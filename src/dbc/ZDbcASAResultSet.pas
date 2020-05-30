@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -84,6 +84,7 @@ type
     FSqlData: IZASASQLDA;
     FASAConnection: IZASAConnection;
     FPlainDriver: TZASAPlainDriver;
+    FByteBuffer: PByteBuffer;
   private
     procedure CheckIndex(const Index: Word);
     procedure CheckRange(const Index: Word);
@@ -193,7 +194,8 @@ type
   protected
     function CreateLobStream(CodePage: Word; LobStreamMode: TZLobStreamMode): TStream; override;
   public //IImmediatelyReleasable
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
+      var AError: EZSQLConnectionLost);
     function GetConSettings: PZConSettings;
   public
     constructor Create(const Connection: IZASAConnection; ASASQLDA: PASASQLDA;
@@ -313,16 +315,16 @@ begin
                                   if PZASASQLDateTime(sqlData).Year < 0 then
                                     JSONWriter.Add('-');
                                   if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stTime) then begin
-                                    DateToIso8601PChar(@FTinyBuffer[0], True, Abs(PZASASQLDateTime(sqlData).Year),
+                                    DateToIso8601PChar(PUTF8Char(fByteBuffer), True, Abs(PZASASQLDateTime(sqlData).Year),
                                     PZASASQLDateTime(sqlData).Month + 1, PZASASQLDateTime(sqlData).Day);
-                                    JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
+                                    JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),10);
                                   end else if jcoMongoISODate in JSONComposeOptions then
                                     JSONWriter.AddShort('0000-00-00');
                                   if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stDate) then begin
-                                    TimeToIso8601PChar(@FTinyBuffer[0], True, PZASASQLDateTime(sqlData).Hour,
+                                    TimeToIso8601PChar(PUTF8Char(fByteBuffer), True, PZASASQLDateTime(sqlData).Hour,
                                     PZASASQLDateTime(sqlData).Minute, PZASASQLDateTime(sqlData).Second,
                                     PZASASQLDateTime(sqlData).MicroSecond div 1000, 'T', jcoMilliseconds in JSONComposeOptions);
-                                    JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                                    JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),9 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
                                   end;
                                   if jcoMongoISODate in JSONComposeOptions
                                   then JSONWriter.AddShort('Z)"')
@@ -373,6 +375,7 @@ begin
   FCursorName := CursorName;
   FCachedBlob := CachedBlob;
   FASAConnection := Statement.GetConnection as IZASAConnection;
+  FByteBuffer := FASAConnection.GetByteBufferAddress;
   FPlainDriver := TZASAPlainDriver(FASAConnection.GetIZPlainDriver.GetInstance);
   FStmtNum := StmtNum;
   ResultSetType := rtScrollSensitive;
@@ -1038,7 +1041,7 @@ begin
   with FSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do begin
     case sqlType and $FFFE of
       DT_TINYINT    : begin
-                        IntToRaw(Cardinal(PByte(sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(Cardinal(PByte(sqldata)^), PAnsiChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_BIT        : if PByte(sqldata)^ <> 0 then begin
@@ -1049,37 +1052,37 @@ begin
                         Len := 5;
                       end;
       DT_SMALLINT   : begin
-                        IntToRaw(Integer(PSmallInt(sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(Integer(PSmallInt(sqldata)^), PAnsiChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_UNSSMALLINT: begin
-                        IntToRaw(Cardinal(PWord(sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(Cardinal(PWord(sqldata)^), PAnsiChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_INT        : begin
-                        IntToRaw(PInteger(sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(PInteger(sqldata)^, PAnsiChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_UNSINT     : begin
-                        IntToRaw(PCardinal(sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(PCardinal(sqldata)^, PAnsiChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_BIGINT     : begin
-                        IntToRaw(PInt64(sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(PInt64(sqldata)^, PAnsiChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_UNSBIGINT  : begin
-                        IntToRaw(PUInt64(sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result);
-set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        IntToRaw(PUInt64(sqldata)^, PAnsiChar(fByteBuffer), @Result);
+set_Results:            Len := Result - PAnsiChar(fByteBuffer);
+                        Result := PAnsiChar(fByteBuffer);
                       end;
       DT_FLOAT      : begin
-                        Len := FloatToSQLRaw(PSingle(sqldata)^, @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        Len := FloatToSQLRaw(PSingle(sqldata)^, PAnsiChar(fByteBuffer));
+                        Result := PAnsiChar(fByteBuffer);
                       end;
       DT_DOUBLE     : begin
-                        Len := FloatToSQLRaw(PDouble(sqldata)^, @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        Len := FloatToSQLRaw(PDouble(sqldata)^, PAnsiChar(fByteBuffer));
+                        Result := PAnsiChar(fByteBuffer);
                       end;
       DT_VARCHAR,
       DT_NVARCHAR,
@@ -1098,7 +1101,7 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
                         else Result := Pointer(FRawTemp);
                       end;
       DT_TIMESTAMP_STRUCT : begin
-                      Result := @FTinyBuffer[0];
+                      Result := PAnsiChar(fByteBuffer);
                       case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
                         stDate: Len := DateToRaw(PZASASQLDateTime(SQLData).Year,
                                   PZASASQLDateTime(SQLData).Month +1, PZASASQLDateTime(SQLData).Day,
@@ -1139,7 +1142,7 @@ begin
   with FSQLDA.sqlvar[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}], TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
     case sqlType and $FFFE of
       DT_TINYINT    : begin
-                        IntToUnicode(Cardinal(PByte(sqldata)^), PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(Cardinal(PByte(sqldata)^), PWideChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_BIT        : if PByte(sqldata)^ <> 0 then begin
@@ -1150,37 +1153,37 @@ begin
                         Len := 5;
                       end;
       DT_SMALLINT   : begin
-                        IntToUnicode(Integer(PSmallInt(sqldata)^), PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(Integer(PSmallInt(sqldata)^), PWideChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_UNSSMALLINT: begin
-                        IntToUnicode(Cardinal(PWord(sqldata)^), PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(Cardinal(PWord(sqldata)^), PWideChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_INT        : begin
-                        IntToUnicode(PInteger(sqldata)^, PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(PInteger(sqldata)^, PWideChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_UNSINT     : begin
-                        IntToUnicode(PCardinal(sqldata)^, PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(PCardinal(sqldata)^, PWideChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_BIGINT     : begin
-                        IntToUnicode(PInt64(sqldata)^, PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(PInt64(sqldata)^, PWideChar(fByteBuffer), @Result);
                         goto set_Results;
                       end;
       DT_UNSBIGINT  : begin
-                        IntToUnicode(PUInt64(sqldata)^, PWideChar(@FTinyBuffer[0]), @Result);
-set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        IntToUnicode(PUInt64(sqldata)^, PWideChar(fByteBuffer), @Result);
+set_Results:            Len := Result - PWideChar(fByteBuffer);
+                        Result := PWideChar(fByteBuffer);
                       end;
       DT_FLOAT      : begin
-                        Len := FloatToSQLUnicode(PSingle(sqldata)^, @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        Len := FloatToSQLUnicode(PSingle(sqldata)^, PWideChar(fByteBuffer));
+                        Result := PWideChar(fByteBuffer);
                       end;
       DT_DOUBLE     : begin
-                        Len := FloatToSQLUnicode(PDouble(sqldata)^, @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        Len := FloatToSQLUnicode(PDouble(sqldata)^, PWideChar(fByteBuffer));
+                        Result := PWideChar(fByteBuffer);
                       end;
       DT_NVARCHAR,
       DT_VARCHAR    : begin
@@ -1203,7 +1206,7 @@ set_from_uni:           Len := Length(FUniTemp);
                         else Result := Pointer(FUniTemp);
                       end;
       DT_TIMESTAMP_STRUCT : begin
-                      Result := @FTinyBuffer[0];
+                      Result := PWideChar(fByteBuffer);
                       case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
                         stDate: Len := DateToUni(Abs(PZASASQLDateTime(SQLData).Year),
                                   PZASASQLDateTime(SQLData).Month +1, PZASASQLDateTime(SQLData).Day,
@@ -1446,22 +1449,24 @@ end;
     <code>false</code> otherwise
 }
 function TZASANativeResultSet.MoveAbsolute(Row: Integer): Boolean;
+var ASASQLCA: PZASASQLCA;
 begin
   Result := False;
   if Closed or ((MaxRows > 0) and (Row >= MaxRows)) then
     Exit;
+  ASASQLCA := FASAConnection.GetDBHandle;
+  FPlainDriver.dbpp_fetch(ASASQLCA,
+    Pointer(FCursorName), CUR_ABSOLUTE, Row, FSQLDA, BlockSize, CUR_FORREGULAR);
+  if ASASQLCA.sqlCode = SQLE_CURSOR_NOT_OPEN then Exit;
+  if (ASASQLCA.sqlCode <> SQLE_NOERROR) and (ASASQLCA.sqlCode <> SQLE_NOTFOUND) then
+    FASAConnection.HandleErrorOrWarning(lcOther, 'dbpp_fetch', Self);
 
-  FPlainDriver.dbpp_fetch(FASAConnection.GetDBHandle,
-    Pointer(FCursorName), CUR_ABSOLUTE, Row, FSqlData.GetData, BlockSize, CUR_FORREGULAR);
-  ZDbcASAUtils.CheckASAError(FPlainDriver,
-    FASAConnection.GetDBHandle, lcOther, ConSettings);
-
-  if FASAConnection.GetDBHandle.sqlCode <> SQLE_NOTFOUND then begin
+  if ASASQLCA.sqlCode <> SQLE_NOTFOUND then begin
     RowNo := Row;
     Result := True;
     FFetchStat := 0;
   end else begin
-    FFetchStat := FASAConnection.GetDBHandle.sqlerrd[2];
+    FFetchStat := ASASQLCA.sqlerrd[2];
     if FFetchStat > 0 then
       LastRowNo := Max(Row - FFetchStat, 0);
   end;
@@ -1485,17 +1490,21 @@ end;
     <code>false</code> otherwise
 }
 function TZASANativeResultSet.MoveRelative(Rows: Integer): Boolean;
+var ASASQLCA: PZASASQLCA;
 begin
   Result := False;
   if Closed or ((RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows))) then
     Exit;
-  FPlainDriver.dbpp_fetch(FASAConnection.GetDBHandle,
-    Pointer(FCursorName), CUR_RELATIVE, Rows, FSqlData.GetData, BlockSize, CUR_FORREGULAR);
-    ZDbcASAUtils.CheckASAError(FPlainDriver,
-      FASAConnection.GetDBHandle, lcOther, ConSettings, EmptyRaw, SQLE_CURSOR_NOT_OPEN); //handle a known null resultset issue (cursor not open)
-  if FASAConnection.GetDBHandle.sqlCode = SQLE_CURSOR_NOT_OPEN then Exit;
-  if FASAConnection.GetDBHandle.sqlCode <> SQLE_NOTFOUND then begin
-    //if (RowNo > 0) or (RowNo + Rows < 0) then
+  ASASQLCA := FASAConnection.GetDBHandle;
+  FPlainDriver.dbpp_fetch(ASASQLCA,
+    Pointer(FCursorName), CUR_RELATIVE, Rows, FSQLDA, BlockSize, CUR_FORREGULAR);
+  //handle a known null resultset issue (cursor not open)
+  //EH: is this correct?
+  if ASASQLCA.sqlCode = SQLE_CURSOR_NOT_OPEN then Exit;
+  if (ASASQLCA.sqlCode <> SQLE_NOERROR) and (ASASQLCA.sqlCode <> SQLE_NOTFOUND) then
+    FASAConnection.HandleErrorOrWarning(lcOther, 'dbpp_fetch', Self);
+
+  if ASASQLCA.sqlCode <> SQLE_NOTFOUND then begin
     RowNo := RowNo + Rows;
     if Rows > 0 then
       LastRowNo := RowNo;
@@ -1677,7 +1686,8 @@ begin
     end;
     PZASABlobStruct(ASASQLVAR.sqlData).array_len := Count;
     FPlainDriver.dbpp_get_data(Fsqlca, FCursorName, FColumnNumber, FPosition, FASASQLDA, 0);
-    CheckASAError( FPlainDriver, Fsqlca, lcOther, FConSettings);
+    if (Fsqlca.sqlCode <> SQLE_NOERROR) then
+      FOwnerLob.FConnection.HandleErrorOrWarning(lcOther, 'dbpp_get_data', Self);
     Result := PZASABlobStruct(ASASQLVAR.sqlData)^.stored_len;
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(
       PZASABlobStruct(ASASQLVAR.sqlData)^.arr[0], Buffer, Result);
@@ -1740,17 +1750,19 @@ end;
 
 function TZASALob.CreateLobStream(CodePage: Word;
   LobStreamMode: TZLobStreamMode): TStream;
+var ASASQLCA: PZASASQLCA;
 begin
   if FReleased
   then Result := nil
   else begin
+    ASASQLCA := FConnection.GetDBHandle;
     if LobStreamMode <> lsmRead then
       raise CreateReadOnlyException;
     if FCurrentRowAddr^ <> FLobRowNo then begin
-      FPlainDriver.dbpp_fetch(FConnection.GetDBHandle,
+      FPlainDriver.dbpp_fetch(ASASQLCA,
         Pointer(FCursorName), CUR_ABSOLUTE, FLobRowNo, FASASQLDA, BlockSize, CUR_FORREGULAR);
-      ZDbcASAUtils.CheckASAError(FPlainDriver,
-        FConnection.GetDBHandle, lcOther, FConSettings);
+      if (ASASQLCA.sqlCode <> SQLE_NOERROR) then
+        FConnection.HandleErrorOrWarning(lcOther, 'dbpp_fetch', Self);
     end;
     Result := TZASAStream.Create(Self);
     if (FColumnCodePage <> zCP_Binary) and (CodePage <> FColumnCodePage) then

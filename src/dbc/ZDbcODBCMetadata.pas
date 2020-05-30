@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -311,7 +311,8 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 
 uses
-  ZGenericSqlToken, ZDbcODBCUtils, ZDbcODBCResultSet, ZEncoding, ZSysUtils, ZFastCode
+  ZGenericSqlToken, ZDbcODBCUtils, ZDbcODBCResultSet, ZDbcLogging,
+  ZEncoding, ZSysUtils, ZFastCode
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
   {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
@@ -391,22 +392,28 @@ end;
 function TZAbstractODBCDatabaseInfo.GetUIntDbcInfo(InfoType: SQLUSMALLINT): SQLUINTEGER;
 var
   ODBCConnection: IZODBCConnection;
+  Ret: SQLRETURN;
 begin
   Result := 0; //satisfy compiler
   ODBCConnection := GetODBCConnection;
-  ODBCConnection.CheckDbcError(TZODBC3PlainDriver(ODBCConnection.GetPlainDriver.GetInstance).SQLGetInfo(fPHDBC^,
-    InfoType, @Result, SizeOf(SQLUINTEGER), nil));
+  Ret := TZODBC3PlainDriver(ODBCConnection.GetPlainDriver.GetInstance).SQLGetInfo(fPHDBC^,
+    InfoType, @Result, SizeOf(SQLUINTEGER), nil);
+  if Ret <> SQL_SUCCESS then
+    ODBCConnection.HandleDbcErrorOrWarning(ret, 'SQLGetInfo', lcOther, ODBCConnection);
 end;
 
 function TZAbstractODBCDatabaseInfo.GetUSmallDbcInfo(
   InfoType: SQLUSMALLINT): SQLUSMALLINT;
 var
   ODBCConnection: IZODBCConnection;
+  Ret: SQLRETURN;
 begin
   Result := 0; //satisfy compiler
   ODBCConnection := GetODBCConnection;
-  ODBCConnection.CheckDbcError(TZODBC3PlainDriver(ODBCConnection.GetPlainDriver.GetInstance).SQLGetInfo(fPHDBC^,
-    InfoType, @Result, SizeOf(SQLUSMALLINT), nil));
+  Ret := TZODBC3PlainDriver(ODBCConnection.GetPlainDriver.GetInstance).SQLGetInfo(fPHDBC^,
+    InfoType, @Result, SizeOf(SQLUSMALLINT), nil);
+  if Ret <> SQL_SUCCESS then
+    ODBCConnection.HandleDbcErrorOrWarning(ret, 'SQLGetInfo', lcOther, ODBCConnection);
 end;
 
 {**
@@ -853,20 +860,20 @@ var
   PlainA: IODBC3RawPlainDriver;
   Plain: TZODBC3PlainDriver;
   ODBCConnection: IZODBCConnection;
+  Ret: SQLRETURN;
 begin
   Result := False; //satisfy compiler
   ODBCConnection := GetODBCConnection;
   plain := ODBCConnection.GetPlainDriver;
   if Plain.GetInterface(IODBC3UnicodePlainDriver, PlainW) then begin
-    ODBCConnection.CheckDbcError(Plain.SQLGetInfo(fPHDBC^,
-      InfoType, @Buf[0], SizeOf(Buf), @PropLength));
+    Ret := Plain.SQLGetInfo(fPHDBC^, InfoType, @Buf[0], SizeOf(Buf), @PropLength);
     Result := ZSysUtils.StrToBoolEx(PWideChar(@Buf[0]), False)
-  end else
-    if Plain.GetInterface(IODBC3RawPlainDriver, PlainA) then begin
-      ODBCConnection.CheckDbcError(Plain.SQLGetInfo(fPHDBC^,
-        InfoType, @Buf[0], SizeOf(Buf), @PropLength));
-      Result := ZSysUtils.StrToBoolEx(PAnsiChar(@Buf[0]), False)
-    end;
+  end else if Plain.GetInterface(IODBC3RawPlainDriver, PlainA) then begin
+    Ret := Plain.SQLGetInfo(fPHDBC^, InfoType, @Buf[0], SizeOf(Buf), @PropLength);
+    Result := ZSysUtils.StrToBoolEx(PAnsiChar(@Buf[0]), False)
+  end else Ret := SQL_SUCCESS;
+  if Ret <> SQL_SUCCESS then
+    ODBCConnection.HandleDbcErrorOrWarning(ret, 'SQLGetInfo', lcOther, ODBCConnection);
 end;
 
 {**
@@ -3474,19 +3481,9 @@ end;
 
 procedure TAbstractODBCDatabaseMetadata.CheckStmtError(RETCODE: SQLRETURN;
   StmtHandle: SQLHSTMT; const Connection: IZODBCConnection);
-procedure RaiseError;
-var imm: IImmediatelyReleasable;
-begin
-  Connection.QueryInterface(IImmediatelyReleasable, imm);
-  try
-    CheckODBCError(RETCODE, StmtHandle, SQL_HANDLE_STMT, '', imm, Connection);
-  finally
-    imm := nil;
-  end;
-end;
 begin
   if RetCode <> SQL_SUCCESS then
-     RaiseError;
+     Connection.HandleStmtErrorOrWarning(RETCODE, StmtHandle, '', lcExecute, Connection);
 end;
 
 {**
@@ -3739,10 +3736,13 @@ var
   Buf: array[0..SQL_MAX_MESSAGE_LENGTH shl 1] of WideChar;
   PropLength: SQLSMALLINT;
   ODBCConnection: IZODBCConnection;
+  Ret: SQLRETURN;
 begin
   ODBCConnection := GetODBCConnection;
-  ODBCConnection.CheckDbcError(TZODBC3PlainDriver(ODBCConnection.GetPlainDriver.GetInstance).SQLGetInfo(fPHDBC^,
-    InfoType, @Buf[0], SizeOf(Buf), @PropLength));
+  Ret := ODBCConnection.GetPlainDriver.SQLGetInfo(fPHDBC^, InfoType, @Buf[0],
+    SizeOf(Buf), @PropLength);
+  if Ret <> SQL_SUCCESS then
+    ODBCConnection.HandleDbcErrorOrWarning(ret, 'SQLGetInfo', lcOther, ODBCConnection);
   {$IFDEF UNICODE}
   SetString(Result, PWideChar(@Buf[0]), PropLength shr 1);
   {$ELSE}
@@ -3757,10 +3757,13 @@ var
   Buf: array[0..SQL_MAX_MESSAGE_LENGTH shl 1] of AnsiChar;
   PropLength: SQLSMALLINT;
   ODBCConnection: IZODBCConnection;
+  Ret: SQLRETURN;
 begin
   ODBCConnection := GetODBCConnection;
-  ODBCConnection.CheckDbcError(TZODBC3PlainDriver(ODBCConnection.GetPlainDriver.GetInstance).SQLGetInfo(fPHDBC^,
-    InfoType, @Buf[0], SizeOf(Buf), @PropLength));
+  Ret := ODBCConnection.GetPlainDriver.SQLGetInfo(fPHDBC^, InfoType, @Buf[0],
+    SizeOf(Buf), @PropLength);
+  if Ret <> SQL_SUCCESS then
+    ODBCConnection.HandleDbcErrorOrWarning(ret, 'SQLGetInfo', lcConnect, ODBCConnection);
   {$IFDEF UNICODE}
   Result := PRawToUnicode(PAnsiChar(@Buf[0]),PropLength,ZOSCodePage);
   {$ELSE}

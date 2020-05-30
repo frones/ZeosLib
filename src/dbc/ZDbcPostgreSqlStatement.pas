@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -102,6 +102,7 @@ type
     FMinExecCount2Prepare: Integer; //how many executions must be done to fall into a real prepared mode?
     FExecCount: Integer; //How often did we execute the stmt until we reached MinExecCount2Prepare?
     FParamNames: TRawByteStringDynArray;
+    FByteBuffer: PByteBuffer;
     procedure CheckError(LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
       ResultHandle: TPGresult);
     function CheckPrepareSwitchMode: Boolean;
@@ -917,7 +918,8 @@ begin
   fAsyncQueries := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_ExecAsync, 'FALSE'))
     and Assigned(FplainDriver.PQsendQuery) and Assigned(FplainDriver.PQsendQueryParams) and
     Assigned(FplainDriver.PQsendQueryPrepared);
-  fServerCursor := fAsyncQueries and StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_SingleRowMode, 'FALSE'))
+  fServerCursor := fAsyncQueries and StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_SingleRowMode, 'FALSE'));
+  FByteBuffer := FPostgreSQLConnection.GetByteBufferAddress;
 end;
 
 function TZAbstractPostgreSQLPreparedStatementV3.CreateResultSet(
@@ -1947,8 +1949,8 @@ begin
   PGSQLType := OIDToSQLType(InParamIdx, SQLType);
   if PGSQLType in [stCurrency, stBigDecimal] then
     if PGSQLType = stBigDecimal then begin
-      Double2BCD(Value, PBCD(@fABuffer[0])^);
-      SetBigDecimal(Index, PBCD(@fABuffer[0])^);
+      Double2BCD(Value, PBCD(fByteBuffer)^);
+      SetBigDecimal(Index, PBCD(fByteBuffer)^);
     end else
       SetCurrency(Index, Value)
   else if (Ord(PGSQLType) < Ord(stGUID)) and Boolean(PGSQLType) then begin
@@ -1996,7 +1998,7 @@ begin
         BindList.Put(Index, PGSQLType, P4Bytes(@Value));
         LinkBinParam2PG(InParamIdx, BindList._4Bytes[Index], ZSQLType2PGBindSizes[PGSQLType]);
       end else if ZSQLType2PGBindSizes[PGSQLType] = 8 then begin
-        BindList.Put(Index, PGSQLType, P8Bytes({$IFNDEF CPU64}@faBuffer[0]{$ELSE}@Value{$ENDIF}));
+        BindList.Put(Index, PGSQLType, P8Bytes({$IFNDEF CPU64}fByteBuffer{$ELSE}@Value{$ENDIF}));
         LinkBinParam2PG(InParamIdx, BindList._8Bytes[Index], 8);
       end else
         LinkBinParam2PG(InParamIdx, BindList.AquireCustomValue(Index, PGSQLType,
@@ -2013,8 +2015,8 @@ begin
       stDouble:   Double2PG(Value, P);
       stCurrency: Currency2PGNumeric(Value, P, FPQparamLengths[InParamIdx]);
       stBigDecimal: Begin
-                      ScaledOrdinal2BCD(Value, 0, PBCD(@fABuffer[0])^);
-                      BCD2PGNumeric(PBCD(@fABuffer[0])^, P, FPQparamLengths[InParamIdx]);
+                      ScaledOrdinal2BCD(Value, 0, PBCD(FByteBuffer)^);
+                      BCD2PGNumeric(PBCD(FByteBuffer)^, P, FPQparamLengths[InParamIdx]);
                     end;
       {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //impossible
     end;
@@ -2055,8 +2057,8 @@ var
         stFloat:    SetFloat(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Single(FPQparamValues[i]));
         stDouble:   SetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Double(FPQparamValues[i]));
         stBigDecimal:begin
-                      PGNumeric2BCD(FPQparamValues[i], PBCD(@fABuffer[0])^);
-                      SetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(@fABuffer[0])^);
+                      PGNumeric2BCD(FPQparamValues[i], PBCD(FByteBuffer)^);
+                      SetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PBCD(FByteBuffer)^);
                     end;
         stTime:     begin
                       if Finteger_datetimes
@@ -2343,9 +2345,9 @@ begin
                     end;
       end;
   end else if (PGSQLType in [stUnknown, stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
-    Len := DateToRaw(Value.Year, Value.Month, Value.Day,@FABuffer[0],
+    Len := DateToRaw(Value.Year, Value.Month, Value.Day, PAnsiChar(FByteBuffer),
       ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
-    ZSetString(PAnsiChar(@FABuffer[0]), Len ,fRawTemp);
+    ZSetString(PAnsiChar(FByteBuffer), Len ,fRawTemp);
     BindRawStr(InParamIdx, fRawTemp)
   end else if TryDateToDateTime(Value, DT)
     then InternalBindDouble(Index, stDate, DT)
@@ -2588,8 +2590,8 @@ begin
       end;
   end else if (PGSQLType in [stUnknown, stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
-      @FABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, False, False);
-    ZSetString(PAnsiChar(@FABuffer[0]), Len ,fRawTemp);
+      PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.TimeFormat, False, False);
+    ZSetString(PAnsiChar(FByteBuffer), Len ,fRawTemp);
     BindRawStr(InParamIdx, fRawTemp);
   end else if TryTimeToDateTime(Value, DT)
     then InternalBindDouble(Index, stTime, DT)
@@ -2634,8 +2636,8 @@ begin
   end else if (PGSQLType in [stUnknown, stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
       Value.Hour, Value.Minute, Value.Second, Value.Fractions,
-      @FABuffer[0], ConSettings^.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative);
-    ZSetString(PAnsiChar(@FABuffer[0]), Len ,fRawTemp);
+      PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative);
+    ZSetString(PAnsiChar(FByteBuffer), Len ,fRawTemp);
     BindRawStr(InParamIdx, fRawTemp)
   end else if TryTimeStampToDateTime(Value, DT)
     then InternalBindDouble(Index, stTimeStamp, DT)

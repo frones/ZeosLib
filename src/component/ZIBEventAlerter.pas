@@ -3,13 +3,12 @@
 {                 Zeos Database Objects                   }
 {         Interbase Database Connectivity Classes         }
 {                                                         }
-{    Copyright (c) 1999-2020 Zeos Development Group       }
 {            Written by Sergey Merkuriev                  }
 {                                                         }
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -86,9 +85,11 @@ type
     FOnEventAlert: TEventAlert;
     FThreads: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     {$IFNDEF ZEOS_DISABLE_INTERBASE}
+    FIBConnection: IZInterbase6Connection;
     FNativeHandle: PISC_DB_HANDLE;
     {$ENDIF}
     {$IFNDEF ZEOS_DISABLE_FIREBIRD}
+    FFBConnection: IZFirebirdConnection;
     FAttachment: IAttachment;
     FStatus: IStatus;
     {$ENDIF}
@@ -132,7 +133,7 @@ implementation
 {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD} //if set we have an empty unit
 
 uses
-  SyncObjs{$IFDEF UNICODE}, ZCompatibility{$ENDIF}
+  SyncObjs, ZDbcLogging{.$IFDEF UNICODE}, ZCompatibility{.$ENDIF}
   {$IFDEF UNICODE}, ZEncoding{$ENDIF};
 
 const
@@ -154,7 +155,7 @@ type
     FirstTime: boolean;
     EventGroup,
     EventCount: integer;
-    Parent: TZIBEventAlerter;
+    FParent: TZIBEventAlerter;
     FExceptObject: TObject;
     FExceptAddr: Pointer;
     FCancelAlerts: boolean;
@@ -165,11 +166,11 @@ type
     procedure Execute; override;
     procedure SignalEvent;
     procedure SignalTerminate;
-    procedure RegisterEvents; virtual; abstract;
-    procedure UnRegisterEvents; virtual; abstract;
+    procedure RegisterEvents;
+    procedure UnRegisterEvents; virtual;
     procedure QueueEvents;
     procedure AsyncQueEvents; virtual; abstract;
-    procedure ProcessEvents; virtual; abstract;
+    procedure ProcessEvents; virtual;
     procedure DoEvent;
     procedure DoHandleException;
     function HandleException: boolean;
@@ -187,25 +188,39 @@ type
     StatusVector: TARRAY_ISC_STATUS;
     // Local use variables
   protected
-    procedure RegisterEvents; override;
     procedure UnRegisterEvents; override;
     procedure AsyncQueEvents; override;
-    procedure ProcessEvents; override;
   end;
   {$ENDIF ZEOS_DISABLE_INTERBASE}
 
   {$IFNDEF ZEOS_DISABLE_FIREBIRD}
+
+  TFBEventThread = class;
+
+  TFBEventCallback = class(IEventCallbackImpl)
+  private
+    FOwner: TFBEventThread;
+    FName: RawByteString;
+    FRefCnt: integer; //for refcounting
+  public
+    constructor Create(aOwner: TFBEventThread; const aName: RawByteString);
+    procedure addRef;  override;
+    function release: Integer; override;
+    procedure eventCallbackFunction(length: Cardinal; events: BytePtr); override;
+    procedure WaitForEvent;
+    procedure CancelEvent;
+ end;
+
+
   { TFBEventThread }
   TFBEventThread = class(TAbstractInterbaseFirebirdEventThread)
   private
     // IB API call parameters
-    //FStatus: IStatus;
-    //FAttachement: IAttachement;
+    FEvents: IEvents;
+    FEventCallback: TFBEventCallback;
   protected
-    procedure RegisterEvents; override;
     procedure UnRegisterEvents; override;
     procedure AsyncQueEvents; override;
-    procedure ProcessEvents; override;
   end;
   {$ENDIF ZEOS_DISABLE_FIREBIRD}
 
@@ -267,26 +282,20 @@ end;
 //    the retrieval of the native DB handle).
 Procedure TZIBEventAlerter.RegisterEvents;
 Var i: Integer;
-  {$IFNDEF ZEOS_DISABLE_INTERBASE}
-  IBConnection: IZInterbase6Connection;
-  {$ENDIF ZEOS_DISABLE_INTERBASE}
-  {$IFNDEF ZEOS_DISABLE_FIREBIRD}
-  FBConnection: IZFirebirdConnection;
-  {$ENDIF ZEOS_DISABLE_FIREBIRD}
 Begin
   {$IFNDEF ZEOS_DISABLE_INTERBASE}
-  IBConnection := nil;
+  FIBConnection := nil;
   {$ENDIF ZEOS_DISABLE_INTERBASE}
   {$IFNDEF ZEOS_DISABLE_FIREBIRD}
-  FBConnection := nil;
+  FFBConnection := nil;
   {$ENDIF ZEOS_DISABLE_FIREBIRD}
   If (not (csDesigning in ComponentState)) and (Assigned(FConnection)) then
   try
     {$IFNDEF ZEOS_DISABLE_FIREBIRD}
-    Connection.DbcConnection.QueryInterface(IZFirebirdConnection, FBConnection);
+    Connection.DbcConnection.QueryInterface(IZFirebirdConnection, FFBConnection);
     {$ENDIF ZEOS_DISABLE_FIREBIRD}
     {$IFNDEF ZEOS_DISABLE_INTERBASE}
-    Connection.DbcConnection.QueryInterface(IZInterbase6Connection, IBConnection);
+    Connection.DbcConnection.QueryInterface(IZInterbase6Connection, FIBConnection);
     {$ENDIF ZEOS_DISABLE_INTERBASE}
 
     If (FThreads.Count = 0) Then
@@ -294,7 +303,7 @@ Begin
         For i := 0 To ((FEvents.Count - 1) div IB_MAX_EVENT_BLOCK) Do
           {$IFNDEF ZEOS_DISABLE_FIREBIRD}
             {$IFNDEF ZEOS_DISABLE_INTERBASE}
-            if FBConnection <> nil then
+            if FFBConnection <> nil then
             {$ENDIF ZEOS_DISABLE_INTERBASE}
             FThreads.Add(TFBEventThread.Create(Self, i, ThreadEnded))
             {$IFNDEF ZEOS_DISABLE_INTERBASE}
@@ -311,19 +320,18 @@ Begin
       If not FConnection.Connected Then
         FConnection.Connect;
       {$IFNDEF ZEOS_DISABLE_FIREBIRD}
-      if (FBConnection <> nil) then begin
-        FAttachment := FBConnection.GetAttachment;
-        //FAttachment.AddRef;
-        FStatus := FBConnection.GetStatus;
-        FBConnection := nil;
-      end else
+      if (FFBConnection <> nil) then begin
+        FAttachment := FFBConnection.GetAttachment;
+        FStatus := FFBConnection.GetStatus;
+      end else begin
         FAttachment := nil;
+        FStatus := nil;
+      end;
       {$ENDIF ZEOS_DISABLE_FIREBIRD}
       {$IFNDEF ZEOS_DISABLE_INTERBASE}
-      if IBConnection <> nil then begin
-        FNativeHandle := IBConnection.GetDBHandle;
-        IBConnection := nil;
-      end else FNativeHandle := nil;
+      if FIBConnection <> nil
+      then FNativeHandle := FIBConnection.GetDBHandle
+      else FNativeHandle := nil;
       {$ENDIF ZEOS_DISABLE_INTERBASE}
     End;
   End;
@@ -349,7 +357,8 @@ Begin
       If WasRegistered Then
         RegisterEvents;
     End;
-    FPlainDriver := FConnection.DbcConnection.GetIZPlainDriver.GetInstance as TZInterbaseFirebirdPlainDriver;
+    if Value <> nil then
+      FPlainDriver := FConnection.DbcConnection.GetIZPlainDriver.GetInstance as TZInterbaseFirebirdPlainDriver;
   End;
 End; // SetConnection
 
@@ -400,7 +409,7 @@ begin
   // thus raising exception)
   FCancelAlerts := False;
   Signal := TSimpleEvent.Create;
-  Parent := Owner;
+  FParent := Owner;
   EventGroup := EventGrp;
   OnTerminate := TermEvent;
   {$IFDEF UNICODE}
@@ -422,7 +431,7 @@ end;
 
 procedure TAbstractInterbaseFirebirdEventThread.DoEvent;
 begin
-  Parent.FOnEventAlert(Parent, Parent.FEvents[((EventGroup * IB_MAX_EVENT_BLOCK) + WhichEvent)],
+  FParent.FOnEventAlert(FParent, FParent.FEvents[((EventGroup * IB_MAX_EVENT_BLOCK) + WhichEvent)],
     CountForEvent, FCancelAlerts)
 end;
 
@@ -451,9 +460,9 @@ end;
 
 function TAbstractInterbaseFirebirdEventThread.HandleException: boolean;
 begin
-  if not Parent.ThreadException then begin
+  if not FParent.ThreadException then begin
     Result := True;
-    Parent.ThreadException := True;
+    FParent.ThreadException := True;
     FExceptObject := ExceptObject;
     FExceptAddr := ExceptAddr;
     try
@@ -467,11 +476,72 @@ begin
     Result := False;
 end;
 
+procedure TAbstractInterbaseFirebirdEventThread.ProcessEvents;
+var
+  i: integer;
+  EventCounts: TARRAY_ISC_EVENTCOUNTS;
+begin
+  FParent.PlainDriver.isc_event_counts(@EventCounts, EventBufferLen,
+    EventBuffer, ResultBuffer);
+  if (Assigned(FParent.FOnEventAlert) and (not FirstTime)) then begin
+    FCancelAlerts := False;
+    for i := 0 to (EventCount - 1) do
+      if (EventCounts[i] <> 0) then begin
+        WhichEvent := i;
+        CountForEvent := EventCounts[i];
+        Synchronize(DoEvent)
+      end;
+  end;
+  FirstTime := False;
+end;
+
 procedure TAbstractInterbaseFirebirdEventThread.QueueEvents;
 begin
   EventsReceived := False;
   Signal.ResetEvent;
   Synchronize(AsyncQueEvents);
+end;
+
+procedure TAbstractInterbaseFirebirdEventThread.RegisterEvents;
+{$IFDEF UNICODE}
+var
+  // Holder for ANSI strings converted from Unicode items of FEvents.
+  // Obligatory! Otherwise pointer returned from EBP will point to
+  // invalid (released) memory.
+  EBPArray: array[1..IB_MAX_EVENT_BLOCK] of RawByteString;
+{$ENDIF}
+
+  function EBP(Index: integer): PAnsiChar;
+  var EvListIndex: Integer;
+  begin
+    // Index is 1-based, FEvents is 0-based
+    EvListIndex := Index + (EventGroup * IB_MAX_EVENT_BLOCK) - 1;
+    if (EvListIndex >= FParent.FEvents.Count) then
+      Result := nil
+    else
+    {$IFDEF UNICODE}
+    begin
+      EBPArray[Index] := ZUnicodeToRaw(FParent.FEvents[EvListIndex], FCodePage);
+      Result := Pointer(EBPArray[Index]);
+    end;
+    {$ELSE}
+    Result := Pointer(FParent.FEvents[EvListIndex]);
+    {$ENDIF}
+  end;
+
+begin
+  EventBuffer := nil;
+  ResultBuffer := nil;
+  EventBufferLen := 0;
+  FirstTime := True;
+  EventCount := (FParent.FEvents.Count - (EventGroup * IB_MAX_EVENT_BLOCK));
+  if (EventCount > IB_MAX_EVENT_BLOCK) then
+    EventCount := IB_MAX_EVENT_BLOCK;
+
+  EventBufferLen := FParent.PlainDriver.isc_event_block(@EventBuffer,
+    @ResultBuffer, EventCount,
+    EBP(1), EBP(2),  EBP(3),  EBP(4),  EBP(5),  EBP(6),  EBP(7), EBP(8),
+    EBP(9), EBP(10), EBP(11), EBP(12), EBP(13), EBP(14), EBP(15));
 end;
 
 procedure TAbstractInterbaseFirebirdEventThread.SignalEvent;
@@ -486,6 +556,14 @@ begin
     Terminate;
     Signal.SetEvent;
   end;
+end;
+
+procedure TAbstractInterbaseFirebirdEventThread.UnRegisterEvents;
+begin
+  FParent.PlainDriver.isc_free(EventBuffer);
+  EventBuffer := nil;
+  FParent.PlainDriver.isc_free(ResultBuffer);
+  ResultBuffer := nil;
 end;
 
 procedure TAbstractInterbaseFirebirdEventThread.UpdateResultBuffer(
@@ -506,91 +584,27 @@ begin
   end;
 end;
 
-procedure TIBEventThread.ProcessEvents;
-var
-  i: integer;
-  EventCounts: TARRAY_ISC_EVENTCOUNTS;
-begin
-  Parent.PlainDriver.isc_event_counts(@EventCounts, EventBufferLen,
-    EventBuffer, ResultBuffer);
-  if (Assigned(Parent.FOnEventAlert) and (not FirstTime)) then begin
-    FCancelAlerts := False;
-    for i := 0 to (EventCount - 1) do
-      if (EventCounts[i] <> 0) then begin
-        WhichEvent := i;
-        CountForEvent := EventCounts[i];
-        Synchronize(DoEvent)
-      end;
-  end;
-  FirstTime := False;
-end;
-
 procedure TIBEventThread.UnRegisterEvents;
 begin
-  Parent.PlainDriver.isc_cancel_events(@StatusVector, Parent.FNativeHandle, @EventID);
-  Parent.PlainDriver.isc_free(EventBuffer);
-  EventBuffer := nil;
-  Parent.PlainDriver.isc_free(ResultBuffer);
-  ResultBuffer := nil;
-end;
-
-procedure TIBEventThread.RegisterEvents;
-{$IFDEF UNICODE}
-var
-  // Holder for ANSI strings converted from Unicode items of FEvents.
-  // Obligatory! Otherwise pointer returned from EBP will point to
-  // invalid (released) memory.
-  EBPArray: array[1..IB_MAX_EVENT_BLOCK] of RawByteString;
-{$ENDIF}
-
-  function EBP(Index: integer): PAnsiChar;
-  var EvListIndex: Integer;
-  begin
-    // Index is 1-based, FEvents is 0-based
-    EvListIndex := Index + (EventGroup * IB_MAX_EVENT_BLOCK) - 1;
-    if (EvListIndex >= Parent.FEvents.Count) then
-      Result := nil
-    else
-    {$IFDEF UNICODE}
-    begin
-      EBPArray[Index] := ZUnicodeToRaw(Parent.FEvents[EvListIndex], FCodePage);
-      Result := Pointer(EBPArray[Index]);
-    end;
-    {$ELSE}
-    Result := Pointer(Parent.FEvents[EvListIndex]);
-    {$ENDIF}
-  end;
-
-begin
-  EventBuffer := nil;
-  ResultBuffer := nil;
-  EventBufferLen := 0;
-  FirstTime := True;
-  EventCount := (Parent.FEvents.Count - (EventGroup * IB_MAX_EVENT_BLOCK));
-  if (EventCount > IB_MAX_EVENT_BLOCK) then
-    EventCount := IB_MAX_EVENT_BLOCK;
-
-  EventBufferLen := Parent.PlainDriver.isc_event_block(@EventBuffer,
-    @ResultBuffer, EventCount,
-    EBP(1), EBP(2),  EBP(3),  EBP(4),  EBP(5),  EBP(6),  EBP(7), EBP(8),
-    EBP(9), EBP(10), EBP(11), EBP(12), EBP(13), EBP(14), EBP(15));
+  FParent.PlainDriver.isc_cancel_events(@StatusVector, FParent.FNativeHandle, @EventID);
+  inherited UnRegisterEvents;
 end;
 
 procedure TIBEventThread.AsyncQueEvents;
 begin
-  if Parent.PlainDriver.isc_que_events(@StatusVector,
-    Parent.FNativeHandle, @EventID, EventBufferLen,
+  if FParent.PlainDriver.isc_que_events(@StatusVector,
+    FParent.FNativeHandle, @EventID, EventBufferLen,
     EventBuffer, TISC_CALLBACK(@EventCallback), PVoid(Self)) <> 0 then
-    if Assigned(Parent.OnError) then // only if someone handles errors
+    if Assigned(FParent.OnError) then // only if someone handles errors
       // Very Ugly! OnError should accept Exception as parameter.
       // But we keep backward compatibility here
       try
-        CheckInterbase6Error(Parent.PlainDriver, StatusVector, nil);
+        CheckInterbase6Error(FParent.PlainDriver, StatusVector, nil);
       except on E: Exception do
         if E is EZSQLException then
-          Parent.OnError(Parent, EZSQLException(E).ErrorCode)
+          FParent.OnError(FParent, EZSQLException(E).ErrorCode)
         else
-          Parent.OnError(Parent, 0);
+          FParent.OnError(FParent, 0);
       end;
 end;
 
@@ -600,23 +614,74 @@ end;
 
 { TFBEventThread }
 
-procedure TFBEventThread.ProcessEvents;
-begin
-end;
-
-procedure TFBEventThread.RegisterEvents;
-begin
-end;
-
 procedure TFBEventThread.AsyncQueEvents;
 begin
-
+  if FEventCallback <> nil then begin
+    FEventCallback.release;
+    FEventCallback := nil;
+  end;
+  FEventCallback := TFBEventCallback.Create(Self, 'EventCallback');
+  FEvents := fParent.FAttachment.queEvents(fParent.FStatus, FEventCallback,
+    EventBufferLen, BytePtr(EventBuffer));
 end;
 
 procedure TFBEventThread.UnRegisterEvents;
 begin
-
+  if FEvents <> nil then
+  try
+    FEvents.Cancel(FParent.FStatus);
+    if ((FParent.FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+      FParent.FFBConnection.HandleError(FParent.FStatus, 'IAttachment.queEvents', FParent.FFBConnection, lcOther);
+  finally
+    FEvents.release;
+    FEvents := nil;
+    if FEventCallback <> nil then begin
+      FEventCallback.release;
+      FEventCallback := nil;
+    end;
+  end;
 end;
+
+{ TFBEventCallback }
+
+procedure TFBEventCallback.addRef;
+begin
+  Inc(FRefCnt);
+end;
+
+procedure TFBEventCallback.CancelEvent;
+begin
+  FOwner.Signal.SetEvent;
+end;
+
+constructor TFBEventCallback.Create(aOwner: TFBEventThread;
+  const aName: RawByteString);
+begin
+  inherited Create;
+  FName := aName;
+  FOwner := aOwner;
+end;
+
+procedure TFBEventCallback.eventCallbackFunction(length: Cardinal;
+  events: BytePtr);
+begin
+  FOwner.UpdateResultBuffer(Length, events);
+  FOwner.SignalEvent;
+end;
+
+function TFBEventCallback.release: Integer;
+begin
+  Dec(FRefCnt);
+  if FRefCnt = 0 then
+    Free;
+  Result := FRefCnt;
+end;
+
+procedure TFBEventCallback.WaitForEvent;
+begin
+  FOwner.Signal.WaitFor(INFINITE)
+end;
+
 {$ENDIF ZEOS_DISABLE_FIREBIRD}
 
 { TZIBEventAlerter }

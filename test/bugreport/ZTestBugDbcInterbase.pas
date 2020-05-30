@@ -458,7 +458,7 @@ begin
   ResultSet.Close;
   ResultSet := nil;
 
-  ResultSet := Metadata.GetTables('', '', 'DEP_VIEW', nil);
+  ResultSet := Metadata.GetTables('', '', 'DEP\_VIEW', nil);
   with ResultSet do begin
     Next;
     CheckEquals('', GetString(CatalogNameIndex));
@@ -494,6 +494,7 @@ begin
   Stmt := Connection.CreateStatement;
   try
     // generate test data
+    Stmt.ExecuteUpdate('delete from TestTicket363');
     for I:= 1 to 10 do
       Stmt.ExecuteUpdate('insert into TestTicket363 (id, "value") values (' + ZFastCode.IntTostr(I) + ', ''testing #' + ZFastCode.IntToStr(I) + ''')');
     // direct approach (just like mORMot with SynDBZeos)

@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -58,7 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 uses SysUtils,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
-  ZCompatibility, ZDbcIntfs, ZPlainODBCDriver, ZDbcODBCCon, ZFastCode;
+  ZCompatibility, ZDbcIntfs, ZPlainODBCDriver, ZFastCode;
 
 type
   PStrLen_or_IndArray = ^TStrLen_or_IndArray;
@@ -99,10 +99,6 @@ function SQL_LEN_DATA_AT_EXEC(Len: SQLLEN): SQLLEN; {$IFDEF WITH_INLINE}inline; 
 
 function ODBCNumeric2Curr(Src: PSQL_NUMERIC_STRUCT): Currency;
 procedure Curr2ODBCNumeric(const Src: Currency; Dest: PSQL_NUMERIC_STRUCT); {$IFDEF WITH_INLINE}inline; {$ENDIF}
-
-procedure CheckODBCError(RETCODE: SQLRETURN; Handle: SQLHANDLE;
-  HandleType: SQLSMALLINT; const SQL: String;
-  const Sender: IImmediatelyReleasable; const Connection: IZODBCConnection);
 
 function GetConnectionString(WindowHandle: SQLHWND; const InConnectionString, LibraryLocation: String): String;
 
@@ -229,120 +225,6 @@ begin
   PInt64(@Dest.val[SizeOf(Currency)])^ := 0;
 end;
 
-procedure CheckODBCError(RETCODE: SQLRETURN; Handle: SQLHANDLE;
-  HandleType: SQLSMALLINT; const SQL: String;
-  const Sender: IImmediatelyReleasable; const Connection: IZODBCConnection);
-var
-  PlainDriver: TZODBC3PlainDriver;
-  SqlstateA: TSQLSTATE;
-  SqlstateW: TSQLSTATE_W;
-  MessageText: array[0..SQL_MAX_MESSAGE_LENGTH] of WideChar;
-  RecNum, FirstNativeError, NativeError: SQLINTEGER;
-  TextLength: SQLSMALLINT;
-  FirstMsgW, FirstNErrW: ZWideString;
-  MsgW, NErrW, ErrorStringW: ZWideString;
-  FirstMsgA, FirstNErrA: RawByteString;
-  MsgA, NErrA, ErrorStringA: RawByteString;
-  aException: EZSQLThrowable;
-  P: Pointer;
-begin
-  if not SQL_SUCCEDED(RETCODE) then begin
-    if (Handle=nil) or (RETCODE=SQL_INVALID_HANDLE) then
-      aException := EZSQLException.CreateWithCodeAndStatus(SQL_INVALID_HANDLE, 'HY000', 'Invalid handle')
-    else begin
-      RecNum := 1;
-      FirstNativeError := RETCODE;
-      PlainDriver := Connection.GetPlainDriver.GetInstance as TZODBC3PlainDriver;
-      if PlainDriver is TODBC3UnicodePlainDriver then begin
-        ErrorStringW := '';
-        while TODBC3UnicodePlainDriver(PlainDriver).SQLGetDiagRecW(HandleType,Handle,RecNum, @SqlstateW[0],
-          @NativeError,@MessageText[0],SQL_MAX_MESSAGE_LENGTH,@TextLength) and (not 1)=0 do begin
-          while (TextLength>0) and (MessageText[TextLength-1]<=' ') do //trim trailing lineending and spaces
-            dec(TextLength);
-          if RecNum = 1 then begin
-            FirstNativeError := NativeError;
-            if TextLength = 0 then
-              FirstMsgW := 'Unidentified error'
-            else
-              SetString(FirstMsgW, PWideChar(@MessageText[0]), TextLength);
-            SetString(FirstNErrW, PWideChar(@SqlstateW[0]), 5);
-            ErrorStringW := FirstNErrW+'['+IntToUnicode(NativeError)+']:'+FirstMsgW;
-          end else begin
-            NErrW := IntToUnicode(NativeError);
-            {$IFDEF WITH_VAR_INIT_WARNING}MsgW := '';{$ENDIF}
-            SetLength(MsgW, SizeOf(TSQLSTATE)+Length(NErrW)+2+TextLength);
-            P := Pointer(MsgW);
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(SqlstateW, P^, SQL_SQLSTATE_SIZE  shl 1);
-            PWord(PWideChar(P)+6)^ := Ord('[');
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(NErrW)^, (PWideChar(P)+7)^, Length(NErrW)  shl 1);
-            PWord(PWideChar(P)+7+Length(NErrW))^ := Ord(']'); PWord(PWideChar(P)+8+Length(NErrW))^ := Ord(':');
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(MessageText[0], (PWideChar(P)+9+Length(NErrW))^, TextLength shl 1);
-            ErrorStringW := ErrorStringW+ZWideString(LineEnding)+MsgW;
-          end;
-          inc(RecNum);
-        end;
-        {$IFNDEF UNICODE}
-        ErrorStringA := PUnicodeToRaw(Pointer(ErrorStringW), Length(ErrorStringW), ZOSCodePage);
-        FirstNErrA := UnicodeStringToASCII7(FirstNErrW);
-        {$ENDIF}
-      end else begin
-        ErrorStringA := '';
-        while TODBC3RawPlainDriver(PlainDriver).SQLGetDiagRec(HandleType,Handle,RecNum, @SqlstateA[0],
-          @NativeError,@MessageText[0],SQL_MAX_MESSAGE_LENGTH,@TextLength) and (not 1)=0 do begin
-          while (TextLength>0) and (PByte(PAnsiChar(@MessageText[0])+TextLength-1)^ <= Ord(' ')) do //trim trailing lineending and spaces
-            dec(TextLength);
-          if RecNum = 1 then begin
-            FirstNativeError := NativeError;
-            if TextLength = 0
-            then FirstMsgA := 'Unidentified error'
-            else ZSetString(PAnsiChar(@MessageText[0]), TextLength, FirstMsgA);
-            ZSetString(PAnsiChar(@SqlstateA[0]), 5, FirstNErrA);
-            ErrorStringA := FirstNErrA+'['+IntToRaw(NativeError)+']:'+FirstMsgA;
-          end else begin
-            NErrA := IntToRaw(NativeError);
-            {$IFDEF WITH_VAR_INIT_WARNING}MsgA := '';{$ENDIF}
-            SetLength(MsgA, SizeOf(TSQLSTATE)+Length(NErrA)+2+TextLength);
-            P := Pointer(MsgA);
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(SqlstateA, P^, SQL_SQLSTATE_SIZE);
-            PByte(PAnsiChar(P)+6)^ := Ord('[');
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(NErrA)^, (PAnsiChar(P)+7)^, Length(NErrA));
-            PByte(PAnsiChar(P)+7+Length(NErrA))^ := Ord(']'); PByte(PAnsiChar(P)+8+Length(NErrA))^ := Ord(':');
-            {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(MessageText[0], (PAnsiChar(P)+9+Length(NErrA))^, TextLength);
-            ErrorStringA := ErrorStringA+RawByteString(LineEnding)+MsgA
-          end;
-          inc(RecNum);
-        end;
-        {$IFDEF UNICODE}
-        ErrorStringW := PRawToUnicode(Pointer(ErrorStringA), Length(ErrorStringA), ZOSCodePage);
-        FirstNErrW := ASCII7ToUnicodeString(FirstNErrA);
-        {$ENDIF}
-      end;
-      if RecNum = 1 then begin
-        {$IFDEF UNICODE}FirstNErrW{$ELSE}FirstNErrA{$ENDIF} := 'HY000';
-        {$IFDEF UNICODE}ErrorStringW{$ELSE}ErrorStringA{$ENDIF} := SUnknownError;
-      end;
-      if SQL <> '' then
-        {$IFDEF UNICODE}ErrorStringW{$ELSE}ErrorStringA{$ENDIF} := {$IFDEF UNICODE}ErrorStringW{$ELSE}ErrorStringA{$ENDIF}+
-          LineEnding+'The SQL: '+SQL;
-      if RETCODE = SQL_SUCCESS_WITH_INFO
-      then aException := EZSQLWarning.CreateWithCodeAndStatus(FirstNativeError, {$IFDEF UNICODE}FirstNErrW, ErrorStringW{$ELSE}FirstNErrA, ErrorStringA{$ENDIF})
-      else aException := EZSQLException.CreateWithCodeAndStatus(FirstNativeError, {$IFDEF UNICODE}FirstNErrW, ErrorStringW{$ELSE}FirstNErrA, ErrorStringA{$ENDIF});
-    end;
-    if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcOther,
-        {$IFDEF UNICODE}
-        PUnicodeToRaw(Pointer(aException.Message), Length(aException.Message), ZOSCodePage),
-        UnicodeStringToASCII7(Connection.GetIZPlainDriver.GetProtocol)
-        {$ELSE}
-        aException.Message, Connection.GetIZPlainDriver.GetProtocol
-        {$ENDIF});
-    if RETCODE = SQL_SUCCESS_WITH_INFO then
-      Connection.SetLastWarning(aException as EZSQLWarning)
-    else
-      raise aException;
-  end;
-end;
-
 const ODBC_Str_C_Type: Array[Boolean] of SQLSMALLINT = (SQL_C_CHAR, SQL_C_WCHAR);
 function ConvertODBCTypeToSQLType(ODBCType, Scale: SQLSMALLINT; Precision: Integer; UnSigned: Boolean;
   ConSettings: PZConSettings; ODBC_CType: PSQLSMALLINT): TZSQLType;
@@ -351,11 +233,10 @@ var ODBCCType: SQLSMALLINT;
 begin
   case ODBCType of
     SQL_NUMERIC,
-    SQL_DECIMAL:      if (Scale <= 4) and (Precision <= sAlignCurrencyScale2Precision[Scale]) then begin
-                        Result := stCurrency;
-                        ODBCCType := SQL_C_NUMERIC;
-                      end else begin
-                        Result := stBigDecimal;
+    SQL_DECIMAL:      begin
+                        if (Scale <= 4) and (Precision <= sAlignCurrencyScale2Precision[Scale])
+                        then Result := stCurrency
+                        else Result := stBigDecimal;
                         ODBCCType := SQL_C_NUMERIC;
                       end;
     SQL_INTEGER:      if UnSigned then begin

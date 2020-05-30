@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -105,7 +105,8 @@ type
     FResultFormat: PInteger;
     FBinaryValues, Finteger_datetimes, FIsOidAsBlob: Boolean;
     FDecimalSeps: array[Boolean] of Char;
-    FConnection: IZPostgreSQLConnection;
+    FPGConnection: IZPostgreSQLConnection;
+    FByteBuffer: PByteBuffer;
     procedure ClearPGResult;
     function CreatePGConvertError(ColumnIndex: Integer; DataType: OID): EZPGConvertError;
   protected
@@ -325,18 +326,18 @@ begin
             stDouble      : JSONWriter.AddDouble(PG2Double(P));
             stBigDecimal  : begin
                               PGNumeric2BCD(P, BCD);
-                              JSONWriter.AddNoJSONEscape(@fTinyBuffer[0], BCDToRaw(BCD, @fTinyBuffer[0], '.'));
+                              JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), BCDToRaw(BCD, PAnsiChar(FByteBuffer), '.'));
                             end;
             stBytes,
             stBinaryStream: if TypeOID = BYTEAOID then
                               JSONWriter.WrBase64(P, FPlainDriver.PQgetlength(Fres, RNo, C), True)
                             else begin
-                              PPointer(@fTinyBuffer[0])^ := nil; //init avoid gpf
+                              PPointer(FByteBuffer)^ := nil; //init avoid gpf
                               L := PG2Cardinal(P);
-jmpOIDBLob:                   PIZlob(@fTinyBuffer[0])^ := TZPostgreSQLOidBlob.Create(FConnection, L , lsmRead, FOpenLobStreams);
-                              P := PIZlob(@fTinyBuffer[0])^.GetBuffer(fRawTemp, L);
+jmpOIDBLob:                   PIZlob(FByteBuffer)^ := TZPostgreSQLOidBlob.Create(FPGConnection, L , lsmRead, FOpenLobStreams);
+                              P := PIZlob(FByteBuffer)^.GetBuffer(fRawTemp, L);
                               JSONWriter.WrBase64(P, L, True);
-                              PIZlob(@fTinyBuffer[0])^ := nil;
+                              PIZlob(FByteBuffer)^ := nil;
                               fRawTemp := '';
                             end;
             stGUID        : begin
@@ -361,8 +362,8 @@ jmpDate:                      if jcoMongoISODate in JSONComposeOptions
                                 then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                                 else JSONWriter.Add('"');
                               PG2Date(PInteger(P)^, TS.Year, TS.Month, TS.Day);
-                              DateToIso8601PChar(@FTinyBuffer[0], True, TS.Year, TS.Month, TS.Day);
-                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], 10);
+                              DateToIso8601PChar(PUTF8Char(FByteBuffer), True, TS.Year, TS.Month, TS.Day);
+                              JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer), 10);
                               if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('Z)"')
                               else JSONWriter.Add('"');
@@ -376,8 +377,8 @@ jmpTime:                      if jcoMongoISODate in JSONComposeOptions
                               if Finteger_datetimes
                               then dt2Time(PG2Int64(P), TS.Hour, TS.Minute, TS.Second, Ts.Fractions)
                               else dt2Time(PG2Double(P), TS.Hour, TS.Minute, TS.Second, Ts.Fractions);
-                              TimeToIso8601PChar(@FTinyBuffer[0], True, TS.Hour, TS.Minute, TS.Second, TS.Fractions, 'T', jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], 9+4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions)));
+                              TimeToIso8601PChar(PUTF8Char(FByteBuffer), True, TS.Hour, TS.Minute, TS.Second, TS.Fractions, 'T', jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer), 9+4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions)));
                               if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('Z)"')
                               else JSONWriter.Add('"');
@@ -391,9 +392,9 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                               if Finteger_datetimes
                               then PG2DateTime(PInt64(P)^, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions)
                               else PG2DateTime(PDouble(P)^, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions);
-                              DateToIso8601PChar(@FTinyBuffer[0], True, TS.Year, TS.Month, TS.Day);
-                              TimeToIso8601PChar(@FTinyBuffer[10], True, TS.Hour, TS.Minute, TS.Second, TS.Fractions, 'T', jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],19+(4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions))));
+                              DateToIso8601PChar(PUTF8Char(FByteBuffer), True, TS.Year, TS.Month, TS.Day);
+                              TimeToIso8601PChar(PUTF8Char(FByteBuffer)+10, True, TS.Hour, TS.Minute, TS.Second, TS.Fractions, 'T', jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),19+(4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions))));
                               if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('Z)"')
                               else JSONWriter.Add('"');
@@ -401,18 +402,18 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
             stString,
             stUnicodeString:if (TypeOID = MACADDROID) then begin
                               JSONWriter.Add('"');
-                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PGMacAddr2Raw(P, @FTinyBuffer[0]));
+                              JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer), PGMacAddr2Raw(P, PAnsiChar(FByteBuffer)));
                               JSONWriter.Add('"');
                             end else if (TypeOID = INETOID) or (TypeOID = CIDROID) then begin
                               JSONWriter.Add('"');
-                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PGInetAddr2Raw(P, @FTinyBuffer[0]));
+                              JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer), PGInetAddr2Raw(P, PAnsiChar(FByteBuffer)));
                               JSONWriter.Add('"');
                             end else if TypeOID = INTERVALOID then begin
                               if Finteger_datetimes
                               then DT := PG2DateTime(PInt64(P)^)
                               else DT := PG2DateTime(PDouble(P)^);
                               DT := DT + (PG2Integer(P+8)-102) * SecsPerDay + PG2Integer(P+12) * SecsPerDay * 30;
-                              P := @fTinyBuffer[0];
+                              P := PAnsiChar(FByteBuffer);
                               if Int(DT) = 0 then begin
                                 DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
                                 Date2PG(DT, PInteger(P)^);
@@ -568,8 +569,9 @@ begin
   inherited Create(Statement, SQL,
     TZPostgresResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self),
     Statement.GetConnection.GetConSettings);
-  FConnection := Connection;
-  FconnAddress := FConnection.GetPGconnAddress;
+  FPGConnection := Connection;
+  FconnAddress := FPGConnection.GetPGconnAddress;
+  FByteBuffer := FPGConnection.GetByteBufferAddress;
   Fres := resAddress^;
   FresAddress := resAddress;
   FPlainDriver := Connection.GetPlainDriver;
@@ -905,42 +907,42 @@ begin
                       Len := 5;
                     end;
         stSmall:    begin
-                      IntToRaw(PG2SmallInt(Result), @fTinyBuffer[0], @PEnd);
+                      IntToRaw(PG2SmallInt(Result), PAnsiChar(fByteBuffer), @PEnd);
                       goto JmpPEndTinyBuf;
                     end;
         stLongWord: begin
-                      IntToRaw(PG2Cardinal(Result), @fTinyBuffer[0], @PEnd);
+                      IntToRaw(PG2Cardinal(Result), PAnsiChar(fByteBuffer), @PEnd);
                       goto JmpPEndTinyBuf;
                     end;
         stInteger:  begin
-                      IntToRaw(PG2Integer(Result), @fTinyBuffer[0], @PEnd);
+                      IntToRaw(PG2Integer(Result), PAnsiChar(fByteBuffer), @PEnd);
                       goto JmpPEndTinyBuf;
                     end;
         stLong:     begin
-                      IntToRaw(PG2int64(Result), @fTinyBuffer[0], @PEnd);
+                      IntToRaw(PG2int64(Result), PAnsiChar(fByteBuffer), @PEnd);
                       goto JmpPEndTinyBuf;
                     end;
         stFloat:    begin
-                      Len := FloatToSqlRaw(PG2Single(Result), @fTinyBuffer[0]);
-                      Result := @fTinyBuffer[0];
+                      Len := FloatToSqlRaw(PG2Single(Result), PAnsiChar(fByteBuffer));
+                      Result := PAnsiChar(fByteBuffer);
                     end;
         stDouble:   begin
-                      Len := FloatToSqlRaw(PG2Double(Result), @fTinyBuffer[0]);
-                      Result := @fTinyBuffer[0];
+                      Len := FloatToSqlRaw(PG2Double(Result), PAnsiChar(fByteBuffer));
+                      Result := PAnsiChar(fByteBuffer);
                     end;
         stCurrency: begin
-                      CurrToRaw(GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), @fTinyBuffer[0], @PEnd);
-JmpPEndTinyBuf:       Result := @fTinyBuffer[0];
+                      CurrToRaw(GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), PAnsiChar(fByteBuffer), @PEnd);
+JmpPEndTinyBuf:       Result := PAnsiChar(fByteBuffer);
                       Len := PEnd - Result;
                     end;
         stBigDecimal: begin
                       PGNumeric2BCD(Result, BCD{%H-});
-                      Result := @fTinyBuffer[0];
-                      Len := BCDToRaw(BCD, @fTinyBuffer[0], '.');
+                      Result := PAnsiChar(fByteBuffer);
+                      Len := BCDToRaw(BCD, PAnsiChar(fByteBuffer), '.');
                     end;
         stDate:     begin
                       PG2Date(PInteger(Result)^, TS.Year, TS.Month, TS.Day);
-jmpDate:              Result := @fTinyBuffer[0];
+jmpDate:              Result := PAnsiChar(fByteBuffer);
                       Len := DateToRaw(TS.Year, TS.Month, TS.Day, Result,
                         ConSettings.DisplayFormatSettings.DateFormat, False, False);
                     end;
@@ -948,7 +950,7 @@ jmpDate:              Result := @fTinyBuffer[0];
                       if Finteger_datetimes
                       then dt2time(PG2Int64(Result), TS.Hour, TS.Minute, TS.Second, TS.Fractions)
                       else dt2time(PG2Double(Result), TS.Hour, TS.Minute, TS.Second, TS.Fractions);
-jmpTime:              Result := @fTinyBuffer[0];
+jmpTime:              Result := PAnsiChar(fByteBuffer);
                       Len := TimeToRaw(TS.Hour, TS.Minute, TS.Second, TS.Fractions,
                         Result, ConSettings.DisplayFormatSettings.TimeFormat, False, False);
                     end;
@@ -956,7 +958,7 @@ jmpTime:              Result := @fTinyBuffer[0];
                       if Finteger_datetimes
                       then PG2DateTime(PInt64(Result)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
                       else PG2DateTime(PDouble(Result)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
-jmpTS:                Result := @fTinyBuffer[0];
+jmpTS:                Result := PAnsiChar(fByteBuffer);
                       Len := ZSysUtils.DateTimeToRaw(TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
                         TS.Second, TS.Fractions, Result, ConSettings.DisplayFormatSettings.DateTimeFormat, False, False);
                     end;
@@ -966,24 +968,24 @@ jmpTS:                Result := @fTinyBuffer[0];
                       UUID.D2 := (PGUID(Result).D2 and $00FF shl 8) or (PGUID(Result).D2 and $FF00 shr 8);
                       UUID.D3 := (PGUID(Result).D3 and $00FF shl 8) or (PGUID(Result).D3 and $FF00 shr 8);
                       PInt64(@UUID.D4)^ := PInt64(@PGUID(Result).D4)^;
-                      ZSysUtils.GUIDToBuffer(@UUID.D1, PAnsiChar(@fTinyBuffer[0]), []); //pg does not Return brackets adopt behavior
+                      ZSysUtils.GUIDToBuffer(@UUID.D1, PAnsiChar(fByteBuffer), []); //pg does not Return brackets adopt behavior
                       {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
                       {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
                       {$ELSE}
-                      ZSysUtils.GUIDToBuffer(Result, PAnsiChar(@fTinyBuffer[0]), []); //pg does not Return brackets adopt behavior
+                      ZSysUtils.GUIDToBuffer(Result, PAnsiChar(fByteBuffer), []); //pg does not Return brackets adopt behavior
                       {$ENDIF}
                       for ColumnIndex := 0 to 35 do
-                        fTinyBuffer[ColumnIndex] := fTinyBuffer[ColumnIndex] or $20;
-                      Result := @fTinyBuffer[0];
+                        PByte(PAnsiChar(fByteBuffer)+ColumnIndex)^ := PByte(PAnsiChar(fByteBuffer)+ColumnIndex)^ or 20;
+                      Result := PAnsiChar(fByteBuffer);
                       Len := 36;
                     end;
         stString,
         stUnicodeString: if (TypeOID = MACADDROID) then begin
-                      Len := PGMacAddr2Raw(Result, @FTinyBuffer[0]);
-                      Result := @fTinyBuffer[0];
+                      Len := PGMacAddr2Raw(Result, PAnsiChar(fByteBuffer));
+                      Result := PAnsiChar(fByteBuffer);
                     end else if (TypeOID = INETOID) or (TypeOID = CIDROID) then begin
-                      Len := PGInetAddr2Raw(Result, @FTinyBuffer[0]);
-                      Result := @fTinyBuffer[0];
+                      Len := PGInetAddr2Raw(Result, PAnsiChar(fByteBuffer));
+                      Result := PAnsiChar(fByteBuffer);
                     end else if TypeOID = INTERVALOID then begin
                       if Finteger_datetimes
                       then DT := PG2DateTime(PInt64(Result)^)
@@ -1091,43 +1093,43 @@ begin
                       Len := 5;
                     end;
         stSmall:    begin
-                      IntToUnicode(PG2SmallInt(P), @fTinyBuffer[0], @PEnd);
+                      IntToUnicode(PG2SmallInt(P), PWideChar(fByteBuffer), @PEnd);
                       goto JmpPEndTinyBuf;
                     end;
         stLongWord: begin
-                      IntToUnicode(PG2Cardinal(P), @fTinyBuffer[0], @PEnd);
+                      IntToUnicode(PG2Cardinal(P), PWideChar(fByteBuffer), @PEnd);
                       goto JmpPEndTinyBuf;
                     end;
         stInteger:  begin
-                      IntToUnicode(PG2Integer(P), @fTinyBuffer[0], @PEnd);
+                      IntToUnicode(PG2Integer(P), PWideChar(fByteBuffer), @PEnd);
                       goto JmpPEndTinyBuf;
                     end;
         stLong:     begin
-                      IntToUnicode(PG2int64(P), @fTinyBuffer[0], @PEnd);
+                      IntToUnicode(PG2int64(P), PWideChar(fByteBuffer), @PEnd);
                       goto JmpPEndTinyBuf;
                     end;
         stFloat:    begin
-                      Len := FloatToSqlUnicode(PG2Single(P), @fTinyBuffer[0]);
-                      Result := @fTinyBuffer[0];
+                      Len := FloatToSqlUnicode(PG2Single(P), PWideChar(fByteBuffer));
+                      Result := PWideChar(fByteBuffer);
                     end;
         stDouble:   begin
-                      Len := FloatToSqlUnicode(PG2Double(P), @fTinyBuffer[0]);
-                      Result := @fTinyBuffer[0];
+                      Len := FloatToSqlUnicode(PG2Double(P), PWideChar(fByteBuffer));
+                      Result := PWideChar(fByteBuffer);
                     end;
         stCurrency: begin
                       C := GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-                      CurrToUnicode(C, @fTinyBuffer[0], @PEnd);
-JmpPEndTinyBuf:       Result := @fTinyBuffer[0];
+                      CurrToUnicode(C, PWideChar(fByteBuffer), @PEnd);
+JmpPEndTinyBuf:       Result := PWideChar(fByteBuffer);
                       Len := PEnd - Result;
                     end;
         stBigDecimal: begin
                       PGNumeric2BCD(P, BCD{%H-});
-                      Result := @fTinyBuffer[0];
-                      Len := BCDToUni(BCD, @fTinyBuffer[0], '.');
+                      Result := PWideChar(fByteBuffer);
+                      Len := BCDToUni(BCD, Result, '.');
                     end;
         stDate:     begin
                       PG2Date(PInteger(P)^, TS.Year, TS.Month, TS.Day);
-jmpDate:              Result := @fTinyBuffer[0];
+jmpDate:              Result := PWideChar(fByteBuffer);
                       Len := DateToUni(TS.Year, TS.Month, TS.Day,
                         Result, ConSettings.DisplayFormatSettings.DateFormat, False, False);
                     end;
@@ -1135,7 +1137,7 @@ jmpDate:              Result := @fTinyBuffer[0];
                       if Finteger_datetimes
                       then dt2time(PG2Int64(P), TS.Hour, TS.Minute, TS.Second, TS.Fractions)
                       else dt2time(PG2Double(P), TS.Hour, TS.Minute, TS.Second, TS.Fractions);
-jmpTime:              Result := @fTinyBuffer[0];
+jmpTime:              Result := PWideChar(fByteBuffer);
                       Len := TimeToUni(TS.Hour, TS.Minute, TS.Second, TS.Fractions,
                         Result, ConSettings.DisplayFormatSettings.TimeFormat, False, tS.IsNegative);
                     end;
@@ -1143,7 +1145,7 @@ jmpTime:              Result := @fTinyBuffer[0];
                       if Finteger_datetimes
                       then PG2DateTime(PInt64(P)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
                       else PG2DateTime(PDouble(P)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
-jmpTS:                Result := @fTinyBuffer[0];
+jmpTS:                Result := PWideChar(fByteBuffer);
                       Len := ZSysUtils.DateTimeToUni(TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
                         TS.Second, TS.Fractions, Result, ConSettings.DisplayFormatSettings.DateTimeFormat, False, False);
                     end;
@@ -1153,24 +1155,24 @@ jmpTS:                Result := @fTinyBuffer[0];
                       UUID.D2 := (PGUID(P).D2 and $00FF shl 8) or (PGUID(P).D2 and $FF00 shr 8);
                       UUID.D3 := (PGUID(P).D3 and $00FF shl 8) or (PGUID(P).D3 and $FF00 shr 8);
                       PInt64(@UUID.D4)^ := PInt64(@PGUID(P).D4)^;
-                      ZSysUtils.GUIDToBuffer(@UUID.D1, PWideChar(@fTinyBuffer[0]), []); //pg does not Return brackets adopt behavior
+                      ZSysUtils.GUIDToBuffer(@UUID.D1, PWideChar(fByteBuffer), []); //pg does not Return brackets adopt behavior
                       {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
                       {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
                       {$ELSE}
-                      ZSysUtils.GUIDToBuffer(P, PWideChar(@fTinyBuffer[0]), []); //pg does not Return brackets adopt behavior
+                      ZSysUtils.GUIDToBuffer(P, PWideChar(fByteBuffer), []); //pg does not Return brackets adopt behavior
                       {$ENDIF}
                       for ColumnIndex := 0 to 35 do //to lowercase
-                        PWord(@fTinyBuffer[ColumnIndex shl 1])^ := PWord(@fTinyBuffer[ColumnIndex shl 1])^ or $20;
-                      Result := @fTinyBuffer[0];
+                        PWord(PWideChar(fByteBuffer)+ColumnIndex)^ := PWord(PWideChar(fByteBuffer)+ColumnIndex)^ or $0020;
+                      Result := PWideChar(fByteBuffer);
                       Len := 36;
                     end;
         stUnicodeString,
         stString:   if (TypeOID = MACADDROID) then begin
-                      Len := PGMacAddr2Uni(P, @FTinyBuffer[0]);
-                      Result := @fTinyBuffer[0];
+                      Len := PGMacAddr2Uni(P, PWideChar(fByteBuffer));
+                      Result := PWideChar(fByteBuffer);
                     end else if (TypeOID = INETOID) or (TypeOID = CIDROID) then begin
-                      Len := PGInetAddr2Uni(P, @FTinyBuffer[0]);
-                      Result := @fTinyBuffer[0];
+                      Len := PGInetAddr2Uni(P, PWideChar(fByteBuffer));
+                      Result := PWideChar(fByteBuffer);
                     end else if TypeOID = INTERVALOID then begin
                       if Finteger_datetimes
                       then DT := PG2DateTime(PInt64(P)^)
@@ -1356,7 +1358,7 @@ begin
       if FBinaryValues
       then Len := PG2Cardinal(Result)
       else Len := RawToIntDef(PAnsiChar(Result), 0);
-      TempLob := TZPostgreSQLOidBlob.Create(FConnection, Len, lsmRead, FOpenLobStreams);
+      TempLob := TZPostgreSQLOidBlob.Create(FPGConnection, Len, lsmRead, FOpenLobStreams);
       FRawTemp := TempLob.GetString;
       TempLob := nil;
       Result := Pointer(FRawTemp);
@@ -1406,12 +1408,12 @@ begin
         stFloat:                      Result := Trunc(PG2Single(P));
         stDouble:                     Result := Trunc(PG2Double(P));
         stCurrency:                   begin
-                                        PCurrency(@fTinyBuffer[0])^ := GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-                                        Result := PInt64(@fTinyBuffer[0])^ div 10000;
+                                        PCurrency(fByteBuffer)^ := GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+                                        Result := PInt64(fByteBuffer)^ div 10000;
                                       end;
         stBigDecimal:                 begin
-                                        PGNumeric2BCD(P, PBCD(@fTinyBuffer[0])^);
-                                        Result := BCD2Int64(PBCD(@fTinyBuffer[0])^);
+                                        PGNumeric2BCD(P, PBCD(fByteBuffer)^);
+                                        Result := BCD2Int64(PBCD(fByteBuffer)^);
                                       end;
         stTime, stTimestamp:          if Finteger_datetimes
                                       then Result := PG2Int64(P)
@@ -1468,8 +1470,8 @@ begin
                                         Result := Result div 10000;
                                       end;
         stBigDecimal:                 begin
-                                        PGNumeric2BCD(P, PBCD(@fTinyBuffer[0])^);
-                                        BCD2Int64(PBCD(@fTinyBuffer[0])^, Result);
+                                        PGNumeric2BCD(P, PBCD(fByteBuffer)^);
+                                        BCD2Int64(PBCD(fByteBuffer)^, Result);
                                       end;
         stTime, stTimestamp:          if Finteger_datetimes
                                       then Result := PG2Int64(P)
@@ -1533,8 +1535,8 @@ begin
                                         Result := Result div 10000;
                                       end;
         stBigDecimal:                 begin
-                                        PGNumeric2BCD(P, PBCD(@fTinyBuffer[0])^);
-                                        BCD2UInt64(PBCD(@fTinyBuffer[0])^, Result);
+                                        PGNumeric2BCD(P, PBCD(fByteBuffer)^);
+                                        BCD2UInt64(PBCD(fByteBuffer)^, Result);
                                       end;
         stTime, stTimestamp:          if Finteger_datetimes
                                       then Result := PG2Int64(P)
@@ -1590,8 +1592,8 @@ begin
         stDouble:                     Result := PG2Double(P);
         stCurrency:                   Result := GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         stBigDecimal:                 begin
-                                        PGNumeric2BCD(P, PBCD(@fTinyBuffer[0])^);
-                                        Result := BCDToDouble(PBCD(@fTinyBuffer[0])^);
+                                        PGNumeric2BCD(P, PBCD(fByteBuffer)^);
+                                        Result := BCDToDouble(PBCD(fByteBuffer)^);
                                       end;
         stTime:                       if Finteger_datetimes
                                       then Result := PG2Time(PInt64(P)^)
@@ -1740,8 +1742,8 @@ begin
         stDouble:                     Result := PG2Double(P);
         stCurrency:                   Result := GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         stBigDecimal:                 begin
-                                        PGNumeric2BCD(P, PBCD(@fTinyBuffer[0])^);
-                                        Result := BCDToDouble(PBCD(@fTinyBuffer[0])^);
+                                        PGNumeric2BCD(P, PBCD(fByteBuffer)^);
+                                        Result := BCDToDouble(PBCD(fByteBuffer)^);
                                       end;
         stDate:                       Result := PG2Date(Pinteger(P)^);
         stTime:                       if Finteger_datetimes
@@ -1814,7 +1816,7 @@ end;
 
 function TZPostgreSQLResultSet.GetConnection: IZPostgreSQLConnection;
 begin
-  Result := FConnection;
+  Result := FPGConnection;
 end;
 
 {**
@@ -1853,8 +1855,8 @@ begin
                                       then Result := PGNumeric2Currency(P)
                                       else Result := PGCash2Currency(P);
         stBigDecimal:                 begin
-                                        PGNumeric2BCD(P, PBCD(@fTinyBuffer[0])^);
-                                        BCDToCurr(PBCD(@fTinyBuffer[0])^, Result);
+                                        PGNumeric2BCD(P, PBCD(fByteBuffer)^);
+                                        BCDToCurr(PBCD(fByteBuffer)^, Result);
                                       end;
         //stGUID: ;
         stAsciiStream, stUnicodeStream,
@@ -1912,20 +1914,20 @@ from_str:             Len := ZFastCode.StrLen(P);
                       Result.IsNegative := False;
                       if Finteger_datetimes
                       then PG2DateTime(PInt64(P)^, Result.Year, Result.Month, Result.Day,
-                        PZTime(@FTinyBuffer[0])^.Hour, PZTime(@FTinyBuffer[0])^.Minute,
-                        PZTime(@FTinyBuffer[0])^.Second, PZTime(@FTinyBuffer[0])^.Fractions)
+                        PZTime(fByteBuffer)^.Hour, PZTime(fByteBuffer)^.Minute,
+                        PZTime(fByteBuffer)^.Second, PZTime(fByteBuffer)^.Fractions)
                       else PG2DateTime(PDouble(P)^, Result.Year, Result.Month, Result.Day,
-                        PZTime(@FTinyBuffer[0])^.Hour, PZTime(@FTinyBuffer[0])^.Minute,
-                        PZTime(@FTinyBuffer[0])^.Second, PZTime(@FTinyBuffer[0])^.Fractions);
+                        PZTime(fByteBuffer)^.Hour, PZTime(fByteBuffer)^.Minute,
+                        PZTime(fByteBuffer)^.Second, PZTime(fByteBuffer)^.Fractions);
                     end else begin
                       Len := ZFastCode.StrLen(P);
                       LastWasNull := not TryPCharToTimeStamp(P, Len, ConSettings^.ReadFormatSettings,
-                        PZTimeStamp(@FTinyBuffer[0])^);
+                        PZTimeStamp(fByteBuffer)^);
                       if LastWasNull then
 jmpZero:                PInt64(@Result.Year)^ := 0
                       else begin
-                        Result := PZDate(@FTinyBuffer[0])^;
-                        Result.IsNegative := PZTimeStamp(@FTinyBuffer[0])^.IsNegative;
+                        Result := PZDate(fByteBuffer)^;
+                        Result.IsNegative := PZTimeStamp(fByteBuffer)^.IsNegative;
                       end;
                     end;
       stBoolean, stSmall,
@@ -1982,21 +1984,21 @@ from_str:           Len := StrLen(P);
       stTimestamp:if FBinaryValues then begin
                     Result.IsNegative := False;
                     if Finteger_datetimes
-                    then PG2DateTime(PInt64(P)^, PZDate(@fTinyBuffer[0])^.Year,
-                      PZDate(@fTinyBuffer[0])^.Month, PZDate(@fTinyBuffer[0])^.Day,
+                    then PG2DateTime(PInt64(P)^, PZDate(fByteBuffer)^.Year,
+                      PZDate(fByteBuffer)^.Month, PZDate(fByteBuffer)^.Day,
                       Result.Hour, Result.Minute, Result.Second, Result.Fractions)
-                    else PG2DateTime(PDouble(P)^, PZDate(@fTinyBuffer[0])^.Year,
-                      PZDate(@fTinyBuffer[0])^.Month, PZDate(@fTinyBuffer[0])^.Day,
+                    else PG2DateTime(PDouble(P)^, PZDate(fByteBuffer)^.Year,
+                      PZDate(fByteBuffer)^.Month, PZDate(fByteBuffer)^.Day,
                       Result.Hour, Result.Minute, Result.Second, Result.Fractions);
                   end else begin
                     Len := StrLen(P);
                     LastWasNull := not TryPCharToTimeStamp(P, Len, ConSettings^.ReadFormatSettings,
-                      PZTimeStamp(@fTinyBuffer[0])^);
+                      PZTimeStamp(fByteBuffer)^);
                     if LastWasNull then begin
 jmpZero:              PCardinal(@Result.Hour)^ := 0;
                       PInt64(@Result.Second)^ := 0;
                     end else begin
-                      Result := PZTime(@PZTimeStamp(@fTinyBuffer[0]).Hour)^;
+                      Result := PZTime(@PZTimeStamp(fByteBuffer).Hour)^;
                       Result.IsNegative := False;
                     end;
                   end;
@@ -2142,7 +2144,7 @@ begin
                         if FBinaryValues
                         then Len := PG2Cardinal(P)
                         else Len := RawToUInt64(P);
-                        Result := TZPostgreSQLOidBlob.Create(FConnection, Len, LobStreamMode, FOpenLobStreams);
+                        Result := TZPostgreSQLOidBlob.Create(FPGConnection, Len, LobStreamMode, FOpenLobStreams);
                       end else if FBinaryValues then begin
                         Len := FPlainDriver.PQgetlength(Fres, ROW_IDX, ColumnIndex);
                         Result := TZLocalMemBlob.CreateWithData(P, Len )

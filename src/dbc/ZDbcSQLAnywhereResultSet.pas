@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -93,6 +93,7 @@ type
     Fapi_version, FDataLen: TSize_T; //just current datalen of buffer (if variable type)
     FDataValues: Pa_sqlany_data_valueArray;
     FColumnData: Pointer; //one buffer for all column data fields
+    FByteBuffer: PByteBuffer;
     function FillData({$IFNDEF GENERIC_INDEX}var{$ENDIF} Index: Integer;
       out native_type: Ta_sqlany_native_type): Boolean;
     function CreateConversionError(Index: Integer): EZSQLException;
@@ -243,8 +244,6 @@ uses SysUtils, TypInfo,
 procedure TZAbstractSQLAnywhereResultSet.AfterClose;
 begin
   inherited;
-  PPointer(@fTinyBuffer[0])^ := nil;
-  Fa_sqlany_stmt := @fTinyBuffer[0];
   if (FColumnData <> nil) then begin
     FreeMem(FColumnData);
     FColumnData := nil;
@@ -257,6 +256,7 @@ begin
     FreeMem(FDataValues);
     FDataValues := nil;
   end;
+  Fa_sqlany_stmt := @FDataValues;
 end;
 
 constructor TZAbstractSQLAnywhereResultSet.Create(const Statement: IZStatement;
@@ -264,6 +264,7 @@ constructor TZAbstractSQLAnywhereResultSet.Create(const Statement: IZStatement;
 var ResultSetMetadata: TContainedObject;
 begin
   FSQLAnyConnection := Statement.GetConnection as IZSQLAnywhereConnection;
+  FByteBuffer := FSQLAnyConnection.GetByteBufferAddress;
   Fapi_version := FSQLAnyConnection.Get_api_version;
   if Fapi_version >= SQLANY_API_VERSION_4
   then ResultSetMetadata := TZSQLAnyWhereResultSetMetadataV4Up.Create(FSQLAnyConnection.GetMetadata, SQL, Self)
@@ -315,11 +316,11 @@ begin
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     end else if (Ord(ColumnType) >= Ord(stAsciiStream)) then begin
       if FplainDriver.sqlany_get_data_info(Fa_sqlany_stmt^, Index, Fdata_info) = 0 then
-        FSQLAnyConnection.HandleError(lcOther, 'sqlany_get_data_info', Self);
+        FSQLAnyConnection.HandleErrorOrWarning(lcOther, 'sqlany_get_data_info', Self);
       Result := (Fdata_info.is_null = 0);
     end else begin
       if FplainDriver.sqlany_get_column(Fa_sqlany_stmt^, Index, Pointer(ABind)) = 0 then
-        FSQLAnyConnection.HandleError(lcOther, 'sqlany_get_column', Self);
+        FSQLAnyConnection.HandleErrorOrWarning(lcOther, 'sqlany_get_column', Self);
       Result := (ABind.is_null^ = 0);
       FData :=  ABind.buffer;
       if ABind.length = nil
@@ -754,7 +755,7 @@ begin
 {$ENDIF}
   if FillData(ColumnIndex, native_type) then case native_type of
     DT_TINYINT    : begin
-                      IntToRaw(Cardinal(PByte(FData)^), PAnsiChar(@FTinyBuffer[0]), @Result);
+                      IntToRaw(Cardinal(PByte(FData)^), PAnsiChar(FByteBuffer), @Result);
                       goto set_Results;
                     end;
     DT_BIT        : if PByte(FData)^ <> 0 then begin
@@ -765,37 +766,37 @@ begin
                       Len := 5;
                     end;
     DT_SMALLINT   : begin
-                      IntToRaw(Integer(PSmallInt(FData)^), PAnsiChar(@FTinyBuffer[0]), @Result);
+                      IntToRaw(Integer(PSmallInt(FData)^), PAnsiChar(FByteBuffer), @Result);
                       goto set_Results;
                     end;
     DT_UNSSMALLINT: begin
-                      IntToRaw(Cardinal(PWord(FData)^), PAnsiChar(@FTinyBuffer[0]), @Result);
+                      IntToRaw(Cardinal(PWord(FData)^), PAnsiChar(FByteBuffer), @Result);
                       goto set_Results;
                     end;
     DT_INT        : begin
-                      IntToRaw(PInteger(FData)^, PAnsiChar(@FTinyBuffer[0]), @Result);
+                      IntToRaw(PInteger(FData)^, PAnsiChar(FByteBuffer), @Result);
                       goto set_Results;
                     end;
     DT_UNSINT     : begin
-                      IntToRaw(PCardinal(FData)^, PAnsiChar(@FTinyBuffer[0]), @Result);
+                      IntToRaw(PCardinal(FData)^, PAnsiChar(FByteBuffer), @Result);
                       goto set_Results;
                     end;
     DT_BIGINT     : begin
-                      IntToRaw(PInt64(FData)^, PAnsiChar(@FTinyBuffer[0]), @Result);
+                      IntToRaw(PInt64(FData)^, PAnsiChar(FByteBuffer), @Result);
                       goto set_Results;
                     end;
     DT_UNSBIGINT  : begin
-                      IntToRaw(PUInt64(FData)^, PAnsiChar(@FTinyBuffer[0]), @Result);
-set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
-                      Result := @FTinyBuffer[0];
+                      IntToRaw(PUInt64(FData)^, PAnsiChar(FByteBuffer), @Result);
+set_Results:            Len := Result - PAnsiChar(FByteBuffer);
+                      Result := PAnsiChar(FByteBuffer);
                     end;
     DT_FLOAT      : begin
-                      Len := FloatToSQLRaw(PSingle(FData)^, @FTinyBuffer[0]);
-                      Result := @FTinyBuffer[0];
+                      Len := FloatToSQLRaw(PSingle(FData)^, PAnsiChar(FByteBuffer));
+                      Result := PAnsiChar(FByteBuffer);
                     end;
     DT_DOUBLE     : begin
-                      Len := FloatToSQLRaw(PDouble(FData)^, @FTinyBuffer[0]);
-                      Result := @FTinyBuffer[0];
+                      Len := FloatToSQLRaw(PDouble(FData)^, PAnsiChar(FByteBuffer));
+                      Result := PAnsiChar(FByteBuffer);
                     end;
     DT_TIME,
     DT_DATE,
@@ -810,16 +811,16 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
                     end;
     DT_LONGBINARY,
     DT_LONGNVARCHAR,
-    DT_LONGVARCHAR: if Fdata_info.data_size < SizeOf(FTinyBuffer) then begin
-                      Result := @FTinyBuffer[0];
+    DT_LONGVARCHAR: if Fdata_info.data_size < SizeOf(TByteBuffer) then begin
+                      Result := PAnsiChar(FByteBuffer);
                       ColumnIndex := FplainDriver.sqlany_get_data(Fa_sqlany_stmt^, ColumnIndex,
-                        0, Result, SizeOf(FTinyBuffer));
+                        0, Result, SizeOf(TByteBuffer)-1);
                       if ColumnIndex < 0 then
-                        FSQLAnyConnection.HandleError(lcOther, 'sqlany_get_data', Self);
+                        FSQLAnyConnection.HandleErrorOrWarning(lcOther, 'sqlany_get_data', Self);
                       Len := Cardinal(ColumnIndex);
                     end else FromLob;
     DT_TIMESTAMP_STRUCT : begin
-                    Result := @FTinyBuffer[0];
+                    Result := PAnsiChar(FByteBuffer);
                     case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
                       stDate: Len := DateToRaw(PZSQLAnyDateTime(FData).Year,
                                 PZSQLAnyDateTime(FData).Month +1, PZSQLAnyDateTime(FData).Day,
@@ -872,7 +873,7 @@ begin
 {$ENDIF}
   if FillData(ColumnIndex, native_type) then with TZSQLAnywhereColumnInfo(ColumnsInfo[ColumnIndex]) do case native_type of
     DT_TINYINT    : begin
-                      IntToUnicode(Cardinal(PByte(FData)^), PWideChar(@FTinyBuffer[0]), @Result);
+                      IntToUnicode(Cardinal(PByte(FData)^), PWideChar(FByteBuffer), @Result);
                       goto set_Results;
                     end;
     DT_BIT        : if PByte(FData)^ <> 0 then begin
@@ -883,37 +884,37 @@ begin
                       Len := 5;
                     end;
     DT_SMALLINT   : begin
-                      IntToUnicode(Integer(PSmallInt(FData)^), PWideChar(@FTinyBuffer[0]), @Result);
+                      IntToUnicode(Integer(PSmallInt(FData)^), PWideChar(FByteBuffer), @Result);
                       goto set_Results;
                     end;
     DT_UNSSMALLINT: begin
-                      IntToUnicode(Cardinal(PWord(FData)^), PWideChar(@FTinyBuffer[0]), @Result);
+                      IntToUnicode(Cardinal(PWord(FData)^), PWideChar(FByteBuffer), @Result);
                       goto set_Results;
                     end;
     DT_INT        : begin
-                      IntToUnicode(PInteger(FData)^, PWideChar(@FTinyBuffer[0]), @Result);
+                      IntToUnicode(PInteger(FData)^, PWideChar(FByteBuffer), @Result);
                       goto set_Results;
                     end;
     DT_UNSINT     : begin
-                      IntToUnicode(PCardinal(FData)^, PWideChar(@FTinyBuffer[0]), @Result);
+                      IntToUnicode(PCardinal(FData)^, PWideChar(FByteBuffer), @Result);
                       goto set_Results;
                     end;
     DT_BIGINT     : begin
-                      IntToUnicode(PInt64(FData)^, PWideChar(@FTinyBuffer[0]), @Result);
+                      IntToUnicode(PInt64(FData)^, PWideChar(FByteBuffer), @Result);
                       goto set_Results;
                     end;
     DT_UNSBIGINT  : begin
-                      IntToUnicode(PUInt64(FData)^, PWideChar(@FTinyBuffer[0]), @Result);
-set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
-                      Result := @FTinyBuffer[0];
+                      IntToUnicode(PUInt64(FData)^, PWideChar(FByteBuffer), @Result);
+set_Results:            Len := Result - PWideChar(FByteBuffer);
+                      Result := PWideChar(FByteBuffer);
                     end;
     DT_FLOAT      : begin
-                      Len := FloatToSQLUnicode(PSingle(FData)^, @FTinyBuffer[0]);
-                      Result := @FTinyBuffer[0];
+                      Len := FloatToSQLUnicode(PSingle(FData)^, PWideChar(FByteBuffer));
+                      Result := PWideChar(FByteBuffer);
                     end;
     DT_DOUBLE     : begin
-                      Len := FloatToSQLUnicode(PDouble(FData)^, @FTinyBuffer[0]);
-                      Result := @FTinyBuffer[0];
+                      Len := FloatToSQLUnicode(PDouble(FData)^, PWideChar(FByteBuffer));
+                      Result := PWideChar(FByteBuffer);
                     end;
     DT_FIXCHAR,
     DT_NFIXCHAR,
@@ -932,17 +933,17 @@ set_from_uni:         Len := Length(FUniTemp);
                       else Result := Pointer(FUniTemp);
                     end;
     DT_LONGNVARCHAR,
-    DT_LONGVARCHAR: if Fdata_info.data_size < SizeOf(FTinyBuffer) then begin
-                      Result := @FTinyBuffer[0];
+    DT_LONGVARCHAR: if Fdata_info.data_size < SizeOf(TByteBuffer) then begin
+                      Result := PWideChar(FByteBuffer);
                       ColumnIndex := FplainDriver.sqlany_get_data(Fa_sqlany_stmt^, ColumnIndex,
-                        0, Result, SizeOf(FTinyBuffer));
+                        0, Result, SizeOf(TByteBuffer)-1);
                       if ColumnIndex < 0 then
-                        FSQLAnyConnection.HandleError(lcOther, 'sqlany_get_data', Self);
+                        FSQLAnyConnection.HandleErrorOrWarning(lcOther, 'sqlany_get_data', Self);
                       Len := Cardinal(ColumnIndex);
                       goto Convert;
                     end else FromLob;
     DT_TIMESTAMP_STRUCT : begin
-                    Result := @FTinyBuffer[0];
+                    Result := PWideChar(FByteBuffer);
                     case ColumnType of
                       stDate: Len := DateToUni(Abs(PZSQLAnyDateTime(FData).Year),
                                 PZSQLAnyDateTime(FData).Month +1, PZSQLAnyDateTime(FData).Day,
@@ -1186,7 +1187,7 @@ begin
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     else begin
       if FplainDriver.sqlany_get_data_info(Fa_sqlany_stmt^, ColumnIndex, Fdata_info) = 0 then
-        FSQLAnyConnection.HandleError(lcOther, 'sqlany_get_data_info', Self);
+        FSQLAnyConnection.HandleErrorOrWarning(lcOther, 'sqlany_get_data_info', Self);
       Result := Fdata_info.is_null <> 0;
     end
   end;
@@ -1267,7 +1268,7 @@ begin
       if Row > LastRowNo then
         LastRowNo := Row;
     end else
-jmpErr: FSQLAnyConnection.HandleError(lcExecute, 'sqlany_fetch_absolute', Self)
+jmpErr: FSQLAnyConnection.HandleErrorOrWarning(lcExecute, 'sqlany_fetch_absolute', Self)
   end;
   RowNo := Row;
 end;
@@ -1325,7 +1326,7 @@ begin
         LastRowNo := RowNo;
     end else
 jmpErr:if (RowNo = 1) then
-      FSQLAnyConnection.HandleError(lcExecute, 'sqlany_fetch_next', Self);
+      FSQLAnyConnection.HandleErrorOrWarning(lcExecute, 'sqlany_fetch_next', Self);
   end;
 end;
 
@@ -1347,13 +1348,13 @@ begin
   RowSize := FBindValueSize * Fnum_cols;
   GetMem(FDataValues, RowSize);
   FillChar(FDataValues^, RowSize, #0);
-  sqlany_column_info := @FTinyBuffer[0];
+  sqlany_column_info := Pointer(FByteBuffer);
   RowSize := 0;
   for i := 0 to Fnum_cols -1 do begin
     ColumnInfo := TZSQLAnywhereColumnInfo.Create;
     ColumnsInfo.Add(ColumnInfo);
     if FPlainDriver.sqlany_get_column_info(Fa_sqlany_stmt^, I, sqlany_column_info) <> 1 then
-      FSQLAnyConnection.HandleError(lcOther, 'sqlany_get_column_info', Self);
+      FSQLAnyConnection.HandleErrorOrWarning(lcOther, 'sqlany_get_column_info', Self);
     ColumnInfo.NativeType := sqlany_column_info.native_type;
     ColumnInfo.Nullable := TZColumnNullableType(sqlany_column_info.nullable <> 0);
     ColumnInfo.ReadOnly := True;
@@ -1428,7 +1429,7 @@ begin
   end;
   if FIteration > 1 then
     if FplainDriver.sqlany_set_rowset_size(Fa_sqlany_stmt^, FIteration) <> 1 then
-      FSQLAnyConnection.HandleError(lcOther, 'sqlany_set_rowset_size', Self);
+      FSQLAnyConnection.HandleErrorOrWarning(lcOther, 'sqlany_set_rowset_size', Self);
   FMaxBufIndex := FIteration;
   { allocate just one block of memory for the data buffers }
   GetMem(FColumnData, (RowSize * FIteration));
@@ -1447,7 +1448,7 @@ begin
     if ((FIteration > 1) or (Fapi_version >= SQLANY_API_VERSION_4)) then begin
       Bind.is_address := 0;
       if FplainDriver.sqlany_bind_column(Fa_sqlany_stmt^, Cardinal(I), Pointer(ABind)) <> 1 then
-        FSQLAnyConnection.HandleError(lcOther, 'sqlany_bind_column', Self);
+        FSQLAnyConnection.HandleErrorOrWarning(lcOther, 'sqlany_bind_column', Self);
       IsBound := True;
     end;
     if not IsBound and (Fdata_info = nil) then //need that for IsNull()
@@ -1556,7 +1557,7 @@ begin
     Result := FPlainDriver.sqlany_get_data(FOwnerLob.Fa_sqlany_stmt, FOwnerLob.FColumnIndex,
       FPosition, @Buffer, Count);
     if Result < 0 then
-      FOwnerLob.FConnection.HandleError(lcOther, 'sqlany_get_data', Self);
+      FOwnerLob.FConnection.HandleErrorOrWarning(lcOther, 'sqlany_get_data', Self);
     FPosition := FPosition+TSize_t(Result);
   end;
 end;

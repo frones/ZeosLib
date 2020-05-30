@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -74,7 +74,7 @@ uses
   ZPlainDBLibDriver;
 
 type
-  TZAbstractDblibDataProvider = class
+  TZAbstractDblibDataProvider = Class
     protected
       FPLainDriver: TZDBLIBPLainDriver;
       FHandle: PDBPROCESS;
@@ -142,6 +142,7 @@ type
     FUserEncoding: TZCharEncoding;
     FDecimalSep: Char;
     FClientCP: Word;
+    FByteBuffer: PByteBuffer;
     procedure CheckColumnIndex(ColumnIndex: Integer);
   protected
     FDBLibConnection: IZDBLibConnection;
@@ -338,6 +339,7 @@ begin
   Statement.GetConnection.QueryInterface(IZDBLibConnection, FDBLibConnection);
   FPlainDriver := TZDBLIBPLainDriver(FDBLibConnection.GetIZPlainDriver.GetInstance);
   FHandle := FDBLibConnection.GetConnectionHandle;
+  FByteBuffer := FDBLibConnection.GetByteBufferAddress;
   FSQL := SQL;
   FCheckDBDead := FPlainDriver.GetProtocol = 'mssql';
   FUserEncoding := UserEncoding;
@@ -399,7 +401,7 @@ label AssignGeneric;
     {$IFDEF UNICODE}
     Result := PRawToUnicode(P, ZFastCode.StrLen(P), FClientCP);
     {$ELSE}
-    {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}//done by ZSetString already
+    {$IFDEF FPC}Result := '';{$ENDIF}//done by ZSetString already
     ZSetString(P, ZFastCode.StrLen(P), Result);
     Result := ConSettings^.ConvFuncs.ZRawToString(Result,
           FClientCP, ConSettings^.CTRL_CP);
@@ -570,14 +572,14 @@ begin
               Len := ZDbcUtils.GetAbsorbedTrailingSpacesLen(Result, dbDatLen);
             end;
         tdsUnique: begin
-            Result := @fTinyBuffer[0];
+            Result := PAnsiChar(fByteBuffer);
             GUIDToBuffer(dbData, Result, [guidWithBrackets]);
             Len := 38;
           end;
         else begin
-          Result := @fTinyBuffer[0];
+          Result := PAnsiChar(FByteBuffer);
           Len := FPlainDriver.dbconvert(FHandle, Ord(TDSType), dbData, Len,
-            Ord(tdsVarChar), Pointer(Result), SizeOF(fTinyBuffer)-1);
+            Ord(tdsVarChar), Pointer(Result), SizeOf(TByteBuffer)-1);
           //FDBLibConnection.CheckDBLibError(lcOther, 'GetPAnsiChar');
         end;
       end;
@@ -634,13 +636,13 @@ ConvCCP2W:  fUniTemp := PRawToUnicode(dbData, Len, ColumnCodePage);
             else goto ConvASCII;
           end;
         tdsUnique: begin
-            Result := @fTinyBuffer[0];
+            Result := PWideChar(FByteBuffer);
             GUIDToBuffer(dbData, Result, [guidWithBrackets]);
             Len := 38;
           end;
         else begin
           Len := FPlainDriver.dbconvert(FHandle, Ord(TDSType), Pointer(dbData), Len,
-            Ord(tdsVarChar), @fTinyBuffer[0], SizeOF(fTinyBuffer)-1);
+            Ord(tdsVarChar), PByte(FByteBuffer), SizeOF(TByteBuffer)-1);
           FDBLibConnection.CheckDBLibError(lcOther, 'GetPAnsiChar');
           fUniTemp := Ascii7ToUnicodeString(dbData, Len);
 set_From_W: if Pointer(fUniTemp) = nil
@@ -881,11 +883,11 @@ begin
     if Data <> nil then begin
       if TDStype <> tdsVarChar then begin
         DL := FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsVarchar),
-            @fTinyBuffer[0], SizeOf(fTinyBuffer));
+            PByte(FByteBuffer), SizeOf(TByteBuffer));
         if DL = -1 then
           FDBLibConnection.CheckDBLibError(lcOther, 'GETBIGDECIMAL');
       end;
-      LastWasNull := not TryRawToBCD(PAnsiChar(@fTinyBuffer[0]), DL, Result, '.');
+      LastWasNull := not TryRawToBCD(PAnsiChar(FByteBuffer), DL, Result, '.');
     end else Result := NullBCD;
   end;
 end;
@@ -916,8 +918,8 @@ begin
     LastWasNull := Data = nil;
     if Data <> nil then begin
       DL := FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsVarchar),
-          @fTinyBuffer[0], SizeOf(fTinyBuffer));
-      SQLStrToFloatDef(PAnsiChar(@fTinyBuffer[0]), 0, FDecimalSep, Result, DL);
+          PByte(FByteBuffer), SizeOf(TByteBuffer));
+      SQLStrToFloatDef(PAnsiChar(FByteBuffer), 0, FDecimalSep, Result, DL);
     end else Result := 0;
     //FDBLibConnection.CheckDBLibError(lcOther, 'GETCURRENCY');
   end;

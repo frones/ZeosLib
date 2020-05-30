@@ -122,7 +122,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  ZTestCase, ZTestConsts, ZSqlUpdate, ZEncoding;
+  ZTestCase, ZTestConsts, ZSqlUpdate, ZEncoding, ZDbcInterbaseFirebirdMetadata;
 
 { ZTestCompInterbaseBugReport }
 
@@ -746,8 +746,20 @@ procedure ZTestCompInterbaseBugReport.TestExecutBlockReturning_WithoutParamCheck
 var
   Query: TZQuery;
   SQL: String;
+  DbInfo: IZInterbaseDatabaseInfo;
 begin
   if SkipForReason(srClosedBug) then Exit;
+
+  // Skip this test if we are not on Firebird 2.0+. Returning was added in that
+  // version.
+  Connection.Connect;
+  Supports(Connection.DbcConnection.GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo);
+  if Assigned(DbInfo) then begin
+    if not (DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 2000000)) then begin
+      Check(True);
+      Exit;
+    end;
+  end;
 
   Query := CreateQuery;
   try
@@ -795,8 +807,20 @@ procedure ZTestCompInterbaseBugReport.TestExecutBlockReturning_WithParamCheck;
 var
   Query: TZQuery;
   SQL: String;
+  DbInfo: IZInterbaseDatabaseInfo;
 begin
   if SkipForReason(srClosedBug) then Exit;
+
+  // Skip this test if we are not on Firebird 2.0+. Returning was added in that
+  // version.
+  Connection.Connect;
+  Supports(Connection.DbcConnection.GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo);
+  if Assigned(DbInfo) then begin
+    if not (DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 2000000)) then begin
+      Check(True);
+      Exit;
+    end;
+  end;
 
   Query := CreateQuery;
   try
@@ -1103,8 +1127,20 @@ INSERT with RETURNING works when executed Query.SQL.Text. If you do the Close an
 procedure ZTestCompInterbaseBugReport.Test_Ticket54;
 var
   Query: TZQuery;
+  DbInfo: IZInterbaseDatabaseInfo;
 begin
   if SkipForReason(srClosedBug) then Exit;
+
+  // Skip this test if we are not on Firebird 2.0+. Returning was added in that
+  // version.
+  Connection.Connect;
+  Supports(Connection.DbcConnection.GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo);
+  if Assigned(DbInfo) then begin
+    if not (DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 2000000)) then begin
+      Check(True);
+      Exit;
+    end;
+  end;
 
   Query := CreateQuery;
   try
@@ -1163,7 +1199,17 @@ end;
 procedure ZTestCompInterbaseBugReport.Test_Ticket67;
 var
   Query: TZQuery;
+  DbInfo: IZInterbaseDatabaseInfo;
 begin
+  Connection.Connect;
+  Supports(Connection.DbcConnection.GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo);
+  if Assigned(DbInfo) then begin
+    if not (DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 2000000)) then begin
+      Check(True);
+      Exit;
+    end;
+  end;
+
   Query := CreateQuery;
   Query.ParamCheck := False;
   Query.SQL.Text := 'execute block (P1 integer = ?) returns (P2 integer) as begin select R1 from PROCEDURE1(:p1) into :P2; suspend; end';
@@ -1218,7 +1264,19 @@ const
 var
   Query: TZQuery;
   FormatSettings: TFormatSettings;
+  DbInfo: IZInterbaseDatabaseInfo;
 begin
+  //skip this test if we are not on Firebird 2.0+ - the ability to cast a parameter
+  //was introduced in Firebird 2.0. Earlier versions and Interbase can't run this test.
+  Connection.Connect;
+  Supports(Connection.DbcConnection.GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo);
+  if Assigned(DbInfo) then begin
+    if not (DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 2000000)) then begin
+      Check(True);
+      Exit;
+    end;
+  end;
+
   FormatSettings.DateSeparator := '-';
   FormatSettings.TimeSeparator := ':';
   FormatSettings.ShortDateFormat := 'yyyy/mm/dd';

@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -79,10 +79,16 @@ type
     ['{FAAAFCE0-F550-4098-96C6-580145813EBF}']
     function GetDBHandle: PZASASQLCA;
     function GetPlainDriver: TZASAPlainDriver;
+    function GetByteBufferAddress: PByteBuffer;
+    procedure HandleErrorOrWarning(LoggingCategory: TZLoggingCategory;
+      const Msg: RawByteString; const Sender: IImmediatelyReleasable);
 //    procedure CreateNewDatabase(const SQL: String);
   end;
 
   {** Implements ASA Database Connection. }
+
+  { TZASAConnection }
+
   TZASAConnection = class(TZAbstractDbcConnection, IZConnection,
     IZASAConnection, IZTransaction)
   private
@@ -91,10 +97,12 @@ type
     FPlainDriver: TZASAPlainDriver;
     FSavePoints: TStrings;
     FHostVersion: Integer;
+    FLastWarning: EZSQLWarning;
   private
     function DetermineASACharSet: String;
     procedure DetermineHostVersion;
-    procedure SetOption(Temporary: Integer; User: PAnsiChar; const Option, Value: RawByteString);
+    procedure SetOption(Temporary: Integer; User: PAnsiChar;
+      const Option, Value: RawByteString; LoggingCategory: TZLoggingCategory);
   protected
     procedure InternalCreate; override;
     procedure InternalClose; override;
@@ -103,7 +111,9 @@ type
     destructor Destroy; override;
     function GetDBHandle: PZASASQLCA;
     function GetPlainDriver: TZASAPlainDriver;
-
+    procedure HandleErrorOrWarning(LoggingCategory: TZLoggingCategory;
+      const Msg: RawByteString; const Sender: IImmediatelyReleasable);
+  public
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareCallWithParams(const Name: String; Info: TStrings):
       IZCallableStatement;
@@ -117,6 +127,9 @@ type
     function StartTransaction: Integer;
 
     procedure Open; override;
+
+    function GetWarnings: EZSQLWarning; override;
+    procedure ClearWarnings; override;
 
     function GetServerProvider: TZServerProvider; override;
     function GetHostVersion: Integer; override;
@@ -135,7 +148,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ASA}
 
 uses
-  ZFastCode, ZDbcASAMetadata, ZDbcASAStatement, ZDbcASAUtils, ZSybaseToken,
+  ZFastCode, ZDbcASAMetadata, ZDbcASAStatement, ZSybaseToken,
   ZSybaseAnalyser, ZSysUtils, ZDbcProperties, ZEncoding, ZMessages
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -240,20 +253,20 @@ begin
     if AutoCommit
     then FPlainDriver.dbpp_commit(FHandle, 0)
     else FPlainDriver.dbpp_rollback(FHandle, 0);
-    CheckASAError(FPlainDriver, FHandle, lcTransaction, ConSettings);
+    if FHandle.sqlCode <> SQLE_NOERROR then
+      HandleErrorOrWarning(lcTransaction, 'Close transaction', Self);
   finally
     FPlainDriver.db_string_disconnect(FHandle, nil);
-    CheckASAError(FPlainDriver, FHandle, lcDisconnect, ConSettings);
-
+    if FHandle.sqlCode <> SQLE_NOERROR then
+       HandleErrorOrWarning(lcDisconnect, 'Disconnect from database', Self);
     FHandle := nil;
-    if FPlainDriver.db_fini(@FSQLCA) = 0 then
-    begin
+    if FPlainDriver.db_fini(@FSQLCA) = 0 then begin
       DriverManager.LogError(lcConnect, ConSettings^.Protocol, 'Finalizing SQLCA',
         0, 'Error closing SQLCA');
       raise EZSQLException.CreateWithCode(0, 'Error closing SQLCA');
     end;
-
-    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,
+    if DriverManager.HasLoggingListener then
+       DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,
         'DISCONNECT FROM "'+ConSettings^.Database+'"');
   end;
 end;
@@ -278,9 +291,11 @@ begin
     FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
     FPlainDriver.dbpp_commit(FHandle, 0);
-    CheckASAError(FPlainDriver, FHandle, lcTransaction, ConSettings);
-    DriverManager.LogMessage(lcTransaction,
-      ConSettings^.Protocol, 'TRANSACTION COMMIT');
+    if FHandle.SqlCode <> SQLE_NOERROR then
+      HandleErrorOrWarning(lcTransaction, 'TRANSACTION COMMIT', Self)
+    else if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol,
+        'TRANSACTION COMMIT');
     //SetOption(1, nil, 'CHAINED', 'ON');
     AutoCommit := True;
     if FRestartTransaction then
@@ -345,6 +360,69 @@ begin
   Result := FPlainDriver;
 end;
 
+{**
+  Checks for possible sql errors or warings.
+  @param LogCategory a logging category.
+  @param Msg a logging message.
+  @param Sender the calling object to handle connection loss
+}
+procedure TZASAConnection.HandleErrorOrWarning(
+  LoggingCategory: TZLoggingCategory; const Msg: RawByteString;
+  const Sender: IImmediatelyReleasable);
+var err_len: Integer;
+  ErrBuf: RawByteString;
+  State, ErrMsg: String;
+  ErrCode: an_sql_code;
+  Exception: EZSQLException;
+  P: PAnsiChar;
+begin
+  ErrCode := FHandle.SqlCode;
+  if (ErrCode = SQLE_NOERROR) or //Nothing todo
+     (ErrCode = SQLE_NOTFOUND) then //no line found
+  Exit;
+  P := @FByteBuffer[0];
+  PByte(P)^ := 0;
+  P := FPlainDriver.sqlError_Message(FHandle, P, SizeOf(TByteBuffer)-1);
+  err_len := ZFastCode.StrLen(P);
+  ErrBuf := '';
+  ZSetString(P, err_len, errBuf);
+  State := '';
+  {$IFDEF UNICODE}
+  State := USASCII7ToUnicodeString(@FHandle.sqlState[0], 5);
+  ErrMsg := PRawToUnicode(P, err_Len, ConSettings.ClientCodePage.CP);
+  {$ELSE}
+  {$IFDEF WITH_VAR_INIT_WARNING} State := ''; {$ENDIF}
+  ZSetString(PAnsiChar(@FHandle.sqlState[0]), 5, State);
+  {$IFDEF WITH_VAR_INIT_WARNING} ErrMsg := ''; {$ENDIF}
+  System.SetString(ErrMsg, P, err_Len);
+  {$ENDIF}
+  ErrMsg := ErrMsg + ' The SQL: ';
+  {$IFDEF UNICODE}
+  ErrMsg := ErrMsg + ZRawToUnicode(Msg, ConSettings.ClientCodePage.CP);
+  {$ELSE}
+  ErrMsg := ErrMsg + Msg;
+  {$ENDIF}
+  if ErrCode > 0 then begin//that's a Warning
+    ClearWarnings;
+    FLastWarning := EZSQLWarning.CreateWithCodeAndStatus(ErrCode, State, ErrMsg);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, ErrBuf);
+  end else begin  //that's an error
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogError(LoggingCategory, ConSettings^.Protocol, Msg, ErrCode, ErrBuf);
+    if (ErrCode = SQLE_CONNECTION_NOT_FOUND) or (ErrCode = SQLE_CONNECTION_TERMINATED) or
+       (ErrCode = SQLE_COMMUNICATIONS_ERROR) then begin
+      Exception := EZSQLConnectionLost.CreateWithCodeAndStatus(ErrCode, State, ErrMsg);
+      if (Sender <> nil)
+      then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(Exception))
+      else ReleaseImmediat(Self, EZSQLConnectionLost(Exception));
+    end else
+      Exception := EZSQLException.CreateWithCodeAndStatus(ErrCode, State, ErrMsg);
+    if Exception <> nil then
+       raise Exception;
+  end;
+end;
+
 function TZASAConnection.GetServerProvider: TZServerProvider;
 begin
   Result := spASA;
@@ -356,9 +434,7 @@ end;
 procedure TZASAConnection.Open;
 var
   ConnectionString, Links: string;
-  {$IFDEF UNICODE}
   RawTemp: RawByteString;
-  {$ENDIF}
 begin
   if not Closed then
      Exit;
@@ -405,23 +481,27 @@ begin
     {$ELSE}
     if FPlainDriver.db_string_connect(FHandle, Pointer(ConnectionString)) <> 0 then
     {$ENDIF}
-      CheckASAError(FPlainDriver, FHandle, lcConnect, ConSettings);
-
-    DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-      'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"');
+    RawTemp := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
+    if FHandle.SqlCode <> SQLE_NOERROR then
+      HandleErrorOrWarning(lcConnect, RawTemp, Self)
+    else if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, RawTemp);
 
     if (FClientCodePage <> '' ) then
       {$IFDEF UNICODE}
       RawTemp := ZUnicodeToRaw(FClientCodePage, ZOSCodePage);
-      if (FPlainDriver.db_change_char_charset(FHandle, Pointer(RawTemp)) = 0 ) or
-         (FPlainDriver.db_change_nchar_charset(FHandle, Pointer(RawTemp)) = 0 ) then
+      Move(Pointer(RawTemp)^, FByteBuffer[0], Length(RawTemp)+1);
+      RawTemp := 'Set client characterset to: '+RawTemp;
+      if (FPlainDriver.db_change_char_charset(FHandle, @FByteBuffer[0]) = 0 ) or
+         (FPlainDriver.db_change_nchar_charset(FHandle, @FByteBuffer[0]) = 0 ) then
       {$ELSE}
+      RawTemp := 'Set client characterset to: '+FClientCodePage;
       if (FPlainDriver.db_change_char_charset(FHandle, Pointer(FClientCodePage)) = 0 ) or
          (FPlainDriver.db_change_nchar_charset(FHandle, Pointer(FClientCodePage)) = 0 ) then
       {$ENDIF}
-        CheckASAError(FPlainDriver, FHandle, lcOther, ConSettings, 'Set client CharacterSet failed.');
-
-    //SetConnOptions     RowCount;
+        HandleErrorOrWarning(lcConnect, RawTemp, Self)
+      else if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, RawTemp);
   except
     on E: Exception do
     begin
@@ -437,10 +517,31 @@ begin
     CheckCharEncoding(DetermineASACharSet);
   DetermineHostVersion;
   if FHostVersion >= 17000000 then
-    SetOption(1, nil, 'chained', 'On'); //chained is deprecated On is comparable with AutoCommit=off
+    SetOption(1, nil, 'chained', 'On', lcTransaction); //chained is deprecated On is comparable with AutoCommit=off
   { Sets an auto commit mode. }
   AutoCommit := not AutoCommit;
   SetAutoCommit(not AutoCommit);
+end;
+
+{**
+  Returns the first warning reported by calls on this Connection.
+  <P><B>Note:</B> Subsequent warnings will be chained to this
+  SQLWarning.
+  @return the first SQLWarning or null
+}
+function TZASAConnection.GetWarnings: EZSQLWarning;
+begin
+  Result := FLastWarning;
+end;
+
+{**
+  Clears all warnings reported for this <code>Connection</code> object.
+  After a call to this method, the method <code>getWarnings</code>
+    returns null until a new warning is reported for this Connection.
+}
+procedure TZASAConnection.ClearWarnings;
+begin
+  FreeAndNil(FLastWarning);
 end;
 
 {**
@@ -469,7 +570,7 @@ end;
   @return a new CallableStatement object containing the
     pre-compiled SQL statement
 }
-function TZASAConnection.PrepareCallWithParams(const Name: string;
+function TZASAConnection.PrepareCallWithParams(const Name: String;
   Info: TStrings): IZCallableStatement;
 begin
   if IsClosed then Open;
@@ -531,9 +632,11 @@ begin
     FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
     FPlainDriver.dbpp_rollback(FHandle, 0);
-    CheckASAError(FPlainDriver, FHandle, lcTransaction, ConSettings);
-    DriverManager.LogMessage(lcTransaction,
-      ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
+    if FHandle.SqlCode <> SQLE_NOERROR then
+      HandleErrorOrWarning(lcTransaction, 'TRANSACTION ROLLBACK', Self)
+    else if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol,
+        'TRANSACTION ROLLBACK');
    // SetOption(1, nil, 'CHAINED', 'ON');
     AutoCommit := True;
     if FRestartTransaction then
@@ -570,8 +673,8 @@ begin
     else if Value then begin
       FSavePoints.Clear;
       if FHostVersion >= 17000000
-      then SetOption(1, nil, 'AUTO_COMMIT', 'On')
-      else SetOption(1, nil, 'chained', 'Off');
+      then SetOption(1, nil, 'AUTO_COMMIT', 'On', lcTransaction)
+      else SetOption(1, nil, 'chained', 'Off', lcTransaction);
       AutoCommit := True;
     end else
       StartTransaction;
@@ -579,10 +682,11 @@ begin
 end;
 
 procedure TZASAConnection.SetOption(Temporary: Integer; User: PAnsiChar;
-  const Option, Value: RawByteString);
+  const Option, Value: RawByteString; LoggingCategory: TZLoggingCategory);
 var
   SQLDA: PASASQLDA;
   Sz: Integer;
+  logStr: RawByteString;
 begin
   if Assigned(FHandle) then
   begin
@@ -597,10 +701,11 @@ begin
       SQLDA.sqlVar[0].sqlLen := Length(Value){$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF};
       SQLDA.sqlVar[0].sqlData := Pointer(Value);
       FPlainDriver.dbpp_setoption(FHandle, Temporary, User, Pointer(Option), SQLDA);
-
-      CheckASAError(FPlainDriver, FHandle, lcOther, ConSettings);
-      DriverManager.LogMessage(lcOther, ConSettings^.Protocol,
-        'SET OPTION '+ConSettings.User+'.'+Option+' = '+Value);
+      logstr := 'SET OPTION '+ConSettings.User+'.'+Option+' = '+Value;
+      if FHandle.SqlCode <> SQLE_NOERROR then
+        HandleErrorOrWarning(LoggingCategory, logstr, Self)
+      else if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, logstr);
     finally
       FreeMem(SQLDA);
     end;
@@ -614,7 +719,7 @@ begin
     Level := tiReadUnCommitted;
   if Level <>  TransactIsolationLevel then begin
     if not IsClosed then
-      SetOption(1, nil, 'ISOLATION_LEVEL', ASATIL[TransactIsolationLevel]);
+      SetOption(1, nil, 'ISOLATION_LEVEL', ASATIL[TransactIsolationLevel], lcTransaction);
     TransactIsolationLevel := Level;
   end;
 end;
@@ -629,8 +734,8 @@ begin
     Open;
   if AutoCommit then begin
     if FHostVersion >= 17000000
-    then SetOption(1, nil, 'AUTO_COMMIT', 'Off')
-    else SetOption(1, nil, 'chained', 'On');
+    then SetOption(1, nil, 'AUTO_COMMIT', 'Off', lcTransaction)
+    else SetOption(1, nil, 'chained', 'On', lcTransaction);
     AutoCommit := False;
     Result := 1;
   end else begin
@@ -692,8 +797,10 @@ procedure TZASAConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 begin
   FPlainDriver.dbpp_execute_imm(FHandle, Pointer(SQL), 0);
-  CheckASAError(FPlainDriver, FHandle, LoggingCategory, ConSettings);
-  DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
+  if FHandle.SqlCode <> SQLE_NOERROR then
+    HandleErrorOrWarning(LoggingCategory, SQL, Self)
+  else if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
 end;
 
 initialization

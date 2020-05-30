@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -320,12 +320,12 @@ implementation
 uses
   Variants, ZGenericSqlToken, ZFastCode,
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
-  ZDbcOleDBUtils
+  ZDbcOleDBUtils, ZDbcLogging
   {$IFDEF ENABLE_OLEDB} //Exclude for ADO
   ,ZDbcOleDB, ZDbcOleDBResultSet, ZDbcOleDBStatement
   {$ENDIF};
 
-const bYesNo: Array[Boolean] of ZWideString = ('NO','YES');
+const bYesNo: Array[Boolean] of UnicodeString = ('NO','YES');
 { TZOleDBDatabaseInfo }
 
 {**
@@ -2845,31 +2845,37 @@ var
   OleArgs: Array of OleVariant;
   I: Integer;
   Stmt: IZStatement;
-  FSchemaRS: IDBSchemaRowset;
+  SchemaRS: IDBSchemaRowset;
+  Status: HResult;
+  OleDBConnection: IZOleDBConnection;
 begin
   Result := nil;
   InitializeSchemas;
   SchemaID := FindSchema(Schema);
   if SchemaID = -1 then Exit;
+  OleDBConnection := GetConnection as IZOleDBConnection;
   try
-    (GetConnection as IZOleDBConnection).GetSession.QueryInterface(IID_IDBSchemaRowset, FSchemaRS);
+    OleCheck(OleDBConnection.GetSession.QueryInterface(IID_IDBSchemaRowset, SchemaRS));
     {$IFDEF WITH_VAR_INIT_WARNING}OleArgs := nil;{$ENDIF}
     SetLength(OleArgs, Length(Args));
     for I := 0 to High(Args) do
       if (FSupportedSchemas[SchemaID].SupportedRestrictions and (1 shl I)) <> 0 then
-        if Args[i] <> '' then
-          OleArgs[I] := Args[I]
-        else
-          OleArgs[I] := UnAssigned;
-    OleDBCheck(FSchemaRS.GetRowset(nil, Schema, Length(Args), OleArgs, IID_IRowset, 0, nil, IInterface(RowSet)), '', nil);
-    if Assigned(RowSet) then
-    begin
+        if Args[i] <> ''
+        then OleArgs[I] := Args[I]
+        else OleArgs[I] := UnAssigned;
+    Status := SchemaRS.GetRowset(nil, Schema, Length(Args), OleArgs,
+      IID_IRowset, 0, nil, IInterface(RowSet));
+    if Status <> S_OK then
+      OleDBConnection.HandleErrorOrWarning(Status, lcExecute,
+        'IDBSchemaRowset.GetRowset', OleDBConnection);
+    if Assigned(RowSet) then begin
       Stmt := GetStatement;
       Result := TZOleDBResultSet.Create(Stmt, '', RowSet, (Stmt as IZOleDBPreparedStatement).GetInternalBufferSize, 0, True);
     end;
   finally
-    FSchemaRS := nil;
+    SchemaRS := nil;
     RowSet := nil;
+    OleDBConnection := nil;
   end;
 end;
 
@@ -2883,23 +2889,26 @@ var
   Nr: ULONG;
   I: Integer;
   SchemaRS: IDBSchemaRowset;
+  Status: HResult;
+  OleDBConnection: IZOleDBConnection;
 begin
-  if Length(FSupportedSchemas) = 0 then
-  begin
-    OleDBCheck((GetConnection as IZOleDBConnection).GetSession.QueryInterface(IID_IDBSchemaRowset, SchemaRS), '', nil);
-    if Assigned(SchemaRS) then
-    begin
-      SchemaRS.GetSchemas(Nr{%H-}, PG{%H-}, IA);
+  if Length(FSupportedSchemas) = 0 then begin
+    OleDBConnection := GetConnection as IZOleDBConnection;
+    OleCheck(OleDBConnection.GetSession.QueryInterface(IID_IDBSchemaRowset, SchemaRS));
+    if Assigned(SchemaRS) then begin
+      Status := SchemaRS.GetSchemas(Nr{%H-}, PG{%H-}, IA);
+      if Status <> S_OK then
+        OleDBConnection.HandleErrorOrWarning(Status, lcExecute,
+          'IDBSchemaRowset.GetSchemas', OleDBConnection);
       OriginalPG := PG;
       SetLength(FSupportedSchemas, Nr);
-      for I := 0 to Nr - 1 do
-      begin
+      for I := 0 to Nr - 1 do begin
         FSupportedSchemas[I].SchemaGuid := PG^;
         FSupportedSchemas[I].SupportedRestrictions := IA^[I];
         Inc({%H-}NativeInt(PG), SizeOf(TGuid));  //M.A. Inc(Integer(PG), SizeOf(TGuid));
       end;
-      if Assigned(OriginalPG) then (GetConnection as IZOleDBConnection).GetMalloc.Free(OriginalPG);
-      if Assigned(IA) then (GetConnection as IZOleDBConnection).GetMalloc.Free(IA);
+      if Assigned(OriginalPG) then OleDBConnection.GetMalloc.Free(OriginalPG);
+      if Assigned(IA) then OleDBConnection.GetMalloc.Free(IA);
     end;
     SchemaRS := nil;
   end;

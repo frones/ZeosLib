@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -213,7 +213,7 @@ begin
     Fa_sqlany_stmt := FplainDriver.sqlany_prepare(FSQLAnyConnection.Get_a_sqlany_connection,
       Pointer(fASQL));
     if Fa_sqlany_stmt = nil then
-      FSQLAnyConnection.HandleError(lcPrepStmt, fASQL, Self);
+      FSQLAnyConnection.HandleErrorOrWarning(lcPrepStmt, fASQL, Self);
     inherited Prepare;
   end else if fMoreResultsIndicator <> mriHasNoMoreResults then
     while GetMoreResults do ;
@@ -277,7 +277,7 @@ begin
     if Result then begin
       num_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt);
       if num_cols < 0
-      then FSQLAnyConnection.HandleError(lcExecute, fASQL, Self)
+      then FSQLAnyConnection.HandleErrorOrWarning(lcExecute, fASQL, Self)
       else if num_cols > 0
         then LastResultSet := CreateResultSet
         else LastUpdateCount := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt);
@@ -320,10 +320,10 @@ begin
     FOutParamResultSet := TZSQLAynwhereOutParamResultSet.Create(Self, SQL, @Fa_sqlany_stmt,
       Fa_sqlany_bind_paramArray, BindList);
   if FplainDriver.sqlany_execute(Fa_sqlany_stmt) <> 1 then
-    FSQLAnyConnection.HandleError(lcExecute, fASQL, Self);
+    FSQLAnyConnection.HandleErrorOrWarning(lcExecute, fASQL, Self);
   num_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt);
   if num_cols < 0
-  then FSQLAnyConnection.HandleError(lcExecute, fASQL, Self)
+  then FSQLAnyConnection.HandleErrorOrWarning(lcExecute, fASQL, Self)
   else if num_cols > 0
     then LastResultSet := CreateResultSet
     else begin
@@ -355,7 +355,7 @@ begin
     FOutParamResultSet := TZSQLAynwhereOutParamResultSet.Create(Self, SQL, @Fa_sqlany_stmt,
       Fa_sqlany_bind_paramArray, BindList);
   if FplainDriver.sqlany_execute(Fa_sqlany_stmt) <> 1 then
-    FSQLAnyConnection.HandleError(lcExecute, fASQL, Self);
+    FSQLAnyConnection.HandleErrorOrWarning(lcExecute, fASQL, Self);
   Result := nil;
   num_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt);
   if num_cols > 0
@@ -392,7 +392,7 @@ begin
     FOutParamResultSet := TZSQLAynwhereOutParamResultSet.Create(Self, SQL, @Fa_sqlany_stmt,
       Fa_sqlany_bind_paramArray, BindList);
   if FplainDriver.sqlany_execute(Fa_sqlany_stmt) <> 1 then
-    FSQLAnyConnection.HandleError(lcExecute, fASQL, Self);
+    FSQLAnyConnection.HandleErrorOrWarning(lcExecute, fASQL, Self);
   Result := -1;
   num_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt);
   if num_cols = 0
@@ -426,7 +426,7 @@ begin
       if BindList[i].ParamType <> pctResultSet then begin
         if FPlainDriver.sqlany_bind_param(Fa_sqlany_stmt, J,
            Pointer(PAnsiChar(Fa_sqlany_bind_paramArray) + (FBindParamSize * i))) <> 1 then
-          FSQLAnyConnection.HandleError(lcExecute, 'sqlany_bind_param', Self);
+          FSQLAnyConnection.HandleErrorOrWarning(lcExecute, 'sqlany_bind_param', Self);
         Inc(J);
       end;
     FBindAgain := False;
@@ -602,13 +602,13 @@ begin
   inherited PrepareInParameters;
   num_params := FPlainDriver.sqlany_num_params(Fa_sqlany_stmt);
   if num_params = -1 then
-    FSQLAnyConnection.HandleError(lcExecute, fASQL, Self);
+    FSQLAnyConnection.HandleErrorOrWarning(lcExecute, fASQL, Self);
   SetBindCapacity(num_params);
   for i := 0 to num_params -1 do begin
     {$R-}
     Bind := Pointer(PAnsiChar(Fa_sqlany_bind_paramArray) + (FBindParamSize * I));
     if FPlainDriver.sqlany_describe_bind_param(Fa_sqlany_stmt, I, Bind) <> 1 then
-      FSQLAnyConnection.HandleError(lcExecute, fASQL, Self);
+      FSQLAnyConnection.HandleErrorOrWarning(lcExecute, fASQL, Self);
     FParamsDescribed := FParamsDescribed or (Bind.value._type <> A_INVALID_TYPE);
     FHasOutParams := FHasOutParams or (Ord(Bind.direction) >= Ord(DD_OUTPUT));
     Bind.value.length :=  @FLengthArray[i];

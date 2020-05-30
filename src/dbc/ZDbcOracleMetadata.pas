@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -253,7 +253,8 @@ implementation
 
 uses
   ZFastCode, ZDbcUtils, ZSelectSchema, ZClasses, ZEncoding,
-  ZPlainOracleDriver {$IFNDEF NO_UNIT_CONTNRS},Contnrs{$ENDIF};
+  ZPlainOracleDriver {$IFNDEF NO_UNIT_CONTNRS},Contnrs{$ENDIF},
+  ZDbcOracle;
 
 { TZOracleDatabaseInfo }
 
@@ -1337,6 +1338,7 @@ var
   RS: IZResultSet;
   DescriptorA: TZOraProcDescriptor_A;
   DescriptorW: TZOraProcDescriptor_W;
+  Connection: IZOracleConnection;
   SQLWriter: TZSQLStringWriter;
   {$IFDEF UNICODE}
   SQLWriterA: TZRawSQLStringWriter;
@@ -1499,6 +1501,7 @@ begin
     SQLWriter.Finalize(TempProcedureNamePattern);
     FreeAndNil(SL);
   end;
+  Connection := GetConnection as IZOracleConnection;
   try
     RS := GetProcedures('', TmpSchemaPattern, TempProcedureNamePattern);
     while RS.Next do begin
@@ -1517,13 +1520,13 @@ begin
       SQLWriter.CancelLastCharIfExists('.', TempProcedureNamePattern);
       SQLWriter.Finalize(TempProcedureNamePattern);
       if ConSettings.ClientCodePage.Encoding = ceUTF16 then begin
-        DescriptorW := TZOraProcDescriptor_W.Create(nil, ConSettings.CTRL_CP);
+        DescriptorW := TZOraProcDescriptor_W.Create(nil, Connection, ConSettings.CTRL_CP);
         {$IFNDEF UNICODE}
         SQLWriterW := TZUnicodeSQLStringWriter.Create(1024);
         S := ZRawToUnicode(TempProcedureNamePattern, ConSettings.CTRL_CP);
         {$ENDIF}
         try
-          DescriptorW.Describe(OCI_PTYPE_UNK, GetConnection, {$IFNDEF UNICODE}S{$ELSE}TempProcedureNamePattern{$ENDIF});
+          DescriptorW.Describe(OCI_PTYPE_UNK, {$IFNDEF UNICODE}S{$ELSE}TempProcedureNamePattern{$ENDIF});
           if DescriptorW.ObjType = OCI_PTYPE_PKG
           then AddPackageArgsW(DescriptorW, {$IFNDEF UNICODE}SQLWriterW{$ELSE}SQLWriter{$ENDIF})
           else AddArgsW(DescriptorW, {$IFNDEF UNICODE}SQLWriterW{$ELSE}SQLWriter{$ENDIF});
@@ -1535,13 +1538,13 @@ begin
           {$ENDIF}
         end;
       end else begin
-        DescriptorA := TZOraProcDescriptor_A.Create(nil, ConSettings.ClientCodePage.CP);
+        DescriptorA := TZOraProcDescriptor_A.Create(nil, Connection, ConSettings.ClientCodePage.CP);
         {$IFDEF UNICODE}
         SQLWriterA := TZRawSQLStringWriter.Create(1024);
         S := ZUnicodeToRaw(TempProcedureNamePattern, ConSettings.ClientCodePage.CP);
         {$ENDIF}
         try
-          DescriptorA.Describe(OCI_PTYPE_UNK, GetConnection, {$IFDEF UNICODE}S{$ELSE}TempProcedureNamePattern{$ENDIF});
+          DescriptorA.Describe(OCI_PTYPE_UNK, {$IFDEF UNICODE}S{$ELSE}TempProcedureNamePattern{$ENDIF});
           if DescriptorA.ObjType = OCI_PTYPE_PKG
           then AddPackageArgsA(DescriptorA, {$IFDEF UNICODE}SQLWriterA{$ELSE}SQLWriter{$ENDIF})
           else AddArgsA(DescriptorA, {$IFDEF UNICODE}SQLWriterA{$ELSE}SQLWriter{$ENDIF});

@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -84,9 +84,6 @@ function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM; IsLong: Boolean;
 
 function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM;
   const SrcRS: IZResultSet): TZSQLType; overload;
-
-procedure OleDBCheck(aResult: HRESULT; const SQL: String;
-  const {%H-}Sender: IImmediatelyReleasable; const aStatus: TDBBINDSTATUSDynArray = nil);
 
 {**
   Brings up the OleDB connection string builder dialog.
@@ -255,118 +252,6 @@ begin
       {
       DBTYPE_IDISPATCH:
       DBTYPE_HCHAPTER:    }Result := stUnknown;
-  end;
-end;
-
-procedure OleDBCheck(aResult: HRESULT; const SQL: String;
-  const Sender: IImmediatelyReleasable; const aStatus: TDBBINDSTATUSDynArray = nil);
-var
-  OleDBErrorMessage, FirstSQLState: String;
-  ErrorInfo, ErrorInfoDetails: IErrorInfo;
-  SQLErrorInfo: ISQLErrorInfo;
-  MSSQLErrorInfo: ISQLServerErrorInfo;
-  ErrorRecords: IErrorRecords;
-  SSErrorPtr: PMSErrorInfo;
-  i, ErrorCode, FirstErrorCode: Integer;
-  ErrorCount: ULONG;
-  Desc, SQLState: WideString;
-  StringsBufferPtr: PWideChar;
-  s: string;
-begin
-  if not Succeeded(aResult) then begin // get OleDB specific error information
-    OleDBErrorMessage := '';
-    FirstSQLState := '';
-    FirstErrorCode := 0;
-    GetErrorInfo(0,ErrorInfo);
-    if Assigned(ErrorInfo) then begin
-      ErrorRecords := ErrorInfo as IErrorRecords;
-      ErrorRecords.GetRecordCount(ErrorCount);
-      OleDBErrorMessage := '';
-      for i := 0 to ErrorCount-1 do
-      begin
-        SQLErrorInfo := nil;
-        if Succeeded(ErrorRecords.GetCustomErrorObject(i, IID_ISQLServerErrorInfo, IUnknown(MSSQLErrorInfo)) ) and
-          Assigned(MSSQLErrorInfo) then
-        begin
-          SSErrorPtr := nil;
-          StringsBufferPtr:= nil;
-          try //try use a SQL Server error interface
-            if Succeeded(MSSQLErrorInfo.GetErrorInfo(SSErrorPtr, StringsBufferPtr)) and
-              Assigned(SSErrorPtr) then
-            begin
-              if OleDBErrorMessage <> '' then OleDBErrorMessage := OleDBErrorMessage + LineEnding;
-              if I = 0 then begin
-                FirstErrorCode := SSErrorPtr^.lNative;
-                FirstSQLState := String(SSErrorPtr^.pwszMessage);
-              end;
-              if OleDBErrorMessage <> '' then OleDBErrorMessage := OleDBErrorMessage+LineEnding;
-              OleDBErrorMessage := OleDBErrorMessage + 'SQLState: '+ String(SSErrorPtr^.pwszMessage) +
-                ' ErrorCode: '+ ZFastCode.IntToStr(SSErrorPtr^.lNative) +
-                ' Line: '+ZFastCode.IntToStr(SSErrorPtr^.wLineNumber);
-            end;
-          finally
-            if Assigned(SSErrorPtr) then CoTaskMemFree(SSErrorPtr);
-            if Assigned(StringsBufferPtr) then CoTaskMemFree(StringsBufferPtr);
-            MSSQLErrorInfo := nil;
-          end
-        end
-        else //try use a common error interface
-          if Succeeded(ErrorRecords.GetCustomErrorObject(i, IID_ISQLErrorInfo, IUnknown(SQLErrorInfo)) ) and
-             Assigned(SQLErrorInfo) then
-            try
-              SQLErrorInfo.GetSQLInfo( SqlState, ErrorCode );
-              if I = 0 then begin
-                FirstErrorCode := ErrorCode;
-                FirstSQLState := String(SqlState);
-              end;
-              if OleDBErrorMessage <> '' then OleDBErrorMessage := OleDBErrorMessage + LineEnding;
-              OleDBErrorMessage := OleDBErrorMessage+'SQLState: '+ String(SqlState) + ' ErrorCode: '+ZFastCode.IntToStr(ErrorCode);
-            finally
-              SQLErrorInfo := nil;
-            end;        // retrieve generic error info
-        OleCheck(ErrorRecords.GetErrorInfo(i,GetSystemDefaultLCID,ErrorInfoDetails));
-        OleCheck(ErrorInfoDetails.GetDescription(Desc));
-        if OleDBErrorMessage<>'' then
-          OleDBErrorMessage := OleDBErrorMessage+LineEnding
-        else begin
-          FirstErrorCode := aResult;
-          FirstSQLState:= IntToHex(aResult,8);
-        end;
-        OleCheck(SetErrorInfo(0, ErrorInfoDetails));
-        OleDBErrorMessage := OleDBErrorMessage+String(Desc);
-        Desc := '';
-        ErrorInfoDetails := nil;
-      end;
-    end;
-    ErrorRecords := nil;
-    ErrorInfo := nil;
-    // get generic HRESULT error
-    if aResult < 0 then //avoid range check error for some negative unknown errors
-      s := '' else
-      s := SysErrorMessage(aResult);
-    if s='' then
-      s := 'OLEDB Error '+IntToHex(aResult,8);
-    if OleDBErrorMessage = '' then begin
-      FirstErrorCode := aResult;
-      FirstSQLState := IntToHex(aResult,8);
-      OleDBErrorMessage := s;
-    end else
-      OleDBErrorMessage := s+':'+LineEnding+OleDBErrorMessage;
-    // retrieve binding information from Status[]
-    s := '';
-    for i := 0 to high(aStatus) do
-      if aStatus[i]<>ZPlainOleDBDriver.DBBINDSTATUS_OK then
-        if aStatus[i]<=cardinal(high(TOleDBBindStatus)) then
-          s := Format('%s Status[%d]="%s"',[s,i,GetEnumName(TypeInfo(TOleDBBindStatus),aStatus[i])])
-        else
-          s := Format('%s Status[%d]=%d',[s,i,aStatus[i]]);
-    if s<>'' then
-      OleDBErrorMessage := OleDBErrorMessage+s;
-    if SQL <> '' then
-      OleDBErrorMessage := OleDBErrorMessage+LineEnding+'SQL: '+SQL;
-    // raise exception
-    DriverManager.LogMessage(lcExecute, 'OleDB', RawByteString(OleDBErrorMessage));
-    raise EZSQLException.CreateWithCodeAndStatus(FirstErrorCode, FirstSQLState, OleDBErrorMessage);
   end;
 end;
 

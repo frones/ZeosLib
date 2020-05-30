@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -88,11 +88,11 @@ type
   TZOracleAbstractResultSet_A = class(TZAbstractReadOnlyResultSet_A, IZOracleResultSet)
   private
     FStmtHandle: POCIStmt;
-    FErrorHandle: POCIError;
-    FConnectionHandle: POCIEnv;
+    FOCIError: POCIError;
+    FOCIEnv: POCIEnv;
     FOCISvcCtx: POCISvcCtx;
     FPlainDriver: TZOraclePlainDriver;
-    FConnection: IZOracleConnection;
+    FOracleConnection: IZOracleConnection;
     FColumns: PZSQLVars;
     FChunkSize: Integer;
     FIteration: Integer; //Max count of rows which fit into BufferSize <= FZBufferSize
@@ -101,10 +101,11 @@ type
     FRowsBuffer: TByteDynArray; //Buffer for multiple rows if possible which is reallocated or freed by IDE -> mem leak save!
     FTempLob: IZBlob;
     FClientCP: Word;
-    fStatus: Sword;
     FvnuInfo: TZvnuInfo;
+    fByteBuffer: PByteBuffer;
     function GetFinalObject(Obj: POCIObject): POCIObject;
     function CreateOCIConvertError(ColumnIndex: Integer; DataType: ub2): EZOCIConvertError;
+    procedure FreeOracleSQLVars;
   public
     constructor Create(
       const Statement: IZStatement; const SQL: string;
@@ -169,9 +170,10 @@ type
 
   TZAbstracOracleLobStream = class; //forward
   {** implements an abstract oracle lob }
-  TZAbstractOracleBlob = class(TZAbstractStreamedLob, IZLob, IZOracleLob)
+  TZAbstractOracleBlob = class(TZAbstractStreamedLob, IZLob, IZOracleLob,
+    IImmediatelyReleasable)
   private
-    FConnection: IZOracleConnection;
+    FOracleConnection: IZOracleConnection;
     FOCIError: POCIError;
     FOCIEnv: POCIEnv;
     FOCISvcCtx: POCISvcCtx;
@@ -198,6 +200,9 @@ type
   public //implement IZLob
     function IsEmpty: Boolean; override;
     procedure Clear; override;
+  public //implement IImmediatelyReleasable
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+    function GetConSettings: PZConSettings;
   public
     function Clone(LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
   public //obsolete
@@ -377,6 +382,7 @@ var P: PAnsiChar;
   Year: SmallInt;
   L: NativeUInt;
   Millis: Cardinal absolute L;
+  Status: SWord;
   procedure AddJSONEscapeA(P: PAnsichar; Len: LengthInt);
   begin
     JSONWriter.Add('"');
@@ -440,19 +446,18 @@ begin
         { the oracle soft decimal }
         SQLT_VNU        : case ZDbcOracleUtils.nvuKind(POCINumber(P), FvnuInfo) of
                             nvu0: JSONWriter.Add('0');
-                            vnuNegInt: JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], NegOrdNVU2Raw(POCINumber(P), FvnuInfo, @FTinyBuffer[0]));
-                            vnuPosInt: JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PosOrdNVU2Raw(POCINumber(P), FvnuInfo, @FTinyBuffer[0]));
+                            vnuNegInt: JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), NegOrdNVU2Raw(POCINumber(P), FvnuInfo, PAnsiChar(FByteBuffer)));
+                            vnuPosInt: JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), PosOrdNVU2Raw(POCINumber(P), FvnuInfo, PAnsiChar(FByteBuffer)));
                             vnuPosCurr: JSONWriter.AddCurr64(PosNvu2Curr(POCINumber(P), FvnuInfo));
-                            //vnuPosCurr: JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PosNVUCurr2Raw(POCINumber(P), FvnuInfo, @FTinyBuffer[0]));
                             vnuNegCurr: JSONWriter.AddCurr64(NegNvu2Curr(POCINumber(P), FvnuInfo));
-                            //vnuNegCurr: JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], NegNVUCurr2Raw(POCINumber(P), FvnuInfo, @FTinyBuffer[0]));
                             nvuNegInf: JSONWriter.AddShort('"-Infinity"');
                             nvuPosInf: JSONWriter.AddShort('"Infinity"');
                             else begin
-                              FStatus:= FPlainDriver.OCINumberToReal(FErrorHandle, POCINumber(P), SizeOf(Double), @FTinyBuffer[0]);
-                              if FStatus = OCI_Success
-                              then JSONWriter.AddDouble(PDouble(@FTinyBuffer[0])^)
-                              else CheckOracleError(FPLainDriver, FErrorHandle, FStatus, lcOther, 'OCINumberToReal', ConSettings);
+                              Status:= FPlainDriver.OCINumberToReal(FOCIError, POCINumber(P), SizeOf(Double), Pointer(FByteBuffer));
+                              if Status = OCI_Success
+                              then JSONWriter.AddDouble(PDouble(FByteBuffer)^)
+                              else Self.FOracleConnection.HandleErrorOrWarning(FOCIError,
+                                Status, lcOther, 'OCINumberToReal', Self);
                             end;
                           end;
         { the charter types we support }
@@ -484,15 +489,15 @@ begin
                             if POraDate(P)^.Cent < 100 then
                               JSONWriter.Add('-');
                             if ColType <> stTime then begin
-                              DateToIso8601PChar(@FTinyBuffer[0], True, (POraDate(P)^.Cent-100)*100+POraDate(P)^.Year-100,
+                              DateToIso8601PChar(PUTF8Char(fByteBuffer), True, (POraDate(P)^.Cent-100)*100+POraDate(P)^.Year-100,
                                 POraDate(P)^.month, POraDate(P)^.day);
-                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
+                              JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),10);
                             end else if jcoMongoISODate in JSONComposeOptions then
                               JSONWriter.AddShort('0000-00-00');
                             if (ColType <> stDate) then begin
-                              TimeToIso8601PChar(@FTinyBuffer[0], True, POraDate(P)^.Hour-1,
-                                POraDate(P)^.Min-1,POraDate(P)^.Sec-1, 0, 'T', jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                              TimeToIso8601PChar(PUTF8Char(fByteBuffer), True, POraDate(P)^.Hour-1,
+                                POraDate(P)^.Min-1,POraDate(P)^.Sec-1, 0, 'T', False);
+                              JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),9);
                             end;
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z)"')
@@ -505,21 +510,21 @@ begin
                             JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                           else
                             JSONWriter.Add('"');
-                          if (ColType <> stTime) and (FPlainDriver.OCIDateTimeGetDate(FConnectionHandle,
-                             FErrorHandle, PPOCIDescriptor(P)^, Year{%H-}, Month{%H-}, Day{%H-}) = OCI_SUCCESS) and
+                          if (ColType <> stTime) and (FPlainDriver.OCIDateTimeGetDate(FOCIEnv,
+                             FOCIError, PPOCIDescriptor(P)^, Year{%H-}, Month{%H-}, Day{%H-}) = OCI_SUCCESS) and
                              (not ((Year=1) and (Month=1) and (Day=1))) then begin
                           // attention : this code handles all timestamps on 01/01/0001 as a pure time value
                           // reason : oracle doesn't have a pure time datatype so all time comparisons compare
                           //          TDateTime values on 30 Dec 1899 against oracle timestamps on 01 januari 0001 (negative TDateTime)
-                            DateToIso8601PChar(@FTinyBuffer[0], True, Abs(Year), Month, Day);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
+                            DateToIso8601PChar(PUTF8Char(fByteBuffer), True, Abs(Year), Month, Day);
+                            JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),10);
                           end else if jcoMongoISODate in JSONComposeOptions then
                             JSONWriter.AddShort('0000-00-00');
-                          if (ColType <> stDate) and (FPlainDriver.OCIDateTimeGetTime(FConnectionHandle,
-                             FErrorHandle, {%H-}PPOCIDescriptor(P)^, Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-}) = OCI_SUCCESS) then begin
-                            TimeToIso8601PChar(@FTinyBuffer[0], True, Hour, Minute, Second,
+                          if (ColType <> stDate) and (FPlainDriver.OCIDateTimeGetTime(FOCIEnv,
+                             FOCIError, {%H-}PPOCIDescriptor(P)^, Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-}) = OCI_SUCCESS) then begin
+                            TimeToIso8601PChar(PUTF8Char(fByteBuffer), True, Hour, Minute, Second,
                               Millis div 1000000, 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),9 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
                           end;
                           if jcoMongoISODate in JSONComposeOptions
                           then JSONWriter.AddShort('Z)"')
@@ -620,8 +625,7 @@ end;
 
 procedure TZOracleAbstractResultSet_A.BeforeClose;
 begin
-  FreeOracleSQLVars(FPlainDriver, FColumns, FIteration, FConnectionHandle,
-    FErrorHandle, ConSettings);
+  FreeOracleSQLVars;
   inherited BeforeClose;
 end;
 
@@ -630,13 +634,14 @@ constructor TZOracleAbstractResultSet_A.Create(
   ErrorHandle: POCIError; const ZBufferSize: Integer);
 begin
   inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
-  FConnection := Statement.GetConnection as IZOracleConnection;
+  FOracleConnection := Statement.GetConnection as IZOracleConnection;
+  fByteBuffer := FOracleConnection.GetByteBufferAddress;
   FStmtHandle := StmtHandle;
-  FErrorHandle := ErrorHandle;
-  FPlainDriver := FConnection.GetPlainDriver;
+  FOCIError := ErrorHandle;
+  FPlainDriver := FOracleConnection.GetPlainDriver;
   ResultSetConcurrency := rcReadOnly;
-  FConnectionHandle := FConnection.GetConnectionHandle;
-  FOCISvcCtx := FConnection.GetServiceContextHandle;
+  FOCIEnv := FOracleConnection.GetConnectionHandle;
+  FOCISvcCtx := FOracleConnection.GetServiceContextHandle;
   FChunkSize := Statement.GetChunkSize;
   FIteration := 1;
   FCurrentRowBufIndex := 0;
@@ -651,6 +656,69 @@ begin
   Result := EZOCIConvertError.Create(Format(SErrorConvertionField,
         [TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnLabel,
         IntToStr(DataType)]));
+end;
+
+procedure TZOracleAbstractResultSet_A.FreeOracleSQLVars;
+var
+  I: Integer;
+  J: NativeUInt;
+  CurrentVar: PZSQLVar;
+  Status: Sword;
+
+  procedure DisposeObject(var Obj: POCIObject);
+  var
+    I: Integer;
+  begin
+    for i := 0 to High(Obj.fields) do
+      DisposeObject(Obj.fields[i]);
+    SetLength(Obj.fields, 0);
+    if Assigned(Obj.next_subtype) then
+    begin
+      DisposeObject(Obj.next_subtype);
+      Obj.next_subtype := nil;
+    end;
+    if Obj.Pinned then
+      {Unpin tdo}
+      //CheckOracleError(PlainDriver, ErrorHandle, //debug
+        FPlainDriver.OCIObjectUnpin(FOCIEnv, FOCIError, CurrentVar^._Obj.tdo)
+        ;//debug, lcOther, 'OCIObjectUnpin', ConSettings);
+    if (Obj.Level = 0) and assigned(Obj.tdo) then
+      {Free Object}
+      //debugCheckOracleError(PlainDriver, ErrorHandle,
+      FPlainDriver.OCIObjectFree(FOCIEnv, FOCIError, CurrentVar^._Obj.tdo, 0)
+      ;//debug, lcOther, 'OCIObjectFree', ConSettings);
+    Dispose(Obj);
+    Obj := nil;
+  end;
+
+begin
+  if FColumns <> nil then begin
+    { Frees allocated memory for output variables }
+    for I := 0 to Integer(FColumns.AllocNum)-1 do begin
+      {$R-}
+      CurrentVar := @FColumns.Variables[I];
+      {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+      if Assigned(CurrentVar^._Obj) then
+        DisposeObject(CurrentVar^._Obj);
+      if (CurrentVar^.valuep <> nil) then
+        if (CurrentVar^.DescriptorType > 0) then begin
+          for J := 0 to FIteration-1 do
+            if (PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer))))^ <> nil then begin
+              Status := FPlainDriver.OCIDescriptorFree(PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer)))^,
+                CurrentVar^.DescriptorType);
+              if Status <> OCI_SUCCESS then
+                FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcOther, 'OCIDescriptorFree', Self);
+            end;
+        end else if CurrentVar^.dty = SQLT_VST then
+          for J := 0 to FIteration-1 do begin
+            Status := FPlainDriver.OCIStringResize(FOCIEnv, FOCIError, 0, PPOCIString(CurrentVar^.valuep+(J*SizeOf(POCIString))));
+            if Status <> OCI_SUCCESS then
+              FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcOther, 'OCIStringResize', Self);
+          end;
+      end;
+    FreeMem(FColumns);
+    FColumns := nil;
+  end;
 end;
 
 {**
@@ -695,8 +763,8 @@ var TS: TZTimeStamp;
 label dbl, sin, set_Result, jmpW2A, jmpTestN;
   procedure RawFromNVU;
   begin
-    Nvu2BCD(POCINumber(Result), PBCD(@FTinyBuffer[0])^);
-    FRawTemp := BcdToSQLRaw(PBCD(@FTinyBuffer[0])^);
+    Nvu2BCD(POCINumber(Result), PBCD(fByteBuffer)^);
+    FRawTemp := BcdToSQLRaw(PBCD(fByteBuffer)^);
   end;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -744,9 +812,9 @@ jmpW2A:             fRawTemp := PUnicodeToRaw(PWideChar(Result), Len, ConSetting
       SQLT_VNU:
         case nvuKind(POCINumber(Result), FvnuInfo) of
           nvu0: begin
-              FTinyBuffer[0] := Ord('0');
+              fByteBuffer[0] := Ord('0');
               Len := 1;
-              Result := @FTinyBuffer[0];
+              Result := PAnsiChar(fByteBuffer);
             end;
           nvuNegInf: begin
               Result := Pointer(rNegInfinity);
@@ -757,19 +825,19 @@ jmpW2A:             fRawTemp := PUnicodeToRaw(PWideChar(Result), Len, ConSetting
               Len := 8;
             end;
           vnuNegInt: begin
-              Len := NegOrdNVU2Raw(POCINumber(Result), FvnuInfo, @FTinyBuffer[0]);
-              Result := @FTinyBuffer[0];
+              Result := PAnsiChar(fByteBuffer);
+              Len := NegOrdNVU2Raw(POCINumber(Result), FvnuInfo, Result);
             end;
           vnuPosInt: begin
-              Len := PosOrdNVU2Raw(POCINumber(Result), FvnuInfo, @FTinyBuffer[0]);
-              Result := @FTinyBuffer[0];
+              Result := PAnsiChar(fByteBuffer);
+              Len := PosOrdNVU2Raw(POCINumber(Result), FvnuInfo, Result);
             end;
           vnuPosCurr: begin
-              CurrToRaw(PosNvu2Curr(POCINumber(Result), FvnuInfo), @FTinyBuffer[0], @Result);
+              CurrToRaw(PosNvu2Curr(POCINumber(Result), FvnuInfo), PAnsiChar(fByteBuffer), @Result);
               goto set_Result;
             end;
           vnuNegCurr: begin
-              CurrToRaw(NegNvu2Curr(POCINumber(Result), FvnuInfo), @FTinyBuffer[0], @Result);
+              CurrToRaw(NegNvu2Curr(POCINumber(Result), FvnuInfo), PAnsiChar(fByteBuffer), @Result);
               goto set_Result;
             end;
           else begin
@@ -781,32 +849,32 @@ jmpW2A:             fRawTemp := PUnicodeToRaw(PWideChar(Result), Len, ConSetting
       { the ordinals we yet do support }
       SQLT_INT: begin
                   case SQLVarHolder.value_sz of
-                    SizeOf(Int64): IntToRaw(PInt64(Result)^, @FTinyBuffer[0], @Result);
-                    SizeOf(Integer): IntToRaw(PInteger(Result)^, @FTinyBuffer[0], @Result);
-                    SizeOf(SmallInt): IntToRaw(PSmallInt(Result)^, @FTinyBuffer[0], @Result);
-                    else IntToRaw(PShortInt(Result)^, @FTinyBuffer, @Result[0]);
+                    SizeOf(Int64): IntToRaw(PInt64(Result)^, PAnsiChar(fByteBuffer), @Result);
+                    SizeOf(Integer): IntToRaw(PInteger(Result)^, PAnsiChar(fByteBuffer), @Result);
+                    SizeOf(SmallInt): IntToRaw(PSmallInt(Result)^, PAnsiChar(fByteBuffer), @Result);
+                    else IntToRaw(PShortInt(Result)^, PAnsiChar(fByteBuffer), @Result[0]);
                   end;
                   goto set_Result;
                 end;
       SQLT_UIN: begin
                   case SQLVarHolder.value_sz of
-                    SizeOf(UInt64): IntToRaw(PUInt64(Result)^, @FTinyBuffer[0], @Result);
-                    SizeOf(Cardinal): IntToRaw(PCardinal(Result)^, @FTinyBuffer[0], @Result);
-                    SizeOf(SmallInt): IntToRaw(Cardinal(PWord(Result)^), @FTinyBuffer[0], @Result);
-                    else IntToRaw(Cardinal(PByte(Result)^), @FTinyBuffer, @Result[0]);
+                    SizeOf(UInt64): IntToRaw(PUInt64(Result)^, PAnsiChar(fByteBuffer), @Result);
+                    SizeOf(Cardinal): IntToRaw(PCardinal(Result)^, PAnsiChar(fByteBuffer), @Result);
+                    SizeOf(SmallInt): IntToRaw(Cardinal(PWord(Result)^), PAnsiChar(fByteBuffer), @Result);
+                    else IntToRaw(Cardinal(PByte(Result)^), PAnsiChar(fByteBuffer), @Result[0]);
                   end;
-set_Result:       Len := Result - @FTinyBuffer[0];
-                  Result := @FTinyBuffer[0];
+set_Result:       Len := Result - PAnsiChar(fByteBuffer);
+                  Result :=PAnsiChar(fByteBuffer);
                 end;
       { the FPU floats we do support }
       SQLT_BFLOAT:  goto sin;
       SQLT_BDOUBLE: goto dbl;
       SQLT_FLT: begin
                   if SQLVarHolder^.value_sz = SizeOf(Double) then
-      dbl:          Len := FloatToSQLRaw(PDouble(Result)^, @FTinyBuffer)
+      dbl:          Len := FloatToSQLRaw(PDouble(Result)^, PAnsiChar(fByteBuffer))
                   else
-      sin:          Len := FloatToSQLRaw(PSingle(Result)^, @FTinyBuffer);
-                  Result := @FTinyBuffer[0];
+      sin:          Len := FloatToSQLRaw(PSingle(Result)^, PAnsiChar(fByteBuffer));
+                  Result := PAnsiChar(fByteBuffer);
                 end;
       { the binary raw we support }
       SQLT_VBI: begin
@@ -825,7 +893,7 @@ set_Result:       Len := Result - @FTinyBuffer[0];
       SQLT_TIMESTAMP_LTZ,
       SQLT_TIMESTAMP: begin
                   GetTimeStamp(ColumnIndex, TS);
-                  Result := @fTinyBuffer[0];
+                  Result := PAnsiChar(fByteBuffer);
                   Len := DateTimeToRaw(TS.Year, TS.Month, TS.Day,
                     TS.Hour, TS.Minute, TS.Second, TS.Fractions,
                     Result, ConSettings^.ReadFormatSettings.DateTimeFormat,
@@ -870,8 +938,8 @@ var TS: TZTimeStamp;
 label dbl, sin, set_from_tmp, set_Result, jmpA2W;
   procedure UniFromNVU;
   begin
-    Nvu2BCD(POCINumber(P), PBCD(@FTinyBuffer[0])^);
-    FUniTemp := ZSysUtils.BcdToSQLUni(PBCD(@FTinyBuffer[0])^);
+    Nvu2BCD(POCINumber(P), PBCD(fByteBuffer)^);
+    FUniTemp := ZSysUtils.BcdToSQLUni(PBCD(fByteBuffer)^);
   end;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -925,9 +993,9 @@ jmpA2W:           FUniTemp := PRawToUnicode(P, Len, FClientCP);
       SQLT_VNU:
         case nvuKind(POCINumber(P), FvnuInfo) of
           nvu0: begin
-              PWord(@FTinyBuffer[0])^ := Ord('0');
+              PWord(fByteBuffer)^ := Ord('0');
               Len := 1;
-              Result := @FTinyBuffer[0];
+              Result := PWideChar(fByteBuffer);
             end;
           nvuNegInf: begin
               Result := Pointer(wNegInfinity);
@@ -938,19 +1006,19 @@ jmpA2W:           FUniTemp := PRawToUnicode(P, Len, FClientCP);
               Len := 8;
             end;
           vnuNegInt: begin
-              IntToUnicode(NegNvu2Int(POCINumber(P), FvnuInfo), @FTinyBuffer[0], @Result);
+              IntToUnicode(NegNvu2Int(POCINumber(P), FvnuInfo), PWideChar(fByteBuffer), @Result);
               goto set_Result;
             end;
           vnuPosInt: begin
-              IntToUnicode(PosNvu2Int(POCINumber(P), FvnuInfo), @FTinyBuffer[0], @Result);
+              IntToUnicode(PosNvu2Int(POCINumber(P), FvnuInfo), PWideChar(fByteBuffer), @Result);
               goto set_Result;
             end;
           vnuPosCurr: begin
-              CurrToUnicode(PosNvu2Curr(POCINumber(P), FvnuInfo), @FTinyBuffer[0], @Result);
+              CurrToUnicode(PosNvu2Curr(POCINumber(P), FvnuInfo), PWideChar(fByteBuffer), @Result);
               goto set_Result;
             end;
           vnuNegCurr: begin
-              CurrToUnicode(NegNvu2Curr(POCINumber(P), FvnuInfo), @FTinyBuffer[0], @Result);
+              CurrToUnicode(NegNvu2Curr(POCINumber(P), FvnuInfo), PWideChar(fByteBuffer), @Result);
               goto set_Result;
             end;
           else begin
@@ -962,32 +1030,32 @@ jmpA2W:           FUniTemp := PRawToUnicode(P, Len, FClientCP);
       { the ordinals we yet do support }
       SQLT_INT: begin
                   case SQLVarHolder.value_sz of
-                    SizeOf(Int64): IntToUnicode(PInt64(P)^, @FTinyBuffer[0], @Result);
-                    SizeOf(Integer): IntToUnicode(PInteger(P)^, @FTinyBuffer[0], @Result);
-                    SizeOf(SmallInt): IntToUnicode(PSmallInt(P)^, @FTinyBuffer[0], @Result);
-                    else IntToUnicode(PShortInt(P)^, @FTinyBuffer, @Result[0]);
+                    SizeOf(Int64): IntToUnicode(PInt64(P)^, PWideChar(fByteBuffer), @Result);
+                    SizeOf(Integer): IntToUnicode(PInteger(P)^, PWideChar(fByteBuffer), @Result);
+                    SizeOf(SmallInt): IntToUnicode(PSmallInt(P)^, PWideChar(fByteBuffer), @Result);
+                    else IntToUnicode(PShortInt(P)^, PWideChar(fByteBuffer), @Result);
                   end;
                   goto set_Result;
                 end;
       SQLT_UIN: begin
                   case SQLVarHolder.value_sz of
-                    SizeOf(UInt64): IntToUnicode(PUInt64(P)^, @FTinyBuffer[0], @Result);
-                    SizeOf(Cardinal): IntToUnicode(PCardinal(P)^, @FTinyBuffer[0], @Result);
-                    SizeOf(Word): IntToUnicode(Cardinal(PWord(P)^), @FTinyBuffer[0], @Result);
-                    else IntToUnicode(Cardinal(PByte(P)^), @FTinyBuffer, @Result[0]);
+                    SizeOf(UInt64): IntToUnicode(PUInt64(P)^, PWideChar(fByteBuffer), @Result);
+                    SizeOf(Cardinal): IntToUnicode(PCardinal(P)^, PWideChar(fByteBuffer), @Result);
+                    SizeOf(Word): IntToUnicode(Cardinal(PWord(P)^), PWideChar(fByteBuffer), @Result);
+                    else IntToUnicode(Cardinal(PByte(P)^), PWideChar(fByteBuffer), @Result);
                   end;
-set_Result:       Len := Result - PWideChar(@FTinyBuffer[0]);
-                  Result := @FTinyBuffer[0];
+set_Result:       Len := Result - PWideChar(fByteBuffer);
+                  Result := PWideChar(fByteBuffer);
                 end;
       { the FPU floats we du support }
       SQLT_BFLOAT:  goto sin;
       SQLT_BDOUBLE: goto dbl;
       SQLT_FLT: begin
                   if SQLVarHolder^.value_sz = SizeOf(Double) then
-      dbl:          Len := FloatToSQLUnicode(PDouble(P)^, @FTinyBuffer)
+      dbl:          Len := FloatToSQLUnicode(PDouble(P)^, PWideChar(fByteBuffer))
                   else
-      sin:          Len := FloatToSQLUnicode(PSingle(P)^, @FTinyBuffer);
-                  Result := @FTinyBuffer
+      sin:          Len := FloatToSQLUnicode(PSingle(P)^, PWideChar(fByteBuffer));
+                  Result := PWideChar(fByteBuffer)
                 end;
       { the binary raw we support }
       SQLT_VBI: begin
@@ -1006,7 +1074,7 @@ set_Result:       Len := Result - PWideChar(@FTinyBuffer[0]);
       SQLT_TIMESTAMP_LTZ,
       SQLT_TIMESTAMP: begin
                   GetTimeStamp(ColumnIndex, TS);
-                  Result := @fTinyBuffer[0];
+                  Result := PWideChar(fByteBuffer);
                   Len := DateTimeToUni(TS.Year, TS.Month, TS.Day,
                     TS.Hour, TS.Minute, TS.Second, TS.Fractions,
                     Result, ConSettings^.ReadFormatSettings.DateTimeFormat,
@@ -1246,12 +1314,12 @@ begin
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
                   vnuNegCurr: Result := NegNvu2Int(POCINumber(P), FvnuInfo);
                   else begin
-                      Status := FplainDriver.OCINumberToReal(FErrorHandle, POCINumber(P),
-                        SizeOf(Double), @FTinyBuffer[0]);
+                      Status := FplainDriver.OCINumberToReal(FOCIError, POCINumber(P),
+                        SizeOf(Double), Pointer(fByteBuffer));
                       if Status <> OCI_SUCCESS then
-                        CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther,
-                              'OCINumberToReal', ConSettings);
-                      Result := Trunc(PDouble(@FTinyBuffer[0])^);
+                        FOracleConnection.HandleErrorOrWarning(FOCIError,
+                          Status, lcOther, 'OCINumberToReal', Self);
+                      Result := Trunc(PDouble(fByteBuffer)^);
                     end;
                 end;
       { the ordinals we yet do support }
@@ -1355,14 +1423,14 @@ begin
                   vnuPosCurr: Result := PosNvu2Int(POCINumber(P), FvnuInfo);
                   vnuNegCurr: Result := NegNvu2Int(POCINumber(P), FvnuInfo);
                   else begin
-                      Status := FplainDriver.OCINumberToReal(FErrorHandle, POCINumber(P),
-                        SizeOf(Double), @FTinyBuffer[0]);
+                      Status := FplainDriver.OCINumberToReal(FOCIError, POCINumber(P),
+                        SizeOf(Double), Pointer(fByteBuffer));
                       if Status <> OCI_SUCCESS then
-                        CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther,
-                              'OCINumberToReal', ConSettings);
-                      if PDouble(@FTinyBuffer[0])^ < 0
+                        FOracleConnection.HandleErrorOrWarning(FOCIError,
+                          Status, lcOther, 'OCINumberToReal', Self);
+                      if PDouble(fByteBuffer)^ < 0
                       then Result := 0
-                      else Result := Trunc(PDouble(@FTinyBuffer[0])^);
+                      else Result := Trunc(PDouble(fByteBuffer)^);
                     end;
                 end;
       { the ordinals we yet do support }
@@ -1504,9 +1572,9 @@ begin
       { the oracle soft decimal }
       SQLT_VNU: begin
           Result := 0;
-          Status:= FPlainDriver.OCINumberToReal(FErrorHandle, POCINumber(P), SizeOf(Double), @Result);
+          Status:= FPlainDriver.OCINumberToReal(FOCIError, POCINumber(P), SizeOf(Double), @Result);
           if Status <> OCI_Success then
-            CheckOracleError(FPLainDriver, FErrorHandle, Status, lcOther, 'OCINumberToReal', ConSettings);
+            FOracleConnection.HandleErrorOrWarning(FOCIError, Status, lcOther, 'OCINumberToReal', Self);
         end;
       { the ordinals we yet do support }
       SQLT_INT:
@@ -1670,12 +1738,12 @@ begin
             vnuPosCurr: Result := PosNvu2Curr(POCINumber(P), FvnuInfo);
             vnuNegCurr: Result := NegNvu2Curr(POCINumber(P), FvnuInfo);
             else begin
-                Status := FplainDriver.OCINumberToReal(FErrorHandle, POCINumber(P),
-                  SizeOf(Double), @FTinyBuffer[0]);
+                Status := FplainDriver.OCINumberToReal(FOCIError, POCINumber(P),
+                  SizeOf(Double), Pointer(fByteBuffer));
                 if Status <> OCI_SUCCESS then
-                  CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther,
-                        'OCINumberToReal', ConSettings);
-                Result := PDouble(@FTinyBuffer[0])^;
+                  FOracleConnection.HandleErrorOrWarning(FOCIError,
+                          Status, lcOther, 'OCINumberToReal', Self);
+                Result := PDouble(fByteBuffer)^;
               end;
         end;
       { the ordinals we yet do support }
@@ -1785,13 +1853,13 @@ begin
                 end;
       SQLT_INTERVAL_DS:
         begin
-          Status := FPlainDriver.OCIIntervalGetDaySecond(FOCISvcCtx, FErrorHandle,
+          Status := FPlainDriver.OCIIntervalGetDaySecond(FOCISvcCtx, FOCIError,
             @dy, @hr, @mm, @ss, @fsec, PPOCIDescriptor(P)^);
           if (Status = OCI_SUCCESS) then
             Result.Day := dy;
         end;
       SQLT_INTERVAL_YM: begin
-          Status := FPlainDriver.OCIIntervalGetYearMonth(FOCISvcCtx, FErrorHandle, @yr, @mnth, PPOCIDescriptor(P)^);
+          Status := FPlainDriver.OCIIntervalGetYearMonth(FOCISvcCtx, FOCIError, @yr, @mnth, PPOCIDescriptor(P)^);
           if (Status = OCI_SUCCESS) then begin
             Result.Year := yr;
             Result.Month := mnth;
@@ -1800,7 +1868,7 @@ begin
       SQLT_TIMESTAMP_TZ,
       SQLT_TIMESTAMP_LTZ,
       SQLT_TIMESTAMP: begin
-          Status := FPlainDriver.OCIDateTimeGetDate(FConnectionHandle, FErrorHandle,
+          Status := FPlainDriver.OCIDateTimeGetDate(FOCIEnv, FOCIError,
             PPOCIDescriptor(P)^, Year{%H-}, Month{%H-}, Day{%H-});
           if (Status = OCI_SUCCESS) then begin
             Result.Year :=  Abs(Year);
@@ -1879,7 +1947,7 @@ Fill: PCardinal(@Result.Hour)^ := 0;
           end;
       SQLT_INTERVAL_DS:
         begin
-          Status := FPlainDriver.OCIIntervalGetDaySecond(FOCISvcCtx, FErrorHandle,
+          Status := FPlainDriver.OCIIntervalGetDaySecond(FOCISvcCtx, FOCIError,
             @dy, @hr, @mm, @ss, @fsec, PPOCIDescriptor(P)^);
           if (Status = OCI_SUCCESS) then begin
             Result.Hour := hr;
@@ -1893,7 +1961,7 @@ Fill: PCardinal(@Result.Hour)^ := 0;
       SQLT_TIMESTAMP_TZ,
       SQLT_TIMESTAMP_LTZ,
       SQLT_TIMESTAMP: begin
-          Status := FPlainDriver.OCIDateTimeGetTime(FConnectionHandle, FErrorHandle,
+          Status := FPlainDriver.OCIDateTimeGetTime(FOCIEnv, FOCIError,
             PPOCIDescriptor(P)^, Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-});
           if Status = OCI_SUCCESS then begin
             Result.Hour := Hour;
@@ -1993,7 +2061,7 @@ Fill: PInt64(@Result.Year)^ := 0;
                 end;
       SQLT_INTERVAL_DS:
         begin
-          Status := FPlainDriver.OCIIntervalGetDaySecond(FOCISvcCtx, FErrorHandle,
+          Status := FPlainDriver.OCIIntervalGetDaySecond(FOCISvcCtx, FOCIError,
             @dy, @hr, @mm, @ss, @fsec, PPOCIDescriptor(P)^);
           if (Status = OCI_SUCCESS) then begin
             PCardinal(@Result.Year)^ := 0;
@@ -2008,7 +2076,7 @@ Fill: PInt64(@Result.Year)^ := 0;
         end;
       SQLT_INTERVAL_YM:
         begin
-          Status := FPlainDriver.OCIIntervalGetYearMonth(FOCISvcCtx, FErrorHandle, @yr, @mnth, PPOCIDescriptor(P)^);
+          Status := FPlainDriver.OCIIntervalGetYearMonth(FOCISvcCtx, FOCIError, @yr, @mnth, PPOCIDescriptor(P)^);
           if (Status = OCI_SUCCESS) then begin
             PInt64(@Result.Hour)^ := 0;
             PInt64(@Result.Second)^ := 0;
@@ -2019,9 +2087,9 @@ Fill: PInt64(@Result.Year)^ := 0;
         end;
       SQLT_TIMESTAMP_TZ,
       SQLT_TIMESTAMP_LTZ,
-      SQLT_TIMESTAMP: if (FPlainDriver.OCIDateTimeGetDate(FConnectionHandle, FErrorHandle,
+      SQLT_TIMESTAMP: if (FPlainDriver.OCIDateTimeGetDate(FOCIEnv, FOCIError,
               PPOCIDescriptor(P)^, Year{%H-}, Month{%H-}, Day{%H-}) = OCI_SUCCESS) and
-              (FPlainDriver.OCIDateTimeGetTime(FConnectionHandle, FErrorHandle,
+              (FPlainDriver.OCIDateTimeGetTime(FOCIEnv, FOCIError,
                PPOCIDescriptor(P)^, Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-}) = OCI_SUCCESS) then begin
             Result.Year :=  Abs(Year);
             Result.Month := Month;
@@ -2052,6 +2120,7 @@ var
   SQLVarHolder: PZSQLVar;
   type_Ref: POCIRef;
   //tdo: POCIType;
+  Status: sword;
 begin
   Result := nil ;
 {$IFNDEF DISABLE_CHECKING}
@@ -2082,37 +2151,39 @@ begin
 
           //create a temporary object
           type_ref := nil;
-          CheckOracleError(FPlainDriver, FErrorHandle,
-            FPlainDriver.OCIObjectNew(FConnectionHandle,
-              FConnection.GetErrorHandle, FOCISvcCtx, OCI_TYPECODE_REF,
-                nil, nil, OCI_DURATION_DEFAULT, TRUE, @type_ref),
-            lcOther, 'OCITypeByRef from OCI_ATTR_REF_TDO', ConSettings);
+          Status := FPlainDriver.OCIObjectNew(FOCIEnv, FOCIError,
+            FOCISvcCtx, OCI_TYPECODE_REF, nil, nil, OCI_DURATION_DEFAULT,
+            TRUE, @type_ref);
+          if Status <> OCI_SUCCESS then
+            FOracleConnection.HandleErrorOrWarning(FOCIError,
+              Status, lcOther, 'OCITypeByRef from OCI_ATTR_REF_TDO', Self);
           //Get the type reference
-          CheckOracleError(FPlainDriver, FErrorHandle,
-            FPlainDriver.OCIObjectGetTypeRef(FConnectionHandle,
-              FConnection.GetErrorHandle, SQLVarHolder._Obj.obj_value, type_Ref),
-            lcOther, 'OCIObjectGetTypeRef(obj_value)', ConSettings);
-
+          Status := FPlainDriver.OCIObjectGetTypeRef(FOCIEnv,
+            FOCIError, SQLVarHolder._Obj.obj_value, type_Ref);
+          if Status <> OCI_SUCCESS then
+            FOracleConnection.HandleErrorOrWarning(FOCIError,
+              Status, lcOther, 'OCIObjectGetTypeRef(obj_value)', Self);
           //Now let's get the new tdo
           //Excptions????????
-          {CheckOracleError(FPlainDriver, FErrorHandle,
-            FPlainDriver.TypeByRef(FConnectionHandle,
-              FConnection.GetErrorHandle, type_ref, OCI_DURATION_DEFAULT,
+          {CheckOracleError(FPlainDriver, FOCIError,
+            FPlainDriver.TypeByRef(FOCIEnv,
+              FOracleConnection.GetErrorHandle, type_ref, OCI_DURATION_DEFAULT,
               OCI_TYPEGET_ALL, @tdo),
             lcOther, 'OCITypeByRef from OCI_ATTR_REF_TDO', ConSettings);}
           //free the temporary object
-          CheckOracleError(FPlainDriver, FErrorHandle,
-            FPlainDriver.OCIObjectFree(FConnectionHandle,
-              FConnection.GetErrorHandle, type_ref, ub2(0)),
-            lcOther, 'ObjectFree()', ConSettings);
+          Status := FPlainDriver.OCIObjectFree(FOCIEnv, FOCIError, type_ref,
+            ub2(0));
+          if Status <> OCI_SUCCESS then
+            FOracleConnection.HandleErrorOrWarning(FOCIError,
+              Status, lcOther, 'ObjectFree()', Self);
         end;
 
 
-        {CheckOracleError(FPlainDriver, FErrorHandle,
+        {CheckOracleError(FPlainDriver, FOCIError,
           FPlainDriver.ResultSetToStmt(SQLVarHolder^._Obj.obj_ind,
-            FErrorHandle), lcOther, 'Nested Table to Stmt handle', ConSettings);
+            FOCIError), lcOther, 'Nested Table to Stmt handle', ConSettings);
         Result := CreateOracleResultSet(FPlainDriver, GetStatement,
-          'Fetch Nested Table', SQLVarHolder^._Obj.obj_ref, FErrorHandle)};
+          'Fetch Nested Table', SQLVarHolder^._Obj.obj_ref, FOCIError)};
       end;
   end;
 end;
@@ -2165,9 +2236,9 @@ begin
                 end;
       SQLT_BLOB,
       SQLT_BFILEE,
-      SQLT_CFILEE: Result := TZOracleBlob.Create(FConnection, PPOCIDescriptor(P)^, SQLVarHolder.dty, FOpenLobStreams);
+      SQLT_CFILEE: Result := TZOracleBlob.Create(FOracleConnection, PPOCIDescriptor(P)^, SQLVarHolder.dty, FOpenLobStreams);
       SQLT_CLOB: with TZOracleColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
-          Result := TZOracleClob.Create(FConnection, PPOCIDescriptor(P)^, CharSetForm, csid, FOpenLobStreams);
+          Result := TZOracleClob.Create(FOracleConnection, PPOCIDescriptor(P)^, CharSetForm, csid, FOpenLobStreams);
       SQLT_NTY: ;
       else raise CreateCanNotAccessBlobRecordException(ColumnIndex, TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType);
     end;
@@ -2193,6 +2264,7 @@ var
   RowSize: Integer;
   defn_or_bindpp: POCIHandle;
   acsid: ub2;
+  Status: sword;
   function AttributeToString(var P: PAnsiChar; Len: Integer):
     {$IF DEFINED(WITH_RAWBYTESTRING) and not DEFINED(UNICODE)}RawByteString{$ELSE}String{$IFEND};
   begin
@@ -2220,23 +2292,24 @@ var
     P := nil;
   end;
 begin
-  //CanBindInt64 := FConnection.GetClientVersion >= 11002000;
+  //CanBindInt64 := FOracleConnection.GetClientVersion >= 11002000;
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
 
-  if not Assigned(FStmtHandle) or not Assigned(FErrorHandle) then
+  if not Assigned(FStmtHandle) or not Assigned(FOCIError) then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
 
-  CheckOracleError(FPlainDriver, FErrorHandle,
-    FPlainDriver.OCIStmtExecute(FOCISvcCtx, FStmtHandle, FErrorHandle, 1, 0,
-      nil, nil, OCI_DESCRIBE_ONLY),
-      lcExecute, 'OCIStmtExecute', ConSettings);
-
+  Status := FPlainDriver.OCIStmtExecute(FOCISvcCtx, FStmtHandle, FOCIError,
+    1, 0, nil, nil, OCI_DESCRIBE_ONLY);
+  if Status <> OCI_SUCCESS then
+    FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
+      'OCIStmtExecute', Self);
   { Resize SQLVARS structure if needed }
-  CheckOracleError(FPlainDriver, FErrorHandle,
-    FPlainDriver.OCIAttrGet(FStmtHandle, OCI_HTYPE_STMT, @ColumnCount, nil,
-      OCI_ATTR_PARAM_COUNT, FErrorHandle),
-      lcExecute, 'OCIStmtExecute', ConSettings);
+  Status := FPlainDriver.OCIAttrGet(FStmtHandle, OCI_HTYPE_STMT, @ColumnCount,
+    nil, OCI_ATTR_PARAM_COUNT, FOCIError);
+  if Status <> OCI_SUCCESS then
+    FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
+      'OCIAttrGet', Self);
 
   AllocateOracleSQLVars(FColumns, ColumnCount);
   DescriptorColumnCount := 0; SubObjectColumnCount := 0;
@@ -2253,34 +2326,34 @@ begin
     ColumnsInfo.Add(ColumnInfo);
 
     paramdpp := nil; //init
-    FPlainDriver.OCIParamGet(FStmtHandle, OCI_HTYPE_STMT, FErrorHandle, paramdpp, I);
-    (*CheckOracleError(FPlainDriver, FErrorHandle,
+    FPlainDriver.OCIParamGet(FStmtHandle, OCI_HTYPE_STMT, FOCIError, paramdpp, I);
+    (*CheckOracleError(FPlainDriver, FOCIError,
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @char_semantics, nil, OCI_ATTR_CHAR_USED, FErrorHandle),
+        @char_semantics, nil, OCI_ATTR_CHAR_USED, FOCIError),
       lcExecute, 'OCI_ATTR_CHAR_USED', ConSettings);
     if Boolean(char_semantics) then
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @CurrentVar^.value_sz, nil, OCI_ATTR_MAXCHAR_SIZE, FErrorHandle)
+        @CurrentVar^.value_sz, nil, OCI_ATTR_MAXCHAR_SIZE, FOCIError)
     else*)
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @CurrentVar^.value_sz, nil, OCI_ATTR_DATA_SIZE, FErrorHandle);
+        @CurrentVar^.value_sz, nil, OCI_ATTR_DATA_SIZE, FOCIError);
     CurrentVar^.value_sz := PUB2(@CurrentVar^.value_sz)^; //full init of all 4 Bytes -> is a ub2
     FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-      @CurrentVar^.dty, nil, OCI_ATTR_DATA_TYPE, FErrorHandle);
+      @CurrentVar^.dty, nil, OCI_ATTR_DATA_TYPE, FOCIError);
     if CurrentVar^.dty in [SQLT_NUM, SQLT_VNU] then begin //unsigned char[21](binary) see: http://docs.oracle.com/cd/B19306_01/appdev.102/b14250/oci03typ.htm
       {11g bug: returns Precision 38 for Ordinal values }
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @CurrentVar^.Precision, nil, OCI_ATTR_PRECISION, FErrorHandle);
+        @CurrentVar^.Precision, nil, OCI_ATTR_PRECISION, FOCIError);
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @CurrentVar^.Scale, nil, OCI_ATTR_SCALE, FErrorHandle);
+        @CurrentVar^.Scale, nil, OCI_ATTR_SCALE, FOCIError);
       ColumnInfo.Precision := CurrentVar.Precision;
       if CurrentVar.Scale > 0 then
         ColumnInfo.Scale := CurrentVar.Scale;
     end else if CurrentVar^.dty in [SQLT_DATE..SQLT_TIMESTAMP_LTZ] then begin
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @CurrentVar^.Precision, nil, OCI_ATTR_LFPRECISION, FErrorHandle);
+        @CurrentVar^.Precision, nil, OCI_ATTR_LFPRECISION, FOCIError);
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @CurrentVar^.Scale, nil, OCI_ATTR_FSPRECISION, FErrorHandle);
+        @CurrentVar^.Scale, nil, OCI_ATTR_FSPRECISION, FOCIError);
       ColumnInfo.Precision := CurrentVar.Precision;
       if CurrentVar.Scale > 0 then
         ColumnInfo.Scale := CurrentVar.Scale;
@@ -2290,16 +2363,18 @@ begin
     end;
     ColumnInfo.dty := CurrentVar^.dty;
     P := nil; //init
-    CheckOracleError(FPlainDriver, FErrorHandle,
-      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-      @P, @TempColumnNameLen, OCI_ATTR_NAME, FErrorHandle),
-      lcExecute, 'OCI_ATTR_NAME', ConSettings);
+    Status := FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+      @P, @TempColumnNameLen, OCI_ATTR_NAME, FOCIError);
+    if Status <> OCI_SUCCESS then
+      FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
+        'OCIAttrGet(OCI_ATTR_NAME)', Self);
     ColumnInfo.ColumnLabel := AttributeToString(P, TempColumnNameLen);
 
-    CheckOracleError(FPlainDriver, FErrorHandle,
-      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-      @P, @TempColumnNameLen, OCI_ATTR_SCHEMA_NAME, FErrorHandle),
-      lcExecute, 'OCI_ATTR_SCHEMA_NAME', ConSettings);
+    Status := FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+      @P, @TempColumnNameLen, OCI_ATTR_SCHEMA_NAME, FOCIError);
+    if Status <> OCI_SUCCESS then
+      FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
+        'OCIAttrGet(OCI_ATTR_SCHEMA_NAME)', Self);
     ColumnInfo.SchemaName := AttributeToString(P, TempColumnNameLen);
     ColumnInfo.CharOctedLength := CurrentVar^.value_sz;
 
@@ -2318,10 +2393,10 @@ begin
         so we'll increase the buffers to avoid truncation errors
         and we use 8 byte aligned buffers. Here we go:}
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @ColumnInfo.CharsetForm, nil, OCI_ATTR_CHARSET_FORM, FErrorHandle);
+        @ColumnInfo.CharsetForm, nil, OCI_ATTR_CHARSET_FORM, FOCIError);
       if ColumnInfo.ColumnType = stString then begin
           FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-            @ColumnInfo.Precision, nil, OCI_ATTR_DISP_SIZE, FErrorHandle);
+            @ColumnInfo.Precision, nil, OCI_ATTR_DISP_SIZE, FOCIError);
         if ColumnInfo.CharsetForm = SQLCS_NCHAR then begin
           CurrentVar^.value_sz := ColumnInfo.Precision;
           ColumnInfo.Precision := ColumnInfo.Precision shr 1;
@@ -2338,7 +2413,7 @@ begin
             CurrentVar.ColType := stUnicodeString;
           end;
           FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-            @ColumnInfo.csid, nil, OCI_ATTR_CHARSET_ID, FErrorHandle);
+            @ColumnInfo.csid, nil, OCI_ATTR_CHARSET_ID, FOCIError);
         end;
         CurrentVar^.value_sz := ((CurrentVar^.value_sz shr 3)+1) shl 3;
         ColumnInfo.CharOctedLength := CurrentVar^.value_sz;
@@ -2348,7 +2423,7 @@ begin
           ColumnInfo.ColumnCodePage := zCP_UTF16
         end else ColumnInfo.ColumnCodePage := FClientCP;
         FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-          @ColumnInfo.csid, nil, OCI_ATTR_CHARSET_ID, FErrorHandle);
+          @ColumnInfo.csid, nil, OCI_ATTR_CHARSET_ID, FOCIError);
       end;
       ColumnInfo.ColumnType := CurrentVar^.ColType;
     end else if (ColumnInfo.ColumnType = stBytes ) then begin
@@ -2358,17 +2433,17 @@ begin
       ColumnInfo.Precision := CurrentVar^.Precision;
     if CurrentVar.dty = SQLT_NTY  then begin
       Inc(SubObjectColumnCount);
-      CurrentVar^.value_sz := SizeOf(PPOCIDescriptor);
-      CurrentVar^.ColType := stDataSet;
-
-      CurrentVar^._Obj := DescribeObject(FplainDriver, FConnection,
+      CurrentVar^.value_sz := 0;//SizeOf(PPOCIDescriptor);
+      CurrentVar^.ColType := stUnknown;//stDataSet;
+      {
+      CurrentVar^._Obj := DescribeObject(FplainDriver, FOracleConnection,
         paramdpp, FStmtHandle, 0);
       if CurrentVar^._Obj.col_typecode = OCI_TYPECODE_TABLE then
         CurrentVar^.ColType := stDataSet
       else if CurrentVar^._Obj.col_typecode = OCI_TYPECODE_VARRAY then
         CurrentVar^.ColType := stArray
       else //more possible types
-        CurrentVar^.ColType := stBinaryStream;
+        CurrentVar^.ColType := stBinaryStream;}
     end;
     {calc required size of field}
 
@@ -2407,38 +2482,43 @@ begin
       continue;
     if CurrentVar^.DescriptorType <> NO_DTYPE then
       for J := 0 to FIteration -1 do begin
-        FStatus := FPlainDriver.OCIDescriptorAlloc(FConnectionHandle, PPOCIDescriptor(P)^, CurrentVar^.DescriptorType, 0, nil);
-        if FStatus <> OCI_SUCCESS then
-          CheckOracleError(FPlainDriver, FErrorHandle, Fstatus, lcOther, 'OCIDescriptorAlloc', ConSettings);
+        Status := FPlainDriver.OCIDescriptorAlloc(FOCIEnv, PPOCIDescriptor(P)^, CurrentVar^.DescriptorType, 0, nil);
+        if Status <> OCI_SUCCESS then
+          FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
+            'OCIDescriptorAlloc', Self);
         Inc(P, SizeOf(PPOCIDescriptor));
       end
     else if CurrentVar^.dty = SQLT_VST then
       for J := 0 to FIteration -1 do begin
-        FStatus := FPlainDriver.OCIStringResize(FConnectionHandle, FErrorHandle, CurrentVar^.value_sz, PPOCIString(P));
-        if FStatus <> OCI_SUCCESS then
-          CheckOracleError(FPlainDriver, FErrorHandle, Fstatus, lcOther, 'OCIStringResize', ConSettings);
+        Status := FPlainDriver.OCIStringResize(FOCIEnv, FOCIError, CurrentVar^.value_sz, PPOCIString(P));
+        if Status <> OCI_SUCCESS then
+          FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
+            'OCIStringResize', Self);
         Inc(P, SizeOf(PPOCIString));
       end
     else
       Inc(P, CurrentVar^.value_sz*Cardinal(FIteration));
     defn_or_bindpp := nil;
-    FStatus := FPlainDriver.OCIDefineByPos(FStmtHandle, defn_or_bindpp,
-      FErrorHandle, I, CurrentVar^.valuep, CurrentVar^.value_sz, CurrentVar^.dty,
+    Status := FPlainDriver.OCIDefineByPos(FStmtHandle, defn_or_bindpp,
+      FOCIError, I, CurrentVar^.valuep, CurrentVar^.value_sz, CurrentVar^.dty,
       CurrentVar^.indp, CurrentVar^.alenp, nil, OCI_DEFAULT);
-    if FStatus <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FErrorHandle, FStatus, lcExecute, 'OCIDefineByPos', ConSettings);
+    if Status <> OCI_SUCCESS then
+      FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
+        'OCIDefineByPos', Self);
     if (CurrentVar^.ColType in [stUnicodeString, stUnicodeStream]) and (ConSettings.ClientCodePage.ID <> OCI_UTF16ID) then begin
       acsid := OCI_UTF16ID;
-      FStatus := FplainDriver.OCIAttrSet(defn_or_bindpp, OCI_HTYPE_DEFINE, @acsid,
-           0, OCI_ATTR_CHARSET_ID, FErrorHandle);
-      if FStatus <> OCI_SUCCESS then
-        CheckOracleError(FPlainDriver, FErrorHandle, FStatus, lcExecute, 'OCIAttrSet(OCI_ATTR_CHARSET_ID)', ConSettings);
+      Status := FplainDriver.OCIAttrSet(defn_or_bindpp, OCI_HTYPE_DEFINE, @acsid,
+           0, OCI_ATTR_CHARSET_ID, FOCIError);
+      if Status <> OCI_SUCCESS then
+        FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
+          'OCIAttrSet(OCI_ATTR_CHARSET_ID)', Self);
     end else if CurrentVar^.dty=SQLT_NTY then
       //second step: http://www.csee.umbc.edu/portal/help/oracle8/server.815/a67846/obj_bind.htm
-      CheckOracleError(FPlainDriver, FErrorHandle,
-        FPlainDriver.OCIDefineObject(defn_or_bindpp, FErrorHandle, CurrentVar^._Obj.tdo,
-           @CurrentVar^._Obj.obj_value, nil, nil, nil),
-        lcExecute, 'OCIDefineObject', ConSettings);
+      Status := FPlainDriver.OCIDefineObject(defn_or_bindpp, FOCIError, CurrentVar^._Obj.tdo,
+           @CurrentVar^._Obj.obj_value, nil, nil, nil);
+      if Status <> OCI_SUCCESS then
+        FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
+          'OCIDefineObject', Self);
   end;
 
   inherited Open;
@@ -2501,7 +2581,7 @@ begin
 
   if RowNo = 0 then begin//fetch Iteration count of rows
     Status := FPlainDriver.OCIStmtExecute(FOCISvcCtx, FStmtHandle,
-      FErrorHandle, FIteration, 0, nil, nil, OCI_DEFAULT);
+      FOCIError, FIteration, 0, nil, nil, OCI_DEFAULT);
     if Status = OCI_SUCCESS then begin
       FMaxBufIndex := FIteration -1; //FFetchedRows is an index [0...?] / FIteration is Count 1...?
       goto success; //skip next if's
@@ -2513,7 +2593,7 @@ begin
     RowNo := RowNo + 1;
     Exit;
   end else begin //fetch Iteration count of rows
-    Status := FPlainDriver.OCIStmtFetch2(FStmtHandle, FErrorHandle,
+    Status := FPlainDriver.OCIStmtFetch2(FStmtHandle, FOCIError,
       FIteration, OCI_FETCH_NEXT, 0, OCI_DEFAULT);
     FCurrentRowBufIndex := 0; //reset
     if Status = OCI_SUCCESS then begin
@@ -2523,7 +2603,7 @@ begin
   end;
 
   if Status = OCI_NO_DATA then begin
-    FPlainDriver.OCIAttrGet(FStmtHandle,OCI_HTYPE_STMT,@FetchedRows,nil,OCI_ATTR_ROWS_FETCHED,FErrorHandle);
+    FPlainDriver.OCIAttrGet(FStmtHandle,OCI_HTYPE_STMT,@FetchedRows,nil,OCI_ATTR_ROWS_FETCHED,FOCIError);
     LastRowNo := RowNo+Integer(FetchedRows);  //this makes Exit out in first check on next fetch
     FMaxBufIndex := Integer(FetchedRows)-1;
     RowNo := RowNo + 1;
@@ -2532,8 +2612,8 @@ begin
       Result := True;
     Exit;
   end;
-
-  CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'FETCH ROW', ConSettings);
+  FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
+    'FETCH ROW', Self);
 
   if Status in [OCI_SUCCESS, OCI_SUCCESS_WITH_INFO] then begin
 Success:
@@ -2658,7 +2738,8 @@ begin
   if IsOpen then begin
     Status := FPlainDriver.OCILobClose(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobClose', FConSettings);
+      FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+        lcExecPrepStmt, 'OCILobClose', Self);
   end;
 end;
 
@@ -2675,18 +2756,22 @@ begin
         Status := FPlainDriver.OCILobGetLength2(FOCISvcCtx, FOCIError, FOwnerlob.FParentLocator, size8);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
         if Status <> OCI_SUCCESS then
-          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobGetLength2', FConSettings);
+          FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+            lcExecPrepStmt, 'OCILobGetLength2', Self);
         Status := FPLainDriver.OCILobCopy2(FOCISvcCtx, FOCIError, FOwnerlob.FLobLocator, FOwnerlob.FParentLocator, size8, 1, 1);
         if Status <> OCI_SUCCESS then
-          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobCopy2', GetConSettings);
+          FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+            lcExecPrepStmt, 'OCILobCopy2', Self);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
       end else begin
         Status := FPlainDriver.OCILobGetLength(FOCISvcCtx, FOCIError, FOwnerlob.FParentLocator, size4);
         if Status <> OCI_SUCCESS then
-          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobGetLength', FConSettings);
+          FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+            lcExecPrepStmt, 'OCILobGetLength', Self);
         Status := FPLainDriver.OCILobCopy(FOCISvcCtx, FOCIError, FOwnerlob.FLobLocator, FOwnerlob.FParentLocator, size4, 1, 1);
         if Status <> OCI_SUCCESS then
-          CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobCopy', GetConSettings);
+          FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+            lcExecPrepStmt, 'OCILobCopy', Self);
       end;
     finally
       { notify the current locator does no longer point to copy of Parent locator }
@@ -2706,7 +2791,8 @@ begin
     { copy locator next fetch may fill the org locator with next lob infos }
     Status := FPlainDriver.OCILobLocatorAssign(FOCISvcCtx, FOCIError, FOwnerLob.FParentLocator, @FOwnerLob.FLobLocator);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobLocatorAssign', FConSettings);
+      FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+        lcExecPrepStmt, 'OCILobLocatorAssign', Self);
   end;
 end;
 
@@ -2735,7 +2821,8 @@ begin
   Status := FPlainDriver.OCIDescriptorAlloc(FOCIEnv,
     FOwnerLob.FLobLocator, FOwnerLob.FDescriptorType, 0, nil);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIDescriptorAlloc', FConSettings);
+    FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+      lcOther, 'OCIDescriptorAlloc', Self);
   FOwnerLob.FLocatorAllocated := True;
 end;
 
@@ -2749,7 +2836,8 @@ begin
         FOwnerLob.FLobLocator, FOwnerLob.Fcsid, FOwnerLob.FCharsetForm, Flobtype,
         False, OCI_DURATION_DEFAULT);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobCreateTemporary', FConSettings);
+      FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+        lcOther, 'OCILobCreateTemporary', Self);
   end;
 end;
 
@@ -2767,7 +2855,8 @@ begin
   Status := FPlainDriver.OCIDescriptorFree(FOwnerLob.FLobLocator, FOwnerLob.FDescriptorType);
   FOwnerLob.FLobLocator := nil;
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIDescriptorFree', FConSettings);
+    FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+      lcOther, 'OCIDescriptorFree', Self);
 end;
 
 procedure TZAbstracOracleLobStream.FreeTemporary;
@@ -2776,7 +2865,8 @@ begin
   if not FReleased then begin
     Status := FPlainDriver.OCILobFreeTemporary(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobFreeTemporary', FConSettings);
+      FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+        lcOther, 'OCILobFreeTemporary', Self);
   end;
 end;
 
@@ -2787,7 +2877,8 @@ begin
   if not FReleased then begin
     Status := FPlainDriver.OCILobIsOpen(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator, Result);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobIsOpen', FConSettings);
+      FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+        lcOther, 'OCILobIsOpen', Self);
   end else Result := False;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
@@ -2799,7 +2890,8 @@ begin
   if not FReleased then begin
     Status := FPlainDriver.OCILobIsTemporary(FOCIEnv, FOCIError, FOwnerLob.FLobLocator, Result);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobIsTemporary', FConSettings);
+      FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+        lcOther, 'OCILobIsTemporary', Self);
   end else Result := False;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
@@ -2813,20 +2905,24 @@ begin
     mode := OCIOpenModes[fOwnerLob.FLobStreamMode];
     Status := FPlainDriver.OCILobOpen(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator, mode);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobOpen', FConSettings);
+      FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+        lcOther, 'OCILobOpen', Self);
     Status := FplainDriver.OCILobCharSetId(FOCIEnv, FOCIError,
       FOwnerLob.FLobLocator, @Fcsid);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobCharSetId', FConSettings);
+      FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+        lcOther, 'OCILobCharSetId', Self);
     Status := FplainDriver.OCILobCharSetForm(FOCIEnv, FOCIError,
       FOwnerLob.FLobLocator, @FOwnerLob.FCharsetForm);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobCharSetForm', FConSettings);
+      FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+        lcOther, 'OCILobCharSetForm', Self);
     if FOwnerLob.FDescriptorType <> OCI_DTYPE_FILE then begin
       Status := FplainDriver.OCILobGetChunkSize(FOCISvcCtx, FOCIError,
         FOwnerLob.FLobLocator, FChunk_Size);
       if Status <> OCI_SUCCESS then
-        CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobGetChunkSize', FConSettings);
+        FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+          lcOther, 'OCILobGetChunkSize', Self);
     end;
   end;
 end;
@@ -2847,7 +2943,8 @@ begin
     if (Flobtype = OCI_TEMP_CLOB) and (FOwnerLob.Fcsid = OCI_UTF16ID) then
       Result := Result shl 1;
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobGetLength', FConSettings);
+      FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+        lcOther, 'OCILobGetLength', Self);
   end;
 end;
 
@@ -2891,7 +2988,8 @@ begin
     Inc(Result, Longint(amtpBytes));
   end;
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobRead', FConSettings);
+    FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+      lcOther, 'OCILobRead', Self);
   FPosition := FPosition + Result;
 end;
 
@@ -2915,7 +3013,8 @@ begin
     Inc(pBuff, amtp);
   end;
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobRead', FConSettings);
+    FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+      lcOther, 'OCILobRead', Self);
   Result := pBuff - pStart;
   FPosition := Result;
   Close;
@@ -2949,7 +3048,8 @@ begin
         newlen := newlen shr 1;
       Status := FPlainDriver.OCILobTrim(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator, newlen);
       if Status <> OCI_SUCCESS then
-        CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobTrim', FConSettings);
+        FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+          lcOther, 'OCILobTrim', Self);
       if FPosition > NewSize then
         FPosition := NewSize;
     end else if NewSize > ASize then
@@ -2986,7 +3086,8 @@ begin
   Status := FPLainDriver.OCILobWrite(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator,
     amtp, offset, pBuff, amtpBytes, OCI_ONE_PIECE, nil, nil, FOwnerLob.Fcsid, FOwnerLob.FCharsetForm);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobWrite', FConSettings);
+    FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+      lcOther, 'OCILobWrite', Self);
   Result := amtpBytes;
   FPosition := FPosition + Result;
 end;
@@ -3022,7 +3123,8 @@ begin
     else piece := OCI_LAST_PIECE
  end;
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobWrite', FConSettings);
+    FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+      lcOther, 'OCILobWrite', Self);
 end;
 
 { TZAbstractOracleBlob }
@@ -3051,11 +3153,11 @@ begin
     SQLT_BFILEE,
     SQLT_CFILEE,
     SQLT_BLOB:  begin
-                  AbstractOracleBlob := TZOracleBlob.Create(FConnection, FLobLocator, Fdty, FOpenLobStreams);
+                  AbstractOracleBlob := TZOracleBlob.Create(FOracleConnection, FLobLocator, Fdty, FOpenLobStreams);
                   Result := TZOracleBlob(AbstractOracleBlob);
                 end;
     SQLT_CLOB:  begin
-                  AbstractOracleBlob := TZOracleClob.Create(FConnection, FLobLocator, Fcharsetform, fcsid, FOpenLobStreams);
+                  AbstractOracleBlob := TZOracleClob.Create(FOracleConnection, FLobLocator, Fcharsetform, fcsid, FOpenLobStreams);
                   Result := TZOracleClob(AbstractOracleBlob);
                 end;
     else raise EZSQLException.Create(SUnsupportedOperation);
@@ -3074,19 +3176,21 @@ begin
   FLobLocator := nil;
   Status := FPlainDriver.OCIDescriptorAlloc(FOCIEnv, FLobLocator, FDescriptorType, 0, nil);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIDescriptorAlloc', FConSettings);
+    FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+      lcOther, 'OCIDescriptorAlloc', Self);
   FLocatorAllocated := True;
   { copy locator next fetch may fill the org locator with next lob infos }
   Status := FPlainDriver.OCILobLocatorAssign(FOCISvcCtx, FOCIError, FParentLocator, @FLobLocator);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobLocatorAssign', FConSettings);
+    FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+      lcOther, 'OCILobLocatorAssign', Self);
 end;
 
 constructor TZAbstractOracleBlob.Create(const Connection: IZOracleConnection;
   LobLocator: POCILobLocator; dty: ub2; const OpenLobStreams: TZSortedList);
 begin
   inherited Create(zCP_Binary, OpenLobStreams);
-  FConnection := Connection;
+  FOracleConnection := Connection;
   FOCIEnv := Connection.GetConnectionHandle;
   FOCISvcCtx := Connection.GetServiceContextHandle;
   FLobLocator := LobLocator;
@@ -3143,21 +3247,31 @@ begin
   if (FLobLocator <> nil) and FLocatorAllocated then try
     Status := FPlainDriver.OCILobIsOpen(FOCISvcCtx, FOCIError, FLobLocator, B);
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobIsOpen', FConSettings);
+      FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+        lcOther, 'OCILobIsOpen', Self);
     if B then begin
       Status := FPlainDriver.OCILobClose(FOCISvcCtx, FOCIError, FLobLocator);
       if Status <> OCI_SUCCESS then
-        CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobClose', FConSettings);
+        FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+          lcOther, 'OCILobClose', Self);
     end;
   finally
     Status := FPlainDriver.OCIDescriptorFree(FLobLocator, FDescriptorType);
     FLobLocator := nil;
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCIDescriptorFree', FConSettings);
+      FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+        lcOther, 'OCIDescriptorFree', Self);
   end;
   inherited;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
+
+function TZAbstractOracleBlob.GetConSettings: PZConSettings;
+begin
+  if FOwner <> nil
+  then Result := FOwner.GetConSettings
+  else Result := nil;
+end;
 
 function TZAbstractOracleBlob.GetLobLocator: POCILobLocator;
 begin
@@ -3180,6 +3294,19 @@ begin
     finally
       Stream.Free;
     end;
+  end;
+end;
+
+procedure TZAbstractOracleBlob.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+begin
+  FLobLocator := nil;
+  FOracleConnection := nil;
+  if FLobStream <> nil
+  then FLobStream.ReleaseImmediat(Sender, AError)
+  else if FOwner <> nil then begin
+    FOwner.ReleaseImmediat(Sender, AError);
+    FOwner := nil
   end;
 end;
 
@@ -3305,11 +3432,11 @@ begin
    the bufl param by chars*BytesPerChar ... And of cours we can perform poll reads }
   if (CodePage = FColumnCodePage) and (FBytesPerChar > 1) then begin
     if FHas64BitLobMethods then begin
-      OCIStream64 := TZOracleInternalLobStream64.Create(Self, FConnection, FOpenLobStreams);
+      OCIStream64 := TZOracleInternalLobStream64.Create(Self, FOracleConnection, FOpenLobStreams);
       Size := OCIStream64.Size;
       OCIStream32 := nil
     end else begin
-      OCIStream32 := TZOracleInternalLobStream32.Create(Self, FConnection, FOpenLobStreams);
+      OCIStream32 := TZOracleInternalLobStream32.Create(Self, FOracleConnection, FOpenLobStreams);
       Size := OCIStream32.Size;
       OCIStream64 := nil;
     end;
@@ -3351,7 +3478,8 @@ begin
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     Result := lenp;
     if Status <> OCI_SUCCESS then
-      CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobGetLength2', FConSettings);
+      FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+        lcOther, 'OCILobGetLength2', Self);
     if (FOwnerLob.Fcsid = OCI_UTF16ID) then
       Result := Result shl 1;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
@@ -3374,7 +3502,8 @@ begin
   { get bytes/(single-byte)character count of lob }
   Status := FplainDriver.OCILobGetLength2(FOCISvcCtx, FOCIError, FOwnerLob.FlobLocator, asize);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobGetLength2', FConSettings);
+    FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+      lcOther, 'OCILobGetLength2', Self);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
   if FOwnerLob.Fcsid = OCI_UTF16ID then begin
     Offset := (FPosition shr 1) +1; //align to char position
@@ -3392,7 +3521,8 @@ begin
     @byte_amtp, @char_amtp, Offset, pBuff, bufl, OCI_ONE_PIECE, nil, nil, FOwnerLob.Fcsid, FOwnerLob.FCharsetForm);
   Result := byte_amtp;
   if (Status <> OCI_SUCCESS) then
-    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobRead2', FConSettings);
+    FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+      lcOther, 'OCILobRead2', Self);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
   FPosition := FPosition + Result;
 end;
@@ -3427,7 +3557,8 @@ begin
     piece := OCI_NEXT_PIECE;
   end;
   if (Status <> OCI_SUCCESS) then
-    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobRead2', FConSettings);
+    FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+      lcOther, 'OCILobRead2', Self);
   Result := pBuff - pStart;
   FPosition := Result;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
@@ -3465,7 +3596,7 @@ begin
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
       Status := FPlainDriver.OCILobTrim2(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator, newlen);
       if Status <> OCI_SUCCESS then
-        CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobTrim2', FConSettings);
+        FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, Status, lcOther, 'OCILobTrim2', Self);
       if FPosition > NewSize then
         FPosition := NewSize;
       {$IFDEF DEBUG}
@@ -3508,7 +3639,7 @@ begin
   Status := FPLainDriver.OCILobWrite2(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator,
     byte_amtp, char_amtp, offset, pBuff, byte_amtp, OCI_ONE_PIECE, nil, nil, FOwnerLob.Fcsid, FOwnerLob.FCharsetForm);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobWrite2', FConSettings);
+    FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, Status, lcOther, 'OCILobWrite2', Self);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
   Result := byte_amtp;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
@@ -3574,10 +3705,11 @@ begin
       piece := OCI_LAST_PIECE;
       bufl := pEnd - pBuff;
     end;
- end;
+  end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, FOCIError, Status, lcOther, 'OCILobWrite', FConSettings);
+    FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+      lcOther, 'OCILobWrite', Self);
 end;
 
 { TZOracleCachedResultSet }

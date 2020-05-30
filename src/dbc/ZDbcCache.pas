@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -1747,7 +1747,7 @@ begin
                             TimeToIso8601PChar(@TinyBuffer[0], True, PZTime(Data)^.hour,
                               PZTime(Data)^.Minute, PZTime(Data)^.second, PZTime(Data)^.Fractions div NanoSecsPerMSec,
                                 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(@TinyBuffer[0],8+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            JSONWriter.AddNoJSONEscape(@TinyBuffer[0],9+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z)"')
                             else JSONWriter.Add('"');

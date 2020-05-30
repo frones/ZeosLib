@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -58,8 +58,9 @@ interface
 {$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZDbcIntfs, ZDbcConnection, ZTokenizer, ZGenericSqlAnalyser, ZDbcLogging,
-  ZCompatibility, ZPlainODBCDriver;
+  ZClasses, ZCompatibility, ZTokenizer,
+  ZPlainODBCDriver,
+  ZDbcIntfs, ZDbcConnection, ZGenericSqlAnalyser, ZDbcLogging;
 
 
 type
@@ -73,18 +74,24 @@ type
 
   IZODBCConnection = Interface(IZConnection)
     ['{D149ABA3-AD8B-404F-A804-77608C596394}']
-    procedure CheckDbcError(RETCODE: SQLRETURN);
+    procedure HandleDbcErrorOrWarning(RETCODE: SQLRETURN;
+      const Msg: SQLString; LoggingCategory: TZLoggingCategory;
+      const Sender: IImmediatelyReleasable);
+    procedure HandleStmtErrorOrWarning(RETCODE: SQLRETURN;
+      STMT: SQLHSTMT; const Msg: SQLString; LoggingCategory: TZLoggingCategory;
+      const Sender: IImmediatelyReleasable);
     function GetArrayRowSupported: Boolean;
     function GetArraySelectSupported: Boolean;
     function GetPlainDriver: TZODBC3PlainDriver;
     procedure SetLastWarning(Warning: EZSQLWarning);
     function ODBCVersion: SQLUSMALLINT;
+    function GetByteBufferAddress: PByteBuffer;
   End;
 
   TZAbstractODBCConnection = class(TZAbstractDbcConnection,
     IZTransaction)
   private
-    fPlainDriver: TZODBC3PlainDriver;
+    fODBCPlainDriver: TZODBC3PlainDriver;
     fHDBC: SQLHDBC;
     fHENV: SQLHENV;
     fRetaining: Boolean;
@@ -107,9 +114,15 @@ type
     function GetArrayRowSupported: Boolean;
     function GetArraySelectSupported: Boolean;
     function GetPlainDriver: TZODBC3PlainDriver;
-    procedure CheckDbcError(RETCODE: SQLRETURN);
     procedure SetLastWarning(Warning: EZSQLWarning);
     function ODBCVersion: Word;
+  public
+    procedure HandleDbcErrorOrWarning(RETCODE: SQLRETURN;
+      const Msg: SQLString; LoggingCategory: TZLoggingCategory;
+      const Sender: IImmediatelyReleasable);
+    procedure HandleStmtErrorOrWarning(RETCODE: SQLRETURN;
+      STMT: SQLHSTMT; const Msg: SQLString; LoggingCategory: TZLoggingCategory;
+      const Sender: IImmediatelyReleasable);
   public
     destructor Destroy; override;
     procedure AfterConstruction; override;
@@ -131,12 +144,27 @@ type
     function GetServerProvider: TZServerProvider; override;
   end;
 
-  TZODBCConnectionW = class(TZAbstractODBCConnection, IZODBCConnection, IZConnection)
+  IZODBCConnectionW = interface(IZODBCConnection)
+    ['{CA4D5757-7E7D-4727-84CC-A55529F64E60}']
+    procedure HandleStmtErrorOrWarningW(RETCODE: SQLRETURN;
+      STMT: SQLHSTMT; const Msg: UnicodeString; LoggingCategory: TZLoggingCategory;
+      const Sender: IImmediatelyReleasable); overload;
+  end;
+
+  TZODBCConnectionW = class(TZAbstractODBCConnection, IZODBCConnection,
+    IZConnection, IZODBCConnectionW)
   protected
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); override;
     function SavePoint(const AName: String): Integer; override;
     procedure ReleaseSavePoint(Index: Integer); override;
     procedure RollBackTo(Index: Integer); override;
+  public
+    procedure HandleErrorOrWarningW(RETCODE: SQLRETURN; Handle: SQLHANDLE;
+      HandleType: SQLSMALLINT; const Msg: UnicodeString;
+      LoggingCategory: TZLoggingCategory; const Sender: IImmediatelyReleasable);
+    procedure HandleStmtErrorOrWarningW(RETCODE: SQLRETURN;
+      STMT: SQLHSTMT; const Msg: UnicodeString; LoggingCategory: TZLoggingCategory;
+      const Sender: IImmediatelyReleasable); overload;
   public
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareCallWithParams(const Name: String; Info: TStrings):
@@ -149,12 +177,27 @@ type
     procedure SetCatalog(const Catalog: string); override;
   end;
 
-  TZODBCConnectionA = class(TZAbstractODBCConnection, IZODBCConnection, IZConnection)
+  IZODBCConnectionA = interface(IZODBCConnection)
+    ['{97723242-F0E8-45CA-9C79-9260357FF3CE}']
+    procedure HandleStmtErrorOrWarningA(RETCODE: SQLRETURN;
+      STMT: SQLHSTMT; const Msg: RawByteString; LoggingCategory: TZLoggingCategory;
+      const Sender: IImmediatelyReleasable);
+  end;
+
+  TZODBCConnectionA = class(TZAbstractODBCConnection, IZODBCConnection,
+    IZConnection, IZODBCConnectionA)
   protected
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
     function SavePoint(const AName: String): Integer; override;
     procedure ReleaseSavePoint(Index: Integer); override;
     procedure RollBackTo(Index: Integer); override;
+  public
+    procedure HandleErrorOrWarningA(RETCODE: SQLRETURN; Handle: SQLHANDLE;
+      HandleType: SQLSMALLINT; const Msg: RawByteString;
+      LoggingCategory: TZLoggingCategory; const Sender: IImmediatelyReleasable);
+    procedure HandleStmtErrorOrWarningA(RETCODE: SQLRETURN;
+      STMT: SQLHSTMT; const Msg: RawByteString; LoggingCategory: TZLoggingCategory;
+      const Sender: IImmediatelyReleasable);
   public
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareCallWithParams(const Name: String; Info: TStrings):
@@ -229,6 +272,11 @@ begin
   Result := TZODBCTokenizer.Create;
 end;
 
+const
+  sCommitMsg = RawByteString('TRANSACTION COMMIT');
+  sRollbackMsg = RawByteString('TRANSACTION ROLLBACK');
+
+
 { TZAbstractODBCConnection }
 
 procedure TZAbstractODBCConnection.AfterConstruction;
@@ -238,12 +286,6 @@ begin
   FWeakODBCConRefOfSelf := Pointer(ODBCConnection);
   ODBCConnection :=  nil;
   inherited AfterConstruction; //dec constructors RefCnt
-end;
-
-procedure TZAbstractODBCConnection.CheckDbcError(RETCODE: SQLRETURN);
-begin
-  if RetCode <> SQL_SUCCESS then
-    CheckODBCError(RetCode, fHDBC, SQL_HANDLE_DBC, '', self, IZODBCConnection(FWeakODBCConRefOfSelf));
 end;
 
 {**
@@ -266,8 +308,9 @@ end;
   Connection.
 }
 procedure TZAbstractODBCConnection.InternalClose;
+var RET: SQLRETURN;
 begin
-  if Closed or not Assigned(fPLainDriver) then
+  if Closed or not Assigned(fODBCPlainDriver) then
     Exit;
   try
     if not AutoCommit then begin
@@ -276,11 +319,14 @@ begin
     end;
   finally
     try
-      if fHDBC <> nil then
-        CheckDbcError(fPLainDriver.SQLDisconnect(fHDBC));
+      if fHDBC <> nil then begin
+        Ret := fODBCPlainDriver.SQLDisconnect(fHDBC);
+        if (Ret <> SQL_SUCCESS) then
+          HandleDbcErrorOrWarning(Ret, 'DISCONNECT DATABASE', lcDisconnect, Self);
+      end;
     finally
       if Assigned(fHDBC) then begin
-        fPlainDriver.SQLFreeHandle(SQL_HANDLE_DBC, fHDBC);
+        fODBCPlainDriver.SQLFreeHandle(SQL_HANDLE_DBC, fHDBC);
         fHDBC := nil;
       end;
     end;
@@ -295,6 +341,7 @@ end;
   @see #setAutoCommit
 }
 procedure TZAbstractODBCConnection.Commit;
+var Ret: SQLRETURN;
 begin
   if Closed then
     raise EZSQLException.Create(cSConnectionIsNotOpened);
@@ -303,7 +350,11 @@ begin
   if FSavePoints.Count > 0
   then ReleaseSavePoint(FSavePoints.Count-1)
   else begin
-    CheckDbcError(fPlainDriver.SQLEndTran(SQL_HANDLE_DBC,fHDBC,SQL_COMMIT));
+    Ret := fODBCPlainDriver.SQLEndTran(SQL_HANDLE_DBC,fHDBC,SQL_COMMIT);
+    if (Ret <> SQL_SUCCESS) then
+      HandleDbcErrorOrWarning(Ret, 'COMMIT TRANSACTION', lcTransaction, Self);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sCommitMsg);
     if not FRestartTransaction then
       SetAutoCommit(True);
   end;
@@ -316,7 +367,7 @@ destructor TZAbstractODBCConnection.Destroy;
 begin
   inherited Destroy;
   if Assigned(fHENV) then
-    fPlainDriver.SQLFreeHandle(SQL_HANDLE_ENV, fHENV);
+    fODBCPlainDriver.SQLFreeHandle(SQL_HANDLE_ENV, fHENV);
   FSavePoints.Free;
   ClearWarnings;
 end;
@@ -349,14 +400,14 @@ begin
       goto fail;
     CodePage := ZFastCode.{$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(PChar(@CodePageName[IPos+1]), ZOSCodePage);
     CodePageName := Copy(CodePageName, 1, iPos-1);
-    if Supports(fPlainDriver, IODBC3UnicodePlainDriver) then
-      fPlainDriver.AddCodePage(CodePageName, 0, ceUTF16, CodePage, '', BytesPerChar)
+    if Supports(fODBCPlainDriver, IODBC3UnicodePlainDriver) then
+      fODBCPlainDriver.AddCodePage(CodePageName, 0, ceUTF16, CodePage, '', BytesPerChar)
     else
-      fPlainDriver.AddCodePage(CodePageName, 0, CPEncodings[CodePage = 65001], CodePage, '', BytesPerChar);
+      fODBCPlainDriver.AddCodePage(CodePageName, 0, CPEncodings[CodePage = 65001], CodePage, '', BytesPerChar);
     CheckCharEncoding(CodePageName);
   end else
 fail:
-    if Supports(fPlainDriver, IODBC3UnicodePlainDriver)
+    if Supports(fODBCPlainDriver, IODBC3UnicodePlainDriver)
     then CheckCharEncoding('CP_UTF16')
     else CheckCharEncoding('CP_ACP');
 end;
@@ -382,7 +433,7 @@ end;
 
 function TZAbstractODBCConnection.GetPlainDriver: TZODBC3PlainDriver;
 begin
-  Result := fPlainDriver;
+  Result := fODBCPlainDriver;
 end;
 
 function TZAbstractODBCConnection.GetServerProvider: TZServerProvider;
@@ -401,26 +452,86 @@ begin
   Result := fLastWarning;
 end;
 
+procedure TZAbstractODBCConnection.HandleDbcErrorOrWarning(RETCODE: SQLRETURN;
+  const Msg: SQLString; LoggingCategory: TZLoggingCategory;
+  const Sender: IImmediatelyReleasable);
+var tmp: {$IFDEF UNICODE}RawByteString{$ELSE}UnicodeString{$ENDIF};
+  CP: Word;
+begin
+  if IsClosed
+  then CP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF}
+  else CP := ConSettings.ClientCodePage.CP;
+  if Self is TZODBCConnectionW  then begin
+    {$IFDEF UNICODE}
+    (Self as TZODBCConnectionW).HandleErrorOrWarningW(RETCODE, fHDBC, SQL_HANDLE_DBC,
+      Msg, LoggingCategory, Sender);
+    {$ELSE}
+    tmp := ZRawToUnicode(Msg, CP);
+    TZODBCConnectionW(Self).HandleErrorOrWarningW(RETCODE, fHDBC, SQL_HANDLE_DBC,
+      tmp, LoggingCategory, Sender);
+    {$ENDIF}
+  end else begin
+    {$IFDEF UNICODE}
+    tmp := ZUnicodeToRaw(Msg, CP);
+    TZODBCConnectionA(Self).HandleErrorOrWarningA(RETCODE, fHDBC, SQL_HANDLE_DBC,
+      tmp, LoggingCategory, Sender);
+    {$ELSE}
+    TZODBCConnectionA(Self).HandleErrorOrWarningA(RETCODE, fHDBC, SQL_HANDLE_DBC,
+      Msg, LoggingCategory, Sender);
+    {$ENDIF}
+  end;
+end;
+
+procedure TZAbstractODBCConnection.HandleStmtErrorOrWarning(RETCODE: SQLRETURN;
+  STMT: SQLHSTMT; const Msg: SQLString; LoggingCategory: TZLoggingCategory;
+  const Sender: IImmediatelyReleasable);
+var tmp: {$IFDEF UNICODE}RawByteString{$ELSE}UnicodeString{$ENDIF};
+  CP: Word;
+begin
+  if IsClosed
+  then CP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF}
+  else CP := ConSettings.ClientCodePage.CP;
+  if Self is TZODBCConnectionW  then begin
+    {$IFDEF UNICODE}
+    TZODBCConnectionW(Self).HandleErrorOrWarningW(RETCODE, STMT, SQL_HANDLE_STMT,
+      Msg, LoggingCategory, Sender);
+    {$ELSE}
+    tmp := ZRawToUnicode(Msg, CP);
+    TZODBCConnectionW(Self).HandleErrorOrWarningW(RETCODE, STMT, SQL_HANDLE_STMT,
+      tmp, LoggingCategory, Sender);
+    {$ENDIF}
+  end else begin
+    {$IFDEF UNICODE}
+    tmp := ZUnicodeToRaw(Msg, CP);
+    TZODBCConnectionA(Self).HandleErrorOrWarningA(RETCODE, STMT, SQL_HANDLE_STMT,
+      tmp, LoggingCategory, Sender);
+    {$ELSE}
+    TZODBCConnectionA(Self).HandleErrorOrWarningA(RETCODE, STMT, SQL_HANDLE_STMT,
+      Msg, LoggingCategory, Sender);
+    {$ENDIF}
+  end;
+end;
+
 procedure TZAbstractODBCConnection.InternalCreate;
 begin
   FSavePoints := TStringList.Create;
-  fPlainDriver := TZODBC3PlainDriver(GetIZPlainDriver.GetInstance);
+  fODBCPlainDriver := TZODBC3PlainDriver(GetIZPlainDriver.GetInstance);
   fHENV := nil;
   fHDBC := nil;
-  if Supports(fPlainDriver, IODBC3UnicodePlainDriver) then
+  if Supports(fODBCPlainDriver, IODBC3UnicodePlainDriver) then
     FMetaData := TODBCDatabaseMetadataW.Create(Self, Url, fHDBC)
   else
     FMetaData := TODBCDatabaseMetadataA.Create(Self, Url, fHDBC);
   fCatalog := '';
-  if not SQL_SUCCEDED(fPlainDriver.SQLAllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), fHENV)) then
+  if not SQL_SUCCEDED(fODBCPlainDriver.SQLAllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), fHENV)) then
     raise EZSQLException.Create('Couldn''t allocate an Environment handle');
   //Try to SET Major Version 3 and minior Version 8
-  if SQL_SUCCEDED(fPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80, 0)) then
+  if SQL_SUCCEDED(fODBCPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80, 0)) then
     fODBCVersion := {%H-}Word(SQL_OV_ODBC3_80)
   else begin
     //set minimum Major Version 3
-    CheckODBCError(fPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0),
-      fHENV, SQL_HANDLE_ENV, 'SQL_ATTR_ODBC_VERSION', Self, IZODBCConnection(FWeakODBCConRefOfSelf));
+    if not SQL_SUCCEDED(fODBCPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0)) then
+      raise EZSQLException.Create('Failed to set minimum ODBC version 3');
     fODBCVersion := {%H-}Word(SQL_OV_ODBC3) * 100;
   end;
 end;
@@ -473,17 +584,22 @@ var
   ConnectStrings: TStrings;
   DriverCompletion: SQLUSMALLINT;
   InfoValue: SQLUINTEGER;
+  Ret: SQLRETURN;
 begin
   if not Closed then
     Exit;
   DetermineAttachmentCharset; //do this by default!
-  CheckODBCError(fPLainDriver.SQLAllocHandle(SQL_HANDLE_DBC,fHENV,fHDBC),fHENV,
-    SQL_HANDLE_ENV, '', Self, IZODBCConnection(FWeakODBCConRefOfSelf));
-  if Info.Values[ConnProps_Timeout] <> '' then
-  begin
+  Ret := fODBCPlainDriver.SQLAllocHandle(SQL_HANDLE_DBC,fHENV,fHDBC);
+  if Ret <> SQL_SUCCESS then
+    raise EZSQLException.Create('Failed to create an environment handle');
+  if Info.Values[ConnProps_Timeout] <> '' then begin
     TimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values[ConnProps_Timeout],0);
-    CheckDbcError(fPlainDriver.SQLSetConnectAttr(fHDBC, SQL_ATTR_CONNECTION_TIMEOUT, SQLPOINTER(TimeOut), 0));
-    CheckDbcError(fPlainDriver.SQLSetConnectAttr(fHDBC, SQL_ATTR_LOGIN_TIMEOUT, SQLPOINTER(TimeOut), SQL_LOGIN_TIMEOUT_DEFAULT));
+    Ret := fODBCPlainDriver.SQLSetConnectAttr(fHDBC, SQL_ATTR_CONNECTION_TIMEOUT, SQLPOINTER(TimeOut), 0);
+    if Ret <> SQL_SUCCESS then
+      HandleDbcErrorOrWarning(Ret, 'SET CONNECTION TIMEOUT', lcConnect, Self);
+    Ret := fODBCPlainDriver.SQLSetConnectAttr(fHDBC, SQL_ATTR_LOGIN_TIMEOUT, SQLPOINTER(TimeOut), SQL_LOGIN_TIMEOUT_DEFAULT);
+    if Ret <> SQL_SUCCESS then
+      HandleDbcErrorOrWarning(Ret, 'SET LOGIN TIMEOUT', lcConnect, Self);
   end;
 
   DriverCompletion := SQL_DRIVER_NOPROMPT;
@@ -508,14 +624,20 @@ begin
   {$IFDEF WITH_VAR_INIT_WARNING}OutConnectString := '';{$ENDIF}
   SetLength(OutConnectString, 1024);
   try
-    CheckDbcError(fPLainDriver.SQLDriverConnect(fHDBC,
+    Ret := fODBCPlainDriver.SQLDriverConnect(fHDBC,
       {$IFDEF MSWINDOWS}SQLHWND(GetDesktopWindow){$ELSE}nil{$ENDIF},
       Pointer(tmp), Length(tmp), Pointer(OutConnectString),
-      Length(OutConnectString), @aLen, DriverCompletion));
+      Length(OutConnectString), @aLen, DriverCompletion);
+    if Ret <> SQL_SUCCESS then
+      HandleDbcErrorOrWarning(Ret, 'CONNECT TO DATABASE', lcConnect, Self);
     SetLength(OutConnectString, aLen);
-    CheckDbcError(fPlainDriver.SQLGetInfo(fHDBC, SQL_PARAM_ARRAY_SELECTS, @InfoValue, SizeOf(SQLUINTEGER), nil));
+    Ret := fODBCPlainDriver.SQLGetInfo(fHDBC, SQL_PARAM_ARRAY_SELECTS, @InfoValue, SizeOf(SQLUINTEGER), nil);
+    if Ret <> SQL_SUCCESS then
+      HandleDbcErrorOrWarning(Ret, 'GET ATTRIBUTE SQL_PARAM_ARRAY_SELECTS', lcOther, Self);
     fArraySelectSupported := InfoValue = SQL_PAS_BATCH;
-    CheckDbcError(fPlainDriver.SQLGetInfo(fHDBC, SQL_PARAM_ARRAY_ROW_COUNTS, @InfoValue, SizeOf(SQLUINTEGER), nil));
+    Ret := fODBCPlainDriver.SQLGetInfo(fHDBC, SQL_PARAM_ARRAY_ROW_COUNTS, @InfoValue, SizeOf(SQLUINTEGER), nil);
+    if Ret <> SQL_SUCCESS then
+      HandleDbcErrorOrWarning(Ret, 'GET ATTRIBUTE SQL_PARAM_ARRAY_ROW_COUNTS', lcOther, Self);
     fArrayRowSupported := InfoValue = SQL_PARC_BATCH;
   finally
     FreeAndNil(ConnectStrings)
@@ -543,7 +665,7 @@ begin
       '  COLLATIONPROPERTY(CAST(DATABASEPROPERTYEX('+QuotedStr(GetCatalog)+', ''Collation'') as NVARCHAR(255)), ''Codepage'') as Codepage') do begin
       if Next and not IsNull(FirstDbcIndex) then begin
         ConSettings.ClientCodePage := New(PZCodePage);
-        if Supports(fPlainDriver, IODBC3UnicodePlainDriver)
+        if Supports(fODBCPlainDriver, IODBC3UnicodePlainDriver)
         then ConSettings.ClientCodePage.Encoding := ceUTF16//well a "mixed" encoding i have not prepared yet...
         else ConSettings.ClientCodePage.Encoding := ceAnsi;
         ConSettings.ClientCodePage.IsStringFieldCPConsistent := True;
@@ -573,6 +695,7 @@ end;
   @see #setAutoCommit
 }
 procedure TZAbstractODBCConnection.Rollback;
+var Ret: SQLRETURN;
 begin
   if Closed then
     raise EZSQLException.Create(cSConnectionIsNotOpened);
@@ -581,7 +704,11 @@ begin
   if FSavePoints.Count > 0
   then RollbackTo(FSavePoints.Count-1)
   else begin
-    CheckDbcError(fPlainDriver.SQLEndTran(SQL_HANDLE_DBC,fHDBC,SQL_ROLLBACK));
+    Ret := fODBCPlainDriver.SQLEndTran(SQL_HANDLE_DBC,fHDBC,SQL_ROLLBACK);
+    if (Ret <> SQL_SUCCESS) then
+      HandleDbcErrorOrWarning(Ret, 'ROLLBACK TRANSACTION', lcTransaction, Self);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sRollbackMsg);
     if not FRestartTransaction then
       SetAutoCommit(True);
   end;
@@ -609,12 +736,16 @@ end;
 }
 const CommitMode: Array[Boolean] of Pointer = (SQL_AUTOCOMMIT_OFF, SQL_AUTOCOMMIT_ON);
 procedure TZAbstractODBCConnection.SetAutoCommit(Value: Boolean);
+var Ret: SQLRETURN;
 begin
   if Value <> AutoCommit then begin
     FRestartTransaction := AutoCommit;
     FSavePoints.Clear;
-    if not Closed then
-      CheckDbcError(fPlainDriver.SQLSetConnectAttr(fHDBC,SQL_ATTR_AUTOCOMMIT,CommitMode[Value],0));
+    if not Closed then begin
+      Ret := fODBCPlainDriver.SQLSetConnectAttr(fHDBC,SQL_ATTR_AUTOCOMMIT,CommitMode[Value],0);
+      if (Ret <> SQL_SUCCESS) then
+        HandleDbcErrorOrWarning(Ret, 'SET AUTOCOMMIT', lcTransaction, Self);
+    end;
     AutoCommit := Value;
   end;
 end;
@@ -642,10 +773,14 @@ end;
 }
 const AccessMode: array[Boolean] of Pointer = (SQL_MODE_READ_WRITE, SQL_MODE_READ_ONLY);
 procedure TZAbstractODBCConnection.SetReadOnly(Value: Boolean);
+var Ret: SQLRETURN;
 begin
   if Value <> ReadOnly then begin
-    if not Closed then
-      CheckDbcError(fPlainDriver.SQLSetConnectAttr(fHDBC,SQL_ATTR_ACCESS_MODE,AccessMode[Value],0));
+    if not Closed then begin
+      Ret := fODBCPlainDriver.SQLSetConnectAttr(fHDBC,SQL_ATTR_ACCESS_MODE,AccessMode[Value],0);
+      if (Ret <> SQL_SUCCESS) then
+        HandleDbcErrorOrWarning(Ret, 'SET READONLY', lcTransaction, Self);
+    end;
     inherited SetReadOnly(Value);
   end;
 end;
@@ -671,21 +806,28 @@ const ODBCTIL: array[TZTransactIsolationLevel] of Pointer =
   );
 procedure TZAbstractODBCConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
+var Ret: SQLRETURN;
 begin
   if (TransactIsolationLevel <> Level) then begin
-    if not Closed then
-      CheckDbcError(fPlainDriver.SQLSetConnectAttr(fHDBC,SQL_ATTR_TXN_ISOLATION,ODBCTIL[Level],0));
+    if not Closed then begin
+      Ret := fODBCPlainDriver.SQLSetConnectAttr(fHDBC,SQL_ATTR_TXN_ISOLATION,ODBCTIL[Level],0);
+      if (Ret <> SQL_SUCCESS) then
+        HandleDbcErrorOrWarning(Ret, 'SET TRANSACTION ISOLATION LEVEL', lcTransaction, self);
+    end;
     inherited SetTransactionIsolation(Level);
   end;
 end;
 
 function TZAbstractODBCConnection.StartTransaction: Integer;
 var S: String;
+    Ret: SQLRETURN;
 begin
   if Closed then
     Open;
   if AutoCommit then begin
-    CheckDbcError(fPlainDriver.SQLSetConnectAttr(fHDBC,SQL_ATTR_AUTOCOMMIT,SQL_AUTOCOMMIT_OFF,0));
+    Ret := fODBCPlainDriver.SQLSetConnectAttr(fHDBC,SQL_ATTR_AUTOCOMMIT,SQL_AUTOCOMMIT_OFF,0);
+    if (Ret <> SQL_SUCCESS) then
+      HandleDbcErrorOrWarning(Ret, 'START TRANSACTION', lcTransaction, Self);
     AutoCommit := False;
     Result := 1;
   end else begin
@@ -724,16 +866,20 @@ var STMT: SQLHSTMT;
 begin
   if SQL = '' then
     Exit;
+  if Closed then
+    Open;
   STMT := nil;
-  CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fHDBC, STMT));
+  Ret := fODBCPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fHDBC, STMT);
+  if (Ret <> SQL_SUCCESS) then
+    HandleErrorOrWarningW(Ret, Stmt, SQL_HANDLE_STMT, SQL, lcExecute, Self);
   try
-    Ret := TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(STMT,
+    Ret := TODBC3UnicodePlainDriver(fODBCPlainDriver).SQLExecDirectW(STMT,
       Pointer(SQL), Length(SQL));
     if (Ret <> SQL_NO_DATA) and (Ret <> SQL_SUCCESS) then
-      CheckDbcError(Ret);
+      HandleErrorOrWarningW(Ret, Stmt, SQL_HANDLE_STMT, SQL, LoggingCategory, Self);
   finally
     if STMT <> nil then
-      CheckDbcError(fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, STMT));
+      fODBCPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, STMT);
   end;
 end;
 
@@ -746,26 +892,151 @@ var
   Buf: ZWideString;
   {$ENDIF}
   aLen: SQLINTEGER;
+  Ret: SQLRETURN;
 begin
   Result := inherited GetCatalog;
   if Result = '' then begin
-    CheckDbcError((fPlainDriver as TODBC3UnicodePlainDriver).SQLGetConnectAttrW(fHDBC,
-      SQL_ATTR_CURRENT_CATALOG, nil, 0, @aLen));
+    RET := TODBC3UnicodePlainDriver(fODBCPlainDriver).SQLGetConnectAttrW(fHDBC,
+      SQL_ATTR_CURRENT_CATALOG, nil, 0, @aLen);
+    if Ret <> SQL_SUCCESS then
+      HandleErrorOrWarningW(Ret, fHDBC, SQL_HANDLE_DBC,
+        'GET CATALOG', lcOther, Self);
     if aLen > 0 then begin
       {$IFDEF UNICODE}
       SetLength(Result, aLen shr 1);
-      CheckDbcError((fPlainDriver as TODBC3UnicodePlainDriver).SQLGetConnectAttrW(fHDBC,
-        SQL_ATTR_CURRENT_CATALOG, Pointer(Result), aLen+2, @aLen));
+      Ret := TODBC3UnicodePlainDriver(fODBCPlainDriver).SQLGetConnectAttrW(fHDBC,
+        SQL_ATTR_CURRENT_CATALOG, Pointer(Result), aLen+2, @aLen);
       {$ELSE}
       {$IFDEF WITH_VAR_INIT_WARNING}Buf := '';{$ENDIF}
       SetLength(Buf, aLen shr 1);
-      CheckDbcError((fPlainDriver as TODBC3UnicodePlainDriver).SQLGetConnectAttrW(fHDBC,
-        SQL_ATTR_CURRENT_CATALOG, Pointer(Buf), aLen+2, @aLen));
+      Ret := TODBC3UnicodePlainDriver(fODBCPlainDriver).SQLGetConnectAttrW(fHDBC,
+        SQL_ATTR_CURRENT_CATALOG, Pointer(Buf), aLen+2, @aLen);
       Result := PUnicodeToRaw(Pointer(Buf), aLen shr 1, ConSettings.CTRL_CP);
       {$ENDIF}
+      if Ret <> SQL_SUCCESS then
+        HandleErrorOrWarningW(Ret, fHDBC, SQL_HANDLE_DBC,
+          'GET CATALOG', lcOther, Self);
       inherited SetCatalog(Result);
     end;
   end;
+end;
+
+const
+  ConnLostW = UnicodeString('01000');
+
+procedure TZODBCConnectionW.HandleErrorOrWarningW(RETCODE: SQLRETURN;
+  Handle: SQLHANDLE; HandleType: SQLSMALLINT; const Msg: UnicodeString;
+  LoggingCategory: TZLoggingCategory; const Sender: IImmediatelyReleasable);
+var
+  SqlstateBuf: TSQLSTATE_W;
+  MessageBuffer: array[0..SQL_MAX_MESSAGE_LENGTH] of WideChar;
+  RecNum, FirstNativeError, NativeError: SQLINTEGER;
+  TextLength: SQLSMALLINT;
+  FirstNErrW, ErrorString: UnicodeString;
+  ErrorStringA, FirstNErrA: RawByteString;
+  aException: EZSQLThrowable;
+  MsgWriter: TZUnicodeSQLStringWriter;
+  {$IFNDEF UNICODE}CP: Word;{$ENDIF}
+begin
+  Assert(Sender <> nil);
+  if RETCODE <> SQL_SUCCESS then begin
+    if (Handle=nil) or (RETCODE=SQL_INVALID_HANDLE) then
+      aException := EZSQLException.CreateWithCodeAndStatus(SQL_INVALID_HANDLE, 'HY000', 'Invalid handle')
+    else begin
+      MsgWriter := TZUnicodeSQLStringWriter.Create(SQL_SQLSTATE_SIZE+SQL_MAX_MESSAGE_LENGTH+12+Length(Msg));
+      try
+        RecNum := 1;
+        FirstNativeError := RETCODE;
+        ErrorString := '';
+        FirstNErrW := '';
+        while TODBC3UnicodePlainDriver(fODBCPlainDriver).SQLGetDiagRecW(HandleType,Handle,RecNum, @SqlstateBuf[0],
+          @NativeError,@MessageBuffer[0],SQL_MAX_MESSAGE_LENGTH,@TextLength) and (not 1)=0 do begin
+          while (TextLength>0) and (MessageBuffer[TextLength-1]<=' ') do //trim trailing lineending and spaces
+            dec(TextLength);
+          if RecNum = 1 then begin
+            System.SetString(FirstNErrW, PWideChar(@SqlstateBuf[0]), 5);
+            FirstNativeError := NativeError;
+          end;
+          MsgWriter.AddText(@SqlstateBuf[0], 5, ErrorString);
+          MsgWriter.AddChar('[', ErrorString);
+          MsgWriter.AddOrd(NativeError, ErrorString);
+          MsgWriter.AddChar(']', ErrorString);
+          MsgWriter.AddChar(':', ErrorString);
+          if TextLength = 0
+          then MsgWriter.AddText(UnicodeString('Unidentified error'), ErrorString)
+          else MsgWriter.AddText(@MessageBuffer[0], TextLength, ErrorString);
+          MsgWriter.AddText(UnicodeString(LineEnding), ErrorString);
+          inc(RecNum);
+        end;
+        if RecNum = 1 then begin //no error returned?
+          FirstNErrW := 'HY000';
+          {$IFDEF UNICODE}
+          ErrorString := SUnknownError;
+          {$ELSE}
+          ErrorString := ZRawToUnicode(SUnknownError, SMessageCodePage);
+          {$ENDIF}
+        end;
+        if (RETCODE <> SQL_SUCCESS_WITH_INFO) and DriverManager.HasLoggingListener then begin
+          MsgWriter.Finalize(ErrorString);
+          ErrorStringA := ZUnicodeToRaw(ErrorString, zCP_UTF8);
+          FirstNErrA := ZUnicodeToRaw(Msg, zCP_UTF8);
+          DriverManager.LogError(LoggingCategory, ConSettings.Protocol, FirstNErrA, FirstNativeError, ErrorStringA)
+        end;
+        if Msg <> '' then begin
+          if RecNum = 1 then
+            MsgWriter.AddText(UnicodeString(LineEnding), ErrorString);
+          MsgWriter.AddText(UnicodeString(' SQL: '), ErrorString);
+          MsgWriter.AddText(Msg, ErrorString);
+        end;
+        MsgWriter.Finalize(ErrorString);
+        {$IFDEF UNICODE}
+        if RETCODE = SQL_SUCCESS_WITH_INFO
+        then begin
+          aException := EZSQLWarning.CreateWithCodeAndStatus(FirstNativeError, FirstNErrW, ErrorString);
+          SetLastWarning(aException as EZSQLWarning);
+          aException := nil;
+        end else if (FirstNErrW = ConnLostW) and (LoggingCategory <> lcConnect) then begin //handle connection lost gracefully
+          aException := EZSQLConnectionLost.CreateWithCodeAndStatus(FirstNativeError, FirstNErrW, ErrorString);
+          if Assigned(Sender)
+          then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(aException))
+          else ReleaseImmediat(Sender, EZSQLConnectionLost(aException));
+        end else
+          aException := EZSQLException.CreateWithCodeAndStatus(FirstNativeError, FirstNErrW, ErrorString);
+        {$ELSE}
+        CP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
+        ErrorStringA := ZUnicodeToRaw(ErrorString, CP);
+        FirstNErrA := ZUnicodeToRaw(FirstNErrW, CP);
+        if RETCODE = SQL_SUCCESS_WITH_INFO then begin
+          aException := EZSQLWarning.CreateWithCodeAndStatus(FirstNativeError, FirstNErrA, ErrorStringA);
+          SetLastWarning(aException as EZSQLWarning);
+          aException := nil;
+        end else if (FirstNErrW = ConnLostW) and (LoggingCategory <> lcConnect) then begin //handle connection lost gracefully
+          aException := EZSQLConnectionLost.CreateWithCodeAndStatus(FirstNativeError, FirstNErrA, ErrorStringA);
+          if Assigned(Sender)
+          then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(aException))
+          else ReleaseImmediat(Sender, EZSQLConnectionLost(aException));
+        end else
+          aException := EZSQLException.CreateWithCodeAndStatus(FirstNativeError, FirstNErrA, ErrorStringA);
+        {$ENDIF}
+      finally
+        FreeAndNil(MsgWriter);
+        if DriverManager.HasLoggingListener and (RETCODE = SQL_SUCCESS_WITH_INFO) then begin
+          ErrorStringA := ZUnicodeToRaw(ErrorString, zCP_UTF8);
+          DriverManager.LogMessage(LoggingCategory, ConSettings.Protocol, ErrorStringA);
+        end;
+      end;
+    end;
+    if aException <> nil then
+      raise aException;
+  end;
+end;
+
+procedure TZODBCConnectionW.HandleStmtErrorOrWarningW(RETCODE: SQLRETURN;
+  STMT: SQLHSTMT; const Msg: UnicodeString; LoggingCategory: TZLoggingCategory;
+  const Sender: IImmediatelyReleasable);
+begin
+  HandleErrorOrWarningW(RetCode, STMT, SQL_HANDLE_STMT,
+    Msg, LoggingCategory, Sender);
 end;
 
 {**
@@ -780,6 +1051,7 @@ end;
 }
 function TZODBCConnectionW.NativeSQL(const SQL: string): string;
 var NewLength: SQLINTEGER;
+  RET: SQLRETURN;
 {$IFNDEF UNICODE}
   aSQL, nSQL: ZWideString;
 {$ENDIF}
@@ -789,15 +1061,18 @@ begin
     aSQL := PRawToUnicode(Pointer(SQL), Length(SQL), ConSettings.CTRL_CP);
     {$IFDEF WITH_VAR_INIT_WARNING}nSQL := '';{$ENDIF}
     SetLength(nSQL, Length(aSQL) shl 1);
-    CheckDbcError(TODBC3UnicodePlainDriver(fPlainDriver).SQLNativeSqlW(fHDBC,
-      Pointer(aSQL), Length(aSQL), Pointer(nSQL), Length(nSQL), @NewLength));
+    Ret := TODBC3UnicodePlainDriver(fODBCPlainDriver).SQLNativeSqlW(fHDBC,
+      Pointer(aSQL), Length(aSQL), Pointer(nSQL), Length(nSQL), @NewLength);
     Result := PUnicodeToRaw(Pointer(nSQL), NewLength, ConSettings^.ClientCodePage^.CP);
     {$ELSE}
     SetLength(Result, Length(SQL) shl 1);
-    CheckDbcError(TODBC3UnicodePlainDriver(fPlainDriver).SQLNativeSqlW(fHDBC,
-      Pointer(SQL), Length(SQL), Pointer(Result), Length(Result), @NewLength));
+    Ret := TODBC3UnicodePlainDriver(fODBCPlainDriver).SQLNativeSqlW(fHDBC,
+      Pointer(SQL), Length(SQL), Pointer(Result), Length(Result), @NewLength);
     SetLength(Result, NewLength);
     {$ENDIF}
+    if Ret <> SQL_SUCCESS then
+      HandleErrorOrWarningW(Ret, fHDBC, SQL_HANDLE_DBC, 'NATIVE SQL',
+        lcOther, Self);
   end else Result := '';
 end;
 
@@ -908,19 +1183,21 @@ begin
 end;
 
 procedure TZODBCConnectionW.SetCatalog(const Catalog: string);
-{$IFNDEF UNICODE}
-var aCatalog: ZWideString;
-{$ENDIF}
+var Ret: SQLReturn;
+  {$IFNDEF UNICODE}aCatalog: UnicodeString;{$ENDIF}
 begin
   if Catalog <> inherited GetCatalog then begin
     {$IFNDEF UNICODE}
     aCatalog := PRawToUnicode(Pointer(Catalog), Length(Catalog), ZOSCodePage);
-    CheckDbcError(fPlainDriver.SQLSetConnectAttr(fHDBC, SQL_ATTR_CURRENT_CATALOG,
-      Pointer(aCatalog), Length(aCatalog) shl 1));
+    Ret := fODBCPlainDriver.SQLSetConnectAttr(fHDBC, SQL_ATTR_CURRENT_CATALOG,
+      Pointer(aCatalog), Length(aCatalog) shl 1);
     {$ELSE}
-    CheckDbcError(fPlainDriver.SQLSetConnectAttr(fHDBC, SQL_ATTR_CURRENT_CATALOG,
-      Pointer(Catalog), Length(Catalog) shl 1));
+    Ret := fODBCPlainDriver.SQLSetConnectAttr(fHDBC, SQL_ATTR_CURRENT_CATALOG,
+      Pointer(Catalog), Length(Catalog) shl 1);
     {$ENDIF}
+    if Ret <> SQL_SUCCESS then
+      HandleErrorOrWarningW(RET, fHDBC, SQL_HANDLE_DBC, 'SET CATALOG',
+        lcOther, Self);
     inherited SetCatalog(Catalog);
   end;
 end;
@@ -950,17 +1227,24 @@ end;
 procedure TZODBCConnectionA.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 var STMT: SQLHSTMT;
+  Ret: SQLRETURN;
 begin
   if SQL = '' then
     Exit;
+  if Closed then
+    Open;
   STMT := nil;
-  CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fHDBC, STMT));
+  Ret := fODBCPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fHDBC, STMT);
+  if (Ret <> SQL_SUCCESS) then
+    HandleErrorOrWarningA(Ret, Stmt, SQL_HANDLE_STMT, SQL, lcExecute, Self);
   try
-    CheckDbcError(TODBC3RawPlainDriver(fPlainDriver).SQLExecDirect(STMT,
-      Pointer(SQL), Length(SQL)));
+    Ret := TODBC3RawPlainDriver(fODBCPlainDriver).SQLExecDirect(STMT,
+      Pointer(SQL), Length(SQL));
+    if (Ret <> SQL_NO_DATA) and (Ret <> SQL_SUCCESS) then
+      HandleErrorOrWarningA(Ret, Stmt, SQL_HANDLE_STMT, SQL, LoggingCategory, Self);
   finally
     if STMT <> nil then
-      CheckDbcError(fPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, STMT));
+      fODBCPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, STMT);
   end;
 end;
 
@@ -975,25 +1259,144 @@ var
   Buf: RawByteString;
   {$ENDIF}
   aLen: SQLINTEGER;
+  Ret: SQLRETURN;
 begin
   Result := inherited GetCatalog;
   if Result = '' then begin
-    CheckDbcError((fPlainDriver as TODBC3RawPlainDriver).SQLGetConnectAttr(fHDBC,
-      SQL_ATTR_CURRENT_CATALOG, nil, 0, @aLen));
-    if aLen > 0 then begin
+    {Test Length}
+    Ret := TODBC3RawPlainDriver(fODBCPlainDriver).SQLGetConnectAttr(fHDBC,
+      SQL_ATTR_CURRENT_CATALOG, nil, 0, @aLen);
+    if Ret <> SQL_SUCCESS then
+      HandleErrorOrWarningA(RET, fHDBC, SQL_HANDLE_DBC, 'GET CATALOG',
+        lcOther, Self);
+    if aLen > 0 then begin //move data to buffer
       {$IFNDEF UNICODE}
       SetLength(Result, aLen shr 1);
-      CheckDbcError((fPlainDriver as TODBC3RawPlainDriver).SQLGetConnectAttr(fHDBC,
-        SQL_ATTR_CURRENT_CATALOG, Pointer(Result), aLen+1, @aLen));
+      Ret := TODBC3RawPlainDriver(fODBCPlainDriver).SQLGetConnectAttr(fHDBC,
+        SQL_ATTR_CURRENT_CATALOG, Pointer(Result), aLen+1, @aLen);
       {$ELSE}
       SetLength(Buf, aLen shr 1);
-      CheckDbcError((fPlainDriver as TODBC3RawPlainDriver).SQLGetConnectAttr(fHDBC,
-        SQL_ATTR_CURRENT_CATALOG, Pointer(Buf), aLen+1, @aLen));
+      Ret := TODBC3RawPlainDriver(fODBCPlainDriver).SQLGetConnectAttr(fHDBC,
+        SQL_ATTR_CURRENT_CATALOG, Pointer(Buf), aLen+1, @aLen);
       Result := PRawToUnicode(Pointer(Buf), aLen, ConSettings.ClientCodePage.CP);
       {$ENDIF}
+      if Ret <> SQL_SUCCESS then
+        HandleErrorOrWarningA(RET, fHDBC, SQL_HANDLE_DBC, 'GET CATALOG',
+          lcOther, Self);
       inherited SetCatalog(Result);
     end;
   end;
+end;
+
+const
+  ConnLostA = RawByteString('01000');
+
+procedure TZODBCConnectionA.HandleErrorOrWarningA(RETCODE: SQLRETURN;
+  Handle: SQLHANDLE; HandleType: SQLSMALLINT; const Msg: RawByteString;
+  LoggingCategory: TZLoggingCategory; const Sender: IImmediatelyReleasable);
+var
+  SqlstateBuf: TSQLSTATE;
+  MessageBuffer: array[0..SQL_MAX_MESSAGE_LENGTH] of AnsiChar;
+  RecNum, FirstNativeError, NativeError: SQLINTEGER;
+  TextLength: SQLSMALLINT;
+  ErrorString: RawByteString;
+  {$IFDEF UNICODE}ErrorStringW, FirstNErrW: UnicodeString;{$ENDIF}
+  FirstNErrA: RawByteString;
+  aException: EZSQLThrowable;
+  MsgWriter: TZRawSQLStringWriter;
+begin
+  Assert(Sender <> nil);
+  if not SQL_SUCCEDED(RETCODE) then begin
+    if (Handle=nil) or (RETCODE=SQL_INVALID_HANDLE) then
+      aException := EZSQLException.CreateWithCodeAndStatus(SQL_INVALID_HANDLE, 'HY000', 'Invalid handle')
+    else begin
+      MsgWriter := TZRawSQLStringWriter.Create(SQL_SQLSTATE_SIZE+SQL_MAX_MESSAGE_LENGTH+10+Length(Msg));
+      try
+        RecNum := 1;
+        FirstNativeError := RETCODE;
+        ErrorString := '';
+        FirstNErrA := '';
+        while TODBC3RawPlainDriver(fODBCPlainDriver).SQLGetDiagRec(HandleType,Handle,RecNum, @SqlstateBuf[0],
+          @NativeError,@MessageBuffer[0],SQL_MAX_MESSAGE_LENGTH,@TextLength) and (not 1)=0 do begin
+          while (TextLength>0) and (PByte(PAnsiChar(@MessageBuffer[0])+TextLength-1)^ <= Ord(' ')) do //trim trailing lineending and spaces
+            dec(TextLength);
+          if RecNum = 1 then begin
+            ZSetString(PAnsiChar(@SqlstateBuf[0]), 5, FirstNErrA);
+            FirstNativeError := NativeError;
+          end;
+          MsgWriter.AddText(@SqlstateBuf[0], 5, ErrorString);
+          MsgWriter.AddChar(AnsiChar('['), ErrorString);
+          MsgWriter.AddOrd(NativeError, ErrorString);
+          MsgWriter.AddChar(AnsiChar(']'), ErrorString);
+          MsgWriter.AddChar(AnsiChar(':'), ErrorString);
+          if TextLength = 0
+          then MsgWriter.AddText(RawByteString('Unidentified error'), ErrorString)
+          else MsgWriter.AddText(@MessageBuffer[0], TextLength, ErrorString);
+          MsgWriter.AddText(RawByteString(LineEnding), ErrorString);
+          inc(RecNum);
+        end;
+        if RecNum = 1 then begin //no error returned?
+          FirstNErrA := 'HY000';
+          {$IFDEF UNICODE}
+          ErrorString := ZUnicodeToRaw(SUnknownError, SMessageCodePage);
+          {$ELSE}
+          ErrorString := SUnknownError;
+          {$ENDIF}
+        end;
+        if (RETCODE <> SQL_SUCCESS_WITH_INFO) and DriverManager.HasLoggingListener then begin
+          MsgWriter.Finalize(ErrorString);
+          DriverManager.LogError(LoggingCategory, ConSettings.Protocol, Msg, FirstNativeError, ErrorString)
+        end;
+        if Msg <> '' then begin
+          if RecNum = 1 then
+            MsgWriter.AddText(RawByteString(LineEnding), ErrorString);
+          MsgWriter.AddText(RawByteString('The SQL: '), ErrorString);
+          MsgWriter.AddText(Msg, ErrorString);
+        end;
+        MsgWriter.Finalize(ErrorString);
+        {$IFDEF UNICODE}
+        FirstNErrW := ZRawToUnicode(FirstNErrA, ConSettings.ClientCodePage.CP);
+        ErrorStringW := ZRawToUnicode(ErrorString, ConSettings.ClientCodePage.CP);
+        if RETCODE = SQL_SUCCESS_WITH_INFO then begin
+          aException := EZSQLWarning.CreateWithCodeAndStatus(FirstNativeError, FirstNErrW, ErrorStringW);
+          SetLastWarning(aException as EZSQLWarning);
+          aException := nil;
+        end else if FirstNErrA = ConnLostA then begin //handle connection lost gracefully
+          aException := EZSQLConnectionLost.CreateWithCodeAndStatus(FirstNativeError, FirstNErrW, ErrorStringW);
+          if Assigned(Sender)
+          then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(aException))
+          else ReleaseImmediat(Sender, EZSQLConnectionLost(aException));
+        end else
+          aException := EZSQLException.CreateWithCodeAndStatus(FirstNativeError, FirstNErrW, ErrorStringW);
+        {$ELSE}
+        if RETCODE = SQL_SUCCESS_WITH_INFO then begin
+          aException := EZSQLWarning.CreateWithCodeAndStatus(FirstNativeError, FirstNErrA, ErrorString);
+          SetLastWarning(aException as EZSQLWarning);
+          aException := nil;
+        end else if FirstNErrA = ConnLostA then begin //handle connection lost gracefully
+          aException := EZSQLConnectionLost.CreateWithCodeAndStatus(FirstNativeError, FirstNErrA, ErrorString);
+          if Assigned(Sender) then
+            Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(aException));
+        end else
+          aException := EZSQLException.CreateWithCodeAndStatus(FirstNativeError, FirstNErrA, ErrorString);
+        {$ENDIF}
+      finally
+        FreeAndNil(MsgWriter);
+        if DriverManager.HasLoggingListener and (RETCODE = SQL_SUCCESS_WITH_INFO) then
+          DriverManager.LogMessage(LoggingCategory, ConSettings.Protocol, ErrorString);
+      end;
+    end;
+    if aException <> nil then
+      raise aException;
+  end;
+end;
+
+procedure TZODBCConnectionA.HandleStmtErrorOrWarningA(RETCODE: SQLRETURN;
+  STMT: SQLHSTMT; const Msg: RawByteString; LoggingCategory: TZLoggingCategory;
+  const Sender: IImmediatelyReleasable);
+begin
+  HandleErrorOrWarningA(RetCode, STMT, SQL_HANDLE_STMT,
+    Msg, LoggingCategory, Sender);
 end;
 
 {**
@@ -1007,7 +1410,8 @@ end;
   @return the native form of this statement
 }
 function TZODBCConnectionA.NativeSQL(const SQL: string): string;
-var NewLength: SQLINTEGER;
+var Ret: SQLRETURN;
+    NewLength: SQLINTEGER;
 {$IFDEF UNICODE}
   aSQL, nSQL: RawByteString;
 {$ENDIF}
@@ -1016,16 +1420,19 @@ begin
     {$IFDEF UNICODE}
     aSQL := PUnicodeToRaw(Pointer(SQL), Length(SQL), ZOSCodePage);
     SetLength(nSQL, Length(aSQL) shl 1); //
-    CheckDbcError(TODBC3RawPlainDriver(fPlainDriver).SQLNativeSql(fHDBC,
-      Pointer(aSQL), Length(aSQL), Pointer(nSQL), Length(nSQL), @NewLength));
+    Ret := TODBC3RawPlainDriver(fODBCPlainDriver).SQLNativeSql(fHDBC,
+      Pointer(aSQL), Length(aSQL), Pointer(nSQL), Length(nSQL), @NewLength);
     Result := PRawToUnicode(Pointer(nSQL), NewLength, ZOSCodePage);
     {$ELSE}
     {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}
     SetLength(Result, Length(SQL) shl 1); //
-    CheckDbcError(TODBC3RawPlainDriver(fPlainDriver).SQLNativeSql(fHDBC,
-      Pointer(SQL), Length(SQL), Pointer(Result), Length(Result), @NewLength));
+    Ret := TODBC3RawPlainDriver(fODBCPlainDriver).SQLNativeSql(fHDBC,
+      Pointer(SQL), Length(SQL), Pointer(Result), Length(Result), @NewLength);
     SetLength(Result, NewLength);
     {$ENDIF}
+    if Ret <> SQL_SUCCESS then
+      HandleErrorOrWarningA(Ret, fHDBC, SQL_HANDLE_DBC, 'NATIVE SQL',
+        lcOther, Self);
   end else Result := '';
 end;
 
@@ -1136,19 +1543,21 @@ end;
   silently ignore this request.
 }
 procedure TZODBCConnectionA.SetCatalog(const Catalog: string);
-{$IFDEF UNICODE}
-var aCatalog: RawByteString;
-{$ENDIF}
+var Ret: SQLRETURN;
+  {$IFDEF UNICODE}aCatalog: RawByteString; {$ENDIF}
 begin
   if Catalog <> inherited GetCatalog then begin
     {$IFDEF UNICODE}
     aCatalog := PUnicodeToRaw(Pointer(Catalog), Length(Catalog), ZOSCodePage);
-    CheckDbcError(fPlainDriver.SQLSetConnectAttr(fHDBC, SQL_ATTR_CURRENT_CATALOG,
-      Pointer(aCatalog), Length(aCatalog)));
+    Ret := fODBCPlainDriver.SQLSetConnectAttr(fHDBC, SQL_ATTR_CURRENT_CATALOG,
+      Pointer(aCatalog), Length(aCatalog));
     {$ELSE}
-    CheckDbcError(fPlainDriver.SQLSetConnectAttr(fHDBC, SQL_ATTR_CURRENT_CATALOG,
-      Pointer(Catalog), Length(Catalog)));
+    Ret := fODBCPlainDriver.SQLSetConnectAttr(fHDBC, SQL_ATTR_CURRENT_CATALOG,
+      Pointer(Catalog), Length(Catalog));
     {$ENDIF}
+    if Ret <> SQL_SUCCESS then
+      HandleErrorOrWarningA(RET, fHDBC, SQL_HANDLE_DBC, 'SET CATALOG',
+        lcOther, Self);
     inherited SetCatalog(Catalog);
   end;
 end;

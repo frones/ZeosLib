@@ -107,12 +107,15 @@ type
     function IsFirebirdLib: Boolean;
     function IsInterbaseLib: Boolean;
     function GetInterbaseFirebirdPlainDriver: TZInterbaseFirebirdPlainDriver;
+    function GetByteBufferAddress: PByteBuffer;
   end;
 
   TZInterbaseFirebirdConnection = Class(TZAbstractDbcConnection)
   private
     FWeakTransactionManagerPtr: Pointer;
   protected
+    FIsFirebirdLib: Boolean; // never use this directly, always use IsFirbirdLib
+    FIsInterbaseLib: Boolean; // never use this directly, always use IsInterbaseLib
     FHardCommit: boolean;
     FDialect: Word;
     FProcedureTypesCache, FSubTypeTestCharIDCache: TStrings;
@@ -126,7 +129,7 @@ type
     FXSQLDAMaxSize: Cardinal;
     FInterbaseFirebirdPlainDriver: TZInterbaseFirebirdPlainDriver;
     procedure BeforeUrlAssign; override;
-    procedure DetermineClientTypeAndVersion; virtual; abstract;
+    procedure DetermineClientTypeAndVersion;
     procedure AssignISC_Parameters;
     function GenerateTPB(AutoCommit, ReadOnly: Boolean; TransactIsolationLevel: TZTransactIsolationLevel;
       Info: TStrings): RawByteString;
@@ -275,6 +278,7 @@ type
   protected
     FGUIDProps: TZInterbaseFirebirdStatementGUIDProps;
     FIsMetadataResultSet: Boolean;
+    FByteBuffer: PByteBuffer;
   public
     //EH: this field is a weak resultset reference
     //it may be an address of a cached resultset which owns this instance.
@@ -353,7 +357,8 @@ type
     FDialect: Cardinal;
     FInData, FOutData: Pointer;
     FCodePageArray: TWordDynArray;
-  procedure ExceuteBatch;
+    FByteBuffer: PByteBuffer;
+    procedure ExceuteBatch;
     function SplittQuery(const SQL: SQLString): RawByteString;
 
     procedure WriteLobBuffer(Index: Cardinal; P: PAnsiChar; Len: NativeUInt); virtual; abstract;
@@ -522,23 +527,69 @@ var
   RoleName: string;
   ConnectTimeout, Idx: integer;
   WireCompression: Boolean;
+  procedure ParseCreateNewDBStringToISC(const Value: String);
+  var CreateDB: String;
+      I: Integer;
+      P, PEnd: PChar;
+  begin
+    CreateDB := UpperCase(Value);
+    I := PosEx('CHARACTER', CreateDB);
+    if I > 0 then begin
+      I := PosEx('SET', CreateDB, I);
+      P := Pointer(CreateDB);
+      Inc(I, 3); Inc(P, I); Inc(I);
+      While P^ = ' ' do begin
+        Inc(I); Inc(P);
+      end;
+      PEnd := P;
+      While ((Ord(PEnd^) >= Ord('A')) and (Ord(PEnd^) <= Ord('Z'))) or
+            ((Ord(PEnd^) >= Ord('0')) and (Ord(PEnd^) <= Ord('9'))) do
+        Inc(PEnd);
+      Info.Values['isc_dpb_set_db_charset'] :=  Copy(CreateDB, I, (PEnd-P));
+    end else if Info.Values['isc_dpb_set_db_charset'] = '' then
+      Info.Values['isc_dpb_set_db_charset'] := Info.Values['isc_dpb_lc_ctype'];
+    if Info.Values['isc_dpb_set_db_charset'] = '' then
+      Info.Values['isc_dpb_set_db_charset'] := FClientCodePage;
+
+    I := PosEx('PAGE', CreateDB);
+    if I > 0 then begin
+      I := PosEx('SIZE', CreateDB, I);
+      P := Pointer(CreateDB);
+      Inc(I, 4); Inc(P, I); Inc(I);
+      While P^ = ' ' do begin
+        Inc(I); Inc(P);
+      end;
+      PEnd := P;
+      While ((Ord(PEnd^) >= Ord('0')) and (Ord(PEnd^) <= Ord('9'))) do
+        Inc(PEnd);
+      Info.Values['isc_dpb_page_size'] :=  Copy(CreateDB, I, (PEnd-P));
+    end else Info.Values['isc_dpb_page_size'] := '4096'; //default
+  end;
 begin
   { set default sql dialect it can be overriden }
   FDialect := StrToIntDef(Info.Values[ConnProps_Dialect], SQL_DIALECT_CURRENT);
-
   Info.BeginUpdate; // Do not call OnPropertiesChange every time a property changes
+  RoleName := Info.Values[ConnProps_CreateNewDatabase];
+
+  if (GetClientVersion >= 2005000) and IsFirebirdLib and (Length(RoleName) > 5) then begin
+    ParseCreateNewDBStringToISC(RoleName);
+    Info.Values[ConnProps_CreateNewDatabase] := 'true';
+  end;
+
   { Processes connection properties. }
   if Info.Values['isc_dpb_username'] = '' then
     Info.Values['isc_dpb_username'] := Url.UserName;
   if Info.Values['isc_dpb_password'] = '' then
     Info.Values['isc_dpb_password'] := Url.Password;
 
-  if FClientCodePage = '' then //was set on inherited Create(...)
-    if Info.Values['isc_dpb_lc_ctype'] <> '' then //Check if Dev set's it manually
-    begin
-      FClientCodePage := Info.Values['isc_dpb_lc_ctype'];
+  if FClientCodePage = '' then begin //was set on inherited Create(...)
+    FClientCodePage := Info.Values['isc_dpb_lc_ctype'];
+    if FClientCodePage = '' then
+      FClientCodePage := Info.Values['isc_dpb_set_db_charset'];
+    if FClientCodePage <> '' then
       CheckCharEncoding(FClientCodePage, True);
-    end;
+  end;
+
   Info.Values['isc_dpb_lc_ctype'] := FClientCodePage;
 
   RoleName := Trim(Info.Values[ConnProps_Rolename]);
@@ -617,6 +668,60 @@ begin
   FreeAndNil(FGUIDProps);
   FreeAndNil(FSubTypeTestCharIDCache);
   inherited Destroy;
+end;
+
+procedure TZInterbaseFirebirdConnection.DetermineClientTypeAndVersion;
+var
+  FbPos, Major, Minor, Release: Integer;
+  Buff: array[0..50] of AnsiChar;
+  P, PDot, PEnd: PAnsiChar;
+begin
+  P := @Buff[0];
+  PDot := P;
+  if Assigned(FInterbaseFirebirdPlainDriver.isc_get_client_version) then begin
+    FbPos := 0;
+    FInterbaseFirebirdPlainDriver.isc_get_client_version(P);
+    PEnd := P+ZFastCode.StrLen(P);
+    while P < PEnd do begin
+      if (FbPos < 2) and (PByte(P)^ = Byte('.')) then begin
+        PDot := P +1; //mark start of fake minior version
+        Inc(FbPos);
+      end else
+        PByte(P)^ := PByte(P)^ or $20; //Lowercase the buffer for the PosEx scan
+      Inc(P);
+    end;
+    P := PDot;
+  end else
+    Exit;
+  FbPos := ZFastCode.PosEx(RawByteString('firebird'), P, PEnd-P);
+  if FbPos > 0 then begin
+    FIsFirebirdLib := true;
+    { to get relase version read to next dot }
+    while (PDot < PEnd) and (PByte(PDot)^ >= Byte('0')) and (PByte(PDot)^ <= Byte('9')) do
+      Inc(PDot);
+    Release := ZFastCode.RawToIntDef(P, PDot, 0);
+    { skip the Firebird brand including the space }
+    Inc(P, FbPos + 8);
+    PDot := P; { read to next dot }
+    while (PDot < PEnd) and (PByte(PDot)^ >= Byte('0')) and (PByte(PDot)^ <= Byte('9')) do
+      Inc(PDot);
+    Major := ZFastCode.RawToIntDef(P, PDot, 0);
+    Inc(PDot); //skip the dot
+    P := PDot; { read to end or next non numeric char }
+    while (PDot < PEnd) and (PByte(PDot)^ >= Byte('0')) and (PByte(PDot)^ <= Byte('9')) do
+      Inc(PDot);
+    Minor := ZFastCode.RawToIntDef(P, PDot, 0);
+  end else begin
+    Release := 0;
+    if Assigned(FInterbaseFirebirdPlainDriver.isc_get_client_major_version)
+    then Major := FInterbaseFirebirdPlainDriver.isc_get_client_major_version()
+    else Major := 0;
+    if Assigned(FInterbaseFirebirdPlainDriver.isc_get_client_minor_version)
+    then Minor := FInterbaseFirebirdPlainDriver.isc_get_client_minor_version()
+    else Minor := 0;
+    FIsInterbaseLib := Major <> 0;
+  end;
+  FClientVersion := Major * 1000000 + Minor * 1000 + Release;
 end;
 
 const
@@ -1045,20 +1150,25 @@ var I: Integer;
   function AddToCache(const ProcName: String): Boolean;
   var RS: IZResultSet;
     Stmt: IZStatement;
+    DbInfo: IZInterbaseDatabaseInfo;
   begin
     Result := False;
-    Stmt := IZConnection(fWeakReferenceOfSelfInterface).CreateStatementWithParams(Info);
-    RS := Stmt.ExecuteQuery('SELECT RDB$PROCEDURE_TYPE FROM RDB$PROCEDURES WHERE RDB$PROCEDURE_NAME = '+QuotedStr(ProcName));
-    if RS <> nil then try
-      if RS.Next then begin
-        Result := RS.GetShort(FirstDbcIndex)=1; //Procedure type 2 has no suspend
-        FProcedureTypesCache.AddObject(ProcName, TObject(Ord(Result)));
-      end else
-        Raise EZUnsupportedException.Create(SUnsupportedOperation);
-    finally
-      RS.Close;
-      RS := nil;
-      Stmt := nil;
+    Supports(GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo);
+
+    if Assigned(DbInfo) and DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 1005000) then begin
+      Stmt := IZConnection(fWeakReferenceOfSelfInterface).CreateStatementWithParams(Info);
+      RS := Stmt.ExecuteQuery('SELECT RDB$PROCEDURE_TYPE FROM RDB$PROCEDURES WHERE RDB$PROCEDURE_NAME = '+QuotedStr(ProcName));
+      if RS <> nil then try
+        if RS.Next then begin
+          Result := RS.GetShort(FirstDbcIndex)=1; //Procedure type 2 has no suspend
+          FProcedureTypesCache.AddObject(ProcName, TObject(Ord(Result)));
+        end else
+          Raise EZUnsupportedException.Create(SUnsupportedOperation);
+      finally
+        RS.Close;
+        RS := nil;
+        Stmt := nil;
+      end;
     end;
   end;
 begin
@@ -1617,22 +1727,22 @@ begin
           SQL_SHORT     : if sqlscale = 0 then
                             JSONWriter.Add(PISC_SHORT(sqldata)^)
                           else begin
-                            ScaledOrdinal2Raw(Integer(PISC_SHORT(sqldata)^), @FTinyBuffer, @P, -sqlscale);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PAnsiChar(P)-PAnsiChar(@FTinyBuffer[0]));
+                            ScaledOrdinal2Raw(Integer(PISC_SHORT(sqldata)^), PAnsiChar(FByteBuffer), @P, -sqlscale);
+                            JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), PAnsiChar(P)-PAnsiChar(FByteBuffer));
                           end;
           SQL_LONG      : if sqlscale = 0 then
                             JSONWriter.Add(PISC_LONG(sqldata)^)
                           else begin
-                            ScaledOrdinal2Raw(PISC_LONG(sqldata)^, @FTinyBuffer, @P, -sqlscale);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PAnsiChar(P)-PAnsiChar(@FTinyBuffer[0]));
+                            ScaledOrdinal2Raw(PISC_LONG(sqldata)^, PAnsiChar(FByteBuffer), @P, -sqlscale);
+                            JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), PAnsiChar(P)-PAnsiChar(FByteBuffer));
                           end;
           SQL_INT64     : if (sqlscale = 0) then
                             JSONWriter.Add(PISC_INT64(sqldata)^)
                           else if sqlScale = -4 then
                             JSONWriter.AddCurr64(PISC_INT64(sqldata)^)
                           else begin
-                            ScaledOrdinal2Raw(PISC_INT64(sqldata)^, @FTinyBuffer, @P, -sqlscale);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0], PAnsiChar(P)-PAnsiChar(@FTinyBuffer[0]));
+                            ScaledOrdinal2Raw(PISC_INT64(sqldata)^, PAnsiChar(FByteBuffer), @P, -sqlscale);
+                            JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), PAnsiChar(P)-PAnsiChar(FByteBuffer));
                           end;
           SQL_TIMESTAMP : begin
                             if jcoMongoISODate in JSONComposeOptions then
@@ -1643,12 +1753,12 @@ begin
                               JSONWriter.Add('"');
                             isc_decode_date(PISC_TIMESTAMP(sqldata).timestamp_date,
                               TempDate.Year, TempDate.Month, Tempdate.Day);
-                            DateToIso8601PChar(@FTinyBuffer[0], True, TempDate.Year, TempDate.Month, TempDate.Day);
+                            DateToIso8601PChar(PUTF8Char(FByteBuffer), True, TempDate.Year, TempDate.Month, TempDate.Day);
                             isc_decode_time(PISC_TIMESTAMP(sqldata).timestamp_time,
                               TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                            TimeToIso8601PChar(@FTinyBuffer[10], True, TempDate.Hour, TempDate.Minute,
+                            TimeToIso8601PChar(PUTF8Char(FByteBuffer)+10, True, TempDate.Hour, TempDate.Minute,
                               TempDate.Second, TempDate.Fractions div 10, 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer),19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z")')
                             else JSONWriter.Add('"');
@@ -1673,9 +1783,9 @@ begin
                               JSONWriter.Add('"');
                             isc_decode_time(PISC_TIME(sqldata)^, TempDate.Hour,
                               TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                            TimeToIso8601PChar(@FTinyBuffer[0], True, TempDate.Hour, TempDate.Minute,
+                            TimeToIso8601PChar(PUTF8Char(FByteBuffer), True, TempDate.Hour, TempDate.Minute,
                               TempDate.Second,  TempDate.Fractions div 10, 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer),9+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z)"')
                             else JSONWriter.Add('"');
@@ -1688,8 +1798,8 @@ begin
                             else
                               JSONWriter.Add('"');
                             isc_decode_date(PISC_DATE(sqldata)^, TempDate.Year, TempDate.Month, Tempdate.Day);
-                            DateToIso8601PChar(@FTinyBuffer[0], True, TempDate.Year, TempDate.Month, Tempdate.Day);
-                            JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
+                            DateToIso8601PChar(PUTF8Char(FByteBuffer), True, TempDate.Year, TempDate.Month, Tempdate.Day);
+                            JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),10);
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z")')
                             else JSONWriter.Add('"');
@@ -1715,6 +1825,7 @@ constructor TZAbstractInterbaseFirebirdResultSet.Create(
 var Connection: IZConnection;
 begin
   Connection := Statement.GetConnection;
+  FByteBuffer := (Connection as IZInterbaseFirebirdConnection).GetByteBufferAddress;
   inherited Create(Statement, SQL, TZInterbaseFirebirdResultSetMetadata.Create(
     Connection.GetMetadata, SQL, Self), Connection.GetConSettings);
   FGUIDProps := TZInterbaseFirebirdStatementGUIDProps.Create(Statement);
@@ -2475,19 +2586,19 @@ begin
     end else case sqltype of
       SQL_D_FLOAT,
       SQL_DOUBLE    : begin
-                        Len := FloatToSQLRaw(PDouble(sqldata)^, @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(fByteBuffer);
+                        Len := FloatToSQLRaw(PDouble(sqldata)^, Result);
                       end;
       SQL_LONG      : if sqlscale = 0 then begin
-                        IntToRaw(PISC_LONG(sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(PISC_LONG(sqldata)^, PAnsiChar(FByteBuffer), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Raw(PISC_LONG(sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result, Byte(-sqlscale));
+                        ScaledOrdinal2Raw(PISC_LONG(sqldata)^, PAnsiChar(FByteBuffer), @Result, Byte(-sqlscale));
                         goto set_Results;
                       end;
       SQL_FLOAT     : begin
-                        Len := FloatToSQLRaw(PSingle(sqldata)^, @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(fByteBuffer);
+                        Len := FloatToSQLRaw(PSingle(sqldata)^, Result);
                       end;
       SQL_BOOLEAN   : if PISC_BOOLEAN(sqldata)^ <> 0 then begin
                         Result := Pointer(BoolStrsRaw[True]);
@@ -2504,20 +2615,20 @@ begin
                         Len := 5;
                       end;
       SQL_SHORT     : if sqlscale = 0 then begin
-                        IntToRaw(Integer(PISC_SHORT(sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(Integer(PISC_SHORT(sqldata)^), PAnsiChar(FByteBuffer), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Raw(Integer(PISC_SHORT(sqldata)^), PAnsiChar(@FTinyBuffer[0]), @Result, Byte(-sqlscale));
+                        ScaledOrdinal2Raw(Integer(PISC_SHORT(sqldata)^), PAnsiChar(FByteBuffer), @Result, Byte(-sqlscale));
                         goto set_Results;
                       end;
       SQL_QUAD,
       SQL_INT64     : if sqlscale = 0 then begin
-                        IntToRaw(PISC_INT64(sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result);
+                        IntToRaw(PISC_INT64(sqldata)^, PAnsiChar(FByteBuffer), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Raw(PISC_INT64(sqldata)^, PAnsiChar(@FTinyBuffer[0]), @Result, Byte(-sqlscale));
-set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        ScaledOrdinal2Raw(PISC_INT64(sqldata)^, PAnsiChar(FByteBuffer), @Result, Byte(-sqlscale));
+set_Results:            Len := Result - PAnsiChar(FByteBuffer);
+                        Result := PAnsiChar(FByteBuffer);
                       end;
       SQL_TEXT,
       SQL_VARYING   : Result := GetPCharFromTextVar(Len);
@@ -2527,7 +2638,7 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
                           TempDate.Year, TempDate.Month, Tempdate.Day);
                         isc_decode_time(PISC_TIMESTAMP(sqldata).timestamp_time,
                           TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(FByteBuffer);
                         Len := DateTimeToRaw(TempDate.Year, TempDate.Month,
                           TempDate.Day, TempDate.Hour, TempDate.Minute,
                           TempDate.Second, TempDate.Fractions * 10000,
@@ -2536,14 +2647,14 @@ set_Results:            Len := Result - PAnsiChar(@FTinyBuffer[0]);
       SQL_TYPE_DATE : begin
                         isc_decode_date(PISC_DATE(sqldata)^,
                           TempDate.Year, TempDate.Month, Tempdate.Day);
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(FByteBuffer);
                         Len := DateToRaw(TempDate.Year, TempDate.Month, Tempdate.Day,
                           Result, ConSettings.ReadFormatSettings.DateFormat, False, False);
                       end;
       SQL_TYPE_TIME : begin
                         isc_decode_time(PISC_TIME(sqldata)^, TempDate.Hour,
                           TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                        Result := @FTinyBuffer[0];
+                        Result := PAnsiChar(FByteBuffer);
                         Len := TimeToRaw(TempDate.Hour, TempDate.Minute,
                           TempDate.Second, TempDate.Fractions * 10000,
                           Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
@@ -2596,12 +2707,12 @@ begin
     end else case sqltype of
       SQL_D_FLOAT,
       SQL_DOUBLE    : begin
-                        Len := FloatToSQLUnicode(PDouble(sqldata)^, @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(FByteBuffer);
+                        Len := FloatToSQLUnicode(PDouble(sqldata)^, Result);
                       end;
       SQL_FLOAT     : begin
-                        Len := FloatToSQLUnicode(PSingle(sqldata)^, @FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(FByteBuffer);
+                        Len := FloatToSQLUnicode(PSingle(sqldata)^, Result);
                       end;
       SQL_BOOLEAN   : if PISC_BOOLEAN(sqldata)^ <> 0 then begin
                         Result := Pointer(BoolStrsW[True]);
@@ -2618,27 +2729,27 @@ begin
                         Len := 5;
                       end;
       SQL_SHORT     : if sqlscale = 0 then begin
-                        IntToUnicode(Integer(PISC_SHORT(sqldata)^), PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(Integer(PISC_SHORT(sqldata)^), PWideChar(FByteBuffer), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Unicode(Integer(PISC_SHORT(sqldata)^), PWideChar(@FTinyBuffer[0]), @Result, Byte(-sqlscale));
+                        ScaledOrdinal2Unicode(Integer(PISC_SHORT(sqldata)^), PWideChar(FByteBuffer), @Result, Byte(-sqlscale));
                         goto set_Results;
                       end;
       SQL_LONG      : if sqlscale = 0 then begin
-                        IntToUnicode(PISC_LONG(sqldata)^, PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(PISC_LONG(sqldata)^, PWideChar(FByteBuffer), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Unicode(PISC_LONG(sqldata)^, PWideChar(@FTinyBuffer[0]), @Result, Byte(-sqlscale));
+                        ScaledOrdinal2Unicode(PISC_LONG(sqldata)^, PWideChar(FByteBuffer), @Result, Byte(-sqlscale));
                         goto set_Results;
                       end;
       SQL_QUAD,
       SQL_INT64     : if sqlscale = 0 then begin
-                        IntToUnicode(PISC_INT64(sqldata)^, PWideChar(@FTinyBuffer[0]), @Result);
+                        IntToUnicode(PISC_INT64(sqldata)^, PWideChar(fByteBuffer), @Result);
                         goto set_Results;
                       end else begin
-                        ScaledOrdinal2Unicode(PISC_INT64(sqldata)^, PWideChar(@FTinyBuffer[0]), @Result, Byte(-sqlscale));
-set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
-                        Result := @FTinyBuffer[0];
+                        ScaledOrdinal2Unicode(PISC_INT64(sqldata)^, PWideChar(fByteBuffer), @Result, Byte(-sqlscale));
+set_Results:            Len := Result - PWideChar(FByteBuffer);
+                        Result := PWideChar(FByteBuffer);
                       end;
       SQL_TEXT,
       SQL_VARYING   : begin
@@ -2657,7 +2768,7 @@ set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
                           TempDate.Year, TempDate.Month, Tempdate.Day);
                         isc_decode_time(PISC_TIMESTAMP(sqldata).timestamp_time,
                           TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(fByteBuffer);
                         Len := DateTimeToUni(TempDate.Year,
                           TempDate.Month, TempDate.Day, TempDate.Hour, TempDate.Minute,
                           TempDate.Second, TempDate.Fractions * 10000,
@@ -2666,14 +2777,14 @@ set_Results:            Len := Result - PWideChar(@FTinyBuffer[0]);
       SQL_TYPE_DATE : begin
                         isc_decode_date(PISC_DATE(sqldata)^,
                           TempDate.Year, TempDate.Month, Tempdate.Day);
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(fByteBuffer);
                         Len := DateToUni(TempDate.Year, TempDate.Month, Tempdate.Day,
                           Result, ConSettings.ReadFormatSettings.DateFormat, False, False);
                       end;
       SQL_TYPE_TIME : begin
                         isc_decode_time(PISC_TIME(sqldata)^, TempDate.Hour,
                           TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                        Result := @FTinyBuffer[0];
+                        Result := PWideChar(fByteBuffer);
                         Len := TimeToUni(TempDate.Hour, TempDate.Minute,
                           TempDate.Second, TempDate.Fractions * 100000,
                           Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
@@ -2927,6 +3038,7 @@ constructor TZAbstractFirebirdInterbasePreparedStatement.Create(
 begin
   Self.ConSettings := Connection.GetConSettings;
   FDB_CP_ID := ConSettings.ClientCodePage.ID;
+  FByteBuffer := Connection.GetByteBufferAddress;
   inherited Create(Connection, SQL, Info);
   FDialect := Connection.GetDialect;
   FCodePageArray := Connection.GetInterbaseFirebirdPlainDriver.GetCodePageArray;
@@ -3182,10 +3294,10 @@ begin
       SQL_QUAD      : BCD2ScaledOrdinal(Value, sqldata, SizeOf(ISC_INT64), -sqlscale);
       SQL_TEXT,
       SQL_VARYING   : begin
-                        L := BcdToRaw(Value, @fABuffer[0], '.');
+                        L := BcdToRaw(Value, PAnsiChar(FByteBuffer), '.');
                         if sqllen < L then
                           L := sqllen;
-                        Move(fABuffer[0], PISC_VARYING(sqldata).str[0], L);
+                        Move(FByteBuffer[0], PISC_VARYING(sqldata).str[0], L);
                         PISC_VARYING(sqldata).strlen := L;
                       end;
       else InternalBindDouble(Index, BCDToDouble(Value));
@@ -3422,11 +3534,11 @@ begin
                         PISC_INT64(sqldata)^ := I64 * IBScaleDivisor[4+sqlscale]; //inc sqlscale digits
       SQL_TEXT,
       SQL_VARYING   : begin
-                        CurrToRaw(Value, @fABuffer[0], @P);
-                        L := P - PAnsiChar(@fABuffer[0]);
+                        CurrToRaw(Value, PAnsiChar(FByteBuffer), @P);
+                        L := P - PAnsiChar(FByteBuffer);
                         if LengthInt(sqllen) < L then
                           L := LengthInt(sqllen);
-                        Move(fABuffer[0], PISC_VARYING(sqldata).str[0], L);
+                        Move(FByteBuffer[0], PISC_VARYING(sqldata).str[0], L);
                         PISC_VARYING(sqldata).strlen := L;
                       end;
       else raise CreateConversionError(Index, stCurrency);
@@ -3456,11 +3568,11 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     case sqltype of
       SQL_VARYING   : begin
-                        L := DateToRaw(Value.Year, Value.Month, Value.Day, @fABuffer[0],
+                        L := DateToRaw(Value.Year, Value.Month, Value.Day, PAnsiChar(FByteBuffer),
                             ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
                         if LengthInt(sqllen) < L then
                           L := LengthInt(sqllen);
-                        Move(fABuffer[0], PISC_VARYING(sqldata).str[0], L);
+                        Move(FByteBuffer[0], PISC_VARYING(sqldata).str[0], L);
                         PISC_VARYING(sqldata).strlen := L;
                       end;
       SQL_TYPE_TIME : PISC_TIME(sqldata)^ := 0;
@@ -3502,10 +3614,10 @@ begin
       SQL_FLOAT     : PSingle(sqldata)^   := Value;
       SQL_TEXT,
       SQL_VARYING   : begin
-          L := FloatToSqlRaw(Value, @fABuffer[0]);
+          L := FloatToSqlRaw(Value, PAnsiChar(FByteBuffer));
           if LengthInt(sqllen) < L then
             L := LengthInt(sqllen);
-          Move(fABuffer[0], PISC_VARYING(sqldata).str[0], L);
+          Move(FByteBuffer[0], PISC_VARYING(sqldata).str[0], L);
           PISC_VARYING(sqldata).strlen := L;
         end;
       else InternalBindDouble(Index, Value);
@@ -3536,10 +3648,10 @@ begin
       SQL_FLOAT     : PSingle(sqldata)^   := Value;
       SQL_TEXT,
       SQL_VARYING   : begin
-          L := FloatToSqlRaw(Value, @fABuffer[0]);
+          L := FloatToSqlRaw(Value, PAnsiChar(FByteBuffer));
           if LengthInt(sqllen) < L then
             L := LengthInt(sqllen);
-          Move(fABuffer[0], PISC_VARYING(sqldata).str[0], L);
+          Move(FByteBuffer[0], PISC_VARYING(sqldata).str[0], L);
           PISC_VARYING(sqldata).strlen := L;
         end;
       else InternalBindDouble(Index, Value);
@@ -3570,7 +3682,7 @@ begin
                           L := SizeOf(TGUID);
                         end else begin
                           //see https://firebirdsql.org/refdocs/langrefupd25-intfunc-uuid_to_char.html
-                          P := @fABuffer[0];
+                          P := PAnsiChar(FByteBuffer);
                           GUIDToBuffer(@Value.D1, P, []);
                           L := 36;
                         end;
@@ -3584,7 +3696,7 @@ begin
       SQL_QUAD      : if codepage = zCP_Binary then
                         WriteLobBuffer(Index, @Value.D1, SizeOf(TGUID))
                       else begin
-                        P := @fABuffer[0];
+                        P := PAnsiChar(FByteBuffer);
                         GUIDToBuffer(@Value.D1, P, []);
                         WriteLobBuffer(Index, P, 36)
                       end;
@@ -4023,10 +4135,10 @@ begin
       SQL_TEXT,
       SQL_VARYING   : begin
                         L := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
-                            @fABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, False, False);
+                            PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.TimeFormat, False, False);
                         if LengthInt(sqllen) < L then
                           L := LengthInt(sqllen);
-                        Move(fABuffer[0], PISC_VARYING(sqldata).str[0], L);
+                        Move(FByteBuffer[0], PISC_VARYING(sqldata).str[0], L);
                         PISC_VARYING(sqldata).strlen := L;
                       end;
       SQL_TYPE_DATE : isc_encode_date(PISC_DATE(sqldata)^, 1899, 12, 31);
@@ -4070,10 +4182,11 @@ begin
       SQL_VARYING   : begin
                         L := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
                             Value.Hour, Value.Minute, Value.Second, Value.Fractions,
-                            @fABuffer[0], ConSettings^.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative);
+                            PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.DateTimeFormat,
+                            False, Value.IsNegative);
                         if LengthInt(sqllen) < L then
                           L := LengthInt(sqllen);
-                        Move(fABuffer[0], PISC_VARYING(sqldata).str[0], L);
+                        Move(FByteBuffer[0], PISC_VARYING(sqldata).str[0], L);
                         PISC_VARYING(sqldata).strlen := L;
                       end;
       SQL_TYPE_DATE : isc_encode_date(PISC_DATE(sqldata)^, Value.Year, Value.Month, Value.Day);

@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -84,6 +84,8 @@ type
     function GetConnectionHandle: PDBPROCESS;
     function GetServerAnsiCodePage: Word;
     procedure CheckDBLibError(LogCategory: TZLoggingCategory; const LogMessage: RawByteString);
+    function GetByteBufferAddress: PByteBuffer;
+    function GetPlainDriver: TZDBLIBPLainDriver;
   end;
 
   {** Implements a generic DBLib Connection. }
@@ -144,8 +146,9 @@ type
     procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
+  public
     function GetServerAnsiCodePage: Word;
-
+    function GetPlainDriver: TZDBLIBPLainDriver;
     function GetServerProvider: TZServerProvider; override;
   end;
 
@@ -396,6 +399,11 @@ begin
       Open;
     end;
   Result := FHandle;
+end;
+
+function TZDBLibConnection.GetPlainDriver: TZDBLIBPLainDriver;
+begin
+  Result := FPlainDriver
 end;
 
 function TZDBLibConnection.GetProvider: TDBLibProvider;

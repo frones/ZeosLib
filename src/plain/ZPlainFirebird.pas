@@ -9,7 +9,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -3347,6 +3347,12 @@ const
 	isc_dpb_nolinger = byte(88);
 	isc_dpb_reset_icu = byte(89);
 	isc_dpb_map_attach = byte(90);
+    isc_dpb_session_time_zone = byte(91);
+    isc_dpb_set_db_replica = byte(92);
+    isc_dpb_set_bind = byte(93);
+    isc_dpb_decfloat_round = byte(94);
+    isc_dpb_decfloat_traps = byte(95);	
+	
 	isc_dpb_address = byte(1);
 	isc_dpb_addr_protocol = byte(1);
 	isc_dpb_addr_endpoint = byte(2);

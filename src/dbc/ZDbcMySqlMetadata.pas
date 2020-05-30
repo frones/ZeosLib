@@ -9,7 +9,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -2862,6 +2862,10 @@ var
       ZType := Ord(stString);
       ZPrecision := MysqlCharLength;
       ZScale := -1;
+    end else if EndsWith(TypeName, 'binary') then begin
+      ZType := Ord(stBytes);
+      ZPrecision := MysqlCharLength;
+      ZScale := -1;
     end else if TypeName = 'date' then begin
       ZType := Ord(stDate);
       ZPrecision := -1;
@@ -2883,8 +2887,13 @@ var
       ZPrecision := -1;
       ZScale := -1;
     end else if EndsWith(TypeName, 'blob') then begin
-      ZType := Ord(stBinaryStream);
-      ZPrecision := -1;
+      if StartsWith(TypeName, 'tiny') then begin
+        ZType := Ord(stBytes);
+        ZPrecision := 255;
+      end else begin
+        ZType := Ord(stBinaryStream);
+        ZPrecision := -1;
+      end;
       ZScale := -1;
     end else if EndsWith(TypeName, 'text') then begin
       ZType := Ord(stAsciiStream);
@@ -2932,7 +2941,8 @@ begin
        + ' ORDER BY P.SPECIFIC_SCHEMA, P.SPECIFIC_NAME, P.ORDINAL_POSITION) ';
   with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(SQL) do begin
     while Next do begin
-      MysqlTypeToZeos(GetString(myProcColTypeNameIndex), GetInt(myExtraNumericPrecisionIndex), GetInt(myProcColScaleIndex), GetInt(myExtraMaxCharLength), ZType, ZPrecision, ZScale);
+      MysqlTypeToZeos(GetString(myProcColTypeNameIndex), GetInt(myExtraNumericPrecisionIndex),
+        GetInt(myProcColScaleIndex), GetInt(myExtraMaxCharLength), ZType, ZPrecision, ZScale);
 
       Result.MoveToInsertRow;
       if not IsNull(CatalogNameIndex) then

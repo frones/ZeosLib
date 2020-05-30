@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -57,7 +57,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX, Windows,
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ZDbcIntfs, ZDbcConnection, ZDbcLogging, ZTokenizer,
   ZGenericSqlAnalyser, ZCompatibility, ZDbcOleDBUtils,
@@ -79,6 +79,10 @@ type
     function CreateCommand: ICommandText;
     function GetMalloc: IMalloc;
     function SupportsMARSConnection: Boolean;
+    function GetByteBufferAddress: PByteBuffer;
+    procedure HandleErrorOrWarning(Status: HRESULT; LoggingCategory: TZLoggingCategory;
+      const Msg: UnicodeString; const Sender: IImmediatelyReleasable;
+      const aStatus: TDBBINDSTATUSDynArray = nil);
   end;
 
   {** Implements a generic OleDB Connection. }
@@ -97,9 +101,8 @@ type
     FSavePoints: TStrings;
     FAutoCommitTIL: ISOLATIONLEVEL;
     FRestartTransaction: Boolean;
+    FLastWarning: EZSQLWarning;
     procedure SetProviderProps(DBinit: Boolean);
-    procedure CheckError(Status: HResult; LoggingCateGory: TZLoggingCategory;
-      const LogMsg: RawByteString);
   protected
     procedure InternalCreate; override;
     function OleDbGetDBPropValue(const APropIDs: array of DBPROPID): string; overload;
@@ -131,8 +134,8 @@ type
     procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
-    {function GetWarnings: EZSQLWarning; override;
-    procedure ClearWarnings; override;}
+    function GetWarnings: EZSQLWarning; override;
+    procedure ClearWarnings; override;
 
     function GetServerProvider: TZServerProvider; override;
   public { IZOleDBConnection }
@@ -140,6 +143,9 @@ type
     function CreateCommand: ICommandText;
     function GetMalloc: IMalloc;
     function SupportsMARSConnection: Boolean;
+    procedure HandleErrorOrWarning(Status: HRESULT; LoggingCategory:  TZLoggingCategory;
+      const Msg: UnicodeString; const Sender: IImmediatelyReleasable;
+      const aStatus: TDBBINDSTATUSDynArray = nil);
   end;
 
 var
@@ -150,8 +156,9 @@ var
 implementation
 {$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 
-uses ZDbcOleDBMetadata, ZDbcOleDBStatement, ZSysUtils, ZDbcUtils, ZEncoding,
-  ZMessages, ZFastCode, ZDbcProperties;
+uses TypInfo,
+  ZSysUtils, ZDbcUtils, ZEncoding, ZMessages, ZFastCode, ZClasses,
+  ZDbcOleDBMetadata, ZDbcOleDBStatement, ZDbcProperties;
 
 { TZOleDBDriver }
 
@@ -244,6 +251,7 @@ var
   rgDBPROPSET_DBPROPSET_SESSION: TDBProp;
   prgPropertySets: TDBPROPSET;
   SessionProperties: ISessionProperties;
+  Status: HResult;
 begin
   SessionProperties := nil;
   if (FDBCreateCommand.QueryInterface(IID_ISessionProperties, SessionProperties) = S_OK) then begin
@@ -254,7 +262,9 @@ begin
     rgDBPROPSET_DBPROPSET_SESSION.dwOptions    := DBPROPOPTIONS_REQUIRED;
     rgDBPROPSET_DBPROPSET_SESSION.colid        := DB_NULLID;
     rgDBPROPSET_DBPROPSET_SESSION.vValue       := TIL[Level];
-    CheckError(SessionProperties.SetProperties(1, @prgPropertySets), lcOther, EmptyRaw);
+    Status := SessionProperties.SetProperties(1, @prgPropertySets);
+    if Status <> S_OK then
+      HandleErrorOrWarning(Status, lcTransaction, 'SET TRANSACTION ISOLATION LEVEL', Self);
     FAutoCommitTIL := TIL[Level];
   end;
 end;
@@ -283,22 +293,18 @@ var Cmd: ICommandText;
   Status: HResult;
   procedure DoLog;
   begin
-    DriverManager.LogMessage(LoggingCategory, ConSettings.Protocol, ZUnicodeToRaw(SQL, ConSettings.ClientCodePage^.CP));
-  end;
-  procedure CheckError;
-  begin
-    OleDbCheck(Status, {$IFNDEF UNICODE}ZUnicodeToRaw(SQL, ConSettings.CTRL_CP){$ELSE}SQL{$ENDIF}, Self, nil);
+    DriverManager.LogMessage(LoggingCategory, ConSettings.Protocol, ZUnicodeToRaw(SQL, zCP_UTF8));
   end;
 begin
   Cmd := CreateCommand;
   FillChar(pParams, SizeOf(TDBParams), #0);
   Status := Cmd.SetCommandText(DBGUID_DEFAULT, Pointer(SQL));
   if Status <> S_OK then
-    CheckError;
+    HandleErrorOrWarning(Status, LoggingCategory, SQL, Self);
   Status := Cmd.Execute(nil, DB_NULLGUID,pParams,nil,nil);
   if Status <> S_OK then
-    CheckError;
-  if DriverManager.HasLoggingListener then
+     HandleErrorOrWarning(Status, LoggingCategory, SQL, Self, nil)
+  else if DriverManager.HasLoggingListener then
     DoLog;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
@@ -324,6 +330,7 @@ end;
   @param autoCommit true enables auto-commit; false disables auto-commit.
 }
 procedure TZOleDBConnection.SetAutoCommit(Value: Boolean);
+var Status: HResult;
 begin
   if Value <> AutoCommit then begin
     FRestartTransaction := AutoCommit;
@@ -332,7 +339,9 @@ begin
     else if Value then begin
       FSavePoints.Clear;
       while FpulTransactionLevel > 0 do begin
-        CheckError(fTransaction.Abort(nil, FRetaining, False), lcTransaction, 'Rollback Transaction');
+        Status := fTransaction.Abort(nil, FRetaining, False);
+        if Status <> S_OK then
+          HandleErrorOrWarning(Status, lcTransaction, 'Rollback Transaction', Self);
         Dec(FpulTransactionLevel);
       end;
       fTransaction := nil;
@@ -371,6 +380,7 @@ var
   rgDBPROPSET_DATASOURCE: TDBProp;
   PropertySets: array[0..2] of TDBPROPSET;
   cPropertySets: ULONG;
+  Status: HResult;
   procedure SetProp(var PropSet: TDBPROPSET; PropertyID: DBPROPID; Value: SmallInt);
   begin
     //initialize common property options
@@ -427,7 +437,9 @@ begin
       else
         cPropertySets := 0;
     try
-      CheckError(DBProps.SetProperties(cPropertySets,@PropertySets[0]), lcTransaction, EmptyRaw);
+      Status := DBProps.SetProperties(cPropertySets,@PropertySets[0]);
+      if Failed(Status) then
+        HandleErrorOrWarning(Status, lcOther, 'SetProperties', Self);
     finally
       DBProps := nil;
     end;
@@ -435,7 +447,7 @@ begin
 end;
 
 function TZOleDBConnection.StartTransaction: Integer;
-var Res: HResult;
+var Status: HResult;
   S: String;
 begin
   if Closed then
@@ -444,8 +456,9 @@ begin
   if FpulTransactionLevel = 0 then begin
     if not Assigned(fTransaction) then
       OleCheck(FDBCreateCommand.QueryInterface(IID_ITransactionLocal,fTransaction));
-    Res := fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel);
-    CheckError(Res, lcTransaction, 'Start Transaction');
+    Status := fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel);
+    if Status <> S_OK then
+      HandleErrorOrWarning(Status, lcTransaction, 'Start Transaction', Self);
     Result := FpulTransactionLevel;
   end else begin
     S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count);
@@ -467,17 +480,20 @@ var
   nPropertySets: ULONG;
   i: Integer;
   s: string;
+  Status: HResult;
 begin
   Result := '';
   DBProperties := nil;
-  CheckError(FDBInitialize.QueryInterface(IID_IDBProperties, DBProperties), lcOther, EmptyRaw);
+  OleCheck(FDBInitialize.QueryInterface(IID_IDBProperties, DBProperties));
   try
     PropIDSet.rgPropertyIDs   := @APropIDs;
     PropIDSet.cPropertyIDs    := High(APropIDs)+1;
     PropIDSet.guidPropertySet := DBPROPSET_DATASOURCEINFO;
     nPropertySets := 0;
     prgPropertySets := nil;
-    CheckError(DBProperties.GetProperties( 1, @PropIDSet, nPropertySets, prgPropertySets ), lcOther, EmptyRaw);
+    Status := DBProperties.GetProperties(1, @PropIDSet, nPropertySets, prgPropertySets );
+    if Status <> S_OK then
+      HandleErrorOrWarning(Status, lcOther, 'IID_IDBProperties.GetProperties', Self, nil);
     Assert( nPropertySets = 1 );
     PropSet := prgPropertySets^;
     for i := 0 to PropSet.cProperties-1 do begin
@@ -545,14 +561,233 @@ begin
 end;
 
 {**
+  Returns the first warning reported by calls on this Connection.
+  <P><B>Note:</B> Subsequent warnings will be chained to this
+  SQLWarning.
+  @return the first SQLWarning or null
+}
+function TZOleDBConnection.GetWarnings: EZSQLWarning;
+begin
+  Result := FLastWarning;
+end;
+
+procedure TZOleDBConnection.HandleErrorOrWarning(Status: HRESULT;
+  LoggingCategory: TZLoggingCategory; const Msg: UnicodeString;
+  const Sender: IImmediatelyReleasable; const aStatus: TDBBINDSTATUSDynArray);
+var
+  OleDBErrorMessage, FirstSQLState: UnicodeString;
+  ErrorInfo, ErrorInfoDetails: IErrorInfo;
+  SQLErrorInfo: ISQLErrorInfo;
+  MSSQLErrorInfo: ISQLServerErrorInfo;
+  ErrorRecords: IErrorRecords;
+  SSErrorPtr: PMSErrorInfo;
+  i, ErrorCode, FirstErrorCode: Integer;
+  ErrorCount: ULONG;
+  WS: WideString;
+  StringsBufferPtr: PWideChar;
+  s: string;
+  Writer: TZUnicodeSQLStringWriter;
+  MessageAdded: Boolean;
+  Exception: EZSQLThrowable;
+  {$IFNDEF UNICODE}
+  CP: Word;
+  {$ENDIF UNICODE}
+begin
+  if Status <> S_OK then begin // get OleDB specific error information
+    Writer := TZUnicodeSQLStringWriter.Create(1024+Length(Msg));
+    ErrorInfo := nil;
+    try
+      if IsError(Status) then
+        if Status < 0 //avoid range check error for some negative unknown errors
+        then OleDBErrorMessage := 'OLEDB Error '
+        else OleDBErrorMessage := UnicodeString(SysErrorMessage(Status))
+      else OleDBErrorMessage := 'OLEDB Warning ';
+      FirstSQLState := '';
+      FirstErrorCode := Status;
+      GetErrorInfo(0,ErrorInfo);
+      if Assigned(ErrorInfo) then begin
+        ErrorRecords := ErrorInfo as IErrorRecords;
+        ErrorRecords.GetRecordCount(ErrorCount);
+        for i := 0 to ErrorCount-1 do begin
+          MessageAdded := False;
+          { get all error interface we know }
+          SQLErrorInfo := nil;
+          if Failed(ErrorRecords.GetCustomErrorObject(i, IID_ISQLErrorInfo, IUnknown(SQLErrorInfo))) then
+            SQLErrorInfo := nil;
+          ErrorInfoDetails := nil;
+          if Failed(ErrorRecords.GetErrorInfo(i,GetSystemDefaultLCID,ErrorInfoDetails)) then
+            ErrorInfoDetails := nil;
+          MSSQLErrorInfo := nil;
+          if Failed(ErrorRecords.GetCustomErrorObject(i, IID_ISQLServerErrorInfo, IUnknown(MSSQLErrorInfo))) then
+            MSSQLErrorInfo := nil;
+
+          { get common error info: }
+          if (SQLErrorInfo <> nil) then try
+            WS := '';
+            SQLErrorInfo.GetSQLInfo(WS, ErrorCode );
+            if I = 0 then begin
+              FirstErrorCode := ErrorCode;
+              FirstSQLState := WS;
+            end;
+            Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+            Writer.AddText('SQLState: ', OleDBErrorMessage);
+            Writer.AddText(Pointer(WS), Length(WS), OleDBErrorMessage);
+            Writer.AddText(' Native Error: ', OleDBErrorMessage);
+            Writer.AddOrd(ErrorCode, OleDBErrorMessage);
+            WS := '';
+          finally
+            SQLErrorInfo := nil;
+          end;
+          if (ErrorInfoDetails <> nil) then try
+            if Succeeded(ErrorInfoDetails.GetDescription(WS)) and (WS <> '') then begin
+              Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+              Writer.AddText('Error message: ', OleDBErrorMessage);
+              Writer.AddText(Pointer(WS), Length(WS), OleDBErrorMessage);
+              MessageAdded := True;
+            end;
+            if Succeeded(ErrorInfoDetails.GetSource(WS)) and (WS <> '') then begin
+              Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+              Writer.AddText('Source: ', OleDBErrorMessage);
+              Writer.AddText(Pointer(WS), Length(WS), OleDBErrorMessage);
+              WS := '';
+            end;
+          finally
+            ErrorInfoDetails := nil;
+            //OleCheck(SetErrorInfo(0, ErrorInfoDetails));
+            WS := '';
+          end;
+          if Assigned(MSSQLErrorInfo) then try
+            Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+            Writer.AddText('SQLServer details: ', OleDBErrorMessage);
+            SSErrorPtr := nil;
+            StringsBufferPtr:= nil;
+            try //try use a SQL Server error interface
+              if Succeeded(MSSQLErrorInfo.GetErrorInfo(SSErrorPtr, StringsBufferPtr)) and Assigned(SSErrorPtr) then begin
+                if not MessageAdded and (SSErrorPtr^.pwszMessage <> nil) and (PWord(SSErrorPtr^.pwszMessage)^ <> 0) then begin
+                  Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+                  Writer.AddText('Error message: ', OleDBErrorMessage);
+                  Writer.AddText(SSErrorPtr^.pwszMessage, {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(SSErrorPtr^.pwszMessage), OleDBErrorMessage);
+                end;
+                if (SSErrorPtr^.pwszServer <> nil) and (PWord(SSErrorPtr^.pwszServer)^ <> 0) then begin
+                  Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+                  Writer.AddText('Server: ', OleDBErrorMessage);
+                  Writer.AddText(SSErrorPtr^.pwszServer, {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(SSErrorPtr^.pwszServer), OleDBErrorMessage);
+                end;
+                if (SSErrorPtr^.pwszProcedure <> nil) and (PWord(SSErrorPtr^.pwszProcedure)^ <> 0) then begin
+                  Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+                  Writer.AddText('Procedure: ', OleDBErrorMessage);
+                  Writer.AddText(SSErrorPtr^.pwszProcedure, {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(SSErrorPtr^.pwszProcedure), OleDBErrorMessage);
+                end;
+                Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+                Writer.AddText('Line: ', OleDBErrorMessage);
+                Writer.AddOrd(SSErrorPtr^.wLineNumber, OleDBErrorMessage);
+                Writer.AddText(', Error state: ', OleDBErrorMessage);
+                Writer.AddOrd(SSErrorPtr^.bState, OleDBErrorMessage);
+                Writer.AddText(', Severity: ', OleDBErrorMessage);
+                Writer.AddOrd(SSErrorPtr^.bClass, OleDBErrorMessage);
+              end;
+            finally
+              if Assigned(SSErrorPtr) then CoTaskMemFree(SSErrorPtr);
+              if Assigned(StringsBufferPtr) then CoTaskMemFree(StringsBufferPtr);
+            end
+          finally
+            MSSQLErrorInfo := nil;
+          end;
+        end;
+      end;
+      // retrieve binding information from Status[]
+      if aStatus <> nil then begin
+        MessageAdded := False;
+        for i := 0 to high(aStatus) do
+          if aStatus[i]<>ZPlainOleDBDriver.DBBINDSTATUS_OK then Begin
+            if not MessageAdded then begin
+              Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+              Writer.AddText('Binding failure(s): ', OleDBErrorMessage);
+              MessageAdded := True;
+            end;
+            Writer.AddText('Status[', OleDBErrorMessage);
+            Writer.AddOrd(i{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, OleDBErrorMessage);
+            Writer.AddText(']="', OleDBErrorMessage);
+            if aStatus[i]<=cardinal(high(TOleDBBindStatus)) then begin
+              S := GetEnumName(TypeInfo(TOleDBBindStatus),aStatus[i]);
+              {$IFDEF UNICODE}
+              Writer.AddText(S, OleDBErrorMessage);
+              {$ELSE}
+              Writer.AddAscii7Text(Pointer(S), Length(S), OleDBErrorMessage);
+              {$ENDIF}
+            end else
+              Writer.AddOrd(aStatus[i], OleDBErrorMessage);
+            Writer.AddChar('"', OleDBErrorMessage);
+            Writer.AddChar(',', OleDBErrorMessage);
+          end;
+        Writer.CancelLastComma(OleDBErrorMessage);
+      end;
+      if (Msg <> '') and (not IsError(Status) or not DriverManager.HasLoggingListener) then begin
+        Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+        Writer.AddText('SQL: ', OleDBErrorMessage);
+        Writer.AddText(Msg, OleDBErrorMessage);
+      end;
+      Writer.Finalize(OleDBErrorMessage);
+      if FirstSQLState = '' then begin
+        FirstErrorCode := Status;
+        FirstSQLState := {$IFNDEF UNCIODE}UnicodeString{$ENDIF}(IntToHex(Status,8));
+      end;
+      {$IFNDEF UNICODE}
+      CP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
+      {$ENDIF UNICODE}
+      if IsError(Status) then begin // raise exception
+        if DriverManager.HasLoggingListener then begin
+          DriverManager.LogError(LoggingCategory, ConSettings.Protocol,
+            ZUnicodeToRaw(Msg, zCP_UTF8), FirstErrorCode, ZUnicodeToRaw(OleDBErrorMessage, zCP_UTF8));
+          if (Msg <> '') then begin
+            Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+            Writer.AddText('SQL: ', OleDBErrorMessage);
+            Writer.AddText(Msg, OleDBErrorMessage);
+            Writer.Finalize(OleDBErrorMessage);
+          end;
+        end;
+        {$IFNDEF UNICODE}
+        Exception := EZSQLException.CreateWithCodeAndStatus(FirstErrorCode, ZUnicodeToRaw(FirstSQLState, CP), ZUnicodeToRaw(OleDBErrorMessage, CP));
+        {$ELSE}
+        Exception := EZSQLException.CreateWithCodeAndStatus(FirstErrorCode, FirstSQLState, OleDBErrorMessage);
+        {$ENDIF}
+        if Exception is EZSQLConnectionLost then if Sender <> nil
+          then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(Exception))
+          else ReleaseImmediat(Sender, EZSQLConnectionLost(Exception));
+        if Exception <> nil then
+          raise Exception;
+      end else begin
+        if DriverManager.HasLoggingListener then
+          DriverManager.LogMessage(LoggingCategory, ConSettings.Protocol, ZUnicodeToRaw(OleDBErrorMessage, zCP_UTF8));
+        ClearWarnings;
+        {$IFNDEF UNICODE}
+        FLastWarning := EZSQLWarning.CreateWithCodeAndStatus(FirstErrorCode, ZUnicodeToRaw(FirstSQLState, CP), ZUnicodeToRaw(OleDBErrorMessage, CP));
+        {$ELSE}
+        FLastWarning := EZSQLWarning.CreateWithCodeAndStatus(FirstErrorCode, FirstSQLState, OleDBErrorMessage);
+        {$ENDIF}
+      end;
+    finally
+      FreeAndNil(Writer);
+      OleCheck(SetErrorInfo(0, nil));
+    end;
+  end;
+end;
+
+{**
   Returs the Ole-ICommandText interface of current connection
 }
 function TZOleDBConnection.CreateCommand: ICommandText;
+var Status: HResult;
 begin
   Result := nil;
-  CheckError(FDBCreateCommand.CreateCommand(nil, IID_ICommandText,IUnknown(Result)), lcOther, EmptyRaw);
+  Status := FDBCreateCommand.CreateCommand(nil, IID_ICommandText,IUnknown(Result));
+  if Status <> S_OK then
+    HandleErrorOrWarning(Status, lcExecute, 'create command', Self, nil);
 end;
 
+{**
+  Returs the Ole-IMalloc interface of current thread
+}
 function TZOleDBConnection.GetMalloc: IMalloc;
 begin
   Result := FMalloc;
@@ -579,13 +814,15 @@ begin
   end;
 end;
 
-procedure TZOleDBConnection.CheckError(Status: HResult; LoggingCateGory: TZLoggingCategory;
-  const LogMsg: RawByteString);
+{**
+  Clears all warnings reported for this <code>Connection</code> object.
+  After a call to this method, the method <code>getWarnings</code>
+    returns null until a new warning is reported for this Connection.
+}
+procedure TZOleDBConnection.ClearWarnings;
 begin
-  if (Pointer(LogMsg) <> nil) and DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(LoggingCateGory, ConSettings^.Protocol, LogMsg);
-  if Status <> S_OK then
-    OleDbCheck(Status, '', Self, nil);
+  if FLastWarning <> nil then
+    FreeAndNil(FLastWarning);
 end;
 
 {**
@@ -597,6 +834,7 @@ end;
 }
 procedure TZOleDBConnection.Commit;
 var S: UnicodeString;
+  Status: HResult;
 begin
   if Closed then
     raise EZSQLException.Create(SConnectionIsNotOpened);
@@ -610,7 +848,9 @@ begin
     end;
     FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
-    CheckError(fTransaction.Commit(FRetaining,XACTTC_SYNC,0), lcTransaction, 'Commit Transaction');
+    Status := fTransaction.Commit(FRetaining,XACTTC_SYNC,0);
+    if Status <> S_OK then
+      HandleErrorOrWarning(Status, lcTransaction, 'Commit Transaction', Self);
     Dec(FpulTransactionLevel);
     if (FpulTransactionLevel = 0) and not FRetaining then begin
       fTransaction := nil;
@@ -642,6 +882,7 @@ end;
 }
 procedure TZOleDBConnection.Rollback;
 var S: UnicodeString;
+  Status: HResult;
 begin
   if Closed then
     raise EZSQLException.Create(SConnectionIsNotOpened);
@@ -655,7 +896,9 @@ begin
     end;
     FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
-    CheckError(fTransaction.Abort(nil, FRetaining, False), lcTransaction, 'Rollback Transaction');
+    Status := fTransaction.Abort(nil, FRetaining, False);
+    if Status < S_OK then
+      HandleErrorOrWarning(Status, lcTransaction, 'Rollback Transaction', Self);
     Dec(FpulTransactionLevel);
     if (FpulTransactionLevel = 0) and not FRetaining then begin
       fTransaction := nil;
@@ -674,17 +917,19 @@ var
   PropSet: TDBPropSet;
   nPropertySets: ULONG;
   i: Integer;
+  Status: HResult;
 begin
   Result := 0;
   DBProperties := nil;
-  CheckError(FDBInitialize.QueryInterface(IID_IDBProperties, DBProperties), lcOther, EmptyRaw);
-  try
+  if FDBInitialize.QueryInterface(IID_IDBProperties, DBProperties) = S_OK then try
     PropIDSet.rgPropertyIDs   := @APropID;
     PropIDSet.cPropertyIDs    := 1;
     PropIDSet.guidPropertySet := DBPROPSET_DATASOURCEINFO;
     nPropertySets := 0;
     prgPropertySets := nil;
-    CheckError(DBProperties.GetProperties( 1, @PropIDSet, nPropertySets, prgPropertySets ), lcOther, EmptyRaw);
+    Status := DBProperties.GetProperties( 1, @PropIDSet, nPropertySets, prgPropertySets );
+    if Status <> S_OK then
+      HandleErrorOrWarning(Status, lcOther, 'IID_IDBProperties.GetProperties', Self, nil);
     Assert( nPropertySets = 1 );
     PropSet := prgPropertySets^;
     for i := 0 to PropSet.cProperties-1 do begin
@@ -711,6 +956,7 @@ var
   ConnectStrings: TStrings;
   ConnectString: UnicodeString;
   FDBCreateSession: IDBCreateSession;
+  Status: HResult;
 begin
   if not Closed then
     Exit;
@@ -736,7 +982,9 @@ begin
     DataInitialize := nil; //no longer required!
     SetProviderProps(True); //set's timeout values
     // open the connection to the DB
-    CheckError(fDBInitialize.Initialize, lcOther, EmptyRaw);
+    Status := fDBInitialize.Initialize;
+    if Status <> S_OK then
+      HandleErrorOrWarning(Status, lcConnect, 'IID_IDBInitialize.Initialize', Self, nil);
     OleCheck(fDBInitialize.QueryInterface(IID_IDBCreateSession, FDBCreateSession));
     //some Providers do NOT support commands, so let's check if we can use it
     OleCheck(FDBCreateSession.CreateSession(nil, IID_IDBCreateCommand, IUnknown(FDBCreateCommand)));
@@ -885,6 +1133,7 @@ end;
   Connection.
 }
 procedure TZOleDBConnection.InternalClose;
+var Status: HResult;
 begin
   if Closed or not Assigned(fDBInitialize) then
     Exit;
@@ -896,10 +1145,16 @@ begin
     AutoCommit := False; //remainder for reopen
   end;
   FDBCreateCommand := nil;
-  CheckError(fDBInitialize.Uninitialize, lcOther, EmptyRaw);
-  fDBInitialize := nil;
-  DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,
-    'DISCONNECT FROM "'+ConSettings^.Database+'"');
+  try
+    Status := fDBInitialize.Uninitialize;
+    if Failed(Status) then
+      HandleErrorOrWarning(Status, lcDisconnect, 'DBInitialize.Uninitialize', Self, nil);
+  finally
+    fDBInitialize := nil;
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,
+        'DISCONNECT FROM "'+ConSettings^.Database+'"');
+  end;
 end;
 
 initialization

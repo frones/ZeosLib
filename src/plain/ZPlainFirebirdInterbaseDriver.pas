@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -1408,7 +1408,10 @@ const
   isc_dpb_map_attach             = 90;
   isc_dpb_session_time_zone      = 91;
   isc_dpb_set_db_replica         = 92;
-  isc_dpb_last_dpb_constant      = isc_dpb_set_db_replica;
+  isc_dpb_set_bind               = 93;
+  isc_dpb_decfloat_round         = 94;
+  isc_dpb_decfloat_traps         = 95;
+  isc_dpb_last_dpb_constant      = isc_dpb_decfloat_traps;
 
   { isc_dpb_verify specific flags }
   isc_dpb_pages                  = 1;

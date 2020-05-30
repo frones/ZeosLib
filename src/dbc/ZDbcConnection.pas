@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -125,6 +125,7 @@ type
     procedure SetPassword(const Value: String);
     function GetInfo: TStrings;
   protected
+    FByteBuffer: TByteBuffer; //have a static buffer for any conversion oslt
     fWeakReferenceOfSelfInterface: Pointer;
     FRestartTransaction: Boolean;
     FDisposeCodePage: Boolean;
@@ -234,6 +235,7 @@ type
     procedure SetUseMetadata(Value: Boolean); virtual;
     function GetServerProvider: TZServerProvider; virtual;
   protected
+    function GetByteBufferAddress: PByteBuffer;
     property Closed: Boolean read IsClosed write FClosed;
   end;
 
@@ -1275,6 +1277,7 @@ begin
     RefCountAdded := False; //destructor did call close;
   try
     try
+      ClearWarnings;
       CloseRegisteredStatements;
     finally
       InternalClose;
@@ -1516,6 +1519,11 @@ end;
 function TZAbstractDbcConnection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   Result := GetSQLHexString(Pointer(Value), Length(Value), GetServerProvider in [spMSSQL, spASE, spASA, spDB2]);
+end;
+
+function TZAbstractDbcConnection.GetByteBufferAddress: PByteBuffer;
+begin
+  Result := @FByteBuffer[0];
 end;
 
 function TZAbstractDbcConnection.GetEscapeString(const Value: ZWideString): ZWideString;

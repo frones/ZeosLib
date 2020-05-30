@@ -93,12 +93,9 @@ type
   private
     FHandle: TISC_DB_HANDLE;
     FStatusVector: TARRAY_ISC_STATUS;
-    FIsFirebirdLib: Boolean; // never use this directly, always use IsFirbirdLib
-    FIsInterbaseLib: Boolean; // never use this directly, always use IsInterbaseLib
     FPlainDriver: TZInterbasePlainDriver;
     function ConstructConnectionString: String;
   protected
-    procedure DetermineClientTypeAndVersion; override;
     procedure BeforeUrlAssign; override;
     procedure InternalCreate; override;
     procedure InternalClose; override;
@@ -262,61 +259,6 @@ end;
 function TZInterbase6Connection.GetPlainDriver: TZInterbasePlainDriver;
 begin
   Result := FPlainDriver;
-end;
-
-{**
-  Determines the Client Library vendor and version. Works for Firebird 1.5+ and
-  Interbase 7+
-}
-procedure TZInterbase6Connection.DetermineClientTypeAndVersion;
-var
-  Major, Minor, Release: Integer;
-  VersionStr: String;
-  FbPos: Integer;
-  DotPos: Integer;
-  Buff: array[0..50] of AnsiChar;
-begin
-  Release := 0;
-
-  if Assigned(FplainDriver.isc_get_client_version) then begin
-    FplainDriver.isc_get_client_version(@Buff[0]);
-    {$IFDEF UNICODE}
-    VersionStr := ZSysUtils.ASCII7ToUnicodeString(@Buff[0], ZFastCode.StrLen(PAnsiChar(@Buff[0])));
-    {$ELSE}
-    SetString(VersionStr, PAnsiChar(@Buff[0]), ZFastCode.StrLen(PAnsiChar(@Buff[0])));
-    {$ENDIF}
-  end else
-    VersionStr := '';
-  FbPos := System.Pos('firebird', LowerCase(VersionStr));
-  if FbPos > 0 then begin
-    FIsFirebirdLib := true;
-    // remove the fake Major version number
-    DotPos := System.Pos('.', VersionStr);
-    Delete(VersionStr, 1, DotPos);
-    // remove the fake Minor version number
-    DotPos := System.Pos('.', VersionStr);
-    Delete(VersionStr, 1, DotPos);
-    // get the release number
-    DotPos := System.Pos('.', VersionStr);
-    Release := StrToIntDef(Copy(VersionStr, 1, DotPos - 1), 0);
-    // remove the Firebird brand including the space
-    FbPos := System.Pos('firebird', LowerCase(VersionStr));
-    Delete(VersionStr, 1, FbPos + 8);
-    // get the major and minor version numbers
-    DotPos := System.Pos('.', VersionStr);
-    Major := StrToIntDef(Copy(VersionStr, 1, DotPos - 1), 0);
-    Minor := StrToIntDef(Copy(VersionStr, DotPos + 1, length(VersionStr)), 0);
-  end else begin
-    if Assigned(FPlainDriver.isc_get_client_major_version)
-    then Major := FPlainDriver.isc_get_client_major_version()
-    else Major := 0;
-    if Assigned(FPlainDriver.isc_get_client_major_version)
-    then Minor := FPlainDriver.isc_get_client_minor_version()
-    else Minor := 0;
-    FIsInterbaseLib := Major <> 0;
-  end;
-
-  FClientVersion := Major * 1000000 + Minor * 1000 + Release;
 end;
 
 procedure TZInterbase6Connection.ExecuteImmediat(const SQL: RawByteString;
@@ -892,7 +834,7 @@ var Status: ISC_STATUS;
 begin
   with TZInterbase6Connection(FOwner) do
   if fSavepoints.Count > 0 then begin
-    S := 'ROLLBACK TO '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    S := 'ROLLBACK TO SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
     ExecuteImmediat(S, lcTransaction);
     FSavePoints.Delete(FSavePoints.Count-1);
   end else if FTrHandle <> 0 then try

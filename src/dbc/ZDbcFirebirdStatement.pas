@@ -120,8 +120,7 @@ type
 implementation
 {$IFNDEF ZEOS_DISABLE_FIREBIRD}
 
-uses Math,
-  ZMessages, ZSysUtils, ZFastCode, ZEncoding, ZVariant,
+uses ZMessages, ZSysUtils, ZFastCode, ZEncoding, ZVariant,
   ZDbcLogging, ZDbcFirebirdResultSet, ZDbcResultSet, ZDbcCachedResultSet,
   ZDbcUtils;
 
@@ -275,17 +274,18 @@ begin
     end;
     Inc(SingleStmtLength, 1{;}+Length(LineEnding));
     if MaxRowsPerBatch = 0 then //calc maximum batch count if not set already
-      MaxRowsPerBatch := Min(Integer(XSQLDAMaxSize div MemPerRow),     {memory limit of XSQLDA structs}
-        Integer(((32*1024)-LBlockLen) div (HeaderLen+SingleStmtLength)))+1; {32KB limited Also with FB3};
+      MaxRowsPerBatch := {Min(}Integer(XSQLDAMaxSize div MemPerRow);//,     {memory limit of XSQLDA structs}
+        //Integer(((32*1024)-LBlockLen) div (HeaderLen+SingleStmtLength)))+1; {32KB limited Also with FB3};
     Inc(StmtLength, HeaderLen+SingleStmtLength);
     Inc(FullHeaderLen, HeaderLen);
     //we run into XSQLDA !update! count limit of 255 see:
     //http://tracker.firebirdsql.org/browse/CORE-3027?page=com.atlassian.jira.plugin.system.issuetabpanels%3Aall-tabpanel
-    if (PreparedRowsOfArray = MaxRowsPerBatch-1) or
-       ((InitialStatementType = stInsert) and (PreparedRowsOfArray > 255)) or
-       ((InitialStatementType <> stInsert) and (PreparedRowsOfArray > 125)) then begin
+    if //(PreparedRowsOfArray = MaxRowsPerBatch-1) or
+       ((InitialStatementType = stInsert) and (PreparedRowsOfArray = 254)) or
+       ((InitialStatementType <> stInsert) and (PreparedRowsOfArray = 124)) then begin
       StmtLength := LastStmLen;
       Dec(FullHeaderLen, HeaderLen);
+      MaxRowsPerBatch := J;
       Break;
     end else
       PreparedRowsOfArray := J;
@@ -364,7 +364,7 @@ begin
     { EH: i have noticed several exception if i use a scrollable cursor ... }
     if ((GetResultSetType <> rtForwardOnly) or (GetResultSetConcurrency = rcUpdatable)) and (FResultSet <> nil) then begin
       NativeResultSet.SetType(rtForwardOnly);
-      CachedResolver := TZInterbaseFirebirdCachedResolver.Create(Self, NativeResultSet.GetMetadata);
+      CachedResolver := TZFirebird2upCachedResolver.Create(Self, NativeResultSet.GetMetadata);
       if CachedLob
       then CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings)
       else CachedResultSet := TZFirebirdCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);

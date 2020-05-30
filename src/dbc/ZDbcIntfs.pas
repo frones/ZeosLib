@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -105,6 +105,8 @@ type
     property SpecificData: TZExceptionSpecificData read FSpecificData; // Engine-specific data
   end;
 
+  EZSQLThrowableClass = class of EZSQLThrowable;
+
   {** Generic SQL exception. }
   EZSQLException = class(EZSQLThrowable);
 
@@ -113,6 +115,14 @@ type
 
   {** Reqquested operation is not (yet) supported by Zeos }
   EZUnsupportedException = class(EZSQLException);
+
+  /// <summary>
+  ///   Generic connection lost exception.
+  /// </summary>
+  EZSQLConnectionLost = class(EZSQLException);
+
+  TOnConnectionLostError = procedure(var AError: EZSQLConnectionLost) of Object;
+  TOnConnect = procedure of Object;
 
   {** hold some connection parameters }
   PZConSettings = ^TZConSettings;
@@ -313,21 +323,19 @@ type
     spInformix, spCUBRID, spFoxPro);
 
   /// <summary>
-  ///   Generic connection lost exception.
-  /// </summary>
-  EZSQLConnectionLost = class(EZSQLException);
-
-  TOnConnectionLostError = procedure(var AError: EZSQLConnectionLost) of Object;
-  TOnConnect = procedure of Object;
-
-  /// <summary>
   ///  Defines a LOB stream mode.
   /// </summary>
   TZLobStreamMode = (lsmRead, lsmWrite, lsmReadWrite);
 
+  PByteBuffer = ^TByteBuffer;
+  TByteBuffer = array[0..1024] of Byte;
+
+  PWordBuffer = ^TWordBuffer;
+  TWordBuffer = array[0..512] of Word;
+
+
 // Interfaces
 type
-
   // Forward declarations
   IZDriverManager = interface;
   IZDriver = interface;

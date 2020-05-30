@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -57,9 +57,9 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
-  ZDbcIntfs, ZDbcStatement, ZPlainSqLiteDriver, ZCompatibility, ZDbcLogging,
-  ZVariant, Types;
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD, Types,
+  ZCompatibility, ZVariant, ZPlainSqLiteDriver,
+  ZDbcIntfs, ZDbcStatement, ZDbcSqLite, ZDbcLogging;
 
 type
   {** Implements CAPI Prepared SQL Statement. }
@@ -75,6 +75,7 @@ type
     FHasLoggingListener: Boolean;
     FBindLater, //Late bindings?
     FLateBound: Boolean; //LateBound done reset is'nt called -> continue LateBindings
+    FByteBuffer: PByteBuffer;
     function CreateResultSet: IZResultSet;
   protected
     procedure ResetCallBack;
@@ -89,8 +90,8 @@ type
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
     procedure BindRawStr(Index: Integer; const Value: RawByteString);override;
   public
-    constructor Create(const Connection: IZConnection;
-      const SQL: string; const Info: TStrings; const Handle: Psqlite);
+    constructor Create(const Connection: IZSQLiteConnection;
+      const SQL: string; const Info: TStrings);
 
     procedure Prepare; override;
     procedure Unprepare; override;
@@ -130,8 +131,8 @@ type
 
   TZSQLiteStatement = class(TZAbstractSQLiteCAPIPreparedStatement, IZStatement)
   public
-    constructor Create(const Connection: IZConnection; const Info: TStrings;
-      const Handle: Psqlite); overload;
+    constructor Create(const Connection: IZSQLiteConnection;
+      const Info: TStrings);
   end;
 
 {$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
@@ -298,19 +299,19 @@ end;
 
 {**
   Constructs this object and assigns main properties.
-  @param Connection a database connection object.
+  @param Connection a sqlite database connection object.
   @param Sql a prepared Sql statement.
   @param Info a statement parameters.
-  @param Handle the sqlite connection handle
 }
 constructor TZAbstractSQLiteCAPIPreparedStatement.Create(
-  const Connection: IZConnection;
-  const SQL: string; const Info: TStrings; const Handle: Psqlite);
+  const Connection: IZSQLiteConnection;
+  const SQL: string; const Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
   FStmtHandle := nil;
-  FHandle := Handle;
-  FPlainDriver := TZSQLitePlainDriver(Connection.GetIZPlainDriver.GetInstance);
+  FHandle := Connection.GetConnectionHandle;
+  FByteBuffer := Connection.GetByteBufferAddress;
+  FPlainDriver := Connection.GetPlainDriver;
   ResultSetType := rtForwardOnly;
   FBindDoubleDateTimeValues :=  StrToBoolEx(DefineStatementParameter(Self, DSProps_BindDoubleDateTimeValues, 'false'));
   FUndefinedVarcharAsStringLength := StrToIntDef(DefineStatementParameter(Self, DSProps_UndefVarcharAsStringLength, '0'), 0);
@@ -500,14 +501,13 @@ end;
 
 {**
   Constructs this object and assigns main properties.
-  @param Connection a database connection object.
+  @param Connection a sqlite database connection object.
   @param Info a statement parameters.
-  @param Handle the sqlite connection handle
 }
-constructor TZSQLiteStatement.Create(const Connection: IZConnection;
-  const Info: TStrings; const Handle: Psqlite);
+constructor TZSQLiteStatement.Create(const Connection: IZSQLiteConnection;
+  const Info: TStrings);
 begin
-  inherited Create(Connection, '', Info, Handle);
+  inherited Create(Connection, '', Info);
 end;
 
 { TZSQLiteCAPIPreparedStatement }
@@ -645,9 +645,9 @@ begin
         CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcBindPrepStmt, ASQL, ConSettings);
     end;
   end else begin
-    Len := DateToRaw(Value.Year, Value.Month, Value.Day, @FABuffer[0],
+    Len := DateToRaw(Value.Year, Value.Month, Value.Day, PAnsiChar(FByteBuffer),
       ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
-    ZSetString(PAnsiChar(@FABuffer[0]), Len ,fRawTemp);
+    ZSetString(PAnsiChar(FByteBuffer), Len ,fRawTemp);
     Bindlist.Put(Index, stString, fRawTemp, zCP_UTF8);
     if not FBindLater then begin
       ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, Index +1, Pointer(fRawTemp), Len, nil);
@@ -812,8 +812,8 @@ begin
     end;
   end else begin
     Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
-      @FABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, False, Value.IsNegative);
-    ZSetString(PAnsiChar(@FABuffer[0]), Len, fRawTemp);
+      PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.TimeFormat, False, Value.IsNegative);
+    ZSetString(PAnsiChar(FByteBuffer), Len, fRawTemp);
     Bindlist.Put(Index, stString, fRawTemp, zCP_UTF8);
     if not FBindLater then begin
       ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, Index +1, Pointer(fRawTemp), Len, nil);
@@ -847,8 +847,8 @@ begin
   end else begin
     Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
       Value.Hour, Value.Minute, Value.Second, Value.Fractions,
-        @FABuffer[0], ConSettings^.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative);
-    ZSetString(PAnsiChar(@FABuffer[0]), Len, fRawTemp);
+        PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative);
+    ZSetString(PAnsiChar(FByteBuffer), Len, fRawTemp);
     Bindlist.Put(Index, stString, fRawTemp, zCP_UTF8);
     if not FBindLater then begin
       ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, Index +1, Pointer(fRawTemp), Len, nil);

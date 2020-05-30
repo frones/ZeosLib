@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2019 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -83,6 +83,8 @@ type
     function GetUndefinedVarcharAsStringLength: Integer;
     function enable_load_extension(OnOff: Integer): Integer;
     function load_extension(zFile: PAnsiChar; zProc: Pointer; var pzErrMsg: PAnsiChar): Integer;
+    function GetByteBufferAddress: PByteBuffer;
+    function GetPlainDriver: TZSQLitePlainDriver;
   end;
 
   TSQLite3TransactionAction = (traBeginDEFERRED, traBeginIMMEDIATE, traBeginEXCLUSIVE, traCommit, traRollBack);
@@ -108,6 +110,7 @@ type
     function GetUndefinedVarcharAsStringLength: Integer;
     function enable_load_extension(OnOff: Integer): Integer;
     function load_extension(zFile: PAnsiChar; zProc: Pointer; var pzErrMsg: PAnsiChar): Integer;
+    function GetPlainDriver: TZSQLitePlainDriver;
   public
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareCallWithParams(const Name: String; Info: TStrings):
@@ -350,7 +353,7 @@ begin
 
   inherited Open;
 
-  Stmt := TZSQLiteStatement.Create(Self, Info, FHandle);
+  Stmt := TZSQLiteStatement.Create(Self, Info);
   { pimp performance }
   Stmt.ExecuteUpdate('PRAGMA cache_size = '+IntToRaw(StrToIntDef(Info.Values[ConnProps_CacheSize], 10000)));
 
@@ -450,7 +453,7 @@ function TZSQLiteConnection.PrepareStatementWithParams(const SQL: string;
 begin
   if IsClosed then
     Open;
-  Result := TZSQLiteCAPIPreparedStatement.Create(Self, SQL, Info, FHandle);
+  Result := TZSQLiteCAPIPreparedStatement.Create(Self, SQL, Info);
 end;
 
 {**
@@ -473,7 +476,7 @@ begin
   if IsClosed then
     Open;
 
-  Result := TZSQLiteStatement.Create(Self, Info, FHandle);
+  Result := TZSQLiteStatement.Create(Self, Info);
 end;
 
 destructor TZSQLiteConnection.Destroy;
@@ -756,6 +759,11 @@ end;
 function TZSQLiteConnection.GetHostVersion: Integer;
 begin
   Result := ConvertSQLiteVersionToSQLVersion(fPlainDriver.sqlite3_libversion);
+end;
+
+function TZSQLiteConnection.GetPlainDriver: TZSQLitePlainDriver;
+begin
+  Result := FPlainDriver;
 end;
 
 initialization

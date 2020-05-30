@@ -1,0 +1,57 @@
+package ZPlain;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION ON}
+{$OVERFLOWCHECKS ON}
+{$RANGECHECKS ON}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'Zeos Plain Database API'}
+{$LIBSUFFIX '270'}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  ZCore;
+
+contains
+  ZPlainAdo in '..\..\src\plain\ZPlainAdo.pas',
+  ZPlainAdoDriver in '..\..\src\plain\ZPlainAdoDriver.pas',
+  ZPlainASADriver in '..\..\src\plain\ZPlainASADriver.pas',
+  ZPlainDbLibDriver in '..\..\src\plain\ZPlainDbLibDriver.pas',
+  ZPlainDriver in '..\..\src\plain\ZPlainDriver.pas',
+  ZPlainFirebird in '..\..\src\plain\ZPlainFirebird.pas',
+  ZPlainFirebirdInterbaseDriver in '..\..\src\plain\ZPlainFirebirdInterbaseDriver.pas',
+  ZPlainLoader in '..\..\src\plain\ZPlainLoader.pas',
+  ZPlainMySqlDriver in '..\..\src\plain\ZPlainMySqlDriver.pas',
+  ZPlainODBCDriver in '..\..\src\plain\ZPlainODBCDriver.pas',
+  ZPlainOleDBDriver in '..\..\src\plain\ZPlainOleDBDriver.pas',
+  ZPlainOracleDriver in '..\..\src\plain\ZPlainOracleDriver.pas',
+  ZPlainPostgreSqlDriver in '..\..\src\plain\ZPlainPostgreSqlDriver.pas',
+  ZPlainProxyDriver in '..\..\src\plain\ZPlainProxyDriver.pas',
+  ZPlainProxyDriverInternalProxy in '..\..\src\plain\ZPlainProxyDriverInternalProxy.pas',
+  ZPlainProxyDriverIntf in '..\..\src\plain\ZPlainProxyDriverIntf.pas',
+  ZPlainProxyDriverSoapProxy in '..\..\src\plain\ZPlainProxyDriverSoapProxy.pas',
+  ZPlainSQLAnywhere in '..\..\src\plain\ZPlainSQLAnywhere.pas',
+  ZPlainSqLiteDriver in '..\..\src\plain\ZPlainSqLiteDriver.pas';
+
+end.

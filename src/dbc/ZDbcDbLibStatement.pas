@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -70,6 +70,7 @@ type
     FResults: IZCollection;
     FUserEncoding: TZCharEncoding;
     FIsNCharIndex: TBooleanDynArray;
+    FByteBuffer: PByteBuffer;
     procedure CreateOutParamResultSet; virtual;
     procedure InternalExecute; virtual; abstract;
   protected
@@ -246,7 +247,8 @@ begin
   FNCharDetected := @FIsNCharIndex;
   inherited Create(Connection, SQL, Info);
   Connection.QueryInterface(IZDBLibConnection, FDBLibConnection);
-  FPlainDriver := TZDBLIBPLainDriver(Connection.GetIZPlainDriver.GetInstance);
+  FByteBuffer := FDBLibConnection.GetByteBufferAddress;
+  FPlainDriver := FDBLibConnection.GetPlainDriver;
   FHandle := FDBLibConnection.GetConnectionHandle;
   ResultSetType := rtScrollInsensitive;
   FResults := TZCollection.Create;
@@ -624,8 +626,8 @@ begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
   Len := DateToRaw(Value.Year, Value.Month, Value.Day,
-    @FABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
-  ZSetString(PAnsiChar(@FABuffer[0]), Len, fRawTemp);
+    PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
+  ZSetString(PAnsiChar(FByteBuffer), Len, fRawTemp);
   BindList.Put(ParameterIndex, stDate, fRawTemp, FClientCP);
 end;
 
@@ -773,8 +775,8 @@ begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
   Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
-    @FABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, True, Value.IsNegative);
-  ZSetString(PAnsiChar(@FABuffer[0]), Len ,fRawTemp);
+    PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.TimeFormat, True, Value.IsNegative);
+  ZSetString(PAnsiChar(FByteBuffer), Len ,fRawTemp);
   BindList.Put(ParameterIndex, stTime, fRawTemp, FClientCP);
 end;
 
@@ -785,8 +787,8 @@ begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
     Value.Hour, Value.Minute, Value.Second, Value.Fractions,
-    @FABuffer[0], ConSettings^.WriteFormatSettings.DateTimeFormat, True, Value.IsNegative);
-  ZSetString(PAnsiChar(@FABuffer[0]), Len, fRawTemp);
+    PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.DateTimeFormat, True, Value.IsNegative);
+  ZSetString(PAnsiChar(FByteBuffer), Len, fRawTemp);
   BindList.Put(ParameterIndex, stTimeStamp, fRawTemp, FClientCP);
 end;
 
@@ -1010,28 +1012,28 @@ begin
           tdsDecimal:
             begin
               Len := FPlainDriver.dbConvert(FHandle, RetType, Data, Len, Ord(tdsVarChar),
-                @fABuffer[0], SizeOf(fABuffer));
-              ZSetString(PAnsichar(@fABuffer[0]), Len, fRawTemp);
+                PByte(FByteBuffer), SizeOf(TByteBuffer));
+              ZSetString(PAnsiChar(FByteBuffer), Len, fRawTemp);
               BindList.Put(I, stBigDecimal, fRawTemp, FClientCP);
             end;
           tdsMoney,
           tdsMoney4:
             begin
               Len := FPlainDriver.dbConvert(FHandle, RetType, Data, Len, Ord(tdsVarChar),
-                @fABuffer[0], SizeOf(fABuffer));
-              ZSetString(PAnsichar(@fABuffer[0]), Len, fRawTemp);
+                PByte(FByteBuffer), SizeOf(TByteBuffer));
+              ZSetString(PAnsiChar(FByteBuffer), Len, fRawTemp);
               BindList.Put(I, stCurrency, fRawTemp, FClientCP);
             end;
           tdsDateTime4, tdsDateTimeN:
             begin
               FPLainDriver.dbConvert(FHandle, RetType, Data, Len, RetType, @OutDBDATETIME, 8);
-              PDouble(@fABuffer[0])^ := OutDBDATETIME.dtdays + 2 + (OutDBDATETIME.dttime / 25920000);
-              BindList.Put(I, stTimeStamp, P8Bytes(@fABuffer[0]));
+              PDouble(FByteBuffer)^ := OutDBDATETIME.dtdays + 2 + (OutDBDATETIME.dttime / 25920000);
+              BindList.Put(I, stTimeStamp, P8Bytes(FByteBuffer));
             end;
           tdsDateTime:
             begin
-              PDouble(@fABuffer[0])^ := PDBDATETIME(Data).dtdays + 2 + (PDBDATETIME(Data).dttime / 25920000);
-              BindList.Put(I, stTimeStamp, P8Bytes(@fABuffer[0]));
+              PDouble(FByteBuffer)^ := PDBDATETIME(Data).dtdays + 2 + (PDBDATETIME(Data).dttime / 25920000);
+              BindList.Put(I, stTimeStamp, P8Bytes(FByteBuffer));
             end;
           tdsImage: BindList.Put(I, stBinaryStream, TZLocalMemBLob.CreateWithData(Data, Len));
           tdsText:  BindList.Put(I, stBinaryStream, TZLocalMemCLob.CreateWithData(Data, Len, FClientCP, ConSettings));
@@ -1285,8 +1287,8 @@ begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
   Len := DateToRaw(Value.Year, Value.Month, Value.Day,
-    @FABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
-  ZSetString(PAnsiChar(@FABuffer[0]), Len, fRawTemp);
+    PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
+  ZSetString(PAnsiChar(FByteBuffer), Len, fRawTemp);
   BindList.Put(ParameterIndex, stDate, fRawTemp, FClientCP);
 end;
 
@@ -1382,8 +1384,8 @@ begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
   Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions div NanoSecsPerMSec,
-    @FABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, False, Value.IsNegative);
-  ZSetString(PAnsiChar(@FABuffer[0]), Len ,fRawTemp);
+    PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.TimeFormat, False, Value.IsNegative);
+  ZSetString(PAnsiChar(FByteBuffer), Len ,fRawTemp);
   BindList.Put(ParameterIndex, stString, fRawTemp, FClientCP);
 end;
 
@@ -1394,8 +1396,8 @@ begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
     Value.Hour, Value.Minute, Value.Second, Value.Fractions,
-    @FABuffer[0], ConSettings^.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative);
-  ZSetString(PAnsiChar(@FABuffer[0]), Len, fRawTemp);
+    PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative);
+  ZSetString(PAnsiChar(FByteBuffer), Len, fRawTemp);
   BindList.Put(ParameterIndex, stTimeStamp, fRawTemp, FClientCP);
 end;
 

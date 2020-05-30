@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -106,6 +106,7 @@ type
     FUndefinedVarcharAsStringLength: Integer;
     FResetCallBack: TResetCallBack;
     FCurrDecimalSep: Char;
+    FByteBuffer: PByteBuffer;
   protected
     procedure Open; override;
   public
@@ -188,7 +189,7 @@ implementation
 
 uses
   ZMessages, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging, ZFastCode, ZDbcUtils,
-  ZVariant, ZDbcMetadata
+  ZVariant, ZDbcMetadata, ZDbcSQLite
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZSQLiteCachedResultSet }
@@ -504,8 +505,11 @@ constructor TZSQLiteResultSet.Create(const Statement: IZStatement;
   PErrorCode: PInteger; UndefinedVarcharAsStringLength: Integer;
   ResetCallBack: TResetCallback);
 var Metadata: TContainedObject;
+  Con: IZSQLiteConnection;
 begin
-  FPlainDriver := TZSQLitePlainDriver(Statement.GetConnection.GetIZPlainDriver.GetInstance);
+  Con := Statement.GetConnection as IZSQLiteConnection;
+  FByteBuffer := Con.GetByteBufferAddress;
+  FPlainDriver := Con.GetPlainDriver;
   if Assigned(FPlainDriver.sqlite3_column_table_name) and Assigned(FPlainDriver.sqlite3_column_name)
   then MetaData := TZSQLiteResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self)
   else MetaData := TZAbstractResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self);
@@ -516,7 +520,6 @@ begin
   Fsqlite3_stmt := Psqlite3_stmt^;
   FStmtErrorCode := PErrorCode;
 
-  FPlainDriver := TZSQLitePlainDriver(Statement.GetConnection.GetIZPlainDriver.GetInstance);
   ResultSetConcurrency := rcReadOnly;
   FUndefinedVarcharAsStringLength := UndefinedVarcharAsStringLength;
   FFirstRow := True;
@@ -669,13 +672,13 @@ begin
       SQLITE_INTEGER: begin
           i64 := FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex);
           if ColumnType = stCurrency
-          then CurrToRaw(C, @FTinyBuffer[0], @Result)
-          else IntToRaw(I64, @FTinyBuffer[0], @Result);
-          Len := Result - PAnsiChar(@FTinyBuffer[0]);
-          Result := @FTinyBuffer[0];
+          then CurrToRaw(C, PAnsiChar(FByteBuffer), @Result)
+          else IntToRaw(I64, PAnsiChar(FByteBuffer), @Result);
+          Len := Result - PAnsiChar(FByteBuffer);
+          Result := PAnsiChar(FByteBuffer);
         end;
       SQLITE_FLOAT: begin
-          Result := @FTinyBuffer[0];
+          Result := PAnsiChar(FByteBuffer);
           Len := FloatToRaw(FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, ColumnIndex),
             Result);
         end;
@@ -726,13 +729,13 @@ begin
       SQLITE_INTEGER: begin
           i64 := FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex);
           if ColumnType = stCurrency
-          then CurrToUnicode(C, @FTinyBuffer[0], @Result)
-          else IntToUnicode(I64, @FTinyBuffer[0], @Result);
-          Len := Result - PWideChar(@FTinyBuffer[0]);
-          Result := @FTinyBuffer[0];
+          then CurrToUnicode(C, PWideChar(FByteBuffer), @Result)
+          else IntToUnicode(I64, PWideChar(FByteBuffer), @Result);
+          Len := Result - PWideChar(FByteBuffer);
+          Result := PWideChar(FByteBuffer);
         end;
       SQLITE_FLOAT: begin
-          Result := @FTinyBuffer[0];
+          Result := PWideChar(FByteBuffer);
           Len := FloatToUnicode(FPlainDriver.sqlite3_column_Double(Fsqlite3_stmt, ColumnIndex), Result);
         end;
       SQLITE3_TEXT: begin
@@ -768,7 +771,7 @@ var P: PAnsiChar;
   Len: NativeUint;
 begin
   P := GetPAnsiChar(ColumnIndex, Len);
-  {$IFDEF WITH_VAR_INIT_WARNING}
+  {$IFDEF FPC}
   Result := '';
   {$ENDIF}
   if P <> nil

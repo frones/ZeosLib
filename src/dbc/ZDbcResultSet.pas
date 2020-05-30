@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -317,8 +317,6 @@ type
   end;
 
   TZAbstractReadOnlyResultSet = class(TZAbstractResultSet)
-  protected
-    FTinyBuffer: Array[Byte] of Byte;
   public //getter
     function GetUnicodeString(ColumnIndex: Integer): UnicodeString;
     function GetString(ColumnIndex: Integer): String;

@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -98,6 +98,7 @@ type
     FResultSetBuffCnt: Integer; //count of allocated Buffers in ColumnsBindingArray
     FIsCallPreparable: Boolean; //are callable statements "real" preparable?
     FCallResultCache: TZCollection;
+    FByteBuffer: PByteBuffer;
     function CreateResultSet(const SQL: string; BufferIndex: Integer; FieldCount: UInt): IZResultSet;
     procedure InitBuffer(SQLType: TZSQLType; Index: Integer; Bind: PMYSQL_aligned_BIND; ActualLength: LengthInt = 0);
     procedure FlushPendingResults;
@@ -348,8 +349,8 @@ begin
      (not FPLainDriver.IsMariaDBDriver and (FClientVersion >= 50608));
   FPreparablePrefixTokens := MySQL568PreparableTokens;
   FMySQLConnection := Connection;
-  FPMYSQL := Connection.GetConnectionHandle;
-
+  FPMYSQL := Connection.GetConnectionHandleAddress;
+  FByteBuffer := Connection.GetByteBufferAddress;
   inherited Create(Connection, SQL, Info);
 
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, DSProps_UseResult, 'false'));
@@ -393,7 +394,9 @@ begin
   ParamCount := BindList.Count;
   inherited Unprepare;
   FExecCount := 0;
-  FlushPendingResults;
+  //FlushPendingResults; //EH: if we receive a "Malformed communication packet" error
+  //i.e. old lib for new servers, we leak mem everywhere
+  //thus i commented it...
   try
     if not FEmulatedParams and (FMYSQL_STMT <> nil) then begin
       //cancel all pending results:
@@ -639,7 +642,7 @@ end;
 
 procedure TZAbstractMySQLPreparedStatement.UnPrepareInParameters;
 begin
-  inherited UnPrepareInParameters;
+  SetBindCapacity(0);
   FBindAgain := True;
   FChunkedData := False;
 end;
@@ -1248,8 +1251,8 @@ begin
           InternalBindDouble(Index, BindValue.SQLType, Value);
       stCurrency: SetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
       stBigDecimal: begin
-          ZSysUtils.ScaledOrdinal2Bcd(Value, 0, PBCD(@fABuffer[0])^, False);
-          BindList.Put(Index, PBCD(@fABuffer[0])^);
+          ZSysUtils.ScaledOrdinal2Bcd(Value, 0, PBCD(FByteBuffer)^, False);
+          BindList.Put(Index, PBCD(FByteBuffer)^);
         end;
       else begin
         EmulatedAsRaw;
@@ -1322,8 +1325,8 @@ begin
           InternalBindDouble(Index, BindValue.SQLType, Value);
       stCurrency: SetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
       stBigDecimal: begin
-          ZSysUtils.ScaledOrdinal2Bcd(Value, 0, PBCD(@fABuffer[0])^);
-          BindList.Put(Index, PBCD(@fABuffer[0])^);
+          ZSysUtils.ScaledOrdinal2Bcd(Value, 0, PBCD(FByteBuffer)^);
+          BindList.Put(Index, PBCD(FByteBuffer)^);
         end;
       else begin
         EmulatedAsRaw;
@@ -1482,12 +1485,12 @@ var
   var Len: LengthInt;
   begin
     case SQLType of
-      stDate: Len := DateTimeToRawSQLDate(Value, @fABuffer, ConSettings^.WriteFormatSettings, True);
-      stTime: Len := DateTimeToRawSQLTime(Value, @fABuffer, ConSettings^.WriteFormatSettings, True);
-      stTimestamp: Len := DateTimeToRawSQLTimeStamp(Value, @fABuffer, ConSettings^.WriteFormatSettings, True)
-      else Len := FloatToSQLRaw(Value, @fABuffer);
+      stDate: Len := DateTimeToRawSQLDate(Value, PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings, True);
+      stTime: Len := DateTimeToRawSQLTime(Value, PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings, True);
+      stTimestamp: Len := DateTimeToRawSQLTimeStamp(Value, PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings, True)
+      else Len := FloatToSQLRaw(Value, PAnsiChar(FByteBuffer));
     end;
-    ZSetString(PAnsiChar(@fABuffer), Len, FEmulatedValues[Index]);
+    ZSetString(PAnsiChar(FByteBuffer), Len, FEmulatedValues[Index]);
   end;
 begin
   CheckParameterIndex(Index);
@@ -2172,8 +2175,8 @@ var
   var L: LengthInt;
   begin
     L := DateToRaw(Value.Year, Value.Month, Value.Day,
-      @fABuffer[0], ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
-    ZSetString(PAnsiChar(@fABuffer[0]), L, FEmulatedValues[Index]);
+      PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
+    ZSetString(PAnsiChar(FByteBuffer), L, FEmulatedValues[Index]);
   end;
 begin
   {$IFNDEF GENERIC_INDEX}Index := Index -1;{$ENDIF}
@@ -2495,8 +2498,8 @@ begin
   if FEmulatedParams then begin
     BindList.Put(Index, Value);
     L := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
-      @fABuffer[0], ConSettings^.WriteFormatSettings.TimeFormat, True, Value.IsNegative);
-    ZSetString(PAnsiChar(@fABuffer[0]), L, FEmulatedValues[Index]);
+      PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.TimeFormat, True, Value.IsNegative);
+    ZSetString(PAnsiChar(FByteBuffer), L, FEmulatedValues[Index]);
   end else begin
     {$R-}
     Bind := @FMYSQL_aligned_BINDs[Index];
@@ -2534,8 +2537,8 @@ begin
     BindList.Put(Index, Value);
     L := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
       Value.Hour, Value.Minute, Value.Second, Value.Fractions,
-      @fABuffer[0], ConSettings^.WriteFormatSettings.DateTimeFormat, True, Value.IsNegative);
-    ZSetString(PAnsiChar(@fABuffer[0]), L, FEmulatedValues[Index]);
+      PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.DateTimeFormat, True, Value.IsNegative);
+    ZSetString(PAnsiChar(FByteBuffer), L, FEmulatedValues[Index]);
   end else begin
     {$R-}
     Bind := @FMYSQL_aligned_BINDs[Index];

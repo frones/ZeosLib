@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -63,7 +63,7 @@ uses
   {$IFEND}
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}ZClasses, ZSysUtils, ZVariant,
   ZCompatibility, ZPlainOracleDriver,
-  ZDbcIntfs, ZDbcUtils, ZSelectSchema, ZDbcLogging;
+  ZDbcIntfs, ZDbcUtils, ZSelectSchema, ZDbcLogging, ZDbcOracle;
 
 const
   MAX_SQLVAR_LIMIT = 1024;
@@ -186,18 +186,6 @@ type
 procedure AllocateOracleSQLVars(var Variables: PZSQLVars; Count: Integer);
 
 {**
-  Frees memory Oracle SQL Variables from the memory.
-  @param PlainDriver an Oracle plain driver.
-  @param Variables a pointer to array of variables.
-  @param Handle a OCIEnvironment pointer
-  @param ErrorHandle the OCI ErrorHandle
-  @param ConSetttings the Pointer to the TZConSettings record
-}
-procedure FreeOracleSQLVars(const PlainDriver: TZOraclePlainDriver;
-  var Variables: PZSQLVars; const Iteration: Integer; const Handle: POCIEnv;
-  const ErrorHandle: POCIError; const {%H-}ConSettings: PZConSettings);
-
-{**
   Convert string Oracle field type to SQLType
   @param string field type value
   @result the SQLType field type value
@@ -208,28 +196,9 @@ function ConvertOracleTypeToSQLType(const TypeName: string;
 function NormalizeOracleTypeToSQLType(var DataType: ub2; var DataSize: ub4;
   out DescriptorType: sb4; Precision, ScaleOrCharSetForm: sb2;
   ConSettings: PZConSettings; IO: OCITypeParamMode): TZSQLType;
-
-  {**
-  Checks for possible SQL errors.
-  @param PlainDriver an Oracle plain driver.
-  @param Handle an Oracle error handle.
-  @param Status a command return status.
-  @param LogCategory a logging category.
-  @param LogMessage a logging message.
-}
-procedure CheckOracleError(const PlainDriver: TZOraclePlainDriver;
-  const ErrorHandle: POCIError; const Status: Integer;
-  const LogCategory: TZLoggingCategory; const LogMessage: String;
-  const ConSettings: PZConSettings);
-
+(*
 function DescribeObject(const PlainDriver: TZOraclePlainDriver; const Connection: IZConnection;
-  ParamHandle: POCIParam; {%H-}stmt_handle: POCIHandle; Level: ub2): POCIObject;
-
-procedure OraWriteLob(const PlainDriver: TZOraclePlainDriver; const BlobData: Pointer;
-  const ContextHandle: POCISvcCtx; const ErrorHandle: POCIError;
-  const LobLocator: POCILobLocator; const ChunkSize: Integer;
-  BlobSize: Int64; Const BinaryLob: Boolean; const ConSettings: PZConSettings);
-
+  ParamHandle: POCIParam; {%H-}stmt_handle: POCIHandle; Level: ub2): POCIObject;*)
 
 {** Autor: EgonHugeist (EH)
   Prolog:
@@ -401,23 +370,24 @@ type
     FConSettings: PZConSettings;
     FOwner: IImmediatelyReleasable;
     Ftrgthndlp: POCIHandle;
-    Ferrhp: POCIError;
+    FOCIError: POCIError;
     Ftrghndltyp: ub4;
     FPlainDriver: TZOraclePlainDriver;
+    FConnection: IZOracleConnection;
   public //IImmediatelyReleasable
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); virtual;
     function GetConSettings: PZConSettings;
+    procedure HandleAttributError(Status: SWord; WasGet: Boolean); virtual; abstract;
   protected //implement fakes IInterface
     function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult; {$IF not defined(MSWINDOWS) and defined(FPC)}cdecl{$ELSE}stdcall{$IFEND};
     function _AddRef: Integer; {$IF not defined(MSWINDOWS) and defined(FPC)}cdecl{$ELSE}stdcall{$IFEND};
     function _Release: Integer; {$IF not defined(MSWINDOWS) and defined(FPC)}cdecl{$ELSE}stdcall{$IFEND};
   public
-    constructor Create(const Owner: IImmediatelyReleasable;
-      {$IFDEF AUTOREFCOUNT} const {$ENDIF} PlainDriver: TZOraclePlainDriver;
+    constructor Create(const Connection: IZOracleConnection;
       trgthndlp: POCIHandle; trghndltyp: ub4; errhp: POCIError);
   public
     procedure SetHandleAndType(trgthndlp: POCIHandle; trghndltyp: ub4);
-    function GetPChar(var Len: ub4; attrtype: ub4): Pointer;
+    function GetPChar(var Len: sb4; attrtype: ub4): Pointer;
     function GetPointer(attrtype: ub4): Pointer;
     function GetUb4(attrtype: ub4): ub4;
     procedure SetUb4(attrtype, Value: ub4);
@@ -434,32 +404,9 @@ type
   end;
   {$M-}
 
-type
-  { oracle loves it's recursion ... so we need a recursive obj model }
-  TZOraProcDescriptor_A = class(TObject)
-  private
-    FParent: TZOraProcDescriptor_A;
-    FRawCP: Word;
-
-    procedure InternalDescribeObject(Obj: POCIHandle;
-      {$IFDEF AUTOREFCOUNT} const {$ENDIF}PlainDriver: TZOraclePlainDriver;
-      ErrorHandle: POCIError; ConSettings: PZConSettings);
-
-    function InternalDescribe(const Name: RawByteString; _Type: UB4;
-      {$IFDEF AUTOREFCOUNT} const {$ENDIF}PlainDriver: TZOraclePlainDriver;
-      ErrorHandle: POCIError; OCISvcCtx: POCISvcCtx; Owner: POCIHandle;
-      ConSettings: PZConSettings): Sword;
-  public
-    procedure Describe(_Type: UB4; const Connection: IZConnection;
-      const Name: RawByteString);
-
-    procedure ConcatParentName(NotArgName: Boolean; {$IFDEF AUTOREFCOUNT}const{$ENDIF}
-      SQLWriter: TZRawSQLStringWriter; var Result: RawByteString; const IC: IZIdentifierConvertor);
-    constructor Create({$IFDEF AUTOREFCOUNT} const {$ENDIF}Parent: TZOraProcDescriptor_A; RawCP: Word);
-    destructor Destroy; override;
+  TZOraProcDescriptor = class(TZOracleAttribute)
   public
     Args: TObjectList;
-    SchemaName, AttributeName, TypeName: RawByteString;
     ObjType, Precision, Radix, csform: UB1;
     Scale: SB1;
     DataSize: UB4;
@@ -469,51 +416,69 @@ type
     IODirection: OCITypeParamMode;
     OrdPos: ub2;
     SQLType: TZSQLType;
-    property Parent: TZOraProcDescriptor_A read FParent;
+  end;
+
+  TZOracleAttributeA = class(TZOraProcDescriptor)
+  public
+    procedure HandleAttributError(Status: SWord; WasGet: Boolean); override;
   end;
 
   { oracle loves it's recursion ... so we need a recursive obj model }
-  TZOraProcDescriptor_W = class(TObject)
+  TZOraProcDescriptor_A = class(TZOracleAttributeA)
+  private
+    FParent: TZOraProcDescriptor_A;
+    FConnection: IZOracleConnection;
+    FRawCP: Word;
+
+    procedure InternalDescribeObject(Obj: POCIHandle);
+    function InternalDescribe(const Name: RawByteString; _Type: UB4;
+      Owner: POCIHandle): Sword;
+  public
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
+    procedure Describe(_Type: UB4; const Name: RawByteString);
+    procedure ConcatParentName(NotArgName: Boolean; {$IFDEF AUTOREFCOUNT}const{$ENDIF}
+      SQLWriter: TZRawSQLStringWriter; var Result: RawByteString; const IC: IZIdentifierConvertor);
+    constructor Create({$IFDEF AUTOREFCOUNT} const {$ENDIF}Parent: TZOraProcDescriptor_A;
+      Const Connection: IZOracleConnection; RawCP: Word);
+    destructor Destroy; override;
+  public
+    SchemaName, AttributeName, TypeName: RawByteString;
+    property Parent: TZOraProcDescriptor_A read FParent;
+  end;
+
+  TZOracleAttributeW = class(TZOraProcDescriptor)
+  public
+    procedure HandleAttributError(Status: SWord; WasGet: Boolean); override;
+  end;
+
+  { oracle loves it's recursion ... so we need a recursive obj model }
+  TZOraProcDescriptor_W = class(TZOracleAttributeW)
   private
     FParent: TZOraProcDescriptor_W;
     FRawCP: Word;
 
-    procedure InternalDescribeObject(Obj: POCIHandle;
-      {$IFDEF AUTOREFCOUNT} const {$ENDIF}PlainDriver: TZOraclePlainDriver;
-      ErrorHandle: POCIError; ConSettings: PZConSettings);
-
+    procedure InternalDescribeObject(Obj: POCIHandle);
     function InternalDescribe(const Name: UnicodeString; _Type: UB4;
-      {$IFDEF AUTOREFCOUNT} const {$ENDIF}PlainDriver: TZOraclePlainDriver;
-      ErrorHandle: POCIError; OCISvcCtx: POCISvcCtx; Owner: POCIHandle;
-      ConSettings: PZConSettings): Sword;
+      Owner: POCIHandle): Sword;
   public
-    procedure Describe(_Type: UB4; const Connection: IZConnection;
-      const Name: UnicodeString);
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
 
+    procedure Describe(_Type: UB4; const Name: UnicodeString);
     procedure ConcatParentName(NotArgName: Boolean; {$IFDEF AUTOREFCOUNT}const{$ENDIF}
       SQLWriter: TZUnicodeSQLStringWriter; var Result: UnicodeString; const IC: IZIdentifierConvertor);
 
-    constructor Create({$IFDEF AUTOREFCOUNT} const {$ENDIF}Parent: TZOraProcDescriptor_W; RawCP: Word);
+    constructor Create({$IFDEF AUTOREFCOUNT} const {$ENDIF}Parent: TZOraProcDescriptor_W;
+      Const Connection: IZOracleConnection; RawCP: Word);
     destructor Destroy; override;
   public
-    Args: TObjectList;
     SchemaName, AttributeName, TypeName: UnicodeString;
-    ObjType, Precision, Radix, csform: UB1;
-    Scale: SB1;
-    DataSize: UB4;
-    DataType, CodePage: UB2;
-    OverloadID, csid: ub2;
-    DescriptorType: SB4;
-    IODirection: OCITypeParamMode;
-    OrdPos: ub2;
-    SQLType: TZSQLType;
     property Parent: TZOraProcDescriptor_W read FParent;
   end;
 {$ENDIF ZEOS_DISABLE_ORACLE}
 implementation
 {$IFNDEF ZEOS_DISABLE_ORACLE}
 
-uses Math, ZMessages, ZDbcOracle, ZDbcOracleResultSet,
+uses Math, ZMessages, ZDbcOracleResultSet,
   ZEncoding, ZFastCode {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IFDEF UNICODE},StrUtils{$ENDIF};
 (* Oracle Docs: https://docs.oracle.com/cd/B28359_01/appdev.111/b28395/oci03typ.htm#i423688
@@ -1138,79 +1103,6 @@ begin
 end;
 
 {**
-  Frees memory Oracle SQL Variables from the memory.
-  @param PlainDriver an Oracle plain driver.
-  @param Variables a pointer to array of variables.
-  @param Handle a OCIEnvironment pointer
-  @param ErrorHandle the OCI ErrorHandle
-  @param ConSetttings the Pointer to the TZConSettings record
-}
-procedure FreeOracleSQLVars(const PlainDriver: TZOraclePlainDriver;
-  var Variables: PZSQLVars; const Iteration: Integer; const Handle: POCIEnv;
-  const ErrorHandle: POCIError; const ConSettings: PZConSettings);
-var
-  I: Integer;
-  J: NativeUInt;
-  CurrentVar: PZSQLVar;
-  Status: Sword;
-
-  procedure DisposeObject(var Obj: POCIObject);
-  var
-    I: Integer;
-  begin
-    for i := 0 to High(Obj.fields) do
-      DisposeObject(Obj.fields[i]);
-    SetLength(Obj.fields, 0);
-    if Assigned(Obj.next_subtype) then
-    begin
-      DisposeObject(Obj.next_subtype);
-      Obj.next_subtype := nil;
-    end;
-    if Obj.Pinned then
-      {Unpin tdo}
-      //CheckOracleError(PlainDriver, ErrorHandle, //debug
-        PlainDriver.OCIObjectUnpin(Handle,ErrorHandle, CurrentVar^._Obj.tdo)
-        ;//debug, lcOther, 'OCIObjectUnpin', ConSettings);
-    if (Obj.Level = 0) and assigned(Obj.tdo) then
-      {Free Object}
-      //debugCheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.OCIObjectFree(Handle,ErrorHandle, CurrentVar^._Obj.tdo, 0)
-      ;//debug, lcOther, 'OCIObjectFree', ConSettings);
-    Dispose(Obj);
-    Obj := nil;
-  end;
-
-begin
-  if Variables <> nil then begin
-    { Frees allocated memory for output variables }
-    for I := 0 to Integer(Variables.AllocNum)-1 do begin
-      {$R-}
-      CurrentVar := @Variables.Variables[I];
-      {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-      if Assigned(CurrentVar^._Obj) then
-        DisposeObject(CurrentVar^._Obj);
-      if (CurrentVar^.valuep <> nil) then
-        if (CurrentVar^.DescriptorType > 0) then begin
-          for J := 0 to Iteration-1 do
-            if (PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer))))^ <> nil then begin
-              Status := PlainDriver.OCIDescriptorFree(PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer)))^,
-                CurrentVar^.DescriptorType);
-              if Status <> OCI_SUCCESS then
-                CheckOracleError(PlainDriver, ErrorHandle, status, lcOther, 'OCIDescriptorFree', ConSettings);
-            end;
-        end else if CurrentVar^.dty = SQLT_VST then
-          for J := 0 to Iteration-1 do begin
-            Status := PlainDriver.OCIStringResize(Handle, ErrorHandle, 0, PPOCIString(CurrentVar^.valuep+(J*SizeOf(POCIString))));
-            if Status <> OCI_SUCCESS then
-              CheckOracleError(PlainDriver, ErrorHandle, status, lcOther, 'OCIDescriptorFree', ConSettings);
-          end;
-      end;
-    FreeMem(Variables);
-    Variables := nil;
-  end;
-end;
-
-{**
   Convert string Oracle field type to SQLType
   @param string field type value
   @result the SQLType field type value
@@ -1537,178 +1429,7 @@ VCS:            DataType := SQLT_VCS;
     //ELSE raise Exception.Create('Unknown datatype: '+ZFastCode.IntToStr(DataType));
   end;
 end;
-
-{**
-  Checks for possible SQL errors.
-  @param PlainDriver an Oracle plain driver.
-  @param Handle an Oracle error handle.
-  @param Status a command return status.
-  @param LogCategory a logging category.
-  @param LogMessage a logging message.
-}
-procedure CheckOracleErrorA(const PlainDriver: TZOraclePlainDriver;
-  const ErrorHandle: POCIError; const Status: Integer;
-  const LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  const ConSettings: PZConSettings);
-var
-  ErrorMessage: RawByteString;
-  ErrorBuffer: TRawBuff;
-  ErrorCode: SB4;
-begin
-  ErrorBuffer.Pos := 0;
-  ErrorCode := Status;
-
-  case Status of
-    OCI_SUCCESS:
-      Exit;
-    OCI_SUCCESS_WITH_INFO:
-      begin
-        PlainDriver.OCIErrorGet(ErrorHandle, 1, nil, ErrorCode, @ErrorBuffer.Buf[0], SizeOf(ErrorBuffer.Buf)-1, OCI_HTYPE_ERROR);
-        ErrorBuffer.Pos := StrLen(@ErrorBuffer.Buf[0])+1;
-        ErrorMessage := 'OCI_SUCCESS_WITH_INFO: ';
-      end;
-    OCI_NEED_DATA:  ErrorMessage := 'OCI_NEED_DATA';
-    OCI_NO_DATA:    ErrorMessage := 'OCI_NO_DATA';
-    OCI_ERROR:
-      begin
-        if PlainDriver.OCIErrorGet(ErrorHandle, 1, nil, ErrorCode, @ErrorBuffer.Buf[0], SizeOf(ErrorBuffer.Buf)-1, OCI_HTYPE_ERROR) = 100
-        then ErrorMessage := 'OCI_ERROR: Unkown(OCI_NO_DATA)'
-        else begin
-          ErrorMessage := 'OCI_ERROR: ';
-          ErrorBuffer.Pos := StrLen(@ErrorBuffer.Buf[0]);
-        end;
-      end;
-    OCI_INVALID_HANDLE:
-      ErrorMessage := 'OCI_INVALID_HANDLE';
-    OCI_STILL_EXECUTING:
-      ErrorMessage := 'OCI_STILL_EXECUTING';
-    OCI_CONTINUE:
-      ErrorMessage := 'OCI_CONTINUE';
-    else ErrorMessage := '';
-  end;
-  FlushBuff(ErrorBuffer, ErrorMessage);
-
-  if (Status <> OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then
-  begin
-    if Assigned(DriverManager) then //Thread-Safe patch
-      DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage,
-        ErrorCode, ErrorMessage);
-    if not ( ( LogCategory = lcDisconnect ) and ( ErrorCode = 3314 ) ) then //patch for disconnected Server
-      //on the other hand we can't close the connction  MantisBT: #0000227
-      if LogMessage <> ''
-        then raise EZSQLException.CreateWithCode(ErrorCode,
-        Format(cSSQLError3, [ConSettings^.ConvFuncs.ZRawToString(ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP), ErrorCode, LogMessage]))
-      else raise EZSQLException.CreateWithCode(ErrorCode,
-        Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
-  end;
-  if (Status = OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then
-    if Assigned(DriverManager) then //Thread-Safe patch
-      DriverManager.LogMessage(LogCategory, ConSettings^.Protocol, ErrorMessage);
-end;
-
-{**
-  Checks for possible SQL errors.
-  @param PlainDriver an Oracle plain driver.
-  @param Handle an Oracle error handle.
-  @param Status a command return status.
-  @param LogCategory a logging category.
-  @param LogMessage a logging message.
-}
-procedure CheckOracleErrorW(const PlainDriver: TZOraclePlainDriver;
-  const ErrorHandle: POCIError; const Status: Integer;
-  const LogCategory: TZLoggingCategory; const LogMessage: UnicodeString;
-  const ConSettings: PZConSettings);
-var
-  ErrorMessage: UnicodeString;
-  ErrorBuffer: TUCS2Buff;
-  ErrorCode: SB4;
-begin
-  ErrorBuffer.Pos := 0;
-  ErrorCode := Status;
-
-  case Status of
-    OCI_SUCCESS:
-      Exit;
-    OCI_SUCCESS_WITH_INFO:
-      begin
-        PlainDriver.OCIErrorGet(ErrorHandle, 1, nil, ErrorCode, @ErrorBuffer.Buf[0], SizeOf(ErrorBuffer.Buf) shr 1 -1, OCI_HTYPE_ERROR);
-        ErrorBuffer.Pos := StrLen(@ErrorBuffer.Buf[0])+1;
-        ErrorMessage := 'OCI_SUCCESS_WITH_INFO: ';
-      end;
-    OCI_NEED_DATA:  ErrorMessage := 'OCI_NEED_DATA';
-    OCI_NO_DATA:    ErrorMessage := 'OCI_NO_DATA';
-    OCI_ERROR:
-      begin
-        if PlainDriver.OCIErrorGet(ErrorHandle, 1, nil, ErrorCode, @ErrorBuffer.Buf[0], SizeOf(ErrorBuffer.Buf) shr 1 -1, OCI_HTYPE_ERROR) = 100
-        then ErrorMessage := 'OCI_ERROR: Unkown(OCI_NO_DATA)'
-        else begin
-          ErrorMessage := 'OCI_ERROR: ';
-          ErrorBuffer.Pos := {$IFDEF WITH_PWIDECHAR_STRLE}SysUtils.StrLen{$ELSE}Length{$ENDIF}(PWideChar(@ErrorBuffer.Buf[0]));
-        end;
-      end;
-    OCI_INVALID_HANDLE:
-      ErrorMessage := 'OCI_INVALID_HANDLE';
-    OCI_STILL_EXECUTING:
-      ErrorMessage := 'OCI_STILL_EXECUTING';
-    OCI_CONTINUE:
-      ErrorMessage := 'OCI_CONTINUE';
-    else ErrorMessage := '';
-  end;
-  FlushBuff(ErrorBuffer, ErrorMessage);
-
-  if (Status <> OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then begin
-    if Assigned(DriverManager) then //Thread-Safe patch
-      DriverManager.LogError(LogCategory, ConSettings^.Protocol, ZUnicodeToRaw(LogMessage, zCP_UTF8),
-        ErrorCode, ZUnicodeToRaw(ErrorMessage, zCP_UTF8));
-    if not ( ( LogCategory = lcDisconnect ) and ( ErrorCode = 3314 ) ) then //patch for disconnected Server
-      //on the other hand we can't close the connction  MantisBT: #0000227
-      if LogMessage <> ''
-        then raise EZSQLException.CreateWithCode(ErrorCode,
-        {$IFDEF UNICODE}
-        Format(cSSQLError3, [ErrorMessage, ErrorCode, LogMessage]))
-        {$ELSE}
-        Format(cSSQLError3, [ZUnicodeToRaw(ErrorMessage, {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF}),
-          ErrorCode, ZUnicodeToRaw(LogMessage, {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF})]))
-        {$ENDIF}
-      else raise EZSQLException.CreateWithCode(ErrorCode,
-        {$IFDEF UNICODE}
-        Format(SSQLError1, [ErrorMessage]));
-        {$ELSE}
-        Format(SSQLError1, [ZUnicodeToRaw(ErrorMessage, {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF})]));
-        {$ENDIF}
-  end;
-  if (Status = OCI_SUCCESS_WITH_INFO) and (ErrorMessage <> '') then
-    if Assigned(DriverManager) then //Thread-Safe patch
-      DriverManager.LogMessage(LogCategory, ConSettings^.Protocol, ZUnicodeToRaw(ErrorMessage, zCP_UTF8));
-end;
-
-{**
-  Checks for possible SQL errors.
-  @param PlainDriver an Oracle plain driver.
-  @param Handle an Oracle error handle.
-  @param Status a command return status.
-  @param LogCategory a logging category.
-  @param LogMessage a logging message.
-}
-procedure CheckOracleError(const PlainDriver: TZOraclePlainDriver;
-  const ErrorHandle: POCIError; const Status: Integer;
-  const LogCategory: TZLoggingCategory; const LogMessage: String;
-  const ConSettings: PZConSettings);
-begin
-  if Status = OCI_SUCCESS then
-    Exit;
-  if (ConSettings <> nil) and (ConSettings.ClientCodePage.ID = OCI_UTF16ID)
-  then CheckOracleErrorW(PlainDriver, ErrorHandle, Status, LogCategory,
-    {$IFNDEF UNICODE}
-    ZRawToUnicode(LogMessage, {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF})
-    {$ELSE}LogMessage{$ENDIF}, ConSettings)
-  else CheckOracleErrorA(PlainDriver, ErrorHandle, Status, LogCategory,
-    {$IFDEF UNICODE}
-    ZUnicodeToRaw(LogMessage, ConSettings.ClientCodePage.CP)
-    {$ELSE}LogMessage{$ENDIF}, ConSettings)
-end;
-
-
+(*
 {**
   recurses down the field's TDOs and saves the little bits it need for later
   use on a fetch SQLVar._obj
@@ -1900,89 +1621,7 @@ begin
     lcOther, 'OCITypeByRef from OCI_ATTR_REF_TDO', ConSettings);
   Result^.Level := Level;
   DescribeObjectByTDO(PlainDriver, Connection, Result);
-end;
-
-procedure OraWriteLob(const PlainDriver: TZOraclePlainDriver; const BlobData: Pointer;
-  const ContextHandle: POCISvcCtx; const ErrorHandle: POCIError;
-  const LobLocator: POCILobLocator; const ChunkSize: Integer;
-  BlobSize: Int64; Const BinaryLob: Boolean; const ConSettings: PZConSettings);
-var
-  Status: sword;
-  ContentSize, OffSet: ub4;
-
-  function DoWrite(AOffSet: ub4; AChunkSize: ub4; APiece: ub1): sword;
-  var
-    AContentSize: ub4;
-  begin
-    if BinaryLob then
-    begin
-      AContentSize := ContentSize;
-      Result := PlainDriver.OCILobWrite(ContextHandle, ErrorHandle, LobLocator,
-        AContentSize, AOffSet, (PAnsiChar(BlobData)+OffSet), AChunkSize, APiece,
-        nil, nil, 0, SQLCS_IMPLICIT);
-    end
-    else
-    begin
-      if ContentSize > 0 then
-        AContentSize := ConSettings^.ClientCodePage^.CharWidth
-      else
-      begin
-        AContentSize := ContentSize;
-        AChunkSize := ConSettings^.ClientCodePage^.CharWidth;
-      end;
-
-      Result := PlainDriver.OCILobWrite(ContextHandle, ErrorHandle, LobLocator,
-        AContentSize, AOffSet, (PAnsiChar(BlobData)+OffSet), AChunkSize, APiece,
-        nil, nil, ConSettings^.ClientCodePage^.ID, SQLCS_IMPLICIT);
-    end;
-    ContentSize := AContentSize;
-    inc(OffSet, AChunkSize);
-  end;
-begin
-
-  { Opens a large object or file for read. }
-  Status := PlainDriver.OCILobOpen(ContextHandle, ErrorHandle, LobLocator, OCI_LOB_READWRITE);
-  if Status <> OCI_SUCCESS then
-    CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, 'Open Large Object', ConSettings);
-
-  if not BinaryLob then
-    BlobSize := BlobSize-1;
-  { Checks for empty blob.}
-  { This test doesn't use IsEmpty because that function does allow for zero length blobs}
-  if (BlobSize > 0) then
-  begin
-    if BlobSize > ChunkSize then
-    begin
-      OffSet := 0;
-      ContentSize := 0;
-
-      Status := DoWrite(1, ChunkSize, OCI_FIRST_PIECE);
-      if Status <> OCI_NEED_DATA then
-        CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, 'Write Large Object', ConSettings);
-
-      if (BlobSize - OffSet) > ChunkSize then
-        while (BlobSize - OffSet) > ChunkSize do begin //take care there is room left for LastPiece
-          Status := DoWrite(offset, ChunkSize, OCI_NEXT_PIECE);
-          if Status <> OCI_NEED_DATA then
-            CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, 'Write Large Object', ConSettings);
-        end;
-      Status := DoWrite(offset, BlobSize - OffSet, OCI_LAST_PIECE);
-    end else begin
-      ContentSize := BlobSize;
-      Status := PlainDriver.OCILobWrite(ContextHandle, ErrorHandle, LobLocator,
-        ContentSize, 1, BlobData, BlobSize, OCI_ONE_PIECE, nil, nil, 0, SQLCS_IMPLICIT);
-    end;
-  end else
-    Status := PlainDriver.OCILobTrim(ContextHandle, ErrorHandle, LobLocator, 0);
-
-  CheckOracleError(PlainDriver, ErrorHandle,
-    Status, lcOther, 'Write Large Object', ConSettings);
-
-  { Closes large object or file. }
-  Status := PlainDriver.OCILobClose(ContextHandle, ErrorHandle, LobLocator);
-  if Status <> OCI_SUCCESS then
-    CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, 'Close Large Object', ConSettings);
-end;
+end; *)
 
 function OCIType2Name(DataType: ub2): String;
 begin
@@ -2090,159 +1729,127 @@ begin
 end;
 
 constructor TZOraProcDescriptor_A.Create({$IFDEF AUTOREFCOUNT} const {$ENDIF}
-  Parent: TZOraProcDescriptor_A; RawCP: Word);
+  Parent: TZOraProcDescriptor_A; Const Connection: IZOracleConnection;
+  RawCP: Word);
 begin
+  inherited Create(Connection, nil, OCI_PTYPE_UNK, Connection.GetErrorHandle);
   fParent := Parent;
   FRawCP := RawCP;
+  FConnection := Connection;
 end;
 
-function TZOraProcDescriptor_A.InternalDescribe(const Name: RawByteString; _Type: UB4;
-  {$IFDEF AUTOREFCOUNT} const {$ENDIF}PlainDriver: TZOraclePlainDriver;
-  ErrorHandle: POCIError; OCISvcCtx: POCISvcCtx; Owner: POCIHandle;
-  ConSettings: PZConSettings): SWord;
+const OCIAttrGetA: RawByteString = 'OCIAttrGet';
+
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "i" does not seem to be initialized} {$ENDIF}
+function TZOraProcDescriptor_A.InternalDescribe(const Name: RawByteString;
+  _Type: UB4; Owner: POCIHandle): Sword;
 var P: PAnsiChar;
   i: sb4;
   parmh: POCIHandle;
   Descriptor: POCIDescribe;
   tmp: RawByteString;
+  ConSettings: PZConSettings;
+  OCISvcCtx: POCISvcCtx;
 begin
   //https://www.bnl.gov/phobos/Detectors/Computing/Orant/doc/appdev.804/a58234/describe.htm#440341
   //section describing the stored procedure
   Descriptor := nil;
+  ConSettings := FConnection.GetConSettings;
+  OCISvcCtx   := FConnection.GetServiceContextHandle;
   { get a descriptor handle for the param/obj }
-  CheckOracleError(PlainDriver, ErrorHandle,
-    PlainDriver.OCIHandleAlloc(Owner, Descriptor, OCI_HTYPE_DESCRIBE, 0, nil),
-      lcOther,'OCIHandleAlloc', ConSettings);
-  Result := PlainDriver.OCIDescribeAny(OCISvcCtx, ErrorHandle, Pointer(Name),
+  Result := FPlainDriver.OCIHandleAlloc(Owner, Descriptor, OCI_HTYPE_DESCRIBE, 0, nil);
+  if Result <> OCI_SUCCESS then
+    FConnection.HandleErrorOrWarningA(FOCIError, Result, lcOther, 'OCIHandleAlloc', Self);
+  Result := FPlainDriver.OCIDescribeAny(OCISvcCtx, FOCIError, Pointer(Name),
         Length(Name), OCI_OTYPE_NAME, 0, _Type, Descriptor);
   if Result <> OCI_SUCCESS then begin
     tmp := '"PUBLIC".'+Name;
-    Result := PlainDriver.OCIDescribeAny(OCISvcCtx, ErrorHandle, Pointer(tmp),
+    Result := FPlainDriver.OCIDescribeAny(OCISvcCtx, FOCIError, Pointer(tmp),
         Length(tmp), OCI_OTYPE_NAME, 0, _Type, Descriptor);
   end;
-
   try
     if Result <> OCI_SUCCESS then
       Exit;
-    CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.OCIAttrGet(Descriptor, OCI_HTYPE_DESCRIBE, @parmh, nil, OCI_ATTR_PARAM, ErrorHandle),
-        lcOther,'OCIAttrGet', ConSettings);
+    SetHandleAndType(Descriptor, OCI_HTYPE_DESCRIBE);
+    parmh := GetPointer(OCI_ATTR_PARAM);
+    SetHandleAndType(parmh, OCI_HTYPE_DESCRIBE);
     { get the schema name }
-    P := nil;
-    CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.OCIAttrGet(parmh, OCI_HTYPE_DESCRIBE, @P, @I, OCI_ATTR_OBJ_SCHEMA, ErrorHandle),
-        lcOther,'OCIAttrGet', ConSettings);
+    P := GetPChar(i, OCI_ATTR_OBJ_SCHEMA);
     if P = nil then begin
       Result := OCI_ERROR;
       Exit;
     end;
     ZSetString(P, I, SchemaName{$IFDEF WITH_RAWBYTESTRING}, ConSettings.ClientCodePage.CP{$ENDIF});
     { get the objectname }
-    P := nil;
-    CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.OCIAttrGet(parmh, OCI_HTYPE_DESCRIBE, @P, @I, OCI_ATTR_OBJ_NAME, ErrorHandle),
-        lcOther,'OCIAttrGet', ConSettings);
+    P := GetPChar(i, OCI_ATTR_OBJ_NAME);
     ZSetString(P, I, AttributeName{$IFDEF WITH_RAWBYTESTRING}, ConSettings.ClientCodePage.CP{$ENDIF});
     { get the first object type }
-    CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.OCIAttrGet(parmh, OCI_HTYPE_DESCRIBE, @ObjType, nil, OCI_ATTR_PTYPE, ErrorHandle),
-        lcOther,'OCIAttrGet', ConSettings);
-    InternalDescribeObject(parmh, PlainDriver, ErrorHandle, ConSettings);
+    ObjType := GetUb1(OCI_ATTR_PTYPE);
+    InternalDescribeObject(parmh);
   finally
     if Descriptor <> nil then begin
-      PlainDriver.OCIDescriptorFree(Descriptor, OCI_HTYPE_DESCRIBE);
+      FPlainDriver.OCIDescriptorFree(Descriptor, OCI_HTYPE_DESCRIBE);
       Descriptor := nil;
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
-{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "arg" does not seem to be initialized} {$ENDIF}
-procedure TZOraProcDescriptor_A.InternalDescribeObject(Obj: POCIHandle;
-  {$IFDEF AUTOREFCOUNT} const {$ENDIF}PlainDriver: TZOraclePlainDriver;
-  ErrorHandle: POCIError; ConSettings: PZConSettings);
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "arg/i" does not seem to be initialized} {$ENDIF}
+procedure TZOraProcDescriptor_A.InternalDescribeObject(Obj: POCIHandle);
 var
   arglst, arg: POCIHandle;
   i, N: sb4;
   ParamCount: ub2;
   p: PAnsichar;
   Param: TZOraProcDescriptor_A;
+  CP: Word;
+  Status: Sword;
+  ConSettings: PZConSettings;
 begin
-  arglst := nil;
-  if ObjType <> OCI_PTYPE_PKG then
+  ConSettings := FConnection.GetConSettings;
+  CP := ConSettings.ClientCodePage.CP;
+  if ObjType <> OCI_PTYPE_PKG then begin
     { get the overload position }
-    CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.OCIAttrGet(obj, OCI_HTYPE_DESCRIBE, @OverloadID, nil, OCI_ATTR_OVERLOAD_ID, ErrorHandle),
-            lcOther,'OCIAttrGet', ConSettings);
+    SetHandleAndType(obj, OCI_HTYPE_DESCRIBE);
+    OverloadID := GetUb2(OCI_ATTR_OVERLOAD_ID);
+  end;
   { get a argument-list handle }
-  CheckOracleError(PlainDriver, ErrorHandle,
-    PlainDriver.OCIAttrGet(Obj, OCI_DTYPE_PARAM, @arglst, nil,
-      ArgListType[ObjType = OCI_PTYPE_PKG], ErrorHandle),
-        lcExecute, 'OCIAttrGet', ConSettings);
+  SetHandleAndType(obj, OCI_DTYPE_PARAM);
+  arglst := GetPointer(ArgListType[ObjType = OCI_PTYPE_PKG]);
   { get argument count using of the list handle }
-  CheckOracleError(PlainDriver, ErrorHandle,
-    PlainDriver.OCIAttrGet(arglst, OCI_DTYPE_PARAM, @ParamCount, nil,
-      OCI_ATTR_NUM_PARAMS, ErrorHandle),
-      lcOther, 'OCIAttrGet', ConSettings);
-  Args := TObjectList.Create;//lse);
+  SetHandleAndType(arglst, OCI_DTYPE_PARAM);
+  ParamCount := GetUb2(OCI_ATTR_NUM_PARAMS);
+  Args := TObjectList.Create;
   Args.Capacity := ParamCount;
-  for N := 0+Ord(ObjType = OCI_PTYPE_PROC) to ParamCount-1+Ord(ObjType = OCI_PTYPE_PROC) do begin
+  for N := Ord(ObjType = OCI_PTYPE_PROC) to ParamCount-1+Ord(ObjType = OCI_PTYPE_PROC) do begin
     { get a argument handle }
-    CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.OCIParamGet(arglst, OCI_DTYPE_PARAM, ErrorHandle, arg, N),
-      lcOther, 'OCIParamGet', ConSettings);
-    Param := TZOraProcDescriptor_A.Create(Self, ConSettings.ClientCodePage.CP);
+    Status := FPlainDriver.OCIParamGet(arglst, OCI_DTYPE_PARAM, FOCIError, arg, N);
+    if Status <> OCI_SUCCESS then
+      FConnection.HandleErrorOrWarningA(FOCIError, Status, lcOther, OCIAttrGetA, Self);
+    Param := TZOraProcDescriptor_A.Create(Self, FConnection, CP);
     Args.Add(Param);
     Param.SchemaName := SchemaName;
     { get the object type }
-    CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @Param.ObjType, nil, OCI_ATTR_PTYPE, ErrorHandle),
-        lcOther,'OCIAttrGet', ConSettings);
+    Param.SetHandleAndType(arg, OCI_HTYPE_DESCRIBE);
+    Param.ObjType := Param.GetUb1(OCI_ATTR_PTYPE);
     { get the attribute Name }
-    P := nil;
-    CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @P, @I, OCI_ATTR_NAME, ErrorHandle),
-        lcOther,'OCIAttrGet', ConSettings);
-    ZSetString(P, I, Param.AttributeName{$IFDEF WITH_RAWBYTESTRING}, ConSettings.ClientCodePage.CP{$ENDIF});
+    P := Param.GetPChar(I, OCI_ATTR_NAME);
+    ZSetString(P, I, Param.AttributeName{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF});
     if Param.ObjType = OCI_PTYPE_ARG then begin
       { get the ordinal position }
-      CheckOracleError(PlainDriver, ErrorHandle,
-        PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @Param.OrdPos, nil, OCI_ATTR_POSITION, ErrorHandle),
-          lcOther,'OCIAttrGet', ConSettings);
+      Param.OrdPos := Param.GetUb2(OCI_ATTR_POSITION);
       if (Param.OrdPos = 0) and (Param.AttributeName = '') then
         Param.AttributeName := 'ReturnValue';
-      P := nil;
-      CheckOracleError(PlainDriver, ErrorHandle,
-        PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @P, @I, OCI_ATTR_TYPE_NAME, ErrorHandle),
-          lcOther,'OCIAttrGet', ConSettings);
-      ZSetString(P, I, Param.TypeName);
-      { get datasize }
-      CheckOracleError(PlainDriver, ErrorHandle,
-        PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-          @Param.DataSize, nil, OCI_ATTR_DATA_SIZE, ErrorHandle),
-        lcOther, 'OCIAttrGet', ConSettings);
-      { get IO direction }
-      CheckOracleError(PlainDriver, ErrorHandle,
-        PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-          @Param.IODirection, nil, OCI_ATTR_IOMODE, ErrorHandle),
-        lcOther, 'OCIAttrGet', ConSettings);
-      { get oci data type }
-      CheckOracleError(PlainDriver, ErrorHandle,
-        PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-          @Param.DataType, nil, OCI_ATTR_DATA_TYPE, ErrorHandle),
-        lcOther, 'OCIAttrGet', ConSettings);
+      P := Param.GetPChar(I, OCI_ATTR_TYPE_NAME);
+      ZSetString(P, I, Param.TypeName{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF});
+      Param.DataSize := Param.GetUb4(OCI_ATTR_DATA_SIZE);
+      Param.IODirection := Param.GetSb4(OCI_ATTR_IOMODE);
+      Param.DataType := Param.GetUb2(OCI_ATTR_DATA_TYPE);
       if Param.DataType in [SQLT_NUM, SQLT_VNU] then begin {11g returns Precision = 38 in all cases}
-        CheckOracleError(PlainDriver, ErrorHandle,
-          PlainDriver.OCIAttrGet(Arg, OCI_DTYPE_PARAM,
-            @Param.Precision, nil, OCI_ATTR_PRECISION, ErrorHandle),
-            lcOther, 'OCIAttrGet', ConSettings);
-        CheckOracleError(PlainDriver, ErrorHandle,
-          PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-            @Param.Scale, nil, OCI_ATTR_SCALE, ErrorHandle),
-            lcOther, 'OCIAttrGet', ConSettings);
-        CheckOracleError(PlainDriver, ErrorHandle,
-          PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-            @Param.Radix, nil, OCI_ATTR_RADIX , ErrorHandle),
-            lcOther, 'OCIAttrGet', ConSettings);
+        Param.Precision := Param.GetUb1(OCI_ATTR_PRECISION);
+        Param.Scale := Param.GetSb1(OCI_ATTR_SCALE);
+        Param.Radix := Param.GetUb1(OCI_ATTR_RADIX);
       end;
       Param.SQLType := NormalizeOracleTypeToSQLType(Param.DataType, Param.DataSize,
         Param.DescriptorType, Param.Precision, Param.Scale, ConSettings, Param.IODirection);
@@ -2251,72 +1858,73 @@ begin
           and is different to the native db charset
           so we'll increase the buffers to avoid truncation errors
           and we use 8 byte aligned buffers. Here we go:}
-        PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-          @Param.csform, nil, OCI_ATTR_CHARSET_FORM, ErrorHandle);
+        Param.csform := Param.GetUb1(OCI_ATTR_CHARSET_FORM);
         if Param.SQLType = stString then begin
-            PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-              @Param.Precision, nil, OCI_ATTR_DISP_SIZE, ErrorHandle);
+          //Param.Precision := Param.GetUb1(OCI_ATTR_DISP_SIZE);
           if Param.csform = SQLCS_NCHAR then begin
             Param.DataSize := Param.Precision;
             Param.Precision := Param.Precision shr 1;
             Param.SQLType := stUnicodeString;
             Param.CodePage := zCP_UTF16;
             Param.csid := OCI_UTF16ID;
+          end else if Consettings.ClientCodePage.Encoding <> ceUTF16 then begin
+            Param.DataSize := Param.Precision * ConSettings.ClientCodePage.CharWidth;
+            Param.CodePage := ConSettings.ClientCodePage.CP;
           end else begin
-            if Consettings.ClientCodePage.Encoding <> ceUTF16 then begin
-              Param.DataSize := Param.Precision * ConSettings.ClientCodePage.CharWidth;
-              Param.CodePage := ConSettings.ClientCodePage.CP;
-            end else begin
-              Param.DataSize := Param.Precision shl 1;
-              Param.CodePage := zCP_UTF16;
-              Param.SQLType := stUnicodeString;
-            end;
-            PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-              @Param.csid, nil, OCI_ATTR_CHARSET_ID, ErrorHandle);
+            Param.DataSize := Param.Precision shl 1;
+            Param.CodePage := zCP_UTF16;
+            Param.SQLType := stUnicodeString;
           end;
-        end else begin
-          if (Param.csform = SQLCS_NCHAR) or (Consettings.ClientCodePage.Encoding = ceUTF16) then begin
-            Param.SQLType := stUnicodeStream;
-            Param.CodePage := zCP_UTF16
-          end else Param.CodePage := ConSettings.ClientCodePage.CP;
-          PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-            @Param.csid, nil, OCI_ATTR_CHARSET_ID, ErrorHandle);
-        end;
+        end else if (Param.csform = SQLCS_NCHAR) or (Consettings.ClientCodePage.Encoding = ceUTF16) then begin
+          Param.SQLType := stUnicodeStream;
+          Param.CodePage := zCP_UTF16
+        end else Param.CodePage := ConSettings.ClientCodePage.CP;
+        Param.csid := Param.GetUb2(OCI_ATTR_CHARSET_ID);
       end;
     end else
-      Param.InternalDescribeObject(arg, PLainDriver, ErrorHandle, ConSettings);
+      Param.InternalDescribeObject(arg);
   end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-procedure TZOraProcDescriptor_A.Describe(_Type: UB4; const Connection: IZConnection;
-  const Name: RawByteString);
+procedure TZOraProcDescriptor_A.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+var imm: IImmediatelyReleasable;
+  I: Integer;
+begin
+  if Assigned(FParent) then begin
+    FParent.QueryInterface(IImmediatelyReleasable, imm);
+    if (imm <> Sender) then
+      imm.ReleaseImmediat(Sender, AError);
+  end;
+  if (Args <> nil) then
+    for i := 0 to Args.Count do
+      TZOracleAttribute(Args[i]).ReleaseImmediat(Sender, AError);
+  inherited ReleaseImmediat(Sender, AError);
+end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "arg/i" does not seem to be initialized} {$ENDIF}
+procedure TZOraProcDescriptor_A.Describe(_Type: UB4; const Name: RawByteString);
 var
-  Plain: TZOraclePlainDriver;
-  OracleConnection: IZOracleConnection;
   ProcSQL, tmp: RawByteString;
   Status, ps, ps2: sword;
   IC: IZIdentifierConvertor;
-  ConSettings: PZConSettings;
   {$IFDEF UNICODE}
   S: String;
   {$ENDIF}
+  OCIEnv: POCIEnv;
 begin
-  OracleConnection := Connection as IZOracleConnection;
-  ConSettings := Connection.GetConSettings;
+  OCIEnv := FConnection.GetConnectionHandle;
   ProcSQL := Name;
 
-  IC := Connection.GetMetadata.GetIdentifierConvertor;
-  Plain := TZOraclePlainDriver(Connection.GetIZPlainDriver.GetInstance);
+  IC := FConnection.GetMetadata.GetIdentifierConvertor;
   { describe the object: }
-  Status := InternalDescribe(ProcSQL, _Type, Plain, OracleConnection.GetErrorHandle,
-    OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
+  Status := InternalDescribe(ProcSQL, _Type, OCIEnv);
   if (Status <> OCI_SUCCESS) then begin
     ps := ZFastCode.PosEx(RawByteString('.'), ProcSQL);
     if ps <> 0 then begin //check wether Package or Schema!
       tmp := Copy(ProcSQL, 1, ps-1);
-      Status := InternalDescribe(tmp, _Type, Plain, OracleConnection.GetErrorHandle,
-        OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
+      Status := InternalDescribe(tmp, _Type, OCIEnv);
       if Status <> OCI_SUCCESS then begin
         ps2 := ZFastCode.PosEx(RawByteString('.'), ProcSQL, ps+1);
         if ps2 <> 0 then //check wether Package or Schema!
@@ -2325,15 +1933,14 @@ begin
           ps2 := ps;
           tmp := Copy(ProcSQL, ps+1, maxint)
         end;
-        Status := InternalDescribe(tmp, OCI_PTYPE_UNK, Plain, OracleConnection.GetErrorHandle,
-          OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
+        Status := InternalDescribe(tmp, OCI_PTYPE_UNK, OCIEnv);
         if Status = OCI_SUCCESS then
           tmp := copy(ProcSQL, Ps2+1, MaxInt)
         else begin { final approach to locate the procedure !}
           tmp := '"PUBLIC".'+tmp;
-          Status := InternalDescribe(tmp, OCI_PTYPE_UNK, Plain, OracleConnection.GetErrorHandle,
-          OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
-          CheckOracleError(Plain, OracleConnection.GetErrorHandle, Status, lcExecute, 'OCIDescribeAny', ConSettings);
+          Status := InternalDescribe(tmp, OCI_PTYPE_UNK, OCIEnv);
+          if Status <> OCI_SUCCESS then
+            FConnection.HandleErrorOrWarning(FConnection.GetErrorHandle, Status, lcExecute, 'OCIDescribeAny', Self);
         end;
       end else begin
         ps2 := ZFastCode.PosEx(RawByteString('.'), ProcSQL, ps+1);
@@ -2357,10 +1964,10 @@ begin
         end;
       end;
     end;
-  end else
-    if (Status <> OCI_SUCCESS) then
-      CheckOracleError(Plain, OracleConnection.GetErrorHandle, Status, lcExecute, 'OCIDescribeAny', ConSettings);
+  end else if Status <> OCI_SUCCESS then
+    FConnection.HandleErrorOrWarningA(FConnection.GetErrorHandle, Status, lcExecute, 'OCIDescribeAny', Self);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 destructor TZOraProcDescriptor_A.Destroy;
 begin
@@ -2400,40 +2007,36 @@ begin
 end;
 
 constructor TZOraProcDescriptor_W.Create({$IFDEF AUTOREFCOUNT} const {$ENDIF}
-  Parent: TZOraProcDescriptor_W; RawCP: Word);
+  Parent: TZOraProcDescriptor_W; Const Connection: IZOracleConnection;
+  RawCP: Word);
 begin
+  inherited Create(Connection, nil, OCI_PTYPE_UNK, Connection.GetErrorHandle);
   fParent := Parent;
   FRawCP := RawCP;
 end;
 
 procedure TZOraProcDescriptor_W.Describe(_Type: UB4;
-  const Connection: IZConnection; const Name: UnicodeString);
+  const Name: UnicodeString);
 var
-  Plain: TZOraclePlainDriver;
-  OracleConnection: IZOracleConnection;
   ProcSQL, tmp: UnicodeString;
   Status, ps, ps2: sword;
   IC: IZIdentifierConvertor;
-  ConSettings: PZConSettings;
   {$IFNDEF UNICODE}
   S: String;
   {$ENDIF}
+  OCIEnv: POCIEnv;
 begin
-  OracleConnection := Connection as IZOracleConnection;
-  ConSettings := Connection.GetConSettings;
+  OCIEnv := FConnection.GetConnectionHandle;
   ProcSQL := Name;
 
-  IC := Connection.GetMetadata.GetIdentifierConvertor;
-  Plain := TZOraclePlainDriver(Connection.GetIZPlainDriver.GetInstance);
+  IC := FConnection.GetMetadata.GetIdentifierConvertor;
   { describe the object: }
-  Status := InternalDescribe(ProcSQL, _Type, Plain, OracleConnection.GetErrorHandle,
-    OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
+  Status := InternalDescribe(ProcSQL, _Type, OCIEnv);
   if (Status <> OCI_SUCCESS) then begin
     ps := ZFastCode.Pos(UnicodeString('.'), ProcSQL);
     if ps <> 0 then begin //check wether Package or Schema!
       tmp := Copy(ProcSQL, 1, ps-1);
-      Status := InternalDescribe(tmp, _Type, Plain, OracleConnection.GetErrorHandle,
-        OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
+      Status := InternalDescribe(tmp, _Type, OCIEnv);
       if Status <> OCI_SUCCESS then begin
         ps2 := ZFastCode.PosEx(UnicodeString('.'), ProcSQL, ps+1);
         if ps2 <> 0 then //check wether Package or Schema!
@@ -2442,15 +2045,14 @@ begin
           ps2 := ps;
           tmp := Copy(ProcSQL, ps+1, maxint)
         end;
-        Status := InternalDescribe(tmp, OCI_PTYPE_UNK, Plain, OracleConnection.GetErrorHandle,
-          OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
+        Status := InternalDescribe(tmp, _Type, OCIEnv);
         if Status = OCI_SUCCESS then
           tmp := copy(ProcSQL, Ps2+1, MaxInt)
         else begin { final approach to locate the procedure !}
           tmp := '"PUBLIC".'+tmp;
-          Status := InternalDescribe(tmp, OCI_PTYPE_UNK, Plain, OracleConnection.GetErrorHandle,
-          OracleConnection.GetServiceContextHandle, OracleConnection.GetConnectionHandle, ConSettings);
-          CheckOracleError(Plain, OracleConnection.GetErrorHandle, Status, lcExecute, 'OCIDescribeAny', ConSettings);
+          Status := InternalDescribe(tmp, _Type, OCIEnv);
+          if Status <> OCI_SUCCESS then
+            FConnection.HandleErrorOrWarningW(FConnection.GetErrorHandle, Status, lcExecute, 'OCIDescribeAny', Self);
         end;
       end else begin
         ps2 := ZFastCode.PosEx(UnicodeString('.'), ProcSQL, ps+1);
@@ -2474,9 +2076,8 @@ begin
         end;
       end;
     end;
-  end else
-    if (Status <> OCI_SUCCESS) then
-      CheckOracleError(Plain, OracleConnection.GetErrorHandle, Status, lcExecute, 'OCIDescribeAny', ConSettings);
+  end else if Status <> OCI_SUCCESS then
+    FConnection.HandleErrorOrWarningW(FConnection.GetErrorHandle, Status, lcExecute, 'OCIDescribeAny', Self);
 end;
 
 destructor TZOraProcDescriptor_W.Destroy;
@@ -2486,40 +2087,38 @@ begin
     FreeAndNil(Args);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "i" does not seem to be initialized} {$ENDIF}
 function TZOraProcDescriptor_W.InternalDescribe(const Name: UnicodeString;
-  _Type: UB4; {$IFDEF AUTOREFCOUNT} const {$ENDIF}PlainDriver: TZOraclePlainDriver;
-  ErrorHandle: POCIError; OCISvcCtx: POCISvcCtx; Owner: POCIHandle;
-  ConSettings: PZConSettings): Sword;
+  _Type: UB4; Owner: POCIHandle): Sword;
 var objptr: PWideChar;
   objnm_len: ub4;
   parmh: POCIHandle;
   Descriptor: POCIDescribe;
   tmp: UnicodeString;
+  OCISvcCtx: POCISvcCtx;
   procedure GetStringProp(attrtype: ub4; var Result: UnicodeString);
-  var Status: SWord;
-      i: sb4;
+  var i: sb4;
+      P: PWideChar;
   begin
-    objptr := nil;
-    Status := PlainDriver.OCIAttrGet(parmh, OCI_HTYPE_DESCRIBE, @objptr, @I, attrtype, ErrorHandle);
-    if Status <> OCI_SUCCESS then
-      CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther,'OCIAttrGet', ConSettings);
+    P := GetPChar(I, attrtype);
     I := I shr 1;
-    System.SetString(Result, objptr, I);
+    System.SetString(Result, P, I);
   end;
 label jmpDescibe;
 begin
   //https://www.bnl.gov/phobos/Detectors/Computing/Orant/doc/appdev.804/a58234/describe.htm#440341
   //section describing the stored procedure
   Descriptor := nil;
+  OCISvcCtx   := FConnection.GetServiceContextHandle;
   { get a descriptor handle for the param/obj }
-  CheckOracleError(PlainDriver, ErrorHandle,
-    PlainDriver.OCIHandleAlloc(Owner, Descriptor, OCI_HTYPE_DESCRIBE, 0, nil),
-      lcOther,'OCIHandleAlloc', ConSettings);
+  Result := FPlainDriver.OCIHandleAlloc(Owner, Descriptor, OCI_HTYPE_DESCRIBE, 0, nil);
+  if Result <> OCI_SUCCESS then
+    FConnection.HandleErrorOrWarningW(FOCIError, Result, lcOther, 'OCIHandleAlloc', Self);
   tmp := Name;
 jmpDescibe:
   objptr := Pointer(tmp);
   objnm_len := Length(tmp) shl 1;
-  Result := PlainDriver.OCIDescribeAny(OCISvcCtx, ErrorHandle, objptr,
+  Result := FPlainDriver.OCIDescribeAny(OCISvcCtx, FOCIError, objptr,
         objnm_len, OCI_OTYPE_NAME, 0, _Type, Descriptor);
   if (Result <> OCI_SUCCESS) and (tmp = Name) then begin
     tmp := '"PUBLIC".'+Name;
@@ -2528,9 +2127,9 @@ jmpDescibe:
   try
     if Result <> OCI_SUCCESS then
       Exit;
-    Result := PlainDriver.OCIAttrGet(Descriptor, OCI_HTYPE_DESCRIBE, @parmh, nil, OCI_ATTR_PARAM, ErrorHandle);
-    if Result <> OCI_SUCCESS then
-      CheckOracleError(PlainDriver, ErrorHandle, Result, lcOther,'OCIAttrGet', ConSettings);
+    SetHandleAndType(Descriptor, OCI_HTYPE_DESCRIBE);
+    parmh := GetPointer(OCI_ATTR_PARAM);
+    SetHandleAndType(parmh, OCI_HTYPE_DESCRIBE);
     GetStringProp(OCI_ATTR_OBJ_SCHEMA, SchemaName);
     if SchemaName = '' then begin
       Result := OCI_ERROR;
@@ -2538,181 +2137,138 @@ jmpDescibe:
     end;
     GetStringProp(OCI_ATTR_OBJ_NAME, AttributeName);
     { get the first object type }
-    Result := PlainDriver.OCIAttrGet(parmh, OCI_HTYPE_DESCRIBE, @ObjType, nil, OCI_ATTR_PTYPE, ErrorHandle);
-    if Result <> OCI_SUCCESS then
-      CheckOracleError(PlainDriver, ErrorHandle, Result, lcOther,'OCIAttrGet', ConSettings);
-    InternalDescribeObject(parmh, PlainDriver, ErrorHandle, ConSettings);
+    ObjType := GetUb1(OCI_ATTR_PTYPE);
+    InternalDescribeObject(parmh);
   finally
     if Descriptor <> nil then begin
-      PlainDriver.OCIDescriptorFree(Descriptor, OCI_HTYPE_DESCRIBE);
+      FPlainDriver.OCIDescriptorFree(Descriptor, OCI_HTYPE_DESCRIBE);
       Descriptor := nil;
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
-{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "arg" does not seem to be initialized} {$ENDIF}
-procedure TZOraProcDescriptor_W.InternalDescribeObject(Obj: POCIHandle;
-  {$IFDEF AUTOREFCOUNT} const {$ENDIF} PlainDriver: TZOraclePlainDriver;
-  ErrorHandle: POCIError; ConSettings: PZConSettings);
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "arg/i" does not seem to be initialized} {$ENDIF}
+procedure TZOraProcDescriptor_W.InternalDescribeObject(Obj: POCIHandle);
 var
   arglst, arg: POCIHandle;
   i, N: sb4;
-  ParamCount: ub2;
+  CP, ParamCount: ub2;
   p: PWideChar;
+  Status: SWord;
   Param: TZOraProcDescriptor_W;
+  ConSettings: PZConSettings;
 begin
-  arglst := nil;
-  if ObjType <> OCI_PTYPE_PKG then
+  ConSettings := FConnection.GetConSettings;
+  CP := ConSettings.ClientCodePage.CP;
+  if ObjType <> OCI_PTYPE_PKG then begin
     { get the overload position }
-    CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.OCIAttrGet(obj, OCI_HTYPE_DESCRIBE, @OverloadID, nil, OCI_ATTR_OVERLOAD_ID, ErrorHandle),
-            lcOther,'OCIAttrGet', ConSettings);
+    SetHandleAndType(obj, OCI_HTYPE_DESCRIBE);
+    OverloadID := GetUb2(OCI_ATTR_OVERLOAD_ID);
+  end;
   { get a argument-list handle }
-  CheckOracleError(PlainDriver, ErrorHandle,
-    PlainDriver.OCIAttrGet(Obj, OCI_DTYPE_PARAM, @arglst, nil,
-      ArgListType[ObjType = OCI_PTYPE_PKG], ErrorHandle),
-        lcExecute, 'OCIAttrGet', ConSettings);
+  SetHandleAndType(obj, OCI_DTYPE_PARAM);
+  arglst := GetPointer(ArgListType[ObjType = OCI_PTYPE_PKG]);
   { get argument count using of the list handle }
-  CheckOracleError(PlainDriver, ErrorHandle,
-    PlainDriver.OCIAttrGet(arglst, OCI_DTYPE_PARAM, @ParamCount, nil,
-      OCI_ATTR_NUM_PARAMS, ErrorHandle),
-      lcOther, 'OCIAttrGet', ConSettings);
-  Args := TObjectList.Create;//lse);
+  SetHandleAndType(arglst, OCI_DTYPE_PARAM);
+  ParamCount := GetUb2(OCI_ATTR_NUM_PARAMS);
+  Args := TObjectList.Create;
   Args.Capacity := ParamCount;
-  for N := 0+Ord(ObjType = OCI_PTYPE_PROC) to ParamCount-1+Ord(ObjType = OCI_PTYPE_PROC) do begin
+  for N := Ord(ObjType = OCI_PTYPE_PROC) to ParamCount-1+Ord(ObjType = OCI_PTYPE_PROC) do begin
     { get a argument handle }
-    CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.OCIParamGet(arglst, OCI_DTYPE_PARAM, ErrorHandle, arg, N),
-      lcOther, 'OCIParamGet', ConSettings);
-    Param := TZOraProcDescriptor_W.Create(Self, ConSettings.CTRL_CP);
+    Status := FPlainDriver.OCIParamGet(arglst, OCI_DTYPE_PARAM, FOCIError, arg, N);
+    if Status <> OCI_SUCCESS then
+      FConnection.HandleErrorOrWarningW(FOCIError, Status, lcOther, 'OCIParamGet', Self);
+    Param := TZOraProcDescriptor_W.Create(Self, FConnection, CP);
     Args.Add(Param);
     Param.SchemaName := SchemaName;
     { get the object type }
-    CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @Param.ObjType, nil, OCI_ATTR_PTYPE, ErrorHandle),
-        lcOther,'OCIAttrGet', ConSettings);
+    Param.SetHandleAndType(arg, OCI_HTYPE_DESCRIBE);
+    Param.ObjType := Param.GetUb1(OCI_ATTR_PTYPE);
     { get the attribute Name }
-    P := nil;
-    CheckOracleError(PlainDriver, ErrorHandle,
-      PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @P, @I, OCI_ATTR_NAME, ErrorHandle),
-        lcOther,'OCIAttrGet', ConSettings);
+    P := Param.GetPChar(I, OCI_ATTR_NAME);
     I := I shr 1;
     System.SetString(Param.AttributeName, P, I);
     if Param.ObjType = OCI_PTYPE_ARG then begin
       { get the ordinal position }
-      CheckOracleError(PlainDriver, ErrorHandle,
-        PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @Param.OrdPos, nil, OCI_ATTR_POSITION, ErrorHandle),
-          lcOther,'OCIAttrGet', ConSettings);
+      Param.OrdPos := Param.GetUb2(OCI_ATTR_POSITION);
       if (Param.OrdPos = 0) and (Param.AttributeName = '') then
         Param.AttributeName := 'ReturnValue';
-      P := nil;
-      CheckOracleError(PlainDriver, ErrorHandle,
-        PlainDriver.OCIAttrGet(arg, OCI_HTYPE_DESCRIBE, @P, @I, OCI_ATTR_TYPE_NAME, ErrorHandle),
-          lcOther,'OCIAttrGet', ConSettings);
+      P := Param.GetPChar(I, OCI_ATTR_TYPE_NAME);
+      I := I shr 1;
       System.SetString(Param.TypeName, P, I);
-      { get datasize }
-      CheckOracleError(PlainDriver, ErrorHandle,
-        PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-          @Param.DataSize, nil, OCI_ATTR_DATA_SIZE, ErrorHandle),
-        lcOther, 'OCIAttrGet', ConSettings);
-      { get IO direction }
-      CheckOracleError(PlainDriver, ErrorHandle,
-        PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-          @Param.IODirection, nil, OCI_ATTR_IOMODE, ErrorHandle),
-        lcOther, 'OCIAttrGet', ConSettings);
-      { get oci data type }
-      CheckOracleError(PlainDriver, ErrorHandle,
-        PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-          @Param.DataType, nil, OCI_ATTR_DATA_TYPE, ErrorHandle),
-        lcOther, 'OCIAttrGet', ConSettings);
+      Param.DataSize := Param.GetUb4(OCI_ATTR_DATA_SIZE);
+      Param.IODirection := Param.GetSb4(OCI_ATTR_IOMODE);
+      Param.DataType := Param.GetUb2(OCI_ATTR_DATA_TYPE);
       if Param.DataType in [SQLT_NUM, SQLT_VNU] then begin {11g returns Precision = 38 in all cases}
-        CheckOracleError(PlainDriver, ErrorHandle,
-          PlainDriver.OCIAttrGet(Arg, OCI_DTYPE_PARAM,
-            @Param.Precision, nil, OCI_ATTR_PRECISION, ErrorHandle),
-            lcOther, 'OCIAttrGet', ConSettings);
-        CheckOracleError(PlainDriver, ErrorHandle,
-          PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-            @Param.Scale, nil, OCI_ATTR_SCALE, ErrorHandle),
-            lcOther, 'OCIAttrGet', ConSettings);
-        CheckOracleError(PlainDriver, ErrorHandle,
-          PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-            @Param.Radix, nil, OCI_ATTR_RADIX , ErrorHandle),
-            lcOther, 'OCIAttrGet', ConSettings);
+        Param.Precision := Param.GetUb1(OCI_ATTR_PRECISION);
+        Param.Scale := Param.GetSb1(OCI_ATTR_SCALE);
+        Param.Radix := Param.GetUb1(OCI_ATTR_RADIX);
       end;
       Param.SQLType := NormalizeOracleTypeToSQLType(Param.DataType, Param.DataSize,
         Param.DescriptorType, Param.Precision, Param.Scale, ConSettings, Param.IODirection);
-      if (Param.SQLType in [stString, stBytes]) then
-        {CheckOracleError(PlainDriver, ErrorHandle,
-          PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-            @Param.DataSize, nil, OCI_ATTR_MAXDATA_SIZE, ErrorHandle),
-            lcOther, 'OCIAttrGet', ConSettings); does not work .. }
       if (Param.SQLType in [stString, stAsciiStream]) then begin
         {EH: Oracle does not calculate true data size if the attachment charset is a multibyte one
           and is different to the native db charset
           so we'll increase the buffers to avoid truncation errors
           and we use 8 byte aligned buffers. Here we go:}
-        CheckOracleError(PlainDriver, ErrorHandle,
-          PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-            @Param.csform, nil, OCI_ATTR_CHARSET_FORM, ErrorHandle),
-            lcOther, 'OCIAttrGet', ConSettings);
+        Param.csform := Param.GetUb1(OCI_ATTR_CHARSET_FORM);
         if Param.SQLType = stString then begin
-          {CheckOracleError(PlainDriver, ErrorHandle,
-            PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-              @Param.Precision, nil, OCI_ATTR_DISP_SIZE, ErrorHandle), //is not possible for describing sp's
-            lcOther, 'OCIAttrGet', ConSettings);
-          CheckOracleError(PlainDriver, ErrorHandle,
-            PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-              @Param.Precision, nil, OCI_ATTR_CHAR_COUNT, ErrorHandle), //oracle bug: does not work for variable variable charsets
-            lcOther, 'OCIAttrGet', ConSettings);}
-           if Param.csform = SQLCS_NCHAR then begin
+          //Param.Precision := Param.GetUb1(OCI_ATTR_DISP_SIZE);
+          if Param.csform = SQLCS_NCHAR then begin
             Param.DataSize := Param.Precision;
             Param.Precision := Param.Precision shr 1;
             Param.SQLType := stUnicodeString;
             Param.CodePage := zCP_UTF16;
             Param.csid := OCI_UTF16ID;
+          end else if Consettings.ClientCodePage.Encoding <> ceUTF16 then begin
+            Param.DataSize := Param.Precision * ConSettings.ClientCodePage.CharWidth;
+            Param.CodePage := CP;
           end else begin
-            if Consettings.ClientCodePage.Encoding <> ceUTF16 then begin
-              Param.DataSize := Param.Precision * ConSettings.ClientCodePage.CharWidth;
-              Param.CodePage := ConSettings.ClientCodePage.CP;
-            end else begin
-              Param.DataSize := Param.Precision shl 1;
-              Param.CodePage := zCP_UTF16;
-              Param.SQLType := stUnicodeString;
-            end;
-            CheckOracleError(PlainDriver, ErrorHandle,
-              PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-                @Param.csid, nil, OCI_ATTR_CHARSET_ID, ErrorHandle),
-              lcOther, 'OCIAttrGet', ConSettings);
+            Param.DataSize := Param.Precision shl 1;
+            Param.CodePage := zCP_UTF16;
+            Param.SQLType := stUnicodeString;
           end;
-        end else begin
-          if (Param.csform = SQLCS_NCHAR) or (Consettings.ClientCodePage.Encoding = ceUTF16) then begin
-            Param.SQLType := stUnicodeStream;
-            Param.CodePage := zCP_UTF16
-          end else Param.CodePage := ConSettings.ClientCodePage.CP;
-          CheckOracleError(PlainDriver, ErrorHandle,
-            PlainDriver.OCIAttrGet(arg, OCI_DTYPE_PARAM,
-              @Param.csid, nil, OCI_ATTR_CHARSET_ID, ErrorHandle),
-              lcOther, 'OCIAttrGet', ConSettings);
-        end;
+        end else if (Param.csform = SQLCS_NCHAR) or (Consettings.ClientCodePage.Encoding = ceUTF16) then begin
+          Param.SQLType := stUnicodeStream;
+          Param.CodePage := zCP_UTF16
+        end else Param.CodePage := CP;
+        Param.csid := Param.GetUb2(OCI_ATTR_CHARSET_ID);
       end;
     end else
-      Param.InternalDescribeObject(arg, PLainDriver, ErrorHandle, ConSettings);
+      Param.InternalDescribeObject(arg);
   end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
+procedure TZOraProcDescriptor_W.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+var imm: IImmediatelyReleasable;
+  I: Integer;
+begin
+  if Assigned(FParent) then begin
+    FParent.QueryInterface(IImmediatelyReleasable, imm);
+    if (imm <> Sender) then
+      imm.ReleaseImmediat(Self, AError);
+  end;
+  if (Args <> nil) then
+    for i := 0 to Args.Count do
+      TZOracleAttribute(Args[i]).ReleaseImmediat(Self, AError);
+  inherited ReleaseImmediat(Sender, AError);
+end;
+
 { TZOracleAttribute }
 
-constructor TZOracleAttribute.Create(const Owner: IImmediatelyReleasable;
-  {$IFDEF AUTOREFCOUNT} const {$ENDIF} PlainDriver: TZOraclePlainDriver;
+constructor TZOracleAttribute.Create(const Connection: IZOracleConnection;
   trgthndlp: POCIHandle; trghndltyp: ub4; errhp: POCIError);
 begin
-  FOwner := Owner;
-  FConSettings := Owner.GetConSettings;
+  FOwner := Connection;
+  FConSettings := Connection.GetConSettings;
   Ftrgthndlp := trgthndlp;
   Ftrghndltyp := trghndltyp;
-  Ferrhp := errhp;
-  FplainDriver := PlainDriver;
+  FOCIError := errhp;
+  FConnection := Connection;
+  FplainDriver := Connection.GetPlainDriver;
 end;
 
 function TZOracleAttribute.GetConSettings: PZConSettings;
@@ -2720,77 +2276,77 @@ begin
   Result := FConSettings;
 end;
 
-function TZOracleAttribute.GetPChar(var Len: ub4; attrtype: ub4): Pointer;
+function TZOracleAttribute.GetPChar(var Len: sb4; attrtype: ub4): Pointer;
 var Status: sword;
 begin
   Result := nil;
   Len := 0;
-  Status := FPlainDriver.OCIAttrGet(Ftrgthndlp, Ftrghndltyp, @Result, @Len, attrtype, Ferrhp);
+  Status := FPlainDriver.OCIAttrGet(Ftrgthndlp, Ftrghndltyp, @Result, @Len, attrtype, FOCIError);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, Ferrhp, Status, lcOther, 'OCIAttrGet', FConSettings);
+    HandleAttributError(Status, True);
 end;
 
 function TZOracleAttribute.GetPointer(attrtype: ub4): Pointer;
 var Status: sword;
 begin
   Result := nil;
-  Status := FPlainDriver.OCIAttrGet(Ftrgthndlp, Ftrghndltyp, @Result, nil, attrtype, Ferrhp);
+  Status := FPlainDriver.OCIAttrGet(Ftrgthndlp, Ftrghndltyp, @Result, nil, attrtype, FOCIError);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, Ferrhp, Status, lcOther, 'OCIAttrGet', FConSettings);
+    HandleAttributError(Status, True);
 end;
 
 function TZOracleAttribute.GetSb1(attrtype: ub4): Sb1;
 var Status: sword;
 begin
   Result := 0;
-  Status := FPlainDriver.OCIAttrGet(Ftrgthndlp, Ftrghndltyp, @Result, nil, attrtype, Ferrhp);
+  Status := FPlainDriver.OCIAttrGet(Ftrgthndlp, Ftrghndltyp, @Result, nil, attrtype, FOCIError);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, Ferrhp, Status, lcOther, 'OCIAttrGet', FConSettings);
+    HandleAttributError(Status, True);
 end;
 
 function TZOracleAttribute.GetSb2(attrtype: ub4): Sb2;
 var Status: sword;
 begin
   Result := 0;
-  Status := FPlainDriver.OCIAttrGet(Ftrgthndlp, Ftrghndltyp, @Result, nil, attrtype, Ferrhp);
+  Status := FPlainDriver.OCIAttrGet(Ftrgthndlp, Ftrghndltyp, @Result, nil, attrtype, FOCIError);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, Ferrhp, Status, lcOther, 'OCIAttrGet', FConSettings);
+    HandleAttributError(Status, True);
 end;
 
 function TZOracleAttribute.GetSb4(attrtype: ub4): Sb4;
 var Status: sword;
 begin
   Result := 0;
-  Status := FPlainDriver.OCIAttrGet(Ftrgthndlp, Ftrghndltyp, @Result, nil, attrtype, Ferrhp);
+  Status := FPlainDriver.OCIAttrGet(Ftrgthndlp, Ftrghndltyp, @Result, nil, attrtype, FOCIError);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, Ferrhp, Status, lcOther, 'OCIAttrGet', FConSettings);
+    HandleAttributError(Status, True);
 end;
 
 function TZOracleAttribute.GetUb1(attrtype: ub4): ub1;
 var Status: sword;
 begin
   Result := 0;
-  Status := FPlainDriver.OCIAttrGet(Ftrgthndlp, Ftrghndltyp, @Result, nil, attrtype, Ferrhp);
+  Status := FPlainDriver.OCIAttrGet(Ftrgthndlp, Ftrghndltyp, @Result, nil, attrtype, FOCIError);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, Ferrhp, Status, lcOther, 'OCIAttrGet', FConSettings);
+    HandleAttributError(Status, True);
 end;
 
 function TZOracleAttribute.GetUb2(attrtype: ub4): ub2;
 var Status: sword;
 begin
   Result := 0;
-  Status := FPlainDriver.OCIAttrGet(Ftrgthndlp, Ftrghndltyp, @Result, nil, attrtype, Ferrhp);
-  if Result <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, Ferrhp, Status, lcOther, 'OCIAttrGet', FConSettings);
+  Status := FPlainDriver.OCIAttrGet(Ftrgthndlp, Ftrghndltyp, @Result, nil, attrtype, FOCIError);
+  if Status <> OCI_SUCCESS then
+    HandleAttributError(Status, True);
 end;
 
 function TZOracleAttribute.GetUb4(attrtype: ub4): ub4;
 var Status: sword;
 begin
   Result := 0;
-  Status := FPlainDriver.OCIAttrGet(Ftrgthndlp, Ftrghndltyp, @Result, nil, attrtype, Ferrhp);
+  Status := FPlainDriver.OCIAttrGet(Ftrgthndlp, Ftrghndltyp, @Result, nil, attrtype, FOCIError);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, Ferrhp, Status, lcOther, 'OCIAttrGet', FConSettings);
+    HandleAttributError(Status, True);
 end;
 
 function TZOracleAttribute.QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult;
@@ -2818,49 +2374,49 @@ end;
 procedure TZOracleAttribute.SetUb4(attrtype, Value: Ub4);
 var Status: sword;
 begin
-  Status := FPlainDriver.OCIAttrSet(Ftrgthndlp, Ftrghndltyp, @Value, SizeOf(Ub4), attrtype, Ferrhp);
+  Status := FPlainDriver.OCIAttrSet(Ftrgthndlp, Ftrghndltyp, @Value, SizeOf(Ub4), attrtype, FOCIError);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, Ferrhp, Status, lcOther, 'OCIAttrSet', FConSettings);
+    HandleAttributError(Status, False);
 end;
 
 procedure TZOracleAttribute.SetSb4(attrtype: ub4; Value: Sb4);
 var Status: sword;
 begin
-  Status := FPlainDriver.OCIAttrSet(Ftrgthndlp, Ftrghndltyp, @Value, SizeOf(Sb4), attrtype, Ferrhp);
+  Status := FPlainDriver.OCIAttrSet(Ftrgthndlp, Ftrghndltyp, @Value, SizeOf(Sb4), attrtype, FOCIError);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, Ferrhp, Status, lcOther, 'OCIAttrSet', FConSettings);
+    HandleAttributError(Status, False);
 end;
 
 procedure TZOracleAttribute.SetUb2(attrtype: ub4; Value: ub2);
 var Status: sword;
 begin
-  Status := FPlainDriver.OCIAttrSet(Ftrgthndlp, Ftrghndltyp, @Value, SizeOf(Ub2), attrtype, Ferrhp);
+  Status := FPlainDriver.OCIAttrSet(Ftrgthndlp, Ftrghndltyp, @Value, SizeOf(Ub2), attrtype, FOCIError);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, Ferrhp, Status, lcOther, 'OCIAttrSet', FConSettings);
+    HandleAttributError(Status, False);
 end;
 
 procedure TZOracleAttribute.SetSb2(attrtype: ub4; Value: Sb2);
 var Status: sword;
 begin
-  Status := FPlainDriver.OCIAttrSet(Ftrgthndlp, Ftrghndltyp, @Value, SizeOf(Sb2), attrtype, Ferrhp);
+  Status := FPlainDriver.OCIAttrSet(Ftrgthndlp, Ftrghndltyp, @Value, SizeOf(Sb2), attrtype, FOCIError);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, Ferrhp, Status, lcOther, 'OCIAttrSet', FConSettings);
+    HandleAttributError(Status, False);
 end;
 
 procedure TZOracleAttribute.SetUb1(attrtype: ub4; Value: ub1);
 var Status: sword;
 begin
-  Status := FPlainDriver.OCIAttrSet(Ftrgthndlp, Ftrghndltyp, @Value, SizeOf(Ub1), attrtype, Ferrhp);
+  Status := FPlainDriver.OCIAttrSet(Ftrgthndlp, Ftrghndltyp, @Value, SizeOf(Ub1), attrtype, FOCIError);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, Ferrhp, Status, lcOther, 'OCIAttrSet', FConSettings);
+    HandleAttributError(Status, False);
 end;
 
 procedure TZOracleAttribute.SetSb1(attrtype: ub4; Value: Sb1);
 var Status: sword;
 begin
-  Status := FPlainDriver.OCIAttrSet(Ftrgthndlp, Ftrghndltyp, @Value, SizeOf(sb1), attrtype, Ferrhp);
+  Status := FPlainDriver.OCIAttrSet(Ftrgthndlp, Ftrghndltyp, @Value, SizeOf(sb1), attrtype, FOCIError);
   if Status <> OCI_SUCCESS then
-    CheckOracleError(FPlainDriver, Ferrhp, Status, lcOther, 'OCIAttrSet', FConSettings);
+    HandleAttributError(Status, False);
 end;
 
 function TZOracleAttribute._AddRef: Integer;
@@ -2871,6 +2427,26 @@ end;
 function TZOracleAttribute._Release: Integer;
 begin
   Result := -1;
+end;
+
+{ TZOracleAttributeA }
+
+const RawOCIAttr: Array[Boolean] of RawByteString = ('OCIAttrSet', 'OCIAttrGet');
+
+procedure TZOracleAttributeA.HandleAttributError(Status: SWord;
+  WasGet: Boolean);
+begin
+  FConnection.HandleErrorOrWarningA(FOCIError, Status, lcOther, RawOCIAttr[WasGet], Self);
+end;
+
+{ TZOracleAttributeW }
+
+const UniOCIAttr: Array[Boolean] of UnicodeString = ('OCIAttrSet', 'OCIAttrGet');
+
+procedure TZOracleAttributeW.HandleAttributError(Status: SWord;
+  WasGet: Boolean);
+begin
+  FConnection.HandleErrorOrWarningW(FOCIError, Status, lcOther, UniOCIAttr[WasGet], Self);
 end;
 
 initialization

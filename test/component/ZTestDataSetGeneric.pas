@@ -116,7 +116,7 @@ type
     TTestMethod = procedure of object;
   {$IFEND}
 
-  {$IFDEF ENABLE_INTERBASE}
+  {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
   TZInterbaseTestGUIDS = class(TZAbstractCompSQLTestCase)
   private
     CurrentTest: string;
@@ -161,7 +161,7 @@ uses
   {$IFDEF UNICODE}ZEncoding,{$ENDIF} ZFastCode,
   DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties,
   ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF},
-  TypInfo;
+  TypInfo, ZDbcInterbaseFirebirdMetadata;
 
 { TZGenericTestDataSet }
 
@@ -2809,7 +2809,7 @@ begin
   end;
 end;
 
-{$IFDEF ENABLE_INTERBASE}
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 
 const
   TBL_NAME = 'Guids';
@@ -3035,44 +3035,68 @@ begin
 end;
 
 procedure TZInterbaseTestGUIDS.TestGUIDs;
-var GuidHex: string;
+var
+  GuidHex: string;
+  DbInfo: IZInterbaseDatabaseInfo;
 begin
   // Init variables
   GuidVal := StringToGUID('{'+GUID_VALUE+'}');
   GuidHex := StringReplace(GUID_VALUE_FB, '-', '', [rfReplaceAll]);
   // set value to DB table
   Connection.Connect;
-  Connection.ExecuteDirect(
-    Format('DELETE FROM %s', [TBL_NAME]));
-  Connection.ExecuteDirect(
-    Format('INSERT INTO %s (ID, %s) VALUES(1, x''%s'')', [TBL_NAME, GUID_DOM_FIELD, GuidHex]));
-  Connection.Disconnect;
+  // only run this test on Firebird 2.5 up because the test requires the
+  // hexadecimal notation for “binary” strings introduced in that version.
+  // Interbase does also not support a hexadecimal notation. See:
+  // https://stackoverflow.com/questions/44348866/is-there-a-binary-literal-in-interbase
+  DbInfo := nil;
+  Connection.Connect;
+  try
+    Supports(Connection.DbcConnection.GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo);
+    if Assigned(DbInfo) then begin
+      if not (DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 2005000)) then begin
+        Check(True);
+        Exit;
+      end;
+    end;
 
-  Query := CreateQuery;
-  SP := TZStoredProc.Create(nil);
-  SP.Connection := Connection;
+    Connection.ExecuteDirect(
+      Format('DELETE FROM %s', [TBL_NAME]));
+    Connection.ExecuteDirect(
+      Format('INSERT INTO %s (ID, %s) VALUES(1, x''%s'')', [TBL_NAME, GUID_DOM_FIELD, GuidHex]));
+    Connection.Disconnect;
 
-  // Now run tests
-  DoTest('Query from table: GUID type by type', Test_QT_Type_Type);
-  DoTest('Query from table: GUID type by domain', Test_QT_Type_Dom);
-  DoTest('Query from table: GUID type by field name', Test_QT_Type_FName);
-  DoTest('Query from table: get GUID value', Test_QT_GetVal);
-  DoTest('Query from table: set GUID value', Test_QT_SetVal);
-  DoTest('Query from table: set param GUID value', Test_QT_ParamSetVal);
-  DoTest('Query from SP: GUID type by type', Test_QSP_Type_Type);
-  DoTest('Query from SP: GUID type by domain (false)', Test_QSP_Type_Dom);
-  DoTest('Query from SP: GUID type by field name', Test_QSP_Type_FName);
-  DoTest('SP: GUID type of param by type', Test_SP_ParamType_Type);
-  DoTest('SP: GUID type of param by domain', Test_SP_ParamType_Dom);
-  DoTest('SP: GUID type of param by name', Test_SP_ParamType_Name);
-  DoTest('SP: GUID type of field by type', Test_SP_Type_Type);
-  DoTest('SP: GUID type of field by domain (false)', Test_SP_Type_Dom);
-  DoTest('SP: GUID type of field by name', Test_SP_Type_Name);
-  DoTest('SP: set param GUID value, type ftGUID', Test_SP_ParamGUIDSetVal);
-  DoTest('SP: set param GUID value, type ftBytes', Test_SP_ParamBytesSetVal);
+    try
+      Query := CreateQuery;
+      SP := TZStoredProc.Create(nil);
+      SP.Connection := Connection;
 
-  FreeAndNil(Query);
-  FreeAndNil(SP);
+      // Now run tests
+      DoTest('Query from table: GUID type by type', Test_QT_Type_Type);
+      DoTest('Query from table: GUID type by domain', Test_QT_Type_Dom);
+      DoTest('Query from table: GUID type by field name', Test_QT_Type_FName);
+      DoTest('Query from table: get GUID value', Test_QT_GetVal);
+      DoTest('Query from table: set GUID value', Test_QT_SetVal);
+      DoTest('Query from table: set param GUID value', Test_QT_ParamSetVal);
+      DoTest('Query from SP: GUID type by type', Test_QSP_Type_Type);
+      DoTest('Query from SP: GUID type by domain (false)', Test_QSP_Type_Dom);
+      DoTest('Query from SP: GUID type by field name', Test_QSP_Type_FName);
+      DoTest('SP: GUID type of param by type', Test_SP_ParamType_Type);
+      DoTest('SP: GUID type of param by domain', Test_SP_ParamType_Dom);
+      DoTest('SP: GUID type of param by name', Test_SP_ParamType_Name);
+      DoTest('SP: GUID type of field by type', Test_SP_Type_Type);
+      DoTest('SP: GUID type of field by domain (false)', Test_SP_Type_Dom);
+      DoTest('SP: GUID type of field by name', Test_SP_Type_Name);
+      DoTest('SP: set param GUID value, type ftGUID', Test_SP_ParamGUIDSetVal);
+      DoTest('SP: set param GUID value, type ftBytes', Test_SP_ParamBytesSetVal);
+    finally
+      if assigned(Query) then
+        FreeAndNil(Query);
+      if Assigned(Sp) then
+        FreeAndNil(SP);
+    end;
+  finally
+    Connection.Disconnect;
+  end;
 end;
 
 procedure TZInterbaseTestGUIDS.CheckEquals(expected, actual: TFieldType;

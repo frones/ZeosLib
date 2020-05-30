@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -86,12 +86,13 @@ type
   {** Represents a MYSQL specific connection interface. }
   IZMySQLConnection = interface (IZConnection)
     ['{68E33DD3-4CDC-4BFC-8A28-E9F2EE94E457}']
-    function GetConnectionHandle: PPMYSQL;
+    function GetConnectionHandleAddress: PPMYSQL;
     function GetDatabaseName: String;
     function MySQL_FieldType_Bit_1_IsBoolean: Boolean;
     function SupportsFieldTypeBit: Boolean;
     function GetPlainDriver: TZMySQLPlainDriver;
     procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString);
+    function GetByteBufferAddress: PByteBuffer;
   end;
 
   {** Implements MySQL Database Connection. }
@@ -137,7 +138,7 @@ type
     function GetClientVersion: Integer; override;
     function GetHostVersion: Integer; override;
     {END ADDED by fduenas 15-06-2006}
-    function GetConnectionHandle: PPMYSQL;
+    function GetConnectionHandleAddress: PPMYSQL;
     function EscapeString(const Value: RawByteString): RawByteString; overload; override;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; override;
     procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); overload;
@@ -986,7 +987,7 @@ end;
   Gets a reference to MySQL connection handle.
   @return a reference to MySQL connection handle.
 }
-function TZMySQLConnection.GetConnectionHandle: PPMYSQL;
+function TZMySQLConnection.GetConnectionHandleAddress: PPMYSQL;
 begin
   Result := @FHandle;
 end;

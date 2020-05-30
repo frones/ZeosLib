@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -75,6 +75,7 @@ type
     FIsSelectSQL: Boolean;
     FCommandType: CommandTypeEnum;
     FRC: OleVariant;
+    FByteBuffer: PByteBuffer;
   protected
     function CreateResultSet: IZResultSet; virtual;
     procedure ReleaseConnection; override;
@@ -191,6 +192,8 @@ constructor TZAbstractAdoStatement.CreateWithCommandType(const Connection: IZCon
 begin
   inherited Create(Connection, SQL, Info);
   FCommandType := CommandType;
+  FAdoConnection := Connection as IZAdoConnection;
+  FByteBuffer := FAdoConnection.GetByteBufferAddress;
 end;
 
 {**
@@ -319,7 +322,6 @@ begin
   if FAdoCommand = nil then begin
     FAdoCommand := CoCommand.Create;
     FAdoCommand.CommandText := WSQL;
-    FAdoConnection := Connection as IZAdoConnection;
     FAdoCommand._Set_ActiveConnection(FAdoConnection.GetAdoConnection);
   end;
   if Not Prepared then begin//prevent PrepareInParameters
@@ -574,7 +576,8 @@ begin
                   BCD2Decimal(AValue, @V);
 set_var:          FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
                 end;
-    else        SetPWideChar(Index, @fWBuffer[0], ZSysUtils.BcdToUni(AValue, @fWBuffer[0], '.'));
+    else        SetPWideChar(Index, PWideChar(FByteBuffer), ZSysUtils.BcdToUni(AValue,
+                  PWideChar(FByteBuffer), '.'));
   end;
 end;
 
@@ -684,8 +687,8 @@ begin
     case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, L, stBytes) of
       adGUID: begin
                 Assert(L=SizeOf(TGUID), 'UID-Size missmatch');
-                GUIDToBuffer(@UID.D1, PWideChar(@fWBuffer[0]), [guidWithBrackets, guidSet0Term]);
-                SetPWideChar(Index, @fWBuffer[0], 38); //ad GUID is a BSTR?
+                GUIDToBuffer(@UID.D1, PWideChar(fByteBuffer), [guidWithBrackets, guidSet0Term]);
+                SetPWideChar(Index, PWideChar(fByteBuffer), 38); //ad GUID is a BSTR?
               end;
       adBSTR: begin
                 fUniTemp := ZDbcUtils.GetSQLHexWideString(P, Length(AValue), True);
@@ -762,8 +765,8 @@ begin
 set_var:          FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
                 end;
     else        begin
-                  CurrToUnicode(AValue, @fWBuffer[0], @PD);
-                  SetPWideChar(Index, @fWBuffer[0], PWideChar(PD) - PWideChar(@fWBuffer[0]));
+                  CurrToUnicode(AValue, PWideChar(fByteBuffer), @PD);
+                  SetPWideChar(Index, PWideChar(fByteBuffer), PWideChar(PD) - PWideChar(fByteBuffer));
                 end;
   end;
 end;
@@ -787,11 +790,12 @@ jmp_Assign:       V := null;
                   FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
                 end;
     adBSTR, adChar, adVarChar, adLongVarChar, adWChar, adVarWChar,
-    adLongVarWChar: SetPWideChar(Index, @fWBuffer[0], DateToUni(AValue.Year, AValue.Month,
-      AValue.Day, @fWBuffer[0], ConSettings.WriteFormatSettings.DateFormat, False, AValue.IsNegative));
+    adLongVarWChar: SetPWideChar(Index, PWideChar(fByteBuffer),
+      DateToUni(AValue.Year, AValue.Month, AValue.Day, PWideChar(fByteBuffer),
+      ConSettings.WriteFormatSettings.DateFormat, False, AValue.IsNegative));
     else           begin
-                      TryDateToDateTime(AValue, PDateTime(@fWBuffer[0])^);
-                      SetDouble(Index, PDouble(@fWBuffer[0])^);
+                      TryDateToDateTime(AValue, PDateTime(fByteBuffer)^);
+                      SetDouble(Index, PDouble(fByteBuffer)^);
                     end;
   end;
 end;
@@ -839,7 +843,7 @@ begin
                   tagVariant(V).dblVal := AValue;
 set_var:          FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
                 end;
-    else        SetPWideChar(Index, @fWBuffer[0], ZSysUtils.FloatToUnicode(AValue, @fWBuffer[0]));
+    else        SetPWideChar(Index, PWideChar(fByteBuffer), ZSysUtils.FloatToUnicode(AValue, PWideChar(fByteBuffer)));
   end;
 end;
 
@@ -885,15 +889,15 @@ begin
                   tagVariant(V).fltVal := AValue;
 set_var:          FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
                 end;
-    else        SetPWideChar(Index, @fWBuffer[0], ZSysUtils.FloatToUnicode(AValue, @fWBuffer[0]));
+    else        SetPWideChar(Index, PWideChar(fByteBuffer), ZSysUtils.FloatToUnicode(AValue, PWideChar(fByteBuffer)));
   end;
 end;
 
 procedure TZAdoPreparedStatement.SetGUID(Index: Integer;
   const AValue: TGUID);
 begin
-  GUIDToBuffer(@AValue.D1, PWideChar(@fWBuffer[0]), [guidWithBrackets, guidSet0Term]);
-  SetPWideChar(Index, @fWBuffer[0], 38); //ad GUID is a BSTR?
+  GUIDToBuffer(@AValue.D1, PWideChar(fByteBuffer), [guidWithBrackets, guidSet0Term]);
+  SetPWideChar(Index, PWideChar(fByteBuffer), 38); //ad GUID is a BSTR?
 end;
 
 procedure TZAdoPreparedStatement.SetInt(Index, AValue: Integer);
@@ -955,8 +959,8 @@ begin
 set_var:          FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
                 end;
     else        begin
-                  IntToUnicode(AValue, @fWBuffer[0], @P);
-                  SetPWideChar(Index, @fWBuffer[0], P - PWideChar(@fWBuffer[0]));
+                  IntToUnicode(AValue, PWideChar(fByteBuffer), @P);
+                  SetPWideChar(Index, PWideChar(fByteBuffer), P - PWideChar(fByteBuffer));
                 end;
   end;
 end;
@@ -1022,8 +1026,8 @@ begin
 set_var:          FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
                 end;
     else        begin
-                  IntToUnicode(AValue, @fWBuffer[0], @P);
-                  SetPWideChar(Index, @fWBuffer[0], P - PWideChar(@fWBuffer[0]));
+                  IntToUnicode(AValue, PWideChar(fByteBuffer), @P);
+                  SetPWideChar(Index, PWideChar(fByteBuffer), P - PWideChar(fByteBuffer));
                   Exit;
                 end;
   end;
@@ -1202,12 +1206,12 @@ jmp_assign:       V := null;
                   FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
                 end;
     adBSTR, adChar, adVarChar, adLongVarChar, adWChar, adVarWChar,
-    adLongVarWChar: SetPWideChar(Index, @fWBuffer[0], TimeToUni(AValue.Hour,
-        AValue.Minute, AValue.Second, AValue.Fractions, @fWBuffer[0],
+    adLongVarWChar: SetPWideChar(Index, PWideChar(fByteBuffer), TimeToUni(AValue.Hour,
+        AValue.Minute, AValue.Second, AValue.Fractions, PWideChar(fByteBuffer),
         ConSettings.WriteFormatSettings.TimeFormat, False, AValue.IsNegative));
     else           begin
-                      TryTimeToDateTime(AValue, PDateTime(@fWBuffer[0])^);
-                      SetDouble(Index, PDouble(@fWBuffer[0])^);
+                      TryTimeToDateTime(AValue, PDateTime(fByteBuffer)^);
+                      SetDouble(Index, PDouble(fByteBuffer)^);
                     end;
   end;
 end;
@@ -1231,13 +1235,13 @@ jmp_Assign:   V := null;
               FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
             end;
     adBSTR, adChar, adVarChar, adLongVarChar, adWChar, adVarWChar,
-    adLongVarWChar: SetPWideChar(Index, @fWBuffer[0], DateTimeToUni(AValue.Hour,
+    adLongVarWChar: SetPWideChar(Index, PWideChar(fByteBuffer), DateTimeToUni(AValue.Hour,
         AValue.Minute, AValue.Second, AValue.Fractions, AValue.Hour, AValue.Minute,
-        AValue.Fractions, @fWBuffer[0],
+        AValue.Fractions, PWideChar(fByteBuffer),
         ConSettings.WriteFormatSettings.TimeFormat, False, AValue.IsNegative));
     else           begin
-                      TryTimeStampToDateTime(AValue, PDateTime(@fWBuffer[0])^);
-                      SetDouble(Index, PDouble(@fWBuffer[0])^);
+                      TryTimeStampToDateTime(AValue, PDateTime(fByteBuffer)^);
+                      SetDouble(Index, PDouble(fByteBuffer)^);
                     end;
   end;
 end;
@@ -1300,8 +1304,8 @@ begin
 set_var:          FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
                 end;
     else        begin
-                  IntToUnicode(AValue, @fWBuffer[0], @P);
-                  SetPWideChar(Index, @fWBuffer[0], P - PWideChar(@fWBuffer[0]));
+                  IntToUnicode(AValue, PWideChar(fByteBuffer), @P);
+                  SetPWideChar(Index, PWideChar(fByteBuffer), P - PWideChar(fByteBuffer));
                 end;
   end;
 end;
@@ -1358,8 +1362,8 @@ begin
 set_var:          FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
                 end;
     else        begin
-                  IntToUnicode(AValue, @fWBuffer[0], @P);
-                  SetPWideChar(Index, @fWBuffer[0], P - PWideChar(@fWBuffer[0]));
+                  IntToUnicode(AValue, PWideChar(fByteBuffer), @P);
+                  SetPWideChar(Index, PWideChar(fByteBuffer), P - PWideChar(fByteBuffer));
                 end;
   end;
 end;

@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -1159,7 +1159,7 @@ begin
         Result := CompareStringW(LOCALE_USER_DEFAULT, 0, P2, L1, P1, L1) = {$IFDEF FPC}2{$ELSE}CSTR_EQUAL{$ENDIF};
         {$ELSE}
           {$IFDEF UNICODE}
-          Result := SysUtils.AnsiStrLComp(P2, P1, L1) = 0;
+          Result := SysUtils.AnsiStrLComp(PWideChar(P2), PWideChar(P1), L1) = 0;
           {$ELSE} //https://www.freepascal.org/docs-html/rtl/sysutils/widecomparestr.html
             if L2 > L1 then
               WValue2 := Copy(WValue2, 1, L2);

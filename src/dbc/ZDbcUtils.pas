@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -69,12 +69,6 @@ type
   end;
   PPreparablePrefixTokens = ^TPreparablePrefixTokens;
   TPreparablePrefixTokens = array of TPreparablePrefixToken;
-
-  PRawBuff = ^TRawBuff;
-  TRawBuff = record
-    Pos: Word;
-    Buf: array[Byte] of AnsiChar;
-  end;
 
   TUCS2Buff = record
     Pos: Word;
@@ -272,21 +266,6 @@ procedure SetConvertFunctions(ConSettings: PZConSettings);
 function CreateUnsupportedParameterTypeException(Index: Integer; ParamType: TZSQLType): EZSQLException;
 
 function IsNullFromArray(ZArray: PZArray; Index: Cardinal): Boolean;
-
-procedure ToBuff(const Value: RawByteString; var Buf: TRawBuff; var Result: RawByteString); overload;
-procedure ToBuff(Value: Pointer; L: LengthInt; var Buf: TRawBuff; var Result: RawByteString); overload;
-procedure ToBuff(Value: AnsiChar; var Buf: TRawBuff; var Result: RawByteString); overload;
-procedure ToBuff(const Value: ZWideString; var Buf: TUCS2Buff; var Result: ZWideString); overload;
-procedure ToBuff(Value: WideChar; var Buf: TUCS2Buff; var Result: ZWideString); overload;
-
-procedure ReplaceOrAddLastChar(cOld, cNew: AnsiChar; var Buf: TRawBuff; var Result: RawByteString); overload;
-procedure ReplaceOrAddLastChar(cOld, cNew: WideChar; var Buf: TUCS2Buff; var Result: ZWideString); overload;
-
-procedure CancelLastChar(var Buf: TRawBuff; var Result: RawByteString); overload;
-procedure CancelLastChar(var Buf: TUCS2Buff; var Result: ZWideString); overload;
-
-procedure FlushBuff(var Buf: TRawBuff; var Result: RawByteString); overload;
-procedure FlushBuff(var Buf: TUCS2Buff; var Result: ZWideString); overload;
 
 function GetAbsorbedTrailingSpacesLen(Buf: PAnsiChar; Len: LengthInt): LengthInt; {$IFDEF WITH_INLINE}inline;{$ENDIF} overload;
 function GetAbsorbedTrailingSpacesLen(Buf: PWideChar; Len: LengthInt): LengthInt; {$IFDEF WITH_INLINE}inline;{$ENDIF} overload;
@@ -1780,219 +1759,6 @@ begin
           raise EZSQLException.Create(SUnsupportedParameterType);
       end
   end else Result := True;
-end;
-
-procedure ToBuff(const Value: RawByteString; var Buf: TRawBuff; var Result: RawByteString); overload;
-var
-  P: PAnsiChar;
-  L, LRes: LengthInt;
-begin
-  L := Length(Value){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
-  if L <= 0 then Exit;
-  if L < (SizeOf(Buf.Buf)-Buf.Pos) then begin
-    P := Pointer(Value);
-    if L = 1 //happens very often (comma,space etc) -> worth it the check
-    then Buf.Buf[Buf.Pos] := AnsiChar(P^)
-    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Buf.Buf[Buf.Pos], L);
-    Inc(Buf.Pos, L);
-  end else begin
-    LRes := Length(Result)+Buf.Pos+L;
-    SetLength(Result, LRes{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
-    P := Pointer(Result);
-    {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-    PByte(P+LRes)^ := Ord(#0);
-    {$ENDIF}
-    Inc(P, LRes-Buf.Pos-L);
-    if Buf.Pos > 0 then begin
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos);
-      Inc(P, Buf.Pos);
-      Buf.Pos := 0;
-    end;
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, P^, L);
-  end;
-end;
-
-procedure ToBuff(Value: Pointer; L: LengthInt; var Buf: TRawBuff; var Result: RawByteString); overload;
-var
-  P: PAnsiChar;
-  LRes: LengthInt;
-begin
-  if L <= 0 then Exit;
-  if L < (SizeOf(Buf.Buf)-Buf.Pos) then begin
-    P := Pointer(Value);
-    if L = 1 //happens very often (comma,space etc) -> worth it the check
-    then Buf.Buf[Buf.Pos] := AnsiChar(P^)
-    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Buf.Buf[Buf.Pos], L);
-    Inc(Buf.Pos, L);
-  end else begin
-    LRes := Length(Result)+Buf.Pos+L;
-    SetLength(Result, LRes{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
-    P := Pointer(Result);
-    {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-    PByte(P+LRes)^ := Ord(#0);
-    {$ENDIF}
-    Inc(P, LRes-Buf.Pos-L);
-    if Buf.Pos > 0 then begin
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos);
-      Inc(P, Buf.Pos);
-      Buf.Pos := 0;
-    end;
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, P^, L);
-  end;
-end;
-
-procedure ToBuff(Value: AnsiChar; var Buf: TRawBuff; var Result: RawByteString); overload;
-var
-  P: PAnsiChar;
-  L: LengthInt;
-begin
-  if Buf.Pos < (SizeOf(Buf.Buf)) then begin
-    Buf.Buf[Buf.Pos] := Value;
-    Inc(Buf.Pos);
-  end else begin
-    L := Length(Result)+Buf.Pos+1;
-    SetLength(Result, L{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
-    P := Pointer(Result);
-    {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-    PByte(P+L)^ := Ord(#0);
-    {$ENDIF}
-    Inc(P, Length(Result)-Buf.Pos-1);
-    if Buf.Pos > 0 then begin
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos);
-      Inc(P, Buf.Pos);
-      Buf.Pos := 0;
-    end;
-    AnsiChar(P^) := Value;
-  end;
-end;
-
-procedure ToBuff(const Value: ZWideString; var Buf: TUCS2Buff; var Result: ZWideString); overload;
-var
-  P: PWideChar;
-  L: LengthInt;
-begin
-  L := Length(Value);
-  if L <= 0 then Exit;
-  if L < ((SizeOf(Buf.Buf) shr 1)-Buf.Pos) then begin
-    P := Pointer(Value);
-    if L = 1 //happens very often (comma,space etc) -> worth it the check
-    then Buf.Buf[Buf.Pos] := P^
-    else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Buf.Buf[Buf.Pos], L shl 1);
-    Inc(Buf.Pos, L);
-  end else begin
-    SetLength(Result, Length(Result)+Buf.Pos+L);
-    P := Pointer(Result);
-    Inc(P, Length(Result)-Buf.Pos-L);
-    if Buf.Pos > 0 then begin
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos shl 1);
-      Inc(P, Buf.Pos);
-      Buf.Pos := 0;
-    end;
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, P^, L shl 1);
-  end;
-end;
-
-procedure ToBuff(Value: WideChar; var Buf: TUCS2Buff; var Result: ZWideString); overload;
-var
-  P: PWideChar;
-  L: LengthInt;
-begin
-  if (Buf.Pos < (SizeOf(Buf.Buf) shr 1)) then begin
-    Buf.Buf[Buf.Pos] := Value;
-    Inc(Buf.Pos);
-  end else begin
-    L := Length(Result)+Buf.Pos+1;
-    SetLength(Result, L);
-    P := Pointer(Result);
-    Inc(P, L-Buf.Pos-1);
-    if Buf.Pos > 0 then begin
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos shl 1);
-      Inc(P, Buf.Pos);
-      Buf.Pos := 0;
-    end;
-    P^ := Value;
-  end;
-end;
-
-procedure FlushBuff(var Buf: TRawBuff; var Result: RawByteString); overload;
-var P: PAnsiChar;
-  L: LengthInt;
-begin
-  if Buf.Pos > 0 then begin
-    L := Length(Result)+Buf.Pos;
-    SetLength(Result, L{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
-    P := Pointer(Result);
-    {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-    PByte(P+L)^ := Ord(#0);
-    {$ENDIF}
-    Inc(P, L-Buf.Pos);
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos);
-    Buf.Pos := 0;
-  end;
-end;
-
-procedure FlushBuff(var Buf: TUCS2Buff; var Result: ZWideString); overload;
-var P: PWideChar;
-  L: LengthInt;
-begin
-  if Buf.Pos > 0 then begin
-    L := Length(Result)+Buf.Pos;
-    SetLength(Result, L);
-    P := Pointer(Result);
-    Inc(P, L-Buf.Pos);
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buf.Buf[0], P^, Buf.Pos shl 1);
-    Buf.Pos := 0;
-  end;
-end;
-
-procedure ReplaceOrAddLastChar(cOld, cNew: AnsiChar; var Buf: TRawBuff; var Result: RawByteString);
-var P: PAnsiChar;
-begin
-  P := nil;
-  if (Buf.Pos > 0) and (Buf.Buf[Buf.Pos-1] = cOld) then
-    P := @Buf.Buf[Buf.Pos-1]
-  else if (Buf.Pos = 0) and (Pointer(Result) <> nil) then begin
-    P := Pointer(Result);
-    if PByte(P + Length(Result) -1)^ = Ord(cOld)
-    then P := P+Length(Result) -1
-    else P := nil;
-  end;
-  if P = nil
-  then ToBuff(cNew, Buf, Result)
-  else PByte(P)^ := Ord(cNew);
-end;
-
-procedure CancelLastChar(var Buf: TRawBuff; var Result: RawByteString);
-begin
-  if (Buf.Pos > 0) then
-    Dec(Buf.Pos)
-  else if (Buf.Pos = 0) and (Pointer(Result) <> nil) then
-    Result := Copy(Result, 1, Length(Result)-1);
-end;
-
-procedure CancelLastChar(var Buf: TUCS2Buff; var Result: ZWideString); overload;
-begin
-  if (Buf.Pos > 0) then
-    Dec(Buf.Pos)
-  else if (Buf.Pos = 0) and (Pointer(Result) <> nil) then
-    Result := Copy(Result, 1, Length(Result)-1);
-end;
-
-procedure ReplaceOrAddLastChar(cOld, cNew: WideChar; var Buf: TUCS2Buff; var Result: ZWideString);
-var P: PWideChar;
-begin
-  P := nil;
-  if (Buf.Pos > 0) and (Buf.Buf[Buf.Pos-1] = cOld) then
-    P := @Buf.Buf[Buf.Pos-1]
-  else if (Buf.Pos = 0) and (Pointer(Result) <> nil) then begin
-    P := Pointer(Result);
-    if PWord(P + Length(Result) -1)^ = Ord(cOld)
-    then P := P+Length(Result) -1
-    else P := nil;
-  end;
-  if P = nil
-  then ToBuff(cNew, Buf, Result)
-  else PWord(P)^ := Ord(cNew);
 end;
 
 function GetAbsorbedTrailingSpacesLen(Buf: PAnsiChar; Len: LengthInt): LengthInt;

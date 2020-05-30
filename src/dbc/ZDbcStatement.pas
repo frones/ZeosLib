@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -95,8 +95,6 @@ type
   protected
     FLastResultSet: IZResultSet;
     FCursorName: RawByteString;
-    fWBuffer: array[Byte] of WideChar;
-    fABuffer: array[Byte] of AnsiChar;
     FWSQL: ZWideString;
     FaSQL: RawByteString;
     FStatementId : Integer;
@@ -525,6 +523,7 @@ type
   private
     FStoredProcName: String;
     FCharRec: TZCharRec;
+    fBCDTemp: TBCD;
     procedure BindSignedOrdinal(Index: Integer; SQLType: TZSQLType; Value: NativeInt);
     procedure BindUnsignedOrdinal(Index: Integer; SQLType: TZSQLType; Value: NativeUint);
     procedure BindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double);
@@ -4026,8 +4025,8 @@ begin
       stFloat, stDouble, stDate, stTime, stTimeStamp: BindList.Put(Index, Bind.SQLType, P8Bytes(@Value));
       stCurrency: SetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
       stBigDecimal: begin
-          ZSysUtils.Double2BCD(Value, PBCD(@fABuffer[0])^);
-          BindList.Put(Index, PBCD(@fABuffer[0])^);
+          ZSysUtils.Double2BCD(Value, fBCDTemp);
+          BindList.Put(Index, fBCDTemp);
         end;
       else FBindList.Put(Index, SQLType, P8Bytes(@Value));
     end;
@@ -4065,8 +4064,8 @@ begin
       stFloat, stDouble, stDate, stTime, stTimeStamp: SetDouble(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
       stCurrency: SetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
       stBigDecimal: begin
-          ZSysUtils.ScaledOrdinal2Bcd(Value, 0, PBCD(@fABuffer[0])^);
-          BindList.Put(Index, PBCD(@fABuffer[0])^);
+          ZSysUtils.ScaledOrdinal2Bcd(Value, 0, fBCDTemp);
+          BindList.Put(Index, fBCDTemp);
         end;
       else FBindList.Put(Index, SQLType, P4Bytes(@Value));
     end;
@@ -4096,8 +4095,8 @@ begin
       stFloat, stDouble, stDate, stTime, stTimeStamp: SetDouble(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
       stCurrency: SetCurrency(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
       stBigDecimal: begin
-          ZSysUtils.ScaledOrdinal2Bcd(Value, 0, PBCD(@fABuffer[0])^, False);
-          BindList.Put(Index, PBCD(@fABuffer[0])^);
+          ZSysUtils.ScaledOrdinal2Bcd(Value, 0, fBCDTemp, False);
+          BindList.Put(Index, fBCDTemp);
         end;
       else FBindList.Put(Index, SQLType, P4Bytes(@Value));
     end;
@@ -4893,8 +4892,8 @@ begin
       stFloat, stDouble, stDate, stTime, stTimeStamp: BindDouble(ParameterIndex, Bind.SQLType, Value);
       stCurrency: FBindList.Put(ParameterIndex, stCurrency, P8Bytes(@Value));
       stBigDecimal: begin
-          ScaledOrdinal2BCD(PInt64(@Value)^, 0, PBCD(@fABuffer[0])^);
-          BindList.Put(ParameterIndex, PBCD(@fABuffer[0])^);
+          ScaledOrdinal2BCD(PInt64(@Value)^, 0, fBCDTemp);
+          BindList.Put(ParameterIndex, fBCDTemp);
         end;
       else FBindList.Put(ParameterIndex, stCurrency, P8Bytes(@Value));;
     end;
@@ -4976,8 +4975,8 @@ begin
       stFloat, stDouble, stDate, stTime, stTimeStamp: SetDouble(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
       stCurrency: SetCurrency(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
       stBigDecimal: begin
-          ZSysUtils.ScaledOrdinal2Bcd(Value, 0, PBCD(@fABuffer[0])^);
-          BindList.Put(ParameterIndex, PBCD(@fABuffer[0])^);
+          ZSysUtils.ScaledOrdinal2Bcd(Value, 0, fBCDTemp);
+          BindList.Put(ParameterIndex, fBCDTemp);
         end;
       else FBindList.Put(ParameterIndex, stLong, P8Bytes(@Value));
     end;
@@ -5097,8 +5096,8 @@ begin
       stFloat, stDouble, stDate, stTime, stTimeStamp: SetDouble(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
       stCurrency: SetCurrency(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
       stBigDecimal: begin
-          ZSysUtils.ScaledOrdinal2Bcd(Value, 0, PBCD(@fABuffer[0])^, False);
-          BindList.Put(ParameterIndex, PBCD(@fABuffer[0])^);
+          ZSysUtils.ScaledOrdinal2Bcd(Value, 0, fBCDTemp, False);
+          BindList.Put(ParameterIndex, fBCDTemp);
         end;
       else FBindList.Put(ParameterIndex, stULong, P8Bytes(@Value));
     end;

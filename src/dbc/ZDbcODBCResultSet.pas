@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -98,7 +98,7 @@ type
   TAbstractODBCResultSet = Class(TZAbstractReadOnlyResultSet)
   private
     fPHSTMT: PSQLHSTMT; //direct reference the handle of the stmt/metadata
-    fConnection: IZODBCConnection;
+    FODBCConnection: IZODBCConnection;
     fPlainDriver: TZODBC3PlainDriver;
     fZBufferSize, fChunkSize: Integer;
     fEnhancedColInfo, FIsMetaData: Boolean;
@@ -110,9 +110,9 @@ type
     fFreeHandle, fCursorOpened: Boolean;
     fSQL_GETDATA_EXTENSIONS: SQLUINTEGER;
     fFirstGetDataIndex, fLastGetDataIndex: Integer;
-    FTinyBuffer: array[Byte] of Byte;
     FClientCP: Word;
     FTempLob: IZBlob;
+    FByteBuffer: PByteBuffer;
     procedure LoadUnBoundColumns;
     function CreateODBCConvertError(ColumnIndex: Integer; DataType: Word): EZODBCConvertError;
   protected
@@ -265,7 +265,7 @@ implementation
 uses Math,
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   ZMessages, ZEncoding, ZDbcProperties,
-  ZDbcUtils;
+  ZDbcUtils, ZDbcLogging;
 
 { TAbstractODBCResultSet }
 
@@ -273,8 +273,8 @@ procedure TAbstractODBCResultSet.CheckStmtError(RETCODE: SQLRETURN);
   procedure HandleError;
   begin
     if Statement <> nil
-    then CheckODBCError(RETCODE, fPHSTMT^, SQL_HANDLE_STMT, Statement.GetSQL, Self, fConnection)
-    else CheckODBCError(RETCODE, fPHSTMT^, SQL_HANDLE_STMT, 'MetaData-call', Self, fConnection);
+    then FODBCConnection.HandleStmtErrorOrWarning(RETCODE, fPHSTMT^, Statement.GetSQL, lcExecute, Self)
+    else FODBCConnection.HandleStmtErrorOrWarning(RETCODE, fPHSTMT^, 'MetaData-call', lcExecute, Self);
   end;
 begin
   if RETCODE <> SQL_SUCCESS then
@@ -324,7 +324,7 @@ begin
         stCurrency:   JSONWriter.AddCurr64(ODBCNumeric2Curr(fColDataPtr));
         stBigDecimal: begin
                         SQLNumeric2BCD(fColDataPtr, BCD, 16);
-                        JSONWriter.AddNoJSONEscape(@fTinyBuffer[0], BCDToRaw(BCD, @fTinyBuffer[0], '.'));
+                        JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), BCDToRaw(BCD, PAnsiChar(FByteBuffer), '.'));
                       end;
         stDouble: JSONWriter.AddDouble(PDouble(fColDataPtr)^);
         stBytes:      JSONWriter.WrBase64(fColDataPtr,fStrLen_or_Ind,True);
@@ -341,13 +341,13 @@ begin
                         end else
                           JSONWriter.Add('"');
                         if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2) then
-                          TimeToIso8601PChar(@FTinyBuffer[0], True, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
+                          TimeToIso8601PChar(PUTF8Char(FByteBuffer), True, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                             PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
                             PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction div 1000000, 'T', jcoMilliseconds in JSONComposeOptions)
                         else
-                          TimeToIso8601PChar(@FTinyBuffer[0], True, PSQL_TIME_STRUCT(fColDataPtr)^.hour,
+                          TimeToIso8601PChar(PUTF8Char(FByteBuffer), True, PSQL_TIME_STRUCT(fColDataPtr)^.hour,
                             PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0, 'T', jcoMilliseconds in JSONComposeOptions);
-                        JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],8+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                        JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),9+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                         if jcoMongoISODate in JSONComposeOptions
                         then JSONWriter.AddShort('Z)"')
                         else JSONWriter.Add('"');
@@ -361,9 +361,9 @@ begin
                           JSONWriter.Add('"');
                         if PSQL_DATE_STRUCT(fColDataPtr)^.year < 0 then
                           JSONWriter.Add('-');
-                        DateToIso8601PChar(@FTinyBuffer[0], True, Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
+                        DateToIso8601PChar(PUTF8Char(FByteBuffer), True, Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
                           PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day);
-                        JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],10);
+                        JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),10);
                         if jcoMongoISODate in JSONComposeOptions
                         then JSONWriter.AddShort('Z")')
                         else JSONWriter.Add('"');
@@ -377,11 +377,11 @@ begin
                           JSONWriter.Add('"');
                         if PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year < 0 then
                           JSONWriter.Add('-');
-                        DateToIso8601PChar(@FTinyBuffer[0], True, Abs(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year),
+                        DateToIso8601PChar(PUTF8Char(FByteBuffer), True, Abs(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year),
                           PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.month, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.day);
-                        TimeToIso8601PChar(@FTinyBuffer[10], True, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute,
+                        TimeToIso8601PChar(PUTF8Char(FByteBuffer)+10, True, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute,
                           PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction, 'T', jcoMilliseconds in JSONComposeOptions);
-                        JSONWriter.AddNoJSONEscape(@FTinyBuffer[0],19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                        JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                         if jcoMongoISODate in JSONComposeOptions
                         then JSONWriter.AddShort('Z")')
                         else JSONWriter.Add('"');
@@ -968,66 +968,66 @@ begin
                       Len := 5;
                     end;
       stByte:       begin
-                      IntToRaw(Cardinal(PByte(fColDataPtr)^), @FTinyBuffer[0], @Result);
+                      IntToRaw(Cardinal(PByte(fColDataPtr)^), PAnsiChar(FByteBuffer), @Result);
                       goto Set_Results;
                     end;
       stShort:      begin
-                      IntToRaw(Integer(PShortInt(fColDataPtr)^), @FTinyBuffer[0], @Result);
+                      IntToRaw(Integer(PShortInt(fColDataPtr)^), PAnsiChar(FByteBuffer), @Result);
                       goto Set_Results;
                     end;
       stWord:        begin
-                      IntToRaw(Cardinal(PWord(fColDataPtr)^), @FTinyBuffer[0], @Result);
+                      IntToRaw(Cardinal(PWord(fColDataPtr)^), PAnsiChar(FByteBuffer), @Result);
                       goto Set_Results;
                     end;
       stSmall:      begin
-                      IntToRaw(Integer(PSmallInt(fColDataPtr)^), @FTinyBuffer[0], @Result);
+                      IntToRaw(Integer(PSmallInt(fColDataPtr)^), PAnsiChar(FByteBuffer), @Result);
                       goto Set_Results;
                     end;
       stLongWord:   begin
-                      IntToRaw(PCardinal(fColDataPtr)^, @FTinyBuffer[0], @Result);
+                      IntToRaw(PCardinal(fColDataPtr)^, PAnsiChar(FByteBuffer), @Result);
                       goto Set_Results;
                     end;
       stInteger:    begin
-                      IntToRaw(PInteger(fColDataPtr)^, @FTinyBuffer[0], @Result);
+                      IntToRaw(PInteger(fColDataPtr)^, PAnsiChar(FByteBuffer), @Result);
                       goto Set_Results;
                     end;
       stULong:      begin
-                      IntToRaw(PUInt64(fColDataPtr)^, @FTinyBuffer[0], @Result);
+                      IntToRaw(PUInt64(fColDataPtr)^, PAnsiChar(FByteBuffer), @Result);
                       goto Set_Results;
                     end;
       stLong:       begin
-                      IntToRaw(PInt64(fColDataPtr)^, @FTinyBuffer[0], @Result);
+                      IntToRaw(PInt64(fColDataPtr)^, PAnsiChar(FByteBuffer), @Result);
                       goto Set_Results;
                     end;
       stFloat:      begin
-                      Len := FloatToSqlRaw(PSingle(fColDataPtr)^, @FTinyBuffer[0]);
-                      Result := @FTinyBuffer[0];
+                      Len := FloatToSqlRaw(PSingle(fColDataPtr)^, PAnsiChar(FByteBuffer));
+                      Result := PAnsiChar(FByteBuffer);
                     end;
       stCurrency:   begin
-                      CurrToRaw(ODBCNumeric2Curr(fColDataPtr), @FTinyBuffer[0], @Result);
-Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
-                      Result := @FTinyBuffer[0];
+                      CurrToRaw(ODBCNumeric2Curr(fColDataPtr), PAnsiChar(FByteBuffer), @Result);
+Set_Results:          Len := Result - PAnsiChar(FByteBuffer);
+                      Result := PAnsiChar(FByteBuffer);
                     end;
       stBigDecimal: begin
-                      Result := @FTinyBuffer[0];
+                      Result := PAnsiChar(FByteBuffer);
                       Len := SQL_MAX_NUMERIC_LEN;
                       SQLNumeric2Raw(fColDataPtr, Result, Len);
                     end;
       stDouble: begin
-                      Len := FloatToSqlRaw(PDouble(fColDataPtr)^, @FTinyBuffer[0]);
-                      Result := @FTinyBuffer[0];
+                      Len := FloatToSqlRaw(PDouble(fColDataPtr)^, PAnsiChar(FByteBuffer));
+                      Result := PAnsiChar(FByteBuffer);
                     end;
       stBytes:      begin
                       Result := fColDataPtr;
                       len := fStrLen_or_Ind;
                     end;
       stGUID:       begin
-                      GUIDToBuffer(fColDataPtr, PWideChar(@FTinyBuffer[0]), [guidWithBrackets]);
-                      Result := @FTinyBuffer[0];
+                      GUIDToBuffer(fColDataPtr, PAnsiChar(FByteBuffer), [guidWithBrackets]);
+                      Result := PAnsiChar(FByteBuffer);
                       Len := 38;
                     end;
       stTime:       begin
-                      Result := @FTinyBuffer[0];
+                      Result := PAnsiChar(FByteBuffer);
                       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2)
                       then Len := TimeToRaw(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
@@ -1038,13 +1038,13 @@ Set_Results:          Len := Result - PAnsiChar(@FTinyBuffer[0]);
                           ConSettings^.DisplayFormatSettings.TimeFormat, False, False);
                     end;
       stDate:       begin
+                      Result := PAnsiChar(FByteBuffer);
                       Len := DateToRaw(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
-                        PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day, @FTinyBuffer[0],
+                        PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day, Result,
                           ConSettings^.DisplayFormatSettings.DateFormat, False, PSQL_DATE_STRUCT(fColDataPtr)^.year < 0);
-                      Result := @FTinyBuffer[0];
                     end;
       stTimeStamp:  begin
-                      Result := @FTinyBuffer[0];
+                      Result := PAnsiChar(FByteBuffer);
                       Len := DateTimeToRaw(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
                         PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour,
@@ -1102,67 +1102,67 @@ begin
                       Len := 5;
                     end;
       stByte:       begin
-                      IntToUnicode(Cardinal(PByte(fColDataPtr)^), @FTinyBuffer[0], @Result);
+                      IntToUnicode(Cardinal(PByte(fColDataPtr)^), PWideChar(FByteBuffer), @Result);
                       goto Set_Results;
                     end;
       stShort:      begin
-                      IntToUnicode(Integer(PShortInt(fColDataPtr)^), @FTinyBuffer[0], @Result);
+                      IntToUnicode(Integer(PShortInt(fColDataPtr)^), PWideChar(FByteBuffer), @Result);
                       goto Set_Results;
                     end;
       stWord:        begin
-                      IntToUnicode(Cardinal(PWord(fColDataPtr)^), @FTinyBuffer[0], @Result);
+                      IntToUnicode(Cardinal(PWord(fColDataPtr)^), PWideChar(FByteBuffer), @Result);
                       goto Set_Results;
                     end;
       stSmall:      begin
-                      IntToUnicode(Integer(PSmallInt(fColDataPtr)^), @FTinyBuffer[0], @Result);
+                      IntToUnicode(Integer(PSmallInt(fColDataPtr)^), PWideChar(FByteBuffer), @Result);
                       goto Set_Results;
                     end;
       stLongWord:   begin
-                      IntToUnicode(PCardinal(fColDataPtr)^, @FTinyBuffer[0], @Result);
+                      IntToUnicode(PCardinal(fColDataPtr)^, PWideChar(FByteBuffer), @Result);
                       goto Set_Results;
                     end;
       stInteger:    begin
-                      IntToUnicode(PInteger(fColDataPtr)^, @FTinyBuffer[0], @Result);
+                      IntToUnicode(PInteger(fColDataPtr)^, PWideChar(FByteBuffer), @Result);
                       goto Set_Results;
                     end;
       stULong:      begin
-                      IntToUnicode(PUInt64(fColDataPtr)^, @FTinyBuffer[0], @Result);
+                      IntToUnicode(PUInt64(fColDataPtr)^, PWideChar(FByteBuffer), @Result);
                       goto Set_Results;
                     end;
       stLong:       begin
-                      IntToUnicode(PInt64(fColDataPtr)^, @FTinyBuffer[0], @Result);
+                      IntToUnicode(PInt64(fColDataPtr)^, PWideChar(FByteBuffer), @Result);
                       goto Set_Results;
                     end;
       stFloat:      begin
-                      Len := FloatToSqlUnicode(PSingle(fColDataPtr)^, @FTinyBuffer[0]);
-                      Result := @FTinyBuffer[0];
+                      Len := FloatToSqlUnicode(PSingle(fColDataPtr)^, PWideChar(FByteBuffer));
+                      Result := PWideChar(FByteBuffer);
                     end;
       stCurrency:   begin
-                      CurrToUnicode(ODBCNumeric2Curr(fColDataPtr), @FTinyBuffer[0], @Result);
-Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
-                      Result := @FTinyBuffer[0];
+                      CurrToUnicode(ODBCNumeric2Curr(fColDataPtr), PWideChar(FByteBuffer), @Result);
+Set_Results:          Len := Result - PWideChar(FByteBuffer);
+                      Result := PWideChar(FByteBuffer);
                     end;
 
       stBigDecimal: begin
-                      Result := @FTinyBuffer[0];
+                      Result := PWideChar(FByteBuffer);
                       Len := SQL_MAX_NUMERIC_LEN;
                       SQLNumeric2Uni(fColDataPtr, Result, Len);
                     end;
       stDouble: begin
-                      Len := FloatToSqlUnicode(PDouble(fColDataPtr)^, @FTinyBuffer[0]);
-                      Result := @FTinyBuffer[0];
+                      Len := FloatToSqlUnicode(PDouble(fColDataPtr)^, PWideChar(FByteBuffer));
+                      Result := PWideChar(FByteBuffer);
                     end;
       stBytes:      begin
                       fUniTemp := Ascii7ToUnicodeString(fColDataPtr, fStrLen_or_Ind);
                       goto Set_From_Temp;
                     end;
       stGUID:       begin
-                      GUIDToBuffer(fColDataPtr, PWideChar(@FTinyBuffer[0]), [guidWithBrackets]);
-                      Result := @FTinyBuffer[0];
+                      GUIDToBuffer(fColDataPtr, PWideChar(FByteBuffer), [guidWithBrackets]);
+                      Result := PWideChar(FByteBuffer);
                       Len := 38;
                     end;
       stTime:       begin
-                      Result := @FTinyBuffer[0];
+                      Result := PWideChar(FByteBuffer);
                       if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIME2)
                       then Len := TimeToUni(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
@@ -1173,14 +1173,14 @@ Set_Results:          Len := Result - PWideChar(@FTinyBuffer[0]);
                           ConSettings^.DisplayFormatSettings.TimeFormat, False, False);
                     end;
       stDate:       begin
+                      Result := PWideChar(FByteBuffer);
                       DateTimeToUnicodeSQLDate(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
-                        PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day), @FTinyBuffer[0],
+                        PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day), Result,
                           ConSettings^.DisplayFormatSettings, False);
-                      Result := @FTinyBuffer[0];
                       Len := ConSettings^.DisplayFormatSettings.DateFormatLen;
                     end;
       stTimeStamp:  begin
-                      Result := @FTinyBuffer[0];
+                      Result := PWideChar(FByteBuffer);
                       Len := DateTimeToUni(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
                         PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour,
@@ -1402,6 +1402,7 @@ end;
   value returned is <code>zero</code>
   @exception SQLException if a database access error occurs
 }
+{$IFDEF FPC} {$PUSH} {$WARN 6018 off : Unreachable code} {$ENDIF} //depents to record size
 procedure TAbstractODBCResultSet.GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp);
 var L: LengthInt;
 label Fill;
@@ -1490,6 +1491,7 @@ begin
   end else
 Fill: FillChar(Result, SizeOf(TZTime), #0);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TAbstractODBCResultSet.GetULong(ColumnIndex: Integer): UInt64;
@@ -1655,20 +1657,26 @@ constructor TAbstractColumnODBCResultSet.Create(const Statement: IZStatement;
   const Connection: IZODBCConnection; ZBufferSize, ChunkSize: Integer;
   const EnhancedColInfo: Boolean);
 var Supported: SQLUSMALLINT;
+  Ret: SQLRETURN;
 begin
   inherited Create(Statement, SQL, TZODBCResultSetMetadata.Create(Connection.GetMetadata, SQL, Self), Connection.GetConSettings);
-  fConnection := Connection;
-  fPlainDriver := TZODBC3PlainDriver(fConnection.GetPlainDriver.GetInstance);
+  FODBCConnection := Connection;
+  fPlainDriver := TZODBC3PlainDriver(FODBCConnection.GetPlainDriver.GetInstance);
   fIsUnicodeDriver := Supports(fPlainDriver, IODBC3UnicodePlainDriver);
   fPHSTMT := @StmtHandle;
   fZBufferSize := ZBufferSize;
   fChunkSize := ChunkSize;
-  fConnection.CheckDbcError(fPLainDriver.SQLGetFunctions(ConnectionHandle, SQL_API_SQLCOLATTRIBUTE, @Supported));
+  Ret := fPLainDriver.SQLGetFunctions(ConnectionHandle, SQL_API_SQLCOLATTRIBUTE, @Supported);
+  if Ret <> SQL_SUCCESS then
+    FODBCConnection.HandleDbcErrorOrWarning(Ret, 'SQLGetFunctions', lcOther, Statement);
   fEnhancedColInfo := EnhancedColInfo and (Supported = SQL_TRUE);
   fCurrentBufRowNo := 0;
   fFreeHandle := not Assigned(StmtHandle);
-  Connection.CheckDbcError(fPlainDriver.SQLGetInfo(ConnectionHandle,
-    SQL_GETDATA_EXTENSIONS, @fSQL_GETDATA_EXTENSIONS, SizeOf(SQLUINTEGER), nil));
+  Ret := fPlainDriver.SQLGetInfo(ConnectionHandle,
+    SQL_GETDATA_EXTENSIONS, @fSQL_GETDATA_EXTENSIONS, SizeOf(SQLUINTEGER), nil);
+  if Ret <> SQL_SUCCESS then
+    FODBCConnection.HandleDbcErrorOrWarning(Ret, 'SQLGetInfo', lcOther, Statement);
+  FByteBuffer := FODBCConnection.GetByteBufferAddress;
   ResultSetType := rtForwardOnly;
   ResultSetConcurrency := rcReadOnly;
   fCursorOpened := True;
@@ -1679,13 +1687,16 @@ end;
 constructor TAbstractColumnODBCResultSet.CreateForMetadataCall(
   out StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC;
   {$IFNDEF FPC}const{$ENDIF} Connection: IZODBCConnection);
+var Ret: SQLRETURN;
 begin
   FIsMetaData := True;
   StmtHandle := nil;
   Create(nil, StmtHandle, ConnectionHandle, '', Connection,
     {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Connection.GetParameters.Values[DSProps_InternalBufSize], 131072), //by default 128KB
     {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Connection.GetParameters.Values[DSProps_ChunkSize], 4096), False);
-  Connection.CheckDbcError(fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, ConnectionHandle, StmtHandle));
+  Ret := fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, ConnectionHandle, StmtHandle);
+  if Ret <> SQL_SUCCESS then
+    Connection.HandleDbcErrorOrWarning(Ret, 'SQLAllocHandle(Stmt)', lcOther, Self);
 end;
 
 {**
@@ -1807,10 +1818,10 @@ begin
     LobsInResult := False;
     {$IFDEF WITH_VAR_INIT_WARNING}StrBuf := nil;{$ENDIF}
     SetLength(StrBuf, (Max(32,
-      Max(fConnection.GetMetaData.GetDataBaseInfo.GetMaxTableNameLength,
-        Max(fConnection.GetMetaData.GetDataBaseInfo.GetMaxSchemaNameLength,
-          Max(fConnection.GetMetaData.GetDataBaseInfo.GetMaxTableNameLength,
-            fConnection.GetMetaData.GetDataBaseInfo.GetMaxColumnNameLength))))+1) shl Ord(ConSettings^.ClientCodePage^.Encoding = ceUTF16));
+      Max(FODBCConnection.GetMetaData.GetDataBaseInfo.GetMaxTableNameLength,
+        Max(FODBCConnection.GetMetaData.GetDataBaseInfo.GetMaxSchemaNameLength,
+          Max(FODBCConnection.GetMetaData.GetDataBaseInfo.GetMaxTableNameLength,
+            FODBCConnection.GetMetaData.GetDataBaseInfo.GetMaxColumnNameLength))))+1) shl Ord(ConSettings^.ClientCodePage^.Encoding = ceUTF16));
 
     for ColumnNumber := 1 to fColumnCount do begin
       ColumnInfo := TZODBCColumnInfo.Create;
