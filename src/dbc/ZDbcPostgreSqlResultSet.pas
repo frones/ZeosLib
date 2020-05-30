@@ -2239,10 +2239,6 @@ end;
 function TZPostgreSQLResultSet.Next: Boolean;
 var Status: TZPostgreSQLExecStatusType;
 label jmpRes;
-  procedure CheckError;
-  begin
-    HandlePostgreSQLError(Self, FplainDriver, FconnAddress^, lcExecPrepStmt, 'PQgetResult', nil);
-  end;
 begin
   Result := False;
   if Closed or ((MaxRows > 0) and (RowNo >= MaxRows)) or (RowNo > LastRowNo) then //previously set by stmt or Next
@@ -2273,7 +2269,7 @@ jmpRes:
       Fres := nil;
       FresAddress^ := nil;
     end else
-      CheckError;
+      FPGConnection.HandleErrorOrWarning(Status, lcOther, 'PQgetResult', Self, nil);
   end else begin
     RowNo := RowNo + 1;
     Result := (RowNo <= LastRowNo);
@@ -2618,7 +2614,7 @@ begin
   if not FReleased and (FOwnerLob.FOwner.GetPGconnAddress^ <> nil) and FLobIsOpen then begin
     FLobIsOpen := False;
     if FPlainDriver.lo_close( FHandle, FBlobHandle) <> 0 then
-      HandlePostgreSQLError(Self, FPlainDriver, FHandle, lcOther, 'Close Large Object',nil);
+      FOwnerLob.FOwner.HandleErrorOrWarning(PGRES_FATAL_ERROR, lcOther, 'Close Large Object', Self, nil);
   end;
 end;
 
@@ -2638,7 +2634,7 @@ begin
   { Creates a new large object. }
   FOwnerLob.FBlobOid := FPlainDriver.lo_creat(FHandle, PGOidLopOpenMode[FLobStreamMode]);
   if not PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then
-    HandlePostgreSQLError(Self, FPlainDriver, FHandle, lcOther, 'Create Large Object',nil);
+    FOwnerLob.FOwner.HandleErrorOrWarning(PGRES_FATAL_ERROR, lcOther, 'Create Large Object', Self, nil);
 end;
 
 destructor TZPostgreSQLOidBlobStream.Destroy;
@@ -2653,7 +2649,7 @@ begin
   { Opens a large object. }
   FBlobHandle := FPlainDriver.lo_open(FHandle, FOwnerLob.FBlobOid, PGOidLopOpenMode[FLobStreamMode]);
   if not PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then
-    HandlePostgreSQLError(Self, FPlainDriver, FHandle, lcOther, 'Open Large Object',nil);
+    FOwnerLob.FOwner.HandleErrorOrWarning(PGRES_FATAL_ERROR, lcOther, 'Open Large Object', Self, nil);
   FLobIsOpen := True;
 end;
 
@@ -2669,7 +2665,7 @@ begin
     Buf := @Buffer;
     Result := FPlainDriver.lo_read(FHandle, FBlobHandle, Buf, Count);
     if Result = -1 then
-      HandlePostgreSQLError(Self, FPlainDriver, FHandle, lcOther, 'Read Large Object',nil);
+      FOwnerLob.FOwner.HandleErrorOrWarning(PGRES_FATAL_ERROR, lcOther, 'Read Large Object', Self, nil);
   end else Result := 0;
 end;
 
@@ -2685,7 +2681,7 @@ begin
     if Assigned(FPlainDriver.lo_lseek64) then begin
       Result := FPlainDriver.lo_lseek64(FHandle, FBlobHandle, Offset, PgSeekLocation[Origin]);  //since pg9.3
       if Result = -1 then
-        HandlePostgreSQLError(Self, FPlainDriver, FHandle, lcOther, 'Seek Large Object',nil);
+        FOwnerLob.FOwner.HandleErrorOrWarning(PGRES_FATAL_ERROR, lcOther, 'Seek Large Object', Self, nil);
     end else Result := inherited Seek(OffSet, Origin); //including rangechecks
   end;
 end;
@@ -2698,14 +2694,14 @@ begin
     if Size = 0 then begin
      { UnLinks(drops) a large object. }
       if FPlainDriver.lo_unlink(FHandle, FOwnerLob.FBlobOid) <> 0 then
-        HandlePostgreSQLError(Self, FPlainDriver, FHandle, lcOther, 'Unlink Large Object',nil);
+      FOwnerLob.FOwner.HandleErrorOrWarning(PGRES_FATAL_ERROR, lcOther, 'Unlink Large Object', Self, nil);
       FOwnerLob.FBlobOid := 0;
     end else begin
       if Assigned(FPlainDriver.lo_truncate64)
       then Res := FPlainDriver.lo_truncate64(FHandle, FBlobHandle, NewSize)  //sinc pg9.3
       else Res := FPlainDriver.lo_truncate(FHandle, FBlobHandle, NewSize);
       if Res = -1 then
-        HandlePostgreSQLError(Self, FPlainDriver, FHandle, lcOther, 'Truncate Large Object',nil);
+      FOwnerLob.FOwner.HandleErrorOrWarning(PGRES_FATAL_ERROR, lcOther, 'Truncate Large Object', Self, nil);
     end;
     Updated := True;
   end;
@@ -2719,7 +2715,7 @@ begin
     BeforeRead;
     Result := FPlainDriver.lo_lseek(FHandle, FBlobHandle, Offset, Origin);
     if Result = -1 then
-      HandlePostgreSQLError(Self, FPlainDriver, FHandle, lcOther, 'Seek Large Object',nil);
+      FOwnerLob.FOwner.HandleErrorOrWarning(PGRES_FATAL_ERROR, lcOther, 'Seek Large Object', Self, nil);
   end;
 end;
 
@@ -2735,7 +2731,7 @@ begin
     BeforeWrite;
     Result := FPlainDriver.lo_write(FHandle, FBlobHandle, Buf, Count);
     if Result = -1 then
-      HandlePostgreSQLError(Self, FPlainDriver, FHandle, lcOther, 'Write Large Object',nil);
+      FOwnerLob.FOwner.HandleErrorOrWarning(PGRES_FATAL_ERROR, lcOther, 'Write Large Object', Self, nil);
     Updated := True;
   end else Result := 0;
 end;
