@@ -57,7 +57,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_PROXY} //if set we have an empty unit
 uses
-  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types{$IFNDEF NO_UNIT_CONTNRS}, Contnrs{$ENDIF}{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcLogging,{$IFDEF ZEOS73UP}FmtBCD, ZVariant, {$ENDIF}
   ZDbcResultSetMetadata, ZCompatibility, XmlDoc, XmlIntf;
@@ -291,7 +291,11 @@ type
     function GetDate(ColumnIndex: Integer): TDateTime; {$IFNDEF ZEOS73UP}override{$ELSE}overload{$ENDIF};
     function GetTime(ColumnIndex: Integer): TDateTime; {$IFNDEF ZEOS73UP}override{$ELSE}overload{$ENDIF};
     function GetTimestamp(ColumnIndex: Integer): TDateTime; {$IFNDEF ZEOS73UP}override{$ELSE}overload{$ENDIF};
+    {$IFNDEF ZEOS73UP}
     function GetBlob(ColumnIndex: Integer): IZBlob; {$IFNDEF ZEOS73UP} override; {$ENDIF}
+    {$ELSE}
+    function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
+    {$ENDIF}
 
     {$IFDEF ZEOS73UP}
     function GetUInt(ColumnIndex: Integer): Cardinal;
@@ -439,6 +443,7 @@ begin
       ColumnLabel := ColumnNode.Attributes['label'];
       ColumnName := ColumnNode.Attributes['name'];
       ColumnType := TZSQLType(GetEnumValue(TypeInfo(TZSQLType), ColumnNode.Attributes['type']));
+      {$IFNDEF ZEOS73UP}
       case ColumnType of
         stString, stUnicodeString:
           if GetConSettings.CPType = cCP_UTF16 then
@@ -451,7 +456,7 @@ begin
           else
             ColumnType := stAsciiStream;
       end;
-
+      {$ENDIF}
       DefaultValue := ColumnNode.Attributes['defaultvalue'];
       Precision := StrToInt(ColumnNode.Attributes['precision']);
       Scale := StrToInt(ColumnNode.Attributes['scale']);
@@ -553,8 +558,9 @@ begin
   if not LastWasNull then begin
     Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
     FWideBuffer := VarToStrDef(Val, '');
+    Len := Length(FWideBuffer);
     if Len = 0
-    then Result := PEmptyAnsiString
+    then Result := PEmptyUnicodeString
     else Result := Pointer(FWideBuffer);
   end else begin
     Result := nil;
@@ -1261,6 +1267,8 @@ begin
   end;
 end;
 
+{$IFNDEF ZEOS73UP}
+
 {**
   Returns the value of the designated column in the current row
   of this <code>ResultSet</code> object as a <code>Blob</code> object
@@ -1309,6 +1317,53 @@ begin
     end;
   end;
 end;
+
+{$ELSE}
+
+function TZDbcProxyResultSet.GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
+var
+  ColType: TZSQLType;
+  Idx: Integer;
+  Val: String;
+  AnsiVal: AnsiString;
+  Bytes: TBytes;
+  ColInfo: TZColumnInfo;
+begin
+  if LobStreamMode <> lsmRead then
+    raise Exception.Create('No lob stream mode besides lsmRead is supported.');
+
+  {$IFNDEF DISABLE_CHECKING}
+    CheckColumnConvertion(ColumnIndex, stInteger);
+  {$ENDIF}
+  LastWasNull := IsNull(ColumnIndex);
+
+  if LastWasNull then begin
+    Result := nil;
+    exit;
+  end;
+
+  Idx := ColumnIndex - FirstDbcIndex;
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
+  ColInfo := TZColumnInfo(ColumnsInfo.Items[Idx]);
+  ColType := ColInfo.ColumnType;
+  case ColType of
+    stBinaryStream: begin
+      Bytes := DecodeBase64(AnsiString(Val));
+      Result := TZAbstractBlob.CreateWithData(@Bytes[0], Length(Bytes)) as IZBlob;
+    end;
+    stAsciiStream, stUnicodeStream: begin
+      if Val <> '' then
+         Result := TZAbstractCLob.CreateWithData(@Val[Low(Val)], Length(Val), GetConSettings) as IZBlob
+       else
+         Result := TZAbstractCLob.CreateWithData(nil, 0, GetConSettings) as IZBlob;
+    end;
+    else begin
+      raise Exception.Create('GetBlob is not supported for ' + ColInfo.GetColumnTypeName + ' (yet). Column: ' + ColInfo.ColumnLabel);
+    end;
+  end;
+end;
+{$ENDIF}
+
 
 {$IFDEF ZEOS73UP}
 procedure RaiseUnsupportedException;

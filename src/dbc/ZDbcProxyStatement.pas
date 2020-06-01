@@ -71,7 +71,7 @@ type
     ['{16818F5D-9A5B-4402-A71A-40839E414D2D}']
   end;
 
-  TZDbcProxyPreparedStatement = class(TZAbstractPreparedStatement,
+  TZDbcProxyPreparedStatement = class({$IFNDEF ZEOS73UP}TZAbstractPreparedStatement{$ELSE}TZAbstractPreparedStatement2{$ENDIF},
     IZProxyPreparedStatement)
   private
   protected
@@ -168,9 +168,13 @@ begin
       // from their databases: ADO, MySQL, SQLite
       spASA: CachedResolver := TZASACachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
       spMSSQL, spASE: CachedResolver := TZDBLibCachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
+      {$IFNDEF ZEOS73UP}
       spIB_FB: CachedResolver := TZInterbase6CachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
+      {$ENDIF}
       spOracle: CachedResolver := TZOracleCachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
+      {$IFNDEF ZEOS73UP}
       spPostgreSQL: CachedResolver := TZPostgreSQLCachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
+      {$ENDIF}
       else CachedResolver := TZGenericCachedResolver.Create(self as IZStatement, NativeResultSet.GetMetaData) as IZCachedResolver;
     end;
 
@@ -246,10 +250,17 @@ begin
             Line := ClientVarManager.GetAsString(InParamValues[x]);
           stULong, stLong:
             Line := ClientVarManager.GetAsString(InParamValues[x]);
+          {$IFNDEF ZEOS73UP}
           stFloat, stDouble, stCurrency:
             Line := DoubleParamToStr(ClientVarManager.GetAsFloat(InParamValues[x]));
           stBigDecimal:
             Line := ExtendedParamToStr(ClientVarManager.GetAsFloat(InParamValues[x]));
+          {$ELSE}
+          stFloat, stDouble, stCurrency:
+            Line := DoubleParamToStr(ClientVarManager.GetAsDouble(InParamValues[x]));
+          stBigDecimal:
+            Line := BcdToString(ClientVarManager.GetAsBCD(InParamValues[x]));
+          {$ENDIF}
           stString, stUnicodeString:
             Line := StrParamToStr(ClientVarManager.GetAsString(InParamValues[x]));
           stDate:
