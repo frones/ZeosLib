@@ -1518,13 +1518,29 @@ begin
   end;
 
   if (ResultSetType <> rtForwardOnly) or (Row >= RowNo) then begin
-    if (0 < Row) and (Row <= LastRowNo) then begin
-      Result := True;
-      FCurrentRowNode := FRowsNode.ChildNodes.Get(Row - 1)
+    if ResultSetType = rtForwardOnly then begin
+      while RowNo < Row do begin
+        if (RowNo <> 0) and (FRowsNode.ChildNodes.Count > 0) then
+          FRowsNode.ChildNodes.Delete(0);
+        RowNo := RowNo + 1;
+      end;
+      if FRowsNode.ChildNodes.Count > 0 then begin
+        Result := True;
+        FCurrentRowNode := FRowsNode.ChildNodes.Get(0);
+      end else begin
+        Result := False;
+        Row := Min(Row, LastRowNo + 1);
+        FCurrentRowNode := nil;
+      end;
     end else begin
-      Result := False;
-      Row := Min(Row, LastRowNo + 1);
-      FCurrentRowNode := nil;
+      if (0 < Row) and (Row <= LastRowNo) then begin
+        Result := True;
+        FCurrentRowNode := FRowsNode.ChildNodes.Get(Row - 1)
+      end else begin
+        Result := False;
+        Row := Min(Row, LastRowNo + 1);
+        FCurrentRowNode := nil;
+      end;
     end;
     RowNo := Row;
   end else begin

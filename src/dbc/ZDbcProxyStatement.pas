@@ -161,6 +161,9 @@ begin
   NativeResultSet.SetConcurrency(rcReadOnly);
   LastUpdateCount := NativeResultSet.GetUpdateCount;
 
+  if (GetResultSetType = rtForwardOnly) or (GetResultSetConcurrency = rcUpdatable) then
+    NativeResultSet.SetType(rtForwardOnly);
+
   if GetResultSetConcurrency = rcUpdatable then
   begin
     case GetConnection.GetServerProvider of
@@ -200,10 +203,17 @@ begin
   Result := FloatToStr(Value, ProxyFormatSettings);
 end;
 
+{$IFNDEF ZEOS73UP}
 function ExtendedParamToStr(const Value: Extended): String;
 begin
-  Result := FloatToStr(Value);
+  Result := FloatToStr(Value, ProxyFormatSettings);
 end;
+{$ELSE}
+function BcdParamToStr(const Value: TFMTBcd): String;
+begin
+  Result := BcdToStr(Value, ProxyFormatSettings);
+end;
+{$ENDIF}
 
 function StrParamToStr(const Value: String): String;
 begin
@@ -259,7 +269,7 @@ begin
           stFloat, stDouble, stCurrency:
             Line := DoubleParamToStr(ClientVarManager.GetAsDouble(InParamValues[x]));
           stBigDecimal:
-            Line := BcdToString(ClientVarManager.GetAsBCD(InParamValues[x]));
+            Line := Line := BcdParamToString(ClientVarManager.GetAsBigDecimal(InParamValues[x]));
           {$ENDIF}
           stString, stUnicodeString:
             Line := StrParamToStr(ClientVarManager.GetAsString(InParamValues[x]));
