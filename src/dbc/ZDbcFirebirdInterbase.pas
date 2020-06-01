@@ -3324,6 +3324,7 @@ begin
       P := nil;
       L := 0;//satisfy compiler
     end else if Supports(Value, IZInterbaseFirebirdLob, IBLob) and ((sqltype = SQL_QUAD) or (sqltype = SQL_BLOB)) then begin
+      sqldata := GetMemory(SizeOf(TISC_QUAD));
       PISC_QUAD(sqldata)^ := IBLob.GetBlobId;
       goto jmpNotNull;
     end else if (Value <> nil) and (codepage <> zCP_Binary) then
