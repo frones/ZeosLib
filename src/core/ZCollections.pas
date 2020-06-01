@@ -893,10 +893,10 @@ var
   HashMap: TZHashMap;
 begin
   HashMap := TZHashMap.Create;
-  HashMap.FKeys := IZCollection(FKeys.Clone);
-  HashMap.FReadOnlyKeys := IZCollection(FReadOnlyKeys.Clone);
-  HashMap.FValues := IZCollection(FValues.Clone);
-  HashMap.FReadOnlyValues := IZCollection(FReadOnlyValues.Clone);
+  HashMap.FKeys := FKeys.Clone as IZCollection;
+  HashMap.FReadOnlyKeys := FReadOnlyKeys.Clone as IZCollection;
+  HashMap.FValues := FValues.Clone as IZCollection;
+  HashMap.FReadOnlyValues := FReadOnlyValues.Clone as IZCollection;
   Result := HashMap;
 end;
 
@@ -1019,7 +1019,7 @@ var
   Stack: TZStack;
 begin
   Stack := TZStack.Create;
-  Stack.FValues := IZCollection(FValues.Clone);
+  Stack.FValues := FValues.Clone as IZCollection;
   Result := Stack;
 end;
 
