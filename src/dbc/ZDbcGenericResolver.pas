@@ -148,7 +148,7 @@ type
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
   end;
   //just an alias for compatibility
-  TZGenericSQLCachedResolver = TZGenerateSQLCachedResolver;
+  TZGenericCachedResolver = TZGenerateSQLCachedResolver;
   (*
   TZUserDefinedSQLCachedResolver = class(TInterfacedObject, IZCachedResolver)
   private
