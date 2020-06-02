@@ -59,7 +59,7 @@ interface
 uses
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types{$IFNDEF NO_UNIT_CONTNRS}, Contnrs{$ENDIF}{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcLogging,{$IFDEF ZEOS73UP}FmtBCD, ZVariant, {$ENDIF}
+  ZPlainProxyDriverIntf, ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcLogging,{$IFDEF ZEOS73UP}FmtBCD, ZVariant, {$ENDIF}
   ZDbcResultSetMetadata, ZCompatibility, XmlDoc, XmlIntf;
 
 type
@@ -73,7 +73,9 @@ type
     FRowsNode: IXMLNode;
     FFormatSettings: TFormatSettings;
   protected
+    {$IFNDEF NEXTGEN}
     FAnsiBuffer: AnsiString;
+    {$ENDIF}
     FWideBuffer: ZWideString;
     FStringBuffer: String;
     {$IFNDEF ZEOS73UP}
@@ -531,9 +533,12 @@ end;
 {$ENDIF ZEOS73UP}
 
 function TZDbcProxyResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
+{$IFNDEF NEXTGEN}
 var
   Val: OleVariant;
+{$ENDIF}
 begin
+{$IFNDEF NEXTGEN}
   LastWasNull := IsNull(ColumnIndex);
 
   if not LastWasNull then begin
@@ -547,6 +552,9 @@ begin
     Result := nil;
     Len := 0
   end;
+{$ELSE}
+  raise Exception.Create('GetPAnsiChar is not supported on Nextgen.');
+{$ENDIF}
 end;
 
 function TZDbcProxyResultSet.GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
@@ -611,6 +619,7 @@ end;
 function TZDbcProxyResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var
   Val: OleVariant;
+  Val2: ZWideString;
 begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then begin
@@ -619,13 +628,15 @@ begin
   end;
 
   Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
-  Result := UTF8Encode(Val);
+  Val2 := VarToStr(Val);
+  Result := UTF8Encode(Val2);
 end;
 {$ENDIF}
 
 function TZDbcProxyResultSet.GetRawByteString(ColumnIndex: Integer): RawByteString;
 var
   Val: OleVariant;
+  Val2: String;
 begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then begin
@@ -634,7 +645,8 @@ begin
   end;
 
   Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
-  Result := UTF8Encode(Val);
+  Val2 := VarToStr(Val);
+  Result := UTF8Encode(Val2);
 end;
 
 function TZDbcProxyResultSet.GetBinaryString(ColumnIndex: Integer): RawByteString;
@@ -1325,7 +1337,7 @@ var
   ColType: TZSQLType;
   Idx: Integer;
   Val: String;
-  AnsiVal: AnsiString;
+  AnsiVal: {$IFDEF NEXTGEN}RawByteString{$ELSE}AnsiString{$ENDIF};
   Bytes: TBytes;
   ColInfo: TZColumnInfo;
 begin
@@ -1348,7 +1360,7 @@ begin
   ColType := ColInfo.ColumnType;
   case ColType of
     stBinaryStream: begin
-      Bytes := DecodeBase64(AnsiString(Val));
+      Bytes := DecodeBase64(Val);
       Result := TZAbstractBlob.CreateWithData(@Bytes[0], Length(Bytes)) as IZBlob;
     end;
     stAsciiStream, stUnicodeStream: begin
