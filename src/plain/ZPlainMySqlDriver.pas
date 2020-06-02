@@ -746,6 +746,16 @@ const
   CR_SERVER_LOST = 2013;
   CR_INVALID_PARAMETER_NO = 2034;
   CR_NO_DATA = 2051;
+//the warnings (mysqld_error.h)
+  WARN_DATA_TRUNCATED = 1265;
+  WARN_NO_MASTER_INFO = 1617;
+  WARN_OPTION_IGNORED = 1618;
+  WARN_PLUGIN_BUSY = 1620;
+  WARN_NON_ASCII_SEPARATOR_NOT_IMPLEMENTED = 1638;
+  WARN_COND_ITEM_TRUNCATED = 1647;
+  WARN_OPTION_BELOW_LIMIT = 1708;
+  WARN_ON_BLOCKHOLE_IN_RBR = 1870;
+  WARN_DEPRECATED_MAXDB_SQL_MODE_FOR_TIMESTAMP = 3226;
 
   //http://eclipseclp.org/doc/bips/lib/dbi/cursor_next_execute-3.html
   //"Only one active cursor of type no_cursor is allowed per session,
