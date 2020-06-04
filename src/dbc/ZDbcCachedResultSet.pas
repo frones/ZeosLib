@@ -2375,8 +2375,14 @@ end;
   Opens this recordset.
 }
 procedure TZCachedResultSet.Open;
+var
+  Statement: IZStatement;
 begin
-  FCachedLobs := StrToBoolEx(DefineStatementParameter(ResultSet.GetStatement, DSProps_CachedLobs, 'false'));
+  Statement := ResultSet.GetStatement;
+  if Assigned(Statement) then
+    FCachedLobs := StrToBoolEx(DefineStatementParameter(Statement, DSProps_CachedLobs, 'false'))
+  else
+    FCachedLobs := False;
   ColumnsInfo.Clear;
   FillColumnsInfo(ColumnsInfo);
   inherited Open;
@@ -2424,11 +2430,17 @@ begin
 end;
 
 procedure TZCachedResultSet.ResetCursor;
+var
+  Statement: IZStatement;
 begin
   if not Closed then begin
     If Assigned(FResultset) then begin
       FResultset.ResetCursor;
-      FCachedLobs := StrToBoolEx(DefineStatementParameter(ResultSet.GetStatement, DSProps_CachedLobs, 'false'));
+      Statement := ResultSet.GetStatement;
+      if Assigned(Statement) then
+        FCachedLobs := StrToBoolEx(DefineStatementParameter(Statement, DSProps_CachedLobs, 'false'))
+      else
+        FCachedLobs := false;
       FRowAccessor.CachedLobs := FCachedLobs;
       FOldRowAccessor.CachedLobs := FCachedLobs;
       FNewRowAccessor.CachedLobs := FCachedLobs;

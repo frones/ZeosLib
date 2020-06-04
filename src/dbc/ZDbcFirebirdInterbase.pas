@@ -3324,6 +3324,8 @@ begin
       P := nil;
       L := 0;//satisfy compiler
     end else if Supports(Value, IZInterbaseFirebirdLob, IBLob) and ((sqltype = SQL_QUAD) or (sqltype = SQL_BLOB)) then begin
+      //sqldata := GetMemory(SizeOf(TISC_QUAD)); EH@Jan what's that? we have one big buffer as described by FB/IB.
+	  //Jan@EH: See commit message for Rev. 6595 + Ticket 429
       PISC_QUAD(sqldata)^ := IBLob.GetBlobId;
       goto jmpNotNull;
     end else if (Value <> nil) and (codepage <> zCP_Binary) then

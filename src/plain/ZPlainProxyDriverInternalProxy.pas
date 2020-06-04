@@ -69,48 +69,48 @@ implementation
 
 {$IFNDEF ZEOS_DISABLE_PROXY}
 
-uses SysUtils, {$IFNDEF NEXTGEN}ActiveX, ComObj,{$ENDIF} SOAPHTTPClient;
+uses SysUtils, {$IFNDEF NO_SAFECALL}ActiveX, ComObj,{$ENDIF} SOAPHTTPClient;
 
 type
-  TZDbcProxy = class(TInterfacedObject, IZDbcProxy{$IFNDEF NEXTGEN}, ISupportErrorInfo{$ENDIF})
+  TZDbcProxy = class(TInterfacedObject, IZDbcProxy{$IFNDEF NO_SAFECALL}, ISupportErrorInfo{$ENDIF})
     protected
       FService: IZeosProxy;
       FConnectionID: WideString;
       procedure CheckConnected;
       // this is necessary for safecall exception handling
-      {$IFNDEF NEXTGEN}
+      {$IFNDEF NO_SAFECALL}
       function InterfaceSupportsErrorInfo(const iid: TIID): HResult; stdcall;
       {$ENDIF}
     public
       // this is necessary for safecall exception handling
-      {$IFNDEF NEXTGEN}
+      {$IFNDEF NO_SAFECALL}
       function SafeCallException(ExceptObject: TObject; ExceptAddr: Pointer): HResult; override;
       {$ENDIF}
 
-      procedure Connect(const UserName, Password, DbHost, DbName: WideString; var Properties: WideString; out DbInfo: WideString); {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      procedure Disconnect; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      procedure SetAutoCommit(const Value: LongBool); {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      procedure Commit; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      procedure Rollback; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function SetProperties(const Properties : WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function ExecuteStatement(const SQL, Parameters: WideString; const MaxRows: LongWord): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function GetTables(const Catalog, SchemaPattern, TableNamePattern, Types: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function GetSchemas: WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function GetCatalogs: WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function GetTableTypes: WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function GetColumns(const Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function GetTablePrivileges(const Catalog, SchemaPattern, TableNamePattern: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function GetColumnPrivileges(const Catalog, Schema, Table, ColumnNamePattern: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function GetPrimaryKeys(const Catalog, Schema, Table: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function GetImportedKeys(const Catalog, Schema, Table: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function GetExportedKeys(const Catalog, Schema, Table: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function GetCrossReference(const PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog, ForeignSchema, ForeignTable: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function GetIndexInfo(const Catalog, Schema, Table: WideString; const Unique, Approximate: LongBool):WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function GetSequences(const Catalog, SchemaPattern, SequenceNamePattern : WideString ): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function GetTriggers(const Catalog, SchemaPattern, TableNamePattern, TriggerNamePattern: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function GetProcedures(const Catalog, SchemaPattern, ProcedureNamePattern : WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function GetProcedureColumns(const Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
-      function GetCharacterSets(): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+      procedure Connect(const UserName, Password, DbHost, DbName: WideString; var Properties: WideString; out DbInfo: WideString); {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      procedure Disconnect; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      procedure SetAutoCommit(const Value: LongBool); {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      procedure Commit; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      procedure Rollback; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function SetProperties(const Properties : WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function ExecuteStatement(const SQL, Parameters: WideString; const MaxRows: LongWord): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetTables(const Catalog, SchemaPattern, TableNamePattern, Types: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetSchemas: WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetCatalogs: WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetTableTypes: WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetColumns(const Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetTablePrivileges(const Catalog, SchemaPattern, TableNamePattern: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetColumnPrivileges(const Catalog, Schema, Table, ColumnNamePattern: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetPrimaryKeys(const Catalog, Schema, Table: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetImportedKeys(const Catalog, Schema, Table: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetExportedKeys(const Catalog, Schema, Table: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetCrossReference(const PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog, ForeignSchema, ForeignTable: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetIndexInfo(const Catalog, Schema, Table: WideString; const Unique, Approximate: LongBool):WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetSequences(const Catalog, SchemaPattern, SequenceNamePattern : WideString ): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetTriggers(const Catalog, SchemaPattern, TableNamePattern, TriggerNamePattern: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetProcedures(const Catalog, SchemaPattern, ProcedureNamePattern : WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetProcedureColumns(const Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetCharacterSets(): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 
       constructor Create;
       destructor Destroy; override;
@@ -143,7 +143,7 @@ begin
     raise Exception.Create('No connection has been established yet!');
 end;
 
-{$IFNDEF NEXTGEN}
+{$IFNDEF NO_SAFECALL}
 function TZDbcProxy.InterfaceSupportsErrorInfo(const iid: TIID): HResult; stdcall;
 begin
   if GetInterfaceEntry(iid) <> nil then
@@ -167,7 +167,7 @@ begin
  FService := nil;
 end;
 
-procedure TZDbcProxy.Connect(const UserName, Password, DbHost, DbName: WideString; var Properties: WideString; out DbInfo: WideString); {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+procedure TZDbcProxy.Connect(const UserName, Password, DbHost, DbName: WideString; var Properties: WideString; out DbInfo: WideString); {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 var
   Url: String;
   LocalProperties: String;
@@ -203,7 +203,7 @@ begin
   end;
 end;
 
-procedure TZDbcProxy.Disconnect; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+procedure TZDbcProxy.Disconnect; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
  CheckConnected;
  try
@@ -213,133 +213,133 @@ begin
  end;
 end;
 
-procedure TZDbcProxy.SetAutoCommit(const Value: LongBool); {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+procedure TZDbcProxy.SetAutoCommit(const Value: LongBool); {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   FService.SetAutoCommit(FConnectionID, Value);
 end;
 
-procedure TZDbcProxy.Commit; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+procedure TZDbcProxy.Commit; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   FService.Commit(FConnectionID);
 end;
 
-procedure TZDbcProxy.Rollback; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+procedure TZDbcProxy.Rollback; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   FService.Rollback(FConnectionID);
 end;
 
-function TZDbcProxy.SetProperties(const Properties : WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.SetProperties(const Properties : WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   Result := FService.SetProperties(FConnectionID, Properties);
 end;
 
-function TZDbcProxy.ExecuteStatement(const SQL, Parameters: WideString; const MaxRows: LongWord): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.ExecuteStatement(const SQL, Parameters: WideString; const MaxRows: LongWord): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   Result := FService.ExecuteStatement(FConnectionID, SQL, Parameters, MaxRows);
 end;
 
-function TZDbcProxy.GetTables(const Catalog, SchemaPattern, TableNamePattern, Types: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.GetTables(const Catalog, SchemaPattern, TableNamePattern, Types: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   Result := FService.GetTables(FConnectionID, Catalog, SchemaPattern, TableNamePattern, Types);
 end;
 
-function TZDbcProxy.GetSchemas: WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.GetSchemas: WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   Result := FService.GetSchemas(FConnectionID);
 end;
 
-function TZDbcProxy.GetCatalogs: WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.GetCatalogs: WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   Result := FService.GetCatalogs(FConnectionID);
 end;
 
-function TZDbcProxy.GetTableTypes: WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.GetTableTypes: WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   Result := FService.GetTableTypes(FConnectionID);
 end;
 
-function TZDbcProxy.GetColumns(const Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.GetColumns(const Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   Result := FService.GetColumns(FConnectionID, Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 end;
 
-function TZDbcProxy.GetTablePrivileges(const Catalog, SchemaPattern, TableNamePattern: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.GetTablePrivileges(const Catalog, SchemaPattern, TableNamePattern: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   Result := FService.GetTablePrivileges(FConnectionID, Catalog, SchemaPattern, TableNamePattern);
 end;
 
-function TZDbcProxy.GetColumnPrivileges(const Catalog, Schema, Table, ColumnNamePattern: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.GetColumnPrivileges(const Catalog, Schema, Table, ColumnNamePattern: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   Result := FService.GetColumnPrivileges(FConnectionID, Catalog, Schema, Table, ColumnNamePattern);
 end;
 
-function TZDbcProxy.GetPrimaryKeys(const Catalog, Schema, Table: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.GetPrimaryKeys(const Catalog, Schema, Table: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   Result := FService.GetPrimaryKeys(FConnectionID, Catalog, Schema, Table);
 end;
 
-function TZDbcProxy.GetImportedKeys(const Catalog, Schema, Table: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.GetImportedKeys(const Catalog, Schema, Table: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   Result := FService.GetImportedKeys(FConnectionID, Catalog, Schema, Table);
 end;
 
-function TZDbcProxy.GetExportedKeys(const Catalog, Schema, Table: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.GetExportedKeys(const Catalog, Schema, Table: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   Result := FService.GetExportedKeys(FConnectionID, Catalog, Schema, Table);
 end;
 
-function TZDbcProxy.GetCrossReference(const PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog, ForeignSchema, ForeignTable: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.GetCrossReference(const PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog, ForeignSchema, ForeignTable: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   Result := FService.GetCrossReference(FConnectionID, PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog, ForeignSchema, ForeignTable);
 end;
 
-function TZDbcProxy.GetIndexInfo(const Catalog, Schema, Table: WideString; const Unique, Approximate: LongBool):WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.GetIndexInfo(const Catalog, Schema, Table: WideString; const Unique, Approximate: LongBool):WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   Result := FService.GetIndexInfo(FConnectionID, Catalog, Schema, Table, Unique, Approximate);
 end;
 
-function TZDbcProxy.GetSequences(const Catalog, SchemaPattern, SequenceNamePattern : WideString ): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.GetSequences(const Catalog, SchemaPattern, SequenceNamePattern : WideString ): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   Result := FService.GetSequences(FConnectionID, Catalog, SchemaPattern, SequenceNamePattern);
 end;
 
-function TZDbcProxy.GetTriggers(const Catalog, SchemaPattern, TableNamePattern, TriggerNamePattern: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.GetTriggers(const Catalog, SchemaPattern, TableNamePattern, TriggerNamePattern: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   Result := FService.GetTriggers(FConnectionID, Catalog, SchemaPattern, TableNamePattern, TriggerNamePattern);
 end;
 
-function TZDbcProxy.GetProcedures(const Catalog, SchemaPattern, ProcedureNamePattern : WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.GetProcedures(const Catalog, SchemaPattern, ProcedureNamePattern : WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   Result := FService.GetProcedures(FConnectionID, Catalog, SchemaPattern, ProcedureNamePattern);
 end;
 
-function TZDbcProxy.GetProcedureColumns(const Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern: WideString): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.GetProcedureColumns(const Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
   CheckConnected;
   Result := FService.GetProcedureColumns(FConnectionID, Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 end;
 
-function TZDbcProxy.GetCharacterSets(): WideString; {$IFNDEF NEXTGEN}safecall;{$ENDIF}
+function TZDbcProxy.GetCharacterSets(): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 begin
  CheckConnected;
  Result := FService.GetCharacterSets(FConnectionID);

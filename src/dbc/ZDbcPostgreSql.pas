@@ -104,6 +104,10 @@ type
     procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: RawByteString);
     procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString);
     function GetByteBufferAddress: PByteBuffer;
+
+    procedure HandleErrorOrWarning(Status: TZPostgreSQLExecStatusType;
+      LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
+      const Sender: IImmediatelyReleasable; ResultHandle: TPGresult);
   end;
 
   PZPGDomain2BaseTypeMap = ^TZPGDomain2BaseTypeMap;
@@ -133,7 +137,6 @@ type
     IZPostgreSQLConnection, IZTransaction)
   private
     FUndefinedVarcharAsStringLength: Integer;
-    FStandardConformingStrings: Boolean;
     Fconn: TPGconn;
 //  Jan: Not sure wether we still need that. What was its intended use?
 //    FBeginRequired: Boolean;
@@ -143,7 +146,8 @@ type
     FServerMajorVersion: Integer;
     FServerMinorVersion: Integer;
     FServerSubVersion: Integer;
-    FNoticeProcessor: TZPostgreSQLNoticeProcessor;
+    FNoticeProcessor: TPQnoticeProcessor;
+    FNoticeReceiver: TPQnoticeReceiver;
     //a collection of statement handles that are not used anymore. These can be
     //safely deallocated upon the next transaction start or immediately if we
     //are in autocommit mode. See SF#137:
@@ -154,6 +158,7 @@ type
     FCheckFieldVisibility: Boolean;
     FNoTableInfoCache: Boolean;
     fPlainDriver: TZPostgreSQLPlainDriver;
+    FLastWarning: EZSQLWarning;
     function HasMinimumServerVersion(MajorVersion, MinorVersion, SubVersion: Integer): Boolean;
   protected
     procedure InternalCreate; override;
@@ -161,8 +166,6 @@ type
     function BuildConnectStr: RawByteString;
     procedure DeallocatePreparedStatements;
     procedure LoadServerVersion;
-    procedure OnPropertiesChange(Sender: TObject); override;
-    procedure SetStandardConformingStrings(const Value: Boolean);
     function EncodeBinary(const Value: RawByteString; Quoted: Boolean): RawByteString; overload;
     function EncodeBinary(const Value: TBytes; Quoted: Boolean): RawByteString; overload;
     function EncodeBinary(Buf: Pointer; Len: Integer; Quoted: Boolean): RawByteString; overload;
@@ -171,6 +174,8 @@ type
     function ClientSettingsChanged: Boolean;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
     procedure InternalClose; override;
+    function GetServerSetting(const AName: RawByteString): string;
+    procedure SetServerSetting(const AName, AValue: RawbyteString);
   public
     destructor Destroy; override;
 
@@ -195,10 +200,10 @@ type
     procedure RollbackPrepared(const transactionid:string);override;
 
     procedure Open; override;
-
+  public //implement IImmediatelyReleasable
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
       var AError: EZSQLConnectionLost); override;
-
+  public  //implement IZPostgreSQLConnection
     function IsOidAsBlob: Boolean;
     function Is_bytea_output_hex: Boolean;
     function integer_datetimes: Boolean;
@@ -210,13 +215,16 @@ type
     function GetTypeNameByOid(Id: Oid): string;
     function GetPlainDriver: TZPostgreSQLPlainDriver;
     function GetPGconnAddress: PPGconn;
+    procedure HandleErrorOrWarning(Status: TZPostgreSQLExecStatusType;
+      LogCategory: TZLoggingCategory; const LogMsg: RawByteString;
+      const Sender: IImmediatelyReleasable; ResultHandle: TPGresult);
 
     function GetHostVersion: Integer; override;
     function GetServerMajorVersion: Integer;
     function GetServerMinorVersion: Integer;
     function GetServerSubVersion: Integer;
     function StoredProcedureIsSelectable(const ProcName: String): Boolean;
-
+  public
     function PingServer: Integer; override;
 
     function EscapeString(const Value: RawByteString): RawByteString; overload; override;
@@ -225,11 +233,13 @@ type
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; override;
     procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); overload;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; override;
-    function GetServerSetting(const AName: RawByteString): string;
-    procedure SetServerSetting(const AName, AValue: RawbyteString);
+
     {$IFDEF ZEOS_TEST_ONLY}
     constructor Create(const ZUrl: TZURL);
     {$ENDIF}
+
+    function GetWarnings: EZSQLWarning; override;
+    procedure ClearWarnings; override;
     function GetServerProvider: TZServerProvider; override;
   end;
 
@@ -247,14 +257,22 @@ uses
   ZPostgreSqlAnalyser, ZEncoding, ZDbcMetadata;
 
 const
-  FON = String('ON');
   cBegin: {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF} = 'BEGIN';
   cCommit: {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF} = 'COMMIT';
   cRollback: {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF} = 'ROLLBACK';
 
-procedure DefaultNoticeProcessor({%H-}arg: Pointer; message: PAnsiChar); cdecl;
+procedure NoticeProcessorDispatcher(arg: Pointer; message: PAnsiChar); cdecl;
 begin
-  DriverManager.LogMessage(lcOther,'Postgres NOTICE', message);
+  TZPostgreSQLConnection(Arg).HandleErrorOrWarning(PGRES_NONFATAL_ERROR,
+    lcOther, Message, nil, nil);
+  //DriverManager.LogMessage(lcOther,'Postgres NOTICE', message);
+end;
+
+procedure NoticeReceiverDispatcher(arg: Pointer; res: TPGResult); cdecl;
+begin
+  TZPostgreSQLConnection(Arg).HandleErrorOrWarning(PGRES_NONFATAL_ERROR,
+    lcOther, 'Postgres NOTICE', nil, res);
+  TZPostgreSQLConnection(Arg).FPlainDriver.PQclear(res);
 end;
 
 { TZPostgreSQLDriver }
@@ -363,15 +381,126 @@ begin
   FCheckFieldVisibility := StrToBoolEx(Info.Values[ConnProps_CheckFieldVisibility]);
   FNoTableInfoCache := StrToBoolEx(Info.Values[ConnProps_NoTableInfoCache]);
   FSavePoints := TStringList.Create;
-  OnPropertiesChange(nil);
 
-  FNoticeProcessor := DefaultNoticeProcessor;
+  FNoticeProcessor := NoticeProcessorDispatcher;
+  FNoticeReceiver  := NoticeReceiverDispatcher;
 end;
 
 
 function TZPostgreSQLConnection.GetUndefinedVarcharAsStringLength: Integer;
 begin
   Result := FUndefinedVarcharAsStringLength;
+end;
+
+{**
+  Returns the first warning reported by calls on this Connection.
+  <P><B>Note:</B> Subsequent warnings will be chained to this
+  SQLWarning.
+  @return the first SQLWarning or null
+}
+function TZPostgreSQLConnection.GetWarnings: EZSQLWarning;
+begin
+  Result := FLastWarning;
+end;
+
+const
+  TPG_DIAG_ErrorFieldPrevixes: Array[TZPostgreSQLFieldCode] of RawByteString = (
+    '', ' ', LineEnding, LineEnding+'detail: ', '', LineEnding+'position: ', ' ',
+    ' ', ' ', LineEnding+'source file: ',
+    LineEnding+'line: ', lineEnding+'funtion: '
+  );
+procedure TZPostgreSQLConnection.HandleErrorOrWarning(
+  Status: TZPostgreSQLExecStatusType;
+  LogCategory: TZLoggingCategory; const LogMsg: RawByteString;
+  const Sender: IImmediatelyReleasable; ResultHandle: TPGresult);
+var I: TZPostgreSQLFieldCode;
+    aMessage, aErrorStatus: String;
+    rawMsg, swSQLState: RawByteString;
+    ConLostError: EZSQLConnectionLost;
+    P: PAnsiChar;
+    L: NativeUInt;
+    SQLWriter: TZRawSQLStringWriter;
+    CP: Word;
+begin
+  P := FPlainDriver.PQerrorMessage(Fconn);
+  if (P = nil) or (P^ = #0) then Exit;
+  L := ZFastCode.StrLen(P);
+  rawMsg := '';
+  swSQLState := '';
+  SQLWriter := TZRawSQLStringWriter.Create(1024+Length(LogMsg));
+  if (ConSettings <> nil) and (ConSettings.ClientCodePage <> nil)
+  then CP := ConSettings.ClientCodePage.CP
+  else CP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
+  try
+    SQLWriter.AddText(P, L, rawMsg);
+    aMessage := '';
+    if Assigned(ResultHandle) then begin
+      if Assigned(FPlainDriver.PQresultErrorField) then //since 7.3
+        for i := low(TZPostgreSQLFieldCode) to {$IFDEF DEBUG}high(TZPostgreSQLFieldCode){$ELSE}pgdiagCONTEXT{$ENDIF} do begin
+          P := FPlainDriver.PQresultErrorField(ResultHandle,TPG_DIAG_ErrorFieldCodes[i]);
+          if P <> nil then begin
+            L := ZFastCode.StrLen(P);
+            ZSysUtils.Trim(L, P);
+            if L > 0 then begin
+              SQLWriter.AddText(TPG_DIAG_ErrorFieldPrevixes[I], rawMsg);
+              SQLWriter.AddText(P, L, rawMsg);
+              if i = pgdiagSQLSTATE then
+              ZSetString(P, L, swSQLState);
+            end;
+          end;
+        end;
+      if Status <> PGRES_NONFATAL_ERROR then //just a warning
+        FPlainDriver.PQclear(ResultHandle);
+    end;
+    SQLWriter.Finalize(rawMsg);
+    aMessage := '';
+    if (rawMsg <> '') then
+      {$IFDEF UNICODE}
+      aMessage := ZRawToUnicode(rawMsg, CP);
+      {$ELSE}
+      if (ConSettings <> nil) and (ConSettings.ClientCodePage <> nil)
+      then aMessage := ConSettings^.ConvFuncs.ZRawToString(rawMsg, CP, ConSettings^.CTRL_CP)
+      else aMessage := rawMsg;
+      {$ENDIF}
+    aErrorStatus := '';
+    if (swSQLState <> '') then
+      {$IFDEF UNICODE}
+      aErrorStatus := USASCII7ToUnicodeString(rawMsg);
+      {$ELSE}
+      aErrorStatus := rawMsg;
+      {$ENDIF}
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMsg, 0, rawMsg);
+
+    aMessage := Format(SSQLError1, [aMessage]);
+    if LogMsg <> '' then begin
+      if aMessage <> '' then
+        aMessage := aMessage + LineEnding;
+      aMessage := aMessage + 'SQL: ';
+      {$IFDEF UNICODE}
+      aMessage := aMessage + ZRawToUnicode(LogMsg, CP);
+      {$ELSE}
+      if (ConSettings <> nil) and (ConSettings.ClientCodePage <> nil)
+      then aMessage := aMessage + ConSettings^.ConvFuncs.ZRawToString(LogMsg, CP, ConSettings^.CTRL_CP)
+      else aMessage := aMessage + LogMsg
+      {$ENDIF}
+    end;
+    if (FPlainDriver.PQstatus(Fconn) = CONNECTION_BAD) and (LogCategory <> lcConnect) then begin
+      ConLostError := EZSQLConnectionLost.CreateWithCodeAndStatus(Ord(CONNECTION_BAD), aErrorStatus, aMessage);
+      if Assigned(Sender)
+      then Sender.ReleaseImmediat(Sender, ConLostError)
+      else ReleaseImmediat(Sender, ConLostError);
+      if ConLostError <> nil then raise ConLostError;
+    end else if LogCategory <> lcUnprepStmt then
+      if Status = PGRES_FATAL_ERROR then //silence -> https://sourceforge.net/p/zeoslib/tickets/246/
+        raise EZSQLException.CreateWithStatus(aErrorStatus, aMessage)
+      else begin //that's a notice propably
+        ClearWarnings;
+        FlastWarning := EZSQLWarning.CreateWithStatus(aErrorStatus, aMessage)
+      end;
+  finally
+    FreeAndNil(SQLWriter);
+  end;
 end;
 
 function TZPostgreSQLConnection.HasMinimumServerVersion(MajorVersion,
@@ -410,28 +539,37 @@ end;
 }
 {$IFDEF FPC} {$PUSH} {$WARN 5091 off : Local variable "ErrRaw" of managed type does not seem to be initialized} {$ENDIF}
 function TZPostgreSQLConnection.AbortOperation: Integer;
-Const
- len = 256;
-Var
- pcancel: PGCancel;
- perr: PChar;
+var
+  pCancel: PGCancel;
+  ErrRaw: RawByteString;
+  L: NativeUInt;
+  P: PAnsiChar;
 begin
- {$MESSAGE '.AbortOperation with PostgreSQL is untested and might cause unexpected results!'}
- // https://www.postgresql.org/docs/9.2/libpq-cancel.html
- Result := 1;
- pcancel := FPlainDriver.PQgetCancel(FConn);
- If pcancel <> nil Then Begin
-                        GetMem(perr, (len + 1) * SizeOf(Char));
-                        Try
-                         Try
-                          If FPlainDriver.PQcancel(pcancel, perr, len) = 1 Then Result := 0;
-                         Finally
-                          FPlainDriver.PQfreeCancel(pcancel);
-                         End;
-                        Finally
-                         FreeMem(perr);
-                        End;
-                        End;
+  {.$MESSAGE '.AbortOperation with PostgreSQL is untested and might cause unexpected results!'}
+  // https://www.postgresql.org/docs/9.2/libpq-cancel.html
+  Result := 1;
+  pCancel := FPlainDriver.PQgetCancel(FConn);
+  if pCancel <> nil then
+  try
+    // 0 - error, 1 - success
+    P := @FByteBuffer[0];
+    PByte(P)^ := 0;
+    if FPlainDriver.PQcancel(pCancel, P, SizeOf(TByteBuffer)-1) = 1 then
+      Result := 0
+    else begin
+      L := ZFastCode.StrLen(P);
+      //as documented if cancel fails, because the server was ready inbetween,
+      //no visible Result is returned so we tag this fail as an success
+      if L = 0
+      then Result := 0
+      else begin
+        ZSetString(P, L, ErrRaw);
+        HandleErrorOrWarning(PGRES_FATAL_ERROR, lcOther, ErrRaw, nil, Self);
+      end;
+    end;
+  finally
+    FPlainDriver.PQfreeCancel(pcancel);
+  end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -597,6 +735,16 @@ begin
     FPreparedStatementTrashBin.Add(Value);
 end;
 
+{**
+  Clears all warnings reported for this <code>Connection</code> object.
+  After a call to this method, the method <code>getWarnings</code>
+    returns null until a new warning is reported for this Connection.
+}
+procedure TZPostgreSQLConnection.ClearWarnings;
+begin
+  FreeAndNil(FLastWarning);
+end;
+
 function TZPostgreSQLConnection.ClientSettingsChanged: Boolean;
 begin
   Result := FClientSettingsChanged;
@@ -629,12 +777,15 @@ begin
   LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
   try
     if FPlainDriver.PQstatus(Fconn) = CONNECTION_BAD then
-      HandlePostgreSQLError(Self, GetPlainDriver, Fconn, lcConnect, LogMessage,nil)
+      HandleErrorOrWarning(PGRES_FATAL_ERROR, lcConnect, LogMessage, Self, nil)
     else if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
+    if Assigned(FPlainDriver.PQsetNoticeReceivcer)
     { Set the notice processor (default = nil)}
-    FPlainDriver.PQsetNoticeProcessor(Fconn,FNoticeProcessor,nil);
+    then FPlainDriver.PQsetNoticeReceivcer(Fconn, FNoticeReceiver, Pointer(Self))
+    { Set the notice processor (default = nil)}
+    else FPlainDriver.PQsetNoticeProcessor(Fconn,FNoticeProcessor, Pointer(Self));
 
     { Gets the current codepage }
     Temp := GetPlainDriver.ValidateCharEncoding(FPlainDriver.PQclientEncoding(Fconn)).Name;
@@ -669,12 +820,10 @@ begin
 
     { sets standard_conforming_strings according to Properties if available }
     SCS := Info.Values[ConnProps_StdConformingStrings];
-    if SCS <> '' then begin
+    if (SCS <> '') then begin
       SetServerSetting(ConnProps_StdConformingStrings, {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(SCS));
       FClientSettingsChanged := True;
-      SetStandardConformingStrings(StrToBoolEx(SCS));
-    end else
-      SetStandardConformingStrings(StrToBoolEx(GetServerSetting(#39+ConnProps_StdConformingStrings+#39)));
+    end;
     {$IFDEF USE_SYNCOMMONS}
     SetServerSetting('DateStyle', 'ISO');
     {$ENDIF}
@@ -932,39 +1081,44 @@ var
   LogMessage: RawbyteString;
   QueryHandle: TPGresult;
   PError: PAnsiChar;
+  Status: TZPostgreSQLExecStatusType;
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
   //see https://sourceforge.net/p/zeoslib/tickets/246/
-  if not AutoCommit then begin //try to commit
-    QueryHandle := FPlainDriver.PQexec(Fconn, Pointer(cCommit));
-    if PGSucceeded(FPlainDriver.PQerrorMessage(Fconn)) then begin
-      FPlainDriver.PQclear(QueryHandle);
-      if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, cCommit);
-    end else begin
-      if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, cCommit);
-      if Assigned(FPlainDriver.PQresultErrorField) and Assigned(QueryHandle)
-      then PError := FPlainDriver.PQresultErrorField(QueryHandle,Ord(PG_DIAG_SQLSTATE))
-      else PError := FPLainDriver.PQerrorMessage(Fconn);
-      //transaction aborted and in postre zombi status? If so a rollback is required
-      if (PError = nil) or (ZSysUtils.ZMemLComp(PError, current_transaction_is_aborted, 5) = 0) then begin
-        FPlainDriver.PQclear(QueryHandle);
-        QueryHandle := FPlainDriver.PQexec(Fconn, Pointer(cRollback));
-      end;
-      if QueryHandle <> nil then
-        FPlainDriver.PQclear(QueryHandle); //raise no exception
-    end;
-  end;
   try
-    DeallocatePreparedStatements;
+    if not AutoCommit then begin //try to commit
+      QueryHandle := FPlainDriver.PQexec(Fconn, Pointer(cRollBack));
+      Status := FPlainDriver.PQresultStatus(QueryHandle);
+      if Status = PGRES_COMMAND_OK then begin
+        FPlainDriver.PQclear(QueryHandle);
+        if DriverManager.HasLoggingListener then
+          DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, cCommit);
+      end else begin
+        if DriverManager.HasLoggingListener then
+          DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, cCommit);
+        if Assigned(FPlainDriver.PQresultErrorField) and Assigned(QueryHandle)
+        then PError := FPlainDriver.PQresultErrorField(QueryHandle,Ord(PG_DIAG_SQLSTATE))
+        else PError := FPLainDriver.PQerrorMessage(Fconn);
+        //transaction aborted and in postre zombi status? If so a rollback is required
+        if (PError = nil) or (ZSysUtils.ZMemLComp(PError, current_transaction_is_aborted, 5) = 0) then begin
+          FPlainDriver.PQclear(QueryHandle);
+          QueryHandle := FPlainDriver.PQexec(Fconn, Pointer(cRollback));
+        end;
+        if QueryHandle <> nil then
+          FPlainDriver.PQclear(QueryHandle); //raise no exception
+      end;
+    end;
   finally
-    if Fconn <> nil then
-      FPlainDriver.PQFinish(Fconn);
-    Fconn := nil;
-    LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
-    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
+    try
+      DeallocatePreparedStatements;
+    finally
+      if Fconn <> nil then
+        FPlainDriver.PQFinish(Fconn);
+      Fconn := nil;
+      LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
+      DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
+    end;
   end;
 end;
 
@@ -1092,6 +1246,7 @@ var
   TypeName: string;
   LastVersion: boolean;
   P: PAnsiChar;
+  Status: TZPostgreSQLExecStatusType;
 begin
   if Closed then
      Open;
@@ -1106,7 +1261,8 @@ begin
              ' WHERE (typtype = ''b'' and oid < 10000) OR typtype = ''p'' OR typtype = ''e'' OR typbasetype<>0 ORDER BY oid';
 
     QueryHandle := FPlainDriver.PQexec(Fconn, Pointer(SQL));
-    if PGSucceeded(FPlainDriver.PQerrorMessage(Fconn)) then begin
+    Status := FPlainDriver.PQresultStatus(QueryHandle);
+    if Status = PGRES_TUPLES_OK then begin
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 
@@ -1138,7 +1294,7 @@ begin
       end;
       GetPlainDriver.PQclear(QueryHandle);
     end else
-      HandlePostgreSQLError(Self, FPlainDriver, Fconn, lcExecute, SQL, QueryHandle);
+      HandleErrorOrWarning(Status, lcExecute, SQL, Self, QueryHandle);
   end;
 
   I := FTypeList.IndexOfObject(TObject(Id));
@@ -1208,12 +1364,14 @@ var
   QueryHandle: TPGresult;
   SQL: RawByteString;
   P: PAnsichar;
+  Status: TZPostgreSQLExecStatusType;
 begin
   if Closed then
     Open;
   SQL := 'SELECT version()';
   QueryHandle := FPlainDriver.PQExec(Fconn, Pointer(SQL));
-  if PGSucceeded(FPlainDriver.PQerrorMessage(Fconn)) then begin
+  Status := FPlainDriver.PQresultStatus(QueryHandle);
+  if Status = PGRES_TUPLES_OK then begin
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
     P := FPlainDriver.PQgetvalue(QueryHandle, 0, 0);
@@ -1247,7 +1405,7 @@ begin
       List.Free;
     end;
   end else
-    HandlePostgreSQLError(Self, GetPlainDriver, Fconn, lcExecute, SQL,QueryHandle);
+    HandleErrorOrWarning(PGRES_FATAL_ERROR, lcExecute, SQL, Self, QueryHandle);
 end;
 
 {**
@@ -1315,15 +1473,16 @@ end;
 procedure TZPostgreSQLConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 var QueryHandle: TPGresult;
+    Status: TZPostgreSQLExecStatusType;
 begin
   QueryHandle := FPlainDriver.PQexec(Fconn, Pointer(SQL));
-  if PGSucceeded(FPlainDriver.PQerrorMessage(Fconn)) then begin
+  Status := FPlainDriver.PQresultStatus(QueryHandle);
+  if (Status = PGRES_COMMAND_OK) or (Status = PGRES_EMPTY_QUERY) then begin
     FPlainDriver.PQclear(QueryHandle);
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
   end else
-    HandlePostgreSQLError(Self, GetPlainDriver, Fconn, LoggingCategory,
-      SQL, QueryHandle);
+    HandleErrorOrWarning(Status, LoggingCategory, SQL, Self, QueryHandle);
 end;
 
 procedure TZPostgreSQLConnection.FillUnknownDomainOIDs;
@@ -1398,10 +1557,12 @@ var
   SQL: RawByteString;
   QueryHandle: TPGresult;
   P: PAnsichar;
+  Status: TZPostgreSQLExecStatusType;
 begin
   SQL := 'select setting from pg_settings where name = '+AName;
   QueryHandle := FPlainDriver.PQExec(Fconn, Pointer(SQL));
-  if PGSucceeded(FPlainDriver.PQerrorMessage(Fconn)) then begin
+  Status := FPlainDriver.PQresultStatus(QueryHandle);
+  if Status = PGRES_TUPLES_OK then begin
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
     P := FPlainDriver.PQgetvalue(QueryHandle, 0, 0);
@@ -1413,20 +1574,7 @@ begin
     {$ENDIF}
     FPlainDriver.PQclear(QueryHandle);
   end else
-    HandlePostgreSQLError(Self, GetPlainDriver, Fconn, lcExecute, SQL, QueryHandle);
-end;
-
-procedure TZPostgreSQLConnection.OnPropertiesChange(Sender: TObject);
-var
-  SCS: string;
-begin
-  inherited OnPropertiesChange(Sender);
-
-  { Define standard_conforming_strings setting}
-  SCS := Trim(Info.Values[ConnProps_StdConformingStrings]);
-  if SCS <> ''
-  then SetStandardConformingStrings(UpperCase(SCS) = FON)
-  else SetStandardConformingStrings(True);
+    HandleErrorOrWarning(Status, lcExecute, SQL, Self, QueryHandle);
 end;
 
 {**
@@ -1440,15 +1588,17 @@ procedure TZPostgreSQLConnection.SetServerSetting(const AName,
 var
   SQL: RawByteString;
   QueryHandle: TPGresult;
+  status: TZPostgreSQLExecStatusType;
 begin
   SQL := 'SET '+AName+' = '+AValue;
   QueryHandle := FPlainDriver.PQExec(Fconn, Pointer(SQL));
-  if PGSucceeded(FPlainDriver.PQerrorMessage(Fconn)) then begin
+  status := FPlainDriver.PQresultStatus(QueryHandle);
+  if (Status = PGRES_COMMAND_OK) then begin
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
     FPlainDriver.PQclear(QueryHandle);
   end else
-    HandlePostgreSQLError(Self, GetPlainDriver, Fconn, lcExecute, SQL, QueryHandle);
+    HandleErrorOrWarning(Status, lcExecute, SQL, Self, QueryHandle);
 end;
 
 {$IFDEF ZEOS_TEST_ONLY}
@@ -1457,11 +1607,6 @@ begin
  inherited Create(ZUrl);
 end;
 {$ENDIF}
-
-procedure TZPostgreSQLConnection.SetStandardConformingStrings(const Value: Boolean);
-begin
-  FStandardConformingStrings := Value;
-end;
 
 function TZPostgreSQLConnection.EncodeBinary(Buf: Pointer;
   Len: Integer; Quoted: Boolean): RawByteString;

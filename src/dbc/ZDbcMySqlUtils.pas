@@ -80,21 +80,6 @@ function ConvertMySQLHandleToSQLType(MYSQL_FIELD: PMYSQL_FIELD;
   FieldOffsets: PMYSQL_FIELDOFFSETS; MySQL_FieldType_Bit_1_IsBoolean: Boolean): TZSQLType;
 
 {**
-  Checks for possible sql errors.
-  @param PlainDriver a MySQL plain driver.
-  @param MYSQL_STMT a MySQL statement handle.
-  @param MYSQL a MySQL connection handle.
-  @param LogCategory a logging category.
-  @param LogMessage a logging message.
-}
-procedure CheckMySQLError(const PlainDriver: TZMySQLPlainDriver;
-  MYSQL: PMYSQL; MYSQL_STMT: PMYSQL_STMT; LogCategory: TZLoggingCategory;
-  const LogMessage: RawByteString; const ImmediatelyReleasable: IImmediatelyReleasable);
-
-procedure EnterSilentMySQLError;
-procedure LeaveSilentMySQLError;
-
-{**
   Decodes a MySQL Version Value encoded with format:
    (major_version * 10,000) + (minor_version * 100) + sub_version
   into separated major, minor and subversion values
@@ -220,19 +205,6 @@ uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   Math, TypInfo,
   ZMessages, ZDbcUtils, ZFastCode, ZEncoding;
 
-threadvar
-  SilentMySQLError: Integer;
-
-procedure EnterSilentMySQLError;
-begin
-  Inc(SilentMySQLError);
-end;
-
-procedure LeaveSilentMySQLError;
-begin
-  Dec(SilentMySQLError);
-end;
-
 {**
   Converts a MySQL native types into ZDBC SQL types.
   @param PlainDriver a native MySQL plain driver.
@@ -354,45 +326,6 @@ begin
    end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
-
-procedure CheckMySQLError(const PlainDriver: TZMySQLPlainDriver;
-  MYSQL: PMYSQL; MYSQL_STMT: PMYSQL_STMT; LogCategory: TZLoggingCategory;
-  const LogMessage: RawByteString; const ImmediatelyReleasable: IImmediatelyReleasable);
-var
-  ErrorMessage: RawByteString;
-  ErrorCode: Integer;
-  ConSettings: PZConSettings;
-  ConnLostError: EZSQLConnectionLost;
-begin
-  if Assigned(MYSQL_STMT) then begin
-    ErrorCode := PlainDriver.mysql_stmt_errno(MYSQL_STMT);
-    ErrorMessage := ZSysUtils.Trim(PlainDriver.mysql_stmt_error(MYSQL_STMT));
-  end else begin
-    ErrorMessage := ZSysUtils.Trim(PlainDriver.mysql_error(MYSQL));
-    ErrorCode := PlainDriver.mysql_errno(MYSQL);
-  end;
-  if (ErrorCode <> 0) then begin
-    if (ErrorMessage = '') then
-      ErrorMessage := 'unknown error';
-    ConSettings := ImmediatelyReleasable.GetConSettings;
-    if (ErrorCode = CR_SERVER_GONE_ERROR) or (ErrorCode = CR_SERVER_LOST) then begin
-      ConnLostError := EZSQLConnectionLost.CreateWithCode(ErrorCode,
-      Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
-        ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
-      ImmediatelyReleasable.ReleaseImmediat(ImmediatelyReleasable, ConnLostError);
-      if ConnLostError <> nil then raise ConnLostError;
-    end else begin
-      if SilentMySQLError > 0 then
-        raise EZMySQLSilentException.CreateFmt(SSQLError1, [ErrorMessage]);
-
-      DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage,
-        ErrorCode, ErrorMessage);
-      raise EZSQLException.CreateWithCode(ErrorCode,
-        Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
-          ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
-    end;
-  end;
-end;
 
 {**
   Decodes a MySQL Version Value encoded with format:

@@ -111,20 +111,6 @@ function EncodeBinaryString(SrcBuffer: PAnsiChar; Len: Integer; Quoted: Boolean 
 function PGEscapeString(SrcBuffer: PAnsiChar; SrcLength: Integer;
     ConSettings: PZConSettings; Quoted: Boolean): RawByteString;
 
-{**
-  Checks for possible sql errors.
-  @param Connection a reference to database connection to execute Rollback.
-  @param PlainDriver a PostgreSQL plain driver.
-  @param Handle a PostgreSQL connection reference.
-  @param LogCategory a logging category.
-  @param LogMessage a logging message.
-  @param ResultHandle the Handle to the Result
-}
-procedure HandlePostgreSQLError(const Sender: IImmediatelyReleasable;
-  const PlainDriver: TZPostgreSQLPlainDriver; conn: TPGconn;
-  LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  ResultHandle: TPGresult);
-
 function PGSucceeded(ErrorMessage: PAnsiChar): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 {**
@@ -727,77 +713,6 @@ begin
   end;
   if Quoted then
     DestBuffer^ := '''';
-end;
-
-{**
-  Checks for possible sql errors.
-  @param Connection a reference to database connection to execute Rollback.
-  @param PlainDriver a PostgreSQL plain driver.
-  @param Handle a PostgreSQL connection reference.
-  @param LogCategory a logging category.
-  @param LogMessage a logging message.
-  //FirmOS 22.02.06
-  @param ResultHandle the Handle to the Result
-}
-procedure HandlePostgreSQLError(const Sender: IImmediatelyReleasable;
-  const PlainDriver: TZPostgreSQLPlainDriver; conn: TPGconn;
-  LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-  ResultHandle: TPGresult);
-var
-   resultErrorFields: array[TZPostgreSQLFieldCode] of PAnsiChar;
-   I: TZPostgreSQLFieldCode;
-   ErrorMessage: PAnsiChar;
-   ConSettings: PZConSettings;
-   aMessage, aErrorStatus: String;
-   ConLostError: EZSQLConnectionLost;
-begin
-  ErrorMessage := PlainDriver.PQerrorMessage(conn);
-  if PGSucceeded(ErrorMessage) then Exit;
-
-  for i := low(TZPostgreSQLFieldCode) to high(TZPostgreSQLFieldCode) do
-    if Assigned(ResultHandle) and Assigned(PlainDriver.PQresultErrorField) {since 7.4}
-    then resultErrorFields[i] := PlainDriver.PQresultErrorField(ResultHandle,TPG_DIAG_ErrorFieldCodes[i])
-    else resultErrorFields[i] := nil;
-
-  if Assigned(Sender) then begin
-    ConSettings := Sender.GetConSettings;
-    aMessage := '';
-    for i := low(TZPostgreSQLFieldCode) to high(TZPostgreSQLFieldCode) do
-       if resultErrorFields[i] <> nil then
-        aMessage := aMessage + TPG_DIAG_ErrorFieldPrevixes[i]+Trim(ConSettings^.ConvFuncs.ZRawToString(resultErrorFields[i],
-          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP));
-    if aMessage <> ''
-    then aMessage := Format(SSQLError1, [aMessage])
-    else aMessage := Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
-          ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]);
-    aErrorStatus := ConSettings^.ConvFuncs.ZRawToString(resultErrorFields[pgdiagSQLSTATE],
-          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-
-    if DriverManager.HasLoggingListener then
-      DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage,
-        0, ErrorMessage);
-  end else begin
-    aMessage := '';
-    for i := low(TZPostgreSQLFieldCode) to high(TZPostgreSQLFieldCode) do
-       if resultErrorFields[i] <> nil then
-        aMessage := aMessage + TPG_DIAG_ErrorFieldPrevixes[i]+Trim(String(resultErrorFields[i]));
-    if aMessage <> ''
-    then aMessage := Format(SSQLError1, [aMessage])
-    else aMessage := Format(SSQLError1, [String(ErrorMessage)]);
-    aErrorStatus := String(resultErrorFields[pgdiagSQLSTATE]);
-    if DriverManager.HasLoggingListener then
-      DriverManager.LogError(LogCategory, 'postresql', LogMessage, 0, ErrorMessage);
-  end;
-
-  if ResultHandle <> nil then
-    PlainDriver.PQclear(ResultHandle);
-  if PlainDriver.PQstatus(conn) = CONNECTION_BAD then begin
-    ConLostError := EZSQLConnectionLost.CreateWithCodeAndStatus(Ord(CONNECTION_BAD), aErrorStatus, aMessage);
-    if Assigned(Sender) then
-      Sender.ReleaseImmediat(Sender, ConLostError);
-    if ConLostError <> nil then raise ConLostError;
-  end else if LogCategory <> lcUnprepStmt then //silence -> https://sourceforge.net/p/zeoslib/tickets/246/
-    raise EZSQLException.CreateWithStatus(aErrorStatus, aMessage);
 end;
 
 function PGSucceeded(ErrorMessage: PAnsiChar): Boolean;

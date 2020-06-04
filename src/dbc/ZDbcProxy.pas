@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcConnection, ZPlainProxyDriver, ZPlainProxyDriverIntf,
-  ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser, ZURL, ZCompatibility;
+  ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser, {$IFNDEF ZEOS73UP}ZURL,{$ENDIF} ZCompatibility;
 
 type
 
@@ -87,8 +87,8 @@ type
 
   { TZProxyConnection }
 
-  TZDbcProxyConnection = class({$IFNDEF ZEOS73UP}TZAbstractConnection, IZConnection
-    {$ELSE} TZAbstractDbcConnection, {$ENDIF}IZDbcProxyConnection)
+  TZDbcProxyConnection = class({$IFNDEF ZEOS73UP}TZAbstractConnection{$ELSE}TZAbstractDbcConnection{$ENDIF},
+    IZConnection, IZDbcProxyConnection)
   private
     FPlainDriver: IZProxyPlainDriver;
     FConnIntf: IZDbcProxy;
@@ -97,18 +97,30 @@ type
     //shadow properties - the just mirror the values that are set on the server
     FCatalog: String;
     FServerProvider: TZServerProvider;
+
+    {$IFDEF ZEOS73UP}
+    FStartTransactionUsed: Boolean;
+    {$ENDIF}
   protected
     procedure InternalCreate; override;
     procedure transferProperties(PropName, PropValue: String);
     procedure applyProperties(const Properties: String);
     function encodeProperties(PropName, PropValue: String): String;
   public
+    {$IFNDEF ZEOS73UP}
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
-    function CreatePreparedStatement(const SQL: string; Info: TStrings):
-      IZPreparedStatement; override;
+    function CreatePreparedStatement(const SQL: string; Info: TStrings): IZPreparedStatement; override;
+    {$ELSE}
+    function CreateStatementWithParams(Info: TStrings): IZStatement;
+    function PrepareStatementWithParams(const SQL: string; Info: TStrings): IZPreparedStatement;
+    function PrepareCallWithParams(const SQL: string; Info: TStrings): IZCallableStatement;
+    {$ENDIF}
 
     procedure Commit;
     procedure Rollback;
+    {$IFDEF ZEOS73UP}
+    function StartTransaction: Integer;
+    {$ENDIF}
 
     procedure Open; override;
     procedure InternalClose; override;
@@ -259,6 +271,10 @@ begin
   if not Closed then
     Exit;
 
+  {$IFDEF ZEOS73UP}
+  FStartTransactionUsed := false;
+  {$ENDIF}
+
   LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
 
   PropList := encodeProperties('autocommit', BoolToStr(GetAutoCommit, True));
@@ -270,6 +286,7 @@ begin
   applyProperties(PropList);
 end;
 
+{$IFNDEF ZEOS73UP}
 {**
   Creates a <code>Statement</code> object for sending
   SQL statements to the database.
@@ -292,6 +309,20 @@ begin
 
   Result := TZDbcProxyPreparedStatement.Create((self as IZConnection), '', Info);
 end;
+
+{$ELSE}
+
+function TZDbcProxyConnection.CreateStatementWithParams(Info: TStrings): IZStatement;
+begin
+  if IsClosed then
+    Open;
+
+  Result := TZDbcProxyPreparedStatement.Create((self as IZConnection), '', Info);
+end;
+
+{$ENDIF}
+
+{$IFNDEF ZEOS73UP}
 
 {**
   Creates a <code>PreparedStatement</code> object for sending
@@ -330,6 +361,25 @@ begin
   Result := TZDbcProxyPreparedStatement.Create((self as IZConnection), SQL, Info);
 end;
 
+{$ELSE}
+
+function TZDbcProxyConnection.PrepareStatementWithParams(const SQL: string; Info: TStrings): IZPreparedStatement;
+begin
+  if IsClosed then
+    Open;
+
+  Result := TZDbcProxyPreparedStatement.Create((self as IZConnection), SQL, Info);
+end;
+
+{$ENDIF}
+
+{$IFDEF ZEOS73UP}
+function TZDbcProxyConnection.PrepareCallWithParams(const SQL: string; Info: TStrings): IZCallableStatement;
+begin
+  raise Exception.Create('PrepareCallWithParams is not supported!');
+end;
+{$ENDIF}
+
 {**
   Makes all changes made since the previous
   commit/rollback permanent and releases any database locks
@@ -342,6 +392,12 @@ begin
   if not Closed then
     if not GetAutoCommit then begin
       FConnIntf.Commit;
+      {$IFDEF ZEOS73UP}
+      if FStartTransactionUsed then begin
+        SetAutoCommit(True);
+        FStartTransactionUsed := false;
+      end;
+      {$ENDIF}
     end else
       raise Exception.Create(SInvalidOpInAutoCommit);
 end;
@@ -358,9 +414,28 @@ begin
   if not Closed then
     if not GetAutoCommit then begin
       FConnIntf.Rollback;
+      {$IFDEF ZEOS73UP}
+      if FStartTransactionUsed then begin
+        SetAutoCommit(True);
+        FStartTransactionUsed := false;
+      end;
+      {$ENDIF}
     end else
       raise Exception.Create(SInvalidOpInAutoCommit);
 end;
+
+{$IFDEF ZEOS73UP}
+// for now we don't support nested transactions.
+// Todo: Integrate changes for nested transactions support.
+function TZDbcProxyConnection.StartTransaction: Integer;
+begin
+  if FStartTransactionUsed or not GetAutoCommit then
+    raise EZSQLException.Create('The proxy driver does not support nested transactions.');
+  FStartTransactionUsed := True;
+  SetAutoCommit(False);
+  Result := 1;
+end;
+{$ENDIF}
 
 {**
   Releases a Connection's database and JDBC resources

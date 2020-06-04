@@ -93,9 +93,16 @@ type
     function GetPlainDriver: TZMySQLPlainDriver;
     procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString);
     function GetByteBufferAddress: PByteBuffer;
+    procedure SetSilentError(Value: Boolean);
+    procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
+      MYSQL_STMT: PMYSQL_STMT; const LogMessage: RawByteString;
+      const Sender: IImmediatelyReleasable);
   end;
 
   {** Implements MySQL Database Connection. }
+
+  { TZMySQLConnection }
+
   TZMySQLConnection = class(TZAbstractDbcConnection, IZConnection,
     IZMySQLConnection, IZTransaction)
   private
@@ -106,6 +113,8 @@ type
     FSupportsBitType, FSupportsReadOnly: Boolean;
     FPlainDriver: TZMySQLPlainDriver;
     FSavePoints: TStrings;
+    FLastWarning: EZSQLWarning;
+    FSilentError: Boolean;
   protected
     procedure InternalCreate; override;
     procedure InternalClose; override;
@@ -134,6 +143,9 @@ type
     procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
+    function GetWarnings: EZSQLWarning; override;
+    procedure ClearWarnings; override;
+
     {ADDED by fduenas 15-06-2006}
     function GetClientVersion: Integer; override;
     function GetHostVersion: Integer; override;
@@ -150,6 +162,10 @@ type
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
       var AError: EZSQLConnectionLost); override;
     function GetPlainDriver: TZMySQLPlainDriver;
+    procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
+      MYSQL_STMT: PMYSQL_STMT; const LogMessage: RawByteString;
+      const Sender: IImmediatelyReleasable);
+    procedure SetSilentError(Value: Boolean);
   end;
 
 var
@@ -516,7 +532,7 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     {$ENDIF}
                               PAnsiChar(ConSettings^.Database), Port, nil,
                               ClientFlag) = nil then begin
-      CheckMySQLError(FPlainDriver, FHandle, nil, lcConnect, LogMessage, Self);
+      HandleErrorOrWarning(lcConnect, nil, LogMessage, Self);
       DriverManager.LogError(lcConnect, ConSettings^.Protocol, LogMessage,
         0, ConSettings.ConvFuncs.ZStringToRaw(SUnknownError,
           ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
@@ -718,8 +734,8 @@ procedure TZMySQLConnection.ExecuteImmediat(const SQL: RawByteString;
 begin
   if FPlainDriver.mysql_real_query(FHandle,
     Pointer(SQL), Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}) <> 0 then
-      CheckMySQLError(FPlainDriver, FHandle, nil, LoggingCategory, SQL, Self);
-  if DriverManager.HasLoggingListener then
+      HandleErrorOrWarning(LoggingCategory, nil, SQL, Self)
+  else if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
 end;
 
@@ -727,7 +743,7 @@ end;
   Attempts to kill a long-running operation on the database server
   side
 }
-Function TZMySQLConnection.AbortOperation: Integer;
+function TZMySQLConnection.AbortOperation: Integer;
 Var
  killquery: SQLString;
  izc: IZConnection;
@@ -758,8 +774,8 @@ begin
     FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
     If FPlainDriver.mysql_commit(FHandle) <> 0 then
-      CheckMySQLError(FPlainDriver, FHandle, nil, lcExecute, 'Native Commit call', Self);
-    if DriverManager.HasLoggingListener then
+      HandleErrorOrWarning(lcTransaction, nil, 'Native Commit call', Self)
+    else if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecute, ConSettings.Protocol, 'Native Commit call');
     AutoCommit := True;
     if FRestartTransaction then
@@ -794,8 +810,8 @@ begin
     FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
     If FPlainDriver.mysql_rollback(FHandle) <> 0 then
-      CheckMySQLError(FPlainDriver, FHandle, nil, lcExecute, 'Native Rollback call', Self);
-    if DriverManager.HasLoggingListener then
+      HandleErrorOrWarning(lcTransaction, nil, 'Native Rollback call', Self)
+    else if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecute, ConSettings.Protocol, 'Native Rollback call');
     AutoCommit := True;
     if FRestartTransaction then
@@ -837,6 +853,27 @@ end;
 function TZMySQLConnection.GetCatalog: string;
 begin
   Result := FCatalog;
+end;
+
+{**
+  Returns the first warning reported by calls on this Connection.
+  <P><B>Note:</B> Subsequent warnings will be chained to this
+  SQLWarning.
+  @return the first SQLWarning or null
+}
+function TZMySQLConnection.GetWarnings: EZSQLWarning;
+begin
+  Result := FLastWarning;
+end;
+
+{**
+  Clears all warnings reported for this <code>Connection</code> object.
+  After a call to this method, the method <code>getWarnings</code>
+    returns null until a new warning is reported for this Connection.
+}
+procedure TZMySQLConnection.ClearWarnings;
+begin
+  FreeAndNil(FLastWarning);
 end;
 
 {**
@@ -895,8 +932,8 @@ begin
     Open;
   if AutoCommit then begin
     if FPlainDriver.mysql_autocommit(FHandle, 0) <> 0 then
-      CheckMySQLError(FPlainDriver, FHandle, nil, lcExecute, MySQLCommitMsg[False], Self);
-    if DriverManager.HasLoggingListener then
+      HandleErrorOrWarning(lcTransaction, nil, MySQLCommitMsg[False], Self)
+    else if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, MySQLCommitMsg[False]);
     AutoCommit := False;
     Result := 1;
@@ -943,8 +980,8 @@ begin
     else if Value then begin
       FSavePoints.Clear;
       if FPlainDriver.mysql_autocommit(FHandle, 1) <> 0 then
-        CheckMySQLError(FPlainDriver, FHandle, nil, lcExecute, MySQLCommitMsg[True], Self);
-      if DriverManager.HasLoggingListener then
+        HandleErrorOrWarning(lcTransaction, nil, MySQLCommitMsg[True], Self)
+      else if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, MySQLCommitMsg[True]);
       AutoCommit := True;
     end else
@@ -981,6 +1018,85 @@ end;
 function TZMySQLConnection.GetPlainDriver: TZMySQLPlainDriver;
 begin
   Result := FPlainDriver;
+end;
+
+procedure TZMySQLConnection.HandleErrorOrWarning(
+  LogCategory: TZLoggingCategory; MYSQL_STMT: PMYSQL_STMT;
+  const LogMessage: RawByteString; const Sender: IImmediatelyReleasable);
+var
+  ErrorMessage: RawByteString;
+  ErrorCode: Integer;
+  P: PAnsiChar;
+  L: NativeUInt;
+  Error: EZSQLThrowable;
+  AExceptionClass: EZSQLThrowableClass;
+label jmpErr;
+begin
+  if Assigned(MYSQL_STMT) then begin
+    ErrorCode := FPlainDriver.mysql_stmt_errno(MYSQL_STMT);
+    P := FPlainDriver.mysql_stmt_error(MYSQL_STMT);
+  end else begin
+    ErrorCode := FPlainDriver.mysql_errno(FHandle);
+    P := FPlainDriver.mysql_error(FHandle);
+  end;
+  if (ErrorCode <> 0) then begin
+    ErrorMessage := '';
+    if P <> nil then begin
+      L := StrLen(P);
+      Trim(L, P);
+      ZSetString(P, L, ErrorMessage);
+    end;
+    if (ErrorMessage = '') then
+      ErrorMessage := 'unknown error';
+    Error := nil;
+    case ErrorCode of
+      CR_SERVER_GONE_ERROR,
+      CR_SERVER_LOST: if LogCategory <> lcConnect
+                      then AExceptionClass := EZSQLConnectionLost
+                      else goto jmpErr;
+      WARN_DATA_TRUNCATED,
+      WARN_NO_MASTER_INFO,
+      WARN_OPTION_IGNORED,
+      WARN_PLUGIN_BUSY,
+      WARN_NON_ASCII_SEPARATOR_NOT_IMPLEMENTED,
+      WARN_COND_ITEM_TRUNCATED,
+      WARN_OPTION_BELOW_LIMIT,
+      WARN_ON_BLOCKHOLE_IN_RBR,
+      WARN_DEPRECATED_MAXDB_SQL_MODE_FOR_TIMESTAMP:
+                      AExceptionClass := EZSQLWarning;
+      else
+jmpErr:               if not FSilentError
+                      then AExceptionClass := EZSQLException
+                      else AExceptionClass := nil;
+    end;
+    if DriverManager.HasLoggingListener then
+      if AExceptionClass <> EZSQLWarning
+      then DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage,
+        ErrorCode, ErrorMessage)
+      else begin
+        if LogMessage <> '' then
+          ErrorMessage := ErrorMessage + ' SQL: '+LogMessage;
+        DriverManager.LogMessage(LogCategory, ConSettings^.Protocol, ErrorMessage);
+      end;
+    if AExceptionClass <> nil then begin
+      if (LogMessage <> EmptyRaw) and (AExceptionClass <> EZSQLWarning) then
+        ErrorMessage := ErrorMessage + ' SQL: '+LogMessage;
+      Error := AExceptionClass.CreateWithCode(ErrorCode,
+          Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
+            ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
+      if AExceptionClass = EZSQLConnectionLost then
+        if Sender <> nil
+        then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(Error))
+        else ReleaseImmediat(Sender, EZSQLConnectionLost(Error));
+      if Error <> nil then
+        raise Error;
+    end;
+  end;
+end;
+
+procedure TZMySQLConnection.SetSilentError(Value: Boolean);
+begin
+  Self.FSilentError := Value;
 end;
 
 {**

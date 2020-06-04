@@ -284,6 +284,9 @@
                         {$DEFINE WITH_InternalAddRecord_TRecBuf}
                         {$DEFINE WITH_AllocRecBuf_TRecBuf}
                         {$DEFINE WITH_FreeRecBuf_TRecBuf}
+                        {$DEFINE NO_WIDESTRING} // no WideString type
+                        {$DEFINE NO_SAFECALL} // no safecall calling convention
+
                         {$IF CompilerVersion <= 30}
                           {$DEFINE NO_UTF8STRING}
                           {$UNDEF WITH_RAWBYTESTRING}
@@ -336,7 +339,15 @@
                                       {$DEFINE HAVE_TFIELD_32BIT_ASLONGWORD} //TField.AsLongWord setter and getter use 32Bit unsigned integer
                                       {$DEFINE WITH_VIRTUAL_ASGUID} //TGUIDfield AsGUID has virtual setter and getter
                                       {$IF CompilerVersion >= 33} //Delphi XE10.3 Rio+
-                                      {$IFEND CompilerVersion >= 333}
+                                        {$IF CompilerVersion >= 34} // Delphi XE10.4 Sydney
+                                          //It seems, this compiler doesn't define NEXTGEN on Android. So we need something else:
+                                          {$IF DEFINED(MACOS) or DEFINED(IOS) or DEFINED(ANDROID)}
+                                            {$DEFINE NO_UNIT_CONTNRS} //unit Contnrs (TObjectList) doesn't exist any more
+                                            {$DEFINE NO_WIDESTRING} // no WideString type
+                                            {$DEFINE NO_SAFECALL} // no safecall calling convention
+                                          {$IFEND}
+                                        {$IFEND CompilerVersion >= 34}
+                                      {$IFEND CompilerVersion >= 33}
                                     {$ELSE !CompilerVersion >= 32} //Delphi Berlin+
                                     {$IFEND CompilerVersion >= 32}
                                   {$ELSE !CompilerVersion >= 31} //Delphi Seattle+

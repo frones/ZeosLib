@@ -367,7 +367,7 @@ end;
 function TZPostgreSQLDatabaseInfo.GetServerVersion: string;
 begin
   with Metadata.GetConnection as IZPostgreSQLConnection do
-    Result := Format('%s.%s', [GetServerMajorVersion, GetServerMinorVersion]);
+    Result := Format('%d.%d', [GetServerMajorVersion, GetServerMinorVersion]);
 end;
 
 {**

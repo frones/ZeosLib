@@ -299,7 +299,7 @@ implementation
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   ZFastCode, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZCollections,
-  ZDbcProperties;
+  ZDbcProperties, ZDbcMySql;
 
 { TZMySQLDatabaseInfo }
 
@@ -1134,29 +1134,25 @@ begin
     LCatalog, LTableNamePattern);
   if lower_case_table_names then
     LTableNamePattern := LowerCase(LTableNamePattern);
-
-  with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
-    Format('SHOW TABLES FROM %s LIKE ''%s''',
-    [IC.Quote(LCatalog), LTableNamePattern])) do
-  begin
-    while Next do
-    begin
-      Result.MoveToInsertRow;
-      Result.UpdateString(CatalogNameIndex, LCatalog);
-      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(FirstDbcIndex, Len), Len);
-      Result.UpdateString(TableColumnsSQLType, 'TABLE');
-      Result.InsertRow;
+  with (GetConnection as IZMySQLConnection) do begin
+    with CreateStatementWithParams(FInfo).ExecuteQuery(
+      Format('SHOW TABLES FROM %s LIKE ''%s''',
+      [IC.Quote(LCatalog), LTableNamePattern])) do begin
+      while Next do begin
+        Result.MoveToInsertRow;
+        Result.UpdateString(CatalogNameIndex, LCatalog);
+        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(FirstDbcIndex, Len), Len);
+        Result.UpdateString(TableColumnsSQLType, 'TABLE');
+        Result.InsertRow;
+      end;
+      Close;
     end;
-    Close;
-  end;
 
-  // If a table was specified but not found, check if it could be a temporary table
-  if not Result.First and (LTableNamePattern <> '%') then
-  begin
-    try
-      EnterSilentMySQLError;
+    // If a table was specified but not found, check if it could be a temporary table
+    if not Result.First and (LTableNamePattern <> '%') then begin
+      SetSilentError(true);
       try
-        if GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
+        if CreateStatementWithParams(FInfo).ExecuteQuery(
           Format('SHOW COLUMNS FROM %s.%s',
           [IC.Quote(LCatalog),
            IC.Quote(LTableNamePattern)])).Next then
@@ -1168,11 +1164,8 @@ begin
           Result.InsertRow;
         end;
       finally
-        LeaveSilentMySQLError;
+        SetSilentError(False);
       end;
-    except
-      on EZMySQLSilentException do ;
-      on EZSQLException do ;
     end;
   end;
 end;

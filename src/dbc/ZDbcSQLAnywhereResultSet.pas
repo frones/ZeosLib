@@ -60,7 +60,7 @@ interface
 uses FmtBCD, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}
-  System.Types, System.Contnrs
+  System.Types{$IFNDEF NO_UNIT_CONTNRS},Contnrs{$ENDIF}
   {$ELSE}
     {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} Types
   {$ENDIF},

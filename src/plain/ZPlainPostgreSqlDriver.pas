@@ -347,7 +347,7 @@ type
     pgdiagSQLSTATE, pgdiagMESSAGE_PRIMARY, pgdiagMESSAGE_DETAIL,
     pgdiagMESSAGE_HINT, pgdiagSTATEMENT_POSITION, pgdiagINTERNAL_POSITION,
     pgdiagINTERNAL_QUERY, pgdiagCONTEXT
-    {$IFDEF DEBUG},pgdiagSOURCE_FILE, pgdiagSOURCE_LINE, pgdiagSOURCE_FUNCTION{$ENDIF});
+    ,pgdiagSOURCE_FILE, pgdiagSOURCE_LINE, pgdiagSOURCE_FUNCTION);
 const
   PG_DIAG_SEVERITY=ord('S');
   PG_DIAG_SQLSTATE=ord('C');
@@ -365,13 +365,8 @@ const
   TPG_DIAG_ErrorFieldCodes: array[TZPostgreSQLFieldCode] of Integer = (PG_DIAG_SEVERITY,
     PG_DIAG_SQLSTATE, PG_DIAG_MESSAGE_PRIMARY, PG_DIAG_MESSAGE_DETAIL,
     PG_DIAG_MESSAGE_HINT, PG_DIAG_STATEMENT_POSITION, PG_DIAG_INTERNAL_POSITION,
-    PG_DIAG_INTERNAL_QUERY, PG_DIAG_CONTEXT{$IFDEF DEBUG}, PG_DIAG_SOURCE_FILE,
-    PG_DIAG_SOURCE_LINE, PG_DIAG_SOURCE_FUNCTION{$ENDIF});
-  TPG_DIAG_ErrorFieldPrevixes: Array[TZPostgreSQLFieldCode] of String = (
-    '', ' ', LineEnding, LineEnding+'detail: ', '', LineEnding+'position: ', ' ',
-    ' ', ' '{$IFDEF DEBUG}, LineEnding+'source file: ',
-    LineEnding+'line: ', lineEnding+'funtion: '{$ENDIF}
-  );
+    PG_DIAG_INTERNAL_QUERY, PG_DIAG_CONTEXT, PG_DIAG_SOURCE_FILE,
+    PG_DIAG_SOURCE_LINE, PG_DIAG_SOURCE_FUNCTION);
 
 type {$Z+}
   TZPostgreSQLExecStatusType = (
@@ -404,10 +399,6 @@ type {$Z+}
   end;
 
   PZPostgreSQLNotify = ^TZPostgreSQLNotify;
-
-{ PQnoticeProcessor is the function type for the notice-message callback. }
-
-  TZPostgreSQLNoticeProcessor = procedure(arg: Pointer; message: PAnsiChar); cdecl;
 
 { Structure for the conninfo parameter definitions returned by PQconndefaults }
 
@@ -564,7 +555,9 @@ type
 
 { PQnoticeProcessor is the function type for the notice-message callback. }
 
-  PQnoticeProcessor = procedure(arg: Pointer; message: PAnsiChar); cdecl;
+  TPQnoticeProcessor = procedure(arg: Pointer; message: PAnsiChar); cdecl;
+
+  TPQnoticeReceiver = procedure(arg: Pointer; res: TPGResult); cdecl;
 
 { Print options for PQprint() }
 
@@ -693,7 +686,8 @@ type
   //15022006 FirmOS: omitting  SSL *PQgetssl(const TPGconn *conn);
     PQtrace         : procedure(conn: TPGconn; DebugPort: Pointer); cdecl;
     PQuntrace       : procedure(conn: TPGconn); cdecl;
-    PQsetNoticeProcessor : procedure(conn: TPGconn; Proc: PQnoticeProcessor; Arg: Pointer); cdecl;
+    PQsetNoticeProcessor : function(conn: TPGconn; Proc: TPQnoticeProcessor; Arg: Pointer): TPQnoticeProcessor; cdecl;
+    PQsetNoticeReceivcer : function(conn: TPGconn; Proc: TPQnoticeReceiver; Arg: Pointer): TPQnoticeReceiver; cdecl;
 
     PQclientEncoding : function(conn: TPGconn): Integer; cdecl; //EgonHugeist
   { === in fe-exec.c === }
@@ -736,7 +730,7 @@ type
     PQconsumeInput  : function(conn: TPGconn): Integer; cdecl;
     PQgetCancel     : function(conn: TPGconn): PGcancel; cdecl;
     PQfreeCancel    : procedure(Canc: PGcancel); cdecl;
-    PQcancel        : function(Canc: PGcancel; Buffer: PChar; BufSize: Integer): Integer;
+    PQcancel        : function(Canc: PGcancel; Buffer: PAnsiChar; BufSize: Integer): Integer;
     PQgetline       : function(conn: TPGconn; Str: PAnsiChar; length: Integer): Integer; cdecl;
     PQputline       : function(conn: TPGconn; Str: PAnsiChar): Integer; cdecl;
     PQgetlineAsync  : function(conn: TPGconn; Buffer: PAnsiChar; BufSize: Integer): Integer; cdecl;
@@ -911,6 +905,7 @@ begin
     @PQtrace        := GetAddress('PQtrace');
     @PQuntrace      := GetAddress('PQuntrace');
     @PQsetNoticeProcessor := GetAddress('PQsetNoticeProcessor');
+    @PQsetNoticeReceivcer := GetAddress('PQsetNoticeReceivcer');
     @PQclientEncoding := GetAddress('PQclientEncoding');
   { === in fe-exec.c === }
     @PQexec         := GetAddress('PQexec');

@@ -406,7 +406,7 @@ implementation
 
 uses
   TypInfo,
-  ZFastCode, ZMessages, ZSysUtils, ZDbcProxy, ZDbcProxyResultSet;
+  ZFastCode, ZMessages, ZSysUtils, ZPlainProxyDriverIntf, ZDbcProxy, ZDbcProxyResultSet;
 
 { TZProxyDatabaseInfo }
 

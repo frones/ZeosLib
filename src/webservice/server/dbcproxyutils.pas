@@ -425,7 +425,9 @@ begin
     TempStr := GetEnumName(TypeInfo(TransactionIsolation), Ord(TransactionIsolation));
     List.Values['transactionisolation'] := TempStr;
     List.Values['usemetadata'] := BoolToStr(Connection.UseMetadata, true);
+    {$IFNDEF ZEOS73UP}
     List.Values['autoencodestrings'] := BoolToStr(Connection.GetAutoEncodeStrings, true);
+    {$IFEND}
     ServerProvider := Connection.GetServerProvider;
     TempStr := GetEnumName(TypeInfo(ServerProvider), Ord(ServerProvider));
     List.Values['serverprovider'] := TempStr;
@@ -464,9 +466,11 @@ begin
     if TempStr <> '' then
       Connection.SetUseMetadata(StrToBool(TempStr));
     //- Get-/SetAutoEncodeStrings
+    {$IFNDEF ZEOS73UP}
     TempStr := List.Values['autoencodestrings'];
     if TempStr <> '' then
       Connection.SetAutoEncodeStrings(StrToBool(TempStr));
+    {$ENDIF}
     //- Get-/SetAutoCommit (as part of initial property transfer)
     TempStr := List.Values['autocommit'];
     if TempStr <> '' then
