@@ -493,7 +493,7 @@ begin
         LastRowNo := 0;
         RowNo := 1; //set AfterLast
       end else
-        FFBConnection.HandleError(FStatus, 'IResultSet.fetchFirst', Self, lcExecute);
+        FFBConnection.HandleErrorOrWarning(lcExecute, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.fetchFirst', Self);
     end else begin
       RowNo := 1;
       if LastRowNo < RowNo then
@@ -565,7 +565,7 @@ begin
         if RowNo = 0 then
           RowNo := 1; //else ?? which row do we have now?
       end else
-        FFBConnection.HandleError(FStatus, 'IResultSet.fetchLast', Self, lcExecute);
+        FFBConnection.HandleErrorOrWarning(lcExecute, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.fetchLast', Self);
     end else begin
       //how to know a rowno now?
     end;
@@ -616,7 +616,7 @@ begin
         if LastRowNo >= Row then
           LastRowNo := Row -1;
       end else
-        FFBConnection.HandleError(FStatus, 'IResultSet.fetchAbsolute', Self, lcExecute);
+        FFBConnection.HandleErrorOrWarning(lcExecute, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.fetchAbsolute', Self);
     end else begin
       RowNo := Row;
       if LastRowNo < Row then
@@ -659,7 +659,7 @@ begin
         if LastRowNo >= RowNo then
           LastRowNo := RowNo -1;
       end else
-        FFBConnection.HandleError(FStatus, 'IResultSet.fetchAbsolute', Self, lcExecute);
+        FFBConnection.HandleErrorOrWarning(lcExecute, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.fetchAbsolute', Self);
     end else begin
       if LastRowNo < RowNo then
         LastRowNo := RowNo;
@@ -704,7 +704,7 @@ begin
         if GetType = rtForwardOnly then begin
           FResultSet.Close(FStatus); //dereister cursor from Txn
           if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-            FFBConnection.HandleError(FStatus, 'IResultSet.close', Self, lcOther);
+            FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.close', Self);
           FResultSet.release;
           FResultSet := nil;
           FResultSetAddr^ := nil;
@@ -712,7 +712,7 @@ begin
             DeRegisterCursor;
         end;
       end else
-        FFBConnection.HandleError(FStatus, 'IResultSet.fetchNext', Self, lcExecute);
+        FFBConnection.HandleErrorOrWarning(lcExecute, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.fetchNext', Self);
     end else begin
       RowNo := RowNo +1;
       if LastRowNo < RowNo then
@@ -749,7 +749,7 @@ begin
         if LastRowNo < RowNo then
           LastRowNo := RowNo;
       end else
-        FFBConnection.HandleError(FStatus, 'IResultSet.fetchPrior', Self, lcExecute);
+        FFBConnection.HandleErrorOrWarning(lcExecute, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.fetchPrior', Self);
     end;
   end;
 end;
@@ -760,7 +760,7 @@ begin
   if FResultSet <> nil then begin
     FResultSet.close(FStatus);
     if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-      FFBConnection.HandleError(FStatus, 'IResultSet.close', Self, lcOther);
+      FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.close', Self);
     FResultSet.release;
     FResultSet := nil;
     FResultSetAddr^ := nil;
@@ -846,7 +846,7 @@ begin
     try
       FBlob.cancel(FStatus);
       if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-        FOwnerLob.FFBConnection.HandleError(FStatus, '', Self, lcOther);
+        FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.cancel', Self);
       FOwnerLob.FFBConnection.GetActiveTransaction.DeRegisterOpenUnCachedLob(FOwnerLob);
     finally
       FLobIsOpen := False;
@@ -864,7 +864,7 @@ begin
   Assert(FLobIsOpen);
   FBlob.close(FStatus);
   if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
-    FOwnerLob.FFBConnection.HandleError(FStatus, 'IBlob.close', Self, lcOther);
+    FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.close', Self);
   FBlob.release;
   FLobIsOpen := False;
   FPosition := 0;
@@ -893,7 +893,7 @@ begin
   { create blob handle }
   FBlob := FAttachment.createBlob(Fstatus, FFBTransaction, @BlobId, 0, nil);
   if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-    FOwnerLob.FFBConnection.HandleError(FStatus, '', Self, lcOther);
+    FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.createBlob', Self);
   if not WasRegistered then
     FOwnerLob.FFBConnection.GetActiveTransaction.RegisterOpenUnCachedLob(FOwnerLob);
   FOwnerLob.FBlobId := BlobId; //write back to descriptor
@@ -935,7 +935,7 @@ begin
 
   FBlob.getInfo(FStatus, 4, @Items[0], SizeOf(Results), @Results[0]);
   if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-     FOwnerLob.FFBConnection.HandleError(FStatus, '', Self, lcOther);
+    FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.GetInfo', Self);
   pBufStart := @Results[0];
   pBuf := pBufStart;
   while pBuf - pBufStart <= SizeOf(Results) do
@@ -980,7 +980,7 @@ begin
     if (Int64(BlobID) <> 0) then begin
       FBlob := FAttachment.openBlob(FStatus, FFBTransaction, @BlobID, 0, nil);
       if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-        FOwnerLob.FFBConnection.HandleError(FStatus, '', Self, lcOther);
+        FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.openBlob', Self);
       FillBlobInfo;
     end else
       CreateLob;
@@ -1008,7 +1008,7 @@ begin
       else SegLen := Word(Count);
       Status := FBlob.getSegment(FStatus, SegLen, PBuf, @BytesRead);
       if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-        FOwnerLob.FFBConnection.HandleError(FStatus, '', Self, lcOther);
+        FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.getSegment', Self);
       case Status of
         {$IFDEF WITH_CLASS_CONST}
         IStatus.RESULT_OK, IStatus.RESULT_SEGMENT
@@ -1027,7 +1027,7 @@ begin
            Inc(Result, Integer(BytesRead));
            Break;
           end
-        else FOwnerLob.FFBConnection.HandleError(FStatus, 'IBlob.getSegment', Self, lcOther);
+        else FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.getSegment', Self);
       end;
     end;
   end;
@@ -1048,7 +1048,7 @@ begin
   if (Result <> FPosition) then begin
     Result := FBlob.seek(FStatus, Origin, Offset);
     if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-      FOwnerLob.FFBConnection.HandleError(FStatus, 'IBlob.seek', Self, lcOther);
+       FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.seek', Self);
   end;
   FPosition := Result;
 end;
@@ -1077,7 +1077,7 @@ begin
     else SegLen := Count;
     FBlob.putSegment(FStatus, SegLen, TempBuffer);
     if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-      FOwnerLob.FFBConnection.HandleError(FStatus, 'IBlob.putSegment', Self, lcOther);
+      FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.putSegment', Self);
     Inc(Result, SegLen);
     Inc(TempBuffer, SegLen);
     Dec(Count, SegLen);
