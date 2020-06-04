@@ -3004,14 +3004,13 @@ begin
   then bufl := 8*1024
   else bufl := fchunk_size;
   PStart := pBuff;
-  Status := OCI_NEED_DATA;
-  while Status = OCI_NEED_DATA do begin
+  repeat
     amtp := 0; //enter polling mode without callback
     Status := FPlainDriver.OCILobRead(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator,
       amtp, offset, pBuff, bufl, nil, nil, Fcsid, FOwnerLob.FCharsetForm);
     { amtp returns amount of byte filled in the buffer }
     Inc(pBuff, amtp);
-  end;
+  until Status <> OCI_NEED_DATA;
   if Status <> OCI_SUCCESS then
     FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
       lcOther, 'OCILobRead', Self);
@@ -3111,9 +3110,8 @@ begin
     piece := OCI_LAST_PIECE;
     bufl := len;
   end else piece := OCI_FIRST_PIECE;
-  Status := OCI_NEED_DATA;
   Offset := 1;
-  while Status = OCI_NEED_DATA do begin
+  repeat
     amtp := 0;
     Status := FPLainDriver.OCILobWrite(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator,
       amtp, offset, pBuff, bufl, Piece, nil, nil, Fcsid, FOwnerLob.FCharsetForm);
@@ -3121,7 +3119,7 @@ begin
     if (pBuff + bufl) < pEnd
     then piece := OCI_NEXT_PIECE
     else piece := OCI_LAST_PIECE
- end;
+  until Status <> OCI_NEED_DATA;
   if Status <> OCI_SUCCESS then
     FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
       lcOther, 'OCILobWrite', Self);
@@ -3539,8 +3537,7 @@ begin
   else bufl := FChunk_Size; //usually 8k/chunk
   OffSet := 1;
   pStart := pBuff;
-  Status := OCI_NEED_DATA;
-  { these parameters need to be set to initialize the poilling mode
+  { these parameters need to be set to initialize the polling mode
     without using a callback function:
     piece must be OCI_FIRST_PIECE
     byte_amtp and char_amtp must be zero
@@ -3548,14 +3545,14 @@ begin
     Offset is ignored
   }
   piece := OCI_FIRST_PIECE;
-  while (Status = OCI_NEED_DATA) do begin
+  Repeat
     byte_amtp := 0;
     char_amtp := 0;
     Status := FPlainDriver.OCILobRead2(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator,
       @byte_amtp, @char_amtp, Offset, pBuff, bufl, piece, nil, nil, Fcsid, FOwnerLob.FCharsetForm);
     Inc(pBuff, byte_amtp);
     piece := OCI_NEXT_PIECE;
-  end;
+  until Status <> OCI_NEED_DATA;
   if (Status <> OCI_SUCCESS) then
     FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
       lcOther, 'OCILobRead2', Self);
@@ -3691,9 +3688,8 @@ begin
   if (Len < bufl) then
     bufl := len;
   piece := OCI_FIRST_PIECE;
-  Status := OCI_NEED_DATA;
   Offset := 1;
-  while Status = OCI_NEED_DATA do begin
+  repeat
     char_amtp := 0;
     byte_amtp := 0;
     Status := FPLainDriver.OCILobWrite2(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator,
@@ -3705,7 +3701,7 @@ begin
       piece := OCI_LAST_PIECE;
       bufl := pEnd - pBuff;
     end;
-  end;
+  until Status <> OCI_NEED_DATA;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
   if Status <> OCI_SUCCESS then
     FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
