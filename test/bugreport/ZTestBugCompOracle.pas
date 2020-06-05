@@ -203,7 +203,7 @@ begin
   Query := CreateQuery;
   Check(Query <> nil);
   try
-    Query.SQL.Text := 'select * from people join people p1 on p1.p_id = people.p_id';
+    Query.SQL.Text := 'select people.p_id, people.p_dep_id as p_id_1, p1.p_id, p1.p_dep_id as p_id_1 from people join people p1 on p1.p_id = people.p_id';
     Query.Open;
     Check(Query.Active);
     Query.Next;
