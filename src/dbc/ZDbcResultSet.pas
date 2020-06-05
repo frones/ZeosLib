@@ -3568,7 +3568,7 @@ begin
           else
             Result[i] := CompareNothing;
         end;
-      ckEquals: raise Exception.Create('Compare Equals is not allowed here!');
+      ckEquals: raise EZSQLException.Create('Compare Equals is not allowed here!');
     end;
 end;
 
