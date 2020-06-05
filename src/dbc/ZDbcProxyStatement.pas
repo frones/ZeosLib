@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
-  ZDbcIntfs, ZDbcStatement, ZDbcLogging,
+  ZDbcIntfs, ZDbcBeginnerStatement, ZDbcLogging,
   ZCompatibility, ZVariant, ZDbcGenericResolver, ZDbcCachedResultSet,
   ZDbcUtils;
 
@@ -71,7 +71,7 @@ type
     ['{16818F5D-9A5B-4402-A71A-40839E414D2D}']
   end;
 
-  TZDbcProxyPreparedStatement = class({$IFNDEF ZEOS73UP}TZAbstractPreparedStatement{$ELSE}TZAbstractPreparedStatement2{$ENDIF},
+  TZDbcProxyPreparedStatement = class({$IFNDEF ZEOS73UP}TZAbstractPreparedStatement{$ELSE}TZAbstractBeginnerPreparedStatement{$ENDIF},
     IZProxyPreparedStatement)
   private
   protected
