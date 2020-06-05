@@ -184,7 +184,7 @@ type
     FDescriptorType: ub4;
     FOwner: IImmediatelyReleasable;
     FHas64BitLobMethods: Boolean;
-    FLobStream: TZAbstracOracleLobStream;
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FLobStream: TZAbstracOracleLobStream;
     FplainDriver: TZOraclePlainDriver;
     FLocatorAllocated: Boolean; //need to know if we destroy the stream if the locator should be freed too
     FIsCloned: Boolean;
@@ -219,9 +219,8 @@ type
     fchunk_size: ub4;
     Flobtype: ub1;
     fcsid: ub2;
-    FOwnerLob: TZAbstractOracleBlob;
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwnerLob: TZAbstractOracleBlob;
     FPosition: Int64;
-    FOpenLobStreams: TZSortedList;
     FConSettings: PZConSettings;
     procedure AllocLobLocator;
     procedure BeforeWrite;
@@ -2805,7 +2804,6 @@ begin
   FOCISvcCtx := OwnerLob.FOCISvcCtx;
   FOCIError := OwnerLob.FOCIError;
   FOwnerLob := OwnerLob;
-  FOpenLobStreams := OpenLobStreams;
   FConSettings := GetConSettings;
   if FOwnerLob.Fdty = SQLT_CLOB
   then {if (FOwnerLob.Fcsid >= OCI_UTF16ID) or (FOwnerlob.FCharsetForm = SQLCS_NCHAR)
