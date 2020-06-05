@@ -1762,13 +1762,7 @@ type
   end;
 
   { Blob id structure }
-  TGDS_QUAD = record
-    gds_quad_high:  ISC_LONG;
-    gds_quad_low:   ISC_ULONG;
-  end;
-  PGDS_QUAD            = ^TGDS_QUAD;
-
-  TISC_QUAD            = TGDS_QUAD;
+  TISC_QUAD            = array[0..1] of ISC_LONG;
   PISC_QUAD            = ^TISC_QUAD;
 
   TISC_ARRAY_BOUND = record
