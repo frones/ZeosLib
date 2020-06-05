@@ -3137,7 +3137,12 @@ begin
     else Stream.Size := 0; //trim the lob
     if FLocatorAllocated then
       FlobStream.FreeLocator;
+    {$IFDEF AUTOREFCOUNT}
+    FlobStream.Free;
+    FlobStream := nil;
+    {$ELSE}
     FreeAndNil(FlobStream);
+    {$ENDIF}
   end;
 end;
 
