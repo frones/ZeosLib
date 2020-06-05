@@ -787,7 +787,8 @@ begin
   if PInt64(@FBlobID)^ <> 0 then try
     if FIsTemporary and (FLobStream <> nil) and FLobStream.FLobIsOpen then begin
       FLobStream.CancelLob;
-      FreeAndNil(FLobStream);
+      FLobStream.Free;
+      //FreeAndNil(FLobStream);
     end;
   finally
     FIsTemporary := False;
@@ -851,8 +852,8 @@ function TZInterbase6Lob.CreateLobStream(CodePage: Word;
   LobStreamMode: TZLobStreamMode): TStream;
 begin
   FLobStreamMode := LobStreamMode;
-  FLobStream := TZInterbaseLobStream.Create(Self);
-  Result := FLobStream;
+  Result := TZInterbaseLobStream.Create(Self);
+  FLobStream := TZInterbaseLobStream(Result);
   if (FColumnCodePage <> zCP_Binary) and (CodePage <> FColumnCodePage) then
     Result := TZCodePageConversionStream.Create(Result, FColumnCodePage, CodePage, FConSettings, FOpenLobStreams);
 end;
@@ -902,7 +903,8 @@ begin
     Imm.ReleaseImmediat(Sender, AError);
     if FlobStream <> nil then begin
       FlobStream.FReleased := True;
-      FreeAndNil(FlobStream);
+      FlobStream.Free;
+      FlobStream := nil;
     end;
   end;
   FReleased := true;

@@ -574,7 +574,7 @@ type
   TZCodePageConversionStream = class(TMemoryStream)
   private
     FNativeCodePage, FCurrentCodePage: Word;
-    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwnerStream: TStream;
+    FOwnerStream: TStream;
     FConSettings: PZConSettings;
     FUpdated: Boolean;
     FInConstructionState: Boolean;
@@ -4498,7 +4498,12 @@ jmpW2A: GetMem(Dst, (L+1) shl 1);
   finally
     FInConstructionState := True;
     inherited Destroy;
+    {$IFNDEF AUTOREFCOUNT}
     FreeAndNil(FOwnerStream);
+    {$ELSE}
+    FOwnerStream.Free;
+    FOwnerStream := nil;
+    {$ENDIF}
   end;
 end;
 
