@@ -114,7 +114,7 @@ type
     FTransactionHandle: PISC_TR_HANDLE;
     FStatusVector: TARRAY_ISC_STATUS;
     FBlobHandle: TISC_BLOB_HANDLE;
-    FOwnerLob: TZInterbase6Lob;
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwnerLob: TZInterbase6Lob;
   protected
     procedure FillBlobInfo;
     function GetSize: Int64; override;
@@ -137,7 +137,7 @@ type
   TZInterbase6Lob = Class(TZAbstractStreamedLob, IZLob, IZBlob,
     IImmediatelyReleasable, IZInterbaseFirebirdLob)
   private
-    FLobStream: TZInterbaseLobStream;
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FLobStream: TZInterbaseLobStream;
     FPlainDriver: TZInterbasePlainDriver;
     FBlobId: TISC_QUAD;
     FIBConnection: IZInterbase6Connection;

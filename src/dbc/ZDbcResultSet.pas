@@ -574,7 +574,7 @@ type
   TZCodePageConversionStream = class(TMemoryStream)
   private
     FNativeCodePage, FCurrentCodePage: Word;
-    FOwnerStream: TStream;
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwnerStream: TStream;
     FConSettings: PZConSettings;
     FUpdated: Boolean;
     FInConstructionState: Boolean;
