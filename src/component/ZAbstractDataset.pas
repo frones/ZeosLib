@@ -503,13 +503,7 @@ begin
     //CachedResultSet.MoveToInsertRow;
     RowAccessor.RowBuffer := RowBuffer;
     //PostToResultSet(CachedResultSet, FieldsLookupTable, Fields, RowAccessor);
-    try
-      CachedResultSet.InsertRow;
-    except on E: Exception do
-      if E is EZSQLThrowable
-      then raise EZDatabaseError.CreateFromException(E as EZSQLThrowable)
-      else raise Exception.Create(E.Message);
-    end;
+    CachedResultSet.InsertRow;
     RowNo := CachedResultSet.GetRow;
     FetchCount := FetchCount + 1;
 
