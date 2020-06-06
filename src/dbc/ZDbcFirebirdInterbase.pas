@@ -3466,14 +3466,12 @@ var P: PAnsiChar;
   L: NativeUInt;
   IBLob: IZInterbaseFirebirdLob;
   X: TISC_QUAD;
-  Param: PZInterbaseFirerbirdParam;
 label jmpNotNull;
 begin
   {$IFNDEF GENERIC_INDEX}Dec(Index);{$ENDIF}
   CheckParameterIndex(Index);
   {$R-}
-  Param := @FInParamDescripors[Index];
-  with Param^ do begin
+  with FInParamDescripors[Index] do begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     BindList.Put(Index, ASQLType, Value); //localize for the refcount
     if (Value = nil) or Value.IsEmpty then begin
@@ -3481,13 +3479,11 @@ begin
       P := nil;
       L := 0;//satisfy compiler
     end else if Supports(Value, IZInterbaseFirebirdLob, IBLob) and ((sqltype = SQL_QUAD) or (sqltype = SQL_BLOB)) then begin
-      //sqldata := GetMemory(SizeOf(TISC_QUAD)); EH@Jan what's that? we have one big buffer as described by FB/IB.
-	  //Jan@EH: See commit message for Rev. 6595 + Ticket 429
       X := IBLob.GetBlobId;
       // this raises an Bus Error or access violation on Android 32 Bits
       //PISC_QUAD(Param.sqldata)^ := X;
       //this works for some reason:
-      PInt64(Param.sqldata)^ := Int64(X);
+      PInt64(sqldata)^ := Int64(X);
       goto jmpNotNull;
     end else if (Value <> nil) and (codepage <> zCP_Binary) then
       if Value.IsClob then begin
