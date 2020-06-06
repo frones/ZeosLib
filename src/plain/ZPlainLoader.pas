@@ -229,7 +229,12 @@ begin
 
   if not Loaded then
     if (Length(FLocations) > 0) and FileExists(FLocations[High(FLocations)])
-    then raise Exception.Create(Format(SLibraryNotCompatible, [TriedLocations]))
+    then begin
+      if Length(FLocations) = 1 then
+        RaiseLastOsError
+      else
+        raise Exception.Create(Format(SLibraryNotCompatible, [TriedLocations]));
+    end
     else raise Exception.Create(Format(SLibraryNotFound, [TriedLocations]));
   Result := True;
 end;
