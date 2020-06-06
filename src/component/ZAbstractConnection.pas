@@ -102,6 +102,9 @@ uses
 {$IFDEF ENABLE_ODBC}
   ZDbcODBCCon,
 {$ENDIF}
+{$IFDEF ENABLE_PROXY}
+  ZDbcProxy,
+{$ENDIF}
 
   SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
   {$IFDEF TLIST_IS_DEPRECATED}ZClasses,{$ENDIF}
