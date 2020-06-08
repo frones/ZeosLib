@@ -426,15 +426,19 @@ begin
       if ColumnName = '' then
         ColumnName := 'Column';
       OrgLabel := ColumnName;
-      for B := False to True do begin //we need two loops to have a unique columnlabel
+      Repeat
         //see test TestDuplicateColumnNames or
         //https://zeoslib.sourceforge.io/viewtopic.php?f=50&t=120692
+        b := False;
         for J := 0 to I - 1 do
           if TZColumnInfo(ColumnsInfo[J]).ColumnLabel = ColumnName then
-            Inc(N);
+            Begin
+             Inc(N);
+             b := True;
+            End;
         if N > 0 then
           ColumnName := OrgLabel + '_' + ZFastCode.IntToStr(N);
-      end;
+      Until Not b;
       FColumnsLabels.Add(ColumnName);
     end;
   end;
