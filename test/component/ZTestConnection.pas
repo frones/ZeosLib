@@ -136,7 +136,7 @@ begin
   Connection.LoginPrompt := true;
   Connection.User := '';
   Connection.Password := '';
-  gloUserName := '';
+  gloUserName := 'x';
   gloPassword := '';
   Connection.OnLogin := ConnLogin;
   try
