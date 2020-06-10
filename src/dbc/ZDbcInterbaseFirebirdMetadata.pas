@@ -57,7 +57,7 @@ interface
 
 {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD} //if set we have an empty unit
 uses
-  Types, Classes, SysUtils, StrUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
+  {$IFDEF WITH_UNIT_NAMESPACES}System.Types,{$ELSE}Types,{$ENDIF} Classes, SysUtils, StrUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
   ZDbcInterbase6, ZEncoding;
 
 type
@@ -329,7 +329,7 @@ begin
       Status := FBConnection.GetStatus;
       Attachment.getInfo(Status, 1, @isc_info, SizeOf(Buffer), @Buffer[0]);
       if (Status.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-        FBConnection.HandleError(Status, 'IAttachment.getInfo', FBConnection, lcOther);
+        FBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(Status.getErrors), 'IAttachment.getInfo', FBConnection);
     {$IFNDEF ZEOS_DISABLE_INTERBASE}end else {$ELSE}end;{$ENDIF}
     {$ENDIF ZEOS_DISABLE_FIREBIRD}
     {$IFNDEF ZEOS_DISABLE_INTERBASE}
@@ -339,7 +339,7 @@ begin
       PlainDriver := TZInterbasePlainDriver(IBConnection.GetIZPlainDriver.GetInstance);
       if PlainDriver.isc_database_info(@StatusVector, ISC_DB_HANDLE, 1, @isc_info,
           SizeOf(Buffer), @Buffer[0]) <> 0 then
-        CheckInterbase6Error(PlainDriver, StatusVector, IBConnection);
+        IBConnection.HandleErrorOrWarning(lcOther, @StatusVector, 'isc_database_info', IBConnection);
     end;
     {$ENDIF ZEOS_DISABLE_INTERBASE}
 

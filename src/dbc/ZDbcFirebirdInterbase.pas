@@ -65,7 +65,7 @@ uses
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   ZCollections, ZClasses, ZCompatibility,
-  ZPlainFirebirdInterbaseDriver, ZDbcInterbase6Utils,
+  ZPlainFirebirdInterbaseDriver, ZDbcInterbase6Utils, ZDbcLogging,
   ZDbcIntfs, ZDbcConnection, ZTokenizer, ZGenericSqlAnalyser, ZDbcCache,
   ZDbcGenericResolver, ZDbcResultSetMetadata, ZDbcCachedResultSet, ZDbcUtils,
   ZDbcResultSet, ZDbcStatement;
@@ -108,6 +108,9 @@ type
     function IsInterbaseLib: Boolean;
     function GetInterbaseFirebirdPlainDriver: TZInterbaseFirebirdPlainDriver;
     function GetByteBufferAddress: PByteBuffer;
+    procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
+      StatusVector: PARRAY_ISC_STATUS; const LogMessage: RawByteString;
+      const Sender: IImmediatelyReleasable);
   end;
 
   TZInterbaseFirebirdConnection = Class(TZAbstractDbcConnection)
@@ -128,6 +131,7 @@ type
     FHostVersion: Integer;
     FXSQLDAMaxSize: Cardinal;
     FInterbaseFirebirdPlainDriver: TZInterbaseFirebirdPlainDriver;
+    FLastWarning: EZSQLWarning;
     procedure BeforeUrlAssign; override;
     procedure DetermineClientTypeAndVersion;
     procedure AssignISC_Parameters;
@@ -154,6 +158,10 @@ type
     function GetDialect: Word;
     function GetXSQLDAMaxSize: Cardinal;
     function GetInterbaseFirebirdPlainDriver: TZInterbaseFirebirdPlainDriver;
+    procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
+      StatusVector: PARRAY_ISC_STATUS; const LogMessage: RawByteString;
+      const Sender: IImmediatelyReleasable);
+    function InterpretInterbaseStatus(StatusVector: PARRAY_ISC_STATUS): TZIBStatusVector;
   public
     procedure Commit;
     procedure Rollback;
@@ -162,6 +170,8 @@ type
     procedure SetAutoCommit(Value: Boolean); override;
     function StartTransaction: Integer;
   public
+    function GetWarnings: EZSQLWarning; override;
+    procedure ClearWarnings; override;
     function GetServerProvider: TZServerProvider; override;
     function GetBinaryEscapeString(const Value: TBytes): String; override;
     function GetHostVersion: Integer; override;
@@ -479,6 +489,7 @@ type
 const
   sCS_NONE = 'NONE';
   DS_Props_IsMetadataResultSet = 'IsMetadataResultSet';
+  sStartTxn = RawByteString('TRANSACTION STARTED.');
   sCommitMsg = RawByteString('TRANSACTION COMMIT');
   sRollbackMsg = RawByteString('TRANSACTION ROLLBACK');
 
@@ -627,6 +638,16 @@ begin
   FGUIDProps := TZInterbaseFirebirdConnectionGUIDProps.Create;
   FClientVersion := -1;
   inherited BeforeUrlAssign;
+end;
+
+{**
+  Clears all warnings reported for this <code>Connection</code> object.
+  After a call to this method, the method <code>getWarnings</code>
+    returns null until a new warning is reported for this Connection.
+}
+procedure TZInterbaseFirebirdConnection.ClearWarnings;
+begin
+  FreeAndNil(FLastWarning);
 end;
 
 {**
@@ -860,7 +881,7 @@ begin
   //http://tracker.firebirdsql.org/browse/CORE-2789
   if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).SupportsBinaryInSQL
   then Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
-  else raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use parameters!');
+  else raise EZSQLException.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use parameters!');
 end;
 
 {**
@@ -945,9 +966,72 @@ begin
     Result := Integer(FSubTypeTestCharIDCache.Objects[Result]);
 end;
 
+{**
+  Returns the first warning reported by calls on this Connection.
+  <P><B>Note:</B> Subsequent warnings will be chained to this
+  SQLWarning.
+  @return the first SQLWarning or null
+}
+function TZInterbaseFirebirdConnection.GetWarnings: EZSQLWarning;
+begin
+  Result := FlastWarning;
+end;
+
 function TZInterbaseFirebirdConnection.GetXSQLDAMaxSize: Cardinal;
 begin
   Result := FXSQLDAMaxSize;
+end;
+
+{**
+  Checks for possible sql errors or warnings.
+  @param LogCategory a logging category
+  @param StatusVector a status vector. It contain information about error
+  @param LogMessage a sql query command or another message
+  @Param Sender the calling object to be use on connection loss
+}
+procedure TZInterbaseFirebirdConnection.HandleErrorOrWarning(
+  LogCategory: TZLoggingCategory; StatusVector: PARRAY_ISC_STATUS;
+  const LogMessage: RawByteString; const Sender: IImmediatelyReleasable);
+var
+  ErrorMessage, ErrorSqlMessage, sSQL: string;
+  ErrorCode: Integer;
+  i: Integer;
+  InterbaseStatusVector: TZIBStatusVector;
+  ConLostError: EZSQLConnectionLost;
+  IsWarning: Boolean;
+begin
+  InterbaseStatusVector := InterpretInterbaseStatus(StatusVector);
+  IsWarning := (StatusVector[1] = isc_arg_end) and (StatusVector[2] = isc_arg_warning);
+  ErrorMessage := '';
+  for i := Low(InterbaseStatusVector) to High(InterbaseStatusVector) do
+    AppendSepString(ErrorMessage, InterbaseStatusVector[i].IBMessage, '; ');
+
+  ErrorCode := InterbaseStatusVector[0].SQLCode;
+  ErrorSqlMessage := InterbaseStatusVector[0].SQLMessage;
+
+  sSQL := ConSettings.ConvFuncs.ZRawToString(LogMessage, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
+  if sSQL <> '' then
+    ErrorSqlMessage := ErrorSqlMessage + ' The SQL: '+sSQL+'; ';
+
+  if ErrorMessage <> '' then begin
+    DriverManager.LogError(LogCategory, ConSettings^.Protocol,
+      ConSettings^.ConvFuncs.ZStringToRaw(ErrorMessage, ConSettings^.CTRL_CP,
+        ConSettings^.ClientCodePage^.CP), ErrorCode,
+      ConSettings^.ConvFuncs.ZStringToRaw(ErrorSqlMessage, ConSettings^.CTRL_CP,
+        ConSettings^.ClientCodePage^.CP));
+    if ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection then begin
+      ConLostError := EZSQLConnectionLost.CreateWithCode(ErrorCode,
+        Format(SSQLError1, [sSQL]));
+      if Sender <> nil
+      then Sender.ReleaseImmediat(Sender, ConLostError)
+      else ReleaseImmediat(Sender, ConLostError);
+      if ConLostError <> nil then raise ConLostError;
+    end else if IsWarning then begin
+      ClearWarnings;
+      FLastWarning := EZSQLWarning.CreateWithCode(ErrorCode, Format(SSQLError1, [ErrorMessage]));
+    end else raise EZIBSQLException.Create(
+      Format(SSQLError1, [ErrorMessage]), InterbaseStatusVector, sSQL);
+  end;
 end;
 
 {**
@@ -973,6 +1057,76 @@ begin
   FSubTypeTestCharIDCache := TStringList.Create;
   FInterbaseFirebirdPlainDriver := TZInterbaseFirebirdPlainDriver(GetIZPlainDriver.GetInstance);
 end;
+
+{**
+  Processes Interbase status vector and returns array of status data.
+  @param StatusVector a status vector. It contain information about error
+  @return array of TInterbaseStatus records
+}
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+function TZInterbaseFirebirdConnection.InterpretInterbaseStatus(
+  StatusVector: PARRAY_ISC_STATUS): TZIBStatusVector;
+var StatusIdx: Integer;
+    pCurrStatus: PZIBStatus;
+begin
+  Result := nil;
+  StatusIdx := 0;
+  repeat
+    SetLength(Result, Length(Result) + 1);
+    pCurrStatus := @Result[High(Result)]; // save pointer to avoid multiple High() calls
+    // SQL code and status
+    pCurrStatus.SQLCode := FInterbaseFirebirdPlainDriver.isc_sqlcode(PISC_STATUS(StatusVector));
+    FInterbaseFirebirdPlainDriver.isc_sql_interprete(pCurrStatus.SQLCode, @FByteBuffer[0], SizeOf(TByteBuffer)-1);
+    pCurrStatus.SQLMessage := ConvertConnRawToString(ConSettings, @FByteBuffer[0]);
+    // IB data
+    pCurrStatus.IBDataType := StatusVector[StatusIdx];
+    case StatusVector[StatusIdx] of
+      isc_arg_end:  // end of argument list
+        Break;
+      isc_arg_gds,  // Long int code
+      isc_arg_number,
+      isc_arg_vms,
+      isc_arg_unix,
+      isc_arg_domain,
+      isc_arg_dos,
+      isc_arg_mpexl,
+      isc_arg_mpexl_ipc,
+      isc_arg_next_mach,
+      isc_arg_netware,
+      isc_arg_win32:
+        begin
+          pCurrStatus.IBDataInt := StatusVector[StatusIdx + 1];
+          Inc(StatusIdx, 2);
+        end;
+      isc_arg_string,  // pointer to string
+      isc_arg_interpreted,
+      isc_arg_sql_state:
+        begin
+          pCurrStatus.IBDataStr := ConvertConnRawToString(ConSettings, Pointer(StatusVector[StatusIdx + 1]));
+          Inc(StatusIdx, 2);
+        end;
+      isc_arg_cstring: // length and pointer to string
+        begin
+          pCurrStatus.IBDataStr := ConvertConnRawToString(ConSettings, Pointer(StatusVector[StatusIdx + 2]), StatusVector[StatusIdx + 1]);
+          Inc(StatusIdx, 3);
+        end;
+      isc_arg_warning: begin// must not happen for error vector
+        Break; //how to handle a warning? I just need an example
+      end
+      else
+        Break;
+    end; // case
+
+    // isc_interprete is deprecated so use fb_interpret instead if available
+    if Assigned(FInterbaseFirebirdPlainDriver.fb_interpret) then begin
+      if FInterbaseFirebirdPlainDriver.fb_interpret(@FByteBuffer[0], SizeOf(TByteBuffer)-1, @StatusVector) = 0 then
+        Break;
+    end else if FInterbaseFirebirdPlainDriver.isc_interprete(@FByteBuffer[0], @StatusVector) = 0 then
+      Break;
+    pCurrStatus.IBMessage := ConvertConnRawToString(ConSettings, @FByteBuffer[0]);
+  until False;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZInterbaseFirebirdConnection.OnPropertiesChange(Sender: TObject);
 var
@@ -3311,6 +3465,7 @@ procedure TZAbstractFirebirdInterbasePreparedStatement.SetBlob(Index: Integer;
 var P: PAnsiChar;
   L: NativeUInt;
   IBLob: IZInterbaseFirebirdLob;
+  X: TISC_QUAD;
 label jmpNotNull;
 begin
   {$IFNDEF GENERIC_INDEX}Dec(Index);{$ENDIF}
@@ -3324,9 +3479,11 @@ begin
       P := nil;
       L := 0;//satisfy compiler
     end else if Supports(Value, IZInterbaseFirebirdLob, IBLob) and ((sqltype = SQL_QUAD) or (sqltype = SQL_BLOB)) then begin
-      //sqldata := GetMemory(SizeOf(TISC_QUAD)); EH@Jan what's that? we have one big buffer as described by FB/IB.
-	  //Jan@EH: See commit message for Rev. 6595 + Ticket 429
-      PISC_QUAD(sqldata)^ := IBLob.GetBlobId;
+      X := IBLob.GetBlobId;
+      // this raises an Bus Error or access violation on Android 32 Bits
+      //PISC_QUAD(Param.sqldata)^ := X;
+      //this works for some reason:
+      PInt64(sqldata)^ := Int64(X);
       goto jmpNotNull;
     end else if (Value <> nil) and (codepage <> zCP_Binary) then
       if Value.IsClob then begin

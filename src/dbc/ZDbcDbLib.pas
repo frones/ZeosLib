@@ -123,7 +123,7 @@ type
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
   public
-    procedure BeforeDestruction; override;
+    destructor Destroy; override;
   public
     function AbortOperation: Integer; override;
 
@@ -416,14 +416,6 @@ begin
  // http://infocenter.sybase.com/help/index.jsp?topic=/com.sybase.help.ocs_12.5.1.dblib/html/dblib/X57019.htm
  If FPlainDriver.dbcancel(FHandle) = DBSUCCEED Then Result := 0
    Else Result := 1;
-end;
-
-procedure TZDBLibConnection.BeforeDestruction;
-begin
-  inherited;
-  FreeAndNil(FSQLErrors);
-  FreeAndNil(FSQLMessages);
-  FreeAndNil(FSavePoints);
 end;
 
 procedure TZDBLibConnection.CheckDBLibError(LogCategory: TZLoggingCategory; const LogMessage: RawByteString);
@@ -778,6 +770,17 @@ begin
   Result := INT_EXIT
 end;
 {$ENDIF TEST_CALLBACK}
+
+destructor TZDBLibConnection.Destroy;
+begin
+  try
+    inherited Destroy;
+  finally
+    FreeAndNil(FSQLErrors);
+    FreeAndNil(FSQLMessages);
+    FreeAndNil(FSavePoints);
+  end;
+end;
 
 procedure TZDBLibConnection.DetermineMSDateFormat;
 var

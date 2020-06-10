@@ -81,6 +81,7 @@ type
     procedure TestTicket96;
     procedure TestOutParam1;
     procedure TestOutParam2;
+    procedure TestDuplicateColumnNames;
   end;
 
 {$ENDIF ZEOS_DISABLE_ORACLE}
@@ -190,6 +191,24 @@ begin
     Query.Open;
   finally
     Query.Free;
+  end;
+end;
+
+(*
+see: https://zeoslib.sourceforge.io/viewtopic.php?f=50&p=150356#p150356
+*)
+procedure ZTestCompOracleBugReport.TestDuplicateColumnNames;
+var Query: TZQuery;
+begin
+  Query := CreateQuery;
+  Check(Query <> nil);
+  try
+    Query.SQL.Text := 'select people.p_id, people.p_dep_id as p_id_1, p1.p_id, p1.p_dep_id as p_id_1 from people join people p1 on p1.p_id = people.p_id';
+    Query.Open;
+    Check(Query.Active);
+    Query.Next;
+  finally
+    FreeAndNil(Query);
   end;
 end;
 

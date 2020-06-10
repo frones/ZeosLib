@@ -224,34 +224,11 @@ function GetInterbase6TransactionParamNumber(const Value: String): word;
 
 { Interbase6 errors functions }
 function StatusSucceeded(const StatusVector: TARRAY_ISC_STATUS): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-function InterpretInterbaseStatus(const PlainDriver: TZInterbaseFirebirdPlainDriver;
-  const StatusVector: TARRAY_ISC_STATUS;
-  const ConSettings: PZConSettings) : TZIBStatusVector;
-procedure CheckInterbase6Error(const PlainDriver: TZInterbaseFirebirdPlainDriver;
-  const StatusVector: TARRAY_ISC_STATUS; const ImmediatelyReleasable: IImmediatelyReleasable;
-  const LoggingCategory: TZLoggingCategory = lcOther;
-  const SQL: RawByteString = '');
 
 { Interbase information functions}
-function GetDBStringInfo(const PlainDriver: TZInterbasePlainDriver;
-  Handle: PISC_DB_HANDLE; isc_info: Byte; const ImmediatelyReleasable: IImmediatelyReleasable): String;
-function GetDBIntegerInfo(const PlainDriver: TZInterbasePlainDriver;
-  Handle: PISC_DB_HANDLE; isc_info: Byte; const ImmediatelyReleasable: IImmediatelyReleasable): Integer;
-function GetDBSQLDialect(const PlainDriver: TZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const ImmediatelyReleasable: IImmediatelyReleasable): Integer;
-
-{ Interbase statement functions}
-function GetAffectedRows(const PlainDriver: TZInterbasePlainDriver;
-  const StmtHandle: TISC_STMT_HANDLE; const StatementType: TZIbSqlStatementType;
-  const ImmediatelyReleasable: IImmediatelyReleasable): integer;
-
 function ConvertInterbase6ToSqlType(SqlType, SqlSubType, Scale, Precision: Integer): TZSqlType;
 
 function GetNameSqlType(Value: Word): RawByteString;
-{ interbase blob routines }
-procedure GetBlobInfo(const PlainDriver: TZInterbasePlainDriver;
-  const BlobHandle: TISC_BLOB_HANDLE; out BlobInfo: TIbBlobInfo;
-  const ImmediatelyReleasable: IImmediatelyReleasable);
 
 function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   const IsParamIndexArray: TBooleanDynArray;
@@ -472,6 +449,8 @@ function XSQLDA_LENGTH(Value: LongInt): LongInt;
    Convert pointer to raw database string to compiler-native string
 }
 function ConvertConnRawToString(ConSettings: PZConSettings; Buffer: Pointer; BufLen: Integer): string; overload;
+function ConvertConnRawToString(ConSettings: PZConSettings; Buffer: Pointer): string; overload;
+
 {$ENDIF DISABLE_INTERBASE_AND_FIREBIRD} //if set we have an empty unit
 implementation
 {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD} //if set we have an empty unit
@@ -1064,17 +1043,6 @@ begin
 end;
 
 {**
-   Convert raw database string to compiler-native string
-}
-function ConvertConnRawToString(ConSettings: PZConSettings; const Src: RawByteString): string; overload;
-begin
-  if ConSettings <> nil then
-    Result := ConSettings^.ConvFuncs.ZRawToString(Src, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
-  else
-    Result := string(Src);
-end;
-
-{**
    Convert pointer to raw database string to compiler-native string
 }
 function ConvertConnRawToString(ConSettings: PZConSettings; Buffer: Pointer; BufLen: Integer): string; overload;
@@ -1098,14 +1066,6 @@ begin
   Result := ConvertConnRawToString(ConSettings, Buffer, StrLen(Buffer));
 end;
 
-function ConvertStringToConnRaw(ConSettings: PZConSettings; const Src: string): RawByteString;
-begin
-  if ConSettings <> nil then
-    Result := ConSettings^.ConvFuncs.ZStringToRaw(Src, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
-  else
-    Result := RawByteString(Src);
-end;
-
 {**
   Checks if Interbase status vector indicates successful operation.
   @param StatusVector a status vector
@@ -1114,342 +1074,7 @@ end;
 }
 function StatusSucceeded(const StatusVector: TARRAY_ISC_STATUS): Boolean;
 begin
-  Result := not ((StatusVector[0] = 1) and (StatusVector[1] > 0));
-end;
-
-{**
-  Processes Interbase status vector and returns array of status data.
-  @param PlainDriver a Interbase Plain drver
-  @param StatusVector a status vector. It contain information about error
-  @param ConSettings pointer to connection settings containing codepage info
-
-  @return array of TInterbaseStatus records
-}
-{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
-function InterpretInterbaseStatus(const PlainDriver: TZInterbaseFirebirdPlainDriver;
-  const StatusVector: TARRAY_ISC_STATUS;
-  const ConSettings: PZConSettings) : TZIBStatusVector;
-var
-  Buffer: array[0..IBBigLocalBufferLength] of AnsiChar;
-  PStatusVector: PISC_STATUS;
-  StatusIdx: Integer;
-  pCurrStatus: PZIBStatus;
-begin
-  Result := nil;
-  PStatusVector := @StatusVector; StatusIdx := 0;
-  repeat
-    SetLength(Result, Length(Result) + 1);
-    pCurrStatus := @Result[High(Result)]; // save pointer to avoid multiple High() calls
-    // SQL code and status
-    pCurrStatus.SQLCode := PlainDriver.isc_sqlcode(PStatusVector);
-    PlainDriver.isc_sql_interprete(pCurrStatus.SQLCode, @Buffer, SizeOf(Buffer));
-    pCurrStatus.SQLMessage := ConvertConnRawToString(ConSettings, @Buffer);
-    // IB data
-    pCurrStatus.IBDataType := StatusVector[StatusIdx];
-    case StatusVector[StatusIdx] of
-      isc_arg_end:  // end of argument list
-        Break;
-      isc_arg_gds,  // Long int code
-      isc_arg_number,
-      isc_arg_vms,
-      isc_arg_unix,
-      isc_arg_domain,
-      isc_arg_dos,
-      isc_arg_mpexl,
-      isc_arg_mpexl_ipc,
-      isc_arg_next_mach,
-      isc_arg_netware,
-      isc_arg_win32:
-        begin
-          pCurrStatus.IBDataInt := StatusVector[StatusIdx + 1];
-          Inc(StatusIdx, 2);
-        end;
-      isc_arg_string,  // pointer to string
-      isc_arg_interpreted,
-      isc_arg_sql_state:
-        begin
-          pCurrStatus.IBDataStr := ConvertConnRawToString(ConSettings, Pointer(StatusVector[StatusIdx + 1]));
-          Inc(StatusIdx, 2);
-        end;
-      isc_arg_cstring: // length and pointer to string
-        begin
-          pCurrStatus.IBDataStr := ConvertConnRawToString(ConSettings, Pointer(StatusVector[StatusIdx + 2]), StatusVector[StatusIdx + 1]);
-          Inc(StatusIdx, 3);
-        end;
-      isc_arg_warning: // must not happen for error vector
-        Break;
-      else
-        Break;
-    end; // case
-
-    // isc_interprete is deprecated so use fb_interpret instead if available
-    if Assigned(PlainDriver.fb_interpret) then
-      if PlainDriver.fb_interpret(@Buffer, Length(Buffer), @PStatusVector) = 0 then
-        Break
-      else
-    else
-    if PlainDriver.isc_interprete(@Buffer, @PStatusVector) = 0 then
-      Break;
-    pCurrStatus.IBMessage := ConvertConnRawToString(ConSettings, @Buffer);
-  until False;
-end;
-{$IFDEF FPC} {$POP} {$ENDIF}
-
-{**
-  Checks for possible sql errors.
-  @param PlainDriver a Interbase Plain drver
-  @param StatusVector a status vector. It contain information about error
-  @param Sql a sql query commend
-
-  @Param Integer Return is the ErrorCode that happened - for disconnecting the database
-}
-procedure CheckInterbase6Error(const PlainDriver: TZInterbaseFirebirdPlainDriver;
-  const StatusVector: TARRAY_ISC_STATUS; const ImmediatelyReleasable: IImmediatelyReleasable;
-  const LoggingCategory: TZLoggingCategory = lcOther;
-  const SQL: RawByteString = '');
-var
-  ErrorMessage, ErrorSqlMessage, sSQL: string;
-  ErrorCode: Integer;
-  i: Integer;
-  InterbaseStatusVector: TZIBStatusVector;
-  ConSettings: PZConSettings;
-  ConLostError: EZSQLConnectionLost;
-begin
-  if not ((StatusVector[0] = 1) and (StatusVector[1] > 0)) then Exit;
-  ConSettings := ImmediatelyReleasable.GetConSettings;
-  InterbaseStatusVector := InterpretInterbaseStatus(PlainDriver, StatusVector, ConSettings);
-
-  ErrorMessage := '';
-  for i := Low(InterbaseStatusVector) to High(InterbaseStatusVector) do
-    AppendSepString(ErrorMessage, InterbaseStatusVector[i].IBMessage, '; ');
-
-  ErrorCode := InterbaseStatusVector[0].SQLCode;
-  ErrorSqlMessage := InterbaseStatusVector[0].SQLMessage;
-
-  sSQL := ConvertConnRawToString(ConSettings, SQL);
-  if sSQL <> '' then
-    ErrorSqlMessage := ErrorSqlMessage + ' The SQL: '+sSQL+'; ';
-
-  if ErrorMessage <> '' then
-  begin
-    DriverManager.LogError(LoggingCategory, ConSettings^.Protocol,
-      ConvertStringToConnRaw(ConSettings, ErrorMessage), ErrorCode,
-      ConvertStringToConnRaw(ConSettings, ErrorSqlMessage));
-    if ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection then begin
-      ConLostError := EZSQLConnectionLost.CreateWithCode(ErrorCode,
-      Format(SSQLError1, [sSQL]));
-      ImmediatelyReleasable.ReleaseImmediat(ImmediatelyReleasable, ConLostError);
-      if ConLostError <> nil then raise ConLostError;
-    end else raise EZIBSQLException.Create(
-      Format(SSQLError1, [ErrorMessage]), InterbaseStatusVector, sSQL);
-  end;
-end;
-
-{**
-   Get affected rows.
-   <i>Note:<i> it function may call after statement execution
-   @param PlainDriver a interbase plain driver
-   @param StmtHandle a statement handle
-   @param StatementType a statement type
-   @return affected rows
-}
-function GetAffectedRows(const PlainDriver: TZInterbasePlainDriver;
-  const StmtHandle: TISC_STMT_HANDLE; const StatementType: TZIbSqlStatementType;
-  const ImmediatelyReleasable: IImmediatelyReleasable): integer;
-type
-  TCountType = (cntSel, cntIns, cntDel, cntUpd);
-var
-  ReqInfo: AnsiChar;
-  Buffer: array[0..IBLocalBufferLength-1] of AnsiChar;
-  StatusVector: TARRAY_ISC_STATUS;
-  pBuf, pBufStart: PAnsiChar;
-  Len, Item, Count: Integer;
-  Counts: array[TCountType] of Integer;
-begin
-  Result := -1;
-  ReqInfo := AnsiChar(isc_info_sql_records);
-
-  if PlainDriver.isc_dsql_sql_info(@StatusVector, @StmtHandle, 1,
-      @ReqInfo, SizeOf(Buffer), @Buffer[0]) <> 0 then
-    CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
-
-  if Buffer[0] <> AnsiChar(isc_info_sql_records) then
-    Exit;
-
-  pBufStart := @Buffer[1];
-  pBuf := pBufStart;
-  Len := PlainDriver.isc_vax_integer(pBuf, 2) + 2;
-  Inc(pBuf, 2);
-  if Buffer[Len] <> AnsiChar(isc_info_end) then
-    Exit;
-
-  FillChar(Counts{%H-}, SizeOf(Counts), #0);
-  while pBuf - pBufStart <= Len do
-  begin
-    Item := Byte(pBuf^);
-
-    if Item = isc_info_end then
-      Break;
-
-    Inc(pBuf);
-    Count := ReadInterbase6NumberWithInc(PlainDriver, pBuf);
-
-    case Item of
-      isc_info_req_select_count: Counts[cntSel] := Count;
-      isc_info_req_insert_count: Counts[cntIns] := Count;
-      isc_info_req_update_count: Counts[cntUpd] := Count;
-      isc_info_req_delete_count: Counts[cntDel] := Count;
-      else
-        raise EZSQLException.Create(SInternalError);
-    end;
-  end;
-
-  { Note: Update statements could have Select counter <> 0 as well }
-
-  case StatementType of
-    stSelect, //selectable procedure could have a update count but FB does not return them.
-    stSelectForUpdate: Result := Counts[cntSel];
-    stInsert:          Result := Counts[cntIns];
-    stUpdate:          Result := Counts[cntUpd];
-    stDelete:          Result := Counts[cntDel];
-    stExecProc:
-      begin
-        { Exec proc could have any counter... So search for the first non-zero counter }
-        Result := Counts[cntIns];
-        if Result > 0 then Exit;
-        Result := Counts[cntUpd];
-        if Result > 0 then Exit;
-        Result := Counts[cntDel];
-        if Result > 0 then Exit;
-        Result := Counts[cntSel];
-      end;
-    else
-      Result := -1;
-  end;
-end;
-
-{**
-   Read blob information by it handle such as blob segment size, segments count,
-   blob size and type.
-   @param PlainDriver
-   @param BlobInfo the blob information structure
-}
-procedure GetBlobInfo(const PlainDriver: TZInterbasePlainDriver;
-  const BlobHandle: TISC_BLOB_HANDLE; out BlobInfo: TIbBlobInfo;
-  const ImmediatelyReleasable: IImmediatelyReleasable);
-var
-  Items: array[0..3] of AnsiChar;
-  Results: array[0..99] of AnsiChar;
-  pBuf, pBufStart: PAnsiChar;
-  Item, ItemVal: Integer;
-  StatusVector: TARRAY_ISC_STATUS;
-begin
-  Items[0] := AnsiChar(isc_info_blob_num_segments);
-  Items[1] := AnsiChar(isc_info_blob_max_segment);
-  Items[2] := AnsiChar(isc_info_blob_total_length);
-  Items[3] := AnsiChar(isc_info_blob_type);
-
-  if PlainDriver.isc_blob_info(@StatusVector, @BlobHandle, 4, @items[0],
-      SizeOf(Results), @Results[0]) <> 0 then
-    CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
-
-  FillChar(BlobInfo{%H-}, SizeOf(BlobInfo), #0);
-
-  pBufStart := @Results[0];
-  pBuf := pBufStart;
-  while pBuf - pBufStart <= SizeOf(Results) do
-  begin
-    Item := Byte(pBuf^);
-    if Item = isc_info_end then
-      Break;
-
-    Inc(pBuf);
-    ItemVal := ReadInterbase6NumberWithInc(PlainDriver, pBuf);
-
-    case Item of
-      isc_info_blob_num_segments:
-        BlobInfo.NumSegments := ItemVal;
-      isc_info_blob_max_segment:
-        BlobInfo.MaxSegmentSize := ItemVal;
-      isc_info_blob_total_length:
-        BlobInfo.TotalSize := ItemVal;
-      isc_info_blob_type:
-        BlobInfo.BlobType := ItemVal;
-    end;
-  end;
-end;
-
-{**
-   Return interbase server version string
-   @param PlainDriver a interbase plain driver
-   @param Handle the database connection handle
-   @param isc_info a ISC_INFO_XXX number
-   @param ConSettings then PZConSettings of active connection
-   @return ISC_INFO string
-}
-function GetDBStringInfo(const PlainDriver: TZInterbasePlainDriver;
-  Handle: PISC_DB_HANDLE; isc_info: Byte; const ImmediatelyReleasable: IImmediatelyReleasable): String;
-var
-  StatusVector: TARRAY_ISC_STATUS;
-  Buffer: array[0..IBBigLocalBufferLength - 1] of AnsiChar;
-begin
-  if PlainDriver.isc_database_info(@StatusVector, Handle, 1, @isc_info,
-      SizeOf(Buffer), @Buffer[0]) <> 0 then
-    CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
-
-  { Buffer:
-      0     - type of info
-      1..2  - total data length
-      3     - #1
-      4     - string length
-      5..N  - string
-      N+1   - #1 }
-  if Buffer[0] = AnsiChar(isc_info) then
-    Result := ConvertConnRawToString(ImmediatelyReleasable.GetConSettings, @Buffer[5], Integer(Buffer[4]))
-  else
-    Result := '';
-end;
-
-{**
-   Return interbase server version string
-   @param PlainDriver a interbase plain driver
-   @param Handle the database connection handle
-   @param isc_info a ISC_INFO_XXX number
-   @param ConSettings then PZConSettings of active connection
-   @return ISC_INFO Integer
-}
-function GetDBIntegerInfo(const PlainDriver: TZInterbasePlainDriver;
-  Handle: PISC_DB_HANDLE; isc_info: Byte; const ImmediatelyReleasable: IImmediatelyReleasable): Integer;
-var
-  StatusVector: TARRAY_ISC_STATUS;
-  Buffer: array[0..31] of AnsiChar; // this should be enough for any number
-begin
-  if PlainDriver.isc_database_info(@StatusVector, Handle, 1, @isc_info,
-      SizeOf(Buffer), @Buffer[0]) <> 0 then
-    CheckInterbase6Error(PlainDriver, StatusVector, ImmediatelyReleasable);
-
-  { Buffer:
-      0     - type of info
-      1..2  - number length
-      3..N  - number
-      N+1   - #1 }
-  if Buffer[0] = AnsiChar(isc_info)
-    then Result := ReadInterbase6Number(PlainDriver, Buffer[1])
-    else Result := -1;
-end;
-
-{**
-   Return interbase database dialect
-   @param PlainDriver a interbase plain driver
-   @param Handle the database connection handle
-   @return interbase database dialect
-}
-function GetDBSQLDialect(const PlainDriver: TZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const ImmediatelyReleasable: IImmediatelyReleasable): Integer;
-begin
-  Result := GetDBIntegerInfo(PlainDriver, Handle, isc_info_db_SQL_Dialect, ImmediatelyReleasable);
-  if Result = -1 then
-    Result := SQL_DIALECT_V5;
+  Result := not ((StatusVector[0] = isc_arg_gds) and (StatusVector[1] > isc_arg_end));
 end;
 
 { TZFBSpecificData }

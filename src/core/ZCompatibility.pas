@@ -74,6 +74,22 @@ type
   {$IF not declared(PUInt64)}
   PUInt64               = {$IFDEF FPC}PQWord{$ELSE}^UInt64{$ENDIF};
   {$IFEND}
+  {$IF not declared(UInt128)}
+  UInt128                = packed record
+    {$IFNDEF ENDIAN_BIG}hi,lo{$ELSE}lo, hi{$ENDIF}: UInt64;
+  end;
+  {$IFEND}
+  {$IF not declared(Int128)}
+  Int128                = packed record
+    {$IFNDEF ENDIAN_BIG}
+    hi: Int64;
+    lo: UInt64;
+    {$ELSE}
+    lo: UInt64;
+    hi: Int64;
+    {$ENDIF}
+  end;
+  {$IFEND}
   {$IF not declared(PPLongWord)}
   PPLongWord            = ^PLongWord;
   {$IFEND}

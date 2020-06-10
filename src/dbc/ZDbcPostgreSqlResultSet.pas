@@ -173,7 +173,7 @@ type
     function GetBlobOid: Oid;
     function Clone(LobStreamMode: TZLobStreamMode): IZBlob;
   public //IImmediatelyReleasable
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); virtual;
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
     function GetConSettings: PZConSettings;
   public
     function IsEmpty: Boolean; override;
@@ -188,7 +188,7 @@ type
     FBlobHandle: Integer;
     FLobStreamMode: TZLobStreamMode;
     FHandle: TPGconn;
-    FOwnerLob: TZPostgreSQLOidBlob;
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwnerLob: TZPostgreSQLOidBlob;
     FLobIsOpen: Boolean;
     procedure BeforeWrite;
     procedure BeforeRead;

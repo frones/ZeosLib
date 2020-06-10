@@ -125,22 +125,89 @@ uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
 
 { TZAbstractInterbase6PreparedStatement }
 
+type
+  TCountType = (cntSel, cntIns, cntDel, cntUpd);
+
 procedure TZAbstractInterbase6PreparedStatement.ExecuteInternal;
 var iError: ISC_STATUS;
+  ISC_TR_HANDLE: PISC_TR_HANDLE;
+  dialect: Word;
+var
+  ReqInfo: AnsiChar;
+  pBuf, pBufStart: PAnsiChar;
+  Len, Item, Count: Integer;
+  Counts: array[TCountType] of Integer;
 begin
-  if BatchDMLArrayCount = 0 then
-    With FIBConnection do begin
-      if (FStatementType = stExecProc)
-      then iError := FPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle,
-        @FStmtHandle, GetDialect, FParamXSQLDA, FResultXSQLDA.GetData) //expecting out params
-      else iError := FPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle,
-        @FStmtHandle, GetDialect, FParamXSQLDA); //not expecting a result
-      if iError <> 0 then
-        ZDbcInterbase6Utils.CheckInterbase6Error(FPlainDriver,
-          FStatusVector, Self, lcExecute, ASQL);
-      LastUpdateCount := GetAffectedRows(FPlainDriver, FStmtHandle, FStatementType, Self);
-    end
-  else ExceuteBatch;
+  if BatchDMLArrayCount = 0 then begin
+    ISC_TR_HANDLE := FIBConnection.GetTrHandle;
+    dialect := FIBConnection.GetDialect;
+    if (FStatementType = stExecProc)
+    then iError := FPlainDriver.isc_dsql_execute2(@FStatusVector, ISC_TR_HANDLE,
+      @FStmtHandle, Dialect, FParamXSQLDA, FResultXSQLDA.GetData) //expecting out params
+    else iError := FPlainDriver.isc_dsql_execute(@FStatusVector, ISC_TR_HANDLE,
+      @FStmtHandle, Dialect, FParamXSQLDA); //not expecting a result
+    if (iError <> 0) or (FStatusVector[2] = isc_arg_warning) then
+      FIBConnection.HandleErrorOrWarning(lcExecPrepStmt, @FStatusVector, fASQL, Self);
+    LastUpdateCount := -1;
+    if FStatementType <> stDDL then begin
+      ReqInfo := AnsiChar(isc_info_sql_records);
+
+      if FPlainDriver.isc_dsql_sql_info(@FStatusVector, @FStmtHandle, 1,
+          @ReqInfo, SizeOf(TByteBuffer), PAnsiChar(FByteBuffer)) <> 0 then
+        FIBConnection.HandleErrorOrWarning(lcExecPrepStmt, @FStatusVector, fASQL, Self);
+      if FByteBuffer[0] <> isc_info_sql_records then
+        Exit;
+
+      pBufStart := @FByteBuffer[1];
+      pBuf := pBufStart;
+      Len := FPlainDriver.isc_vax_integer(pBuf, 2) + 2;
+      Inc(pBuf, 2);
+      if FByteBuffer[Len] <> isc_info_end then
+        Exit;
+
+      FillChar(Counts{%H-}, SizeOf(Counts), #0);
+      while pBuf - pBufStart <= Len do
+      begin
+        Item := Byte(pBuf^);
+
+        if Item = isc_info_end then
+          Break;
+
+        Inc(pBuf);
+        Count := ReadInterbase6NumberWithInc(FPlainDriver, pBuf);
+
+        case Item of
+          isc_info_req_select_count: Counts[cntSel] := Count;
+          isc_info_req_insert_count: Counts[cntIns] := Count;
+          isc_info_req_update_count: Counts[cntUpd] := Count;
+          isc_info_req_delete_count: Counts[cntDel] := Count;
+          else
+            raise EZSQLException.Create(SInternalError);
+        end;
+      end;
+
+      { Note: Update statements could have Select counter <> 0 as well }
+
+      case FStatementType of
+        stSelect, //selectable procedure could have a update count but FB does not return them.
+        stSelectForUpdate:LastUpdateCount := Counts[cntSel];
+        stInsert:         LastUpdateCount := Counts[cntIns];
+        stUpdate:         LastUpdateCount := Counts[cntUpd];
+        stDelete:         LastUpdateCount := Counts[cntDel];
+        stExecProc: begin
+                          { Exec proc could have any counter... So search for the first non-zero counter }
+                          LastUpdateCount := Counts[cntIns];
+                          if LastUpdateCount > 0 then Exit;
+                          LastUpdateCount := Counts[cntUpd];
+                          if LastUpdateCount > 0 then Exit;
+                          LastUpdateCount := Counts[cntDel];
+                          if LastUpdateCount > 0 then Exit;
+                          LastUpdateCount := Counts[cntSel];
+                        end;
+        else            LastUpdateCount := -1;
+      end;
+    end;
+  end else ExceuteBatch;
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.ReleaseConnection;
@@ -214,8 +281,7 @@ procedure TZAbstractInterbase6PreparedStatement.AfterClose;
 begin
   if (FStmtHandle <> 0) then begin// Free statement-handle! Otherwise: Exception!
     if FPlainDriver.isc_dsql_free_statement(@FStatusVector, @FStmtHandle, DSQL_drop) <> 0 then
-      CheckInterbase6Error(FPlainDriver,
-          FStatusVector, Self, lcOther, 'isc_dsql_free_statement');
+      FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, 'isc_dsql_free_statement', FIBConnection);
     FStmtHandle := 0;
   end;
 end;
@@ -232,6 +298,7 @@ var
   XSQLVAR: PXSQLVAR;
   XSQLDA: PXSQLDA;
   P: PAnsiChar;
+  Status: ISC_STATUS;
 label jmpEB;
 
   procedure PrepareArrayStmt(var Slot: TZIB_FBStmt);
@@ -279,7 +346,7 @@ begin
     { Allocate an sql statement }
     if FStmtHandle = 0 then
       if FPlainDriver.isc_dsql_allocate_statement(@FStatusVector, GetDBHandle, @FStmtHandle) <> 0 then
-        CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcOther, ASQL);
+        FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, 'isc_dsql_allocate_statement', Self);
       { Prepare an sql statement }
       //get overlong string running:
       //see request https://zeoslib.sourceforge.io/viewtopic.php?f=40&p=147689#p147689
@@ -293,16 +360,17 @@ begin
           raise Exception.Create('Statements longer than ' + ZFastCode.IntToStr(MaxLen) + ' bytes are not supported by your database.');
         L := 0; //fall back to C-String behavior
       end;
-      if FPlainDriver.isc_dsql_prepare(@FStatusVector, GetTrHandle, @FStmtHandle,
-          Word(L), Pointer(ASQL), GetDialect, nil) <> 0 then
-        CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcPrepStmt, ASQL); //Check for disconnect AVZ
+      Status := FPlainDriver.isc_dsql_prepare(@FStatusVector, GetTrHandle, @FStmtHandle,
+          Word(L), Pointer(ASQL), GetDialect, nil);
+       if (Status <> 0) or (FStatusVector[2] = isc_arg_warning) then
+         FIBConnection.HandleErrorOrWarning(lcPrepStmt, @FStatusVector, fASQL, Self);
       { Set Statement Type }
       TypeItem := AnsiChar(isc_info_sql_stmt_type);
 
       { Get information about a prepared DSQL statement. }
       if FPlainDriver.isc_dsql_sql_info(@FStatusVector, @FStmtHandle, 1,
           @TypeItem, SizeOf(Buffer), @Buffer[0]) <> 0 then
-        CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
+        FIBConnection.HandleErrorOrWarning(lcPrepStmt, @FStatusVector, fASQL, Self);
 
       if Buffer[0] = AnsiChar(isc_info_sql_stmt_type)
       then FStatementType := TZIbSqlStatementType(ReadInterbase6Number(FPlainDriver, Buffer[1]))
@@ -315,11 +383,11 @@ begin
         FResultXSQLDA := TZSQLDA.Create(Connection, ConSettings);
         { Initialise ouput param and fields }
         if FPlainDriver.isc_dsql_describe(@FStatusVector, @FStmtHandle, GetDialect, FResultXSQLDA.GetData) <> 0 then
-          CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, ASQL);
+          FIBConnection.HandleErrorOrWarning(lcBindPrepStmt, @FStatusVector, fASQL, Self);
         if FResultXSQLDA.GetData^.sqld <> FResultXSQLDA.GetData^.sqln then begin
           FResultXSQLDA.AllocateSQLDA;
           if FPlainDriver.isc_dsql_describe(@FStatusVector, @FStmtHandle, GetDialect, FResultXSQLDA.GetData) <> 0 then
-            CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, ASql);
+            FIBConnection.HandleErrorOrWarning(lcBindPrepStmt, @FStatusVector, fASQL, Self);
         end;
         FOutMessageCount := FResultXSQLDA.GetData.sqld;
         if FOutMessageCount > 0 then begin
@@ -402,7 +470,7 @@ begin
     end;
     {check dynamic sql}
     if FPlainDriver.isc_dsql_describe_bind(@StatusVector, @FStmtHandle, GetDialect, FParamXSQLDA) <> 0 then
-      ZDbcInterbase6Utils.CheckInterbase6Error(FPlainDriver, StatusVector, Self, lcExecute, ASQL);
+      FIBConnection.HandleErrorOrWarning(lcBindPrepStmt, @FStatusVector, fASQL, Self);
 
     //alloc space for lobs, arrays, param-types
     if ((FStatementType = stExecProc) and (FResultXSQLDA.GetFieldCount > 0)) or
@@ -414,7 +482,7 @@ begin
     if FParamXSQLDA^.sqld <> FParamXSQLDA^.sqln then begin
       FParamXSQLDA := FParamSQLData.AllocateSQLDA;
       if FPlainDriver.isc_dsql_describe_bind(@StatusVector, @FStmtHandle, GetDialect,FParamXSQLDA) <> 0 then
-        ZDbcInterbase6Utils.CheckInterbase6Error(FPlainDriver, StatusVector, Self, lcExecute, ASQL);
+        FIBConnection.HandleErrorOrWarning(lcBindPrepStmt, @FStatusVector, fASQL, Self);
     end;
     FInMessageCount := FParamXSQLDA^.sqld;
     GetMem(FInParamDescripors, FInMessageCount * SizeOf(TZInterbaseFirerbirdParam));
@@ -481,7 +549,7 @@ begin
   inherited Unprepare;
   if (FStmtHandle <> 0) then //check if prepare did fail. otherwise we unprepare the handle
     if FPlainDriver.isc_dsql_free_statement(@fStatusVector, @FStmtHandle, DSQL_UNPREPARE) <> 0 then
-      CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcOther, 'isc_dsql_free_statement');
+      FIBConnection.HandleErrorOrWarning(lcUnprepStmt, @FStatusVector, fASQL, Self);
 end;
 
 {**
@@ -507,7 +575,7 @@ begin
     with FIBConnection do
       if FPlainDriver.isc_create_blob2(@StatusVector, GetDBHandle, GetTrHandle,
         @BlobHandle, PISC_QUAD(sqldata), 0, nil) <> 0 then
-      CheckInterbase6Error(FPlainDriver, StatusVector, Self);
+      HandleErrorOrWarning(lcBindPrepStmt, @FStatusVector, 'create lob', Self);
 
     { put data to blob }
     CurPos := 0;
@@ -516,14 +584,14 @@ begin
       if (NativeUInt(CurPos + SegLen) > Len) then
         SegLen := Len - NativeUint(CurPos);
       if FPlainDriver.isc_put_segment(@StatusVector, @BlobHandle, SegLen, P) <> 0 then
-        CheckInterbase6Error(FPlainDriver, StatusVector, Self);
+        FIBConnection.HandleErrorOrWarning(lcBindPrepStmt, @FStatusVector, 'write lob', Self);
       Inc(CurPos, SegLen);
       Inc(P, SegLen);
     end;
 
     { close blob handle }
     if FPlainDriver.isc_close_blob(@StatusVector, @BlobHandle) <> 0 then
-      CheckInterbase6Error(FPlainDriver, StatusVector, Self);
+      FIBConnection.HandleErrorOrWarning(lcBindPrepStmt, @FStatusVector, 'close lob', Self);
     sqlind^ := ISC_NOTNULL;
   end;
 end;
@@ -611,7 +679,7 @@ begin
           FOpenResultSet := nil;
         end else if FResultXSQLDA.GetFieldCount <> 0 then
           if FPlainDriver.isc_dsql_free_statement(@FStatusVector, @FStmtHandle, DSQL_CLOSE) <> 0 then
-            CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcOther, 'isc_dsql_free_statement');
+            FIBConnection.HandleErrorOrWarning(lcExecPrepStmt, @FStatusVector, fASQL, Self);
       stExecProc: { Create ResultSet if possible }
         if FResultXSQLDA.GetFieldCount <> 0 then
           FOutParamResultSet := CreateResultSet;

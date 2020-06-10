@@ -130,20 +130,25 @@ procedure TZTestConnectionCase.TestLoginPromptConnection;
 var
     locUserName,locPassword : string;
 begin
+  if Connection.Protocol = 'sqlite' then
+    exit;
+
   locUserName := Connection.User;
   locPassword := Connection.Password;
   Connection.Disconnect;
   Connection.LoginPrompt := true;
   Connection.User := '';
   Connection.Password := '';
-  gloUserName := '';
+  gloUserName := 'x';
   gloPassword := '';
   Connection.OnLogin := ConnLogin;
   try
     Connection.Connect;
+    //Fail('We never expect to reach this place. It means we were allowed to login using invalid user credentials.');
   except
     CheckEquals(false,Connection.Connected);
   end;
+  Connection.Disconnect; // I assume, sqlite would allow conecting anyway.
   gloUserName := locUserName;
   gloPassword := locPassword;
   Connection.Connect;

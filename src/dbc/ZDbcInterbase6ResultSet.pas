@@ -87,6 +87,7 @@ type
     FISC_TR_HANDLE: TISC_TR_HANDLE;
     FIBConnection: IZInterbase6Connection;
     FIBTransaction: IZIBTransaction;
+    FStatusVector: TARRAY_ISC_STATUS;
     procedure RegisterCursor;
     procedure DeRegisterCursor;
   public //implement IZInterbaseResultSet
@@ -113,7 +114,7 @@ type
     FTransactionHandle: PISC_TR_HANDLE;
     FStatusVector: TARRAY_ISC_STATUS;
     FBlobHandle: TISC_BLOB_HANDLE;
-    FOwnerLob: TZInterbase6Lob;
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwnerLob: TZInterbase6Lob;
   protected
     procedure FillBlobInfo;
     function GetSize: Int64; override;
@@ -136,7 +137,7 @@ type
   TZInterbase6Lob = Class(TZAbstractStreamedLob, IZLob, IZBlob,
     IImmediatelyReleasable, IZInterbaseFirebirdLob)
   private
-    FLobStream: TZInterbaseLobStream;
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FLobStream: TZInterbaseLobStream;
     FPlainDriver: TZInterbasePlainDriver;
     FBlobId: TISC_QUAD;
     FIBConnection: IZInterbase6Connection;
@@ -420,9 +421,7 @@ end;
     <code>false</code> if there are no more rows
 }
 function TZInterbase6XSQLDAResultSet.Next: Boolean;
-var
-  StatusVector: TARRAY_ISC_STATUS;
-  Status: ISC_STATUS;
+var Status: ISC_STATUS;
 label CheckE;
 begin
   { Checks for maximum row. }
@@ -434,8 +433,7 @@ begin
   if (FStmtType <> stExecProc) then begin //AVZ - Test for ExecProc - this is for multiple rows
     if (RowNo = 0) then
       FStmtHandle := FStmtHandleAddr^;
-    Status := FPlainDriver.isc_dsql_fetch(@StatusVector,
-      @FStmtHandle, FDialect, FXSQLDA);
+    Status := FPlainDriver.isc_dsql_fetch(@FStatusVector, @FStmtHandle, FDialect, FXSQLDA);
     if Status = 0 then begin
       if (RowNo = 0) then RegisterCursor;
       RowNo := RowNo + 1;
@@ -444,13 +442,13 @@ begin
     end else if Status = 100  then begin
       {no error occoured -> notify IsAfterLast and close the recordset}
       RowNo := RowNo + 1;
-      if FPlainDriver.isc_dsql_free_statement(@StatusVector, @FStmtHandle, DSQL_CLOSE) <> 0 then
+      if FPlainDriver.isc_dsql_free_statement(@FStatusVector, @FStmtHandle, DSQL_CLOSE) <> 0 then
         goto CheckE;
       FStmtHandle := 0;
       if (FIBTransaction <> nil) then
         DeRegisterCursor;
     end else
-CheckE:CheckInterbase6Error(FPlainDriver, StatusVector, Self);
+CheckE: FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, 'isc_dsql_free_statement', Self);
   end else if RowNo = 0 then begin
     Result := True;
     RowNo := 1;
@@ -466,13 +464,12 @@ begin
 end;
 
 procedure TZInterbase6XSQLDAResultSet.ResetCursor;
-var StatusVector: TARRAY_ISC_STATUS;
 begin
   if not Closed then begin
     if (FStmtHandle <> 0) then begin
       if (FStmtType <> stExecProc) then begin
-         if (FPlainDriver.isc_dsql_free_statement(@StatusVector, @FStmtHandle, DSQL_CLOSE) <> 0) then
-          CheckInterbase6Error(FPlainDriver, StatusVector, Self, lcOther, 'isc_dsql_free_statement');
+        if (FPlainDriver.isc_dsql_free_statement(@FStatusVector, @FStmtHandle, DSQL_CLOSE) <> 0) then
+          FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, 'isc_dsql_free_statement', Self);
         FStmtHandle := 0;
         if FIBTransaction <> nil then
           DeRegisterCursor;
@@ -498,7 +495,7 @@ begin
     Assert(FLobIsOpen);
     try
       if FPlainDriver.isc_cancel_blob(@FStatusVector, @FBlobHandle) <> 0 then
-        CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
+        FOwnerLob.FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, 'cancel lob', Self);
     finally
       FLobIsOpen := False;
       Updated := False;
@@ -514,7 +511,7 @@ procedure TZInterbaseLobStream.CloseLob;
 begin
   Assert(FLobIsOpen);
   if FPlainDriver.isc_close_blob(@FStatusVector, @FBlobHandle) <> 0 then
-    CheckInterbase6Error(FPlainDriver, FStatusVector, FOwner);
+    FOwnerLob.FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, 'close lob', Self);
   FLobIsOpen := False;
   FPosition := 0;
 end;
@@ -535,7 +532,7 @@ begin
   { create blob handle }
   if FPlainDriver.isc_create_blob2(@FStatusVector, FDB_HANDLE, FTransactionHandle,
      @FBlobHandle, @BlobId, 0, nil) <> 0 then //EH: what about BPB
-    CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
+    FOwnerLob.FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, 'create lob', Self);
   FOwnerLob.FBlobId := BlobId; //write back to descriptor
   Updated := True;
   FLobIsOpen := True;
@@ -553,7 +550,7 @@ begin
     if not FReleased and FLobIsOpen then
   {    close blob handle }
       if FPlainDriver.isc_close_blob(@FStatusVector, @FBlobHandle) <> 0 then
-        CheckInterbase6Error(FPlainDriver, FStatusVector, FOwner);
+        FOwnerLob.FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, 'close lob', Self);
   finally
     FOwnerLob.FLobStream := nil;
     FOwnerLob.FIsUpdated := Updated;
@@ -576,7 +573,7 @@ begin
 
   if FPlainDriver.isc_blob_info(@StatusVector, @FBlobHandle, 4, @items[0],
       SizeOf(Results), @Results[0]) <> 0 then
-    CheckInterbase6Error(FPlainDriver, StatusVector, Self);
+    FOwnerLob.FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, 'get lob info', Self);
   pBufStart := @Results[0];
   pBuf := pBufStart;
   while pBuf - pBufStart <= SizeOf(Results) do
@@ -621,7 +618,7 @@ begin
     if (Int64(BlobID) <> 0) then begin
        if FPlainDriver.isc_open_blob2(@FStatusVector, FDB_HANDLE,
        FTransactionHandle, @FBlobHandle, @BlobId, 0 , nil) <> 0 then
-      CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
+      FOwnerLob.FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, 'open lob', Self);
       FillBlobInfo;
     end else
       CreateLob;
@@ -659,7 +656,7 @@ begin
            Inc(Result, BytesRead);
            Break;
           end
-        else CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
+        else FOwnerLob.FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, 'read lob', Self);
       end;
     end;
   end;
@@ -722,7 +719,7 @@ begin
     then SegLen := BlobInfo.MaxSegmentSize
     else SegLen := Count;
     if FPlainDriver.isc_put_segment(@FStatusVector, @FBlobHandle, SegLen, TempBuffer) <> 0 then
-      CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
+      FOwnerLob.FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, 'write lob', Self);
     Inc(Result, SegLen);
     Inc(TempBuffer, SegLen);
     Dec(Count, SegLen);
@@ -790,7 +787,8 @@ begin
   if PInt64(@FBlobID)^ <> 0 then try
     if FIsTemporary and (FLobStream <> nil) and FLobStream.FLobIsOpen then begin
       FLobStream.CancelLob;
-      FreeAndNil(FLobStream);
+      FLobStream.Free;
+      //FreeAndNil(FLobStream);
     end;
   finally
     FIsTemporary := False;
@@ -854,8 +852,8 @@ function TZInterbase6Lob.CreateLobStream(CodePage: Word;
   LobStreamMode: TZLobStreamMode): TStream;
 begin
   FLobStreamMode := LobStreamMode;
-  FLobStream := TZInterbaseLobStream.Create(Self);
-  Result := FLobStream;
+  Result := TZInterbaseLobStream.Create(Self);
+  FLobStream := TZInterbaseLobStream(Result);
   if (FColumnCodePage <> zCP_Binary) and (CodePage <> FColumnCodePage) then
     Result := TZCodePageConversionStream.Create(Result, FColumnCodePage, CodePage, FConSettings, FOpenLobStreams);
 end;
@@ -905,7 +903,8 @@ begin
     Imm.ReleaseImmediat(Sender, AError);
     if FlobStream <> nil then begin
       FlobStream.FReleased := True;
-      FreeAndNil(FlobStream);
+      FlobStream.Free;
+      FlobStream := nil;
     end;
   end;
   FReleased := true;

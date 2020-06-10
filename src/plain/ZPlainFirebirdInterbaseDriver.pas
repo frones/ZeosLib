@@ -111,18 +111,16 @@ const
   SQL_TYPE_TIME                  = 560;
   SQL_TYPE_DATE                  = 570;
   SQL_INT64                      = 580;
-  // IB7
-  SQL_BOOLEAN                    = 590;
-  // FB25
-  SQL_NULL                       = 32766;
-  // FB30
-  SQL_BOOLEAN_FB                 = 32764;
-  // FB40
-  SQL_TIMESTAMP_TZ_FB            = 32754;
-  SQL_TIME_TZ_FB                 = 32756;
-  SQL_DEC_FIXED_FB               = 32758;
-  SQL_DEC16_FB                   = 32760;
-  SQL_DEC34_FB                   = 32762;
+  SQL_BOOLEAN                    = 590; // IB7
+  SQL_TIMESTAMP_TZ_EX_FB         = 32748; //FB4+
+  SQL_TIME_TZ_EX_FB              = 32756; //FB4+
+  SQL_INT128_FB                  = 32752; //FB4+
+  SQL_TIMESTAMP_TZ_FB            = 32754; //FB4+
+  SQL_TIME_TZ_FB                 = 32756; //FB4+
+  SQL_DEC16_FB                   = 32760; //FB4+
+  SQL_DEC34_FB                   = 32762; //FB4+
+  SQL_BOOLEAN_FB                 = 32764; //FB3+
+  SQL_NULL                       = 32766; //FB25+
 
   // deprecated alias for pre V6 applications
   SQL_DATE                       = SQL_TIMESTAMP;
@@ -163,9 +161,11 @@ const
   blr_bool            = 23;
   blr_dec64           = 24;
   blr_dec128          = 25;
-  blr_dec_fixed       = 26;
+  blr_int128          = 26;
   blr_sql_time_tz     = 28;
   blr_timestamp_tz    = 29;
+  blr_ex_time_tz      = 30;
+  blr_ex_timestamp_tz = 31;
 
   // Historical alias for pre V6 applications
   blr_date		      = blr_timestamp;
@@ -275,26 +275,26 @@ const
   fb_cancel_abort                =  4;
 
   {* error codes *}
-  isc_facility                        = 20;
-  isc_base                             = 335544320;
-  isc_factor                           = 1;
-  isc_arg_end                               = 0;     // end of argument list
-  isc_arg_gds                               = 1;     // generic DSRI status value
-  isc_arg_string                          = 2;   // string argument
-  isc_arg_cstring                         = 3;   // count & string argument
-  isc_arg_number                          = 4;   // numeric argument (long)
-  isc_arg_interpreted                   = 5;     // interpreted status code (string)
-  isc_arg_vms                               = 6;     // VAX/VMS status code (long)
-  isc_arg_unix                            = 7;   // UNIX error code
-  isc_arg_domain                          = 8;   // Apollo/Domain error code
-  isc_arg_dos                               = 9;     // MSDOS/OS2 error code
-  isc_arg_mpexl                               = 10;    // HP MPE/XL error code
-  isc_arg_mpexl_ipc                         = 11;  // HP MPE/XL IPC error code
-  isc_arg_next_mach                         = 15;  // NeXT/Mach error code
-  isc_arg_netware                         = 16;    // NetWare error code
-  isc_arg_win32                               = 17;    // Win32 error code
-  isc_arg_warning                         = 18;    // warning argument
-  isc_arg_sql_state                         = 19;  // SQLSTATE
+  isc_facility                          = 20;
+  isc_base                              = 335544320;
+  isc_factor                            = 1;
+  isc_arg_end                           = 0;   // end of argument list
+  isc_arg_gds                           = 1;   // generic DSRI status value
+  isc_arg_string                        = 2;   // string argument
+  isc_arg_cstring                       = 3;   // count & string argument
+  isc_arg_number                        = 4;   // numeric argument (long)
+  isc_arg_interpreted                   = 5;   // interpreted status code (string)
+  isc_arg_vms                           = 6;   // VAX/VMS status code (long)
+  isc_arg_unix                          = 7;   // UNIX error code
+  isc_arg_domain                        = 8;   // Apollo/Domain error code
+  isc_arg_dos                           = 9;   // MSDOS/OS2 error code
+  isc_arg_mpexl                         = 10;  // HP MPE/XL error code
+  isc_arg_mpexl_ipc                     = 11;  // HP MPE/XL IPC error code
+  isc_arg_next_mach                     = 15;  // NeXT/Mach error code
+  isc_arg_netware                       = 16;  // NetWare error code
+  isc_arg_win32                         = 17;  // Win32 error code
+  isc_arg_warning                       = 18;  // warning argument
+  isc_arg_sql_state                     = 19;  // SQLSTATE
 
   isc_arith_except                     = 335544321;
   isc_bad_dbkey                        = 335544322;
@@ -1762,13 +1762,7 @@ type
   end;
 
   { Blob id structure }
-  TGDS_QUAD = record
-    gds_quad_high:  ISC_LONG;
-    gds_quad_low:   ISC_ULONG;
-  end;
-  PGDS_QUAD            = ^TGDS_QUAD;
-
-  TISC_QUAD            = TGDS_QUAD;
+  TISC_QUAD            = array[0..1] of ISC_LONG;
   PISC_QUAD            = ^TISC_QUAD;
 
   TISC_ARRAY_BOUND = record

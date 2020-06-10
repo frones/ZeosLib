@@ -399,8 +399,9 @@ begin
         FInMessageMetadata, FInData, FOutMessageMetadata, flags)
     end else FFBTransaction := FFBStatement.execute(FStatus, FFBTransaction,
       FInMessageMetadata, FInData, FOutMessageMetadata, FOutData);
-    if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-      FFBConnection.HandleError(FStatus, fASQL, Self, lcExecute);
+    if ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
+       ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0)  then
+      FFBConnection.HandleErrorOrWarning(lcExecPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), fASQL, Self);
   end else ExceuteBatch;
 end;
 
@@ -489,7 +490,7 @@ begin
         end else if FResultSet <> nil then begin
           FResultSet.Close(FStatus);
           if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-            FFBConnection.HandleError(FStatus, fASQL, Self, lcExecute);
+            FFBConnection.HandleErrorOrWarning(lcExecPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), fASQL, Self);
           FResultSet.Release;
         end;
       stExecProc: begin{ Create ResultSet if possible }
@@ -569,7 +570,7 @@ begin
     FFBStatement := FAttachment.prepare(FStatus, Transaction, Length(fASQL),
       Pointer(fASQL), FDialect, flags);
     if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-      FFBConnection.HandleError(FStatus, fASQL, Self, lcExecute);
+      FFBConnection.HandleErrorOrWarning(lcPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), fASQL, Self);
     FStatementType := TZIbSqlStatementType(FFBStatement.getType(FStatus));
     FOutMessageMetadata := FFBStatement.getOutputMetadata(FStatus);
     FOutMessageCount := FOutMessageMetadata.getCount(FStatus);
@@ -685,7 +686,7 @@ begin
   if FFBStatement <> nil then begin
     FFBStatement.free(FStatus);
     if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-      FFBConnection.HandleError(FStatus, fASQL, Self, lcExecute);
+      FFBConnection.HandleErrorOrWarning(lcUnprepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), fASQL, Self);
     FFBStatement.release;
     FFBStatement := nil;
   end;
@@ -715,14 +716,14 @@ begin
         SegLen := Len - CurPos;
       Blob.putSegment(FStatus, SegLen, P);
       if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-        FFBConnection.HandleError(FStatus, 'IBlob.putSegment', Self, lcExecute);
+        FFBConnection.HandleErrorOrWarning(lcBindPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.putSegment', Self);
       Inc(CurPos, SegLen);
       Inc(P, SegLen);
     end;
     { close blob handle }
     Blob.close(FStatus);
     if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-      FFBConnection.HandleError(FStatus, 'IBlob.close', Self, lcExecute);
+      FFBConnection.HandleErrorOrWarning(lcBindPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.close', Self);
     Blob.release;
     sqlind^ := ISC_NOTNULL;
   end;

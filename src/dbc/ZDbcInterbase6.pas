@@ -83,6 +83,8 @@ type
     function GetTrHandle: PISC_TR_HANDLE;
     function GetActiveTransaction: IZIBTransaction;
     function GetPlainDriver: TZInterbasePlainDriver;
+    function GetDBIntegerInfo(isc_info: Byte; const Sender: IImmediatelyReleasable): Integer;
+    function GetDBStringInfo(isc_info: Byte; const Sender: IImmediatelyReleasable): String;
   end;
 
   {** Implements Interbase6 Database Connection. }
@@ -110,6 +112,8 @@ type
     function GetTrHandle: PISC_TR_HANDLE;
     function GetActiveTransaction: IZIBTransaction;
     function GetPlainDriver: TZInterbasePlainDriver;
+    function GetDBIntegerInfo(isc_info: Byte; const Sender: IImmediatelyReleasable): Integer;
+    function GetDBStringInfo(isc_info: Byte; const Sender: IImmediatelyReleasable): String;
   public { IZTransactionManager }
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
@@ -214,7 +218,7 @@ Begin
  if assigned(FPlainDriver.fb_cancel_operation) then begin
    Result := 0;
    If FPlainDriver.fb_cancel_operation(@FStatusVector, @FHandle, fb_cancel_raise) <> 0 Then
-     CheckInterbase6Error(FPlainDriver, FStatusVector, Self);
+     HandleErrorOrWarning(lcOther, @FStatusVector, 'cancel operation', Self);
  end else begin
    Result := 1 //abort opertion is not supported by the current client library
  end;
@@ -230,17 +234,20 @@ End;
   Connection.
 }
 procedure TZInterbase6Connection.InternalClose;
+var LogMsg: RawByteString;
+  Status: ISC_Status;
 begin
+  LogMsg := 'DISCONNECT FROM "'+ConSettings^.DataBase+'"';
   try
     inherited InternalClose;
   finally
     if Assigned(DriverManager) and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-          'DISCONNECT FROM "'+ConSettings^.DataBase+'"');
+      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMsg);
     if FHandle <> 0 then begin
-      FPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
+      Status := FPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
       FHandle := 0;
-      CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcDisconnect);
+      if Status <> 0 then
+        HandleErrorOrWarning(lcDisconnect, @FStatusVector, LogMsg, Self);
     end;
   end;
 end;
@@ -263,13 +270,15 @@ end;
 
 procedure TZInterbase6Connection.ExecuteImmediat(const SQL: RawByteString;
   ISC_TR_HANDLE: PISC_TR_HANDLE; LoggingCategory: TZLoggingCategory);
+var Status: ISC_STATUS;
 begin
   if SQL = '' then
     Exit;
-  if FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle,
+  Status := FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle,
       ISC_TR_HANDLE, Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF},
-      Pointer(SQL), GetDialect, nil) <> 0 then
-    CheckInterbase6Error(FPlainDriver, FStatusVector, Self, LoggingCategory);
+      Pointer(SQL), GetDialect, nil);
+    if (Status <> 0) or (FStatusVector[2] = isc_arg_warning) then
+      HandleErrorOrWarning(lcExecPrepStmt, @FStatusVector, SQL, Self);
   DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
 end;
 
@@ -308,6 +317,53 @@ end;
 function TZInterbase6Connection.GetDBHandle: PISC_DB_HANDLE;
 begin
   Result := @FHandle;
+end;
+
+{**
+   Return interbase server integer
+   @param isc_info a ISC_INFO_XXX number
+   @param sender the calling object
+   @return ISC_INFO Integer
+}
+function TZInterbase6Connection.GetDBIntegerInfo(isc_info: Byte;
+  const Sender: IImmediatelyReleasable): Integer;
+begin
+  if FPlainDriver.isc_database_info(@FStatusVector, @FHandle, 1, @isc_info,
+      SizeOf(TByteBuffer), @FByteBuffer[0]) <> 0 then
+    HandleErrorOrWarning(lcOther, @FStatusVector, 'isc_database_info', Sender);
+  { Buffer:
+      0     - type of info
+      1..2  - number length
+      3..N  - number
+      N+1   - #1 }
+  if FByteBuffer[0] = isc_info
+  then Result := ReadInterbase6Number(FPlainDriver, FByteBuffer[1])
+  else Result := -1;
+end;
+
+{**
+   Return interbase server string
+   @param isc_info a ISC_INFO_XXX number
+   @param sender the calling object
+   @return ISC_INFO string
+}
+function TZInterbase6Connection.GetDBStringInfo(isc_info: Byte;
+  const Sender: IImmediatelyReleasable): String;
+begin
+  if FPlainDriver.isc_database_info(@FStatusVector, @FHandle, 1, @isc_info,
+      SizeOf(TByteBuffer), @FByteBuffer[0]) <> 0 then
+    HandleErrorOrWarning(lcOther, @FStatusVector, 'isc_database_info', Sender);
+
+  { Buffer:
+      0     - type of info
+      1..2  - total data length
+      3     - #1
+      4     - string length
+      5..N  - string
+      N+1   - #1 }
+  if FByteBuffer[0] = isc_info
+  then Result := ConvertConnRawToString(ConSettings, @FByteBuffer[5], Integer(FByteBuffer[4]))
+  else Result := '';
 end;
 
 {**
@@ -393,7 +449,7 @@ end;
 }
 procedure TZInterbase6Connection.Open;
 var
-  DPB: RawByteString;
+  DPB, LogMsg: RawByteString;
   DBName: array[0..512] of AnsiChar;
   ConnectionString, CSNoneCP, DBCP, CreateDB: String;
   ti: IZIBTransaction;
@@ -448,12 +504,12 @@ begin
         Info.Values['isc_dpb_set_db_charset'] := Info.Values['isc_dpb_lc_ctype'];
       DBCP := Info.Values['isc_dpb_set_db_charset'];
       PrepareDPB;
+      LogMsg := 'CREATE DATABASE "'+ConSettings.Database+'" AS USER "'+ ConSettings^.User+'"';
       if FPlainDriver.isc_create_database(@FStatusVector, SmallInt(StrLen(@DBName[0])),
           @DBName[0], @FHandle, Smallint(Length(DPB)),Pointer(DPB), 0) <> 0 then
-        CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcConnect);
+        Self.HandleErrorOrWarning(lcOther, @FStatusVector, LogMsg, Self);
       if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-          'CREATE DATABASE "'+ConSettings.Database+'" AS USER "'+ ConSettings^.User+'"');
+        DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMsg);
     end else begin
       {$IFDEF UNICODE}
       DPB := ZUnicodeToRaw(CreateDB, zOSCodePage);
@@ -477,11 +533,10 @@ begin
       end else DBCP := sCS_NONE;
       if FPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle, @TrHandle,
           Length(DPB), Pointer(DPB), FDialect, nil) <> 0 then
-        CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, DPB);
+        HandleErrorOrWarning(lcOther, @FStatusVector, DPB, Self);
       { Logging connection action }
       if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-          DPB+' AS USER "'+ ConSettings^.User+'"');
+        DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, DPB);
       //we did create the db and are connected now.
       //we have no dpb so we connect with 'NONE' which is not a problem for the UTF8/NONE charsets
       //because the metainformations are retrieved in UTF8 encoding
@@ -489,7 +544,7 @@ begin
          ((FClientCodePage <> 'UTF8') and (FClientCodePage <> sCS_NONE))) then begin
         //we need a reconnect with a valid dpb
         if FPlainDriver.isc_detach_database(@FStatusVector, @FHandle) <> 0 then
-          CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcExecute, DPB);
+          HandleErrorOrWarning(lcDisconnect, @FStatusVector, DPB, Self);
         TrHandle := 0;
         FHandle := 0;
       end;
@@ -500,17 +555,20 @@ begin
 reconnect:
   if FHandle = 0 then begin
     PrepareDPB;
+    LogMsg := 'CONNECT TO "'+ConSettings^.DataBase+'" AS USER "'+ConSettings^.User+'"';
     { Connect to Interbase6 database. }
     if FPlainDriver.isc_attach_database(@FStatusVector,
         ZFastCode.StrLen(@DBName[0]), @DBName[0], @FHandle, Length(DPB), Pointer(DPB)) <> 0 then
-      CheckInterbase6Error(FPlainDriver, FStatusVector, Self, lcConnect);
+      HandleErrorOrWarning(lcConnect, @FStatusVector, DPB, Self);
 
     { Dialect could have changed by isc_dpb_set_db_SQL_dialect command }
-    FDialect := GetDBSQLDialect(FPlainDriver, @FHandle, Self);
+    I := GetDBIntegerInfo(isc_info_db_SQL_Dialect, Self);
+    if I = -1
+    then FDialect := SQL_DIALECT_V5
+    else FDialect := Word(I);
     { Logging connection action }
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-        'CONNECT TO "'+ConSettings^.DataBase+'" AS USER "'+ConSettings^.User+'"');
+      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMsg);
   end;
 
   inherited SetAutoCommit(AutoCommit or (Info.IndexOf('isc_tpb_autocommit') <> -1));
@@ -787,10 +845,10 @@ begin
     end;
     FExplicitTransactionCounter := 0;
     if Status <> 0 then
-      CheckInterbase6Error(FPlainDriver, FStatusVector, FOwner);
+      FOwner.HandleErrorOrWarning(lcTransaction, @FStatusVector, sCommitMsg, Self);
   finally
     if fDoLog and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION COMMIT');
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sCommitMsg);
   end;
 end;
 
@@ -850,10 +908,10 @@ begin
     end;
     FExplicitTransactionCounter := 0;
     if Status <> 0 then
-      CheckInterbase6Error(FPlainDriver, FStatusVector, FOwner);
+      FOwner.HandleErrorOrWarning(lcTransaction, @FStatusVector, sRollbackMsg, Self);
   finally
     if fDoLog and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sRollbackMsg);
   end;
 end;
 
@@ -877,8 +935,8 @@ begin
     Result := Ord(not AutoCommit);
     fTEB.db_handle := @FHandle;
     if FPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, @fTEB) <> 0 then
-      CheckInterbase6Error(FPlainDriver, FStatusVector, FOwner, lcTransaction);
-    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION STARTED.');
+      FOwner.HandleErrorOrWarning(lcTransaction, @FStatusVector, sStartTxn, Self);
+    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sStartTxn);
   end else begin
     Result := FSavePoints.Count+2;
     S := 'SP'+ZFastcode.IntToStr(NativeUInt(Self))+'_'+ZFastCode.IntToStr(Result);

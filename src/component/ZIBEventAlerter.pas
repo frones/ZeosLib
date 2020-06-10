@@ -599,7 +599,7 @@ begin
       // Very Ugly! OnError should accept Exception as parameter.
       // But we keep backward compatibility here
       try
-        CheckInterbase6Error(FParent.PlainDriver, StatusVector, nil);
+        FParent.FIBConnection.HandleErrorOrWarning(lcTransaction, @StatusVector, 'isc_que_events', nil);
       except on E: Exception do
         if E is EZSQLException then
           FParent.OnError(FParent, EZSQLException(E).ErrorCode)
@@ -631,7 +631,7 @@ begin
   try
     FEvents.Cancel(FParent.FStatus);
     if ((FParent.FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
-      FParent.FFBConnection.HandleError(FParent.FStatus, 'IAttachment.queEvents', FParent.FFBConnection, lcOther);
+      FParent.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FParent.FStatus.getErrors), 'IAttachment.queEvents', FParent.FFBConnection);
   finally
     FEvents.release;
     FEvents := nil;
@@ -673,7 +673,11 @@ function TFBEventCallback.release: Integer;
 begin
   Dec(FRefCnt);
   if FRefCnt = 0 then
+    {$IFDEF AUTOREFCOUNT}
+    Destroy;
+    {$ELSE}
     Free;
+    {$ENDIF}
   Result := FRefCnt;
 end;
 

@@ -2415,7 +2415,11 @@ function TZDBLIBPLainDriver.dbOpen(Login: PLOGINREC;
   server: PAnsiChar): PDBPROCESS;
 begin
   if Assigned(FTdsDbOpen) then
-    Result := FTdsDbOpen(Login, server, Ord(ZFastCode.Pos('Sybase', GetDescription) > 0))
+    // the ORD() thing is strange. It makes dblib terminate the program if no
+    // correct login information is given. This made the test TZTestConnectionCase.TestLoginPromptConnection
+    // fail when trying to login using 'x' as the user name. When reverting to 1,
+    // everything works as expected.
+    Result := FTdsDbOpen(Login, server, 1{Ord(ZFastCode.Pos('Sybase', GetDescription) > 0)})
   else
     {$IFNDEF MSWINDOWS}
     Result := FdbOpen(Login, server);
