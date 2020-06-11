@@ -1191,6 +1191,7 @@ type
   end;
 
   EventCallbackVTable = class(ReferenceCountedVTable)
+  protected
     eventCallbackFunction: IEventCallback_eventCallbackFunctionPtr;
   end;
 
@@ -9178,67 +9179,67 @@ var
 
 procedure IBatchImpl_addRefDispatcher(this: IBatch); cdecl;
 begin
-IBatchImpl(this).addRef;
+  IBatchImpl(this).addRef;
 end;
 
 function IBatchImpl_releaseDispatcher(this: IBatch): Integer; cdecl;
 begin
-Result := IBatchImpl(this).release;
+  Result := IBatchImpl(this).release;
 end;
 
 procedure IBatchImpl_addDispatcher(this: IBatch; status: IStatus; count: Cardinal;
 inBuffer: Pointer); cdecl;
 begin
-IBatchImpl(this).Add(status, count, inBuffer);
+  IBatchImpl(this).Add(status, count, inBuffer);
 end;
 
 procedure IBatchImpl_addBlobDispatcher(this: IBatch; status: IStatus; length: Cardinal; inBuffer: Pointer; blobId: ISC_QUADptr; parLength: Cardinal; par: PByte); cdecl;
 begin
-IBatchImpl(this).addBlob(status, length, inBuffer, blobId, parLength, par);
+  IBatchImpl(this).addBlob(status, length, inBuffer, blobId, parLength, par);
 end;
 
 procedure IBatchImpl_appendBlobDataDispatcher(this: IBatch; status: IStatus;
-length: Cardinal; inBuffer: Pointer); cdecl;
+  length: Cardinal; inBuffer: Pointer); cdecl;
 begin
-IBatchImpl(this).appendBlobData(status, length, inbuffer);
+  IBatchImpl(this).appendBlobData(status, length, inbuffer);
 end;
 
 procedure IBatchImpl_addBlobStreamDispatcher(this: IBatch; status: IStatus;
-length: Cardinal; inBuffer: Pointer); cdecl;
+  length: Cardinal; inBuffer: Pointer); cdecl;
 begin
-IBatchImpl(this).addBlobStream(status, length, inBuffer);
+  IBatchImpl(this).addBlobStream(status, length, inBuffer);
 end;
 
 procedure IBatchImpl_registerBlobDispatcher(this: IBatch; status: IStatus;
-existingBlob: ISC_QUADPtr; blobId: ISC_QUADPtr); cdecl;
+  existingBlob: ISC_QUADPtr; blobId: ISC_QUADPtr); cdecl;
 begin
-IBatchImpl(this).registerBlob(status, existingBlob, blobId);
+  IBatchImpl(this).registerBlob(status, existingBlob, blobId);
 end;
 
 function IBatchImpl_executeDispatcher(this: IBatch; status: IStatus;
-transaction: ITransaction): IBatchCompletionState; cdecl;
+  transaction: ITransaction): IBatchCompletionState; cdecl;
 begin
-Result := IBatchImpl(this).execute(status, transaction);
+  Result := IBatchImpl(this).execute(status, transaction);
 end;
 
 procedure IBatchImpl_cancelDispatcher(this: IBatch; status: IStatus); cdecl;
 begin
-IBatchImpl(this).cancel(status);
+  IBatchImpl(this).cancel(status);
 end;
 
 function IBatchImpl_getBlobAlignmentDispatcher(this: IBatch; status: IStatus): Cardinal; cdecl;
 begin
-Result := IBatchImpl(this).getBlobAlignment(status);
+  Result := IBatchImpl(this).getBlobAlignment(status);
 end;
 
 function IBatchImpl_getMetadataDispatcher(this: IBatch; status: IStatus): IMessageMetadata; cdecl;
 begin
-Result := IBatchImpl(this).getMetadata(status);
+  Result := IBatchImpl(this).getMetadata(status);
 end;
 
 procedure IBatchImpl_setDefaultBpbDispatcher(this: IBatch; status: IStatus; parLength: Cardinal; par: PByte); cdecl;
 begin
-IBatchImpl(this).setDefaultBpb(status, parLength, par);
+  IBatchImpl(this).setDefaultBpb(status, parLength, par);
 end;
 
 { IBatchImpl }
@@ -13907,6 +13908,9 @@ finalization
   IMetadataBuilderImpl_vTable.destroy;
   IResultSetImpl_vTable.destroy;
   IStatementImpl_vTable.destroy;
+  IStatementImpl_vTable_V4.destroy;
+  IBatchImpl_vTable.Destroy;
+  IBatchCompletionState_VTable.Destroy;
   IRequestImpl_vTable.destroy;
   IEventsImpl_vTable.destroy;
   IAttachmentImpl_vTable.destroy;
