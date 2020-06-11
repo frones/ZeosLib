@@ -416,8 +416,7 @@ var
   B: Boolean;
 begin
   { Prepare unique column labels. }
-  if FColumnsLabels = nil then
-  begin
+  if FColumnsLabels = nil then begin
     ColumnsInfo := FResultSet.ColumnsInfo;
     FColumnsLabels := TStringList.Create;
     for I := 0 to ColumnsInfo.Count - 1 do begin
@@ -442,7 +441,6 @@ begin
       FColumnsLabels.Add(ColumnName);
     end;
   end;
-
   Result := ColumnsLabels[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
 end;
 

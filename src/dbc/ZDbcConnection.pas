@@ -99,7 +99,7 @@ type
 
   { TZAbstractDbcConnection }
 
-  TZAbstractDbcConnection = class(TZCodePagedObject, IImmediatelyReleasable)
+  TZAbstractDbcConnection = class(TZImmediatelyReleasableObject, IImmediatelyReleasable)
   private
     FOnConnectionLostError: TOnConnectionLostError; //error handle which can be registered
     FDriver: IZDriver;
@@ -239,6 +239,11 @@ type
     property Closed: Boolean read IsClosed write FClosed;
   end;
 
+  TZAbstractDbcSingleTransactionConnection = class(TZAbstractDbcConnection)
+  public //implement IZTransaction
+    function GetConnection: IZConnection;
+  end;
+
   {** Implements Abstract Database notification. }
   TZAbstractNotification = class(TInterfacedObject, IZNotification)
   private
@@ -356,6 +361,24 @@ type
     constructor Create(const ConSettings: PZConSettings{; FormatSettings: TZFormatSettings});
     function UseWComparsions: Boolean;
     function GetAsDateTime(const Value: TZVariant): TDateTime; reintroduce;
+  end;
+
+  TZEmulatedTransactionManager = class(TZImmediatelyReleasableObject, IZTransactionManager)
+  private
+    fMainConnection: IZConnection;
+    fActiveTransaction: IZTransaction;
+    fTransactions: IZCollection;
+  public //implement IZTransactionManager
+    function CreateTransaction(AutoCommit, ReadOnly: Boolean;
+      TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
+    procedure ReleaseTransaction(const Transaction: IZTransaction);
+    procedure SetActiveTransaction(const Transaction: IZTransaction);
+    function GetTransactionCount: Integer;
+    function GetTransaction(Index: Cardinal): IZTransaction;
+  public //implement IImmediatelyReleasable
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+  public
+    Constructor Create(const Connection: IZConnection);
   end;
 
 type
@@ -2137,6 +2160,94 @@ end;
 function TZClientVariantManager.UseWComparsions: Boolean;
 begin
   Result := FUseWComparsions;
+end;
+
+{ TZEmulatedTransactionManager }
+
+constructor TZEmulatedTransactionManager.Create(const Connection: IZConnection);
+begin
+  Assert(Connection <> nil, 'Main connection is not assigned');
+  fMainConnection := Connection;
+  ConSettings := Connection.GetConSettings;
+  fTransactions := TZCollection.Create;
+  Connection.QueryInterface(IZTransaction, fActiveTransaction);
+  fTransactions.Add(fActiveTransaction);
+end;
+
+function TZEmulatedTransactionManager.CreateTransaction(AutoCommit,
+  ReadOnly: Boolean; TransactIsolationLevel: TZTransactIsolationLevel;
+  Params: TStrings): IZTransaction;
+var URL: TZURL;
+  Connection: IZConnection;
+begin
+  URL := TZURL.Create;
+  Result := nil;
+  if fMainConnection <> nil then //released ?
+  try
+    URL.URL := fMainConnection.GetURL;
+    if Params <> nil then
+      URL.Properties.AddStrings(Params);
+    Connection := DriverManager.GetConnection(URL.URL);
+    Connection.SetAutoCommit(AutoCommit);
+    Connection.SetReadOnly(ReadOnly);
+    Connection.SetTransactionIsolation(TransactIsolationLevel);
+    Connection.Open; //test if connect succeeded
+    Result := Connection as IZTransaction; //if not supported we get an invalid interface exc.
+    fTransactions.Add(Result)
+  finally
+    FreeAndNil(URL);
+  end;
+end;
+
+function TZEmulatedTransactionManager.GetTransaction(
+  Index: Cardinal): IZTransaction;
+begin
+  Result := nil;
+  if fMainConnection <> nil then //released ?
+    if Index = 0
+    then fMainConnection.QueryInterface(IZTransaction, Result)
+    else if Index >= Cardinal(fTransactions.Count)
+      then fTransactions[Index-1].QueryInterface(IZTransaction, Result)
+end;
+
+function TZEmulatedTransactionManager.GetTransactionCount: Integer;
+begin
+  Result := fTransactions.Count +1;
+end;
+
+procedure TZEmulatedTransactionManager.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+begin
+  fActiveTransaction := nil;
+  fTransactions.Clear;
+  fMainConnection := nil;
+end;
+
+procedure TZEmulatedTransactionManager.ReleaseTransaction(
+  const Transaction: IZTransaction);
+var I: Integer;
+  Connection: IZConnection;
+begin
+  I := fTransactions.IndexOf(Transaction);
+  if I < 0 then
+    raise EZSQLException.Create('Manager could not locate given transaction');
+  Connection := fTransactions[i] as IZConnection;
+  if Connection <> fMainConnection then
+    Connection.Close;
+  fTransactions.Delete(I);
+end;
+
+procedure TZEmulatedTransactionManager.SetActiveTransaction(
+  const Transaction: IZTransaction);
+begin
+  fActiveTransaction := Transaction;
+end;
+
+{ TZAbstractDbcSingleTransactionConnection }
+
+function TZAbstractDbcSingleTransactionConnection.GetConnection: IZConnection;
+begin
+  Result := IZConnection(fWeakReferenceOfSelfInterface);
 end;
 
 end.

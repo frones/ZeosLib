@@ -4346,7 +4346,10 @@ end;
   @return 0 if bookmarks are equal, -1 if the first bookmark is less,
     1 if the first bookmark is greatter.
 }
-{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+  {$WARN 4056 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
 function TZAbstractRODataset.CompareBookmarks(Bookmark1,
   Bookmark2: TBookmark): Integer;
 var
@@ -4385,7 +4388,10 @@ end;
   @param Bookmark a bookmark object.
   @return <code>True</code> if the bookmark is valid.
 }
-{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+  {$WARN 4056 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
 function TZAbstractRODataset.BookmarkValid(Bookmark: TBookmark): Boolean;
 begin
   Result := False;

@@ -95,6 +95,7 @@ type
   public { implement ITransaction}
     procedure Commit;
     procedure Rollback;
+    function GetConnection: IZConnection;
     function StartTransaction: Integer;
   public
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
@@ -116,7 +117,6 @@ type
     FPlainDriver: TZFirebird3UpPlainDriver;
     function ConstructConnectionString: String;
   protected
-    //procedure DetermineClientTypeAndVersion; override; FUtil.getgetClientVersion returns 872 for FB3
     procedure InternalCreate; override;
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
@@ -246,6 +246,8 @@ function TZFirebirdConnection.CreateTransaction(AutoCommit, ReadOnly: Boolean;
   TransactIsolationLevel: TZTransactIsolationLevel;
   Params: TStrings): IZTransaction;
 begin
+  if Params = nil then
+    Params := Info;
   if FTPBs[AutoCommit][ReadOnly][TransactIsolationLevel] = EmptyRaw then
     FTPBs[AutoCommit][ReadOnly][TransactIsolationLevel] := GenerateTPB(AutoCommit, ReadOnly, TransactIsolationLevel, Params);
   Result := TZFirebirdTransaction.Create(Self, AutoCommit, ReadOnly, FTPBs[AutoCommit][ReadOnly][TransactIsolationLevel]);
@@ -272,7 +274,7 @@ begin
     if fActiveTransaction[ReadOnly] = nil then begin
       TA := CreateTransaction(AutoCommit, ReadOnly, TransactIsolationLevel, Info);
       TA.QueryInterface(IZInterbaseFirebirdTransaction, fActiveTransaction[ReadOnly]);
-      fTransactions[ReadOnly].Add(TA);
+      fTransactions.Add(TA);
     end;
     fActiveTransaction[ReadOnly].QueryInterface(IZFirebirdTransaction, Result);
   end else
@@ -607,7 +609,12 @@ begin
   GetTransaction;
 end;
 
-function TZFirebirdTransaction.GetTransaction: ITransaction;
+function TZFireBirdTransaction.GetConnection: IZConnection;
+begin
+  Result := FOwner as TZFirebirdConnection
+end;
+
+function TZFireBirdTransaction.GetTransaction: ITransaction;
 begin
   if FTransaction = nil then
     StartTransaction;

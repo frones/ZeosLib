@@ -78,6 +78,7 @@ type
   TZGenerateSQLCachedResolver = class (TZAbstractCachedResolver, IZCachedResolver)
   private
     FStatement : IZStatement;
+    FTransactions: array[Boolean] of IZTransaction;
     FDatabaseMetadata: IZDatabaseMetadata;
     FIdentifierConvertor: IZIdentifierConvertor;
 
@@ -137,6 +138,9 @@ type
     function FormCalculateStatement(const RowAccessor: TZRowAccessor;
       const ColumnsLookup: TZIndexPairList): SQLString; virtual;
   public //implement IZCachedResolver
+    procedure SetReadOnlyTransaction(const Value: IZTransaction);
+    procedure SetReadWriteTransaction(const Value: IZTransaction);
+
     procedure CalculateDefaults(const Sender: IZCachedResultSet; const RowAccessor: TZRowAccessor);
     procedure PostUpdates(const Sender: IZCachedResultSet;
       UpdateType: TZRowUpdateType; const OldRowAccessor, NewRowAccessor: TZRowAccessor); virtual;
@@ -307,7 +311,9 @@ begin
   Result := nil;
   try
     SetResolverStatementParamters(FStatement, Temp);
-    Result := Connection.PrepareStatementWithParams(SQL, Temp);
+    if FTransactions[False] <> nil
+    then Result := FTransactions[False].GetConnection.PrepareStatementWithParams(SQL, Temp)
+    else Result := Connection.PrepareStatementWithParams(SQL, Temp);
   finally
     Temp.Free;
   end;
@@ -711,7 +717,7 @@ begin
   case UpdateType of
     utInserted:
       begin
-        if InsertStatement = nil then begin
+        if (InsertStatement = nil) or InsertStatement.IsClosed then begin
           SQL := FormInsertStatement;
           InsertStatement := CreateResolverStatement(SQL);
           Statement := InsertStatement;
@@ -722,10 +728,11 @@ begin
     utDeleted:
       begin
         if not FWhereAll then begin
-          If FDeleteStatements.Count = 0 then begin
+          If (FDeleteStatements.Count = 0) or (FDeleteStatements.Values[0] as IZPreparedStatement).IsClosed then begin
             SQL := FormDeleteStatement(OldRowAccessor);
             Statement := CreateResolverStatement(SQL);
             TempKey := TZAnyValue.CreateWithInteger(Hash(SQL));
+            FDeleteStatements.Clear;
             FDeleteStatements.Put(TempKey, Statement);
           end else
             Statement := FDeleteStatements.Values[0] as IZPreparedStatement;
@@ -734,7 +741,9 @@ begin
           if SQL = '' then Exit;
           TempKey := TZAnyValue.CreateWithInteger(Hash(SQL));
           Statement := FDeleteStatements.Get(TempKey) as IZPreparedStatement;
-          If Statement = nil then begin
+          If (Statement = nil) or (Statement.IsClosed) then begin
+            if Statement <> nil then
+              FUpdateStatements.Remove(TempKey);
             Statement := CreateResolverStatement(SQL);
             FDeleteStatements.Put(TempKey, Statement);
           end;
@@ -749,8 +758,10 @@ begin
         If SQL = '' then exit;// no fields have been changed
         TempKey := TZAnyValue.CreateWithInteger(Hash(SQL));
         Statement := FUpdateStatements.Get(TempKey) as IZPreparedStatement;
-        If Statement = nil then begin
+        If (Statement = nil) or (Statement.IsClosed) then begin
           Statement := CreateResolverStatement(SQL);
+          if Statement <> nil then
+            FUpdateStatements.Remove(TempKey);
           FUpdateStatements.Put(TempKey, Statement);
         end;
         OldRowAccessor.FillStatement(Statement, FCurrentWhereColumns, Metadata);
@@ -829,6 +840,18 @@ begin
   end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
+
+procedure TZGenerateSQLCachedResolver.SetReadOnlyTransaction(
+  const Value: IZTransaction);
+begin
+  FTransactions[True] := Value;
+end;
+
+procedure TZGenerateSQLCachedResolver.SetReadWriteTransaction(
+  const Value: IZTransaction);
+begin
+  FTransactions[False] := Value;
+end;
 
 procedure TZGenerateSQLCachedResolver.SetResolverStatementParamters(
   const Statement: IZStatement; {$IFDEF AUTOREFCOUNT}const {$ENDIF} Params: TStrings);

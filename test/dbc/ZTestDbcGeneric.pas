@@ -83,6 +83,7 @@ type
     procedure TestAfterLast;
     procedure TestQuestionMarks;
     procedure TestDbcBCDValues;
+    procedure TestDbcTransaction;
   end;
 
   TZGenericTestDbcArrayBindings = class(TZAbstractDbcSQLTestCase)
@@ -129,7 +130,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZTestConsts, ZFastCode, ZVariant, ZDbcResultSet, StrUtils;
+uses ZSysUtils, ZTestConsts, ZFastCode, ZVariant, ZDbcResultSet, ZDbcConnection, StrUtils;
 
 { TZGenericTestDbcResultSet }
 procedure TZGenericTestDbcResultSet.TestAfterLast;
@@ -1742,6 +1743,18 @@ begin
   end;
 end;
 
+procedure TZGenericTestDbcResultSet.TestDbcTransaction;
+var TxnMngr: IZTransactionManager;
+  ROTxn, RWTxn: IZTransaction;
+begin
+  if Connection.QueryInterface(IZTransactionManager, TxnMngr) <> S_OK then
+    TxnMngr := TZEmulatedTransactionManager.Create(Connection);
+  ROTxn := TxnMngr.CreateTransaction(False, True, tiReadCommitted, nil);
+  Check(ROTxn <> nil);
+  RWTxn := TxnMngr.CreateTransaction(False, False, tiReadCommitted, nil);
+  Check(RWTxn <> nil);
+end;
+
 { TZGenericTestDbcArrayBindings }
 
 const
@@ -1805,7 +1818,7 @@ var
       stDoubleArray[i] := RandomFloat(-5000, 5000);
       stBigDecimalArray[i] := DoubleToBCD(RandomFloat(-5000, 5000));
       stStringArray[i] := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(RandomStr(Random(99)+1));
-      stUnicodeStringArray[i] := RandomStr(Random(254+1));
+      stUnicodeStringArray[i] := UnicodeString(RandomStr(Random(254+1)));
       stBytesArray[i] := RandomBts(ArrayLen);
       stDateArray[i] := Trunc(Now);
       stTimeArray[i] := Frac(Now);
@@ -1932,7 +1945,7 @@ begin
           SetLength(stLongNullArray, Length(stLongNullArray) +1);
           SetLength(stLongNullArray[High(stLongNullArray)], ArrayLen);
           for J := 0 to ArrayLen-1 do
-            stLongNullArray[High(stLongNullArray)][J] := Random(2)-1;
+            stLongNullArray[High(stLongNullArray)][J] {%H-}:= Random(2)-1;
           PStatement.SetNullArray(I, stLong, stLongNullArray[High(stLongNullArray)]);
         end;
       stFloat:

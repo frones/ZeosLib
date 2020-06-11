@@ -105,14 +105,14 @@ type
     procedure CloseTransaction;
     function GetTrHandle: POCITrans;
     function IsStarted: Boolean;
-    function StartTransaction: Integer;
   end;
 
   /// <summary>
   ///  implements an oracle OCI connection.
   /// </summary>
   {** Implements Oracle Database Connection. }
-  TZOracleConnection = class(TZAbstractDbcConnection, IZConnection, IZOracleConnection)
+  TZOracleConnection = class(TZAbstractDbcSingleTransactionConnection, IZConnection,
+    IZOracleConnection, IZTransaction)
   private
     FCatalog: string;
     FOCIEnv: POCIEnv;
@@ -236,6 +236,7 @@ type
   public { IZTransaction }
     procedure Commit;
     procedure Rollback;
+    function GetConnection: IZConnection;
     function StartTransaction: Integer;
   public { IZOracleTransaction }
     procedure CloseTransaction;
@@ -1486,6 +1487,11 @@ begin
   fSavepoints := TStringList.Create;
   ConSettings := Owner.ConSettings;
   fLocal := True;
+end;
+
+function TZOracleTransaction.GetConnection: IZConnection;
+begin
+  Result := FOwner;
 end;
 
 function TZOracleTransaction.GetTrHandle: POCITrans;

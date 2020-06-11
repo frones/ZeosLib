@@ -89,7 +89,7 @@ type
 
   { TZASAConnection }
 
-  TZASAConnection = class(TZAbstractDbcConnection, IZConnection,
+  TZASAConnection = class(TZAbstractDbcSingleTransactionConnection, IZConnection,
     IZASAConnection, IZTransaction)
   private
     FSQLCA: TZASASQLCA;
@@ -254,11 +254,11 @@ begin
     then FPlainDriver.dbpp_commit(FHandle, 0)
     else FPlainDriver.dbpp_rollback(FHandle, 0);
     if FHandle.sqlCode <> SQLE_NOERROR then
-      HandleErrorOrWarning(lcTransaction, 'Close transaction', Self);
+      HandleErrorOrWarning(lcTransaction, 'Close transaction', IImmediatelyReleasable(FWeakImmediatRelPtr));
   finally
     FPlainDriver.db_string_disconnect(FHandle, nil);
     if FHandle.sqlCode <> SQLE_NOERROR then
-       HandleErrorOrWarning(lcDisconnect, 'Disconnect from database', Self);
+       HandleErrorOrWarning(lcDisconnect, 'Disconnect from database', IImmediatelyReleasable(FWeakImmediatRelPtr));
     FHandle := nil;
     if FPlainDriver.db_fini(@FSQLCA) = 0 then begin
       DriverManager.LogError(lcConnect, ConSettings^.Protocol, 'Finalizing SQLCA',
@@ -292,7 +292,7 @@ begin
   end else begin
     FPlainDriver.dbpp_commit(FHandle, 0);
     if FHandle.SqlCode <> SQLE_NOERROR then
-      HandleErrorOrWarning(lcTransaction, 'TRANSACTION COMMIT', Self)
+      HandleErrorOrWarning(lcTransaction, 'TRANSACTION COMMIT', IImmediatelyReleasable(FWeakImmediatRelPtr))
     else if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol,
         'TRANSACTION COMMIT');
@@ -483,7 +483,7 @@ begin
     {$ENDIF}
     RawTemp := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
     if FHandle.SqlCode <> SQLE_NOERROR then
-      HandleErrorOrWarning(lcConnect, RawTemp, Self)
+      HandleErrorOrWarning(lcConnect, RawTemp, IImmediatelyReleasable(FWeakImmediatRelPtr))
     else if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, RawTemp);
 
@@ -499,7 +499,7 @@ begin
       if (FPlainDriver.db_change_char_charset(FHandle, Pointer(FClientCodePage)) = 0 ) or
          (FPlainDriver.db_change_nchar_charset(FHandle, Pointer(FClientCodePage)) = 0 ) then
       {$ENDIF}
-        HandleErrorOrWarning(lcConnect, RawTemp, Self)
+        HandleErrorOrWarning(lcConnect, RawTemp, IImmediatelyReleasable(FWeakImmediatRelPtr))
       else if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, RawTemp);
   except
@@ -633,7 +633,7 @@ begin
   end else begin
     FPlainDriver.dbpp_rollback(FHandle, 0);
     if FHandle.SqlCode <> SQLE_NOERROR then
-      HandleErrorOrWarning(lcTransaction, 'TRANSACTION ROLLBACK', Self)
+      HandleErrorOrWarning(lcTransaction, 'TRANSACTION ROLLBACK', IImmediatelyReleasable(FWeakImmediatRelPtr))
     else if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol,
         'TRANSACTION ROLLBACK');
@@ -703,7 +703,7 @@ begin
       FPlainDriver.dbpp_setoption(FHandle, Temporary, User, Pointer(Option), SQLDA);
       logstr := 'SET OPTION '+ConSettings.User+'.'+Option+' = '+Value;
       if FHandle.SqlCode <> SQLE_NOERROR then
-        HandleErrorOrWarning(LoggingCategory, logstr, Self)
+        HandleErrorOrWarning(LoggingCategory, logstr, IImmediatelyReleasable(FWeakImmediatRelPtr))
       else if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, logstr);
     finally
@@ -798,7 +798,7 @@ procedure TZASAConnection.ExecuteImmediat(const SQL: RawByteString;
 begin
   FPlainDriver.dbpp_execute_imm(FHandle, Pointer(SQL), 0);
   if FHandle.SqlCode <> SQLE_NOERROR then
-    HandleErrorOrWarning(LoggingCategory, SQL, Self)
+    HandleErrorOrWarning(LoggingCategory, SQL, IImmediatelyReleasable(FWeakImmediatRelPtr))
   else if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
 end;
