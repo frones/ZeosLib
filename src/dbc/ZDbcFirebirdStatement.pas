@@ -122,7 +122,7 @@ implementation
 
 uses ZMessages, ZSysUtils, ZFastCode, ZEncoding, ZVariant,
   ZDbcLogging, ZDbcFirebirdResultSet, ZDbcResultSet, ZDbcCachedResultSet,
-  ZDbcUtils;
+  ZDbcUtils, ZDbcProperties;
 
 const
   EBStart = {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('EXECUTE BLOCK(');
@@ -516,6 +516,7 @@ var Transaction: ITransaction;
   flags: Cardinal;
   PreparedRowsOfArray: Integer;
   FinalChunkSize: Integer;
+  TimeOut: Cardinal;
 label jmpEB;
   procedure PrepareArrayStmt(var Slot: TZIB_FBStmt);
   begin
@@ -571,6 +572,14 @@ begin
       Pointer(fASQL), FDialect, flags);
     if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
       FFBConnection.HandleErrorOrWarning(lcPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), fASQL, Self);
+    if FFBStatement.vTable.version > 3 then begin
+      TimeOut := StrToInt(DefineStatementParameter(Self, DSProps_StatementTimeOut, '0'));
+      if TimeOut <> 0 then begin
+        IStatement_V4(FFBStatement).setTimeout(FStatus, TimeOut);
+        if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+          FFBConnection.HandleErrorOrWarning(lcPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), fASQL, Self);
+      end;
+    end;
     FStatementType := TZIbSqlStatementType(FFBStatement.getType(FStatus));
     FOutMessageMetadata := FFBStatement.getOutputMetadata(FStatus);
     FOutMessageCount := FOutMessageMetadata.getCount(FStatus);

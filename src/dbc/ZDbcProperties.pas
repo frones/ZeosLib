@@ -261,13 +261,15 @@ const ZPropertiesArray: array[0..1] of TZProperty = (
   ConnProps_Provider = 'Provider';
 {$IFEND}
 
-{$IF DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}
+{$IF DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB) OR DEFINED(ENABLE_FIREBIRD)}
+  {$IF DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}
   // Type: BOOLEAN
   // Use trusted connection
   ConnProps_TrustedConnection = 'Trusted_Connection';
+  {$IFEND}
   // Type: INT
   // Execution timeout in seconds
-  DSProps_StatementTimeOut = 'StatementTimeOut';
+  DSProps_StatementTimeOut = 'StatementTimeOut'; //since FB4 also
 {$IFEND}
 
 {$IF defined (ENABLE_MYSQL) or defined (ENABLE_POSTGRESQL)}
