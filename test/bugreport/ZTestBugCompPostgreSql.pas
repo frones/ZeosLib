@@ -135,7 +135,7 @@ implementation
 
 uses ZSysUtils, ZTestCase, ZPgEventAlerter, DateUtils, ZEncoding,
   ZDbcPostgreSqlMetadata, ZPlainPostgreSqlDriver, ZDatasetUtils,
-  {$IFDEF WITH_VCL_PREFIX}Vcl.Forms{$ELSE}Forms{$ENDIF}
+  (*{$IFDEF WITH_VCL_PREFIX}Vcl.Forms{$ELSE}Forms{$ENDIF}*)ZTestConfig
   {$IFDEF WITH_TDATASETPROVIDER},Provider, DBClient{$ENDIF};
 
 { TZTestCompPostgreSQLBugReport }
@@ -1329,7 +1329,7 @@ begin
     EndTime := IncSecond(Now, 2);
     Connection.ExecuteDirect('NOTIFY zeostest');
     while (not TestSF274_GotNotified) and (EndTime > Now) do begin
-      Application.ProcessMessages;
+      //Application.ProcessMessages;
       Sleep(0);
     end;
     Listener.Active := false;
