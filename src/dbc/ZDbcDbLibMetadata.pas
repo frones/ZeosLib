@@ -2904,7 +2904,7 @@ begin
   TempTable := RemoveQuotesFromIdentifier(TableNamePattern);
   TempColumn := RemoveQuotesFromIdentifier(ColumnNamePattern);
 
-  with GetStatement.ExecuteQuery('exec sys.' +
+  with GetStatement.ExecuteQuery('exec dbo.' +
     'sp_jdbc_columns '+ComposeObjectString(TempTable)+', '+
     ComposeObjectString(TempSchema)+', '+ComposeObjectString(TempCatalog)+', '+
     ComposeObjectString(TempColumn)) do
