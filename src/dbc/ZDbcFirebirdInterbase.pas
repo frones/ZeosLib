@@ -1023,6 +1023,8 @@ begin
   for i := Low(InterbaseStatusVector) to High(InterbaseStatusVector) do
     AppendSepString(ErrorMessage, InterbaseStatusVector[i].IBMessage, '; ');
 
+  PInt64(StatusVector)^ := 0; //init for fb3up
+  PInt64(PAnsiChar(StatusVector)+8)^ := 0; //init for fb3up
   ErrorCode := InterbaseStatusVector[0].SQLCode;
   ErrorSqlMessage := InterbaseStatusVector[0].SQLMessage;
 

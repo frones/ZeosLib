@@ -166,6 +166,7 @@ type
   //added in FB4
   IBatch = class;
   IBatchCompletionState = class;
+  IReplicator = class;
   //end added in FB4
   IRequest = class;
   IEvents = class;
@@ -1646,6 +1647,29 @@ type
     function getStatus(status, _to: IStatus; pos: Cardinal): Cardinal; virtual; abstract;
   end;
 
+  IReplicatorVTable = class(ReferenceCountedVTable)
+  protected
+    process: procedure(this: IReplicator; status: IStatus; length: Cardinal; data: PByte); cdecl;
+    close: procedure(this: IReplicator; status: IStatus); cdecl;
+  end;
+
+  IReplicator = class(IReferenceCounted)
+  public
+    {$IFDEF WITH_CLASS_CONST}
+    const VERSION = Cardinal(3);
+    {$ENDIF WITH_CLASS_CONST}
+    procedure process(status: IStatus; length: Cardinal; data: PByte);
+    procedure close(status: IStatus);
+  end;
+
+  IReplicatorImpl = class(IReplicator)
+  public
+    constructor create;
+  protected
+    procedure process(status: IStatus; length: Cardinal; data: PByte); virtual; abstract;
+    procedure close(status: IStatus); virtual; abstract;
+  end;
+
   RequestVTable = class(ReferenceCountedVTable)
   protected
     receive: IRequest_receivePtr;
@@ -1780,6 +1804,44 @@ type
     procedure ping(status: IStatus); virtual; abstract;
     procedure detach(status: IStatus); virtual; abstract;
     procedure dropDatabase(status: IStatus); virtual; abstract;
+  end;
+
+  Attachment_V4VTable = class(AttachmentVTable)
+  protected
+    getIdleTimeout: function(Self: IAttachment; status: IStatus): Cardinal; cdecl;
+    setIdleTimeout: procedure(Self: IAttachment; status: IStatus; timeOut: Cardinal); cdecl;
+    getStatementTimeout: function(Self: IAttachment; status: IStatus): Cardinal; cdecl;
+    setStatementTimeout: procedure(Self: IAttachment; status: IStatus; timeOut: Cardinal); cdecl;
+    createBatch: function(Self: IAttachment; status: IStatus; transaction: ITransaction;
+      stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal;
+      inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch; cdecl;
+    createReplicator: function(Self: IAttachment; status: IStatus): IReplicator; cdecl;
+  end;
+
+  IAttachment_V4 = class(IAttachment)
+  public
+    function getIdleTimeout(status: IStatus): Cardinal;
+    procedure setIdleTimeout(status: IStatus; timeOut: Cardinal);
+    function getStatementTimeout(status: IStatus): Cardinal;
+    procedure setStatementTimeout(status: IStatus; timeOut: Cardinal);
+    function createBatch(status: IStatus; transaction: ITransaction;
+      stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal;
+      inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch;
+    function createReplicator(status: IStatus): IReplicator;
+  end;
+
+  IAttachment_V4Impl = class(IAttachment_V4)
+  public
+    constructor create;
+  protected
+    function getIdleTimeout(status: IStatus): Cardinal; virtual; abstract;
+    procedure setIdleTimeout(status: IStatus; timeOut: Cardinal); virtual; abstract;
+    function getStatementTimeout(status: IStatus): Cardinal; virtual; abstract;
+    procedure setStatementTimeout(status: IStatus; timeOut: Cardinal); virtual; abstract;
+    function createBatch(status: IStatus; transaction: ITransaction;
+      stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal;
+      inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch; virtual; abstract;
+    function createReplicator(status: IStatus): IReplicator; virtual; abstract;
   end;
 
   ServiceVTable = class(ReferenceCountedVTable)
@@ -5421,7 +5483,6 @@ end;
 function IMaster.getMetadataBuilder(status: IStatus; fieldCount: Cardinal): IMetadataBuilder;
 begin
   Result := MasterVTable(vTable).getMetadataBuilder(Self, status, fieldCount);
-//  FbException.checkException(status);
 end;
 
 function IMaster.serverMode(mode: Integer): Integer;
@@ -5467,19 +5528,16 @@ end;
 function IPluginSet.getPlugin(status: IStatus): IPluginBase;
 begin
   Result := PluginSetVTable(vTable).getPlugin(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IPluginSet.next(status: IStatus);
 begin
   PluginSetVTable(vTable).next(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IPluginSet.set_(status: IStatus; s: PAnsiChar);
 begin
   PluginSetVTable(vTable).set_(Self, status, s);
-//  FbException.checkException(status);
 end;
 
 function IConfigEntry.getName(): PAnsiChar;
@@ -5505,25 +5563,21 @@ end;
 function IConfigEntry.getSubConfig(status: IStatus): IConfig;
 begin
   Result := ConfigEntryVTable(vTable).getSubConfig(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IConfig.find(status: IStatus; name: PAnsiChar): IConfigEntry;
 begin
   Result := ConfigVTable(vTable).find(Self, status, name);
-//  FbException.checkException(status);
 end;
 
 function IConfig.findValue(status: IStatus; name: PAnsiChar; value: PAnsiChar): IConfigEntry;
 begin
   Result := ConfigVTable(vTable).findValue(Self, status, name, value);
-//  FbException.checkException(status);
 end;
 
 function IConfig.findPos(status: IStatus; name: PAnsiChar; pos: Cardinal): IConfigEntry;
 begin
   Result := ConfigVTable(vTable).findPos(Self, status, name, pos);
-//  FbException.checkException(status);
 end;
 
 function IFirebirdConf.getKey(name: PAnsiChar): Cardinal;
@@ -5554,25 +5608,21 @@ end;
 function IPluginConfig.getDefaultConfig(status: IStatus): IConfig;
 begin
   Result := PluginConfigVTable(vTable).getDefaultConfig(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IPluginConfig.getFirebirdConf(status: IStatus): IFirebirdConf;
 begin
   Result := PluginConfigVTable(vTable).getFirebirdConf(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IPluginConfig.setReleaseDelay(status: IStatus; microSeconds: QWord);
 begin
   PluginConfigVTable(vTable).setReleaseDelay(Self, status, microSeconds);
-//  FbException.checkException(status);
 end;
 
 function IPluginFactory.createPlugin(status: IStatus; factoryParameter: IPluginConfig): IPluginBase;
 begin
   Result := PluginFactoryVTable(vTable).createPlugin(Self, status, factoryParameter);
-//  FbException.checkException(status);
 end;
 
 procedure IPluginModule.doClean();
@@ -5598,13 +5648,11 @@ end;
 function IPluginManager.getPlugins(status: IStatus; pluginType: Cardinal; namesList: PAnsiChar; firebirdConf: IFirebirdConf): IPluginSet;
 begin
   Result := PluginManagerVTable(vTable).getPlugins(Self, status, pluginType, namesList, firebirdConf);
-//  FbException.checkException(status);
 end;
 
 function IPluginManager.getConfig(status: IStatus; filename: PAnsiChar): IConfig;
 begin
   Result := PluginManagerVTable(vTable).getConfig(Self, status, filename);
-//  FbException.checkException(status);
 end;
 
 procedure IPluginManager.releasePlugin(plugin: IPluginBase);
@@ -5615,13 +5663,11 @@ end;
 procedure ICryptKey.setSymmetric(status: IStatus; type_: PAnsiChar; keyLength: Cardinal; key: Pointer);
 begin
   CryptKeyVTable(vTable).setSymmetric(Self, status, type_, keyLength, key);
-//  FbException.checkException(status);
 end;
 
 procedure ICryptKey.setAsymmetric(status: IStatus; type_: PAnsiChar; encryptKeyLength: Cardinal; encryptKey: Pointer; decryptKeyLength: Cardinal; decryptKey: Pointer);
 begin
   CryptKeyVTable(vTable).setAsymmetric(Self, status, type_, encryptKeyLength, encryptKey, decryptKeyLength, decryptKey);
-//  FbException.checkException(status);
 end;
 
 function ICryptKey.getEncryptKey(length: CardinalPtr): Pointer;
@@ -6081,7 +6127,7 @@ end;
 procedure IBatch.addBlobStream(status: IStatus; length: Cardinal;
   inBuffer: Pointer);
 begin
-BatchVTable(VTable).addBlobStream(Self, status, length, inBuffer);
+  BatchVTable(VTable).addBlobStream(Self, status, length, inBuffer);
 end;
 
 procedure IBatch.appendBlobData(status: IStatus; length: Cardinal;
@@ -6161,223 +6207,232 @@ end;
 procedure IRequest.getInfo(status: IStatus; level: Integer; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr);
 begin
   RequestVTable(vTable).getInfo(Self, status, level, itemsLength, items, bufferLength, buffer);
-//  FbException.checkException(status);
 end;
 
 procedure IRequest.start(status: IStatus; tra: ITransaction; level: Integer);
 begin
   RequestVTable(vTable).start(Self, status, tra, level);
-//  FbException.checkException(status);
 end;
 
 procedure IRequest.startAndSend(status: IStatus; tra: ITransaction; level: Integer; msgType: Cardinal; length: Cardinal; message: BytePtr);
 begin
   RequestVTable(vTable).startAndSend(Self, status, tra, level, msgType, length, message);
-//  FbException.checkException(status);
 end;
 
 procedure IRequest.unwind(status: IStatus; level: Integer);
 begin
   RequestVTable(vTable).unwind(Self, status, level);
-//  FbException.checkException(status);
 end;
 
 procedure IRequest.free(status: IStatus);
 begin
   RequestVTable(vTable).free(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IEvents.cancel(status: IStatus);
 begin
   EventsVTable(vTable).cancel(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IAttachment.getInfo(status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr);
 begin
   AttachmentVTable(vTable).getInfo(Self, status, itemsLength, items, bufferLength, buffer);
-//  FbException.checkException(status);
 end;
 
 function IAttachment.startTransaction(status: IStatus; tpbLength: Cardinal; tpb: BytePtr): ITransaction;
 begin
   Result := AttachmentVTable(vTable).startTransaction(Self, status, tpbLength, tpb);
-//  FbException.checkException(status);
 end;
 
 function IAttachment.reconnectTransaction(status: IStatus; length: Cardinal; id: BytePtr): ITransaction;
 begin
   Result := AttachmentVTable(vTable).reconnectTransaction(Self, status, length, id);
-//  FbException.checkException(status);
 end;
 
 function IAttachment.compileRequest(status: IStatus; blrLength: Cardinal; blr: BytePtr): IRequest;
 begin
   Result := AttachmentVTable(vTable).compileRequest(Self, status, blrLength, blr);
-//  FbException.checkException(status);
 end;
 
 procedure IAttachment.transactRequest(status: IStatus; transaction: ITransaction; blrLength: Cardinal; blr: BytePtr; inMsgLength: Cardinal; inMsg: BytePtr; outMsgLength: Cardinal; outMsg: BytePtr);
 begin
   AttachmentVTable(vTable).transactRequest(Self, status, transaction, blrLength, blr, inMsgLength, inMsg, outMsgLength, outMsg);
-//  FbException.checkException(status);
 end;
 
 function IAttachment.createBlob(status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; bpbLength: Cardinal; bpb: BytePtr): IBlob;
 begin
   Result := AttachmentVTable(vTable).createBlob(Self, status, transaction, id, bpbLength, bpb);
-//  FbException.checkException(status);
 end;
 
 function IAttachment.openBlob(status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; bpbLength: Cardinal; bpb: BytePtr): IBlob;
 begin
   Result := AttachmentVTable(vTable).openBlob(Self, status, transaction, id, bpbLength, bpb);
-//  FbException.checkException(status);
 end;
 
 function IAttachment.getSlice(status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; sdlLength: Cardinal; sdl: BytePtr; paramLength: Cardinal; param: BytePtr; sliceLength: Integer; slice: BytePtr): Integer;
 begin
   Result := AttachmentVTable(vTable).getSlice(Self, status, transaction, id, sdlLength, sdl, paramLength, param, sliceLength, slice);
-//  FbException.checkException(status);
 end;
 
 procedure IAttachment.putSlice(status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; sdlLength: Cardinal; sdl: BytePtr; paramLength: Cardinal; param: BytePtr; sliceLength: Integer; slice: BytePtr);
 begin
   AttachmentVTable(vTable).putSlice(Self, status, transaction, id, sdlLength, sdl, paramLength, param, sliceLength, slice);
-//  FbException.checkException(status);
 end;
 
 procedure IAttachment.executeDyn(status: IStatus; transaction: ITransaction; length: Cardinal; dyn: BytePtr);
 begin
   AttachmentVTable(vTable).executeDyn(Self, status, transaction, length, dyn);
-//  FbException.checkException(status);
 end;
 
 function IAttachment.prepare(status: IStatus; tra: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; flags: Cardinal): IStatement;
 begin
   Result := AttachmentVTable(vTable).prepare(Self, status, tra, stmtLength, sqlStmt, dialect, flags);
-  //FbException.checkException(status);
 end;
 
 function IAttachment.execute(status: IStatus; transaction: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata; inBuffer: Pointer; outMetadata: IMessageMetadata; outBuffer: Pointer): ITransaction;
 begin
   Result := AttachmentVTable(vTable).execute(Self, status, transaction, stmtLength, sqlStmt, dialect, inMetadata, inBuffer, outMetadata, outBuffer);
-//  FbException.checkException(status);
 end;
 
 function IAttachment.openCursor(status: IStatus; transaction: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata; inBuffer: Pointer; outMetadata: IMessageMetadata; cursorName: PAnsiChar; cursorFlags: Cardinal): IResultSet;
 begin
   Result := AttachmentVTable(vTable).openCursor(Self, status, transaction, stmtLength, sqlStmt, dialect, inMetadata, inBuffer, outMetadata, cursorName, cursorFlags);
-//  FbException.checkException(status);
 end;
 
 function IAttachment.queEvents(status: IStatus; callback: IEventCallback; length: Cardinal; events: BytePtr): IEvents;
 begin
   Result := AttachmentVTable(vTable).queEvents(Self, status, callback, length, events);
-//  FbException.checkException(status);
 end;
 
 procedure IAttachment.cancelOperation(status: IStatus; option: Integer);
 begin
   AttachmentVTable(vTable).cancelOperation(Self, status, option);
-//  FbException.checkException(status);
 end;
 
 procedure IAttachment.ping(status: IStatus);
 begin
   AttachmentVTable(vTable).ping(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IAttachment.detach(status: IStatus);
 begin
   AttachmentVTable(vTable).detach(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IAttachment.dropDatabase(status: IStatus);
 begin
   AttachmentVTable(vTable).dropDatabase(Self, status);
-//  FbException.checkException(status);
+end;
+
+{ IAttachment_V4 }
+
+function IAttachment_V4.createBatch(status: IStatus; transaction: ITransaction;
+  stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal;
+  inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch;
+begin
+  Result := Attachment_V4VTable(vTable).createBatch(Self, status, transaction,
+    stmtLength, sqlStmt, dialect, inMetadata, parLength, par);
+end;
+
+function IAttachment_V4.createReplicator(status: IStatus): IReplicator;
+begin
+  Result := Attachment_V4VTable(vTable).createReplicator(Self, status);
+end;
+
+function IAttachment_V4.getIdleTimeout(status: IStatus): Cardinal;
+begin
+  Result := Attachment_V4VTable(vTable).getIdleTimeout(Self, status);
+end;
+
+function IAttachment_V4.getStatementTimeout(status: IStatus): Cardinal;
+begin
+  Result := Attachment_V4VTable(vTable).getStatementTimeout(Self, status);
+end;
+
+procedure IAttachment_V4.setIdleTimeout(status: IStatus; timeOut: Cardinal);
+begin
+  Attachment_V4VTable(vTable).setIdleTimeout(Self, status, timeOut);
+end;
+
+procedure IAttachment_V4.setStatementTimeout(status: IStatus;
+  timeOut: Cardinal);
+begin
+  Attachment_V4VTable(vTable).setStatementTimeout(Self, status, timeOut);
+end;
+
+{ IAttachment_V4Impl }
+
+var
+  IAttachment_V4Impl_vTable: Attachment_V4VTable;
+
+constructor IAttachment_V4Impl.create;
+begin
+  vTable := IAttachment_V4Impl_vTable;
 end;
 
 procedure IService.detach(status: IStatus);
 begin
   ServiceVTable(vTable).detach(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IService.query(status: IStatus; sendLength: Cardinal; sendItems: BytePtr; receiveLength: Cardinal; receiveItems: BytePtr; bufferLength: Cardinal; buffer: BytePtr);
 begin
   ServiceVTable(vTable).query(Self, status, sendLength, sendItems, receiveLength, receiveItems, bufferLength, buffer);
-//  FbException.checkException(status);
 end;
 
 procedure IService.start(status: IStatus; spbLength: Cardinal; spb: BytePtr);
 begin
   ServiceVTable(vTable).start(Self, status, spbLength, spb);
-//  FbException.checkException(status);
 end;
 
 function IProvider.attachDatabase(status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: BytePtr): IAttachment;
 begin
   Result := ProviderVTable(vTable).attachDatabase(Self, status, fileName, dpbLength, dpb);
-  //FbException.checkException(status);
 end;
 
 function IProvider.createDatabase(status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: BytePtr): IAttachment;
 begin
   Result := ProviderVTable(vTable).createDatabase(Self, status, fileName, dpbLength, dpb);
-//  FbException.checkException(status);
 end;
 
 function IProvider.attachServiceManager(status: IStatus; service: PAnsiChar; spbLength: Cardinal; spb: BytePtr): IService;
 begin
   Result := ProviderVTable(vTable).attachServiceManager(Self, status, service, spbLength, spb);
-//  FbException.checkException(status);
 end;
 
 procedure IProvider.shutdown(status: IStatus; timeout: Cardinal; reason: Integer);
 begin
   ProviderVTable(vTable).shutdown(Self, status, timeout, reason);
-//  FbException.checkException(status);
 end;
 
 procedure IProvider.setDbCryptCallback(status: IStatus; cryptCallback: ICryptKeyCallback);
 begin
   ProviderVTable(vTable).setDbCryptCallback(Self, status, cryptCallback);
-//  FbException.checkException(status);
 end;
 
 procedure IDtcStart.addAttachment(status: IStatus; att: IAttachment);
 begin
   DtcStartVTable(vTable).addAttachment(Self, status, att);
-//  FbException.checkException(status);
 end;
 
 procedure IDtcStart.addWithTpb(status: IStatus; att: IAttachment; length: Cardinal; tpb: BytePtr);
 begin
   DtcStartVTable(vTable).addWithTpb(Self, status, att, length, tpb);
-//  FbException.checkException(status);
 end;
 
 function IDtcStart.start(status: IStatus): ITransaction;
 begin
   Result := DtcStartVTable(vTable).start(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IDtc.join(status: IStatus; one: ITransaction; two: ITransaction): ITransaction;
 begin
   Result := DtcVTable(vTable).join(Self, status, one, two);
-//  FbException.checkException(status);
 end;
 
 function IDtc.startBuilder(status: IStatus): IDtcStart;
 begin
   Result := DtcVTable(vTable).startBuilder(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IWriter.reset();
@@ -6388,19 +6443,16 @@ end;
 procedure IWriter.add(status: IStatus; name: PAnsiChar);
 begin
   WriterVTable(vTable).add(Self, status, name);
-//  FbException.checkException(status);
 end;
 
 procedure IWriter.setType(status: IStatus; value: PAnsiChar);
 begin
   WriterVTable(vTable).setType(Self, status, value);
-//  FbException.checkException(status);
 end;
 
 procedure IWriter.setDb(status: IStatus; value: PAnsiChar);
 begin
   WriterVTable(vTable).setDb(Self, status, value);
-//  FbException.checkException(status);
 end;
 
 function IServerBlock.getLogin(): PAnsiChar;
@@ -6416,13 +6468,11 @@ end;
 procedure IServerBlock.putData(status: IStatus; length: Cardinal; data: Pointer);
 begin
   ServerBlockVTable(vTable).putData(Self, status, length, data);
-//  FbException.checkException(status);
 end;
 
 function IServerBlock.newKey(status: IStatus): ICryptKey;
 begin
   Result := ServerBlockVTable(vTable).newKey(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IClientBlock.getLogin(): PAnsiChar;
@@ -9250,7 +9300,7 @@ begin
 end;
 
 var
-  IBatchCompletionState_VTable: BatchCompletionStateVTable;
+  IBatchCompletionStateImpl_VTable: BatchCompletionStateVTable;
 
 procedure IBatchCompletionImpl_DisposeDispatcher(this: IBatchCompletionState); cdecl;
 begin
@@ -9279,7 +9329,50 @@ end;
 
 constructor IBatchCompletionStateImpl.create;
 begin
-  vTable := IBatchCompletionState_VTable;
+  vTable := IBatchCompletionStateImpl_VTable;
+end;
+
+{ IReplicator }
+
+var
+  IReplicatorImpl_vTable: IReplicatorVTable;
+
+procedure IReplicator_addRefDispatcher(this: IReplicator); cdecl;
+begin
+  IReplicatorImpl(this).addRef;
+end;
+
+function IReplicator_releaseDispatcher(this: IReplicator): Integer; cdecl;
+begin
+  Result := IReplicatorImpl(this).release;
+end;
+
+procedure IReplicator_closeDispatcher(this: IReplicator; status: IStatus); cdecl;
+begin
+  IReplicatorImpl(this).close(status);
+end;
+
+procedure IReplicator_processDispatcher(this: IReplicator; status: IStatus;
+  length: Cardinal; data: PByte); cdecl;
+begin
+  IReplicatorImpl(this).process(status, length, data);
+end;
+
+procedure IReplicator.close(status: IStatus);
+begin
+  IReplicatorVTable(VTable).close(Self, status);
+end;
+
+procedure IReplicator.process(status: IStatus; length: Cardinal; data: PByte);
+begin
+  IReplicatorVTable(VTable).process(Self, status, length, data);
+end;
+
+{ IReplicatorImpl }
+
+constructor IReplicatorImpl.create;
+begin
+  vTable := IReplicatorImpl_vTable;
 end;
 
 procedure IRequestImpl_addRefDispatcher(this: IRequest); cdecl;
@@ -9592,6 +9685,44 @@ var
 constructor IAttachmentImpl.create;
 begin
   vTable := IAttachmentImpl_vTable;
+end;
+
+function IAttachment_V4Impl_getIdleTimeoutDispatcher(Self: IAttachment_V4;
+  status: IStatus): Cardinal; cdecl;
+begin
+  Result := IAttachment_V4Impl(Self).getIdleTimeout(Status);
+end;
+
+procedure IAttachment_V4Impl_setIdleTimeoutDispatcher(Self: IAttachment_V4;
+  status: IStatus; timeOut: Cardinal); cdecl;
+begin
+  IAttachment_V4Impl(Self).setIdleTimeout(Status, timeOut);
+end;
+
+function IAttachment_V4Impl_getStatementTimeoutDispatcher(Self: IAttachment_V4;
+  status: IStatus): Cardinal; cdecl;
+begin
+  Result := IAttachment_V4Impl(Self).getStatementTimeout(Status);
+end;
+
+procedure IAttachment_V4Impl_setStatementTimeoutDispatcher(Self: IAttachment_V4;
+  status: IStatus; timeOut: Cardinal); cdecl;
+begin
+  IAttachment_V4Impl(Self).setIdleTimeout(Status, timeOut);
+end;
+
+function IAttachment_V4Impl_createBatchDispatcher(Self: IAttachment_V4;
+  status: IStatus; transaction: ITransaction; stmtLength: Cardinal;
+  sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata;
+  parLength: Cardinal; par: PByte): IBatch; cdecl;
+begin
+  Result := IAttachment_V4Impl(Self).createBatch(Status, transaction,
+    stmtLength, sqlStmt, dialect, inMetadata, parLength, par);
+end;
+
+function IAttachment_V4Impl_createReplicatorDispatcher(Self: IAttachment_V4; status: IStatus): IReplicator; cdecl;
+begin
+  Result := IAttachment_V4Impl(Self).createReplicator(Status);
 end;
 
 procedure IServiceImpl_addRefDispatcher(this: IService); cdecl;
@@ -13071,6 +13202,7 @@ begin
     status.setErrors(@statusVector);
   end
 end; *)
+
 initialization
   IVersionedImpl_vTable := VersionedVTable.create;
   IVersionedImpl_vTable.version := 0;
@@ -13331,13 +13463,20 @@ initialization
   IBatchImpl_vTable.getMetadata := @IBatchImpl_getMetadataDispatcher;
   IBatchImpl_vTable.setDefaultBpb := @IBatchImpl_setDefaultBpbDispatcher;
 
-  IBatchCompletionState_vTable := BatchCompletionStateVTable.Create;
-  IBatchCompletionState_vTable.version := 3;
-  IBatchCompletionState_vTable.dispose := @IBatchCompletionImpl_DisposeDispatcher;
-  IBatchCompletionState_vTable.getSize := @IBatchCompletionImpl_getSizeDispatcher;
-  IBatchCompletionState_vTable.getState := @IBatchCompletionImpl_getStateDispatcher;
-  IBatchCompletionState_vTable.findError := @IBatchCompletionImpl_findErrorDispatcher;
-  IBatchCompletionState_vTable.getStatus := @IBatchCompletionImpl_getStatusDispatcher;
+  IBatchCompletionStateImpl_VTable := BatchCompletionStateVTable.Create;
+  IBatchCompletionStateImpl_VTable.version := 3;
+  IBatchCompletionStateImpl_VTable.dispose := @IBatchCompletionImpl_DisposeDispatcher;
+  IBatchCompletionStateImpl_VTable.getSize := @IBatchCompletionImpl_getSizeDispatcher;
+  IBatchCompletionStateImpl_VTable.getState := @IBatchCompletionImpl_getStateDispatcher;
+  IBatchCompletionStateImpl_VTable.findError := @IBatchCompletionImpl_findErrorDispatcher;
+  IBatchCompletionStateImpl_VTable.getStatus := @IBatchCompletionImpl_getStatusDispatcher;
+
+  IReplicatorImpl_vTable := IReplicatorVTable.Create;
+  IReplicatorImpl_vTable.version := 3;
+  IReplicatorImpl_vTable.addRef := @IReplicator_addRefDispatcher;
+  IReplicatorImpl_vTable.release := @IReplicator_releaseDispatcher;
+  IReplicatorImpl_vTable.close := @IReplicator_closeDispatcher;
+  IReplicatorImpl_vTable.process := @IReplicator_processDispatcher;
 
   IRequestImpl_vTable := RequestVTable.create;
   IRequestImpl_vTable.version := 9;
@@ -13379,6 +13518,35 @@ initialization
   IAttachmentImpl_vTable.ping := @IAttachmentImpl_pingDispatcher;
   IAttachmentImpl_vTable.detach := @IAttachmentImpl_detachDispatcher;
   IAttachmentImpl_vTable.dropDatabase := @IAttachmentImpl_dropDatabaseDispatcher;
+
+  IAttachment_V4Impl_vTable := Attachment_V4VTable.Create;
+  IAttachment_V4Impl_vTable.version := 20;
+  IAttachment_V4Impl_vTable.addRef := @IAttachmentImpl_addRefDispatcher;
+  IAttachment_V4Impl_vTable.release := @IAttachmentImpl_releaseDispatcher;
+  IAttachment_V4Impl_vTable.getInfo := @IAttachmentImpl_getInfoDispatcher;
+  IAttachment_V4Impl_vTable.startTransaction := @IAttachmentImpl_startTransactionDispatcher;
+  IAttachment_V4Impl_vTable.reconnectTransaction := @IAttachmentImpl_reconnectTransactionDispatcher;
+  IAttachment_V4Impl_vTable.compileRequest := @IAttachmentImpl_compileRequestDispatcher;
+  IAttachment_V4Impl_vTable.transactRequest := @IAttachmentImpl_transactRequestDispatcher;
+  IAttachment_V4Impl_vTable.createBlob := @IAttachmentImpl_createBlobDispatcher;
+  IAttachment_V4Impl_vTable.openBlob := @IAttachmentImpl_openBlobDispatcher;
+  IAttachment_V4Impl_vTable.getSlice := @IAttachmentImpl_getSliceDispatcher;
+  IAttachment_V4Impl_vTable.putSlice := @IAttachmentImpl_putSliceDispatcher;
+  IAttachment_V4Impl_vTable.executeDyn := @IAttachmentImpl_executeDynDispatcher;
+  IAttachment_V4Impl_vTable.prepare := @IAttachmentImpl_prepareDispatcher;
+  IAttachment_V4Impl_vTable.execute := @IAttachmentImpl_executeDispatcher;
+  IAttachment_V4Impl_vTable.openCursor := @IAttachmentImpl_openCursorDispatcher;
+  IAttachment_V4Impl_vTable.queEvents := @IAttachmentImpl_queEventsDispatcher;
+  IAttachment_V4Impl_vTable.cancelOperation := @IAttachmentImpl_cancelOperationDispatcher;
+  IAttachment_V4Impl_vTable.ping := @IAttachmentImpl_pingDispatcher;
+  IAttachment_V4Impl_vTable.detach := @IAttachmentImpl_detachDispatcher;
+  IAttachment_V4Impl_vTable.dropDatabase := @IAttachmentImpl_dropDatabaseDispatcher;
+  IAttachment_V4Impl_vTable.getIdleTimeout := @IAttachment_V4Impl_getIdleTimeoutDispatcher;
+  IAttachment_V4Impl_vTable.setIdleTimeout := @IAttachment_V4Impl_setIdleTimeoutDispatcher;
+  IAttachment_V4Impl_vTable.getStatementTimeout := @IAttachment_V4Impl_getStatementTimeoutDispatcher;
+  IAttachment_V4Impl_vTable.setStatementTimeout := @IAttachment_V4Impl_setStatementTimeoutDispatcher;
+  IAttachment_V4Impl_vTable.createBatch := @IAttachment_V4Impl_createBatchDispatcher;
+  IAttachment_V4Impl_vTable.createReplicator := @IAttachment_V4Impl_createReplicatorDispatcher;
 
   IServiceImpl_vTable := ServiceVTable.create;
   IServiceImpl_vTable.version := 5;
@@ -13910,10 +14078,12 @@ finalization
   IStatementImpl_vTable.destroy;
   IStatementImpl_vTable_V4.destroy;
   IBatchImpl_vTable.Destroy;
-  IBatchCompletionState_VTable.Destroy;
+  IBatchCompletionStateImpl_VTable.Destroy;
+  IReplicatorImpl_vTable.Destroy;
   IRequestImpl_vTable.destroy;
   IEventsImpl_vTable.destroy;
   IAttachmentImpl_vTable.destroy;
+  IAttachment_V4Impl_vTable.Destroy;
   IServiceImpl_vTable.destroy;
   IProviderImpl_vTable.destroy;
   IDtcStartImpl_vTable.destroy;
