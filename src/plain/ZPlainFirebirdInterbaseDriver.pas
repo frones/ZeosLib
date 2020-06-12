@@ -1314,6 +1314,11 @@ const
   isc_trace_mandatory_switch_miss      = 337182760;
   isc_err_max                          = 1266;
 
+  isc_att_shut_killed                  = 335545130; //since FB4
+  isc_att_shut_idle                    = 335545131; //since FB4
+  isc_att_shut_db_down                 = 335545132; //since FB4
+  isc_att_shut_engine                  = 335545133; //since FB4
+
   { Database parameter block stuff }
   isc_dpb_version1               = 1;
   isc_dpb_cdd_pathname           = 1;

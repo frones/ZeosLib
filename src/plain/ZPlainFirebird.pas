@@ -4909,6 +4909,12 @@ const
   isc_login_error                      = 335545106;
   isc_already_opened                   = 335545107;
   isc_bad_crypt_key                    = 335545108;
+
+  isc_att_shut_killed                  = 335545130; //since FB4
+  isc_att_shut_idle                    = 335545131; //since FB4
+  isc_att_shut_db_down                 = 335545132; //since FB4
+  isc_att_shut_engine                  = 335545133; //since FB4
+
   isc_encrypt_error                    = 335545109;
   isc_gfix_db_name                     = 335740929;
   isc_gfix_invalid_sw                  = 335740930;

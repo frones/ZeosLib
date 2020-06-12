@@ -239,6 +239,8 @@ end;
 function TZFirebirdConnection.CreateStatementWithParams(
   Info: TStrings): IZStatement;
 begin
+  if IsClosed then
+    Open;
   Result := TZFirebirdStatement.Create(Self, Info);
 end;
 
@@ -257,14 +259,37 @@ procedure TZFirebirdConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 var ZTrans: IZFirebirdTransaction;
     FBTrans: ITransaction;
+    Stmt: IStatement;
+    FStatementType: TZIbSqlStatementType;
 begin
   ZTrans := GetActiveTransaction;
   FBTrans := ZTrans.GetTransaction;
-  FAttachment.execute(FStatus, FBTrans, Length(SQL), Pointer(SQL),
-    FDialect, nil, nil, nil, nil);
-  if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-     ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
-    HandleErrorOrWarning(LoggingCategory, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self);
+  if LoggingCategory = lcTransaction then begin
+    FAttachment.execute(FStatus, FBTrans, Length(SQL), Pointer(SQL),
+      FDialect, nil, nil, nil, nil);
+    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
+       ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
+      HandleErrorOrWarning(LoggingCategory, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self);
+  end else begin
+    Stmt := FAttachment.prepare(FStatus, FBTrans, Length(SQL), Pointer(SQL), FDialect, 0);
+    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
+       ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
+      HandleErrorOrWarning(LoggingCategory, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self);
+    FStatementType := TZIbSqlStatementType(Stmt.getType(FStatus));
+    try
+      if FStatementType in [stGetSegment, stPutSegment, stStartTrans..stRollback]
+      then raise EZSQLException.Create(SStatementIsNotAllowed)
+      else begin
+        Stmt.execute(FStatus, FBTrans, nil, nil, nil, nil);
+        if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
+           ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
+            HandleErrorOrWarning(LoggingCategory, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self);
+      end;
+    finally
+      Stmt.free(FStatus);
+      Stmt.release;
+    end;
+  end;
 end;
 
 function TZFirebirdConnection.GetActiveTransaction: IZFirebirdTransaction;
@@ -348,6 +373,7 @@ var
   DBCreated: Boolean;
   Statement: IZStatement;
   CP: Word;
+  TimeOut: Cardinal;
   procedure PrepareDPB;
   var
     R: RawByteString;
@@ -369,7 +395,7 @@ var
       Move(P^, DBName[0], L);
     AnsiChar((PAnsiChar(@DBName[0])+L)^) := AnsiChar(#0);
   end;
-label reconnect;
+label reconnect, jmpTimeOuts;
 begin
   if not Closed then
     Exit;
@@ -401,6 +427,10 @@ begin
       DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMsg);
   end;
 reconnect:
+  if FProvider = nil then
+    FProvider := FMaster.getDispatcher;
+  if FStatus  = nil then
+    FStatus := FMaster.getStatus;
   if FAttachment = nil then begin
     PrepareDPB;
     LogMsg := 'CONNECT TO "'+ConSettings^.DataBase+'" AS USER "'+ConSettings^.User+'"';
@@ -425,7 +455,7 @@ reconnect:
 
   FHardCommit := StrToBoolEx(Info.Values[ConnProps_HardCommit]);
   if (DBCP <> '') and not DBCreated then
-    Exit;
+    goto jmpTimeOuts;
   inherited Open;
   with GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo do
   begin
@@ -492,6 +522,22 @@ reconnect:
     end;
   end else if FClientCodePage = '' then
     CheckCharEncoding(DBCP);
+jmpTimeOuts:
+  if (FAttachment.vTable.version >= 4) and (FHostVersion >= 4000000) then begin
+    TimeOut := StrToIntDef(Info.Values[ConnProps_StatementTimeOut], 0);
+    if TimeOut > 0 then begin
+      IAttachment_V4(FAttachment).SetStatementTimeOut(Fstatus, TimeOut);
+      if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+        HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.SetStatmentTimeOut', Self);
+    end;
+    TimeOut := StrToIntDef(Info.Values[ConnProps_SessionIdleTimeOut], 0);
+    if TimeOut > 16 then begin
+      IAttachment_V4(FAttachment).setIdleTimeout(Fstatus, TimeOut);
+      if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+        HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.setIdleTimeout', Self);
+    end;
+  end;
+
 end;
 
 {**
@@ -525,6 +571,8 @@ end;
 function TZFirebirdConnection.PrepareCallWithParams(const SQL: string;
   Info: TStrings): IZCallableStatement;
 begin
+  if IsClosed then
+    Open;
   Result := TZFirebirdCallableStatement.Create(Self, SQL, Info);
 end;
 
@@ -557,6 +605,8 @@ end;
 function TZFirebirdConnection.PrepareStatementWithParams(const Name: string;
   Info: TStrings): IZPreparedStatement;
 begin
+  if IsClosed then
+    Open;
   Result := TZFirebirdPreparedStatement.Create(Self, Name, Info);
 end;
 

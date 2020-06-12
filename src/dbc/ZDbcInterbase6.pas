@@ -279,14 +279,16 @@ begin
       ISC_TR_HANDLE, Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF},
       Pointer(SQL), GetDialect, nil);
     if (Status <> 0) or (FStatusVector[2] = isc_arg_warning) then
-      HandleErrorOrWarning(lcExecPrepStmt, @FStatusVector, SQL, Self);
+      HandleErrorOrWarning(LoggingCategory, @FStatusVector, SQL, Self);
   DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
 end;
 
 procedure TZInterbase6Connection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 begin
-  ExecuteImmediat(SQL, GetActiveTransaction.GetTrHandle, LoggingCategory);
+  if LoggingCategory <> lcExecute
+  then ExecuteImmediat(SQL, GetActiveTransaction.GetTrHandle, LoggingCategory)
+  else CreateStatement.ExecuteUpdate(SQL)
 end;
 
 {**

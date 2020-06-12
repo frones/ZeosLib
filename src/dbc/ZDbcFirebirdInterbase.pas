@@ -1038,7 +1038,9 @@ begin
         ConSettings^.ClientCodePage^.CP), ErrorCode,
       ConSettings^.ConvFuncs.ZStringToRaw(ErrorSqlMessage, ConSettings^.CTRL_CP,
         ConSettings^.ClientCodePage^.CP));
-    if ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection then begin
+    if (ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection) or
+       (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_idle) or
+       (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_engine) then begin
       ConLostError := EZSQLConnectionLost.CreateWithCode(ErrorCode,
         Format(SSQLError1, [sSQL]));
       if Sender <> nil
