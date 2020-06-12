@@ -121,7 +121,7 @@ implementation
 
 uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} Types, Math,
   ZSysUtils, ZFastCode, ZEncoding, ZDbcInterbase6ResultSet,
-  ZDbcResultSet;
+  ZDbcResultSet, ZDbcProperties;
 
 const
   EBStart = {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('EXECUTE BLOCK(');
@@ -560,8 +560,14 @@ begin
       end;
       Status := FPlainDriver.isc_dsql_prepare(@FStatusVector, GetTrHandle, @FStmtHandle,
           Word(L), Pointer(ASQL), GetDialect, nil);
-       if (Status <> 0) or (FStatusVector[2] = isc_arg_warning) then
-         FIBConnection.HandleErrorOrWarning(lcPrepStmt, @FStatusVector, fASQL, Self);
+      if (Status <> 0) or (FStatusVector[2] = isc_arg_warning) then
+        FIBConnection.HandleErrorOrWarning(lcPrepStmt, @FStatusVector, fASQL, Self);
+      if Assigned(FPlainDriver.fb_dsql_set_timeout) then begin
+        Mem := StrToInt(DefineStatementParameter(Self, DSProps_StatementTimeOut, '0'));
+        if Mem <> 0 then
+          if FPlainDriver.fb_dsql_set_timeout(@FStatusVector, @FStmtHandle, Mem) <> 0 then
+            FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, 'fb_dsql_set_timeout', Self);
+      end;
       { Set Statement Type }
       TypeItem := AnsiChar(isc_info_sql_stmt_type);
 

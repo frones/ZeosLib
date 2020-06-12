@@ -2136,9 +2136,9 @@ type
       buffer_length: Short; buffer: PAnsiChar): ISC_STATUS;
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
-	fb_dsql_set_timeout: function(status_vector: PISC_STATUS;
-	  stmt_handle: PISC_STMT_HANDLE; milliseconds: ISC_ULONG): ISC_STATUS
-	  {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    fb_dsql_set_timeout: function(status_vector: PISC_STATUS;
+      stmt_handle: PISC_STMT_HANDLE; milliseconds: ISC_ULONG): ISC_STATUS
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
 
 	//this function is commented out in the Firebird 4.0 Beta 1 ibase.h too
@@ -2400,6 +2400,7 @@ begin
     @isc_get_client_major_version := GetAddress('isc_get_client_major_version');
     @isc_get_client_minor_version := GetAddress('isc_get_client_minor_version');
     @fb_cancel_operation := GetAddress('fb_cancel_operation');
+    @fb_dsql_set_timeout := GetAddress('fb_dsql_set_timeout');
   end;
 end;
 

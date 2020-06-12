@@ -284,7 +284,7 @@ const
   ConnProps_TrustedConnection = 'Trusted_Connection';
 {$IFEND}
 
-{$IF DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB) OR DEFINED(ENABLE_FIREBIRD)}
+{$IF DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB) OR DEFINED(ENABLE_FIREBIRD) or DEFINED(ZEOS_DISABLE_INTERBASE)}
   // Type: INT
   // Execution timeout in seconds/milliseconds for FireBird
   DSProps_StatementTimeOut = 'StatementTimeOut'; //since FB4 also
