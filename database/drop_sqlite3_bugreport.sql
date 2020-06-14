@@ -6,3 +6,5 @@
 
 drop table table_ticket_386;
 
+drop table [TestSF431];
+

@@ -78,6 +78,7 @@ type
     procedure TestCompTicket386;
     procedure TestAttachAndDetach;
     procedure TestTicket405;
+    procedure TestSF431;
   end;
 
   {** Implements a MBC bug report test case for SQLite components. }
@@ -228,6 +229,22 @@ begin
     Query.Free;
   end;
 end;
+
+procedure ZTestCompSQLiteBugReport.TestSF431;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from TestSF431';
+    Query.Open;
+    Query.FetchAll;
+    Query.Close;
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
 
 { ZTestCompSQLiteBugReportMBCs }
 const
