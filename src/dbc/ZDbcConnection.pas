@@ -82,7 +82,7 @@ type
 
     function GetSupportedProtocols: TStringDynArray;
     function GetClientCodePages(const Url: TZURL): TStringDynArray;
-    function Connect(const Url: string; Info: TStrings = nil): IZConnection; overload; deprecated;
+    function Connect(const Url: string; Info: TStrings = nil): IZConnection; overload;// deprecated;
     function Connect(const {%H-}Url: TZURL): IZConnection; overload; virtual;
     function AcceptsURL(const Url: string): Boolean; virtual;
 
@@ -179,8 +179,8 @@ type
     function PrepareStatement(const SQL: string): IZPreparedStatement;
     function PrepareCall(const SQL: string): IZCallableStatement;
 
-    function CreateNotification(const {%H-}Event: string): IZNotification; virtual;
-    function CreateSequence(const {%H-}Sequence: string; {%H-}BlockSize: Integer):
+    function CreateNotification(const Event: string): IZNotification; virtual;
+    function CreateSequence(const Sequence: string; BlockSize: Integer):
       IZSequence; virtual;
 
     function NativeSQL(const SQL: string): string; virtual;
@@ -1161,8 +1161,12 @@ end;
   @param Event an event name.
   @returns a created notification object.
 }
-{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
-function TZAbstractDbcConnection.CreateNotification(const Event: string): IZNotification;
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5033 off : Function result does not seem to be set}
+  {$WARN 5024 off : Parameter "Event" not used}
+{$ENDIF}
+function TZAbstractDbcConnection.CreateNotification(
+  const Event: string): IZNotification;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
@@ -1178,7 +1182,8 @@ function TZAbstractDbcConnection.CreateSequence(const Sequence: string;
   BlockSize: Integer): IZSequence;
 begin
   if TZDefaultProviderSequenceClasses[GetServerProvider] <> nil then
-    Result := TZDefaultProviderSequenceClasses[GetServerProvider].Create(IZConnection(fWeakReferenceOfSelfInterface), Sequence, BlockSize)
+    Result := TZDefaultProviderSequenceClasses[GetServerProvider].Create(
+      IZConnection(fWeakReferenceOfSelfInterface), Sequence, BlockSize)
   else
     Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
@@ -1265,12 +1270,22 @@ begin
   Result := EncodeCString(Value);
 end;
 
+{**
+  Executes any statement immediataly
+  @param SQL the raw encoded sql which should be executed
+  @param LoggingCategory a category for the LoggingListeners
+}
 procedure TZAbstractDbcConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 begin
   ExecuteImmediat(ZRawToUnicode(SQL, ConSettings.CTRL_CP), LoggingCategory);
 end;
 
+{**
+  Executes any statement immediataly
+  @param SQL the UTF16 encoded sql which should be executed
+  @param LoggingCategory a category for the LoggingListeners
+}
 procedure TZAbstractDbcConnection.ExecuteImmediat(const SQL: UnicodeString;
   LoggingCategory: TZLoggingCategory);
 begin
@@ -1328,6 +1343,7 @@ begin
   end;
 end;
 
+{** do something before the URL OnChange is set }
 procedure TZAbstractDbcConnection.BeforeUrlAssign;
 begin
   //dummy
@@ -1413,6 +1429,10 @@ begin
   Result := 0;
 end;
 
+{**
+  Gets the PlainDriver description.
+  @returns a the description.
+}
 function TZAbstractDbcConnection.GetDescription: String;
 begin
   Result := PlainDriver.GetDescription;
@@ -1571,10 +1591,12 @@ begin
   else Result := SQLQuotedStr(P, L, AnsiChar(#39));
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Sender" not used} {$ENDIF}
 procedure TZAbstractDbcConnection.OnPropertiesChange(Sender: TObject);
 begin
   // do nothing in base class
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZAbstractNotification }
 
@@ -1838,7 +1860,7 @@ begin
   FCtrlsCP := Consettings.CTRL_CP;
   FUseWComparsions := (FClientCP <> ZOSCodePage) or
     (FClientCP = zCP_UTF8) or
-    Consettings.ClientCodePage.IsStringFieldCPConsistent or
+    not Consettings.ClientCodePage.IsStringFieldCPConsistent or
     (Consettings.ClientCodePage.Encoding = ceUTF16);
 end;
 
