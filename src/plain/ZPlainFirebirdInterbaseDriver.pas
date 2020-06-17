@@ -1671,8 +1671,8 @@ type
 
   ISC_SCHAR            = AnsiChar;
   ISC_UCHAR            = AnsiChar;
-  ISC_SHORT            = SmallInt;
-  ISC_USHORT           = Word;
+  ISC_SHORT            = SmallInt; { 16 bit signed }
+  ISC_USHORT           = Word; { 16 bit unsigned }
   ISC_LONG             = Integer;
   ISC_ULONG            = Cardinal;
   ISC_INT64            = Int64;
@@ -1732,38 +1732,75 @@ type
   TISC_CALLBACK = procedure (UserData: PVoid; Length: ISC_USHORT; Updated: PISC_UCHAR); cdecl;
 
   { Time & Date Support }
-  ISC_DATE = LongInt;
+  TISC_DATE = Integer;
   PISC_DATE = ^ISC_DATE;
-  ISC_TIME = Cardinal;
+  TISC_TIME = Integer;
   PISC_TIME = ^ISC_TIME;
 
-  // why do we prefix records with a T (TISC_TIMESTAMP) while we don't prefix
-  // simple types (ISC_DATE)?
+  PFB_DEC16 = ^TFB_DEC16;
+  TFB_DEC16 = array [1..1] of Int64;
+
+  PFB_DEC34 = ^TFB_DEC34;
+  TFB_DEC34 = array [1..2] of Int64;
+
+  PFB_I128 = ^TFB_I128;
+  TFB_I128 = array [1..2] of Int64;
+
+  PISC_TIME_TZ = ^TISC_TIME_TZ;
   TISC_TIME_TZ = record
     utc_time: ISC_TIME;
-	time_zone: ISC_USHORT;
+    time_zone: ISC_USHORT;
   end;
-  PISC_TIME_TZ = ^TISC_TIME_TZ;
 
+  PISC_TIME_TZ_EX = ^TISC_TIME_TZ_EX;
+  TISC_TIME_TZ_EX = record
+    utc_time: ISC_TIME;
+    time_zone: ISC_USHORT;
+    ext_offset: ISC_SHORT;
+  end;
+
+  PISC_TIMESTAMP = ^TISC_TIMESTAMP;
   TISC_TIMESTAMP = record
     timestamp_date: ISC_DATE;
     timestamp_time: ISC_TIME;
   end;
-  PISC_TIMESTAMP = ^TISC_TIMESTAMP;
 
+  PISC_TIMESTAMP_TZ = ^TISC_TIMESTAMP_TZ;
   TISC_TIMESTAMP_TZ = record
     utc_timestamp: TISC_TIMESTAMP;
-	  time_zone: ISC_USHORT;
+    time_zone: ISC_USHORT;
   end;
-  PTISC_TIMESTAMP_TZ = ^TISC_TIMESTAMP_TZ;
 
-  TFB_DEC16 = record
-    fb_data: array[0..0] of ISC_UINT64;
+  PISC_TIMESTAMP_TZ_EX = ^TISC_TIMESTAMP_TZ_EX;
+  TISC_TIMESTAMP_TZ_EX = record
+    utc_timestamp: TISC_TIMESTAMP;
+    time_zone: ISC_USHORT;
+    ext_offset: ISC_SHORT;
   end;
-  PFB_DEC16 = ^TFB_DEC16;
 
-  TFB_DEC34 = record
-    fb_data: array[0..1] of ISC_UINT64;
+  Pntrace_relation_t = ^Tntrace_relation_t;
+  Tntrace_relation_t = Integer;
+  PTraceCounts = ^TTraceCounts;
+  TTraceCounts = Record
+    trc_relation_id     : ntrace_relation_t;
+    trc_relation_name   : PAnsiChar;
+    trc_counters        : PInt64;
+  end;
+
+  PPerformanceInfo = ^TPerformanceInfo;
+  TPerformanceInfo = Record
+    pin_time            : Int64;
+    pin_counters        : PInt64;
+    pin_count           : NativeUInt;
+    pin_tables          : PTraceCounts;
+    pin_records_fetched	: Int64;
+  end;
+
+  PDsc = ^TDsc;
+  TDsc = Record
+    dsc_dtype, dsc_scale: Byte;
+    dsc_length, dsc_sub_type, dsc_flags: Int16;
+    dsc_address: PByte;
   end;
 
   { Blob id structure }
@@ -2141,15 +2178,14 @@ type
       {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
 
-	//this function is commented out in the Firebird 4.0 Beta 1 ibase.h too
+    //this function is commented out in the Firebird 4.0 Beta 1 ibase.h too
     //fb_get_statement_interface: function(status_vector: PISC_STATUS;
-	//  api_handle: PFB_API_HANDLE; stmt_interface: Pointer;): ISC_STATUS;
-	//  {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    //  api_handle: PFB_API_HANDLE; stmt_interface: Pointer;): ISC_STATUS;
+    //  {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
-	{
+   {
     ISC_STATUS ISC_EXPORT fb_get_statement_interface(ISC_STATUS*,
-												    FB_API_HANDLE*,
-												    void**);
+      FB_API_HANDLE*,    void**);
     }
 
     { Blob processing routines }
