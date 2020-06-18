@@ -11,7 +11,7 @@ Type
  TZMethodInThread = Class
  private
   _dataset: TZAbstractRODataset;
-  _methodthread: TObject;
+  _methodthread: TThread;
   _methoderror: TErrorEvent;
   _methodfinish: TNotifyEvent;
   _threaderror: Exception;
@@ -22,13 +22,15 @@ Type
   Procedure StartMethodThread(inMethod: TProcedureOfObject);
   Procedure ThreadError(Sender: TObject; Error: Exception);
   Procedure ThreadFinish(Sender: TObject);
-  Function ThreadRunning: Boolean;
+  Function GetThreadID: Cardinal;
+  Function GetThreadRunning: Boolean;
  public
   Constructor Create;
   Destructor Destroy; Override;
-  Property IsRunning: Boolean Read ThreadRunning;
+  Property IsRunning: Boolean Read GetThreadRunning;
   Property OnError: TErrorEvent Read _methoderror Write SetOnError;
   Property OnFinish: TNotifyEvent Read _methodfinish Write SetOnFinish;
+  Property ThreadID: Cardinal Read GetThreadId;
   Procedure ApplyUpdates(inDataSet: TZAbstractDataset);
   Procedure Connect(inConnection: TZAbstractConnection);
   Procedure Commit(inConnection: TZAbstractConnection);
@@ -88,7 +90,7 @@ End;
 
 Procedure TZMethodInThread.CheckRunning;
 Begin
- If Self.ThreadRunning Then Raise EZSQLException.Create(SBackgroundOperationStillRunning)
+ If Self.IsRunning Then Raise EZSQLException.Create(SBackgroundOperationStillRunning)
    Else
  If Assigned(_methodthread) Then FreeAndNil(_methodthread);
 End;
@@ -151,9 +153,9 @@ Begin
  // to interrupt the action after calling .AbortOperation
  If Not inAreYouSure Then Exit;
  {$IF defined(MSWINDOWS)}
-  If Self.IsRunning Then TerminateThread((_methodthread As TZMethodThread).Handle, 0);
+  If Self.IsRunning Then TerminateThread(_methodthread.Handle, 0);
  {$ELSE IF defined(LINUX)}
-  If Self.IsRunning Then pthread_kill((_methodthread As TZMethodThread).Handle, SIGSTOP);
+  If Self.IsRunning Then pthread_kill(_methodthread.Handle, SIGSTOP);
  {$ENDIF}
 End;
 
@@ -210,14 +212,20 @@ Begin
  If Assigned(_methodfinish) Then _methodfinish(Self);
 End;
 
-Function TZMethodInThread.ThreadRunning: Boolean;
+Function TZMethodInThread.GetThreadID: Cardinal;
 Begin
- Result := Assigned(_methodthread) And Not (_methodthread As TZMethodThread).Finished;
+ If Self.IsRunning Then Result := _methodthread.ThreadID
+   Else Result := 0;
+End;
+
+Function TZMethodInThread.GetThreadRunning: Boolean;
+Begin
+ Result := Assigned(_methodthread) And Not _methodthread.Finished;
 End;
 
 Procedure TZMethodInThread.WaitFor;
 Begin
- If IsRunning Then (_methodthread As TZMethodThread).WaitFor;
+ If Self.IsRunning Then _methodthread.WaitFor;
 End;
 
 End.
