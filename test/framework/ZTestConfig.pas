@@ -269,6 +269,7 @@ var
   I: Integer;
   Temp: TStrings;
 begin
+  Result := nil;
   Temp := SplitString(Value, Delimiters);
   try
     SetLength(Result, Temp.Count);

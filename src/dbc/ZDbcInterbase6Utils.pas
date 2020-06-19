@@ -322,7 +322,7 @@ const
     10000000,1000000,100000,10000,1000,100,10);
 
   { count database parameters }
-  MAX_DPB_PARAMS = 90;
+  MAX_DPB_PARAMS = 95;
   { prefix database parameters names it used in paramters scann procedure }
   DPBPrefix = 'isc_dpb_';
   { list database parameters and their apropriate numbers }
@@ -417,7 +417,12 @@ const
     (Name: 'isc_dpb_config';                ValueType: pvtString; Number: isc_dpb_config),
     (Name: 'isc_dpb_nolinger';              ValueType: pvtNone; Number: isc_dpb_nolinger),
     (Name: 'isc_dpb_reset_icu';             ValueType: pvtNone; Number: isc_dpb_reset_icu),
-    (Name: 'isc_dpb_map_attach';            ValueType: pvtNone; Number: isc_dpb_map_attach)
+    (Name: 'isc_dpb_map_attach';            ValueType: pvtNone; Number: isc_dpb_map_attach),
+    (Name: 'isc_dpb_session_time_zone';     ValueType: pvtString; Number: isc_dpb_session_time_zone), // this is an assumption and needs to be tested!
+    (Name: 'isc_dpb_set_db_replica';        ValueType: pvtNone; Number: isc_dpb_set_db_replica),      // I have no clue how to use that
+    (Name: 'isc_dpb_set_bind';              ValueType: pvtString; Number: isc_dpb_set_bind),
+    (Name: 'isc_dpb_decfloat_round';        ValueType: pvtString; Number: isc_dpb_decfloat_round),
+    (Name: 'isc_dpb_decfloat_traps';        ValueType: pvtString; Number: isc_dpb_decfloat_traps)
   );
 
   { count transaction parameters }

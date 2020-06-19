@@ -35,7 +35,7 @@ unit zxmltestreport;
 interface
 
 uses
-  Classes, SysUtils,fpcunit, fpcunitreport, testutils, dom, XMLWrite;
+  Classes, SysUtils,fpcunit, fpcunitreport, dom, XMLWrite;
   
 
 type
@@ -76,9 +76,9 @@ type
 
 implementation
 
+uses ZFastCode, ZSysUtils;
+
 const
-  strTrue = 'True';
-  strFalse = 'False';
   strPassed = 'Passed';
   strFailed = 'Failed';
   strInconclusive = 'Inconclusive';
@@ -104,18 +104,17 @@ procedure TZXMLResultsWriter.WriteTestHeader(ATest: TTest; ALevel: integer; ACou
 var
   n: TDOMElement;
   o: TDOMElement;
-  ParentName: String;
 begin
   inherited;
   n := FDoc.CreateElement('test-case');
-  n['id'] := IntToStr(GetNextId);
-  n['name'] := ATest.TestName;
-  n['fullname'] := ATest.TestName + '.' + ATest.TestSuiteName;
-  n['methodname'] := ATest.TestName;
-  n['classname'] := ATest.TestSuiteName;
+  n['id'] := IntToUnicode(GetNextId);
+  n['name'] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(ATest.TestName);
+  n['fullname'] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(ATest.TestName + '.' + ATest.TestSuiteName);
+  n['methodname'] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(ATest.TestName);
+  n['classname'] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(ATest.TestSuiteName);
   n['runstate'] := 'Runnable';
   n['result'] := strPassed;
-  n['start-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', Now);
+  n['start-time'] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', Now));
 
   if FSuitePath.Count > 0 then begin
   //test is included in a suite
@@ -132,15 +131,14 @@ end;
 procedure TZXMLResultsWriter.WriteTestFooter(ATest: TTest; ALevel: integer; ATiming: TDateTime);
 begin
   inherited;
-  FCurrentTest['end-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', Now);
-  FCurrentTest['duration'] := FormatFloat('0.###', TimeToSeconds(ATiming));
+  FCurrentTest['end-time'] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', Now));
+  FCurrentTest['duration'] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FormatFloat('0.###', TimeToSeconds(ATiming)));
 end;
 
 
 procedure TZXMLResultsWriter.WriteSuiteHeader(ATestSuite: TTestSuite; ALevel: integer);
 var
   n: TDOMElement;
-  results: TDomElement;
   x: integer;
   FullName: String;
 begin
@@ -148,20 +146,20 @@ begin
 
   n := FDoc.CreateElement('test-suite');
   n['type'] := 'TestSuite';
-  n['id'] := IntToStr(GetNextId);
-  n['name'] := ATestSuite.TestName;
-  n['testcasecount'] := IntToStr(ATestSuite.CountTestCases);
+  n['id'] := IntToUnicode(GetNextId);
+  n['name'] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(ATestSuite.TestName);
+  n['testcasecount'] := IntToUnicode(ATestSuite.CountTestCases);
   n['runstate'] := 'Runnable';
   n['result'] := strInconclusive;
-  n['start-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', Now);
-  n['total'] := IntToStr(ATestSuite.CountTestCases);
+  n['start-time'] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', Now));
+  n['total'] := IntToUnicode(ATestSuite.CountTestCases);
 
   FullName := '';
   for x := 0 to FSuitePath.Count - 1
-  do FullName := FullName + TDOMElement(FSuitePath[x])['name'] + '.';
+  do FullName := FullName + {$IFNDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(TDOMElement(FSuitePath[x])['name'] + '.');
   FullName := FullName + ATestSuite.TestName;
-  n['classname'] := FullName;
-  n['fullname'] := FullName + '.' + ATestSuite.TestName;  
+  n['classname'] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FullName);
+  n['fullname'] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FullName + '.' + ATestSuite.TestName);  
 
   FSuitePath.Add(n);
 
@@ -180,13 +178,13 @@ var
 begin
   inherited;
   n := TDomElement(FSuitePath[FSuitePath.Count -1]);
-  n['duration'] := FloatToStr(TimeToSeconds(ATiming));
-  n['end-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', Now);
-  n['total'] := IntToStr(ANumRuns);
-  n['passed'] := IntToStr(ANumRuns - ANumErrors - ANumFailures);
-  n['failed'] := IntToStr(ANumErrors + ANumFailures);
+  n['duration'] := FloatToUnicode(TimeToSeconds(ATiming));
+  n['end-time'] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', Now));
+  n['total'] := IntToUnicode(ANumRuns);
+  n['passed'] := IntToUnicode(ANumRuns - ANumErrors - ANumFailures);
+  n['failed'] := IntToUnicode(ANumErrors + ANumFailures);
   n['inconclusive'] := '0';
-  n['skipped'] := IntToStr(ANumIgnores);
+  n['skipped'] := IntToUnicode(ANumIgnores);
   FSuitePath.Delete(FSuitePath.Count - 1);
 end;
 
@@ -213,10 +211,10 @@ begin
   inherited;
   FResults := FDoc.CreateElement('test-run');
   FResults.AppendChild(FDoc.CreateComment(' Generated using FPCUnit on '
-    + FormatDateTime('yyyy-mm-dd hh:nn:ss', Now) ));
+    + {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FormatDateTime('yyyy-mm-dd hh:nn:ss', Now))));
   FDoc.AppendChild(FResults);
   FResults['id'] := '2';
-  FResults['start-time'] := FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', Now);
+  FResults['start-time'] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FormatDateTime('YYYY-MM-DD HH:NN:SS.ZZZ', Now));
 end;
 
 
@@ -244,7 +242,7 @@ begin
     FCurrentTest.AppendChild(failure);
     message := FDoc.CreateElement('message');
     failure.AppendChild(message);
-    message.AppendChild(FDoc.CreateCDATASection(AFailure.ExceptionClassName + #13 + AFailure.ExceptionMessage + #13 + AFailure.AsString));
+    message.AppendChild(FDoc.CreateCDATASection({$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(AFailure.ExceptionClassName + #13 + AFailure.ExceptionMessage + #13 + AFailure.AsString)));
 end;
 
 procedure TZXMLResultsWriter.AddError(ATest: TTest; AError: TTestFailure);
@@ -269,7 +267,7 @@ begin
   FCurrentTest.AppendChild(error);
   message := FDoc.CreateElement('message');
   error.AppendChild(message);
-  message.AppendChild(FDoc.CreateCDATASection(AError.ExceptionClassName + #13 + AError.ExceptionMessage + #13 + AError.SourceUnitName + #13 + IntToStr(AError.LineNumber) + #13 + AError.FailedMethodName + #13 + AError.AsString));
+  message.AppendChild(FDoc.CreateCDATASection({$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(AError.ExceptionClassName + #13 + AError.ExceptionMessage + #13 + AError.SourceUnitName + #13 + IntToStr(AError.LineNumber) + #13 + AError.FailedMethodName + #13 + AError.AsString)));
 end;
 
 
@@ -286,18 +284,18 @@ end;
 
 procedure TZXMLResultsWriter.WriteResult(aResult: TTestResult);
 var
-  n, lResults: TDOMNode;
+  //lResults: TDOMNode;
   f: text;
 begin
-  lResults := FDoc.FindNode('TestResults');
+  //lResults := FDoc.FindNode('TestResults');
 
   //n := FDoc.CreateElement('NumberOfRunTests');
   //n.AppendChild(FDoc.CreateTextNode(IntToStr(aResult.RunTests)));
   //lResults.AppendChild(n);
-  FResults['total'] := IntToStr(aResult.RunTests + aResult.NumberOfIgnoredTests + aResult.NumberOfSkippedTests);
-  FResults['not-run'] := IntToStr(aResult.NumberOfIgnoredTests + aResult.NumberOfSkippedTests);
-  FResults['date'] := FormatDateTime('DD/MM/YYYY', Now);
-  FResults['time'] := FormatDateTime('HH:NN:SS', Now);
+  FResults['total'] := IntToUnicode(aResult.RunTests + aResult.NumberOfIgnoredTests + aResult.NumberOfSkippedTests);
+  FResults['not-run'] := IntToUnicode(aResult.NumberOfIgnoredTests + aResult.NumberOfSkippedTests);
+  FResults['date'] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FormatDateTime('DD/MM/YYYY', Now));
+  FResults['time'] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FormatDateTime('HH:NN:SS', Now));
 
   //n := FDoc.CreateElement('NumberOfErrors');
   //n.AppendChild(FDoc.CreateTextNode(IntToStr(aResult.NumberOfErrors)));
@@ -306,7 +304,7 @@ begin
   //n := FDoc.CreateElement('NumberOfFailures');
   //n.AppendChild(FDoc.CreateTextNode(IntToStr(aResult.NumberOfFailures)));
   //lResults.AppendChild(n);
-  FResults['failures'] := IntToStr(aResult.NumberOfErrors + aResult.NumberOfFailures);
+  FResults['failures'] := IntToUnicode(aResult.NumberOfErrors + aResult.NumberOfFailures);
 
   //n := FDoc.CreateElement('NumberOfIgnoredTests');
   //n.AppendChild(FDoc.CreateTextNode(IntToStr(aResult.NumberOfIgnoredTests)));

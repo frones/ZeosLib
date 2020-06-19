@@ -422,8 +422,6 @@ end;
   @return the list
 }
 function TZMySQLDatabaseInfo.GetSQLKeywords: string;
-var
-  Major, Minor: Integer;
 begin
   Result := 'AUTO_INCREMENT,BINARY,BLOB,ENUM,INFILE,LOAD,MEDIUMINT,OPTION,'
     + 'OUTFILE,REPLACE,SET,TEXT,UNSIGNED,ZEROFILL';
@@ -453,16 +451,11 @@ begin
     + 'UTC_TIMESTAMP,VARBINARY,VARCHARACTER,VARYING,WHEN,WHILE,WITH,'
     + 'WRITE,X509,XOR,YEAR_MONTH,ACCESSIBLE,LINEAR,'
     + 'MASTER_SSL_VERIFY_SERVER_CERT,RANGE,READ_ONLY,READ_WRITE';
-    { more reserved words (starting at MySQL 8) provided by abonic}
-    if fMySQLFork = fMySQL then begin
-      GetVersion(Major, Minor);
-      if Major >= 8 then begin
-        Result := Result + 'CUBE,CUME_DIST,DENSE_RANK,EMPTY,EXCEPT,FIRST_VALUE,FUNCTION,'
-        + 'GENERATED,GET,GROUPING,GROUPS,IO_AFTER_GTIDS,IO_BEFORE_GTIDS,JSON_TABLE,'
-        + 'LAG,LAST_VALUE,LATERAL,LEAD,MASTER_BIND,NTH_VALUE,NTILE,OF,OPTIMIZER_COSTS,OVER,'
-        + 'PARTITION,PERCENT_RANK,RANK,RECURSIVE,ROW,ROWS,ROW_NUMBER,STORED,SYSTEM,VIRTUAL,WINDOW';
-      end;
-    end;
+  { more reserved words, introduced after MySQL 5.1, up to version 8, thanks to abonic. }
+  Result := Result + 'CUBE,CUME_DIST,DENSE_RANK,EMPTY,EXCEPT,FIRST_VALUE,FUNCTION,'
+    + 'GENERATED,GET,GROUPING,GROUPS,IO_AFTER_GTIDS,IO_BEFORE_GTIDS,JSON_TABLE,'
+    + 'LAG,LAST_VALUE,LATERAL,LEAD,MASTER_BIND,NTH_VALUE,NTILE,OF,OPTIMIZER_COSTS,OVER,'
+    + 'PARTITION,PERCENT_RANK,RANK,RECURSIVE,ROW,ROWS,ROW_NUMBER,STORED,SYSTEM,VIRTUAL,WINDOW';
 end;
 
 {**
@@ -2834,6 +2827,10 @@ var
       else ZType := Ord(stString);
       ZPrecision := MysqlCharLength;
       ZScale := -1;
+    end else if EndsWith(TypeName, 'binary') then begin
+      ZType := Ord(stBytes);
+      ZPrecision := MysqlCharLength;
+      ZScale := -1;
     end else if TypeName = 'date' then begin
       ZType := Ord(stDate);
       ZPrecision := -1;
@@ -2855,8 +2852,13 @@ var
       ZPrecision := -1;
       ZScale := -1;
     end else if EndsWith(TypeName, 'blob') then begin
-      ZType := Ord(stBinaryStream);
-      ZPrecision := -1;
+      if StartsWith(TypeName, 'tiny') then begin
+        ZType := Ord(stBytes);
+        ZPrecision := 255;
+      end else begin
+        ZType := Ord(stBinaryStream);
+        ZPrecision := -1;
+      end;
       ZScale := -1;
     end else if EndsWith(TypeName, 'text') then begin
       if FConSettings.CPType = cCP_UTF16
@@ -2931,7 +2933,8 @@ begin
 
   with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(SQL) do begin
     while Next do begin
-      MysqlTypeToZeos(GetString(myProcColTypeNameIndex), GetInt(myExtraNumericPrecisionIndex), GetInt(myProcColScaleIndex), GetInt(myExtraMaxCharLength), ZType, ZPrecision, ZScale);
+      MysqlTypeToZeos(GetString(myProcColTypeNameIndex), GetInt(myExtraNumericPrecisionIndex),
+        GetInt(myProcColScaleIndex), GetInt(myExtraMaxCharLength), ZType, ZPrecision, ZScale);
 
       Result.MoveToInsertRow;
       if not IsNull(CatalogNameIndex) then
