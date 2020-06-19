@@ -7,13 +7,12 @@
 {                                                         }
 {    Thanks to :                                          }
 {               Pascal Data Objects Library               }
-{                                                         }
-{    Copyright (c) 2006 John Marino, www.synsport.com     }
+{               John Marino, www.synsport.com             }
 {                                                         }
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }

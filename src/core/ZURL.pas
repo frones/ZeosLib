@@ -1,12 +1,12 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{            Test Case for TZURL Class                    }
+{               URL Connectivity Classes                  }
 {                                                         }
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2020 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }

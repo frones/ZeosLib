@@ -4045,7 +4045,7 @@ procedure TZAbstractRODataset.InternalGotoBookmark(Bookmark: TBookmark);
 procedure TZAbstractRODataset.InternalGotoBookmark(Bookmark: Pointer);
 {$ENDIF}
 begin
-  if not GotoRow(PInteger(Bookmark)^) then
+  if not GotoRow(PNativeInt(Bookmark)^) then
     raise EZDatabaseError.Create(SBookmarkWasNotFound);
 end;
 
@@ -4212,6 +4212,7 @@ end;
   @return 0 if bookmarks are equal, -1 if the first bookmark is less,
     1 if the first bookmark is greatter.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZAbstractRODataset.CompareBookmarks(Bookmark1,
   Bookmark2: TBookmark): Integer;
 var
@@ -4227,22 +4228,22 @@ begin
   if Index1 < Index2 then Result := -1
   else if Index1 > Index2 then Result := 1;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
 
 {**
   Checks is the specified bookmark valid.
   @param Bookmark a bookmark object.
   @return <code>True</code> if the bookmark is valid.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZAbstractRODataset.BookmarkValid(Bookmark: TBookmark): Boolean;
 begin
   Result := False;
-  if Active and Assigned(Bookmark) and (FResultSet <> nil) then
-    try
-      Result := CurrentRows.IndexOf(Pointer(PInteger(Bookmark)^)) >= 0;
-    except
-      Result := False;
-    end;
+  if Active and Assigned(Bookmark) and (FResultSet <> nil) and (CurrentRows <> nil) then
+    Result := CurrentRows.IndexOf(Pointer(PInteger(Bookmark)^)) >= 0;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Performs an internal initialization of record buffer.
