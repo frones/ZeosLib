@@ -1284,53 +1284,6 @@ begin
   end;
 end;
 
-{$ELSE}
-
-function TZDbcProxyResultSet.GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
-var
-  ColType: TZSQLType;
-  Idx: Integer;
-  Val: String;
-  AnsiVal: {$IFDEF NEXTGEN}RawByteString{$ELSE}AnsiString{$ENDIF};
-  Bytes: TBytes;
-  ColInfo: TZColumnInfo;
-begin
-  if LobStreamMode <> lsmRead then
-    raise Exception.Create('No lob stream mode besides lsmRead is supported.');
-
-  {$IFNDEF DISABLE_CHECKING}
-    CheckColumnConvertion(ColumnIndex, stInteger);
-  {$ENDIF}
-  LastWasNull := IsNull(ColumnIndex);
-
-  if LastWasNull then begin
-    Result := nil;
-    exit;
-  end;
-
-  Idx := ColumnIndex - FirstDbcIndex;
-  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
-  ColInfo := TZColumnInfo(ColumnsInfo.Items[Idx]);
-  ColType := ColInfo.ColumnType;
-  case ColType of
-    stBinaryStream: begin
-      Bytes := DecodeBase64(Val);
-      Result := TZAbstractBlob.CreateWithData(@Bytes[0], Length(Bytes)) as IZBlob;
-    end;
-    stAsciiStream, stUnicodeStream: begin
-      if Val <> '' then
-         Result := TZAbstractCLob.CreateWithData(@Val[Low(Val)], Length(Val), GetConSettings) as IZBlob
-       else
-         Result := TZAbstractCLob.CreateWithData(nil, 0, GetConSettings) as IZBlob;
-    end;
-    else begin
-      raise Exception.Create('GetBlob is not supported for ' + ColInfo.GetColumnTypeName + ' (yet). Column: ' + ColInfo.ColumnLabel);
-    end;
-  end;
-end;
-{$ENDIF}
-
-
 {$IFDEF ZEOS73UP}
 procedure RaiseUnsupportedException;
 begin
