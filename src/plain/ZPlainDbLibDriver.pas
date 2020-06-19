@@ -1322,7 +1322,7 @@ begin
   if Assigned(FtdsDbOpen) then
     Result := FtdsDbOpen(Login, Host, 1
       // this Ord(..) doesn't work as expected. Using it exits the program whenever an error occurs.
-	  // So I simply revert this to 1 because we always want freetds to behave like it is MS dblib...
+      // So I simply revert this to 1 because we always want freetds to behave like it is MS dblib...
       {Ord(ZFastCode.Pos('Sybase', GetDescription) > 0)})
   else
 {$IFNDEF MSWINDOWS}
