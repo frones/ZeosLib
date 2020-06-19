@@ -1257,7 +1257,8 @@ end;
 }
 function TZInterbase6DatabaseInfo.SupportsArrayBindings: Boolean;
 begin
-  Result := True;
+  // we use the execute block syntax that is only available from Firebird 2.0 on
+  Result := FIsFireBird and (FHostVersion >= 2000000)
 end;
 
 { TZInterbase6DatabaseMetadata }

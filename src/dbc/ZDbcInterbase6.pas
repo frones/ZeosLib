@@ -1076,7 +1076,8 @@ var I: Integer;
         RS := nil;
         Stmt := nil;
       end;
-    end;
+    end else
+      FProcedureTypesCache.AddObject(ProcName, nil);
   end;
 begin
   I := FProcedureTypesCache.IndexOf(ProcName);

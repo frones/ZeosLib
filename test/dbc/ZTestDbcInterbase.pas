@@ -216,16 +216,21 @@ end;
 procedure TZTestDbcInterbaseCase.FB_TestUpdateCounts_Returning;
 var Stmt: IZStatement;
   Cnt: Integer;
+  DbInfo: IZInterbaseDatabaseInfo;
 begin
-  Stmt := Connection.CreateStatement;
-  try
-    CheckNotNull(Stmt);
-    Cnt := Stmt.ExecuteUpdate('update people set p_id = p_id where p_id = 5 returning p_id'); //fb does not support multiple rows yet
-    Check(Cnt = 1, 'updatecount is not equal');
-    Stmt.Close;
-  finally
-    Stmt.Close;
-    Stmt := nil;
+  Supports(Connection.GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo);
+
+  if Assigned(DbInfo) and DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 2000000) then begin
+    Stmt := Connection.CreateStatement;
+    try
+      CheckNotNull(Stmt);
+      Cnt := Stmt.ExecuteUpdate('update people set p_id = p_id where p_id = 5 returning p_id'); //fb does not support multiple rows yet
+      Check(Cnt = 1, 'updatecount is not equal');
+      Stmt.Close;
+    finally
+      Stmt.Close;
+      Stmt := nil;
+    end;
   end;
 end;
 
@@ -979,11 +984,13 @@ procedure TZTestDbcInterbaseCase.TestStoredprocedures;
 var
   ResultSet: IZResultSet;
   CallableStatement: IZCallableStatement;
+  DbInfo: IZInterbaseDatabaseInfo;
 begin
   // Doesn't run with ExecutePrepared. RegisterOutParameter does also not work.
   // Has to be called with an ExecuteQueryPrepared, then has to be fetched and
   // afterwards the Resultes have to be retrieved via result set columns.
   // Resultset must only have one(!) line.
+  Connection.Open;
   CallableStatement := Connection.PrepareCallWithParams(
     'PROCEDURE1', nil);
   with CallableStatement do begin
@@ -997,21 +1004,26 @@ begin
   end;
   CallableStatement.Close;
 
-  CallableStatement := Connection.PrepareCallWithParams(
-    'PROCEDURE2', nil);
-  ResultSet := CallableStatement.ExecuteQueryPrepared;
-  with ResultSet do begin
-    CheckEquals(True, Next);
-    CheckEquals('Computer', GetString(FirstDbcIndex));
-    CheckEquals(True, Next);
-    CheckEquals('Laboratoy', GetString(FirstDbcIndex));
-    CheckEquals(True, Next);
-    CheckEquals('Radiostation', GetString(FirstDbcIndex));
-    CheckEquals(True, Next);
-    CheckEquals('Volvo', GetString(FirstDbcIndex));
-    Close;
+  // this test can only be passed by Firebird 1.5+ For Interbase and older Firebird versions we cannot detect if a procedure is selectable.
+  if Supports(Connection.GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo) then begin
+    if DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 1005000) then begin
+      CallableStatement := Connection.PrepareCallWithParams(
+        'PROCEDURE2', nil);
+      ResultSet := CallableStatement.ExecuteQueryPrepared;
+      with ResultSet do begin
+        CheckEquals(True, Next);
+        CheckEquals('Computer', GetString(FirstDbcIndex));
+        CheckEquals(True, Next);
+        CheckEquals('Laboratoy', GetString(FirstDbcIndex));
+        CheckEquals(True, Next);
+        CheckEquals('Radiostation', GetString(FirstDbcIndex));
+        CheckEquals(True, Next);
+        CheckEquals('Volvo', GetString(FirstDbcIndex));
+        Close;
+      end;
+      CallableStatement.Close;
+    end;
   end;
-  CallableStatement.Close;
 end;
 
 type
