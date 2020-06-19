@@ -62,6 +62,15 @@ if exists (select 1
             and   type = 'U')
    drop table default_values2
 go
+
+drop procedure procedure1
+
+go
+
+drop procedure procedure2
+
+go
+
 /*
 drop procedure abtest
 go */

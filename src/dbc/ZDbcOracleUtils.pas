@@ -1074,20 +1074,17 @@ begin
     Result := stTimestamp
   else if TypeNameUp = 'BFILE' then
     Result := stBinaryStream else
-  if TypeNameUp = 'NUMBER' then
-  begin
-    Result := stDouble;  { default for number types}
-    if (Scale = 0) and (Precision <> 0) then
-    begin
+  if TypeNameUp = 'NUMBER' then begin //numer is signed always
+    if (Scale = 0) and (Precision > 0) and (Precision <= 18) then begin
       if Precision <= 2 then
-        Result := stByte
+        Result := stShort
       else if Precision <= 4 then
         Result := stSmall
-      else if Precision <= 9 then
+      else if Precision <= 8 then
         Result := stInteger
-      else if Precision <= 19 then
-        Result := stLong  {!!in fact, unusable}
-    end;
+      else
+        Result := stLong
+    end else Result := stDouble;  { default for number types}
   end
   else if StartsWith(TypeNameUp, 'INTERVAL') then
     Result := stTimestamp
