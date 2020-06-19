@@ -3,9 +3,12 @@ program ZDbcProxyServer;
 {$mode delphi}{$H+}
 
 uses
-  {$IFDEF UNIX}{$IFDEF UseCThreads}
-  cthreads,
-  {$ENDIF}{$ENDIF}
+  {$IFDEF UNIX}
+  cwstring,
+    {$IFDEF UseCThreads}
+    cthreads,
+    {$ENDIF}
+  {$ENDIF}
   Classes, SysUtils, CustApp,
   { you can add units after this }
   //{fpc}lazutils,
@@ -118,7 +121,9 @@ end;
 var
   Application: TZDbcProxyServer;
 begin
-  SetMultiByteConversionCodePage(65001);
+  {$IFDEF WINDOWS}
+  SetMultiByteConversionCodePage(CP_UTF8);
+  {$IFEND}
   Application:=TZDbcProxyServer.Create(nil);
   Application.Title:='Zeos DBC Proxy Server';
   Application.Run;
