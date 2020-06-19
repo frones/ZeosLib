@@ -122,6 +122,7 @@ type
     procedure FB_TestUpdateCounts_FromSuspendedProcedure_A;
     procedure FB_TestUpdateCounts_FromSuspendedProcedure_B;
     procedure FB_TestUpdateCounts_FromSuspendedProcedure_C;
+    procedure TestLongStatements;
   end;
 
 implementation
@@ -1199,6 +1200,54 @@ begin
       CheckEquals(4, IsolationMode, 'Expected Isolation mode to be READ COMMITTED READ CONSISTENCY (4) but got something else.')
     else
       CheckEquals(2, IsolationMode, 'Expected Isolation mode to be READ COMMITTED RECORD VERSION (2) but got something else.');
+  end;
+end;
+
+
+/// <summary>
+///   This test tests if statements longer than 64 KB work as expected.
+/// </summary>
+procedure TZTestDbcInterbaseCase.TestLongStatements;
+const
+  IDX = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+
+  SQL: String;
+  Ctr: Integer;
+  MinLen: Integer;
+begin
+  MinLen := Integer(High(Word)) + 1;
+  if Connection.GetMetadata.GetDatabaseInfo.GetMaxStatementLength > MinLen then begin
+    Statement := Connection.CreateStatement;
+    CheckNotNull(Statement, 'Couldn''t get a valid statement.');
+    Statement.SetResultSetType(rtScrollInsensitive);
+    Statement.SetResultSetConcurrency(rcReadOnly);
+
+    //Build SQL:
+    Ctr := FirstDbcIndex + 1;
+    SQL := 'select cast(' + IntToStr(FirstDbcIndex) + ' as integer) as Field' + IntToStr(FirstDbcIndex);
+    while Length(SQL) < MinLen do begin
+      SQL := SQL + ', cast(' + IntToStr(Ctr) + ' as integer) as Field' + IntToStr(Ctr);
+      Inc(Ctr);
+    end;
+
+    SQL := SQL + ' from RDB$DATABASE';
+
+    ResultSet := Statement.ExecuteQuery(SQL);
+    CheckNotNull(ResultSet);
+
+    Check(ResultSet.Next, 'Couldn''t move to the first result row.');
+
+    for Ctr := FirstDbcIndex to ResultSet.GetMetadata.GetColumnCount - FirstDbcIndex do begin
+      CheckEquals(Ctr, ResultSet.GetInt(Ctr), 'Expected the field to have its index number as its value.');
+    end;
+
+    ResultSet.Close;
+    Statement.Close;
+  end else begin
+    Check(true, 'This is a fake and cannot fail because this test can only be executed on Firebird 3.0+');
   end;
 end;
 

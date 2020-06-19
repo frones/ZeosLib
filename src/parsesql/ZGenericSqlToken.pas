@@ -140,7 +140,7 @@ var
   begin
     LastChar := #0;
     while Stream.Read(LastChar, SizeOf(Char)) > 0 do
-      if CharInSet(LastChar, ['0'..'9']) then
+      if (Ord(LastChar) >= Ord('0')) (and Ord(LastChar) <= Ord('9')) then
       begin
         ToBuf(LastChar, Result.Value);
         LastChar := #0;

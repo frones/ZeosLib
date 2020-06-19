@@ -317,6 +317,7 @@
                                 {$IF CompilerVersion >= 30} //Delphi Seattle+
                                   {$IF CompilerVersion >= 31} //Delphi Berlin+
                                     {$IF CompilerVersion >= 32} //Delphi Tokyo+
+                                      {$DEFINE WITH_TRYFINALLY_RESULT_EXCEPTION_CHECK} //the compiler is able to see through try finally block, which have nothing todo initializing the result
                                       {$DEFINE WITH_VIRTUAL_TFIELD_GETASGUID} //TField has now a virtual GetAsGUID function 
                                       {$DEFINE WITH_IProviderSupportNG}   //TDataset now supports IProviderSupportNG
                                       {$DEFINE WITH_InternalGotoBookmark_TBookmark}

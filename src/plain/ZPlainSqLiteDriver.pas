@@ -553,7 +553,7 @@ implementation
 
 {$IFNDEF ZEOS_DISABLE_SQLITE}
 
-uses ZPlainLoader, ZEncoding{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}, ZClasses, ZMessages;
+uses ZPlainLoader, ZEncoding, ZClasses, ZMessages, ZFastCode, ZSysUtils;
 
 { TZSQLiteBaseDriver }
 
@@ -638,13 +638,21 @@ begin
 end;
 
 function TZSQLiteBaseDriver.ErrorMessage(db: Psqlite): RawByteString;
+var P: PAnsiChar;
+    L: LengthInt;
 begin
-  if Assigned(sqlite3_errmsg) and Assigned(db)
-  then Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(sqlite3_errmsg(db))
-  else Result := '';
+  if Assigned(sqlite3_errmsg) and Assigned(db) then begin
+    P := sqlite3_errmsg(db);
+    if P = nil
+    then L := 0
+    else L := ZFastCode.StrLen(P);
+    Result := ZSysUtils.Trim(P,L);
+  end else Result := '';
 end;
 
 function TZSQLiteBaseDriver.ErrorString(db: Psqlite; code: Integer): RawByteString;
+var P: PAnsiChar;
+    L: LengthInt;
 begin
   if code = SQLITE_OK then
   begin
@@ -690,8 +698,13 @@ begin
     else
       Result := 'unknown error';
     end
-  else
-    Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(sqlite3_errstr(code));
+  else begin
+    P := sqlite3_errstr(code);
+    if P = nil
+    then L := 0
+    else L := ZFastCode.StrLen(P);
+    Result := ZSysUtils.Trim(P,L);
+  end;
 end;
 
 function TZSQLiteBaseDriver.Execute(db: Psqlite; const sql: PAnsiChar;

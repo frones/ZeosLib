@@ -342,7 +342,7 @@ begin
   if (not Prepared) then begin
     with FIBConnection do begin
       FStatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        GetDBHandle, GetTrHandle, GetDialect, ASQL, ConSettings, FStmtHandle); //allocate handle if required or reuse it
+        GetDBHandle, GetTrHandle, GetDialect, ASQL, Connection, FStmtHandle); //allocate handle if required or reuse it
       if FStatementType in [stSelect, stExecProc, stSelectForUpdate] then
       begin
         FResultXSQLDA := TZSQLDA.Create(Connection);
@@ -658,7 +658,7 @@ begin
     with FIBConnection do
     begin
       FStatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        GetDBHandle, GetTrHandle, GetDialect, FProcSql, ConSettings, FStmtHandle); //allocate handle if required or reuse it
+        GetDBHandle, GetTrHandle, GetDialect, FProcSql, Connection, FStmtHandle); //allocate handle if required or reuse it
 
       if FStatementType in [stSelect, stExecProc] then
         begin

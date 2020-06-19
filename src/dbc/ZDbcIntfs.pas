@@ -1805,8 +1805,10 @@ function TZDriverManager.GetClientVersion(const Url: string): Integer;
 var
   Driver: IZDriver;
 begin
+  {$IFNDEF WITH_TRYFINALLY_RESULT_EXCEPTION_CHECK}
+  Result := -1;
+  {$ENDIF}
   FDriversCS.Enter;
-  Result := 0;
   try
     Driver := InternalGetDriver(URL);
     if Driver = nil then

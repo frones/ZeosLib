@@ -254,7 +254,7 @@ function GetDBSQLDialect(const PlainDriver: IZInterbasePlainDriver;
 { Interbase statement functions}
 function PrepareStatement(const PlainDriver: IZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; TrHandle: PISC_TR_HANDLE;
-  Dialect: Word; const SQL: RawByteString; ConSettings: PZConSettings;
+  Dialect: Word; const SQL: RawByteString; const Connection: IZConnection;
   var StmtHandle: TISC_STMT_HANDLE): TZIbSqlStatementType;
 procedure PrepareResultSqlData(const PlainDriver: IZInterbasePlainDriver;
   const Dialect: Word; const SQL: RawByteString;
@@ -917,23 +917,34 @@ end;
 }
 function PrepareStatement(const PlainDriver: IZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; TrHandle: PISC_TR_HANDLE;
-  Dialect: Word; const SQL: RawByteString; ConSettings: PZConSettings;
+  Dialect: Word; const SQL: RawByteString; const Connection: IZConnection;
   var StmtHandle: TISC_STMT_HANDLE): TZIbSqlStatementType;
 var
   StatusVector: TARRAY_ISC_STATUS;
   iError : Integer; //Error for disconnect
-  L: LengthInt;
+  L,MaxLen: LengthInt;
+  ConSettings: PZConSettings;
 begin
   { Allocate an sql statement }
+  ConSettings := Connection.GetConSettings;
   if StmtHandle = 0 then
   begin
     PlainDriver.isc_dsql_allocate_statement(@StatusVector, Handle, @StmtHandle);
     CheckInterbase6Error(PlainDriver, StatusVector, ConSettings, lcOther, SQL);
   end;
   { Prepare an sql statement }
+  //get overlong string running:
+  //see request https://zeoslib.sourceforge.io/viewtopic.php?f=40&p=147689#p147689
+  //http://tracker.firebirdsql.org/browse/CORE-1117?focusedCommentId=31493&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#action_31493
   L := Length(SQL);
-  if L > High(Word) then
+  if L > High(Word) then begin//test word range overflow
+    if ZFastCode.Pos(RawByteString(#0), SQL) > 0 then
+      raise EZSQLException.Create('Statements longer than 64KB may not contain the #0 character.');
+    MaxLen := Connection.GetMetadata.GetDatabaseInfo.GetMaxStatementLength;
+    if L > MaxLen then
+      raise Exception.Create('Statements longer than ' + ZFastCode.IntToStr(MaxLen) + ' bytes are not supported by your database.');
     L := 0; //fall back to C-String behavior
+  end;
   PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
     Word(L), Pointer(SQL), Dialect, nil);
 

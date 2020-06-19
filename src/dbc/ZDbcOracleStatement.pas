@@ -200,14 +200,14 @@ begin
   N := 0;
   Result := '';
   for I := 0 to High(CachedQueryRaw) do begin
-    SelectFound := (I = 0) and (AnsiUpperCase(CachedQueryRaw[i]) = 'SELECT');
+    SelectFound := (I = 0) and (UpperCase(CachedQueryRaw[i]) = 'SELECT');
     if IsParamIndex[i] then begin
       FServerStmtCache := True;
       Inc(N);
       Result := Result + ':P' + IntToRaw(N);
     end else begin
       if SelectFound and not FServerStmtCache then
-        SelectFound := AnsiUpperCase(CachedQueryRaw[i]) <> 'WHERE';
+        SelectFound := UpperCase(CachedQueryRaw[i]) <> 'WHERE';
       Result := Result + CachedQueryRaw[i];
     end;
   end;
