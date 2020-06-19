@@ -739,6 +739,10 @@ TMYSQL_CLIENT_OPTIONS =
   PPMYSQL_STMT = ^PMYSQL_STMT;
   PMYSQL_STMT = Pointer;
 
+  /// <summary>
+  ///   Enum for specifying a MySQL fork. Possible values:
+  ///   fUnknown, fMySQL, fMariaDB, fSphinx, fPercona, fDrizzle, WebScaleSQL, OurDelta
+  /// </summary>
   TMySQLFork = (fUnknown, fMySQL, fMariaDB, fSphinx, fPercona, fDrizzle, WebScaleSQL, OurDelta);
 
 const
