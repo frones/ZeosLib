@@ -59,7 +59,7 @@ interface
 uses
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcLogging,
+  ZPlainProxyDriverIntf, ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcLogging,{$IFDEF ZEOS73UP}FmtBCD, ZVariant, {$ENDIF}
   ZDbcResultSetMetadata, ZCompatibility, XmlDoc, XmlIntf;
 
 type
@@ -73,7 +73,9 @@ type
     FRowsNode: IXMLNode;
     FFormatSettings: TFormatSettings;
   protected
-    FAnsiBuffer: {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF};
+    {$IFNDEF NEXTGEN}
+    FAnsiBuffer: AnsiString;
+    {$ENDIF}
     FWideBuffer: ZWideString;
     FStringBuffer: String;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
@@ -493,9 +495,12 @@ begin
 end;
 
 function TZDbcProxyResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
+{$IFNDEF NEXTGEN}
 var
   Val: OleVariant;
+{$ENDIF}
 begin
+{$IFNDEF NEXTGEN}
   LastWasNull := IsNull(ColumnIndex);
 
   if not LastWasNull then begin
@@ -516,6 +521,9 @@ begin
     Len := Length(FAnsiBuffer);
     Result := @FAnsiBuffer[Low(FAnsiBuffer)];
   end;
+{$ELSE}
+  raise Exception.Create('GetPAnsiChar is not supported on Nextgen.');
+{$ENDIF}
 end;
 
 function TZDbcProxyResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
@@ -588,6 +596,7 @@ end;
 function TZDbcProxyResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var
   Val: OleVariant;
+  Val2: ZWideString;
 begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then begin
@@ -596,13 +605,15 @@ begin
   end;
 
   Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
-  Result := UTF8Encode(VarToStrDef(Val, ''));
+  Val2 := VarToStr(Val);
+  Result := UTF8Encode(Val2);
 end;
 {$ENDIF}
 
 function TZDbcProxyResultSet.GetRawByteString(ColumnIndex: Integer): RawByteString;
 var
   Val: OleVariant;
+  Val2: String;
 begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then begin
@@ -611,7 +622,8 @@ begin
   end;
 
   Val := FCurrentRowNode.ChildNodes.Get(ColumnIndex - FirstDbcIndex).Attributes[ValueAttr];
-  Result := UTF8Encode(VarToStrDef(Val, ''));
+  Val2 := VarToStr(Val);
+  Result := UTF8Encode(Val2);
 end;
 
 function TZDbcProxyResultSet.GetBinaryString(ColumnIndex: Integer): RawByteString;
@@ -1271,6 +1283,156 @@ begin
     end;
   end;
 end;
+
+{$ELSE}
+
+function TZDbcProxyResultSet.GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
+var
+  ColType: TZSQLType;
+  Idx: Integer;
+  Val: String;
+  AnsiVal: {$IFDEF NEXTGEN}RawByteString{$ELSE}AnsiString{$ENDIF};
+  Bytes: TBytes;
+  ColInfo: TZColumnInfo;
+begin
+  if LobStreamMode <> lsmRead then
+    raise Exception.Create('No lob stream mode besides lsmRead is supported.');
+
+  {$IFNDEF DISABLE_CHECKING}
+    CheckColumnConvertion(ColumnIndex, stInteger);
+  {$ENDIF}
+  LastWasNull := IsNull(ColumnIndex);
+
+  if LastWasNull then begin
+    Result := nil;
+    exit;
+  end;
+
+  Idx := ColumnIndex - FirstDbcIndex;
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
+  ColInfo := TZColumnInfo(ColumnsInfo.Items[Idx]);
+  ColType := ColInfo.ColumnType;
+  case ColType of
+    stBinaryStream: begin
+      Bytes := DecodeBase64(Val);
+      Result := TZAbstractBlob.CreateWithData(@Bytes[0], Length(Bytes)) as IZBlob;
+    end;
+    stAsciiStream, stUnicodeStream: begin
+      if Val <> '' then
+         Result := TZAbstractCLob.CreateWithData(@Val[Low(Val)], Length(Val), GetConSettings) as IZBlob
+       else
+         Result := TZAbstractCLob.CreateWithData(nil, 0, GetConSettings) as IZBlob;
+    end;
+    else begin
+      raise Exception.Create('GetBlob is not supported for ' + ColInfo.GetColumnTypeName + ' (yet). Column: ' + ColInfo.ColumnLabel);
+    end;
+  end;
+end;
+{$ENDIF}
+
+
+{$IFDEF ZEOS73UP}
+procedure RaiseUnsupportedException;
+begin
+  raise EZSQLException.Create(SUnsupportedOperation);
+end;
+
+function TZDbcProxyResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
+var
+  ColType: TZSQLType;
+  Idx: Integer;
+  Val: String;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stInteger);
+{$ENDIF}
+  LastWasNull := IsNull(ColumnIndex);
+
+  if LastWasNull then begin
+    Result := 0;
+    exit;
+  end;
+
+  Idx := ColumnIndex - FirstDbcIndex;
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
+  ColType := TZColumnInfo(ColumnsInfo.Items[Idx]).ColumnType;
+  case ColType of
+    stBoolean:
+      Result := BoolToInt(StrToBool(Val));
+    stByte, stShort, stWord, stSmall, stLongWord, stInteger:
+      Result := StrToUInt(Val);
+    stULong:
+      Result := StrToUInt(Val);
+    stLong:
+      Result := StrToInt(Val);
+    stFloat, stDouble, stCurrency, stBigDecimal:
+      Result := Trunc(StrToFloat(Val, FFormatSettings));
+    stString, stUnicodeString, stAsciiStream, stUnicodeStream:
+      Result := StrToUInt(Val);
+    stDate:
+      Result := Trunc(StrToDate(Val, FFormatSettings));
+    stTime:
+      Result := 0;
+    stTimestamp:
+      Result := Trunc(StrToDateTime(Val, FFormatSettings));
+    else
+      Result := 0;
+  end;
+end;
+
+procedure TZDbcProxyResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+begin
+  Result := GetBigDecimal(ColumnIndex)
+end;
+
+procedure TZDbcProxyResultSet.GetGUID(ColumnIndex: Integer; var Result: TGUID);
+var
+  ColType: TZSQLType;
+  Idx: Integer;
+  Val: String;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stInteger);
+{$ENDIF}
+  LastWasNull := IsNull(ColumnIndex);
+
+  if LastWasNull then begin
+    Result := StringToGUID('{00000000-0000-0000-0000-000000000000}');
+    exit;
+  end;
+
+  Idx := ColumnIndex - FirstDbcIndex;
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
+  ColType := TZColumnInfo(ColumnsInfo.Items[Idx]).ColumnType;
+
+  case ColType of
+    stGUID:
+      Result := StringToGUID(Val);
+    else
+      RaiseUnsupportedException;
+  end;
+end;
+
+function TZDbcProxyResultSet.GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte;
+begin
+  raise Exception.Create('GetBytes is not supported (yet)');
+end;
+
+procedure TZDbcProxyResultSet.GetDate(ColumnIndex: Integer; var Result: TZDate);
+begin
+  DecodeDateTimeToDate(GetDate(ColumnIndex), Result);
+end;
+
+procedure TZDbcProxyResultSet.GetTime(ColumnIndex: Integer; Var Result: TZTime);
+begin
+  DecodeDateTimeToTime(GetDate(ColumnIndex), Result);
+end;
+
+procedure TZDbcProxyResultSet.GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp);
+begin
+  DecodeDateTimeToTimeStamp(GetDate(ColumnIndex), Result);
+end;
+{$ENDIF}
 
 function TZDbcProxyResultSet.GetUpdateCount: Integer;
 var

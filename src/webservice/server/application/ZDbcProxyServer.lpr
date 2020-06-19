@@ -9,11 +9,11 @@ uses
   Classes, SysUtils, CustApp,
   { you can add units after this }
   //{fpc}lazutils,
-  {wst}server_listener, fpc_http_server, server_service_soap,
+  {wst}server_listener, fpc_http_server, server_service_soap, zdbc,
   {synapse}
   {local}zeosproxy, zeosproxy_binder, zeosproxy_imp, DbcProxyUtils,
   DbcProxyConnectionManager, DbcProxyConfigManager, ZDbcProxyManagement,
-  ZDbcInterbase6;
+  ZDbcInterbase6, ZDbcPostgreSql;
 
 type
 
@@ -40,7 +40,14 @@ procedure TZDbcProxyServer.DoRun;
 var
   ErrorMsg: String;
   AppObject : TwstListener;
+  configFile: String;
 begin
+  {$IFDEF LINUX}
+  configFile := '/etc/zeosproxy.ini';
+  {$ELSE}
+  configFile := ExtractFilePath(ParamStr(0)) + ZDbcProxy.ini;
+  {$ENDIF}
+
   // quick check parameters
   ErrorMsg:=String(CheckOptions('h', 'help'));
   if ErrorMsg<>'' then begin
@@ -60,7 +67,7 @@ begin
 
   ConnectionManager := TDbcProxyConnectionManager.Create;
   ConfigManager := TDbcProxyConfigManager.Create;
-  ConfigManager.LoadConfigInfo(ExtractFilePath(ParamStr(0)) + 'ZDbcProxy.ini');
+  ConfigManager.LoadConfigInfo(configFile);
 
   //Server_service_RegisterBinaryFormat();
   Server_service_RegisterSoapFormat();
