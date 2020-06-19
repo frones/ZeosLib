@@ -51,13 +51,9 @@
 
 unit ZPlainProxyDriverIntf;
 
-{$IFDEF FPC}
-{$mode delphi}{$H+}
-{$ENDIF}
+{$I ZPlain.inc}
 
 interface
-
-{$I ZPlain.inc}
 
 {$IFNDEF ZEOS_DISABLE_PROXY}
 

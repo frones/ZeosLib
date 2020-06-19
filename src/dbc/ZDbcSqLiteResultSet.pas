@@ -480,19 +480,20 @@ end;
 function TZSQLiteResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var P: PAnsiChar;
   Len: NativeUint;
-begin //rewritten because of performance reasons to avoid localized the RBS before
-  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}) = SQLITE_NULL;
-  if LastWasNull then
-    Result := ''
-  else
-  begin
-    P := GetPAnsiChar(ColumnIndex, Len);
-    {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-    ZSetString(P, Len, result);
-    {$ELSE}
-    System.SetString(Result, P, Len);
-    {$ENDIF}
-  end;
+begin
+  P := GetPAnsiChar(ColumnIndex, Len);
+  {$IFDEF WITH_VAR_INIT_WARNING}
+  Result := '';
+  {$ENDIF}
+  if P <> nil
+  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+  then ZSetString(P, Len, result)
+  {$ELSE}
+  then System.SetString(Result, P, Len)
+  {$ENDIF}
+  {$IFNDEF WITH_VAR_INIT_WARNING}
+  else Result := '';
+  {$ENDIF}
 end;
 
 
