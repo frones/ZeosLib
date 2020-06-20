@@ -140,7 +140,7 @@ type
     Fconn: TPGconn;
 //  Jan: Not sure wether we still need that. What was its intended use?
 //    FBeginRequired: Boolean;
-    FTypeList, FSavePoints: TStrings;
+    FTypeList: TStrings;
     FDomain2BaseTypMap: TZOID2OIDMapList;
     FOidAsBlob, Finteger_datetimes: Boolean;
     FServerMajorVersion: Integer;
@@ -380,7 +380,6 @@ begin
   FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
   FCheckFieldVisibility := StrToBoolEx(Info.Values[ConnProps_CheckFieldVisibility]);
   FNoTableInfoCache := StrToBoolEx(Info.Values[ConnProps_NoTableInfoCache]);
-  FSavePoints := TStringList.Create;
 
   FNoticeProcessor := NoticeProcessorDispatcher;
   FNoticeReceiver  := NoticeReceiverDispatcher;
@@ -529,7 +528,6 @@ begin
   inherited Destroy;
   FreeAndNil(FPreparedStatementTrashBin);
   FreeAndNil(FProcedureTypesCache);
-  FreeAndNil(FSavePoints);
   FreeAndNil(FDomain2BaseTypMap);
 end;
 

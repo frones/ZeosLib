@@ -630,7 +630,6 @@ begin
     S := 'RELEASE SAVEPOINT '+ {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
     ExecuteImmediat(S, lcTransaction);
     FSavePoints.Delete(FSavePoints.Count-1);
-    FExplicitTransactionCounter := fSavepoints.Count +1;
   end else if FTransaction <> nil then try
     if TZFirebirdConnection(FOwner).FHardCommit or
       ((FOpenCursors.Count = 0) and (FOpenUncachedLobs.Count = 0)) or
@@ -645,7 +644,6 @@ begin
       FTransaction.commitRetaining(FStatus);
       ReleaseTransaction(Self);
     end;
-    FExplicitTransactionCounter := 0;
 	  if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
       HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(FStatus.getErrors), sCommitMsg, Self);
   finally
@@ -713,7 +711,6 @@ begin
       FTransaction.rollbackRetaining(FStatus);
       ReleaseTransaction(Self);
     end;
-    FExplicitTransactionCounter := 0;
 	  if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
       HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(FStatus.getErrors), sRollbackMsg, Self);
   finally
@@ -749,7 +746,6 @@ begin
     ExecuteImmediat('SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S), lcTransaction);
     Result := FSavePoints.Add(S)+2;
   end;
-  FExplicitTransactionCounter := Result;
 end;
 
 function TZFirebirdTransaction.TestCachedResultsAndForceFetchAll: Boolean;

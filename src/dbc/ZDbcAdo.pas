@@ -88,7 +88,6 @@ type
     IZAdoConnection, IZTransaction)
   private
     fServerProvider: TZServerProvider;
-    FSavePoints: TStrings;
     FTransactionLevel: Integer;
   protected
     FAdoConnection: ZPlainAdo.Connection;
@@ -200,8 +199,7 @@ procedure TZAdoConnection.InternalCreate;
 begin
   CoInit;
   FAdoConnection := CoConnection.Create;
-  Self.FMetadata := TZAdoDatabaseMetadata.Create(Self, URL);
-  FSavePoints := TStringList.Create;
+  FMetadata := TZAdoDatabaseMetadata.Create(Self, URL);
 end;
 
 {**
@@ -209,11 +207,12 @@ end;
 }
 destructor TZAdoConnection.Destroy;
 begin
-  Close;
-  FAdoConnection := nil;
-  inherited Destroy;
-  FSavePoints.Free;
-  CoUninit;
+  try
+    inherited Destroy;
+  finally
+    FAdoConnection := nil;
+    CoUninit;
+  end;
 end;
 
 procedure TZAdoConnection.ExecuteImmediat(const SQL: UnicodeString;

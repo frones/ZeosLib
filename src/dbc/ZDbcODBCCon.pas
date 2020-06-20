@@ -100,7 +100,6 @@ type
     fODBCVersion: SQLUSMALLINT;
     fArraySelectSupported, fArrayRowSupported: Boolean;
     fServerProvider: TZServerProvider;
-    FSavePoints: TStrings;
     FRestartTransaction: Boolean;
     FWeakODBCConRefOfSelf: Pointer;
     procedure DetermineAttachmentCharset;
@@ -368,7 +367,6 @@ begin
   inherited Destroy;
   if Assigned(fHENV) then
     fODBCPlainDriver.SQLFreeHandle(SQL_HANDLE_ENV, fHENV);
-  FSavePoints.Free;
   ClearWarnings;
 end;
 
@@ -514,7 +512,6 @@ end;
 
 procedure TZAbstractODBCConnection.InternalCreate;
 begin
-  FSavePoints := TStringList.Create;
   fODBCPlainDriver := TZODBC3PlainDriver(GetIZPlainDriver.GetInstance);
   fHENV := nil;
   fHDBC := nil;

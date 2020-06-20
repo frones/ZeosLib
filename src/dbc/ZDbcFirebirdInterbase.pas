@@ -88,7 +88,6 @@ type
     procedure RegisterOpenUnCachedLob(const Lob: IZlob);
     procedure DeRegisterOpenCursor(const CursorRS: IZResultSet);
     procedure DeRegisterOpenUnCachedLob(const Lob: IZlob);
-    function GetTransactionLevel: Integer;
     function GetOpenCursorCount: Integer;
     function GetTPB: RawByteString;
     function IsReadOnly: Boolean;
@@ -192,7 +191,6 @@ type
     FOpenCursors, FOpenUncachedLobs: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     FReadOnly, FAutoCommit: Boolean;
     FTPB: RawByteString;
-    FExplicitTransactionCounter: Integer;
     {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZInterbaseFirebirdConnection;
   protected
     function TxnIsStarted: Boolean; virtual; abstract;
@@ -1428,7 +1426,9 @@ end;
 
 function TZInterbaseFirebirdTransaction.GetTransactionLevel: Integer;
 begin
-  Result := FExplicitTransactionCounter;
+  if TxnIsStarted
+  then Result := Ord(not FAutoCommit)+FSavePoints.Count
+  else Result := -1;
 end;
 
 function TZInterbaseFirebirdTransaction.GetOpenCursorCount: Integer;

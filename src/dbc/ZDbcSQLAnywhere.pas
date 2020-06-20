@@ -90,7 +90,6 @@ type
     IZConnection, IZTransaction, IZSQLAnywhereConnection)
   private
     FSQLAnyPlainDriver: TZSQLAnywherePlainDriver;
-    FSavePoints: TStrings;
     Fa_sqlany_connection: Pa_sqlany_connection;
     Fa_sqlany_interface_context: Pa_sqlany_interface_context;
     Fapi_version: Tsacapi_u32;
@@ -108,8 +107,6 @@ type
     function GetPlainDriver: TZSQLAnywherePlainDriver;
     function Get_api_version: Tsacapi_u32;
   public
-    destructor Destroy; override;
-
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareCallWithParams(const Name: String; Info: TStrings):
       IZCallableStatement;
@@ -358,12 +355,6 @@ begin
   Result := TZSQLAnywhereStatement.Create(Self, Info);
 end;
 
-destructor TZSQLAnywhereConnection.Destroy;
-begin
-  inherited;
-  FSavePoints.Free;
-end;
-
 function TZSQLAnywhereConnection.DetermineASACharSet: String;
 var
   Stmt: IZStatement;
@@ -422,7 +413,6 @@ procedure TZSQLAnywhereConnection.InternalCreate;
 begin
   FSQLAnyPlainDriver := TZSQLAnywherePlainDriver(GetIZPlainDriver.GetInstance);
   Self.FMetadata := TZASADatabaseMetadata.Create(Self, URL);
-  FSavePoints := TStringList.Create;
   Fapi_version := SQLANY_API_VERSION_5;
 end;
 
