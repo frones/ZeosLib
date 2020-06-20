@@ -71,7 +71,7 @@ type
 
   { TZAbstractStatement }
 
-  TZAbstractStatement = class(TZCodePagedObject, IZStatement, IZLoggingObject,
+  TZAbstractStatement = class(TZImmediatelyReleasableObject, IZStatement, IZLoggingObject,
     IImmediatelyReleasable)
   private
     FMaxFieldSize: Integer;

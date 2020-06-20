@@ -90,6 +90,7 @@ type
     procedure AssignColumnsInfo(const Dest: TObjectList);
     function GetConnection: IZPostgreSQLConnection;
   end;
+
   {** Implements PostgreSQL ResultSet. }
   TZPostgreSQLResultSet = class(TZAbstractReadOnlyResultSet_A, IZResultSet,
     IZPostgresResultSet)
@@ -282,10 +283,8 @@ var
   L: NativeUInt;
   P, pgBuff: PAnsiChar;
   RNo, H, I: Integer;
-  BCD: TBCD;
-  TS: TZTimeStamp absolute BCD;
-  {$IFNDEF ENDIAN_BIG}UUID: TGUID absolute BCD;{$ENDIF}
-  DT: TDateTime absolute BCD;
+  TS: TZTimeStamp;
+  DT: TDateTime absolute TS;
 label ProcBts, jmpDate, jmpTime, jmpTS, jmpOIDBLob;
 begin
   RNo := PGRowNo;
@@ -298,7 +297,6 @@ begin
     if Pointer(JSONWriter.Fields) = nil then
       C := I else
       C := JSONWriter.Fields[i];
-    L := PGRowNo;
     if FPlainDriver.PQgetisnull(Fres, RNo, C) <> 0 then
       if JSONWriter.Expand then begin
         if not (jcsSkipNulls in JSONComposeOptions) then begin
@@ -325,8 +323,10 @@ begin
             stFloat       : JSONWriter.AddSingle(PG2Single(P));
             stDouble      : JSONWriter.AddDouble(PG2Double(P));
             stBigDecimal  : begin
-                              PGNumeric2BCD(P, BCD);
-                              JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), BCDToRaw(BCD, PAnsiChar(FByteBuffer), '.'));
+                              pgBuff := PAnsiChar(FByteBuffer)+SizeOf(TBCD);
+                              PGNumeric2BCD(P, PBCD(FByteBuffer)^);
+                              JSONWriter.AddNoJSONEscape(pgBuff,
+                                BCDToRaw(PBCD(FByteBuffer)^, pgBuff, '.'));
                             end;
             stBytes,
             stBinaryStream: if TypeOID = BYTEAOID then
@@ -343,11 +343,11 @@ jmpOIDBLob:                   PIZlob(FByteBuffer)^ := TZPostgreSQLOidBlob.Create
             stGUID        : begin
                               JSONWriter.Add('"');
                               {$IFNDEF ENDIAN_BIG} {$Q-} {$R-}
-                              UUID.D1 := PG2Cardinal(@PGUID(P).D1); //what a *beep* swapped digits! but only on reading
-                              UUID.D2 := (PGUID(P).D2 and $00FF shl 8) or (PGUID(P).D2 and $FF00 shr 8);
-                              UUID.D3 := (PGUID(P).D3 and $00FF shl 8) or (PGUID(P).D3 and $FF00 shr 8);
-                              PInt64(@UUID.D4)^ := PInt64(@PGUID(P).D4)^;
-                              JSONWriter.Add(UUID);//
+                              PGUID(fByteBuffer)^.D1 := PG2Cardinal(@PGUID(P).D1); //what a *beep* swapped digits! but only on reading
+                              PGUID(fByteBuffer)^.D2 := (PGUID(P).D2 and $00FF shl 8) or (PGUID(P).D2 and $FF00 shr 8);
+                              PGUID(fByteBuffer)^.D3 := (PGUID(P).D3 and $00FF shl 8) or (PGUID(P).D3 and $FF00 shr 8);
+                              PInt64(@PGUID(fByteBuffer)^.D4)^ := PInt64(@PGUID(P).D4)^;
+                              JSONWriter.Add(PGUID(fByteBuffer)^);
                               {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
                               {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
                               {$ELSE}
@@ -499,7 +499,7 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                               if jcoDATETIME_MAGIC in JSONComposeOptions
                               then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                               else JSONWriter.Add('"');
-                              JSONWriter.AddShort('T');
+                              JSONWriter.Add('T');
                               if ((P+8)^ <> '.') or not (jcoMilliseconds in JSONComposeOptions) //time zone ?
                               then JSONWriter.AddNoJSONEscape(P, 8)
                               else JSONWriter.AddNoJSONEscape(P, 12);
@@ -515,11 +515,12 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                               if jcoDATETIME_MAGIC in JSONComposeOptions
                               then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                               else JSONWriter.Add('"');
-                              JSONWriter.AddNoJSONEscape(P, 10);
+                              (P+10)^ := 'T';
+                              {JSONWriter.AddNoJSONEscape(P, 10);
                               JSONWriter.Add('T');
                               if ((P+19)^ <> '.') or not (jcoMilliseconds in JSONComposeOptions)
                               then JSONWriter.AddNoJSONEscape(P+11, 8)
-                              else JSONWriter.AddNoJSONEscape(P+11, 12);
+                              else} JSONWriter.AddNoJSONEscape(P{+11, 12});
                               JSONWriter.Add('"');
                             end;
             stString,

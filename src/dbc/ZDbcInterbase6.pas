@@ -146,6 +146,7 @@ type
     procedure Commit;
     procedure Rollback;
     function StartTransaction: Integer;
+    function GetConnection: IZConnection;
   public { IZIBTransaction }
     procedure DoStartTransaction;
     function GetTrHandle: PISC_TR_HANDLE;
@@ -278,14 +279,16 @@ begin
       ISC_TR_HANDLE, Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF},
       Pointer(SQL), GetDialect, nil);
     if (Status <> 0) or (FStatusVector[2] = isc_arg_warning) then
-      HandleErrorOrWarning(lcExecPrepStmt, @FStatusVector, SQL, Self);
+      HandleErrorOrWarning(LoggingCategory, @FStatusVector, SQL, Self);
   DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
 end;
 
 procedure TZInterbase6Connection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 begin
-  ExecuteImmediat(SQL, GetActiveTransaction.GetTrHandle, LoggingCategory);
+  if LoggingCategory <> lcExecute
+  then ExecuteImmediat(SQL, GetActiveTransaction.GetTrHandle, LoggingCategory)
+  else CreateStatement.ExecuteUpdate(SQL)
 end;
 
 {**
@@ -658,16 +661,15 @@ var ImmediatelyReleasable: IImmediatelyReleasable;
   B: Boolean;
 begin
   FHandle := 0;
-  for B := False to True do begin
+  for B := False to True do
     if (fActiveTransaction[b] <> nil) and
        (fActiveTransaction[b].QueryInterface(IImmediatelyReleasable, ImmediatelyReleasable) = S_OK) and
         (ImmediatelyReleasable <> Sender) then
         ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
-    while fTransactions[b].Count > 0 do begin
-      fTransactions[b][0].QueryInterface(IImmediatelyReleasable, ImmediatelyReleasable);
-      if ImmediatelyReleasable <> Sender then
-        ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
-    end;
+  while fTransactions.Count > 0 do begin
+    fTransactions[0].QueryInterface(IImmediatelyReleasable, ImmediatelyReleasable);
+    if ImmediatelyReleasable <> Sender then
+      ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
   end;
   inherited ReleaseImmediat(Sender, AError);
 end;
@@ -775,7 +777,7 @@ begin
     if fActiveTransaction[ReadOnly] = nil then begin
       TA := CreateTransaction(AutoCommit, ReadOnly, TransactIsolationLevel, Info);
       TA.QueryInterface(IZInterbaseFirebirdTransaction, fActiveTransaction[ReadOnly]);
-      fTransactions[ReadOnly].Add(TA);
+      fTransactions.Add(TA);
     end;
     fActiveTransaction[ReadOnly].QueryInterface(IZIBTransaction, Result);
   end else
@@ -808,6 +810,8 @@ function TZInterbase6Connection.CreateTransaction(AutoCommit, ReadOnly: Boolean;
   TransactIsolationLevel: TZTransactIsolationLevel;
   Params: TStrings): IZTransaction;
 begin
+  if Params = nil then
+    Params := Info;
   if FTPBs[AutoCommit][ReadOnly][TransactIsolationLevel] = EmptyRaw then
     FTPBs[AutoCommit][ReadOnly][TransactIsolationLevel] := GenerateTPB(AutoCommit, ReadOnly, TransactIsolationLevel, Params);
   Result := TZIBTransaction.Create(Self, AutoCommit, ReadOnly, FTPBs[AutoCommit][ReadOnly][TransactIsolationLevel]);
@@ -863,6 +867,12 @@ end;
 procedure TZIBTransaction.DoStartTransaction;
 begin
   GetTrHandle;
+end;
+
+function TZIBTransaction.GetConnection: IZConnection;
+begin
+  Result := FOwner as TZInterbase6Connection;
+  FOwner.SetActiveTransaction(Self);
 end;
 
 function TZIBTransaction.GetTrHandle: PISC_TR_HANDLE;

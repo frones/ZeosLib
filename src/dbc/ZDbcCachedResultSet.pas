@@ -81,6 +81,9 @@ type
       const OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
+
+    procedure SetReadOnlyTransaction(const Value: IZTransaction);
+    procedure SetReadWriteTransaction(const Value: IZTransaction);
   end;
 
   {** Represents a cached result set. }

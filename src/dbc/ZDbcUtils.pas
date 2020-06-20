@@ -78,7 +78,7 @@ type
   TBCDDynArray = array of TBCD;
 
   PDB_NUMERIC = ^TDB_NUMERIC;
-  TDB_NUMERIC = record { oledb&odbc little enadian / dblib big endian}
+  TDB_NUMERIC = record { oledb&odbc little endian / dblib(freetds&sybase) big endian}
     precision:  Byte;
     scale:      Byte;
     sign:       Byte; {1 if positive, 0 if negative }

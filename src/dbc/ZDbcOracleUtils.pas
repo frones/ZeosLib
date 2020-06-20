@@ -1139,17 +1139,17 @@ begin
     Result := stTimestamp
   else if TypeNameUp = 'BFILE' then
     Result := stBinaryStream else
-  if TypeNameUp = 'NUMBER' then begin
-    if (Scale = 0) and (Precision > 0) and (Precision < 20) then begin
+  if TypeNameUp = 'NUMBER' then begin //numer is signed always
+    if (Scale = 0) and (Precision > 0) and (Precision <= 18) then begin
       if Precision <= 2 then
-        Result := stByte
+        Result := stShort
       else if Precision <= 4 then
         Result := stSmall
-      else if Precision <= 9 then
+      else if Precision <= 8 then
         Result := stInteger
       else
         Result := stLong
-    end else if (Scale >= 0) and (Scale <= 4) and (Precision > 0) and (Precision <= sAlignCurrencyScale2Precision[Scale]) then
+    end else if (Scale >= 0) and (Scale <= 4) and (Precision > 0) and (Precision < sAlignCurrencyScale2Precision[Scale]) then
       Result := stCurrency
     else
       Result := stBigDecimal;  { default for number types}
@@ -1213,7 +1213,7 @@ begin
                     DataType := SQLT_INT;
                     DataSize := SizeOf(SmallInt);
                   end;
-            5..9: begin //(-)99999..(-)999999999
+            5..9: begin //(-)99999..(-)999.999.999
                     Result := stInteger; // -2147483648..2.147.484.647
                     DataType := SQLT_INT;
                     DataSize := SizeOf(Integer);

@@ -75,6 +75,7 @@ type
   }
   TZUpdateSQL = class(TComponent, IZCachedResolver)
   private
+    FTransactions: array[Boolean] of IZTransaction;
     FDataSet: TDataSet;
 
     FDeleteSQL: TZSQLStrings;
@@ -136,6 +137,9 @@ type
       const RefreshResultSet: IZResultSet; const RefreshRowAccessor: TZRowAccessor);
 
     procedure DefineProperties(Filer: TFiler); override;
+
+    procedure SetReadOnlyTransaction(const Value: IZTransaction);
+    procedure SetReadWriteTransaction(const Value: IZTransaction);
     procedure CalculateDefaults(const Sender: IZCachedResultSet;
       const RowAccessor: TZRowAccessor);
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
@@ -368,6 +372,16 @@ end;
 procedure TZUpdateSQL.SetParamsList(Value: TParams);
 begin
   FParams.AssignValues(Value);
+end;
+
+procedure TZUpdateSQL.SetReadOnlyTransaction(const Value: IZTransaction);
+begin
+  FTransactions[True] := Value;
+end;
+
+procedure TZUpdateSQL.SetReadWriteTransaction(const Value: IZTransaction);
+begin
+  FTransactions[False] := Value;
 end;
 
 procedure TZUpdateSQL.SetRefreshSQL(Value: TStrings);

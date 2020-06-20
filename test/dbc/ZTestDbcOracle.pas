@@ -520,7 +520,7 @@ begin
   CheckEquals('-3.402823466E38', ResultSet.GetString(number_values_n_real_Index));
   //CheckEquals(-1.7976931348623157E38, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
   CheckEquals(-21474836.48, ResultSet.GetCurrency(number_values_n_money_Index));
-  Check(ResultSet.Next);
+  Check(ResultSet.Next, 'There is a row');
   //2,-128,-32768,-2147483648,-9223372036854775808, -11111.1111,
 	//-1.175494351E-38, -1.175494351E-38, -2.2250738585072014E-38, 21474836.47
   CheckEquals(2, ResultSet.GetInt(number_values_n_id_Index));
@@ -536,7 +536,7 @@ begin
   CheckEquals(-1.175494351E-38, ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
   CheckEquals(-2.2250738585072014E-38, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
   CheckEquals(21474836.47, ResultSet.GetCurrency(number_values_n_money_Index));
-  Check(ResultSet.Next);
+  Check(ResultSet.Next, 'There is a row');
   //3, 0, 0, 0, 0, 0, 0, 0, 0, '0'
   CheckEquals(3, ResultSet.GetInt(number_values_n_id_Index));
   CheckEquals(0, ResultSet.GetInt(number_values_n_tint_Index));
@@ -551,7 +551,7 @@ begin
   CheckEquals(0, ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
   CheckEquals(0, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
   CheckEquals(0, ResultSet.GetCurrency(number_values_n_money_Index));
-  Check(ResultSet.Next);
+  Check(ResultSet.Next, 'There is a row');
   //4, 128, 32767, 2147483647, 9223372036854775807, 11111.1111,
 	//3.402823466E+38, 3.402823466E+38, 1.7976931348623157E+38, -922337203685477.5808
   CheckEquals(4, ResultSet.GetInt(number_values_n_id_Index));
@@ -567,7 +567,7 @@ begin
   CheckEquals('3.402823466E38', ResultSet.GetString(number_values_n_real_Index));
   //CheckEquals(1.7976931348623157E+38, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
   CheckEquals(-922337203685477.5808, ResultSet.GetCurrency(number_values_n_money_Index));
-  Check(ResultSet.Next);
+  Check(ResultSet.Next, 'There is a row');
   //5, 128, 32767, 147483647, 9223372036854775807,  99999.9999,
 	//1.175494351E-38, 1.175494351E-38, 2.2250738585072014E-38, 922337203685477.5807
   CheckEquals(5, ResultSet.GetInt(number_values_n_id_Index));
@@ -583,7 +583,7 @@ begin
   CheckEquals(1.175494351E-38, ResultSet.GetFloat(number_values_n_real_Index), FLOAT_COMPARE_PRECISION_SINGLE);
   CheckEquals(2.2250738585072014E-38, ResultSet.GetDouble(number_values_n_dprecision_Index), FLOAT_COMPARE_PRECISION);
   CheckEquals(922337203685477.5807, ResultSet.GetCurrency(number_values_n_money_Index));
-  Check(not ResultSet.Next);
+  CheckFalse(ResultSet.Next, 'There is no row');
 end;
 
 {**

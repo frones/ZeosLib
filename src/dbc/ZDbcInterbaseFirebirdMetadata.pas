@@ -57,7 +57,7 @@ interface
 
 {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD} //if set we have an empty unit
 uses
-  {$IFDEF WITH_UNIT_NAMESPACES}System.Types,{$ELSE}Types,{$ENDIF} Classes, SysUtils, StrUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
+  Types, Classes, SysUtils, StrUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
   ZDbcInterbase6, ZEncoding;
 
 type

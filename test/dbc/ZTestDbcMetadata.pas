@@ -662,9 +662,9 @@ begin
     end;
   end;
  
-  ResultSet := MD.GetSequences(Catalog, Schema, 'GEN\_ID');
+  ResultSet := MD.GetSequences(Catalog, Schema, 'GEN_ID');
   PrintResultSet(ResultSet, False);
-  Check(ResultSet.Next, 'There should be a sequence "GEN\_ID"');
+  Check(ResultSet.Next, 'There should be a sequence "GEN_ID"');
   CheckEquals(CatalogNameIndex, Resultset.FindColumn('SEQUENCE_CAT'));
   CheckEquals(SchemaNameIndex, Resultset.FindColumn('SEQUENCE_SCHEM'));
   CheckEquals(SequenceNameIndex, Resultset.FindColumn('SEQUENCE_NAME'));
@@ -684,7 +684,7 @@ begin
     Exit;
   end;
 
-  ResultSet := MD.GetTriggers(Catalog, Schema, '', 'INSERT\_RETURNING\_BI');
+  ResultSet := MD.GetTriggers(Catalog, Schema, '', 'INSERT_RETURNING_BI');
   PrintResultSet(ResultSet, False);
   Check(ResultSet.Next, 'There should be a trigger "INSERT_RETURNING_BI"');
 

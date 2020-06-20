@@ -61,7 +61,7 @@ uses ZDbcIntfs;
 //EH @ Fr0sT and aehimself
 //just a proposal which is not related to the docs you guys are planning
 //it would be nice to have a PropertyEditor possibility for the DataSet guys
-//we could define each prop to a rercord. in initialization part of the
+//we could define each prop to a record. in initialization part of the
 //PropertyEditor unit we could load them into "something"
 //much smarter would be to define all records into an static record of TZProperty
 //like TZPropertyArray = Array[0..x] of TZProperty = ( ...... add all of them )
@@ -69,14 +69,45 @@ uses ZDbcIntfs;
 //forget to add that prop to the Editor unit.. would the docs work for array elements too?
 //It's just an Proposal
 Type
-  TZPropertyType = (
-    ptEmpty,
-    ptBool,
-    ptInteger,
-    ptString,
-    ptBoolOrString);
+  TZPropertyValueType = (
+    pvtEmpty,
+    pvtBool,
+    pvtNumber,
+    pvtString,
+    pvtBoolOrString);
+
+  TZPropertyLevelTypes = set of (pltConnection, pltTransaction, pltStatement);
+
+  PZPropertyProvider = ^TZPropertyProvider;
+  TZPropertyProvider = record
+    Provider: TZServerProvider;
+    MinimumServerVersion: Integer;
+    MinimumClientVersion: Integer;
+    MinimumProtocolVersion: Integer;
+  end;
+  PZPropertyProviderArray = ^TZPropertyProviderArray;
+  TZPropertyProviderArray = array[Byte] of TZPropertyProvider;
+
+  TZPropertyProviders = record
+    Count: Cardinal;
+    Items: PZPropertyProviderArray;
+  end;
+
+  PProtocolArray = ^TProtocolArray;
+  TProtocolArray = array[Byte] of String;
+
+  TProtocols = record
+    Count: Cardinal;
+    Items: PProtocolArray;
+  end;
+
+  TZPropertyProtocols = record
+    Count: Cardinal;
+    Items: PZPropertyProviderArray;
+  end;
+
 const
-  cProptertyTypeDesc: Array[TZPropertyType] of String = (
+  cProptertyTypeDesc: Array[TZPropertyValueType] of String = (
     'no value expected',
     'boolean expresson like ''Y''/''YES''/''T''/''TRUE''/''ON''/<>0 in any case to enable, any other',
     'any ordinal number',
@@ -85,34 +116,20 @@ const
 type
   PZProperty = ^TZProperty;
   TZProperty = Record
-    _Type: TZPropertyType;
     Name: String;
-    Porpose: String;
+    Purpose: String;
+    ValueType: TZPropertyValueType;
+    LevelTypes: TZPropertyLevelTypes;
+    Providers: TZPropertyProviders;
+    Protocols: TProtocols;
   End;
-
-  TZServerProviders = set of TZServerProvider;
-  TZConnProperty = record
-    Prop: TZProperty;
-    Providers: TZServerProviders;
-  end;
 
 const
   ProposalConst: TZProperty = (
-    _Type: ptEmpty;
+    Name: 'proposal';
+    Purpose: 'do what you want';
+    ValueType: pvtEmpty);
     //add Doc here ?
-    Name: 'proposal';
-    Porpose: 'do what you want');
-
-const ZPropertiesArray: array[0..1] of TZProperty = (
-  (
-    _Type: ptEmpty;
-    Name: 'proposal';
-    Porpose: 'do what you want you have free hand, open your mind (% (:EH'),
-  (
-    _Type: ptBoolOrString;
-    Name: 'Idea';
-    Porpose: 'just an idea for the gui guys..... hope it helps, (:EH')
-  );
 
 { WARNING! Some of the parameter values are used directly in DBC API, so they
   must not be changed. }
@@ -265,9 +282,12 @@ const ZPropertiesArray: array[0..1] of TZProperty = (
   // Type: BOOLEAN
   // Use trusted connection
   ConnProps_TrustedConnection = 'Trusted_Connection';
+{$IFEND}
+
+{$IF DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB) OR DEFINED(ENABLE_FIREBIRD) or DEFINED(ZEOS_DISABLE_INTERBASE)}
   // Type: INT
-  // Execution timeout in seconds
-  DSProps_StatementTimeOut = 'StatementTimeOut';
+  // Execution timeout in seconds/milliseconds for FireBird
+  DSProps_StatementTimeOut = 'StatementTimeOut'; //since FB4 also
 {$IFEND}
 
 {$IF defined (ENABLE_MYSQL) or defined (ENABLE_POSTGRESQL)}
@@ -484,6 +504,15 @@ const ZPropertiesArray: array[0..1] of TZProperty = (
   { Some of the isc_tpb_* parameters are added internally according to
     Connection.TransactIsolationLevel property }
 {$IFEND}
+
+{$IFDEF ENABLE_FIREBIRD}
+  // Type: INT
+  // Session idle timeout in seconds
+  ConnProps_SessionIdleTimeOut = 'SesssionIdleTimeOut'; //since FB4
+  // Type: INT
+  // Execution timeout in seconds
+  ConnProps_StatementTimeOut = DSProps_StatementTimeOut;
+{$ENDIF ENABLE_FIREBIRD}
 
 {$IFDEF ENABLE_SQLITE}
   // Type: BOOLEAN

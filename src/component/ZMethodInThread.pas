@@ -2,7 +2,7 @@ Unit ZMethodInThread;
 
 Interface
 
-Uses SysUtils, ZAbstractRODataSet, DB, ZAbstractConnection;
+Uses SysUtils, ZAbstractRODataSet, DB, ZAbstractConnection, Classes, ZAbstractDataSet;
 
 Type
  TProcedureOfObject = Procedure Of Object;
@@ -11,33 +11,45 @@ Type
  TZMethodInThread = Class
  private
   _dataset: TZAbstractRODataset;
-  _afteropen: TDataSetNotifyEvent;
-  _methodthread: TObject;
+  _methodthread: TThread;
   _methoderror: TErrorEvent;
+  _methodfinish: TNotifyEvent;
   _threaderror: Exception;
   Procedure CheckRunning;
   Procedure InternalOpen;
   Procedure SetOnError(Const inErrorEvent: TErrorEvent);
-  Procedure Sync_MethodError;
-  Procedure Sync_AfterOpen;
+  Procedure SetOnFinish(Const inFinishEvent: TNotifyEvent);
+  Procedure StartMethodThread(inMethod: TProcedureOfObject);
   Procedure ThreadError(Sender: TObject; Error: Exception);
-  Function ThreadRunning: Boolean;
+  Procedure ThreadFinish(Sender: TObject);
+  Function GetThreadID: Cardinal;
+  Function GetThreadRunning: Boolean;
  public
   Constructor Create;
   Destructor Destroy; Override;
-  Property IsRunning: Boolean Read ThreadRunning;
+  Property IsRunning: Boolean Read GetThreadRunning;
   Property OnError: TErrorEvent Read _methoderror Write SetOnError;
+  Property OnFinish: TNotifyEvent Read _methodfinish Write SetOnFinish;
+  Property ThreadID: Cardinal Read GetThreadId;
+  Procedure ApplyUpdates(inDataSet: TZAbstractDataset);
   Procedure Connect(inConnection: TZAbstractConnection);
   Procedure Commit(inConnection: TZAbstractConnection);
   Procedure ExecSQL(inDataSet: TZAbstractRODataSet);
   Procedure Open(inDataSet: TZAbstractRODataset);
+  Procedure Post(inDataSet: TZAbstractRODataset);
+  Procedure Refresh(inDataSet: TZAbstractRODataset);
   Procedure Rollback(inConnection: TZAbstractConnection);
   Procedure WaitFor;
+  Procedure Kill(inAreYouSure: Boolean);
  End;
 
 Implementation
 
-Uses Classes, ZClasses, ZMessages;
+Uses ZDbcIntfs, ZMessages{$IF defined(MSWINDOWS)}, Windows{$ELSE IF defined(LINUX)}, Linux{$ENDIF};
+
+{$IF defined(LINUX)}
+Function pthread_kill(ThreadID: TThreadID; SigNum: Integer): Integer; Cdecl; External 'libpthread.so.0' name 'pthread_kill';
+{$ENDIF}
 
 Type
  TZMethodThread = Class(TThread)
@@ -47,14 +59,15 @@ Type
  protected
   Procedure Execute; Override;
  public
-  Constructor Create(inMethod: TProcedureOfObject; inErrorEvent: TErrorEvent); ReIntroduce;
+  Constructor Create(inMethod: TProcedureOfObject; inErrorEvent: TErrorEvent; inFinishEvent: TNotifyEvent); ReIntroduce;
  End;
 
-Constructor TZMethodThread.Create(inMethod: TProcedureOfObject; inErrorEvent: TErrorEvent);
+Constructor TZMethodThread.Create(inMethod: TProcedureOfObject; inErrorEvent: TErrorEvent; inFinishEvent: TNotifyEvent);
 Begin
- inherited Create(True);
+ inherited Create(False);
  _runmethod := inMethod;
  _onerror := inErrorEvent;
+ Self.OnTerminate := inFinishEvent;
 End;
 
 Procedure TZMethodThread.Execute;
@@ -70,9 +83,14 @@ End;
 // TZMethodInThread
 //
 
+Procedure TZMethodInThread.ApplyUpdates(inDataSet: TZAbstractDataset);
+Begin
+ StartMethodThread(inDataSet.ApplyUpdates);
+End;
+
 Procedure TZMethodInThread.CheckRunning;
 Begin
- If Self.ThreadRunning Then Raise EZSQLException.Create(SBackgroundOperationStillRunning)
+ If Self.IsRunning Then Raise EZSQLException.Create(SBackgroundOperationStillRunning)
    Else
  If Assigned(_methodthread) Then FreeAndNil(_methodthread);
 End;
@@ -84,10 +102,7 @@ End;
 
 Procedure TZMethodInThread.Connect(inConnection: TZAbstractConnection);
 Begin
- CheckRunning;
- _methodthread := TZMethodThread.Create(inConnection.Connect, ThreadError);
- (_methodthread As TZMethodThread).NameThreadForDebugging('TZMethodInThread_Connect');
- (_methodthread As TZMethodThread).Start;
+ StartMethodThread(inConnection.Connect);
 End;
 
 Constructor TZMethodInThread.Create;
@@ -95,7 +110,6 @@ Begin
  inherited;
  _methodthread := nil;
  _methoderror := nil;
- _afteropen := nil;
  _threaderror := nil;
 End;
 
@@ -112,27 +126,53 @@ Begin
 End;
 
 Procedure TZMethodInThread.InternalOpen;
+Var
+ afteropen, afterscroll: TDataSetNotifyEvent;
 Begin
- _afteropen := _dataset.AfterOpen;
+ afteropen := _dataset.AfterOpen;
+ afterscroll := _dataset.AfterScroll;
  _dataset.AfterOpen := nil;
+ _dataset.AfterScroll := nil;
  Try
   _dataset.Open;
   _dataset.FetchAll;
-  If Assigned(_afteropen) Then TThread.Synchronize(nil, Sync_AfterOpen);
+  If Assigned(afteropen) Then afteropen(_dataset);
+  If Assigned(afterscroll) Then afterscroll(_dataset);
  Finally
-  _dataset.AfterOpen := _afteropen;
-  _afteropen := nil;
+  _dataset.AfterOpen := afteropen;
+  _dataset.AfterScroll := afterscroll;
   _dataset := nil;
  End;
 End;
 
+Procedure TZMethodInThread.Kill(inAreYouSure: Boolean);
+Begin
+ // Confirmation parameter is included because terminating a thread like
+ // this is potentially dangerous and can cause application instability.
+ // Normally noone should use this ever, just wait for the database server
+ // to interrupt the action after calling .AbortOperation
+ If Not inAreYouSure Then Exit;
+ {$IF defined(MSWINDOWS)}
+  If Self.IsRunning Then TerminateThread(_methodthread.Handle, 0);
+ {$ELSE IF defined(LINUX)}
+  If Self.IsRunning Then pthread_kill(_methodthread.Handle, SIGSTOP);
+ {$ENDIF}
+End;
+
 Procedure TZMethodInThread.Open(inDataSet: TZAbstractRODataset);
 Begin
- CheckRunning;
  _dataset := inDataSet;
- _methodthread := TZMethodThread.Create(InternalOpen, ThreadError);
- (_methodthread As TZMethodThread).NameThreadForDebugging('TZMethodInThread_Open');
- (_methodthread As TZMethodThread).Start;
+ StartMethodThread(InternalOpen);
+End;
+
+Procedure TZMethodInThread.Post(inDataSet: TZAbstractRODataset);
+Begin
+ StartMethodThread(inDataSet.Post);
+End;
+
+Procedure TZMethodInThread.Refresh(inDataSet: TZAbstractRODataset);
+Begin
+ StartMethodThread(inDataSet.Refresh);
 End;
 
 Procedure TZMethodInThread.Rollback(inConnection: TZAbstractConnection);
@@ -146,33 +186,46 @@ Begin
  _methoderror := inErrorEvent;
 End;
 
-Procedure TZMethodInThread.Sync_AfterOpen;
+Procedure TZMethodInThread.SetOnFinish(Const inFinishEvent: TNotifyEvent);
 Begin
- _afteropen(_dataset);
+ Self.CheckRunning;
+ _methodfinish := inFinishEvent;
 End;
 
-Procedure TZMethodInThread.Sync_MethodError;
+Procedure TZMethodInThread.StartMethodThread(inMethod: TProcedureOfObject);
 Begin
- _methoderror(Self, _threaderror);
+ Self.CheckRunning;
+ _methodthread := TZMethodThread.Create(inMethod, ThreadError, ThreadFinish);
 End;
 
 Procedure TZMethodInThread.ThreadError(Sender: TObject; Error: Exception);
 Begin
  If Assigned(_methoderror) Then Begin
                                 _threaderror := Error;
-                                TThread.Synchronize(nil, Self.Sync_MethodError);
+                                _methoderror(Self, _threaderror);
                                 _threaderror := nil;
                                 End;
 End;
 
-Function TZMethodInThread.ThreadRunning: Boolean;
+Procedure TZMethodInThread.ThreadFinish(Sender: TObject);
 Begin
- Result := Assigned(_methodthread) And Not (_methodthread As TZMethodThread).Finished;
+ If Assigned(_methodfinish) Then _methodfinish(Self);
+End;
+
+Function TZMethodInThread.GetThreadID: Cardinal;
+Begin
+ If Self.IsRunning Then Result := _methodthread.ThreadID
+   Else Result := 0;
+End;
+
+Function TZMethodInThread.GetThreadRunning: Boolean;
+Begin
+ Result := Assigned(_methodthread) And Not _methodthread.Finished;
 End;
 
 Procedure TZMethodInThread.WaitFor;
 Begin
- If Assigned(_methodthread) Then (_methodthread As TZMethodThread).WaitFor;
+ If Self.IsRunning Then _methodthread.WaitFor;
 End;
 
 End.

@@ -93,7 +93,6 @@ type
     function GetTPB: RawByteString;
     function IsReadOnly: Boolean;
     function IsAutoCommit: Boolean;
-    function StartTransaction: Integer;
   end;
 
   {** Represents a Interbase specific connection interface. }
@@ -124,7 +123,7 @@ type
     FProcedureTypesCache, FSubTypeTestCharIDCache: TStrings;
     FGUIDProps: TZInterbaseFirebirdConnectionGUIDProps;
     FTPBs: array[Boolean,Boolean,TZTransactIsolationLevel] of RawByteString;
-    fTransactions: array[Boolean] of IZCollection; //simultan (not nested) readonly/readwrite transaction container
+    fTransactions: IZCollection; //simultan (not nested) readonly/readwrite transaction container
     fActiveTransaction: array[Boolean] of IZInterbaseFirebirdTransaction;
     FPB_CP: Word; //the parameter buffer codepage
     FClientVersion: Integer;
@@ -148,8 +147,9 @@ type
     destructor Destroy; override;
   public { IZTransactionManager }
     procedure ReleaseTransaction(const Transaction: IZTransaction);
-    procedure SetActiveTransaction(const Value: IZTransaction);
-  public
+    function GetTransactionCount: Integer;
+    function GetTransaction(Index: Cardinal): IZTransaction;
+  public { implement IZInterbaseFirebirdTransaction }
     function IsFirebirdLib: Boolean; virtual; abstract;
     function IsInterbaseLib: Boolean; virtual; abstract;
     function GetGUIDProps: TZInterbaseFirebirdConnectionGUIDProps;
@@ -162,6 +162,7 @@ type
       StatusVector: PARRAY_ISC_STATUS; const LogMessage: RawByteString;
       const Sender: IImmediatelyReleasable);
     function InterpretInterbaseStatus(StatusVector: PARRAY_ISC_STATUS): TZIBStatusVector;
+    procedure SetActiveTransaction(const Value: IZTransaction);
   public
     procedure Commit;
     procedure Rollback;
@@ -868,7 +869,7 @@ begin
     if fActiveTransaction[ReadOnly] = nil then begin
       TA := IZTransactionManager(FWeakTransactionManagerPtr).CreateTransaction(AutoCommit, ReadOnly, TransactIsolationLevel, Info);
       TA.QueryInterface(IZInterbaseFirebirdTransaction, fActiveTransaction[ReadOnly]);
-      fTransactions[ReadOnly].Add(TA);
+      fTransactions.Add(TA);
     end;
     Result := fActiveTransaction[ReadOnly];
   end else
@@ -967,6 +968,22 @@ begin
 end;
 
 {**
+  Returns the transaction interface by index.
+  @param Index then index of the requested transaction
+  @return the transaction or null if index out of bounds.
+}
+function TZInterbaseFirebirdConnection.GetTransaction(
+  Index: Cardinal): IZTransaction;
+begin
+  fTransactions[Index].QueryInterface(IZTransaction, Result)
+end;
+
+function TZInterbaseFirebirdConnection.GetTransactionCount: Integer;
+begin
+  Result := fTransactions.Count;
+end;
+
+{**
   Returns the first warning reported by calls on this Connection.
   <P><B>Note:</B> Subsequent warnings will be chained to this
   SQLWarning.
@@ -1006,6 +1023,8 @@ begin
   for i := Low(InterbaseStatusVector) to High(InterbaseStatusVector) do
     AppendSepString(ErrorMessage, InterbaseStatusVector[i].IBMessage, '; ');
 
+  PInt64(StatusVector)^ := 0; //init for fb3up
+  PInt64(PAnsiChar(StatusVector)+8)^ := 0; //init for fb3up
   ErrorCode := InterbaseStatusVector[0].SQLCode;
   ErrorSqlMessage := InterbaseStatusVector[0].SQLMessage;
 
@@ -1019,7 +1038,9 @@ begin
         ConSettings^.ClientCodePage^.CP), ErrorCode,
       ConSettings^.ConvFuncs.ZStringToRaw(ErrorSqlMessage, ConSettings^.CTRL_CP,
         ConSettings^.ClientCodePage^.CP));
-    if ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection then begin
+    if (ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection) or
+       (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_idle) or
+       (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_engine) then begin
       ConLostError := EZSQLConnectionLost.CreateWithCode(ErrorCode,
         Format(SSQLError1, [sSQL]));
       if Sender <> nil
@@ -1040,17 +1061,15 @@ end;
 procedure TZInterbaseFirebirdConnection.InternalClose;
 var B: Boolean;
 begin
-  for B := False to True do begin
-    fTransactions[b].Clear;
+  fTransactions.Clear;
+  for B := False to True do
     fActiveTransaction[b] := nil;
-  end;
 end;
 
 procedure TZInterbaseFirebirdConnection.InternalCreate;
 begin
   FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
-  fTransactions[False] := TZCollection.Create;
-  fTransactions[True] := TZCollection.Create;
+  fTransactions := TZCollection.Create;
   { set default sql dialect it can be overriden }
   FDialect := StrToIntDef(Info.Values[ConnProps_Dialect], SQL_DIALECT_CURRENT);
   FProcedureTypesCache := TStringList.Create;
@@ -1154,17 +1173,16 @@ var idx: Integer;
   Trans: IZTransaction;
   B: Boolean;
 begin
-  for B := False to True do begin
+  for B := False to True do
     if (fActiveTransaction[B] <> nil) then begin
       fActiveTransaction[B].QueryInterface(IZTransaction, Trans);
       if (Trans = Transaction) then
         fActiveTransaction[B] := nil;
     end;
-    Idx := fTransactions[b].IndexOf(Transaction);
-    if Idx <> -1 then begin
-      fTransactions[b].Delete(Idx);
-      Exit;
-    end;
+  Idx := fTransactions.IndexOf(Transaction);
+  if Idx <> -1 then begin
+    fTransactions.Delete(Idx);
+    Exit;
   end;
   raise EZSQLException.Create('release an invalid Transaction');
 end;
@@ -1449,9 +1467,9 @@ var I: Integer;
   ImmediatelyReleasable: IImmediatelyReleasable;
 begin
   fSavepoints.Clear;
-  I := FOwner.FTransactions[FReadOnly].IndexOf(Self);
+  I := FOwner.FTransactions.IndexOf(Self);
   if I > -1 then
-    FOwner.FTransactions[FReadOnly].Delete(I);
+    FOwner.FTransactions.Delete(I);
   for i := FOpenUncachedLobs.Count -1 downto 0 do
     if Supports(IZBlob(FOpenUncachedLobs[i]), IImmediatelyReleasable, ImmediatelyReleasable) and
        (Sender <> ImmediatelyReleasable) then
@@ -3465,7 +3483,6 @@ procedure TZAbstractFirebirdInterbasePreparedStatement.SetBlob(Index: Integer;
 var P: PAnsiChar;
   L: NativeUInt;
   IBLob: IZInterbaseFirebirdLob;
-  X: TISC_QUAD;
 label jmpNotNull;
 begin
   {$IFNDEF GENERIC_INDEX}Dec(Index);{$ENDIF}
@@ -3479,11 +3496,9 @@ begin
       P := nil;
       L := 0;//satisfy compiler
     end else if Supports(Value, IZInterbaseFirebirdLob, IBLob) and ((sqltype = SQL_QUAD) or (sqltype = SQL_BLOB)) then begin
-      X := IBLob.GetBlobId;
-      // this raises an Bus Error or access violation on Android 32 Bits
-      //PISC_QUAD(Param.sqldata)^ := X;
-      //this works for some reason:
-      PInt64(sqldata)^ := Int64(X);
+      //sqldata := GetMemory(SizeOf(TISC_QUAD)); EH@Jan what's that? we have one big buffer as described by FB/IB.
+	  //Jan@EH: See commit message for Rev. 6595 + Ticket 429
+      PISC_QUAD(sqldata)^ := IBLob.GetBlobId;
       goto jmpNotNull;
     end else if (Value <> nil) and (codepage <> zCP_Binary) then
       if Value.IsClob then begin

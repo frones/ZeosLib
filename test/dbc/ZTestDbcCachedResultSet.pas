@@ -109,20 +109,23 @@ type
   TZEmptyResolver = class(TInterfacedObject, IZCachedResolver)
   public
     procedure CalculateDefaults(const Sender: IZCachedResultSet;
-      const {%H-}RowAccessor: TZRowAccessor);
-    procedure PostUpdates(const Sender: IZCachedResultSet; {%H-}UpdateType: TZRowUpdateType;
-      {%H-}const  OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor);
+      const RowAccessor: TZRowAccessor);
+    procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
+      const  OldRowAccessor, NewRowAccessor: TZRowAccessor);
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet;
-      {%H-}UpdateType: TZRowUpdateType;
-      const {%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); virtual;
+      UpdateType: TZRowUpdateType;
+      const OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); virtual;
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet;RowAccessor: TZRowAccessor);
+
+    procedure SetReadOnlyTransaction(const Value: IZTransaction);
+    procedure SetReadWriteTransaction(const Value: IZTransaction);
   end;
 
 implementation
 
-uses ZClasses, ZEncoding;
+uses ZEncoding;
 
 const
   stBooleanIndex        = FirstDbcIndex + 0;
@@ -1011,14 +1014,6 @@ procedure TZEmptyResolver.PostUpdates(const Sender: IZCachedResultSet;
   UpdateType: TZRowUpdateType; const OldRowAccessor,
   NewRowAccessor: TZRowAccessor);
 begin
-//  Check(UpdateType <> utUnmodified);
-(*
-  if NewRowAccessor.RowBuffer.Index < 10 then
-  begin
-    PrintLn('Posted updates for row# ', NewRowAccessor.RowBuffer.Index,
-      ' code# ', Ord(UpdateType));
-  end;
-*)
 end;
 
 {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
@@ -1026,15 +1021,23 @@ procedure TZEmptyResolver.UpdateAutoIncrementFields(
   const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType; const OldRowAccessor,
   NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
 begin
- //Should be implemented at Specific database Level Cached resolver
 end;
 {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 
 procedure TZEmptyResolver.RefreshCurrentRow(const Sender: IZCachedResultSet;RowAccessor: TZRowAccessor);
 begin
- //Should be implemented at Specific database Level Cached resolver
 end;
 
+
+procedure TZEmptyResolver.SetReadOnlyTransaction(const Value: IZTransaction);
+begin
+
+end;
+
+procedure TZEmptyResolver.SetReadWriteTransaction(const Value: IZTransaction);
+begin
+
+end;
 
 initialization
   RegisterTest('dbc',TZTestCachedResultSetCase.Suite);

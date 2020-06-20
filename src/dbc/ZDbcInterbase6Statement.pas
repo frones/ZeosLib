@@ -119,9 +119,207 @@ type
 implementation
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
-uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
+uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} Types, Math,
   ZSysUtils, ZFastCode, ZEncoding, ZDbcInterbase6ResultSet,
-  ZDbcResultSet;
+  ZDbcResultSet, ZDbcProperties;
+
+const
+  EBStart = {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('EXECUTE BLOCK(');
+  EBBegin =  {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}(')AS BEGIN'+LineEnding);
+  EBSuspend =  {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('SUSPEND;'+LineEnding); //required for RETURNING syntax
+  EBEnd = {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('END');
+  LBlockLen = Length(EBStart)+Length(EBBegin)+Length(EBEnd);
+  cRETURNING: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF} = ('RETURNING');
+function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
+  const IsParamIndexArray: TBooleanDynArray;
+  const InParamCount, RemainingArrayRows: Integer;
+  const CurrentSQLTokens: TRawByteStringDynArray;
+  const PlainDriver: TZInterbasePlainDriver;
+  var MemPerRow, PreparedRowsOfArray,MaxRowsPerBatch: Integer;
+  var TypeTokens: TRawByteStringDynArray;
+  InitialStatementType: TZIbSqlStatementType;
+  const XSQLDAMaxSize: Integer): RawByteString;
+var
+  IndexName, ArrayName, Tmp: RawByteString;
+  ParamIndex, J: Cardinal;
+  I, BindCount, ParamNameLen, SingleStmtLength, LastStmLen,
+  HeaderLen, FullHeaderLen, StmtLength:  Integer;
+  CodePageInfo: PZCodePage;
+  PStmts, PResult, P: PAnsiChar;
+  ReturningFound: Boolean;
+
+  procedure Put(const Args: array of RawByteString; var Dest: PAnsiChar);
+  var I: Integer;
+    L: LengthInt;
+  begin
+    for I := low(Args) to high(Args) do //Move data
+      if Pointer(Args[i]) <> nil then begin
+        L := {%H-}PLengthInt(NativeUInt(Args[i]) - StringLenOffSet)^;
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Args[i])^, Dest^, L);
+        Inc(Dest, L);
+      end;
+  end;
+  procedure AddParam(const Args: array of RawByteString; var Dest: RawByteString);
+  var I, L: Integer;
+    P: PAnsiChar;
+  begin
+    Dest := ''; L := 0;
+    for I := low(Args) to high(Args) do //Calc String Length
+      Inc(L ,Length(Args[i]));
+    SetLength(Dest, L);
+    P := Pointer(Dest);
+    Put(Args, P);
+  end;
+begin
+  if Pointer(TypeTokens) = nil then
+  begin
+    BindCount := ParamsSQLDA.GetFieldCount;
+    Assert(InParamCount=BindCount, 'ParamCount missmatch');
+    SetLength(TypeTokens, BindCount);
+    MemPerRow := 0;
+    for ParamIndex := 0 to BindCount-1 do
+    begin
+      case ParamsSQLDA.GetIbSqlType(ParamIndex) and not (1) of
+        SQL_VARYING, SQL_TEXT:
+          begin
+            CodePageInfo := PlainDriver.ValidateCharEncoding(ParamsSQLDA.GetIbSqlSubType(ParamIndex) and 255);
+            AddParam([' VARCHAR(', IntToRaw(ParamsSQLDA.GetIbSqlLen(ParamIndex) div CodePageInfo.CharWidth),
+            ') CHARACTER SET ', {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CodePageInfo.Name), '=?' ], TypeTokens[ParamIndex]);
+          end;
+        SQL_DOUBLE, SQL_D_FLOAT:
+           AddParam([' DOUBLE PRECISION=?'], TypeTokens[ParamIndex]);
+        SQL_FLOAT:
+           AddParam([' FLOAT=?'],TypeTokens[ParamIndex]);
+        SQL_LONG:
+          if ParamsSQLDA.GetFieldScale(ParamIndex) = 0 then
+            AddParam([' INTEGER=?'],TypeTokens[ParamIndex])
+          else begin
+            Tmp := IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex));
+            if ParamsSQLDA.GetIbSqlSubType(ParamIndex) = RDB_NUMBERS_NUMERIC then
+              AddParam([' NUMERIC(9,', Tmp,')=?'], TypeTokens[ParamIndex])
+            else
+              AddParam([' DECIMAL(9,', Tmp,')=?'],TypeTokens[ParamIndex]);
+          end;
+        SQL_SHORT:
+          if ParamsSQLDA.GetFieldScale(ParamIndex) = 0 then
+            AddParam([' SMALLINT=?'],TypeTokens[ParamIndex])
+          else begin
+            Tmp := IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex));
+            if ParamsSQLDA.GetIbSqlSubType(ParamIndex) = RDB_NUMBERS_NUMERIC then
+              AddParam([' NUMERIC(4,', Tmp,')=?'],TypeTokens[ParamIndex])
+            else
+              AddParam([' DECIMAL(4,', Tmp,')=?'],TypeTokens[ParamIndex]);
+          end;
+        SQL_TIMESTAMP:
+           AddParam([' TIMESTAMP=?'],TypeTokens[ParamIndex]);
+        SQL_BLOB:
+          if ParamsSQLDA.GetIbSqlSubType(ParamIndex) = isc_blob_text then
+            AddParam([' BLOB SUB_TYPE TEXT=?'],TypeTokens[ParamIndex])
+          else
+            AddParam([' BLOB=?'],TypeTokens[ParamIndex]);
+        //SQL_ARRAY                      = 540;
+        //SQL_QUAD                       = 550;
+        SQL_TYPE_TIME:
+           AddParam([' TIME=?'],TypeTokens[ParamIndex]);
+        SQL_TYPE_DATE:
+           AddParam([' DATE=?'],TypeTokens[ParamIndex]);
+        SQL_INT64: // IB7
+          if ParamsSQLDA.GetFieldScale(ParamIndex) = 0 then
+            AddParam([' BIGINT=?'],TypeTokens[ParamIndex])
+          else begin
+            Tmp := IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex));
+            if ParamsSQLDA.GetIbSqlSubType(ParamIndex) = RDB_NUMBERS_NUMERIC then
+              AddParam([' NUMERIC(18,', Tmp,')=?'],TypeTokens[ParamIndex])
+            else
+              AddParam([' DECIMAL(18,', Tmp,')=?'],TypeTokens[ParamIndex]);
+          end;
+        SQL_BOOLEAN, SQL_BOOLEAN_FB{FB30}:
+           AddParam([' BOOLEAN=?'],TypeTokens[ParamIndex]);
+        SQL_NULL{FB25}:
+           AddParam([' CHAR(1)=?'],TypeTokens[ParamIndex]);
+      end;
+      (*Inc(MemPerRow, ParamsSQLDA.GetFieldLength(ParamIndex) +
+        2*Ord((ParamsSQLDA.GetIbSqlType(ParamIndex) and not 1) = SQL_VARYING));*)
+    end;
+    Inc(MemPerRow, XSQLDA_LENGTH(InParamCount));
+  end;
+  {now let's calc length of stmt to know if we can bound all array data or if we need some more calls}
+  StmtLength := 0;
+  FullHeaderLen := 0;
+  ReturningFound := False;
+  PreparedRowsOfArray := 0;
+
+  for J := 0 to RemainingArrayRows -1 do
+  begin
+    ParamIndex := 0;
+    SingleStmtLength := 0;
+    LastStmLen := StmtLength;
+    HeaderLen := 0;
+    for i := low(CurrentSQLTokens) to high(CurrentSQLTokens) do begin
+      if IsParamIndexArray[i] then begin //calc Parameters size
+        {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+        ParamNameLen := {P}1+GetOrdinalDigits(ParamIndex)+1{_}+GetOrdinalDigits(j);
+        {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+        {inc header}
+        Inc(HeaderLen, ParamNameLen+ {%H-}PLengthInt(NativeUInt(TypeTokens[ParamIndex]) - StringLenOffSet)^+Ord(not ((ParamIndex = 0) and (J=0))){,});
+        {inc stmt}
+        Inc(SingleStmtLength, 1+{:}ParamNameLen);
+        Inc(ParamIndex);
+      end else begin
+        Inc(SingleStmtLength, {%H-}PLengthInt(NativeUInt(CurrentSQLTokens[i]) - StringLenOffSet)^);
+        P := Pointer(CurrentSQLTokens[i]);
+        if not ReturningFound and (Ord(P^) in [Ord('R'), Ord('r')]) and (Length(CurrentSQLTokens[i]) = Length(cRETURNING)) then begin
+          ReturningFound := ZSysUtils.SameText(P, Pointer(cReturning), Length(cRETURNING));
+          Inc(StmtLength, Ord(ReturningFound)*Length(EBSuspend));
+        end;
+      end;
+    end;
+    Inc(SingleStmtLength, 1{;}+Length(LineEnding));
+    if MaxRowsPerBatch = 0 then //calc maximum batch count if not set already
+      MaxRowsPerBatch := Min(Integer(XSQLDAMaxSize div MemPerRow),     {memory limit of XSQLDA structs}
+        Integer(((32*1024)-LBlockLen) div (HeaderLen+SingleStmtLength)))+1; {32KB limited Also with FB3};
+    Inc(StmtLength, HeaderLen+SingleStmtLength);
+    Inc(FullHeaderLen, HeaderLen);
+    //we run into XSQLDA !update! count limit of 255 see:
+    //http://tracker.firebirdsql.org/browse/CORE-3027?page=com.atlassian.jira.plugin.system.issuetabpanels%3Aall-tabpanel
+    if (PreparedRowsOfArray = MaxRowsPerBatch-1) or
+       ((InitialStatementType = stInsert) and (PreparedRowsOfArray > 255)) or
+       ((InitialStatementType <> stInsert) and (PreparedRowsOfArray > 125)) then begin
+      StmtLength := LastStmLen;
+      Dec(FullHeaderLen, HeaderLen);
+      Break;
+    end else
+      PreparedRowsOfArray := J;
+  end;
+
+  {EH: now move our data to result ! ONE ALLOC ! of result (: }
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}
+  SetLength(Result, StmtLength+LBlockLen);
+  PResult := Pointer(Result);
+  Put([EBStart], PResult);
+  PStmts := PResult + FullHeaderLen+Length(EBBegin);
+  for J := 0 to PreparedRowsOfArray do begin
+    ParamIndex := 0;
+    for i := low(CurrentSQLTokens) to high(CurrentSQLTokens) do begin
+      if IsParamIndexArray[i] then begin
+        IndexName := IntToRaw(ParamIndex);
+        ArrayName := IntToRaw(J);
+        Put([':P', IndexName, '_', ArrayName], PStmts);
+        if (ParamIndex = 0) and (J=0)
+        then Put(['P', IndexName, '_', ArrayName, TypeTokens[ParamIndex]], PResult)
+        else Put([',P', IndexName, '_', ArrayName, TypeTokens[ParamIndex]], PResult);
+        Inc(ParamIndex);
+      end else
+        Put([CurrentSQLTokens[i]], PStmts);
+    end;
+    Put([';',LineEnding], PStmts);
+  end;
+  Put([EBBegin], PResult);
+  if ReturningFound then
+    Put([EBSuspend], PStmts);
+  Put([EBEnd], PStmts);
+  Inc(PreparedRowsOfArray);
+end;
 
 { TZAbstractInterbase6PreparedStatement }
 
@@ -362,8 +560,14 @@ begin
       end;
       Status := FPlainDriver.isc_dsql_prepare(@FStatusVector, GetTrHandle, @FStmtHandle,
           Word(L), Pointer(ASQL), GetDialect, nil);
-       if (Status <> 0) or (FStatusVector[2] = isc_arg_warning) then
-         FIBConnection.HandleErrorOrWarning(lcPrepStmt, @FStatusVector, fASQL, Self);
+      if (Status <> 0) or (FStatusVector[2] = isc_arg_warning) then
+        FIBConnection.HandleErrorOrWarning(lcPrepStmt, @FStatusVector, fASQL, Self);
+      if Assigned(FPlainDriver.fb_dsql_set_timeout) then begin
+        Mem := StrToInt(DefineStatementParameter(Self, DSProps_StatementTimeOut, '0'));
+        if Mem <> 0 then
+          if FPlainDriver.fb_dsql_set_timeout(@FStatusVector, @FStmtHandle, Mem) <> 0 then
+            FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, 'fb_dsql_set_timeout', Self);
+      end;
       { Set Statement Type }
       TypeItem := AnsiChar(isc_info_sql_stmt_type);
 

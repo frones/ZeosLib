@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD} //if set we have an empty unit
 uses
-  SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Types,
+  SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZDbcIntfs, ZPlainFirebirdInterbaseDriver, ZCompatibility,
   ZDbcLogging, ZMessages,
@@ -230,16 +230,6 @@ function ConvertInterbase6ToSqlType(SqlType, SqlSubType, Scale, Precision: Integ
 
 function GetNameSqlType(Value: Word): RawByteString;
 
-function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
-  const IsParamIndexArray: TBooleanDynArray;
-  const InParamCount, RemainingArrayRows: Integer;
-  const CurrentSQLTokens: TRawByteStringDynArray;
-  const PlainDriver: TZInterbasePlainDriver;
-  var MemPerRow, PreparedRowsOfArray, MaxRowsPerBatch: Integer;
-  var TypeTokens: TRawByteStringDynArray;
-  InitialStatementType: TZIbSqlStatementType;
-  const XSQLDAMaxSize: Integer): RawByteString;
-
 const
   { Default Interbase blob size for reading }
   DefaultBlobSegmentSize = 16 * 1024;
@@ -352,23 +342,23 @@ const
     (Name: 'isc_dpb_org_filename';          ValueType: pvtString;  Number: isc_dpb_org_filename),
     (Name: 'isc_dpb_utf8_filename';         ValueType: pvtNone;    Number: isc_dpb_utf8_filename),
     (Name: 'isc_dpb_ext_call_depth';        ValueType: pvtNum;     Number: isc_dpb_ext_call_depth),
-    (Name: 'isc_dpb_auth_block';            ValueType: pvtString; Number: isc_dpb_auth_block), // Bytes
-    (Name: 'isc_dpb_client_version';        ValueType: pvtString; Number: isc_dpb_client_version),
-    (Name: 'isc_dpb_remote_protocol';       ValueType: pvtString; Number: isc_dpb_remote_protocol),
-    (Name: 'isc_dpb_host_name';             ValueType: pvtString; Number: isc_dpb_host_name),
-    (Name: 'isc_dpb_os_user';               ValueType: pvtString; Number: isc_dpb_os_user),
-    (Name: 'isc_dpb_specific_auth_data';    ValueType: pvtString; Number: isc_dpb_specific_auth_data),  
-    (Name: 'isc_dpb_auth_plugin_list';      ValueType: pvtString; Number: isc_dpb_auth_plugin_list),  
-    (Name: 'isc_dpb_auth_plugin_name';      ValueType: pvtString; Number: isc_dpb_auth_plugin_name),
-    (Name: 'isc_dpb_config';                ValueType: pvtString; Number: isc_dpb_config),
-    (Name: 'isc_dpb_nolinger';              ValueType: pvtNone; Number: isc_dpb_nolinger),
-    (Name: 'isc_dpb_reset_icu';             ValueType: pvtNone; Number: isc_dpb_reset_icu),
-    (Name: 'isc_dpb_map_attach';            ValueType: pvtNone; Number: isc_dpb_map_attach),
-	(Name: 'isc_dpb_session_time_zone';     ValueType: pvtString; Number: isc_dpb_session_time_zone), // this is an assumption and needs to be tested!
-	(Name: 'isc_dpb_set_db_replica';        ValueType: pvtNone; Number: isc_dpb_set_db_replica),      // I have no clue how to use that
-	(Name: 'isc_dpb_set_bind';              ValueType: pvtString; Number: isc_dpb_set_bind),
-	(Name: 'isc_dpb_decfloat_round';        ValueType: pvtString; Number: isc_dpb_decfloat_round),
-	(Name: 'isc_dpb_decfloat_traps';        ValueType: pvtString; Number: isc_dpb_decfloat_traps)
+    (Name: 'isc_dpb_auth_block';            ValueType: pvtString;  Number: isc_dpb_auth_block), // Bytes
+    (Name: 'isc_dpb_client_version';        ValueType: pvtString;  Number: isc_dpb_client_version),
+    (Name: 'isc_dpb_remote_protocol';       ValueType: pvtString;  Number: isc_dpb_remote_protocol),
+    (Name: 'isc_dpb_host_name';             ValueType: pvtString;  Number: isc_dpb_host_name),
+    (Name: 'isc_dpb_os_user';               ValueType: pvtString;  Number: isc_dpb_os_user),
+    (Name: 'isc_dpb_specific_auth_data';    ValueType: pvtString;  Number: isc_dpb_specific_auth_data),
+    (Name: 'isc_dpb_auth_plugin_list';      ValueType: pvtString;  Number: isc_dpb_auth_plugin_list),
+    (Name: 'isc_dpb_auth_plugin_name';      ValueType: pvtString;  Number: isc_dpb_auth_plugin_name),
+    (Name: 'isc_dpb_config';                ValueType: pvtString;  Number: isc_dpb_config),
+    (Name: 'isc_dpb_nolinger';              ValueType: pvtNone;    Number: isc_dpb_nolinger),
+    (Name: 'isc_dpb_reset_icu';             ValueType: pvtNone;    Number: isc_dpb_reset_icu),
+    (Name: 'isc_dpb_map_attach';            ValueType: pvtNone;    Number: isc_dpb_map_attach),
+    (Name: 'isc_dpb_session_time_zone';     ValueType: pvtString;  Number: isc_dpb_session_time_zone), // this is an assumption and needs to be tested!
+    (Name: 'isc_dpb_set_db_replica';        ValueType: pvtNone;    Number: isc_dpb_set_db_replica),      // I have no clue how to use that
+    (Name: 'isc_dpb_set_bind';              ValueType: pvtString;  Number: isc_dpb_set_bind),
+    (Name: 'isc_dpb_decfloat_round';        ValueType: pvtString;  Number: isc_dpb_decfloat_round),
+    (Name: 'isc_dpb_decfloat_traps';        ValueType: pvtString;  Number: isc_dpb_decfloat_traps)
   );
 
   { count transaction parameters }
@@ -408,10 +398,10 @@ const
 
 //ported  from NoThrowTimeStamp.cpp
 
-procedure isc_decode_time(ntime: ISC_TIME; out hours, minutes, seconds: Word; out fractions: Cardinal);
-procedure isc_encode_time(var ntime: ISC_TIME; hours, minutes, seconds: Word; fractions: Cardinal);
-procedure isc_decode_date(nday: ISC_DATE; out year, month, day: Word);
-procedure isc_encode_date(out nday: ISC_DATE; year, month, day: Word);
+procedure isc_decode_time(ntime: TISC_TIME; out hours, minutes, seconds: Word; out fractions: Cardinal);
+procedure isc_encode_time(var ntime: TISC_TIME; hours, minutes, seconds: Word; fractions: Cardinal);
+procedure isc_decode_date(nday: TISC_DATE; out year, month, day: Word);
+procedure isc_encode_date(out nday: TISC_DATE; year, month, day: Word);
 
 {**
   Read Interbase number (1..4 bytes) from buffer in standard format: [Len * 2 bytes][Number * Len bytes]
@@ -431,6 +421,8 @@ function ReadInterbase6NumberWithInc(const PlainDriver: TZInterbaseFirebirdPlain
 }
 function ReadInterbase6Number(const PlainDriver: TZInterbasePlainDriver; const Buffer): Integer; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
+//procedure ScaledOrdinal2Raw(const Value: Int128; Buf: PAnsiChar; PEnd: PPAnsiChar; Scale: Byte); overload;
+//procedure ScaledOrdinal2Raw(const Value: UInt128; Buf: PAnsiChar; PEnd: PPAnsiChar; Scale: Byte); overload;
 procedure ScaledOrdinal2Raw(const Value: Int64; Buf: PAnsiChar; PEnd: PPAnsiChar; Scale: Byte); overload;
 procedure ScaledOrdinal2Raw(const Value: UInt64; Buf: PAnsiChar; PEnd: PPAnsiChar; Scale: Byte); overload;
 procedure ScaledOrdinal2Raw(Value: Integer; Buf: PAnsiChar; PEnd: PPAnsiChar; Scale: Byte); overload;
@@ -444,6 +436,7 @@ procedure ScaledOrdinal2Unicode(Value: Cardinal; Buf: PWideChar; PEnd: ZPPWideCh
 procedure BCD2ScaledOrdinal(const Value: TBCD; Dest: Pointer; DestSize, Scale: Byte);
 
 function XSQLDA_LENGTH(Value: LongInt): LongInt;
+function XSQLDA_LENGTH_V2(Value: LongInt): LongInt;
 
 {**
    Convert pointer to raw database string to compiler-native string
@@ -463,6 +456,11 @@ uses
 function XSQLDA_LENGTH(Value: LongInt): LongInt;
 begin
   Result := SizeOf(TXSQLDA) + ((Value - 1) * SizeOf(TXSQLVAR));
+end;
+
+function XSQLDA_LENGTH_V2(Value: LongInt): LongInt;
+begin
+  Result := SizeOf(TXSQLDA_V2) + ((Value - 1) * SizeOf(TXSQLVAR_V2));
 end;
 
 function FindPBParam(const ParamName: string; const ParamArr: array of TZIbParam): PZIbParam;
@@ -988,7 +986,11 @@ testBCD:  Scale := Abs(Scale);
           else Result := stBigDecimal;
         end;
     blr_sql_date: Result := stDate;
+    blr_sql_time_tz,
+    blr_ex_time_tz,
     blr_sql_time: Result := stTime;
+    blr_timestamp_tz,
+    blr_ex_timestamp_tz,
     blr_timestamp: Result := stTimestamp;
     blr_blob, blr_blob2:
       case SqlSubType of
@@ -1009,6 +1011,9 @@ testBCD:  Scale := Abs(Scale);
         else //http://sourceforge.net/p/zeoslib/tickets/111/
           Result := stBinaryStream;
       end;
+    blr_dec64,
+    blr_dec128,
+    blr_int128: Result := stBigDecimal;
     else
       Result := ZDbcIntfs.stUnknown;
   end;
@@ -1400,206 +1405,7 @@ begin
   Result := FXSQLDA;
 end;
 
-
-const
-  EBStart = {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('EXECUTE BLOCK(');
-  EBBegin =  {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}(')AS BEGIN'+LineEnding);
-  EBSuspend =  {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('SUSPEND;'+LineEnding); //required for RETURNING syntax
-  EBEnd = {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('END');
-  LBlockLen = Length(EBStart)+Length(EBBegin)+Length(EBEnd);
-  cRETURNING: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF} = ('RETURNING');
-function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
-  const IsParamIndexArray: TBooleanDynArray;
-  const InParamCount, RemainingArrayRows: Integer;
-  const CurrentSQLTokens: TRawByteStringDynArray;
-  const PlainDriver: TZInterbasePlainDriver;
-  var MemPerRow, PreparedRowsOfArray,MaxRowsPerBatch: Integer;
-  var TypeTokens: TRawByteStringDynArray;
-  InitialStatementType: TZIbSqlStatementType;
-  const XSQLDAMaxSize: Integer): RawByteString;
-var
-  IndexName, ArrayName, Tmp: RawByteString;
-  ParamIndex, J: Cardinal;
-  I, BindCount, ParamNameLen, SingleStmtLength, LastStmLen,
-  HeaderLen, FullHeaderLen, StmtLength:  Integer;
-  CodePageInfo: PZCodePage;
-  PStmts, PResult, P: PAnsiChar;
-  ReturningFound: Boolean;
-
-  procedure Put(const Args: array of RawByteString; var Dest: PAnsiChar);
-  var I: Integer;
-    L: LengthInt;
-  begin
-    for I := low(Args) to high(Args) do //Move data
-      if Pointer(Args[i]) <> nil then begin
-        L := {%H-}PLengthInt(NativeUInt(Args[i]) - StringLenOffSet)^;
-        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Args[i])^, Dest^, L);
-        Inc(Dest, L);
-      end;
-  end;
-  procedure AddParam(const Args: array of RawByteString; var Dest: RawByteString);
-  var I, L: Integer;
-    P: PAnsiChar;
-  begin
-    Dest := ''; L := 0;
-    for I := low(Args) to high(Args) do //Calc String Length
-      Inc(L ,Length(Args[i]));
-    SetLength(Dest, L);
-    P := Pointer(Dest);
-    Put(Args, P);
-  end;
-begin
-  if Pointer(TypeTokens) = nil then
-  begin
-    BindCount := ParamsSQLDA.GetFieldCount;
-    Assert(InParamCount=BindCount, 'ParamCount missmatch');
-    SetLength(TypeTokens, BindCount);
-    MemPerRow := 0;
-    for ParamIndex := 0 to BindCount-1 do
-    begin
-      case ParamsSQLDA.GetIbSqlType(ParamIndex) and not (1) of
-        SQL_VARYING, SQL_TEXT:
-          begin
-            CodePageInfo := PlainDriver.ValidateCharEncoding(ParamsSQLDA.GetIbSqlSubType(ParamIndex) and 255);
-            AddParam([' VARCHAR(', IntToRaw(ParamsSQLDA.GetIbSqlLen(ParamIndex) div CodePageInfo.CharWidth),
-            ') CHARACTER SET ', {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CodePageInfo.Name), '=?' ], TypeTokens[ParamIndex]);
-          end;
-        SQL_DOUBLE, SQL_D_FLOAT:
-           AddParam([' DOUBLE PRECISION=?'], TypeTokens[ParamIndex]);
-        SQL_FLOAT:
-           AddParam([' FLOAT=?'],TypeTokens[ParamIndex]);
-        SQL_LONG:
-          if ParamsSQLDA.GetFieldScale(ParamIndex) = 0 then
-            AddParam([' INTEGER=?'],TypeTokens[ParamIndex])
-          else begin
-            Tmp := IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex));
-            if ParamsSQLDA.GetIbSqlSubType(ParamIndex) = RDB_NUMBERS_NUMERIC then
-              AddParam([' NUMERIC(9,', Tmp,')=?'], TypeTokens[ParamIndex])
-            else
-              AddParam([' DECIMAL(9,', Tmp,')=?'],TypeTokens[ParamIndex]);
-          end;
-        SQL_SHORT:
-          if ParamsSQLDA.GetFieldScale(ParamIndex) = 0 then
-            AddParam([' SMALLINT=?'],TypeTokens[ParamIndex])
-          else begin
-            Tmp := IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex));
-            if ParamsSQLDA.GetIbSqlSubType(ParamIndex) = RDB_NUMBERS_NUMERIC then
-              AddParam([' NUMERIC(4,', Tmp,')=?'],TypeTokens[ParamIndex])
-            else
-              AddParam([' DECIMAL(4,', Tmp,')=?'],TypeTokens[ParamIndex]);
-          end;
-        SQL_TIMESTAMP:
-           AddParam([' TIMESTAMP=?'],TypeTokens[ParamIndex]);
-        SQL_BLOB:
-          if ParamsSQLDA.GetIbSqlSubType(ParamIndex) = isc_blob_text then
-            AddParam([' BLOB SUB_TYPE TEXT=?'],TypeTokens[ParamIndex])
-          else
-            AddParam([' BLOB=?'],TypeTokens[ParamIndex]);
-        //SQL_ARRAY                      = 540;
-        //SQL_QUAD                       = 550;
-        SQL_TYPE_TIME:
-           AddParam([' TIME=?'],TypeTokens[ParamIndex]);
-        SQL_TYPE_DATE:
-           AddParam([' DATE=?'],TypeTokens[ParamIndex]);
-        SQL_INT64: // IB7
-          if ParamsSQLDA.GetFieldScale(ParamIndex) = 0 then
-            AddParam([' BIGINT=?'],TypeTokens[ParamIndex])
-          else begin
-            Tmp := IntToRaw(ParamsSQLDA.GetFieldScale(ParamIndex));
-            if ParamsSQLDA.GetIbSqlSubType(ParamIndex) = RDB_NUMBERS_NUMERIC then
-              AddParam([' NUMERIC(18,', Tmp,')=?'],TypeTokens[ParamIndex])
-            else
-              AddParam([' DECIMAL(18,', Tmp,')=?'],TypeTokens[ParamIndex]);
-          end;
-        SQL_BOOLEAN, SQL_BOOLEAN_FB{FB30}:
-           AddParam([' BOOLEAN=?'],TypeTokens[ParamIndex]);
-        SQL_NULL{FB25}:
-           AddParam([' CHAR(1)=?'],TypeTokens[ParamIndex]);
-      end;
-      (*Inc(MemPerRow, ParamsSQLDA.GetFieldLength(ParamIndex) +
-        2*Ord((ParamsSQLDA.GetIbSqlType(ParamIndex) and not 1) = SQL_VARYING));*)
-    end;
-    Inc(MemPerRow, XSQLDA_LENGTH(InParamCount));
-  end;
-  {now let's calc length of stmt to know if we can bound all array data or if we need some more calls}
-  StmtLength := 0;
-  FullHeaderLen := 0;
-  ReturningFound := False;
-  PreparedRowsOfArray := 0;
-
-  for J := 0 to RemainingArrayRows -1 do
-  begin
-    ParamIndex := 0;
-    SingleStmtLength := 0;
-    LastStmLen := StmtLength;
-    HeaderLen := 0;
-    for i := low(CurrentSQLTokens) to high(CurrentSQLTokens) do begin
-      if IsParamIndexArray[i] then begin //calc Parameters size
-        {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-        ParamNameLen := {P}1+GetOrdinalDigits(ParamIndex)+1{_}+GetOrdinalDigits(j);
-        {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-        {inc header}
-        Inc(HeaderLen, ParamNameLen+ {%H-}PLengthInt(NativeUInt(TypeTokens[ParamIndex]) - StringLenOffSet)^+Ord(not ((ParamIndex = 0) and (J=0))){,});
-        {inc stmt}
-        Inc(SingleStmtLength, 1+{:}ParamNameLen);
-        Inc(ParamIndex);
-      end else begin
-        Inc(SingleStmtLength, {%H-}PLengthInt(NativeUInt(CurrentSQLTokens[i]) - StringLenOffSet)^);
-        P := Pointer(CurrentSQLTokens[i]);
-        if not ReturningFound and (Ord(P^) in [Ord('R'), Ord('r')]) and (Length(CurrentSQLTokens[i]) = Length(cRETURNING)) then begin
-          ReturningFound := ZSysUtils.SameText(P, Pointer(cReturning), Length(cRETURNING));
-          Inc(StmtLength, Ord(ReturningFound)*Length(EBSuspend));
-        end;
-      end;
-    end;
-    Inc(SingleStmtLength, 1{;}+Length(LineEnding));
-    if MaxRowsPerBatch = 0 then //calc maximum batch count if not set already
-      MaxRowsPerBatch := Min(Integer(XSQLDAMaxSize div MemPerRow),     {memory limit of XSQLDA structs}
-        Integer(((32*1024)-LBlockLen) div (HeaderLen+SingleStmtLength)))+1; {32KB limited Also with FB3};
-    Inc(StmtLength, HeaderLen+SingleStmtLength);
-    Inc(FullHeaderLen, HeaderLen);
-    //we run into XSQLDA !update! count limit of 255 see:
-    //http://tracker.firebirdsql.org/browse/CORE-3027?page=com.atlassian.jira.plugin.system.issuetabpanels%3Aall-tabpanel
-    if (PreparedRowsOfArray = MaxRowsPerBatch-1) or
-       ((InitialStatementType = stInsert) and (PreparedRowsOfArray > 255)) or
-       ((InitialStatementType <> stInsert) and (PreparedRowsOfArray > 125)) then begin
-      StmtLength := LastStmLen;
-      Dec(FullHeaderLen, HeaderLen);
-      Break;
-    end else
-      PreparedRowsOfArray := J;
-  end;
-
-  {EH: now move our data to result ! ONE ALLOC ! of result (: }
-  {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}
-  SetLength(Result, StmtLength+LBlockLen);
-  PResult := Pointer(Result);
-  Put([EBStart], PResult);
-  PStmts := PResult + FullHeaderLen+Length(EBBegin);
-  for J := 0 to PreparedRowsOfArray do begin
-    ParamIndex := 0;
-    for i := low(CurrentSQLTokens) to high(CurrentSQLTokens) do begin
-      if IsParamIndexArray[i] then begin
-        IndexName := IntToRaw(ParamIndex);
-        ArrayName := IntToRaw(J);
-        Put([':P', IndexName, '_', ArrayName], PStmts);
-        if (ParamIndex = 0) and (J=0)
-        then Put(['P', IndexName, '_', ArrayName, TypeTokens[ParamIndex]], PResult)
-        else Put([',P', IndexName, '_', ArrayName, TypeTokens[ParamIndex]], PResult);
-        Inc(ParamIndex);
-      end else
-        Put([CurrentSQLTokens[i]], PStmts);
-    end;
-    Put([';',LineEnding], PStmts);
-  end;
-  Put([EBBegin], PResult);
-  if ReturningFound then
-    Put([EBSuspend], PStmts);
-  Put([EBEnd], PStmts);
-  Inc(PreparedRowsOfArray);
-end;
-
-procedure isc_decode_time(ntime: ISC_TIME; out hours, minutes, seconds: Word; out fractions: Cardinal);
+procedure isc_decode_time(ntime: TISC_TIME; out hours, minutes, seconds: Word; out fractions: Cardinal);
 begin
   hours := ntime div (SecsPerHour * ISC_TIME_SECONDS_PRECISION);
   ntime := ntime mod (SecsPerHour * ISC_TIME_SECONDS_PRECISION);
@@ -1610,7 +1416,7 @@ begin
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 4081 off : Converting the operands to "$1" before doing the multiply could prevent overflow errors.} {$ENDIF} // overflow means error so just disable hint
-procedure isc_encode_time(var ntime: ISC_TIME; hours, minutes, seconds: Word; fractions: Cardinal);
+procedure isc_encode_time(var ntime: TISC_TIME; hours, minutes, seconds: Word; fractions: Cardinal);
 begin
   ntime := ((hours * Word(MinsPerHour) + minutes) * Word(SecsPerMin) + seconds) * Word(ISC_TIME_SECONDS_PRECISION) + fractions;
 end;
@@ -1632,7 +1438,7 @@ const
   {$WARN 4080 off : Converting the operands to "$1" before doing the substract could prevent overflow errors.}
   {$WARN 4081 off : Converting the operands to "$1" before doing the multiply could prevent overflow errors.}
 {$ENDIF} // overflow means error so just disable hint
-procedure isc_decode_date(nday: ISC_DATE; out year, month, day: Word);
+procedure isc_decode_date(nday: TISC_DATE; out year, month, day: Word);
 var century: integer;
 begin
   nday := nday + IB_BaseDateToDay0Diff;
@@ -1659,7 +1465,7 @@ begin
   end;
 end;
 
-procedure isc_encode_date(out nday: ISC_DATE; year, month, day: word);
+procedure isc_encode_date(out nday: TISC_DATE; year, month, day: word);
 var century, year_anno: Integer;
 begin
   if (month > 2) then

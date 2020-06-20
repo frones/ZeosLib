@@ -478,6 +478,25 @@ alter table people
    add foreign key (p_dep_id) references department (dep_id)
 go
 
+/*==============================================================*/
+/* Stored procedure: procedure1                                 */
+/*==============================================================*/
+
+create procedure procedure1
+	@p1 integer,
+	@r1 integer output
+as
+  set @r1 = @p1 + 1
+  select @r1
+go
+
+/*==============================================================*/
+/* Stored procedure: procedure2                                 */
+/*==============================================================*/
+create procedure procedure2
+as
+  select eq_name FROM equipment ORDER BY eq_name
+go
 
 /*
 SET ANSI_NULLS ON 

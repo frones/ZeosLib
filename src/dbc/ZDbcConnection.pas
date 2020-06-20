@@ -82,7 +82,7 @@ type
 
     function GetSupportedProtocols: TStringDynArray;
     function GetClientCodePages(const Url: TZURL): TStringDynArray;
-    function Connect(const Url: string; Info: TStrings = nil): IZConnection; overload; deprecated;
+    function Connect(const Url: string; Info: TStrings = nil): IZConnection; overload;// deprecated;
     function Connect(const {%H-}Url: TZURL): IZConnection; overload; virtual;
     function AcceptsURL(const Url: string): Boolean; virtual;
 
@@ -99,7 +99,7 @@ type
 
   { TZAbstractDbcConnection }
 
-  TZAbstractDbcConnection = class(TZCodePagedObject, IImmediatelyReleasable)
+  TZAbstractDbcConnection = class(TZImmediatelyReleasableObject, IImmediatelyReleasable)
   private
     FOnConnectionLostError: TOnConnectionLostError; //error handle which can be registered
     FDriver: IZDriver;
@@ -179,8 +179,8 @@ type
     function PrepareStatement(const SQL: string): IZPreparedStatement;
     function PrepareCall(const SQL: string): IZCallableStatement;
 
-    function CreateNotification(const {%H-}Event: string): IZNotification; virtual;
-    function CreateSequence(const {%H-}Sequence: string; {%H-}BlockSize: Integer):
+    function CreateNotification(const Event: string): IZNotification; virtual;
+    function CreateSequence(const Sequence: string; BlockSize: Integer):
       IZSequence; virtual;
 
     function NativeSQL(const SQL: string): string; virtual;
@@ -237,6 +237,11 @@ type
   protected
     function GetByteBufferAddress: PByteBuffer;
     property Closed: Boolean read IsClosed write FClosed;
+  end;
+
+  TZAbstractDbcSingleTransactionConnection = class(TZAbstractDbcConnection)
+  public //implement IZTransaction
+    function GetConnection: IZConnection;
   end;
 
   {** Implements Abstract Database notification. }
@@ -356,6 +361,24 @@ type
     constructor Create(const ConSettings: PZConSettings{; FormatSettings: TZFormatSettings});
     function UseWComparsions: Boolean;
     function GetAsDateTime(const Value: TZVariant): TDateTime; reintroduce;
+  end;
+
+  TZEmulatedTransactionManager = class(TZImmediatelyReleasableObject, IZTransactionManager)
+  private
+    fMainConnection: IZConnection;
+    fActiveTransaction: IZTransaction;
+    fTransactions: IZCollection;
+  public //implement IZTransactionManager
+    function CreateTransaction(AutoCommit, ReadOnly: Boolean;
+      TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
+    procedure ReleaseTransaction(const Transaction: IZTransaction);
+    procedure SetActiveTransaction(const Transaction: IZTransaction);
+    function GetTransactionCount: Integer;
+    function GetTransaction(Index: Cardinal): IZTransaction;
+  public //implement IImmediatelyReleasable
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+  public
+    Constructor Create(const Connection: IZConnection);
   end;
 
 type
@@ -1138,8 +1161,12 @@ end;
   @param Event an event name.
   @returns a created notification object.
 }
-{$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
-function TZAbstractDbcConnection.CreateNotification(const Event: string): IZNotification;
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5033 off : Function result does not seem to be set}
+  {$WARN 5024 off : Parameter "Event" not used}
+{$ENDIF}
+function TZAbstractDbcConnection.CreateNotification(
+  const Event: string): IZNotification;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
@@ -1155,7 +1182,8 @@ function TZAbstractDbcConnection.CreateSequence(const Sequence: string;
   BlockSize: Integer): IZSequence;
 begin
   if TZDefaultProviderSequenceClasses[GetServerProvider] <> nil then
-    Result := TZDefaultProviderSequenceClasses[GetServerProvider].Create(IZConnection(fWeakReferenceOfSelfInterface), Sequence, BlockSize)
+    Result := TZDefaultProviderSequenceClasses[GetServerProvider].Create(
+      IZConnection(fWeakReferenceOfSelfInterface), Sequence, BlockSize)
   else
     Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
@@ -1242,12 +1270,22 @@ begin
   Result := EncodeCString(Value);
 end;
 
+{**
+  Executes any statement immediataly
+  @param SQL the raw encoded sql which should be executed
+  @param LoggingCategory a category for the LoggingListeners
+}
 procedure TZAbstractDbcConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 begin
   ExecuteImmediat(ZRawToUnicode(SQL, ConSettings.CTRL_CP), LoggingCategory);
 end;
 
+{**
+  Executes any statement immediataly
+  @param SQL the UTF16 encoded sql which should be executed
+  @param LoggingCategory a category for the LoggingListeners
+}
 procedure TZAbstractDbcConnection.ExecuteImmediat(const SQL: UnicodeString;
   LoggingCategory: TZLoggingCategory);
 begin
@@ -1305,6 +1343,7 @@ begin
   end;
 end;
 
+{** do something before the URL OnChange is set }
 procedure TZAbstractDbcConnection.BeforeUrlAssign;
 begin
   //dummy
@@ -1390,6 +1429,10 @@ begin
   Result := 0;
 end;
 
+{**
+  Gets the PlainDriver description.
+  @returns a the description.
+}
 function TZAbstractDbcConnection.GetDescription: String;
 begin
   Result := PlainDriver.GetDescription;
@@ -1548,10 +1591,12 @@ begin
   else Result := SQLQuotedStr(P, L, AnsiChar(#39));
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Sender" not used} {$ENDIF}
 procedure TZAbstractDbcConnection.OnPropertiesChange(Sender: TObject);
 begin
   // do nothing in base class
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZAbstractNotification }
 
@@ -1815,7 +1860,7 @@ begin
   FCtrlsCP := Consettings.CTRL_CP;
   FUseWComparsions := (FClientCP <> ZOSCodePage) or
     (FClientCP = zCP_UTF8) or
-    Consettings.ClientCodePage.IsStringFieldCPConsistent or
+    not Consettings.ClientCodePage.IsStringFieldCPConsistent or
     (Consettings.ClientCodePage.Encoding = ceUTF16);
 end;
 
@@ -2137,6 +2182,94 @@ end;
 function TZClientVariantManager.UseWComparsions: Boolean;
 begin
   Result := FUseWComparsions;
+end;
+
+{ TZEmulatedTransactionManager }
+
+constructor TZEmulatedTransactionManager.Create(const Connection: IZConnection);
+begin
+  Assert(Connection <> nil, 'Main connection is not assigned');
+  fMainConnection := Connection;
+  ConSettings := Connection.GetConSettings;
+  fTransactions := TZCollection.Create;
+  Connection.QueryInterface(IZTransaction, fActiveTransaction);
+  fTransactions.Add(fActiveTransaction);
+end;
+
+function TZEmulatedTransactionManager.CreateTransaction(AutoCommit,
+  ReadOnly: Boolean; TransactIsolationLevel: TZTransactIsolationLevel;
+  Params: TStrings): IZTransaction;
+var URL: TZURL;
+  Connection: IZConnection;
+begin
+  URL := TZURL.Create;
+  Result := nil;
+  if fMainConnection <> nil then //released ?
+  try
+    URL.URL := fMainConnection.GetURL;
+    if Params <> nil then
+      URL.Properties.AddStrings(Params);
+    Connection := DriverManager.GetConnection(URL.URL);
+    Connection.SetAutoCommit(AutoCommit);
+    Connection.SetReadOnly(ReadOnly);
+    Connection.SetTransactionIsolation(TransactIsolationLevel);
+    Connection.Open; //test if connect succeeded
+    Result := Connection as IZTransaction; //if not supported we get an invalid interface exc.
+    fTransactions.Add(Result)
+  finally
+    FreeAndNil(URL);
+  end;
+end;
+
+function TZEmulatedTransactionManager.GetTransaction(
+  Index: Cardinal): IZTransaction;
+begin
+  Result := nil;
+  if fMainConnection <> nil then //released ?
+    if Index = 0
+    then fMainConnection.QueryInterface(IZTransaction, Result)
+    else if Index >= Cardinal(fTransactions.Count)
+      then fTransactions[Index-1].QueryInterface(IZTransaction, Result)
+end;
+
+function TZEmulatedTransactionManager.GetTransactionCount: Integer;
+begin
+  Result := fTransactions.Count +1;
+end;
+
+procedure TZEmulatedTransactionManager.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+begin
+  fActiveTransaction := nil;
+  fTransactions.Clear;
+  fMainConnection := nil;
+end;
+
+procedure TZEmulatedTransactionManager.ReleaseTransaction(
+  const Transaction: IZTransaction);
+var I: Integer;
+  Connection: IZConnection;
+begin
+  I := fTransactions.IndexOf(Transaction);
+  if I < 0 then
+    raise EZSQLException.Create('Manager could not locate given transaction');
+  Connection := fTransactions[i] as IZConnection;
+  if Connection <> fMainConnection then
+    Connection.Close;
+  fTransactions.Delete(I);
+end;
+
+procedure TZEmulatedTransactionManager.SetActiveTransaction(
+  const Transaction: IZTransaction);
+begin
+  fActiveTransaction := Transaction;
+end;
+
+{ TZAbstractDbcSingleTransactionConnection }
+
+function TZAbstractDbcSingleTransactionConnection.GetConnection: IZConnection;
+begin
+  Result := IZConnection(fWeakReferenceOfSelfInterface);
 end;
 
 end.
