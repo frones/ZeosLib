@@ -2445,17 +2445,16 @@ var
   OldParams: TParams;
 begin
   FieldDefs.Clear;
-  if Active then
-    Close
-  else
-  begin
-    if assigned(Statement) then
-      Statement.Close;
+  if Active
+  then Close
+  else if assigned(Statement) then begin
+    Statement.Close;
     Statement := nil;
   end;
 
   UnPrepare;
-
+  if (csLoading in ComponentState) then
+    Exit;
   OldParams := TParams.Create;
   OldParams.Assign(FParams);
   FParams.Clear;
