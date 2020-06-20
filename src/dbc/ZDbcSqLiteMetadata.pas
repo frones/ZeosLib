@@ -1178,7 +1178,6 @@ function TZSQLiteDatabaseMetadata.UncachedGetTables(const Catalog: string;
   const Types: TStringDynArray): IZResultSet;
 var
   WhereClause, SQL: string;
-
   function IncludedType(const TypeName: string): Boolean;
   var I: Integer;
   begin
@@ -1189,24 +1188,29 @@ var
   end;
 
 begin
-  WhereClause := '';
-  if IncludedType('TABLE') then
-    WhereClause := 'TYPE=''table''';
+  if IncludedType('TABLE')
+  then WhereClause := 'TYPE=''table'''
+  else WhereClause := '';
   if IncludedType('VIEW') then
-  begin
-    if WhereClause <> '' then
-      WhereClause := '(' + WhereClause + ' OR TYPE=''view'')'
+    if WhereClause <> ''
+    then WhereClause := '(' + WhereClause + ' OR TYPE=''view'')'
     else WhereClause := 'TYPE=''view''';
-  end;
 
-  SQL := 'SELECT ''' + Catalog + ''' AS TABLE_CAT, NULL AS TABLE_SCHEM,'
+  SQL := 'SELECT ';
+  if Catalog <> ''
+  then SQL := SQL + ''''+Catalog+''''
+  else SQL := SQL + 'null';
+
+  SQL := SQL +' AS TABLE_CAT, NULL AS TABLE_SCHEM,'
     + ' TBL_NAME AS TABLE_NAME, UPPER(TYPE) AS TABLE_TYPE, NULL AS REMARKS'
     + ' FROM ';
   if Catalog <> '' then
     SQL := SQL + Catalog + '.';
-  SQL := SQL + 'SQLITE_MASTER WHERE ' + WhereClause
-    + ' AND TBL_NAME LIKE ''' + ToLikeString(TableNamePattern) + '''';
-
+  SQL := SQL + 'SQLITE_MASTER WHERE ' + WhereClause+ ' AND TBL_NAME ';
+  if (TableNamePattern <> '') and HasNoWildcards(TableNamePattern)
+  then SQL := SQL + '= '''+ StripEscape(TableNamePattern)
+  else SQL := SQL + 'LIKE ''' + ToLikeString(TableNamePattern);
+  SQL := SQL + '''';
   Result := CopyToVirtualResultSet(
     GetConnection.CreateStatement.ExecuteQuery(SQL),
     ConstructVirtualResultSet(TableColumnsDynArray));
