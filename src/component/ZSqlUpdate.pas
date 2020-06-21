@@ -380,8 +380,22 @@ begin
 end;
 
 procedure TZUpdateSQL.SetReadWriteTransaction(const Value: IZTransaction);
+var Stmt: IZStatement;
+  ut: TZRowUpdateType;
 begin
-  FTransactions[False] := Value;
+  if FTransactions[False] <> Value then begin
+    Stmt := nil;
+    for ut := utModified to utDeleted do
+      if (FTransactions[False] <> nil) and
+         (FStmts[ut].Count > 0) and (FStmts[ut][0] <> nil) and
+         (FStmts[ut][0].QueryInterface(IZStatement, Stmt) = S_OK) and
+         (Stmt.GetConnection <> FTransactions[False].GetConnection)
+      then Break
+      else Stmt := nil;
+    if (Stmt <> nil) then
+      for ut := utModified to utDeleted do
+        FStmts[ut].Clear;
+  end;
 end;
 
 procedure TZUpdateSQL.SetRefreshSQL(Value: TStrings);

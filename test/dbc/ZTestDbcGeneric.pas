@@ -1752,7 +1752,7 @@ var TxnMngr: IZTransactionManager;
   Resolver: IZCachedResolver;
   RS: IZCachedResultSet;
   I: Integer;
-  B: Boolean;
+  B, Succeeded: Boolean;
 begin
   Connection.Open;
   Check(not Connection.IsClosed);
@@ -1776,12 +1776,16 @@ begin
         Rs.MoveToInsertRow;
         Rs.UpdateSmall(FirstDbcIndex, I+10*Ord(B));
         Resolver.SetReadWriteTransaction(Txn[B]);
+        Succeeded := False;
         if B then try
           Rs.InsertRow;
-          Check(False, 'Inserted a row into a readonly Session/Transaction');
         except //expected the exception
-        end else
+          Succeeded := True;
+        end else begin
           Rs.InsertRow;
+          Succeeded := True;
+        end;
+        Check(Succeeded, 'Inserted a row into a readonly Session/Transaction');
       end;
     end;
   finally
