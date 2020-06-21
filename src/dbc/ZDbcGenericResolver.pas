@@ -849,8 +849,30 @@ end;
 
 procedure TZGenerateSQLCachedResolver.SetReadWriteTransaction(
   const Value: IZTransaction);
+var Stmt: IZStatement;
+  Col: IZCollection;
 begin
-  FTransactions[False] := Value;
+  if FTransactions[False] <> Value then begin
+    FTransactions[False] := Value;
+    if InsertStatement <> nil
+    then Stmt := InsertStatement
+    else begin
+      Col := nil;
+      if (FUpdateStatements.Count > 0) then
+        Col := FUpdateStatements.GetValues
+      else if (FDeleteStatements.Count > 0) then
+        Col := FDeleteStatements.GetValues;
+      if (Col <> nil) then
+        Col[0].QueryInterface(IZStatement, Stmt);
+    end;
+    { test if statement is part of session -> FB always all others will fail}
+    if (Stmt <> nil) and ((Value = nil) or (Stmt.GetConnection <> Value.GetConnection)) then begin
+      Stmt.Close;
+      InsertStatement := nil;
+      FUpdateStatements.Clear;
+      FDeleteStatements.Clear;
+    end;
+  end;
 end;
 
 procedure TZGenerateSQLCachedResolver.SetResolverStatementParamters(
@@ -859,7 +881,7 @@ begin
   Params.Assign(Statement.GetParameters);
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Sender" not used} {$ENDIF}
  {**
   Calculate default values for the fields.
   @param Sender a cached result set object.

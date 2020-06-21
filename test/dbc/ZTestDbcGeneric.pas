@@ -130,7 +130,8 @@ type
 
 implementation
 
-uses ZSysUtils, ZTestConsts, ZFastCode, ZVariant, ZDbcResultSet, ZDbcConnection, StrUtils;
+uses StrUtils, ZSysUtils, ZTestConsts, ZFastCode, ZVariant,
+  ZDbcResultSet, ZDbcCachedResultSet, ZDbcConnection;
 
 { TZGenericTestDbcResultSet }
 procedure TZGenericTestDbcResultSet.TestAfterLast;
@@ -1745,14 +1746,49 @@ end;
 
 procedure TZGenericTestDbcResultSet.TestDbcTransaction;
 var TxnMngr: IZTransactionManager;
-  ROTxn, RWTxn: IZTransaction;
+  Txn: Array[Boolean] of IZTransaction;
+  AConnection: IZConnection;
+  Stmt: IZStatement;
+  Resolver: IZCachedResolver;
+  RS: IZCachedResultSet;
+  I: Integer;
+  B: Boolean;
 begin
+  Connection.Open;
+  Check(not Connection.IsClosed);
   if Connection.QueryInterface(IZTransactionManager, TxnMngr) <> S_OK then
     TxnMngr := TZEmulatedTransactionManager.Create(Connection);
-  ROTxn := TxnMngr.CreateTransaction(False, True, tiReadCommitted, nil);
-  Check(ROTxn <> nil);
-  RWTxn := TxnMngr.CreateTransaction(False, False, tiReadCommitted, nil);
-  Check(RWTxn <> nil);
+  //mssql and sybase products simply do not support readonly sessions/transactions
+  Txn[True] := TxnMngr.CreateTransaction(False, not (Connection.GetServerProvider in [spMSSQL, spASA, spASE]), tiReadCommitted, nil);
+  Check(Txn[True] <> nil);
+  Txn[False] := TxnMngr.CreateTransaction(False, False, tiReadCommitted, nil);
+  Check(Txn[False] <> nil);
+  AConnection := Txn[True].GetConnection;
+  Stmt := AConnection.CreateStatement;
+  Stmt.SetResultSetConcurrency(rcUpdatable);
+  RS := Stmt.ExecuteQuery('select * from people where p_id > 9') as IZCachedResultSet;
+  Resolver := RS.GetResolver;
+  Check(Txn[False].StartTransaction = 1);
+  try
+    for i := 10 to 14 do begin
+      for B := False to not (Connection.GetServerProvider in [spMSSQL, spASA, spASE]) do begin
+        Resolver.SetReadWriteTransaction(Txn[B]);
+        Rs.MoveToInsertRow;
+        Rs.UpdateSmall(FirstDbcIndex, I+10*Ord(B));
+        Resolver.SetReadWriteTransaction(Txn[B]);
+        if B then try
+          Rs.InsertRow;
+          Check(False, 'Inserted a row into a readonly Session/Transaction');
+        except //expected the exception
+        end else
+          Rs.InsertRow;
+      end;
+    end;
+  finally
+    Txn[False].Rollback;
+    Stmt := Connection.CreateStatement;
+    Stmt.ExecuteUpdate('delete from people where p_id > 9');
+  end;
 end;
 
 { TZGenericTestDbcArrayBindings }
