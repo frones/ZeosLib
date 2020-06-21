@@ -505,11 +505,11 @@ end;
 function TZPostgreSQLConnection.HasMinimumServerVersion(MajorVersion,
   MinorVersion, SubVersion: Integer): Boolean;
 begin
-  Result := MajorVersion > GetServerMajorVersion;
-  if not Result and (MajorVersion = GetServerMajorVersion) then begin
-    Result := MinorVersion > GetServerMinorVersion;
-    if not Result and (MinorVersion = GetServerMinorVersion) then
-      Result := SubVersion >= GetServerSubVersion;
+  Result := MajorVersion <= GetServerMajorVersion;
+  if Result and (MajorVersion = GetServerMajorVersion) then begin
+    Result := MinorVersion <= GetServerMinorVersion;
+    if Result and (MinorVersion = GetServerMinorVersion) then
+      Result := SubVersion <= GetServerSubVersion;
   end;
 end;
 
@@ -1120,6 +1120,7 @@ begin
   end;
 end;
 
+const cROTxn: array[Boolean] of RawByteString = (' READ WRITE', ' READ ONLY');
 {**
   Sets a new transact isolation level. tiNone, tiReadUncommitted
   will be mapped to tiReadCommitted since PostgreSQL will treat
@@ -1146,6 +1147,7 @@ begin
               SQL := SQL + RawByteString('SERIALIZABLE');
         else  SQL := SQL + RawByteString('READ COMMITTED');
       end;
+      SQL := SQL + cROTxn[ReadOnly];
       ExecuteImmediat(SQL, lcTransaction);
     end;
     TransactIsolationLevel := Level;
