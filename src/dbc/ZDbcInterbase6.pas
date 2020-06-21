@@ -939,7 +939,7 @@ var S: String;
 begin
   with TZInterbase6Connection(FOwner) do
   if FTrHandle = 0 then begin
-    Result := Ord(not AutoCommit);
+    Result := Ord(not Self.FAutoCommit);
     fTEB.db_handle := @FHandle;
     if FPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, @fTEB) <> 0 then
       FOwner.HandleErrorOrWarning(lcTransaction, @FStatusVector, sStartTxn, Self);

@@ -738,7 +738,7 @@ begin
   if FTransaction = nil then begin
     FTransaction := FAttachment.startTransaction(FStatus, Length(FTPB), Pointer(FTPB));
     FTransaction.AddRef;
-    Result := Ord(not AutoCommit);
+    Result := Ord(not Self.FAutoCommit);
     DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION STARTED.');
   end else begin
     Result := FSavePoints.Count+2;

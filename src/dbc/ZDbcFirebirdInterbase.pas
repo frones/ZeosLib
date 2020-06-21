@@ -664,8 +664,8 @@ begin
     raise EZSQLException.Create(SCannotUseCommit);
   with GetActiveTransaction do begin
     Commit;
-    if (not FRestartTransaction) and (GetTransactionLevel = 0) then
-      SetAutoCommit(True)
+    if (not FRestartTransaction) and (GetTransactionLevel <= 0) then
+      SetAutoCommit(True);
   end;
 end;
 
@@ -1200,8 +1200,8 @@ begin
     raise EZSQLException.Create(SCannotUseRollback);
   with GetActiveTransaction do begin
     Rollback;
-    if (not FRestartTransaction) and (GetTransactionLevel = 0) then
-      SetAutoCommit(True);
+    if (not FRestartTransaction) and (GetTransactionLevel <= 0) then
+      SetAutoCommit(True)
   end;
 end;
 
@@ -1212,8 +1212,8 @@ var Transaction: IZInterbaseFirebirdTransaction;
 begin
   SavePoint := nil;
   Transaction := nil;
-  if (Value = nil) or (Value.QueryInterface(IZInterbaseFirebirdConnection, Transaction) <> S_OK)
-    or (Value.QueryInterface(IZInterbaseFirebirdSavePoint, SavePoint) <> S_OK) then
+  if (Value = nil) or (Value.QueryInterface(IZInterbaseFirebirdTransaction, Transaction) <> S_OK)
+    and (Value.QueryInterface(IZInterbaseFirebirdSavePoint, SavePoint) <> S_OK) then
     raise EZSQLException.Create('invalid IB/FB transaction');
   if (SavePoint <> nil) then
     SavePoint.GetOwnerTransaction.QueryInterface(IZInterbaseFirebirdTransaction, Transaction);
