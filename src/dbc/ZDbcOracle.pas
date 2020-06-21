@@ -238,6 +238,7 @@ type
     procedure Rollback;
     function GetConnection: IZConnection;
     function StartTransaction: Integer;
+    function GetTransactionLevel: Integer;
   public { IZOracleTransaction }
     procedure CloseTransaction;
     function GetTrHandle: POCITrans;
@@ -1492,6 +1493,13 @@ end;
 function TZOracleTransaction.GetConnection: IZConnection;
 begin
   Result := FOwner;
+end;
+
+function TZOracleTransaction.GetTransactionLevel: Integer;
+begin
+  if FStarted
+  then Result := Ord(not FOwner.AutoCommit)+fSavepoints.Count
+  else Result := -1;
 end;
 
 function TZOracleTransaction.GetTrHandle: POCITrans;

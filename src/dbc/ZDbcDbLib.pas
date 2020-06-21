@@ -97,7 +97,6 @@ type
     FProvider: TDBLibProvider;
     FServerAnsiCodePage: Word;
     FPlainDriver: TZDBLIBPLainDriver;
-    FSavePoints: TStrings;
     {$IFDEF TEST_CALLBACK}
     FDBLibErrorHandler: IZDBLibErrorHandler;
     FDBLibMessageHandler: IZDBLibMessageHandler;
@@ -255,7 +254,6 @@ begin
     {$ELSE}
     Info.Values[ConnProps_CodePage] := 'ISO-8859-1'; //this is the default CP of free-tds
     {$IFEND}
-  FSavePoints := TStringList.Create;
 end;
 
 {**
@@ -778,7 +776,6 @@ begin
   finally
     FreeAndNil(FSQLErrors);
     FreeAndNil(FSQLMessages);
-    FreeAndNil(FSavePoints);
   end;
 end;
 

@@ -112,7 +112,6 @@ type
     FIKnowMyDatabaseName, FMySQL_FieldType_Bit_1_IsBoolean,
     FSupportsBitType, FSupportsReadOnly: Boolean;
     FPlainDriver: TZMySQLPlainDriver;
-    FSavePoints: TStrings;
     FLastWarning: EZSQLWarning;
     FSilentError: Boolean;
   protected
@@ -132,7 +131,6 @@ type
     procedure SetAutoCommit(Value: Boolean); override;
     function StartTransaction: Integer;
 
-    destructor Destroy; override;
     procedure SetReadOnly(Value: Boolean); override;
 
     function PingServer: Integer; override;
@@ -346,7 +344,6 @@ begin
      Self.Port := MYSQL_PORT;
   inherited SetTransactionIsolation(tiRepeatableRead);
   FMetaData := TZMySQLDatabaseMetadata.Create(Self, Url);
-  FSavePoints := TStringList.Create;
 end;
 
 const
@@ -715,12 +712,6 @@ begin
   if IsClosed then
      Open;
   Result := TZMySQLStatement.Create(Self, Info);
-end;
-
-destructor TZMySQLConnection.Destroy;
-begin
-  inherited Destroy;
-  FSavePoints.Free;
 end;
 
 function TZMySQLConnection.EscapeString(

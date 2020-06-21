@@ -573,6 +573,7 @@ type
     /// </returns>
     function StartTransaction: Integer;
     function GetConnection: IZConnection;
+    function GetTransactionLevel: Integer;
   end;
 
   IZTransactionManager = interface(IImmediatelyReleasable)

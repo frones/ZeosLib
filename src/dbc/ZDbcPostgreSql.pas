@@ -140,7 +140,7 @@ type
     Fconn: TPGconn;
 //  Jan: Not sure wether we still need that. What was its intended use?
 //    FBeginRequired: Boolean;
-    FTypeList, FSavePoints: TStrings;
+    FTypeList: TStrings;
     FDomain2BaseTypMap: TZOID2OIDMapList;
     FOidAsBlob, Finteger_datetimes: Boolean;
     FServerMajorVersion: Integer;
@@ -380,7 +380,6 @@ begin
   FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
   FCheckFieldVisibility := StrToBoolEx(Info.Values[ConnProps_CheckFieldVisibility]);
   FNoTableInfoCache := StrToBoolEx(Info.Values[ConnProps_NoTableInfoCache]);
-  FSavePoints := TStringList.Create;
 
   FNoticeProcessor := NoticeProcessorDispatcher;
   FNoticeReceiver  := NoticeReceiverDispatcher;
@@ -506,11 +505,11 @@ end;
 function TZPostgreSQLConnection.HasMinimumServerVersion(MajorVersion,
   MinorVersion, SubVersion: Integer): Boolean;
 begin
-  Result := MajorVersion > GetServerMajorVersion;
-  if not Result and (MajorVersion = GetServerMajorVersion) then begin
-    Result := MinorVersion > GetServerMinorVersion;
-    if not Result and (MinorVersion = GetServerMinorVersion) then
-      Result := SubVersion >= GetServerSubVersion;
+  Result := MajorVersion <= GetServerMajorVersion;
+  if Result and (MajorVersion = GetServerMajorVersion) then begin
+    Result := MinorVersion <= GetServerMinorVersion;
+    if Result and (MinorVersion = GetServerMinorVersion) then
+      Result := SubVersion <= GetServerSubVersion;
   end;
 end;
 
@@ -529,7 +528,6 @@ begin
   inherited Destroy;
   FreeAndNil(FPreparedStatementTrashBin);
   FreeAndNil(FProcedureTypesCache);
-  FreeAndNil(FSavePoints);
   FreeAndNil(FDomain2BaseTypMap);
 end;
 
@@ -1122,6 +1120,7 @@ begin
   end;
 end;
 
+const cROTxn: array[Boolean] of RawByteString = (' READ WRITE', ' READ ONLY');
 {**
   Sets a new transact isolation level. tiNone, tiReadUncommitted
   will be mapped to tiReadCommitted since PostgreSQL will treat
@@ -1148,6 +1147,7 @@ begin
               SQL := SQL + RawByteString('SERIALIZABLE');
         else  SQL := SQL + RawByteString('READ COMMITTED');
       end;
+      SQL := SQL + cROTxn[ReadOnly];
       ExecuteImmediat(SQL, lcTransaction);
     end;
     TransactIsolationLevel := Level;

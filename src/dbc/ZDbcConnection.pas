@@ -240,8 +240,15 @@ type
   end;
 
   TZAbstractDbcSingleTransactionConnection = class(TZAbstractDbcConnection)
+  protected
+    FSavePoints: TStrings;
+    FTransactionLevel: Integer;
+    procedure BeforeUrlAssign; override;
   public //implement IZTransaction
     function GetConnection: IZConnection;
+    function GetTransactionLevel: Integer;
+  public
+    destructor Destroy; override;
   end;
 
   {** Implements Abstract Database notification. }
@@ -2267,9 +2274,30 @@ end;
 
 { TZAbstractDbcSingleTransactionConnection }
 
+procedure TZAbstractDbcSingleTransactionConnection.BeforeUrlAssign;
+begin
+  FSavePoints := TStringList.Create;
+end;
+
+destructor TZAbstractDbcSingleTransactionConnection.Destroy;
+begin
+  try
+    inherited Destroy;
+  finally
+    FreeAndNil(FSavePoints);
+  end;
+end;
+
 function TZAbstractDbcSingleTransactionConnection.GetConnection: IZConnection;
 begin
   Result := IZConnection(fWeakReferenceOfSelfInterface);
+end;
+
+function TZAbstractDbcSingleTransactionConnection.GetTransactionLevel: Integer;
+begin
+  Result := Ord(not AutoCommit);
+  if FSavePoints <> nil then
+    Result := Result + FSavePoints.Count;
 end;
 
 end.

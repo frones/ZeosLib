@@ -100,7 +100,6 @@ type
     FHandle: Psqlite;
     FPlainDriver: TZSQLitePlainDriver;
     FTransactionStmts: array[TSQLite3TransactionAction] of Psqlite3_stmt;
-    FSavePoints: TStrings;
   protected
     procedure InternalCreate; override;
     procedure InternalClose; override;
@@ -120,8 +119,6 @@ type
 
     function AbortOperation: Integer; override;
   public
-    destructor Destroy; override;
-
     procedure Open; override;
 
     procedure Commit;
@@ -253,7 +250,6 @@ begin
   FMetadata := TZSQLiteDatabaseMetadata.Create(Self, Url);
   //https://sqlite.org/pragma.html#pragma_read_uncommitted
   inherited SetTransactionIsolation(tiSerializable);
-  FSavePoints := TStringList.Create;
   CheckCharEncoding('UTF-8');
   FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
 end;
@@ -477,12 +473,6 @@ begin
     Open;
 
   Result := TZSQLiteStatement.Create(Self, Info);
-end;
-
-destructor TZSQLiteConnection.Destroy;
-begin
-  FSavePoints.Free;
-  inherited;
 end;
 
 function TZSQLiteConnection.enable_load_extension(OnOff: Integer): Integer;

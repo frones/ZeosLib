@@ -95,7 +95,6 @@ type
     FSQLCA: TZASASQLCA;
     FHandle: PZASASQLCA;
     FPlainDriver: TZASAPlainDriver;
-    FSavePoints: TStrings;
     FHostVersion: Integer;
     FLastWarning: EZSQLWarning;
   private
@@ -108,7 +107,6 @@ type
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
   public
-    destructor Destroy; override;
     function GetDBHandle: PZASASQLCA;
     function GetPlainDriver: TZASAPlainDriver;
     procedure HandleErrorOrWarning(LoggingCategory: TZLoggingCategory;
@@ -310,7 +308,6 @@ procedure TZASAConnection.InternalCreate;
 begin
   FPlainDriver := TZASAPlainDriver(GetIZPlainDriver.GetInstance);
   Self.FMetadata := TZASADatabaseMetadata.Create(Self, URL);
-  FSavePoints := TStringList.Create;
 end;
 
 {**
@@ -743,12 +740,6 @@ begin
     ExecuteImmediat('SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S), lcTransaction);
     Result := FSavePoints.Add(S) +2;
   end;
-end;
-
-destructor TZASAConnection.Destroy;
-begin
-  inherited;
-  FSavePoints.Free;
 end;
 
 function TZASAConnection.DetermineASACharSet: String;

@@ -98,7 +98,6 @@ type
     FServerProvider: TZServerProvider;
     fTransaction: ITransactionLocal;
     fCatalog: String;
-    FSavePoints: TStrings;
     FAutoCommitTIL: ISOLATIONLEVEL;
     FRestartTransaction: Boolean;
     FLastWarning: EZSQLWarning;
@@ -233,7 +232,6 @@ begin
   OleCheck(CoGetMalloc(1,fMalloc));
   FMetadata := TOleDBDatabaseMetadata.Create(Self, URL);
   FRetaining := False; //not StrToBoolEx(URL.Properties.Values['hard_commit']);
-  FSavePoints := TStringList.Create;
   Inherited SetAutoCommit(True);
   //Open;
 end;
@@ -277,7 +275,6 @@ begin
   try
     inherited Destroy; // call Disconnect;
   finally
-    FreeAndNil(FSavePoints);
     FDBCreateCommand := nil;
     fDBInitialize := nil;
     fMalloc := nil;

@@ -422,43 +422,34 @@ end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure BCD2Decimal(const Value: TBCD; Dest: PDecimal);
 var
-  LastNibbleByteIDX, BCDScale, P, I, F: Byte;
   i64: UInt64;
-  Negative, LastByteIsHalfByte: boolean;
+  Precision, Scale: Word;
+  GetFirstHalfByte: boolean;
+  PNibble, pLastNibble: PAnsiChar;
 begin
-  LastNibbleByteIDX := (Value.Precision-1) shr 1;
-  F := Value.SignSpecialPlaces;
-  BCDScale := (F and 63);
-  Negative := (F and $80) = $80;
-  LastByteIsHalfByte := (Value.Precision and 1 = 1) or ((BCDScale and 1 = 1) and (Value.Fraction[LastNibbleByteIDX] and $0F = 0));
-  P := 0;
-  i64 := 0;
-  { scan for leading zeroes to skip them }
-  if LastNibbleByteIDX > 0 then begin
-    for I := 0 to LastNibbleByteIDX do begin
-      F := Value.Fraction[i];
-      if F = 0
-      then Inc(P)
-      else begin
-        i64 := ZBcdNibble2Base100ByteLookup[F];
-        Break;
-      end;
-    end
+  GetPacketBCDOffSets(Value, pNibble, pLastNibble, Precision, Scale, GetFirstHalfByte);
+  if (Precision <= 1) and (pByte(pNibble)^ = 0) then begin
+    Dest.Lo64 := 0;
+    Dest.Scale := 0;
+    Exit;
   end;
-  { initialize the Result }
-  if P < LastNibbleByteIDX then begin
-    for I := P+1 to LastNibbleByteIDX-Ord(LastByteIsHalfByte) do
-      i64 := i64 * 100 + ZBcdNibble2Base100ByteLookup[Value.Fraction[i]];
-    { last half nibble byte}
-    if LastByteIsHalfByte then begin
-      i64 := i64 * 10 + Value.Fraction[P+LastNibbleByteIDX] shr 4;
-      if (BCDScale and 1 = 1) and (Value.Precision and 1 = 0) then
-        Dec(BCDScale);
-    end;
-    if negative then
-      Dest.Sign := 1;
+  if GetFirstHalfByte
+  then i64 := 0 //init
+  else begin
+    i64 := PByte(pNibble)^;
+    Inc(pNibble);
   end;
-  Dest.Scale := BCDScale;
+  while pNibble < pLastNibble do begin
+    i64 := i64 * 100 + ZBcdNibble2Base100ByteLookup[PByte(pNibble)^];
+    Inc(pNibble);
+  end;
+  if not GetFirstHalfByte then
+    Dec(Precision);
+  if Precision and 1 = 1
+  then i64 := i64 * 10 + PByte(pNibble)^ shr 4
+  else i64 := i64 * 100 + ZBcdNibble2Base100ByteLookup[PByte(pNibble)^];
+  Dest.Sign := Byte(Value.SignSpecialPlaces and $80 = $80);
+  Dest.Scale := Byte(Scale);
   {$IFDEF FPC}
   Dest.Lo64 := i64; //correct translated
   {$else}
