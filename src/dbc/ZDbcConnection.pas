@@ -2203,6 +2203,7 @@ begin
   fTransactions.Add(fActiveTransaction);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "AutoCommit" not used} {$ENDIF}
 function TZEmulatedTransactionManager.CreateTransaction(AutoCommit,
   ReadOnly: Boolean; TransactIsolationLevel: TZTransactIsolationLevel;
   Params: TStrings): IZTransaction;
@@ -2217,16 +2218,17 @@ begin
     if Params <> nil then
       URL.Properties.AddStrings(Params);
     Connection := DriverManager.GetConnection(URL.URL);
-    Connection.SetAutoCommit(AutoCommit);
+    Connection.SetAutoCommit(True); //do not automatically start a explicit txn that should be done by StartTransaction
     Connection.SetReadOnly(ReadOnly);
     Connection.SetTransactionIsolation(TransactIsolationLevel);
-    Connection.Open; //test if connect succeeded
+    Connection.Open; //test if connect succeeded and prevent raise exception on starttransaction
     Result := Connection as IZTransaction; //if not supported we get an invalid interface exc.
-    fTransactions.Add(Result)
+    fTransactions.Add(Result);
   finally
     FreeAndNil(URL);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TZEmulatedTransactionManager.GetTransaction(
   Index: Cardinal): IZTransaction;
