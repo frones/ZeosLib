@@ -4044,7 +4044,7 @@ procedure TZAbstractRODataset.InternalGotoBookmark(Bookmark: TBookmark);
 procedure TZAbstractRODataset.InternalGotoBookmark(Bookmark: Pointer);
 {$ENDIF}
 begin
-  if not GotoRow(PNativeInt(Bookmark)^) then
+  if not GotoRow(PInteger(Bookmark)^) then
     raise EZDatabaseError.Create(SBookmarkWasNotFound);
 end;
 
