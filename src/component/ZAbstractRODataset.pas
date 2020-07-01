@@ -164,7 +164,6 @@ type
     FParams: TParams;
     FShowRecordTypes: TUpdateStatusSet;
     FOptions: TZDatasetOptions;
-
     FProperties: TStrings;
     FConnection: TZAbstractConnection;
     FStatement: IZPreparedStatement;
@@ -290,6 +289,7 @@ type
     {$ENDIF}
     function  GetUniDirectional: boolean;
   protected
+    FTransaction: TZAbstractTransaction;
     procedure CheckOpened;
     procedure CheckConnected;
     procedure CheckBiDirectional;
@@ -310,6 +310,7 @@ type
     procedure RetrieveParamValues;
     function GetDataSource: TDataSource; override;
     procedure Prepare4DataManipulation(Field: TField);
+    procedure SetTransaction(Value: TZAbstractTransaction);
   protected { Internal protected properties. }
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; virtual;
@@ -571,7 +572,10 @@ type
     {$IFNDEF WITH_DATASETFIELD}
     property DataSetField: TDataSetField read FDataSetField write SetDataSetField;
     {$ENDIF}
+    property LastRowFetched: Boolean read FLastRowFetched;
   published
+    property Transaction: TZAbstractTransaction read FTransaction
+      write SetTransaction;
     property Connection: TZAbstractConnection read FConnection write SetConnection;
     property SortedFields: string read FSortedFields write SetSortedFields;
     property SortType : TSortType read FSortType write SetSortType
@@ -1896,6 +1900,25 @@ begin
       FStringFieldGetter := StringFieldGetterRaw2RawConvert;
     FStringFieldSetter := StringFieldSetterFromAnsi;
     {$ENDIF}
+end;
+
+type
+  THackTransaction = class(TZAbstractTransaction);
+
+procedure TZAbstractRODataset.SetTransaction(Value: TZAbstractTransaction);
+begin
+  CheckInactive;
+  if Value <> FTransaction then begin
+    if (FTransaction <> nil) then begin
+      if (Statement <> nil) and (THackTransaction(FTransaction).GetIZTransaction.GetConnection <> Statement.GetConnection) then
+        Statement.Close;
+      FTransaction.UnregisterDataSet(Self);
+    end;
+    FTransaction := Value;
+    if FTransaction <> nil then begin
+      FTransaction.RegisterDataSet(Self);
+    end;
+  end;
 end;
 
 {**
@@ -3377,17 +3400,16 @@ end;
 }
 procedure TZAbstractRODataset.ExecSQL;
 begin
-  if Active then
-    begin
-      Connection.ShowSQLHourGlass;
-      try
-        Close;
-      finally
-        Connection.HideSQLHourGlass;
-      end;
+  if Active then begin
+    Connection.ShowSQLHourGlass;
+    try
+      Close;
+    finally
+      Connection.HideSQLHourGlass;
     end;
-
-  Prepare;
+  end;
+  if (Statement = nil) or Statement.IsClosed then
+    Prepare;
 
   Connection.ShowSQLHourGlass;
   try
@@ -3524,6 +3546,8 @@ function TZAbstractRODataset.CreateStatement(const SQL: string; Properties: TStr
   IZPreparedStatement;
 var
   Temp: TStrings;
+  Txn: IZTransaction;
+  TxnCon: IZConnection;
 begin
   Temp := TStringList.Create;
   try
@@ -3533,7 +3557,11 @@ begin
     Temp.Values[DSProps_Defaults] := BoolStrs[doCalcDefaults in FOptions];
     Temp.Values[DSProps_PreferPrepared] := BoolStrs[doPreferPrepared in FOptions];
     Temp.Values[DSProps_CachedLobs] := BoolStrs[doCachedLobs in FOptions];
-    Result := FConnection.DbcConnection.PrepareStatementWithParams(SQL, Temp);
+    if FTransaction <> nil
+    then Txn := THackTransaction(FTransaction).GetIZTransaction
+    else Txn := FConnection.DbcConnection.GetConnectionTransaction;
+    TxnCon := Txn.GetConnection; //sets the active txn for IB/FB that is more a hack than i nice idea of me (EH) but make it work..
+    Result := TxnCon.PrepareStatementWithParams(SQL, Temp);
   finally
     Temp.Free;
   end;
@@ -3564,15 +3592,11 @@ begin
     if MaxRows > 0 then
       Statement.SetMaxRows(MaxRows);
 
-    if doSmartOpen in FOptions then
-    begin
-      if Statement.ExecutePrepared then
-        Result := Statement.GetResultSet
-      else
-        Result := nil;
-    end
-    else
-      Result := Statement.ExecuteQueryPrepared;
+    if doSmartOpen in FOptions
+    then if Statement.ExecutePrepared
+      then Result := Statement.GetResultSet
+      else Result := nil
+    else Result := Statement.ExecuteQueryPrepared;
   finally
     Connection.HideSQLHourGlass;
   end;
@@ -6247,176 +6271,6 @@ end;
 (*
 type
   THackObjectField = Class(TObjectField);
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter ParentField not used} {$ENDIF}
-function TZFieldDef.CreateFieldComponent(Owner: TComponent;
-  ParentField: TObjectField = nil; FieldName: string = ''): TField;
-var
-  FieldClassType: TFieldClass;
-  Idx: Integer;
-Label JmpDefField;
-begin
-  Idx := FieldNo-1;
-  if InternalCalcField
-  then goto JmpDefField
-  else case DataType of
-    ftBoolean: begin
-        Result := TZBooleanField.Create(Owner);
-        TZBooleanField(Result).FFieldIndex := Idx;
-      end;
-    {$IFDEF WITH_FTBYTE}
-    ftByte: begin
-        Result := TZByteField.Create(Owner);
-        TZByteField(Result).FFieldIndex := Idx;
-      end;
-    {$ENDIF WITH_FTBYTE}
-    {$IFDEF WITH_FTSHORTINT}
-    ftShortInt: begin
-        Result := TZShortIntField.Create(Owner);
-        TZShortIntField(Result).FFieldIndex := Idx;
-      end;
-    {$ENDIF WITH_FTSHORTINT}
-    ftSmallInt: {$IFNDEF WITH_FTSHORTINT}
-        if FSQLType = stShort then begin
-          Result := TZShortIntField.Create(Owner);
-          TZShortIntField(Result).FFieldIndex := Idx;
-        end else {$ENDIF WITH_FTSHORTINT} begin
-          Result := TZSmallIntField.Create(Owner);
-          TZSmallIntField(Result).FFieldIndex := Idx;
-        end;
-    ftWord: {$IFNDEF WITH_FTSHORTINT}
-        if FSQLType = stByte then begin
-          Result := TZByteField.Create(Owner);
-          TZByteField(Result).FFieldIndex := Idx;
-        end else {$ENDIF WITH_FTSHORTINT} begin
-          Result := TZWordField.Create(Owner);
-          TZWordField(Result).FFieldIndex := Idx;
-        end;
-    ftInteger: begin
-        Result := TZIntegerField.Create(Owner);
-        TZIntegerField(Result).FFieldIndex := Idx;
-      end;
-    {$IFDEF WITH_FTLONGWORD}
-    ftLongWord: begin
-        Result := TZCardinalField.Create(Owner);
-        TZCardinalField(Result).FFieldIndex := Idx;
-      end;
-    {$ENDIF WITH_FTLONGWORD}
-    ftTime: begin
-        Result := TZTimeField.Create(Owner);
-        TZTimeField(Result).FFieldIndex := Idx;
-        TZTimeField(Result).fScale := Size;
-      end;
-    ftDate: begin
-        Result := TZDateField.Create(Owner);
-        TZDateField(Result).FFieldIndex := Idx;
-      end;
-    ftDateTime: begin
-        Result := TZDateTimeField.Create(Owner);
-        TZDateTimeField(Result).FFieldIndex := Idx;
-        TZDateTimeField(Result).fScale := Size;
-      end;
-    ftLargeInt: if FSQLType = stLong then begin
-          Result := TZInt64Field.Create(Owner);
-          TZInt64Field(Result).FFieldIndex := Idx;
-        end else {$IFNDEF WITH_FTLONGWORD}if FSQLType = stLongWord then begin
-          Result := TZCardinalField.Create(Owner);
-          TZCardinalField(Result).FFieldIndex := Idx;
-        end else {$ENDIF WITH_FTLONGWORD}begin
-          Result := TZUInt64Field.Create(Owner);
-          TZUInt64Field(Result).FFieldIndex := Idx;
-        end;
-    {$IFDEF WITH_FTSINGLE}
-    ftSingle: begin
-        Result := TZSingleField.Create(Owner);
-        TZSingleField(Result).FFieldIndex := Idx;
-      end;
-    {$ENDIF WITH_FTSINGLE}
-    ftFloat: {$IFNDEF WITH_FTSINGLE} if FSQLType = stFloat then begin
-        Result := TZSingleField.Create(Owner);
-        TZSingleField(Result).FFieldIndex := Idx;
-      end else {$ENDIF WITH_FTSINGLE}begin
-        Result := TZDoubleField.Create(Owner);
-        TZDoubleField(Result).FFieldIndex := Idx;
-      end;
-    ftBCD:  begin
-        Result := TZBCDField.Create(Owner);
-        TZBCDField(Result).FFieldIndex := Idx;
-      end;
-    ftFmtBCD: begin
-        Result := TZFMTBcdField.Create(Owner);
-        TZFMTBcdField(Result).FFieldIndex := Idx;
-      end;
-    ftGUID: begin
-        Result := TZGUIDField.Create(Owner);
-        TZGUIDField(Result).FFieldIndex := Idx;
-      end;
-    ftString: begin
-        Result := TZRawStringField.Create(Owner);
-        TZRawStringField(Result).FFieldIndex := Idx;
-      end;
-    ftWideString: begin
-        Result := TZUnicodeStringField.Create(Owner);
-        TZUnicodeStringField(Result).FFieldIndex := Idx;
-      end;
-    ftBytes: begin
-        Result := TZBytesField.Create(Owner);
-        TZBytesField(Result).FFieldIndex := Idx;
-      end;
-    ftVarBytes: begin
-        Result := TZVarBytesField.Create(Owner);
-        TZVarBytesField(Result).FFieldIndex := Idx;
-      end;
-    ftMemo: {$IFNDEF WITH_WIDEMEMO} if FSQLType = stUnicodeStream then begin
-        Result := TZUnicodeCLobField.Create(Owner);
-        TZUnicodeCLobField(Result).FFieldIndex := Idx;
-      end else {$ENDIF WITH_WIDEMEMO}begin
-        Result := TZRawCLobField.Create(Owner);
-        TZRawCLobField(Result).FFieldIndex := Idx;
-      end;
-    {$IFDEF WITH_WIDEMEMO}
-    ftWideMemo: begin
-        Result := TZUnicodeCLobField.Create(Owner);
-        TZUnicodeCLobField(Result).FFieldIndex := Idx;
-      end;
-    {$ENDIF WITH_WIDEMEMO}
-    ftBlob: begin
-        Result := TZBLobField.Create(Owner);
-        TZBLobField(Result).FFieldIndex := Idx;
-      end;
-    else begin
-JmpDefField:
-      FieldClassType := DefaultFieldClasses[DataType];
-      if FieldClassType = nil then DatabaseErrorFmt(SUnknownFieldType, [Name]);
-      Result := FieldClassType.Create(Owner);
-    end;
-  end;
-  try
-    Result.Size := Size;
-    if FieldName <> '' then
-      Result.FieldName := FieldName else
-      Result.FieldName := Name;
-    Result.Required := faRequired in Attributes;
-    Result.ReadOnly := faReadonly in Attributes;
-    Result.SetFieldType(DataType);
-    if Result is TBCDField then
-      TBCDField(Result).Precision := Precision
-    else if Result is TFMTBCDField then
-      TFMTBCDField(Result).Precision := Precision;
-    {if Assigned(ParentField) then
-      TField(Result).ParentField := ParentField else}
-      Result.DataSet := TFieldDefs(Collection).DataSet;
-    if ((faFixed in Attributes) or (DataType = ftFixedChar)) and (Result is TStringField) then
-      TStringField(Result).FixedChar := True;
-    if InternalCalcField then
-      Result.FieldKind := fkInternalCalc;
-    if (faUnNamed in Attributes) and (Result is TObjectField) then
-      THackObjectField(Result).SetUnNamed(True);
-  except
-    Result.Free;
-    raise;
-  end;
-end;
-{$IFDEF FPC} {$POP} {$ENDIF}
 *)
 
 {$IFNDEF TFIELDDEF_HAS_CHILDEFS}
@@ -6448,34 +6302,6 @@ begin
   Result := (FChildDefs <> nil) and (FChildDefs.Count > 0);
 end;
 {$ENDIF}
-(*
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF}
-function TZFieldDef.CreateField(Owner: TComponent; ParentField: TObjectField = nil;
-  const FieldName: string = ''; CreateChildren: Boolean = True): TField;
-{$IFDEF TFIELDDEF_HAS_CHILDEFS}
-var
-  FieldCount, I: Integer;
-{$ENDIF TFIELDDEF_HAS_CHILDEFS}
-begin
-  Result := CreateFieldComponent(Owner, ParentField, FieldName);
-  {$IFDEF TFIELDDEF_HAS_CHILDEFS}
-  if CreateChildren and HasChildDefs then
-  begin
-    if (DataType = ftArray) then
-    begin
-      if TZAbstractRODataset(TFieldDefs(Collection).DataSet).SparseArrays then
-        FieldCount := 1 else
-        FieldCount := Size;
-      for I := 0 to FieldCount - 1 do
-        TZFieldDef(ChildDefs[0]).CreateField(nil, TObjectField(Result), Format('%s[%d]',
-          [Result.FieldName, I]))
-    end else
-      for I := 0 to ChildDefs.Count - 1 do
-        TZFieldDef(ChildDefs[I]).CreateField(nil, TObjectField(Result), '');
-  end;
-  {$ENDIF TFIELDDEF_HAS_CHILDEFS}
-end;
-{$IFDEF FPC} {$POP} {$ENDIF}*)
 
 {$IFNDEF WITH_TOBJECTFIELD}
 { TObjectField }

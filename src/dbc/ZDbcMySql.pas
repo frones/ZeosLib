@@ -103,7 +103,7 @@ type
 
   { TZMySQLConnection }
 
-  TZMySQLConnection = class(TZAbstractDbcSingleTransactionConnection, IZConnection,
+  TZMySQLConnection = class(TZAbstractSuccedaneousTxnConnection, IZConnection,
     IZMySQLConnection, IZTransaction)
   private
     FCatalog: string;

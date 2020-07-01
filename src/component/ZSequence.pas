@@ -97,7 +97,7 @@ implementation
 
 procedure TZSequence.CloseSequence;
 begin
-  FSequence:=nil;
+  FSequence := nil;
 end;
 
 constructor TZSequence.Create(AOwner: TComponent);

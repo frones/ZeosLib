@@ -52,8 +52,11 @@
 (*
  Constributors:
   cipto,
+  HA,
   mdeams (Mark Deams)
   miab3
+  marsupilami97
+  mse
   EgonHugeist and many others i'm not aware about
 *)
 
@@ -107,14 +110,14 @@ uses
 {$ENDIF}
 
   SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
-  {$IFDEF TLIST_IS_DEPRECATED}ZClasses,{$ENDIF}
-  ZDbcIntfs, ZCompatibility, ZDatasetUtils;
-
+  ZClasses, ZCompatibility,
+  ZDbcIntfs, ZDatasetUtils;
 
 type
   //HA 090811 New Type TZLoginEvent to make Username and Password persistent
   TZLoginEvent = procedure(Sender: TObject; var Username:string ; var Password: string) of object;
 
+  TZAbstractTransaction = class;
   {** Represents a component which wraps a connection to database. }
 
   { TZAbstractConnection }
@@ -137,8 +140,8 @@ type
     FReadOnly: Boolean;
     FTransactIsolationLevel: TZTransactIsolationLevel;
     FConnection: IZConnection;
-    FDatasets: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
-    FSequences: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
+    FDatasets: TZSortedList;
+    FSequences: TZSortedList;
 
     FLoginPrompt: Boolean;
     FStreamedConnected: Boolean;
@@ -156,11 +159,9 @@ type
     FOnCommit: TNotifyEvent;
     FOnRollback, FOnLost: TNotifyEvent;
     FOnStartTransaction: TNotifyEvent;
-    //HA 090811 Change Type of FOnLogin to new TZLoginEvent
-    //FOnLogin: TLoginEvent;
     FOnLogin: TZLoginEvent;
     FClientCodepage: String;
-
+    FTransactions: TZSortedList;
     function GetAutoEncode: Boolean;
     procedure SetAutoEncode(Value: Boolean);
     function GetHostName: string;
@@ -209,6 +210,7 @@ type
     procedure CloseAllDataSets;
     procedure UnregisterAllDataSets;
 
+    procedure CloseAllTransactions;
     procedure CloseAllSequences;
 
     procedure Notification(AComponent: TComponent;
@@ -244,6 +246,8 @@ type
     function ExecuteDirect(const SQL: string; out RowsAffected: integer): boolean; overload;
     procedure RegisterSequence(Sequence: TComponent);
     procedure UnregisterSequence(Sequence: TComponent);
+    function RegisterTransaction(Value: TZAbstractTransaction): Integer;
+    procedure UnregisterTransaction(Value: TZAbstractTransaction);
 
     procedure GetProtocolNames(List: TStrings);
     procedure GetCatalogNames(List: TStrings);
@@ -314,8 +318,6 @@ type
       default False;
     property OnCommit: TNotifyEvent read FOnCommit write FOnCommit;
     property OnRollback: TNotifyEvent read FOnRollback write FOnRollback;
-    //HA 090811 Change Type of FOnLogin to new TZLoginEvent
-    //property OnLogin: TLoginEvent read FOnLogin write FOnLogin;
     property OnLogin: TZLoginEvent read FOnLogin write FOnLogin;
     property OnStartTransaction: TNotifyEvent
       read FOnStartTransaction write FOnStartTransaction;
@@ -324,11 +326,76 @@ type
     property TestMode : Byte read FTestMode write FTestMode;
     {$ENDIF}
   end;
+  {** EH: Implements an abstract transaction component }
+
+  TZAbstractTransaction = class(TComponent)
+  private
+    FApplyPendingUpdatesOnCommit: Boolean;
+    FDisposePendingUpdatesOnRollback: Boolean;
+    FDatasets: TZSortedList;
+    FParams: TStrings;
+    FAutoCommit: Boolean;
+    FReadOnly: Boolean;
+    FTransactIsolationLevel: TZTransactIsolationLevel;
+    FBeforeStartTransaction: TNotifyEvent;
+    FAfterStartTransaction: TNotifyEvent;
+    FBeforeCommit: TNotifyEvent;
+    FAfterCommit: TNotifyEvent;
+    FBeforeRollback: TNotifyEvent;
+    FAfterRollback: TNotifyEvent;
+    FConnection: TZAbstractConnection;
+    FTransaction: IZTransaction;
+    function GetActive: Boolean;
+    function GetAutoCommit: Boolean;
+    function GetDataSetCount: Integer;
+    procedure SetAutoCommit(Value: Boolean);
+    procedure SetReadOnly(Value: Boolean);
+    procedure SetTransactIsolationLevel(Value: TZTransactIsolationLevel);
+    function GetDataSet(Index: Integer): TDataSet;
+    procedure SetConnection(Value: TZAbstractConnection);
+    procedure SetParams(Value: TStrings);
+    function GetTransactionManager: IZTransactionManager;
+    procedure TxnPropertiesChanged;
+    procedure CheckConnected;
+  protected
+    function GetIZTransaction: IZTransaction;
+  public
+    constructor Create(AOnwer: TComponent); override;
+    procedure BeforeDestruction; override;
+  public
+    procedure RegisterDataSet(Value: TDataset);
+    procedure UnregisterDataSet(Value: TDataset);
+  public
+    function StartTransaction: Integer;
+    procedure Commit;
+    procedure Rollback;
+    property Active: Boolean read GetActive;
+    property DataSetCount: Integer read GetDataSetCount;
+    property DataSets[AIndex: Integer]: TDataSet read GetDataSet;
+    property Connection: TZAbstractConnection read FConnection write SetConnection;
+    property BeforeStartTransaction: TNotifyEvent read FBeforeStartTransaction
+      write FBeforeStartTransaction;
+    property AfterStartTransaction: TNotifyEvent read FAfterStartTransaction
+      write FAfterStartTransaction;
+    property BeforeCommit: TNotifyEvent read FBeforeCommit write FBeforeCommit;
+    property AfterCommit: TNotifyEvent read FAfterCommit write FAfterCommit;
+    property BeforeRollback: TNotifyEvent read FBeforeRollback write FBeforeRollback;
+    property AfterRollback: TNotifyEvent read FAfterRollback write FAfterRollback;
+
+    property TransactIsolationLevel: TZTransactIsolationLevel read
+      FTransactIsolationLevel write SetTransactIsolationLevel default tiReadCommitted;
+    property AutoCommit: Boolean read GetAutoCommit write SetAutoCommit default False;
+    property ReadOnly: Boolean read FReadOnly write SetReadOnly default False;
+    property Properties: TStrings read FParams write SetParams;
+    property ApplyPendingUpdatesOnCommit: Boolean read FApplyPendingUpdatesOnCommit
+      write FApplyPendingUpdatesOnCommit default True;
+    property DisposePendingUpdatesOnRollback: Boolean read FDisposePendingUpdatesOnRollback
+      write FDisposePendingUpdatesOnRollback default True;
+  end;
 
 implementation
 
 uses ZMessages, ZAbstractRODataset, ZSysUtils,
-  {$IFNDEF TLIST_IS_DEPRECATED}ZClasses, {$ENDIF}
   ZDbcProperties, ZDbcLogging,
   ZSequence, ZAbstractDataset, ZEncoding;
 
@@ -346,7 +413,6 @@ constructor TZAbstractConnection.Create(AOwner: TComponent);
 begin
   {$IFDEF UNICODE}
   FControlsCodePage := cCP_UTF16;
-  //FAutoEncode := True;
   {$ELSE}
     {$IFDEF FPC}
     FControlsCodePage := cCP_UTF8;
@@ -361,8 +427,9 @@ begin
   FTransactIsolationLevel := tiNone;
   FConnection := nil;
   FUseMetadata := True;
-  FDatasets := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
-  FSequences:= {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
+  FDatasets := TZSortedList.Create;
+  FSequences:= TZSortedList.Create;
+  FTransactions := TZSortedList.Create;
   FLoginPrompt := False;
   FDesignConnection := False;
 end;
@@ -378,6 +445,7 @@ begin
   FURL.Free;
   FSequences.Clear;
   FSequences.Free;
+  FreeAndNil(FTransactions);
   inherited Destroy;
 end;
 
@@ -516,16 +584,10 @@ procedure TZAbstractConnection.SetConnected(Value: Boolean);
 begin
   if (csReading in ComponentState) and Value then
     FStreamedConnected := True
-  else
-  begin
-    if Value <> GetConnected then
-    begin
-      if Value then
-        Connect
-      else
-        Disconnect;
-    end;
-  end;
+  else if Value <> GetConnected then
+    if Value
+    then Connect
+    else Disconnect;
 end;
 
 {**
@@ -839,8 +901,7 @@ var
 //and to avoid the storage of password
   Username, Password: string;
 begin
-  if FConnection = nil then
-  begin
+  if FConnection = nil then begin
 // Fixes Zeos Bug 00056
 //    try
       DoBeforeConnect;
@@ -892,9 +953,9 @@ begin
           SetTestMode(FTestMode);
           {$ENDIF}
         end;
-      except
-        FConnection := nil;
-        raise;
+      finally
+        if FConnection.IsClosed then
+          FConnection := nil;
       end;
     finally
       HideSqlHourGlass;
@@ -903,7 +964,6 @@ begin
     FExplicitTransactionCounter := FTxnLevel;
     if not FAutoCommit then
       DoStartTransaction;
-
     if not FConnection.IsClosed then
       DoAfterConnect;
   end;
@@ -940,6 +1000,7 @@ begin
       FConnection.SetOnConnectionLostErrorHandler(nil);
       CloseAllDataSets;
       CloseAllSequences;
+      CloseAllTransactions;
       FConnection.Close;
     finally
       FConnection := nil;
@@ -1227,20 +1288,10 @@ end;
   Unregisters all dataset objects.
 }
 procedure TZAbstractConnection.UnregisterAllDataSets;
-var
-  I: Integer;
-  Current: TZAbstractRODataset;
+var I: Integer;
 begin
   for I := FDatasets.Count - 1 downto 0 do
-  begin
-    Current := TZAbstractRODataset(FDatasets[I]);
-    FDatasets.Remove(Current);
-    try
-      Current.Connection := nil;
-    except
-      // Ignore.
-    end;
-  end;
+    TZAbstractRODataset(FDatasets[I]).Connection := nil; //removes the DS from the list
 end;
 
 {**
@@ -1251,14 +1302,10 @@ begin
   if not FSqlHourGlass then
     Exit;
 
-  if SqlHourGlassLock = 0 then
-  begin
-    if Assigned(DBScreen) then
-    begin
-      CursorBackup := DBScreen.Cursor;
-      if CursorBackup <> dcrOther then
-        DBScreen.Cursor := dcrSQLWait;
-    end;
+  if (SqlHourGlassLock = 0) and Assigned(DBScreen) then begin
+    CursorBackup := DBScreen.Cursor;
+    if CursorBackup <> dcrOther then
+      DBScreen.Cursor := dcrSQLWait;
   end;
   Inc(SqlHourGlassLock);
 end;
@@ -1561,15 +1608,42 @@ begin
   end;
 end;
 
+procedure TZAbstractConnection.CloseAllTransactions;
+var
+  I: Integer;
+  Current: TZAbstractTransaction;
+begin
+  for I := FTransactions.Count - 1 downto 0 do begin
+    Current := TZAbstractTransaction(FTransactions[I]);
+    if Current.Active then
+      Current.GetIZTransaction.Close;
+  end;
+end;
+
 procedure TZAbstractConnection.RegisterSequence(Sequence: TComponent);
 begin
   FSequences.Add(TZSequence(Sequence));
+end;
+
+function TZAbstractConnection.RegisterTransaction(
+  Value: TZAbstractTransaction): Integer;
+begin
+  if Assigned(FTransactions)
+  then Result := FTransactions.Add(Pointer(Value))
+  else Result := -1;
 end;
 
 procedure TZAbstractConnection.UnregisterSequence(Sequence: TComponent);
 begin
   if Assigned(FSequences) then
     FSequences.Remove(TZSequence(Sequence));
+end;
+
+procedure TZAbstractConnection.UnregisterTransaction(
+  Value: TZAbstractTransaction);
+begin
+  if Assigned(FTransactions) then
+    FTransactions.Remove(Pointer(Value))
 end;
 
 {**
@@ -1600,6 +1674,223 @@ begin
   finally
     result := (RowsAffected <> -1);
   end;
+end;
+
+{ TZAbstractTransaction }
+
+procedure TZAbstractTransaction.BeforeDestruction;
+var I: Integer;
+begin
+  for i := FDatasets.Count -1 downto 0 do
+    if TZAbstractDataset(FDatasets[i]).UpdateTransaction = Self then
+      TZAbstractDataset(FDatasets[i]).UpdateTransaction := nil;
+  for i := FDatasets.Count -1 downto 0 do
+    if TZAbstractDataset(FDatasets[i]).Transaction = Self then
+      TZAbstractDataset(FDatasets[i]).Transaction := nil;
+  FreeAndNil(FParams);
+  FreeAndNil(FDatasets);
+  inherited BeforeDestruction;
+end;
+
+procedure TZAbstractTransaction.CheckConnected;
+begin
+  if (FConnection = nil) or (not FConnection.Connected) then
+    raise EZDatabaseError.Create(SConnectionIsNotOpened);
+end;
+
+procedure TZAbstractTransaction.Commit;
+var I: Integer;
+    Row: NativeInt;
+    B: Boolean;
+begin
+  if (FTransaction = nil) then
+    raise EZDatabaseError.Create(SInvalidOpInAutoCommit);
+  if Assigned(FBeforeCommit) then
+    FBeforeCommit(Self);
+  B := Connection.DbcConnection.GetMetadata.GetDatabaseInfo.SupportsOpenCursorsAcrossRollback;
+  if FApplyPendingUpdatesOnCommit or B then
+    for i := 0 to FDatasets.Count -1 do
+      if Assigned(FDatasets[i]) and (TObject(FDatasets[i]) is TZAbstractDataset)
+         and THack_ZAbstractDataset(FDatasets[i]).IsCursorOpen then begin
+        if FDisposePendingUpdatesOnRollback and TZAbstractDataset(FDatasets[i]).UpdatesPending then
+          THack_ZAbstractDataset(FDatasets[i]).ApplyUpdates;
+        if not B and not THack_ZAbstractDataset(FDatasets[i]).LastRowFetched then begin
+          Row := THack_ZAbstractDataset(FDatasets[i]).CurrentRow;
+          THack_ZAbstractDataset(FDatasets[i]).DisableControls;
+          try
+            THack_ZAbstractDataset(FDatasets[i]).FetchRows(0);
+          finally
+            THack_ZAbstractDataset(FDatasets[i]).GotoRow(Row);
+            THack_ZAbstractDataset(FDatasets[i]).EnableControls;
+          end;
+        end;
+      end;
+  FTransaction.Commit;
+  if Assigned(FAfterCommit) then
+    FAfterCommit(Self);
+end;
+
+constructor TZAbstractTransaction.Create(AOnwer: TComponent);
+begin
+  inherited;
+  FParams := TStringList.Create;
+  FDatasets := TZSortedList.Create;
+  FDisposePendingUpdatesOnRollback := True;
+  FApplyPendingUpdatesOnCommit := True;
+  FTransactIsolationLevel := tiReadCommitted
+end;
+
+function TZAbstractTransaction.GetActive: Boolean;
+var TxnMngr: IZTransactionManager;
+begin
+  if (FConnection <> nil) and FConnection.Connected and (FTransaction <> nil) and
+     (FConnection.DbcConnection.QueryInterface(IZTransactionManager, TxnMngr) = S_OK)
+  then Result := TxnMngr.IsTransactionValid(FTransaction)
+  else Result := False;
+end;
+
+function TZAbstractTransaction.GetAutoCommit: Boolean;
+begin
+  if GetActive
+  then Result := FTransaction.GetAutoCommit
+  else Result := FAutoCommit;
+end;
+
+function TZAbstractTransaction.GetDataSet(Index: Integer): TDataSet;
+begin
+  Result := TDataSet(FDatasets[Index]);
+end;
+
+function TZAbstractTransaction.GetDataSetCount: Integer;
+begin
+  Result := FDatasets.Count;
+end;
+
+function TZAbstractTransaction.GetIZTransaction: IZTransaction;
+var TxnManager: IZTransactionManager;
+begin
+  TxnManager := GetTransactionManager;
+  if (FTransaction = nil) or (not TxnManager.IsTransactionValid(FTransaction)) then
+    Result := TxnManager.CreateTransaction(FAutoCommit,
+      FReadOnly, FTransactIsolationLevel, FParams)
+  else Result := FTransaction;
+end;
+
+function TZAbstractTransaction.GetTransactionManager: IZTransactionManager;
+begin
+  CheckConnected;
+  if FConnection.DbcConnection.QueryInterface(IZTransactionManager, Result) <> S_OK then
+    raise EZDatabaseError.Create(SUnsupportedOperation);
+end;
+
+procedure TZAbstractTransaction.RegisterDataSet(Value: TDataset);
+var IDX: Integer;
+begin
+  IDX := FDatasets.IndexOf(Value);
+  if IDX = -1 then
+    FDatasets.Add(Pointer(Value));
+end;
+
+procedure TZAbstractTransaction.Rollback;
+var I: Integer;
+    Row: NativeInt;
+    B: Boolean;
+begin
+  if (FTransaction = nil) then
+    raise EZDatabaseError.Create(SInvalidOpInAutoCommit);
+  if Assigned(FBeforeCommit) then
+    FBeforeRollback(Self);
+  B := Connection.DbcConnection.GetMetadata.GetDatabaseInfo.SupportsOpenCursorsAcrossRollback;
+  if FDisposePendingUpdatesOnRollback or B then
+    for i := 0 to FDatasets.Count -1 do
+      if Assigned(FDatasets[i]) and (TObject(FDatasets[i]) is TZAbstractDataset)
+         and THack_ZAbstractDataset(FDatasets[i]).IsCursorOpen then begin
+        if FDisposePendingUpdatesOnRollback and TZAbstractDataset(FDatasets[i]).UpdatesPending then
+          THack_ZAbstractDataset(FDatasets[i]).DisposeCachedUpdates;
+        if not B and not THack_ZAbstractDataset(FDatasets[i]).LastRowFetched then begin
+          Row := THack_ZAbstractDataset(FDatasets[i]).CurrentRow;
+          THack_ZAbstractDataset(FDatasets[i]).DisableControls;
+          try
+            THack_ZAbstractDataset(FDatasets[i]).FetchRows(0);
+          finally
+            THack_ZAbstractDataset(FDatasets[i]).GotoRow(Row);
+            THack_ZAbstractDataset(FDatasets[i]).EnableControls;
+          end;
+        end;
+      end;
+  FTransaction.Rollback;
+  if Assigned(FAfterRollback) then
+    FAfterRollback(Self);
+end;
+
+procedure TZAbstractTransaction.SetAutoCommit(Value: Boolean);
+begin
+  if Value <> FAutoCommit then begin
+    FAutoCommit := Value;
+    TxnPropertiesChanged;
+  end;
+end;
+
+procedure TZAbstractTransaction.SetConnection(Value: TZAbstractConnection);
+begin
+  if Value <> FConnection then begin
+    if (Value<> nil) and GetActive then
+      raise EZDatabaseError.Create(SInvalidOpInNonAutoCommit);
+    if (Value = nil) then
+      FConnection.UnregisterTransaction(Self);
+    FConnection := Value;
+  end;
+end;
+
+procedure TZAbstractTransaction.SetParams(Value: TStrings);
+begin
+  FParams.Clear;
+  FParams.AddStrings(Value);
+  TxnPropertiesChanged;
+end;
+
+procedure TZAbstractTransaction.SetReadOnly(Value: Boolean);
+begin
+  if Value <> FReadOnly then begin
+    FReadOnly := Value;
+    TxnPropertiesChanged;
+  end;
+end;
+
+procedure TZAbstractTransaction.SetTransactIsolationLevel(
+  Value: TZTransactIsolationLevel);
+begin
+  if Value <> FTransactIsolationLevel then begin
+    FTransactIsolationLevel := Value;
+    TxnPropertiesChanged;
+  end;
+end;
+
+function TZAbstractTransaction.StartTransaction: Integer;
+var Txn: IZTransaction;
+begin
+  if GetActive
+  then Txn := FTransaction
+  else Txn := GetIZTransaction;
+  if Assigned(FBeforeStartTransaction) then
+    FBeforeStartTransaction(Self);
+  Result := Txn.StartTransaction;
+  if Assigned(FAfterStartTransaction) then
+    FAfterStartTransaction(Self);
+end;
+
+procedure TZAbstractTransaction.TxnPropertiesChanged;
+begin
+  if GetActive then
+    raise EZDatabaseError.Create(SInvalidOpInNonAutoCommit);
+end;
+
+procedure TZAbstractTransaction.UnregisterDataSet(Value: TDataset);
+var IDX: Integer;
+begin
+  IDX := FDatasets.IndexOf(Value);
+  if IDX <> -1 then
+    FDatasets.Delete(IDX);
 end;
 
 initialization

@@ -119,8 +119,7 @@ type
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet;RowAccessor: TZRowAccessor);
 
-    procedure SetReadOnlyTransaction(const Value: IZTransaction);
-    procedure SetReadWriteTransaction(const Value: IZTransaction);
+    procedure SetTransaction(const Value: IZTransaction);
   end;
 
 implementation
@@ -1029,12 +1028,7 @@ begin
 end;
 
 
-procedure TZEmptyResolver.SetReadOnlyTransaction(const Value: IZTransaction);
-begin
-
-end;
-
-procedure TZEmptyResolver.SetReadWriteTransaction(const Value: IZTransaction);
+procedure TZEmptyResolver.SetTransaction(const Value: IZTransaction);
 begin
 
 end;

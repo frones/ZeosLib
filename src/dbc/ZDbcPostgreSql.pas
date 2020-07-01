@@ -133,7 +133,7 @@ type
 
   { TZPostgreSQLConnection }
 
-  TZPostgreSQLConnection = class(TZAbstractDbcSingleTransactionConnection,
+  TZPostgreSQLConnection = class(TZAbstractSuccedaneousTxnConnection,
     IZConnection, IZPostgreSQLConnection, IZTransaction)
   private
     FUndefinedVarcharAsStringLength: Integer;

@@ -2142,7 +2142,7 @@ begin
     Query.SQL.Text := 'SELECT * FROM biginterror';
     Query.Open;
     try
-      writeln(Query.Fields[0].AsString);
+      //writeln(Query.Fields[0].AsString);
       Query.Refresh; // Range check error pops up here
     Finally
       Query.Connection.Disconnect;

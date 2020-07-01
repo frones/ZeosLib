@@ -59,7 +59,7 @@ uses
   Variants,
   SysUtils,  Classes, {$IFDEF MSEgui}mdb, mclasses{$ELSE}DB{$ENDIF},
   ZSqlUpdate, ZDbcIntfs, ZVariant, ZDbcCache, ZDbcCachedResultSet,
-  ZAbstractRODataset, ZCompatibility, ZSequence
+  ZAbstractRODataset, ZCompatibility, ZSequence,ZAbstractConnection
   {$IFDEF TLIST_IS_DEPRECATED}, ZSysUtils, ZClasses{$ENDIF};
 
 type
@@ -99,13 +99,15 @@ type
     FAfterApplyUpdates: TNotifyEvent; {bangfauzan addition}
     FDetailDataSets: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     FDetailCachedUpdates: array of Boolean;
+    FUpdateTransaction: TZAbstractTransaction;
+    procedure SetTxns2Resolver(const Resolver: IZCachedResolver);
   private
     function GetUpdatesPending: Boolean;
     procedure SetUpdateObject(Value: TZUpdateSQL);
     procedure SetCachedUpdates(Value: Boolean);
     procedure SetWhereMode(Value: TZWhereMode);
     procedure SetUpdateMode(Value: TZUpdateMode);
-
+    procedure SetUpdateTransaction(Value: TZAbstractTransaction);
   protected
     property CachedResultSet: IZCachedResultSet read FCachedResultSet
       write FCachedResultSet;
@@ -150,6 +152,7 @@ type
   {$ENDIF}
     procedure RegisterDetailDataSet(Value: TZAbstractDataset; CachedUpdates: Boolean);
     procedure DisposeCachedUpdates;
+    procedure SetTransaction(Value: TZAbstractTransaction);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -181,8 +184,8 @@ type
       write FBeforeApplyUpdates; {bangfauzan addition}
     property AfterApplyUpdates: TNotifyEvent read FAfterApplyUpdates
       write FAfterApplyUpdates; {bangfauzan addition}
-
-
+    property UpdateTransaction: TZAbstractTransaction read FUpdateTransaction
+      write SetUpdateTransaction;
   published
     property BeforeInsert;
     property AfterInsert;
@@ -239,6 +242,9 @@ begin
   inherited Destroy;
 end;
 
+type
+  HackTZAbstractTransaction = class(TZAbstractTransaction);
+
 {**
   Sets a new UpdateSQL object.
   @param Value a new UpdateSQL object.
@@ -246,8 +252,7 @@ end;
 procedure TZAbstractDataset.SetUpdateObject(Value: TZUpdateSQL);
 var TempResolver: IZCachedResolver; //need a temporay interface to compare the resolvers
 begin
-  if FUpdateObject <> Value then
-  begin
+  if FUpdateObject <> Value then begin
     TempResolver := nil; //init
     if Assigned(FUpdateObject) then begin
       FUpdateObject.RemoveFreeNotification(Self);
@@ -263,19 +268,36 @@ begin
       if FUpdateObject <> nil then begin
         { get a local interface of the component }
         FUpdateObject.GetInterface(IZCachedResolver, TempResolver);
-        CachedResultSet.SetResolver(TempResolver)
+        CachedResultSet.SetResolver(TempResolver);
+        SetTxns2Resolver(TempResolver);
       end else begin
         {EH: now test if the old FUpdateObject intf equals with current cached resolver }
-        if CachedResolver = TempResolver then begin
+        if FCachedResolver = TempResolver then
           { do not use this interface any more. Use the native resolver of
             the cached RS instead. Otherwise on freeing (self) the compiler
             attaches dead memory later on (this is hidded with FastMM in our tests f.e.)
             -> Component interfaces are not refcounted by default}
-          CachedResolver := CachedResultSet.GetNativeResolver;
-          FCachedResolver := CachedResolver;
-        end;
-        CachedResultSet.SetResolver(CachedResolver);
+          FCachedResolver := CachedResultSet.GetNativeResolver;
+        CachedResultSet.SetResolver(FCachedResolver);
+        SetTxns2Resolver(FCachedResolver);
       end;
+  end;
+end;
+
+procedure TZAbstractDataset.SetUpdateTransaction(Value: TZAbstractTransaction);
+var Txn: IZTransaction;
+begin
+  if Value <> FUpdateTransaction then begin
+    if (FTransaction <> nil) and (FTransaction <> FUpdateTransaction) and (FUpdateTransaction <> nil) then
+      FUpdateTransaction.UnregisterDataSet(Self);
+    FUpdateTransaction := Value;
+    if FUpdateTransaction <> nil then
+      FUpdateTransaction.RegisterDataSet(Self);
+    if (Value<> nil) and Value.Active
+    then Txn := HackTZAbstractTransaction(Value).GetIZTransaction
+    else Txn := nil;
+    if CachedResolver <> nil then
+      CachedResolver.SetTransaction(Txn);
   end;
 end;
 
@@ -291,6 +313,27 @@ begin
     if Active and (CachedResultSet <> nil) then
       CachedResultSet.SetCachedUpdates(Value);
   end;
+end;
+
+procedure TZAbstractDataset.SetTransaction(Value: TZAbstractTransaction);
+begin
+  if Value <> FTransaction then begin
+    if (FTransaction <> nil) and (FTransaction <> FUpdateTransaction) then
+      FTransaction.UnregisterDataSet(Self);
+    FTransaction := Value;
+    if FTransaction <> nil then
+      FTransaction.RegisterDataSet(Self);
+  end;
+end;
+
+procedure TZAbstractDataset.SetTxns2Resolver(const Resolver: IZCachedResolver);
+var Txn: IZTransaction;
+begin
+  if Resolver = nil then Exit;
+  if FUpdateTransaction = nil
+  then Txn := nil
+  else Txn := HackTZAbstractTransaction(FUpdateTransaction).GetIZTransaction;
+  Resolver.SetTransaction(Txn);
 end;
 
 {**
@@ -372,8 +415,10 @@ begin
     CachedResultSet := Result as IZCachedResultSet;
     CachedResolver := CachedResultSet.GetResolver;
     CachedResultSet.SetCachedUpdates(CachedUpdates);
-    if FUpdateObject <> nil then
+    if FUpdateObject <> nil then begin
       CachedResultSet.SetResolver(FUpdateObject);
+      SetTxns2Resolver(FUpdateObject);
+    end else SetTxns2Resolver(CachedResolver);
   end;
 end;
 

@@ -99,8 +99,8 @@ var                                             //
 {$IFEND}                                        //
 {$ENDIF}                                        // **** Pitfiend addition end
 begin
-  RegisterComponents(ZEOS_DB_PALETTE, [
-    TZConnection, TZReadOnlyQuery, TZQuery, TZTable, TZUpdateSQL,
+  RegisterComponents(ZEOS_DB_PALETTE, [TZConnection,
+    TZTransaction, TZReadOnlyQuery, TZQuery, TZTable, TZUpdateSQL,
     TZConnectionGroup, TZGroupedConnection,
     TZStoredProc, TZSQLMetadata, TZSQLProcessor, TZSQLMonitor, TZSequence
     {$IFDEF ENABLE_INTERBASE}, TZIBEventAlerter {$ENDIF}

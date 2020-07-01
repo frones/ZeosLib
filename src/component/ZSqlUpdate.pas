@@ -75,7 +75,7 @@ type
   }
   TZUpdateSQL = class(TComponent, IZCachedResolver)
   private
-    FTransactions: array[Boolean] of IZTransaction;
+    FTransaction: IZTransaction;
     FDataSet: TDataSet;
 
     FDeleteSQL: TZSQLStrings;
@@ -138,8 +138,7 @@ type
 
     procedure DefineProperties(Filer: TFiler); override;
 
-    procedure SetReadOnlyTransaction(const Value: IZTransaction);
-    procedure SetReadWriteTransaction(const Value: IZTransaction);
+    procedure SetTransaction(const Value: IZTransaction);
     procedure CalculateDefaults(const Sender: IZCachedResultSet;
       const RowAccessor: TZRowAccessor);
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
@@ -374,22 +373,17 @@ begin
   FParams.AssignValues(Value);
 end;
 
-procedure TZUpdateSQL.SetReadOnlyTransaction(const Value: IZTransaction);
-begin
-  FTransactions[True] := Value;
-end;
-
-procedure TZUpdateSQL.SetReadWriteTransaction(const Value: IZTransaction);
+procedure TZUpdateSQL.SetTransaction(const Value: IZTransaction);
 var Stmt: IZStatement;
   ut: TZRowUpdateType;
 begin
-  if FTransactions[False] <> Value then begin
+  if FTransaction <> Value then begin
     Stmt := nil;
     for ut := utModified to utDeleted do
-      if (FTransactions[False] <> nil) and
+      if (FTransaction <> nil) and
          (FStmts[ut].Count > 0) and (FStmts[ut][0] <> nil) and
          (FStmts[ut][0].QueryInterface(IZStatement, Stmt) = S_OK) and
-         (Stmt.GetConnection <> FTransactions[False].GetConnection)
+         (Stmt.GetConnection <> FTransaction.GetConnection)
       then Break
       else Stmt := nil;
     if (Stmt <> nil) then

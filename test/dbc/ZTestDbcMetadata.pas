@@ -523,6 +523,7 @@ type
   public
     procedure InternalClose; override;
     function StartTransaction: Integer;
+    function GetConnectionTransaction: IZTransaction;
     procedure Commit;
     procedure Rollback;
     function CreateStatementWithParams(Info: TStrings): IZStatement;
@@ -574,6 +575,11 @@ end;
 
 function TDummyDbcConnection.CreateStatementWithParams(
   Info: TStrings): IZStatement;
+begin
+  Result := nil;
+end;
+
+function TDummyDbcConnection.GetConnectionTransaction: IZTransaction;
 begin
   Result := nil;
 end;
