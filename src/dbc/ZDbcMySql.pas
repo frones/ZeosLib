@@ -581,10 +581,12 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
       (not FPlainDriver.IsMariaDBDriver and (ClientVersion >=  50003) ) ) and (GetHostVersion >= EncodeSQLVersioning(5,0,3));
     //if not explizit !un!set -> assume as default since Zeos 7.3
     FMySQL_FieldType_Bit_1_IsBoolean := FMySQL_FieldType_Bit_1_IsBoolean or (FSupportsBitType and (Info.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean] = ''));
-    (GetMetadata as IZMySQLDatabaseMetadata).SetMySQL_FieldType_Bit_1_IsBoolean(FMySQL_FieldType_Bit_1_IsBoolean);
-    FSupportsReadOnly := (    FPlainDriver.IsMariaDBDriver and (GetHostVersion >= EncodeSQLVersioning(10,0,0))) or
-                         (not FPlainDriver.IsMariaDBDriver and (GetHostVersion >= EncodeSQLVersioning( 5,6,0)));
-    (GetMetadata as IZMySQLDatabaseMetadata).SetDataBaseName(GetDatabaseName);
+    with (GetMetadata as IZMySQLDatabaseMetadata) do begin
+      SetMySQL_FieldType_Bit_1_IsBoolean(FMySQL_FieldType_Bit_1_IsBoolean);
+      FSupportsReadOnly := ( IsMariaDB and (GetHostVersion >= EncodeSQLVersioning(10,0,0))) or
+                           ( IsMySQL and (GetHostVersion >= EncodeSQLVersioning( 5,6,0)));
+      SetDataBaseName(GetDatabaseName);
+    end;
 
     { Sets transaction isolation level. }
     if not (TransactIsolationLevel in [tiNone,tiRepeatableRead]) then
@@ -597,6 +599,11 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
       AutoCommit := True;
       SetAutoCommit(False);
     end;
+    if FSupportsReadOnly and ReadOnly then begin
+      ReadOnly := False;
+      SetReadOnly(True);
+    end;
+
   except
     FPlainDriver.mysql_close(FHandle);
     FHandle := nil;
@@ -895,11 +902,12 @@ end;
 }
 procedure TZMySQLConnection.SetReadOnly(Value: Boolean);
 begin
-  if not FSupportsReadOnly then
-    Value := False;
   if Value <> ReadOnly then begin
-    if not Closed then
+    if not Closed then begin
+      if not FSupportsReadOnly then
+        raise EZSQLException.Create(SUnsupportedOperation);
       ExecuteImmediat(MySQLSessionTransactionReadOnly[ReadOnly], lcTransaction);
+    end;
     ReadOnly := Value;
   end;
 end;
