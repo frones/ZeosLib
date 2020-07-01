@@ -774,7 +774,7 @@ end;
 }
 function TZSQLiteDatabaseInfo.SupportsOpenCursorsAcrossCommit: Boolean;
 begin
-  Result := False;
+  Result := True;
 end;
 
 {**
