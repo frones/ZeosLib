@@ -534,6 +534,7 @@ constructor TZThreadTimer.Create;
 begin
   inherited Create;
   FSignal := TSimpleEvent.Create;
+  FThread := TZIntervalThread.Create(FSignal);
 end;
 
 constructor TZThreadTimer.Create(OnTimer: TThreadMethod;
@@ -543,11 +544,9 @@ begin
   FInterval := Interval;
   FOnTimer := OnTimer;
   FEnabled := Enabled;
-  FThread := TZIntervalThread.Create(FSignal);
   TZIntervalThread(FThread).FOnTimer := FOnTimer;
   TZIntervalThread(FThread).FInterval := FInterval;
   TZIntervalThread(FThread).Suspended := False; //start thread
-  Reset;
 end;
 
 destructor TZThreadTimer.Destroy;
@@ -569,12 +568,16 @@ procedure TZThreadTimer.Reset;
     end;
   end;
 begin
-  SignalThread; //change active state
+  if FEnabled then begin
+    TZIntervalThread(FThread).Suspended := False; //start thread
+    SignalThread; //change active state
+  end;
   TZIntervalThread(FThread).FOnTimer := FOnTimer;
   if FEnabled and Assigned(FOnTimer) and (FInterval > 0)
   then TZIntervalThread(FThread).FInterval := FInterval
   else TZIntervalThread(FThread).FInterval := INFINITE;
-  SignalThread; //change active state
+  if FEnabled then
+    SignalThread; //change active state
 end;
 
 procedure TZThreadTimer.SetEnabled(const Value: Boolean);
