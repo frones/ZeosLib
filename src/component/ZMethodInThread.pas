@@ -10,6 +10,7 @@ Type
 
  TZMethodInThread = Class
  private
+  _connection: TZAbstractConnection;
   _dataset: TZAbstractRODataset;
   _methodthread: TThread;
   _methoderror: TErrorEvent;
@@ -17,6 +18,7 @@ Type
   _threaderror: Exception;
   Procedure CheckRunning;
   Procedure InternalOpen;
+  Procedure InternalStartTransaction;
   Procedure SetOnError(Const inErrorEvent: TErrorEvent);
   Procedure SetOnFinish(Const inFinishEvent: TNotifyEvent);
   Procedure StartMethodThread(inMethod: TProcedureOfObject);
@@ -34,11 +36,13 @@ Type
   Procedure ApplyUpdates(inDataSet: TZAbstractDataset);
   Procedure Connect(inConnection: TZAbstractConnection);
   Procedure Commit(inConnection: TZAbstractConnection);
+  Procedure Disconnect(inConnection: TZAbstractConnection);
   Procedure ExecSQL(inDataSet: TZAbstractRODataSet);
   Procedure Open(inDataSet: TZAbstractRODataset);
   Procedure Post(inDataSet: TZAbstractRODataset);
   Procedure Refresh(inDataSet: TZAbstractRODataset);
   Procedure Rollback(inConnection: TZAbstractConnection);
+  Procedure StartTransaction(inConnection: TZAbstractConnection);
   Procedure WaitFor;
   Procedure Kill(inAreYouSure: Boolean);
  End;
@@ -120,6 +124,11 @@ Begin
  inherited;
 End;
 
+Procedure TZMethodInThread.Disconnect(inConnection: TZAbstractConnection);
+Begin
+ StartMethodThread(inConnection.Disconnect);
+End;
+
 Procedure TZMethodInThread.ExecSQL(inDataSet: TZAbstractRODataSet);
 Begin
  StartMethodThread(inDataSet.ExecSQL);
@@ -145,6 +154,15 @@ Begin
  End;
 End;
 
+Procedure TZMethodInThread.InternalStartTransaction;
+Begin
+ Try
+  _connection.StartTransaction;
+ Finally
+  _connection := nil;
+ End;
+End;
+
 Procedure TZMethodInThread.Kill(inAreYouSure: Boolean);
 Begin
  // Confirmation parameter is included because terminating a thread like
@@ -161,6 +179,7 @@ End;
 
 Procedure TZMethodInThread.Open(inDataSet: TZAbstractRODataset);
 Begin
+ Self.CheckRunning;
  _dataset := inDataSet;
  StartMethodThread(InternalOpen);
 End;
@@ -196,6 +215,13 @@ Procedure TZMethodInThread.StartMethodThread(inMethod: TProcedureOfObject);
 Begin
  Self.CheckRunning;
  _methodthread := TZMethodThread.Create(inMethod, ThreadError, ThreadFinish);
+End;
+
+Procedure TZMethodInThread.StartTransaction(inConnection: TZAbstractConnection);
+Begin
+ Self.CheckRunning;
+ _connection := inConnection;
+ StartMethodThread(InternalStartTransaction);
 End;
 
 Procedure TZMethodInThread.ThreadError(Sender: TObject; Error: Exception);
