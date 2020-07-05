@@ -43,6 +43,7 @@ requires
 contains
   ZPropertyEditor in '..\..\src\component\ZPropertyEditor.pas',
   ZUpdateSqlEditor in '..\..\src\component\ZUpdateSqlEditor.pas' {ZUpdateSQLEditForm},
+  ZPropertiesEditor in '..\..\src\component\ZPropertiesEditor.pas' {frmPropertyEditor},
   ZComponentReg in '..\..\src\component\ZComponentReg.pas';
 
 end.

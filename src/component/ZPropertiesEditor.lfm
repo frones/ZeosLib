@@ -127,6 +127,7 @@ object frmPropertyEditor: TfrmPropertyEditor
       Height = 13
       Top = 144
       Width = 104
+      Anchors = [akLeft, akBottom]
       Caption = 'Protocol: <undefined>'
       ParentColor = False
     end
@@ -135,6 +136,7 @@ object frmPropertyEditor: TfrmPropertyEditor
       Height = 13
       Top = 144
       Width = 135
+      Anchors = [akLeft, akBottom]
       Caption = 'ServerProvider: <undefined>'
       ParentColor = False
       Visible = False
@@ -144,6 +146,7 @@ object frmPropertyEditor: TfrmPropertyEditor
       Height = 13
       Top = 144
       Width = 68
+      Anchors = [akLeft, akBottom]
       Caption = 'Hostversion: 0'
       ParentColor = False
       Visible = False
@@ -153,31 +156,10 @@ object frmPropertyEditor: TfrmPropertyEditor
       Height = 13
       Top = 144
       Width = 73
+      Anchors = [akLeft, akBottom]
       Caption = 'ClientVersion: 0'
       ParentColor = False
       Visible = False
-    end
-    object btnOk: TBitBtn
-      Left = 504
-      Height = 25
-      Top = 144
-      Width = 75
-      Default = True
-      DefaultCaption = True
-      Kind = bkOK
-      ModalResult = 1
-      TabOrder = 0
-    end
-    object btnCancel: TBitBtn
-      Left = 592
-      Height = 25
-      Top = 144
-      Width = 75
-      Cancel = True
-      Caption = 'Cancel'
-      Kind = bkCancel
-      ModalResult = 2
-      TabOrder = 1
     end
     object pnlValDesc: TPanel
       Left = 0
@@ -190,7 +172,7 @@ object frmPropertyEditor: TfrmPropertyEditor
       BorderWidth = 8
       ClientHeight = 137
       ClientWidth = 691
-      TabOrder = 2
+      TabOrder = 0
       object Splitter2: TSplitter
         Left = 305
         Height = 121
@@ -256,6 +238,28 @@ object frmPropertyEditor: TfrmPropertyEditor
           TabOrder = 0
         end
       end
+    end
+    object btnOK: TButton
+      Left = 528
+      Height = 25
+      Top = 144
+      Width = 75
+      Anchors = [akRight, akBottom]
+      Caption = 'OK'
+      ModalResult = 1
+      OnClick = btnOkClick
+      TabOrder = 1
+    end
+    object btnCancel: TButton
+      Left = 608
+      Height = 25
+      Top = 144
+      Width = 75
+      Anchors = [akRight, akBottom]
+      Caption = 'Cancel'
+      ModalResult = 2
+      OnClick = btnCancelClick
+      TabOrder = 2
     end
   end
 end

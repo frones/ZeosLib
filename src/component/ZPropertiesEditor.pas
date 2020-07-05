@@ -53,14 +53,21 @@ unit ZPropertiesEditor;
 
 interface
 
+{$I ZComponent.inc}
 uses
-  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, Mask, Buttons, ExtCtrls,
+  {$IFNDEF FPC}Windows, Messages, {$ENDIF}SysUtils, Variants, Classes, Graphics,
+  Controls, Forms, Dialogs, StdCtrls, Buttons, ExtCtrls,
   ZClasses, ZDbcProperties, ZDbcIntfs,
-  {$IFNDEF FPC}DesignIntf, DesignEditors{$ELSE}PropEdits{$ENDIF};
+  {$IFNDEF FPC}DesignIntf, DesignEditors{$ELSE}
+  PropEdits, LCLIntf, LResources, ComponentEditors{$ENDIF};
 
 type
+
+  { TfrmPropertyEditor }
+
   TfrmPropertyEditor = class(TForm)
+    btnCancel: TBitBtn;
+    btnOk: TBitBtn;
     pnlProps: TPanel;
     bgPropsUsed: TGroupBox;
     lbUsed: TListBox;
@@ -68,8 +75,6 @@ type
     spltProps: TSplitter;
     gbAvailable: TGroupBox;
     pnlBottom: TPanel;
-    btnOk: TBitBtn;
-    btnCancel: TBitBtn;
     btnRemove: TButton;
     Splitter1: TSplitter;
     pnlValDesc: TPanel;
@@ -85,6 +90,8 @@ type
     lblServerProvider: TLabel;
     lblHostversion: TLabel;
     lblClientVersion: TLabel;
+    procedure btnCancelClick(Sender: TObject);
+    procedure btnOkClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -114,10 +121,12 @@ type
 implementation
 
 uses ZSysUtils, TypInfo,
-  ZAbstractRODataset, ZAbstractConnection;
+  ZAbstractRODataset, ZAbstractDataset, ZAbstractConnection;
 
 {$IFNDEF FPC}
 {$R *.dfm}
+{$ELSE}
+{$R *.lfm}
 {$ENDIF}
 
 procedure TfrmPropertyEditor.FormShow(Sender: TObject);
@@ -195,6 +204,16 @@ begin
   end;
 end;
 
+procedure TfrmPropertyEditor.btnCancelClick(Sender: TObject);
+begin
+  Close;
+end;
+
+procedure TfrmPropertyEditor.btnOkClick(Sender: TObject);
+begin
+  Close;
+end;
+
 { TZProperitesEditor }
 
 procedure TZProperitesEditor.Edit;
@@ -218,6 +237,12 @@ jmpProtocol:
       FZPropertyLevelTypes := [pltTransaction];
       if TZAbstractTransaction(Component).Connection <> nil then begin
         Component := TZAbstractTransaction(Component).Connection;
+        goto jmpProtocol;
+      end;
+    end else if Component.InheritsFrom(TZAbstractDataset) then begin
+      FZPropertyLevelTypes := [pltStatement, pltResolver];
+      if TZAbstractRODataSet(Component).Connection <> nil then begin
+        Component := TZAbstractRODataSet(Component).Connection;
         goto jmpProtocol;
       end;
     end else if Component.InheritsFrom(TZAbstractRODataSet) then begin
@@ -420,4 +445,8 @@ begin
   lbAvailableClick(Sender);
 end;
 
+{$IFDEF FPC}
+initialization
+{$i ZPropertiesEditor.lrs}
+{$ENDIF}
 end.

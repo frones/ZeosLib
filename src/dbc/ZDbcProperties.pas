@@ -66,7 +66,8 @@ Type
     pvtString,
     pvtBoolOrString);
 
-  TZPropertyLevelTypes = set of (pltConnection, pltTransaction, pltStatement);
+  TZPropertyLevelTypes = set of (pltConnection, pltTransaction, pltStatement,
+    pltResolver);
 
   PZPropertyProvider = ^TZPropertyProvider;
   TZPropertyProvider = record
@@ -919,7 +920,7 @@ const
     Purpose: 'Determine how to genearate the update statement params.'+LineEnding+
       'Using All brings best performance(minior stmt-caching) for tables whith a low field-count -> normailization dude!'+LineEnding+
       'Otherwise the behavior might be vice versa. Same as TZDataset.UpdateMode property';
-    ValueType: pvtEnum; LevelTypes: [pltStatement];
+    ValueType: pvtEnum; LevelTypes: [pltResolver];
     Values: 'all|changed'; Default: 'changed'; Alias: '';
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
@@ -927,7 +928,7 @@ const
   ZProp_WhereMode : TZProperty = (
     Name: DSProps_Where;
     Purpose: 'Determine how to genearate the where clause. Same as TZDataset.WhereMode property';
-    ValueType: pvtEnum; LevelTypes: [pltStatement];
+    ValueType: pvtEnum; LevelTypes: [pltResolver];
     Values: 'all|keyonly'; Default: 'keyonly'; Alias: '';
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
@@ -936,7 +937,7 @@ const
     Name: DSProps_Defaults;
     Purpose: 'Calc defaults for empty columns? It will decrease your performance using it.'+LineEnding+
              'If your table has no default values declared, turn it off!';
-    ValueType: pvtBool; LevelTypes: [pltStatement];
+    ValueType: pvtBool; LevelTypes: [pltResolver];
     Values: 'false|true'; Default: 'true'; Alias: '';
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
@@ -960,7 +961,7 @@ const
     Purpose: 'like Field1[, Field2, ...] (valid separators are: "," or ";")'+LineEnding+
        'List of fields; if defined, they are used for locating and, if WhereMode = KeyOnly,'+LineEnding+
        'for constructing a WHERE clause';
-    ValueType: pvtString; LevelTypes: [pltStatement];
+    ValueType: pvtString; LevelTypes: [pltResolver];
     Values: ''; Default: ''; Alias: '';
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
@@ -970,7 +971,7 @@ const
     Purpose: 'Check number of rows affected after executing a statement.'+LineEnding+
       'If the value is different to one an error is raised. Reason is we just update !one! record,'+LineEnding+
       ' and we do not expect to change many or zero rows the stmt did affect! Use a valid primary key!';
-    ValueType: pvtBool; LevelTypes: [pltStatement];
+    ValueType: pvtBool; LevelTypes: [pltResolver];
     Values: 'false|true'; Default: 'true'; Alias: '';
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
@@ -1004,7 +1005,7 @@ const
       'is removed from the transaction-manger, and is alive until: no more row '+
       'of a opened IZResultset can be fetched and if there are no more Lob''s '+
       'to read. ZeosLib automatically will try to perfrom a fetchall and loads '+
-      'all data  if possible. You can use cached lob''s to guarantiee all '+
+      'all data, if possible. You can use cached lob''s to guarantiee all '+
       'lob''s can be read. Then the transaction will end up with a committed '+
       'or rollback as requested. However ech new request will create a new '+
       'transaction.';
