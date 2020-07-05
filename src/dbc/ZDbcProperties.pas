@@ -248,7 +248,6 @@ const
   // Type: INT
 {$IFEND}
 
-
 {$IF DEFINED(ENABLE_SQLITE) OR DEFINED(ENABLE_POSTGRESQL)}
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
@@ -268,11 +267,11 @@ const
 
 {$IF DEFINED(ENABLE_ADO) OR DEFINED(ENABLE_OLEDB)}
   // Type: STR
-  // ?
+  // the ole provider
   ConnProps_Provider = 'Provider';
 {$IFEND}
 
-{$IF DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}
+{$IF DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB) OR DEFINED(ENABLE_ADO)}
   // Type: BOOLEAN
   // Use trusted connection
   ConnProps_TrustedConnection = 'Trusted_Connection';
@@ -466,6 +465,10 @@ const
   // for FB 3.0 this will enable the construction of url style connection strings
   // see firebird 3.0 release notes
   ConnProps_FBProtocol = 'fb_protocol';
+
+  // Type: STR
+  // identify the charset "NONE" codepage
+  ConnProps_Charset_NONE_CodePage = 'Charset_NONE_CodePage';
 
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
@@ -684,10 +687,6 @@ const
   ConnProps_UNC = 'UNC';
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
-
-  // Type: BOOLEAN
-  // ?
-  DSProps_CachedBlob = 'CachedBlob';
 {$ENDIF}
 
 {$IFDEF ENABLE_OLEDB}
@@ -728,7 +727,6 @@ const
 
 procedure RegisterZProperty(Value: PZProperty);
 function GetZProperties: PZPropertyRefDynArray;
-
 
 implementation
 
@@ -942,7 +940,7 @@ const
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
   );
-{$IF DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_ADO) OR DEFINED(ENABLE_OLEDB) or DEFINED(ENABLE_ASA)}
+{$IF declared(DSProps_PreferPrepared)}
   ZProp_PreferPrepared : TZProperty = (
     Name: DSProps_PreferPrepared;
     Purpose: 'Use prepared statements? We recommend you to use this.'+LineEnding+
@@ -977,34 +975,135 @@ const
     Protocols: (Count: 0; Items: nil);
   );
 
-{$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_ADO) OR DEFINED(ENABLE_OLEDB) or DEFINED(ENABLE_ASA)}
+{$IF declared(DSProps_InternalBufSize)}
   ZProp_InternalBufSize : TZProperty = (
     Name: DSProps_InternalBufSize;
     Purpose: 'Drivers like ODBC, OleDB, Oracle, ASE(SACAPI) do allow block-fetches to reduce roundtrips.'+LineEnding+
       'Define memory in bytes for the block buffer. Default is 128Kb'+LineEnding+
       'Zeos will do a minimum allocation for one row.';
-    ValueType: pvtBool; LevelTypes: [pltStatement];
+    ValueType: pvtNumber; LevelTypes: [pltStatement];
     Values: ''; Default: '131072'; Alias: '';
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
   );
 {$IFEND}
+{$IF declared(DSProps_CachedLobs)}
+  ZProp_CachedLobs : TZProperty = (
+    Name: DSProps_CachedLobs;
+    Purpose: 'Cache the Lob-Streams? Used for Oracle-Lobs, All IB/FB-lob''s, '+
+      'Postgre-OID-lob''s only. All other providers do not support a good '+
+      'locator API. Servers like MySQL, ASE do support late-fetching methods '+
+      'but we need to refetch the whole row first if the cursor postion changes';
+    ValueType: pvtBool; LevelTypes: [pltConnection, pltStatement];
+    Values: ''; Default: 'false'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+{$IFEND}
+{$IF declared(DSProps_UndefVarcharAsStringLength)}
+  ZProp_UndefVarcharAsStringLength : TZProperty = (
+    Name: DSProps_UndefVarcharAsStringLength;
+    Purpose: 'Treat varchar fields without a length limit as if they had a '+
+      'length limit of <maxlength> thus making these fields usable with '+
+      'TDBEdit components.';
+    ValueType: pvtNumber; LevelTypes: [pltConnection, pltStatement];
+    Values: ''; Default: '0'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+{$IFEND}
+{$IF declared(ConnProps_Provider)}
+  const AllOleDBAndADO: array[0..1] of String =
+    ('OleDB','ADO');
+  ZProp_OleDBProvider : TZProperty = (
+    Name: ConnProps_Provider;
+    Purpose: 'The OleDB-Provider if not spezified in the DataBase-String.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: '0'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllOleDBAndADO);
+  );
+{$IFEND}
+{$IF declared(ConnProps_TrustedConnection)}
+  const AllODBC_OleDB_Firebird_Interbase: array[0..3] of String =
+    ('odbc','OleDB','firebird','interbase');
+  ZProp_TrustedConnection : TZProperty = (
+    Name: ConnProps_TrustedConnection;
+    Purpose: 'Execution timeout of a statement.'+LineEnding+
+      'Seconds for OleDB and ODBC, Milliseconds for Firebird and Interbase';
+    ValueType: pvtNumber; LevelTypes: [pltConnection];
+    Values: ''; Default: '0'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 4; Items: @AllODBC_OleDB_Firebird_Interbase);
+  );
+{$IFEND}
+{$IF declared(DSProps_StatementTimeOut)}
+  const AllODBC_OleDB_ADO: array[0..2] of String =
+    ('odbc','OleDB','ADO');
+  ZProp_StatementTimeOut : TZProperty = (
+    Name: DSProps_StatementTimeOut;
+    Purpose: 'Use trusted connection?';
+    ValueType: pvtBool; LevelTypes: [pltConnection];
+    Values: ''; Default: '0'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 3; Items: @AllODBC_OleDB_ADO);
+  );
+{$IFEND}
 
+{$IF defined (ENABLE_MYSQL) or defined (ENABLE_POSTGRESQL)}
+  const AllMySQL_MariaDB_Postgre: array[0..2] of String =
+    ('mysql','mariadb','postgres');
+  ZProp_MinExecCntBeforePrepare : TZProperty = (
+    Name: DSProps_MinExecCntBeforePrepare;
+    Purpose: 'How many executions must be done to realy prepare the statement?' +
+      'JDBC does prepare on after 4 executions. A negative value means never prepare. '+
+      'Zero means prepare immediately. '+
+      'Actually default is 2 executions before prepare the stmt on the server';
+    ValueType: pvtNumber; LevelTypes: [pltConnection, pltStatement];
+    Values: ''; Default: '2'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 3; Items: @AllMySQL_MariaDB_Postgre);
+  );
+  ZProp_EmulatePrepares : TZProperty = (
+    Name: DSProps_EmulatePrepares;
+    Purpose: 'Old postgres before protocol V3 can''t bind paramters. '+
+      'MySQL may have known issuse(resolved inbetween? unkown for MariaDB) like: '+
+      'https://dev.mysql.com/doc/refman/5.7/en/c-api-prepared-statement-problems.html '+
+      'If enabled turn of parameter bindings and send composed strings instead.'+
+      'That''s definitelly killing the performance so have a good reason like:'+LineEnding+
+      'http://zeoslib.sourceforge.net/viewtopic.php?f=20&t=10695&p=30151#p30151';
+    ValueType: pvtBool; LevelTypes: [pltConnection, pltStatement];
+    Values: ''; Default: 'False'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 3; Items: @AllMySQL_MariaDB_Postgre);
+  );
+{$IFEND}
 {$IF defined(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}
   const AllInterbaseAndFireBirebirdProtocols: array[0..1] of String =
     ('firebird','interbase');
   const cInterbaseAndFireBirebirdProvider: TZPropertyProvider = (
     Provider: spIB_FB; MinimumServerVersion: 0;
     MinimumClientVersion: 0; MinimumProtocolVersion: 0;);
+  ZProp_InsertReturningFields : TZProperty = (
+    Name: DSProps_InsertReturningFields;
+    Purpose: 'Field1[, Field2, ...] (allowed separators: "," or ";") '+
+      'It''s a list of fields which will get their values on INSERT '+
+      '(by INSERT...RETURNING/OUTPUT). Results are set by IZCachedResolver to '+
+      'the inserted row '+LineEnding+'Yet implemented for Firebird only.';
+    ValueType: pvtString; LevelTypes: [pltResolver];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
   ZProp_HardCommit: TZProperty = (
     Name: ConnProps_HardCommit;
-    Purpose: 'Don''t use is_commit_retaining or isc_rollback_retaining call.'+
+    Purpose: 'Don''t use isc_commit_retaining or isc_rollback_retaining call.'+
       'If enabled all record-streams of the txn are closed.'+LineEnding+
       'Note since 7.2.6 ZeosLib uses short-transactions but keeps the retaining '+
       'design by default. If a retained commit/rollback is done the transaction '+
       'is removed from the transaction-manger, and is alive until: no more row '+
       'of a opened IZResultset can be fetched and if there are no more Lob''s '+
-      'to read. ZeosLib automatically will try to perfrom a fetchall and loads '+
+      'to read. ZeosLib automatically will try to perform a fetchall and loads '+
       'all data, if possible. You can use cached lob''s to guarantiee all '+
       'lob''s can be read. Then the transaction will end up with a committed '+
       'or rollback as requested. However ech new request will create a new '+
@@ -1269,14 +1368,37 @@ initialization
   RegisterZProperty(@ZProp_UpdateMode);
   RegisterZProperty(@ZProp_WhereMode);
   RegisterZProperty(@ZProp_CalcDefauls);
-{$IF DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_ADO) OR DEFINED(ENABLE_OLEDB) or DEFINED(ENABLE_ASA)}
+{$IF declared(DSProps_PreferPrepared)}
   RegisterZProperty(@ZProp_PreferPrepared);
 {$IFEND}
   RegisterZProperty(@ZProp_KeyFields);
   RegisterZProperty(@ZProp_AffectedRows);
+{$IF declared(ZProp_InternalBufSize)}
   RegisterZProperty(@ZProp_InternalBufSize);
-  RegisterZProperty(@ZProp_UID);
+{$IFEND}
+{$IF declared(ZProp_CachedLobs)}
+  RegisterZProperty(@ZProp_CachedLobs);
+{$IFEND}
+{$IF declared(ZProp_UndefVarcharAsStringLength)}
+  RegisterZProperty(@ZProp_UndefVarcharAsStringLength);
+{$IFEND}
+{$IF declared(ConnProps_Provider)}
+  RegisterZProperty(@ZProp_OleDBProvider);
+{$IFEND}
+{$IF declared(ZProp_StatementTimeOut)}
+  RegisterZProperty(@ZProp_StatementTimeOut);
+{$IFEND}
+{$IF declared(ZProp_TrustedConnection)}
+  RegisterZProperty(@ZProp_TrustedConnection);
+{$IFEND}
+{$IF declared(ZProp_MinExecCntBeforePrepare)}
+  RegisterZProperty(@ZProp_MinExecCntBeforePrepare);
+{$IFEND}
+{$IF declared(ZProp_MinExecCntBeforePrepare)}
+  RegisterZProperty(@ZProp_EmulatePrepares);
+{$IFEND}
 {$IF defined(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}
+  RegisterZProperty(@ZProp_InsertReturningFields);
   RegisterZProperty(@ZProp_HardCommit);
   RegisterZProperty(@ZProp_isc_tpb_consistency);
   RegisterZProperty(@ZProp_isc_tpb_concurrency);

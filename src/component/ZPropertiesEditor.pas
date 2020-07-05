@@ -66,8 +66,6 @@ type
   { TfrmPropertyEditor }
 
   TfrmPropertyEditor = class(TForm)
-    btnCancel: TBitBtn;
-    btnOk: TBitBtn;
     pnlProps: TPanel;
     bgPropsUsed: TGroupBox;
     lbUsed: TListBox;
@@ -90,6 +88,8 @@ type
     lblServerProvider: TLabel;
     lblHostversion: TLabel;
     lblClientVersion: TLabel;
+    btnOK: TButton;
+    btnCancel: TButton;
     procedure btnCancelClick(Sender: TObject);
     procedure btnOkClick(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -206,11 +206,13 @@ end;
 
 procedure TfrmPropertyEditor.btnCancelClick(Sender: TObject);
 begin
+  ModalResult := mrCancel;
   Close;
 end;
 
 procedure TfrmPropertyEditor.btnOkClick(Sender: TObject);
 begin
+  ModalResult := mrOk;
   Close;
 end;
 

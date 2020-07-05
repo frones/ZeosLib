@@ -234,6 +234,7 @@ object frmPropertyEditor: TfrmPropertyEditor
           Height = 97
           Anchors = [akLeft, akTop, akRight, akBottom]
           ReadOnly = True
+          ScrollBars = ssVertical
           TabOrder = 0
         end
       end
