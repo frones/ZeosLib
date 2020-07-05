@@ -1,0 +1,261 @@
+object frmPropertyEditor: TfrmPropertyEditor
+  Left = 352
+  Height = 481
+  Top = 176
+  Width = 691
+  Caption = 'Edit Properties ...'
+  ClientHeight = 481
+  ClientWidth = 691
+  Color = clBtnFace
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'MS Sans Serif'
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  OnShow = FormShow
+  LCLVersion = '1.8.4.0'
+  object Splitter1: TSplitter
+    Cursor = crVSplit
+    Left = 0
+    Height = 4
+    Top = 301
+    Width = 691
+    Align = alBottom
+    ResizeAnchor = akBottom
+  end
+  object pnlProps: TPanel
+    Left = 0
+    Height = 301
+    Top = 0
+    Width = 691
+    Align = alClient
+    BevelOuter = bvNone
+    BorderWidth = 8
+    ClientHeight = 301
+    ClientWidth = 691
+    TabOrder = 0
+    object spltProps: TSplitter
+      Left = 305
+      Height = 285
+      Top = 8
+      Width = 4
+    end
+    object bgPropsUsed: TGroupBox
+      Left = 8
+      Height = 285
+      Top = 8
+      Width = 297
+      Align = alLeft
+      Caption = 'Used properties'
+      ClientHeight = 267
+      ClientWidth = 293
+      TabOrder = 0
+      object lbUsed: TListBox
+        Left = 8
+        Height = 243
+        Top = 16
+        Width = 245
+        Anchors = [akTop, akLeft, akRight, akBottom]
+        ItemHeight = 0
+        OnClick = lbUsedClick
+        TabOrder = 0
+      end
+      object btnAdd: TButton
+        Left = 260
+        Height = 25
+        Top = 16
+        Width = 25
+        Anchors = [akTop, akRight]
+        Caption = '<'
+        Font.Color = clWindowText
+        Font.Height = -11
+        Font.Name = 'MS Sans Serif'
+        Font.Style = [fsBold]
+        OnClick = btnAddClick
+        ParentFont = False
+        TabOrder = 1
+      end
+      object btnRemove: TButton
+        Left = 260
+        Height = 25
+        Top = 48
+        Width = 25
+        Anchors = [akTop, akRight]
+        Caption = '>'
+        Font.Color = clWindowText
+        Font.Height = -11
+        Font.Name = 'MS Sans Serif'
+        Font.Style = [fsBold]
+        OnClick = btnRemoveClick
+        ParentFont = False
+        TabOrder = 2
+      end
+    end
+    object gbAvailable: TGroupBox
+      Left = 309
+      Height = 285
+      Top = 8
+      Width = 374
+      Align = alClient
+      ClientHeight = 267
+      ClientWidth = 370
+      TabOrder = 1
+      object lbAvailable: TListBox
+        Left = 8
+        Height = 243
+        Top = 15
+        Width = 354
+        Anchors = [akTop, akLeft, akRight, akBottom]
+        ItemHeight = 0
+        OnClick = lbAvailableClick
+        TabOrder = 0
+      end
+    end
+  end
+  object pnlBottom: TPanel
+    Left = 0
+    Height = 176
+    Top = 305
+    Width = 691
+    Align = alBottom
+    BevelOuter = bvNone
+    ClientHeight = 176
+    ClientWidth = 691
+    TabOrder = 1
+    object lblProtocol: TLabel
+      Left = 8
+      Height = 13
+      Top = 144
+      Width = 104
+      Caption = 'Protocol: <undefined>'
+      ParentColor = False
+    end
+    object lblServerProvider: TLabel
+      Left = 136
+      Height = 13
+      Top = 144
+      Width = 135
+      Caption = 'ServerProvider: <undefined>'
+      ParentColor = False
+      Visible = False
+    end
+    object lblHostversion: TLabel
+      Left = 304
+      Height = 13
+      Top = 144
+      Width = 68
+      Caption = 'Hostversion: 0'
+      ParentColor = False
+      Visible = False
+    end
+    object lblClientVersion: TLabel
+      Left = 408
+      Height = 13
+      Top = 144
+      Width = 73
+      Caption = 'ClientVersion: 0'
+      ParentColor = False
+      Visible = False
+    end
+    object btnOk: TBitBtn
+      Left = 504
+      Height = 25
+      Top = 144
+      Width = 75
+      Default = True
+      DefaultCaption = True
+      Kind = bkOK
+      ModalResult = 1
+      TabOrder = 0
+    end
+    object btnCancel: TBitBtn
+      Left = 592
+      Height = 25
+      Top = 144
+      Width = 75
+      Cancel = True
+      Caption = 'Cancel'
+      Kind = bkCancel
+      ModalResult = 2
+      TabOrder = 1
+    end
+    object pnlValDesc: TPanel
+      Left = 0
+      Height = 137
+      Top = 0
+      Width = 691
+      Align = alTop
+      Anchors = [akTop, akLeft, akRight, akBottom]
+      BevelOuter = bvNone
+      BorderWidth = 8
+      ClientHeight = 137
+      ClientWidth = 691
+      TabOrder = 2
+      object Splitter2: TSplitter
+        Left = 305
+        Height = 121
+        Top = 8
+        Width = 5
+      end
+      object gbVal: TGroupBox
+        Left = 8
+        Height = 121
+        Top = 8
+        Width = 297
+        Align = alLeft
+        Caption = 'Value'
+        ClientHeight = 103
+        ClientWidth = 293
+        TabOrder = 0
+        object cbEnum: TComboBox
+          Left = 8
+          Height = 21
+          Top = 48
+          Width = 277
+          Anchors = [akTop, akLeft, akRight]
+          ItemHeight = 13
+          Style = csDropDownList
+          TabOrder = 0
+        end
+        object cbBoolean: TCheckBox
+          Left = 8
+          Height = 19
+          Top = 72
+          Width = 277
+          Anchors = [akTop, akLeft, akRight]
+          Caption = 'Boolean'
+          OnClick = cbBooleanClick
+          TabOrder = 1
+        end
+        object edString: TEdit
+          Left = 8
+          Height = 21
+          Top = 16
+          Width = 277
+          Anchors = [akTop, akLeft, akRight]
+          TabOrder = 2
+        end
+      end
+      object gbDescription: TGroupBox
+        Left = 310
+        Height = 121
+        Top = 8
+        Width = 373
+        Align = alClient
+        Caption = 'Purpose/Description'
+        ClientHeight = 103
+        ClientWidth = 369
+        TabOrder = 1
+        object mmDescrption: TMemo
+          Left = 8
+          Height = 79
+          Top = 16
+          Width = 353
+          Anchors = [akTop, akLeft, akRight, akBottom]
+          ReadOnly = True
+          TabOrder = 0
+        end
+      end
+    end
+  end
+end

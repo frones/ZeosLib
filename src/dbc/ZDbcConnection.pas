@@ -129,7 +129,6 @@ type
     fWeakReferenceOfSelfInterface: Pointer;
     FRestartTransaction: Boolean;
     FDisposeCodePage: Boolean;
-    FChunkSize: Integer; //indicates reading / writing lobs in Chunks of x Byte
     FClientCodePage: String;
     FMetadata: TContainedObject;
     {$IFDEF ZEOS_TEST_ONLY}
@@ -1034,7 +1033,6 @@ begin
   ConSettings^.Protocol := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FIZPlainDriver.GetProtocol);
   ConSettings^.Database := ConSettings^.ConvFuncs.ZStringToRaw(FURL.Database, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
   ConSettings^.User := ConSettings^.ConvFuncs.ZStringToRaw(FURL.UserName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-  FChunkSize := StrToIntDef(Info.Values[DSProps_ChunkSize], 4096);
   // now InternalCreate will work, since it will try to Open the connection
   InternalCreate;
 

@@ -82,6 +82,7 @@ uses
   ToolsAPI,                                     //
 {$ENDIF}
 {$ENDIF}
+  ZPropertiesEditor,
   Classes, ZConnection, ZAbstractConnection, ZDataset, ZSqlUpdate, ZSqlProcessor,
   ZStoredProcedure, ZGroupedConnection, ZConnectionGroup,
   ZSqlMonitor, ZSqlMetadata, ZSequence, ZAbstractRODataset
@@ -155,6 +156,7 @@ begin
 
   RegisterPropertyEditor(TypeInfo(string), TZSequence, 'SequenceName', TZSequenceNamePropertyEditor);
 
+  RegisterPropertyEditor(TypeInfo(TStrings), TZTransaction, 'Properties', TZProperitesEditor);
 {$IFDEF USE_METADATA}
   RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'Catalog', TZCatalogProperty);
   RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'ColumnName', TZColumnNamePropertyEditor);

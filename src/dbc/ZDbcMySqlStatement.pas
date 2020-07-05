@@ -97,6 +97,7 @@ type
     FResultSetIndex: Integer; //index of current ColumnsBindingArray
     FResultSetBuffCnt: Integer; //count of allocated Buffers in ColumnsBindingArray
     FIsCallPreparable: Boolean; //are callable statements "real" preparable?
+    FChunkSize: Integer;
     FCallResultCache: TZCollection;
     FByteBuffer: PByteBuffer;
     function CreateResultSet(const SQL: string; BufferIndex: Integer; FieldCount: UInt): IZResultSet;
@@ -363,11 +364,14 @@ begin
   FMinExecCount2Prepare := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_MinExecCntBeforePrepare, '2'), 2);
 
   FInitial_emulate_prepare := (FBindOffset.buffer_type=0) or (FMinExecCount2Prepare < 0) or
-    StrToBoolEx(DefineStatementParameter(Self, DSProps_EmulatePrepares, 'false'));
+    StrToBoolEx(DefineStatementParameter(Self, DSProps_EmulatePrepares, 'false')) {
+    and not StrToBoolEx(DefineStatementParameter(Self, DSProps_PreferPrepared, 'False'))};
   FEmulatedParams := True;
   FMySQL_FieldType_Bit_1_IsBoolean := FMySQLConnection.MySQL_FieldType_Bit_1_IsBoolean;
   FGUIDAsString := True;
   FResultSetIndex := -1;
+
+  FChunkSize := StrToInt(DefineStatementParameter(Self, DSProps_ChunkSize, '4096'));
 end;
 
 {**
@@ -1403,7 +1407,7 @@ begin
       if (Bind^.is_null_address^ = 0) and (Bind^.buffer = nil) and (BindList[i].BindType = zbtLob) then begin
         P := IZBlob(BindList[I].Value).GetBuffer(FRawTemp, Len);
         OffSet := 0;
-        PieceSize := ChunkSize;
+        PieceSize := fChunkSize;
         while (OffSet < Len) or (Len = 0) do begin
           if OffSet+PieceSize > Len then
             PieceSize := Len - OffSet;

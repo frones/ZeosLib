@@ -56,11 +56,10 @@ interface
 {$I ZDbc.inc}
 {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD} //if set we have an empty unit
 uses
-  SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} FmtBCD,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
-  ZDbcIntfs, ZPlainFirebirdInterbaseDriver, ZCompatibility,
-  ZDbcLogging, ZMessages,
-  ZVariant, FmtBCD;
+  ZDbcIntfs, ZPlainFirebirdInterbaseDriver, ZCompatibility, ZMessages, ZVariant,
+  ZDbcLogging, ZDbcProperties;
 
 type
   { Interbase Statement Type }
@@ -368,32 +367,32 @@ const
   { list transaction parameters and their apropriate numbers }
   TransactionParams: array [0..MAX_TPB_PARAMS-1] of TZIbParam =
   (
-    (Name: 'isc_tpb_consistency';      ValueType: pvtNone;    Number: isc_tpb_consistency),
-    (Name: 'isc_tpb_concurrency';      ValueType: pvtNone;    Number: isc_tpb_concurrency),
-    (Name: 'isc_tpb_shared';           ValueType: pvtNone;    Number: isc_tpb_shared),
-    (Name: 'isc_tpb_protected';        ValueType: pvtNone;    Number: isc_tpb_protected),
-    (Name: 'isc_tpb_exclusive';        ValueType: pvtNone;    Number: isc_tpb_exclusive),
-    (Name: 'isc_tpb_wait';             ValueType: pvtNone;    Number: isc_tpb_wait),
-    (Name: 'isc_tpb_nowait';           ValueType: pvtNone;    Number: isc_tpb_nowait),
-    (Name: 'isc_tpb_read';             ValueType: pvtNone;    Number: isc_tpb_read),
-    (Name: 'isc_tpb_write';            ValueType: pvtNone;    Number: isc_tpb_write),
-    (Name: 'isc_tpb_lock_read';        ValueType: pvtString;  Number: isc_tpb_lock_read),
-    (Name: 'isc_tpb_lock_write';       ValueType: pvtString;  Number: isc_tpb_lock_write),
-    (Name: 'isc_tpb_verb_time';        ValueType: pvtNotImpl; Number: isc_tpb_verb_time),
-    (Name: 'isc_tpb_commit_time';      ValueType: pvtNotImpl; Number: isc_tpb_commit_time),
-    (Name: 'isc_tpb_ignore_limbo';     ValueType: pvtNone;    Number: isc_tpb_ignore_limbo),
-    (Name: 'isc_tpb_read_committed';   ValueType: pvtNone;    Number: isc_tpb_read_committed),
-    (Name: 'isc_tpb_autocommit';       ValueType: pvtNone;    Number: isc_tpb_autocommit),
-    (Name: 'isc_tpb_rec_version';      ValueType: pvtNone;    Number: isc_tpb_rec_version),
-    (Name: 'isc_tpb_no_rec_version';   ValueType: pvtNone;    Number: isc_tpb_no_rec_version),
-    (Name: 'isc_tpb_restart_requests'; ValueType: pvtNone;    Number: isc_tpb_restart_requests),
-    (Name: 'isc_tpb_no_auto_undo';     ValueType: pvtNone;    Number: isc_tpb_no_auto_undo),
+    (Name: TxnProps_isc_tpb_consistency;      ValueType: pvtNone;    Number: isc_tpb_consistency),
+    (Name: TXnProps_isc_tpb_concurrency;      ValueType: pvtNone;    Number: isc_tpb_concurrency),
+    (Name: TXnProps_isc_tpb_shared;           ValueType: pvtNone;    Number: isc_tpb_shared),
+    (Name: TxnProps_isc_tpb_protected;        ValueType: pvtNone;    Number: isc_tpb_protected),
+    (Name: TxnProps_isc_tpb_exclusive;        ValueType: pvtNone;    Number: isc_tpb_exclusive),
+    (Name: TxnProps_isc_tpb_wait;             ValueType: pvtNone;    Number: isc_tpb_wait),
+    (Name: TxnProps_isc_tpb_nowait;           ValueType: pvtNone;    Number: isc_tpb_nowait),
+    (Name: TxnProps_isc_tpb_read;             ValueType: pvtNone;    Number: isc_tpb_read),
+    (Name: TxnProps_isc_tpb_write;            ValueType: pvtNone;    Number: isc_tpb_write),
+    (Name: TxnProps_isc_tpb_lock_read;        ValueType: pvtString;  Number: isc_tpb_lock_read),
+    (Name: TxnProps_isc_tpb_lock_write;       ValueType: pvtString;  Number: isc_tpb_lock_write),
+    (Name: TxnProps_isc_tpb_verb_time;        ValueType: pvtNotImpl; Number: isc_tpb_verb_time),
+    (Name: TxnProps_isc_tpb_commit_time;      ValueType: pvtNotImpl; Number: isc_tpb_commit_time),
+    (Name: TxnProps_isc_tpb_ignore_limbo;     ValueType: pvtNone;    Number: isc_tpb_ignore_limbo),
+    (Name: TxnProps_isc_tpb_read_committed;   ValueType: pvtNone;    Number: isc_tpb_read_committed),
+    (Name: TxnProps_isc_tpb_autocommit;       ValueType: pvtNone;    Number: isc_tpb_autocommit),
+    (Name: TxnProps_isc_tpb_rec_version;      ValueType: pvtNone;    Number: isc_tpb_rec_version),
+    (Name: TxnProps_isc_tpb_no_rec_version;   ValueType: pvtNone;    Number: isc_tpb_no_rec_version),
+    (Name: TxnProps_isc_tpb_restart_requests; ValueType: pvtNone;    Number: isc_tpb_restart_requests),
+    (Name: TxnProps_isc_tpb_no_auto_undo;     ValueType: pvtNone;    Number: isc_tpb_no_auto_undo),
     // IB75+
-    (Name: 'isc_tpb_no_savepoint';     ValueType: pvtNone;    Number: isc_tpb_no_savepoint),
+    (Name: TxnProps_isc_tpb_no_savepoint;     ValueType: pvtNone;    Number: isc_tpb_no_savepoint),
     // FB20+
-    (Name: 'isc_tpb_lock_timeout';     ValueType: pvtNum;     Number: isc_tpb_lock_timeout),
+    (Name: TxnProps_isc_tpb_lock_timeout;     ValueType: pvtNum;     Number: isc_tpb_lock_timeout),
     // FB40+
-    (Name: 'isc_tpb_read_consistency'; ValueType: pvtNone;    Number: isc_tpb_read_consistency)
+    (Name: TxnProps_isc_tpb_read_consistency; ValueType: pvtNone;    Number: isc_tpb_read_consistency)
   );
 
 //ported  from NoThrowTimeStamp.cpp

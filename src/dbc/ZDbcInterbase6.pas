@@ -572,7 +572,7 @@ reconnect:
       DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMsg);
   end;
 
-  inherited SetAutoCommit(AutoCommit or (Info.IndexOf('isc_tpb_autocommit') <> -1));
+  inherited SetAutoCommit(AutoCommit or (Info.IndexOf(TxnProps_isc_tpb_autocommit) <> -1));
   FRestartTransaction := not AutoCommit;
 
   FHardCommit := StrToBoolEx(Info.Values[ConnProps_HardCommit]);

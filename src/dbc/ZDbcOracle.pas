@@ -367,7 +367,7 @@ begin
   else FStmtMode := OCI_DEFAULT;
   S := Info.Values[ConnProps_StatementCache];
   FStatementPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(S, 30); //default = 20
-  FBlobPrefetchSize := FChunkSize;
+  FBlobPrefetchSize := StrToIntDef(Info.Values[ConnProps_BlobPrefetchSize], 8*1024);
 end;
 
 procedure TZOracleConnection.InternalSetCatalog(const Catalog: String);
@@ -1427,7 +1427,7 @@ end;
 procedure TZOracleTransaction.BeforeDestruction;
 var Status: sword;
 begin
-  inherited;
+  inherited BeforeDestruction;
   if FOCITrans <> nil then begin
     try
       fSavepoints.Clear;
@@ -1451,7 +1451,7 @@ procedure TZOracleTransaction.Commit;
 var Status: sword;
 begin
   if fSavepoints.Count > 0
-  then fSavepoints.Delete(fSavepoints.Count-1)
+  then fSavepoints.Delete(fSavepoints.Count -1) //oracle,sybase,sqlserver do not support a release savepoint syntax
   else if not FStarted then
     raise EZSQLException.Create(SCannotUseCommit)
   else try

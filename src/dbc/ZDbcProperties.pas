@@ -55,23 +55,13 @@ interface
 
 {$I ZDbc.inc}
 
+uses ZDbcIntfs, ZCompatibility;
 
-uses ZDbcIntfs;
-
-//EH @ Fr0sT and aehimself
-//just a proposal which is not related to the docs you guys are planning
-//it would be nice to have a PropertyEditor possibility for the DataSet guys
-//we could define each prop to a record. in initialization part of the
-//PropertyEditor unit we could load them into "something"
-//much smarter would be to define all records into an static record of TZProperty
-//like TZPropertyArray = Array[0..x] of TZProperty = ( ...... add all of them )
-//that way a PropertyEditor could access the array directly and we would never
-//forget to add that prop to the Editor unit.. would the docs work for array elements too?
-//It's just an Proposal
 Type
   TZPropertyValueType = (
     pvtEmpty,
     pvtBool,
+    pvtEnum,
     pvtNumber,
     pvtString,
     pvtBoolOrString);
@@ -110,6 +100,7 @@ const
   cProptertyTypeDesc: Array[TZPropertyValueType] of String = (
     'no value expected',
     'boolean expresson like ''Y''/''YES''/''T''/''TRUE''/''ON''/<>0 in any case to enable, any other',
+    'any enumeration value as described',
     'any ordinal number',
     'any string value',
     'either BOOL expression or string value');
@@ -120,16 +111,13 @@ type
     Purpose: String;
     ValueType: TZPropertyValueType;
     LevelTypes: TZPropertyLevelTypes;
+    Values, Default, Alias: String;
     Providers: TZPropertyProviders;
     Protocols: TProtocols;
   End;
 
-const
-  ProposalConst: TZProperty = (
-    Name: 'proposal';
-    Purpose: 'do what you want';
-    ValueType: pvtEmpty);
-    //add Doc here ?
+  PZPropertyRefDynArray = ^TZPropertyRefDynArray;
+  TZPropertyRefDynArray = array of PZProperty;
 
 { WARNING! Some of the parameter values are used directly in DBC API, so they
   must not be changed. }
@@ -141,7 +129,7 @@ const
     STR     - string }
 
   { Parameters common for all DBC's }
-
+const
   // Type: STR
   // Same as User property
   ConnProps_UID = 'UID';
@@ -151,23 +139,27 @@ const
   ConnProps_PWD = 'PWD';
   ConnProps_Password = 'password';
   // Type: STR
-  // Same as LibraryLocation property, path to client lib
+  // Same as TZConnection.LibraryLocation property, path to client lib
   ConnProps_LibLocation = 'LibLocation';
   // Type: STR, like CP_UTF8
   // Codepage to interact with driver
   ConnProps_CodePage = 'codepage';
   // Type: BOOLEAN
-  // Same as AutoEncodeStrings property
+  // Same as TZConnection.AutoEncodeStrings property
   ConnProps_AutoEncodeStrings = 'AutoEncodeStrings';
+  ConnProps_Transliterate = 'Transliterate';
   // Type: CP_UTF16 | CP_UTF8 | GET_ACP
   // Same as ControlsCodePage property
   ConnProps_ControlsCP = 'controls_cp';
+  // Type: CP_UTF8 | GET_ACP
+  // Same as ControlsCodePage property
+  ConnProps_RawStringEncoding = 'RawStringEncoding';
   // Type: INT
   // The login timeout to use in seconds.
   ConnProps_Timeout = 'timeout';
   // Type: STR
   // Format to display date, like YYYY-MM-DD
-  ConnProps_DateDisplayFormat = 'DateDisplayFormat';
+  ConnProps_DateDisplayFormat = 'DateDisplayFormat'; //deprecated not used anymore
   // Type: STR
   // Format to read date
   ConnProps_DateReadFormat = 'DateReadFormat';
@@ -176,7 +168,7 @@ const
   ConnProps_DateWriteFormat = 'DateWriteFormat';
   // Type: STR, like HH:MM:SS
   // Format to display time
-  ConnProps_TimeDisplayFormat = 'TimeDisplayFormat';
+  ConnProps_TimeDisplayFormat = 'TimeDisplayFormat'; //deprected not used anymore
   // Type: STR
   // Format to read time
   ConnProps_TimeReadFormat = 'TimeReadFormat';
@@ -185,7 +177,7 @@ const
   ConnProps_TimeWriteFormat = 'TimeWriteFormat';
   // Type: STR
   // Format to display date & time
-  ConnProps_DateTimeDisplayFormat = 'DatetimeDisplayFormat';
+  ConnProps_DateTimeDisplayFormat = 'DatetimeDisplayFormat'; //deprected not used anymore
   // Type: STR
   // Format to read date & time
   ConnProps_DateTimeReadFormat = 'DatetimeReadFormat';
@@ -217,13 +209,6 @@ const
   // Type: BOOLEAN
   // Same as TZDatasetOptions.doPreferPrepared in Dataset.Options property
   DSProps_PreferPrepared = 'PreferPrepared';
-  // Type: BOOLEAN
-  // Same as TZDatasetOptions.doCachedLobs in Dataset.Options property
-  DSProps_CachedLobs = 'CachedLob';
-  // Type: INT
-  // Same as Statement.ChunkSize, size of chunks for retrieving/sending long data
-  // depends to your network speed
-  DSProps_ChunkSize = 'chunk_size'; //default is a very low value of 4KB
 
   { Parameters for datasets }
 
@@ -246,7 +231,7 @@ const
   DSProps_ResetCodePage = 'ResetCodePage';
 {$IFEND}
 
-{$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_ADO) OR DEFINED(ENABLE_OLEDB)}
+{$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
 
@@ -254,6 +239,14 @@ const
   // Size of buffer for results
   DSProps_InternalBufSize = 'internal_buffer_size';
 {$IFEND}
+
+{$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD) OR DEFINED(ENABLE_POSTGRES)}
+  // Type: BOOLEAN
+  // Same as TZDatasetOptions.doCachedLobs in Dataset.Options property
+  DSProps_CachedLobs = 'CachedLob';
+  // Type: INT
+{$IFEND}
+
 
 {$IF DEFINED(ENABLE_SQLITE) OR DEFINED(ENABLE_POSTGRESQL)}
   { Parameters that are for datasets and statements but could be set for connections
@@ -385,6 +378,10 @@ const
   // Type: INT
   // Sets STMT_ATTR_PREFETCH_ROWS option, refer to MySql manual for details
   DSProps_PrefetchRows = 'prefetch_rows';
+  // Type: INT
+  // Same as Statement.ChunkSize, size of chunks for retrieving/sending long data
+  // depends to your network speed
+  DSProps_ChunkSize = 'chunk_size'; //default is a very low value of 4KB
 {$ENDIF}
 
 {$IFDEF ENABLE_POSTGRESQL}
@@ -503,6 +500,34 @@ const
 
   { Some of the isc_tpb_* parameters are added internally according to
     Connection.TransactIsolationLevel property }
+
+  // Type: NONE
+  TxnProps_isc_tpb_consistency = 'isc_tpb_consistency';
+  TxnProps_isc_tpb_concurrency = 'isc_tpb_concurrency';
+  TxnProps_isc_tpb_shared = 'isc_tpb_shared';
+  TxnProps_isc_tpb_protected = 'isc_tpb_protected';
+  TxnProps_isc_tpb_exclusive = 'isc_tpb_exclusive';
+  TxnProps_isc_tpb_wait = 'isc_tpb_wait';
+  TxnProps_isc_tpb_nowait = 'isc_tpb_nowait';
+  TxnProps_isc_tpb_read = 'isc_tpb_read';
+  TxnProps_isc_tpb_write = 'isc_tpb_write';
+  // Type: String
+  TxnProps_isc_tpb_lock_read = 'isc_tpb_lock_read';
+  TxnProps_isc_tpb_lock_write = 'isc_tpb_lock_write';
+  //not implemented
+  TxnProps_isc_tpb_verb_time = 'isc_tpb_verb_time';
+  TxnProps_isc_tpb_commit_time = 'isc_tpb_commit_time';
+  //Type: None
+  TxnProps_isc_tpb_ignore_limbo = 'isc_tpb_ignore_limbo';
+  TxnProps_isc_tpb_read_committed = 'isc_tpb_read_committed';
+  TxnProps_isc_tpb_autocommit = 'isc_tpb_autocommit';
+  TxnProps_isc_tpb_rec_version = 'isc_tpb_rec_version';
+  TxnProps_isc_tpb_no_rec_version = 'isc_tpb_no_rec_version';
+  TxnProps_isc_tpb_restart_requests = 'isc_tpb_restart_requests';
+  TxnProps_isc_tpb_no_auto_undo = 'isc_tpb_no_auto_undo';
+  TxnProps_isc_tpb_no_savepoint = 'isc_tpb_no_savepoint';
+  TxnProps_isc_tpb_lock_timeout = 'isc_tpb_lock_timeout';
+  TxnProps_isc_tpb_read_consistency = 'isc_tpb_read_consistency';
 {$IFEND}
 
 {$IFDEF ENABLE_FIREBIRD}
@@ -550,6 +575,10 @@ const
   // Type: BOOLEAN
   // If enabled or not specified, sets StatementMode to OCI_STMT_CACHE (refer to Oracle manual for details)
   ConnProps_ServerCachedStmts = 'ServerCachedStmts';
+
+  // Type: INT
+  // Sets value for OCI_ATTR_DEFAULT_LOBPREFETCH_SIZE option, refer to Oracle manual for details
+  ConnProps_BlobPrefetchSize = 'BlobPrefetchSize';
   // Type: INT
   // Sets value for OCI_ATTR_STMTCACHESIZE option, refer to Oracle manual for details
   ConnProps_StatementCache = 'StatementCache';
@@ -560,6 +589,7 @@ const
   // Type: INT
   // Sets value for OCI_ATTR_PREFETCH_MEMORY option, refer to Oracle manual for details
   DSProps_RowPrefetchSize = 'row_prefetch_size';
+
 {$ENDIF}
 
 {$IFDEF ENABLE_ASA}
@@ -694,6 +724,580 @@ const
   ConnProps_Wait = 'Wait';
 {$ENDIF}
 
+
+procedure RegisterZProperty(Value: PZProperty);
+function GetZProperties: PZPropertyRefDynArray;
+
+
 implementation
+
+//which of Jan@EH: instead of a constant array, use a dynamic array,
+//so others can easaly add it's own properties
+var ZPropertyArray: TZPropertyRefDynArray;
+
+function GetZProperties: PZPropertyRefDynArray;
+begin
+  Result := @ZPropertyArray;
+end;
+
+procedure RegisterZProperty(Value: PZProperty);
+begin
+  SetLength(ZPropertyArray, Length(ZPropertyArray)+1);
+  ZPropertyArray[High(ZPropertyArray)] := Value;
+end;
+
+const
+  ZProp_UID: TZProperty = (
+    Name: ConnProps_UID; Purpose: 'the login username (same as username)';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_Username;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  ZProp_Username: TZProperty = (
+    Name: ConnProps_Username; Purpose: 'the login username (same as UID)';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_UID;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  ZProp_PWD: TZProperty = (
+    Name: ConnProps_PWD; Purpose: 'the login password';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_Password;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  ZProp_Password : TZProperty = (
+    Name: ConnProps_Password; Purpose: 'the login password';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_PWD;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  ZProp_LibLocation : TZProperty = (
+    Name: ConnProps_LibLocation;
+    Purpose: 'the client lib name with full path(optional)';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  ZProp_CodePage : TZProperty = (
+    Name: ConnProps_CodePage;
+    Purpose: 'Codepage to interact with driver'+LineEnding+
+      'for odbc_a it''s implemented as:'+LineEnding+
+      'set a custom codepage to notify zeos about conversion routines note: cp must be equal for all fields else use the W driver.'+LineEnding+
+      'first place in a name, second use '':'' for the codepage, third use ''/'' for the maximum amount of bytes per character equal to database defined charset'+LineEnding+
+      'example: codepage=latin1:1252/1 or characterset=utf8:65001/4';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  ZProp_AutoEncodeStrings : TZProperty = (
+    Name: ConnProps_AutoEncodeStrings;
+    Purpose: 'transliterate between client-characterset and RawStringEncoding'+LineEnding+
+      'this option might be interesting for Ansi-Compilers and drivers like SQLite'+LineEnding+
+      'the more you can work with ut8 encoding and the database encoding is ansi  or vice versa'+LineEnding+
+      '(siltent character conversion with expected character/accedent loss'+LineEnding+
+      '2. deprected might be omitted in future(it''s a guesswork). Test the raw encoded strings against UTF8/Ansi encoding';
+    ValueType: pvtBool; LevelTypes: [pltConnection];
+    Values: 'false|true'; Default: 'false'; Alias: ConnProps_Transliterate;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  {ZProp_Transliterate: TZProperty = (
+    Name: ConnProps_Transliterate;
+    Purpose: 'transliterate between client-characterset and RawStringEncoding'+LineEnding+
+      'this option might be interesting for !Ansi!-Compilers and drivers like SQLite'+LineEnding+
+      'the more you can work with ut8 encoding and the database encoding is ansi or vice versa';
+    ValueType: pvtBool; LevelTypes: [pltConnection];
+    Values: 'false|true'; Default: 'false'; Alias: 'ConnProps_Transliterate';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );}
+  ZProp_ControlsCP : TZProperty = (
+    Name: ConnProps_ControlsCP;
+    Purpose: //'deprecated use RawStringEncoding instead'+LineEnding+
+             'determine the stringField-Types of the dataset and/or '+LineEnding+
+             'identify the raw string codepage for W-drivers on non unicode compilers for:'+LineEnding+
+             'GetString()/SetString()/GetRawByteString()/SetRawByteString()'+LineEnding+
+             'it''s also used for non A-Drivers if String-Translitation is enabled';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: 'CP_UTF8|GET_ACP'; Default: 'false'; Alias: ConnProps_RawStringEncoding;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  {ZProp_RawStringEncoding : TZProperty = (
+    Name: ConnProps_RawStringEncoding;
+    Purpose: 'deprecated use RawStringEncoding instead'+LineEnding+
+             'determine the stringField-Types of the dataset and/or '+LineEnding+
+             'identify the raw string codepage for W-drivers on non unicode compilers for:'+LineEnding+
+             'GetString()/SetString()/GetRawByteString()/SetRawByteString()'+LineEnding+
+             'it''s also used for non A-Drivers if String-Translitation is enabled';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: 'CP_UTF8|GET_ACP'; Default: 'false'; Alias: ConnProps_ControlsCP;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );}
+  ZProp_Timeout : TZProperty = (
+    Name: ConnProps_Timeout;
+    Purpose: 'The login timeout to use in seconds.';
+    ValueType: pvtNumber; LevelTypes: [pltConnection];
+    Values: ''; Default: '10'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  ZProp_DateReadFormat : TZProperty = (
+    Name: ConnProps_DateReadFormat;
+    Purpose: 'Format to read a date, like YYYY-MM-DD. Just simple Formats are supported.'+LineEnding+
+             'Neither centuries nor weekdays and so on.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: 'YYYY-MM-DD'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  ZProp_DateWriteFormat : TZProperty = (
+    Name: ConnProps_DateWriteFormat;
+    Purpose: 'Format to write a date, like YYYY-MM-DD. Just simple formats are supported.'+LineEnding+
+             'Neither centuries nor weekdays and so on.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: 'YYYY-MM-DD'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  ZProp_TimeReadFormat : TZProperty = (
+    Name: ConnProps_TimeReadFormat;
+    Purpose: 'Format to read time, like HH:MM:SS. Just simple formats are supported.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: 'HH:MM:SS.F'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  ZProp_TimeWriteFormat : TZProperty = (
+    Name: ConnProps_TimeWriteFormat;
+    Purpose: 'Format to write time, like HH:MM:SS. Just simple formats are supported.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: 'HH:MM:SS.F'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  ZProp_DateTimeReadFormat : TZProperty = (
+    Name: ConnProps_DateTimeReadFormat;
+    Purpose: 'Format to read date & time, like YYYY-MM-DD HH:NN:SS.F'+LineEnding+
+       'Just simple formats are supported. ISO 8601 is prefered.'+LineEnding+
+       'If the driver(f.e.SQLite) supports the ''T''delimiter do not hasitate to use!';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: 'YYYY-MM-DD HH:NN:SS.F'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  ZProp_DateTimeWriteFormat : TZProperty = (
+    Name: ConnProps_DateTimeWriteFormat;
+    Purpose: 'Format to read date & time, like YYYY-MM-DD HH:NN:SS.F'+LineEnding+
+       'Just simple formats are supported. ISO 8601 is prefered.'+LineEnding+
+       'If the driver(f.e.SQLite) supports the ''T''delimiter do not hasitate to use!';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: 'YYYY-MM-DD HH:NN:SS.F'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  ZProp_IdentifierQuotes : TZProperty = (
+    Name: ConnProps_IdentifierQuotes;
+    Purpose: 'Overwrites TZAbstractDatabaseInfo.IdentifierQuotes property, used for Identifier quoting. '+LineEnding+
+             'i.e. ADO, OleDB, ODBC, SQLite or Postgres dollar quotes...'+LineEnding+
+             'skip it if you don''t use such driver''s'+LineEnding+
+             'SQL standart 2003: "" ... wondering about SQL-Server....';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: '""'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  ZProp_UpdateMode : TZProperty = (
+    Name: DSProps_Update;
+    Purpose: 'Determine how to genearate the update statement params.'+LineEnding+
+      'Using All brings best performance(minior stmt-caching) for tables whith a low field-count -> normailization dude!'+LineEnding+
+      'Otherwise the behavior might be vice versa. Same as TZDataset.UpdateMode property';
+    ValueType: pvtEnum; LevelTypes: [pltStatement];
+    Values: 'all|changed'; Default: 'changed'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  ZProp_WhereMode : TZProperty = (
+    Name: DSProps_Where;
+    Purpose: 'Determine how to genearate the where clause. Same as TZDataset.WhereMode property';
+    ValueType: pvtEnum; LevelTypes: [pltStatement];
+    Values: 'all|keyonly'; Default: 'keyonly'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  ZProp_CalcDefauls : TZProperty = (
+    Name: DSProps_Defaults;
+    Purpose: 'Calc defaults for empty columns? It will decrease your performance using it.'+LineEnding+
+             'If your table has no default values declared, turn it off!';
+    ValueType: pvtBool; LevelTypes: [pltStatement];
+    Values: 'false|true'; Default: 'true'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+{$IF DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_ADO) OR DEFINED(ENABLE_OLEDB) or DEFINED(ENABLE_ASA)}
+  ZProp_PreferPrepared : TZProperty = (
+    Name: DSProps_PreferPrepared;
+    Purpose: 'Use prepared statements? We recommend you to use this.'+LineEnding+
+      'The performance is much better then. Same as TZDatasetOptions.doPreferPrepared in Dataset.Options property'+LineEnding+
+      'Drivers like Oracle, SQLite, ASE, Firebird, and Interbase always do prepare the stmt -> this property is ignored.'+LineEnding+
+      'For drivers like ODBC, OleDb the property is used as "DEFERPREPARE" see manuals..'+LineEnding+
+      'Some servers might fail to prepare the statments(MS-products are master of fails including unknown exceptions) -> turn it off on DataSet/Statement level if you run into that issue';
+    ValueType: pvtBool; LevelTypes: [pltStatement];
+    Values: 'false|true'; Default: 'true'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+{$IFEND}
+  ZProp_KeyFields : TZProperty = (
+    Name: DSProps_KeyFields;
+    Purpose: 'like Field1[, Field2, ...] (valid separators are: "," or ";")'+LineEnding+
+       'List of fields; if defined, they are used for locating and, if WhereMode = KeyOnly,'+LineEnding+
+       'for constructing a WHERE clause';
+    ValueType: pvtString; LevelTypes: [pltStatement];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+  ZProp_AffectedRows : TZProperty = (
+    Name: DSProps_ValidateUpdateCount;
+    Purpose: 'Check number of rows affected after executing a statement.'+LineEnding+
+      'If the value is different to one an error is raised. Reason is we just update !one! record,'+LineEnding+
+      ' and we do not expect to change many or zero rows the stmt did affect! Use a valid primary key!';
+    ValueType: pvtBool; LevelTypes: [pltStatement];
+    Values: 'false|true'; Default: 'true'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+
+{$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_ADO) OR DEFINED(ENABLE_OLEDB) or DEFINED(ENABLE_ASA)}
+  ZProp_InternalBufSize : TZProperty = (
+    Name: DSProps_InternalBufSize;
+    Purpose: 'Drivers like ODBC, OleDB, Oracle, ASE(SACAPI) do allow block-fetches to reduce roundtrips.'+LineEnding+
+      'Define memory in bytes for the block buffer. Default is 128Kb'+LineEnding+
+      'Zeos will do a minimum allocation for one row.';
+    ValueType: pvtBool; LevelTypes: [pltStatement];
+    Values: ''; Default: '131072'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+{$IFEND}
+
+{$IF defined(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}
+  const AllInterbaseAndFireBirebirdProtocols: array[0..1] of String =
+    ('firebird','interbase');
+  const cInterbaseAndFireBirebirdProvider: TZPropertyProvider = (
+    Provider: spIB_FB; MinimumServerVersion: 0;
+    MinimumClientVersion: 0; MinimumProtocolVersion: 0;);
+  ZProp_HardCommit: TZProperty = (
+    Name: ConnProps_HardCommit;
+    Purpose: 'Don''t use is_commit_retaining or isc_rollback_retaining call.'+
+      'If enabled all record-streams of the txn are closed.'+LineEnding+
+      'Note since 7.2.6 ZeosLib uses short-transactions but keeps the retaining '+
+      'design by default. If a retained commit/rollback is done the transaction '+
+      'is removed from the transaction-manger, and is alive until: no more row '+
+      'of a opened IZResultset can be fetched and if there are no more Lob''s '+
+      'to read. ZeosLib automatically will try to perfrom a fetchall and loads '+
+      'all data  if possible. You can use cached lob''s to guarantiee all '+
+      'lob''s can be read. Then the transaction will end up with a committed '+
+      'or rollback as requested. However ech new request will create a new '+
+      'transaction.';
+    ValueType: pvtBool; LevelTypes: [pltConnection, pltTransaction];
+    Values: 'false|true'; Default: 'false'; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+
+  ZProp_isc_tpb_consistency: TZProperty = (
+    Name: TxnProps_isc_tpb_consistency;
+    Purpose: 'Table-locking transaction model'+LineEnding+
+      'This parameter is used for tiReadCommitted and tiSeriaizable. '+
+      'You manually can use this param only if isolation level tiNone is specified.';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  ZProp_isc_tpb_concurrency: TZProperty = (
+    Name: TxnProps_isc_tpb_concurrency;
+    Purpose:  'High throughput, high concurrency transaction with acceptable '+
+      'consistency; use of this parameter takes full advantage of the InterBase or Firebird '+
+      'multi-generational transaction model [Default]'+LineEnding+
+      'This parameter is used for isolationlevel tiRepeatableRead and default for tiNone.';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  ZProp_isc_tpb_shared: TZProperty = (
+    Name: TXnProps_isc_tpb_shared;
+    Purpose: 'Concurrent, shared access of a specified table among all transactions; use '+
+      'in conjunction with isc_tpb_lock_read and isc_tpb_lock_write to '+
+      'establish the lock option [Default]';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  ZProp_isc_tpb_protected: TZProperty = (
+    Name: TxnProps_isc_tpb_protected;
+    Purpose: 'Concurrent, restricted access of a specified table; use in conjunction with '+
+      'isc_tpb_lock_read and isc_tpb_lock_write to establish the lock option';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  ZProp_isc_tpb_exclusive: TZProperty = (
+    Name: TxnProps_isc_tpb_exclusive;
+    Purpose: 'Used to specify exclusive table access when calling '+
+      'isc_start_transaction() at the API level.';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  ZProp_isc_tpb_wait: TZProperty = (
+    Name: TxnProps_isc_tpb_wait;
+    Purpose: 'Lock resolution specifies that the transaction is to wait until locked '+
+      'resources are released before retrying an operation [Default]'+LineEnding+
+      'This parameter is default using isolation level tiNone.';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  ZProp_isc_tpb_nowait: TZProperty = (
+    Name: TxnProps_isc_tpb_nowait;
+    Purpose: 'Lock resolution specifies that the transaction is not to wait for '+
+      'locks to be released, but instead, a lock conflict error should be '+
+      'returned immediately.'+LineEnding+
+      'This parameter is used for isolationlevel tiReadCommitted and tiRepeatableRead.';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  ZProp_isc_tpb_read: TZProperty = (
+    Name: TxnProps_isc_tpb_read;
+    Purpose: 'Read-only access mode that allows a transaction only to select '+
+      'data from tables'+LineEnding+
+      'This parameter is set if your transaction is ReadOnly';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  ZProp_isc_tpb_write: TZProperty = (
+    Name: TxnProps_isc_tpb_write;
+    Purpose: 'Read-write access mode of that allows a transaction to select, insert, '+
+      'update, and delete table data [Default]'+LineEnding+
+      'This parameter is set if your transaction is not ReadOnly';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  ZProp_isc_tpb_lock_read: TZProperty = (
+    Name: TxnProps_isc_tpb_lock_read;
+    Purpose: 'Read-only access of a specified table. Use in conjunction with '+
+      'isc_tpb_shared, isc_tpb_protected, and isc_tpb_exclusive to establish the '+
+      'lock option.';
+    ValueType: pvtString; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  ZProp_isc_tpb_lock_write: TZProperty = (
+    Name: TxnProps_isc_tpb_lock_write;
+    Purpose: 'Read-write access of a specified table. Use in conjunction with '+LineEnding+
+      'isc_tpb_shared, isc_tpb_protected, and isc_tpb_exclusive to establish the '+LineEnding+
+      'lock option [Default]';
+    ValueType: pvtString; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  cFireBirebird2upProvider: TZPropertyProvider = (
+    Provider: spIB_FB; MinimumServerVersion: 2000000;
+    MinimumClientVersion: 2000000; MinimumProtocolVersion: 0;);
+  ZProp_isc_ignore_limbo: TZProperty = (
+    Name: TxnProps_isc_tpb_ignore_limbo;
+    Purpose: 'With this option, records created by limbo transactions are '+
+      'ignored. Transactions are in limbo if the second stage of a two-phase '+
+      'commit fails.';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cFireBirebird2upProvider);
+    Protocols: (Count: 1; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  ZProp_isc_tpb_read_committed: TZProperty = (
+    Name: TxnProps_isc_tpb_read_committed;
+    Purpose: 'With this option, records created by limbo transactions are '+
+      'ignored. Transactions are in limbo if the second stage of a two-phase '+
+      'commit fails.';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  ZProp_isc_tpb_autocommit: TZProperty = (
+    Name: TxnProps_isc_tpb_autocommit;
+    Purpose: 'This parameter is set if your transaction is set to AutoCommit.';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  ZProp_isc_tpb_rec_version: TZProperty = (
+    Name: TxnProps_isc_tpb_rec_version;
+    Purpose: 'Enables an isc_tpb_read_committed transaction to read the most '+
+      'recently committed version of a record even if other, uncommitted '+
+      'versions are pending.'+LineEnding+
+      'This parameter is set if your isolation level is tiReadCommitted.';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  ZProp_isc_tpb_no_rec_version: TZProperty = (
+    Name: TxnProps_isc_tpb_no_rec_version;
+    Purpose: 'Enables an isc_tpb_read_committed transaction to read only the '+
+      'latest committed version of a record. If an uncommitted version of a '+
+      'record is pending and isc_tpb_wait is also specified, then the '+
+      'transaction waits for the pending record to be committed or rolled back '+
+      'before proceeding.'+LineEnding+
+      'Otherwise, a lock conflict error is reported at once.';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  ZProp_isc_tpb_restart_requests: TZProperty = (
+    Name: TxnProps_isc_tpb_restart_requests;
+    Purpose: '<undocumented>';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  ZProp_isc_tpb_no_auto_undo: TZProperty = (
+    Name: TxnProps_isc_tpb_no_auto_undo;
+    Purpose: 'With NO AUTO UNDO, the transaction refrains from keeping the log '+
+      'that is normally used to undo changes in the event of a rollback. '+
+      'Should the transaction be rolled back after all, other transactions '+
+      'will pick up the garbage (eventually). This option can be useful for '+
+      'massive insertions that don''t need to be rolled back. For transactions '+
+      'that don''t perform any mutations, NO AUTO UNDO makes no difference at all';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
+    Protocols: (Count: 1; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  cInterbase7_5upProvider: TZPropertyProvider = (
+    Provider: spIB_FB; MinimumServerVersion: 7005000;
+    MinimumClientVersion: 0; MinimumProtocolVersion: 0;);
+  ZProp_isc_no_savepoint: TZProperty = (
+    Name: TxnProps_isc_tpb_no_savepoint;
+    Purpose: 'With NO AUTO UNDO, the transaction refrains from keeping the log '+
+      'that is normally used to undo changes in the event of a rollback. '+
+      'Should the transaction be rolled back after all, other transactions '+
+      'will pick up the garbage (eventually). This option can be useful for '+
+      'massive insertions that don''t need to be rolled back. For transactions '+
+      'that don''t perform any mutations, NO AUTO UNDO makes no difference at all';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbase7_5upProvider);
+    Protocols: (Count: 1; Items: @AllInterbaseAndFireBirebirdProtocols[1]);
+  );
+  ZProp_isc_tpb_lock_timeout: TZProperty = (
+    Name: TxnProps_isc_tpb_lock_timeout;
+    Purpose: 'With NO AUTO UNDO, the transaction refrains from keeping the log '+
+      'that is normally used to undo changes in the event of a rollback. '+
+      'Should the transaction be rolled back after all, other transactions '+
+      'will pick up the garbage (eventually). This option can be useful for '+
+      'massive insertions that don''t need to be rolled back. For transactions '+
+      'that don''t perform any mutations, NO AUTO UNDO makes no difference at all';
+    ValueType: pvtNumber; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cFireBirebird2upProvider);
+    Protocols: (Count: 1; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+  cFireBirebird4upProvider: TZPropertyProvider = (
+    Provider: spIB_FB; MinimumServerVersion: 4000000;
+    MinimumClientVersion: 0; MinimumProtocolVersion: 0;);
+  ZProp_isc_tpb_read_consistency: TZProperty = (
+    Name: TxnProps_isc_tpb_read_consistency;
+    Purpose: ' Firebird 4.0 release notes pages 26 ("Read Consistency for '+
+      'Statements in Read-Committed Transactions") and 28 ("New API Constant '+
+      'in the TPB")'+LineEnding+
+      'This new isolation level should be the default isolation level for read '+
+      'committed transactions on Firebird 4.0';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cFireBirebird4upProvider);
+    Protocols: (Count: 1; Items: @AllInterbaseAndFireBirebirdProtocols);
+  );
+{$IFEND}
+
+initialization
+  RegisterZProperty(@ZProp_UID);
+  RegisterZProperty(@ZProp_Username);
+  RegisterZProperty(@ZProp_PWD);
+  RegisterZProperty(@ZProp_Password);
+  RegisterZProperty(@ZProp_LibLocation);
+  RegisterZProperty(@ZProp_CodePage);
+  RegisterZProperty(@ZProp_AutoEncodeStrings);
+  //RegisterZProperty(@ZProp_Transliterate);
+  RegisterZProperty(@ZProp_ControlsCP);
+  //RegisterZProperty(@ZProp_RawStringEncoding);
+  RegisterZProperty(@ZProp_Timeout);
+  RegisterZProperty(@ZProp_DateReadFormat);
+  RegisterZProperty(@ZProp_DateWriteFormat);
+  RegisterZProperty(@ZProp_TimeReadFormat);
+  RegisterZProperty(@ZProp_TimeWriteFormat);
+  RegisterZProperty(@ZProp_DateTimeReadFormat);
+  RegisterZProperty(@ZProp_DateTimeWriteFormat);
+  RegisterZProperty(@ZProp_IdentifierQuotes);
+  RegisterZProperty(@ZProp_UpdateMode);
+  RegisterZProperty(@ZProp_WhereMode);
+  RegisterZProperty(@ZProp_CalcDefauls);
+{$IF DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_ADO) OR DEFINED(ENABLE_OLEDB) or DEFINED(ENABLE_ASA)}
+  RegisterZProperty(@ZProp_PreferPrepared);
+{$IFEND}
+  RegisterZProperty(@ZProp_KeyFields);
+  RegisterZProperty(@ZProp_AffectedRows);
+  RegisterZProperty(@ZProp_InternalBufSize);
+  RegisterZProperty(@ZProp_UID);
+{$IF defined(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}
+  RegisterZProperty(@ZProp_HardCommit);
+  RegisterZProperty(@ZProp_isc_tpb_consistency);
+  RegisterZProperty(@ZProp_isc_tpb_concurrency);
+  RegisterZProperty(@ZProp_isc_tpb_shared);
+  RegisterZproperty(@ZProp_isc_tpb_protected);
+  RegisterZProperty(@ZProp_isc_tpb_exclusive);
+  RegisterZProperty(@ZProp_isc_tpb_wait);
+  RegisterZProperty(@ZProp_isc_tpb_nowait);
+  RegisterZProperty(@ZProp_isc_tpb_read);
+  RegisterZProperty(@ZProp_isc_tpb_write);
+  RegisterZProperty(@ZProp_isc_tpb_lock_read);
+  RegisterZProperty(@ZProp_isc_tpb_lock_write);
+  RegisterZProperty(@ZProp_isc_ignore_limbo);
+  RegisterZProperty(@ZProp_isc_tpb_read_committed);
+  RegisterZProperty(@ZProp_isc_tpb_autocommit);
+  RegisterZProperty(@ZProp_isc_tpb_rec_version);
+  RegisterZProperty(@ZProp_isc_tpb_no_rec_version);
+  RegisterZProperty(@ZProp_isc_tpb_restart_requests);
+  RegisterZProperty(@ZProp_isc_tpb_no_auto_undo);
+  RegisterZProperty(@ZProp_isc_no_savepoint);
+  RegisterZProperty(@ZProp_isc_tpb_lock_timeout);
+  RegisterZProperty(@ZProp_isc_tpb_read_consistency);
+{$IFEND}
 
 end.

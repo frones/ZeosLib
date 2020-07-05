@@ -903,7 +903,7 @@ begin
   else FPQResultFormat := ParamFormatStr;
   fPrepareCnt := 0;
   //JDBC prepares after 4th execution
-  if not FUseEmulatedStmtsOnly
+  if not FUseEmulatedStmtsOnly //and not StrToBoolEx(DefineStatementParameter(Self, DSProps_PreferPrepared, 'False'))
   then FMinExecCount2Prepare := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_MinExecCntBeforePrepare, '2'), 2)
   else FMinExecCount2Prepare := -1;
   fAsyncQueries := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_ExecAsync, 'FALSE'))

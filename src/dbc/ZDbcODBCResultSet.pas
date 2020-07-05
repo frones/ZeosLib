@@ -100,7 +100,7 @@ type
     fPHSTMT: PSQLHSTMT; //direct reference the handle of the stmt/metadata
     FODBCConnection: IZODBCConnection;
     fPlainDriver: TZODBC3PlainDriver;
-    fZBufferSize, fChunkSize: Integer;
+    fZBufferSize: Integer;
     fEnhancedColInfo, FIsMetaData: Boolean;
     fColumnCount: SQLSMALLINT;
     fMaxFetchableRows, fFetchedRowCount, fCurrentBufRowNo: SQLULEN;
@@ -157,7 +157,7 @@ type
   public
     constructor Create(const Statement: IZStatement; var StmtHandle: SQLHSTMT;
       ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
-      ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean = True); virtual;
+      ZBufferSize: Integer; const EnhancedColInfo: Boolean = True); virtual;
     constructor CreateForMetadataCall(out StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC;
       {$IFNDEF FPC}const{$ENDIF} Connection: IZODBCConnection); virtual; //fpc skope for (GetConnection as IZODBCConnection) is different to dephi and crashs
     function Next: Boolean; reintroduce;
@@ -175,7 +175,7 @@ type
   public
     constructor Create(const Statement: IZStatement; var StmtHandle: SQLHSTMT;
       ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
-      ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean = True); override;
+      ZBufferSize: Integer; const EnhancedColInfo: Boolean = True); override;
   end;
 
   TODBCResultSetA = class(TAbstractColumnODBCResultSet)
@@ -188,7 +188,7 @@ type
   public
     constructor Create(const Statement: IZStatement; var StmtHandle: SQLHSTMT;
       ConnectionHandle: SQLHDBC; const SQL: String; const Connection: IZODBCConnection;
-      ZBufferSize, ChunkSize: Integer; const EnhancedColInfo: Boolean = True); override;
+      ZBufferSize: Integer; const EnhancedColInfo: Boolean = True); override;
   end;
 
   TZODBCBlob = class(TZLocalMemBLob)
@@ -1654,7 +1654,7 @@ end;
 
 constructor TAbstractColumnODBCResultSet.Create(const Statement: IZStatement;
   var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; const SQL: String;
-  const Connection: IZODBCConnection; ZBufferSize, ChunkSize: Integer;
+  const Connection: IZODBCConnection; ZBufferSize: Integer;
   const EnhancedColInfo: Boolean);
 var Supported: SQLUSMALLINT;
   Ret: SQLRETURN;
@@ -1665,7 +1665,6 @@ begin
   fIsUnicodeDriver := Supports(fPlainDriver, IODBC3UnicodePlainDriver);
   fPHSTMT := @StmtHandle;
   fZBufferSize := ZBufferSize;
-  fChunkSize := ChunkSize;
   Ret := fPLainDriver.SQLGetFunctions(ConnectionHandle, SQL_API_SQLCOLATTRIBUTE, @Supported);
   if Ret <> SQL_SUCCESS then
     FODBCConnection.HandleDbcErrorOrWarning(Ret, 'SQLGetFunctions', lcOther, Statement);
@@ -1693,7 +1692,7 @@ begin
   StmtHandle := nil;
   Create(nil, StmtHandle, ConnectionHandle, '', Connection,
     {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Connection.GetParameters.Values[DSProps_InternalBufSize], 131072), //by default 128KB
-    {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Connection.GetParameters.Values[DSProps_ChunkSize], 4096), False);
+    False);
   Ret := fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, ConnectionHandle, StmtHandle);
   if Ret <> SQL_SUCCESS then
     Connection.HandleDbcErrorOrWarning(Ret, 'SQLAllocHandle(Stmt)', lcOther, Self);
@@ -2011,12 +2010,12 @@ end;
 
 constructor TODBCResultSetW.Create(const Statement: IZStatement;
   var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; const SQL: String;
-  const Connection: IZODBCConnection; ZBufferSize, ChunkSize: Integer;
+  const Connection: IZODBCConnection; ZBufferSize: Integer;
   const EnhancedColInfo: Boolean);
 begin
   fPlainW := Connection.GetPLainDriver.GetInstance as TODBC3UnicodePlainDriver;
   inherited Create(Statement, StmtHandle, ConnectionHandle, SQL, Connection,
-    ZBufferSize, ChunkSize, EnhancedColInfo);
+    ZBufferSize, EnhancedColInfo);
 end;
 
 procedure TODBCResultSetW.DescribeColumn(ColumnNumber: SQLUSMALLINT;
@@ -2083,12 +2082,12 @@ end;
 
 constructor TODBCResultSetA.Create(const Statement: IZStatement;
   var StmtHandle: SQLHSTMT; ConnectionHandle: SQLHDBC; const SQL: String;
-  const Connection: IZODBCConnection; ZBufferSize, ChunkSize: Integer;
+  const Connection: IZODBCConnection; ZBufferSize: Integer;
   const EnhancedColInfo: Boolean);
 begin
   fPlainA := Connection.GetPLainDriver.GetInstance as TODBC3RawPlainDriver;
   inherited Create(Statement, StmtHandle, ConnectionHandle, SQL, Connection,
-    ZBufferSize, ChunkSize, EnhancedColInfo);
+    ZBufferSize, EnhancedColInfo);
 end;
 
 procedure TODBCResultSetA.DescribeColumn(ColumnNumber: SQLUSMALLINT;

@@ -751,8 +751,8 @@ begin
 end;
 
 const
-  Tpb_Access: array[boolean] of String = ('isc_tpb_write','isc_tpb_read');
-  tpb_AutoCommit: array[boolean] of String = ('','isc_tpb_autocommit');
+  Tpb_Access: array[boolean] of String = (TxnProps_isc_tpb_write,TxnProps_isc_tpb_read);
+  tpb_AutoCommit: array[boolean] of String = ('',TxnProps_isc_tpb_autocommit);
 function TZInterbaseFirebirdConnection.GenerateTPB(AutoCommit,
   ReadOnly: Boolean; TransactIsolationLevel: TZTransactIsolationLevel;
   Info: TStrings): RawByteString;
@@ -775,24 +775,24 @@ type
     for I := 0 to Src.Count - 1 do
     begin
       SrcPar := LowerCase(Src[I]);
-      if (SrcPar = 'isc_tpb_consistency') or
-         (SrcPar = 'isc_tpb_concurrency') or
-         (SrcPar = 'isc_tpb_read_committed') then
+      if (SrcPar = TxnProps_isc_tpb_consistency) or
+         (SrcPar = TXnProps_isc_tpb_concurrency) or
+         (SrcPar = TxnProps_isc_tpb_read_committed) then
         OverwritableParams[parTIL] := SrcPar
       else
-      if (SrcPar = 'isc_tpb_wait') or
-         (SrcPar = 'isc_tpb_nowait') then
+      if (SrcPar = TxnProps_isc_tpb_wait) or
+         (SrcPar = TxnProps_isc_tpb_nowait) then
         OverwritableParams[parWait] := SrcPar
       else
-      if (SrcPar = 'isc_tpb_read') or
-         (SrcPar = 'isc_tpb_write') then
+      if (SrcPar = TxnProps_isc_tpb_read) or
+         (SrcPar = TxnProps_isc_tpb_write) then
         OverwritableParams[parRW] := SrcPar
       else
-      if (SrcPar = 'isc_tpb_rec_version') or
-         (SrcPar = 'isc_tpb_no_rec_version') then
+      if (SrcPar = TxnProps_isc_tpb_rec_version) or
+         (SrcPar = TxnProps_isc_tpb_no_rec_version) then
         OverwritableParams[parRecVer] := SrcPar
       else
-      if (SrcPar = 'isc_tpb_autocommit') then
+      if (SrcPar = TxnProps_isc_tpb_autocommit) then
         OverwritableParams[parAutoCommit] := SrcPar
       else if StartsWith(SrcPar, TPBPrefix) then  //skip all non isc_tpb params
         Dest.Add(Src[I]);
@@ -804,7 +804,6 @@ begin
   Params := TStringlist.Create;
   try
     Params.Capacity := Ord(High(TOverwritableParams))+Info.Count;
-    //OverwritableParams[parRW] := tpb_Access[ReadOnly]; will be set always below
     OverwritableParams[parAutoCommit] := tpb_AutoCommit[AutoCommit];
 
     { Set transaction parameters by TransactIsolationLevel }
@@ -812,31 +811,31 @@ begin
       tiReadCommitted:
         begin
           if GetHostVersion >= 4000000
-          then OverwritableParams[parRecVer] := 'isc_tpb_read_consistency'
-          else OverwritableParams[parRecVer] := 'isc_tpb_rec_version';
-          OverwritableParams[parWait] := 'isc_tpb_nowait';
+          then OverwritableParams[parRecVer] := TxnProps_isc_tpb_read_consistency
+          else OverwritableParams[parRecVer] := TxnProps_isc_tpb_rec_version;
+          OverwritableParams[parWait] := TxnProps_isc_tpb_nowait;
           AddStrings(Params, Info, OverwritableParams);
           OverwritableParams[parRW] := tpb_Access[ReadOnly];
-          OverwritableParams[parTIL] := 'isc_tpb_read_committed';
+          OverwritableParams[parTIL] := TxnProps_isc_tpb_read_committed;
         end;
       tiRepeatableRead:
         begin
-          OverwritableParams[parWait] := 'isc_tpb_nowait';
+          OverwritableParams[parWait] := TxnProps_isc_tpb_nowait;
           AddStrings(Params, Info, OverwritableParams);
           OverwritableParams[parRW] := tpb_Access[ReadOnly];
-          OverwritableParams[parTIL] := 'isc_tpb_concurrency';
+          OverwritableParams[parTIL] := TXnProps_isc_tpb_concurrency;
         end;
       tiSerializable:
         begin
           AddStrings(Params, Info, OverwritableParams);
           OverwritableParams[parRW] := tpb_Access[ReadOnly];
-          OverwritableParams[parTIL] := 'isc_tpb_consistency';
+          OverwritableParams[parTIL] := TxnProps_isc_tpb_consistency;
         end;
       else begin
         OverwritableParams[parRW] := tpb_Access[ReadOnly]; //eh: why is this done before AddStrings is called?
         { FB default values for non-standard TIL }
-        OverwritableParams[parTIL] := 'isc_tpb_concurrency';
-        OverwritableParams[parWait] := 'isc_tpb_wait';
+        OverwritableParams[parTIL] := TXnProps_isc_tpb_concurrency;
+        OverwritableParams[parWait] := TxnProps_isc_tpb_wait;
         AddStrings(Params, Info, OverwritableParams);
       end;
     end;

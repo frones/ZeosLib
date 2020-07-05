@@ -480,7 +480,7 @@ reconnect:
   if DBName[1] = AnsiChar(isc_info_db_SQL_Dialect)
   then FDialect := ReadInterbase6Number(FPlainDriver, DBName[2])
   else FDialect := SQL_DIALECT_V5;
-  inherited SetAutoCommit(AutoCommit or (Info.IndexOf('isc_tpb_autocommit') <> -1));
+  inherited SetAutoCommit(AutoCommit or (Info.IndexOf(TxnProps_isc_tpb_autocommit) <> -1));
   FRestartTransaction := not AutoCommit;
 
   FHardCommit := StrToBoolEx(Info.Values[ConnProps_HardCommit]);

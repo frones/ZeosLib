@@ -311,8 +311,7 @@ var
 begin
   Result := nil;
   if Assigned(RowSet) then begin
-    NativeResultSet := TZOleDBResultSet.Create(Self, SQL, RowSet,
-      FZBufferSize, ChunkSize);
+    NativeResultSet := TZOleDBResultSet.Create(Self, SQL, RowSet, FZBufferSize);
     if (ResultSetConcurrency = rcUpdatable) or (ResultSetType <> rtForwardOnly) then begin
       if (Connection.GetServerProvider = spMSSQL) and (Self.GetResultSetConcurrency = rcUpdatable)
       then CachedResolver := TZOleDBMSSQLCachedResolver.Create(Self, NativeResultSet.GetMetaData)
