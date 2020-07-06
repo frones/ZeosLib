@@ -15,11 +15,13 @@ type
     Synchronizer: TMultiReadExclusiveWriteSynchronizer;
     List: TDbcProxyConnectionList;
   public
-    function GetConnectionCount: Integer;
+    function GetConnectionCount: SizeInt;
     function FindConnection(ID: String): TDbcProxyConnection;
+    function GetConnection(Index: SizeInt): TDbcProxyConnection;
     function AddConnection(Connection: IZConnection): String;
     procedure RemoveConnection(ID: String);
-    function LockConnection(ID: String): TDbcProxyConnection;
+    function LockConnection(ID: String): TDbcProxyConnection; overload;
+    function LockConnection(Index: SizeInt): TDbcProxyConnection; overload;
     constructor Create;
     destructor Destroy; override;
   end;
@@ -60,10 +62,30 @@ begin
   end;
 end;
 
+function TDbcProxyConnectionManager.GetConnection(Index: SizeInt): TDbcProxyConnection;
+begin
+  Result := Nil;
+  Synchronizer.Beginread;
+  try
+    if List.Count >= Index then
+      Result := Nil
+    else
+      Result := List.Items[Index];
+  finally
+    Synchronizer.Endread;
+  end;
+end;
+
 function TDbcProxyConnectionManager.LockConnection(ID: String): TDbcProxyConnection;
 begin
   Result := FindConnection(ID);
   if Assigned(Result) then Result.Lock else raise Exception.Create('No connection with ID ' + ID + ' was found!');
+end;
+
+function TDbcProxyConnectionManager.LockConnection(Index: SizeInt): TDbcProxyConnection;
+begin
+  Result := GetConnection(Index);
+  if Assigned(Result) then Result.Lock else raise Exception.Create('No connection with Index ' + IntToStr(Index) + ' was found!');
 end;
 
 function TDbcProxyConnectionManager.AddConnection(Connection: IZConnection): String;
@@ -102,9 +124,14 @@ begin
     Conn := nil;
 end;
 
-function TDbcProxyConnectionManager.GetConnectionCount: Integer;
+function TDbcProxyConnectionManager.GetConnectionCount: SizeInt;
 begin
-  Result := List.Count;
+  Synchronizer.Beginread;
+  try
+    Result := List.Count;
+  finally
+    Synchronizer.Endread;
+  end;
 end;
 
 end.

@@ -36,7 +36,7 @@
         <PackageName Value="sparta_generics"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="6">
+    <Units Count="7">
       <Unit0>
         <Filename Value="ZDbcProxyServer.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -65,6 +65,10 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="DbcProxyConfigManager"/>
       </Unit5>
+      <Unit6>
+        <Filename Value="..\dbcproxycleanupthread.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit6>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

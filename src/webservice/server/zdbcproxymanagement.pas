@@ -19,12 +19,10 @@ type
     destructor Destroy; override;
     property ZeosConnection: IZConnection read FZeosConnection;
     property ID: String read FID;
+    property LastAccessTime: TDateTime read FLastAccessTime;
     procedure Lock;
     procedure Unlock;
   end;
-
-//var
-  //LastConnectionId: Integer;
 
 procedure RaiseNotImplemented(FunctionName: String);
 
@@ -40,11 +38,10 @@ var
   UUID: TGuid;
 begin
   FCriticalSection := TCriticalSection.Create;
-  //Inc(LastConnectionId);
-  //FID := IntToStr(LastConnectionId);
   CreateGUID(UUID);
   FID := GUIDToString(UUID);
   FZeosConnection := AConnection;
+  FLastAccessTime := Now;
 end;
 
 destructor TDbcProxyConnection.Destroy;
@@ -56,16 +53,15 @@ end;
 
 procedure TDbcProxyConnection.Lock;
 begin
+  FLastAccessTime := Now;
   FCriticalSection.Enter;
 end;
 
 procedure TDbcProxyConnection.Unlock;
 begin
+  FLastAccessTime := Now;
   FCriticalSection.Leave;
 end;
-
-//initialization
-//  LastConnectionId := 0;
 
 end.
 
