@@ -530,7 +530,9 @@ const
   TxnProps_isc_tpb_restart_requests = 'isc_tpb_restart_requests';
   TxnProps_isc_tpb_no_auto_undo = 'isc_tpb_no_auto_undo';
   TxnProps_isc_tpb_no_savepoint = 'isc_tpb_no_savepoint';
+  //Type: Int
   TxnProps_isc_tpb_lock_timeout = 'isc_tpb_lock_timeout';
+  //Type: None
   TxnProps_isc_tpb_read_consistency = 'isc_tpb_read_consistency';
 {$IFEND}
 
@@ -824,7 +826,7 @@ const
              'GetString()/SetString()/GetRawByteString()/SetRawByteString()'+LineEnding+
              'it''s also used for non A-Drivers if String-Translitation is enabled';
     ValueType: pvtEnum; LevelTypes: [pltConnection];
-    Values: 'CP_UTF8|GET_ACP'; Default: 'false'; Alias: ConnProps_RawStringEncoding;
+    Values: 'CP_UTF8|GET_ACP'; Default: {$IFDEF LCL}'CP_UTF8'{$ELSE}'GET_ACP'{$ENDIF}; Alias: ConnProps_RawStringEncoding;
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
   );
@@ -1001,6 +1003,7 @@ const
   );
 {$IFEND}
 {$IF declared(DSProps_UndefVarcharAsStringLength)}
+  const All_Postgres_SQLite: array[0..1] of String = ('postrgres', 'sqlite');
   ZProp_UndefVarcharAsStringLength : TZProperty = (
     Name: DSProps_UndefVarcharAsStringLength;
     Purpose: 'Treat varchar fields without a length limit as if they had a '+
@@ -1009,7 +1012,7 @@ const
     ValueType: pvtNumber; LevelTypes: [pltConnection, pltStatement];
     Values: ''; Default: '0'; Alias: '';
     Providers: (Count: 0; Items: nil);
-    Protocols: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @All_Postgres_SQLite);
   );
 {$IFEND}
 {$IF declared(ConnProps_Provider)}
@@ -1025,10 +1028,22 @@ const
   );
 {$IFEND}
 {$IF declared(ConnProps_TrustedConnection)}
-  const AllODBC_OleDB_Firebird_Interbase: array[0..3] of String =
-    ('odbc','OleDB','firebird','interbase');
+  const AllODBC_OleDB_ADO: array[0..2] of String =
+    ('odbc','OleDB','ADO');
   ZProp_TrustedConnection : TZProperty = (
     Name: ConnProps_TrustedConnection;
+    Purpose: 'Use trusted connection?';
+    ValueType: pvtBool; LevelTypes: [pltConnection];
+    Values: 'false|true'; Default: 'false'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 3; Items: @AllODBC_OleDB_ADO);
+  );
+{$IFEND}
+{$IF declared(DSProps_StatementTimeOut)}
+  const AllODBC_OleDB_Firebird_Interbase: array[0..3] of String =
+    ('odbc','OleDB','firebird','interbase');
+  ZProp_StatementTimeOut : TZProperty = (
+    Name: DSProps_StatementTimeOut;
     Purpose: 'Execution timeout of a statement.'+LineEnding+
       'Seconds for OleDB and ODBC, Milliseconds for Firebird and Interbase';
     ValueType: pvtNumber; LevelTypes: [pltConnection];
@@ -1037,27 +1052,15 @@ const
     Protocols: (Count: 4; Items: @AllODBC_OleDB_Firebird_Interbase);
   );
 {$IFEND}
-{$IF declared(DSProps_StatementTimeOut)}
-  const AllODBC_OleDB_ADO: array[0..2] of String =
-    ('odbc','OleDB','ADO');
-  ZProp_StatementTimeOut : TZProperty = (
-    Name: DSProps_StatementTimeOut;
-    Purpose: 'Use trusted connection?';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: ''; Default: '0'; Alias: '';
-    Providers: (Count: 0; Items: nil);
-    Protocols: (Count: 3; Items: @AllODBC_OleDB_ADO);
-  );
-{$IFEND}
 
 {$IF defined (ENABLE_MYSQL) or defined (ENABLE_POSTGRESQL)}
   const AllMySQL_MariaDB_Postgre: array[0..2] of String =
     ('mysql','mariadb','postgres');
   ZProp_MinExecCntBeforePrepare : TZProperty = (
     Name: DSProps_MinExecCntBeforePrepare;
-    Purpose: 'How many executions must be done to realy prepare the statement?' +
-      'JDBC does prepare on after 4 executions. A negative value means never prepare. '+
-      'Zero means prepare immediately. '+
+    Purpose: 'How many executions must be done to realy prepare the statement '+
+      'on the Server? JDBC does prepare on after 4 executions. A negative '+
+      'value means never prepare. Zero means prepare immediately. '+
       'Actually default is 2 executions before prepare the stmt on the server';
     ValueType: pvtNumber; LevelTypes: [pltConnection, pltStatement];
     Values: ''; Default: '2'; Alias: '';
@@ -1078,6 +1081,141 @@ const
     Protocols: (Count: 3; Items: @AllMySQL_MariaDB_Postgre);
   );
 {$IFEND}
+
+{$IFDEF ENABLE_DBLIB}
+  const AllSybaseMSSQL: array[0..1] of String = ('sybase','mssql');
+  ZProp_TDSVersion : TZProperty = (
+    Name: ConnProps_TDSVersion;
+    Purpose: '(DBLIB) If set, the TDS version will be set on connect or dbinit '+
+      '(sybase-lib only) see ZPlainDbLibDriver.pas "TDSDBVERSION_?"s also see:'+ LineEnding+
+      'https://www.freetds.org/userguide/ChoosingTdsProtocol.html'+LineEnding+
+      'By default we set the latest protocol version';
+    ValueType: pvtNumber; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllSybaseMSSQL);
+  );
+  ZProp_TDSProtocolVersion : TZProperty = (
+    Name: ConnProps_TDSProtocolVersion;
+    Purpose: '(DBLIB) It''s the documtented TDS Protocol Version like ''7.2''. '+
+      'Purpose is equal to param '+ConnProps_TDSVersion+'. If set, the TDS '+
+      'version will be set on connect or dbinit (sybase-lib only) see:'+ LineEnding+
+      'https://www.freetds.org/userguide/ChoosingTdsProtocol.html'+LineEnding+
+      'By default we set the latest protocol version';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllSybaseMSSQL);
+  );
+  ZProp_AnsiPadding : TZProperty = (
+    Name: ConnProps_AnsiPadding;
+    Purpose: 'Turn Ansi-Padding on/off. See Server-documentation.'+
+      'If set, executes ''SET ANSI_PADDING ON'' on connect';
+    ValueType: pvtBool; LevelTypes: [pltConnection];
+    Values: 'OFF|ON'; Default: 'ON'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllSybaseMSSQL);
+  );
+  ZProp_AppName : TZProperty = (
+    Name: ConnProps_AppName;
+    Purpose: 'The application name to send to the server on connect.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllSybaseMSSQL);
+  );
+  ZProp_Language : TZProperty = (
+    Name: ConnProps_Language;
+    Purpose: 'The language the server should use for messages';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllSybaseMSSQL);
+  );
+  ZProp_Workstation : TZProperty = (
+    Name: ConnProps_Workstation;
+    Purpose: 'The workstation name to send to the server';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllSybaseMSSQL);
+  );
+  ZProp_TDSLog : TZProperty = (
+    Name: ConnProps_Log;
+    Purpose: 'Write a TDS log file';
+    ValueType: pvtBool; LevelTypes: [pltConnection];
+    Values: 'false|true'; Default: 'false'; Alias: ConnProps_Logging+','+ConnProps_TDSDump;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllSybaseMSSQL);
+  );
+  ZProp_TDSLogging : TZProperty = (
+    Name: ConnProps_Logging;
+    Purpose: 'Write a TDS log file';
+    ValueType: pvtBool; LevelTypes: [pltConnection];
+    Values: 'false|true'; Default: 'false'; Alias: ConnProps_Log+','+ConnProps_TDSDump;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllSybaseMSSQL);
+  );
+  ZProp_TDSDump : TZProperty = (
+    Name: ConnProps_TDSDump;
+    Purpose: 'Write a TDS log file';
+    ValueType: pvtBool; LevelTypes: [pltConnection];
+    Values: 'false|true'; Default: 'false'; Alias: ConnProps_Log+','+ConnProps_Logging;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllSybaseMSSQL);
+  );
+  ZProp_TDSLogFile : TZProperty = (
+    Name: ConnProps_LogFile;
+    Purpose: 'Path to log file. If not set and log/dump is active, '+
+      'the <AppPath>\<AppName>.tdslog will be used.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_Log_File+','+ConnProps_TDSDumpFile;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllSybaseMSSQL);
+  );
+  ZProp_TDSLog_File : TZProperty = (
+    Name: ConnProps_Log_File;
+    Purpose: 'Path to log file. If not set and log/dump is active, '+
+      'the <AppPath>\<AppName>.tdslog will be used.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_LogFile+','+ConnProps_TDSDumpFile;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllSybaseMSSQL);
+  );
+  ZProp_TDSDumpFile : TZProperty = (
+    Name: ConnProps_TDSDumpFile;
+    Purpose: 'Path to log file. If not set and log/dump is active, '+
+      'the <AppPath>\<AppName>.tdslog will be used.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_Log_File+','+ConnProps_Log_File;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllSybaseMSSQL);
+  );
+  ZProp_TDSNTAuth : TZProperty = (
+    Name: ConnProps_NTAuth;
+    Purpose: 'Use Windows auth when connecting to server';
+    ValueType: pvtBool; LevelTypes: [pltConnection];
+    Values: 'false|true'; Default: 'false'; Alias: ConnProps_Secure+','+ConnProps_Trusted;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllSybaseMSSQL);
+  );
+  ZProp_TDSSecure : TZProperty = (
+    Name: ConnProps_Secure;
+    Purpose: 'Use Windows auth when connecting to server';
+    ValueType: pvtBool; LevelTypes: [pltConnection];
+    Values: 'false|true'; Default: 'false'; Alias: ConnProps_NTAuth+','+ConnProps_Trusted;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllSybaseMSSQL);
+  );
+  ZProp_TDSTrusted : TZProperty = (
+    Name: ConnProps_Trusted;
+    Purpose: 'Use Windows auth when connecting to server';
+    ValueType: pvtBool; LevelTypes: [pltConnection];
+    Values: 'false|true'; Default: 'false'; Alias: ConnProps_NTAuth+','+ConnProps_Secure;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllSybaseMSSQL);
+  );
+{$ENDIF}
 {$IF defined(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}
   const AllInterbaseAndFireBirebirdProtocols: array[0..1] of String =
     ('firebird','interbase');
@@ -1106,7 +1244,7 @@ const
       'to read. ZeosLib automatically will try to perform a fetchall and loads '+
       'all data, if possible. You can use cached lob''s to guarantiee all '+
       'lob''s can be read. Then the transaction will end up with a committed '+
-      'or rollback as requested. However ech new request will create a new '+
+      'or rollback as requested. However a new request will create a new '+
       'transaction.';
     ValueType: pvtBool; LevelTypes: [pltConnection, pltTransaction];
     Values: 'false|true'; Default: 'false'; Alias: '';
@@ -1397,6 +1535,23 @@ initialization
 {$IF declared(ZProp_MinExecCntBeforePrepare)}
   RegisterZProperty(@ZProp_EmulatePrepares);
 {$IFEND}
+{$IFDEF ENABLE_DBLIB}
+  RegisterZProperty(@ZProp_TDSVersion);
+  RegisterZProperty(@ZProp_TDSProtocolVersion);
+  RegisterZProperty(@ZProp_AnsiPadding);
+  RegisterZProperty(@ZProp_AppName);
+  RegisterZProperty(@ZProp_Language);
+  RegisterZProperty(@ZProp_Workstation);
+  RegisterZProperty(@ZProp_TDSLog);
+  RegisterZProperty(@ZProp_TDSLogging);
+  RegisterZProperty(@ZProp_TDSDump);
+  RegisterZProperty(@ZProp_TDSLogFile);
+  RegisterZProperty(@ZProp_TDSLog_File);
+  RegisterZProperty(@ZProp_TDSDumpFile);
+  RegisterZProperty(@ZProp_TDSNTAuth);
+  RegisterZProperty(@ZProp_TDSSecure);
+  RegisterZProperty(@ZProp_TDSTrusted);
+{$ENDIF}
 {$IF defined(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}
   RegisterZProperty(@ZProp_InsertReturningFields);
   RegisterZProperty(@ZProp_HardCommit);
