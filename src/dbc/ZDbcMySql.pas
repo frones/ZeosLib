@@ -331,6 +331,9 @@ begin
   TempUrl.Free
 end;
 
+var
+  MySQLOptionProperties: array of TZProperty;
+
 { TZMySQLConnection }
 
 {**
@@ -501,29 +504,28 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
         ClientFlag := ClientFlag or Cardinal(1 shl Integer(my_client_Opt));
     end;
 
-  { Set SSL properties before connect}
-  SslKey := nil; SslCert := nil; SslCa := nil; SslCaPath := nil; SslCypher := nil;
-  if StrToBoolEx(Info.Values[ConnProps_MYSQLSSL]) then
-    begin                                          
-       if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_KEY)] <> '' then
-          SslKey := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-            Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_KEY)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-       if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CERT)] <> '' then
-          SslCert := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-            Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CERT)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-       if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CA)] <> '' then
-          SslCa := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-            Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CA)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-       if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CAPATH)] <> '' then
-          SslCaPath := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-            Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CAPATH)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-       if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CIPHER)] <> '' then
-          SslCypher := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-            Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CIPHER)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-       FPlainDriver.mysql_ssl_set(FHandle, SslKey, SslCert, SslCa, SslCaPath,
-          SslCypher);
-       DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-          'SSL options set');
+    { Set SSL properties before connect}
+    SslKey := nil; SslCert := nil; SslCa := nil; SslCaPath := nil; SslCypher := nil;
+    if StrToBoolEx(Info.Values[ConnProps_MYSQLSSL]) then begin
+     if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_KEY)] <> '' then
+        SslKey := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
+          Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_KEY)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+     if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CERT)] <> '' then
+        SslCert := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
+          Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CERT)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+     if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CA)] <> '' then
+        SslCa := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
+          Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CA)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+     if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CAPATH)] <> '' then
+        SslCaPath := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
+          Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CAPATH)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+     if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CIPHER)] <> '' then
+        SslCypher := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
+          Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CIPHER)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+     FPlainDriver.mysql_ssl_set(FHandle, SslKey, SslCert, SslCa, SslCaPath,
+        SslCypher);
+     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
+        'SSL options set');
     end;
 
     { Connect to MySQL database. }
@@ -566,8 +568,9 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
       end;
       CheckCharEncoding(FClientCodePage);
     end;
-
-    MaxLobSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values[ConnProps_MaxLobSize], 0);
+    MaxLobSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values[ConnProps_max_allowed_packet], 0);
+    if MaxLobSize = 0 then
+      MaxLobSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values[ConnProps_MaxLobSize], 0);
     if MaxLobSize <> 0 then begin
       SQL := 'SET GLOBAL max_allowed_packet='+IntToRaw(MaxLobSize);
       ExecuteImmediat(SQL, lcOther);
@@ -1166,9 +1169,21 @@ begin
   else SetLength(Result, EscapedLen+2);
 end;
 
+(*procedure RegisterMySQLProperties;
+var o: TMySqlOption;
+begin
+  SetLength(MySQLOptionProperties, Ord(High(TMySqlOption));
+  for o := low(TMySqlOption) to high(TMySqlOption) do with MySQLOptionProperties[o] do begin
+    MySQLOptionProperties[o].Name := GetEnumName(TypeInfo(TMySQLOption), Integer(Option));
+    MySQLOptionProperties[o].Purpose :=
+  end;
+
+end;*)
+
 initialization
   MySQLDriver := TZMySQLDriver.Create;
   DriverManager.RegisterDriver(MySQLDriver);
+  //RegisterMySQLProperties;
 finalization
   if DriverManager <> nil then
     DriverManager.DeregisterDriver(MySQLDriver);

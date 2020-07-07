@@ -350,6 +350,7 @@ const
   // Type: INT
   // Value used in 'SET GLOBAL max_allowed_packet' statement, refer to MySql manual for details
   ConnProps_MaxLobSize = 'MaxLobSize';
+  ConnProps_max_allowed_packet = 'max_allowed_packet';
   // Type: BOOLEAN
   // Value used to identify BIT(1) as Boolean instead of ENUM('Y','N')
   ConnProps_MySQL_FieldType_Bit_1_IsBoolean = 'MySQL_FieldType_Bit_1_IsBoolean';
@@ -574,7 +575,7 @@ const
   // see sqlite manuals
   // if Value is 'EXCLUSIVE' we're assuming you want emulate a ReadCommitted transaction
   // which blocks read transactions while the transaction is underway
-  DSProps_TransactionBehaviour = 'TransactionBehaviour';
+  TxnProps_TransactionBehaviour = 'TransactionBehaviour';
 {$ENDIF}
 
 {$IFDEF ENABLE_ORACLE}
@@ -732,8 +733,8 @@ function GetZProperties: PZPropertyRefDynArray;
 
 implementation
 
-//which of Jan@EH: instead of a constant array, use a dynamic array,
-//so others can easaly add it's own properties
+//wish of Jan@EH: instead of a constant array, use a dynamic array,
+//so others can easily add it's own properties
 var ZPropertyArray: TZPropertyRefDynArray;
 
 function GetZProperties: PZPropertyRefDynArray;
@@ -1046,7 +1047,7 @@ const
     Name: DSProps_StatementTimeOut;
     Purpose: 'Execution timeout of a statement.'+LineEnding+
       'Seconds for OleDB and ODBC, Milliseconds for Firebird and Interbase';
-    ValueType: pvtNumber; LevelTypes: [pltConnection];
+    ValueType: pvtNumber; LevelTypes: [pltConnection, pltStatement];
     Values: ''; Default: '0'; Alias: '';
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 4; Items: @AllODBC_OleDB_Firebird_Interbase);
@@ -1216,6 +1217,108 @@ const
     Protocols: (Count: 2; Items: @AllSybaseMSSQL);
   );
 {$ENDIF}
+{$IFDEF ENABLE_MYSQL}
+  const
+    AllMySQL: array[0..1] of String = ('mariadb','mysql');
+  ZProp_MYSQLSSL : TZProperty = (
+    Name: ConnProps_MYSQLSSL;
+    Purpose: 'Enable SSL certificate loading.';
+    ValueType: pvtBool; LevelTypes: [pltConnection];
+    Values: 'false|true'; Default: 'false'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllMySQL);
+  );
+  ZProp_MYSQLCompress : TZProperty = (
+    Name: ConnProps_Compress;
+    Purpose: 'same as MYSQL_OPT_COMPRESS, refer to MySql manual for details';
+    ValueType: pvtBool; LevelTypes: [pltConnection];
+    Values: 'false|true'; Default: 'false'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllMySQL);
+  );
+  ZProp_MYSQLdbless : TZProperty = (
+    Name: ConnProps_DBLess;
+    Purpose: 'Same as CLIENT_CONNECT_WITH_DB, refer to MySql manual for details';
+    ValueType: pvtBool; LevelTypes: [pltConnection];
+    Values: 'false|true'; Default: 'false'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllMySQL);
+  );
+  ZProp_MYSQLMaxLobSize : TZProperty = (
+    Name: ConnProps_MaxLobSize;
+    Purpose: 'executes a ''SET GLOBAL max_allowed_packet'' statement, refer to '+
+      'MySql manual for detail';
+    ValueType: pvtNumber; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_max_allowed_packet;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllMySQL);
+  );
+  ZProp_max_allowed_packet : TZProperty = (
+    Name: ConnProps_max_allowed_packet;
+    Purpose: 'executes a ''SET GLOBAL max_allowed_packet'' statement, refer to '+
+      'MySql manual for detail';
+    ValueType: pvtNumber; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_MaxLobSize;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllMySQL);
+  );
+  ZProp_MySQL_FieldType_Bit_1_IsBoolean : TZProperty = (
+    Name: ConnProps_MySQL_FieldType_Bit_1_IsBoolean;
+    Purpose: 'Treat fieldtype BIT(1) as Boolean instead of ENUM(''Y'',''N'')'+LineEnding+
+      'Default since 7.3';
+    ValueType: pvtBool; LevelTypes: [pltConnection];
+    Values: 'false|true'; Default: 'true'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllMySQL);
+  );
+  ZProp_MySQLDatadir : TZProperty = (
+    Name: ConnProps_Datadir;
+    Purpose: 'Refer to MySql manual for details. Used for mysql_init';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllMySQL);
+  );
+  ZProp_MySQLLibrary : TZProperty = (
+    Name: ConnProps_Library;
+    Purpose: 'Refer to MySql manual for details. Used for mysql_init';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllMySQL);
+  );
+  ZProp_MySQL_UseResult : TZProperty = (
+    Name: DSProps_UseResult;
+    Purpose: 'Fetching rows one by one using mysql_use_result(not prepared) '+
+      'instead of  mysql_stmt_store_result(prepared)/mysql_store_result(not prepared) '+
+      'this reduces the memory-consumtion of libmysql. Rows are fetched one by one.'+
+      'Side effects: Each call is a roundtrip, i guess. Mysql is tabular '+
+      'streamed. -> So you can''t use it within using metainformations or '+
+      'multiple active resultsets.';
+    ValueType: pvtBool; LevelTypes: [pltStatement];
+    Values: 'false|true'; Default: 'false'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllMySQL);
+  );
+  ZProp_MySQL_STMT_ATTR_PREFETCH_ROWS : TZProperty = (
+    Name: DSProps_PrefetchRows;
+    Purpose: 'For prepared statements only. Sets STMT_ATTR_PREFETCH_ROWS '+
+      'option, refer to MySql manual for details';
+    ValueType: pvtNumber; LevelTypes: [pltConnection, pltStatement];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllMySQL);
+  );
+  ZProp_MySQL_chunk_size : TZProperty = (
+    Name: DSProps_ChunkSize;
+    Purpose: 'size of chunks for sending long data, depends to your network speed';
+    ValueType: pvtNumber; LevelTypes: [pltConnection, pltStatement];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllMySQL);
+  );
+{$ENDIF}
+
 {$IF defined(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}
   const AllInterbaseAndFireBirebirdProtocols: array[0..1] of String =
     ('firebird','interbase');
@@ -1472,7 +1575,7 @@ const
     MinimumClientVersion: 0; MinimumProtocolVersion: 0;);
   ZProp_isc_tpb_read_consistency: TZProperty = (
     Name: TxnProps_isc_tpb_read_consistency;
-    Purpose: ' Firebird 4.0 release notes pages 26 ("Read Consistency for '+
+    Purpose: 'Firebird 4.0 release notes pages 26 ("Read Consistency for '+
       'Statements in Read-Committed Transactions") and 28 ("New API Constant '+
       'in the TPB")'+LineEnding+
       'This new isolation level should be the default isolation level for read '+
@@ -1483,6 +1586,120 @@ const
     Protocols: (Count: 1; Items: @AllInterbaseAndFireBirebirdProtocols);
   );
 {$IFEND}
+
+{$IFDEF ENABLE_FIREBIRD}
+  ZProp_SessionIdleTimeOut: TZProperty = (
+    Name: ConnProps_SessionIdleTimeOut;
+    Purpose: 'Set the session idle timeout in milliseconds. '+
+      'Minimum value is 16. Supported since Firebird 4.';
+    ValueType: pvtEmpty; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cFireBirebird4upProvider);
+    Protocols: (Count: 1; Items: @AllInterbaseAndFireBirebirdProtocols[0]);
+  );
+{$ENDIF ENABLE_FIREBIRD}
+
+{$IFDEF ENABLE_SQLITE}
+  cSqlite3upProvider: TZPropertyProvider = (
+    Provider: spSQLite; MinimumServerVersion: 0;
+    MinimumClientVersion: 0; MinimumProtocolVersion: 0;);
+  cSQLiteProtocol: String = 'sqlite';
+
+  ZProp_Encrypted: TZProperty = (
+    Name: ConnProps_Encrypted;
+    Purpose: 'Use connection encryption?';
+    ValueType: pvtBool; LevelTypes: [pltConnection];
+    Values: 'false|true'; Default: 'false'; Alias: '';
+    Providers: (Count: 1; Items: @cSqlite3upProvider);
+    Protocols: (Count: 1; Items: @cSQLiteProtocol);
+  );
+  ZProp_BusyTimeout: TZProperty = (
+    Name: ConnProps_BusyTimeout;
+    Purpose: 'calls sqlite3_busy_timeout. This routine sets a busy handler '+
+      'that sleeps for a specified amount of time when a table is locked. The '+
+      'handler will sleep multiple times until at least "ms" milliseconds of '+
+      'sleeping have accumulated. After at least "ms" milliseconds of sleeping, '+
+      'the handler returns 0 which causes sqlite3_step() to return SQLITE_BUSY.';
+    ValueType: pvtNumber; LevelTypes: [pltConnection];
+    Values: ''; Default: '0'; Alias: '';
+    Providers: (Count: 1; Items: @cSqlite3upProvider);
+    Protocols: (Count: 1; Items: @cSQLiteProtocol);
+  );
+  ZProp_CacheSize: TZProperty = (
+    Name: ConnProps_CacheSize;
+    Purpose: 'calls PRAGMA cache_size = value. See:'+LineEnding+
+      'https://www.sqlite.org/pragma.html#pragma_cache_size';
+    ValueType: pvtNumber; LevelTypes: [pltConnection];
+    Values: ''; Default: '0'; Alias: '';
+    Providers: (Count: 1; Items: @cSqlite3upProvider);
+    Protocols: (Count: 1; Items: @cSQLiteProtocol);
+  );
+  ZProp_Synchronous: TZProperty = (
+    Name: ConnProps_Synchronous;
+    Purpose: 'calls PRAGMA synchronous = value. See:'+LineEnding+
+      'https://www.sqlite.org/pragma.html#pragma_synchronous'+LineEnding+
+      '"OFF" brings the best performance';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: '0|OFF|1|NORMAL|2|FULL|3|EXTRA'; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cSqlite3upProvider);
+    Protocols: (Count: 1; Items: @cSQLiteProtocol);
+  );
+  ZProp_LockingMode: TZProperty = (
+    Name: ConnProps_LockingMode;
+    Purpose: 'calls PRAGMA locking_mode = value. See:'+LineEnding+
+      'https://www.sqlite.org/pragma.html#pragma_locking_mode'+LineEnding+
+      '"EXCLUSIVE" brings the best performance';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: 'NORMAL|EXCLUSIVE'; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cSqlite3upProvider);
+    Protocols: (Count: 1; Items: @cSQLiteProtocol);
+  );
+  ZProp_ForeignKeys: TZProperty = (
+    Name: ConnProps_ForeignKeys;
+    Purpose: 'calls PRAGMA foreign_keys = value. See:'+LineEnding+
+      'https://www.sqlite.org/pragma.html#pragma_foreign_keys';
+    ValueType: pvtBool; LevelTypes: [pltConnection];
+    Values: 'false|true'; Default: 'true'; Alias: '';
+    Providers: (Count: 1; Items: @cSqlite3upProvider);
+    Protocols: (Count: 1; Items: @cSQLiteProtocol);
+  );
+  ZProp_journal_mode: TZProperty = (
+    Name: ConnProps_journal_mode;
+    Purpose: 'calls PRAGMA journal_mode = value. See:'+LineEnding+
+      'https://www.sqlite.org/pragma.html#pragma_journal_mode';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: 'DELETE|TRUNCATE|PERSIST|MEMORY|WAL|OFF'; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cSqlite3upProvider);
+    Protocols: (Count: 1; Items: @cSQLiteProtocol);
+  );
+  ZProp_BindDoubleDateTimeValues: TZProperty = (
+    Name: DSProps_BindDoubleDateTimeValues;
+    Purpose: 'If set, directly bind the double value of date/time/datetime '+
+      'fields. Otherwise, use intermediate string';
+    ValueType: pvtBool; LevelTypes: [pltConnection,pltStatement];
+    Values: 'false|true'; Default: 'false'; Alias: '';
+    Providers: (Count: 1; Items: @cSqlite3upProvider);
+    Protocols: (Count: 1; Items: @cSQLiteProtocol);
+  );
+  ZProp_BindOrdinalBoolValues: TZProperty = (
+    Name: DSProps_BindOrdinalBoolValues;
+    Purpose: 'If set, directly bind the ordinal of boolean fields. Otherwise, '+
+      'use intermediate alltime ''Y''/''N'' string.';
+    ValueType: pvtBool; LevelTypes: [pltConnection,pltStatement];
+    Values: 'false|true'; Default: 'false'; Alias: '';
+    Providers: (Count: 1; Items: @cSqlite3upProvider);
+    Protocols: (Count: 1; Items: @cSQLiteProtocol);
+  );
+  ZProp_SQLiteTransactionBehaviour: TZProperty = (
+    Name: TxnProps_TransactionBehaviour;
+    Purpose: 'Sets the transaction behavior on starting a transaction.'+
+      'See Section 2.2 of https://www.sqlite.org/lang_transaction.html';
+    ValueType: pvtEnum; LevelTypes: [pltConnection,pltTransaction];
+    Values: 'DEFERRED|IMMEDIATE|EXCLUSIVE'; Default: 'DEFERRED'; Alias: '';
+    Providers: (Count: 1; Items: @cSqlite3upProvider);
+    Protocols: (Count: 1; Items: @cSQLiteProtocol);
+  );
+{$ENDIF}
 
 initialization
   RegisterZProperty(@ZProp_UID);
@@ -1514,6 +1731,18 @@ initialization
 {$IF declared(ZProp_InternalBufSize)}
   RegisterZProperty(@ZProp_InternalBufSize);
 {$IFEND}
+{$IFDEF ENABLE_SQLITE}
+  RegisterZProperty(@ZProp_Encrypted);
+  RegisterZProperty(@ZProp_BusyTimeout);
+  RegisterZProperty(@ZProp_CacheSize);
+  RegisterZProperty(@ZProp_Synchronous);
+  RegisterZProperty(@ZProp_LockingMode);
+  RegisterZProperty(@ZProp_ForeignKeys);
+  RegisterZProperty(@ZProp_journal_mode);
+  RegisterZProperty(@ZProp_BindDoubleDateTimeValues);
+  RegisterZProperty(@ZProp_BindOrdinalBoolValues);
+  RegisterZProperty(@ZProp_SQLiteTransactionBehaviour);
+{$ENDIF}
 {$IF declared(ZProp_CachedLobs)}
   RegisterZProperty(@ZProp_CachedLobs);
 {$IFEND}
@@ -1552,6 +1781,22 @@ initialization
   RegisterZProperty(@ZProp_TDSSecure);
   RegisterZProperty(@ZProp_TDSTrusted);
 {$ENDIF}
+{$IFDEF ENABLE_MYSQL}
+  RegisterZProperty(@ZProp_MYSQLSSL);
+  RegisterZProperty(@ZProp_MYSQLCompress);
+  RegisterZProperty(@ZProp_MYSQLdbless);
+  RegisterZProperty(@ZProp_MYSQLMaxLobSize);
+  RegisterZProperty(@ZProp_max_allowed_packet);
+  RegisterZProperty(@ZProp_MySQL_FieldType_Bit_1_IsBoolean);
+  RegisterZProperty(@ZProp_MySQLDatadir);
+  RegisterZProperty(@ZProp_MySQLLibrary);
+  RegisterZProperty(@ZProp_MySQL_UseResult);
+  RegisterZProperty(@ZProp_MySQL_STMT_ATTR_PREFETCH_ROWS);
+  RegisterZProperty(@ZProp_MySQL_chunk_size);
+{$ENDIF}
+{$IF declared(ZProp_SessionIdleTimeOut)}
+  RegisterZProperty(@ZProp_SessionIdleTimeOut);
+{$IFEND}
 {$IF defined(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}
   RegisterZProperty(@ZProp_InsertReturningFields);
   RegisterZProperty(@ZProp_HardCommit);
