@@ -469,7 +469,7 @@ const
 
   // Type: STR
   // identify the charset "NONE" codepage
-  ConnProps_Charset_NONE_CodePage = 'Charset_NONE_CodePage';
+  ConnProps_Charset_NONE_Alias = 'Charset_NONE_Alias';
 
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
@@ -503,38 +503,126 @@ const
       'isc_dpb_sql_dialect'     = ConnProps_Dialect
       'isc_dpb_connect_timeout' = ConnProps_Timeout }
 
+  ConnProps_isc_dpb_page_size               = 'isc_dpb_page_size';
+  ConnProps_isc_dpb_num_buffers             = 'isc_dpb_num_buffers';
+  ConnProps_isc_dpb_debug                   = 'isc_dpb_debug';
+  ConnProps_isc_dpb_garbage_collect         = 'isc_dpb_garbage_collect';
+  ConnProps_isc_dpb_verify                  = 'isc_dpb_verify';
+  ConnProps_isc_dpb_sweep                   = 'isc_dpb_sweep';
+  ConnProps_isc_dpb_enable_journal          = 'isc_dpb_enable_journal';
+  ConnProps_isc_dpb_disable_journal         = 'isc_dpb_disable_journal';
+  ConnProps_isc_dpb_dbkey_scope             = 'isc_dpb_dbkey_scope';
+  ConnProps_isc_dpb_trace                   = 'isc_dpb_trace';
+  ConnProps_isc_dpb_no_garbage_collect      = 'isc_dpb_no_garbage_collect';
+  ConnProps_isc_dpb_damaged                 = 'isc_dpb_damaged';
+  ConnProps_isc_dpb_license                 = 'isc_dpb_license';
+  ConnProps_isc_dpb_sys_user_name           = 'isc_dpb_sys_user_name';
+  ConnProps_isc_dpb_encrypt_key             = 'isc_dpb_encrypt_key';
+  ConnProps_isc_dpb_activate_shadow         = 'isc_dpb_activate_shadow';
+  ConnProps_isc_dpb_sweep_interval          = 'isc_dpb_sweep_interval';
+  ConnProps_isc_dpb_delete_shadow           = 'isc_dpb_delete_shadow';
+  ConnProps_isc_dpb_force_write             = 'isc_dpb_force_write';
+  ConnProps_isc_dpb_begin_log               = 'isc_dpb_begin_log';
+  ConnProps_isc_dpb_quit_log                = 'isc_dpb_quit_log';
+  ConnProps_isc_dpb_no_reserve              = 'isc_dpb_no_reserve';
+  ConnProps_isc_dpb_username                = 'isc_dpb_username';
+  ConnProps_isc_dpb_password                = 'isc_dpb_password';
+  ConnProps_isc_dpb_password_enc            = 'isc_dpb_password_enc';
+  ConnProps_isc_dpb_sys_user_name_enc       = 'isc_dpb_sys_user_name_enc';
+  ConnProps_isc_dpb_interp                  = 'isc_dpb_interp';
+  ConnProps_isc_dpb_online_dump             = 'isc_dpb_online_dump';
+  ConnProps_isc_dpb_old_file_size           = 'isc_dpb_old_file_size';
+  ConnProps_isc_dpb_old_num_files           = 'isc_dpb_old_num_files';
+  ConnProps_isc_dpb_old_file                = 'isc_dpb_old_file';
+  ConnProps_isc_dpb_old_start_page          = 'isc_dpb_old_start_page';
+  ConnProps_isc_dpb_old_start_seqno         = 'isc_dpb_old_start_seqno';
+  ConnProps_isc_dpb_old_start_file          = 'isc_dpb_old_start_file';
+  ConnProps_isc_dpb_drop_walfile            = 'isc_dpb_drop_walfile';
+  ConnProps_isc_dpb_old_dump_id             = 'isc_dpb_old_dump_id';
+  ConnProps_isc_dpb_wal_backup_dir          = 'isc_dpb_wal_backup_dir';
+  ConnProps_isc_dpb_wal_chkptlen            = 'isc_dpb_wal_chkptlen';
+  ConnProps_isc_dpb_wal_numbufs             = 'isc_dpb_wal_numbufs';
+  ConnProps_isc_dpb_wal_bufsize             = 'isc_dpb_wal_bufsize';
+  ConnProps_isc_dpb_wal_grp_cmt_wait        = 'isc_dpb_wal_grp_cmt_wait';
+  ConnProps_isc_dpb_lc_messages             = 'isc_dpb_lc_messages';
+  ConnProps_isc_dpb_lc_ctype                = 'isc_dpb_lc_ctype';
+  ConnProps_isc_dpb_shutdown                = 'isc_dpb_shutdown';
+  ConnProps_isc_dpb_online                  = 'isc_dpb_online';
+  ConnProps_isc_dpb_shutdown_delay          = 'isc_dpb_shutdown_delay';
+  ConnProps_isc_dpb_reserved                = 'isc_dpb_reserved';
+  ConnProps_isc_dpb_overwrite               = 'isc_dpb_overwrite';
+  ConnProps_isc_dpb_sec_attach              = 'isc_dpb_sec_attach';
+  ConnProps_isc_dpb_disable_wal             = 'isc_dpb_disable_wal';
+  ConnProps_isc_dpb_connect_timeout         = 'isc_dpb_connect_timeout';
+  ConnProps_isc_dpb_dummy_packet_interval   = 'isc_dpb_dummy_packet_interval';
+  ConnProps_isc_dpb_gbak_attach             = 'isc_dpb_gbak_attach';
+  ConnProps_isc_dpb_sql_role_name           = 'isc_dpb_sql_role_name';
+  ConnProps_isc_dpb_set_page_buffers        = 'isc_dpb_set_page_buffers';
+  ConnProps_isc_dpb_working_directory       = 'isc_dpb_working_directory';
+  ConnProps_isc_dpb_sql_dialect             = 'isc_dpb_sql_dialect';
+  ConnProps_isc_dpb_set_db_readonly         = 'isc_dpb_set_db_readonly';
+  ConnProps_isc_dpb_set_db_sql_dialect      = 'isc_dpb_set_db_sql_dialect';
+  ConnProps_isc_dpb_gfix_attach             = 'isc_dpb_gfix_attach';
+  ConnProps_isc_dpb_gstat_attach            = 'isc_dpb_gstat_attach';
+  ConnProps_isc_dpb_set_db_charset          = 'isc_dpb_set_db_charset';
+  ConnProps_isc_dpb_gsec_attach             = 'isc_dpb_gsec_attach';
+  ConnProps_isc_dpb_address_path            = 'isc_dpb_address_path';
+  ConnProps_isc_dpb_process_id              = 'isc_dpb_process_id';
+  ConnProps_isc_dpb_no_db_triggers          = 'isc_dpb_no_db_triggers';
+  ConnProps_isc_dpb_trusted_auth            = 'isc_dpb_trusted_auth';
+  ConnProps_isc_dpb_process_name            = 'isc_dpb_process_name';
+  ConnProps_isc_dpb_trusted_role            = 'isc_dpb_trusted_role';
+  ConnProps_isc_dpb_org_filename            = 'isc_dpb_org_filename';
+  ConnProps_isc_dpb_utf8_filename           = 'isc_dpb_utf8_filename';
+  ConnProps_isc_dpb_ext_call_depth          = 'isc_dpb_ext_call_depth';
+  ConnProps_isc_dpb_auth_block              = 'isc_dpb_auth_block';
+  ConnProps_isc_dpb_client_version          = 'isc_dpb_client_version';
+  ConnProps_isc_dpb_remote_protocol         = 'isc_dpb_remote_protocol';
+  ConnProps_isc_dpb_host_name               = 'isc_dpb_host_name';
+  ConnProps_isc_dpb_os_user                 = 'isc_dpb_os_user';
+  ConnProps_isc_dpb_specific_auth_data      = 'isc_dpb_specific_auth_data';
+  ConnProps_isc_dpb_auth_plugin_list        = 'isc_dpb_auth_plugin_list';
+  ConnProps_isc_dpb_auth_plugin_name        = 'isc_dpb_auth_plugin_name';
+  ConnProps_isc_dpb_config                  = 'isc_dpb_config';
+  ConnProps_isc_dpb_nolinger                = 'isc_dpb_nolinger';
+  ConnProps_isc_dpb_reset_icu               = 'isc_dpb_reset_icu';
+  ConnProps_isc_dpb_map_attach              = 'isc_dpb_map_attach';
+  ConnProps_isc_dpb_session_time_zone       = 'isc_dpb_session_time_zone';
+  ConnProps_isc_dpb_set_db_replica          = 'isc_dpb_set_db_replica';
+  ConnProps_isc_dpb_set_bind                = 'isc_dpb_set_bind';
+  ConnProps_isc_dpb_decfloat_round          = 'isc_dpb_decfloat_round';
+  ConnProps_isc_dpb_decfloat_traps          = 'isc_dpb_decfloat_traps';
   { Some of the isc_tpb_* parameters are added internally according to
     Connection.TransactIsolationLevel property }
-
   // Type: NONE
-  TxnProps_isc_tpb_consistency = 'isc_tpb_consistency';
-  TxnProps_isc_tpb_concurrency = 'isc_tpb_concurrency';
-  TxnProps_isc_tpb_shared = 'isc_tpb_shared';
-  TxnProps_isc_tpb_protected = 'isc_tpb_protected';
-  TxnProps_isc_tpb_exclusive = 'isc_tpb_exclusive';
-  TxnProps_isc_tpb_wait = 'isc_tpb_wait';
-  TxnProps_isc_tpb_nowait = 'isc_tpb_nowait';
-  TxnProps_isc_tpb_read = 'isc_tpb_read';
-  TxnProps_isc_tpb_write = 'isc_tpb_write';
+  TxnProps_isc_tpb_consistency              = 'isc_tpb_consistency';
+  TxnProps_isc_tpb_concurrency              = 'isc_tpb_concurrency';
+  TxnProps_isc_tpb_shared                   = 'isc_tpb_shared';
+  TxnProps_isc_tpb_protected                = 'isc_tpb_protected';
+  TxnProps_isc_tpb_exclusive                = 'isc_tpb_exclusive';
+  TxnProps_isc_tpb_wait                     = 'isc_tpb_wait';
+  TxnProps_isc_tpb_nowait                   = 'isc_tpb_nowait';
+  TxnProps_isc_tpb_read                     = 'isc_tpb_read';
+  TxnProps_isc_tpb_write                    = 'isc_tpb_write';
   // Type: String
-  TxnProps_isc_tpb_lock_read = 'isc_tpb_lock_read';
-  TxnProps_isc_tpb_lock_write = 'isc_tpb_lock_write';
+  TxnProps_isc_tpb_lock_read                = 'isc_tpb_lock_read';
+  TxnProps_isc_tpb_lock_write               = 'isc_tpb_lock_write';
   //not implemented
-  TxnProps_isc_tpb_verb_time = 'isc_tpb_verb_time';
-  TxnProps_isc_tpb_commit_time = 'isc_tpb_commit_time';
+  TxnProps_isc_tpb_verb_time                = 'isc_tpb_verb_time';
+  TxnProps_isc_tpb_commit_time              = 'isc_tpb_commit_time';
   //Type: None
-  TxnProps_isc_tpb_ignore_limbo = 'isc_tpb_ignore_limbo';
-  TxnProps_isc_tpb_read_committed = 'isc_tpb_read_committed';
-  TxnProps_isc_tpb_autocommit = 'isc_tpb_autocommit';
-  TxnProps_isc_tpb_rec_version = 'isc_tpb_rec_version';
-  TxnProps_isc_tpb_no_rec_version = 'isc_tpb_no_rec_version';
-  TxnProps_isc_tpb_restart_requests = 'isc_tpb_restart_requests';
-  TxnProps_isc_tpb_no_auto_undo = 'isc_tpb_no_auto_undo';
-  TxnProps_isc_tpb_no_savepoint = 'isc_tpb_no_savepoint';
+  TxnProps_isc_tpb_ignore_limbo             = 'isc_tpb_ignore_limbo';
+  TxnProps_isc_tpb_read_committed           = 'isc_tpb_read_committed';
+  TxnProps_isc_tpb_autocommit               = 'isc_tpb_autocommit';
+  TxnProps_isc_tpb_rec_version              = 'isc_tpb_rec_version';
+  TxnProps_isc_tpb_no_rec_version           = 'isc_tpb_no_rec_version';
+  TxnProps_isc_tpb_restart_requests         = 'isc_tpb_restart_requests';
+  TxnProps_isc_tpb_no_auto_undo             = 'isc_tpb_no_auto_undo';
+  TxnProps_isc_tpb_no_savepoint             = 'isc_tpb_no_savepoint';
   //Type: Int
-  TxnProps_isc_tpb_lock_timeout = 'isc_tpb_lock_timeout';
+  TxnProps_isc_tpb_lock_timeout             = 'isc_tpb_lock_timeout';
   //Type: None
-  TxnProps_isc_tpb_read_consistency = 'isc_tpb_read_consistency';
+  TxnProps_isc_tpb_read_consistency         = 'isc_tpb_read_consistency';
 {$IFEND}
 
 {$IFDEF ENABLE_FIREBIRD}
@@ -1098,7 +1186,7 @@ const
   );
   ZProp_TDSProtocolVersion : TZProperty = (
     Name: ConnProps_TDSProtocolVersion;
-    Purpose: '(DBLIB) It''s the documtented TDS Protocol Version like ''7.2''. '+
+    Purpose: '(DBLIB) It''s the documented TDS Protocol Version like ''7.2''. '+
       'Purpose is equal to param '+ConnProps_TDSVersion+'. If set, the TDS '+
       'version will be set on connect or dbinit (sybase-lib only) see:'+ LineEnding+
       'https://www.freetds.org/userguide/ChoosingTdsProtocol.html'+LineEnding+
@@ -1320,11 +1408,95 @@ const
 {$ENDIF}
 
 {$IF defined(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}
-  const AllInterbaseAndFireBirebirdProtocols: array[0..1] of String =
+  const AllInterbaseAndFirebirdProtocols: array[0..1] of String =
     ('firebird','interbase');
-  const cInterbaseAndFireBirebirdProvider: TZPropertyProvider = (
+  const cInterbaseAndFirebirdProvider: TZPropertyProvider = (
     Provider: spIB_FB; MinimumServerVersion: 0;
     MinimumClientVersion: 0; MinimumProtocolVersion: 0;);
+  ZProp_IB_FB_Dialect : TZProperty = (
+    Name: ConnProps_Dialect;
+    Purpose: 'Dialect of API communication';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: '1|3'; Default: '3'; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
+  );
+  ZProp_IB_FB_Rolename : TZProperty = (
+    Name: ConnProps_Rolename;
+    Purpose: 'Name of the role the user connects with';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
+  );
+  const cFirebird3upProvider: TZPropertyProvider = (
+    Provider: spIB_FB; MinimumServerVersion: 3000000;
+    MinimumClientVersion: 0; MinimumProtocolVersion: 0;);
+  ZProp_IB_FB_WireCompression : TZProperty = (
+    Name: ConnProps_WireCompression;
+    Purpose: 'Enable the wire compression in Firebird 3.0 and above. '+
+      'This option generates isc_dpb_config string';
+    ValueType: pvtBool; LevelTypes: [pltConnection];
+    Values: 'false|true'; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cFirebird3upProvider);
+    Protocols: (Count: 1; Items: @AllInterbaseAndFirebirdProtocols[0]);
+  );
+  ZProp_FBProtocol : TZProperty = (
+    Name: ConnProps_FBProtocol;
+    Purpose: 'can be used to define the firebird protocol to be used '+
+      'for FB 3.0 this will enable the construction of url style connection '+
+      'strings. see firebird 3.0 release notes';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: 'INET|WNET|XNET|LOCAL'; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cFirebird3upProvider);
+    Protocols: (Count: 1; Items: @AllInterbaseAndFirebirdProtocols);
+  );
+  ZProp_CreateNewDatabase : TZProperty = (
+    Name: ConnProps_CreateNewDatabase;
+    Purpose: 'Create new DB on the given path on connect. You can use '+
+      'the sql-statment or since FB2.5+ just use the value "true"';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
+  );
+  ZProp_SetGUIDByType : TZProperty = (
+    Name: ConnProps_SetGUIDByType;
+    Purpose: 'Set a type of **all** CHAR(16) CHAR SET OCTETS fields to GUID.';
+    ValueType: pvtBool; LevelTypes: [pltConnection, pltStatement];
+    Values: 'false|true'; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
+  );
+  ZProp_GUIDDomains : TZProperty = (
+    Name: ConnProps_GUIDDomains;
+    Purpose: 'like Domain1[, Domain2, ...] (separators: "," or ";") '+
+      'List of domains; if defined, fields of that domains will get GUID type';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
+  );
+  ZProp_GUIDFields : TZProperty = (
+    Name: DSProps_GUIDFields;
+    Purpose: 'like Domain1[, Domain2, ...] (separators: "," or ";") '+
+      'List of fields; if defined, fields with these names will get GUID type';
+    ValueType: pvtString; LevelTypes: [pltStatement];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
+  );
+  ZProp_Charset_NONE_Alias : TZProperty = (
+    Name: ConnProps_Charset_NONE_Alias;
+    Purpose: 'Identify the CodePage of characterset "NONE" by setting an '+
+      'character-set alias. Relevant only if the default characterset of your '+
+       'database is "NONE" and you have fields without an explicit collation. '+
+       'If not set we''ll use the attachment characterset, and this might be wrong';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
+  );
   ZProp_InsertReturningFields : TZProperty = (
     Name: DSProps_InsertReturningFields;
     Purpose: 'Field1[, Field2, ...] (allowed separators: "," or ";") '+
@@ -1336,13 +1508,105 @@ const
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
   );
+  //database parameter buffer properties:
+  (*
+  ConnProps_isc_dpb_page_size               = 'isc_dpb_page_size';
+  ConnProps_isc_dpb_num_buffers             = 'isc_dpb_num_buffers';
+  ConnProps_isc_dpb_debug                   = 'isc_dpb_debug';
+  ConnProps_isc_dpb_garbage_collect         = 'isc_dpb_garbage_collect';
+  ConnProps_isc_dpb_verify                  = 'isc_dpb_verify';
+  ConnProps_isc_dpb_sweep                   = 'isc_dpb_sweep';
+  ConnProps_isc_dpb_enable_journal          = 'isc_dpb_enable_journal';
+  ConnProps_isc_dpb_disable_journal         = 'isc_dpb_disable_journal';
+  ConnProps_isc_dpb_dbkey_scope             = 'isc_dpb_dbkey_scope';
+  ConnProps_isc_dpb_trace                   = 'isc_dpb_trace';
+  ConnProps_isc_dpb_no_garbage_collect      = 'isc_dpb_no_garbage_collect';
+  ConnProps_isc_dpb_damaged                 = 'isc_dpb_damaged';
+  ConnProps_isc_dpb_license                 = 'isc_dpb_license';
+  ConnProps_isc_dpb_sys_user_name           = 'isc_dpb_sys_user_name';
+  ConnProps_isc_dpb_encrypt_key             = 'isc_dpb_encrypt_key';
+  ConnProps_isc_dpb_activate_shadow         = 'isc_dpb_activate_shadow';
+  ConnProps_isc_dpb_sweep_interval          = 'isc_dpb_sweep_interval';
+  ConnProps_isc_dpb_delete_shadow           = 'isc_dpb_delete_shadow';
+  ConnProps_isc_dpb_force_write             = 'isc_dpb_force_write';
+  ConnProps_isc_dpb_begin_log               = 'isc_dpb_begin_log';
+  ConnProps_isc_dpb_quit_log                = 'isc_dpb_quit_log';
+  ConnProps_isc_dpb_no_reserve              = 'isc_dpb_no_reserve';
+  ConnProps_isc_dpb_username                = 'isc_dpb_username';
+  ConnProps_isc_dpb_password                = 'isc_dpb_password';
+  ConnProps_isc_dpb_password_enc            = 'isc_dpb_password_enc';
+  ConnProps_isc_dpb_sys_user_name_enc       = 'isc_dpb_sys_user_name_enc';
+  ConnProps_isc_dpb_interp                  = 'isc_dpb_interp';
+  ConnProps_isc_dpb_online_dump             = 'isc_dpb_online_dump';
+  ConnProps_isc_dpb_old_file_size           = 'isc_dpb_old_file_size';
+  ConnProps_isc_dpb_old_num_files           = 'isc_dpb_old_num_files';
+  ConnProps_isc_dpb_old_file                = 'isc_dpb_old_file';
+  ConnProps_isc_dpb_old_start_page          = 'isc_dpb_old_start_page';
+  ConnProps_isc_dpb_old_start_seqno         = 'isc_dpb_old_start_seqno';
+  ConnProps_isc_dpb_old_start_file          = 'isc_dpb_old_start_file';
+  ConnProps_isc_dpb_drop_walfile            = 'isc_dpb_drop_walfile';
+  ConnProps_isc_dpb_old_dump_id             = 'isc_dpb_old_dump_id';
+  ConnProps_isc_dpb_wal_backup_dir          = 'isc_dpb_wal_backup_dir';
+  ConnProps_isc_dpb_wal_chkptlen            = 'isc_dpb_wal_chkptlen';
+  ConnProps_isc_dpb_wal_numbufs             = 'isc_dpb_wal_numbufs';
+  ConnProps_isc_dpb_wal_bufsize             = 'isc_dpb_wal_bufsize';
+  ConnProps_isc_dpb_wal_grp_cmt_wait        = 'isc_dpb_wal_grp_cmt_wait';
+  ConnProps_isc_dpb_lc_messages             = 'isc_dpb_lc_messages';
+  ConnProps_isc_dpb_lc_ctype                = 'isc_dpb_lc_ctype';
+  ConnProps_isc_dpb_shutdown                = 'isc_dpb_shutdown';
+  ConnProps_isc_dpb_online                  = 'isc_dpb_online';
+  ConnProps_isc_dpb_shutdown_delay          = 'isc_dpb_shutdown_delay';
+  ConnProps_isc_dpb_reserved                = 'isc_dpb_reserved';
+  ConnProps_isc_dpb_overwrite               = 'isc_dpb_overwrite';
+  ConnProps_isc_dpb_sec_attach              = 'isc_dpb_sec_attach';
+  ConnProps_isc_dpb_disable_wal             = 'isc_dpb_disable_wal';
+  ConnProps_isc_dpb_connect_timeout         = 'isc_dpb_connect_timeout';
+  ConnProps_isc_dpb_dummy_packet_interval   = 'isc_dpb_dummy_packet_interval';
+  ConnProps_isc_dpb_gbak_attach             = 'isc_dpb_gbak_attach';
+  ConnProps_isc_dpb_sql_role_name           = 'isc_dpb_sql_role_name';
+  ConnProps_isc_dpb_set_page_buffers        = 'isc_dpb_set_page_buffers';
+  ConnProps_isc_dpb_working_directory       = 'isc_dpb_working_directory';
+  ConnProps_isc_dpb_sql_dialect             = 'isc_dpb_sql_dialect';
+  ConnProps_isc_dpb_set_db_readonly         = 'isc_dpb_set_db_readonly';
+  ConnProps_isc_dpb_set_db_sql_dialect      = 'isc_dpb_set_db_sql_dialect';
+  ConnProps_isc_dpb_gfix_attach             = 'isc_dpb_gfix_attach';
+  ConnProps_isc_dpb_gstat_attach            = 'isc_dpb_gstat_attach';
+  ConnProps_isc_dpb_set_db_charset          = 'isc_dpb_set_db_charset';
+  ConnProps_isc_dpb_gsec_attach             = 'isc_dpb_gsec_attach';
+  ConnProps_isc_dpb_address_path            = 'isc_dpb_address_path';
+  ConnProps_isc_dpb_process_id              = 'isc_dpb_process_id';
+  ConnProps_isc_dpb_no_db_triggers          = 'isc_dpb_no_db_triggers';
+  ConnProps_isc_dpb_trusted_auth            = 'isc_dpb_trusted_auth';
+  ConnProps_isc_dpb_process_name            = 'isc_dpb_process_name';
+  ConnProps_isc_dpb_trusted_role            = 'isc_dpb_trusted_role';
+  ConnProps_isc_dpb_org_filename            = 'isc_dpb_org_filename';
+  ConnProps_isc_dpb_utf8_filename           = 'isc_dpb_utf8_filename';
+  ConnProps_isc_dpb_ext_call_depth          = 'isc_dpb_ext_call_depth';
+  ConnProps_isc_dpb_auth_block              = 'isc_dpb_auth_block';
+  ConnProps_isc_dpb_client_version          = 'isc_dpb_client_version';
+  ConnProps_isc_dpb_remote_protocol         = 'isc_dpb_remote_protocol';
+  ConnProps_isc_dpb_host_name               = 'isc_dpb_host_name';
+  ConnProps_isc_dpb_os_user                 = 'isc_dpb_os_user';
+  ConnProps_isc_dpb_specific_auth_data      = 'isc_dpb_specific_auth_data';
+  ConnProps_isc_dpb_auth_plugin_list        = 'isc_dpb_auth_plugin_list';
+  ConnProps_isc_dpb_auth_plugin_name        = 'isc_dpb_auth_plugin_name';
+  ConnProps_isc_dpb_config                  = 'isc_dpb_config';
+  ConnProps_isc_dpb_nolinger                = 'isc_dpb_nolinger';
+  ConnProps_isc_dpb_reset_icu               = 'isc_dpb_reset_icu';
+  ConnProps_isc_dpb_map_attach              = 'isc_dpb_map_attach';
+  ConnProps_isc_dpb_session_time_zone       = 'isc_dpb_session_time_zone';
+  ConnProps_isc_dpb_set_db_replica          = 'isc_dpb_set_db_replica';
+  ConnProps_isc_dpb_set_bind                = 'isc_dpb_set_bind';
+  ConnProps_isc_dpb_decfloat_round          = 'isc_dpb_decfloat_round';
+  ConnProps_isc_dpb_decfloat_traps          = 'isc_dpb_decfloat_traps';
+  *)
   ZProp_HardCommit: TZProperty = (
     Name: ConnProps_HardCommit;
     Purpose: 'Don''t use isc_commit_retaining or isc_rollback_retaining call.'+
-      'If enabled all record-streams of the txn are closed.'+LineEnding+
+      'If enabled all record-streams of the txn are closed immediatelly.'+LineEnding+
       'Note since 7.2.6 ZeosLib uses short-transactions but keeps the retaining '+
       'design by default. If a retained commit/rollback is done the transaction '+
-      'is removed from the transaction-manger, and is alive until: no more row '+
+      'is removed from the transaction-manager, and is alive until: no more row '+
       'of a opened IZResultset can be fetched and if there are no more Lob''s '+
       'to read. ZeosLib automatically will try to perform a fetchall and loads '+
       'all data, if possible. You can use cached lob''s to guarantiee all '+
@@ -1351,10 +1615,11 @@ const
       'transaction.';
     ValueType: pvtBool; LevelTypes: [pltConnection, pltTransaction];
     Values: 'false|true'; Default: 'false'; Alias: '';
-    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
-    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
 
+  //transaction parameter buffer properties:
   ZProp_isc_tpb_consistency: TZProperty = (
     Name: TxnProps_isc_tpb_consistency;
     Purpose: 'Table-locking transaction model'+LineEnding+
@@ -1362,8 +1627,8 @@ const
       'You manually can use this param only if isolation level tiNone is specified.';
     ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
-    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
   ZProp_isc_tpb_concurrency: TZProperty = (
     Name: TxnProps_isc_tpb_concurrency;
@@ -1373,8 +1638,8 @@ const
       'This parameter is used for isolationlevel tiRepeatableRead and default for tiNone.';
     ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
-    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
   ZProp_isc_tpb_shared: TZProperty = (
     Name: TXnProps_isc_tpb_shared;
@@ -1383,8 +1648,8 @@ const
       'establish the lock option [Default]';
     ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
-    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
   ZProp_isc_tpb_protected: TZProperty = (
     Name: TxnProps_isc_tpb_protected;
@@ -1392,8 +1657,8 @@ const
       'isc_tpb_lock_read and isc_tpb_lock_write to establish the lock option';
     ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
-    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
   ZProp_isc_tpb_exclusive: TZProperty = (
     Name: TxnProps_isc_tpb_exclusive;
@@ -1401,8 +1666,8 @@ const
       'isc_start_transaction() at the API level.';
     ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
-    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
   ZProp_isc_tpb_wait: TZProperty = (
     Name: TxnProps_isc_tpb_wait;
@@ -1411,8 +1676,8 @@ const
       'This parameter is default using isolation level tiNone.';
     ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
-    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
   ZProp_isc_tpb_nowait: TZProperty = (
     Name: TxnProps_isc_tpb_nowait;
@@ -1422,8 +1687,8 @@ const
       'This parameter is used for isolationlevel tiReadCommitted and tiRepeatableRead.';
     ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
-    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
   ZProp_isc_tpb_read: TZProperty = (
     Name: TxnProps_isc_tpb_read;
@@ -1432,8 +1697,8 @@ const
       'This parameter is set if your transaction is ReadOnly';
     ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
-    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
   ZProp_isc_tpb_write: TZProperty = (
     Name: TxnProps_isc_tpb_write;
@@ -1442,8 +1707,8 @@ const
       'This parameter is set if your transaction is not ReadOnly';
     ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
-    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
   ZProp_isc_tpb_lock_read: TZProperty = (
     Name: TxnProps_isc_tpb_lock_read;
@@ -1452,8 +1717,8 @@ const
       'lock option.';
     ValueType: pvtString; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
-    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
   ZProp_isc_tpb_lock_write: TZProperty = (
     Name: TxnProps_isc_tpb_lock_write;
@@ -1462,10 +1727,10 @@ const
       'lock option [Default]';
     ValueType: pvtString; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
-    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
-  cFireBirebird2upProvider: TZPropertyProvider = (
+  cFirebird2upProvider: TZPropertyProvider = (
     Provider: spIB_FB; MinimumServerVersion: 2000000;
     MinimumClientVersion: 2000000; MinimumProtocolVersion: 0;);
   ZProp_isc_ignore_limbo: TZProperty = (
@@ -1475,8 +1740,8 @@ const
       'commit fails.';
     ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cFireBirebird2upProvider);
-    Protocols: (Count: 1; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cFirebird2upProvider);
+    Protocols: (Count: 1; Items: @AllInterbaseAndFirebirdProtocols);
   );
   ZProp_isc_tpb_read_committed: TZProperty = (
     Name: TxnProps_isc_tpb_read_committed;
@@ -1485,16 +1750,16 @@ const
       'commit fails.';
     ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
-    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
   ZProp_isc_tpb_autocommit: TZProperty = (
     Name: TxnProps_isc_tpb_autocommit;
     Purpose: 'This parameter is set if your transaction is set to AutoCommit.';
     ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
-    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
   ZProp_isc_tpb_rec_version: TZProperty = (
     Name: TxnProps_isc_tpb_rec_version;
@@ -1504,8 +1769,8 @@ const
       'This parameter is set if your isolation level is tiReadCommitted.';
     ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
-    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
   ZProp_isc_tpb_no_rec_version: TZProperty = (
     Name: TxnProps_isc_tpb_no_rec_version;
@@ -1517,16 +1782,16 @@ const
       'Otherwise, a lock conflict error is reported at once.';
     ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
-    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
   ZProp_isc_tpb_restart_requests: TZProperty = (
     Name: TxnProps_isc_tpb_restart_requests;
     Purpose: '<undocumented>';
     ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
-    Protocols: (Count: 2; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
   ZProp_isc_tpb_no_auto_undo: TZProperty = (
     Name: TxnProps_isc_tpb_no_auto_undo;
@@ -1538,8 +1803,8 @@ const
       'that don''t perform any mutations, NO AUTO UNDO makes no difference at all';
     ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cInterbaseAndFireBirebirdProvider);
-    Protocols: (Count: 1; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
+    Protocols: (Count: 1; Items: @AllInterbaseAndFirebirdProtocols);
   );
   cInterbase7_5upProvider: TZPropertyProvider = (
     Provider: spIB_FB; MinimumServerVersion: 7005000;
@@ -1555,7 +1820,7 @@ const
     ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
     Providers: (Count: 1; Items: @cInterbase7_5upProvider);
-    Protocols: (Count: 1; Items: @AllInterbaseAndFireBirebirdProtocols[1]);
+    Protocols: (Count: 1; Items: @AllInterbaseAndFirebirdProtocols[1]);
   );
   ZProp_isc_tpb_lock_timeout: TZProperty = (
     Name: TxnProps_isc_tpb_lock_timeout;
@@ -1567,10 +1832,10 @@ const
       'that don''t perform any mutations, NO AUTO UNDO makes no difference at all';
     ValueType: pvtNumber; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cFireBirebird2upProvider);
-    Protocols: (Count: 1; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cFirebird2upProvider);
+    Protocols: (Count: 1; Items: @AllInterbaseAndFirebirdProtocols);
   );
-  cFireBirebird4upProvider: TZPropertyProvider = (
+  cFirebird4upProvider: TZPropertyProvider = (
     Provider: spIB_FB; MinimumServerVersion: 4000000;
     MinimumClientVersion: 0; MinimumProtocolVersion: 0;);
   ZProp_isc_tpb_read_consistency: TZProperty = (
@@ -1582,8 +1847,8 @@ const
       'committed transactions on Firebird 4.0';
     ValueType: pvtEmpty; LevelTypes: [pltConnection, pltTransaction];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cFireBirebird4upProvider);
-    Protocols: (Count: 1; Items: @AllInterbaseAndFireBirebirdProtocols);
+    Providers: (Count: 1; Items: @cFirebird4upProvider);
+    Protocols: (Count: 1; Items: @AllInterbaseAndFirebirdProtocols);
   );
 {$IFEND}
 
@@ -1594,8 +1859,8 @@ const
       'Minimum value is 16. Supported since Firebird 4.';
     ValueType: pvtEmpty; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: '';
-    Providers: (Count: 1; Items: @cFireBirebird4upProvider);
-    Protocols: (Count: 1; Items: @AllInterbaseAndFireBirebirdProtocols[0]);
+    Providers: (Count: 1; Items: @cFirebird4upProvider);
+    Protocols: (Count: 1; Items: @AllInterbaseAndFirebirdProtocols[0]);
   );
 {$ENDIF ENABLE_FIREBIRD}
 
@@ -1797,7 +2062,19 @@ initialization
 {$IF declared(ZProp_SessionIdleTimeOut)}
   RegisterZProperty(@ZProp_SessionIdleTimeOut);
 {$IFEND}
+{$IF declared(ZProp_SessionIdleTimeOut)}
+  RegisterZProperty(@ZProp_FBProtocol);
+{$IFEND}
 {$IF defined(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}
+  RegisterZProperty(@ZProp_IB_FB_Dialect);
+  RegisterZProperty(@ZProp_IB_FB_Rolename);
+  RegisterZProperty(@ZProp_IB_FB_WireCompression);
+  RegisterZProperty(@ZProp_CreateNewDatabase);
+  RegisterZProperty(@ZProp_SetGUIDByType);
+  RegisterZProperty(@ZProp_GUIDDomains);
+  RegisterZProperty(@ZProp_GUIDFields);
+  RegisterZProperty(@ZProp_Charset_NONE_Alias);
+
   RegisterZProperty(@ZProp_InsertReturningFields);
   RegisterZProperty(@ZProp_HardCommit);
   RegisterZProperty(@ZProp_isc_tpb_consistency);

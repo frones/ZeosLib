@@ -493,7 +493,7 @@ begin
 
   AssignISC_Parameters;
   ConnectionString := ConstructConnectionString;
-  CSNoneCP := Info.Values[DSProps_ResetCodePage];
+  CSNoneCP := Info.Values[ConnProps_Charset_NONE_Alias];
 
   FHandle := 0;
   DBCreated := False;

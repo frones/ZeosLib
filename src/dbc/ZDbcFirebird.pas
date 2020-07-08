@@ -437,7 +437,7 @@ begin
     CheckCharEncoding(FClientCodePage, True);
 
   AssignISC_Parameters;
-  CSNoneCP := Info.Values[DSProps_ResetCodePage];
+  CSNoneCP := Info.Values[ConnProps_Charset_NONE_Alias];
   ConnectionString := ConstructConnectionString;
 
   DBCreated := False;
