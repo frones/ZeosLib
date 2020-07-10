@@ -501,9 +501,9 @@ begin
   if (Info.Values[ConnProps_CreateNewDatabase] <> '') then begin
     CreateDB := Info.Values[ConnProps_CreateNewDatabase];
     if (GetClientVersion >= 2005000) and IsFirebirdLib and (Length(CreateDB)<=4) and StrToBoolEx(CreateDB, False) then begin
-      if (Info.Values['isc_dpb_lc_ctype'] <> '') and (Info.Values['isc_dpb_set_db_charset'] = '') then
-        Info.Values['isc_dpb_set_db_charset'] := Info.Values['isc_dpb_lc_ctype'];
-      DBCP := Info.Values['isc_dpb_set_db_charset'];
+      if (Info.Values[ConnProps_isc_dpb_lc_ctype] <> '') and (Info.Values[ConnProps_isc_dpb_set_db_charset] = '') then
+        Info.Values[ConnProps_isc_dpb_set_db_charset] := Info.Values[ConnProps_isc_dpb_lc_ctype];
+      DBCP := Info.Values[ConnProps_isc_dpb_set_db_charset];
       PrepareDPB;
       LogMsg := 'CREATE DATABASE "'+ConSettings.Database+'" AS USER "'+ ConSettings^.User+'"';
       if FPlainDriver.isc_create_database(@FStatusVector, SmallInt(StrLen(@DBName[0])),
@@ -632,15 +632,15 @@ reconnect:
     then CSNoneCP := FClientCodePage
     else if FCLientCodePage <> ''
       then CSNoneCP := FCLientCodePage
-      else CSNoneCP := 'WIN1252'; {WIN1252 would be optimal propably}
+      else CSNoneCP := 'WIN1252'; {WIN1252 would be optimal propably, each byte is shifted to a word..}
     ResetCurrentClientCodePage(CSNoneCP, False);
     ConSettings^.ClientCodePage^.ID := 0;
     //Now notify our metadata object all fields are retrieved in utf8 encoding
     (FMetadata as TZInterbase6DatabaseMetadata).SetUTF8CodePageInfo;
     if (FCLientCodePage <> DBCP) then begin
-      Info.Values['isc_dpb_lc_ctype'] := DBCP;
+      Info.Values[ConnProps_isc_dpb_lc_ctype] := DBCP;
       InternalClose;
-      goto reconnect; //build new TDB and reopen in SC_NONE mode
+      goto reconnect; //build new TDB and reopen in CS_NONE mode
     end;
   end else if FClientCodePage = '' then
     CheckCharEncoding(DBCP);

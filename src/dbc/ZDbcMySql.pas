@@ -331,9 +331,6 @@ begin
   TempUrl.Free
 end;
 
-var
-  MySQLOptionProperties: array of TZProperty;
-
 { TZMySQLConnection }
 
 {**
@@ -387,7 +384,6 @@ var
   sMy_client_Opt, sMy_client_Char_Set:String;
   ClientVersion: Integer;
   SQL: RawByteString;
-  MaxLobSize: ULong;
 label setuint;
 begin
   if not Closed then
@@ -447,7 +443,7 @@ begin
           MYSQL_OPT_SSL_FIPS_MODE,
           MYSQL_OPT_ZSTD_COMPRESSION_LEVEL:
             if Info.Values[sMyOpt] <> '' then begin
-setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
+setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def{$ENDIF}(Info.Values[sMyOpt], 0);
               FPlainDriver.mysql_options(FHandle, myopt, @UIntOpt);
             end;
           MYSQL_OPT_LOCAL_INFILE: {optional empty or unsigned int}
@@ -568,14 +564,14 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
       end;
       CheckCharEncoding(FClientCodePage);
     end;
-    MaxLobSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values[ConnProps_max_allowed_packet], 0);
-    if MaxLobSize = 0 then
-      MaxLobSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values[ConnProps_MaxLobSize], 0);
-    if MaxLobSize <> 0 then begin
-      SQL := 'SET GLOBAL max_allowed_packet='+IntToRaw(MaxLobSize);
-      ExecuteImmediat(SQL, lcOther);
-    end;
     inherited Open;
+    if TMySqlOptionMinimumVersion[MYSQL_OPT_MAX_ALLOWED_PACKET] < GetHostVersion then begin
+      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def{$ENDIF}(Info.Values[ConnProps_MYSQL_OPT_MAX_ALLOWED_PACKET], 0);
+      if (UIntOpt <> 0) then begin
+        SQL := 'SET GLOBAL max_allowed_packet='+IntToRaw(UIntOpt);
+        ExecuteImmediat(SQL, lcOther);
+      end;
+    end;
     //no real version check required -> the user can simply switch off treading
     //enum('Y','N')
     FMySQL_FieldType_Bit_1_IsBoolean := StrToBoolEx(Info.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean]);

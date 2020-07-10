@@ -290,7 +290,7 @@ const
     (Name: ConnProps_isc_dpb_begin_log;             ValueType: pvtString;  Number: isc_dpb_begin_log),
     (Name: ConnProps_isc_dpb_quit_log;              ValueType: pvtNone;    Number: isc_dpb_quit_log),
     (Name: ConnProps_isc_dpb_no_reserve;            ValueType: pvtNum;     Number: isc_dpb_no_reserve),
-    (Name: ConnProps_isc_dpb_username;              ValueType: pvtString;  Number: isc_dpb_user_name),
+    (Name: ConnProps_isc_dpb_user_name;             ValueType: pvtString;  Number: isc_dpb_user_name),
     (Name: ConnProps_isc_dpb_password;              ValueType: pvtString;  Number: isc_dpb_password),
     (Name: ConnProps_isc_dpb_password_enc;          ValueType: pvtString;  Number: isc_dpb_password_enc),
     (Name: ConnProps_isc_dpb_sys_user_name_enc;     ValueType: pvtString;  Number: isc_dpb_sys_user_name_enc),

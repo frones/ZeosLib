@@ -3967,6 +3967,7 @@ jmpFail:
     raise EConvertError.CreateResFmt(@SInvalidInteger, [Buf]);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function RawToUInt32(Const S: RawByteString): Cardinal;
 var Buf, P, PEnd: PAnsiChar;
 label jmpFail;
@@ -3981,6 +3982,7 @@ begin
 jmpFail:
     raise EConvertError.CreateResFmt(@SInvalidInteger, [S]);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function UnicodeToInt(const Value: UnicodeString): Integer;
 //function StrToInt32_JOH_PAS_7_c(const s: string): Integer;
@@ -4080,6 +4082,7 @@ jmpFail:
     raise EConvertError.CreateResFmt(@SInvalidInteger, [Buf]);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function UnicodeToUInt32(Const S: UnicodeString): Cardinal;
 var Buf, P, PEnd: PWideChar;
 label jmpFail;
@@ -4094,6 +4097,8 @@ begin
 jmpFail:
     raise EConvertError.CreateResFmt(@SInvalidInteger, [S]);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
 {$WARNINGS ON}
 
 {$IF defined(WIN32) and not defined(FPC)}
@@ -4333,6 +4338,7 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function RawToUInt32Def(const S: RawByteString; const Default: Cardinal): Cardinal; overload;
 var Buf, P, PEnd: PAnsiChar;
 begin
@@ -4348,6 +4354,7 @@ begin
   end;
 
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function RawToUInt32Def(Buf, PEnd: PAnsiChar; const Default: Cardinal): Cardinal;
 var P: PAnsiChar;
@@ -4468,6 +4475,7 @@ begin
     Result := Default;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function UnicodeToUInt32Def(const S: UnicodeString; Default: Cardinal): Cardinal;
 var Buf, P, PEnd: PWideChar;
 begin
@@ -4483,6 +4491,7 @@ begin
   end;
 
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function UnicodeToUInt32Def(Buf, PEnd: PWideChar; Default: Cardinal): Cardinal;
 var P: PWideChar;

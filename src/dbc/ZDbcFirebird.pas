@@ -443,7 +443,7 @@ begin
   DBCreated := False;
   CreateDB := Info.Values[ConnProps_CreateNewDatabase];
   if (CreateDB <> '') and StrToBoolEx(CreateDB) then begin
-    DBCP := Info.Values['isc_dpb_set_db_charset'];
+    DBCP := Info.Values[ConnProps_isc_dpb_set_db_charset];
     PrepareDPB;
     FAttachment := FProvider.createDatabase(FStatus, @DBName[0], Smallint(Length(DPB)),Pointer(DPB));
     Info.Values[ConnProps_CreateNewDatabase] := ''; //prevent recreation on open
@@ -545,7 +545,7 @@ reconnect:
     //Now notify our metadata object all fields are retrieved in utf8 encoding
     (FMetadata as TZInterbase6DatabaseMetadata).SetUTF8CodePageInfo;
     if (FCLientCodePage <> DBCP) then begin
-      Info.Values['isc_dpb_lc_ctype'] := DBCP;
+      Info.Values[ConnProps_isc_dpb_lc_ctype] := DBCP;
       InternalClose;
       goto reconnect; //build new TDB and reopen in SC_NONE mode
     end;

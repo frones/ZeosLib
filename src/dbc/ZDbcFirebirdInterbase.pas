@@ -555,11 +555,13 @@ var
       While ((Ord(PEnd^) >= Ord('A')) and (Ord(PEnd^) <= Ord('Z'))) or
             ((Ord(PEnd^) >= Ord('0')) and (Ord(PEnd^) <= Ord('9'))) do
         Inc(PEnd);
-      Info.Values['isc_dpb_set_db_charset'] :=  Copy(CreateDB, I, (PEnd-P));
-    end else if Info.Values['isc_dpb_set_db_charset'] = '' then
-      Info.Values['isc_dpb_set_db_charset'] := Info.Values['isc_dpb_lc_ctype'];
-    if Info.Values['isc_dpb_set_db_charset'] = '' then
-      Info.Values['isc_dpb_set_db_charset'] := FClientCodePage;
+      Info.Values[ConnProps_isc_dpb_lc_ctype] := Copy(CreateDB, I, (PEnd-P));
+    end;
+    if Info.Values[ConnProps_isc_dpb_lc_ctype] = '' then
+      Info.Values[ConnProps_isc_dpb_lc_ctype] := FClientCodePage;
+    if Info.Values[ConnProps_isc_dpb_lc_ctype] = '' then
+      Info.Values[ConnProps_isc_dpb_lc_ctype] := Info.Values[ConnProps_isc_dpb_set_db_charset];
+    FClientCodePage := Info.Values[ConnProps_isc_dpb_lc_ctype];
 
     I := PosEx('PAGE', CreateDB);
     if I > 0 then begin
@@ -572,12 +574,12 @@ var
       PEnd := P;
       While ((Ord(PEnd^) >= Ord('0')) and (Ord(PEnd^) <= Ord('9'))) do
         Inc(PEnd);
-      Info.Values['isc_dpb_page_size'] :=  Copy(CreateDB, I, (PEnd-P));
-    end else Info.Values['isc_dpb_page_size'] := '4096'; //default
+      Info.Values[ConnProps_isc_dpb_page_size] :=  Copy(CreateDB, I, (PEnd-P));
+    end else Info.Values[ConnProps_isc_dpb_page_size] := '4096'; //default
   end;
 begin
   { set default sql dialect it can be overriden }
-  FDialect := StrToIntDef(Info.Values[ConnProps_Dialect], SQL_DIALECT_CURRENT);
+  FDialect := StrToIntDef(Info.Values[ConnProps_isc_dpb_sql_dialect], StrToIntDef(Info.Values[ConnProps_Dialect], SQL_DIALECT_CURRENT));
   Info.BeginUpdate; // Do not call OnPropertiesChange every time a property changes
   RoleName := Info.Values[ConnProps_CreateNewDatabase];
 
@@ -587,36 +589,41 @@ begin
   end;
 
   { Processes connection properties. }
-  if Info.Values['isc_dpb_username'] = '' then
-    Info.Values['isc_dpb_username'] := Url.UserName;
-  if Info.Values['isc_dpb_password'] = '' then
-    Info.Values['isc_dpb_password'] := Url.Password;
+  if Info.Values[ConnProps_isc_dpb_user_name] = '' then
+    Info.Values[ConnProps_isc_dpb_user_name] := Url.UserName;
+  if Info.Values[ConnProps_isc_dpb_password] = '' then
+    Info.Values[ConnProps_isc_dpb_password] := Url.Password;
 
   if FClientCodePage = '' then begin //was set on inherited Create(...)
-    FClientCodePage := Info.Values['isc_dpb_lc_ctype'];
+    FClientCodePage := Info.Values[ConnProps_isc_dpb_lc_ctype];
     if FClientCodePage = '' then
-      FClientCodePage := Info.Values['isc_dpb_set_db_charset'];
+      FClientCodePage := Info.Values[ConnProps_isc_dpb_set_db_charset];
     if FClientCodePage <> '' then
       CheckCharEncoding(FClientCodePage, True);
   end;
+  Info.Values[ConnProps_isc_dpb_lc_ctype] := FClientCodePage;
 
-  Info.Values['isc_dpb_lc_ctype'] := FClientCodePage;
-
-  RoleName := Trim(Info.Values[ConnProps_Rolename]);
-  if RoleName <> '' then
-    Info.Values['isc_dpb_sql_role_name'] := UpperCase(RoleName);
-
-  ConnectTimeout := StrToIntDef(Info.Values[ConnProps_Timeout], -1);
-  if ConnectTimeout >= 0 then
-    Info.Values['isc_dpb_connect_timeout'] := ZFastCode.IntToStr(ConnectTimeout);
+  if Info.Values[ConnProps_isc_dpb_sql_role_name] = '' then begin
+    RoleName := Trim(Info.Values[ConnProps_Rolename]);
+    if RoleName <> '' then
+      Info.Values[ConnProps_isc_dpb_sql_role_name] := UpperCase(RoleName);
+  end;
+  // EH: that's a bug: even if this property is named as "connnect timeout"
+  // it's used as idle time out after n seconds and has nothing todo with
+  // opening a connection in elepsed seconds...
+  if StrToIntDef(Info.Values[ConnProps_isc_dpb_connect_timeout], -1) = -1 then begin
+    ConnectTimeout := StrToIntDef(Info.Values[ConnProps_Timeout], -1);
+    if ConnectTimeout >= 0 then
+      Info.Values[ConnProps_isc_dpb_connect_timeout] := ZFastCode.IntToStr(ConnectTimeout);
+  end;
 
   WireCompression := StrToBoolEx(Info.Values[ConnProps_WireCompression]);
   if WireCompression then
-    Info.Values['isc_dpb_config'] :=
-      Info.Values['isc_dpb_config'] + LineEnding + 'WireCompression=true';
+    Info.Values[ConnProps_isc_dpb_config] :=
+      Info.Values[ConnProps_isc_dpb_config] + LineEnding + 'WireCompression=true';
 
-  if Info.IndexOf('isc_dpb_sql_dialect') = -1 then
-    Info.Values['isc_dpb_sql_dialect'] := ZFastCode.IntToStr(FDialect);
+  if Info.IndexOf(ConnProps_isc_dpb_sql_dialect) = -1 then
+    Info.Values[ConnProps_isc_dpb_sql_dialect] := ZFastCode.IntToStr(FDialect);
 
   Idx := Info.IndexOf('isc_dpb_utf8_filename');
   if (GetClientVersion >= 2005000) and IsFirebirdLib then begin
