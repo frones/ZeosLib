@@ -28,10 +28,6 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
     OnChanging = PageControlChanging
     object FieldsPage: TTabSheet
       Caption = 'Options'
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       object GroupBox1: TGroupBox
         Left = 0
         Top = 0
