@@ -57,9 +57,9 @@ interface
 uses
   {$IFNDEF FPC}Windows, Messages, {$ENDIF}SysUtils, Variants, Classes, Graphics,
   Controls, Forms, Dialogs, StdCtrls, Buttons, ExtCtrls,
-  ZClasses, ZDbcProperties, ZDbcIntfs,
+  ZClasses, ZDbcProperties, ZDbcIntfs, ComCtrls,
   {$IFNDEF FPC}DesignIntf, DesignEditors{$ELSE}
-  PropEdits, LCLIntf, LResources, ComponentEditors{$ENDIF};
+  PropEdits, LCLIntf, {LResources, }ComponentEditors{$ENDIF};
 
 type
   TZPropertyLevelTypes = set of (pltConnection, pltTransaction, pltStatement,
@@ -68,49 +68,58 @@ type
   { TfrmPropertyEditor }
 
   TfrmPropertyEditor = class(TForm)
+    pcEditValues: TPageControl;
+    tcDiffList: TTabSheet;
     pnlProps: TPanel;
+    spltProps: TSplitter;
     bgPropsUsed: TGroupBox;
     lbUsed: TListBox;
     btnAdd: TButton;
-    spltProps: TSplitter;
-    gbAvailable: TGroupBox;
-    pnlBottom: TPanel;
     btnRemove: TButton;
-    Splitter1: TSplitter;
-    pnlValDesc: TPanel;
-    gbVal: TGroupBox;
-    Splitter2: TSplitter;
-    gbDescription: TGroupBox;
-    mmDescrption: TMemo;
+    gbAvailable: TGroupBox;
     lbAvailable: TListBox;
-    cbEnum: TComboBox;
-    cbBoolean: TCheckBox;
-    edString: TEdit;
+    Splitter1: TSplitter;
+    btnOK: TButton;
+    btnCancel: TButton;
+    pnlBottom: TPanel;
     lblProtocol: TLabel;
     lblServerProvider: TLabel;
     lblHostversion: TLabel;
     lblClientVersion: TLabel;
-    btnOK: TButton;
-    btnCancel: TButton;
-    procedure btnCancelClick(Sender: TObject);
-    procedure btnOkClick(Sender: TObject);
+    cbProtocol: TComboBox;
+    pnlValDesc: TPanel;
+    Splitter2: TSplitter;
+    gbVal: TGroupBox;
+    cbEnum: TComboBox;
+    edString: TEdit;
+    gbDescription: TGroupBox;
+    mmDescrption: TMemo;
+    tsStringList: TTabSheet;
+    cbProvider: TComboBox;
+    mmStringList: TMemo;
+    lblProtocols: TLabel;
+    lblProviders: TLabel;
     procedure FormShow(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure btnRemoveClick(Sender: TObject);
     procedure lbUsedClick(Sender: TObject);
-    procedure cbBooleanClick(Sender: TObject);
     procedure lbAvailableClick(Sender: TObject);
     procedure btnAddClick(Sender: TObject);
+    procedure pcEditValuesChanging(Sender: TObject;
+      var AllowChange: Boolean);
+    procedure cbProtocolChange(Sender: TObject);
   private
     { Private declarations }
     FZPropertyLevelTypes: TZPropertyLevelTypes;
-    FProtocol: String;
     FServerProvider: TZServerProvider;
     FPropsUsed, FPropsUnUsed: TZSortedList;
+    FSortedLines: TStrings;
     function compareProps(Item1, Item2: Pointer): Integer;
+    procedure LoadProperties;
   public
     { Public declarations }
+    Lines: TStrings;
   end;
 
   {** Implements the basic methods of the property editor. }
@@ -123,11 +132,9 @@ type
 Type
   TZPropertyValueType = (
     pvtEmpty,
-    pvtBool,
     pvtEnum,
     pvtNumber,
-    pvtString,
-    pvtBoolOrString);
+    pvtString);
 
   PZPropertyProvider = ^TZPropertyProvider;
   TZPropertyProvider = record
@@ -181,14 +188,27 @@ procedure RegisterZPropertiesArray(const Count: Cardinal; Values: PZPropertyArra
 
 implementation
 
-uses ZSysUtils, TypInfo,
-  ZAbstractRODataset, ZAbstractDataset, ZAbstractConnection, ZCompatibility;
+uses TypInfo, Types,
+  ZSysUtils, ZCompatibility, ZVariant,
+  ZAbstractRODataset, ZAbstractDataset, ZAbstractConnection
+  {$IFDEF ENABLE_MYSQL},ZPlainMySqlDriver{$ENDIF};
 
 {$IFNDEF FPC}
 {$R *.dfm}
 {$ELSE}
 {$R *.lfm}
 {$ENDIF}
+
+var
+  prEditValuesPageIndex: Integer;
+  frmPropertyHeight: Integer;
+  frmPropertyWidth: Integer;
+  frmPropertyTop: Integer;
+  frmPropertyLeft: Integer;
+  pnlBottomHeight: Integer;
+  gbValWidth: Integer;
+  bgPropsUsedWidth: Integer;
+
 { EH: represent each constant in an record for a better control/description}
 //wish of Jan@EH: instead of a constant array, use a dynamic array,
 //so others can easily add it's own properties
@@ -242,90 +262,40 @@ begin
 end;
 
 procedure TfrmPropertyEditor.FormShow(Sender: TObject);
-var I, j: Integer;
-  UpperUsed, UpperCurrent: String;
-  Found: Boolean;
-  Current: PZProperty;
-  ZPropertiesArray: PZPropertyRefDynArray;
 begin
-  cbBoolean.Top := edString.Top;
   cbEnum.Top := edString.Top;
-  ZPropertiesArray := GetZProperties;
-  for i := 0 to High(ZPropertiesArray^) do
-    if ZPropertiesArray^[i] <> nil then begin
-      Current := ZPropertiesArray^[i];
-      if ((pltConnection in FZPropertyLevelTypes) and (pltConnection in Current.LevelTypes)) or
-         ((pltTransaction in FZPropertyLevelTypes) and (pltTransaction in Current.LevelTypes)) or
-         ((pltStatement in FZPropertyLevelTypes) and (pltStatement in Current.LevelTypes) and not
-           ((pltConnection in FZPropertyLevelTypes) and not (pltConnection in Current.LevelTypes))) then begin
-        if (FProtocol <> '') and (Current.Protocols.Count > 0) and (Current.Protocols.Items <> nil) then begin
-          lblProtocol.Caption := 'Protocol: '+fProtocol;
-          Found := False;
-          UpperCurrent := UpperCase(FProtocol);
-          for J := 0 to Current.Protocols.Count -1 do begin
-            UpperUsed := UpperCase(Current.Protocols.Items[j]);
-            Found := StartsWith(UpperCurrent, UpperUsed);
-            if Found then
-              Break;
-          end;
-          if not Found then
-            continue;
-        end;
-        if (FServerProvider <> spUnknown) and (Current.Providers.Count > 0) and
-           (Current.Providers.Items <> nil) then begin
-          lblServerProvider.Caption := 'ServerProvider: '+GetEnumName(TypeInfo(TZServerProvider), Ord(FServerProvider));
-          Found := False;
-          for J := 0 to Current.Protocols.Count -1 do
-            if FServerProvider = Current.Providers.Items[j].Provider then begin
-              //todo add possible version check
-              Found := True;
-              Break;
-            end;
-          if not Found then
-            continue;
-        end;
-        Found := False;
-        UpperCurrent := UpperCase(Current.Name);
-        for J := 0 to lbUsed.Items.Count -1 do begin
-          UpperUsed := UpperCase(lbUsed.Items[j]);
-          Found := StartsWith(UpperUsed, UpperCurrent);
-          if Found then begin
-            FPropsUsed.Add(Current);
-            lbUsed.Items.Objects[j] := TObject(Current);
-            Break;
-          end;
-        end;
-        if not Found then
-          FPropsUnUsed.Add(Current);
-      end;
-    end;
-  FPropsUnUsed.Sort(compareProps);
-  for i := 0 to FPropsUnUsed.Count -1 do begin
-    Current := FPropsUnUsed[i];
-    lbAvailable.Items.AddObject(Current.Name, TObject(Current));
-  end;
-  if lbUsed.Items.Count > 0 then begin
-    lbUsed.ItemIndex := 0;
-    lbUsedClick(Sender);
-  end else if lbAvailable.Items.Count > 0 then begin
-    lbAvailable.ItemIndex := 0;
-    lbAvailableClick(Sender);
+  if frmPropertyHeight <> -1 then
+    Height := frmPropertyHeight;
+  if frmPropertyWidth <> -1 then
+    Width := frmPropertyWidth;
+  if frmPropertyTop <> -1 then
+    Top := frmPropertyTop;
+  if frmPropertyLeft <> -1 then
+    Left := frmPropertyLeft;
+  if pnlBottomHeight <> -1 then
+    pnlBottom.Height := pnlBottomHeight;
+  if gbValWidth <> -1 then
+    gbVal.Width := gbValWidth;
+  if bgPropsUsedWidth <> -1 then
+    bgPropsUsed.Width := bgPropsUsedWidth;
+  LoadProperties;
+end;
+
+procedure TfrmPropertyEditor.pcEditValuesChanging(Sender: TObject;
+  var AllowChange: Boolean);
+begin
+  AllowChange := True;
+  if pcEditValues.ActivePageIndex = 0 then begin
+    mmStringList.Lines.Clear;
+    mmStringList.Lines.AddStrings(lbUsed.Items);
   end else begin
-    btnAdd.Enabled := False;
-    btnRemove.Enabled := False;
+    FSortedLines.Clear;
+    FSortedLines.AddStrings(mmStringList.Lines);
+    TStringList(FSortedLines).Sort;
+    lbUsed.Items.Clear;
+    lbUsed.Items.AddStrings(FSortedLines);
+    LoadProperties;
   end;
-end;
-
-procedure TfrmPropertyEditor.btnCancelClick(Sender: TObject);
-begin
-  ModalResult := mrCancel;
-  Close;
-end;
-
-procedure TfrmPropertyEditor.btnOkClick(Sender: TObject);
-begin
-  ModalResult := mrOk;
-  Close;
 end;
 
 { TZProperitesEditor }
@@ -333,18 +303,16 @@ end;
 procedure TZProperitesEditor.Edit;
 var
   Component: TComponent;
-  Lines, SortedLines: TStrings;
 label jmpProtocol;
 begin
   Component := TComponent(GetComponent(0));
-  SortedLines := TStringList.Create;
   with TfrmPropertyEditor.Create(Application) do
   try
     Lines := TStrings(GetOrdValue);
     if Component.InheritsFrom(TZAbstractConnection) then begin
       FZPropertyLevelTypes := [pltConnection, pltTransaction, pltStatement];
 jmpProtocol:
-      FProtocol := TZAbstractConnection(Component).Protocol;
+      cbProtocol.ItemIndex := cbProtocol.Items.IndexOf(TZAbstractConnection(Component).Protocol);
       if TZAbstractConnection(Component).Connected then
         FServerProvider := TZAbstractConnection(Component).DbcConnection.GetServerProvider;
     end else if Component.InheritsFrom(TZAbstractTransaction) then begin
@@ -366,21 +334,16 @@ jmpProtocol:
         goto jmpProtocol;
       end;
     end else Exit;
-    SortedLines.AddStrings(Lines);
-    TStringList(SortedLines).Sort;
-    lbUsed.Items.AddStrings(SortedLines);
-    ActiveControl := lbUsed;
-    case ShowModal of
-      mrOk: begin
-              Lines.Clear;
-              Lines.AddStrings(lbUsed.Items);
-              SetOrdValue(NativeInt(Lines));
-              ShowMessage(Lines.Text);
-            end;
-    end;
+    FSortedLines.AddStrings(Lines);
+    TStringList(FSortedLines).Sort;
+    lbUsed.Items.AddStrings(FSortedLines);
+    pcEditValues.ActivePageIndex := prEditValuesPageIndex;
+    if ShowModal = mrOk then
+      if pcEditValues.ActivePageIndex = 0
+      then SetOrdValue(NativeInt(lbUsed.Items))
+      else SetOrdValue(NativeInt(mmStringList.Lines));
   finally
     Free;
-    SortedLines.Free;
   end;
 end;
 
@@ -393,12 +356,59 @@ procedure TfrmPropertyEditor.FormDestroy(Sender: TObject);
 begin
   FreeAndNil(FPropsUsed);
   FreeAndNil(FPropsUnUsed);
+  FreeAndNil(FSortedLines);
+  frmPropertyHeight := Height;
+  frmPropertyWidth  := Width;
+  frmPropertyTop    := top;
+  frmPropertyLeft   := left;
+  pnlBottomHeight   := pnlBottom.Height;
+  gbValWidth        := gbVal.Width;
+  bgPropsUsedWidth  := bgPropsUsedWidth;
+  prEditValuesPageIndex := pcEditValues.ActivePageIndex;
 end;
 
 procedure TfrmPropertyEditor.FormCreate(Sender: TObject);
+var
+  I, J: Integer;
+  Drivers: IZCollection;
+  Protocols: TStringDynArray;
+  ServerProvider: TZServerProvider;
+  TInfo: PTypeInfo;
 begin
   FPropsUsed := TZSortedList.Create;
   FPropsUnUsed := TZSortedList.Create;
+  FSortedLines := TStringList.Create;
+  Drivers := DriverManager.GetDrivers;
+  Protocols := nil;
+  FSortedLines.Clear;
+  FSortedLines.Add('');
+  for I := 0 to Drivers.Count - 1 do begin
+    Protocols := (Drivers[I] as IZDriver).GetSupportedProtocols;
+    for J := Low(Protocols) to High(Protocols) do
+      if StartsWith(LowerCase(Protocols[J]), 'asa') then
+        FSortedLines.AddObject(Protocols[J], TObject(Ord(spASA)))
+      else if StartsWith(Protocols[J], 'firebird') then
+        FSortedLines.AddObject(Protocols[J], TObject(Ord(spIB_FB)))
+      else if StartsWith(Protocols[J], 'mssql') then
+        FSortedLines.AddObject(Protocols[J], TObject(Ord(spMSSQL)))
+      else if StartsWith(Protocols[J], 'mysql') then
+        FSortedLines.AddObject(Protocols[J], TObject(Ord(spMySQL)))
+      else if StartsWith(Protocols[J], 'oracle') then
+        FSortedLines.AddObject(Protocols[J], TObject(Ord(spOracle)))
+      else if StartsWith(Protocols[J], 'postgres') then
+        FSortedLines.AddObject(Protocols[J], TObject(Ord(spPostgreSQL)))
+      else if StartsWith(Protocols[J], 'sqlite') then
+        FSortedLines.AddObject(Protocols[J], TObject(Ord(spSQLite)))
+      else if StartsWith(Protocols[J], 'sybase') then
+        FSortedLines.AddObject(Protocols[J], TObject(Ord(spASE)))
+      else FSortedLines.AddObject(Protocols[J], nil);
+  end;
+  TStringList(FSortedLines).Sort;
+  cbProtocol.Items.Assign(FSortedLines);
+  FSortedLines.Clear;
+  TInfo := TypeInfo(TZServerProvider);
+  for ServerProvider := Low(TZServerProvider) to High(TZServerProvider) do
+    cbProvider.Items.AddObject(GetEnumName(TInfo, Ord(ServerProvider)), TObject(Ord(ServerProvider)));
 end;
 
 procedure TfrmPropertyEditor.btnRemoveClick(Sender: TObject);
@@ -440,38 +450,21 @@ begin
   if (lbUsed.ItemIndex <> -1) and lbUsed.Enabled then begin
     Current := PZProperty(lbUsed.Items.Objects[lbUsed.ItemIndex]);
     edString.Visible := False;
-    cbBoolean.Visible := False;
     cbEnum.Visible := False;
     if Current = nil then Exit;
     mmDescrption.Text := Current.Purpose;
     gbVal.Caption := Current.Name;
     case Current.ValueType of
-      pvtBool: begin
-                 cbBoolean.Visible := True;
-                 cbBoolean.Checked := StrToBoolEx(lbUsed.Items.Values[Current.Name]);
-               end;
       pvtEnum: begin
                  cbEnum.Visible := True;
                  cbEnum.Text := lbUsed.Items.Values[Current.Name];
                end;
       pvtNumber,
-      pvtString,
-      pvtBoolOrString: begin
+      pvtString: begin
                  edString.Visible := True;
                  edString.Text := lbUsed.Items.Values[Current.Name];
               end;
     end;
-  end;
-end;
-
-procedure TfrmPropertyEditor.cbBooleanClick(Sender: TObject);
-var Current: PZProperty;
-begin
-  if (lbUsed.ItemIndex <> -1) and lbUsed.Enabled then begin
-    Current := PZProperty(lbUsed.Items.Objects[lbUsed.ItemIndex]);
-    if cbBoolean.Checked
-    then lbUsed.Items.Values[Current.Name] := 'true'
-    else lbUsed.Items.Values[Current.Name] := 'false'
   end;
 end;
 
@@ -484,16 +477,11 @@ begin
   if (lbAvailable.ItemIndex <> -1) and lbAvailable.Enabled then begin
     Current := PZProperty(lbAvailable.Items.Objects[lbAvailable.ItemIndex]);
     edString.Visible := False;
-    cbBoolean.Visible := False;
     cbEnum.Visible := False;
     if Current = nil then Exit;
     mmDescrption.Text := Current.Purpose;
     gbVal.Caption := Current.Name;
       case Current.ValueType of
-        pvtBool: begin
-                   cbBoolean.Visible := True;
-                   cbBoolean.Checked := StrToBoolEx(Current.Default);
-                 end;
         pvtEnum: begin
                   cbEnum.Visible := True;
                   List := ZSysUtils.SplitString(Current.Values, '|;,');
@@ -510,8 +498,7 @@ begin
                    edString.Visible := True;
                    edString.Text := Current.Default;
                  end;
-        pvtString,
-        pvtBoolOrString: begin
+        pvtString: begin
                    edString.Visible := True;
                    edString.Text := Current.Default;
                 end;
@@ -528,13 +515,9 @@ begin
     Current := PZProperty(lbAvailable.Items.Objects[lbAvailable.ItemIndex]);
     if Current <> nil then begin
       case Current.ValueType of
-        pvtBool:  if cbBoolean.Checked
-                  then Value := 'True'
-                  else Value := 'False';
         pvtEnum:  Value := cbEnum.Text;
         pvtNumber,
-        pvtString,
-        pvtBoolOrString: Value := edString.Text;
+        pvtString: Value := edString.Text;
         else Value := '';
       end;
       if (Value = '') then
@@ -559,7 +542,81 @@ begin
   lbAvailableClick(Sender);
 end;
 
+procedure TfrmPropertyEditor.LoadProperties;
+var I, j: Integer;
+  UpperUsed, UpperCurrent: String;
+  Found: Boolean;
+  Current: PZProperty;
+begin
+  FPropsUnUsed.Clear;
+  FPropsUsed.Clear;
+  for i := 0 to High(ZPropertyArray) do
+    if ZPropertyArray[i] <> nil then begin
+      Current := ZPropertyArray[i];
+      if ((pltConnection in FZPropertyLevelTypes) and (pltConnection in Current.LevelTypes)) or
+         ((pltTransaction in FZPropertyLevelTypes) and (pltTransaction in Current.LevelTypes)) or
+         ((pltStatement in FZPropertyLevelTypes) and (pltStatement in Current.LevelTypes) and not
+           ((pltConnection in FZPropertyLevelTypes) and not (pltConnection in Current.LevelTypes))) then begin
+        if (cbProtocol.Text <> '') and (Current.Protocols.Count > 0) and (Current.Protocols.Items <> nil) then begin
+          Found := False;
+          UpperCurrent := UpperCase(cbProtocol.Text);
+          for J := 0 to Current.Protocols.Count -1 do begin
+            UpperUsed := UpperCase(Current.Protocols.Items[j]);
+            Found := StartsWith(UpperCurrent, UpperUsed);
+            if Found then
+              Break;
+          end;
+          if not Found then
+            continue;
+        end;
+        if (FServerProvider <> spUnknown) and (Current.Providers.Count > 0) and
+           (Current.Providers.Items <> nil) then begin
+          lblServerProvider.Caption := 'ServerProvider: '+GetEnumName(TypeInfo(TZServerProvider), Ord(FServerProvider));
+          Found := False;
+          for J := 0 to Current.Protocols.Count -1 do
+            if FServerProvider = Current.Providers.Items[j].Provider then begin
+              //todo add possible version check
+              Found := True;
+              Break;
+            end;
+          if not Found then
+            continue;
+        end;
+        Found := False;
+        UpperCurrent := UpperCase(Current.Name);
+        for J := 0 to lbUsed.Items.Count -1 do begin
+          UpperUsed := UpperCase(lbUsed.Items[j]);
+          Found := StartsWith(UpperUsed, UpperCurrent);
+          if Found then begin
+            FPropsUsed.Add(Current);
+            lbUsed.Items.Objects[j] := TObject(Current);
+            Break;
+          end;
+        end;
+        if not Found then
+          FPropsUnUsed.Add(Current);
+      end;
+    end;
+  FPropsUnUsed.Sort(compareProps);
+  lbAvailable.Items.Clear;
+  for i := 0 to FPropsUnUsed.Count -1 do begin
+    Current := FPropsUnUsed[i];
+    lbAvailable.Items.AddObject(Current.Name, TObject(Current));
+  end;
+  if lbUsed.Items.Count > 0 then begin
+    lbUsed.ItemIndex := 0;
+    lbUsedClick(nil);
+  end else if lbAvailable.Items.Count > 0 then begin
+    lbAvailable.ItemIndex := 0;
+    lbAvailableClick(nil);
+  end else begin
+    btnAdd.Enabled := False;
+    btnRemove.Enabled := False;
+  end;
+end;
+
 const
+  cBoolEnum = 'FALSE|TRUE';
   ZProp_UID: TZProperty = (
     Name: ConnProps_UID; Purpose: 'the login username (same as username)';
     ValueType: pvtString; LevelTypes: [pltConnection];
@@ -615,8 +672,8 @@ const
       'the more you can work with ut8 encoding and the database encoding is ansi  or vice versa'+LineEnding+
       '(siltent character conversion with expected character/accedent loss'+LineEnding+
       '2. deprected might be omitted in future(it''s a guesswork). Test the raw encoded strings against UTF8/Ansi encoding';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: ConnProps_Transliterate;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: ConnProps_Transliterate;
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
   );
@@ -625,8 +682,8 @@ const
     Purpose: 'transliterate between client-characterset and RawStringEncoding'+LineEnding+
       'this option might be interesting for !Ansi!-Compilers and drivers like SQLite'+LineEnding+
       'the more you can work with ut8 encoding and the database encoding is ansi or vice versa';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: 'ConnProps_Transliterate';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: 'ConnProps_Transliterate';
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
   );}
@@ -650,7 +707,7 @@ const
              'GetString()/SetString()/GetRawByteString()/SetRawByteString()'+LineEnding+
              'it''s also used for non A-Drivers if String-Translitation is enabled';
     ValueType: pvtEnum; LevelTypes: [pltConnection];
-    Values: 'CP_UTF8|GET_ACP'; Default: 'false'; Alias: ConnProps_ControlsCP;
+    Values: 'CP_UTF8|GET_ACP'; Default: StrFalseUp; Alias: ConnProps_ControlsCP;
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
   );}
@@ -721,7 +778,7 @@ const
     Purpose: 'Overwrites TZAbstractDatabaseInfo.IdentifierQuotes property, used for Identifier quoting. '+LineEnding+
              'i.e. ADO, OleDB, ODBC, SQLite or Postgres dollar quotes...'+LineEnding+
              'skip it if you don''t use such driver''s'+LineEnding+
-             'SQL standart 2003: "" ... wondering about SQL-Server....';
+             'SQL standard 2003: "" ... wondering about ODBC-Syntax....';
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: '""'; Alias: '';
     Providers: (Count: 0; Items: nil);
@@ -749,8 +806,8 @@ const
     Name: DSProps_Defaults;
     Purpose: 'Calc defaults for empty columns? It will decrease your performance using it.'+LineEnding+
              'If your table has no default values declared, turn it off!';
-    ValueType: pvtBool; LevelTypes: [pltResolver];
-    Values: 'false|true'; Default: 'true'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltResolver];
+    Values: cBoolEnum; Default: StrTrueUp; Alias: '';
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
   );
@@ -762,8 +819,8 @@ const
       'Drivers like Oracle, SQLite, ASE, Firebird, and Interbase always do prepare the stmt -> this property is ignored.'+LineEnding+
       'For drivers like ODBC, OleDb the property is used as "DEFERPREPARE" see manuals..'+LineEnding+
       'Some servers might fail to prepare the statments(MS-products are master of fails including unknown exceptions) -> turn it off on DataSet/Statement level if you run into that issue';
-    ValueType: pvtBool; LevelTypes: [pltStatement];
-    Values: 'false|true'; Default: 'true'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltStatement];
+    Values: cBoolEnum; Default: StrTrueUp; Alias: '';
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
   );
@@ -783,8 +840,8 @@ const
     Purpose: 'Check number of rows affected after executing a statement.'+LineEnding+
       'If the value is different to one an error is raised. Reason is we just update !one! record,'+LineEnding+
       ' and we do not expect to change many or zero rows the stmt did affect! Use a valid primary key!';
-    ValueType: pvtBool; LevelTypes: [pltResolver];
-    Values: 'false|true'; Default: 'true'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltResolver];
+    Values: cBoolEnum; Default: StrTrueUp; Alias: '';
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
   );
@@ -808,8 +865,8 @@ const
       'Postgre-OID-lob''s only. All other providers do not support a good '+
       'locator API. Servers like MySQL, ASE do support late-fetching methods '+
       'but we need to refetch the whole row first if the cursor postion changes';
-    ValueType: pvtBool; LevelTypes: [pltConnection, pltStatement];
-    Values: ''; Default: 'false'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection, pltStatement];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: '';
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
   );
@@ -845,8 +902,8 @@ const
   ZProp_TrustedConnection : TZProperty = (
     Name: ConnProps_TrustedConnection;
     Purpose: 'Use trusted connection?';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: '';
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 3; Items: @AllODBC_OleDB_ADO);
   );
@@ -887,8 +944,8 @@ const
       'If enabled turn of parameter bindings and send composed strings instead.'+
       'That''s definitelly killing the performance so have a good reason like:'+LineEnding+
       'http://zeoslib.sourceforge.net/viewtopic.php?f=20&t=10695&p=30151#p30151';
-    ValueType: pvtBool; LevelTypes: [pltConnection, pltStatement];
-    Values: ''; Default: 'False'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection, pltStatement];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: '';
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 3; Items: @AllMySQL_MariaDB_Postgre);
   );
@@ -923,7 +980,7 @@ const
     Name: ConnProps_AnsiPadding;
     Purpose: 'Turn Ansi-Padding on/off. See Server-documentation.'+
       'If set, executes ''SET ANSI_PADDING ON'' on connect';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
     Values: 'OFF|ON'; Default: 'ON'; Alias: '';
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 2; Items: @AllSybaseMSSQL);
@@ -955,24 +1012,24 @@ const
   ZProp_TDSLog : TZProperty = (
     Name: ConnProps_Log;
     Purpose: 'Write a TDS log file';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: ConnProps_Logging+','+ConnProps_TDSDump;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: ConnProps_Logging+','+ConnProps_TDSDump;
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 2; Items: @AllSybaseMSSQL);
   );
   ZProp_TDSLogging : TZProperty = (
     Name: ConnProps_Logging;
     Purpose: 'Write a TDS log file';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: ConnProps_Log+','+ConnProps_TDSDump;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: ConnProps_Log+','+ConnProps_TDSDump;
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 2; Items: @AllSybaseMSSQL);
   );
   ZProp_TDSDump : TZProperty = (
     Name: ConnProps_TDSDump;
     Purpose: 'Write a TDS log file';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: ConnProps_Log+','+ConnProps_Logging;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: ConnProps_Log+','+ConnProps_Logging;
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 2; Items: @AllSybaseMSSQL);
   );
@@ -1006,24 +1063,24 @@ const
   ZProp_TDSNTAuth : TZProperty = (
     Name: ConnProps_NTAuth;
     Purpose: 'Use Windows auth when connecting to server';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: ConnProps_Secure+','+ConnProps_Trusted;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: ConnProps_Secure+','+ConnProps_Trusted;
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 2; Items: @AllSybaseMSSQL);
   );
   ZProp_TDSSecure : TZProperty = (
     Name: ConnProps_Secure;
     Purpose: 'Use Windows auth when connecting to server';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: ConnProps_NTAuth+','+ConnProps_Trusted;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: ConnProps_NTAuth+','+ConnProps_Trusted;
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 2; Items: @AllSybaseMSSQL);
   );
   ZProp_TDSTrusted : TZProperty = (
     Name: ConnProps_Trusted;
     Purpose: 'Use Windows auth when connecting to server';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: ConnProps_NTAuth+','+ConnProps_Secure;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: ConnProps_NTAuth+','+ConnProps_Secure;
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 2; Items: @AllSybaseMSSQL);
   );
@@ -1037,24 +1094,24 @@ const
   ZProp_MYSQLSSL : TZProperty = (
     Name: ConnProps_MYSQLSSL;
     Purpose: 'Enable SSL certificate loading.';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: '';
     Providers: (Count: 1; Items: @cMySQLProvider);
     Protocols: (Count: 2; Items: @AllMySQL);
   );
   ZProp_MYSQLCompress : TZProperty = (
     Name: ConnProps_Compress;
     Purpose: 'same as MYSQL_OPT_COMPRESS, refer to MySql manual for details';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: '';
     Providers: (Count: 1; Items: @cMySQLProvider);
     Protocols: (Count: 2; Items: @AllMySQL);
   );
   ZProp_MYSQLdbless : TZProperty = (
     Name: ConnProps_DBLess;
     Purpose: 'Same as CLIENT_CONNECT_WITH_DB, refer to MySql manual for details';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: '';
     Providers: (Count: 1; Items: @cMySQLProvider);
     Protocols: (Count: 2; Items: @AllMySQL);
   );
@@ -1062,8 +1119,8 @@ const
     Name: ConnProps_MySQL_FieldType_Bit_1_IsBoolean;
     Purpose: 'Treat fieldtype BIT(1) as Boolean instead of ENUM(''Y'',''N'')'+LineEnding+
       'Default since 7.3';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'true'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrTrueUp; Alias: '';
     Providers: (Count: 1; Items: @cMySQLProvider);
     Protocols: (Count: 2; Items: @AllMySQL);
   );
@@ -1091,8 +1148,8 @@ const
       'Side effects: Each call is a roundtrip, i guess. Mysql is tabular '+
       'streamed. -> So you can''t use it within using metainformations or '+
       'multiple active resultsets.';
-    ValueType: pvtBool; LevelTypes: [pltStatement];
-    Values: 'false|true'; Default: 'false'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltStatement];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: '';
     Providers: (Count: 1; Items: @cMySQLProvider);
     Protocols: (Count: 2; Items: @AllMySQL);
   );
@@ -1267,7 +1324,7 @@ const
     Protocols: (Count: 2; Items: @AllMySQL);
  );
  ZProp_MYSQL_OPT_GUESS_CONNECTION : TZProperty = (
-    Name: '';
+    Name: ConnProps_MYSQL_OPT_GUESS_CONNECTION;
     Purpose: 'For an application linked against the libmysqld embedded server '+
       'library, this enables the library to guess whether to use the embedded '+
       'server or a remote server. “Guess” means that if the host name is set '+
@@ -1298,8 +1355,8 @@ const
     Name: ConnProps_MYSQL_SECURE_AUTH;
     Purpose: 'Whether to connect to a server that does not support the password '+
       'hashing used in MySQL 4.1.1 and later.';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: '';
     Providers: (Count: 1; Items: @cMySQLProvider);
     Protocols: (Count: 2; Items: @AllMySQL);
  );
@@ -1308,8 +1365,8 @@ const
     Purpose: 'Enable or disable reporting of data truncation errors for '+
       'prepared statements using the error member of MYSQL_BIND structures. '+
       '(Default: enabled.) Added in 5.0.3.';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'true'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrTrueUp; Alias: '';
     Providers: (Count: 1; Items: @cMySQLProvider);
     Protocols: (Count: 2; Items: @AllMySQL);
  );
@@ -1319,8 +1376,8 @@ const
       'connection is found to have been lost. Reconnect has been off by default '+
       'since MySQL 5.0.3; this option is new in 5.0.13 and provides a way to '+
       'set reconnection behavior explicitly.';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'true'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrTrueUp; Alias: '';
     Providers: (Count: 1; Items: @cMySQLProvider);
     Protocols: (Count: 2; Items: @AllMySQL);
  );
@@ -1331,8 +1388,8 @@ const
       'server. The connection is rejected if there is a mismatch. For encrypted '+
       'connections, this feature can be used to prevent man-in-the-middle '+
       'attacks. Verification is disabled by default. Added in MySQL 5.0.23';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: '';
     Providers: (Count: 1; Items: @cMySQLProvider);
     Protocols: (Count: 2; Items: @AllMySQL);
  );
@@ -1492,8 +1549,8 @@ const
       'sandbox mode, where all commands will return error 1820 '+
       '(ER_MUST_CHANGE_PASSWORD) unless a new password was set. This option '+
       'was added in MariaDB Connector/C 3.0.4';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: '';
     Providers: (Count: 1; Items: @cMySQLProvider);
     Protocols: (Count: 2; Items: @AllMySQL);
  );
@@ -1502,8 +1559,8 @@ const
     Purpose: 'Whether to force TLS. This enables TLS with the default system '+
       'settings. It does not prevent the connection from being created if the '+
       'server does not support TLS';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: '';
     Providers: (Count: 1; Items: @cMySQLProvider);
     Protocols: (Count: 2; Items: @AllMySQL);
  );
@@ -1558,8 +1615,8 @@ const
       'do not authenticate with that plugin. It is also ignored if RSA-based '+
       'password exchange is not used, as is the case when the client connects '+
       'to the server using a secure connection.';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: '';
     Providers: (Count: 1; Items: @cMySQLProvider);
     Protocols: (Count: 1; Items: @AllMySQL[1]);
  );
@@ -1579,8 +1636,8 @@ const
     Purpose: 'This flag makes result set metadata optional. It is an '+
       'alternative way of setting the CLIENT_OPTIONAL_RESULTSET_METADATA '+
       'connection flag for the mysql_real_connect() function.';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: '';
     Providers: (Count: 1; Items: @cMySQLProvider);
     Protocols: (Count: 1; Items: @AllMySQL[1]);
  );
@@ -1630,6 +1687,32 @@ const
     Providers: (Count: 1; Items: @cMySQLProvider);
     Protocols: (Count: 2; Items: @AllMySQL);
  );
+ ZMySqlOptionProperties: Array[TMySqlOption] of PZProperty = (
+    @ZProp_MYSQL_OPT_CONNECT_TIMEOUT, @ZProp_MYSQL_OPT_COMPRESS,
+    @ZProp_MYSQL_OPT_NAMED_PIPE, @ZProp_MYSQL_INIT_COMMAND,
+    @ZProp_MYSQL_READ_DEFAULT_FILE, @ZProp_MYSQL_READ_DEFAULT_GROUP,
+    @ZProp_MYSQL_SET_CHARSET_DIR, @ZProp_MYSQL_SET_CHARSET_NAME,
+    @ZProp_MYSQL_OPT_LOCAL_INFILE, @ZProp_MYSQL_OPT_PROTOCOL,
+    @ZProp_MYSQL_SHARED_MEMORY_BASE_NAME, @ZProp_MYSQL_OPT_READ_TIMEOUT,
+    @ZProp_MYSQL_OPT_WRITE_TIMEOUT, @ZProp_MYSQL_OPT_USE_RESULT,
+    @ZProp_MYSQL_OPT_USE_REMOTE_CONNECTION, @ZProp_MYSQL_OPT_USE_EMBEDDED_CONNECTION,
+    @ZProp_MYSQL_OPT_GUESS_CONNECTION, @ZProp_MYSQL_SET_CLIENT_IP,
+    @ZProp_MYSQL_SECURE_AUTH, @ZProp_MYSQL_REPORT_DATA_TRUNCATION,
+    @ZProp_MYSQL_OPT_RECONNECT, @ZProp_MYSQL_OPT_SSL_VERIFY_SERVER_CERT,
+    @ZProp_MYSQL_PLUGIN_DIR, @ZProp_MYSQL_DEFAULT_AUTH,
+    @ZProp_MYSQL_OPT_BIND, @ZProp_MYSQL_OPT_SSL_KEY, @ZProp_MYSQL_OPT_SSL_CERT,
+    @ZProp_MYSQL_OPT_SSL_CA, @ZProp_MYSQL_OPT_SSL_CAPATH,
+    @ZProp_MYSQL_OPT_SSL_CIPHER, @ZProp_MYSQL_OPT_SSL_CRL,
+    @ZProp_MYSQL_OPT_SSL_CRLPATH, @ZProp_MYSQL_OPT_CONNECT_ATTR_RESET,
+    @ZProp_MYSQL_OPT_CONNECT_ATTR_ADD, @ZProp_MYSQL_OPT_CONNECT_ATTR_DELETE,
+    @ZProp_MYSQL_SERVER_PUBLIC_KEY, @ZProp_MYSQL_ENABLE_CLEARTEXT_PLUGIN,
+    @ZProp_MYSQL_OPT_CAN_HANDLE_EXPIRED_PASSWORDS, @ZProp_MYSQL_OPT_SSL_ENFORCE,
+    @ZProp_MYSQL_OPT_MAX_ALLOWED_PACKET, @ZProp_MYSQL_OPT_NET_BUFFER_LENGTH,
+    @ZProp_MYSQL_OPT_TLS_VERSION, @ZProp_MYSQL_OPT_SSL_MODE,
+    {MySQL 8:}@ZProp_MYSQL_OPT_GET_SERVER_PUBLIC_KEY, @ZProp_MYSQL_OPT_RETRY_COUNT,
+    @ZProp_MYSQL_OPT_OPTIONAL_RESULTSET_METADATA, @ZProp_MYSQL_OPT_SSL_FIPS_MODE,
+    @ZProp_MYSQL_OPT_TLS_CIPHERSUITES, @ZProp_MYSQL_OPT_COMPRESSION_ALGORITHMS,
+    @ZProp_MYSQL_OPT_ZSTD_COMPRESSION_LEVEL);
 {$ENDIF}
 
 {$IF defined(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}
@@ -1661,8 +1744,8 @@ const
     Name: ConnProps_WireCompression;
     Purpose: 'Enable the wire compression in Firebird 3.0 and above. '+
       'This option generates isc_dpb_config string';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: ''; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: ''; Alias: '';
     Providers: (Count: 1; Items: @cFirebird3upProvider);
     Protocols: (Count: 1; Items: @AllInterbaseAndFirebirdProtocols[0]);
   );
@@ -1688,8 +1771,8 @@ const
   ZProp_SetGUIDByType : TZProperty = (
     Name: ConnProps_SetGUIDByType;
     Purpose: 'Set a type of **all** CHAR(16) CHAR SET OCTETS fields to GUID.';
-    ValueType: pvtBool; LevelTypes: [pltConnection, pltStatement];
-    Values: 'false|true'; Default: ''; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection, pltStatement];
+    Values: cBoolEnum; Default: ''; Alias: '';
     Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
     Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
@@ -2203,8 +2286,8 @@ const
   ZProp_isc_dpb_set_db_readonly : TZProperty = (
     Name: ConnProps_isc_dpb_set_db_readonly;
     Purpose: 'Set database as read only in database header';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: '';
     Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
     Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
@@ -2478,8 +2561,8 @@ const
       'lob''s can be read. Then the transaction will end up with a committed '+
       'or rollback as requested. However a new request will create a new '+
       'transaction.';
-    ValueType: pvtBool; LevelTypes: [pltConnection, pltTransaction];
-    Values: 'false|true'; Default: 'false'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection, pltTransaction];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: '';
     Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
     Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
@@ -2737,8 +2820,8 @@ const
   ZProp_Encrypted: TZProperty = (
     Name: ConnProps_Encrypted;
     Purpose: 'Use connection encryption?';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'false'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: '';
     Providers: (Count: 1; Items: @cSqlite3upProvider);
     Protocols: (Count: 1; Items: @cSQLiteProtocol);
   );
@@ -2787,8 +2870,8 @@ const
     Name: ConnProps_ForeignKeys;
     Purpose: 'calls PRAGMA foreign_keys = value. See:'+LineEnding+
       'https://www.sqlite.org/pragma.html#pragma_foreign_keys';
-    ValueType: pvtBool; LevelTypes: [pltConnection];
-    Values: 'false|true'; Default: 'true'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrTrueUp; Alias: '';
     Providers: (Count: 1; Items: @cSqlite3upProvider);
     Protocols: (Count: 1; Items: @cSQLiteProtocol);
   );
@@ -2805,8 +2888,8 @@ const
     Name: DSProps_BindDoubleDateTimeValues;
     Purpose: 'If set, directly bind the double value of date/time/datetime '+
       'fields. Otherwise, use intermediate string';
-    ValueType: pvtBool; LevelTypes: [pltConnection,pltStatement];
-    Values: 'false|true'; Default: 'false'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection,pltStatement];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: '';
     Providers: (Count: 1; Items: @cSqlite3upProvider);
     Protocols: (Count: 1; Items: @cSQLiteProtocol);
   );
@@ -2814,8 +2897,8 @@ const
     Name: DSProps_BindOrdinalBoolValues;
     Purpose: 'If set, directly bind the ordinal of boolean fields. Otherwise, '+
       'use intermediate alltime ''Y''/''N'' string.';
-    ValueType: pvtBool; LevelTypes: [pltConnection,pltStatement];
-    Values: 'false|true'; Default: 'false'; Alias: '';
+    ValueType: pvtEnum; LevelTypes: [pltConnection,pltStatement];
+    Values: cBoolEnum; Default: StrFalseUp; Alias: '';
     Providers: (Count: 1; Items: @cSqlite3upProvider);
     Protocols: (Count: 1; Items: @cSQLiteProtocol);
   );
@@ -2829,8 +2912,230 @@ const
     Protocols: (Count: 1; Items: @cSQLiteProtocol);
   );
 {$ENDIF}
+{$IFDEF ENABLE_ASA}
+  cASAProvider: TZPropertyProvider = (
+    Provider: spASA; MinimumServerVersion: 0;
+    MinimumClientVersion: 0; MinimumProtocolVersion: 0;);
+  cASAProtocol: String = 'asa';
+  cASA_AppInfoPurpose = 'Assists administrators in identifying the origin of particular '+
+             'client connections from a database server. Clients can specify '+
+             'their own string that is appended to the generated string. '+
+             'The AppInfo property string is a sequence of semicolon-delimited '+
+             'key=value pairs. Refer to ASA manual for types and acceptable '+
+             'values of these parameter.';
+  ZProp_AppInfo : TZProperty = (
+    Name: ConnProps_AppInfo;
+    Purpose: cASA_AppInfoPurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_APP;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  ZProp_APP : TZProperty = (
+    Name: ConnProps_APP;
+    Purpose: cASA_AppInfoPurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_AppInfo;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  cASA_AutoStartPurpose =
+    'Controls whether a local database server is started if no server can be '+
+    'connected to. Refer to ASA manual';
+  ZProp_AutoStart : TZProperty = (
+    Name: ConnProps_AutoStart;
+    Purpose: cASA_AutoStartPurpose;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrTrueUp; Alias: ConnProps_ASTART;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  ZProp_ASTART : TZProperty = (
+    Name: ConnProps_ASTART;
+    Purpose: cASA_AutoStartPurpose;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: StrTrueUp; Alias: ConnProps_AutoStart;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  cASA_CharSetPurpose: String =
+    'Specifies the character set to be used on this connection. '+
+    'Syntax: { CharSet | CS }={ NONE | character-set }'+LineEnding+
+    'NONE   Specifying CharSet=NONE requests that the connection use the '+
+    'database CHAR character set.';
+  ZProp_CharSet : TZProperty = (
+    Name: ConnProps_CharSet;
+    Purpose: cASA_AutoStartPurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_CS+','+ConnProps_CodePage;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  ZProp_CS : TZProperty = (
+    Name: ConnProps_CS;
+    Purpose: cASA_AutoStartPurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_CharSet+','+ConnProps_CodePage;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  cASA_CommBufferSizePurpose =
+    'Sets the maximum size of communication packets. '+LineEnding+
+    '{ CommBufferSize | CBSIZE }=size[ k ]'+LineEnding+
+    ' This integer specifies the maximum size of communication packets. The '+
+    'default value is in bytes, but you can use k to specify units of '+
+    'kilobytes. The minimum value of CommBufferSize is 500 bytes, and the '+
+    'maximum is 16000 bytes.. If no CommBufferSize value is set, the '+
+    'CommBufferSize is controlled by the setting on the server, which defaults '+
+    'to 7300 bytes on all operating systems except Windows Mobile. On '+
+    'Windows Mobile, the default is 1460 bytes.';
+  ZProp_CommBufferSize : TZProperty = (
+    Name: ConnProps_CommBufferSize;
+    Purpose: cASA_CommBufferSizePurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: '7300'; Alias: ConnProps_CBSIZE;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  ZProp_CBSIZE : TZProperty = (
+    Name: ConnProps_CBSIZE;
+    Purpose: cASA_CommBufferSizePurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_CommBufferSize;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  cASA_CommLinksPurpose =
+    'Specifies client-side network protocol options.'+LineEnding+
+    'Syntax: { CommLinks | LINKS }={ [ SharedMemory | ShMem ] | ALL | [ TCPIP | TCP ] } [, ... ] string'+LineEnding+
+    'Refer Sybase manuals';
+  ZProp_CommLinks : TZProperty = (
+    Name: ConnProps_CommLinks;
+    Purpose: cASA_CommLinksPurpose;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: 'SharedMemory|ShMem|ALL|TCPIP|TCP'; Default: 'SharedMemory'; Alias: ConnProps_LINKS;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  ZProp_LINKS : TZProperty = (
+    Name: ConnProps_LINKS;
+    Purpose: cASA_CommLinksPurpose;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: 'SharedMemory|ShMem|ALL|TCPIP|TCP'; Default: 'SharedMemory'; Alias: ConnProps_CommLinks;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  cASA_CompressPurpose =
+    'Turns compression on or off for a connection.'+LineEnding+
+    'Syntax: { Compress | COMP }={ YES | NO }'+LineEnding+
+    'Anywhere except with TDS connections. TDS connections (including jConnect) '+
+    'do not support SQL Anywhere communication compression.';
+  ZProp_Compress : TZProperty = (
+    Name: ConnProps_Compress;
+    Purpose: cASA_CompressPurpose;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: 'NO|YES'; Default: 'NO'; Alias: ConnProps_COMP;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  ZProp_COMP : TZProperty = (
+    Name: ConnProps_COMP;
+    Purpose: cASA_CompressPurpose;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: 'NO|YES'; Default: 'NO'; Alias: ConnProps_Compress;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+ (*
+  ConnProps_CompressionThreshold = 'CompressionThreshold';
+  ConnProps_COMPTH = 'COMPTH';
+  ConnProps_ConnectionName = 'ConnectionName';
+  ConnProps_CON = 'CON';
+  ConnProps_ConnectionPool = 'ConnectionPool';
+  ConnProps_CPOOL = 'CPOOL';
+  ConnProps_DatabaseFile = 'DatabaseFile';
+  ConnProps_DBF = 'DBF';
+  ConnProps_DatabaseKey = 'DatabaseKey';
+  ConnProps_DBKEY = 'DBKEY';
+  ConnProps_DatabaseName = 'DatabaseName';
+  ConnProps_DBN = 'DBN';
+  ConnProps_DatabaseSwitches = 'DatabaseSwitches';
+  ConnProps_DBS = 'DBS';
+  ConnProps_DataSourceName = 'DataSourceName';
+  ConnProps_DSN = 'DSN';
+  ConnProps_DisableMultiRowFetch = 'DisableMultiRowFetch';
+  ConnProps_DMRF = 'DMRF';
+  ConnProps_Elevate = 'Elevate';
+  ConnProps_EncryptedPassword = 'EncryptedPassword';
+  ConnProps_ENP = 'ENP';
+  ConnProps_Encryption = 'Encryption';
+  ConnProps_ENC = 'ENC';
+  ConnProps_EngineName = 'EngineName';
+  ConnProps_ENG = 'ENG';
+  ConnProps_FileDataSourceName = 'FileDataSourceName';
+  ConnProps_FILEDSN = 'FILEDSN';
+  ConnProps_ForceStart = 'ForceStart';
+  ConnProps_FORCE = 'FORCE';
+  ConnProps_Host = 'Host';
+  ConnProps_Idle = 'Idle';
+  ConnProps_Integrated = 'Integrated';
+  ConnProps_INT = 'INT';
+  ConnProps_Kerberos = 'Kerberos';
+  ConnProps_KRB = 'KRB';
+  {$IFNDEF ENABLE_DBLIB}
+  ConnProps_Language = 'Language';
+  {$ENDIF}
+  ConnProps_LANG = 'LANG';
+  ConnProps_LazyClose = 'LazyClose';
+  ConnProps_LCLOSE = 'LCLOSE';
+  ConnProps_LivenessTimeout = 'LivenessTimeout';
+  ConnProps_LTO = 'LTO';
+  {$IFNDEF ENABLE_DBLIB}
+  ConnProps_LogFile = 'LogFile';
+  ConnProps_LOG = 'LOG';
+  {$ENDIF ENABLE_DBLIB}
+  ConnProps_NewPassword = 'NewPassword';
+  ConnProps_NEWPWD = 'NEWPWD';
+  ConnProps_MatView = 'MatView';
+  ConnProps_NodeType = 'NodeType';
+  ConnProps_NODE = 'NODE';
+  //ConnProps_Password  = 'Password';
+  //ConnProps_PWD = 'PWD';
+  ConnProps_PrefetchBuffer = 'PrefetchBuffer';
+  ConnProps_PBUF = 'PBUF';
+  ConnProps_PrefetchOnOpen = 'PrefetchOnOpen';
+  ConnProps_PrefetchRows = 'PrefetchRows';
+  ConnProps_PROWS = 'PROWS';
+  ConnProps_RetryConnectionTimeout = 'RetryConnectionTimeout';
+  ConnProps_RetryConnTO = 'RetryConnTO';
+  ConnProps_ServerName = 'ServerName';
+  ConnProps_Server = 'Server';
+  ConnProps_StartLine = 'StartLine';
+  ConnProps_START = 'START';
+  ConnProps_Unconditional = 'Unconditional';
+  ConnProps_UNC = 'UNC';
+  { Parameters that are for datasets and statements but could be set for connections
+    (see comment above) }
+    *)
+{$ENDIF}
+
+procedure TfrmPropertyEditor.cbProtocolChange(Sender: TObject);
+begin
+  LoadProperties;
+end;
 
 initialization
+  prEditValuesPageIndex := 0;
+  frmPropertyHeight := -1;
+  frmPropertyWidth := -1;
+  frmPropertyHeight := -1;
+  frmPropertyWidth := -1;
+  frmPropertyTop := -1;
+  frmPropertyLeft := -1;
+  pnlBottomHeight := -1;
+  gbValWidth := -1;
+  bgPropsUsedWidth := -1;
+
   RegisterZProperties([@ZProp_UID, @ZProp_Username, @ZProp_PWD, @ZProp_Password,
     @ZProp_LibLocation, @ZProp_CodePage, @ZProp_AutoEncodeStrings, //@ZProp_Transliterate,
     @ZProp_ControlsCP, {@ZProp_RawStringEncoding, }@ZProp_Timeout,
@@ -2882,32 +3187,8 @@ initialization
   RegisterZProperties([@ZProp_MYSQLSSL, @ZProp_MYSQLCompress, @ZProp_MYSQLdbless,
     @ZProp_MySQL_FieldType_Bit_1_IsBoolean, @ZProp_MySQLDatadir,
     @ZProp_MySQLLibrary, @ZProp_MySQL_UseResult,
-    @ZProp_MySQL_STMT_ATTR_PREFETCH_ROWS, @ZProp_MySQL_chunk_size,
-    @ZProp_MYSQL_OPT_CONNECT_TIMEOUT, @ZProp_MYSQL_OPT_COMPRESS,
-    @ZProp_MYSQL_OPT_NAMED_PIPE, @ZProp_MYSQL_INIT_COMMAND,
-    @ZProp_MYSQL_READ_DEFAULT_FILE, @ZProp_MYSQL_READ_DEFAULT_GROUP,
-    @ZProp_MYSQL_SET_CHARSET_DIR, @ZProp_MYSQL_SET_CHARSET_NAME,
-    @ZProp_MYSQL_OPT_LOCAL_INFILE, @ZProp_MYSQL_OPT_PROTOCOL,
-    @ZProp_MYSQL_SHARED_MEMORY_BASE_NAME, @ZProp_MYSQL_OPT_READ_TIMEOUT,
-    @ZProp_MYSQL_OPT_WRITE_TIMEOUT, @ZProp_MYSQL_OPT_USE_RESULT,
-    @ZProp_MYSQL_OPT_USE_REMOTE_CONNECTION, @ZProp_MYSQL_OPT_USE_EMBEDDED_CONNECTION,
-    @ZProp_MYSQL_OPT_GUESS_CONNECTION, @ZProp_MYSQL_SET_CLIENT_IP,
-    @ZProp_MYSQL_SECURE_AUTH, @ZProp_MYSQL_REPORT_DATA_TRUNCATION,
-    @ZProp_MYSQL_OPT_RECONNECT, @ZProp_MYSQL_OPT_SSL_VERIFY_SERVER_CERT,
-    @ZProp_MYSQL_PLUGIN_DIR, @ZProp_MYSQL_DEFAULT_AUTH,
-    @ZProp_MYSQL_OPT_BIND, @ZProp_MYSQL_OPT_SSL_KEY, @ZProp_MYSQL_OPT_SSL_CERT,
-    @ZProp_MYSQL_OPT_SSL_CA, @ZProp_MYSQL_OPT_SSL_CAPATH,
-    @ZProp_MYSQL_OPT_SSL_CIPHER, @ZProp_MYSQL_OPT_SSL_CRL,
-    @ZProp_MYSQL_OPT_SSL_CRLPATH, @ZProp_MYSQL_OPT_CONNECT_ATTR_RESET,
-    @ZProp_MYSQL_OPT_CONNECT_ATTR_ADD, @ZProp_MYSQL_OPT_CONNECT_ATTR_DELETE,
-    @ZProp_MYSQL_SERVER_PUBLIC_KEY, @ZProp_MYSQL_ENABLE_CLEARTEXT_PLUGIN,
-    @ZProp_MYSQL_OPT_CAN_HANDLE_EXPIRED_PASSWORDS, @ZProp_MYSQL_OPT_SSL_ENFORCE,
-    @ZProp_MYSQL_OPT_MAX_ALLOWED_PACKET, @ZProp_MYSQL_OPT_NET_BUFFER_LENGTH,
-    @ZProp_MYSQL_OPT_TLS_VERSION, @ZProp_MYSQL_OPT_SSL_MODE,
-    {MySQL 8:}@ZProp_MYSQL_OPT_GET_SERVER_PUBLIC_KEY, @ZProp_MYSQL_OPT_RETRY_COUNT,
-    @ZProp_MYSQL_OPT_OPTIONAL_RESULTSET_METADATA, @ZProp_MYSQL_OPT_SSL_FIPS_MODE,
-    @ZProp_MYSQL_OPT_TLS_CIPHERSUITES, @ZProp_MYSQL_OPT_COMPRESSION_ALGORITHMS,
-    @ZProp_MYSQL_OPT_ZSTD_COMPRESSION_LEVEL]);
+    @ZProp_MySQL_STMT_ATTR_PREFETCH_ROWS, @ZProp_MySQL_chunk_size]);
+  RegisterZPropertiesArray(Ord(High(TMySqlOption))+1, @ZMySqlOptionProperties);
 {$ENDIF}
 {$IF declared(ZProp_SessionIdleTimeOut)}
   RegisterZProperty(@ZProp_SessionIdleTimeOut);
@@ -2961,8 +3242,15 @@ initialization
     @ZProp_isc_tpb_no_rec_version, @ZProp_isc_tpb_restart_requests, @ZProp_isc_tpb_no_auto_undo,
     @ZProp_isc_no_savepoint, @ZProp_isc_tpb_lock_timeout, @ZProp_isc_tpb_read_consistency]);
 {$IFEND}
-
-{$IFDEF FPC}
-{$i ZPropertiesEditor.lrs}
+{$IFDEF ENABLE_ASA}
+  RegisterZProperties([@ZProp_AppInfo, @ZProp_APP, @ZProp_AutoStart,
+    @ZProp_ASTART, @ZProp_CharSet, @ZProp_CS, @ZProp_CommBufferSize,
+    @ZProp_CBSIZE, @ZProp_CommLinks, @ZProp_LINKS, @ZProp_Compress, @ZProp_COMP]);
 {$ENDIF}
+
+
+{$IFDEF LCL}
+//{.$i ZPropertiesEditor.lrs}
+{$ENDIF}
+
 end.

@@ -1136,7 +1136,7 @@ end;
 
 {$IFDEF FPC}
 initialization
-{$i ZPropertiesEditor.lrs}
+{$i ZUpdateSqlEditor.lrs}
 {$ENDIF}
 
 end.

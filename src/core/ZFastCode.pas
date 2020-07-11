@@ -4338,7 +4338,10 @@ begin
   end;
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+  {$WARN 4056 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
 function RawToUInt32Def(const S: RawByteString; const Default: Cardinal): Cardinal; overload;
 var Buf, P, PEnd: PAnsiChar;
 begin
@@ -4475,7 +4478,10 @@ begin
     Result := Default;
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+  {$WARN 4056 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
 function UnicodeToUInt32Def(const S: UnicodeString; Default: Cardinal): Cardinal;
 var Buf, P, PEnd: PWideChar;
 begin
@@ -6073,6 +6079,9 @@ begin
     PEnd := PStart;
 end;
 
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4079 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
 function ValRawUInt32(PStart: PAnsiChar; var PEnd: PAnsiChar): Cardinal; overload;
 //function ValInt64_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Int64;
 //fast pascal from John O'Harrow see:
@@ -6137,6 +6146,7 @@ begin
   if not (((Flags and 1) <> 0) and (PStart = PEnd)) then
     PEnd := PStart;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function ValRawUInt64(PStart: PAnsiChar; var PEnd: PAnsiChar): UInt64; overload;
 //function ValInt64_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Int64;
@@ -6292,6 +6302,9 @@ begin
     PEnd := PStart;
 end;
 
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4079 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
 function ValUnicodeUInt32(PStart: PWideChar; var PEnd: PWideChar): Cardinal; overload;
 //function ValInt64_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Int64;
 //fast pascal from John O'Harrow see:
@@ -6357,6 +6370,7 @@ begin
   if not (((Flags and 1) <> 0) and (PStart = PEnd)) then
     PEnd := PStart;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function ValUnicodeInt64(PStart: PWideChar; var PEnd: PWideChar): Int64;
 //function ValInt64_JOH_PAS_8_a(const s: AnsiString; out code: Integer): Int64;
