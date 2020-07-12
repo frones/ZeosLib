@@ -1174,8 +1174,10 @@ begin
           AValue2 := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiUpperCase(AValue2);
         L1 := Length(AValue1);
         L2 := Length(AValue2);
-        if L2 < L1 then
+        if L2 < L1 then begin
+          Result := False;
           Exit;
+        end;
         P1 := Pointer(AValue1);
         P2 := Pointer(AValue2);
         Result := {$IFDEF WITH_ANSISTRLCOMP_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrLComp(PAnsiChar(P2), PAnsiChar(P1), L1) = 0;

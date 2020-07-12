@@ -12,11 +12,11 @@ uses
   Classes, SysUtils, CustApp,
   { you can add units after this }
   //{fpc}lazutils,
-  {wst}server_listener, fpc_http_server, server_service_soap, zdbc,
+  {wst}server_listener, fpc_http_server, server_service_soap,
   {synapse}
   {local}zeosproxy, zeosproxy_binder, zeosproxy_imp, DbcProxyUtils,
   DbcProxyConnectionManager, DbcProxyConfigManager, ZDbcProxyManagement,
-  ZDbcInterbase6, ZDbcPostgreSql;
+  ZDbcInterbase6, ZDbcPostgreSql, dbcproxycleanupthread;
 
 type
 
@@ -48,7 +48,7 @@ begin
   {$IFDEF LINUX}
   configFile := '/etc/zeosproxy.ini';
   {$ELSE}
-  configFile := ExtractFilePath(ParamStr(0)) + ZDbcProxy.ini;
+  configFile := ExtractFilePath(ParamStr(0)) + 'ZDbcProxy.ini';
   {$ENDIF}
 
   // quick check parameters

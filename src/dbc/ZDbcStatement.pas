@@ -88,7 +88,6 @@ type
     FBatchQueries: TStrings;
     FConnection: IZConnection;
     FInfo: TStrings;
-    FChunkSize: Integer; //size of buffer chunks for large lob's related to network settings
     FClosed: Boolean;
     FCachedLob: Boolean;
     procedure SetLastResultSet(const ResultSet: IZResultSet); virtual;
@@ -132,7 +131,6 @@ type
     property SQL: String read {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF};
     property WSQL: ZWideString read FWSQL write SetWSQL;
     property ASQL: RawByteString read FaSQL write SetASQL;
-    property ChunkSize: Integer read FChunkSize;
     property CachedLob: Boolean read FCachedLob;
     property ClientCP: word read FClientCP;
     function CreateStmtLogEvent(Category: TZLoggingCategory;
@@ -708,7 +706,6 @@ begin
   FInfo := TStringList.Create;
   if Info <> nil then
     FInfo.AddStrings(Info);
-  FChunkSize := StrToIntDef(DefineStatementParameter(Self, DSProps_ChunkSize, '4096'), 4096);
   FCachedLob := StrToBoolEx(DefineStatementParameter(Self, DSProps_CachedLobs, 'false'));
   FStatementId := Self.GetNextStatementId;
 end;
@@ -1577,7 +1574,7 @@ end;
 }
 function TZAbstractStatement.GetChunkSize: Integer;
 begin
-  Result := FChunkSize;
+  Result := -1;
 end;
 
 { TZBindList }

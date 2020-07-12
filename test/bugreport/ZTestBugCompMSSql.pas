@@ -665,6 +665,11 @@ var
 begin
   Q := CreateQuery;
   try
+    Check(Q <> nil);
+    //ado does some own logic behind the scenes such as calling some sp's ->
+    //#t doesn't exist any more
+    if Protocol = 'ado' then
+      Exit;
     q.Sql.Add('create table #t (b varbinary(128));');
     q.Sql.Add('insert into #t values (0x6170706c65), (0x62616e616e61), (0x636865727279);');
     q.ExecSql;

@@ -68,6 +68,8 @@ type
   // Forward declarations.
   IZCachedResultSet = interface;
 
+  TZHasDefaultValues = ( hdvUnknownDefaults, hdvNoDefaults, hdvHasDefaults);
+
   {** Resolver to post updates. }
   IZCachedResolver = interface (IZInterface)
     ['{546ED716-BB88-468C-8CCE-D7111CF5E1EF}']
@@ -82,8 +84,7 @@ type
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
 
-    procedure SetReadOnlyTransaction(const Value: IZTransaction);
-    procedure SetReadWriteTransaction(const Value: IZTransaction);
+    procedure SetTransaction(const Value: IZTransaction);
   end;
 
   {** Represents a cached result set. }

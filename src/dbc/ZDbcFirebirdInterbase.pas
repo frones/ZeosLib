@@ -82,7 +82,6 @@ type
 
   IZInterbaseFirebirdTransaction = interface(IZTransaction)
     ['{A30246BA-AFC0-43FF-AB56-AB272281A3C2}']
-    procedure CloseTransaction;
     procedure DoStartTransaction;
     procedure RegisterOpencursor(const CursorRS: IZResultSet);
     procedure RegisterOpenUnCachedLob(const Lob: IZlob);
@@ -90,8 +89,6 @@ type
     procedure DeRegisterOpenUnCachedLob(const Lob: IZlob);
     function GetOpenCursorCount: Integer;
     function GetTPB: RawByteString;
-    function IsReadOnly: Boolean;
-    function IsAutoCommit: Boolean;
   end;
 
   {** Represents a Interbase specific connection interface. }
@@ -121,9 +118,8 @@ type
     FDialect: Word;
     FProcedureTypesCache, FSubTypeTestCharIDCache: TStrings;
     FGUIDProps: TZInterbaseFirebirdConnectionGUIDProps;
-    FTPBs: array[Boolean,Boolean,TZTransactIsolationLevel] of RawByteString;
     fTransactions: IZCollection; //simultan (not nested) readonly/readwrite transaction container
-    fActiveTransaction: array[Boolean] of IZInterbaseFirebirdTransaction;
+    fActiveTransaction: IZInterbaseFirebirdTransaction;
     FPB_CP: Word; //the parameter buffer codepage
     FClientVersion: Integer;
     FHostVersion: Integer;
@@ -133,8 +129,6 @@ type
     procedure BeforeUrlAssign; override;
     procedure DetermineClientTypeAndVersion;
     procedure AssignISC_Parameters;
-    function GenerateTPB(AutoCommit, ReadOnly: Boolean; TransactIsolationLevel: TZTransactIsolationLevel;
-      Info: TStrings): RawByteString;
     procedure TransactionParameterPufferChanged;
     function GetActiveTransaction: IZInterbaseFirebirdTransaction;
     procedure OnPropertiesChange({%H-}Sender: TObject); override;
@@ -145,9 +139,9 @@ type
     procedure AfterConstruction; override;
     destructor Destroy; override;
   public { IZTransactionManager }
-    procedure ReleaseTransaction(const Transaction: IZTransaction);
-    function GetTransactionCount: Integer;
-    function GetTransaction(Index: Cardinal): IZTransaction;
+    procedure ReleaseTransaction(const Value: IZTransaction);
+    function IsTransactionValid(const Value: IZTransaction): Boolean;
+    procedure ClearTransactions;
   public { implement IZInterbaseFirebirdTransaction }
     function IsFirebirdLib: Boolean; virtual; abstract;
     function IsInterbaseLib: Boolean; virtual; abstract;
@@ -162,6 +156,8 @@ type
       const Sender: IImmediatelyReleasable);
     function InterpretInterbaseStatus(StatusVector: PARRAY_ISC_STATUS): TZIBStatusVector;
     procedure SetActiveTransaction(const Value: IZTransaction);
+    function GenerateTPB(AutoCommit, ReadOnly: Boolean; TransactIsolationLevel: TZTransactIsolationLevel;
+      Info: TStrings): RawByteString;
   public
     procedure Commit;
     procedure Rollback;
@@ -169,6 +165,7 @@ type
     procedure SetReadOnly(Value: Boolean); override;
     procedure SetAutoCommit(Value: Boolean); override;
     function StartTransaction: Integer;
+    function GetConnectionTransaction: IZTransaction;
   public
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
@@ -182,34 +179,37 @@ type
   End;
 
   {** EH: implements a IB/FB transaction }
-  TZInterbaseFirebirdTransaction = class(TZCodePagedObject, IImmediatelyReleasable)
-  private
-    FWeakIZTransactionPtr: Pointer;
+  TZInterbaseFirebirdTransaction = class(TZImmediatelyReleasableObject, IImmediatelyReleasable)
   protected
+    FWeakIZTransactionPtr: Pointer;
     fSavepoints: TStrings;
     fDoCommit, fDoLog: Boolean;
     FOpenCursors, FOpenUncachedLobs: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     FReadOnly, FAutoCommit: Boolean;
+    FTransactionIsolation: TZTransactIsolationLevel;
     FTPB: RawByteString;
+    FProperties: TStrings;
     {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZInterbaseFirebirdConnection;
   protected
     function TxnIsStarted: Boolean; virtual; abstract;
     function TestCachedResultsAndForceFetchAll: Boolean; virtual; abstract;
   public { IZInterbaseFirebirdTransaction }
-    procedure CloseTransaction;
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); virtual;
     procedure RegisterOpencursor(const CursorRS: IZResultSet);
     procedure RegisterOpenUnCachedLob(const Lob: IZlob);
     procedure DeRegisterOpenCursor(const CursorRS: IZResultSet);
     procedure DeRegisterOpenUnCachedLob(const Lob: IZlob);
     function GetTransactionLevel: Integer;
+    procedure SetTransactionIsolation(Value: TZTransactIsolationLevel);
     function GetOpenCursorCount: Integer;
     function GetTPB: RawByteString;
     function IsReadOnly: Boolean;
-    function IsAutoCommit: Boolean;
+    procedure SetReadOnly(Value: Boolean);
+    function GetAutoCommit: Boolean;
+    procedure SetAutoCommit(Value: Boolean);
   public
     constructor Create(const Owner: TZInterbaseFirebirdConnection; AutoCommit, ReadOnly: Boolean;
-      const TPB: RawByteString);
+      TransactionIsolation: TZTransactIsolationLevel; Properties: TStrings);
     procedure BeforeDestruction; override;
     procedure AfterConstruction; override;
   end;
@@ -555,11 +555,13 @@ var
       While ((Ord(PEnd^) >= Ord('A')) and (Ord(PEnd^) <= Ord('Z'))) or
             ((Ord(PEnd^) >= Ord('0')) and (Ord(PEnd^) <= Ord('9'))) do
         Inc(PEnd);
-      Info.Values['isc_dpb_set_db_charset'] :=  Copy(CreateDB, I, (PEnd-P));
-    end else if Info.Values['isc_dpb_set_db_charset'] = '' then
-      Info.Values['isc_dpb_set_db_charset'] := Info.Values['isc_dpb_lc_ctype'];
-    if Info.Values['isc_dpb_set_db_charset'] = '' then
-      Info.Values['isc_dpb_set_db_charset'] := FClientCodePage;
+      Info.Values[ConnProps_isc_dpb_lc_ctype] := Copy(CreateDB, I, (PEnd-P));
+    end;
+    if Info.Values[ConnProps_isc_dpb_lc_ctype] = '' then
+      Info.Values[ConnProps_isc_dpb_lc_ctype] := FClientCodePage;
+    if Info.Values[ConnProps_isc_dpb_lc_ctype] = '' then
+      Info.Values[ConnProps_isc_dpb_lc_ctype] := Info.Values[ConnProps_isc_dpb_set_db_charset];
+    FClientCodePage := Info.Values[ConnProps_isc_dpb_lc_ctype];
 
     I := PosEx('PAGE', CreateDB);
     if I > 0 then begin
@@ -572,12 +574,12 @@ var
       PEnd := P;
       While ((Ord(PEnd^) >= Ord('0')) and (Ord(PEnd^) <= Ord('9'))) do
         Inc(PEnd);
-      Info.Values['isc_dpb_page_size'] :=  Copy(CreateDB, I, (PEnd-P));
-    end else Info.Values['isc_dpb_page_size'] := '4096'; //default
+      Info.Values[ConnProps_isc_dpb_page_size] :=  Copy(CreateDB, I, (PEnd-P));
+    end else Info.Values[ConnProps_isc_dpb_page_size] := '4096'; //default
   end;
 begin
   { set default sql dialect it can be overriden }
-  FDialect := StrToIntDef(Info.Values[ConnProps_Dialect], SQL_DIALECT_CURRENT);
+  FDialect := StrToIntDef(Info.Values[ConnProps_isc_dpb_sql_dialect], StrToIntDef(Info.Values[ConnProps_Dialect], SQL_DIALECT_CURRENT));
   Info.BeginUpdate; // Do not call OnPropertiesChange every time a property changes
   RoleName := Info.Values[ConnProps_CreateNewDatabase];
 
@@ -587,36 +589,41 @@ begin
   end;
 
   { Processes connection properties. }
-  if Info.Values['isc_dpb_username'] = '' then
-    Info.Values['isc_dpb_username'] := Url.UserName;
-  if Info.Values['isc_dpb_password'] = '' then
-    Info.Values['isc_dpb_password'] := Url.Password;
+  if Info.Values[ConnProps_isc_dpb_user_name] = '' then
+    Info.Values[ConnProps_isc_dpb_user_name] := Url.UserName;
+  if Info.Values[ConnProps_isc_dpb_password] = '' then
+    Info.Values[ConnProps_isc_dpb_password] := Url.Password;
 
   if FClientCodePage = '' then begin //was set on inherited Create(...)
-    FClientCodePage := Info.Values['isc_dpb_lc_ctype'];
+    FClientCodePage := Info.Values[ConnProps_isc_dpb_lc_ctype];
     if FClientCodePage = '' then
-      FClientCodePage := Info.Values['isc_dpb_set_db_charset'];
+      FClientCodePage := Info.Values[ConnProps_isc_dpb_set_db_charset];
     if FClientCodePage <> '' then
       CheckCharEncoding(FClientCodePage, True);
   end;
+  Info.Values[ConnProps_isc_dpb_lc_ctype] := FClientCodePage;
 
-  Info.Values['isc_dpb_lc_ctype'] := FClientCodePage;
-
-  RoleName := Trim(Info.Values[ConnProps_Rolename]);
-  if RoleName <> '' then
-    Info.Values['isc_dpb_sql_role_name'] := UpperCase(RoleName);
-
-  ConnectTimeout := StrToIntDef(Info.Values[ConnProps_Timeout], -1);
-  if ConnectTimeout >= 0 then
-    Info.Values['isc_dpb_connect_timeout'] := ZFastCode.IntToStr(ConnectTimeout);
+  if Info.Values[ConnProps_isc_dpb_sql_role_name] = '' then begin
+    RoleName := Trim(Info.Values[ConnProps_Rolename]);
+    if RoleName <> '' then
+      Info.Values[ConnProps_isc_dpb_sql_role_name] := UpperCase(RoleName);
+  end;
+  // EH: that's a bug: even if this property is named as "connnect timeout"
+  // it's used as idle time out after n seconds and has nothing todo with
+  // opening a connection in elepsed seconds...
+  if StrToIntDef(Info.Values[ConnProps_isc_dpb_connect_timeout], -1) = -1 then begin
+    ConnectTimeout := StrToIntDef(Info.Values[ConnProps_Timeout], -1);
+    if ConnectTimeout >= 0 then
+      Info.Values[ConnProps_isc_dpb_connect_timeout] := ZFastCode.IntToStr(ConnectTimeout);
+  end;
 
   WireCompression := StrToBoolEx(Info.Values[ConnProps_WireCompression]);
   if WireCompression then
-    Info.Values['isc_dpb_config'] :=
-      Info.Values['isc_dpb_config'] + LineEnding + 'WireCompression=true';
+    Info.Values[ConnProps_isc_dpb_config] :=
+      Info.Values[ConnProps_isc_dpb_config] + LineEnding + 'WireCompression=true';
 
-  if Info.IndexOf('isc_dpb_sql_dialect') = -1 then
-    Info.Values['isc_dpb_sql_dialect'] := ZFastCode.IntToStr(FDialect);
+  if Info.IndexOf(ConnProps_isc_dpb_sql_dialect) = -1 then
+    Info.Values[ConnProps_isc_dpb_sql_dialect] := ZFastCode.IntToStr(FDialect);
 
   Idx := Info.IndexOf('isc_dpb_utf8_filename');
   if (GetClientVersion >= 2005000) and IsFirebirdLib then begin
@@ -637,6 +644,12 @@ begin
   FGUIDProps := TZInterbaseFirebirdConnectionGUIDProps.Create;
   FClientVersion := -1;
   inherited BeforeUrlAssign;
+end;
+
+procedure TZInterbaseFirebirdConnection.ClearTransactions;
+begin
+  fTransactions.Clear;
+  fTransactions.Add(nil);
 end;
 
 {**
@@ -664,8 +677,8 @@ begin
     raise EZSQLException.Create(SCannotUseCommit);
   with GetActiveTransaction do begin
     Commit;
-    if (not FRestartTransaction) and (GetTransactionLevel = 0) then
-      SetAutoCommit(True)
+    if (not FRestartTransaction) and (GetTransactionLevel <= 0) then
+      SetAutoCommit(True);
   end;
 end;
 
@@ -745,8 +758,8 @@ begin
 end;
 
 const
-  Tpb_Access: array[boolean] of String = ('isc_tpb_write','isc_tpb_read');
-  tpb_AutoCommit: array[boolean] of String = ('','isc_tpb_autocommit');
+  Tpb_Access: array[boolean] of String = (TxnProps_isc_tpb_write,TxnProps_isc_tpb_read);
+  tpb_AutoCommit: array[boolean] of String = ('',TxnProps_isc_tpb_autocommit);
 function TZInterbaseFirebirdConnection.GenerateTPB(AutoCommit,
   ReadOnly: Boolean; TransactIsolationLevel: TZTransactIsolationLevel;
   Info: TStrings): RawByteString;
@@ -769,24 +782,24 @@ type
     for I := 0 to Src.Count - 1 do
     begin
       SrcPar := LowerCase(Src[I]);
-      if (SrcPar = 'isc_tpb_consistency') or
-         (SrcPar = 'isc_tpb_concurrency') or
-         (SrcPar = 'isc_tpb_read_committed') then
+      if (SrcPar = TxnProps_isc_tpb_consistency) or
+         (SrcPar = TXnProps_isc_tpb_concurrency) or
+         (SrcPar = TxnProps_isc_tpb_read_committed) then
         OverwritableParams[parTIL] := SrcPar
       else
-      if (SrcPar = 'isc_tpb_wait') or
-         (SrcPar = 'isc_tpb_nowait') then
+      if (SrcPar = TxnProps_isc_tpb_wait) or
+         (SrcPar = TxnProps_isc_tpb_nowait) then
         OverwritableParams[parWait] := SrcPar
       else
-      if (SrcPar = 'isc_tpb_read') or
-         (SrcPar = 'isc_tpb_write') then
+      if (SrcPar = TxnProps_isc_tpb_read) or
+         (SrcPar = TxnProps_isc_tpb_write) then
         OverwritableParams[parRW] := SrcPar
       else
-      if (SrcPar = 'isc_tpb_rec_version') or
-         (SrcPar = 'isc_tpb_no_rec_version') then
+      if (SrcPar = TxnProps_isc_tpb_rec_version) or
+         (SrcPar = TxnProps_isc_tpb_no_rec_version) then
         OverwritableParams[parRecVer] := SrcPar
       else
-      if (SrcPar = 'isc_tpb_autocommit') then
+      if (SrcPar = TxnProps_isc_tpb_autocommit) then
         OverwritableParams[parAutoCommit] := SrcPar
       else if StartsWith(SrcPar, TPBPrefix) then  //skip all non isc_tpb params
         Dest.Add(Src[I]);
@@ -798,7 +811,6 @@ begin
   Params := TStringlist.Create;
   try
     Params.Capacity := Ord(High(TOverwritableParams))+Info.Count;
-    //OverwritableParams[parRW] := tpb_Access[ReadOnly]; will be set always below
     OverwritableParams[parAutoCommit] := tpb_AutoCommit[AutoCommit];
 
     { Set transaction parameters by TransactIsolationLevel }
@@ -806,31 +818,31 @@ begin
       tiReadCommitted:
         begin
           if GetHostVersion >= 4000000
-          then OverwritableParams[parRecVer] := 'isc_tpb_read_consistency'
-          else OverwritableParams[parRecVer] := 'isc_tpb_rec_version';
-          OverwritableParams[parWait] := 'isc_tpb_nowait';
+          then OverwritableParams[parRecVer] := TxnProps_isc_tpb_read_consistency
+          else OverwritableParams[parRecVer] := TxnProps_isc_tpb_rec_version;
+          OverwritableParams[parWait] := TxnProps_isc_tpb_nowait;
           AddStrings(Params, Info, OverwritableParams);
           OverwritableParams[parRW] := tpb_Access[ReadOnly];
-          OverwritableParams[parTIL] := 'isc_tpb_read_committed';
+          OverwritableParams[parTIL] := TxnProps_isc_tpb_read_committed;
         end;
       tiRepeatableRead:
         begin
-          OverwritableParams[parWait] := 'isc_tpb_nowait';
+          OverwritableParams[parWait] := TxnProps_isc_tpb_nowait;
           AddStrings(Params, Info, OverwritableParams);
           OverwritableParams[parRW] := tpb_Access[ReadOnly];
-          OverwritableParams[parTIL] := 'isc_tpb_concurrency';
+          OverwritableParams[parTIL] := TXnProps_isc_tpb_concurrency;
         end;
       tiSerializable:
         begin
           AddStrings(Params, Info, OverwritableParams);
           OverwritableParams[parRW] := tpb_Access[ReadOnly];
-          OverwritableParams[parTIL] := 'isc_tpb_consistency';
+          OverwritableParams[parTIL] := TxnProps_isc_tpb_consistency;
         end;
       else begin
         OverwritableParams[parRW] := tpb_Access[ReadOnly]; //eh: why is this done before AddStrings is called?
         { FB default values for non-standard TIL }
-        OverwritableParams[parTIL] := 'isc_tpb_concurrency';
-        OverwritableParams[parWait] := 'isc_tpb_wait';
+        OverwritableParams[parTIL] := TXnProps_isc_tpb_concurrency;
+        OverwritableParams[parWait] := TxnProps_isc_tpb_wait;
         AddStrings(Params, Info, OverwritableParams);
       end;
     end;
@@ -862,14 +874,20 @@ end;
 
 function TZInterbaseFirebirdConnection.GetActiveTransaction: IZInterbaseFirebirdTransaction;
 var TA: IZTransaction;
+  I: Integer;
 begin
   if not IsClosed then begin
-    if fActiveTransaction[ReadOnly] = nil then begin
-      TA := IZTransactionManager(FWeakTransactionManagerPtr).CreateTransaction(AutoCommit, ReadOnly, TransactIsolationLevel, Info);
-      TA.QueryInterface(IZInterbaseFirebirdTransaction, fActiveTransaction[ReadOnly]);
-      fTransactions.Add(TA);
+    if fActiveTransaction = nil then begin
+      TA := IZTransactionManager(FWeakTransactionManagerPtr).CreateTransaction(
+        AutoCommit, ReadOnly, TransactIsolationLevel, Info);
+      if Ftransactions.Count > 1 then begin
+        I := Ftransactions.IndexOf(TA);
+        Ftransactions.Exchange(I, 0);
+        Ftransactions.Delete(I);
+      end;
+      TA.QueryInterface(IZInterbaseFirebirdTransaction, fActiveTransaction);
     end;
-    Result := fActiveTransaction[ReadOnly];
+    Result := fActiveTransaction;
   end else
     Result := nil;
 end;
@@ -965,20 +983,17 @@ begin
     Result := Integer(FSubTypeTestCharIDCache.Objects[Result]);
 end;
 
-{**
-  Returns the transaction interface by index.
-  @param Index then index of the requested transaction
-  @return the transaction or null if index out of bounds.
-}
-function TZInterbaseFirebirdConnection.GetTransaction(
-  Index: Cardinal): IZTransaction;
+function TZInterbaseFirebirdConnection.GetConnectionTransaction: IZTransaction;
 begin
-  fTransactions[Index].QueryInterface(IZTransaction, Result)
-end;
-
-function TZInterbaseFirebirdConnection.GetTransactionCount: Integer;
-begin
-  Result := fTransactions.Count;
+  Result := nil;
+  if not Closed then
+    if ((fTransactions.Count = 0) or (fTransactions[0] = nil)) then begin
+      fActiveTransaction := nil;
+      fActiveTransaction := GetActiveTransaction;
+    end else
+      fTransactions[0].QueryInterface(IZInterbaseFirebirdTransaction, fActiveTransaction);
+  if fActiveTransaction <> nil then
+    fActiveTransaction.QueryInterface(IZTransaction, Result);;
 end;
 
 {**
@@ -1053,21 +1068,26 @@ begin
   end;
 end;
 
+function TZInterbaseFirebirdConnection.IsTransactionValid(
+  const Value: IZTransaction): Boolean;
+begin
+  Result := fTransactions.IndexOf(Value) >= 0;
+end;
+
+procedure TZInterbaseFirebirdConnection.InternalClose;
+begin
+  fTransactions.Clear;
+  fActiveTransaction := nil;
+end;
+
 {**
   Constructs this object and assignes the main properties.
 }
-procedure TZInterbaseFirebirdConnection.InternalClose;
-var B: Boolean;
-begin
-  fTransactions.Clear;
-  for B := False to True do
-    fActiveTransaction[b] := nil;
-end;
-
 procedure TZInterbaseFirebirdConnection.InternalCreate;
 begin
   FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
   fTransactions := TZCollection.Create;
+  Ftransactions.Add(nil);
   { set default sql dialect it can be overriden }
   FDialect := StrToIntDef(Info.Values[ConnProps_Dialect], SQL_DIALECT_CURRENT);
   FProcedureTypesCache := TStringList.Create;
@@ -1146,38 +1166,30 @@ end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZInterbaseFirebirdConnection.OnPropertiesChange(Sender: TObject);
-var
-  AC,RO, HC: Boolean;
-  TIL: TZTransactIsolationLevel;
+var HC: Boolean;
+    TPB: RawByteString;
 begin
   HC := StrToBoolEx(Info.Values[ConnProps_HardCommit]);
   FGUIDProps.InitFromProps(Info);
-  for RO := false to true do begin
-    for AC := false to true do
-      for til := low(TZTransactIsolationLevel) to high(TZTransactIsolationLevel) do
-        FTPBs[AC][RO][TIL] := '';
-    If not IsClosed then
-      FTPBs[AutoCommit][RO][TransactIsolationLevel] := GenerateTPB(AutoCommit, ReadOnly, TransactIsolationLevel, Info);
-    if (fActiveTransaction[RO] <> nil) and ((HC <> FHardCommit) or
-       (fActiveTransaction[RO].GetTPB <> FTPBs[AutoCommit][RO][TransactIsolationLevel])) then//*** ADDED THIS CHECK by EMartin ***
-      TransactionParameterPufferChanged;
-  end;
+  TPB := GenerateTPB(AutoCommit, ReadOnly, TransactIsolationLevel, Info);
+  if (fActiveTransaction <> nil) and ((HC <> FHardCommit) or
+     (fActiveTransaction.GetTPB <> TPB)) then//*** ADDED THIS CHECK by EMartin ***
+    TransactionParameterPufferChanged;
   FHardCommit := HC;
 end;
 
 procedure TZInterbaseFirebirdConnection.ReleaseTransaction(
-  const Transaction: IZTransaction);
+  const Value: IZTransaction);
 var idx: Integer;
   Trans: IZTransaction;
-  B: Boolean;
 begin
-  for B := False to True do
-    if (fActiveTransaction[B] <> nil) then begin
-      fActiveTransaction[B].QueryInterface(IZTransaction, Trans);
-      if (Trans = Transaction) then
-        fActiveTransaction[B] := nil;
+  if (fActiveTransaction <> nil) then begin
+    fActiveTransaction.QueryInterface(IZTransaction, Trans);
+    if (Trans = Value) then begin
+      fActiveTransaction := nil;
     end;
-  Idx := fTransactions.IndexOf(Transaction);
+  end;
+  Idx := fTransactions.IndexOf(Value);
   if Idx <> -1 then begin
     fTransactions.Delete(Idx);
     Exit;
@@ -1200,8 +1212,8 @@ begin
     raise EZSQLException.Create(SCannotUseRollback);
   with GetActiveTransaction do begin
     Rollback;
-    if (not FRestartTransaction) and (GetTransactionLevel = 0) then
-      SetAutoCommit(True);
+    if (not FRestartTransaction) and (GetTransactionLevel <= 0) then
+      SetAutoCommit(True)
   end;
 end;
 
@@ -1212,12 +1224,12 @@ var Transaction: IZInterbaseFirebirdTransaction;
 begin
   SavePoint := nil;
   Transaction := nil;
-  if (Value = nil) or (Value.QueryInterface(IZInterbaseFirebirdConnection, Transaction) <> S_OK)
-    or (Value.QueryInterface(IZInterbaseFirebirdSavePoint, SavePoint) <> S_OK) then
+  if (Value = nil) or (Value.QueryInterface(IZInterbaseFirebirdTransaction, Transaction) <> S_OK)
+    and (Value.QueryInterface(IZInterbaseFirebirdSavePoint, SavePoint) <> S_OK) then
     raise EZSQLException.Create('invalid IB/FB transaction');
   if (SavePoint <> nil) then
     SavePoint.GetOwnerTransaction.QueryInterface(IZInterbaseFirebirdTransaction, Transaction);
-  fActiveTransaction[Transaction.IsReadOnly] := Transaction;
+  fActiveTransaction := Transaction;
 end;
 
 {**
@@ -1350,10 +1362,10 @@ end;
 
 procedure TZInterbaseFirebirdConnection.TransactionParameterPufferChanged;
 begin
-  if (fActiveTransaction[ReadOnly] <> nil) then begin
-    fActiveTransaction[ReadOnly].CloseTransaction;
-    if (fActiveTransaction[ReadOnly] <> nil) then
-      ReleaseTransaction(fActiveTransaction[ReadOnly]);
+  if (fActiveTransaction <> nil) then begin
+    if (FTransactions.IndexOf(fActiveTransaction) = 0) then
+      FTransactions.Insert(0, nil); //zero index is for main txn...
+    ReleaseTransaction(fActiveTransaction);
   end;
 end;
 
@@ -1380,30 +1392,27 @@ begin
   FreeAndNil(fSavepoints);
   FreeAndNil(FOpenCursors);
   FreeAndNil(FOpenUncachedLobs);
+  FreeAndNil(FProperties);
   inherited BeforeDestruction;
 end;
 
-procedure TZInterbaseFirebirdTransaction.CloseTransaction;
-begin
-  fSavepoints.Clear;
-  if TxnIsStarted then
-    if FOwner.AutoCommit
-    then IZTransaction(FWeakIZTransactionPtr).Commit
-    else IZTransaction(FWeakIZTransactionPtr).RollBack;
-end;
-
 constructor TZInterbaseFirebirdTransaction.Create(const Owner: TZInterbaseFirebirdConnection;
-  AutoCommit, ReadOnly: Boolean; const TPB: RawByteString);
+  AutoCommit, ReadOnly: Boolean; TransactionIsolation: TZTransactIsolationLevel;
+  Properties: TStrings);
 begin
   FOwner := Owner;
   FOpenCursors := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   FOpenUncachedLobs := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
-  fTPB := TPB;
   fSavepoints := TStringList.Create;
   fDoLog := True;
   FReadOnly := ReadOnly;
   FAutoCommit := AutoCommit;
   ConSettings := Owner.ConSettings;
+  FProperties := TStringList.Create;
+  FTransactionIsolation := TransactionIsolation;
+  if Properties <> nil
+  then FProperties.AddStrings(Properties)
+  else FProperties.AddStrings(FOwner.Info);
 end;
 
 procedure TZInterbaseFirebirdTransaction.DeRegisterOpencursor(const CursorRS: IZResultSet);
@@ -1438,10 +1447,12 @@ end;
 
 function TZInterbaseFirebirdTransaction.GetTPB: RawByteString;
 begin
+  if FTPB = EmptyRaw then
+    FTPB := FOwner.GenerateTPB(FAutoCommit, FReadOnly, FTransactionIsolation, FProperties);
   Result := FTPB;
 end;
 
-function TZInterbaseFirebirdTransaction.IsAutoCommit: Boolean;
+function TZInterbaseFirebirdTransaction.GetAutoCommit: Boolean;
 begin
   Result := FAutoCommit;
 end;
@@ -1474,6 +1485,46 @@ begin
     if Supports(IZBlob(FOpenUncachedLobs[i]), IImmediatelyReleasable, ImmediatelyReleasable) and
        (Sender <> ImmediatelyReleasable) then
       ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+end;
+
+procedure TZInterbaseFirebirdTransaction.SetAutoCommit(Value: Boolean);
+begin
+  if Value <> FAutoCommit then begin
+    if TxnIsStarted then
+      if not FAutoCommit
+      then raise EZSQLException.Create(SInvalidOpInNonAutoCommit)
+      else {if FOwner.IsFirebirdLib And (FOwner.GetHostVersion >= 4000000) then begin
+      end else }begin
+        IZTransaction(FWeakIZTransactionPtr).Close;
+        FTPB := EmptyRaw;
+      end;
+    FAutoCommit := Value;
+  end;
+end;
+
+procedure TZInterbaseFirebirdTransaction.SetReadOnly(Value: Boolean);
+begin
+  if Value <> FReadOnly then begin
+    if TxnIsStarted then
+      if not FAutoCommit
+      then raise EZSQLException.Create(SInvalidOpInNonAutoCommit)
+      else IZTransaction(FWeakIZTransactionPtr).Close;
+    FReadOnly := Value;
+    FTPB := EmptyRaw;
+  end;
+end;
+
+procedure TZInterbaseFirebirdTransaction.SetTransactionIsolation(
+  Value: TZTransactIsolationLevel);
+begin
+  if Value <> FTransactionIsolation then begin
+    if TxnIsStarted then
+      if not FAutoCommit
+      then raise EZSQLException.Create(SInvalidOpInNonAutoCommit)
+      else IZTransaction(FWeakIZTransactionPtr).Close;
+    FTransactionIsolation := Value;
+    FTPB := EmptyRaw;
+  end;
 end;
 
 { TZInterbaseFirebirdSequence }

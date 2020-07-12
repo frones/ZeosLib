@@ -26,7 +26,7 @@
     <Description Value="Zeos Database Components
 "/>
     <Version Major="7" Minor="3"/>
-    <Files Count="18">
+    <Files Count="19">
       <Item1>
         <Filename Value="..\..\src\component\ZAbstractConnection.pas"/>
         <UnitName Value="ZAbstractConnection"/>
@@ -100,6 +100,10 @@
         <Filename Value="..\..\src\component\ZUpdateSqlEditor.pas"/>
         <UnitName Value="ZUpdateSqlEditor"/>
       </Item18>
+      <Item19>
+        <Filename Value="..\..\src\component\ZPropertiesEditor.pas"/>
+        <UnitName Value="ZPropertiesEditor"/>
+      </Item19>
     </Files>
     <RequiredPkgs Count="6">
       <Item1>

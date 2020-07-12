@@ -57,6 +57,9 @@
     <DCCReference Include="..\..\src\component\ZUpdateSqlEditor.pas">
       <Form>ZUpdateSQLEditForm</Form>
     </DCCReference>
+    <DCCReference Include="..\..\src\component\ZPropertiesEditor.pas">
+      <Form>frmPropertyEditor</Form>
+    </DCCReference>
     <DCCReference Include="dbrtl.dcp" />
     <DCCReference Include="designide.dcp" />
     <DCCReference Include="ZComponent.dcp" />

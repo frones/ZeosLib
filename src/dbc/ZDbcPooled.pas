@@ -147,6 +147,7 @@ type
     procedure Commit;
     procedure Rollback;
     function StartTransaction: Integer;
+    function GetConnectionTransaction: IZTransaction;
     procedure PrepareTransaction(const transactionid: string);
     procedure CommitPrepared(const transactionid: string);
     procedure RollbackPrepared(const transactionid: string);
@@ -590,6 +591,11 @@ end;
 function TZDbcPooledConnection.GetServerProvider: TZServerProvider;
 begin
   Result := GetConnection.GetServerProvider;
+end;
+
+function TZDbcPooledConnection.GetConnectionTransaction: IZTransaction;
+begin
+  Result := GetConnection.GetConnectionTransaction;
 end;
 
 function TZDbcPooledConnection.GetTransactionIsolation: TZTransactIsolationLevel;

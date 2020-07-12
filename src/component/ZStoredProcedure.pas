@@ -149,6 +149,7 @@ end;
   @param Params a collection of SQL parameters.
   @param DataLink a datalink to get parameters.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "ParamNames/DataLink" not used} {$ENDIF}
 procedure TZStoredProc.SetStatementParams(const Statement: IZPreparedStatement;
   const ParamNames: TStringDynArray; Params: TParams; DataLink: TDataLink);
 var
@@ -165,6 +166,7 @@ begin
     SetStatementParam(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Statement, Param);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Performs internal query opening.

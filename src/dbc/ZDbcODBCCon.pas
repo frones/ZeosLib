@@ -88,7 +88,7 @@ type
     function GetByteBufferAddress: PByteBuffer;
   End;
 
-  TZAbstractODBCConnection = class(TZAbstractDbcSingleTransactionConnection,
+  TZAbstractODBCConnection = class(TZAbstractSuccedaneousTxnConnection,
     IZTransaction)
   private
     fODBCPlainDriver: TZODBC3PlainDriver;

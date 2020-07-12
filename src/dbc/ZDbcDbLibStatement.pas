@@ -429,7 +429,7 @@ begin
   Raw := GetRawSQL;
   if FDBLibConnection.GetProvider = dpMsSQL then
     //This one is to avoid a bug in dblib interface as it drops a single backslash before line end
-    Raw := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(Raw, '\'#13, '\\'#13, [rfReplaceAll])
+    Raw := StringReplaceAll_CS_GToEQ(Raw, RawByteString('\'#13), RawByteString('\\'#13))
   else
     //This one is to avoid sybase error: Invalid operator for datatype op: is null type: VOID TYPE
     Raw := StringReplaceAll_CS_LToEQ(Raw, RawByteString(' AND NULL IS NULL'), EmptyRaw);

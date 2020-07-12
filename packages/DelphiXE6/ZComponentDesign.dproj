@@ -113,6 +113,9 @@
         <DCCReference Include="..\..\src\component\ZUpdateSqlEditor.pas">
             <Form>ZUpdateSQLEditForm</Form>
         </DCCReference>
+        <DCCReference Include="..\..\src\component\ZPropertiesEditor.pas">
+            <Form>frmPropertyEditor</Form>
+        </DCCReference>
         <DCCReference Include="..\..\src\component\ZComponentReg.pas"/>
         <BuildConfiguration Include="Debug">
             <Key>Cfg_2</Key>

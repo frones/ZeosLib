@@ -25,21 +25,18 @@
       <FormatVersion Value="2"/>
       <Modes Count="0"/>
     </RunParams>
-    <RequiredPackages Count="4">
+    <RequiredPackages Count="3">
       <Item1>
-        <PackageName Value="zdbc"/>
+        <PackageName Value="wst_fcltransport"/>
       </Item1>
       <Item2>
-        <PackageName Value="wst_fcltransport"/>
+        <PackageName Value="wst_core"/>
       </Item2>
       <Item3>
-        <PackageName Value="wst_core"/>
-      </Item3>
-      <Item4>
         <PackageName Value="sparta_generics"/>
-      </Item4>
+      </Item3>
     </RequiredPackages>
-    <Units Count="6">
+    <Units Count="7">
       <Unit0>
         <Filename Value="ZDbcProxyServer.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -68,6 +65,10 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="DbcProxyConfigManager"/>
       </Unit5>
+      <Unit6>
+        <Filename Value="..\dbcproxycleanupthread.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit6>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -78,7 +79,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..;..\..\wsdl"/>
+      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\..\src\core;..\..\..\..\src\parsesql;..\..\..\..\src\plain;..\..\..\..\src\dbc"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>
@@ -97,9 +98,6 @@
     </CodeGeneration>
     <Other>
       <CustomOptions Value="-dUseCThreads"/>
-      <OtherDefines Count="1">
-        <Define0 Value="UseCThreads"/>
-      </OtherDefines>
     </Other>
   </CompilerOptions>
   <Debugging>

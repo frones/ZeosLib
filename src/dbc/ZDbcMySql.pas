@@ -103,7 +103,7 @@ type
 
   { TZMySQLConnection }
 
-  TZMySQLConnection = class(TZAbstractDbcSingleTransactionConnection, IZConnection,
+  TZMySQLConnection = class(TZAbstractSuccedaneousTxnConnection, IZConnection,
     IZMySQLConnection, IZTransaction)
   private
     FCatalog: string;
@@ -384,7 +384,6 @@ var
   sMy_client_Opt, sMy_client_Char_Set:String;
   ClientVersion: Integer;
   SQL: RawByteString;
-  MaxLobSize: ULong;
 label setuint;
 begin
   if not Closed then
@@ -439,7 +438,7 @@ begin
           MYSQL_OPT_WRITE_TIMEOUT:
             if Info.Values[sMyOpt] <> '' then
             begin
-setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
+setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def{$ENDIF}(Info.Values[sMyOpt], 0);
               FPlainDriver.mysql_options(FHandle, myopt, @UIntOpt);
             end;
           MYSQL_OPT_LOCAL_INFILE: {optional empty or unsigned int}
@@ -494,29 +493,28 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
         ClientFlag := ClientFlag or Cardinal(1 shl Integer(my_client_Opt));
     end;
 
-  { Set SSL properties before connect}
-  SslKey := nil; SslCert := nil; SslCa := nil; SslCaPath := nil; SslCypher := nil;
-  if StrToBoolEx(Info.Values[ConnProps_MYSQLSSL]) then
-    begin                                          
-       if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_KEY)] <> '' then
-          SslKey := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-            Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_KEY)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-       if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CERT)] <> '' then
-          SslCert := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-            Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CERT)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-       if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CA)] <> '' then
-          SslCa := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-            Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CA)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-       if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CAPATH)] <> '' then
-          SslCaPath := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-            Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CAPATH)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-       if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CIPHER)] <> '' then
-          SslCypher := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-            Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CIPHER)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-       FPlainDriver.mysql_ssl_set(FHandle, SslKey, SslCert, SslCa, SslCaPath,
-          SslCypher);
-       DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-          'SSL options set');
+    { Set SSL properties before connect}
+    SslKey := nil; SslCert := nil; SslCa := nil; SslCaPath := nil; SslCypher := nil;
+    if StrToBoolEx(Info.Values[ConnProps_MYSQLSSL]) then begin
+     if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_KEY)] <> '' then
+        SslKey := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
+          Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_KEY)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+     if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CERT)] <> '' then
+        SslCert := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
+          Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CERT)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+     if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CA)] <> '' then
+        SslCa := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
+          Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CA)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+     if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CAPATH)] <> '' then
+        SslCaPath := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
+          Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CAPATH)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+     if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CIPHER)] <> '' then
+        SslCypher := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
+          Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CIPHER)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+     FPlainDriver.mysql_ssl_set(FHandle, SslKey, SslCert, SslCa, SslCaPath,
+        SslCypher);
+     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
+        'SSL options set');
     end;
 
     { Connect to MySQL database. }
@@ -559,13 +557,14 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
       end;
       CheckCharEncoding(FClientCodePage);
     end;
-
-    MaxLobSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values[ConnProps_MaxLobSize], 0);
-    if MaxLobSize <> 0 then begin
-      SQL := 'SET GLOBAL max_allowed_packet='+IntToRaw(MaxLobSize);
-      ExecuteImmediat(SQL, lcOther);
-    end;
     inherited Open;
+    if TMySqlOptionMinimumVersion[MYSQL_OPT_MAX_ALLOWED_PACKET] < GetHostVersion then begin
+      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def{$ENDIF}(Info.Values[ConnProps_MYSQL_OPT_MAX_ALLOWED_PACKET], 0);
+      if (UIntOpt <> 0) then begin
+        SQL := 'SET GLOBAL max_allowed_packet='+IntToRaw(UIntOpt);
+        ExecuteImmediat(SQL, lcOther);
+      end;
+    end;
     //no real version check required -> the user can simply switch off treading
     //enum('Y','N')
     FMySQL_FieldType_Bit_1_IsBoolean := StrToBoolEx(Info.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean]);
@@ -574,10 +573,12 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
       (not FPlainDriver.IsMariaDBDriver and (ClientVersion >=  50003) ) ) and (GetHostVersion >= EncodeSQLVersioning(5,0,3));
     //if not explizit !un!set -> assume as default since Zeos 7.3
     FMySQL_FieldType_Bit_1_IsBoolean := FMySQL_FieldType_Bit_1_IsBoolean or (FSupportsBitType and (Info.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean] = ''));
-    (GetMetadata as IZMySQLDatabaseMetadata).SetMySQL_FieldType_Bit_1_IsBoolean(FMySQL_FieldType_Bit_1_IsBoolean);
-    FSupportsReadOnly := (    FPlainDriver.IsMariaDBDriver and (GetHostVersion >= EncodeSQLVersioning(10,0,0))) or
-                         (not FPlainDriver.IsMariaDBDriver and (GetHostVersion >= EncodeSQLVersioning( 5,6,0)));
-    (GetMetadata as IZMySQLDatabaseMetadata).SetDataBaseName(GetDatabaseName);
+    with (GetMetadata as IZMySQLDatabaseMetadata) do begin
+      SetMySQL_FieldType_Bit_1_IsBoolean(FMySQL_FieldType_Bit_1_IsBoolean);
+      FSupportsReadOnly := ( IsMariaDB and (GetHostVersion >= EncodeSQLVersioning(10,0,0))) or
+                           ( IsMySQL and (GetHostVersion >= EncodeSQLVersioning( 5,6,0)));
+      SetDataBaseName(GetDatabaseName);
+    end;
 
     { Sets transaction isolation level. }
     if not (TransactIsolationLevel in [tiNone,tiRepeatableRead]) then
@@ -590,6 +591,11 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
       AutoCommit := True;
       SetAutoCommit(False);
     end;
+    if FSupportsReadOnly and ReadOnly then begin
+      ReadOnly := False;
+      SetReadOnly(True);
+    end;
+
   except
     FPlainDriver.mysql_close(FHandle);
     FHandle := nil;
@@ -888,11 +894,12 @@ end;
 }
 procedure TZMySQLConnection.SetReadOnly(Value: Boolean);
 begin
-  if not FSupportsReadOnly then
-    Value := False;
   if Value <> ReadOnly then begin
-    if not Closed then
+    if not Closed then begin
+      if not FSupportsReadOnly then
+        raise EZSQLException.Create(SUnsupportedOperation);
       ExecuteImmediat(MySQLSessionTransactionReadOnly[ReadOnly], lcTransaction);
+    end;
     ReadOnly := Value;
   end;
 end;
@@ -1151,9 +1158,21 @@ begin
   else SetLength(Result, EscapedLen+2);
 end;
 
+(*procedure RegisterMySQLProperties;
+var o: TMySqlOption;
+begin
+  SetLength(MySQLOptionProperties, Ord(High(TMySqlOption));
+  for o := low(TMySqlOption) to high(TMySqlOption) do with MySQLOptionProperties[o] do begin
+    MySQLOptionProperties[o].Name := GetEnumName(TypeInfo(TMySQLOption), Integer(Option));
+    MySQLOptionProperties[o].Purpose :=
+  end;
+
+end;*)
+
 initialization
   MySQLDriver := TZMySQLDriver.Create;
   DriverManager.RegisterDriver(MySQLDriver);
+  //RegisterMySQLProperties;
 finalization
   if DriverManager <> nil then
     DriverManager.DeregisterDriver(MySQLDriver);

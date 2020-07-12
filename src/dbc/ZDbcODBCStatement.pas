@@ -574,9 +574,9 @@ function TZAbstractODBCStatement.InternalCreateResultSet: IZResultSet;
 begin
   if (FClientEncoding = ceUTF16)
   then Result := TODBCResultSetW.Create(Self, fHSTMT, fPHDBC^, SQL, FODBCConnection,
-    fZBufferLength, ChunkSize, FEnhancedColInfo)
+    fZBufferLength, FEnhancedColInfo)
   else Result := TODBCResultSetA.Create(Self, fHSTMT, fPHDBC^, SQL, FODBCConnection,
-    fZBufferLength, ChunkSize, FEnhancedColInfo);
+    fZBufferLength, FEnhancedColInfo);
 end;
 
 procedure TZAbstractODBCStatement.InternalExecute;

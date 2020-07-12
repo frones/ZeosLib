@@ -70,7 +70,6 @@ type
   {** Implements Ado ResultSet. }
   TZAbstractOleDBResultSet = class(TZAbstractReadOnlyResultSet, IZResultSet)
   private
-    FChunkSize: Integer;
     FRowSet: IRowSet;
     FZBufferSize: Integer;
     FDBBindingArray: TDBBindingDynArray;
@@ -133,7 +132,7 @@ type
     procedure Open; override;
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
-      const RowSet: IRowSet; ZBufferSize, ChunkSize: Integer;
+      const RowSet: IRowSet; ZBufferSize: Integer;
       const {%H-}EnhancedColInfo: Boolean = True);
     procedure ResetCursor; override;
     function Next: Boolean; override;
@@ -2176,7 +2175,7 @@ end;
   @param AdoRecordSet a ADO recordset object, the source of the ResultSet.
 }
 constructor TZOleDBResultSet.Create(const Statement: IZStatement;
-  const SQL: string; const RowSet: IRowSet; ZBufferSize, ChunkSize: Integer;
+  const SQL: string; const RowSet: IRowSet; ZBufferSize: Integer;
   const EnhancedColInfo: Boolean);
 begin
   FOleDBConnection := Statement.GetConnection as IZOleDBConnection;
@@ -2192,7 +2191,6 @@ begin
   FCurrentBufRowNo := 0;
   FRowsObtained := 0;
   FHROWS := nil;
-  FChunkSize := ChunkSize;
   fCtrlCP := ConSettings.CTRL_CP;
   fClientCP := ConSettings.ClientCodePage.CP;
   Open;

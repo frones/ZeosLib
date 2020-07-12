@@ -78,7 +78,7 @@ type
   TZGenerateSQLCachedResolver = class (TZAbstractCachedResolver, IZCachedResolver)
   private
     FStatement : IZStatement;
-    FTransactions: array[Boolean] of IZTransaction;
+    FTransaction: IZTransaction;
     FDatabaseMetadata: IZDatabaseMetadata;
     FIdentifierConvertor: IZIdentifierConvertor;
 
@@ -138,8 +138,7 @@ type
     function FormCalculateStatement(const RowAccessor: TZRowAccessor;
       const ColumnsLookup: TZIndexPairList): SQLString; virtual;
   public //implement IZCachedResolver
-    procedure SetReadOnlyTransaction(const Value: IZTransaction);
-    procedure SetReadWriteTransaction(const Value: IZTransaction);
+    procedure SetTransaction(const Value: IZTransaction); virtual;
 
     procedure CalculateDefaults(const Sender: IZCachedResultSet; const RowAccessor: TZRowAccessor);
     procedure PostUpdates(const Sender: IZCachedResultSet;
@@ -153,32 +152,6 @@ type
   end;
   //just an alias for compatibility
   TZGenericCachedResolver = TZGenerateSQLCachedResolver;
-  (*
-  TZUserDefinedSQLCachedResolver = class(TInterfacedObject, IZCachedResolver)
-  private
-    //EH: Stmt cache for performance boost using prepareds
-    FStmts: Array[utModified..utDeleted] of IZCollection;
-    FRefreshRS: IZResultSet;
-    FRefreshStmt: IZPreparedStatement;
-    FDeleteSQL: TStrings;
-    FInsertSQL: TStrings;
-    FModifySQL: TStrings;
-    //FOSPATCH
-    FRefreshSQL: TStrings;
-    //FOSPATCH
-    FMetadata: IZResultSetMetadata;
-  public
-    procedure CalculateDefaults(const Sender: IZCachedResultSet;
-      RowAccessor: TZRowAccessor);
-    procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor);
-    {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-    procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
-    {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-    procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
-  end;
-  //*)
 
 implementation
 
@@ -311,8 +284,8 @@ begin
   Result := nil;
   try
     SetResolverStatementParamters(FStatement, Temp);
-    if FTransactions[False] <> nil
-    then Result := FTransactions[False].GetConnection.PrepareStatementWithParams(SQL, Temp)
+    if FTransaction <> nil
+    then Result := FTransaction.GetConnection.PrepareStatementWithParams(SQL, Temp)
     else Result := Connection.PrepareStatementWithParams(SQL, Temp);
   finally
     Temp.Free;
@@ -841,16 +814,32 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-procedure TZGenerateSQLCachedResolver.SetReadOnlyTransaction(
+procedure TZGenerateSQLCachedResolver.SetTransaction(
   const Value: IZTransaction);
+var Stmt: IZStatement;
+  Col: IZCollection;
 begin
-  FTransactions[True] := Value;
-end;
-
-procedure TZGenerateSQLCachedResolver.SetReadWriteTransaction(
-  const Value: IZTransaction);
-begin
-  FTransactions[False] := Value;
+  if FTransaction <> Value then begin
+    FTransaction := Value;
+    if InsertStatement <> nil
+    then Stmt := InsertStatement
+    else begin
+      Col := nil;
+      if (FUpdateStatements.Count > 0) then
+        Col := FUpdateStatements.GetValues
+      else if (FDeleteStatements.Count > 0) then
+        Col := FDeleteStatements.GetValues;
+      if (Col <> nil) then
+        Col[0].QueryInterface(IZStatement, Stmt);
+    end;
+    { test if statement is part of session -> FB always all others will fail}
+    if (Stmt <> nil) and ((Value = nil) or (Stmt.GetConnection <> Value.GetConnection)) then begin
+      Stmt.Close;
+      InsertStatement := nil;
+      FUpdateStatements.Clear;
+      FDeleteStatements.Clear;
+    end;
+  end;
 end;
 
 procedure TZGenerateSQLCachedResolver.SetResolverStatementParamters(
@@ -859,7 +848,7 @@ begin
   Params.Assign(Statement.GetParameters);
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Sender" not used} {$ENDIF}
  {**
   Calculate default values for the fields.
   @param Sender a cached result set object.
@@ -891,7 +880,6 @@ begin
     SQL := FormCalculateStatement(RowAccessor, DefaultColumnsLookup);
     if SQL = '' then
        Exit;
-
     { Executes statement and fills default fields. }
     Statement := Connection.CreateStatement;
     ResultSet := Statement.ExecuteQuery(SQL);

@@ -549,6 +549,9 @@ type
     function GetStatementAnalyser: IZStatementAnalyser;
   end;
 
+  /// <summary>
+  ///   an immediately releasable interface.
+  /// </summary>
   IImmediatelyReleasable = interface(IZInterface)
     ['{7AA5A5DA-5EC7-442E-85B0-CCCC71C13169}']
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
@@ -568,21 +571,47 @@ type
     ///  if changing the autocommit mode was triggered by a starttransaction call.
     /// </summary>
     /// <returns>
-    ///  Returns the current txn-level. 1 means a transaction was started.
+    ///  Returns the current txn-level. -1 means no active transaction,
+    ///  0 means the txn is in AutoCommit-Mode, 1 means a expicit transaction was started.
     ///  2 means the transaction was saved. 3 means the previous savepoint got saved too and so on
     /// </returns>
     function StartTransaction: Integer;
     function GetConnection: IZConnection;
     function GetTransactionLevel: Integer;
+    procedure SetTransactionIsolation(Value: TZTransactIsolationLevel);
+    function GetAutoCommit: Boolean;
+    function IsReadOnly: Boolean;
+    procedure SetReadOnly(Value: Boolean);
+    procedure Close;
+    function IsClosed: Boolean;
+   // procedure SetProperties(Value: TStrings);
   end;
 
   IZTransactionManager = interface(IImmediatelyReleasable)
     ['{BF61AD03-1072-473D-AF1F-67F90DFB4E6A}']
+    /// <summary>
+    ///  Creates a <code>Transaction</code>
+    ///  <param name="AutoCommit">the AutoCommit mode.</param>
+    ///  <param name="ReadOnly">the ReadOnly mode.</param>
+    ///  <param name="TransactIsolationLevel">the TransactIsolationLevel one of
+    ///   the TRANSACTION_* isolation values with the
+    ///   exception of TRANSACTION_NONE; some databases may not support other values
+    ///   @see DatabaseMetaData#supportsTransactionIsolationLevel
+    ///  </param>
+    ///  <param name="Value">returns the Transaction object.
+    ///   @see IZTransaction
+    ///  </param>
+    /// </summary>
+    /// <returns>
+    ///  the index in the manager list of the new transaction
+    ///  if the provider does not support simultan transactions the index is
+    ///  always greater than zero
+    /// </returns>
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
-    procedure ReleaseTransaction(const Transaction: IZTransaction);
-    function GetTransactionCount: Integer;
-    function GetTransaction(Index: Cardinal): IZTransaction;
+    procedure ReleaseTransaction(const Value: IZTransaction);
+    function IsTransactionValid(const Value: IZTransaction): Boolean;
+    procedure ClearTransactions;
   end;
 
   {** Implements a variant manager with connection related convertion rules. }
@@ -637,6 +666,7 @@ type
     ///  2 means the transaction was saved. 3 means the previous savepoint got saved too and so on
     /// </returns>
     function StartTransaction: Integer;
+    function GetConnectionTransaction: IZTransaction;
 
     //2Phase Commit Support initially for PostgresSQL (firmos) 21022006
     procedure PrepareTransaction(const transactionid: string);

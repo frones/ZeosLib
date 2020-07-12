@@ -1201,10 +1201,10 @@ procedure ScaledOrdinal2Bcd(Value: SmallInt; Scale: Byte; var Result: TBCD); ove
 procedure ScaledOrdinal2Bcd(Value: Word; Scale: Byte; var Result: TBCD; Negative: Boolean); overload;
 
 function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString; overload;
-function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: ZWideString): ZWideString; overload;
+function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: UnicodeString): UnicodeString; overload;
 
-(*function StringReplaceAll_CS_GToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString; overload;
-function StringReplaceAll_CI_GToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString; overload;*)
+function StringReplaceAll_CS_GToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString; overload;
+function StringReplaceAll_CS_GToEQ(const Source, OldPattern, NewPattern: UnicodeString): UnicodeString; overload;
 
 function BcdToSQLRaw(const Value: TBCD): RawByteString; overload;
 
@@ -5233,7 +5233,7 @@ end;
 function EncodeSQLVersioning(const MajorVersion: Integer;
  const MinorVersion: Integer; const SubVersion: Integer): Integer;
 begin
- Result := (MajorVersion * 1000000) + (MinorVersion * 1000) + SubVersion;
+  Result := (MajorVersion * 1000000) + (MinorVersion * 1000) + SubVersion;
 end;
 
 {**
@@ -6958,7 +6958,7 @@ begin
   SetLength(Result, L-(PResEnd-PRes));
 end;
 
-function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: ZWideString): ZWideString;
+function StringReplaceAll_CS_LToEQ(const Source, OldPattern, NewPattern: UnicodeString): UnicodeString;
 var PSrc, PEnd: PWideChar;
   POld: PWideChar absolute OldPattern;
   PNew: PWideChar absolute NewPattern;
@@ -6998,6 +6998,97 @@ begin
   SetLength(Result, L-(PResEnd-PRes));
 end;
 
+function StringReplaceAll_CS_GToEQ(const Source, OldPattern, NewPattern: RawByteString): RawByteString; overload;
+var Cnt, LOld, LNew, LSrc, I, OffSet: Integer;
+  PSrc, PNewP, PDest, PEnd: PAnsiChar;
+begin
+  Cnt := 0;
+  OffSet := 1;
+  LOld := Length(OldPattern);
+  while true do begin
+    OffSet := ZFastCode.PosEx(OldPattern, Source, OffSet);
+    if OffSet = 0 then
+      Break;
+    Inc(Cnt);
+    Inc(OffSet, LOld);
+  end;
+  if Cnt = 0 then begin
+    Result := Source;
+    Exit;
+  end;
+  LNew := Length(NewPattern);
+  Assert(LNew >= LOld);
+  Result := EmptyRaw;
+  I := (LNew - LOld);
+  I := ((I * Cnt) + Length(Source));
+  SetLength(Result, I);
+  PDest := Pointer(Result);
+  PSrc  := Pointer(Source);
+  LSrc := Length(Source);
+  PEnd := PSrc+LSrc;
+  PNewP := Pointer(NewPattern);
+  OffSet := ZFastCode.PosEx(OldPattern, Source, 1);
+  I := OffSet-1;
+  repeat
+    Move(PSrc^, PDest^, I);
+    Inc(PDest, Cardinal(I));
+    Inc(PSrc, Cardinal(I+LOld));
+    Move(PNewP^, PDest^, LNew);
+    Inc(PDest, Cardinal(LNew));
+    OffSet := OffSet + LOld;
+    I := OffSet;
+    OffSet := ZFastCode.PosEx(OldPattern, Source, OffSet);
+    I := OffSet - I;
+  until OffSet = 0;
+  if (PSrc <= PEnd) then
+    Move(PSrc^, PDest^, (PAnsiChar(PEnd)-PAnsiChar(PSrc)));
+end;
+
+function StringReplaceAll_CS_GToEQ(const Source, OldPattern, NewPattern: UnicodeString): UnicodeString;
+var Cnt, LOld, LNew, LSrc, I, OffSet: Integer;
+  PSrc, PNewP, PDest, PEnd: PWideChar;
+begin
+  Cnt := 0;
+  OffSet := 1;
+  LOld := Length(OldPattern);
+  while true do begin
+    OffSet := ZFastCode.PosEx(OldPattern, Source, OffSet);
+    if OffSet = 0 then
+      Break;
+    Inc(Cnt);
+    Inc(OffSet, LOld);
+  end;
+  if Cnt = 0 then begin
+    Result := Source;
+    Exit;
+  end;
+  LNew := Length(NewPattern);
+  Assert(LNew >= LOld);
+  Result := '';
+  I := (LNew - LOld);
+  I := ((I * Cnt) + Length(Source));
+  SetLength(Result, I);
+  PDest := Pointer(Result);
+  PSrc  := Pointer(Source);
+  LSrc := Length(Source);
+  PEnd := PSrc+LSrc;
+  PNewP := Pointer(NewPattern);
+  OffSet := ZFastCode.PosEx(OldPattern, Source, 1);
+  I := (OffSet-1);
+  repeat
+    Move(PSrc^, PDest^, I shl 1);
+    Inc(PDest, Cardinal(I));
+    Inc(PSrc, Cardinal(I+LOld));
+    Move(PNewP^, PDest^, LNew shl 1);
+    Inc(PDest, Cardinal(LNew));
+    OffSet := OffSet + LOld;
+    I := OffSet;
+    OffSet := ZFastCode.PosEx(OldPattern, Source, OffSet);
+    I := OffSet - I;
+  until OffSet = 0;
+  if (PSrc <= PEnd) then
+    Move(PSrc^, PDest^, (PAnsiChar(PEnd)-PAnsiChar(PSrc)));
+end;
 
 procedure RaiseBcd2OrdException(P, PEnd: PChar);
 var S: String;
@@ -7851,7 +7942,15 @@ begin
   end;
 end;
 
+procedure X;
+var S: UnicodeString;
+begin
+  S := StringReplaceAll_CS_GToEQ('acdcacacacd', 'a', 'bb');
+  Assert(S <> '');
+end;
+
 initialization;
+  X;
   BcdNibbleLookupFiller;
   HexFiller;  //build up lookup table
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}

@@ -80,6 +80,23 @@ type
     property LibraryLocation: String read GetLibLocation write SetLibLocation;
   end;
 
+  TZTransaction = class(TZAbstractTransaction)
+  published
+    property Connection;
+    property BeforeStartTransaction;
+    property AfterStartTransaction;
+    property BeforeCommit;
+    property AfterCommit;
+    property BeforeRollback;
+    property AfterRollback;
+    property TransactIsolationLevel;
+    property AutoCommit;
+    property ReadOnly;
+    property Properties;
+    property ApplyPendingUpdatesOnCommit;
+    property DisposePendingUpdatesOnRollback;
+  end;
+
 implementation
 
 end.

@@ -1471,12 +1471,12 @@ end;
 
 procedure TZDbcProxyResultSet.GetTime(ColumnIndex: Integer; Var Result: TZTime);
 begin
-  DecodeDateTimeToTime(GetDate(ColumnIndex), Result);
+  DecodeDateTimeToTime(GetTime(ColumnIndex), Result);
 end;
 
 procedure TZDbcProxyResultSet.GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp);
 begin
-  DecodeDateTimeToTimeStamp(GetDate(ColumnIndex), Result);
+  DecodeDateTimeToTimeStamp(GetTimestamp(ColumnIndex), Result);
 end;
 {$ENDIF}
 

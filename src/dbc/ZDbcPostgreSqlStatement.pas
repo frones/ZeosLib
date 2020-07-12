@@ -903,7 +903,7 @@ begin
   else FPQResultFormat := ParamFormatStr;
   fPrepareCnt := 0;
   //JDBC prepares after 4th execution
-  if not FUseEmulatedStmtsOnly
+  if not FUseEmulatedStmtsOnly //and not StrToBoolEx(DefineStatementParameter(Self, DSProps_PreferPrepared, 'False'))
   then FMinExecCount2Prepare := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_MinExecCntBeforePrepare, '2'), 2)
   else FMinExecCount2Prepare := -1;
   fAsyncQueries := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_ExecAsync, 'FALSE'))
@@ -1596,7 +1596,7 @@ begin
     else if SQLType in [stBytes, stString, stUnicodeString, stAsciistream, stUnicodeStream, stBinaryStream] then
       Result := SQLType
     else
-      Result := stUnknown; //indicate unsupport the types as Fallback to String format
+      Result := stUnknown; //indicate unsupport types as fallback to String format
   end;
 end;
 
@@ -1608,28 +1608,37 @@ procedure TZAbstractPostgreSQLPreparedStatementV3.PGExecutePrepare;
 var PError: PAnsiChar;
   Res: TPGresult;
   Status: TZPostgreSQLExecStatusType;
+  AC: Boolean;
 begin
   { Logging Execution }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcPrepStmt,Self);
-  Res := FPlainDriver.PQprepare(FconnAddress^, Pointer(FRawPlanName),
-    Pointer(ASQL), BindList.Count-FOutParamCount, nil{Pointer(FPQParamOIDs)});
-  Status := FPlainDriver.PQresultStatus(Res);
-  if (Ord(Status) > ord(PGRES_TUPLES_OK)) then begin
-    if Assigned(FPlainDriver.PQresultErrorField)
-    then PError := FPlainDriver.PQresultErrorField(Res,Ord(PG_DIAG_SQLSTATE))
-    else PError := FPLainDriver.PQerrorMessage(FconnAddress^);
-    if (PError <> nil) and (PError^ <> #0) then
-      { check for indermine datatype error}
-      if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, indeterminate_datatype, 5) <> 0) then
-        FPostgreSQLConnection.HandleErrorOrWarning(Status, lcPrepStmt, fASQL, Self, Res)
-      else begin
-        FPlainDriver.PQclear(Res);
-        Findeterminate_datatype := True
-      end
-  end else begin
-    FPlainDriver.PQclear(Res);
-    PrepareInParameters;
+  AC := Connection.GetAutoCommit;
+  if not AC then
+    Connection.StartTransaction;
+  try
+    Res := FPlainDriver.PQprepare(FconnAddress^, Pointer(FRawPlanName),
+      Pointer(ASQL), BindList.Count-FOutParamCount, nil{Pointer(FPQParamOIDs)});
+    Status := FPlainDriver.PQresultStatus(Res);
+    if (Ord(Status) > ord(PGRES_TUPLES_OK)) then begin
+      if Assigned(FPlainDriver.PQresultErrorField)
+      then PError := FPlainDriver.PQresultErrorField(Res,Ord(PG_DIAG_SQLSTATE))
+      else PError := FPLainDriver.PQerrorMessage(FconnAddress^);
+      if (PError <> nil) and (PError^ <> #0) then
+        { check for indermine datatype error}
+        if Assigned(FPlainDriver.PQresultErrorField) and (ZSysUtils.ZMemLComp(PError, indeterminate_datatype, 5) <> 0) then
+          FPostgreSQLConnection.HandleErrorOrWarning(Status, lcPrepStmt, fASQL, Self, Res)
+        else begin
+          FPlainDriver.PQclear(Res);
+          Findeterminate_datatype := True
+        end
+    end else begin
+      FPlainDriver.PQclear(Res);
+      PrepareInParameters;
+    end;
+  finally
+    if not AC then
+      Connection.Rollback;
   end;
 end;
 

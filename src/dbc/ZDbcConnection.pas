@@ -112,7 +112,7 @@ type
     FURL: TZURL;
     FUseMetadata: Boolean;
     FClientVarManager: IZClientVariantManager;
-    fRegisteredStatements: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}; //weak reference to pending stmts
+    fRegisteredStatements: TZSortedList; //weak reference to pending stmts
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetPort: Integer;
@@ -129,7 +129,6 @@ type
     fWeakReferenceOfSelfInterface: Pointer;
     FRestartTransaction: Boolean;
     FDisposeCodePage: Boolean;
-    FChunkSize: Integer; //indicates reading / writing lobs in Chunks of x Byte
     FClientCodePage: String;
     FMetadata: TContainedObject;
     {$IFDEF ZEOS_TEST_ONLY}
@@ -239,15 +238,29 @@ type
     property Closed: Boolean read IsClosed write FClosed;
   end;
 
-  TZAbstractDbcSingleTransactionConnection = class(TZAbstractDbcConnection)
+  TZAbstractSuccedaneousTxnConnection = class(TZAbstractDbcConnection,
+    IZTransactionManager)
   protected
     FSavePoints: TStrings;
     FTransactionLevel: Integer;
+    fTransactions: IZCollection;
+    fActiveTransaction: IZTransaction;
+    fWeakTxnPtr, fWeakConPtr: Pointer;
     procedure BeforeUrlAssign; override;
   public //implement IZTransaction
     function GetConnection: IZConnection;
     function GetTransactionLevel: Integer;
+  public //implement IZTransactionManager
+    function CreateTransaction(AutoCommit, ReadOnly: Boolean;
+      TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
+    procedure ReleaseTransaction(const Value: IZTransaction);
+    function IsTransactionValid(const Value: IZTransaction): Boolean;
+    procedure ClearTransactions;
+    function GetConnectionTransaction: IZTransaction;
+  public //implement IImmediatelyReleasable
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
   public
+    procedure AfterConstruction; override;
     destructor Destroy; override;
   end;
 
@@ -368,24 +381,6 @@ type
     constructor Create(const ConSettings: PZConSettings{; FormatSettings: TZFormatSettings});
     function UseWComparsions: Boolean;
     function GetAsDateTime(const Value: TZVariant): TDateTime; reintroduce;
-  end;
-
-  TZEmulatedTransactionManager = class(TZImmediatelyReleasableObject, IZTransactionManager)
-  private
-    fMainConnection: IZConnection;
-    fActiveTransaction: IZTransaction;
-    fTransactions: IZCollection;
-  public //implement IZTransactionManager
-    function CreateTransaction(AutoCommit, ReadOnly: Boolean;
-      TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
-    procedure ReleaseTransaction(const Transaction: IZTransaction);
-    procedure SetActiveTransaction(const Transaction: IZTransaction);
-    function GetTransactionCount: Integer;
-    function GetTransaction(Index: Cardinal): IZTransaction;
-  public //implement IImmediatelyReleasable
-    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
-  public
-    Constructor Create(const Connection: IZConnection);
   end;
 
 type
@@ -1019,7 +1014,7 @@ begin
   FDriverManager := DriverManager; //just keep refcount high
   FDriver := DriverManager.GetDriver(ZURL.URL);
   FIZPlainDriver := FDriver.GetPlainDriver(ZUrl);
-  fRegisteredStatements := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
+  fRegisteredStatements := TZSortedList.Create;
   BeforeUrlAssign;
   FURL.OnPropertiesChange := OnPropertiesChange;
   FURL.URL := ZUrl.URL;
@@ -1038,7 +1033,6 @@ begin
   ConSettings^.Protocol := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FIZPlainDriver.GetProtocol);
   ConSettings^.Database := ConSettings^.ConvFuncs.ZStringToRaw(FURL.Database, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
   ConSettings^.User := ConSettings^.ConvFuncs.ZStringToRaw(FURL.UserName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-  FChunkSize := StrToIntDef(Info.Values[DSProps_ChunkSize], 4096);
   // now InternalCreate will work, since it will try to Open the connection
   InternalCreate;
 
@@ -2191,19 +2185,34 @@ begin
   Result := FUseWComparsions;
 end;
 
-{ TZEmulatedTransactionManager }
+{ TZAbstractSuccedaneousTxnConnection }
 
-constructor TZEmulatedTransactionManager.Create(const Connection: IZConnection);
+procedure TZAbstractSuccedaneousTxnConnection.AfterConstruction;
+var Trans: IZTransaction;
+  Con: IZConnection;
 begin
-  Assert(Connection <> nil, 'Main connection is not assigned');
-  fMainConnection := Connection;
-  ConSettings := Connection.GetConSettings;
-  fTransactions := TZCollection.Create;
-  Connection.QueryInterface(IZTransaction, fActiveTransaction);
-  fTransactions.Add(fActiveTransaction);
+  QueryInterface(IZTransaction, Trans);
+  fWeakTxnPtr := Pointer(Trans);
+  Trans := nil;
+  QueryInterface(IZConnection, Con);
+  fWeakConPtr := Pointer(Con);
+  Con := nil;
+  inherited AfterConstruction;
 end;
 
-function TZEmulatedTransactionManager.CreateTransaction(AutoCommit,
+procedure TZAbstractSuccedaneousTxnConnection.BeforeUrlAssign;
+begin
+  FSavePoints := TStringList.Create;
+  fTransactions := TZCollection.Create;
+end;
+
+procedure TZAbstractSuccedaneousTxnConnection.ClearTransactions;
+begin
+  fTransactions.Clear;
+end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "AutoCommit" not used} {$ENDIF}
+function TZAbstractSuccedaneousTxnConnection.CreateTransaction(AutoCommit,
   ReadOnly: Boolean; TransactIsolationLevel: TZTransactIsolationLevel;
   Params: TStrings): IZTransaction;
 var URL: TZURL;
@@ -2211,93 +2220,72 @@ var URL: TZURL;
 begin
   URL := TZURL.Create;
   Result := nil;
-  if fMainConnection <> nil then //released ?
   try
-    URL.URL := fMainConnection.GetURL;
+    URL.URL := FURL.URL;
     if Params <> nil then
       URL.Properties.AddStrings(Params);
     Connection := DriverManager.GetConnection(URL.URL);
-    Connection.SetAutoCommit(AutoCommit);
+    Connection.SetAutoCommit(True); //do not automatically start a explicit txn that should be done by StartTransaction
     Connection.SetReadOnly(ReadOnly);
     Connection.SetTransactionIsolation(TransactIsolationLevel);
-    Connection.Open; //test if connect succeeded
     Result := Connection as IZTransaction; //if not supported we get an invalid interface exc.
     fTransactions.Add(Result)
   finally
     FreeAndNil(URL);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
-function TZEmulatedTransactionManager.GetTransaction(
-  Index: Cardinal): IZTransaction;
-begin
-  Result := nil;
-  if fMainConnection <> nil then //released ?
-    if Index = 0
-    then fMainConnection.QueryInterface(IZTransaction, Result)
-    else if Index >= Cardinal(fTransactions.Count)
-      then fTransactions[Index-1].QueryInterface(IZTransaction, Result)
-end;
-
-function TZEmulatedTransactionManager.GetTransactionCount: Integer;
-begin
-  Result := fTransactions.Count +1;
-end;
-
-procedure TZEmulatedTransactionManager.ReleaseImmediat(
-  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
-begin
-  fActiveTransaction := nil;
-  fTransactions.Clear;
-  fMainConnection := nil;
-end;
-
-procedure TZEmulatedTransactionManager.ReleaseTransaction(
-  const Transaction: IZTransaction);
-var I: Integer;
-  Connection: IZConnection;
-begin
-  I := fTransactions.IndexOf(Transaction);
-  if I < 0 then
-    raise EZSQLException.Create('Manager could not locate given transaction');
-  Connection := fTransactions[i] as IZConnection;
-  if Connection <> fMainConnection then
-    Connection.Close;
-  fTransactions.Delete(I);
-end;
-
-procedure TZEmulatedTransactionManager.SetActiveTransaction(
-  const Transaction: IZTransaction);
-begin
-  fActiveTransaction := Transaction;
-end;
-
-{ TZAbstractDbcSingleTransactionConnection }
-
-procedure TZAbstractDbcSingleTransactionConnection.BeforeUrlAssign;
-begin
-  FSavePoints := TStringList.Create;
-end;
-
-destructor TZAbstractDbcSingleTransactionConnection.Destroy;
+destructor TZAbstractSuccedaneousTxnConnection.Destroy;
 begin
   try
     inherited Destroy;
   finally
     FreeAndNil(FSavePoints);
+    fTransactions := nil;
   end;
 end;
 
-function TZAbstractDbcSingleTransactionConnection.GetConnection: IZConnection;
+function TZAbstractSuccedaneousTxnConnection.GetConnection: IZConnection;
 begin
   Result := IZConnection(fWeakReferenceOfSelfInterface);
 end;
 
-function TZAbstractDbcSingleTransactionConnection.GetTransactionLevel: Integer;
+function TZAbstractSuccedaneousTxnConnection.GetConnectionTransaction: IZTransaction;
+begin
+  Result := IZTransaction(fWeakTxnPtr);
+end;
+
+function TZAbstractSuccedaneousTxnConnection.GetTransactionLevel: Integer;
 begin
   Result := Ord(not AutoCommit);
   if FSavePoints <> nil then
     Result := Result + FSavePoints.Count;
+end;
+
+function TZAbstractSuccedaneousTxnConnection.IsTransactionValid(
+  const Value: IZTransaction): Boolean;
+begin
+  if Value = nil then
+    Result := False
+  else if Pointer(Value) = fWeakTxnPtr then
+    Result := True
+  else
+    Result := fTransactions.IndexOf(Value) >= 0;
+end;
+
+procedure TZAbstractSuccedaneousTxnConnection.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+begin
+  inherited;
+end;
+
+procedure TZAbstractSuccedaneousTxnConnection.ReleaseTransaction(
+  const Value: IZTransaction);
+begin
+  if Pointer(Value) = fWeakTxnPtr
+  then raise EZSQLException.Create(SUnsupportedOperation)
+  else fTransactions.Delete(fTransactions.IndexOf(Value));
 end;
 
 end.

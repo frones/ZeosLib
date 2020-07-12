@@ -86,7 +86,7 @@ type
   end;
 
   {** Implements a generic OleDB Connection. }
-  TZOleDBConnection = class(TZAbstractDbcSingleTransactionConnection, IZConnection,
+  TZOleDBConnection = class(TZAbstractSuccedaneousTxnConnection, IZConnection,
     IZOleDBConnection, IZTransaction)
   private
     FMalloc: IMalloc;

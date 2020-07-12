@@ -8,11 +8,11 @@ unit zcomponent;
 interface
 
 uses
-  ZComponentReg, ZConnection, ZDatasetUtils, ZUpdateSqlEditor, 
-  ZConnectionGroup, ZGroupedConnection, ZIBEventAlerter, ZPgEventAlerter, 
-  ZSqlMetadata, ZSqlMonitor, ZSqlProcessor, ZSqlUpdate, ZStoredProcedure, 
   ZAbstractConnection, ZAbstractDataset, ZAbstractRODataset, ZAbstractTable, 
-  ZSqlStrings, ZStreamBlob, LazarusPackageIntf;
+  ZComponentReg, ZConnection, ZConnectionGroup, ZDatasetUtils, 
+  ZGroupedConnection, ZIBEventAlerter, ZPgEventAlerter, ZSqlMetadata, 
+  ZSqlMonitor, ZSqlProcessor, ZSqlStrings, ZSqlUpdate, ZStoredProcedure, 
+  ZUpdateSqlEditor, ZPropertiesEditor, LazarusPackageIntf;
 
 implementation
 

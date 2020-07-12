@@ -89,7 +89,7 @@ type
   end;
 
   {** Implements a generic DBLib Connection. }
-  TZDBLibConnection = class(TZAbstractDbcSingleTransactionConnection, IZConnection,
+  TZDBLibConnection = class(TZAbstractSuccedaneousTxnConnection, IZConnection,
     IZDBLibConnection, IZTransaction)
   private
     FSQLErrors: TZDBLibErrorList;

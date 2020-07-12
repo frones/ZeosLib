@@ -1,4 +1,5 @@
 TZCONNECTION        BITMAP "TZConnection.bmp"
+TZTRANSACTION       BITMAP "TZTransaction.bmp"
 TZREADONLYQUERY     BITMAP "TZReadOnlyQuery.bmp"
 TZQUERY             BITMAP "TZQuery.bmp"
 TZUPDATESQL         BITMAP "TZUpdateSQL.bmp"

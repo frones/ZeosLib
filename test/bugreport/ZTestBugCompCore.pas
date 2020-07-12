@@ -1787,7 +1787,8 @@ begin
   try
     Query.Connection.Connect;
     Query.SQL.Text := 'SELECT * from people';
-    Connection.StartTransaction;
+    if (Connection.Protocol <> 'OleDB') then //not reolvable
+      Connection.StartTransaction;
     Query.Open;
     //Connection.Commit; //<- this crash with FB/IB and MSSQL(oledb,odbc,ado) only
     Check(Query.RecordCount = 5);

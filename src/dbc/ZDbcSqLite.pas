@@ -92,7 +92,7 @@ type
   {** Implements SQLite Database Connection. }
 
   { TZSQLiteConnection }
-  TZSQLiteConnection = class(TZAbstractDbcSingleTransactionConnection, IZConnection,
+  TZSQLiteConnection = class(TZAbstractSuccedaneousTxnConnection, IZConnection,
     IZSQLiteConnection, IZTransaction)
   private
     FUndefinedVarcharAsStringLength: Integer;
@@ -715,7 +715,7 @@ begin
   if Closed then
     Open;
   if AutoCommit then begin
-    S := ZDbcUtils.DefineStatementParameter(Self, Info, DSProps_TransactionBehaviour, 'DEFERRED');
+    S := ZDbcUtils.DefineStatementParameter(Self, Info, TxnProps_TransactionBehaviour, 'DEFERRED');
     P := Pointer(S);
     case {$IFDEF UNICODE}PWord{$ELSE}PByte{$ENDIF}(P)^ or $20 of
       Ord('e'): TransactionAction := traBeginEXCLUSIVE;

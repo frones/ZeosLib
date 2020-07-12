@@ -102,16 +102,14 @@ type
 
   IZOracleTransaction = interface(IZTransaction)
     ['{07C8E090-BE86-4CA9-B2CB-1583DA94AFA6}']
-    procedure CloseTransaction;
     function GetTrHandle: POCITrans;
-    function IsStarted: Boolean;
   end;
 
   /// <summary>
   ///  implements an oracle OCI connection.
   /// </summary>
   {** Implements Oracle Database Connection. }
-  TZOracleConnection = class(TZAbstractDbcSingleTransactionConnection, IZConnection,
+  TZOracleConnection = class(TZAbstractSuccedaneousTxnConnection, IZConnection,
     IZOracleConnection, IZTransaction)
   private
     FCatalog: string;
@@ -235,15 +233,19 @@ type
     {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FOwner: TZOracleConnection;
   public { IZTransaction }
     procedure Commit;
-    procedure Rollback;
+    procedure Close;
     function GetConnection: IZConnection;
-    function StartTransaction: Integer;
     function GetTransactionLevel: Integer;
+    procedure SetTransactionIsolation(Value: TZTransactIsolationLevel);
+    procedure Rollback;
+    function StartTransaction: Integer;
+    function IsReadOnly: Boolean;
+    procedure SetReadOnly(Value: Boolean);
+    function GetAutoCommit: Boolean;
   public { IZOracleTransaction }
-    procedure CloseTransaction;
     function GetTrHandle: POCITrans;
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
-    function IsStarted: Boolean;
+    function IsClosed: Boolean;
   public
     constructor CreateLocal(const Owner: TZOracleConnection);
     constructor CreateGlobal(const Owner: TZOracleConnection; TxnMode: TZOCITxnMode;
@@ -365,7 +367,7 @@ begin
   else FStmtMode := OCI_DEFAULT;
   S := Info.Values[ConnProps_StatementCache];
   FStatementPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(S, 30); //default = 20
-  FBlobPrefetchSize := FChunkSize;
+  FBlobPrefetchSize := StrToIntDef(Info.Values[ConnProps_BlobPrefetchSize], 8*1024);
 end;
 
 procedure TZOracleConnection.InternalSetCatalog(const Catalog: String);
@@ -659,7 +661,7 @@ begin
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseCommit);
   fAttachedTransaction.Commit;
-  if not fAttachedTransaction.IsStarted then begin
+  if fAttachedTransaction.IsClosed then begin
     fAttachedTransaction.StartTransaction;
     AutoCommit := not FRestartTransaction;
   end;
@@ -700,7 +702,7 @@ begin
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseCommit);
   fAttachedTransaction.Rollback;
-  if not fAttachedTransaction.IsStarted then begin
+  if fAttachedTransaction.IsClosed then begin
     fAttachedTransaction.StartTransaction;
     AutoCommit := not FRestartTransaction;
   end;
@@ -1425,7 +1427,7 @@ end;
 procedure TZOracleTransaction.BeforeDestruction;
 var Status: sword;
 begin
-  inherited;
+  inherited BeforeDestruction;
   if FOCITrans <> nil then begin
     try
       fSavepoints.Clear;
@@ -1441,7 +1443,7 @@ begin
   fSavepoints.Free;
 end;
 
-procedure TZOracleTransaction.CloseTransaction;
+procedure TZOracleTransaction.Close;
 begin
 end;
 
@@ -1449,7 +1451,7 @@ procedure TZOracleTransaction.Commit;
 var Status: sword;
 begin
   if fSavepoints.Count > 0
-  then fSavepoints.Delete(fSavepoints.Count-1)
+  then fSavepoints.Delete(fSavepoints.Count -1) //oracle,sybase,sqlserver do not support a release savepoint syntax
   else if not FStarted then
     raise EZSQLException.Create(SCannotUseCommit)
   else try
@@ -1490,6 +1492,13 @@ begin
   fLocal := True;
 end;
 
+function TZOracleTransaction.GetAutoCommit: Boolean;
+begin
+  if FOwner <> nil
+  then Result := FOwner.AutoCommit
+  else Result := True;
+end;
+
 function TZOracleTransaction.GetConnection: IZConnection;
 begin
   Result := FOwner;
@@ -1507,9 +1516,16 @@ begin
   Result := FOCITrans
 end;
 
-function TZOracleTransaction.IsStarted: Boolean;
+function TZOracleTransaction.IsClosed: Boolean;
 begin
-  Result := FStarted;
+  Result := not FStarted;
+end;
+
+function TZOracleTransaction.IsReadOnly: Boolean;
+begin
+  if FOwner <> nil
+  then Result := FOwner.ReadOnly
+  else Result := True;
 end;
 
 procedure TZOracleTransaction.ReleaseImmediat(
@@ -1560,6 +1576,19 @@ const
     OCI_TRANS_TIGHT, OCI_TRANS_LOOSE);
   OCITransStartSpawnFlags: Array[TZOCITxnSpawnMode] of ub4 = (
     OCI_TRANS_NEW, OCI_TRANS_JOIN, OCI_TRANS_RESUME);
+
+procedure TZOracleTransaction.SetReadOnly(Value: Boolean);
+begin
+  if FOwner <> nil then
+    FOwner.SetReadOnly(Value);
+end;
+
+procedure TZOracleTransaction.SetTransactionIsolation(
+  Value: TZTransactIsolationLevel);
+begin
+  if FOwner <> nil then
+    FOwner.SetTransactionIsolation(Value);
+end;
 
 function TZOracleTransaction.StartTransaction: Integer;
 var

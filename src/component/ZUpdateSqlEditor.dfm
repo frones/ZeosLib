@@ -1,9 +1,9 @@
 object ZUpdateSQLEditForm: TZUpdateSQLEditForm
   Left = 339
   Top = 271
-  Width = 406
-  Height = 293
-  ActiveControl = UpdateTableName
+  ActiveControl = SQLMemo
+  ClientHeight = 254
+  ClientWidth = 390
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -21,7 +21,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
     Left = 0
     Top = 0
     Width = 390
-    Height = 223
+    Height = 220
     ActivePage = SQLPage
     Align = alClient
     TabOrder = 0
@@ -32,13 +32,13 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
         Left = 0
         Top = 0
         Width = 382
-        Height = 195
+        Height = 192
         Align = alClient
         Caption = ' SQL Generation '
         TabOrder = 0
         DesignSize = (
           382
-          195)
+          192)
         object Label1: TLabel
           Left = 8
           Top = 24
@@ -78,7 +78,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
           Left = 126
           Top = 40
           Width = 117
-          Height = 146
+          Height = 143
           Anchors = [akLeft, akTop, akBottom]
           ItemHeight = 13
           MultiSelect = True
@@ -90,7 +90,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
           Left = 254
           Top = 40
           Width = 120
-          Height = 146
+          Height = 143
           Anchors = [akLeft, akTop, akRight, akBottom]
           ItemHeight = 13
           MultiSelect = True
@@ -187,7 +187,7 @@ object ZUpdateSQLEditForm: TZUpdateSQLEditForm
   end
   object Panel1: TPanel
     Left = 0
-    Top = 223
+    Top = 220
     Width = 390
     Height = 34
     Align = alBottom

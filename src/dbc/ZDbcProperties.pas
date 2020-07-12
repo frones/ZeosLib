@@ -55,82 +55,6 @@ interface
 
 {$I ZDbc.inc}
 
-
-uses ZDbcIntfs;
-
-//EH @ Fr0sT and aehimself
-//just a proposal which is not related to the docs you guys are planning
-//it would be nice to have a PropertyEditor possibility for the DataSet guys
-//we could define each prop to a record. in initialization part of the
-//PropertyEditor unit we could load them into "something"
-//much smarter would be to define all records into an static record of TZProperty
-//like TZPropertyArray = Array[0..x] of TZProperty = ( ...... add all of them )
-//that way a PropertyEditor could access the array directly and we would never
-//forget to add that prop to the Editor unit.. would the docs work for array elements too?
-//It's just an Proposal
-Type
-  TZPropertyValueType = (
-    pvtEmpty,
-    pvtBool,
-    pvtNumber,
-    pvtString,
-    pvtBoolOrString);
-
-  TZPropertyLevelTypes = set of (pltConnection, pltTransaction, pltStatement);
-
-  PZPropertyProvider = ^TZPropertyProvider;
-  TZPropertyProvider = record
-    Provider: TZServerProvider;
-    MinimumServerVersion: Integer;
-    MinimumClientVersion: Integer;
-    MinimumProtocolVersion: Integer;
-  end;
-  PZPropertyProviderArray = ^TZPropertyProviderArray;
-  TZPropertyProviderArray = array[Byte] of TZPropertyProvider;
-
-  TZPropertyProviders = record
-    Count: Cardinal;
-    Items: PZPropertyProviderArray;
-  end;
-
-  PProtocolArray = ^TProtocolArray;
-  TProtocolArray = array[Byte] of String;
-
-  TProtocols = record
-    Count: Cardinal;
-    Items: PProtocolArray;
-  end;
-
-  TZPropertyProtocols = record
-    Count: Cardinal;
-    Items: PZPropertyProviderArray;
-  end;
-
-const
-  cProptertyTypeDesc: Array[TZPropertyValueType] of String = (
-    'no value expected',
-    'boolean expresson like ''Y''/''YES''/''T''/''TRUE''/''ON''/<>0 in any case to enable, any other',
-    'any ordinal number',
-    'any string value',
-    'either BOOL expression or string value');
-type
-  PZProperty = ^TZProperty;
-  TZProperty = Record
-    Name: String;
-    Purpose: String;
-    ValueType: TZPropertyValueType;
-    LevelTypes: TZPropertyLevelTypes;
-    Providers: TZPropertyProviders;
-    Protocols: TProtocols;
-  End;
-
-const
-  ProposalConst: TZProperty = (
-    Name: 'proposal';
-    Purpose: 'do what you want';
-    ValueType: pvtEmpty);
-    //add Doc here ?
-
 { WARNING! Some of the parameter values are used directly in DBC API, so they
   must not be changed. }
 
@@ -141,7 +65,7 @@ const
     STR     - string }
 
   { Parameters common for all DBC's }
-
+const
   // Type: STR
   // Same as User property
   ConnProps_UID = 'UID';
@@ -151,23 +75,27 @@ const
   ConnProps_PWD = 'PWD';
   ConnProps_Password = 'password';
   // Type: STR
-  // Same as LibraryLocation property, path to client lib
+  // Same as TZConnection.LibraryLocation property, path to client lib
   ConnProps_LibLocation = 'LibLocation';
   // Type: STR, like CP_UTF8
   // Codepage to interact with driver
   ConnProps_CodePage = 'codepage';
   // Type: BOOLEAN
-  // Same as AutoEncodeStrings property
+  // Same as TZConnection.AutoEncodeStrings property
   ConnProps_AutoEncodeStrings = 'AutoEncodeStrings';
+  ConnProps_Transliterate = 'Transliterate';
   // Type: CP_UTF16 | CP_UTF8 | GET_ACP
   // Same as ControlsCodePage property
   ConnProps_ControlsCP = 'controls_cp';
+  // Type: CP_UTF8 | GET_ACP
+  // Same as ControlsCodePage property
+  ConnProps_RawStringEncoding = 'RawStringEncoding';
   // Type: INT
   // The login timeout to use in seconds.
   ConnProps_Timeout = 'timeout';
   // Type: STR
   // Format to display date, like YYYY-MM-DD
-  ConnProps_DateDisplayFormat = 'DateDisplayFormat';
+  ConnProps_DateDisplayFormat = 'DateDisplayFormat'; //deprecated not used anymore
   // Type: STR
   // Format to read date
   ConnProps_DateReadFormat = 'DateReadFormat';
@@ -176,7 +104,7 @@ const
   ConnProps_DateWriteFormat = 'DateWriteFormat';
   // Type: STR, like HH:MM:SS
   // Format to display time
-  ConnProps_TimeDisplayFormat = 'TimeDisplayFormat';
+  ConnProps_TimeDisplayFormat = 'TimeDisplayFormat'; //deprected not used anymore
   // Type: STR
   // Format to read time
   ConnProps_TimeReadFormat = 'TimeReadFormat';
@@ -185,7 +113,7 @@ const
   ConnProps_TimeWriteFormat = 'TimeWriteFormat';
   // Type: STR
   // Format to display date & time
-  ConnProps_DateTimeDisplayFormat = 'DatetimeDisplayFormat';
+  ConnProps_DateTimeDisplayFormat = 'DatetimeDisplayFormat'; //deprected not used anymore
   // Type: STR
   // Format to read date & time
   ConnProps_DateTimeReadFormat = 'DatetimeReadFormat';
@@ -217,13 +145,6 @@ const
   // Type: BOOLEAN
   // Same as TZDatasetOptions.doPreferPrepared in Dataset.Options property
   DSProps_PreferPrepared = 'PreferPrepared';
-  // Type: BOOLEAN
-  // Same as TZDatasetOptions.doCachedLobs in Dataset.Options property
-  DSProps_CachedLobs = 'CachedLob';
-  // Type: INT
-  // Same as Statement.ChunkSize, size of chunks for retrieving/sending long data
-  // depends to your network speed
-  DSProps_ChunkSize = 'chunk_size'; //default is a very low value of 4KB
 
   { Parameters for datasets }
 
@@ -237,7 +158,7 @@ const
 
   { Parameters common for several drivers }
 
-{$IF DEFINED(ENABLE_DBLIB) OR DEFINED(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}
+{$IF DEFINED(ENABLE_DBLIB)}
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
 
@@ -246,13 +167,20 @@ const
   DSProps_ResetCodePage = 'ResetCodePage';
 {$IFEND}
 
-{$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_ADO) OR DEFINED(ENABLE_OLEDB)}
+{$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
 
   // Type: INT
   // Size of buffer for results
   DSProps_InternalBufSize = 'internal_buffer_size';
+{$IFEND}
+
+{$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD) OR DEFINED(ENABLE_POSTGRES)}
+  // Type: BOOLEAN
+  // Same as TZDatasetOptions.doCachedLobs in Dataset.Options property
+  DSProps_CachedLobs = 'CachedLob';
+  // Type: INT
 {$IFEND}
 
 {$IF DEFINED(ENABLE_SQLITE) OR DEFINED(ENABLE_POSTGRESQL)}
@@ -274,11 +202,11 @@ const
 
 {$IF DEFINED(ENABLE_ADO) OR DEFINED(ENABLE_OLEDB)}
   // Type: STR
-  // ?
+  // the ole provider
   ConnProps_Provider = 'Provider';
 {$IFEND}
 
-{$IF DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}
+{$IF DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB) OR DEFINED(ENABLE_ADO)}
   // Type: BOOLEAN
   // Use trusted connection
   ConnProps_TrustedConnection = 'Trusted_Connection';
@@ -354,9 +282,6 @@ const
   // Type: BOOLEAN
   // Same as CLIENT_CONNECT_WITH_DB, refer to MySql manual for details
   ConnProps_DBLess = 'dbless';
-  // Type: INT
-  // Value used in 'SET GLOBAL max_allowed_packet' statement, refer to MySql manual for details
-  ConnProps_MaxLobSize = 'MaxLobSize';
   // Type: BOOLEAN
   // Value used to identify BIT(1) as Boolean instead of ENUM('Y','N')
   ConnProps_MySQL_FieldType_Bit_1_IsBoolean = 'MySQL_FieldType_Bit_1_IsBoolean';
@@ -369,8 +294,59 @@ const
 
   { In addition, any server parameter prefixed by value of
     ZPlainMySqlConstants.SERVER_ARGUMENTS_KEY_PREFIX constant and all members from
-    ZPlainMySqlConstants.TMYSQL_CLIENT_OPTIONS and ZPlainMySqlConstants.TMySqlOption
     could be used as well. }
+  (* refer MySQL manuals *)
+  ConnProps_MYSQL_OPT_CONNECT_TIMEOUT             = 'MYSQL_OPT_CONNECT_TIMEOUT';
+  ConnProps_MYSQL_OPT_COMPRESS                    = 'MYSQL_OPT_COMPRESS';
+  ConnProps_MYSQL_OPT_NAMED_PIPE                  = 'MYSQL_OPT_NAMED_PIPE';
+  ConnProps_MYSQL_INIT_COMMAND                    = 'MYSQL_INIT_COMMAND';
+  ConnProps_MYSQL_READ_DEFAULT_FILE               = 'MYSQL_READ_DEFAULT_FILE';
+  ConnProps_MYSQL_READ_DEFAULT_GROUP              = 'MYSQL_READ_DEFAULT_GROUP';
+  ConnProps_MYSQL_SET_CHARSET_DIR                 = 'MYSQL_SET_CHARSET_DIR';
+  ConnProps_MYSQL_SET_CHARSET_NAME                = 'MYSQL_SET_CHARSET_NAME';
+  ConnProps_MYSQL_OPT_LOCAL_INFILE                = 'MYSQL_OPT_LOCAL_INFILE';
+  ConnProps_MYSQL_OPT_PROTOCOL                    = 'MYSQL_OPT_PROTOCOL';
+  ConnProps_MYSQL_SHARED_MEMORY_BASE_NAME         = 'MYSQL_SHARED_MEMORY_BASE_NAME';
+  ConnProps_MYSQL_OPT_READ_TIMEOUT                = 'MYSQL_OPT_READ_TIMEOUT';
+  ConnProps_MYSQL_OPT_WRITE_TIMEOUT               = 'MYSQL_OPT_WRITE_TIMEOUT';
+  ConnProps_MYSQL_OPT_USE_RESULT                  = 'MYSQL_OPT_USE_RESULT';
+  ConnProps_MYSQL_OPT_USE_REMOTE_CONNECTION       = 'MYSQL_OPT_USE_REMOTE_CONNECTION';
+  ConnProps_MYSQL_OPT_USE_EMBEDDED_CONNECTION     = 'MYSQL_OPT_USE_EMBEDDED_CONNECTION';
+  ConnProps_MYSQL_OPT_GUESS_CONNECTION            = 'MYSQL_OPT_GUESS_CONNECTION';
+  ConnProps_MYSQL_SET_CLIENT_IP                   = 'MYSQL_SET_CLIENT_IP';
+  ConnProps_MYSQL_SECURE_AUTH                     = 'MYSQL_SECURE_AUTH';
+  ConnProps_MYSQL_REPORT_DATA_TRUNCATION          = 'MYSQL_REPORT_DATA_TRUNCATION';
+  ConnProps_MYSQL_OPT_RECONNECT                   = 'MYSQL_OPT_RECONNECT';
+  ConnProps_MYSQL_OPT_SSL_VERIFY_SERVER_CERT      = 'MYSQL_OPT_SSL_VERIFY_SERVER_CERT';
+  ConnProps_MYSQL_PLUGIN_DIR                      = 'MYSQL_PLUGIN_DIR';
+  ConnProps_MYSQL_DEFAULT_AUTH                    = 'MYSQL_DEFAULT_AUTH';
+  ConnProps_MYSQL_OPT_BIND                        = 'MYSQL_OPT_BIND';
+  ConnProps_MYSQL_OPT_SSL_KEY                     = 'MYSQL_OPT_SSL_KEY';
+  ConnProps_MYSQL_OPT_SSL_CERT                    = 'MYSQL_OPT_SSL_CERT';
+  ConnProps_MYSQL_OPT_SSL_CA                      = 'MYSQL_OPT_SSL_CA';
+  ConnProps_MYSQL_OPT_SSL_CAPATH                  = 'MYSQL_OPT_SSL_CAPATH';
+  ConnProps_MYSQL_OPT_SSL_CIPHER                  = 'MYSQL_OPT_SSL_CIPHER';
+  ConnProps_MYSQL_OPT_SSL_CRL                     = 'MYSQL_OPT_SSL_CRL';
+  ConnProps_MYSQL_OPT_SSL_CRLPATH                 = 'MYSQL_OPT_SSL_CRLPATH';
+  ConnProps_MYSQL_OPT_CONNECT_ATTR_RESET          = 'MYSQL_OPT_CONNECT_ATTR_RESET';
+  ConnProps_MYSQL_OPT_CONNECT_ATTR_ADD            = 'MYSQL_OPT_CONNECT_ATTR_ADD';
+  ConnProps_MYSQL_OPT_CONNECT_ATTR_DELETE         = 'MYSQL_OPT_CONNECT_ATTR_DELETE';
+  ConnProps_MYSQL_SERVER_PUBLIC_KEY               = 'MYSQL_SERVER_PUBLIC_KEY';
+  ConnProps_MYSQL_ENABLE_CLEARTEXT_PLUGIN         = 'MYSQL_ENABLE_CLEARTEXT_PLUGIN';
+  ConnProps_MYSQL_OPT_CAN_HANDLE_EXPIRED_PASSWORDS= 'MYSQL_OPT_CAN_HANDLE_EXPIRED_PASSWORDS';
+  ConnProps_MYSQL_OPT_SSL_ENFORCE                 = 'MYSQL_OPT_SSL_ENFORCE';
+  ConnProps_MYSQL_OPT_MAX_ALLOWED_PACKET          = 'MYSQL_OPT_MAX_ALLOWED_PACKET';
+  ConnProps_MYSQL_OPT_NET_BUFFER_LENGTH           = 'MYSQL_OPT_NET_BUFFER_LENGTH';
+  ConnProps_MYSQL_OPT_TLS_VERSION                 = 'MYSQL_OPT_TLS_VERSION';
+  ConnProps_MYSQL_OPT_SSL_MODE                    = 'MYSQL_OPT_SSL_MODE';
+    {MySQL 8:}
+  ConnProps_MYSQL_OPT_GET_SERVER_PUBLIC_KEY       = 'MYSQL_OPT_GET_SERVER_PUBLIC_KEY';
+  ConnProps_MYSQL_OPT_RETRY_COUNT                 = 'MYSQL_OPT_RETRY_COUNT';
+  ConnProps_MYSQL_OPT_OPTIONAL_RESULTSET_METADATA = 'MYSQL_OPT_OPTIONAL_RESULTSET_METADATA';
+  ConnProps_MYSQL_OPT_SSL_FIPS_MODE               = 'MYSQL_OPT_SSL_FIPS_MODE';
+  ConnProps_MYSQL_OPT_TLS_CIPHERSUITES            = 'MYSQL_OPT_TLS_CIPHERSUITES';
+  ConnProps_MYSQL_OPT_COMPRESSION_ALGORITHMS      = 'MYSQL_OPT_COMPRESSION_ALGORITHMS';
+  ConnProps_MYSQL_OPT_ZSTD_COMPRESSION_LEVEL      = 'MYSQL_OPT_ZSTD_COMPRESSION_LEVEL';
 
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
@@ -385,6 +361,10 @@ const
   // Type: INT
   // Sets STMT_ATTR_PREFETCH_ROWS option, refer to MySql manual for details
   DSProps_PrefetchRows = 'prefetch_rows';
+  // Type: INT
+  // Same as Statement.ChunkSize, size of chunks for retrieving/sending long data
+  // depends to your network speed
+  DSProps_ChunkSize = 'chunk_size'; //default is a very low value of 4KB
 {$ENDIF}
 
 {$IFDEF ENABLE_POSTGRESQL}
@@ -469,6 +449,10 @@ const
   // see firebird 3.0 release notes
   ConnProps_FBProtocol = 'fb_protocol';
 
+  // Type: STR
+  // identify the charset "NONE" codepage
+  ConnProps_Charset_NONE_Alias = 'Charset_NONE_Alias';
+
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
 
@@ -487,22 +471,126 @@ const
   // In addition, DB-level option affects things besides datasets.
   DSProps_SetGUIDByType = ConnProps_SetGUIDByType;
 
-  { In addition, all isc_dpb_* (connection level) and isc_tpb_* (transaction level)
-    parameters could be used as well, refer to Firebird manual for details.
-    isc_dpb_config parameter could be used to set several DB or connection options,
-    refer to https://firebirdsql.org/file/documentation/release_notes/html/en/3_0/rnfb30-fbconf.html
-    for available parameters and values }
-
-  { These parameters are analogs of general ones:
-      'isc_dpb_username'        = ConnProps_Username
-      'isc_dpb_password'        = ConnProps_Password
-      'isc_dpb_lc_ctype'        = ConnProps_CodePage
-      'isc_dpb_sql_role_name'   = ConnProps_Rolename
-      'isc_dpb_sql_dialect'     = ConnProps_Dialect
-      'isc_dpb_connect_timeout' = ConnProps_Timeout }
-
+  ConnProps_isc_dpb_page_size               = 'isc_dpb_page_size';
+  ConnProps_isc_dpb_num_buffers             = 'isc_dpb_num_buffers';
+  ConnProps_isc_dpb_debug                   = 'isc_dpb_debug';
+  ConnProps_isc_dpb_garbage_collect         = 'isc_dpb_garbage_collect';
+  ConnProps_isc_dpb_verify                  = 'isc_dpb_verify';
+  ConnProps_isc_dpb_sweep                   = 'isc_dpb_sweep';
+  ConnProps_isc_dpb_enable_journal          = 'isc_dpb_enable_journal';
+  ConnProps_isc_dpb_disable_journal         = 'isc_dpb_disable_journal';
+  ConnProps_isc_dpb_dbkey_scope             = 'isc_dpb_dbkey_scope';
+  ConnProps_isc_dpb_trace                   = 'isc_dpb_trace';
+  ConnProps_isc_dpb_no_garbage_collect      = 'isc_dpb_no_garbage_collect';
+  ConnProps_isc_dpb_damaged                 = 'isc_dpb_damaged';
+  ConnProps_isc_dpb_license                 = 'isc_dpb_license';
+  ConnProps_isc_dpb_sys_user_name           = 'isc_dpb_sys_user_name';
+  ConnProps_isc_dpb_encrypt_key             = 'isc_dpb_encrypt_key';
+  ConnProps_isc_dpb_activate_shadow         = 'isc_dpb_activate_shadow';
+  ConnProps_isc_dpb_sweep_interval          = 'isc_dpb_sweep_interval';
+  ConnProps_isc_dpb_delete_shadow           = 'isc_dpb_delete_shadow';
+  ConnProps_isc_dpb_force_write             = 'isc_dpb_force_write';
+  ConnProps_isc_dpb_begin_log               = 'isc_dpb_begin_log';
+  ConnProps_isc_dpb_quit_log                = 'isc_dpb_quit_log';
+  ConnProps_isc_dpb_no_reserve              = 'isc_dpb_no_reserve';
+  ConnProps_isc_dpb_user_name               = 'isc_dpb_user_name';
+  ConnProps_isc_dpb_password                = 'isc_dpb_password';
+  ConnProps_isc_dpb_password_enc            = 'isc_dpb_password_enc';
+  ConnProps_isc_dpb_sys_user_name_enc       = 'isc_dpb_sys_user_name_enc';
+  ConnProps_isc_dpb_interp                  = 'isc_dpb_interp';
+  ConnProps_isc_dpb_online_dump             = 'isc_dpb_online_dump';
+  ConnProps_isc_dpb_old_file_size           = 'isc_dpb_old_file_size';
+  ConnProps_isc_dpb_old_num_files           = 'isc_dpb_old_num_files';
+  ConnProps_isc_dpb_old_file                = 'isc_dpb_old_file';
+  ConnProps_isc_dpb_old_start_page          = 'isc_dpb_old_start_page';
+  ConnProps_isc_dpb_old_start_seqno         = 'isc_dpb_old_start_seqno';
+  ConnProps_isc_dpb_old_start_file          = 'isc_dpb_old_start_file';
+  ConnProps_isc_dpb_drop_walfile            = 'isc_dpb_drop_walfile';
+  ConnProps_isc_dpb_old_dump_id             = 'isc_dpb_old_dump_id';
+  ConnProps_isc_dpb_wal_backup_dir          = 'isc_dpb_wal_backup_dir';
+  ConnProps_isc_dpb_wal_chkptlen            = 'isc_dpb_wal_chkptlen';
+  ConnProps_isc_dpb_wal_numbufs             = 'isc_dpb_wal_numbufs';
+  ConnProps_isc_dpb_wal_bufsize             = 'isc_dpb_wal_bufsize';
+  ConnProps_isc_dpb_wal_grp_cmt_wait        = 'isc_dpb_wal_grp_cmt_wait';
+  ConnProps_isc_dpb_lc_messages             = 'isc_dpb_lc_messages';
+  ConnProps_isc_dpb_lc_ctype                = 'isc_dpb_lc_ctype';
+  ConnProps_isc_dpb_shutdown                = 'isc_dpb_shutdown';
+  ConnProps_isc_dpb_online                  = 'isc_dpb_online';
+  ConnProps_isc_dpb_shutdown_delay          = 'isc_dpb_shutdown_delay';
+  ConnProps_isc_dpb_reserved                = 'isc_dpb_reserved';
+  ConnProps_isc_dpb_overwrite               = 'isc_dpb_overwrite';
+  ConnProps_isc_dpb_sec_attach              = 'isc_dpb_sec_attach';
+  ConnProps_isc_dpb_disable_wal             = 'isc_dpb_disable_wal';
+  ConnProps_isc_dpb_connect_timeout         = 'isc_dpb_connect_timeout';
+  ConnProps_isc_dpb_dummy_packet_interval   = 'isc_dpb_dummy_packet_interval';
+  ConnProps_isc_dpb_gbak_attach             = 'isc_dpb_gbak_attach';
+  ConnProps_isc_dpb_sql_role_name           = 'isc_dpb_sql_role_name';
+  ConnProps_isc_dpb_set_page_buffers        = 'isc_dpb_set_page_buffers';
+  ConnProps_isc_dpb_working_directory       = 'isc_dpb_working_directory';
+  ConnProps_isc_dpb_sql_dialect             = 'isc_dpb_sql_dialect';
+  ConnProps_isc_dpb_set_db_readonly         = 'isc_dpb_set_db_readonly';
+  ConnProps_isc_dpb_set_db_sql_dialect      = 'isc_dpb_set_db_sql_dialect';
+  ConnProps_isc_dpb_gfix_attach             = 'isc_dpb_gfix_attach';
+  ConnProps_isc_dpb_gstat_attach            = 'isc_dpb_gstat_attach';
+  ConnProps_isc_dpb_set_db_charset          = 'isc_dpb_set_db_charset';
+  ConnProps_isc_dpb_gsec_attach             = 'isc_dpb_gsec_attach';
+  ConnProps_isc_dpb_address_path            = 'isc_dpb_address_path';
+  ConnProps_isc_dpb_process_id              = 'isc_dpb_process_id';
+  ConnProps_isc_dpb_no_db_triggers          = 'isc_dpb_no_db_triggers';
+  ConnProps_isc_dpb_trusted_auth            = 'isc_dpb_trusted_auth';
+  ConnProps_isc_dpb_process_name            = 'isc_dpb_process_name';
+  ConnProps_isc_dpb_trusted_role            = 'isc_dpb_trusted_role';
+  ConnProps_isc_dpb_org_filename            = 'isc_dpb_org_filename';
+  ConnProps_isc_dpb_utf8_filename           = 'isc_dpb_utf8_filename';
+  ConnProps_isc_dpb_ext_call_depth          = 'isc_dpb_ext_call_depth';
+  ConnProps_isc_dpb_auth_block              = 'isc_dpb_auth_block';
+  ConnProps_isc_dpb_client_version          = 'isc_dpb_client_version';
+  ConnProps_isc_dpb_remote_protocol         = 'isc_dpb_remote_protocol';
+  ConnProps_isc_dpb_host_name               = 'isc_dpb_host_name';
+  ConnProps_isc_dpb_os_user                 = 'isc_dpb_os_user';
+  ConnProps_isc_dpb_specific_auth_data      = 'isc_dpb_specific_auth_data';
+  ConnProps_isc_dpb_auth_plugin_list        = 'isc_dpb_auth_plugin_list';
+  ConnProps_isc_dpb_auth_plugin_name        = 'isc_dpb_auth_plugin_name';
+  ConnProps_isc_dpb_config                  = 'isc_dpb_config';
+  ConnProps_isc_dpb_nolinger                = 'isc_dpb_nolinger';
+  ConnProps_isc_dpb_reset_icu               = 'isc_dpb_reset_icu';
+  ConnProps_isc_dpb_map_attach              = 'isc_dpb_map_attach';
+  ConnProps_isc_dpb_session_time_zone       = 'isc_dpb_session_time_zone';
+  ConnProps_isc_dpb_set_db_replica          = 'isc_dpb_set_db_replica';
+  ConnProps_isc_dpb_set_bind                = 'isc_dpb_set_bind';
+  ConnProps_isc_dpb_decfloat_round          = 'isc_dpb_decfloat_round';
+  ConnProps_isc_dpb_decfloat_traps          = 'isc_dpb_decfloat_traps';
   { Some of the isc_tpb_* parameters are added internally according to
     Connection.TransactIsolationLevel property }
+  // Type: NONE
+  TxnProps_isc_tpb_consistency              = 'isc_tpb_consistency';
+  TxnProps_isc_tpb_concurrency              = 'isc_tpb_concurrency';
+  TxnProps_isc_tpb_shared                   = 'isc_tpb_shared';
+  TxnProps_isc_tpb_protected                = 'isc_tpb_protected';
+  TxnProps_isc_tpb_exclusive                = 'isc_tpb_exclusive';
+  TxnProps_isc_tpb_wait                     = 'isc_tpb_wait';
+  TxnProps_isc_tpb_nowait                   = 'isc_tpb_nowait';
+  TxnProps_isc_tpb_read                     = 'isc_tpb_read';
+  TxnProps_isc_tpb_write                    = 'isc_tpb_write';
+  // Type: String
+  TxnProps_isc_tpb_lock_read                = 'isc_tpb_lock_read';
+  TxnProps_isc_tpb_lock_write               = 'isc_tpb_lock_write';
+  //not implemented
+  TxnProps_isc_tpb_verb_time                = 'isc_tpb_verb_time';
+  TxnProps_isc_tpb_commit_time              = 'isc_tpb_commit_time';
+  //Type: None
+  TxnProps_isc_tpb_ignore_limbo             = 'isc_tpb_ignore_limbo';
+  TxnProps_isc_tpb_read_committed           = 'isc_tpb_read_committed';
+  TxnProps_isc_tpb_autocommit               = 'isc_tpb_autocommit';
+  TxnProps_isc_tpb_rec_version              = 'isc_tpb_rec_version';
+  TxnProps_isc_tpb_no_rec_version           = 'isc_tpb_no_rec_version';
+  TxnProps_isc_tpb_restart_requests         = 'isc_tpb_restart_requests';
+  TxnProps_isc_tpb_no_auto_undo             = 'isc_tpb_no_auto_undo';
+  TxnProps_isc_tpb_no_savepoint             = 'isc_tpb_no_savepoint';
+  //Type: Int
+  TxnProps_isc_tpb_lock_timeout             = 'isc_tpb_lock_timeout';
+  //Type: None
+  TxnProps_isc_tpb_read_consistency         = 'isc_tpb_read_consistency';
 {$IFEND}
 
 {$IFDEF ENABLE_FIREBIRD}
@@ -543,13 +631,17 @@ const
   // see sqlite manuals
   // if Value is 'EXCLUSIVE' we're assuming you want emulate a ReadCommitted transaction
   // which blocks read transactions while the transaction is underway
-  DSProps_TransactionBehaviour = 'TransactionBehaviour';
+  TxnProps_TransactionBehaviour = 'TransactionBehaviour';
 {$ENDIF}
 
 {$IFDEF ENABLE_ORACLE}
   // Type: BOOLEAN
   // If enabled or not specified, sets StatementMode to OCI_STMT_CACHE (refer to Oracle manual for details)
   ConnProps_ServerCachedStmts = 'ServerCachedStmts';
+
+  // Type: INT
+  // Sets value for OCI_ATTR_DEFAULT_LOBPREFETCH_SIZE option, refer to Oracle manual for details
+  ConnProps_BlobPrefetchSize = 'BlobPrefetchSize';
   // Type: INT
   // Sets value for OCI_ATTR_STMTCACHESIZE option, refer to Oracle manual for details
   ConnProps_StatementCache = 'StatementCache';
@@ -560,6 +652,7 @@ const
   // Type: INT
   // Sets value for OCI_ATTR_PREFETCH_MEMORY option, refer to Oracle manual for details
   DSProps_RowPrefetchSize = 'row_prefetch_size';
+
 {$ENDIF}
 
 {$IFDEF ENABLE_ASA}
@@ -653,10 +746,6 @@ const
   ConnProps_UNC = 'UNC';
   { Parameters that are for datasets and statements but could be set for connections
     (see comment above) }
-
-  // Type: BOOLEAN
-  // ?
-  DSProps_CachedBlob = 'CachedBlob';
 {$ENDIF}
 
 {$IFDEF ENABLE_OLEDB}
