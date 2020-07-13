@@ -432,6 +432,12 @@ const
       ({spCUBRID}     cUnknown,   cUnknown,   cUnknown),
       ({spFoxPro}     cUnknown,   cUnknown,   cUnknown)
     );
+
+  cCommit_A: RawByteString = 'COMMIT TRANSACTION';
+  cCommit_W: UnicodeString = 'COMMIT TRANSACTION';
+  cRollback_A: RawByteString = 'ROLLBACK TRANSACTION';
+  cRollback_W: UnicodeString = 'ROLLBACK TRANSACTION';
+
 implementation
 
 uses ZMessages,{$IFNDEF TLIST_IS_DEPRECATED}ZSysUtils, {$ENDIF}

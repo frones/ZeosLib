@@ -351,7 +351,7 @@ end;
 
 procedure TZFirebirdConnection.InternalClose;
 begin
-  inherited;
+  inherited InternalClose;
   if FAttachment <> nil then begin
     FAttachment.detach(FStatus);
     FAttachment.release;

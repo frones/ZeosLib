@@ -314,7 +314,7 @@ var num_cols: Tsacapi_i32;
 begin
   PrepareOpenResultSetForReUse;
   Prepare;
-  if FWeakIntfPtrOfIPrepStmt <> nil then
+  if FWeakIZPreparedStatementPtr <> nil then
     BindInParameters;
   if FHasOutParams and (FOutParamResultSet = nil) then
     FOutParamResultSet := TZSQLAynwhereOutParamResultSet.Create(Self, SQL, @Fa_sqlany_stmt,
@@ -349,7 +349,7 @@ var num_cols: Tsacapi_i32;
 begin
   PrepareOpenResultSetForReUse;
   Prepare;
-  if FWeakIntfPtrOfIPrepStmt <> nil then
+  if FWeakIZPreparedStatementPtr <> nil then
     BindInParameters;
   if FHasOutParams and (FOutParamResultSet = nil) then
     FOutParamResultSet := TZSQLAynwhereOutParamResultSet.Create(Self, SQL, @Fa_sqlany_stmt,
@@ -386,7 +386,7 @@ function TZAbstractSQLAnywhereStatement.ExecuteUpdatePrepared: Integer;
 var num_cols: Tsacapi_i32;
 begin
   Prepare;
-  if FWeakIntfPtrOfIPrepStmt <> nil then
+  if FWeakIZPreparedStatementPtr <> nil then
     BindInParameters;
   if FHasOutParams and (FOutParamResultSet = nil) then
     FOutParamResultSet := TZSQLAynwhereOutParamResultSet.Create(Self, SQL, @Fa_sqlany_stmt,

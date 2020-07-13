@@ -68,7 +68,7 @@ uses
 
 type
   {** Implements Abstract ResultSet. }
-  TZAbstractResultSet = class(TZCodePagedObject,
+  TZAbstractResultSet = class(TZImmediatelyReleasableObject,
     IImmediatelyReleasable)
   private
     FLastRowNo: Integer;

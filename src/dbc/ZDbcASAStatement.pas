@@ -358,7 +358,7 @@ function TZAbstractASAStatement.ExecutePrepared: Boolean;
 var DBHandle: PZASASQLCA;
 begin
   Prepare;
-  if FWeakIntfPtrOfIPrepStmt <> nil then
+  if FWeakIZPreparedStatementPtr <> nil then
     BindInParameters;
   if FMoreResults or FHasOutParams
   then LastResultSet := ExecuteQueryPrepared
@@ -392,7 +392,7 @@ var DBHandle: PZASASQLCA;
 begin
   Prepare;
   PrepareOpenResultSetForReUse;
-  if FWeakIntfPtrOfIPrepStmt <> nil then
+  if FWeakIZPreparedStatementPtr <> nil then
     BindInParameters;
   DBHandle := FASAConnection.GetDBHandle;
   if not FHasOutParams then begin
@@ -436,7 +436,7 @@ function TZAbstractASAStatement.ExecuteUpdatePrepared: Integer;
 var DBHandle: PZASASQLCA;
 begin
   Prepare;
-  if FWeakIntfPtrOfIPrepStmt <> nil then
+  if FWeakIZPreparedStatementPtr <> nil then
     BindInParameters;
   if FHasOutParams and (FOpenResultSet = nil) then begin
     //first create the ResultSet -> exact types are described

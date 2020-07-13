@@ -560,7 +560,7 @@ label jmpEB;
 begin
   if not Prepared then begin
     Transaction := FFBConnection.GetActiveTransaction.GetTransaction;
-    if FWeakIntfPtrOfIPrepStmt <> nil
+    if FWeakIZPreparedStatementPtr <> nil
     {$IFDEF WITH_CLASS_CONST}
     then flags := IStatement.PREPARE_PREFETCH_METADATA
     else flags := IStatement.PREPARE_PREFETCH_TYPE or IStatement.PREPARE_PREFETCH_OUTPUT_PARAMETERS;

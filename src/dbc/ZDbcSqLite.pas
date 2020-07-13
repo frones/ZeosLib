@@ -612,10 +612,11 @@ var
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
+  FSavePoints.Clear;
   try
     if not AutoCommit then begin
-      SetAutoCommit(True);
-      AutoCommit := False;
+      AutoCommit := not FRestartTransaction;
+      ExecuteImmediat(cTransactionActionStmt[traRollBack], lcTransaction, FTransactionStmts[traRollBack]);
     end;
   finally
     LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';

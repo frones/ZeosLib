@@ -246,11 +246,14 @@ procedure TZASAConnection.InternalClose;
 begin
   if Closed or (not Assigned(PlainDriver))then
     Exit;
-
+  FSavePoints.Clear;
   try
     if AutoCommit
     then FPlainDriver.dbpp_commit(FHandle, 0)
-    else FPlainDriver.dbpp_rollback(FHandle, 0);
+    else begin
+      AutoCommit := not FRestartTransaction;
+      FPlainDriver.dbpp_rollback(FHandle, 0);
+    end;
     if FHandle.sqlCode <> SQLE_NOERROR then
       HandleErrorOrWarning(lcTransaction, 'Close transaction', IImmediatelyReleasable(FWeakImmediatRelPtr));
   finally

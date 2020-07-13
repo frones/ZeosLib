@@ -990,7 +990,7 @@ begin
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseCommit);
   if FSavePoints.Count > 0 then begin
-    S := 'RELEASE SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    S := cReleaseSP+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
     ExecuteImmediat(S, lcTransaction);
     FSavePoints.Delete(FSavePoints.Count-1);
     DeallocatePreparedStatements;
@@ -1035,7 +1035,7 @@ begin
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseRollback);
   if FSavePoints.Count > 0 then begin
-    S := 'ROLLBACK TO '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    S := cRollbackTo+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
     ExecuteImmediat(S, lcTransaction);
     FSavePoints.Delete(FSavePoints.Count-1);
     DeallocatePreparedStatements;
@@ -1078,34 +1078,17 @@ procedure TZPostgreSQLConnection.InternalClose;
 var
   LogMessage: RawbyteString;
   QueryHandle: TPGresult;
-  PError: PAnsiChar;
-  Status: TZPostgreSQLExecStatusType;
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
   //see https://sourceforge.net/p/zeoslib/tickets/246/
+  FSavePoints.Clear;
   try
-    if not AutoCommit then begin //try to commit
+    if not AutoCommit then begin //try to rollback
+      AutoCommit := not FRestartTransaction;
       QueryHandle := FPlainDriver.PQexec(Fconn, Pointer(cRollBack));
-      Status := FPlainDriver.PQresultStatus(QueryHandle);
-      if Status = PGRES_COMMAND_OK then begin
-        FPlainDriver.PQclear(QueryHandle);
-        if DriverManager.HasLoggingListener then
-          DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, cCommit);
-      end else begin
-        if DriverManager.HasLoggingListener then
-          DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, cCommit);
-        if Assigned(FPlainDriver.PQresultErrorField) and Assigned(QueryHandle)
-        then PError := FPlainDriver.PQresultErrorField(QueryHandle,Ord(PG_DIAG_SQLSTATE))
-        else PError := FPLainDriver.PQerrorMessage(Fconn);
-        //transaction aborted and in postre zombi status? If so a rollback is required
-        if (PError = nil) or (ZSysUtils.ZMemLComp(PError, current_transaction_is_aborted, 5) = 0) then begin
-          FPlainDriver.PQclear(QueryHandle);
-          QueryHandle := FPlainDriver.PQexec(Fconn, Pointer(cRollback));
-        end;
-        if QueryHandle <> nil then
-          FPlainDriver.PQclear(QueryHandle); //raise no exception
-      end;
+      if QueryHandle <> nil then
+        FPlainDriver.PQclear(QueryHandle); //raise no exception
     end;
   finally
     try
@@ -1165,7 +1148,7 @@ begin
     Result := 1;
   end else begin
     S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count); //PG also has problems with numbered tokens..
-    ExecuteImmediat('SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S), lcTransaction);
+    ExecuteImmediat(cSavePoint+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S), lcTransaction);
     Result := FSavePoints.Add(S)+2;
   end;
 end;

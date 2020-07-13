@@ -403,6 +403,11 @@ procedure TZSQLAnywhereConnection.InternalClose;
 begin
   if Closed then
     Exit;
+  FSavePoints.Clear;
+  if not AutoCommit then begin
+    AutoCommit := not FRestartTransaction;
+    FSQLAnyPlainDriver.sqlany_rollback(Fa_sqlany_connection);
+  end;
   FSQLAnyPlainDriver.sqlany_free_connection(Fa_sqlany_connection);
   Fa_sqlany_connection := nil;
   FSQLAnyPlainDriver.sqlany_fini_ex(Fa_sqlany_interface_context);

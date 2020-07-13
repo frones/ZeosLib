@@ -1076,6 +1076,7 @@ end;
 
 procedure TZInterbaseFirebirdConnection.InternalClose;
 begin
+  AutoCommit := not FRestartTransaction;
   fTransactions.Clear;
   fActiveTransaction := nil;
 end;
