@@ -700,12 +700,12 @@ const
   cBoolEnum = 'False|true';
   cBoolTrue = 'True';
   cBoolFalse = 'False';
-  cOff_On_Enum = 'Off|On';
+  {cOff_On_Enum = 'Off|On';
   cOn = 'On';
-  cOff = 'Off';
-  cNo_Yes_Enum = 'No|Yes';
-  cYes = 'Yes';
-  cNo = 'No';
+  cOff = 'Off';}
+  cNo_Yes_Enum = 'NO|YES';
+  cYes = 'YES';
+  cNo = 'NO';
   ZProp_UID: TZProperty = (
     Name: ConnProps_UID; Purpose: 'the login username (same as username)';
     ValueType: pvtString; LevelTypes: [pltConnection];
@@ -3269,20 +3269,148 @@ const
     Providers: (Count: 1; Items: @cASAProvider);
     Protocols: (Count: 1; Items: @cASAProtocol);
   );
+  cASA_DatabaseSwitchesPurpose =
+    'Provides database-specific options when starting a database.'+LineEnding+
+    '{ DatabaseSwitches | DBS }=database-options'+LineEnding+
+    'Connecting to a database server when the database is not started. This '+
+    'connection parameter starts a database server automatically with the '+
+    'specified database and options if a database server is not running.';
+  ZProp_DatabaseSwitches : TZProperty = (
+    Name: ConnProps_DatabaseSwitches;
+    Purpose: cASA_DatabaseSwitchesPurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_DBS;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  ZProp_DBS : TZProperty = (
+    Name: ConnProps_DBS;
+    Purpose: cASA_DatabaseSwitchesPurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_DatabaseSwitches;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  cASA_DatabaseSourceNamePurpose =
+    'Tells the ODBC driver manager or embedded SQL library where to look in the '+
+    'registry or the system information file (named .odbc.ini by default) to '+
+    'find ODBC data source information. '+LineEnding+
+    '{ DataSourceName | DSN }=data-source-name'+LineEnding+
+    'This string specifies the name of the ODBC data source that contains '+
+    'connection in formation for your database. ';
+  ZProp_DatabaseSourceName : TZProperty = (
+    Name: ConnProps_DataSourceName;
+    Purpose: cASA_DatabaseSourceNamePurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_DSN;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  ZProp_DSN : TZProperty = (
+    Name: ConnProps_DSN;
+    Purpose: cASA_DatabaseSourceNamePurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_DataSourceName;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  cASA_DisableMultiRowFetchPurpose =
+    'Turns off multi-row fetches across the network.'+LineEnding+
+    '{ DisableMultiRowFetch | DMRF }={ YES | NO }'+LineEnding+
+    'By default, when the database server gets a simple fetch request, the '+
+    'application asks for extra rows. You can disable this behavior by setting '+
+    'this parameter to YES.';
+  ZProp_DisableMultiRowFetch : TZProperty = (
+    Name: ConnProps_DisableMultiRowFetch;
+    Purpose: cASA_DisableMultiRowFetchPurpose;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cNo_Yes_Enum; Default: cNo; Alias: ConnProps_DMRF;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  ZProp_DMRF : TZProperty = (
+    Name: ConnProps_DMRF;
+    Purpose: cASA_DisableMultiRowFetchPurpose;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cNo_Yes_Enum; Default: cNo; Alias: ConnProps_DisableMultiRowFetch;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  ZProp_Elevate : TZProperty = (
+    Name: ConnProps_Elevate;
+    Purpose: 'Elevates automatically started database server executables on '+LineEnding+
+      'Windows Vista.'+LineEnding+'Elevate={ YES | NO }'+LineEnding+
+      'You can specify ELEVATE=YES in your connection string so that '+
+      'automatically started database server executables are elevated. This '+
+      'allows non-elevated client processes to start elevated servers '+
+      'automatically, which is necessary on Windows Vista because non-elevated '+
+      'servers cannot use AWE memory. This parameter is ignored if the database '+
+      'server is not started automatically. You must specify the -cw option '+
+      'when starting the database server command to use an AWE cache.';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cNo_Yes_Enum; Default: cNo; Alias: '';
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  cASA_EncryptedPasswordPurpose =
+    'Provides a password, stored in an encrypted format in a data source.'+LineEnding+
+    '{ EncryptedPassword | ENP }=password'+LineEnding+
+    'Every user of a database has a password. The password must be supplied for '+
+    'the user to connect to the database. The EncryptedPassword (ENP) connection '+
+    'parameter is used to specify an encrypted password. An application may '+
+    'include the encrypted password in the connection string. If both the '+
+    'Password (PWD) connection parameter and the EncryptedPassword (ENP) '+
+    'connection parameter are specified, the Password (PWD) connection '+
+    'parameter takes precedence.';
+  ZProp_EncryptedPassword : TZProperty = (
+    Name: ConnProps_EncryptedPassword;
+    Purpose: cASA_EncryptedPasswordPurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_ENP;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  ZProp_ENP : TZProperty = (
+    Name: ConnProps_ENP;
+    Purpose: cASA_EncryptedPasswordPurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_EncryptedPassword;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  cASA_EncryptionPurpose =
+    'Encrypts packets sent between the client application and the database '+
+    'server using transport-layer security or simple encryption.'+LineEnding+
+    '{ Encryption | ENC }={ NONE | SIMPLE | TLS( TLS_TYPE=algorithm;'+LineEnding+
+    '  [ FIPS={ Y | N }; ]'+LineEnding+
+    ' TRUSTED_CERTIFICATE=public-certificate;'+LineEnding+
+    '  [ CERTIFICATE_COMPANY=organization; ]'+LineEnding+
+    '  [ CERTIFICATE_NAME=common-name; ]'+LineEnding+
+    '  [ CERTIFICATE_UNIT=organization-unit ] )'+LineEnding+
+    'Every user of a database has a password. The password must be supplied for '+
+    'the user to connect to the database. The Encryption (ENP) connection '+
+    'parameter is used to specify an encrypted password. An application may '+
+    'include the encrypted password in the connection string. If both the '+
+    'Password (PWD) connection parameter and the Encryption (ENP) '+
+    'connection parameter are specified, the Password (PWD) connection '+
+    'parameter takes precedence. ';
+  ZProp_Encryption : TZProperty = (
+    Name: ConnProps_Encryption;
+    Purpose: cASA_EncryptionPurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_ENC;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
+  ZProp_ENC : TZProperty = (
+    Name: ConnProps_ENC;
+    Purpose: cASA_EncryptionPurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_Encryption;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 1; Items: @cASAProtocol);
+  );
  (*
-  ConnProps_DatabaseSwitches = 'DatabaseSwitches';
-  ConnProps_DBS = 'DBS';
-  ConnProps_DataSourceName = 'DataSourceName';
-  ConnProps_DSN = 'DSN';
-  ConnProps_DisableMultiRowFetch = 'DisableMultiRowFetch';
-  ConnProps_DMRF = 'DMRF';
-  ConnProps_Elevate = 'Elevate';
-  ConnProps_EncryptedPassword = 'EncryptedPassword';
-  ConnProps_ENP = 'ENP';
-  ConnProps_Encryption = 'Encryption';
-  ConnProps_ENC = 'ENC';
-  ConnProps_EngineName = 'EngineName';
-  ConnProps_ENG = 'ENG';
   ConnProps_FileDataSourceName = 'FileDataSourceName';
   ConnProps_FILEDSN = 'FILEDSN';
   ConnProps_ForceStart = 'ForceStart';
@@ -3454,7 +3582,10 @@ initialization
     @ZProp_CBSIZE, @ZProp_CommLinks, @ZProp_LINKS, @ZProp_Compress, @ZProp_COMP,
     @ZProp_CompressionThreshold, @ZProp_COMPTH, @ZProp_ConnectionName, @ZProp_CON,
     @ZProp_ConnectionPool,@ZProp_CPOOL,@ZProp_DatabaseFile,@ZProp_DBF,
-    @ZProp_DatabaseKey, @ZProp_DBKEY, @ZProp_DatabaseName, @ZProp_DBN]);
+    @ZProp_DatabaseKey, @ZProp_DBKEY, @ZProp_DatabaseName, @ZProp_DBN,
+    @ZProp_DatabaseSwitches, @ZProp_DBS, @ZProp_DatabaseSourceName, @ZProp_DSN,
+    @ZProp_DisableMultiRowFetch, @ZProp_DMRF, @ZProp_Elevate,
+    @ZProp_EncryptedPassword, @ZProp_ENP, @ZProp_Encryption, @ZProp_ENC]);
 {$ENDIF}
 
 
