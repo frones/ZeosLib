@@ -274,7 +274,6 @@ type
     procedure SetIndexFieldNames(const Value : String); {bangfauzan addition}
     procedure SetOptions(Value: TZDatasetOptions);
     procedure SetSortedFields(const Value: string); {bangfauzan modification}
-    procedure SetProperties(const Value: TStrings);
 
     function GetSortType : TSortType; {bangfauzan addition}
     Procedure SetSortType(Value : TSortType); {bangfauzan addition}
@@ -288,6 +287,7 @@ type
     procedure SetUniDirectional(const Value: boolean);
     {$ENDIF}
     function  GetUniDirectional: boolean;
+    procedure SetProperties(const Value: TStrings); virtual;
   protected
     FTransaction: TZAbstractTransaction;
     procedure CheckOpened;
@@ -369,8 +369,7 @@ type
     property IsUniDirectional: Boolean read GetUniDirectional
       write SetUniDirectional default False;
     property Properties: TStrings read FProperties write SetProperties;
-    property Options: TZDatasetOptions read FOptions write SetOptions
-      default [doCalcDefaults, doPreferPrepared];
+    property Options: TZDatasetOptions read FOptions write SetOptions;
     property DataSource: TDataSource read GetDataSource write SetDataSource;
     property MasterFields: string read GetMasterFields
       write SetMasterFields;
@@ -5562,64 +5561,7 @@ end;
 type
   IProviderSupportActual = {$IF DECLARED(IProviderSupportNG)}IProviderSupportNG{$ELSE} IProviderSupport {$IFEND};
 {$ENDIF}
-(*
-procedure TZAbstractRODataset.CreateFields;
-var
-  I: Integer;
 
-  procedure SetKeyFields;
-  var
-    Pos, j: Integer;
-    KeyFields, FieldName: string;
-    {$IFDEF WITH_IPROVIDERSUPPORT_GUID}
-    PS: IProviderSupportActual;
-    {$ENDIF}
-  begin
-    {$IFDEF WITH_IPROVIDERSUPPORT_GUID}
-    if Supports(self, IProviderSupportActual, PS) then
-      KeyFields := PS.PSGetKeyFields
-    else
-      KeyFields := IProviderSupportActual(Self).PSGetKeyFields;
-    {$ELSE}
-    KeyFields := self.PSGetKeyFields;
-    {$ENDIF}
-    Pos := 1;
-    while Pos <= Length(KeyFields) do
-    begin
-      FieldName := ExtractFieldName(KeyFields, Pos);
-      for j := 0 to FieldCount - 1 do
-        if AnsiCompareText(FieldName, Fields[j].FieldName) = 0 then
-        begin
-          Fields[j].ProviderFlags := Fields[j].ProviderFlags + [pfInKey];
-          break;
-        end;
-    end;
-  end;
-begin
-  if ObjectView then
-  begin
-    for I := 0 to FieldDefs.Count - 1 do
-      with FieldDefs[I] do
-        if (DataType <> ftUnknown) and not
-          ((faHiddenCol in Attributes) and not FIeldDefs.HiddenFields) then
-          CreateField(Self);
-  end else
-    for I := 0 to {$IFNDEF WITH_FIELDDEFLIST}FieldDefs{$ELSE}FieldDefList{$ENDIF}.Count - 1 do
-      with FieldDefs[I] do
-        if (FieldDefs[I] is TZFieldDef) and not InternalCalcField and not
-            ((faHiddenCol in Attributes) and not FieldDefs.HiddenFields) then
-          TZFieldDef(FieldDefs[I]).CreateField(Self)
-        else with {$IFNDEF WITH_FIELDDEFLIST}FieldDefs{$ELSE}FieldDefList{$ENDIF}[I] do
-          if (DataType <> ftUnknown) and not (DataType in ObjectFieldTypes) and
-            not ((faHiddenCol in Attributes) and not FieldDefs.HiddenFields) then
-            CreateField(Self);
-  {$IFNDEF FPC}
-  SetKeyFields;
-  {$ENDIF}
-  //else
-  inherited CreateFields;
-end;
-*)
 {**
   Reset the calculated (includes fkLookup) fields
   @param Buffer
@@ -8974,8 +8916,9 @@ begin
 end;
 
 procedure TZRawStringField.SetAsString(const Value: String);
+var
 {$IFNDEF UNICODE}
-var L: LengthInt;
+    L: LengthInt;
     P: PAnsiChar;
   procedure DoValidate;
   begin
@@ -9000,10 +8943,13 @@ var L: LengthInt;
     U := PRawToUnicode(P, L, StrCP);
     SetAsUnicodeString(U);
   end;
+{$ELSE}
+  PW: PWideChar;
 {$ENDIF}
 begin
   {$IFDEF UNICODE}
-  SetPWideChar(Pointer(Value), Length(Value));
+  PW := Pointer(Value);
+  SetPWideChar(PW, SysUtils.StrLen(PW));
   {$ELSE}
   if not FBound then
     raise CreateUnBoundError(Self);

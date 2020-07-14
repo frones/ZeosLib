@@ -75,7 +75,7 @@ type
     property MasterSource;
     property LinkedFields; {renamed by bangfauzan}
     property IndexFieldNames; {bangfauzan addition}
-    property Options;
+    property Options default [doPreferPrepared];
   end;
 
   {** Implements an universal SQL query for read/write data access. }
@@ -97,7 +97,7 @@ type
     property IndexFieldNames; {bangfauzan addition}
     property UpdateMode;
     property WhereMode;
-    property Options;
+    property Options default [doCalcDefaults, doPreferPrepared];
     property Sequence;
     property SequenceField;
   end;
@@ -119,7 +119,7 @@ type
     property IndexFieldNames; {bangfauzan addition}
     property UpdateMode;
     property WhereMode;
-    property Options;
+    property Options default [doCalcDefaults, doPreferPrepared];
     property Sequence;
     property SequenceField;
   end;
