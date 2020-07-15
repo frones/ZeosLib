@@ -119,7 +119,7 @@ type
 
   TZAbstractODBCPreparedStatement = class(TZAbstractODBCStatement)
   private
-    fDEFERPREPARE, //if set the stmt will be prepared immediatelly and we'll try to decribe params
+    fDEFERPREPARE, //if not set the stmt will be prepared immediatelly and we'll try to decribe params
     fBindImmediat: Boolean; //the param describe did fail! we'll try to bind the params with describe emulation
     fCurrentIterations: NativeUInt;
     function CreateUnsupportedParamType(Index: Integer; SQLCType: SQLSMALLINT; SQLType: TZSQLType): EZSQLException;
@@ -316,7 +316,7 @@ begin
   fStreamSupport := Connection.ODBCVersion >= {%H-}Word(SQL_OV_ODBC3_80);
   fPHDBC := @ConnectionHandle;
   FZBufferLength := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_InternalBufSize, ''), 131072); //by default 128KB
-  FEnhancedColInfo := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_EnhancedColumnInfo, 'True'));
+  FEnhancedColInfo := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_EnhancedColumnInfo, StrTrue));
   fStmtTimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_StatementTimeOut, ''), SQL_QUERY_TIMEOUT_DEFAULT); //execution timeout in seconds by default 1
   fMoreResultsIndicator := TZMoreResultsIndicator(Ord(not Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets));
   FClientEncoding := ConSettings^.ClientCodePage.Encoding;
@@ -753,9 +753,18 @@ end;
 
 procedure TZODBCPreparedStatementW.InternalPrepare;
 var Ret: SQLRETURN;
+  S: String;
 begin
-  fDEFERPREPARE := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_PreferPrepared, 'True')) and (FTokenMatchIndex <> -1);
-  if fDEFERPREPARE then begin
+  S := GetParameters.Values[DSProps_DeferPrepare];
+  if S = '' then
+    S := Connection.GetParameters.Values[DSProps_DeferPrepare];
+  if S = '' then begin
+    S := DefineStatementParameter(Self, DSProps_PreferPrepared, StrTrue);
+    fDEFERPREPARE := not StrToBoolEx(S);
+  end else
+    fDEFERPREPARE := StrToBoolEx(S);
+  fDEFERPREPARE := fDEFERPREPARE or (FTokenMatchIndex = -1);
+  if not fDEFERPREPARE then begin
     Ret := TODBC3UnicodePlainDriver(fPlainDriver).SQLPrepareW(fHSTMT, Pointer(WSQL), Length(WSQL));
     if Ret <> SQL_SUCCESS then
       FODBCConnectionW.HandleStmtErrorOrWarningW(Ret, fHSTMT, fWSQL, lcExecute, Self);
@@ -805,9 +814,18 @@ end;
 
 procedure TZODBCPreparedStatementA.InternalPrepare;
 var Ret: SQLRETURN;
+  S: String;
 begin
-  fDEFERPREPARE := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_PreferPrepared, 'True')) and (FTokenMatchIndex <> -1);
-  if fDEFERPREPARE then begin
+  S := GetParameters.Values[DSProps_DeferPrepare];
+  if S = '' then
+    S := Connection.GetParameters.Values[DSProps_DeferPrepare];
+  if S = '' then begin
+    S := ZDbcUtils.DefineStatementParameter(Self, DSProps_PreferPrepared, StrTrue);
+    fDEFERPREPARE := not StrToBoolEx(S);
+  end else
+    fDEFERPREPARE := StrToBoolEx(S);
+  fDEFERPREPARE := fDEFERPREPARE or (FTokenMatchIndex = -1);
+  if not fDEFERPREPARE then begin
     Ret := TODBC3RawPlainDriver(fPlainDriver).SQLPrepare(fHSTMT, Pointer(ASQL), Length(ASQL));
     if Ret <> SQL_SUCCESS then
       FODBCConnectionA.HandleStmtErrorOrWarningA(Ret, fHSTMT, fASQL, lcExecute, Self);

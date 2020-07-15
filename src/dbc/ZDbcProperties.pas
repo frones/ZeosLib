@@ -212,7 +212,7 @@ const
   ConnProps_TrustedConnection = 'Trusted_Connection';
 {$IFEND}
 
-{$IF DEFINED(ENABLE_OLEDB) OR DEFINED(ENABLE_ADO)}
+{$IF DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}
   // Type: BOOLEAN
   // Defer the prepare?
   DSProps_DeferPrepare = 'DeferPrepare';
