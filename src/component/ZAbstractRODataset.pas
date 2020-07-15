@@ -84,9 +84,8 @@ type
 
   {** Options for dataset. }
   TZDatasetOption = ({$IFNDEF NO_TDATASET_TRANSLATE}doOemTranslate, {$ENDIF}
-    doCalcDefaults, doAlwaysDetailResync,
-    doSmartOpen, doPreferPrepared, doDontSortOnPost, doUpdateMasterFirst,
-    doCachedLobs, doAlignMaxRequiredWideStringFieldSize, doNoAlignDisplayWidth);
+    doCalcDefaults, doAlwaysDetailResync, doSmartOpen, doPreferPrepared,
+    doDontSortOnPost, doUpdateMasterFirst, doCachedLobs);
 
   {** Set of dataset options. }
   TZDatasetOptions = set of TZDatasetOption;
@@ -3472,13 +3471,6 @@ begin
 
         if FieldType in [ftBytes, ftVarBytes, ftString, ftWidestring] then begin
           Size := GetPrecision(I);
-          (*EH 14.01.2020 commented. After having the TZRaw/Unicode-Fields we don't need that any more
-          if (FieldType = ftString) then
-            if (ConSettings^.CPType = cCP_UTF8)
-            then Size := Size shl 2 //four bytes per char
-            else Size := Size * ZOSCodePageMaxCharSize
-          else if (FieldType = ftWideString) and (doAlignMaxRequiredWideStringFieldSize in Options) {and (ConSettings.ClientCodePage.CharWidth > 3)} then
-            Size := Size shl 1; //two bytes per char *)
         end else {$IFDEF WITH_FTGUID} if FieldType = ftGUID then
           Size := 38
         else {$ENDIF} if FieldType in [ftBCD, ftFmtBCD{, ftTime, ftDateTime}] then
@@ -3554,8 +3546,12 @@ begin
       Temp.AddStrings(Properties);
     { Define TDataset specific parameters. }
     Temp.Values[DSProps_Defaults] := BoolStrs[doCalcDefaults in FOptions];
+    {$IF declared(DSProps_PreferPrepared)}
     Temp.Values[DSProps_PreferPrepared] := BoolStrs[doPreferPrepared in FOptions];
+    {$IFEND}
+    {$IF declared(DSProps_CachedLobs)}
     Temp.Values[DSProps_CachedLobs] := BoolStrs[doCachedLobs in FOptions];
+    {$IFEND}
     if FTransaction <> nil
     then Txn := THackTransaction(FTransaction).GetIZTransaction
     else Txn := FConnection.DbcConnection.GetConnectionTransaction;
@@ -3649,20 +3645,19 @@ begin
     {$ENDIF}
     begin
       CreateFields;
-      if not (doNoAlignDisplayWidth in FOptions) then
-        for i := 0 to Fields.Count -1 do begin
-          if Fields[i].DataType = ftString then
-            Fields[i].DisplayWidth := FResultSetMetadata.GetPrecision(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
-          {$IFDEF WITH_FTGUID}
-          else if Fields[i].DataType = ftGUID then Fields[i].DisplayWidth := 40 //looks better in Grid
-          {$ENDIF}
-          (*else if Fields[i].DataType in [ftTime, ftDateTime] then
-            Fields[i].DisplayWidth := Fields[i].DisplayWidth + MetaData.GetScale(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})*);
-          {$IFDEF WITH_TAUTOREFRESHFLAG} //that's forcing loading metainfo's
-          //if FResultSetMetadata.IsAutoIncrement({$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then
-            //Fields[i].AutoGenerateValue := arAutoInc;
-          {$ENDIF !WITH_TAUTOREFRESHFLAG}
-        end;
+      for i := 0 to Fields.Count -1 do begin
+        if Fields[i].DataType = ftString then
+          Fields[i].DisplayWidth := FResultSetMetadata.GetPrecision(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+        {$IFDEF WITH_FTGUID}
+        else if Fields[i].DataType = ftGUID then Fields[i].DisplayWidth := 40 //looks better in Grid
+        {$ENDIF}
+        (*else if Fields[i].DataType in [ftTime, ftDateTime] then
+          Fields[i].DisplayWidth := Fields[i].DisplayWidth + MetaData.GetScale(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})*);
+        {$IFDEF WITH_TAUTOREFRESHFLAG} //that's forcing loading metainfo's
+        //if FResultSetMetadata.IsAutoIncrement({$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then
+          //Fields[i].AutoGenerateValue := arAutoInc;
+        {$ENDIF !WITH_TAUTOREFRESHFLAG}
+      end;
     end;
     BindFields(True);
 
