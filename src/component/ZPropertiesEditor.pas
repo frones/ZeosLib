@@ -99,6 +99,7 @@ type
     mmStringList: TMemo;
     lblProtocols: TLabel;
     lblProviders: TLabel;
+    cbHideAlias: TCheckBox;
     procedure FormShow(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -113,15 +114,17 @@ type
       Y: Integer);
     procedure lbAvailableMouseMove(Sender: TObject; Shift: TShiftState; X,
       Y: Integer);
+    procedure cbHideAliasClick(Sender: TObject);
   private
     { Private declarations }
     FZPropertyLevelTypes: TZPropertyLevelTypes;
     FServerProvider: TZServerProvider;
-    FPropsUsed, FPropsUnUsed: TZSortedList;
+    FPropsUsed, FPropsUnused: TZSortedList;
     FSortedLines: TStrings;
     function compareProps(Item1, Item2: Pointer): Integer;
     procedure LoadProperties;
     procedure SetItemHint(ListBox: TListBox; ItemIndex: Integer);
+    procedure SetUnusedItems;
   public
     { Public declarations }
     Lines: TStrings;
@@ -213,6 +216,7 @@ var
   pnlBottomHeight: Integer;
   gbValWidth: Integer;
   bgPropsUsedWidth: Integer;
+  HideEquals: Boolean;
 
 { EH: represent each constant in an record for a better control/description}
 //wish of Jan@EH: instead of a constant array, use a dynamic array,
@@ -283,6 +287,7 @@ begin
     gbVal.Width := gbValWidth;
   if bgPropsUsedWidth <> -1 then
     bgPropsUsed.Width := bgPropsUsedWidth;
+  cbHideAlias.Checked := HideEquals;
   LoadProperties;
 end;
 
@@ -360,7 +365,7 @@ end;
 procedure TfrmPropertyEditor.FormDestroy(Sender: TObject);
 begin
   FreeAndNil(FPropsUsed);
-  FreeAndNil(FPropsUnUsed);
+  FreeAndNil(FPropsUnused);
   FreeAndNil(FSortedLines);
   frmPropertyHeight := Height;
   frmPropertyWidth  := Width;
@@ -385,7 +390,6 @@ begin
   FSortedLines := TStringList.Create;
   Drivers := DriverManager.GetDrivers;
   Protocols := nil;
-  FSortedLines.Clear;
   FSortedLines.Add('');
   for I := 0 to Drivers.Count - 1 do begin
     Protocols := (Drivers[I] as IZDriver).GetSupportedProtocols;
@@ -424,17 +428,12 @@ begin
   if lbUsed.ItemIndex <> -1 then begin
     Current := PZProperty(lbUsed.Items.Objects[Idx]);
     if Current <> nil then begin
-      FPropsUnUsed.Add(Current);
-      FPropsUnUsed.Sort(compareProps);
-      lbAvailable.Enabled := False;
-      lbAvailable.Clear;
-      for i := 0 to FPropsUnUsed.Count -1 do
-        lbAvailable.Items.AddObject(PZProperty(FPropsUnUsed[i]).Name, FPropsUnUsed[i]);
-      lbAvailable.Enabled := True;
+      FPropsUnused.Add(Current);
       i := FPropsUsed.IndexOf(Current);
       FPropsUsed.Delete(I);
     end;
     lbUsed.Items.Delete(Idx);
+    SetUnusedItems;
   end;
   if Idx = FPropsUsed.Count then
     Dec(IDX);
@@ -466,17 +465,17 @@ begin
     if Current.Protocols.Count = 0 then
       lblProtocols.Caption := 'Protocol(s): <ALL>'
     else begin
-      lblProtocols.Caption := 'Protocols: '+Current.Protocols.Items^[0];
+      lblProtocols.Caption := 'Protocols(s): '+Current.Protocols.Items^[0];
       for I := 1 to Current.Protocols.Count -1 do
-        lblProtocols.Caption := lblProtocols.Caption+','+Current.Protocols.Items^[I];
+        lblProtocols.Caption := lblProtocols.Caption+', '+Current.Protocols.Items^[I];
     end;
     if Current.Providers.Count = 0 then
       lblProviders.Caption := 'Provider(s): spUnknown'
     else begin
       TInfo := TypeInfo(TZServerProvider);
-      lblProviders.Caption := 'Providers: '+GetEnumName(TInfo, Ord(Current.Providers.Items[0].Provider));
+      lblProviders.Caption := 'Provider(s): '+GetEnumName(TInfo, Ord(Current.Providers.Items[0].Provider));
       for I := 1 to Current.Providers.Count -1 do
-        lblProviders.Caption := lblProviders.Caption+','+GetEnumName(TInfo, Ord(Current.Providers.Items[I].Provider));
+        lblProviders.Caption := lblProviders.Caption+', '+GetEnumName(TInfo, Ord(Current.Providers.Items[I].Provider));
     end;
     case Current.ValueType of
       pvtEnum: begin
@@ -512,9 +511,9 @@ begin
     if Current.Protocols.Count = 0 then
       lblProtocols.Caption := 'Protocol(s): <ALL>'
     else begin
-      lblProtocols.Caption := 'Protocols: '+Current.Protocols.Items^[0];
+      lblProtocols.Caption := 'Protocol(s): '+Current.Protocols.Items^[0];
       for I := 1 to Current.Protocols.Count -1 do
-        lblProtocols.Caption := lblProtocols.Caption+','+Current.Protocols.Items^[I];
+        lblProtocols.Caption := lblProtocols.Caption+', '+Current.Protocols.Items^[I];
     end;
     if Current.Providers.Count = 0 then
       lblProviders.Caption := 'Provider(s): spUnknown'
@@ -522,7 +521,7 @@ begin
       TInfo := TypeInfo(TZServerProvider);
       lblProviders.Caption := 'Providers: '+GetEnumName(TInfo, Ord(Current.Providers.Items[0].Provider));
       for I := 1 to Current.Providers.Count -1 do
-        lblProviders.Caption := lblProviders.Caption+','+GetEnumName(TInfo, Ord(Current.Providers.Items[I].Provider));
+        lblProviders.Caption := lblProviders.Caption+', '+GetEnumName(TInfo, Ord(Current.Providers.Items[I].Provider));
     end;
     mmDescrption.Text := Current.Purpose;
     gbVal.Caption := Current.Name;
@@ -578,9 +577,9 @@ begin
       TStringList(FSortedLines).Sort;
       lbUsed.Items.Assign(FSortedLines);
       FSortedLines.Clear;
-      FPropsUnUsed.Delete(FPropsUnUsed.IndexOf(Current));
+      FPropsUnused.Delete(FPropsUnused.IndexOf(Current));
     end;
-    lbAvailable.Items.Delete(lbAvailable.ItemIndex);
+    SetUnusedItems;
   end;
   lbAvailableClick(Sender);
 end;
@@ -591,13 +590,14 @@ var I, j: Integer;
   Found: Boolean;
   Current: PZProperty;
 begin
-  FPropsUnUsed.Clear;
+  FPropsUnused.Clear;
   FPropsUsed.Clear;
   for i := 0 to High(ZPropertyArray) do
     if ZPropertyArray[i] <> nil then begin
       Current := ZPropertyArray[i];
       if ((pltConnection in FZPropertyLevelTypes) and (pltConnection in Current.LevelTypes)) or
          ((pltTransaction in FZPropertyLevelTypes) and (pltTransaction in Current.LevelTypes)) or
+         ((pltResolver in FZPropertyLevelTypes) and (pltResolver in Current.LevelTypes)) or
          ((pltStatement in FZPropertyLevelTypes) and (pltStatement in Current.LevelTypes) and not
            ((pltConnection in FZPropertyLevelTypes) and not (pltConnection in Current.LevelTypes))) then begin
         if (cbProtocol.Text <> '') and (Current.Protocols.Count > 0) and (Current.Protocols.Items <> nil) then begin
@@ -637,15 +637,10 @@ begin
           end;
         end;
         if not Found then
-          FPropsUnUsed.Add(Current);
+          FPropsUnused.Add(Current);
       end;
     end;
-  FPropsUnUsed.Sort(compareProps);
-  lbAvailable.Items.Clear;
-  for i := 0 to FPropsUnUsed.Count -1 do begin
-    Current := FPropsUnUsed[i];
-    lbAvailable.Items.AddObject(Current.Name, TObject(Current));
-  end;
+  SetUnusedItems;
   if lbUsed.Items.Count > 0 then begin
     lbUsed.ItemIndex := 0;
     lbUsedClick(nil);
@@ -657,7 +652,6 @@ begin
     btnRemove.Enabled := False;
   end;
 end;
-
 
 procedure TfrmPropertyEditor.cbProtocolChange(Sender: TObject);
 begin
@@ -694,6 +688,49 @@ begin
   end;
   LastItemIndex := ItemIndex;
   LastListBox := ListBox;
+end;
+
+procedure TfrmPropertyEditor.cbHideAliasClick(Sender: TObject);
+begin
+  LoadProperties;
+end;
+
+procedure TfrmPropertyEditor.SetUnusedItems;
+var I, J, N: Integer;
+  Current: PZProperty;
+  Found: Boolean;
+  UpperCurrent, UpperUsed: string;
+begin
+  FPropsUnused.Sort(compareProps);
+  lbAvailable.Items.Clear;
+  if cbHideAlias.Checked then begin
+    for i := 0 to FPropsUnused.Count -1 do begin
+      Current := FPropsUnused[i];
+      if (Current <> nil) and (Current.Alias <> '') then begin
+        ZSysUtils.PutSplitString(FSortedLines, Current.Alias, ',;');
+        Found := False;
+        for N := 0 to FSortedLines.Count -1 do begin
+          UpperCurrent := UpperCase(FSortedLines[N]);
+          for J := 0 to FPropsUsed.Count -1 do begin
+            UpperUsed := UpperCase(PZProperty(FPropsUsed[j])^.Name);
+            if UpperUsed = UpperCurrent then begin
+              Found := True;
+              Break;
+            end;
+          end;
+          if Found then
+            Break;
+        end;
+        FSortedLines.Clear;
+        if not Found then
+          lbAvailable.Items.AddObject(Current.Name, TObject(Current));
+      end else
+        lbAvailable.Items.AddObject(Current.Name, TObject(Current));
+    end;
+  end else for i := 0 to FPropsUnused.Count -1 do begin
+    Current := FPropsUnused[i];
+    lbAvailable.Items.AddObject(Current.Name, TObject(Current));
+  end;
 end;
 
 const
@@ -948,16 +985,17 @@ const
   );
 {$IFEND}
 {$IF declared(DSProps_CachedLobs)}
+  const All_Oracle_IB_FB_Postgre: array[0..3] of String = ('oracle', 'firebird', 'interbase', 'postrgres');
   ZProp_CachedLobs : TZProperty = (
     Name: DSProps_CachedLobs;
     Purpose: 'Cache the Lob-Streams? Used for Oracle-Lobs, All IB/FB-lob''s, '+
       'Postgre-OID-lob''s only. All other providers do not support a good '+
-      'locator API. Servers like MySQL, ASE do support late-fetching methods '+
+      'locator API. Servers like MySQL(real prepared), ASE do support late-fetching methods '+
       'but we need to refetch the whole row first if the cursor postion changes';
     ValueType: pvtEnum; LevelTypes: [pltConnection, pltStatement];
     Values: cBoolEnum; Default: cBoolFalse; Alias: '';
     Providers: (Count: 0; Items: nil);
-    Protocols: (Count: 0; Items: nil);
+    Protocols: (Count: 4; Items: @All_Oracle_IB_FB_Postgre);
   );
 {$IFEND}
 {$IF declared(DSProps_UndefVarcharAsStringLength)}
@@ -1017,7 +1055,7 @@ const
   ZProp_DeferPrepare : TZProperty = (
     Name: DSProps_DeferPrepare;
     Purpose: 'Defer prepare? If not set we''ll try to prepere the [update|delete'+
-      '|insert|select] statements immediately'.+LineEnding+
+      '|insert|select] statements immediately.'+LineEnding+
       'The more we try determine the parameter types, alloc the param-buffer '+
       'once and do not use parameter late-bindings. Thus it''s faster if NO '+
       'defer prepare is used'+LineEnding+
@@ -1037,8 +1075,8 @@ const
   ZProp_MinExecCntBeforePrepare : TZProperty = (
     Name: DSProps_MinExecCntBeforePrepare;
     Purpose: 'How many executions must be done to realy prepare the statement '+
-      'on the Server? JDBC does prepare on after 4 executions. A negative '+
-      'value means never prepare. Zero means prepare immediately. '+
+      'on the Server? JDBC does prepare after 4 executions. A negative '+
+      'value means never prepare. A zero value means prepare immediately. '+LineEnding+
       'Actually default is 2 executions before prepare the stmt on the server';
     ValueType: pvtNumber; LevelTypes: [pltConnection, pltStatement];
     Values: ''; Default: '2'; Alias: '';
@@ -1888,8 +1926,8 @@ const
   ZProp_SetGUIDByType : TZProperty = (
     Name: ConnProps_SetGUIDByType;
     Purpose: 'Set a type of **all** CHAR(16) CHAR SET OCTETS fields to GUID.';
-    ValueType: pvtEnum; LevelTypes: [pltConnection, pltStatement];
-    Values: cBoolEnum; Default: ''; Alias: '';
+    ValueType: pvtString; LevelTypes: [pltConnection, pltStatement];
+    Values: ''; Default: ''; Alias: '';
     Providers: (Count: 1; Items: @cInterbaseAndFirebirdProvider);
     Protocols: (Count: 2; Items: @AllInterbaseAndFirebirdProtocols);
   );
@@ -3075,14 +3113,14 @@ const
     Providers: (Count: 1; Items: @cASAProvider);
     Protocols: (Count: 1; Items: @cASAProtocol);
   );
-  cASA_CharSetPurpose: String =
+  cASA_CharSetPurpose =
     'Specifies the character set to be used on this connection. '+
     'Syntax: { CharSet | CS }={ NONE | character-set }'+LineEnding+
     'NONE   Specifying CharSet=NONE requests that the connection use the '+
     'database CHAR character set.';
   ZProp_CharSet : TZProperty = (
     Name: ConnProps_CharSet;
-    Purpose: cASA_AutoStartPurpose;
+    Purpose: cASA_CharSetPurpose;
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_CS+','+ConnProps_CodePage;
     Providers: (Count: 1; Items: @cASAProvider);
@@ -3090,7 +3128,7 @@ const
   );
   ZProp_CS : TZProperty = (
     Name: ConnProps_CS;
-    Purpose: cASA_AutoStartPurpose;
+    Purpose: cASA_CharSetPurpose;
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_CharSet+','+ConnProps_CodePage;
     Providers: (Count: 1; Items: @cASAProvider);
@@ -3489,6 +3527,7 @@ initialization
   bgPropsUsedWidth := -1;
   LastListBox := nil;
   LastItemIndex := -1;
+  HideEquals := True;
 
   RegisterZProperties([@ZProp_UID, @ZProp_Username, @ZProp_PWD, @ZProp_Password,
     @ZProp_LibLocation, @ZProp_CodePage, @ZProp_AutoEncodeStrings, //@ZProp_Transliterate,

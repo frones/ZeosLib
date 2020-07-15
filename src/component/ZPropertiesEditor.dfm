@@ -125,7 +125,7 @@ object frmPropertyEditor: TfrmPropertyEditor
           object lbAvailable: TListBox
             Left = 8
             Top = 15
-            Width = 263
+            Width = 281
             Height = 238
             Anchors = [akLeft, akTop, akRight, akBottom]
             ItemHeight = 13
@@ -268,7 +268,7 @@ object frmPropertyEditor: TfrmPropertyEditor
             object mmDescrption: TMemo
               Left = 8
               Top = 16
-              Width = 264
+              Width = 281
               Height = 97
               Anchors = [akLeft, akTop, akRight, akBottom]
               ReadOnly = True
@@ -305,7 +305,7 @@ object frmPropertyEditor: TfrmPropertyEditor
     end
   end
   object btnOK: TButton
-    Left = 441
+    Left = 457
     Top = 491
     Width = 75
     Height = 25
@@ -315,7 +315,7 @@ object frmPropertyEditor: TfrmPropertyEditor
     TabOrder = 1
   end
   object btnCancel: TButton
-    Left = 521
+    Left = 537
     Top = 491
     Width = 75
     Height = 25
@@ -323,5 +323,15 @@ object frmPropertyEditor: TfrmPropertyEditor
     Caption = 'Cancel'
     ModalResult = 2
     TabOrder = 2
+  end
+  object cbHideAlias: TCheckBox
+    Left = 16
+    Top = 496
+    Width = 201
+    Height = 17
+    Alignment = taLeftJustify
+    Caption = 'Hide properties with equal purpose'
+    TabOrder = 3
+    OnClick = cbHideAliasClick
   end
 end
