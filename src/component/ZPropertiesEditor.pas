@@ -1011,6 +1011,26 @@ const
   );
 {$IFEND}
 
+{$IF declared(DSProps_DeferPrepare)}
+  const AllODBC_OleDB: array[0..1] of String =
+    ('odbc','OleDB');
+  ZProp_DeferPrepare : TZProperty = (
+    Name: DSProps_DeferPrepare;
+    Purpose: 'Defer prepare? If not set we''ll try to prepere the [update|delete'+
+      '|insert|select] statements immediately'.+LineEnding+
+      'The more we try determine the parameter types, alloc the param-buffer '+
+      'once and do not use parameter late-bindings. Thus it''s faster if NO '+
+      'defer prepare is used'+LineEnding+
+      'Some servers might fail to prepare the statments(MS-products are master '+
+      'of fails including unknown exceptions) -> turn it off on DataSet/Statement '+
+      'level if you run into that issue';
+    ValueType: pvtEnum; LevelTypes: [pltStatement];
+    Values: cBoolEnum; Default: cBoolFalse; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @AllODBC_OleDB);
+  );
+{$IFEND}
+
 {$IF defined (ENABLE_MYSQL) or defined (ENABLE_POSTGRESQL)}
   const AllMySQL_MariaDB_Postgre: array[0..2] of String =
     ('mysql','mariadb','postgres');
@@ -3495,7 +3515,7 @@ initialization
 {$IF declared(ZProp_UndefVarcharAsStringLength)}
   RegisterZProperty(@ZProp_UndefVarcharAsStringLength);
 {$IFEND}
-{$IF declared(ConnProps_Provider)}
+{$IF declared(ZProp_OleDBProvider)}
   RegisterZProperty(@ZProp_OleDBProvider);
 {$IFEND}
 {$IF declared(ZProp_StatementTimeOut)}
@@ -3507,8 +3527,11 @@ initialization
 {$IF declared(ZProp_MinExecCntBeforePrepare)}
   RegisterZProperty(@ZProp_MinExecCntBeforePrepare);
 {$IFEND}
-{$IF declared(ZProp_MinExecCntBeforePrepare)}
+{$IF declared(ZProp_EmulatePrepares)}
   RegisterZProperty(@ZProp_EmulatePrepares);
+{$IFEND}
+{$IF declared(ZProp_DeferPrepare)}
+  RegisterZProperty(@ZProp_DeferPrepare);
 {$IFEND}
 {$IFDEF ENABLE_DBLIB}
   RegisterZProperties([@ZProp_TDSVersion, @ZProp_TDSProtocolVersion,
