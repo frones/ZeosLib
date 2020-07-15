@@ -764,7 +764,8 @@ begin
         FRawTemp, IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
   end;
-  if Result = nil then raise EZSQLException.Create(SCanNotOpenResultSet);
+  if (Result = nil) and not FMySQLConnection.IsSilentError then
+    raise EZSQLException.Create(SCanNotOpenResultSet);
   if (FTokenMatchIndex = Ord(myCall)) or BindList.HasReturnParam then
     FOutParamResultSet := Result;
 end;

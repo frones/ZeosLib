@@ -94,6 +94,7 @@ type
     procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString);
     function GetByteBufferAddress: PByteBuffer;
     procedure SetSilentError(Value: Boolean);
+    function IsSilentError: Boolean;
     procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
       MYSQL_STMT: PMYSQL_STMT; const LogMessage: RawByteString;
       const Sender: IImmediatelyReleasable);
@@ -164,6 +165,7 @@ type
       MYSQL_STMT: PMYSQL_STMT; const LogMessage: RawByteString;
       const Sender: IImmediatelyReleasable);
     procedure SetSilentError(Value: Boolean);
+    function IsSilentError: Boolean;
   end;
 
 var
@@ -344,6 +346,11 @@ begin
      Self.Port := MYSQL_PORT;
   inherited SetTransactionIsolation(tiRepeatableRead);
   FMetaData := TZMySQLDatabaseMetadata.Create(Self, Url);
+end;
+
+function TZMySQLConnection.IsSilentError: Boolean;
+begin
+  Result := FSilentError;
 end;
 
 const
@@ -1110,7 +1117,7 @@ end;
 
 procedure TZMySQLConnection.SetSilentError(Value: Boolean);
 begin
-  Self.FSilentError := Value;
+  FSilentError := Value;
 end;
 
 {**
