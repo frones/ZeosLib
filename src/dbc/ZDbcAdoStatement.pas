@@ -218,7 +218,8 @@ begin
     LastResultSet := CreateResultSet;
     LastUpdateCount := {%H-}RC;
     Result := Assigned(LastResultSet);
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecPrepStmt, Self);
   except
     on E: EOleException do begin
       DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, E.ErrorCode, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
@@ -265,7 +266,8 @@ begin
       Result := GetResultSet;
     end;
     FOpenResultSet := Pointer(Result);
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecPrepStmt, Self);
   except
     on E: EOleException do begin
       DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, E.ErrorCode, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
@@ -295,7 +297,8 @@ begin
       LastResultSet := CreateResultSet;
     LastUpdateCount := FRC;
     Result := LastUpdateCount;
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecPrepStmt, Self);
   except
     on E: EOleException do begin
       DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, E.ErrorCode, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));

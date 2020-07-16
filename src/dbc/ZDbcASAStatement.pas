@@ -358,6 +358,7 @@ function TZAbstractASAStatement.ExecutePrepared: Boolean;
 var DBHandle: PZASASQLCA;
 begin
   Prepare;
+  LastUpdateCount := -1;
   if FWeakIZPreparedStatementPtr <> nil then
     BindInParameters;
   if FMoreResults or FHasOutParams
@@ -373,11 +374,11 @@ begin
       if (DBHandle.sqlCode <> SQLE_NOERROR) then
         FASAConnection.HandleErrorOrWarning(lcExecPrepStmt, fASQL, Self);
       LastResultSet := CreateResultSet;
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcExecPrepStmt,Self);
     end;
   end;
   Result := Assigned(FLastResultSet);
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
 
 {**
@@ -390,11 +391,13 @@ end;
 function TZAbstractASAStatement.ExecuteQueryPrepared: IZResultSet;
 var DBHandle: PZASASQLCA;
 begin
+  LastUpdateCount := -1;
   Prepare;
   PrepareOpenResultSetForReUse;
   if FWeakIZPreparedStatementPtr <> nil then
     BindInParameters;
   DBHandle := FASAConnection.GetDBHandle;
+  LastUpdateCount := -1;
   if not FHasOutParams then begin
     FPlainDriver.dbpp_open(DBHandle, Pointer(CursorName), nil, nil, @FStmtNum,
       FInParamSQLDA, FetchSize, 0, FCursorOptions);
@@ -419,7 +422,7 @@ begin
   end;
   { Logging SQL Command and values}
   if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcExecPrepStmt,Self);
+    DriverManager.LogMessage(lcExecPrepStmt, Self);
 end;
 
 {**

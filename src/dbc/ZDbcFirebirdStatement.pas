@@ -415,6 +415,7 @@ end;
 }
 function TZAbstractFirebirdStatement.ExecutePrepared: Boolean;
 begin
+  LastUpdateCount := -1;
   Prepare;
   PrepareLastResultSetForReUse;
   if DriverManager.HasLoggingListener then
@@ -430,7 +431,9 @@ begin
     LastResultSet := nil;
   LastUpdateCount := FFBStatement.getAffectedRecords(FStatus);
   Result := LastResultSet <> nil;
-  inherited ExecutePrepared;
+  { Logging Execution }
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
 
 {**
@@ -475,13 +478,13 @@ end;
 }
 function TZAbstractFirebirdStatement.ExecuteUpdatePrepared: Integer;
 begin
+  LastUpdateCount := -1;
   Prepare;
   LastResultSet := nil;
   PrepareOpenResultSetForReUse;
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcBindPrepStmt,Self);
   ExecuteInternal;
-  Result := LastUpdateCount;
   if BatchDMLArrayCount = 0 then begin
     case FStatementType of
       stSelect, stSelectForUpdate: if BindList.HasOutParam then begin
@@ -496,13 +499,13 @@ begin
       stExecProc: begin{ Create ResultSet if possible }
           if FOutMessageMetadata <> nil then
             FOutParamResultSet := CreateResultSet;
-          Result := FFBStatement.getAffectedRecords(FStatus)
+          LastUpdateCount := FFBStatement.getAffectedRecords(FStatus)
         end;
-      stInsert, stUpdate, stDelete: Result := FFBStatement.getAffectedRecords(FStatus);
+      stInsert, stUpdate, stDelete: LastUpdateCount := FFBStatement.getAffectedRecords(FStatus);
       {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
     end;
-    LastUpdateCount := Result;
   end;
+  Result := LastUpdateCount;
   { Logging Execution }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecPrepStmt,Self);

@@ -824,7 +824,9 @@ begin
   end else
     LastResultSet := nil;
   Result := LastResultSet <> nil;
-  inherited ExecutePrepared;
+  { Logging Execution }
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
 
 {**
@@ -852,8 +854,9 @@ begin
     Result := nil;
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   end;
-
-  inherited ExecuteQueryPrepared;
+  { Logging Execution }
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
 
 {**

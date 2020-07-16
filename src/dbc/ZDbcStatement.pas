@@ -1161,13 +1161,13 @@ begin
   EventMsg := 'Statement ';
   {$ENDIF}
   SQLWriter.AddOrd(FStatementId, EventMsg);
-  if msg <> EmptyRaw then begin
+  if (msg <> EmptyRaw) then begin
     SQLWriter.AddText(' : ', EventMsg);
     SQLWriter.AddText(Msg, EventMsg);
   end;
   SQLWriter.Finalize(EventMsg);
   FreeAndNil(SQLWriter);
-  Result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, EventMsg, 0, EmptyRaw)
+  Result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, EventMsg, FLastUpdateCount, EmptyRaw)
 end;
 
 function TZAbstractStatement.CreateLogEvent(

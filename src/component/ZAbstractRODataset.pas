@@ -7688,7 +7688,7 @@ function TZCardinalField.GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integ
 var C: Cardinal;
 begin
   C := GetAsCardinal;
-  if C > Cardinal(High(LongInt)) then
+  if C > Cardinal(High({$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF})) then
     RangeError(C, 0, High(LongInt));
   Result := C;
 end;

@@ -1698,7 +1698,7 @@ end;
 function TZASAStream.Seek(const Offset: Int64; Origin: TSeekOrigin): Int64;
 begin
   if Origin = soEnd then
-    Result := PZASABlobStruct(FOwnerLob.FASASQLDA.sqlVar[FOwnerLob.FColumnIndex].sqlData).untrunc_len - OffSet
+    Result := Int64(PZASABlobStruct(FOwnerLob.FASASQLDA.sqlVar[FOwnerLob.FColumnIndex].sqlData).untrunc_len) - OffSet
   else if Origin = soCurrent then
     Result := FPosition + OffSet
   else

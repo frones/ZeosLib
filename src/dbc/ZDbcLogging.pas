@@ -85,19 +85,19 @@ type
     FCategory: TZLoggingCategory;
     FProtocol: RawByteString;
     FMessage: RawByteString;
-    FErrorCode: Integer;
+    FErrorCodeOrAffectedRows: Integer;
     FError: RawByteString;
     FTimestamp: TDateTime;
   public
     constructor Create(Category: TZLoggingCategory; const Protocol: RawByteString;
-      const Msg: RawByteString; ErrorCode: Integer; const Error: RawByteString);
+      const Msg: RawByteString; ErrorCodeOrAffectedRows: Integer; const Error: RawByteString);
 
     function AsString(const LoggingFormatter: IZLoggingFormatter = nil): RawByteString;
 
     property Category: TZLoggingCategory read FCategory;
     property Protocol: RawByteString read FProtocol;
     property Message: RawByteString read FMessage;
-    property ErrorCode: Integer read FErrorCode;
+    property ErrorCodeOrAffectedRows: Integer read FErrorCodeOrAffectedRows;
     property Error: RawByteString read FError;
     property Timestamp: TDateTime read FTimestamp;
   end;
@@ -129,7 +129,7 @@ begin
   Result := EmptyRaw;
   SQLWriter := TZRawSQLStringWriter.Create(100+Length(LoggingEvent.Message)+Length(LoggingEvent.Error));
   try
-    SQLWriter.AddDateTime(LoggingEvent.Timestamp, 'yyyy-mm-dd hh:mm:ss', Result);
+    SQLWriter.AddDateTime(LoggingEvent.Timestamp, 'yyyy-mm-dd hh:mm:ss.fff', Result);
     SQLWriter.AddText(' cat: ', Result);
     case LoggingEvent.Category of
       lcConnect: SQLWriter.AddText('Connect', Result);
@@ -149,11 +149,14 @@ begin
     end;
     SQLWriter.AddText(', msg: ', Result);
     SQLWriter.AddText(LoggingEvent.Message, Result);
-    if (LoggingEvent.ErrorCode <> 0) or (LoggingEvent.Error <> EmptyRaw) then begin
+    if (LoggingEvent.Error <> EmptyRaw) then begin
       SQLWriter.AddText(', errcode: ', Result);
-      SQLWriter.AddOrd(LoggingEvent.ErrorCode, Result);
+      SQLWriter.AddOrd(LoggingEvent.ErrorCodeOrAffectedRows, Result);
       SQLWriter.AddText(', error: ', Result);
       SQLWriter.AddText(LoggingEvent.Error, Result);
+    end else if (LoggingEvent.ErrorCodeOrAffectedRows <> -1) then begin
+      SQLWriter.AddText(', affected row(s): ', Result);
+      SQLWriter.AddOrd(LoggingEvent.ErrorCodeOrAffectedRows, Result);
     end;
     SQLWriter.Finalize(Result);
   finally
@@ -171,12 +174,13 @@ end;
   @param Error an error message.
 }
 constructor TZLoggingEvent.Create(Category: TZLoggingCategory;
-  const Protocol: RawByteString; const Msg: RawByteString; ErrorCode: Integer; const Error: RawByteString);
+  const Protocol: RawByteString; const Msg: RawByteString;
+  ErrorCodeOrAffectedRows: Integer; const Error: RawByteString);
 begin
   FCategory := Category;
   FProtocol := Protocol;
   FMessage := Msg;
-  FErrorCode := ErrorCode;
+  FErrorCodeOrAffectedRows := ErrorCodeOrAffectedRows;
   FError := Error;
   FTimestamp := Now;
 end;

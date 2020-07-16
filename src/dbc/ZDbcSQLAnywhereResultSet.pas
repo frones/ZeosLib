@@ -1567,7 +1567,7 @@ begin
   if Origin = soEnd then
     Result := 0
   else if Origin = soCurrent then
-    Result := FPosition + OffSet
+    Result := Int64(FPosition) + OffSet
   else
     Result := OffSet;
   if Result <> FPosition then
