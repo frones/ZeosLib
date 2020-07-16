@@ -975,8 +975,8 @@ jmpTS:                Result := PAnsiChar(fByteBuffer);
                       {$ELSE}
                       ZSysUtils.GUIDToBuffer(Result, PAnsiChar(fByteBuffer), []); //pg does not Return brackets adopt behavior
                       {$ENDIF}
-                      for ColumnIndex := 0 to 35 do
-                        PByte(PAnsiChar(fByteBuffer)+ColumnIndex)^ := PByte(PAnsiChar(fByteBuffer)+ColumnIndex)^ or 20;
+                      for ColumnIndex := 0 to 8 do
+                        PCardinal(PAnsiChar(fByteBuffer)+(4*ColumnIndex))^ := PCardinal(PAnsiChar(fByteBuffer)+(4*ColumnIndex))^ or $20202020;
                       Result := PAnsiChar(fByteBuffer);
                       Len := 36;
                     end;
