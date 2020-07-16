@@ -120,6 +120,7 @@ type
     procedure Rollback;
     {$IFDEF ZEOS73UP}
     function StartTransaction: Integer;
+    function GetConnectionTransaction: IZTransaction;
     {$ENDIF}
 
     procedure Open; override;
@@ -434,6 +435,11 @@ begin
   FStartTransactionUsed := True;
   SetAutoCommit(False);
   Result := 1;
+end;
+
+function TZDbcProxyConnection.GetConnectionTransaction: IZTransaction;
+begin
+  raise Exception.Create('Unsupported');
 end;
 {$ENDIF}
 

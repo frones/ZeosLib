@@ -136,7 +136,7 @@ uses
   ZEncoding, ZTokenizer, ZClasses,
   // For the resolvers:
   ZDbcInterbase6, ZDbcASA,ZDbcDbLibResultSet, ZDbcOracle, ZdbcPostgreSqlStatement,
-  TypInfo, Variants, NetEncoding
+  TypInfo, Variants, NetEncoding{$IFDEF ZEOS73UP}, FmtBcd{$ENDIF}
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
   {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
@@ -209,7 +209,7 @@ begin
   Result := FloatToStr(Value, ProxyFormatSettings);
 end;
 {$ELSE}
-function BcdParamToStr(const Value: TFMTBcd): String;
+function BcdParamToString(const Value: TBCD): String;
 begin
   Result := BcdToStr(Value, ProxyFormatSettings);
 end;
@@ -242,6 +242,9 @@ var
   Line: String;
   x: Integer;
   TempBlob: IZBlob;
+  {$IFDEF ZEOS73UP}
+  LocalBCD: TBCD;
+  {$ENDIF}
 begin
   if InParamCount = 0 then
     exit;
@@ -268,8 +271,10 @@ begin
           {$ELSE}
           stFloat, stDouble, stCurrency:
             Line := DoubleParamToStr(ClientVarManager.GetAsDouble(InParamValues[x]));
-          stBigDecimal:
-            Line := Line := BcdParamToString(ClientVarManager.GetAsBigDecimal(InParamValues[x]));
+          stBigDecimal: begin
+              ClientVarManager.GetAsBigDecimal(InParamValues[x], LocalBCD);
+              Line := BcdParamToString(LocalBCD);
+            end;
           {$ENDIF}
           stString, stUnicodeString:
             Line := StrParamToStr(ClientVarManager.GetAsString(InParamValues[x]));
