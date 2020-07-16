@@ -664,6 +664,8 @@ begin
       if Status <> OCI_SUCCESS then
         FOracleConnection.HandleErrorOrWarning(FOCIError, Status, lcOther, 'OCIAttrSet(OCI_ATTR_PREFETCH_MEMORY)', Self);
     end;
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcPrepStmt,Self);
     inherited Prepare;
   end;
 end;

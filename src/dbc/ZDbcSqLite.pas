@@ -537,7 +537,6 @@ end;
 }
 function TZSQLiteConnection.AbortOperation: Integer;
 begin
-  {$MESSAGE '.AbortOperation with SQLite is untested and might cause unexpected results!'}
   // https://sqlite.org/c3ref/interrupt.html
   FPlainDriver.sqlite3_interrupt(FHandle);
   Result := 1;

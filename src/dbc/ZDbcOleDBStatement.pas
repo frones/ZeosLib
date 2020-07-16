@@ -1455,6 +1455,8 @@ begin
     if not fDEFERPREPARE and (fCommand.QueryInterface(IID_ICommandPrepare, CommandPrepare) = S_OK) then begin
       CheckError(CommandPrepare.Prepare(0), lcPrepStmt);
       fBindImmediat := True;
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcPrepStmt,Self);
     end else
       fBindImmediat := False;
     DBInfo := Connection.GetMetadata.GetDatabaseInfo;

@@ -205,8 +205,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  ZEncoding, ZFastCode, ZSysUtils, ZDbcMetadata, ZDbcLogging, ZVariant,
-  ZDbcProperties;
+  ZEncoding, ZFastCode, ZSysUtils, ZDbcMetadata, ZDbcLogging, ZVariant;
 
 { TZInterbase6XSQLDAResultSet }
 

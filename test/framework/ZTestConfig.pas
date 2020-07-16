@@ -301,11 +301,11 @@ begin
   if LoggingEvent.Protocol <> '' then
     Result := Result + ', proto: ' + LoggingEvent.Protocol;
   Result := Result + ', msg: ' + LoggingEvent.Message;
-  if (LoggingEvent.ErrorCode <> 0) or (LoggingEvent.Error <> '') then
-  begin
-    Result := Result + ', errcode: ' + IntToRaw(LoggingEvent.ErrorCode)
-      + ', error: ' + LoggingEvent.Error;
-  end;
+  if (LoggingEvent.Error <> '') then
+    Result := Result + ', errcode: ' + IntToRaw(LoggingEvent.ErrorCodeOrAffectedRows)
+      + ', error: ' + LoggingEvent.Error
+  else if (LoggingEvent.ErrorCodeOrAffectedRows <> 0) then
+    Result := Result + ', affected row(s): ' + IntToRaw(LoggingEvent.ErrorCodeOrAffectedRows);
 end;
 
 { TZTestConfiguration }

@@ -333,8 +333,11 @@ begin
     FAdoCommand.CommandType := FCommandType;
    // FAdoCommand.Properties['Defer Prepare'].Value := False;
     if (FWeakIZPreparedStatementPtr <> nil) and (FTokenMatchIndex > -1) and
-       StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_PreferPrepared, 'True')) then
+       StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_PreferPrepared, 'True')) then begin
       FAdoCommand.Prepared := True;
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcPrepStmt,Self);
+    end;
     inherited Prepare;
   end;
 end;

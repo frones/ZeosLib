@@ -575,6 +575,8 @@ begin
       Pointer(fASQL), FDialect, flags);
     if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
       FFBConnection.HandleErrorOrWarning(lcPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), fASQL, Self);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcPrepStmt,Self);
     if FFBStatement.vTable.version > 3 then begin
       TimeOut := StrToInt(DefineStatementParameter(Self, DSProps_StatementTimeOut, '0'));
       if TimeOut <> 0 then begin

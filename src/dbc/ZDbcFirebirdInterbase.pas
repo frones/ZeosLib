@@ -3338,9 +3338,11 @@ end;
 
 procedure TZAbstractFirebirdInterbasePreparedStatement.ExceuteBatch;
 var ArrayOffSet: Integer;
+  Succeeded: Boolean;
 begin
   Connection.StartTransaction;
   ArrayOffSet := 0;
+  Succeeded := False;
   try
     if (FBatchStmts[True].Obj <> nil) and (BatchDMLArrayCount >= FBatchStmts[True].PreparedRowsOfArray) then
       while (ArrayOffSet+FBatchStmts[True].PreparedRowsOfArray <= BatchDMLArrayCount) do begin
@@ -3354,10 +3356,11 @@ begin
         ArrayOffSet, FBatchStmts[False].PreparedRowsOfArray);
       FBatchStmts[False].Obj.ExecuteUpdatePrepared;
     end;
-    Connection.Commit;
-  except
-    Connection.Rollback;
-    raise;
+    Succeeded := True;
+  finally
+    if Succeeded
+    then Connection.Commit
+    else Connection.Rollback;
   end;
   LastUpdateCount := BatchDMLArrayCount;
 end;

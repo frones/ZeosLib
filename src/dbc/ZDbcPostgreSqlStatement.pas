@@ -220,7 +220,8 @@ uses
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
   {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
-
+const
+   cLoggingType: array[Boolean] of TZLoggingCategory = (lcExecPrepStmt,lcExecute);
 var
   PGPreparableTokens: TPreparablePrefixTokens;
 
@@ -1217,12 +1218,11 @@ var
     else Result := FPlainDriver.PQExec(FconnAddress^, Pointer(TmpSQL));
   end;
 begin
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcBindPrepStmt,Self);
   Result := nil;
   if not Assigned(FconnAddress^) then
     Exit;
-  { Logging Execution }
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcExecute,Self);
   if fAsyncQueries then begin
     if (FPQResultFormat = ParamFormatBin) or (BindList.Capacity > 0) then begin
       if FplainDriver.PQsendQueryParams(FconnAddress^,
@@ -1289,6 +1289,7 @@ end;
 function TZAbstractPostgreSQLPreparedStatementV3.ExecutePrepared: Boolean;
 var Status: TZPostgreSQLExecStatusType;
 begin
+  LastUpdatecount := -1;
   Prepare;
   PrepareLastResultSetForReUse;
   if (DriverManager <> nil) and DriverManager.HasLoggingListener then
@@ -1307,10 +1308,12 @@ begin
       FOutParamResultSet := LastResultSet;
   end else begin
     Result := False;
-    LastUpdateCount := RawToIntDef(
-      FPlainDriver.PQcmdTuples(Fres), 0);
+    LastUpdateCount := RawToIntDef(FPlainDriver.PQcmdTuples(Fres), 0);
     FPlainDriver.PQclear(Fres);
   end;
+  { Logging Execution }
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(cLoggingType[Findeterminate_datatype or (FRawPlanName = '')],Self);
 end;
 
 {**
@@ -1323,6 +1326,7 @@ end;
 function TZAbstractPostgreSQLPreparedStatementV3.ExecuteQueryPrepared: IZResultSet;
 var Status: TZPostgreSQLExecStatusType;
 begin
+  LastUpdateCount := -1;
   PrepareOpenResultSetForReUse;
   Prepare;
   if (DriverManager <> nil) and DriverManager.HasLoggingListener then
@@ -1339,6 +1343,9 @@ begin
       FOutParamResultSet := Result;
   end else
     Result := nil;
+  { Logging Execution }
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(cLoggingType[Findeterminate_datatype or (FRawPlanName = '')],Self);
 end;
 
 {**
@@ -1377,6 +1384,9 @@ begin
     end;
   end;
   Result := LastUpdateCount;
+  { Logging Execution }
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(cLoggingType[Findeterminate_datatype or (FRawPlanName = '')],Self);
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.FlushPendingResults;
@@ -1610,9 +1620,6 @@ var PError: PAnsiChar;
   Status: TZPostgreSQLExecStatusType;
   AC: Boolean;
 begin
-  { Logging Execution }
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcPrepStmt,Self);
   AC := Connection.GetAutoCommit;
   if not AC then
     Connection.StartTransaction;
@@ -1640,6 +1647,9 @@ begin
     if not AC then
       Connection.Rollback;
   end;
+  { Logging Execution }
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcPrepStmt,Self);
 end;
 
 function TZAbstractPostgreSQLPreparedStatementV3.PGExecutePrepared: TPGresult;
@@ -1647,9 +1657,8 @@ var PError: PAnsiChar;
   Status: TZPostgreSQLExecStatusType;
 label ReExecuteStr;
 begin
-  { Logging Execution }
   if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcExecPrepStmt,Self);
+    DriverManager.LogMessage(lcBindPrepStmt,Self);
   if fAsyncQueries then begin
     Result := nil; //satisfy compiler
     if FPlainDriver.PQsendQueryPrepared(FconnAddress^,
@@ -1696,9 +1705,6 @@ var
   end;
 begin
   fRawTemp := 'DEALLOCATE "'+FRawPlanName+'"';
-  { Logging Execution }
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcUnprepStmt,Self);
   Res := FPlainDriver.PQExec(FconnAddress^, Pointer(fRawTemp));
   Status := FPlainDriver.PQresultStatus(Res);
   if Status <> PGRES_COMMAND_OK then begin
@@ -1712,6 +1718,9 @@ begin
       else
         DoOnFail
   end else FPlainDriver.PQclear(Res);
+  { Logging Execution }
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcUnprepStmt,Self);
 end;
 
 {**

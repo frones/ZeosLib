@@ -770,6 +770,8 @@ begin
       FODBCConnectionW.HandleStmtErrorOrWarningW(Ret, fHSTMT, fWSQL, lcExecute, Self);
     FHandleState := hsPrepared;
     fBindImmediat := True;
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcPrepStmt,Self);
   end else
     fBindImmediat := False;
 end;
@@ -831,6 +833,8 @@ begin
       FODBCConnectionA.HandleStmtErrorOrWarningA(Ret, fHSTMT, fASQL, lcExecute, Self);
     FHandleState := hsPrepared;
     fBindImmediat := True;
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcPrepStmt,Self);
   end else
     fBindImmediat := False;
 end;

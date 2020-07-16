@@ -143,7 +143,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ASA}
 
 uses ZSysUtils, ZDbcUtils, ZMessages, ZDbcASAResultSet, ZDbcCachedResultSet,
-  ZEncoding, ZDbcProperties, ZFastCode;
+  ZEncoding, ZFastCode;
 
 { TZAbstractASAStatement }
 
@@ -233,6 +233,8 @@ begin
         Pointer(ASQL), FResultSQLDA, FInParamSQLDA, WhatToDesc, 0);
     if DBHandle.sqlCode <> SQLE_NOERROR then
       FASAConnection.HandleErrorOrWarning(lcPrepStmt, fASQL, Self);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcPrepStmt,Self);
     SetParamCount(FInParamSQLDA.sqld);
     if FInParamSQLDA.sqld <> FInParamSQLDA.sqln then begin
       FInParamSQLData.AllocateSQLDA(FInParamSQLDA.sqld);

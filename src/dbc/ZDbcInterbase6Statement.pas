@@ -562,6 +562,8 @@ begin
           Word(L), Pointer(ASQL), GetDialect, nil);
       if (Status <> 0) or (FStatusVector[2] = isc_arg_warning) then
         FIBConnection.HandleErrorOrWarning(lcPrepStmt, @FStatusVector, fASQL, Self);
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcPrepStmt,Self);
       if Assigned(FPlainDriver.fb_dsql_set_timeout) then begin
         Mem := StrToInt(DefineStatementParameter(Self, DSProps_StatementTimeOut, '0'));
         if Mem <> 0 then

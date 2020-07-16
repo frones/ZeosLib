@@ -3054,8 +3054,6 @@ end;
 }
 procedure TZAbstractPreparedStatement.Prepare;
 begin
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcPrepStmt,Self);
   PrepareInParameters;
   FPrepared := True;
   FClosed := False;

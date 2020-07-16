@@ -825,7 +825,7 @@ begin
       if FieldCount = 0 then
         LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT);
       if (TokenMatchIndex = Ord(myCall)) or BindList.HasOutParam or BindList.HasInOutParam then begin
-        FetchCallResults(FieldCount,Result);
+        FetchCallResults(FieldCount,LastUpdateCount);
         if BindList.HasOutParam or BindList.HasInOutParam then
           FOutParamResultSet := GetLastResultSet;
       end else if FieldCount > 0 then
@@ -1164,6 +1164,8 @@ begin
   SetLength(FEmulatedValues, 0);
   if (BindList.Capacity > 0) and (FMYSQL_BINDs = nil) then
     InternalSetInParamCount(BindList.Capacity);
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcPrepStmt,Self);
 end;
 
 procedure TZAbstractMySQLPreparedStatement.InternalSetInParamCount(NewParamCount: Integer);
