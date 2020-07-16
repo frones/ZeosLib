@@ -2829,18 +2829,21 @@ end;
   @returns an encoded standard variant.
 }
 function EncodeVariant(const Value: TZVariant): Variant;
+var DT: TDateTime;
 begin
   case Value.VType of
     vtBoolean: Result := Value.VBoolean;
     vtBytes: Result := BytesToVar(Value.VRawByteString);
-    vtInteger: if (Value.VInteger > -MaxInt) and (Value.VInteger < MaxInt) then
-        Result := Integer(Value.VInteger)
-      else
-{$ifdef fpc}
-        Result := Value.VInteger;
-{$else}
-        Result := ZFastCode.IntToStr(Value.VInteger);
-{$endif}
+    vtInteger: if (Value.VInteger > -MaxInt) and (Value.VInteger < MaxInt)
+      then Result := Integer(Value.VInteger)
+      else Result := Value.VInteger;
+    vtUInteger: if Int64Rec(Value.VUInteger).Hi = 0
+      then Result := Int64Rec(Value.VUInteger).Lo
+      else {$IFDEF WITH_VARIANT_UINT64}
+            Result := Value.VUInteger;
+          {$ELSE}
+            Result := ZFastCode.IntToStr(Value.VUInteger);
+          {$ENDIF}
     vtDouble: Result := Value.VDouble;
     vtCurrency: Result := Value.VCurrency;
     vtBigDecimal: VarFMTBcdCreate(Result, Value.VBigDecimal);
@@ -2854,6 +2857,15 @@ begin
     vtRawByteString: Result := Value.VRawByteString;
     vtUnicodeString: Result := Value.VUnicodeString;
     vtDateTime: Result := Value.VDateTime;
+    vtDate: if TryDateToDateTime(Value.VDate, DT)
+      then Result := DT
+      else Result := null;
+    vtTime: if TryTimeToDateTime(Value.VTime, DT)
+      then Result := DT
+      else Result := null;
+    vtTimeStamp: if TryTimeStampToDateTime(Value.VTimeStamp, DT)
+      then Result := DT
+      else Result := null;
     vtPointer:
     {$ifdef fpc}
         Result := {%H-}NativeUInt(Value.VPointer);
@@ -2908,8 +2920,11 @@ begin
     varDate: Result := EncodeDateTime(Value);
     varShortInt, varWord, varLongWord:
       Result := EncodeInteger(Value);
-    varInt64{$IFDEF WITH_VARIANT_UINT64},varUInt64{$ENDIF}:
+    varInt64:
       Result := EncodeInteger(Value);
+    {$IFDEF WITH_VARIANT_UINT64}
+    varUInt64: Result := EncodeUInteger(Value);
+    {$ENDIF}
   else
     Result := EncodeNull;
   end;
