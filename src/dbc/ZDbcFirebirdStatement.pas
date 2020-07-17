@@ -388,6 +388,9 @@ procedure TZAbstractFirebirdStatement.ExecuteInternal;
 var flags: Cardinal;
 begin
   if BatchDMLArrayCount = 0 then begin
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcBindPrepStmt,Self);
+    RestartTimer;
     FFBTransaction := FFBConnection.GetActiveTransaction.GetTransaction;
     if FStatementType in [stSelect, stSelectForUpdate] then begin
       (* commented, somesting in fblclient is killing our skack/heap for some selects
@@ -418,8 +421,6 @@ begin
   LastUpdateCount := -1;
   Prepare;
   PrepareLastResultSetForReUse;
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcBindPrepStmt,Self);
   ExecuteInternal;
   { Create ResultSet if possible else free Statement Handle }
   if (FStatementType in [stSelect, stExecProc, stSelectForUpdate]) and (FOutMessageMetadata <> nil) then begin
@@ -447,8 +448,6 @@ function TZAbstractFirebirdStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   Prepare;
   PrepareOpenResultSetForReUse;
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcBindPrepStmt,Self);
   ExecuteInternal;
 
   if (FOutMessageMetadata <> nil) then begin
@@ -482,8 +481,6 @@ begin
   Prepare;
   LastResultSet := nil;
   PrepareOpenResultSetForReUse;
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcBindPrepStmt,Self);
   ExecuteInternal;
   if BatchDMLArrayCount = 0 then begin
     case FStatementType of
@@ -562,6 +559,7 @@ label jmpEB;
   end;
 begin
   if not Prepared then begin
+    RestartTimer;
     Transaction := FFBConnection.GetActiveTransaction.GetTransaction;
     if FWeakIZPreparedStatementPtr <> nil
     {$IFDEF WITH_CLASS_CONST}

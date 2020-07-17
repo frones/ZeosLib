@@ -71,8 +71,8 @@ type
 
   { TZAbstractStatement }
 
-  TZAbstractStatement = class(TZImmediatelyReleasableObject, IZStatement, IZLoggingObject,
-    IImmediatelyReleasable)
+  TZAbstractStatement = class(TZImmediatelyReleasableObject, IZStatement,
+    IZLoggingObject, IImmediatelyReleasable)
   private
     FMaxFieldSize: Integer;
     FMaxRows: Integer;
@@ -90,6 +90,7 @@ type
     FInfo: TStrings;
     FClosed: Boolean;
     FCachedLob: Boolean;
+    FStartTime: TDateTime;
     procedure SetLastResultSet(const ResultSet: IZResultSet); virtual;
   protected
     FLastResultSet: IZResultSet;
@@ -107,6 +108,7 @@ type
     procedure SetWSQL(const Value: ZWideString); virtual;
     class function GetNextStatementId : integer;
     procedure ReleaseConnection; virtual;
+    procedure RestartTimer;
     property MaxFieldSize: Integer read FMaxFieldSize write FMaxFieldSize;
     property MaxRows: Integer read FMaxRows write FMaxRows;
     property EscapeProcessing: Boolean
@@ -139,6 +141,7 @@ type
 
     function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; virtual;
     function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; virtual;
+    property StartTime: TDateTime read FStartTime;
   public
     constructor Create(const Connection: IZConnection; {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
     destructor Destroy; override;
@@ -795,6 +798,13 @@ begin
   end;
 end;
 
+procedure TZAbstractStatement.RestartTimer;
+begin
+  if DriverManager.HasLoggingListener
+  then FStartTime := now
+  else FStartTime := 0;
+end;
+
 {**
   Sets a last result set to avoid problems with reference counting.
   @param ResultSet the lastest executed result set.
@@ -1167,7 +1177,7 @@ begin
   end;
   SQLWriter.Finalize(EventMsg);
   FreeAndNil(SQLWriter);
-  Result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, EventMsg, FLastUpdateCount, EmptyRaw)
+  Result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, EventMsg, FLastUpdateCount, EmptyRaw, FStartTime)
 end;
 
 function TZAbstractStatement.CreateLogEvent(
@@ -1177,7 +1187,7 @@ begin
     lcPrepStmt, lcExecute:
       result := CreateStmtLogEvent(Category, ASQL);
     lcExecPrepStmt, lcUnprepStmt:
-      result := CreateStmtLogEvent(Category);
+      result := CreateStmtLogEvent(Category, EmptyRaw);
   else
     result := nil;
   end;

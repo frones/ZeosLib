@@ -429,6 +429,7 @@ begin
   PrepareOpenedResultSetsForReusing;
   Prepare;
   BindInParameters;
+  RestartTimer;
   try
     FRowsAffected := DB_COUNTUNAVAILABLE;
     FRowSet := nil;
@@ -444,6 +445,8 @@ begin
       end else
         CheckError(FCommand.Execute(nil, IID_IRowset,
           FDBParams,@FRowsAffected,@FRowSet), LogExecType[fDEFERPREPARE], fDBBINDSTATUSArray);
+      if DriverManager.HasLoggingListener then
+         DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
       if BindList.HasOutOrInOutOrResultParam then begin
         FetchCallResults(FRowSet);
         Result := GetFirstResultSet;
@@ -478,10 +481,8 @@ function TZAbstractOleDBStatement.ExecuteUpdatePrepared: Integer;
 begin
   Prepare;
   BindInParameters;
-
+  RestartTimer;
   FRowsAffected := DB_COUNTUNAVAILABLE; //init
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   if FSupportsMultipleResultSets then begin
     CheckError(FCommand.Execute(nil, IID_IMultipleResults, FDBParams,@FRowsAffected,@FMultipleResults),
       LogExecType[fDEFERPREPARE], fDBBINDSTATUSArray);
@@ -491,6 +492,8 @@ begin
   end else
     CheckError(FCommand.Execute(nil, DB_NULLGUID,FDBParams,@FRowsAffected,nil),
       LogExecType[fDEFERPREPARE], FDBBINDSTATUSArray);
+  if DriverManager.HasLoggingListener then
+     DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
   if BindList.HasOutOrInOutOrResultParam then
     FOutParamResultSet := CreateResultSet(nil);
   LastUpdateCount := FRowsAffected;
@@ -536,10 +539,8 @@ var FRowSet: IRowSet;
 begin
   PrepareOpenedResultSetsForReusing;
   LastUpdateCount := -1;
-
   Prepare;
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcBindPrepStmt,Self);
+  RestartTimer;
   FRowsAffected := DB_COUNTUNAVAILABLE;
   try
     FRowSet := nil;
@@ -554,6 +555,8 @@ begin
       CheckError(FCommand.Execute(nil, IID_IRowset,
         FDBParams,@FRowsAffected,@FRowSet), LogExecType[fDEFERPREPARE],
         FDBBINDSTATUSArray);
+    if DriverManager.HasLoggingListener then
+       DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
     if BindList.HasOutOrInOutOrResultParam then
       if FetchCallResults(FRowSet)
       then LastResultSet := GetFirstResultSet
@@ -1018,6 +1021,8 @@ begin
     finally
       fBindImmediat := not fDEFERPREPARE;
     end;
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcBindPrepStmt,Self);
 end;
 
 {$IFDEF FPC}

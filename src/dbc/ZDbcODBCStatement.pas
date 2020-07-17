@@ -610,8 +610,7 @@ procedure TZAbstractODBCStatement.InternalExecute;
   end;
 begin
 //  CheckStmtError(fPlainDriver.SQLFreeStmt(fHSTMT,SQL_CLOSE)); //handle a get data issue
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+  RestartTimer;
   if BindList.HasOutOrInOutOrResultParam then //first test with ExecuteDirect
     if FHandleState = hsPrepared then begin
       CheckStmtError(fPlainDriver.SQLFreeStmt(fHSTMT,SQL_CLOSE));
@@ -622,11 +621,15 @@ begin
         InternalPrepare;
         FHandleState := hsExecute;
       end;
-      FExecRETCODE := fPlainDriver.SQLExecute(fHSTMT)
+      FExecRETCODE := fPlainDriver.SQLExecute(fHSTMT);
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcExecPrepStmt, Self);
     end
   else if Ord(FHandleState) >= Ord(hsPrepared) then begin
     FExecRETCODE := fPlainDriver.SQLExecute(fHSTMT);
     FHandleState := hsExecute;
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecPrepStmt, Self);
   end else
     FExecRETCODE := ExecutDirect;
   if FExecRETCODE = SQL_NEED_DATA then
@@ -722,6 +725,8 @@ begin
   Result := TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(fHSTMT, Pointer(WSQL), Length(WSQL));
   if not Result in [SQL_NO_DATA, SQL_SUCCESS, SQL_PARAM_DATA_AVAILABLE] then
     FODBCConnectionW.HandleStmtErrorOrWarningW(Result, fHSTMT, fWSQL, lcExecute, Self);
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcExecute, Self);
 end;
 
 function TZODBCPreparedStatementW.GetUnicodeEncodedSQL(
@@ -3007,6 +3012,8 @@ begin
   Result := TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(fHSTMT, Pointer(WSQL), Length(WSQL));
   if not Result in [SQL_NO_DATA, SQL_SUCCESS, SQL_PARAM_DATA_AVAILABLE] then
     FODBCConnectionW.HandleStmtErrorOrWarningW(Result, fHSTMT, fWSQL, lcExecute, Self);
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcExecute, Self);
 end;
 
 { TZODBCStatementA }

@@ -427,6 +427,7 @@ procedure TZAbstracDBLibSQLStatement.InternalExecute;
 var Raw: RawByteString;
 begin
   LastUpdateCount := -1;
+  RestartTimer;
   Raw := GetRawSQL;
   if FDBLibConnection.GetProvider = dpMsSQL then
     //This one is to avoid a bug in dblib interface as it drops a single backslash before line end

@@ -318,6 +318,7 @@ begin
   Prepare;
   if FWeakIZPreparedStatementPtr <> nil then
     BindInParameters;
+  RestartTimer;
   if FHasOutParams and (FOutParamResultSet = nil) then
     FOutParamResultSet := TZSQLAynwhereOutParamResultSet.Create(Self, SQL, @Fa_sqlany_stmt,
       Fa_sqlany_bind_paramArray, BindList);
@@ -355,6 +356,7 @@ begin
   Prepare;
   if FWeakIZPreparedStatementPtr <> nil then
     BindInParameters;
+  RestartTimer;
   if FHasOutParams and (FOutParamResultSet = nil) then
     FOutParamResultSet := TZSQLAynwhereOutParamResultSet.Create(Self, SQL, @Fa_sqlany_stmt,
       Fa_sqlany_bind_paramArray, BindList);
@@ -393,6 +395,7 @@ begin
   Prepare;
   if FWeakIZPreparedStatementPtr <> nil then
     BindInParameters;
+  RestartTimer;
   if FHasOutParams and (FOutParamResultSet = nil) then
     FOutParamResultSet := TZSQLAynwhereOutParamResultSet.Create(Self, SQL, @Fa_sqlany_stmt,
       Fa_sqlany_bind_paramArray, BindList);

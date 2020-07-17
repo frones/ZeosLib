@@ -201,8 +201,8 @@ procedure TZAbstractASAStatement.Prepare;
 var DBHandle: PZASASQLCA;
   WhatToDesc: LongWord;
 begin
-  if not Prepared then
-  begin
+  if not Prepared then begin
+    RestartTimer;
     DBHandle := FASAConnection.GetDBHandle;
     if FStmtNum <> 0 then
     begin
@@ -366,6 +366,7 @@ begin
   if FMoreResults or FHasOutParams
   then LastResultSet := ExecuteQueryPrepared
   else begin
+    RestartTimer;
     DBHandle := FASAConnection.GetDBHandle;
     FPlainDriver.dbpp_open(DBHandle, Pointer(CursorName), nil, nil, @FStmtNum,
       FInParamSQLDA, FetchSize, 0, CUR_OPEN_DECLARE + CUR_READONLY);  //need a way to know if a resultset can be retrieved
@@ -400,6 +401,7 @@ begin
     BindInParameters;
   DBHandle := FASAConnection.GetDBHandle;
   LastUpdateCount := -1;
+  RestartTimer;
   if not FHasOutParams then begin
     FPlainDriver.dbpp_open(DBHandle, Pointer(CursorName), nil, nil, @FStmtNum,
       FInParamSQLDA, FetchSize, 0, FCursorOptions);
@@ -443,6 +445,7 @@ begin
   Prepare;
   if FWeakIZPreparedStatementPtr <> nil then
     BindInParameters;
+  RestartTimer;
   if FHasOutParams and (FOpenResultSet = nil) then begin
     //first create the ResultSet -> exact types are described
     FOutParamResultSet := TZASAParamererResultSet.Create(Self, SQL, FStmtNum, CursorName, FSQLData, True);

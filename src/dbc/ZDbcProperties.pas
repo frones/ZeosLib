@@ -117,8 +117,15 @@ const
   // Type: STR
   // Format to read date & time
   ConnProps_DateTimeReadFormat = 'DatetimeReadFormat';
-  // Type: STR
-  // Format to write date & time
+  /// <type>String</type>
+  /// <summary>
+  ///  Format to read date & time, like YYYY-MM-DD HH:NN:SS.F
+  /// </summary>
+  /// <default>YYYY-MM-DD HH:NN:SS.FFF</default>
+  /// <remarks>
+  ///  Just simple formats are supported. ISO 8601 is prefered.
+  ///  If the driver(f.e. SQLite) supports the 'T' delimiter do not hasitate to use it!
+  /// </remarks>
   ConnProps_DateTimeWriteFormat = 'DatetimeWriteFormat';
   // Type: STR
   // Sets TZAbstractDatabaseInfo.IdentifierQuotes property, refer to Zeos manual for details

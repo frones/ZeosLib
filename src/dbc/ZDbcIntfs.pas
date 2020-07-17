@@ -49,10 +49,6 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-/// <summary>
-///  This unit contains all DBC layer interfaces, base exception types, the driver manager, TZURL and others...
-/// </summary>
-
 unit ZDbcIntfs;
 
 interface
@@ -602,14 +598,11 @@ type
     ///   exception of TRANSACTION_NONE; some databases may not support other values
     ///   @see DatabaseMetaData#supportsTransactionIsolationLevel
     ///  </param>
-    ///  <param name="Value">returns the Transaction object.
-    ///   @see IZTransaction
-    ///  </param>
+    ///  <param name="Params">a list of properties used for the transaction.</param>
     /// </summary>
     /// <returns>
-    ///  the index in the manager list of the new transaction
-    ///  if the provider does not support simultan transactions the index is
-    ///  always greater than zero
+    ///  returns the Transaction object.
+    ///   @see IZTransaction
     /// </returns>
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
@@ -1683,7 +1676,7 @@ type
     ///  for example, when the cursor is positioned before the first row
     ///  or after the last row of the result set.
     /// </summary>
-    /// <param name="Row"><see cref="System.Integer"/>
+    /// <param name="Rows"><see cref="System.Integer"/>
     /// </param>
     /// <returns>
     /// <see cref="System.Boolean"/>
@@ -2767,3 +2760,4 @@ finalization
   DriverManager := nil;
   FreeAndNil(GlobalCriticalSection);
 end.
+

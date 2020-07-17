@@ -732,6 +732,7 @@ begin
   PrepareOpenResultSetForReUse;
   Prepare;
   BindInParameters;
+  RestartTimer;
   if FEmulatedParams or (FMYSQL_STMT = nil) then begin
     if (DriverManager <> nil) and DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecute,Self);
@@ -814,6 +815,7 @@ begin
   Prepare;
   BindInParameters;
   LastUpdateCount := -1;
+  RestartTimer;
   if FEmulatedParams or (FMYSQL_STMT = nil)
   then ExecEmulated
   else begin
@@ -955,6 +957,7 @@ begin
   Prepare;
   BindInParameters;
   LastUpdateCount := -1;
+  RestartTimer;
   if FEmulatedParams or (FMYSQL_STMT = nil)
   then ExecuteEmulated
   else begin

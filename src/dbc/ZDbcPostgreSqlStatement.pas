@@ -1218,8 +1218,10 @@ var
     else Result := FPlainDriver.PQExec(FconnAddress^, Pointer(TmpSQL));
   end;
 begin
+  { logs the values }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcBindPrepStmt,Self);
+  RestartTimer;
   Result := nil;
   if not Assigned(FconnAddress^) then
     Exit;
@@ -1276,6 +1278,8 @@ ExecWithParams:
     if (Status = PGRES_BAD_RESPONSE) or (Status = PGRES_NONFATAL_ERROR) or (Status = PGRES_FATAL_ERROR) then
       FPostgreSQLConnection.HandleErrorOrWarning(Status, lcExecute, fASQL, Self, Result);
   end;
+  if DriverManager.HasLoggingListener then
+     DriverManager.LogMessage(lcExecute,Self);
 end;
 
 {**
@@ -1621,6 +1625,7 @@ var PError: PAnsiChar;
   AC: Boolean;
 begin
   AC := Connection.GetAutoCommit;
+  RestartTimer;
   if not AC then
     Connection.StartTransaction;
   try
@@ -1657,8 +1662,10 @@ var PError: PAnsiChar;
   Status: TZPostgreSQLExecStatusType;
 label ReExecuteStr;
 begin
+  { logs the values }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcBindPrepStmt,Self);
+  RestartTimer;
   if fAsyncQueries then begin
     Result := nil; //satisfy compiler
     if FPlainDriver.PQsendQueryPrepared(FconnAddress^,
@@ -1692,6 +1699,8 @@ ReExecuteStr:
         FPostgreSQLConnection.HandleErrorOrWarning(Status, lcExecPrepStmt, fASQL, Self, Result)
     end;
   end;
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.PGExecuteUnPrepare;

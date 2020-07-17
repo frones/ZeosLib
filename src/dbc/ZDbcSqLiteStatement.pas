@@ -409,6 +409,7 @@ begin
   PrepareOpenResultSetForReUse;
   Prepare;
   BindInParameters;
+  RestartTimer;
   FBindLater := False;
   FErrorCode := FPlainDriver.sqlite3_step(FStmtHandle); //exec prepared
   if not (FErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then
@@ -443,7 +444,7 @@ var ErrorCode: Integer;
 begin
   Prepare;
   BindInParameters;
-
+  RestartTimer;
   LastUpdateCount := -1;
   FBindLater := False;
   ErrorCode := fPlainDriver.sqlite3_step(FStmtHandle);
@@ -478,7 +479,7 @@ begin
   PrepareLastResultSetForReUse;
   Prepare;
   BindInParameters;
-
+  RestartTimer;
   FBindLater := False;
   FErrorCode := FPlainDriver.sqlite3_step(FStmtHandle);
   if not (FErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then

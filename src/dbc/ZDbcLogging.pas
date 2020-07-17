@@ -61,7 +61,7 @@ type
 
   {** Defines a time or the message. }
   TZLoggingCategory = (lcConnect, lcDisconnect, lcTransaction, lcExecute, lcOther,
-    lcPrepStmt, lcBindPrepStmt, lcExecPrepStmt, lcUnprepStmt);
+    lcPrepStmt, lcBindPrepStmt, lcExecPrepStmt, lcUnprepStmt, lcFetch);
 
   {** Defines a object for logging event. }
   TZLoggingEvent = class;
@@ -87,10 +87,11 @@ type
     FMessage: RawByteString;
     FErrorCodeOrAffectedRows: Integer;
     FError: RawByteString;
-    FTimestamp: TDateTime;
+    FTimestamp, FTimeStampStart: TDateTime;
   public
     constructor Create(Category: TZLoggingCategory; const Protocol: RawByteString;
-      const Msg: RawByteString; ErrorCodeOrAffectedRows: Integer; const Error: RawByteString);
+      const Msg: RawByteString; ErrorCodeOrAffectedRows: Integer; const Error: RawByteString;
+      TimeStampStart: TDateTime = 0);
 
     function AsString(const LoggingFormatter: IZLoggingFormatter = nil): RawByteString;
 
@@ -100,6 +101,7 @@ type
     property ErrorCodeOrAffectedRows: Integer read FErrorCodeOrAffectedRows;
     property Error: RawByteString read FError;
     property Timestamp: TDateTime read FTimestamp;
+    property TimeStampStart: TDateTime read FTimeStampStart;
   end;
 
   {** Defines an interface to accept logging events. }
@@ -140,12 +142,25 @@ begin
       lcBindPrepStmt: SQLWriter.AddText('Bind prepared', Result);
       lcExecPrepStmt: SQLWriter.AddText('Execute prepared', Result);
       lcUnprepStmt: SQLWriter.AddText('Unprepare prepared', Result);
+      lcFetch: SQLWriter.AddText('Fetching', Result);
     else
       SQLWriter.AddText('Other', Result);
     end;
     if LoggingEvent.Protocol <> EmptyRaw then begin
       SQLWriter.AddText(', proto: ', Result);
       SQLWriter.AddText(LoggingEvent.Protocol, Result);
+    end;
+    if (LoggingEvent.ErrorCodeOrAffectedRows <> -1) and (
+        (LoggingEvent.Category = lcExecPrepStmt) or
+        (LoggingEvent.Category = lcExecute) ) then begin
+      if LoggingEvent.Category = lcFetch
+      then SQLWriter.AddText(', fetched row(s): ', Result)
+      else SQLWriter.AddText(', affected row(s): ', Result);
+      SQLWriter.AddOrd(LoggingEvent.ErrorCodeOrAffectedRows, Result);
+    end;
+    if LoggingEvent.TimeStampStart <> 0 then begin
+      SQLWriter.AddText(', elapsed time: ', Result);
+      SQLWriter.AddDateTime(LoggingEvent.Timestamp-LoggingEvent.TimeStampStart, DefTimeFormatMsecs, Result);
     end;
     SQLWriter.AddText(', msg: ', Result);
     SQLWriter.AddText(LoggingEvent.Message, Result);
@@ -154,9 +169,6 @@ begin
       SQLWriter.AddOrd(LoggingEvent.ErrorCodeOrAffectedRows, Result);
       SQLWriter.AddText(', error: ', Result);
       SQLWriter.AddText(LoggingEvent.Error, Result);
-    end else if (LoggingEvent.ErrorCodeOrAffectedRows <> -1) then begin
-      SQLWriter.AddText(', affected row(s): ', Result);
-      SQLWriter.AddOrd(LoggingEvent.ErrorCodeOrAffectedRows, Result);
     end;
     SQLWriter.Finalize(Result);
   finally
@@ -175,14 +187,15 @@ end;
 }
 constructor TZLoggingEvent.Create(Category: TZLoggingCategory;
   const Protocol: RawByteString; const Msg: RawByteString;
-  ErrorCodeOrAffectedRows: Integer; const Error: RawByteString);
+  ErrorCodeOrAffectedRows: Integer; const Error: RawByteString;
+  TimeStampStart: TDateTime = 0);
 begin
   FCategory := Category;
   FProtocol := Protocol;
   FMessage := Msg;
   FErrorCodeOrAffectedRows := ErrorCodeOrAffectedRows;
   FError := Error;
-  FTimestamp := Now;
+  FTimeStampStart := TimeStampStart;
 end;
 
 {**

@@ -337,6 +337,9 @@ var
   Counts: array[TCountType] of Integer;
 begin
   if BatchDMLArrayCount = 0 then begin
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcBindPrepStmt,Self);
+    RestartTimer;
     ISC_TR_HANDLE := FIBConnection.GetTrHandle;
     dialect := FIBConnection.GetDialect;
     if (FStatementType = stExecProc)
@@ -814,8 +817,6 @@ function TZAbstractInterbase6PreparedStatement.ExecutePrepared: Boolean;
 begin
   Prepare;
   PrepareLastResultSetForReUse;
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcBindPrepStmt,Self);
   ExecuteInternal;
   { Create ResultSet if possible else free Statement Handle }
   if (FStatementType in [stSelect, stExecProc, stSelectForUpdate]) and (FResultXSQLDA.GetFieldCount <> 0) then begin
@@ -842,10 +843,7 @@ function TZAbstractInterbase6PreparedStatement.ExecuteQueryPrepared: IZResultSet
 begin
   Prepare;
   PrepareOpenResultSetForReUse;
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcBindPrepStmt,Self);
   ExecuteInternal;
-
   if (FResultXSQLDA <> nil) and (FResultXSQLDA.GetFieldCount <> 0) then begin
     if (FStatementType = stSelect) and Assigned(FOpenResultSet) and not BindList.HasOutOrInOutOrResultParam
     then Result := IZResultSet(FOpenResultSet)
@@ -876,8 +874,6 @@ begin
   Prepare;
   LastResultSet := nil;
   PrepareOpenResultSetForReUse;
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcBindPrepStmt,Self);
   ExecuteInternal;
   Result := LastUpdateCount;
   if BatchDMLArrayCount = 0 then
