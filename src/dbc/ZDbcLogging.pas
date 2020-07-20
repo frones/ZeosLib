@@ -61,7 +61,7 @@ type
 
   {** Defines a time or the message. }
   TZLoggingCategory = (lcConnect, lcDisconnect, lcTransaction, lcExecute, lcOther,
-    lcPrepStmt, lcBindPrepStmt, lcExecPrepStmt, lcUnprepStmt, lcFetch);
+    lcPrepStmt, lcBindPrepStmt, lcExecPrepStmt, lcUnprepStmt, lcFetch, lcFetchDone);
 
   {** Defines a object for logging event. }
   TZLoggingEvent = class;
@@ -98,7 +98,7 @@ type
     property Category: TZLoggingCategory read FCategory;
     property Protocol: RawByteString read FProtocol;
     property Message: RawByteString read FMessage;
-    property ErrorCodeOrAffectedRows: Integer read FErrorCodeOrAffectedRows;
+    property ErrorCodeOrAffectedRows: Integer read FErrorCodeOrAffectedRows write FErrorCodeOrAffectedRows;
     property Error: RawByteString read FError;
     property Timestamp: TDateTime read FTimestamp;
     property TimeStampStart: TDateTime read FTimeStampStart;
@@ -142,7 +142,8 @@ begin
       lcBindPrepStmt: SQLWriter.AddText('Bind prepared', Result);
       lcExecPrepStmt: SQLWriter.AddText('Execute prepared', Result);
       lcUnprepStmt: SQLWriter.AddText('Unprepare prepared', Result);
-      lcFetch: SQLWriter.AddText('Fetching', Result);
+      lcFetch: SQLWriter.AddText('Fetch row(s)', Result);
+      lcFetchDone: SQLWriter.AddText('Fetch complete', Result);
     else
       SQLWriter.AddText('Other', Result);
     end;
@@ -152,8 +153,9 @@ begin
     end;
     if (LoggingEvent.ErrorCodeOrAffectedRows <> -1) and (
         (LoggingEvent.Category = lcExecPrepStmt) or
-        (LoggingEvent.Category = lcExecute) ) then begin
-      if LoggingEvent.Category = lcFetch
+        (LoggingEvent.Category = lcExecute) or
+        (LoggingEvent.Category = lcFetchDone) ) then begin
+      if LoggingEvent.Category = lcFetchDone
       then SQLWriter.AddText(', fetched row(s): ', Result)
       else SQLWriter.AddText(', affected row(s): ', Result);
       SQLWriter.AddOrd(LoggingEvent.ErrorCodeOrAffectedRows, Result);
@@ -195,6 +197,7 @@ begin
   FMessage := Msg;
   FErrorCodeOrAffectedRows := ErrorCodeOrAffectedRows;
   FError := Error;
+  FTimestamp := now;
   FTimeStampStart := TimeStampStart;
 end;
 
