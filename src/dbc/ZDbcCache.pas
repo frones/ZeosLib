@@ -1538,7 +1538,7 @@ procedure TZRowAccessor.InitBuffer(Buffer: PZRowBuffer);
 begin
   if Buffer <> nil then
   begin
-    Buffer^.Index := 0;
+    Buffer^.Index := -1;
     Buffer^.BookmarkFlag := 0;//bfCurrent;
     Buffer^.UpdateType := utUnmodified;
     FillChar(Buffer^.Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
