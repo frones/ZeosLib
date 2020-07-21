@@ -2270,14 +2270,16 @@ fetch_data:
   end;
 
 Success:
-    RowNo := RowNo + 1;
-    if LastRowNo < RowNo then
-      LastRowNo := RowNo;
-    Result := True;
-    Exit;
+  RowNo := RowNo + 1;
+  if LastRowNo < RowNo then
+    LastRowNo := RowNo;
+  Result := True;
+  Exit;
 NoSuccess:
-    if RowNo <= LastRowNo then
-      RowNo := LastRowNo + 1;
+  if RowNo <= LastRowNo then
+    RowNo := LastRowNo + 1;
+  if not LastRowFetchLogged and DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
 end;
 
 {**

@@ -160,7 +160,9 @@ begin
       else SQLWriter.AddText(', affected row(s): ', Result);
       SQLWriter.AddOrd(LoggingEvent.ErrorCodeOrAffectedRows, Result);
     end;
-    if LoggingEvent.TimeStampStart <> 0 then begin
+    if (LoggingEvent.TimeStampStart <> 0) and (
+        (LoggingEvent.Category = lcExecPrepStmt) or
+        (LoggingEvent.Category = lcExecute)) then begin
       SQLWriter.AddText(', elapsed time: ', Result);
       SQLWriter.AddDateTime(LoggingEvent.Timestamp-LoggingEvent.TimeStampStart, DefTimeFormatMsecs, Result);
     end;

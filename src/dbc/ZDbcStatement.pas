@@ -101,6 +101,7 @@ type
     FOpenResultSet: Pointer; //weak reference to avoid memory-leaks and cursor issues
     FClientCP: Word;
     FWeakIZStatementPtr: Pointer; //weak reference to IZStatement intf of Self
+    FWeakIZLoggingObjectPtr: Pointer; //weak reference to IZLoggingObject intf of Self
     procedure PrepareOpenResultSetForReUse; virtual;
     procedure PrepareLastResultSetForReUse; virtual;
     procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
@@ -1186,7 +1187,7 @@ begin
   case Category of
     lcPrepStmt, lcExecute:
       result := CreateStmtLogEvent(Category, ASQL);
-    lcExecPrepStmt, lcUnprepStmt:
+    lcExecPrepStmt, lcUnprepStmt, lcFetchDone:
       result := CreateStmtLogEvent(Category, EmptyRaw);
   else
     result := nil;
@@ -1490,11 +1491,16 @@ end;
 
 procedure TZAbstractStatement.AfterConstruction;
 var Stmt: IZStatement;
+    LogObj: IZLoggingObject;
 begin
   Stmt := nil;
   QueryInterface(IZStatement, Stmt);
   FWeakIZStatementPtr := Pointer(Stmt);
   Stmt := nil;
+  LogObj := nil;
+  QueryInterface(IZLoggingObject, LogObj);
+  FWeakIZLoggingObjectPtr := Pointer(LogObj);
+  LogObj := nil;
   inherited AfterConstruction; //decrement constructors refcount
 end;
 

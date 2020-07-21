@@ -1402,6 +1402,8 @@ begin
   if not Result and Assigned(Fsqlite3_stmt) then begin
     FResetCallBack;
     Fsqlite3_stmt := nil;
+    if not LastRowFetchLogged and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
   end;
 end;
 

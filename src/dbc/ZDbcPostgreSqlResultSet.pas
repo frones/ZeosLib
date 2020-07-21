@@ -2189,8 +2189,11 @@ begin
   if FFirstRow then begin
     Fres := FresAddress^; //first row is obtained already
     FFirstRow := False;
-    if not FSingleRowMode then
+    if not FSingleRowMode then begin
       LastRowNo := FPlainDriver.PQntuples(Fres);
+      if not LastRowFetchLogged and DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
+    end;
   end;
   { Checks for maximum row. }
   Result := False;
@@ -2275,6 +2278,8 @@ jmpRes:
     RowNo := RowNo + 1;
     Result := (RowNo <= LastRowNo);
   end;
+  if not Result and not LastRowFetchLogged and DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
 end;
 
 { TZPostgreSQLOidBlob }

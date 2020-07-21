@@ -394,6 +394,9 @@ type
     /// <summary>
     ///  Locates a required driver and opens a connection to the specified database.
     /// </summary>
+    /// <param name="Url">
+    ///   a database connection url.
+    /// </param>
     /// <param name="User">
     ///   a user's name.
     /// </param>
@@ -519,6 +522,9 @@ type
     /// </param>
     /// <param name="Properties">
     ///  the Database-Properties (could be empty).
+    /// </param>
+    /// <param name="LibLocation">
+    ///  optional. The library name with optional full path.
     /// </param>
     function ConstructURL(const Protocol, HostName, Database,
       UserName, Password: String; const Port: Integer;

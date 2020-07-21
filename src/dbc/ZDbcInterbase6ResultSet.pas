@@ -446,6 +446,8 @@ begin
       FStmtHandle := 0;
       if (FIBTransaction <> nil) then
         DeRegisterCursor;
+      if not LastRowFetchLogged and DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
     end else
 CheckE: FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, 'isc_dsql_free_statement', Self);
   end else if RowNo = 0 then begin

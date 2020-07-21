@@ -2618,9 +2618,11 @@ begin
     //did we retrieve a row or is table empty?
     if FetchedRows > 0 then
       Result := True;
+    if not LastRowFetchLogged and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
     Exit;
   end;
-  FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
+  FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcFetch,
     'FETCH ROW', Self);
 
   if Status in [OCI_SUCCESS, OCI_SUCCESS_WITH_INFO] then begin

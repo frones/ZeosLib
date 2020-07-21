@@ -893,7 +893,7 @@ const
     Name: ConnProps_DateTimeWriteFormat;
     Purpose: 'Format to read date & time, like YYYY-MM-DD HH:NN:SS.F'+LineEnding+
        'Just simple formats are supported. ISO 8601 is prefered.'+LineEnding+
-       'If the driver(f.e.SQLite) supports the ''T''delimiter do not hasitate to use!';
+       'If the driver(f.e.SQLite) supports the ''T'' delimiter do not hasitate to use!';
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: 'YYYY-MM-DD HH:NN:SS.F'; Alias: '';
     Providers: (Count: 0; Items: nil);

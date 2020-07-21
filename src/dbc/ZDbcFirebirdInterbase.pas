@@ -2079,7 +2079,7 @@ var
     Len: NativeUint;
     RBS: RawByteString absolute Result;
   begin
-    Lob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(ColumnIndex);
+    Lob := IZResultSet(FWeakIZResultSetPtr).GetBlob(ColumnIndex);
     if Lob.IsClob
     then Lob.GetPAnsiChar(ZOSCodePage, RBS, Len)
     else begin
@@ -2230,7 +2230,7 @@ function TZAbstractInterbaseFirebirdResultSet.GetBytes(ColumnIndex: Integer;
   function FromLob(ColumnIndex: Integer; out Len: NativeUInt): PByte;
   var Lob: IZBlob;
   begin
-    Lob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(ColumnIndex);
+    Lob := IZResultSet(FWeakIZResultSetPtr).GetBlob(ColumnIndex);
     Result := Lob.GetBuffer(FRawTemp, Len);
   end;
 begin
@@ -2794,7 +2794,7 @@ var
   function GetLobBufAndLen(ColumnIndex: Integer; out Len: NativeUInt): Pointer;
   var BlobTemp: IZBlob;
   begin
-    BlobTemp := IZResultSet(FWeakIntfPtrOfSelf).GetBlob( ColumnIndex);
+    BlobTemp := IZResultSet(FWeakIZResultSetPtr).GetBlob( ColumnIndex);
     Result := BlobTemp.GetBuffer(fRawTemp, Len);
   end;
   label set_Results;
@@ -2908,7 +2908,7 @@ var
   function GetLobBufAndLen(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
   var BlobTemp: IZBlob;
   begin
-    BlobTemp := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(ColumnIndex, lsmRead);
+    BlobTemp := IZResultSet(FWeakIZResultSetPtr).GetBlob(ColumnIndex, lsmRead);
     if BlobTemp.IsClob then begin
       Result := BlobTemp.GetPWideChar(FUniTemp, Len);
     end else begin
@@ -3104,7 +3104,7 @@ var P: Pointer;
     Len: NativeUint;
     RBS: RawByteString absolute Result;
   begin
-    Lob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(ColumnIndex);
+    Lob := IZResultSet(FWeakIZResultSetPtr).GetBlob(ColumnIndex);
     if Lob.IsClob
     then Lob.GetPAnsiChar(zCP_UTF8, RBS, Len)
     else begin

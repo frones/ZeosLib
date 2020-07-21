@@ -168,7 +168,7 @@ implementation
 uses
   Variants, {$IFDEF FPC}ZPlainOleDBDriver{$ELSE}OleDB{$ENDIF}, ActiveX,
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
-  ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode, ZDbcUtils, ZDbcAdo;
+  ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode, ZDbcUtils, ZDbcLogging, ZDbcAdo;
 
 {$IFDEF USE_SYNCOMMONS}
 procedure TZAdoResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
@@ -481,6 +481,8 @@ begin
   RowNo := RowNo +1;
   if Result then
     LastRowNo := RowNo;
+  if not Result and not LastRowFetchLogged and DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
 end;
 
 {**
@@ -522,7 +524,10 @@ begin
     else
       FAdoRecordSet.Move(Abs(Row) - 1, adBookmarkLast);
     Result := not (FAdoRecordSet.EOF or FAdoRecordSet.BOF);
-    if Result then FFields := FAdoRecordSet.Fields;
+    if Result
+    then FFields := FAdoRecordSet.Fields
+    else if not LastRowFetchLogged and DriverManager.HasLoggingListener and FAdoRecordSet.EOF then
+      DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
   end else
     Result := inherited MoveAbsolute(Row);
 end;

@@ -1469,6 +1469,8 @@ begin
     FFetchStat := ASASQLCA.sqlerrd[2];
     if FFetchStat > 0 then
       LastRowNo := Max(Row - FFetchStat, 0);
+    if not LastRowFetchLogged and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
   end;
 end;
 
