@@ -1845,7 +1845,7 @@ var L, H, I: Integer;
     Buf: PAnsiChar;
     L, R, Size: NativeInt;
   begin
-    Blob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    Blob := IZResultSet(FWeakIZResultSetPtr).GetBlob(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     Blob.QueryInterface(IZClob, CLob);
     Blob := nil;
     Stream := Clob.GetStream(zCP_UTF8);
@@ -1877,7 +1877,7 @@ var L, H, I: Integer;
     PW: Pointer;
     L: NativeUInt;
   begin
-    Blob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    Blob := IZResultSet(FWeakIZResultSetPtr).GetBlob(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     Blob.QueryInterface(IZClob, CLob);
     Blob := nil;
     try
@@ -1893,7 +1893,7 @@ var L, H, I: Integer;
     P: Pointer;
     L: NativeUInt;
   begin
-    Blob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    Blob := IZResultSet(FWeakIZResultSetPtr).GetBlob(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     try
       P := Blob.GetBuffer(FRawTemp, L); //base 64 can not be added in chunks ):
       JSONWriter.WrBase64(P, L, True);
