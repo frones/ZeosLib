@@ -2571,6 +2571,7 @@ end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 procedure TZMySQL_Store_ResultSet.OpenCursor;
+label jmpLog;
 begin
   inherited OpenCursor;
   if FPMYSQL_STMT^ <> nil then begin
@@ -2580,6 +2581,7 @@ begin
       then LastRowNo := FPlainDriver.mysql_stmt_num_rows(FMYSQL_STMT)
       else FMySQLConnection.HandleErrorOrWarning(lcFetch, FMYSQL_STMT,
         'mysql_stmt_store_result', IImmediatelyReleasable(FWeakImmediatRelPtr));
+      goto jmpLog;
     end;
   end else begin
     FQueryHandle := FPlainDriver.mysql_store_result(FPMYSQL^);
@@ -2587,6 +2589,9 @@ begin
     then LastRowNo := FPlainDriver.mysql_num_rows(FQueryHandle)
     else FMySQLConnection.HandleErrorOrWarning(lcFetch, nil,
       'mysql_store_result', IImmediatelyReleasable(FWeakImmediatRelPtr));
+jmpLog:
+    if not LastRowFetchLogged and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcFetchDone, Self);
   end;
 end;
 

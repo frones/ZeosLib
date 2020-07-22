@@ -733,11 +733,9 @@ begin
   Prepare;
   BindInParameters;
   RestartTimer;
-  if FEmulatedParams or (FMYSQL_STMT = nil) then begin
-    if (DriverManager <> nil) and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcExecute,Self);
-    Result := ExecuteEmulated;
-  end else begin
+  if FEmulatedParams or (FMYSQL_STMT = nil)
+  then Result := ExecuteEmulated
+  else begin
     FStmtHandleIsExecuted := True; //keep this even if an error is thrown
     if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
       FieldCount := FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT);
@@ -801,7 +799,6 @@ function TZAbstractMySQLPreparedStatement.ExecuteUpdatePrepared: Integer;
         if BindList.HasReturnParam //retrieve outparam
         then FOutParamResultSet := CreateResultSet(SQL, 0, FieldCount)
         else LastResultSet := CreateResultSet(SQL, 0, FieldCount);
-        if BindList.HasReturnParam then
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcExecute,Self);
     end else
@@ -819,8 +816,6 @@ begin
   if FEmulatedParams or (FMYSQL_STMT = nil)
   then ExecEmulated
   else begin
-    if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcExecPrepStmt,Self);
     FStmtHandleIsExecuted := True; //keep this even if an error is thrown
     if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
       FieldCount := FplainDriver.mysql_stmt_field_count(FMYSQL_STMT);
