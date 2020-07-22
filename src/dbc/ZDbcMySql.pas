@@ -94,6 +94,7 @@ type
     procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString);
     function GetByteBufferAddress: PByteBuffer;
     procedure SetSilentError(Value: Boolean);
+    function IsSilentError: Boolean;
     procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
       MYSQL_STMT: PMYSQL_STMT; const LogMessage: RawByteString;
       const Sender: IImmediatelyReleasable);
@@ -164,6 +165,7 @@ type
       MYSQL_STMT: PMYSQL_STMT; const LogMessage: RawByteString;
       const Sender: IImmediatelyReleasable);
     procedure SetSilentError(Value: Boolean);
+    function IsSilentError: Boolean;
   end;
 
 var
@@ -344,6 +346,11 @@ begin
      Self.Port := MYSQL_PORT;
   inherited SetTransactionIsolation(tiRepeatableRead);
   FMetaData := TZMySQLDatabaseMetadata.Create(Self, Url);
+end;
+
+function TZMySQLConnection.IsSilentError: Boolean;
+begin
+  Result := FSilentError;
 end;
 
 const
@@ -527,7 +534,8 @@ setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def
     {$ENDIF}
                               PAnsiChar(ConSettings^.Database), Port, nil,
                               ClientFlag) = nil then begin
-      HandleErrorOrWarning(lcConnect, nil, LogMessage, Self);
+      HandleErrorOrWarning(lcConnect, nil, LogMessage,
+        IImmediatelyReleasable(FWeakImmediatRelPtr));
       DriverManager.LogError(lcConnect, ConSettings^.Protocol, LogMessage,
         0, ConSettings.ConvFuncs.ZStringToRaw(SUnknownError,
           ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
@@ -731,7 +739,8 @@ procedure TZMySQLConnection.ExecuteImmediat(const SQL: RawByteString;
 begin
   if FPlainDriver.mysql_real_query(FHandle,
     Pointer(SQL), Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}) <> 0 then
-      HandleErrorOrWarning(LoggingCategory, nil, SQL, Self)
+      HandleErrorOrWarning(LoggingCategory, nil, SQL,
+        IImmediatelyReleasable(FWeakImmediatRelPtr))
   else if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
 end;
@@ -766,14 +775,15 @@ begin
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseCommit);
   if FSavePoints.Count > 0 then begin
-    S := 'RELEASE SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    S := cReleaseSP+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
     ExecuteImmediat(S, lcTransaction);
     FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
     If FPlainDriver.mysql_commit(FHandle) <> 0 then
-      HandleErrorOrWarning(lcTransaction, nil, 'Native Commit call', Self)
+      HandleErrorOrWarning(lcTransaction, nil, cCommit_A,
+        IImmediatelyReleasable(FWeakImmediatRelPtr))
     else if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcExecute, ConSettings.Protocol, 'Native Commit call');
+      DriverManager.LogMessage(lcExecute, ConSettings.Protocol, cCommit_A);
     AutoCommit := True;
     if FRestartTransaction then
       StartTransaction;
@@ -802,14 +812,15 @@ begin
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseRollback);
   if FSavePoints.Count > 0 then begin
-    S := 'ROLLBACK TO SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+    S := cRollbackToSP+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
     ExecuteImmediat(S, lcTransaction);
     FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
     If FPlainDriver.mysql_rollback(FHandle) <> 0 then
-      HandleErrorOrWarning(lcTransaction, nil, 'Native Rollback call', Self)
+      HandleErrorOrWarning(lcTransaction, nil, cRollback_A,
+        IImmediatelyReleasable(FWeakImmediatRelPtr))
     else if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcExecute, ConSettings.Protocol, 'Native Rollback call');
+      DriverManager.LogMessage(lcExecute, ConSettings.Protocol, cRollback_A);
     AutoCommit := True;
     if FRestartTransaction then
       StartTransaction;
@@ -827,12 +838,15 @@ end;
 }
 procedure TZMySQLConnection.InternalClose;
 begin
-  if ( Closed ) or (not Assigned(PlainDriver)) then
+  if ( Closed ) or (not Assigned(FPlainDriver)) then
     Exit;
+  FSavePoints.Clear;
   try
     if not AutoCommit then begin
-      SetAutoCommit(True);
-      AutoCommit := False;
+      AutoCommit := not FRestartTransaction;
+      if FPlainDriver.mysql_rollback(FHandle) <> 0 then
+        HandleErrorOrWarning(lcTransaction, nil, cCommit_A,
+          IImmediatelyReleasable(FWeakImmediatRelPtr))
     end;
   finally
     FPlainDriver.mysql_close(FHandle);
@@ -930,14 +944,15 @@ begin
     Open;
   if AutoCommit then begin
     if FPlainDriver.mysql_autocommit(FHandle, 0) <> 0 then
-      HandleErrorOrWarning(lcTransaction, nil, MySQLCommitMsg[False], Self)
+      HandleErrorOrWarning(lcTransaction, nil, MySQLCommitMsg[False],
+        IImmediatelyReleasable(FWeakImmediatRelPtr))
     else if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, MySQLCommitMsg[False]);
     AutoCommit := False;
     Result := 1;
   end else begin
     S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count);
-    ExecuteImmediat('SAVEPOINT '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S), lcTransaction);
+    ExecuteImmediat(cSavePoint+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S), lcTransaction);
     Result := FSavePoints.Add(S) +2;
   end;
 end;
@@ -978,7 +993,8 @@ begin
     else if Value then begin
       FSavePoints.Clear;
       if FPlainDriver.mysql_autocommit(FHandle, 1) <> 0 then
-        HandleErrorOrWarning(lcTransaction, nil, MySQLCommitMsg[True], Self)
+        HandleErrorOrWarning(lcTransaction, nil, MySQLCommitMsg[True],
+          IImmediatelyReleasable(FWeakImmediatRelPtr))
       else if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, MySQLCommitMsg[True]);
       AutoCommit := True;
@@ -1094,7 +1110,7 @@ end;
 
 procedure TZMySQLConnection.SetSilentError(Value: Boolean);
 begin
-  Self.FSilentError := Value;
+  FSilentError := Value;
 end;
 
 {**
@@ -1158,21 +1174,9 @@ begin
   else SetLength(Result, EscapedLen+2);
 end;
 
-(*procedure RegisterMySQLProperties;
-var o: TMySqlOption;
-begin
-  SetLength(MySQLOptionProperties, Ord(High(TMySqlOption));
-  for o := low(TMySqlOption) to high(TMySqlOption) do with MySQLOptionProperties[o] do begin
-    MySQLOptionProperties[o].Name := GetEnumName(TypeInfo(TMySQLOption), Integer(Option));
-    MySQLOptionProperties[o].Purpose :=
-  end;
-
-end;*)
-
 initialization
   MySQLDriver := TZMySQLDriver.Create;
   DriverManager.RegisterDriver(MySQLDriver);
-  //RegisterMySQLProperties;
 finalization
   if DriverManager <> nil then
     DriverManager.DeregisterDriver(MySQLDriver);

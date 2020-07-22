@@ -585,8 +585,9 @@ begin
 
   FSavePoints.Clear;
   if not AutoCommit then begin
-    SetAutoCommit(True);
-    AutoCommit := False;
+    AutoCommit := not FRestartTransaction;
+    FTransactionLevel := 0;
+    FAdoConnection.RollbackTrans;
   end;
   try
     LogMessage := 'CLOSE CONNECTION TO "'+ConSettings^.Database+'"';

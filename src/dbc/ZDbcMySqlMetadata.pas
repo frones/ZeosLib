@@ -1127,6 +1127,7 @@ function TZMySQLDatabaseMetadata.UncachedGetTables(const Catalog: string;
 var
   Len: NativeUInt;
   LCatalog, LTableNamePattern: string;
+  RS: IZResultSet;
 begin
   Result := inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
 
@@ -1152,16 +1153,19 @@ begin
     if not Result.First and (LTableNamePattern <> '%') then begin
       SetSilentError(true);
       try
-        if CreateStatementWithParams(FInfo).ExecuteQuery(
+        RS := CreateStatementWithParams(FInfo).ExecuteQuery(
           Format('SHOW COLUMNS FROM %s.%s',
           [IC.Quote(LCatalog),
-           IC.Quote(LTableNamePattern)])).Next then
-        begin
-          Result.MoveToInsertRow;
-          Result.UpdateString(CatalogNameIndex, LCatalog);
-          Result.UpdateString(TableNameIndex, LTableNamePattern);
-          Result.UpdateString(TableColumnsSQLType, 'TABLE');
-          Result.InsertRow;
+           IC.Quote(LTableNamePattern)]));
+        if (RS <> nil) then begin
+          if RS.Next then begin
+            Result.MoveToInsertRow;
+            Result.UpdateString(CatalogNameIndex, LCatalog);
+            Result.UpdateString(TableNameIndex, LTableNamePattern);
+            Result.UpdateString(TableColumnsSQLType, 'TABLE');
+            Result.InsertRow;
+          end;
+          Rs.Close;
         end;
       finally
         SetSilentError(False);

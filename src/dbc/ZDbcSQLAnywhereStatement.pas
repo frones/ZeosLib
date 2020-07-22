@@ -147,7 +147,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ASA}
 
 uses ZSysUtils, ZDbcUtils, ZMessages, ZDbcSQLAnywhereResultSet,
-  ZDbcGenericResolver, ZEncoding, ZDbcProperties, ZFastCode;
+  ZDbcGenericResolver, ZEncoding, ZFastCode;
 
 { TZAbstractSQLAnywhereStatement }
 
@@ -214,6 +214,8 @@ begin
       Pointer(fASQL));
     if Fa_sqlany_stmt = nil then
       FSQLAnyConnection.HandleErrorOrWarning(lcPrepStmt, fASQL, Self);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcPrepStmt,Self);
     inherited Prepare;
   end else if fMoreResultsIndicator <> mriHasNoMoreResults then
     while GetMoreResults do ;
@@ -314,8 +316,9 @@ var num_cols: Tsacapi_i32;
 begin
   PrepareOpenResultSetForReUse;
   Prepare;
-  if FWeakIntfPtrOfIPrepStmt <> nil then
+  if FWeakIZPreparedStatementPtr <> nil then
     BindInParameters;
+  RestartTimer;
   if FHasOutParams and (FOutParamResultSet = nil) then
     FOutParamResultSet := TZSQLAynwhereOutParamResultSet.Create(Self, SQL, @Fa_sqlany_stmt,
       Fa_sqlany_bind_paramArray, BindList);
@@ -324,15 +327,16 @@ begin
   num_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt);
   if num_cols < 0
   then FSQLAnyConnection.HandleErrorOrWarning(lcExecute, fASQL, Self)
-  else if num_cols > 0
-    then LastResultSet := CreateResultSet
-    else begin
-      LastUpdateCount := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt);
-      if FHasOutParams then
-        FLastResultSet := FOutParamResultSet;
-    end;
+  else if num_cols > 0 then begin
+    LastUpdatecount := -1;
+    LastResultSet := CreateResultSet
+  end else begin
+    LastUpdateCount := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt);
+    if FHasOutParams then
+      FLastResultSet := FOutParamResultSet;
+  end;
   Result := Assigned(FLastResultSet);
-  { Logging SQL Command and values}
+  { Logging SQL Command }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
@@ -347,10 +351,12 @@ end;
 function TZAbstractSQLAnywhereStatement.ExecuteQueryPrepared: IZResultSet;
 var num_cols: Tsacapi_i32;
 begin
+  LastUpdateCount := -1;
   PrepareOpenResultSetForReUse;
   Prepare;
-  if FWeakIntfPtrOfIPrepStmt <> nil then
+  if FWeakIZPreparedStatementPtr <> nil then
     BindInParameters;
+  RestartTimer;
   if FHasOutParams and (FOutParamResultSet = nil) then
     FOutParamResultSet := TZSQLAynwhereOutParamResultSet.Create(Self, SQL, @Fa_sqlany_stmt,
       Fa_sqlany_bind_paramArray, BindList);
@@ -385,25 +391,28 @@ end;
 function TZAbstractSQLAnywhereStatement.ExecuteUpdatePrepared: Integer;
 var num_cols: Tsacapi_i32;
 begin
+  LastUpdateCount := -1;
   Prepare;
-  if FWeakIntfPtrOfIPrepStmt <> nil then
+  if FWeakIZPreparedStatementPtr <> nil then
     BindInParameters;
+  RestartTimer;
   if FHasOutParams and (FOutParamResultSet = nil) then
     FOutParamResultSet := TZSQLAynwhereOutParamResultSet.Create(Self, SQL, @Fa_sqlany_stmt,
       Fa_sqlany_bind_paramArray, BindList);
   if FplainDriver.sqlany_execute(Fa_sqlany_stmt) <> 1 then
     FSQLAnyConnection.HandleErrorOrWarning(lcExecute, fASQL, Self);
-  Result := -1;
   num_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt);
   if num_cols = 0
-  then Result := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt)
+  then LastUpdateCount := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt)
   else while GetMoreResults do
-    if FLastResultSet = nil then
-      Result := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt);
+    if FLastResultSet = nil then begin
+      LastUpdateCount := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt);
+      Break;
+    end;
   { Logging SQL Command and values }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecPrepStmt,Self);
-  LastUpdateCount := Result;
+  Result := LastUpdateCount;;
 end;
 
 { TZSQLAnywherePreparedStatement }

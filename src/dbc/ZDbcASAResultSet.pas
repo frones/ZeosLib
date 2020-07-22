@@ -1469,6 +1469,8 @@ begin
     FFetchStat := ASASQLCA.sqlerrd[2];
     if FFetchStat > 0 then
       LastRowNo := Max(Row - FFetchStat, 0);
+    if not LastRowFetchLogged and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
   end;
 end;
 
@@ -1698,7 +1700,7 @@ end;
 function TZASAStream.Seek(const Offset: Int64; Origin: TSeekOrigin): Int64;
 begin
   if Origin = soEnd then
-    Result := PZASABlobStruct(FOwnerLob.FASASQLDA.sqlVar[FOwnerLob.FColumnIndex].sqlData).untrunc_len - OffSet
+    Result := Int64(PZASABlobStruct(FOwnerLob.FASASQLDA.sqlVar[FOwnerLob.FColumnIndex].sqlData).untrunc_len) - OffSet
   else if Origin = soCurrent then
     Result := FPosition + OffSet
   else

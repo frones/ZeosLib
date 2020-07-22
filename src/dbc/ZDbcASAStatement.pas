@@ -143,7 +143,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ASA}
 
 uses ZSysUtils, ZDbcUtils, ZMessages, ZDbcASAResultSet, ZDbcCachedResultSet,
-  ZEncoding, ZDbcProperties, ZFastCode;
+  ZEncoding, ZFastCode;
 
 { TZAbstractASAStatement }
 
@@ -201,8 +201,8 @@ procedure TZAbstractASAStatement.Prepare;
 var DBHandle: PZASASQLCA;
   WhatToDesc: LongWord;
 begin
-  if not Prepared then
-  begin
+  if not Prepared then begin
+    RestartTimer;
     DBHandle := FASAConnection.GetDBHandle;
     if FStmtNum <> 0 then
     begin
@@ -233,6 +233,8 @@ begin
         Pointer(ASQL), FResultSQLDA, FInParamSQLDA, WhatToDesc, 0);
     if DBHandle.sqlCode <> SQLE_NOERROR then
       FASAConnection.HandleErrorOrWarning(lcPrepStmt, fASQL, Self);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcPrepStmt,Self);
     SetParamCount(FInParamSQLDA.sqld);
     if FInParamSQLDA.sqld <> FInParamSQLDA.sqln then begin
       FInParamSQLData.AllocateSQLDA(FInParamSQLDA.sqld);
@@ -358,11 +360,13 @@ function TZAbstractASAStatement.ExecutePrepared: Boolean;
 var DBHandle: PZASASQLCA;
 begin
   Prepare;
-  if FWeakIntfPtrOfIPrepStmt <> nil then
+  LastUpdateCount := -1;
+  if FWeakIZPreparedStatementPtr <> nil then
     BindInParameters;
   if FMoreResults or FHasOutParams
   then LastResultSet := ExecuteQueryPrepared
   else begin
+    RestartTimer;
     DBHandle := FASAConnection.GetDBHandle;
     FPlainDriver.dbpp_open(DBHandle, Pointer(CursorName), nil, nil, @FStmtNum,
       FInParamSQLDA, FetchSize, 0, CUR_OPEN_DECLARE + CUR_READONLY);  //need a way to know if a resultset can be retrieved
@@ -373,11 +377,11 @@ begin
       if (DBHandle.sqlCode <> SQLE_NOERROR) then
         FASAConnection.HandleErrorOrWarning(lcExecPrepStmt, fASQL, Self);
       LastResultSet := CreateResultSet;
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcExecPrepStmt,Self);
     end;
   end;
   Result := Assigned(FLastResultSet);
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
 
 {**
@@ -390,11 +394,14 @@ end;
 function TZAbstractASAStatement.ExecuteQueryPrepared: IZResultSet;
 var DBHandle: PZASASQLCA;
 begin
+  LastUpdateCount := -1;
   Prepare;
   PrepareOpenResultSetForReUse;
-  if FWeakIntfPtrOfIPrepStmt <> nil then
+  if FWeakIZPreparedStatementPtr <> nil then
     BindInParameters;
   DBHandle := FASAConnection.GetDBHandle;
+  LastUpdateCount := -1;
+  RestartTimer;
   if not FHasOutParams then begin
     FPlainDriver.dbpp_open(DBHandle, Pointer(CursorName), nil, nil, @FStmtNum,
       FInParamSQLDA, FetchSize, 0, FCursorOptions);
@@ -419,7 +426,7 @@ begin
   end;
   { Logging SQL Command and values}
   if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcExecPrepStmt,Self);
+    DriverManager.LogMessage(lcExecPrepStmt, Self);
 end;
 
 {**
@@ -436,8 +443,9 @@ function TZAbstractASAStatement.ExecuteUpdatePrepared: Integer;
 var DBHandle: PZASASQLCA;
 begin
   Prepare;
-  if FWeakIntfPtrOfIPrepStmt <> nil then
+  if FWeakIZPreparedStatementPtr <> nil then
     BindInParameters;
+  RestartTimer;
   if FHasOutParams and (FOpenResultSet = nil) then begin
     //first create the ResultSet -> exact types are described
     FOutParamResultSet := TZASAParamererResultSet.Create(Self, SQL, FStmtNum, CursorName, FSQLData, True);

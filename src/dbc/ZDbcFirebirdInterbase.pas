@@ -1076,6 +1076,7 @@ end;
 
 procedure TZInterbaseFirebirdConnection.InternalClose;
 begin
+  AutoCommit := not FRestartTransaction;
   fTransactions.Clear;
   fActiveTransaction := nil;
 end;
@@ -1844,7 +1845,7 @@ var L, H, I: Integer;
     Buf: PAnsiChar;
     L, R, Size: NativeInt;
   begin
-    Blob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    Blob := IZResultSet(FWeakIZResultSetPtr).GetBlob(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     Blob.QueryInterface(IZClob, CLob);
     Blob := nil;
     Stream := Clob.GetStream(zCP_UTF8);
@@ -1876,7 +1877,7 @@ var L, H, I: Integer;
     PW: Pointer;
     L: NativeUInt;
   begin
-    Blob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    Blob := IZResultSet(FWeakIZResultSetPtr).GetBlob(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     Blob.QueryInterface(IZClob, CLob);
     Blob := nil;
     try
@@ -1892,7 +1893,7 @@ var L, H, I: Integer;
     P: Pointer;
     L: NativeUInt;
   begin
-    Blob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    Blob := IZResultSet(FWeakIZResultSetPtr).GetBlob(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     try
       P := Blob.GetBuffer(FRawTemp, L); //base 64 can not be added in chunks ):
       JSONWriter.WrBase64(P, L, True);
@@ -2078,7 +2079,7 @@ var
     Len: NativeUint;
     RBS: RawByteString absolute Result;
   begin
-    Lob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(ColumnIndex);
+    Lob := IZResultSet(FWeakIZResultSetPtr).GetBlob(ColumnIndex);
     if Lob.IsClob
     then Lob.GetPAnsiChar(ZOSCodePage, RBS, Len)
     else begin
@@ -2229,7 +2230,7 @@ function TZAbstractInterbaseFirebirdResultSet.GetBytes(ColumnIndex: Integer;
   function FromLob(ColumnIndex: Integer; out Len: NativeUInt): PByte;
   var Lob: IZBlob;
   begin
-    Lob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(ColumnIndex);
+    Lob := IZResultSet(FWeakIZResultSetPtr).GetBlob(ColumnIndex);
     Result := Lob.GetBuffer(FRawTemp, Len);
   end;
 begin
@@ -2793,7 +2794,7 @@ var
   function GetLobBufAndLen(ColumnIndex: Integer; out Len: NativeUInt): Pointer;
   var BlobTemp: IZBlob;
   begin
-    BlobTemp := IZResultSet(FWeakIntfPtrOfSelf).GetBlob( ColumnIndex);
+    BlobTemp := IZResultSet(FWeakIZResultSetPtr).GetBlob( ColumnIndex);
     Result := BlobTemp.GetBuffer(fRawTemp, Len);
   end;
   label set_Results;
@@ -2907,7 +2908,7 @@ var
   function GetLobBufAndLen(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
   var BlobTemp: IZBlob;
   begin
-    BlobTemp := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(ColumnIndex, lsmRead);
+    BlobTemp := IZResultSet(FWeakIZResultSetPtr).GetBlob(ColumnIndex, lsmRead);
     if BlobTemp.IsClob then begin
       Result := BlobTemp.GetPWideChar(FUniTemp, Len);
     end else begin
@@ -3103,7 +3104,7 @@ var P: Pointer;
     Len: NativeUint;
     RBS: RawByteString absolute Result;
   begin
-    Lob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(ColumnIndex);
+    Lob := IZResultSet(FWeakIZResultSetPtr).GetBlob(ColumnIndex);
     if Lob.IsClob
     then Lob.GetPAnsiChar(zCP_UTF8, RBS, Len)
     else begin
@@ -3337,9 +3338,11 @@ end;
 
 procedure TZAbstractFirebirdInterbasePreparedStatement.ExceuteBatch;
 var ArrayOffSet: Integer;
+  Succeeded: Boolean;
 begin
   Connection.StartTransaction;
   ArrayOffSet := 0;
+  Succeeded := False;
   try
     if (FBatchStmts[True].Obj <> nil) and (BatchDMLArrayCount >= FBatchStmts[True].PreparedRowsOfArray) then
       while (ArrayOffSet+FBatchStmts[True].PreparedRowsOfArray <= BatchDMLArrayCount) do begin
@@ -3353,10 +3356,11 @@ begin
         ArrayOffSet, FBatchStmts[False].PreparedRowsOfArray);
       FBatchStmts[False].Obj.ExecuteUpdatePrepared;
     end;
-    Connection.Commit;
-  except
-    Connection.Rollback;
-    raise;
+    Succeeded := True;
+  finally
+    if Succeeded
+    then Connection.Commit
+    else Connection.Rollback;
   end;
   LastUpdateCount := BatchDMLArrayCount;
 end;

@@ -148,8 +148,6 @@ type
     FVarLenCols, FArrayCols, FLobCols, FDataSetCols: array of Integer;
     FConSettings: PZConSettings;
     function GetColumnSize(ColumnInfo: TZColumnInfo): Integer;
-    function InternalGetInt(ColumnIndex: Integer; out IsNull: Boolean): Integer; {$IFDEF WITHINLINE} inline; {$ENDIF}
-    function InternalGetULong(ColumnIndex: Integer; out IsNull: Boolean): UInt64; {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetInt(ColumnIndex: Integer; Value: Integer); {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetULong(ColumnIndex: Integer; const Value: UInt64); {$IFDEF WITHINLINE} inline; {$ENDIF}
   protected
@@ -1120,102 +1118,6 @@ begin
   end;
 end;
 
-function TZRowAccessor.InternalGetInt(ColumnIndex: Integer; out IsNull: Boolean): Integer;
-var
-  Data: PPointer;
-  PW: PWideChar;
-  PA: PAnsiChar absolute PW;
-  Len: NativeUint;
-begin
-  Result := 0;
-  {$R-}
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
-    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    {$Q-}
-    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(Data)^ then Result := 1;
-      stByte: Result := PByte(Data)^;
-      stShort: Result := PShortInt(Data)^;
-      stWord: Result := PWord(Data)^;
-      stSmall: Result := PSmallInt(Data)^;
-      stLongWord: Result := PCardinal(Data)^;
-      stInteger: Result := PInteger(Data)^;
-      stULong: Result := PUInt64(Data)^;
-      stLong: Result := Integer(PInt64(Data)^);
-      stFloat: Result := Integer({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^));
-      stDouble: Result := Integer({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^));
-      stCurrency: Result := Integer(PInt64(Data)^ div 10000);
-      stBigDecimal: Result := BCD2Int64(PBCD(Data)^);
-      stString: if Data^ <> nil then
-          Result := RawToIntDef(PPAnsiChar(Data)^+PAnsiInc, 0);
-      stUnicodeString: if Data^ <> nil then
-          Result := UnicodeToIntDef(ZPPWideChar(Data)^+PWideInc, 0);
-      stAsciiStream: begin
-          PA := GetPAnsiChar(ColumnIndex, IsNull, Len);
-          Result := RawToIntDef(PA, PA+Len, 0);
-        end;
-      stUnicodeStream: begin
-          PW := GetPWideChar(ColumnIndex, IsNull, Len);
-          Result := UnicodeToIntDef(PW, PW+Len, 0);
-        end;
-      else raise CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stInteger);
-    end;    {$IFDEF OverFlowCheckEnabled}{$Q+}{$ENDIF}
-    IsNull := False;
-  end else begin
-    IsNull := True;
-  end;
-end;
-
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-function TZRowAccessor.InternalGetULong(ColumnIndex: Integer; out IsNull: Boolean): UInt64;
-var
-  Data: PPointer;
-  PW: PWideChar;
-  PA: PAnsiChar absolute PW;
-  Len: NativeUint;
-begin
-  {$R-}
-  Result := 0;
-  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
-    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
-    {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-      stBoolean: if PWordBool(Data)^ then Result := 1;
-      stByte: Result := PByte(Data)^;
-      stShort: Result := PShortInt(Data)^;
-      stWord: Result := PWord(Data)^;
-      stSmall: Result := PSmallInt(Data)^;
-      stLongWord: Result := PCardinal(Data)^;
-      stInteger: Result := PInteger(Data)^;
-      stULong: Result := PUInt64(Data)^;
-      stLong: Result := PInt64(Data)^;
-      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^);
-      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
-      stCurrency: Result := (PInt64(Data)^ div 10000);
-      stBigDecimal: Result := BCD2UInt64(PBCD(Data)^);
-      stString: if Data^ <> nil
-        then Result := RawToUInt64Def(PPAnsiChar(Data)^+PAnsiInc, 0)
-        else Result := 0;
-      stUnicodeString: if Data^ <> nil
-        then Result := UnicodeToUInt64Def(ZPPWideChar(Data)^+PWideInc, 0)
-        else Result := 0;
-      stAsciiStream: begin
-          PA := GetPAnsiChar(ColumnIndex, IsNull, Len);
-          Result := RawToUInt64Def(PA, PA+Len, 0);
-        end;
-      stUnicodeStream: begin
-          PW := GetPWideChar(ColumnIndex, IsNull, Len);
-          Result := UnicodeToUInt64Def(PW, PW+Len, 0);
-        end;
-      else raise CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stULong);
-    end;
-    IsNull := False;
-  end else
-    IsNull := True;
-end;
-{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-
 procedure TZRowAccessor.InternalSetInt(ColumnIndex: Integer; Value: Integer);
 var
   Data: PPointer;
@@ -1636,7 +1538,7 @@ procedure TZRowAccessor.InitBuffer(Buffer: PZRowBuffer);
 begin
   if Buffer <> nil then
   begin
-    Buffer^.Index := 0;
+    Buffer^.Index := -1;
     Buffer^.BookmarkFlag := 0;//bfCurrent;
     Buffer^.UpdateType := utUnmodified;
     FillChar(Buffer^.Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
@@ -2892,9 +2794,9 @@ end;
 function TZRowAccessor.GetByte(ColumnIndex: Integer; out IsNull: Boolean): Byte;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stBoolean);
+  CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := Byte(InternalGetInt(ColumnIndex, IsNull));
+  Result := Byte(GetInt(ColumnIndex, IsNull));
 end;
 
 {**
@@ -2911,7 +2813,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
-  Result := ShortInt(InternalGetInt(ColumnIndex, IsNull));
+  Result := ShortInt(GetInt(ColumnIndex, IsNull));
 end;
 
 {**
@@ -2928,7 +2830,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stWord);
 {$ENDIF}
-  Result := Word(InternalGetInt(ColumnIndex, IsNull));
+  Result := Word(GetUInt(ColumnIndex, IsNull));
 end;
 {**
   Gets the value of the designated column in the current row
@@ -2944,7 +2846,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stSmall);
 {$ENDIF}
-  Result := SmallInt(InternalGetInt(ColumnIndex, IsNull));
+  Result := SmallInt(GetInt(ColumnIndex, IsNull));
 end;
 
 {**
@@ -2956,13 +2858,59 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZRowAccessor.GetUInt(ColumnIndex: Integer; out IsNull: Boolean): Cardinal;
+var
+  Data: PPointer;
+  PW: PWideChar;
+  PA: PAnsiChar absolute PW;
+  Len: NativeUint;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLongWord);
 {$ENDIF}
-  Result := Cardinal(InternalGetULong(ColumnIndex, IsNull));
+  {$R-}
+  Result := 0;
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+      stBoolean: if PWordBool(Data)^ then Result := 1;
+      stByte: Result := PByte(Data)^;
+      stShort: Result := PShortInt(Data)^;
+      stWord: Result := PWord(Data)^;
+      stSmall: Result := PSmallInt(Data)^;
+      stLongWord: Result := PCardinal(Data)^;
+      stInteger: Result := PInteger(Data)^;
+      stULong: Result := PUInt64(Data)^;
+      stLong: Result := PInt64(Data)^;
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^);
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
+      stCurrency: Result := (PInt64(Data)^ div 10000);
+      stBigDecimal: Result := BCD2UInt64(PBCD(Data)^);
+      stString: if Data^ <> nil then begin
+          PA := PPAnsiChar(Data)^+PAnsiInc;
+          Result := RawToUInt32Def(PA, PA+PCardinal(PPointer(Data)^)^, 0)
+        end else Result := 0;
+      stUnicodeString: if Data^ <> nil then begin
+          PW := ZPPWideChar(Data)^+PWideInc;
+          Result := UnicodeToUInt32Def(PW, PW + PCardinal(PPointer(Data)^)^, 0)
+        end else Result := 0;
+      stAsciiStream: begin
+          PA := GetPAnsiChar(ColumnIndex, IsNull, Len);
+          Result := RawToUInt32Def(PA, PA+Len, 0);
+        end;
+      stUnicodeStream: begin
+          PW := GetPWideChar(ColumnIndex, IsNull, Len);
+          Result := UnicodeToUInt32Def(PW, PW+Len, 0);
+        end;
+      else raise CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stULong);
+    end;
+    IsNull := False;
+  end else
+    IsNull := True;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
   Gets the value of the designated column in the current row
@@ -2974,11 +2922,52 @@ end;
     value returned is <code>0</code>
 }
 function TZRowAccessor.GetInt(ColumnIndex: Integer; out IsNull: Boolean): Integer;
+var
+  Data: PPointer;
+  PW: PWideChar;
+  PA: PAnsiChar absolute PW;
+  Len: NativeUint;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  Result := InternalGetInt(ColumnIndex, IsNull);
+  Result := 0;
+  {$R-}
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    {$Q-}
+    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+      stBoolean: if PWordBool(Data)^ then Result := 1;
+      stByte: Result := PByte(Data)^;
+      stShort: Result := PShortInt(Data)^;
+      stWord: Result := PWord(Data)^;
+      stSmall: Result := PSmallInt(Data)^;
+      stLongWord: Result := PCardinal(Data)^;
+      stInteger: Result := PInteger(Data)^;
+      stULong: Result := PUInt64(Data)^;
+      stLong: Result := Integer(PInt64(Data)^);
+      stFloat: Result := Integer({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^));
+      stDouble: Result := Integer({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^));
+      stCurrency: Result := Integer(PInt64(Data)^ div 10000);
+      stBigDecimal: Result := BCD2Int64(PBCD(Data)^);
+      stString: if Data^ <> nil then
+          Result := RawToIntDef(PPAnsiChar(Data)^+PAnsiInc, 0);
+      stUnicodeString: if Data^ <> nil then
+          Result := UnicodeToIntDef(ZPPWideChar(Data)^+PWideInc, 0);
+      stAsciiStream: begin
+          PA := GetPAnsiChar(ColumnIndex, IsNull, Len);
+          Result := RawToIntDef(PA, PA+Len, 0);
+        end;
+      stUnicodeStream: begin
+          PW := GetPWideChar(ColumnIndex, IsNull, Len);
+          Result := UnicodeToIntDef(PW, PW+Len, 0);
+        end;
+      else raise CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stInteger);
+    end;    {$IFDEF OverFlowCheckEnabled}{$Q+}{$ENDIF}
+    IsNull := False;
+  end else
+    IsNull := True;
 end;
 
 {**
@@ -2990,13 +2979,57 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZRowAccessor.GetULong(ColumnIndex: Integer; out IsNull: Boolean): UInt64;
+var
+  Data: PPointer;
+  PW: PWideChar;
+  PA: PAnsiChar absolute PW;
+  Len: NativeUint;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stULong);
 {$ENDIF}
-  Result := InternalGetULong(ColumnIndex, IsNull);
+  {$R-}
+  Result := 0;
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
+    Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
+    {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+    case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
+      stBoolean: if PWordBool(Data)^ then Result := 1;
+      stByte: Result := PByte(Data)^;
+      stShort: Result := PShortInt(Data)^;
+      stWord: Result := PWord(Data)^;
+      stSmall: Result := PSmallInt(Data)^;
+      stLongWord: Result := PCardinal(Data)^;
+      stInteger: Result := PInteger(Data)^;
+      stULong: Result := PUInt64(Data)^;
+      stLong: Result := PInt64(Data)^;
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(Data)^);
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
+      stCurrency: Result := (PInt64(Data)^ div 10000);
+      stBigDecimal: Result := BCD2UInt64(PBCD(Data)^);
+      stString: if Data^ <> nil
+        then Result := RawToUInt64Def(PPAnsiChar(Data)^+PAnsiInc, 0)
+        else Result := 0;
+      stUnicodeString: if Data^ <> nil
+        then Result := UnicodeToUInt64Def(ZPPWideChar(Data)^+PWideInc, 0)
+        else Result := 0;
+      stAsciiStream: begin
+          PA := GetPAnsiChar(ColumnIndex, IsNull, Len);
+          Result := RawToUInt64Def(PA, PA+Len, 0);
+        end;
+      stUnicodeStream: begin
+          PW := GetPWideChar(ColumnIndex, IsNull, Len);
+          Result := UnicodeToUInt64Def(PW, PW+Len, 0);
+        end;
+      else raise CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stULong);
+    end;
+    IsNull := False;
+  end else
+    IsNull := True;
 end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 {**
   Gets the value of the designated column in the current row
@@ -3306,6 +3339,7 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] = bIsNotNull then begin
     Data := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+    IsNull := False;
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stBoolean: ScaledOrdinal2BCD(Word(PWord(Data)^ <> 0), 0, Result);
       stByte: ScaledOrdinal2BCD(Word(PByte(Data)^), 0, Result);
@@ -3336,7 +3370,6 @@ begin
         end else goto NBCD;
       else raise CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stBigDecimal);
     end;
-    IsNull := False;
   end else begin
 NBCD:
     IsNull := True;

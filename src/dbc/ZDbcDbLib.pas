@@ -987,13 +987,12 @@ var LogMessage: RawByteString;
 begin
   if Closed or not Assigned(PlainDriver) then
     Exit;
+  FSavePoints.Clear;
   try
     if not AutoCommit then begin
-      SetAutoCommit(True);
-      AutoCommit := False;
+      AutoCommit := not FRestartTransaction;
+      ExecuteImmediat(RawByteString('rollback'), lcTransaction);
     end;
-    //if not FPlainDriver.dbDead(FHandle) <> 0 then
-      //InternalExecuteStatement('if @@trancount > 0 rollback');
   finally
     if FHandle <> nil then begin
       FPlainDriver.dbclose(FHandle);

@@ -96,7 +96,7 @@ type
     FCallResultCache: TZCollection;
     FByteBuffer: PByteBuffer;
     FOleDBConnection: IZOleDBConnection;
-    fDEFERPREPARE: Boolean; //ole: if set the stmt will be prepared immediatelly and we'll try to decribe params
+    fDEFERPREPARE: Boolean; //ole: if not set the stmt will be prepared immediatelly and we'll try to decribe params
     procedure CheckError(Status: HResult; LoggingCategory: TZLoggingCategory;
        const DBBINDSTATUSArray: TDBBINDSTATUSDynArray = nil);
     procedure PrepareOpenedResultSetsForReusing;
@@ -249,7 +249,7 @@ uses
 
 var DefaultPreparableTokens: TPreparablePrefixTokens;
 const
-  LogExecType: array[Boolean] of TZLoggingCategory = (lcExecute, lcExecPrepStmt);
+  LogExecType: array[Boolean] of TZLoggingCategory = (lcExecPrepStmt, lcExecute);
 
 { TZAbstractOleDBStatement }
 
@@ -429,6 +429,7 @@ begin
   PrepareOpenedResultSetsForReusing;
   Prepare;
   BindInParameters;
+  RestartTimer;
   try
     FRowsAffected := DB_COUNTUNAVAILABLE;
     FRowSet := nil;
@@ -444,6 +445,8 @@ begin
       end else
         CheckError(FCommand.Execute(nil, IID_IRowset,
           FDBParams,@FRowsAffected,@FRowSet), LogExecType[fDEFERPREPARE], fDBBINDSTATUSArray);
+      if DriverManager.HasLoggingListener then
+         DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
       if BindList.HasOutOrInOutOrResultParam then begin
         FetchCallResults(FRowSet);
         Result := GetFirstResultSet;
@@ -478,10 +481,8 @@ function TZAbstractOleDBStatement.ExecuteUpdatePrepared: Integer;
 begin
   Prepare;
   BindInParameters;
-
+  RestartTimer;
   FRowsAffected := DB_COUNTUNAVAILABLE; //init
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   if FSupportsMultipleResultSets then begin
     CheckError(FCommand.Execute(nil, IID_IMultipleResults, FDBParams,@FRowsAffected,@FMultipleResults),
       LogExecType[fDEFERPREPARE], fDBBINDSTATUSArray);
@@ -491,6 +492,8 @@ begin
   end else
     CheckError(FCommand.Execute(nil, DB_NULLGUID,FDBParams,@FRowsAffected,nil),
       LogExecType[fDEFERPREPARE], FDBBINDSTATUSArray);
+  if DriverManager.HasLoggingListener then
+     DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
   if BindList.HasOutOrInOutOrResultParam then
     FOutParamResultSet := CreateResultSet(nil);
   LastUpdateCount := FRowsAffected;
@@ -536,10 +539,8 @@ var FRowSet: IRowSet;
 begin
   PrepareOpenedResultSetsForReusing;
   LastUpdateCount := -1;
-
   Prepare;
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcBindPrepStmt,Self);
+  RestartTimer;
   FRowsAffected := DB_COUNTUNAVAILABLE;
   try
     FRowSet := nil;
@@ -554,6 +555,8 @@ begin
       CheckError(FCommand.Execute(nil, IID_IRowset,
         FDBParams,@FRowsAffected,@FRowSet), LogExecType[fDEFERPREPARE],
         FDBBINDSTATUSArray);
+    if DriverManager.HasLoggingListener then
+       DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
     if BindList.HasOutOrInOutOrResultParam then
       if FetchCallResults(FRowSet)
       then LastResultSet := GetFirstResultSet
@@ -1016,8 +1019,10 @@ begin
       else BindBatchDMLArrays;
       fBindAgain := False;
     finally
-      fBindImmediat := fDEFERPREPARE;
+      fBindImmediat := not fDEFERPREPARE;
     end;
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcBindPrepStmt,Self);
 end;
 
 {$IFDEF FPC}
@@ -1076,7 +1081,7 @@ procedure TZOleDBPreparedStatement.CheckParameterIndex(var Value: Integer);
 begin
   if not Prepared then
     Prepare;
-  if (BindList.Capacity < Value+1) then
+  if (BindList.Count < Value+1) then
     if fBindImmediat
     then raise EZSQLException.Create(SInvalidInputParameterCount)
     else inherited CheckParameterIndex(Value);
@@ -1437,17 +1442,28 @@ procedure TZOleDBPreparedStatement.Prepare;
 var
   DBInfo: IZDataBaseInfo;
   CommandPrepare: ICommandPrepare;
+  S: String;
 begin
   if Not Prepared then begin//prevent PrepareInParameters
-    fDEFERPREPARE := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_PreferPrepared, 'True')) and (FTokenMatchIndex <> -1);
+    S := GetParameters.Values[DSProps_DeferPrepare];
+    if S = '' then
+      S := Connection.GetParameters.Values[DSProps_DeferPrepare];
+    if S = '' then begin
+      S := DefineStatementParameter(Self, DSProps_PreferPrepared, StrTrue);
+      fDEFERPREPARE := not StrToBoolEx(S);
+    end else
+      fDEFERPREPARE := StrToBoolEx(S);
+    fDEFERPREPARE := fDEFERPREPARE or (FTokenMatchIndex = -1);
     FCommand := (Connection as IZOleDBConnection).CreateCommand;
-      SetOleCommandProperties;
-      CheckError(fCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL)), lcOther);
-      if fDEFERPREPARE and (fCommand.QueryInterface(IID_ICommandPrepare, CommandPrepare) = S_OK) then begin
-        CheckError(CommandPrepare.Prepare(0), lcPrepStmt);
-        fBindImmediat := True;
-      end else
-        fBindImmediat := False;
+    SetOleCommandProperties;
+    CheckError(fCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL)), lcOther);
+    if not fDEFERPREPARE and (fCommand.QueryInterface(IID_ICommandPrepare, CommandPrepare) = S_OK) then begin
+      CheckError(CommandPrepare.Prepare(0), lcPrepStmt);
+      fBindImmediat := True;
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcPrepStmt,Self);
+    end else
+      fBindImmediat := False;
     DBInfo := Connection.GetMetadata.GetDatabaseInfo;
     if FSupportsMultipleResultSets
     then fMoreResultsIndicator := mriUnknown
@@ -1485,7 +1501,7 @@ begin
     OleCheck(fcommand.QueryInterface(IID_ICommandWithParameters, FCommandWithParameters));
     Status := FCommandWithParameters.GetParameterInfo(FDBUPARAMS,PDBPARAMINFO(FParamInfoArray), FNamesBuffer);
     if Status = DB_E_PARAMUNAVAILABLE then begin
-      fDEFERPREPARE := false;
+      fDEFERPREPARE := true;
       Exit;
     end else if Failed(Status) then
       CheckError(Status, lcOther, FDBBINDSTATUSArray);
@@ -1537,7 +1553,7 @@ begin
     FParamNamesArray[Index] := Name;
   end;
   Bind := @FDBBindingArray[Index];
-  if fDEFERPREPARE then begin
+  if not fDEFERPREPARE then begin
     case ParamType of
       pctReturn, pctOut: if Bind.dwFlags and DBPARAMFLAGS_ISINPUT <> 0 then
                            Bind.dwFlags := (Bind.dwFlags and not DBPARAMFLAGS_ISINPUT) or DBPARAMFLAGS_ISOUTPUT;
@@ -1655,7 +1671,7 @@ end;
 procedure TZOleDBPreparedStatement.SetBindCapacity(Capacity: Integer);
 begin
   inherited SetBindCapacity(Capacity);
-  if not fBindImmediat and not fDEFERPREPARE and (Bindlist.Count < Capacity) then
+  if not fBindImmediat and fDEFERPREPARE and (Bindlist.Count < Capacity) then
     SetParamCount(Capacity);
 end;
 
@@ -1969,7 +1985,7 @@ begin
     Arr.VArrayVariantType := vtNull;
     BindList.Put(ParameterIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Arr, True);
   end;
-  if not fDEFERPREPARE then begin
+  if fDEFERPREPARE then begin
     {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex -1;{$ENDIF}
     case SQLtype of
       stBigDecimal: InitFixedBind(ParameterIndex, SizeOf(Double), DBTYPE_R8);
@@ -2406,8 +2422,8 @@ begin
       //turn off deferred prepare -> raise exception on Prepare if command can't be executed!
       //http://msdn.microsoft.com/de-de/library/ms130779.aspx
       if fDEFERPREPARE
-      then SetProp(rgPropertySets[1], SSPROP_DEFERPREPARE, VARIANT_FALSE)
-      else SetProp(rgPropertySets[1], SSPROP_DEFERPREPARE, VARIANT_TRUE);
+      then SetProp(rgPropertySets[1], SSPROP_DEFERPREPARE, VARIANT_TRUE)
+      else SetProp(rgPropertySets[1], SSPROP_DEFERPREPARE, VARIANT_FALSE);
     end else begin
       //to avoid http://support.microsoft.com/kb/272358/de we need a
       //FAST_FORWARD(RO) server cursor

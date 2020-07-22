@@ -64,11 +64,11 @@ uses
 {$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBcd,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
-  ZDbcIntfs, ZSysUtils, ZCompatibility, ZVariant, ZClasses;
+  ZDbcIntfs, ZDbcLogging, ZSysUtils, ZCompatibility, ZVariant, ZClasses;
 
 type
   {** Implements Abstract ResultSet. }
-  TZAbstractResultSet = class(TZCodePagedObject,
+  TZAbstractResultSet = class(TZImmediatelyReleasableObject,
     IImmediatelyReleasable)
   private
     FLastRowNo: Integer;
@@ -83,8 +83,9 @@ type
     FColumnsInfo: TObjectList;
     FMetadata: TContainedObject;
     FStatement: IZStatement;
+    FLastRowFetchLogged: Boolean;
   protected
-    FWeakIntfPtrOfSelf: Pointer; //EH: Remainder for dereferencing on stmt
+    FWeakIZResultSetPtr: Pointer; //EH: Remainder for dereferencing on stmt
     //note: while in destruction IZResultSet(Self) has no longer the same pointer address!
     //so we mark the address in constructor
     FRowNo: Integer;
@@ -113,6 +114,7 @@ type
       read FResultSetConcurrency write FResultSetConcurrency;
     property Statement: IZStatement read FStatement;
     property Metadata: TContainedObject read FMetadata write FMetadata;
+    property LastRowFetchLogged: Boolean read FLastRowFetchLogged;
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
       Metadata: TContainedObject; ConSettings: PZConSettings);
@@ -316,7 +318,9 @@ type
     property ColumnsInfo: TObjectList read FColumnsInfo write FColumnsInfo;
   end;
 
-  TZAbstractReadOnlyResultSet = class(TZAbstractResultSet)
+  TZAbstractReadOnlyResultSet = class(TZAbstractResultSet, IZLoggingObject)
+  protected
+    FWeakIZLoggingObjectPtr: Pointer; //weak reference to IZLoggingObject intf of Self
   public //getter
     function GetUnicodeString(ColumnIndex: Integer): UnicodeString;
     function GetString(ColumnIndex: Integer): String;
@@ -358,6 +362,10 @@ type
     procedure UpdateLob(ColumnIndex: Integer; const Value: IZBlob);
     procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant);
     procedure UpdateDefaultExpression(ColumnIndex: Integer; const Value: string);
+  public
+    function CreateLogEvent(const Category: TZLoggingCategory): TZLoggingEvent;
+  public
+    procedure AfterConstruction; override;
   end;
 
   //sequential stream with faket interface implementationm, not refcounted
@@ -980,7 +988,7 @@ begin
 
   { the constructor keeps the refcount to 1}
   QueryInterface(IZResultSet, RS);
-  FWeakIntfPtrOfSelf := Pointer(RS); //Remainder for unregister on stmt!
+  FWeakIZResultSetPtr := Pointer(RS); //Remainder for unregister on stmt!
   RS := nil;
   if Statement = nil then begin
     FResultSetType := rtForwardOnly;
@@ -1137,6 +1145,7 @@ begin
     FRowNo := 0;
     FLastRowNo := 0;
     LastWasNull := True;
+    FLastRowFetchLogged := False;
   end;
 end;
 
@@ -1168,7 +1177,7 @@ begin
           _AddRef;
           RefCountAdded := True;
         end;
-        FStatement.FreeOpenResultSetReference(IZResultSet(FWeakIntfPtrOfSelf));
+        FStatement.FreeOpenResultSetReference(IZResultSet(FWeakIZResultSetPtr));
         FStatement := nil;
       end;
       AfterClose;
@@ -1216,7 +1225,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetUInt(ColumnIndex);
+  Result := IZResultSet(FWeakIZResultSetPtr).GetUInt(ColumnIndex);
 end;
 
 {**
@@ -1233,7 +1242,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetInt(ColumnIndex);
+  Result := IZResultSet(FWeakIZResultSetPtr).GetInt(ColumnIndex);
 end;
 
 {**
@@ -1250,7 +1259,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stWord);
 {$ENDIF}
-  Result := Word(IZResultSet(FWeakIntfPtrOfSelf).GetInt(ColumnIndex));
+  Result := Word(IZResultSet(FWeakIZResultSetPtr).GetInt(ColumnIndex));
 end;
 
 {**
@@ -1267,7 +1276,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stSmall);
 {$ENDIF}
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetInt(ColumnIndex);
+  Result := IZResultSet(FWeakIZResultSetPtr).GetInt(ColumnIndex);
 end;
 
 {**
@@ -1300,10 +1309,10 @@ begin
   CheckColumnConvertion(ColumnIndex, stAsciiStream);
 {$ENDIF}
   Result := nil;
-  if IZResultSet(FWeakIntfPtrOfSelf).IsNull(ColumnIndex) then
+  if IZResultSet(FWeakIZResultSetPtr).IsNull(ColumnIndex) then
     LastWasNull := True
   else begin
-    Blob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(ColumnIndex);
+    Blob := IZResultSet(FWeakIZResultSetPtr).GetBlob(ColumnIndex);
     if not LastWasNull and (Blob <> nil) then
       Blob.QueryInterface(IZCLob, Clob);
       if Clob = nil then
@@ -1348,10 +1357,10 @@ begin
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
   Result := nil;
-  if IZResultSet(FWeakIntfPtrOfSelf).IsNull(ColumnIndex) then
+  if IZResultSet(FWeakIZResultSetPtr).IsNull(ColumnIndex) then
     LastWasNull := True
   else begin
-    Blob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(ColumnIndex);
+    Blob := IZResultSet(FWeakIZResultSetPtr).GetBlob(ColumnIndex);
     if not LastWasNull and (Blob <> nil) and Supports(Blob, IZClob, CLob)
     then Result := Clob.GetStream(zCP_UTF16)
     else Result := Blob.GetStream;
@@ -1386,10 +1395,10 @@ begin
   CheckColumnConvertion(ColumnIndex, stBinaryStream);
 {$ENDIF}
   Result := nil;
-  if IZResultSet(FWeakIntfPtrOfSelf).IsNull(ColumnIndex) then
+  if IZResultSet(FWeakIZResultSetPtr).IsNull(ColumnIndex) then
     LastWasNull := True
   else begin
-    Blob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(ColumnIndex);
+    Blob := IZResultSet(FWeakIZResultSetPtr).GetBlob(ColumnIndex);
     if not LastWasNull and (Blob <> nil) then
       Result := Blob.GetStream;
     LastWasNull := (Result = nil);
@@ -1437,46 +1446,46 @@ begin
 
   case Metadata.GetColumnType(ColumnIndex) of
     stBoolean:
-      Result := EncodeBoolean(IZResultSet(FWeakIntfPtrOfSelf).GetBoolean(ColumnIndex));
+      Result := EncodeBoolean(IZResultSet(FWeakIZResultSetPtr).GetBoolean(ColumnIndex));
     stShort, stSmall, stInteger, stLong:
-      Result := EncodeInteger(IZResultSet(FWeakIntfPtrOfSelf).GetLong(ColumnIndex));
+      Result := EncodeInteger(IZResultSet(FWeakIZResultSetPtr).GetLong(ColumnIndex));
     stByte, stWord, stLongWord, stULong:
-      Result := EncodeUInteger(IZResultSet(FWeakIntfPtrOfSelf).GetULong(ColumnIndex));
+      Result := EncodeUInteger(IZResultSet(FWeakIZResultSetPtr).GetULong(ColumnIndex));
     stFloat, stDouble:
-      Result := EncodeDouble(IZResultSet(FWeakIntfPtrOfSelf).GetDouble(ColumnIndex));
+      Result := EncodeDouble(IZResultSet(FWeakIZResultSetPtr).GetDouble(ColumnIndex));
     stCurrency:
-      Result := EncodeCurrency(IZResultSet(FWeakIntfPtrOfSelf).GetCurrency(ColumnIndex));
+      Result := EncodeCurrency(IZResultSet(FWeakIZResultSetPtr).GetCurrency(ColumnIndex));
     stBigDecimal: begin
                     InitializeVariant(Result, vtBigDecimal);
-                    IZResultSet(FWeakIntfPtrOfSelf).GetBigDecimal(ColumnIndex, Result.VBigDecimal);
+                    IZResultSet(FWeakIZResultSetPtr).GetBigDecimal(ColumnIndex, Result.VBigDecimal);
                   end;
     stDate:   begin
                 InitializeVariant(Result, vtDate);
-                IZResultSet(FWeakIntfPtrOfSelf).GetDate(ColumnIndex, Result.VDate);
+                IZResultSet(FWeakIZResultSetPtr).GetDate(ColumnIndex, Result.VDate);
               end;
     stTime:   begin
                 InitializeVariant(Result, vtTime);
-                IZResultSet(FWeakIntfPtrOfSelf).GetTime(ColumnIndex, Result.VTime);
+                IZResultSet(FWeakIZResultSetPtr).GetTime(ColumnIndex, Result.VTime);
               end;
     stTimestamp:begin
                 InitializeVariant(Result, vtTimeStamp);
-                IZResultSet(FWeakIntfPtrOfSelf).GetTimeStamp(ColumnIndex, Result.VTimeStamp);
+                IZResultSet(FWeakIZResultSetPtr).GetTimeStamp(ColumnIndex, Result.VTimeStamp);
               end;
     stGUID: begin
               InitializeVariant(Result, vtGUID);
-              IZResultSet(FWeakIntfPtrOfSelf).GetGUID(ColumnIndex, Result.VGUID);
+              IZResultSet(FWeakIZResultSetPtr).GetGUID(ColumnIndex, Result.VGUID);
             end;
     stBytes, stBinaryStream:
-      Result := EncodeBytes(IZResultSet(FWeakIntfPtrOfSelf).GetBytes(ColumnIndex));
+      Result := EncodeBytes(IZResultSet(FWeakIZResultSetPtr).GetBytes(ColumnIndex));
     stString, stAsciiStream, stUnicodeString, stUnicodeStream:
       {$IFDEF WITH_USC2_ANSICOMPARESTR_ONLY}
-      Result := EncodeUnicodeString(IZResultSet(FWeakIntfPtrOfSelf).GetUnicodeString(ColumnIndex));
+      Result := EncodeUnicodeString(IZResultSet(FWeakIZResultSetPtr).GetUnicodeString(ColumnIndex));
       {$ELSE}
       if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
          (ConSettings^.ClientCodePage^.Encoding in [ceUTf8, ceUTF16]) then
-        Result := EncodeUnicodeString(IZResultSet(FWeakIntfPtrOfSelf).GetUnicodeString(ColumnIndex))
+        Result := EncodeUnicodeString(IZResultSet(FWeakIZResultSetPtr).GetUnicodeString(ColumnIndex))
       else
-        Result := EncodeRawByteString(IZResultSet(FWeakIntfPtrOfSelf).GetRawByteString(ColumnIndex));
+        Result := EncodeRawByteString(IZResultSet(FWeakIZResultSetPtr).GetRawByteString(ColumnIndex));
       {$ENDIF}
     else
       Result.VType := vtNull;
@@ -1518,7 +1527,7 @@ end;
 }
 function TZAbstractResultSet.IsNullByName(const ColumnName: string): Boolean;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).IsNull(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).IsNull(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1534,7 +1543,7 @@ end;
 function TZAbstractResultSet.GetPAnsiCharByName(const ColumnName: string;
   out Len: NativeUInt): PAnsiChar;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(GetColumnIndex(ColumnName), Len);
+  Result := IZResultSet(FWeakIZResultSetPtr).GetPAnsiChar(GetColumnIndex(ColumnName), Len);
 end;
 
 {**
@@ -1550,7 +1559,7 @@ end;
 function TZAbstractResultSet.GetPWideCharByName(const ColumnName: string;
   out Len: NativeUInt): PWideChar;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetPWideChar(GetColumnIndex(ColumnName), Len);
+  Result := IZResultSet(FWeakIZResultSetPtr).GetPWideChar(GetColumnIndex(ColumnName), Len);
 end;
 
 {**
@@ -1564,7 +1573,7 @@ end;
 }
 function TZAbstractResultSet.GetStringByName(const ColumnName: string): String;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetString(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetString(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1597,10 +1606,10 @@ begin
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
   Result := nil;
-  if IZResultSet(FWeakIntfPtrOfSelf).IsNull(ColumnIndex) then
+  if IZResultSet(FWeakIZResultSetPtr).IsNull(ColumnIndex) then
     LastWasNull := True
   else begin
-    Blob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(ColumnIndex);
+    Blob := IZResultSet(FWeakIZResultSetPtr).GetBlob(ColumnIndex);
     if not LastWasNull and (Blob <> nil) and Supports(Blob, IZClob, CLob)
     then Result := Clob.GetStream(zOSCodePage)
     else Result := Blob.GetStream;
@@ -1633,7 +1642,7 @@ end;
 function TZAbstractResultSet.GetAnsiStreamByName(
   const ColumnName: string): TStream;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetAnsiStream(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetAnsiStream(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1648,7 +1657,7 @@ end;
 {$IFNDEF NO_ANSISTRING}
 function TZAbstractResultSet.GetAnsiStringByName(const ColumnName: string): AnsiString;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetAnsiString(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetAnsiString(GetColumnIndex(ColumnName));
 end;
 {$ENDIF}
 
@@ -1683,10 +1692,10 @@ begin
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
   Result := nil;
-  if IZResultSet(FWeakIntfPtrOfSelf).IsNull(ColumnIndex) then
+  if IZResultSet(FWeakIZResultSetPtr).IsNull(ColumnIndex) then
     LastWasNull := True
   else begin
-    Blob := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(ColumnIndex);
+    Blob := IZResultSet(FWeakIZResultSetPtr).GetBlob(ColumnIndex);
     if not LastWasNull and (Blob <> nil) and Supports(Blob, IZClob, CLob)
     then Result := Clob.GetStream(zCP_UTF8)
     else Result := Blob.GetStream;
@@ -1719,7 +1728,7 @@ end;
 function TZAbstractResultSet.GetUTF8StreamByName(
   const ColumnName: string): TStream;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetUTF8Stream(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetUTF8Stream(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1734,7 +1743,7 @@ end;
 {$IFNDEF NO_UTF8STRING}
 function TZAbstractResultSet.GetUTF8StringByName(const ColumnName: string): UTF8String;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetUTF8String(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetUTF8String(GetColumnIndex(ColumnName));
 end;
 {$ENDIF}
 
@@ -1749,7 +1758,7 @@ end;
 }
 function TZAbstractResultSet.GetRawByteStringByName(const ColumnName: string): RawByteString;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetRawByteString(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetRawByteString(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1764,7 +1773,7 @@ end;
 function TZAbstractResultSet.GetUnicodeStringByName(const ColumnName: string):
   UnicodeString;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetUnicodeString(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetUnicodeString(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1778,7 +1787,7 @@ end;
 }
 function TZAbstractResultSet.GetBooleanByName(const ColumnName: string): Boolean;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetBoolean(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetBoolean(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1792,7 +1801,7 @@ end;
 }
 function TZAbstractResultSet.GetByteByName(const ColumnName: string): Byte;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetUInt(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetUInt(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1806,7 +1815,7 @@ end;
 }
 function TZAbstractResultSet.GetShortByName(const ColumnName: string): ShortInt;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetInt(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetInt(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1820,7 +1829,7 @@ end;
 }
 function TZAbstractResultSet.GetWordByName(const ColumnName: string): Word;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetUInt(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetUInt(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1834,7 +1843,7 @@ end;
 }
 function TZAbstractResultSet.GetSmallByName(const ColumnName: string): SmallInt;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetInt(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetInt(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1848,7 +1857,7 @@ end;
 }
 function TZAbstractResultSet.GetUIntByName(const ColumnName: string): Cardinal;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetUInt(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetUInt(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1862,7 +1871,7 @@ end;
 }
 function TZAbstractResultSet.GetIntByName(const ColumnName: string): Integer;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetInt(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetInt(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1876,7 +1885,7 @@ end;
 }
 function TZAbstractResultSet.GetULongByName(const ColumnName: string): UInt64;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetULong(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetULong(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1890,7 +1899,7 @@ end;
 }
 function TZAbstractResultSet.GetLongByName(const ColumnName: string): Int64;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetLong(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetLong(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1904,13 +1913,13 @@ end;
 }
 function TZAbstractResultSet.GetFloatByName(const ColumnName: string): Single;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetFloat(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetFloat(GetColumnIndex(ColumnName));
 end;
 
 procedure TZAbstractResultSet.GetGUIDByName(const ColumnName: string;
   var Result: TGUID);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).GetGUID(GetColumnIndex(ColumnName), Result);
+  IZResultSet(FWeakIZResultSetPtr).GetGUID(GetColumnIndex(ColumnName), Result);
 end;
 
 {**
@@ -1924,7 +1933,7 @@ end;
 }
 function TZAbstractResultSet.GetDoubleByName(const ColumnName: string): Double;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetDouble(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetDouble(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1938,7 +1947,7 @@ end;
 }
 function TZAbstractResultSet.GetCurrencyByName(const ColumnName: string): Currency;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetCurrency(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetCurrency(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -1952,7 +1961,7 @@ end;
 }
 procedure TZAbstractResultSet.GetBigDecimalByName(const ColumnName: string; var Result: TBCD);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).GetBigDecimal(GetColumnIndex(ColumnName), Result);
+  IZResultSet(FWeakIZResultSetPtr).GetBigDecimal(GetColumnIndex(ColumnName), Result);
 end;
 
 {**
@@ -1969,7 +1978,7 @@ function TZAbstractResultSet.GetBytes(ColumnIndex: Integer): TBytes;
 var P: PByte;
   L: NativeUInt;
 begin
-  P := IZResultSet(FWeakIntfPtrOfSelf).GetBytes(ColumnIndex, L);
+  P := IZResultSet(FWeakIZResultSetPtr).GetBytes(ColumnIndex, L);
   if (P <> nil) and (L > 0) then begin
     {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
     SetLength(Result, L);
@@ -1990,13 +1999,13 @@ end;
 }
 function TZAbstractResultSet.GetBytesByName(const ColumnName: string): TBytes;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetBytes(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetBytes(GetColumnIndex(ColumnName));
 end;
 
 function TZAbstractResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 var D: TZDate;
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).GetDate(ColumnIndex, D{%H-});
+  IZResultSet(FWeakIZResultSetPtr).GetDate(ColumnIndex, D{%H-});
   if not LastWasNull then
     LastWasNull := not TryDateToDateTime(D, Result{%H-});
   if LastWasNull then
@@ -2015,7 +2024,7 @@ end;
 procedure TZAbstractResultSet.GetDateByName(const ColumnName: string;
   var Result: TZDate);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).GetDate(GetColumnIndex(ColumnName), Result);
+  IZResultSet(FWeakIZResultSetPtr).GetDate(GetColumnIndex(ColumnName), Result);
 end;
 
 {**
@@ -2029,7 +2038,7 @@ end;
 }
 function TZAbstractResultSet.GetDateByName(const ColumnName: string): TDateTime;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetDate(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetDate(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2049,7 +2058,7 @@ end;
 function TZAbstractResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var T: TZTime;
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).GetTime(columnIndex, T);
+  IZResultSet(FWeakIZResultSetPtr).GetTime(columnIndex, T);
   if not LastWasNull then
     LastWasNull := not TryTimeToDateTime(T, Result);
   if LastWasNull then
@@ -2069,7 +2078,7 @@ end;
 procedure TZAbstractResultSet.GetTimeByName(const ColumnName: string;
   var Result: TZTime);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).GetTime(GetColumnIndex(ColumnName), Result);
+  IZResultSet(FWeakIZResultSetPtr).GetTime(GetColumnIndex(ColumnName), Result);
 end;
 
 {**
@@ -2083,7 +2092,7 @@ end;
 }
 function TZAbstractResultSet.GetTimeByName(const ColumnName: string): TDateTime;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetTime(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetTime(GetColumnIndex(ColumnName));
 end;
 
 {$IFDEF FPC}
@@ -2094,7 +2103,7 @@ end;
 function TZAbstractResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var TS: TZTimeStamp;
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).GetTimeStamp(ColumnIndex, TS);
+  IZResultSet(FWeakIZResultSetPtr).GetTimeStamp(ColumnIndex, TS);
   if not LastWasNull then
     LastWasNull := not TryTimeStampToDateTime(TS, Result);
   if LastWasNull then
@@ -2114,7 +2123,7 @@ end;
 procedure TZAbstractResultSet.GetTimestampByName(const ColumnName: string;
   var Result: TZTimeStamp);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).GetTimestamp(GetColumnIndex(ColumnName), Result);
+  IZResultSet(FWeakIZResultSetPtr).GetTimestamp(GetColumnIndex(ColumnName), Result);
 end;
 
 {**
@@ -2128,7 +2137,7 @@ end;
 }
 function TZAbstractResultSet.GetTimestampByName(const ColumnName: string): TDateTime;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetTimestamp(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetTimestamp(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2154,7 +2163,7 @@ end;
 }
 function TZAbstractResultSet.GetAsciiStreamByName(const ColumnName: string): TStream;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetAsciiStream(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetAsciiStream(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2180,7 +2189,7 @@ end;
 }
 function TZAbstractResultSet.GetUnicodeStreamByName(const ColumnName: string): TStream;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetUnicodeStream(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetUnicodeStream(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2205,7 +2214,7 @@ end;
 }
 function TZAbstractResultSet.GetBinaryStreamByName(const ColumnName: string): TStream;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetBinaryStream(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetBinaryStream(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2220,12 +2229,12 @@ end;
 function TZAbstractResultSet.GetBlobByName(const ColumnName: string;
   LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetBlob(GetColumnIndex(ColumnName), LobStreamMode);
+  Result := IZResultSet(FWeakIZResultSetPtr).GetBlob(GetColumnIndex(ColumnName), LobStreamMode);
 end;
 
 function TZAbstractResultSet.GetDataSetByName(const ColumnName: string): IZDataSet;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetDataSet(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetDataSet(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2238,7 +2247,7 @@ end;
 }
 function TZAbstractResultSet.GetValueByName(const ColumnName: string): TZVariant;
 begin
-  Result := IZResultSet(FWeakIntfPtrOfSelf).GetValue(GetColumnIndex(ColumnName));
+  Result := IZResultSet(FWeakIZResultSetPtr).GetValue(GetColumnIndex(ColumnName));
 end;
 
 //=====================================================================
@@ -2719,37 +2728,37 @@ var Lob: IZBLob;
   Len: NativeUInt;
 begin
   case Value.VType of
-    vtBoolean: IZResultSet(FWeakIntfPtrOfSelf).UpdateBoolean(ColumnIndex, Value.VBoolean);
-    vtInteger: IZResultSet(FWeakIntfPtrOfSelf).UpdateLong(ColumnIndex, Value.VInteger);
-    vtUInteger: IZResultSet(FWeakIntfPtrOfSelf).UpdateULong(ColumnIndex, Value.VUInteger);
-    vtDouble: IZResultSet(FWeakIntfPtrOfSelf).UpdateDouble(ColumnIndex, Value.VDouble);
-    vtCurrency: IZResultSet(FWeakIntfPtrOfSelf).UpdateCurrency(ColumnIndex, Value.VCurrency);
-    vtBigDecimal: IZResultSet(FWeakIntfPtrOfSelf).UpdateBigDecimal(ColumnIndex, Value.VBigDecimal);
-    vtGUID:    IZResultSet(FWeakIntfPtrOfSelf).UpdateGUID(ColumnIndex, Value.VGUID);
-    vtString: IZResultSet(FWeakIntfPtrOfSelf).UpdateString(ColumnIndex, Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF});
+    vtBoolean: IZResultSet(FWeakIZResultSetPtr).UpdateBoolean(ColumnIndex, Value.VBoolean);
+    vtInteger: IZResultSet(FWeakIZResultSetPtr).UpdateLong(ColumnIndex, Value.VInteger);
+    vtUInteger: IZResultSet(FWeakIZResultSetPtr).UpdateULong(ColumnIndex, Value.VUInteger);
+    vtDouble: IZResultSet(FWeakIZResultSetPtr).UpdateDouble(ColumnIndex, Value.VDouble);
+    vtCurrency: IZResultSet(FWeakIZResultSetPtr).UpdateCurrency(ColumnIndex, Value.VCurrency);
+    vtBigDecimal: IZResultSet(FWeakIZResultSetPtr).UpdateBigDecimal(ColumnIndex, Value.VBigDecimal);
+    vtGUID:    IZResultSet(FWeakIZResultSetPtr).UpdateGUID(ColumnIndex, Value.VGUID);
+    vtString: IZResultSet(FWeakIZResultSetPtr).UpdateString(ColumnIndex, Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF});
 {$IFNDEF NO_ANSISTRING}
-    vtAnsiString: IZResultSet(FWeakIntfPtrOfSelf).UpdateAnsiString(ColumnIndex, Value.VRawByteString);
+    vtAnsiString: IZResultSet(FWeakIZResultSetPtr).UpdateAnsiString(ColumnIndex, Value.VRawByteString);
 {$ENDIF}
 {$IFNDEF NO_UTF8STRING}
-    vtUTF8String: IZResultSet(FWeakIntfPtrOfSelf).UpdateUTF8String(ColumnIndex, Value.VRawByteString);
+    vtUTF8String: IZResultSet(FWeakIZResultSetPtr).UpdateUTF8String(ColumnIndex, Value.VRawByteString);
 {$ENDIF}
-    vtRawByteString: IZResultSet(FWeakIntfPtrOfSelf).UpdateRawByteString(ColumnIndex, Value.VRawByteString);
+    vtRawByteString: IZResultSet(FWeakIZResultSetPtr).UpdateRawByteString(ColumnIndex, Value.VRawByteString);
     vtBytes: begin
               Len := Length(Value.VRawByteString);
-              IZResultSet(FWeakIntfPtrOfSelf).UpdateBytes(ColumnIndex, Pointer(Value.VRawByteString), Len);
+              IZResultSet(FWeakIZResultSetPtr).UpdateBytes(ColumnIndex, Pointer(Value.VRawByteString), Len);
             end;
-    vtDateTime: IZResultSet(FWeakIntfPtrOfSelf).UpdateTimestamp(ColumnIndex, Value.VDateTime);
-    vtDate: IZResultSet(FWeakIntfPtrOfSelf).UpdateDate(ColumnIndex, Value.VDate);
-    vtTime: IZResultSet(FWeakIntfPtrOfSelf).UpdateTime(ColumnIndex, Value.VTime);
-    vtTimeStamp: IZResultSet(FWeakIntfPtrOfSelf).UpdateTimeStamp(ColumnIndex, Value.VTimeStamp);
-    vtUnicodeString: IZResultSet(FWeakIntfPtrOfSelf).UpdateUnicodeString(ColumnIndex, Value.VUnicodeString);
+    vtDateTime: IZResultSet(FWeakIZResultSetPtr).UpdateTimestamp(ColumnIndex, Value.VDateTime);
+    vtDate: IZResultSet(FWeakIZResultSetPtr).UpdateDate(ColumnIndex, Value.VDate);
+    vtTime: IZResultSet(FWeakIZResultSetPtr).UpdateTime(ColumnIndex, Value.VTime);
+    vtTimeStamp: IZResultSet(FWeakIZResultSetPtr).UpdateTimeStamp(ColumnIndex, Value.VTimeStamp);
+    vtUnicodeString: IZResultSet(FWeakIZResultSetPtr).UpdateUnicodeString(ColumnIndex, Value.VUnicodeString);
     vtInterface: begin
       if (Value.vInterface <> nil) and Supports(Value.vInterface, IZBLob, Lob)
-      then IZResultSet(FWeakIntfPtrOfSelf).UpdateLob(ColumnIndex, Lob)
-      else IZResultSet(FWeakIntfPtrOfSelf).UpdateNull(ColumnIndex);
+      then IZResultSet(FWeakIZResultSetPtr).UpdateLob(ColumnIndex, Lob)
+      else IZResultSet(FWeakIZResultSetPtr).UpdateNull(ColumnIndex);
     end
   else
-    IZResultSet(FWeakIntfPtrOfSelf).UpdateNull(ColumnIndex);
+    IZResultSet(FWeakIZResultSetPtr).UpdateNull(ColumnIndex);
   end;
 end;
 
@@ -2764,7 +2773,7 @@ end;
 }
 procedure TZAbstractResultSet.UpdateNullByName(const ColumnName: string);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateNull(GetColumnIndex(ColumnName));
+  IZResultSet(FWeakIZResultSetPtr).UpdateNull(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2780,7 +2789,7 @@ end;
 procedure TZAbstractResultSet.UpdateBooleanByName(const ColumnName: string;
   Value: Boolean);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateBoolean(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateBoolean(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -2796,7 +2805,7 @@ end;
 procedure TZAbstractResultSet.UpdateByteByName(const ColumnName: string;
   Value: Byte);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateByte(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateByte(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -2812,7 +2821,7 @@ end;
 procedure TZAbstractResultSet.UpdateShortByName(const ColumnName: string;
   Value: ShortInt);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateShort(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateShort(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -2828,7 +2837,7 @@ end;
 procedure TZAbstractResultSet.UpdateWordByName(const ColumnName: string;
   Value: Word);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateWord(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateWord(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -2844,7 +2853,7 @@ end;
 procedure TZAbstractResultSet.UpdateSmallByName(const ColumnName: string;
   Value: SmallInt);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateSmall(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateSmall(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -2860,7 +2869,7 @@ end;
 procedure TZAbstractResultSet.UpdateUIntByName(const ColumnName: string;
   Value: Cardinal);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateUInt(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateUInt(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -2876,7 +2885,7 @@ end;
 procedure TZAbstractResultSet.UpdateIntByName(const ColumnName: string;
   Value: Integer);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateInt(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateInt(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -2892,7 +2901,7 @@ end;
 procedure TZAbstractResultSet.UpdateULongByName(const ColumnName: string;
   const Value: UInt64);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateULong(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateULong(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -2908,7 +2917,7 @@ end;
 procedure TZAbstractResultSet.UpdateLongByName(const ColumnName: string;
   const Value: Int64);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateLong(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateLong(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -2924,13 +2933,13 @@ end;
 procedure TZAbstractResultSet.UpdateFloatByName(const ColumnName: string;
   Value: Single);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateFloat(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateFloat(GetColumnIndex(ColumnName), Value);
 end;
 
 procedure TZAbstractResultSet.UpdateGUIDByName(const ColumnName: string;
   const Value: TGUID);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateGUID(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateGUID(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -2946,7 +2955,7 @@ end;
 procedure TZAbstractResultSet.UpdateDoubleByName(const ColumnName: string;
   const Value: Double);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateDouble(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateDouble(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -2962,7 +2971,7 @@ end;
 procedure TZAbstractResultSet.UpdateCurrencyByName(const ColumnName: string;
   const Value: Currency);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateCurrency(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateCurrency(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -2979,7 +2988,7 @@ end;
 procedure TZAbstractResultSet.UpdateBigDecimalByName(const ColumnName: string;
   const Value: TBCD);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateBigDecimal(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateBigDecimal(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -2996,7 +3005,7 @@ end;
 procedure TZAbstractResultSet.UpdatePAnsiCharByName(const ColumnName: string;
   Value: PAnsiChar; var Len: NativeUInt);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdatePAnsiChar(GetColumnIndex(ColumnName), Value, Len);
+  IZResultSet(FWeakIZResultSetPtr).UpdatePAnsiChar(GetColumnIndex(ColumnName), Value, Len);
 end;
 
 {**
@@ -3013,7 +3022,7 @@ end;
 procedure TZAbstractResultSet.UpdatePWideCharByName(const ColumnName: string;
   Value: PWideChar; var Len: NativeUInt);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdatePWideChar(GetColumnIndex(ColumnName), Value, Len);
+  IZResultSet(FWeakIZResultSetPtr).UpdatePWideChar(GetColumnIndex(ColumnName), Value, Len);
 end;
 
 {**
@@ -3029,7 +3038,7 @@ end;
 procedure TZAbstractResultSet.UpdateStringByName(const ColumnName: string;
    const Value: String);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateString(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateString(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -3046,7 +3055,7 @@ end;
 procedure TZAbstractResultSet.UpdateAnsiStringByName(const ColumnName: string;
    const Value: AnsiString);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateAnsiString(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateAnsiString(GetColumnIndex(ColumnName), Value);
 end;
 {$ENDIF}
 
@@ -3064,7 +3073,7 @@ end;
 procedure TZAbstractResultSet.UpdateUTF8StringByName(const ColumnName: string;
    const Value: UTF8String);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateUTF8String(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateUTF8String(GetColumnIndex(ColumnName), Value);
 end;
 {$ENDIF}
 
@@ -3081,7 +3090,7 @@ end;
 procedure TZAbstractResultSet.UpdateRawByteStringByName(const ColumnName: string;
    const Value: RawByteString);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateRawByteString(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateRawByteString(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -3097,7 +3106,7 @@ end;
 procedure TZAbstractResultSet.UpdateUnicodeStringByName(const ColumnName: string;
   const Value: UnicodeString);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateUnicodeString(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateUnicodeString(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -3115,7 +3124,7 @@ procedure TZAbstractResultSet.UpdateBytes(ColumnIndex: Integer;
 var Len: NativeUint;
 begin
   Len := Length(Value);
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateBytes(ColumnIndex, Pointer(Value), Len);
+  IZResultSet(FWeakIZResultSetPtr).UpdateBytes(ColumnIndex, Pointer(Value), Len);
 end;
 
 {**
@@ -3143,7 +3152,7 @@ procedure TZAbstractResultSet.UpdateBytesByName(const ColumnName: string;
 var Len: NativeUint;
 begin
   Len := Length(Value);
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateBytes(GetColumnIndex(ColumnName), Pointer(Value), Len);
+  IZResultSet(FWeakIZResultSetPtr).UpdateBytes(GetColumnIndex(ColumnName), Pointer(Value), Len);
 end;
 
 {**
@@ -3159,7 +3168,7 @@ end;
 procedure TZAbstractResultSet.UpdateDateByName(const ColumnName: string;
   const Value: TDateTime);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateDate(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateDate(GetColumnIndex(ColumnName), Value);
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "D" does not seem to be initialized} {$ENDIF}
@@ -3168,7 +3177,7 @@ procedure TZAbstractResultSet.UpdateDate(ColumnIndex: Integer;
 var D: TZDate;
 begin
   DecodeDateTimeToDate(Value, D);
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateDate(ColumnIndex, D);
+  IZResultSet(FWeakIZResultSetPtr).UpdateDate(ColumnIndex, D);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -3185,7 +3194,7 @@ end;
 procedure TZAbstractResultSet.UpdateDateByName(const ColumnName: string;
   const Value: TZDate);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateDate(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateDate(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -3201,7 +3210,7 @@ end;
 procedure TZAbstractResultSet.UpdateTimeByName(const ColumnName: string;
   const Value: TDateTime);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateTime(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateTime(GetColumnIndex(ColumnName), Value);
 end;
 
 {$IFDEF FPC}
@@ -3214,7 +3223,7 @@ procedure TZAbstractResultSet.UpdateTime(ColumnIndex: Integer;
 var T: TZTime;
 begin
   DecodeDateTimeToTime(Value, T);
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateTime(ColumnIndex, T);
+  IZResultSet(FWeakIZResultSetPtr).UpdateTime(ColumnIndex, T);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -3231,7 +3240,7 @@ end;
 procedure TZAbstractResultSet.UpdateTimeByName(const ColumnName: string;
   const Value: TZTime);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateTime(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateTime(GetColumnIndex(ColumnName), Value);
 end;
 
 {$IFDEF FPC}
@@ -3244,7 +3253,7 @@ procedure TZAbstractResultSet.UpdateTimeStamp(ColumnIndex: Integer;
 var TS: TZTimeStamp;
 begin
   DecodeDateTimeToTimeStamp(Value, TS);
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateTimeStamp(ColumnIndex, TS);
+  IZResultSet(FWeakIZResultSetPtr).UpdateTimeStamp(ColumnIndex, TS);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -3262,7 +3271,7 @@ end;
 procedure TZAbstractResultSet.UpdateTimestampByName(const ColumnName: string;
   const Value: TDateTime);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateTimestamp(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateTimestamp(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -3279,7 +3288,7 @@ end;
 procedure TZAbstractResultSet.UpdateTimestampByName(const ColumnName: string;
   const Value: TZTimeStamp);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateTimestamp(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateTimestamp(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -3295,7 +3304,7 @@ end;
 procedure TZAbstractResultSet.UpdateAsciiStreamByName(const ColumnName: string;
   const Value: TStream);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateAsciiStream(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateAsciiStream(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -3311,7 +3320,7 @@ end;
 procedure TZAbstractResultSet.UpdateBinaryStreamByName(const ColumnName: string;
   const Value: TStream);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateBinaryStream(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateBinaryStream(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -3327,7 +3336,7 @@ end;
 procedure TZAbstractResultSet.UpdateUnicodeStreamByName(const ColumnName: string;
   const Value: TStream);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateUnicodeStream(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateUnicodeStream(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -3343,7 +3352,7 @@ end;
 procedure TZAbstractResultSet.UpdateValueByName(const ColumnName: string;
   const Value: TZVariant);
 begin
-  IZResultSet(FWeakIntfPtrOfSelf).UpdateValue(GetColumnIndex(ColumnName), Value);
+  IZResultSet(FWeakIZResultSetPtr).UpdateValue(GetColumnIndex(ColumnName), Value);
 end;
 
 {**
@@ -3590,6 +3599,29 @@ end;
 
 { TZAbstractReadOnlyResultSet }
 
+procedure TZAbstractReadOnlyResultSet.AfterConstruction;
+var LogObj: IZLoggingObject;
+begin
+  LogObj := nil;
+  QueryInterface(IZLoggingObject, LogObj);
+  FWeakIZLoggingObjectPtr := Pointer(LogObj);
+  LogObj := nil;
+  inherited AfterConstruction;
+end;
+
+function TZAbstractReadOnlyResultSet.CreateLogEvent(
+  const Category: TZLoggingCategory): TZLoggingEvent;
+var Stmt: IZStatement;
+  LogObj: IZLoggingObject;
+begin
+  Stmt := GetStatement;
+  if (Category = lcFetchDone) and (Stmt <> nil) and (Stmt.QueryInterface(IZLoggingObject, LogObj) = S_OK) then begin
+    Result := LogObj.CreateLogEvent(lcFetchDone);
+    Result.ErrorCodeOrAffectedRows := LastRowNo;
+    FLastRowFetchLogged := True;
+  end else result := nil;
+end;
+
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -3604,7 +3636,7 @@ function TZAbstractReadOnlyResultSet.GetRawByteString(
 var P: PAnsiChar;
   L: NativeUInt;
 begin
-  P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
+  P := IZResultSet(FWeakIZResultSetPtr).GetPAnsiChar(ColumnIndex, L);
   if (P <> nil) and (L > 0) then
     if P = Pointer(FRawTemp)
     then Result := FRawTemp
@@ -3630,7 +3662,7 @@ var P: {$IFDEF UNICODE}PWidechar{$ELSE}PAnsiChar{$ENDIF};
   L: NativeUInt;
 begin
   {$IFDEF UNICODE}
-  P := IZResultSet(FWeakIntfPtrOfSelf).GetPWideChar(ColumnIndex, L);
+  P := IZResultSet(FWeakIZResultSetPtr).GetPWideChar(ColumnIndex, L);
   if (P <> nil) and (L > 0) then
     if P = Pointer(FUniTemp)
     then Result := FUniTemp
@@ -3639,10 +3671,10 @@ begin
   {$ELSE}
   if ConSettings.AutoEncode or (ConSettings.ClientCodePage.Encoding = ceUTF16) then
     if ConSettings.CTRL_CP = zCP_UTF8
-    then Result := IZResultSet(FWeakIntfPtrOfSelf).GetUTF8String(ColumnIndex)
-    else Result := IZResultSet(FWeakIntfPtrOfSelf).GetAnsiString(ColumnIndex)
+    then Result := IZResultSet(FWeakIZResultSetPtr).GetUTF8String(ColumnIndex)
+    else Result := IZResultSet(FWeakIZResultSetPtr).GetAnsiString(ColumnIndex)
   else begin
-    P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
+    P := IZResultSet(FWeakIZResultSetPtr).GetPAnsiChar(ColumnIndex, L);
     if (P <> nil) and (L > 0) then
       if P = Pointer(FRawTemp)
       then Result := FRawTemp
@@ -3666,7 +3698,7 @@ function TZAbstractReadOnlyResultSet.GetUnicodeString(
 var P: PWideChar;
   L: NativeUInt;
 begin
-  P := IZResultSet(FWeakIntfPtrOfSelf).GetPWideChar(ColumnIndex, L);
+  P := IZResultSet(FWeakIZResultSetPtr).GetPWideChar(ColumnIndex, L);
   if LastWasNull or (L = 0) then
     Result := ''
   else if P = Pointer(FUniTemp)
@@ -4200,7 +4232,7 @@ begin
   with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
     case ColumnType of
       stString,stAsciiStream: begin
-jmpA:     P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
+jmpA:     P := IZResultSet(FWeakIZResultSetPtr).GetPAnsiChar(ColumnIndex, L);
           RBS := '';
           if (P <> nil) and (ColumnCodePage <> ZOSCodePage)
           then PRawToRawConvert(P, L, ColumnCodePage, ZOSCodePage, RBS)
@@ -4208,11 +4240,11 @@ jmpA:     P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
         end;
       stUnicodeString, stUnicodeStream: {some drivers just tag N-Columns but are raw encoded}
         if ColumnCodePage = zCP_UTF16 then begin
-          P := Pointer(IZResultSet(FWeakIntfPtrOfSelf).GetPWideChar(ColumnIndex, L));
+          P := Pointer(IZResultSet(FWeakIZResultSetPtr).GetPWideChar(ColumnIndex, L));
           Result := PUnicodeToRaw(PWideChar(P), L, ZOSCodePage);
         end else goto jmpA
       else begin
-          P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
+          P := IZResultSet(FWeakIZResultSetPtr).GetPAnsiChar(ColumnIndex, L);
 jmpSet:   System.SetString(Result, P, L)
         end;
     end;
@@ -4239,7 +4271,7 @@ begin
   with TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
     case ColumnType of
       stString,stAsciiStream: begin
-jmpA:     P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
+jmpA:     P := IZResultSet(FWeakIZResultSetPtr).GetPAnsiChar(ColumnIndex, L);
           RBS := '';
           if (P <> nil) and (ColumnCodePage <> zCP_UTF8)
           then PRawToRawConvert(P, L, ColumnCodePage, zCP_UTF8, RBS)
@@ -4247,11 +4279,11 @@ jmpA:     P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
         end;
       stUnicodeString, stUnicodeStream: {some drivers just tag N-Columns but are raw encoded}
         if ColumnCodePage = zCP_UTF16 then begin
-          P := Pointer(IZResultSet(FWeakIntfPtrOfSelf).GetPWideChar(ColumnIndex, L));
+          P := Pointer(IZResultSet(FWeakIZResultSetPtr).GetPWideChar(ColumnIndex, L));
           Result := PUnicodeToRaw(PWideChar(P), L, zCP_UTF8);
         end else goto jmpA
       else begin
-          P := IZResultSet(FWeakIntfPtrOfSelf).GetPAnsiChar(ColumnIndex, L);
+          P := IZResultSet(FWeakIZResultSetPtr).GetPAnsiChar(ColumnIndex, L);
 jmpSet:   {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
           ZSetString(P, L, result)
           {$ELSE}

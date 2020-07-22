@@ -426,6 +426,8 @@ end;
 procedure TZAbstracDBLibSQLStatement.InternalExecute;
 var Raw: RawByteString;
 begin
+  LastUpdateCount := -1;
+  RestartTimer;
   Raw := GetRawSQL;
   if FDBLibConnection.GetProvider = dpMsSQL then
     //This one is to avoid a bug in dblib interface as it drops a single backslash before line end
@@ -445,7 +447,8 @@ begin
 
   if FPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED then
     FDBLibConnection.CheckDBLibError(lcExecute, Raw);
-  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, Raw);
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcExecute, Self);
 end;
 
 { TZDBLibPreparedStatementEmulated }
@@ -1169,6 +1172,7 @@ end;
 
 procedure TZDBLIBPreparedRPCStatement.InternalExecute;
 begin
+  LastUpdateCount := -1;
   if FPLainDriver.dbRpcExec(FHandle) <> DBSUCCEED then
     FDBLibConnection.CheckDBLibError(lcOther, 'EXECUTEPREPARED:dbRPCExec');
 end;

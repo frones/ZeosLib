@@ -388,6 +388,9 @@ procedure TZAbstractFirebirdStatement.ExecuteInternal;
 var flags: Cardinal;
 begin
   if BatchDMLArrayCount = 0 then begin
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcBindPrepStmt,Self);
+    RestartTimer;
     FFBTransaction := FFBConnection.GetActiveTransaction.GetTransaction;
     if FStatementType in [stSelect, stSelectForUpdate] then begin
       (* commented, somesting in fblclient is killing our skack/heap for some selects
@@ -415,10 +418,9 @@ end;
 }
 function TZAbstractFirebirdStatement.ExecutePrepared: Boolean;
 begin
+  LastUpdateCount := -1;
   Prepare;
   PrepareLastResultSetForReUse;
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcBindPrepStmt,Self);
   ExecuteInternal;
   { Create ResultSet if possible else free Statement Handle }
   if (FStatementType in [stSelect, stExecProc, stSelectForUpdate]) and (FOutMessageMetadata <> nil) then begin
@@ -430,7 +432,9 @@ begin
     LastResultSet := nil;
   LastUpdateCount := FFBStatement.getAffectedRecords(FStatus);
   Result := LastResultSet <> nil;
-  inherited ExecutePrepared;
+  { Logging Execution }
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
 
 {**
@@ -444,8 +448,6 @@ function TZAbstractFirebirdStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   Prepare;
   PrepareOpenResultSetForReUse;
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcBindPrepStmt,Self);
   ExecuteInternal;
 
   if (FOutMessageMetadata <> nil) then begin
@@ -475,13 +477,11 @@ end;
 }
 function TZAbstractFirebirdStatement.ExecuteUpdatePrepared: Integer;
 begin
+  LastUpdateCount := -1;
   Prepare;
   LastResultSet := nil;
   PrepareOpenResultSetForReUse;
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcBindPrepStmt,Self);
   ExecuteInternal;
-  Result := LastUpdateCount;
   if BatchDMLArrayCount = 0 then begin
     case FStatementType of
       stSelect, stSelectForUpdate: if BindList.HasOutParam then begin
@@ -496,13 +496,13 @@ begin
       stExecProc: begin{ Create ResultSet if possible }
           if FOutMessageMetadata <> nil then
             FOutParamResultSet := CreateResultSet;
-          Result := FFBStatement.getAffectedRecords(FStatus)
+          LastUpdateCount := FFBStatement.getAffectedRecords(FStatus)
         end;
-      stInsert, stUpdate, stDelete: Result := FFBStatement.getAffectedRecords(FStatus);
+      stInsert, stUpdate, stDelete: LastUpdateCount := FFBStatement.getAffectedRecords(FStatus);
       {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
     end;
-    LastUpdateCount := Result;
   end;
+  Result := LastUpdateCount;
   { Logging Execution }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecPrepStmt,Self);
@@ -559,8 +559,9 @@ label jmpEB;
   end;
 begin
   if not Prepared then begin
+    RestartTimer;
     Transaction := FFBConnection.GetActiveTransaction.GetTransaction;
-    if FWeakIntfPtrOfIPrepStmt <> nil
+    if FWeakIZPreparedStatementPtr <> nil
     {$IFDEF WITH_CLASS_CONST}
     then flags := IStatement.PREPARE_PREFETCH_METADATA
     else flags := IStatement.PREPARE_PREFETCH_TYPE or IStatement.PREPARE_PREFETCH_OUTPUT_PARAMETERS;
@@ -572,6 +573,8 @@ begin
       Pointer(fASQL), FDialect, flags);
     if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
       FFBConnection.HandleErrorOrWarning(lcPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), fASQL, Self);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcPrepStmt,Self);
     if FFBStatement.vTable.version > 3 then begin
       TimeOut := StrToInt(DefineStatementParameter(Self, DSProps_StatementTimeOut, '0'));
       if TimeOut <> 0 then begin

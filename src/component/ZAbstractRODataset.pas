@@ -84,9 +84,8 @@ type
 
   {** Options for dataset. }
   TZDatasetOption = ({$IFNDEF NO_TDATASET_TRANSLATE}doOemTranslate, {$ENDIF}
-    doCalcDefaults, doAlwaysDetailResync,
-    doSmartOpen, doPreferPrepared, doDontSortOnPost, doUpdateMasterFirst,
-    doCachedLobs, doAlignMaxRequiredWideStringFieldSize, doNoAlignDisplayWidth);
+    doCalcDefaults, doAlwaysDetailResync, doSmartOpen, doPreferPrepared,
+    doDontSortOnPost, doUpdateMasterFirst, doCachedLobs);
 
   {** Set of dataset options. }
   TZDatasetOptions = set of TZDatasetOption;
@@ -274,7 +273,6 @@ type
     procedure SetIndexFieldNames(const Value : String); {bangfauzan addition}
     procedure SetOptions(Value: TZDatasetOptions);
     procedure SetSortedFields(const Value: string); {bangfauzan modification}
-    procedure SetProperties(const Value: TStrings);
 
     function GetSortType : TSortType; {bangfauzan addition}
     Procedure SetSortType(Value : TSortType); {bangfauzan addition}
@@ -288,6 +286,7 @@ type
     procedure SetUniDirectional(const Value: boolean);
     {$ENDIF}
     function  GetUniDirectional: boolean;
+    procedure SetProperties(const Value: TStrings); virtual;
   protected
     FTransaction: TZAbstractTransaction;
     procedure CheckOpened;
@@ -369,8 +368,7 @@ type
     property IsUniDirectional: Boolean read GetUniDirectional
       write SetUniDirectional default False;
     property Properties: TStrings read FProperties write SetProperties;
-    property Options: TZDatasetOptions read FOptions write SetOptions
-      default [doCalcDefaults, doPreferPrepared];
+    property Options: TZDatasetOptions read FOptions write SetOptions;
     property DataSource: TDataSource read GetDataSource write SetDataSource;
     property MasterFields: string read GetMasterFields
       write SetMasterFields;
@@ -3473,13 +3471,6 @@ begin
 
         if FieldType in [ftBytes, ftVarBytes, ftString, ftWidestring] then begin
           Size := GetPrecision(I);
-          (*EH 14.01.2020 commented. After having the TZRaw/Unicode-Fields we don't need that any more
-          if (FieldType = ftString) then
-            if (ConSettings^.CPType = cCP_UTF8)
-            then Size := Size shl 2 //four bytes per char
-            else Size := Size * ZOSCodePageMaxCharSize
-          else if (FieldType = ftWideString) and (doAlignMaxRequiredWideStringFieldSize in Options) {and (ConSettings.ClientCodePage.CharWidth > 3)} then
-            Size := Size shl 1; //two bytes per char *)
         end else {$IFDEF WITH_FTGUID} if FieldType = ftGUID then
           Size := 38
         else {$ENDIF} if FieldType in [ftBCD, ftFmtBCD{, ftTime, ftDateTime}] then
@@ -3555,8 +3546,12 @@ begin
       Temp.AddStrings(Properties);
     { Define TDataset specific parameters. }
     Temp.Values[DSProps_Defaults] := BoolStrs[doCalcDefaults in FOptions];
+    {$IF declared(DSProps_PreferPrepared)}
     Temp.Values[DSProps_PreferPrepared] := BoolStrs[doPreferPrepared in FOptions];
+    {$IFEND}
+    {$IF declared(DSProps_CachedLobs)}
     Temp.Values[DSProps_CachedLobs] := BoolStrs[doCachedLobs in FOptions];
+    {$IFEND}
     if FTransaction <> nil
     then Txn := THackTransaction(FTransaction).GetIZTransaction
     else Txn := FConnection.DbcConnection.GetConnectionTransaction;
@@ -3650,20 +3645,19 @@ begin
     {$ENDIF}
     begin
       CreateFields;
-      if not (doNoAlignDisplayWidth in FOptions) then
-        for i := 0 to Fields.Count -1 do begin
-          if Fields[i].DataType = ftString then
-            Fields[i].DisplayWidth := FResultSetMetadata.GetPrecision(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
-          {$IFDEF WITH_FTGUID}
-          else if Fields[i].DataType = ftGUID then Fields[i].DisplayWidth := 40 //looks better in Grid
-          {$ENDIF}
-          (*else if Fields[i].DataType in [ftTime, ftDateTime] then
-            Fields[i].DisplayWidth := Fields[i].DisplayWidth + MetaData.GetScale(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})*);
-          {$IFDEF WITH_TAUTOREFRESHFLAG} //that's forcing loading metainfo's
-          //if FResultSetMetadata.IsAutoIncrement({$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then
-            //Fields[i].AutoGenerateValue := arAutoInc;
-          {$ENDIF !WITH_TAUTOREFRESHFLAG}
-        end;
+      for i := 0 to Fields.Count -1 do begin
+        if Fields[i].DataType = ftString then
+          Fields[i].DisplayWidth := FResultSetMetadata.GetPrecision(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+        {$IFDEF WITH_FTGUID}
+        else if Fields[i].DataType = ftGUID then Fields[i].DisplayWidth := 40 //looks better in Grid
+        {$ENDIF}
+        (*else if Fields[i].DataType in [ftTime, ftDateTime] then
+          Fields[i].DisplayWidth := Fields[i].DisplayWidth + MetaData.GetScale(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})*);
+        {$IFDEF WITH_TAUTOREFRESHFLAG} //that's forcing loading metainfo's
+        //if FResultSetMetadata.IsAutoIncrement({$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then
+          //Fields[i].AutoGenerateValue := arAutoInc;
+        {$ENDIF !WITH_TAUTOREFRESHFLAG}
+      end;
     end;
     BindFields(True);
 
@@ -5562,64 +5556,7 @@ end;
 type
   IProviderSupportActual = {$IF DECLARED(IProviderSupportNG)}IProviderSupportNG{$ELSE} IProviderSupport {$IFEND};
 {$ENDIF}
-(*
-procedure TZAbstractRODataset.CreateFields;
-var
-  I: Integer;
 
-  procedure SetKeyFields;
-  var
-    Pos, j: Integer;
-    KeyFields, FieldName: string;
-    {$IFDEF WITH_IPROVIDERSUPPORT_GUID}
-    PS: IProviderSupportActual;
-    {$ENDIF}
-  begin
-    {$IFDEF WITH_IPROVIDERSUPPORT_GUID}
-    if Supports(self, IProviderSupportActual, PS) then
-      KeyFields := PS.PSGetKeyFields
-    else
-      KeyFields := IProviderSupportActual(Self).PSGetKeyFields;
-    {$ELSE}
-    KeyFields := self.PSGetKeyFields;
-    {$ENDIF}
-    Pos := 1;
-    while Pos <= Length(KeyFields) do
-    begin
-      FieldName := ExtractFieldName(KeyFields, Pos);
-      for j := 0 to FieldCount - 1 do
-        if AnsiCompareText(FieldName, Fields[j].FieldName) = 0 then
-        begin
-          Fields[j].ProviderFlags := Fields[j].ProviderFlags + [pfInKey];
-          break;
-        end;
-    end;
-  end;
-begin
-  if ObjectView then
-  begin
-    for I := 0 to FieldDefs.Count - 1 do
-      with FieldDefs[I] do
-        if (DataType <> ftUnknown) and not
-          ((faHiddenCol in Attributes) and not FIeldDefs.HiddenFields) then
-          CreateField(Self);
-  end else
-    for I := 0 to {$IFNDEF WITH_FIELDDEFLIST}FieldDefs{$ELSE}FieldDefList{$ENDIF}.Count - 1 do
-      with FieldDefs[I] do
-        if (FieldDefs[I] is TZFieldDef) and not InternalCalcField and not
-            ((faHiddenCol in Attributes) and not FieldDefs.HiddenFields) then
-          TZFieldDef(FieldDefs[I]).CreateField(Self)
-        else with {$IFNDEF WITH_FIELDDEFLIST}FieldDefs{$ELSE}FieldDefList{$ENDIF}[I] do
-          if (DataType <> ftUnknown) and not (DataType in ObjectFieldTypes) and
-            not ((faHiddenCol in Attributes) and not FieldDefs.HiddenFields) then
-            CreateField(Self);
-  {$IFNDEF FPC}
-  SetKeyFields;
-  {$ENDIF}
-  //else
-  inherited CreateFields;
-end;
-*)
 {**
   Reset the calculated (includes fkLookup) fields
   @param Buffer
@@ -7751,7 +7688,7 @@ function TZCardinalField.GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integ
 var C: Cardinal;
 begin
   C := GetAsCardinal;
-  if C > Cardinal(High(LongInt)) then
+  if C > Cardinal(High({$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF})) then
     RangeError(C, 0, High(LongInt));
   Result := C;
 end;
@@ -8974,8 +8911,9 @@ begin
 end;
 
 procedure TZRawStringField.SetAsString(const Value: String);
+var
 {$IFNDEF UNICODE}
-var L: LengthInt;
+    L: LengthInt;
     P: PAnsiChar;
   procedure DoValidate;
   begin
@@ -9000,10 +8938,13 @@ var L: LengthInt;
     U := PRawToUnicode(P, L, StrCP);
     SetAsUnicodeString(U);
   end;
+{$ELSE}
+  PW: PWideChar;
 {$ENDIF}
 begin
   {$IFDEF UNICODE}
-  SetPWideChar(Pointer(Value), Length(Value));
+  PW := Pointer(Value);
+  SetPWideChar(PW, SysUtils.StrLen(PW));
   {$ELSE}
   if not FBound then
     raise CreateUnBoundError(Self);

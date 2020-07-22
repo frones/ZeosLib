@@ -2571,6 +2571,12 @@ function TZOracleResultSet_A.Next: Boolean;
 var
   Status: Integer;
   FetchedRows: LongWord;
+  procedure LogExecution;
+  var iLO: IZLoggingObject;
+  begin
+    Statement.QueryInterface(IZLoggingObject, iLO);
+    DriverManager.LogMessage(lcExecPrepStmt,iLO);
+  end;
 label Success;  //ugly but faster and no double code
 begin
   { Checks for maximum row. }
@@ -2583,6 +2589,9 @@ begin
       FOCIError, FIteration, 0, nil, nil, OCI_DEFAULT);
     if Status = OCI_SUCCESS then begin
       FMaxBufIndex := FIteration -1; //FFetchedRows is an index [0...?] / FIteration is Count 1...?
+      { Logging Execution }
+      if DriverManager.HasLoggingListener then
+        LogExecution;
       goto success; //skip next if's
     end;
   end else if Integer(FCurrentRowBufIndex) < FMaxBufIndex then begin
@@ -2609,9 +2618,11 @@ begin
     //did we retrieve a row or is table empty?
     if FetchedRows > 0 then
       Result := True;
+    if not LastRowFetchLogged and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
     Exit;
   end;
-  FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
+  FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcFetch,
     'FETCH ROW', Self);
 
   if Status in [OCI_SUCCESS, OCI_SUCCESS_WITH_INFO] then begin

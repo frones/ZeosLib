@@ -311,10 +311,13 @@ var RET: SQLRETURN;
 begin
   if Closed or not Assigned(fODBCPlainDriver) then
     Exit;
+  FSavePoints.Clear;
   try
     if not AutoCommit then begin
-      SetAutoCommit(True); //stop TA
-      AutoCommit := False; //remainder for reopen
+      AutoCommit := not FRestartTransaction;
+      Ret := fODBCPlainDriver.SQLEndTran(SQL_HANDLE_DBC,fHDBC,SQL_ROLLBACK);
+      if (Ret <> SQL_SUCCESS) then
+        HandleDbcErrorOrWarning(Ret, 'ROLLBACK TRANSACTION', lcTransaction, Self);
     end;
   finally
     try

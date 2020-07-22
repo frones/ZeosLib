@@ -337,6 +337,9 @@ var
   Counts: array[TCountType] of Integer;
 begin
   if BatchDMLArrayCount = 0 then begin
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcBindPrepStmt,Self);
+    RestartTimer;
     ISC_TR_HANDLE := FIBConnection.GetTrHandle;
     dialect := FIBConnection.GetDialect;
     if (FStatementType = stExecProc)
@@ -562,6 +565,8 @@ begin
           Word(L), Pointer(ASQL), GetDialect, nil);
       if (Status <> 0) or (FStatusVector[2] = isc_arg_warning) then
         FIBConnection.HandleErrorOrWarning(lcPrepStmt, @FStatusVector, fASQL, Self);
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcPrepStmt,Self);
       if Assigned(FPlainDriver.fb_dsql_set_timeout) then begin
         Mem := StrToInt(DefineStatementParameter(Self, DSProps_StatementTimeOut, '0'));
         if Mem <> 0 then
@@ -812,8 +817,6 @@ function TZAbstractInterbase6PreparedStatement.ExecutePrepared: Boolean;
 begin
   Prepare;
   PrepareLastResultSetForReUse;
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcBindPrepStmt,Self);
   ExecuteInternal;
   { Create ResultSet if possible else free Statement Handle }
   if (FStatementType in [stSelect, stExecProc, stSelectForUpdate]) and (FResultXSQLDA.GetFieldCount <> 0) then begin
@@ -824,7 +827,9 @@ begin
   end else
     LastResultSet := nil;
   Result := LastResultSet <> nil;
-  inherited ExecutePrepared;
+  { Logging Execution }
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
 
 {**
@@ -838,10 +843,7 @@ function TZAbstractInterbase6PreparedStatement.ExecuteQueryPrepared: IZResultSet
 begin
   Prepare;
   PrepareOpenResultSetForReUse;
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcBindPrepStmt,Self);
   ExecuteInternal;
-
   if (FResultXSQLDA <> nil) and (FResultXSQLDA.GetFieldCount <> 0) then begin
     if (FStatementType = stSelect) and Assigned(FOpenResultSet) and not BindList.HasOutOrInOutOrResultParam
     then Result := IZResultSet(FOpenResultSet)
@@ -852,8 +854,9 @@ begin
     Result := nil;
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   end;
-
-  inherited ExecuteQueryPrepared;
+  { Logging Execution }
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
 
 {**
@@ -871,8 +874,6 @@ begin
   Prepare;
   LastResultSet := nil;
   PrepareOpenResultSetForReUse;
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcBindPrepStmt,Self);
   ExecuteInternal;
   Result := LastUpdateCount;
   if BatchDMLArrayCount = 0 then

@@ -1500,7 +1500,6 @@ label Fail;
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
     case FwType of
-      //DBTYPE_NUMERIC	= 131;
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_I2:        ScaledOrdinal2Bcd(PSmallInt(FData)^, 0, Result);
       DBTYPE_I4:        ScaledOrdinal2Bcd(PInteger(FData)^, 0, Result);
@@ -1553,6 +1552,7 @@ end;
     value returned is <code>0</code>
 }
 function TZAbstractOleDBResultSet.GetCurrency(ColumnIndex: Integer): Currency;
+label jmpFail;
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
     case FwType of
@@ -1574,7 +1574,10 @@ begin
       DBTYPE_UI8:       Result := PUInt64(FData)^;
       DBTYPE_STR:       SQLStrToFloatDef(PAnsiChar(FData), 0, Result, FLength);
       DBTYPE_WSTR:      SQLStrToFloatDef(PWideChar(FData), 0, Result, FLength shr 1);
-      //DBTYPE_NUMERIC	= 131;
+      DBTYPE_NUMERIC,
+      DBTYPE_VARNUMERIC:if PDB_NUMERIC(FData).precision < 19
+                        then Result := DBNumeric2Curr_LE(FData, 0)
+                        else goto jmpFail;
       //DBTYPE_UDT	= 132;
       //DBTYPE_DBDATE	= 133;
       //DBTYPE_DBTIME	= 134;
@@ -1582,8 +1585,8 @@ begin
       DBTYPE_HCHAPTER:  Result := PCHAPTER(FData)^;
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
-      //DBTYPE_VARNUMERIC	= 139;
-      else raise CreateOleDbConvertError(ColumnIndex, stCurrency);
+      else
+jmpFail:raise CreateOleDbConvertError(ColumnIndex, stCurrency);
     end
   else Result := 0;
 end;
@@ -2267,14 +2270,16 @@ fetch_data:
   end;
 
 Success:
-    RowNo := RowNo + 1;
-    if LastRowNo < RowNo then
-      LastRowNo := RowNo;
-    Result := True;
-    Exit;
+  RowNo := RowNo + 1;
+  if LastRowNo < RowNo then
+    LastRowNo := RowNo;
+  Result := True;
+  Exit;
 NoSuccess:
-    if RowNo <= LastRowNo then
-      RowNo := LastRowNo + 1;
+  if RowNo <= LastRowNo then
+    RowNo := LastRowNo + 1;
+  if not LastRowFetchLogged and DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
 end;
 
 {**

@@ -494,6 +494,8 @@ begin
         RowNo := 1; //set AfterLast
       end else
         FFBConnection.HandleErrorOrWarning(lcExecute, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.fetchFirst', Self);
+      if not LastRowFetchLogged and DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
     end else begin
       RowNo := 1;
       if LastRowNo < RowNo then
@@ -566,6 +568,8 @@ begin
           RowNo := 1; //else ?? which row do we have now?
       end else
         FFBConnection.HandleErrorOrWarning(lcExecute, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.fetchLast', Self);
+      if not LastRowFetchLogged and DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
     end else begin
       //how to know a rowno now?
     end;
@@ -617,6 +621,8 @@ begin
           LastRowNo := Row -1;
       end else
         FFBConnection.HandleErrorOrWarning(lcExecute, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.fetchAbsolute', Self);
+      if not LastRowFetchLogged and DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
     end else begin
       RowNo := Row;
       if LastRowNo < Row then
@@ -660,6 +666,8 @@ begin
           LastRowNo := RowNo -1;
       end else
         FFBConnection.HandleErrorOrWarning(lcExecute, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.fetchAbsolute', Self);
+      if not LastRowFetchLogged and DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
     end else begin
       if LastRowNo < RowNo then
         LastRowNo := RowNo;
@@ -713,6 +721,8 @@ begin
         end;
       end else
         FFBConnection.HandleErrorOrWarning(lcExecute, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.fetchNext', Self);
+      if not LastRowFetchLogged and DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
     end else begin
       RowNo := RowNo +1;
       if LastRowNo < RowNo then
@@ -750,6 +760,8 @@ begin
           LastRowNo := RowNo;
       end else
         FFBConnection.HandleErrorOrWarning(lcExecute, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.fetchPrior', Self);
+      if not LastRowFetchLogged and DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
     end;
   end;
 end;

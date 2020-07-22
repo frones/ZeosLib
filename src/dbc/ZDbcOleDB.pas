@@ -1136,13 +1136,18 @@ begin
     Exit;
 
   FSavePoints.Clear;
-
-  if not AutoCommit then begin
-    SetAutoCommit(True); //close all pending transactions without restarting the TA
-    AutoCommit := False; //remainder for reopen
-  end;
   FDBCreateCommand := nil;
   try
+    FpulTransactionLevel := 0;
+    if not AutoCommit then begin
+      AutoCommit := not FRestartTransaction;
+      if fTransaction <> nil then begin
+        Status := fTransaction.Abort(nil, False, False);
+        fTransaction := nil;
+        if Status < S_OK then
+          HandleErrorOrWarning(Status, lcTransaction, 'Rollback Transaction', Self);
+      end;
+    end;
     Status := fDBInitialize.Uninitialize;
     if Failed(Status) then
       HandleErrorOrWarning(Status, lcDisconnect, 'DBInitialize.Uninitialize', Self, nil);

@@ -76,6 +76,7 @@ type
     FCommandType: CommandTypeEnum;
     FRC: OleVariant;
     FByteBuffer: PByteBuffer;
+    fDEFERPREPARE: Boolean;
   protected
     function CreateResultSet: IZResultSet; virtual;
     procedure ReleaseConnection; override;
@@ -214,11 +215,13 @@ begin
   Prepare;
   BindInParameters;
   try
+    RestartTimer;
     FAdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, adOptionUnspecified);
     LastResultSet := CreateResultSet;
     LastUpdateCount := {%H-}RC;
     Result := Assigned(LastResultSet);
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecPrepStmt, Self);
   except
     on E: EOleException do begin
       DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, E.ErrorCode, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
@@ -243,6 +246,7 @@ begin
   LastUpdateCount := -1;
   BindInParameters;
   try
+    RestartTimer;
     if FIsSelectSQL then begin
       if (FAdoRecordSet = nil) or (FAdoRecordSet.MaxRecords <> MaxRows) then begin
         FAdoRecordSet := CoRecordSet.Create;
@@ -265,7 +269,8 @@ begin
       Result := GetResultSet;
     end;
     FOpenResultSet := Pointer(Result);
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecPrepStmt, Self);
   except
     on E: EOleException do begin
       DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, E.ErrorCode, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
@@ -290,12 +295,14 @@ begin
   LastUpdateCount := -1;
   BindInParameters;
   try
+    RestartTimer;
     FAdoRecordSet := FAdoCommand.Execute(FRC, EmptyParam, adExecuteNoRecords);
     if BindList.HasOutOrInOutOrResultParam then
       LastResultSet := CreateResultSet;
     LastUpdateCount := FRC;
     Result := LastUpdateCount;
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecPrepStmt, Self);
   except
     on E: EOleException do begin
       DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, E.ErrorCode, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
@@ -318,6 +325,7 @@ begin
 end;
 
 procedure TZAbstractAdoStatement.Prepare;
+var S: String;
 begin
   if FAdoCommand = nil then begin
     FAdoCommand := CoCommand.Create;
@@ -328,10 +336,23 @@ begin
     FIsSelectSQL := IsSelect(SQL);
     FAdoCommand.CommandText := WSQL;
     FAdoCommand.CommandType := FCommandType;
-   // FAdoCommand.Properties['Defer Prepare'].Value := False;
-    if (FWeakIntfPtrOfIPrepStmt <> nil) and (FTokenMatchIndex > -1) and
-       StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_PreferPrepared, 'True')) then
-      FAdoCommand.Prepared := True;
+    if (FWeakIZPreparedStatementPtr <> nil) and (FTokenMatchIndex > -1) then begin
+      S := GetParameters.Values[DSProps_DeferPrepare];
+      if S = '' then
+        S := Connection.GetParameters.Values[DSProps_DeferPrepare];
+      if S = '' then begin
+        S := DefineStatementParameter(Self, DSProps_PreferPrepared, StrTrue);
+        fDEFERPREPARE := not StrToBoolEx(S);
+      // FAdoCommand.Properties['Defer Prepare'].Value := False;
+      end else
+        fDEFERPREPARE := StrToBoolEx(S);
+      if not fDEFERPREPARE then begin
+        RestartTimer;
+        FAdoCommand.Prepared := True;
+        if DriverManager.HasLoggingListener then
+          DriverManager.LogMessage(lcPrepStmt,Self);
+      end;
+    end;
     inherited Prepare;
   end;
 end;
@@ -344,6 +365,7 @@ end;
 
 procedure TZAbstractAdoStatement.Unprepare;
 begin
+  RestartTimer;
   FAdoRecordSet := nil;
   if Assigned(FAdoCommand) and FAdoCommand.Prepared then
     FAdoCommand.Prepared := False;

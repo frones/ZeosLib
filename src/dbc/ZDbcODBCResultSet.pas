@@ -1779,6 +1779,8 @@ Fail:
   end;
   if RowNo <= LastRowNo then
     RowNo := LastRowNo + 1;
+  if not LastRowFetchLogged and DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 4081 off : Converting Operants to "Int64" could prevent overflow errors.} {$ENDIF}

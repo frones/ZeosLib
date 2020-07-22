@@ -141,16 +141,19 @@ begin
   RegisterPropertyEditor(TypeInfo(string), TZQuery, 'MasterFields', TZMasterFieldPropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZQuery, 'SortedFields', TZDataFieldPropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZQuery, 'SequenceField', TZDataFieldPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(TStrings), TZQuery, 'Properties', TZProperitesEditor);
 
   RegisterPropertyEditor(TypeInfo(string), TZReadOnlyQuery, 'LinkedFields', TZDataFieldPropertyEditor); {renamed by bangfauzan}
   RegisterPropertyEditor(TypeInfo(string), TZReadOnlyQuery, 'MasterFields', TZMasterFieldPropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZReadOnlyQuery, 'SortedFields', TZDataFieldPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(TStrings), TZReadOnlyQuery, 'Properties', TZProperitesEditor);
 
   RegisterPropertyEditor(TypeInfo(string), TZTable, 'TableName', TZTableNamePropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZTable, 'LinkedFields', TZDataFieldPropertyEditor); {renamed by bangfauzan}
   RegisterPropertyEditor(TypeInfo(string), TZTable, 'MasterFields', TZMasterFieldPropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZTable, 'SortedFields', TZDataFieldPropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZTable, 'SequenceField', TZDataFieldPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(TStrings), TZTable, 'Properties', TZProperitesEditor);
 
   RegisterPropertyEditor(TypeInfo(string), TZStoredProc, 'StoredProcName', TZProcedureNamePropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZStoredProc, 'SortedFields', TZDataFieldPropertyEditor);

@@ -1268,9 +1268,11 @@ begin
       if Row > LastRowNo then
         LastRowNo := Row;
     end else
-jmpErr: FSQLAnyConnection.HandleErrorOrWarning(lcExecute, 'sqlany_fetch_absolute', Self)
+jmpErr: FSQLAnyConnection.HandleErrorOrWarning(lcFetch, 'sqlany_fetch_absolute', Self)
   end;
   RowNo := Row;
+  if not Result and not LastRowFetchLogged and DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
 end;
 
 {**
@@ -1324,10 +1326,13 @@ begin
     if Result then begin
       if (LastRowNo < RowNo) then
         LastRowNo := RowNo;
-    end else
+    end else begin
 jmpErr:if (RowNo = 1) then
-      FSQLAnyConnection.HandleErrorOrWarning(lcExecute, 'sqlany_fetch_next', Self);
+      FSQLAnyConnection.HandleErrorOrWarning(lcFetch, 'sqlany_fetch_next', Self)
+    end;
   end;
+  if not Result and not LastRowFetchLogged and DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
 end;
 
 {**
@@ -1567,7 +1572,7 @@ begin
   if Origin = soEnd then
     Result := 0
   else if Origin = soCurrent then
-    Result := FPosition + OffSet
+    Result := Int64(FPosition) + OffSet
   else
     Result := OffSet;
   if Result <> FPosition then

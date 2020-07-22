@@ -537,7 +537,6 @@ end;
 }
 function TZSQLiteConnection.AbortOperation: Integer;
 begin
-  {$MESSAGE '.AbortOperation with SQLite is untested and might cause unexpected results!'}
   // https://sqlite.org/c3ref/interrupt.html
   FPlainDriver.sqlite3_interrupt(FHandle);
   Result := 1;
@@ -612,10 +611,11 @@ var
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
+  FSavePoints.Clear;
   try
     if not AutoCommit then begin
-      SetAutoCommit(True);
-      AutoCommit := False;
+      AutoCommit := not FRestartTransaction;
+      ExecuteImmediat(cTransactionActionStmt[traRollBack], lcTransaction, FTransactionStmts[traRollBack]);
     end;
   finally
     LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';

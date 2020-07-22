@@ -518,11 +518,12 @@ end;
 }
 procedure TZAbstractCachedResultSet.PrepareRowForUpdates;
 begin
-  if (RowAccessor.RowBuffer = FSelectedRow) and (FSelectedRow <> FUpdatedRow) then
-  begin
+  if (RowAccessor.RowBuffer = FSelectedRow) and (FSelectedRow <> FUpdatedRow) then begin
     FSelectedRow := FUpdatedRow;
     RowAccessor.RowBuffer := FSelectedRow;
     RowAccessor.CloneFrom(PZRowBuffer(FRowsList[RowNo - 1]));
+    FUpdatedRow.Index := FSelectedRow.Index;
+    FUpdatedRow.UpdateType := utModified;
   end;
 end;
 
@@ -638,16 +639,13 @@ var
   Index: Integer;
 begin
   CheckClosed;
-  if (RowNo >= 1) and (RowNo <= LastRowNo) and (FSelectedRow <> nil) then
-  begin
+  if (RowNo >= 1) and (RowNo <= LastRowNo) and (FSelectedRow <> nil) then begin
     Index := LocateRow(FInitialRowsList, FSelectedRow.Index);
-    if Index >= 0 then
-    begin
+    if Index >= 0 then begin
       FSelectedRow := FInitialRowsList[Index];
       FRowAccessor.RowBuffer := FSelectedRow;
     end;
-  end
-  else
+  end else
     FRowAccessor.RowBuffer := nil;
 end;
 
@@ -657,8 +655,7 @@ end;
 procedure TZAbstractCachedResultSet.PostUpdates;
 begin
   CheckClosed;
-  if FInitialRowsList.Count > 0 then
-  begin
+  if FInitialRowsList.Count > 0 then begin
     while FInitialRowsList.Count > 0 do
     begin
       OldRowAccessor.RowBuffer := PZRowBuffer(FInitialRowsList[0]);
@@ -672,12 +669,12 @@ begin
       PostRowUpdates(OldRowAccessor, NewRowAccessor);
 
       { If post was Ok - update the row update type. }
-      if NewRowAccessor.RowBuffer.UpdateType <> utDeleted then
-      begin
+      if NewRowAccessor.RowBuffer.UpdateType <> utDeleted then begin
         NewRowAccessor.RowBuffer.UpdateType := utUnmodified;
-        if (FSelectedRow <> nil)
-          and (FSelectedRow.Index = NewRowAccessor.RowBuffer.Index) then
+        if (FSelectedRow <> nil) and
+           (FSelectedRow.Index = NewRowAccessor.RowBuffer.Index) then
           FSelectedRow.UpdateType := utUnmodified;
+        FUpdatedRow.Index := -1;
       end;
 
       { Removes cached rows. }
@@ -696,19 +693,15 @@ var
   i: Integer;
 begin
   CheckClosed;
-  if FInitialRowsList.Count > 0 then
-  begin
+  if FInitialRowsList.Count > 0 then begin
     i := 0;
-    while i < FInitialRowsList.Count do
-    begin
+    while i < FInitialRowsList.Count do begin
       OldRowAccessor.RowBuffer := PZRowBuffer(FInitialRowsList[i]);
       NewRowAccessor.RowBuffer := PZRowBuffer(FCurrentRowsList[i]);
       Inc(i);
-
       { Updates default field values. }
       if NewRowAccessor.RowBuffer.UpdateType in [utInserted, utModified] then
         CalculateRowDefaults(NewRowAccessor);
-
       { Posts row updates. }
       PostRowUpdates(OldRowAccessor, NewRowAccessor);
     end;
@@ -721,19 +714,16 @@ end;
 }
 procedure TZAbstractCachedResultSet.DisposeCachedUpdates;
 begin
-  while FInitialRowsList.Count > 0 do
-  begin
+  while FInitialRowsList.Count > 0 do begin
     OldRowAccessor.RowBuffer := PZRowBuffer(FInitialRowsList[0]);
     NewRowAccessor.RowBuffer := PZRowBuffer(FCurrentRowsList[0]);
 
-    if NewRowAccessor.RowBuffer.UpdateType <> utDeleted then
-    begin
+    if NewRowAccessor.RowBuffer.UpdateType <> utDeleted then begin
       NewRowAccessor.RowBuffer.UpdateType := utUnmodified;
       if (FSelectedRow <> nil)
         and (FSelectedRow.Index = NewRowAccessor.RowBuffer.Index) then
           FSelectedRow.UpdateType := utUnmodified;
     end;
-
     { Remove cached rows. }
     OldRowAccessor.Dispose;
     FInitialRowsList.Delete(0);
@@ -758,9 +748,11 @@ begin
       InitialRow.UpdateType := utDeleted;
 
     FRowAccessor.CopyBuffer(InitialRow, CurrentRow);
-    if (FSelectedRow = FUpdatedRow)
-      and (FSelectedRow.Index = InitialRow.Index) then
+    if (FSelectedRow = FUpdatedRow) and
+       (FSelectedRow.Index = InitialRow.Index) then begin
       FRowAccessor.CopyBuffer(InitialRow, FSelectedRow);
+      FRowAccessor.ClearBuffer(FUpdatedRow);
+    end;
 
     FRowAccessor.DisposeBuffer(InitialRow);
     FInitialRowsList.Delete(0);
@@ -784,23 +776,28 @@ var
   InitialRow, CurrentRow: PZRowBuffer;
 begin
   CheckClosed;
-  if (RowNo >= 1) and (RowNo <= LastRowNo) then
-  begin
+  if (RowNo > 0) and (RowNo <= LastRowNo) then begin
     Index := LocateRow(FInitialRowsList, FSelectedRow.Index);
-    if Index >= 0 then
-    begin
+    if Index >= 0 then begin
       InitialRow := PZRowBuffer(FInitialRowsList[Index]);
       CurrentRow := PZRowBuffer(FRowsList[RowNo - 1]);
 
       if CurrentRow.UpdateType = utInserted then
         InitialRow.UpdateType := utDeleted;
       FRowAccessor.CopyBuffer(InitialRow, CurrentRow);
-      if (FSelectedRow = FUpdatedRow) then
+      if (FSelectedRow = FUpdatedRow) then begin
         FRowAccessor.CopyBuffer(InitialRow, FSelectedRow);
+        FUpdatedRow.Index := -1;
+        FUpdatedRow.UpdateType := utUnmodified;
+      end;
 
       FRowAccessor.DisposeBuffer(InitialRow);
       FInitialRowsList.Delete(Index);
       FCurrentRowsList.Delete(Index);
+    end else if (FSelectedRow = FUpdatedRow) and (FSelectedRow.Index < FRowsList.Count) then begin
+      CurrentRow := FRowsList[FSelectedRow.Index];
+      FRowAccessor.ClearBuffer(FSelectedRow);
+      FSelectedRow := CurrentRow;
     end;
   end;
 end;
@@ -822,7 +819,7 @@ begin
   FOldRowAccessor := GetRowAccessorClass.Create(ColumnsInfo, ConSettings, FOpenLobStreams, FCachedLobs);
   FNewRowAccessor := GetRowAccessorClass.Create(ColumnsInfo, ConSettings, FOpenLobStreams, FCachedLobs);
 
-  FUpdatedRow :=FRowAccessor.AllocBuffer;
+  FUpdatedRow := FRowAccessor.AllocBuffer;
   FInsertedRow := FRowAccessor.AllocBuffer;
   FSelectedRow := nil;
 
@@ -885,8 +882,7 @@ procedure TZAbstractCachedResultSet.ResetCursor;
 var
   I: Integer;
 begin
-  if Assigned(FRowAccessor) then
-  begin
+  if Assigned(FRowAccessor) then begin
     for I := 0 to FRowsList.Count - 1 do
       FRowAccessor.DisposeBuffer(PZRowBuffer(FRowsList[I]));
     for I := 0 to FInitialRowsList.Count - 1 do
@@ -895,6 +891,7 @@ begin
     FInitialRowsList.Clear;
     FCurrentRowsList.Clear;
   end;
+  FNextRowIndex := 0;
   inherited ResetCursor;
 end;
 
@@ -1994,23 +1991,20 @@ begin
     RaiseForwardOnlyException;
 {$ENDIF}
 
-  if not Closed and (Row >= 0) and (Row <= LastRowNo + 1) then
-  begin
+  if not Closed and (Row >= 0) and (Row <= LastRowNo + 1) then begin
     RowNo := Row;
-    if (Row >= 1) and (Row <= LastRowNo) then
-    begin
+    if (Row >= 1) and (Row <= LastRowNo) then begin
       Result := True;
       FSelectedRow := PZRowBuffer(FRowsList[Row - 1]);
+      if (FSelectedRow.Index = FUpdatedRow.Index) and (FUpdatedRow.UpdateType = utModified)
+      then FSelectedRow := FUpdatedRow;
       RowAccessor.RowBuffer := FSelectedRow;
-    end
-    else
-    begin
+    end else begin
       Result := False;
       FSelectedRow := nil;
       RowAccessor.RowBuffer := FSelectedRow;
     end;
-  end
-  else
+  end else
     Result := False;
 end;
 
@@ -2146,6 +2140,7 @@ begin
   { Posts non-cached updates. }
   if not FCachedUpdates then
     PostUpdates; //EH: restoring previous state should happen by RevertRecord!
+  FUpdatedRow.UpdateType := utUnmodified;
 end;
 
 {**
@@ -2201,6 +2196,10 @@ end;
 }
 procedure TZAbstractCachedResultSet.CancelRowUpdates;
 begin
+  if (FSelectedRow <> nil) and (FUpdatedRow.Index = FSelectedRow.Index) then begin
+    FUpdatedRow.Index := -1;
+    FUpdatedRow.UpdateType := utUnmodified;
+  end;
   MoveAbsolute(RowNo);
 end;
 
@@ -2555,14 +2554,12 @@ begin
     Exit;
 
   { Processes negative rows }
-  if Row < 0 then
-  begin
+  if Row < 0 then begin
     FetchAll;
     Row := LastRowNo - Row + 1;
     if Row < 0 then
        Row := 0;
-  end
-  else
+  end else
   { Processes moving after last row }
     while (LastRowNo < Row) and Fetch do;
 

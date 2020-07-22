@@ -66,16 +66,70 @@ interface
 
   { Parameters common for all DBC's }
 const
-  // Type: STR
-  // Same as User property
+  /// <type>String</type>
+  /// <alias>ConnProps_Username</alias>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_UID]=userid</syntax>
+  /// <summary>
+  ///  Specifies the user ID used to log in to the database.
+  /// </summary>
+  /// <remarks>
+  ///  You must always supply a user ID when connecting to a database, unless
+  ///  you are using an integrated/trusted or Kerberos login.
+  /// </remarks>
   ConnProps_UID = 'UID';
+  /// <type>String</type>
+  /// <alias>ConnProps_UID</alias>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_Username]=username</syntax>
+  /// <summary>
+  ///  Specifies the user name used to log in to the database.
+  /// </summary>
+  /// <remarks>
+  ///  You must always supply a user name when connecting to a database, unless
+  ///  you are using an integrated/trusted or Kerberos login.
+  /// </remarks>
   ConnProps_Username = 'username';
-  // Type: STR
-  // Same as Password property
+  /// <type>String</type>
+  /// <alias>ConnProps_Password</alias>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_PWD]=password</syntax>
+  /// <summary>
+  ///  Provides a password for a connection.
+  /// </summary>
+  /// <remarks>
+  ///  The Password (PWD) connection parameter is not encrypted. An application
+  ///  can include the password in the connection string. If both the Password
+  ///  (PWD) connection parameter and the EncryptedPassword (ENP) (if supported)
+  ///  connection parameter are specified, the Password (PWD) connection
+  ///  parameter takes precedence.
+  /// </remarks>
   ConnProps_PWD = 'PWD';
+  /// <type>String</type>
+  /// <alias>ConnProps_PWD</alias>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_Password]=password</syntax>
+  /// <summary>
+  ///  Provides a password for a connection.
+  /// </summary>
+  /// <remarks>
+  ///  The Password (PWD) connection parameter is not encrypted. An application
+  ///  can include the password in the connection string. If both the Password
+  ///  (PWD) connection parameter and the EncryptedPassword (ENP) (if supported)
+  ///  connection parameter are specified, the Password (PWD) connection
+  ///  parameter takes precedence.
+  /// </remarks>
   ConnProps_Password = 'password';
-  // Type: STR
-  // Same as TZConnection.LibraryLocation property, path to client lib
+  /// <type>String</type>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_LibLocation]=filename</syntax>
+  /// <summary>
+  ///  Provides a filename for a client library.
+  /// </summary>
+  /// <remarks>
+  ///  If provided then we'll try to load the library otherwise the default
+  ///  lib-names will be used for.
+  /// </remarks>
   ConnProps_LibLocation = 'LibLocation';
   // Type: STR, like CP_UTF8
   // Codepage to interact with driver
@@ -117,8 +171,15 @@ const
   // Type: STR
   // Format to read date & time
   ConnProps_DateTimeReadFormat = 'DatetimeReadFormat';
-  // Type: STR
-  // Format to write date & time
+  /// <type>String</type>
+  /// <summary>
+  ///  Format to read date & time, like YYYY-MM-DD HH:NN:SS.F
+  /// </summary>
+  /// <default>YYYY-MM-DD HH:NN:SS.FFF</default>
+  /// <remarks>
+  ///  Just simple formats are supported. ISO 8601 is prefered.
+  ///  If the driver(f.e. SQLite) supports the 'T' delimiter do not hasitate to use it!
+  /// </remarks>
   ConnProps_DateTimeWriteFormat = 'DatetimeWriteFormat';
   // Type: STR
   // Sets TZAbstractDatabaseInfo.IdentifierQuotes property, refer to Zeos manual for details
@@ -210,6 +271,12 @@ const
   // Type: BOOLEAN
   // Use trusted connection
   ConnProps_TrustedConnection = 'Trusted_Connection';
+{$IFEND}
+
+{$IF DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}
+  // Type: BOOLEAN
+  // Defer the prepare?
+  DSProps_DeferPrepare = 'DeferPrepare';
 {$IFEND}
 
 {$IF DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB) OR DEFINED(ENABLE_FIREBIRD) or DEFINED(ZEOS_DISABLE_INTERBASE)}

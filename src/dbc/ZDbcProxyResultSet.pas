@@ -58,7 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_PROXY} //if set we have an empty unit
 uses
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types{$IFNDEF NO_UNIT_CONTNRS}, Contnrs{$ENDIF}{$ELSE}Types{$ENDIF},
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, System.NetEncoding,
   ZPlainProxyDriverIntf, ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcLogging,{$IFDEF ZEOS73UP}FmtBCD, ZVariant, {$ENDIF}
   ZDbcResultSetMetadata, ZCompatibility, XmlDoc, XmlIntf;
 
@@ -1337,7 +1337,7 @@ var
   ColType: TZSQLType;
   Idx: Integer;
   Val: String;
-  AnsiVal: {$IFDEF NEXTGEN}RawByteString{$ELSE}AnsiString{$ENDIF};
+  //AnsiVal: {$IFDEF NEXTGEN}RawByteString{$ELSE}AnsiString{$ENDIF};
   Bytes: TBytes;
   ColInfo: TZColumnInfo;
 begin
@@ -1360,7 +1360,7 @@ begin
   ColType := ColInfo.ColumnType;
   case ColType of
     stBinaryStream: begin
-      Bytes := DecodeBase64(Val);
+      Bytes := DecodeBase64(AnsiString(Val));
       Result := TZAbstractBlob.CreateWithData(@Bytes[0], Length(Bytes)) as IZBlob;
     end;
     stAsciiStream, stUnicodeStream: begin
@@ -1406,15 +1406,15 @@ begin
     stBoolean:
       Result := BoolToInt(StrToBool(Val));
     stByte, stShort, stWord, stSmall, stLongWord, stInteger:
-      Result := StrToUInt(Val);
+      Result := UnicodeToUInt32(Val);
     stULong:
-      Result := StrToUInt(Val);
+      Result := UnicodeToUInt32(Val);
     stLong:
-      Result := StrToInt(Val);
+      Result := UnicodeToUInt32(Val);
     stFloat, stDouble, stCurrency, stBigDecimal:
       Result := Trunc(StrToFloat(Val, FFormatSettings));
     stString, stUnicodeString, stAsciiStream, stUnicodeStream:
-      Result := StrToUInt(Val);
+      Result := UnicodeToUInt32(Val);
     stDate:
       Result := Trunc(StrToDate(Val, FFormatSettings));
     stTime:

@@ -331,6 +331,8 @@ begin
     if FErrorCode <> SQLITE_OK then
       CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcPrepStmt, ASQL, ConSettings);
     inherited Prepare;
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcPrepStmt,Self);
   end;
 end;
 
@@ -403,14 +405,17 @@ end;
 }
 function TZAbstractSQLiteCAPIPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
+  LastUpdateCount := -1;
   PrepareOpenResultSetForReUse;
   Prepare;
   BindInParameters;
+  RestartTimer;
   FBindLater := False;
   FErrorCode := FPlainDriver.sqlite3_step(FStmtHandle); //exec prepared
   if not (FErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then
     CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcExecPrepStmt, ASQL, ConSettings);
   if (FErrorCode <> SQLITE_ROW) and (FPlainDriver.sqlite3_column_count(FStmtHandle) = 0) then begin
+    LastUpdateCount := FPlainDriver.sqlite3_Changes(FHandle);
     FErrorCode := FPlainDriver.sqlite3_reset(FStmtHandle);
     if FErrorCode <> SQLITE_OK then
       CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcOther, ASQL, ConSettings); //exec prepared
@@ -439,27 +444,26 @@ var ErrorCode: Integer;
 begin
   Prepare;
   BindInParameters;
-
-  Result := -1;
+  RestartTimer;
+  LastUpdateCount := -1;
   FBindLater := False;
   ErrorCode := fPlainDriver.sqlite3_step(FStmtHandle);
   if (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then begin
-    Result := FPlainDriver.sqlite3_Changes(FHandle);
+    if ErrorCode <> SQLITE_ROW then
+      LastUpdateCount := FPlainDriver.sqlite3_Changes(FHandle);
     if FHasLoggingListener then
-      inherited ExecuteUpdatePrepared; //log values
+      DriverManager.LogMessage(lcExecPrepStmt,Self);
     ErrorCode := FPlainDriver.sqlite3_reset(FStmtHandle);
     if ErrorCode <> SQLITE_OK then
       CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcExecPrepStmt, ASQL, ConSettings); //exec prepared
-    LastUpdateCount := Result;
     FHasLoggingListener := DriverManager.HasLoggingListener;
-  end else
-    try
-      CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcExecPrepStmt, ASQL, ConSettings); //exec prepared
-    finally
-      FPlainDriver.sqlite3_reset(FStmtHandle); //reset handle allways without check else -> leaking mem
-      LastUpdateCount := Result;
-      FHasLoggingListener := DriverManager.HasLoggingListener;
-    end;
+  end else try
+    CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, lcExecPrepStmt, ASQL, ConSettings); //exec prepared
+  finally
+    FPlainDriver.sqlite3_reset(FStmtHandle); //reset handle allways without check else -> leaking mem
+    FHasLoggingListener := DriverManager.HasLoggingListener;
+  end;
+  Result := LastUpdateCount;
 end;
 
 {**
@@ -475,13 +479,14 @@ begin
   PrepareLastResultSetForReUse;
   Prepare;
   BindInParameters;
-
+  RestartTimer;
   FBindLater := False;
   FErrorCode := FPlainDriver.sqlite3_step(FStmtHandle);
   if not (FErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then
     CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcExecPrepStmt, 'Step', ConSettings);
   { Process queries with result sets }
   if (FErrorCode = SQLITE_ROW) or (FPlainDriver.sqlite3_column_count(FStmtHandle) <> 0) then begin
+    LastUpdateCount := -1;
     Result := True;
     LastResultSet := CreateResultSet;
   end else begin { Processes regular query. }
@@ -492,9 +497,9 @@ begin
     if FErrorCode <> SQLITE_OK then
       CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcOther, 'Reset', ConSettings);
   end;
-  if FHasLoggingListener then
-    inherited ExecutePrepared;
   FHasLoggingListener := DriverManager.HasLoggingListener;
+  if FHasLoggingListener then
+    DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
 
 { TZSQLiteStatement }

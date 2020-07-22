@@ -392,8 +392,9 @@ begin
   { Prepares a statement. }
   Prepare;
   { logs the values }
-  BindInParameters;
-
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcBindPrepStmt,Self);
+  RestartTimer;
   if (FStatementType = OCI_STMT_SELECT) then begin
     { Executes the statement and gets a resultset. }
     if not Assigned(LastResultSet) then
@@ -416,8 +417,10 @@ begin
     LastUpdateCount := upCnt;
     if (FStatementType = OCI_STMT_BEGIN) and (BindList.HasOutOrInOutOrResultParam) then
       FOutParamResultSet := CreateResultSet;
+    { logging execution }
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecPrepStmt,Self);
   end;
-  inherited ExecutePrepared;
 end;
 
 {**
@@ -435,10 +438,10 @@ begin
   PrepareOpenResultSetForReUse;
   { Prepares a statement. }
   Prepare;
-  //log values
+  { log values }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcBindPrepStmt,Self);
-
+  RestartTimer;
   { Executes the statement and gets a resultset. }
   if (FStatementType = OCI_STMT_BEGIN) and (BindList.HasOutOrInOutOrResultParam) then begin
     Status := FPlainDriver.OCIStmtExecute(FOracleConnection.GetServiceContextHandle,
@@ -451,15 +454,15 @@ begin
     LastUpdateCount := upCnt;
     Result := CreateResultSet;
     FOutParamResultSet := Result;
+    { Logging Execution }
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecPrepStmt,Self);
   end else if (FStatementType = OCI_STMT_SELECT)  then
     Result := CreateResultSet
   else begin
     Result := nil; //satisfy compiler
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   end;
-  { Logging Execution }
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
 
 {**
@@ -480,7 +483,6 @@ var
 begin
   { Prepares a statement. }
   Prepare;
-
   if FOpenResultSet <> nil then
   begin
     IZResultSet(FOpenResultSet).Close;
@@ -489,6 +491,7 @@ begin
 
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcBindPrepStmt,Self);
+  RestartTimer;
   if (FStatementType = OCI_STMT_SELECT) then begin
     LastUpdateCount := -1;
     { Executes the statement and gets a resultset. }
@@ -511,11 +514,11 @@ begin
     LastUpdateCount := upCnt;
     if ((FStatementType = OCI_STMT_BEGIN) or (FStatementType = OCI_STMT_DECLARE)) and (BindList.HasOutOrInOutOrResultParam) then
       FOutParamResultSet := CreateResultSet;
+    { logging execution }
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecPrepStmt,Self);
   end;
   Result := LastUpdateCount;
-  { logging execution }
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
 
 {$IFDEF NEXTGEN}{$HINTS OFF}{$ENDIF}//wrong hint OldSize assigned value is never used
@@ -611,6 +614,7 @@ var
 begin
   if not Prepared then begin
     // we need a errorhandle per stmt
+    RestartTimer;
     if (FOCIError = nil) then begin
       Status := FPlainDriver.OCIHandleAlloc(FOracleConnection.GetConnectionHandle,
         FOCIError, OCI_HTYPE_ERROR, 0, nil);
@@ -664,6 +668,8 @@ begin
       if Status <> OCI_SUCCESS then
         FOracleConnection.HandleErrorOrWarning(FOCIError, Status, lcOther, 'OCIAttrSet(OCI_ATTR_PREFETCH_MEMORY)', Self);
     end;
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcPrepStmt,Self);
     inherited Prepare;
   end;
 end;
@@ -715,6 +721,7 @@ begin
   try
     inherited Unprepare;
   finally
+
     if FOCIStmt <> nil then begin
       if FServerStmtCache
       then Status := FPlainDriver.OCIStmtRelease(FOCIStmt, FOCIError, nil, 0, OCI_STMTCACHE_DELETE)

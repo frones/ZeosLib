@@ -1377,12 +1377,12 @@ begin
     for i := 0 to 5 do begin
       Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1000, ''miab3'')');
       with Stmt.ExecuteQuery('select * from people where p_id = 1000') do begin
-        Check(Next, 'wrong commit behavior');
+        Check(Next, 'wrong autocommit behavior');
         Close;
       end;
       Stmt.ExecuteUpdate('delete from people where p_id = 1000');
       with Stmt.ExecuteQuery('select * from people where p_id = 1000') do begin
-        Check(not Next, 'wrong commit behavior');
+        Check(not Next, 'wrong autocommit behavior');
         Close;
       end;
       Stmt.Close;
@@ -1461,6 +1461,18 @@ begin
       Stmt.Close;
       Check(Connection.GetAutoCommit, 'Fallback to Autocommit');
     end;
+    Connection.CreateStatement.ExecuteUpdate('delete from people where p_id >= 1000');
+    CheckEquals(1, Connection.Starttransaction, 'TxnCount AutoCommit was true -> StartTransaction');
+    Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1000, ''aehimself'')');
+    CheckEquals(2, Connection.Starttransaction, 'TxnCount AutoCommit was true -> StartTransaction');
+    Stmt.ExecuteUpdate('insert into people(p_id, p_name) values (1001, ''Jan'')');
+    Connection.Commit; //just commit the savepoint
+    Stmt := nil;
+    Connection.Close;
+    CheckEquals(True, Connection.IsClosed);
+    Stmt := Connection.CreateStatement;
+    CheckEquals(0, Stmt.ExecuteUpdate('delete from people where p_id >= 1000'),
+      'Wrong rollback behavior after connection is closed');
     Connection.Close;
     CheckEquals(True, Connection.IsClosed);
   finally

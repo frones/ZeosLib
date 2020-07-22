@@ -377,7 +377,7 @@ jmpTime:                      if jcoMongoISODate in JSONComposeOptions
                               if Finteger_datetimes
                               then dt2Time(PG2Int64(P), TS.Hour, TS.Minute, TS.Second, Ts.Fractions)
                               else dt2Time(PG2Double(P), TS.Hour, TS.Minute, TS.Second, Ts.Fractions);
-                              TimeToIso8601PChar(PUTF8Char(FByteBuffer), True, TS.Hour, TS.Minute, TS.Second, TS.Fractions, 'T', jcoMilliseconds in JSONComposeOptions);
+                              TimeToIso8601PChar(PUTF8Char(FByteBuffer), True, TS.Hour, TS.Minute, TS.Second, TS.Fractions div NanoSecsPerMSec, 'T', jcoMilliseconds in JSONComposeOptions);
                               JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer), 9+4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions)));
                               if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('Z)"')
@@ -393,7 +393,7 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                               then PG2DateTime(PInt64(P)^, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions)
                               else PG2DateTime(PDouble(P)^, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions);
                               DateToIso8601PChar(PUTF8Char(FByteBuffer), True, TS.Year, TS.Month, TS.Day);
-                              TimeToIso8601PChar(PUTF8Char(FByteBuffer)+10, True, TS.Hour, TS.Minute, TS.Second, TS.Fractions, 'T', jcoMilliseconds in JSONComposeOptions);
+                              TimeToIso8601PChar(PUTF8Char(FByteBuffer)+10, True, TS.Hour, TS.Minute, TS.Second, TS.Fractions div NanoSecsPerMSec, 'T', jcoMilliseconds in JSONComposeOptions);
                               JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),19+(4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions))));
                               if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('Z)"')
@@ -975,8 +975,8 @@ jmpTS:                Result := PAnsiChar(fByteBuffer);
                       {$ELSE}
                       ZSysUtils.GUIDToBuffer(Result, PAnsiChar(fByteBuffer), []); //pg does not Return brackets adopt behavior
                       {$ENDIF}
-                      for ColumnIndex := 0 to 35 do
-                        PByte(PAnsiChar(fByteBuffer)+ColumnIndex)^ := PByte(PAnsiChar(fByteBuffer)+ColumnIndex)^ or 20;
+                      for ColumnIndex := 0 to 8 do
+                        PCardinal(PAnsiChar(fByteBuffer)+(4*ColumnIndex))^ := PCardinal(PAnsiChar(fByteBuffer)+(4*ColumnIndex))^ or $20202020;
                       Result := PAnsiChar(fByteBuffer);
                       Len := 36;
                     end;
@@ -2189,8 +2189,11 @@ begin
   if FFirstRow then begin
     Fres := FresAddress^; //first row is obtained already
     FFirstRow := False;
-    if not FSingleRowMode then
+    if not FSingleRowMode then begin
       LastRowNo := FPlainDriver.PQntuples(Fres);
+      if not LastRowFetchLogged and DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
+    end;
   end;
   { Checks for maximum row. }
   Result := False;
@@ -2275,6 +2278,8 @@ jmpRes:
     RowNo := RowNo + 1;
     Result := (RowNo <= LastRowNo);
   end;
+  if not Result and not LastRowFetchLogged and DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
 end;
 
 { TZPostgreSQLOidBlob }

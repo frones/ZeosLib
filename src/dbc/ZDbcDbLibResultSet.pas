@@ -133,7 +133,7 @@ type
     TDSType: TTDSType;
   end;
   {** Implements DBLib ResultSet. }
-  TZDBLibResultSet = class(TZAbstractReadOnlyResultSet_A,IZResultSet{TZSimpleResultSet})
+  TZDBLibResultSet = class(TZAbstractReadOnlyResultSet_A,IZResultSet)
   private
     FSQL: string;
     FCheckDBDead: Boolean;
@@ -1080,6 +1080,8 @@ end;
 function TZDBLibResultSet.Next: Boolean;
 begin
   Result := FDataProvider.Next;
+  if not Result and not LastRowFetchLogged and DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
 end;
 
 

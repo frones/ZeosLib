@@ -281,7 +281,7 @@ begin
     if FMaxTraceCount > 0 then
       TruncateTraceList(FMaxTraceCount - 1);
     FTraceList.Add(TZLoggingEvent.Create(Event.Category, Event.Protocol,
-      Event.Message, Event.ErrorCode, Event.Error));
+      Event.Message, Event.ErrorCodeOrAffectedRows, Event.Error, Event.TimeStampStart));
   end;
 
   { Save the event. }
