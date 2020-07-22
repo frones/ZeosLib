@@ -794,7 +794,7 @@ begin
       FRowAccessor.DisposeBuffer(InitialRow);
       FInitialRowsList.Delete(Index);
       FCurrentRowsList.Delete(Index);
-    end else if FSelectedRow.Index < FRowsList.Count then begin
+    end else if (FSelectedRow = FUpdatedRow) and (FSelectedRow.Index < FRowsList.Count) then begin
       CurrentRow := FRowsList[FSelectedRow.Index];
       FRowAccessor.ClearBuffer(FSelectedRow);
       FSelectedRow := CurrentRow;
