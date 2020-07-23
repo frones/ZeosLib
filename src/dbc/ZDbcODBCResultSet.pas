@@ -118,8 +118,8 @@ type
   protected
     procedure CheckStmtError(RETCODE: SQLRETURN);
   public
-    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload;
-    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
+    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
     function IsNull(ColumnIndex: Integer): Boolean;
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ColumnIndex: Integer): AnsiString;

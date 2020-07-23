@@ -2237,7 +2237,10 @@ begin
                         SQLWriter.AddText(PAnsiChar(FByteBuffer), Len, Result);
                       end;
           DBTYPE_BYTES: SQLWriter.AddHexBinary(Data, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^, True, Result);
-          DBTYPE_WSTR:  SQLWriter.AddText(SQLQuotedStr(PUnicodeToRaw(Data, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^, ConSettings.CTRL_CP),#39), Result);
+          DBTYPE_WSTR:  begin
+                          FRawTemp := PUnicodeToRaw(Data, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^, zCP_UTF8);
+                          SQLWriter.AddTextQuoted(FRawTemp, AnsiChar(#39), Result);
+                        end;
           DBTYPE_DBDATE:begin
                         Len := DateToRaw(Abs(PDBDATE(Data)^.year), PDBDATE(Data)^.month,
                           PDBDATE(Data)^.day, PAnsiChar(fByteBuffer),
@@ -2265,7 +2268,15 @@ begin
                           ConSettings.WriteFormatSettings.DateTimeFormat, True, PDBTimeStamp(Data)^.year < 0);
                         SQLWriter.AddText(PAnsiChar(fByteBuffer), Len, Result);
                       end;
-          else Result := '(unknown)';
+          DBTYPE_DBTIMESTAMPOFFSET: begin
+                        Len := DateTimeToRaw(Abs(PDBTIMESTAMPOFFSET(Data)^.year),
+                          PDBTIMESTAMPOFFSET(Data).month, PDBTIMESTAMPOFFSET(Data).day, PDBTIMESTAMPOFFSET(Data).hour,
+                          PDBTIMESTAMPOFFSET(Data)^.minute, PDBTIMESTAMPOFFSET(Data)^.second,
+                          PDBTIMESTAMPOFFSET(Data)^.fraction, PAnsiChar(fByteBuffer),
+                          ConSettings.WriteFormatSettings.DateTimeFormat, True, PDBTimeStamp(Data)^.year < 0);
+                          SQLWriter.AddText(PAnsiChar(fByteBuffer), Len, Result);
+                        end;
+          else SQLWriter.AddText('(unknown)', Result);
         end;
       end;
     end;
