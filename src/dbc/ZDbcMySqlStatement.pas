@@ -704,6 +704,9 @@ var
       if FieldCount = 0
       then LastUpdateCount := FPlainDriver.mysql_affected_rows(FPMYSQL^)
       else LastUpdateCount := -1;
+      { Logging Execution }
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcExecute,Self);
       if (TokenMatchIndex = Ord(myCall)) or BindList.HasOutParam or BindList.HasInOutParam then begin
         FetchCallResults(FieldCount,LastUpdateCount);
         Result := GetFirstResultSet;
@@ -719,9 +722,6 @@ var
           Break;
         end;
       FOpenResultSet := Pointer(Result);
-      { Logging Execution }
-      if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcExecute,Self);
     end else
       FMySQLConnection.HandleErrorOrWarning(lcExecute, nil, RSQL,
         IImmediatelyReleasable(FWeakImmediatRelPtr));
@@ -742,6 +742,9 @@ begin
       if FieldCount = 0
       then LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
       else LastUpdateCount := -1;
+      { Logging Execution }
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcExecPrepStmt,Self);
       if (TokenMatchIndex = Ord(myCall)) or BindList.HasOutParam or BindList.HasInOutParam then begin
         FetchCallResults(FieldCount,LastUpdateCount);
         Result := GetFirstResultSet;
@@ -763,9 +766,6 @@ begin
       FMySQLConnection.HandleErrorOrWarning(lcExecPrepStmt, FMYSQL_STMT,
         FRawTemp, IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
-    { Logging Execution }
-    if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcExecPrepStmt,Self);
   end;
   if (Result = nil) and not FMySQLConnection.IsSilentError then
     raise EZSQLException.Create(SCanNotOpenResultSet);
@@ -790,6 +790,9 @@ function TZAbstractMySQLPreparedStatement.ExecuteUpdatePrepared: Integer;
   begin
     RSQL := ComposeRawSQLQuery;
     if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(RSQL), Length(RSQL)) = 0 then begin
+      { Logging Execution }
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcExecute,Self);
       FieldCount := FplainDriver.mysql_field_count(FPMYSQL^);
       if FieldCount = 0 then
         LastUpdateCount := FPlainDriver.mysql_affected_rows(FPMYSQL^);
@@ -799,8 +802,6 @@ function TZAbstractMySQLPreparedStatement.ExecuteUpdatePrepared: Integer;
         if BindList.HasReturnParam //retrieve outparam
         then FOutParamResultSet := CreateResultSet(SQL, 0, FieldCount)
         else LastResultSet := CreateResultSet(SQL, 0, FieldCount);
-      if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcExecute,Self);
     end else
       FMySQLConnection.HandleErrorOrWarning(lcExecute, nil, RSQL,
         IImmediatelyReleasable(FWeakImmediatRelPtr));
@@ -819,6 +820,9 @@ begin
     FStmtHandleIsExecuted := True; //keep this even if an error is thrown
     if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
       FieldCount := FplainDriver.mysql_stmt_field_count(FMYSQL_STMT);
+      { Logging Execution }
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcExecPrepStmt,Self);
       if FieldCount = 0 then
         LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT);
       if (TokenMatchIndex = Ord(myCall)) or BindList.HasOutParam or BindList.HasInOutParam then begin
@@ -829,9 +833,6 @@ begin
         if BindList.HasReturnParam //retrieve outparam
         then FOutParamResultSet := CreateResultSet(SQL, 0, FieldCount)
         else LastResultSet := CreateResultSet(SQL, 0, FieldCount);
-      { Logging Execution }
-      if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcExecPrepStmt,Self);
     end else begin
       FRawTemp := ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
           ConSettings^.ClientCodePage^.CP);
