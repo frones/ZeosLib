@@ -426,6 +426,8 @@ end;
 procedure TZAbstracDBLibSQLStatement.InternalExecute;
 var Raw: RawByteString;
 begin
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcBindPrepStmt,Self);
   LastUpdateCount := -1;
   RestartTimer;
   Raw := GetRawSQL;
@@ -1172,6 +1174,8 @@ end;
 
 procedure TZDBLIBPreparedRPCStatement.InternalExecute;
 begin
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcBindPrepStmt,Self);
   LastUpdateCount := -1;
   if FPLainDriver.dbRpcExec(FHandle) <> DBSUCCEED then
     FDBLibConnection.CheckDBLibError(lcOther, 'EXECUTEPREPARED:dbRPCExec');
