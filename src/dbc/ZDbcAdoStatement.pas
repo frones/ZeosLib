@@ -245,8 +245,8 @@ begin
   Prepare;
   LastUpdateCount := -1;
   BindInParameters;
+  RestartTimer;
   try
-    RestartTimer;
     if FIsSelectSQL then begin
       if (FAdoRecordSet = nil) or (FAdoRecordSet.MaxRecords <> MaxRows) then begin
         FAdoRecordSet := CoRecordSet.Create;

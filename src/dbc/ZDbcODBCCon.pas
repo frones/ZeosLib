@@ -871,7 +871,7 @@ begin
   STMT := nil;
   Ret := fODBCPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fHDBC, STMT);
   if (Ret <> SQL_SUCCESS) then
-    HandleErrorOrWarningW(Ret, Stmt, SQL_HANDLE_STMT, SQL, lcExecute, Self);
+    HandleErrorOrWarningW(Ret, Stmt, SQL_HANDLE_STMT, SQL, LoggingCategory, Self);
   try
     Ret := TODBC3UnicodePlainDriver(fODBCPlainDriver).SQLExecDirectW(STMT,
       Pointer(SQL), Length(SQL));
@@ -1236,7 +1236,7 @@ begin
   STMT := nil;
   Ret := fODBCPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fHDBC, STMT);
   if (Ret <> SQL_SUCCESS) then
-    HandleErrorOrWarningA(Ret, Stmt, SQL_HANDLE_STMT, SQL, lcExecute, Self);
+    HandleErrorOrWarningA(Ret, Stmt, SQL_HANDLE_STMT, SQL, LoggingCategory, Self);
   try
     Ret := TODBC3RawPlainDriver(fODBCPlainDriver).SQLExecDirect(STMT,
       Pointer(SQL), Length(SQL));

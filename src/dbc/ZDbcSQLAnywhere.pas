@@ -375,7 +375,7 @@ procedure TZSQLAnywhereConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 begin
   if FSQLAnyPlainDriver.sqlany_execute_immediate(Fa_sqlany_connection, Pointer(SQL)) <> 1 then
-    HandleErrorOrWarning(lcExecute, SQL, Self);
+    HandleErrorOrWarning(LoggingCategory, SQL, Self);
   DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
 end;
 

@@ -790,7 +790,7 @@ begin
       HandleErrorOrWarning(lcTransaction, nil, cCommit_A,
         IImmediatelyReleasable(FWeakImmediatRelPtr))
     else if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcExecute, ConSettings.Protocol, cCommit_A);
+      DriverManager.LogMessage(lcTransaction, ConSettings.Protocol, cCommit_A);
     AutoCommit := True;
     if FRestartTransaction then
       StartTransaction;
@@ -827,7 +827,7 @@ begin
       HandleErrorOrWarning(lcTransaction, nil, cRollback_A,
         IImmediatelyReleasable(FWeakImmediatRelPtr))
     else if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcExecute, ConSettings.Protocol, cRollback_A);
+      DriverManager.LogMessage(lcTransaction, ConSettings.Protocol, cRollback_A);
     AutoCommit := True;
     if FRestartTransaction then
       StartTransaction;
@@ -954,7 +954,7 @@ begin
       HandleErrorOrWarning(lcTransaction, nil, MySQLCommitMsg[False],
         IImmediatelyReleasable(FWeakImmediatRelPtr))
     else if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, MySQLCommitMsg[False]);
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, MySQLCommitMsg[False]);
     AutoCommit := False;
     Result := 1;
   end else begin
@@ -1003,7 +1003,7 @@ begin
         HandleErrorOrWarning(lcTransaction, nil, MySQLCommitMsg[True],
           IImmediatelyReleasable(FWeakImmediatRelPtr))
       else if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, MySQLCommitMsg[True]);
+        DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, MySQLCommitMsg[True]);
       AutoCommit := True;
     end else
       StartTransaction;

@@ -779,7 +779,7 @@ begin
   Result := nil;
   Status := FDBCreateCommand.CreateCommand(nil, IID_ICommandText,IUnknown(Result));
   if Status <> S_OK then
-    HandleErrorOrWarning(Status, lcExecute, 'create command', Self, nil);
+    HandleErrorOrWarning(Status, lcOther, 'create command', Self, nil);
 end;
 
 {**
