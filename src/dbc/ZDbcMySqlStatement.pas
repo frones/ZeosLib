@@ -790,12 +790,13 @@ function TZAbstractMySQLPreparedStatement.ExecuteUpdatePrepared: Integer;
   begin
     RSQL := ComposeRawSQLQuery;
     if FPlainDriver.mysql_real_query(FPMYSQL^, Pointer(RSQL), Length(RSQL)) = 0 then begin
+      FieldCount := FplainDriver.mysql_field_count(FPMYSQL^);
+      if FieldCount = 0
+      then LastUpdateCount := FPlainDriver.mysql_affected_rows(FPMYSQL^)
+      else LastUpdateCount := -1;
       { Logging Execution }
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcExecute,Self);
-      FieldCount := FplainDriver.mysql_field_count(FPMYSQL^);
-      if FieldCount = 0 then
-        LastUpdateCount := FPlainDriver.mysql_affected_rows(FPMYSQL^);
       if (TokenMatchIndex = Ord(myCall)) or BindList.HasOutParam or BindList.HasInOutParam then
         FetchCallResults(FieldCount,Result)
       else if FieldCount > 0 then
@@ -812,7 +813,6 @@ var FieldCount: ULong;
 begin
   Prepare;
   BindInParameters;
-  LastUpdateCount := -1;
   RestartTimer;
   if FEmulatedParams or (FMYSQL_STMT = nil)
   then ExecEmulated
@@ -820,11 +820,12 @@ begin
     FStmtHandleIsExecuted := True; //keep this even if an error is thrown
     if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
       FieldCount := FplainDriver.mysql_stmt_field_count(FMYSQL_STMT);
+      if FieldCount = 0
+      then LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
+      else LastUpdateCount := -1;
       { Logging Execution }
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcExecPrepStmt,Self);
-      if FieldCount = 0 then
-        LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT);
       if (TokenMatchIndex = Ord(myCall)) or BindList.HasOutParam or BindList.HasInOutParam then begin
         FetchCallResults(FieldCount,LastUpdateCount);
         if BindList.HasOutParam or BindList.HasInOutParam then
@@ -952,7 +953,6 @@ begin
   PrepareLastResultSetForReUse;
   Prepare;
   BindInParameters;
-  LastUpdateCount := -1;
   RestartTimer;
   if FEmulatedParams or (FMYSQL_STMT = nil)
   then ExecuteEmulated
@@ -963,6 +963,8 @@ begin
       if FieldCount = 0 // we can call this function if fielcount is zero only
       then LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
       else LastUpdateCount := -1;
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcExecPrepStmt,Self);
       if (TokenMatchIndex = Ord(myCall)) or BindList.HasOutParam or BindList.HasInOutParam then begin
         FetchCallResults(FieldCount,LastUpdateCount);
         if BindList.HasOutParam or BindList.HasInOutParam then
@@ -974,8 +976,6 @@ begin
         then LastResultSet := CreateResultSet(SQL, 0, FieldCount)
         else LastResultSet := nil;
       end;
-      if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcExecPrepStmt,Self);
     end else begin
       FRawTemp := ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
           ConSettings^.ClientCodePage^.CP);
