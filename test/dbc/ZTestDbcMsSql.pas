@@ -78,6 +78,8 @@ type
     procedure TestStatement;
     procedure TestDefaultValues;
     procedure TestStoredprocedures;
+    procedure TestSubSelectParams_1;
+    procedure TestSubSelectParams_2;
   end;
 
 {$ENDIF ZEOS_DISABLE_MSSQL_SYBASE}
@@ -205,6 +207,60 @@ begin
     CheckNotNull(ResultSet);
     PrintResultSet(ResultSet, True);
     ResultSet.Close;
+  finally
+    Statement.Close;
+    Connection.Close;
+  end;
+end;
+
+procedure TZTestDbcMSSqlCase.TestSubSelectParams_1;
+var
+  Statement: IZPreparedStatement;
+  ResultSet: IZResultSet;
+begin
+  Statement := Connection.PrepareStatementWithParams('SELECT *, (select dep_name '+
+    'from department where dep_id = ?) as dep_name FROM cargo where c_id = ?', nil);
+  CheckNotNull(Statement);
+  Statement.SetResultSetType(rtForwardOnly);
+  Statement.SetResultSetConcurrency(rcReadOnly);
+  try
+    Statement.SetSmall(FirstDbcIndex, 3);
+    Statement.SetSmall(FirstDbcIndex+1, 2);
+    ResultSet := Statement.ExecuteQueryPrepared;
+    CheckNotNull(ResultSet);
+    try
+      Check(ResultSet.Next, 'There is a row');
+      CheckEquals('Delivery agency', ResultSet.GetStringByName('dep_name'));
+    finally
+      ResultSet.Close;
+    end;
+  finally
+    Statement.Close;
+    Connection.Close;
+  end;
+end;
+
+procedure TZTestDbcMSSqlCase.TestSubSelectParams_2;
+var
+  Statement: IZPreparedStatement;
+  ResultSet: IZResultSet;
+begin
+  Statement := Connection.PrepareStatementWithParams('SELECT *, CASE IsNull((select dep_name '+
+    'from department where dep_id = ?), ''A'') when ''A'' THEN ''B'' ELSE ''C'' END as dep_name FROM cargo where c_id = ?', nil);
+  CheckNotNull(Statement);
+  Statement.SetResultSetType(rtForwardOnly);
+  Statement.SetResultSetConcurrency(rcReadOnly);
+  try
+    Statement.SetSmall(FirstDbcIndex, 3);
+    Statement.SetSmall(FirstDbcIndex+1, 2);
+    ResultSet := Statement.ExecuteQueryPrepared;
+    CheckNotNull(ResultSet);
+    try
+      Check(ResultSet.Next, 'There is a row');
+      CheckEquals('C', ResultSet.GetStringByName('dep_name'));
+    finally
+      ResultSet.Close;
+    end;
   finally
     Statement.Close;
     Connection.Close;
