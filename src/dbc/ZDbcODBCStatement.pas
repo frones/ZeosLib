@@ -170,7 +170,7 @@ type
     procedure SetGUID(Index: Integer; const Value: TGUID); reintroduce;
 
     procedure SetString(Index: Integer; const Value: String); reintroduce;
-    procedure SetUnicodeString(Index: Integer; const Value: ZWideString); reintroduce;
+    procedure SetUnicodeString(Index: Integer; const Value: UnicodeString); reintroduce;
     procedure SetCharRec(Index: Integer; const Value: TZCharRec); reintroduce;
     {$IFNDEF NO_ANSISTRING}
     procedure SetAnsiString(Index: Integer; const Value: AnsiString); reintroduce;
@@ -196,7 +196,7 @@ type
     procedure InternalPrepare; override;
   public
     procedure Unprepare; override;
-    function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; override;
+    function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): UnicodeString; override;
   end;
 
   TZODBCStatementW = class(TZAbstractODBCStatement)
@@ -731,7 +731,7 @@ begin
 end;
 
 function TZODBCPreparedStatementW.GetUnicodeEncodedSQL(
-  const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString;
+  const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): UnicodeString;
 var I: Integer;
   {$IFNDEF UNICODE}SQLWriter: TZUnicodeSQLStringWriter;{$ENDIF}
 begin
@@ -1618,7 +1618,7 @@ begin
         stString, stUnicodeString: begin
             case BindValue.BindType of
               zbtRawString, zbtUTF8String{$IFNDEF NEXTGEN},zbtAnsiString{$ENDIF}: L := Length(RawByteString(BindValue.Value));
-              zbtUniString: L := Length(ZWideString(BindValue.Value));
+              zbtUniString: L := Length(UnicodeString(BindValue.Value));
               zbtCharByRef: L := PZCharRec(BindValue.Value).Len;
               zbtBinByRef:  L := PZBufRec(BindValue.Value).Len;
               else L := Length(TBytes(BindValue.Value));
@@ -2975,7 +2975,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractODBCPreparedStatement.SetUnicodeString(Index: Integer;
-  const Value: ZWideString);
+  const Value: UnicodeString);
 begin
   {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
   CheckParameterIndex(Index);

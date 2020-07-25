@@ -2122,9 +2122,9 @@ begin
 end;
 
 const {Test Strings}
-  Str1: ZWideString = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
+  Str1: UnicodeString = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
   // some dull text in Russian
-  Str2: ZWideString = #$041E#$0434#$043D#$043E#$0439#$0020#$0438#$0437#$0020#$043D#$0430+
+  Str2: UnicodeString = #$041E#$0434#$043D#$043E#$0439#$0020#$0438#$0437#$0020#$043D#$0430+
                       #$0438#$0431#$043E#$043B#$0435#$0435#$0020#$0442#$0440#$0438#$0432+
                       #$0438#$0430#$043B#$044C#$043D#$044B#$0445#$0020#$0437#$0430#$0434+
                       #$0430#$0447#$002C#$0020#$0440#$0435#$0448#$0430#$0435#$043C#$044B+
@@ -2147,10 +2147,10 @@ const {Test Strings}
                       #$0435#$0440#$0432#$0435#$0440#$0430#$0020#$043F#$0440#$0438#$043B+
                       #$043E#$0436#$0435#$043D#$0438#$0439#$002C#$0020#$043A#$043B#$0438+
                       #$0435#$043D#$0442#$0441#$043A#$043E#$0435#$0020#$002E#$002E#$002E;
-  Str3: ZWideString = #$041E#$0434#$043D#$043E#$0439#$0020#$0438#$0437#$0020#$043D#$0430#$0438#$0431#$043E#$043B#$0435#$0435;
-  Str4: ZWideString = #$0442#$0440#$0438#$0432#$0438#$0430#$043B#$044C#$043D#$044B#$0445#$0020#$0437#$0430#$0434#$0430#$0447;
-  Str5: ZWideString = #$0440#$0435#$0448#$0430#$0435#$043C#$044B#$0445#$0020#$043C#$043D#$043E#$0433#$0438#$043C#$0438;
-  Str6: ZWideString = #$043A#$043E#$043B#$043B#$0435#$043A#$0442#$0438#$0432#$0430#$043C+
+  Str3: UnicodeString = #$041E#$0434#$043D#$043E#$0439#$0020#$0438#$0437#$0020#$043D#$0430#$0438#$0431#$043E#$043B#$0435#$0435;
+  Str4: UnicodeString = #$0442#$0440#$0438#$0432#$0438#$0430#$043B#$044C#$043D#$044B#$0445#$0020#$0437#$0430#$0434#$0430#$0447;
+  Str5: UnicodeString = #$0440#$0435#$0448#$0430#$0435#$043C#$044B#$0445#$0020#$043C#$043D#$043E#$0433#$0438#$043C#$0438;
+  Str6: UnicodeString = #$043A#$043E#$043B#$043B#$0435#$043A#$0442#$0438#$0432#$0430#$043C+
                       #$0438#$0020#$043F#$0440#$043E#$0433#$0440#$0430#$043C#$043C#$0438#$0441#$0442#$043E#$0432;
 
 {$IFDEF MSWINDOWS}
@@ -2160,7 +2160,7 @@ var
   StrStream1: TMemoryStream;
   SL: TStringList;
   ConSettings: PZConSettings;
-  {Str1, }Str2, Str3{, Str4, Str5, Str6}: ZWideString;
+  {Str1, }Str2, Str3{, Str4, Str5, Str6}: UnicodeString;
   CP: Word;
   {$IFDEF UNICODE}
   DSCCString: RawByteString;
@@ -2227,7 +2227,7 @@ begin
 
         (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
 
-        CheckEquals(Str2+ZWideString(LineEnding), StrStream1, FieldByName('P_RESUME').DataType, ConSettings, Connection.ControlsCodePage, 'Param().LoadFromStream(StringStream, ftMemo) '+Protocol);
+        CheckEquals(Str2+UnicodeString(LineEnding), StrStream1, FieldByName('P_RESUME').DataType, ConSettings, Connection.ControlsCodePage, 'Param().LoadFromStream(StringStream, ftMemo) '+Protocol);
         {$IFDEF UNICODE}
         CheckEquals(Str3, FieldByName('P_NAME').AsString, 'Field(P_NAME) as String');
         {$ELSE}
@@ -2268,9 +2268,9 @@ var
   Query: TZQuery;
   RowCounter: Integer;
   I: Integer;
-  Str1, Str2, Str3, Str4, Str5, Str6: ZWideString;
+  Str1, Str2, Str3, Str4, Str5, Str6: UnicodeString;
   ConSettings: PZConSettings;
-  procedure InsertValues(s_char, s_varchar, s_nchar, s_nvarchar: ZWideString);
+  procedure InsertValues(s_char, s_varchar, s_nchar, s_nvarchar: UnicodeString);
   begin
     Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
     if Query.Connection.ControlsCodePage = cCP_UTF16 then begin
@@ -2315,14 +2315,14 @@ begin
   // String 2 Starts with String 3
   // String 2 ends with String 4
   // String 5 is in the middle of String 2
-  Str2 := ZWideString(AnsiString(Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199)+
+  Str2 := UnicodeString(AnsiString(Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199)+
           Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223)+
           Chr(200)+Chr(201)+Chr(202)+Chr(203)+Chr(204)+Chr(205)+Chr(206)+Chr(207)+
           Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215)));
-  Str3 := ZWideString(AnsiString(Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199)));
-  Str4 := ZWideString(AnsiString(Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215)));
-  Str5 := ZWideString(AnsiString(Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223)));
-  Str6 := ZWideString(AnsiString(Chr(232)+Chr(233)+Chr(234)+Chr(235)+Chr(236)+Chr(237)+Chr(238)+Chr(239)));
+  Str3 := UnicodeString(AnsiString(Chr(192)+Chr(193)+Chr(194)+Chr(195)+Chr(196)+Chr(197)+Chr(198)+Chr(199)));
+  Str4 := UnicodeString(AnsiString(Chr(208)+Chr(209)+Chr(210)+Chr(211)+Chr(212)+Chr(213)+Chr(214)+Chr(215)));
+  Str5 := UnicodeString(AnsiString(Chr(216)+Chr(217)+Chr(218)+Chr(219)+Chr(220)+Chr(221)+Chr(222)+Chr(223)));
+  Str6 := UnicodeString(AnsiString(Chr(232)+Chr(233)+Chr(234)+Chr(235)+Chr(236)+Chr(237)+Chr(238)+Chr(239)));
 
   Query := CreateQuery;
   Connection.Connect;  //DbcConnection needed

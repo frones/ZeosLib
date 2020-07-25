@@ -170,7 +170,7 @@ function ToLikeString(const Value: string): string;
   @param ODBC a boolean if output result should be with a starting 0x...
   @returns a valid hex formated unicode-safe string
 }
-function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): ZWideString;
+function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): UnicodeString;
 function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): RawByteString;
 function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): String;
 
@@ -634,7 +634,7 @@ end;
   @returns a valid hex formated unicode-safe string
 }
 
-function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): ZWideString;
+function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): UnicodeString;
 var P: PWideChar;
 begin
   ZSetString(nil, ((Len+1) shl 1)+Ord(not Odbc), Result{%H-});
@@ -1364,13 +1364,13 @@ var
   I, C, N: Integer;
   Tokens: TZTokenList;
   Token: PZToken;
-  Temp: ZWideString;
+  Temp: UnicodeString;
   FirstComposePos: Integer;
   {$IFNDEF UNICODE}
   SectionWriter: TZUnicodeSQLStringWriter;
   {$ENDIF}
   NextIsNChar, ParamFound: Boolean;
-  procedure Add(const Value: ZWideString; Const Param: Boolean = False);
+  procedure Add(const Value: UnicodeString; Const Param: Boolean = False);
   begin
     SetLength(Result, Length(Result)+1);
     Result[High(Result)] := Value;
@@ -1582,7 +1582,7 @@ end;
 function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
   ConSettings: PZConSettings): RawByteString;
 var
-  US: ZWideString; //possible com base widestring -> prevent overflow
+  US: UnicodeString; //possible com base widestring -> prevent overflow
   Bytes: TByteDynArray;
   Encoding: TZCharEncoding;
 begin

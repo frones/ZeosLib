@@ -156,7 +156,7 @@ type
   public
     TinyBuffer: array[Byte] of Byte;
     FRawTemp: RawByteString;
-    FUniTemp: ZWideString;
+    FUniTemp: UnicodeString;
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
       const OpenLobStreams: TZSortedList; CachedLobs: WordBool); virtual;
@@ -217,7 +217,7 @@ type
     {$ENDIF}
     function GetRawByteString(ColumnIndex: Integer; out IsNull: Boolean): RawByteString;
     function GetPWideChar(ColumnIndex: Integer; out IsNull: Boolean; out Len: NativeUInt): PWideChar;
-    function GetUnicodeString(ColumnIndex: Integer; out IsNull: Boolean): ZWideString;
+    function GetUnicodeString(ColumnIndex: Integer; out IsNull: Boolean): UnicodeString;
     function GetBoolean(ColumnIndex: Integer; out IsNull: Boolean): Boolean;
     function GetByte(ColumnIndex: Integer; out IsNull: Boolean): Byte;
     function GetShort(ColumnIndex: Integer; out IsNull: Boolean): ShortInt;
@@ -274,7 +274,7 @@ type
     procedure SetUTF8String(ColumnIndex: Integer; const Value: UTF8String); virtual;
     {$ENDIF}
     procedure SetRawByteString(ColumnIndex: Integer; const Value: RawByteString); virtual;
-    procedure SetUnicodeString(ColumnIndex: Integer; const Value: ZWideString); virtual;
+    procedure SetUnicodeString(ColumnIndex: Integer; const Value: UnicodeString); virtual;
     procedure SetBytes(ColumnIndex: Integer; const Value: TBytes); overload; virtual;
     procedure SetBytes(ColumnIndex: Integer; Buf: Pointer; var Len: NativeUint); overload; virtual;
     procedure SetDate(ColumnIndex: Integer; const Value: TZDate); virtual;
@@ -767,7 +767,7 @@ end;
 
 function CompareUnicodeFromUTF8_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 var
-  S1, S2: ZWideString;
+  S1, S2: UnicodeString;
 begin
   Result := NullsCompareMatrix[Null1, Null2];
   if Result = BothNotNull then
@@ -791,7 +791,7 @@ end;
 
 function CompareUnicode_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 {$IFNDEF MSWINDOWS}
-var S1, S2: ZWideString;
+var S1, S2: UnicodeString;
 {$ENDIF}
 begin
   Result := NullsCompareMatrix[Null1, Null2];
@@ -2718,7 +2718,7 @@ end;
     value returned is <code>null</code>
 }
 function TZRowAccessor.GetUnicodeString(ColumnIndex: Integer;
-  out IsNull: Boolean): ZWideString;
+  out IsNull: Boolean): UnicodeString;
 var P: PWideChar;
   L: NativeUInt;
 begin
@@ -4628,7 +4628,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
+procedure TZRowAccessor.SetUnicodeString(ColumnIndex: Integer; const Value: UnicodeString);
 var Len: NativeUInt;
 begin
   Len := Length(Value);

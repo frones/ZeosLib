@@ -288,7 +288,7 @@ end;
 { ZTestCompSQLiteBugReportMBCs }
 const
   // some dull text in Russian
-  Str2: ZWideString =
+  Str2: UnicodeString =
     #$041E#$0434#$043D#$043E#$0439#$0020#$0438#$0437#$0020#$043D#$0430#$0438+
     #$0431#$043E#$043B#$0435#$0435#$0020#$0442#$0440#$0438#$0432#$0438#$0430+
     #$043B#$044C#$043D#$044B#$0445#$0020#$0437#$0430#$0434#$0430#$0447#$002C+
@@ -310,10 +310,10 @@ const
     #$0445#$002C#$0020#$0441#$0435#$0440#$0432#$0435#$0440#$0430#$0020#$043F+
     #$0440#$0438#$043B#$043E#$0436#$0435#$043D#$0438#$0439#$002C#$0020#$043A+
     #$043B#$0438#$0435#$043D#$0442#$0441#$043A#$043E#$0435#$0020#$002E#$002E#$002E;
-  Str3: ZWideString = #$041E#$0434#$043D#$043E#$0439#$0020#$0438#$0437#$0020#$043D#$0430#$0438#$0431#$043E#$043B#$0435#$0435;
-  Str4: ZWideString = #$0442#$0440#$0438#$0432#$0438#$0430#$043B#$044C#$043D#$044B#$0445#$0020#$0437#$0430#$0434#$0430#$0447;
-  Str5: ZWideString = #$0440#$0435#$0448#$0430#$0435#$043C#$044B#$0445#$0020#$043C#$043D#$043E#$0433#$0438#$043C#$0438;
-  Str6: ZWideString = #$043A#$043E#$043B#$043B#$0435#$043A#$0442#$0438#$0432#$0430#$043C#$0438#$0020#$043F#$0440#$043E#$0433#$0440#$0430#$043C#$043C#$0438#$0441#$0442#$043E#$0432;
+  Str3: UnicodeString = #$041E#$0434#$043D#$043E#$0439#$0020#$0438#$0437#$0020#$043D#$0430#$0438#$0431#$043E#$043B#$0435#$0435;
+  Str4: UnicodeString = #$0442#$0440#$0438#$0432#$0438#$0430#$043B#$044C#$043D#$044B#$0445#$0020#$0437#$0430#$0434#$0430#$0447;
+  Str5: UnicodeString = #$0440#$0435#$0448#$0430#$0435#$043C#$044B#$0445#$0020#$043C#$043D#$043E#$0433#$0438#$043C#$0438;
+  Str6: UnicodeString = #$043A#$043E#$043B#$043B#$0435#$043A#$0442#$0438#$0432#$0430#$043C#$0438#$0020#$043F#$0440#$043E#$0433#$0440#$0430#$043C#$043C#$0438#$0441#$0442#$043E#$0432;
 
 function ZTestCompSQLiteBugReportMBCs.GetSupportedProtocols: string;
 begin
@@ -331,7 +331,7 @@ var
   I: Integer;
   ConSettings: PZConSettings;
   CP: Word;
-  procedure InsertValues(TestString: ZWideString);
+  procedure InsertValues(TestString: UnicodeString);
   begin
     Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
     Query.ParamByName('s_char').AsString := GetDBTestString(TestString, ConSettings);
@@ -343,7 +343,7 @@ var
     inc(RowCounter);
   end;
 
-  procedure CheckColumnValues(const TestString: ZWideString);
+  procedure CheckColumnValues(const TestString: UnicodeString);
   begin
     {$IFDEF UNICODE}
     CheckEquals(TestString, Query.FieldByName('s_char').AsString);

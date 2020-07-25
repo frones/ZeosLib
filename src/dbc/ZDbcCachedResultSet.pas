@@ -194,7 +194,7 @@ type
     function GetUTF8String(ColumnIndex: Integer): UTF8String;
     {$ENDIF}
     function GetRawByteString(ColumnIndex: Integer): RawByteString;
-    function GetUnicodeString(ColumnIndex: Integer): ZWidestring;
+    function GetUnicodeString(ColumnIndex: Integer): UnicodeString;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetUInt(ColumnIndex: Integer): Cardinal;
     function GetInt(ColumnIndex: Integer): Integer;
@@ -251,7 +251,7 @@ type
     procedure UpdateUTF8String(ColumnIndex: Integer; const Value: UTF8String);
     {$ENDIF}
     procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString);
-    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
+    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: UnicodeString);
     procedure UpdateBytes(ColumnIndex: Integer; Value: PByte; var Len: NativeUInt); overload;
     procedure UpdateDate(ColumnIndex: Integer; const Value: TZDate); overload;
     procedure UpdateTime(ColumnIndex: Integer; const Value: TZTime); overload;
@@ -1012,7 +1012,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractCachedResultSet.GetUnicodeString(ColumnIndex: Integer): ZWidestring;
+function TZAbstractCachedResultSet.GetUnicodeString(ColumnIndex: Integer): UnicodeString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
@@ -1754,7 +1754,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateUnicodeString(ColumnIndex: Integer;
-  const Value: ZWideString);
+  const Value: UnicodeString);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;

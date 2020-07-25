@@ -215,7 +215,7 @@ end;
 procedure ZTestCompOracleBugReport.TestNCLOBValues;
 const
   row_id = 1000;
-  testString: ZWideString = #$0410#$0431#$0440#$0430#$043a#$0430#$0434#$0430#$0431#$0440#$0430; // Abrakadabra in Cyrillic letters
+  testString: UnicodeString = #$0410#$0431#$0440#$0430#$043a#$0430#$0434#$0430#$0431#$0440#$0430; // Abrakadabra in Cyrillic letters
 var
   Query: TZQuery;
   BinFileStream: TFileStream;
@@ -284,8 +284,8 @@ begin
         {$ELSE}
           {$IFDEF WITH_FTWIDESTRING}
           if Connection.ControlsCodePage = cCP_UTF16 then begin
-            CheckEquals(teststring+teststring, ZWideString(Query.FieldByName('b_nclob').AsWideString), 'value of b_nclob field');
-            CheckEquals(teststring+teststring+teststring, ZWideString(Query.FieldByName('b_clob').AsWideString), 'value of b_clob field');
+            CheckEquals(teststring+teststring, UnicodeString(Query.FieldByName('b_nclob').AsWideString), 'value of b_nclob field');
+            CheckEquals(teststring+teststring+teststring, UnicodeString(Query.FieldByName('b_clob').AsWideString), 'value of b_clob field');
           end else {$ENDIF}
            if Connection.ControlsCodePage = cCP_UTF8 then begin
             CheckEquals(UTF8Encode(teststring+teststring), Query.FieldByName('b_nclob').AsString, 'value of b_nclob field');

@@ -926,8 +926,8 @@ end;
     value returned is <code>null</code>
 }
 const
-  wNegInfinity: ZWideString = '-Infinity';
-  wInfinity: ZWideString = 'Infinity';
+  wNegInfinity: UnicodeString = '-Infinity';
+  wInfinity: UnicodeString = 'Infinity';
 
 function TZOracleAbstractResultSet_A.GetPWideChar(ColumnIndex: Integer;
   out Len: NativeUInt): PWideChar;

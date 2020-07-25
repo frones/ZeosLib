@@ -923,7 +923,7 @@ var
   {$IFNDEF NEXTGEN}
   Value1, Value2: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF};
   {$ENDIF}
-  WValue1, WValue2: ZWideString;
+  WValue1, WValue2: UnicodeString;
 begin
   Result := True;
   for I := 0 to High(KeyValues) do begin
@@ -1102,7 +1102,7 @@ var
   {$IFNDEF NEXTGEN}
   AValue1, AValue2: {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF};
   {$ENDIF}
-  WValue1, WValue2: ZWideString;
+  WValue1, WValue2: UnicodeString;
   CurrentType : TZSQLType;
   BCD: TBCD;
   UID: TGUID absolute BCD;
@@ -1736,7 +1736,7 @@ var
   CP: Word;
   P: Pointer;
   L: NativeUInt;
-  UniTemp: ZWideString;
+  UniTemp: UnicodeString;
   {$IFNDEF UNICODE}
   R: RawByteString;
   {$ENDIF}

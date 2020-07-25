@@ -889,7 +889,7 @@ end;
 function TZODBCConnectionW.GetCatalog: string;
 var
   {$IFNDEF UNICODE}
-  Buf: ZWideString;
+  Buf: UnicodeString;
   {$ENDIF}
   aLen: SQLINTEGER;
   Ret: SQLRETURN;
@@ -1053,7 +1053,7 @@ function TZODBCConnectionW.NativeSQL(const SQL: string): string;
 var NewLength: SQLINTEGER;
   RET: SQLRETURN;
 {$IFNDEF UNICODE}
-  aSQL, nSQL: ZWideString;
+  aSQL, nSQL: UnicodeString;
 {$ENDIF}
 begin
   if SQL <> '' then begin

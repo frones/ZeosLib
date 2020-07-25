@@ -191,13 +191,13 @@ uses ZEncoding, ZDbcConnection;
 var
   TestVar1, TestVar2: TZVariant;
   TestConSettings: PZConSettings;
-  S: ZWideString;
+  S: UnicodeString;
 
 //const
-  //S: ZWideString = 'üהצßגבא';                                 // Hiergeist old
-  //S: ZwideString = #$0061#$0062#$0063#$0430#$0431#$0432#$00FC#$00E4#$00F6; // Fr0sT
-  //S: ZWideString = AnsiString(#$FC#$E4#$F6#$DF#$E2#$E1#$E0);  // Marsupilami
-  //S: ZwideString = #$00FC#$00E4#$00F6#$00DF#$00E2#$00E1#$00E0;  // Hiergeist
+  //S: UnicodeString = 'üהצßגבא';                                 // Hiergeist old
+  //S: UnicodeString = #$0061#$0062#$0063#$0430#$0431#$0432#$00FC#$00E4#$00F6; // Fr0sT
+  //S: UnicodeString = AnsiString(#$FC#$E4#$F6#$DF#$E2#$E1#$E0);  // Marsupilami
+  //S: UnicodeString = #$00FC#$00E4#$00F6#$00DF#$00E2#$00E1#$00E0;  // Hiergeist
 
 { TZTestVariantCase }
 
@@ -757,10 +757,10 @@ procedure TZDefVarManagerConvertCase.Test_UnicodeStringFromUTF8String;
 begin
   TestVar1 := Manager.Convert(UTF8Var, vtUnicodeString);
   CheckEquals(Ord(vtUnicodeString), Ord(TestVar1.VType), 'ZVariant-Type'+GetOptionString);
-  CheckEquals({$IFDEF WITH_RAWBYTESTRING}ZWideString{$ELSE}UTF8ToString{$ENDIF}(UTF8Var.VRawByteString), TestVar1.VUnicodeString, 'UnicodeString from AnsiString'+GetOptionString);
+  CheckEquals({$IFDEF WITH_RAWBYTESTRING}UnicodeString{$ELSE}UTF8ToString{$ENDIF}(UTF8Var.VRawByteString), TestVar1.VUnicodeString, 'UnicodeString from AnsiString'+GetOptionString);
   Manager.SetAsUnicodeString(TestVar2, TestVar1.VUnicodeString);
   CheckEquals(Ord(vtUnicodeString), Ord(TestVar2.VType), 'ZVariant-Type'+GetOptionString);
-  CheckEquals({$IFDEF WITH_RAWBYTESTRING}ZWideString{$ELSE}UTF8ToString{$ENDIF}(UTF8Var.VRawByteString), TestVar2.VUnicodeString, 'UnicodeString'+GetOptionString);
+  CheckEquals({$IFDEF WITH_RAWBYTESTRING}UnicodeString{$ELSE}UTF8ToString{$ENDIF}(UTF8Var.VRawByteString), TestVar2.VUnicodeString, 'UnicodeString'+GetOptionString);
   CheckEquals(TestVar1.VUnicodeString, TestVar2.VUnicodeString, 'UnicodeString'+GetOptionString);
   TestVar1 := Manager.Convert(TestVar2, vtUTF8String);
   CheckEquals(Ord(vtUTF8String), Ord(TestVar1.VType), 'ZVariant-Type'+GetOptionString);

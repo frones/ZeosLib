@@ -495,12 +495,8 @@ var
   RowNo: NativeInt;
   RowBuffer: PZRowBuffer;
 begin
-  if (CachedResultSet <> nil) and GetActiveBuffer(RowBuffer) then
-  begin
+  if (CachedResultSet <> nil) and GetActiveBuffer(RowBuffer) then begin
     RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
-    {CachedResultSet.MoveAbsolute(RowNo);
-    RowAccessor.RowBuffer := RowBuffer;
-    PostToResultSet(CachedResultSet, FieldsLookupTable, Fields, RowAccessor);}
     try
       CachedResultSet.UpdateRow;
     except on E: Exception do
@@ -510,8 +506,7 @@ begin
     end;
 
     { Filters the row }
-    if not FilterRow(RowNo) then
-    begin
+    if not FilterRow(RowNo) then begin
       CurrentRows.Delete(CurrentRow - 1);
       CurrentRow := Min(CurrentRows.Count, CurrentRow);
     end;
@@ -543,29 +538,21 @@ begin
   if Append then
     FetchRows(0);
 
-  if CachedResultSet <> nil then
-  begin
-    //CachedResultSet.MoveToInsertRow;
+  if CachedResultSet <> nil then begin
     RowAccessor.RowBuffer := RowBuffer;
-    //PostToResultSet(CachedResultSet, FieldsLookupTable, Fields, RowAccessor);
     CachedResultSet.InsertRow;
     RowNo := CachedResultSet.GetRow;
     FetchCount := FetchCount + 1;
 
     { Filters the row }
     if FilterRow(RowNo) then
-    begin
-      if Append then
-      begin
+      if Append then begin
         CurrentRows.Add({%H-}Pointer(RowNo));
         CurrentRow := CurrentRows.Count;
-      end
-      else
-      begin
+      end else begin
         CurrentRow := Max(CurrentRow, 1);
         CurrentRows.Insert(CurrentRow - 1, {%H-}Pointer(RowNo));
       end;
-    end;
   end;
 end;
 
@@ -583,11 +570,8 @@ var
   I: Integer;
 begin
   if (FSequenceField <> '') and Assigned(FSequence) then
-  begin
     if FieldByName(FSequenceField).IsNull then
       FieldByName(FSequenceField).Value := FSequence.GetNextValue;
-  end;
-
   //inherited;  //AVZ - Firebird defaults come through when this is commented out
 
 

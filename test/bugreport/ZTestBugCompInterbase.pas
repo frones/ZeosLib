@@ -469,7 +469,7 @@ var
   StrStream, BinStream: TMemoryStream;
   StrStream1, BinStream1: TMemoryStream;
   {$IFDEF WITH_WIDEMEMO}
-  WS: ZWideString;
+  WS: UnicodeString;
   {$ENDIF}
 begin
   if SkipForReason(srClosedBug) then Exit;
@@ -1708,13 +1708,13 @@ procedure ZTestCompInterbaseBugReportMBCs.Test_Mantis214;
 const
   RowID = 214;
   { three cases }
-  S1: ZWideString = #$004D#$00FC#$006C#$006C#$0065#$0072#$0020#$00E4#$00F6#$00FC#$00C4#$00D6#$00DC#$00DF; //european dull
-  S2: ZWideString = #$0030#$0030#$0030#$0020#$041F#$0435#$0442#$044A#$0440#$0020#$0030#$0030#$0030;   //cyryl dull
-  S3: ZWideString = #$0061#$0062#$0063; // ASCII7 can be written and reread
+  S1: UnicodeString = #$004D#$00FC#$006C#$006C#$0065#$0072#$0020#$00E4#$00F6#$00FC#$00C4#$00D6#$00DC#$00DF; //european dull
+  S2: UnicodeString = #$0030#$0030#$0030#$0020#$041F#$0435#$0442#$044A#$0440#$0020#$0030#$0030#$0030;   //cyryl dull
+  S3: UnicodeString = #$0061#$0062#$0063; // ASCII7 can be written and reread
 var
   iqry: TZQuery;
   ConSettings: PZConSettings;
-  Procedure AddRecord(ID: Integer; WS: ZWideString);
+  Procedure AddRecord(ID: Integer; WS: UnicodeString);
   begin
     iqry.ParamByName('i1').AsInteger:= ID;
     {$IFDEF UNICODE}

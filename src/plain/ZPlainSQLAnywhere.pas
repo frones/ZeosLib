@@ -944,10 +944,10 @@ type
     /// </summary>
     DT_TIMESTAMP = 392,
     /// <summary>
-    /// Varying length character string, in the CHAR character set, with a two-byte length field.
-    /// The maximum length is 32765 bytes. When sending data, you must set the length field.
-    /// When fetching data, the database server sets the length field.
-    /// The data is not null-terminated or blank-padded.
+    ///  Varying length character string, in the CHAR character set, with a two-byte length field.
+    ///  The maximum length is 32765 bytes. When sending data, you must set the length field.
+    ///  When fetching data, the database server sets the length field.
+    ///  The data is not null-terminated or blank-padded.
     /// </summary>
     DT_VARCHAR = 448,
     /// <summary>

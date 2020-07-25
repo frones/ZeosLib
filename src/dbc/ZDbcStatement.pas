@@ -95,7 +95,7 @@ type
   protected
     FLastResultSet: IZResultSet;
     FCursorName: RawByteString;
-    FWSQL: ZWideString;
+    FWSQL: UnicodeString;
     FaSQL: RawByteString;
     FStatementId : Integer;
     FOpenResultSet: Pointer; //weak reference to avoid memory-leaks and cursor issues
@@ -106,7 +106,7 @@ type
     procedure PrepareLastResultSetForReUse; virtual;
     procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
     procedure SetASQL(const Value: RawByteString); virtual;
-    procedure SetWSQL(const Value: ZWideString); virtual;
+    procedure SetWSQL(const Value: UnicodeString); virtual;
     class function GetNextStatementId : integer;
     procedure ReleaseConnection; virtual;
     procedure RestartTimer;
@@ -133,7 +133,7 @@ type
     property Closed: Boolean read FClosed write FClosed;
 
     property SQL: String read {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF};
-    property WSQL: ZWideString read FWSQL write SetWSQL;
+    property WSQL: UnicodeString read FWSQL write SetWSQL;
     property ASQL: RawByteString read FaSQL write SetASQL;
     property CachedLob: Boolean read FCachedLob;
     property ClientCP: word read FClientCP;
@@ -141,16 +141,16 @@ type
       const Msg: RawByteString=EmptyRaw): TZLoggingEvent;
 
     function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; virtual;
-    function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; virtual;
+    function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): UnicodeString; virtual;
     property StartTime: TDateTime read FStartTime;
   public
     constructor Create(const Connection: IZConnection; {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
     destructor Destroy; override;
     procedure AfterConstruction; override;
 
-    function ExecuteQuery(const SQL: ZWideString): IZResultSet; overload; virtual;
-    function ExecuteUpdate(const SQL: ZWideString): Integer; overload; virtual;
-    function Execute(const SQL: ZWideString): Boolean; overload; virtual;
+    function ExecuteQuery(const SQL: UnicodeString): IZResultSet; overload; virtual;
+    function ExecuteUpdate(const SQL: UnicodeString): Integer; overload; virtual;
+    function Execute(const SQL: UnicodeString): Boolean; overload; virtual;
 
     function ExecuteQuery(const SQL: RawByteString): IZResultSet; overload; virtual;
     function ExecuteUpdate(const SQL: RawByteString): Integer; overload; virtual;
@@ -288,7 +288,7 @@ type
     procedure Put(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); overload;
     procedure Put(Index: Integer; SQLType: TZSQLType; const Value: RawByteString; CP: Word); overload;
     procedure Put(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; CP: Word); overload;
-    procedure Put(Index: Integer; SQLType: TZSQLType; const Value: ZWideString); overload;
+    procedure Put(Index: Integer; SQLType: TZSQLType; const Value: UnicodeString); overload;
     procedure Put(Index: Integer; const Value: TZArray; AddArrayRef: Boolean); overload;
     procedure Put(Index: Integer; SQLType: TZSQLType; const Value: IZBLob); overload;
     procedure Put(Index: Integer; Value: PZBindValue); overload;
@@ -332,7 +332,7 @@ type
     FBindList: TZBindList;
   protected
     FOpenLobStreams: TZSortedList;
-    FUniTemp: ZWideString;
+    FUniTemp: UnicodeString;
     FRawTemp: RawByteString;
     FTokenMatchIndex, //did we match a token to indicate if Prepare makes sense?
     FCountOfQueryParams: Integer; //how many params did we found to prepvent mem-reallocs?
@@ -366,7 +366,7 @@ type
     property BindList: TZBindList read FBindList;
   protected //the sql conversions
     procedure SetASQL(const Value: RawByteString); override;
-    procedure SetWSQL(const Value: ZWideString); override;
+    procedure SetWSQL(const Value: UnicodeString); override;
   protected //binding
     procedure BindArray(Index: Integer; const Value: TZArray); virtual;
     procedure BindBinary(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); virtual;
@@ -406,7 +406,7 @@ type
     function GetUTF8String(ParameterIndex: Integer): UTF8String;
     {$ENDIF}
     function GetRawByteString(ParameterIndex: Integer): RawByteString;
-    function GetUnicodeString(ParameterIndex: Integer): ZWideString;
+    function GetUnicodeString(ParameterIndex: Integer): UnicodeString;
 
     function GetBLob(ParameterIndex: Integer): IZBlob;
     function GetCLob(ParameterIndex: Integer): IZClob;
@@ -418,9 +418,9 @@ type
 
     function GetResultSet: IZResultSet; override;
 
-    function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZWideString): Integer; override;
-    function Execute(const SQL: ZWideString): Boolean; override;
+    function ExecuteQuery(const SQL: UnicodeString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: UnicodeString): Integer; override;
+    function Execute(const SQL: UnicodeString): Boolean; override;
 
     function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
     function ExecuteUpdate(const SQL: RawByteString): Integer; override;
@@ -481,7 +481,7 @@ type
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String);
     {$ENDIF}
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString);
-    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString);
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: UnicodeString);
   end;
 
   TZRawParamDetectPreparedStatement = class(TZRawPreparedStatement)
@@ -497,7 +497,7 @@ type
 
   TZUTF16PreparedStatement = class(TZAbstractPreparedStatement)
   protected
-    procedure BindUniStr(Index: Integer; const Value: ZWideString); overload; virtual;
+    procedure BindUniStr(Index: Integer; const Value: UnicodeString); overload; virtual;
     procedure BindUniStr(Index: Integer; Buf: PWideChar; CodePoints: LengthInt); overload; virtual;
   public
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
@@ -509,7 +509,7 @@ type
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String);
     {$ENDIF}
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString);
-    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString);
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: UnicodeString);
   end;
 
   TZUTF16ParamDetectPreparedStatement = class(TZUTF16PreparedStatement)
@@ -518,7 +518,7 @@ type
     FNCharDetected: PBooleanDynArray;
     FIsParamIndex: TBooleanDynArray;
   public
-    function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; override;
+    function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): UnicodeString; override;
     procedure Unprepare; override;
   end;
 
@@ -609,9 +609,9 @@ type
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
 
-    function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZWideString): Integer; override;
-    function Execute(const SQL: ZWideString): Boolean; override;
+    function ExecuteQuery(const SQL: UnicodeString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: UnicodeString): Integer; override;
+    function Execute(const SQL: UnicodeString): Boolean; override;
     function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
     function ExecuteUpdate(const SQL: RawByteString): Integer; override;
     function Execute(const SQL: RawByteString): Boolean; override;
@@ -638,7 +638,7 @@ type
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String);
     {$ENDIF}
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString);
-    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString);
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: UnicodeString);
   public //getters
     function GetString(ParameterIndex: Integer): String; reintroduce;
     {$IFNDEF NO_ANSISTRING}
@@ -648,7 +648,7 @@ type
     function GetUTF8String(ParameterIndex: Integer): UTF8String; reintroduce;
     {$ENDIF}
     function GetRawByteString(ParameterIndex: Integer): RawByteString; reintroduce;
-    function GetUnicodeString(ParameterIndex: Integer): ZWideString; reintroduce;
+    function GetUnicodeString(ParameterIndex: Integer): UnicodeString; reintroduce;
   end;
 
   TZAbstractCallableStatement_W = class(TZAbstractCallableStatement, IZPreparedStatement)
@@ -665,7 +665,7 @@ type
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); reintroduce;
     {$ENDIF}
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); reintroduce;
-    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); reintroduce;
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: UnicodeString); reintroduce;
   public //getters
     function GetString(ParameterIndex: Integer): String; reintroduce;
     {$IFNDEF NO_ANSISTRING}
@@ -675,7 +675,7 @@ type
     function GetUTF8String(ParameterIndex: Integer): UTF8String; reintroduce;
     {$ENDIF}
     function GetRawByteString(ParameterIndex: Integer): RawByteString; reintroduce;
-    function GetUnicodeString(ParameterIndex: Integer): ZWideString; reintroduce;
+    function GetUnicodeString(ParameterIndex: Integer): UnicodeString; reintroduce;
   end;
 
 implementation
@@ -732,7 +732,7 @@ end;
   Sets the preprepared SQL-Statement in an String and AnsiStringForm.
   @param Value: the SQL-String which has to be optional preprepared
 }
-procedure TZAbstractStatement.SetWSQL(const Value: ZWideString);
+procedure TZAbstractStatement.SetWSQL(const Value: UnicodeString);
 {$IFNDEF UNICODE}var CP: Word;{$ENDIF}
 begin
   if FWSQL <> Value then
@@ -866,7 +866,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZAbstractStatement.ExecuteQuery(const SQL: ZWideString): IZResultSet;
+function TZAbstractStatement.ExecuteQuery(const SQL: UnicodeString): IZResultSet;
 begin
   WSQL := SQL;
   Result := ExecuteQuery(ASQL);
@@ -890,7 +890,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZAbstractStatement.ExecuteUpdate(const SQL: ZWideString): Integer;
+function TZAbstractStatement.ExecuteUpdate(const SQL: UnicodeString): Integer;
 begin
   WSQL := SQL;
   Result := ExecuteUpdate(ASQL);
@@ -1121,7 +1121,7 @@ begin
 {$ENDIF !UNICODE}
 end;
 
-function TZAbstractStatement.GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString;
+function TZAbstractStatement.GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): UnicodeString;
 {$IFDEF UNICODE}
 begin
   Result := SQL;
@@ -1129,7 +1129,7 @@ begin
 var
   SQLTokens: TZTokenList;
   i: Integer;
-  US: ZWideString;
+  US: UnicodeString;
   SQLWriter: TZUnicodeSQLStringWriter;
 begin
   if ConSettings^.AutoEncode then begin
@@ -1241,7 +1241,7 @@ end;
   @see #getUpdateCount
   @see #getMoreResults
 }
-function TZAbstractStatement.Execute(const SQL: ZWideString): Boolean;
+function TZAbstractStatement.Execute(const SQL: UnicodeString): Boolean;
 begin
   WSQL := SQL;
   Result := Execute(ASQL);
@@ -1691,7 +1691,7 @@ begin
         {$IFNDEF NO_ANSISTRING}
         zbtAnsiString: IZPreparedStatement(Stmt.FWeakIZPreparedStatementPtr).SetAnsiString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, AnsiString(BindValue.Value));
         {$ENDIF}
-        zbtUniString: IZPreparedStatement(Stmt.FWeakIZPreparedStatementPtr).SetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, ZWideString(BindValue.Value));
+        zbtUniString: IZPreparedStatement(Stmt.FWeakIZPreparedStatementPtr).SetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, UnicodeString(BindValue.Value));
         zbtCharByRef: IZPreparedStatement(Stmt.FWeakIZPreparedStatementPtr).SetCharRec(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PZCharRec(BindValue.Value)^);
         zbtBinByRef:  IZPreparedStatement(Stmt.FWeakIZPreparedStatementPtr).SetBytes(I, PZBufRec(BindValue.Value).Buf, PZBufRec(BindValue.Value).Len);
         zbtGUID:      IZPreparedStatement(Stmt.FWeakIZPreparedStatementPtr).SetGUID(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PGUID(BindValue.Value)^);
@@ -1737,7 +1737,7 @@ begin
         zbtUTF8String
         {$IFNDEF NO_ANSISTRING}
         ,zbtAnsiString{$ENDIF}: RawByteString(BindValue.Value) := EmptyRaw; //dec refcnt
-        zbtUniString: ZWideString(BindValue.Value) := '';
+        zbtUniString: UnicodeString(BindValue.Value) := '';
         zbtBytes:     TBytes(BindValue.Value) := nil;
         zbtLob:       IZBlob(BindValue.Value) := nil;
         zbtCustom:    begin
@@ -1939,7 +1939,7 @@ begin
     zbtAnsiString:Result := EncodeAnsiString(AnsiString(BindValue.Value));
     {$ENDIF}
     zbtBCD:       Result := EncodeBigDecimal(PBCD(BindValue.Value)^);
-    zbtUniString: Result := EncodeUnicodeString(ZWideString(BindValue.Value));
+    zbtUniString: Result := EncodeUnicodeString(UnicodeString(BindValue.Value));
     zbtCharByRef: Result := EncodeCharRec(PZCharRec(BindValue.Value)^);
     zbtBinByRef:  Result := EncodeBytes(BufferToBytes(PZBufRec(BindValue.Value)^.Buf, PZBufRec(BindValue.Value)^.Len));
     zbtGUID:      Result := EncodeGUID(PGUID(BindValue.Value)^);
@@ -2015,9 +2015,9 @@ begin
 end;
 
 procedure TZBindList.Put(Index: Integer; SQLType: TZSQLType;
-  const Value: ZWideString);
+  const Value: UnicodeString);
 begin
-  ZWideString(AquireBuffer(Index, SQLType, zbtUniString).Value) := Value;
+  UnicodeString(AquireBuffer(Index, SQLType, zbtUniString).Value) := Value;
 end;
 
 procedure TZBindList.Put(Index: Integer; const Value: TZArray; AddArrayRef: Boolean);
@@ -2150,7 +2150,7 @@ begin
     {$IFNDEF NEXTGEN}
     zbtAnsiString:Put(Index, Value.SQLType, RawByteString(Value.Value), zOSCodePage);
     {$ENDIF NEXTGEN}
-    zbtUniString: Put(Index, Value.SQLType, ZWideString(Value.Value));
+    zbtUniString: Put(Index, Value.SQLType, UnicodeString(Value.Value));
     zbtCharByRef: Put(Index, Value.SQLType, PZCharRec(Value.Value).P, PZCharRec(Value.Value).Len, PZCharRec(Value.Value).CP);
     zbtBinByRef:  Put(Index, Value.SQLType, PZBufRec(Value.Value).Buf, PZBufRec(Value.Value).Len);
     zbtGUID:      Put(Index, stGUID, Value.Value, SizeOf(TGUID));
@@ -2499,7 +2499,7 @@ end;
   @see #getUpdateCount
   @see #getMoreResults
 }
-function TZAbstractPreparedStatement.Execute(const SQL: ZWideString): Boolean;
+function TZAbstractPreparedStatement.Execute(const SQL: UnicodeString): Boolean;
 begin
   WSQL := SQL;
   Result := ExecutePrepared;
@@ -2558,7 +2558,7 @@ end;
     given query; never <code>null</code>
 }
 function TZAbstractPreparedStatement.ExecuteQuery(
-  const SQL: ZWideString): IZResultSet;
+  const SQL: UnicodeString): IZResultSet;
 begin
   WSQL := SQL;
   Result := ExecuteQueryPrepared;
@@ -2604,7 +2604,7 @@ end;
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
 function TZAbstractPreparedStatement.ExecuteUpdate(
-  const SQL: ZWideString): Integer;
+  const SQL: UnicodeString): Integer;
 begin
   WSQL := SQL;
   Result := ExecuteUpdatePrepared;
@@ -2929,7 +2929,7 @@ begin
 end;
 
 function TZAbstractPreparedStatement.GetUnicodeString(
-  ParameterIndex: Integer): ZWideString;
+  ParameterIndex: Integer): UnicodeString;
 begin
   {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
   Result := fOutParamResultSet.GetUnicodeString(ParamterIndex2ResultSetIndex(ParameterIndex));
@@ -3567,7 +3567,7 @@ begin
   end;
 end;
 
-procedure TZAbstractPreparedStatement.SetWSQL(const Value: ZWideString);
+procedure TZAbstractPreparedStatement.SetWSQL(const Value: UnicodeString);
 begin
   if Value <> FWSQL then begin
     if Prepared then
@@ -3734,7 +3734,7 @@ end;
 }
 procedure TZRawPreparedStatement.SetCharRec(ParameterIndex: Integer;
   const Value: TZCharRec);
-var UniTemp: ZWideString;
+var UniTemp: UnicodeString;
 begin
   if (Value.CP = FClientCP) then
     BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value.P, Value.Len)
@@ -3801,7 +3801,7 @@ end;
   @param x the parameter value
 }
 procedure TZRawPreparedStatement.SetUnicodeString(
-  ParameterIndex: Integer; const Value: ZWideString);
+  ParameterIndex: Integer; const Value: UnicodeString);
 begin
   BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF},
     ZUnicodetoRaw(Value, FClientCP));
@@ -3834,7 +3834,7 @@ end;
 { TZUTF16PreparedStatement }
 
 procedure TZUTF16PreparedStatement.BindUniStr(Index: Integer;
-  const Value: ZWideString);
+  const Value: UnicodeString);
 begin
   CheckParameterIndex(Index);
   FBindList.Put(Index, stUnicodeString, Value);
@@ -3938,7 +3938,7 @@ end;
   @param x the parameter value
 }
 procedure TZUTF16PreparedStatement.SetUnicodeString(
-  ParameterIndex: Integer; const Value: ZWideString);
+  ParameterIndex: Integer; const Value: UnicodeString);
 begin
   BindUniStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value);
 end;
@@ -3999,7 +3999,7 @@ end;
 { TZUTF16ParamDetectPreparedStatement }
 
 function TZUTF16ParamDetectPreparedStatement.GetUnicodeEncodedSQL(const SQL:
-  {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString;
+  {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): UnicodeString;
 var I: Integer;
   SQLWriter: TZUnicodeSQLStringWriter;
 begin
@@ -4186,7 +4186,7 @@ end;
   {$WARN 5024 off : Parameter "$1" not used}
   {$WARN 5033 off : Function result does not seem to be set}
 {$ENDIF} // abstract base class - parameters not used intentionally
-function TZAbstractCallableStatement.Execute(const SQL: ZWideString): Boolean;
+function TZAbstractCallableStatement.Execute(const SQL: UnicodeString): Boolean;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
@@ -4226,7 +4226,7 @@ begin
 end;
 
 function TZAbstractCallableStatement.ExecuteQuery(
-  const SQL: ZWideString): IZResultSet;
+  const SQL: UnicodeString): IZResultSet;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
@@ -4268,7 +4268,7 @@ begin
 end;
 
 function TZAbstractCallableStatement.ExecuteUpdate(
-  const SQL: ZWideString): Integer;
+  const SQL: UnicodeString): Integer;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
@@ -5288,7 +5288,7 @@ end;
   the Java programming language.
   <p>
   For the fixed-length type JDBC <code>CHAR</code>,
-  the <code>ZWideString</code> object
+  the <code>UnicodeString</code> object
   returned has exactly the same value the JDBC
   <code>CHAR</code> value had in the
   database, including any padding added by the database.
@@ -5299,7 +5299,7 @@ end;
   @exception SQLException if a database access error occurs
 }
 function TZAbstractCallableStatement_A.GetUnicodeString(
-  ParameterIndex: Integer): ZWideString;
+  ParameterIndex: Integer): UnicodeString;
 var
   L: LengthInt;
 begin
@@ -5406,7 +5406,7 @@ begin
 end;
 
 procedure TZAbstractCallableStatement_A.SetUnicodeString(
-  ParameterIndex: Integer; const Value: ZWideString);
+  ParameterIndex: Integer; const Value: UnicodeString);
 begin
   SetRawByteString(ParameterIndex, ZUnicodeToRaw(Value, FClientCP));
 end;
@@ -5481,7 +5481,7 @@ end;
   the Java programming language.
   <p>
   For the fixed-length type JDBC <code>CHAR</code>,
-  the <code>ZWideString</code> object
+  the <code>UnicodeString</code> object
   returned has exactly the same value the JDBC
   <code>CHAR</code> value had in the
   database, including any padding added by the database.
@@ -5492,7 +5492,7 @@ end;
   @exception SQLException if a database access error occurs
 }
 function TZAbstractCallableStatement_W.GetUnicodeString(
-  ParameterIndex: Integer): ZWideString;
+  ParameterIndex: Integer): UnicodeString;
 var L: LengthInt;
 begin
   FillAndBindCharRec(ParameterIndex, L);
@@ -5543,7 +5543,7 @@ begin
 end;
 
 {**
-  Sets the designated parameter to a Object Pascal <code>ZWideString</code>
+  Sets the designated parameter to a Object Pascal <code>UnicodeString</code>
   value. The driver converts this
   to an SQL <code>VARCHAR</code> or <code>LONGVARCHAR</code> value
   (depending on the argument's
@@ -5554,7 +5554,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractCallableStatement_W.SetUnicodeString(
-  ParameterIndex: Integer; const Value: ZWideString);
+  ParameterIndex: Integer; const Value: UnicodeString);
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex -1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);

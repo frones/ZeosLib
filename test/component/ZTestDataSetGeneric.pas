@@ -694,7 +694,7 @@ end;
 procedure TZGenericTestDataSet.TestQueryUpdate;
 var
   Sql_: string;
-  WS: ZWideString;
+  WS: UnicodeString;
   Ansi: AnsiString;
   Query: TZQuery;
   StrStream, BinStream: TMemoryStream;
@@ -1985,7 +1985,7 @@ var
   BinStreamE, TextStreamE: TMemoryStream;
   TempA: RawByteString;
   {$IFDEF WITH_WIDEMEMO}
-  TempU: ZWideString;
+  TempU: UnicodeString;
   {$ENDIF}
 
   TextLob, BinLob: String;
@@ -2045,7 +2045,7 @@ begin
       TextStreamE := TMemoryStream.Create;
       {$IFDEF WITH_WIDEMEMO}
       if ( Connection.ControlsCodePage = cCP_UTF16 ) then
-        TextStreamE.Write(ZWideString(teststring)[1], Length(teststring)*2)
+        TextStreamE.Write(UnicodeString(teststring)[1], Length(teststring)*2)
       else
       {$ENDIF}
         TextStreamE.Write(teststring[1], Length(teststring));
@@ -2059,7 +2059,7 @@ begin
       try
         {$IFDEF WITH_WIDEMEMO}
         if ( Connection.ControlsCodePage = cCP_UTF16 ) then
-          TextStreamA.Write(ZWideString(teststring)[1], Length(teststring)*2)
+          TextStreamA.Write(UnicodeString(teststring)[1], Length(teststring)*2)
         else
         {$ENDIF}
           TextStreamA.Write(teststring[1],length(teststring));
@@ -2099,7 +2099,7 @@ begin
         begin
           SetLength(TempU, Length(TestString));
           TextStreamA.Read(PWideChar(TempU)^, Length(teststring)*2);
-          CheckEquals(TempU, ZWideString(TestString));
+          CheckEquals(TempU, UnicodeString(TestString));
         end
         else
         {$ENDIF}
@@ -2146,7 +2146,7 @@ begin
         begin
           SetLength(TempU, TextStreamA.Size div 2);
           TextStreamE.Read(PWideChar(TempU)^, TextStreamA.Size);
-          CheckEquals(Copy(ZWideString(TestString), 1, Length(teststring) div 2), TempU);
+          CheckEquals(Copy(UnicodeString(TestString), 1, Length(teststring) div 2), TempU);
         end
         else
         {$ENDIF}
@@ -2612,9 +2612,9 @@ end;
 
 procedure TZGenericTestDataSet.TestVeryLargeBlobs;
 {$IFDEF MSWINDOWS}
-const teststring: ZWideString = '123456'+Chr(192)+Chr(193)+Chr(194)+Chr(195);
+const teststring: UnicodeString = '123456'+Chr(192)+Chr(193)+Chr(194)+Chr(195);
 {$ELSE}
-const teststring: ZWideString = '123456\##/';
+const teststring: UnicodeString = '123456\##/';
 {$ENDIF}
 
 var
@@ -2622,11 +2622,11 @@ var
   BinStreamE,BinStreamA,TextStream: TMemoryStream;
   s:  RawByteString;
   TextLob, BinLob: String;
-  W: ZWideString;
+  W: UnicodeString;
   TempConnection: TZConnection;
   ConSettings: PZConSettings;
 
-  function WideDupeString(const AText: ZWideString; ACount: Integer): ZWideString;
+  function WideDupeString(const AText: UnicodeString; ACount: Integer): UnicodeString;
   var i,l : integer;
   begin
     result:='';

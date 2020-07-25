@@ -227,7 +227,7 @@ type
 
     function GetBinaryEscapeString(const Value: TBytes): String; overload; virtual;
 
-    function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
+    function GetEscapeString(const Value: UnicodeString): UnicodeString; overload; virtual;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
 
     function UseMetadata: boolean;
@@ -1576,7 +1576,7 @@ begin
   Result := @FByteBuffer[0];
 end;
 
-function TZAbstractDbcConnection.GetEscapeString(const Value: ZWideString): ZWideString;
+function TZAbstractDbcConnection.GetEscapeString(const Value: UnicodeString): UnicodeString;
 var P: PWideChar;
     L: LengthInt;
 begin

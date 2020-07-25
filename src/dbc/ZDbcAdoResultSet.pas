@@ -114,7 +114,7 @@ type
     function GetRawByteString(ColumnIndex: Integer): RawByteString;
     function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
-    function GetUnicodeString(ColumnIndex: Integer): ZWideString;
+    function GetUnicodeString(ColumnIndex: Integer): UnicodeString;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetInt(ColumnIndex: Integer): Integer;
     function GetUInt(ColumnIndex: Integer): Cardinal;
@@ -930,7 +930,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAdoResultSet.GetUnicodeString(ColumnIndex: Integer): ZWideString;
+function TZAdoResultSet.GetUnicodeString(ColumnIndex: Integer): UnicodeString;
 var P: PWideChar;
   L: NativeUInt;
 begin

@@ -49,6 +49,13 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
+{
+  constributor(s):
+  EgonHugeist
+  fduenas
+  FOS
+}
+
 unit ZSqlUpdate;
 
 interface
@@ -60,7 +67,6 @@ uses
   ZDbcIntfs, ZDbcCachedResultSet, ZDbcCache, ZSqlStrings, ZClasses;
 
 type
-  {ADDED BY fduenas}
   TZBeforeSQLStatementEvent = procedure(const Sender: TObject;
     StatementIndex: Integer; out Execute: Boolean ) of object;
 
@@ -81,10 +87,7 @@ type
     FDeleteSQL: TZSQLStrings;
     FInsertSQL: TZSQLStrings;
     FModifySQL: TZSQLStrings;
-    //FOSPATCH
     FRefreshSQL: TZSQLStrings;
-    //FOSPATCH
-    //EH: Stmt cache for performance boost using prepareds
     FStmts: Array[utModified..utDeleted] of IZCollection;
     FRefreshRS: IZResultSet;
     FRefreshStmt: IZPreparedStatement;
@@ -99,7 +102,6 @@ type
     FAfterInsertSQL: TNotifyEvent;
     FAfterModifySQL: TNotifyEvent;
     FUseSequenceFieldForRefreshSQL: Boolean;
-    {New Statement Events added by Fduenas}
     FBeforeDeleteSQLStatement: TZBeforeSQLStatementEvent;
     FAfterDeleteSQLStatement: TZAfterSQLStatementEvent;
     FBeforeInsertSQLStatement: TZBeforeSQLStatementEvent;
@@ -123,10 +125,8 @@ type
     function GetModifySQL: TStrings;
     procedure SetModifySQL(Value: TStrings);
 
-    //FOSPATCH
     function GetRefreshSQL: TStrings;
     procedure SetRefreshSQL(Value: TStrings);
-    //FOSPATCH
 
     procedure ReadParamData(Reader: TReader);
     procedure WriteParamData(Writer: TWriter);
@@ -143,12 +143,10 @@ type
       const RowAccessor: TZRowAccessor);
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       const OldRowAccessor, NewRowAccessor: TZRowAccessor);
-    {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       Const OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
-    {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 
-    procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);//FOS+ 07112006
+    procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
 
     procedure Rebuild(SQLStrings: TZSQLStrings);
     procedure RebuildAll;
@@ -188,9 +186,7 @@ type
     property DeleteSQL: TStrings read GetDeleteSQL write SetDeleteSQL;
     property InsertSQL: TStrings read GetInsertSQL write SetInsertSQL;
     property ModifySQL: TStrings read GetModifySQL write SetModifySQL;
-    //FOSPATCH
     property RefreshSQL: TStrings read GetRefreshSQL write SetRefreshSQL;
-    //FOSPATCH
     property UseSequenceFieldForRefreshSQL:Boolean read FUseSequenceFieldForRefreshSQL write SetUseSequenceFieldForRefreshSQL;
 
 
@@ -251,10 +247,8 @@ begin
   FModifySQL := TZSQLStrings.Create;
   FModifySQL.OnChange := UpdateParams;
 
-//FOSPATCH
   FRefreshSQL := TZSQLStrings.Create;
   FRefreshSQL.OnChange:= UpdateParams;
-//FOSPATCH
 
   FParams := TParams.Create(Self);
   FParamCheck := True;

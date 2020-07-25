@@ -415,7 +415,7 @@ type
     procedure SetAnsiString(Index: Integer; const Value: AnsiString); reintroduce;
     {$ENDIF}
     procedure SetRawByteString(Index: Integer; const Value: RawByteString); reintroduce;
-    procedure SetUnicodeString(Index: Integer; const Value: ZWideString); reintroduce;
+    procedure SetUnicodeString(Index: Integer; const Value: UnicodeString); reintroduce;
 
     procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
     procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
@@ -4473,7 +4473,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetUnicodeString(Index: Integer;
-  const Value: ZWideString);
+  const Value: UnicodeString);
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;

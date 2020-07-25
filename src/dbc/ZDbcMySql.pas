@@ -151,7 +151,7 @@ type
     {END ADDED by fduenas 15-06-2006}
     function GetConnectionHandleAddress: PPMYSQL;
     function EscapeString(const Value: RawByteString): RawByteString; overload; override;
-    function GetEscapeString(const Value: ZWideString): ZWideString; overload; override;
+    function GetEscapeString(const Value: UnicodeString): UnicodeString; overload; override;
     procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); overload;
 
     function GetDatabaseName: String;
@@ -1150,7 +1150,7 @@ begin
 end;
 
 function TZMySQLConnection.GetEscapeString(
-  const Value: ZWideString): ZWideString;
+  const Value: UnicodeString): UnicodeString;
 var tmp: RawByteString;
 begin
   tmp := ZUnicodeToRaw(Value, ConSettings.ClientcodePage.CP);
