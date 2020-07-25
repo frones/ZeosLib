@@ -984,6 +984,7 @@ begin
         SQL_C_FLOAT:  SQLWriter.AddFloat(PSingle(Bind.ParameterValuePtr)^, Result);
         SQL_C_DOUBLE: SQLWriter.AddFloat(PDouble(Bind.ParameterValuePtr)^, Result);
         SQL_C_NUMERIC: begin
+            Len := 16;
             SQLNumeric2Raw(Bind.ParameterValuePtr, PAnsiChar(fByteBuffer), Len);
 jmpWritePC: SQLWriter.AddText(PAnsiChar(fByteBuffer), Len, Result);
           end;
