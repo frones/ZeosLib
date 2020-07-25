@@ -999,6 +999,7 @@ begin
       AutoCommit := not FRestartTransaction;
       ExecuteImmediat(RawByteString('rollback'), lcTransaction);
     end;
+    ClearTransactions;
   finally
     if FHandle <> nil then begin
       FPlainDriver.dbclose(FHandle);

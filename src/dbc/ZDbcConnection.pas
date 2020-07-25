@@ -2213,7 +2213,12 @@ begin
 end;
 
 procedure TZAbstractSuccedaneousTxnConnection.ClearTransactions;
+var I: Integer;
+    Txn: IZTransaction;
 begin
+  for i := 0 to fTransactions.Count -1 do
+    if (fTransactions[i] <> nil) and (fTransactions[i].QueryInterface(IZTransaction, Txn) = S_OK) then
+      Txn.Close;
   fTransactions.Clear;
 end;
 
