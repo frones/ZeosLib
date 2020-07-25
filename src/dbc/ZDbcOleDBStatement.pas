@@ -205,7 +205,7 @@ type
     procedure SetAnsiString(Index: Integer; const Value: AnsiString); reintroduce;
     {$ENDIF}
     procedure SetRawByteString(Index: Integer; const Value: RawByteString); reintroduce;
-    procedure SetUnicodeString(Index: Integer; const Value: ZWideString); reintroduce;
+    procedure SetUnicodeString(Index: Integer; const Value: UnicodeString); reintroduce;
 
     procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
     procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
@@ -1443,6 +1443,8 @@ var
   DBInfo: IZDataBaseInfo;
   CommandPrepare: ICommandPrepare;
   S: String;
+  Res: HResult;
+label jmpRecreate;
 begin
   if Not Prepared then begin//prevent PrepareInParameters
     S := GetParameters.Values[DSProps_DeferPrepare];
@@ -1454,16 +1456,23 @@ begin
     end else
       fDEFERPREPARE := StrToBoolEx(S);
     fDEFERPREPARE := fDEFERPREPARE or (FTokenMatchIndex = -1);
-    FCommand := (Connection as IZOleDBConnection).CreateCommand;
+jmpRecreate:
+    fBindImmediat := False;
+    FCommand := FOleDBConnection.CreateCommand;
     SetOleCommandProperties;
     CheckError(fCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL)), lcOther);
     if not fDEFERPREPARE and (fCommand.QueryInterface(IID_ICommandPrepare, CommandPrepare) = S_OK) then begin
-      CheckError(CommandPrepare.Prepare(0), lcPrepStmt);
-      fBindImmediat := True;
-      if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcPrepStmt,Self);
-    end else
-      fBindImmediat := False;
+      Res := CommandPrepare.Prepare(0);
+      if Succeeded(Res) then begin
+        fBindImmediat := True;
+        if DriverManager.HasLoggingListener then
+          DriverManager.LogMessage(lcPrepStmt,Self);
+      end else if Res = DTS_E_OLEDBERROR then begin
+        fDEFERPREPARE := True;
+        goto jmpRecreate;
+      end else
+        CheckError(Res, lcPrepStmt);
+    end;
     DBInfo := Connection.GetMetadata.GetDatabaseInfo;
     if FSupportsMultipleResultSets
     then fMoreResultsIndicator := mriUnknown
@@ -2237,7 +2246,10 @@ begin
                         SQLWriter.AddText(PAnsiChar(FByteBuffer), Len, Result);
                       end;
           DBTYPE_BYTES: SQLWriter.AddHexBinary(Data, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^, True, Result);
-          DBTYPE_WSTR:  SQLWriter.AddText(SQLQuotedStr(PUnicodeToRaw(Data, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^, ConSettings.CTRL_CP),#39), Result);
+          DBTYPE_WSTR:  begin
+                          FRawTemp := PUnicodeToRaw(Data, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^, zCP_UTF8);
+                          SQLWriter.AddTextQuoted(FRawTemp, AnsiChar(#39), Result);
+                        end;
           DBTYPE_DBDATE:begin
                         Len := DateToRaw(Abs(PDBDATE(Data)^.year), PDBDATE(Data)^.month,
                           PDBDATE(Data)^.day, PAnsiChar(fByteBuffer),
@@ -2265,7 +2277,15 @@ begin
                           ConSettings.WriteFormatSettings.DateTimeFormat, True, PDBTimeStamp(Data)^.year < 0);
                         SQLWriter.AddText(PAnsiChar(fByteBuffer), Len, Result);
                       end;
-          else Result := '(unknown)';
+          DBTYPE_DBTIMESTAMPOFFSET: begin
+                        Len := DateTimeToRaw(Abs(PDBTIMESTAMPOFFSET(Data)^.year),
+                          PDBTIMESTAMPOFFSET(Data).month, PDBTIMESTAMPOFFSET(Data).day, PDBTIMESTAMPOFFSET(Data).hour,
+                          PDBTIMESTAMPOFFSET(Data)^.minute, PDBTIMESTAMPOFFSET(Data)^.second,
+                          PDBTIMESTAMPOFFSET(Data)^.fraction, PAnsiChar(fByteBuffer),
+                          ConSettings.WriteFormatSettings.DateTimeFormat, True, PDBTimeStamp(Data)^.year < 0);
+                          SQLWriter.AddText(PAnsiChar(fByteBuffer), Len, Result);
+                        end;
+          else SQLWriter.AddText('(unknown)', Result);
         end;
       end;
     end;
@@ -3032,7 +3052,7 @@ end;
   @param x the parameter value
 }
 procedure TZOleDBPreparedStatement.SetUnicodeString(Index: Integer;
-  const Value: ZWideString);
+  const Value: UnicodeString);
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;

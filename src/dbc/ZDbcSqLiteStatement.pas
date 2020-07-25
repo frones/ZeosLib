@@ -327,6 +327,7 @@ procedure TZAbstractSQLiteCAPIPreparedStatement.Prepare;
 var pzTail: PAnsiChar;
 begin
   if not Prepared then begin
+    RestartTimer;
     FErrorCode := FPlainDriver.sqlite3_prepare_v2(FHandle, Pointer(ASQL), Length(ASQL), FStmtHandle, pzTail{%H-});
     if FErrorCode <> SQLITE_OK then
       CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcPrepStmt, ASQL, ConSettings);

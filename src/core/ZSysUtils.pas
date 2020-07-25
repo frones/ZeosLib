@@ -85,7 +85,7 @@ const
   YesNoStrsRaw: array[Boolean] of RawByteString = ('NO', 'YES');
   {$ENDIF}
   BoolStrs: array[Boolean] of string = (StrFalse, StrTrue);
-  BoolStrsW: array[Boolean] of ZWideString = (ZWideString(StrFalse), ZWideString(StrTrue));
+  BoolStrsW: array[Boolean] of UnicodeString = (UnicodeString(StrFalse), UnicodeString(StrTrue));
   SQLDateTimeFmt = 'YYYY"-"MM"-"DD HH":"NN":"SS';
   SQLDateTimeFmtMSecs = 'YYYY"-"MM"-"DD HH":"NN":"SS"."ZZZ';
   YesNoStrs: array[Boolean] of string = ('NO', 'YES');
@@ -145,7 +145,7 @@ function MemLCompAnsi(P1, P2: PAnsiChar; Len: Integer): Boolean;
   @param SubStr a WideString/UnicodeString to test at the start of the Str.
   @return <code>True</code> if Str started with SubStr;
 }
-function StartsWith(const Str, SubStr: ZWidestring): Boolean; overload;
+function StartsWith(const Str, SubStr: UnicodeString): Boolean; overload;
 
 {**
   Checks is the string starts with substring.
@@ -170,7 +170,7 @@ function EndsWith(const Str, SubStr: RawByteString): Boolean; overload;
   @param SubStr a WideString/UnicodeString to test at the end of the Str.
   @return <code>True</code> if Str ended with SubStr;
 }
-function EndsWith(const Str, SubStr: ZWideString): Boolean; overload;
+function EndsWith(const Str, SubStr: UnicodeString): Boolean; overload;
 
 {** EH:
   Converts SQL PAnsiChar into float value.
@@ -348,10 +348,10 @@ function StrToBoolEx(Buf, PEnd: PAnsiChar; const CheckInt: Boolean = True;
 
 {**
   Converts a string into boolean value.
-  @param Str a ZWideString value.
+  @param Str a UnicodeString value.
   @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
 }
-function StrToBoolEx(const Str: ZWideString; const CheckInt: Boolean = True): Boolean; overload;
+function StrToBoolEx(const Str: UnicodeString; const CheckInt: Boolean = True): Boolean; overload;
 
 {**
   Converts a zero terminated UTF16 buffer into boolean value.
@@ -379,7 +379,7 @@ function StrToBoolEx(Buf, PEnd: PWideChar; const CheckInt: Boolean = True;
   @param Bool a boolean value.
   @return <code>"True"</code> or <code>"False"</code>
 }
-function BoolToUnicodeEx(Value: Boolean): ZWideString; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function BoolToUnicodeEx(Value: Boolean): UnicodeString; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
 {**
   Converts a boolean into RawByteString value.
@@ -720,7 +720,7 @@ function DateToRaw(Year, Month, Day: Word; Buf: PAnsichar;
 }
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString; overload;
+  const Quoted: Boolean; const Suffix: UnicodeString = ''): UnicodeString; overload;
 
 {** EH:
   Converts date value into a UCS2 buffer with format pattern
@@ -734,7 +734,7 @@ function DateTimeToUnicodeSQLDate(const Value: TDateTime;
 }
 function DateTimeToUnicodeSQLDate(const Value: TDateTime; Buf: PWideChar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''): Word; overload;
+  const Quoted: Boolean; const Suffix: UnicodeString = ''): Word; overload;
 
 {** EH:
   Converts date values into a buffer with format pattern
@@ -812,7 +812,7 @@ function TimeToRaw(Hour, Minute, Second: Word; Fractions: Cardinal;
 }
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString; overload;
+  const Quoted: Boolean; const Suffix: UnicodeString = ''): UnicodeString; overload;
 
 {** EH:
   Converts a time value into a UCS2 buffer with format pattern
@@ -826,7 +826,7 @@ function DateTimeToUnicodeSQLTime(const Value: TDateTime;
 }
 function DateTimeToUnicodeSQLTime(const Value: TDateTime; Buf: PWideChar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''): Word; overload;
+  const Quoted: Boolean; const Suffix: UnicodeString = ''): Word; overload;
 
 {** EH:
   Converts a time values into a UCS2 buffer with format pattern
@@ -908,7 +908,7 @@ function DateTimeToRaw(Year, Month, Day, Hour, Minute, Second: Word;
 }
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString; overload;
+  const Quoted: Boolean; const Suffix: UnicodeString = ''): UnicodeString; overload;
 
 {** EH:
   Converts a datetime value into a UCS2 buffer with format pattern
@@ -922,7 +922,7 @@ function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
 }
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime; Buf: PWideChar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''): Word; overload;
+  const Quoted: Boolean; const Suffix: UnicodeString = ''): Word; overload;
 
 {** EH:
   Converts date and time values into a UCS2 buffer with format pattern
@@ -950,17 +950,17 @@ function DateTimeToUni(Year, Month, Day, Hour, Minute, Second: Word;
   @param Value a regular string.
   @return a string in PostgreSQL escape format.
 }
-function EncodeCString(const Value: ZWideString): ZWideString; overload;
+function EncodeCString(const Value: UnicodeString): UnicodeString; overload;
 function EncodeCString(const Value: RawByteString): RawByteString; overload;
 {**
   Converts an string from escape PostgreSQL format.
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
 }
-function DecodeCString(const Value: ZWideString): ZWideString; overload;
+function DecodeCString(const Value: UnicodeString): UnicodeString; overload;
 function DecodeCString(const Value: RawByteString): RawByteString; overload;
 
-procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; out Result: ZWideString); overload;
+procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; out Result: UnicodeString); overload;
 procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PAnsiChar; out Result: RawByteString); overload;
 
 function DecodeCString(SrcLength: LengthInt; SrcBuffer, DestBuffer: PWideChar): LengthInt; overload;
@@ -1047,18 +1047,18 @@ function FormatSQLVersion( const SQLVersion: Integer ): String;
 }
 function AppendCondition(const Condition: string): string;
 
-function ASCII7ToUnicodeString(const Src: RawByteString): ZWideString; overload;
-function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): ZWideString; overload;
-function UnicodeStringToASCII7(const Src: ZWideString): RawByteString; overload;
+function ASCII7ToUnicodeString(const Src: RawByteString): UnicodeString; overload;
+function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): UnicodeString; overload;
+function UnicodeStringToASCII7(const Src: UnicodeString): RawByteString; overload;
 function UnicodeStringToASCII7(const Src: PWideChar; const Len: LengthInt): RawByteString; overload;
 
 function FloatToRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): RawByteString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function FloatToRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}; Buf: PAnsiChar): LengthInt; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function FloatToSqlRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): RawByteString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function FloatToSqlRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}; Buf: PAnsiChar): LengthInt; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
-function FloatToUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): ZWideString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function FloatToUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): UnicodeString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function FloatToUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}; Buf: PWideChar): LengthInt; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
-function FloatToSqlUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): ZWideString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function FloatToSqlUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): UnicodeString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function FloatToSqlUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}; Buf: PWideChar): LengthInt; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
 procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: LengthInt); overload;
@@ -1079,11 +1079,11 @@ function GUIDToRaw(const GUID: TGUID; WithBrackets: Boolean = True): RawByteStri
 function GUIDToRaw(const Bts: TBytes; WithBrackets: Boolean = True): RawByteString; overload;
 function GUIDToRaw(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): RawByteString; overload;
 
-procedure GUIDToUnicode(Value: PGUID; const Options: TGUIDConvOptions; var Result: ZWideString); overload;
-function GUIDToUnicode(const GUID: TGUID; const Options: TGUIDConvOptions): ZWideString; overload;
-function GUIDToUnicode(const GUID: TGUID; WithBrackets: Boolean = True): ZWideString; overload;
-function GUIDToUnicode(const Bts: TBytes; WithBrackets: Boolean = True): ZWideString; overload;
-function GUIDToUnicode(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): ZWideString; overload;
+procedure GUIDToUnicode(Value: PGUID; const Options: TGUIDConvOptions; var Result: UnicodeString); overload;
+function GUIDToUnicode(const GUID: TGUID; const Options: TGUIDConvOptions): UnicodeString; overload;
+function GUIDToUnicode(const GUID: TGUID; WithBrackets: Boolean = True): UnicodeString; overload;
+function GUIDToUnicode(const Bts: TBytes; WithBrackets: Boolean = True): UnicodeString; overload;
+function GUIDToUnicode(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): UnicodeString; overload;
 
 function GUIDToStr(Value: PGUID; const Options: TGUIDConvOptions): String; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GUIDToStr(const GUID: TGUID; WithBrackets: Boolean = True): string; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
@@ -1093,8 +1093,8 @@ function GUIDToStr(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): st
 procedure ValidGUIDToBinary(Src, Dest: PAnsiChar); overload;
 procedure ValidGUIDToBinary(Src: PWideChar; Dest: PAnsiChar); overload;
 
-function SQLQuotedStr(const S: ZWideString; Quote: WideChar): ZWideString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
-function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWideString; overload;
+function SQLQuotedStr(const S: UnicodeString; Quote: WideChar): UnicodeString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): UnicodeString; overload;
 function SQLQuotedStr(const S: RawByteString; Quote: AnsiChar): RawByteString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function SQLQuotedStr(Src: PAnsiChar; Len: LengthInt; Quote: AnsiChar): RawByteString; overload;
 
@@ -1115,7 +1115,7 @@ function Trim(P: PAnsiChar; L: LengthInt): RawByteString; overload;
 function LTrim(P: PAnsiChar; L: LengthInt): RawByteString; overload;
 function RTrim(P: PAnsiChar; L: LengthInt): RawByteString; overload;
 function Trim(P: PAnsiChar): RawByteString; overload;
-function Trim(P: PWideChar; L: LengthInt): ZWideString; overload;
+function Trim(P: PWideChar; L: LengthInt): UnicodeString; overload;
 function LTrim(P: PWideChar; L: LengthInt): UnicodeString; overload;
 function RTrim(P: PWideChar; L: LengthInt): UnicodeString; overload;
 {$IF defined(UNICODE) and not defined(WITH_UNITANSISTRINGS)}
@@ -1124,7 +1124,7 @@ function LowerCase(const Value: RawByteString): RawByteString; overload;
 function UpperCase(const Value: RawByteString): RawByteString; overload;
 {$IFEND}
 {$IFNDEF UNICODE}
-function Trim(const Value: ZWideString): ZWideString; overload;
+function Trim(const Value: UnicodeString): UnicodeString; overload;
 {$ENDIF}
 
 {$IFDEF NO_RAW_HEXTOBIN}
@@ -1136,7 +1136,7 @@ function HexToBin(Hex: PAnsiChar; Bin: PByte; BinBytes: Integer): Boolean;
    If buffer contains no data, creates an empty stream.
 }
 function StreamFromData(Buffer: Pointer; Size: Integer): TMemoryStream; overload;
-function StreamFromData(const AString: ZWideString): TMemoryStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function StreamFromData(const AString: UnicodeString): TMemoryStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function StreamFromData(const Bytes: TBytes): TMemoryStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
 function StreamFromData(const AString: RawByteString): TMemoryStream; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
@@ -1226,18 +1226,18 @@ function RawToBCD(const Value: RawByteString): TBCD; overload;
    @param DecimalSep the decimal-seperator
    @return the count of words we wrote into the buffer
 }
-function BcdToSQLUni(const Value: TBCD): ZWideString;
+function BcdToSQLUni(const Value: TBCD): UnicodeString;
 function BcdToUni(const Bcd: TBcd; Buf: PWideChar; DecimalSep: Char): LengthInt;
 function UniToBCD(Value: PWideChar; Len: LengthInt): TBCD; overload;
-function UniToBCD(const Value: ZWideString): TBCD; overload;
+function UniToBCD(const Value: UnicodeString): TBCD; overload;
 
 procedure BCD2Int64(const Value: TBCD; out Result: Int64); overload;
 function BCD2Int64(const Value: TBCD): Int64; overload;
 procedure BCD2UInt64(const Value: TBCD; out Result: UInt64); overload;
 function BCD2UInt64(const Value: TBCD): UInt64; overload;
 
-function TryUniToBcd(const Value: ZWideString; var Bcd: TBcd{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}; const FormatSettings: TFormatSettings{$ENDIF}): Boolean; overload;
-function TryUniToBcd(const Value: ZWideString; var Bcd: TBcd; DecimalSep: Char): Boolean; overload;
+function TryUniToBcd(const Value: UnicodeString; var Bcd: TBcd{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}; const FormatSettings: TFormatSettings{$ENDIF}): Boolean; overload;
+function TryUniToBcd(const Value: UnicodeString; var Bcd: TBcd; DecimalSep: Char): Boolean; overload;
 function TryUniToBcd(Buf: PWideChar; Len: LengthInt; var Bcd: TBcd; DecimalSep: Char): Boolean; overload;
 
 function TryRawToBcd(const Value: RawByteString; var Bcd: TBcd{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}; const FormatSettings: TFormatSettings{$ENDIF}): Boolean; overload;
@@ -1517,7 +1517,7 @@ end;
   @param SubStr a WideString/UnicodeString to test at the start of the Str.
   @return <code>True</code> if Str started with SubStr;
 }
-function StartsWith(const Str, SubStr: ZWideString): Boolean;
+function StartsWith(const Str, SubStr: UnicodeString): Boolean;
 var
   LenSubStr: Integer;
 begin
@@ -1537,7 +1537,7 @@ end;
   @param SubStr a WideString/UnicodeString to test at the end of the Str.
   @return <code>True</code> if Str ended with SubStr;
 }
-function EndsWith(const Str, SubStr: ZWideString): Boolean;
+function EndsWith(const Str, SubStr: UnicodeString): Boolean;
 var
   LenSubStr: Integer;
   LenStr: Integer;
@@ -2203,10 +2203,10 @@ end;
 
 {**
   Converts a string into boolean value.
-  @param Str a ZWideString value.
+  @param Str a UnicodeString value.
   @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
 }
-function StrToBoolEx(const Str: ZWideString; const CheckInt: Boolean = True): Boolean;
+function StrToBoolEx(const Str: UnicodeString; const CheckInt: Boolean = True): Boolean;
 begin
   Result := StrToBoolEx(PWideChar(Pointer(Str)), CheckInt, False);
 end;
@@ -2309,7 +2309,7 @@ end;
   @param Bool a boolean value.
   @return <code>"True"</code> or <code>"False"</code>
 }
-function BoolToUnicodeEx(Value: Boolean): ZWideString;
+function BoolToUnicodeEx(Value: Boolean): UnicodeString;
 begin
   Result := BoolStrsW[Value];
 end;
@@ -3988,7 +3988,7 @@ end;
 }
 function DateTimeToUnicodeSQLDate(const Value: TDateTime; Buf: PWideChar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''): word;
+  const Quoted: Boolean; const Suffix: UnicodeString = ''): word;
 var L, Year, Month, Day: Word;
 begin
   DecodeDate(Value, Year, Month, Day);
@@ -4123,7 +4123,7 @@ end;
 }
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString): ZWideString;
+  const Quoted: Boolean; const Suffix: UnicodeString): UnicodeString;
 var L, L2, Year, Month, Day: Word;
   Buffer: array[0..cMaxDateLenQuoted] of WideChar;
   P: PWideChar;
@@ -4303,7 +4303,7 @@ end;
 }
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString): ZWideString;
+  const Quoted: Boolean; const Suffix: UnicodeString): UnicodeString;
 var l, l2, Hour, Minute, Second, MSec: Word;
   Buffer: array[0..cMaxTimeLenQuoted] of WideChar;
   P: PWideChar;
@@ -4331,7 +4331,7 @@ end;
 }
 function DateTimeToUnicodeSQLTime(const Value: TDateTime; Buf: PWideChar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''): Word;
+  const Quoted: Boolean; const Suffix: UnicodeString = ''): Word;
 var l, Hour, Minute, Second, MSec: Word;
 begin
   DecodeTime(Value, Hour, Minute, Second, MSec);
@@ -4666,7 +4666,7 @@ end;
 }
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime; Buf: PWideChar;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''): Word;
+  const Quoted: Boolean; const Suffix: UnicodeString = ''): Word;
 var l, Year, Month, Day, Hour, Minute, Second, MSec: Word;
 begin
   DecodeDateTime(Value, Year, Month, Day, Hour, Minute, Second, MSec);
@@ -4847,7 +4847,7 @@ end;
 }
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
-  const Quoted: Boolean; const Suffix: ZWideString = ''): ZWideString;
+  const Quoted: Boolean; const Suffix: UnicodeString = ''): UnicodeString;
 var l, l2, Year, Month, Day, Hour, Minute, Second, MSec: Word;
   Buffer: array[0..cMaxTimeStampLenQuoted] of WideChar;
   P: PWideChar;
@@ -4868,7 +4868,7 @@ end;
   @param Value a regular string.
   @return a string in PostgreSQL escape format.
 }
-function EncodeCString(const Value: ZWideString): ZWideString;
+function EncodeCString(const Value: UnicodeString): UnicodeString;
 var
   I: Integer;
   SrcLength, DestLength: Integer;
@@ -5062,7 +5062,7 @@ end;
   @param SrcBuffer the souce buffer.
   @return a regular string.
 }
-procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; out Result: ZWideString);
+procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PWideChar; out Result: UnicodeString);
 begin
   Result := '';
   SetLength(Result, SrcLength);
@@ -5086,7 +5086,7 @@ begin
   DecodeCString(Length(Value), Pointer(Value), Result);
 end;
 
-function DecodeCString(const Value: ZWideString): ZWideString;
+function DecodeCString(const Value: UnicodeString): UnicodeString;
 begin
   DecodeCString(Length(Value), Pointer(Value), Result);
 end;
@@ -5261,12 +5261,12 @@ begin
     else Result := ' AND ' + Condition;
 end;
 
-function ASCII7ToUnicodeString(const Src: RawByteString): ZWideString;
+function ASCII7ToUnicodeString(const Src: RawByteString): UnicodeString;
 begin
   Result := Ascii7ToUnicodeString(Pointer(Src), Length(Src));
 end;
 
-function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): ZWideString;
+function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): UnicodeString;
 var Source: PByteArray absolute Src;
   PEnd: PAnsiChar;
   Dest: PWordArray;
@@ -5298,7 +5298,7 @@ begin
   end;
 end;
 
-function UnicodeStringToASCII7(const Src: ZWideString): RawByteString;
+function UnicodeStringToASCII7(const Src: UnicodeString): RawByteString;
 begin
   Result := UnicodeStringToASCII7(Pointer(Src), Length(Src));
 end;
@@ -5374,7 +5374,7 @@ begin
   {$ENDIF}
 end;
 
-function FloatToUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): ZWideString;
+function FloatToUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): UnicodeString;
 var
   Buffer: array[0..63] of WideChar;
 begin
@@ -5397,7 +5397,7 @@ begin
   {$ENDIF}
 end;
 
-function FloatToSqlUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): ZWideString;
+function FloatToSqlUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): UnicodeString;
 var
   Buffer: array[0..63] of WideChar;
 begin
@@ -5708,7 +5708,7 @@ begin
   GUIDToBuffer(Pointer(Bts), P, Options);
 end;
 
-function GUIDToUnicode(const GUID: TGUID; const Options: TGUIDConvOptions): ZWideString;
+function GUIDToUnicode(const GUID: TGUID; const Options: TGUIDConvOptions): UnicodeString;
 var P: PWideChar;
 begin
   ZSetString(nil, 36+((Ord(guidWithBrackets in Options)+Ord(guidQuoted in Options)) shl 1), Result{%H-});
@@ -5716,7 +5716,7 @@ begin
   GUIDToBuffer(@GUID.D1, P, Options);
 end;
 
-procedure GUIDToUnicode(Value: PGUID; const Options: TGUIDConvOptions; var Result: ZWideString);
+procedure GUIDToUnicode(Value: PGUID; const Options: TGUIDConvOptions; var Result: UnicodeString);
 var P: PWideChar;
 begin
   ZSetString(nil, 36+((Ord(guidWithBrackets in Options)+Ord(guidQuoted in Options)) shl 1), Result{%H-});
@@ -5725,7 +5725,7 @@ begin
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
-function GUIDToUnicode(const GUID: TGUID; WithBrackets: Boolean): ZWideString;
+function GUIDToUnicode(const GUID: TGUID; WithBrackets: Boolean): UnicodeString;
 var Options: TGUIDConvOptions;
   P: PWideChar;
 begin
@@ -5737,7 +5737,7 @@ begin
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
-function GUIDToUnicode(const Bts: TBytes; WithBrackets: Boolean): ZWideString;
+function GUIDToUnicode(const Bts: TBytes; WithBrackets: Boolean): UnicodeString;
 var Options: TGUIDConvOptions;
   P: PWideChar;
 begin
@@ -5750,7 +5750,7 @@ begin
   GUIDToBuffer(Pointer(Bts), P, Options);
 end;
 
-function GUIDToUnicode(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): ZWideString; overload;
+function GUIDToUnicode(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): UnicodeString; overload;
 var Options: TGUIDConvOptions;
   P: PWideChar;
 begin
@@ -5905,7 +5905,7 @@ end;
 {**
   Standard quoting: Result := Quote + Double_Quotes(Src, Quote) + Quote
 }
-function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): ZWideString; overload;
+function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): UnicodeString; overload;
 var
   P, Dest, PEnd, PFirst: PWideChar;
 begin
@@ -5955,7 +5955,7 @@ begin
   Dest^ := Quote;
 end;
 
-function SQLQuotedStr(const S: ZWideString; Quote: WideChar): ZWideString;
+function SQLQuotedStr(const S: UnicodeString; Quote: WideChar): UnicodeString;
 begin
   Result := SQLQuotedStr(Pointer(S), Length(S), Quote);
 end;
@@ -6468,7 +6468,7 @@ begin
   Result := Trim(P, StrLen(P));
 end;
 
-function Trim(P: PWideChar; L: LengthInt): ZWideString;
+function Trim(P: PWideChar; L: LengthInt): UnicodeString;
 var PEnd: PWideChar;
 begin
   PEnd := P + L -1;
@@ -6568,7 +6568,7 @@ end;
 {$IFEND}
 
 {$IFNDEF UNICODE}
-function Trim(const Value: ZWideString): ZWideString; overload;
+function Trim(const Value: UnicodeString): UnicodeString; overload;
 var
   P, PEnd: PWideChar;
 begin
@@ -6601,7 +6601,7 @@ begin
   Result.Position := 0;
 end;
 
-function StreamFromData(const AString: ZWideString): TMemoryStream;
+function StreamFromData(const AString: UnicodeString): TMemoryStream;
 begin
   Result := StreamFromData(Pointer(AString), Length(AString)*SizeOf(WideChar));
 end;
@@ -7131,12 +7131,12 @@ begin
     RaiseBcd2OrdException(P, PEnd);
 end;
 
-function TryUniToBcd(const Value: ZWideString; var Bcd: TBcd{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}; const FormatSettings: TFormatSettings{$ENDIF}): Boolean; overload;
+function TryUniToBcd(const Value: UnicodeString; var Bcd: TBcd{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}; const FormatSettings: TFormatSettings{$ENDIF}): Boolean; overload;
 begin
   Result := TryUniToBCD(Value, BCD, {$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}FormatSettings.DecimalSeparator{$ELSE}'.'{$ENDIF});
 end;
 
-function TryUniToBcd(const Value: ZWideString; var Bcd: TBcd; DecimalSep: Char): Boolean;
+function TryUniToBcd(const Value: UnicodeString; var Bcd: TBcd; DecimalSep: Char): Boolean;
 begin
   if Value = ''
   then Result := False
@@ -7755,7 +7755,7 @@ begin
   Result := RawToBCD(Pointer(Value), Length(Value));
 end;
 
-function BcdToSQLUni(const Value: TBCD): ZWideString;
+function BcdToSQLUni(const Value: TBCD): UnicodeString;
 var Digits: array[0..MaxFMTBcdFractionSize-1+1{sign}+1{dot}] of WideChar;
 begin
   {$IFDEF FPC}Result := '';{$ENDIF}
@@ -7768,7 +7768,7 @@ begin
     raise EBcdException.CreateFmt(SInvalidBcdValue, [Value]);
 end;
 
-function UniToBCD(const Value: ZWideString): TBCD;
+function UniToBCD(const Value: UnicodeString): TBCD;
 begin
   Result := UniToBCD(Pointer(Value), Length(Value));
 end;
@@ -7911,7 +7911,7 @@ begin
     TwoDigitLookupHexW[i] := PWord(Pointer(RawByteString(Hex)))^;
     {$ELSE}
     TwoDigitLookupHexW[i] := PWord(Pointer(Hex))^;
-    TwoDigitLookupHexLW[i] := PCardinal(Pointer(ZWideString(Hex)))^;
+    TwoDigitLookupHexLW[i] := PCardinal(Pointer(UnicodeString(Hex)))^;
     {$ENDIF}
   end;
   {$IFDEF NO_RAW_HEXTOBIN}

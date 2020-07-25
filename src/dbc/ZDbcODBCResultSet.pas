@@ -118,8 +118,8 @@ type
   protected
     procedure CheckStmtError(RETCODE: SQLRETURN);
   public
-    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload;
-    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
+    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
     function IsNull(ColumnIndex: Integer): Boolean;
     {$IFNDEF NO_ANSISTRING}
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
@@ -286,8 +286,7 @@ procedure TAbstractODBCResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 var C, H, I: Integer;
     P: Pointer;
-    BCD: TBCD;
-    L: NativeUint absolute BCD;
+    L: NativeUint;
 begin
   //init
   if JSONWriter.Expand then
@@ -323,8 +322,9 @@ begin
         stFloat:      JSONWriter.AddSingle(PSingle(fColDataPtr)^);
         stCurrency:   JSONWriter.AddCurr64(ODBCNumeric2Curr(fColDataPtr));
         stBigDecimal: begin
-                        SQLNumeric2BCD(fColDataPtr, BCD, 16);
-                        JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), BCDToRaw(BCD, PAnsiChar(FByteBuffer), '.'));
+                        L := SQL_MAX_NUMERIC_LEN;
+                        SQLNumeric2Raw(fColDataPtr, PAnsiChar(fByteBuffer), L);
+                        JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), L);
                       end;
         stDouble: JSONWriter.AddDouble(PDouble(fColDataPtr)^);
         stBytes:      JSONWriter.WrBase64(fColDataPtr,fStrLen_or_Ind,True);
@@ -419,7 +419,7 @@ begin
           P := IZBlob(fColDataPtr).GetBuffer(fRawTemp, L);
           JSONWriter.WrBase64(P, L, True);
         end else //stArray, stDataSet:
-          JSONWriter.AddShort('null,') ;
+          JSONWriter.AddShort('null') ;
       end;
       JSONWriter.Add(',');
     end;

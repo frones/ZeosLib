@@ -125,7 +125,7 @@ type
     procedure SetBigDecimal(ParameterIndex: Integer; const Value: TBCD);
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);reintroduce;
     procedure SetString(ParameterIndex: Integer; const Value: String);reintroduce;
-    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); reintroduce;
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: UnicodeString); reintroduce;
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); reintroduce; overload;
     procedure SetGuid(ParameterIndex: Integer; const Value: TGUID); reintroduce;
     procedure SetBytes(ParameterIndex: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
@@ -170,7 +170,7 @@ type
     procedure SetBigDecimal(ParameterIndex: Integer; const Value: TBCD);
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);reintroduce;
     procedure SetString(ParameterIndex: Integer; const Value: String);reintroduce;
-    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); reintroduce;
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: UnicodeString); reintroduce;
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); reintroduce; overload;
     procedure SetBytes(ParameterIndex: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
     procedure SetGuid(ParameterIndex: Integer; const Value: TGUID); reintroduce;
@@ -186,9 +186,9 @@ type
     procedure SetTimestamp(ParameterIndex: Integer; const Value: TZTimeStamp); reintroduce; overload;
     procedure SetBlob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override{keep it virtual because of (set)ascii/uniocde/binary streams};
   public
-    function ExecuteQuery(const {%H-}SQL: ZWideString): IZResultSet; override;
-    function ExecuteUpdate(const {%H-}SQL: ZWideString): Integer; override;
-    function Execute(const {%H-}SQL: ZWideString): Boolean; override;
+    function ExecuteQuery(const {%H-}SQL: UnicodeString): IZResultSet; override;
+    function ExecuteUpdate(const {%H-}SQL: UnicodeString): Integer; override;
+    function Execute(const {%H-}SQL: UnicodeString): Boolean; override;
 
     function ExecuteQuery(const {%H-}SQL: RawByteString): IZResultSet; override;
     function ExecuteUpdate(const {%H-}SQL: RawByteString): Integer; override;
@@ -426,6 +426,8 @@ end;
 procedure TZAbstracDBLibSQLStatement.InternalExecute;
 var Raw: RawByteString;
 begin
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcBindPrepStmt,Self);
   LastUpdateCount := -1;
   RestartTimer;
   Raw := GetRawSQL;
@@ -812,7 +814,7 @@ begin
 end;
 
 procedure TZDBLibPreparedStatementEmulated.SetUnicodeString(ParameterIndex: Integer;
-  const Value: ZWideString);
+  const Value: UnicodeString);
 var CP: Word;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
@@ -1117,7 +1119,7 @@ begin
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
-function TZDBLIBPreparedRPCStatement.Execute(const SQL: ZWideString): Boolean;
+function TZDBLIBPreparedRPCStatement.Execute(const SQL: UnicodeString): Boolean;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
@@ -1141,7 +1143,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZDBLIBPreparedRPCStatement.ExecuteQuery(
-  const SQL: ZWideString): IZResultSet;
+  const SQL: UnicodeString): IZResultSet;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
@@ -1149,7 +1151,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5033 off : Function result does not seem to be set} {$ENDIF}
 function TZDBLIBPreparedRPCStatement.ExecuteUpdate(
-  const SQL: ZWideString): Integer;
+  const SQL: UnicodeString): Integer;
 begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
@@ -1172,6 +1174,8 @@ end;
 
 procedure TZDBLIBPreparedRPCStatement.InternalExecute;
 begin
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcBindPrepStmt,Self);
   LastUpdateCount := -1;
   if FPLainDriver.dbRpcExec(FHandle) <> DBSUCCEED then
     FDBLibConnection.CheckDBLibError(lcOther, 'EXECUTEPREPARED:dbRPCExec');
@@ -1422,7 +1426,7 @@ begin
 end;
 
 procedure TZDBLIBPreparedRPCStatement.SetUnicodeString(ParameterIndex: Integer;
-  const Value: ZWideString);
+  const Value: UnicodeString);
 begin
   SetRawByteString(ParameterIndex, PUnicodeToRaw(Pointer(Value), Length(Value), FClientCP));
 end;

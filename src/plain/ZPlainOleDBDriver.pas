@@ -1266,7 +1266,12 @@ const
   { errors from oledberr.h }
   DB_E_PARAMUNAVAILABLE = HRESULT($80040E51); //cannot derive parameter information and SetParameterInfo has not been called
   DB_E_ERRORSOCCURRED = HRESULT($80040E21); //Multiple-step OLE DB operation generated errors. Check each OLE DB status value, if available. No work was done.
+  DB_E_ERRORSINCOMMAND = HRESULT($80040E14); //One or more errors occurred during processing of command.
   DB_S_ERRORSOCCURRED = HRESULT($00040EDA); //Multiple-step OLE DB operation generated errors. Check each OLE DB status value, if available.
+  DB_E_BADBINDINFO = HRESULT($80040E14); //Binding information is invalid.
+  DB_SEC_E_PERMISSIONDENIED = HRESULT($80040E09); //Permission denied.
+  DTS_E_OLEDBERROR = HRESULT($80004005); //Syntax error, permission violation, or other nonspecific error"
+
 type
   DBRESULTFLAGENUM = (
     DBRESULTFLAG_DEFAULT = 0,

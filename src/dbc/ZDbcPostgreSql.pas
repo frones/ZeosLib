@@ -230,7 +230,7 @@ type
     function EscapeString(const Value: RawByteString): RawByteString; overload; override;
     function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
     procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: RawByteString); overload;
-    function GetEscapeString(const Value: ZWideString): ZWideString; overload; override;
+    function GetEscapeString(const Value: UnicodeString): UnicodeString; overload; override;
     procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); overload;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; override;
 
@@ -1520,7 +1520,7 @@ end;
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Postrgres-compatible String
 }
-function TZPostgreSQLConnection.GetEscapeString(const Value: ZWideString): ZWideString;
+function TZPostgreSQLConnection.GetEscapeString(const Value: UnicodeString): UnicodeString;
 begin
   Result := ZRawToUnicode(EscapeString(ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP)), ConSettings^.ClientCodePage^.CP);
 end;

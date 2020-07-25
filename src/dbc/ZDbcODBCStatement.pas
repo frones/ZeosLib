@@ -58,8 +58,8 @@ interface
 {$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 uses Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
-  ZCompatibility, ZDbcIntfs, ZDbcStatement, ZVariant, ZDbcProperties, ZDbcUtils,
-  ZDbcODBCCon, ZPlainODBCDriver, ZDbcODBCUtils, ZCollections;
+  ZCompatibility, ZClasses, ZVariant, ZCollections, ZDbcIntfs, ZDbcStatement,
+  ZDbcProperties, ZDbcUtils, ZDbcODBCCon, ZPlainODBCDriver, ZDbcODBCUtils;
 
 type
   PSQLHDBC = ^SQLHDBC;
@@ -143,6 +143,7 @@ type
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
     procedure SetBindCapacity(Capacity: Integer); override;
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
   public
     constructor Create(const Connection: IZODBCConnection;
       var ConnectionHandle: SQLHDBC; const SQL: string; Info: TStrings);
@@ -169,7 +170,7 @@ type
     procedure SetGUID(Index: Integer; const Value: TGUID); reintroduce;
 
     procedure SetString(Index: Integer; const Value: String); reintroduce;
-    procedure SetUnicodeString(Index: Integer; const Value: ZWideString); reintroduce;
+    procedure SetUnicodeString(Index: Integer; const Value: UnicodeString); reintroduce;
     procedure SetCharRec(Index: Integer; const Value: TZCharRec); reintroduce;
     {$IFNDEF NO_ANSISTRING}
     procedure SetAnsiString(Index: Integer; const Value: AnsiString); reintroduce;
@@ -195,7 +196,7 @@ type
     procedure InternalPrepare; override;
   public
     procedure Unprepare; override;
-    function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; override;
+    function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): UnicodeString; override;
   end;
 
   TZODBCStatementW = class(TZAbstractODBCStatement)
@@ -255,7 +256,7 @@ implementation
 uses Math, DateUtils, TypInfo, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   ZSysUtils, ZMessages, ZEncoding, ZDbcResultSet, ZFastCode, ZDbcLogging,
   ZDbcODBCResultSet, ZDbcCachedResultSet, ZDbcGenericResolver,
-  ZClasses, ZDbcMetadata;
+  ZDbcMetadata;
 
 var DefaultPreparableTokens: TPreparablePrefixTokens;
 
@@ -730,7 +731,7 @@ begin
 end;
 
 function TZODBCPreparedStatementW.GetUnicodeEncodedSQL(
-  const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString;
+  const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): UnicodeString;
 var I: Integer;
   {$IFNDEF UNICODE}SQLWriter: TZUnicodeSQLStringWriter;{$ENDIF}
 begin
@@ -904,6 +905,102 @@ const
     SQL_FLOAT, SQL_DOUBLE);
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
+
+procedure TZAbstractODBCPreparedStatement.AddParamLogValue(ParamIndex: Integer;
+  SQLWriter: TZRawSQLStringWriter; var Result: RawByteString);
+var Bind: PZODBCParamBind;
+    Len: NativeUint;
+label jmpWritePC;
+begin
+  case BindList.ParamTypes[ParamIndex] of
+    pctReturn: SQLWriter.AddText('(RETURN_VALUE)', Result);
+    pctOut: SQLWriter.AddText('(OUT_PARAM)', Result);
+    else begin
+      {$R-}
+      Bind := @fParamBindings[ParamIndex];
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+      if Bind.StrLen_or_IndPtr^ = SQL_NULL_DATA then
+        SQLWriter.AddText('(NULL)', Result)
+      else if Bind.StrLen_or_IndPtr^ = SQL_DATA_AT_EXEC then begin
+        if Bind.SQLType = stAsciiStream then
+          SQLWriter.AddText('(CLOB/VARCHAR(MAX))', Result)
+        else if Bind.SQLType = stUnicodeStream then
+          SQLWriter.AddText('(NCLOB/NVARCHAR(MAX))', Result)
+        else
+          SQLWriter.AddText('(BLOB/VARBINARY(MAX))', Result)
+      end else case Bind.ValueType of
+        SQL_C_BIT:      if PByte(Bind.ParameterValuePtr)^ <> 0
+                        then SQLWriter.AddText('(TRUE)', Result)
+                        else SQLWriter.AddText('(FALSE)', Result);
+        SQL_C_STINYINT: SQLWriter.AddOrd(PShortInt(Bind.ParameterValuePtr)^, Result);
+        SQL_C_UTINYINT: SQLWriter.AddOrd(PByte(Bind.ParameterValuePtr)^, Result);
+        SQL_C_SSHORT:   SQLWriter.AddOrd(PSmallInt(Bind.ParameterValuePtr)^, Result);
+        SQL_C_USHORT:   SQLWriter.AddOrd(PWord(Bind.ParameterValuePtr)^, Result);
+        SQL_C_SLONG:    SQLWriter.AddOrd(PInteger(Bind.ParameterValuePtr)^, Result);
+        SQL_C_ULONG:    SQLWriter.AddOrd(PCardinal(Bind.ParameterValuePtr)^, Result);
+        SQL_C_SBIGINT:  SQLWriter.AddOrd(PInt64(Bind.ParameterValuePtr)^, Result);
+        SQL_C_UBIGINT:  SQLWriter.AddOrd(PUInt64(Bind.ParameterValuePtr)^, Result);
+        SQL_C_TYPE_TIME, SQL_C_TIME: begin
+            Len := TimeToRaw(PSQL_TIME_STRUCT(Bind.ParameterValuePtr)^.hour,
+              PSQL_TIME_STRUCT(Bind.ParameterValuePtr)^.minute,
+              PSQL_TIME_STRUCT(Bind.ParameterValuePtr)^.second, 0, PAnsiChar(fByteBuffer),
+              ConSettings.WriteFormatSettings.TimeFormat, True, False);
+            goto jmpWritePC;
+          end;
+        SQL_C_SS_TIME2: begin
+            Len := TimeToRaw(PSQL_SS_TIME2_STRUCT(Bind.ParameterValuePtr)^.hour,
+              PSQL_SS_TIME2_STRUCT(Bind.ParameterValuePtr)^.minute,
+              PSQL_SS_TIME2_STRUCT(Bind.ParameterValuePtr)^.second,
+              PSQL_SS_TIME2_STRUCT(Bind.ParameterValuePtr)^.fraction, PAnsiChar(fByteBuffer),
+              ConSettings.WriteFormatSettings.TimeFormat, True, False);
+            goto jmpWritePC;
+          end;
+        SQL_C_TYPE_DATE, SQL_C_DATE: begin
+            Len := DateToRaw(Abs(PSQL_DATE_STRUCT(Bind.ParameterValuePtr)^.year),
+              PSQL_DATE_STRUCT(Bind.ParameterValuePtr)^.month,
+              PSQL_DATE_STRUCT(Bind.ParameterValuePtr)^.day, PAnsiChar(fByteBuffer),
+              ConSettings.WriteFormatSettings.DateFormat, True,
+              PSQL_DATE_STRUCT(Bind.ParameterValuePtr)^.year < 0);
+            goto jmpWritePC;
+          end;
+        SQL_C_TIMESTAMP, SQL_C_TYPE_TIMESTAMP: begin
+            Len := DateTimeToRaw(Abs(PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^.year),
+              PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr).month, PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr).day,
+              PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr).hour, PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^.minute,
+              PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^.second, PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^.fraction,
+              PAnsiChar(fByteBuffer), ConSettings.WriteFormatSettings.DateTimeFormat,
+              True, PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^.year < 0);
+            goto jmpWritePC;
+          end;
+        SQL_C_SS_TIMESTAMPOFFSET: begin
+            Len := DateTimeToRaw(Abs(PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^.year),
+              PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr).month, PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr).day,
+              PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr).hour, PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^.minute,
+              PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^.second, PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^.fraction,
+              PAnsiChar(fByteBuffer), ConSettings.WriteFormatSettings.DateTimeFormat,
+              True, PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^.year < 0);
+              goto jmpWritePC;
+          end;
+        SQL_C_FLOAT:  SQLWriter.AddFloat(PSingle(Bind.ParameterValuePtr)^, Result);
+        SQL_C_DOUBLE: SQLWriter.AddFloat(PDouble(Bind.ParameterValuePtr)^, Result);
+        SQL_C_NUMERIC: begin
+            Len := 16;
+            SQLNumeric2Raw(Bind.ParameterValuePtr, PAnsiChar(fByteBuffer), Len);
+jmpWritePC: SQLWriter.AddText(PAnsiChar(fByteBuffer), Len, Result);
+          end;
+        SQL_C_WCHAR:  begin
+            FRawTemp := PUnicodeToRaw(Bind.ParameterValuePtr, Bind.StrLen_or_IndPtr^ shr 1, zCP_UTF8);
+            SQLWriter.AddTextQuoted(FRawTemp, AnsiChar(#39), Result);
+          end;
+        SQL_C_CHAR: SQLWriter.AddTextQuoted(PAnsiChar(Bind.ParameterValuePtr), Bind.StrLen_or_IndPtr^, AnsiChar(#39), Result);
+        SQL_C_BINARY: SQLWriter.AddHexBinary(Bind.ParameterValuePtr, PSQLLEN(Bind.StrLen_or_IndPtr)^, True, Result);
+        SQL_C_GUID: SQLWriter.AddGUID(PGUID(Bind.ParameterValuePtr)^, [guidWithBrackets, guidQuoted], Result);
+        else SQLWriter.AddText('(unknown)', Result);
+      end;
+    end;
+  end;
+end;
+
 procedure TZAbstractODBCPreparedStatement.BindArrayColumnWise(Index: Integer);
 var ArrayLen, MaxL, I: Integer;
   Arr: PZArray;
@@ -1521,7 +1618,7 @@ begin
         stString, stUnicodeString: begin
             case BindValue.BindType of
               zbtRawString, zbtUTF8String{$IFNDEF NEXTGEN},zbtAnsiString{$ENDIF}: L := Length(RawByteString(BindValue.Value));
-              zbtUniString: L := Length(ZWideString(BindValue.Value));
+              zbtUniString: L := Length(UnicodeString(BindValue.Value));
               zbtCharByRef: L := PZCharRec(BindValue.Value).Len;
               zbtBinByRef:  L := PZBufRec(BindValue.Value).Len;
               else L := Length(TBytes(BindValue.Value));
@@ -2878,7 +2975,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractODBCPreparedStatement.SetUnicodeString(Index: Integer;
-  const Value: ZWideString);
+  const Value: UnicodeString);
 begin
   {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
   CheckParameterIndex(Index);

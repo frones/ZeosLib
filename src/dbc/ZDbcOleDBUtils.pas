@@ -181,11 +181,11 @@ end;
 
 function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM;
   const SrcRS: IZResultSet): TZSQLType; overload;
-const LongNames: array [0..8] of ZWideString = ('TEXT', 'NTEXT', 'MEDIUMTEXT',
+const LongNames: array [0..8] of UnicodeString = ('TEXT', 'NTEXT', 'MEDIUMTEXT',
   'LONGTEXT', 'CLOB', 'BLOB', 'MEDIUMBLOB', 'LONGBLOB', 'IMAGE');
 function IsLong: Boolean;
 var I: Integer;
-  Uni: ZWideString;
+  Uni: UnicodeString;
 begin
   Uni := UpperCase(SrcRS.GetUnicodeStringByName('TYPE_NAME'));
   Result := False;

@@ -134,7 +134,7 @@ type
 
     {string bindings }
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
-    procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString);
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: UnicodeString);
     procedure SetString(ParameterIndex: Integer; const Value: String);
     {$IFNDEF NO_ANSISTRING}
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString);
@@ -154,7 +154,7 @@ type
     FIsParamIndex: TBooleanDynArray;
     property IsParamIndex: TBooleanDynArray read FIsParamIndex;
   public
-    function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; override;
+    function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): UnicodeString; override;
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
       ParamType: TZProcedureColumnType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
       Scale: LengthInt = 0); override;
@@ -2417,7 +2417,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractOraclePreparedStatement.SetUnicodeString(ParameterIndex: Integer;
-  const Value: ZWideString);
+  const Value: UnicodeString);
 var L: NativeUInt;
   P: PWideChar;
 begin
@@ -2630,7 +2630,7 @@ end;
 { TZOraclePreparedStatement_W }
 
 function TZOraclePreparedStatement_W.GetUnicodeEncodedSQL(
-  const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString;
+  const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): UnicodeString;
 var
   I, C, FirstComposePos: Integer;
   ParamsCnt: Cardinal;

@@ -264,35 +264,35 @@ begin
 end;
 
 procedure TZTestSysUtilsCase.TestStringReplaceAll_CS_LToEQ_W;
-var SourceStr, Res: ZWideString;
+var SourceStr, Res: UnicodeString;
 begin
   SourceStr := 'aaaaa';
-  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('aa'), ZWideString(''));
-  CheckEquals(ZWideString('a'), Res);
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, UnicodeString('aa'), UnicodeString(''));
+  CheckEquals(UnicodeString('a'), Res);
   SourceStr := 'aaaggaaaggaaaggaaagg';
-  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString('aa'));
-  CheckEquals(ZWideString('aaaaaaaaaaaaaaaaaaaa'), Res);
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, UnicodeString('gg'), UnicodeString('aa'));
+  CheckEquals(UnicodeString('aaaaaaaaaaaaaaaaaaaa'), Res);
   SourceStr := 'aaaggaaaggaaaggaaagg';
-  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString('y'));
-  CheckEquals(ZWideString('aaayaaayaaayaaay'), Res);
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, UnicodeString('gg'), UnicodeString('y'));
+  CheckEquals(UnicodeString('aaayaaayaaayaaay'), Res);
   SourceStr := 'aaaggaaaggaaaggaaa';
-  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString('y'));
-  CheckEquals(ZWideString('aaayaaayaaayaaa'), Res);
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, UnicodeString('gg'), UnicodeString('y'));
+  CheckEquals(UnicodeString('aaayaaayaaayaaa'), Res);
   SourceStr := 'aaagg';
-  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString('N'));
-  CheckEquals(ZWideString('aaaN'), Res);
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, UnicodeString('gg'), UnicodeString('N'));
+  CheckEquals(UnicodeString('aaaN'), Res);
   SourceStr := 'ggaaa';
-  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString('N'));
-  CheckEquals(ZWideString('Naaa'), Res);
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, UnicodeString('gg'), UnicodeString('N'));
+  CheckEquals(UnicodeString('Naaa'), Res);
   SourceStr := 'ggaaa';
-  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString(''));
-  CheckEquals(ZWideString('aaa'), Res);
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, UnicodeString('gg'), UnicodeString(''));
+  CheckEquals(UnicodeString('aaa'), Res);
   SourceStr := 'aaagg';
-  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('gg'), ZWideString(''));
-  CheckEquals(ZWideString('aaa'), Res);
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, UnicodeString('gg'), UnicodeString(''));
+  CheckEquals(UnicodeString('aaa'), Res);
   SourceStr := 'aaaa';
-  Res := StringReplaceAll_CS_LToEQ(SourceStr, ZWideString('aa'), ZWideString(''));
-  CheckEquals(ZWideString(''), Res);
+  Res := StringReplaceAll_CS_LToEQ(SourceStr, UnicodeString('aa'), UnicodeString(''));
+  CheckEquals(UnicodeString(''), Res);
 end;
 
 {$IFDEF ENABLE_POSTGRESQL}
@@ -474,30 +474,30 @@ begin
   CheckEquals(643.11, SqlStrToFloatDef(PAnsiChar('643,11 €'), 11.11));
   CheckEquals(643.11, SqlStrToFloatDef(PAnsiChar('643,11 $'), 11.11));
 
-  CheckEquals(12.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('12,75'), 11.11));
-  CheckEquals(12.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('12.75'), 11.11));
-  CheckEquals(0.1275, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('12.75e-2'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('12.75float'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}(''), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('111,125.33'), 11.11));
-  CheckEquals(1012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$1.012,75'), 11.11));
-  CheckEquals(1012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€ 1.012,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$1.0012,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€ 1.0012,75'), 11.11));
-  CheckEquals(1012012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$1.012.012,75'), 11.11));
-  CheckEquals(1012012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€  1.012.012,75'), 11.11));
-  CheckEquals(1012012111.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$1.012.012.111,75'), 11.11));
-  CheckEquals(1012012111.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€  1.012.012.111,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$1.012.012.1119,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€  1.012.012.1119,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$1.012.0121.111,75'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€  1.012.0121.111,75'), 11.11));
-  CheckEquals(-1012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€ -1.012,75'), 11.11));
-  CheckEquals(-1012012111.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$-1.012.012.111,75'), 11.11));
-  CheckEquals(1012012111.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('$+1.012.012.111,75'), 11.11));
-  CheckEquals(643.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('€643,11'), 11.11));
-  CheckEquals(643.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('643,11 €'), 11.11));
-  CheckEquals(643.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}ZWideString{$ENDIF}('643,11 $'), 11.11));
+  CheckEquals(12.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('12,75'), 11.11));
+  CheckEquals(12.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('12.75'), 11.11));
+  CheckEquals(0.1275, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('12.75e-2'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('12.75float'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}(''), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('111,125.33'), 11.11));
+  CheckEquals(1012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('$1.012,75'), 11.11));
+  CheckEquals(1012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('€ 1.012,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('$1.0012,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('€ 1.0012,75'), 11.11));
+  CheckEquals(1012012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('$1.012.012,75'), 11.11));
+  CheckEquals(1012012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('€  1.012.012,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('$1.012.012.111,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('€  1.012.012.111,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('$1.012.012.1119,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('€  1.012.012.1119,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('$1.012.0121.111,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('€  1.012.0121.111,75'), 11.11));
+  CheckEquals(-1012.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('€ -1.012,75'), 11.11));
+  CheckEquals(-1012012111.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('$-1.012.012.111,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('$+1.012.012.111,75'), 11.11));
+  CheckEquals(643.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('€643,11'), 11.11));
+  CheckEquals(643.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('643,11 €'), 11.11));
+  CheckEquals(643.11, SqlStrToFloatDef({$IFDEF PWIDECHAR_IS_PUNICODECHAR}PWideChar{$ELSE}UnicodeString{$ENDIF}('643,11 $'), 11.11));
 end;
 
 {**
@@ -518,18 +518,18 @@ begin
   CheckEquals(False, StrToBoolEx(RawByteString('No')));
   CheckEquals(False, StrToBoolEx(RawByteString('N')));
 
-  Check(StrToBoolEx(ZWideString('YES')));
-  Check(StrToBoolEx(ZWideString('Yes')));
-  Check(StrToBoolEx(ZWideString('Y')));
-  Check(StrToBoolEx(ZWideString('TRUE')));
-  Check(StrToBoolEx(ZWideString('True')));
-  Check(StrToBoolEx(ZWideString('T')));
-  CheckEquals(False, StrToBoolEx(ZWideString('FALSE')));
-  CheckEquals(False, StrToBoolEx(ZWideString('False')));
-  CheckEquals(False, StrToBoolEx(ZWideString('F')));
-  CheckEquals(False, StrToBoolEx(ZWideString('NO')));
-  CheckEquals(False, StrToBoolEx(ZWideString('No')));
-  CheckEquals(False, StrToBoolEx(ZWideString('N')));
+  Check(StrToBoolEx(UnicodeString('YES')));
+  Check(StrToBoolEx(UnicodeString('Yes')));
+  Check(StrToBoolEx(UnicodeString('Y')));
+  Check(StrToBoolEx(UnicodeString('TRUE')));
+  Check(StrToBoolEx(UnicodeString('True')));
+  Check(StrToBoolEx(UnicodeString('T')));
+  CheckEquals(False, StrToBoolEx(UnicodeString('FALSE')));
+  CheckEquals(False, StrToBoolEx(UnicodeString('False')));
+  CheckEquals(False, StrToBoolEx(UnicodeString('F')));
+  CheckEquals(False, StrToBoolEx(UnicodeString('NO')));
+  CheckEquals(False, StrToBoolEx(UnicodeString('No')));
+  CheckEquals(False, StrToBoolEx(UnicodeString('N')));
 end;
 
 {**
@@ -678,13 +678,13 @@ const CPArray: Array[0..42] of Word = (zCP_DOS437, zCP_DOS708, zCP_DOS720,
 var
   Between1, Between2: Cardinal;
   Start, Stop: Cardinal;
-  S1, S2: ZWideString;
+  S1, S2: UnicodeString;
   RBS: RawByteString;
   Loop, J: Integer;
   I: Byte;
   P: PAnsiChar;
 
-    procedure TestWinEncode(P: PAnsiChar; Len: NativeUInt; CP: Word; var Dest: ZWideString);
+    procedure TestWinEncode(P: PAnsiChar; Len: NativeUInt; CP: Word; var Dest: UnicodeString);
     begin
       Dest := '';
       SetLength(Dest, Len);
@@ -695,7 +695,7 @@ var
       {$ENDIF}
     end;
 
-    procedure TestZEncode(P: PAnsiChar; Len: NativeUInt; CP: Word; var Result: ZWideString);
+    procedure TestZEncode(P: PAnsiChar; Len: NativeUInt; CP: Word; var Result: UnicodeString);
     var
       S: RawByteString;
       {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
@@ -721,7 +721,7 @@ var
                 if ZCompatibleCodePages(ZOSCodePage,zCP_UTF8) then
                 begin
                   ZSetString(P, Len, S{%H-});
-                  Result := ZWideString(S); //random success, we don't know ANY proper CP here
+                  Result := UnicodeString(S); //random success, we don't know ANY proper CP here
                 end
                 else
                 begin
@@ -849,7 +849,7 @@ var
                 if ZCompatibleCodePages(CP, zCP_UTF8) then
                   Result := UTF8Decode(S)
                 else
-                  Result := ZWideString(S); //random success
+                  Result := UnicodeString(S); //random success
               end;
               {$ENDIF}
             {$IFEND}
@@ -888,19 +888,19 @@ end;
 
 procedure TZTestSysUtilsCase.TestUTF8ToUnicodePerformance;
 const
-  cS1 = ZWideString('Müller, Maier, Dödelö');
-  cS2 = ZWideString('Muhende Määäh''s');
+  cS1 = UnicodeString('Müller, Maier, Dödelö');
+  cS2 = UnicodeString('Muhende Määäh''s');
 var
   Between1, Between2: Cardinal;
   Start, Stop: Cardinal;
-  S1, S2: ZWideString;
+  S1, S2: UnicodeString;
   RBS: RawByteString;
   P: PAnsiChar;
   Len: NativeUInt;
   Loop: Integer;
   I: Byte;
 
-    procedure TestWinEncode(P: PAnsichar; Len: NativeUInt; CP: Word; var Dest: ZWideString);
+    procedure TestWinEncode(P: PAnsichar; Len: NativeUInt; CP: Word; var Dest: UnicodeString);
     begin
       Dest := '';
       SetLength(Dest, Len);
@@ -911,7 +911,7 @@ var
       {$ENDIF}
     end;
 
-    procedure TestZEncode(P: PAnsichar; Len: NativeUInt; CP: Word; var Dest: ZWideString);
+    procedure TestZEncode(P: PAnsichar; Len: NativeUInt; CP: Word; var Dest: UnicodeString);
     begin
       Dest := '';
       SetLength(Dest, Len);
@@ -1045,9 +1045,9 @@ procedure TZTestSysUtilsCase.TestIntToUnicode_VS_IntToStr;
 var
   Between1, Between2: Cardinal;
   Start, Stop: Cardinal;
-  S1, S2: ZWideString;
+  S1, S2: UnicodeString;
 
-    function TestIntToRaw: ZWideString;
+    function TestIntToRaw: UnicodeString;
     var
       I: Integer;
     begin
@@ -1055,12 +1055,12 @@ var
         Result := IntToUnicode(i);
     end;
 
-    function TestIntToString: ZWideString;
+    function TestIntToString: UnicodeString;
     var
       I: Integer;
     begin
       for i := -1 to 10000000 do
-        Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(SysUtils.IntToStr(i));
+        Result := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(SysUtils.IntToStr(i));
     end;
 begin
   Start := GetTickCount;
@@ -1076,7 +1076,7 @@ begin
 
   system.WriteLn('');
   system.WriteLn('Benchmarking(x 10.000.000): Integer to UnicodeString');
-  system.WriteLn(Format('Zeos: %d ms VS. ZWideString(SysUtils.IntToStr): %d ms', [Between1, Between2]));
+  system.WriteLn(Format('Zeos: %d ms VS. UnicodeString(SysUtils.IntToStr): %d ms', [Between1, Between2]));
 
 end;
 
@@ -1147,9 +1147,9 @@ procedure TZTestSysUtilsCase.TestInt64ToUnicode_VS_IntToStr;
 var
   Between1, Between2: Cardinal;
   Start, Stop: Cardinal;
-  S1, S2: ZWideString;
+  S1, S2: UnicodeString;
 
-    function TestIntToRaw: ZWideString;
+    function TestIntToRaw: UnicodeString;
     var
       I: Integer;
       I64: Int64;
@@ -1162,7 +1162,7 @@ var
       Result := IntToUnicode(High(Int64)-1);
     end;
 
-    function TestIntToString: ZWideString;
+    function TestIntToString: UnicodeString;
     var
       I: Integer;
       I64: Int64;
@@ -1170,9 +1170,9 @@ var
       for i := -10 to 10000000 do
       begin
         I64 := Int64(i) * Int64(i);
-        Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(SysUtils.IntToStr(I64));
+        Result := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(SysUtils.IntToStr(I64));
       end;
-      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(SysUtils.IntToStr(High(Int64)-1));
+      Result := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(SysUtils.IntToStr(High(Int64)-1));
     end;
 begin
   Start := GetTickCount;
@@ -1188,7 +1188,7 @@ begin
 
   system.WriteLn('');
   system.WriteLn('Benchmarking(x 10.000.000): Int64 to UnicodeString');
-  system.WriteLn(Format('Zeos: %d ms VS. ZWideString(SysUtils.IntToStr): %d ms', [Between1, Between2]));
+  system.WriteLn(Format('Zeos: %d ms VS. UnicodeString(SysUtils.IntToStr): %d ms', [Between1, Between2]));
 
 end;
 
@@ -1239,7 +1239,7 @@ var
   Between1, Between2: Cardinal;
   Start, Stop: Cardinal;
   S1, S2: RawByteString;
-  TestString: ZWideString;
+  TestString: UnicodeString;
 
     function TestUTF8EncodeOversized: RawByteString;
     var i, wlen, ulen: Integer;
@@ -1335,11 +1335,11 @@ const AnsiTestString: TBytes = 'Îäíîé èç íàèáîëåå òðèâèàëüíûõ çàäà÷, ðåøàåìûõ ìí
 var
   Between1, Between2: Cardinal;
   Start, Stop: Cardinal;
-  S1, S2: ZWideString;
+  S1, S2: UnicodeString;
   RBS: RawByteString;
-  TestString: ZWideString;
+  TestString: UnicodeString;
 
-    function TestUTF8EncodeOversized: ZWideString;
+    function TestUTF8EncodeOversized: UnicodeString;
     var i, wlen, ulen: Integer;
     begin
       for i := 0 to 10000000 do
@@ -1354,7 +1354,7 @@ var
       end;
     end;
 
-    function TestUTF8EncodeTestSize: ZWideString;
+    function TestUTF8EncodeTestSize: UnicodeString;
     var i, wlen, ulen: Integer;
     begin
       for i := 0 to 10000000 do
@@ -1368,7 +1368,7 @@ var
       end;
     end;
 
-    function Test1252EncodeOversized: ZWideString;
+    function Test1252EncodeOversized: UnicodeString;
     var i, wlen, ulen: Integer;
     begin
       for i := 0 to 10000000 do
@@ -1382,7 +1382,7 @@ var
       end;
     end;
 
-    function Test1252EncodeTestSize: ZWideString;
+    function Test1252EncodeTestSize: UnicodeString;
     var i, wlen, ulen: Integer;
     begin
       for i := 0 to 10000000 do
@@ -1638,7 +1638,7 @@ var
           {$IFDEF UNICODE}
             SysUtils.StrToInt(SysUtils.IntToStr(I));
           {$ELSE}
-            SysUtils.StrToInt(String(ZWideString(SysUtils.IntToStr(I))));
+            SysUtils.StrToInt(String(UnicodeString(SysUtils.IntToStr(I))));
           {$ENDIF}
     end;
 begin
@@ -1671,7 +1671,7 @@ var
     begin
       for i := -20 to 10000000 do
         Result := UnicodeToIntDef(IntToUnicode(I),1);
-      Result := Result + UnicodeToIntDef(ZWideString('test'), -999);
+      Result := Result + UnicodeToIntDef(UnicodeString('test'), -999);
     end;
 
     function TStrToInt: Integer;
@@ -1683,12 +1683,12 @@ var
           {$IFDEF UNICODE}
             StrToIntDef(SysUtils.IntToStr(I),1);
           {$ELSE}
-            StrToIntDef(String(ZWideString(SysUtils.IntToStr(I))), 1);
+            StrToIntDef(String(UnicodeString(SysUtils.IntToStr(I))), 1);
           {$ENDIF}
         {$IFDEF UNICODE}
           Result := Result +  StrToIntDef('test', -999);
         {$ELSE}
-          Result := Result + StrToIntDef(String(ZWideString('test')), -999);
+          Result := Result + StrToIntDef(String(UnicodeString('test')), -999);
         {$ENDIF}
     end;
 begin
@@ -1731,7 +1731,7 @@ var
       CheckEquals(High(Int64), UnicodeToInt64Def(IntToUnicode(High(Int64)), 0), 'Results of UnicodeToInt64Def VS. High(Int64)');
       for i := 0 to 10000000 do
         Result := UnicodeToInt64Def(IntToUnicode(Int64(i*i)), 1);
-      Result := Result + UnicodeToInt64Def(ZWideString('test'), -999);
+      Result := Result + UnicodeToInt64Def(UnicodeString('test'), -999);
     end;
 
     function TStrToInt: Int64;
@@ -1745,10 +1745,10 @@ var
         Result := StrToInt64Def(SysUtils.IntToStr(Int64(i*i)), 1);
       Result := Result + StrToInt64Def('test', -999);
       {$ELSE}
-      CheckEquals(Low(Int64), StrToInt64Def(String(ZWideString(SysUtils.IntToStr(Low(Int64)))), 0), 'Results of StrToInt64Def VS. Low(Int64)');
-      CheckEquals(High(Int64), StrToInt64Def(String(ZWideString(SysUtils.IntToStr(High(Int64)))), 0), 'Results of StrToInt64Def VS. High(Int64)');
+      CheckEquals(Low(Int64), StrToInt64Def(String(UnicodeString(SysUtils.IntToStr(Low(Int64)))), 0), 'Results of StrToInt64Def VS. Low(Int64)');
+      CheckEquals(High(Int64), StrToInt64Def(String(UnicodeString(SysUtils.IntToStr(High(Int64)))), 0), 'Results of StrToInt64Def VS. High(Int64)');
       for i := 0 to 10000000 do
-        Result := StrToInt64Def(String(ZWideString(SysUtils.IntToStr(Int64(i*i)))), 1);
+        Result := StrToInt64Def(String(UnicodeString(SysUtils.IntToStr(Int64(i*i)))), 1);
       Result := Result + StrToInt64Def('test', -999);
       {$ENDif}
     end;
@@ -1830,7 +1830,7 @@ begin
 end;
 
 procedure TZTestSysUtilsCase.TestUnicodeToFloat;
-const sTestFloat = ZWideString('9876543210.0123456789');
+const sTestFloat = UnicodeString('9876543210.0123456789');
 var
   Between1, Between2: Cardinal;
   Start, Stop: Cardinal;
@@ -1845,9 +1845,9 @@ var
         for i := 0 to 20 do
           Result := UnicodeToFloat(PWideChar(sTestFloat)+I, WideChar('.'));
         for i := 1 to 10 do
-          Result := Result + UnicodeToFloat(PWideChar(ZWideString(sTestFloat[i])), WideChar('.'));
+          Result := Result + UnicodeToFloat(PWideChar(UnicodeString(sTestFloat[i])), WideChar('.'));
       end;
-      Result := Result + UnicodeToFloatDef(@ZWideString('test')[1], WideChar('.'), -999);
+      Result := Result + UnicodeToFloatDef(@UnicodeString('test')[1], WideChar('.'), -999);
     end;
 
     function TStrToFloat: Extended;
@@ -1860,7 +1860,7 @@ var
         for i := 0 to 20 do
           Result := StrToFloat(String(PWideChar(sTestFloat)+I));
         for i := 1 to 10 do
-          Result := Result + StrToFloat(String(PWideChar(ZWideString(sTestFloat[i]))));
+          Result := Result + StrToFloat(String(PWideChar(UnicodeString(sTestFloat[i]))));
       end;
       Result := Result + StrToFloatDef('test', -999);
     end;
@@ -1938,10 +1938,10 @@ procedure TZTestSysUtilsCase.BenchTestDateTimeToUnicodeSQLDate;
 var
   Between1, Between2: Cardinal;
   Start, Stop: Cardinal;
-  S1, S2: ZWideString;
+  S1, S2: UnicodeString;
   ADate: TDateTime;
 
-  function TDateTimeToUnicodeSQLDate(const Value: TDateTime): ZWideString;
+  function TDateTimeToUnicodeSQLDate(const Value: TDateTime): UnicodeString;
   var
     I: Integer;
   begin
@@ -1955,18 +1955,18 @@ var
       Result := DateTimeToUnicodeSQLDate(Value, ConSettingsDummy.ReadFormatSettings, True, 'suffix');
   end;
 
-  function TFormatDateTime(const Value: TDateTime; const Format: String): ZWideString;
+  function TFormatDateTime(const Value: TDateTime; const Format: String): UnicodeString;
   var
     I: Integer;
   begin
     for i := 0 to 2500000 do
-      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(FormatDateTime(Format, Value));
+      Result := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(FormatDateTime(Format, Value));
     for i := 0 to 2500000 do
-      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39);
+      Result := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39);
     for i := 0 to 2500000 do
-      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(FormatDateTime(Format, Value)+'suffix');
+      Result := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(FormatDateTime(Format, Value)+'suffix');
     for i := 0 to 2500000 do
-      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39'suffix');
+      Result := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39'suffix');
   end;
 begin
   ADate := now;
@@ -2042,10 +2042,10 @@ procedure TZTestSysUtilsCase.BenchTestDateTimeToUnicodeSQLTime;
 var
   Between1, Between2: Cardinal;
   Start, Stop: Cardinal;
-  S1, S2: ZWideString;
+  S1, S2: UnicodeString;
   ATime: TDateTime;
 
-  function TDateTimeToUnicodeSQLTime(const Value: TDateTime): ZWideString;
+  function TDateTimeToUnicodeSQLTime(const Value: TDateTime): UnicodeString;
   var
     I: Integer;
   begin
@@ -2059,18 +2059,18 @@ var
       Result := DateTimeToUnicodeSQLTime(Value, ConSettingsDummy.ReadFormatSettings, True, 'suffix');
   end;
 
-  function TFormatDateTime(const Value: TDateTime; const Format: String): ZWideString;
+  function TFormatDateTime(const Value: TDateTime; const Format: String): UnicodeString;
   var
     I: Integer;
   begin
     for i := 0 to 2500000 do
-      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(FormatDateTime(Format, Value));
+      Result := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(FormatDateTime(Format, Value));
     for i := 0 to 2500000 do
-      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39);
+      Result := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39);
     for i := 0 to 2500000 do
-      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(FormatDateTime(Format, Value)+'suffix');
+      Result := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(FormatDateTime(Format, Value)+'suffix');
     for i := 0 to 2500000 do
-      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39'suffix');
+      Result := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39'suffix');
   end;
 begin
   ATime := now;
@@ -2146,10 +2146,10 @@ procedure TZTestSysUtilsCase.BenchTestDateTimeToUnicodeSQLTimeStamp;
 var
   Between1, Between2: Cardinal;
   Start, Stop: Cardinal;
-  S1, S2: ZWideString;
+  S1, S2: UnicodeString;
   ADateTime: TDateTime;
 
-  function TDateTimeToUnicodeSQLTimeStamp(const Value: TDateTime): ZWideString;
+  function TDateTimeToUnicodeSQLTimeStamp(const Value: TDateTime): UnicodeString;
   var
     I: Integer;
   begin
@@ -2163,18 +2163,18 @@ var
       Result := DateTimeToUnicodeSQLTimeStamp(Value, ConSettingsDummy.ReadFormatSettings, True, 'suffix');
   end;
 
-  function TFormatDateTime(const Value: TDateTime; const Format: String): ZWideString;
+  function TFormatDateTime(const Value: TDateTime; const Format: String): UnicodeString;
   var
     I: Integer;
   begin
     for i := 0 to 2500000 do
-      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(FormatDateTime(Format, Value));
+      Result := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(FormatDateTime(Format, Value));
     for i := 0 to 2500000 do
-      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39);
+      Result := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39);
     for i := 0 to 2500000 do
-      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(FormatDateTime(Format, Value)+'suffix');
+      Result := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(FormatDateTime(Format, Value)+'suffix');
     for i := 0 to 2500000 do
-      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39'suffix');
+      Result := {$IFNDEF UNICODE}UnicodeString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39'suffix');
   end;
 begin
   ADateTime := now;
@@ -2198,11 +2198,11 @@ procedure TZTestSysUtilsCase.BenchBinToHexUnicode;
 var
   Between1, Between2: Cardinal;
   Start, Stop: Cardinal;
-  S1, S2: ZWideString;
+  S1, S2: UnicodeString;
   Bin: TByteDynArray;
   I, L: Cardinal;
 
-  function TZBinToHex: ZWideString;
+  function TZBinToHex: UnicodeString;
   var
     I: Integer;
   begin
@@ -2212,7 +2212,7 @@ var
       ZBinToHex(PAnsiChar(Pointer(Bin)), PWideChar(Pointer(Result)), L);
   end;
 
-  function TBinToHex: ZWideString;
+  function TBinToHex: UnicodeString;
   var
     I: Integer;
     Tmp: RawByteString;
@@ -2222,7 +2222,7 @@ var
     for i := 0 to 1000000 do
     begin
       BinToHex(PAnsiChar(Pointer(Bin)), PAnsiChar(Pointer(Tmp)), L);
-      Result := ZWideString(Tmp);
+      Result := UnicodeString(Tmp);
     end;
 
   end;
@@ -2244,7 +2244,7 @@ begin
 
   system.WriteLn('');
   system.WriteLn(Format('Benchmarking(x %d): ZBinToHex', [1000000]));
-  system.WriteLn(Format('Zeos: %d ms VS. ZWideString(SysUtils.BinToHex): %d ms', [Between1, Between2]));
+  system.WriteLn(Format('Zeos: %d ms VS. UnicodeString(SysUtils.BinToHex): %d ms', [Between1, Between2]));
 end;
 
 procedure TZTestSysUtilsCase.BenchBinToHexRaw;

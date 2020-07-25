@@ -871,7 +871,7 @@ begin
   STMT := nil;
   Ret := fODBCPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fHDBC, STMT);
   if (Ret <> SQL_SUCCESS) then
-    HandleErrorOrWarningW(Ret, Stmt, SQL_HANDLE_STMT, SQL, lcExecute, Self);
+    HandleErrorOrWarningW(Ret, Stmt, SQL_HANDLE_STMT, SQL, LoggingCategory, Self);
   try
     Ret := TODBC3UnicodePlainDriver(fODBCPlainDriver).SQLExecDirectW(STMT,
       Pointer(SQL), Length(SQL));
@@ -889,7 +889,7 @@ end;
 function TZODBCConnectionW.GetCatalog: string;
 var
   {$IFNDEF UNICODE}
-  Buf: ZWideString;
+  Buf: UnicodeString;
   {$ENDIF}
   aLen: SQLINTEGER;
   Ret: SQLRETURN;
@@ -1053,7 +1053,7 @@ function TZODBCConnectionW.NativeSQL(const SQL: string): string;
 var NewLength: SQLINTEGER;
   RET: SQLRETURN;
 {$IFNDEF UNICODE}
-  aSQL, nSQL: ZWideString;
+  aSQL, nSQL: UnicodeString;
 {$ENDIF}
 begin
   if SQL <> '' then begin
@@ -1236,7 +1236,7 @@ begin
   STMT := nil;
   Ret := fODBCPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fHDBC, STMT);
   if (Ret <> SQL_SUCCESS) then
-    HandleErrorOrWarningA(Ret, Stmt, SQL_HANDLE_STMT, SQL, lcExecute, Self);
+    HandleErrorOrWarningA(Ret, Stmt, SQL_HANDLE_STMT, SQL, LoggingCategory, Self);
   try
     Ret := TODBC3RawPlainDriver(fODBCPlainDriver).SQLExecDirect(STMT,
       Pointer(SQL), Length(SQL));

@@ -135,7 +135,7 @@ type
     procedure SetAnsiString(Index: Integer; const AValue: AnsiString); reintroduce;
     {$ENDIF}
     procedure SetRawByteString(Index: Integer; const AValue: RawByteString); reintroduce;
-    procedure SetUnicodeString(Index: Integer; const AValue: ZWideString); reintroduce;
+    procedure SetUnicodeString(Index: Integer; const AValue: UnicodeString); reintroduce;
 
     procedure SetDate(Index: Integer; const AValue: TZDate); overload;
     procedure SetTime(Index: Integer; const AValue: TZTime); overload;
@@ -245,8 +245,8 @@ begin
   Prepare;
   LastUpdateCount := -1;
   BindInParameters;
+  RestartTimer;
   try
-    RestartTimer;
     if FIsSelectSQL then begin
       if (FAdoRecordSet = nil) or (FAdoRecordSet.MaxRecords <> MaxRows) then begin
         FAdoRecordSet := CoRecordSet.Create;
@@ -1055,7 +1055,7 @@ set_var:          FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]
   end;
 end;
 
-const cNullUni = ZWideString('null');
+const cNullUni = UnicodeString('null');
 procedure TZAdoPreparedStatement.SetNull(Index: Integer;
   SQLType: TZSQLType);
 begin
@@ -1391,7 +1391,7 @@ set_var:          FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]
 end;
 
 procedure TZAdoPreparedStatement.SetUnicodeString(Index: Integer;
-  const AValue: ZWideString);
+  const AValue: UnicodeString);
 begin
   SetPWideChar(Index, Pointer(AValue), Length(AValue));
 end;

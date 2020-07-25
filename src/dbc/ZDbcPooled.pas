@@ -183,7 +183,7 @@ type
 
     function GetBinaryEscapeString(const Value: TBytes): String;
 
-    function GetEscapeString(const Value: ZWideString): ZWideString; overload;
+    function GetEscapeString(const Value: UnicodeString): UnicodeString; overload;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload;
 
     function GetEncoding: TZCharEncoding;
@@ -736,7 +736,7 @@ begin
   Result := GetConnection.GetBinaryEscapeString(Value);
 end;
 
-function TZDbcPooledConnection.GetEscapeString(const Value: ZWideString): ZWideString;
+function TZDbcPooledConnection.GetEscapeString(const Value: UnicodeString): UnicodeString;
 begin
   Result := GetConnection.GetEscapeString(Value);
 end;

@@ -845,7 +845,7 @@ begin
     if ((GetZComponent as TZAbstractConnection).Protocol = 'ado') or
        ((GetZComponent as TZAbstractConnection).Protocol = 'OleDB') then
       (GetZComponent as TZAbstractConnection).Database := String(PromptDataSource({$IFDEF FPC}Application.MainFormHandle{$ELSE}Application.Handle{$ENDIF},
-        ZWideString((GetZComponent as TZAbstractConnection).Database)))
+        WideString((GetZComponent as TZAbstractConnection).Database)))
 {$IFEND}
 {$IFDEF ENABLE_ODBC}
     else
@@ -1229,7 +1229,7 @@ begin
     if ((GetZComponent as TZConnectionGroup).Protocol = 'ado') or
        ((GetZComponent as TZConnectionGroup).Protocol = 'OleDB') then
       (GetZComponent as TZConnectionGroup).Database := String(PromptDataSource({$IFDEF FPC}Application.MainFormHandle{$ELSE}Application.Handle{$ENDIF},
-        ZWideString((GetZComponent as TZConnectionGroup).Database)))
+        WideString((GetZComponent as TZConnectionGroup).Database)))
 {$IFEND}
 {$IFDEF ENABLE_ODBC}
     else

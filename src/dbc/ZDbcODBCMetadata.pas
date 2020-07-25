@@ -249,7 +249,7 @@ type
     fPlainW: TODBC3UnicodePlainDriver;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-27
-    function DecomposeObjectString(const S: String): ZWideString; reintroduce;
+    function DecomposeObjectString(const S: String): UnicodeString; reintroduce;
   protected
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
@@ -1600,7 +1600,7 @@ begin
   Result := TZODBCDatabaseInfoW.Create(Self, fPHDBC);
 end;
 
-function TODBCDatabaseMetadataW.DecomposeObjectString(const S: String): ZWideString;
+function TODBCDatabaseMetadataW.DecomposeObjectString(const S: String): UnicodeString;
 begin
   if S = '' then
     Result := ''
@@ -1650,7 +1650,7 @@ var
   RS: IZResultSet;
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
-  Cat, Schem, Proc: ZWideString;
+  Cat, Schem, Proc: UnicodeString;
   ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
@@ -1748,7 +1748,7 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   SQLType: TZSQLType;
-  Cat, Schem, Proc, Col: ZWideString;
+  Cat, Schem, Proc, Col: UnicodeString;
   ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
@@ -1843,7 +1843,7 @@ var
   RS: IZResultSet;
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
-  Cat, Schem, Table, TableTypes: ZWideString;
+  Cat, Schem, Table, TableTypes: UnicodeString;
   ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
@@ -1941,7 +1941,7 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   SQLType: TZSQLType;
-  Cat, Schem, Table, Column: ZWideString;
+  Cat, Schem, Table, Column: UnicodeString;
   ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern,
@@ -2044,7 +2044,7 @@ var
   RS: IZResultSet;
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
-  Cat, Schem, Tabl, Col: ZWideString;
+  Cat, Schem, Tabl, Col: UnicodeString;
   ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
@@ -2118,7 +2118,7 @@ var
   RS: IZResultSet;
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
-  Cat, Schem, Table: ZWideString;
+  Cat, Schem, Table: UnicodeString;
   ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
@@ -2181,7 +2181,7 @@ var
   RS: IZResultSet;
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
-  Cat, Schem, Tabl: ZWideString;
+  Cat, Schem, Tabl: UnicodeString;
   ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
@@ -2296,7 +2296,7 @@ var
   RS: IZResultSet;
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
-  PKCat, PKSchem, PKTabl, FKCat, FKSchem, FKTabl: ZWideString;
+  PKCat, PKSchem, PKTabl, FKCat, FKSchem, FKTabl: UnicodeString;
   ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
@@ -2402,7 +2402,7 @@ var
   RS: IZResultSet;
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
-  Cat, Schem, Tabl: ZWideString;
+  Cat, Schem, Tabl: UnicodeString;
   ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
@@ -3712,7 +3712,7 @@ end;
 }
 function TAbstractODBCDatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
-  TableTypes: array[0..7] of ZWideString = (
+  TableTypes: array[0..7] of UnicodeString = (
     'ALIAS', 'TABLE', 'SYNONYM', 'SYSTEM TABLE', 'VIEW',
     'GLOBAL TEMPORARY', 'LOCAL TEMPORARY', 'SYSTEM VIEW'
   );

@@ -419,7 +419,7 @@ begin
         FAdoConnection.CommitTrans;
         Dec(FTransactionLevel);
       end;
-      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'COMMIT');
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'COMMIT');
       AutoCommit := True;
     end else
       StartTransaction;
@@ -464,7 +464,7 @@ begin
   try
     if FTransactionLevel = 0 then begin
       FTransactionLevel := FAdoConnection.BeginTrans;
-      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, LogMessage);
       Result := FTransactionLevel;
     end else begin
       if cSavePointSyntaxW[fServerProvider][spqtSavePoint] = '' then
@@ -475,7 +475,7 @@ begin
     end;
   except
     on E: Exception do begin
-      DriverManager.LogError(lcExecute, ConSettings^.Protocol, LogMessage, 0,
+      DriverManager.LogError(lcTransaction, ConSettings^.Protocol, LogMessage, 0,
        ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise EZSQLException.Create(E.Message);
     end;
@@ -509,7 +509,7 @@ begin
       FSavePoints.Delete(FSavePoints.Count-1);
     end else begin
       FAdoConnection.CommitTrans;
-      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, LogMessage);
       FTransactionLevel := 0;
       AutoCommit := True;
       if FRestartTransaction then
@@ -518,7 +518,7 @@ begin
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, ConSettings^.Protocol, LogMessage, 0,
+      DriverManager.LogError(lcTransaction, ConSettings^.Protocol, LogMessage, 0,
        ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
@@ -551,7 +551,7 @@ begin
       FSavePoints.Delete(FSavePoints.Count-1);
     end else begin
       FAdoConnection.RollbackTrans;
-      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, LogMessage);
       FTransactionLevel := 0;
       AutoCommit := True;
       if FRestartTransaction then
@@ -560,7 +560,7 @@ begin
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, ConSettings^.Protocol, LogMessage, 0,
+      DriverManager.LogError(lcTransaction, ConSettings^.Protocol, LogMessage, 0,
        ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
@@ -594,10 +594,10 @@ begin
     if FAdoConnection.State = adStateOpen then
       FAdoConnection.Close;
 //      FAdoConnection := nil;
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
+    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, LogMessage);
   except
     on E: Exception do begin
-      DriverManager.LogError(lcExecute, ConSettings^.Protocol, LogMessage, 0,
+      DriverManager.LogError(lcTransaction, ConSettings^.Protocol, LogMessage, 0,
        ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
@@ -620,11 +620,11 @@ begin
   try
     if Catalog <> '' then //see https://sourceforge.net/p/zeoslib/tickets/117/
       FAdoConnection.DefaultDatabase := WideString(Catalog);
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
+    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, LogMessage);
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, ConSettings^.Protocol, LogMessage, 0,
+      DriverManager.LogError(lcTransaction, ConSettings^.Protocol, LogMessage, 0,
        ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;

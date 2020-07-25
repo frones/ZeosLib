@@ -394,7 +394,7 @@ var
   CS: Word;
   function ValueToString(Buf: PAnsiChar; Len: Cardinal): String;
   {$IFNDEF UNICODE}
-  var tmp: ZWideString;
+  var tmp: UnicodeString;
   {$ENDIF}
   begin
     if (Buf = nil) or (AnsiChar(Buf^) = AnsiChar(#0)) then

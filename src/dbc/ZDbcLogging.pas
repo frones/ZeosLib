@@ -142,7 +142,7 @@ begin
       lcBindPrepStmt: SQLWriter.AddText('Bind prepared', Result);
       lcExecPrepStmt: SQLWriter.AddText('Execute prepared', Result);
       lcUnprepStmt: SQLWriter.AddText('Unprepare prepared', Result);
-      lcFetch: SQLWriter.AddText('Fetch row(s)', Result);
+      lcFetch: SQLWriter.AddText('Fetch ', Result);
       lcFetchDone: SQLWriter.AddText('Fetch complete', Result);
     else
       SQLWriter.AddText('Other', Result);
@@ -151,8 +151,10 @@ begin
       SQLWriter.AddText(', proto: ', Result);
       SQLWriter.AddText(LoggingEvent.Protocol, Result);
     end;
-    if (LoggingEvent.ErrorCodeOrAffectedRows <> -1) and (
-        (LoggingEvent.Category = lcExecPrepStmt) or
+    SQLWriter.AddText(', msg: ', Result);
+    SQLWriter.AddText(LoggingEvent.Message, Result);
+    if (LoggingEvent.ErrorCodeOrAffectedRows <> -1) and (LoggingEvent.Error = EmptyRaw) and
+       ((LoggingEvent.Category = lcExecPrepStmt) or
         (LoggingEvent.Category = lcExecute) or
         (LoggingEvent.Category = lcFetchDone) ) then begin
       if LoggingEvent.Category = lcFetchDone
@@ -166,8 +168,6 @@ begin
       SQLWriter.AddText(', elapsed time: ', Result);
       SQLWriter.AddDateTime(LoggingEvent.Timestamp-LoggingEvent.TimeStampStart, DefTimeFormatMsecs, Result);
     end;
-    SQLWriter.AddText(', msg: ', Result);
-    SQLWriter.AddText(LoggingEvent.Message, Result);
     if (LoggingEvent.Error <> EmptyRaw) then begin
       SQLWriter.AddText(', errcode: ', Result);
       SQLWriter.AddOrd(LoggingEvent.ErrorCodeOrAffectedRows, Result);

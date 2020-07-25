@@ -1545,13 +1545,13 @@ begin
         CheckEquals(AnsiString(SNames[name]), ResultSet.GetAnsiString(p_name_Index));
         CheckEquals(UTF8String(SNames[name]), ResultSet.GetUTF8String(p_name_Index));
         CheckEquals(RawByteString(SNames[name]), ResultSet.GetRawByteString(p_name_Index));
-        CheckEquals(ZWideString(SNames[name]), ResultSet.GetUnicodeString(p_name_Index));
+        CheckEquals(UnicodeString(SNames[name]), ResultSet.GetUnicodeString(p_name_Index));
         P := ResultSet.GetPAnsiChar(p_name_Index, Len);
         ZSetString(PAnsiChar(P), Len, R);
         CheckEquals(RawByteString(SNames[name]), R);
         P := ResultSet.GetPWideChar(p_name_Index, Len);
         System.SetString(U, PWideChar(P), Len);
-        CheckEquals(ZWideString(SNames[name]), U);
+        CheckEquals(UnicodeString(SNames[name]), U);
       end;
     finally
       ResultSet.Close;
