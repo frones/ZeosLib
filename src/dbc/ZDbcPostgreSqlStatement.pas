@@ -1296,8 +1296,6 @@ begin
   LastUpdatecount := -1;
   Prepare;
   PrepareLastResultSetForReUse;
-  if (DriverManager <> nil) and DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcBindPrepStmt,Self);
   if Findeterminate_datatype or (FRawPlanName = '')
   then Fres := PGExecute
   else Fres := PGExecutePrepared;
@@ -1333,8 +1331,6 @@ begin
   LastUpdateCount := -1;
   PrepareOpenResultSetForReUse;
   Prepare;
-  if (DriverManager <> nil) and DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcBindPrepStmt,Self);
   if Findeterminate_datatype or (FRawPlanName = '')
   then Fres := PGExecute
   else Fres := PGExecutePrepared;
@@ -1368,8 +1364,6 @@ var
 begin
   PrepareLastResultSetForReuse;
   Prepare;
-  if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcBindPrepStmt,Self);
   if BatchDMLArrayCount > 0
   then FRes := ExecuteDMLBatchWithUnnestVarlenaArrays
   else if (FRawPlanName = '') or Findeterminate_datatype
