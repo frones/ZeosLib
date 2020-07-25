@@ -301,6 +301,7 @@ end;
 procedure TZGenerateSQLCachedResolver.FillUpdateColumns(
   const OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var I, j: Integer;
+  IP: PZIndexPair;
 begin
   FUpdateColumns.Clear;
   { Use precached parameters. }
@@ -312,10 +313,11 @@ begin
   else begin
     FUpdateColumns.Capacity := FInsertColumns.Count;
     J := FirstDbcIndex;
-    for I := FirstDbcIndex to FUpdateColumns.Capacity{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
+    for I := 0 to FUpdateColumns.Capacity-1 do begin
+      IP := PZIndexPair(FInsertColumns[i]);
       if (OldRowAccessor.CompareBuffer(OldRowAccessor.RowBuffer,
-         NewRowAccessor.RowBuffer, I, NewRowAccessor.GetCompareFunc(I, ckEquals))  <> 0) then begin
-        FUpdateColumns.Add(J, I);
+         NewRowAccessor.RowBuffer, IP.ColumnIndex, NewRowAccessor.GetCompareFunc(IP.ColumnIndex, ckEquals))  <> 0) then begin
+        FUpdateColumns.Add(J, IP.ColumnIndex);
         Inc(J);
       end;
     end;
