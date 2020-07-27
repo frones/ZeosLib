@@ -2220,9 +2220,8 @@ begin
       Result := False;
     if not Result and FSingleRowMode then
       ClearPGResult;
-  end
-  else
-    RaiseForwardOnlyException;
+  end else
+    raise CreateForwardOnlyException;
 end;
 
 {**
