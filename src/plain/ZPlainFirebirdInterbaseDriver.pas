@@ -2307,7 +2307,6 @@ type
   end;
   {$ENDIF ZEOS_DISABLE_INTERBASE}
 
-  {$IFNDEF ZEOS_DISABLE_FIREBIRD}
   {** Implements a native driver for Firebird }
   TZFirebirdPlainDriver = class (TZInterbasePlainDriver)
   protected
@@ -2315,12 +2314,13 @@ type
   public
     function GetProtocol: string; override;
     function GetDescription: string; override;
+  {$IFNDEF ZEOS_DISABLE_FIREBIRD}
   protected
     procedure LoadApi; override;
   public
     fb_get_master_interface: function: IMaster; cdecl;
-  end;
   {$ENDIF ZEOS_DISABLE_FIREBIRD}
+  end;
 
 {$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 
@@ -2572,8 +2572,6 @@ begin
 end;
 {$ENDIF ZEOS_DISABLE_INTERBASE}
 
-{$IFNDEF ZEOS_DISABLE_FIREBIRD}
-
 { TZFirebirdPlainDriver }
 
 function TZFirebirdPlainDriver.Clone: IZPlainDriver;
@@ -2591,6 +2589,7 @@ begin
   Result := 'firebird';
 end;
 
+{$IFNDEF ZEOS_DISABLE_FIREBIRD}
 procedure TZFirebirdPlainDriver.LoadApi;
 begin
   inherited LoadApi;

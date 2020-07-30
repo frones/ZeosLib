@@ -206,6 +206,9 @@ constructor TZInterbase6Driver.Create;
 begin
   inherited Create;
   AddSupportedProtocol(AddPlainDriverToCache(TZInterbasePlainDriver.Create));
+  {$IFDEF ZEOS_DISABLE_FIREBIRD}
+  AddSupportedProtocol(AddPlainDriverToCache( TZFirebirdPlainDriver.Create));
+  {$ENDIF}
 end;
 
 { TZInterbase6Connection }
