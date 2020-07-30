@@ -126,6 +126,8 @@ type
   protected
     procedure SetColumnCodePageFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
       ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); override;
+    procedure SetColumnPrecisionFromGetColumnsRS(
+      {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); override;
   end;
 
   TZDBLIBColumnInfo = class(TZColumnInfo)
@@ -1162,6 +1164,13 @@ begin
         else ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP; //assume server CP instead
   end else
     ColumnInfo.ColumnCodePage := zCP_NONE;
+end;
+
+procedure TZDblibResultSetMetadata.SetColumnPrecisionFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+begin
+  if (ColumnInfo.ColumnType = stString) or (ColumnInfo.ColumnType = stUnicodeString) then
+    ColumnInfo.Precision := TableColumns.GetInt(TableColColumnSizeIndex);
 end;
 
 {$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit

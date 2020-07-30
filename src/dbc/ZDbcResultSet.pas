@@ -94,7 +94,7 @@ type
     LastWasNull: Boolean;
     FOpenLobStreams: TZSortedList;
 
-    procedure RaiseForwardOnlyException;
+    function CreateForwardOnlyException: EZSQLException;
     procedure CheckClosed;
     procedure CheckColumnConvertion(ColumnIndex: Integer; ResultType: TZSQLType);
     procedure CheckBlobColumn(ColumnIndex: Integer);
@@ -1019,6 +1019,14 @@ begin
 end;
 
 {**
+  Creates an operation is not allowed in FORWARD ONLY mode exception.
+}
+function TZAbstractResultSet.CreateForwardOnlyException: EZSQLException;
+begin
+  Result := EZSQLException.Create(SOperationIsNotAllowed1);
+end;
+
+{**
   Destroys this object and cleanups the memory.
 }
 destructor TZAbstractResultSet.Destroy;
@@ -1029,14 +1037,6 @@ begin
   FreeAndNil(FColumnsInfo);
   FreeAndNil(FOpenLobStreams);
   inherited Destroy;
-end;
-
-{**
-  Raises operation is not allowed in FORWARD ONLY mode exception.
-}
-procedure TZAbstractResultSet.RaiseForwardOnlyException;
-begin
-  raise EZSQLException.Create(SOperationIsNotAllowed1);
 end;
 
 {**
@@ -2507,11 +2507,13 @@ end;
   @return <code>true</code> if the cursor is on the result set;
     <code>false</code> otherwise
 }
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // base class - parameter not used intentionally
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5024 off : Parameter "$1" not used}
+  {$WARN 5033 off : Function result does not seem to be set}
+{$ENDIF}
 function TZAbstractResultSet.MoveAbsolute(Row: Integer): Boolean;
 begin
-  Result := False;
-  RaiseForwardOnlyException;
+  raise CreateForwardOnlyException;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 

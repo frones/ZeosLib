@@ -82,7 +82,7 @@ type
     function GetActiveTransaction: IZFirebirdTransaction;
     function GetAttachment: IAttachment;
     function GetStatus: IStatus;
-    function GetPlainDriver: TZFirebird3UpPlainDriver;
+    function GetPlainDriver: TZFirebirdPlainDriver;
   end;
 
   TZFirebirdTransaction = class(TZInterbaseFirebirdTransaction,
@@ -116,7 +116,7 @@ type
     FAttachment: IAttachment;
     FStatus: IStatus;
     FUtil: IUtil;
-    FPlainDriver: TZFirebird3UpPlainDriver;
+    FPlainDriver: TZFirebirdPlainDriver;
     function ConstructConnectionString: String;
   protected
     procedure InternalCreate; override;
@@ -126,7 +126,7 @@ type
     function GetActiveTransaction: IZFirebirdTransaction;
     function GetAttachment: IAttachment;
     function GetStatus: IStatus;
-    function GetPlainDriver: TZFirebird3UpPlainDriver;
+    function GetPlainDriver: TZFirebirdPlainDriver;
   public { IZTransactionManager }
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
@@ -149,7 +149,8 @@ implementation
 {$IFNDEF ZEOS_DISABLE_FIREBIRD} //if set we have an empty unit
 
 uses ZFastCode, ZDbcFirebirdStatement, ZDbcInterbaseFirebirdMetadata, ZEncoding,
-  ZDbcMetadata, ZMessages,
+  ZDbcMetadata, ZMessages, ZPlainDriver,
+  {$IFNDEF ZEOS_DISABLE_INTERBASE}ZDbcInterbase6,{$ENDIF}
   ZDbcProperties, Math
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES},System.Types{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
@@ -180,8 +181,19 @@ uses ZFastCode, ZDbcFirebirdStatement, ZDbcInterbaseFirebirdMetadata, ZEncoding,
     connection to the URL
 }
 function TZFirebirdDriver.Connect(const Url: TZURL): IZConnection;
+var iPlainDriver: IZPlainDriver;
+    FirebirdPlainDriver: TZFirebirdPlainDriver;
 begin
-  Result := TZFirebirdConnection.Create(URL);
+  iPlainDriver := GetPlainDriver(URL, True);
+  FirebirdPlainDriver := iPlainDriver.GetInstance as TZFirebirdPlainDriver;
+  if Assigned(FirebirdPlainDriver.fb_get_master_interface) then
+    Result := TZFirebirdConnection.Create(URL)
+  else
+    {$IFDEF ZEOS_DISABLE_INTERBASE}
+    raise EZSQLException.Create('couldn''t find fb_get_master_interface in client library!');
+    {$ELSE ZEOS_DISABLE_INTERBASE}
+    Result := TZInterbase6Connection.Create(Url);
+    {$ENDIF ZEOS_DISABLE_INTERBASE}
 end;
 
 {**
@@ -190,7 +202,7 @@ end;
 constructor TZFirebirdDriver.Create;
 begin
   inherited Create;
-  AddSupportedProtocol(AddPlainDriverToCache(TZFirebird3UpPlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZFirebirdPlainDriver.Create));
 end;
 
 { TZFirebirdConnection }
@@ -339,7 +351,7 @@ begin
   Result := FAttachment;
 end;
 
-function TZFirebirdConnection.GetPlainDriver: TZFirebird3UpPlainDriver;
+function TZFirebirdConnection.GetPlainDriver: TZFirebirdPlainDriver;
 begin
   Result := FPlainDriver;
 end;
@@ -372,7 +384,7 @@ end;
 }
 procedure TZFirebirdConnection.InternalCreate;
 begin
-  FPlainDriver := TZFirebird3UpPlainDriver(PlainDriver.GetInstance);
+  FPlainDriver := PlainDriver.GetInstance as TZFirebirdPlainDriver;
   inherited InternalCreate;
   { set default sql dialect it can be overriden }
   FMaster := FPlainDriver.fb_get_master_interface;

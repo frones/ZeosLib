@@ -1832,8 +1832,8 @@ GUID_Size:  Result.UpdateRawByteString(TableColColumnTypeNameIndex, 'GUID');
             Result.UpdateInt(TableColColumnCharOctetLengthIndex, SizeOf(TGUID));
           end else begin
             Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(TYPE_NAME_Index, L), L);
-Str_Size:   Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldLength*GetInt(CHARACTER_LENGTH_Index));   //CHAR_OCTET_LENGTH
-            Result.UpdateInt(TableColColumnSizeIndex, FieldLength);
+Str_Size:   Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldLength);   //CHAR_OCTET_LENGTH
+            Result.UpdateInt(TableColColumnSizeIndex, GetInt(CHARACTER_LENGTH_Index));
           end;
         else
           Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(TYPE_NAME_Index, L), L);

@@ -225,7 +225,9 @@ var
     CheckEquals(UpperCase(ColumnName), UpperCase(ResultSet.GetStringByName('COLUMN_NAME')));
 //    CheckEquals(DataType, ResultSet.GetSmallByName('DATA_TYPE'));
 //    CheckEquals(TypeName, ResultSet.GetStringByName('TYPE_NAME'));
-//    CheckEquals(ColumnSize, ResultSet.GetIntByName('COLUMN_SIZE'));
+    if (ResultSet.GetIntByName('DATA_TYPE') = Ord(stString)) or
+       (ResultSet.GetIntByName('DATA_TYPE') = Ord(stUnicodeString)) then
+      CheckEquals(ColumnSize, ResultSet.GetIntByName('COLUMN_SIZE'), ColumnName);
 //    CheckEquals(BufferLength, ResultSet.GetIntByName('BUFFER_LENGTH'));
 //    CheckEquals(DecimalDigits, ResultSet.GetIntByName('DECIMAL_DIGITS'));
 //    CheckEquals(Radix, ResultSet.GetIntByName('NUM_PREC_RADIX'));
@@ -523,6 +525,7 @@ type
   public
     procedure InternalClose; override;
     function StartTransaction: Integer;
+    function GetTransactionLevel: Integer;
     function GetConnectionTransaction: IZTransaction;
     procedure Commit;
     procedure Rollback;
@@ -582,6 +585,11 @@ end;
 function TDummyDbcConnection.GetConnectionTransaction: IZTransaction;
 begin
   Result := nil;
+end;
+
+function TDummyDbcConnection.GetTransactionLevel: Integer;
+begin
+  Result := -1;
 end;
 
 procedure TDummyDbcConnection.InternalClose;

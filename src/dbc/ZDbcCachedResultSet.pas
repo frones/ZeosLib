@@ -1988,7 +1988,7 @@ begin
   // return false here. What is our specification?
   //CheckClosed;
   if (ResultSetType = rtForwardOnly) and (Row < RowNo) then
-    RaiseForwardOnlyException;
+    raise CreateForwardOnlyException;
 {$ENDIF}
 
   if not Closed and (Row >= 0) and (Row <= LastRowNo + 1) then begin
@@ -2234,10 +2234,9 @@ end;
 procedure TZAbstractCachedResultSet.MoveToCurrentRow;
 begin
   CheckClosed;
-  if (RowNo >= 1) and (RowNo <= LastRowNo) then
-    FRowAccessor.RowBuffer := FSelectedRow
-  else
-    FRowAccessor.RowBuffer := nil;
+  if (RowNo >= 1) and (RowNo <= LastRowNo)
+  then FRowAccessor.RowBuffer := FSelectedRow
+  else FRowAccessor.RowBuffer := nil;
 end;
 
 {$IFDEF USE_SYNCOMMONS}
@@ -2262,7 +2261,7 @@ var
 begin
 {$IFNDEF DISABLE_CHECKING}
   if ResultSetType = rtForwardOnly then
-    RaiseForwardOnlyException;
+    raise CreateForwardOnlyException;
 {$ENDIF}
   RowBuffer1 := PZRowBuffer(FRowsList[Row1 - 1]);
   RowBuffer2 := PZRowBuffer(FRowsList[Row2 - 1]);

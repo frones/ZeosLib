@@ -160,7 +160,7 @@ type
     IImmediatelyReleasable, IZInterbaseFirebirdLob)
   private
     FLobStream: TZFirebirdLobStream;
-    FPlainDriver: TZFirebird3UpPlainDriver;
+    FPlainDriver: TZFirebirdPlainDriver;
     FBlobId: TISC_QUAD;
     FFBConnection: IZFirebirdConnection;
     FFBTransaction: IZFirebirdTransaction;

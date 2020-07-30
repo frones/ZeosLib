@@ -2599,11 +2599,17 @@ end;
   @param RowBuffer a reference to the result row buffer.
   @return <code>True</code> if the buffer was defined.
 }
-function TZAbstractRODataset.GetActiveBuffer(out RowBuffer: PZRowBuffer):
-  Boolean;
+function TZAbstractRODataset.GetActiveBuffer(
+  out RowBuffer: PZRowBuffer): Boolean;
 var
   RowNo: NativeInt;
-  CachedResultSet: IZCachedResultSet;
+  procedure TryMoveToInitialRow;
+  var CachedResultSet: IZCachedResultSet; //keep intf out of main method -> no _IntfClear here
+  begin
+    if (ResultSet.QueryInterface(IZCachedResultSet, CachedResultSet) = S_OK)
+    then CachedResultSet.MoveToInitialRow
+    else ResultSet.MoveToCurrentRow;
+  end;
 begin
   RowBuffer := nil;
   case State of
@@ -2630,20 +2636,18 @@ begin
         if RowNo <> ResultSet.GetRow then
           CheckBiDirectional;
 
-        if State = dsOldValue
+        if (State = dsOldValue)
         then RowBuffer := OldRowBuffer
         else RowBuffer := NewRowBuffer;
 
-        if RowBuffer.Index <> RowNo then
-        begin
+        if RowBuffer.Index <> RowNo then begin
           RowAccessor.RowBuffer := RowBuffer;
           RowAccessor.Clear;
           if (ResultSet.GetRow = RowNo) or ResultSet.MoveAbsolute(RowNo) then begin
-            if (State = dsOldValue) and (ResultSet.QueryInterface(IZCachedResultSet,
-                    CachedResultSet) = S_OK) then
-              CachedResultSet.MoveToInitialRow;
+            if (State = dsOldValue)
+            then TryMoveToInitialRow
+            else ResultSet.MoveToCurrentRow;
             RowBuffer.Index := RowNo;
-            ResultSet.MoveToCurrentRow;
           end else
             RowBuffer := nil;
         end;
