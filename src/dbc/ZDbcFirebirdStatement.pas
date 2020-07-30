@@ -74,7 +74,7 @@ type
     FStatus: IStatus;
     FStatementType: TZIbSqlStatementType;
     FInMessageMetadata, FOutMessageMetadata: IMessageMetadata;
-    FPlainDriver: TZFirebird3UpPlainDriver;
+    FPlainDriver: TZFirebirdPlainDriver;
     FResultSet: IResultSet;
   protected
     procedure WriteLobBuffer(Index: Cardinal; P: PAnsiChar; Len: NativeUInt); override;

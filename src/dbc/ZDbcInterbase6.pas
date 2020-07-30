@@ -206,7 +206,6 @@ constructor TZInterbase6Driver.Create;
 begin
   inherited Create;
   AddSupportedProtocol(AddPlainDriverToCache(TZInterbasePlainDriver.Create));
-  AddSupportedProtocol(AddPlainDriverToCache(TZFirebirdPlainDriver.Create));
 end;
 
 { TZInterbase6Connection }
