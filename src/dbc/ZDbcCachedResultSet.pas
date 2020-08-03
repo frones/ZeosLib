@@ -294,6 +294,7 @@ type
     procedure CancelUpdates; virtual;
     procedure RevertRecord; virtual;
     procedure MoveToInitialRow; virtual;
+    procedure MoveToUpdateRow;
     procedure PostUpdatesCached; virtual;
     procedure DisposeCachedUpdates; virtual;
     {$IFDEF USE_SYNCOMMONS}
@@ -656,8 +657,7 @@ procedure TZAbstractCachedResultSet.PostUpdates;
 begin
   CheckClosed;
   if FInitialRowsList.Count > 0 then begin
-    while FInitialRowsList.Count > 0 do
-    begin
+    while FInitialRowsList.Count > 0 do begin
       OldRowAccessor.RowBuffer := PZRowBuffer(FInitialRowsList[0]);
       NewRowAccessor.RowBuffer := PZRowBuffer(FCurrentRowsList[0]);
 
@@ -2224,6 +2224,34 @@ procedure TZAbstractCachedResultSet.MoveToInsertRow;
 begin
   CheckClosed;
   FRowAccessor.RowBuffer := FInsertedRow;
+end;
+
+{**
+  Moves the cursor to the update row.  The current cursor position is
+  remembered while the cursor is positioned on the update row.
+
+  The update row is a special row associated with an updatable
+  result set.  It is essentially a buffer where a new row may
+  be constructed by calling the <code>updateXXX</code> methods prior to
+  updateing the row into the result set.
+
+  Only the <code>updateXXX</code>, <code>getXXX</code>,
+  and <code>updateRow</code> methods may be
+  called when the cursor is on the update row.  All of the columns in
+  a result set must be given a value each time this method is
+  called before calling <code>updateRow</code>.
+  An <code>updateXXX</code> method must be called before a
+  <code>getXXX</code> method can be called on a column value.
+}
+procedure TZAbstractCachedResultSet.MoveToUpdateRow;
+begin
+  if (RowAccessor.RowBuffer = FSelectedRow) and (FSelectedRow <> FUpdatedRow) then begin
+    FSelectedRow := FUpdatedRow;
+    RowAccessor.RowBuffer := FSelectedRow;
+    RowAccessor.CloneFrom(PZRowBuffer(FRowsList[RowNo - 1]));
+    FUpdatedRow.Index := FSelectedRow.Index;
+    FUpdatedRow.UpdateType := utModified;
+  end;
 end;
 
 {**

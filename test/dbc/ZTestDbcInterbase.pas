@@ -233,7 +233,7 @@ begin
   try
     Connection.Commit;
     Connection.Rollback;
-    Fail(cSInvalidOpInAutoCommit);
+    Fail(SInvalidOpInAutoCommit);
   except on E: Exception do
     CheckNotTestFailure(E);
   end;
@@ -247,7 +247,7 @@ begin
   try
     Connection.Commit;
     Connection.Rollback;
-    Fail(cSInvalidOpInAutoCommit);
+    Fail(SInvalidOpInAutoCommit);
   except on E: Exception do
     CheckNotTestFailure(E);
   end;
@@ -263,7 +263,7 @@ begin
   try
     Connection.Commit;
     Connection.Rollback;
-    Fail(cSInvalidOpInAutoCommit);
+    Fail(SInvalidOpInAutoCommit);
   except on E: Exception do
     CheckNotTestFailure(E);
   end;

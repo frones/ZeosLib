@@ -404,7 +404,7 @@ begin
       FInMessageMetadata, FInData, FOutMessageMetadata, FOutData);
     if ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
        ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0)  then
-      FFBConnection.HandleErrorOrWarning(lcExecPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), fASQL, Self);
+      FFBConnection.HandleErrorOrWarning(lcExecPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self);
   end else ExceuteBatch;
 end;
 
@@ -490,7 +490,7 @@ begin
         end else if FResultSet <> nil then begin
           FResultSet.Close(FStatus);
           if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-            FFBConnection.HandleErrorOrWarning(lcExecPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), fASQL, Self);
+            FFBConnection.HandleErrorOrWarning(lcExecPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self);
           FResultSet.Release;
         end;
       stExecProc: begin{ Create ResultSet if possible }
@@ -572,7 +572,7 @@ begin
     FFBStatement := FAttachment.prepare(FStatus, Transaction, Length(fASQL),
       Pointer(fASQL), FDialect, flags);
     if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-      FFBConnection.HandleErrorOrWarning(lcPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), fASQL, Self);
+      FFBConnection.HandleErrorOrWarning(lcPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self);
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcPrepStmt,Self);
     if FFBStatement.vTable.version > 3 then begin
@@ -580,7 +580,7 @@ begin
       if TimeOut <> 0 then begin
         IStatement_V4(FFBStatement).setTimeout(FStatus, TimeOut);
         if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-          FFBConnection.HandleErrorOrWarning(lcPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), fASQL, Self);
+          FFBConnection.HandleErrorOrWarning(lcPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self);
       end;
     end;
     FStatementType := TZIbSqlStatementType(FFBStatement.getType(FStatus));
@@ -698,7 +698,7 @@ begin
   if FFBStatement <> nil then begin
     FFBStatement.free(FStatus);
     if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-      FFBConnection.HandleErrorOrWarning(lcUnprepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), fASQL, Self);
+      FFBConnection.HandleErrorOrWarning(lcUnprepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self);
     FFBStatement.release;
     FFBStatement := nil;
   end;

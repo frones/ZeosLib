@@ -107,7 +107,7 @@ type
   private
     function GetRawSQL: RawByteString; override;
   protected
-    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
   public
     procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
     procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
@@ -445,10 +445,10 @@ begin
   //  FDBLibConnection.CheckDBLibError(lcExecute, SQL);
 
   if FPlainDriver.dbcmd(FHandle, Pointer(Raw)) <> DBSUCCEED then
-    FDBLibConnection.CheckDBLibError(lcExecute, Raw);
+    FDBLibConnection.CheckDBLibError(lcExecute, SQL);
 
   if FPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED then
-    FDBLibConnection.CheckDBLibError(lcExecute, Raw);
+    FDBLibConnection.CheckDBLibError(lcExecute, SQL);
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecute, Self);
 end;
@@ -677,9 +677,11 @@ begin
 end;
 
 procedure TZDBLibPreparedStatementEmulated.AddParamLogValue(
-  ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter;
-  var Result: RawByteString);
+  ParamIndex: Integer; SQLWriter: TZSQLStringWriter; var Result: SQLString);
 var Bind: PZBindValue;
+  {$IFDEF UNICODE}
+  CP: Word;
+  {$ENDIF}
 begin
   Bind := BindList[ParamIndex];
   if Bind.BindType = zbtNull then
@@ -692,7 +694,19 @@ begin
                     else SQLWriter.AddText('(TRUE)', Result);
     stAsciiStream:  SQLWriter.AddText('(CLOB)', Result);
     stBinaryStream: SQLWriter.AddText('(BLOB)', Result);
+    {$IFDEF UNICODE}
+    stString: begin
+        if (FClientCP = zCP_UTF8) or FIsNCharIndex[ParamIndex]
+        then CP := zCP_UTF8
+        else CP := FClientCP;
+        fUniTemp := ZRawToUnicode(RawByteString(Bind.Value), CP);
+        SQLWriter.AddTextQuoted(fUniTemp, #39, Result);
+        fUniTemp := '';
+      end;
+    else            SQLWriter.AddAscii7Text(Pointer(RawByteString(Bind.Value)), Length(RawByteString(Bind.Value)), Result);
+    {$ELSE}
     else            SQLWriter.AddText(RawByteString(Bind.Value), Result);
+    {$ENDIF}
   end;
 end;
 
@@ -1176,6 +1190,7 @@ procedure TZDBLIBPreparedRPCStatement.InternalExecute;
 begin
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcBindPrepStmt,Self);
+  RestartTimer;
   LastUpdateCount := -1;
   if FPLainDriver.dbRpcExec(FHandle) <> DBSUCCEED then
     FDBLibConnection.CheckDBLibError(lcOther, 'EXECUTEPREPARED:dbRPCExec');

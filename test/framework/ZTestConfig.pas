@@ -251,7 +251,7 @@ type
   private
     FCounter: Integer;
   public
-    function Format(LoggingEvent: TZLoggingEvent) : RawByteString;
+    function Format(LoggingEvent: TZLoggingEvent) : SQLString;
   end;
 
 
@@ -282,10 +282,10 @@ end;
 
 { TZTestLoggingFormatter }
 
-function TZTestLoggingFormatter.Format(LoggingEvent: TZLoggingEvent): RawByteString;
+function TZTestLoggingFormatter.Format(LoggingEvent: TZLoggingEvent): SQLString;
 begin
   Inc(FCounter);
-  Result := RawByteString(SysUtils.Format('[%10d]', [FCounter])) + ' cat: ';
+  Result := SysUtils.Format('[%10d]', [FCounter]) + ' cat: ';
   case LoggingEvent.Category of
     lcConnect: Result := Result + 'Connect';
     lcDisconnect: Result := Result + 'Disconnect';
@@ -302,10 +302,10 @@ begin
     Result := Result + ', proto: ' + LoggingEvent.Protocol;
   Result := Result + ', msg: ' + LoggingEvent.Message;
   if (LoggingEvent.Error <> '') then
-    Result := Result + ', errcode: ' + IntToRaw(LoggingEvent.ErrorCodeOrAffectedRows)
+    Result := Result + ', errcode: ' + {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(LoggingEvent.ErrorCodeOrAffectedRows)
       + ', error: ' + LoggingEvent.Error
   else if (LoggingEvent.ErrorCodeOrAffectedRows <> 0) then
-    Result := Result + ', affected row(s): ' + IntToRaw(LoggingEvent.ErrorCodeOrAffectedRows);
+    Result := Result + ', affected row(s): ' + {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(LoggingEvent.ErrorCodeOrAffectedRows);
 end;
 
 { TZTestConfiguration }

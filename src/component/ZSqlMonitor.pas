@@ -121,6 +121,10 @@ type
 
 implementation
 
+{$IFDEF UNICODE}
+uses ZEncoding;
+{$ENDIF}
+
 
 { TZSQLMonitor }
 
@@ -131,7 +135,7 @@ implementation
 constructor TZSQLMonitor.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FTraceList := TObjectList.Create;
+  FTraceList := TObjectList.Create(True);
   FMaxTraceCount := 100;
 end;
 
@@ -141,7 +145,7 @@ end;
 destructor TZSQLMonitor.Destroy;
 begin
   SetActive(False);
-  FTraceList.Free;
+  FreeAndNil(FTraceList);
   inherited Destroy;
 end;
 
@@ -171,13 +175,14 @@ end;
 }
 procedure TZSQLMonitor.SetActive(const Value: Boolean);
 begin
-  if FActive <> Value then
-  begin
-    if Value then
-      DriverManager.AddLoggingListener(Self)
-    else
+  if FActive <> Value then begin
+    if Value
+    then DriverManager.AddLoggingListener(Self)
+    else begin
       if Assigned(DriverManager) then
-         DriverManager.RemoveLoggingListener(Self);
+        DriverManager.RemoveLoggingListener(Self);
+      //Eh: should i uncomment thisFTraceList.Clear;
+    end;
     FActive := Value;
   end;
 end;
@@ -188,8 +193,7 @@ end;
 }
 procedure TZSQLMonitor.SetMaxTraceCount(const Value: Integer);
 begin
-  if Value <> FMaxTraceCount then
-  begin
+  if Value <> FMaxTraceCount then begin
     FMaxTraceCount := Value;
     TruncateTraceList(Value);
   end;
@@ -251,9 +255,12 @@ begin
   else
     Stream := TFileStream.Create(FileName, fmOpenWrite or fmShareDenyWrite);
   try
-    for I := 0 to FTraceList.Count - 1 do
-    begin
-      Temp := RawByteString(TZLoggingEvent(FTraceList[I]).AsString + LineEnding);
+    for I := 0 to FTraceList.Count - 1 do begin
+      {$IFDEF UNICODE}
+      Temp := ZUnicodeToRaw(TZLoggingEvent(FTraceList[I]).AsString + LineEnding, zCP_UTF8);
+      {$ELSE}
+      Temp := TZLoggingEvent(FTraceList[I]).AsString + LineEnding;
+      {$ENDIF}
       Stream.Write(PAnsiChar(Temp)^, Length(Temp));
     end;
   finally
@@ -270,30 +277,33 @@ var
   LogTrace: Boolean;
   Stream: TFileStream;
   Temp: RawbyteString;
+  EventCopy: TZLoggingEvent;
 begin
   LogTrace := True;
   DoTrace(Event, LogTrace);
   if not LogTrace then Exit;
-
   { Store the event. }
-  if FMaxTraceCount <> 0 then
-  begin
+  if FMaxTraceCount <> 0 then begin
     if FMaxTraceCount > 0 then
       TruncateTraceList(FMaxTraceCount - 1);
-    FTraceList.Add(TZLoggingEvent.Create(Event.Category, Event.Protocol,
-      Event.Message, Event.ErrorCodeOrAffectedRows, Event.Error, Event.TimeStampStart));
+    EventCopy := TZLoggingEvent.Create(Event.Category, Event.Protocol,
+      Event.Message, Event.ErrorCodeOrAffectedRows, Event.Error, Event.TimeStampStart);
+    FTraceList.Add(EventCopy);
   end;
 
   { Save the event. }
-  if FAutoSave and (FFileName <> '') then
-  begin
+  if FAutoSave and (FFileName <> '') then begin
     if not FileExists(FFileName) then
       Stream := TFileStream.Create(FFileName, fmCreate)
     else
       Stream := TFileStream.Create(FFileName, fmOpenReadWrite or fmShareDenyWrite);
     try
       Stream.Seek(NativeInt(0), {$IFDEF CPU64}soEnd{$ELSE}soFromEnd{$ENDIF}); //handle an Android64_Delphi compile issue
+      {$IFDEF UNICODE}
+      Temp := ZUnicodeToRaw(Event.AsString(FLoggingFormatter) + LineEnding, zCP_UTF8);
+      {$ELSE}
       Temp := Event.AsString(FLoggingFormatter) + LineEnding;
+      {$ENDIF}
       Stream.Write(PAnsiChar(Temp)^, Length(Temp));
     finally
       Stream.Free;

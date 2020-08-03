@@ -3619,7 +3619,8 @@ begin
   Stmt := GetStatement;
   if (Category = lcFetchDone) and (Stmt <> nil) and (Stmt.QueryInterface(IZLoggingObject, LogObj) = S_OK) then begin
     Result := LogObj.CreateLogEvent(lcFetchDone);
-    Result.ErrorCodeOrAffectedRows := LastRowNo;
+    if Result <> nil then
+      Result.ErrorCodeOrAffectedRows := LastRowNo;
     FLastRowFetchLogged := True;
   end else result := nil;
 end;
@@ -4605,7 +4606,7 @@ end;
 
 function TZAbstractLob.CreateBinaryException: EZSQLException;
 begin
-  Result := EZSQLException.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+  Result := EZSQLException.Create(Format(SOperationIsNotAllowed3, ['binary']));
 end;
 
 procedure TZAbstractLob.SetRawByteString(const Value: RawByteString;

@@ -134,6 +134,7 @@ type
     {$IFDEF ZEOS_TEST_ONLY}
     FTestMode: Byte;
     {$ENDIF}
+    FLogMessage: SQLString;
     procedure BeforeUrlAssign; virtual;
     procedure InternalCreate; virtual; abstract;
     procedure InternalClose; virtual; abstract;
@@ -146,6 +147,8 @@ type
     function GetClientVariantManager: IZClientVariantManager;
     procedure CheckCharEncoding(const CharSet: String; const DoArrange: Boolean = False);
     procedure OnPropertiesChange({%H-}Sender: TObject); virtual;
+    procedure LogError(const Category: TZLoggingCategory; ErrorCode: Integer;
+      const Sender: IImmediatelyReleasable; const Msg, Error: String);
 
     procedure SetOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
     procedure RegisterStatement(const Value: IZStatement);
@@ -433,17 +436,27 @@ const
       ({spFoxPro}     cUnknown,   cUnknown,   cUnknown)
     );
 
-  cCommit_A: RawByteString = 'COMMIT TRANSACTION';
-  cCommit_W: UnicodeString = 'COMMIT TRANSACTION';
-  cRollback_A: RawByteString = 'ROLLBACK TRANSACTION';
-  cRollback_W: UnicodeString = 'ROLLBACK TRANSACTION';
+  sCommitMsg = 'COMMIT TRANSACTION';
+  sRollbackMsg = 'ROLLBACK TRANSACTION';
+
+  sSessionTransactionIsolation: array[TZTransactIsolationLevel] of
+    String = (
+    'SET TRANSACTION ISOLATION LEVEL UNDEFINED',
+    'SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED',
+    'SET TRANSACTION ISOLATION LEVEL READ COMMITTED',
+    'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ',
+    'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
+
+  cCommit_A: RawByteString = sCommitMsg;
+  cCommit_W: UnicodeString = sCommitMsg;
+  cRollback_A: RawByteString = sRollbackMsg;
+  cRollback_W: UnicodeString = sRollbackMsg;
 
 implementation
 
 uses ZMessages,{$IFNDEF TLIST_IS_DEPRECATED}ZSysUtils, {$ENDIF}
-  ZDbcMetadata, ZDbcUtils, ZEncoding, StrUtils,
-  ZDbcProperties, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}
-  {$IFDEF WITH_INLINE},ZFastCode{$ENDIF}
+  ZDbcMetadata, ZDbcUtils, ZEncoding, ZFastCode,
+  ZDbcProperties, StrUtils, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
   {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
@@ -1036,9 +1049,7 @@ begin
   FTransactIsolationLevel := tiNone;
   FUseMetadata := True;
   // should be set BEFORE InternalCreate
-  ConSettings^.Protocol := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FIZPlainDriver.GetProtocol);
-  ConSettings^.Database := ConSettings^.ConvFuncs.ZStringToRaw(FURL.Database, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-  ConSettings^.User := ConSettings^.ConvFuncs.ZStringToRaw(FURL.UserName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+  ConSettings^.Protocol := FIZPlainDriver.GetProtocol;
   // now InternalCreate will work, since it will try to Open the connection
   InternalCreate;
 
@@ -1469,6 +1480,21 @@ end;
 function TZAbstractDbcConnection.IsReadOnly: Boolean;
 begin
   Result := FReadOnly;
+end;
+
+procedure TZAbstractDbcConnection.LogError(const Category: TZLoggingCategory;
+  ErrorCode: Integer; const Sender: IImmediatelyReleasable; const Msg,
+  Error: String);
+var Stmt: IZStatement;
+    AMessage: String;
+begin
+  if (Sender <> nil) and (Sender.QueryInterface(IZStatement, Stmt) = S_OK) then begin
+    AMessage := 'Statement '+{$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Stmt.GetStatementId);
+    if Msg <> '' then
+      AMessage := AMessage+' : ';
+  end else AMessage := '';
+  AMessage := AMessage + Msg;
+  DriverManager.LogError(Category, ConSettings^.Protocol, AMessage, ErrorCode, Error);
 end;
 
 {**

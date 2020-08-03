@@ -63,38 +63,219 @@ uses ZCompatibility;
 
 procedure loadmessages();
 
+var
+  SMessageCodePage: Word;
+
+  {$IFNDEF WITH_RTLCONSTS_SInvalidGuidArray}
+  SInvalidGuidArray: String;
+  {$ENDIF}
+  {$IFNDEF WITH_SBCDOVERFLOW}
+  SBcdOverflow: String;
+  {$ENDIF}
+  {$IFNDEF WITH_SInvalidBcdValue}
+  SInvalidBcdValue: String;
+  {$ENDIF}
+
+  SSQLError1: String;
+  SSQLError2: String;
+  SSQLError3: String;
+  SSQLError4: String;
+
+  SListCapacityError: String;
+  SListCountError: String;
+  SListIndexError: String;
+
+  SClonningIsNotSupported: String;
+  SImmutableOpIsNotAllowed: String;
+  SStackIsEmpty: String;
+  SVariableWasNotFound: String;
+  SFunctionWasNotFound: String;
+  SInternalError: String;
+  SSyntaxErrorNear: String;
+  SSyntaxError: String;
+  SUnknownSymbol: String;
+  SUnexpectedExprEnd: String;
+  SRightBraceExpected: String;
+  SParametersError: String;
+  SParamValueExceeded: String;
+  SExpectedMoreParams: String;
+  SInvalidVarByteArray: String;
+  SVariableAlreadyExists: String;
+  STypesMismatch: String;
+  SUnsupportedVariantType: String;
+  SUnsupportedOperation: String;
+
+  STokenizerIsNotDefined: String;
+  SLibraryNotFound: String;
+  SLibraryNotCompatible: String;
+  SEncodeDateIsNotSupported: String;
+  SEncodeTimeIsNotSupported: String;
+  SEncodeTimestampIsNotSupported: String;
+  SDecodeDateIsNotSupported: String;
+  SDecodeTimeIsNotSupported: String;
+  SDecodeTimestampIsNotSupported: String;
+
+  SCanNotRetrieveResultSetData: String;
+  SRowBufferIsNotAssigned: String;
+  SColumnIsNotAccessable: String;
+  SConvertionIsNotPossible: String;
+  SCanNotAccessBlobRecord: String;
+  SRowDataIsNotAvailable: String;
+  SResolverIsNotSpecified: String;
+  SResultsetIsAlreadyOpened: String;
+  SCanNotUpdateEmptyRow: String;
+  SCanNotUpdateDeletedRow: String;
+  SCanNotDeleteEmptyRow: String;
+  SCannotUseCommit: String;
+  SCannotUseRollBack: String;
+  SCanNotUpdateComplexQuery: String;
+  SCanNotUpdateThisQueryType: String;
+  SDriverWasNotFound: String;
+  SCanNotConnectToServer: String;
+  STableIsNotSpecified: String;
+  SLiveResultSetsAreNotSupported: String;
+  SInvalidInputParameterCount: String;
+  SIsolationIsNotSupported: String;
+  SColumnWasNotFound: String;
+  SWrongTypeForBlobParameter: String;
+  SIncorrectConnectionURL: String;
+  SUnsupportedProtocol: String;
+  SUnsupportedByDriver   : String;
+
+  SConnectionIsNotOpened: String;
+  SInvalidOpInAutoCommit: String;
+  SInvalidOpInNonAutoCommit: String;
+  SInvalidOpPrepare: String;
+
+  SConnectionIsNotAssigned: String;
+  SQueryIsEmpty: String;
+  SCanNotExecuteMoreQueries: String;
+  SOperationIsNotAllowed1: String;
+  SOperationIsNotAllowed2: String;
+  SOperationIsNotAllowed3: String;
+  SOperationIsNotAllowed4: String;
+  SNoMoreRecords: String;
+  SCanNotOpenResultSet: String;
+  SCanNotOpenDataSetWhenDestroying: String;
+  SCircularLink: String;
+  SBookmarkWasNotFound: String;
+  SIncorrectSearchFieldsNumber: String;
+  SInvalidOperationInTrans: String;
+  SIncorrectSymbol: String;
+  SIncorrectToken: String;
+  SIncorrectParamChar: String;
+
+  SSelectedTransactionIsolation: String;
+  SDriverNotSupported: String;
+  SPattern2Long: String;
+  SDriverNotCapableOutParameters: String;
+  SStatementIsNotAllowed: String;
+  SStoredProcIsNotAllowed: String;
+  SCannotPerformOperation: String;
+  SInvalidState: String;
+  SErrorConvertion: String;
+  SDataTypeDoesNotSupported: String;
+  SUnsupportedParameterType: String;
+  SUnsupportedDataType: String;
+  SErrorConvertionField: String;
+  SBadOCI: String;
+  SConnect2AsUser: String;
+  SUnknownError: String;
+  SFieldNotFound1: String;
+  SFieldNotFound2: String;
+
+  SLoginPromptFailure: String;
+
+  SPropertyQuery: String;
+  SPropertyTables: String;
+  SPropertyColumns: String;
+  SPropertyProcedures: String;
+  SPropertySequences: String;
+  SPropertyExecute: String;
+
+  SFormTest: String;
+  SButtonClose: String;
+  SFormEditor: String;
+  STabSheetSelect: String;
+  SMenuLoad: String;
+  SMenuSave: String;
+  SButtonGenerate: String;
+  SButtonCheck: String;
+  SButtonTest: String;
+  SButtonOk: String;
+  SButtonCancel: String;
+  STableAlias: String;
+  SReplaceSQL: String;
+  SDialogOpenTitle: String;
+  SDialogSaveTitle: String;
+  SSQLEditor: String;
+  SDatabaseDialog: String;
+
+  SUpdateSQLNoResult: String;
+  SUpdateSQLRefreshStatementcount: String;
+  {$IFDEF FPC}
+  SNotEditing: String;
+  SFieldTypeMismatch: String;
+  SFieldSizeMismatch: String;
+  {$ENDIF}
+  SNeedField: String;
+
+  SFailedtoInitPrepStmt: String;
+  SFailedtoPrepareStmt: String;
+  SFailedToBindAllValues: String;
+  SAttemptExecOnBadPrep: String;
+  SBindingFailure: String;
+  SPreparedStmtExecFailure: String;
+  SBoundVarStrIndexMissing: String;
+  SBindVarOutOfRange: String;
+  SFailedToBindResults: String;
+  SPreviousResultStillOpen: String;
+
+
+  SRefreshRowOnlySupportedWithUpdateObject: String;
+  SMustBeInBrowseMode: String;
+
+  SUnKnownParamDataType: String;
+  SFieldReadOnly: String;
+  SInvalidUpdateCount: String;
+
+  SRowBufferWidthExceeded: String;
+  SBackgroundOperationStillRunning: String;
+
+implementation
+
 const
 {$IFDEF FRENCH}
-  cCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
+  MsgCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
 {$ELSE !FRENCH}
 {$IFDEF PORTUGUESE}
-  cCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
+  MsgCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
 {$ELSE !PORTUGUESE}
 {$IFDEF DUTCH}
-  cCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
+  MsgCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
 {$ELSE !DUTCH}
 {$IFDEF GERMAN}
-  cCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
+  MsgCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
 {$ELSE !GERMAN}
 {$IFDEF SPANISH}
-  cCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
+  MsgCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
 {$ELSE !SPANISH}
 {$IFDEF ROMANA}
-  cCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
+  MsgCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
 {$ELSE !ROMANA}
 {$IFDEF INDONESIAN}
-  cCodePage = 20127; {US-ASCII (7-bit)}
+  MsgCodePage = 20127; {US-ASCII (7-bit)}
 {$ELSE !INDONESIAN}
 {$IFDEF RUSSIAN}
-  cCodePage = 1251; {Microsoft Windows Codepage 1251 (Cyrl)}
+  MsgCodePage = 1251; {Microsoft Windows Codepage 1251 (Cyrl)}
 {$ELSE !RUSSIAN}
 {$IFDEF CZECH}
-  cCodePage = 1250; {Microsoft Windows Codepage 1250 (East European)}
+  MsgCodePage = 1250; {Microsoft Windows Codepage 1250 (East European)}
 {$ELSE !CZECH}
 {$IFDEF POLISH}
-  cCodePage = 1250; {Microsoft Windows Codepage 1250 (East European)}
+  MsgCodePage = 1250; {Microsoft Windows Codepage 1250 (East European)}
 {$ELSE !POLISH}
-cCodePage = 20127; {US-ASCII (7-bit)}
+MsgCodePage = 20127; {US-ASCII (7-bit)}
 {$ENDIF POLISH} // POLISH
 {$ENDIF CZECH} // CZECH
 {$ENDIF RUSSIAN}
@@ -107,7 +288,6 @@ cCodePage = 20127; {US-ASCII (7-bit)}
 {$ENDIF FRENCH}
 
 resourcestring
-
   {$IFNDEF WITH_RTLCONSTS_SInvalidGuidArray}
     cInvalidGuidArray = 'Byte-Array or Buffer for GUID must have exact %s Bytes';
   {$ENDIF}
@@ -1919,193 +2099,10 @@ resourcestring
 
 {$ENDIF} // PORTUGUESE
 {$ENDIF FRENCH}
-type
-  TMessageToRaw = function(const AMessage: String; Const RawCP: Word): RawByteString;
-
-var
-  SMessageCodePage: Word;
-
-  {$IFNDEF WITH_RTLCONSTS_SInvalidGuidArray}
-  SInvalidGuidArray: String;
-  {$ENDIF}
-  {$IFNDEF WITH_SBCDOVERFLOW}
-  SBcdOverflow: String;
-  {$ENDIF}
-  {$IFNDEF WITH_SInvalidBcdValue}
-  SInvalidBcdValue: String;
-  {$ENDIF}
-
-  SSQLError1: String;
-  SSQLError2: String;
-  SSQLError3: String;
-  SSQLError4: String;
-
-  SListCapacityError: String;
-  SListCountError: String;
-  SListIndexError: String;
-
-  SClonningIsNotSupported: String;
-  SImmutableOpIsNotAllowed: String;
-  SStackIsEmpty: String;
-  SVariableWasNotFound: String;
-  SFunctionWasNotFound: String;
-  SInternalError: String;
-  SSyntaxErrorNear: String;
-  SSyntaxError: String;
-  SUnknownSymbol: String;
-  SUnexpectedExprEnd: String;
-  SRightBraceExpected: String;
-  SParametersError: String;
-  SParamValueExceeded: String;
-  SExpectedMoreParams: String;
-  SInvalidVarByteArray: String;
-  SVariableAlreadyExists: String;
-  STypesMismatch: String;
-  SUnsupportedVariantType: String;
-  SUnsupportedOperation: String;
-
-  STokenizerIsNotDefined: String;
-  SLibraryNotFound: String;
-  SLibraryNotCompatible: String;
-  SEncodeDateIsNotSupported: String;
-  SEncodeTimeIsNotSupported: String;
-  SEncodeTimestampIsNotSupported: String;
-  SDecodeDateIsNotSupported: String;
-  SDecodeTimeIsNotSupported: String;
-  SDecodeTimestampIsNotSupported: String;
-
-  SCanNotRetrieveResultSetData: String;
-  SRowBufferIsNotAssigned: String;
-  SColumnIsNotAccessable: String;
-  SConvertionIsNotPossible: String;
-  SCanNotAccessBlobRecord: String;
-  SRowDataIsNotAvailable: String;
-  SResolverIsNotSpecified: String;
-  SResultsetIsAlreadyOpened: String;
-  SCanNotUpdateEmptyRow: String;
-  SCanNotUpdateDeletedRow: String;
-  SCanNotDeleteEmptyRow: String;
-  SCannotUseCommit: String;
-  SCannotUseRollBack: String;
-  SCanNotUpdateComplexQuery: String;
-  SCanNotUpdateThisQueryType: String;
-  SDriverWasNotFound: String;
-  SCanNotConnectToServer: String;
-  STableIsNotSpecified: String;
-  SLiveResultSetsAreNotSupported: String;
-  SInvalidInputParameterCount: String;
-  SIsolationIsNotSupported: String;
-  SColumnWasNotFound: String;
-  SWrongTypeForBlobParameter: String;
-  SIncorrectConnectionURL: String;
-  SUnsupportedProtocol: String;
-  SUnsupportedByDriver   : String;
-
-  SConnectionIsNotOpened: String;
-  SInvalidOpInAutoCommit: String;
-  SInvalidOpInNonAutoCommit: String;
-  SInvalidOpPrepare: String;
-
-  SConnectionIsNotAssigned: String;
-  SQueryIsEmpty: String;
-  SCanNotExecuteMoreQueries: String;
-  SOperationIsNotAllowed1: String;
-  SOperationIsNotAllowed2: String;
-  SOperationIsNotAllowed3: String;
-  SOperationIsNotAllowed4: String;
-  SNoMoreRecords: String;
-  SCanNotOpenResultSet: String;
-  SCanNotOpenDataSetWhenDestroying: String;
-  SCircularLink: String;
-  SBookmarkWasNotFound: String;
-  SIncorrectSearchFieldsNumber: String;
-  SInvalidOperationInTrans: String;
-  SIncorrectSymbol: String;
-  SIncorrectToken: String;
-  SIncorrectParamChar: String;
-
-  SSelectedTransactionIsolation: String;
-  SDriverNotSupported: String;
-  SPattern2Long: String;
-  SDriverNotCapableOutParameters: String;
-  SStatementIsNotAllowed: String;
-  SStoredProcIsNotAllowed: String;
-  SCannotPerformOperation: String;
-  SInvalidState: String;
-  SErrorConvertion: String;
-  SDataTypeDoesNotSupported: String;
-  SUnsupportedParameterType: String;
-  SUnsupportedDataType: String;
-  SErrorConvertionField: String;
-  SBadOCI: String;
-  SConnect2AsUser: String;
-  SUnknownError: String;
-  SFieldNotFound1: String;
-  SFieldNotFound2: String;
-
-  SLoginPromptFailure: String;
-
-  SPropertyQuery: String;
-  SPropertyTables: String;
-  SPropertyColumns: String;
-  SPropertyProcedures: String;
-  SPropertySequences: String;
-  SPropertyExecute: String;
-
-  SFormTest: String;
-  SButtonClose: String;
-  SFormEditor: String;
-  STabSheetSelect: String;
-  SMenuLoad: String;
-  SMenuSave: String;
-  SButtonGenerate: String;
-  SButtonCheck: String;
-  SButtonTest: String;
-  SButtonOk: String;
-  SButtonCancel: String;
-  STableAlias: String;
-  SReplaceSQL: String;
-  SDialogOpenTitle: String;
-  SDialogSaveTitle: String;
-  SSQLEditor: String;
-  SDatabaseDialog: String;
-
-  SUpdateSQLNoResult: String;
-  SUpdateSQLRefreshStatementcount: String;
-  {$IFDEF FPC}
-  SNotEditing: String;
-  SFieldTypeMismatch: String;
-  SFieldSizeMismatch: String;
-  {$ENDIF}
-  SNeedField: String;
-
-  SFailedtoInitPrepStmt: String;
-  SFailedtoPrepareStmt: String;
-  SFailedToBindAllValues: String;
-  SAttemptExecOnBadPrep: String;
-  SBindingFailure: String;
-  SPreparedStmtExecFailure: String;
-  SBoundVarStrIndexMissing: String;
-  SBindVarOutOfRange: String;
-  SFailedToBindResults: String;
-  SPreviousResultStillOpen: String;
-
-
-  SRefreshRowOnlySupportedWithUpdateObject: String;
-  SMustBeInBrowseMode: String;
-
-  SUnKnownParamDataType: String;
-  SFieldReadOnly: String;
-  SInvalidUpdateCount: String;
-
-  SRowBufferWidthExceeded: String;
-  SBackgroundOperationStillRunning: String;
-
-implementation
 
 procedure loadmessages;
 begin
-  SMessageCodePage := cCodePage;
+  SMessageCodePage := MsgCodePage;
 
   {$IFNDEF WITH_RTLCONSTS_SInvalidGuidArray}
   SInvalidGuidArray := cInvalidGuidArray;

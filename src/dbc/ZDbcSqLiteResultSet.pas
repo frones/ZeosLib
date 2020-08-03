@@ -68,7 +68,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZPlainSqLiteDriver,
   ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver,
-  ZSelectSchema, ZClasses;
+  ZDbcSQLite, ZSelectSchema, ZClasses;
 
 type
   {** Implements SQLite ResultSet Metadata. }
@@ -97,7 +97,6 @@ type
   TZSQLiteResultSet = class(TZAbstractReadOnlyResultSet, IZResultSet)
   private
     FStmtErrorCode: PInteger;
-    FPsqlite: PPsqlite;
     FPsqlite3_stmt: PPsqlite3_stmt;
     Fsqlite3_stmt: Psqlite3_stmt;
     FColumnCount: Integer;
@@ -107,11 +106,12 @@ type
     FResetCallBack: TResetCallBack;
     FCurrDecimalSep: Char;
     FByteBuffer: PByteBuffer;
+    FSQLiteConnection: IZSQLiteConnection;
   protected
     procedure Open; override;
   public
     constructor Create(const Statement: IZStatement;
-      const SQL: string; Psqlite: PPsqlite; Psqlite3_stmt: PPsqlite3_stmt;
+      const SQL: string; Psqlite3_stmt: PPsqlite3_stmt;
       PErrorCode: PInteger; UndefinedVarcharAsStringLength: Integer;
       ResetCallBack: TResetCallback);
 
@@ -189,7 +189,7 @@ implementation
 
 uses
   ZMessages, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging, ZFastCode, ZDbcUtils,
-  ZVariant, ZDbcMetadata, ZDbcSQLite
+  ZVariant, ZDbcMetadata
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZSQLiteCachedResultSet }
@@ -501,21 +501,19 @@ end;
     <code>False</code> to store result.
 }
 constructor TZSQLiteResultSet.Create(const Statement: IZStatement;
-  const SQL: string; Psqlite: PPsqlite; Psqlite3_stmt: PPsqlite3_stmt;
+  const SQL: string; Psqlite3_stmt: PPsqlite3_stmt;
   PErrorCode: PInteger; UndefinedVarcharAsStringLength: Integer;
   ResetCallBack: TResetCallback);
 var Metadata: TContainedObject;
-  Con: IZSQLiteConnection;
 begin
-  Con := Statement.GetConnection as IZSQLiteConnection;
-  FByteBuffer := Con.GetByteBufferAddress;
-  FPlainDriver := Con.GetPlainDriver;
+  FSQLiteConnection := Statement.GetConnection as IZSQLiteConnection;
+  FByteBuffer := FSQLiteConnection.GetByteBufferAddress;
+  FPlainDriver := FSQLiteConnection.GetPlainDriver;
   if Assigned(FPlainDriver.sqlite3_column_table_name) and Assigned(FPlainDriver.sqlite3_column_name)
-  then MetaData := TZSQLiteResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self)
-  else MetaData := TZAbstractResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self);
-  inherited Create(Statement, SQL, MetaData, Statement.GetConnection.GetConSettings);
+  then MetaData := TZSQLiteResultSetMetadata.Create(FSQLiteConnection.GetMetadata, SQL, Self)
+  else MetaData := TZAbstractResultSetMetadata.Create(FSQLiteConnection.GetMetadata, SQL, Self);
+  inherited Create(Statement, SQL, MetaData, FSQLiteConnection.GetConSettings);
 
-  FPsqlite := Psqlite;
   FPsqlite3_stmt := Psqlite3_stmt;
   Fsqlite3_stmt := Psqlite3_stmt^;
   FStmtErrorCode := PErrorCode;
@@ -1379,7 +1377,8 @@ begin
       Exit;
     ErrorCode := FPlainDriver.sqlite3_Step(Fsqlite3_stmt);
     if not (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then
-      CheckSQLiteError(FPlainDriver, Fsqlite3_stmt, ErrorCode, lcOther, 'FETCH', ConSettings);
+      FSQLiteConnection.HandleErrorOrWarning(lcFetch, ErrorCode, 'FETCH',
+        IImmediatelyReleasable(FWeakImmediatRelPtr));
   end;
 
   if FFirstRow then begin//avoid incrementing issue on fetching since the first row is allready fetched by stmt

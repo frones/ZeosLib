@@ -109,7 +109,7 @@ type
     procedure InternalBindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double);
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt);
   protected
-    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
   public
     procedure SetPWideChar(Index: Integer; Value: PWideChar; WLen: NativeUInt);
     procedure SetNull(Index: Integer; SQLType: TZSQLType);
@@ -405,15 +405,11 @@ begin
     Status := FPlainDriver.OCIStmtExecute(FOracleConnection.GetServiceContextHandle,
         FOCIStmt, FOCIError, Max(1, BatchDMLArrayCount), 0, nil, nil, CommitMode[Connection.GetAutoCommit]);
     if Status <> OCI_SUCCESS then
-      if FCharSetID = OCI_UTF16ID
-      then FOracleConnection.HandleErrorOrWarningW(FOCIError, status, lcExecPrepStmt, fWSQL, Self)
-      else FOracleConnection.HandleErrorOrWarningA(FOCIError, status, lcExecPrepStmt, fASQL, Self);
+      FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt, SQL, Self);
     Status := FPlainDriver.OCIAttrGet(FOCIStmt, OCI_HTYPE_STMT, @upCnt, nil,
       OCI_ATTR_ROW_COUNT, FOCIError);
     if Status <> OCI_SUCCESS then
-      if FCharSetID = OCI_UTF16ID
-      then FOracleConnection.HandleErrorOrWarningW(FOCIError, status, lcExecPrepStmt, fWSQL, Self)
-      else FOracleConnection.HandleErrorOrWarningA(FOCIError, status, lcExecPrepStmt, fASQL, Self);
+      FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcOther, 'OCIAttrGet', Self);
     LastUpdateCount := upCnt;
     if (FStatementType = OCI_STMT_BEGIN) and (BindList.HasOutOrInOutOrResultParam) then
       FOutParamResultSet := CreateResultSet;
@@ -447,9 +443,7 @@ begin
     Status := FPlainDriver.OCIStmtExecute(FOracleConnection.GetServiceContextHandle,
         FOCIStmt, FOCIError, Max(1, BatchDMLArrayCount), 0, nil, nil, CommitMode[Connection.GetAutoCommit]);
     if Status <> OCI_SUCCESS then
-      if ConSettings.ClientCodePage.Encoding = ceUTF16
-      then FOracleConnection.HandleErrorOrWarningW(FOCIError, status, lcExecPrepStmt, fWSQL, Self)
-      else FOracleConnection.HandleErrorOrWarningA(FOCIError, status, lcExecPrepStmt, fASQL, Self);
+      FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt, SQL, Self);
     FPlainDriver.OCIAttrGet(FOCIStmt, OCI_HTYPE_STMT, @upCnt, nil, OCI_ATTR_ROW_COUNT, FOCIError);
     LastUpdateCount := upCnt;
     Result := CreateResultSet;
@@ -507,9 +501,7 @@ begin
     Status := FPlainDriver.OCIStmtExecute(FOracleConnection.GetServiceContextHandle,
         FOCIStmt, FOCIError, Max(1, BatchDMLArrayCount), 0, nil, nil, CommitMode[Connection.GetAutoCommit]);
     if Status <> OCI_SUCCESS then
-      if ConSettings.ClientCodePage.Encoding = ceUTF16
-      then FOracleConnection.HandleErrorOrWarningW(FOCIError, status, lcExecPrepStmt, fWSQL, Self)
-      else FOracleConnection.HandleErrorOrWarningA(FOCIError, status, lcExecPrepStmt, fASQL, Self);
+      FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt, SQL, Self);
     FPlainDriver.OCIAttrGet(FOCIStmt, OCI_HTYPE_STMT, @upCnt, nil, OCI_ATTR_ROW_COUNT, FOCIError);
     LastUpdateCount := upCnt;
     if ((FStatementType = OCI_STMT_BEGIN) or (FStatementType = OCI_STMT_DECLARE)) and (BindList.HasOutOrInOutOrResultParam) then
@@ -647,9 +639,7 @@ begin
           stmt_len, OCI_NTV_SYNTAX, OCI_DEFAULT);
       end;
       if Status <> OCI_SUCCESS then
-        if FCharSetID = OCI_UTF16ID
-        then FOracleConnection.HandleErrorOrWarningW(FOCIError, Status, lcPrepStmt, FWSQL, Self)
-        else FOracleConnection.HandleErrorOrWarningA(FOCIError, Status, lcPrepStmt, FASQL, Self);
+        FOracleConnection.HandleErrorOrWarning(FOCIError, Status, lcPrepStmt, SQL, Self)
     end;
     { get statement type }
     Status := FPlainDriver.OCIAttrGet(FOCIStmt, OCI_HTYPE_STMT, @FStatementType,
@@ -1835,7 +1825,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable BCD does not seem to be initialized} {$ENDIF}
 procedure TZAbstractOraclePreparedStatement.AddParamLogValue(ParamIndex: Integer;
-  SQLWriter: TZRawSQLStringWriter; var Result: RawByteString);
+  SQLWriter: TZSQLStringWriter; var Result: SQLString);
 var
   Bind: PZOCIParamBind;
   BCD: TBCD;
@@ -1913,12 +1903,21 @@ begin
                 L  := POCILong(Bind.valuep).Len;
 jmpTestW2A:     if BindList[ParamIndex].SQLType = stUnicodeString then begin
                   L := L shr 1;
+                {$IFDEF UNICODE}
+                  SQLWriter.AddTextQuoted(PW, L, #39, Result);
+                end else begin
+                  FUniTemp := PRawToUnicode(PA, L, FClientCP);
+                  SQLWriter.AddTextQuoted(FUniTemp, #39, Result);
+                  FUniTemp := '';
+                end;
+                {$ELSE}
                   fRawTemp := PUnicodeToRaw(PW, L, zCP_UTF8);
                   L := Length(fRawTemp);
                   P := Pointer(fRawTemp);
                 end;
                 SQLWriter.AddTextQuoted(PA, L, AnsiChar(#39), Result);
                 fRawTemp := EmptyRaw;
+                {$ENDIF}
               end;
     SQLT_LVB: SQLWriter.AddHexBinary(@POCILong(Bind.valuep).data[0], POCILong(Bind.valuep).Len, False, Result);
     SQLT_CLOB: if BindList[ParamIndex].SQLType = stAsciiStream

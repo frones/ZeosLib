@@ -2687,7 +2687,7 @@ begin
   RawCP := zCP_UTF8;
   {$ENDIF}
   if (RawCP = MsgCP) then
-  {$IFDEF WITH_RAWBYTESTRING} //fpc2.7up
+  {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG} //fpc2.7up
   begin
     Result := ''; //satisfy compiler
     ZSetString(PAnsiChar(AMessage), Length(AMessage), Result);
@@ -2706,7 +2706,7 @@ begin
   RawCP := zCP_UTF8;
   {$ENDIF}
   if (RawCP = ZOSCodePage) then
-  {$IFDEF WITH_RAWBYTESTRING} //fpc2.7up
+  {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG} //fpc2.7up
   begin
     Result := ''; //satisfy compiler
     ZSetString(PAnsiChar(AMessage), Length(AMessage), Result);

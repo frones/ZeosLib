@@ -135,7 +135,7 @@ type
     ReadFormatSettings: TZFormatSettings;
     WriteFormatSettings: TZFormatSettings;
     DataBaseSettings: Pointer;
-    Protocol, Database, User: RawByteString;
+    Protocol: String;
   end;
 
   {** a base class for most dbc-layer objects }
@@ -476,8 +476,8 @@ type
     /// <param name="Msg">
     ///  a description message.
     /// </param>
-    procedure LogMessage(Category: TZLoggingCategory; const Protocol: RawByteString;
-      const Msg: RawByteString); overload;
+    procedure LogMessage(Category: TZLoggingCategory; const Protocol: String;
+      const Msg: SQLString); overload;
     procedure LogMessage(const Category: TZLoggingCategory; const Sender: IZLoggingObject); overload;
     /// <summary>
     ///  Logs a message about event with error result code.
@@ -497,8 +497,8 @@ type
     /// <param name="Error">
     ///   an error message.
     /// </param>
-    procedure LogError(Category: TZLoggingCategory; const Protocol: RawByteString;
-      const Msg: RawByteString; ErrorCode: Integer; const Error: RawByteString);
+    procedure LogError(Category: TZLoggingCategory; const Protocol: String;
+      const Msg: SQLString; ErrorCode: Integer; const Error: SQLString);
     /// <summary>
     ///  Constructs a valid URL
     /// </summary>
@@ -1374,6 +1374,8 @@ type
     /// </summary>
     procedure ClearWarnings;
     procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
+
+    function GetStatementId: NativeUInt;
   end;
 
   /// <summary>
@@ -2020,11 +2022,11 @@ type
     procedure RemoveLoggingListener(const Listener: IZLoggingListener);
     function HasLoggingListener: Boolean;
 
-    procedure LogMessage(Category: TZLoggingCategory; const Protocol: RawByteString;
-      const Msg: RawByteString); overload;
+    procedure LogMessage(Category: TZLoggingCategory; const Protocol: String;
+      const Msg: SQLString); overload;
     procedure LogMessage(const Category: TZLoggingCategory; const Sender: IZLoggingObject); overload;
-    procedure LogError(Category: TZLoggingCategory; const Protocol: RawByteString;
-      const Msg: RawByteString; ErrorCode: Integer; const Error: RawByteString);
+    procedure LogError(Category: TZLoggingCategory; const Protocol: String;
+      const Msg: SQLString; ErrorCode: Integer; const Error: SQLString);
 
     function ConstructURL(const Protocol, HostName, Database,
       UserName, Password: String; const Port: Integer;
@@ -2231,8 +2233,8 @@ end;
   @param Error an error message.
 }
 procedure TZDriverManager.LogError(Category: TZLoggingCategory;
-  const Protocol: RawByteString; const Msg: RawByteString; ErrorCode: Integer;
-  const Error: RawByteString);
+  const Protocol: String; const Msg: SQLString; ErrorCode: Integer;
+  const Error: SQLString);
 var
   Event: TZLoggingEvent;
 begin
@@ -2266,7 +2268,7 @@ end;
   @param Msg a description message.
 }
 procedure TZDriverManager.LogMessage(Category: TZLoggingCategory;
-  const Protocol: RawByteString; const Msg: RawByteString);
+  const Protocol: String; const Msg: SQLString);
 var
   Event: TZLoggingEvent;
 begin
@@ -2275,7 +2277,7 @@ begin
   try
     if not FHasLoggingListener then
       Exit;
-    Event := TZLoggingEvent.Create(Category, Protocol, Msg, 0, EmptyRaw);
+    Event := TZLoggingEvent.Create(Category, Protocol, Msg, 0, '');
     InternalLogEvent(Event);
   finally
     FreeAndNil(Event);

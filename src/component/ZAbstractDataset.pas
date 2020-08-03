@@ -898,12 +898,9 @@ var
     for I := 0 to Length(FieldRefs) - 1 do
     begin
       SrcField := Delta.FieldByName(TField(FieldRefs[I]).FieldName);
-      if SrcField <> nil then
-      begin
-          Temp[I] := SrcField.OldValue;
-      end
-      else
-        Temp[I] := Null;
+      if SrcField <> nil
+      then Temp[I] := SrcField.OldValue
+      else Temp[I] := Null;
     end;
 
     if Length(FieldRefs) = 1 then
