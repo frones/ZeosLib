@@ -864,7 +864,7 @@ begin
   {$ELSE}
   FLogMessage := SQL;
   {$ENDIF}
-  if (FPlainDriver.dbcmd(FHandle, Pointer(FLogMessage)) <> DBSUCCEED) or
+  if (FPlainDriver.dbcmd(FHandle, Pointer(SQL)) <> DBSUCCEED) or
      (FPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED) then
     CheckDBLibError(LoggingCategory, FLogMessage);
   repeat
