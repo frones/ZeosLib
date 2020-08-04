@@ -1303,6 +1303,7 @@ begin
 {$ENDIF}
 end;
 
+{$IFDEF WITH_PG_WEIGHT_OPT_BUG}{$O-}{$ENDIF}
 const CurrMulTbl: array[0..4] of Int64 = (1, 10000, 100000000, 1000000000000, 10000000000000000) ;
 {$R-} {$Q-} //for the endian shifts
 function PGNumeric2Currency(P: Pointer): Currency;
@@ -1313,23 +1314,25 @@ var
   i64: Int64 absolute Result;
 begin
   Sign := Numeric_External.sign;
-  {$IFNDEF ENDIAN_BIG}Sign := (Sign and $00FF shl 8) or (Sign and $FF00 shr 8);{$ENDIF ENDIAN_BIG}
+  {$IFNDEF ENDIAN_BIG}Sign := ((Sign and $00FF) shl 8) or ((Sign and $FF00) shr 8);{$ENDIF ENDIAN_BIG}
   NBASEDigits := Numeric_External.NBASEDigits;
-  {$IFNDEF ENDIAN_BIG}NBASEDigits := (NBASEDigits and $00FF shl 8) or (NBASEDigits and $FF00 shr 8);{$ENDIF ENDIAN_BIG}
+  {$IFNDEF ENDIAN_BIG}NBASEDigits := ((NBASEDigits and $00FF) shl 8) or ((NBASEDigits and $FF00) shr 8);{$ENDIF ENDIAN_BIG}
   Result := 0;
   if (NBASEDigits = 0) or (Sign = NUMERIC_NAN) or (Sign = NUMERIC_NULL) then
     Exit;
   Weight := Numeric_External.weight;
-  {$IFNDEF ENDIAN_BIG}Word(Weight) := (Word(Weight) and $00FF shl 8) or (Word(Weight) and $FF00 shr 8);{$ENDIF ENDIAN_BIG}
+  {$IFNDEF ENDIAN_BIG}Word(Weight) := ((Word(Weight) and $00FF) shl 8) or ((Word(Weight) and $FF00) shr 8);{$ENDIF ENDIAN_BIG}
   Inc(Weight);
   for I := 0 to (NBASEDigits-1) do begin
-    NBASEDigit := Word(Numeric_External.digits[i]);
-    {$IFNDEF ENDIAN_BIG}NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);{$ENDIF ENDIAN_BIG}
+    //NBASEDigit := Word(Numeric_External.digits[i]);
+    NBASEDigit := Numeric_External.digits[i];
+    {$IFNDEF ENDIAN_BIG}NBASEDigit := ((NBASEDigit and $00FF) shl 8) or ((NBASEDigit and $FF00) shr 8);{$ENDIF ENDIAN_BIG}
     I64 := I64 + NBASEDigit * CurrMulTbl[weight-i];
   end;
   if Sign <> NUMERIC_POS then
     Result := -Result;
 end;
+{$IFDEF WITH_PG_WEIGHT_OPT_BUG}{$O+}{$ENDIF}
 {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
@@ -1557,6 +1560,7 @@ end;
   @param Dst the result value to be converted
 }
 {$Q-} {$R-} //else my shift fail
+{$IFDEF WITH_PG_WEIGHT_OPT_BUG}{$O-}{$ENDIF}
 procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
 var
   i, NBASEDigitsCount, Precision, Scale, Digits: Integer;
@@ -1689,6 +1693,7 @@ jmpScale:
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+{$IFDEF WITH_PG_WEIGHT_OPT_BUG}{$O+}{$ENDIF}
 
 function PGCash2Currency(P: Pointer): Currency;
 var i64: Int64 absolute Result;

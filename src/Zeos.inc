@@ -244,6 +244,9 @@
                       {$IFNDEF PUREPASCAL}
                         {$DEFINE PUREPASCAL}
                       {$ENDIF}
+                      {$IFOPT O+}
+                        {$DEFINE WITH_PG_WEIGHT_OPT_BUG} //wrong otpimization in ZDbcPostgreSqlUtils according the weight variable, thus results are unexpected since min XE5 until?
+                      {$ENDIF}
                     {$ELSE}
                       {$IFDEF PatchSystemMove}
                         {$UNDEF PatchSystemMove}  //FastCode-Project Move currently not ported to other plattforms
@@ -338,6 +341,9 @@
                                       {$DEFINE HAVE_TFIELD_32BIT_ASINTEGER} //TField.AsInteger setter and getter use 32Bit integer
                                       {$DEFINE HAVE_TFIELD_32BIT_ASLONGWORD} //TField.AsLongWord setter and getter use 32Bit unsigned integer
                                       {$DEFINE WITH_VIRTUAL_ASGUID} //TGUIDfield AsGUID has virtual setter and getter
+                                      {$IFDEF WITH_PG_WEIGHT_OPT_BUG} 
+                                        {$UNDEF WITH_PG_WEIGHT_OPT_BUG} //Resolved minimum since XE10.3 or earlier?
+                                      {$ENDIF}
                                       {$IF CompilerVersion >= 33} //Delphi XE10.3 Rio+
                                         {$IF CompilerVersion >= 34} // Delphi XE10.4 Sydney
                                           //It seems, this compiler doesn't define NEXTGEN on Android. So we need something else:
