@@ -143,7 +143,7 @@ type
 
     procedure Open; override;
 
-    procedure SetReadOnly(ReadOnly: Boolean); override;
+    procedure SetReadOnly(Value: Boolean); override;
 
     procedure SetCatalog(const Value: string); override;
     function GetCatalog: string; override;
@@ -1129,12 +1129,12 @@ end;
   @param readOnly true enables read-only mode; false disables
     read-only mode.
 }
-procedure TZDBLibConnection.SetReadOnly(ReadOnly: Boolean);
+procedure TZDBLibConnection.SetReadOnly(Value: Boolean);
 begin
-{ TODO -ofjanos -cAPI : I think it is not supported in this way }
-  inherited;
   //sql server and sybase do not support RO-Transaction or Sessions
   //all we have is a readonly database ...
+  if Value then
+    raise EZSQLException.Create(SUnsupportedOperation);
 end;
 
 {**
@@ -1149,7 +1149,15 @@ var
 begin
   if (Value <> '') and not Closed then
   begin
+    {$IFNDEF NO_AUTOENCODE}
     RawCat := ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+    {$ELSE}
+      {$IFDEF UNICODE}
+      RawCat := ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP);
+      {$ELSE}
+      RawCat := Value;
+      {$ENDIF}
+    {$ENDIF}
     FLogMessage := 'SET CATALOG '+Value;
     if FPlainDriver.dbUse(FHandle, PAnsiChar(RawCat)) <> DBSUCCEED then
       CheckDBLibError(lcOther, FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
