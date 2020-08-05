@@ -228,9 +228,11 @@ function USASCII7ToUnicodeString(Source: PAnsiChar; Len: NativeUInt): UnicodeStr
 function USASCII7ToUnicodeString(const Source: RawByteString): UnicodeString; overload;
 
 { Message-Helpers }
-function ConvertZMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF}MsgCP, RawCP: Word): RawByteString;
-function ConvertEMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF} RawCP: Word): RawByteString;
-
+{$IFNDEF UNICODE}
+function ConvertZMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF}MsgCP, RawCP: Word): RawByteString; overload;
+function ConvertZMsgToRaw(AMessage: PAnsiChar; Len: NativeUInt; {$IFNDEF LCL}Const{$ENDIF}MsgCP, RawCP: Word): RawByteString; overload;
+//function ConvertEMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF} RawCP: Word): RawByteString;
+{$ENDIF}
 
 {SBCS codepages $00..FF}
 procedure AnsiSBCSToUTF16(Source: PAnsichar; SourceBytes: LengthInt;
@@ -2670,17 +2672,19 @@ function USASCII7ToUnicodeString(const Source: RawByteString): UnicodeString; ov
 begin
   Result := USASCII7ToUnicodeString(Pointer(Source), Length(Source));
 end;
-{$IFDEF UNICODE}
-function ConvertZMsgToRaw(const AMessage: String; Const MsgCP, RawCP: Word): RawByteString;
+
+{$IFNDEF UNICODE}
+function ConvertZMsgToRaw(AMessage: PAnsiChar; Len: NativeUInt; {$IFNDEF LCL}Const{$ENDIF}MsgCP, RawCP: Word): RawByteString; overload;
 begin
-  Result := ZUnicodeToRaw(AMessage, RawCP);
+  if (Len = 0) or (AMessage = nil)
+  then Result := EmptyRaw
+  else if MsgCP = RawCP then begin
+    Result := ''; //satisfy compiler
+    ZSetString(AMessage, Len, Result{$IFDEF WITH_RAWBYTESTRING},RawCP{$ENDIF});
+  end else
+    Result := ZUnicodeToRaw(PRawToUnicode(AMessage,Len, MsgCP), RawCP);
 end;
 
-function ConvertEMsgToRaw(const AMessage: String; Const RawCP: Word): RawByteString;
-begin
-  Result := ZUnicodeToRaw(AMessage, RawCP);
-end;
-{$ELSE !UNICODE}
 function ConvertZMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF}MsgCP, RawCP: Word): RawByteString;
 begin
   {$IFDEF LCL}

@@ -1029,10 +1029,6 @@ var
   InterbaseStatusVector: TZIBStatusVector;
   ConLostError: EZSQLConnectionLost;
   IsWarning: Boolean;
-  {$IFNDEF UNICODE}
-  sCP, dCP: Word;
-  LogMsg: String;
-  {$ENDIF}
 begin
   InterbaseStatusVector := InterpretInterbaseStatus(StatusVector);
   IsWarning := (StatusVector[1] = isc_arg_end) and (StatusVector[2] = isc_arg_warning);
@@ -1045,26 +1041,8 @@ begin
   ErrorCode := InterbaseStatusVector[0].SQLCode;
 
   if ErrorMessage <> '' then begin
-    LogError(LogCategory, ErrorCode, Sender, LogMessage, ErrorMessage);
-  {$IFNDEF UNICODE}
-    {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
-    dCP := DefaultSystemCodePage;
-    {$ELSE}
-    dCP := ZOSCodePage;
-    {$ENDIF}
-    if (ConSettings.ClientCodePage <> nil)
-    then sCP := ConSettings.ClientCodePage.CP
-    else sCP := ZOSCodePage;
-    if dCP <> sCP then begin
-      ErrorMessage := ConvertZMsgToRaw(ErrorMessage, sCP, dCP);
-      LogMsg := ConvertZMsgToRaw(LogMessage, sCP, dCP);
-    end else
-      LogMsg := LogMessage;
-    if (SMessageCodePage <> zCP_us_ascii) and (dCP <> SMessageCodePage) then begin
-      ErrorString := ConvertZMsgToRaw(SSQLError1, SMessageCodePage, dCP);
-      ErrorString := Format(ErrorString, [ErrorMessage]);
-    end else
-  {$ENDIF}
+    if not IsWarning and DriverManager.HasLoggingListener then
+      LogError(LogCategory, ErrorCode, Sender, LogMessage, ErrorMessage);
     ErrorString := Format(SSQLError1, [ErrorMessage]);
     if (ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection) or
        (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_idle) or
@@ -1076,9 +1054,11 @@ begin
       if ConLostError <> nil then raise ConLostError;
     end else if IsWarning then begin
       ClearWarnings;
-      FLastWarning := EZSQLWarning.CreateWithCode(ErrorCode, Format(SSQLError1, [ErrorMessage]));
+      FLastWarning := EZSQLWarning.CreateWithCode(ErrorCode, ErrorString);
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(LogCategory, URL.Protocol, ErrorMessage);
     end else raise EZIBSQLException.Create(
-      ErrorString, InterbaseStatusVector, {$IFDEF UNICODE}LogMessage{$ELSE}LogMsg{$ENDIF});
+      ErrorString, InterbaseStatusVector, LogMessage);
   end;
 end;
 
@@ -3276,8 +3256,10 @@ var I: Integer;
 begin
   if not Prepared then
     Prepare;
-  if (Value<0) or (Value+1 > BindList.Count) then
-    raise EZSQLException.Create(SInvalidInputParameterCount);
+  if (Value<0) or (Value+1 > BindList.Count) then begin
+    {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := Format(SBindVarOutOfRange, [Value]);
+    raise EZSQLException.Create({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
+  end;
   if BindList.HasOutOrInOutOrResultParam then
     for I := 0 to Value do
       if Ord(BindList[I].ParamType) > Ord(pctInOut) then

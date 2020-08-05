@@ -485,10 +485,6 @@ begin
       then FormatStr := SSQLError3
       else FormatStr := SSQLError4
     else FormatStr := SSQLError2;
-    {$IFNDEF UNICODE}
-    if (SMessageCodePage <> zCP_us_ascii) and (CP <> SMessageCodePage) then
-      FormatStr := ConvertZMsgToRaw(FormatStr, SMessageCodePage, CP);
-    {$ENDIF}
     if LogMsg <> ''
     then aMessage := Format(FormatStr, [aMessage, Ord(Status), LogMsg])
     else aMessage := Format(FormatStr, [aMessage, Ord(Status)]);
@@ -506,7 +502,7 @@ begin
         ClearWarnings;
         FlastWarning := EZSQLWarning.CreateWithStatus(aErrorStatus, aMessage);
         if DriverManager.HasLoggingListener then
-          DriverManager.LogMessage(LogCategory, ConSettings^.Protocol, aMessage);
+          DriverManager.LogMessage(LogCategory, URL.Protocol, aMessage);
       end;
   finally
     FreeAndNil(SQLWriter);
@@ -766,7 +762,7 @@ end;
 procedure TZPostgreSQLConnection.Open;
 
 var
-  LogMessage, SCS, Temp: string;
+  SCS, Temp: string;
   {aport, apwd, ahost, aUser,} adb: RawByteString;
 begin
   if not Closed then
@@ -787,12 +783,12 @@ begin
     adb := BuildConnectStr;
     Fconn := FPlainDriver.PQconnectdb(Pointer(adb));
   end;
-  LogMessage := 'CONNECT TO "'+URL.Database+'" AS USER "'+URL.UserName+'"';
+  FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);
   try
     if FPlainDriver.PQstatus(Fconn) = CONNECTION_BAD then
-      HandleErrorOrWarning(PGRES_FATAL_ERROR, lcConnect, LogMessage, Self, nil)
+      HandleErrorOrWarning(PGRES_FATAL_ERROR, lcConnect, FLogMessage, Self, nil)
     else if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
+      DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
 
     if Assigned(FPlainDriver.PQsetNoticeReceivcer)
     { Set the notice processor (default = nil)}
@@ -922,12 +918,11 @@ begin
 end;
 
 procedure TZPostgreSQLConnection.PrepareTransaction(const transactionid: string);
-var SQL: RawByteString;
+var SQL: SQLString;
 begin
   if Closed then
     raise EZSQLException.Create(SConnectionIsNotOpened);
-  SQL :='PREPARE TRANSACTION '''+copy(ConSettings^.ConvFuncs.ZStringToRaw(transactionid,
-    ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP),1,200)+'''';
+  SQL :='PREPARE TRANSACTION '''+copy(transactionid,1,200)+'''';
   ExecuteImmediat(SQL, lcTransaction);
   ExecuteImmediat(cBegin, lcTransaction);
   AutoCommit := False;
@@ -1113,7 +1108,7 @@ begin
         FPlainDriver.PQFinish(Fconn);
       Fconn := nil;
       LogMessage := 'DISCONNECT FROM "'+URL.Database+'"';
-      DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
+      DriverManager.LogMessage(lcDisconnect, URL.Protocol, LogMessage);
     end;
   end;
 end;
@@ -1266,7 +1261,7 @@ begin
     {$ENDIF}
     if Status = PGRES_TUPLES_OK then begin
       if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcExecute, ConSettings^.Protocol,
+        DriverManager.LogMessage(lcExecute, URL.Protocol,
           {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF});
 
       FTypeList := TStringList.Create;
@@ -1377,7 +1372,7 @@ begin
   Status := FPlainDriver.PQresultStatus(QueryHandle);
   if Status = PGRES_TUPLES_OK then begin
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'SELECT version()');
+      DriverManager.LogMessage(lcExecute, URL.Protocol, 'SELECT version()');
     P := FPlainDriver.PQgetvalue(QueryHandle, 0, 0);
     {$IFDEF UNICODE}
     Temp := ZSysUtils.ASCII7ToUnicodeString(P, ZFastCode.StrLen(P));
@@ -1577,7 +1572,7 @@ begin
   {$ENDIF}
   if Status = PGRES_TUPLES_OK then begin
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF});
+      DriverManager.LogMessage(lcExecute, URL.Protocol, {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF});
     P := FPlainDriver.PQgetvalue(QueryHandle, 0, 0);
     {$IFDEF UNICODE}
     Result := PRawToUnicode(P, ZFastCode.StrLen(P), ConSettings^.ClientCodePage^.CP);
@@ -1613,7 +1608,7 @@ begin
   {$ENDIF}
   if (Status = PGRES_COMMAND_OK) then begin
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF});
+      DriverManager.LogMessage(lcExecute, URL.Protocol, {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF});
     FPlainDriver.PQclear(QueryHandle);
   end else
     HandleErrorOrWarning(Status, lcExecute, {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF}, Self, QueryHandle);

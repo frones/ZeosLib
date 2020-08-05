@@ -486,7 +486,7 @@ begin
       HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors),
         FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, FLogMessage);
+      DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
   end;
 reconnect:
   if FProvider = nil then
@@ -495,7 +495,7 @@ reconnect:
     FStatus := FMaster.getStatus;
   if FAttachment = nil then begin
     PrepareDPB;
-    FLogMessage := 'CONNECT TO "'+URL.DataBase+'" AS USER "'+URL.UserName+'"';
+    FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);;
     {$IFDEF UNICODE}
     R := ZUnicodeToRaw(URL.Database, CP);
     P := Pointer(R);
@@ -508,7 +508,7 @@ reconnect:
         FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
     { Logging connection action }
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, FLogMessage);
+      DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
   end;
   { Dialect could have changed by isc_dpb_set_db_SQL_dialect command }
   DBName[0] := AnsiChar(isc_info_db_SQL_Dialect);
@@ -734,7 +734,7 @@ begin
         sCommitMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
   finally
     if fDoLog and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sCommitMsg);
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, sCommitMsg);
   end;
 end;
 
@@ -808,7 +808,7 @@ begin
         sRollbackMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
   finally
     if fDoLog and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sRollbackMsg);
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, sRollbackMsg);
   end;
 end;
 
@@ -835,7 +835,7 @@ begin
         Length(FTPB){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, Pointer(FTPB));
       FTransaction.AddRef;
       Result := Ord(not Self.FAutoCommit);
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION STARTED.');
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, 'TRANSACTION STARTED.');
     end else begin
       Result := FSavePoints.Count+2;
       S := 'SP'+ZFastcode.IntToStr(NativeUInt(Self))+'_'+ZFastCode.IntToStr(Result);

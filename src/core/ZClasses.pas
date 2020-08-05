@@ -1576,7 +1576,7 @@ begin
     Inc(P);
     L := (NativeUInt(P) - NativeUInt(Value));
     Move(Value^, Dest^, L);
-    Inc(NativeUInt(Dest), L);
+    Inc(NativeUInt(Dest), NativeUInt(L));
     PWord(Dest)^ := Ord(QuoteChar);
     Inc(Dest);
     Value := P;

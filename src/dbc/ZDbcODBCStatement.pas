@@ -1607,9 +1607,10 @@ begin
   if not Prepared then
     Prepare;
   if (BindList.Capacity < Value+1) then
-    if fBindImmediat
-    then raise EZSQLException.Create(SInvalidInputParameterCount)
-    else inherited CheckParameterIndex(Value);
+    if fBindImmediat then begin
+      {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := Format(SBindVarOutOfRange, [Value]);
+      raise EZSQLException.Create({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
+    end else inherited CheckParameterIndex(Value);
 end;
 
 constructor TZAbstractODBCPreparedStatement.Create(

@@ -295,7 +295,7 @@ begin
     if FHandle.SqlCode <> SQLE_NOERROR then
       HandleErrorOrWarning(lcTransaction, sCommitMsg, IImmediatelyReleasable(FWeakImmediatRelPtr))
     else if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sCommitMsg);
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, sCommitMsg);
     //SetOption(1, nil, 'CHAINED', 'ON');
     AutoCommit := True;
     if FRestartTransaction then
@@ -369,42 +369,56 @@ procedure TZASAConnection.HandleErrorOrWarning(
   LoggingCategory: TZLoggingCategory; const Msg: SQLString;
   const Sender: IImmediatelyReleasable);
 var err_len: Integer;
-  State, ErrMsg: String;
+  State, ErrMsg, FormatStr: String;
   ErrCode: an_sql_code;
   Exception: EZSQLException;
   P: PAnsiChar;
+  {$IFNDEF UNICODE}excCP,{$ENDIF}msgCP: Word;
 begin
   ErrCode := FHandle.SqlCode;
   if (ErrCode = SQLE_NOERROR) or //Nothing todo
      (ErrCode = SQLE_NOTFOUND) then //no line found
-  Exit;
+    Exit;
   P := @FByteBuffer[0];
   PByte(P)^ := 0;
+  if ConSettings.ClientCodePage <> nil
+  then msgCP := ConSettings.ClientCodePage.CP
+  else msgCP := ZOSCodePage;
+{$IFNDEF UNICODE}
+  excCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}
+      {$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
+{$ENDIF}
   P := FPlainDriver.sqlError_Message(FHandle, P, SizeOf(TByteBuffer)-1);
   err_len := ZFastCode.StrLen(P);
   {$IFDEF UNICODE}
   State := USASCII7ToUnicodeString(@FHandle.sqlState[0], 5);
-  ErrMsg := PRawToUnicode(P, err_Len, ConSettings.ClientCodePage.CP);
+  ErrMsg := PRawToUnicode(P, err_Len, msgCP);
   {$ELSE}
   State := '';
   ZSetString(PAnsiChar(@FHandle.sqlState[0]), 5, State);
-  {$IFDEF WITH_VAR_INIT_WARNING} ErrMsg := ''; {$ENDIF}
-  System.SetString(ErrMsg, P, err_Len);
+  if excCP <> msgCP
+  then ErrMsg := ConvertZMsgToRaw(P, err_len, msgCP, excCP)
+  else begin
+    ErrMsg := '';
+    System.SetString(ErrMsg, P, err_Len);
+  end;
   {$ENDIF}
   if ErrCode > 0 then begin//that's a Warning
     ClearWarnings;
     FLastWarning := EZSQLWarning.CreateWithCodeAndStatus(ErrCode, State, ErrMsg);
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, ErrMsg);
+      DriverManager.LogMessage(LoggingCategory, URL.Protocol, ErrMsg);
   end else begin  //that's an error
     if DriverManager.HasLoggingListener then
       LogError(LoggingCategory, ErrCode, Sender, Msg, ErrMsg);
-    if Msg <> '' then begin
+    if Msg <> '' then
       if LoggingCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
-      then ErrMsg := ErrMsg + ' The SQL: '
-      else ErrMsg := ErrMsg + ' The Msg: ';
-      ErrMsg := ErrMsg + Msg;
-    end;
+      then FormatStr := SSQLError3
+      else FormatStr := SSQLError4
+    else FormatStr := SSQLError2;
+    if Msg <> ''
+    then ErrMsg := Format(FormatStr, [ErrMsg, ErrCode, Msg])
+    else ErrMsg := Format(FormatStr, [ErrMsg, ErrCode]);
     if (ErrCode = SQLE_CONNECTION_NOT_FOUND) or (ErrCode = SQLE_CONNECTION_TERMINATED) or
        (ErrCode = SQLE_COMMUNICATIONS_ERROR) then begin
       Exception := EZSQLConnectionLost.CreateWithCodeAndStatus(ErrCode, State, ErrMsg);
@@ -441,10 +455,9 @@ begin
   try
     if FPlainDriver.db_init(@FSQLCA) = 0 then
     begin
-      DriverManager.LogError(lcConnect, ConSettings^.Protocol, 'Inititalizing SQLCA',
+      DriverManager.LogError(lcConnect, URL.Protocol, 'Inititalizing SQLCA',
         0, 'Error initializing SQLCA');
-      raise EZSQLException.CreateWithCode(0,
-        'Error initializing SQLCA');
+      raise EZSQLException.Create('Error initializing SQLCA');
     end;
     FHandle := @FSQLCA;
 
@@ -478,11 +491,11 @@ begin
     {$ELSE}
     if FPlainDriver.db_string_connect(FHandle, Pointer(ConnectionString)) <> 0 then
     {$ENDIF}
-    FLogMessage := 'CONNECT TO "'+URL.Database+'" AS USER "'+URL.UserName+'"';
+    FLogMessage := Format(SConnect2AsUser,  [URL.Database, URL.UserName]);
     if FHandle.SqlCode <> SQLE_NOERROR then
       HandleErrorOrWarning(lcConnect, FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr))
     else if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, FLogMessage);
+      DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
 
     if (FClientCodePage <> '' ) then begin
       FLogMessage := 'Set client characterset to: '+FClientCodePage;
@@ -497,7 +510,7 @@ begin
       {$ENDIF}
         HandleErrorOrWarning(lcConnect, FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr))
       else if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, FLogMessage);
+        DriverManager.LogMessage(lcOther, URL.Protocol, FLogMessage);
     end;
     inherited Open;
   finally
@@ -629,7 +642,7 @@ begin
     if FHandle.SqlCode <> SQLE_NOERROR then
       HandleErrorOrWarning(lcTransaction, sRollbackMsg, IImmediatelyReleasable(FWeakImmediatRelPtr))
     else if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sRollbackMsg);
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, sRollbackMsg);
    // SetOption(1, nil, 'CHAINED', 'ON');
     AutoCommit := True;
     if FRestartTransaction then
@@ -696,7 +709,7 @@ begin
       if FHandle.SqlCode <> SQLE_NOERROR then
         HandleErrorOrWarning(LoggingCategory, LogMsg, IImmediatelyReleasable(FWeakImmediatRelPtr))
       else if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, LogMsg);
+        DriverManager.LogMessage(LoggingCategory, URL.Protocol, LogMsg);
     finally
       FreeMem(SQLDA);
     end;
@@ -794,7 +807,7 @@ begin
   if FHandle.SqlCode <> SQLE_NOERROR then
     HandleErrorOrWarning(LoggingCategory, LogSQL, IImmediatelyReleasable(FWeakImmediatRelPtr))
   else if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, LogSQL);
+    DriverManager.LogMessage(LoggingCategory, URL.Protocol, LogSQL);
 end;
 
 initialization

@@ -518,7 +518,7 @@ const
 implementation
 
 uses
-  ZFastCode, Math, ZSysUtils, ZMessages;
+  ZFastCode, Math, ZSysUtils;
 
 function TokenAsString(const Value: TZToken): String;
 begin

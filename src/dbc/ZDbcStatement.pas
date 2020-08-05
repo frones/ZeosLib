@@ -1177,7 +1177,8 @@ begin
   finally
     FreeAndNil(SQLWriter);
   end;
-  Result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, EventMsg, FLastUpdateCount, '', FStartTime);
+  Result := TZLoggingEvent.Create(Category, FConnection.GetIZPlainDriver.GetProtocol,
+    EventMsg, FLastUpdateCount, '', FStartTime);
 end;
 
 function TZAbstractStatement.CreateLogEvent(
@@ -3065,7 +3066,7 @@ begin
     end;
     SQLWriter.Finalize(LogMsg);
     FreeAndNil(SQLWriter);
-    DriverManager.LogMessage(Category, ConSettings^.Protocol, LogMsg);
+    DriverManager.LogMessage(Category, FConnection.GetIZPlainDriver.GetProtocol, LogMsg);
   end;
 end;
 

@@ -406,7 +406,7 @@ begin
   if not Closed then
     Exit;
 
-  FLogMessage := 'CONNECT TO "'+URL.Database+'" AS USER "'+URL.UserName+'"';
+  FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);;
   GlobalCriticalSection.Enter;
   try
     FHandle := FPlainDriver.mysql_init(FHandle); //is not threadsave!
@@ -537,8 +537,8 @@ setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def
           Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CIPHER)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
      FPlainDriver.mysql_ssl_set(FHandle, SslKey, SslCert, SslCa, SslCaPath,
         SslCypher);
-     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-        'SSL options set');
+     if DriverManager.HasLoggingListener then
+       DriverManager.LogMessage(lcConnect, URL.Protocol, 'SSL options set');
     end;
 
     { Connect to MySQL database. }
@@ -555,11 +555,12 @@ setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def
         Port, nil,ClientFlag) = nil then begin
       HandleErrorOrWarning(lcConnect, nil, FLogMessage,
         IImmediatelyReleasable(FWeakImmediatRelPtr));
-      DriverManager.LogError(lcConnect, ConSettings^.Protocol,
-        FLogMessage, 0, SUnknownError);
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogError(lcConnect, URL.Protocol,
+          FLogMessage, 0, SUnknownError);
       raise EZSQLException.Create(SCanNotConnectToServer);
     end;
-    DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, FLogMessage);
+    DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
 
     { Fix Bugs in certain Versions where real_conncet resets the Reconnect flag }
     if (Info.Values[GetMySQLOptionValue(MYSQL_OPT_RECONNECT)] <> '') and
@@ -770,7 +771,7 @@ begin
   then HandleErrorOrWarning(LoggingCategory, nil, FLogMessage,
     IImmediatelyReleasable(FWeakImmediatRelPtr))
   else if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, FLogMessage);
+    DriverManager.LogMessage(LoggingCategory, URL.Protocol, FLogMessage);
 end;
 
 {**
@@ -811,7 +812,7 @@ begin
       HandleErrorOrWarning(lcTransaction, nil, sCommitMsg,
         IImmediatelyReleasable(FWeakImmediatRelPtr))
     else if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings.Protocol, sCommitMsg);
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, sCommitMsg);
     AutoCommit := True;
     if FRestartTransaction then
       StartTransaction;
@@ -848,7 +849,7 @@ begin
       HandleErrorOrWarning(lcTransaction, nil, sRollbackMsg,
         IImmediatelyReleasable(FWeakImmediatRelPtr))
     else if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings.Protocol, sRollbackMsg);
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, sRollbackMsg);
     AutoCommit := True;
     if FRestartTransaction then
       StartTransaction;
@@ -880,7 +881,7 @@ begin
     FPlainDriver.mysql_close(FHandle);
     FHandle := nil;
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,
+      DriverManager.LogMessage(lcDisconnect, URL.Protocol,
         'DISCONNECT FROM "'+URL.Database+'"');
   end;
 end;
@@ -975,7 +976,7 @@ begin
       HandleErrorOrWarning(lcTransaction, nil, MySQLCommitMsg[False],
         IImmediatelyReleasable(FWeakImmediatRelPtr))
     else if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, MySQLCommitMsg[False]);
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, MySQLCommitMsg[False]);
     AutoCommit := False;
     Result := 1;
   end else begin
@@ -1024,7 +1025,7 @@ begin
         HandleErrorOrWarning(lcTransaction, nil, MySQLCommitMsg[True],
           IImmediatelyReleasable(FWeakImmediatRelPtr))
       else if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, MySQLCommitMsg[True]);
+        DriverManager.LogMessage(lcTransaction, URL.Protocol, MySQLCommitMsg[True]);
       AutoCommit := True;
     end else
       StartTransaction;
@@ -1066,7 +1067,7 @@ procedure TZMySQLConnection.HandleErrorOrWarning(
   LogCategory: TZLoggingCategory; MYSQL_STMT: PMYSQL_STMT;
   const LogMessage: SQLString; const Sender: IImmediatelyReleasable);
 var
-  ErrorMessage: SQLString;
+  FormatStr: String;
   ErrorCode: Integer;
   P: PAnsiChar;
   L: NativeUInt;
@@ -1085,7 +1086,7 @@ begin
     P := FPlainDriver.mysql_error(FHandle);
   end;
   if (ErrorCode <> 0) then begin
-    ErrorMessage := '';
+    FLogMessage := '';
     if P <> nil then begin
       L := StrLen(P);
       Trim(L, P);
@@ -1093,13 +1094,13 @@ begin
       if ConSettings.ClientCodePage <> nil
       then CP := ConSettings.ClientCodePage.CP
       else CP := ZOSCodePage;
-      ErrorMessage := PRawToUnicode(P, L, CP);
+      FLogMessage := PRawToUnicode(P, L, CP);
       {$ELSE}
-      ZSetString(P, L, ErrorMessage);
+      ZSetString(P, L, FLogMessage);
       {$ENDIF}
     end;
-    if (ErrorMessage = '') then
-      ErrorMessage := 'unknown error';
+    if (FLogMessage = '') then
+      FLogMessage := SUnknownError;
 
     Error := nil;
     case ErrorCode of
@@ -1124,20 +1125,27 @@ jmpErr:               if not FSilentError
     end;
     if DriverManager.HasLoggingListener then
       if AExceptionClass <> EZSQLWarning
-      then LogError(LogCategory, ErrorCode, Sender, LogMessage, ErrorMessage)
-      else begin
-        if LogMessage <> '' then
-          ErrorMessage := ErrorMessage + ' SQL: '+LogMessage;
-        DriverManager.LogMessage(LogCategory, ConSettings^.Protocol, ErrorMessage);
-      end;
+      then LogError(LogCategory, ErrorCode, Sender, LogMessage, FLogMessage)
+      else DriverManager.LogMessage(LogCategory, URL.Protocol, FLogMessage);
     if AExceptionClass <> nil then begin
-      if (LogMessage <> EmptyRaw) and (AExceptionClass <> EZSQLWarning) then
-        ErrorMessage := ErrorMessage + ' SQL: '+LogMessage;
-      Error := AExceptionClass.CreateWithCode(ErrorCode, Format(SSQLError1, [ErrorMessage]));
+      if LogMessage <> '' then
+        if LogCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
+        then FormatStr := SSQLError3
+        else FormatStr := SSQLError4
+      else FormatStr := SSQLError2;
+      if (LogMessage <> EmptyRaw)
+      then FLogMessage := Format(FormatStr, [FLogMessage, ErrorCode, LogMessage])
+      else FLogMessage := Format(FormatStr, [FLogMessage, ErrorCode]);
+      Error := AExceptionClass.CreateWithCode(ErrorCode, FLogMessage);
       if AExceptionClass = EZSQLConnectionLost then
         if Sender <> nil
         then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(Error))
-        else ReleaseImmediat(Sender, EZSQLConnectionLost(Error));
+        else ReleaseImmediat(Sender, EZSQLConnectionLost(Error))
+      else if AExceptionClass = EZSQLWarning then begin
+        ClearWarnings;
+        FLastWarning := EZSQLWarning(Error);
+        Error := nil;
+      end;
       if Error <> nil then
         raise Error;
     end;

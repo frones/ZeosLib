@@ -421,7 +421,6 @@ end;
 procedure TZOracleConnection.Open;
 var
   Status: Integer;
-  LogMessage: String;
   ncharset: ub2;
   Succeeded: Boolean;
   {$IFNDEF UNICODE}
@@ -453,12 +452,12 @@ var
 
       if Next then begin
         {$IFDEF UNICODE}
-        LogMessage := GetUnicodeString(FirstDbcIndex);
+        FLogMessage := GetUnicodeString(FirstDbcIndex);
         {$ELSE}
         P := GetPWideChar(FirstDbcIndex, L);
-        LogMessage := UnicodeStringToASCII7(P, L);
+        FLogMessage := UnicodeStringToASCII7(P, L);
         {$ENDIF UNICODE}
-        ResetCurrentClientCodePage(LogMessage, True);
+        ResetCurrentClientCodePage(FLogMessage, True);
         { keep the w-encoding infos alive, just identify the raw CP}
         ConSettings.ClientCodePage.Encoding := ceUTF16;
         ConSettings.ClientCodePage.ID := OCI_UTF16ID;
@@ -470,7 +469,7 @@ begin
   if not Closed then
      Exit;
 
-  LogMessage := 'CONNECT TO "'+URL.Database+'" AS USER "'+URL.UserName+'"';
+  FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);
 
   { Sets a default port number. }
   if Port = 0 then
@@ -499,7 +498,7 @@ begin
   Status := FPlainDriver.OCIEnvNlsCreate(FOCIEnv, OCI_OBJECT, nil, nil, nil,
     nil, 0, nil, fcharset, ncharset);
   if Status <> OCI_SUCCESS then
-    HandleErrorOrWarning(FErrorHandle, Status, lcConnect, 'EnvNlsCreate failed.', Self);
+    HandleErrorOrWarning(FErrorHandle, Status, lcOther, 'EnvNlsCreate failed.', Self);
   FErrorHandle := nil;
   FPlainDriver.OCIHandleAlloc(FOCIEnv, FErrorHandle, OCI_HTYPE_ERROR, 0, nil);
   FServerHandle := nil;
@@ -527,7 +526,7 @@ begin
       Pointer(URL.Database), Length(URL.Database), 0);
    {$ENDIF}
   if Status <> OCI_SUCCESS then try
-    HandleErrorOrWarning(FErrorHandle, Status, lcConnect, LogMessage, Self);
+    HandleErrorOrWarning(FErrorHandle, Status, lcConnect, FLogMessage, Self);
     Succeeded := True;
   finally
     if not Succeeded then
@@ -587,7 +586,7 @@ begin
   Status := FPlainDriver.OCISessionBegin(FContextHandle, FErrorHandle,
     FSessionHandle, OCI_CRED_RDBMS, OCI_DEFAULT);
   if Status <> OCI_SUCCESS then try
-    HandleErrorOrWarning(FErrorHandle, Status, lcConnect, LogMessage, Self);
+    HandleErrorOrWarning(FErrorHandle, Status, lcConnect, FLogMessage, Self);
     Succeeded := True;
   finally
     if not Succeeded then
@@ -596,7 +595,7 @@ begin
   FPlainDriver.OCIAttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FSessionHandle, 0,
     OCI_ATTR_SESSION, FErrorHandle);
   if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, FLogMessage);
+    DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
   fLocalTransaction := TZOracleTransaction.CreateLocal(Self);
   SetActiveTransaction(fLocalTransaction);
   fLocalTransaction.StartTransaction;
@@ -855,7 +854,7 @@ begin
         FOCIEnv := nil;
       end;
       if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
+        DriverManager.LogMessage(lcConnect, URL.Protocol, LogMessage);
     end;
   end;
 end;
@@ -1266,17 +1265,13 @@ JmpConcat:
     then FormatStr := SSQLError3
     else FormatStr := SSQLError4
   else FormatStr := SSQLError2;
-  {$IFNDEF UNICODE}
-  if (SMessageCodePage <> zCP_us_ascii) and (CP <> SMessageCodePage) then
-    FormatStr := ConvertZMsgToRaw(FormatStr, SMessageCodePage, CP);
-  {$ENDIF}
   if LogMessage <> ''
   then ErrorString := Format(FormatStr, [ErrorMessage, FirstErrorCode, LogMessage])
   else ErrorString := Format(FormatStr, [ErrorMessage, FirstErrorCode]);
   AException := AExceptionClass.CreateWithCode(FirstErrorCode, ErrorString);
   if (Status = OCI_SUCCESS_WITH_INFO) then begin
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(LogCategory, ConSettings^.Protocol, ErrorMessage);
+      DriverManager.LogMessage(LogCategory, URL.Protocol, ErrorMessage);
     SetLastWarning(EZSQLWarning(AException));
     //AException := nil;
   end else if AExceptionClass = EZSQLConnectionLost then
@@ -1405,7 +1400,7 @@ begin
   finally
     FStarted := False;
     if fDoLog and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION COMMIT');
+      DriverManager.LogMessage(lcTransaction, FOwner.URL.Protocol, 'TRANSACTION COMMIT');
   end;
 end;
 
@@ -1502,7 +1497,7 @@ begin
   finally
     FStarted := False;
     if fDoLog and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
+      DriverManager.LogMessage(lcTransaction, FOwner.URL.Protocol, 'TRANSACTION ROLLBACK');
   end;
 end;
 
@@ -1562,7 +1557,7 @@ begin
       FOwner.HandleErrorOrWarning(FOwner.FErrorHandle, Status, lcTransaction, OCITransStartFlagsLog[FTxnMode], Self);
     FStarted := True;
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, OCITransStartFlagsLog[FTxnMode]);
+      DriverManager.LogMessage(lcTransaction, FOwner.URL.Protocol, OCITransStartFlagsLog[FTxnMode]);
     Result := Ord(not FOwner.AutoCommit);
   end;
 end;

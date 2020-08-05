@@ -242,7 +242,7 @@ begin
     inherited InternalClose;
   finally
     if Assigned(DriverManager) and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, FLogMessage);
+      DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
     if FHandle <> 0 then begin
       Status := FPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
       FHandle := 0;
@@ -283,7 +283,7 @@ begin
   {$ENDIF}
     if (Status <> 0) or (FStatusVector[2] = isc_arg_warning) then
       HandleErrorOrWarning(LoggingCategory, @FStatusVector, {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF}, Self);
-  DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF});
+  DriverManager.LogMessage(LoggingCategory, URL.Protocol, {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF});
 end;
 
 procedure TZInterbase6Connection.ExecuteImmediat(const SQL: RawByteString;
@@ -515,7 +515,7 @@ begin
           @DBName[0], @FHandle, Smallint(Length(DPB)),Pointer(DPB), 0) <> 0 then
         Self.HandleErrorOrWarning(lcOther, @FStatusVector, FLogMessage, Self);
       if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, FLogMessage);
+        DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
     end else begin
       {$IFDEF UNICODE}
       DPB := ZUnicodeToRaw(CreateDB, zOSCodePage);
@@ -542,7 +542,7 @@ begin
         HandleErrorOrWarning(lcOther, @FStatusVector, CreateDB, Self);
       { Logging connection action }
       if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, CreateDB);
+        DriverManager.LogMessage(lcConnect, URL.Protocol, CreateDB);
       //we did create the db and are connected now.
       //we have no dpb so we connect with 'NONE' which is not a problem for the UTF8/NONE charsets
       //because the metainformations are retrieved in UTF8 encoding
@@ -562,7 +562,7 @@ begin
 reconnect:
   if FHandle = 0 then begin
     PrepareDPB;
-    FLogMessage := 'CONNECT TO "'+URL.DataBase+'" AS USER "'+URL.UserName+'"';
+    FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);
     { Connect to Interbase6 database. }
     if FPlainDriver.isc_attach_database(@FStatusVector,
         ZFastCode.StrLen(@DBName[0]), @DBName[0], @FHandle, Length(DPB), Pointer(DPB)) <> 0 then
@@ -575,7 +575,7 @@ reconnect:
     else FDialect := Word(I);
     { Logging connection action }
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, FLogMessage);
+      DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
   end;
 
   inherited SetAutoCommit(AutoCommit or (Info.IndexOf(TxnProps_isc_tpb_autocommit) <> -1));
@@ -865,7 +865,7 @@ begin
           IImmediatelyReleasable(FWeakImmediatRelPtr));
     finally
       if fDoLog and DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sCommitMsg);
+        DriverManager.LogMessage(lcTransaction, URL.Protocol, sCommitMsg);
     end;
 end;
 
@@ -930,7 +930,7 @@ begin
       FOwner.HandleErrorOrWarning(lcTransaction, @FStatusVector, sRollbackMsg, Self);
   finally
     if fDoLog and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sRollbackMsg);
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, sRollbackMsg);
   end;
 end;
 
@@ -960,7 +960,7 @@ begin
       fTEB.db_handle := @FHandle;
       if FPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, @fTEB) <> 0 then
         FOwner.HandleErrorOrWarning(lcTransaction, @FStatusVector, sStartTxn, Self);
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sStartTxn);
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, sStartTxn);
     end else begin
       Result := FSavePoints.Count+2;
       S := 'SP'+ZFastcode.IntToStr(NativeUInt(Self))+'_'+ZFastCode.IntToStr(Result);

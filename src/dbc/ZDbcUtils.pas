@@ -231,19 +231,19 @@ procedure Curr2DBNumeric_BE(const Src: Currency; Dest: PDB_NUMERIC; const Numeri
 
 procedure MoveReverseByteOrder(Dest, Src: PAnsiChar; Len: LengthInt);
 
-function TokenizeSQLQueryRaw(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
+function TokenizeSQLQueryRaw(const SQL: SQLString; ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
   IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
   var TokenMatchIndex: Integer): TRawByteStringDynArray;
 
-function TokenizeSQLQueryUni(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
+function TokenizeSQLQueryUni(const SQL: SQLString; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
   IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
   var TokenMatchIndex: Integer): TUnicodeStringDynArray;
 
 function ExtractFields(const FieldNames: string; const SepChars: Array of Char): TStrings;
 
-
+{$IFNDEF NO_AUTOENCODE}
 {**
   GetValidatedTextStream the incoming Stream for his given Memory and
   returns a valid UTF8/Ansi StringStream
@@ -255,7 +255,7 @@ function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
 
 function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
   ConSettings: PZConSettings; ToCP: Word): RawByteString; overload; //deprecated;
-
+{$ENDIF NO_AUTOENCODE}
 {**
   Set the string-types conversion funtion in relation to the Connection-Settings.
   The Results should be as optimal as possible to speed up the behavior
@@ -1226,7 +1226,8 @@ end;
   Splits a SQL query into a list of sections.
   @returns a list of splitted sections.
 }
-function TokenizeSQLQueryRaw(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
+function TokenizeSQLQueryRaw(const SQL: SQLString;
+  ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
   IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
   var TokenMatchIndex: Integer): TRawByteStringDynArray;
@@ -1356,7 +1357,7 @@ end;
   Splits a SQL query into a list of sections.
   @returns a list of splitted sections.
 }
-function TokenizeSQLQueryUni(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
+function TokenizeSQLQueryUni(const SQL: SQLString; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
   IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
   var TokenMatchIndex: Integer): TUnicodeStringDynArray;
@@ -1387,7 +1388,11 @@ var
   end;
 begin
   ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSe}Pos{$ENDIF}('?', SQL) > 0);
+  {$IFDEF NO_AUTOENCODE}
+  if ParamFound or Assigned(ComparePrefixTokens) then begin
+  {$ELSE !NO_AUTOENCODE}
   if ParamFound {$IFNDEF UNICODE}or ConSettings^.AutoEncode{$ENDIF} or Assigned(ComparePrefixTokens) then begin
+  {$ENDIF NO_AUTOENCODE}
     Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
     {$IFNDEF UNICODE}
     if ConSettings.AutoEncode
@@ -1579,6 +1584,7 @@ end;
   @param Stream the Stream with the unknown format and data
   @return a valid utf8 encoded stringstram
 }
+{$IFNDEF NO_AUTOENCODE}
 function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
   ConSettings: PZConSettings): RawByteString;
 var
@@ -1655,6 +1661,7 @@ begin
   Result := GetValidatedAnsiStringFromBuffer(Buffer, Size, ConSettings);
   ConSettings.ClientCodePage.CP := DB_CP;
 end;
+{$ENDIF NO_AUTOENCODE}
 
 function CreateUnsupportedParameterTypeException(Index: Integer; ParamType: TZSQLType): EZSQLException;
 var TypeName: String;
@@ -2423,7 +2430,9 @@ begin
   FillChar(ConSettings^.ConvFuncs, SizeOf(ConSettings^.ConvFuncs), #0);
 
   //Let's start with the AnsiTo/From types..
+  {$IFNDEF NO_AUTOENCODE}
   if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then begin
+  {$ENDIF}
     //last but not least the String to/from converters
     //string represents the DataSet/IZResultSet Strings
 
@@ -2459,12 +2468,14 @@ begin
       then Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertString_CPUTF8ToUnicode
       else Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicode;
     {$ENDIF}
+  {$IFNDEF NO_AUTOENCODE}
   end else begin //autoencode strings is allways true
     Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode;
     Consettings^.ConvFuncs.ZRawToString := @ZConvertRawToString;
     ConSettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString;
     Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicodeWithAutoEncode;
   end;
+  {$ENDIF NO_AUTOENCODE}
 end;
 
 function CreateCanNotAccessBlobRecordException(ColumnIndex: Integer; SQLType: TZSQLType): EZSQLException;

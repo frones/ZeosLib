@@ -320,7 +320,7 @@ begin
   if not Closed then
     Exit;
 
-  FLogMessage := 'CONNECT TO "'+URL.Database+'" AS USER "'+URL.UserName+'"';
+  FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);
   {$IFDEF UNICODE}
   SQL := ZUnicodeToRaw(DataBase, zCP_UTF8);
   {$ELSE}
@@ -338,7 +338,7 @@ begin
   if TmpInt <> SQLITE_OK then
     HandleErrorOrWarning(lcConnect, TmpInt, FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
   if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, FLogMessage);
+    DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
   { Turn on encryption if requested }
   if StrToBoolEx(Info.Values[ConnProps_Encrypted]) and Assigned(FPlainDriver.sqlite3_key) and (Password <> '') then begin
     SQL := {$IFDEF UNICODE}UTF8String{$ENDIF}(Password);
@@ -512,7 +512,7 @@ begin
     FPlainDriver.sqlite3_reset(Stmt);
   end;
   if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, LogSQL);
+    DriverManager.LogMessage(LoggingCategory, URL.Protocol, LogSQL);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -722,7 +722,7 @@ begin
     if ErrorCode <> SQLITE_OK then
       HandleErrorOrWarning(lcConnect, ErrorCode, FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
     if DriverManager.HasLoggingListener then //thread save
-      DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, FLogMessage);
+      DriverManager.LogMessage(lcDisconnect, URL.Protocol, FLogMessage);
   end;
 end;
 

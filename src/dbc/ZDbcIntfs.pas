@@ -124,18 +124,26 @@ type
   TOnConnectionLostError = procedure(var AError: EZSQLConnectionLost) of Object;
   TOnConnect = procedure of Object;
 
+  {$IFDEF NO_AUTOENCODE}
+  TZRawByteStringEncoding = (rbseGET_ACP, rbseUTF8{$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}, rbseDefaultSystemCodePage{$ENDIF});
+  {$ENDIF NO_AUTOENCODE}
   {** hold some connection parameters }
   PZConSettings = ^TZConSettings;
   TZConSettings = record
+    {$IFNDEF NO_AUTOENCODE}
     AutoEncode: Boolean;        //Check Encoding and or convert string with FromCP ToCP
     CTRL_CP: Word;              //Target CP of raw string conversion (CP_ACP/CP_UPF8/DefaultSytemCodePage)
+    {$ENDIF NO_AUTOENCODE}
+    //{$ELSE NO_AUTOENCODE}
+    //RawByteStringEncoding: TZRawByteStringEncoding; //Target CP of raw string conversion (GET_ACP/UTF8/DefaultSytemCodePage)
+//    {$ENDIF NO_AUTOENCODE}
     ConvFuncs: TConvertEncodingFunctions; //a rec for the Convert functions used by the objects
     ClientCodePage: PZCodePage; //The codepage informations of the current characterset
+    {$IFNDEF NO_AUTOENCODE}
     DisplayFormatSettings: TZFormatSettings;
+    {$ENDIF NO_AUTOENCODE}
     ReadFormatSettings: TZFormatSettings;
     WriteFormatSettings: TZFormatSettings;
-    DataBaseSettings: Pointer;
-    Protocol: String;
   end;
 
   {** a base class for most dbc-layer objects }
@@ -2417,6 +2425,7 @@ procedure TZCodePagedObject.SetConSettingsFromInfo(Info: TStrings);
 var S: String;
 begin
   if Assigned(Info) and Assigned(FConSettings) then begin
+{$IFNDEF NO_AUTOENCODE}
     {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(WITH_LCONVENCODING) or defined(UNICODE)}
     S := Info.Values[ConnProps_AutoEncodeStrings];
     ConSettings.AutoEncode := StrToBoolEx(S); //compatibitity Option for existing Applications;
@@ -2438,6 +2447,8 @@ begin
       else ConSettings.CTRL_CP := ZOSCodePage;
       {$ENDIF}
     {$IFEND}
+{$ELSE NO_AUTOENCODE}
+{$ENDIF NO_AUTOENCODE}
   end;
 end;
 

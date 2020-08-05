@@ -860,9 +860,10 @@ begin
   if not Prepared then
     Prepare;
   if (BindList.Capacity < Value+1) then
-    if fRawPlanname <> ''
-    then raise EZSQLException.Create(SInvalidInputParameterCount)
-    else inherited CheckParameterIndex(Value);
+    if fRawPlanname <> '' then begin
+      {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := Format(SBindVarOutOfRange, [Value]);
+      raise EZSQLException.Create({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
+    end else inherited CheckParameterIndex(Value);
   { now change the index to the !in!-param ordinal index }
   if BindList.HasOutOrInOutOrResultParam then
     for I := 0 to Value do

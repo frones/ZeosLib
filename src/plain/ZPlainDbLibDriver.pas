@@ -1043,6 +1043,26 @@ type
     Updatable:      Byte;    { TRUE, FALSE or DBUNKNOWN }
     Identity:       LongBool;{ TRUE, FALSE }*)
   end;
+  PTDSDBCOL2 = ^TTDSDBCOL;
+  TTDSDBCOL2 = record
+    SizeOfStruct:   DBINT;
+    Name:           array[0..TDSMAXCOLNAMELEN+1] of DBCHAR;
+    ActualName:     array[0..TDSMAXCOLNAMELEN+1] of DBCHAR;
+    TableName:      array[0..TDSMAXCOLNAMELEN+1] of DBCHAR;
+    Typ:            SmallInt;
+    UserType:       DBINT;
+    MaxLength:      DBINT;
+    Precision:      Byte;
+    Scale:          Byte;
+    VarLength:      LongBool;{ TRUE, FALSE }
+    Null:           Byte;    { TRUE, FALSE or DBUNKNOWN }
+    CaseSensitive:  Byte; { TRUE, FALSE or DBUNKNOWN }
+    Updatable:      Byte;    { TRUE, FALSE or DBUNKNOWN }
+    Identity:       LongBool;{ TRUE, FALSE }
+    ServerType:     DBSHORT;
+    ServerMaxLength:DBINT;
+    ServerTypeDeclaration:array[Byte] of AnsiChar;
+  end;
 
   {$IFDEF FPC}
     {$PACKRECORDS DEFAULT}

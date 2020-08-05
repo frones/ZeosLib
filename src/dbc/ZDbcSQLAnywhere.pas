@@ -263,10 +263,6 @@ begin
     then FormatStr := SSQLError3
     else FormatStr := SSQLError4
   else FormatStr := SSQLError2;
-  {$IFNDEF UNICODE}
-  if (SMessageCodePage <> zCP_us_ascii) and (CP <> SMessageCodePage) then
-    FormatStr := ConvertZMsgToRaw(FormatStr, SMessageCodePage, CP);
-  {$ENDIF}
   if Msg <> ''
   then ErrorString := Format(FormatStr, [ErrMsg, ErrCode, Msg])
   else ErrorString := Format(FormatStr, [ErrMsg, ErrCode]);
@@ -276,7 +272,7 @@ begin
     ClearWarnings;
     FLastWarning := EZSQLWarning.CreateWithCodeAndStatus(ErrCode, State, ErrorString);
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, ErrorString);
+      DriverManager.LogMessage(LoggingCategory, URL.Protocol, ErrorString);
   end else begin  //that's an error
     if DriverManager.HasLoggingListener then
       LogError(LoggingCategory, ErrCode, Sender, Msg, ErrMsg);
@@ -329,7 +325,7 @@ begin
   end else begin
     if FSQLAnyPlainDriver.sqlany_commit(Fa_sqlany_connection) <> 1 then
       HandleErrorOrWarning(lcTransaction, sCommitMsg, Self);
-    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sCommitMsg);
+    DriverManager.LogMessage(lcTransaction, URL.Protocol, sCommitMsg);
     AutoCommit := True;
     if FRestartTransaction then
       StartTransaction;
@@ -390,7 +386,7 @@ begin
   if B <> 1 then
     HandleErrorOrWarning(LoggingCategory, FlogMessage, Self);
   if DriverManager.HasLoggingListener then
-    DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, FlogMessage);
+    DriverManager.LogMessage(LoggingCategory, URL.Protocol, FlogMessage);
 end;
 
 function TZSQLAnywhereConnection.GetPlainDriver: TZSQLAnywherePlainDriver;
@@ -453,7 +449,7 @@ label jmpInit;
 begin
   if not Closed then
     Exit;
-  FLogMessage := 'CONNECT TO "'+URL.Database+'" AS USER "'+URL.UserName+'"';
+  FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);
   R := '';
   S := Info.Values[ConnProps_AppName];
 jmpInit:
@@ -522,7 +518,8 @@ jmpInit:
       Fa_sqlany_interface_context := nil;
     end;
   end;
-  DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, FLogMessage);
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
   if Fapi_version>=SQLANY_API_VERSION_4 then
     ExecuteImmediat(cAutoCommit[False][False], lcTransaction);
   if FClientCodePage = ''  then begin
@@ -641,7 +638,7 @@ begin
   end else begin
     if FSQLAnyPlainDriver.sqlany_rollback(Fa_sqlany_connection) <> 1 then
       HandleErrorOrWarning(lcTransaction, sRollbackMsg, Self);
-    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sRollbackMsg);
+    DriverManager.LogMessage(lcTransaction, URL.Protocol, sRollbackMsg);
     AutoCommit := True;
     if FRestartTransaction then
       StartTransaction;

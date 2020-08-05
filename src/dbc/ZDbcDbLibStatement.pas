@@ -383,7 +383,7 @@ begin
   repeat
     ResultsRETCODE := FPlainDriver.dbresults(FHandle);
     if ResultsRETCODE = DBFAIL then
-      FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS/dbresults');
+      FDBLibConnection.CheckDBLibError(lcFetch, 'FETCHRESULTS/dbresults', IImmediatelyReleasable(FWeakImmediatRelPtr));
     cmdRowRETCODE := FPlainDriver.dbcmdrow(FHandle);
     //EH: if NO_MORE_RESULTS there might be a final update count see TestSF380(a/b)
     if (cmdRowRETCODE = DBSUCCEED) and (ResultsRETCODE <> NO_MORE_RESULTS) then begin
@@ -445,10 +445,10 @@ begin
   //  FDBLibConnection.CheckDBLibError(lcExecute, SQL);
 
   if FPlainDriver.dbcmd(FHandle, Pointer(Raw)) <> DBSUCCEED then
-    FDBLibConnection.CheckDBLibError(lcExecute, SQL);
+    FDBLibConnection.CheckDBLibError(lcExecute, SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
 
   if FPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED then
-    FDBLibConnection.CheckDBLibError(lcExecute, SQL);
+    FDBLibConnection.CheckDBLibError(lcExecute, SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecute, Self);
 end;
@@ -897,7 +897,7 @@ var I: Integer;
   Bind: PZBindValue;
 begin
   if FPLainDriver.dbRPCInit(FHandle, Pointer(fASQL), 0) <> DBSUCCEED then
-    FDBLibConnection.CheckDBLibError(lcOther, 'EXECUTEPREPARED:dbRPCInit');
+    FDBLibConnection.CheckDBLibError(lcOther, 'EXECUTEPREPARED:dbRPCInit', IImmediatelyReleasable(FWeakImmediatRelPtr));
   for i := 1 to BindList.Count -1 do begin //skip the returnparam
     Bind := BindList[I];
     case Bind.BindType of
@@ -1127,7 +1127,7 @@ begin
   Prepare;
   BindInParameters;
   if FPLainDriver.dbRpcExec(FHandle) <> DBSUCCEED then
-    FDBLibConnection.CheckDBLibError(lcOther, 'EXECUTEPREPARED:dbRPCExec');
+    FDBLibConnection.CheckDBLibError(lcExecute, 'EXECUTEPREPARED:dbRPCExec', IImmediatelyReleasable(FWeakImmediatRelPtr));
   FetchResults;
   Result := (FResults.Count > 0) and Supports(FResults[0], IZResultSet, FLastResultSet);
 end;
@@ -1193,7 +1193,7 @@ begin
   RestartTimer;
   LastUpdateCount := -1;
   if FPLainDriver.dbRpcExec(FHandle) <> DBSUCCEED then
-    FDBLibConnection.CheckDBLibError(lcOther, 'EXECUTEPREPARED:dbRPCExec');
+    FDBLibConnection.CheckDBLibError(lcExecute, SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
 end;
 
 procedure TZDBLIBPreparedRPCStatement.RegisterParameter(ParameterIndex: Integer;

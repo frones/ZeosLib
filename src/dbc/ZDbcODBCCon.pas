@@ -351,7 +351,7 @@ begin
     if (Ret <> SQL_SUCCESS) then
       HandleDbcErrorOrWarning(Ret, 'COMMIT TRANSACTION', lcTransaction, Self);
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sCommitMsg);
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, sCommitMsg);
     if not FRestartTransaction then
       SetAutoCommit(True);
   end;
@@ -580,13 +580,16 @@ begin
   end;
   {$IFDEF WITH_VAR_INIT_WARNING}OutConnectString := '';{$ENDIF}
   SetLength(OutConnectString, 1024);
+  FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);
   try
     Ret := fODBCPlainDriver.SQLDriverConnect(fHDBC,
       {$IFDEF MSWINDOWS}SQLHWND(GetDesktopWindow){$ELSE}nil{$ENDIF},
       Pointer(tmp), Length(tmp), Pointer(OutConnectString),
       Length(OutConnectString), @aLen, DriverCompletion);
     if Ret <> SQL_SUCCESS then
-      HandleDbcErrorOrWarning(Ret, 'CONNECT TO DATABASE', lcConnect, Self);
+      HandleDbcErrorOrWarning(Ret, FLogMessage, lcConnect, Self)
+    else if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
     SetLength(OutConnectString, aLen);
     Ret := fODBCPlainDriver.SQLGetInfo(fHDBC, SQL_PARAM_ARRAY_SELECTS, @InfoValue, SizeOf(SQLUINTEGER), nil);
     if Ret <> SQL_SUCCESS then
@@ -665,7 +668,7 @@ begin
     if (Ret <> SQL_SUCCESS) then
       HandleDbcErrorOrWarning(Ret, 'ROLLBACK TRANSACTION', lcTransaction, Self);
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sRollbackMsg);
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, sRollbackMsg);
     if not FRestartTransaction then
       SetAutoCommit(True);
   end;
@@ -910,17 +913,10 @@ begin
     CP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
     {$ENDIF}
     if (Handle=nil) or (RETCODE=SQL_INVALID_HANDLE) then begin
-      {$IFDEF UNICODE}
-      ErrorString := Format(SSQLError2, ['HY000', 'Invalid handle']);
-      {$ELSE}
-      if (SMessageCodePage <> zCP_us_ascii) and (CP <> SMessageCodePage)
-      then FormatStr := ConvertZMsgToRaw(SSQLError2, SMessageCodePage, CP)
-      else FormatStr := SSQLError2;
-      ErrorStringA := Format(FormatStr, ['HY000', 'Invalid handle']);
-      {$ENDIF}
+      FLogMessage := Format(SSQLError2, ['HY000', 'Invalid handle']);
       if DriverManager.HasLoggingListener then
-        LogError(LoggingCategory, SQL_INVALID_HANDLE, Sender, Msg, {$IFDEF UNICODE}ErrorString{$ELSE}ErrorStringA{$ENDIF});
-      aException := EZSQLException.CreateWithCodeAndStatus(SQL_INVALID_HANDLE, 'HY000', {$IFDEF UNICODE}ErrorString{$ELSE}ErrorStringA{$ENDIF});
+        LogError(LoggingCategory, SQL_INVALID_HANDLE, Sender, Msg, FLogMessage);
+      aException := EZSQLException.CreateWithCodeAndStatus(SQL_INVALID_HANDLE, 'HY000', FLogMessage);
     end else begin
       MsgWriter := TZUnicodeSQLStringWriter.Create(SQL_SQLSTATE_SIZE+SQL_MAX_MESSAGE_LENGTH+12);
       try
@@ -956,7 +952,7 @@ begin
           {$IFDEF UNICODE}
           ErrorString := SUnknownError;
           {$ELSE}
-          ErrorString := ZRawToUnicode(SUnknownError, SMessageCodePage);
+          ErrorString := ZRawToUnicode(SUnknownError, {$IFDEF FPC}MsgCodePage{$ELSE}ZOSCodePage{$ENDIF});
           {$ENDIF}
         end;
         MsgWriter.Finalize(ErrorString);
@@ -971,10 +967,6 @@ begin
           then FormatStr := SSQLError3
           else FormatStr := SSQLError4
         else FormatStr := SSQLError2;
-        {$IFNDEF UNICODE}
-        if (SMessageCodePage <> zCP_us_ascii) and (CP <> SMessageCodePage) then
-          FormatStr := ConvertZMsgToRaw(FormatStr, SMessageCodePage, CP);
-        {$ENDIF}
         if Msg <> ''
         {$IFDEF UNICODE}
         then ErrorString := Format(FormatStr, [ErrorString, FirstNativeError, Msg])
@@ -997,7 +989,7 @@ begin
       finally
         FreeAndNil(MsgWriter);
         if DriverManager.HasLoggingListener and (RETCODE = SQL_SUCCESS_WITH_INFO) then
-          DriverManager.LogMessage(LoggingCategory, ConSettings.Protocol, {$IFDEF UNICODE}ErrorString{$ELSE}ErrorStringA{$ENDIF});
+          DriverManager.LogMessage(LoggingCategory, URL.Protocol, {$IFDEF UNICODE}ErrorString{$ELSE}ErrorStringA{$ENDIF});
       end;
     end;
     if aException <> nil then
@@ -1223,7 +1215,7 @@ begin
     if (Ret <> SQL_NO_DATA) and (Ret <> SQL_SUCCESS) then
       HandleErrorOrWarningA(Ret, Stmt, SQL_HANDLE_STMT, FLogMessage, LoggingCategory, Self);
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, FLogMessage);
+      DriverManager.LogMessage(LoggingCategory, URL.Protocol, FLogMessage);
   finally
     if STMT <> nil then
       fODBCPlainDriver.SQLFreeHandle(SQL_HANDLE_STMT, STMT);
@@ -1280,10 +1272,12 @@ var
   TextLength: SQLSMALLINT;
   ErrorString: RawByteString;
   FormatStr, SQLState: String;
-  {$IFDEF UNICODE}ErrorStringW: UnicodeString;{$ENDIF}
+  {$IFDEF UNICODE}
+  ErrorStringW: UnicodeString;
+  CP: Word;
+  {$ENDIF}
   aException: EZSQLThrowable;
   MsgWriter: TZRawSQLStringWriter;
-  CP: Word;
 begin
   Assert(Sender <> nil);
   if not SQL_SUCCEDED(RETCODE) then begin
@@ -1291,17 +1285,12 @@ begin
     if ConSettings.ClientCodePage <> nil
     then CP := ConSettings.ClientCodePage.CP
     else CP := ZOSCodePage;
-    {$ELSE}
-    CP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
     {$ENDIF}
     if (Handle=nil) or (RETCODE=SQL_INVALID_HANDLE) then begin
       {$IFDEF UNICODE}
       ErrorStringW := Format(SSQLError2, ['HY000', 'Invalid handle']);
       {$ELSE}
-      if (SMessageCodePage <> zCP_us_ascii) and (CP <> SMessageCodePage)
-      then FormatStr := ConvertZMsgToRaw(SSQLError2, SMessageCodePage, CP)
-      else FormatStr := SSQLError2;
-      ErrorString := Format(FormatStr, ['HY000', 'Invalid handle']);
+      ErrorString := Format(SSQLError2, ['HY000', 'Invalid handle']);
       {$ENDIF}
       if DriverManager.HasLoggingListener then
         LogError(LoggingCategory, SQL_INVALID_HANDLE, Sender, Msg, {$IFNDEF UNICODE}ErrorString{$ELSE}ErrorStringW{$ENDIF});
@@ -1340,9 +1329,7 @@ begin
         {$IFNDEF UNICODE}
         if RecNum = 1 then begin //no error returned?
           SQLState := 'HY000';
-          if (SMessageCodePage <> zCP_us_ascii) and (CP <> SMessageCodePage)
-          then ErrorString := ConvertZMsgToRaw(SUnknownError, SMessageCodePage, CP)
-          else ErrorString := SUnknownError;
+          ErrorString := SUnknownError;
         end;
         {$ELSE}
         if RecNum = 1
@@ -1357,10 +1344,6 @@ begin
           then FormatStr := SSQLError3
           else FormatStr := SSQLError4
         else FormatStr := SSQLError2;
-        {$IFNDEF UNICODE}
-        if (SMessageCodePage <> zCP_us_ascii) and (CP <> SMessageCodePage) then
-          FormatStr := ConvertZMsgToRaw(FormatStr, SMessageCodePage, CP);
-        {$ENDIF}
         if Msg <> ''
         {$IFNDEF UNICODE}
         then ErrorString := Format(FormatStr, [ErrorString, FirstNativeError, Msg])
@@ -1383,7 +1366,7 @@ begin
       finally
         FreeAndNil(MsgWriter);
         if DriverManager.HasLoggingListener and (RETCODE = SQL_SUCCESS_WITH_INFO) then
-          DriverManager.LogMessage(LoggingCategory, ConSettings.Protocol, {$IFNDEF UNICODE}ErrorString{$ELSE}ErrorStringW{$ENDIF});
+          DriverManager.LogMessage(LoggingCategory, URL.Protocol, {$IFNDEF UNICODE}ErrorString{$ELSE}ErrorStringW{$ENDIF});
       end;
     end;
     if aException <> nil then

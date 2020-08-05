@@ -242,8 +242,10 @@ procedure TZAbstractMySQLPreparedStatement.CheckParameterIndex(var Value: Intege
 begin
   if ((FMYSQL_STMT <> nil) and (BindList.Count < Value+1)) or
      ((FMYSQL_STMT =  nil) and (BindList.Capacity < Value+1))
-  then raise EZSQLException.Create(SInvalidInputParameterCount)
-  else inherited CheckParameterIndex(Value);
+  then begin
+    {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := Format(SBindVarOutOfRange, [Value]);
+    raise EZSQLException.Create({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
+  end else inherited CheckParameterIndex(Value);
 end;
 
 function TZAbstractMySQLPreparedStatement.CheckPrepareSwitchMode: Boolean;
@@ -298,15 +300,8 @@ begin
       Bind^.buffer_address^ := Bind.buffer;
     end;
     if FPlainDriver.mysql_stmt_attr_set517up(FMYSQL_STMT, STMT_ATTR_ARRAY_SIZE, @array_size) <> 0 then begin
-      {$IFDEF UNICODE}
       FMySQLConnection.HandleErrorOrWarning(lcOther, FMYSQL_STMT, SBindingFailure,
         IImmediatelyReleasable(FWeakImmediatRelPtr));
-      {$ELSE}
-      FRawTemp := ConvertZMsgToRaw(SBindingFailure, SMessageCodePage,
-        ConSettings^.ClientCodePage^.CP);
-      FMySQLConnection.HandleErrorOrWarning(lcOther, FMYSQL_STMT, FRawTemp,
-        IImmediatelyReleasable(FWeakImmediatRelPtr));
-      {$ENDIF}
     end;
   end;
   inherited ClearParameters;
@@ -1131,12 +1126,9 @@ begin
     FMYSQL_STMT := FPlainDriver.mysql_stmt_init(FPMYSQL^);
   FBindAgain := True;
   FStmtHandleIsExecuted := False;
-  if (FPlainDriver.mysql_stmt_prepare(FMYSQL_STMT, Pointer(FASQL), length(FASQL)) <> 0) then begin
-    FRawTemp := ConvertZMsgToRaw(SFailedtoPrepareStmt,
-      SMessageCodePage, ConSettings^.ClientCodePage^.CP);
+  if (FPlainDriver.mysql_stmt_prepare(FMYSQL_STMT, Pointer(FASQL), length(FASQL)) <> 0) then
     FMySQLConnection.HandleErrorOrWarning(lcPrepStmt, FMYSQL_STMT, SQL,
       IImmediatelyReleasable(FWeakImmediatRelPtr));
-  end;
   //see user comment: http://dev.mysql.com/doc/refman/5.0/en/mysql-stmt-fetch.html
   //"If you want work with more than one statement simultaneously, anidated select,
   //for example, you must declare CURSOR_TYPE_READ_ONLY the statement after just prepared this.!"
@@ -1399,24 +1391,13 @@ begin
       //set array_size first: https://mariadb.com/kb/en/library/bulk-insert-column-wise-binding/
       array_size := BatchDMLArrayCount;
       if FPlainDriver.mysql_stmt_attr_set517up(FMYSQL_STMT, STMT_ATTR_ARRAY_SIZE, @array_size) <> 0 then begin
-        {$IFNDEF UNICODE}
-        FRawTemp := ConvertZMsgToRaw(SBindingFailure, SMessageCodePage,
-          ConSettings^.ClientCodePage^.CP);
-        {$ENDIF}
         FMySQLConnection.HandleErrorOrWarning(lcBindPrepStmt, FMYSQL_STMT,
-          {$IFNDEF UNICODE}FRawTemp{$ELSE}SQL{$ENDIF}, IImmediatelyReleasable(FWeakImmediatRelPtr));
+          {$IFDEF DEBUG}'mysql_stmt_attr_set'{$ELSE}''{$ENDIF}, IImmediatelyReleasable(FWeakImmediatRelPtr));
       end;
     end;
     if (FPlainDriver.mysql_stmt_bind_param(FMYSQL_STMT, PAnsichar(FMYSQL_BINDs)+(Ord(BindList.HasReturnParam)*FBindOffset.size)) <> 0) then
-      {$IFDEF UNICODE}
       FMySQLConnection.HandleErrorOrWarning(lcBindPrepStmt, FMYSQL_STMT,
         SBindingFailure, IImmediatelyReleasable(FWeakImmediatRelPtr));
-      {$ELSE}
-      FRawTemp := ConvertZMsgToRaw(SBindingFailure, SMessageCodePage,
-        {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF});
-      FMySQLConnection.HandleErrorOrWarning(lcBindPrepStmt, FMYSQL_STMT,
-        FRawTemp, IImmediatelyReleasable(FWeakImmediatRelPtr));
-      {$ENDIF}
       FBindAgain := False;
   end;
   inherited BindInParameters;
@@ -1433,15 +1414,8 @@ begin
           if OffSet+PieceSize > Len then
             PieceSize := Len - OffSet;
           if (FPlainDriver.mysql_stmt_send_long_data(FMYSQL_STMT, I, P, PieceSize) <> 0) then begin
-            {$IFDEF UNICODE}
-            FMySQLConnection.HandleErrorOrWarning(lcExecute, FMYSQL_STMT,
+            FMySQLConnection.HandleErrorOrWarning(lcBindPrepStmt, FMYSQL_STMT,
               SBindingFailure, IImmediatelyReleasable(FWeakImmediatRelPtr));
-            {$ELSE}
-            FRawTemp := ConvertZMsgToRaw(SBindingFailure, SMessageCodePage,
-              {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF});
-            FMySQLConnection.HandleErrorOrWarning(lcExecute, FMYSQL_STMT,
-              FRawTemp, IImmediatelyReleasable(FWeakImmediatRelPtr));
-            {$ENDIF}
             exit;
           end else Inc(P, PieceSize);
           Inc(OffSet, PieceSize);

@@ -432,8 +432,6 @@ type
     ZRawToString: TZRawToString;
     ZUnicodeToString: TZUnicodeToString;
     ZStringToUnicode: TZStringToUnicode;
-    ZPRawToString: TPRawToString;
-    ZPUnicodeToString: TPUnicodeToString;
   end;
 
 {$IFNDEF WITH_CHARINSET}

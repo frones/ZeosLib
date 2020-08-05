@@ -234,7 +234,7 @@ begin
   try
     FAdoConnection.Execute(SQL, RowsAffected, adExecuteNoRecords);
     {$IFNDEF UNICODE}FlogMessage := ZUnicodeToRaw(SQL, zCP_UTF8);{$ENDIF}
-    DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, {$IFDEF UNICODE}SQL{$ELSE}FlogMessage{$ENDIF});
+    DriverManager.LogMessage(LoggingCategory, URL.Protocol, {$IFDEF UNICODE}SQL{$ELSE}FlogMessage{$ENDIF});
   except
     on E: Exception do begin
       {$IFNDEF UNICODE}FlogMessage := ZUnicodeToRaw(SQL, zCP_UTF8);{$ENDIF}
@@ -264,7 +264,7 @@ var
 begin
   if not Closed then Exit;
 
-  FLogMessage := 'CONNECT TO "'+URL.Database+'" AS USER "'+URL.UserName+'"';
+  FLogMessage := Format(SConnect2AsUser,  [URL.Database, URL.UserName]);
   try
     if ReadOnly then
       FAdoConnection.Set_Mode(adModeRead)
@@ -277,8 +277,8 @@ begin
 
     FAdoConnection.Open(WideString(Database), WideString(User), WideString(Password), -1{adConnectUnspecified});
     FAdoConnection.Set_CursorLocation(adUseClient);
-    DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, FLogMessage);
-    ConSettings^.AutoEncode := {$IFDEF UNICODE}False{$ELSE}True{$ENDIF};
+    DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
+    //ConSettings^.AutoEncode := {$IFDEF UNICODE}False{$ELSE}True{$ENDIF};
     CheckCharEncoding('CP_UTF16');
   except
     on E: Exception do
@@ -424,7 +424,7 @@ begin
         FAdoConnection.CommitTrans;
         Dec(FTransactionLevel);
       end;
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'COMMIT');
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, 'COMMIT');
       AutoCommit := True;
     end else
       StartTransaction;
@@ -471,7 +471,7 @@ begin
   if FTransactionLevel = 0 then try
     FTransactionLevel := FAdoConnection.BeginTrans;
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, FLogMessage);
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, FLogMessage);
     Result := FTransactionLevel;
   except
     on E: Exception do begin
@@ -515,7 +515,7 @@ begin
     FSavePoints.Delete(FSavePoints.Count-1);
   end else try
     FAdoConnection.CommitTrans;
-    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sCommitMsg);
+    DriverManager.LogMessage(lcTransaction, URL.Protocol, sCommitMsg);
     FTransactionLevel := 0;
     AutoCommit := True;
   except
@@ -549,7 +549,7 @@ begin
     FSavePoints.Delete(FSavePoints.Count-1);
   end else try
     FAdoConnection.RollbackTrans;
-    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sRollbackMsg);
+    DriverManager.LogMessage(lcTransaction, URL.Protocol, sRollbackMsg);
     FTransactionLevel := 0;
     AutoCommit := True;
   except
@@ -588,7 +588,7 @@ begin
     if FAdoConnection.State = adStateOpen then
       FAdoConnection.Close;
 //      FAdoConnection := nil;
-    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
+    DriverManager.LogMessage(lcDisconnect, URL.Protocol, LogMessage);
   except
     on E: Exception do
       HandleErrorOrWarning(lcDisconnect, E, Self, LogMessage);
@@ -610,7 +610,7 @@ begin
     if Catalog <> '' then //see https://sourceforge.net/p/zeoslib/tickets/117/
       FAdoConnection.DefaultDatabase := WideString(Catalog);
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcOther, ConSettings^.Protocol, FLogMessage);
+      DriverManager.LogMessage(lcOther, URL.Protocol, FLogMessage);
   except
     on E: Exception do
       HandleErrorOrWarning(lcOther, E, Self, FLogMessage);
@@ -635,23 +635,15 @@ procedure TZAdoConnection.HandleErrorOrWarning(
   LoggingCategory: TZLoggingCategory; const E: Exception;
   const Sender: IImmediatelyReleasable; const LogMsg: SQLString);
 var FormatStr, ErrorString: String;
-    {$IFNDEF UNICODE}
-    CP: Word;
-    {$ENDIF}
 begin
   if E is EOleException then with E as EOleException do begin
     LogError(LoggingCategory, ErrorCode, Sender, LogMsg, Message);
     raise EZSQLException.CreateWithCode(ErrorCode, Message);
     if LogMsg <> '' then
-      if LoggingCategory in [lcExecute, lcTransaction, lcPrepStmt]
+      if LoggingCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
       then FormatStr := SSQLError3
       else FormatStr := SSQLError4
     else FormatStr := SSQLError2;
-    {$IFNDEF UNICODE}
-    CP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
-    if (SMessageCodePage <> zCP_us_ascii) and (CP <> SMessageCodePage) then
-      FormatStr := ConvertZMsgToRaw(FormatStr, SMessageCodePage, CP);
-    {$ENDIF}
     if LogMsg <> ''
     then ErrorString := Format(FormatStr, [Message, ErrorCode, LogMsg])
     else ErrorString := Format(FormatStr, [Message, ErrorCode]);

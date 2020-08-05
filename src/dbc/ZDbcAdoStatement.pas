@@ -397,8 +397,10 @@ begin
       Size := ASize
     end
   end else begin
-    if (Index <0) or (fAdoCommand.Parameters.Count < Index +1) then
-      raise Exception.Create('Index out of bounds');
+    if (Index <0) or (fAdoCommand.Parameters.Count < Index +1) then begin
+      {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := Format(SBindVarOutOfRange, [Index]);
+      raise EZSQLException.Create({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
+    end;
     Result := fAdoCommand.Parameters[Index].Type_;
   end;
 end;

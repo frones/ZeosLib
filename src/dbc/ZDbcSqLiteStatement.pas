@@ -166,8 +166,10 @@ begin
     Prepare;
     FBindLater := False;
   end;
-  if (BindList.Count < Index+1) then
-    raise EZSQLException.Create(SInvalidInputParameterCount);
+  if (BindList.Count < Index+1) then begin
+    {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := Format(SBindVarOutOfRange, [Index]);
+    raise EZSQLException.Create({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
+  end;
 end;
 
 function TZAbstractSQLiteCAPIPreparedStatement.CreateResultSet: IZResultSet;

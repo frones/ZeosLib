@@ -299,10 +299,10 @@ begin
      HandleErrorOrWarning(Status, LoggingCategory, SQL, Self, nil)
   else if DriverManager.HasLoggingListener then begin
     {$IFDEF UNICODE}
-    DriverManager.LogMessage(LoggingCategory, ConSettings.Protocol, SQL);
+    DriverManager.LogMessage(LoggingCategory, URL.Protocol, SQL);
     {$ELSE}
     FLogMessage := ZUnicodeToRaw(SQL, zCP_UTF8);
-    DriverManager.LogMessage(LoggingCategory, ConSettings.Protocol, FLogMessage);
+    DriverManager.LogMessage(LoggingCategory, URL.Protocol, FLogMessage);
     {$ENDIF}
   end;
 end;
@@ -758,7 +758,7 @@ begin
           raise Exception;
       end else begin
         if DriverManager.HasLoggingListener then
-          DriverManager.LogMessage(LoggingCategory, ConSettings.Protocol,
+          DriverManager.LogMessage(LoggingCategory, URL.Protocol,
             {$IFDEF UNICODE}OleDBErrorMessage{$ELSE}ZUnicodeToRaw(OleDBErrorMessage, zCP_UTF8){$ENDIF});
         ClearWarnings;
         {$IFNDEF UNICODE}
@@ -1034,8 +1034,11 @@ begin
         Close;
       end;
     end;
-    FLogMessage := 'CONNECT TO "'+URL.Database+'" AS USER "'+URL.UserName+'"';
-    DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, FLogMessage);
+    if DriverManager.HasLoggingListener then begin
+      FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);
+      DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
+      FLogMessage := '';
+    end;
     if not AutoCommit then begin
       AutoCommit := True;
       SetAutoCommit(False);;
@@ -1159,7 +1162,7 @@ begin
     fDBInitialize := nil;
     FLogMessage := 'DISCONNECT FROM "'+URL.Database+'"';
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, FLogMessage);
+      DriverManager.LogMessage(lcDisconnect, URL.Protocol, FLogMessage);
   end;
 end;
 

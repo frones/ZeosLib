@@ -1051,15 +1051,29 @@ end;
 }
 function ConvertConnRawToString(ConSettings: PZConSettings; Buffer: Pointer; BufLen: Integer): string; overload;
 var
+  {$IFDEF UNICODE}
+  CP: Word;
+  {$ELSE}
   RawStr: RawByteString;
+  {$ENDIF}
 begin
-  // TODO: having ZPRawToString we could convert the string directly without SetString
-  {$IFDEF FPC}RawStr := '';{$ENDIF}
-  ZSetString(PAnsiChar(Buffer), BufLen, RawStr);
-  if ConSettings <> nil then
-    Result := ConSettings^.ConvFuncs.ZRawToString(RawStr, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
-  else
-    Result := string(RawStr);
+  {$IFDEF UNICODE}
+  if (ConSettings <> nil) and (ConSettings.ClientCodePage <> nil)
+  then CP := ConSettings^.ClientCodePage^.CP
+  else CP := DefaultSystemCodePage;
+  Result := PRawToUnicode(Buffer, BufLen, CP);
+  {$ELSE}
+    {$IFDEF NO_AUTOENCODE}
+    Result := '';
+    System.SetString(Result, PAnsiChar(Buffer), BufLen);
+    {$ELSE}
+    RawStr := '';
+    ZSetString(PAnsiChar(Buffer), BufLen, RawStr);
+    if (ConSettings <> nil) and (ConSettings.ClientCodePage <> nil)
+    then Result := ConSettings^.ConvFuncs.ZRawToString(RawStr, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
+    else Result := string(RawStr);
+    {$ENDIF}
+  {$ENDIF}
 end;
 
 {**

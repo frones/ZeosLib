@@ -826,10 +826,11 @@ begin
     SetNotEmptyFormat(Info.Values[ConnProps_DateReadFormat],
       DefDateFormatYMD,
       ConSettings^.ReadFormatSettings.DateFormat);
-
+    {$IFNDEF NO_AUTOENCODE}
     SetNotEmptyFormat(Info.Values[ConnProps_DateDisplayFormat],
       {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat,
       ConSettings^.DisplayFormatSettings.DateFormat);
+    {$ENDIF NO_AUTOENCODE}
 
     {time formats}
     SetNotEmptyFormat(Info.Values[ConnProps_TimeWriteFormat],
@@ -840,9 +841,11 @@ begin
       IfThen(GetMetaData.GetDatabaseInfo.SupportsMilliseconds, DefTimeFormatMsecs, DefTimeFormat),
       ConSettings^.ReadFormatSettings.TimeFormat);
 
+    {$IFNDEF NO_AUTOENCODE}
     SetNotEmptyFormat(Info.Values[ConnProps_TimeDisplayFormat],
       {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat,
       ConSettings^.DisplayFormatSettings.TimeFormat);
+    {$ENDIF NO_AUTOENCODE}
 
     {timestamp formats}
     SetNotEmptyFormat(Info.Values[ConnProps_DateTimeWriteFormat],
@@ -853,22 +856,30 @@ begin
       ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat,
       ConSettings^.ReadFormatSettings.DateTimeFormat);
 
+    {$IFNDEF NO_AUTOENCODE}
     SetNotEmptyFormat(Info.Values[ConnProps_DateTimeDisplayFormat],
       ConSettings^.DisplayFormatSettings.DateFormat+' '+ConSettings^.DisplayFormatSettings.TimeFormat,
       ConSettings^.DisplayFormatSettings.DateTimeFormat);
+    {$ENDIF NO_AUTOENCODE}
   end;
 
   ConSettings^.WriteFormatSettings.DateFormatLen := Length(ConSettings^.WriteFormatSettings.DateFormat);
   ConSettings^.ReadFormatSettings.DateFormatLen := Length(ConSettings^.ReadFormatSettings.DateFormat);
+  {$IFNDEF NO_AUTOENCODE}
   ConSettings^.DisplayFormatSettings.DateFormatLen := Length(ConSettings^.DisplayFormatSettings.DateFormat);
+  {$ENDIF NO_AUTOENCODE}
 
   ConSettings^.WriteFormatSettings.TimeFormatLen := Length(ConSettings^.WriteFormatSettings.TimeFormat);
   ConSettings^.ReadFormatSettings.TimeFormatLen := Length(ConSettings^.ReadFormatSettings.TimeFormat);
+  {$IFNDEF NO_AUTOENCODE}
   ConSettings^.DisplayFormatSettings.TimeFormatLen := Length(ConSettings^.DisplayFormatSettings.TimeFormat);
+  {$ENDIF NO_AUTOENCODE}
 
   ConSettings^.WriteFormatSettings.DateTimeFormatLen := Length(ConSettings^.WriteFormatSettings.DateTimeFormat);
   ConSettings^.ReadFormatSettings.DateTimeFormatLen := Length(ConSettings^.ReadFormatSettings.DateTimeFormat);
+  {$IFNDEF NO_AUTOENCODE}
   ConSettings^.DisplayFormatSettings.DateTimeFormatLen := Length(ConSettings^.DisplayFormatSettings.DateTimeFormat);
+  {$ENDIF NO_AUTOENCODE}
 end;
 
 procedure TZAbstractDbcConnection.SetOnConnectionLostErrorHandler(
@@ -1049,7 +1060,6 @@ begin
   FTransactIsolationLevel := tiNone;
   FUseMetadata := True;
   // should be set BEFORE InternalCreate
-  ConSettings^.Protocol := FIZPlainDriver.GetProtocol;
   // now InternalCreate will work, since it will try to Open the connection
   InternalCreate;
 
@@ -1295,8 +1305,16 @@ end;
 }
 procedure TZAbstractDbcConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
+var CP: Word;
 begin
-  ExecuteImmediat(ZRawToUnicode(SQL, ConSettings.CTRL_CP), LoggingCategory);
+  {$IFDEF NO_AUTOENCODE}
+  if ConSettings.ClientCodePage.Encoding = ceUTF16
+  then CP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF}
+  else CP := ConSettings.ClientCodePage.CP;
+  {$ELSE NO_AUTOENCODE}
+  CP := ConSettings.CTRL_CP;
+  {$ENDIF NO_AUTOENCODE}
+  ExecuteImmediat(ZRawToUnicode(SQL, CP), LoggingCategory);
 end;
 
 {**
@@ -1494,7 +1512,7 @@ begin
       AMessage := AMessage+' : ';
   end else AMessage := '';
   AMessage := AMessage + Msg;
-  DriverManager.LogError(Category, ConSettings^.Protocol, AMessage, ErrorCode, Error);
+  DriverManager.LogError(Category, URL.Protocol, AMessage, ErrorCode, Error);
 end;
 
 {**
@@ -2052,9 +2070,9 @@ begin
   Result.VType := vtRawByteString;
   case Value.VType of
     {$IFNDEF UNICODE}
-    vtString: if FConSettings.AutoEncode
+    vtString: {$IFNDEF NO_AUTOENCODE}if FConSettings.AutoEncode
               then ResTmp := ZConvertStringToRawWithAutoEncode(Value.VRawByteString, FCtrlsCP, FClientCP)
-              else ResTmp := Value.VRawByteString;
+              else {$ENDIF NO_AUTOENCODE}ResTmp := Value.VRawByteString;
     {$ENDIF}
     {$IFNDEF NO_ANSISTRING}
     vtAnsiString: if FClientCP = ZOSCodePage

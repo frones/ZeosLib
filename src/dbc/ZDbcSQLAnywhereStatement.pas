@@ -492,8 +492,10 @@ var I: Integer;
 begin
   if not Prepared then
     Prepare;
-  if (Value<0) or (Value+1 > BindList.Count) then
-    raise EZSQLException.Create(SInvalidInputParameterCount);
+  if (Value<0) or (Value+1 > BindList.Count) then begin
+    {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := Format(SBindVarOutOfRange, [Value]);
+    raise EZSQLException.Create({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
+  end;
   if BindList.HasOutOrInOutOrResultParam then
     for I := 0 to Value do
       if Ord(BindList[I].ParamType) > Ord(pctInOut) then

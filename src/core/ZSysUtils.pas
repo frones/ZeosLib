@@ -5962,6 +5962,7 @@ begin
   Result := SQLQuotedStr(Pointer(S), Length(S), Quote);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function SQLQuotedStr(Src: PAnsiChar; Len: LengthInt; Quote: AnsiChar): RawByteString;
 var
   P, Dest, PEnd, PFirst: PAnsiChar;
@@ -5974,7 +5975,7 @@ begin
     if (AnsiChar(P^)=Quote) then begin
       if Dest = nil then
         PFirst := P;
-      Inc({%H-}NativeUInt(Dest));
+      Inc(NativeUInt(Dest));
     end;
     Inc(P);
   end;
@@ -5991,7 +5992,7 @@ begin
     AnsiChar(Dest^) := Quote;
     Exit;
   end;
-  SetLength(Result, Len + {%H-}NativeInt(Dest) + 2);
+  SetLength(Result, Len + NativeInt(NativeUint(Dest)) + 2);
   Dest := Pointer(Result);
   AnsiChar(Dest^) := Quote;
   Inc(Dest);
@@ -6011,6 +6012,7 @@ begin
   Inc(Dest, PEnd - Src);
   AnsiChar(Dest^) := Quote;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function SQLQuotedStr(const S: RawByteString; Quote: AnsiChar): RawByteString;
 begin
