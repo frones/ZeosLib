@@ -645,6 +645,9 @@ begin
     if Index >= 0 then begin
       FSelectedRow := FInitialRowsList[Index];
       FRowAccessor.RowBuffer := FSelectedRow;
+    end else if FCachedUpdates and (FUpdatedRow.Index = FSelectedRow.Index) and (FUpdatedRow.UpdateType = utModified) then begin
+      FSelectedRow := FRowsList[FUpdatedRow.Index];
+      FRowAccessor.RowBuffer := FSelectedRow;
     end;
   end else
     FRowAccessor.RowBuffer := nil;
@@ -2245,6 +2248,7 @@ end;
 }
 procedure TZAbstractCachedResultSet.MoveToUpdateRow;
 begin
+  CheckClosed;
   if (RowAccessor.RowBuffer = FSelectedRow) and (FSelectedRow <> FUpdatedRow) then begin
     FSelectedRow := FUpdatedRow;
     RowAccessor.RowBuffer := FSelectedRow;
@@ -2262,8 +2266,10 @@ end;
 procedure TZAbstractCachedResultSet.MoveToCurrentRow;
 begin
   CheckClosed;
-  if (RowNo >= 1) and (RowNo <= LastRowNo)
-  then FRowAccessor.RowBuffer := FSelectedRow
+  if (RowNo >= 1) and (RowNo <= LastRowNo) then
+    if (FSelectedRow.Index = FUpdatedRow.Index) and (FUpdatedRow.UpdateType = utModified)
+    then FRowAccessor.RowBuffer := FUpdatedRow
+    else FRowAccessor.RowBuffer := FSelectedRow
   else FRowAccessor.RowBuffer := nil;
 end;
 

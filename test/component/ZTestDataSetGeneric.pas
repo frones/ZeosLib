@@ -110,6 +110,7 @@ type
     procedure TestNullUnionNull;
     procedure TestVeryLargeBlobs;
     procedure TestKeyWordParams;
+    procedure TestOldValue;
   end;
 
   {$IF not declared(TTestMethod)}
@@ -1903,6 +1904,51 @@ begin
     Query.Open; //just take care we can open a cursor
     BlankCheck;
     Query.Close;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure TZGenericTestDataSet.TestOldValue;
+var
+  //eq_id: Integer;
+  eq_name: String;
+  {eq_type: SmallInt;
+  eq_cost: Currency;
+  eq_date: TDate;
+  woff_date: TDate;}
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  Check(Query <> nil);
+  try
+    { select equipment table }
+    Query.SQL.Text := 'select * FROM equipment where eq_id = 1';
+    Query.CachedUpdates := True;
+    Query.Open;
+    CheckEquals(1, Query.Fields[0].AsInteger);
+    CheckEquals('Volvo', Query.Fields[1].AsString);
+    Query.Edit;
+    eq_name := Query.Fields[1].OldValue;
+    Query.Fields[1].AsString := 'Nissan';
+    CheckEquals(eq_name, 'Volvo');
+    eq_name := Query.Fields[1].OldValue;
+    CheckEquals(eq_name, 'Volvo');
+    eq_name := Query.Fields[1].CurValue;
+    CheckEquals(eq_name, 'Nissan');
+    eq_name := Query.Fields[1].OldValue;
+    CheckEquals(eq_name, 'Volvo');
+    eq_name := Query.Fields[1].CurValue;
+    CheckEquals(eq_name, 'Nissan');
+    Query.Post;
+    eq_name := Query.Fields[1].OldValue;
+    CheckEquals(eq_name, 'Volvo');
+    eq_name := Query.Fields[1].OldValue;
+    CheckEquals(eq_name, 'Volvo');
+    eq_name := Query.Fields[1].CurValue;
+    CheckEquals(eq_name, 'Nissan');
+    eq_name := Query.Fields[1].Value;
+    CheckEquals(eq_name, 'Nissan');
   finally
     Query.Free;
   end;
