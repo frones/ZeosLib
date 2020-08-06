@@ -231,7 +231,6 @@ function USASCII7ToUnicodeString(const Source: RawByteString): UnicodeString; ov
 {$IFNDEF UNICODE}
 function ConvertZMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF}MsgCP, RawCP: Word): RawByteString; overload;
 function ConvertZMsgToRaw(AMessage: PAnsiChar; Len: NativeUInt; {$IFNDEF LCL}Const{$ENDIF}MsgCP, RawCP: Word): RawByteString; overload;
-//function ConvertEMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF} RawCP: Word): RawByteString;
 {$ENDIF}
 
 {SBCS codepages $00..FF}
@@ -1898,7 +1897,7 @@ begin
           {$ENDIF}
         {$ENDIF}
 A2U:      Result := SourceBytes - wlen + DestWords;
-        Inc(PWideChar(Dest), DestWords);
+        //Inc(PWideChar(Dest), DestWords);
       end;
      // PWord(Dest)^ := Ord(#0); //allways append the term
     end;
@@ -2423,8 +2422,8 @@ function ZConvertStringToAnsiWithAutoEncode(const Src: String;
 var Tmp: UnicodeString; //COM based. Localize the Value to avoid buffer overrun
 {$ENDIF}
 begin
-  if Src = '' then
-    Result := ''
+  if Src = ''
+  then Result := ''
   else
     {$IFDEF UNICODE}
     Result := AnsiString(Src);
@@ -2432,15 +2431,13 @@ begin
     case ZDetectUTF8Encoding(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^) of
       etUSASCII: Result := Src;
       etAnsi:
-        if ZOSCodePage = zCP_UTF8 then
-        begin
+        if ZOSCodePage = zCP_UTF8 then begin
           Tmp := UnicodeString(Src);
           Result := UTF8Encode(Src);
         end else
           Result := Src;
-      else
-        if ZOSCodePage = zCP_UTF8 then
-          Result := Src
+      else if ZOSCodePage = zCP_UTF8
+        then Result := Src
         else begin
           Tmp := PRawToUnicode(Pointer(Src),
             {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, zCP_UTF8);
@@ -2559,15 +2556,13 @@ begin
   EndPtr := Source + Len -SizeOf(Cardinal);
 
   // skip leading US-ASCII part.
-  while Source <= EndPtr do //Check next quad
-  begin
+  while Source <= EndPtr do begin//Check next quad
     if PCardinal(Source)^ and $80808080<>0 then Break; //break on first non USASCII sequence
     inc(Source, SizeOf(Cardinal));
   end;
   Inc(EndPtr, SizeOf(Cardinal));
 
-  while Source < EndPtr do //Check bytes
-  begin
+  while Source < EndPtr do begin//Check bytes
     if Byte(Source^) >= $80 then break; //break on first non USASCII sequence
     inc(Source);
   end;
@@ -2575,66 +2570,49 @@ begin
   // If all character is US-ASCII, done.
   if Source = EndPtr then exit;
 
-  while Source < EndPtr do
-  begin
+  while Source < EndPtr do begin
     c := Byte(Source^);
     case c of
       $00..$7F:  //Ascii7
-        if (EndPtr - Source > SizeOf(PCardinal)) and (PCardinal(Source)^ and $80808080 = 0) then //Check quad block ASCII again
-          inc(Source, SizeOf(PCardinal))
-        else
-          Inc(Source);
+        if (EndPtr - Source > SizeOf(PCardinal)) and (PCardinal(Source)^ and $80808080 = 0) //Check quad block ASCII again
+        then inc(Source, SizeOf(PCardinal))
+        else Inc(Source);
       $C2..$DF:  // non-overlong 2-byte
-        if (Source+1 < EndPtr)
-            and (Byte((Source+1)^) in [$80..$BF]) then
-          Inc(Source, 2)
-        else
-          break;
-
+        if (Source+1 < EndPtr) and (Byte((Source+1)^) in [$80..$BF])
+        then Inc(Source, 2)
+        else break;
       $E0: // excluding overlongs
         if (Source+2 < EndPtr)
             and (Byte((Source+1)^) in [$A0..$BF])
-            and (Byte((Source+2)^) in [$80..$BF]) then
-          Inc(Source, 3)
-        else
-          break;
-
+            and (Byte((Source+2)^) in [$80..$BF])
+        then Inc(Source, 3)
+        else break;
       $E1..$EF: // straight 3-byte & excluding surrogates
         if (Source+2 < EndPtr)
             and (Byte((Source+1)^) in [$80..$BF])
-            and (Byte((Source+2)^) in [$80..$BF]) then
-          Inc(Source, 3)
-        else
-          break;
-
+            and (Byte((Source+2)^) in [$80..$BF])
+        then Inc(Source, 3)
+        else break;
       $F0: // planes 1-3
         if (Source+3 < EndPtr)
             and (Byte((Source+1)^) in [$90..$BF])
             and (Byte((Source+2)^) in [$80..$BF])
-            and (Byte((Source+3)^) in [$80..$BF]) then
-          Inc(Source, 4)
-        else
-          break;
-
-      $F1..$F3:
-        if (Source+3 < EndPtr)
+            and (Byte((Source+3)^) in [$80..$BF])
+        then Inc(Source, 4)
+        else break;
+      $F1..$F3: if (Source+3 < EndPtr)
             and (Byte((Source+1)^) in [$80..$BF])
             and (Byte((Source+2)^) in [$80..$BF])
-            and (Byte((Source+3)^) in [$80..$BF]) then
-          Inc(Source, 4)
-        else
-          break;
-
-      $F4:
-        if (Source+3 < EndPtr)
+            and (Byte((Source+3)^) in [$80..$BF])
+        then Inc(Source, 4)
+        else break;
+      $F4: if (Source+3 < EndPtr)
             and (Byte((Source+1)^) in [$80..$8F])
             and (Byte((Source+2)^) in [$80..$BF])
-            and (Byte((Source+3)^) in [$80..$BF]) then
-          Inc(Source, 4)
-        else
-          break;
-    else
-      break;
+            and (Byte((Source+3)^) in [$80..$BF])
+        then Inc(Source, 4)
+        else break;
+      else break;
     end;
   end;
 
@@ -2649,8 +2627,7 @@ begin
   SetString(Result, nil, Len);
   Dest := Pointer(Result);
   {fast quad conversion from SHA}
-  while Len >= 4 do
-  begin
+  while Len >= 4 do begin
     C := PCardinal(Source)^;
     dec(Len,4);
     inc(Source,4);
@@ -2659,8 +2636,7 @@ begin
     PCardinal(Dest+2)^ := (c shl 8 or c) and $00ff00ff;
     inc(Dest,4);
   end;
-  while Len > 0 do
-  begin
+  while Len > 0 do begin
     dec(Len);
     PWord(Dest)^ := Byte(Source^); //Shift Byte to Word
     inc(Source);
@@ -2691,36 +2667,17 @@ begin
   RawCP := zCP_UTF8;
   {$ENDIF}
   if (RawCP = MsgCP) then
-  {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG} //fpc2.7up
+  {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG} //fpc2.7 only
   begin
     Result := ''; //satisfy compiler
     ZSetString(PAnsiChar(AMessage), Length(AMessage), Result);
   end
-  {$ELSE !WITH_RAWBYTESTRING}
+  {$ELSE !WITH_RAWBYTESTRING_CONVERSION_BUG}
   Result := AMessage
-  {$ENDIF WITH_RAWBYTESTRING}
+  {$ENDIF WITH_RAWBYTESTRING_CONVERSION_BUG}
   else
     Result := ZUnicodeToRaw(PRawToUnicode(Pointer(AMessage),
       {%H-}PLengthInt(NativeUInt(AMessage) - StringLenOffSet)^, MsgCP), RawCP);
-end;
-
-function ConvertEMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF}RawCP: Word): RawByteString;
-begin
-  {$IFDEF LCL}
-  RawCP := zCP_UTF8;
-  {$ENDIF}
-  if (RawCP = ZOSCodePage) then
-  {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG} //fpc2.7up
-  begin
-    Result := ''; //satisfy compiler
-    ZSetString(PAnsiChar(AMessage), Length(AMessage), Result);
-  end
-  {$ELSE !WITH_RAWBYTESTRING}
-  Result := AMessage
-  {$ENDIF WITH_RAWBYTESTRING}
-  else
-    Result := ZUnicodeToRaw(PRawToUnicode(Pointer(AMessage),
-      {%H-}PLengthInt(NativeUInt(AMessage) - StringLenOffSet)^, ZOSCodePage), RawCP);
 end;
 {$ENDIF UNICODE}
 
