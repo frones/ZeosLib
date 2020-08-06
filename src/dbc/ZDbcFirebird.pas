@@ -299,22 +299,38 @@ var ZTrans: IZFirebirdTransaction;
     FBTrans: ITransaction;
     Stmt: IStatement;
     FStatementType: TZIbSqlStatementType;
+    State: Cardinal;
 begin
   ZTrans := GetActiveTransaction;
   FBTrans := ZTrans.GetTransaction;
+  {$IFDEF UNICODE}
+  if DriverManager.HasLoggingListener then
+    FLogMessage := ZRawToUnicode(SQL, ConSettings.ClientCodePage.CP);
+  {$ENDIF}
   if LoggingCategory = lcTransaction then begin
     FAttachment.execute(FStatus, FBTrans, Length(SQL), Pointer(SQL),
       FDialect, nil, nil, nil, nil);
-    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-       ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
+    State := Fstatus.getState;
+    if ((State and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
+       ((State and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then begin
+      {$IFDEF UNICODE}
+      if not DriverManager.HasLoggingListener then
+        FLogMessage := ZRawToUnicode(SQL, ConSettings.ClientCodePage.CP);
+      {$ENDIF}
       HandleErrorOrWarning(LoggingCategory, PARRAY_ISC_STATUS(FStatus.getErrors),
-        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
+        {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF}, IImmediatelyReleasable(FWeakImmediatRelPtr));
+    end;
   end else begin
-    Stmt := FAttachment.prepare(FStatus, FBTrans, Length(SQL), Pointer(SQL), FDialect, 0);
+    Stmt := FAttachment.prepare(FStatus, FBTrans, Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, Pointer(SQL), FDialect, 0);
     if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-       ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
+       ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then begin
+      {$IFDEF UNICODE}
+      if not DriverManager.HasLoggingListener then
+        FLogMessage := ZRawToUnicode(SQL, ConSettings.ClientCodePage.CP);
+      {$ENDIF}
       HandleErrorOrWarning(LoggingCategory, PARRAY_ISC_STATUS(FStatus.getErrors),
-        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
+        {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF}, IImmediatelyReleasable(FWeakImmediatRelPtr));
+    end;
     FStatementType := TZIbSqlStatementType(Stmt.getType(FStatus));
     try
       if FStatementType in [stGetSegment, stPutSegment, stStartTrans..stRollback]
@@ -322,9 +338,14 @@ begin
       else begin
         Stmt.execute(FStatus, FBTrans, nil, nil, nil, nil);
         if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-           ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
-            HandleErrorOrWarning(LoggingCategory, PARRAY_ISC_STATUS(FStatus.getErrors),
-              SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
+           ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then begin
+          {$IFDEF UNICODE}
+          if not DriverManager.HasLoggingListener then
+            FLogMessage := ZRawToUnicode(SQL, ConSettings.ClientCodePage.CP);
+          {$ENDIF}
+          HandleErrorOrWarning(LoggingCategory, PARRAY_ISC_STATUS(FStatus.getErrors),
+            {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF}, IImmediatelyReleasable(FWeakImmediatRelPtr));
+        end;
       end;
     finally
       Stmt.free(FStatus);
@@ -406,7 +427,7 @@ end;
 procedure TZFirebirdConnection.Open;
 var
   ti: IZFirebirdTransaction;
-  DPB, LogMsg: RawByteString;
+  DPB{$IFDEF UNICODE},R{$ENDIF}: RawByteString;
   DBCP, ConnectionString, CSNoneCP, CreateDB: String;
   DBName: array[0..512] of AnsiChar;
   P: PAnsiChar;
@@ -460,12 +481,12 @@ begin
     FAttachment := FProvider.createDatabase(FStatus, @DBName[0], Smallint(Length(DPB)),Pointer(DPB));
     Info.Values[ConnProps_CreateNewDatabase] := ''; //prevent recreation on open
     DBCreated := True;
-    LogMsg := 'CREATE DATABASE "'+ConSettings.Database+'" AS USER "'+ ConSettings^.User+'"';
+    FLogMessage := 'CREATE DATABASE "'+URL.Database+'" AS USER "'+ URL.UserName+'"';
     if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
       HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors),
-        LogMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
+        FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMsg);
+      DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
   end;
 reconnect:
   if FProvider = nil then
@@ -474,15 +495,20 @@ reconnect:
     FStatus := FMaster.getStatus;
   if FAttachment = nil then begin
     PrepareDPB;
-    LogMsg := 'CONNECT TO "'+ConSettings^.DataBase+'" AS USER "'+ConSettings^.User+'"';
-    P := Pointer(ConSettings.Database);
+    FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);;
+    {$IFDEF UNICODE}
+    R := ZUnicodeToRaw(URL.Database, CP);
+    P := Pointer(R);
+    {$ELSE}
+    P := Pointer(URL.Database);
+    {$ENDIF}
     FAttachment := FProvider.attachDatabase(FStatus, PAnsichar(P), Length(DPB), Pointer(DPB));
     if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
       HandleErrorOrWarning(lcConnect, PARRAY_ISC_STATUS(FStatus.getErrors),
-        LogMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
+        FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
     { Logging connection action }
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMsg);
+      DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
   end;
   { Dialect could have changed by isc_dpb_set_db_SQL_dialect command }
   DBName[0] := AnsiChar(isc_info_db_SQL_Dialect);
@@ -708,7 +734,7 @@ begin
         sCommitMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
   finally
     if fDoLog and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sCommitMsg);
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, sCommitMsg);
   end;
 end;
 
@@ -782,7 +808,7 @@ begin
         sRollbackMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
   finally
     if fDoLog and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, sRollbackMsg);
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, sRollbackMsg);
   end;
 end;
 
@@ -809,7 +835,7 @@ begin
         Length(FTPB){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, Pointer(FTPB));
       FTransaction.AddRef;
       Result := Ord(not Self.FAutoCommit);
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION STARTED.');
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, 'TRANSACTION STARTED.');
     end else begin
       Result := FSavePoints.Count+2;
       S := 'SP'+ZFastcode.IntToStr(NativeUInt(Self))+'_'+ZFastCode.IntToStr(Result);

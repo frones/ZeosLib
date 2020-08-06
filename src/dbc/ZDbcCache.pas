@@ -4388,7 +4388,7 @@ begin
   {$ELSE}
   CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
   if CP = zCP_UTF16 then begin
-    fUniTemp := ConSettings^.ConvFuncs.ZStringToUnicode(Value, ConSettings^.CTRL_CP); //localize Value becuse of WideString overrun
+    fUniTemp := ConSettings^.ConvFuncs.ZStringToUnicode(Value, ConSettings^.CTRL_CP); //localize Value because of WideString overrun
     Len := Length(fUniTemp);
     SetPWideChar(ColumnIndex, Pointer(fUniTemp), Len);
   end else if not ConSettings.AutoEncode then begin

@@ -208,10 +208,12 @@ begin
     EditUpdateSQL(TZUpdateSQL(Component));
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Index" not used} {$ENDIF}
 function TZUpdateSqlEditor.GetVerb(Index: Integer): string;
 begin
   Result := 'UpdateSql editor...';
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TZUpdateSqlEditor.GetVerbCount: Integer;
 begin
@@ -670,6 +672,7 @@ end;
 procedure TZUpdateSQLEditForm.GenInsertSQL(const TableName: string;
   UpdateFields, SQL: TStrings);
 
+  {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Index" not used} {$ENDIF}
   procedure GenFieldList(const TabName, ParamChar: String);
   var
     L: string;
@@ -694,7 +697,7 @@ procedure TZUpdateSQLEditForm.GenInsertSQL(const TableName: string;
     end;
     SQL.Add(L+')');
   end;
-
+  {$IFDEF FPC} {$POP} {$ENDIF}
 begin
   SQL.Add(Format('INSERT INTO %s', [TableName])); { Do not localize }
   GenFieldList(GetTableRef(TableName), '');

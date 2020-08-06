@@ -658,17 +658,21 @@ begin
   LoadProperties;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Shift" not used} {$ENDIF}
 procedure TfrmPropertyEditor.lbUsedMouseMove(Sender: TObject;
   Shift: TShiftState; X, Y: Integer);
 begin
   SetItemHint(lbUsed, lbUsed.ItemAtPos(Point(X, Y), true));
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Shift" not used} {$ENDIF}
 procedure TfrmPropertyEditor.lbAvailableMouseMove(Sender: TObject;
   Shift: TShiftState; X, Y: Integer);
 begin
   SetItemHint(lbAvailable, lbAvailable.ItemAtPos(Point(X, Y), true));
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 var
   LastListBox: TListBox;

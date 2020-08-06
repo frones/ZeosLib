@@ -340,7 +340,7 @@ begin
           DT_UNSBIGINT        : JSONWriter.AddQ(PUInt64(sqldata)^);
           DT_BIT              : JSONWriter.AddShort(JSONBool[PByte(sqldata)^ <> 0]);
           else
-            FSqlData.CreateException(Format(SErrorConvertionField,
+            raise FSqlData.CreateException(Format(SErrorConvertionField,
               [ FSqlData.GetFieldName(C), ConvertASATypeToString(sqlType)]));
         end;
         JSONWriter.Add(',');
@@ -459,7 +459,7 @@ begin
             Result := StrToBoolEx(FRawTemp);
           end;
       else
-        FSqlData.CreateException(Format(SErrorConvertionField,
+        raise FSqlData.CreateException(Format(SErrorConvertionField,
           [FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
@@ -496,7 +496,7 @@ begin
           Result := Pointer(FRawTemp);
         end;
       else
-        FSqlData.CreateException(Format(SErrorConvertionField,
+        raise FSqlData.CreateException(Format(SErrorConvertionField,
           [ FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
     end;
 end;
@@ -543,7 +543,7 @@ begin
             Result := ZFastCode.RawToInt64(FRawTemp);
           end;
       else
-        FSqlData.CreateException(Format(SErrorConvertionField,
+        raise FSqlData.CreateException(Format(SErrorConvertionField,
           [ FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
@@ -590,7 +590,7 @@ begin
             Result := ZFastCode.RawToInt(FRawTemp);
           end;
       else
-        FSqlData.CreateException(Format(SErrorConvertionField,
+        raise FSqlData.CreateException(Format(SErrorConvertionField,
           [ FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
@@ -638,7 +638,7 @@ begin
             Result := ZFastCode.RawToUInt64(FRawTemp);
           end;
       else
-        FSqlData.CreateException(Format(SErrorConvertionField,
+        raise FSqlData.CreateException(Format(SErrorConvertionField,
           [ FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
@@ -686,7 +686,7 @@ begin
             Result := ZFastCode.RawToInt64(FRawTemp);
           end;
       else
-        FSqlData.CreateException(Format(SErrorConvertionField,
+        raise FSqlData.CreateException(Format(SErrorConvertionField,
           [ FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
@@ -729,7 +729,7 @@ begin
             SQLStrToFloatDef(PAnsiChar(Pointer(FRawTemp)), 0, Result, Length(fRawTemp));
           end;
       else
-        FSqlData.CreateException(Format(SErrorConvertionField,
+        raise FSqlData.CreateException(Format(SErrorConvertionField,
           [ FSqlData.GetFieldName(columnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
@@ -764,7 +764,7 @@ begin
                       else goto Fail;
     else begin
 fail:  FillChar(Result, SizeOf(TGUID), #0);
-        FSqlData.CreateException(Format(SErrorConvertionField,
+        raise FSqlData.CreateException(Format(SErrorConvertionField,
           [ FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
     end;
@@ -809,7 +809,7 @@ begin
             SQLStrToFloatDef(PAnsiChar(Pointer(FRawTemp)), 0, Result, Length(fRawTemp));
           end;
       else
-        FSqlData.CreateException(Format(SErrorConvertionField,
+        raise FSqlData.CreateException(Format(SErrorConvertionField,
           [ FSqlData.GetFieldName(columnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
@@ -852,7 +852,7 @@ begin
           TryRawToBCD(FRawTemp, Result, '.');
         end;
     else
-      FSqlData.CreateException(Format(SErrorConvertionField,
+      raise FSqlData.CreateException(Format(SErrorConvertionField,
         [ FSqlData.GetFieldName(columnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
     end;
 end;
@@ -885,7 +885,7 @@ begin
             SQLStrToFloatDef(PAnsiChar(Pointer(FRawTemp)), 0, Result, length(FRawTemp));
           end;
       else
-        FSqlData.CreateException(Format(SErrorConvertionField,
+        raise FSqlData.CreateException(Format(SErrorConvertionField,
           [ FSqlData.GetFieldName(columnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
@@ -925,7 +925,7 @@ begin
             Result.IsNegative := PZASASQLDateTime(sqlData).Year < 0;
           end;
     else
-      FSqlData.CreateException(Format(SErrorConvertionField,
+      raise FSqlData.CreateException(Format(SErrorConvertionField,
         [ FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
   end;
 end;
@@ -967,7 +967,7 @@ begin
             Result.IsNegative := False;
           end;
         else
-          FSqlData.CreateException(Format(SErrorConvertionField,
+          raise FSqlData.CreateException(Format(SErrorConvertionField,
             [FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
@@ -1013,7 +1013,7 @@ begin
             Result.IsNegative := PZASASQLDateTime(sqlData).Year < 0;
           end;
         else
-          FSqlData.CreateException(Format(SErrorConvertionField,
+          raise FSqlData.CreateException(Format(SErrorConvertionField,
             [FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
 end;
@@ -1121,7 +1121,7 @@ set_Results:            Len := Result - PAnsiChar(fByteBuffer);
     else begin
         Result := nil;
         Len := 0;
-        FSqlData.CreateException(Format(SErrorConvertionField,
+        raise FSqlData.CreateException(Format(SErrorConvertionField,
           [ FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
     end;
@@ -1226,7 +1226,7 @@ set_from_uni:           Len := Length(FUniTemp);
     else begin
         Result := nil;
         Len := 0;
-        FSqlData.CreateException(Format(SErrorConvertionField,
+        raise FSqlData.CreateException(Format(SErrorConvertionField,
           [ FSqlData.GetFieldName(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), ConvertASATypeToString(sqlType)]));
       end;
     end;

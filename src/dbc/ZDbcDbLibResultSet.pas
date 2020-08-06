@@ -227,7 +227,7 @@ begin
   case FPlainDriver.dbnextrow(FHandle) of
     REG_ROW: Result := True;
     NO_MORE_ROWS: ;
-    DBFAIL: FConnection.CheckDBLibError(lcOther, 'NEXT');
+    DBFAIL: FConnection.CheckDBLibError(lcFetch, 'NEXT', nil);
     BUF_FULL: raise EZSQLException.Create('The data doesn''t fit the dblib buffer');//should not happen because we are not using dblibc buffering.
   else
    // If a compute row is read, the computeid of the row is returned
@@ -499,7 +499,7 @@ begin
     if Assigned(FHandle) then
       if FPlainDriver.dbDead(FHandle) = 0 then
         if FPlainDriver.dbCanQuery(FHandle) <> DBSUCCEED then
-          FDBLibConnection.CheckDBLibError(lcDisconnect, 'CLOSE QUERY');
+          FDBLibConnection.CheckDBLibError(lcFetch, 'CLOSE QUERY', IImmediatelyReleasable(FWeakImmediatRelPtr));
   FHandle := nil;
   inherited BeforeClose;
 end;
@@ -645,12 +645,12 @@ ConvCCP2W:  fUniTemp := PRawToUnicode(dbData, Len, ColumnCodePage);
         else begin
           Len := FPlainDriver.dbconvert(FHandle, Ord(TDSType), Pointer(dbData), Len,
             Ord(tdsVarChar), PByte(FByteBuffer), SizeOF(TByteBuffer)-1);
-          FDBLibConnection.CheckDBLibError(lcOther, 'GetPAnsiChar');
+          FDBLibConnection.CheckDBLibError(lcOther, 'GetPAnsiChar', IImmediatelyReleasable(FWeakImmediatRelPtr));
           fUniTemp := Ascii7ToUnicodeString(dbData, Len);
 set_From_W: if Pointer(fUniTemp) = nil
           then Result := PEmptyUnicodeString
           else Result := Pointer(fUniTemp);
-          FDBLibConnection.CheckDBLibError(lcOther, 'GetPAnsiChar');
+          FDBLibConnection.CheckDBLibError(lcOther, 'GetPAnsiChar', IImmediatelyReleasable(FWeakImmediatRelPtr));
         end;
       end
   end;
@@ -680,7 +680,7 @@ begin
       then Result := System.PByte(Data)^ <> 0
       else FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsBit),
           @Result, SizeOf(Result));
-    FDBLibConnection.CheckDBLibError(lcOther, 'GETBOOLEAN');
+    FDBLibConnection.CheckDBLibError(lcOther, 'GETBOOLEAN', IImmediatelyReleasable(FWeakImmediatRelPtr));
   end;
 end;
 
@@ -703,7 +703,7 @@ var
 begin
   //DBLib -----> Col/Param starts whith index 1
   FDataProvider.GetColData(ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}, Data, DL);
-  FDBLibConnection.CheckDBLibError(lcOther, 'GETBYTES');
+  FDBLibConnection.CheckDBLibError(lcOther, 'GETBYTES', IImmediatelyReleasable(FWeakImmediatRelPtr));
   LastWasNull := Data = nil;
   Result := Data;
   Len := DL;
@@ -733,7 +733,7 @@ begin
       then Result := PInteger(Data)^
       else FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsInt4),
           @Result, SizeOf(Result));
-    FDBLibConnection.CheckDBLibError(lcOther, 'GETINT');
+    FDBLibConnection.CheckDBLibError(lcOther, 'GETINT', IImmediatelyReleasable(FWeakImmediatRelPtr));
   end;
 end;
 
@@ -766,7 +766,7 @@ begin
         else FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsInt8),
           @Result, SizeOf(Int64));
       end;
-    FDBLibConnection.CheckDBLibError(lcOther, 'GETLONG');
+    FDBLibConnection.CheckDBLibError(lcOther, 'GETLONG', IImmediatelyReleasable(FWeakImmediatRelPtr));
   end;
 end;
 
@@ -795,7 +795,7 @@ begin
       else FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsFlt4),
           @Result, SizeOf(Result))
     else Result := 0;
-    FDBLibConnection.CheckDBLibError(lcOther, 'GETFLOAT');
+    FDBLibConnection.CheckDBLibError(lcOther, 'GETFLOAT', IImmediatelyReleasable(FWeakImmediatRelPtr));
   end;
 end;
 
@@ -820,7 +820,7 @@ begin
             dbDatLen := ZDbcUtils.GetAbsorbedTrailingSpacesLen(PAnsiChar(dbData), dbDatLen);
           end;
       tdsUnique: Result := PGUID(dbData)^;
-      else FDBLibConnection.CheckDBLibError(lcOther, 'GetPAnsiChar');
+      else FDBLibConnection.CheckDBLibError(lcOther, 'GetPAnsiChar', IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
   end;
 end;
@@ -855,7 +855,7 @@ begin
             @Result, SizeOf(Result));
       end
     else Result := 0;
-    FDBLibConnection.CheckDBLibError(lcOther, 'GETDOUBLE');
+    FDBLibConnection.CheckDBLibError(lcOther, 'GETDOUBLE', IImmediatelyReleasable(FWeakImmediatRelPtr));
   end;
 end;
 
@@ -887,7 +887,7 @@ begin
         DL := FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsVarchar),
             PByte(FByteBuffer), SizeOf(TByteBuffer));
         if DL = -1 then
-          FDBLibConnection.CheckDBLibError(lcOther, 'GETBIGDECIMAL');
+          FDBLibConnection.CheckDBLibError(lcOther, 'GETBIGDECIMAL', IImmediatelyReleasable(FWeakImmediatRelPtr));
       end;
       LastWasNull := not TryRawToBCD(PAnsiChar(FByteBuffer), DL, Result, '.');
     end else Result := NullBCD;
@@ -1004,7 +1004,7 @@ Enc:    if FPlainDriver.DBLibraryVendorType = lvtFreeTDS //type diff
       end else begin
         FPlainDriver.dbconvert(FHandle, Ord(TDSType), Data, DL, Ord(tdsDateTime),
           @tdsTempDate, SizeOf(tdsTempDate));
-        FDBLibConnection.CheckDBLibError(lcOther, 'GETTIMESTAMP');
+        FDBLibConnection.CheckDBLibError(lcOther, 'GETTIMESTAMP', IImmediatelyReleasable(FWeakImmediatRelPtr));
         Data :=  @tdsTempDate.dtdays;
         goto Enc;
       end;

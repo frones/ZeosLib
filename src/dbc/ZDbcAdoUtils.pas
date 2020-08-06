@@ -162,7 +162,7 @@ implementation
 
 uses
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF}, Variants,
-  ZSysUtils, ZDbcUtils, ZMessages, ZEncoding, ZFastCode;
+  ZSysUtils, ZDbcUtils, ZEncoding, ZFastCode;
 
 {**
   Converts an ADO native types into string related.

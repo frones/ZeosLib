@@ -348,14 +348,14 @@ begin
     else iError := FPlainDriver.isc_dsql_execute(@FStatusVector, ISC_TR_HANDLE,
       @FStmtHandle, Dialect, FParamXSQLDA); //not expecting a result
     if (iError <> 0) or (FStatusVector[2] = isc_arg_warning) then
-      FIBConnection.HandleErrorOrWarning(lcExecPrepStmt, @FStatusVector, fASQL, Self);
+      FIBConnection.HandleErrorOrWarning(lcExecPrepStmt, @FStatusVector, SQL, Self);
     LastUpdateCount := -1;
     if FStatementType <> stDDL then begin
       ReqInfo := AnsiChar(isc_info_sql_records);
 
       if FPlainDriver.isc_dsql_sql_info(@FStatusVector, @FStmtHandle, 1,
           @ReqInfo, SizeOf(TByteBuffer), PAnsiChar(FByteBuffer)) <> 0 then
-        FIBConnection.HandleErrorOrWarning(lcExecPrepStmt, @FStatusVector, fASQL, Self);
+        FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, {$IFDEF DEBUG}'isc_dsql_sql_info'{$ELSE}''{$ENDIF}, Self);
       if FByteBuffer[0] <> isc_info_sql_records then
         Exit;
 
@@ -564,7 +564,7 @@ begin
       Status := FPlainDriver.isc_dsql_prepare(@FStatusVector, GetTrHandle, @FStmtHandle,
           Word(L), Pointer(ASQL), GetDialect, nil);
       if (Status <> 0) or (FStatusVector[2] = isc_arg_warning) then
-        FIBConnection.HandleErrorOrWarning(lcPrepStmt, @FStatusVector, fASQL, Self);
+        FIBConnection.HandleErrorOrWarning(lcPrepStmt, @FStatusVector, SQL, Self);
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcPrepStmt,Self);
       if Assigned(FPlainDriver.fb_dsql_set_timeout) then begin
@@ -579,7 +579,7 @@ begin
       { Get information about a prepared DSQL statement. }
       if FPlainDriver.isc_dsql_sql_info(@FStatusVector, @FStmtHandle, 1,
           @TypeItem, SizeOf(Buffer), @Buffer[0]) <> 0 then
-        FIBConnection.HandleErrorOrWarning(lcPrepStmt, @FStatusVector, fASQL, Self);
+        FIBConnection.HandleErrorOrWarning(lcPrepStmt, @FStatusVector, SQL, Self);
 
       if Buffer[0] = AnsiChar(isc_info_sql_stmt_type)
       then FStatementType := TZIbSqlStatementType(ReadInterbase6Number(FPlainDriver, Buffer[1]))
@@ -592,11 +592,11 @@ begin
         FResultXSQLDA := TZSQLDA.Create(Connection, ConSettings);
         { Initialise ouput param and fields }
         if FPlainDriver.isc_dsql_describe(@FStatusVector, @FStmtHandle, GetDialect, FResultXSQLDA.GetData) <> 0 then
-          FIBConnection.HandleErrorOrWarning(lcBindPrepStmt, @FStatusVector, fASQL, Self);
+          FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, {$IFDEF DEBUG}'isc_dsql_describe'{$ELSE}''{$ENDIF}, Self);
         if FResultXSQLDA.GetData^.sqld <> FResultXSQLDA.GetData^.sqln then begin
           FResultXSQLDA.AllocateSQLDA;
           if FPlainDriver.isc_dsql_describe(@FStatusVector, @FStmtHandle, GetDialect, FResultXSQLDA.GetData) <> 0 then
-            FIBConnection.HandleErrorOrWarning(lcBindPrepStmt, @FStatusVector, fASQL, Self);
+            FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, {$IFDEF DEBUG}'isc_dsql_describe'{$ELSE}''{$ENDIF}, Self);
         end;
         FOutMessageCount := FResultXSQLDA.GetData.sqld;
         if FOutMessageCount > 0 then begin
@@ -679,7 +679,7 @@ begin
     end;
     {check dynamic sql}
     if FPlainDriver.isc_dsql_describe_bind(@StatusVector, @FStmtHandle, GetDialect, FParamXSQLDA) <> 0 then
-      FIBConnection.HandleErrorOrWarning(lcBindPrepStmt, @FStatusVector, fASQL, Self);
+      FIBConnection.HandleErrorOrWarning(lcBindPrepStmt, @FStatusVector, {$IFDEF DEBUG}'isc_dsql_describe_bind'{$ELSE}''{$ENDIF}, Self);
 
     //alloc space for lobs, arrays, param-types
     if ((FStatementType = stExecProc) and (FResultXSQLDA.GetFieldCount > 0)) or
@@ -691,7 +691,7 @@ begin
     if FParamXSQLDA^.sqld <> FParamXSQLDA^.sqln then begin
       FParamXSQLDA := FParamSQLData.AllocateSQLDA;
       if FPlainDriver.isc_dsql_describe_bind(@StatusVector, @FStmtHandle, GetDialect,FParamXSQLDA) <> 0 then
-        FIBConnection.HandleErrorOrWarning(lcBindPrepStmt, @FStatusVector, fASQL, Self);
+        FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, {$IFDEF DEBUG}'isc_dsql_describe_bind'{$ELSE}''{$ENDIF}, Self);
     end;
     FInMessageCount := FParamXSQLDA^.sqld;
     GetMem(FInParamDescripors, FInMessageCount * SizeOf(TZInterbaseFirerbirdParam));
@@ -758,7 +758,10 @@ begin
   inherited Unprepare;
   if (FStmtHandle <> 0) then //check if prepare did fail. otherwise we unprepare the handle
     if FPlainDriver.isc_dsql_free_statement(@fStatusVector, @FStmtHandle, DSQL_UNPREPARE) <> 0 then
-      FIBConnection.HandleErrorOrWarning(lcUnprepStmt, @FStatusVector, fASQL, Self);
+      FIBConnection.HandleErrorOrWarning(lcUnprepStmt, @FStatusVector, SQL, Self);
+  { Logging Execution }
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcUnprepStmt,Self);
 end;
 
 {**
@@ -884,7 +887,7 @@ begin
           FOpenResultSet := nil;
         end else if FResultXSQLDA.GetFieldCount <> 0 then
           if FPlainDriver.isc_dsql_free_statement(@FStatusVector, @FStmtHandle, DSQL_CLOSE) <> 0 then
-            FIBConnection.HandleErrorOrWarning(lcExecPrepStmt, @FStatusVector, fASQL, Self);
+            FIBConnection.HandleErrorOrWarning(lcExecPrepStmt, @FStatusVector, SQL, Self);
       stExecProc: { Create ResultSet if possible }
         if FResultXSQLDA.GetFieldCount <> 0 then
           FOutParamResultSet := CreateResultSet;

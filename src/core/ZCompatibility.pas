@@ -316,6 +316,9 @@ type
   {$If not declared(UnicodeString)}
   UnicodeString = WideString;
   {$IFEND}
+
+  SQLString = {$IFDEF UNICODE}UnicodeString{$ELSE}RawByteString{$ENDIF};
+
   ZWideString = {$IFDEF PWIDECHAR_IS_PUNICODECHAR}UnicodeString{$ELSE}WideString{$ENDIF};
 
   {$IF not declared(TBooleanDynArray)}
@@ -429,8 +432,6 @@ type
     ZRawToString: TZRawToString;
     ZUnicodeToString: TZUnicodeToString;
     ZStringToUnicode: TZStringToUnicode;
-    ZPRawToString: TPRawToString;
-    ZPUnicodeToString: TPUnicodeToString;
   end;
 
 {$IFNDEF WITH_CHARINSET}

@@ -97,7 +97,7 @@ type
     FCursorName: RawByteString;
     FWSQL: UnicodeString;
     FaSQL: RawByteString;
-    FStatementId : Integer;
+    FStatementId : NativeUint;
     FOpenResultSet: Pointer; //weak reference to avoid memory-leaks and cursor issues
     FClientCP: Word;
     FWeakIZStatementPtr: Pointer; //weak reference to IZStatement intf of Self
@@ -107,7 +107,7 @@ type
     procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
     procedure SetASQL(const Value: RawByteString); virtual;
     procedure SetWSQL(const Value: UnicodeString); virtual;
-    class function GetNextStatementId : integer;
+    class function GetNextStatementId: NativeUint;
     procedure ReleaseConnection; virtual;
     procedure RestartTimer;
     property MaxFieldSize: Integer read FMaxFieldSize write FMaxFieldSize;
@@ -138,7 +138,7 @@ type
     property CachedLob: Boolean read FCachedLob;
     property ClientCP: word read FClientCP;
     function CreateStmtLogEvent(Category: TZLoggingCategory;
-      const Msg: RawByteString=EmptyRaw): TZLoggingEvent;
+      const Msg: SQLString = ''): TZLoggingEvent;
 
     function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; virtual;
     function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): UnicodeString; virtual;
@@ -205,6 +205,7 @@ type
     procedure ClearWarnings; virtual;
 
     function CreateLogEvent(const Category: TZLoggingCategory): TZLoggingEvent; virtual;
+    function GetStatementId: NativeUInt;
   end;
 
   TZBindType = (zbtNull, zbt8Byte, zbt4Byte,
@@ -356,8 +357,8 @@ type
     procedure SetParamCount(NewParamCount: Integer); virtual;
     procedure SetBindCapacity(Capacity: Integer); virtual;
 
-    procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: RawByteString = EmptyRaw);
-    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); virtual;
+    procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: SQLString = '');
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); virtual;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; virtual;
     function ParamterIndex2ResultSetIndex(Value: Integer): Integer;
   protected //Properties
@@ -690,7 +691,7 @@ var
   Holds the value of the last assigned statement ID.
   Only Accessible using TZAbstractStatement.GetNextStatementId.
 }
-  GlobalStatementIdCounter : integer;
+  GlobalStatementIdCounter : NativeUint;
 
 {**
   Constructs this class and defines the main properties.
@@ -854,7 +855,7 @@ begin
     FLastResultSet := nil;
 end;
 
-class function TZAbstractStatement.GetNextStatementId: integer;
+class function TZAbstractStatement.GetNextStatementId: NativeUint;
 begin
   Inc(GlobalStatementIdCounter);
   Result := GlobalStatementIdCounter;
@@ -1157,28 +1158,27 @@ begin
 end;
 
 function TZAbstractStatement.CreateStmtLogEvent(Category: TZLoggingCategory;
-  const Msg: RawByteString = EmptyRaw): TZLoggingEvent;
-var SQLWriter: TZRawSQLStringWriter;
+  const Msg: SQLString): TZLoggingEvent;
+var SQLWriter: TZSQLStringWriter;
   L: LengthInt;
-  EventMsg: RawByteString;
+  EventMsg: SQLString;
 begin
   L := Length(Msg);
   L := L + 40;
-  SQLWriter := TZRawSQLStringWriter.Create(L);
-  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-  EventMsg := EmptyRaw;
-  SQLWriter.AddText('Statement ', EventMsg);
-  {$ELSE}
   EventMsg := 'Statement ';
-  {$ENDIF}
-  SQLWriter.AddOrd(FStatementId, EventMsg);
-  if (msg <> EmptyRaw) then begin
-    SQLWriter.AddText(' : ', EventMsg);
-    SQLWriter.AddText(Msg, EventMsg);
+  SQLWriter := TZSQLStringWriter.Create(L);
+  try
+    SQLWriter.AddOrd(FStatementId, EventMsg);
+    if (msg <> '') then begin
+      SQLWriter.AddText(' : ', EventMsg);
+      SQLWriter.AddText(Msg, EventMsg);
+    end;
+    SQLWriter.Finalize(EventMsg);
+  finally
+    FreeAndNil(SQLWriter);
   end;
-  SQLWriter.Finalize(EventMsg);
-  FreeAndNil(SQLWriter);
-  Result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, EventMsg, FLastUpdateCount, EmptyRaw, FStartTime)
+  Result := TZLoggingEvent.Create(Category, FConnection.GetIZPlainDriver.GetProtocol,
+    EventMsg, FLastUpdateCount, '', FStartTime);
 end;
 
 function TZAbstractStatement.CreateLogEvent(
@@ -1186,9 +1186,9 @@ function TZAbstractStatement.CreateLogEvent(
 begin
   case Category of
     lcPrepStmt, lcExecute:
-      result := CreateStmtLogEvent(Category, ASQL);
+      result := CreateStmtLogEvent(Category, SQL);
     lcExecPrepStmt, lcUnprepStmt, lcFetchDone:
-      result := CreateStmtLogEvent(Category, EmptyRaw);
+      result := CreateStmtLogEvent(Category, '');
   else
     result := nil;
   end;
@@ -1259,6 +1259,11 @@ end;
 function TZAbstractStatement.GetSQL: String;
 begin
   Result := {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF};
+end;
+
+function TZAbstractStatement.GetStatementId: NativeUint;
+begin
+  Result := FStatementId;
 end;
 
 {**
@@ -2438,16 +2443,16 @@ function TZAbstractPreparedStatement.CreateLogEvent(
   const Category: TZLoggingCategory): TZLoggingEvent;
 var
   I: integer;
-  LogString : RawByteString;
-  SQLWriter: TZRawSQLStringWriter;
+  LogString: SQLString;
+  SQLWriter: TZSQLStringWriter;
 begin
-  case Category of
-    lcBindPrepStmt:
-      if (FBindList.Count=0) then
-        result := nil
-      else begin { Prepare Log Output}
-        SQLWriter := TZRawSQLStringWriter.Create(FBindList.Count shl 5);
-        LogString := EmptyRaw;
+  if Category = lcBindPrepStmt then
+    if (FBindList.Count=0) then
+      Result := nil
+    else begin { Prepare Log Output}
+      LogString := '';
+      SQLWriter := TZSQLStringWriter.Create(FBindList.Count shl 5);
+      try
         For I := 0 to FBindList.Count - 1 do begin
           if BindList[I].ParamType = pctOut then
             SQLWriter.AddText('(OUTPARAM)', LogString)
@@ -2455,15 +2460,16 @@ begin
             SQLWriter.AddText('(RETURN_VALUE)', LogString)
           else
             AddParamLogValue(I, SQLWriter, LogString);
-          SQLWriter.AddChar(AnsiChar(','), LogString);
+          SQLWriter.AddChar(',', LogString);
         end;
         SQLWriter.CancelLastComma(LogString);
         SQLWriter.Finalize(LogString);
+      finally
         FreeAndNil(SQLWriter);
-        result := CreateStmtLogEvent(Category, Logstring);
-     end;
-    else result := inherited CreatelogEvent(Category);
-  end;
+      end;
+      Result := CreateStmtLogEvent(Category, Logstring);
+    end
+  else Result := inherited CreatelogEvent(Category);
 end;
 
 {**
@@ -3045,12 +3051,12 @@ end;
   @param Msg a description message.
 }
 procedure TZAbstractPreparedStatement.LogPrepStmtMessage(
-  Category: TZLoggingCategory; const Msg: RawByteString);
-var SQLWriter: TZRawSQLStringWriter;
-  LogMsg: RawByteString;
+  Category: TZLoggingCategory; const Msg: SQLString);
+var SQLWriter: TZSQLStringWriter;
+  LogMsg: SQLString;
 begin
   if DriverManager.HasLoggingListener then begin
-    SQLWriter := TZRawSQLStringWriter.Create(30+Length(Msg));
+    SQLWriter := TZSQLStringWriter.Create(30+Length(Msg));
     LogMsg := EmptyRaw;
     SQLWriter.AddText('Statement ', LogMsg);
     SQLWriter.AddOrd(FStatementId, LogMsg);
@@ -3060,7 +3066,7 @@ begin
     end;
     SQLWriter.Finalize(LogMsg);
     FreeAndNil(SQLWriter);
-    DriverManager.LogMessage(Category, ConSettings^.Protocol, LogMsg);
+    DriverManager.LogMessage(Category, FConnection.GetIZPlainDriver.GetProtocol, LogMsg);
   end;
 end;
 
@@ -3301,7 +3307,7 @@ begin
 end;
 
 procedure TZAbstractPreparedStatement.AddParamLogValue(ParamIndex: Integer;
-  SQLWriter: TZRawSQLStringWriter; var Result: RawByteString);
+  SQLWriter: TZSQLStringWriter; var Result: SQLString);
 var BindValue: PZBindValue;
 begin
   BindValue := FBindList[ParamIndex];
@@ -3339,19 +3345,43 @@ begin
               end;
     {$IFNDEF NO_UTF8STRING}zbtUTF8String,{$ENDIF}
     {$IFNDEF NO_ANSISTRING}zbtAnsiString,{$ENDIF}
-    zbtRawString: SQLWriter.AddText(SQLQuotedStr(RawByteString(BindValue.Value), AnsiChar(#39)), Result);
+    zbtRawString: {$IFDEF UNICODE} begin
+                  FUniTemp := ZRawToUnicode(RawByteString(BindValue.Value), FClientCP);
+                  SQLWriter.AddTextQuoted(FUniTemp, #39, Result);
+                  end; {$ELSE}
+                  SQLWriter.AddText(SQLQuotedStr(RawByteString(BindValue.Value), AnsiChar(#39)), Result);
+                  {$ENDIF}
     zbtBCD:       SQLWriter.AddDecimal(PBCD(BindValue.Value)^, Result);
-    zbtUniString: SQLWriter.AddText(SQLQuotedStr(ZUnicodeToRaw(UnicodeString(BindValue.Value), FClientCP), AnsiChar(#39)), Result);
+    zbtUniString: {$IFDEF UNICODE}
+                  SQLWriter.AddTextQuoted(UnicodeString(BindValue.Value), #39, Result);
+                  {$ELSE} begin
+                    FRawTemp := ZUnicodeToRaw(UnicodeString(BindValue.Value), zCP_UTF8);
+                    SQLWriter.AddTextQuoted(FRawTemp, AnsiChar(#39), Result);
+                  end; {$ENDIF}
     zbtCharByRef: if PZCharRec(BindValue.Value)^.CP = zCP_UTF16
-                  then SQLWriter.AddText(SQLQuotedStr(PUnicodeToRaw(PZCharRec(BindValue.Value)^.P, PZCharRec(BindValue.Value)^.Len, FClientCP), AnsiChar(#39)), Result)
-                  else SQLWriter.AddText(SQLQuotedStr(PAnsiChar(PZCharRec(BindValue.Value)^.P), PZCharRec(BindValue.Value)^.Len, AnsiChar(#39)), Result);
+                  {$IFDEF UNICODE}
+                  then SQLWriter.AddTextQuoted(PZCharRec(BindValue.Value)^.P, PZCharRec(BindValue.Value)^.Len, #39, Result)
+                  else begin
+                    FUniTemp := PRawToUnicode(PZCharRec(BindValue.Value)^.P, PZCharRec(BindValue.Value)^.Len, PZCharRec(BindValue.Value)^.CP);
+                    SQLWriter.AddTextQuoted(FUniTemp, #39, Result);
+                    FUniTemp := '';
+                  end;
+                  {$ELSE}
+                  then begin
+                    FRawTemp := PUnicodeToRaw(PZCharRec(BindValue.Value)^.P, PZCharRec(BindValue.Value)^.Len, zCP_UTF8);
+                    SQLWriter.AddTextQuoted(FRawTemp, AnsiChar(#39), Result);
+                    FRawTemp := '';
+                  end else SQLWriter.AddTextQuoted(PAnsiChar(PZCharRec(BindValue.Value)^.P), PZCharRec(BindValue.Value)^.Len, AnsiChar(#39), Result);
+                  {$ENDIF}
     zbtBinByRef:  SQLWriter.AddHexBinary(PZBufRec(BindValue.Value)^.Buf, PZBufRec(BindValue.Value)^.Len, False, Result);
     zbtGUID:      SQLWriter.AddGUID(PGUID(BindValue.Value)^, [guidWithBrackets, guidQuoted], Result);
     zbtBytes:     SQLWriter.AddHexBinary(TBytes(BindValue.Value), False, Result);
     zbtArray:     SQLWriter.AddText('(ARRAY)', Result);
     zbtLob:       if BindValue.SQLType = stbinaryStream
                   then SQLWriter.AddText('(BLOB)', Result)
-                  else SQLWriter.AddText('(CLOB)', Result);
+                  else if BindValue.SQLType = stUnicodeStream
+                    then SQLWriter.AddText('(NCLOB)', Result)
+                    else SQLWriter.AddText('(CLOB)', Result);
     zbtPointer:   SQLWriter.AddText('(POINTER)', Result);
     zbtNull:      SQLWriter.AddText('(NULL)', Result);
     zbtDate:      SQLWriter.AddDate(PZDate(BindValue.Value)^, ConSettings.WriteFormatSettings.DateFormat, Result);

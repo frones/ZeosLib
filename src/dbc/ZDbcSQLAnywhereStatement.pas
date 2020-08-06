@@ -109,7 +109,7 @@ type
     procedure PrepareInParameters; override;
     procedure UnPrepareInParameters; override;
     procedure BindInParameters; override;
-    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
     procedure SetBindCapacity(Capacity: Integer); override;
     procedure CheckParameterIndex(var Value: Integer); override;
   public
@@ -213,7 +213,7 @@ begin
     Fa_sqlany_stmt := FplainDriver.sqlany_prepare(FSQLAnyConnection.Get_a_sqlany_connection,
       Pointer(fASQL));
     if Fa_sqlany_stmt = nil then
-      FSQLAnyConnection.HandleErrorOrWarning(lcPrepStmt, fASQL, Self);
+      FSQLAnyConnection.HandleErrorOrWarning(lcPrepStmt, SQL, Self);
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcPrepStmt,Self);
     inherited Prepare;
@@ -279,7 +279,7 @@ begin
     if Result then begin
       num_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt);
       if num_cols < 0
-      then FSQLAnyConnection.HandleErrorOrWarning(lcExecute, fASQL, Self)
+      then FSQLAnyConnection.HandleErrorOrWarning(lcExecPrepStmt, SQL, Self)
       else if num_cols > 0
         then LastResultSet := CreateResultSet
         else LastUpdateCount := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt);
@@ -323,10 +323,10 @@ begin
     FOutParamResultSet := TZSQLAynwhereOutParamResultSet.Create(Self, SQL, @Fa_sqlany_stmt,
       Fa_sqlany_bind_paramArray, BindList);
   if FplainDriver.sqlany_execute(Fa_sqlany_stmt) <> 1 then
-    FSQLAnyConnection.HandleErrorOrWarning(lcExecute, fASQL, Self);
+    FSQLAnyConnection.HandleErrorOrWarning(lcExecPrepStmt, SQL, Self);
   num_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt);
   if num_cols < 0
-  then FSQLAnyConnection.HandleErrorOrWarning(lcExecute, fASQL, Self)
+  then FSQLAnyConnection.HandleErrorOrWarning(lcExecPrepStmt, SQL, Self)
   else if num_cols > 0 then begin
     LastUpdatecount := -1;
     LastResultSet := CreateResultSet
@@ -361,7 +361,7 @@ begin
     FOutParamResultSet := TZSQLAynwhereOutParamResultSet.Create(Self, SQL, @Fa_sqlany_stmt,
       Fa_sqlany_bind_paramArray, BindList);
   if FplainDriver.sqlany_execute(Fa_sqlany_stmt) <> 1 then
-    FSQLAnyConnection.HandleErrorOrWarning(lcExecute, fASQL, Self);
+    FSQLAnyConnection.HandleErrorOrWarning(lcExecPrepStmt, SQL, Self);
   Result := nil;
   num_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt);
   if num_cols > 0
@@ -400,7 +400,7 @@ begin
     FOutParamResultSet := TZSQLAynwhereOutParamResultSet.Create(Self, SQL, @Fa_sqlany_stmt,
       Fa_sqlany_bind_paramArray, BindList);
   if FplainDriver.sqlany_execute(Fa_sqlany_stmt) <> 1 then
-    FSQLAnyConnection.HandleErrorOrWarning(lcExecute, fASQL, Self);
+    FSQLAnyConnection.HandleErrorOrWarning(lcExecPrepStmt, SQL, Self);
   num_cols := FplainDriver.sqlany_num_cols(Fa_sqlany_stmt);
   if num_cols = 0
   then LastUpdateCount := FplainDriver.sqlany_affected_rows(Fa_sqlany_stmt)
@@ -492,8 +492,10 @@ var I: Integer;
 begin
   if not Prepared then
     Prepare;
-  if (Value<0) or (Value+1 > BindList.Count) then
-    raise EZSQLException.Create(SInvalidInputParameterCount);
+  if (Value<0) or (Value+1 > BindList.Count) then begin
+    {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := Format(SBindVarOutOfRange, [Value]);
+    raise EZSQLException.Create({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
+  end;
   if BindList.HasOutOrInOutOrResultParam then
     for I := 0 to Value do
       if Ord(BindList[I].ParamType) > Ord(pctInOut) then
@@ -611,13 +613,13 @@ begin
   inherited PrepareInParameters;
   num_params := FPlainDriver.sqlany_num_params(Fa_sqlany_stmt);
   if num_params = -1 then
-    FSQLAnyConnection.HandleErrorOrWarning(lcExecute, fASQL, Self);
+    FSQLAnyConnection.HandleErrorOrWarning(lcBindPrepStmt, SQL, Self);
   SetBindCapacity(num_params);
   for i := 0 to num_params -1 do begin
     {$R-}
     Bind := Pointer(PAnsiChar(Fa_sqlany_bind_paramArray) + (FBindParamSize * I));
     if FPlainDriver.sqlany_describe_bind_param(Fa_sqlany_stmt, I, Bind) <> 1 then
-      FSQLAnyConnection.HandleErrorOrWarning(lcExecute, fASQL, Self);
+      FSQLAnyConnection.HandleErrorOrWarning(lcBindPrepStmt, SQL, Self);
     FParamsDescribed := FParamsDescribed or (Bind.value._type <> A_INVALID_TYPE);
     FHasOutParams := FHasOutParams or (Ord(Bind.direction) >= Ord(DD_OUTPUT));
     Bind.value.length :=  @FLengthArray[i];
@@ -867,7 +869,7 @@ begin
 end;
 
 procedure TZSQLAnywherePreparedStatement.AddParamLogValue(ParamIndex: Integer;
-  SQLWriter: TZRawSQLStringWriter; var Result: RawByteString);
+  SQLWriter: TZSQLStringWriter; var Result: SQLString);
 var Bind: Pa_sqlany_bind_param;
 begin
   CheckParameterIndex(ParamIndex);
@@ -881,8 +883,18 @@ begin
     A_STRING: case BindList[ParamIndex].SQLType of
                 stAsciiStream: SQLWriter.AddText('(CLOB)', Result);
                 stUnicodeStream: SQLWriter.AddText('(NCLOB)', Result);
-                stCurrency, stBigDecimal: SQLWriter.AddText(Bind.value.buffer, Bind.value.length^, Result);
-                else SQLWriter.AddTextQuoted(Bind.value.buffer, Bind.value.length^, AnsiChar(#39), Result);
+                stCurrency, stBigDecimal:
+                  {$IFDEF UNICODE}
+                    SQLWriter.AddAscii7Text(Bind.value.buffer, Bind.value.length^, Result);
+                  else begin
+                    FUniTemp := PRawToUnicode(Bind.value.buffer, Bind.value.length^, FClientCP);
+                    SQLWriter.AddTextQuoted(FUniTemp, #39, Result);
+                    FUniTemp := '';
+                  end;
+                  {$ELSE}
+                    SQLWriter.AddText(Bind.value.buffer, Bind.value.length^, Result);
+                  else SQLWriter.AddTextQuoted(Bind.value.buffer, Bind.value.length^, AnsiChar(#39), Result);
+                  {$ENDIF}
               end;
     A_DOUBLE: if Bind.value.buffer_size = SizeOf(Double)
               then SQLWriter.AddFloat(PDouble(Bind.value.buffer)^, Result)

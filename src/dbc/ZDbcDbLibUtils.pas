@@ -80,21 +80,6 @@ function ConvertTDSTypeToSqlType(FieldType: TTDSType; Precision, Scale: Integer)
 }
 function ConvertSqlTypeToTDSType(FieldType: TZSQLType): TTDSType;
 
-{**
-  Converts ZDBC SQL types into MS SQL native types.
-  @param FieldType dblibc native field type.
-  @return a SQL undepended type.
-}
-function ConvertSqlTypeToDBLibTypeName(FieldType: TZSQLType): string;
-function ConvertSqlTypeToFreeTDSTypeName(FieldType: TZSQLType): string;
-
-{**
-  Converts a DBLib nullability value into ZDBC TZColumnNullableType.
-  @param DBLibNullability dblibc native nullability.
-  @return a SQL TZColumnNullableType.
-}
-function ConvertDBLibNullability(DBLibNullability: Byte): TZColumnNullableType;
-
 {$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 implementation
 {$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
@@ -187,34 +172,6 @@ begin
 end;
 
 {**
-  Converts ZDBC SQL types into DBLib native types.
-  @param FieldType dblibc native field type.
-  @return a SQL undepended type.
-}
-function ConvertSqlTypeToDBLibTypeName(FieldType: TZSQLType): string;
-begin
-  case FieldType of
-    stBoolean: Result := 'bit';
-    stByte: Result := 'tinyint';
-    stSmall: Result := 'smallint';
-    stInteger: Result := 'int';
-    stLong: Result := 'bigint';
-    stFloat: Result := 'float(24)';
-    stDouble: Result := 'float(53)';
-    stBigDecimal: Result := 'float(53)';
-    stString: Result := 'varchar(8000)';
-    stBytes: Result := 'varbinary(8000)';
-    stDate: Result := 'datetime';
-    stTime: Result := 'datetime';
-    stTimestamp: Result := 'datetime';
-    stAsciiStream: Result := 'text';
-    stUnicodeStream: Result := 'ntext';
-    stBinaryStream: Result := 'image';
-    else Result := '';
-  end;
-end;
-
-{**
   Converts ZDBC SQL types into FreeTDS native types.
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
@@ -237,48 +194,6 @@ begin
     stBinaryStream: Result := tdsImage;
     else Result := tdsVoid;
   end;
-end;
-
-{**
-  Converts ZDBC SQL types into FreeTDS native types.
-  @param FieldType dblibc native field type.
-  @return a SQL undepended type.
-}
-function ConvertSqlTypeToFreeTDSTypeName(FieldType: TZSQLType): string;
-begin
-  case FieldType of
-    stBoolean: Result := 'bit';
-    stByte: Result := 'tinyint';
-    stSmall: Result := 'smallint';
-    stInteger: Result := 'int';
-    stLong: Result := 'bigint';
-    stFloat: Result := 'float(24)';
-    stDouble: Result := 'float(53)';
-    stBigDecimal: Result := 'float(53)';
-    stString: Result := 'varchar(8000)';
-    stUnicodeString: Result := 'nvarchar(4000)';
-    stBytes: Result := 'varbinary(8000)';
-    stDate: Result := 'datetime';
-    stTime: Result := 'datetime';
-    stTimestamp: Result := 'datetime';
-    stAsciiStream: Result := 'text';
-    stUnicodeStream: Result := 'ntext';
-    stBinaryStream: Result := 'image';
-    else Result := '';
-  end;
-end;
-
-{**
-  Converts a DBLib nullability value into ZDBC TZColumnNullableType.
-  @param DBLibNullability dblibc native nullability.
-  @return a SQL TZColumnNullableType.
-}
-function ConvertDBLibNullability(DBLibNullability: Byte): TZColumnNullableType;
-const
-  Nullability: array[0..2] of TZColumnNullableType =
-    (ntNoNulls, ntNullable, ntNullableUnknown);
-begin
-  Result := Nullability[DBLibNullability];
 end;
 
 {$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit

@@ -107,7 +107,7 @@ type
   private
     function GetRawSQL: RawByteString; override;
   protected
-    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
   public
     procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
     procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
@@ -383,7 +383,7 @@ begin
   repeat
     ResultsRETCODE := FPlainDriver.dbresults(FHandle);
     if ResultsRETCODE = DBFAIL then
-      FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS/dbresults');
+      FDBLibConnection.CheckDBLibError(lcFetch, 'FETCHRESULTS/dbresults', IImmediatelyReleasable(FWeakImmediatRelPtr));
     cmdRowRETCODE := FPlainDriver.dbcmdrow(FHandle);
     //EH: if NO_MORE_RESULTS there might be a final update count see TestSF380(a/b)
     if (cmdRowRETCODE = DBSUCCEED) and (ResultsRETCODE <> NO_MORE_RESULTS) then begin
@@ -445,10 +445,10 @@ begin
   //  FDBLibConnection.CheckDBLibError(lcExecute, SQL);
 
   if FPlainDriver.dbcmd(FHandle, Pointer(Raw)) <> DBSUCCEED then
-    FDBLibConnection.CheckDBLibError(lcExecute, Raw);
+    FDBLibConnection.CheckDBLibError(lcExecute, SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
 
   if FPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED then
-    FDBLibConnection.CheckDBLibError(lcExecute, Raw);
+    FDBLibConnection.CheckDBLibError(lcExecute, SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecute, Self);
 end;
@@ -677,9 +677,11 @@ begin
 end;
 
 procedure TZDBLibPreparedStatementEmulated.AddParamLogValue(
-  ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter;
-  var Result: RawByteString);
+  ParamIndex: Integer; SQLWriter: TZSQLStringWriter; var Result: SQLString);
 var Bind: PZBindValue;
+  {$IFDEF UNICODE}
+  CP: Word;
+  {$ENDIF}
 begin
   Bind := BindList[ParamIndex];
   if Bind.BindType = zbtNull then
@@ -692,7 +694,19 @@ begin
                     else SQLWriter.AddText('(TRUE)', Result);
     stAsciiStream:  SQLWriter.AddText('(CLOB)', Result);
     stBinaryStream: SQLWriter.AddText('(BLOB)', Result);
+    {$IFDEF UNICODE}
+    stString: begin
+        if (FClientCP = zCP_UTF8) or FIsNCharIndex[ParamIndex]
+        then CP := zCP_UTF8
+        else CP := FClientCP;
+        fUniTemp := ZRawToUnicode(RawByteString(Bind.Value), CP);
+        SQLWriter.AddTextQuoted(fUniTemp, #39, Result);
+        fUniTemp := '';
+      end;
+    else            SQLWriter.AddAscii7Text(Pointer(RawByteString(Bind.Value)), Length(RawByteString(Bind.Value)), Result);
+    {$ELSE}
     else            SQLWriter.AddText(RawByteString(Bind.Value), Result);
+    {$ENDIF}
   end;
 end;
 
@@ -883,7 +897,7 @@ var I: Integer;
   Bind: PZBindValue;
 begin
   if FPLainDriver.dbRPCInit(FHandle, Pointer(fASQL), 0) <> DBSUCCEED then
-    FDBLibConnection.CheckDBLibError(lcOther, 'EXECUTEPREPARED:dbRPCInit');
+    FDBLibConnection.CheckDBLibError(lcOther, 'EXECUTEPREPARED:dbRPCInit', IImmediatelyReleasable(FWeakImmediatRelPtr));
   for i := 1 to BindList.Count -1 do begin //skip the returnparam
     Bind := BindList[I];
     case Bind.BindType of
@@ -1113,7 +1127,7 @@ begin
   Prepare;
   BindInParameters;
   if FPLainDriver.dbRpcExec(FHandle) <> DBSUCCEED then
-    FDBLibConnection.CheckDBLibError(lcOther, 'EXECUTEPREPARED:dbRPCExec');
+    FDBLibConnection.CheckDBLibError(lcExecute, 'EXECUTEPREPARED:dbRPCExec', IImmediatelyReleasable(FWeakImmediatRelPtr));
   FetchResults;
   Result := (FResults.Count > 0) and Supports(FResults[0], IZResultSet, FLastResultSet);
 end;
@@ -1176,9 +1190,10 @@ procedure TZDBLIBPreparedRPCStatement.InternalExecute;
 begin
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcBindPrepStmt,Self);
+  RestartTimer;
   LastUpdateCount := -1;
   if FPLainDriver.dbRpcExec(FHandle) <> DBSUCCEED then
-    FDBLibConnection.CheckDBLibError(lcOther, 'EXECUTEPREPARED:dbRPCExec');
+    FDBLibConnection.CheckDBLibError(lcExecute, SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
 end;
 
 procedure TZDBLIBPreparedRPCStatement.RegisterParameter(ParameterIndex: Integer;

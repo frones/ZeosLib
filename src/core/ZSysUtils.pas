@@ -5905,6 +5905,7 @@ end;
 {**
   Standard quoting: Result := Quote + Double_Quotes(Src, Quote) + Quote
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function SQLQuotedStr(Src: PWideChar; Len: LengthInt; Quote: WideChar): UnicodeString; overload;
 var
   P, Dest, PEnd, PFirst: PWideChar;
@@ -5917,12 +5918,12 @@ begin
     if (P^=Quote) then begin
       if Dest = nil then
         PFirst := P;
-      Inc({%H-}NativeUInt(Dest));
+      Inc(NativeUInt(Dest));
     end;
     Inc(P);
   end;
   if Dest = nil then begin
-    {$IFDEF FPC} Result := '';{$ENDIF}
+    Result := '';
     System.SetLength(Result, Len+2);
     Dest := Pointer(Result);
     Dest^ := Quote;
@@ -5934,14 +5935,14 @@ begin
     Dest^ := Quote;
     Exit;
   end;
-  SetLength(Result, Len + {%H-}NativeInt(Dest) + 2);
+  SetLength(Result, Len + NativeInt(NativeUint(Dest)) + 2);
   Dest := Pointer(Result);
   Dest^ := Quote;
   Inc(Dest);
   P := PFirst;
   repeat
     Inc(P);
-    Move(Src^, Dest^, (P - Src) shl 1);
+    Move(Src^, Dest^, (NativeUInt(P) - NativeUInt(Src)));
     Inc(Dest, (P - Src));
     Dest^ := Quote;
     Inc(Dest);
@@ -5950,16 +5951,18 @@ begin
       then Break
       else Inc(P);
   until P = PEnd;
-  Move(Src^, Dest^, (PEnd - Src) shl 1);
+  Move(Src^, Dest^, (NativeUInt(PEnd) - NativeUInt(Src)));
   Inc(Dest, PEnd - Src);
   Dest^ := Quote;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function SQLQuotedStr(const S: UnicodeString; Quote: WideChar): UnicodeString;
 begin
   Result := SQLQuotedStr(Pointer(S), Length(S), Quote);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function SQLQuotedStr(Src: PAnsiChar; Len: LengthInt; Quote: AnsiChar): RawByteString;
 var
   P, Dest, PEnd, PFirst: PAnsiChar;
@@ -5972,7 +5975,7 @@ begin
     if (AnsiChar(P^)=Quote) then begin
       if Dest = nil then
         PFirst := P;
-      Inc({%H-}NativeUInt(Dest));
+      Inc(NativeUInt(Dest));
     end;
     Inc(P);
   end;
@@ -5989,7 +5992,7 @@ begin
     AnsiChar(Dest^) := Quote;
     Exit;
   end;
-  SetLength(Result, Len + {%H-}NativeInt(Dest) + 2);
+  SetLength(Result, Len + NativeInt(NativeUint(Dest)) + 2);
   Dest := Pointer(Result);
   AnsiChar(Dest^) := Quote;
   Inc(Dest);
@@ -6009,6 +6012,7 @@ begin
   Inc(Dest, PEnd - Src);
   AnsiChar(Dest^) := Quote;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function SQLQuotedStr(const S: RawByteString; Quote: AnsiChar): RawByteString;
 begin
@@ -7942,15 +7946,7 @@ begin
   end;
 end;
 
-procedure X;
-var S: UnicodeString;
-begin
-  S := StringReplaceAll_CS_GToEQ('acdcacacacd', 'a', 'bb');
-  Assert(S <> '');
-end;
-
 initialization;
-  X;
   BcdNibbleLookupFiller;
   HexFiller;  //build up lookup table
 {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}

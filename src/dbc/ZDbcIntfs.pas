@@ -124,18 +124,26 @@ type
   TOnConnectionLostError = procedure(var AError: EZSQLConnectionLost) of Object;
   TOnConnect = procedure of Object;
 
+  {$IFDEF NO_AUTOENCODE}
+  TZRawByteStringEncoding = (rbseGET_ACP, rbseUTF8{$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}, rbseDefaultSystemCodePage{$ENDIF});
+  {$ENDIF NO_AUTOENCODE}
   {** hold some connection parameters }
   PZConSettings = ^TZConSettings;
   TZConSettings = record
+    {$IFNDEF NO_AUTOENCODE}
     AutoEncode: Boolean;        //Check Encoding and or convert string with FromCP ToCP
     CTRL_CP: Word;              //Target CP of raw string conversion (CP_ACP/CP_UPF8/DefaultSytemCodePage)
+    {$ENDIF NO_AUTOENCODE}
+    //{$ELSE NO_AUTOENCODE}
+    //RawByteStringEncoding: TZRawByteStringEncoding; //Target CP of raw string conversion (GET_ACP/UTF8/DefaultSytemCodePage)
+//    {$ENDIF NO_AUTOENCODE}
     ConvFuncs: TConvertEncodingFunctions; //a rec for the Convert functions used by the objects
     ClientCodePage: PZCodePage; //The codepage informations of the current characterset
+    {$IFNDEF NO_AUTOENCODE}
     DisplayFormatSettings: TZFormatSettings;
+    {$ENDIF NO_AUTOENCODE}
     ReadFormatSettings: TZFormatSettings;
     WriteFormatSettings: TZFormatSettings;
-    DataBaseSettings: Pointer;
-    Protocol, Database, User: RawByteString;
   end;
 
   {** a base class for most dbc-layer objects }
@@ -476,8 +484,8 @@ type
     /// <param name="Msg">
     ///  a description message.
     /// </param>
-    procedure LogMessage(Category: TZLoggingCategory; const Protocol: RawByteString;
-      const Msg: RawByteString); overload;
+    procedure LogMessage(Category: TZLoggingCategory; const Protocol: String;
+      const Msg: SQLString); overload;
     procedure LogMessage(const Category: TZLoggingCategory; const Sender: IZLoggingObject); overload;
     /// <summary>
     ///  Logs a message about event with error result code.
@@ -497,8 +505,8 @@ type
     /// <param name="Error">
     ///   an error message.
     /// </param>
-    procedure LogError(Category: TZLoggingCategory; const Protocol: RawByteString;
-      const Msg: RawByteString; ErrorCode: Integer; const Error: RawByteString);
+    procedure LogError(Category: TZLoggingCategory; const Protocol: String;
+      const Msg: SQLString; ErrorCode: Integer; const Error: SQLString);
     /// <summary>
     ///  Constructs a valid URL
     /// </summary>
@@ -1374,6 +1382,8 @@ type
     /// </summary>
     procedure ClearWarnings;
     procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
+
+    function GetStatementId: NativeUInt;
   end;
 
   /// <summary>
@@ -2020,11 +2030,11 @@ type
     procedure RemoveLoggingListener(const Listener: IZLoggingListener);
     function HasLoggingListener: Boolean;
 
-    procedure LogMessage(Category: TZLoggingCategory; const Protocol: RawByteString;
-      const Msg: RawByteString); overload;
+    procedure LogMessage(Category: TZLoggingCategory; const Protocol: String;
+      const Msg: SQLString); overload;
     procedure LogMessage(const Category: TZLoggingCategory; const Sender: IZLoggingObject); overload;
-    procedure LogError(Category: TZLoggingCategory; const Protocol: RawByteString;
-      const Msg: RawByteString; ErrorCode: Integer; const Error: RawByteString);
+    procedure LogError(Category: TZLoggingCategory; const Protocol: String;
+      const Msg: SQLString; ErrorCode: Integer; const Error: SQLString);
 
     function ConstructURL(const Protocol, HostName, Database,
       UserName, Password: String; const Port: Integer;
@@ -2231,8 +2241,8 @@ end;
   @param Error an error message.
 }
 procedure TZDriverManager.LogError(Category: TZLoggingCategory;
-  const Protocol: RawByteString; const Msg: RawByteString; ErrorCode: Integer;
-  const Error: RawByteString);
+  const Protocol: String; const Msg: SQLString; ErrorCode: Integer;
+  const Error: SQLString);
 var
   Event: TZLoggingEvent;
 begin
@@ -2266,7 +2276,7 @@ end;
   @param Msg a description message.
 }
 procedure TZDriverManager.LogMessage(Category: TZLoggingCategory;
-  const Protocol: RawByteString; const Msg: RawByteString);
+  const Protocol: String; const Msg: SQLString);
 var
   Event: TZLoggingEvent;
 begin
@@ -2275,7 +2285,7 @@ begin
   try
     if not FHasLoggingListener then
       Exit;
-    Event := TZLoggingEvent.Create(Category, Protocol, Msg, 0, EmptyRaw);
+    Event := TZLoggingEvent.Create(Category, Protocol, Msg, 0, '');
     InternalLogEvent(Event);
   finally
     FreeAndNil(Event);
@@ -2415,6 +2425,7 @@ procedure TZCodePagedObject.SetConSettingsFromInfo(Info: TStrings);
 var S: String;
 begin
   if Assigned(Info) and Assigned(FConSettings) then begin
+{$IFNDEF NO_AUTOENCODE}
     {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(WITH_LCONVENCODING) or defined(UNICODE)}
     S := Info.Values[ConnProps_AutoEncodeStrings];
     ConSettings.AutoEncode := StrToBoolEx(S); //compatibitity Option for existing Applications;
@@ -2436,6 +2447,8 @@ begin
       else ConSettings.CTRL_CP := ZOSCodePage;
       {$ENDIF}
     {$IFEND}
+{$ELSE NO_AUTOENCODE}
+{$ENDIF NO_AUTOENCODE}
   end;
 end;
 

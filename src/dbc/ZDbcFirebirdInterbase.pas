@@ -104,7 +104,7 @@ type
     function GetInterbaseFirebirdPlainDriver: TZInterbaseFirebirdPlainDriver;
     function GetByteBufferAddress: PByteBuffer;
     procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
-      StatusVector: PARRAY_ISC_STATUS; const LogMessage: RawByteString;
+      StatusVector: PARRAY_ISC_STATUS; const LogMessage: SQLString;
       const Sender: IImmediatelyReleasable);
   end;
 
@@ -152,7 +152,7 @@ type
     function GetXSQLDAMaxSize: Cardinal;
     function GetInterbaseFirebirdPlainDriver: TZInterbaseFirebirdPlainDriver;
     procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
-      StatusVector: PARRAY_ISC_STATUS; const LogMessage: RawByteString;
+      StatusVector: PARRAY_ISC_STATUS; const LogMessage: SQLString;
       const Sender: IImmediatelyReleasable);
     function InterpretInterbaseStatus(StatusVector: PARRAY_ISC_STATUS): TZIBStatusVector;
     procedure SetActiveTransaction(const Value: IZTransaction);
@@ -375,7 +375,7 @@ type
   protected
     procedure UnPrepareInParameters; override;
     procedure CheckParameterIndex(var Value: Integer); override;
-    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
   public
     function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; override;
     procedure Unprepare; override;
@@ -1021,9 +1021,9 @@ end;
 }
 procedure TZInterbaseFirebirdConnection.HandleErrorOrWarning(
   LogCategory: TZLoggingCategory; StatusVector: PARRAY_ISC_STATUS;
-  const LogMessage: RawByteString; const Sender: IImmediatelyReleasable);
+  const LogMessage: SQLString; const Sender: IImmediatelyReleasable);
 var
-  ErrorMessage, ErrorSqlMessage, sSQL: string;
+  ErrorString, ErrorMessage: string;
   ErrorCode: Integer;
   i: Integer;
   InterbaseStatusVector: TZIBStatusVector;
@@ -1039,32 +1039,26 @@ begin
   PInt64(StatusVector)^ := 0; //init for fb3up
   PInt64(PAnsiChar(StatusVector)+8)^ := 0; //init for fb3up
   ErrorCode := InterbaseStatusVector[0].SQLCode;
-  ErrorSqlMessage := InterbaseStatusVector[0].SQLMessage;
-
-  sSQL := ConSettings.ConvFuncs.ZRawToString(LogMessage, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
-  if sSQL <> '' then
-    ErrorSqlMessage := ErrorSqlMessage + ' The SQL: '+sSQL+'; ';
 
   if ErrorMessage <> '' then begin
-    DriverManager.LogError(LogCategory, ConSettings^.Protocol,
-      ConSettings^.ConvFuncs.ZStringToRaw(ErrorMessage, ConSettings^.CTRL_CP,
-        ConSettings^.ClientCodePage^.CP), ErrorCode,
-      ConSettings^.ConvFuncs.ZStringToRaw(ErrorSqlMessage, ConSettings^.CTRL_CP,
-        ConSettings^.ClientCodePage^.CP));
+    if not IsWarning and DriverManager.HasLoggingListener then
+      LogError(LogCategory, ErrorCode, Sender, LogMessage, ErrorMessage);
+    ErrorString := Format(SSQLError1, [ErrorMessage]);
     if (ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection) or
        (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_idle) or
        (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_engine) then begin
-      ConLostError := EZSQLConnectionLost.CreateWithCode(ErrorCode,
-        Format(SSQLError1, [sSQL]));
+      ConLostError := EZSQLConnectionLost.CreateWithCode(ErrorCode, ErrorString);
       if Sender <> nil
       then Sender.ReleaseImmediat(Sender, ConLostError)
       else ReleaseImmediat(Sender, ConLostError);
       if ConLostError <> nil then raise ConLostError;
     end else if IsWarning then begin
       ClearWarnings;
-      FLastWarning := EZSQLWarning.CreateWithCode(ErrorCode, Format(SSQLError1, [ErrorMessage]));
+      FLastWarning := EZSQLWarning.CreateWithCode(ErrorCode, ErrorString);
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(LogCategory, URL.Protocol, ErrorMessage);
     end else raise EZIBSQLException.Create(
-      Format(SSQLError1, [ErrorMessage]), InterbaseStatusVector, sSQL);
+      ErrorString, InterbaseStatusVector, LogMessage);
   end;
 end;
 
@@ -3157,8 +3151,8 @@ end;
 
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 procedure TZAbstractFirebirdInterbasePreparedStatement.AddParamLogValue(
-  ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter;
-  var Result: RawByteString);
+  ParamIndex: Integer; SQLWriter: TZSQLStringWriter;
+  var Result: SQLString);
 var TempDate: TZTimeStamp;
     Buffer: array[0..SizeOf(TZTimeStamp)-1] of AnsiChar absolute TempDate;
     dDT, tDT: TDateTime;
@@ -3202,10 +3196,24 @@ begin
                       end;
       SQL_TEXT      : if codepage = zCP_Binary
                       then SQLWriter.AddHexBinary(PByte(sqldata), sqllen, False, Result)
+                      {$IFDEF UNICODE} else begin
+                        FUniTemp := PRawToUnicode(PAnsiChar(sqldata), sqllen, codepage);
+                        SQLWriter.AddTextQuoted(FUniTemp, #39, Result);
+                        FUniTemp := '';
+                      end;
+                      {$ELSE}
                       else SQLWriter.AddTextQuoted(PAnsiChar(sqldata), sqllen, AnsiChar(#39), Result);
+                      {$ENDIF}
       SQL_VARYING   : if codepage = zCP_Binary
                       then SQLWriter.AddHexBinary(PByte(@PISC_VARYING(sqldata).str[0]), PISC_VARYING(sqldata).strlen, False, Result)
+                      {$IFDEF UNICODE} else begin
+                        FUniTemp := PRawToUnicode(PAnsiChar(@PISC_VARYING(sqldata).str[0]), PISC_VARYING(sqldata).strlen, codepage);
+                        SQLWriter.AddTextQuoted(FUniTemp, #39, Result);
+                        FUniTemp := '';
+                      end;
+                      {$ELSE}
                       else SQLWriter.AddTextQuoted(PAnsiChar(@PISC_VARYING(sqldata).str[0]), PISC_VARYING(sqldata).strlen, AnsiChar(#39), Result);
+                      {$ENDIF}
       SQL_BLOB      : if codepage <> zCP_Binary
                       then SQLWriter.AddText('(CLOB)', Result)
                       else SQLWriter.AddText('(BLOB)', Result);
@@ -3248,8 +3256,10 @@ var I: Integer;
 begin
   if not Prepared then
     Prepare;
-  if (Value<0) or (Value+1 > BindList.Count) then
-    raise EZSQLException.Create(SInvalidInputParameterCount);
+  if (Value<0) or (Value+1 > BindList.Count) then begin
+    {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := Format(SBindVarOutOfRange, [Value]);
+    raise EZSQLException.Create({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
+  end;
   if BindList.HasOutOrInOutOrResultParam then
     for I := 0 to Value do
       if Ord(BindList[I].ParamType) > Ord(pctInOut) then

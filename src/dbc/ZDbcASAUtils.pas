@@ -74,7 +74,7 @@ type
   { Base interface for sqlda }
   IZASASQLDA = interface
     ['{7606E8EB-9FC8-4F76-8D91-E23AB96409E1}']
-    procedure CreateException(const Msg: string);
+    function CreateException(const Msg: string): EZSQLException;
     procedure AllocateSQLDA( NumVars: Word);
     procedure InitFields;
     procedure FreeSQLDA;
@@ -103,7 +103,7 @@ type
     FHandle: PZASASQLCA;
     FCursorName: PAnsiChar;
     FConnection: IZASAConnection;
-    procedure CreateException(const  Msg: string);
+    function CreateException(const  Msg: string): EZSQLException;
     procedure CheckIndex(const Index: Word);
     procedure CheckRange(const Index: Word);
     procedure SetFieldType(const Index: Word; ASAType: Smallint; Len: LongWord); overload;
@@ -149,9 +149,6 @@ function ConvertASATypeToString( SQLType: SmallInt): String;
 
 function ConvertASAJDBCToSqlType(const FieldType: SmallInt): TZSQLType;
 
-procedure DescribeCursor(const ASAConnection: IZASAConnection; const SQLData: IZASASQLDA;
-  const Cursor: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SQL: RawByteString);
-
 const SQLType2ASATypeMap: array[TZSQLType] of SmallInt =
   (DT_NOTYPE, //
     //fixed size DataTypes first
@@ -188,9 +185,10 @@ uses Variants, Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
 
 { TZASASQLDA }
 
-procedure TZASASQLDA.CreateException(const Msg: string);
+function TZASASQLDA.CreateException(const Msg: string): EZSQLException;
 begin
-  DriverManager.LogError( lcOther, FConSettings^.Protocol, EmptyRaw, -1, ConvertEMsgToRaw(Msg, FConSettings^.ClientCodePage^.CP));  raise EZSQLException.Create( Format( SSQLError1, [ Msg]));
+  DriverManager.LogError(lcOther, 'ASA', '', -1, Msg);
+  Result := EZSQLException.Create(Format( SSQLError1, [Msg]));
 end;
 
 {**
@@ -281,7 +279,8 @@ procedure TZASASQLDA.AllocateSQLDA( NumVars: Word);
 begin
   FreeSQLDA;
   FSQLDA := FPlainDriver.alloc_sqlda( NumVars);
-  if not Assigned( FSQLDA) then CreateException( 'Not enough memory for SQLDA');
+  if not Assigned( FSQLDA) then
+    raise CreateException( 'Not enough memory for SQLDA');
 end;
 
 {**
@@ -444,7 +443,7 @@ begin
       if StrLIComp(P1, P2, Length(name)) = 0 then
         Exit;
   end;
-  CreateException( Format( SFieldNotFound1, [name]));
+  raise CreateException( Format( SFieldNotFound1, [name]));
   Result := 0; // satisfy compiler
 end;
 
@@ -508,14 +507,14 @@ begin
       Assert( PZASABlobStruct( sqlData).array_len = PZASABlobStruct( sqlData).untrunc_len,
         'Blob Record is not correctly initialized');
       if PZASABlobStruct( sqlData).array_len <> Length then
-        CreateException( 'Could''nt complete BLOB-Read');
+        raise CreateException( 'Could''nt complete BLOB-Read');
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move( PZASABlobStruct( sqlData).arr[0], Buffer, PZASABlobStruct( sqlData).array_len);
     end
     else
     begin
       TempSQLDA := FPlainDriver.alloc_sqlda( 1);
       if not Assigned( TempSQLDA) then
-        CreateException( 'Not enough memory for SQLDA');
+        raise CreateException( 'Not enough memory for SQLDA');
       try
         with TempSQLDA.sqlvar[ 0] do
         begin
@@ -551,7 +550,7 @@ begin
             sqllen := Min( Int64(BlockSize), Int64(Length-Rd));
           end;
           if Rd <> Length then
-            CreateException( 'Could''nt complete BLOB-Read');
+            raise CreateException( 'Could''nt complete BLOB-Read');
           FreeMem(sqlData);
           FPlainDriver.free_sqlda( TempSQLDA);
           TempSQLDA := nil;
@@ -589,7 +588,7 @@ begin
         {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(Str)^, PZASABlobStruct( sqlData).untrunc_len);
         FreeMem(buffer);
       end else
-        CreateException( Format( SErrorConvertionField,
+        raise CreateException( Format( SErrorConvertionField,
           [ GetFieldName(Index), ConvertASATypeToString( sqlType)]));
     end;
   end;
@@ -742,27 +741,6 @@ begin
   else
     Result := stUnknown;
   end;
-end;
-
-procedure DescribeCursor(const ASAConnection: IZASAConnection; const SQLData: IZASASQLDA;
-  const Cursor: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SQL: RawByteString);
-var PlainDriver: TZASAPlainDriver;
-    ASASQLCA: PZASASQLCA;
-begin
-  PlainDriver := ASAConnection.GetPlainDriver;
-  ASASQLCA := ASAConnection.GetDBHandle;
-  PlainDriver.dbpp_describe_cursor(ASASQLCA, Pointer(Cursor), SQLData.GetData, SQL_DESCRIBE_OUTPUT);
-  if ASASQLCA.sqlCode <> SQLE_NOERROR then
-    ASAConnection.HandleErrorOrWarning(lcExecute, SQL, ASAConnection);
-  if SQLData.GetData^.sqld <= 0 then
-    raise EZSQLException.Create( SCanNotRetrieveResultSetData)
-  else if ( SQLData.GetData^.sqld > SQLData.GetData^.sqln) then begin
-    SQLData.AllocateSQLDA( SQLData.GetData^.sqld);
-    PlainDriver.dbpp_describe_cursor(ASASQLCA, PAnsiChar(Cursor), SQLData.GetData, SQL_DESCRIBE_OUTPUT);
-    if ASASQLCA.sqlCode <> SQLE_NOERROR then
-      ASAConnection.HandleErrorOrWarning(lcExecute, SQL, ASAConnection);
-  end;
-  //SQLData.InitFields;
 end;
 
 {$ENDIF ZEOS_DISABLE_ASA}

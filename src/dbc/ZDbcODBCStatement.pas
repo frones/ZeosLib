@@ -143,7 +143,7 @@ type
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
     procedure SetBindCapacity(Capacity: Integer); override;
-    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
   public
     constructor Create(const Connection: IZODBCConnection;
       var ConnectionHandle: SQLHDBC; const SQL: string; Info: TStrings);
@@ -725,7 +725,7 @@ function TZODBCPreparedStatementW.ExecutDirect: RETCODE;
 begin
   Result := TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(fHSTMT, Pointer(WSQL), Length(WSQL));
   if not Result in [SQL_NO_DATA, SQL_SUCCESS, SQL_PARAM_DATA_AVAILABLE] then
-    FODBCConnectionW.HandleStmtErrorOrWarningW(Result, fHSTMT, fWSQL, lcExecute, Self);
+    FODBCConnectionW.HandleStmtErrorOrWarningW(Result, fHSTMT, SQL, lcExecute, Self);
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecute, Self);
 end;
@@ -773,7 +773,7 @@ begin
   if not fDEFERPREPARE then begin
     Ret := TODBC3UnicodePlainDriver(fPlainDriver).SQLPrepareW(fHSTMT, Pointer(WSQL), Length(WSQL));
     if Ret <> SQL_SUCCESS then
-      FODBCConnectionW.HandleStmtErrorOrWarningW(Ret, fHSTMT, fWSQL, lcExecute, Self);
+      FODBCConnectionW.HandleStmtErrorOrWarningW(Ret, fHSTMT, SQL, lcExecute, Self);
     FHandleState := hsPrepared;
     fBindImmediat := True;
     if DriverManager.HasLoggingListener then
@@ -794,7 +794,9 @@ function TZODBCPreparedStatementA.ExecutDirect: RETCODE;
 begin
   Result := TODBC3RawPlainDriver(fPlainDriver).SQLExecDirect(fHSTMT, Pointer(ASQL), Length(ASQL));
   if not Result in [SQL_NO_DATA, SQL_SUCCESS, SQL_PARAM_DATA_AVAILABLE] then
-    FODBCConnectionA.HandleStmtErrorOrWarningA(Result, fHSTMT, fASQL, lcExecute, Self);
+    FODBCConnectionA.HandleStmtErrorOrWarningA(Result, fHSTMT, SQL, lcExecute, Self);
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcExecute, Self);
 end;
 
 function TZODBCPreparedStatementA.GetRawEncodedSQL(
@@ -836,7 +838,7 @@ begin
   if not fDEFERPREPARE then begin
     Ret := TODBC3RawPlainDriver(fPlainDriver).SQLPrepare(fHSTMT, Pointer(ASQL), Length(ASQL));
     if Ret <> SQL_SUCCESS then
-      FODBCConnectionA.HandleStmtErrorOrWarningA(Ret, fHSTMT, fASQL, lcExecute, Self);
+      FODBCConnectionA.HandleStmtErrorOrWarningA(Ret, fHSTMT, SQL, lcPrepStmt, Self);
     FHandleState := hsPrepared;
     fBindImmediat := True;
     if DriverManager.HasLoggingListener then
@@ -907,7 +909,7 @@ const
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 
 procedure TZAbstractODBCPreparedStatement.AddParamLogValue(ParamIndex: Integer;
-  SQLWriter: TZRawSQLStringWriter; var Result: RawByteString);
+  SQLWriter: TZSQLStringWriter; var Result: SQLString);
 var Bind: PZODBCParamBind;
     Len: NativeUint;
 label jmpWritePC;
@@ -941,43 +943,53 @@ begin
         SQL_C_SBIGINT:  SQLWriter.AddOrd(PInt64(Bind.ParameterValuePtr)^, Result);
         SQL_C_UBIGINT:  SQLWriter.AddOrd(PUInt64(Bind.ParameterValuePtr)^, Result);
         SQL_C_TYPE_TIME, SQL_C_TIME: begin
-            Len := TimeToRaw(PSQL_TIME_STRUCT(Bind.ParameterValuePtr)^.hour,
+            Len := {$IFDEF UNICODE}TimeToUni{$ELSE}TimeToRaw{$ENDIF}(
+              PSQL_TIME_STRUCT(Bind.ParameterValuePtr)^.hour,
               PSQL_TIME_STRUCT(Bind.ParameterValuePtr)^.minute,
-              PSQL_TIME_STRUCT(Bind.ParameterValuePtr)^.second, 0, PAnsiChar(fByteBuffer),
+              PSQL_TIME_STRUCT(Bind.ParameterValuePtr)^.second, 0,
+              {$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF}(fByteBuffer),
               ConSettings.WriteFormatSettings.TimeFormat, True, False);
             goto jmpWritePC;
           end;
         SQL_C_SS_TIME2: begin
-            Len := TimeToRaw(PSQL_SS_TIME2_STRUCT(Bind.ParameterValuePtr)^.hour,
+            Len := {$IFDEF UNICODE}TimeToUni{$ELSE}TimeToRaw{$ENDIF}(
+              PSQL_SS_TIME2_STRUCT(Bind.ParameterValuePtr)^.hour,
               PSQL_SS_TIME2_STRUCT(Bind.ParameterValuePtr)^.minute,
               PSQL_SS_TIME2_STRUCT(Bind.ParameterValuePtr)^.second,
-              PSQL_SS_TIME2_STRUCT(Bind.ParameterValuePtr)^.fraction, PAnsiChar(fByteBuffer),
+              PSQL_SS_TIME2_STRUCT(Bind.ParameterValuePtr)^.fraction,
+              {$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF}(fByteBuffer),
               ConSettings.WriteFormatSettings.TimeFormat, True, False);
             goto jmpWritePC;
           end;
         SQL_C_TYPE_DATE, SQL_C_DATE: begin
-            Len := DateToRaw(Abs(PSQL_DATE_STRUCT(Bind.ParameterValuePtr)^.year),
+            Len := {$IFDEF UNICODE}DateToUni{$ELSE}DateToRaw{$ENDIF}(
+              Abs(PSQL_DATE_STRUCT(Bind.ParameterValuePtr)^.year),
               PSQL_DATE_STRUCT(Bind.ParameterValuePtr)^.month,
-              PSQL_DATE_STRUCT(Bind.ParameterValuePtr)^.day, PAnsiChar(fByteBuffer),
+              PSQL_DATE_STRUCT(Bind.ParameterValuePtr)^.day,
+              {$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF}(fByteBuffer),
               ConSettings.WriteFormatSettings.DateFormat, True,
               PSQL_DATE_STRUCT(Bind.ParameterValuePtr)^.year < 0);
             goto jmpWritePC;
           end;
         SQL_C_TIMESTAMP, SQL_C_TYPE_TIMESTAMP: begin
-            Len := DateTimeToRaw(Abs(PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^.year),
+            Len := {$IFDEF UNICODE}DateTimeToUni{$ELSE}DateTimeToRaw{$ENDIF}(
+              Abs(PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^.year),
               PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr).month, PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr).day,
               PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr).hour, PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^.minute,
               PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^.second, PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^.fraction,
-              PAnsiChar(fByteBuffer), ConSettings.WriteFormatSettings.DateTimeFormat,
+              {$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF}(fByteBuffer),
+              ConSettings.WriteFormatSettings.DateTimeFormat,
               True, PSQL_TIMESTAMP_STRUCT(Bind.ParameterValuePtr)^.year < 0);
             goto jmpWritePC;
           end;
         SQL_C_SS_TIMESTAMPOFFSET: begin
-            Len := DateTimeToRaw(Abs(PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^.year),
+            Len := {$IFDEF UNICODE}DateTimeToUni{$ELSE}DateTimeToRaw{$ENDIF}(
+              Abs(PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^.year),
               PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr).month, PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr).day,
               PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr).hour, PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^.minute,
               PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^.second, PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^.fraction,
-              PAnsiChar(fByteBuffer), ConSettings.WriteFormatSettings.DateTimeFormat,
+              {$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF}(fByteBuffer),
+              ConSettings.WriteFormatSettings.DateTimeFormat,
               True, PSQL_SS_TIMESTAMPOFFSET_STRUCT(Bind.ParameterValuePtr)^.year < 0);
               goto jmpWritePC;
           end;
@@ -985,14 +997,29 @@ begin
         SQL_C_DOUBLE: SQLWriter.AddFloat(PDouble(Bind.ParameterValuePtr)^, Result);
         SQL_C_NUMERIC: begin
             Len := 16;
-            SQLNumeric2Raw(Bind.ParameterValuePtr, PAnsiChar(fByteBuffer), Len);
-jmpWritePC: SQLWriter.AddText(PAnsiChar(fByteBuffer), Len, Result);
+            {$IFDEF UNICODE}SQLNumeric2Uni{$ELSE}SQLNumeric2Raw{$ENDIF}(Bind.ParameterValuePtr,
+            {$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF}(fByteBuffer), Len);
+jmpWritePC: SQLWriter.AddText({$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF}(fByteBuffer), Len, Result);
           end;
-        SQL_C_WCHAR:  begin
+        SQL_C_WCHAR:
+          {$IFDEF UNICODE}
+          SQLWriter.AddTextQuoted(Bind.ParameterValuePtr, Bind.StrLen_or_IndPtr^ shr 1, #39, Result);
+          {$ELSE}
+          begin
             FRawTemp := PUnicodeToRaw(Bind.ParameterValuePtr, Bind.StrLen_or_IndPtr^ shr 1, zCP_UTF8);
             SQLWriter.AddTextQuoted(FRawTemp, AnsiChar(#39), Result);
           end;
-        SQL_C_CHAR: SQLWriter.AddTextQuoted(PAnsiChar(Bind.ParameterValuePtr), Bind.StrLen_or_IndPtr^, AnsiChar(#39), Result);
+          {$ENDIF}
+        SQL_C_CHAR:
+          {$IFDEF UNICODE}
+          begin
+            FUniTemp := PRawToUnicode(PAnsiChar(Bind.ParameterValuePtr), Bind.StrLen_or_IndPtr^, FClientCP);
+            SQLWriter.AddTextQuoted(FUniTemp, #39, Result);
+            FUniTemp := '';
+          end;
+          {$ELSE}
+          SQLWriter.AddTextQuoted(PAnsiChar(Bind.ParameterValuePtr), Bind.StrLen_or_IndPtr^, AnsiChar(#39), Result);
+          {$ENDIF}
         SQL_C_BINARY: SQLWriter.AddHexBinary(Bind.ParameterValuePtr, PSQLLEN(Bind.StrLen_or_IndPtr)^, True, Result);
         SQL_C_GUID: SQLWriter.AddGUID(PGUID(Bind.ParameterValuePtr)^, [guidWithBrackets, guidQuoted], Result);
         else SQLWriter.AddText('(unknown)', Result);
@@ -1580,9 +1607,10 @@ begin
   if not Prepared then
     Prepare;
   if (BindList.Capacity < Value+1) then
-    if fBindImmediat
-    then raise EZSQLException.Create(SInvalidInputParameterCount)
-    else inherited CheckParameterIndex(Value);
+    if fBindImmediat then begin
+      {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := Format(SBindVarOutOfRange, [Value]);
+      raise EZSQLException.Create({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
+    end else inherited CheckParameterIndex(Value);
 end;
 
 constructor TZAbstractODBCPreparedStatement.Create(
@@ -1880,7 +1908,7 @@ end;
 
 procedure TZAbstractODBCPreparedStatement.RaiseExceeded(Index: Integer);
 begin
-  raise EZSQLException.Create(Format(cSParamValueExceeded, [Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}])+LineEnding+
+  raise EZSQLException.Create(Format(SParamValueExceeded, [Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}])+LineEnding+
     'Stmt: '+GetSQL);
 end;
 
@@ -3108,7 +3136,7 @@ function TZODBCStatementW.ExecutDirect: RETCODE;
 begin
   Result := TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(fHSTMT, Pointer(WSQL), Length(WSQL));
   if not Result in [SQL_NO_DATA, SQL_SUCCESS, SQL_PARAM_DATA_AVAILABLE] then
-    FODBCConnectionW.HandleStmtErrorOrWarningW(Result, fHSTMT, fWSQL, lcExecute, Self);
+    FODBCConnectionW.HandleStmtErrorOrWarningW(Result, fHSTMT, SQL, lcExecute, Self);
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecute, Self);
 end;
@@ -3125,7 +3153,9 @@ function TZODBCStatementA.ExecutDirect: RETCODE;
 begin
   Result := TODBC3RawPlainDriver(fPlainDriver).SQLExecDirect(fHSTMT, Pointer(fASQL), Length(fASQL));
   if not Result in [SQL_NO_DATA, SQL_SUCCESS, SQL_PARAM_DATA_AVAILABLE] then
-    FODBCConnectionA.HandleStmtErrorOrWarningA(Result, fHSTMT, fASQL, lcExecute, Self);
+    FODBCConnectionA.HandleStmtErrorOrWarningA(Result, fHSTMT, SQL, lcExecute, Self);
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcExecute, Self);
 end;
 
 initialization

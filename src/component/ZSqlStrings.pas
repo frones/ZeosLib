@@ -299,7 +299,7 @@ begin
   if FParamChar <> Value then
   begin
     If not(GetTokenizer.GetCharacterState(Value) is TZSymbolstate) Then
-      raise EZDatabaseError.Create(cSIncorrectParamChar+' : '+Value);
+      raise EZDatabaseError.Create(SIncorrectParamChar+' : '+Value);
     FParamChar := Value;
     RebuildAll;
   end;

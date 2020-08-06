@@ -328,6 +328,8 @@ type
     procedure IncreaseCapacityTo(WideCharCapacity: Integer; var Result: UnicodeString);
     procedure AddText(Value: PWideChar; L: LengthInt; var Result: UnicodeString); overload;
     procedure AddText(const Value: UnicodeString; var Result: UnicodeString); overload;
+    procedure AddTextQuoted(Value: PWideChar; L: LengthInt; QuoteChar: Char; var Result: UnicodeString); overload;
+    procedure AddTextQuoted(const Value: UnicodeString; QuoteChar: Char; var Result: UnicodeString); overload;
     procedure AddAscii7Text(Value: PAnsiChar; L: LengthInt; var Result: UnicodeString); overload;
     procedure AddHexBinary(Value: PByte; L: LengthInt; ODBC: Boolean; var Result: UnicodeString); overload;
     procedure AddHexBinary(const Value: TBytes; ODBC: Boolean; var Result: UnicodeString); overload;
@@ -359,7 +361,6 @@ type
   end;
 
   TZSQLStringWriter = {$IFDEF UNICODE}TZUnicodeSQLStringWriter{$ELSE}TZRawSQLStringWriter{$ENDIF};
-  SQLString = {$IFDEF UNICODE}UnicodeString{$ELSE}RawByteString{$ENDIF};
 
   {** Modified comparison function. }
   TZListSortCompare = function (Item1, Item2: Pointer): Integer of object;
@@ -942,6 +943,7 @@ begin
   else AddText(P, L, Result);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 procedure TZRawSQLStringWriter.AddTextQuoted(Value: PAnsiChar; L: LengthInt;
   QuoteChar: AnsiChar; var Result: RawByteString);
 var
@@ -974,18 +976,20 @@ begin
     AnsiChar(Dest^) := QuoteChar;
     Exit;
   end;
-  if (FPos+L+{%H-}NativeInt(Dest) +2 < FEnd) then begin
+  L := L+NativeInt(NativeUint(Dest)) +2;
+  if (FPos+L < FEnd) then begin
     Dest := FPos;
-    Inc(FPos, L+{%H-}NativeInt(Dest)+2);
+    Inc(FPos, L);
   end else
-    Dest := FlushBuff(Result, L+{%H-}NativeInt(Dest)+2);
+    Dest := FlushBuff(Result, L);
   AnsiChar(Dest^) := QuoteChar;
   Inc(Dest);
   P := PFirst;
   repeat
     Inc(P);
-    Move(Value^, Dest^, (P - Value));
-    Inc(Dest, P - Value);
+    L := (P - Value);
+    Move(Value^, Dest^, L);
+    Inc(Dest, L);
     AnsiChar(Dest^) := QuoteChar;
     Inc(Dest);
     Value := P;
@@ -993,10 +997,12 @@ begin
       then Break
       else Inc(P);
   until P = PEnd;
-  Move(Value^, Dest^, (PEnd - Value));
-  Inc(Dest, PEnd - Value);
+  L := (PEnd - Value);
+  Move(Value^, Dest^, L);
+  Inc(Dest, L);
   AnsiChar(Dest^) := QuoteChar;
 end;
+{$IFDEF FPC} {$POP} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 
 procedure TZRawSQLStringWriter.AddTime(const Value: TDateTime; const Format: String;
   var Result: RawByteString);
@@ -1522,6 +1528,73 @@ procedure TZUnicodeSQLStringWriter.AddText(const Value: UnicodeString;
   var Result: UnicodeString);
 begin
   AddText(Pointer(Value), Length(Value), Result);
+end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+procedure TZUnicodeSQLStringWriter.AddTextQuoted(Value: PWideChar; L: LengthInt;
+  QuoteChar: Char; var Result: UnicodeString);
+var
+  P, Dest, PEnd, PFirst: PWideChar;
+begin
+  Dest := nil;
+  P := Value;
+  PEnd := P + L;
+  PFirst := nil;
+  while P < PEnd do begin
+    if (PWord(P)^=Ord(QuoteChar)) then begin
+      if Dest = nil then
+        PFirst := P;
+      Inc(NativeUInt(Dest));
+    end;
+    Inc(P);
+  end;
+  if Dest = nil then begin //no quoteChars found?
+    if (FPos+L+2 < FEnd) then begin
+      Dest := FPos;
+      Inc(FPos, L+2);
+    end else
+      Dest := FlushBuff(Result, L+2);
+    PWord(Dest)^ := Ord(QuoteChar);
+    if L > 0 then begin
+      System.Move(Value^, (Dest+1)^, L shl 1);
+      Inc(Dest, L+1);
+    end else
+      Inc(Dest);
+    PWord(Dest)^ := Ord(QuoteChar);
+    Exit;
+  end;
+  L := L+NativeInt(NativeUint(Dest))+2;
+  if (FPos+L < FEnd) then begin
+    Dest := FPos;
+    Inc(FPos, L);
+  end else
+    Dest := FlushBuff(Result, L);
+  PWord(Dest)^ := Ord(QuoteChar);
+  Inc(Dest);
+  P := PFirst;
+  repeat
+    Inc(P);
+    L := (NativeUInt(P) - NativeUInt(Value));
+    Move(Value^, Dest^, L);
+    Inc(NativeUInt(Dest), NativeUInt(L));
+    PWord(Dest)^ := Ord(QuoteChar);
+    Inc(Dest);
+    Value := P;
+    while (P<PEnd) do if PWord(P)^ = Ord(QuoteChar)
+      then Break
+      else Inc(P);
+  until P = PEnd;
+  L := (NativeUInt(PEnd) - NativeUInt(Value));
+  Move(Value^, Dest^, L);
+  Inc(NativeUInt(Dest), NativeUInt(L));
+  PWord(Dest)^ := Ord(QuoteChar);
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+procedure TZUnicodeSQLStringWriter.AddTextQuoted(const Value: UnicodeString;
+  QuoteChar: Char; var Result: UnicodeString);
+begin
+  AddTextQuoted(Pointer(Value), Length(Value), QuoteChar, Result);
 end;
 
 procedure TZUnicodeSQLStringWriter.AddTime(const Value: TZTime;

@@ -76,6 +76,7 @@ type
     FHasOutParams: Boolean;
   private
     function CreateResultSet: IZResultSet;
+    procedure DescribeCursor;
   protected
     procedure CheckParameterIndex(var Value: Integer); override;
   public
@@ -109,7 +110,7 @@ type
     procedure BindTimeStampStruct(Index: Integer; ASAType: SmallInt; const Value: TZASASQLDateTime);
   protected
     procedure UnPrepareInParameters; override;
-    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
   public
     procedure SetNull(Index: Integer; SQLType: TZSQLType);
     procedure SetBoolean(Index: Integer; Value: Boolean);
@@ -171,6 +172,26 @@ begin
   end;
 end;
 
+procedure TZAbstractASAStatement.DescribeCursor;
+var ASASQLCA: PZASASQLCA;
+    ASASQLDA: PASASQLDA;
+begin
+  ASASQLCA := FASAConnection.GetDBHandle;
+  ASASQLDA := FSQLData.GetData;
+  FPlainDriver.dbpp_describe_cursor(ASASQLCA, Pointer(CursorName), ASASQLDA, SQL_DESCRIBE_OUTPUT);
+  if ASASQLCA.sqlCode <> SQLE_NOERROR then
+    FASAConnection.HandleErrorOrWarning(lcOther, SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
+  if ASASQLDA^.sqld <= 0 then
+    raise EZSQLException.Create(SCanNotRetrieveResultSetData)
+  else if ( ASASQLDA^.sqld > ASASQLDA^.sqln) then begin
+    FSQLData.AllocateSQLDA(ASASQLDA^.sqld);
+    FPlainDriver.dbpp_describe_cursor(ASASQLCA, Pointer(CursorName), ASASQLDA, SQL_DESCRIBE_OUTPUT);
+    if ASASQLCA.sqlCode <> SQLE_NOERROR then
+      FASAConnection.HandleErrorOrWarning(lcExecute, SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
+  end;
+  //SQLData.InitFields;
+end;
+
 destructor TZAbstractASAStatement.Destroy;
 begin
   inherited Destroy;
@@ -184,7 +205,7 @@ var
 begin
   With FASAConnection do begin
     FSQLData := TZASASQLDA.Create(FASAConnection, Pointer(CursorName));
-    DescribeCursor(FASAConnection, FSQLData, CursorName, ASQL);
+    DescribeCursor;
     NativeResultSet := TZASANativeResultSet.Create(Self, SQL, FStmtNum, CursorName, FSQLData, CachedLob);
     if ResultSetConcurrency = rcUpdatable then begin
       CachedResultSet := TZASACachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings);
@@ -232,7 +253,7 @@ begin
       FPlainDriver.dbpp_prepare_describe(DBHandle, nil, nil, @FStmtNum,
         Pointer(ASQL), FResultSQLDA, FInParamSQLDA, WhatToDesc, 0);
     if DBHandle.sqlCode <> SQLE_NOERROR then
-      FASAConnection.HandleErrorOrWarning(lcPrepStmt, fASQL, Self);
+      FASAConnection.HandleErrorOrWarning(lcPrepStmt, SQL, Self);
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcPrepStmt,Self);
     SetParamCount(FInParamSQLDA.sqld);
@@ -243,7 +264,7 @@ begin
       FPlainDriver.dbpp_describe(DBHandle, nil, nil, @FStmtNum,
         FInParamSQLDA, SQL_DESCRIBE_INPUT);
       if DBHandle.sqlCode <> SQLE_NOERROR then
-        FASAConnection.HandleErrorOrWarning(lcPrepStmt, fASQL, Self);
+        FASAConnection.HandleErrorOrWarning(lcBindPrepStmt, {$IFDEF DEBUG}'dbpp_describe'{$ELSE}''{$ENDIF}, Self);
     end;
     FMoreResults := DBHandle.sqlerrd[2] = 0; //we need to know if more ResultSets can be retrieved
     if not FMoreResults then begin
@@ -251,13 +272,13 @@ begin
       FResultSQLDA := FSQLData.GetData;
       FPLainDriver.dbpp_describe(DBHandle, nil, nil, @FStmtNum, FResultSQLDA, SQL_DESCRIBE_OUTPUT);
       if DBHandle.sqlCode <> SQLE_NOERROR then
-        FASAConnection.HandleErrorOrWarning(lcPrepStmt, fASQL, Self);
+        FASAConnection.HandleErrorOrWarning(lcOther, {$IFDEF DEBUG}'dbpp_describe'{$ELSE}''{$ENDIF}, Self);
       if FResultSQLDA.sqld <> FResultSQLDA.sqln then begin
         FSQLData.AllocateSQLDA(FResultSQLDA.sqld);
         FResultSQLDA := FSQLData.GetData;
         FPLainDriver.dbpp_describe(DBHandle, nil, nil, @FStmtNum, FResultSQLDA, SQL_DESCRIBE_OUTPUT);
         if DBHandle.sqlCode <> SQLE_NOERROR then
-          FASAConnection.HandleErrorOrWarning(lcPrepStmt, fASQL, Self);
+          FASAConnection.HandleErrorOrWarning(lcOther, {$IFDEF DEBUG}'dbpp_describe'{$ELSE}''{$ENDIF}, Self);
         { test if Outparams are available: }
         FHasOutParams := FResultSQLDA.sqlVar[0].sqlInd^ and DT_PROCEDURE_OUT = DT_PROCEDURE_OUT;
       end;
@@ -296,8 +317,10 @@ var I: Integer;
 begin
   if not Prepared then
     Prepare;
-  if (Value<0) or (Value+1 > BindList.Count) then
-    raise EZSQLException.Create(SInvalidInputParameterCount);
+  if (Value<0) or (Value+1 > BindList.Count) then begin
+    {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := Format(SBindVarOutOfRange, [Value]);
+    raise EZSQLException.Create({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
+  end;
   if BindList.HasOutOrInOutOrResultParam then
     for I := 0 to Value do
       if Ord(BindList[I].ParamType) > Ord(pctInOut) then
@@ -330,7 +353,7 @@ begin
       FASAConnection.HandleErrorOrWarning(lcOther, 'dbpp_resume', Self);
     if DBHandle.sqlcode = SQLE_PROCEDURE_COMPLETE
     then Result := false
-    else DescribeCursor(FASAConnection, FSQLData, CursorName, EmptyRaw);
+    else DescribeCursor;
   end;
 end;
 
@@ -375,7 +398,7 @@ begin
       FLastResultSet := nil;
     end else begin
       if (DBHandle.sqlCode <> SQLE_NOERROR) then
-        FASAConnection.HandleErrorOrWarning(lcExecPrepStmt, fASQL, Self);
+        FASAConnection.HandleErrorOrWarning(lcExecPrepStmt, SQL, Self);
       LastResultSet := CreateResultSet;
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcExecPrepStmt,Self);
@@ -406,7 +429,7 @@ begin
     FPlainDriver.dbpp_open(DBHandle, Pointer(CursorName), nil, nil, @FStmtNum,
       FInParamSQLDA, FetchSize, 0, FCursorOptions);
     if (DBHandle.sqlCode <> SQLE_NOERROR) then
-      FASAConnection.HandleErrorOrWarning(lcExecPrepStmt, fASQL, Self);
+      FASAConnection.HandleErrorOrWarning(lcExecPrepStmt, SQL, Self);
     if Assigned(FOpenResultSet)
     then Result := IZResultSet(FOpenResultSet)
     else Result := CreateResultSet;
@@ -421,7 +444,7 @@ begin
     //now fill the outparam SQLDA-Variables
     FPlainDriver.dbpp_execute_into(DBHandle, nil, nil, @FStmtNum, FInParamSQLDA, FResultSQLDA);
     if (DBHandle.sqlCode <> SQLE_NOERROR) then
-      FASAConnection.HandleErrorOrWarning(lcExecPrepStmt, fASQL, Self);
+      FASAConnection.HandleErrorOrWarning(lcExecPrepStmt, SQL, Self);
     FOutParamResultSet := Result;
   end;
   { Logging SQL Command and values}
@@ -455,7 +478,7 @@ begin
   FPlainDriver.dbpp_execute_into(DBHandle, nil, nil, @FStmtNum,
     FInParamSQLDA, FResultSQLDA);
   if (DBHandle.sqlCode <> SQLE_NOERROR) and (DBHandle.sqlCode <> SQLE_TOO_MANY_RECORDS) then
-    FASAConnection.HandleErrorOrWarning(lcExecPrepStmt, fASQL, Self);
+    FASAConnection.HandleErrorOrWarning(lcExecPrepStmt, SQL, Self);
   Result := DBHandle.sqlErrd[2];
   LastUpdateCount := Result;
   { Logging SQL Command and values }
@@ -738,7 +761,7 @@ begin
 end;
 
 procedure TZASAPreparedStatement.AddParamLogValue(ParamIndex: Integer;
-  SQLWriter: TZRawSQLStringWriter; var Result: RawByteString);
+  SQLWriter: TZSQLStringWriter; var Result: SQLString);
 var SQLVAR: PZASASQLVAR;
   DT: TDateTime;
 begin
@@ -752,7 +775,13 @@ begin
     //DT_DECIMAL          : ;
     DT_FLOAT            : SQLWriter.AddFloat(PSingle(SQLVAR.sqldata)^, Result);
     DT_DOUBLE           : SQLWriter.AddFloat(PDouble(SQLVAR.sqldata)^, Result);
-    DT_VARCHAR          : SQLWriter.AddTextQuoted(PAnsiChar(@PZASASQLSTRING(SQLVAR.sqldata).data[0]), PZASASQLSTRING(SQLVAR.sqldata).length, AnsiChar(#39), Result);
+    DT_VARCHAR          : {$IFDEF UNICODE} begin
+                            FUniTemp := PRawToUnicode(PAnsiChar(@PZASASQLSTRING(SQLVAR.sqldata).data[0]), PZASASQLSTRING(SQLVAR.sqldata).length, FClientCP);
+                            SQLWriter.AddTextQuoted(FUniTemp, #39, Result);
+                          end;
+                          {$ELSE}
+                          SQLWriter.AddTextQuoted(PAnsiChar(@PZASASQLSTRING(SQLVAR.sqldata).data[0]), PZASASQLSTRING(SQLVAR.sqldata).length, AnsiChar(#39), Result);
+                          {$ENDIF}
     DT_LONGVARCHAR      : SQLWriter.AddText('(CLOB)', Result);
     DT_TIMESTAMP_STRUCT : case PSmallInt(PAnsiChar(SQLVAR.sqlData)+SizeOf(TZASASQLDateTime))^ of
                             DT_DATE: begin
@@ -786,7 +815,14 @@ begin
     DT_BIT              : If PByte(SQLVAR.sqlData)^ = 0
                           then SQLWriter.AddText('(FALSE)', Result)
                           else SQLWriter.AddText('(TRUE)', Result);
-    DT_NVARCHAR         : Result := SQLQuotedStr(PAnsiChar(@PZASASQLSTRING(SQLVAR.sqldata).data[0]), PZASASQLSTRING(SQLVAR.sqldata).length, AnsiChar(#39));
+    DT_NVARCHAR         : {$IFDEF UNICODE} begin
+                            FUniTemp := PRawToUnicode(PAnsiChar(@PZASASQLSTRING(SQLVAR.sqldata).data[0]), PZASASQLSTRING(SQLVAR.sqldata).length, zCP_UTF8);
+                            SQLWriter.AddTextQuoted(FUniTemp, #39, Result);
+                            FUniTemp := '';
+                          end;
+                          {$ELSE}
+                          Result := SQLQuotedStr(PAnsiChar(@PZASASQLSTRING(SQLVAR.sqldata).data[0]), PZASASQLSTRING(SQLVAR.sqldata).length, AnsiChar(#39));
+                          {$ENDIF}
     DT_LONGNVARCHAR     : SQLWriter.AddText('(NCLOB)', Result);
     else                  SQLWriter.AddText('(UNKNOWN)', Result);
   end;

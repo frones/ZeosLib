@@ -81,6 +81,9 @@ type
     ['{50D1AF76-0174-41CD-B90B-4FB770EFB14F}']
     function GetAdoConnection: ZPlainAdo.Connection;
     function GetByteBufferAddress: PByteBuffer;
+    procedure HandleErrorOrWarning(LoggingCategory: TZLoggingCategory;
+      const E: Exception; const Sender: IImmediatelyReleasable;
+      const LogMsg: SQLString);
   end;
 
   {** Implements a generic Ado Connection. }
@@ -91,11 +94,16 @@ type
     FTransactionLevel: Integer;
   protected
     FAdoConnection: ZPlainAdo.Connection;
-    function GetAdoConnection: ZPlainAdo.Connection;
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload; override;
     procedure InternalCreate; override;
     procedure InternalClose; override;
   public
+    function GetAdoConnection: ZPlainAdo.Connection;
+    procedure HandleErrorOrWarning(LoggingCategory: TZLoggingCategory;
+      const E: Exception; const Sender: IImmediatelyReleasable;
+      const LogMsg: SQLString);
+  public
+
     destructor Destroy; override;
 
     procedure Commit;
@@ -127,7 +135,10 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ADO}
 
 uses
-  Variants, ActiveX, ZPlainOleDBDriver,
+  Variants, ActiveX,
+  {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
+  ZFastCode,
+  ZPlainOleDBDriver,
   ZDbcUtils, ZAdoToken, ZSysUtils, ZMessages, ZDbcProperties, ZDbcAdoStatement,
   ZDbcAdoMetadata, ZEncoding, ZDbcOleDBUtils, ZDbcOleDBMetadata, ZDbcAdoUtils;
 
@@ -222,13 +233,12 @@ var
 begin
   try
     FAdoConnection.Execute(SQL, RowsAffected, adExecuteNoRecords);
-    DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, ZUnicodeToRaw(SQL, ZOSCodePage));
+    {$IFNDEF UNICODE}FlogMessage := ZUnicodeToRaw(SQL, zCP_UTF8);{$ENDIF}
+    DriverManager.LogMessage(LoggingCategory, URL.Protocol, {$IFDEF UNICODE}SQL{$ELSE}FlogMessage{$ENDIF});
   except
-    on E: Exception do
-    begin
-      DriverManager.LogError(LoggingCategory, ConSettings^.Protocol, ZUnicodeToRaw(SQL, ZOSCodePage), 0,
-        ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
-      raise;
+    on E: Exception do begin
+      {$IFNDEF UNICODE}FlogMessage := ZUnicodeToRaw(SQL, zCP_UTF8);{$ENDIF}
+      HandleErrorOrWarning(LoggingCategory, E, Self, {$IFDEF UNICODE}SQL{$ELSE}FlogMessage{$ENDIF});
     end;
   end;
 end;
@@ -246,7 +256,6 @@ end;
 }
 procedure TZAdoConnection.Open;
 var
-  LogMessage: RawByteString;
   ConnectStrings: TStrings;
   DBInitialize: IDBInitialize;
   Command: ZPlainAdo.Command;
@@ -255,7 +264,7 @@ var
 begin
   if not Closed then Exit;
 
-  LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
+  FLogMessage := Format(SConnect2AsUser,  [URL.Database, URL.UserName]);
   try
     if ReadOnly then
       FAdoConnection.Set_Mode(adModeRead)
@@ -268,16 +277,12 @@ begin
 
     FAdoConnection.Open(WideString(Database), WideString(User), WideString(Password), -1{adConnectUnspecified});
     FAdoConnection.Set_CursorLocation(adUseClient);
-    DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
-    ConSettings^.AutoEncode := {$IFDEF UNICODE}False{$ELSE}True{$ENDIF};
+    DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
+    //ConSettings^.AutoEncode := {$IFDEF UNICODE}False{$ELSE}True{$ENDIF};
     CheckCharEncoding('CP_UTF16');
   except
     on E: Exception do
-    begin
-      DriverManager.LogError(lcConnect, ConSettings^.Protocol, LogMessage, 0,
-        ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
-      raise;
-    end;
+      HandleErrorOrWarning(lcConnect, E, Self, FlogMessage);
   end;
 
   inherited Open;
@@ -419,7 +424,7 @@ begin
         FAdoConnection.CommitTrans;
         Dec(FTransactionLevel);
       end;
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'COMMIT');
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, 'COMMIT');
       AutoCommit := True;
     end else
       StartTransaction;
@@ -454,31 +459,33 @@ end;
   Starts a new transaction. Used internally.
 }
 function TZAdoConnection.StartTransaction: Integer;
-var LogMessage: RawByteString;
-  S: String;
+var S: String;
+{$IFNDEF UNICODE}
+LogMessage: UnicodeString;
+{$ENDIF}
 begin
   if Closed then
     Open;
-  LogMessage := 'BEGIN TRANSACTION';
   AutoCommit := False;
-  try
-    if FTransactionLevel = 0 then begin
-      FTransactionLevel := FAdoConnection.BeginTrans;
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, LogMessage);
-      Result := FTransactionLevel;
-    end else begin
-      if cSavePointSyntaxW[fServerProvider][spqtSavePoint] = '' then
-        raise EZSQLException.Create(SUnsupportedOperation);
-      S := 'SP'+IntToStr(NativeUint(Self))+'_'+IntToStr(FSavePoints.Count);
-      ExecuteImmediat(cSavePointSyntaxW[fServerProvider][spqtSavePoint]+{$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(S), lcTransaction);
-      Result := FSavePoints.Add(S)+2;
-    end;
+  FLogMessage := 'START TRANSACTION';
+  if FTransactionLevel = 0 then try
+    FTransactionLevel := FAdoConnection.BeginTrans;
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, FLogMessage);
+    Result := FTransactionLevel;
   except
     on E: Exception do begin
-      DriverManager.LogError(lcTransaction, ConSettings^.Protocol, LogMessage, 0,
-       ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
-      raise EZSQLException.Create(E.Message);
+      HandleErrorOrWarning(lcTransaction, E, Self, FLogMessage);
+      Result := 0; //Satisfy compiler
     end;
+  end else begin
+    if cSavePointSyntaxW[fServerProvider][spqtSavePoint] = '' then
+      raise EZSQLException.Create(SUnsupportedOperation);
+    S := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(NativeUint(Self))+'_'+{$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(FSavePoints.Count);
+    {$IFDEF UNICODE}FLogMessage{$ELSE}LogMessage{$ENDIF} :=
+      cSavePointSyntaxW[fServerProvider][spqtSavePoint]+'SP'+{$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(S);
+    ExecuteImmediat({$IFDEF UNICODE}FLogMessage{$ELSE}LogMessage{$ENDIF}, lcTransaction);
+    Result := FSavePoints.Add(S)+2;
   end;
 end;
 
@@ -490,39 +497,33 @@ end;
   @see #setAutoCommit
 }
 procedure TZAdoConnection.Commit;
-var LogMessage: RawByteString;
-    S: UnicodeString;
+var S: UnicodeString;
+  Cnt: Integer;
 begin
   if Closed then
-    raise EZSQLException.Create(cSConnectionIsNotOpened);
+    raise EZSQLException.Create(SConnectionIsNotOpened);
   if AutoCommit then
     raise EZSQLException.Create(SInvalidOpInAutoCommit);
   if Closed then Exit;
-  LogMessage := 'COMMIT';
-  try
-    if FSavePoints.Count > 0 then begin
-      S := cSavePointSyntaxW[fServerProvider][spqtCommit];
-      if S <> '' then begin
-        S := S+{$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
-        ExecuteImmediat(S, lcTransaction);
-      end;
-      FSavePoints.Delete(FSavePoints.Count-1);
-    end else begin
-      FAdoConnection.CommitTrans;
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, LogMessage);
-      FTransactionLevel := 0;
-      AutoCommit := True;
-      if FRestartTransaction then
-        StartTransaction;
+  Cnt := FSavePoints.Count;
+  if Cnt > 0 then begin
+    S := cSavePointSyntaxW[fServerProvider][spqtCommit];
+    if S <> '' then begin
+      S := S+{$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+      ExecuteImmediat(S, lcTransaction);
     end;
+    FSavePoints.Delete(FSavePoints.Count-1);
+  end else try
+    FAdoConnection.CommitTrans;
+    DriverManager.LogMessage(lcTransaction, URL.Protocol, sCommitMsg);
+    FTransactionLevel := 0;
+    AutoCommit := True;
   except
     on E: Exception do
-    begin
-      DriverManager.LogError(lcTransaction, ConSettings^.Protocol, LogMessage, 0,
-       ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
-      raise;
-    end;
+      HandleErrorOrWarning(lcTransaction, E, Self, sCommitMsg);
   end;
+  if (Cnt = 0) and FRestartTransaction then
+    StartTransaction;
 end;
 
 {**
@@ -533,38 +534,30 @@ end;
   @see #setAutoCommit
 }
 procedure TZAdoConnection.Rollback;
-var
-  LogMessage: RawbyteString;
-  S: UnicodeString;
+var S: UnicodeString;
+  Cnt: Integer;
 begin
   if AutoCommit then
     raise EZSQLException.Create(SInvalidOpInAutoCommit);
-  LogMessage := 'ROLLBACK';
-  if not (AutoCommit or (GetTransactionIsolation = tiNone)) then
-  try
-    if FSavePoints.Count > 0 then begin
-      S := cSavePointSyntaxW[fServerProvider][spqtRollback];
-      if S <> '' then begin
-        S := S+UnicodeString(FSavePoints[FSavePoints.Count-1]);
-        ExecuteImmediat(S, lcTransaction);
-      end;
-      FSavePoints.Delete(FSavePoints.Count-1);
-    end else begin
-      FAdoConnection.RollbackTrans;
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, LogMessage);
-      FTransactionLevel := 0;
-      AutoCommit := True;
-      if FRestartTransaction then
-        StartTransaction;
+  Cnt := FSavePoints.Count;
+  if Cnt > 0 then begin
+    S := cSavePointSyntaxW[fServerProvider][spqtRollback];
+    if S <> '' then begin
+      S := S+UnicodeString(FSavePoints[FSavePoints.Count-1]);
+      ExecuteImmediat(S, lcTransaction);
     end;
+    FSavePoints.Delete(FSavePoints.Count-1);
+  end else try
+    FAdoConnection.RollbackTrans;
+    DriverManager.LogMessage(lcTransaction, URL.Protocol, sRollbackMsg);
+    FTransactionLevel := 0;
+    AutoCommit := True;
   except
     on E: Exception do
-    begin
-      DriverManager.LogError(lcTransaction, ConSettings^.Protocol, LogMessage, 0,
-       ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
-      raise;
-    end;
+      HandleErrorOrWarning(lcTransaction, E, Self, sRollbackMsg);
   end;
+  if (Cnt = 0) and FRestartTransaction then
+    StartTransaction;
 end;
 
 {**
@@ -577,30 +570,28 @@ end;
   Connection.
 }
 procedure TZAdoConnection.InternalClose;
-var
-  LogMessage: RawByteString;
+var LogMessage: SQLString;
 begin
   if Closed or (not Assigned(PlainDriver)) then
     Exit;
 
+  LogMessage := 'CLOSE CONNECTION TO "'+URL.Database+'"';
   FSavePoints.Clear;
   if not AutoCommit then begin
     AutoCommit := not FRestartTransaction;
     FTransactionLevel := 0;
-    FAdoConnection.RollbackTrans;
+    try
+      FAdoConnection.RollbackTrans;
+    except end;
   end;
   try
-    LogMessage := 'CLOSE CONNECTION TO "'+ConSettings^.Database+'"';
     if FAdoConnection.State = adStateOpen then
       FAdoConnection.Close;
 //      FAdoConnection := nil;
-    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, LogMessage);
+    DriverManager.LogMessage(lcDisconnect, URL.Protocol, LogMessage);
   except
-    on E: Exception do begin
-      DriverManager.LogError(lcTransaction, ConSettings^.Protocol, LogMessage, 0,
-       ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
-      raise;
-    end;
+    on E: Exception do
+      HandleErrorOrWarning(lcDisconnect, E, Self, LogMessage);
   end;
 end;
 
@@ -611,23 +602,18 @@ end;
   silently ignore this request.
 }
 procedure TZAdoConnection.SetCatalog(const Catalog: string);
-var
-  LogMessage: RawByteString;
 begin
   if Closed then Exit;
 
-  LogMessage := 'SET CATALOG '+ConSettings^.ConvFuncs.ZStringToRaw(Catalog, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+  FLogMessage := 'SET CATALOG '+Catalog;
   try
     if Catalog <> '' then //see https://sourceforge.net/p/zeoslib/tickets/117/
       FAdoConnection.DefaultDatabase := WideString(Catalog);
-    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, LogMessage);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcOther, URL.Protocol, FLogMessage);
   except
     on E: Exception do
-    begin
-      DriverManager.LogError(lcTransaction, ConSettings^.Protocol, LogMessage, 0,
-       ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
-      raise;
-    end;
+      HandleErrorOrWarning(lcOther, E, Self, FLogMessage);
   end;
 end;
 
@@ -643,6 +629,29 @@ end;
 function TZAdoConnection.GetServerProvider: TZServerProvider;
 begin
   Result := fServerProvider;
+end;
+
+procedure TZAdoConnection.HandleErrorOrWarning(
+  LoggingCategory: TZLoggingCategory; const E: Exception;
+  const Sender: IImmediatelyReleasable; const LogMsg: SQLString);
+var FormatStr, ErrorString: String;
+begin
+  if E is EOleException then with E as EOleException do begin
+    LogError(LoggingCategory, ErrorCode, Sender, LogMsg, Message);
+    raise EZSQLException.CreateWithCode(ErrorCode, Message);
+    if LogMsg <> '' then
+      if LoggingCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
+      then FormatStr := SSQLError3
+      else FormatStr := SSQLError4
+    else FormatStr := SSQLError2;
+    if LogMsg <> ''
+    then ErrorString := Format(FormatStr, [Message, ErrorCode, LogMsg])
+    else ErrorString := Format(FormatStr, [Message, ErrorCode]);
+    raise EZSQLException.CreateWithCode(ErrorCode, ErrorString);
+  end else begin
+    LogError(LoggingCategory, 0, Sender, LogMsg, E.Message);
+    raise Exception(E.ClassType).Create(E.Message);
+  end;
 end;
 
 initialization

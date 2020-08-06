@@ -97,8 +97,6 @@ type
     FByteBuffer: PByteBuffer;
     FOleDBConnection: IZOleDBConnection;
     fDEFERPREPARE: Boolean; //ole: if not set the stmt will be prepared immediatelly and we'll try to decribe params
-    procedure CheckError(Status: HResult; LoggingCategory: TZLoggingCategory;
-       const DBBINDSTATUSArray: TDBBINDSTATUSDynArray = nil);
     procedure PrepareOpenedResultSetsForReusing;
     function FetchCallResults(var RowSet: IRowSet): Boolean;
     function GetFirstResultSet: IZResultSet;
@@ -139,8 +137,8 @@ type
     FParamNamesArray: TStringDynArray;
     FDBUPARAMS: DB_UPARAMS;
     fBindImmediat, //the param describe did fail! we'll try to bind the params with describe emulation
-    fBindAgain, //param type or sizes have been changed need to create a new accessor handle
-    fSupportsByRef: Boolean; //are by REF bound values supported by provider?
+    fBindAgain: Boolean; //param type or sizes have been changed need to create a new accessor handle
+    //fSupportsByRef: Boolean; //are by REF bound values supported by provider?
     FParamsBuffer: TByteDynArray; //our value buffer
     FParameterAccessor: IAccessor;
     FClientCP: Word;
@@ -169,7 +167,7 @@ type
     function CreateOleDBConvertErrror(Index: Integer; WType: Word; SQLType: TZSQLType): EZOleDBConvertError;
     procedure RaiseExceeded(Index: Integer);
     function CreateResultSet(const RowSet: IRowSet): IZResultSet; override;
-    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string;
@@ -260,22 +258,16 @@ const
   is being executed by another thread.
 }
 procedure TZAbstractOleDBStatement.Cancel;
+var Status: HResult;
 begin
-  if FCommand <> nil then
-    CheckError(FCommand.Cancel, lcOther, nil)
-  else inherited Cancel;
-end;
-
-procedure TZAbstractOleDBStatement.CheckError(Status: HResult;
-  LoggingCategory: TZLoggingCategory;
-  const DBBINDSTATUSArray: TDBBINDSTATUSDynArray = nil);
-begin
-  if Failed(Status) then
-    FOleDBConnection.HandleErrorOrWarning(Status, LoggingCategory, WSQL,
-      Self, DBBINDSTATUSArray)
-  else if DriverManager.HasLoggingListener and
-     (LoggingCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt, lcUnprepStmt]) then
-    DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, ASQL);
+  if FCommand <> nil then begin
+    Status := FCommand.Cancel;
+    if Failed(Status) then
+      FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
+        {$IFDEF DEBUG}'ICommand.Cancel'{$ELSE}''{$ENDIF},
+        IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
+  end else
+    inherited Cancel;
 end;
 
 procedure TZAbstractOleDBStatement.ClearCallResultCache;
@@ -358,10 +350,15 @@ end;
   count have been reached
 }
 procedure TZAbstractOleDBStatement.Prepare;
+var Status: HResult;
 begin
   if FCommand = nil then begin
-    FCommand := (Connection as IZOleDBConnection).CreateCommand;
-    CheckError(FCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL)), lcOther);
+    FCommand := Self.FOleDBConnection.CreateCommand;
+    Status := FCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL));
+    if Failed(Status) then
+      FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
+        {$IFDEF DEBUG}'ICommand.SetCommandText'{$ELSE}''{$ENDIF},
+        IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
   end;
   if FCallResultCache <> nil then
     ClearCallResultCache;
@@ -425,6 +422,7 @@ end;
 function TZAbstractOleDBStatement.ExecuteQueryPrepared: IZResultSet;
 var
   FRowSet: IRowSet;
+  Status: HResult;
 begin
   PrepareOpenedResultSetsForReusing;
   Prepare;
@@ -437,14 +435,25 @@ begin
       Result := IZResultSet(FOpenResultSet)
     else begin
       if FSupportsMultipleResultSets then begin
-        CheckError(FCommand.Execute(nil, IID_IMultipleResults, FDBParams,@FRowsAffected,@FMultipleResults),
-          LogExecType[fDEFERPREPARE], fDBBINDSTATUSArray);
-        if Assigned(FMultipleResults) then
-          CheckError(FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
-            IID_IRowset, @FRowsAffected, @FRowSet), lcOther);
-      end else
-        CheckError(FCommand.Execute(nil, IID_IRowset,
-          FDBParams,@FRowsAffected,@FRowSet), LogExecType[fDEFERPREPARE], fDBBINDSTATUSArray);
+        Status := FCommand.Execute(nil, IID_IMultipleResults, FDBParams,
+          @FRowsAffected,@FMultipleResults);
+        if Failed(Status) then
+          FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+            WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+        if Assigned(FMultipleResults) then begin
+          Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
+            IID_IRowset, @FRowsAffected, @FRowSet);
+          if Failed(Status) then
+            FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
+              {$IFDEF DEBUG}'IMultipleResults.GetResult'{$ELSE}''{$ENDIF},
+              IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
+        end;
+      end else begin
+        Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@FRowSet);
+        if Failed(Status) then
+          FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+            WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+      end;
       if DriverManager.HasLoggingListener then
          DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
       if BindList.HasOutOrInOutOrResultParam then begin
@@ -478,20 +487,32 @@ end;
   or 0 for SQL statements that return nothing
 }
 function TZAbstractOleDBStatement.ExecuteUpdatePrepared: Integer;
+var Status: HResult;
 begin
   Prepare;
   BindInParameters;
   RestartTimer;
   FRowsAffected := DB_COUNTUNAVAILABLE; //init
   if FSupportsMultipleResultSets then begin
-    CheckError(FCommand.Execute(nil, IID_IMultipleResults, FDBParams,@FRowsAffected,@FMultipleResults),
-      LogExecType[fDEFERPREPARE], fDBBINDSTATUSArray);
-    if Assigned(FMultipleResults) then
-      CheckError(FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
-        DB_NULLGUID, @FRowsAffected, nil), lcExecute);
-  end else
-    CheckError(FCommand.Execute(nil, DB_NULLGUID,FDBParams,@FRowsAffected,nil),
-      LogExecType[fDEFERPREPARE], FDBBINDSTATUSArray);
+    Status := FCommand.Execute(nil, IID_IMultipleResults, FDBParams,
+      @FRowsAffected,@FMultipleResults);
+    if Failed(Status) then
+      FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+        WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+    if Assigned(FMultipleResults) then begin
+      Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
+        DB_NULLGUID, @FRowsAffected, nil);
+      if Failed(Status) then
+        FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
+          {$IFDEF DEBUG}'IMultipleResults.GetResult'{$ELSE}''{$ENDIF},
+          IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
+    end;
+  end else begin
+    Status := FCommand.Execute(nil, DB_NULLGUID,FDBParams,@FRowsAffected,nil);
+    if Failed(Status) then
+      FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+        WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+  end;
   if DriverManager.HasLoggingListener then
      DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
   if BindList.HasOutOrInOutOrResultParam then
@@ -536,6 +557,7 @@ end;
 }
 function TZAbstractOleDBStatement.ExecutePrepared: Boolean;
 var FRowSet: IRowSet;
+    Status: HResult;
 begin
   PrepareOpenedResultSetsForReusing;
   LastUpdateCount := -1;
@@ -545,16 +567,25 @@ begin
   try
     FRowSet := nil;
     if FSupportsMultipleResultSets then begin
-      CheckError(FCommand.Execute(nil, IID_IMultipleResults,
-        FDBParams,@FRowsAffected,@FMultipleResults), LogExecType[fDEFERPREPARE],
-        FDBBINDSTATUSArray);
-      if Assigned(FMultipleResults) then
-        CheckError(FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
-          IID_IRowset, @FRowsAffected, @FRowSet), LogExecType[fDEFERPREPARE]);
-    end else
-      CheckError(FCommand.Execute(nil, IID_IRowset,
-        FDBParams,@FRowsAffected,@FRowSet), LogExecType[fDEFERPREPARE],
-        FDBBINDSTATUSArray);
+      Status := FCommand.Execute(nil, IID_IMultipleResults,
+        FDBParams,@FRowsAffected,@FMultipleResults);
+      if Failed(Status) then
+        FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+          WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+      if Assigned(FMultipleResults) then begin
+        Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
+          IID_IRowset, @FRowsAffected, @FRowSet);
+        if Failed(Status) then
+          FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
+            {$IFDEF DEBUG}'IMultipleResults.GetResult'{$ELSE}''{$ENDIF},
+            IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
+        end;
+    end else begin
+      Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@FRowSet);
+      if Failed(Status) then
+        FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+          WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+    end;
     if DriverManager.HasLoggingListener then
        DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
     if BindList.HasOutOrInOutOrResultParam then
@@ -632,12 +663,17 @@ begin
 end;
 
 function TZAbstractOleDBStatement.GetNewRowSet(var RowSet: IRowSet): Boolean;
+var Status: HResult;
 begin
   RowSet := nil;
   if Prepared then begin
-    CheckError(FCommand.Execute(nil, IID_IRowset,
-      FDBParams,@FRowsAffected,@RowSet), lcExecute);
+    Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@RowSet);
+    if Failed(Status) then
+      FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+        WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
     Result := Assigned(RowSet);
+    if DriverManager.HasLoggingListener then
+       DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
   end else Result := False;
 end;
 
@@ -660,10 +696,18 @@ begin
         until Failed(Status) or (Status = DB_S_NORESULT);
         FMultipleResults := nil;
       end;
-      if FCommand.QueryInterface(ICommandPrepare, CommandPrepare) = S_OK then try
-        CheckError(CommandPrepare.UnPrepare, lcUnprepStmt, nil);
-      finally
-        CommandPrepare := nil;
+      if (FCommand.QueryInterface(ICommandPrepare, CommandPrepare) = S_OK) and
+         not fDEFERPREPARE then begin
+        try
+          Status := CommandPrepare.UnPrepare;
+          if Failed(Status) then
+            FOleDBConnection.HandleErrorOrWarning(Status, lcUnprepStmt, WSQL,
+              IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
+          if DriverManager.HasLoggingListener then
+            LogPrepStmtMessage(lcUnprepStmt);
+        finally
+          CommandPrepare := nil;
+        end;
       end;
     finally
       FCommand := nil;
@@ -1061,8 +1105,8 @@ end;
 {$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
 
 procedure TZOleDBPreparedStatement.CalcParamSetsAndBufferSize;
-var
-  FAccessorRefCount: DBREFCOUNT;
+var FAccessorRefCount: DBREFCOUNT;
+    Status: HResult;
 begin
   FDBParams.cParamSets := Max(1, BatchDMLArrayCount); //indicate rows for single executions
   if (FDBParams.hAccessor <> 0) and fBindAgain then begin
@@ -1071,10 +1115,15 @@ begin
   end;
   SetLength(FParamsBuffer, FDBParams.cParamSets * FRowSize);
   FDBParams.pData := Pointer(FParamsBuffer); //set entry pointer
-  if (FDBParams.hAccessor = 0) then
-    CheckError(FParameterAccessor.CreateAccessor(DBACCESSOR_PARAMETERDATA,
+  if (FDBParams.hAccessor = 0) then begin
+    Status := FParameterAccessor.CreateAccessor(DBACCESSOR_PARAMETERDATA,
       FDBUPARAMS, Pointer(FDBBindingArray), FRowSize, @FDBParams.hAccessor,
-      Pointer(FDBBINDSTATUSArray)), lcOther, FDBBINDSTATUSArray);
+      Pointer(FDBBINDSTATUSArray));
+    if Failed(Status) then
+      FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
+        {$IFDEF DEBUG}'IParameterAccessor.CreateAccessor'{$ELSE}''{$ENDIF},
+        IImmediatelyReleasable(FWeakImmediatRelPtr), FDBBINDSTATUSArray);
+  end;
 end;
 
 procedure TZOleDBPreparedStatement.CheckParameterIndex(var Value: Integer);
@@ -1082,9 +1131,10 @@ begin
   if not Prepared then
     Prepare;
   if (BindList.Count < Value+1) then
-    if fBindImmediat
-    then raise EZSQLException.Create(SInvalidInputParameterCount)
-    else inherited CheckParameterIndex(Value);
+    if fBindImmediat then begin
+      {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := Format(SBindVarOutOfRange, [Value]);
+      raise EZSQLException.Create({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
+    end else inherited CheckParameterIndex(Value);
 end;
 
 constructor TZOleDBPreparedStatement.Create(const Connection: IZConnection;
@@ -1440,10 +1490,10 @@ end;
 
 procedure TZOleDBPreparedStatement.Prepare;
 var
-  DBInfo: IZDataBaseInfo;
+  //DBInfo: IZDataBaseInfo;
   CommandPrepare: ICommandPrepare;
   S: String;
-  Res: HResult;
+  Status: HResult;
 label jmpRecreate;
 begin
   if Not Prepared then begin//prevent PrepareInParameters
@@ -1460,25 +1510,29 @@ jmpRecreate:
     fBindImmediat := False;
     FCommand := FOleDBConnection.CreateCommand;
     SetOleCommandProperties;
-    CheckError(fCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL)), lcOther);
+    Status := fCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL));
+    if Failed(Status) then
+      FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
+        {$IFDEF DEBUG}'ICommand.SetCommandText'{$ELSE}''{$ENDIF},
+        IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
     if not fDEFERPREPARE and (fCommand.QueryInterface(IID_ICommandPrepare, CommandPrepare) = S_OK) then begin
-      Res := CommandPrepare.Prepare(0);
-      if Succeeded(Res) then begin
+      Status := CommandPrepare.Prepare(0);
+      if Succeeded(Status) then begin
         fBindImmediat := True;
         if DriverManager.HasLoggingListener then
           DriverManager.LogMessage(lcPrepStmt,Self);
-      end else if Res = DTS_E_OLEDBERROR then begin
+      end else if Status = DTS_E_OLEDBERROR then begin
         fDEFERPREPARE := True;
         goto jmpRecreate;
-      end else
-        CheckError(Res, lcPrepStmt);
+      end else FOleDBConnection.HandleErrorOrWarning(Status, lcPrepStmt, WSQL,
+        IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
     end;
-    DBInfo := Connection.GetMetadata.GetDatabaseInfo;
+    //DBInfo := Connection.GetMetadata.GetDatabaseInfo;
     if FSupportsMultipleResultSets
     then fMoreResultsIndicator := mriUnknown
     else fMoreResultsIndicator := mriHasNoMoreResults;
-    fSupportsByRef := (DBInfo as IZOleDBDatabaseInfo).SupportsByRefAccessors;
-    DBInfo := nil;
+    //fSupportsByRef := (DBInfo as IZOleDBDatabaseInfo).SupportsByRefAccessors;
+    //DBInfo := nil;
     inherited Prepare;
   end else begin
     if FCallResultCache <> nil then
@@ -1511,9 +1565,12 @@ begin
     Status := FCommandWithParameters.GetParameterInfo(FDBUPARAMS,PDBPARAMINFO(FParamInfoArray), FNamesBuffer);
     if Status = DB_E_PARAMUNAVAILABLE then begin
       fDEFERPREPARE := true;
+      fBindImmediat := False;
       Exit;
     end else if Failed(Status) then
-      CheckError(Status, lcOther, FDBBINDSTATUSArray);
+      FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
+        {$IFDEF DEBUG}'ICommandWithParameters.GetParameterInfo'{$ELSE}''{$ENDIF},
+        IImmediatelyReleasable(FWeakImmediatRelPtr), FDBBINDSTATUSArray);
     try
       SetParamCount(FDBUPARAMS);
       if FDBUPARAMS > 0 then begin
@@ -1546,7 +1603,7 @@ end;
 
 procedure TZOleDBPreparedStatement.RaiseExceeded(Index: Integer);
 begin
-  raise EZSQLException.Create(Format(cSParamValueExceeded, [Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}])+LineEnding+
+  raise EZSQLException.Create(Format(SParamValueExceeded, [Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}])+LineEnding+
     'Stmt: '+GetSQL);
 end;
 
@@ -2207,7 +2264,7 @@ end;
   {$WARN 5057 off : Local variable "Len" does not seem to be initialized}
 {$ENDIF} // uses pointer maths
 procedure TZOleDBPreparedStatement.AddParamLogValue(ParamIndex: Integer;
-  SQLWriter: TZRawSQLStringWriter; var Result: RawByteString);
+  SQLWriter: TZSQLStringWriter; var Result: SQLString);
 var Bind: PDBBINDING;
   Data: Pointer;
   Len: NativeUInt;
@@ -2242,48 +2299,64 @@ begin
           DBTYPE_CY:    SQLWriter.AddDecimal(PCurrency(Data)^, Result);
           DBTYPE_GUID:  SQLWriter.AddGUID(PGUID(Data)^, [guidWithBrackets, guidQuoted], Result);
           DBTYPE_NUMERIC: begin
+                        Len := SQL_MAX_NUMERIC_LEN;
+                        {$IFDEF UNICODE}
+                        SQLNumeric2Uni(PDB_Numeric(Data), PWideChar(FByteBuffer), Len);
+                        SQLWriter.AddText(PWideChar(FByteBuffer), Len, Result);
+                        {$ELSE}
                         SQLNumeric2Raw(PDB_Numeric(Data), PAnsiChar(FByteBuffer), Len);
                         SQLWriter.AddText(PAnsiChar(FByteBuffer), Len, Result);
+                        {$ENDIF}
                       end;
           DBTYPE_BYTES: SQLWriter.AddHexBinary(Data, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^, True, Result);
-          DBTYPE_WSTR:  begin
-                          FRawTemp := PUnicodeToRaw(Data, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^, zCP_UTF8);
+          DBTYPE_WSTR:  {$IFDEF UNICODE}
+                        SQLWriter.AddTextQuoted(Data, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ shr 1, #39, Result);
+                        {$ELSE}
+                        begin
+                          FRawTemp := PUnicodeToRaw(Data, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ shr 1, zCP_UTF8);
                           SQLWriter.AddTextQuoted(FRawTemp, AnsiChar(#39), Result);
                         end;
+                        {$ENDIF}
           DBTYPE_DBDATE:begin
-                        Len := DateToRaw(Abs(PDBDATE(Data)^.year), PDBDATE(Data)^.month,
-                          PDBDATE(Data)^.day, PAnsiChar(fByteBuffer),
+                        Len := {$IFDEF UNICODE}DateToUni{$ELSE}DateToRaw{$ENDIF}(
+                          Abs(PDBDATE(Data)^.year), PDBDATE(Data)^.month,
+                          PDBDATE(Data)^.day, {$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF}(fByteBuffer),
                           ConSettings.WriteFormatSettings.DateFormat, True, PDBDATE(Data)^.year <0);
-                        SQLWriter.AddText(PAnsiChar(fByteBuffer), Len, Result);
+                        SQLWriter.AddText({$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF}(fByteBuffer), Len, Result);
                       end;
           DBTYPE_DATE:  SQLWriter.AddDate(PDateTime(Data)^, ConSettings.WriteFormatSettings.DateFormat, Result);
           DBTYPE_DBTIME: begin
-                        Len := TimeToRaw(PDBTIME(Data)^.hour, PDBTIME(Data)^.minute,
-                          PDBTIME(Data)^.second, 0, PAnsiChar(fByteBuffer),
+                        Len := {$IFDEF UNICODE}TimeToUni{$ELSE}TimeToRaw{$ENDIF}(
+                          PDBTIME(Data)^.hour, PDBTIME(Data)^.minute,
+                          PDBTIME(Data)^.second, 0, {$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF}(fByteBuffer),
                           ConSettings.WriteFormatSettings.TimeFormat, True, False);
-                        SQLWriter.AddText(PAnsiChar(fByteBuffer), Len, Result);
+                        SQLWriter.AddText({$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF}(fByteBuffer), Len, Result);
                       end;
           DBTYPE_DBTIME2: begin
-                        Len := TimeToRaw(PDBTIME2(Data)^.hour, PDBTIME2(Data)^.minute,
-                          PDBTIME2(Data)^.second, PDBTIME2(Data)^.fraction, PAnsiChar(fByteBuffer),
+                        Len := {$IFDEF UNICODE}TimeToUni{$ELSE}TimeToRaw{$ENDIF}(
+                          PDBTIME2(Data)^.hour, PDBTIME2(Data)^.minute,
+                          PDBTIME2(Data)^.second, PDBTIME2(Data)^.fraction,
+                          {$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF}(fByteBuffer),
                           ConSettings.WriteFormatSettings.DateTimeFormat, True, False);
-                        SQLWriter.AddText(PAnsiChar(fByteBuffer), Len, Result);
+                        SQLWriter.AddText({$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF}(fByteBuffer), Len, Result);
                       end;
           DBTYPE_DBTIMESTAMP: begin
-                        Len := DateTimeToRaw(Abs(PDBTimeStamp(Data)^.year),
-                          PDBTimeStamp(Data).month, PDBTimeStamp(Data).day, PDBTimeStamp(Data).hour,
-                          PDBTimeStamp(Data)^.minute, PDBTimeStamp(Data)^.second,
-                          PDBTimeStamp(Data)^.fraction, PAnsiChar(fByteBuffer),
+                        Len := {$IFDEF UNICODE}DateTimeToUni{$ELSE}DateTimeToRaw{$ENDIF}(
+                          Abs(PDBTimeStamp(Data)^.year), PDBTimeStamp(Data).month,
+                          PDBTimeStamp(Data).day, PDBTimeStamp(Data).hour, PDBTimeStamp(Data)^.minute,
+                          PDBTimeStamp(Data)^.second, PDBTimeStamp(Data)^.fraction,
+                          {$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF}(fByteBuffer),
                           ConSettings.WriteFormatSettings.DateTimeFormat, True, PDBTimeStamp(Data)^.year < 0);
-                        SQLWriter.AddText(PAnsiChar(fByteBuffer), Len, Result);
+                        SQLWriter.AddText({$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF}(fByteBuffer), Len, Result);
                       end;
           DBTYPE_DBTIMESTAMPOFFSET: begin
-                        Len := DateTimeToRaw(Abs(PDBTIMESTAMPOFFSET(Data)^.year),
-                          PDBTIMESTAMPOFFSET(Data).month, PDBTIMESTAMPOFFSET(Data).day, PDBTIMESTAMPOFFSET(Data).hour,
-                          PDBTIMESTAMPOFFSET(Data)^.minute, PDBTIMESTAMPOFFSET(Data)^.second,
-                          PDBTIMESTAMPOFFSET(Data)^.fraction, PAnsiChar(fByteBuffer),
+                        Len := {$IFDEF UNICODE}DateTimeToUni{$ELSE}DateTimeToRaw{$ENDIF}(
+                          Abs(PDBTIMESTAMPOFFSET(Data)^.year), PDBTIMESTAMPOFFSET(Data).month,
+                          PDBTIMESTAMPOFFSET(Data).day, PDBTIMESTAMPOFFSET(Data).hour, PDBTIMESTAMPOFFSET(Data)^.minute,
+                          PDBTIMESTAMPOFFSET(Data)^.second, PDBTIMESTAMPOFFSET(Data)^.fraction,
+                          {$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF}(fByteBuffer),
                           ConSettings.WriteFormatSettings.DateTimeFormat, True, PDBTimeStamp(Data)^.year < 0);
-                          SQLWriter.AddText(PAnsiChar(fByteBuffer), Len, Result);
+                          SQLWriter.AddText({$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF}(fByteBuffer), Len, Result);
                         end;
           else SQLWriter.AddText('(unknown)', Result);
         end;

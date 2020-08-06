@@ -134,6 +134,7 @@ type
     {$IFDEF ZEOS_TEST_ONLY}
     FTestMode: Byte;
     {$ENDIF}
+    FLogMessage: SQLString;
     procedure BeforeUrlAssign; virtual;
     procedure InternalCreate; virtual; abstract;
     procedure InternalClose; virtual; abstract;
@@ -146,6 +147,8 @@ type
     function GetClientVariantManager: IZClientVariantManager;
     procedure CheckCharEncoding(const CharSet: String; const DoArrange: Boolean = False);
     procedure OnPropertiesChange({%H-}Sender: TObject); virtual;
+    procedure LogError(const Category: TZLoggingCategory; ErrorCode: Integer;
+      const Sender: IImmediatelyReleasable; const Msg, Error: String);
 
     procedure SetOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
     procedure RegisterStatement(const Value: IZStatement);
@@ -433,17 +436,27 @@ const
       ({spFoxPro}     cUnknown,   cUnknown,   cUnknown)
     );
 
-  cCommit_A: RawByteString = 'COMMIT TRANSACTION';
-  cCommit_W: UnicodeString = 'COMMIT TRANSACTION';
-  cRollback_A: RawByteString = 'ROLLBACK TRANSACTION';
-  cRollback_W: UnicodeString = 'ROLLBACK TRANSACTION';
+  sCommitMsg = 'COMMIT TRANSACTION';
+  sRollbackMsg = 'ROLLBACK TRANSACTION';
+
+  sSessionTransactionIsolation: array[TZTransactIsolationLevel] of
+    String = (
+    'SET TRANSACTION ISOLATION LEVEL UNDEFINED',
+    'SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED',
+    'SET TRANSACTION ISOLATION LEVEL READ COMMITTED',
+    'SET TRANSACTION ISOLATION LEVEL REPEATABLE READ',
+    'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE');
+
+  cCommit_A: RawByteString = sCommitMsg;
+  cCommit_W: UnicodeString = sCommitMsg;
+  cRollback_A: RawByteString = sRollbackMsg;
+  cRollback_W: UnicodeString = sRollbackMsg;
 
 implementation
 
 uses ZMessages,{$IFNDEF TLIST_IS_DEPRECATED}ZSysUtils, {$ENDIF}
-  ZDbcMetadata, ZDbcUtils, ZEncoding, StrUtils,
-  ZDbcProperties, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}
-  {$IFDEF WITH_INLINE},ZFastCode{$ENDIF}
+  ZDbcMetadata, ZDbcUtils, ZEncoding, ZFastCode,
+  ZDbcProperties, StrUtils, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
   {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
@@ -813,10 +826,11 @@ begin
     SetNotEmptyFormat(Info.Values[ConnProps_DateReadFormat],
       DefDateFormatYMD,
       ConSettings^.ReadFormatSettings.DateFormat);
-
+    {$IFNDEF NO_AUTOENCODE}
     SetNotEmptyFormat(Info.Values[ConnProps_DateDisplayFormat],
       {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat,
       ConSettings^.DisplayFormatSettings.DateFormat);
+    {$ENDIF NO_AUTOENCODE}
 
     {time formats}
     SetNotEmptyFormat(Info.Values[ConnProps_TimeWriteFormat],
@@ -827,9 +841,11 @@ begin
       IfThen(GetMetaData.GetDatabaseInfo.SupportsMilliseconds, DefTimeFormatMsecs, DefTimeFormat),
       ConSettings^.ReadFormatSettings.TimeFormat);
 
+    {$IFNDEF NO_AUTOENCODE}
     SetNotEmptyFormat(Info.Values[ConnProps_TimeDisplayFormat],
       {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat,
       ConSettings^.DisplayFormatSettings.TimeFormat);
+    {$ENDIF NO_AUTOENCODE}
 
     {timestamp formats}
     SetNotEmptyFormat(Info.Values[ConnProps_DateTimeWriteFormat],
@@ -840,22 +856,30 @@ begin
       ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat,
       ConSettings^.ReadFormatSettings.DateTimeFormat);
 
+    {$IFNDEF NO_AUTOENCODE}
     SetNotEmptyFormat(Info.Values[ConnProps_DateTimeDisplayFormat],
       ConSettings^.DisplayFormatSettings.DateFormat+' '+ConSettings^.DisplayFormatSettings.TimeFormat,
       ConSettings^.DisplayFormatSettings.DateTimeFormat);
+    {$ENDIF NO_AUTOENCODE}
   end;
 
   ConSettings^.WriteFormatSettings.DateFormatLen := Length(ConSettings^.WriteFormatSettings.DateFormat);
   ConSettings^.ReadFormatSettings.DateFormatLen := Length(ConSettings^.ReadFormatSettings.DateFormat);
+  {$IFNDEF NO_AUTOENCODE}
   ConSettings^.DisplayFormatSettings.DateFormatLen := Length(ConSettings^.DisplayFormatSettings.DateFormat);
+  {$ENDIF NO_AUTOENCODE}
 
   ConSettings^.WriteFormatSettings.TimeFormatLen := Length(ConSettings^.WriteFormatSettings.TimeFormat);
   ConSettings^.ReadFormatSettings.TimeFormatLen := Length(ConSettings^.ReadFormatSettings.TimeFormat);
+  {$IFNDEF NO_AUTOENCODE}
   ConSettings^.DisplayFormatSettings.TimeFormatLen := Length(ConSettings^.DisplayFormatSettings.TimeFormat);
+  {$ENDIF NO_AUTOENCODE}
 
   ConSettings^.WriteFormatSettings.DateTimeFormatLen := Length(ConSettings^.WriteFormatSettings.DateTimeFormat);
   ConSettings^.ReadFormatSettings.DateTimeFormatLen := Length(ConSettings^.ReadFormatSettings.DateTimeFormat);
+  {$IFNDEF NO_AUTOENCODE}
   ConSettings^.DisplayFormatSettings.DateTimeFormatLen := Length(ConSettings^.DisplayFormatSettings.DateTimeFormat);
+  {$ENDIF NO_AUTOENCODE}
 end;
 
 procedure TZAbstractDbcConnection.SetOnConnectionLostErrorHandler(
@@ -1036,9 +1060,6 @@ begin
   FTransactIsolationLevel := tiNone;
   FUseMetadata := True;
   // should be set BEFORE InternalCreate
-  ConSettings^.Protocol := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FIZPlainDriver.GetProtocol);
-  ConSettings^.Database := ConSettings^.ConvFuncs.ZStringToRaw(FURL.Database, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-  ConSettings^.User := ConSettings^.ConvFuncs.ZStringToRaw(FURL.UserName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
   // now InternalCreate will work, since it will try to Open the connection
   InternalCreate;
 
@@ -1284,8 +1305,16 @@ end;
 }
 procedure TZAbstractDbcConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
+var CP: Word;
 begin
-  ExecuteImmediat(ZRawToUnicode(SQL, ConSettings.CTRL_CP), LoggingCategory);
+  {$IFDEF NO_AUTOENCODE}
+  if ConSettings.ClientCodePage.Encoding = ceUTF16
+  then CP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF}
+  else CP := ConSettings.ClientCodePage.CP;
+  {$ELSE NO_AUTOENCODE}
+  CP := ConSettings.CTRL_CP;
+  {$ENDIF NO_AUTOENCODE}
+  ExecuteImmediat(ZRawToUnicode(SQL, CP), LoggingCategory);
 end;
 
 {**
@@ -1469,6 +1498,21 @@ end;
 function TZAbstractDbcConnection.IsReadOnly: Boolean;
 begin
   Result := FReadOnly;
+end;
+
+procedure TZAbstractDbcConnection.LogError(const Category: TZLoggingCategory;
+  ErrorCode: Integer; const Sender: IImmediatelyReleasable; const Msg,
+  Error: String);
+var Stmt: IZStatement;
+    AMessage: String;
+begin
+  if (Sender <> nil) and (Sender.QueryInterface(IZStatement, Stmt) = S_OK) then begin
+    AMessage := 'Statement '+{$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Stmt.GetStatementId);
+    if Msg <> '' then
+      AMessage := AMessage+' : ';
+  end else AMessage := '';
+  AMessage := AMessage + Msg;
+  DriverManager.LogError(Category, URL.Protocol, AMessage, ErrorCode, Error);
 end;
 
 {**
@@ -2026,9 +2070,9 @@ begin
   Result.VType := vtRawByteString;
   case Value.VType of
     {$IFNDEF UNICODE}
-    vtString: if FConSettings.AutoEncode
+    vtString: {$IFNDEF NO_AUTOENCODE}if FConSettings.AutoEncode
               then ResTmp := ZConvertStringToRawWithAutoEncode(Value.VRawByteString, FCtrlsCP, FClientCP)
-              else ResTmp := Value.VRawByteString;
+              else {$ENDIF NO_AUTOENCODE}ResTmp := Value.VRawByteString;
     {$ENDIF}
     {$IFNDEF NO_ANSISTRING}
     vtAnsiString: if FClientCP = ZOSCodePage

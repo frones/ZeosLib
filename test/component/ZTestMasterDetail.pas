@@ -421,7 +421,7 @@ begin
     MasterQuery.Append;
     MasterQuery.FieldByName('dep_id').AsInteger := TestRowID;
     MasterQuery.FieldByName('dep_name').AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
-    MasterQuery.FieldByName('dep_shname').AsString := 'abc';
+    MasterQuery.FieldByName('dep_shname').AsString := 'ab''c';
     MasterQuery.FieldByName('dep_address').AsString := GetDBTestString(Str2, Connection.DbcConnection.GetConSettings);
 
     CheckEquals(True, (MasterQuery.State = dsInsert), 'MasterQuery Insert-State');

@@ -85,6 +85,9 @@ type
     function load_extension(zFile: PAnsiChar; zProc: Pointer; var pzErrMsg: PAnsiChar): Integer;
     function GetByteBufferAddress: PByteBuffer;
     function GetPlainDriver: TZSQLitePlainDriver;
+    procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
+      ErrorCode: Integer; const LogMessage: String;
+      const Sender: IImmediatelyReleasable);
   end;
 
   TSQLite3TransactionAction = (traBeginDEFERRED, traBeginIMMEDIATE, traBeginEXCLUSIVE, traCommit, traRollBack);
@@ -110,6 +113,9 @@ type
     function enable_load_extension(OnOff: Integer): Integer;
     function load_extension(zFile: PAnsiChar; zProc: Pointer; var pzErrMsg: PAnsiChar): Integer;
     function GetPlainDriver: TZSQLitePlainDriver;
+    procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
+      ErrorCode: Integer; const LogMessage: String;
+      const Sender: IImmediatelyReleasable);
   public
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareCallWithParams(const Name: String; Info: TStrings):
@@ -308,38 +314,37 @@ end;
 }
 procedure TZSQLiteConnection.Open;
 var
-  LogMessage: RawByteString;
   SQL: RawByteString;
   TmpInt: Integer;
-  Stmt: IZStatement;
 begin
   if not Closed then
     Exit;
 
-  LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
+  FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);
   {$IFDEF UNICODE}
   SQL := ZUnicodeToRaw(DataBase, zCP_UTF8);
   {$ELSE}
     {$IFDEF LCL}
     SQL := DataBase;
     {$ELSE}
-    if ZEncoding.ZDetectUTF8Encoding(Pointer(DataBase), Length(DataBase)) = etANSI
-    then PRawToRawConvert(Pointer(DataBase), Length(DataBase), zOSCodePage, zCP_UTF8, SQL)
-    else SQL := DataBase;
+    if ZEncoding.ZDetectUTF8Encoding(Pointer(DataBase), Length(DataBase)) = etANSI then begin
+      SQL := '';
+      PRawToRawConvert(Pointer(DataBase), Length(DataBase), zOSCodePage, zCP_UTF8, SQL)
+    end else SQL := DataBase;
     {$ENDIF}
   {$ENDIF}
   //patch by omaga software see https://sourceforge.net/p/zeoslib/tickets/312/
   TmpInt := FPlainDriver.sqlite3_open(Pointer(SQL), FHandle);
   if TmpInt <> SQLITE_OK then
-    CheckSQLiteError(FPlainDriver, FHandle, TmpInt, lcConnect, LogMessage, ConSettings);
-  DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
-
+    HandleErrorOrWarning(lcConnect, TmpInt, FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
   { Turn on encryption if requested }
   if StrToBoolEx(Info.Values[ConnProps_Encrypted]) and Assigned(FPlainDriver.sqlite3_key) and (Password <> '') then begin
     SQL := {$IFDEF UNICODE}UTF8String{$ENDIF}(Password);
-    CheckSQLiteError(FPlainDriver, FHandle,
-      FPlainDriver.sqlite3_key(FHandle, Pointer(SQL), Length(SQL)),
-      lcConnect, 'SQLite.Key', ConSettings);
+    TmpInt := FPlainDriver.sqlite3_key(FHandle, Pointer(SQL), Length(SQL));
+    if TmpInt <> SQLITE_OK then
+      HandleErrorOrWarning(lcConnect, TmpInt, 'SQLite.Key', IImmediatelyReleasable(FWeakImmediatRelPtr));
   end;
 
   { Set busy timeout if requested }
@@ -349,30 +354,29 @@ begin
 
   inherited Open;
 
-  Stmt := TZSQLiteStatement.Create(Self, Info);
   { pimp performance }
-  Stmt.ExecuteUpdate('PRAGMA cache_size = '+IntToRaw(StrToIntDef(Info.Values[ConnProps_CacheSize], 10000)));
+  ExecuteImmediat('PRAGMA cache_size = '+IntToRaw(StrToIntDef(Info.Values[ConnProps_CacheSize], 10000)), lcExecute);
 
   //see http://www.sqlite.org/pragma.html#pragma_synchronous
   //0 brings best performance
   if Info.Values[ConnProps_Synchronous] <> '' then
-    Stmt.ExecuteUpdate('PRAGMA synchronous = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values[ConnProps_Synchronous]));
+    ExecuteImmediat('PRAGMA synchronous = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values[ConnProps_Synchronous]), lcExecute);
 
   //see http://www.sqlite.org/pragma.html#pragma_locking_mode
   //EXCLUSIVE brings best performance
   if Info.Values[ConnProps_LockingMode] <> '' then
-    Stmt.ExecuteUpdate('PRAGMA locking_mode = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values[ConnProps_LockingMode]));
+    ExecuteImmediat('PRAGMA locking_mode = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values[ConnProps_LockingMode]), lcExecute);
 
   if Info.Values[ConnProps_journal_mode] <> '' then
-    Stmt.ExecuteUpdate('PRAGMA journal_mode = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values[ConnProps_journal_mode]));
+    ExecuteImmediat('PRAGMA journal_mode = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values[ConnProps_journal_mode]), lcExecute);
 
   if ( FClientCodePage <> '' ) and (FClientCodePage <> 'UTF-8') then
-    Stmt.ExecuteUpdate('PRAGMA encoding = '''+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FClientCodePage)+'''');
+    ExecuteImmediat('PRAGMA encoding = '''+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FClientCodePage)+'''', lcExecute);
 
-  Stmt.ExecuteUpdate('PRAGMA show_datatypes = ON');
+  ExecuteImmediat(RawByteString('PRAGMA show_datatypes = ON'), lcExecute);
 
   if Info.Values[ConnProps_ForeignKeys] <> '' then
-    Stmt.ExecuteUpdate('PRAGMA foreign_keys = '+BoolStrIntsRaw[StrToBoolEx(Info.Values[ConnProps_ForeignKeys])] );
+    ExecuteImmediat('PRAGMA foreign_keys = '+BoolStrIntsRaw[StrToBoolEx(Info.Values[ConnProps_ForeignKeys])], lcExecute);
   if not AutoCommit then begin
     AutoCommit := True;
     SetAutoCommit(False);
@@ -485,25 +489,30 @@ procedure TZSQLiteConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory; var Stmt: Psqlite3_stmt);
 var PZTail: PAnsiChar;
   Status: Integer;
+  LogSQL: String;
 begin
+  {$IFDEF UNICODE}
+  LogSQL := ZRawToUnicode(SQL, zCP_UTF8);
+  {$ELSE}
+  LogSQL := SQL;
+  {$ENDIF}
   if Pointer(SQL) = nil then
     Exit;
   if Stmt = nil then begin
     Status := FPlainDriver.sqlite3_prepare_v2(FHandle,
       Pointer(SQL), Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, Stmt, pZTail);
     if (Status <> SQLITE_OK) and (Status <> SQLITE_DONE) then
-      CheckSQLiteError(FPlainDriver, FHandle, Status, lcPrepStmt,
-        SQL, ConSettings)
+      HandleErrorOrWarning(lcPrepStmt, Status, LogSQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
   end;
   Status := FPlainDriver.sqlite3_step(Stmt);
   try
     if (Status <> SQLITE_OK) and (Status <> SQLITE_DONE) then
-      CheckSQLiteError(FPlainDriver, FHandle, Status, LoggingCategory, SQL, ConSettings)
+      HandleErrorOrWarning(LoggingCategory, Status, LogSQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
   finally
     FPlainDriver.sqlite3_reset(Stmt);
-    if Assigned(DriverManager) and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
   end;
+  if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(LoggingCategory, URL.Protocol, LogSQL);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -518,7 +527,9 @@ begin
   finally
     if Stmt <> nil then begin
       Status := FPlainDriver.sqlite3_finalize(Stmt);
-      CheckSQLiteError(FPlainDriver, FHandle, Status, LoggingCategory, SQL, ConSettings);
+      if Status <> SQLITE_OK then
+        HandleErrorOrWarning(lcUnprepStmt, Status, 'sqlite3_finalize',
+          IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
   end;
 end;
@@ -529,6 +540,89 @@ end;
 function TZSQLiteConnection.GetUndefinedVarcharAsStringLength: Integer;
 begin
   Result := FUndefinedVarcharAsStringLength;
+end;
+
+{**
+  Checks for possible sql errors.
+  @param LogCategory a logging category.
+  @param ErrorCode an error code.
+  @param LogMessage a logging message.
+}
+procedure TZSQLiteConnection.HandleErrorOrWarning(
+  LogCategory: TZLoggingCategory; ErrorCode: Integer; const LogMessage: String;
+  const Sender: IImmediatelyReleasable);
+var
+  ErrorStr, ErrorMsg: SQLString;
+  P: PAnsiChar;
+  L: NativeUInt;
+begin
+  if (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then Exit;
+  ErrorMsg := '';
+  ErrorStr := '';
+  if Assigned(FPlainDriver.sqlite3_extended_errcode) then
+    ErrorCode := FPlainDriver.sqlite3_extended_errcode(FHandle);
+  if ( FHandle <> nil ) and ( Assigned(FPlainDriver.sqlite3_errstr) ) then begin
+    P := FPlainDriver.sqlite3_errstr(ErrorCode);
+    if P <> nil then begin
+      L := StrLen(P);
+      ZSysUtils.Trim(L, P);
+    end else L := 0;
+    ZSysUtils.Trim(L, P);
+    {$IFDEF UNICODE}
+    ErrorStr := PRawToUnicode(P, L, zCP_UTF8);
+    {$ELSE}
+    ZSetString(P, L, ErrorStr{$IFDEF WITH_RAWBYTESTRING}, zCP_UTF8{$ENDIF});
+    {$ENDIF}
+  end;
+  if ErrorStr = '' then
+    case ErrorCode of
+      SQLITE_OK:          ErrorStr := 'not an error';
+      SQLITE_ERROR:       ErrorStr := 'SQL logic error or missing database';
+      SQLITE_INTERNAL:    ErrorStr := 'internal SQLite implementation flaw';
+      SQLITE_PERM:        ErrorStr := 'access permission denied';
+      SQLITE_ABORT:       ErrorStr := 'callback requested query abort';
+      SQLITE_BUSY:        ErrorStr := 'database is locked';
+      SQLITE_LOCKED:      ErrorStr := 'database table is locked';
+      SQLITE_NOMEM:       ErrorStr := 'out of memory';
+      SQLITE_READONLY:    ErrorStr := 'attempt to write a readonly database';
+      SQLITE_INTERRUPT:   ErrorStr := 'interrupted';
+      SQLITE_IOERR:       ErrorStr := 'disk I/O error';
+      SQLITE_CORRUPT:     ErrorStr := 'database disk image is malformed';
+      SQLITE_NOTFOUND:    ErrorStr := 'table or record not found';
+      SQLITE_FULL:        ErrorStr := 'database is full';
+      SQLITE_CANTOPEN:    ErrorStr := 'unable to open database file';
+      SQLITE_PROTOCOL:    ErrorStr := 'database locking protocol failure';
+      SQLITE_EMPTY:       ErrorStr := 'table contains no data';
+      SQLITE_SCHEMA:      ErrorStr := 'database schema has changed';
+      SQLITE_TOOBIG:      ErrorStr := 'too much data for one table row';
+      SQLITE_CONSTRAINT:  ErrorStr := 'constraint failed';
+      SQLITE_MISMATCH:    ErrorStr := 'datatype mismatch';
+      SQLITE_MISUSE:      ErrorStr := 'library routine called out of sequence';
+      SQLITE_NOLFS:       ErrorStr := 'kernel lacks large file support';
+      SQLITE_AUTH:        ErrorStr := 'authorization denied';
+      SQLITE_FORMAT:      ErrorStr := 'auxiliary database format error';
+      SQLITE_RANGE:       ErrorStr := 'bind index out of range';
+      SQLITE_NOTADB:      ErrorStr := 'file is encrypted or is not a database';
+      else                ErrorStr := 'unknown error';
+    end
+  else if ( FHandle <> nil ) and ( Assigned(FPlainDriver.sqlite3_errmsg) ) then begin
+    P := FPlainDriver.sqlite3_errmsg(FHandle);
+    if P <> nil then begin
+      L := StrLen(P);
+      ZSysUtils.Trim(L, P);
+    end else L := 0;
+    ZSysUtils.Trim(L, P);
+    {$IFDEF UNICODE}
+    ErrorMsg := PRawToUnicode(P, L, zCP_UTF8);
+    {$ELSE}
+    ZSetString(P, L, ErrorMsg{$IFDEF WITH_RAWBYTESTRING}, zCP_UTF8{$ENDIF});
+    {$ENDIF}
+  end;
+  if ErrorMsg <> '' then
+    ErrorStr := 'Error: '+ErrorStr+LineEnding+'Message: '+ErrorMsg;
+  if DriverManager.HasLoggingListener then
+    LogError(LogCategory, ErrorCode, Sender, LogMessage, ErrorStr);
+  raise EZSQLException.CreateWithCode(ErrorCode, Format(SSQLError1, [ErrorStr]));
 end;
 
 {**
@@ -605,7 +699,6 @@ end;
 }
 procedure TZSQLiteConnection.InternalClose;
 var
-  LogMessage: RawByteString;
   ErrorCode: Integer;
   TransactionAction: TSQLite3TransactionAction;
 begin
@@ -618,7 +711,7 @@ begin
       ExecuteImmediat(cTransactionActionStmt[traRollBack], lcTransaction, FTransactionStmts[traRollBack]);
     end;
   finally
-    LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
+    FLogMessage := 'DISCONNECT FROM "'+URL.Database+'"';
     for TransactionAction := low(TSQLite3TransactionAction) to high(TSQLite3TransactionAction) do
       if FTransactionStmts[TransactionAction] <> nil then begin
         FPlainDriver.sqlite3_finalize(FTransactionStmts[TransactionAction]);
@@ -626,10 +719,10 @@ begin
       end;
     ErrorCode := FPlainDriver.sqlite3_close(FHandle);
     FHandle := nil;
-    CheckSQLiteError(FPlainDriver, FHandle, ErrorCode,
-      lcOther, LogMessage, ConSettings);
-    if Assigned(DriverManager) and DriverManager.HasLoggingListener then //thread save
-      DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
+    if ErrorCode <> SQLITE_OK then
+      HandleErrorOrWarning(lcConnect, ErrorCode, FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
+    if DriverManager.HasLoggingListener then //thread save
+      DriverManager.LogMessage(lcDisconnect, URL.Protocol, FLogMessage);
   end;
 end;
 

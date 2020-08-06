@@ -288,10 +288,6 @@ procedure TZOleDBConnection.ExecuteImmediat(const SQL: UnicodeString;
 var Cmd: ICommandText;
   pParams: TDBPARAMS;
   Status: HResult;
-  procedure DoLog;
-  begin
-    DriverManager.LogMessage(LoggingCategory, ConSettings.Protocol, ZUnicodeToRaw(SQL, zCP_UTF8));
-  end;
 begin
   Cmd := CreateCommand;
   FillChar(pParams, SizeOf(TDBParams), #0);
@@ -301,8 +297,14 @@ begin
   Status := Cmd.Execute(nil, DB_NULLGUID,pParams,nil,nil);
   if Status <> S_OK then
      HandleErrorOrWarning(Status, LoggingCategory, SQL, Self, nil)
-  else if DriverManager.HasLoggingListener then
-    DoLog;
+  else if DriverManager.HasLoggingListener then begin
+    {$IFDEF UNICODE}
+    DriverManager.LogMessage(LoggingCategory, URL.Protocol, SQL);
+    {$ELSE}
+    FLogMessage := ZUnicodeToRaw(SQL, zCP_UTF8);
+    DriverManager.LogMessage(LoggingCategory, URL.Protocol, FLogMessage);
+    {$ENDIF}
+  end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -734,8 +736,9 @@ begin
       {$ENDIF UNICODE}
       if IsError(Status) then begin // raise exception
         if DriverManager.HasLoggingListener then begin
-          DriverManager.LogError(LoggingCategory, ConSettings.Protocol,
-            ZUnicodeToRaw(Msg, zCP_UTF8), FirstErrorCode, ZUnicodeToRaw(OleDBErrorMessage, zCP_UTF8));
+          LogError(LoggingCategory, FirstErrorCode, Sender,
+            {$IFDEF UNICODE}Msg{$ELSE}ZUnicodeToRaw(Msg, zCP_UTF8){$ENDIF},
+            {$IFDEF UNICODE}OleDBErrorMessage{$ELSE}ZUnicodeToRaw(OleDBErrorMessage, zCP_UTF8){$ENDIF});
           if (Msg <> '') then begin
             Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
             Writer.AddText('SQL: ', OleDBErrorMessage);
@@ -755,7 +758,8 @@ begin
           raise Exception;
       end else begin
         if DriverManager.HasLoggingListener then
-          DriverManager.LogMessage(LoggingCategory, ConSettings.Protocol, ZUnicodeToRaw(OleDBErrorMessage, zCP_UTF8));
+          DriverManager.LogMessage(LoggingCategory, URL.Protocol,
+            {$IFDEF UNICODE}OleDBErrorMessage{$ELSE}ZUnicodeToRaw(OleDBErrorMessage, zCP_UTF8){$ENDIF});
         ClearWarnings;
         {$IFNDEF UNICODE}
         FLastWarning := EZSQLWarning.CreateWithCodeAndStatus(FirstErrorCode, ZUnicodeToRaw(FirstSQLState, CP), ZUnicodeToRaw(OleDBErrorMessage, CP));
@@ -1030,8 +1034,11 @@ begin
         Close;
       end;
     end;
-    DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
-      'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"');
+    if DriverManager.HasLoggingListener then begin
+      FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);
+      DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
+      FLogMessage := '';
+    end;
     if not AutoCommit then begin
       AutoCommit := True;
       SetAutoCommit(False);;
@@ -1153,9 +1160,9 @@ begin
       HandleErrorOrWarning(Status, lcDisconnect, 'DBInitialize.Uninitialize', Self, nil);
   finally
     fDBInitialize := nil;
+    FLogMessage := 'DISCONNECT FROM "'+URL.Database+'"';
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,
-        'DISCONNECT FROM "'+ConSettings^.Database+'"');
+      DriverManager.LogMessage(lcDisconnect, URL.Protocol, FLogMessage);
   end;
 end;
 

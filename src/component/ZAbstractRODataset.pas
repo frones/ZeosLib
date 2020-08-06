@@ -2610,6 +2610,7 @@ var
     then CachedResultSet.MoveToInitialRow
     else ResultSet.MoveToCurrentRow;
   end;
+label jmpSeek;
 begin
   RowBuffer := nil;
   case State of
@@ -2644,13 +2645,14 @@ begin
           RowAccessor.RowBuffer := RowBuffer;
           RowAccessor.Clear;
           if (ResultSet.GetRow = RowNo) or ResultSet.MoveAbsolute(RowNo) then begin
-            if (State = dsOldValue)
-            then TryMoveToInitialRow
-            else ResultSet.MoveToCurrentRow;
             RowBuffer.Index := RowNo;
+            goto jmpSeek;
           end else
             RowBuffer := nil;
-        end;
+        end else
+jmpSeek:  if (State = dsOldValue)
+          then TryMoveToInitialRow
+          else ResultSet.MoveToCurrentRow;
       end;
     {$IFDEF FPC}else; {$ENDIF}
   end;

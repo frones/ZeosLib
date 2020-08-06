@@ -151,7 +151,7 @@ type
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); override;
     procedure BindRawStr(Index: Integer; const Value: RawByteString); override;
     procedure BindInParameters; override;
-    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZRawSQLStringWriter; Var Result: RawByteString); override;
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
   public
     //a performance thing: direct dispatched methods for the interfaces :
     //https://stackoverflow.com/questions/36137977/are-interface-methods-always-virtual
@@ -242,8 +242,10 @@ procedure TZAbstractMySQLPreparedStatement.CheckParameterIndex(var Value: Intege
 begin
   if ((FMYSQL_STMT <> nil) and (BindList.Count < Value+1)) or
      ((FMYSQL_STMT =  nil) and (BindList.Capacity < Value+1))
-  then raise EZSQLException.Create(SInvalidInputParameterCount)
-  else inherited CheckParameterIndex(Value);
+  then begin
+    {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := Format(SBindVarOutOfRange, [Value]);
+    raise EZSQLException.Create({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
+  end else inherited CheckParameterIndex(Value);
 end;
 
 function TZAbstractMySQLPreparedStatement.CheckPrepareSwitchMode: Boolean;
@@ -298,9 +300,7 @@ begin
       Bind^.buffer_address^ := Bind.buffer;
     end;
     if FPlainDriver.mysql_stmt_attr_set517up(FMYSQL_STMT, STMT_ATTR_ARRAY_SIZE, @array_size) <> 0 then begin
-      FRawTemp := ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
-        ConSettings^.ClientCodePage^.CP);
-      FMySQLConnection.HandleErrorOrWarning(lcOther, FMYSQL_STMT, FRawTemp,
+      FMySQLConnection.HandleErrorOrWarning(lcOther, FMYSQL_STMT, SBindingFailure,
         IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
   end;
@@ -477,7 +477,7 @@ begin
       if Assigned(FPlainDriver.mysql_next_result) and Assigned(FPMYSQL^) then begin
         Status := FPlainDriver.mysql_next_result(FPMYSQL^);
         if Status > 0 //if status is -1 then there are no more resuls
-        then FMySQLConnection.HandleErrorOrWarning(lcExecute, nil, fASQL,
+        then FMySQLConnection.HandleErrorOrWarning(lcExecute, nil, SQL,
           IImmediatelyReleasable(FWeakImmediatRelPtr))
         else if Status = 0 then begin //results are in queue
           Result := True;
@@ -491,7 +491,7 @@ begin
     end else if Assigned(FPlainDriver.mysql_stmt_next_result) and Assigned(FMYSQL_STMT) then begin
       Status := FPlainDriver.mysql_stmt_next_result(FMYSQL_STMT);
       if Status > 0 //if status is -1 then there are no more resuls
-      then FMySQLConnection.HandleErrorOrWarning(lcExecute, FMYSQL_STMT, fASQL,
+      then FMySQLConnection.HandleErrorOrWarning(lcExecute, FMYSQL_STMT, SQL,
         IImmediatelyReleasable(FWeakImmediatRelPtr))
       else if Status = 0 then begin //results are in queue
         Result := True;
@@ -723,7 +723,7 @@ var
         end;
       FOpenResultSet := Pointer(Result);
     end else
-      FMySQLConnection.HandleErrorOrWarning(lcExecute, nil, RSQL,
+      FMySQLConnection.HandleErrorOrWarning(lcExecute, nil, SQL,
         IImmediatelyReleasable(FWeakImmediatRelPtr));
     Inc(FExecCount, Ord((FMinExecCount2Prepare >= 0) and (FExecCount < FMinExecCount2Prepare)));
     CheckPrepareSwitchMode;
@@ -760,12 +760,9 @@ begin
       end else
         Result := CreateResultSet(SQL, 0, FieldCount);
       FOpenResultSet := Pointer(Result);
-    end else begin
-      FRawTemp := ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
-        ConSettings^.ClientCodePage^.CP);
+    end else
       FMySQLConnection.HandleErrorOrWarning(lcExecPrepStmt, FMYSQL_STMT,
-        FRawTemp, IImmediatelyReleasable(FWeakImmediatRelPtr));
-    end;
+        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
   end;
   if (Result = nil) and not FMySQLConnection.IsSilentError then
     raise EZSQLException.Create(SCanNotOpenResultSet);
@@ -804,7 +801,7 @@ function TZAbstractMySQLPreparedStatement.ExecuteUpdatePrepared: Integer;
         then FOutParamResultSet := CreateResultSet(SQL, 0, FieldCount)
         else LastResultSet := CreateResultSet(SQL, 0, FieldCount);
     end else
-      FMySQLConnection.HandleErrorOrWarning(lcExecute, nil, RSQL,
+      FMySQLConnection.HandleErrorOrWarning(lcExecute, nil, SQL,
         IImmediatelyReleasable(FWeakImmediatRelPtr));
     Inc(FExecCount, Ord((FMinExecCount2Prepare >= 0) and (FExecCount < FMinExecCount2Prepare)));
     CheckPrepareSwitchMode;
@@ -834,12 +831,9 @@ begin
         if BindList.HasReturnParam //retrieve outparam
         then FOutParamResultSet := CreateResultSet(SQL, 0, FieldCount)
         else LastResultSet := CreateResultSet(SQL, 0, FieldCount);
-    end else begin
-      FRawTemp := ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
-          ConSettings^.ClientCodePage^.CP);
+    end else
       FMySQLConnection.HandleErrorOrWarning(lcExecPrepStmt, FMYSQL_STMT,
-        FRawTemp, IImmediatelyReleasable(FWeakImmediatRelPtr));
-    end;
+        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
   end;
   Result := LastUpdateCount;
 end;
@@ -888,7 +882,7 @@ begin
           FPlainDriver.mysql_free_result(FQueryHandle);
         end;
       end else if (Status > 0) then begin
-        FMySQLConnection.HandleErrorOrWarning(lcExecute, nil, ASQL,
+        FMySQLConnection.HandleErrorOrWarning(lcExecute, nil, SQL,
           IImmediatelyReleasable(FWeakImmediatRelPtr));
         Break;
       end;
@@ -905,10 +899,8 @@ begin
             goto jmpCheckErr
       end else if (Status > 0) then begin
 jmpCheckErr:
-        FRawTemp := ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
-            ConSettings^.ClientCodePage^.CP);
         FMySQLConnection.HandleErrorOrWarning(lcExecPrepStmt, FMYSQL_STMT,
-          FRawTemp, IImmediatelyReleasable(FWeakImmediatRelPtr));
+          SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
         Break;
       end;
     end;
@@ -944,7 +936,7 @@ var
         else LastResultSet := nil;
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcExecute,Self);
-    end else FMySQLConnection.HandleErrorOrWarning(lcExecute, nil, RSQL,
+    end else FMySQLConnection.HandleErrorOrWarning(lcExecute, nil, SQL,
       IImmediatelyReleasable(FWeakImmediatRelPtr));
     Inc(FExecCount, Ord((FMinExecCount2Prepare >= 0) and (FExecCount < FMinExecCount2Prepare)));
     CheckPrepareSwitchMode;
@@ -976,12 +968,8 @@ begin
         then LastResultSet := CreateResultSet(SQL, 0, FieldCount)
         else LastResultSet := nil;
       end;
-    end else begin
-      FRawTemp := ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
-          ConSettings^.ClientCodePage^.CP);
-      FMySQLConnection.HandleErrorOrWarning(lcExecPrepStmt, FMYSQL_STMT,
-        FRawTemp, IImmediatelyReleasable(FWeakImmediatRelPtr));
-    end;
+    end else FMySQLConnection.HandleErrorOrWarning(lcExecPrepStmt, FMYSQL_STMT,
+      SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
   end;
   if BindList.HasReturnParam then begin
     FOutParamResultset := Connection.GetMetadata.CloneCachedResultSet(FLastResultSet);
@@ -1138,12 +1126,9 @@ begin
     FMYSQL_STMT := FPlainDriver.mysql_stmt_init(FPMYSQL^);
   FBindAgain := True;
   FStmtHandleIsExecuted := False;
-  if (FPlainDriver.mysql_stmt_prepare(FMYSQL_STMT, Pointer(FASQL), length(FASQL)) <> 0) then begin
-    FRawTemp := ConvertZMsgToRaw(SFailedtoPrepareStmt,
-      ZMessages.cCodePage, ConSettings^.ClientCodePage^.CP);
-    FMySQLConnection.HandleErrorOrWarning(lcPrepStmt, FMYSQL_STMT, FASQL,
+  if (FPlainDriver.mysql_stmt_prepare(FMYSQL_STMT, Pointer(FASQL), length(FASQL)) <> 0) then
+    FMySQLConnection.HandleErrorOrWarning(lcPrepStmt, FMYSQL_STMT, SQL,
       IImmediatelyReleasable(FWeakImmediatRelPtr));
-  end;
   //see user comment: http://dev.mysql.com/doc/refman/5.0/en/mysql-stmt-fetch.html
   //"If you want work with more than one statement simultaneously, anidated select,
   //for example, you must declare CURSOR_TYPE_READ_ONLY the statement after just prepared this.!"
@@ -1406,17 +1391,13 @@ begin
       //set array_size first: https://mariadb.com/kb/en/library/bulk-insert-column-wise-binding/
       array_size := BatchDMLArrayCount;
       if FPlainDriver.mysql_stmt_attr_set517up(FMYSQL_STMT, STMT_ATTR_ARRAY_SIZE, @array_size) <> 0 then begin
-        FRawTemp := ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
-          ConSettings^.ClientCodePage^.CP);
         FMySQLConnection.HandleErrorOrWarning(lcBindPrepStmt, FMYSQL_STMT,
-          FRawTemp, IImmediatelyReleasable(FWeakImmediatRelPtr));
+          {$IFDEF DEBUG}'mysql_stmt_attr_set'{$ELSE}''{$ENDIF}, IImmediatelyReleasable(FWeakImmediatRelPtr));
       end;
     end;
     if (FPlainDriver.mysql_stmt_bind_param(FMYSQL_STMT, PAnsichar(FMYSQL_BINDs)+(Ord(BindList.HasReturnParam)*FBindOffset.size)) <> 0) then
-      FRawTemp := ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
-        ConSettings^.ClientCodePage^.CP);
       FMySQLConnection.HandleErrorOrWarning(lcBindPrepStmt, FMYSQL_STMT,
-        FRawTemp, IImmediatelyReleasable(FWeakImmediatRelPtr));
+        SBindingFailure, IImmediatelyReleasable(FWeakImmediatRelPtr));
       FBindAgain := False;
   end;
   inherited BindInParameters;
@@ -1433,10 +1414,8 @@ begin
           if OffSet+PieceSize > Len then
             PieceSize := Len - OffSet;
           if (FPlainDriver.mysql_stmt_send_long_data(FMYSQL_STMT, I, P, PieceSize) <> 0) then begin
-            FRawTemp := ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
-              ConSettings^.ClientCodePage^.CP);
-            FMySQLConnection.HandleErrorOrWarning(lcExecute, FMYSQL_STMT,
-              FRawTemp, IImmediatelyReleasable(FWeakImmediatRelPtr));
+            FMySQLConnection.HandleErrorOrWarning(lcBindPrepStmt, FMYSQL_STMT,
+              SBindingFailure, IImmediatelyReleasable(FWeakImmediatRelPtr));
             exit;
           end else Inc(P, PieceSize);
           Inc(OffSet, PieceSize);
@@ -2267,7 +2246,7 @@ end;
   @param x the parameter value
 }
 procedure TZMySQLPreparedStatement.AddParamLogValue(ParamIndex: Integer;
-  SQLWriter: TZRawSQLStringWriter; var Result: RawByteString);
+  SQLWriter: TZSQLStringWriter; var Result: SQLString);
 var
   Bind: PMYSQL_aligned_BIND;
   TmpDateTime, TmpDateTime2: TDateTime;
@@ -2276,9 +2255,21 @@ begin
   if FEmulatedParams then
     if BindList[ParamIndex].SQLType in [stAsciiStream, stUnicodeStream]
     then SQLWriter.AddText('(CLOB)', Result)
-    else if BindList[ParamIndex].SQLType = stBinaryStream
-      then SQLWriter.AddText('(BLOB)', Result)
-      else SQLWriter.AddText(FEmulatedValues[ParamIndex], Result)
+    else if BindList[ParamIndex].SQLType = stBinaryStream then
+      SQLWriter.AddText('(BLOB)', Result)
+    else if BindList[ParamIndex].SQLType = stAsciiStream then
+      SQLWriter.AddText('(CLOB)', Result)
+    {$IFDEF UNICODE}
+    else if Ord(BindList[ParamIndex].SQLType) < Ord(stString) then
+      SQLWriter.AddAscii7Text(Pointer(FEmulatedValues[ParamIndex]), Length(FEmulatedValues[ParamIndex]), Result)
+    else begin
+      FUniTemp := ZRawToUnicode(FEmulatedValues[ParamIndex], FClientCP);
+      SQLWriter.AddText(FUniTemp, Result);
+      FUniTemp := '';
+    end
+    {$ELSE}
+    else SQLWriter.AddText(FEmulatedValues[ParamIndex], Result)
+    {$ENDIF}
   else begin
     {$R-}
     Bind := @FMYSQL_aligned_BINDs[ParamIndex];
@@ -2344,10 +2335,22 @@ begin
       FIELD_TYPE_YEAR:
         SQLWriter.AddOrd(PWord(Bind^.buffer_address^)^, Result);
       FIELD_TYPE_NEWDECIMAL:
+        {$IFDEF UNICODE}
+        SQLWriter.AddAscii7Text(PAnsiChar(Bind^.buffer), Bind^.length[0], Result);
+        {$ELSE}
         SQLWriter.AddText(PAnsiChar(Bind^.buffer), Bind^.length[0], Result);
+        {$ENDIF}
       FIELD_TYPE_STRING: if BindList[ParamIndex].SQLType in [stAsciiStream, stUnicodeStream]
           then SQLWriter.AddText('(CLOB)', Result)
+          {$IFDEF UNICODE}
+          else begin
+            FUniTemp := PRawToUnicode(PAnsiChar(Bind^.buffer), Bind^.length[0], FClientCP);
+            SQLWriter.AddTextQuoted(FUniTemp, #39, Result);
+            FUniTemp := '';
+          end;
+          {$ELSE}
           else SQLWriter.AddTextQuoted(PAnsiChar(Bind^.buffer), Bind^.length[0], AnsiChar(#39), Result);
+          {$ENDIF}
       FIELD_TYPE_TINY_BLOB: SQLWriter.AddHexBinary(Bind^.buffer, Bind^.length[0], False, Result);
       FIELD_TYPE_BLOB: SQLWriter.AddText('(BLOB)', Result);
       else SQLWriter.AddText('(UNKNOWN)', Result);
@@ -2746,9 +2749,16 @@ begin
   I := Length(SQL);
   if i = 4 then //no inparams ?
     Exit;
-  if FplainDriver.mysql_real_query(Stmt.FPMYSQL^, Pointer(SQL), I-1) <> 0 then
+  if FplainDriver.mysql_real_query(Stmt.FPMYSQL^, Pointer(SQL), I-1) <> 0 then begin
+    {$IFDEF UNICODE}
+    FUniTemp := ZRawToUnicode(SQL, FClientCP);
+    Stmt.FMySQLConnection.HandleErrorOrWarning(lcExecute, nil, FUniTemp,
+      IImmediatelyReleasable(FWeakImmediatRelPtr));
+    {$ELSE}
     Stmt.FMySQLConnection.HandleErrorOrWarning(lcExecute, nil, SQL,
       IImmediatelyReleasable(FWeakImmediatRelPtr));
+    {$ENDIF}
+  end;
 end;
 
 function TZMySQLCallableStatement56down.CreateExecutionStatement(

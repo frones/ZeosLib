@@ -90,13 +90,7 @@ type
     function GetByteBufferAddress: PByteBuffer;
 
     procedure HandleErrorOrWarning(ErrorHandle: POCIError; Status: sword;
-      LogCategory: TZLoggingCategory; const LogMessage: String;
-      const Sender: IImmediatelyReleasable);
-    procedure HandleErrorOrWarningA(ErrorHandle: POCIError; Status: sword;
-      LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-      const Sender: IImmediatelyReleasable);
-    procedure HandleErrorOrWarningW(ErrorHandle: POCIError; Status: sword;
-      LogCategory: TZLoggingCategory; const LogMessage: UnicodeString;
+      LogCategory: TZLoggingCategory; const LogMessage: SQLString;
       const Sender: IImmediatelyReleasable);
   end;
 
@@ -131,9 +125,6 @@ type
     procedure ExecuteImmediat(const SQL: RawByteString; var Stmt: POCIStmt; LoggingCategory: TZLoggingCategory); overload;
     procedure ExecuteImmediat(const SQL: UnicodeString; var Stmt: POCIStmt; LoggingCategory: TZLoggingCategory); overload;
     procedure InternalSetCatalog(const Catalog: String);
-    {$IFDEF UNICODE}
-    procedure LogW(LoggingCategory: TZLoggingCategory; const logMessage: UnicodeString);
-    {$ENDIF UNICODE}
   protected
     procedure InternalCreate; override;
     procedure InternalClose; override;
@@ -181,13 +172,7 @@ type
     function GetPlainDriver: TZOraclePlainDriver;
 
     procedure HandleErrorOrWarning(ErrorHandle: POCIError; Status: sword;
-      LogCategory: TZLoggingCategory; const LogMessage: String;
-      const Sender: IImmediatelyReleasable);
-    procedure HandleErrorOrWarningA(ErrorHandle: POCIError; Status: sword;
-      LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
-      const Sender: IImmediatelyReleasable);
-    procedure HandleErrorOrWarningW(ErrorHandle: POCIError; Status: sword;
-      LogCategory: TZLoggingCategory; const LogMessage: UnicodeString;
+      LogCategory: TZLoggingCategory; const LogMessage: SQLString;
       const Sender: IImmediatelyReleasable);
   public
     function GetClientVersion: Integer; override;
@@ -375,16 +360,6 @@ begin
   ExecuteImmediat('ALTER SESSION SET CURRENT_SCHEMA = '+Catalog, lcOther);
 end;
 
-{$IFDEF UNICODE}
-procedure TZOracleConnection.LogW(LoggingCategory: TZLoggingCategory;
-  const logMessage: UnicodeString);
-var R: RawByteString;
-begin
-  R := ZUnicodeToRaw(logMessage, ConSettings.CTRL_CP);
-  DriverManager.LogMessage(LoggingCategory, ConSettings.Protocol, R);
-end;
-{$ENDIF UNICODE}
-
 procedure TZOracleConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 var Stmt: POCIStmt;
@@ -399,9 +374,9 @@ begin
     finally
       if Stmt <> nil then begin
         Status := FPlainDriver.OCIHandleFree(Stmt, OCI_HTYPE_STMT);
-        if not Status in [OCI_SUCCESS, OCI_NO_DATA] then
-          HandleErrorOrWarningA(FErrorHandle, Status, LoggingCategory,
-            SQL, Self);
+        if Status <> OCI_SUCCESS then
+          HandleErrorOrWarning(FErrorHandle, Status, lcOther,
+            {$IFDEF DEBUG}'OCIHandleFree'{$ELSE}''{$ENDIF}, Self);
       end;
     end;
   end;
@@ -417,17 +392,27 @@ begin
     Status := FPlainDriver.OCIHandleAlloc(GetConnectionHandle,
       Stmt, OCI_HTYPE_STMT, 0, nil);
     if Status <> OCI_SUCCESS then
-      HandleErrorOrWarningA(FErrorHandle, Status, LoggingCategory,
+      HandleErrorOrWarning(FErrorHandle, Status, lcOther,
         'OCIHandleAlloc(OCIStmt-Handle)', Self);
     Status := FPlainDriver.OCIStmtPrepare(Stmt, FErrorHandle, Pointer(SQL),
       Length(SQL){$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF}, OCI_NTV_SYNTAX, OCI_DEFAULT);
-    if not (Status in [OCI_SUCCESS, OCI_NO_DATA]) then
-      HandleErrorOrWarningA(FErrorHandle, Status, LoggingCategory, SQL, Self);
+    if not (Status in [OCI_SUCCESS, OCI_NO_DATA]) then begin
+      {$IFDEF UNICODE}
+      FLogMessage := ZRawToUnicode(SQL, ConSettings.ClientCodePage.CP);
+      {$ENDIF}
+      HandleErrorOrWarning(FErrorHandle, Status, LoggingCategory,
+        {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF}, Self);
+    end;
   end;
   Status := FPlainDriver.OCIStmtExecute(FContextHandle,
       Stmt, FErrorHandle, 1, 0, nil, nil, CommitMode[AutoCommit]);
-  if not (Status in [OCI_SUCCESS, OCI_NO_DATA]) then
-    HandleErrorOrWarningA(FErrorHandle, Status, LoggingCategory, SQL, Self);
+  if not (Status in [OCI_SUCCESS, OCI_NO_DATA]) then begin
+    {$IFDEF UNICODE}
+    FLogMessage := ZRawToUnicode(SQL, ConSettings.ClientCodePage.CP);
+    {$ENDIF}
+    HandleErrorOrWarning(FErrorHandle, Status, LoggingCategory,
+      {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF}, Self);
+  end;
 end;
 
 {**
@@ -436,13 +421,13 @@ end;
 procedure TZOracleConnection.Open;
 var
   Status: Integer;
-  LogMessage: String;
   ncharset: ub2;
   Succeeded: Boolean;
   {$IFNDEF UNICODE}
   US: UnicodeString;
   {$ELSE}
   R: RawByteString;
+  CP: Word;
   {$ENDIF}
   procedure CleanupOnFail;
   begin
@@ -467,12 +452,12 @@ var
 
       if Next then begin
         {$IFDEF UNICODE}
-        LogMessage := GetUnicodeString(FirstDbcIndex);
+        FLogMessage := GetUnicodeString(FirstDbcIndex);
         {$ELSE}
         P := GetPWideChar(FirstDbcIndex, L);
-        LogMessage := UnicodeStringToASCII7(P, L);
+        FLogMessage := UnicodeStringToASCII7(P, L);
         {$ENDIF UNICODE}
-        ResetCurrentClientCodePage(LogMessage, True);
+        ResetCurrentClientCodePage(FLogMessage, True);
         { keep the w-encoding infos alive, just identify the raw CP}
         ConSettings.ClientCodePage.Encoding := ceUTF16;
         ConSettings.ClientCodePage.ID := OCI_UTF16ID;
@@ -484,7 +469,7 @@ begin
   if not Closed then
      Exit;
 
-  LogMessage := 'CONNECT TO "'+URL.Database+'" AS USER "'+URL.UserName+'"';
+  FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);
 
   { Sets a default port number. }
   if Port = 0 then
@@ -496,9 +481,13 @@ begin
     if FClientCodePage <> '' then
       CheckCharEncoding(FClientCodePage, True);
   end;
-  if ConSettings.ClientCodePage = nil
-  then fcharset := 0
-  else fcharset := ConSettings.ClientCodePage^.ID;
+  if ConSettings.ClientCodePage = nil then begin
+    fcharset := 0;
+    {$IFDEF UNICODE} CP := ZOSCodePage; {$ENDIF}
+  end else begin
+    fcharset := ConSettings.ClientCodePage^.ID;
+    {$IFDEF UNICODE} CP := ConSettings.ClientCodePage^.CP; {$ENDIF}
+  end;
   //EH: do NOT use OCI_CLIENT_NCHARSET_ID if OCI_CLIENT_CHARSET_ID is zero!!
   if fcharset = 0
   then ncharset := 0
@@ -509,7 +498,7 @@ begin
   Status := FPlainDriver.OCIEnvNlsCreate(FOCIEnv, OCI_OBJECT, nil, nil, nil,
     nil, 0, nil, fcharset, ncharset);
   if Status <> OCI_SUCCESS then
-    HandleErrorOrWarning(FErrorHandle, Status, lcConnect, 'EnvNlsCreate failed.', Self);
+    HandleErrorOrWarning(FErrorHandle, Status, lcOther, 'EnvNlsCreate failed.', Self);
   FErrorHandle := nil;
   FPlainDriver.OCIHandleAlloc(FOCIEnv, FErrorHandle, OCI_HTYPE_ERROR, 0, nil);
   FServerHandle := nil;
@@ -528,10 +517,16 @@ begin
     Status := FPlainDriver.OCIServerAttach(FServerHandle, FErrorHandle,
       Pointer(US), Length(US) shl 1, 0);
     {$ENDIF}
-  end else Status := FPlainDriver.OCIServerAttach(FServerHandle, FErrorHandle,
-      Pointer(ConSettings^.Database), Length(ConSettings^.Database), 0);
+  end else {$IFDEF UNICODE} begin
+    R := ZUnicodeToRaw(URL.Database, CP);
+    Status := FPlainDriver.OCIServerAttach(FServerHandle, FErrorHandle,
+      Pointer(R), Length(R){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, 0);
+   end; {$ELSE}
+    Status := FPlainDriver.OCIServerAttach(FServerHandle, FErrorHandle,
+      Pointer(URL.Database), Length(URL.Database), 0);
+   {$ENDIF}
   if Status <> OCI_SUCCESS then try
-    HandleErrorOrWarning(FErrorHandle, Status, lcConnect, LogMessage, Self);
+    HandleErrorOrWarning(FErrorHandle, Status, lcConnect, FLogMessage, Self);
     Succeeded := True;
   finally
     if not Succeeded then
@@ -571,15 +566,18 @@ begin
       Length(US) shl 1, OCI_ATTR_PASSWORD, FErrorHandle);
     {$ENDIF}
   end else begin
-    FPlainDriver.OCIAttrSet(FSessionHandle, OCI_HTYPE_SESSION, Pointer(ConSettings^.User),
-      Length(ConSettings^.User), OCI_ATTR_USERNAME, FErrorHandle);
     {$IFDEF UNICODE}
-    R := UnicodeStringToAscii7(Password);
-    FPlainDriver.OCIAttrSet(FSessionHandle, OCI_HTYPE_SESSION,
-      Pointer(R), Length(R), OCI_ATTR_PASSWORD, FErrorHandle);
+    R := ZUnicodeToRaw(URL.Password, CP);
+    FPlainDriver.OCIAttrSet(FSessionHandle, OCI_HTYPE_SESSION, Pointer(R),
+      Length(R){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, OCI_ATTR_PASSWORD, FErrorHandle);
+    R := ZUnicodeToRaw(URL.UserName, CP);
+    FPlainDriver.OCIAttrSet(FSessionHandle, OCI_HTYPE_SESSION, Pointer(R),
+      Length(R){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, OCI_ATTR_USERNAME, FErrorHandle);
     {$ELSE}
     FPlainDriver.OCIAttrSet(FSessionHandle, OCI_HTYPE_SESSION,
       Pointer(Password), Length(Password), OCI_ATTR_PASSWORD, FErrorHandle);
+    FPlainDriver.OCIAttrSet(FSessionHandle, OCI_HTYPE_SESSION, Pointer(URL.UserName),
+      Length(URL.UserName), OCI_ATTR_USERNAME, FErrorHandle);
     {$ENDIF}
   end;
   FPlainDriver.OCIAttrSet(FSessionHandle,OCI_HTYPE_SESSION,@fBlobPrefetchSize,0,
@@ -588,7 +586,7 @@ begin
   Status := FPlainDriver.OCISessionBegin(FContextHandle, FErrorHandle,
     FSessionHandle, OCI_CRED_RDBMS, OCI_DEFAULT);
   if Status <> OCI_SUCCESS then try
-    HandleErrorOrWarning(FErrorHandle, Status, lcConnect, LogMessage, Self);
+    HandleErrorOrWarning(FErrorHandle, Status, lcConnect, FLogMessage, Self);
     Succeeded := True;
   finally
     if not Succeeded then
@@ -597,11 +595,7 @@ begin
   FPlainDriver.OCIAttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FSessionHandle, 0,
     OCI_ATTR_SESSION, FErrorHandle);
   if DriverManager.HasLoggingListener then
-    {$IFDEF UNICODE}
-    LogW(lcConnect, LogMessage);
-    {$ELSE}
-    DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
-    {$ENDIF}
+    DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
   fLocalTransaction := TZOracleTransaction.CreateLocal(Self);
   SetActiveTransaction(fLocalTransaction);
   fLocalTransaction.StartTransaction;
@@ -860,11 +854,7 @@ begin
         FOCIEnv := nil;
       end;
       if DriverManager.HasLoggingListener then
-        {$IFDEF UNICODE}
-        LogW(lcConnect, LogMessage);
-        {$ELSE}
-        DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
-        {$ENDIF}
+        DriverManager.LogMessage(lcConnect, URL.Protocol, LogMessage);
     end;
   end;
 end;
@@ -1063,7 +1053,7 @@ begin
       if Stmt <> nil then begin
         Status := FPlainDriver.OCIHandleFree(Stmt, OCI_HTYPE_STMT);
         if Status <> OCI_SUCCESS then
-          HandleErrorOrWarningA(FErrorHandle, Status, LoggingCategory, 'OCIHandleFree(OCIStmt-Handle)', Self);
+          HandleErrorOrWarning(FErrorHandle, Status, lcOther, 'OCIHandleFree(OCIStmt-Handle)', Self);
       end;
     end;
   end;
@@ -1079,16 +1069,26 @@ begin
     Status := FPlainDriver.OCIHandleAlloc(GetConnectionHandle,
       Stmt, OCI_HTYPE_STMT, 0, nil);
     if Status <> OCI_SUCCESS then
-      HandleErrorOrWarningW(FErrorHandle, Status, LoggingCategory, 'OCIHandleAlloc(OCIStmt-Handle)', Self);
+      HandleErrorOrWarning(FErrorHandle, Status, lcOther, 'OCIHandleAlloc(OCIStmt-Handle)', Self);
     Status := FPlainDriver.OCIStmtPrepare(Stmt, FErrorHandle, Pointer(SQL),
       (Length(SQL)+1) shl 1, OCI_NTV_SYNTAX, OCI_DEFAULT);
-    if not (Status in [OCI_SUCCESS, OCI_NO_DATA]) then
-      HandleErrorOrWarningW(FErrorHandle, Status, LoggingCategory, SQL, Self);
+    if not (Status in [OCI_SUCCESS, OCI_NO_DATA]) then begin
+      {$IFNDEF UNICODE}
+      FLogMessage := ZUnicodeToRaw(SQL, ConSettings.ClientCodePage.CP);
+      {$ENDIF}
+      HandleErrorOrWarning(FErrorHandle, Status, lcPrepStmt,
+        {$IFNDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF}, Self);
+    end;
   end;
   Status := FPlainDriver.OCIStmtExecute(FContextHandle,
       Stmt, FErrorHandle, 1, 0, nil, nil, CommitMode[AutoCommit]);
-  if not (Status in [OCI_SUCCESS, OCI_NO_DATA]) then
-    HandleErrorOrWarningW(FErrorHandle, Status, LoggingCategory, SQL, Self);
+  if not (Status in [OCI_SUCCESS, OCI_NO_DATA]) then begin
+    {$IFNDEF UNICODE}
+    FLogMessage := ZUnicodeToRaw(SQL, ConSettings.ClientCodePage.CP);
+    {$ENDIF}
+    HandleErrorOrWarning(FErrorHandle, Status, LoggingCategory,
+      {$IFNDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF}, Self);
+  end;
 end;
 
 {**
@@ -1151,197 +1151,135 @@ begin
 end;
 
 procedure TZOracleConnection.HandleErrorOrWarning(ErrorHandle: POCIError;
-  Status: sword; LogCategory: TZLoggingCategory; const LogMessage: String;
+  Status: sword; LogCategory: TZLoggingCategory; const LogMessage: SQLString;
   const Sender: IImmediatelyReleasable);
-begin
-  if ConSettings.ClientCodePage.ID = OCI_UTF16ID then
-    HandleErrorOrWarningW(ErrorHandle, Status, LogCategory,
-      {$IFDEF UNICODE}LogMessage
-      {$ELSE}ZRawToUnicode(LogMessage, ConSettings.ClientCodePage.CP){$ENDIF}, Sender)
-  else
-    HandleErrorOrWarningA(ErrorHandle, Status, LogCategory,
-      {$IFDEF UNICODE}ZUnicodeToRaw(LogMessage, ConSettings.ClientCodePage.CP)
-      {$ELSE}LogMessage{$ENDIF}, Sender)
-end;
-
-procedure TZOracleConnection.HandleErrorOrWarningA(ErrorHandle: POCIError;
-  Status: sword; LogCategory: TZLoggingCategory;
-  const LogMessage: RawByteString; const Sender: IImmediatelyReleasable);
 var
-  ErrorMessage: RawByteString;
-  Writer: TZRawSQLStringWriter;
+  {$IFDEF UNICODE}
+  ErrorMessageA: RawByteString;
+  {$ELSE}
+  ErrorMessageW: UnicodeString;
+  {$ENDIF}
+  CP: Word;
+  WriterA: TZRawSQLStringWriter;
+  WriterW: TZUnicodeSQLStringWriter;
   FirstErrorCode, ErrorCode: SB4;
-  I: ub4;
-  NewStatus: sword;
-  AExceptionClass: EZSQLThrowableClass;
-  AException: EZSQLThrowable;
-  ErrorString{$IFDEF UNICODE}, S2{$ENDIF}: String;
-  label jmpConcat;
-begin
-  if Status = OCI_SUCCESS then Exit;
-  Writer := TZRawSQLStringWriter.Create(1024);
-  ErrorCode := Status;
-  FirstErrorCode := Status;
-  AException := nil;
-  try
-    AExceptionClass := EZSQLException;
-    case Status of
-      OCI_SUCCESS_WITH_INFO: begin
-          AExceptionClass := EZSQLWarning;
-          goto JmpConcat;
-        end;
-      OCI_NEED_DATA:  ErrorMessage := 'OCI_NEED_DATA';
-      OCI_NO_DATA:    ErrorMessage := 'OCI_NO_DATA';
-      OCI_ERROR: begin
-jmpConcat:I := 1;
-          ErrorMessage := '';
-          while true do begin
-            NewStatus := FPlainDriver.OCIErrorGet(ErrorHandle, I, nil, ErrorCode,
-              PAnsiChar(@FByteBuffer[0]), SizeOf(TByteBuffer)-1, OCI_HTYPE_ERROR);
-            if NewStatus = OCI_NO_DATA  then
-              Break;
-            if (i > 1)
-            then Writer.AddText(RawByteString(LineEnding), ErrorMessage)
-            else begin
-              FirstErrorCode := ErrorCode;
-              if (FirstErrorCode = 3314) and (LogCategory <> lcConnect) then //disconnect
-                AExceptionClass := EZSQLConnectionLost;
-            end;
-            Writer.AddText(@FByteBuffer[0], ZFastCode.StrLen(PAnsiChar(@FByteBuffer[0])), ErrorMessage);
-            Inc(I);
-          end;
-        end;
-      OCI_INVALID_HANDLE:   ErrorMessage := 'OCI_INVALID_HANDLE';
-      OCI_STILL_EXECUTING:  ErrorMessage := 'OCI_STILL_EXECUTING';
-      OCI_CONTINUE:         ErrorMessage := 'OCI_CONTINUE';
-      else                  ErrorMessage := '';
-    end;
-    Writer.Finalize(ErrorMessage);
-    if ErrorMessage = '' then
-      Exit;
-    {$IFDEF UNICODE}
-    ErrorString := ZRawToUnicode(ErrorMessage, ConSettings^.ClientCodePage^.CP);
-    S2 := ZRawToUnicode(LogMessage, ConSettings^.ClientCodePage^.CP);
-    if S2 <> '' then
-      ErrorString := ErrorString+' SQL: '+S2;
-    {$ELSE}
-    ErrorString := ErrorMessage;
-    if LogMessage <> '' then
-      ErrorString := ErrorString+' SQL: '+LogMessage;
-    {$ENDIF}
-    AException := AExceptionClass.CreateWithCode(FirstErrorCode, ErrorString);
-    if (Status = OCI_SUCCESS_WITH_INFO) then begin
-      if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(LogCategory, ConSettings^.Protocol, ErrorMessage);
-      SetLastWarning(EZSQLWarning(AException));
-    end else begin
-      if DriverManager.HasLoggingListener then
-        DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage,
-          FirstErrorCode, ErrorMessage);
-      if AExceptionClass = EZSQLConnectionLost then if Assigned(Sender)
-      then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(aException))
-      else ReleaseImmediat(Sender, EZSQLConnectionLost(aException));
-    end;
-    if AException <> nil then
-      raise AException;
-  finally
-    Writer.Free;
-  end;
-end;
-
-procedure TZOracleConnection.HandleErrorOrWarningW(ErrorHandle: POCIError;
-  Status: sword; LogCategory: TZLoggingCategory;
-  const LogMessage: UnicodeString; const Sender: IImmediatelyReleasable);
-var
-  ErrorMessage: UnicodeString;
-  LogMsgA, ErrMsgA: RawByteString;
-  Writer: TZUnicodeSQLStringWriter;
-  FirstErrorCode, ErrorCode: SB4;
+  ErrorMessage: SQLString;
+  FormatStr: String;
+  L: NativeUInt;
   I: ub4;
   NewStatus: sword;
   AExceptionClass: EZSQLThrowableClass;
   AException: EZSQLThrowable;
   ErrorString: String;
-  {$IFNDEF UNICODE}CP: Word;{$ENDIF}
   label jmpConcat;
 begin
   if Status = OCI_SUCCESS then Exit;
-  Writer := TZUnicodeSQLStringWriter.Create(1024);
   ErrorCode := Status;
   FirstErrorCode := Status;
   AException := nil;
-  try
-    AExceptionClass := EZSQLException;
-    case Status of
-      OCI_SUCCESS_WITH_INFO: begin
-          AExceptionClass := EZSQLWarning;
-          goto JmpConcat;
-        end;
-      OCI_NEED_DATA:  ErrorMessage := 'OCI_NEED_DATA';
-      OCI_NO_DATA:    ErrorMessage := 'OCI_NO_DATA';
-      OCI_ERROR: begin
-jmpConcat:I := 1;
-          ErrorMessage := '';
+  AExceptionClass := EZSQLException;
+  ErrorMessage := '';
+  case Status of
+    OCI_SUCCESS_WITH_INFO: begin
+        AExceptionClass := EZSQLWarning;
+        goto JmpConcat;
+      end;
+    OCI_NEED_DATA:  ErrorMessage := 'OCI_NEED_DATA';
+    OCI_NO_DATA:    ErrorMessage := 'OCI_NO_DATA';
+    OCI_ERROR:
+JmpConcat:
+      if ConSettings.ClientCodePage.ID = OCI_UTF16ID then begin
+        WriterW := TZUnicodeSQLStringWriter.Create(1024);
+        I := 1;
+        {$IFNDEF UNICODE}ErrorMessageW := '';{$ENDIF}
+        try
           while true do begin
             NewStatus := FPlainDriver.OCIErrorGet(ErrorHandle, I, nil, ErrorCode,
               @FByteBuffer[0], SizeOf(TByteBuffer)-1, OCI_HTYPE_ERROR);
             if NewStatus = OCI_NO_DATA  then
               Break;
             if (i > 1)
-            then Writer.AddText(UnicodeString(LineEnding), ErrorMessage)
+            then WriterW.AddLineFeedIfNotEmpty({$IFDEF UNICODE}ErrorMessage{$ELSE}ErrorMessageW{$ENDIF})
             else begin
               FirstErrorCode := ErrorCode;
               if (FirstErrorCode = 3314) and (LogCategory <> lcConnect) then //disconnect
                 AExceptionClass := EZSQLConnectionLost;
             end;
-            Writer.AddText(@FByteBuffer[0], {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(PWideChar(@fByteBuffer[0])), ErrorMessage);
+            L := {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(PWideChar(@fByteBuffer[0]));
+            WriterW.AddText(@FByteBuffer[0], L, {$IFDEF UNICODE}ErrorMessage{$ELSE}ErrorMessageW{$ENDIF});
             Inc(I);
           end;
+          WriterW.Finalize({$IFDEF UNICODE}ErrorMessage{$ELSE}ErrorMessageW{$ENDIF});
+        finally
+          FreeAndNil(WriterW);
         end;
-      OCI_INVALID_HANDLE:   ErrorMessage := 'OCI_INVALID_HANDLE';
-      OCI_STILL_EXECUTING:  ErrorMessage := 'OCI_STILL_EXECUTING';
-      OCI_CONTINUE:         ErrorMessage := 'OCI_CONTINUE';
-      else                  ErrorMessage := '';
-    end;
-    Writer.Finalize(ErrorMessage);
-    if ErrorMessage = '' then
-      Exit;
-    {$IFDEF UNICODE}
-    ErrorString := ErrorMessage;
-    if LogMessage <> '' then
-      ErrorString := ErrorString+ ' SQL: '+LogMessage;
-    {$ELSE}
-    CP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
-    ErrMsgA := ZUnicodeToRaw(ErrorMessage, CP);
-    LogMsgA := ZUnicodeToRaw(LogMessage, CP);
-    ErrorString := ErrMsgA;
-    if LogMsgA <> '' then
-      ErrorString := ErrorString+' SQL: '+ LogMsgA;
-    {$ENDIF}
-    AException := AExceptionClass.CreateWithCode(FirstErrorCode, ErrorString);
-    if (Status = OCI_SUCCESS_WITH_INFO) then begin
-      if DriverManager.HasLoggingListener then begin
-        LogMsgA := ZUnicodeToRaw(ErrorMessage, zCP_UTF8); //no character loss on logging
-        DriverManager.LogMessage(LogCategory, ConSettings^.Protocol, LogMsgA);
+        {$IFNDEF UNICODE}
+        CP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
+        ErrorMessage := ZUnicodeToRaw(ErrorMessageW, CP);
+        ErrorMessageW := '';
+        {$ENDIF}
+      end else begin
+        I := 1;
+        WriterA := TZRawSQLStringWriter.Create(1024);
+        {$IFDEF UNICODE}ErrorMessageA := EmptyRaw;{$ENDIF}
+        try
+          while true do begin
+            NewStatus := FPlainDriver.OCIErrorGet(ErrorHandle, I, nil, ErrorCode,
+              @FByteBuffer[0], SizeOf(TByteBuffer)-1, OCI_HTYPE_ERROR);
+            if NewStatus = OCI_NO_DATA  then
+              Break;
+            if (i > 1)
+            then WriterA.AddLineFeedIfNotEmpty({$IFNDEF UNICODE}ErrorMessage{$ELSE}ErrorMessageA{$ENDIF})
+            else begin
+              FirstErrorCode := ErrorCode;
+              if (FirstErrorCode = 3314) and (LogCategory <> lcConnect) then //disconnect
+                AExceptionClass := EZSQLConnectionLost;
+            end;
+            L := StrLen(PAnsiChar(@fByteBuffer[0]));
+            WriterA.AddText(@FByteBuffer[0], L, {$IFNDEF UNICODE}ErrorMessage{$ELSE}ErrorMessageA{$ENDIF});
+            Inc(I);
+          end;
+          WriterA.Finalize({$IFNDEF UNICODE}ErrorMessage{$ELSE}ErrorMessageA{$ENDIF});
+        finally
+          FreeAndNil(WriterA);
+        end;
+        {$IFDEF UNICODE}
+        if ConSettings.ClientCodePage <> nil
+        then CP := ConSettings.ClientCodePage.CP
+        else CP := ZOSCodePage;
+        ErrorMessage := ZRawToUnicode(ErrorMessageA, CP);
+        ErrorMessageA := EmptyRaw;
+        {$ENDIF}
       end;
-      SetLastWarning(EZSQLWarning(AException));
-      AException := nil; //silence?
-    end else begin
-      if DriverManager.HasLoggingListener then begin
-        LogMsgA := ZUnicodeToRaw(LogMessage, zCP_UTF8);
-        ErrMsgA := ZUnicodeToRaw(ErrorMessage, zCP_UTF8);
-        DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMsgA,
-          FirstErrorCode, ErrMsgA);
-      end;
-      if AExceptionClass = EZSQLConnectionLost then if Assigned(Sender)
-      then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(aException))
-      else ReleaseImmediat(Sender, EZSQLConnectionLost(aException));
-    end;
-    if AException <> nil then
-      raise AException;
-  finally
-    Writer.Free;
+    OCI_INVALID_HANDLE:   ErrorMessage := 'OCI_INVALID_HANDLE';
+    OCI_STILL_EXECUTING:  ErrorMessage := 'OCI_STILL_EXECUTING';
+    OCI_CONTINUE:         ErrorMessage := 'OCI_CONTINUE';
+    else                  ErrorMessage := '';
   end;
+  if ErrorMessage = '' then
+    Exit;
+  if (Status <> OCI_SUCCESS_WITH_INFO) and DriverManager.HasLoggingListener then
+    LogError(LogCategory, FirstErrorCode, Sender, LogMessage, ErrorMessage);
+  if LogMessage <> '' then
+    if LogCategory in [lcExecute, lcTransaction, lcPrepStmt]
+    then FormatStr := SSQLError3
+    else FormatStr := SSQLError4
+  else FormatStr := SSQLError2;
+  if LogMessage <> ''
+  then ErrorString := Format(FormatStr, [ErrorMessage, FirstErrorCode, LogMessage])
+  else ErrorString := Format(FormatStr, [ErrorMessage, FirstErrorCode]);
+  AException := AExceptionClass.CreateWithCode(FirstErrorCode, ErrorString);
+  if (Status = OCI_SUCCESS_WITH_INFO) then begin
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(LogCategory, URL.Protocol, ErrorMessage);
+    SetLastWarning(EZSQLWarning(AException));
+    //AException := nil;
+  end else if AExceptionClass = EZSQLConnectionLost then
+    if Sender <> nil
+    then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(aException))
+    else ReleaseImmediat(Sender, EZSQLConnectionLost(aException));
+  if AException <> nil then
+    raise AException;
 end;
 
 {**
@@ -1462,7 +1400,7 @@ begin
   finally
     FStarted := False;
     if fDoLog and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION COMMIT');
+      DriverManager.LogMessage(lcTransaction, FOwner.URL.Protocol, 'TRANSACTION COMMIT');
   end;
 end;
 
@@ -1559,7 +1497,7 @@ begin
   finally
     FStarted := False;
     if fDoLog and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
+      DriverManager.LogMessage(lcTransaction, FOwner.URL.Protocol, 'TRANSACTION ROLLBACK');
   end;
 end;
 
@@ -1619,11 +1557,7 @@ begin
       FOwner.HandleErrorOrWarning(FOwner.FErrorHandle, Status, lcTransaction, OCITransStartFlagsLog[FTxnMode], Self);
     FStarted := True;
     if DriverManager.HasLoggingListener then
-      {$IFDEF UNICODE}
-      FOwner.LogW(lcTransaction, OCITransStartFlagsLog[FTxnMode]);
-      {$ELSE}
-      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, OCITransStartFlagsLog[FTxnMode]);
-      {$ENDIF}
+      DriverManager.LogMessage(lcTransaction, FOwner.URL.Protocol, OCITransStartFlagsLog[FTxnMode]);
     Result := Ord(not FOwner.AutoCommit);
   end;
 end;
