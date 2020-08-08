@@ -160,7 +160,6 @@ type
     function GetCatalog: string; override;
 
     procedure ClearWarnings; override;
-    procedure SetLastWarning(const Warning: EZSQLWarning);
   public { IZOracleConnection }
     function GetConnectionHandle: POCIEnv;
     function GetServiceContextHandle: POCISvcCtx;
@@ -637,8 +636,7 @@ End;
 }
 procedure TZOracleConnection.ClearWarnings;
 begin
-  if fWarning <> nil then
-    FreeAndNil(fWarning);
+   FreeAndNil(fWarning);
 end;
 
 {**
@@ -930,12 +928,6 @@ begin
     if not Closed and (Value <> '') then
       InternalSetCatalog(Value);
   end;
-end;
-
-procedure TZOracleConnection.SetLastWarning(const Warning: EZSQLWarning);
-begin
-  ClearWarnings;
-  FWarning := Warning;
 end;
 
 {**
@@ -1256,24 +1248,24 @@ JmpConcat:
     OCI_CONTINUE:         ErrorMessage := 'OCI_CONTINUE';
     else                  ErrorMessage := '';
   end;
-  if ErrorMessage = '' then
-    Exit;
-  if (Status <> OCI_SUCCESS_WITH_INFO) and DriverManager.HasLoggingListener then
+  if ErrorMessage = '' then Exit;
+  if DriverManager.HasLoggingListener then
     LogError(LogCategory, FirstErrorCode, Sender, LogMessage, ErrorMessage);
-  if LogMessage <> '' then
+  if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '') then
     if LogCategory in [lcExecute, lcTransaction, lcPrepStmt]
     then FormatStr := SSQLError3
     else FormatStr := SSQLError4
   else FormatStr := SSQLError2;
-  if LogMessage <> ''
+  if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '')
   then ErrorString := Format(FormatStr, [ErrorMessage, FirstErrorCode, LogMessage])
   else ErrorString := Format(FormatStr, [ErrorMessage, FirstErrorCode]);
   AException := AExceptionClass.CreateWithCode(FirstErrorCode, ErrorString);
   if (Status = OCI_SUCCESS_WITH_INFO) then begin
-    if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(LogCategory, URL.Protocol, ErrorMessage);
-    SetLastWarning(EZSQLWarning(AException));
-    //AException := nil;
+    ClearWarnings;
+    if not RaiseWarnings or (LogCategory = lcConnect) then begin
+      FWarning := EZSQLWarning(AException);
+      AException := nil;
+    end;
   end else if AExceptionClass = EZSQLConnectionLost then
     if Sender <> nil
     then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(aException))

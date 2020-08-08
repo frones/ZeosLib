@@ -457,6 +457,8 @@ var
 
 implementation
 
+uses ZCompatibility;
+
 resourcestring
   {$IFNDEF WITH_RTLCONSTS_SInvalidGuidArray}
     cInvalidGuidArray = 'Byte-Array or Buffer for GUID must have exact %s Bytes';
@@ -472,8 +474,8 @@ resourcestring
 {$IFDEF FRENCH}
   cSSQLError1 = 'Erreur SQL: %s';
   cSSQLError2 = 'Erreur SQL: %s Code: %d';
-  cSSQLError3 = 'Erreur SQL: %s Code: %d SQL: %s';
-  cSSQLError4 = 'Erreur SQL: %s Code: %d Message: %s';
+  cSSQLError3 = 'Erreur SQL: %s '+LineEnding+'Code: %d SQL: %s';
+  cSSQLError4 = 'Erreur SQL: %s '+LineEnding+'Code: %d Message: %s';
 
   cSListCapacityError = 'Capacitй de liste hors limite (%d)';
   cSListCountError = 'Compteur de liste (count) hors limite (%d)';
@@ -636,8 +638,8 @@ resourcestring
 {$IFDEF PORTUGUESE}
   cSSQLError1 = 'Erro SQL: %s';
   cSSQLError2 = 'Erro SQL: %s Cуdigo: %d';
-  cSSQLError3 = 'Erro SQL: %s Cуdigo: %d SQL: %s';
-  cSSQLError4 = 'Erro SQL: %s Cуdigo: %d Mensagem: %s';
+  cSSQLError3 = 'Erro SQL: %s '+LineEnding+'Cуdigo: %d SQL: %s';
+  cSSQLError4 = 'Erro SQL: %s '+LineEnding+'Cуdigo: %d Mensagem: %s';
 
   cSListCapacityError = 'Capacidade da Lista fora do limite (%d)';
   cSListCountError = 'Contagem da Lista fora do limite (%d)';
@@ -797,8 +799,8 @@ resourcestring
 {$IFDEF DUTCH}
   cSSQLError1 = 'SQL Fout: %s';
   cSSQLError2 = 'SQL Fout: %s Code: %d';
-  cSSQLError3 = 'SQL Fout: %s Code: %d SQL: %s';
-  cSSQLError4 = 'SQL Fout: %s Code: %d Bericht: %s';
+  cSSQLError3 = 'SQL Fout: %s '+LineEnding+'Code: %d SQL: %s';
+  cSSQLError4 = 'SQL Fout: %s '+LineEnding+'Code: %d Bericht: %s';
 
   cSListCapacityError = 'Lijst capaciteit buiten bereik (%d)';
   cSListCountError = 'Lijst aantal buiten bereik (%d)';
@@ -961,8 +963,8 @@ resourcestring
 {$IFDEF GERMAN}
   cSSQLError1 = 'SQL Fehler: %s';
   cSSQLError2 = 'SQL Fehler: %s Code: %d';
-  cSSQLError3 = 'SQL Fehler: %s Code: %d SQL: %s';
-  cSSQLError4 = 'SQL Fehler: %s Code: %d Meldung: %s';
+  cSSQLError3 = 'SQL Fehler: %s '+LineEnding+'Code: %d SQL: %s';
+  cSSQLError4 = 'SQL Fehler: %s '+LineEnding+'Code: %d Meldung: %s';
 
   cSListCapacityError = 'Die Listenkapazitдt ьbersteigt die definierte Grenze (%d)';
   cSListCountError = 'Der Listenzдhler ist auЯerhalb seiner definierten Grenzen (%d)';
@@ -1123,8 +1125,8 @@ resourcestring
 {$IFDEF SPANISH} //Spanish translations
   cSSQLError1 = 'Error SQL: %s';
   cSSQLError2 = 'Error SQL: %s Cуdigo: %d';
-  cSSQLError3 = 'Error SQL: %s Cуdigo: %d SQL: %s';
-  cSSQLError4 = 'Error SQL: %s Cуdigo: %d Mensage: %s';
+  cSSQLError3 = 'Error SQL: %s '+LineEnding+'Cуdigo: %d SQL: %s';
+  cSSQLError4 = 'Error SQL: %s '+LineEnding+'Cуdigo: %d Mensage: %s';
 
   cSListCapacityError = 'List capacity fuera de lнmites (%d)';
   cSListCountError = 'List count fuera de lнmites (%d)';
@@ -1287,8 +1289,8 @@ resourcestring
 
   SSQLError1 = 'SQL Eroare: %s';
   cSSQLError2 = 'SQL Eroare: %s Cod: %d';
-  cSSQLError3 = 'SQL Eroare: %s Cod: %d SQL: %s';
-  cSSQLError4 = 'SQL Eroare: %s Cod: %d Mesaj: %s';
+  cSSQLError3 = 'SQL Eroare: %s '+LineEnding+'Cod: %d SQL: %s';
+  cSSQLError4 = 'SQL Eroare: %s '+LineEnding+'Cod: %d Mesaj: %s';
 
   cSListCapacityError = 'Capacitatea listei este оn afara limitelor (%d)';
   cSListCountError = 'Contorul listei este оn afara limitelor (%d)';
@@ -1447,8 +1449,8 @@ resourcestring
   {$IFDEF INDONESIAN}
   cSSQLError1 = 'Kesalahan SQL: %s';
   cSSQLError2 = 'Kesalahan SQL: %s Kode: %d';
-  cSSQLError3 = 'Kesalahan SQL: %s Kode: %d SQL: %s';
-  cSSQLError4 = 'Kesalahan SQL: %s Kode: %d Pesan: %s';
+  cSSQLError3 = 'Kesalahan SQL: %s '+LineEnding+'Kode: %d SQL: %s';
+  cSSQLError4 = 'Kesalahan SQL: %s '+LineEnding+'Kode: %d Pesan: %s';
 
   cSListCapacityError = 'Kapasitas List diluar jangkauan (%d)';
   cSListCountError = 'Jumlah List diluar jangkauan (%d)';
@@ -1610,8 +1612,8 @@ resourcestring
 {$IFDEF RUSSIAN}
   cSSQLError1                               = 'Ошибка в SQL выражении: %s';
   cSSQLError2                               = 'Ошибка в SQL выражении: %s Код ошибки: %d';
-  cSSQLError3                               = 'Ошибка в SQL выражении: %s Код ошибки: %d SQL: %s';
-  cSSQLError4                               = 'Ошибка в SQL выражении: %s Код ошибки: %d Сообщение: %s';
+  cSSQLError3                               = 'Ошибка в SQL выражении: %s '+LineEnding+'Код ошибки: %d SQL: %s';
+  cSSQLError4                               = 'Ошибка в SQL выражении: %s '+LineEnding+'Код ошибки: %d Сообщение: %s';
 
   cSListCapacityError                       = 'Размер списка вышел за границы (%d)';
   cSListCountError                          = 'Счетчик списка вышел за границы (%d)';
@@ -1774,8 +1776,8 @@ resourcestring
 {$IFDEF CZECH}
   cSSQLError1 = 'SQL chyba: %s';
   cSSQLError2 = 'SQL chyba: %s kуd: %d';
-  cSSQLError3 = 'SQL chyba: %s kуd: %d SQL: %s';
-  cSSQLError4 = 'SQL chyba: %s kуd: %d Hlбљenн: %s';
+  cSSQLError3 = 'SQL chyba: %s '+LineEnding+'kуd: %d SQL: %s';
+  cSSQLError4 = 'SQL chyba: %s '+LineEnding+'kуd: %d Hlбљenн: %s';
 
   cSListCapacityError = 'Kapacita seznamu je mimo rozsah (%d)';
   cSListCountError = 'Poиet seznamщ je mimo rozsah (%d)';
@@ -1940,8 +1942,8 @@ resourcestring
 {$IFDEF POLISH}
   cSSQLError1 = 'Bі№d SQL: %s';
   cSSQLError2 = 'Bі№d SQL: %s Kod: %d';
-  cSSQLError3 = 'Bі№d SQL: %s Kod: %d SQL: %s';
-  cSSQLError4 = 'Bі№d SQL: %s Kod: %d Komunikat: %s';
+  cSSQLError3 = 'Bі№d SQL: %s '+LineEnding+'Kod: %d SQL: %s';
+  cSSQLError4 = 'Bі№d SQL: %s '+LineEnding+'Kod: %d Komunikat: %s';
 
   cSListCapacityError = 'Przekroczona pojemnoњж listy (%d)';
   cSListCountError = 'Licznik listy poza zakresem (%d)';
@@ -2103,8 +2105,8 @@ resourcestring
 
   cSSQLError1 = 'SQL Error: %s';
   cSSQLError2 = 'SQL Error: %s Code: %d';
-  cSSQLError3 = 'SQL Error: %s Code: %d SQL: %s';
-  cSSQLError4 = 'SQL Error: %s Code: %d Message: %s';
+  cSSQLError3 = 'SQL Error: %s '+LineEnding+'Code: %d SQL: %s';
+  cSSQLError4 = 'SQL Error: %s '+LineEnding+'Code: %d Message: %s';
 
   cSListCapacityError = 'List capacity out of bounds (%d)';
   cSListCountError = 'List count out of bounds (%d)';

@@ -425,13 +425,13 @@ procedure TZPostgreSQLConnection.HandleErrorOrWarning(
   LogCategory: TZLoggingCategory; const LogMsg: SQLString;
   const Sender: IImmediatelyReleasable; ResultHandle: TPGresult);
 var I: TZPostgreSQLFieldCode;
-    aMessage, aErrorStatus, FormatStr: String;
+    aErrorStatus, FormatStr: String;
     rawMsg: RawByteString;
-    ConLostError: EZSQLConnectionLost;
     P: PAnsiChar;
     L: NativeUInt;
     SQLWriter: TZRawSQLStringWriter;
-    CP: Word;
+    {$IFNDEF UNICODE}excCP,{$ENDIF}msgCP: Word;
+    Error: EZSQLThrowable;
 begin
   P := FPlainDriver.PQerrorMessage(Fconn);
   if (P = nil) or (P^ = #0) then Exit;
@@ -439,11 +439,14 @@ begin
   rawMsg := '';
   SQLWriter := TZRawSQLStringWriter.Create(1024+Length(LogMsg));
   if (ConSettings <> nil) and (ConSettings.ClientCodePage <> nil)
-  then CP := ConSettings.ClientCodePage.CP
-  else CP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
+  then msgCP := ConSettings.ClientCodePage.CP
+  else msgCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
+{$IFNDEF UNICODE}
+  excCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}
+      {$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
+{$ENDIF}
   try
     SQLWriter.AddText(P, L, rawMsg);
-    aMessage := '';
     aErrorStatus := '';
     if Assigned(ResultHandle) then begin
       if Assigned(FPlainDriver.PQresultErrorField) then //since 7.3
@@ -468,45 +471,50 @@ begin
         FPlainDriver.PQclear(ResultHandle);
     end;
     SQLWriter.Finalize(rawMsg);
-    aMessage := '';
-    if (rawMsg <> '') then
-      {$IFDEF UNICODE}
-      aMessage := ZRawToUnicode(rawMsg, CP);
-      {$ELSE}
-      if (ConSettings <> nil) and (ConSettings.ClientCodePage <> nil)
-      then aMessage := ConSettings^.ConvFuncs.ZRawToString(rawMsg, CP, ConSettings^.CTRL_CP)
-      else aMessage := rawMsg;
-      {$ENDIF}
-    if DriverManager.HasLoggingListener and (Status = PGRES_FATAL_ERROR) then
-      LogError(LogCategory, 0, Sender, LogMsg, aMessage);
-
-    if LogMsg <> '' then
-      if LogCategory in [lcExecute, lcTransaction, lcPrepStmt]
-      then FormatStr := SSQLError3
-      else FormatStr := SSQLError4
-    else FormatStr := SSQLError2;
-    if LogMsg <> ''
-    then aMessage := Format(FormatStr, [aMessage, Ord(Status), LogMsg])
-    else aMessage := Format(FormatStr, [aMessage, Ord(Status)]);
-
-    if (FPlainDriver.PQstatus(Fconn) = CONNECTION_BAD) and (LogCategory <> lcConnect) then begin
-      ConLostError := EZSQLConnectionLost.CreateWithCodeAndStatus(Ord(CONNECTION_BAD), aErrorStatus, aMessage);
-      if Assigned(Sender)
-      then Sender.ReleaseImmediat(Sender, ConLostError)
-      else ReleaseImmediat(Sender, ConLostError);
-      if ConLostError <> nil then raise ConLostError;
-    end else if LogCategory <> lcUnprepStmt then
-      if Status = PGRES_FATAL_ERROR then //silence -> https://sourceforge.net/p/zeoslib/tickets/246/
-        raise EZSQLException.CreateWithStatus(aErrorStatus, aMessage)
-      else begin //that's a notice propably
-        ClearWarnings;
-        FlastWarning := EZSQLWarning.CreateWithStatus(aErrorStatus, aMessage);
-        if DriverManager.HasLoggingListener then
-          DriverManager.LogMessage(LogCategory, URL.Protocol, aMessage);
-      end;
   finally
     FreeAndNil(SQLWriter);
   end;
+  Error := nil;
+  if (rawMsg <> '') then
+    {$IFDEF UNICODE}
+    FLogMessage := ZRawToUnicode(rawMsg, msgCP);
+    {$ELSE}
+    if excCP <> msgCP
+    then PRawToRawConvert(Pointer(rawMsg), Length(rawMsg), msgCP, excCP, FLogMessage)
+    else FLogMessage := rawMsg;
+    {$ENDIF}
+  if DriverManager.HasLoggingListener then
+    if (Status = PGRES_FATAL_ERROR)
+    then LogError(LogCategory, 0, Sender, LogMsg, FLogMessage)
+    else DriverManager.LogMessage(LogCategory, URL.Protocol, FLogMessage);
+  if AddLogMsgToExceptionOrWarningMsg and (LogMsg <> '') then
+    if LogCategory in [lcExecute, lcTransaction, lcPrepStmt, lcExecPrepStmt]
+    then FormatStr := SSQLError3
+    else FormatStr := SSQLError4
+  else FormatStr := SSQLError2;
+
+  if AddLogMsgToExceptionOrWarningMsg and (LogMsg <> '')
+  then FLogMessage := Format(FormatStr, [FLogMessage, Ord(Status), LogMsg])
+  else FLogMessage := Format(FormatStr, [FLogMessage, Ord(Status)]);
+
+  if (FPlainDriver.PQstatus(Fconn) = CONNECTION_BAD) and (LogCategory <> lcConnect) then begin
+    Error := EZSQLConnectionLost.CreateWithCodeAndStatus(Ord(CONNECTION_BAD), aErrorStatus, FLogMessage);
+    if Assigned(Sender)
+    then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(Error))
+    else ReleaseImmediat(Sender, EZSQLConnectionLost(Error));
+  end else if LogCategory <> lcUnprepStmt then //silence -> https://sourceforge.net/p/zeoslib/tickets/246/
+    if Status = PGRES_FATAL_ERROR
+    then Error := EZSQLException.CreateWithStatus(aErrorStatus, FLogMessage)
+    else begin //that's a notice propably
+      ClearWarnings;
+      Error := EZSQLWarning.CreateWithStatus(aErrorStatus, FLogMessage);
+      if not RaiseWarnings then begin
+        FLastWarning := EZSQLWarning(Error);
+        Error := nil;
+      end;
+    end;
+  if Error <> nil then
+    raise Error;
 end;
 
 function TZPostgreSQLConnection.HasMinimumServerVersion(MajorVersion,

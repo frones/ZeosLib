@@ -272,6 +272,7 @@ type
   End;
 
   TZInterbaseFirebirdColumnInfo = Class(TZColumnInfo)
+  public
     sqldata: Pointer; //points to data in our buffer
     sqlind: PISC_SHORT; //null indicator, nil if not nullable
     sqltype: Cardinal;
@@ -1013,7 +1014,7 @@ begin
 end;
 
 {**
-  Checks for possible sql errors or warnings.
+  Handles possible sql errors or warnings.
   @param LogCategory a logging category
   @param StatusVector a status vector. It contain information about error
   @param LogMessage a sql query command or another message
@@ -1023,43 +1024,56 @@ procedure TZInterbaseFirebirdConnection.HandleErrorOrWarning(
   LogCategory: TZLoggingCategory; StatusVector: PARRAY_ISC_STATUS;
   const LogMessage: SQLString; const Sender: IImmediatelyReleasable);
 var
-  ErrorString, ErrorMessage: string;
+  FormatStr, ErrorString: string;
   ErrorCode: Integer;
   i: Integer;
   InterbaseStatusVector: TZIBStatusVector;
-  ConLostError: EZSQLConnectionLost;
-  IsWarning: Boolean;
+  Error: EZSQLThrowable;
+  ExeptionClass: EZSQLThrowableClass;
 begin
   InterbaseStatusVector := InterpretInterbaseStatus(StatusVector);
-  IsWarning := (StatusVector[1] = isc_arg_end) and (StatusVector[2] = isc_arg_warning);
-  ErrorMessage := '';
+  ErrorCode := InterbaseStatusVector[0].SQLCode;
+  ErrorString := '';
   for i := Low(InterbaseStatusVector) to High(InterbaseStatusVector) do
-    AppendSepString(ErrorMessage, InterbaseStatusVector[i].IBMessage, '; ');
+    AppendSepString(ErrorString, InterbaseStatusVector[i].IBMessage, '; ');
+
+  if DriverManager.HasLoggingListener then
+    LogError(LogCategory, ErrorCode, Sender, LogMessage, ErrorString);
+  if (StatusVector[1] = isc_arg_end) and (StatusVector[2] = isc_arg_warning)
+  then ExeptionClass := EZSQLWarning
+  else if (ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection) or
+      (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_idle) or
+      (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_engine)
+    then ExeptionClass := EZSQLConnectionLost
+    else ExeptionClass := EZIBSQLException;
 
   PInt64(StatusVector)^ := 0; //init for fb3up
   PInt64(PAnsiChar(StatusVector)+8)^ := 0; //init for fb3up
-  ErrorCode := InterbaseStatusVector[0].SQLCode;
-
-  if ErrorMessage <> '' then begin
-    if not IsWarning and DriverManager.HasLoggingListener then
-      LogError(LogCategory, ErrorCode, Sender, LogMessage, ErrorMessage);
-    ErrorString := Format(SSQLError1, [ErrorMessage]);
-    if (ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection) or
-       (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_idle) or
-       (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_engine) then begin
-      ConLostError := EZSQLConnectionLost.CreateWithCode(ErrorCode, ErrorString);
-      if Sender <> nil
-      then Sender.ReleaseImmediat(Sender, ConLostError)
-      else ReleaseImmediat(Sender, ConLostError);
-      if ConLostError <> nil then raise ConLostError;
-    end else if IsWarning then begin
+  if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '') then
+    if LogCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
+    then FormatStr := SSQLError3
+    else FormatStr := SSQLError4
+  else FormatStr := SSQLError1;//changed by Fr0st SSQLError2;
+  if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '')
+  then FLogMessage := Format(FormatStr, [ErrorString, ErrorCode, LogMessage])
+  else FLogMessage := Format(FormatStr, [ErrorString{, ErrorCode changed by Fr0st}]);
+  if ExeptionClass = EZIBSQLException //added by Fr0st
+  then Error := EZIBSQLException.Create(ErrorString, InterbaseStatusVector, LogMessage)
+  else begin
+    Error := ExeptionClass.CreateWithCode(ErrorCode, FlogMessage);
+    if ExeptionClass = EZSQLWarning then begin
       ClearWarnings;
-      FLastWarning := EZSQLWarning.CreateWithCode(ErrorCode, ErrorString);
-      if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(LogCategory, URL.Protocol, ErrorMessage);
-    end else raise EZIBSQLException.Create(
-      ErrorString, InterbaseStatusVector, LogMessage);
+      if not RaiseWarnings then begin
+        FLastWarning := EZSQLWarning(Error);
+        Error := nil;
+      end;
+    end else if (Sender <> nil)
+      then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(Error))
+      else ReleaseImmediat(Self, EZSQLConnectionLost(Error))
   end;
+  FLogMessage := '';
+  if Error <> nil then
+    raise Error;
 end;
 
 function TZInterbaseFirebirdConnection.IsTransactionValid(

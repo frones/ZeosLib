@@ -1073,8 +1073,9 @@ var
   L: NativeUInt;
   Error: EZSQLThrowable;
   AExceptionClass: EZSQLThrowableClass;
-  {$IFDEF UNICODE}
-  CP: Word;
+  msgCP: Word;
+  {$IFNDEF UNICODE}
+  excCP: Word;
   {$ENDIF}
 label jmpErr;
 begin
@@ -1086,17 +1087,24 @@ begin
     P := FPlainDriver.mysql_error(FHandle);
   end;
   if (ErrorCode <> 0) then begin
+    if (ConSettings <> nil) and (ConSettings.ClientCodePage <> nil)
+    then msgCP := ConSettings.ClientCodePage.CP
+    else msgCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}
+      {$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
+  {$IFNDEF UNICODE}
+    excCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}
+        {$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
+  {$ENDIF}
     FLogMessage := '';
     if P <> nil then begin
       L := StrLen(P);
       Trim(L, P);
       {$IFDEF UNICODE}
-      if ConSettings.ClientCodePage <> nil
-      then CP := ConSettings.ClientCodePage.CP
-      else CP := ZOSCodePage;
-      FLogMessage := PRawToUnicode(P, L, CP);
+      FLogMessage := PRawToUnicode(P, L, msgCP);
       {$ELSE}
-      ZSetString(P, L, FLogMessage);
+      if excCP <> msgCP
+      then PRawToRawConvert(P, l, msgCP, excCP, FLogMessage)
+      else System.SetString(FLogMessage, P, l);
       {$ENDIF}
     end;
     if (FLogMessage = '') then
@@ -1117,34 +1125,35 @@ begin
       WARN_OPTION_BELOW_LIMIT,
       WARN_ON_BLOCKHOLE_IN_RBR,
       WARN_DEPRECATED_MAXDB_SQL_MODE_FOR_TIMESTAMP:
-                      AExceptionClass := EZSQLWarning;
+          AExceptionClass := EZSQLWarning;
       else
-jmpErr:               if not FSilentError
-                      then AExceptionClass := EZSQLException
-                      else AExceptionClass := nil;
+jmpErr:   if not FSilentError
+          then AExceptionClass := EZSQLException
+          else AExceptionClass := nil;
     end;
     if DriverManager.HasLoggingListener then
-      if AExceptionClass <> EZSQLWarning
-      then LogError(LogCategory, ErrorCode, Sender, LogMessage, FLogMessage)
-      else DriverManager.LogMessage(LogCategory, URL.Protocol, FLogMessage);
+      LogError(LogCategory, ErrorCode, Sender, LogMessage, FLogMessage);
     if AExceptionClass <> nil then begin
-      if LogMessage <> '' then
+      if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '') then
         if LogCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
         then FormatStr := SSQLError3
         else FormatStr := SSQLError4
       else FormatStr := SSQLError2;
-      if (LogMessage <> EmptyRaw)
+      if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '')
       then FLogMessage := Format(FormatStr, [FLogMessage, ErrorCode, LogMessage])
       else FLogMessage := Format(FormatStr, [FLogMessage, ErrorCode]);
       Error := AExceptionClass.CreateWithCode(ErrorCode, FLogMessage);
+      FLogMessage := '';
       if AExceptionClass = EZSQLConnectionLost then
         if Sender <> nil
         then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(Error))
         else ReleaseImmediat(Sender, EZSQLConnectionLost(Error))
       else if AExceptionClass = EZSQLWarning then begin
         ClearWarnings;
-        FLastWarning := EZSQLWarning(Error);
-        Error := nil;
+        if not RaiseWarnings then begin
+          FLastWarning := EZSQLWarning(Error);
+          Error := nil;
+        end;
       end;
       if Error <> nil then
         raise Error;

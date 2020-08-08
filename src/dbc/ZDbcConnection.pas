@@ -113,6 +113,8 @@ type
     FUseMetadata: Boolean;
     FClientVarManager: IZClientVariantManager;
     fRegisteredStatements: TZSortedList; //weak reference to pending stmts
+    fAddLogMsgToExceptionOrWarningMsg: Boolean;
+    fRaiseWarnings: Boolean;
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetPort: Integer;
@@ -149,8 +151,9 @@ type
     procedure OnPropertiesChange({%H-}Sender: TObject); virtual;
     procedure LogError(const Category: TZLoggingCategory; ErrorCode: Integer;
       const Sender: IImmediatelyReleasable; const Msg, Error: String);
-
     procedure SetOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
+    procedure SetAddLogMsgToExceptionOrWarningMsg(Value: Boolean);
+    procedure SetRaiseWarnings(Value: Boolean);
     procedure RegisterStatement(const Value: IZStatement);
     procedure DeregisterStatement(const Value: IZStatement);
     procedure CloseRegisteredStatements;
@@ -239,6 +242,9 @@ type
   protected
     function GetByteBufferAddress: PByteBuffer;
     property Closed: Boolean read IsClosed write FClosed;
+    property AddLogMsgToExceptionOrWarningMsg: Boolean read
+      fAddLogMsgToExceptionOrWarningMsg write fAddLogMsgToExceptionOrWarningMsg;
+    property RaiseWarnings: Boolean read fRaiseWarnings write fRaiseWarnings;
   end;
 
   TZAbstractSuccedaneousTxnConnection = class(TZAbstractDbcConnection,
@@ -968,6 +974,7 @@ end;
 procedure TZAbstractDbcConnection.AfterConstruction;
 var iCon: IZConnection;
 begin
+  fAddLogMsgToExceptionOrWarningMsg := True;
   if QueryInterface(IZConnection, ICon) = S_OK then begin
     fWeakReferenceOfSelfInterface := Pointer(iCon);
     iCon := nil;
@@ -1038,7 +1045,7 @@ begin
   FClosed := True;
   FDisposeCodePage := False;
   if not assigned(ZUrl) then
-    raise Exception.Create('ZUrl is not assigned!')
+    raise EZSQLException.Create('ZUrl is not assigned!')
   else
     FURL := TZURL.Create();
   FDriverManager := DriverManager; //just keep refcount high
@@ -1059,6 +1066,8 @@ begin
   FReadOnly := False; //EH: Changed! We definitelly did newer ever open a ReadOnly connection by default!
   FTransactIsolationLevel := tiNone;
   FUseMetadata := True;
+  fAddLogMsgToExceptionOrWarningMsg := True;
+  fRaiseWarnings := False;
   // should be set BEFORE InternalCreate
   // now InternalCreate will work, since it will try to Open the connection
   InternalCreate;
@@ -1229,6 +1238,12 @@ end;
 function TZAbstractDbcConnection.NativeSQL(const SQL: string): string;
 begin
   Result := SQL;
+end;
+
+procedure TZAbstractDbcConnection.SetAddLogMsgToExceptionOrWarningMsg(
+  Value: Boolean);
+begin
+  fAddLogMsgToExceptionOrWarningMsg := Value;
 end;
 
 {**
@@ -1475,6 +1490,11 @@ begin
 end;
 
 {END ADDED by fduenas 15-06-2006}
+
+procedure TZAbstractDbcConnection.SetRaiseWarnings(Value: Boolean);
+begin
+  fRaiseWarnings := Value;
+end;
 
 {**
   Puts this connection in read-only mode as a hint to enable

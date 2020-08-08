@@ -119,7 +119,7 @@ type
     procedure InternalCreate; override;
     procedure InternalLogin;
     function GetConnectionHandle: PDBPROCESS;
-    procedure CheckDBLibError(LogCategory: TZLoggingCategory;
+    procedure CheckDBLibError(LoggingCategory: TZLoggingCategory;
       const LogMessage: SQLString; const Sender: IImmediatelyReleasable);
     function GetServerCollation: String;
     procedure InternalClose; override;
@@ -448,7 +448,9 @@ begin
    Else Result := 1;
 end;
 
-procedure TZDBLibConnection.CheckDBLibError(LogCategory: TZLoggingCategory;
+const P4ZeroChars: array[0..3] of Byte = (Byte('0'),Byte('0'),Byte('0'),Byte('0')); //Endian save
+
+procedure TZDBLibConnection.CheckDBLibError(LoggingCategory: TZLoggingCategory;
   const LogMessage: SQLString; const Sender: IImmediatelyReleasable);
 var I: Integer;
   rException, rWarningOrInfo: RawByteString;
@@ -457,7 +459,9 @@ var I: Integer;
   lErrorEntry: PDBLibError;
   lMesageEntry: PDBLibMessage;
   SQLWriter: TZRawSQLStringWriter;
-  {$IFDEF UNICODE}msgCP: Word;{$ENDIF}
+  Error: EZSQLThrowable;
+  ExeptionClass: EZSQLThrowableClass;
+  {$IFNDEF UNICODE}excCP,{$ENDIF}msgCP: Word;
   procedure IntToBuf(Value: Integer; var Buf: RawByteString);
   var C: Cardinal;
     Digits: Byte;
@@ -467,7 +471,7 @@ var I: Integer;
     Digits := GetOrdinalDigits(Value, C, Negative);
     if Negative then
       SQLWriter.AddChar(AnsiChar('-'), rException);
-    PCardinal(@IntBuf[0])^ := Cardinal(808464432);//'0000'
+    PCardinal(@IntBuf[0])^ := PCardinal(@P4ZeroChars[0])^;
     IntToRaw(C, @IntBuf[5-Digits], Digits);
     SQLWriter.AddText(PAnsiChar(@IntBuf[0]), 5, Buf);
   end;
@@ -480,6 +484,13 @@ begin
   rException := EmptyRaw;
   rWarningOrInfo := EmptyRaw;
   FirstError := 0;
+  if ConSettings.ClientCodePage <> nil
+  then msgCP := ConSettings.ClientCodePage.CP
+  else msgCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};;
+{$IFNDEF UNICODE}
+  excCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}
+      {$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
+{$ENDIF}
   SQLWriter := TZRawSQLStringWriter.Create(1024);
   try
     for I := 0 to FSQLErrors.Count -1 do begin
@@ -528,46 +539,60 @@ begin
   finally
     FreeAndNil(SQLWriter);
   end;
-  {$IFDEF UNICODE}
-  if ConSettings.ClientCodePage <> nil
-  then msgCP := ConSettings.ClientCodePage.CP
-  else msgCP := ZOSCodePage;
-  {$ENDIF UNICODE}
-  if LogMessage <> '' then
-    if LogCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
-    then FormatStr := SSQLError3
-    else FormatStr := SSQLError4
-  else FormatStr := SSQLError2;
   if rException <> EmptyRaw then begin
+    if FplainDriver.dbdead(FHandle) <> 0
+    then ExeptionClass := EZSQLConnectionLost
+    else ExeptionClass := EZSQLException;
     {$IFDEF UNICODE}
     FLogMessage := ZRawToUnicode(rException, msgCP);
     {$ELSE}
-    FLogMessage := rException;
-    {$ENDIF}
-    LogError(LogCategory, FirstError, Self, logMessage, FLogMessage);
     if DriverManager.HasLoggingListener then
-      DriverManager.LogError(LogCategory, URL.Protocol, LogMessage, 0, FLogMessage);
-    if LogMessage <> ''
-    then FLogMessage := Format(FormatStr, [FLogMessage, FirstError, LogMessage])
-    else FLogMessage := Format(FormatStr, [FLogMessage, FirstError]);
-    if fHandle <> nil then
-      FPlainDriver.dbcancel(fHandle);
-    raise EZSQLException.Create(FLogMessage);
-  end else if (rWarningOrInfo <> EmptyRaw) then begin
+      LogError(LoggingCategory, FirstError, Sender, LogMessage, rException);
+    if excCP <> msgCP
+    then PRawToRawConvert(Pointer(rException), Length(rException), msgCP, excCP, FLogMessage)
+    else FLogMessage := rException;
+    {$ENDIF}
+    rException := EmptyRaw;
+  end else begin
+    ExeptionClass := EZSQLWarning;
     {$IFDEF UNICODE}
     FLogMessage := ZRawToUnicode(rWarningOrInfo, msgCP);
     {$ELSE}
-    FLogMessage := rWarningOrInfo;
-    {$ENDIF}
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(LogCategory, URL.Protocol, FLogMessage);
-    ClearWarnings;
-    if LogMessage <> ''
-    then FLogMessage := Format(FormatStr, [FLogMessage, FirstError, LogMessage])
-    else FLogMessage := Format(FormatStr, [FLogMessage, FirstError]);
-    FLogMessage := '';
-    FLastWarning := EZSQLWarning.CreateWithCode(FirstError, FLogMessage);
+      LogError(LoggingCategory, FirstError, Sender, LogMessage, rWarningOrInfo);
+    if excCP <> msgCP
+    then PRawToRawConvert(Pointer(rWarningOrInfo), Length(rWarningOrInfo), msgCP, excCP, FLogMessage)
+    else FLogMessage := rWarningOrInfo;
+    {$ENDIF}
+    rException := rWarningOrInfo;
   end;
+  {$IFDEF UNICODE}
+  if DriverManager.HasLoggingListener then
+    LogError(LoggingCategory, FirstError, Sender, LogMessage, FLogMessage);
+  {$ENDIF}
+  Error := ExeptionClass.CreateWithCode(FirstError, FLogMessage);
+  FLogMessage := '';
+  if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '') then
+    if LoggingCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
+    then FormatStr := SSQLError3
+    else FormatStr := SSQLError4
+  else FormatStr := SSQLError2;
+  if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '')
+  then FLogMessage := Format(FormatStr, [FLogMessage, FirstError, LogMessage])
+  else FLogMessage := Format(FormatStr, [FLogMessage, FirstError]);
+  if ExeptionClass = EZSQLWarning then begin
+    ClearWarnings;
+    if not RaiseWarnings or (LoggingCategory = lcConnect) then begin
+      FLastWarning := EZSQLWarning(Error);
+      Error := nil;
+    end;
+  end else if ExeptionClass = EZSQLConnectionLost then begin
+    if (Sender <> nil)
+    then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(Error))
+    else ReleaseImmediat(Self, EZSQLConnectionLost(Error));
+  end;
+  if Error <> nil then
+    raise Error;
 end;
 
 {**

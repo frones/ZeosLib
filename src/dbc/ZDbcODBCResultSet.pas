@@ -273,8 +273,8 @@ procedure TAbstractODBCResultSet.CheckStmtError(RETCODE: SQLRETURN);
   procedure HandleError;
   begin
     if Statement <> nil
-    then FODBCConnection.HandleStmtErrorOrWarning(RETCODE, fPHSTMT^, Statement.GetSQL, lcExecute, Self)
-    else FODBCConnection.HandleStmtErrorOrWarning(RETCODE, fPHSTMT^, 'MetaData-call', lcExecute, Self);
+    then FODBCConnection.HandleErrorOrWarning(RETCODE, fPHSTMT^, SQL_HANDLE_STMT, Statement.GetSQL, lcExecute, Self)
+    else FODBCConnection.HandleErrorOrWarning(RETCODE, fPHSTMT^, SQL_HANDLE_STMT, 'MetaData-call', lcExecute, Self);
   end;
 begin
   if RETCODE <> SQL_SUCCESS then
@@ -1667,14 +1667,16 @@ begin
   fZBufferSize := ZBufferSize;
   Ret := fPLainDriver.SQLGetFunctions(ConnectionHandle, SQL_API_SQLCOLATTRIBUTE, @Supported);
   if Ret <> SQL_SUCCESS then
-    FODBCConnection.HandleDbcErrorOrWarning(Ret, 'SQLGetFunctions', lcOther, Statement);
+    FODBCConnection.HandleErrorOrWarning(Ret, ConnectionHandle, SQL_HANDLE_DBC,
+      'SQLGetFunctions', lcOther, Statement);
   fEnhancedColInfo := EnhancedColInfo and (Supported = SQL_TRUE);
   fCurrentBufRowNo := 0;
   fFreeHandle := not Assigned(StmtHandle);
   Ret := fPlainDriver.SQLGetInfo(ConnectionHandle,
     SQL_GETDATA_EXTENSIONS, @fSQL_GETDATA_EXTENSIONS, SizeOf(SQLUINTEGER), nil);
   if Ret <> SQL_SUCCESS then
-    FODBCConnection.HandleDbcErrorOrWarning(Ret, 'SQLGetInfo', lcOther, Statement);
+    FODBCConnection.HandleErrorOrWarning(Ret, ConnectionHandle, SQL_HANDLE_DBC,
+      'SQLGetInfo', lcOther, Statement);
   FByteBuffer := FODBCConnection.GetByteBufferAddress;
   ResultSetType := rtForwardOnly;
   ResultSetConcurrency := rcReadOnly;
@@ -1695,7 +1697,8 @@ begin
     False);
   Ret := fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, ConnectionHandle, StmtHandle);
   if Ret <> SQL_SUCCESS then
-    Connection.HandleDbcErrorOrWarning(Ret, 'SQLAllocHandle(Stmt)', lcOther, Self);
+    Connection.HandleErrorOrWarning(Ret, ConnectionHandle, SQL_HANDLE_DBC,
+      'SQLAllocHandle(Stmt)', lcOther, Self);
 end;
 
 {**

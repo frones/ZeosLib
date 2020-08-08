@@ -730,7 +730,7 @@ type
     PQconsumeInput  : function(conn: TPGconn): Integer; cdecl;
     PQgetCancel     : function(conn: TPGconn): PGcancel; cdecl;
     PQfreeCancel    : procedure(Canc: PGcancel); cdecl;
-    PQcancel        : function(Canc: PGcancel; Buffer: PAnsiChar; BufSize: Integer): Integer;
+    PQcancel        : function(Canc: PGcancel; Buffer: PAnsiChar; BufSize: Integer): Integer; cdecl;
     PQgetline       : function(conn: TPGconn; Str: PAnsiChar; length: Integer): Integer; cdecl;
     PQputline       : function(conn: TPGconn; Str: PAnsiChar): Integer; cdecl;
     PQgetlineAsync  : function(conn: TPGconn; Buffer: PAnsiChar; BufSize: Integer): Integer; cdecl;
@@ -766,7 +766,7 @@ type
     PQescapeByteaConn  : function(conn: TPGconn; from: PAnsiChar; from_length: longword; to_lenght: PLongword): PAnsiChar;cdecl;
     PQunescapeBytea    : function(const from:PAnsiChar;to_lenght:PLongword):PAnsiChar;cdecl;
     PQFreemem          : procedure(ptr:Pointer);cdecl;
-
+    PQisthreadsafe     : function: Integer; cdecl;
     //* These forms are deprecated! */
     PQescapeString     : function(ToChar: PAnsiChar; const FormChar: PAnsiChar; length: NativeUInt): NativeUInt;cdecl; //7.2
     PQescapeBytea      : function(const from:PAnsiChar;from_length:longword;to_lenght:PLongword):PAnsiChar;cdecl; //7.2
@@ -978,6 +978,8 @@ begin
     @PQunescapeBytea     := GetAddress('PQunescapeBytea'); // since postgresql 8.3
     @PQescapeLiteral     := GetAddress('PQescapeLiteral'); // since postgresql 9.0
     @PQescapeIdentifier  := GetAddress('PQescapeIdentifier'); // since postgresql 9.0
+
+    @PQisthreadsafe      := GetAddress('PQisthreadsafe');
 
     @PQresultErrorField  := GetAddress('PQresultErrorField');
     @PQgetCancel         := GetAddress('PQgetCancel');

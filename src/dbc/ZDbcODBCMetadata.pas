@@ -399,7 +399,8 @@ begin
   Ret := TZODBC3PlainDriver(ODBCConnection.GetPlainDriver.GetInstance).SQLGetInfo(fPHDBC^,
     InfoType, @Result, SizeOf(SQLUINTEGER), nil);
   if Ret <> SQL_SUCCESS then
-    ODBCConnection.HandleDbcErrorOrWarning(ret, 'SQLGetInfo', lcOther, ODBCConnection);
+    ODBCConnection.HandleErrorOrWarning(ret, fPHDBC^, SQL_HANDLE_DBC,
+      'SQLGetInfo', lcOther, ODBCConnection);
 end;
 
 function TZAbstractODBCDatabaseInfo.GetUSmallDbcInfo(
@@ -413,7 +414,8 @@ begin
   Ret := TZODBC3PlainDriver(ODBCConnection.GetPlainDriver.GetInstance).SQLGetInfo(fPHDBC^,
     InfoType, @Result, SizeOf(SQLUSMALLINT), nil);
   if Ret <> SQL_SUCCESS then
-    ODBCConnection.HandleDbcErrorOrWarning(ret, 'SQLGetInfo', lcOther, ODBCConnection);
+    ODBCConnection.HandleErrorOrWarning(ret, fPHDBC^, SQL_HANDLE_DBC,
+      'SQLGetInfo', lcOther, ODBCConnection);
 end;
 
 {**
@@ -873,7 +875,8 @@ begin
     Result := ZSysUtils.StrToBoolEx(PAnsiChar(@Buf[0]), False)
   end else Ret := SQL_SUCCESS;
   if Ret <> SQL_SUCCESS then
-    ODBCConnection.HandleDbcErrorOrWarning(ret, 'SQLGetInfo', lcOther, ODBCConnection);
+    ODBCConnection.HandleErrorOrWarning(ret, fPHDBC^, SQL_HANDLE_DBC,
+      'SQLGetInfo', lcOther, ODBCConnection);
 end;
 
 {**
@@ -3483,7 +3486,7 @@ procedure TAbstractODBCDatabaseMetadata.CheckStmtError(RETCODE: SQLRETURN;
   StmtHandle: SQLHSTMT; const Connection: IZODBCConnection);
 begin
   if RetCode <> SQL_SUCCESS then
-     Connection.HandleStmtErrorOrWarning(RETCODE, StmtHandle, '', lcExecute, Connection);
+     Connection.HandleErrorOrWarning(RETCODE, StmtHandle, SQL_HANDLE_STMT, '', lcExecute, Connection);
 end;
 
 {**
@@ -3742,7 +3745,8 @@ begin
   Ret := ODBCConnection.GetPlainDriver.SQLGetInfo(fPHDBC^, InfoType, @Buf[0],
     SizeOf(Buf), @PropLength);
   if Ret <> SQL_SUCCESS then
-    ODBCConnection.HandleDbcErrorOrWarning(ret, 'SQLGetInfo', lcOther, ODBCConnection);
+    ODBCConnection.HandleErrorOrWarning(ret, fPHDBC^, SQL_HANDLE_DBC,
+      'SQLGetInfo', lcOther, ODBCConnection);
   {$IFDEF UNICODE}
   SetString(Result, PWideChar(@Buf[0]), PropLength shr 1);
   {$ELSE}
@@ -3763,7 +3767,8 @@ begin
   Ret := ODBCConnection.GetPlainDriver.SQLGetInfo(fPHDBC^, InfoType, @Buf[0],
     SizeOf(Buf), @PropLength);
   if Ret <> SQL_SUCCESS then
-    ODBCConnection.HandleDbcErrorOrWarning(ret, 'SQLGetInfo', lcConnect, ODBCConnection);
+    ODBCConnection.HandleErrorOrWarning(ret,fPHDBC^, SQL_HANDLE_DBC,
+      'SQLGetInfo', lcConnect, ODBCConnection);
   {$IFDEF UNICODE}
   Result := PRawToUnicode(PAnsiChar(@Buf[0]),PropLength,ZOSCodePage);
   {$ELSE}

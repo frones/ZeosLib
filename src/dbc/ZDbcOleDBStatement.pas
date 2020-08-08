@@ -439,7 +439,7 @@ begin
           @FRowsAffected,@FMultipleResults);
         if Failed(Status) then
           FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-            WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+            SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
         if Assigned(FMultipleResults) then begin
           Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
             IID_IRowset, @FRowsAffected, @FRowSet);
@@ -452,7 +452,7 @@ begin
         Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@FRowSet);
         if Failed(Status) then
           FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-            WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+            SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
       end;
       if DriverManager.HasLoggingListener then
          DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
@@ -498,7 +498,7 @@ begin
       @FRowsAffected,@FMultipleResults);
     if Failed(Status) then
       FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-        WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
     if Assigned(FMultipleResults) then begin
       Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
         DB_NULLGUID, @FRowsAffected, nil);
@@ -511,7 +511,7 @@ begin
     Status := FCommand.Execute(nil, DB_NULLGUID,FDBParams,@FRowsAffected,nil);
     if Failed(Status) then
       FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-        WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
   end;
   if DriverManager.HasLoggingListener then
      DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
@@ -571,7 +571,7 @@ begin
         FDBParams,@FRowsAffected,@FMultipleResults);
       if Failed(Status) then
         FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-          WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+          SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
       if Assigned(FMultipleResults) then begin
         Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
           IID_IRowset, @FRowsAffected, @FRowSet);
@@ -584,7 +584,7 @@ begin
       Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@FRowSet);
       if Failed(Status) then
         FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-          WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+          SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
     end;
     if DriverManager.HasLoggingListener then
        DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
@@ -670,7 +670,7 @@ begin
     Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@RowSet);
     if Failed(Status) then
       FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-        WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
+        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
     Result := Assigned(RowSet);
     if DriverManager.HasLoggingListener then
        DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
@@ -701,7 +701,7 @@ begin
         try
           Status := CommandPrepare.UnPrepare;
           if Failed(Status) then
-            FOleDBConnection.HandleErrorOrWarning(Status, lcUnprepStmt, WSQL,
+            FOleDBConnection.HandleErrorOrWarning(Status, lcUnprepStmt, SQL,
               IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
           if DriverManager.HasLoggingListener then
             LogPrepStmtMessage(lcUnprepStmt);
@@ -1524,7 +1524,7 @@ jmpRecreate:
       end else if Status = DTS_E_OLEDBERROR then begin
         fDEFERPREPARE := True;
         goto jmpRecreate;
-      end else FOleDBConnection.HandleErrorOrWarning(Status, lcPrepStmt, WSQL,
+      end else FOleDBConnection.HandleErrorOrWarning(Status, lcPrepStmt, SQL,
         IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
     end;
     //DBInfo := Connection.GetMetadata.GetDatabaseInfo;

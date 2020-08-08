@@ -142,7 +142,8 @@ type
     FConnection: IZConnection;
     FDatasets: TZSortedList;
     FSequences: TZSortedList;
-
+    FAddLogMsgToExceptionOrWarningMsg: Boolean;
+    FRaiseWarningMessages: Boolean;
     FLoginPrompt: Boolean;
     FStreamedConnected: Boolean;
     FExplicitTransactionCounter: Integer; //this counter is required to find out setting autocommit mode back to True without loosing changes
@@ -179,6 +180,8 @@ type
     function GetProtocol: String;
     procedure SetProtocol(const Value: String);
     function GetProperties: TStrings;
+    procedure SetAddLogMsgToExceptionOrWarningMsg(Value: Boolean);
+    procedure SetRaiseWarningMessages(Value: Boolean);
     function GetConnected: Boolean;
     procedure SetConnected(Value: Boolean);
     procedure SetProperties(Value: TStrings);
@@ -301,6 +304,11 @@ type
     property Version: string read GetVersion stored False;
     property DesignConnection: Boolean read FDesignConnection
       write FDesignConnection default False;
+    property AddLogMsgToExceptionOrWarningMsg: Boolean
+      read fAddLogMsgToExceptionOrWarningMsg
+      write SetAddLogMsgToExceptionOrWarningMsg default True;
+    property RaiseWarningMessages: Boolean read fRaiseWarningMessages
+      write SetRaiseWarningMessages default False;
 
     property BeforeConnect: TNotifyEvent
       read FBeforeConnect write FBeforeConnect;
@@ -425,6 +433,8 @@ begin
   FAutoCommit := True;
   FReadOnly := False;
   FTransactIsolationLevel := tiNone;
+  FAddLogMsgToExceptionOrWarningMsg := True;
+  FRaiseWarningMessages := False;
   FConnection := nil;
   FUseMetadata := True;
   FDatasets := TZSortedList.Create;
@@ -642,6 +652,20 @@ begin
 end;
 
 {**
+  Sets AddLogMsgToExceptionOrWarningMsg flag.
+  @param Value <code>True</code> to turn message concatation.
+}
+procedure TZAbstractConnection.SetAddLogMsgToExceptionOrWarningMsg(
+  Value: Boolean);
+begin
+  if FAddLogMsgToExceptionOrWarningMsg <> Value then begin
+    if FConnection <> nil then
+      FConnection.SetAddLogMsgToExceptionOrWarningMsg(Value);
+    FAddLogMsgToExceptionOrWarningMsg := Value;
+  end;
+end;
+
+{**
   Sets autocommit flag.
   @param Value <code>True</code> to turn autocommit on.
 }
@@ -668,6 +692,15 @@ end;
   Sets readonly flag.
   @param Value readonly flag.
 }
+procedure TZAbstractConnection.SetRaiseWarningMessages(Value: Boolean);
+begin
+  if FRaiseWarningMessages <> Value then begin
+    if FConnection <> nil then
+      FConnection.SetRaiseWarnings(Value);
+    FRaiseWarningMessages := Value;
+  end;
+end;
+
 procedure TZAbstractConnection.SetReadOnly(Value: Boolean);
 begin
   if FReadOnly <> Value then begin
@@ -948,6 +981,8 @@ begin
           SetCatalog(FCatalog);
           SetTransactionIsolation(FTransactIsolationLevel);
           SetUseMetadata(FUseMetadata);
+          SetAddLogMsgToExceptionOrWarningMsg(FAddLogMsgToExceptionOrWarningMsg);
+          SetRaiseWarnings(FRaiseWarningMessages);
           Open;
           {$IFDEF ZEOS_TEST_ONLY}
           SetTestMode(FTestMode);

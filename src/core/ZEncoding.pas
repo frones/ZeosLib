@@ -227,12 +227,6 @@ function ZDetectUTF8Encoding(Source: PAnsiChar; Len: NativeUInt): TEncodeType;
 function USASCII7ToUnicodeString(Source: PAnsiChar; Len: NativeUInt): UnicodeString; overload;
 function USASCII7ToUnicodeString(const Source: RawByteString): UnicodeString; overload;
 
-{ Message-Helpers }
-{$IFNDEF UNICODE}
-function ConvertZMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF}MsgCP, RawCP: Word): RawByteString; overload;
-function ConvertZMsgToRaw(AMessage: PAnsiChar; Len: NativeUInt; {$IFNDEF LCL}Const{$ENDIF}MsgCP, RawCP: Word): RawByteString; overload;
-{$ENDIF}
-
 {SBCS codepages $00..FF}
 procedure AnsiSBCSToUTF16(Source: PAnsichar; SourceBytes: LengthInt;
   var Dest: UnicodeString; SBCS_MAP: PSBCS_MAP); overload;
@@ -2646,40 +2640,8 @@ end;
 
 function USASCII7ToUnicodeString(const Source: RawByteString): UnicodeString; overload;
 begin
-  Result := USASCII7ToUnicodeString(Pointer(Source), Length(Source));
+  Result := USASCII7ToUnicodeString(Pointer(Source), Length(Source){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
 end;
-
-{$IFNDEF UNICODE}
-function ConvertZMsgToRaw(AMessage: PAnsiChar; Len: NativeUInt; {$IFNDEF LCL}Const{$ENDIF}MsgCP, RawCP: Word): RawByteString; overload;
-begin
-  if (Len = 0) or (AMessage = nil)
-  then Result := EmptyRaw
-  else if MsgCP = RawCP then begin
-    Result := ''; //satisfy compiler
-    ZSetString(AMessage, Len, Result{$IFDEF WITH_RAWBYTESTRING},RawCP{$ENDIF});
-  end else
-    Result := ZUnicodeToRaw(PRawToUnicode(AMessage,Len, MsgCP), RawCP);
-end;
-
-function ConvertZMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF}MsgCP, RawCP: Word): RawByteString;
-begin
-  {$IFDEF LCL}
-  RawCP := zCP_UTF8;
-  {$ENDIF}
-  if (RawCP = MsgCP) then
-  {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG} //fpc2.7 only
-  begin
-    Result := ''; //satisfy compiler
-    ZSetString(PAnsiChar(AMessage), Length(AMessage), Result);
-  end
-  {$ELSE !WITH_RAWBYTESTRING_CONVERSION_BUG}
-  Result := AMessage
-  {$ENDIF WITH_RAWBYTESTRING_CONVERSION_BUG}
-  else
-    Result := ZUnicodeToRaw(PRawToUnicode(Pointer(AMessage),
-      {%H-}PLengthInt(NativeUInt(AMessage) - StringLenOffSet)^, MsgCP), RawCP);
-end;
-{$ENDIF UNICODE}
 
 initialization
   SetZOSCodePage;
