@@ -127,6 +127,7 @@ type
     procedure TestSF238;
     procedure TestSF418_SortedFields;
     procedure TestSF418_IndexFieldNames;
+    procedure TestSF434;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -244,16 +245,15 @@ begin
     Query.SQL.Text := 'SELECT * FROM people';
     Query.Open;
     Query.Append;
-//    Query.FieldByName('p_id').AsInteger := TEST_ROW_ID;
-//    Query.Post;
+    Query.FieldByName('p_id').AsInteger := TEST_ROW_ID;
+    Query.Post;
     Query.Close;
-(*
+
     { Remove newly created record }
     Query.SQL.Text := 'DELETE FROM people WHERE p_id=:id';
     Query.ParamByName('id').AsInteger := TEST_ROW_ID;
     Query.ExecSQL;
     CheckEquals(1, Query.RowsAffected);
-*)
   finally
     Query.Free;
   end;
@@ -1896,6 +1896,51 @@ begin
     end;
   finally
     Connection.Disconnect;
+  end;
+end;
+
+(* I use the MS SQL-Server 2014 and 2016. I work in the ZConnection with the
+  protocol "ado". In the ZQuery, an SQL command with one parameter is executed.
+  The query does not return any result (Recordcount = 0). Now ZQuery is closed,
+  the parameter changed and ZQuery opened again. Again there is no result,
+  although the query should result in several lines. When debugging,
+  I noticed that the changed parameter was not adopted
+  (down to the depth of the sources). It works perfectly with the
+  "mssql" protocol. If the SQL command is set before the second
+  parameter transfer, it also works.
+
+Example:
+ZQuery.SQL.Text: = 'select * from article where artno like :0';
+ZQuery.Params [0] .asString: = 'A';
+ZQuery.Open;
+// ZQuery.Recordcount = 0 (OK)
+...
+ZQuery.Close;
+ZQuery.Params [0] .asString: = 'B%';
+ZQuery.Open;
+// ZQuery.Recordcount = 0 (not OK => 'B%' was not set)
+*)
+procedure ZTestCompCoreBugReport.TestSF434;
+var
+  Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  Query.Connection.Connect;
+  try
+    CheckEquals(False, Query.CachedUpdates);
+
+    Query.SQL.Text := 'SELECT * FROM people where p_name like :'+Char(Ord('0')+Ord(Connection.DbcConnection.GetServerProvider = spPostgreSQL));
+    Query.Params[0].AsString := 'A';
+    Query.Open;
+    CheckEquals(0, Query.RecordCount, 'there is no Row');
+    Query.Close;
+    Query.Params[0].AsString := 'A%';
+    Query.Open;
+    CheckEquals(2, Query.RecordCount, 'there are two rows');
+  finally
+    Query.Free;
   end;
 end;
 
