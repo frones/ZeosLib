@@ -667,6 +667,20 @@ const
   // Type: INT
   // Execution timeout in seconds
   ConnProps_StatementTimeOut = DSProps_StatementTimeOut;
+  /// <type>Enum</type>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_FirebirdAPI]={legacy|interface}</syntax>
+  /// <values>legacy|interface</syntax>
+  /// <summary>
+  ///  defines the Firebird API which is used used for. The default for firebird
+  ///  3+ is object API. If "legacy" is set the old firebird legacy API is used.
+  /// </summary>
+  /// <default>interface</default>
+  /// <remarks>
+  ///  If the library version is lower then 3.0 the parameter is ignored
+  ///  and the legacy API is always used
+  /// </remarks>
+  ConnProps_FirebirdAPI = 'FirebirdAPI';
 {$ENDIF ENABLE_FIREBIRD}
 
 {$IFDEF ENABLE_SQLITE}

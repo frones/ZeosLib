@@ -2968,6 +2968,17 @@ const
     Providers: (Count: 1; Items: @cFirebird4upProvider);
     Protocols: (Count: 1; Items: @AllInterbaseAndFirebirdProtocols[0]);
   );
+  ZProp_FirebirdAPI: TZProperty = (
+    Name: ConnProps_FirebirdAPI;
+    Purpose: 'defines the Firebird API which is used used for. The default for '+
+      'firebird 3+ is object API. If "legacy" is set the old firebird lagacy '+
+      'API is used. If the library version is lower then 3.0 the parameter is '+
+      'ignored and the legacy API is always used.';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: 'legacy|interface'; Default: 'interface'; Alias: '';
+    Providers: (Count: 1; Items: @cFirebird3upProvider);
+    Protocols: (Count: 1; Items: @AllInterbaseAndFirebirdProtocols[0]);
+  );
 {$ENDIF ENABLE_FIREBIRD}
 
 {$IFDEF ENABLE_SQLITE}
@@ -3075,7 +3086,7 @@ const
   cASAProvider: TZPropertyProvider = (
     Provider: spASA; MinimumServerVersion: 0;
     MinimumClientVersion: 0; MinimumProtocolVersion: 0;);
-  cASAProtocol: String = 'asa';
+  cASAProtocols: array[0..1] of String = ('asa','asa_capi');
   cASA_AppInfoPurpose = 'Assists administrators in identifying the origin of particular '+
              'client connections from a database server. Clients can specify '+
              'their own string that is appended to the generated string. '+
@@ -3088,7 +3099,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_APP;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_APP : TZProperty = (
     Name: ConnProps_APP;
@@ -3096,7 +3107,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_AppInfo;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   cASA_AutoStartPurpose =
     'Controls whether a local database server is started if no server can be '+
@@ -3107,7 +3118,7 @@ const
     ValueType: pvtEnum; LevelTypes: [pltConnection];
     Values: cBoolEnum; Default: cBoolTrue; Alias: ConnProps_ASTART;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_ASTART : TZProperty = (
     Name: ConnProps_ASTART;
@@ -3115,7 +3126,7 @@ const
     ValueType: pvtEnum; LevelTypes: [pltConnection];
     Values: cBoolEnum; Default: cBoolTrue; Alias: ConnProps_AutoStart;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   cASA_CharSetPurpose =
     'Specifies the character set to be used on this connection. '+
@@ -3128,7 +3139,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_CS+','+ConnProps_CodePage;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_CS : TZProperty = (
     Name: ConnProps_CS;
@@ -3136,7 +3147,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_CharSet+','+ConnProps_CodePage;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   cASA_CommBufferSizePurpose =
     'Sets the maximum size of communication packets. '+LineEnding+
@@ -3154,7 +3165,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: '7300'; Alias: ConnProps_CBSIZE;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_CBSIZE : TZProperty = (
     Name: ConnProps_CBSIZE;
@@ -3162,7 +3173,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_CommBufferSize;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   cASA_CommLinksPurpose =
     'Specifies client-side network protocol options.'+LineEnding+
@@ -3174,7 +3185,7 @@ const
     ValueType: pvtEnum; LevelTypes: [pltConnection];
     Values: 'SharedMemory|ShMem|ALL|TCPIP|TCP'; Default: 'SharedMemory'; Alias: ConnProps_LINKS;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_LINKS : TZProperty = (
     Name: ConnProps_LINKS;
@@ -3182,7 +3193,7 @@ const
     ValueType: pvtEnum; LevelTypes: [pltConnection];
     Values: 'SharedMemory|ShMem|ALL|TCPIP|TCP'; Default: 'SharedMemory'; Alias: ConnProps_CommLinks;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   cASA_CompressPurpose =
     '(ASA) Turns compression on or off for a connection.'+LineEnding+
@@ -3195,7 +3206,7 @@ const
     ValueType: pvtEnum; LevelTypes: [pltConnection];
     Values: cNo_Yes_Enum; Default: cNo; Alias: ConnProps_COMP;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_COMP : TZProperty = (
     Name: ConnProps_COMP;
@@ -3203,7 +3214,7 @@ const
     ValueType: pvtEnum; LevelTypes: [pltConnection];
     Values: cNo_Yes_Enum; Default: cNo; Alias: ConnProps_Compress;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   cASA_CompressionThresholdPurpose =
     'Increases or decreases the size limit at which packets are compressed.'+LineEnding+
@@ -3214,7 +3225,7 @@ const
     ValueType: pvtNumber; LevelTypes: [pltConnection];
     Values: ''; Default: '120'; Alias: ConnProps_COMPTH;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_COMPTH : TZProperty = (
     Name: ConnProps_COMP;
@@ -3222,7 +3233,7 @@ const
     ValueType: pvtNumber; LevelTypes: [pltConnection];
     Values: ''; Default: '120'; Alias: ConnProps_CompressionThreshold;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   cASA_ConnectionNamePurpose =
     'Names a connection, to make switching to it easier in multi-connection applications.'+LineEnding+
@@ -3233,7 +3244,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_CON;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_CON : TZProperty = (
     Name: ConnProps_CON;
@@ -3241,7 +3252,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_ConnectionName;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   cASA_ConnectionPoolPurpose =
     'Controls the behavior of client connection pooling.'+LineEnding+
@@ -3258,7 +3269,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: cNo_Yes_Enum; Default: cYes; Alias: ConnProps_CON;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_CPOOL : TZProperty = (
     Name: ConnProps_CPOOL;
@@ -3266,7 +3277,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: cNo_Yes_Enum; Default: cYes; Alias: ConnProps_ConnectionName;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   cASA_DatabaseFilePurpose =
     'Indicates which database file you want to load and connect to when starting a database that is not running.'+LineEnding+
@@ -3278,7 +3289,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_DBF;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_DBF : TZProperty = (
     Name: ConnProps_DBF;
@@ -3286,7 +3297,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_DatabaseFile;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   cASA_DatabaseKeyPurpose =
     'Starts an encrypted database with a connect request.'+LineEnding+
@@ -3300,7 +3311,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_DBKEY;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_DBKEY : TZProperty = (
     Name: ConnProps_DBKEY;
@@ -3308,7 +3319,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_DatabaseKey;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   cASA_DatabaseNamePurpose =
     'Identifies a loaded database to which a connection needs to be made when '+
@@ -3321,7 +3332,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_DBN;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_DBN : TZProperty = (
     Name: ConnProps_DBN;
@@ -3329,7 +3340,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_DatabaseName;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   cASA_DatabaseSwitchesPurpose =
     'Provides database-specific options when starting a database.'+LineEnding+
@@ -3343,7 +3354,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_DBS;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_DBS : TZProperty = (
     Name: ConnProps_DBS;
@@ -3351,7 +3362,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_DatabaseSwitches;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   cASA_DatabaseSourceNamePurpose =
     'Tells the ODBC driver manager or embedded SQL library where to look in the '+
@@ -3366,7 +3377,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_DSN;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_DSN : TZProperty = (
     Name: ConnProps_DSN;
@@ -3374,7 +3385,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_DataSourceName;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   cASA_DisableMultiRowFetchPurpose =
     'Turns off multi-row fetches across the network.'+LineEnding+
@@ -3388,7 +3399,7 @@ const
     ValueType: pvtEnum; LevelTypes: [pltConnection];
     Values: cNo_Yes_Enum; Default: cNo; Alias: ConnProps_DMRF;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_DMRF : TZProperty = (
     Name: ConnProps_DMRF;
@@ -3396,7 +3407,7 @@ const
     ValueType: pvtEnum; LevelTypes: [pltConnection];
     Values: cNo_Yes_Enum; Default: cNo; Alias: ConnProps_DisableMultiRowFetch;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_Elevate : TZProperty = (
     Name: ConnProps_Elevate;
@@ -3412,7 +3423,7 @@ const
     ValueType: pvtEnum; LevelTypes: [pltConnection];
     Values: cNo_Yes_Enum; Default: cNo; Alias: '';
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   cASA_EncryptedPasswordPurpose =
     'Provides a password, stored in an encrypted format in a data source.'+LineEnding+
@@ -3430,7 +3441,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_ENP;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_ENP : TZProperty = (
     Name: ConnProps_ENP;
@@ -3438,7 +3449,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_EncryptedPassword;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   cASA_EncryptionPurpose =
     'Encrypts packets sent between the client application and the database '+
@@ -3462,7 +3473,7 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_ENC;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_ENC : TZProperty = (
     Name: ConnProps_ENC;
@@ -3470,11 +3481,33 @@ const
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: ConnProps_Encryption;
     Providers: (Count: 1; Items: @cASAProvider);
-    Protocols: (Count: 1; Items: @cASAProtocol);
+    Protocols: (Count: 2; Items: @cASAProtocols);
+  );
+  cASA_FileDataSourceNamePurpose =
+    'Tells the client library there is an ODBC file data source holding information about the database to which you want to connect.'+LineEnding+
+    '{ FileDataSourceName | FILEDSN }=file-data-source-name'+LineEnding+
+    'File Data Sources hold the same information as ODBC data sources stored '+LineEnding+
+    'in the registry. File Data Sources can be easily distributed to end users '+LineEnding+
+    'so that connection information does not have to be reconstructed on each '+LineEnding+
+    'computer.'+LineEnding+
+    'Both ODBC and embedded SQL applications can use file data sources.';
+  ZProp_FileDataSourceName : TZProperty = (
+    Name: ConnProps_FileDataSourceName;
+    Purpose: cASA_FileDataSourceNamePurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_FILEDSN;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 2; Items: @cASAProtocols);
+  );
+  ZProp_FILEDSN : TZProperty = (
+    Name: ConnProps_FILEDSN;
+    Purpose: cASA_FileDataSourceNamePurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_FileDataSourceName;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 2; Items: @cASAProtocols);
   );
  (*
-  ConnProps_FileDataSourceName = 'FileDataSourceName';
-  ConnProps_FILEDSN = 'FILEDSN';
   ConnProps_ForceStart = 'ForceStart';
   ConnProps_FORCE = 'FORCE';
   ConnProps_Host = 'Host';
@@ -3591,7 +3624,7 @@ initialization
   RegisterZPropertiesArray(Ord(High(TMySqlOption))+1, @ZMySqlOptionProperties);
 {$ENDIF}
 {$IF declared(ZProp_SessionIdleTimeOut)}
-  RegisterZProperty(@ZProp_SessionIdleTimeOut);
+  RegisterZProperties([@ZProp_SessionIdleTimeOut, @ZProp_FirebirdAPI]);
 {$IFEND}
 {$IF declared(ZProp_SessionIdleTimeOut)}
   RegisterZProperty(@ZProp_FBProtocol);
@@ -3651,7 +3684,8 @@ initialization
     @ZProp_DatabaseKey, @ZProp_DBKEY, @ZProp_DatabaseName, @ZProp_DBN,
     @ZProp_DatabaseSwitches, @ZProp_DBS, @ZProp_DatabaseSourceName, @ZProp_DSN,
     @ZProp_DisableMultiRowFetch, @ZProp_DMRF, @ZProp_Elevate,
-    @ZProp_EncryptedPassword, @ZProp_ENP, @ZProp_Encryption, @ZProp_ENC]);
+    @ZProp_EncryptedPassword, @ZProp_ENP, @ZProp_Encryption, @ZProp_ENC,
+    @ZProp_FileDataSourceName, @ZProp_FILEDSN]);
 {$ENDIF}
 
 

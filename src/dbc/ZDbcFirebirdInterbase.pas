@@ -1053,12 +1053,12 @@ begin
     if LogCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
     then FormatStr := SSQLError3
     else FormatStr := SSQLError4
-  else FormatStr := SSQLError1;//changed by Fr0st SSQLError2;
+  else FormatStr := SSQLError2;//changed by Fr0st SSQLError2;
   if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '')
   then FLogMessage := Format(FormatStr, [ErrorString, ErrorCode, LogMessage])
-  else FLogMessage := Format(FormatStr, [ErrorString{, ErrorCode changed by Fr0st}]);
+  else FLogMessage := Format(FormatStr, [ErrorString, ErrorCode]);
   if ExeptionClass = EZIBSQLException //added by Fr0st
-  then Error := EZIBSQLException.Create(ErrorString, InterbaseStatusVector, LogMessage)
+  then Error := EZIBSQLException.Create(FLogMessage, InterbaseStatusVector, LogMessage)
   else begin
     Error := ExeptionClass.CreateWithCode(ErrorCode, FlogMessage);
     if ExeptionClass = EZSQLWarning then begin

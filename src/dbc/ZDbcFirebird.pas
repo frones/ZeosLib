@@ -183,10 +183,14 @@ uses ZFastCode, ZDbcFirebirdStatement, ZDbcInterbaseFirebirdMetadata, ZEncoding,
 function TZFirebirdDriver.Connect(const Url: TZURL): IZConnection;
 var iPlainDriver: IZPlainDriver;
     FirebirdPlainDriver: TZFirebirdPlainDriver;
+    S: String;
 begin
   iPlainDriver := GetPlainDriver(URL, True);
+  S := URL.Properties.Values[ConnProps_FirebirdAPI];
+  if S <> '' then
+    S := LowerCase(S);
   FirebirdPlainDriver := iPlainDriver.GetInstance as TZFirebirdPlainDriver;
-  if Assigned(FirebirdPlainDriver.fb_get_master_interface) then
+  if Assigned(FirebirdPlainDriver.fb_get_master_interface) and (S <> 'legacy') then
     Result := TZFirebirdConnection.Create(URL)
   else
     {$IFDEF ZEOS_DISABLE_INTERBASE}
