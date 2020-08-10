@@ -287,6 +287,7 @@ var
   DT: TDateTime absolute TS;
 label ProcBts, jmpDate, jmpTime, jmpTS, jmpOIDBLob;
 begin
+  if (Fres = nil) then Exit;
   RNo := PGRowNo;
   if JSONWriter.Expand then
     JSONWriter.Add('{');
@@ -587,9 +588,8 @@ begin
   FBinaryValues := FResultFormat^ = ParamFormatBin;
   FClientCP := ConSettings.ClientCodePage.CP;
   FSingleRowMode := SingleRowMode;
-  if FSingleRowMode
-  then SetType(rtForwardOnly)
-  else SetType(rtScrollSensitive);
+  if FSingleRowMode then
+    SetType(rtForwardOnly);
   Open;
 end;
 
@@ -643,10 +643,10 @@ end;
 
 procedure TZPostgreSQLResultSet.ClearPGResult;
 begin
-  if Fres <> nil then
-  begin
+  if Fres <> nil then begin
     FPlainDriver.PQclear(Fres);
     Fres := nil;
+    FresAddress^ := nil
   end;
 end;
 
@@ -857,8 +857,8 @@ begin
   if (RowNo < 1) or (RowNo > LastRowNo) then
     raise EZSQLException.Create(SRowDataIsNotAvailable);
 {$ENDIF}
-  Result := FPlainDriver.PQgetisnull(Fres, PGRowNo,
-    ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}) <> 0;
+  Result := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, PGRowNo,
+    ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}) <> 0);
 end;
 
 {**
@@ -892,7 +892,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
+  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
   if LastWasNull then begin
     Result := nil;
     Len := 0;
@@ -1078,7 +1078,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
+  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
   if LastWasNull then begin
     Result := nil;
     Len := 0;
@@ -1251,7 +1251,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
+  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
   if LastWasNull then
     Result := False
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1311,7 +1311,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
+  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
   if not LastWasNull then with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
     Result := PByte(FPlainDriver.PQgetvalue(Fres, ROW_IDX, ColumnIndex));
     if TypeOID = BYTEAOID {bytea} then begin
@@ -1394,7 +1394,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
+  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
   if LastWasNull
   then Result := 0
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1452,7 +1452,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
+  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
   if LastWasNull
   then Result := 0
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1517,7 +1517,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
+  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
   if LastWasNull
   then Result := 0
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1577,7 +1577,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
+  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
   if LastWasNull then
     Result := 0
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1640,7 +1640,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
+  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
   if not LastWasNull then with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
     Buffer := FPlainDriver.PQgetvalue(Fres, ROW_IDX, ColumnIndex);
     if TypeOID = BYTEAOID {bytea} then begin
@@ -1727,7 +1727,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
+  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
   if LastWasNull then
     Result := 0
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1787,7 +1787,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
+  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
   if LastWasNull
   then FillChar(Result, SizeOf(TBCD), #0)
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1841,7 +1841,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
+  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
   if LastWasNull
   then Result := 0
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1895,7 +1895,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
+  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
   if LastWasNull
   then goto jmpZero
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1965,7 +1965,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
+  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
   if LastWasNull
   then goto jmpZero
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -2038,7 +2038,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
+  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
   if LastWasNull
   then goto jmpZero
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -2127,7 +2127,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
+  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
   Result := nil;
   with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
     P := FPlainDriver.PQgetvalue(Fres, ROW_IDX, ColumnIndex);
@@ -2268,14 +2268,14 @@ jmpRes:
     end else if Status = PGRES_TUPLES_OK then begin //end of stream
       LastRowNo := RowNo;
       RowNo := RowNo +1;
-      FplainDriver.PQclear(Fres);
-      Fres := nil;
-      FresAddress^ := nil;
+      ClearPGResult;
     end else
-      FPGConnection.HandleErrorOrWarning(Status, lcOther, 'PQgetResult', Self, nil);
+      FPGConnection.HandleErrorOrWarning(Status, lcFetch, 'PQgetResult', Self, nil);
   end else begin
     RowNo := RowNo + 1;
     Result := (RowNo <= LastRowNo);
+    if not Result and (ResultSetType = rtForwardOnly) then
+      ClearPGResult;
   end;
   if not Result and not LastRowFetchLogged and DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
