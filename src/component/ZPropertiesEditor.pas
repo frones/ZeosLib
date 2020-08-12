@@ -1148,9 +1148,18 @@ const
     const All_ASA_Sybase_MSSQL: array[0..2] of String = ('ASA','sybase','mssql');
   {$ENDIF}
 
+  cLanguagePurpose = 'Specifies the language of the connection.'+LineEnding+
+      '{ Language | LANG }=language-code'+LineEnding+
+      'The two-letter combination representing a language. For example, '+
+      'specifying Language=DE sets the default language to German.'+LineEnding+
+      'This connection parameter establishes the language for the connection. '+
+      'Any errors or warnings from the server are delivered in the specified '+
+      'language, assuming that the server supports the language. If no language '+
+      'is specified, the default language is used. This connection parameter '+
+      'only affects the connection.';
   ZProp_Language : TZProperty = (
     Name: ConnProps_Language;
-    Purpose: 'The language the server should use for messages';
+    Purpose: cLanguagePurpose;
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: '';
     Providers: (Count: 0; Items: nil);
@@ -3507,21 +3516,136 @@ const
     Providers: (Count: 1; Items: @cASAProvider);
     Protocols: (Count: 2; Items: @cASAProtocols);
   );
+  cASA_ForceStartPurpose =
+    'Starts a database server without checking if any server is running.'+LineEnding+
+    '{ ForceStart | FORCE }={ YES | NO }'+LineEnding+
+    'Only with the db_start_engine function. '+LineEnding+
+    'By setting ForceStart=YES, the db_start_engine function does not check if '+
+    'any server is running before starting the server.';
+  ZProp_ForceStart : TZProperty = (
+    Name: ConnProps_ForceStart;
+    Purpose: cASA_ForceStartPurpose;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: 'YES|NO'; Default: 'NO'; Alias: ConnProps_FORCE;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 2; Items: @cASAProtocols);
+  );
+  ZProp_FORCE : TZProperty = (
+    Name: ConnProps_FORCE;
+    Purpose: cASA_ForceStartPurpose;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: 'YES|NO'; Default: 'NO'; Alias: ConnProps_ForceStart;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 2; Items: @cASAProtocols);
+  );
+  ZProp_Host : TZProperty = (
+    Name: ConnProps_Host;
+    Purpose: 'Accepts a host name or IP address and optional port number that '+
+      'tells the client where to find the database server.'+LineEnding+
+      'Host={ hostname | ip-address }[ :port-number ]'+LineEnding+
+      'The Host connection parameter is recommended for connections to a '+
+      'network server, and indicates the use of TCP/IP.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_Host;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 2; Items: @cASAProtocols);
+  );
+  ZProp_Idle : TZProperty = (
+    Name: ConnProps_Host;
+    Purpose: 'Specifies a connection''s idle timeout period.'+LineEnding+
+      'Idle=timeout-value'+LineEnding+
+      'The connection''s idle timeout period, in minutes. The minimum value '+
+      'for the Idle connection parameter is 1 minute, and the maximum supported '+
+      'value is 32767 minutes. If you specify 0, idle timeout checking is '+
+      'turned off for the connection.'+LineEnding+
+      'Default: 240 minutes (TCP/IP)|0 (shared memory)';
+    ValueType: pvtNumber; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_Idle;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 2; Items: @cASAProtocols);
+  );
+  cASA_IntegratedPurpose =
+    'Specifies whether an integrated login can be attempted.'+LineEnding+
+    '{ Integrated | INT }={ YES | NO }'+LineEnding+
+    'For a client application to use an integrated login, the server must be '+
+    'running with the login_mode database option set to a value that includes '+
+    'Integrated.';
+  ZProp_Integrated : TZProperty = (
+    Name: ConnProps_Integrated;
+    Purpose: cASA_IntegratedPurpose;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: 'YES|NO'; Default: 'NO'; Alias: ConnProps_INT;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 2; Items: @cASAProtocols);
+  );
+  ZProp_INT : TZProperty = (
+    Name: ConnProps_INT;
+    Purpose: cASA_IntegratedPurpose;
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: 'YES|NO'; Default: 'NO'; Alias: ConnProps_Integrated;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 2; Items: @cASAProtocols);
+  );
+  cASA_KerberosPurpose =
+    'Specifies whether Kerberos authentication can be used when connecting to the database server.'+LineEnding+
+    '{ Kerberos | KRB }= { YES | NO | SSPI | GSS-API-library-file }'+LineEnding+
+    'The UserID and Password connection parameters are ignored when using a '+
+    'Kerberos authenticated login.'+LineEnding+
+    'To use Kerberos authentication, a Kerberos client must already be '+
+    'installed and configured (nothing needs to be done for SSPI), the user '+
+    'must have already logged in to Kerberos (have a valid ticket-granting '+
+    'ticket), and the database server must have enabled and configured Kerberos '+
+    'authenticated logins.';
+  ZProp_Kerberos : TZProperty = (
+    Name: ConnProps_Kerberos;
+    Purpose: cASA_KerberosPurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: 'NO'; Alias: ConnProps_KRB;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 2; Items: @cASAProtocols);
+  );
+  ZProp_KRB : TZProperty = (
+    Name: ConnProps_KRB;
+    Purpose: cASA_KerberosPurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: 'NO'; Alias: ConnProps_Kerberos;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 2; Items: @cASAProtocols);
+  );
+  ZProp_LANG : TZProperty = (
+    Name: ConnProps_LANG;
+    Purpose: cLanguagePurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_Language;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 2; Items: @cASAProtocols);
+  );
+  cASA_LazyClosePurpose =
+    'Controls whether cursor requests are queued until the next request or '+
+    'performed immediately. Queuing close cursor requests saves a round trip '+
+    'and improves performance.'+LineEnding+
+    '{ LazyClose | LCLOSE }={ YES | NO | AUTO }'+LineEnding+
+    'When this connection parameter is set to YES or AUTO, cursors are not '+
+    'closed until the next database request. Enabling this option can improve '+
+    'performance, if your network exhibits poor latency or your application '+
+    'sends many cursor open and close requests.';
+  ZProp_LazyClose : TZProperty = (
+    Name: cASA_LazyClosePurpose;
+    Purpose: cASA_LazyClosePurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: 'YES|NO|AUTO'; Default: 'AUTO'; Alias: ConnProps_LCLOSE;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 2; Items: @cASAProtocols);
+  );
+  ZProp_LCLOSE : TZProperty = (
+    Name: ConnProps_KRB;
+    Purpose: cASA_LazyClosePurpose;
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: 'YES|NO|AUTO'; Default: 'AUTO'; Alias: ConnProps_LazyClose;
+    Providers: (Count: 1; Items: @cASAProvider);
+    Protocols: (Count: 2; Items: @cASAProtocols);
+  );
  (*
-  ConnProps_ForceStart = 'ForceStart';
-  ConnProps_FORCE = 'FORCE';
-  ConnProps_Host = 'Host';
-  ConnProps_Idle = 'Idle';
-  ConnProps_Integrated = 'Integrated';
-  ConnProps_INT = 'INT';
-  ConnProps_Kerberos = 'Kerberos';
-  ConnProps_KRB = 'KRB';
-  {$IFNDEF ENABLE_DBLIB}
-  ConnProps_Language = 'Language';
-  {$ENDIF}
-  ConnProps_LANG = 'LANG';
-  ConnProps_LazyClose = 'LazyClose';
-  ConnProps_LCLOSE = 'LCLOSE';
   ConnProps_LivenessTimeout = 'LivenessTimeout';
   ConnProps_LTO = 'LTO';
   {$IFNDEF ENABLE_DBLIB}
@@ -3685,7 +3809,9 @@ initialization
     @ZProp_DatabaseSwitches, @ZProp_DBS, @ZProp_DatabaseSourceName, @ZProp_DSN,
     @ZProp_DisableMultiRowFetch, @ZProp_DMRF, @ZProp_Elevate,
     @ZProp_EncryptedPassword, @ZProp_ENP, @ZProp_Encryption, @ZProp_ENC,
-    @ZProp_FileDataSourceName, @ZProp_FILEDSN]);
+    @ZProp_FileDataSourceName, @ZProp_FILEDSN,@ZProp_ForceStart,@ZProp_FORCE,
+    @ZProp_Host, @ZProp_Idle, @ZProp_Integrated, @ZProp_INT,@ZProp_Kerberos,
+    @ZProp_KRB, @ZProp_LANG, @ZProp_LazyClose, @ZProp_LCLOSE]);
 {$ENDIF}
 
 
