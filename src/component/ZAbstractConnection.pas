@@ -165,8 +165,10 @@ type
     FOnLogin: TZLoginEvent;
     FClientCodepage: String;
     FTransactions: TZSortedList;
+    {$IFNDEF NO_AUTOENCODE}
     function GetAutoEncode: Boolean;
     procedure SetAutoEncode(Value: Boolean);
+    {$ENDIF}
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetConnPort: Integer;
@@ -287,7 +289,9 @@ type
     procedure HideSQLHourGlass;
   published
     property ControlsCodePage: TZControlsCodePage read FControlsCodePage write SetControlsCodePage;
+    {$IFNDEF NO_AUTOENCODE}
     property AutoEncodeStrings: Boolean read GetAutoEncode write SetAutoEncode stored True default {$IFDEF UNICODDE}True{$ELSE}False{$ENDIF};
+    {$ENDIF NO_AUTOENCODE}
     property ClientCodepage: String read FClientCodepage write SetClientCodePage; //EgonHugeist
     property Catalog: string read FCatalog write FCatalog;
     property Properties: TStrings read GetProperties write SetProperties;
@@ -1541,6 +1545,7 @@ begin
   Result := ConstructURL(FURL.UserName, FURL.Password);
 end;
 
+{$IFNDEF NO_AUTOENCODE}
 function TZAbstractConnection.GetAutoEncode: Boolean;
 begin
   {.$IFDEF UNICODE}
@@ -1583,6 +1588,7 @@ begin
     {$IFEND}
   {.$ENDIF}
 end;
+{$ENDIF NO_AUTOENCODE}
 
 {**
   Returns the current version of zeosdbo.

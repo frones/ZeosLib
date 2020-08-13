@@ -74,8 +74,12 @@ type
   TZFieldsLookUpDynArray = array of TZFieldsLookUp;
 
   {** Defines the Target Ansi codepages for the Controls }
+  {$IF defined(NO_AUTOENCODE) and defined(WITH_DEFAULTSYSTEMCODEPAGE)}
+  TZControlsCodePage = ({$IFDEF UNICODE}cCP_UTF16, cCP_UTF8, cGET_ACP, cDefaultSystemCodePage{$ELSE}
+    {$IFDEF FPC}{$IFDEF LCL}cCP_UTF8, cDefaultSystemCodePage{$ELSE}cDefaultSystemCodePage,cCP_UTF8{$ENDIF}, cCP_UTF16, cGET_ACP{$ELSE}cDefaultSystemCodePage, cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
+  {$ELSE}
   TZControlsCodePage = ({$IFDEF UNICODE}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
-
+  {$IFEND}
 {**
   Converts DBC Field Type to TDataset Field Type.
   @param Value an initial DBC field type.
@@ -267,6 +271,7 @@ procedure SplitQualifiedObjectName(const QualifiedName: string;
   const SupportsCatalogs, SupportsSchemas: Boolean;
   out Catalog, Schema, ObjectName: string); overload;
 
+function GetTransliterateCodePage(ControlsCodePage: TZControlsCodePage): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 {**
   Assigns a Statement value from a TParam
   @param Index the index of Statement.SetParam(Idex..);
@@ -334,7 +339,7 @@ implementation
 uses
   FmtBCD, Variants,
   ZFastCode, ZMessages, ZGenericSqlToken, ZAbstractRODataset,
-  ZSysUtils, ZDbcResultSet, ZEncoding;
+  ZSysUtils, ZDbcResultSet, {$IFDEF NO_AUTOENCODE}ZDbcUtils,{$ENDIF}ZEncoding;
 
 {**
   Converts DBC Field Type to TDataset Field Type.
@@ -1707,6 +1712,22 @@ begin
   end;
 end;
 
+function GetTransliterateCodePage(ControlsCodePage: TZControlsCodePage): Word;
+begin
+  case ControlsCodePage of
+    cCP_UTF8: Result := zCP_UTF8;
+    cGET_ACP:  Result := ZOSCodePage;
+    {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+    else Result := DefaultSystemCodePage
+    {$ELSE}
+      {$IFDEF LCL}
+      Result := zCP_UTF8
+      {$ELSE}
+      Result := ZOSCodePage;
+      {$ENDIF}
+    {$ENDIF}
+  end;
+end;
 {**
   Assigns a Statement value from a TParam
   @param Index the index of Statement.SetXxxx(ColumnIndex, xxx);
@@ -1876,6 +1897,11 @@ begin
                  Lob := TZLocalMemCLob.CreateWithData(PWideChar(P), L shr 1, ConSettings, nil);
                  Statement.SetBlob(Index, stUnicodeStream, Lob);
               end else {$ENDIF}begin
+                {$IFDEF NO_AUTOENCODE}
+                if ConSettings.ClientCodePage.Encoding = ceUTF16
+                then CP := GetW2A2WConversionCodePage(ConSettings)
+                else CP := ConSettings.ClientCodePage.CP;
+                {$ELSE}
                 if ConSettings.ClientCodePage.Encoding = ceUTF16
                 then CP := ConSettings.CTRL_CP
                 else CP := ConSettings.ClientCodePage.CP;
@@ -1892,6 +1918,7 @@ begin
                   etUTF8: CP := zCP_UTF8;
                   else {etUSASCII}; //do nothing just satisfy FPC 3.1+
                 end;
+                {$ENDIF}
                 Lob := TZLocalMemCLob.CreateWithData(PAnsiChar(P), L, CP, ConSettings, nil);
                 Statement.SetBlob(Index, stAsciiStream, Lob);
               end;

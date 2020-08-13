@@ -141,7 +141,7 @@ type
     FCurrentRow: Integer;
     FRowAccessor, FFieldsAccessor: TZRowAccessor;
     FResultSet2AccessorIndexList: TZIndexPairList;
-    FClientCP, FCTRL_CP: Word;
+    FClientCP{$IFNDEF NO_AUTOENCODE}, FCTRL_CP{$ENDIF}: Word;
     FOldRowBuffer: PZRowBuffer;
     FNewRowBuffer: PZRowBuffer;
     FCurrentRows: TZSortedList;
@@ -1126,8 +1126,10 @@ type
     property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
     {$IFEND}
     property AsRawByteString: RawByteString read GetAsRawByteString write SetAsRawByteString;
+  {$IFNDEF NO_AUTOENCODE}
   published
     property Transliterate default False;  //obsolete imho
+  {$ENDIF}
   end;
 
   TZUnicodeStringField = class(TWideStringField)
@@ -2181,6 +2183,7 @@ end;
   Fetches one row from the result set.
   @return <code>True</code> if record was successfully fetched.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZAbstractRODataset.FetchOneRow: Boolean;
 begin
   if Assigned(ResultSet) then
@@ -2194,7 +2197,7 @@ begin
       if Result then begin
         Inc(FFetchCount);
         if FilterRow(ResultSet.GetRow) then
-          CurrentRows.Add({%H-}Pointer(ResultSet.GetRow))
+          CurrentRows.Add(Pointer(ResultSet.GetRow))
         else
           Continue;
       end;
@@ -2202,12 +2205,14 @@ begin
   else
     Result := False;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Checks the specified row with the all filters.
   @param RowNo a number of the row.
   @return <code>True</code> if the row sutisfy to all filters.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZAbstractRODataset.FilterRow(RowNo: NativeInt): Boolean;
 var
   I: Integer;
@@ -2258,7 +2263,7 @@ begin
     CurrentRows := TZSortedList.Create;
 
     SavedState := SetTempState(dsNewValue);
-    CurrentRows.Add({%H-}Pointer(RowNo));
+    CurrentRows.Add(Pointer(RowNo));
     CurrentRow := 1;
 
     try
@@ -2296,18 +2301,20 @@ begin
   if not Result then
      Exit;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Go to specified row.
   @param RowNo a number of the row.
   @return <code>True</code> if the row successfully located.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZAbstractRODataset.GotoRow(RowNo: NativeInt): Boolean;
 var
   Index: Integer;
 begin
   Result := False;
-  Index := CurrentRows.IndexOf({%H-}Pointer(RowNo));
+  Index := CurrentRows.IndexOf(Pointer(RowNo));
   if Index >= 0 then
   begin
     if Index < CurrentRow then
@@ -2316,30 +2323,30 @@ begin
     Result := True;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Rereads all rows and applies a filter.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 procedure TZAbstractRODataset.RereadRows;
-var
-  I: NativeUInt;
-  RowNo: NativeInt;
+var I, RowNo: NativeInt;
 begin
   if not (State in [dsInactive]) and not IsUniDirectional then
   begin
     UpdateCursorPos; //see http://sourceforge.net/p/zeoslib/tickets/89/
     if (CurrentRow > 0) and (CurrentRow <= CurrentRows.Count) and
        (CurrentRows.Count > 0) then
-      RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1])
+      RowNo := NativeInt(CurrentRows[CurrentRow - 1])
     else
       RowNo := -1;
     CurrentRows.Clear;
 
     for I := 1 to FetchCount do
       if FilterRow(I) then
-        CurrentRows.Add({%H-}Pointer(I));
+        CurrentRows.Add(Pointer(I));
 
-    CurrentRow := CurrentRows.IndexOf({%H-}Pointer(RowNo)) + 1;
+    CurrentRow := CurrentRows.IndexOf(Pointer(RowNo)) + 1;
     CurrentRow := Min(Max(1, CurrentRow), CurrentRows.Count);
 
     if FSortedFields <> '' then
@@ -2348,10 +2355,12 @@ begin
       Resync([]);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Retrieves parameter values from prepared statement.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4057 off : Local variable "BCD" does not seem to be initialized} {$ENDIF}
 procedure TZAbstractRODataset.RetrieveParamValues;
 var
   I: Integer;
@@ -2466,6 +2475,7 @@ begin
       end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Fill prepared statement with parameters.
@@ -2531,6 +2541,7 @@ end;
   @param DoCheck flag to perform checking.
   @return a location result.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZAbstractRODataset.GetRecord(Buffer: TRecordBuffer; GetMode: TGetMode;
   DoCheck: Boolean): TGetResult;
 var
@@ -2581,7 +2592,7 @@ begin
 
   if Result = grOK then
   begin
-    RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
+    RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
     if (ResultSet.GetRow <> RowNo) then
       ResultSet.MoveAbsolute(RowNo);
     RowAccessor.RowBuffer := PZRowBuffer(Buffer);
@@ -2593,6 +2604,7 @@ begin
   if (Result = grError) and DoCheck then
     raise EZDatabaseError.Create(SNoMoreRecords);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets the current record buffer depended on the current dataset state.
@@ -2633,7 +2645,8 @@ begin
         else FResultSet.MoveAbsolute(RowBuffer.Index);
       end;
     dsCalcFields: RowBuffer := PZRowBuffer(CalcBuffer);
-    dsOldValue, dsNewValue, dsCurValue: begin
+    dsOldValue, dsNewValue, dsCurValue: if (CurrentRow > 0) and
+      (CurrentRow <= CurrentRows.Count) then begin
         RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
         if RowNo <> ResultSet.GetRow then
           CheckBiDirectional;
@@ -3052,6 +3065,7 @@ end;
   @param Field an field object to be stored.
   @param Buffer a field value buffer.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF} //ill FPC
 procedure TZAbstractRODataset.SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF});
 var
   ColumnIndex: Integer;
@@ -3109,7 +3123,7 @@ begin
               if FNativeFormatOverloadCalled[ftDate]
               then DT := PDateTime(Buffer)^
               else DT := PInteger(Buffer)^ - 1 + D1M1Y1;
-              DecodeDateTimeToDate(DT, D{%H-});
+              DecodeDateTimeToDate(DT, D);
               RowAccessor.SetDate(ColumnIndex, D);
               FNativeFormatOverloadCalled[ftDate] := False;
             end;
@@ -3321,6 +3335,7 @@ begin
     NewRowBuffer.Index := -1;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Checks is the cursor opened.
@@ -3638,7 +3653,9 @@ begin
         then raise EZDatabaseError.Create(SCanNotOpenResultSet)
         else Exit;
     FClientCP := ResultSet.GetConSettings.ClientCodePage.CP;
+    {$IFNDEF NO_AUTOENCODE}
     FCTRL_CP := ResultSet.GetConSettings.CTRL_CP;
+    {$ENDIF NO_AUTOENCODE}
 
     FCursorOpened := True;
     FResultSetMetadata := ResultSet.GetMetadata;
@@ -4438,6 +4455,7 @@ end;
 {**
   Performs an internal refreshing.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 procedure TZAbstractRODataset.InternalRefresh;
 var
   RowNo: NativeInt;
@@ -4454,7 +4472,7 @@ begin
   begin
     if CurrentRow > 0 then
     begin
-      RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
+      RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
       if ResultSet.GetRow <> RowNo then
         ResultSet.MoveAbsolute(RowNo);
 
@@ -4503,6 +4521,7 @@ begin
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Finds the next record in a filtered query.
@@ -4706,6 +4725,7 @@ end;
   @param Options a search options.
   @return an index of found row or -1 if nothing was found.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZAbstractRODataset.InternalLocate(const KeyFields: string;
   const KeyValues: Variant; Options: TLocateOptions): LongInt;
 var
@@ -4760,7 +4780,7 @@ begin
         if I >= RowCount then
           Break;
 
-        RowNo := {%H-}NativeInt(CurrentRows[I]);
+        RowNo := NativeInt(CurrentRows[I]);
         ResultSet.MoveAbsolute(RowNo);
 
         RowAccessor.RowBuffer := SearchRowBuffer;
@@ -4797,7 +4817,7 @@ begin
       if I >= RowCount then
         Break;
 
-      RowNo := {%H-}NativeInt(CurrentRows[I]);
+      RowNo := NativeInt(CurrentRows[I]);
       ResultSet.MoveAbsolute(RowNo);
 
       if CompareFieldsFromResultSet(FieldRefs, DecodedKeyValues,
@@ -4810,6 +4830,7 @@ begin
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Locates an interested record by specified search criteria.
@@ -4851,6 +4872,7 @@ end;
   @param ResultFields a list of field names to return as a result.
   @return an array of requested field values.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZAbstractRODataset.Lookup(const KeyFields: string;
   const KeyValues: Variant; const ResultFields: string): Variant;
 var
@@ -4880,7 +4902,7 @@ begin
   SearchRowBuffer := PZRowBuffer(AllocRecordBuffer);
   {$ENDIF}
   try
-    RowNo := {%H-}NativeInt(CurrentRows[RowNo - 1]);
+    RowNo := NativeInt(CurrentRows[RowNo - 1]);
     if ResultSet.GetRow <> RowNo then
       ResultSet.MoveAbsolute(RowNo);
 
@@ -4901,11 +4923,13 @@ begin
   else
     Result := EncodeVariantArray(ResultValues);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets the updated status for the current row.
   @return the UpdateStatus value for the current row.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZAbstractRODataset.UpdateStatus: TUpdateStatus;
 var
   RowNo: NativeInt;
@@ -4913,7 +4937,7 @@ begin
   Result := usUnmodified;
   if (ResultSet <> nil) and (CurrentRows.Count > 0) then
   begin
-    RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
+    RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
     if ResultSet.GetRow <> RowNo then
       ResultSet.MoveAbsolute(RowNo);
 
@@ -4925,6 +4949,7 @@ begin
       Result := usDeleted;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Translates strings between ansi and oem character sets.
@@ -5025,9 +5050,16 @@ begin
         {$ENDIF}
         ftMemo, ftFmtMemo: begin
             ConSettings := FConnection.DbcConnection.GetConSettings;
+            {$IFNDEF NO_AUTOENCODE}
             if FConnection.AutoEncodeStrings or (ConSettings.ClientCodePage.Encoding = ceUTF16)
             then CP := ConSettings.CTRL_CP
             else CP := ConSettings.ClientCodePage.CP;
+            {$ELSE NO_AUTOENCODE}
+            CP := GetTransliterateCodePage(Connection.ControlsCodePage);
+            if not ((ConSettings.ClientCodePage.Encoding = ceUTF16) or
+               (TMemoField(TField).Transliterate and (CP <> ConSettings.ClientCodePage.CP))) then
+              CP := ConSettings.ClientCodePage.CP;
+            {$ENDIF}
             Assert(Blob.QueryInterface(IZCLob, CLob) = S_OK);
             Result := Clob.GetStream(CP);
           end;
@@ -5092,6 +5124,7 @@ end;
 {**
   Performs sorting of the internal rows.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 procedure TZAbstractRODataset.InternalSort;
 var
   I: Integer;
@@ -5124,7 +5157,7 @@ begin
 
     if (CurrentRow <= CurrentRows.Count) and (CurrentRows.Count > 0)
       and (CurrentRow > 0) then
-      RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1])
+      RowNo := NativeInt(CurrentRows[CurrentRow - 1])
     else
       RowNo := -1;
 
@@ -5167,12 +5200,13 @@ begin
       end;
     end;
 
-    CurrentRow := CurrentRows.IndexOf({%H-}Pointer(RowNo)) + 1;
+    CurrentRow := CurrentRows.IndexOf(Pointer(RowNo)) + 1;
     CurrentRow := Min(Max(0, CurrentRow), CurrentRows.Count);
     if not (State in [dsInactive]) then
        Resync([]);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Clears list sorting and restores the previous order.
@@ -5181,11 +5215,14 @@ end;
   @returns &gt;0 if Item1 &gt; Item2, &lt;0 it Item1 &lt; Item2 and 0
     if Item1 and Item2 are equal.
 }
-{$IFDEF FPC} {$PUSH} {$WARN 4082 off : Converting pointers to signed integers...} {$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4082 off : Converting pointers to signed integers...}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
 function TZAbstractRODataset.ClearSort(Item1, Item2: Pointer): Integer;
 begin
   //no real pointer addresses here, just a Integer represented as Pointer! -> overflow save!
-  Result := {%H-}NativeInt(Item1) - {%H-}NativeInt(Item2);
+  Result := NativeInt(Item1) - NativeInt(Item2);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -5198,6 +5235,7 @@ end;
   @returns &gt;0 if Item1 &gt; Item2, &lt;0 it Item1 &lt; Item2 and 0
     if Item1 and Item2 are equal.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZAbstractRODataset.HighLevelSort(Item1, Item2: Pointer): Integer;
 var
   RowNo: NativeInt;
@@ -5214,7 +5252,7 @@ begin
   GetCalcFields(TGetCalcFieldsParamType(FSortRowBuffer1));
 
   { Gets the second row. }
-  RowNo := {%H-}NativeInt(Item2);
+  RowNo := NativeInt(Item2);
   ResultSet.MoveAbsolute(RowNo);
   FFieldsAccessor.RowBuffer := FSortRowBuffer2;
   FFieldsAccessor.RowBuffer^.Index := RowNo;
@@ -5228,6 +5266,7 @@ begin
   Result := FFieldsAccessor.CompareBuffers(FSortRowBuffer1, FSortRowBuffer2,
     FSortedFieldIndices, FCompareFuncs);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sorting list using lowlevel approach which is fast but may not be used
@@ -5238,11 +5277,13 @@ end;
   @returns &gt;0 if Item1 &gt; Item2, &lt;0 it Item1 &lt; Item2 and 0
     if Item1 and Item2 are equal.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZAbstractRODataset.LowLevelSort(Item1, Item2: Pointer): Integer;
 begin
-  Result := ResultSet.CompareRows({%H-}NativeInt(Item1), {%H-}NativeInt(Item2),
+  Result := ResultSet.CompareRows(NativeInt(Item1), NativeInt(Item2),
     FSortedFieldIndices, FCompareFuncs);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
    Sets a new dataset properties.
@@ -6794,6 +6835,7 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "D" does not seem to be initialized} {$ENDIF} //ill FPC
 procedure TZDateField.SetAsDateTime(Value: TDateTime);
   procedure DoValidate;
   begin
@@ -6811,9 +6853,10 @@ var D: TZDate;
 begin
   if Assigned(OnValidate) then
     DoValidate;
-  DecodeDateTimeToDate(Value, D{%H-});
+  DecodeDateTimeToDate(Value, D);
   SetAsDate(D);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZDateField.SetInvalidText(const Value: String);
 begin
@@ -9520,7 +9563,11 @@ begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
       if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK) then begin
         if FColumnCP = zCP_UTF16
+        {$IFDEF NO_AUTOENCODE}
+        then CP := GetTransliterateCodePage(TZAbstractRODataset(DataSet).Connection.ControlsCodePage)
+        {$ELSE}
         then CP := FRowAccessor.ConSettings^.CTRL_CP
+        {$ENDIF}
         else CP := FColumnCP;
         Result := Clob.GetRawByteString(CP);
       end else Result := ''
@@ -9710,7 +9757,11 @@ begin
     Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
     BLob.QueryInterface(IZCLob, Clob);
     if (FColumnCP = zCP_UTF16)
+    {$IFDEF NO_AUTOENCODE}
+    then SetW(GetTransliterateCodePage(TZAbstractRODataset(DataSet).Connection.ControlsCodePage))
+    {$ELSE}
     then SetW(FRowAccessor.ConSettings^.CTRL_CP)
+    {$ENDIF}
     else CLob.SetPAnsiChar(P, FColumnCP, L);
     FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Clob);
     if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
@@ -9907,7 +9958,11 @@ begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
       if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK) then begin
         if FColumnCP = zCP_UTF16
+        {$IFDEF NO_AUTOENCODE}
+        then CP := GetTransliterateCodePage(TZAbstractRODataset(DataSet).Connection.ControlsCodePage)
+        {$ELSE}
         then CP := FRowAccessor.ConSettings^.CTRL_CP
+        {$ENDIF}
         else CP := FColumnCP;
         Result := Clob.GetRawByteString(CP);
       end else Result := ''
@@ -10092,7 +10147,11 @@ begin
     Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
     BLob.QueryInterface(IZCLob, Clob);
     if (FColumnCP = zCP_UTF16)
+    {$IFDEF NO_AUTOENCODE}
+    then SetW(GetTransliterateCodePage(TZAbstractRODataset(DataSet).Connection.ControlsCodePage))
+    {$ELSE}
     then SetW(FRowAccessor.ConSettings^.CTRL_CP)
+    {$ENDIF}
     else CLob.SetPAnsiChar(P, FColumnCP, L);
     FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Clob);
     if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
