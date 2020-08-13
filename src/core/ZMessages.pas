@@ -180,6 +180,7 @@ const
   function SUnsupportedByDriver   : String;
 
   function SConnectionIsNotOpened: String;
+  function SConnectionIsOpened: String;
   function SInvalidOpInAutoCommit: String;
   function SInvalidOpInNonAutoCommit: String;
   function SInvalidOpPrepare: String;
@@ -354,6 +355,7 @@ var
   SUnsupportedByDriver   : String;
 
   SConnectionIsNotOpened: String;
+  SConnectionIsOpened: String;
   SInvalidOpInAutoCommit: String;
   SInvalidOpInNonAutoCommit: String;
   SInvalidOpPrepare: String;
@@ -532,6 +534,7 @@ resourcestring
   cSUnsupportedByDriver    = 'Le driver d''origine ne supporte pas cette fonctionnalité: [%s]';
 
   cSConnectionIsNotOpened = 'Connexion non encore ouverte';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit = 'Opération non valide en mode AutoCommit';
   cSInvalidOpInNonAutoCommit = 'Opération non valide si le mode n''est pas AutoCommit';
   cSInvalidOpPrepare = 'Préparer une transaction n''est possible qu''en en démarrant une (Starttransaction) d''abord (!)';
@@ -696,6 +699,7 @@ resourcestring
   cSUnsupportedByDriver    = 'O Driver não suporta este recurso nativamente: [%s]';
 
   cSConnectionIsNotOpened = 'Conexão ainda não está aberta.';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit = 'Operação inválida no modo AutoCommit.';
   cSInvalidOpInNonAutoCommit = 'Operação inválida quando o modo AutoCommit é False.';
   cSInvalidOpPrepare = 'Prepare transaction somente é possível após comandar StartTransaction';
@@ -857,6 +861,7 @@ resourcestring
   cSUnsupportedByDriver    = 'De driver ondersteunt deze functie niet: [%s]';
 
   cSConnectionIsNotOpened = 'Verbinding is niet gemaakt.';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit = 'Ongeldige operatie in AutoCommit mode.';
   cSInvalidOpInNonAutoCommit = 'Ongeldige operatie in non AutoCommit mode.';
   cSInvalidOpPrepare = 'Transactie voorbereiden is enkel mogelijk bij de eerste aanroep van Starttransaction!';
@@ -1021,6 +1026,7 @@ resourcestring
   cSUnsupportedProtocol = 'Nicht unterstütztes Protokoll: %s';
 
   cSConnectionIsNotOpened = 'Die Verbindung zur Datenbank ist noch nicht hergestellt';
+  cSConnectionIsOpened = 'Die Verbindung zur Datenbank ist bereits hergestellt';
   cSInvalidOpInAutoCommit = 'Ungültige Operation im AUTOCOMMIT-Modus';
   cSInvalidOpInNonAutoCommit = 'Ungültige Operation außerhalb des AUTOCOMMIT-Modus';
   cSInvalidOpPrepare = 'Transaktion vorzubereiten ist nur beim ersten Aufruf von Starttransaction möglich!';
@@ -1183,6 +1189,7 @@ resourcestring
   cSUnsupportedByDriver    = 'Translate: Driver can not support this feature natively: [%s]';
 
   cSConnectionIsNotOpened = 'La conexión no ha sido abierta todavía';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit = 'Operación inválida en modo AutoCommit';
   cSInvalidOpInNonAutoCommit = 'Operación inválida en modo No-AutoCommit';
   cSInvalidOpPrepare = 'Translate : Prepare transaction only possible on matching first(!) Starttransaction';
@@ -1347,6 +1354,7 @@ resourcestring
   cSUnsupportedByDriver    = 'Driver nu poate suporta aceastã facilitate : [%s]';
 
   cSConnectionIsNotOpened = 'Conexiune nu este deschisã incã';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit = 'Operaşie invalidã în modul AutoCommit';
   cSInvalidOpInNonAutoCommit = 'Operaşie invalidã în modul non AutoCommit ';
   cSInvalidOpPrepare = 'Prepare transaction only possible on matching first(!) Starttransaction';
@@ -1507,6 +1515,7 @@ resourcestring
   cSUnsupportedByDriver    = 'Driver tidak mendukung fitur: [%s]';
 
   cSConnectionIsNotOpened = 'Koneksi belum dibuka';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit = 'Operasi tidak valid pada mode AUTOCOMMIT';
   cSInvalidOpInNonAutoCommit = 'Operasi tidak valid pada mode non AUTOCOMMIT';
   cSInvalidOpPrepare = 'Persiapan transaksi hanya mungkin pada (!) Starttransaction pertama';
@@ -1670,6 +1679,7 @@ resourcestring
   cSUnsupportedByDriver                     = 'Äğàéâåğ íå ïîääåğæèâàåò äàííóş âîçìîæíîñòü : [%s]';
 
   cSConnectionIsNotOpened                   = 'Ïîäêëş÷åíèå íå îòêğûòî';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit                   = 'Íåâåğíàÿ îïåğàöèÿ â ğåæèìå àâòîïîäòâåğæäåíèÿ (AutoCommit)';
   cSInvalidOpInNonAutoCommit                = 'Íåâåğíàÿ îïåğàöèÿ â ğåæèìå ÍÅ àâòîïîäòâåğæäåíèÿ (non AutoCommit)';
   cSInvalidOpPrepare                        = 'Ïîäãîòîâêà òğàíçàíêöèè âîçìîæíà òîëüêî ïğè ïåğâîì èñïîëüçîâàíèè(!) StartTransaction';
@@ -1834,6 +1844,7 @@ resourcestring
   cSUnsupportedByDriver    = 'Ovladaè nepodporuje tuto vlastnost: [%s]';
 
   cSConnectionIsNotOpened = 'Spojení není otevøeno';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit = 'Nesprávná operace v módu AutoCommit';
   cSInvalidOpInNonAutoCommit = 'Nesprávná operace v módu NE AutoCommit';
   cSInvalidOpPrepare = '"Prepare" transakce je moné pouze jako první! Starttransaction';
@@ -2000,6 +2011,7 @@ resourcestring
   cSUnsupportedByDriver    = 'Sterownik nie obs³uguje tej w³aœciwoœci natywnie: [%s]';
 
   cSConnectionIsNotOpened = 'Jeszcze nie nawi¹zano po³¹czenia';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit = 'B³êdna operacja w trybie AutoCommit';
   cSInvalidOpInNonAutoCommit = 'B³êdna operacja przy wy³¹czonym AutoCommit';
   cSInvalidOpPrepare = 'Przygotowanie transakcji mo¿liwe jest tylko przy pierwszym(!) Starttransaction';
@@ -2163,6 +2175,7 @@ resourcestring
   cSUnsupportedByDriver    = 'Driver can not support this feature natively: [%s]';
 
   cSConnectionIsNotOpened = 'Connection is not opened yet';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit = 'Invalid operation in AutoCommit mode';
   cSInvalidOpInNonAutoCommit = 'Invalid operation in non AutoCommit mode';
   cSInvalidOpPrepare = 'Prepare transaction only possible on matching first(!) Starttransaction';
@@ -2589,6 +2602,11 @@ end;
 function SConnectionIsNotOpened: String;
 begin
   Result := ConvertZMessageToRaw(cSConnectionIsNotOpened);
+end;
+
+function SConnectionIsOpened: String;
+begin
+  Result := ConvertZMessageToRaw(cSConnectionIsOpened);
 end;
 
 function SInvalidOpInAutoCommit: String;
@@ -3095,6 +3113,7 @@ begin
   SUnsupportedByDriver := cSUnsupportedByDriver;
 
   SConnectionIsNotOpened := cSConnectionIsNotOpened;
+  SConnectionIsOpened := cSConnectionIsOpened;
   SInvalidOpInAutoCommit := cSInvalidOpInAutoCommit;
   SInvalidOpInNonAutoCommit := cSInvalidOpInNonAutoCommit;
   SInvalidOpPrepare := cSInvalidOpPrepare;

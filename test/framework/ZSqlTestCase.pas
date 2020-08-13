@@ -63,7 +63,7 @@ uses
 {$ENDIF}
   {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, DB, Contnrs,
   ZDataset, ZDatasetUtils,
-  ZCompatibility, ZDbcIntfs, ZClasses, ZConnection, ZTestCase, ZScriptParser, ZDbcLogging;
+  ZCompatibility, ZDbcIntfs, ZConnection, ZTestCase, ZScriptParser, ZDbcLogging;
 
 const
   { protocol lists }

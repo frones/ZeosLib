@@ -379,9 +379,9 @@ begin
       //Result := ftCurrency;
       Result := ftBCD;
     stString: if Precision <= 0
-      then {$IFDEF WITH_WIDEMEMO}if CPType = cCP_UTF16
-        then Result := ftWideMemo
-        else {$ENDIF}Result := ftMemo
+      then {$IF defined(WITH_WIDEMEMO) or defined(NO_AUTOENCODE)}if CPType = cCP_UTF16
+        then Result := {$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}
+        else {$IFEND}Result := ftMemo
       else if CPType = cCP_UTF16
         then Result := ftWideString
         else Result := ftString;
@@ -401,15 +401,15 @@ begin
     stBinaryStream:
       Result := ftBlob;
     stUnicodeString: if (Precision <= 0) or (Precision > dsMaxStringSize)
-      then {$IFDEF WITH_WIDEMEMO}if CPType = cCP_UTF16
-        then Result := ftWideMemo
-        else {$ENDIF}Result := ftMemo
+      then {$IF defined(WITH_WIDEMEMO) or defined(NO_AUTOENCODE)}if CPType = cCP_UTF16
+        then Result := {$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}
+        else {$IFEND}Result := ftMemo
       else if CPType = cCP_UTF16
         then Result := ftWideString
         else Result := ftString;
-    stUnicodeStream: {$IFDEF WITH_WIDEMEMO}if CPType = cCP_UTF16
-        then Result := ftWideMemo
-        else {$ENDIF}Result := ftMemo;
+    stUnicodeStream: {$IF defined(WITH_WIDEMEMO) or defined(NO_AUTOENCODE)}if CPType = cCP_UTF16
+        then Result := {$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}
+        else {$IFEND}Result := ftMemo;
     {$IFDEF WITH_FTDATASETSUPPORT}
     stDataSet:
       Result := ftDataSet;

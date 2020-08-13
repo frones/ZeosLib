@@ -1260,7 +1260,6 @@ procedure ZTestCompInterbaseBugReport.Test_SF287;
 const
   DateStr1 = '0018-07-02 19:00:00';
   DateStr2 = '0018-07-01 05:00:00';
-  FormatStr = '';
 var
   Query: TZQuery;
   FormatSettings: TFormatSettings;

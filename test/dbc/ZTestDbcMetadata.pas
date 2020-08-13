@@ -534,18 +534,19 @@ type
       IZPreparedStatement;
     function PrepareCallWithParams(const SQL: string; Info: TStrings):
       IZCallableStatement;
-  protected
-    procedure InternalCreate; override;
+  public
+    procedure AfterConstruction; override;
   public
     Metadata: TZAbstractDatabaseMetadata; // arrrgh... need to keep object pointer
   end;
 
 { TDummyDbcConnection }
 
-procedure TDummyDbcConnection.InternalCreate;
+procedure TDummyDbcConnection.AfterConstruction;
 begin
   Metadata := TZAbstractDatabaseMetadata.Create(Self, Url);
   FMetadata := Metadata;
+  inherited AfterConstruction;
 end;
 
 function TDummyDbcConnection.PrepareCallWithParams(const SQL: string;

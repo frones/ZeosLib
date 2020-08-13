@@ -209,6 +209,7 @@ type
     procedure DoStartTransaction;
 
     procedure CheckConnected;
+    procedure CheckDisconnected;
     procedure CheckAutoCommitMode;
     procedure CheckNonAutoCommitMode;
 
@@ -1096,7 +1097,15 @@ end;
 }
 procedure TZAbstractConnection.CheckConnected;
 begin
-  if FConnection = nil then
+  if (FConnection = nil) or FConnection.IsClosed then
+    raise EZDatabaseError.Create(SConnectionIsNotOpened);
+end;
+
+{**  Checks if this connection is inactive.
+}
+procedure TZAbstractConnection.CheckDisconnected;
+begin
+  if (FConnection <> nil) and not FConnection.IsClosed then
     raise EZDatabaseError.Create(SConnectionIsNotOpened);
 end;
 
@@ -1610,17 +1619,22 @@ procedure TZAbstractConnection.SetControlsCodePage(const Value: TZControlsCodePa
 var NewControlsCodePage: TZControlsCodePage;
     S: String;
 begin
+  CheckDisconnected;
   case Value of
-    cCP_UTF16:  {$IFDEF WITH_WIDEFIELDS}
+    cCP_UTF16:  {$IF defined(WITH_WIDEFIELDS) or defined(NO_AUTOENCODE)}
                 NewControlsCodePage := Value;
                 {$ELSE}
                 NewControlsCodePage := cCP_UTF8;
-                {$ENDIF}
+                {$IFEND}
     cCP_UTF8:   {$IF defined(MSWINDOWS) and defined(UNICODE)}
                 NewControlsCodePage := cCP_UTF16;
                 {$ELSE}
                 NewControlsCodePage := Value;
                 {$IFEND}
+    {$IF defined(WITH_DEFAULTSYSTEMCODEPAGE) and defined(NO_AUTOENCODE)}
+    cDefaultSystemCodePage:
+                NewControlsCodePage := Value;
+    {$IFEND}
     else        if ZOSCodePage = zCP_UTF8
                 then NewControlsCodePage := cCP_UTF8
                 else NewControlsCodePage := Value;
@@ -1629,6 +1643,9 @@ begin
     case NewControlsCodePage of
       cCP_UTF16:  S := 'CP_UTF16';
       cCP_UTF8:   S := 'CP_UTF8';
+      {$IF defined(WITH_DEFAULTSYSTEMCODEPAGE) and defined(NO_AUTOENCODE)}
+      cDefaultSystemCodePage: S := 'DEFSYSCP';
+      {$IFEND}
       else        S := 'GET_ACP';
     end;
     Properties.Values[ConnProps_ControlsCP] := S;

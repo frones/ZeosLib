@@ -189,8 +189,9 @@ var
     {$WARN 3175 off : Some fields coming before "$1" were not initialized}
   {$ENDIF}
   ConSettingsDummy: TZConSettings =
-    (AutoEncode: False;
+    ({$IFNDEF NO_AUTOENCODE}AutoEncode: False;{$ENDIF}
       ClientCodePage: @CodePageDummy;
+      {$IFNDEF NO_AUTOENCODE}
       DisplayFormatSettings:
           (DateFormat: DefDateFormatYMD;
           DateFormatLen: Length(DefDateFormatYMD);
@@ -198,6 +199,7 @@ var
           TimeFormatLen: Length(DefTimeFormatMsecs);
           DateTimeFormat: DefDateTimeFormatMsecsDMY;
           DateTimeFormatLen: Length(DefDateTimeFormatMsecsDMY));
+      {$ENDIF NO_AUTOENCODE}
       ReadFormatSettings:
           (DateFormat: DefDateFormatYMD;
           DateFormatLen: Length(DefDateFormatYMD);
@@ -788,6 +790,18 @@ begin
 end;
 
 initialization
+  {$IFDEF NO_AUTOENCODE}
+  ConSettingsDummy.W2A2WEncodingSource :=
+    {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+  w2a2wDefaultSystemCodePage
+    {$ELSE}
+      {$IFDEF LCL}
+    w2a2wCP_UTF8
+      {$ELSE}
+    w2a2wGET_ACP
+      {$ENDIF}
+    {$ENDIF};
+  {$ELSE}
   ConSettingsDummy.CTRL_CP :=
   {$IFDEF UNICODE}
   DefaultSystemCodePage
@@ -799,5 +813,6 @@ initialization
     {$ENDIF}
   {$ENDIF};
   SetConvertFunctions(@ConSettingsDummy);
+  {$ENDIF}
 end.
 
