@@ -192,7 +192,6 @@ function ZUnicodeToString(const Source: UnicodeString; CP: Word): String;
 
 {converter functions for the String-types}
 {$IFNDEF UNICODE}
-function ZConvertPCharToRawWithDedectEncoding(Src: PChar; Len: LengthInt; CtrlsCP, RawCP: Word): RawByteString;
 function ZConvertStringToUTF8WithAutoEncode(const Src: String; const StringCP: Word): UTF8String;
 function ZConvertStringToAnsiWithAutoEncode(const Src: String; const {%H-}StringCP: Word): AnsiString;
 {$ENDIF}
@@ -1165,7 +1164,7 @@ end;
 
 {**
   EgonHugeist:
-  my fast Byte to Word shift with a lookup table
+  my fast Byte to Word move with a lookup table
   eg. all single byte encodings
 }
 procedure AnsiSBCSToUTF16(Source: PByteArray; Dest: PWordArray;
@@ -1174,18 +1173,15 @@ var
   PEnd: PAnsiChar;
 begin
   PEnd := PAnsiChar(Source)+SourceBytes-8;
-  while PAnsiChar(Source) < PEnd do //making a octed processing loop
-  begin
-    begin //we need a lookup here
-      Dest[0] := SBCS_MAP[Source[0]];
-      Dest[1] := SBCS_MAP[Source[1]];
-      Dest[2] := SBCS_MAP[Source[2]];
-      Dest[3] := SBCS_MAP[Source[3]];
-      Dest[4] := SBCS_MAP[Source[4]];
-      Dest[5] := SBCS_MAP[Source[5]];
-      Dest[6] := SBCS_MAP[Source[6]];
-      Dest[7] := SBCS_MAP[Source[7]];
-    end;
+  while PAnsiChar(Source) < PEnd do begin//making a octed processing loop
+    Dest[0] := SBCS_MAP[Source[0]];
+    Dest[1] := SBCS_MAP[Source[1]];
+    Dest[2] := SBCS_MAP[Source[2]];
+    Dest[3] := SBCS_MAP[Source[3]];
+    Dest[4] := SBCS_MAP[Source[4]];
+    Dest[5] := SBCS_MAP[Source[5]];
+    Dest[6] := SBCS_MAP[Source[6]];
+    Dest[7] := SBCS_MAP[Source[7]];
     inc(PAnsiChar(Source),8);
     inc(PWideChar(Dest),8);
   end;
@@ -2352,34 +2348,6 @@ end;
 {$ENDIF NO_AUTOENCODE}
 
 {$IFNDEF UNICODE}
-function ZConvertPCharToRawWithDedectEncoding(Src: PChar; Len: LengthInt; CtrlsCP, RawCP: Word): RawByteString;
-var WS: UnicodeString; //guesswork func!
-label FromW, SetRaw;
-begin
-  if (Src = nil) or (Len <= 0) then
-    Result := EmptyRaw
-  else case ZDetectUTF8Encoding(Src, Len) of
-    etUSASCII: goto SetRaw;
-    etAnsi: if (RawCP = zCP_UTF8) then
-              if (CtrlsCP = zCP_UTF8 ) then begin
-                if (ZOSCodePage = zCP_UTF8) //Random success unknown String CP
-                then WS := UnicodeString(Src)
-                else WS := PRawToUnicode(Src, Len, ZOSCodePage);
-                goto FromW;
-              end else begin
-                WS := PRawToUnicode(Src, Len, ZOSCodePage);
-                goto FromW;
-              end
-            else goto SetRaw;
-    else if (RawCP = zCP_UTF8) {etUTF8} then
-SetRaw: ZSetString(Src, Len, Result)
-      else begin
-        WS := PRawToUnicode(Src, Len, zCP_UTF8);
-FromW:  Result := ZUnicodeToRaw(WS, RawCP);
-      end;
-  end;
-end;
-
 function ZConvertStringToUTF8WithAutoEncode(const Src: String;
   const StringCP: Word): UTF8String;
 {$IFNDEF UNICODE}
