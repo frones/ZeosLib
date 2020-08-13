@@ -126,10 +126,11 @@ type
     procedure ExecuteImmediat(const SQL: UnicodeString; var Stmt: POCIStmt; LoggingCategory: TZLoggingCategory); overload;
     procedure InternalSetCatalog(const Catalog: String);
   protected
-    procedure InternalCreate; override;
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload; override;
+  public
+    procedure AfterConstruction; override;
   public { IZTransactionManager }
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
@@ -329,30 +330,6 @@ begin
 end;
 
 { TZOracleConnection }
-
-{**
-  Constructs this object and assignes the main properties.
-}
-procedure TZOracleConnection.InternalCreate;
-var S: String;
-begin
-  FPlainDriver := TZOraclePlainDriver(PlainDriver.GetInstance);
-  FMetaData := TZOracleDatabaseMetadata.Create(Self, URL);
-  fGlobalTransactions[False] := TZCollection.Create;
-  fGlobalTransactions[True ] := TZCollection.Create;
-  TransactIsolationLevel := tiReadCommitted;
-
-  { Sets a default properties }
-  if Self.Port = 0 then
-      Self.Port := 1521;
-  S := Info.Values[ConnProps_ServerCachedStmts];
-  if (S = '') or StrToBoolEx(S, False)
-  then FStmtMode := OCI_STMT_CACHE //use by default
-  else FStmtMode := OCI_DEFAULT;
-  S := Info.Values[ConnProps_StatementCache];
-  FStatementPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(S, 30); //default = 20
-  FBlobPrefetchSize := StrToIntDef(Info.Values[ConnProps_BlobPrefetchSize], 8*1024);
-end;
 
 procedure TZOracleConnection.InternalSetCatalog(const Catalog: String);
 begin
@@ -634,6 +611,28 @@ End;
   After a call to this method, the method <code>getWarnings</code>
     returns null until a new warning is reported for this Connection.
 }
+procedure TZOracleConnection.AfterConstruction;
+begin
+  FPlainDriver := PlainDriver.GetInstance as TZOraclePlainDriver;
+  FMetaData := TZOracleDatabaseMetadata.Create(Self, URL);
+  inherited AfterConstruction;
+  fGlobalTransactions[False] := TZCollection.Create;
+  fGlobalTransactions[True ] := TZCollection.Create;
+  TransactIsolationLevel := tiReadCommitted;
+
+  { Sets a default properties }
+  if Self.Port = 0 then
+    Self.Port := 1521;
+  FLogMessage := Info.Values[ConnProps_ServerCachedStmts];
+  if (FLogMessage = '') or StrToBoolEx(FLogMessage, False)
+  then FStmtMode := OCI_STMT_CACHE //use by default
+  else FStmtMode := OCI_DEFAULT;
+  FLogMessage := Info.Values[ConnProps_StatementCache];
+  FStatementPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(FLogMessage, 30); //default = 20
+  FLogMessage := '';
+  FBlobPrefetchSize := StrToIntDef(Info.Values[ConnProps_BlobPrefetchSize], 8*1024);
+end;
+
 procedure TZOracleConnection.ClearWarnings;
 begin
    FreeAndNil(fWarning);
@@ -1252,7 +1251,7 @@ JmpConcat:
   if DriverManager.HasLoggingListener then
     LogError(LogCategory, FirstErrorCode, Sender, LogMessage, ErrorMessage);
   if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '') then
-    if LogCategory in [lcExecute, lcTransaction, lcPrepStmt]
+    if LogCategory in [lcExecute, lcTransaction, lcPrepStmt, lcExecPrepStmt]
     then FormatStr := SSQLError3
     else FormatStr := SSQLError4
   else FormatStr := SSQLError2;

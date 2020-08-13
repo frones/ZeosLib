@@ -101,7 +101,6 @@ type
     FWeakODBCConRefOfSelf: Pointer;
     procedure DetermineAttachmentCharset;
   protected
-    procedure InternalCreate; override;
     procedure InternalClose; override;
     function SavePoint(const AName: String): Integer; virtual; abstract;
     procedure ReleaseSavePoint(Index: Integer); virtual; abstract;
@@ -193,7 +192,7 @@ implementation
 
 uses
   {$IFDEF MSWINDOWS}Windows,{$ENDIF}
-  ZODBCToken, ZDbcODBCUtils, ZDbcODBCMetadata, ZDbcODBCStatement, ZDbcUtils,
+  ZODBCToken, ZDbcODBCMetadata, ZDbcODBCStatement, ZDbcUtils,
   ZPlainDriver, ZSysUtils, ZEncoding, ZFastCode, ZDbcProperties,
   ZMessages {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
@@ -254,7 +253,26 @@ begin
   QueryInterface(IZODBCConnection, ODBCConnection);
   FWeakODBCConRefOfSelf := Pointer(ODBCConnection);
   ODBCConnection :=  nil;
+  fODBCPlainDriver := PlainDriver.GetInstance as TZODBC3PlainDriver;
+  fHENV := nil;
+  fHDBC := nil;
+  if Supports(fODBCPlainDriver, IODBC3UnicodePlainDriver) then
+    FMetaData := TODBCDatabaseMetadataW.Create(Self, Url, fHDBC)
+  else
+    FMetaData := TODBCDatabaseMetadataA.Create(Self, Url, fHDBC);
+  fCatalog := '';
   inherited AfterConstruction; //dec constructors RefCnt
+  if fODBCPlainDriver.SQLAllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), fHENV) <> SQL_SUCCESS then
+    raise EZSQLException.Create('Couldn''t allocate an Environment handle');
+  //Try to SET Major Version 3 and minior Version 8
+  if fODBCPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80, 0) = SQL_SUCCESS then
+    fODBCVersion := {%H-}Word(SQL_OV_ODBC3_80)
+  else begin
+    //set minimum Major Version 3
+    if fODBCPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0) <> SQL_SUCCESS then
+      raise EZSQLException.Create('Failed to set minimum ODBC version 3');
+    fODBCVersion := {%H-}Word(SQL_OV_ODBC3) * 100;
+  end;
 end;
 
 {**
@@ -470,29 +488,6 @@ begin
   end;
   if Error <> nil then
      raise Error;
-end;
-
-procedure TZAbstractODBCConnection.InternalCreate;
-begin
-  fODBCPlainDriver := TZODBC3PlainDriver(GetIZPlainDriver.GetInstance);
-  fHENV := nil;
-  fHDBC := nil;
-  if Supports(fODBCPlainDriver, IODBC3UnicodePlainDriver) then
-    FMetaData := TODBCDatabaseMetadataW.Create(Self, Url, fHDBC)
-  else
-    FMetaData := TODBCDatabaseMetadataA.Create(Self, Url, fHDBC);
-  fCatalog := '';
-  if not SQL_SUCCEDED(fODBCPlainDriver.SQLAllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), fHENV)) then
-    raise EZSQLException.Create('Couldn''t allocate an Environment handle');
-  //Try to SET Major Version 3 and minior Version 8
-  if SQL_SUCCEDED(fODBCPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80, 0)) then
-    fODBCVersion := {%H-}Word(SQL_OV_ODBC3_80)
-  else begin
-    //set minimum Major Version 3
-    if not SQL_SUCCEDED(fODBCPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0)) then
-      raise EZSQLException.Create('Failed to set minimum ODBC version 3');
-    fODBCVersion := {%H-}Word(SQL_OV_ODBC3) * 100;
-  end;
 end;
 
 function TZAbstractODBCConnection.ODBCVersion: Word;
@@ -1169,7 +1164,7 @@ begin
         Result := SUnknownError;
       end else begin
         if (ConSettings <> nil) and (ConSettings.ClientCodePage <> nil)
-        then msgCP := ConSettings.ClientCodePage.ID
+        then msgCP := ConSettings.ClientCodePage.CP
         else msgCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
         {$IFDEF UNICODE}
         Result := ZRawToUnicode(ErrorString, msgCP);

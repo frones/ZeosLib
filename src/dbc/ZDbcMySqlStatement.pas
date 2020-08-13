@@ -1814,7 +1814,11 @@ var
       else begin
         if (SQLType <> stBinaryStream) then begin
           if not Supports(Lob, IZCLob, CLob)
+          {$IFNDEF NO_AUTOENCODE}
           then TInterfaceDynArray(Value)[i] := CreateRawCLobFromBlob(Lob, ConSettings, FOpenLobStreams)
+          {$ELSE}
+          then CreateConversionError(ParameterIndex, stBinaryStream, stAsciiStream)
+          {$ENDIF}
           else CLob.SetCodePageTo(ClientCP);
         end;
         P := Lob.GetBuffer(FRawTemp, L);

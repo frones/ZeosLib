@@ -103,15 +103,15 @@ type
     FLastWarning: EZSQLWarning;
     procedure SetProviderProps(DBinit: Boolean);
   protected
-    procedure InternalCreate; override;
     function OleDbGetDBPropValue(const APropIDs: array of DBPROPID): string; overload;
     function OleDbGetDBPropValue(APropID: DBPROPID): Integer; overload;
     procedure InternalSetTIL(Level: TZTransactIsolationLevel);
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload; override;
     procedure InternalClose; override;
   public
+    procedure AfterConstruction; override;
     destructor Destroy; override;
-
+  public
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareCallWithParams(const Name: String; Info: TStrings):
       IZCallableStatement;
@@ -226,15 +226,6 @@ begin
 end;
 
 { TZOleDBConnection }
-procedure TZOleDBConnection.InternalCreate;
-begin
-  CoInit;
-  OleCheck(CoGetMalloc(1,fMalloc));
-  FMetadata := TOleDBDatabaseMetadata.Create(Self, URL);
-  FRetaining := False; //not StrToBoolEx(URL.Properties.Values['hard_commit']);
-  Inherited SetAutoCommit(True);
-  //Open;
-end;
 
 const
   TIL: array[TZTransactIsolationLevel] of ISOLATIONLEVEL =
@@ -807,6 +798,15 @@ begin
     end;
     TransactIsolationLevel := Level;
   end;
+end;
+
+procedure TZOleDBConnection.AfterConstruction;
+begin
+  CoInit;
+  OleCheck(CoGetMalloc(1,fMalloc));
+  FMetadata := TOleDBDatabaseMetadata.Create(Self, URL);
+  Inherited SetAutoCommit(True);
+  inherited AfterConstruction;
 end;
 
 {**

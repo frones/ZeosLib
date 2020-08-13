@@ -1032,16 +1032,28 @@ Set_Results:          Len := Result - PAnsiChar(FByteBuffer);
                       then Len := TimeToRaw(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
                           PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction, Result,
+                          {$IFDEF NO_AUTOENCODE}
+                          ConSettings^.ReadFormatSettings.TimeFormat, False, False)
+                          {$ELSE}
                           ConSettings^.DisplayFormatSettings.TimeFormat, False, False)
+                          {$ENDIF}
                       else Len := TimeToRaw(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
                         PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0, Result,
+                          {$IFDEF NO_AUTOENCODE}
+                          ConSettings^.ReadFormatSettings.TimeFormat, False, False)
+                          {$ELSE}
                           ConSettings^.DisplayFormatSettings.TimeFormat, False, False);
+                          {$ENDIF}
                     end;
       stDate:       begin
                       Result := PAnsiChar(FByteBuffer);
                       Len := DateToRaw(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
                         PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day, Result,
+                          {$IFDEF NO_AUTOENCODE}
+                          ConSettings^.ReadFormatSettings.DateFormat, False, PSQL_DATE_STRUCT(fColDataPtr)^.year < 0);
+                          {$ELSE}
                           ConSettings^.DisplayFormatSettings.DateFormat, False, PSQL_DATE_STRUCT(fColDataPtr)^.year < 0);
+                          {$ENDIF}
                     end;
       stTimeStamp:  begin
                       Result := PAnsiChar(FByteBuffer);
@@ -1050,7 +1062,11 @@ Set_Results:          Len := Result - PAnsiChar(FByteBuffer);
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction, Result,
+                          {$IFDEF NO_AUTOENCODE}
+                          ConSettings^.ReadFormatSettings.DateTimeFormat,
+                          {$ELSE}
                           ConSettings^.DisplayFormatSettings.DateTimeFormat,
+                          {$ENDIF}
                           False, PSQL_DATE_STRUCT(fColDataPtr)^.year < 0);
                     end;
       stString, stUnicodeString: begin
@@ -1167,27 +1183,54 @@ Set_Results:          Len := Result - PWideChar(FByteBuffer);
                       then Len := TimeToUni(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
                           PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction, Result,
+                          {$IFDEF NO_AUTOENCODE}
+                          ConSettings^.ReadFormatSettings.TimeFormat, False, False)
+                          {$ELSE}
                           ConSettings^.DisplayFormatSettings.TimeFormat, False, False)
+                          {$ENDIF}
                       else Len := TimeToUni(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
                         PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0, Result,
+                        {$IFDEF NO_AUTOENCODE}
+                          ConSettings^.ReadFormatSettings.TimeFormat, False, False);
+                        {$ELSE}
                           ConSettings^.DisplayFormatSettings.TimeFormat, False, False);
+                        {$ENDIF}
                     end;
       stDate:       begin
                       Result := PWideChar(FByteBuffer);
-                      DateTimeToUnicodeSQLDate(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
+                      Len := DateTimeToUnicodeSQLDate(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
                         PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day), Result,
+                        {$IFNDEF NO_AUTOENCODE}
                           ConSettings^.DisplayFormatSettings, False);
-                      Len := ConSettings^.DisplayFormatSettings.DateFormatLen;
+                        {$ELSE}
+                          ConSettings^.ReadFormatSettings, False);
+                        {$ENDIF}
                     end;
       stTimeStamp:  begin
                       Result := PWideChar(FByteBuffer);
-                      Len := DateTimeToUni(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
-                        PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day,
+                      if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIMESTAMPOFFSET)
+                      then Len := DateTimeToUni(Abs(PSQL_SS_TIMESTAMPOFFSET_STRUCT(fColDataPtr)^.year),
+                        PSQL_SS_TIMESTAMPOFFSET_STRUCT(fColDataPtr)^.month, PSQL_SS_TIMESTAMPOFFSET_STRUCT(fColDataPtr)^.day,
+                        PSQL_SS_TIMESTAMPOFFSET_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIMESTAMPOFFSET_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIMESTAMPOFFSET_STRUCT(fColDataPtr)^.second,
+                        PSQL_SS_TIMESTAMPOFFSET_STRUCT(fColDataPtr)^.fraction, Result,
+                        {$IFNDEF NO_AUTOENCODE}
+                        ConSettings^.DisplayFormatSettings.DateTimeFormat, False,
+                        {$ELSE}
+                        ConSettings^.ReadFormatSettings.DateTimeFormat, False,
+                        {$ENDIF}
+                        PSQL_SS_TIMESTAMPOFFSET_STRUCT(fColDataPtr)^.year < 0)
+                      else Len := DateTimeToUni(Abs(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year),
+                        PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.month, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.day,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction, Result,
+                        {$IFNDEF NO_AUTOENCODE}
                         ConSettings^.DisplayFormatSettings.DateTimeFormat, False,
-                        PSQL_DATE_STRUCT(fColDataPtr)^.year < 0);
+                        {$ELSE}
+                        ConSettings^.ReadFormatSettings.DateTimeFormat, False,
+                        {$ENDIF}
+                        PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year < 0);
                     end;
       stString, stUnicodeString: begin
                       if fIsUnicodeDriver then begin
@@ -1311,7 +1354,11 @@ begin
         end;
       stAsciiStream, stUnicodeStream: begin
           if fIsUnicodeDriver
+          {$IFDEF NO_AUTOENCODE}
+          then CP := GetW2A2WConversionCodePage(ConSettings)
+          {$ELSE}
           then CP := ConSettings^.CTRL_CP
+          {$ENDIF}
           else CP := FClientCP;
           FTemplob := GetBlob(ColumnIndex);
           if FTemplob <> nil then begin
@@ -2168,7 +2215,7 @@ begin
           SQL_C_BINARY, OffSetPtr, MaxBufSize, StrLen_or_IndPtr));
         Inc(OffSetPtr, MaxBufSize);
       end;
-      Assert(SQL_SUCCEDED(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_BINARY, OffSetPtr, MaxBufSize, StrLen_or_IndPtr)));
+      Assert(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_BINARY, OffSetPtr, MaxBufSize, StrLen_or_IndPtr) = SQL_SUCCESS);
     end else if StrLen_or_IndPtr^ = SQL_NO_TOTAL then begin
       SetCapacity(MaxBufSize);
       OffSetPtr := @FDataRefAddress.VarLenData.Data;
@@ -2209,7 +2256,7 @@ begin
         Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr));
         Inc(OffSetPtr, (MaxBufSize-SizeOf(AnsiChar)));
       end;
-      Assert(SQL_SUCCEDED(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr)));
+      Assert(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr) = SQL_SUCCESS);
     end else begin
       Assert(StrLen_or_IndPtr^ = SQL_NO_TOTAL);
       SetCapacity(MaxBufSize);
@@ -2251,7 +2298,7 @@ begin
         Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr));
         Inc(OffSetPtr, (MaxBufSize-SizeOf(WideChar)));
       end;
-      Assert(SQL_SUCCEDED(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr)));
+      Assert(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr) = SQL_SUCCESS);
     end else begin
       Assert(StrLen_or_IndPtr^ = SQL_NO_TOTAL);
       SetCapacity(MaxBufSize);

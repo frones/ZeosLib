@@ -1520,7 +1520,11 @@ begin
       SQLWriter.CancelLastCharIfExists('.', TempProcedureNamePattern);
       SQLWriter.Finalize(TempProcedureNamePattern);
       if ConSettings.ClientCodePage.Encoding = ceUTF16 then begin
-        DescriptorW := TZOraProcDescriptor_W.Create(nil, Connection, ConSettings.CTRL_CP);
+        {$IFDEF NO_AUTOENCODE}
+        DescriptorW := TZOraProcDescriptor_W.Create(nil, Connection{$IFNDEF UNICODE}, GetW2A2WConversionCodePage(ConSettings){$ENDIF});
+        {$ELSE}
+        DescriptorW := TZOraProcDescriptor_W.Create(nil, Connection{$IFNDEF UNICODE}, ConSettings.CTRL_CP{$ENDIF});
+        {$ENDIF}
         {$IFNDEF UNICODE}
         SQLWriterW := TZUnicodeSQLStringWriter.Create(1024);
         S := ZRawToUnicode(TempProcedureNamePattern, ConSettings.CTRL_CP);
@@ -1538,7 +1542,7 @@ begin
           {$ENDIF}
         end;
       end else begin
-        DescriptorA := TZOraProcDescriptor_A.Create(nil, Connection, ConSettings.ClientCodePage.CP);
+        DescriptorA := TZOraProcDescriptor_A.Create(nil, Connection{$IFDEF UNICODE}, ConSettings.ClientCodePage.CP{$ENDIF});
         {$IFDEF UNICODE}
         SQLWriterA := TZRawSQLStringWriter.Create(1024);
         S := ZUnicodeToRaw(TempProcedureNamePattern, ConSettings.ClientCodePage.CP);

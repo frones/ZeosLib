@@ -272,7 +272,9 @@ var
   Bind: PZOCIParamBind;
   OCILob: IZOracleLob;
   RefCntLob: IZBlob;
+{$IFNDEF NO_AUTOENCODE}
   Stream: TStream;
+{$ENDIF}
   CLob: IZCLob;
 begin
   CheckParameterIndex(Index);
@@ -295,6 +297,9 @@ begin
           if ZEncoding.IsMBCSCodePage(FClientCP)
           then Value.SetCodePageTo(zCP_UTF16)
           else Value.SetCodePageTo(FClientCP)
+{$IFDEF NO_AUTOENCODE}
+        else raise CreateConversionError(Index, stBinaryStream, stUnicodeStream);
+{$ELSE}
         else if SQLType = stAsciiStream
           then PIZLob(BindList[Index].Value)^ := CreateRawCLobFromBlob(Value, ConSettings, FOpenLobStreams)
           else begin
@@ -305,6 +310,7 @@ begin
               Stream.Free;
             end;
           end;
+{$ENDIF}
         IZBlob(BindList[Index].Value).QueryInterface(IZCLob, Clob);
         if ZEncoding.IsMBCSCodePage(FClientCP) then begin
           RefCntLob := TZOracleClob.CreateFromClob(Clob, nil,
@@ -824,7 +830,7 @@ begin
   try
     if FProcDescriptor = nil then
       { describe the object: }
-      FProcDescriptor := TZOraProcDescriptor_A.Create(nil, Connection as IZOracleConnection, FClientCP);
+      FProcDescriptor := TZOraProcDescriptor_A.Create(nil, Connection as IZOracleConnection{$IFDEF UNICODE}, FClientCP{$ENDIF});
     if FProcDescriptor.ObjType = OCI_PTYPE_UNK then begin
       {$IFDEF UNICODE}
       ProcSQL := ZUnicodeToRaw(StoredProcName, FClientCP);
@@ -909,7 +915,7 @@ begin
     FParamsRegistered := True;
     FRegisteringParamFromMetadata := True;
     if FProcDescriptor = nil then
-      FProcDescriptor := TZOraProcDescriptor_A.Create(nil, Connection as IZOracleConnection, FClientCP);
+      FProcDescriptor := TZOraProcDescriptor_A.Create(nil, Connection as IZOracleConnection{$IFDEF UNICODE}, FClientCP{$ENDIF});
     if FProcDescriptor.ObjType = OCI_PTYPE_UNK then begin
       { describe the object: }
       {$IFDEF UNICODE}
@@ -1403,12 +1409,18 @@ write_lob:OciLob := TZOracleBlob.CreateFromBlob(Blob, nil, FOracleConnection, FO
       for i := 0 to ArrayLen -1 do
         if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZBlob, Lob) and not Lob.IsEmpty then begin
           if Supports(Lob, IZCLob, CLob) then
-            CLob.SetCodePageTo(ClientCP)
+            if (ConSettings^.ClientCodePage.ID = OCI_UTF16ID)
+            then CLob.SetCodePageTo(zCP_UTF16)
+            else CLob.SetCodePageTo(ClientCP)
+{$IFDEF NO_AUTOENCODE}
+          else raise CreateConversionError(ParameterIndex, stBinaryStream, SQLType);
+{$ELSE}
           else begin
             Clob := ZDbcResultSet.CreateRawCLobFromBlob(Lob, ConSettings, FOpenLobStreams);
             TInterfaceDynArray(Value)[I] := CLob;
             Lob := Clob;
           end;
+{$ENDIF}
           if not Supports(Lob, IZOracleLob, OCILob) then begin
             OciLob := TZOracleClob.CreateFromClob(Clob, nil, SQLCS_IMPLICIT, 0, FOracleConnection, FOpenLobStreams);
             PPOCIDescriptor(PAnsiChar(Bind.valuep)+SizeOf(Pointer)*I)^ := OciLob.GetLobLocator;
@@ -2132,7 +2144,11 @@ var P: PAnsiChar;
   L: NativeUint;
 begin
   if (FCharSetID = OCI_UTF16ID) then begin
+    {$IFDEF NO_AUTOENCODE}
+    FUniTemp := ZRawToUnicode(Value, GetW2A2WConversionCodePage(ConSettings));
+    {$ELSE}
     FUniTemp := ZRawToUnicode(Value, ConSettings.CTRL_CP);
+    {$ENDIF}
     SetUnicodeString(ParameterIndex, FUniTemp);
   end else begin
     L := Length(Value);
@@ -2598,12 +2614,20 @@ begin
       if FIsParamIndex[i] then begin
         if (J = ParameterIndex) then begin
           if (FCachedQueryRaw[j] = '?') then
+{$IFDEF NO_AUTOENCODE}
+          {$IFDEF UNICODE}
+            FCachedQueryRaw[j] := ':'+ZUnicodeToRaw(Name, FClientCP);
+          {$ELSE}
+            FCachedQueryRaw[j] := ':'+Name
+          {$ENDIF}
+{$ELSE}
             FCachedQueryRaw[j] := ':'+ConSettings.ConvFuncs.ZStringToRaw(Name, ConSettings.CTRL_CP, FClientCP);
+{$ENDIF}
           Break;
         end;
         Inc(J);
       end;
-    end;
+  end;
 
   if ParamType <> pctUnknown then begin
     if (Scale > 0) and (SQLType in [stBoolean..stBigDecimal]) then
@@ -2762,7 +2786,15 @@ begin
       if FIsParamIndex[i] then begin
         if (J = ParameterIndex) then begin
           if (FCachedQueryUni[j] = '?') then
+{$IFDEF NO_AUTOENCODE}
+            {$IFDEF UNICODE}
+            FCachedQueryUni[j] := ':'+Name;
+            {$ELSE}
+            FCachedQueryUni[j] := ':'+RawToUnicode(Name, GetW2A2WConversionCodePage(ConSettings));
+            {$ENDIF}
+{$ELSE}
             FCachedQueryUni[j] := ':'+ConSettings.ConvFuncs.ZStringToUnicode(Name, ConSettings.CTRL_CP);
+{$ENDIF}
           Break;
         end;
         Inc(J);
@@ -2877,7 +2909,7 @@ begin
   try
     if FProcDescriptor = nil then
       { describe the object: }
-      FProcDescriptor := TZOraProcDescriptor_W.Create(nil, Connection as IZOracleConnection, ConSettings.CTRL_CP);
+      FProcDescriptor := TZOraProcDescriptor_W.Create(nil, Connection as IZOracleConnection{$IFNDEF UNICODE}, ConSettings.CTRL_CP{$ENDIF});
     if FProcDescriptor.ObjType = OCI_PTYPE_UNK then begin
       {$IFDEF UNICODE}
       FProcDescriptor.Describe(OCI_PTYPE_UNK, StoredProcName);
@@ -2902,7 +2934,11 @@ begin
   Result := TZOraclePreparedStatement_W.Create(Connection, '', Info);
   TZOraclePreparedStatement_W(Result).FWSQL := ProcSQL;
   {$IFDEF UNICODE}
+{$IFDEF NO_AUTOENCODE}
+  TZOraclePreparedStatement_W(Result).fASQL := ZUnicodeToRaw(ProcSQL, GetW2A2WConversionCodePage(ConSettings));
+{$ELSE}
   TZOraclePreparedStatement_W(Result).fASQL := ZUnicodeToRaw(ProcSQL, ConSettings.CTRL_CP);
+{$ENDIF}
   {$ENDIF}
   TZOraclePreparedStatement_W(Result).Prepare;
 end;
@@ -2960,7 +2996,7 @@ begin
     FParamsRegistered := True;
     FRegisteringParamFromMetadata := True;
     if FProcDescriptor = nil then
-      FProcDescriptor := TZOraProcDescriptor_W.Create(nil, Connection as IZOracleConnection, FClientCP);
+      FProcDescriptor := TZOraProcDescriptor_W.Create(nil, Connection as IZOracleConnection{$IFNDEF UNICODE}, FClientCP{$ENDIF});
     if FProcDescriptor.ObjType = OCI_PTYPE_UNK then begin
       { describe the object: }
       {$IFNDEF UNICODE}

@@ -287,7 +287,6 @@ var
   DT: TDateTime absolute TS;
 label ProcBts, jmpDate, jmpTime, jmpTS, jmpOIDBLob;
 begin
-  if (Fres = nil) then Exit;
   RNo := PGRowNo;
   if JSONWriter.Expand then
     JSONWriter.Add('{');
@@ -588,8 +587,9 @@ begin
   FBinaryValues := FResultFormat^ = ParamFormatBin;
   FClientCP := ConSettings.ClientCodePage.CP;
   FSingleRowMode := SingleRowMode;
-  if FSingleRowMode then
-    SetType(rtForwardOnly);
+  if FSingleRowMode
+  then SetType(rtForwardOnly)
+  else SetType(rtScrollSensitive);
   Open;
 end;
 
@@ -643,10 +643,10 @@ end;
 
 procedure TZPostgreSQLResultSet.ClearPGResult;
 begin
-  if Fres <> nil then begin
+  if Fres <> nil then
+  begin
     FPlainDriver.PQclear(Fres);
     Fres := nil;
-    FresAddress^ := nil
   end;
 end;
 
@@ -857,8 +857,8 @@ begin
   if (RowNo < 1) or (RowNo > LastRowNo) then
     raise EZSQLException.Create(SRowDataIsNotAvailable);
 {$ENDIF}
-  Result := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, PGRowNo,
-    ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}) <> 0);
+  Result := FPlainDriver.PQgetisnull(Fres, PGRowNo,
+    ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}) <> 0;
 end;
 
 {**
@@ -892,7 +892,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
   if LastWasNull then begin
     Result := nil;
     Len := 0;
@@ -945,7 +945,11 @@ JmpPEndTinyBuf:       Result := PAnsiChar(fByteBuffer);
                       PG2Date(PInteger(Result)^, TS.Year, TS.Month, TS.Day);
 jmpDate:              Result := PAnsiChar(fByteBuffer);
                       Len := DateToRaw(TS.Year, TS.Month, TS.Day, Result,
+                        {$IFDEF NO_AUTOENCODE}
+                        ConSettings.ReadFormatSettings.DateFormat, False, False);
+                        {$ELSE}
                         ConSettings.DisplayFormatSettings.DateFormat, False, False);
+                        {$ENDIF}
                     end;
         stTime:     begin
                       if Finteger_datetimes
@@ -953,7 +957,11 @@ jmpDate:              Result := PAnsiChar(fByteBuffer);
                       else dt2time(PG2Double(Result), TS.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTime:              Result := PAnsiChar(fByteBuffer);
                       Len := TimeToRaw(TS.Hour, TS.Minute, TS.Second, TS.Fractions,
+                        {$IFDEF NO_AUTOENCODE}
+                        Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
+                        {$ELSE}
                         Result, ConSettings.DisplayFormatSettings.TimeFormat, False, False);
+                        {$ENDIF}
                     end;
         stTimestamp:begin
                       if Finteger_datetimes
@@ -961,7 +969,11 @@ jmpTime:              Result := PAnsiChar(fByteBuffer);
                       else PG2DateTime(PDouble(Result)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTS:                Result := PAnsiChar(fByteBuffer);
                       Len := ZSysUtils.DateTimeToRaw(TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
+                        {$IFDEF NO_AUTOENCODE}
+                        TS.Second, TS.Fractions, Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
+                        {$ELSE}
                         TS.Second, TS.Fractions, Result, ConSettings.DisplayFormatSettings.DateTimeFormat, False, False);
+                        {$ENDIF}
                     end;
         stGUID:     begin
                       {$IFNDEF ENDIAN_BIG} {$Q-} {$R-}
@@ -1078,7 +1090,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
   if LastWasNull then begin
     Result := nil;
     Len := 0;
@@ -1132,7 +1144,11 @@ JmpPEndTinyBuf:       Result := PWideChar(fByteBuffer);
                       PG2Date(PInteger(P)^, TS.Year, TS.Month, TS.Day);
 jmpDate:              Result := PWideChar(fByteBuffer);
                       Len := DateToUni(TS.Year, TS.Month, TS.Day,
+                      {$IFDEF NO_AUTOENCODE}
+                        Result, ConSettings.ReadFormatSettings.DateFormat, False, False);
+                      {$ELSE}
                         Result, ConSettings.DisplayFormatSettings.DateFormat, False, False);
+                      {$ENDIF}
                     end;
         stTime:     begin
                       if Finteger_datetimes
@@ -1140,7 +1156,11 @@ jmpDate:              Result := PWideChar(fByteBuffer);
                       else dt2time(PG2Double(P), TS.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTime:              Result := PWideChar(fByteBuffer);
                       Len := TimeToUni(TS.Hour, TS.Minute, TS.Second, TS.Fractions,
+                      {$IFDEF NO_AUTOENCODE}
+                        Result, ConSettings.ReadFormatSettings.TimeFormat, False, tS.IsNegative);
+                      {$ELSE}
                         Result, ConSettings.DisplayFormatSettings.TimeFormat, False, tS.IsNegative);
+                      {$ENDIF}
                     end;
         stTimestamp:begin
                       if Finteger_datetimes
@@ -1148,7 +1168,11 @@ jmpTime:              Result := PWideChar(fByteBuffer);
                       else PG2DateTime(PDouble(P)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTS:                Result := PWideChar(fByteBuffer);
                       Len := ZSysUtils.DateTimeToUni(TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
+                      {$IFDEF NO_AUTOENCODE}
+                        TS.Second, TS.Fractions, Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
+                      {$ELSE}
                         TS.Second, TS.Fractions, Result, ConSettings.DisplayFormatSettings.DateTimeFormat, False, False);
+                      {$ENDIF}
                     end;
         stGUID:     begin
                       {$IFNDEF ENDIAN_BIG} {$Q-} {$R-}
@@ -1251,7 +1275,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
   if LastWasNull then
     Result := False
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1311,7 +1335,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
   if not LastWasNull then with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
     Result := PByte(FPlainDriver.PQgetvalue(Fres, ROW_IDX, ColumnIndex));
     if TypeOID = BYTEAOID {bytea} then begin
@@ -1394,7 +1418,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
   if LastWasNull
   then Result := 0
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1452,7 +1476,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
   if LastWasNull
   then Result := 0
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1517,7 +1541,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
   if LastWasNull
   then Result := 0
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1577,7 +1601,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
   if LastWasNull then
     Result := 0
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1640,7 +1664,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
   if not LastWasNull then with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
     Buffer := FPlainDriver.PQgetvalue(Fres, ROW_IDX, ColumnIndex);
     if TypeOID = BYTEAOID {bytea} then begin
@@ -1727,7 +1751,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
   if LastWasNull then
     Result := 0
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1787,7 +1811,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
   if LastWasNull
   then FillChar(Result, SizeOf(TBCD), #0)
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1841,7 +1865,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
   if LastWasNull
   then Result := 0
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1895,7 +1919,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
   if LastWasNull
   then goto jmpZero
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -1965,7 +1989,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
   if LastWasNull
   then goto jmpZero
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -2038,7 +2062,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
   if LastWasNull
   then goto jmpZero
   else with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
@@ -2127,7 +2151,7 @@ begin
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   ROW_IDX := PGRowNo;
-  LastWasNull := (Fres = nil) or (FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0);
+  LastWasNull := FPlainDriver.PQgetisnull(Fres, ROW_IDX, ColumnIndex) <> 0;
   Result := nil;
   with TZPGColumnInfo(ColumnsInfo[ColumnIndex]) do begin
     P := FPlainDriver.PQgetvalue(Fres, ROW_IDX, ColumnIndex);
@@ -2268,14 +2292,14 @@ jmpRes:
     end else if Status = PGRES_TUPLES_OK then begin //end of stream
       LastRowNo := RowNo;
       RowNo := RowNo +1;
-      ClearPGResult;
+      FplainDriver.PQclear(Fres);
+      Fres := nil;
+      FresAddress^ := nil;
     end else
-      FPGConnection.HandleErrorOrWarning(Status, lcFetch, 'PQgetResult', Self, nil);
+      FPGConnection.HandleErrorOrWarning(Status, lcOther, 'PQgetResult', Self, nil);
   end else begin
     RowNo := RowNo + 1;
     Result := (RowNo <= LastRowNo);
-    if not Result and (ResultSetType = rtForwardOnly) then
-      ClearPGResult;
   end;
   if not Result and not LastRowFetchLogged and DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));

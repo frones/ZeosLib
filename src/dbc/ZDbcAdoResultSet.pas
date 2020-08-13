@@ -797,7 +797,11 @@ Set_From_Buf:           Len := Result - PAnsiChar(fByteBuffer);
                       end;
         else begin
           PW := GetPWideChar(ColumnIndex, Len);
+          {$IFNDEF NO_AUTOENCODE}
           FRawTemp := PUnicodeToRaw(PW, Len, ConSettings.CTRL_CP);
+          {$ELSE NO_AUTOENCODE}
+          FRawTemp := PUnicodeToRaw(PW, Len, GetW2A2WConversionCodePage(ConSettings));
+          {$ENDIF NO_AUTOENCODE}
           Result := Pointer(FRawTemp);
           Len := Length(FRawTemp);
         end;

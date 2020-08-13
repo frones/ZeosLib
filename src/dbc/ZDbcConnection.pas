@@ -137,8 +137,6 @@ type
     FTestMode: Byte;
     {$ENDIF}
     FLogMessage: SQLString;
-    procedure BeforeUrlAssign; virtual;
-    procedure InternalCreate; virtual; abstract;
     procedure InternalClose; virtual; abstract;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; virtual;
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload; virtual;
@@ -171,11 +169,12 @@ type
     property URL: TZURL read FURL;
     property TransactIsolationLevel: TZTransactIsolationLevel
       read FTransactIsolationLevel write FTransactIsolationLevel;
+    property DriverManager: IZDriverManager read FDriverManager;
   public
     constructor Create(const {%H-}Driver: IZDriver; const Url: string;
       const {%H-}PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
       const Database: string; const User: string; const Password: string;
-      Info: TStrings); overload; deprecated;
+      Info: TStrings); overload;
     constructor Create(const ZUrl: TZURL); overload;
     destructor Destroy; override;
     procedure AfterConstruction; override;
@@ -254,8 +253,7 @@ type
     FTransactionLevel: Integer;
     fTransactions: IZCollection;
     fActiveTransaction: IZTransaction;
-    fWeakTxnPtr, fWeakConPtr: Pointer;
-    procedure BeforeUrlAssign; override;
+    fWeakTxnPtr: Pointer;
   public //implement IZTransaction
     function GetConnection: IZConnection;
     function GetTransactionLevel: Integer;
@@ -947,7 +945,9 @@ begin
   SetConvertFunctions(ConSettings^.CTRL_CP, ConSettings^.ClientCodePage.CP,
     ConSettings^.PlainConvertFunc, ConSettings^.DbcConvertFunc);
   {$ENDIF}
+{$IFNDEF NO_AUTOENCODE}
   SetConvertFunctions(ConSettings);
+{$ENDIF}
   FClientVarManager := TZClientVariantManager.Create(ConSettings);
 end;
 
@@ -974,12 +974,12 @@ end;
 procedure TZAbstractDbcConnection.AfterConstruction;
 var iCon: IZConnection;
 begin
-  fAddLogMsgToExceptionOrWarningMsg := True;
   if QueryInterface(IZConnection, ICon) = S_OK then begin
     fWeakReferenceOfSelfInterface := Pointer(iCon);
     iCon := nil;
   end;
   inherited AfterConstruction;
+  FURL.OnPropertiesChange := OnPropertiesChange;
 end;
 
 {**
@@ -1002,7 +1002,9 @@ begin
   SetConvertFunctions(ConSettings^.CTRL_CP, ConSettings^.ClientCodePage.CP,
     ConSettings^.PlainConvertFunc, ConSettings^.DbcConvertFunc);
   {$ENDIF}
+{$IFNDEF NO_AUTOENCODE}
   SetConvertFunctions(ConSettings);
+{$ENDIF NO_AUTOENCODE}
   FClientVarManager := TZClientVariantManager.Create(ConSettings);
 end;
 
@@ -1047,34 +1049,24 @@ begin
   if not assigned(ZUrl) then
     raise EZSQLException.Create('ZUrl is not assigned!')
   else
-    FURL := TZURL.Create();
-  FDriverManager := DriverManager; //just keep refcount high
-  FDriver := DriverManager.GetDriver(ZURL.URL);
+    FURL := TZURL.Create(ZURL);
+  FDriverManager := ZDbcIntfs.DriverManager; //just keep refcount high
+  FDriver := FDriverManager.GetDriver(ZURL.URL);
   FIZPlainDriver := FDriver.GetPlainDriver(ZUrl);
-  fRegisteredStatements := TZSortedList.Create;
-  BeforeUrlAssign;
-  FURL.OnPropertiesChange := OnPropertiesChange;
-  FURL.URL := ZUrl.URL;
-
-  FClientCodePage := Info.Values[ConnProps_CodePage];
-  {CheckCharEncoding}
-  ConSettings := New(PZConSettings);
-
-  SetConSettingsFromInfo(Info);
-  CheckCharEncoding(FClientCodePage, True);
   FAutoCommit := True;
   FReadOnly := False; //EH: Changed! We definitelly did newer ever open a ReadOnly connection by default!
   FTransactIsolationLevel := tiNone;
   FUseMetadata := True;
   fAddLogMsgToExceptionOrWarningMsg := True;
   fRaiseWarnings := False;
-  // should be set BEFORE InternalCreate
-  // now InternalCreate will work, since it will try to Open the connection
-  InternalCreate;
-
+  fRegisteredStatements := TZSortedList.Create;
   {$IFDEF ZEOS_TEST_ONLY}
   FTestMode := 0;
   {$ENDIF}
+  FClientCodePage := Info.Values[ConnProps_CodePage];
+  ConSettings := New(PZConSettings);
+  CheckCharEncoding(FClientCodePage, True);
+  SetConSettingsFromInfo(Info);
 end;
 
 {**
@@ -1392,12 +1384,6 @@ begin
       IZStatement(fRegisteredStatements[i]).Close;
     //except end;
   end;
-end;
-
-{** do something before the URL OnChange is set }
-procedure TZAbstractDbcConnection.BeforeUrlAssign;
-begin
-  //dummy
 end;
 
 {**
@@ -1928,7 +1914,9 @@ begin
   FConSettings := ConSettings;
   FFormatSettings := FConSettings.ReadFormatSettings;
   FClientCP := Consettings.ClientCodePage.CP;
+  {$IFNDEF NO_AUTOENCODE}
   FCtrlsCP := Consettings.CTRL_CP;
+  {$ENDIF}
   FUseWComparsions := (FClientCP <> ZOSCodePage) or
     (FClientCP = zCP_UTF8) or
     not Consettings.ClientCodePage.IsStringFieldCPConsistent or
@@ -2259,19 +2247,11 @@ end;
 
 procedure TZAbstractSuccedaneousTxnConnection.AfterConstruction;
 var Trans: IZTransaction;
-  Con: IZConnection;
 begin
   QueryInterface(IZTransaction, Trans);
   fWeakTxnPtr := Pointer(Trans);
   Trans := nil;
-  QueryInterface(IZConnection, Con);
-  fWeakConPtr := Pointer(Con);
-  Con := nil;
   inherited AfterConstruction;
-end;
-
-procedure TZAbstractSuccedaneousTxnConnection.BeforeUrlAssign;
-begin
   FSavePoints := TStringList.Create;
   fTransactions := TZCollection.Create;
 end;

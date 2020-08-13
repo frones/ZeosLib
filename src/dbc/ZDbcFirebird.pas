@@ -119,9 +119,10 @@ type
     FPlainDriver: TZFirebirdPlainDriver;
     function ConstructConnectionString: String;
   protected
-    procedure InternalCreate; override;
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
+  public
+    procedure AfterConstruction; override;
   public { IZFirebirdConnection }
     function GetActiveTransaction: IZFirebirdTransaction;
     function GetAttachment: IAttachment;
@@ -221,6 +222,14 @@ begin
     if Result <> 0 then
       FStatus.init;
   end;
+end;
+
+procedure TZFirebirdConnection.AfterConstruction;
+begin
+  FPlainDriver := PlainDriver.GetInstance as TZFirebirdPlainDriver;
+  { set default sql dialect it can be overriden }
+  FMaster := FPlainDriver.fb_get_master_interface;
+  inherited AfterConstruction;
 end;
 
 {**
@@ -402,17 +411,6 @@ begin
     FStatus.dispose;
     FStatus := nil;
   end;
-end;
-
-{**
-  Constructs this object and assignes the main properties.
-}
-procedure TZFirebirdConnection.InternalCreate;
-begin
-  FPlainDriver := PlainDriver.GetInstance as TZFirebirdPlainDriver;
-  inherited InternalCreate;
-  { set default sql dialect it can be overriden }
-  FMaster := FPlainDriver.fb_get_master_interface;
 end;
 
 function TZFirebirdConnection.IsFirebirdLib: Boolean;

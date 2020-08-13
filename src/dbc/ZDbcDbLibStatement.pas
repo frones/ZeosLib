@@ -535,11 +535,15 @@ begin
       if Value.IsClob then begin
         P := RefCntLob.GetPAnsiChar(CP, R, Len);
         FRawTemp := SQLQuotedStr(P, Len, AnsiChar(#39))
+      {$IFDEF NO_AUTOENCODE}
+      end else raise CreateConversionError(Index, stBinaryStream, stAsciiStream);
+      {$ELSE}
       end else begin
         P := Value.GetBuffer(R, Len);
         FRawTemp := GetValidatedAnsiStringFromBuffer(P, Len, ConSettings, CP);
         FRawTemp := SQLQuotedStr(FRawTemp, AnsiChar(#39));
       end;
+      {$ENDIF}
       BindList.Put(Index, stAsciiStream, FRawTemp, CP);
     end else begin
       P := RefCntLob.GetBuffer(R, Len);
@@ -1201,7 +1205,15 @@ procedure TZDBLIBPreparedRPCStatement.RegisterParameter(ParameterIndex: Integer;
   PrecisionOrSize, Scale: LengthInt);
 begin
   inherited;
+  {$IFDEF NO_AUTOENCODE}
+    {$IFDEF UNICODE}
+    FParamNames[ParameterIndex] := ZUnicodeToRaw(Name, FClientCP);
+    {$ELSE}
+    FParamNames[ParameterIndex] := Name;
+    {$ENDIF}
+  {$ELSE}
   FParamNames[ParameterIndex] := ConSettings.ConvFuncs.ZStringToRaw(Name, ConSettings.CTRL_CP, FClientCP);
+  {$ENDIF}
 end;
 
 {$IFNDEF NO_ANSISTRING}

@@ -1815,7 +1815,11 @@ begin
           PPointer(Data)^ := Value.GetPAnsiChar(FClientCP, FRawTemp, Len);
           DBLENGTH^ := Len;
         end else
-Fix_CLob: SetBLob(Index, stAsciiStream, CreateRawCLobFromBlob(Value, ConSettings, FOpenLobStreams));
+Fix_CLob: {$IFNDEF NO_AUTOENCODE}
+          SetBLob(Index, stAsciiStream, CreateRawCLobFromBlob(Value, ConSettings, FOpenLobStreams));
+          {$ELSE}
+          raise CreateConversionError(Index, stBinaryStream, stAsciiStream);
+          {$ENDIF NO_AUTOENCODE}
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
               Value.SetCodePageTo(zCP_UTF16);
               PPointer(Data)^ := Value.GetPWideChar(fUniTemp, Len);

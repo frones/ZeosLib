@@ -126,14 +126,12 @@ type
     FXSQLDAMaxSize: Cardinal;
     FInterbaseFirebirdPlainDriver: TZInterbaseFirebirdPlainDriver;
     FLastWarning: EZSQLWarning;
-    procedure BeforeUrlAssign; override;
     procedure DetermineClientTypeAndVersion;
     procedure AssignISC_Parameters;
     procedure TransactionParameterPufferChanged;
     function GetActiveTransaction: IZInterbaseFirebirdTransaction;
     procedure OnPropertiesChange({%H-}Sender: TObject); override;
   protected
-    procedure InternalCreate; override;
     procedure InternalClose; override;
   public
     procedure AfterConstruction; override;
@@ -530,6 +528,18 @@ begin
   QueryInterface(IZTransactionManager, TAManager);
   FWeakTransactionManagerPtr := Pointer(TAManager);
   TAManager := nil;
+  // ! Create the object before parent's constructor because it is used in
+  // TZAbstractDbcConnection.Create > Url.OnPropertiesChange
+  FGUIDProps := TZInterbaseFirebirdConnectionGUIDProps.Create;
+  FClientVersion := -1;
+  FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
+  fTransactions := TZCollection.Create;
+  Ftransactions.Add(nil);
+  { set default sql dialect it can be overriden }
+  FDialect := StrToIntDef(Info.Values[ConnProps_Dialect], SQL_DIALECT_CURRENT);
+  FProcedureTypesCache := TStringList.Create;
+  FSubTypeTestCharIDCache := TStringList.Create;
+  FInterbaseFirebirdPlainDriver := PlainDriver.GetInstance as TZInterbaseFirebirdPlainDriver;
   inherited AfterConstruction;
 end;
 
@@ -636,15 +646,6 @@ begin
     FPB_CP := ConSettings.ClientCodePage.CP;
   end;
   Info.EndUpdate;
-end;
-
-procedure TZInterbaseFirebirdConnection.BeforeUrlAssign;
-begin
-  // ! Create the object before parent's constructor because it is used in
-  // TZAbstractDbcConnection.Create > Url.OnPropertiesChange
-  FGUIDProps := TZInterbaseFirebirdConnectionGUIDProps.Create;
-  FClientVersion := -1;
-  inherited BeforeUrlAssign;
 end;
 
 procedure TZInterbaseFirebirdConnection.ClearTransactions;
@@ -1087,21 +1088,6 @@ begin
   AutoCommit := not FRestartTransaction;
   fTransactions.Clear;
   fActiveTransaction := nil;
-end;
-
-{**
-  Constructs this object and assignes the main properties.
-}
-procedure TZInterbaseFirebirdConnection.InternalCreate;
-begin
-  FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
-  fTransactions := TZCollection.Create;
-  Ftransactions.Add(nil);
-  { set default sql dialect it can be overriden }
-  FDialect := StrToIntDef(Info.Values[ConnProps_Dialect], SQL_DIALECT_CURRENT);
-  FProcedureTypesCache := TStringList.Create;
-  FSubTypeTestCharIDCache := TStringList.Create;
-  FInterbaseFirebirdPlainDriver := TZInterbaseFirebirdPlainDriver(GetIZPlainDriver.GetInstance);
 end;
 
 {**
@@ -3392,9 +3378,19 @@ end;
 function TZAbstractFirebirdInterbasePreparedStatement.GetRawEncodedSQL(
   const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
 begin
+  {$IFNDEF NO_AUTOENCODE}
   if ConSettings^.AutoEncode or (FDB_CP_ID = CS_NONE)
   then Result := SplittQuery(SQL)
   else Result := ConSettings^.ConvFuncs.ZStringToRaw(SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+  {$ELSE}
+  if (FDB_CP_ID = CS_NONE)
+  then Result := SplittQuery(SQL)
+  {$IFDEF UNICODE}
+  else Result := ZUnicodeToRaw(SQL, ConSettings^.ClientCodePage^.CP);
+  {$ELSE}
+  else Result := SQL;
+  {$ENDIF}
+  {$ENDIF}
 end;
 
 procedure TZAbstractFirebirdInterbasePreparedStatement.InternalBindDouble(Index: Cardinal;
@@ -3583,10 +3579,14 @@ begin
       if Value.IsClob then begin
         Value.SetCodePageTo(codepage);
         P := Value.GetPAnsiChar(codepage, FRawTemp, L)
+      {$IFDEF NO_AUTOENCODE}
+      end else raise CreateConversionError(Index, stBinaryStream)
+      {$ELSE}
       end else begin
         BindList.Put(Index, stAsciiStream, CreateRawCLobFromBlob(Value, ConSettings, FOpenLobStreams));
         P := IZCLob(BindList[Index].Value).GetPAnsiChar(codepage, FRawTemp, L);
       end
+      {$ENDIF}
     else P := Value.GetBuffer(FRawTemp, L);
     if P <> nil then begin
       case sqltype of

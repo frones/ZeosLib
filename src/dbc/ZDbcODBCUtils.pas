@@ -94,7 +94,6 @@ function CalcBufSize(ColumnSize: Integer; ODBC_CType: SQLSMALLINT; SQLType: TZSQ
   ClientCodePage: PZCodePage): SQLSMALLINT;
 
 { macros of sqlext.h }
-function SQL_SUCCEDED(RETCODE: SQLRETURN): Boolean; {$IFDEF WITH_INLINE}inline; {$ENDIF}
 function SQL_LEN_DATA_AT_EXEC(Len: SQLLEN): SQLLEN; {$IFDEF WITH_INLINE}inline; {$ENDIF}
 
 function ODBCNumeric2Curr(Src: PSQL_NUMERIC_STRUCT): Currency;
@@ -128,11 +127,6 @@ implementation
 
 uses ZEncoding, ZSysUtils, ZMessages, ZDbcLogging, ZDbcUtils
  {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
-
-function SQL_SUCCEDED(RETCODE: SQLRETURN): Boolean;
-begin
-  Result := (RETCODE = SQL_SUCCESS);
-end;
 
 function SQL_LEN_DATA_AT_EXEC(Len: SQLLEN): SQLLEN;
 begin
@@ -562,18 +556,18 @@ begin
   ODBC3BaseDriver := TZODBC3PlainDriver(PlainDriver.GetInstance);
   try
     PlainDriver.Initialize(LibraryLocation);
-    Assert(SQL_SUCCEDED(ODBC3BaseDriver.SQLAllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), HENV)), 'Couldn''t allocate an Environment handle');
+    Assert(ODBC3BaseDriver.SQLAllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), HENV) = SQL_SUCCESS, 'Couldn''t allocate an Environment handle');
     //Try to SET Major Version 3 and minior Version 8
-    if not SQL_SUCCEDED(ODBC3BaseDriver.SQLSetEnvAttr(HENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80, 0)) then
+    if ODBC3BaseDriver.SQLSetEnvAttr(HENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80, 0) <> SQL_SUCCESS then
       //set minimum Major Version 3
-      Assert(SQL_SUCCEDED(ODBC3BaseDriver.SQLSetEnvAttr(HENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0)), 'Couln''t set minimum ODBC-Version 3.0');
-    Assert(SQL_SUCCEDED(ODBC3BaseDriver.SQLAllocHandle(SQL_HANDLE_DBC,HENV,HDBC)), 'Couldn''t allocate a DBC handle');
+      Assert(ODBC3BaseDriver.SQLSetEnvAttr(HENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0) = SQL_SUCCESS, 'Couln''t set minimum ODBC-Version 3.0');
+    Assert(ODBC3BaseDriver.SQLAllocHandle(SQL_HANDLE_DBC,HENV,HDBC) = SQL_SUCCESS, 'Couldn''t allocate a DBC handle');
     {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}
     SetLength(Result, 1024);
     aLen := 0;
-    if SQL_SUCCEDED(ODBC3BaseDriver.SQLDriverConnect(HDBC, WindowHandle,
+    if ODBC3BaseDriver.SQLDriverConnect(HDBC, WindowHandle,
       Pointer(InConnectionString), Length(InConnectionString), Pointer(Result),
-        Length(Result), @aLen, SQL_DRIVER_PROMPT)) then
+        Length(Result), @aLen, SQL_DRIVER_PROMPT) = SQL_SUCCESS then
       SetLength(Result, aLen)
     else
       Result := InConnectionString;

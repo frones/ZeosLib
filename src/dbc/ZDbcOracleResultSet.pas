@@ -800,7 +800,11 @@ begin
                   Result := PAnsiChar(@POCILong(Result).data[0]);
 jmpTestN:         if ColumnCodePage = zCP_UTF16 then begin
                     Len := Len shr 1;
+{$IFDEF NO_AUTOENCODE}
+jmpW2A:             fRawTemp := PUnicodeToRaw(PWideChar(Result), Len, GetW2A2WConversionCodePage(ConSettings));
+{$ELSE}
 jmpW2A:             fRawTemp := PUnicodeToRaw(PWideChar(Result), Len, ConSettings.CTRL_CP);
+{$ENDIF}
                     Len := Length(fRawTemp);
                     if Len = 0
                     then Result := pEmptyAnsiString

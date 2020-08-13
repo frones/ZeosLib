@@ -161,7 +161,6 @@ type
     FLastWarning: EZSQLWarning;
     function HasMinimumServerVersion(MajorVersion, MinorVersion, SubVersion: Integer): Boolean;
   protected
-    procedure InternalCreate; override;
     function GetUndefinedVarcharAsStringLength: Integer;
     function BuildConnectStr: RawByteString;
     procedure DeallocatePreparedStatements;
@@ -177,8 +176,9 @@ type
     function GetServerSetting(const AName: RawByteString): string;
     procedure SetServerSetting(const AName, AValue: RawbyteString);
   public
+    procedure AfterConstruction; override;
     destructor Destroy; override;
-
+  public
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareCallWithParams(const Name: String; Info: TStrings):
       IZCallableStatement;
@@ -363,40 +363,6 @@ begin
 end;
 
 { TZPostgreSQLConnection }
-
-{**
-  Constructs this object and assignes the main properties.
-}
-procedure TZPostgreSQLConnection.InternalCreate;
-begin
-  FProcedureTypesCache := TStringList.Create;
-  FMetaData := TZPostgreSQLDatabaseMetadata.Create(Self, Url);
-  FPlainDriver := TZPostgreSQLPlainDriver(PlainDriver.GetInstance);
-  FPreparedStatementTrashBin := nil;
-  FDomain2BaseTypMap := TZOID2OIDMapList.Create;
-  { Sets a default PostgreSQL port }
-  if Self.Port = 0 then
-     Self.Port := 5432;
-
-  { Define connect options. }
-//  Jan: Not sure wether we still need that. What was its intended use?
-//  if Info.Values['beginreq'] <> '' then
-//    FBeginRequired := StrToBoolEx(Info.Values['beginreq'])
-//  else
-//    FBeginRequired := True;
-
-  inherited SetTransactionIsolation(tiReadCommitted);
-
-  { Processes connection properties. }
-  FOidAsBlob := StrToBoolEx(Info.Values[DSProps_OidAsBlob]);
-  FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
-  FCheckFieldVisibility := StrToBoolEx(Info.Values[ConnProps_CheckFieldVisibility]);
-  FNoTableInfoCache := StrToBoolEx(Info.Values[ConnProps_NoTableInfoCache]);
-
-  FNoticeProcessor := NoticeProcessorDispatcher;
-  FNoticeReceiver  := NoticeReceiverDispatcher;
-end;
-
 
 function TZPostgreSQLConnection.GetUndefinedVarcharAsStringLength: Integer;
 begin
@@ -592,6 +558,37 @@ procedure TZPostgreSQLConnection.AddDomain2BaseTypeIfNotExists(DomainOID,
   BaseTypeOID: OID);
 begin
   FDomain2BaseTypMap.AddIfNotExists(DomainOID, BaseTypeOID);
+end;
+
+procedure TZPostgreSQLConnection.AfterConstruction;
+begin
+  FMetaData := TZPostgreSQLDatabaseMetadata.Create(Self, Url);
+  FPlainDriver := PlainDriver.GetInstance as TZPostgreSQLPlainDriver;
+  inherited AfterConstruction;
+  FProcedureTypesCache := TStringList.Create;
+  FPreparedStatementTrashBin := nil;
+  FDomain2BaseTypMap := TZOID2OIDMapList.Create;
+  { Sets a default PostgreSQL port }
+  if Self.Port = 0 then
+     Self.Port := 5432;
+
+  { Define connect options. }
+//  Jan: Not sure wether we still need that. What was its intended use?
+//  if Info.Values['beginreq'] <> '' then
+//    FBeginRequired := StrToBoolEx(Info.Values['beginreq'])
+//  else
+//    FBeginRequired := True;
+
+  inherited SetTransactionIsolation(tiReadCommitted);
+
+  { Processes connection properties. }
+  FOidAsBlob := StrToBoolEx(Info.Values[DSProps_OidAsBlob]);
+  FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
+  FCheckFieldVisibility := StrToBoolEx(Info.Values[ConnProps_CheckFieldVisibility]);
+  FNoTableInfoCache := StrToBoolEx(Info.Values[ConnProps_NoTableInfoCache]);
+
+  FNoticeProcessor := NoticeProcessorDispatcher;
+  FNoticeReceiver  := NoticeReceiverDispatcher;
 end;
 
 {**

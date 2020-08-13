@@ -293,7 +293,11 @@ var
         if BindList.SQLTypes[Index] in [stUnicodeStream, stAsciiStream] then begin
           if TempBlob.IsClob
           then TempBlob.SetCodePageTo(FClientCP)
+{$IFDEF NO_AUTOENCODE}
+          else raise CreateConversionError(Index, stBinaryStream, stAsciiStream);
+{$ELSE}
           else TInterfaceDynArray(Dyn)[j] := CreateRawCLobFromBlob(TempBlob, ConSettings, FOpenLobStreams);
+{$ENDIF}
           goto LenOfBuf;
         end else if FOidAsBlob then begin
           if not Supports(TempBlob, IZPostgreSQLOidBlob, WriteTempBlob) then begin
@@ -1890,7 +1894,11 @@ begin
   if (Value <> nil) and (SQLType in [stAsciiStream, stUnicodeStream]) then begin
     if Value.IsClob
     then Value.SetCodePageTo(FClientCP)
+{$IFDEF NO_AUTOENCODE}
+    else raise CreateConversionError(Index, stBinaryStream, stAsciiStream);
+{$ELSE}
     else RefCntLob := CreateRawCLobFromBlob(Value, ConSettings, FOpenLobStreams);
+{$ENDIF}
     SQLType := stAsciiStream;
   end;
   BindList.Put(Index, SQLType, RefCntLob);
@@ -2172,7 +2180,15 @@ begin
   CheckParameterIndex(I);
   BindList.SetParamTypes(ParameterIndex , SQLType, ParamType);
   if Name <> '' then
+{$IFDEF NO_AUTOENCODE}
+    {$IFDEF UNICODE}
+    FParamNames[ParameterIndex] := ZUnicodeToRaw(Name, FClientCP);
+    {$ELSE}
+    FParamNames[ParameterIndex] := Name;
+    {$ENDIF}
+{$ELSE}
     FParamNames[ParameterIndex] := ConSettings.ConvFuncs.ZStringToRaw(Name, ConSettings.CTRL_CP, FClientCP);
+{$ENDIF}
 
   if ParamType in [pctOut, pctReturn] then begin
     FOutParamCount := 0;

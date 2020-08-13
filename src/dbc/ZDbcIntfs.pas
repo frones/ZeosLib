@@ -125,7 +125,7 @@ type
   TOnConnect = procedure of Object;
 
   {$IFDEF NO_AUTOENCODE}
-  TZRawByteStringEncoding = (rbseGET_ACP, rbseUTF8{$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}, rbseDefaultSystemCodePage{$ENDIF});
+  TZW2A2WEncodingSource = (w2a2wDB_CP, w2a2wGET_ACP, w2a2wUTF8{$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}, w2a2wDefaultSystemCodePage{$ENDIF});
   {$ENDIF NO_AUTOENCODE}
   {** hold some connection parameters }
   PZConSettings = ^TZConSettings;
@@ -133,11 +133,10 @@ type
     {$IFNDEF NO_AUTOENCODE}
     AutoEncode: Boolean;        //Check Encoding and or convert string with FromCP ToCP
     CTRL_CP: Word;              //Target CP of raw string conversion (CP_ACP/CP_UPF8/DefaultSytemCodePage)
-    {$ENDIF NO_AUTOENCODE}
-    //{$ELSE NO_AUTOENCODE}
-    //RawByteStringEncoding: TZRawByteStringEncoding; //Target CP of raw string conversion (GET_ACP/UTF8/DefaultSytemCodePage)
-//    {$ENDIF NO_AUTOENCODE}
     ConvFuncs: TConvertEncodingFunctions; //a rec for the Convert functions used by the objects
+    {$ELSE NO_AUTOENCODE}
+    W2A2WEncodingSource: TZW2A2WEncodingSource; //Target CP of raw string conversion (GET_ACP/UTF8/DefaultSytemCodePage)
+    {$ENDIF NO_AUTOENCODE}
     ClientCodePage: PZCodePage; //The codepage informations of the current characterset
     {$IFNDEF NO_AUTOENCODE}
     DisplayFormatSettings: TZFormatSettings;
@@ -2439,9 +2438,9 @@ begin
     {$IF defined(Delphi) and defined(UNICODE) and defined(MSWINDOWS)}
     ConSettings.CTRL_CP := DefaultSystemCodePage;
     {$ELSE}
-      if Info.Values[ConnProps_ControlsCP] = 'GET_ACP'
+      if S = 'GET_ACP'
       then ConSettings.CTRL_CP := ZOSCodePage
-      else if Info.Values[ConnProps_ControlsCP] = 'CP_UTF8'
+      else if S = 'CP_UTF8'
       then ConSettings.CTRL_CP := zCP_UTF8
       {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
       else ConSettings.CTRL_CP := DefaultSystemCodePage;
@@ -2450,6 +2449,17 @@ begin
       {$ENDIF}
     {$IFEND}
 {$ELSE NO_AUTOENCODE}
+    S := Info.Values[ConnProps_ControlsCP];
+    S := UpperCase(S);
+    if S = 'DBCP'
+    then ConSettings.W2A2WEncodingSource := w2a2wDB_CP
+    else if S = 'GET_ACP'
+    then ConSettings.W2A2WEncodingSource := w2a2wGET_ACP
+    else {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}if S = 'CP_UTF8'
+    then {$ELSE}else {$ENDIF}ConSettings.W2A2WEncodingSource := w2a2wUTF8
+    {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+    else ConSettings.W2A2WEncodingSource := w2a2wDefaultSystemCodePage;
+    {$ENDIF}
 {$ENDIF NO_AUTOENCODE}
   end;
 end;

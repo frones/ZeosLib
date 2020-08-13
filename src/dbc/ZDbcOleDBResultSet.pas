@@ -84,7 +84,7 @@ type
     FRowStates: TDBROWSTATUSDynArray;
     fpcColumns: DBORDINAL;
     fTempBlob: IZBlob;
-    fClientCP, fCtrlCP: Word;
+    fClientCP{$IFNDEF NO_AUTOENCODE}, fCtrlCP{$ENDIF}: Word;
     FOleDBConnection: IZOleDBConnection;
     FByteBuffer: PByteBuffer;
   private
@@ -803,7 +803,11 @@ set_from_buf:           Len := Result - PAnsiChar(fByteBuffer);
                       end;
     DBTYPE_WSTR:    if FColBind.cbMaxLen = 0 then begin
                       fTempBlob := GetBlob(ColumnIndex);
+                      {$IFNDEF NO_AUTOENCODE}
                       Result := fTempBlob.GetPAnsiChar(fCtrlCP, fRawTemp, Len);
+                      {$ELSE}
+                      Result := fTempBlob.GetPAnsiChar(GetW2A2WConversionCodePage(ConSettings), fRawTemp, Len);
+                      {$ENDIF}
                       fTempBlob := nil;
                     end else begin
                       Result := FData;
@@ -811,7 +815,11 @@ set_from_buf:           Len := Result - PAnsiChar(fByteBuffer);
                       if FColBind.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0
                       then Len := GetAbsorbedTrailingSpacesLen(PWideChar(Result), FLength)
                       else Len := FLength;
+                      {$IFNDEF NO_AUTOENCODE}
                       FRawTemp := PUnicodeToRaw(PWideChar(Result), Len, fCtrlCP);
+                      {$ELSE}
+                      FRawTemp := PUnicodeToRaw(PWideChar(Result), Len, GetW2A2WConversionCodePage(ConSettings));
+                      {$ENDIF}
 set_from_tmp:         Len := Length(FRawTemp);
                       if Len = 0
                       then Result := PEmptyAnsiString
@@ -2112,7 +2120,9 @@ begin
   FOleDBConnection := (Statement.GetConnection as IZOleDBConnection);
   FByteBuffer := FOleDBConnection.GetByteBufferAddress;
   inherited Create(Statement, Statement.GetSQL, nil, FOleDBConnection.GetConSettings);
+  {$IFNDEF NO_AUTOENCODE}
   fCtrlCP := ConSettings.CTRL_CP;
+  {$ENDIF}
   fClientCP := ConSettings.ClientCodePage.CP;
   FColBuffer := ParamBuffer;
   J := 0;
@@ -2194,7 +2204,9 @@ begin
   FCurrentBufRowNo := 0;
   FRowsObtained := 0;
   FHROWS := nil;
+  {$IFNDEF NO_AUTOENCODE}
   fCtrlCP := ConSettings.CTRL_CP;
+  {$ENDIF NO_AUTOENCODE}
   fClientCP := ConSettings.ClientCodePage.CP;
   Open;
 end;

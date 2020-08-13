@@ -94,7 +94,7 @@ type
     procedure SetLastResultSet(const ResultSet: IZResultSet); virtual;
   protected
     FLastResultSet: IZResultSet;
-    FCursorName: RawByteString;
+    FCursorName: SQLString;
     FWSQL: UnicodeString;
     FaSQL: RawByteString;
     FStatementId : NativeUint;
@@ -126,7 +126,7 @@ type
       read FResultSetConcurrency write FResultSetConcurrency;
     property ResultSetType: TZResultSetType
       read FResultSetType write FResultSetType;
-    property CursorName: RawByteString read FCursorName write FCursorName;
+    property CursorName: String read FCursorName write FCursorName;
     property BatchQueries: TStrings read FBatchQueries;
     property Connection: IZConnection read FConnection;
     property Info: TStrings read FInfo;
@@ -741,7 +741,9 @@ begin
     {$IFDEF UNICODE}
     if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then begin
       FWSQL := GetUnicodeEncodedSQL(Value);
+      {$IFNDEF NO_AUTOENCODE}
       {$IFDEF DEBUG}FASQL := ZUnicodeToRaw(FWSQL, ConSettings^.CTRL_CP);{$ENDIF}
+      {$ENDIF NO_AUTOENCODE}
     end else begin
       FASQL := GetRawEncodedSQL(Value);
       FWSQL := Value;
@@ -749,7 +751,11 @@ begin
     {$ELSE !UNICODE}
     begin
       if (ConSettings^.ClientCodePage^.Encoding = ceUTF16)
+      {$IFNDEF NO_AUTOENCODE}
       then CP := ConSettings^.CTRL_CP
+      {$ELSE}
+      CP := GetW2A2WConversionCodePage(ConSettings);
+      {$ENDIF}
       else CP := FClientCP;
       FaSQL := GetRawEncodedSQL(ZUnicodeToRaw(Value, CP)); //required for the resultsets
       FWSQL := Value;
@@ -1215,7 +1221,7 @@ end;
 }
 procedure TZAbstractStatement.SetCursorName(const Value: String);
 begin
-  FCursorName := ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+  FCursorName := Value;
 end;
 
 {**
@@ -3196,12 +3202,17 @@ begin
     Exit;
   end;
   if ConSettings^.ClientCodePage.Encoding = ceUTF16
+  {$IFNDEF NO_AUTOENCODE}
   then CP := ConSettings^.CTRL_CP
+  {$ELSE NO_AUTOENCODE}
+  then CP := GetW2A2WConversionCodePage(ConSettings)
+  {$ENDIF NO_AUTOENCODE}
   else CP := ConSettings^.ClientCodePage^.CP;
   CLob := TZLocalMemCLob.Create(CP, ConSettings, FOpenLobStreams);
-
+  {$IFNDEF NO_AUTOENCODE}
   if ConSettings^.AutoEncode then
      CP := zCP_NONE;
+  {$ENDIF NO_AUTOENCODE}
   Clob.SetStream(Value, CP);
   SetBlob(ParameterIndex, stAsciiStream, Clob);
 end;
@@ -3713,7 +3724,11 @@ begin
   if (Value <> nil) and (SQLType in [stAsciiStream, stUnicodeStream]) then begin
     if Value.IsClob
     then Value.SetCodePageTo(FClientCP)
+    {$IFNDEF NO_AUTOENCODE}
     else PIZLob(BindList[Index].Value)^ := CreateRawCLobFromBlob(Value, ConSettings, FOpenLobStreams);
+    {$ELSE}
+    else raise CreateConversionError(Index, stBinaryStream, stAsciiStream);
+    {$ENDIF}
     BindList[Index].SQLType := stAsciiStream;
   end;
 end;

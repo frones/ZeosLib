@@ -298,6 +298,7 @@ implementation
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
+  {$IF defined(NO_AUTOENCODE) and defined(UNICODE)}ZEncoding,{$IFEND}
   ZFastCode, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZCollections,
   ZDbcProperties, ZDbcMySql;
 
@@ -2714,7 +2715,15 @@ begin
           Result.UpdateRawByteString(CatalogNameIndex, 'def');
           Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(PROCEDURE_SCHEM_index, Len), Len); //PROCEDURE_SCHEM
           Result.UpdatePAnsiChar(ProcColProcedureNameIndex, GetPAnsiChar(PROCEDURE_NAME_Index, Len), Len); //PROCEDURE_NAME
+        {$IFDEF NO_AUTOENCODE}
+          {$IFDEF UNICODE}
+          TypeName := ZUnicodeToRaw(Params[2], ConSettings^.ClientCodePage^.CP);
+          {$ELSE}
+          TypeName := Params[2];
+          {$ENDIF}
+        {$ELSE}
           TypeName := ConSettings^.ConvFuncs.ZStringToRaw(Params[2], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+        {$ENDIF}
           ConvertMySQLColumnInfoFromString(TypeName, Temp, FieldType, ColumnSize, Scale,
             fMySQL_FieldType_Bit_1_IsBoolean);
           { process COLUMN_NAME }

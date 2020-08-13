@@ -95,7 +95,6 @@ type
   protected
     FAdoConnection: ZPlainAdo.Connection;
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload; override;
-    procedure InternalCreate; override;
     procedure InternalClose; override;
   public
     function GetAdoConnection: ZPlainAdo.Connection;
@@ -103,9 +102,9 @@ type
       const E: Exception; const Sender: IImmediatelyReleasable;
       const LogMsg: SQLString);
   public
-
+    procedure AfterConstruction; override;
     destructor Destroy; override;
-
+  public
     procedure Commit;
     procedure Rollback;
     procedure SetAutoCommit(Value: Boolean); override;
@@ -205,13 +204,6 @@ begin
     CoUninitialize;
 end;
 { TZAdoConnection }
-
-procedure TZAdoConnection.InternalCreate;
-begin
-  CoInit;
-  FAdoConnection := CoConnection.Create;
-  FMetadata := TZAdoDatabaseMetadata.Create(Self, URL);
-end;
 
 {**
   Destroys this object and cleanups the memory.
@@ -499,6 +491,14 @@ end;
   used only when auto-commit mode has been disabled.
   @see #setAutoCommit
 }
+procedure TZAdoConnection.AfterConstruction;
+begin
+  CoInit;
+  FAdoConnection := CoConnection.Create;
+  FMetadata := TZAdoDatabaseMetadata.Create(Self, URL);
+  inherited AfterConstruction;
+end;
+
 procedure TZAdoConnection.Commit;
 var S: UnicodeString;
   Cnt: Integer;

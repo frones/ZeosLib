@@ -105,7 +105,6 @@ type
     FPlainDriver: TZSQLitePlainDriver;
     FTransactionStmts: array[TSQLite3TransactionAction] of Psqlite3_stmt;
   protected
-    procedure InternalCreate; override;
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory; var Stmt: Psqlite3_stmt); overload;
@@ -117,6 +116,8 @@ type
     procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
       ErrorCode: Integer; const LogMessage: String;
       const Sender: IImmediatelyReleasable);
+  public
+    procedure AfterConstruction; override;
   public
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareCallWithParams(const Name: String; Info: TStrings):
@@ -247,19 +248,6 @@ const cTransactionActionStmt: Array[TSQLite3TransactionAction] of RawByteString 
   'ROLLBACK TRANSACTION');
 
 { TZSQLiteConnection }
-
-{**
-  Constructs this object and assignes the main properties.
-}
-procedure TZSQLiteConnection.InternalCreate;
-begin
-  FPlainDriver := TZSQLitePlainDriver(PlainDriver.GetInstance);
-  FMetadata := TZSQLiteDatabaseMetadata.Create(Self, Url);
-  //https://sqlite.org/pragma.html#pragma_read_uncommitted
-  inherited SetTransactionIsolation(tiSerializable);
-  CheckCharEncoding('UTF-8');
-  FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
-end;
 
 {**
   Set encryption key for a database
@@ -675,6 +663,17 @@ end;
   used only when auto-commit mode has been disabled.
   @see #setAutoCommit
 }
+procedure TZSQLiteConnection.AfterConstruction;
+begin
+  FPlainDriver := PlainDriver.GetInstance as TZSQLitePlainDriver;
+  FMetadata := TZSQLiteDatabaseMetadata.Create(Self, Url);
+  inherited AfterConstruction;
+  //https://sqlite.org/pragma.html#pragma_read_uncommitted
+  inherited SetTransactionIsolation(tiSerializable);
+  CheckCharEncoding('UTF-8');
+  FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
+end;
+
 procedure TZSQLiteConnection.Commit;
 var S: RawByteString;
 begin

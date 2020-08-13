@@ -107,7 +107,9 @@ type
     procedure InternalSetTransactionIsolation(Level: TZTransactIsolationLevel);
     procedure DetermineMSDateFormat;
     function DetermineMSServerCollation: String;
+    {$IFNDEF NO_AUTOENCODE}
     function DetermineMSServerCodePage(const Collation: String): Word;
+    {$ENDIF NO_AUTOENCODE}
     {$IFDEF TEST_CALLBACK}
     function DBMSGHANDLE(Proc: PDBPROCESS; MsgNo: DBINT; MsgState,
       Severity: Integer; MsgText, SrvName, ProcName: PAnsiChar; Line: DBUSMALLINT): Integer;
@@ -116,7 +118,6 @@ type
     {$ENDIF TEST_CALLBACK}
   protected
     FHandle: PDBPROCESS;
-    procedure InternalCreate; override;
     procedure InternalLogin;
     function GetConnectionHandle: PDBPROCESS;
     procedure CheckDBLibError(LoggingCategory: TZLoggingCategory;
@@ -125,6 +126,7 @@ type
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
   public
+    procedure AfterConstruction; override;
     destructor Destroy; override;
   public
     function AbortOperation: Integer; override;
@@ -247,30 +249,6 @@ end;
 { TZDBLibConnection }
 
 {**
-  Constructs this object and assignes the main properties.
-}
-procedure TZDBLibConnection.InternalCreate;
-begin
-  FPlainDriver := TZDBLIBPLainDriver(PlainDriver.GetInstance);
-  FSQLErrors := TZDBLibErrorList.Create;
-  FSQLMessages := TZDBLibMessageList.Create;
-  if ZFastCode.Pos('mssql', LowerCase(Url.Protocol)) > 0  then begin
-    FMetadata := TZMsSqlDatabaseMetadata.Create(Self, Url);
-    FProvider := dpMsSQL;
-  end else if ZFastCode.Pos('sybase', LowerCase(Url.Protocol)) > 0 then begin
-    FMetadata := TZSybaseDatabaseMetadata.Create(Self, Url);
-    FProvider := dpSybase;
-  end else
-    FMetadata := nil;
-  if (FPlainDriver.DBLibraryVendorType = lvtFreeTDS) and (Info.Values[ConnProps_CodePage] = '') then
-    {$IF defined(UNICODE) or defined(LCL)}
-    Info.Values[ConnProps_CodePage] := 'UTF-8';
-    {$ELSE}
-    Info.Values[ConnProps_CodePage] := 'ISO-8859-1'; //this is the default CP of free-tds
-    {$IFEND}
-end;
-
-{**
   Login procedure can be overriden for special settings.
 }
 procedure TZDBLibConnection.InternalLogin;
@@ -282,6 +260,19 @@ var
   Ret: RETCODE;
   P: PChar;
   E: EZSQLException;
+  {$IFDEF NO_AUTOENCODE}
+  procedure SetRawFromProperties(const PropName: String);
+  begin
+  {$IFDEF UNICODE}
+    lLogFile := URL.Properties.Values[PropName];
+    if lLogFile <> ''
+    then RawTemp := ZUnicodeToRaw(lLogFile, ZOSCodePage)
+    else RawTemp := '';
+  {$ELSE}
+    RawTemp := URL.Properties.Values[PropName]
+  {$ENDIF}
+  end;
+  {$ENDIF}
 begin
   FLogMessage := 'CONNECT TO "'+HostName+'"';
   LoginRec := FPlainDriver.dbLogin;
@@ -330,15 +321,27 @@ begin
       end;
     end;
 //Common parameters
+    {$IFDEF NO_AUTOENCODE}
+    SetRawFromProperties(ConnProps_Workstation);
+    {$ELSE NO_AUTOENCODE}
     RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values[ConnProps_Workstation], ConSettings.CTRL_CP, ZOSCodePage);
+    {$ENDIF NO_AUTOENCODE}
     if Pointer(RawTemp) <> nil then
       FPlainDriver.dbSetLHost(LoginRec, Pointer(RawTemp));
 
+    {$IFDEF NO_AUTOENCODE}
+    SetRawFromProperties(ConnProps_AppName);
+    {$ELSE NO_AUTOENCODE}
     RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values[ConnProps_AppName], ConSettings.CTRL_CP, ZOSCodePage);
+    {$ENDIF NO_AUTOENCODE}
     if Pointer(RawTemp) <> nil then
       FPlainDriver.dbSetLApp(LoginRec, Pointer(RawTemp));
 
-    RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values[ConnProps_Language], ConSettings.CTRL_CP, ZOSCodePage);
+    {$IFDEF NO_AUTOENCODE}
+    SetRawFromProperties(ConnProps_AppName);
+    {$ELSE NO_AUTOENCODE}
+    RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values[ConnProps_AppName], ConSettings.CTRL_CP, ZOSCodePage);
+    {$ENDIF NO_AUTOENCODE}
     if Pointer(RawTemp) <> nil then
       FPlainDriver.dbSetLNatLang(LoginRec, Pointer(RawTemp));
 
@@ -355,9 +358,15 @@ begin
           lLogFile := Info.Values[ConnProps_TDSDumpFile];
         if lLogFile = '' then
           lLogFile := ChangeFileExt(ParamStr(0), '.tdslog');
-        RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(lLogFile, ConSettings.CTRL_CP, ZOSCodePage);
+        {$IFDEF UNICODE}
+        RawTemp := ZUnicodeToRaw(lLogFile, ZOSCodePage);
         if RawTemp <> '' then
           FPlainDriver.tdsDump_Open(Pointer(RawTemp));
+        {$ELSE}
+        RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(lLogFile, ConSettings.CTRL_CP, ZOSCodePage);
+        if lLogFile <> '' then
+          FPlainDriver.tdsDump_Open(Pointer(lLogFile));
+        {$ENDIF}
       end;
     end;
 
@@ -369,13 +378,13 @@ begin
       FLogMessage := Format(SConnect2WinAuth,  [URL.HostName]);
     end else begin
       {$IFDEF UNICODE}
-      RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(URL.UserName, ConSettings.CTRL_CP, ZOSCodePage);
+      RawTemp := ZUnicodeToRaw(URL.UserName, ZOSCodePage);
       {$ELSE}
       RawTemp := URL.UserName;
       {$ENDIF}
       FPlainDriver.dbsetluser(LoginRec, PAnsiChar(RawTemp));
       {$IFDEF UNICODE}
-      RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Password, ConSettings.CTRL_CP, ZOSCodePage);
+      RawTemp := ZUnicodeToRaw(Password, ZOSCodePage);
       {$ELSE}
       RawTemp := Password;
       {$ENDIF}
@@ -396,7 +405,11 @@ begin
       end;
     end;
     CheckDBLibError(lcConnect, FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
-    RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings.CTRL_CP, ZOSCodePage);
+    {$IFDEF UNICODE}
+    RawTemp := ZUnicodeToRaw(HostName, ZOSCodePage);
+    {$ELSE}
+    RawTemp := HostName;
+    {$ENDIF}
     // add port number if FreeTDS is used, the port number was specified and no server instance name was given:
     if (FPlainDriver.DBLibraryVendorType = lvtFreeTDS) and (Port <> 0) and (ZFastCode.Pos('\', HostName) = 0)  then
       RawTemp := RawTemp + ':' + ZFastCode.IntToRaw(Port);
@@ -449,6 +462,31 @@ begin
 end;
 
 const P4ZeroChars: array[0..3] of Byte = (Byte('0'),Byte('0'),Byte('0'),Byte('0')); //Endian save
+
+procedure TZDBLibConnection.AfterConstruction;
+begin
+  FPlainDriver := PlainDriver.GetInstance as TZDBLIBPLainDriver;
+  FSQLErrors := TZDBLibErrorList.Create;
+  FSQLMessages := TZDBLibMessageList.Create;
+  FLogMessage := LowerCase(Url.Protocol);
+  if ZFastCode.Pos('mssql', FLogMessage) > 0  then begin
+    FMetadata := TZMsSqlDatabaseMetadata.Create(Self, Url);
+    FProvider := dpMsSQL;
+  end else if ZFastCode.Pos('sybase', FLogMessage) > 0 then begin
+    FMetadata := TZSybaseDatabaseMetadata.Create(Self, Url);
+    FProvider := dpSybase;
+  end else
+    FMetadata := nil;
+  FLogMessage := Info.Values[ConnProps_CodePage];
+  if (FPlainDriver.DBLibraryVendorType = lvtFreeTDS) and (FLogMessage = '') then
+    {$IF defined(UNICODE) or defined(LCL)}
+    Info.Values[ConnProps_CodePage] := 'UTF-8';
+    {$ELSE}
+    Info.Values[ConnProps_CodePage] := 'ISO-8859-1'; //this is the default CP of free-tds
+    {$IFEND}
+  FLogMessage := '';
+  inherited AfterConstruction;
+end;
 
 procedure TZDBLibConnection.CheckDBLibError(LoggingCategory: TZLoggingCategory;
   const LogMessage: SQLString; const Sender: IImmediatelyReleasable);
@@ -646,6 +684,7 @@ begin
   end;
 
   (GetMetadata.GetDatabaseInfo as IZDbLibDatabaseInfo).InitIdentifierCase(GetServerCollation);
+  {$IFNDEF NO_AUTOENCODE}
   if (FProvider = dpMsSQL) and (FPlainDriver.DBLibraryVendorType <> lvtFreeTDS) then
   begin
   {note: this is a hack from a user-request of synopse project!
@@ -672,7 +711,7 @@ begin
     end;
     ConSettings^.AutoEncode := True; //Must be set because we can't determine a column-codepage! e.g NCHAR vs. CHAR Fields
     SetConvertFunctions(ConSettings);
-  end else begin
+  end else {$ENDIF}begin
     if (FProvider = dpSybase) and (FPlainDriver.DBLibraryVendorType <> lvtFreeTDS)
     then ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := False;
     FServerAnsiCodePage := ConSettings^.ClientCodePage^.CP;
@@ -984,6 +1023,7 @@ begin
   else Result := 'unknown';
 end;
 
+{$IFNDEF NO_AUTOENCODE}
 function TZDBLibConnection.DetermineMSServerCodePage(const Collation: String): Word;
 var P: PAnsiChar;
     L: LengthInt;
@@ -1009,6 +1049,7 @@ begin
     FPlainDriver.dbCancel(FHandle);
   end;
 end;
+{$ENDIF NO_AUTOENCODE}
 
 {**
   Attempts to change the transaction isolation level to the one given.

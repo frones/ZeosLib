@@ -255,13 +255,13 @@ function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
 
 function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
   ConSettings: PZConSettings; ToCP: Word): RawByteString; overload; //deprecated;
-{$ENDIF NO_AUTOENCODE}
 {**
   Set the string-types conversion funtion in relation to the Connection-Settings.
   The Results should be as optimal as possible to speed up the behavior
   @param ConSettings a Pointer to the ConnectionSetting
 }
 procedure SetConvertFunctions(ConSettings: PZConSettings);
+{$ENDIF NO_AUTOENCODE}
 
 function CreateUnsupportedParameterTypeException(Index: Integer; ParamType: TZSQLType): EZSQLException;
 
@@ -299,6 +299,10 @@ function CreateReadOnlyException: EZSQLException;
 function CreateBinaryException: EZSQLException;
 function CreateNonBinaryException: EZSQLException;
 function CreateConversionError(ColumnIndex: Integer; Actual, Expected: TZSQLType): EZSQLException;
+
+{$IFDEF NO_AUTOENCODE}
+function GetW2A2WConversionCodePage(ConSettings: PZConSettings): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+{$ENDIF}
 
 const
   i4SpaceRaw: Integer = Ord(#32)+Ord(#32) shl 8 + Ord(#32) shl 16 +Ord(#32) shl 24;  //integer representation of the four space chars
@@ -1261,9 +1265,9 @@ var
   end;
 begin
   ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSE}Pos{$ENDIF}('?', SQL) > 0);
+  CP := ConSettings^.ClientCodePage^.CP;
   if ParamFound {$IFNDEF UNICODE}or ConSettings^.AutoEncode {$ENDIF}or Assigned(ComparePrefixTokens) then begin
     Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
-    CP := ConSettings^.ClientCodePage^.CP;
     {$IFNDEF UNICODE}
     if ConSettings^.AutoEncode
     then SectionWriter := TZRawSQLStringWriter.Create(Length(SQL) shr 5)
@@ -1348,9 +1352,19 @@ begin
         SectionWriter.Free;
       {$ENDIF}
     end;
-  end
-  else
-    Add(ConSettings^.ConvFuncs.ZStringToRaw(SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+  end else
+  {$IFDEF NO_AUTOENCODE}
+    {$IFDEF UNICODE}
+    begin
+      Tmp := ZUnicodeToRaw(SQL, CP);
+      Add(Tmp);
+    end;
+    {$ELSE}
+      Add(SQL);
+    {$ENDIF}
+  {$ELSE}
+    Add(ConSettings^.ConvFuncs.ZStringToRaw(SQL, ConSettings^.CTRL_CP, CP));
+  {$ENDIF}
 end;
 
 {**
@@ -2425,6 +2439,7 @@ DoRaise: raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
+{$IFNDEF NO_AUTOENCODE}
 procedure SetConvertFunctions(ConSettings: PZConSettings);
 begin
   FillChar(ConSettings^.ConvFuncs, SizeOf(ConSettings^.ConvFuncs), #0);
@@ -2477,6 +2492,7 @@ begin
   end;
   {$ENDIF NO_AUTOENCODE}
 end;
+{$ENDIF NO_AUTOENCODE}
 
 function CreateCanNotAccessBlobRecordException(ColumnIndex: Integer; SQLType: TZSQLType): EZSQLException;
 begin
@@ -2512,6 +2528,28 @@ function CreateNonBinaryException: EZSQLException;
 begin
   Result := EZSQLException.Create(Format(SOperationIsNotAllowed3, ['NON BINARY']));
 end;
+
+{$IFDEF NO_AUTOENCODE}
+function GetW2A2WConversionCodePage(ConSettings: PZConSettings): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+begin
+  if (ConSettings = nil)
+  then Result := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}
+      {$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF}
+  else case ConSettings.W2A2WEncodingSource of
+    w2a2wDB_CP: if (ConSettings.ClientCodePage = nil) or (ConSettings.ClientCodePage.CP = zCP_UTF16)
+                then Result := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}
+                      {$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF}
+                else Result := ConSettings.ClientCodePage.CP;
+    w2a2wGET_ACP: Result := ZOSCodePage;
+    {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+    w2a2wUTF8: Result := zCP_UTF8;
+    else      Result := DefaultSystemCodePage;
+    {$ELSE}
+    else      Result := zCP_UTF8;
+    {$ENDIF}
+  end;
+end;
+{$ENDIF NO_AUTOENCODE}
 
 {$IF DEFINED(ENABLE_DBLIB) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}
 initialization

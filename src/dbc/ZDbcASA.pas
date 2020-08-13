@@ -103,7 +103,6 @@ type
     procedure SetOption(Temporary: Integer; const LogMsg: String;
       const Option, Value: RawByteString; LoggingCategory: TZLoggingCategory);
   protected
-    procedure InternalCreate; override;
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
   public
@@ -111,6 +110,8 @@ type
     function GetPlainDriver: TZASAPlainDriver;
     procedure HandleErrorOrWarning(LoggingCategory: TZLoggingCategory;
       const Msg: SQLString; const Sender: IImmediatelyReleasable);
+  public
+    procedure AfterConstruction; override;
   public
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareCallWithParams(const Name: String; Info: TStrings):
@@ -301,15 +302,6 @@ begin
     if FRestartTransaction then
       StartTransaction;
   end;
-end;
-
-{**
-  Constructs this object and assignes the main properties.
-}
-procedure TZASAConnection.InternalCreate;
-begin
-  FPlainDriver := TZASAPlainDriver(GetIZPlainDriver.GetInstance);
-  Self.FMetadata := TZASADatabaseMetadata.Create(Self, URL);
 end;
 
 {**
@@ -543,6 +535,13 @@ end;
 function TZASAConnection.GetWarnings: EZSQLWarning;
 begin
   Result := FLastWarning;
+end;
+
+procedure TZASAConnection.AfterConstruction;
+begin
+  FPlainDriver := PlainDriver.GetInstance as TZASAPlainDriver;
+  FMetadata := TZASADatabaseMetadata.Create(Self, URL);
+  inherited AfterConstruction;
 end;
 
 {**

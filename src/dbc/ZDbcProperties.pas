@@ -181,8 +181,17 @@ const
   ///  If the driver(f.e. SQLite) supports the 'T' delimiter do not hasitate to use it!
   /// </remarks>
   ConnProps_DateTimeWriteFormat = 'DatetimeWriteFormat';
-  // Type: STR
-  // Sets TZAbstractDatabaseInfo.IdentifierQuotes property, refer to Zeos manual for details
+  /// <type>String</type>
+  /// <summary>
+  ///  Sets TZAbstractDatabaseInfo.IdentifierQuotes property. The quote chars
+  ///  are relevant for Postgres dollar quoting, multi drivers like ado, odbc,
+  ///  OleDB same as SQLite whare all known identifier quotes are allowed
+  /// </summary>
+  /// <default>""</default>
+  /// <remarks>
+  ///  the quote char(s) count can contain a single char like sql standard " or
+  ///  maximum two characters
+  /// </remarks>
   ConnProps_IdentifierQuotes = 'identifier_quotes';
 
   { Parameters common for all DBC's }

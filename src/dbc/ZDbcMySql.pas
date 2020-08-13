@@ -115,9 +115,10 @@ type
     FLastWarning: EZSQLWarning;
     FSilentError: Boolean;
   protected
-    procedure InternalCreate; override;
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
+  public
+    procedure AfterConstruction; override;
   public
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareStatementWithParams(const SQL: string; Info: TStrings):
@@ -346,19 +347,6 @@ end;
 
 { TZMySQLConnection }
 
-{**
-  Constructs this object and assignes the main properties.
-}
-procedure TZMySQLConnection.InternalCreate;
-begin
-  FPlainDriver := PlainDriver.GetInstance AS TZMySQLPlainDriver;
-  FIKnowMyDatabaseName := False;
-  if Self.Port = 0 then
-     Self.Port := MYSQL_PORT;
-  inherited SetTransactionIsolation(tiRepeatableRead);
-  FMetaData := TZMySQLDatabaseMetadata.Create(Self, Url);
-end;
-
 function TZMySQLConnection.IsSilentError: Boolean;
 begin
   Result := FSilentError;
@@ -394,13 +382,48 @@ var
   UIntOpt: UInt;
   MyBoolOpt: Byte;
   ClientFlag : Cardinal;
-  SslCa, SslCaPath, SslKey, SslCert, SslCypher: PAnsiChar;
   myopt: TMySQLOption;
   sMyOpt: string;
   my_client_Opt:TMYSQL_CLIENT_OPTIONS;
   sMy_client_Opt, sMy_client_Char_Set:String;
   ClientVersion: Integer;
   SQL: RawByteString;
+  P: PAnsiChar;
+  S: String;
+  procedure mysql_ssl_set;
+  var
+    pSslCa, pSslCaPath, pSslKey, pSslCert, pSslCypher: PAnsiChar;
+    SslCa, SslCaPath, SslKey, SslCert, SslCypher: RawByteString;
+  begin
+    S := Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_KEY)];
+    if S <> '' then begin
+      SslKey := {$IFDEF UNICODE}ZUnicodeToRaw(S, ZOSCodePage){$ELSE}S{$ENDIF};
+      pSslKey := Pointer(SslKey);
+    end else pSslKey := nil;
+    S := Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CERT)];
+    if S <> '' then begin
+      SslCert := {$IFDEF UNICODE}ZUnicodeToRaw(S, ZOSCodePage){$ELSE}S{$ENDIF};
+      pSslCert := Pointer(SslCert);
+    end else pSslCert := nil;
+    S := Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CA)];
+    if S <> '' then begin
+      SslCa := {$IFDEF UNICODE}ZUnicodeToRaw(S, ZOSCodePage){$ELSE}S{$ENDIF};
+      pSslCa := Pointer(SslCa);
+    end else pSslCa := nil;
+    S := Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CAPATH)];
+    if S <> '' then begin
+      SslCaPath := {$IFDEF UNICODE}ZUnicodeToRaw(S, ZOSCodePage){$ELSE}S{$ENDIF};
+      pSslCaPath := Pointer(SslCaPath);
+    end else pSslCaPath := nil;
+    S := Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CIPHER)];
+    if S <> '' then begin
+      SslCypher := {$IFDEF UNICODE}ZUnicodeToRaw(S, ZOSCodePage){$ELSE}S{$ENDIF};
+      pSslCypher := Pointer(SslCypher);
+    end else pSslCypher := nil;
+    FPlainDriver.mysql_ssl_set(FHandle, pSslKey, pSslCert, pSslCa, pSslCaPath, pSslCypher);
+   if DriverManager.HasLoggingListener then
+     DriverManager.LogMessage(lcOther, URL.Protocol, 'SSL options set');
+  end;
 label setuint;
 begin
   if not Closed then
@@ -415,16 +438,18 @@ begin
   end;
   {EgonHugeist: get current characterset first }
   if Assigned(FPlainDriver.mysql_character_set_name) then begin
-    SslCa := FPlainDriver.mysql_character_set_name(FHandle);
+    P := FPlainDriver.mysql_character_set_name(FHandle);
     {$IFDEF UNICODE}
-    sMy_client_Char_Set := ASCII7ToUnicodeString(SslCa, StrLen(SslCa));
+    sMy_client_Char_Set := ASCII7ToUnicodeString(P, StrLen(P));
     {$ELSE}
-    System.SetString(sMy_client_Char_Set, SslCa, StrLen(SslCa));
+    System.SetString(sMy_client_Char_Set, P, StrLen(P));
     {$ENDIF}
     if (sMy_client_Char_Set <> '') {mysql 4down doesn't have this function } and
      (sMy_client_Char_Set <> FClientCodePage) then begin
       ConSettings^.ClientCodePage := FPlainDriver.ValidateCharEncoding(sMy_client_Char_Set);
+      {$IFNDEF NO_AUTOENCODE}
       SetConvertFunctions(ConSettings);
+      {$ENDIF}
     end;
   end;
   try
@@ -497,11 +522,25 @@ setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def
           MYSQL_OPT_SSL_CA, MYSQL_OPT_SSL_CAPATH, MYSQL_OPT_SSL_CIPHER,
           MYSQL_OPT_TLS_CIPHERSUITES,
           MYSQL_OPT_COMPRESSION_ALGORITHMS: ;//skip, processed down below
-          else
-            if Info.Values[sMyOpt] <> '' then
+          {$IFDEF NO_AUTOENCODE}
+          else  begin
+                  S := Info.Values[sMyOpt];
+                  if S <> '' then begin
+                    {$IFDEF UNICODE}
+                    SQL := ZUnicodeToRaw(S, ZOSCodePage);
+                    P := Pointer(SQL);
+                    {$ELSE}
+                    P := Pointer(S);
+                    {$ENDIF}
+                    FPlainDriver.mysql_options(FHandle, myopt, P);
+                  end;
+                end;
+          {$ELSE}
+          else  if Info.Values[sMyOpt] <> '' then
               FPlainDriver.mysql_options(FHandle, myopt, PAnsiChar(
                 ConSettings^.ConvFuncs.ZStringToRaw(Info.Values[sMyOpt],
                   ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)));
+          {$ENDIF}
         end;
     end;
 
@@ -518,28 +557,8 @@ setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def
     end;
 
     { Set SSL properties before connect}
-    SslKey := nil; SslCert := nil; SslCa := nil; SslCaPath := nil; SslCypher := nil;
-    if StrToBoolEx(Info.Values[ConnProps_MYSQLSSL]) then begin
-     if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_KEY)] <> '' then
-        SslKey := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-          Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_KEY)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-     if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CERT)] <> '' then
-        SslCert := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-          Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CERT)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-     if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CA)] <> '' then
-        SslCa := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-          Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CA)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-     if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CAPATH)] <> '' then
-        SslCaPath := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-          Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CAPATH)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-     if Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CIPHER)] <> '' then
-        SslCypher := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
-          Info.Values[GetMySQLOptionValue(MYSQL_OPT_SSL_CIPHER)], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-     FPlainDriver.mysql_ssl_set(FHandle, SslKey, SslCert, SslCa, SslCaPath,
-        SslCypher);
-     if DriverManager.HasLoggingListener then
-       DriverManager.LogMessage(lcConnect, URL.Protocol, 'SSL options set');
-    end;
+    S := Info.Values[ConnProps_MYSQLSSL];
+    if StrToBoolEx(S) then mysql_ssl_set;
 
     { Connect to MySQL database. }
     if FPlainDriver.mysql_real_connect(FHandle,
@@ -563,10 +582,12 @@ setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def
     DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
 
     { Fix Bugs in certain Versions where real_conncet resets the Reconnect flag }
-    if (Info.Values[GetMySQLOptionValue(MYSQL_OPT_RECONNECT)] <> '') and
+    s := Info.Values[GetMySQLOptionValue(MYSQL_OPT_RECONNECT)];
+    if (S <> '') and
       ((ClientVersion>=50013) and (ClientVersion<50019)) or
       ((ClientVersion>=50100) and (ClientVersion<50106)) then begin
-      MyBoolOpt := Ord(StrToBoolEx(Info.Values[GetMySQLOptionValue(MYSQL_OPT_RECONNECT)]));
+      S := Info.Values[GetMySQLOptionValue(MYSQL_OPT_RECONNECT)];
+      MyBoolOpt := Ord(StrToBoolEx(S));
       FPlainDriver.mysql_options(FHandle, MYSQL_OPT_RECONNECT, @MyBoolOpt);
     end;
     if (FClientCodePage = '') and (sMy_client_Char_Set <> '') then
@@ -586,7 +607,8 @@ setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def
     end;
     inherited Open;
     if TMySqlOptionMinimumVersion[MYSQL_OPT_MAX_ALLOWED_PACKET] < GetHostVersion then begin
-      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def{$ENDIF}(Info.Values[ConnProps_MYSQL_OPT_MAX_ALLOWED_PACKET], 0);
+      S := Info.Values[ConnProps_MYSQL_OPT_MAX_ALLOWED_PACKET];
+      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def{$ENDIF}(S, 0);
       if (UIntOpt <> 0) then begin
         SQL := 'SET GLOBAL max_allowed_packet='+IntToRaw(UIntOpt);
         ExecuteImmediat(SQL, lcOther);
@@ -594,12 +616,13 @@ setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def
     end;
     //no real version check required -> the user can simply switch off treading
     //enum('Y','N')
-    FMySQL_FieldType_Bit_1_IsBoolean := StrToBoolEx(Info.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean]);
+    S := Info.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean];
+    FMySQL_FieldType_Bit_1_IsBoolean := StrToBoolEx(S);
     FSupportsBitType := (
       (    FPlainDriver.IsMariaDBDriver and (ClientVersion >= 100109) ) or
       (not FPlainDriver.IsMariaDBDriver and (ClientVersion >=  50003) ) ) and (GetHostVersion >= EncodeSQLVersioning(5,0,3));
     //if not explizit !un!set -> assume as default since Zeos 7.3
-    FMySQL_FieldType_Bit_1_IsBoolean := FMySQL_FieldType_Bit_1_IsBoolean or (FSupportsBitType and (Info.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean] = ''));
+    FMySQL_FieldType_Bit_1_IsBoolean := FMySQL_FieldType_Bit_1_IsBoolean and (FSupportsBitType and (S = ''));
     with (GetMetadata as IZMySQLDatabaseMetadata) do begin
       SetMySQL_FieldType_Bit_1_IsBoolean(FMySQL_FieldType_Bit_1_IsBoolean);
       FSupportsReadOnly := ( IsMariaDB and (GetHostVersion >= EncodeSQLVersioning(10,0,0))) or
@@ -636,7 +659,9 @@ setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def
       Close;
     end;
     ConSettings^.ClientCodePage := FPlainDriver.ValidateCharEncoding(FClientCodePage);
+    {$IFNDEF NO_AUTOENCODE}
     SetConvertFunctions(ConSettings);
+    {$ENDIF}
   end;
 end;
 
@@ -904,6 +929,17 @@ end;
 function TZMySQLConnection.GetWarnings: EZSQLWarning;
 begin
   Result := FLastWarning;
+end;
+
+procedure TZMySQLConnection.AfterConstruction;
+begin
+  FPlainDriver := PlainDriver.GetInstance as TZMySQLPlainDriver;
+  FIKnowMyDatabaseName := False;
+  if Self.Port = 0 then
+     Self.Port := MYSQL_PORT;
+  FMetaData := TZMySQLDatabaseMetadata.Create(Self, Url);
+  inherited AfterConstruction;
+  inherited SetTransactionIsolation(tiRepeatableRead);
 end;
 
 {**

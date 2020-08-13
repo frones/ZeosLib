@@ -1604,15 +1604,35 @@ begin
 end;
 
 function TODBCDatabaseMetadataW.DecomposeObjectString(const S: String): UnicodeString;
+{$IF defined(NO_AUTOENCODE) and not defined(UNICODE)}
+var tmp: String;
+    CP: Word;
+{$IFEND}
 begin
-  if S = '' then
-    Result := ''
+  {$IF defined(NO_AUTOENCODE) and not defined(UNICODE)}
+  CP := GetW2A2WConversionCodePage(ConSettings);
+  {$IFEND}
+  if S = ''
+  then Result := ''
+  {$IFDEF NO_AUTOENCODE}
+  else if IC.IsQuoted(S) then
+    {$IFDEF UNICODE}
+    Result := IC.ExtractQuote(S)
+    {$ELSE}
+    tmp := IC.ExtractQuote(S);
+    Result := ZRawToUnicode(tmp, CP);
+    {$ENDIF}
+  else {$IFDEF UNICODE}
+    Result := S;
+    {$ELSE}
+    Result := ZRawToUnicode(S, CP);
+    {$ENDIF}
+  {$ELSE}
+  else if IC.IsQuoted(S) then
+    Result := ConSettings^.ConvFuncs.ZStringToUnicode(IC.ExtractQuote(S), ConSettings^.CTRL_CP)
   else
-    if IC.IsQuoted(S) then
-       Result := ConSettings^.ConvFuncs.ZStringToUnicode(IC.ExtractQuote(S), ConSettings^.CTRL_CP)
-    else
-      Result := ConSettings^.ConvFuncs.ZStringToUnicode(S, ConSettings^.CTRL_CP);
-
+    Result := ConSettings^.ConvFuncs.ZStringToUnicode(S, ConSettings^.CTRL_CP);
+  {$ENDIF}
 end;
 {**
   Gets a description of the stored procedures available in a
@@ -1856,11 +1876,18 @@ begin
   Table := DecomposeObjectString(TableNamePattern);
 
   TableTypes := '';
-  for I := Low(Types) to High(Types) do
-  begin
+  for I := Low(Types) to High(Types) do begin
     if Length(TableTypes) > 0 then
       TableTypes := TableTypes + ',';
+{$IFDEF NO_AUTOENCODE}
+    {$IFDEF UNICODE}
+    TableTypes := TableTypes + Types[I];
+    {$ELSE}
+    TableTypes := TableTypes + ZRawToUnicode(Types[I], GetW2A2WConversionCodePage(ConSettings));
+    {$ENDIF}
+{$ELSE}
     TableTypes := TableTypes + ConSettings^.ConvFuncs.ZStringToUnicode(Types[I], ConSettings^.CTRL_CP);
+{$ENDIF}
   end;
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
@@ -1868,21 +1895,18 @@ begin
   RS := TODBCResultSetW.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainW.SQLTablesW(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem), Length(Schem),
     Pointer(Table), Length(Table), Pointer(TableTypes), Length(TableTypes)), HSTMT, ODBCConnection);
-  if Assigned(RS) then
-    with RS do
-    begin
-      while Next do
-      begin
-        Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(CatalogNameIndex, Len), Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(SchemaNameIndex, Len), Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideChar(TableNameIndex, Len), Len);
-        Result.UpdatePWideChar(TableColumnsSQLType, GetPWideChar(TableColumnsSQLType, Len), Len);
-        Result.UpdatePWideChar(TableColumnsRemarks, GetPWideChar(TableColumnsRemarks, Len), Len);
-        Result.InsertRow;
-      end;
-      Close;
+  if Assigned(RS) then with RS do begin
+    while Next do begin
+      Result.MoveToInsertRow;
+      Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(CatalogNameIndex, Len), Len);
+      Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(SchemaNameIndex, Len), Len);
+      Result.UpdatePWideChar(TableNameIndex, GetPWideChar(TableNameIndex, Len), Len);
+      Result.UpdatePWideChar(TableColumnsSQLType, GetPWideChar(TableColumnsSQLType, Len), Len);
+      Result.UpdatePWideChar(TableColumnsRemarks, GetPWideChar(TableColumnsRemarks, Len), Len);
+      Result.InsertRow;
     end;
+    Close;
+  end;
 end;
 
 {**
@@ -2552,14 +2576,29 @@ begin
 end;
 
 function TODBCDatabaseMetadataA.DecomposeObjectString(const S: String): RawByteString;
+{$IF defined(NO_AUTOENCODE) and defined(UNICODE)}
+var Tmp: String;
+{$IFEND}
 begin
-  if S = '' then
-    Result := ''
-  else
-    if IC.IsQuoted(S) then
-       Result := ConSettings^.ConvFuncs.ZStringToRaw(IC.ExtractQuote(S), ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
-    else
-      Result := ConSettings^.ConvFuncs.ZStringToRaw(S, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+  if S = ''
+  then Result := ''
+{$IFNDEF NO_AUTOENCODE}
+  else if IC.IsQuoted(S)
+    then Result := ConSettings^.ConvFuncs.ZStringToRaw(IC.ExtractQuote(S), ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
+    else Result := ConSettings^.ConvFuncs.ZStringToRaw(S, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+{$ELSE}
+  {$IFDEF UNICODE}
+  else begin if IC.IsQuoted(S)
+    then Tmp := IC.ExtractQuote(S)
+    else Tmp := S;
+    Result := ZUnicodeToRaw(Tmp, ConSettings.ClientCodePage.CP);
+  end;
+  {$ELSE}
+  else if IC.IsQuoted(S)
+    then Result := IC.ExtractQuote(S)
+    else Result := S;
+  {$ENDIF}
+{$ENDIF}
 end;
 {**
   Gets a description of the stored procedures available in a
@@ -2804,11 +2843,18 @@ begin
   Tabl := DecomposeObjectString(TableNamePattern);
 
   TableTypes := '';
-  for I := Low(Types) to High(Types) do
-  begin
+  for I := Low(Types) to High(Types) do begin
     if Length(TableTypes) > 0 then
       TableTypes := TableTypes + ',';
+{$IFDEF NO_AUTOENCODE}
+    {$IFDEF UNICODE}
+    TableTypes := TableTypes + ZUnicodeToRaw(Types[I], ConSettings^.ClientCodePage^.CP);
+    {$ELSE}
+    TableTypes := TableTypes + Types[I];
+    {$ENDIF}
+{$ELSE}
     TableTypes := TableTypes + ConSettings^.ConvFuncs.ZStringToRaw(Types[I], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+{$ENDIF}
   end;
 
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
@@ -2817,21 +2863,18 @@ begin
   RS := TODBCResultSetA.CreateForMetadataCall(HSTMT, fPHDBC^, ODBCConnection);
   CheckStmtError(fPLainA.SQLTables(HSTMT, Pointer(Cat), Length(Cat), Pointer(Schem), Length(Schem),
     Pointer(Tabl), Length(Tabl), Pointer(TableTypes), Length(TableTypes)), HSTMT, ODBCConnection);
-  if Assigned(RS) then
-    with RS do
-    begin
-      while Next do
-      begin
-        Result.MoveToInsertRow;
-        Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(CatalogNameIndex, Len), Len);
-        Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(SchemaNameIndex, Len), Len);
-        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(TableNameIndex, Len), Len);
-        Result.UpdatePAnsiChar(TableColumnsSQLType, GetPAnsiChar(TableColumnsSQLType, Len), Len);
-        Result.UpdatePAnsiChar(TableColumnsRemarks, GetPAnsiChar(TableColumnsRemarks, Len), Len);
-        Result.InsertRow;
-      end;
-      Close;
+  if Assigned(RS) then with RS do begin
+    while Next do begin
+      Result.MoveToInsertRow;
+      Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(CatalogNameIndex, Len), Len);
+      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(SchemaNameIndex, Len), Len);
+      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(TableNameIndex, Len), Len);
+      Result.UpdatePAnsiChar(TableColumnsSQLType, GetPAnsiChar(TableColumnsSQLType, Len), Len);
+      Result.UpdatePAnsiChar(TableColumnsRemarks, GetPAnsiChar(TableColumnsRemarks, Len), Len);
+      Result.InsertRow;
     end;
+    Close;
+  end;
 end;
 
 {**

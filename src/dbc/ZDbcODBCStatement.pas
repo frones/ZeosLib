@@ -2061,7 +2061,9 @@ var Bind: PZODBCParamBind;
   Len: NativeUInt;
   PA: PAnsiChar;
   PW: PWidechar absolute PA;
+  {$IFNDEF NO_AUTOENCODE}
   ConvLob: IZBlob;
+  {$ENDIF NO_AUTOENCODE}
 begin
   inherited SetBlob(ParameterIndex, SQLType, Value); //inc refcnt for FPC
   if fBindImmediat then begin
@@ -2085,10 +2087,14 @@ begin
           if FClientEncoding = ceUTF16
           then Value.SetCodePageTo(zCP_UTF16)
           else Value.SetCodePageTo(FClientCP)
+        {$IFDEF NO_AUTOENCODE}
+        else raise CreateConversionError(ParameterIndex, stBinaryStream, Bind.SQLType);
+        {$ELSE}
         else if (FClientEncoding <> ceUTF16) then begin
           ConvLob := CreateRawCLobFromBlob(Value, ConSettings, FOpenLobStreams);
           SetBlob(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stAsciiStream, ConvLob); //recursive call
         end;
+        {$ENDIF}
       if Bind.SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
         PIZLob(Bind.ParameterValuePtr)^ := IZBlob(BindList[ParameterIndex].Value);
         Bind.StrLen_or_IndPtr^ := SQL_DATA_AT_EXEC

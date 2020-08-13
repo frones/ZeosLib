@@ -2599,6 +2599,7 @@ end;
   @param RowBuffer a reference to the result row buffer.
   @return <code>True</code> if the buffer was defined.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZAbstractRODataset.GetActiveBuffer(
   out RowBuffer: PZRowBuffer): Boolean;
 var
@@ -2633,7 +2634,7 @@ begin
       end;
     dsCalcFields: RowBuffer := PZRowBuffer(CalcBuffer);
     dsOldValue, dsNewValue, dsCurValue: begin
-        RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
+        RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
         if RowNo <> ResultSet.GetRow then
           CheckBiDirectional;
 
@@ -2658,6 +2659,7 @@ jmpSeek:  if (State = dsOldValue)
   end;
   Result := RowBuffer <> nil;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {$IFDEF WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD}
 function TZAbstractRODataset.GetFieldClass(FieldDef: TFieldDef): TFieldClass;

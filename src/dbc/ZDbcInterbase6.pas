@@ -98,13 +98,12 @@ type
     FPlainDriver: TZInterbasePlainDriver;
     function ConstructConnectionString: String;
   protected
-    procedure BeforeUrlAssign; override;
-    procedure InternalCreate; override;
     procedure InternalClose; override;
   public
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
     procedure ExecuteImmediat(const SQL: RawByteString; ISC_TR_HANDLE: PISC_TR_HANDLE; LoggingCategory: TZLoggingCategory); overload;
-
+  public
+    procedure AfterConstruction; override;
   public
     function IsFirebirdLib: Boolean; override;
     function IsInterbaseLib: Boolean; override;
@@ -252,17 +251,6 @@ begin
   end;
 end;
 
-{**
-  Constructs this object and assignes the main properties.
-}
-procedure TZInterbase6Connection.InternalCreate;
-begin
-  FPlainDriver := TZInterbasePlainDriver(PlainDriver.GetInstance);
-  FHandle := 0;
-  inherited InternalCreate;
-  FXSQLDAMaxSize := 64*1024; //64KB by default
-end;
-
 function TZInterbase6Connection.GetPlainDriver: TZInterbasePlainDriver;
 begin
   Result := FPlainDriver;
@@ -383,11 +371,11 @@ begin
   else Result := nil;
 end;
 
-procedure TZInterbase6Connection.BeforeUrlAssign;
+procedure TZInterbase6Connection.AfterConstruction;
 begin
-  inherited;
-  FIsFirebirdLib := false;
-  FIsInterbaseLib := false;
+  FPlainDriver := PlainDriver.GetInstance as TZInterbasePlainDriver;
+  FXSQLDAMaxSize := 64*1024; //64KB by default
+  inherited AfterConstruction;
 end;
 
 {**

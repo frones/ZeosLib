@@ -125,7 +125,9 @@ type
   TZAbstractConnection = class(TComponent)
   private
     FUseMetaData: Boolean;
+    {$IFNDEF NO_AUTOENCODE}
     FAutoEncode: Boolean;
+    {$ENDIF}
     FControlsCodePage: TZControlsCodePage;
     {$IFDEF ZEOS_TEST_ONLY}
     FTestMode: Byte;
@@ -614,10 +616,12 @@ begin
   if S <> '' then
     FClientCodepage := S;
   Value.Values[ConnProps_CodePage] := FClientCodepage;
+  {$IFNDEF NO_AUTOENCODE}
   { check autoencodestrings }
   FAutoEncode := StrToBoolEx(Value.Values[ConnProps_AutoEncodeStrings]);
   if Connected then
     DbcConnection.GetConSettings.AutoEncode := FAutoEncode;
+  {$ENDIF NO_AUTOENCODE}
   if Value.Values[ConnProps_ControlsCP] <> '' then begin
     S := Value.Values[ConnProps_ControlsCP];
     if S = 'CP_UTF16' then
@@ -963,8 +967,10 @@ begin
       //See https://sourceforge.net/p/zeoslib/tickets/329/
       if (FURL.Properties.Values[ConnProps_CodePage] = '') and (FClientCodePage <> '') then
         FURL.Properties.Values[ConnProps_CodePage] := FClientCodePage;
+      {$IFNDEF NO_AUTOENCODE}
       if (FURL.Properties.Values[ConnProps_AutoEncodeStrings] = '') and FAutoEncode then
         FURL.Properties.Values[ConnProps_AutoEncodeStrings] := 'True';
+      {$ENDIF NO_AUTOENCODE}
       if (FURL.Properties.Values[ConnProps_ControlsCP] = '') then
         case ControlsCodePage of //automated check..
           cCP_UTF16: FURL.Properties.Values[ConnProps_ControlsCP] := 'CP_UTF16';

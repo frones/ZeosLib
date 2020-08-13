@@ -97,7 +97,6 @@ type
   private
     function DetermineASACharSet: String;
   protected
-    procedure InternalCreate; override;
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
   public
@@ -106,6 +105,8 @@ type
       const Msg: SQLString; const Sender: IImmediatelyReleasable);
     function GetPlainDriver: TZSQLAnywherePlainDriver;
     function Get_api_version: Tsacapi_u32;
+  public
+    procedure AfterConstruction; override;
   public
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareCallWithParams(const Name: String; Info: TStrings):
@@ -306,6 +307,14 @@ const
   After a call to this method, the method <code>getWarnings</code>
     returns null until a new warning is reported for this Connection.
 }
+procedure TZSQLAnywhereConnection.AfterConstruction;
+begin
+  FSQLAnyPlainDriver := PlainDriver.GetInstance as TZSQLAnywherePlainDriver;
+  FMetadata := TZASADatabaseMetadata.Create(Self, URL);
+  inherited AfterConstruction;
+  Fapi_version := SQLANY_API_VERSION_5;
+end;
+
 procedure TZSQLAnywhereConnection.ClearWarnings;
 begin
   FreeAndNil(FLastWarning);
@@ -429,13 +438,6 @@ begin
   Fa_sqlany_connection := nil;
   FSQLAnyPlainDriver.sqlany_fini_ex(Fa_sqlany_interface_context);
   Fa_sqlany_interface_context := nil;
-end;
-
-procedure TZSQLAnywhereConnection.InternalCreate;
-begin
-  FSQLAnyPlainDriver := TZSQLAnywherePlainDriver(GetIZPlainDriver.GetInstance);
-  Self.FMetadata := TZASADatabaseMetadata.Create(Self, URL);
-  Fapi_version := SQLANY_API_VERSION_5;
 end;
 
 procedure TZSQLAnywhereConnection.Open;
