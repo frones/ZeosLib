@@ -103,7 +103,11 @@ function ConvertDatasetToDbcType(Value: TFieldType): TZSQLType;
   @param DataFieldsOnly indicate if the ResultList contains fkDataFields only
   @return a collection of column information objects.
 }
+{$IFDEF NO_AUTOENCODE}
+function ConvertFieldsToColumnInfo(Fields: TFields; ControlsCodePage: TZControlsCodePage; DataFieldsOnly: Boolean): TObjectList;
+{$ELSE}
 function ConvertFieldsToColumnInfo(Fields: TFields; ControlsCodePage: Word; DataFieldsOnly: Boolean): TObjectList;
+{$ENDIF}
 
 {**
   Converts a field definitions into column information objects.
@@ -271,7 +275,9 @@ procedure SplitQualifiedObjectName(const QualifiedName: string;
   const SupportsCatalogs, SupportsSchemas: Boolean;
   out Catalog, Schema, ObjectName: string); overload;
 
+{$IFDEF NO_AUTOENCODE}
 function GetTransliterateCodePage(ControlsCodePage: TZControlsCodePage): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+{$ENDIF NO_AUTOENCODE}
 {**
   Assigns a Statement value from a TParam
   @param Index the index of Statement.SetParam(Idex..);
@@ -509,8 +515,13 @@ end;
     which are not data-fields
   @return a collection of column information objects.
 }
+{$IFDEF NO_AUTOENCODE}
+function ConvertFieldsToColumnInfo(Fields: TFields;
+  ControlsCodePage: TZControlsCodePage; DataFieldsOnly: Boolean): TObjectList;
+{$ELSE}
 function ConvertFieldsToColumnInfo(Fields: TFields; ControlsCodePage: Word;
   DataFieldsOnly: Boolean): TObjectList;
+{$ENDIF}
 var
   I: Integer;
   Current: TField;
@@ -520,32 +531,6 @@ begin
   for I := 0 to Fields.Count - 1 do begin
     Current := Fields[I];
     if (Current.FieldKind = fkData) and DataFieldsOnly then continue;
-    {all other fields (created for the accessor) or calculated oslt. }
-    (*case Current.DataType of
-      ftBoolean: if (Current is TZBooleanField) then Continue;
-      {$IFDEF WITH_FTBYTE}ftByte: if Current is TZByteField then Continue; {$ENDIF}
-      {$IFDEF WITH_FTBYTE}ftShortInt: if Current is TZShortIntField then Continue; {$ENDIF}
-      ftWord: if (Current is TZWordField) then Continue;
-      ftSmallInt: if (Current is TZSmallIntField) then Continue;
-      ftInteger: if (Current is TZIntegerField) then Continue;
-      {$IFDEF WITH_FTLONGWORD}ftLongWord: if Current is TZCardinalField then Continue;{$ENDIF}
-      ftLargeInt: if (Current is TZInt64Field) then Continue;
-      {$IFDEF WITH_FTSINGLE}ftSingle: if Current is TZSingleField then Continue;{$ENDIF}
-      ftTime: if Current is TZTimeField then Continue;
-      ftDate: if Current is TZDateField then Continue;
-      ftDateTime: if Current is TZDateTimeField then Continue;
-      ftFloat: if Current is TZDoubleField then Continue;
-      ftBCD: if Current is TZBCDField then Continue;
-      ftFmtBCD: if Current is TZFmtBCDField then Continue;
-      ftBytes: if Current is TZBytesField then Continue;
-      ftVarBytes: if Current is TZVarBytesField then Continue;
-      ftString: if Current is TZRawStringField then Continue;
-      ftWideString: if Current is TZUnicodeStringField then Continue;
-      ftMemo: if Current is TZRawCLobField then Continue;
-      {$IFDEF WITH_WIDEMEMO}ftWideMemo: if Current is TZUnicodeCLobField then Continue;{$ENDIF}
-      ftBlob: if Current is TZBLobField then Continue;
-    end;*)
-
     ColumnInfo := ConvertFieldToColumnInfo(Current, ControlsCodePage);
     Result.Add(ColumnInfo);
   end;
@@ -560,7 +545,6 @@ end;
 function ConvertFieldToColumnInfo(Field: TField; NativeColumnCodePage: Word): TZColumnInfo;
 begin
   Result := TZColumnInfo.Create;
-
   Result.ColumnType := ConvertDatasetToDbcType(Field.DataType);
   Result.ColumnName := Field.FieldName;
   Result.Precision := Field.Size;
@@ -1712,6 +1696,7 @@ begin
   end;
 end;
 
+{$IFDEF NO_AUTOENCODE}
 function GetTransliterateCodePage(ControlsCodePage: TZControlsCodePage): Word;
 begin
   case ControlsCodePage of
@@ -1721,13 +1706,14 @@ begin
     else Result := DefaultSystemCodePage
     {$ELSE}
       {$IFDEF LCL}
-      Result := zCP_UTF8
+      else Result := zCP_UTF8
       {$ELSE}
-      Result := ZOSCodePage;
+      else Result := ZOSCodePage;
       {$ENDIF}
     {$ENDIF}
   end;
 end;
+{$ENDIF NO_AUTOENCODE}
 {**
   Assigns a Statement value from a TParam
   @param Index the index of Statement.SetXxxx(ColumnIndex, xxx);
