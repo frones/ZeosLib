@@ -2656,17 +2656,18 @@ begin
         else FResultSet.MoveAbsolute(RowBuffer.Index);
       end;
     dsCalcFields: RowBuffer := PZRowBuffer(CalcBuffer);
-    dsOldValue, dsNewValue, dsCurValue: if (CurrentRow > 0) and
-      (CurrentRow <= CurrentRows.Count) then begin
-        RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
-        if RowNo <> ResultSet.GetRow then
-          CheckBiDirectional;
+    dsOldValue, dsNewValue, dsCurValue: begin
+        if (CurrentRow > 0) and (CurrentRow <= CurrentRows.Count) then begin
+          RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
+          if RowNo <> ResultSet.GetRow then
+            CheckBiDirectional;
+        end else RowNo := 0;
 
         if (State = dsOldValue)
         then RowBuffer := OldRowBuffer
         else RowBuffer := NewRowBuffer;
 
-        if RowBuffer.Index <> RowNo then begin
+        if (RowBuffer.Index <> RowNo) then begin
           RowAccessor.RowBuffer := RowBuffer;
           RowAccessor.Clear;
           if (ResultSet.GetRow = RowNo) or ResultSet.MoveAbsolute(RowNo) then begin
@@ -2675,7 +2676,11 @@ begin
           end else
             RowBuffer := nil;
         end else
-jmpSeek:  if (State = dsOldValue)
+jmpSeek:  if (RowNo = 0) then
+            if State = dsOldValue
+            then RowBuffer := nil
+            else ResultSet.MoveToInsertRow
+          else if (State = dsOldValue)
           then TryMoveToInitialRow
           else ResultSet.MoveToCurrentRow;
       end;
@@ -3806,10 +3811,9 @@ begin
       finally
         ColumnList.Free;
       end;
-      if Cnt > 0
-      then FFieldsAccessor := FRowAccessor;
-      if not IsUnidirectional then
-      begin
+      if Cnt > 0 then
+        FFieldsAccessor := FRowAccessor;
+      if not IsUnidirectional then begin
         {$IFDEF WITH_AllocRecBuf_TRecBuf}
         FOldRowBuffer := PZRowBuffer(AllocRecBuf);
         FNewRowBuffer := PZRowBuffer(AllocRecBuf);
@@ -3821,9 +3825,6 @@ begin
       {$IFNDEF NO_AUTOENCODE}
       SetStringFieldSetterAndSetter;
       {$ENDIF NO_AUTOENCODE}
-
-
-      //FieldsLookupTable := CreateFieldsLookupTable(FieldDefs, Fields, FResultSet2AccessorIndexList);
 
       InitFilterFields := False;
 

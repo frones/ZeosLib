@@ -126,6 +126,7 @@ type
     FSelectedRow: PZRowBuffer;
     FUpdatedRow: PZRowBuffer;
     FInsertedRow: PZRowBuffer;
+    FEmptyRow: PZRowBuffer; //improve the MoveToInitialRow in insert state
     FRowAccessor: TZRowAccessor;
     FNewRowAccessor: TZRowAccessor;
     FOldRowAccessor: TZRowAccessor;
@@ -648,7 +649,12 @@ begin
     end else if FCachedUpdates and (FUpdatedRow.Index = FSelectedRow.Index) and (FUpdatedRow.UpdateType = utModified) then begin
       FSelectedRow := FRowsList[FUpdatedRow.Index];
       FRowAccessor.RowBuffer := FSelectedRow;
+    end else if FRowAccessor.RowBuffer = FInsertedRow then begin
+      if FEmptyRow = nil then
+        FEmptyRow := FRowAccessor.AllocBuffer;
+      FRowAccessor.RowBuffer := FEmptyRow;
     end;
+
   end else
     FRowAccessor.RowBuffer := nil;
 end;
@@ -869,6 +875,11 @@ begin
     FRowAccessor.DisposeBuffer(FInsertedRow);
     FInsertedRow := nil;
     FSelectedRow := nil;
+
+    if FEmptyRow <> nil then begin
+      FRowAccessor.DisposeBuffer(FEmptyRow);
+      FEmptyRow := nil;
+    end;
 
     FreeAndNil(FRowsList);
     FreeAndNil(FInitialRowsList);
