@@ -726,9 +726,9 @@ begin
     if DriverManager.HasLoggingListener then
       LogError(LoggingCategory, ErrorCode, Sender, LogMessage, FLogMessage);
     if IsError(Status) then
-      {if SQLState = ???
+      if (SQLState = '08S01') and (GetServerProvider = spMSSQL)
       then ExeptionClass := EZSQLConnectionLost
-      else }ExeptionClass := EZSQLException
+      else ExeptionClass := EZSQLException
     else ExeptionClass := EZSQLWarning;
     if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '') then
       if LoggingCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
