@@ -938,7 +938,7 @@ begin
       SetLength(Buf, aLen shr 1);
       Ret := TODBC3UnicodePlainDriver(fODBCPlainDriver).SQLGetConnectAttrW(fHDBC,
         SQL_ATTR_CURRENT_CATALOG, Pointer(Buf), aLen+2, @aLen);
-      Result := PUnicodeToRaw(Pointer(Buf), aLen shr 1, ConSettings.CTRL_CP);
+      Result := PUnicodeToRaw(Pointer(Buf), aLen shr 1, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF});
       {$ENDIF}
       if Ret <> SQL_SUCCESS then
         HandleErrorOrWarning(Ret, fHDBC, SQL_HANDLE_DBC, 'GET CATALOG', lcOther, Self);
@@ -966,7 +966,7 @@ var NewLength: SQLINTEGER;
 begin
   if SQL <> '' then begin
     {$IFNDEF UNICODE}
-    aSQL := PRawToUnicode(Pointer(SQL), Length(SQL), ConSettings.CTRL_CP);
+    aSQL := PRawToUnicode(Pointer(SQL), Length(SQL), {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF});
     {$IFDEF WITH_VAR_INIT_WARNING}nSQL := '';{$ENDIF}
     SetLength(nSQL, Length(aSQL) shl 1);
     Ret := TODBC3UnicodePlainDriver(fODBCPlainDriver).SQLNativeSqlW(fHDBC,

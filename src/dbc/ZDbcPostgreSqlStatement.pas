@@ -387,10 +387,10 @@ LenOfBuf: PA := TempBlob.GetBuffer(FRawTemp, L);
     {$IFDEF WITH_VAR_INIT_WARNING}FTempRaws := nil;{$ENDIF}
     SetLength(FTempRaws, DynArrayLen);
     case Arr.VArrayVariantType of
-      {$IFNDEF UNICODE}
+      {$IF not defined(UNICODE) and not defined(NO_AUTOENCODE)}
       vtString:   for J := 0 to DynArrayLen -1 do
                     FTempRaws[j] := ConSettings.ConvFuncs.ZStringToRaw(TStringDynArray(Dyn)[j], ConSettings.CTRL_CP, CP);
-      {$ENDIF}
+      {$IFEND}
       {$IFNDEF NO_ANSISTRING}
       vtAnsiString: for J := 0 to DynArrayLen -1 do begin
                       FUniTemp := PRawToUnicode(Pointer(TRawByteStringDynArray(Dyn)[j]), Length(TRawByteStringDynArray(Dyn)[j]), zOSCodePage);
@@ -807,9 +807,14 @@ begin
                           then BindDequotedStrings;
           {$IFEND}
           {$IFNDEF UNICODE}
-          vtString:       if (not ConSettings^.AutoEncode and (CP = ConSettings^.CTRL_CP))
+
+          vtString:       {$IFDEF NO_AUTOENCODE}
+                          BindRawStrings;
+                          {$ELSE}
+                          if (not ConSettings^.AutoEncode and (CP = ConSettings^.CTRL_CP))
                           then BindRawStrings
                           else BindConvertedStrings;
+                          {$ENDIF}
           {$ENDIF}
           {$IFNDEF NO_ANSISTRING}
           vtAnsiString:   if (CP= ZOSCodePage)
@@ -1418,7 +1423,7 @@ var
   ParamsCnt: Cardinal;
   Tokens: TZTokenList;
   Token: PZToken;
-  tmp{$IFNDEF UNICODE}, Fraction{$ENDIF}: RawByteString;
+  tmp{$IF not defined(UNICODE) and not defined(NO_AUTOENCODE)}, Fraction{$IFEND}: RawByteString;
   SQLWriter, ParamWriter: TZRawSQLStringWriter;
   ComparePrefixTokens: TPreparablePrefixTokens;
   procedure Add(const Value: RawByteString; const Param: Boolean);
@@ -1479,10 +1484,10 @@ begin
           Inc(ParamsCnt);
           {$IFDEF UNICODE}
           Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, FClientCP);
-          {$ELSE}
+          {$ELSE} {$IFNDEF NO_AUTOENCODE}
           if Consettings.AutoEncode
           then ParamWriter.Finalize(Tmp)
-          else Tmp := Tokens.AsString(FirstComposePos, I-1);
+          else {$ENDIF}Tmp := Tokens.AsString(FirstComposePos, I-1);
           {$ENDIF}
           Add(Tmp, False);
           if (Token.P^ = '?') then begin
@@ -1503,7 +1508,7 @@ begin
           end;
           Add(Tmp, True);
           Tmp := '';
-        end {$IFNDEF UNICODE} else if (FirstComposePos <= I) and ConSettings.AutoEncode then
+        end {$IF not defined(UNICODE) and not defined(NO_AUTOENCODE)} else if (FirstComposePos <= I) and ConSettings.AutoEncode then
           case (Token.TokenType) of
             ttQuoted, ttComment,
             ttWord, ttQuotedIdentifier: begin
@@ -1512,16 +1517,16 @@ begin
               end;
             else ParamWriter.AddText(Token.P, Token.L, tmp);
           end
-        {$ENDIF};
+        {$IFEND};
       end;
       I := Tokens.Count -1;
       if (FirstComposePos <= I) then begin
         {$IFDEF UNICODE}
         Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, FClientCP);
-        {$ELSE}
+        {$ELSE} {$IFNDEF NO_AUTOENCODE}
         if ConSettings.AutoEncode
         then ParamWriter.Finalize(Tmp)
-        else Tmp := Tokens.AsString(FirstComposePos, I);
+        else {$ENDIF}Tmp := Tokens.AsString(FirstComposePos, I);
         {$ENDIF}
         Add(Tmp, False);
       end;

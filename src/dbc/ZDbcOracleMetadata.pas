@@ -1527,7 +1527,7 @@ begin
         {$ENDIF}
         {$IFNDEF UNICODE}
         SQLWriterW := TZUnicodeSQLStringWriter.Create(1024);
-        S := ZRawToUnicode(TempProcedureNamePattern, ConSettings.CTRL_CP);
+        S := ZRawToUnicode(TempProcedureNamePattern, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF});
         {$ENDIF}
         try
           DescriptorW.Describe(OCI_PTYPE_UNK, {$IFNDEF UNICODE}S{$ELSE}TempProcedureNamePattern{$ENDIF});

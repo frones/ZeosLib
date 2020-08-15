@@ -363,9 +363,13 @@ begin
         if RawTemp <> '' then
           FPlainDriver.tdsDump_Open(Pointer(RawTemp));
         {$ELSE}
+          {$IFDEF NO_AUTOENCODE}
+        RawTemp := lLogFile;
+        {$ELSE}
         RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(lLogFile, ConSettings.CTRL_CP, ZOSCodePage);
-        if lLogFile <> '' then
-          FPlainDriver.tdsDump_Open(Pointer(lLogFile));
+        {$ENDIF}
+        if RawTemp <> '' then
+          FPlainDriver.tdsDump_Open(Pointer(RawTemp));
         {$ENDIF}
       end;
     end;

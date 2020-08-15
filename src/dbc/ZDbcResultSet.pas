@@ -3668,7 +3668,7 @@ end;
     value returned is <code>null</code>
 }
 function TZAbstractReadOnlyResultSet.GetString(ColumnIndex: Integer): String;
-var P: {$IFDEF UNICODE}PWidechar{$ELSE}PAnsiChar{$ENDIF};
+var P: Pointer;
   L: NativeUInt;
 begin
   {$IFDEF UNICODE}
@@ -3676,19 +3676,31 @@ begin
   if (P <> nil) and (L > 0) then
     if P = Pointer(FUniTemp)
     then Result := FUniTemp
-    else System.SetString(Result, P, L)
+    else begin
+      Result := '';
+      System.SetString(Result, PWideChar(P), L)
+    end
   else Result := '';
+  {$ELSE}
+    {$IFDEF NO_AUTOENCODE}
+  if (ConSettings.ClientCodePage.Encoding = ceUTF16) or (TZColumnInfo(FColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType in [stUnicodeString, stUnicodeStream]) then begin
+    P := IZResultSet(FWeakIZResultSetPtr).GetPWideChar(ColumnIndex, L);
+    if (P <> nil) and (L > 0)
+    then Result := PUnicodeToRaw(P, L, GetW2A2WConversionCodePage(ConSettings))
+    else Result := '';
+  end
   {$ELSE}
   if ConSettings.AutoEncode or (ConSettings.ClientCodePage.Encoding = ceUTF16) then
     if ConSettings.CTRL_CP = zCP_UTF8
     then Result := IZResultSet(FWeakIZResultSetPtr).GetUTF8String(ColumnIndex)
     else Result := IZResultSet(FWeakIZResultSetPtr).GetAnsiString(ColumnIndex)
+  {$ENDIF}
   else begin
     P := IZResultSet(FWeakIZResultSetPtr).GetPAnsiChar(ColumnIndex, L);
     if (P <> nil) and (L > 0) then
       if P = Pointer(FRawTemp)
       then Result := FRawTemp
-      else System.SetString(Result, P, L)
+      else System.SetString(Result, PAnsiChar(P), L)
     else Result := '';
   end;
   {$ENDIF}
@@ -3713,7 +3725,10 @@ begin
     Result := ''
   else if P = Pointer(FUniTemp)
     then Result := FUniTemp
-    else System.SetString(Result, P, L);
+    else begin
+      Result := '';
+      System.SetString(Result, P, L);
+    end;
 end;
 
 {**

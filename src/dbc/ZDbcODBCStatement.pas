@@ -1112,7 +1112,15 @@ var ArrayLen, MaxL, I: Integer;
   procedure BinLobs;
   var I: Integer;
     TmpLob: IZBlob;
+    {$IF defined(NO_AUTOENCODE) and not Defined(UNICODE)}
+    StrCP: Word;
+    {$IFEND}
   begin
+    {$IF defined(NO_AUTOENCODE) and not Defined(UNICODE)}
+    if ConSettings^.ClientCodePage.Encoding = ceUTF16
+    then StrCP := GetW2A2WConversionCodePage(ConSettings)
+    else StrCP := FClientCP;
+    {$IFEND}
     case SQLtype of
       stString,
       stUnicodeString: for I := 0 to ArrayLen-1 do begin
@@ -1145,7 +1153,7 @@ var ArrayLen, MaxL, I: Integer;
                                   Length(TRawByteStringDynArray(DA)[i]), ZOSCodePage, ConSettings);
                             {$ENDIF}
                             {$IFNDEF UNICODE}
-                            vtString: if ConSettings^.AutoEncode then
+                            vtString: {$IFNDEF NO_AUTOENCODE}if ConSettings^.AutoEncode then
                                         ParamDataLobs[I] :=
                                           TZLocalMemCLob.CreateWithData(Pointer(TRawByteStringDynArray(DA)[i]),
                                               Length(TRawByteStringDynArray(DA)[i]), zCP_None, ConSettings)
@@ -1153,6 +1161,11 @@ var ArrayLen, MaxL, I: Integer;
                                         ParamDataLobs[I] :=
                                           TZLocalMemCLob.CreateWithData(Pointer(TRawByteStringDynArray(DA)[i]),
                                               Length(TRawByteStringDynArray(DA)[i]), FClientCP, ConSettings);
+                                     {$ELSE}
+                                       ParamDataLobs[I] :=
+                                       TZLocalMemCLob.CreateWithData(Pointer(TRawByteStringDynArray(DA)[i]),
+                                           Length(TRawByteStringDynArray(DA)[i]), StrCP, ConSettings);
+                                     {$ENDIF}
                             {$ENDIF}
                             else
                               raise EZSQLException.Create('Unsupported String Variant');
@@ -1433,8 +1446,7 @@ begin
                                 Inc(P, Bind.BufferLength);
                               end;
           {$IFNDEF UNICODE}
-          vtString: if ConSettings.AutoEncode then
-                                     else BindRawStrings(FClientCP);
+          vtString: BindRawStrings(FClientCP);
           {$ENDIF}
           {$IFNDEF NO_ANSISTRING}vtAnsiString: BindRawStrings(ZOSCodePage);{$ENDIF}
           {$IFNDEF NO_UTF8STRING}vtUTF8String: BindRawStrings(zCP_UTF8);{$ENDIF}
@@ -2717,14 +2729,15 @@ end;
 }
 procedure TZAbstractODBCPreparedStatement.SetString(Index: Integer;
   const Value: String);
-{$IFNDEF UNICODE}
+{$IF not defined(UNICODE) and not defined(NO_AUTOENCODE)}
 var Bind: PZODBCParamBind;
-{$ENDIF}
+{$IFEND}
 begin
   {$IFDEF UNICODE}
   SetPWideChar(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Pointer(Value), Length(Value));
   {$ELSE}
   {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
+  {$IFNDEF NO_AUTOENCODE}
   if ConSettings.AutoEncode and (Value <> '') then begin
     CheckParameterIndex(Index);
     if fBindImmediat then begin
@@ -2746,8 +2759,8 @@ begin
       fRawTemp := ConSettings.ConvFuncs.ZStringToRaw(Value, ConSettings.CTRL_CP, FClientCP);
       BindList.Put(Index, stString, Value, FClientCP);
     end;
-  end else if FClientEncoding = ceUTF16
-    then BindRaw(Index, Value, ConSettings.CTRL_CP)
+  end else {$ENDIF}if FClientEncoding = ceUTF16
+    then BindRaw(Index, Value, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF})
     else BindRaw(Index, Value, FClientCP);
   {$ENDIF}
 end;

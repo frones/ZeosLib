@@ -810,9 +810,13 @@ begin
       if (SQLType in [stString, stUnicodeString]) then
       case ZArray.VArrayVariantType of
         {$IFNDEF UNICODE}
+        {$IFDEF NO_AUTOENCODE}
+        vtString: W1 := GetW2A2WConversionCodePage(ConSettings);
+        {$ELSE}
         vtString: if ConSettings^.AutoEncode
                   then W1 := zCP_None
                   else W1 := ConSettings^.CTRL_CP;
+        {$ENDIF}
         {$ENDIF}
         vtAnsiString: W1 := ZOSCodePage;
         vtUTF8String: W1 := zCP_UTF8;
@@ -1189,8 +1193,12 @@ begin
     stString, stUnicodeString:
       case Arr.VArrayVariantType of
         {$IFNDEF UNICODE}
-        vtString:   if not ConSettings^.AutoEncode then
+        vtString:   {$IFDEF NO_AUTOENCODE}
+                    CP := GetW2A2WConversionCodePage(ConSettings);
+                    {$ELSE}
+                    if not ConSettings^.AutoEncode then
                       CP := ConSettings^.CTRL_CP;
+                    {$ENDIF}
         {$ENDIF}
         vtUTF8String: CP := zCP_UTF8;
         vtAnsiString: CP := ZOSCodePage;
@@ -2855,9 +2863,13 @@ begin
   {$IFDEF UNICODE}
   SetUnicodeString(Index, Value);
   {$ELSE}
+    {$IFDEF NO_AUTOENCODE}
+    BindRaw(Index, Value, GetW2A2WConversionCodePage(ConSettings));
+    {$ELSE}
   if ConSettings^.AutoEncode
   then BindRaw(Index, Value, zCP_NONE)
   else BindRaw(Index, Value, ConSettings^.CTRL_CP);
+    {$ENDIF}
   {$ENDIF}
 end;
 

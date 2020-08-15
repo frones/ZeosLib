@@ -2277,18 +2277,19 @@ var
         {$IFDEF UNICODE}
         System.SetString(Result, PWideChar(P), Len)
         {$ELSE}
-        Result := PUnicodeToRaw(PWideChar(P), Len, ConSettings^.CTRL_CP)
+        Result := PUnicodeToRaw(PWideChar(P), Len, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF})
         {$ENDIF}
       end else
       {$IFDEF UNICODE}
       Result := ZEncoding.PRawToUnicode(P, Len, FClientCP)
-      {$ELSE}
+      {$ELSE} {$IFNDEF NO_AUTOENCODE}
       if (not ConSettings^.AutoEncode) or (FClientCP = ConSettings^.CTRL_CP) then
-        Result := BufferToStr(P, Len)
+        {$ENDIF}
+        Result := BufferToStr(P, Len){$IFNDEF NO_AUTOENCODE}
       else begin
         Result := '';
         PRawToRawConvert(P, Len, FClientCP, ConSettings^.CTRL_CP, Result);
-      end
+      end{$ENDIF}
       {$ENDIF}
     else
       Result := '';

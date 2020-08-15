@@ -465,7 +465,11 @@ var
     {$IFDEF UNICODE}
     R := ZUnicodeToRaw(ConnectionString, CP);
     {$ELSE}
+    {$IFDEF NO_AUTOENCODE}
+    R := ConnectionString;
+    {$ELSE}
     R := ZConvertStringToRawWithAutoEncode(ConnectionString, ConSettings^.CTRL_CP, CP);
+    {$ENDIF}
     {$ENDIF}
     DPB := GenerateDPB(FPlainDriver, Info, ConSettings, CP);
     P := Pointer(R);

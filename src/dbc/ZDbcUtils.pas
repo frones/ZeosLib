@@ -58,7 +58,7 @@ uses
   {$IFDEF USE_SYNCOMMONS}SynCommons, {$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} TypInfo, FmtBcd,
-  ZCompatibility, ZDbcIntfs, ZClasses, ZTokenizer, ZVariant, ZSysUtils,
+  ZCompatibility, ZDbcIntfs, {$IFNDEF NO_AUTOENCODE}ZClasses, {$ENDIF}ZTokenizer, ZVariant, ZSysUtils,
   ZDbcResultSetMetadata;
 
 const SQL_MAX_NUMERIC_LEN = 16;
@@ -1237,15 +1237,17 @@ function TokenizeSQLQueryRaw(const SQL: SQLString;
   var TokenMatchIndex: Integer): TRawByteStringDynArray;
 var
   I, C, N, FirstComposePos: Integer;
+  {$IF defined(UNICODE) or not defined(NO_AUTOENCODE)}
   CP: Word;
+  {$IFEND}
   NextIsNChar, ParamFound: Boolean;
   Tokens: TZTokenList;
   Token: PZToken;
   Tmp: RawByteString;
-  {$IFNDEF UNICODE}
+  {$IF not defined(UNICODE) and not defined(NO_AUTOENCODE)}
   SectionWriter: TZRawSQLStringWriter;
   Fraction: RawByteString;
-  {$ENDIF}
+  {$IFEND}
 
   procedure Add(const Value: RawByteString; const Param: Boolean = False);
   begin
@@ -1265,14 +1267,16 @@ var
   end;
 begin
   ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSE}Pos{$ENDIF}('?', SQL) > 0);
+  {$IF defined(UNICODE) or not defined(NO_AUTOENCODE)}
   CP := ConSettings^.ClientCodePage^.CP;
-  if ParamFound {$IFNDEF UNICODE}or ConSettings^.AutoEncode {$ENDIF}or Assigned(ComparePrefixTokens) then begin
+  {$IFEND}
+  if ParamFound {$IF not defined(UNICODE) and not defined(NO_AUTOENCODE)}or ConSettings^.AutoEncode {$IFEND}or Assigned(ComparePrefixTokens) then begin
     Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
-    {$IFNDEF UNICODE}
+    {$IF not defined(UNICODE) and not defined(NO_AUTOENCODE)}
     if ConSettings^.AutoEncode
     then SectionWriter := TZRawSQLStringWriter.Create(Length(SQL) shr 5)
     else SectionWriter := nil; //satisfy compiler
-    {$ENDIF}
+    {$IFEND}
     try
       NextIsNChar := False;
       N := -1;
@@ -1307,9 +1311,10 @@ begin
           {$IFDEF UNICODE}
           Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, CP);
           {$ELSE}
+            {$IFNDEF NO_AUTOENCODE}
           if Consettings.AutoEncode
           then SectionWriter.Finalize(Tmp)
-          else Tmp := Tokens.AsString(FirstComposePos, I-1);
+          else {$ENDIF}Tmp := Tokens.AsString(FirstComposePos, I-1);
           {$ENDIF}
           Add(Tmp, False);
           {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
@@ -1322,7 +1327,7 @@ begin
         end else if ParamFound and (IsNCharIndex<> nil) and Tokens.IsEqual(I, Char('N')) and
             (Tokens.Count > i) and Tokens.IsEqual(i+1, Char('?')) then
           NextIsNChar := True
-        {$IFNDEF UNICODE}
+        {$IF not defined(UNICODE) and not defined(NO_AUTOENCODE)}
         else if (FirstComposePos <= I) and ConSettings.AutoEncode then
           case (Token.TokenType) of
             ttQuoted, ttComment,
@@ -1332,25 +1337,25 @@ begin
               end;
             else SectionWriter.AddText(Token.P, Token.L, tmp);
         end
-        {$ENDIF};
+        {$IFEND};
       end;
       I := Tokens.Count -1;
       if (FirstComposePos <= Tokens.Count-1) then begin
         {$IFDEF UNICODE}
         Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, CP);
         {$ELSE}
-        if ConSettings.AutoEncode
+        {$IFNDEF NO_AUTOENCODE}if ConSettings.AutoEncode
         then SectionWriter.Finalize(Tmp)
-        else Tmp := Tokens.AsString(FirstComposePos, I);
+        else {$ENDIF}Tmp := Tokens.AsString(FirstComposePos, I);
         {$ENDIF}
         Add(Tmp, False);
       end;
     finally
       Tokens.Free;
-      {$IFNDEF UNICODE}
+      {$IF not defined(UNICODE) and not defined(NO_AUTOENCODE)}
       if ConSettings^.AutoEncode then
         SectionWriter.Free;
-      {$ENDIF}
+      {$IFEND}
     end;
   end else
   {$IFDEF NO_AUTOENCODE}
@@ -1381,9 +1386,9 @@ var
   Token: PZToken;
   Temp: UnicodeString;
   FirstComposePos: Integer;
-  {$IFNDEF UNICODE}
+  {$IF not defined(UNICODE) and not defined(NO_AUTOENCODE)}
   SectionWriter: TZUnicodeSQLStringWriter;
-  {$ENDIF}
+  {$IFEND}
   NextIsNChar, ParamFound: Boolean;
   procedure Add(const Value: UnicodeString; Const Param: Boolean = False);
   begin
@@ -1408,11 +1413,11 @@ begin
   if ParamFound {$IFNDEF UNICODE}or ConSettings^.AutoEncode{$ENDIF} or Assigned(ComparePrefixTokens) then begin
   {$ENDIF NO_AUTOENCODE}
     Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
-    {$IFNDEF UNICODE}
+    {$IF not defined(UNICODE) and not defined(NO_AUTOENCODE)}
     if ConSettings.AutoEncode
     then SectionWriter := TZUnicodeSQLStringWriter.Create(Length(SQL))
     else SectionWriter := nil;
-    {$ENDIF}
+    {$IFEND}
     try
       Temp := '';
       NextIsNChar := False;
@@ -1447,9 +1452,13 @@ begin
           {$IFDEF UNICODE}
           Temp := Tokens.AsString(FirstComposePos, I-1);
           {$ELSE}
+  {$IFNDEF NO_AUTOENCODE}
           if ConSettings.AutoEncode
           then SectionWriter.Finalize(Temp)
           else Temp := PRawToUnicode(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, ConSettings^.CTRL_CP);
+  {$ELSE}
+          Temp := PRawToUnicode(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, GetW2A2WConversionCodePage(ConSettings));
+  {$ENDIF}
           {$ENDIF}
           Add(Temp, False);
           Add('?', True);
@@ -1458,7 +1467,7 @@ begin
         end else if ParamFound and (IsNCharIndex <> nil) and Tokens.IsEqual(I, Char('N')) and
           (Tokens.Count > i) and Tokens.IsEqual(I+1, Char('?')) then
           NextIsNChar := True
-        {$IFNDEF UNICODE}
+        {$IF not defined(UNICODE) and not defined(NO_AUTOENCODE)}
         else if (FirstComposePos <= I) and ConSettings.AutoEncode then
           case (Token.TokenType) of
             ttQuoted, ttComment,
@@ -1466,31 +1475,39 @@ begin
               SectionWriter.AddText(ConSettings^.ConvFuncs.ZStringToUnicode(Tokens.AsString(i), ConSettings^.CTRL_CP), Temp);
             else SectionWriter.AddAscii7Text(Token.P, Token.L, Temp);
           end;
-        {$ENDIF}
+        {$IFEND}
       end;
       I := Tokens.Count -1;
       if (FirstComposePos <= Tokens.Count-1) then begin
         {$IFDEF UNICODE}
         Temp := Tokens.AsString(FirstComposePos, I);
         {$ELSE}
+   {$IFNDEF NO_AUTOENCODE}
         if ConSettings.AutoEncode
         then SectionWriter.Finalize(Temp)
         else Temp := PRawToUnicode(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, ConSettings^.CTRL_CP);
+   {$else}
+        Temp := PRawToUnicode(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, GetW2A2WConversionCodePage(ConSettings));
+   {$ENDIF}
         {$ENDIF}
         Add(Temp, False);
       end;
     finally
       Tokens.Free;
-      {$IFNDEF UNICODE}
+      {$IF not defined(UNICODE) and not defined(NO_AUTOENCODE)}
       if ConSettings^.AutoEncode then
         SectionWriter.Free;
-      {$ENDIF}
+      {$IFEND}
     end;
   end else
     {$IFDEF UNICODE}
     Add(SQL);
     {$ELSE}
+{$IFNDEF NO_AUTOENCODE}
     Add(ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings^.CTRL_CP));
+{$else}
+    Add(ZRawToUnicode(SQL, GetW2A2WConversionCodePage(ConSettings)));
+{$ENDIF}
     {$ENDIF}
 end;
 
@@ -2445,9 +2462,7 @@ begin
   FillChar(ConSettings^.ConvFuncs, SizeOf(ConSettings^.ConvFuncs), #0);
 
   //Let's start with the AnsiTo/From types..
-  {$IFNDEF NO_AUTOENCODE}
   if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then begin
-  {$ENDIF}
     //last but not least the String to/from converters
     //string represents the DataSet/IZResultSet Strings
 
@@ -2483,14 +2498,12 @@ begin
       then Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertString_CPUTF8ToUnicode
       else Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicode;
     {$ENDIF}
-  {$IFNDEF NO_AUTOENCODE}
   end else begin //autoencode strings is allways true
     Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode;
     Consettings^.ConvFuncs.ZRawToString := @ZConvertRawToString;
     ConSettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString;
     Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicodeWithAutoEncode;
   end;
-  {$ENDIF NO_AUTOENCODE}
 end;
 {$ENDIF NO_AUTOENCODE}
 
@@ -2532,22 +2545,12 @@ end;
 {$IFDEF NO_AUTOENCODE}
 function GetW2A2WConversionCodePage(ConSettings: PZConSettings): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 begin
-  if (ConSettings = nil)
+  if (ConSettings = nil) or (ConSettings.W2A2WEncodingSource = encDefaultSystemCodePage) or (ConSettings.ClientCodePage.CP = zCP_UTF16)
   then Result := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}
       {$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF}
-  else case ConSettings.W2A2WEncodingSource of
-    w2a2wDB_CP: if (ConSettings.ClientCodePage = nil) or (ConSettings.ClientCodePage.CP = zCP_UTF16)
-                then Result := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}
-                      {$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF}
-                else Result := ConSettings.ClientCodePage.CP;
-    w2a2wGET_ACP: Result := ZOSCodePage;
-    {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
-    w2a2wUTF8: Result := zCP_UTF8;
-    else      Result := DefaultSystemCodePage;
-    {$ELSE}
-    else      Result := zCP_UTF8;
-    {$ENDIF}
-  end;
+  else if ConSettings.W2A2WEncodingSource = encDB_CP
+    then Result := ConSettings.ClientCodePage.CP
+    else Result := zCP_UTF8;
 end;
 {$ENDIF NO_AUTOENCODE}
 

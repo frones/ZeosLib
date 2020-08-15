@@ -73,13 +73,25 @@ type
   end;
   TZFieldsLookUpDynArray = array of TZFieldsLookUp;
 
-  {** Defines the Target Ansi codepages for the Controls }
-  {$IF defined(NO_AUTOENCODE) and defined(WITH_DEFAULTSYSTEMCODEPAGE)}
-  TZControlsCodePage = ({$IFDEF UNICODE}cCP_UTF16, cCP_UTF8, cGET_ACP, cDefaultSystemCodePage{$ELSE}
-    {$IFDEF FPC}{$IFDEF LCL}cCP_UTF8, cDefaultSystemCodePage{$ELSE}cDefaultSystemCodePage,cCP_UTF8{$ENDIF}, cCP_UTF16, cGET_ACP{$ELSE}cDefaultSystemCodePage, cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
+  {** Defines the target Field-Type }
+{$IFDEF NO_AUTOENCODE}
+  TZControlsCodePage = ( //EH: my name is obsolate it should be TZCharacterFieldType, left for backward compatibility
+  {$IFDEF UNICODE}
+    cCP_UTF16, cGET_ACP, cDynamic
   {$ELSE}
+    {$IFDEF FPC}
+      {$IFDEF LCL}
+        cCP_UTF8, cCP_UTF16, cGET_ACP, cDynamic
+      {$ELSE LCL}
+        cGET_ACP, cCP_UTF16, cCP_UTF8, cDynamic
+      {$ENDIF LCL}
+    {$ELSE FPC}
+      cGET_ACP, cCP_UTF16, cCP_UTF8, cDynamic
+    {$ENDIF FPC}
+  {$ENDIF UNICODE});
+{$ELSE NO_AUTOENCODE}
   TZControlsCodePage = ({$IFDEF UNICODE}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
-  {$IFEND}
+{$ENDIF NO_AUTOENCODE}
 {**
   Converts DBC Field Type to TDataset Field Type.
   @param Value an initial DBC field type.
@@ -98,16 +110,13 @@ function ConvertDatasetToDbcType(Value: TFieldType): TZSQLType;
 {**
   Converts field definitions into column information objects.
   @param Fields a collection of field definitions.
-  @param ControlsCodePage the codepage used for the String fields
+  @param StringFieldCodePage the codepage used for the String fields
     which are not data-fields
   @param DataFieldsOnly indicate if the ResultList contains fkDataFields only
   @return a collection of column information objects.
 }
-{$IFDEF NO_AUTOENCODE}
-function ConvertFieldsToColumnInfo(Fields: TFields; ControlsCodePage: TZControlsCodePage; DataFieldsOnly: Boolean): TObjectList;
-{$ELSE}
-function ConvertFieldsToColumnInfo(Fields: TFields; ControlsCodePage: Word; DataFieldsOnly: Boolean): TObjectList;
-{$ENDIF}
+function ConvertFieldsToColumnInfo(Fields: TFields; StringFieldCodePage: Word;
+  NoDataFieldsOnly: Boolean): TObjectList;
 
 {**
   Converts a field definitions into column information objects.
@@ -115,7 +124,7 @@ function ConvertFieldsToColumnInfo(Fields: TFields; ControlsCodePage: Word; Data
   @param NativeColumnCodePage the codepage used for the String/memo fields
   @return a column information object.
 }
-function ConvertFieldToColumnInfo(Field: TField; NativeColumnCodePage: Word): TZColumnInfo;
+function ConvertFieldToColumnInfo(Field: TField; StringFieldCodePage: Word): TZColumnInfo;
 
 {**
   Defines fields indices for the specified dataset.
@@ -515,13 +524,8 @@ end;
     which are not data-fields
   @return a collection of column information objects.
 }
-{$IFDEF NO_AUTOENCODE}
-function ConvertFieldsToColumnInfo(Fields: TFields;
-  ControlsCodePage: TZControlsCodePage; DataFieldsOnly: Boolean): TObjectList;
-{$ELSE}
-function ConvertFieldsToColumnInfo(Fields: TFields; ControlsCodePage: Word;
-  DataFieldsOnly: Boolean): TObjectList;
-{$ENDIF}
+function ConvertFieldsToColumnInfo(Fields: TFields; StringFieldCodePage: Word;
+  NoDataFieldsOnly: Boolean): TObjectList;
 var
   I: Integer;
   Current: TField;
@@ -530,8 +534,8 @@ begin
   Result := TObjectList.Create(True);
   for I := 0 to Fields.Count - 1 do begin
     Current := Fields[I];
-    if (Current.FieldKind = fkData) and DataFieldsOnly then continue;
-    ColumnInfo := ConvertFieldToColumnInfo(Current, ControlsCodePage);
+    if (Current.FieldKind = fkData) and NoDataFieldsOnly then continue;
+    ColumnInfo := ConvertFieldToColumnInfo(Current, StringFieldCodePage);
     Result.Add(ColumnInfo);
   end;
 end;
@@ -542,7 +546,7 @@ end;
   @param NativeColumnCodePage the codepage used for the String/memo fields
   @return a column information object.
 }
-function ConvertFieldToColumnInfo(Field: TField; NativeColumnCodePage: Word): TZColumnInfo;
+function ConvertFieldToColumnInfo(Field: TField; StringFieldCodePage: Word): TZColumnInfo;
 begin
   Result := TZColumnInfo.Create;
   Result.ColumnType := ConvertDatasetToDbcType(Field.DataType);
@@ -551,7 +555,7 @@ begin
   if Field.DataType in [ftBCD, ftFmtBCD] then
     Result.Scale := Field.DataSize
   else if Field.DataType in [ftMemo, ftString, ftFixedChar] then
-    Result.ColumnCodePage := NativeColumnCodePage
+    Result.ColumnCodePage := StringFieldCodePage
   else if Field.DataType in [{$IFDEF WITH_FTWIDEMEMO}ftWideMemo, {$ENDIF}
     ftWideString{$IFDEF WITH_FTFIXEDWIDECHAR}, ftFixedWideChar{$ENDIF}] then
     Result.ColumnCodePage := zCP_UTF16;
@@ -1700,7 +1704,9 @@ end;
 function GetTransliterateCodePage(ControlsCodePage: TZControlsCodePage): Word;
 begin
   case ControlsCodePage of
+    {$IFNDEF UNICODE}
     cCP_UTF8: Result := zCP_UTF8;
+    {$ENDIF}
     cGET_ACP:  Result := ZOSCodePage;
     {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
     else Result := DefaultSystemCodePage
@@ -1713,6 +1719,7 @@ begin
     {$ENDIF}
   end;
 end;
+type THackParam = class(TParam);
 {$ENDIF NO_AUTOENCODE}
 {**
   Assigns a Statement value from a TParam
@@ -1852,15 +1859,14 @@ begin
               R := RawByteString(TVarData(Param.Value).VString);
               P :=  Pointer(R);
               if P <> nil
-              (*{$IFDEF WITH_DEFAULTSYSTEMCODEPAGE} //FPC 2.7+
-              then CP := StringCodePage(R)
-              {$ELSE}*)
-              then if ConSettings.AutoEncode
+              then {$IFNDEF NO_AUTOENCODE}if ConSettings.AutoEncode
                 then CP := zCP_NONE
                 else if (ConSettings.ClientCodePage.Encoding = ceUTF16)
                   then CP := ConSettings.CTRL_CP
                   else CP := ConSettings.ClientCodePage.CP
-              {.$ENDIF}
+                {$ELSE}
+                CP := GetTransliterateCodePage(TZAbstractRODataset(Param.DataSet).Connection.ControlsCodePage)
+                {$ENDIF}
               else begin
                 CP := ConSettings.ClientCodePage.CP;
                 P := PEmptyAnsiString;
@@ -1884,9 +1890,7 @@ begin
                  Statement.SetBlob(Index, stUnicodeStream, Lob);
               end else {$ENDIF}begin
                 {$IFDEF NO_AUTOENCODE}
-                if ConSettings.ClientCodePage.Encoding = ceUTF16
-                then CP := GetW2A2WConversionCodePage(ConSettings)
-                else CP := ConSettings.ClientCodePage.CP;
+                CP := GetTransliterateCodePage(TZAbstractRODataset(THackParam(Param).DataSet).Connection.ControlsCodePage);
                 {$ELSE}
                 if ConSettings.ClientCodePage.Encoding = ceUTF16
                 then CP := ConSettings.CTRL_CP

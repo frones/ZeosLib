@@ -564,7 +564,11 @@ begin
             {$IFDEF UNICODE}
             tmp := ZUnicodeToRaw(ParamValue, CP);
             {$ELSE}
+              {$IFDEF NO_AUTOENCODE}
+            tmp := ParamValue;
+              {$ELSE}
             tmp := ZConvertStringToRawWithAutoEncode(ParamValue, ConSettings^.CTRL_CP, CP);
+              {$ENDIF}
             {$ENDIF}
             Writer.AddChar(AnsiChar(PParam.Number), Result);
             Writer.AddChar(AnsiChar(Length(tmp)), Result);
@@ -1050,11 +1054,11 @@ end;
    Convert pointer to raw database string to compiler-native string
 }
 function ConvertConnRawToString(ConSettings: PZConSettings; Buffer: Pointer; BufLen: Integer): string; overload;
-var
   {$IFDEF UNICODE}
+var
   CP: Word;
   {$ELSE}
-  RawStr: RawByteString;
+  {$IFNDEF NO_AUTOENCODE}var RawStr: RawByteString;{$ENDIF}
   {$ENDIF}
 begin
   {$IFDEF UNICODE}
@@ -1172,11 +1176,16 @@ begin
   then Result := PRawToUnicode(Buffer, BufLen, zCP_UTF8)
   else Result := PRawToUnicode(Buffer, BufLen, ConSettings^.ClientCodePage^.CP);
   {$ELSE}
-    if (not ConSettings^.AutoEncode) or (ConSettings^.ClientCodePage^.CP = ConSettings^.CTRL_CP) then
-      SetString(Result, PChar(Buffer), BufLen)
-    else if ConSettings^.ClientCodePage^.ID = CS_NONE
-      then Result := ZUnicodeToString(PRawToUnicode(Buffer, BufLen, zCP_UTF8), ConSettings^.CTRL_CP)
-      else Result := ZUnicodeToString(PRawToUnicode(Buffer, BufLen, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
+    {$IFDEF NO_AUTOENCODE}
+  Result := '';
+  SetString(Result, PChar(Buffer), BufLen)
+    {$ELSE}
+  if (not ConSettings^.AutoEncode) or (ConSettings^.ClientCodePage^.CP = ConSettings^.CTRL_CP) then
+    SetString(Result, PChar(Buffer), BufLen)
+  else if ConSettings^.ClientCodePage^.ID = CS_NONE
+    then Result := ZUnicodeToString(PRawToUnicode(Buffer, BufLen, zCP_UTF8), ConSettings^.CTRL_CP)
+    else Result := ZUnicodeToString(PRawToUnicode(Buffer, BufLen, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
+    {$ENDIF}
   {$ENDIF}
 end;
 

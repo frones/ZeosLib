@@ -188,30 +188,28 @@ function PUnicode2PRawBuf(Source: PWideChar; Dest: PAnsiChar; SrcWords, MaxDestB
 function PUnicodeToUtf8Buf(Dest: PAnsiChar; DestLen: NativeUint;
   Source: PWideChar; SourceLen: NativeUint; Flags: TCharConversionFlags): NativeUint;
 
-function ZUnicodeToString(const Source: UnicodeString; CP: Word): String;
-
 {converter functions for the String-types}
+{$IFNDEF NO_AUTOENCODE}
+function ZUnicodeToString(const Source: UnicodeString; CP: Word): String;
 {$IFNDEF UNICODE}
 function ZConvertStringToUTF8WithAutoEncode(const Src: String; const StringCP: Word): UTF8String;
 function ZConvertStringToAnsiWithAutoEncode(const Src: String; const {%H-}StringCP: Word): AnsiString;
 {$ENDIF}
 function ZConvertRawToString(const Src: RawByteString; const RawCP, StringCP: Word): String;
 function ZConvertStringToRaw(const Src: String; const StringCP, RawCP: Word): RawByteString;
-{$IFNDEF NO_AUTOENCODE}
 function ZConvertStringToRawWithAutoEncode(const Src: String; const StringCP, RawCP: Word): RawByteString;
-{$ENDIF}
 function ZConvertUnicodeToString(const Src: UnicodeString; const StringCP: Word): String;
 function ZConvertUnicodeToString_CPUTF8(const Src: UnicodeString; const {%H-}StringCP: Word): String;
 function ZConvertStringToUnicode(const Src: String; const StringCP: Word): UnicodeString;
 function ZConvertString_CPUTF8ToUnicode(const Src: String; const {%H-}StringCP: Word): UnicodeString;
-{$IFNDEF NO_AUTOENCODE}
 function ZConvertStringToUnicodeWithAutoEncode(const Src: String; const StringCP: Word): UnicodeString;
-{$ENDIF}
 
 function ZMoveRawToString(const Src: RawByteString; const {%H-}RawCP, {%H-}StringCP: Word): String;
 function ZMoveStringToRaw(const Src: String; const {%H-}StringCP, {%H-}RawCP: Word): RawByteString;
 
 function ZUnicodeToUnknownRaw(const US: UnicodeString; CP: Word): RawByteString;
+{$ENDIF}
+
 
 function IsMBCSCodePage(CP: Word): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
@@ -2068,59 +2066,6 @@ begin
   end;
 end;
 
-function ZUnicodeToString(const Source: UnicodeString; CP: Word): String;
-{$if defined(MSWINDOWS) and not defined(UNICODE)}
-var
-  ulen: Integer;
-  Buf: Array[0..dsMaxRStringSize] of AnsiChar;
-  {$IFDEF WITH_RAWBYTESTRING}
-  var RBS: RawByteString absolute Result;
-  {$ENDIF}
-{$IFEND}
-begin
-  {$IFDEF WITH_LCONVENCODING}
-  Result := ZUnicodeToRaw(Source, CP);
-  {$ELSE}
-    {$IFDEF UNICODE}
-    Result := Source
-    {$ELSE}
-      if CP = zCP_NONE then
-        CP := ZOSCodePage; //random success
-      if (Source = '') then
-        Result := ''
-      else
-      {$IFDEF MSWINDOWS}
-      begin
-        ULen := Min(Length(Source) shl (2*Ord(IsMBCSCodePage(cp))), High(Integer)-1);
-        if Ulen < dsMaxRStringSize then
-          {$IFDEF WITH_RAWBYTESTRING}
-          ZSetString(@Buf[0], WideCharToMultiByte(CP, 0, Pointer(Source), Length(Source), @Buf[0], ulen, NIL, NIL), RBS , CP)
-          {$ELSE}
-          ZSetString(@Buf[0], WideCharToMultiByte(CP, 0, Pointer(Source), Length(Source), @Buf[0], ulen, NIL, NIL), Result)
-          {$ENDIF}
-        else begin
-          {$IFDEF WITH_RAWBYTESTRING}
-          ZSetString(nil, uLen, RBS, CP);
-          {$ELSE}
-          ZSetString(nil, uLen, Result);
-          {$ENDIF}
-          setlength(Result, WideCharToMultiByte(CP,0, Pointer(Source), Length(Source), Pointer(Result), ulen, nil, nil)); // Convert Wide down to Ansi
-        end;
-      end;
-      {$ELSE}
-        {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
-        WidestringManager.Unicode2AnsiMoveProc(Pointer(Source), Result, CP, Length(Source));
-        {$ELSE} //FPC 2.6 down
-        if (CP = zCP_UTF8) then
-          Result := UTF8Encode(Source)
-        else
-          Result := String(Source); //random success according the CP
-        {$ENDIF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
-      {$ENDIF MSWINDOWS}
-    {$ENDIF UNICODE}
-  {$ENDIF WITH_LCONVENCODING}
-end;
-
 {$IFDEF WITH_LCONVENCODING}
 function IsLConvEncodingCodePage(const CP: Word): Boolean;
 var
@@ -2166,6 +2111,7 @@ begin
   Result := (CP >= zCP_csISO2022JP) or ((CP >=zCP_MSWIN921) and (CP <=zCP_Big5)) or (CP = ZCP_JOHAB) or (CP=zCP_EUC_JP)
 end;
 
+{$IFNDEF NO_AUTOENCODE}
 function ZConvertRawToString(const Src: RawByteString;
   const RawCP, StringCP: Word): String;
 {$IF not defined(UNICODE) and not defined(WITH_LCONVENCODING)}
@@ -2297,7 +2243,59 @@ begin
   {$ENDIF}
 end;
 
-{$IFNDEF NO_AUTOENCODE}
+function ZUnicodeToString(const Source: UnicodeString; CP: Word): String;
+{$if defined(MSWINDOWS) and not defined(UNICODE)}
+var
+  ulen: Integer;
+  Buf: Array[0..dsMaxRStringSize] of AnsiChar;
+  {$IFDEF WITH_RAWBYTESTRING}
+  var RBS: RawByteString absolute Result;
+  {$ENDIF}
+{$IFEND}
+begin
+  {$IFDEF WITH_LCONVENCODING}
+  Result := ZUnicodeToRaw(Source, CP);
+  {$ELSE}
+    {$IFDEF UNICODE}
+    Result := Source
+    {$ELSE}
+      if CP = zCP_NONE then
+        CP := ZOSCodePage; //random success
+      if (Source = '') then
+        Result := ''
+      else
+      {$IFDEF MSWINDOWS}
+      begin
+        ULen := Min(Length(Source) shl (2*Ord(IsMBCSCodePage(cp))), High(Integer)-1);
+        if Ulen < dsMaxRStringSize then
+          {$IFDEF WITH_RAWBYTESTRING}
+          ZSetString(@Buf[0], WideCharToMultiByte(CP, 0, Pointer(Source), Length(Source), @Buf[0], ulen, NIL, NIL), RBS , CP)
+          {$ELSE}
+          ZSetString(@Buf[0], WideCharToMultiByte(CP, 0, Pointer(Source), Length(Source), @Buf[0], ulen, NIL, NIL), Result)
+          {$ENDIF}
+        else begin
+          {$IFDEF WITH_RAWBYTESTRING}
+          ZSetString(nil, uLen, RBS, CP);
+          {$ELSE}
+          ZSetString(nil, uLen, Result);
+          {$ENDIF}
+          setlength(Result, WideCharToMultiByte(CP,0, Pointer(Source), Length(Source), Pointer(Result), ulen, nil, nil)); // Convert Wide down to Ansi
+        end;
+      end;
+      {$ELSE}
+        {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
+        WidestringManager.Unicode2AnsiMoveProc(Pointer(Source), Result, CP, Length(Source));
+        {$ELSE} //FPC 2.6 down
+        if (CP = zCP_UTF8) then
+          Result := UTF8Encode(Source)
+        else
+          Result := String(Source); //random success according the CP
+        {$ENDIF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
+      {$ENDIF MSWINDOWS}
+    {$ENDIF UNICODE}
+  {$ENDIF WITH_LCONVENCODING}
+end;
+
 function ZConvertStringToRawWithAutoEncode(const Src: String;
   const StringCP, RawCP: Word): RawByteString;
 {$IFNDEF UNICODE}
@@ -2345,7 +2343,6 @@ begin
   end;
   {$ENDIF UNICODE}
 end;
-{$ENDIF NO_AUTOENCODE}
 
 {$IFNDEF UNICODE}
 function ZConvertStringToUTF8WithAutoEncode(const Src: String;
@@ -2455,7 +2452,6 @@ begin
   {$ENDIF}
 end;
 
-{$IFNDEF NO_AUTOENCODE}
 function ZConvertStringToUnicodeWithAutoEncode(const Src: String;
   const StringCP: Word): UnicodeString;
 begin
@@ -2477,7 +2473,6 @@ begin
   end;
   {$ENDIF}
 end;
-{$ENDIF NO_AUTOENCODE}
 
 function ZMoveRawToString(const Src: RawByteString;
   const RawCP, StringCP: Word): String;
@@ -2506,6 +2501,7 @@ begin
     {$ENDIF}
   {$ENDIF}
 end;
+{$ENDIF NO_AUTOENCODE}
 
 function ZDetectUTF8Encoding(Source: PAnsiChar; Len: NativeUInt): TEncodeType;
 var

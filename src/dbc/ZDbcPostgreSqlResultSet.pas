@@ -777,9 +777,13 @@ begin
       {$IFDEF UNICODE}
       ColumnLabel := PRawToUnicode(P, Precision, FClientCP);
       {$ELSE}
+        {$IFDEF NO_AUTOENCODE}
+      ColumnLabel := BufferToStr(P, Precision);
+        {$ELSE}
       if (not ConSettings^.AutoEncode) or (FClientCP = ConSettings^.CTRL_CP)
       then ColumnLabel := BufferToStr(P, Precision)
       else ColumnLabel := ZUnicodeToString(PRawToUnicode(P, Precision, FClientCP), ConSettings^.CTRL_CP);
+        {$ENDIF}
       {$ENDIF}
       Nullable := ntNullableUnknown; //there is NO information about nullable
       Precision := 0;

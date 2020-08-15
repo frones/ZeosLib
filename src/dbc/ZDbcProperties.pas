@@ -140,9 +140,8 @@ const
   ConnProps_Transliterate = 'Transliterate';
   // Type: CP_UTF16 | CP_UTF8 | GET_ACP
   // Same as ControlsCodePage property
-  ConnProps_ControlsCP = 'controls_cp';
-  // Type: CP_UTF8 | GET_ACP
-  // Same as ControlsCodePage property
+  ConnProps_ControlsCP = 'controls_cp'; //dreprecaded use ConnProps_RawStringEncoding  instead
+  // Type: DB_CP | CP_UTF8 | DefaultSystemCodePage
   ConnProps_RawStringEncoding = 'RawStringEncoding';
   // Type: INT
   // The login timeout to use in seconds.

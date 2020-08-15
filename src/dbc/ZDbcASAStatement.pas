@@ -184,14 +184,14 @@ var ASASQLCA: PZASASQLCA;
 begin
   ASASQLCA := FASAConnection.GetDBHandle;
   ASASQLDA := FSQLData.GetData;
-  FPlainDriver.dbpp_describe_cursor(ASASQLCA, Pointer(CursorName), ASASQLDA, SQL_DESCRIBE_OUTPUT);
+  FPlainDriver.dbpp_describe_cursor(ASASQLCA, Pointer(FCursorName), ASASQLDA, SQL_DESCRIBE_OUTPUT);
   if ASASQLCA.sqlCode <> SQLE_NOERROR then
     FASAConnection.HandleErrorOrWarning(lcOther, SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
   if ASASQLDA^.sqld <= 0 then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData)
   else if ( ASASQLDA^.sqld > ASASQLDA^.sqln) then begin
     FSQLData.AllocateSQLDA(ASASQLDA^.sqld);
-    FPlainDriver.dbpp_describe_cursor(ASASQLCA, Pointer(CursorName), ASASQLDA, SQL_DESCRIBE_OUTPUT);
+    FPlainDriver.dbpp_describe_cursor(ASASQLCA, Pointer(FCursorName), ASASQLDA, SQL_DESCRIBE_OUTPUT);
     if ASASQLCA.sqlCode <> SQLE_NOERROR then
       FASAConnection.HandleErrorOrWarning(lcExecute, SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
   end;
@@ -210,7 +210,7 @@ var
   CachedResultSet: TZCachedResultSet;
 begin
   With FASAConnection do begin
-    FSQLData := TZASASQLDA.Create(FASAConnection, Pointer(CursorName));
+    FSQLData := TZASASQLDA.Create(FASAConnection, Pointer(FCursorName));
     DescribeCursor;
     NativeResultSet := TZASANativeResultSet.Create(Self, SQL, FStmtNum, FCursorName, FSQLData, CachedLob);
     if ResultSetConcurrency = rcUpdatable then begin
@@ -240,7 +240,7 @@ begin
       FCursorOptions := CUR_OPEN_DECLARE + CUR_READONLY + CUR_INSENSITIVE
     else
       FCursorOptions := CUR_OPEN_DECLARE + CUR_READONLY;
-    FInParamSQLData := TZASASQLDA.Create(FASAConnection, Pointer(CursorName),
+    FInParamSQLData := TZASASQLDA.Create(FASAConnection, Pointer(FCursorName),
       FCountOfQueryParams);
     FInParamSQLDA := FInParamSQLData.GetData;
     WhatToDesc := SQL_PREPARE_DESCRIBE_STMTNUM + SQL_PREPARE_DESCRIBE_INPUT +
@@ -274,7 +274,7 @@ begin
     end;
     FMoreResults := DBHandle.sqlerrd[2] = 0; //we need to know if more ResultSets can be retrieved
     if not FMoreResults then begin
-      FSQLData := TZASASQLDA.Create(FASAConnection, Pointer(CursorName), 0);
+      FSQLData := TZASASQLDA.Create(FASAConnection, Pointer(FCursorName), 0);
       FResultSQLDA := FSQLData.GetData;
       FPLainDriver.dbpp_describe(DBHandle, nil, nil, @FStmtNum, FResultSQLDA, SQL_DESCRIBE_OUTPUT);
       if DBHandle.sqlCode <> SQLE_NOERROR then
@@ -323,7 +323,7 @@ end;
 procedure TZAbstractASAStatement.Unprepare;
 begin
   if not Assigned(FOpenResultSet) then //on closing the RS we exec db_close
-    FPlainDriver.dbpp_close(FASAConnection.GetDBHandle, Pointer(CursorName));
+    FPlainDriver.dbpp_close(FASAConnection.GetDBHandle, Pointer(FCursorName));
   inherited Unprepare;
 end;
 
@@ -381,7 +381,7 @@ begin
   Result := FMoreResults;
   if FMoreResults then begin
     DBHandle := FASAConnection.GetDBHandle;
-    FPlainDriver.dbpp_resume(DBHandle, Pointer(CursorName));
+    FPlainDriver.dbpp_resume(DBHandle, Pointer(FCursorName));
     if (DBHandle.sqlCode <> SQLE_NOERROR) and (DBHandle.sqlCode <> SQLE_PROCEDURE_COMPLETE) then
       FASAConnection.HandleErrorOrWarning(lcOther, 'dbpp_resume', Self);
     if DBHandle.sqlcode = SQLE_PROCEDURE_COMPLETE
@@ -424,7 +424,7 @@ begin
   else begin
     RestartTimer;
     DBHandle := FASAConnection.GetDBHandle;
-    FPlainDriver.dbpp_open(DBHandle, Pointer(CursorName), nil, nil, @FStmtNum,
+    FPlainDriver.dbpp_open(DBHandle, Pointer(FCursorName), nil, nil, @FStmtNum,
       FInParamSQLDA, FetchSize, 0, CUR_OPEN_DECLARE + CUR_READONLY);  //need a way to know if a resultset can be retrieved
     if DBHandle.sqlCode = SQLE_OPEN_CURSOR_ERROR then begin
       ExecuteUpdatePrepared;
@@ -459,7 +459,7 @@ begin
   LastUpdateCount := -1;
   RestartTimer;
   if not FHasOutParams then begin
-    FPlainDriver.dbpp_open(DBHandle, Pointer(CursorName), nil, nil, @FStmtNum,
+    FPlainDriver.dbpp_open(DBHandle, Pointer(FCursorName), nil, nil, @FStmtNum,
       FInParamSQLDA, FetchSize, 0, FCursorOptions);
     if (DBHandle.sqlCode <> SQLE_NOERROR) then
       FASAConnection.HandleErrorOrWarning(lcExecPrepStmt, SQL, Self);

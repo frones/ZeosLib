@@ -312,7 +312,7 @@ implementation
 
 uses
   ZGenericSqlToken, ZDbcODBCUtils, ZDbcODBCResultSet, ZDbcLogging,
-  ZEncoding, ZSysUtils, ZFastCode
+  ZEncoding, ZSysUtils, ZFastCode {$IF defined(NO_AUTOENCODE) and not defined(Unicode)},ZDbcUtils{$IFEND}
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
   {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
@@ -1615,14 +1615,14 @@ begin
   if S = ''
   then Result := ''
   {$IFDEF NO_AUTOENCODE}
-  else if IC.IsQuoted(S) then
+  else if IC.IsQuoted(S) then begin
     {$IFDEF UNICODE}
     Result := IC.ExtractQuote(S)
     {$ELSE}
     tmp := IC.ExtractQuote(S);
     Result := ZRawToUnicode(tmp, CP);
     {$ENDIF}
-  else {$IFDEF UNICODE}
+  end else {$IFDEF UNICODE}
     Result := S;
     {$ELSE}
     Result := ZRawToUnicode(S, CP);

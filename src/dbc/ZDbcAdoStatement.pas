@@ -425,6 +425,9 @@ function TZAdoPreparedStatement.CreateResultSet: IZResultSet;
     PD: PDecimal;
     L: NativeUInt;
     AdType: TDataTypeEnum;
+    {$IFNDEF UNICODE}
+    Name: WideString;
+    {$ENDIF}
   begin
     ColumnsInfo := TObjectList.Create;
     try
@@ -434,7 +437,12 @@ function TZAdoPreparedStatement.CreateResultSet: IZResultSet;
         ColumnInfo := TZColumnInfo.Create;
         with ColumnInfo do begin
           {$IFNDEF UNICODE}
-          ColumnLabel := PUnicodeToRaw(Pointer(FAdoCommand.Parameters.Item[i].Name), Length(FAdoCommand.Parameters.Item[i].Name), ConSettings^.CTRL_CP);
+          Name := FAdoCommand.Parameters.Item[i].Name;
+          {$IFDEF NO_AUTOENCODE}
+          ColumnLabel := PUnicodeToRaw(Pointer(Name), Length(Name), GetW2A2WConversionCodePage(ConSettings));
+          {$ELSE}
+          ColumnLabel := PUnicodeToRaw(Pointer(Name), Length(Name), ConSettings^.CTRL_CP);
+          {$ENDIF}
           {$ELSE}
           ColumnLabel := FAdoCommand.Parameters.Item[i].Name;
           {$ENDIF}
@@ -1197,9 +1205,13 @@ begin
   {$IFDEF UNICODE}
   SetPWideChar(Index, Pointer(AValue), Length(AValue));
   {$ELSE}
+    {$IFDEF NO_AUTOENCODE}
+    fUniTemp := ZRawToUnicode(AValue, GetW2A2WConversionCodePage(ConSettings));
+    {$ELSE}
   if Consettings.AutoEncode
   then fUniTemp := ConSettings.ConvFuncs.ZStringToUnicode(AValue, ConSettings^.CTRL_CP)
   else fUniTemp := PRawToUnicode(Pointer(AValue), Length(AValue), FClientCP);
+    {$ENDIF}
   SetPWideChar(Index, Pointer(fUniTemp), Length(fUniTemp));
   {$ENDIF}
 end;

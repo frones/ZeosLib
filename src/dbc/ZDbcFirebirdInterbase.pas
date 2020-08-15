@@ -4343,21 +4343,21 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     L := Length(Value);
     case sqltype of
-      SQL_VARYING   : if not ConSettings^.AutoEncode or (codepage = zCP_Binary) then begin
+      SQL_VARYING   : {$IFNDEF NO_AUTOENCODE}if not ConSettings^.AutoEncode or (codepage = zCP_Binary) then {$ENDIF}begin
                         if L > LengthInt(sqllen) then
                           L := LengthInt(sqllen);
                         Move(Pointer(Value)^, PISC_VARYING(sqldata).str[0], L);
                         PISC_VARYING(sqldata).strlen := L;
                         sqlind^ := ISC_NOTNULL;
-                      end else
+                      end {$IFNDEF NO_AUTOENCODE} else
                         SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
-                          ConSettings^.ConvFuncs.ZStringToRaw( Value, ConSettings^.Ctrl_CP, codepage));
-      SQL_BLOB      : if not ConSettings^.AutoEncode or (codepage = zCP_Binary)
-                      then WriteLobBuffer(Index, Pointer(Value), L)
+                          ConSettings^.ConvFuncs.ZStringToRaw( Value, ConSettings^.Ctrl_CP, codepage)){$ENDIF};
+      SQL_BLOB      : {$IFNDEF NO_AUTOENCODE}if not ConSettings^.AutoEncode or (codepage = zCP_Binary)
+                      then {$ENDIF}WriteLobBuffer(Index, Pointer(Value), L){$IFNDEF NO_AUTOENCODE}
                       else begin
                         FRawTemp := ConSettings^.ConvFuncs.ZStringToRaw( Value, ConSettings^.Ctrl_CP, codepage);
                         SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, FRawTemp);
-                      end;
+                      end{$ENDIF};
       else SetPAnsiChar(Index, Pointer(Value), L);
     end;
   end else
@@ -4585,7 +4585,7 @@ var
   I, ParamCnt, FirstComposePos: Integer;
   Tokens: TZTokenList;
   Token: PZToken;
-  Tmp, Tmp2: RawByteString;
+  Tmp{$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}, Tmp2{$IFEND}: RawByteString;
   ResultWriter, SectionWriter: TZRawSQLStringWriter;
   procedure Add(const Value: RawByteString; const Param: Boolean = False);
   begin
@@ -4599,7 +4599,7 @@ var
 begin
   ParamCnt := 0;
   Result := '';
-  Tmp2 := '';
+  {$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}Tmp2 := '';{$IFEND}
   Tmp := '';
   Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
   SectionWriter := TZRawSQLStringWriter.Create(Length(SQL) shr 5);
@@ -4629,6 +4629,7 @@ begin
         FirstComposePos := i +1;
       end
       {$IFNDEF UNICODE}
+        {$IFNDEF NO_AUTOENCODE}
       else if ConSettings.AutoEncode or (FDB_CP_ID = CS_NONE) then
         case (Tokens[i].TokenType) of
           ttQuoted, ttComment,
@@ -4646,6 +4647,7 @@ begin
             end;
           else ;//satisfy FPC
         end
+        {$ENDIF}
       {$ELSE}
       else if (FDB_CP_ID = CS_NONE) and (//all identifiers collate unicode_fss if CS_NONE
                (Token.TokenType = ttQuotedIdentifier) or

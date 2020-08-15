@@ -549,10 +549,14 @@ var
       {$IFDEF UNICODE}
       Result := PRawToUnicode(P, ZFastCode.StrLen(P), zCP_UTF8);
       {$ELSE}
+        {$IFDEF NO_AUTOENCODE}
+      Result := BufferToStr(P, ZFastCode.StrLen(P));
+        {$ELSE}
       if (not ConSettings^.AutoEncode) or (ConSettings^.CTRL_CP = zCP_UTF8) then
         Result := BufferToStr(P, ZFastCode.StrLen(P))
       else
         Result := ZUnicodeToString(PRawToUnicode(P, ZFastCode.StrLen(P), zCP_UTF8), ConSettings^.CTRL_CP);
+        {$ENDIF}
       {$ENDIF}
   end;
 begin

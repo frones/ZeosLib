@@ -125,7 +125,7 @@ type
   TOnConnect = procedure of Object;
 
   {$IFDEF NO_AUTOENCODE}
-  TZW2A2WEncodingSource = (w2a2wDB_CP, w2a2wGET_ACP, w2a2wUTF8{$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}, w2a2wDefaultSystemCodePage{$ENDIF});
+  TZW2A2WEncodingSource = (encDB_CP, encUTF8, encDefaultSystemCodePage);
   {$ENDIF NO_AUTOENCODE}
   {** hold some connection parameters }
   PZConSettings = ^TZConSettings;
@@ -2452,14 +2452,10 @@ begin
     S := Info.Values[ConnProps_ControlsCP];
     S := UpperCase(S);
     if S = 'DBCP'
-    then ConSettings.W2A2WEncodingSource := w2a2wDB_CP
-    else if S = 'GET_ACP'
-    then ConSettings.W2A2WEncodingSource := w2a2wGET_ACP
-    else {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}if S = 'CP_UTF8'
-    then {$ELSE}else {$ENDIF}ConSettings.W2A2WEncodingSource := w2a2wUTF8
-    {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
-    else ConSettings.W2A2WEncodingSource := w2a2wDefaultSystemCodePage;
-    {$ENDIF}
+    then ConSettings.W2A2WEncodingSource := encDB_CP
+    else if S = 'CP_UTF8'
+    then ConSettings.W2A2WEncodingSource := encUTF8
+    else ConSettings.W2A2WEncodingSource := encDefaultSystemCodePage;
 {$ENDIF NO_AUTOENCODE}
   end;
 end;

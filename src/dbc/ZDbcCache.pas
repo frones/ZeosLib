@@ -2422,32 +2422,48 @@ jmpNull:
   end;
 end;
 
-{$IFDEF FPC} {$PUSH}
-  {$WARN 5093 off : Function result variable of a managed type does not seem to be initialized}
-  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized}
-{$ENDIF} // ZSetString does the job even if NOT required
 function TZRowAccessor.GetString(ColumnIndex: Integer; out IsNull: Boolean): String;
-var P: {$IFDEF UNICODE}PWideChar{$ELSE}PAnsiChar{$ENDIF};
+var P: Pointer;
   Len: NativeUInt;
+  {$IFNDEF UNICODE}
+  CP: Word;
+  {$ENDIF}
   {$IF defined(WITH_RAWBYTESTRING) and not defined(UNICODE)}
   RBS: RawByteString absolute Result;
   {$IFEND}
 begin
   {$IFDEF UNICODE}
   P := GetPWideChar(ColumnIndex, IsNull, Len);
-  if P = Pointer(FUniTemp)
-  then Result := FUniTemp
-  else System.SetString(Result, P, Len);
+  if P = Pointer(FUniTemp) then begin
+    Result := FUniTemp;
+    FUniTemp := '';
+  end else begin
+    Result := '';
+    System.SetString(Result, PWidechar(P), Len);
+  end;
   {$ELSE}
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
     stString: begin
         P := GetPAnsiChar(ColumnIndex, IsNull, Len);
-        if not ConSettings^.AutoEncode or (ConSettings^.CTRL_CP = FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]) or (Len=0) then
+        CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
+        {$IFDEF NO_AUTOENCODE}
+          {$IFDEF UNICODE}
+          Result := PRawToUnicode(P, Len, CP);
+          {$ELSE}
+          Result := '';
+            {$IFDEF WITH_RAWBYTESTRING}
+            ZSetString(PAnsichar(P), Len, RBS, FClientCP);
+            {$ELSE}
+            System.SetString(Result, PAnsiChar(P), Len)
+            {$ENDIF}
+          {$ENDIF}
+        {$ELSE}
+        if not ConSettings^.AutoEncode or (ConSettings^.CTRL_CP = CP) or (Len=0) then
           {$IF defined(WITH_RAWBYTESTRING) and not defined(UNICODE)}
           //implicit give the FPC the correct string CP for conversions
           ZSetString(P, Len, RBS, FClientCP)
           {$ELSE}
-          System.SetString(Result, P, Len)
+          System.SetString(Result, PAnsiChar(P), Len)
           {$IFEND}
         else begin
           fUniTemp := PRawToUnicode(P, Len, FClientCP);
@@ -2458,27 +2474,31 @@ begin
           Result := PUnicodeToRaw(Pointer(fUniTemp), Length(FUniTemp), ConSettings^.CTRL_CP)
           {$IFEND}
         end;
+        {$ENDIF}
       end;
     stUnicodeString: begin
-        PWideChar(P) := GetPWideChar(ColumnIndex, IsNull, Len);
-        if ConSettings^.AutoEncode or (ConSettings^.ClientCodePage.Encoding = ceUTF16)
+        P := GetPWideChar(ColumnIndex, IsNull, Len);
+        {$IFDEF NO_AUTOENCODE}
+        CP := GetW2A2WConversionCodePage(ConSettings);
+        {$ELSE}
+        CP := ConSettings^.CTRL_CP;
+        {$ENDIF}
+        Result := '';
         {$IF defined(WITH_RAWBYTESTRING) and not defined(UNICODE)}
         //implicit give the FPC the correct string CP for conversions
-        then RBS := PUnicodeToRaw(PWideChar(P), Len, ConSettings^.CTRL_CP)
-        else RBS := PUnicodeToRaw(PWideChar(P), Len, FClientCP);
+        RBS := PUnicodeToRaw(P, Len, CP)
         {$ELSE}
-        then Result := PUnicodeToRaw(PWideChar(P), Len, ConSettings^.CTRL_CP)
-        else Result := PUnicodeToRaw(PWideChar(P), Len, FClientCP);
+        Result := PUnicodeToRaw(P, Len, CP)
         {$IFEND}
       end;
     else begin
       P := GetPAnsiChar(ColumnIndex, IsNull, Len);
-      System.SetString(Result, P, Len);
+      Result := '';
+      System.SetString(Result, PAnsiChar(P), Len);
     end;
   end;
   {$ENDIF}
 end;
-{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets the value of the designated column in the current row
@@ -4415,15 +4435,38 @@ end;
 }
 procedure TZRowAccessor.SetString(ColumnIndex: Integer; const Value: String);
 var Len: NativeUInt;
+  {$IF defined(UNICODE) or defined(NO_AUTOENCODE)}
+    P: Pointer;
+  {$IFEND}
 {$IFNDEF UNICODE}
     CP: Word;
 {$ENDIF}
 begin
   {$IFDEF UNICODE}
   Len := Length(Value);
-  SetPWideChar(ColumnIndex, Pointer(Value), Len);
+  if Len = 0
+  then P := PEmptyUnicodeString
+  else P := Pointer(Value);
+  SetPWideChar(ColumnIndex, P, Len);
   {$ELSE}
   CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
+{$IFDEF NO_AUTOENCODE}
+  if CP = zCP_UTF16 then begin
+    CP := GetW2A2WConversionCodePage(ConSettings);
+    fUniTemp := ZRawToUnicode(Value, CP); //localize Value because of WideString overrun
+    Len := Length(fUniTemp);
+    if Len = 0
+    then P := PEmptyUnicodeString
+    else P := Pointer(fUniTemp);
+    SetPWideChar(ColumnIndex, P, Len);
+  end else begin
+    Len := Length(Value);
+    if Len = 0
+    then P := PEmptyAnsiString
+    else P := Pointer(Value);
+    SetPAnsiChar(ColumnIndex, P, Len)
+  end;
+{$ELSE}
   if CP = zCP_UTF16 then begin
     fUniTemp := ConSettings^.ConvFuncs.ZStringToUnicode(Value, ConSettings^.CTRL_CP); //localize Value because of WideString overrun
     Len := Length(fUniTemp);
@@ -4436,6 +4479,7 @@ begin
     Len := Length(fRawTemp);
     SetPAnsiChar(ColumnIndex, Pointer(fRawTemp), Len);
   end;
+{$ENDIF}
   {$ENDIF}
 end;
 

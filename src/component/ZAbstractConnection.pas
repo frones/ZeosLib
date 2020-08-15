@@ -134,7 +134,7 @@ type
     {$ENDIF}
     function GetVersion: string;
     procedure SetUseMetadata(AValue: Boolean);
-    procedure SetControlsCodePage(const Value: TZControlsCodePage);
+    procedure SetCharacterFieldType(const Value: TZControlsCodePage);
   protected
     FURL: TZURL;
     FCatalog: string;
@@ -168,6 +168,15 @@ type
     {$IFNDEF NO_AUTOENCODE}
     function GetAutoEncode: Boolean;
     procedure SetAutoEncode(Value: Boolean);
+    {$ELSE}
+      {$IFNDEF UNICODE}
+    FTransliterateSQL: Boolean;
+    FTransliterateEncoding: TZW2A2WEncodingSource;
+      {$ENDIF}
+    function GetTransliterateSQL: Boolean;
+    procedure SetTransliterateSQL(Value: Boolean);
+    function GetTransliterateEncoding: TZW2A2WEncodingSource;
+    procedure SetTransliterateEncoding(Value: TZW2A2WEncodingSource);
     {$ENDIF}
     function GetHostName: string;
     procedure SetHostName(const Value: String);
@@ -289,9 +298,19 @@ type
     procedure ShowSQLHourGlass;
     procedure HideSQLHourGlass;
   published
-    property ControlsCodePage: TZControlsCodePage read FControlsCodePage write SetControlsCodePage;
+    property ControlsCodePage: TZControlsCodePage read FControlsCodePage write SetCharacterFieldType;
     {$IFNDEF NO_AUTOENCODE}
     property AutoEncodeStrings: Boolean read GetAutoEncode write SetAutoEncode stored True default {$IFDEF UNICODDE}True{$ELSE}False{$ENDIF};
+    {$ELSE}
+    {EH: Even if it's a NO OP for the Unicode-Compiler, it's nice to have a portable program!}
+    property TransliterateSQL: Boolean read GetTransliterateSQL
+      {$IFDEF UNCIODE}
+      write SetTransliterateSQL stored False default True;
+      {$ELSE}
+      write SetTransliterateSQL stored True default False;
+      {$ENDIF}
+    property TransliterateEncoding: TZW2A2WEncodingSource read GetTransliterateEncoding
+      write SetTransliterateEncoding stored {$IFDEF UNCIODE}false{$ELSE}true{$ENDIF} default encDB_CP;
     {$ENDIF NO_AUTOENCODE}
     property ClientCodepage: String read FClientCodepage write SetClientCodePage; //EgonHugeist
     property Catalog: string read FCatalog write FCatalog;
@@ -612,8 +631,7 @@ end;
   @param Value a list with new connection properties.
 }
 procedure TZAbstractConnection.SetProperties(Value: TStrings);
-var NewControlsCodePage: TZControlsCodePage;
-    S: String;
+var S: String;
 begin
   FURL.Properties.Clear;
   if Value = nil then Exit;
@@ -627,35 +645,6 @@ begin
   if Connected then
     DbcConnection.GetConSettings.AutoEncode := FAutoEncode;
   {$ENDIF NO_AUTOENCODE}
-  if Value.Values[ConnProps_ControlsCP] <> '' then begin
-    S := Value.Values[ConnProps_ControlsCP];
-    if S = 'CP_UTF16' then
-      NewControlsCodePage := cCP_UTF16
-    else if S = 'CP_UTF8' then
-      NewControlsCodePage := cCP_UTF8
-    else NewControlsCodePage := cGET_ACP;
-    { possibly fix given value }
-    case NewControlsCodePage of
-      cCP_UTF16:  {$IFDEF WITH_WIDEFIELDS}
-                  {keepit};
-                  {$ELSE}
-                  NewControlsCodePage := cCP_UTF8;
-                  {$ENDIF}
-      cCP_UTF8:   {$IF defined(MSWINDOWS) and defined(UNICODE)}
-                  NewControlsCodePage := cCP_UTF16;
-                  {$ELSE}
-                  {keep it};
-                  {$IFEND}
-      else        if ZOSCodePage = zCP_UTF8
-                  then NewControlsCodePage := cCP_UTF8;
-    end;
-  end else
-    NewControlsCodePage := FControlsCodePage;
-  case NewControlsCodePage of
-    cCP_UTF16:  S := 'CP_UTF16';
-    cCP_UTF8:   S := 'CP_UTF8';
-    else        S := 'GET_ACP';
-  end;
   Value.Values[ConnProps_ControlsCP] := S;
   FURL.Properties.AddStrings(Value);
 end;
@@ -747,6 +736,22 @@ begin
     end;
   end;
 end;
+
+{$IFDEF NO_AUTOENCODE}
+procedure TZAbstractConnection.SetTransliterateEncoding(Value: TZW2A2WEncodingSource);
+begin
+  {$IFNDEF UNICODE}
+  FTransliterateEncoding := Value;
+  {$ENDIF}
+end;
+
+procedure TZAbstractConnection.SetTransliterateSQL(Value: Boolean);
+begin
+  {$IFNDEF UNICODE}
+  FTransliterateSQL := Value;
+  {$ENDIF}
+end;
+{$ENDIF}
 
 {**
   Gets a ZDBC driver for the specified protocol.
@@ -975,13 +980,22 @@ begin
       {$IFNDEF NO_AUTOENCODE}
       if (FURL.Properties.Values[ConnProps_AutoEncodeStrings] = '') and FAutoEncode then
         FURL.Properties.Values[ConnProps_AutoEncodeStrings] := 'True';
+      case ControlsCodePage of //automated check..
+        cCP_UTF16: FURL.Properties.Values[ConnProps_ControlsCP] := 'CP_UTF16';
+        cCP_UTF8: FURL.Properties.Values[ConnProps_ControlsCP] := 'CP_UTF8';
+        cGET_ACP: FURL.Properties.Values[ConnProps_ControlsCP] := 'GET_ACP';
+      end;
+      {$ELSE}
+        {$IFDEF UNICODE}
+        FURL.Properties.Values[ConnProps_RawStringEncoding] := 'DB_CP';
+        {$ELSE}
+      case FTransliterateEncoding of //automated check..
+        encDB_CP: FURL.Properties.Values[ConnProps_RawStringEncoding] := 'DB_CP';
+        encUTF8: FURL.Properties.Values[ConnProps_RawStringEncoding] := 'CP_UTF8';
+        encDefaultSystemCodePage: FURL.Properties.Values[ConnProps_RawStringEncoding] := 'GET_ACP';
+      end;
+        {$ENDIF}
       {$ENDIF NO_AUTOENCODE}
-      if (FURL.Properties.Values[ConnProps_ControlsCP] = '') then
-        case ControlsCodePage of //automated check..
-          cCP_UTF16: FURL.Properties.Values[ConnProps_ControlsCP] := 'CP_UTF16';
-          cCP_UTF8: FURL.Properties.Values[ConnProps_ControlsCP] := 'CP_UTF8';
-          cGET_ACP: FURL.Properties.Values[ConnProps_ControlsCP] := 'GET_ACP';
-        end;
       FConnection := DriverManager.GetConnectionWithParams(
         ConstructURL(UserName, Password), FURL.Properties);
       try
@@ -1529,6 +1543,28 @@ begin
     List.Add(ResultSet.GetStringByName('PROCEDURE_NAME'));
 end;
 
+{$IFDEF NO_AUTOENCODE}
+function TZAbstractConnection.GetTransliterateEncoding: TZW2A2WEncodingSource;
+begin
+  {$IFDEF UNICODE}
+  Result := encDB_CP;
+  {$ELSE}
+  Result := FTransliterateEncoding
+  {$ENDIF}
+end;
+
+function TZAbstractConnection.GetTransliterateSQL: Boolean;
+begin
+  {$IFDEF UNICODE}
+  if Connected then
+    Result := DbcConnection.GetConSettings.ClientCodePage.Encoding <> ceUTF16
+  else Result := True;
+  {$ELSE}
+  Result := FTransliterateSQL;
+  {$ENDIF}
+end;
+{$ENDIF}
+
 {**
   EgonHugeist Returns Database-Triggers
   @Param TablePattern is a "like"-pattern to get Triggers of specified Table
@@ -1615,45 +1651,10 @@ begin
     FConnection.SetUseMetadata(FUseMetadata);
 end;
 
-procedure TZAbstractConnection.SetControlsCodePage(const Value: TZControlsCodePage);
-var NewControlsCodePage: TZControlsCodePage;
-    S: String;
+procedure TZAbstractConnection.SetCharacterFieldType(const Value: TZControlsCodePage);
 begin
-  CheckDisconnected;
-  case Value of
-    cCP_UTF16:  {$IF defined(WITH_WIDEFIELDS) or defined(NO_AUTOENCODE)}
-                NewControlsCodePage := Value;
-                {$ELSE}
-                NewControlsCodePage := cCP_UTF8;
-                {$IFEND}
-    cCP_UTF8:   {$IF defined(MSWINDOWS) and defined(UNICODE)}
-                NewControlsCodePage := cCP_UTF16;
-                {$ELSE}
-                NewControlsCodePage := Value;
-                {$IFEND}
-    {$IF defined(WITH_DEFAULTSYSTEMCODEPAGE) and defined(NO_AUTOENCODE)}
-    cDefaultSystemCodePage:
-                NewControlsCodePage := Value;
-    {$IFEND}
-    else        if ZOSCodePage = zCP_UTF8
-                then NewControlsCodePage := cCP_UTF8
-                else NewControlsCodePage := Value;
-  end;
-  if NewControlsCodePage <> FControlsCodePage then begin
-    case NewControlsCodePage of
-      cCP_UTF16:  S := 'CP_UTF16';
-      cCP_UTF8:   S := 'CP_UTF8';
-      {$IF defined(WITH_DEFAULTSYSTEMCODEPAGE) and defined(NO_AUTOENCODE)}
-      cDefaultSystemCodePage: S := 'DEFSYSCP';
-      {$IFEND}
-      else        S := 'GET_ACP';
-    end;
-    Properties.Values[ConnProps_ControlsCP] := S;
-    if Connected then begin
-      Connected := False;
-      Connected := True;
-    end;
-  end;
+  if Value <> FControlsCodePage then
+    FControlsCodePage := Value;
 end;
 
 procedure TZAbstractConnection.CloseAllSequences;

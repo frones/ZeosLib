@@ -249,7 +249,7 @@ var
 implementation
 {$IFNDEF ZEOS_DISABLE_ORACLE}
 
-uses
+uses {$IF not defined(UNICODE) and defined(NO_AUTOENCODE)}ZDbcUtils,{$IFEND}
   ZMessages, ZGenericSqlToken, ZDbcOracleStatement, ZSysUtils, ZFastCode,
   ZDbcOracleUtils, ZDbcOracleMetadata, ZOracleToken, ZOracleAnalyser, ZDbcProperties,
   ZCollections, ZEncoding;
@@ -489,7 +489,7 @@ begin
     Status := FPlainDriver.OCIServerAttach(FServerHandle, FErrorHandle,
       Pointer(URL.Database), Length(URL.Database) shl 1, 0);
     {$ELSE}
-    US := ZRawToUnicode(URL.Database, ConSettings.CTRL_CP);
+    US := ZRawToUnicode(URL.Database, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF});
     Status := FPlainDriver.OCIServerAttach(FServerHandle, FErrorHandle,
       Pointer(US), Length(US) shl 1, 0);
     {$ENDIF}
@@ -534,10 +534,10 @@ begin
     FPlainDriver.OCIAttrSet(FSessionHandle, OCI_HTYPE_SESSION,
       Pointer(Password), Length(Password) shl 1, OCI_ATTR_PASSWORD, FErrorHandle);
     {$ELSE}
-    US := ZRawToUnicode(URL.UserName, ConSettings.CTRL_CP);
+    US := ZRawToUnicode(URL.UserName, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF});
     FPlainDriver.OCIAttrSet(FSessionHandle, OCI_HTYPE_SESSION, Pointer(US),
       Length(US) shl 1, OCI_ATTR_USERNAME, FErrorHandle);
-    US := ZRawToUnicode(URL.Password, ConSettings.CTRL_CP);
+    US := ZRawToUnicode(URL.Password, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF});
     FPlainDriver.OCIAttrSet(FSessionHandle, OCI_HTYPE_SESSION, Pointer(US),
       Length(US) shl 1, OCI_ATTR_PASSWORD, FErrorHandle);
     {$ENDIF}

@@ -659,7 +659,9 @@ var
   I: Integer;
   SDyn: TStringDynArray;
   Url: TZURL;
+{$IFNDEF NO_AUTOENCODE}
   CodePage: PZCodePage;
+{$ENDIF}
   PlainDriver: IZPlainDriver;
   Driver: IZDriver;
 begin
@@ -689,6 +691,10 @@ begin
         Url.Free;
       end;
       for i := 0 to high(SDyn) do begin
+{$IFDEF NO_AUTOENCODE}
+        List.Append(SDyn[i]);
+{$ELSE}
+
         CodePage := PlainDriver.ValidateCharEncoding(SDyn[i]);
         if (CodePage.Encoding = ceUTF16)
         then List.Append(SDyn[i])
@@ -739,6 +745,7 @@ begin
               {$ENDIF}
             {$IFEND}
         end;
+{$ENDIF}
       end;
       TStringList(List).Sort;
     end;

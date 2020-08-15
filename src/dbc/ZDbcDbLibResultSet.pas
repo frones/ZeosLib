@@ -399,14 +399,18 @@ label AssignGeneric;
     end;
   end;
   function ValueToString(P: PAnsiChar): String;
+  var L: NativeUInt;
   begin
+    L := ZFastCode.StrLen(P);
     {$IFDEF UNICODE}
-    Result := PRawToUnicode(P, ZFastCode.StrLen(P), FClientCP);
+    Result := PRawToUnicode(P, L, FClientCP);
     {$ELSE}
     {$IFDEF FPC}Result := '';{$ENDIF}//done by ZSetString already
-    ZSetString(P, ZFastCode.StrLen(P), Result);
+    ZSetString(P, L, Result{$IFDEF WITH_RAWBYTESRING}, FClientCP{$ENDIF});
+    {$IFNDEF NO_AUTOENCODE}
     Result := ConSettings^.ConvFuncs.ZRawToString(Result,
           FClientCP, ConSettings^.CTRL_CP);
+    {$ENDIF}
     {$ENDIF}
   end;
 begin

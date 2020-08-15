@@ -1720,10 +1720,10 @@ bind_direct:
     stString, stUnicodeString:
       case VariantType of
         {$IFNDEF UNICODE}
-        vtString:
-          if not ConSettings.AutoEncode
-          then BindRawStrings(TRawByteStringDynArray(Value))
-          else BindFromAutoEncode;
+        vtString: {$IFNDEF NO_AUTOENCODE}
+          if ConSettings.AutoEncode
+          then BindFromAutoEncode
+          else {$ENDIF}BindRawStrings(TRawByteStringDynArray(Value));
         {$ENDIF}
         {$IFNDEF NO_ANSISTRING}
         vtAnsiString:  if (ClientCP = ZOSCodePage)
@@ -2203,10 +2203,14 @@ begin
   SetUnicodeString(ParameterIndex, Value);
   {$ELSE}
   if FCharSetID = OCI_UTF16ID then begin
-    FUniTemp := ZRawToUnicode(Value, ConSettings^.Ctrl_CP);
+    FUniTemp := ZRawToUnicode(Value, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF});
     SetUnicodeString(ParameterIndex, FUniTemp);
   end else begin
+    {$IFDEF NO_AUTOENCODE}
+    FRawTemp := Value;
+    {$ELSE}
     FRawTemp := ConSettings^.ConvFuncs.ZStringtoRaw(Value, ConSettings^.Ctrl_CP, FClientCP);
+    {$ENDIF}
     SetRawByteString(ParameterIndex, FRawTemp);
   end;
   {$ENDIF}
@@ -2487,7 +2491,7 @@ var
   ParamsCnt: Cardinal;
   Tokens: TZTokenList;
   Token: PZToken;
-  tmp{$IFNDEF UNICODE}, Fraction{$ENDIF}: RawByteString;
+  tmp{$IF not defined(UNICODE) and not defined(NO_AUTOENCODE)}, Fraction{$IFEND}: RawByteString;
   SQLWriter, ParamWriter: TZRawSQLStringWriter;
   ComparePrefixTokens: TPreparablePrefixTokens;
   procedure Add(const Value: RawByteString; const Param: Boolean);
@@ -2529,10 +2533,10 @@ begin
           Inc(ParamsCnt);
           {$IFDEF UNICODE}
           Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, FClientCP);
-          {$ELSE}
+          {$ELSE} {$IFNDEF NO_AUTOENCODE}
           if Consettings.AutoEncode
           then ParamWriter.Finalize(Tmp)
-          else Tmp := Tokens.AsString(FirstComposePos, I-1);
+          else {$ENDIF}Tmp := Tokens.AsString(FirstComposePos, I-1);
           {$ENDIF}
           Add(Tmp, False);
           if (Token.P^ = '?') then begin
@@ -2556,7 +2560,7 @@ begin
           end;
           Add(Tmp, True);
           Tmp := '';
-        end {$IFNDEF UNICODE} else if (FirstComposePos <= I) and ConSettings.AutoEncode then
+        end {$IF not defined(UNICODE) and not defined(NO_AUTOENCODE)} else if (FirstComposePos <= I) and ConSettings.AutoEncode then
           case (Token.TokenType) of
             ttQuoted, ttComment,
             ttWord, ttQuotedIdentifier: begin
@@ -2565,16 +2569,16 @@ begin
               end;
             else ParamWriter.AddText(Token.P, Token.L, tmp);
           end
-        {$ENDIF};
+        {$IFEND};
       end;
       I := Tokens.Count -1;
       if (FirstComposePos <= I) then begin
         {$IFDEF UNICODE}
         Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, FClientCP);
-        {$ELSE}
+        {$ELSE} {$IFNDEF NO_AUTOENCODE}
         if ConSettings.AutoEncode
         then ParamWriter.Finalize(Tmp)
-        else Tmp := Tokens.AsString(FirstComposePos, I);
+        else {$ENDIF}Tmp := Tokens.AsString(FirstComposePos, I);
         {$ENDIF}
         Add(Tmp, False);
       end;
@@ -2618,7 +2622,7 @@ begin
           {$IFDEF UNICODE}
             FCachedQueryRaw[j] := ':'+ZUnicodeToRaw(Name, FClientCP);
           {$ELSE}
-            FCachedQueryRaw[j] := ':'+Name
+            FCachedQueryRaw[j] := ':'+Name;
           {$ENDIF}
 {$ELSE}
             FCachedQueryRaw[j] := ':'+ConSettings.ConvFuncs.ZStringToRaw(Name, ConSettings.CTRL_CP, FClientCP);
@@ -2659,7 +2663,7 @@ var
   ParamsCnt: Cardinal;
   Tokens: TZTokenList;
   Token: PZToken;
-  tmp{$IFNDEF UNICODE}, Fraction{$ENDIF}: UnicodeString;
+  tmp{$IF not defined(UNICODE) and not Defined(NO_AUTOENCODE)}, Fraction{$IFEND}: UnicodeString;
   SQLWriter, ParamWriter: TZUnicodeSQLStringWriter;
   ComparePrefixTokens: TPreparablePrefixTokens;
   procedure Add(const Value: UnicodeString; const Param: Boolean);
@@ -2701,10 +2705,10 @@ begin
           Inc(ParamsCnt);
           {$IFDEF UNICODE}
           Tmp := Tokens.AsString(FirstComposePos, I-1);
-          {$ELSE}
+          {$ELSE} {$IFNDEF NO_AUTOENCODE}
           if Consettings.AutoEncode
           then ParamWriter.Finalize(Tmp)
-          else Tmp := PRawToUnicode(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, ConSettings.CTRL_CP);
+          else {$ENDIF}Tmp := PRawToUnicode(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF});
           {$ENDIF}
           Add(Tmp, False);
           if (Token.P^ = '?') then begin
@@ -2728,7 +2732,7 @@ begin
           end;
           Add(Tmp, True);
           Tmp := '';
-        end {$IFNDEF UNICODE} else if (FirstComposePos <= I) and ConSettings.AutoEncode then
+        end {$IF not defined(UNICODE) and not defined(NO_AUTOENCODE)} else if (FirstComposePos <= I) and ConSettings.AutoEncode then
           case (Token.TokenType) of
             ttQuoted, ttComment,
             ttWord, ttQuotedIdentifier: begin
@@ -2737,16 +2741,16 @@ begin
               end;
             else ParamWriter.AddAscii7Text(Token.P, Token.L, tmp);
           end
-        {$ENDIF};
+        {$IFEND};
       end;
       I := Tokens.Count -1;
       if (FirstComposePos <= I) then begin
         {$IFDEF UNICODE}
         Tmp := Tokens.AsString(FirstComposePos, I);
-        {$ELSE}
+        {$ELSE} {$IFNDEF NO_AUTOENCODE}
         if ConSettings.AutoEncode
         then ParamWriter.Finalize(Tmp)
-        else Tmp := PRawToUnicode(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, ConSettings^.CTRL_CP);
+        else {$ENDIF}Tmp := PRawToUnicode(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF});
         {$ENDIF}
         Add(Tmp, False);
       end;
@@ -2790,7 +2794,7 @@ begin
             {$IFDEF UNICODE}
             FCachedQueryUni[j] := ':'+Name;
             {$ELSE}
-            FCachedQueryUni[j] := ':'+RawToUnicode(Name, GetW2A2WConversionCodePage(ConSettings));
+            FCachedQueryUni[j] := ':'+ZRawToUnicode(Name, GetW2A2WConversionCodePage(ConSettings));
             {$ENDIF}
 {$ELSE}
             FCachedQueryUni[j] := ':'+ConSettings.ConvFuncs.ZStringToUnicode(Name, ConSettings.CTRL_CP);
@@ -2857,9 +2861,9 @@ var
     SQLWriter.AddText(' := ', ProcSQL);
     Descriptor.ConcatParentName(True, SQLWriter, ProcSQL, IC);
     {$IFNDEF UNICODE}
-    R := ZUnicodeToRaw(Descriptor.AttributeName, ConSettings.CTRL_CP);
+    R := ZUnicodeToRaw(Descriptor.AttributeName, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF});
     R := IC.Quote(R);
-    S := ZRawToUnicode(R, ConSettings.CTRL_CP);
+    S := ZRawToUnicode(R, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF});
     SQLWriter.AddText(S, ProcSQL);
     {$ELSE}
     SQLWriter.AddText(IC.Quote(Descriptor.AttributeName), ProcSQL);
@@ -2875,9 +2879,9 @@ var
   begin
     Descriptor.ConcatParentName(True, SQLWriter, ProcSQL, IC);
     {$IFNDEF UNICODE}
-    R := ZUnicodeToRaw(Descriptor.AttributeName, ConSettings.CTRL_CP);
+    R := ZUnicodeToRaw(Descriptor.AttributeName, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF});
     R := IC.Quote(R);
-    S := ZRawToUnicode(R, ConSettings.CTRL_CP);
+    S := ZRawToUnicode(R, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF});
     SQLWriter.AddText(S, ProcSQL);
     {$ELSE}
     SQLWriter.AddText(Descriptor.AttributeName, ProcSQL);
@@ -2909,12 +2913,12 @@ begin
   try
     if FProcDescriptor = nil then
       { describe the object: }
-      FProcDescriptor := TZOraProcDescriptor_W.Create(nil, Connection as IZOracleConnection{$IFNDEF UNICODE}, ConSettings.CTRL_CP{$ENDIF});
+      FProcDescriptor := TZOraProcDescriptor_W.Create(nil, Connection as IZOracleConnection{$IFNDEF UNICODE}, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF}{$ENDIF});
     if FProcDescriptor.ObjType = OCI_PTYPE_UNK then begin
       {$IFDEF UNICODE}
       FProcDescriptor.Describe(OCI_PTYPE_UNK, StoredProcName);
       {$ELSE}
-      ProcSQL := ZRawToUnicode(StoredProcName, ConSettings.CTRL_CP);
+      ProcSQL := ZRawToUnicode(StoredProcName, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF});
       FProcDescriptor.Describe(OCI_PTYPE_UNK, ProcSQL);
       {$ENDIF}
     end;
@@ -2970,7 +2974,7 @@ var Idx: Integer;
           SQLWriter.AddText(Descriptor.AttributeName, Tmp);
           SQLWriter.Finalize(tmp);
           {$IFNDEF UNICODE}
-          S := ZUnicodeToRaw(tmp, ConSettings.CTRL_CP);
+          S := ZUnicodeToRaw(tmp, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF});
           {$ENDIF}
           if FExecStatement = nil then
             RegisterParameter(IDX,
@@ -3000,7 +3004,7 @@ begin
     if FProcDescriptor.ObjType = OCI_PTYPE_UNK then begin
       { describe the object: }
       {$IFNDEF UNICODE}
-      S := ZRawToUnicode(StoredProcName, ConSettings.CTRL_CP);
+      S := ZRawToUnicode(StoredProcName, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF});
       FProcDescriptor.Describe(OCI_PTYPE_UNK, S);
       {$ELSE}
       FProcDescriptor.Describe(OCI_PTYPE_UNK, StoredProcName);

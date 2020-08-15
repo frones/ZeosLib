@@ -1853,6 +1853,7 @@ var
     SetLength(ClientStrings, BatchDMLArrayCount);
     case VariantType of
       {$IFNDEF UNICODE}
+        {$IFNDEF NO_AUTOENCODE}
       vtString: begin
           for I := 0 to BatchDMLArrayCount -1 do begin
             ClientStrings[i] := ConSettings^.ConvFuncs.ZStringToRaw(TStringDynArray(Value)[i], ConSettings^.CTRL_CP, ClientCP);
@@ -1860,6 +1861,7 @@ var
           end;
           goto move_from_temp;
         end;
+        {$ENDIF}
       {$ENDIF}
       {$IFNDEF NO_ANSISTRING}
       vtAnsiString: begin
@@ -2142,9 +2144,14 @@ begin
         Bind^.length_address^ := Bind^.length;
         case VariantType of
           {$IFNDEF UNICODE}
-          vtString: if not ConSettings.AutoEncode and (ConSettings^.CTRL_CP = ClientCP)
+          vtString:
+            {$IFDEF NO_AUTOENCODE}
+            BindRaw;
+            {$ELSE}
+            if not ConSettings.AutoEncode and (ConSettings^.CTRL_CP = ClientCP)
             then BindRaw
             else BindRawFromConvertion;
+            {$ENDIF}
           {$ENDIF}
           {$IFNDEF NO_ANSISTRING}
           vtAnsiString: if (ZOSCodePage = ClientCP)
