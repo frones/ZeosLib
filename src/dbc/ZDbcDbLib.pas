@@ -496,7 +496,7 @@ procedure TZDBLibConnection.CheckDBLibError(LoggingCategory: TZLoggingCategory;
   const LogMessage: SQLString; const Sender: IImmediatelyReleasable);
 var I: Integer;
   rException, rWarningOrInfo: RawByteString;
-  FirstError: Integer;
+  FirstError, FirstSeverity: Integer;
   FormatStr: String;
   lErrorEntry: PDBLibError;
   lMesageEntry: PDBLibMessage;
@@ -526,6 +526,7 @@ begin
   rException := EmptyRaw;
   rWarningOrInfo := EmptyRaw;
   FirstError := 0;
+  FirstSeverity := 0;
   if ConSettings.ClientCodePage <> nil
   then msgCP := ConSettings.ClientCodePage.CP
   else msgCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};;
@@ -541,6 +542,8 @@ begin
         if lErrorEntry^.DbErr > EXINFO then begin
           if FirstError = 0 then
             FirstError := lErrorEntry^.DbErr;
+          if FirstSeverity = 0 then
+            FirstSeverity := lErrorEntry^.Severity;
           SQLWriter.AddLineFeedIfNotEmpty(rException);
           SQLWriter.AddText('DBError : [', rException);
           IntToBuf(lErrorEntry^.DbErr, rException);
@@ -550,6 +553,8 @@ begin
         if lErrorEntry^.OsErr > EXINFO then begin
           if FirstError = 0 then
             FirstError := lErrorEntry^.OsErr;
+          if FirstSeverity = 0 then
+            FirstSeverity := lErrorEntry^.Severity;
           SQLWriter.AddLineFeedIfNotEmpty(rException);
           SQLWriter.AddText('OSError : [', rException);
           IntToBuf(lErrorEntry^.OsErr, rException);
@@ -567,11 +572,23 @@ begin
         if lMesageEntry^.MsgNo <> 5701 then begin
           if FirstError = 0 then
             FirstError := lMesageEntry^.MsgNo;
-          SQLWriter.AddLineFeedIfNotEmpty(rWarningOrInfo);
-          SQLWriter.AddText('MsgNo : [', rWarningOrInfo);
-          IntToBuf(lMesageEntry^.MsgNo, rWarningOrInfo);
-          SQLWriter.AddText('] : ', rWarningOrInfo);
-          SQLWriter.AddText(lMesageEntry^.MsgText, rWarningOrInfo);
+          if FirstSeverity = 0 then
+            FirstSeverity := lMesageEntry^.Severity;
+          if (lMesageEntry^.Severity = EXNONFATAL) or (lMesageEntry^.Severity <= EXINFO) then begin
+            SQLWriter.AddLineFeedIfNotEmpty(rWarningOrInfo);
+            SQLWriter.AddText('MsgNo : [', rWarningOrInfo);
+            IntToBuf(lMesageEntry^.MsgNo, rWarningOrInfo);
+            SQLWriter.AddText('] : ', rWarningOrInfo);
+            SQLWriter.AddText(lMesageEntry^.MsgText, rWarningOrInfo);
+          end else begin
+            SQLWriter.Finalize(rWarningOrInfo);
+            SQLWriter.AddLineFeedIfNotEmpty(rException);
+            SQLWriter.AddText('MsgNo : [', rException);
+            IntToBuf(lMesageEntry^.MsgNo, rException);
+            SQLWriter.AddText('] : ', rException);
+            SQLWriter.AddText(lMesageEntry^.MsgText, rException);
+            SQLWriter.Finalize(rException);
+          end;
         end;
         Dispose(lMesageEntry);
       end;
@@ -582,7 +599,7 @@ begin
     FreeAndNil(SQLWriter);
   end;
   if rException <> EmptyRaw then begin
-    if FplainDriver.dbdead(FHandle) <> 0
+    if (FirstSeverity >= EXRESOURCE) and (FirstSeverity <= EXFATAL)
     then ExeptionClass := EZSQLConnectionLost
     else ExeptionClass := EZSQLException;
     {$IFDEF UNICODE}
