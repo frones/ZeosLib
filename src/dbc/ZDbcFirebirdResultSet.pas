@@ -481,7 +481,11 @@ function TZFirebirdResultSet.First: Boolean;
 var Status: Integer;
 begin
   Result := False;
-  if not Closed and (FResultSetAddr^ <> nil) then begin
+  if ResultSetType = rtForwardOnly then
+    if RowNo = 0
+    then Result := Next
+    else raise EZSQLException.Create(SOperationIsNotAllowed1)
+  else if not Closed and (FResultSetAddr^ <> nil) then begin
     if (FResultSet = nil) then begin
       FResultSet := FResultSetAddr^;
       RegisterCursor;
@@ -514,13 +518,17 @@ end;
 }
 function TZFirebirdResultSet.IsAfterLast: Boolean;
 begin
-  Result := True;
-  if not Closed and (FResultSetAddr^ <> nil) then begin
-    if (FResultSet = nil) then begin
-      FResultSet := FResultSetAddr^;
-      RegisterCursor;
+  if ResultSetType = rtForwardOnly then
+    Result := (RowNo > LastRowNo)
+  else begin
+    Result := True;
+    if not Closed and (FResultSetAddr^ <> nil) then begin
+      if (FResultSet = nil) then begin
+        FResultSet := FResultSetAddr^;
+        RegisterCursor;
+      end;
+      Result := FResultset.isEof(FStatus)
     end;
-    Result := FResultset.isEof(FStatus)
   end;
 end;
 
@@ -534,13 +542,17 @@ end;
 }
 function TZFirebirdResultSet.IsBeforeFirst: Boolean;
 begin
-  Result := True;
-  if not Closed and (FResultSetAddr^ <> nil) then begin
-    if (FResultSet = nil) then begin
-      FResultSet := FResultSetAddr^;
-      RegisterCursor;
+  if ResultSetType = rtForwardOnly then
+    Result :=  (FRowNo = 0)
+  else begin
+    Result := True;
+    if not Closed and (FResultSetAddr^ <> nil) then begin
+      if (FResultSet = nil) then begin
+        FResultSet := FResultSetAddr^;
+        RegisterCursor;
+      end;
+      Result := FResultset.isBof(FStatus)
     end;
-    Result := FResultset.isBof(FStatus)
   end;
 end;
 
@@ -555,6 +567,8 @@ function TZFirebirdResultSet.Last: Boolean;
 var Status: Integer;
 begin
   Result := False;
+  if ResultSetType = rtForwardOnly then
+    raise EZSQLException.Create(SOperationIsNotAllowed1);
   if not Closed and (FResultSetAddr^ <> nil) then begin
     if (FResultSet = nil) then begin
       FResultSet := FResultSetAddr^;
@@ -607,6 +621,10 @@ function TZFirebirdResultSet.MoveAbsolute(Row: Integer): Boolean;
 var Status: Integer;
 begin
   Result := False;
+  if ResultSetType = rtForwardOnly then
+    if Row = RowNo+1
+    then Result := Next
+    else raise EZSQLException.Create(SOperationIsNotAllowed1);
   if not Closed and (FResultSetAddr^ <> nil) then begin
     if (FResultSet = nil) then begin
       FResultSet := FResultSetAddr^;
@@ -652,6 +670,10 @@ function TZFirebirdResultSet.MoveRelative(Rows: Integer): Boolean;
 var Status: Integer;
 begin
   Result := False;
+  if ResultSetType = rtForwardOnly then
+    if Rows = 1
+    then Result := Next
+    else raise EZSQLException.Create(SOperationIsNotAllowed1);
   if not Closed and (FResultSetAddr^ <> nil) then begin
     if (FResultSet = nil) then begin
       FResultSet := FResultSetAddr^;
@@ -746,6 +768,8 @@ function TZFirebirdResultSet.Previous: Boolean;
 var Status: Integer;
 begin
   Result := False;
+  if ResultSetType = rtForwardOnly then
+    raise EZSQLException.Create(SOperationIsNotAllowed1);
   if not Closed and (FResultSetAddr^ <> nil) then begin
     if (FResultSet = nil) then begin
       FResultSet := FResultSetAddr^;
@@ -768,7 +792,7 @@ end;
 
 procedure TZFirebirdResultSet.ResetCursor;
 begin
-  inherited;
+  inherited ResetCursor;
   if FResultSet <> nil then begin
     FResultSet.close(FStatus);
     if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
