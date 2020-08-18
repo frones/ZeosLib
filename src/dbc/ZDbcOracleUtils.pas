@@ -1864,7 +1864,7 @@ begin
             Param.csid := OCI_UTF16ID;
           end else if Consettings.ClientCodePage.Encoding <> ceUTF16 then begin
             Param.DataSize := Param.Precision * ConSettings.ClientCodePage.CharWidth;
-            Param.CodePage := ConSettings.ClientCodePage.CP;
+            Param.CodePage := CP;
           end else begin
             Param.DataSize := Param.Precision shl 1;
             Param.CodePage := zCP_UTF16;
@@ -1873,7 +1873,7 @@ begin
         end else if (Param.csform = SQLCS_NCHAR) or (Consettings.ClientCodePage.Encoding = ceUTF16) then begin
           Param.SQLType := stUnicodeStream;
           Param.CodePage := zCP_UTF16
-        end else Param.CodePage := ConSettings.ClientCodePage.CP;
+        end else Param.CodePage := CP;
         Param.csid := Param.GetUb2(OCI_ATTR_CHARSET_ID);
       end;
     end else
