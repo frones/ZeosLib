@@ -131,6 +131,7 @@ type
     procedure TransactionParameterPufferChanged;
     function GetActiveTransaction: IZInterbaseFirebirdTransaction;
     procedure OnPropertiesChange({%H-}Sender: TObject); override;
+    function ConstructConnectionString: SQLString;
   protected
     procedure InternalClose; override;
   public
@@ -685,6 +686,72 @@ begin
 end;
 
 {**
+  Constructs the connection string for the current connection
+}
+function TZInterbaseFirebirdConnection.ConstructConnectionString: SQLString;
+var
+  Protocol: String;
+  Writer: TZSQLStringWriter;
+begin
+  Protocol := Info.Values[ConnProps_FBProtocol];
+  Protocol := LowerCase(Protocol);
+  Writer := TZSQLStringWriter.Create(512);
+  Result := '';
+  try
+    if ((Protocol = 'inet') or (Protocol = 'wnet') or (Protocol = 'xnet') or (Protocol = 'local')) then begin
+      if (GetClientVersion >= 3000000) and IsFirebirdLib then begin
+        if protocol = 'inet' then begin
+          Writer.AddText('inet://', Result);
+          Writer.AddText(HostName, Result);
+          if Port <> 0 then begin
+            Writer.AddChar(':', Result);
+            Writer.AddOrd(Port, Result);
+          end;
+          Writer.AddChar('/', Result);
+        end else if Protocol = 'wnet' then begin
+          Writer.AddText('wnet://', Result);
+          if HostName <> '' then begin
+            Writer.AddText(HostName, Result);
+            Writer.AddChar('/', Result);
+          end; //EH@Jan isn't the port missing here ? or just not required?
+        end else if Protocol = 'xnet' then
+          Writer.AddText('xnet://', Result);
+      end else if protocol = 'inet' then begin
+        if HostName = ''
+        then Writer.AddText('localhost', Result)
+        else Writer.AddText(HostName, Result);
+        if Port <> 0 then begin
+          Writer.AddChar('/', Result);
+          Writer.AddOrd(Port, Result);
+        end;
+        Writer.AddChar(':', Result);
+      end else if Protocol = 'wnet' then begin
+        Writer.AddText('\\', Result);
+        if HostName = ''
+        then Writer.AddChar('.', Result)
+        else Writer.AddText(HostName, Result);
+        if Port <> 0 then begin
+          Writer.AddChar('@', Result);
+          Writer.AddOrd(Port, Result);
+        end;
+        Writer.AddChar('\', Result);
+      end;
+    end else if HostName <> '' then begin
+      Writer.AddText(HostName, Result);
+      if Port <> 0 then begin
+        Writer.AddChar('/', Result);
+        Writer.AddOrd(Port, Result);
+      end;
+      Writer.AddChar(':', Result);
+    end;
+    Writer.AddText(Database, Result);
+    Writer.Finalize(Result);
+  finally
+    FreeAndNil(Writer);
+  end;
+end;
+
+{**
   Creates a sequence generator object.
   @param Sequence a name of the sequence generator.
   @param BlockSize a number of unique keys requested in one trip to SQL server.
@@ -868,7 +935,7 @@ begin
       Params.Insert(0, OverwritableParams[parAutoCommit]);
 
     Result := BuildPB(FInterbaseFirebirdPlainDriver, Params, isc_tpb_version3,
-      TPBPrefix, TransactionParams, ConSettings, FPB_CP);
+      TPBPrefix, TransactionParams{$IFDEF NO_AUTOENCODE)}{$IFDEF UNICODE},FPB_CP{$ENDIF}{$ELSE},ConSettings,FPB_CP{$ENDIF});
   finally
     FreeAndNil(Params);
   end;
@@ -1109,7 +1176,8 @@ begin
     // SQL code and status
     pCurrStatus.SQLCode := FInterbaseFirebirdPlainDriver.isc_sqlcode(PISC_STATUS(StatusVector));
     FInterbaseFirebirdPlainDriver.isc_sql_interprete(pCurrStatus.SQLCode, @FByteBuffer[0], SizeOf(TByteBuffer)-1);
-    pCurrStatus.SQLMessage := ConvertConnRawToString(ConSettings, @FByteBuffer[0]);
+    pCurrStatus.SQLMessage := ConvertConnRawToString({$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
+      ConSettings,{$IFEND}@FByteBuffer[0]);
     // IB data
     pCurrStatus.IBDataType := StatusVector[StatusIdx];
     case StatusVector[StatusIdx] of
@@ -1134,12 +1202,14 @@ begin
       isc_arg_interpreted,
       isc_arg_sql_state:
         begin
-          pCurrStatus.IBDataStr := ConvertConnRawToString(ConSettings, Pointer(StatusVector[StatusIdx + 1]));
+          pCurrStatus.IBDataStr := ConvertConnRawToString({$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
+            ConSettings,{$IFEND}Pointer(StatusVector[StatusIdx + 1]));
           Inc(StatusIdx, 2);
         end;
       isc_arg_cstring: // length and pointer to string
         begin
-          pCurrStatus.IBDataStr := ConvertConnRawToString(ConSettings, Pointer(StatusVector[StatusIdx + 2]), StatusVector[StatusIdx + 1]);
+          pCurrStatus.IBDataStr := ConvertConnRawToString({$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
+            ConSettings,{$IFEND}Pointer(StatusVector[StatusIdx + 2]), StatusVector[StatusIdx + 1]);
           Inc(StatusIdx, 3);
         end;
       isc_arg_warning: begin// must not happen for error vector
@@ -1155,7 +1225,8 @@ begin
         Break;
     end else if FInterbaseFirebirdPlainDriver.isc_interprete(@FByteBuffer[0], @StatusVector) = 0 then
       Break;
-    pCurrStatus.IBMessage := ConvertConnRawToString(ConSettings, @FByteBuffer[0]);
+    pCurrStatus.IBMessage := ConvertConnRawToString({$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
+            ConSettings,{$IFEND}@FByteBuffer[0]);
   until False;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
