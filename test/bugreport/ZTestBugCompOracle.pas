@@ -246,8 +246,8 @@ begin
     ConSettings := Connection.DbcConnection.GetConSettings;
     CheckEquals(6, Query.Fields.Count);
     CheckEquals('', Query.Fields[2].AsString);
-    CheckMemoFieldType(Query.Fields[2].DataType, Connection.ControlsCodePage);
-    CheckMemoFieldType(Query.Fields[3].DataType, Connection.ControlsCodePage);
+    CheckMemoFieldType(Query.Fields[2]{$IFNDEF NO_AUTOENCODE}.DataType{$ENDIF}, Connection.ControlsCodePage);
+    CheckMemoFieldType(Query.Fields[3]{$IFNDEF NO_AUTOENCODE}.DataType{$ENDIF}, Connection.ControlsCodePage);
     Query.Next;
     CheckEquals('Test string', Query.Fields[2].AsString); //read ORA NCLOB
     Query.Next;
@@ -291,8 +291,13 @@ begin
             CheckEquals(UTF8Encode(teststring+teststring), Query.FieldByName('b_nclob').AsString, 'value of b_nclob field');
             CheckEquals(UTF8Encode(teststring+teststring+teststring), Query.FieldByName('b_clob').AsString, 'value of b_clob field');
           end else begin
-            CheckEquals(ZUnicodeToString(teststring+teststring, CP), Query.FieldByName('b_nclob').AsString,'value of b_nclob field');
-            CheckEquals(ZUnicodeToString(teststring+teststring+teststring, CP), Query.FieldByName('b_clob').AsString,'value of b_clob field');
+            {$IFDEF UNICODE}
+            CheckEquals(teststring+teststring, Query.FieldByName('b_nclob').AsString,'value of b_nclob field');
+            CheckEquals(teststring+teststring+teststring, Query.FieldByName('b_clob').AsString,'value of b_clob field');
+            {$ELSE}
+            CheckEquals(ZUnicodeToRaw(teststring+teststring, CP), Query.FieldByName('b_nclob').AsString,'value of b_nclob field');
+            CheckEquals(ZUnicodeToRaw(teststring+teststring+teststring, CP), Query.FieldByName('b_clob').AsString,'value of b_clob field');
+            {$ENDIF}
           end;
         {$ENDIF}
       end;

@@ -254,6 +254,7 @@ begin
     {$ELSE}
     Tmp := FChildEvents.Strings[I];
     {$ENDIF}
+    Tmp := 'listen ' + Tmp;
 {$ELSE}
     Tmp := 'listen ' + ICon.GetConSettings.ConvFuncs.ZStringToRaw(FChildEvents.Strings[I],
       ICon.GetConSettings.CTRL_CP, ICon.GetConSettings.ClientCodePage.CP);
@@ -294,6 +295,7 @@ begin
     {$ELSE}
     Tmp := FChildEvents.Strings[I];
     {$ENDIF}
+    Tmp := 'unlisten ' + Tmp;
 {$ELSE}
     Tmp := 'unlisten ' + ICon.GetConSettings.ConvFuncs.ZStringToRaw(FChildEvents.Strings[I],
       ICon.GetConSettings.CTRL_CP, ICon.GetConSettings.ClientCodePage.CP);

@@ -1987,6 +1987,7 @@ procedure ZTestCompCoreBugReport.TestSF270_1;
 var
   Query: TZQuery;
   PersonName: String;
+  Succeeded: Boolean;
 begin
   if SkipForReason(srClosedBug) then Exit;
 
@@ -1999,11 +2000,13 @@ begin
     Query.Edit;
     Query.FieldByName('p_name').AsString := '';
     Query.FieldByName('p_name').AsString := PersonName;
+    Succeeded := False;
     try
       Query.Post;
-    except
-      Query.Cancel;
-      raise;
+      Succeeded := True;
+    finally
+      if not Succeeded then
+        Query.Cancel;
     end;
     Query.Close;
   finally
@@ -2195,8 +2198,8 @@ const {Test Strings}
   Str3: UnicodeString = #$041E#$0434#$043D#$043E#$0439#$0020#$0438#$0437#$0020#$043D#$0430#$0438#$0431#$043E#$043B#$0435#$0435;
   Str4: UnicodeString = #$0442#$0440#$0438#$0432#$0438#$0430#$043B#$044C#$043D#$044B#$0445#$0020#$0437#$0430#$0434#$0430#$0447;
   Str5: UnicodeString = #$0440#$0435#$0448#$0430#$0435#$043C#$044B#$0445#$0020#$043C#$043D#$043E#$0433#$0438#$043C#$0438;
-  Str6: UnicodeString = #$043A#$043E#$043B#$043B#$0435#$043A#$0442#$0438#$0432#$0430#$043C+
-                      #$0438#$0020#$043F#$0440#$043E#$0433#$0440#$0430#$043C#$043C#$0438#$0441#$0442#$043E#$0432;
+  (*Str6: UnicodeString = #$043A#$043E#$043B#$043B#$0435#$043A#$0442#$0438#$0432#$0430#$043C+
+                      #$0438#$0020#$043F#$0440#$043E#$0433#$0440#$0430#$043C#$043C#$0438#$0441#$0442#$043E#$0432;*)
 
 {$IFDEF MSWINDOWS}
 procedure ZTestCompCoreBugReportMBCs.TestUnicodeBehavior;
@@ -2210,9 +2213,11 @@ var
   {$IFDEF UNICODE}
   DSCCString: RawByteString;
   {$ELSE}
+    {$IFNDEF NO_AUTOENCODE}
     {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE} //FPC silently converts the string cp's
     R: RawByteString;
     S: String;
+    {$ENDIF}
     {$ENDIF}
   {$ENDIF}
 begin
@@ -2241,6 +2246,9 @@ begin
     Check(Query.Connection.Connected, 'Connected');
     ConSettings := connection.DbcConnection.GetConSettings;
     CP := ConSettings.ClientCodePage.CP;
+    {$IFDEF NO_AUTOENCODE}
+    Check(CP <> 0, 'The Codepage can not be zero');
+    {$ENDIF}
     with Query do
     begin
       SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
@@ -2253,9 +2261,13 @@ begin
       ParamByName('P_ID').AsInteger := TEST_ROW_ID;
       ParamByName('P_NAME').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}  := Str3;
       CheckEquals(3, Query.Params.Count, 'Param.Count');
+      {$IFDEF NO_AUTOENCODE}
+      SL.Text := GetDBTestString(Str2, ttParam);
+      {$ELSE NO_AUTOENCODE}
       SL.Text := GetDBTestString(Str2, ConSettings);
+      {$ENDIF NO_AUTOENCODE}
       {$IFDEF UNICODE} //the unicode compiler are converting the streams into DefaultSystemCodePage
-      if not ConSettings.AutoEncode and (CP <> DefaultSystemCodePage) and (ConSettings.ClientCodePage.Encoding <> ceUTF16) then begin
+      if {$IFNDEF NO_AUTOENCODE}not ConSettings.AutoEncode and {$ENDIF}(CP <> DefaultSystemCodePage) and (ConSettings.ClientCodePage.Encoding <> ceUTF16) then begin
         DSCCString := ZUnicodeToRaw(SL.Text, CP);
         StrStream1.Write(Pointer(DSCCString)^, Length(DSCCString));
         StrStream1.Position := 0;
@@ -2271,11 +2283,17 @@ begin
         Open;
 
         (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
-
+        {$IFDEF NO_AUTOENCODE}
+        CheckEquals(Str2+UnicodeString(LineEnding), StrStream1, FieldByName('P_RESUME'), ConSettings, 'Param().LoadFromStream(StringStream, ftMemo) '+Protocol);
+        {$ELSE}
         CheckEquals(Str2+UnicodeString(LineEnding), StrStream1, FieldByName('P_RESUME').DataType, ConSettings, Connection.ControlsCodePage, 'Param().LoadFromStream(StringStream, ftMemo) '+Protocol);
+        {$ENDIF}
         {$IFDEF UNICODE}
         CheckEquals(Str3, FieldByName('P_NAME').AsString, 'Field(P_NAME) as String');
         {$ELSE}
+          {$IFDEF NO_AUTOENCODE}
+        CheckEquals(Str3, FieldByName('P_NAME'));
+          {$ELSE}
         if Connection.ControlsCodePage = cCP_UTF16 then
           CheckEquals(Str3, FieldByName('P_NAME').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'Field(P_NAME) as WideString '+Protocol)
         else begin
@@ -2291,6 +2309,7 @@ begin
           CheckEquals(ZUnicodeToRaw(Str3, CP), FieldByName('P_NAME').AsString, 'Field(P_NAME) as String '+Protocol);
           {$ENDIF}
         END;
+          {$ENDIF NO_AUTOENCODE}
         {$ENDIF}
       finally
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
@@ -2314,7 +2333,9 @@ var
   RowCounter: Integer;
   I: Integer;
   Str1, Str2, Str3, Str4, Str5, Str6: UnicodeString;
+  {$IFNDEF NO_AUTOENCODE}
   ConSettings: PZConSettings;
+  {$ENDIF NO_AUTOENCODE}
   procedure InsertValues(s_char, s_varchar, s_nchar, s_nvarchar: UnicodeString);
   begin
     Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
@@ -2324,10 +2345,17 @@ var
       Query.ParamByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_nchar;
       Query.ParamByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_nvarchar;
     end else begin
-      Query.ParamByName('s_char').AsString := GetDBTestString(s_char, ConSettings);;
+      {$IFDEF NO_AUTOENCODE}
+      Query.ParamByName('s_char').AsString := GetDBTestString(s_char, ttParam);
+      Query.ParamByName('s_varchar').AsString := GetDBTestString(s_varchar, ttParam);
+      Query.ParamByName('s_nchar').AsString := GetDBTestString(s_nchar, ttParam);
+      Query.ParamByName('s_nvarchar').AsString := GetDBTestString(s_nvarchar, ttParam);
+      {$ELSE NO_AUTOENCODE}
+      Query.ParamByName('s_char').AsString := GetDBTestString(s_char, ConSettings);
       Query.ParamByName('s_varchar').AsString := GetDBTestString(s_varchar, ConSettings);
       Query.ParamByName('s_nchar').AsString := GetDBTestString(s_nchar, ConSettings);
       Query.ParamByName('s_nvarchar').AsString := GetDBTestString(s_nvarchar, ConSettings);
+      {$ENDIF NO_AUTOENCODE}
     end;
     Query.ExecSQL;
     inc(RowCounter);
@@ -2372,7 +2400,9 @@ begin
   Query := CreateQuery;
   Connection.Connect;  //DbcConnection needed
   Check(Connection.Connected);
+  {$IFNDEF NO_AUTOENCODE}
   ConSettings := Connection.DbcConnection.GetConSettings;
+  {$ENDIF NO_AUTOENCODE}
   try
     RowCounter := 0;
     Query.SQL.Text := 'Insert into string_values (s_id, s_char, s_varchar, s_nchar, s_nvarchar)'+
@@ -2386,6 +2416,25 @@ begin
     Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
     Query.Open;
     CheckEquals(True, Query.RecordCount = 5);
+    {$IFDEF NO_AUTOENCODE}
+    if ProtocolType in [protASA, protASACAPI] then //ASA has a limitation of 125chars for like statements
+      Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str2, ttSQL, 125),'%'''])
+    else
+      Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str2, ttSQL),'%''']);
+    Query.Open;
+    CheckEquals(1, Query.RecordCount, 'RowCount of Str2 '+Protocol);
+    Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str3, ttSQL),'%''']);
+    Query.Open;
+    CheckEquals(2, Query.RecordCount, 'RowCount of Str3  '+Protocol);
+    Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str4, ttSQL),'%''']);
+    Query.Open;
+    CheckEquals(2, Query.RecordCount, 'RowCount of Str4 '+Protocol);
+    Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str5, ttSQL),'%''']);
+    Query.Open;
+    CheckEquals(2, Query.RecordCount, 'RowCount of Str5 '+Protocol);
+    Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str6, ttSQL),'%''']);
+    Query.Open;
+    {$ELSE}
     if ProtocolType in [protASA, protASACAPI] then //ASA has a limitation of 125chars for like statements
       Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str2, ConSettings , 125),'%'''])
     else
@@ -2403,6 +2452,7 @@ begin
     CheckEquals(2, Query.RecordCount, 'RowCount of Str5 '+Protocol);
     Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str6, ConSettings),'%''']);
     Query.Open;
+    {$ENDIF}
   finally
     for i := TestRowID to TestRowID+RowCounter do
     begin
@@ -2447,7 +2497,7 @@ begin
     {no unicode strings or utf8 allowed}
     if ((Connection.ControlsCodePage = cGET_ACP)
 {$IF defined(MSWINDOWS) and not (defined(LCL) and defined(WITH_DEFAULTSYSTEMCODEPAGE))} //LCL is hacking the default-systemcodepage so they can pass this test pass nice (utf8 to Widcharmove)
-          or (Connection.ControlsCodePage = cCP_UTF8)
+          {$IF not defined(UNICODE) or not defined(NO_AUTOENCODE)}or (Connection.ControlsCodePage = cCP_UTF8){$IFEND}
 {$IFEND}
       ) and not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_EUC_CN) or (ZOSCodePage = zCP_csISO2022JP)) then
       Exit;

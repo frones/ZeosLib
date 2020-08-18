@@ -75,6 +75,7 @@ type
 
   {** Defines the target Field-Type }
 {$IFDEF NO_AUTOENCODE}
+  TZTransliterationType = (ttField, ttParam,ttSQL);
   TZControlsCodePage = ( //EH: my name is obsolate it should be TZCharacterFieldType, left for backward compatibility
   {$IFDEF UNICODE}
     cCP_UTF16, cGET_ACP, cDynamic
@@ -416,13 +417,13 @@ begin
     stBinaryStream:
       Result := ftBlob;
     stUnicodeString: if (Precision <= 0) or (Precision > dsMaxStringSize)
-      then {$IF defined(WITH_WIDEMEMO) or defined(NO_AUTOENCODE)}if CPType = cCP_UTF16
+      then {$IF defined(WITH_WIDEMEMO) or defined(NO_AUTOENCODE)}if (CPType = cCP_UTF16) {$IFDEF NO_AUTOENCODE}or (CPType = cDynamic){$ENDIF}
         then Result := {$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}
         else {$IFEND}Result := ftMemo
       else if CPType = cCP_UTF16
         then Result := ftWideString
         else Result := ftString;
-    stUnicodeStream: {$IF defined(WITH_WIDEMEMO) or defined(NO_AUTOENCODE)}if CPType = cCP_UTF16
+    stUnicodeStream: {$IF defined(WITH_WIDEMEMO) or defined(NO_AUTOENCODE)}if (CPType = cCP_UTF16){$IFDEF NO_AUTOENCODE}or (CPType = cDynamic){$ENDIF}
         then Result := {$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}
         else {$IFEND}Result := ftMemo;
     {$IFDEF WITH_FTDATASETSUPPORT}
@@ -1482,6 +1483,7 @@ begin
     Result := nil;
     Exit;
   end;
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
   SetLength(Result, Length(FieldRefs));
   for I := 0 to High(Result) do
     for J := 0 to high(FieldsLookupTable) do
@@ -1615,84 +1617,53 @@ begin
       ExtractStrings(['.'], [' '], PChar(QualifiedName), SL);
       case SL.Count of
         0, 1: ;
-        2:
-          begin
-            if SupportsCatalogs then
-            begin
+        2:  if SupportsCatalogs then begin
               Catalog := SL.Strings[0];
-              if SupportsSchemas then
-                Schema := SL.Strings[1]
-              else
-                ObjectName := SL.Strings[1];
-            end
-            else
-              if SupportsSchemas then
-              begin
-                Schema := SL.Strings[0];
-                ObjectName := SL.Strings[1];
-              end
-              else
-                ObjectName := SL.Strings[0]+'.'+SL.Strings[1];
-          end;
-        3:
-          if SupportsCatalogs then
-          begin
-            Catalog := SL.Strings[0];
-            if SupportsSchemas then
-            begin
-              Schema := SL.Strings[1];
-              ObjectName := SL.Strings[2]
-            end
-            else
-              ObjectName := SL.Strings[1]+'.'+SL.Strings[2];
-          end
-          else
-            if SupportsSchemas then
-            begin
+              if SupportsSchemas
+              then Schema := SL.Strings[1]
+              else ObjectName := SL.Strings[1];
+            end else if SupportsSchemas then begin
+              Schema := SL.Strings[0];
+              ObjectName := SL.Strings[1];
+            end else
+              ObjectName := SL.Strings[0]+'.'+SL.Strings[1];
+        3:  if SupportsCatalogs then begin
+              Catalog := SL.Strings[0];
+              if SupportsSchemas then begin
+                Schema := SL.Strings[1];
+                ObjectName := SL.Strings[2]
+              end else
+                ObjectName := SL.Strings[1]+'.'+SL.Strings[2];
+            end else if SupportsSchemas then begin
               Schema := SL.Strings[0];
               ObjectName := SL.Strings[1]+'.'+SL.Strings[2];
-            end
-            else
+            end else
               ObjectName := SL.Strings[0]+'.'+SL.Strings[1]+'.'+SL.Strings[2];
-        else
-          if SupportsCatalogs then
-          begin
-            Catalog := SL.Strings[0];
-            if SupportsSchemas then
-            begin
-              Schema := SL.Strings[1];
-              for i := 2 to SL.Count-1 do
-                if i = 2 then
-                  ObjectName := SL.Strings[i]
-                else
-                  ObjectName := ObjectName+'.'+SL.Strings[i];
-            end
-            else
-            begin
-              ObjectName := '';
-              for i := 2 to SL.Count-1 do
-                if I = 2 then
-                  ObjectName := SL.Strings[i]
-                else
-                  ObjectName := ObjectName+'.'+SL.Strings[i];
-            end;
-          end
-          else
-            if SupportsSchemas then
-            begin
+        else if SupportsCatalogs then begin
+              Catalog := SL.Strings[0];
+              if SupportsSchemas then begin
+                Schema := SL.Strings[1];
+                for i := 2 to SL.Count-1 do
+                  if i = 2
+                  then ObjectName := SL.Strings[i]
+                  else ObjectName := ObjectName+'.'+SL.Strings[i];
+              end else begin
+                ObjectName := '';
+                for i := 2 to SL.Count-1 do
+                  if I = 2
+                  then ObjectName := SL.Strings[i]
+                  else ObjectName := ObjectName+'.'+SL.Strings[i];
+              end;
+            end else if SupportsSchemas then begin
               Schema := SL.Strings[0];
               for i := 1 to SL.Count-1 do
-                if i = 1 then
-                  ObjectName := SL.Strings[i]
-                else
-                  ObjectName := ObjectName+'.'+SL.Strings[i];
-            end
-            else
-              for i := 0 to SL.Count-1 do
-                if I = 0 then
-                  ObjectName := SL.Strings[i]
-                else
-                  ObjectName := ObjectName+'.'+SL.Strings[i];
+                if i = 1
+                then ObjectName := SL.Strings[i]
+                else ObjectName := ObjectName+'.'+SL.Strings[i];
+              end else for i := 0 to SL.Count-1 do
+                if I = 0
+                then ObjectName := SL.Strings[i]
+                else ObjectName := ObjectName+'.'+SL.Strings[i];
         end;
     finally
       SL.Free;
@@ -1865,7 +1836,7 @@ begin
                   then CP := ConSettings.CTRL_CP
                   else CP := ConSettings.ClientCodePage.CP
                 {$ELSE}
-                CP := GetTransliterateCodePage(TZAbstractRODataset(Param.DataSet).Connection.ControlsCodePage)
+                CP := TZAbstractRODataset(THackParam(Param).DataSet).Connection.CharacterTransliterateOptions.GetRawTransliterateCodePage(ttParam)
                 {$ENDIF}
               else begin
                 CP := ConSettings.ClientCodePage.CP;
@@ -1890,7 +1861,9 @@ begin
                  Statement.SetBlob(Index, stUnicodeStream, Lob);
               end else {$ENDIF}begin
                 {$IFDEF NO_AUTOENCODE}
-                CP := GetTransliterateCodePage(TZAbstractRODataset(THackParam(Param).DataSet).Connection.ControlsCodePage);
+                if ConSettings^.ClientCodePage.Encoding = ceUTF16
+                then CP := GetTransliterateCodePage(TZAbstractRODataset(THackParam(Param).DataSet).Connection.ControlsCodePage)
+                else CP := ConSettings.ClientCodePage.CP;
                 {$ELSE}
                 if ConSettings.ClientCodePage.Encoding = ceUTF16
                 then CP := ConSettings.CTRL_CP

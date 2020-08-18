@@ -2449,9 +2449,11 @@ begin
       {$ENDIF}
     {$IFEND}
 {$ELSE NO_AUTOENCODE}
-    S := Info.Values[ConnProps_ControlsCP];
+    S := Info.Values[ConnProps_RawStringEncoding];
+    if S = '' then
+      S := Info.Values[ConnProps_ControlsCP]; //left for backward compatibility
     S := UpperCase(S);
-    if S = 'DBCP'
+    if S = 'DB_CP'
     then ConSettings.W2A2WEncodingSource := encDB_CP
     else if S = 'CP_UTF8'
     then ConSettings.W2A2WEncodingSource := encUTF8

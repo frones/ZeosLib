@@ -118,6 +118,9 @@ type
   TZLoginEvent = procedure(Sender: TObject; var Username:string ; var Password: string) of object;
 
   TZAbstractTransaction = class;
+  {$IFDEF NO_AUTOENCODE}
+  TZCharacterTransliterateOptions = class;
+  {$ENDIF}
   {** Represents a component which wraps a connection to database. }
 
   { TZAbstractConnection }
@@ -165,18 +168,12 @@ type
     FOnLogin: TZLoginEvent;
     FClientCodepage: String;
     FTransactions: TZSortedList;
-    {$IFNDEF NO_AUTOENCODE}
+    {$IFDEF NO_AUTOENCODE}
+    FCharacterTransliterateOptions: TZCharacterTransliterateOptions;
+    procedure SetCharacterTransliterateOptions(Value: TZCharacterTransliterateOptions);
+    {$ELSE}
     function GetAutoEncode: Boolean;
     procedure SetAutoEncode(Value: Boolean);
-    {$ELSE}
-      {$IFNDEF UNICODE}
-    FTransliterateSQL: Boolean;
-    FTransliterateEncoding: TZW2A2WEncodingSource;
-      {$ENDIF}
-    function GetTransliterateSQL: Boolean;
-    procedure SetTransliterateSQL(Value: Boolean);
-    function GetTransliterateEncoding: TZW2A2WEncodingSource;
-    procedure SetTransliterateEncoding(Value: TZW2A2WEncodingSource);
     {$ENDIF}
     function GetHostName: string;
     procedure SetHostName(const Value: String);
@@ -302,15 +299,8 @@ type
     {$IFNDEF NO_AUTOENCODE}
     property AutoEncodeStrings: Boolean read GetAutoEncode write SetAutoEncode stored True default {$IFDEF UNICODDE}True{$ELSE}False{$ENDIF};
     {$ELSE}
-    {EH: Even if it's a NO OP for the Unicode-Compiler, it's nice to have a portable program!}
-    property TransliterateSQL: Boolean read GetTransliterateSQL
-      {$IFDEF UNCIODE}
-      write SetTransliterateSQL stored False default True;
-      {$ELSE}
-      write SetTransliterateSQL stored True default False;
-      {$ENDIF}
-    property TransliterateEncoding: TZW2A2WEncodingSource read GetTransliterateEncoding
-      write SetTransliterateEncoding stored {$IFDEF UNCIODE}false{$ELSE}true{$ENDIF} default encDB_CP;
+    property CharacterTransliterateOptions: TZCharacterTransliterateOptions read FCharacterTransliterateOptions write
+      SetCharacterTransliterateOptions;
     {$ENDIF NO_AUTOENCODE}
     property ClientCodepage: String read FClientCodepage write SetClientCodePage; //EgonHugeist
     property Catalog: string read FCatalog write FCatalog;
@@ -427,6 +417,38 @@ type
       write FDisposePendingUpdatesOnRollback default True;
   end;
 
+  {$IFDEF NO_AUTOENCODE}
+  TZCharacterTransliterateOptions = class(TPersistent)
+  private
+    FConnection: TZAbstractConnection;
+    {$IFNDEF UNICODE}
+    FSQL: Boolean;
+    {$ENDIF}
+    FEncoding: TZW2A2WEncodingSource;
+    FRawParams: Boolean;
+    FRawFields: Boolean;
+    {$IFNDEF UNICODE}
+    function GetSQL: Boolean;
+    procedure SetSQL(Value: Boolean);
+    {$ENDIF UNICODE}
+    function GetEncoding: TZW2A2WEncodingSource;
+    procedure SetEncoding(Value: TZW2A2WEncodingSource);
+  public
+    Constructor Create(AOwner: TZAbstractConnection);
+    function GetRawTransliterateCodePage(Target: TZTransliterationType): Word;
+  published
+    {$IFNDEF UNICODE}
+    property SQL: Boolean read GetSQL write SetSQL stored true default False;
+    {$ENDIF}
+    //this option is not reachable in Component-Layer for the Unicode-Compilers
+    //it's always DB_CP!! But in DBC it's also interesting. Thus another enumerator
+    property Encoding: TZW2A2WEncodingSource read GetEncoding
+      write SetEncoding stored {$IFDEF UNCIODE}False{$ELSE}True{$ENDIF} default encDB_CP;
+    property RawParams: Boolean read FRawParams write FRawParams stored true default False;
+    property RawFields: Boolean read FRawFields write FRawFields stored True default True;
+  end;
+  {$ENDIF}
+
 implementation
 
 uses ZMessages, ZAbstractRODataset, ZSysUtils,
@@ -456,6 +478,9 @@ begin
   {$ENDIF}
   FURL := TZURL.Create;
   inherited Create(AOwner);
+  {$IFDEF NO_AUTOENCODE}
+  FCharacterTransliterateOptions := TZCharacterTransliterateOptions.Create(Self);
+  {$ENDIF}
   FAutoCommit := True;
   FReadOnly := False;
   FTransactIsolationLevel := tiNone;
@@ -482,6 +507,9 @@ begin
   FSequences.Clear;
   FSequences.Free;
   FreeAndNil(FTransactions);
+  {$IFDEF NO_AUTOENCODE}
+  FreeAndNil(FCharacterTransliterateOptions);
+  {$ENDIF}
   inherited Destroy;
 end;
 
@@ -737,22 +765,6 @@ begin
   end;
 end;
 
-{$IFDEF NO_AUTOENCODE}
-procedure TZAbstractConnection.SetTransliterateEncoding(Value: TZW2A2WEncodingSource);
-begin
-  {$IFNDEF UNICODE}
-  FTransliterateEncoding := Value;
-  {$ENDIF}
-end;
-
-procedure TZAbstractConnection.SetTransliterateSQL(Value: Boolean);
-begin
-  {$IFNDEF UNICODE}
-  FTransliterateSQL := Value;
-  {$ENDIF}
-end;
-{$ENDIF}
-
 {**
   Gets a ZDBC driver for the specified protocol.
   @returns a ZDBC driver interface.
@@ -989,7 +1001,7 @@ begin
         {$IFDEF UNICODE}
         FURL.Properties.Values[ConnProps_RawStringEncoding] := 'DB_CP';
         {$ELSE}
-      case FTransliterateEncoding of //automated check..
+      case FCharacterTransliterateOptions.FEncoding of //automated check..
         encDB_CP: FURL.Properties.Values[ConnProps_RawStringEncoding] := 'DB_CP';
         encUTF8: FURL.Properties.Values[ConnProps_RawStringEncoding] := 'CP_UTF8';
         encDefaultSystemCodePage: FURL.Properties.Values[ConnProps_RawStringEncoding] := 'GET_ACP';
@@ -1543,28 +1555,6 @@ begin
     List.Add(ResultSet.GetStringByName('PROCEDURE_NAME'));
 end;
 
-{$IFDEF NO_AUTOENCODE}
-function TZAbstractConnection.GetTransliterateEncoding: TZW2A2WEncodingSource;
-begin
-  {$IFDEF UNICODE}
-  Result := encDB_CP;
-  {$ELSE}
-  Result := FTransliterateEncoding
-  {$ENDIF}
-end;
-
-function TZAbstractConnection.GetTransliterateSQL: Boolean;
-begin
-  {$IFDEF UNICODE}
-  if Connected then
-    Result := DbcConnection.GetConSettings.ClientCodePage.Encoding <> ceUTF16
-  else Result := True;
-  {$ELSE}
-  Result := FTransliterateSQL;
-  {$ENDIF}
-end;
-{$ENDIF}
-
 {**
   EgonHugeist Returns Database-Triggers
   @Param TablePattern is a "like"-pattern to get Triggers of specified Table
@@ -1656,6 +1646,14 @@ begin
   if Value <> FControlsCodePage then
     FControlsCodePage := Value;
 end;
+
+{$IFDEF NO_AUTOENCODE}
+procedure TZAbstractConnection.SetCharacterTransliterateOptions(
+  Value: TZCharacterTransliterateOptions);
+begin
+  fCharacterTransliterateOptions.Assign(Value);
+end;
+{$ENDIF}
 
 procedure TZAbstractConnection.CloseAllSequences;
 var
@@ -1957,6 +1955,84 @@ begin
   if IDX <> -1 then
     FDatasets.Delete(IDX);
 end;
+
+{ TZCharacterTransliterateOptions }
+{$IFDEF NO_AUTOENCODE}
+constructor TZCharacterTransliterateOptions.Create(
+  AOwner: TZAbstractConnection);
+begin
+  FConnection := AOwner;
+  FRawFields := True;
+end;
+
+function TZCharacterTransliterateOptions.GetEncoding: TZW2A2WEncodingSource;
+begin
+  {$IFDEF UNICODE}
+  if FrawParams
+  then Result := FEncoding
+  else Result := encDB_CP;
+  {$ELSE}
+  Result := FEncoding;
+  {$ENDIF}
+end;
+
+function TZCharacterTransliterateOptions.GetRawTransliterateCodePage(
+  Target: TZTransliterationType): Word;
+var Transliterate: Boolean;
+  ConSettings: PZConSettings;
+begin
+  FConnection.CheckConnected;
+  ConSettings := FConnection.FConnection.GetConSettings;
+  if (ConSettings.ClientCodePage.Encoding = ceUTF16) then
+    Transliterate := True
+  else case Target of
+    ttSQL:  Transliterate := {$IFDEF UNICODE}False{$ELSE}FSQL{$ENDIF};
+    ttParam: Transliterate := FRawParams;
+    else {ttField:} Transliterate := FRawFields;
+  end;
+  if Transliterate then
+    case GetEncoding of
+      encDefaultSystemCodePage: Result := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF};
+      encDB_CP: if ConSettings.ClientCodePage.Encoding = ceUTF16
+                then Result := zCP_UTF8(*if ConSettings.ClientCodePage.CP = zCP_UTF16
+                  then Result := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF}
+                  else Result := ConSettings.ClientCodePage.CP*)
+                else Result := ConSettings.ClientCodePage.CP;
+      else {encUTF8:} Result := zCP_UTF8;
+    end
+  else Result := ConSettings.ClientCodePage.CP;
+end;
+
+{$IFNDEF UNICODE}
+function TZCharacterTransliterateOptions.GetSQL: Boolean;
+begin
+  if FConnection.Connected and (FConnection.DbcConnection.GetConSettings.ClientCodePage.Encoding =ceUTF16)
+  then Result := True
+  else Result := FSQL;
+end;
+{$ENDIF UNICODE}
+
+procedure TZCharacterTransliterateOptions.SetEncoding(
+  Value: TZW2A2WEncodingSource);
+begin
+  {$IFDEF UNICODE}
+  if FrawParams
+  then FEncoding := Value
+  else FEncoding := encDB_CP;
+  {$ENDIF}
+  FEncoding := Value;
+end;
+
+{$IFNDEF UNICODE}
+procedure TZCharacterTransliterateOptions.SetSQL(Value: Boolean);
+begin
+  {$IFNDEF UNICODE}
+  FSQL := Value;
+  {$ENDIF}
+end;
+{$ENDIF UNICODE}
+
+{$ENDIF NO_AUTOENCODE}
 
 initialization
   SqlHourGlassLock := 0;

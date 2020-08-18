@@ -2055,7 +2055,7 @@ begin
     {$IFDEF UNICODE}
     System.SetString(Result, PWideChar(Pointer(Buf)), StringLength shr 1)
     {$ELSE}
-    Result := PUnicodeToRaw(PWideChar(Pointer(Buf)), StringLength shr 1, FClientCP)
+    Result := PUnicodeToRaw(PWideChar(Pointer(Buf)), StringLength shr 1, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}FClientCP{$ENDIF})
     {$ENDIF}
   else Result := '';
 end;

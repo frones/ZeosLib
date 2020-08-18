@@ -235,7 +235,7 @@ procedure MapByteToUTF16(Source: PByteArray; SourceBytes: LengthInt;
   Dest: PWordArray); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 {MBCS codepages }
-procedure AnsiMBCSToUCS2(Source: PAnsichar; SourceBytes: LengthInt;
+procedure AnsiMBCSToUTF16(Source: PAnsichar; SourceBytes: LengthInt;
   const MapProc: TMBCSMapProc; var Dest: UnicodeString);
 function UTF8ToWideChar(Source: PAnsichar; SourceBytes: LengthInt; Dest: PWideChar): NativeUInt; overload;
 function UTF8ToWideChar(source: PAnsiChar; dest: PWideChar; sourceBytes, DestWords: LengthInt): NativeUInt; overload;
@@ -1210,7 +1210,7 @@ begin
   MapProc(Pointer(Source), SourceBytes, Pointer(Dest));
 end;
 
-procedure AnsiMBCSToUCS2(Source: PAnsichar; SourceBytes: LengthInt;
+procedure AnsiMBCSToUTF16(Source: PAnsichar; SourceBytes: LengthInt;
   const MapProc: TMBCSMapProc; var Dest: UnicodeString);
 var
   Buf: array[0..dsMaxWStringSize] of WideChar; //static buf to avoid mem allocs

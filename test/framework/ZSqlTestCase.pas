@@ -62,7 +62,7 @@ uses
   Types,
 {$ENDIF}
   {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, DB, Contnrs,
-  ZDataset, ZDatasetUtils,
+  ZDataset, ZDatasetUtils, {$IFDEF NO_AUTOENCODE}ZAbstractConnection,{$ENDIF}
   ZCompatibility, ZDbcIntfs, ZConnection, ZTestCase, ZScriptParser, ZDbcLogging;
 
 const
@@ -330,22 +330,33 @@ type
     function CreateQuery: TZQuery;
     function CreateReadOnlyQuery: TZReadOnlyQuery;
     function CreateTable: TZTable;
-
     property Connection: TZConnection read FConnection write FConnection;
   public
-    function GetDBTestString(const Value: ZWideString; ConSettings: PZConSettings; MaxLen: Integer = -1): SQLString; overload;
-    procedure CheckEquals(const OrgStr: ZWideString; ActualLobStream: TStream;
+{$IFDEF NO_AUTOENCODE}
+    function GetDBTestString(const Value: UnicodeString; Target: TZTransliterationType; MaxLen: Integer = -1): SQLString; overload;
+    procedure CheckEquals(const OrgStr: UnicodeString; ActualLobStream: TStream;
+      Actual: TField; ConSettings: PZConSettings; const Msg: string = ''); overload;
+    procedure CheckEquals(const OrgStr: UnicodeString; Actual: TField; const Msg: string = ''); overload;
+{$ELSE}
+    function GetDBTestString(const Value: UnicodeString; ConSettings: PZConSettings; MaxLen: Integer = -1): SQLString; overload;
+    procedure CheckEquals(const OrgStr: UnicodeString; ActualLobStream: TStream;
       Actual: TFieldType; ConSettings: PZConSettings; CPType: TZControlsCodePage; const Msg: string = ''); overload;
     {$IFNDEF UNICODE}
-    procedure CheckEquals(const OrgStr: ZWideString; Actual: String;
-      ConSettings: PZConSettings; CPType: TZControlsCodePage; const Msg: string = ''); overload;
+    procedure CheckEquals(const OrgStr: UnicodeString;
+      Actual: String; ConSettings: PZConSettings;
+      CPType: TZControlsCodePage; const Msg: string); overload;
     {$ENDIF}
+{$ENDIF}
     procedure CheckEquals(Expected, Actual: TFieldType;
       const Msg: string = ''); overload;
     procedure CheckNotEquals(Expected, Actual: TFieldType;
       const Msg: string = ''); overload;
-    procedure CheckStringFieldType(Actual: TFieldType; ControlsCodePage: TZControlsCodePage);
-    procedure CheckMemoFieldType(Actual: TFieldType; ControlsCodePage: TZControlsCodePage);
+    procedure CheckStringFieldType(Actual: {$IFDEF NO_AUTOENCODE}TField{$ELSE}TFieldType{$ENDIF}; ControlsCodePage: TZControlsCodePage);
+    {$IFDEF NO_AUTOENCODE}
+    procedure CheckStringParamType(Actual: TParam; ControlsCodePage: TZControlsCodePage);
+    procedure CheckMemoParamType(Actual: TParam; ControlsCodePage: TZControlsCodePage);
+    {$ENDIF NO_AUTOENCODE}
+    procedure CheckMemoFieldType(Actual: {$IFDEF NO_AUTOENCODE}TField{$ELSE}TFieldType{$ENDIF}; ControlsCodePage: TZControlsCodePage);
   end;
 
   {** Implements a bug test case which runs all active protocols with MB-Chars }
@@ -500,9 +511,9 @@ function TZConnectionConfig.GetProvider: TZServerProvider;
 var
   Connection: IZConnection;
 begin
-  if FProvider <> spUnknown
+  (*if FProvider <> spUnknown
   then Result := FProvider
-  else begin
+  else begin*)
     case GetProtocolType of
       protMySQL: FProvider := spMySQL;
       protPostgre: FProvider := spPostgreSQL;
@@ -516,9 +527,10 @@ begin
           Connection.Open;
           FProvider := Connection.GetServerProvider;
         end;
+      else FProvider := spUnknown;
     end;
     Result := FProvider;
-  end;
+  //end;
 end;
 
 function TZConnectionConfig.GetTransport: TZTransport;
@@ -787,9 +799,9 @@ function TZAbstractSQLTestCase.GetProvider: TZServerProvider;
 var
   Connection: IZConnection;
 begin
-  if FProvider <> spUnknown
+  {if FProvider <> spUnknown
   then Result := FProvider
-  else begin
+  else begin}
     case GetProtocolType of
       protMySQL: FProvider := spMySQL;
       protPostgre: FProvider := spPostgreSQL;
@@ -802,9 +814,10 @@ begin
           Connection.Open;
           FProvider := Connection.GetServerProvider;
         end;
+      else FProvider := spUnknown;
     end;
     Result := FProvider;
-  end;
+  //end;
 end;
 
 function TZAbstractSQLTestCase.GetTransport: TZTransport;
@@ -1006,6 +1019,7 @@ function TZAbstractSQLTestCase.RandomGUIDBytes: TBytes;
 var GUID: TGUID;
 {$ENDIF}
 begin
+  Result := nil;
   SetLength(Result, 16);
   {$IFDEF WITH_FTGUID}
   if CreateGuid(GUID) = S_OK then
@@ -1076,6 +1090,7 @@ begin
     Length := 32
   else
     Length := Min(MaxPerformanceLobSize, Length);
+  Result := nil;
   SetLength(Result, Length);
   for I := 1 to Length do
     Result[i-1] := Ord(Random(255));
@@ -1227,11 +1242,19 @@ begin
     if StartsWith(Properties[I], ConnProps_ControlsCP) then begin
       if EndsWith(Properties[I], 'GET_ACP')
       then Result.ControlsCodePage := cGET_ACP
+      {$IFNDEF NO_AUTOENCODE}
       else if EndsWith(Properties[I], 'CP_UTF8')
         then Result.ControlsCodePage := cCP_UTF8
         else {if EndsWith(Result.Properties[I], 'CP_UTF16')
           then} Result.ControlsCodePage := cCP_UTF16
           //else Result.ControlsCodePage := cCP_Native;
+      {$ELSE}
+      else {$IFNDEF UNICODE}if EndsWith(Properties[I], 'CP_UTF8')
+        then Result.ControlsCodePage := cCP_UTF8
+        else {$ENDIF}if EndsWith(Result.Properties[I], 'CP_UTF16')
+          then Result.ControlsCodePage := cCP_UTF16
+          else Result.ControlsCodePage := cDynamic;
+      {$ENDIF}
     end;
     Result.Properties.Add(Properties[I])
   end;
@@ -1524,6 +1547,7 @@ begin
 end;
 
 { TZAbstractCompSQLTestCase }
+
 procedure TZAbstractCompSQLTestCase.SetUp;
 begin
   FConnection := CreateDatasetConnection;
@@ -1544,7 +1568,38 @@ begin
   Result:=True;
 end;
 
-procedure TZAbstractCompSQLTestCase.CheckEquals(const OrgStr: ZWideString;
+{$IFDEF NO_AUTOENCODE}
+type THackDataSet = class(TZAbstractRODataSet);
+procedure TZAbstractCompSQLTestCase.CheckEquals(const OrgStr: UnicodeString;
+  ActualLobStream: TStream; Actual: TField; ConSettings: PZConSettings;
+  const Msg: string = '');
+var
+  StrStream: TMemoryStream;
+  procedure SetAnsiStream(const Value: RawByteString);
+  begin
+    StrStream.Write(PAnsiChar(Value)^, Length(Value));
+    StrStream.Position := 0;
+  end;
+begin
+  StrStream := TMemoryStream.Create;
+  {$IFDEF WITH_WIDEMEMO}
+  if Actual.InheritsFrom(TWideMemoField) then begin
+    StrStream.Write(PWideChar(OrgStr)^, Length(OrgStr)*2);
+    StrStream.Position := 0;
+  end else {$ENDIF}begin
+    Check(Actual.InheritsFrom(TMemoField), 'Should be a MemoField');
+    if TMemoField(Actual).Transliterate or (ConSettings.ClientCodePage.Encoding = ceUTF16)
+    then SetAnsiStream(ZUnicodeToRaw(OrgStr, GetTransliterateCodePage(TZAbstractRODataset(Actual.DataSet).Connection.ControlsCodePage)))
+    else SetAnsiStream(ZUnicodeToRaw(OrgStr, ConSettings.ClientCodePage.CP))
+  end;
+  try
+    CheckEquals(StrStream, ActualLobStream, Msg);
+  finally
+    StrStream.Free;
+  end;
+end;
+{$ELSE}
+procedure TZAbstractCompSQLTestCase.CheckEquals(const OrgStr: UnicodeString;
   ActualLobStream: TStream; Actual: TFieldType; ConSettings: PZConSettings;
   CPType: TZControlsCodePage; const Msg: string);
 var
@@ -1574,6 +1629,7 @@ begin
     StrStream.Free;
   end;
 end;
+{$ENDIF}
 
 {**
    Function compare two strings with depenedent to the ConnectionSettings.
@@ -1582,15 +1638,102 @@ end;
    @param Actual the second stream for compare
    @param ConSettings the Connection given settings
 }
+{$IFDEF NO_AUTOENCODE}
+procedure TZAbstractCompSQLTestCase.CheckEquals(const OrgStr: UnicodeString;
+  Actual: TField; const Msg: string = '');
+var ATemp, ATemp2: AnsiString;
+    WTmp: UnicodeString;
+    Stream: TMemoryStream;
+    Idx: Integer;
+    ControlsCodePage: TZControlsCodePage;
+    ColumnCP, StringCP{, TransliterateCP}: Word;
+begin
+  Idx := THackDataSet(Actual.DataSet).ResultSetMetadata.FindColumn(Actual.FieldName);
+  Check(Idx > InvalidDbcIndex, 'the native column index was not found');
+  ColumnCP := THackDataSet(Actual.DataSet).ResultSetMetadata.GetColumnCodePage(Idx);
+  //TransliterateCP := THackDataSet(Actual.DataSet).Connection.CharacterTransliterateOptions.GetRawTransliterateCodePage(ttField);
+  ControlsCodePage := THackDataSet(Actual.DataSet).Connection.ControlsCodePage;
+  case THackDataSet(Actual.DataSet).Connection.CharacterTransliterateOptions.Encoding of
+    encDB_CP: StringCP := THackDataSet(Actual.DataSet).Connection.DbcConnection.GetConSettings.ClientCodePage.CP;
+    encUTF8: StringCP := zCP_UTF8;
+    else StringCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF};
+  end;
+  Check(StringCP <> zCP_UTF16, 'TransliterateEncoding "DB_CP" is not allowd for UTF16 drivers');
+  if Actual.InheritsFrom(TWideStringField) then begin
+    WTmp := TWideStringField(Actual).Value;
+    CheckEquals(OrgStr, WTmp, 'The UTF16 value of Field: '+Actual.FieldName);
+    Check((ControlsCodePage = cCP_UTF16) or ((ControlsCodePage = cDynamic) and (ColumnCP = zCP_UTF16)), 'The FieldType-W type');
+    {$IFNDEF UNICODE}
+      {$IFDEF WITH_DEFAULSYSTEMCODEPAGE}
+    ATemp := ZUnicodeToRaw(OrgStr, DefaultSystemCodePage);
+      {$ELSE}
+    ATemp := AnsiString(OrgStr);
+      {$ENDIF}
+    CheckEquals(ATemp, Actual.AsString, 'The raw string of Field'+Actual.FieldName);
+    {$ENDIF}
+  end else {$IFDEF WITH_WIDEMEMO}if Actual.InheritsFrom(TWideMemoField) then begin
+    CheckEquals(OrgStr, TWideMemoField(Actual).Value, 'The UTF16 value of Field: '+Actual.FieldName);
+    Check((ControlsCodePage = cCP_UTF16) or ((ControlsCodePage = cDynamic) and (ColumnCP = zCP_UTF16)), 'The FieldType-W type');
+    Stream := TMemoryStream.Create;
+    try
+      TWideMemoField(Actual).SaveToStream(Stream);
+      CheckEquals(Length(OrgStr) shl 1, Stream.Size, 'The Stream Size');
+      WTmp := '';
+      SetLength(WTmp, Length(OrgStr));
+      Stream.Position := 0;
+      Stream.Read(Pointer(WTmp)^, Stream.Size);
+      CheckEquals(OrgStr, WTmp, 'The string read back from W-Steam');
+    finally
+      Stream.Free;
+    end;
+    {$IFNDEF UNICODE}
+      {$IFDEF WITH_DEFAULSYSTEMCODEPAGE}
+    ATemp := ZUnicodeToRaw(OrgStr, DefaultSystemCodePage);
+      {$ELSE}
+    ATemp := AnsiString(OrgStr);
+      {$ENDIF}
+    CheckEquals(ATemp, Actual.AsString, 'The raw string of Field'+Actual.FieldName);
+    {$ENDIF}
+  end else {$ENDIF} if Actual.InheritsFrom(TStringField) then begin
+    if (ColumnCP = zCP_UTF16) or (TStringField(Actual).Transliterate)
+    then StringCP := GetTransliterateCodePage(ControlsCodepage)
+    else StringCP := ColumnCP;
+    ATemp := ZUnicodeToRaw(OrgStr, StringCP);
+    ATemp2 := TStringField(Actual).{$IFDEF WITH_ASANSISTRING}AsAnsiString{$ELSE}AsString{$ENDIF};
+    CheckEquals(ATemp, Atemp2, 'The raw value of Field: '+Actual.FieldName);
+    Check(ControlsCodePage in [cGET_ACP, {$IFNDEF UNICODE}cCP_UTF8,{$ENDIF}cDynamic], 'The FieldType-A type');
+  end else if Actual.InheritsFrom(TMemoField) then begin
+    Stream := TMemoryStream.Create;
+    if (ColumnCP = zCP_UTF16) or TMemoField(Actual).Transliterate then begin
+      StringCP := GetTransliterateCodePage(ControlsCodepage);
+      ATemp := ZUnicodeToRaw(OrgStr, StringCP);
+    end else ATemp := ZUnicodeToRaw(OrgStr, ColumnCP);
+    try
+      TMemoField(Actual).SaveToStream(Stream);
+      CheckEquals(Length(ATemp), Stream.Size, 'The Stream Size');
+      SetLength(ATemp2, Length(ATemp));
+      Stream.Position := 0;
+      Stream.Read(Pointer(ATemp2)^, Stream.Size);
+      CheckEquals(ATemp, ATemp2, 'The raw string read back from A-Stream');
+    finally
+      Stream.Free;
+    end;
+    if (ColumnCP = zCP_UTF16) or (TMemoField(Actual).Transliterate and (StringCP <> ColumnCP))
+    then ATemp := ZUnicodeToRaw(OrgStr, StringCP)
+    else ATemp := AnsiString(OrgStr);
+    ATemp2 := TStringField(Actual).{$IFDEF WITH_ASANSISTRING}AsAnsiString{$ELSE}AsString{$ENDIF};
+    CheckEquals(ATemp, Atemp2, 'The raw value of Field: '+Actual.FieldName);
+    Check(ControlsCodePage in [cGET_ACP, {$IFNDEF UNICODE}cCP_UTF8,{$ENDIF}cDynamic], 'The FieldType-A type');
+  end else
+    Check(False, 'wrong overload called');
+end;
+{$ELSE}
 {$IFNDEF UNICODE}
-procedure TZAbstractCompSQLTestCase.CheckEquals(const OrgStr: ZWideString;
+procedure TZAbstractCompSQLTestCase.CheckEquals(const OrgStr: UnicodeString;
   Actual: String; ConSettings: PZConSettings;
   CPType: TZControlsCodePage; const Msg: string);
-{$IFNDEF UNICODE}
 var Temp: String;
-{$ENDIF}
 begin
-  {$IFNDEF UNICODE}
   if ConSettings.ClientCodePage.Encoding = ceUTF16 then
     Temp := ZUnicodeToString(OrgStr, Consettings.CTRL_CP)
   else if ConSettings.ClientCodePage.Encoding = ceUTF8 then
@@ -1624,10 +1767,10 @@ begin
           Temp := UTF8Encode(OrgStr)
         else
           Temp := OrgStr;
-  {$ENDIF}
-  CheckEquals({$IFNDEF UNICODE}Temp{$ELSE}OrgStr{$ENDIF}, Actual, Msg)
+  CheckEquals(Temp, Actual, Msg)
 end;
 {$ENDIF UNICODE}
+{$ENDIF NO_AUTOENCODE}
 
 procedure TZAbstractCompSQLTestCase.CheckNotEquals(Expected, Actual: TFieldType;
   const Msg: string);
@@ -1638,14 +1781,57 @@ begin
   inherited CheckNotEquals(E, A, Msg);
 end;
 
-procedure TZAbstractCompSQLTestCase.CheckStringFieldType(Actual: TFieldType;
+procedure TZAbstractCompSQLTestCase.CheckStringFieldType(Actual: {$IFDEF NO_AUTOENCODE}TField{$ELSE}TFieldType{$ENDIF};
   ControlsCodePage: TZControlsCodePage);
+{$IFDEF NO_AUTOENCODE}
+var IDX: Integer;
+{$ENDIF NO_AUTOENCODE}
 begin
+  {$IFDEF NO_AUTOENCODE}
+  case ControlsCodePage of
+    cGET_ACP{$IFNDEF UNICODE},cCP_UTF8{$ENDIF}: CheckEquals(ftString, Actual.DataType, 'String Field/Parameter-Type');
+    cCP_UTF16: CheckEquals(ftWideString, Actual.DataType, 'String Field/Parameter-Type');
+    cDynamic: begin
+                IDX := THackDataSet(Actual.DataSet).ResultSetMetadata.FindColumn(Actual.FieldName);
+                if THackDataSet(Actual.DataSet).ResultSetMetadata.GetColumnType(IDX) = stUnicodeString
+                then CheckEquals(ftWideString, Actual.DataType, 'String Field/Parameter-Type')
+                else CheckEquals(ftString, Actual.DataType, 'String Field/Parameter-Type')
+              end;
+
+  end;
+  {$ELSE}
   case ControlsCodePage of
     cGET_ACP, cCP_UTF8{$IFNDEF WITH_WIDEFIELDS},cCP_UTF16{$ENDIF}: CheckEquals(ftString, Actual, 'String Field/Parameter-Type');
     {$IFDEF WITH_WIDEFIELDS}cCP_UTF16: CheckEquals(ftWideString, Actual, 'String Field/Parameter-Type');{$ENDIF}
   end;
+  {$ENDIF}
 end;
+
+{$IFDEF NO_AUTOENCODE}
+procedure TZAbstractCompSQLTestCase.CheckMemoParamType(Actual: TParam;
+  ControlsCodePage: TZControlsCodePage);
+begin
+  case ControlsCodePage of
+    cGET_ACP{$IFNDEF UNICODE},cCP_UTF8{$ENDIF}: CheckEquals(ftMemo, Actual.DataType, 'Memo Parameter-Type');
+    cCP_UTF16:  CheckEquals({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}, Actual.DataType, 'Memo Parameter-Type');
+    cDynamic:   if Actual.DataType = {$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}
+                then CheckEquals({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}, Actual.DataType, 'Memo Parameter-Type')
+                else CheckEquals(ftMemo, Actual.DataType, 'Memo Parameter-Type')
+  end;
+end;
+
+procedure TZAbstractCompSQLTestCase.CheckStringParamType(Actual: TParam;
+  ControlsCodePage: TZControlsCodePage);
+begin
+  case ControlsCodePage of
+    cGET_ACP{$IFNDEF UNICODE},cCP_UTF8{$ENDIF}: CheckEquals(ftString, Actual.DataType, 'String Parameter-Type');
+    cCP_UTF16:  CheckEquals(ftWideString, Actual.DataType, 'String Parameter-Type');
+    cDynamic:   if Actual.DataType = ftWideString
+                then CheckEquals(ftWideString, Actual.DataType, 'String Parameter-Type')
+                else CheckEquals(ftString, Actual.DataType, 'String Parameter-Type')
+  end;
+end;
+{$ENDIF NO_AUTOENCODE}
 
 procedure TZAbstractCompSQLTestCase.CheckEquals(Expected, Actual: TFieldType;
   const Msg: string);
@@ -1656,13 +1842,29 @@ begin
   inherited CheckEquals(E, A, Msg);
 end;
 
-procedure TZAbstractCompSQLTestCase.CheckMemoFieldType(Actual: TFieldType;
+procedure TZAbstractCompSQLTestCase.CheckMemoFieldType(Actual: {$IFDEF NO_AUTOENCODE}TField{$ELSE}TFieldType{$ENDIF};
   ControlsCodePage: TZControlsCodePage);
+{$IFDEF NO_AUTOENCODE}
+var IDX: Integer;
+{$ENDIF NO_AUTOENCODE}
 begin
+  {$IFDEF NO_AUTOENCODE}
+  case ControlsCodePage of
+    cGET_ACP{$IFNDEF UNICODE}, cCP_UTF8{$ENDIF}: CheckEquals(ftMemo, Actual.DataType, 'Memo-Field/Parmeter-Type');
+    cCP_UTF16: CheckEquals({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}, Actual.DataType, 'Memo-FieldParameter-Type');
+    cDynamic: begin
+                IDX := THackDataSet(Actual.DataSet).ResultSetMetadata.FindColumn(Actual.FieldName);
+                if THackDataSet(Actual.DataSet).ResultSetMetadata.GetColumnType(IDX) = stUnicodeStream
+                then CheckEquals({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}, Actual.DataType, 'Memo Field/Parameter-Type')
+                else CheckEquals(ftMemo, Actual.DataType, 'Memo Field/Parameter-Type')
+              end;
+  end;
+  {$ELSE}
   case ControlsCodePage of
     cGET_ACP, cCP_UTF8{$IFNDEF WITH_WIDEFIELDS},cCP_UTF16{$ENDIF}: CheckEquals(ftMemo, Actual, 'Memo-Field/Parmeter-Type');
     {$IFDEF WITH_WIDEFIELDS}cCP_UTF16: CheckEquals(ftWideMemo, Actual, 'Memo-FieldParameter-Type');{$ENDIF}
   end;
+  {$ENDIF}
 end;
 
 function TZAbstractCompSQLTestCase.CreateQuery: TZQuery;
@@ -1692,10 +1894,36 @@ begin
     Result.Options := Result.Options + [doPreferPrepared];
 end;
 
+{$IFDEF NO_AUTOENCODE}
+function TZAbstractCompSQLTestCase.GetDBTestString(const Value: UnicodeString;
+  Target: TZTransliterationType; MaxLen: Integer = -1): SQLString;
+var CP: Word;
+  {$IFDEF UNICODE}
+  RawTemp: RawByteString;
+  ConSettings: PZConSettings;
+  {$ENDIF}
+begin
+  {$IFDEF UNICODE}
+  ConSettings := Connection.DbcConnection.GetConSettings;
+  if (ConSettings.ClientCodePage.Encoding in [ceUTF8, ceUTF16])
+  then Result := Value
+  else begin
+    CP := ConSettings.ClientCodePage.CP;
+    RawTemp := ZUnicodeToRaw(Value, CP);
+    Result := ZRawToUnicode(RawTemp, CP);
+  end;
+  {$ELSE}
+  CP := FConnection.CharacterTransliterateOptions.GetRawTransliterateCodePage(Target);
+  Result := ZUnicodeToRaw(Value, CP);
+  {$ENDIF}
+  if (MaxLen > 0) and (Length(Result) > MaxLen) then
+    SetLength(Result, MaxLen);
+end;
+{$ELSE}
 {$IFDEF UNICODE}
   {$WARNINGS OFF}
 {$ENDIF}
-function TZAbstractCompSQLTestCase.GetDBTestString(const Value: ZWideString;
+function TZAbstractCompSQLTestCase.GetDBTestString(const Value: UnicodeString;
   ConSettings: PZConSettings; MaxLen: Integer = -1): SQLString;
 {$IFNDEF UNICODE}
 var CP: Word;
@@ -1736,7 +1964,7 @@ end;
 {$IFDEF UNICODE}
   {$WARNINGS ON}
 {$ENDIF}
-
+{$ENDIF NO_AUTOENCODE}
 
 { TZAbstractDbcSQLTestCaseMBCs }
 

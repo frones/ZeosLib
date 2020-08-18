@@ -2332,7 +2332,15 @@ begin
     begin
       ColumnInfo := TZColumnInfo.Create;
       if (prgInfo.pwszName<>nil) and (prgInfo.pwszName^<>#0) then
+        {$IFDEF NO_AUTOENCODE}
+          {$IFDEF UNICODE}
+          System.SetString(ColumnInfo.ColumnLabel, prgInfo^.pwszName, {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(prgInfo^.pwszName));
+          {$ELSE}
+          ColumnInfo.ColumnLabel := PUnicodeToRaw(prgInfo^.pwszName, {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(prgInfo^.pwszName), zCP_UTF8);
+          {$ENDIF}
+        {$ELSE}
         ColumnInfo.ColumnLabel := String(prgInfo^.pwszName);
+        {$ENDIF}
       ColumnInfo.ColumnType := ConvertOleDBTypeToSQLType(prgInfo^.wType,
         prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG <> 0,
         prgInfo.bScale, prgInfo.bPrecision);

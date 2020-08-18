@@ -444,9 +444,8 @@ begin
           Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
             IID_IRowset, @FRowsAffected, @FRowSet);
           if Failed(Status) then
-            FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
-              {$IFDEF DEBUG}'IMultipleResults.GetResult'{$ELSE}''{$ENDIF},
-              IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
+            FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+              SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
         end;
       end else begin
         Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@FRowSet);

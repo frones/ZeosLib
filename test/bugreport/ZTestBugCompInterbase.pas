@@ -109,7 +109,9 @@ type
 //    function GetSupportedProtocols: string; override;
     function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
   published
+    {$IFNDEF NO_AUTOENCODE}
     procedure Test_Param_LoadFromStream_StringStream_ftBlob;
+    {$ENDIF}
     procedure Test_Param_LoadFromStream_StringStream_ftMemo;
     procedure Test_Mantis214;
   end;
@@ -121,7 +123,7 @@ implementation
 uses
 {$IFNDEF VER130BELOW}
   Variants,
-{$ENDIF}
+{$ENDIF} 
   ZTestCase, ZTestConsts, ZSqlUpdate, ZEncoding, ZDbcInterbaseFirebirdMetadata;
 
 { ZTestCompInterbaseBugReport }
@@ -1556,7 +1558,7 @@ end;
 const
   Str2 = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
   Str3 = 'ќдной из наиболее';
-
+{$IFNDEF NO_AUTOENCODE}
 procedure ZTestCompInterbaseBugReportMBCs.Test_Param_LoadFromStream_StringStream_ftBlob;
 var
   Query: TZQuery;
@@ -1593,7 +1595,11 @@ begin
         Open;
 
         (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
+        {$IFDEF NO_AUTOENCODE}
+        CheckEquals(str2+LineEnding, StrStream1, FieldByName('P_RESUME'), Connection.DbcConnection.GetConSettings, 'Param().LoadFromStream(StringStream, ftBlob)');
+        {$ELSE}
         CheckEquals(str2+LineEnding, StrStream1, FieldByName('P_RESUME').DataType, Connection.DbcConnection.GetConSettings, Connection.ControlsCodePage, 'Param().LoadFromStream(StringStream, ftBlob)');
+        {$ENDIF}
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
         CheckEquals(1, Params.Count);
         Params[0].DataType := ftInteger;
@@ -1612,6 +1618,7 @@ begin
     Query.Free;
   end;
 end;
+{$ENDIF}
 
 //bugreport of mrLion
 procedure ZTestCompInterbaseBugReportMBCs.Test_Param_LoadFromStream_StringStream_ftMemo;
@@ -1641,8 +1648,19 @@ begin
       ParamByName('P_ID').AsInteger := TEST_ROW_ID;
       CheckEquals(3, Query.Params.Count, 'Param.Count');
 
-      ParamByName('P_NAME').AsString := GetDBTestString(Str3, Connection.DbcConnection.GetConSettings);
-      SL.Text := GetDBTestString(Str2, Connection.DbcConnection.GetConSettings);
+{$IFDEF NO_AUTOENCODE}
+      ParamByName('P_NAME').AsString := GetDBTestString(Str3, ttParam);
+      SL.Text := GetDBTestString(Str2, ttParam);
+      {$IFDEF UNICODE}
+      R := ZUnicodeToRaw(Str2+LineEnding, ConSettings^.ClientCodePage.CP);
+      StrStream1.Write(Pointer(R)^, Length(R));
+      StrStream1.Position := 0;
+      {$ELSE}
+      SL.SaveToStream(StrStream1);
+      {$ENDIF}
+{$ELSE}
+      ParamByName('P_NAME').AsString := GetDBTestString(Str3, ConSettings);
+      SL.Text := GetDBTestString(Str2, ConSettings);
       {$IFDEF UNICODE}
       if not ConSettings.AutoEncode then begin
         R := ZUnicodeToRaw(Str2+LineEnding, ConSettings^.ClientCodePage.CP);
@@ -1651,6 +1669,7 @@ begin
       end else
       {$ENDIF}
         SL.SaveToStream(StrStream1);
+{$ENDIF}
       ParamByName('P_RESUME').LoadFromStream(StrStream1, ftMemo);
 
       try
@@ -1661,7 +1680,11 @@ begin
         Open;
 
         (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
+        {$IFDEF NO_AUTOENCODE}
+        CheckEquals(str2+LineEnding, StrStream1, FieldByName('P_RESUME'), ConSettings, 'Param().LoadFromStream(StringStream, ftMemo)');
+        {$ELSE}
         CheckEquals(Str2+LineEnding, StrStream1, FieldByName('P_RESUME').DataType, ConSettings, Connection.ControlsCodePage, 'Param().LoadFromStream(StringStream, ftMemo)');
+        {$ENDIF}
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
         CheckEquals(1, Params.Count);
         Params[0].DataType := ftInteger;
@@ -1713,7 +1736,7 @@ const
 var
   iqry: TZQuery;
   ConSettings: PZConSettings;
-  Procedure AddRecord(ID: Integer; WS: UnicodeString);
+  Procedure AddRecord(ID: Integer; const WS: UnicodeString);
   begin
     iqry.ParamByName('i1').AsInteger:= ID;
     {$IFDEF UNICODE}
@@ -1728,14 +1751,46 @@ begin
 
   { prepared insert statement }
   iqry:= CreateQuery;
+  Check(iqry <> nil);
   try
     Connection.Connect; // DbcConnection needed
     ConSettings := Connection.DbcConnection.GetConSettings;
     if ConSettings^.ClientCodePage^.Encoding = ceUTF8 then
     begin
-      if ( Connection.ControlsCodePage = cCP_UTF16 ) then
-      begin
-        iqry.SQL.Add('insert into string_values(s_id,s_varchar) values (:i1,:s1)');
+      iqry.SQL.Text := 'delete from string_values where s_id > 213 and s_id < 217';
+      iqry.ExecSQL;
+{$IFNDEF NO_AUTOENCODE}
+      if ( Connection.ControlsCodePage = cCP_UTF16 ) then begin
+        iqry.Close;
+        iqry.SQL.Text :='insert into string_values(s_id,s_varchar) values (:i1,:s1)';
+        iqry.Prepare;
+        AddRecord(RowID, S1);
+        AddRecord(RowID+1,S2);
+        AddRecord(RowID+2,S3);
+
+        iqry.SQL.Text := 'select s_varchar from string_values where s_id > 213 and s_id < 217';
+        iqry.open;
+        {$IFDEF WITH_WIDEMEMO}
+          {$IFDEF UNICODE}
+          CheckEquals(S1, iqry.Fields[0].AsString);
+          iqry.Next;
+          CheckEquals(S2, iqry.Fields[0].AsString);
+          iqry.Next;
+          CheckEquals(S3, iqry.Fields[0].AsString);
+          {$ELSE UNICODE}
+          CheckEquals(S1, iqry.Fields[0].AsWideString);
+          iqry.Next;
+          CheckEquals(S2, iqry.Fields[0].AsWideString);
+          iqry.Next;
+          CheckEquals(S3, iqry.Fields[0].AsWideString);
+          {$ENDIF UNICODE}
+        {$ENDIF WITH_WIDEMEMO}
+{$ELSE}
+      iqry.SQL.Text := 'select s_varchar from string_values where s_id > 213 and s_id < 217';
+      iqry.open;
+      if iqry.Fields[0].InheritsFrom(TWideStringField) then begin
+        iqry.Close;
+        iqry.SQL.Text :='insert into string_values(s_id,s_varchar) values (:i1,:s1)';
         iqry.Prepare;
         AddRecord(RowID, S1);
         AddRecord(RowID+1,S2);
@@ -1745,34 +1800,44 @@ begin
         iqry.open;
 
         CheckEquals(3, iqry.RecordCount, 'RecordCount');
-        {$IFDEF WITH_FTWIDESTRING}
-          {$IFDEF UNICODE}
+        {$IFDEF UNICODE}
           CheckEquals(S1, iqry.Fields[0].AsString);
           iqry.Next;
           CheckEquals(S2, iqry.Fields[0].AsString);
           iqry.Next;
           CheckEquals(S3, iqry.Fields[0].AsString);
-          {$ELSE}
+        {$ELSE UNICODE}
+          {$IFDEF WITH_WIDEMEMO}
           CheckEquals(S1, iqry.Fields[0].AsWideString);
           iqry.Next;
           CheckEquals(S2, iqry.Fields[0].AsWideString);
           iqry.Next;
           CheckEquals(S3, iqry.Fields[0].AsWideString);
-          {$ENDIF}
-        {$ENDIF}
+          {$ELSE WITH_WIDEMEMO}
+          CheckEquals(S1, TWideStringField(iqry.Fields[0]).Value);
+          iqry.Next;
+          CheckEquals(S2, TWideStringField(iqry.Fields[0]).Value);
+          iqry.Next;
+          CheckEquals(S3, TWideStringField(iqry.Fields[0]).Value);
+          {$ENDIF WITH_WIDEMEMO}
+        {$ENDIF UNICODE}
+{$ENDIF NO_AUTOENCODE}
       end
       else
       begin
-        iqry.SQL.Add('insert into string_values(s_id,s_varchar) values (:i1,:s1)');
+{$IFDEF NO_AUTOENCODE}
+        iqry.Close;
+{$ENDIF}
+        iqry.SQL.Text := 'insert into string_values(s_id,s_varchar) values (:i1,:s1)';
         iqry.Prepare;
         iqry.ParamByName('i1').AsInteger:= RowID;
-        iqry.ParamByName('s1').AsString:= GetDBTestString(S1, ConSettings);
+        iqry.ParamByName('s1').AsString:= GetDBTestString(S1{$IFNDEF NO_AUTOENCODE}, ConSettings{$ELSE}, ttParam{$ENDIF});
         iqry.ExecSQL;
         iqry.ParamByName('i1').AsInteger:= RowID+1;
-        iqry.ParamByName('s1').AsString:= GetDBTestString(S2, ConSettings);
+        iqry.ParamByName('s1').AsString:= GetDBTestString(S2{$IFNDEF NO_AUTOENCODE}, ConSettings{$ELSE}, ttParam{$ENDIF});
         iqry.ExecSQL;
         iqry.ParamByName('i1').AsInteger:= RowID+2;
-        iqry.ParamByName('s1').AsString:= GetDBTestString(S3, ConSettings);
+        iqry.ParamByName('s1').AsString:= GetDBTestString(S3{$IFNDEF NO_AUTOENCODE}, ConSettings{$ELSE}, ttParam{$ENDIF});
         iqry.ExecSQL;
         iqry.Unprepare;
 
@@ -1782,17 +1847,25 @@ begin
         CheckEquals(3, iqry.RecordCount, 'RecordCount');
         { note GetDBTestString might have dataloss if AutoEncode is set and the os-code does not support cyrylic or Latin1 chars ...
           so we'll skip the check because we'll never be able to get a match in such cases }
+        {$IFNDEF NO_AUTOENCODE}
         if ((ZOSCodePage = zCP_WIN1252) or (ZOSCodePage = zCP_UTF8)) or (ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP) or
             (not ConSettings^.AutoEncode and (ConSettings.CTRL_CP = zCP_UTF8)) then
            if (ConSettings.CTRL_CP = zCP_WIN1252) or (ConSettings.CTRL_CP = zCP_UTF8) then
-              CheckEquals(S1, iqry.Fields[0].AsString{$IFNDEF UNICODE}, ConSettings, Connection.ControlsCodePage{$ENDIF UNICODE});
+              CheckEquals(S1, iqry.Fields[0].AsString{$IFNDEF UNICODE}, ConSettings, Connection.ControlsCodePage, ''{$ENDIF UNICODE});
+        {$ELSE}
+        CheckEquals(S1, iqry.Fields[0]);
+        {$ENDIF}
         iqry.Next;
+        {$IFNDEF NO_AUTOENCODE}
         if ((ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zCP_UTF8)) or (ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP) or
             (not ConSettings^.AutoEncode and (ConSettings.CTRL_CP = zCP_UTF8)) then
            if (ConSettings.CTRL_CP = zCP_WIN1251) or (ConSettings.CTRL_CP = zCP_UTF8) then
-              CheckEquals(S2, iqry.Fields[0].AsString{$IFNDEF UNICODE}, ConSettings, Connection.ControlsCodePage{$ENDIF UNICODE});
+              CheckEquals(S2, iqry.Fields[0].AsString{$IFNDEF UNICODE}, ConSettings, Connection.ControlsCodePage, ''{$ENDIF UNICODE});
+        {$ELSE}
+        CheckEquals(S2, iqry.Fields[0]);
+        {$ENDIF}
         iqry.Next;
-        CheckEquals(S3, String(iqry.Fields[0].AsString));
+        CheckEquals(String(S3), iqry.Fields[0].AsString);
       end;
     end;
   finally

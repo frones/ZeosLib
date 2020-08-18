@@ -477,6 +477,7 @@ procedure TZAbstractTestCase.CheckEquals(const Expected: RawByteString;
   ActualValue: PAnsiChar; ActualLen: PNativeUInt; const Msg: string);
 var Actual: RawByteString;
 begin
+  Actual := '';
   ZSetString(ActualValue, ActualLen^, Actual);
   CheckEquals(Expected, Actual, Msg);
 end;
@@ -515,7 +516,9 @@ begin
     Fail(NotEqualsErrorMessage('NIL', 'Not NIL', Msg));
   CheckEquals(Expected.Size, Actual.Size, AddToMsg(Msg, SStreamSizesDiffer));
   Size := Expected.Size;
+  EBuf := nil;
   SetLength(EBuf, Size);
+  ABuf := nil;
   SetLength(ABuf, Size);
   Expected.Position := 0;
   Actual.Position := 0;
@@ -567,7 +570,7 @@ begin
   {$IFNDEF WITH_TESTCASE_ERROR_ADDRESS}
   AssertTrue(ComparisonMsg(Expected, Actual), Expected = Actual);
   {$ELSE}
-  AssertTrue(ComparisonMsg(Msg, Expected, Actual), Expected = Actual, CallerAddr);
+  AssertTrue(ComparisonMsg(Msg, String(Expected), String(Actual)), Expected = Actual, CallerAddr);
   {$ENDIF}
 end;
 
@@ -575,7 +578,7 @@ procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: WideString;
   const Msg: string);
 begin
   if (Expected = Actual) then
-    Fail(Msg + ComparisonMsg(Expected, Actual, False))
+    Fail(Msg + ComparisonMsg(String(Expected), String(Actual), False))
   else
     Check(True);
 end;
@@ -793,12 +796,12 @@ initialization
   {$IFDEF NO_AUTOENCODE}
   ConSettingsDummy.W2A2WEncodingSource :=
     {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
-  w2a2wDefaultSystemCodePage
+  encDefaultSystemCodePage
     {$ELSE}
       {$IFDEF LCL}
-    w2a2wCP_UTF8
+    encCP_UTF8
       {$ELSE}
-    w2a2wGET_ACP
+    encDefaultSystemCodePage
       {$ENDIF}
     {$ENDIF};
   {$ELSE}

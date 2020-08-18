@@ -2547,9 +2547,11 @@ function GetW2A2WConversionCodePage(ConSettings: PZConSettings): Word; {$IFDEF W
 begin
   if (ConSettings = nil) or (ConSettings.W2A2WEncodingSource = encDefaultSystemCodePage) or (ConSettings.ClientCodePage.CP = zCP_UTF16)
   then Result := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}
-      {$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF}
+      {$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF}                        
   else if ConSettings.W2A2WEncodingSource = encDB_CP
-    then Result := ConSettings.ClientCodePage.CP
+    then if ConSettings.ClientCodePage.Encoding = ceUTF16
+      then Result := zCP_UTF8
+      else Result := ConSettings.ClientCodePage.CP
     else Result := zCP_UTF8;
 end;
 {$ENDIF NO_AUTOENCODE}

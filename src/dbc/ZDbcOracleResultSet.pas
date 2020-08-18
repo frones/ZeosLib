@@ -2261,23 +2261,24 @@ var
   CurrentVar: PZSQLVar;
   ColumnCount: ub4;
   TempColumnNameLen: Integer;
-  P: PAnsiChar;
+  P: Pointer;
   DescriptorColumnCount,SubObjectColumnCount: Integer;
   paramdpp: Pointer;
   RowSize: Integer;
   defn_or_bindpp: POCIHandle;
   acsid: ub2;
   Status: sword;
-  function AttributeToString(var P: PAnsiChar; Len: Integer):
+  function AttributeToString(var P: Pointer; Len: Integer):
     {$IF DEFINED(WITH_RAWBYTESTRING) and not DEFINED(UNICODE)}RawByteString{$ELSE}String{$IFEND};
   begin
     if P <> nil then
       if ConSettings^.ClientCodePage.Encoding = ceUTF16 then begin
         Len := Len shr 1;
         {$IFDEF UNICODE}
+        Result := '';
         System.SetString(Result, PWideChar(P), Len)
         {$ELSE}
-        Result := PUnicodeToRaw(PWideChar(P), Len, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF})
+        Result := PUnicodeToRaw(PWideChar(P), Len, {$IFDEF NO_AUTOENCODE}zCP_UTF8{$ELSE}ConSettings.CTRL_CP{$ENDIF})
         {$ENDIF}
       end else
       {$IFDEF UNICODE}
@@ -2480,7 +2481,7 @@ begin
     if (CurrentVar^.value_sz = 0) then
       continue;
     CurrentVar.indp := Pointer(P);
-    Inc(P, SizeOf(sb2)*FIteration);
+    Inc(PAnsiChar(P), SizeOf(sb2)*FIteration);
     CurrentVar.valuep := P;
     if CurrentVar^.ColType = stUnknown then
       continue;
@@ -2490,7 +2491,7 @@ begin
         if Status <> OCI_SUCCESS then
           FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
             'OCIDescriptorAlloc', Self);
-        Inc(P, SizeOf(PPOCIDescriptor));
+        Inc(PAnsiChar(P), SizeOf(PPOCIDescriptor));
       end
     else if CurrentVar^.dty = SQLT_VST then
       for J := 0 to FIteration -1 do begin
@@ -2498,10 +2499,10 @@ begin
         if Status <> OCI_SUCCESS then
           FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
             'OCIStringResize', Self);
-        Inc(P, SizeOf(PPOCIString));
+        Inc(PAnsiChar(P), SizeOf(PPOCIString));
       end
     else
-      Inc(P, CurrentVar^.value_sz*Cardinal(FIteration));
+      Inc(PAnsiChar(P), CurrentVar^.value_sz*Cardinal(FIteration));
     defn_or_bindpp := nil;
     Status := FPlainDriver.OCIDefineByPos(FStmtHandle, defn_or_bindpp,
       FOCIError, I, CurrentVar^.valuep, CurrentVar^.value_sz, CurrentVar^.dty,

@@ -1640,7 +1640,7 @@ begin
     Query.SQL.Text := 'SELECT * FROM `mysql`.`user`';
 
     Query.Open;
-    Self.CheckStringFieldType(Query.Fields[0].DataType, Connection.ControlsCodePage);
+    CheckStringFieldType(Query.Fields[0]{$IFNDEF NO_AUTOENCODE}.DataType{$ENDIF}, Connection.ControlsCodePage);
     Query.Close;
   finally
     Query.Free;
@@ -1699,7 +1699,7 @@ begin
 
     Query.Open;
     CheckEquals(1, Query.RecordCount);
-    CheckMemoFieldType(Query.Fields[0].DataType, Connection.ControlsCodePage);
+    CheckMemoFieldType(Query.Fields[0]{$IFNDEF NO_AUTOENCODE}.DataType{$ENDIF}, Connection.ControlsCodePage);
     CheckEquals('', Query.Fields[0].AsString);
     CheckEquals(False, Query.Fields[0].IsNull);
 

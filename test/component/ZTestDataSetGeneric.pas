@@ -75,6 +75,8 @@ type
   protected
     procedure TestQueryGeneric(Query: TDataset);
     procedure TestFilterGeneric(Query: TDataset);
+  protected
+    procedure Ticket433BeforePost(DataSet: TDataSet);
   published
     procedure TestConnection;
     procedure TestReadOnlyQuery;
@@ -162,7 +164,8 @@ uses
   {$IFDEF UNICODE}ZEncoding,{$ENDIF} ZFastCode,
   DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties,
   ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF},
-  TypInfo, ZDbcInterbaseFirebirdMetadata;
+  TypInfo, ZDbcInterbaseFirebirdMetadata
+  {$IFDEF NO_AUTOENCODE},ZAbstractConnection{$ENDIF};
 
 { TZGenericTestDataSet }
 
@@ -1782,6 +1785,12 @@ begin
   end;
 end;
 
+procedure TZGenericTestDataSet.Ticket433BeforePost(DataSet: TDataSet);
+begin
+  Check(DataSet.Fields[1].OldValue <> DataSet.Fields[1].Value, 'Value should be different');
+  Check(DataSet.Fields[1].OldValue <> DataSet.Fields[1].CurValue, 'Value should be different');
+end;
+
 {**
 Runs a test for Datetime locate expressions.
 }
@@ -1949,7 +1958,26 @@ begin
     CheckEquals(eq_name, 'Nissan');
     eq_name := Query.Fields[1].Value;
     CheckEquals(eq_name, 'Nissan');
+    Query.BeforePost := Ticket433BeforePost;
+    Query.Connection.StartTransaction;
+    Query.Close;
+    Query.CachedUpdates := False;
+    Query.Open;
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID;
+    Query.Fields[1].AsString := 'Ticket433';
+    Query.Post;
+    Query.Close;
+    Query.SQL.Text := 'select * FROM equipment where eq_id = -1';
+    Query.Open;
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID+1;
+    Query.Fields[1].AsString := 'Ticket433';
+    Query.Post;
+    Query.Close;
   finally
+    if not Query.Connection.AutoCommit then
+      Query.Connection.Rollback;
     Query.Free;
   end;
 end;
@@ -2669,7 +2697,7 @@ var
   s:  RawByteString;
   TextLob, BinLob: String;
   W: UnicodeString;
-  TempConnection: TZConnection;
+  OldConnection: TZConnection;
   ConSettings: PZConSettings;
 
   function WideDupeString(const AText: UnicodeString; ACount: Integer): UnicodeString;
@@ -2685,35 +2713,35 @@ var
     end;
   end;
 begin
-  TempConnection := nil;
   BinStreamE:=nil;
   BinStreamA:=nil;
   TextStream:=nil;
 
   Query := CreateQuery;
+  OldConnection := Connection;
   try
     if ProtocolType = protPostgre then
     begin
-      TempConnection := TZConnection.Create(nil);
-      TempConnection.HostName := Connection.HostName;
-      TempConnection.Port     := Connection.Port;
-      TempConnection.Database := Connection.Database;
-      TempConnection.User     := Connection.User;
-      TempConnection.Password := Connection.Password;
-      TempConnection.Protocol := Connection.Protocol;
-      TempConnection.Catalog  := Connection.Catalog;
-      TempConnection.Properties.Text := Connection.Properties.Text;
-      TempConnection.Properties.Values[DSProps_OidAsBlob] := StrTrue;
-      TempConnection.TransactIsolationLevel := tiReadCommitted;
-      TempConnection.AutoCommit := False;    //https://www.postgresql.org/message-id/002701c49d7e%240f059240%24d604460a%40zaphod
-      TempConnection.Connect;
-      Query.Connection := TempConnection;
+      Connection := TZConnection.Create(nil);
+      Connection.HostName := OldConnection.HostName;
+      Connection.Port     := OldConnection.Port;
+      Connection.Database := OldConnection.Database;
+      Connection.User     := OldConnection.User;
+      Connection.Password := OldConnection.Password;
+      Connection.Protocol := OldConnection.Protocol;
+      Connection.Catalog  := OldConnection.Catalog;
+      Connection.Properties.Text := OldConnection.Properties.Text;
+      Connection.Properties.Values[DSProps_OidAsBlob] := StrTrue;
+      Connection.TransactIsolationLevel := tiReadCommitted;
+      Connection.AutoCommit := False;    //https://www.postgresql.org/message-id/002701c49d7e%240f059240%24d604460a%40zaphod
+      Connection.Connect;
+      Query.Connection := Connection;
       Connection.TransactIsolationLevel:=tiReadCommitted;
     end;
-    if not Query.Connection.Connected then
-      Query.Connection.Connect;
+    if not Connection.Connected then
+      Connection.Connect;
 
-    ConSettings := Query.Connection.DbcConnection.GetConSettings;
+    ConSettings := Connection.DbcConnection.GetConSettings;
     with Query do
     begin
       SQL.Text := 'DELETE FROM blob_values where b_id = '+ SysUtils.IntToStr(TEST_ROW_ID-1);
@@ -2745,11 +2773,15 @@ begin
       TextStream := TMemoryStream.Create;
       W := WideDupeString(teststring,6000);
       {$IFNDEF UNICODE}
-      s:= GetDBTestString(W, ConSettings);
+        {$IFDEF NO_AUTOENCODE}
+        s:= GetDBTestString(W, ttParam);
+        {$ELSE}
+        s:= GetDBTestString(W, ConSettings);
+        {$ENDIF}
       {$ELSE}
-      if ConSettings.AutoEncode or (ConSettings.ClientCodePage.Encoding = ceUTF16)
+      {$IFNDEF NO_AUTOENCODE}if ConSettings.AutoEncode or (ConSettings.ClientCodePage.Encoding = ceUTF16)
       then S := ZUnicodeToRaw(W, ConSettings.CTRL_CP)
-      else S := ZUnicodeToRaw(W, ConSettings.ClientCodePage.CP);
+      else {$ENDIF}S := ZUnicodeToRaw(W, ConSettings.ClientCodePage.CP);
       {$ENDIF}
 
       TextStream.Write(Pointer(S)^,length(s));
@@ -2778,7 +2810,12 @@ begin
       CheckEquals(TEST_ROW_ID-1, FieldByName('b_id').AsInteger);
       TextStream := TMemoryStream.Create;
       (FieldByName(TextLob) as TBlobField).SaveToStream(TextStream);
+      {$IFDEF NO_AUTOENCODE}
+      CheckEquals(W, TextStream, FieldByName(TextLob), ConSettings, 'Text-Stream');
+      CheckEquals(W, FieldByName(TextLob), 'Text-Stream');
+      {$ELSE}
       CheckEquals(W, TextStream, FieldByName(TextLob).DataType, ConSettings, Connection.ControlsCodePage, 'Text-Stream');
+      {$ENDIF}
       FreeAndNil(TextStream);
       BinStreamA := TMemoryStream.Create;
       BinStreamA.Position:=0;
@@ -2793,11 +2830,11 @@ begin
     Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ SysUtils.IntToStr(TEST_ROW_ID-1);
     try
       Query.ExecSQL;
-      if Assigned(TempConnection) then
-        TempConnection.Commit;
+      if not Connection.AutoCommit then
+        Connection.Commit;
     finally
       Query.Free;
-      FreeAndNil(TempConnection);
+      Connection := OldConnection;
     end;
   end;
 end;

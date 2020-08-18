@@ -487,6 +487,7 @@ begin
                  edString.Visible := True;
                  edString.Text := lbUsed.Items.Values[Current.Name];
               end;
+      {$IFDEF WITH_CASE_WARNING}else;{$ENDIF}
     end;
   end;
 end;
@@ -546,6 +547,7 @@ begin
                    edString.Visible := True;
                    edString.Text := Current.Default;
                 end;
+        {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
       end;
   end;
 end;

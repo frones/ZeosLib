@@ -2445,27 +2445,31 @@ begin
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
     stString: begin
         P := GetPAnsiChar(ColumnIndex, IsNull, Len);
-        CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
+//        CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
         {$IFDEF NO_AUTOENCODE}
           {$IFDEF UNICODE}
+          CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
           Result := PRawToUnicode(P, Len, CP);
           {$ELSE}
           Result := '';
             {$IFDEF WITH_RAWBYTESTRING}
-            ZSetString(PAnsichar(P), Len, RBS, FClientCP);
+            CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
+            ZSetString(PAnsichar(P), Len, RBS, CP);
             {$ELSE}
             System.SetString(Result, PAnsiChar(P), Len)
             {$ENDIF}
           {$ENDIF}
         {$ELSE}
-        if not ConSettings^.AutoEncode or (ConSettings^.CTRL_CP = CP) or (Len=0) then
+        CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
+        if not ConSettings^.AutoEncode or (ConSettings^.CTRL_CP = CP) or (Len=0) then begin
           {$IF defined(WITH_RAWBYTESTRING) and not defined(UNICODE)}
           //implicit give the FPC the correct string CP for conversions
+          RBS := '';
           ZSetString(P, Len, RBS, FClientCP)
           {$ELSE}
           System.SetString(Result, PAnsiChar(P), Len)
           {$IFEND}
-        else begin
+        end else begin
           fUniTemp := PRawToUnicode(P, Len, FClientCP);
           {$IF defined(WITH_RAWBYTESTRING) and not defined(UNICODE)}
           //implicit give the FPC the correct string CP for conversions
