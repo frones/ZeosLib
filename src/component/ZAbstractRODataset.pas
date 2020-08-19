@@ -3350,7 +3350,7 @@ begin
           //EH: dbc internaly strores everthing in utf if a unicode(UTF8/UTF16) driver is used so what about fieldnames here?
           //we can not change the FieldName (it would break building the lookups) but we can fix the DisplayNames
           //is that a good idea? not sure yet! Just a logic decision.
-          if (Ord(FCharEncoding) >= Ord(ceUTF8)) and Connection.CharacterTransliterateOptions.RawFields and
+          if (Ord(FCharEncoding) >= Ord(ceUTF8)) and Connection.RawCharacterTransliterateOptions.RawFields and
              ({$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF} <> zCP_UTF8) then
             PRawToRawConvert(Pointer(FName), Length(FName), zCP_UTF8, {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF}, RawByteString(FName));
           {$IFEND}
@@ -3420,7 +3420,7 @@ begin
     if (Ord(FCharEncoding)  >= Ord(ceUTF8))
     then ClientCP := zCP_UTF8
     else ClientCP := ConSettings.ClientCodePage.CP;
-    sqlCP := Connection.CharacterTransliterateOptions.GetRawTransliterateCodePage(ttSQL);
+    sqlCP := Connection.RawCharacterTransliterateOptions.GetRawTransliterateCodePage(ttSQL);
     if (clientCP <> sqlCP) then begin
       NewSQL := '';
       PRawToRawConvert(Pointer(SQL), Length(SQL), sqlCP, clientCP, RawByteString(NewSQL));
@@ -8608,7 +8608,7 @@ begin
       then FColumnCP := zCP_UTF16
       else FColumnCP := FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
       Transliterate := Transliterate or (FColumnCP = zCP_UTF16) or (
-        TZAbstractRODataset(DataSet).Connection.CharacterTransliterateOptions.RawFields and
+        TZAbstractRODataset(DataSet).Connection.RawCharacterTransliterateOptions.Fields and
         (FColumnCP <>  GetTransliterateCodePage(Connection.ControlsCodePage)));
       if (FColumnCP = zCP_UTF8)
       then FBufferSize := Size shl 2
@@ -9373,7 +9373,7 @@ begin
       then FColumnCP := zCP_UTF16
       else FColumnCP := FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
       Transliterate := Transliterate or (FColumnCP = zCP_UTF16) or (
-        TZAbstractRODataset(DataSet).Connection.CharacterTransliterateOptions.RawFields and
+        TZAbstractRODataset(DataSet).Connection.RawCharacterTransliterateOptions.Fields and
         (FColumnCP <>  GetTransliterateCodePage(Connection.ControlsCodePage)));
     end;
   end;

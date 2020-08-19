@@ -1822,7 +1822,7 @@ begin
               R := RawByteString(TVarData(Param.Value).VString);
               P :=  Pointer(R);
               if P <> nil
-              then CP := TZAbstractRODataset(THackParam(Param).DataSet).Connection.CharacterTransliterateOptions.GetRawTransliterateCodePage(ttParam)
+              then CP := TZAbstractRODataset(THackParam(Param).DataSet).Connection.RawCharacterTransliterateOptions.GetRawTransliterateCodePage(ttParam)
               else begin
                 CP := ConSettings.ClientCodePage.CP;
                 P := PEmptyAnsiString;
@@ -1847,7 +1847,7 @@ begin
               end else {$ENDIF}begin
                 if ConSettings^.ClientCodePage.Encoding = ceUTF16
                 //then CP := GetTransliterateCodePage(TZAbstractRODataset(THackParam(Param).DataSet).Connection.ControlsCodePage)
-                then CP := TZAbstractRODataset(THackParam(Param).DataSet).Connection.CharacterTransliterateOptions.GetRawTransliterateCodePage(ttParam)
+                then CP := TZAbstractRODataset(THackParam(Param).DataSet).Connection.RawCharacterTransliterateOptions.GetRawTransliterateCodePage(ttParam)
                 else CP := ConSettings.ClientCodePage.CP;
                 Lob := TZLocalMemCLob.CreateWithData(PAnsiChar(P), L, CP, ConSettings, nil);
                 Statement.SetBlob(Index, stAsciiStream, Lob);

@@ -1558,13 +1558,13 @@ begin
     StringCP := GetTransliterateCodePage(ControlsCodepage);
   end else begin
     ColumnCP := THackDataSet(Actual.DataSet).ResultSetMetadata.GetColumnCodePage(Idx);
-    case THackDataSet(Actual.DataSet).Connection.CharacterTransliterateOptions.Encoding of
+    case THackDataSet(Actual.DataSet).Connection.RawCharacterTransliterateOptions.Encoding of
       encDB_CP: StringCP := ConSettings.ClientCodePage.CP;
       encUTF8: StringCP := zCP_UTF8;
       else StringCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF};
     end;
   end;
-  //TransliterateCP := THackDataSet(Actual.DataSet).Connection.CharacterTransliterateOptions.GetRawTransliterateCodePage(ttField);
+  //TransliterateCP := THackDataSet(Actual.DataSet).Connection.RawCharacterTransliterateOptions.GetRawTransliterateCodePage(ttField);
   if Actual.InheritsFrom(TWideStringField) then begin
     WTmp := TWideStringField(Actual).Value;
     CheckEquals(OrgStr, WTmp, Protocol+': The UTF16 value of Field: '+Actual.FieldName);
@@ -1753,7 +1753,7 @@ begin
     Result := ZRawToUnicode(RawTemp, CP);
   end;
   {$ELSE}
-  CP := FConnection.CharacterTransliterateOptions.GetRawTransliterateCodePage(Target);
+  CP := FConnection.RawCharacterTransliterateOptions.GetRawTransliterateCodePage(Target);
   Result := ZUnicodeToRaw(Value, CP);
   {$ENDIF}
   if (MaxLen > 0) and (Length(Result) > MaxLen) then

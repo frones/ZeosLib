@@ -2771,7 +2771,7 @@ begin
       Params[0].AsInteger := TEST_ROW_ID-1;
       TextStream := TMemoryStream.Create;
       W := WideDupeString(teststring,6000);
-      CP := Connection.CharacterTransliterateOptions.GetRawTransliterateCodePage(ttParam);
+      CP := Connection.RawCharacterTransliterateOptions.GetRawTransliterateCodePage(ttParam);
       S := ZUnicodeToRaw(W, CP);
 
       TextStream.Write(Pointer(S)^,length(s));
