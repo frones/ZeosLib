@@ -2379,7 +2379,6 @@ var
     then CachedResultSet.MoveToInitialRow
     else ResultSet.MoveToCurrentRow;
   end;
-label jmpSeek;
 begin
   RowBuffer := nil;
   case State of
@@ -2401,33 +2400,40 @@ begin
         else FResultSet.MoveAbsolute(RowBuffer.Index);
       end;
     dsCalcFields: RowBuffer := PZRowBuffer(CalcBuffer);
-    dsOldValue, dsNewValue, dsCurValue: begin
-        if (CurrentRow > 0) and (CurrentRow <= CurrentRows.Count) then begin
+    dsOldValue: if not IsEmpty then begin
+        RowBuffer := PZRowBuffer(ActiveBuffer);
+        if (RowBuffer.BookMarkFlag >= Byte(bfEOF)) then
+            //there is no OldValue for an inserted/appended row -> tag no Data
+          RowBuffer := nil
+        else begin
+          RowBuffer := OldRowBuffer;
           RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
           if RowNo <> ResultSet.GetRow then
             CheckBiDirectional;
-        end else RowNo := 0;
-
-        if (State = dsOldValue)
-        then RowBuffer := OldRowBuffer
-        else RowBuffer := NewRowBuffer;
-
-        if (RowBuffer.Index <> RowNo) then begin
-          RowAccessor.RowBuffer := RowBuffer;
-          RowAccessor.Clear;
           if (ResultSet.GetRow = RowNo) or ResultSet.MoveAbsolute(RowNo) then begin
             RowBuffer.Index := RowNo;
-            goto jmpSeek;
-          end else
-            RowBuffer := nil;
-        end else
-jmpSeek:  if (RowNo = 0) then
-            if State = dsOldValue
-            then RowBuffer := nil
-            else ResultSet.MoveToInsertRow
-          else if (State = dsOldValue)
-          then TryMoveToInitialRow
-          else ResultSet.MoveToCurrentRow;
+            TryMoveToInitialRow;
+          end else RowBuffer := nil;
+        end;
+      end;
+    dsNewValue, dsCurValue: begin
+        RowBuffer := PZRowBuffer(ActiveBuffer);
+        if (RowBuffer.BookMarkFlag >= Byte(bfEOF)) then begin
+          RowBuffer := NewRowBuffer;
+          ResultSet.MoveToInsertRow;
+        end else begin
+          RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
+          if RowNo <> ResultSet.GetRow then
+            CheckBiDirectional;
+          RowBuffer := NewRowBuffer;
+          if (ResultSet.GetRow = RowNo) or ResultSet.MoveAbsolute(RowNo) then
+            ResultSet.MoveToCurrentRow;
+          if (RowBuffer.Index <> RowNo) then begin
+            RowAccessor.RowBuffer := RowBuffer;
+            RowAccessor.Clear;
+            RowBuffer.Index := RowNo;
+          end;
+        end;
       end;
     {$IFDEF FPC}else; {$ENDIF}
   end;
