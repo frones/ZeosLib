@@ -1367,15 +1367,11 @@ var
         ColumnNamePattern := S;
       end;
       ColumnNamePattern := NormalizePatternCase(ColumnNamePattern);
-    {$IFDEF NO_AUTOENCODE}
       {$IFDEF UNICODE}
       ColPatTemp := ZUnicodeToRaw(ColumnNamePattern, zCP_UTF8);
       {$ELSE}
       ColPatTemp := ColumnNamePattern;
       {$ENDIF}
-    {$ELSE}
-      ColPatTemp := ConSettings.ConvFuncs.ZStringToRaw(ColumnNamePattern, ConSettings.CTRL_CP, zCP_UTF8);
-    {$ENDIF}
     end else begin
       CompareColLike := False;
       CompareEquals := False;
@@ -1460,26 +1456,18 @@ begin
     if HasNoWildcards(TableNamePattern) and HasNoWildcards(SchemaPattern) and ((ColumnNamePattern = '') or (ColumnNamePattern = '%')) then begin
       TempTableNamePattern := StripEscape(TableNamePattern);
       TempTableNamePattern := NormalizePatternCase(TempTableNamePattern);
-    {$IFDEF NO_AUTOENCODE}
       {$IFDEF UNICODE}
       TblTmp := ZUnicodeToRaw(TempTableNamePattern, zCP_UTF8);
       {$ELSE}
       TblTmp := TempTableNamePattern;
       {$ENDIF}
-    {$ELSE}
-      TblTmp := ConSettings.ConvFuncs.ZStringToRaw(TempTableNamePattern, ConSettings^.CTRL_CP, 65001);
-    {$ENDIF}
 
       Temp_scheme := StripEscape(SchemaPattern);
-    {$IFDEF NO_AUTOENCODE}
       {$IFDEF UNICODE}
       SchemaTmp := ZUnicodeToRaw(Temp_scheme, zCP_UTF8);
       {$ELSE}
       SchemaTmp := Temp_scheme;
       {$ENDIF}
-    {$ELSE}
-      SchemaTmp := ConSettings.ConvFuncs.ZStringToRaw(Temp_scheme, ConSettings^.CTRL_CP, 65001);
-    {$ENDIF}
       ResSet := GetStatement.ExecuteQuery('PRAGMA '+SchemaTmp+'table_info('''+TblTmp+''')');
       FillResult(ResSet, UndefinedVarcharAsStringLength, ColumnNamePattern, SchemaTmp, TblTmp);
     end else begin

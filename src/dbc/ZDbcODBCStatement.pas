@@ -1112,15 +1112,15 @@ var ArrayLen, MaxL, I: Integer;
   procedure BinLobs;
   var I: Integer;
     TmpLob: IZBlob;
-    {$IF defined(NO_AUTOENCODE) and not Defined(UNICODE)}
+    {$IFNDEF UNICODE}
     StrCP: Word;
-    {$IFEND}
+    {$ENDIF}
   begin
-    {$IF defined(NO_AUTOENCODE) and not Defined(UNICODE)}
+    {$IFNDEF UNICODE}
     if ConSettings^.ClientCodePage.Encoding = ceUTF16
     then StrCP := GetW2A2WConversionCodePage(ConSettings)
     else StrCP := FClientCP;
-    {$IFEND}
+    {$ENDIF}
     case SQLtype of
       stString,
       stUnicodeString: for I := 0 to ArrayLen-1 do begin
@@ -1153,19 +1153,9 @@ var ArrayLen, MaxL, I: Integer;
                                   Length(TRawByteStringDynArray(DA)[i]), ZOSCodePage, ConSettings);
                             {$ENDIF}
                             {$IFNDEF UNICODE}
-                            vtString: {$IFNDEF NO_AUTOENCODE}if ConSettings^.AutoEncode then
-                                        ParamDataLobs[I] :=
-                                          TZLocalMemCLob.CreateWithData(Pointer(TRawByteStringDynArray(DA)[i]),
-                                              Length(TRawByteStringDynArray(DA)[i]), zCP_None, ConSettings)
-                                      else
-                                        ParamDataLobs[I] :=
-                                          TZLocalMemCLob.CreateWithData(Pointer(TRawByteStringDynArray(DA)[i]),
-                                              Length(TRawByteStringDynArray(DA)[i]), FClientCP, ConSettings);
-                                     {$ELSE}
-                                       ParamDataLobs[I] :=
+                            vtString: ParamDataLobs[I] :=
                                        TZLocalMemCLob.CreateWithData(Pointer(TRawByteStringDynArray(DA)[i]),
                                            Length(TRawByteStringDynArray(DA)[i]), StrCP, ConSettings);
-                                     {$ENDIF}
                             {$ENDIF}
                             else
                               raise EZSQLException.Create('Unsupported String Variant');
@@ -2073,9 +2063,6 @@ var Bind: PZODBCParamBind;
   Len: NativeUInt;
   PA: PAnsiChar;
   PW: PWidechar absolute PA;
-  {$IFNDEF NO_AUTOENCODE}
-  ConvLob: IZBlob;
-  {$ENDIF NO_AUTOENCODE}
 begin
   inherited SetBlob(ParameterIndex, SQLType, Value); //inc refcnt for FPC
   if fBindImmediat then begin
@@ -2099,14 +2086,7 @@ begin
           if FClientEncoding = ceUTF16
           then Value.SetCodePageTo(zCP_UTF16)
           else Value.SetCodePageTo(FClientCP)
-        {$IFDEF NO_AUTOENCODE}
         else raise CreateConversionError(ParameterIndex, stBinaryStream, Bind.SQLType);
-        {$ELSE}
-        else if (FClientEncoding <> ceUTF16) then begin
-          ConvLob := CreateRawCLobFromBlob(Value, ConSettings, FOpenLobStreams);
-          SetBlob(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stAsciiStream, ConvLob); //recursive call
-        end;
-        {$ENDIF}
       if Bind.SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
         PIZLob(Bind.ParameterValuePtr)^ := IZBlob(BindList[ParameterIndex].Value);
         Bind.StrLen_or_IndPtr^ := SQL_DATA_AT_EXEC
@@ -2729,39 +2709,14 @@ end;
 }
 procedure TZAbstractODBCPreparedStatement.SetString(Index: Integer;
   const Value: String);
-{$IF not defined(UNICODE) and not defined(NO_AUTOENCODE)}
-var Bind: PZODBCParamBind;
-{$IFEND}
 begin
   {$IFDEF UNICODE}
   SetPWideChar(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Pointer(Value), Length(Value));
   {$ELSE}
   {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
-  {$IFNDEF NO_AUTOENCODE}
-  if ConSettings.AutoEncode and (Value <> '') then begin
-    CheckParameterIndex(Index);
-    if fBindImmediat then begin
-      {$R-}
-      Bind := @fParamBindings[Index];
-      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-      if (Bind.ValueType = SQL_C_WCHAR) then begin
-        fUniTemp := ConSettings.ConvFuncs.ZStringToUnicode(Value, ConSettings.CTRL_CP);
-        SetUnicodeString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, fUniTemp);
-      end else if (Bind.ValueType = SQL_C_CHAR) then begin
-        fRawTemp := ConSettings.ConvFuncs.ZStringToRaw(Value, ConSettings.CTRL_CP, FClientCP);
-        BindRaw(Index, FRawTemp, FClientCP);
-      end else
-       SetPAnsiChar(Index, Pointer(Value), Length(Value))
-    end else if FClientEncoding = ceUTF16 then begin
-      fUniTemp := ZRawToUnicode(Value, FClientCP);
-      BindList.Put(Index, stUnicodeString, fUniTemp);
-    end else begin
-      fRawTemp := ConSettings.ConvFuncs.ZStringToRaw(Value, ConSettings.CTRL_CP, FClientCP);
-      BindList.Put(Index, stString, Value, FClientCP);
-    end;
-  end else {$ENDIF}if FClientEncoding = ceUTF16
-    then BindRaw(Index, Value, {$IFDEF NO_AUTOENCODE}GetW2A2WConversionCodePage(ConSettings){$ELSE}ConSettings.CTRL_CP{$ENDIF})
-    else BindRaw(Index, Value, FClientCP);
+  if FClientEncoding = ceUTF16
+  then BindRaw(Index, Value, GetW2A2WConversionCodePage(ConSettings))
+  else BindRaw(Index, Value, FClientCP);
   {$ENDIF}
 end;
 

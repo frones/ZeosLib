@@ -403,9 +403,9 @@ var
   ConnectionString: SQLString;
   DBCreated: Boolean;
   Statement: IZStatement;
-  {$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
+  {$IFDEF UNICODE}
   CP: Word;
-  {$IFEND}
+  {$ENDIF}
   TimeOut: Cardinal;
   procedure PrepareDPB;
   var
@@ -413,21 +413,17 @@ var
     P: PAnsiChar;
     L: LengthInt;
   begin
-    {$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
+    {$IFDEF UNICODE}
     if (Info.IndexOf('isc_dpb_utf8_filename') = -1)
     then CP := zOSCodePage
     else CP := zCP_UTF8;
-    {$IFEND}
+    {$ENDIF}
     {$IFDEF UNICODE}
     R := ZUnicodeToRaw(ConnectionString, CP);
     {$ELSE}
-    {$IFNDEF NO_AUTOENCODE}
-    R := ZConvertStringToRawWithAutoEncode(ConnectionString, ConSettings^.CTRL_CP, CP);
-    {$ELSE}
     R :=  ConnectionString;
     {$ENDIF}
-    {$ENDIF}
-    DPB := GenerateDPB(FPlainDriver, Info {$IFDEF NO_AUTOENCODE)}{$IFDEF UNICODE},CP{$ENDIF}{$ELSE},ConSettings,CP{$ENDIF});
+    DPB := GenerateDPB(FPlainDriver, Info {$IFDEF UNICODE},CP{$ENDIF});
     P := Pointer(R);
     L := Min(1024, Length(R){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
     if L > 0 then

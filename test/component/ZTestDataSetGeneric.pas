@@ -161,11 +161,10 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  {$IFDEF UNICODE}ZEncoding,{$ENDIF} ZFastCode,
+  ZEncoding, ZFastCode,
   DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties,
   ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF},
-  TypInfo, ZDbcInterbaseFirebirdMetadata
-  {$IFDEF NO_AUTOENCODE},ZAbstractConnection{$ENDIF};
+  TypInfo, ZDbcInterbaseFirebirdMetadata;
 
 { TZGenericTestDataSet }
 
@@ -2699,7 +2698,7 @@ var
   W: UnicodeString;
   OldConnection: TZConnection;
   ConSettings: PZConSettings;
-
+  CP: Word;
   function WideDupeString(const AText: UnicodeString; ACount: Integer): UnicodeString;
   var i,l : integer;
   begin
@@ -2772,17 +2771,8 @@ begin
       Params[0].AsInteger := TEST_ROW_ID-1;
       TextStream := TMemoryStream.Create;
       W := WideDupeString(teststring,6000);
-      {$IFNDEF UNICODE}
-        {$IFDEF NO_AUTOENCODE}
-        s:= GetDBTestString(W, ttParam);
-        {$ELSE}
-        s:= GetDBTestString(W, ConSettings);
-        {$ENDIF}
-      {$ELSE}
-      {$IFNDEF NO_AUTOENCODE}if ConSettings.AutoEncode or (ConSettings.ClientCodePage.Encoding = ceUTF16)
-      then S := ZUnicodeToRaw(W, ConSettings.CTRL_CP)
-      else {$ENDIF}S := ZUnicodeToRaw(W, ConSettings.ClientCodePage.CP);
-      {$ENDIF}
+      CP := Connection.CharacterTransliterateOptions.GetRawTransliterateCodePage(ttParam);
+      S := ZUnicodeToRaw(W, CP);
 
       TextStream.Write(Pointer(S)^,length(s));
       s := '';
@@ -2810,12 +2800,8 @@ begin
       CheckEquals(TEST_ROW_ID-1, FieldByName('b_id').AsInteger);
       TextStream := TMemoryStream.Create;
       (FieldByName(TextLob) as TBlobField).SaveToStream(TextStream);
-      {$IFDEF NO_AUTOENCODE}
       CheckEquals(W, TextStream, FieldByName(TextLob), ConSettings, 'Text-Stream');
       CheckEquals(W, FieldByName(TextLob), 'Text-Stream');
-      {$ELSE}
-      CheckEquals(W, TextStream, FieldByName(TextLob).DataType, ConSettings, Connection.ControlsCodePage, 'Text-Stream');
-      {$ENDIF}
       FreeAndNil(TextStream);
       BinStreamA := TMemoryStream.Create;
       BinStreamA.Position:=0;
@@ -2834,7 +2820,12 @@ begin
         Connection.Commit;
     finally
       Query.Free;
-      Connection := OldConnection;
+      if Connection <> OldConnection then try
+        Connection.Connected := False;
+        Connection.Free;
+      finally
+        Connection := OldConnection;
+      end;
     end;
   end;
 end;

@@ -107,9 +107,7 @@ type
     procedure InternalSetTransactionIsolation(Level: TZTransactIsolationLevel);
     procedure DetermineMSDateFormat;
     function DetermineMSServerCollation: String;
-    {$IFNDEF NO_AUTOENCODE}
-    function DetermineMSServerCodePage(const Collation: String): Word;
-    {$ENDIF NO_AUTOENCODE}
+    //function DetermineMSServerCodePage(const Collation: String): Word;
     {$IFDEF TEST_CALLBACK}
     function DBMSGHANDLE(Proc: PDBPROCESS; MsgNo: DBINT; MsgState,
       Severity: Integer; MsgText, SrvName, ProcName: PAnsiChar; Line: DBUSMALLINT): Integer;
@@ -260,7 +258,6 @@ var
   Ret: RETCODE;
   P: PChar;
   E: EZSQLException;
-  {$IFDEF NO_AUTOENCODE}
   procedure SetRawFromProperties(const PropName: String);
   begin
   {$IFDEF UNICODE}
@@ -272,7 +269,6 @@ var
     RawTemp := URL.Properties.Values[PropName]
   {$ENDIF}
   end;
-  {$ENDIF}
 begin
   FLogMessage := 'CONNECT TO "'+HostName+'"';
   LoginRec := FPlainDriver.dbLogin;
@@ -321,27 +317,15 @@ begin
       end;
     end;
 //Common parameters
-    {$IFDEF NO_AUTOENCODE}
     SetRawFromProperties(ConnProps_Workstation);
-    {$ELSE NO_AUTOENCODE}
-    RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values[ConnProps_Workstation], ConSettings.CTRL_CP, ZOSCodePage);
-    {$ENDIF NO_AUTOENCODE}
     if Pointer(RawTemp) <> nil then
       FPlainDriver.dbSetLHost(LoginRec, Pointer(RawTemp));
 
-    {$IFDEF NO_AUTOENCODE}
     SetRawFromProperties(ConnProps_AppName);
-    {$ELSE NO_AUTOENCODE}
-    RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values[ConnProps_AppName], ConSettings.CTRL_CP, ZOSCodePage);
-    {$ENDIF NO_AUTOENCODE}
     if Pointer(RawTemp) <> nil then
       FPlainDriver.dbSetLApp(LoginRec, Pointer(RawTemp));
 
-    {$IFDEF NO_AUTOENCODE}
     SetRawFromProperties(ConnProps_AppName);
-    {$ELSE NO_AUTOENCODE}
-    RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values[ConnProps_AppName], ConSettings.CTRL_CP, ZOSCodePage);
-    {$ENDIF NO_AUTOENCODE}
     if Pointer(RawTemp) <> nil then
       FPlainDriver.dbSetLNatLang(LoginRec, Pointer(RawTemp));
 
@@ -360,17 +344,11 @@ begin
           lLogFile := ChangeFileExt(ParamStr(0), '.tdslog');
         {$IFDEF UNICODE}
         RawTemp := ZUnicodeToRaw(lLogFile, ZOSCodePage);
-        if RawTemp <> '' then
-          FPlainDriver.tdsDump_Open(Pointer(RawTemp));
         {$ELSE}
-          {$IFDEF NO_AUTOENCODE}
         RawTemp := lLogFile;
-        {$ELSE}
-        RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(lLogFile, ConSettings.CTRL_CP, ZOSCodePage);
         {$ENDIF}
         if RawTemp <> '' then
           FPlainDriver.tdsDump_Open(Pointer(RawTemp));
-        {$ENDIF}
       end;
     end;
 
@@ -705,40 +683,11 @@ begin
   end;
 
   (GetMetadata.GetDatabaseInfo as IZDbLibDatabaseInfo).InitIdentifierCase(GetServerCollation);
-  {$IFNDEF NO_AUTOENCODE}
-  if (FProvider = dpMsSQL) and (FPlainDriver.DBLibraryVendorType <> lvtFreeTDS) then
-  begin
-  {note: this is a hack from a user-request of synopse project!
-    Purpose is to notify Zeos all Character columns are
-    UTF8-encoded. e.g. N(VAR)CHAR. Initial idea is made for MSSQL where we've NO
-    valid tdsType to determine (Var)Char(Ansi-Encoding) or N(Var)Char(UTF8) encoding
-    So this is stopping all encoding detections and increases the performance in
-    a high rate. If Varchar fields are fetched you Should use a cast to N-Fields!
-    Else all results are invalid!!!!! Just to invoke later questions, reports!}
-    FDisposeCodePage := True;
-    ConSettings^.ClientCodePage := New(PZCodePage);
-    ConSettings^.ClientCodePage^.CP := ZOSCodePage; //need a tempory CP for the SQL preparation
-    ConSettings^.ClientCodePage^.Encoding := ceAnsi;
-    ConSettings^.ClientCodePage^.Name := DetermineMSServerCollation;
-    FServerAnsiCodePage := DetermineMSServerCodePage(ConSettings^.ClientCodePage^.Name);
-    if UpperCase(Info.Values[DSProps_ResetCodePage]) = 'UTF8' then
-    begin
-      ConSettings^.ClientCodePage^.CP := zCP_UTF8;
-      ConSettings^.ClientCodePage^.Encoding := ceUTF8;
-      ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := True;
-    end else begin
-      ConSettings^.ClientCodePage^.CP := FServerAnsiCodePage;
-      ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := False;
-    end;
-    ConSettings^.AutoEncode := True; //Must be set because we can't determine a column-codepage! e.g NCHAR vs. CHAR Fields
-    SetConvertFunctions(ConSettings);
-  end else {$ENDIF}begin
-    if (FProvider = dpSybase) and (FPlainDriver.DBLibraryVendorType <> lvtFreeTDS)
-    then ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := False;
-    FServerAnsiCodePage := ConSettings^.ClientCodePage^.CP;
-    ConSettings^.ReadFormatSettings.DateFormat := 'yyyy/mm/dd';
-    ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat;
-  end;
+  if (FProvider = dpSybase) and (FPlainDriver.DBLibraryVendorType <> lvtFreeTDS)
+  then ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := False;
+  FServerAnsiCodePage := ConSettings^.ClientCodePage^.CP;
+  ConSettings^.ReadFormatSettings.DateFormat := 'yyyy/mm/dd';
+  ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat;
   { EH:
   http://technet.microsoft.com/en-us/library/ms180878%28v=sql.105%29.aspx
    Using DATE and DATETIME in ISO 8601 format is multi-language supported:
@@ -1044,8 +993,7 @@ begin
   else Result := 'unknown';
 end;
 
-{$IFNDEF NO_AUTOENCODE}
-function TZDBLibConnection.DetermineMSServerCodePage(const Collation: String): Word;
+(*function TZDBLibConnection.DetermineMSServerCodePage(const Collation: String): Word;
 var P: PAnsiChar;
     L: LengthInt;
 {$IFDEF UNICODE}
@@ -1069,8 +1017,7 @@ begin
     Result := RawToIntDef(P, P+L, High(Word));
     FPlainDriver.dbCancel(FHandle);
   end;
-end;
-{$ENDIF NO_AUTOENCODE}
+end;*)
 
 {**
   Attempts to change the transaction isolation level to the one given.
@@ -1236,14 +1183,10 @@ var
 begin
   if (Value <> '') and not Closed then
   begin
-    {$IFNDEF NO_AUTOENCODE}
-    RawCat := ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+    {$IFDEF UNICODE}
+    RawCat := ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP);
     {$ELSE}
-      {$IFDEF UNICODE}
-      RawCat := ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP);
-      {$ELSE}
-      RawCat := Value;
-      {$ENDIF}
+    RawCat := Value;
     {$ENDIF}
     FLogMessage := 'SET CATALOG '+Value;
     if FPlainDriver.dbUse(FHandle, PAnsiChar(RawCat)) <> DBSUCCEED then

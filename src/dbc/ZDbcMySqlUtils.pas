@@ -393,9 +393,6 @@ var
   FieldLength: ULong;
   CS: Word;
   function ValueToString(Buf: PAnsiChar; Len: Cardinal): String;
-  {$IF not defined(UNICODE) and not defined(NO_AUTOENCODE)}
-  var tmp: UnicodeString;
-  {$IFEND}
   begin
     if (Buf = nil) or (AnsiChar(Buf^) = AnsiChar(#0)) then
       Result := ''
@@ -403,16 +400,8 @@ var
       {$IFDEF UNICODE}
       Result := PRawToUnicode(Buf, Len, ConSettings^.ClientCodePage^.CP);
       {$ELSE}
-        {$IFDEF NO_AUTOENCODE}
-        System.SetString(Result, Buf, Len)
-        {$ELSE}
-      if (not ConSettings^.AutoEncode) or (ConSettings^.ClientCodePage^.CP = ConSettings^.CTRL_CP)
-      then System.SetString(Result, Buf, Len)
-      else begin
-        tmp := PRawToUnicode(Buf, len, ConSettings^.ClientCodePage^.CP);
-        Result := ZUnicodeToString(tmp, ConSettings^.CTRL_CP);
-      end;
-        {$ENDIF}
+      Result := '';
+      System.SetString(Result, Buf, Len)
       {$ENDIF}
     end;
   end;

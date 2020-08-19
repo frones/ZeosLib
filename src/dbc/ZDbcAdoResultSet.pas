@@ -366,11 +366,7 @@ begin
     {$IFDEF UNICODE}
     ColName := F.Name;
     {$ELSE}
-      {$IFDEF NO_AUTOENCODE}
-      ColName := PUnicodeToRaw(Pointer(F.Name), Length(F.Name), GetW2A2WConversionCodePage(ConSettings));
-      {$ELSE}
-    ColName := PUnicodeToRaw(Pointer(F.Name), Length(F.Name), ConSettings.CTRL_CP);
-      {$ENDIF}
+    ColName := PUnicodeToRaw(Pointer(F.Name), Length(F.Name), zCP_UTF8);
     {$ENDIF}
     ColType := F.Type_;
     ColumnInfo.ColumnLabel := ColName;
@@ -764,11 +760,7 @@ Set_From_Buf:           Len := Result - PAnsiChar(fByteBuffer);
                       end;
         else begin
           PW := GetPWideChar(ColumnIndex, Len);
-          {$IFNDEF NO_AUTOENCODE}
-          FRawTemp := PUnicodeToRaw(PW, Len, ConSettings.CTRL_CP);
-          {$ELSE NO_AUTOENCODE}
           FRawTemp := PUnicodeToRaw(PW, Len, GetW2A2WConversionCodePage(ConSettings));
-          {$ENDIF NO_AUTOENCODE}
           Result := Pointer(FRawTemp);
           Len := Length(FRawTemp);
         end;

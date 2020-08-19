@@ -246,8 +246,8 @@ begin
     ConSettings := Connection.DbcConnection.GetConSettings;
     CheckEquals(6, Query.Fields.Count);
     CheckEquals('', Query.Fields[2].AsString);
-    CheckMemoFieldType(Query.Fields[2]{$IFNDEF NO_AUTOENCODE}.DataType{$ENDIF}, Connection.ControlsCodePage);
-    CheckMemoFieldType(Query.Fields[3]{$IFNDEF NO_AUTOENCODE}.DataType{$ENDIF}, Connection.ControlsCodePage);
+    CheckMemoFieldType(Query.Fields[2], Connection.ControlsCodePage);
+    CheckMemoFieldType(Query.Fields[3], Connection.ControlsCodePage);
     Query.Next;
     CheckEquals('Test string', Query.Fields[2].AsString); //read ORA NCLOB
     Query.Next;

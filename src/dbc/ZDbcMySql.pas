@@ -447,9 +447,6 @@ begin
     if (sMy_client_Char_Set <> '') {mysql 4down doesn't have this function } and
      (sMy_client_Char_Set <> FClientCodePage) then begin
       ConSettings^.ClientCodePage := FPlainDriver.ValidateCharEncoding(sMy_client_Char_Set);
-      {$IFNDEF NO_AUTOENCODE}
-      SetConvertFunctions(ConSettings);
-      {$ENDIF}
     end;
   end;
   try
@@ -522,7 +519,6 @@ setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def
           MYSQL_OPT_SSL_CA, MYSQL_OPT_SSL_CAPATH, MYSQL_OPT_SSL_CIPHER,
           MYSQL_OPT_TLS_CIPHERSUITES,
           MYSQL_OPT_COMPRESSION_ALGORITHMS: ;//skip, processed down below
-          {$IFDEF NO_AUTOENCODE}
           else  begin
                   S := Info.Values[sMyOpt];
                   if S <> '' then begin
@@ -535,12 +531,6 @@ setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def
                     FPlainDriver.mysql_options(FHandle, myopt, P);
                   end;
                 end;
-          {$ELSE}
-          else  if Info.Values[sMyOpt] <> '' then
-              FPlainDriver.mysql_options(FHandle, myopt, PAnsiChar(
-                ConSettings^.ConvFuncs.ZStringToRaw(Info.Values[sMyOpt],
-                  ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)));
-          {$ENDIF}
         end;
     end;
 
@@ -659,9 +649,6 @@ setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def
       Close;
     end;
     ConSettings^.ClientCodePage := FPlainDriver.ValidateCharEncoding(FClientCodePage);
-    {$IFNDEF NO_AUTOENCODE}
-    SetConvertFunctions(ConSettings);
-    {$ENDIF}
   end;
 end;
 

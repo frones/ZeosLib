@@ -935,7 +935,7 @@ begin
       Params.Insert(0, OverwritableParams[parAutoCommit]);
 
     Result := BuildPB(FInterbaseFirebirdPlainDriver, Params, isc_tpb_version3,
-      TPBPrefix, TransactionParams{$IFDEF NO_AUTOENCODE)}{$IFDEF UNICODE},FPB_CP{$ENDIF}{$ELSE},ConSettings,FPB_CP{$ENDIF});
+      TPBPrefix, TransactionParams{$IFDEF UNICODE},FPB_CP{$ENDIF});
   finally
     FreeAndNil(Params);
   end;
@@ -1176,8 +1176,7 @@ begin
     // SQL code and status
     pCurrStatus.SQLCode := FInterbaseFirebirdPlainDriver.isc_sqlcode(PISC_STATUS(StatusVector));
     FInterbaseFirebirdPlainDriver.isc_sql_interprete(pCurrStatus.SQLCode, @FByteBuffer[0], SizeOf(TByteBuffer)-1);
-    pCurrStatus.SQLMessage := ConvertConnRawToString({$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
-      ConSettings,{$IFEND}@FByteBuffer[0]);
+    pCurrStatus.SQLMessage := ConvertConnRawToString({$IFDEF UNICODE}ConSettings,{$ENDIF}@FByteBuffer[0]);
     // IB data
     pCurrStatus.IBDataType := StatusVector[StatusIdx];
     case StatusVector[StatusIdx] of
@@ -1202,14 +1201,14 @@ begin
       isc_arg_interpreted,
       isc_arg_sql_state:
         begin
-          pCurrStatus.IBDataStr := ConvertConnRawToString({$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
-            ConSettings,{$IFEND}Pointer(StatusVector[StatusIdx + 1]));
+          pCurrStatus.IBDataStr := ConvertConnRawToString({$IFDEF UNICODE}
+            ConSettings,{$ENDIF}Pointer(StatusVector[StatusIdx + 1]));
           Inc(StatusIdx, 2);
         end;
       isc_arg_cstring: // length and pointer to string
         begin
-          pCurrStatus.IBDataStr := ConvertConnRawToString({$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
-            ConSettings,{$IFEND}Pointer(StatusVector[StatusIdx + 2]), StatusVector[StatusIdx + 1]);
+          pCurrStatus.IBDataStr := ConvertConnRawToString({$IFDEF UNICODE}
+            ConSettings,{$ENDIF}Pointer(StatusVector[StatusIdx + 2]), StatusVector[StatusIdx + 1]);
           Inc(StatusIdx, 3);
         end;
       isc_arg_warning: begin// must not happen for error vector
@@ -1225,8 +1224,8 @@ begin
         Break;
     end else if FInterbaseFirebirdPlainDriver.isc_interprete(@FByteBuffer[0], @StatusVector) = 0 then
       Break;
-    pCurrStatus.IBMessage := ConvertConnRawToString({$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
-            ConSettings,{$IFEND}@FByteBuffer[0]);
+    pCurrStatus.IBMessage := ConvertConnRawToString({$IFDEF UNICODE}
+            ConSettings,{$ENDIF}@FByteBuffer[0]);
   until False;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
@@ -3449,18 +3448,12 @@ end;
 function TZAbstractFirebirdInterbasePreparedStatement.GetRawEncodedSQL(
   const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
 begin
-  {$IFNDEF NO_AUTOENCODE}
-  if ConSettings^.AutoEncode or (FDB_CP_ID = CS_NONE)
-  then Result := SplittQuery(SQL)
-  else Result := ConSettings^.ConvFuncs.ZStringToRaw(SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-  {$ELSE}
   if (FDB_CP_ID = CS_NONE)
   then Result := SplittQuery(SQL)
   {$IFDEF UNICODE}
   else Result := ZUnicodeToRaw(SQL, ConSettings^.ClientCodePage^.CP);
   {$ELSE}
   else Result := SQL;
-  {$ENDIF}
   {$ENDIF}
 end;
 
@@ -3650,14 +3643,7 @@ begin
       if Value.IsClob then begin
         Value.SetCodePageTo(codepage);
         P := Value.GetPAnsiChar(codepage, FRawTemp, L)
-      {$IFDEF NO_AUTOENCODE}
       end else raise CreateConversionError(Index, stBinaryStream)
-      {$ELSE}
-      end else begin
-        BindList.Put(Index, stAsciiStream, CreateRawCLobFromBlob(Value, ConSettings, FOpenLobStreams));
-        P := IZCLob(BindList[Index].Value).GetPAnsiChar(codepage, FRawTemp, L);
-      end
-      {$ENDIF}
     else P := Value.GetBuffer(FRawTemp, L);
     if P <> nil then begin
       case sqltype of
@@ -4414,21 +4400,14 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     L := Length(Value);
     case sqltype of
-      SQL_VARYING   : {$IFNDEF NO_AUTOENCODE}if not ConSettings^.AutoEncode or (codepage = zCP_Binary) then {$ENDIF}begin
+      SQL_VARYING   : begin
                         if L > LengthInt(sqllen) then
                           L := LengthInt(sqllen);
                         Move(Pointer(Value)^, PISC_VARYING(sqldata).str[0], L);
                         PISC_VARYING(sqldata).strlen := L;
                         sqlind^ := ISC_NOTNULL;
-                      end {$IFNDEF NO_AUTOENCODE} else
-                        SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
-                          ConSettings^.ConvFuncs.ZStringToRaw( Value, ConSettings^.Ctrl_CP, codepage)){$ENDIF};
-      SQL_BLOB      : {$IFNDEF NO_AUTOENCODE}if not ConSettings^.AutoEncode or (codepage = zCP_Binary)
-                      then {$ENDIF}WriteLobBuffer(Index, Pointer(Value), L){$IFNDEF NO_AUTOENCODE}
-                      else begin
-                        FRawTemp := ConSettings^.ConvFuncs.ZStringToRaw( Value, ConSettings^.Ctrl_CP, codepage);
-                        SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, FRawTemp);
-                      end{$ENDIF};
+                      end;
+      SQL_BLOB      : WriteLobBuffer(Index, Pointer(Value), L);
       else SetPAnsiChar(Index, Pointer(Value), L);
     end;
   end else
@@ -4656,7 +4635,7 @@ var
   I, ParamCnt, FirstComposePos: Integer;
   Tokens: TZTokenList;
   Token: PZToken;
-  Tmp{$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}, Tmp2{$IFEND}: RawByteString;
+  Tmp{$IFDEF UNICODE}, Tmp2{$ENDIF}: RawByteString;
   ResultWriter, SectionWriter: TZRawSQLStringWriter;
   procedure Add(const Value: RawByteString; const Param: Boolean = False);
   begin
@@ -4670,7 +4649,7 @@ var
 begin
   ParamCnt := 0;
   Result := '';
-  {$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}Tmp2 := '';{$IFEND}
+  {$IFDEF UNICODE}Tmp2 := '';{$ENDIF}
   Tmp := '';
   Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
   SectionWriter := TZRawSQLStringWriter.Create(Length(SQL) shr 5);
@@ -4699,27 +4678,7 @@ begin
         Inc(ParamCnt);
         FirstComposePos := i +1;
       end
-      {$IFNDEF UNICODE}
-        {$IFNDEF NO_AUTOENCODE}
-      else if ConSettings.AutoEncode or (FDB_CP_ID = CS_NONE) then
-        case (Tokens[i].TokenType) of
-          ttQuoted, ttComment,
-          ttWord: begin
-              if (FirstComposePos < I) then
-                SectionWriter.AddText(Tokens[FirstComposePos].P, (Tokens[I-1].P-Tokens[FirstComposePos].P)+ Tokens[I-1].L, Tmp);
-              if (FDB_CP_ID = CS_NONE) and ( //all identifiers collate unicode_fss if CS_NONE
-                 (Token.TokenType = ttQuotedIdentifier) or
-                 ((Token.TokenType = ttWord) and (Token.L > 1) and (Token.P^ = '"')))
-              then Tmp2 := ZConvertStringToRawWithAutoEncode(Tokens.AsString(i), ConSettings^.CTRL_CP, zCP_UTF8)
-              else Tmp2 := ConSettings^.ConvFuncs.ZStringToRaw(Tokens.AsString(i), ConSettings^.CTRL_CP, FClientCP);
-              SectionWriter.AddText(Tmp2, Tmp);
-              Tmp2 := '';
-              FirstComposePos := I +1;
-            end;
-          else ;//satisfy FPC
-        end
-        {$ENDIF}
-      {$ELSE}
+      {$IFDEF UNICODE}
       else if (FDB_CP_ID = CS_NONE) and (//all identifiers collate unicode_fss if CS_NONE
                (Token.TokenType = ttQuotedIdentifier) or
                ((Token.TokenType = ttWord) and (Token.L > 1) and (Token.P^ = '"'))) then begin

@@ -376,7 +376,7 @@ type
   TZClientVariantManager = class (TZSoftVariantManager, IZVariantManager, IZClientVariantManager)
   protected
     FConSettings: PZConSettings;
-    FClientCP,{$IFDEF NO_AUTOENCODE}FStringCP{$ELSE}FCtrlsCP{$ENDIF}: Word;
+    FClientCP, FStringCP: Word;
     FUseWComparsions: Boolean;
     procedure ProcessString(const Value: TZVariant; out Result: TZVariant); override;
     procedure ProcessUnicodeString(const Value: TZVariant; out Result: TZVariant); override;
@@ -830,12 +830,6 @@ begin
     SetNotEmptyFormat(Info.Values[ConnProps_DateReadFormat],
       DefDateFormatYMD,
       ConSettings^.ReadFormatSettings.DateFormat);
-    {$IFNDEF NO_AUTOENCODE}
-    SetNotEmptyFormat(Info.Values[ConnProps_DateDisplayFormat],
-      {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat,
-      ConSettings^.DisplayFormatSettings.DateFormat);
-    {$ENDIF NO_AUTOENCODE}
-
     {time formats}
     SetNotEmptyFormat(Info.Values[ConnProps_TimeWriteFormat],
       IfThen(GetMetaData.GetDatabaseInfo.SupportsMilliseconds, DefTimeFormatMsecs, DefTimeFormat),
@@ -844,12 +838,6 @@ begin
     SetNotEmptyFormat(Info.Values[ConnProps_TimeReadFormat],
       IfThen(GetMetaData.GetDatabaseInfo.SupportsMilliseconds, DefTimeFormatMsecs, DefTimeFormat),
       ConSettings^.ReadFormatSettings.TimeFormat);
-
-    {$IFNDEF NO_AUTOENCODE}
-    SetNotEmptyFormat(Info.Values[ConnProps_TimeDisplayFormat],
-      {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat,
-      ConSettings^.DisplayFormatSettings.TimeFormat);
-    {$ENDIF NO_AUTOENCODE}
 
     {timestamp formats}
     SetNotEmptyFormat(Info.Values[ConnProps_DateTimeWriteFormat],
@@ -860,30 +848,16 @@ begin
       ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat,
       ConSettings^.ReadFormatSettings.DateTimeFormat);
 
-    {$IFNDEF NO_AUTOENCODE}
-    SetNotEmptyFormat(Info.Values[ConnProps_DateTimeDisplayFormat],
-      ConSettings^.DisplayFormatSettings.DateFormat+' '+ConSettings^.DisplayFormatSettings.TimeFormat,
-      ConSettings^.DisplayFormatSettings.DateTimeFormat);
-    {$ENDIF NO_AUTOENCODE}
   end;
 
   ConSettings^.WriteFormatSettings.DateFormatLen := Length(ConSettings^.WriteFormatSettings.DateFormat);
   ConSettings^.ReadFormatSettings.DateFormatLen := Length(ConSettings^.ReadFormatSettings.DateFormat);
-  {$IFNDEF NO_AUTOENCODE}
-  ConSettings^.DisplayFormatSettings.DateFormatLen := Length(ConSettings^.DisplayFormatSettings.DateFormat);
-  {$ENDIF NO_AUTOENCODE}
 
   ConSettings^.WriteFormatSettings.TimeFormatLen := Length(ConSettings^.WriteFormatSettings.TimeFormat);
   ConSettings^.ReadFormatSettings.TimeFormatLen := Length(ConSettings^.ReadFormatSettings.TimeFormat);
-  {$IFNDEF NO_AUTOENCODE}
-  ConSettings^.DisplayFormatSettings.TimeFormatLen := Length(ConSettings^.DisplayFormatSettings.TimeFormat);
-  {$ENDIF NO_AUTOENCODE}
 
   ConSettings^.WriteFormatSettings.DateTimeFormatLen := Length(ConSettings^.WriteFormatSettings.DateTimeFormat);
   ConSettings^.ReadFormatSettings.DateTimeFormatLen := Length(ConSettings^.ReadFormatSettings.DateTimeFormat);
-  {$IFNDEF NO_AUTOENCODE}
-  ConSettings^.DisplayFormatSettings.DateTimeFormatLen := Length(ConSettings^.DisplayFormatSettings.DateTimeFormat);
-  {$ENDIF NO_AUTOENCODE}
 end;
 
 procedure TZAbstractDbcConnection.SetOnConnectionLostErrorHandler(
@@ -941,13 +915,6 @@ begin
   ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := IsStringFieldCPConsistent;
   {Also reset the MetaData ConSettings}
   (FMetadata as TZAbstractDatabaseMetadata).ConSettings := ConSettings;
-  {$IFDEF WITH_LCONVENCODING}
-  SetConvertFunctions(ConSettings^.CTRL_CP, ConSettings^.ClientCodePage.CP,
-    ConSettings^.PlainConvertFunc, ConSettings^.DbcConvertFunc);
-  {$ENDIF}
-{$IFNDEF NO_AUTOENCODE}
-  SetConvertFunctions(ConSettings);
-{$ENDIF}
   FClientVarManager := TZClientVariantManager.Create(ConSettings);
 end;
 
@@ -998,13 +965,6 @@ procedure TZAbstractDbcConnection.CheckCharEncoding(const CharSet: String;
 begin
   ConSettings.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(CharSet, DoArrange);
   FClientCodePage := ConSettings.ClientCodePage^.Name; //resets the developer choosen ClientCodePage
-  {$IFDEF WITH_LCONVENCODING}
-  SetConvertFunctions(ConSettings^.CTRL_CP, ConSettings^.ClientCodePage.CP,
-    ConSettings^.PlainConvertFunc, ConSettings^.DbcConvertFunc);
-  {$ENDIF}
-{$IFNDEF NO_AUTOENCODE}
-  SetConvertFunctions(ConSettings);
-{$ENDIF NO_AUTOENCODE}
   FClientVarManager := TZClientVariantManager.Create(ConSettings);
 end;
 
@@ -1314,13 +1274,9 @@ procedure TZAbstractDbcConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 var CP: Word;
 begin
-  {$IFDEF NO_AUTOENCODE}
   if ConSettings.ClientCodePage.Encoding = ceUTF16
-  then CP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF}
+  then CP := zCP_UTF8
   else CP := ConSettings.ClientCodePage.CP;
-  {$ELSE NO_AUTOENCODE}
-  CP := ConSettings.CTRL_CP;
-  {$ENDIF NO_AUTOENCODE}
   ExecuteImmediat(ZRawToUnicode(SQL, CP), LoggingCategory);
 end;
 
@@ -1914,11 +1870,7 @@ begin
   FConSettings := ConSettings;
   FFormatSettings := FConSettings.ReadFormatSettings;
   FClientCP := Consettings.ClientCodePage.CP;
-  {$IFNDEF NO_AUTOENCODE}
-  FCtrlsCP := Consettings.CTRL_CP;
-  {$ELSE}
   FStringCP := GetW2A2WConversionCodePage(ConSettings);
-  {$ENDIF}
   FUseWComparsions := (FClientCP <> ZOSCodePage) or
     (FClientCP = zCP_UTF8) or
     not Consettings.ClientCodePage.IsStringFieldCPConsistent or
@@ -1971,18 +1923,12 @@ begin
   Result.VType := vtAnsiString;
   case Value.VType of
     {$IFNDEF UNICODE}
-    vtString: {$IFNDEF NO_AUTOENCODE}
-              if FConSettings.AutoEncode
-              then ResTmp := ZConvertStringToAnsiWithAutoEncode(Value.VRawByteString, FCtrlsCP)
-              else ResTmp := Value.VRawByteString;
-              {$ELSE}
-              if FClientCP = ZOSCodePage
+    vtString: if FClientCP = ZOSCodePage
               then ResTmp := Value.VRawByteString
               else begin
                 ResTmp := '';
                 PRawToRawConvert(Pointer(Value.VRawByteString), Length(Value.VRawByteString), FClientCP, GetW2A2WConversionCodePage(FConSettings), ResTmp);
               end;
-              {$ENDIF}
     {$ENDIF}
     vtAnsiString: ResTmp := Value.VRawByteString;
     vtUTF8String: if ZOSCodePage = zCP_UTF8
@@ -2021,7 +1967,7 @@ begin
       end;
     {$IFNDEF UNICODE}
     vtString: begin
-        Result.VCharRec.CP := {$IFDEF NO_AUTOENCODE}FStringCP{$ELSE}FCtrlsCP{$ENDIF};
+        Result.VCharRec.CP := FStringCP;
         goto SetRaw;
       end;
     {$ENDIF}
@@ -2089,9 +2035,7 @@ begin
   Result.VType := vtRawByteString;
   case Value.VType of
     {$IFNDEF UNICODE}
-    vtString: {$IFNDEF NO_AUTOENCODE}if FConSettings.AutoEncode
-              then ResTmp := ZConvertStringToRawWithAutoEncode(Value.VRawByteString, FCtrlsCP, FClientCP)
-              else {$ENDIF NO_AUTOENCODE}ResTmp := Value.VRawByteString;
+    vtString: ResTmp := Value.VRawByteString;
     {$ENDIF}
     {$IFNDEF NO_ANSISTRING}
     vtAnsiString: if FClientCP = ZOSCodePage
@@ -2132,26 +2076,26 @@ begin
     vtAnsiString: {$IFDEF UNICODE}
                   ResTmp := ZRawToUnicode(Value.VRawByteString, ZOSCodePage);
                   {$ELSE}
-                  if {$IFNDEF NO_AUTOENCODE}FCtrlsCP{$ELSE}FStringCP{$ENDIF} = ZOSCodePage
+                  if FStringCP = ZOSCodePage
                   then ResTmp := Value.VRawByteString
-                  else RawCPConvert(Value.VRawByteString, ResTmp, ZOSCodePage, {$IFNDEF NO_AUTOENCODE}FCtrlsCP{$ELSE}FStringCP{$ENDIF});
+                  else RawCPConvert(Value.VRawByteString, ResTmp, ZOSCodePage, FStringCP);
                   {$ENDIF}
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
     vtUTF8String: {$IFDEF UNICODE}
                   ResTmp := ZRawToUnicode(Value.VRawByteString, zCP_UTF8);
                   {$ELSE}
-                  if {$IFNDEF NO_AUTOENCODE}FCtrlsCP{$ELSE}FStringCP{$ENDIF} = zCP_UTF8
+                  if FStringCP = zCP_UTF8
                   then ResTmp := Value.VRawByteString
-                  else RawCPConvert(Value.VRawByteString, ResTmp, zCP_UTF8, {$IFNDEF NO_AUTOENCODE}FCtrlsCP{$ELSE}FStringCP{$ENDIF});
+                  else RawCPConvert(Value.VRawByteString, ResTmp, zCP_UTF8, FStringCP);
                   {$ENDIF}
     {$ENDIF}
     vtRawByteString: {$IFDEF UNICODE}
                   ResTmp := ZRawToUnicode(Value.VRawByteString, FClientCP);
                   {$ELSE}
-                  if ({$IFNDEF NO_AUTOENCODE}FCtrlsCP{$ELSE}FStringCP{$ENDIF} = FClientCP)
+                  if (FStringCP = FClientCP)
                   then ResTmp := Value.VRawByteString
-                  else RawCPConvert(Value.VRawByteString, ResTmp, FClientCP, {$IFNDEF NO_AUTOENCODE}FCtrlsCP{$ELSE}FStringCP{$ENDIF});
+                  else RawCPConvert(Value.VRawByteString, ResTmp, FClientCP, FStringCP);
                   {$ENDIF}
    {$IFDEF UNICODE}vtString,{$ENDIF}
    vtUnicodeString:
@@ -2160,23 +2104,19 @@ begin
       {$ELSE}
       //hint: VarArrayOf(['Test']) returns allways varOleStr which is type WideString don't change that again
       //this hint means a cast instead of convert. The user should better use WideString constants!
-      {$IFDEF NO_AUTOENCODE}
       ResTmp := ZUnicodeToRaw(Value.VUnicodeString, {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}ZOSCodePage{$ENDIF}{$ENDIF});
-      {$ELSE}
-      ResTmp := ZUnicodeToRaw(Value.VUnicodeString, FCtrlsCP);
-      {$ENDIF}
       {$ENDIF}
     vtCharRec: if (Value.VCharRec.CP = zCP_UTF16) then
         {$IFDEF UNICODE}
         SetString(ResTmp, PChar(Value.VCharRec.P), Value.VCharRec.Len)
         {$ELSE}
-        ResTmp := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, {$IFNDEF NO_AUTOENCODE}FCtrlsCP{$ELSE}FStringCP{$ENDIF})
+        ResTmp := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, FStringCP)
         {$ENDIF}
       else
         {$IFNDEF UNICODE}
-        if ({$IFNDEF NO_AUTOENCODE}FCtrlsCP{$ELSE}FStringCP{$ENDIF} = Value.VCharRec.CP)
-        then ZSetString(PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len, ResTmp{$IFDEF WITH_DEFAULTSYSTEMCODEPAGE},{$IFNDEF NO_AUTOENCODE}FCtrlsCP{$ELSE}FStringCP{$ENDIF}{$ENDIF})
-        else PRawCPConvert(Value.VCharRec.P, Value.VCharRec.Len, ResTmp, Value.VCharRec.CP, {$IFNDEF NO_AUTOENCODE}FCtrlsCP{$ELSE}FStringCP{$ENDIF});
+        if (FStringCP = Value.VCharRec.CP)
+        then ZSetString(PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len, ResTmp{$IFDEF WITH_DEFAULTSYSTEMCODEPAGE},FStringCP{$ENDIF})
+        else PRawCPConvert(Value.VCharRec.P, Value.VCharRec.Len, ResTmp, Value.VCharRec.CP, FStringCP);
         {$ELSE}
         ResTmp := PRawToUnicode(Value.VCharRec.P, Value.VCharRec.Len, Value.VCharRec.CP);
         {$ENDIF}
@@ -2194,9 +2134,7 @@ begin
   Result.VType := vtUnicodeString;
   case Value.VType of
     {$IFNDEF UNICODE}
-    vtString: {$IFNDEF NO_AUTOENCODE}if FConSettings.AutoEncode
-              then ResTmp := ZConvertStringToUnicodeWithAutoEncode(Value.VRawByteString, FCtrlsCP)
-              else {$ENDIF}ResTmp := ZRawToUnicode(Value.VRawByteString, {$IFNDEF NO_AUTOENCODE}FCtrlsCP{$ELSE}FStringCP{$ENDIF});
+    vtString: ResTmp := ZRawToUnicode(Value.VRawByteString, FStringCP);
     {$ENDIF}
     {$IFNDEF NO_ANSISTRING}
     vtAnsiString: ResTmp := ZRawToUnicode(Value.VRawByteString, ZOSCodePage);
@@ -2224,9 +2162,9 @@ begin
   Result.VType := vtUTF8String;
   case Value.VType of
     {$IFNDEF UNICODE}
-    vtString:     if {$IFNDEF NO_AUTOENCODE}FCtrlsCP{$ELSE}FStringCP{$ENDIF} = zCP_UTF8
+    vtString:     if FStringCP = zCP_UTF8
                   then ResTmp := Value.VRawByteString
-                  else RawCPConvert(Value.VRawByteString, ResTmp, {$IFNDEF NO_AUTOENCODE}FCtrlsCP{$ELSE}FStringCP{$ENDIF}, zCP_UTF8);
+                  else RawCPConvert(Value.VRawByteString, ResTmp, FStringCP, zCP_UTF8);
     {$ENDIF}
     {$IFNDEF NO_ANSISTRING}
     vtAnsiString: if ZOSCodePage = zCP_UTF8

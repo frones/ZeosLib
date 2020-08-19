@@ -777,13 +777,7 @@ begin
       {$IFDEF UNICODE}
       ColumnLabel := PRawToUnicode(P, Precision, FClientCP);
       {$ELSE}
-        {$IFDEF NO_AUTOENCODE}
       ColumnLabel := BufferToStr(P, Precision);
-        {$ELSE}
-      if (not ConSettings^.AutoEncode) or (FClientCP = ConSettings^.CTRL_CP)
-      then ColumnLabel := BufferToStr(P, Precision)
-      else ColumnLabel := ZUnicodeToString(PRawToUnicode(P, Precision, FClientCP), ConSettings^.CTRL_CP);
-        {$ENDIF}
       {$ENDIF}
       Nullable := ntNullableUnknown; //there is NO information about nullable
       Precision := 0;
@@ -949,11 +943,7 @@ JmpPEndTinyBuf:       Result := PAnsiChar(fByteBuffer);
                       PG2Date(PInteger(Result)^, TS.Year, TS.Month, TS.Day);
 jmpDate:              Result := PAnsiChar(fByteBuffer);
                       Len := DateToRaw(TS.Year, TS.Month, TS.Day, Result,
-                        {$IFDEF NO_AUTOENCODE}
                         ConSettings.ReadFormatSettings.DateFormat, False, False);
-                        {$ELSE}
-                        ConSettings.DisplayFormatSettings.DateFormat, False, False);
-                        {$ENDIF}
                     end;
         stTime:     begin
                       if Finteger_datetimes
@@ -961,11 +951,7 @@ jmpDate:              Result := PAnsiChar(fByteBuffer);
                       else dt2time(PG2Double(Result), TS.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTime:              Result := PAnsiChar(fByteBuffer);
                       Len := TimeToRaw(TS.Hour, TS.Minute, TS.Second, TS.Fractions,
-                        {$IFDEF NO_AUTOENCODE}
                         Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
-                        {$ELSE}
-                        Result, ConSettings.DisplayFormatSettings.TimeFormat, False, False);
-                        {$ENDIF}
                     end;
         stTimestamp:begin
                       if Finteger_datetimes
@@ -973,11 +959,7 @@ jmpTime:              Result := PAnsiChar(fByteBuffer);
                       else PG2DateTime(PDouble(Result)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTS:                Result := PAnsiChar(fByteBuffer);
                       Len := ZSysUtils.DateTimeToRaw(TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
-                        {$IFDEF NO_AUTOENCODE}
                         TS.Second, TS.Fractions, Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
-                        {$ELSE}
-                        TS.Second, TS.Fractions, Result, ConSettings.DisplayFormatSettings.DateTimeFormat, False, False);
-                        {$ENDIF}
                     end;
         stGUID:     begin
                       {$IFNDEF ENDIAN_BIG} {$Q-} {$R-}
@@ -1148,11 +1130,7 @@ JmpPEndTinyBuf:       Result := PWideChar(fByteBuffer);
                       PG2Date(PInteger(P)^, TS.Year, TS.Month, TS.Day);
 jmpDate:              Result := PWideChar(fByteBuffer);
                       Len := DateToUni(TS.Year, TS.Month, TS.Day,
-                      {$IFDEF NO_AUTOENCODE}
                         Result, ConSettings.ReadFormatSettings.DateFormat, False, False);
-                      {$ELSE}
-                        Result, ConSettings.DisplayFormatSettings.DateFormat, False, False);
-                      {$ENDIF}
                     end;
         stTime:     begin
                       if Finteger_datetimes
@@ -1160,11 +1138,7 @@ jmpDate:              Result := PWideChar(fByteBuffer);
                       else dt2time(PG2Double(P), TS.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTime:              Result := PWideChar(fByteBuffer);
                       Len := TimeToUni(TS.Hour, TS.Minute, TS.Second, TS.Fractions,
-                      {$IFDEF NO_AUTOENCODE}
                         Result, ConSettings.ReadFormatSettings.TimeFormat, False, tS.IsNegative);
-                      {$ELSE}
-                        Result, ConSettings.DisplayFormatSettings.TimeFormat, False, tS.IsNegative);
-                      {$ENDIF}
                     end;
         stTimestamp:begin
                       if Finteger_datetimes
@@ -1172,11 +1146,7 @@ jmpTime:              Result := PWideChar(fByteBuffer);
                       else PG2DateTime(PDouble(P)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTS:                Result := PWideChar(fByteBuffer);
                       Len := ZSysUtils.DateTimeToUni(TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
-                      {$IFDEF NO_AUTOENCODE}
                         TS.Second, TS.Fractions, Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
-                      {$ELSE}
-                        TS.Second, TS.Fractions, Result, ConSettings.DisplayFormatSettings.DateTimeFormat, False, False);
-                      {$ENDIF}
                     end;
         stGUID:     begin
                       {$IFNDEF ENDIAN_BIG} {$Q-} {$R-}

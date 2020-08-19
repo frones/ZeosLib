@@ -407,10 +407,6 @@ label AssignGeneric;
     {$ELSE}
     {$IFDEF FPC}Result := '';{$ENDIF}//done by ZSetString already
     ZSetString(P, L, Result{$IFDEF WITH_RAWBYTESRING}, FClientCP{$ENDIF});
-    {$IFNDEF NO_AUTOENCODE}
-    Result := ConSettings^.ConvFuncs.ZRawToString(Result,
-          FClientCP, ConSettings^.CTRL_CP);
-    {$ENDIF}
     {$ENDIF}
   end;
 begin

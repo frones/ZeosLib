@@ -476,9 +476,9 @@ begin
   end else begin
     if cSavePointSyntaxW[fServerProvider][spqtSavePoint] = '' then
       raise EZSQLException.Create(SUnsupportedOperation);
-    S := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(NativeUint(Self))+'_'+{$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(FSavePoints.Count);
+    S := 'SP'+{$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(NativeUint(Self))+'_'+{$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(FSavePoints.Count);
     {$IFDEF UNICODE}FLogMessage{$ELSE}LogMessage{$ENDIF} :=
-      cSavePointSyntaxW[fServerProvider][spqtSavePoint]+'SP'+{$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(S);
+      cSavePointSyntaxW[fServerProvider][spqtSavePoint]+{$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(S);
     ExecuteImmediat({$IFDEF UNICODE}FLogMessage{$ELSE}LogMessage{$ENDIF}, lcTransaction);
     Result := FSavePoints.Add(S)+2;
   end;
@@ -513,6 +513,8 @@ begin
     S := cSavePointSyntaxW[fServerProvider][spqtCommit];
     if S <> '' then begin
       S := S+{$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+      if fServerProvider = spMSSQL then
+        S := '"'+S+'"';
       ExecuteImmediat(S, lcTransaction);
     end;
     FSavePoints.Delete(FSavePoints.Count-1);

@@ -312,7 +312,7 @@ implementation
 
 uses
   ZGenericSqlToken, ZDbcODBCUtils, ZDbcODBCResultSet, ZDbcLogging,
-  ZEncoding, ZSysUtils, ZFastCode {$IF defined(NO_AUTOENCODE) and not defined(Unicode)},ZDbcUtils{$IFEND}
+  ZEncoding, ZSysUtils, ZFastCode {$IFNDEF Unicode},ZDbcUtils{$ENDIF}
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
   {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
@@ -1604,17 +1604,16 @@ begin
 end;
 
 function TODBCDatabaseMetadataW.DecomposeObjectString(const S: String): UnicodeString;
-{$IF defined(NO_AUTOENCODE) and not defined(UNICODE)}
+{$IFNDEF UNICODE}
 var tmp: String;
     CP: Word;
-{$IFEND}
+{$ENDIF}
 begin
-  {$IF defined(NO_AUTOENCODE) and not defined(UNICODE)}
+  {$IFNDEF UNICODE}
   CP := GetW2A2WConversionCodePage(ConSettings);
-  {$IFEND}
+  {$ENDIF}
   if S = ''
   then Result := ''
-  {$IFDEF NO_AUTOENCODE}
   else if IC.IsQuoted(S) then begin
     {$IFDEF UNICODE}
     Result := IC.ExtractQuote(S)
@@ -1627,12 +1626,6 @@ begin
     {$ELSE}
     Result := ZRawToUnicode(S, CP);
     {$ENDIF}
-  {$ELSE}
-  else if IC.IsQuoted(S) then
-    Result := ConSettings^.ConvFuncs.ZStringToUnicode(IC.ExtractQuote(S), ConSettings^.CTRL_CP)
-  else
-    Result := ConSettings^.ConvFuncs.ZStringToUnicode(S, ConSettings^.CTRL_CP);
-  {$ENDIF}
 end;
 {**
   Gets a description of the stored procedures available in a
@@ -1879,15 +1872,11 @@ begin
   for I := Low(Types) to High(Types) do begin
     if Length(TableTypes) > 0 then
       TableTypes := TableTypes + ',';
-{$IFDEF NO_AUTOENCODE}
     {$IFDEF UNICODE}
     TableTypes := TableTypes + Types[I];
     {$ELSE}
     TableTypes := TableTypes + ZRawToUnicode(Types[I], GetW2A2WConversionCodePage(ConSettings));
     {$ENDIF}
-{$ELSE}
-    TableTypes := TableTypes + ConSettings^.ConvFuncs.ZStringToUnicode(Types[I], ConSettings^.CTRL_CP);
-{$ENDIF}
   end;
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
@@ -2576,19 +2565,15 @@ begin
 end;
 
 function TODBCDatabaseMetadataA.DecomposeObjectString(const S: String): RawByteString;
-{$IF defined(NO_AUTOENCODE) and defined(UNICODE)}
+{$IFDEF UNICODE}
 var Tmp: String;
-{$IFEND}
+{$ENDIF}
 begin
   if S = ''
   then Result := ''
-{$IFNDEF NO_AUTOENCODE}
-  else if IC.IsQuoted(S)
-    then Result := ConSettings^.ConvFuncs.ZStringToRaw(IC.ExtractQuote(S), ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
-    else Result := ConSettings^.ConvFuncs.ZStringToRaw(S, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-{$ELSE}
   {$IFDEF UNICODE}
-  else begin if IC.IsQuoted(S)
+  else begin
+    if IC.IsQuoted(S)
     then Tmp := IC.ExtractQuote(S)
     else Tmp := S;
     Result := ZUnicodeToRaw(Tmp, ConSettings.ClientCodePage.CP);
@@ -2598,7 +2583,6 @@ begin
     then Result := IC.ExtractQuote(S)
     else Result := S;
   {$ENDIF}
-{$ENDIF}
 end;
 {**
   Gets a description of the stored procedures available in a
@@ -2846,15 +2830,11 @@ begin
   for I := Low(Types) to High(Types) do begin
     if Length(TableTypes) > 0 then
       TableTypes := TableTypes + ',';
-{$IFDEF NO_AUTOENCODE}
     {$IFDEF UNICODE}
     TableTypes := TableTypes + ZUnicodeToRaw(Types[I], ConSettings^.ClientCodePage^.CP);
     {$ELSE}
     TableTypes := TableTypes + Types[I];
     {$ENDIF}
-{$ELSE}
-    TableTypes := TableTypes + ConSettings^.ConvFuncs.ZStringToRaw(Types[I], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-{$ENDIF}
   end;
 
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi

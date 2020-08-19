@@ -63,7 +63,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
-  ZDbcIntfs, {$IFNDEF NO_AUTOENCODE}ZTokenizer, {$ENDIF}ZCompatibility, ZVariant, ZDbcLogging, ZClasses,
+  ZDbcIntfs, ZCompatibility, ZVariant, ZDbcLogging, ZClasses,
   ZDbcUtils;
 
 type
@@ -140,8 +140,8 @@ type
     function CreateStmtLogEvent(Category: TZLoggingCategory;
       const Msg: SQLString = ''): TZLoggingEvent;
 
-    function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; virtual;
-    function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): UnicodeString; virtual;
+    function GetRawEncodedSQL(const SQL: SQLString): RawByteString; virtual;
+    function GetUnicodeEncodedSQL(const SQL: SQLString): UnicodeString; virtual;
     property StartTime: TDateTime read FStartTime;
   public
     constructor Create(const Connection: IZConnection; {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
@@ -547,10 +547,6 @@ type
   public //value getter procs
     procedure GetLob(Index: Integer; out Result: IZBlob); override;
     procedure GetPChar(Index: Integer; out Buf: Pointer; out Len: LengthInt; CodePage: Word); override;
-  {$IFNDEF NO_AUTOENCODE}
-  public //deprecated value getter methods
-    function GetPChar(ParameterIndex: Integer): PChar; overload;
-  {$ENDIF}
   public //value getter methods
     function IsNull(ParameterIndex: Integer): Boolean; reintroduce;
     function GetBoolean(ParameterIndex: Integer): Boolean; reintroduce;
@@ -743,9 +739,6 @@ begin
     {$IFDEF UNICODE}
     if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then begin
       FWSQL := GetUnicodeEncodedSQL(Value);
-      {$IFNDEF NO_AUTOENCODE}
-      {$IFDEF DEBUG}FASQL := ZUnicodeToRaw(FWSQL, ConSettings^.CTRL_CP);{$ENDIF}
-      {$ENDIF NO_AUTOENCODE}
     end else begin
       FASQL := GetRawEncodedSQL(Value);
       FWSQL := Value;
@@ -753,11 +746,7 @@ begin
     {$ELSE !UNICODE}
     begin
       if (ConSettings^.ClientCodePage^.Encoding = ceUTF16)
-      {$IFNDEF NO_AUTOENCODE}
-      then CP := ConSettings^.CTRL_CP
-      {$ELSE}
       then CP := GetW2A2WConversionCodePage(ConSettings)
-      {$ENDIF}
       else CP := FClientCP;
       FaSQL := GetRawEncodedSQL(ZUnicodeToRaw(Value, CP)); //required for the resultsets
       FWSQL := Value;
@@ -777,11 +766,7 @@ begin
     {$ELSE !UNICODE}
     if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then begin
       FWSQL := GetUnicodeEncodedSQL(Value);
-      {$IFDEF NO_AUTOENCODE}
       FASQL := Value;
-      {$ELSE}
-      FASQL := ZUnicodeToRaw(FWSQL, ConSettings^.CTRL_CP);
-      {$ENDIF}
     end else
       FASQL := GetRawEncodedSQL(Value);
     {$ENDIF UNICODE}
@@ -1092,88 +1077,25 @@ procedure TZAbstractStatement.ClearWarnings;
 begin
 end;
 
-function TZAbstractStatement.GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
-{$IFDEF UNICODE}
+function TZAbstractStatement.GetRawEncodedSQL(const SQL: SQLString): RawByteString;
 begin
+{$IFDEF UNICODE}
   FWSQL := SQL;
   Result := ZUnicodeToRaw(SQL, ConSettings^.ClientCodePage^.CP);
 {$ELSE}
-{$IFNDEF NO_AUTOENCODE}
-var
-  SQLTokens: TZTokenList;
-  i: Integer;
-  SQLWriter: TZRawSQLStringWriter;
-  Raw: RawByteString;
-  {$ENDIF}
-begin
-  {$IFNDEF NO_AUTOENCODE}
-  if ConSettings^.AutoEncode then begin
-    Result := EmptyRaw; //init for FPC
-    SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]); //Disassembles the Query
-    SQLWriter := TZRawSQLStringWriter.Create(Length(SQL));
-    try
-      for i := 0 to SQLTokens.Count-1 do begin //Assembles the Query
-        case SQLTokens[i].TokenType of
-          ttQuoted, ttComment, ttQuotedIdentifier,
-          ttWord: begin
-                    Raw := ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens.AsString(i),
-                      ConSettings^.CTRL_CP, FClientCP);
-                    SQLWriter.AddText(Raw, Result);
-                  end
-          else SQLWriter.AddText(SQLTokens[I].P, SQLTokens[I].L, Result);
-        end;
-      end;
-    finally
-      SQLWriter.Finalize(Result);
-      FASQL := '';
-      FreeAndNil(SQLWriter);
-      SQLTokens.Free;
-    end;
-  end else {$ENDIF}begin
-    FASQL := SQL;
-    Result := SQL;
-  end;
+  FASQL := SQL;
+  Result := SQL;
 {$ENDIF !UNICODE}
 end;
 
-function TZAbstractStatement.GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): UnicodeString;
+function TZAbstractStatement.GetUnicodeEncodedSQL(const SQL: SQLString): UnicodeString;
+begin
 {$IFDEF UNICODE}
-begin
+  FWSQL := SQL;
   Result := SQL;
-{$ELSE}
-{$IFNDEF NO_AUTOENCODE}
-var
-  SQLTokens: TZTokenList;
-  i: Integer;
-  US: UnicodeString;
-  SQLWriter: TZUnicodeSQLStringWriter;
-{$ENDIF}
-begin
-  {$IFNDEF NO_AUTOENCODE}
-  if ConSettings^.AutoEncode then begin
-    Result := ''; //init
-    SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]); //Disassembles the Query
-    SQLWriter := TZUnicodeSQLStringWriter.Create(Length(SQL));
-    try
-      for i := 0 to SQLTokens.Count -1 do begin
-        case (SQLTokens[i].TokenType) of
-          ttQuoted, ttComment, ttQuotedIdentifier,
-          ttWord: US := ConSettings^.ConvFuncs.ZStringToUnicode(SQLTokens.AsString(I), ConSettings.CTRL_CP);
-          else    US := ASCII7ToUnicodeString(SQLTokens[i].P, SQLTokens[i].L);
-        end;
-        SQLWriter.AddText(US, Result);
-      end;
-    finally
-      SQLWriter.Finalize(Result);
-      FreeAndNil(SQLTokens);
-      FreeAndNil(SQLWriter);
-      FWSQL := '';
-    end;
-  end else
-    Result := ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP);
-  {$ELSE}
+{$ELSE UNICODE}
   Result := ZRawToUnicode(SQL, GetW2A2WConversionCodePage(ConSettings));
-  {$ENDIF}
+  FWSQL := Result;
 {$ENDIF}
 end;
 
@@ -3216,17 +3138,9 @@ begin
     Exit;
   end;
   if ConSettings^.ClientCodePage.Encoding = ceUTF16
-  {$IFNDEF NO_AUTOENCODE}
-  then CP := ConSettings^.CTRL_CP
-  {$ELSE NO_AUTOENCODE}
   then CP := GetW2A2WConversionCodePage(ConSettings)
-  {$ENDIF NO_AUTOENCODE}
   else CP := ConSettings^.ClientCodePage^.CP;
   CLob := TZLocalMemCLob.Create(CP, ConSettings, FOpenLobStreams);
-  {$IFNDEF NO_AUTOENCODE}
-  if ConSettings^.AutoEncode then
-     CP := zCP_NONE;
-  {$ENDIF NO_AUTOENCODE}
   Clob.SetStream(Value, CP);
   SetBlob(ParameterIndex, stAsciiStream, Clob);
 end;
@@ -3738,11 +3652,7 @@ begin
   if (Value <> nil) and (SQLType in [stAsciiStream, stUnicodeStream]) then begin
     if Value.IsClob
     then Value.SetCodePageTo(FClientCP)
-    {$IFNDEF NO_AUTOENCODE}
-    else PIZLob(BindList[Index].Value)^ := CreateRawCLobFromBlob(Value, ConSettings, FOpenLobStreams);
-    {$ELSE}
     else raise CreateConversionError(Index, stBinaryStream, stAsciiStream);
-    {$ENDIF}
     BindList[Index].SQLType := stAsciiStream;
   end;
 end;
@@ -3842,12 +3752,7 @@ begin
   FRawTemp := ZUnicodeToRaw(Value, FClientCP);
   BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FRawTemp);
   {$ELSE}
-    {$IFDEF NO_AUTOENCODE}
-    BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value);
-    {$ELSE}
-    FRawTemp := ConSettings^.ConvFuncs.ZStringtoRaw(Value, ConSettings^.Ctrl_CP, FClientCP);
-    BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FRawTemp);
-    {$ENDIF}
+  BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value);
   {$ENDIF}
 end;
 
@@ -3964,11 +3869,7 @@ procedure TZUTF16PreparedStatement.SetRawByteString(
 var RawCP: Word;
 begin
   if ConSettings^.ClientCodePage.CP = zCP_UTF16
-  {$IFDEF NO_AUTOENCODE}
   then RawCP := GetW2A2WConversionCodePage(ConSettings)
-  {$ELSE}
-  then RawCP := ConSettings.CTRL_CP
-  {$ENDIF}
   else RawCP := ConSettings^.ClientCodePage.CP;
   FUniTemp := ZRawToUnicode(Value, RawCP);
   BindUniStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FUniTemp);
@@ -3987,22 +3888,12 @@ end;
 }
 procedure TZUTF16PreparedStatement.SetString(ParameterIndex: Integer;
   const Value: String);
-{$IF defined(NO_AUTOENCODE) and not defined(UNICODE)}
-var StrCP: Word;
-{$IFEND}
 begin
   {$IFDEF UNICODE}
   BindUniStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value);
   {$ELSE}
-    {$IFDEF NO_AUTOENCODE}
-    if ConSettings^.ClientCodePage.CP = zCP_UTF16
-    then StrCP := GetW2A2WConversionCodePage(ConSettings)
-    else StrCP := ConSettings^.ClientCodePage.CP;
-    FUniTemp := ZRawToUniCode(Value, StrCP);
-    {$ELSE}
-    FUniTemp := ConSettings^.ConvFuncs.ZStringToUnicode(Value, ConSettings^.CTRL_CP);
-    {$ENDIF}
-    BindUniStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FUniTemp);
+  FUniTemp := ZRawToUniCode(Value, GetW2A2WConversionCodePage(ConSettings));
+  BindUniStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FUniTemp);
   {$ENDIF}
 end;
 
@@ -4572,36 +4463,6 @@ begin
   if (Result <> nil) and (Result.GetType <> rtForwardOnly) then
     Result.BeforeFirst;
 end;
-
-{**
-  Retrieves the value of a JDBC <code>CHAR</code>, <code>VARCHAR</code>,
-  or <code>LONGVARCHAR</code> parameter as a <code>String</code> in
-  the Java programming language.
-  <p>
-  For the fixed-length type JDBC <code>CHAR</code>,
-  the <code>String</code> object
-  returned has exactly the same value the JDBC
-  <code>CHAR</code> value had in the
-  database, including any padding added by the database.
-  @param parameterIndex the first parameter is 1, the second is 2,
-  and so on
-  @return the parameter value. If the value is SQL <code>NULL</code>, the result
-  is <code>null</code>.
-  @exception SQLException if a database access error occurs
-}
-{$IFNDEF NO_AUTOENCODE}
-function TZAbstractCallableStatement.GetPChar(ParameterIndex: Integer): PChar;
-var
-  L: LengthInt;
-begin
-  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
-  {$IFDEF UNICODE}
-  FExecStatement.GetPChar(ParameterIndex, Pointer(Result), L, zCP_UTF16);
-  {$ELSE}
-  FExecStatement.GetPChar(ParameterIndex, Pointer(Result), L, ConSettings.CTRL_CP);
-  {$ENDIF}
-end;
-{$ENDIF}
 
 {**
   Retrieves the value of a JDBC <code>CHAR</code>, <code>VARCHAR</code>,
@@ -5369,17 +5230,7 @@ begin
   {$IFDEF UNICODE}
   Result := GetUnicodeString(ParameterIndex);
   {$ELSE}
-  {$IFNDEF NO_AUTOENCODE}
-  if ConSettings.AutoEncode then
-    if (FClientCP = ConSettings.CTRL_CP) then
-      Result := GetRawByteString(ParameterIndex)
-    else begin
-      FUniTemp := GetUnicodeString(ParameterIndex);
-      Result := ConSettings.ConvFuncs.ZUnicodeToString(FUniTemp, ConSettings.CTRL_CP);
-    end
-  else
-  {$ENDIF NO_AUTOENCODE}
-    Result := GetRawByteString(ParameterIndex)
+  Result := GetRawByteString(ParameterIndex)
   {$ENDIF}
 end;
 
@@ -5502,11 +5353,7 @@ begin
   {$IFDEF UNICODE}
   SetRawByteString(ParameterIndex, ZUnicodeToRaw(Value, FClientCP));
   {$ELSE}
-    {$IFNDEF NO_AUTOENCODE}
-  SetRawByteString(ParameterIndex, ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, FClientCP));
-    {$ELSE}
-    SetRawByteString(ParameterIndex, Value);
-    {$ENDIF}
+  SetRawByteString(ParameterIndex, Value);
   {$ENDIF}
 end;
 
@@ -5568,17 +5415,7 @@ begin
   {$IFDEF UNICODE}
   Result := GetUnicodeString(ParameterIndex);
   {$ELSE}
-  {$IFNDEF NO_AUTOENCODE}
-  if ConSettings.AutoEncode then
-    if (ConSettings.ClientCodePage.CP = ConSettings.CTRL_CP) then
-      Result := GetRawByteString(ParameterIndex)
-    else begin
-      FUniTemp := GetUnicodeString(ParameterIndex);
-      Result := ConSettings.ConvFuncs.ZUnicodeToString(FUniTemp, ConSettings.CTRL_CP);
-    end
-  else
-  {$ENDIF}
-    Result := GetRawByteString(ParameterIndex)
+  Result := GetUTF8String(ParameterIndex)
   {$ENDIF}
 end;
 
@@ -5644,11 +5481,7 @@ procedure TZAbstractCallableStatement_W.SetString(ParameterIndex: Integer;
   const Value: String);
 begin
   {$IFNDEF UNICODE}
-    {$IFDEF NO_AUTOENCODE}
-    FUniTemp := ZRawToUnicode(Value, GetW2A2WConversionCodePage(ConSettings));
-    {$ELSE}
-  FUniTemp := ConSettings.ConvFuncs.ZStringToUnicode(Value, ConSettings.CTRL_CP);
-    {$ENDIF}
+  FUniTemp := ZRawToUnicode(Value, GetW2A2WConversionCodePage(ConSettings));
   {$ENDIF}
   SetUnicodeString(ParameterIndex, {$IFDEF UNICODE}Value{$ELSE}FUniTemp{$ENDIF});
 end;

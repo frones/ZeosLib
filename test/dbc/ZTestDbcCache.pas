@@ -130,7 +130,7 @@ type
 
 implementation
 
-uses ZTestConsts{$IFDEF NO_AUTOENCODE},ZEncoding, ZDbcUtils{$ENDIF};
+uses ZTestConsts,ZEncoding, ZDbcUtils;
 
 const
   stBooleanIndex        = FirstDbcIndex + 0;
@@ -225,20 +225,12 @@ begin
     Add(GetColumnsInfo(stFloatIndex, stFloat, ntNullable, False, True));
     Add(GetColumnsInfo(stDoubleIndex, stDouble, ntNullable, False, True));
     Add(GetColumnsInfo(stBigDecimalIndex, stBigDecimal, ntNullable, False, True));
-    {$IFNDEF NO_AUTOENCODE}
-    TZColumnInfo(Result[Add(GetColumnsInfo(stStringIndex, stString, ntNullable, False, True))]).ColumnCodePage := FConSettings.CTRL_CP;
-    {$ELSE NO_AUTOENCODE}
     TZColumnInfo(Result[Add(GetColumnsInfo(stStringIndex, stString, ntNullable, False, True))]).ColumnCodePage := GetW2A2WConversionCodePage(@FConSettings);
-    {$ENDIF NO_AUTOENCODE}
     Add(GetColumnsInfo(stBytesIndex, stBytes, ntNullable, False, True));
     Add(GetColumnsInfo(stDateIndex, stDate, ntNullable, False, True));
     Add(GetColumnsInfo(stTimeIndex, stTime, ntNullable, False, True));
     Add(GetColumnsInfo(stTimestampIndex, stTimestamp, ntNullable, False, True));
-    {$IFNDEF NO_AUTOENCODE}
-    TZColumnInfo(Result[Add(GetColumnsInfo(stAsciiStreamIndex, stAsciiStream, ntNullable, False, True))]).ColumnCodePage := FConSettings.CTRL_CP;
-    {$ELSE NO_AUTOENCODE}
     TZColumnInfo(Result[Add(GetColumnsInfo(stAsciiStreamIndex, stAsciiStream, ntNullable, False, True))]).ColumnCodePage := GetW2A2WConversionCodePage(@FConSettings);
-    {$ENDIF NO_AUTOENCODE}
     TZColumnInfo(Result[Add(GetColumnsInfo(stUnicodeStreamIndex, stUnicodeStream, ntNullable, False, True))]).ColumnCodePage := 1200;
     Add(GetColumnsInfo(stBinaryStreamIndex, stBinaryStream, ntNullable, False, True));
   end;
@@ -300,15 +292,9 @@ begin
   FByteArray[4] := 4;
 
   FConSettings := ConSettingsDummy;
-  {$IFNDEF NO_AUTOENCODE}
-  FConSettings.DisplayFormatSettings.DateFormat := DefDateFormatYMD;
-  {$ENDIF}
   FConSettings.ReadFormatSettings.DateFormat := DefDateFormatYMD;
   FConSettings.WriteFormatSettings.DateFormat := DefDateFormatYMD;
 
-  {$IFNDEF NO_AUTOENCODE}
-  FConSettings.DisplayFormatSettings.DateTimeFormat := DefDateFormatYMD + ' ' + DefTimeFormatMsecs;
-  {$ENDIF}
   FConSettings.ReadFormatSettings.DateTimeFormat := DefDateFormatYMD + ' ' + DefTimeFormatMsecs;
   FConSettings.WriteFormatSettings.DateTimeFormat := DefDateFormatYMD + ' ' + DefTimeFormatMsecs;
 
@@ -644,13 +630,8 @@ begin
   with RowAccessor do
   begin
     TryDateToDateTime(FDate, DT);
-    {$IFNDEF NO_AUTOENCODE}
-    CheckEquals(FormatDateTime(ConSettings^.DisplayFormatSettings.DateFormat, DT),
-      GetString(stDateIndex, WasNull), 'GetString');
-    {$ELSE}
     CheckEquals(FormatDateTime(ConSettings^.ReadFormatSettings.DateFormat, DT),
       GetString(stDateIndex, WasNull), 'GetString');
-    {$ENDIF}
     GetDate(stDateIndex, WasNull, D);
     Check(ZCompareDate(FDate, D)= 0, 'GetDate');
     GetTimestamp(stDateIndex, WasNull, TS);
@@ -894,13 +875,8 @@ begin
   with RowAccessor do
   begin
     Check(TryTimeToDateTime(FTime, DT), 'TimeConvert');
-    {$IFNDEF NO_AUTOENCODE}
-    CheckEquals(FormatDateTime(ConSettings^.DisplayFormatSettings.TimeFormat, DT),
-      GetString(stTimeIndex, WasNull), 'GetString');
-    {$ELSE}
     CheckEquals(FormatDateTime(ConSettings^.ReadFormatSettings.TimeFormat, DT),
       GetString(stTimeIndex, WasNull), 'GetString');
-    {$ENDIF}
     GetTime(stTimeIndex, WasNull, T);
     Check(TryTimeToDateTime(T, DT2), 'TimeConvert');
     CheckEqualsDate(DT, DT2, [], 'GetTime');
@@ -924,13 +900,8 @@ begin
   with RowAccessor do
   begin
     Check(TryTimeStampToDateTime(FTimeStamp, DT), 'TimeStampConvert');
-    {$IFNDEF NO_AUTOENCODE}
-    CheckEquals(FormatDateTime(ConSettings^.DisplayFormatSettings.DateTimeFormat, DT),
-      GetString(stTimestampIndex, WasNull), 'GetString');
-    {$ELSE}
     CheckEquals(FormatDateTime(ConSettings^.ReadFormatSettings.DateTimeFormat, DT),
       GetString(stTimestampIndex, WasNull), 'GetString');
-    {$ENDIF}
     GetDate(stTimestampIndex, WasNull, D);
     Check(TryDateToDateTime(FDate, DT2), 'DateConvert');
     CheckEqualsDate(DT, DT2, [dpYear..dpDay], 'GetDate');

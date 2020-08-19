@@ -2270,7 +2270,7 @@ end;
 function TZRowAccessor.GetPAnsiChar(ColumnIndex: Integer; out IsNull: Boolean;
   out Len: NativeUInt): PAnsiChar;
 var Data: PPointer;
-    {$IFDEF NO_AUTOENCODE}CP: Word;{$ENDIF}
+    CP: Word;
 label Set_Results, SetEmpty, jmpNull;
 begin
   {$R-}
@@ -2345,11 +2345,9 @@ Set_Results:        Len := Result - PAnsiChar(@TinyBuffer[0]);
 SetEmpty:           Len := 0;
                     Result := PEmptyAnsiString;
                   end else begin
-                    {$IFDEF NO_AUTOENCODE}
                     CP := GetW2A2WConversionCodePage(ConSettings);
-                    {$ENDIF}
                     FRawTemp := PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc,
-                      PCardinal(PPointer(Data)^)^ shr 1, {$IFDEF NO_AUTOENCODE}CP{$ELSE}FClientCP{$ENDIF});
+                      PCardinal(PPointer(Data)^)^ shr 1, CP);
                     Len := Length(FRawTemp);
                     if Len > 0
                     then Result := Pointer(FRawTemp)
@@ -2368,46 +2366,28 @@ SetEmpty:           Len := 0;
       stDate:     begin
                     Result := @TinyBuffer[0];
                     Len := DateToRaw(PZDate(Data)^.Year, PZDate(Data)^.Month, PZDate(Data)^.Day,
-                      {$IFDEF NO_AUTOENCODE}
                       Result, ConSettings^.ReadFormatSettings.DateFormat, False, PZDate(Data)^.IsNegative);
-                      {$ELSE}
-                      Result, ConSettings^.DisplayFormatSettings.DateFormat, False, PZDate(Data)^.IsNegative);
-                      {$ENDIF}
                   end;
       stTime:     begin
                     Result := @TinyBuffer[0];
                     Len := TimeToRaw(PZTime(Data)^.Hour, PZTime(Data)^.Minute, PZTime(Data)^.Second,
-                      {$IFDEF NO_AUTOENCODE}
                       PZTime(Data)^.Fractions, Result, ConSettings^.ReadFormatSettings.TimeFormat, False, PZTime(Data)^.IsNegative);
-                      {$ELSE}
-                      PZTime(Data)^.Fractions, Result, ConSettings^.DisplayFormatSettings.TimeFormat, False, PZTime(Data)^.IsNegative);
-                      {$ENDIF}
                   end;
       stTimestamp:begin
                     Result := @TinyBuffer[0];
                     Len := DateTimeToRaw(PZTimeStamp(Data)^.Year, PZTimeStamp(Data)^.Month,
                       PZTimeStamp(Data)^.Day, PZTimeStamp(Data)^.Hour, PZTimeStamp(Data)^.Minute,
                       PZTimeStamp(Data)^.Second, PZTimeStamp(Data)^.Fractions, Result,
-                      {$IFDEF NO_AUTOENCODE}
                       ConSettings^.ReadFormatSettings.DateTimeFormat, False, PZTimeStamp(Data)^.IsNegative);
-                      {$ELSE}
-                      ConSettings^.DisplayFormatSettings.DateTimeFormat, False, PZTimeStamp(Data)^.IsNegative);
-                      {$ENDIF}
                   end;
       stAsciiStream, stUnicodeStream:
                   if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then
-                    {$IFDEF NO_AUTOENCODE}
                   begin
                     CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
                     if CP = zCP_UTF16 then
                       CP := GetW2A2WConversionCodePage(ConSettings);
                     Result := PIZLob(Data)^.GetPAnsiChar(CP, FRawTemp, Len);
                   end
-                  {$ELSE}
-                    if ConSettings^.ClientCodePage.Encoding = ceUTF16// ConSettings^.AutoEncode
-                    then Result := PIZLob(Data)^.GetPAnsiChar(ConSettings^.CTRL_CP, FRawTemp, Len)
-                    else Result := PIZLob(Data)^.GetPAnsiChar(FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], fRawTemp, Len)
-                    {$ENDIF}
                   else goto jmpNull;
       stBinaryStream: if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty then
                     Result := PIZLob(Data)^.GetBuffer(FRawTemp, Len)
@@ -2445,48 +2425,22 @@ begin
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
     stString: begin
         P := GetPAnsiChar(ColumnIndex, IsNull, Len);
-//        CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
-        {$IFDEF NO_AUTOENCODE}
-          {$IFDEF UNICODE}
-          CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
-          Result := PRawToUnicode(P, Len, CP);
-          {$ELSE}
-          Result := '';
-            {$IFDEF WITH_RAWBYTESTRING}
-            CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
-            ZSetString(PAnsichar(P), Len, RBS, CP);
-            {$ELSE}
-            System.SetString(Result, PAnsiChar(P), Len)
-            {$ENDIF}
-          {$ENDIF}
-        {$ELSE}
+        {$IFDEF UNICODE}
         CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
-        if not ConSettings^.AutoEncode or (ConSettings^.CTRL_CP = CP) or (Len=0) then begin
-          {$IF defined(WITH_RAWBYTESTRING) and not defined(UNICODE)}
-          //implicit give the FPC the correct string CP for conversions
-          RBS := '';
-          ZSetString(P, Len, RBS, FClientCP)
+        Result := PRawToUnicode(P, Len, CP);
+        {$ELSE}
+        Result := '';
+          {$IFDEF WITH_RAWBYTESTRING}
+          CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
+          ZSetString(PAnsichar(P), Len, RBS, CP);
           {$ELSE}
           System.SetString(Result, PAnsiChar(P), Len)
-          {$IFEND}
-        end else begin
-          fUniTemp := PRawToUnicode(P, Len, FClientCP);
-          {$IF defined(WITH_RAWBYTESTRING) and not defined(UNICODE)}
-          //implicit give the FPC the correct string CP for conversions
-          RBS := PUnicodeToRaw(Pointer(fUniTemp), Length(FUniTemp), ConSettings^.CTRL_CP)
-          {$ELSE}
-          Result := PUnicodeToRaw(Pointer(fUniTemp), Length(FUniTemp), ConSettings^.CTRL_CP)
-          {$IFEND}
-        end;
+          {$ENDIF}
         {$ENDIF}
       end;
     stUnicodeString: begin
         P := GetPWideChar(ColumnIndex, IsNull, Len);
-        {$IFDEF NO_AUTOENCODE}
         CP := GetW2A2WConversionCodePage(ConSettings);
-        {$ELSE}
-        CP := ConSettings^.CTRL_CP;
-        {$ENDIF}
         Result := '';
         {$IF defined(WITH_RAWBYTESTRING) and not defined(UNICODE)}
         //implicit give the FPC the correct string CP for conversions
@@ -2730,31 +2684,19 @@ SetEmpty:             Result := PEmptyUnicodeString;
       stDate:     begin
                     Result := @TinyBuffer[0];
                     Len := DateToUni(PZDate(Data)^.Year, PZDate(Data)^.Month, PZDate(Data)^.Day,
-                      {$IFDEF NO_AUTOENCODE}
                       Result, ConSettings^.ReadFormatSettings.DateFormat, False, PZDate(Data)^.IsNegative);
-                      {$ELSE}
-                      Result, ConSettings^.DisplayFormatSettings.DateFormat, False, PZDate(Data)^.IsNegative);
-                      {$ENDIF}
                   end;
       stTime:     begin
                     Result := @TinyBuffer[0];
                     Len := TimeToUni(PZTime(Data)^.Hour, PZTime(Data)^.Minute, PZTime(Data)^.Second,
-                      {$IFDEF NO_AUTOENCODE}
                       PZTime(Data)^.Fractions, Result, ConSettings^.ReadFormatSettings.TimeFormat, False, PZTime(Data)^.IsNegative);
-                      {$ELSE}
-                      PZTime(Data)^.Fractions, Result, ConSettings^.DisplayFormatSettings.TimeFormat, False, PZTime(Data)^.IsNegative);
-                      {$ENDIF}
                   end;
       stTimestamp:begin
                     Result := @TinyBuffer[0];
                     Len := DateTimeToUni(PZTimeStamp(Data)^.Year, PZTimeStamp(Data)^.Month,
                       PZTimeStamp(Data)^.Day, PZTimeStamp(Data)^.Hour, PZTimeStamp(Data)^.Minute,
                       PZTimeStamp(Data)^.Second, PZTimeStamp(Data)^.Fractions, Result,
-                      {$IFDEF NO_AUTOENCODE}
                       ConSettings^.ReadFormatSettings.DateTimeFormat, False, PZTimeStamp(Data)^.IsNegative);
-                      {$ELSE}
-                      ConSettings^.DisplayFormatSettings.DateTimeFormat, False, PZTimeStamp(Data)^.IsNegative);
-                      {$ENDIF}
                   end;
       stAsciiStream, stUnicodeStream: if (Data^ <> nil) and not PIZLob(Data)^.IsEmpty
                     then Result := PIZLob(Data)^.GetPWideChar(fUniTemp, Len)
@@ -4439,9 +4381,7 @@ end;
 }
 procedure TZRowAccessor.SetString(ColumnIndex: Integer; const Value: String);
 var Len: NativeUInt;
-  {$IF defined(UNICODE) or defined(NO_AUTOENCODE)}
     P: Pointer;
-  {$IFEND}
 {$IFNDEF UNICODE}
     CP: Word;
 {$ENDIF}
@@ -4454,7 +4394,6 @@ begin
   SetPWideChar(ColumnIndex, P, Len);
   {$ELSE}
   CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
-{$IFDEF NO_AUTOENCODE}
   if CP = zCP_UTF16 then begin
     CP := GetW2A2WConversionCodePage(ConSettings);
     fUniTemp := ZRawToUnicode(Value, CP); //localize Value because of WideString overrun
@@ -4470,20 +4409,6 @@ begin
     else P := Pointer(Value);
     SetPAnsiChar(ColumnIndex, P, Len)
   end;
-{$ELSE}
-  if CP = zCP_UTF16 then begin
-    fUniTemp := ConSettings^.ConvFuncs.ZStringToUnicode(Value, ConSettings^.CTRL_CP); //localize Value because of WideString overrun
-    Len := Length(fUniTemp);
-    SetPWideChar(ColumnIndex, Pointer(fUniTemp), Len);
-  end else if not ConSettings.AutoEncode then begin
-    Len := Length(Value);
-    SetPAnsiChar(ColumnIndex, Pointer(Value), Len)
-  end else if ConSettings.AutoEncode then begin
-    fRawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, CP);
-    Len := Length(fRawTemp);
-    SetPAnsiChar(ColumnIndex, Pointer(fRawTemp), Len);
-  end;
-{$ENDIF}
   {$ENDIF}
 end;
 
@@ -4524,12 +4449,8 @@ begin
     stBigDecimal: ZSysUtils.TryRawToBcd(Value, Len, PBCD(Data)^, '.');
     stString: InternalSetPAnsiChar(Data, Value, Len);
     stUnicodeString: begin
-        {$IFDEF NO_AUTOENCODE}
         CP := GetW2A2WConversionCodePage(ConSettings);
         fUniTemp := PRawToUnicode(Value, Len, CP); //localize because of WideString overrun
-        {$ELSE}
-        fUniTemp := PRawToUnicode(Value, Len, FClientCP); //localize because of WideString overrun
-        {$ENDIF}
         InternalSetPWideChar(Data, Pointer(fUniTemp), Length(fUniTemp));
       end;
     stBytes: InternalSetVarLenBytes(Data, Value, Len);
@@ -4556,11 +4477,7 @@ begin
         CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
         PIZLob(Data)^ := TZLocalMemCLob.Create(CP, ConSettings, FOpenLobStreams);
         if CP = zCP_UTF16 then
-          {$IFDEF NO_AUTOENCODE}
           CP := GetW2A2WConversionCodePage(ConSettings);
-          {$ELSE}
-          CP := ConSettings^.CTRL_CP;
-          {$ENDIF}
         PIZLob(Data)^.SetPAnsiChar(Value, CP, Len);
       end else PIZLob(Data)^.SetPAnsiChar(Value, FClientCP, Len);
     stBinaryStream:
@@ -4946,38 +4863,21 @@ begin
           then Data^ := TZLocalMemBLob.Create(FOpenLobStreams)
           else Data^ := TZLocalMemCLob.Create(CP, ConSettings, FOpenLobStreams);
         if Data^.QueryInterface(IZClob, Clob) = S_OK then
-          {$IFDEF NO_AUTOENCODE}
           begin
             if CP = zCP_UTF16 then
               CP := GetW2A2WConversionCodePage(ConSettings);
             Clob.SetStream(Value, CP)
           end
-          {$ELSE}
-          if ConSettings^.AutoEncode
-          then Clob.SetStream(Value, zCP_None)
-          else Clob.SetStream(Value, CP)
-          {$ENDIF}
         else Data^.SetStream(Value);
       end;
     stString, stUnicodeString: begin
         CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
-        {$IFDEF NO_AUTOENCODE}
         begin
           if CP = zCP_UTF16 then
             raise ZDbcUtils.CreateConversionError(ColumnIndex, stUnicodeStream, stAsciiStream);
           Clob := TZRowAccessorRawByteStringLob.CreateWithDataAddess(PZVarLenDataRef(Data), CP, ConSettings, FOpenLobStreams);
           Clob.SetStream(Value, CP);
         end
-        {$ELSE}
-        if CP = zCP_UTF16
-        then Clob := TZRowAccessorUnicodeStringLob.CreateWithDataAddess(PZVarLenDataRef(Data), CP, ConSettings, FOpenLobStreams)
-        else Clob := TZRowAccessorRawByteStringLob.CreateWithDataAddess(PZVarLenDataRef(Data), CP, ConSettings, FOpenLobStreams);
-        if ConSettings^.AutoEncode
-        then CP := zCP_None
-        else if ConSettings^.ClientCodePage.Encoding = ceUTF16 then
-          CP := ConSettings^.CTRL_CP;
-        Clob.SetStream(Value, CP);
-        {$ENDIF}
       end
     else
       raise EZSQLException.Create( Format(SCanNotAccessBlobRecord,

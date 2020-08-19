@@ -418,14 +418,11 @@ begin
   Result := PRawToUnicode(@FSQLDA.sqlvar[Index].sqlname.data[0],
     FSQLDA.sqlvar[Index].sqlname.length-1, FConSettings^.ClientCodePage^.CP);
   {$ELSE}
-    {$IFDEF NO_AUTOENCODE}
-    SetString(Result, PAnsiChar(@FSQLDA.sqlvar[Index].sqlname.data[0]), FSQLDA.sqlvar[Index].sqlname.length-1)
+  Result := '';
+    {$IFDEF WITH_RAWBYTESTRING}
+  ZSetString(PAnsiChar(@FSQLDA.sqlvar[Index].sqlname.data[0]), FSQLDA.sqlvar[Index].sqlname.length-1, RawByteString(Result), FConSettings^.ClientCodePage^.CP);
     {$ELSE}
-    if (not FConSettings^.AutoEncode) or (FConSettings^.ClientCodePage^.CP = FConSettings^.CTRL_CP) then
-      SetString(Result, PAnsiChar(@FSQLDA.sqlvar[Index].sqlname.data[0]), FSQLDA.sqlvar[Index].sqlname.length-1)
-    else
-      Result := ZUnicodeToString(PRawToUnicode(@FSQLDA.sqlvar[Index].sqlname.data[0],
-        FSQLDA.sqlvar[Index].sqlname.length-1, FConSettings^.ClientCodePage^.CP), FConSettings^.CTRL_CP);
+  System.SetString(Result, PAnsiChar(@FSQLDA.sqlvar[Index].sqlname.data[0]), FSQLDA.sqlvar[Index].sqlname.length-1);
     {$ENDIF}
   {$ENDIF}
 end;

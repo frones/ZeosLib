@@ -125,7 +125,7 @@ implementation
 
 
 uses ZMessages
-{$IF defined(UNICODE) and defined(NO_AUTOENCODE)},ZEncoding{$IFEND}
+{$IFDEF UNICODE},ZEncoding{$ENDIF}
 {$IFDEF WITH_UNITANSISTRINGS},AnsiStrings{$ENDIF};
 
 { TZPgEventAlerter }
@@ -248,17 +248,12 @@ begin
   if Handle = nil then
     Exit;
   for I := 0 to FChildEvents.Count-1 do begin
-{$IFDEF NO_AUTOENCODE}
     {$IFDEF UNICODE}
     Tmp := ZUnicodeToRaw(FChildEvents.Strings[I], ICon.GetConSettings.ClientCodePage.CP);
     {$ELSE}
     Tmp := FChildEvents.Strings[I];
     {$ENDIF}
     Tmp := 'listen ' + Tmp;
-{$ELSE}
-    Tmp := 'listen ' + ICon.GetConSettings.ConvFuncs.ZStringToRaw(FChildEvents.Strings[I],
-      ICon.GetConSettings.CTRL_CP, ICon.GetConSettings.ClientCodePage.CP);
-{$ENDIF}
     Res := PlainDRV.PQExec(Handle, Pointer(Tmp));
     if (PlainDRV.PQresultStatus(Res) <> TZPostgreSQLExecStatusType(PGRES_COMMAND_OK)) then begin
       PlainDRV.PQclear(Res);
@@ -289,17 +284,12 @@ begin
   if Handle = nil then
     Exit;
   for I := 0 to FChildEvents.Count-1 do begin
-{$IFDEF NO_AUTOENCODE}
     {$IFDEF UNICODE}
     Tmp := ZUnicodeToRaw(FChildEvents.Strings[I], ICon.GetConSettings.ClientCodePage.CP);
     {$ELSE}
     Tmp := FChildEvents.Strings[I];
     {$ENDIF}
     Tmp := 'unlisten ' + Tmp;
-{$ELSE}
-    Tmp := 'unlisten ' + ICon.GetConSettings.ConvFuncs.ZStringToRaw(FChildEvents.Strings[I],
-      ICon.GetConSettings.CTRL_CP, ICon.GetConSettings.ClientCodePage.CP);
-{$ENDIF}
     Res := PlainDRV.PQExec(Handle, Pointer(Tmp));
     if (PlainDRV.PQresultStatus(Res) <> TZPostgreSQLExecStatusType(PGRES_COMMAND_OK)) then begin
       PlainDRV.PQclear(Res);

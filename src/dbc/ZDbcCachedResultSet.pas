@@ -1868,15 +1868,8 @@ begin
     else Blob.Open(lsmWrite);
     if Blob.QueryInterface(IZCLob, Clob) = S_OK then begin
       CP := FRowAccessor.GetColumnCodePage(ColumnIndex);
-      {$IFNDEF NO_AUTOENCODE}
-      if ConSettings^.AutoEncode
-      then CP := zCP_None
-      else if CP = zCP_UTF16 then
-        CP := ConSettings.CTRL_CP;
-      {$ELSE}
       if CP = zCP_UTF16 then
         CP := GetW2A2WConversionCodePage(ConSettings);
-      {$ENDIF}
       Clob.SetStream(Value, CP);
     end else Blob.SetStream(Value);
   end;

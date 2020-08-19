@@ -672,13 +672,13 @@ end;
 function TFBEventCallback.release: Integer;
 begin
   Dec(FRefCnt);
+  Result := FRefCnt;
   if FRefCnt = 0 then
     {$IFDEF AUTOREFCOUNT}
     Destroy;
     {$ELSE}
     Free;
     {$ENDIF}
-  Result := FRefCnt;
 end;
 
 procedure TFBEventCallback.WaitForEvent;

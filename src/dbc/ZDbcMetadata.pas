@@ -772,7 +772,7 @@ var
 
 implementation
 
-uses ZFastCode, ZVariant, ZCollections, ZMessages,{$IFDEF NO_AUTOENCODE}ZEncoding,{$ENDIF}
+uses ZFastCode, ZVariant, ZCollections, ZMessages, ZEncoding,
   ZDbcProperties, ZDbcUtils;
 
 { TZAbstractDatabaseInfo }
@@ -2319,7 +2319,6 @@ begin
       with ColumnInfo do begin
         ColumnLabel := ColumnsDefs[I].Name;
         ColumnType := ColumnsDefs[I].SQLType;
-        {$IFDEF NO_AUTOENCODE}
         if ColumnType in [stString, stUnicodeString] then
           if (FConSettings.ClientCodePage.Encoding = ceUTF16) then begin
             ColumnType := TZSQLType(Ord(ColumnType)+1);
@@ -2327,7 +2326,6 @@ begin
           end else if FConSettings.ClientCodePage.Encoding = ceUTF8 then
             ColumnCodePage := zCP_UTF8
           else ColumnCodePage := FConSettings.ClientCodePage.CP;
-        {$ENDIF NO_AUTOENCODE}
         Precision := ColumnsDefs[I].Length;
       end;
       ColumnsInfo.Add(ColumnInfo);

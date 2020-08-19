@@ -738,8 +738,8 @@ begin
 //  ResultSet.Last; // why do we do this in this test?
   Check(ResultSet.GetInt(D_ID) <> 0);
   CheckEquals(Int(ThisTime), ResultSet.GetDate(D_DATE),'Failure field 2');
-  ToTS(Frac(ThisTime), TS1);
-  ToTS(ResultSet.GetTime(D_TIME), Ts2);
+  ToTS(Frac(ThisTime), TS1{%H-});
+  ToTS(ResultSet.GetTime(D_TIME), Ts2{%H-});
   CheckEquals(EncodeTime(ts1.Hour, ts1.Minute, ts1.Second, 0), EncodeTime(ts2.Hour, ts2.Minute, ts2.Second, 0), 'time without fractions');
   CheckEquals(ts1.Fractions, ts2.Fractions, 'fractions');
   CheckEquals(ThisTime, ResultSet.GetTimeStamp(D_DATETIME),'Failure field 4');
@@ -897,8 +897,6 @@ end;
 ///   This test tests if statements longer than 64 KB work as expected.
 /// </summary>
 procedure TZTestDbcInterbaseCase.TestLongStatements;
-const
-  IDX = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;

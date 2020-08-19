@@ -355,8 +355,8 @@ begin
       5..N  - string
       N+1   - #1 }
   if FByteBuffer[0] = isc_info
-  then Result := ConvertConnRawToString({$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
-    ConSettings, {$IFEND}@FByteBuffer[5], Integer(FByteBuffer[4]))
+  then Result := ConvertConnRawToString({$IFDEF UNICODE}
+    ConSettings, {$ENDIF}@FByteBuffer[5], Integer(FByteBuffer[4]))
   else Result := '';
 end;
 
@@ -397,25 +397,19 @@ var
   var
     R: RawByteString;
     P: PAnsiChar;
-    {$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
+    {$IFDEF UNICODE}
     CP: Word;
-    {$IFEND}
+    {$ENDIF}
   begin
-    {$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
+    {$IFDEF UNICODE}
     if (Info.IndexOf('isc_dpb_utf8_filename') = -1)
     then CP := zOSCodePage
     else CP := zCP_UTF8;
-    {$IFEND}
-    {$IFDEF UNICODE}
     R := ZUnicodeToRaw(ConnectionString, CP);
     {$ELSE}
-    {$IFDEF NO_AUTOENCODE}
     R := ConnectionString;
-    {$ELSE}
-    R := ZConvertStringToRawWithAutoEncode(ConnectionString, ConSettings^.CTRL_CP, CP);
     {$ENDIF}
-    {$ENDIF}
-    DPB := GenerateDPB(FPlainDriver, Info{$IFDEF NO_AUTOENCODE)}{$IFDEF UNICODE},CP{$ENDIF}{$ELSE},ConSettings,CP{$ENDIF});
+    DPB := GenerateDPB(FPlainDriver, Info{$IFDEF UNICODE},CP{$ENDIF});
     P := Pointer(R);
     db_name_len := Min(512, Length(R){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
     if P <> nil then

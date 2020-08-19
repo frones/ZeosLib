@@ -212,14 +212,11 @@ type
 {Interbase6 Connection Functions}
 function BuildPB(PlainDriver: TZInterbaseFirebirdPlainDriver; Info: TStrings; VersionCode: Byte;
   const FilterPrefix: string; const ParamArr: array of TZIbParam
-  {$IFDEF NO_AUTOENCODE)}{$IFDEF UNICODE};CP: Word{$ENDIF}{$ELSE}
-    ;ConSettings: PZConSettings; CP: Word{$ENDIF}): RawByteString;
+  {$IFDEF UNICODE};CP: Word{$ENDIF}): RawByteString;
 function GenerateDPB(PlainDriver: TZInterbaseFirebirdPlainDriver; Info: TStrings
-  {$IFDEF NO_AUTOENCODE)}{$IFDEF UNICODE};CP: Word{$ENDIF}{$ELSE}
-  ;ConSettings: PZConSettings; CP: Word{$ENDIF}): RawByteString;
+  {$IFDEF UNICODE};CP: Word{$ENDIF}): RawByteString;
 function GenerateTPB(PlainDriver: TZInterbaseFirebirdPlainDriver; Params: TStrings
-  {$IFDEF NO_AUTOENCODE)}{$IFDEF UNICODE};CP: Word{$ENDIF}{$ELSE}
-  ;ConSettings: PZConSettings; CP: Word{$ENDIF}): RawByteString;
+  {$IFDEF UNICODE};CP: Word{$ENDIF}): RawByteString;
 procedure GenerateTEB(PHandle: PISC_DB_HANDLE; const TPB: RawByteString; var TEB: TISC_TEB);
 function GetInterbase6DatabaseParamNumber(const Value: String): word;
 function GetInterbase6TransactionParamNumber(const Value: String): word;
@@ -443,10 +440,10 @@ function XSQLDA_LENGTH_V2(Value: LongInt): LongInt;
 {**
    Convert pointer to raw database string to compiler-native string
 }
-function ConvertConnRawToString({$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
-  ConSettings: PZConSettings; {$IFEND}Buffer: Pointer; BufLen: Integer): string; overload;
-function ConvertConnRawToString({$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
-  ConSettings: PZConSettings; {$IFEND}Buffer: Pointer): string; overload;
+function ConvertConnRawToString({$IFDEF UNICODE}ConSettings: PZConSettings;{$ENDIF}
+  Buffer: Pointer; BufLen: Integer): string; overload;
+function ConvertConnRawToString({$IFDEF UNICODE}ConSettings: PZConSettings;{$ENDIF}
+  Buffer: Pointer): string; overload;
 
 {$ENDIF DISABLE_INTERBASE_AND_FIREBIRD} //if set we have an empty unit
 implementation
@@ -493,8 +490,7 @@ end;
 }
 function BuildPB(PlainDriver: TZInterbaseFirebirdPlainDriver; Info: TStrings;
   VersionCode: Byte; const FilterPrefix: string; const ParamArr: array of TZIbParam
-  {$IFDEF NO_AUTOENCODE)}{$IFDEF UNICODE};CP: Word{$ENDIF}{$ELSE}
-  ;ConSettings: PZConSettings; CP: Word{$ENDIF}): RawByteString;
+  {$IFDEF UNICODE};CP: Word{$ENDIF}): RawByteString;
 var Writer: TZRawSQLStringWriter;
 
   procedure ExtractParamNameAndValue(const S: string; out ParamName: String; out ParamValue: String);
@@ -570,11 +566,7 @@ begin
             {$IFDEF UNICODE}
             tmp := ZUnicodeToRaw(ParamValue, CP);
             {$ELSE}
-              {$IFDEF NO_AUTOENCODE}
             tmp := ParamValue;
-              {$ELSE}
-            tmp := ZConvertStringToRawWithAutoEncode(ParamValue, ConSettings^.CTRL_CP, CP);
-              {$ENDIF}
             {$ENDIF}
             Writer.AddChar(AnsiChar(PParam.Number), Result);
             Writer.AddChar(AnsiChar(Length(tmp)), Result);
@@ -597,11 +589,10 @@ end;
   @return a generated string
 }
 function GenerateDPB(PlainDriver: TZInterbaseFirebirdPlainDriver; Info: TStrings
-  {$IFDEF NO_AUTOENCODE)}{$IFDEF UNICODE};CP: Word{$ENDIF}{$ELSE}
-  ;ConSettings: PZConSettings; CP: Word{$ENDIF}): RawByteString;
+  {$IFDEF UNICODE};CP: Word{$ENDIF}): RawByteString;
 begin
-  Result := BuildPB(PlainDriver, Info, isc_dpb_version1, DPBPrefix, DatabaseParams
-  {$IFDEF NO_AUTOENCODE)}{$IFDEF UNICODE},CP{$ENDIF}{$ELSE},ConSettings,CP{$ENDIF});
+  Result := BuildPB(PlainDriver, Info, isc_dpb_version1, DPBPrefix,
+    DatabaseParams {$IFDEF UNICODE},CP{$ENDIF});
 end;
 
 {**
@@ -611,12 +602,11 @@ end;
   @param Params - a transaction parameters list
   @return a generated string
 }
-function GenerateTPB(PlainDriver: TZInterbaseFirebirdPlainDriver; Params: TStrings
-  {$IFDEF NO_AUTOENCODE)}{$IFDEF UNICODE};CP: Word{$ENDIF}{$ELSE}
-  ;ConSettings: PZConSettings; CP: Word{$ENDIF}): RawByteString;
+function GenerateTPB(PlainDriver: TZInterbaseFirebirdPlainDriver;
+  Params: TStrings {$IFDEF UNICODE};CP: Word{$ENDIF}): RawByteString;
 begin
   Result := BuildPB(PlainDriver, Params, isc_tpb_version3, TPBPrefix, TransactionParams
-  {$IFDEF NO_AUTOENCODE)}{$IFDEF UNICODE},CP{$ENDIF}{$ELSE},ConSettings,CP{$ENDIF});
+  {$IFDEF UNICODE},CP{$ENDIF});
 end;
 
 {**
@@ -1063,14 +1053,11 @@ end;
 {**
    Convert pointer to raw database string to compiler-native string
 }
-function ConvertConnRawToString({$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
-  ConSettings: PZConSettings; {$IFEND}Buffer: Pointer; BufLen: Integer): string; overload;
-  {$IFDEF UNICODE}
-var
-  CP: Word;
-  {$ELSE}
-  {$IFNDEF NO_AUTOENCODE}var RawStr: RawByteString;{$ENDIF}
-  {$ENDIF}
+function ConvertConnRawToString({$IFDEF UNICODE}ConSettings: PZConSettings;{$ENDIF}
+  Buffer: Pointer; BufLen: Integer): string; overload;
+{$IFDEF UNICODE}
+var CP: Word;
+{$ENDIF}
 begin
   {$IFDEF UNICODE}
   if (ConSettings <> nil) and (ConSettings.ClientCodePage <> nil)
@@ -1078,27 +1065,19 @@ begin
   else CP := DefaultSystemCodePage;
   Result := PRawToUnicode(Buffer, BufLen, CP);
   {$ELSE}
-    {$IFDEF NO_AUTOENCODE}
-    Result := '';
-    System.SetString(Result, PAnsiChar(Buffer), BufLen);
-    {$ELSE}
-    RawStr := '';
-    ZSetString(PAnsiChar(Buffer), BufLen, RawStr);
-    if (ConSettings <> nil) and (ConSettings.ClientCodePage <> nil)
-    then Result := ConSettings^.ConvFuncs.ZRawToString(RawStr, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
-    else Result := string(RawStr);
-    {$ENDIF}
+  Result := '';
+  System.SetString(Result, PAnsiChar(Buffer), BufLen);
   {$ENDIF}
 end;
 
 {**
    Convert zero-terminated raw database string to compiler-native string
 }
-function ConvertConnRawToString({$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
-  ConSettings: PZConSettings; {$IFEND}Buffer: Pointer): string; overload;
+function ConvertConnRawToString({$IFDEF UNICODE}ConSettings: PZConSettings;{$ENDIF}
+  Buffer: Pointer): string; overload;
 begin
-  Result := ConvertConnRawToString({$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
-            ConSettings,{$IFEND}Buffer, StrLen(Buffer));
+  Result := ConvertConnRawToString({$IFDEF UNICODE} ConSettings,{$ENDIF}
+    Buffer, StrLen(Buffer));
 end;
 
 {**
@@ -1182,27 +1161,19 @@ begin
   Assert(Index < Word(FXSQLDA.sqln), 'Out of Range.');
 end;
 
-{$IF defined(UNICODE) or not defined(NO_AUTOENCODE)}
+{$IFDEF UNICODE}
 function ConvertConnRawToStringWithOpt(ConSettings: PZConSettings; Buffer: Pointer; BufLen: Integer): string;
 {$ELSE}
 function ConvertConnRawToStringWithOpt(Buffer: Pointer; BufLen: Integer): string;
-{$IFEND}
+{$ENDIF}
 begin
   {$IFDEF UNICODE}
   if ConSettings^.ClientCodePage^.ID = CS_NONE
   then Result := PRawToUnicode(Buffer, BufLen, zCP_UTF8)
   else Result := PRawToUnicode(Buffer, BufLen, ConSettings^.ClientCodePage^.CP);
   {$ELSE}
-    {$IFDEF NO_AUTOENCODE}
   Result := '';
   SetString(Result, PChar(Buffer), BufLen)
-    {$ELSE}
-  if (not ConSettings^.AutoEncode) or (ConSettings^.ClientCodePage^.CP = ConSettings^.CTRL_CP) then
-    SetString(Result, PChar(Buffer), BufLen)
-  else if ConSettings^.ClientCodePage^.ID = CS_NONE
-    then Result := ZUnicodeToString(PRawToUnicode(Buffer, BufLen, zCP_UTF8), ConSettings^.CTRL_CP)
-    else Result := ZUnicodeToString(PRawToUnicode(Buffer, BufLen, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP);
-    {$ENDIF}
   {$ENDIF}
 end;
 
@@ -1215,7 +1186,7 @@ function TZSQLDA.GetFieldAliasName(const Index: Word): String;
 begin
   CheckRange(Index);
   {$R-}
-  Result := ConvertConnRawToStringWithOpt({$IF defined(UNICODE) or not defined(NO_AUTOENCODE)}ConSettings,{$IFEND}
+  Result := ConvertConnRawToStringWithOpt({$IFDEF UNICODE}ConSettings,{$ENDIF}
     @FXSQLDA.sqlvar[Index].aliasname[0], FXSQLDA.sqlvar[Index].aliasname_length);
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
@@ -1328,7 +1299,7 @@ function TZSQLDA.GetFieldOwnerName(const Index: Word): String;
 begin
   CheckRange(Index);
   {$R-}
-  Result := ConvertConnRawToStringWithOpt({$IF defined(UNICODE) or not defined(NO_AUTOENCODE)}ConSettings,{$IFEND}
+  Result := ConvertConnRawToStringWithOpt({$IFDEF UNICODE}ConSettings,{$ENDIF}
     @FXSQLDA.sqlvar[Index].OwnName[0], FXSQLDA.sqlvar[Index].OwnName_length);
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
@@ -1342,7 +1313,7 @@ function TZSQLDA.GetFieldRelationName(const Index: Word): String;
 begin
   CheckRange(Index);
   {$R-}
-  Result := ConvertConnRawToStringWithOpt({$IF defined(UNICODE) or not defined(NO_AUTOENCODE)}ConSettings,{$IFEND}
+  Result := ConvertConnRawToStringWithOpt({$IFDEF UNICODE)}ConSettings,{$ENDIF}
     @FXSQLDA.sqlvar[Index].RelName[0], FXSQLDA.sqlvar[Index].RelName_length);
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
@@ -1369,7 +1340,7 @@ function TZSQLDA.GetFieldSqlName(const Index: Word): String;
 begin
   CheckRange(Index);
   {$R-}
-  Result := ConvertConnRawToStringWithOpt({$IF defined(UNICODE) or not defined(NO_AUTOENCODE)}ConSettings,{$IFEND}
+  Result := ConvertConnRawToStringWithOpt({$IFDEF UNICODE}ConSettings,{$ENDIF}
     @FXSQLDA.sqlvar[Index].sqlname[0], FXSQLDA.sqlvar[Index].sqlname_length);
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;

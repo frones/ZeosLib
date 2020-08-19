@@ -118,9 +118,8 @@ type
   TZLoginEvent = procedure(Sender: TObject; var Username:string ; var Password: string) of object;
 
   TZAbstractTransaction = class;
-  {$IFDEF NO_AUTOENCODE}
+
   TZCharacterTransliterateOptions = class;
-  {$ENDIF}
   {** Represents a component which wraps a connection to database. }
 
   { TZAbstractConnection }
@@ -128,9 +127,6 @@ type
   TZAbstractConnection = class(TComponent)
   private
     FUseMetaData: Boolean;
-    {$IFNDEF NO_AUTOENCODE}
-    FAutoEncode: Boolean;
-    {$ENDIF}
     FControlsCodePage: TZControlsCodePage;
     {$IFDEF ZEOS_TEST_ONLY}
     FTestMode: Byte;
@@ -168,13 +164,8 @@ type
     FOnLogin: TZLoginEvent;
     FClientCodepage: String;
     FTransactions: TZSortedList;
-    {$IFDEF NO_AUTOENCODE}
     FCharacterTransliterateOptions: TZCharacterTransliterateOptions;
     procedure SetCharacterTransliterateOptions(Value: TZCharacterTransliterateOptions);
-    {$ELSE}
-    function GetAutoEncode: Boolean;
-    procedure SetAutoEncode(Value: Boolean);
-    {$ENDIF}
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetConnPort: Integer;
@@ -296,13 +287,9 @@ type
     procedure HideSQLHourGlass;
   published
     property ControlsCodePage: TZControlsCodePage read FControlsCodePage write SetCharacterFieldType;
-    {$IFNDEF NO_AUTOENCODE}
-    property AutoEncodeStrings: Boolean read GetAutoEncode write SetAutoEncode stored True default {$IFDEF UNICODDE}True{$ELSE}False{$ENDIF};
-    {$ELSE}
     property CharacterTransliterateOptions: TZCharacterTransliterateOptions read FCharacterTransliterateOptions write
       SetCharacterTransliterateOptions;
-    {$ENDIF NO_AUTOENCODE}
-    property ClientCodepage: String read FClientCodepage write SetClientCodePage; //EgonHugeist
+    property ClientCodepage: String read FClientCodepage write SetClientCodePage;
     property Catalog: string read FCatalog write FCatalog;
     property Properties: TStrings read GetProperties write SetProperties;
     property AutoCommit: Boolean read FAutoCommit write SetAutoCommit
@@ -416,8 +403,8 @@ type
     property DisposePendingUpdatesOnRollback: Boolean read FDisposePendingUpdatesOnRollback
       write FDisposePendingUpdatesOnRollback default True;
   end;
-
-  {$IFDEF NO_AUTOENCODE}
+  ////EgonHugeist
+  /// implement a raw to utf16 and vice verca setting object
   TZCharacterTransliterateOptions = class(TPersistent)
   private
     FConnection: TZAbstractConnection;
@@ -447,7 +434,6 @@ type
     property RawParams: Boolean read FRawParams write FRawParams stored true default False;
     property RawFields: Boolean read FRawFields write FRawFields stored True default True;
   end;
-  {$ENDIF}
 
 implementation
 
@@ -478,9 +464,7 @@ begin
   {$ENDIF}
   FURL := TZURL.Create;
   inherited Create(AOwner);
-  {$IFDEF NO_AUTOENCODE}
   FCharacterTransliterateOptions := TZCharacterTransliterateOptions.Create(Self);
-  {$ENDIF}
   FAutoCommit := True;
   FReadOnly := False;
   FTransactIsolationLevel := tiNone;
@@ -507,9 +491,7 @@ begin
   FSequences.Clear;
   FSequences.Free;
   FreeAndNil(FTransactions);
-  {$IFDEF NO_AUTOENCODE}
   FreeAndNil(FCharacterTransliterateOptions);
-  {$ENDIF}
   inherited Destroy;
 end;
 
@@ -659,22 +641,8 @@ end;
   @param Value a list with new connection properties.
 }
 procedure TZAbstractConnection.SetProperties(Value: TStrings);
-var S: String;
 begin
-  FURL.Properties.Clear;
-  if Value = nil then Exit;
-  S := Trim(Value.Values[ConnProps_CodePage]);
-  if S <> '' then
-    FClientCodepage := S;
-  Value.Values[ConnProps_CodePage] := FClientCodepage;
-  {$IFNDEF NO_AUTOENCODE}
-  { check autoencodestrings }
-  FAutoEncode := StrToBoolEx(Value.Values[ConnProps_AutoEncodeStrings]);
-  if Connected then
-    DbcConnection.GetConSettings.AutoEncode := FAutoEncode;
-  {$ENDIF NO_AUTOENCODE}
-  Value.Values[ConnProps_ControlsCP] := S;
-  FURL.Properties.AddStrings(Value);
+  FURL.Properties.Assign(Value);
 end;
 
 {**
@@ -989,25 +957,15 @@ begin
       //See https://sourceforge.net/p/zeoslib/tickets/329/
       if (FURL.Properties.Values[ConnProps_CodePage] = '') and (FClientCodePage <> '') then
         FURL.Properties.Values[ConnProps_CodePage] := FClientCodePage;
-      {$IFNDEF NO_AUTOENCODE}
-      if (FURL.Properties.Values[ConnProps_AutoEncodeStrings] = '') and FAutoEncode then
-        FURL.Properties.Values[ConnProps_AutoEncodeStrings] := 'True';
-      case ControlsCodePage of //automated check..
-        cCP_UTF16: FURL.Properties.Values[ConnProps_ControlsCP] := 'CP_UTF16';
-        cCP_UTF8: FURL.Properties.Values[ConnProps_ControlsCP] := 'CP_UTF8';
-        cGET_ACP: FURL.Properties.Values[ConnProps_ControlsCP] := 'GET_ACP';
-      end;
+      {$IFDEF UNICODE}
+      FURL.Properties.Values[ConnProps_RawStringEncoding] := 'DB_CP';
       {$ELSE}
-        {$IFDEF UNICODE}
-        FURL.Properties.Values[ConnProps_RawStringEncoding] := 'DB_CP';
-        {$ELSE}
       case FCharacterTransliterateOptions.FEncoding of //automated check..
         encDB_CP: FURL.Properties.Values[ConnProps_RawStringEncoding] := 'DB_CP';
         encUTF8: FURL.Properties.Values[ConnProps_RawStringEncoding] := 'CP_UTF8';
         encDefaultSystemCodePage: FURL.Properties.Values[ConnProps_RawStringEncoding] := 'GET_ACP';
       end;
-        {$ENDIF}
-      {$ENDIF NO_AUTOENCODE}
+      {$ENDIF}
       FConnection := DriverManager.GetConnectionWithParams(
         ConstructURL(UserName, Password), FURL.Properties);
       try
@@ -1580,51 +1538,6 @@ begin
   Result := ConstructURL(FURL.UserName, FURL.Password);
 end;
 
-{$IFNDEF NO_AUTOENCODE}
-function TZAbstractConnection.GetAutoEncode: Boolean;
-begin
-  {.$IFDEF UNICODE}
-  //Result := True;
-  {.$ELSE}
-    {$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)}
-    if Connected then
-    begin
-      Result := DbcConnection.GetConSettings.AutoEncode;
-      FAutoEncode := Result;
-    end
-    else
-      Result := FAutoEncode;
-    {$ELSE}
-    Result := False;
-    {$IFEND}
-  {.$ENDIF}
-end;
-
-procedure TZAbstractConnection.SetAutoEncode(Value: Boolean);
-begin
-  {.$IFNDEF UNICODE}
-    {$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)}
-    if Value then
-      FURL.Properties.Values[ConnProps_AutoEncodeStrings] := 'True'
-    else
-      FURL.Properties.Values[ConnProps_AutoEncodeStrings] := '';
-
-    if Value <> FAutoEncode then
-    begin
-      FAutoEncode := Value;
-      if Self.Connected then
-      begin
-        Connected := False;
-        Connected := True;
-      end;
-    end;
-    {$ELSE}
-    FURL.Properties.Values[ConnProps_AutoEncodeStrings] := '';
-    {$IFEND}
-  {.$ENDIF}
-end;
-{$ENDIF NO_AUTOENCODE}
-
 {**
   Returns the current version of zeosdbo.
 }
@@ -1647,13 +1560,11 @@ begin
     FControlsCodePage := Value;
 end;
 
-{$IFDEF NO_AUTOENCODE}
 procedure TZAbstractConnection.SetCharacterTransliterateOptions(
   Value: TZCharacterTransliterateOptions);
 begin
   fCharacterTransliterateOptions.Assign(Value);
 end;
-{$ENDIF}
 
 procedure TZAbstractConnection.CloseAllSequences;
 var
@@ -1957,7 +1868,6 @@ begin
 end;
 
 { TZCharacterTransliterateOptions }
-{$IFDEF NO_AUTOENCODE}
 constructor TZCharacterTransliterateOptions.Create(
   AOwner: TZAbstractConnection);
 begin
@@ -1994,7 +1904,8 @@ begin
     case GetEncoding of
       encDefaultSystemCodePage: Result := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF};
       encDB_CP: if ConSettings.ClientCodePage.Encoding = ceUTF16
-                then Result := zCP_UTF8(*if ConSettings.ClientCodePage.CP = zCP_UTF16
+                then Result := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}zCP_UTF8{$ENDIF}
+                (*then Result := zCP_UTF8(*if ConSettings.ClientCodePage.CP = zCP_UTF16
                   then Result := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF}
                   else Result := ConSettings.ClientCodePage.CP*)
                 else Result := ConSettings.ClientCodePage.CP;
@@ -2031,8 +1942,6 @@ begin
   {$ENDIF}
 end;
 {$ENDIF UNICODE}
-
-{$ENDIF NO_AUTOENCODE}
 
 initialization
   SqlHourGlassLock := 0;

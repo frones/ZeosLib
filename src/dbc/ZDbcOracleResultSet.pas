@@ -800,11 +800,7 @@ begin
                   Result := PAnsiChar(@POCILong(Result).data[0]);
 jmpTestN:         if ColumnCodePage = zCP_UTF16 then begin
                     Len := Len shr 1;
-{$IFDEF NO_AUTOENCODE}
 jmpW2A:             fRawTemp := PUnicodeToRaw(PWideChar(Result), Len, GetW2A2WConversionCodePage(ConSettings));
-{$ELSE}
-jmpW2A:             fRawTemp := PUnicodeToRaw(PWideChar(Result), Len, ConSettings.CTRL_CP);
-{$ENDIF}
                     Len := Length(fRawTemp);
                     if Len = 0
                     then Result := pEmptyAnsiString
@@ -2268,32 +2264,30 @@ var
   defn_or_bindpp: POCIHandle;
   acsid: ub2;
   Status: sword;
-  function AttributeToString(var P: Pointer; Len: Integer):
-    {$IF DEFINED(WITH_RAWBYTESTRING) and not DEFINED(UNICODE)}RawByteString{$ELSE}String{$IFEND};
+  function AttributeToString(var P: Pointer; Len: Integer): SQLString;
   begin
     if P <> nil then
       if ConSettings^.ClientCodePage.Encoding = ceUTF16 then begin
         Len := Len shr 1;
         {$IFDEF UNICODE}
         Result := '';
-        System.SetString(Result, PWideChar(P), Len)
+        System.SetString(Result, PWideChar(P), Len);
         {$ELSE}
-        Result := PUnicodeToRaw(PWideChar(P), Len, {$IFDEF NO_AUTOENCODE}zCP_UTF8{$ELSE}ConSettings.CTRL_CP{$ENDIF})
+        Result := PUnicodeToRaw(PWideChar(P), Len, zCP_UTF8);
         {$ENDIF}
-      end else
+      end else begin
       {$IFDEF UNICODE}
       Result := ZEncoding.PRawToUnicode(P, Len, FClientCP)
-      {$ELSE} {$IFNDEF NO_AUTOENCODE}
-      if (not ConSettings^.AutoEncode) or (FClientCP = ConSettings^.CTRL_CP) then
-        {$ENDIF}
-        Result := BufferToStr(P, Len){$IFNDEF NO_AUTOENCODE}
-      else begin
-        Result := '';
-        PRawToRawConvert(P, Len, FClientCP, ConSettings^.CTRL_CP, Result);
-      end{$ENDIF}
-      {$ENDIF}
-    else
+      {$ELSE}
+        {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
       Result := '';
+      ZSetString(PAnsiChar(P), Len, RawByteString(Result), FClientCP);
+        {$ELSE}
+      Result := BufferToStr(P, Len);
+        {$ENDIF}
+      {$ENDIF}
+      end
+    else Result := '';
     P := nil;
   end;
 begin

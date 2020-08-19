@@ -121,12 +121,6 @@ type
     constructor Create(ADataset: TZAbstractRODataset); {$IFDEF FPC}reintroduce;{$ENDIF}
   end;
 
-  {$IFNDEF NO_AUTOENCODE}
-  TStringFieldSetter = procedure(ColumnIndex: Integer; Buffer: PAnsiChar; UseResultSet: Boolean) of object;
-  TStringFieldGetter = function(ColumnIndex, FieldSize: Integer; Buffer: PAnsiChar; UseResultSet: Boolean): Boolean of object;
-  TWideStringFieldGetter = function(ColumnIndex, FieldSize: Integer; Buffer: PWideChar; UseResultSet: Boolean): Boolean of object;
-  {$ENDIF NO_AUTOENCODE}
-
   {$IFNDEF WITH_TDATASETFIELD}
   TDataSetField = class;
   {$ENDIF WITH_TDATASETFIELD}
@@ -143,7 +137,7 @@ type
     FCurrentRow: Integer;
     FRowAccessor, FFieldsAccessor: TZRowAccessor;
     FResultSet2AccessorIndexList: TZIndexPairList;
-    FClientCP{$IFNDEF NO_AUTOENCODE}, FCTRL_CP{$ENDIF}: Word;
+    FClientCP: Word;
     FOldRowBuffer: PZRowBuffer;
     FNewRowBuffer: PZRowBuffer;
     FCurrentRows: TZSortedList;
@@ -192,10 +186,8 @@ type
     FMasterLink: TMasterDataLink;
     FLinkedFields: string; {renamed by bangfauzan}
     FIndexFieldNames: String; {bangfauzan addition}
-    {$IFDEF NO_AUTOENCODE}
     FUniTemp: UnicodeString;
     FCharEncoding: TZCharEncoding;
-    {$ENDIF}
 
     FIndexFields: {$IFDEF WITH_GENERIC_TLISTTFIELD}TList<TField>{$ELSE}TList{$ENDIF};
     FCachedLobs: WordBool;
@@ -213,11 +205,6 @@ type
     FPrepared: Boolean;
     FCursorOpened: Boolean;
     FResultSetWalking: Boolean;
-    {$IFNDEF NO_AUTOENCODE}
-    FStringFieldSetter: TStringFieldSetter;
-    FStringFieldGetter: TStringFieldGetter;
-    FWideStringFieldGetter: TWideStringFieldGetter;
-    {$ENDIF NO_AUTOENCODE}
     {$IFNDEF WITH_NESTEDDATASETS}
     FNestedDataSets: TList;
     {$ENDIF}
@@ -241,21 +228,6 @@ type
     {$IFNDEF WITH_NESTEDDATASETS}
     function GetNestedDataSets: TList;
     {$ENDIF}
-    {$IFNDEF NO_AUTOENCODE}
-    procedure SetStringFieldSetterAndSetter;
-    {$IFNDEF UNICODE}
-    procedure StringFieldSetterFromRawAutoEncode(ColumnIndex: Integer; Buffer: PAnsiChar; UseResultSet: Boolean);
-    procedure StringFieldSetterFromRaw(ColumnIndex: Integer; Buffer: PAnsiChar; UseResultSet: Boolean);
-    {$ELSE}
-    procedure StringFieldSetterFromAnsi(ColumnIndex: Integer; Buffer: PAnsiChar; UseResultSet: Boolean);
-    {$ENDIF}
-    procedure StringFieldSetterRawToUnicode(ColumnIndex: Integer; Buffer: PAnsiChar; UseResultSet: Boolean);
-    function StringFieldGetterFromUnicode(ColumnIndex, FieldSize: Integer; Buffer: PAnsiChar; UseResultSet: Boolean): Boolean;
-    function StringFieldGetterFromAnsiRec(ColumnIndex, FieldSize: Integer; Buffer: PAnsiChar; UseResultSet: Boolean): Boolean;
-    function StringFieldGetterRaw2RawConvert(ColumnIndex, FieldSize: Integer; Buffer: PAnsiChar; UseResultSet: Boolean): Boolean;
-    function WideStringGetterFromUnicode(ColumnIndex, FieldSize: Integer; Buffer: PWideChar; UseResultSet: Boolean): Boolean;
-    function WideStringGetterFromRaw(ColumnIndex, FieldSize: Integer; Buffer: PWideChar; UseResultSet: Boolean): Boolean;
-    {$ENDIF NO_AUTOENCODE}
     procedure OnBlobUpdate(AField: NativeInt);
     function GetFieldIndex(AField: TField): Integer;
     procedure SetDisableZFields(Value: Boolean);
@@ -1137,10 +1109,6 @@ type
     property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
     {$IFEND}
     property AsRawByteString: RawByteString read GetAsRawByteString write SetAsRawByteString;
-  {$IFNDEF NO_AUTOENCODE}
-  published
-    property Transliterate default False;  //obsolete imho
-  {$ENDIF}
   end;
 
   TZUnicodeStringField = class(TWideStringField)
@@ -1619,180 +1587,6 @@ begin
   inherited Destroy;
 end;
 
-{$IFNDEF NO_AUTOENCODE}
-procedure TZAbstractRODataset.StringFieldSetterRawToUnicode(ColumnIndex: Integer;
-  Buffer: PAnsiChar; UseResultSet: Boolean);
-var
-  len: NativeUInt;
-  wBuf: array[0..dsMaxStringSize shr 1] of WideChar;
-  Dest: PWideChar;
-begin
-  len := ZFastCode.StrLen(Buffer);
-  if Len > dsMaxStringSize shr 1
-  then GetMem(Dest, Len shl 1)
-  else Dest := @wBuf[0];
-  try
-    Len := PRaw2PUnicodeBuf(Buffer, Dest, Len, FCTRL_CP);
-    if UseResultSet
-    then ResultSet.UpdatePWideChar(ColumnIndex, Dest, Len)
-    else RowAccessor.SetPWideChar(ColumnIndex, Dest, Len);
-  finally
-    if Dest <> @wBuf[0] then
-      FreeMem(Dest);
-  end;
-end;
-
-{$IFNDEF UNICODE}
-procedure TZAbstractRODataset.StringFieldSetterFromRawAutoEncode(
-  ColumnIndex: Integer; Buffer: PAnsiChar; UseResultSet: Boolean);
-var L: NativeUInt;
-begin
-  L := ZFastCode.StrLen(Buffer);
-  case ZDetectUTF8Encoding(Buffer, L) of
-    etUSASCII: if UseResultSet
-        then fResultSet.UpdatePAnsiChar(ColumnIndex, Buffer, L)
-        else RowAccessor.SetPAnsiChar(ColumnIndex, Buffer, L);
-    etAnsi: if UseResultSet
-        then fResultSet.UpdateAnsiString(ColumnIndex, Buffer)
-        else RowAccessor.SetAnsiString(ColumnIndex, Buffer);
-    etUTF8: if UseResultSet
-        then fResultSet.UpdateUTF8String(ColumnIndex, Buffer)
-        else RowAccessor.SetUTF8String(ColumnIndex, Buffer);
-  end;
-end;
-
-procedure TZAbstractRODataset.StringFieldSetterFromRaw(
-  ColumnIndex: Integer; Buffer: PAnsiChar; UseResultSet: Boolean);
-var L: NativeUInt;
-begin
-  L := ZFastCode.StrLen(Buffer);
-  if UseResultSet
-  then fResultSet.UpdatePAnsiChar(ColumnIndex, Buffer, L)
-  else RowAccessor.SetPAnsiChar(ColumnIndex, Buffer, L);
-end;
-
-{$ELSE}
-procedure TZAbstractRODataset.StringFieldSetterFromAnsi(
-  ColumnIndex: Integer; Buffer: PAnsiChar; UseResultSet: Boolean);
-begin
-  {$IFNDEF NO_ANSISTRING}
-  if UseResultSet
-  then fResultSet.UpdateAnsiString(ColumnIndex, Buffer)
-  else RowAccessor.SetAnsiString(ColumnIndex, Buffer);
-  {$ELSE}
-  if UseResultSet
-  then fResultSet.UpdateRawByteString(ColumnIndex, Buffer)
-  else RowAccessor.SetRawByteString(ColumnIndex, Buffer);
-  {$ENDIF}
-end;
-{$ENDIF}
-
-function TZAbstractRODataset.StringFieldGetterFromAnsiRec(
-  ColumnIndex, FieldSize: Integer; Buffer: PAnsiChar; UseResultSet: Boolean): Boolean;
-var
-  P: PAnsiChar;
-  L: NativeUInt;
-begin
-  if UseResultSet then begin
-    P := FResultSet.GetPAnsiChar(ColumnIndex, L);
-    Result := (P = nil) or ResultSet.WasNull;
-  end else
-    P := RowAccessor.GetPAnsiChar(ColumnIndex, Result, L);
-  if not Result then begin //instead of StrPLCopy
-    L := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(L, NativeUInt(Max(dsMaxStringSize, FieldSize-1))); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Buffer^, L);
-  end;
-  PByte(Buffer+L)^ := Ord(#0);
-end;
-
-function TZAbstractRODataset.StringFieldGetterFromUnicode(ColumnIndex, FieldSize: Integer;
-  Buffer: PAnsiChar; UseResultSet: Boolean): Boolean;
-var
-  P: PWideChar;
-  L: NativeUInt;
-begin
-  if UseResultSet then begin
-    P := ResultSet.GetPWideChar(ColumnIndex, L);
-    Result := (P = nil) or ResultSet.WasNull;
-  end else
-    P := RowAccessor.GetPWideChar(ColumnIndex, Result, L);
-  if not Result then //instead of StrPLCopy
-    L := PUnicode2PRawBuf(P, Buffer, L, FieldSize-1, FCTRL_CP);
-  PByte(Buffer+L)^ := Ord(#0);
-end;
-
-function TZAbstractRODataset.StringFieldGetterRaw2RawConvert(ColumnIndex,
-  FieldSize: Integer; Buffer: PAnsiChar; UseResultSet: Boolean): Boolean;
-var
-  P: PAnsiChar;
-  L: NativeUInt;
-begin
-  if UseResultSet then begin
-    P := ResultSet.GetPAnsiChar(ColumnIndex, L);
-    Result := (P = nil) or ResultSet.WasNull;
-  end else
-    P := RowAccessor.GetPAnsiChar(ColumnIndex, Result, L);
-  if not Result then //instead of WStrLCopy
-    L := PRawToPRawBuf(P, Buffer, L, Max(dsMaxStringSize, FieldSize-1),
-      FClientCP, FCTRL_CP);
-  PByte(Buffer+L)^ := Ord(#0)
-end;
-
-function TZAbstractRODataset.WideStringGetterFromRaw(ColumnIndex, FieldSize: Integer;
-  Buffer: PWideChar; UseResultSet: Boolean): Boolean;
-{$IFDEF TWIDESTRINGFIELD_DATABUFFER_IS_PWIDESTRING}
-begin
-  if UseResultSet then begin
-    PWideString(Buffer)^ := ResultSet.GetUnicodeString(ColumnIndex, Result)
-    Result := ResultSet.LastWasNull;
-  end else
-    PWideString(Buffer)^ := RowAccessor.GetUnicodeString(ColumnIndex, Result);
-end;
-{$ELSE}
-var
-  P: PAnsiChar;
-  L: NativeUInt;
-begin
-  if UseResultSet then begin
-    P := FResultSet.GetPAnsiChar(ColumnIndex, L);
-    Result := (P = nil) or ResultSet.WasNull;
-  end else
-    P := RowAccessor.GetPAnsiChar(ColumnIndex, Result, L);
-  if not Result then //instead of WStrLCopy
-    L := PRaw2PUnicode(P, Buffer, FClientCP, LengthInt(L), LengthInt(Max(dsMaxStringSize, FieldSize-2)) shr 1);
-  PWord(Buffer+L)^ := Word(#0);
-end;
-{$ENDIF}
-
-function TZAbstractRODataset.WideStringGetterFromUnicode(ColumnIndex, FieldSize: Integer;
-  Buffer: PWideChar; UseResultSet: Boolean): Boolean;
-{$IFDEF TWIDESTRINGFIELD_DATABUFFER_IS_PWIDESTRING}
-begin
-  if UseResultSet then begin
-    PWideString(Buffer)^ := ResultSet.GetUnicodeString(ColumnIndex, Result)
-    Result := ResultSet.LastWasNull;
-  end else
-    PWideString(Buffer)^ := RowAccessor.GetUnicodeString(ColumnIndex, Result);
-end;
-{$ELSE}
-var
-  P: PWideChar;
-  L: NativeUInt;
-begin
-  if UseResultSet then begin
-    P := FResultSet.GetPWideChar(ColumnIndex, L);
-    Result := (P = nil) or ResultSet.WasNull;
-  end else
-    P := RowAccessor.GetPWideChar(ColumnIndex, Result, L);
-  if not Result then begin //instead of WStrCopy
-    L := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Min(L, NativeUInt(Max(dsMaxStringSize, FieldSize -2) shr 1)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(P^, Pointer(Buffer)^, L shl 1);
-  end;
-  PWord(Buffer+L)^ := Ord(#0);
-end;
-{$ENDIF}
-{$ENDIF NO_AUTOENCODE}
-
 {**
   Sets database connection object.
   @param Value a database connection object.
@@ -1863,57 +1657,6 @@ begin
   Result := FNestedDataSets;
 end;
 {$ENDIF}
-
-{$IFNDEF NO_AUTOENCODE}
-procedure TZAbstractRODataset.SetStringFieldSetterAndSetter;
-var ConSettings: PZConSettings;
-begin
-  ConSettings := Connection.DbcConnection.GetConSettings;
-  if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
-     (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) then begin
-    FStringFieldGetter := StringFieldGetterFromUnicode;
-    {$IFNDEF UNICODE}
-    if ConSettings^.AutoEncode then
-      FStringFieldSetter := StringFieldSetterFromRawAutoEncode
-    else
-    {$ENDIF}
-      FStringFieldSetter := StringFieldSetterRawToUnicode;
-    FWideStringFieldGetter := WideStringGetterFromUnicode;
-  end else
-    FWideStringFieldGetter := WideStringGetterFromRaw;
-    {$IFNDEF UNICODE}
-    //Hint: the UnicodeIDE's do return allways a AnsiString casted UnicodeString
-    //So it's impossible to retrieve a UTF8 encoded string SAFELY
-    //It might be possible a user did Assign such a casted value. But that's
-    //not Unicode-Save since the AnsiString(AUnicodeString) cast.
-    //Known issues: Simplified chinese or Persian f.e. have some equal UTF8
-    //two/four byte sequense wich lead to data loss. So success is randomly!!
-    if ConSettings^.AutoEncode then
-    begin
-      FStringFieldSetter := StringFieldSetterFromRawAutoEncode;
-      if ConSettings.CTRL_CP = zCP_UTF8 then
-        if (ConSettings^.ClientCodePage^.Encoding = ceUTF8) then
-          FStringFieldGetter := StringFieldGetterFromAnsiRec
-        else
-          FStringFieldGetter := StringFieldGetterRaw2RawConvert
-      else if (ConSettings^.ClientCodePage^.Encoding = ceAnsi) and
-              (ZOSCodePage = ConSettings^.ClientCodePage^.CP) then
-        FStringFieldGetter := StringFieldGetterFromAnsiRec
-      else
-        FStringFieldGetter := StringFieldGetterRaw2RawConvert;
-    end else begin
-      FStringFieldGetter := StringFieldGetterFromAnsiRec;
-      FStringFieldSetter := StringFieldSetterFromRaw;
-    end;
-    {$ELSE}
-    if (ZOSCodePage = ConSettings^.ClientCodePage^.CP) then
-      FStringFieldGetter := StringFieldGetterFromAnsiRec
-    else
-      FStringFieldGetter := StringFieldGetterRaw2RawConvert;
-    FStringFieldSetter := StringFieldSetterFromAnsi;
-    {$ENDIF}
-end;
-{$ENDIF NO_AUTOENCODE}
 
 type
   THackTransaction = class(TZAbstractTransaction);
@@ -2800,11 +2543,9 @@ var
   bLen: NativeUInt;
   P: Pointer;
   RowBuffer: PZRowBuffer;
-  {$IFDEF NO_AUTOENCODE}
   FieldCP, ColumnCP: Word;
-  {$ENDIF}
 {$IFDEF WITH_TVALUEBUFFER}label jmpReal10RS, jmpReal10RA;{$ENDIF}
-{$IFDEF NO_AUTOENCODE}label jmpMoveW, jmpMoveA;{$ENDIF}
+  label jmpMoveW, jmpMoveA;
   label jmpMovDate, jmpMovTime, jmpMovDateTime, jmpMovBts, jmpMovVarBts;
 begin
   if GetActiveBuffer(RowBuffer) then begin
@@ -2814,7 +2555,6 @@ begin
       if Buffer <> nil then begin
         case Field.DataType of
           ftString: begin
-              {$IFDEF NO_AUTOENCODE}
               ColumnCP := FResultSetMetadata.GetColumnCodePage(ColumnIndex);
               if ((ColumnCP = zCP_UTF16) or TStringField(Field).Transliterate) or (FCharEncoding = ceUTF16) then begin
                 FieldCP  := GetTransliterateCodePage(Connection.ControlsCodePage);
@@ -2831,10 +2571,6 @@ begin
                 Result := P <> nil;
                 goto jmpMoveA;
               end;
-            {$ELSE NO_AUTOENCODE}
-              Result := not FStringFieldGetter(ColumnIndex, Field.DataSize, PAnsiChar(Buffer), True);
-              Exit;
-            {$ENDIF NO_AUTOENCODE}
             end;
           ftSmallint: PSmallInt(Buffer)^ := FResultSet.GetSmall(ColumnIndex);
           ftInteger, ftAutoInc: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}PInteger{$ELSE}PLongInt{$ENDIF}(Buffer)^ := ResultSet.GetInt(ColumnIndex);
@@ -2875,15 +2611,11 @@ begin
               goto jmpMovVarBts;
             end;
           { Processes String fields. }
-          {$IFDEF NO_AUTOENCODE}
           ftWideString: begin
               P := FResultSet.GetPWideChar(ColumnIndex, bLen);
               Result := P <> nil;
               goto jmpMoveW;
             end;
-          {$ELSE}
-          ftWideString: FWideStringFieldGetter(ColumnIndex, Field.DataSize, PWideChar(Buffer), True);
-          {$ENDIF}
           ftLargeInt: if FResultSetMetadata.GetColumnType(ColumnIndex) = stULong
             then PUInt64(Buffer)^ := ResultSet.GetULong(ColumnIndex)
             else PInt64(Buffer)^ := ResultSet.GetLong(ColumnIndex);
@@ -2944,7 +2676,6 @@ begin
         Result := not ResultSet.IsNull(ColumnIndex)
     else if Buffer <> nil then begin //Accessor cached fields:
       case Field.DataType of
-        {$IFDEF NO_AUTOENCODE}
         ftString: begin
             P := RowAccessor.GetPAnsiChar(ColumnIndex, Result, blen);
             Result := not Result;
@@ -2956,9 +2687,6 @@ jmpMoveA:   if Result then begin
             end;
             Exit;
           end;
-        {$ELSE}
-        ftString: Result := FStringFieldGetter(ColumnIndex, Field.Size, PAnsiChar(Buffer), False);
-        {$ENDIF}
         ftSmallint: RowAccessor.GetSmall(ColumnIndex, Result);
         ftInteger, ftAutoInc: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}PInteger{$ELSE}PLongInt{$ENDIF}(Buffer)^ := RowAccessor.GetInt(ColumnIndex, Result);
         ftBoolean: PWordBool(Buffer)^ := RowAccessor.GetBoolean(ColumnIndex, Result);
@@ -3035,7 +2763,6 @@ jmpMovVarBts:PWord(Buffer)^ := bLen;
               (PAnsiChar(Pointer(Buffer))+SizeOf(Word))^, Min(Integer(bLen), Field.DataSize));
           end;
         { Processes String fields. }
-        {$IFDEF NO_AUTOENCODE}
         ftWideString: begin
             P := RowAccessor.GetPWideChar(ColumnIndex, Result, bLen);
             Result := not Result;
@@ -3054,9 +2781,6 @@ jmpMoveW:   if Result then begin
             end;
             Exit;
           end;
-        {$ELSE}
-        ftWideString: Result := FWideStringFieldGetter(ColumnIndex, Field.Size, PWideChar(Buffer), False);
-        {$ENDIF}
         ftLargeInt: if FResultSetMetadata.GetColumnType(ColumnIndex) = stULong
             then PUInt64(Buffer)^ := RowAccessor.GetULong(ColumnIndex, Result)
             else PInt64(Buffer)^ := RowAccessor.GetLong(ColumnIndex, Result);
@@ -3161,10 +2885,8 @@ var
   D: TZDate absolute TS;
   UID: TGUID absolute TS;
   S: TTimeStamp absolute TS;
-  {$IFDEF NO_AUTOENCODE}
   FieldCP, ColumnCP: Word;
   PA: PAnsiChar absolute TS;
-  {$ENDIF}
   {$IFNDEF TWIDESTRINGFIELD_DATABUFFER_IS_PWIDESTRING}
   PW: PWideChar absolute TS;
   L: NativeUInt;
@@ -3195,15 +2917,11 @@ begin
     if Field.FieldKind <> fkData then //left over for calculated fields etc
       if Assigned(Buffer) then
         case Field.DataType of
-          {$IFNDEF NO_AUTOENCODE}
-          ftString: FStringFieldSetter(ColumnIndex, PAnsichar(Buffer), False);
-          {$ELSE}
           ftString: begin
                       PA := PAnsichar(Buffer);
                       L := StrLen(PA);
                       RowAccessor.SetPAnsiChar(ColumnIndex, PA, L);
                     end;
-          {$ENDIF}
           ftSmallint: RowAccessor.SetInt(ColumnIndex, PSmallInt(Buffer)^);
           ftInteger, ftAutoInc: RowAccessor.SetInt(ColumnIndex, {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}PInteger{$ELSE}PLongInt{$ENDIF}(Buffer)^);
           ftWord: RowAccessor.SetUInt(ColumnIndex, PWord(Buffer)^);
@@ -3313,9 +3031,6 @@ begin
       else RowAccessor.SetNull(ColumnIndex)
     else if Assigned(Buffer) then
       case Field.DataType of
-        {$IFNDEF NO_AUTOENCODE}
-        ftString: FStringFieldSetter(ColumnIndex, PAnsichar(Buffer), True);
-        {$ELSE}
         ftString: begin
             FieldCP  := GetTransliterateCodePage(Connection.ControlsCodePage);
             ColumnCP := FResultSetMetadata.GetColumnCodePage(ColumnIndex);
@@ -3332,7 +3047,6 @@ begin
             end else
               FResultSet.UpdatePAnsiChar(ColumnIndex, PA, L);
           end;
-        {$ENDIF}
         ftSmallint: FResultSet.UpdateSmall(ColumnIndex, PSmallInt(Buffer)^);
         ftInteger, ftAutoInc: FResultSet.UpdateInt(ColumnIndex, {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}PInteger{$ELSE}PLongInt{$ENDIF}(Buffer)^);
         ftWord: FResultSet.UpdateWord(ColumnIndex, PWord(Buffer)^);
@@ -3632,7 +3346,7 @@ begin
           end else
             Attributes := Attributes + [faReadonly];
           Precision := GetPrecision(I);
-          {$IF not defined(UNICODE) and defined(NO_AUTOENCODE) and not defined(LCL)}
+          {$IF not defined(UNICODE) and not defined(LCL)}
           //EH: dbc internaly strores everthing in utf if a unicode(UTF8/UTF16) driver is used so what about fieldnames here?
           //we can not change the FieldName (it would break building the lookups) but we can fix the DisplayNames
           //is that a good idea? not sure yet! Just a logic decision.
@@ -3679,11 +3393,11 @@ var
   Temp: TStrings;
   Txn: IZTransaction;
   TxnCon: IZConnection;
-  {$IF defined(NO_AUTOENCODE) and not defined(Unicode)}
+  {$IFNDEF UNICODE}
   sqlCP, ClientCP: Word;
   NewSQL: RawByteString;
   ConSettings: PZConSettings;
-  {$IFEND}
+  {$ENDIF}
 begin
   Temp := TStringList.Create;
   try
@@ -3701,7 +3415,7 @@ begin
     then Txn := THackTransaction(FTransaction).GetIZTransaction
     else Txn := FConnection.DbcConnection.GetConnectionTransaction;
     TxnCon := Txn.GetConnection; //sets the active txn for IB/FB that is more a hack than i nice idea of me (EH) but make it work..
-    {$IF defined(NO_AUTOENCODE) and not defined(Unicode)}
+    {$IFNDEF UNICODE}
     ConSettings := TxnCon.GetConSettings;
     if (Ord(FCharEncoding)  >= Ord(ceUTF8))
     then ClientCP := zCP_UTF8
@@ -3714,7 +3428,7 @@ begin
     Result := TxnCon.PrepareStatementWithParams(NewSQL, Temp);
     {$ELSE}
     Result := TxnCon.PrepareStatementWithParams(SQL, Temp);
-    {$IFEND}
+    {$ENDIF}
   finally
     Temp.Free;
   end;
@@ -3790,11 +3504,7 @@ begin
         else Exit;
     ConSettings := ResultSet.GetConSettings;
     FClientCP := ConSettings.ClientCodePage.CP;
-    {$IFNDEF NO_AUTOENCODE}
-    FCTRL_CP := ResultSet.GetConSettings.CTRL_CP;
-    {$ELSE}
     FCharEncoding := ConSettings.ClientCodePage.Encoding;
-    {$ENDIF NO_AUTOENCODE}
 
     FCursorOpened := True;
     FResultSetMetadata := ResultSet.GetMetadata;
@@ -3827,11 +3537,7 @@ begin
 
     if not FRefreshInProgress then begin
       { Initializes accessors and buffers. }
-      {$IFDEF NO_AUTOENCODE}
       ColumnList := ConvertFieldsToColumnInfo(Fields, GetTransliterateCodePage(Connection.ControlsCodePage), True);
-      {$ELSE}
-      ColumnList := ConvertFieldsToColumnInfo(Fields, FCTRL_CP, True);
-      {$ENDIF}
       Cnt := ColumnList.Count;
       try
         //the RowAccessor wideneds the fieldbuffers for calculated field
@@ -3850,9 +3556,6 @@ begin
         FNewRowBuffer := PZRowBuffer(AllocRecordBuffer);
         {$ENDIF}
       end;
-      {$IFNDEF NO_AUTOENCODE}
-      SetStringFieldSetterAndSetter;
-      {$ENDIF NO_AUTOENCODE}
 
       InitFilterFields := False;
 
@@ -5191,16 +4894,10 @@ begin
         {$ENDIF}
         ftMemo, ftFmtMemo: begin
             ConSettings := FConnection.DbcConnection.GetConSettings;
-            {$IFNDEF NO_AUTOENCODE}
-            if FConnection.AutoEncodeStrings or (ConSettings.ClientCodePage.Encoding = ceUTF16)
-            then CP := ConSettings.CTRL_CP
-            else CP := ConSettings.ClientCodePage.CP;
-            {$ELSE NO_AUTOENCODE}
             CP := GetTransliterateCodePage(Connection.ControlsCodePage);
             if not ((FCharEncoding = ceUTF16) or
                (TMemoField(TField).Transliterate and (CP <> ConSettings.ClientCodePage.CP))) then
               CP := ConSettings.ClientCodePage.CP;
-            {$ENDIF}
             Assert(Blob.QueryInterface(IZCLob, CLob) = S_OK);
             Result := Clob.GetStream(CP);
           end;
@@ -5279,11 +4976,7 @@ var
     try
       for i := low(FFieldsLookupTable) to high(FFieldsLookupTable) do begin
         if FFieldsLookupTable[i].DataSource = dltAccessor
-        {$IFDEF NO_AUTOENCODE}
         then CP := GetTransliterateCodePage(Connection.ControlsCodePage)
-        {$ELSE}
-        then CP := FCTRL_CP
-        {$ENDIF}
         else CP := FResultSetMetadata.GetColumnCodePage(FFieldsLookupTable[i].Index);
         ColumnList.Add(ConvertFieldToColumnInfo(TField(FFieldsLookupTable[i].Field), CP))
       end;
@@ -8911,15 +8604,13 @@ begin
       raise CreateUnBoundError(Self);
     FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
     with TZAbstractRODataset(DataSet) do begin
-      FColumnCP := FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-      {$IFDEF NO_AUTOENCODE}
-      Transliterate := Transliterate or (FColumnCP = zCP_UTF16) or (FCharEncoding = ceUTF16) or (
+      if FCharEncoding = ceUTF16
+      then FColumnCP := zCP_UTF16
+      else FColumnCP := FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+      Transliterate := Transliterate or (FColumnCP = zCP_UTF16) or (
         TZAbstractRODataset(DataSet).Connection.CharacterTransliterateOptions.RawFields and
         (FColumnCP <>  GetTransliterateCodePage(Connection.ControlsCodePage)));
       if (FColumnCP = zCP_UTF8)
-      {$ELSE}
-      if Connection.ControlsCodePage = cCP_UTF8
-      {$ENDIF}
       then FBufferSize := Size shl 2
       else FBufferSize := Size * ZOSCodePageMaxCharSize;
       FBufferSize := FBufferSize +1
@@ -8974,16 +8665,14 @@ begin
 end;
 
 function TZRawStringField.GetAsString: String;
-{$IF defined(NO_AUTOENCODE) and not defined(Unicode)}
+{$IFNDEF UNICODE}
 var TransliterateCP: Word;
     P: Pointer;
     L:  NativeUint;
-{$IFEND}
 begin
-  {$IF defined(NO_AUTOENCODE) and not defined(Unicode)}
   if IsRowDataAvailable then with TZAbstractRODataset(DataSet) do begin
     TransliterateCP := GetTransliterateCodePage(Connection.ControlsCodePage);
-    if (FColumnCP = zCP_UTF16) or (FCharEncoding = ceUTF16) then begin
+    if (FColumnCP = zCP_UTF16) then begin
       P := FResultSet.GetPWideChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, L);
       Result := PUnicodeToRaw(P, L, TransliterateCP)
     end else begin
@@ -8991,14 +8680,22 @@ begin
       Result := '';
       if Transliterate
       then PRawToRawConvert(P, L, FColumnCP, TransliterateCP, RawByteString(Result))
+      {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+      else begin
+        Result := '';
+        ZSetString(P, L, RawByteString(Result), FColumnCP);
+      end;
+      {$ELSE}
       else System.SetString(Result, PAnsiChar(P), L);
+      {$ENDIF}
     end
   end else Result := '';
   {$ELSE}
+begin
   if IsRowDataAvailable
   then Result := TZAbstractRODataset(DataSet).FResultSet.GetString(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
   else Result := '';
-  {$IFEND}
+  {$ENDIF}
 end;
 
 function TZRawStringField.GetIsNull: Boolean;
@@ -9046,11 +8743,7 @@ function TZRawStringField.GetAsVariant: Variant;
 begin
   if IsRowDataAvailable
   then with TZAbstractRODataset(DataSet) do begin
-    {$IFDEF NO_AUTOENCODE}
-    if (FColumnCP = GetTransliterateCodePage(TZAbstractRODataset(DataSet).Connection.ControlsCodePage)) and (FCharEncoding <> ceUTF16)
-    {$ELSE}
-    if (FColumnCP = FCTRL_CP)
-    {$ENDIF NO_AUTOENCODE}
+    if (FCharEncoding <> ceUTF16) and (FColumnCP = GetTransliterateCodePage(TZAbstractRODataset(DataSet).Connection.ControlsCodePage))
     then Result := FResultSet.GetString(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
     else Result := FResultSet.GetUnicodeString(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     if FResultSet.WasNull then
@@ -9104,7 +8797,6 @@ end;
 procedure TZRawStringField.SetAsRawByteString(const Value: RawByteString);
 var P: PAnsiChar;
   L: NativeUInt;
-  {$IFDEF NO_AUTOENCODE}
   procedure SetAsW;
   var W: UnicodeString;
     CP: Word;
@@ -9125,7 +8817,6 @@ var P: PAnsiChar;
       FResultSet.UpdatePWideChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, P, L);
     end;
   end;
-  {$ENDIF}
   procedure DoValidate;
   begin
     SetLength(FValidateBuffer, Max(L, FBufferSize){$IFDEF WITH_TVALUEBUFFER}+1{$ENDIF});
@@ -9134,7 +8825,7 @@ var P: PAnsiChar;
     P := Pointer(FValidateBuffer);
     PByte(P+L)^ := 0;
     {$IFNDEF NO_TDATASET_TRANSLATE}
-    if Transliterate then
+    if Transliterate and (doOemTranslate in TZAbstractRODataset(DataSet).Options) then
       DataSet.Translate(P, P, True);
     {$ENDIF NO_TDATASET_TRANSLATE}
     Validate({$IFDEF WITH_TVALUEBUFFER}FValidateBuffer{$ELSE}P{$ENDIF});
@@ -9149,15 +8840,13 @@ begin
     if P = nil
     then L := 0
     else L := ZFastCode.StrLen(P); //the Delphi/FPC guys did decide to allow no zero byte in middle of a string propably because of Validate(Buffer)
-    if Assigned(OnValidate) {$IFNDEF NO_TDATASET_TRANSLATE}or Transliterate{$ENDIF} then
+    if Assigned(OnValidate) {$IFNDEF NO_TDATASET_TRANSLATE}or (Transliterate and (doOemTranslate in TZAbstractRODataset(DataSet).Options)) {$ENDIF} then
       DoValidate;
     if L > FBufferSize then
       raise CreateSizeError;
-    {$IFDEF NO_AUOTENCODE}
-    if (FCharEncoding = ceUTF16) or (FColumnCP = zCP_UTF16)
-    then SetAsW else
-    {$ENDIF NO_AUOTENCODE}
-    FResultSet.UpdatePAnsiChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, P, L);
+    if (FColumnCP = zCP_UTF16)
+    then SetAsW
+    else FResultSet.UpdatePAnsiChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, P, L);
     if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
       DataEvent(deFieldChange, NativeInt(Self));
   end;
@@ -9184,14 +8873,6 @@ var
       DataSet.Translate(P, P, True);
     L := ZFastCode.StrLen(P);
   end;
-  {$IFNDEF NO_AUTOENCODE}
-  procedure SetW(StrCP: Word);
-  var U: UnicodeString;
-  begin
-    U := PRawToUnicode(P, L, StrCP);
-    SetAsUnicodeString(U);
-  end;
-  {$ENDIF NO_AUTOENCODE}
 {$ELSE}
   PW: PWideChar;
 {$ENDIF}
@@ -9208,31 +8889,10 @@ begin
     if P = nil
     then L := 0
     else L := ZFastCode.StrLen(P);  //the Delphi/FPC guys did decide to allow no zero byte in middle of a string propably because of Validate(Buffer)
-    {$IFDEF NO_AUTOENCODE}
     if Transliterate then begin
       FUniTemp := PRawToUnicode(P, L, GetTransliterateCodePage(Connection.ControlsCodePage));
       SetAsUnicodeString(FUniTemp);
-    end
-    {$ELSE}
-    if Transliterate or Assigned(OnValidate) then
-      DoValidate;
-    if (L > 0) and Connection.AutoEncodeStrings then
-      case ZDetectUTF8Encoding(P, L) of
-        etUSASCII:  SetAsRawByteString(Value);
-        etUTF8:     if (L > Size) or (FColumnCP <> zCP_UTF8)
-                    then SetW(zCP_UTF8)
-                    else SetAsRawByteString(Value);
-        else if FRowAccessor.ConSettings^.CTRL_CP <> zCP_UTF8
-              then SetW(FRowAccessor.ConSettings^.CTRL_CP)
-              else if FColumnCP = zCP_UTF8 then
-                if ZOSCodePage <> FColumnCP
-                then SetW(ZOSCodePage)
-                else SetW(zCP_None)
-              else SetW(FColumnCP);
-              //SetRawByteString(Value); // let the user do the job with transliterate
-      end
-    {$ENDIF}
-    else SetAsRawByteString(Value);
+    end else SetAsRawByteString(Value);
   end;
   {$ENDIF}
 end;
@@ -9277,20 +8937,26 @@ end;
 {$ENDIF NO_UTF8STRING}
 
 procedure TZRawStringField.SetPWideChar(P: Pointer; Len: NativeUint);
+var RawCP: Word;
 begin
   if not FBound then
     raise CreateUnBoundError(Self);
   if Len > NativeUInt(Size) then
     raise CreateSizeError;
-  if {$IFNDEF NO_AUTOENCODE}Transliterate or {$ENDIF}Assigned(OnValidate) then
-    SetAsRawByteString(PUnicodeToRaw(P, Len, FColumnCP))
-  else with TZAbstractRODataset(DataSet) do begin
-    Prepare4DataManipulation(Self);
-    if P = nil then
-      P := PEmptyUnicodeString;
-    FResultSet.UpdatePWideChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, P, Len);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
+  with TZAbstractRODataset(DataSet) do begin
+    if Assigned(OnValidate) then begin
+      if (FColumnCP = zCP_UTF16)
+      then RawCP := GetTransliterateCodePage(Connection.ControlsCodePage)
+      else RawCP := FColumnCP;
+      SetAsRawByteString(PUnicodeToRaw(P, Len, RawCP))
+    end else with TZAbstractRODataset(DataSet) do begin
+      Prepare4DataManipulation(Self);
+      if P = nil then
+        P := PEmptyUnicodeString;
+      FResultSet.UpdatePWideChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, P, Len);
+      if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+        DataEvent(deFieldChange, NativeInt(Self));
+    end;
   end;
 end;
 
@@ -9304,7 +8970,9 @@ begin
       raise CreateUnBoundError(Self);
     with TZAbstractRODataset(DataSet) do begin
       FFieldIndex := GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
-      FColumnCP := FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+      if FCharEncoding = ceUTF16
+      then FColumnCP := zCP_UTF16
+      else FColumnCP := FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     end;
   end;
   inherited Bind(Binding);
@@ -9339,30 +9007,36 @@ end;
 {$ENDIF NO_ANSISTRING}
 
 function TZUnicodeStringField.GetAsString: String;
-{$IF defined(NO_AUTOENCODE) and not defined(Unicode)}
+{$IFNDEF UNICODE}
 var TransliterateCP: Word;
     P: Pointer;
     L:  NativeUint;
-{$IFEND}
 begin
-  {$IF defined(NO_AUTOENCODE) and not defined(Unicode)}
   if IsRowDataAvailable then with TZAbstractRODataset(DataSet) do begin
     TransliterateCP := GetTransliterateCodePage(Connection.ControlsCodePage);
-    if (FColumnCP = zCP_UTF16) or (FCharEncoding = ceUTF16) then begin
+    if (FColumnCP = zCP_UTF16) then begin
       P := FResultSet.GetPWideChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, L);
       Result := PUnicodeToRaw(P, L, TransliterateCP)
     end else begin
       P := FResultSet.GetPAnsiChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, L);
       if TransliterateCP <> FColumnCP
       then ZEncoding.PRawToRawConvert(P, L, FColumnCP, TransliterateCP, RawByteString(Result))
+      {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+      else begin
+        Result := '';
+        ZSetString(P, L, RawByteString(Result), FColumnCP);
+      end;
+      {$ELSE}
       else System.SetString(Result, PAnsiChar(P), L);
+      {$ENDIF}
     end
   end else Result := '';
-  {$ELSE}
+{$ELSE}
+begin
   if IsRowDataAvailable
   then Result := TZAbstractRODataset(DataSet).FResultSet.GetString(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
   else Result := '';
-  {$IFEND}
+{$ENDIF}
 end;
 
 {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or defined(WITH_VIRTUAL_TFIELD_ASWIDESTRING)}
@@ -9424,12 +9098,13 @@ end;
 {$ENDIF NO_ANSISTRING}
 
 procedure TZUnicodeStringField.SetAsString(const Value: String);
-{$IFNDEF UNICODE}
+{$IFDEF UNICODE}
+begin
+  SetPWideChar(Pointer(Value), Length(Value));
+{$ELSE}
 var L: NativeUInt;
     P: PAnsiChar;
-    {$IFDEF NO_AUTOENCODE}
     StringCP: Word;
-    {$ENDIF}
   procedure SetW(StrCP: Word);
   var U: UnicodeString;
   begin
@@ -9440,12 +9115,8 @@ var L: NativeUInt;
     SetAsUnicodeString(U);
     {$ENDIF}
   end;
-{$ENDIF}
-label jmpMove{$IFNDEF NO_AUTOENCODE}, jmpUTF8, jmpACP, jmpRange{$ENDIF};
+label jmpMove;
 begin
-  {$IFDEF UNICODE}
-  SetPWideChar(Pointer(Value), Length(Value));
-  {$ELSE}
   //we convert all values to UTF16 for Size control except the value and encoding do fit into
   if not FBound then
     raise CreateUnBoundError(Self);
@@ -9459,9 +9130,8 @@ begin
       then SetW(zCP_WIN1252)
       else goto jmpMove
     else begin
-      {$IFDEF NO_AUTOENCODE}
       StringCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}ZOSCodePage{$ENDIF}{$ENDIF};
-      if Assigned(OnValidate) or (StringCP <> FColumnCP) or (FCharEncoding = ceUTF16) then
+      if Assigned(OnValidate) or (StringCP <> FColumnCP) then
         SetW(StringCP)
       else if (StringCP = ZCP_UTF8) then
         if ((L <= NativeUInt(Size)) or (CountOfUtf8Chars(P,L)  <= NativeUInt(Size)))
@@ -9474,40 +9144,9 @@ jmpMove:Prepare4DataManipulation(Self);
           DataEvent(deFieldChange, NativeInt(Self));
       end else
         SetW(StringCP);
-      {$ELSE}
-      if RowAccessor.ConSettings^.AutoEncode then
-        case ZDetectUTF8Encoding(P, L) of
-          etUSASCII:  if (L <= NativeUInt(Size))
-                      then if not Assigned(OnValidate) and (FColumnCP <> zCP_UTF16)
-                        then goto jmpMove
-                        else SetW(zCP_WIN1252)
-                      else goto jmpRange;
-          etUTF8:     goto jmpUTF8;
-          else if FRowAccessor.ConSettings^.CTRL_CP <> zCP_UTF8
-                then SetW(FRowAccessor.ConSettings^.CTRL_CP)
-                else if ZOSCodePage = zCP_UTF8
-                  then SetW(zCP_None)
-                  else goto jmpACP;
-        end
-      else if RowAccessor.ConSettings^.CTRL_CP = zCP_UTF8 then
-jmpUTF8:if (FColumnCP = ZCP_UTF8) and not Assigned(OnValidate) then
-          if ((L <= NativeUInt(Size)) or (CountOfUtf8Chars(P,L)  <= NativeUInt(Size)))
-          then goto jmpMove else
-jmpRange:   raise CreateSizeError
-          else SetW(zCP_UTF8)
-        else
-jmpACP: if (FColumnCP = ZOSCodePage) and not Assigned(OnValidate) and
-           (L <= NativeUInt(Size*ZOSCodePageMaxCharSize)) then begin
-jmpMove:  Prepare4DataManipulation(Self);
-          FResultSet.UpdatePAnsiChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, P, L);
-          if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-            DataEvent(deFieldChange, NativeInt(Self));
-        end else
-          SetW(ZOSCodePage);
-        {$ENDIF}
     end;
   end;
-  {$ENDIF}
+{$ENDIF}
 end;
 
 {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or defined(WITH_VIRTUAL_TFIELD_ASWIDESTRING)}
@@ -9730,12 +9369,12 @@ begin
       raise CreateUnBoundError(Self);
     with TZAbstractRODataset(DataSet) do begin
       FFieldIndex := GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
-      FColumnCP := FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-      {$IFDEF NO_AUTOENCODE}
+      if FCharEncoding = ceUTF16
+      then FColumnCP := zCP_UTF16
+      else FColumnCP := FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
       Transliterate := Transliterate or (FColumnCP = zCP_UTF16) or (
         TZAbstractRODataset(DataSet).Connection.CharacterTransliterateOptions.RawFields and
         (FColumnCP <>  GetTransliterateCodePage(Connection.ControlsCodePage)));
-      {$ENDIF}
     end;
   end;
   inherited Bind(Binding);
@@ -9821,12 +9460,8 @@ begin
     with TZAbstractRODataset(DataSet) do begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
       if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK) then begin
-        if FColumnCP = zCP_UTF16
-        {$IFDEF NO_AUTOENCODE}
+        if (FColumnCP = zCP_UTF16)
         then CP := GetTransliterateCodePage(TZAbstractRODataset(DataSet).Connection.ControlsCodePage)
-        {$ELSE}
-        then CP := FRowAccessor.ConSettings^.CTRL_CP
-        {$ENDIF}
         else CP := FColumnCP;
         Result := Clob.GetRawByteString(CP);
       end else Result := ''
@@ -9852,15 +9487,9 @@ begin
     with TZAbstractRODataset(DataSet) do begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
       if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK) then begin
-        {$IFDEF NO_AUTOENCODE}
         if (FColumnCP = zCP_UTF16) or Transliterate
         then CP := GetTransliterateCodePage(Connection.ControlsCodePage)
         else CP := FColumnCP;
-        {$ELSE}
-        if (FColumnCP <> zCP_UTF16) and (not FRowAccessor.ConSettings^.AutoEncode or (FRowAccessor.ConSettings^.CTRL_CP = FColumnCP))
-        then CP := FColumnCP
-        else CP := FRowAccessor.ConSettings^.CTRL_CP;
-        {$ENDIF}
         R := '';
         P := Clob.GetPAnsiChar(CP, R, L);
         if (L<>0) and (P <> Pointer(R)) then begin
@@ -9925,11 +9554,7 @@ function TZRawCLobField.GetAsVariant: Variant;
 begin
   if IsRowDataAvailable
   then with TZAbstractRODataset(DataSet) do begin
-    {$IFDEF NO_AUTOENCODE}
     if (FColumnCP = GetTransliterateCodePage(TZAbstractRODataset(DataSet).Connection.ControlsCodePage))
-    {$ELSE}
-    if (FColumnCP = FCTRL_CP)
-    {$ENDIF NO_AUTOENCODE}
     then Result := FResultSet.GetString(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
     else Result := FResultSet.GetUnicodeString(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     if FResultSet.WasNull then
@@ -10026,11 +9651,7 @@ begin
     Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
     BLob.QueryInterface(IZCLob, Clob);
     if (FColumnCP = zCP_UTF16)
-    {$IFDEF NO_AUTOENCODE}
     then SetW(GetTransliterateCodePage(TZAbstractRODataset(DataSet).Connection.ControlsCodePage))
-    {$ELSE}
-    then SetW(FRowAccessor.ConSettings^.CTRL_CP)
-    {$ENDIF}
     else CLob.SetPAnsiChar(P, FColumnCP, L);
     FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Clob);
     if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
@@ -10045,9 +9666,6 @@ var L: LengthInt;
     P: PAnsiChar;
     Blob: IZBlob;
     Clob: IZCLob;
-{$IFNDEF NO_AUTOENCODE}
-label jumpSetP;
-{$ENDIF}
   procedure SetW(StrCP: Word);
   var U: UnicodeString;
   begin
@@ -10068,31 +9686,9 @@ begin
       L := 0;
       P := PEmptyAnsiString
     end else L := ZFastCode.StrLen(P);  //the Delphi/FPC guys did decide to allow no zero byte in middle of a string propably because of Validate(Buffer)
-    {$IFNDEF NO_AUTOENCODE}
-    if (L > 0) and Connection.AutoEncodeStrings then
-      case ZDetectUTF8Encoding(P, L) of
-        etUSASCII:  if FColumnCP = zCP_UTF16
-                    then SetW(zCP_WIN1252)
-                    else goto jumpSetP;
-        etUTF8:     if (FColumnCP <> zCP_UTF8)
-                    then SetW(zCP_UTF8)
-                    else goto jumpSetP;
-        else if (FColumnCP <> zCP_UTF8)
-              then SetW(FRowAccessor.ConSettings^.CTRL_CP)
-              else if FColumnCP = zCP_UTF8 then
-                if ZOSCodePage <> FColumnCP
-                then SetW(ZOSCodePage)
-                else SetW(zCP_None)
-              else SetW(FColumnCP);
-      end
-    else if FColumnCP = zCP_UTF16
-    then SetW(FRowAccessor.ConSettings^.CTRL_CP) else begin
-jumpSetP: Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
-    {$ELSE}
     if (FColumnCP = zCP_UTF16) or Transliterate
     then SetW(GetTransliterateCodePage(Connection.ControlsCodePage)) else begin
       Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
-    {$ENDIF}
       BLob.QueryInterface(IZCLob, Clob);
       CLob.SetPAnsiChar(P,FColumnCP,L);
       FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Clob);
@@ -10160,8 +9756,12 @@ begin
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
       raise CreateUnBoundError(Self);
-    FFieldIndex := TZAbstractRODataset(DataSet).GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
-    FColumnCP := TZAbstractRODataset(DataSet).FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    with TZAbstractRODataset(DataSet) do begin
+      FFieldIndex := GetFieldIndex(Self){$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+      if FCharEncoding = ceUTF16
+      then FColumnCP := zCP_UTF16
+      else FColumnCP := FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    end;
   end;
   inherited Bind(Binding);
 end;
@@ -10235,11 +9835,7 @@ begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
       if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK) then begin
         if FColumnCP = zCP_UTF16
-        {$IFDEF NO_AUTOENCODE}
         then CP := GetTransliterateCodePage(TZAbstractRODataset(DataSet).Connection.ControlsCodePage)
-        {$ELSE}
-        then CP := FRowAccessor.ConSettings^.CTRL_CP
-        {$ENDIF}
         else CP := FColumnCP;
         Result := Clob.GetRawByteString(CP);
       end else Result := ''
@@ -10265,13 +9861,7 @@ begin
     with TZAbstractRODataset(DataSet) do begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
       if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK) then begin
-        {$IFNDEF NO_AUTOENCODE}
-        if (FColumnCP <> zCP_UTF16) and (not FRowAccessor.ConSettings^.AutoEncode or (FRowAccessor.ConSettings^.CTRL_CP = FColumnCP))
-        then CP := FColumnCP
-        else CP := FRowAccessor.ConSettings^.CTRL_CP;
-        {$ELSE}
         CP := GetTransliterateCodePage(Connection.ControlsCodePage);
-        {$ENDIF}
         R := '';
         P := Clob.GetPAnsiChar(CP, R, L);
         if (L<>0) and (P <> Pointer(R)) then begin
@@ -10428,11 +10018,7 @@ begin
     Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
     BLob.QueryInterface(IZCLob, Clob);
     if (FColumnCP = zCP_UTF16)
-    {$IFDEF NO_AUTOENCODE}
     then SetW(GetTransliterateCodePage(TZAbstractRODataset(DataSet).Connection.ControlsCodePage))
-    {$ELSE}
-    then SetW(FRowAccessor.ConSettings^.CTRL_CP)
-    {$ENDIF}
     else CLob.SetPAnsiChar(P, FColumnCP, L);
     FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Clob);
     if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
@@ -10446,11 +10032,7 @@ var L: LengthInt;
     P: PAnsiChar;
     Blob: IZBlob;
     Clob: IZCLob;
-{$IFDEF NO_AUTOENCODE}
     StringCP: Word;
-{$ELSE}
-label jumpSetP;
-{$ENDIF}
   procedure SetW(StrCP: Word);
   var U: UnicodeString;
   begin
@@ -10471,33 +10053,11 @@ begin
       L := 0;
       P := PEmptyAnsiString;
     end else L := ZFastCode.StrLen(P);  //the Delphi/FPC guys did decide to allow no zero byte in middle of a string propably because of Validate(Buffer)
-    {$IFNDEF NO_AUTOENCODE}
-    if (L > 0) and Connection.AutoEncodeStrings then
-      case ZDetectUTF8Encoding(P, L) of
-        etUSASCII:  if FColumnCP = zCP_UTF16
-                    then SetW(zCP_WIN1252)
-                    else goto jumpSetP;
-        etUTF8:     if (FColumnCP <> zCP_UTF8)
-                    then SetW(zCP_UTF8)
-                    else goto jumpSetP;
-        else if (FColumnCP <> zCP_UTF8)
-              then SetW(FRowAccessor.ConSettings^.CTRL_CP)
-              else if FColumnCP = zCP_UTF8 then
-                if ZOSCodePage <> FColumnCP
-                then SetW(ZOSCodePage)
-                else SetW(zCP_None)
-              else SetW(FColumnCP);
-      end
-    else if FColumnCP = zCP_UTF16
-    then SetW(FRowAccessor.ConSettings^.CTRL_CP) else begin
-jumpSetP: Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
-    {$ELSE}
     StringCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}ZOSCodePage{$ENDIF}{$ENDIF};
     if (StringCP <> FColumnCP) then
       SetW(StringCP)
     else begin
       Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
-    {$ENDIF}
       BLob.QueryInterface(IZCLob, Clob);
       CLob.SetPAnsiChar(P,FColumnCP,L);
       FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Clob);

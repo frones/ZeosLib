@@ -235,9 +235,7 @@ type
   TZInterbase6DatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
     FInfo: TStrings;
-  {$IFDEF NO_AUTOENCODE}
     FCS_NONE_ConSettings: TZConSettings;
-  {$ENDIF NO_AUTOENCODE}
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-25
     function ConstructNameCondition(const Pattern: string; const Column: string): string; override;
@@ -354,8 +352,8 @@ begin
       5..N  - string
       N+1   - #1 }
     if Buffer[0] = AnsiChar(isc_info)
-    then FServerVersion := ConvertConnRawToString({$IF not defined(NO_AUTOENCODE) or defined(UNICODE)}
-      Connection.GetConSettings, {$IFEND}@Buffer[5], Integer(Buffer[4]))
+    then FServerVersion := ConvertConnRawToString({$IFDEF UNICODE}
+      Connection.GetConSettings, {$ENDIF}@Buffer[5], Integer(Buffer[4]))
     else FServerVersion := '';
     FIsFireBird := ZFastCode.Pos('Firebird', FServerVersion) > 0;
     FProductVersion := Copy(FServerVersion, ZFastCode.Pos(DBProvider[FIsFireBird],
@@ -2613,14 +2611,12 @@ begin
   if FInfo = nil then
     FInfo := TStringList.Create;
   FInfo.Values[DS_Props_IsMetadataResultSet] := 'True';
-  {$IFDEF NO_AUTOENCODE}
   {even if CS_NONE is cp neutral, all metainformations are UTF8/UNIOCDE_FSS encoded}
   FCS_NONE_ConSettings.W2A2WEncodingSource := FConSettings.W2A2WEncodingSource;
   FCS_NONE_ConSettings.ReadFormatSettings := FConSettings.ReadFormatSettings;
   FCS_NONE_ConSettings.WriteFormatSettings := FConSettings.WriteFormatSettings;
   FCS_NONE_ConSettings.ClientCodePage := GetConnection.GetIZPlainDriver.ValidateCharEncoding('UTF8');
   FConSettings := @FCS_NONE_ConSettings;
-  {$ENDIF}
 end;
 
 {**

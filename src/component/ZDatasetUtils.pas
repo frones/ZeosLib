@@ -74,7 +74,6 @@ type
   TZFieldsLookUpDynArray = array of TZFieldsLookUp;
 
   {** Defines the target Field-Type }
-{$IFDEF NO_AUTOENCODE}
   TZTransliterationType = (ttField, ttParam,ttSQL);
   TZControlsCodePage = ( //EH: my name is obsolate it should be TZCharacterFieldType, left for backward compatibility
   {$IFDEF UNICODE}
@@ -90,9 +89,6 @@ type
       cGET_ACP, cCP_UTF16, cCP_UTF8, cDynamic
     {$ENDIF FPC}
   {$ENDIF UNICODE});
-{$ELSE NO_AUTOENCODE}
-  TZControlsCodePage = ({$IFDEF UNICODE}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
-{$ENDIF NO_AUTOENCODE}
 {**
   Converts DBC Field Type to TDataset Field Type.
   @param Value an initial DBC field type.
@@ -285,9 +281,7 @@ procedure SplitQualifiedObjectName(const QualifiedName: string;
   const SupportsCatalogs, SupportsSchemas: Boolean;
   out Catalog, Schema, ObjectName: string); overload;
 
-{$IFDEF NO_AUTOENCODE}
 function GetTransliterateCodePage(ControlsCodePage: TZControlsCodePage): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-{$ENDIF NO_AUTOENCODE}
 {**
   Assigns a Statement value from a TParam
   @param Index the index of Statement.SetParam(Idex..);
@@ -355,7 +349,7 @@ implementation
 uses
   FmtBCD, Variants,
   ZFastCode, ZMessages, ZGenericSqlToken, ZAbstractRODataset,
-  ZSysUtils, ZDbcResultSet, {$IFDEF NO_AUTOENCODE}ZDbcUtils,{$ENDIF}ZEncoding;
+  ZSysUtils, ZDbcResultSet, ZDbcUtils, ZEncoding;
 
 {**
   Converts DBC Field Type to TDataset Field Type.
@@ -395,9 +389,9 @@ begin
       //Result := ftCurrency;
       Result := ftBCD;
     stString: if Precision <= 0
-      then {$IF defined(WITH_WIDEMEMO) or defined(NO_AUTOENCODE)}if CPType = cCP_UTF16
+      then if CPType = cCP_UTF16
         then Result := {$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}
-        else {$IFEND}Result := ftMemo
+        else Result := ftMemo
       else if CPType = cCP_UTF16
         then Result := ftWideString
         else Result := ftString;
@@ -417,15 +411,15 @@ begin
     stBinaryStream:
       Result := ftBlob;
     stUnicodeString: if (Precision <= 0) or (Precision > dsMaxStringSize)
-      then {$IF defined(WITH_WIDEMEMO) or defined(NO_AUTOENCODE)}if (CPType = cCP_UTF16) {$IFDEF NO_AUTOENCODE}or (CPType = cDynamic){$ENDIF}
+      then if (CPType = cCP_UTF16) or (CPType = cDynamic)
         then Result := {$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}
-        else {$IFEND}Result := ftMemo
+        else Result := ftMemo
       else if CPType = cCP_UTF16
         then Result := ftWideString
         else Result := ftString;
-    stUnicodeStream: {$IF defined(WITH_WIDEMEMO) or defined(NO_AUTOENCODE)}if (CPType = cCP_UTF16){$IFDEF NO_AUTOENCODE}or (CPType = cDynamic){$ENDIF}
+    stUnicodeStream: if (CPType = cCP_UTF16)or (CPType = cDynamic)
         then Result := {$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}
-        else {$IFEND}Result := ftMemo;
+        else Result := ftMemo;
     {$IFDEF WITH_FTDATASETSUPPORT}
     stDataSet:
       Result := ftDataSet;
@@ -1671,14 +1665,13 @@ begin
   end;
 end;
 
-{$IFDEF NO_AUTOENCODE}
 function GetTransliterateCodePage(ControlsCodePage: TZControlsCodePage): Word;
 begin
   case ControlsCodePage of
     {$IFNDEF UNICODE}
     cCP_UTF8: Result := zCP_UTF8;
     {$ENDIF}
-    cGET_ACP:  Result := ZOSCodePage;
+    cGET_ACP:  Result := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF};
     {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
     else Result := DefaultSystemCodePage
     {$ELSE}
@@ -1691,7 +1684,6 @@ begin
   end;
 end;
 type THackParam = class(TParam);
-{$ENDIF NO_AUTOENCODE}
 {**
   Assigns a Statement value from a TParam
   @param Index the index of Statement.SetXxxx(ColumnIndex, xxx);
@@ -1830,14 +1822,7 @@ begin
               R := RawByteString(TVarData(Param.Value).VString);
               P :=  Pointer(R);
               if P <> nil
-              then {$IFNDEF NO_AUTOENCODE}if ConSettings.AutoEncode
-                then CP := zCP_NONE
-                else if (ConSettings.ClientCodePage.Encoding = ceUTF16)
-                  then CP := ConSettings.CTRL_CP
-                  else CP := ConSettings.ClientCodePage.CP
-                {$ELSE}
-                CP := TZAbstractRODataset(THackParam(Param).DataSet).Connection.CharacterTransliterateOptions.GetRawTransliterateCodePage(ttParam)
-                {$ENDIF}
+              then CP := TZAbstractRODataset(THackParam(Param).DataSet).Connection.CharacterTransliterateOptions.GetRawTransliterateCodePage(ttParam)
               else begin
                 CP := ConSettings.ClientCodePage.CP;
                 P := PEmptyAnsiString;
@@ -1860,28 +1845,10 @@ begin
                  Lob := TZLocalMemCLob.CreateWithData(PWideChar(P), L shr 1, ConSettings, nil);
                  Statement.SetBlob(Index, stUnicodeStream, Lob);
               end else {$ENDIF}begin
-                {$IFDEF NO_AUTOENCODE}
                 if ConSettings^.ClientCodePage.Encoding = ceUTF16
-                then CP := GetTransliterateCodePage(TZAbstractRODataset(THackParam(Param).DataSet).Connection.ControlsCodePage)
+                //then CP := GetTransliterateCodePage(TZAbstractRODataset(THackParam(Param).DataSet).Connection.ControlsCodePage)
+                then CP := TZAbstractRODataset(THackParam(Param).DataSet).Connection.CharacterTransliterateOptions.GetRawTransliterateCodePage(ttParam)
                 else CP := ConSettings.ClientCodePage.CP;
-                {$ELSE}
-                if ConSettings.ClientCodePage.Encoding = ceUTF16
-                then CP := ConSettings.CTRL_CP
-                else CP := ConSettings.ClientCodePage.CP;
-                if ConSettings.AutoEncode then case ZDetectUTF8Encoding(P, L) of
-                  etAnsi: if CP = zCP_UTF8 then //otherwise we'll keep the code page
-                        if (ConSettings^.ClientCodePage^.CP = zCP_UTF8) then
-                          if (ConSettings^.CTRL_CP = zCP_UTF8) then
-                            if (ZOSCodePage = zCP_UTF8) then
-                            {no idea what to do with ansiencoding, if everything if set to UTF8!}
-                              CP := zCP_WIN1252 //all convertions would fail so.. let the server raise an error!
-                            else CP := ZOSCodePage
-                          else CP := ConSettings^.CTRL_CP
-                        else CP := ConSettings^.ClientCodePage^.CP;
-                  etUTF8: CP := zCP_UTF8;
-                  else {etUSASCII}; //do nothing just satisfy FPC 3.1+
-                end;
-                {$ENDIF}
                 Lob := TZLocalMemCLob.CreateWithData(PAnsiChar(P), L, CP, ConSettings, nil);
                 Statement.SetBlob(Index, stAsciiStream, Lob);
               end;
