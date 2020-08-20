@@ -1953,6 +1953,7 @@ begin
     eq_name := Query.Fields[1].Value;
     CheckEquals(eq_name, 'Nissan');
     Query.Post;
+    Check(Query.UpdatesPending, 'PendingUpdates in queue');
     eq_name := Query.Fields[1].OldValue;
     CheckEquals(eq_name, 'Volvo');
     eq_name := Query.Fields[1].OldValue;

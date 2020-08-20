@@ -295,7 +295,6 @@ type
     procedure CancelUpdates; virtual;
     procedure RevertRecord; virtual;
     procedure MoveToInitialRow; virtual;
-    procedure MoveToUpdateRow;
     procedure PostUpdatesCached; virtual;
     procedure DisposeCachedUpdates; virtual;
     {$IFDEF USE_SYNCOMMONS}
@@ -643,13 +642,11 @@ begin
   CheckClosed;
   if (RowNo >= 1) and (RowNo <= LastRowNo) and (FSelectedRow <> nil) then begin
     Index := LocateRow(FInitialRowsList, FSelectedRow.Index);
-    if Index >= 0 then begin
-      FSelectedRow := FInitialRowsList[Index];
-      FRowAccessor.RowBuffer := FSelectedRow;
-    end else if (FUpdatedRow.Index <> -1) and (FUpdatedRow.Index = FSelectedRow.Index) and (FUpdatedRow.UpdateType = utModified) then begin
-      FSelectedRow := FRowsList[FUpdatedRow.Index];
-      FRowAccessor.RowBuffer := FSelectedRow;
-    end else if FRowAccessor.RowBuffer = FInsertedRow then begin
+    if Index >= 0 then
+      FRowAccessor.RowBuffer := FInitialRowsList[Index]//do not set the FSelectedRow
+    else if (FUpdatedRow.Index <> -1) and (FUpdatedRow.Index = FSelectedRow.Index) and (FUpdatedRow.UpdateType = utModified) then
+      FRowAccessor.RowBuffer := FRowsList[FUpdatedRow.Index]////do not set the FSelectedRow;
+    else if FRowAccessor.RowBuffer = FInsertedRow then begin
       if FEmptyRow = nil then
         FEmptyRow := FRowAccessor.AllocBuffer;
       FRowAccessor.RowBuffer := FEmptyRow;
@@ -2236,35 +2233,6 @@ procedure TZAbstractCachedResultSet.MoveToInsertRow;
 begin
   CheckClosed;
   FRowAccessor.RowBuffer := FInsertedRow;
-end;
-
-{**
-  Moves the cursor to the update row.  The current cursor position is
-  remembered while the cursor is positioned on the update row.
-
-  The update row is a special row associated with an updatable
-  result set.  It is essentially a buffer where a new row may
-  be constructed by calling the <code>updateXXX</code> methods prior to
-  updateing the row into the result set.
-
-  Only the <code>updateXXX</code>, <code>getXXX</code>,
-  and <code>updateRow</code> methods may be
-  called when the cursor is on the update row.  All of the columns in
-  a result set must be given a value each time this method is
-  called before calling <code>updateRow</code>.
-  An <code>updateXXX</code> method must be called before a
-  <code>getXXX</code> method can be called on a column value.
-}
-procedure TZAbstractCachedResultSet.MoveToUpdateRow;
-begin
-  CheckClosed;
-  if (RowAccessor.RowBuffer = FSelectedRow) and (FSelectedRow <> FUpdatedRow) then begin
-    FSelectedRow := FUpdatedRow;
-    RowAccessor.RowBuffer := FSelectedRow;
-    RowAccessor.CloneFrom(PZRowBuffer(FRowsList[RowNo - 1]));
-    FUpdatedRow.Index := FSelectedRow.Index;
-    FUpdatedRow.UpdateType := utModified;
-  end;
 end;
 
 {**
