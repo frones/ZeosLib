@@ -2120,7 +2120,7 @@ begin
               end;
     SQLT_CLOB: AsLob;
     else
-jmpFail: CreateConversionError({$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stUnicodeString, SQLType);
+jmpFail: CreateConversionError(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stUnicodeString, SQLType);
   end;
   Bind.indp[0] := 0;
   {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}

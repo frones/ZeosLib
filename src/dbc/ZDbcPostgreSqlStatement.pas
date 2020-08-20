@@ -2546,7 +2546,7 @@ procedure TZPostgreSQLPreparedStatementV3.SetNull(Index: Integer;
   SQLType: TZSQLType);
 var InParamIdx: Integer;
 begin
-  InParamIdx := {$IFNDEF GENERIC_INDEX}Index -1{$ENDIF};
+  InParamIdx := Index{$IFNDEF GENERIC_INDEX} -1{$ENDIF};
   SQLType := OIDToSQLType(InParamIdx, SQLType);
   BindList.SetNull(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SQLType);
   FPQparamFormats[InParamIdx] := ParamFormatStr;
