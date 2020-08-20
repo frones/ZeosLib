@@ -83,7 +83,7 @@ type
     FPLainDriver: TZSQLAnywherePlainDriver;
     FSQLAnyConnection: IZSQLAnywhereConnection;
     FBindValueSize: NativeInt;
-    FClientCP, FRawStrCP: Word;
+    FClientCP: Word;
     Fnum_cols: Tsacapi_i32; //kept for index check
     FFetchedMinRowNo, FFetchedMaxRowNo: NativeInt; //required for OffSetCalculation of MoveAbsolut
     FZBufferSize: Cardinal; //max size for multiple rows. If Row > Value ignore it!
@@ -274,7 +274,6 @@ begin
   FPlainDriver := FSQLAnyConnection.GetPlainDriver;
   ResultSetConcurrency := rcReadOnly;
   FClientCP := ConSettings.ClientCodePage.CP;
-  FRawStrCP := ConSettings.CTRL_CP;
   FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Statement, DSProps_InternalBufSize, ''), 131072);
   if Fapi_version >= SQLANY_API_VERSION_4
   then FBindValueSize := SizeOf(Ta_sqlany_data_valueV4up)

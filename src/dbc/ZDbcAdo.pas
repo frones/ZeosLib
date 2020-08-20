@@ -95,7 +95,6 @@ type
   protected
     FAdoConnection: ZPlainAdo.Connection;
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload; override;
-    procedure InternalCreate; override;
     procedure InternalClose; override;
   public
     function GetAdoConnection: ZPlainAdo.Connection;
@@ -103,9 +102,9 @@ type
       const E: Exception; const Sender: IImmediatelyReleasable;
       const LogMsg: SQLString);
   public
-
+    procedure AfterConstruction; override;
     destructor Destroy; override;
-
+  public
     procedure Commit;
     procedure Rollback;
     procedure SetAutoCommit(Value: Boolean); override;
@@ -206,13 +205,6 @@ begin
 end;
 { TZAdoConnection }
 
-procedure TZAdoConnection.InternalCreate;
-begin
-  CoInit;
-  FAdoConnection := CoConnection.Create;
-  FMetadata := TZAdoDatabaseMetadata.Create(Self, URL);
-end;
-
 {**
   Destroys this object and cleanups the memory.
 }
@@ -234,7 +226,8 @@ begin
   try
     FAdoConnection.Execute(SQL, RowsAffected, adExecuteNoRecords);
     {$IFNDEF UNICODE}FlogMessage := ZUnicodeToRaw(SQL, zCP_UTF8);{$ENDIF}
-    DriverManager.LogMessage(LoggingCategory, URL.Protocol, {$IFDEF UNICODE}SQL{$ELSE}FlogMessage{$ENDIF});
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(LoggingCategory, URL.Protocol, {$IFDEF UNICODE}SQL{$ELSE}FlogMessage{$ENDIF});
   except
     on E: Exception do begin
       {$IFNDEF UNICODE}FlogMessage := ZUnicodeToRaw(SQL, zCP_UTF8);{$ENDIF}
@@ -277,7 +270,8 @@ begin
 
     FAdoConnection.Open(WideString(Database), WideString(User), WideString(Password), -1{adConnectUnspecified});
     FAdoConnection.Set_CursorLocation(adUseClient);
-    DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
     //ConSettings^.AutoEncode := {$IFDEF UNICODE}False{$ELSE}True{$ENDIF};
     CheckCharEncoding('CP_UTF16');
   except
@@ -424,7 +418,8 @@ begin
         FAdoConnection.CommitTrans;
         Dec(FTransactionLevel);
       end;
-      DriverManager.LogMessage(lcTransaction, URL.Protocol, 'COMMIT');
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcTransaction, URL.Protocol, 'COMMIT');
       AutoCommit := True;
     end else
       StartTransaction;
@@ -481,9 +476,9 @@ begin
   end else begin
     if cSavePointSyntaxW[fServerProvider][spqtSavePoint] = '' then
       raise EZSQLException.Create(SUnsupportedOperation);
-    S := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(NativeUint(Self))+'_'+{$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(FSavePoints.Count);
+    S := 'SP'+{$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(NativeUint(Self))+'_'+{$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(FSavePoints.Count);
     {$IFDEF UNICODE}FLogMessage{$ELSE}LogMessage{$ENDIF} :=
-      cSavePointSyntaxW[fServerProvider][spqtSavePoint]+'SP'+{$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(S);
+      cSavePointSyntaxW[fServerProvider][spqtSavePoint]+{$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(S);
     ExecuteImmediat({$IFDEF UNICODE}FLogMessage{$ELSE}LogMessage{$ENDIF}, lcTransaction);
     Result := FSavePoints.Add(S)+2;
   end;
@@ -496,6 +491,14 @@ end;
   used only when auto-commit mode has been disabled.
   @see #setAutoCommit
 }
+procedure TZAdoConnection.AfterConstruction;
+begin
+  CoInit;
+  FAdoConnection := CoConnection.Create;
+  FMetadata := TZAdoDatabaseMetadata.Create(Self, URL);
+  inherited AfterConstruction;
+end;
+
 procedure TZAdoConnection.Commit;
 var S: UnicodeString;
   Cnt: Integer;
@@ -510,12 +513,15 @@ begin
     S := cSavePointSyntaxW[fServerProvider][spqtCommit];
     if S <> '' then begin
       S := S+{$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(FSavePoints[FSavePoints.Count-1]);
+      if fServerProvider = spMSSQL then
+        S := '"'+S+'"';
       ExecuteImmediat(S, lcTransaction);
     end;
     FSavePoints.Delete(FSavePoints.Count-1);
   end else try
     FAdoConnection.CommitTrans;
-    DriverManager.LogMessage(lcTransaction, URL.Protocol, sCommitMsg);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, sCommitMsg);
     FTransactionLevel := 0;
     AutoCommit := True;
   except
@@ -549,7 +555,8 @@ begin
     FSavePoints.Delete(FSavePoints.Count-1);
   end else try
     FAdoConnection.RollbackTrans;
-    DriverManager.LogMessage(lcTransaction, URL.Protocol, sRollbackMsg);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, sRollbackMsg);
     FTransactionLevel := 0;
     AutoCommit := True;
   except
@@ -588,7 +595,8 @@ begin
     if FAdoConnection.State = adStateOpen then
       FAdoConnection.Close;
 //      FAdoConnection := nil;
-    DriverManager.LogMessage(lcDisconnect, URL.Protocol, LogMessage);
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcDisconnect, URL.Protocol, LogMessage);
   except
     on E: Exception do
       HandleErrorOrWarning(lcDisconnect, E, Self, LogMessage);
@@ -637,19 +645,21 @@ procedure TZAdoConnection.HandleErrorOrWarning(
 var FormatStr, ErrorString: String;
 begin
   if E is EOleException then with E as EOleException do begin
-    LogError(LoggingCategory, ErrorCode, Sender, LogMsg, Message);
+    if DriverManager.HasLoggingListener then
+      LogError(LoggingCategory, ErrorCode, Sender, LogMsg, Message);
     raise EZSQLException.CreateWithCode(ErrorCode, Message);
-    if LogMsg <> '' then
+    if AddLogMsgToExceptionOrWarningMsg and (LogMsg <> '') then
       if LoggingCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
       then FormatStr := SSQLError3
       else FormatStr := SSQLError4
     else FormatStr := SSQLError2;
-    if LogMsg <> ''
+    if AddLogMsgToExceptionOrWarningMsg and (LogMsg <> '')
     then ErrorString := Format(FormatStr, [Message, ErrorCode, LogMsg])
     else ErrorString := Format(FormatStr, [Message, ErrorCode]);
     raise EZSQLException.CreateWithCode(ErrorCode, ErrorString);
   end else begin
-    LogError(LoggingCategory, 0, Sender, LogMsg, E.Message);
+    if DriverManager.HasLoggingListener then
+      LogError(LoggingCategory, 0, Sender, LogMsg, E.Message);
     raise Exception(E.ClassType).Create(E.Message);
   end;
 end;

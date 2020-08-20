@@ -98,6 +98,13 @@ const
   SQLITE_FORMAT       = 24;  // Auxiliary database format error
   SQLITE_RANGE        = 25;  // 2nd parameter to sqlite_bind out of range
   SQLITE_NOTADB       = 26;  // File opened that is not a database file
+  SQLITE_NOTICE       = 27;  // The SQLITE_NOTICE result code is not returned by any C/C++ interface.
+                             // However, SQLITE_NOTICE (or rather one of its extended error codes) is
+                             // sometimes used as the first argument in an sqlite3_log() callback to indicate that an unusual operation is taking place.
+  SQLITE_WARNING      = 28;  // The SQLITE_WARNING result code is not returned by any C/C++ interface.
+                             // However, SQLITE_WARNING (or rather one of its extended error codes) is
+                             // sometimes used as the first argument in an sqlite3_log() callback to indicate
+                             //  that an unusual and possibly ill-advised operation is taking place.
   SQLITE_ROW          = 100;  // sqlite3_step() has another row ready
   SQLITE_DONE         = 101;  // sqlite3_step() has finished executing
 

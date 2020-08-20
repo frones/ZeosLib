@@ -393,7 +393,7 @@ begin
     RestartTimer;
     FFBTransaction := FFBConnection.GetActiveTransaction.GetTransaction;
     if FStatementType in [stSelect, stSelectForUpdate] then begin
-      (* commented, somesting in fblclient is killing our skack/heap for some selects
+      (* commented, somesting in fblclient is killing our stack/heap for some selects
        using a scrollable cursor..
       if (GetResultSetType <> rtForwardOnly) and (GetResultSetConcurrency = rcReadOnly)
       then flags := {$IFDEF WITH_CLASS_CONST}IStatement.CURSOR_TYPE_SCROLLABLE{$ELSE}IStatement_CURSOR_TYPE_SCROLLABLE{$ENDIF}

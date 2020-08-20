@@ -446,9 +446,13 @@ begin
               Query1.Fields[i].AsString := RandomStr(Query1.Fields[i].DisplayWidth);
             ftMemo, ftFmtMemo:
               Query1.Fields[i].AsString := RandomStr(RecordCount*100);
-            {$IFDEF WITH_WIDEFIELDS}
-            ftWideString{$IFNDEF FPC}, ftFixedWideChar{$ENDIF}:
+            ftWideString{$IF declared(ftFixedWideChar)}, ftFixedWideChar{$IFEND}:
+              {$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}
               Query1.Fields[i].AsWideString := WideString(RandomStr(Query1.Fields[i].DisplayWidth));
+              {$ELSE}
+              TWideStringField(Query1.Fields[i]).Value := WideString(RandomStr(Query1.Fields[i].DisplayWidth));
+              {$ENDIF}
+            {$IFDEF WITH_WIDEMEMO}
             ftWideMemo:
               Query1.Fields[i].AsWideString := WideString(RandomStr(RecordCount*100));
             {$ENDIF}

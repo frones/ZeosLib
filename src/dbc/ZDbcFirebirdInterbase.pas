@@ -126,14 +126,13 @@ type
     FXSQLDAMaxSize: Cardinal;
     FInterbaseFirebirdPlainDriver: TZInterbaseFirebirdPlainDriver;
     FLastWarning: EZSQLWarning;
-    procedure BeforeUrlAssign; override;
     procedure DetermineClientTypeAndVersion;
     procedure AssignISC_Parameters;
     procedure TransactionParameterPufferChanged;
     function GetActiveTransaction: IZInterbaseFirebirdTransaction;
     procedure OnPropertiesChange({%H-}Sender: TObject); override;
+    function ConstructConnectionString: SQLString;
   protected
-    procedure InternalCreate; override;
     procedure InternalClose; override;
   public
     procedure AfterConstruction; override;
@@ -272,6 +271,7 @@ type
   End;
 
   TZInterbaseFirebirdColumnInfo = Class(TZColumnInfo)
+  public
     sqldata: Pointer; //points to data in our buffer
     sqlind: PISC_SHORT; //null indicator, nil if not nullable
     sqltype: Cardinal;
@@ -529,6 +529,18 @@ begin
   QueryInterface(IZTransactionManager, TAManager);
   FWeakTransactionManagerPtr := Pointer(TAManager);
   TAManager := nil;
+  // ! Create the object before parent's constructor because it is used in
+  // TZAbstractDbcConnection.Create > Url.OnPropertiesChange
+  FGUIDProps := TZInterbaseFirebirdConnectionGUIDProps.Create;
+  FClientVersion := -1;
+  FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
+  fTransactions := TZCollection.Create;
+  Ftransactions.Add(nil);
+  { set default sql dialect it can be overriden }
+  FDialect := StrToIntDef(Info.Values[ConnProps_Dialect], SQL_DIALECT_CURRENT);
+  FProcedureTypesCache := TStringList.Create;
+  FSubTypeTestCharIDCache := TStringList.Create;
+  FInterbaseFirebirdPlainDriver := PlainDriver.GetInstance as TZInterbaseFirebirdPlainDriver;
   inherited AfterConstruction;
 end;
 
@@ -637,15 +649,6 @@ begin
   Info.EndUpdate;
 end;
 
-procedure TZInterbaseFirebirdConnection.BeforeUrlAssign;
-begin
-  // ! Create the object before parent's constructor because it is used in
-  // TZAbstractDbcConnection.Create > Url.OnPropertiesChange
-  FGUIDProps := TZInterbaseFirebirdConnectionGUIDProps.Create;
-  FClientVersion := -1;
-  inherited BeforeUrlAssign;
-end;
-
 procedure TZInterbaseFirebirdConnection.ClearTransactions;
 begin
   fTransactions.Clear;
@@ -679,6 +682,72 @@ begin
     Commit;
     if (not FRestartTransaction) and (GetTransactionLevel <= 0) then
       SetAutoCommit(True);
+  end;
+end;
+
+{**
+  Constructs the connection string for the current connection
+}
+function TZInterbaseFirebirdConnection.ConstructConnectionString: SQLString;
+var
+  Protocol: String;
+  Writer: TZSQLStringWriter;
+begin
+  Protocol := Info.Values[ConnProps_FBProtocol];
+  Protocol := LowerCase(Protocol);
+  Writer := TZSQLStringWriter.Create(512);
+  Result := '';
+  try
+    if ((Protocol = 'inet') or (Protocol = 'wnet') or (Protocol = 'xnet') or (Protocol = 'local')) then begin
+      if (GetClientVersion >= 3000000) and IsFirebirdLib then begin
+        if protocol = 'inet' then begin
+          Writer.AddText('inet://', Result);
+          Writer.AddText(HostName, Result);
+          if Port <> 0 then begin
+            Writer.AddChar(':', Result);
+            Writer.AddOrd(Port, Result);
+          end;
+          Writer.AddChar('/', Result);
+        end else if Protocol = 'wnet' then begin
+          Writer.AddText('wnet://', Result);
+          if HostName <> '' then begin
+            Writer.AddText(HostName, Result);
+            Writer.AddChar('/', Result);
+          end; //EH@Jan isn't the port missing here ? or just not required?
+        end else if Protocol = 'xnet' then
+          Writer.AddText('xnet://', Result);
+      end else if protocol = 'inet' then begin
+        if HostName = ''
+        then Writer.AddText('localhost', Result)
+        else Writer.AddText(HostName, Result);
+        if Port <> 0 then begin
+          Writer.AddChar('/', Result);
+          Writer.AddOrd(Port, Result);
+        end;
+        Writer.AddChar(':', Result);
+      end else if Protocol = 'wnet' then begin
+        Writer.AddText('\\', Result);
+        if HostName = ''
+        then Writer.AddChar('.', Result)
+        else Writer.AddText(HostName, Result);
+        if Port <> 0 then begin
+          Writer.AddChar('@', Result);
+          Writer.AddOrd(Port, Result);
+        end;
+        Writer.AddChar('\', Result);
+      end;
+    end else if HostName <> '' then begin
+      Writer.AddText(HostName, Result);
+      if Port <> 0 then begin
+        Writer.AddChar('/', Result);
+        Writer.AddOrd(Port, Result);
+      end;
+      Writer.AddChar(':', Result);
+    end;
+    Writer.AddText(Database, Result);
+    Writer.Finalize(Result);
+  finally
+    FreeAndNil(Writer);
   end;
 end;
 
@@ -866,7 +935,7 @@ begin
       Params.Insert(0, OverwritableParams[parAutoCommit]);
 
     Result := BuildPB(FInterbaseFirebirdPlainDriver, Params, isc_tpb_version3,
-      TPBPrefix, TransactionParams, ConSettings, FPB_CP);
+      TPBPrefix, TransactionParams{$IFDEF UNICODE},FPB_CP{$ENDIF});
   finally
     FreeAndNil(Params);
   end;
@@ -1013,7 +1082,7 @@ begin
 end;
 
 {**
-  Checks for possible sql errors or warnings.
+  Handles possible sql errors or warnings.
   @param LogCategory a logging category
   @param StatusVector a status vector. It contain information about error
   @param LogMessage a sql query command or another message
@@ -1023,43 +1092,56 @@ procedure TZInterbaseFirebirdConnection.HandleErrorOrWarning(
   LogCategory: TZLoggingCategory; StatusVector: PARRAY_ISC_STATUS;
   const LogMessage: SQLString; const Sender: IImmediatelyReleasable);
 var
-  ErrorString, ErrorMessage: string;
+  FormatStr, ErrorString: string;
   ErrorCode: Integer;
   i: Integer;
   InterbaseStatusVector: TZIBStatusVector;
-  ConLostError: EZSQLConnectionLost;
-  IsWarning: Boolean;
+  Error: EZSQLThrowable;
+  ExeptionClass: EZSQLThrowableClass;
 begin
   InterbaseStatusVector := InterpretInterbaseStatus(StatusVector);
-  IsWarning := (StatusVector[1] = isc_arg_end) and (StatusVector[2] = isc_arg_warning);
-  ErrorMessage := '';
+  ErrorCode := InterbaseStatusVector[0].SQLCode;
+  ErrorString := '';
   for i := Low(InterbaseStatusVector) to High(InterbaseStatusVector) do
-    AppendSepString(ErrorMessage, InterbaseStatusVector[i].IBMessage, '; ');
+    AppendSepString(ErrorString, InterbaseStatusVector[i].IBMessage, '; ');
+
+  if DriverManager.HasLoggingListener then
+    LogError(LogCategory, ErrorCode, Sender, LogMessage, ErrorString);
+  if (StatusVector[1] = isc_arg_end) and (StatusVector[2] = isc_arg_warning)
+  then ExeptionClass := EZSQLWarning
+  else if (ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection) or
+      (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_idle) or
+      (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_engine)
+    then ExeptionClass := EZSQLConnectionLost
+    else ExeptionClass := EZIBSQLException;
 
   PInt64(StatusVector)^ := 0; //init for fb3up
   PInt64(PAnsiChar(StatusVector)+8)^ := 0; //init for fb3up
-  ErrorCode := InterbaseStatusVector[0].SQLCode;
-
-  if ErrorMessage <> '' then begin
-    if not IsWarning and DriverManager.HasLoggingListener then
-      LogError(LogCategory, ErrorCode, Sender, LogMessage, ErrorMessage);
-    ErrorString := Format(SSQLError1, [ErrorMessage]);
-    if (ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection) or
-       (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_idle) or
-       (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_engine) then begin
-      ConLostError := EZSQLConnectionLost.CreateWithCode(ErrorCode, ErrorString);
-      if Sender <> nil
-      then Sender.ReleaseImmediat(Sender, ConLostError)
-      else ReleaseImmediat(Sender, ConLostError);
-      if ConLostError <> nil then raise ConLostError;
-    end else if IsWarning then begin
+  if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '') then
+    if LogCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
+    then FormatStr := SSQLError3
+    else FormatStr := SSQLError4
+  else FormatStr := SSQLError2;//changed by Fr0st SSQLError2;
+  if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '')
+  then FLogMessage := Format(FormatStr, [ErrorString, ErrorCode, LogMessage])
+  else FLogMessage := Format(FormatStr, [ErrorString, ErrorCode]);
+  if ExeptionClass = EZIBSQLException //added by Fr0st
+  then Error := EZIBSQLException.Create(FLogMessage, InterbaseStatusVector, LogMessage)
+  else begin
+    Error := ExeptionClass.CreateWithCode(ErrorCode, FlogMessage);
+    if ExeptionClass = EZSQLWarning then begin
       ClearWarnings;
-      FLastWarning := EZSQLWarning.CreateWithCode(ErrorCode, ErrorString);
-      if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(LogCategory, URL.Protocol, ErrorMessage);
-    end else raise EZIBSQLException.Create(
-      ErrorString, InterbaseStatusVector, LogMessage);
+      if not RaiseWarnings then begin
+        FLastWarning := EZSQLWarning(Error);
+        Error := nil;
+      end;
+    end else if (Sender <> nil)
+      then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(Error))
+      else ReleaseImmediat(Self, EZSQLConnectionLost(Error))
   end;
+  FLogMessage := '';
+  if Error <> nil then
+    raise Error;
 end;
 
 function TZInterbaseFirebirdConnection.IsTransactionValid(
@@ -1073,21 +1155,6 @@ begin
   AutoCommit := not FRestartTransaction;
   fTransactions.Clear;
   fActiveTransaction := nil;
-end;
-
-{**
-  Constructs this object and assignes the main properties.
-}
-procedure TZInterbaseFirebirdConnection.InternalCreate;
-begin
-  FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
-  fTransactions := TZCollection.Create;
-  Ftransactions.Add(nil);
-  { set default sql dialect it can be overriden }
-  FDialect := StrToIntDef(Info.Values[ConnProps_Dialect], SQL_DIALECT_CURRENT);
-  FProcedureTypesCache := TStringList.Create;
-  FSubTypeTestCharIDCache := TStringList.Create;
-  FInterbaseFirebirdPlainDriver := TZInterbaseFirebirdPlainDriver(GetIZPlainDriver.GetInstance);
 end;
 
 {**
@@ -1109,7 +1176,7 @@ begin
     // SQL code and status
     pCurrStatus.SQLCode := FInterbaseFirebirdPlainDriver.isc_sqlcode(PISC_STATUS(StatusVector));
     FInterbaseFirebirdPlainDriver.isc_sql_interprete(pCurrStatus.SQLCode, @FByteBuffer[0], SizeOf(TByteBuffer)-1);
-    pCurrStatus.SQLMessage := ConvertConnRawToString(ConSettings, @FByteBuffer[0]);
+    pCurrStatus.SQLMessage := ConvertConnRawToString({$IFDEF UNICODE}ConSettings,{$ENDIF}@FByteBuffer[0]);
     // IB data
     pCurrStatus.IBDataType := StatusVector[StatusIdx];
     case StatusVector[StatusIdx] of
@@ -1134,12 +1201,14 @@ begin
       isc_arg_interpreted,
       isc_arg_sql_state:
         begin
-          pCurrStatus.IBDataStr := ConvertConnRawToString(ConSettings, Pointer(StatusVector[StatusIdx + 1]));
+          pCurrStatus.IBDataStr := ConvertConnRawToString({$IFDEF UNICODE}
+            ConSettings,{$ENDIF}Pointer(StatusVector[StatusIdx + 1]));
           Inc(StatusIdx, 2);
         end;
       isc_arg_cstring: // length and pointer to string
         begin
-          pCurrStatus.IBDataStr := ConvertConnRawToString(ConSettings, Pointer(StatusVector[StatusIdx + 2]), StatusVector[StatusIdx + 1]);
+          pCurrStatus.IBDataStr := ConvertConnRawToString({$IFDEF UNICODE}
+            ConSettings,{$ENDIF}Pointer(StatusVector[StatusIdx + 2]), StatusVector[StatusIdx + 1]);
           Inc(StatusIdx, 3);
         end;
       isc_arg_warning: begin// must not happen for error vector
@@ -1155,7 +1224,8 @@ begin
         Break;
     end else if FInterbaseFirebirdPlainDriver.isc_interprete(@FByteBuffer[0], @StatusVector) = 0 then
       Break;
-    pCurrStatus.IBMessage := ConvertConnRawToString(ConSettings, @FByteBuffer[0]);
+    pCurrStatus.IBMessage := ConvertConnRawToString({$IFDEF UNICODE}
+            ConSettings,{$ENDIF}@FByteBuffer[0]);
   until False;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
@@ -3378,9 +3448,13 @@ end;
 function TZAbstractFirebirdInterbasePreparedStatement.GetRawEncodedSQL(
   const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
 begin
-  if ConSettings^.AutoEncode or (FDB_CP_ID = CS_NONE)
+  if (FDB_CP_ID = CS_NONE)
   then Result := SplittQuery(SQL)
-  else Result := ConSettings^.ConvFuncs.ZStringToRaw(SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+  {$IFDEF UNICODE}
+  else Result := ZUnicodeToRaw(SQL, ConSettings^.ClientCodePage^.CP);
+  {$ELSE}
+  else Result := SQL;
+  {$ENDIF}
 end;
 
 procedure TZAbstractFirebirdInterbasePreparedStatement.InternalBindDouble(Index: Cardinal;
@@ -3569,10 +3643,7 @@ begin
       if Value.IsClob then begin
         Value.SetCodePageTo(codepage);
         P := Value.GetPAnsiChar(codepage, FRawTemp, L)
-      end else begin
-        BindList.Put(Index, stAsciiStream, CreateRawCLobFromBlob(Value, ConSettings, FOpenLobStreams));
-        P := IZCLob(BindList[Index].Value).GetPAnsiChar(codepage, FRawTemp, L);
-      end
+      end else raise CreateConversionError(Index, stBinaryStream)
     else P := Value.GetBuffer(FRawTemp, L);
     if P <> nil then begin
       case sqltype of
@@ -4329,21 +4400,14 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     L := Length(Value);
     case sqltype of
-      SQL_VARYING   : if not ConSettings^.AutoEncode or (codepage = zCP_Binary) then begin
+      SQL_VARYING   : begin
                         if L > LengthInt(sqllen) then
                           L := LengthInt(sqllen);
                         Move(Pointer(Value)^, PISC_VARYING(sqldata).str[0], L);
                         PISC_VARYING(sqldata).strlen := L;
                         sqlind^ := ISC_NOTNULL;
-                      end else
-                        SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
-                          ConSettings^.ConvFuncs.ZStringToRaw( Value, ConSettings^.Ctrl_CP, codepage));
-      SQL_BLOB      : if not ConSettings^.AutoEncode or (codepage = zCP_Binary)
-                      then WriteLobBuffer(Index, Pointer(Value), L)
-                      else begin
-                        FRawTemp := ConSettings^.ConvFuncs.ZStringToRaw( Value, ConSettings^.Ctrl_CP, codepage);
-                        SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, FRawTemp);
                       end;
+      SQL_BLOB      : WriteLobBuffer(Index, Pointer(Value), L);
       else SetPAnsiChar(Index, Pointer(Value), L);
     end;
   end else
@@ -4571,7 +4635,7 @@ var
   I, ParamCnt, FirstComposePos: Integer;
   Tokens: TZTokenList;
   Token: PZToken;
-  Tmp, Tmp2: RawByteString;
+  Tmp{$IFDEF UNICODE}, Tmp2{$ENDIF}: RawByteString;
   ResultWriter, SectionWriter: TZRawSQLStringWriter;
   procedure Add(const Value: RawByteString; const Param: Boolean = False);
   begin
@@ -4585,7 +4649,7 @@ var
 begin
   ParamCnt := 0;
   Result := '';
-  Tmp2 := '';
+  {$IFDEF UNICODE}Tmp2 := '';{$ENDIF}
   Tmp := '';
   Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
   SectionWriter := TZRawSQLStringWriter.Create(Length(SQL) shr 5);
@@ -4614,25 +4678,7 @@ begin
         Inc(ParamCnt);
         FirstComposePos := i +1;
       end
-      {$IFNDEF UNICODE}
-      else if ConSettings.AutoEncode or (FDB_CP_ID = CS_NONE) then
-        case (Tokens[i].TokenType) of
-          ttQuoted, ttComment,
-          ttWord: begin
-              if (FirstComposePos < I) then
-                SectionWriter.AddText(Tokens[FirstComposePos].P, (Tokens[I-1].P-Tokens[FirstComposePos].P)+ Tokens[I-1].L, Tmp);
-              if (FDB_CP_ID = CS_NONE) and ( //all identifiers collate unicode_fss if CS_NONE
-                 (Token.TokenType = ttQuotedIdentifier) or
-                 ((Token.TokenType = ttWord) and (Token.L > 1) and (Token.P^ = '"')))
-              then Tmp2 := ZConvertStringToRawWithAutoEncode(Tokens.AsString(i), ConSettings^.CTRL_CP, zCP_UTF8)
-              else Tmp2 := ConSettings^.ConvFuncs.ZStringToRaw(Tokens.AsString(i), ConSettings^.CTRL_CP, FClientCP);
-              SectionWriter.AddText(Tmp2, Tmp);
-              Tmp2 := '';
-              FirstComposePos := I +1;
-            end;
-          else ;//satisfy FPC
-        end
-      {$ELSE}
+      {$IFDEF UNICODE}
       else if (FDB_CP_ID = CS_NONE) and (//all identifiers collate unicode_fss if CS_NONE
                (Token.TokenType = ttQuotedIdentifier) or
                ((Token.TokenType = ttWord) and (Token.L > 1) and (Token.P^ = '"'))) then begin

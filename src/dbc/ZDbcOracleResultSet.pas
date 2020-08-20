@@ -800,7 +800,7 @@ begin
                   Result := PAnsiChar(@POCILong(Result).data[0]);
 jmpTestN:         if ColumnCodePage = zCP_UTF16 then begin
                     Len := Len shr 1;
-jmpW2A:             fRawTemp := PUnicodeToRaw(PWideChar(Result), Len, ConSettings.CTRL_CP);
+jmpW2A:             fRawTemp := PUnicodeToRaw(PWideChar(Result), Len, GetW2A2WConversionCodePage(ConSettings));
                     Len := Length(fRawTemp);
                     if Len = 0
                     then Result := pEmptyAnsiString
@@ -2257,37 +2257,37 @@ var
   CurrentVar: PZSQLVar;
   ColumnCount: ub4;
   TempColumnNameLen: Integer;
-  P: PAnsiChar;
+  P: Pointer;
   DescriptorColumnCount,SubObjectColumnCount: Integer;
   paramdpp: Pointer;
   RowSize: Integer;
   defn_or_bindpp: POCIHandle;
   acsid: ub2;
   Status: sword;
-  function AttributeToString(var P: PAnsiChar; Len: Integer):
-    {$IF DEFINED(WITH_RAWBYTESTRING) and not DEFINED(UNICODE)}RawByteString{$ELSE}String{$IFEND};
+  function AttributeToString(var P: Pointer; Len: Integer): SQLString;
   begin
     if P <> nil then
       if ConSettings^.ClientCodePage.Encoding = ceUTF16 then begin
         Len := Len shr 1;
         {$IFDEF UNICODE}
-        System.SetString(Result, PWideChar(P), Len)
+        Result := '';
+        System.SetString(Result, PWideChar(P), Len);
         {$ELSE}
-        Result := PUnicodeToRaw(PWideChar(P), Len, ConSettings^.CTRL_CP)
+        Result := PUnicodeToRaw(PWideChar(P), Len, zCP_UTF8);
         {$ENDIF}
-      end else
+      end else begin
       {$IFDEF UNICODE}
       Result := ZEncoding.PRawToUnicode(P, Len, FClientCP)
       {$ELSE}
-      if (not ConSettings^.AutoEncode) or (FClientCP = ConSettings^.CTRL_CP) then
-        Result := BufferToStr(P, Len)
-      else begin
-        Result := '';
-        PRawToRawConvert(P, Len, FClientCP, ConSettings^.CTRL_CP, Result);
-      end
-      {$ENDIF}
-    else
+        {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
       Result := '';
+      ZSetString(PAnsiChar(P), Len, RawByteString(Result), FClientCP);
+        {$ELSE}
+      Result := BufferToStr(P, Len);
+        {$ENDIF}
+      {$ENDIF}
+      end
+    else Result := '';
     P := nil;
   end;
 begin
@@ -2475,7 +2475,7 @@ begin
     if (CurrentVar^.value_sz = 0) then
       continue;
     CurrentVar.indp := Pointer(P);
-    Inc(P, SizeOf(sb2)*FIteration);
+    Inc(PAnsiChar(P), SizeOf(sb2)*FIteration);
     CurrentVar.valuep := P;
     if CurrentVar^.ColType = stUnknown then
       continue;
@@ -2485,7 +2485,7 @@ begin
         if Status <> OCI_SUCCESS then
           FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
             'OCIDescriptorAlloc', Self);
-        Inc(P, SizeOf(PPOCIDescriptor));
+        Inc(PAnsiChar(P), SizeOf(PPOCIDescriptor));
       end
     else if CurrentVar^.dty = SQLT_VST then
       for J := 0 to FIteration -1 do begin
@@ -2493,10 +2493,10 @@ begin
         if Status <> OCI_SUCCESS then
           FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
             'OCIStringResize', Self);
-        Inc(P, SizeOf(PPOCIString));
+        Inc(PAnsiChar(P), SizeOf(PPOCIString));
       end
     else
-      Inc(P, CurrentVar^.value_sz*Cardinal(FIteration));
+      Inc(PAnsiChar(P), CurrentVar^.value_sz*Cardinal(FIteration));
     defn_or_bindpp := nil;
     Status := FPlainDriver.OCIDefineByPos(FStmtHandle, defn_or_bindpp,
       FOCIError, I, CurrentVar^.valuep, CurrentVar^.value_sz, CurrentVar^.dty,

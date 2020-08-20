@@ -134,15 +134,19 @@ begin
     (* EH: This is a hack to use integer affinity for Currency type ranges *)
     if (Decimals > 0) and (Decimals <= 4) and (Precision >= Decimals) and (Precision <= zDbcUtils.sAlignCurrencyScale2Precision[Decimals]) then
       Result := stCurrency
-    else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('TINY')) then
-      Result := stShort
-    else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('SMALL')) then
-      Result := stSmall
-    else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('BIG')) or
-             (TypeName = 'INTEGER') then //http://www.sqlite.org/autoinc.html
-      Result := stLong
-    else //includes 'INT' / 'MEDIUMINT'
-      Result := stInteger
+    else begin
+      if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('TINY')) or StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('INT8')) then
+        Result := stShort
+      else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('SMALL')) or StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('INT16'))  then
+        Result := stSmall
+      else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('BIG')) or
+               (TypeName = 'INTEGER') then //http://www.sqlite.org/autoinc.html
+        Result := stLong
+      else //includes 'INT' / 'MEDIUMINT' /INT32
+        Result := stInteger;
+      if PosEx({$IFDEF UNICODE}RawByteString{$ENDIF}('UNSIGEND'), TypeName) > 0 then
+        Result := TZSQLType(Ord(stLongWord)-1);
+    end
   else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('REAL')) then
     Result := stDouble
   else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('FLOAT')) then

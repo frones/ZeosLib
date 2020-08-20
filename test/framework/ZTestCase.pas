@@ -189,15 +189,7 @@ var
     {$WARN 3175 off : Some fields coming before "$1" were not initialized}
   {$ENDIF}
   ConSettingsDummy: TZConSettings =
-    (AutoEncode: False;
-      ClientCodePage: @CodePageDummy;
-      DisplayFormatSettings:
-          (DateFormat: DefDateFormatYMD;
-          DateFormatLen: Length(DefDateFormatYMD);
-          TimeFormat: DefTimeFormatMsecs;
-          TimeFormatLen: Length(DefTimeFormatMsecs);
-          DateTimeFormat: DefDateTimeFormatMsecsDMY;
-          DateTimeFormatLen: Length(DefDateTimeFormatMsecsDMY));
+    ( ClientCodePage: @CodePageDummy;
       ReadFormatSettings:
           (DateFormat: DefDateFormatYMD;
           DateFormatLen: Length(DefDateFormatYMD);
@@ -475,6 +467,7 @@ procedure TZAbstractTestCase.CheckEquals(const Expected: RawByteString;
   ActualValue: PAnsiChar; ActualLen: PNativeUInt; const Msg: string);
 var Actual: RawByteString;
 begin
+  Actual := '';
   ZSetString(ActualValue, ActualLen^, Actual);
   CheckEquals(Expected, Actual, Msg);
 end;
@@ -513,7 +506,9 @@ begin
     Fail(NotEqualsErrorMessage('NIL', 'Not NIL', Msg));
   CheckEquals(Expected.Size, Actual.Size, AddToMsg(Msg, SStreamSizesDiffer));
   Size := Expected.Size;
+  EBuf := nil;
   SetLength(EBuf, Size);
+  ABuf := nil;
   SetLength(ABuf, Size);
   Expected.Position := 0;
   Actual.Position := 0;
@@ -565,7 +560,7 @@ begin
   {$IFNDEF WITH_TESTCASE_ERROR_ADDRESS}
   AssertTrue(ComparisonMsg(Expected, Actual), Expected = Actual);
   {$ELSE}
-  AssertTrue(ComparisonMsg(Msg, Expected, Actual), Expected = Actual, CallerAddr);
+  AssertTrue(ComparisonMsg(Msg, String(Expected), String(Actual)), Expected = Actual, CallerAddr);
   {$ENDIF}
 end;
 
@@ -573,7 +568,7 @@ procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: WideString;
   const Msg: string);
 begin
   if (Expected = Actual) then
-    Fail(Msg + ComparisonMsg(Expected, Actual, False))
+    Fail(Msg + ComparisonMsg(String(Expected), String(Actual), False))
   else
     Check(True);
 end;
@@ -788,16 +783,15 @@ begin
 end;
 
 initialization
-  ConSettingsDummy.CTRL_CP :=
-  {$IFDEF UNICODE}
-  DefaultSystemCodePage
-  {$ELSE}
-    {$IFDEF FPC}
-    zCP_UTF8
+  ConSettingsDummy.W2A2WEncodingSource :=
+    {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+  encDefaultSystemCodePage
     {$ELSE}
-    ZOSCodePage
-    {$ENDIF}
-  {$ENDIF};
-  SetConvertFunctions(@ConSettingsDummy);
+      {$IFDEF LCL}
+    encCP_UTF8
+      {$ELSE}
+    encDefaultSystemCodePage
+      {$ENDIF}
+    {$ENDIF};
 end.
 

@@ -102,11 +102,11 @@ begin
     Query.Open;
     CheckEquals(ord(ftSmallInt), ord(Query.Fields[0].DataType));
     CheckEquals(ord(ftSmallInt), ord(Query.Fields[1].DataType));
-    CheckStringFieldType(Query.Fields[2].DataType, Connection.ControlsCodePage);
+    CheckStringFieldType(Query.Fields[2], Connection.ControlsCodePage);
     Check(Query.Fields[3].DataType in [ftDateTime, ftTime]); //create scripts?
     Check(Query.Fields[4].DataType in [ftDateTime, ftTime]); //create scripts?
     CheckEquals(ord(ftBlob), ord(Query.Fields[5].DataType));
-    CheckMemoFieldType(Query.Fields[6].DataType, Connection.ControlsCodePage);
+    CheckMemoFieldType(Query.Fields[6], Connection.ControlsCodePage);
     {$IFDEF WITH_FTBYTE}
     CheckEquals(ord(ftByte), ord(Query.Fields[7].DataType));
     {$ELSE}
@@ -164,11 +164,11 @@ begin
     Query.Open;
     CheckEquals(ord(ftSmallInt), ord(Query.Fields[0].DataType));
     CheckEquals(ord(ftSmallInt), ord(Query.Fields[1].DataType));
-    CheckStringFieldType(Query.Fields[2].DataType, Connection.ControlsCodePage);
+    CheckStringFieldType(Query.Fields[2], Connection.ControlsCodePage);
     Check(Query.Fields[3].DataType in [ftDateTime, ftTime]); //create scripts?
     Check(Query.Fields[4].DataType in [ftDateTime, ftTime]); //create scripts?
     CheckEquals(ord(ftBlob), ord(Query.Fields[5].DataType));
-    CheckMemoFieldType(Query.Fields[6].DataType, Connection.ControlsCodePage);
+    CheckMemoFieldType(Query.Fields[6], Connection.ControlsCodePage);
     {$IFDEF WITH_FTBYTE}
     CheckEquals(ord(ftByte), ord(Query.Fields[7].DataType));
     {$ELSE}

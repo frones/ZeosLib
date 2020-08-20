@@ -124,24 +124,12 @@ type
   TOnConnectionLostError = procedure(var AError: EZSQLConnectionLost) of Object;
   TOnConnect = procedure of Object;
 
-  {$IFDEF NO_AUTOENCODE}
-  TZRawByteStringEncoding = (rbseGET_ACP, rbseUTF8{$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}, rbseDefaultSystemCodePage{$ENDIF});
-  {$ENDIF NO_AUTOENCODE}
+  TZW2A2WEncodingSource = (encDB_CP, encUTF8, encDefaultSystemCodePage);
   {** hold some connection parameters }
   PZConSettings = ^TZConSettings;
   TZConSettings = record
-    {$IFNDEF NO_AUTOENCODE}
-    AutoEncode: Boolean;        //Check Encoding and or convert string with FromCP ToCP
-    CTRL_CP: Word;              //Target CP of raw string conversion (CP_ACP/CP_UPF8/DefaultSytemCodePage)
-    {$ENDIF NO_AUTOENCODE}
-    //{$ELSE NO_AUTOENCODE}
-    //RawByteStringEncoding: TZRawByteStringEncoding; //Target CP of raw string conversion (GET_ACP/UTF8/DefaultSytemCodePage)
-//    {$ENDIF NO_AUTOENCODE}
-    ConvFuncs: TConvertEncodingFunctions; //a rec for the Convert functions used by the objects
+    W2A2WEncodingSource: TZW2A2WEncodingSource; //Target CP of raw string conversion (GET_ACP/UTF8/DefaultSytemCodePage)
     ClientCodePage: PZCodePage; //The codepage informations of the current characterset
-    {$IFNDEF NO_AUTOENCODE}
-    DisplayFormatSettings: TZFormatSettings;
-    {$ENDIF NO_AUTOENCODE}
     ReadFormatSettings: TZFormatSettings;
     WriteFormatSettings: TZFormatSettings;
   end;
@@ -640,6 +628,8 @@ type
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload;
 
     procedure SetOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
+    procedure SetAddLogMsgToExceptionOrWarningMsg(Value: Boolean);
+    procedure SetRaiseWarnings(Value: Boolean);
 
     procedure RegisterStatement(const Value: IZStatement);
     procedure DeregisterStatement(const Statement: IZStatement);
@@ -2425,30 +2415,15 @@ procedure TZCodePagedObject.SetConSettingsFromInfo(Info: TStrings);
 var S: String;
 begin
   if Assigned(Info) and Assigned(FConSettings) then begin
-{$IFNDEF NO_AUTOENCODE}
-    {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(WITH_LCONVENCODING) or defined(UNICODE)}
-    S := Info.Values[ConnProps_AutoEncodeStrings];
-    ConSettings.AutoEncode := StrToBoolEx(S); //compatibitity Option for existing Applications;
-    {$ELSE}
-    ConSettings.AutoEncode := False;
-    {$IFEND}
-    S := Info.Values[ConnProps_ControlsCP];
+    S := Info.Values[ConnProps_RawStringEncoding];
+    if S = '' then
+      S := Info.Values[ConnProps_ControlsCP]; //left for backward compatibility
     S := UpperCase(S);
-    {$IF defined(Delphi) and defined(UNICODE) and defined(MSWINDOWS)}
-    ConSettings.CTRL_CP := DefaultSystemCodePage;
-    {$ELSE}
-      if Info.Values[ConnProps_ControlsCP] = 'GET_ACP'
-      then ConSettings.CTRL_CP := ZOSCodePage
-      else if Info.Values[ConnProps_ControlsCP] = 'CP_UTF8'
-      then ConSettings.CTRL_CP := zCP_UTF8
-      {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
-      else ConSettings.CTRL_CP := DefaultSystemCodePage;
-      {$ELSE}
-      else ConSettings.CTRL_CP := ZOSCodePage;
-      {$ENDIF}
-    {$IFEND}
-{$ELSE NO_AUTOENCODE}
-{$ENDIF NO_AUTOENCODE}
+    if S = 'DB_CP'
+    then ConSettings.W2A2WEncodingSource := encDB_CP
+    else if S = 'CP_UTF8'
+    then ConSettings.W2A2WEncodingSource := encUTF8
+    else ConSettings.W2A2WEncodingSource := encDefaultSystemCodePage;
   end;
 end;
 

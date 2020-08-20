@@ -684,8 +684,6 @@ const
   JSONBool: array[Boolean] of ShortString = ('false', 'true');
 {$ENDIF USE_SYNCOMMONS}
 
-function CreateRawCLobFromBlob(Value: IZBlob; ConSettings: PZConSettings; const OpenLobStreams: TZSortedList): IZClob;
-
 implementation
 
 uses ZMessages, ZDbcUtils, ZDbcResultSetMetadata, ZEncoding, ZFastCode
@@ -1318,9 +1316,9 @@ begin
       if Clob = nil then
         Result := (Blob).GetStream
       else begin
-        if ConSettings.AutoEncode or (ConSettings.ClientCodePage.Encoding = ceUTF16)
-        then CP := ConSettings.CTRL_CP
-        else CP := ConSettings.ClientCodePage.CP;
+        CP := TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF _GENERIC_INDEX}-1{$ENDIF}]).ColumnCodePage;
+        if CP = zCP_UTF16 then
+          CP := GetW2A2WConversionCodePage(ConSettings);
         Result := Clob.GetStream(CP)
       end;
     LastWasNull := (Result = nil);
@@ -3661,7 +3659,7 @@ end;
     value returned is <code>null</code>
 }
 function TZAbstractReadOnlyResultSet.GetString(ColumnIndex: Integer): String;
-var P: {$IFDEF UNICODE}PWidechar{$ELSE}PAnsiChar{$ENDIF};
+var P: Pointer;
   L: NativeUInt;
 begin
   {$IFDEF UNICODE}
@@ -3669,19 +3667,23 @@ begin
   if (P <> nil) and (L > 0) then
     if P = Pointer(FUniTemp)
     then Result := FUniTemp
-    else System.SetString(Result, P, L)
+    else begin
+      Result := '';
+      System.SetString(Result, PWideChar(P), L)
+    end
   else Result := '';
   {$ELSE}
-  if ConSettings.AutoEncode or (ConSettings.ClientCodePage.Encoding = ceUTF16) then
-    if ConSettings.CTRL_CP = zCP_UTF8
-    then Result := IZResultSet(FWeakIZResultSetPtr).GetUTF8String(ColumnIndex)
-    else Result := IZResultSet(FWeakIZResultSetPtr).GetAnsiString(ColumnIndex)
-  else begin
+  if (ConSettings.ClientCodePage.Encoding = ceUTF16) or (TZColumnInfo(FColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType in [stUnicodeString, stUnicodeStream]) then begin
+    P := IZResultSet(FWeakIZResultSetPtr).GetPWideChar(ColumnIndex, L);
+    if (P <> nil) and (L > 0)
+    then Result := PUnicodeToRaw(P, L, GetW2A2WConversionCodePage(ConSettings))
+    else Result := '';
+  end else begin
     P := IZResultSet(FWeakIZResultSetPtr).GetPAnsiChar(ColumnIndex, L);
     if (P <> nil) and (L > 0) then
       if P = Pointer(FRawTemp)
       then Result := FRawTemp
-      else System.SetString(Result, P, L)
+      else System.SetString(Result, PAnsiChar(P), L)
     else Result := '';
   end;
   {$ENDIF}
@@ -3706,7 +3708,10 @@ begin
     Result := ''
   else if P = Pointer(FUniTemp)
     then Result := FUniTemp
-    else System.SetString(Result, P, L);
+    else begin
+      Result := '';
+      System.SetString(Result, P, L);
+    end;
 end;
 
 {**
@@ -4489,23 +4494,6 @@ begin
       L := Size;
       Src := Memory;
       SetPointer(nil, 0); //the destructor should not kill our mem
-      if (FCurrentCodePage <> zCP_UTF16) and FConSettings^.AutoEncode then
-        case ZDetectUTF8Encoding(Src, L) of
-          etAnsi: if FNativeCodePage = zCP_UTF8 then //otherwise we'll keep the code page
-                if (FConSettings^.ClientCodePage^.CP = zCP_UTF8) then
-                  if (FConSettings^.CTRL_CP = zCP_UTF8) then
-                    if (ZOSCodePage = zCP_UTF8) then
-                    {no idea what to do with ansiencoding, if everything if set to UTF8!}
-                      FCurrentCodePage := zCP_WIN1252 //all convertions would fail so.. let the server raise an error!
-                    else FCurrentCodePage := ZOSCodePage
-                  else FCurrentCodePage := FConSettings^.CTRL_CP
-                else FCurrentCodePage := FConSettings^.ClientCodePage^.CP;
-          etUTF8: FCurrentCodePage := zCP_UTF8;
-          else {etUSASCII}
-                if FNativeCodePage <> zCP_UTF16
-                then FCurrentCodePage := FNativeCodePage
-                else FCurrentCodePage := FConSettings^.CTRL_CP;
-        end;
       if (FCurrentCodePage = FNativeCodePage)
       then Dst := Src
       else begin
@@ -4721,7 +4709,7 @@ end;
 function TZAbstractLob.GetString: RawByteString;
 begin
   if IsClob and (FColumnCodePage = zCP_UTF16)
-  then Result := GetRawByteString(FconSettings.CTRL_CP)
+  then Result := GetRawByteString(GetW2A2WConversionCodePage(FConSettings))
   else Result := GetRawByteString(FColumnCodePage);
 end;
 
@@ -5221,41 +5209,13 @@ begin
     GetMem(P, L);
     try
       Value.Read(P^, L);
-      if FConSettings.AutoEncode and (CodePage = zCP_None) then begin
-        case ZEncoding.ZDetectUTF8Encoding(P, L) of
-          etUSASCII: CodePage := FConSettings^.ClientCodePage^.CP;
-          etUTF8: CodePage := zCP_UTF8;
-          else
-            if (FConSettings^.ClientCodePage^.CP = zCP_UTF8) then
-              if (FConSettings^.CTRL_CP = zCP_UTF8)
-              then CodePage := ZOSCodePage
-              else  CodePage := FConSettings^.CTRL_CP
-            else CodePage := FConSettings^.ClientCodePage^.CP;
-        end;
-        SetPAnsiChar(P, CodePage, L);
-      end else if CodePage = zCP_UTF16
+      if CodePage = zCP_UTF16
         then SetPWideChar(P, L)
         else SetPAnsiChar(P, CodePage, L);
     finally
       FreeMem(P);
     end;
   end;
-end;
-
-function CreateRawCLobFromBlob(Value: IZBlob; ConSettings: PZConSettings; const OpenLobStreams: TZSortedList): IZClob;
-var RLob, Dest: RawbyteString;
-  P: Pointer;
-  L: NativeUint;
-begin
-  Rlob := '';
-  P := Value.GetBuffer(Rlob, L);
-  Dest := GetValidatedAnsiStringFromBuffer(P, L, ConSettings);
-  RLob := EmptyRaw;
-  L := Length(Dest);
-  if L = 0
-  then P := PEmptyAnsiString
-  else P := Pointer(Dest);
-  Result := TZLocalMemCLob.CreateWithData(P, L, ConSettings.ClientCodePage.CP, ConSettings, OpenLobStreams);
 end;
 
 { TZVarVarLenDataRefStream }

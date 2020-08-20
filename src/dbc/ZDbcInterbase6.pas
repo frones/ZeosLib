@@ -96,15 +96,13 @@ type
     FHandle: TISC_DB_HANDLE;
     FStatusVector: TARRAY_ISC_STATUS;
     FPlainDriver: TZInterbasePlainDriver;
-    function ConstructConnectionString: String;
   protected
-    procedure BeforeUrlAssign; override;
-    procedure InternalCreate; override;
     procedure InternalClose; override;
   public
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
     procedure ExecuteImmediat(const SQL: RawByteString; ISC_TR_HANDLE: PISC_TR_HANDLE; LoggingCategory: TZLoggingCategory); overload;
-
+  public
+    procedure AfterConstruction; override;
   public
     function IsFirebirdLib: Boolean; override;
     function IsInterbaseLib: Boolean; override;
@@ -252,17 +250,6 @@ begin
   end;
 end;
 
-{**
-  Constructs this object and assignes the main properties.
-}
-procedure TZInterbase6Connection.InternalCreate;
-begin
-  FPlainDriver := TZInterbasePlainDriver(PlainDriver.GetInstance);
-  FHandle := 0;
-  inherited InternalCreate;
-  FXSQLDAMaxSize := 64*1024; //64KB by default
-end;
-
 function TZInterbase6Connection.GetPlainDriver: TZInterbasePlainDriver;
 begin
   Result := FPlainDriver;
@@ -368,7 +355,8 @@ begin
       5..N  - string
       N+1   - #1 }
   if FByteBuffer[0] = isc_info
-  then Result := ConvertConnRawToString(ConSettings, @FByteBuffer[5], Integer(FByteBuffer[4]))
+  then Result := ConvertConnRawToString({$IFDEF UNICODE}
+    ConSettings, {$ENDIF}@FByteBuffer[5], Integer(FByteBuffer[4]))
   else Result := '';
 end;
 
@@ -383,71 +371,11 @@ begin
   else Result := nil;
 end;
 
-procedure TZInterbase6Connection.BeforeUrlAssign;
+procedure TZInterbase6Connection.AfterConstruction;
 begin
-  inherited;
-  FIsFirebirdLib := false;
-  FIsInterbaseLib := false;
-end;
-
-{**
-  Constructs the connection string for the current connection
-}
-function TZInterbase6Connection.ConstructConnectionString: String;
-var
-  Protocol: String;
-  ConnectionString: String;
-begin
-  Protocol := LowerCase(Info.Values[ConnProps_FBProtocol]);
-
-  if ((Protocol = 'inet') or (Protocol = 'wnet') or (Protocol = 'xnet') or (Protocol = 'local')) then begin
-    if (GetClientVersion >= 3000000) and IsFirebirdLib then begin
-      if protocol = 'inet' then begin
-        if Port <> 0
-        then ConnectionString := 'inet://' + HostName + ':' + ZFastCode.IntToStr(Port) + '/' + Database
-        else ConnectionString := 'inet://' + HostName + '/' + Database;
-      end else if Protocol = 'wnet' then begin
-        if HostName <> ''
-        then ConnectionString := 'wnet://' + HostName + '/' + Database
-        else ConnectionString := 'wnet://' + Database
-      end else if Protocol = 'xnet' then begin
-        ConnectionString := 'xnet://' + Database;
-      end else begin
-        ConnectionString := Database;
-      end;
-    end else begin
-      if protocol = 'inet' then begin
-        if HostName = ''
-        then ConnectionString := 'localhost'
-        else ConnectionString := HostName;
-        if Port <> 0 then begin
-          ConnectionString := ConnectionString + '/' + ZFastCode.IntToStr(Port);
-        end;
-        ConnectionString := ConnectionString + ':';
-        ConnectionString := ConnectionString + Database;
-      end else if Protocol = 'wnet' then begin
-        if HostName = ''
-        then ConnectionString := '\\.'
-        else ConnectionString := '\\' + HostName;
-        if Port <> 0 then begin
-          ConnectionString := ConnectionString + '@' + ZFastCode.IntToStr(Port);
-        end;
-        ConnectionString := ConnectionString + '\' + Database;
-      end else begin
-        ConnectionString := Database;
-      end;
-    end;
-  end else begin
-    if HostName <> '' then
-      if Port <> 0 then
-        ConnectionString := HostName + '/' + ZFastCode.IntToStr(Port) + ':' + Database
-      else
-        ConnectionString := HostName + ':' + Database
-    else
-      ConnectionString := Database;
-  end;
-
-  Result := ConnectionString;
+  FPlainDriver := PlainDriver.GetInstance as TZInterbasePlainDriver;
+  FXSQLDAMaxSize := 64*1024; //64KB by default
+  inherited AfterConstruction;
 end;
 
 {**
@@ -456,11 +384,12 @@ end;
 procedure TZInterbase6Connection.Open;
 var
   DPB: RawByteString;
-  DBName: array[0..512] of AnsiChar;
-  ConnectionString, CSNoneCP, DBCP, CreateDB: String;
+  CSNoneCP, DBCP, CreateDB: String;
+  ConnectionString: SQLString;
   ti: IZIBTransaction;
   Statement: IZStatement;
   I: Integer;
+  db_name_len: Smallint;
   P, PEnd: PChar;
   TrHandle: TISC_TR_HANDLE;
   DBCreated: Boolean;
@@ -468,23 +397,24 @@ var
   var
     R: RawByteString;
     P: PAnsiChar;
-    L: LengthInt;
+    {$IFDEF UNICODE}
     CP: Word;
+    {$ENDIF}
   begin
+    {$IFDEF UNICODE}
     if (Info.IndexOf('isc_dpb_utf8_filename') = -1)
     then CP := zOSCodePage
     else CP := zCP_UTF8;
-    {$IFDEF UNICODE}
     R := ZUnicodeToRaw(ConnectionString, CP);
     {$ELSE}
-    R := ZConvertStringToRawWithAutoEncode(ConnectionString, ConSettings^.CTRL_CP, CP);
+    R := ConnectionString;
     {$ENDIF}
-    DPB := GenerateDPB(FPlainDriver, Info, ConSettings, CP);
+    DPB := GenerateDPB(FPlainDriver, Info{$IFDEF UNICODE},CP{$ENDIF});
     P := Pointer(R);
-    L := Min(SizeOf(DBName)-1, Length(R){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
+    db_name_len := Min(512, Length(R){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
     if P <> nil then
-      Move(P^, DBName[0], L);
-    AnsiChar((PAnsiChar(@DBName[0])+L)^) := AnsiChar(#0);
+      Move(P^, FByteBuffer[0], db_name_len);
+    PByte(PAnsiChar(@FByteBuffer[0])+db_name_len)^ := 0;
   end;
 label reconnect;
 begin
@@ -511,8 +441,8 @@ begin
       DBCP := Info.Values[ConnProps_isc_dpb_set_db_charset];
       PrepareDPB;
       FLogMessage := 'CREATE DATABASE "'+URL.Database+'" AS USER "'+ URL.UserName+'"';
-      if FPlainDriver.isc_create_database(@FStatusVector, SmallInt(StrLen(@DBName[0])),
-          @DBName[0], @FHandle, Smallint(Length(DPB)),Pointer(DPB), 0) <> 0 then
+      if FPlainDriver.isc_create_database(@FStatusVector, db_name_len,
+          @FByteBuffer[0], @FHandle, Smallint(Length(DPB)),Pointer(DPB), 0) <> 0 then
         Self.HandleErrorOrWarning(lcOther, @FStatusVector, FLogMessage, Self);
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
@@ -562,10 +492,10 @@ begin
 reconnect:
   if FHandle = 0 then begin
     PrepareDPB;
-    FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);
+    FLogMessage := Format(SConnect2AsUser, [ConnectionString, URL.UserName]);
     { Connect to Interbase6 database. }
-    if FPlainDriver.isc_attach_database(@FStatusVector,
-        ZFastCode.StrLen(@DBName[0]), @DBName[0], @FHandle, Length(DPB), Pointer(DPB)) <> 0 then
+    if FPlainDriver.isc_attach_database(@FStatusVector, db_name_len,
+       @FByteBuffer[0], @FHandle, Length(DPB), Pointer(DPB)) <> 0 then
       HandleErrorOrWarning(lcConnect, @FStatusVector, FLogMessage, Self);
 
     { Dialect could have changed by isc_dpb_set_db_SQL_dialect command }

@@ -107,7 +107,7 @@ type
     procedure InternalSetTransactionIsolation(Level: TZTransactIsolationLevel);
     procedure DetermineMSDateFormat;
     function DetermineMSServerCollation: String;
-    function DetermineMSServerCodePage(const Collation: String): Word;
+    //function DetermineMSServerCodePage(const Collation: String): Word;
     {$IFDEF TEST_CALLBACK}
     function DBMSGHANDLE(Proc: PDBPROCESS; MsgNo: DBINT; MsgState,
       Severity: Integer; MsgText, SrvName, ProcName: PAnsiChar; Line: DBUSMALLINT): Integer;
@@ -116,15 +116,15 @@ type
     {$ENDIF TEST_CALLBACK}
   protected
     FHandle: PDBPROCESS;
-    procedure InternalCreate; override;
     procedure InternalLogin;
     function GetConnectionHandle: PDBPROCESS;
-    procedure CheckDBLibError(LogCategory: TZLoggingCategory;
+    procedure CheckDBLibError(LoggingCategory: TZLoggingCategory;
       const LogMessage: SQLString; const Sender: IImmediatelyReleasable);
     function GetServerCollation: String;
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
   public
+    procedure AfterConstruction; override;
     destructor Destroy; override;
   public
     function AbortOperation: Integer; override;
@@ -247,30 +247,6 @@ end;
 { TZDBLibConnection }
 
 {**
-  Constructs this object and assignes the main properties.
-}
-procedure TZDBLibConnection.InternalCreate;
-begin
-  FPlainDriver := TZDBLIBPLainDriver(PlainDriver.GetInstance);
-  FSQLErrors := TZDBLibErrorList.Create;
-  FSQLMessages := TZDBLibMessageList.Create;
-  if ZFastCode.Pos('mssql', LowerCase(Url.Protocol)) > 0  then begin
-    FMetadata := TZMsSqlDatabaseMetadata.Create(Self, Url);
-    FProvider := dpMsSQL;
-  end else if ZFastCode.Pos('sybase', LowerCase(Url.Protocol)) > 0 then begin
-    FMetadata := TZSybaseDatabaseMetadata.Create(Self, Url);
-    FProvider := dpSybase;
-  end else
-    FMetadata := nil;
-  if (FPlainDriver.DBLibraryVendorType = lvtFreeTDS) and (Info.Values[ConnProps_CodePage] = '') then
-    {$IF defined(UNICODE) or defined(LCL)}
-    Info.Values[ConnProps_CodePage] := 'UTF-8';
-    {$ELSE}
-    Info.Values[ConnProps_CodePage] := 'ISO-8859-1'; //this is the default CP of free-tds
-    {$IFEND}
-end;
-
-{**
   Login procedure can be overriden for special settings.
 }
 procedure TZDBLibConnection.InternalLogin;
@@ -282,6 +258,17 @@ var
   Ret: RETCODE;
   P: PChar;
   E: EZSQLException;
+  procedure SetRawFromProperties(const PropName: String);
+  begin
+  {$IFDEF UNICODE}
+    lLogFile := URL.Properties.Values[PropName];
+    if lLogFile <> ''
+    then RawTemp := ZUnicodeToRaw(lLogFile, ZOSCodePage)
+    else RawTemp := '';
+  {$ELSE}
+    RawTemp := URL.Properties.Values[PropName]
+  {$ENDIF}
+  end;
 begin
   FLogMessage := 'CONNECT TO "'+HostName+'"';
   LoginRec := FPlainDriver.dbLogin;
@@ -330,15 +317,15 @@ begin
       end;
     end;
 //Common parameters
-    RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values[ConnProps_Workstation], ConSettings.CTRL_CP, ZOSCodePage);
+    SetRawFromProperties(ConnProps_Workstation);
     if Pointer(RawTemp) <> nil then
       FPlainDriver.dbSetLHost(LoginRec, Pointer(RawTemp));
 
-    RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values[ConnProps_AppName], ConSettings.CTRL_CP, ZOSCodePage);
+    SetRawFromProperties(ConnProps_AppName);
     if Pointer(RawTemp) <> nil then
       FPlainDriver.dbSetLApp(LoginRec, Pointer(RawTemp));
 
-    RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values[ConnProps_Language], ConSettings.CTRL_CP, ZOSCodePage);
+    SetRawFromProperties(ConnProps_AppName);
     if Pointer(RawTemp) <> nil then
       FPlainDriver.dbSetLNatLang(LoginRec, Pointer(RawTemp));
 
@@ -355,7 +342,11 @@ begin
           lLogFile := Info.Values[ConnProps_TDSDumpFile];
         if lLogFile = '' then
           lLogFile := ChangeFileExt(ParamStr(0), '.tdslog');
-        RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(lLogFile, ConSettings.CTRL_CP, ZOSCodePage);
+        {$IFDEF UNICODE}
+        RawTemp := ZUnicodeToRaw(lLogFile, ZOSCodePage);
+        {$ELSE}
+        RawTemp := lLogFile;
+        {$ENDIF}
         if RawTemp <> '' then
           FPlainDriver.tdsDump_Open(Pointer(RawTemp));
       end;
@@ -369,13 +360,13 @@ begin
       FLogMessage := Format(SConnect2WinAuth,  [URL.HostName]);
     end else begin
       {$IFDEF UNICODE}
-      RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(URL.UserName, ConSettings.CTRL_CP, ZOSCodePage);
+      RawTemp := ZUnicodeToRaw(URL.UserName, ZOSCodePage);
       {$ELSE}
       RawTemp := URL.UserName;
       {$ENDIF}
       FPlainDriver.dbsetluser(LoginRec, PAnsiChar(RawTemp));
       {$IFDEF UNICODE}
-      RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Password, ConSettings.CTRL_CP, ZOSCodePage);
+      RawTemp := ZUnicodeToRaw(Password, ZOSCodePage);
       {$ELSE}
       RawTemp := Password;
       {$ENDIF}
@@ -390,7 +381,11 @@ begin
       end;
     end;
     CheckDBLibError(lcConnect, FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
-    RawTemp := ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings.CTRL_CP, ZOSCodePage);
+    {$IFDEF UNICODE}
+    RawTemp := ZUnicodeToRaw(HostName, ZOSCodePage);
+    {$ELSE}
+    RawTemp := HostName;
+    {$ENDIF}
     // add port number if FreeTDS is used, the port number was specified and no server instance name was given:
     if (FPlainDriver.DBLibraryVendorType = lvtFreeTDS) and (Port <> 0) and (ZFastCode.Pos('\', HostName) = 0)  then
       RawTemp := RawTemp + ':' + ZFastCode.IntToRaw(Port);
@@ -442,16 +437,45 @@ begin
    Else Result := 1;
 end;
 
-procedure TZDBLibConnection.CheckDBLibError(LogCategory: TZLoggingCategory;
+const P4ZeroChars: array[0..3] of Byte = (Byte('0'),Byte('0'),Byte('0'),Byte('0')); //Endian save
+
+procedure TZDBLibConnection.AfterConstruction;
+begin
+  FPlainDriver := PlainDriver.GetInstance as TZDBLIBPLainDriver;
+  FSQLErrors := TZDBLibErrorList.Create;
+  FSQLMessages := TZDBLibMessageList.Create;
+  FLogMessage := LowerCase(Url.Protocol);
+  if ZFastCode.Pos('mssql', FLogMessage) > 0  then begin
+    FMetadata := TZMsSqlDatabaseMetadata.Create(Self, Url);
+    FProvider := dpMsSQL;
+  end else if ZFastCode.Pos('sybase', FLogMessage) > 0 then begin
+    FMetadata := TZSybaseDatabaseMetadata.Create(Self, Url);
+    FProvider := dpSybase;
+  end else
+    FMetadata := nil;
+  FLogMessage := Info.Values[ConnProps_CodePage];
+  if (FPlainDriver.DBLibraryVendorType = lvtFreeTDS) and (FLogMessage = '') then
+    {$IF defined(UNICODE) or defined(LCL)}
+    Info.Values[ConnProps_CodePage] := 'UTF-8';
+    {$ELSE}
+    Info.Values[ConnProps_CodePage] := 'ISO-8859-1'; //this is the default CP of free-tds
+    {$IFEND}
+  FLogMessage := '';
+  inherited AfterConstruction;
+end;
+
+procedure TZDBLibConnection.CheckDBLibError(LoggingCategory: TZLoggingCategory;
   const LogMessage: SQLString; const Sender: IImmediatelyReleasable);
 var I: Integer;
   rException, rWarningOrInfo: RawByteString;
-  FirstError: Integer;
+  FirstError, FirstSeverity: Integer;
   FormatStr: String;
   lErrorEntry: PDBLibError;
   lMesageEntry: PDBLibMessage;
   SQLWriter: TZRawSQLStringWriter;
-  {$IFDEF UNICODE}msgCP: Word;{$ENDIF}
+  Error: EZSQLThrowable;
+  ExeptionClass: EZSQLThrowableClass;
+  {$IFNDEF UNICODE}excCP,{$ENDIF}msgCP: Word;
   procedure IntToBuf(Value: Integer; var Buf: RawByteString);
   var C: Cardinal;
     Digits: Byte;
@@ -461,7 +485,7 @@ var I: Integer;
     Digits := GetOrdinalDigits(Value, C, Negative);
     if Negative then
       SQLWriter.AddChar(AnsiChar('-'), rException);
-    PCardinal(@IntBuf[0])^ := Cardinal(808464432);//'0000'
+    PCardinal(@IntBuf[0])^ := PCardinal(@P4ZeroChars[0])^;
     IntToRaw(C, @IntBuf[5-Digits], Digits);
     SQLWriter.AddText(PAnsiChar(@IntBuf[0]), 5, Buf);
   end;
@@ -474,6 +498,14 @@ begin
   rException := EmptyRaw;
   rWarningOrInfo := EmptyRaw;
   FirstError := 0;
+  FirstSeverity := 0;
+  if ConSettings.ClientCodePage <> nil
+  then msgCP := ConSettings.ClientCodePage.CP
+  else msgCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};;
+{$IFNDEF UNICODE}
+  excCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}
+      {$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
+{$ENDIF}
   SQLWriter := TZRawSQLStringWriter.Create(1024);
   try
     for I := 0 to FSQLErrors.Count -1 do begin
@@ -482,6 +514,8 @@ begin
         if lErrorEntry^.DbErr > EXINFO then begin
           if FirstError = 0 then
             FirstError := lErrorEntry^.DbErr;
+          if FirstSeverity = 0 then
+            FirstSeverity := lErrorEntry^.Severity;
           SQLWriter.AddLineFeedIfNotEmpty(rException);
           SQLWriter.AddText('DBError : [', rException);
           IntToBuf(lErrorEntry^.DbErr, rException);
@@ -491,6 +525,8 @@ begin
         if lErrorEntry^.OsErr > EXINFO then begin
           if FirstError = 0 then
             FirstError := lErrorEntry^.OsErr;
+          if FirstSeverity = 0 then
+            FirstSeverity := lErrorEntry^.Severity;
           SQLWriter.AddLineFeedIfNotEmpty(rException);
           SQLWriter.AddText('OSError : [', rException);
           IntToBuf(lErrorEntry^.OsErr, rException);
@@ -508,11 +544,23 @@ begin
         if lMesageEntry^.MsgNo <> 5701 then begin
           if FirstError = 0 then
             FirstError := lMesageEntry^.MsgNo;
-          SQLWriter.AddLineFeedIfNotEmpty(rWarningOrInfo);
-          SQLWriter.AddText('MsgNo : [', rWarningOrInfo);
-          IntToBuf(lMesageEntry^.MsgNo, rWarningOrInfo);
-          SQLWriter.AddText('] : ', rWarningOrInfo);
-          SQLWriter.AddText(lMesageEntry^.MsgText, rWarningOrInfo);
+          if FirstSeverity = 0 then
+            FirstSeverity := lMesageEntry^.Severity;
+          if (lMesageEntry^.Severity = EXNONFATAL) or (lMesageEntry^.Severity <= EXINFO) then begin
+            SQLWriter.AddLineFeedIfNotEmpty(rWarningOrInfo);
+            SQLWriter.AddText('MsgNo : [', rWarningOrInfo);
+            IntToBuf(lMesageEntry^.MsgNo, rWarningOrInfo);
+            SQLWriter.AddText('] : ', rWarningOrInfo);
+            SQLWriter.AddText(lMesageEntry^.MsgText, rWarningOrInfo);
+          end else begin
+            SQLWriter.Finalize(rWarningOrInfo);
+            SQLWriter.AddLineFeedIfNotEmpty(rException);
+            SQLWriter.AddText('MsgNo : [', rException);
+            IntToBuf(lMesageEntry^.MsgNo, rException);
+            SQLWriter.AddText('] : ', rException);
+            SQLWriter.AddText(lMesageEntry^.MsgText, rException);
+            SQLWriter.Finalize(rException);
+          end;
         end;
         Dispose(lMesageEntry);
       end;
@@ -522,46 +570,60 @@ begin
   finally
     FreeAndNil(SQLWriter);
   end;
-  {$IFDEF UNICODE}
-  if ConSettings.ClientCodePage <> nil
-  then msgCP := ConSettings.ClientCodePage.CP
-  else msgCP := ZOSCodePage;
-  {$ENDIF UNICODE}
-  if LogMessage <> '' then
-    if LogCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
-    then FormatStr := SSQLError3
-    else FormatStr := SSQLError4
-  else FormatStr := SSQLError2;
   if rException <> EmptyRaw then begin
+    if (FirstSeverity >= EXRESOURCE) and (FirstSeverity <= EXFATAL)
+    then ExeptionClass := EZSQLConnectionLost
+    else ExeptionClass := EZSQLException;
     {$IFDEF UNICODE}
     FLogMessage := ZRawToUnicode(rException, msgCP);
     {$ELSE}
-    FLogMessage := rException;
-    {$ENDIF}
-    LogError(LogCategory, FirstError, Self, logMessage, FLogMessage);
     if DriverManager.HasLoggingListener then
-      DriverManager.LogError(LogCategory, URL.Protocol, LogMessage, 0, FLogMessage);
-    if LogMessage <> ''
-    then FLogMessage := Format(FormatStr, [FLogMessage, FirstError, LogMessage])
-    else FLogMessage := Format(FormatStr, [FLogMessage, FirstError]);
-    if fHandle <> nil then
-      FPlainDriver.dbcancel(fHandle);
-    raise EZSQLException.Create(FLogMessage);
-  end else if (rWarningOrInfo <> EmptyRaw) then begin
+      LogError(LoggingCategory, FirstError, Sender, LogMessage, rException);
+    if excCP <> msgCP
+    then PRawToRawConvert(Pointer(rException), Length(rException), msgCP, excCP, FLogMessage)
+    else FLogMessage := rException;
+    {$ENDIF}
+    rException := EmptyRaw;
+  end else begin
+    ExeptionClass := EZSQLWarning;
     {$IFDEF UNICODE}
     FLogMessage := ZRawToUnicode(rWarningOrInfo, msgCP);
     {$ELSE}
-    FLogMessage := rWarningOrInfo;
-    {$ENDIF}
     if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(LogCategory, URL.Protocol, FLogMessage);
-    ClearWarnings;
-    if LogMessage <> ''
-    then FLogMessage := Format(FormatStr, [FLogMessage, FirstError, LogMessage])
-    else FLogMessage := Format(FormatStr, [FLogMessage, FirstError]);
-    FLogMessage := '';
-    FLastWarning := EZSQLWarning.CreateWithCode(FirstError, FLogMessage);
+      LogError(LoggingCategory, FirstError, Sender, LogMessage, rWarningOrInfo);
+    if excCP <> msgCP
+    then PRawToRawConvert(Pointer(rWarningOrInfo), Length(rWarningOrInfo), msgCP, excCP, FLogMessage)
+    else FLogMessage := rWarningOrInfo;
+    {$ENDIF}
+    rException := rWarningOrInfo;
   end;
+  {$IFDEF UNICODE}
+  if DriverManager.HasLoggingListener then
+    LogError(LoggingCategory, FirstError, Sender, LogMessage, FLogMessage);
+  {$ENDIF}
+  Error := ExeptionClass.CreateWithCode(FirstError, FLogMessage);
+  FLogMessage := '';
+  if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '') then
+    if LoggingCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
+    then FormatStr := SSQLError3
+    else FormatStr := SSQLError4
+  else FormatStr := SSQLError2;
+  if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '')
+  then FLogMessage := Format(FormatStr, [FLogMessage, FirstError, LogMessage])
+  else FLogMessage := Format(FormatStr, [FLogMessage, FirstError]);
+  if ExeptionClass = EZSQLWarning then begin
+    ClearWarnings;
+    if not RaiseWarnings or (LoggingCategory = lcConnect) then begin
+      FLastWarning := EZSQLWarning(Error);
+      Error := nil;
+    end;
+  end else if ExeptionClass = EZSQLConnectionLost then begin
+    if (Sender <> nil)
+    then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(Error))
+    else ReleaseImmediat(Self, EZSQLConnectionLost(Error));
+  end;
+  if Error <> nil then
+    raise Error;
 end;
 
 {**
@@ -615,39 +677,11 @@ begin
   end;
 
   (GetMetadata.GetDatabaseInfo as IZDbLibDatabaseInfo).InitIdentifierCase(GetServerCollation);
-  if (FProvider = dpMsSQL) and (FPlainDriver.DBLibraryVendorType <> lvtFreeTDS) then
-  begin
-  {note: this is a hack from a user-request of synopse project!
-    Purpose is to notify Zeos all Character columns are
-    UTF8-encoded. e.g. N(VAR)CHAR. Initial idea is made for MSSQL where we've NO
-    valid tdsType to determine (Var)Char(Ansi-Encoding) or N(Var)Char(UTF8) encoding
-    So this is stopping all encoding detections and increases the performance in
-    a high rate. If Varchar fields are fetched you Should use a cast to N-Fields!
-    Else all results are invalid!!!!! Just to invoke later questions, reports!}
-    FDisposeCodePage := True;
-    ConSettings^.ClientCodePage := New(PZCodePage);
-    ConSettings^.ClientCodePage^.CP := ZOSCodePage; //need a tempory CP for the SQL preparation
-    ConSettings^.ClientCodePage^.Encoding := ceAnsi;
-    ConSettings^.ClientCodePage^.Name := DetermineMSServerCollation;
-    FServerAnsiCodePage := DetermineMSServerCodePage(ConSettings^.ClientCodePage^.Name);
-    if UpperCase(Info.Values[DSProps_ResetCodePage]) = 'UTF8' then
-    begin
-      ConSettings^.ClientCodePage^.CP := zCP_UTF8;
-      ConSettings^.ClientCodePage^.Encoding := ceUTF8;
-      ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := True;
-    end else begin
-      ConSettings^.ClientCodePage^.CP := FServerAnsiCodePage;
-      ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := False;
-    end;
-    ConSettings^.AutoEncode := True; //Must be set because we can't determine a column-codepage! e.g NCHAR vs. CHAR Fields
-    SetConvertFunctions(ConSettings);
-  end else begin
-    if (FProvider = dpSybase) and (FPlainDriver.DBLibraryVendorType <> lvtFreeTDS)
-    then ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := False;
-    FServerAnsiCodePage := ConSettings^.ClientCodePage^.CP;
-    ConSettings^.ReadFormatSettings.DateFormat := 'yyyy/mm/dd';
-    ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat;
-  end;
+  if (FProvider = dpSybase) and (FPlainDriver.DBLibraryVendorType <> lvtFreeTDS)
+  then ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := False;
+  FServerAnsiCodePage := ConSettings^.ClientCodePage^.CP;
+  ConSettings^.ReadFormatSettings.DateFormat := 'yyyy/mm/dd';
+  ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat;
   { EH:
   http://technet.microsoft.com/en-us/library/ms180878%28v=sql.105%29.aspx
    Using DATE and DATETIME in ISO 8601 format is multi-language supported:
@@ -953,7 +987,7 @@ begin
   else Result := 'unknown';
 end;
 
-function TZDBLibConnection.DetermineMSServerCodePage(const Collation: String): Word;
+(*function TZDBLibConnection.DetermineMSServerCodePage(const Collation: String): Word;
 var P: PAnsiChar;
     L: LengthInt;
 {$IFDEF UNICODE}
@@ -977,7 +1011,7 @@ begin
     Result := RawToIntDef(P, P+L, High(Word));
     FPlainDriver.dbCancel(FHandle);
   end;
-end;
+end;*)
 
 {**
   Attempts to change the transaction isolation level to the one given.
@@ -1143,14 +1177,10 @@ var
 begin
   if (Value <> '') and not Closed then
   begin
-    {$IFNDEF NO_AUTOENCODE}
-    RawCat := ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+    {$IFDEF UNICODE}
+    RawCat := ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP);
     {$ELSE}
-      {$IFDEF UNICODE}
-      RawCat := ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP);
-      {$ELSE}
-      RawCat := Value;
-      {$ENDIF}
+    RawCat := Value;
     {$ENDIF}
     FLogMessage := 'SET CATALOG '+Value;
     if FPlainDriver.dbUse(FHandle, PAnsiChar(RawCat)) <> DBSUCCEED then

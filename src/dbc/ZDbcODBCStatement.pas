@@ -79,8 +79,6 @@ type
     fLastAutoCommit: Boolean;
     FClientEncoding: TZCharEncoding;
     FODBCConnection: IZODBCConnection;
-    FODBCConnectionW: IZODBCConnectionW;
-    FODBCConnectionA: IZODBCConnectionA;
     FCallResultCache: TZCollection;
     FExecRETCODE: SQLRETURN;
     fParamBindings: PZODBCParamBindArray;
@@ -281,7 +279,7 @@ begin
   if fHSTMT <> nil then begin
     Ret := FPlainDriver.SQLCancel(fHSTMT);
     if Ret <> SQL_SUCCESS then
-      FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLCancel', lcOther, Self);
+      FODBCConnection.HandleErrorOrWarning(Ret, fHSTMT, SQL_HANDLE_STMT, 'SQLCancel', lcOther, Self);
   end;
 end;
 
@@ -322,8 +320,6 @@ begin
   fMoreResultsIndicator := TZMoreResultsIndicator(Ord(not Connection.GetMetadata.GetDatabaseInfo.SupportsMultipleResultSets));
   FClientEncoding := ConSettings^.ClientCodePage.Encoding;
   FODBCConnection := Connection;
-  FODBCConnection.QueryInterface(IZODBCConnectionW, FODBCConnectionW);
-  FODBCConnection.QueryInterface(IZODBCConnectionA, FODBCConnectionA);
   fByteBuffer := FODBCConnection.GetByteBufferAddress;
 end;
 
@@ -343,14 +339,14 @@ begin
   else begin
     Ret := fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount);
     if Ret <> SQL_SUCCESS then
-      FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLNumResultCols', lcOther, Self);
+      FODBCConnection.HandleErrorOrWarning(Ret, fHSTMT, SQL_HANDLE_STMT, 'SQLNumResultCols', lcOther, Self);
     if ColumnCount > 0 then begin
       LastUpdateCount := -1;
       LastResultSet := GetCurrentResultSet;
     end else begin
       Ret := fPlainDriver.SQLRowCount(fHSTMT, @RowCount);
       if Ret <> SQL_SUCCESS then
-        FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLRowCount', lcOther, Self);
+        FODBCConnection.HandleErrorOrWarning(Ret, fHSTMT, SQL_HANDLE_STMT, 'SQLRowCount', lcOther, Self);
       LastUpdateCount := RowCount;
       LastResultSet := nil;
     end;
@@ -368,7 +364,7 @@ begin
   InternalExecute;
   Ret := fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount);
   if Ret <> SQL_SUCCESS then
-    FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLNumResultCols', lcOther, Self);
+    FODBCConnection.HandleErrorOrWarning(Ret, fHSTMT, SQL_HANDLE_STMT, 'SQLNumResultCols', lcOther, Self);
   if BindList.HasOutOrInOutOrResultParam then begin
      FetchCallResults;
      Result := GetFirstResultSet;
@@ -400,7 +396,8 @@ begin
   else begin
     Ret := fPlainDriver.SQLRowCount(fHSTMT, @RowCount);
     if Ret <> SQL_SUCCESS then
-      FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLRowCount', lcOther, Self);
+      FODBCConnection.HandleErrorOrWarning(Ret, fHSTMT, SQL_HANDLE_STMT,
+        'SQLRowCount', lcOther, Self);
     if (RowCount = -1) and GetMoreResults and (fLastResultSet = nil)
     then RowCount := LastUpdateCount
     else LastUpdateCount := LastUpdateCount + RowCount;
@@ -419,7 +416,8 @@ begin
   CallResultCache := TZCollection.Create;
   Ret := fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount);
   if Ret <> SQL_SUCCESS then
-    FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLNumResultCols', lcOther, Self);
+    FODBCConnection.HandleErrorOrWarning(Ret, fHSTMT, SQL_HANDLE_STMT,
+      'SQLNumResultCols', lcOther, Self);
   if (fMoreResultsIndicator <> mriHasNoMoreResults) and (ColumnCount > 0) then begin
     FLastResultSet := InternalCreateResultSet;
     CallResultCache.Add(Connection.GetMetadata.CloneCachedResultSet(FlastResultSet));
@@ -433,7 +431,8 @@ begin
   end else begin
     CheckStmtError(fPlainDriver.SQLRowCount(fHSTMT, @RowCount));
     if Ret <> SQL_SUCCESS then
-      FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLRowCount', lcOther, Self);
+      FODBCConnection.HandleErrorOrWarning(Ret, fHSTMT, SQL_HANDLE_STMT,
+        'SQLRowCount', lcOther, Self);
     LastUpdateCount := RowCount;
     CallResultCache.Add(TZAnyValue.CreateWithInteger(LastUpdateCount));
   end;
@@ -530,27 +529,30 @@ begin
       fMoreResultsIndicator := mriHasMoreResults;
       RETCODE := fPlainDriver.SQLNumResultCols(fHSTMT, @ColumnCount);
       if RETCODE <> SQL_SUCCESS then
-        FODBCConnection.HandleStmtErrorOrWarning(RETCODE, fHSTMT, 'SQLNumResultCols', lcOther, Self);
+        FODBCConnection.HandleErrorOrWarning(RETCODE, fHSTMT, SQL_HANDLE_STMT,
+          'SQLNumResultCols', lcOther, Self);
       if ColumnCount > 0
       then LastResultSet := GetCurrentResultSet
       else begin
         RETCODE := fPlainDriver.SQLRowCount(fHSTMT, @RowCount);
         if RETCODE <> SQL_SUCCESS then
-          FODBCConnection.HandleStmtErrorOrWarning(RETCODE, fHSTMT, 'SQLRowCount', lcOther, Self);
+          FODBCConnection.HandleErrorOrWarning(RETCODE, fHSTMT, SQL_HANDLE_STMT,
+            'SQLRowCount', lcOther, Self);
         LastUpdateCount := RowCount;
       end;
     end else if RETCODE = SQL_NO_DATA then begin
       if fMoreResultsIndicator <> mriHasMoreResults then
         fMoreResultsIndicator := mriHasNoMoreResults;
     end else
-      FODBCConnection.HandleStmtErrorOrWarning(RETCODE, fHSTMT, 'SQLMoreResults', lcExecute, Self);
+      FODBCConnection.HandleErrorOrWarning(RETCODE, fHSTMT, SQL_HANDLE_STMT,
+        'SQLMoreResults', lcExecute, Self);
   end;
 end;
 
 procedure TZAbstractODBCStatement.HandleError(RETCODE: SQLRETURN;
   Handle: SQLHANDLE);
 begin
-  FODBCConnection.HandleStmtErrorOrWarning(RETCODE, Handle,
+  FODBCConnection.HandleErrorOrWarning(RETCODE, Handle, SQL_HANDLE_STMT,
     SQL, lcOther, Self);
 end;
 
@@ -562,10 +564,12 @@ begin
   if not Assigned(fHSTMT) then begin
     Ret := fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fPHDBC^, fHSTMT);
     if Ret <> SQL_SUCCESS then
-      FODBCConnection.HandleDbcErrorOrWarning(Ret, 'SQLAllocHandle(Stmt)', lcOther, Self);
+      FODBCConnection.HandleErrorOrWarning(Ret, fPHDBC^, SQL_HANDLE_DBC,
+        'SQLAllocHandle(Stmt)', lcOther, Self);
     Ret := fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_QUERY_TIMEOUT, {%H-}SQLPOINTER(fStmtTimeOut), 0);
     if Ret <> SQL_SUCCESS then
-      FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLSetStmtAttr(Timeout)', lcOther, Self);
+      FODBCConnection.HandleErrorOrWarning(Ret, fHSTMT, SQL_HANDLE_STMT,
+        'SQLSetStmtAttr(Timeout)', lcOther, Self);
     fMoreResultsIndicator := mriUnknown;
     FHandleState := hsAllocated;
   end;
@@ -656,10 +660,12 @@ begin
   if not Assigned(fHSTMT) then begin
     Ret := fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fPHDBC^, fHSTMT);
     if Ret <> SQL_SUCCESS then
-      FODBCConnection.HandleDbcErrorOrWarning(Ret, 'SQLAllocHandle (SQL_HANDLE_STMT)', lcOther, Self);
+      FODBCConnection.HandleErrorOrWarning(Ret, fPHDBC^, SQL_HANDLE_DBC,
+        'SQLAllocHandle (SQL_HANDLE_STMT)', lcOther, Self);
     Ret := fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_QUERY_TIMEOUT, {%H-}SQLPOINTER(fStmtTimeOut), 0);
     if Ret <> SQL_SUCCESS then
-      FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLSetStmtAttr (SQL_ATTR_QUERY_TIMEOUT)', lcOther, Self);
+      FODBCConnection.HandleErrorOrWarning(Ret, fHSTMT, SQL_HANDLE_STMT,
+        'SQLSetStmtAttr (SQL_ATTR_QUERY_TIMEOUT)', lcOther, Self);
     fMoreResultsIndicator := mriUnknown;
     FHandleState := hsAllocated;
   end;
@@ -675,7 +681,8 @@ begin
     if Assigned(fHSTMT) and Assigned(fPHDBC^) then begin
       Ret := fPlainDriver.SQLFreeStmt(fHSTMT,SQL_CLOSE);
       if Ret <> SQL_SUCCESS then
-        FODBCConnection.HandleStmtErrorOrWarning(Ret, fHSTMT, 'SQLFreeStmt', lcOther, Self);
+        FODBCConnection.HandleErrorOrWarning(Ret, fHSTMT, SQL_HANDLE_STMT,
+          'SQLFreeStmt', lcOther, Self);
     end;
 end;
 
@@ -698,8 +705,6 @@ procedure TZAbstractODBCStatement.ReleaseConnection;
 begin
   inherited ReleaseConnection;
   FODBCConnection := nil;
-  FODBCConnectionW := nil;
-  FODBCConnectionA := nil;
 end;
 
 function TZAbstractODBCStatement.SupportsSingleColumnArrays: Boolean;
@@ -725,7 +730,7 @@ function TZODBCPreparedStatementW.ExecutDirect: RETCODE;
 begin
   Result := TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(fHSTMT, Pointer(WSQL), Length(WSQL));
   if not Result in [SQL_NO_DATA, SQL_SUCCESS, SQL_PARAM_DATA_AVAILABLE] then
-    FODBCConnectionW.HandleStmtErrorOrWarningW(Result, fHSTMT, SQL, lcExecute, Self);
+    FODBCConnection.HandleErrorOrWarning(Result, fHSTMT, SQL_HANDLE_STMT, SQL, lcExecute, Self);
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecute, Self);
 end;
@@ -773,7 +778,7 @@ begin
   if not fDEFERPREPARE then begin
     Ret := TODBC3UnicodePlainDriver(fPlainDriver).SQLPrepareW(fHSTMT, Pointer(WSQL), Length(WSQL));
     if Ret <> SQL_SUCCESS then
-      FODBCConnectionW.HandleStmtErrorOrWarningW(Ret, fHSTMT, SQL, lcExecute, Self);
+      FODBCConnection.HandleErrorOrWarning(Ret, fHSTMT, SQL_HANDLE_STMT, SQL, lcExecute, Self);
     FHandleState := hsPrepared;
     fBindImmediat := True;
     if DriverManager.HasLoggingListener then
@@ -794,7 +799,7 @@ function TZODBCPreparedStatementA.ExecutDirect: RETCODE;
 begin
   Result := TODBC3RawPlainDriver(fPlainDriver).SQLExecDirect(fHSTMT, Pointer(ASQL), Length(ASQL));
   if not Result in [SQL_NO_DATA, SQL_SUCCESS, SQL_PARAM_DATA_AVAILABLE] then
-    FODBCConnectionA.HandleStmtErrorOrWarningA(Result, fHSTMT, SQL, lcExecute, Self);
+    FODBCConnection.HandleErrorOrWarning(Result, fHSTMT, SQL_HANDLE_STMT, SQL, lcExecute, Self);
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecute, Self);
 end;
@@ -838,7 +843,7 @@ begin
   if not fDEFERPREPARE then begin
     Ret := TODBC3RawPlainDriver(fPlainDriver).SQLPrepare(fHSTMT, Pointer(ASQL), Length(ASQL));
     if Ret <> SQL_SUCCESS then
-      FODBCConnectionA.HandleStmtErrorOrWarningA(Ret, fHSTMT, SQL, lcPrepStmt, Self);
+      FODBCConnection.HandleErrorOrWarning(Ret, fHSTMT, SQL_HANDLE_STMT, SQL, lcPrepStmt, Self);
     FHandleState := hsPrepared;
     fBindImmediat := True;
     if DriverManager.HasLoggingListener then
@@ -1107,7 +1112,15 @@ var ArrayLen, MaxL, I: Integer;
   procedure BinLobs;
   var I: Integer;
     TmpLob: IZBlob;
+    {$IFNDEF UNICODE}
+    StrCP: Word;
+    {$ENDIF}
   begin
+    {$IFNDEF UNICODE}
+    if ConSettings^.ClientCodePage.Encoding = ceUTF16
+    then StrCP := GetW2A2WConversionCodePage(ConSettings)
+    else StrCP := FClientCP;
+    {$ENDIF}
     case SQLtype of
       stString,
       stUnicodeString: for I := 0 to ArrayLen-1 do begin
@@ -1140,14 +1153,9 @@ var ArrayLen, MaxL, I: Integer;
                                   Length(TRawByteStringDynArray(DA)[i]), ZOSCodePage, ConSettings);
                             {$ENDIF}
                             {$IFNDEF UNICODE}
-                            vtString: if ConSettings^.AutoEncode then
-                                        ParamDataLobs[I] :=
-                                          TZLocalMemCLob.CreateWithData(Pointer(TRawByteStringDynArray(DA)[i]),
-                                              Length(TRawByteStringDynArray(DA)[i]), zCP_None, ConSettings)
-                                      else
-                                        ParamDataLobs[I] :=
-                                          TZLocalMemCLob.CreateWithData(Pointer(TRawByteStringDynArray(DA)[i]),
-                                              Length(TRawByteStringDynArray(DA)[i]), FClientCP, ConSettings);
+                            vtString: ParamDataLobs[I] :=
+                                       TZLocalMemCLob.CreateWithData(Pointer(TRawByteStringDynArray(DA)[i]),
+                                           Length(TRawByteStringDynArray(DA)[i]), StrCP, ConSettings);
                             {$ENDIF}
                             else
                               raise EZSQLException.Create('Unsupported String Variant');
@@ -1428,8 +1436,7 @@ begin
                                 Inc(P, Bind.BufferLength);
                               end;
           {$IFNDEF UNICODE}
-          vtString: if ConSettings.AutoEncode then
-                                     else BindRawStrings(FClientCP);
+          vtString: BindRawStrings(FClientCP);
           {$ENDIF}
           {$IFNDEF NO_ANSISTRING}vtAnsiString: BindRawStrings(ZOSCodePage);{$ENDIF}
           {$IFNDEF NO_UTF8STRING}vtUTF8String: BindRawStrings(zCP_UTF8);{$ENDIF}
@@ -2056,7 +2063,6 @@ var Bind: PZODBCParamBind;
   Len: NativeUInt;
   PA: PAnsiChar;
   PW: PWidechar absolute PA;
-  ConvLob: IZBlob;
 begin
   inherited SetBlob(ParameterIndex, SQLType, Value); //inc refcnt for FPC
   if fBindImmediat then begin
@@ -2080,10 +2086,7 @@ begin
           if FClientEncoding = ceUTF16
           then Value.SetCodePageTo(zCP_UTF16)
           else Value.SetCodePageTo(FClientCP)
-        else if (FClientEncoding <> ceUTF16) then begin
-          ConvLob := CreateRawCLobFromBlob(Value, ConSettings, FOpenLobStreams);
-          SetBlob(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stAsciiStream, ConvLob); //recursive call
-        end;
+        else raise CreateConversionError(ParameterIndex, stBinaryStream, Bind.SQLType);
       if Bind.SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
         PIZLob(Bind.ParameterValuePtr)^ := IZBlob(BindList[ParameterIndex].Value);
         Bind.StrLen_or_IndPtr^ := SQL_DATA_AT_EXEC
@@ -2706,38 +2709,14 @@ end;
 }
 procedure TZAbstractODBCPreparedStatement.SetString(Index: Integer;
   const Value: String);
-{$IFNDEF UNICODE}
-var Bind: PZODBCParamBind;
-{$ENDIF}
 begin
   {$IFDEF UNICODE}
   SetPWideChar(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Pointer(Value), Length(Value));
   {$ELSE}
   {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
-  if ConSettings.AutoEncode and (Value <> '') then begin
-    CheckParameterIndex(Index);
-    if fBindImmediat then begin
-      {$R-}
-      Bind := @fParamBindings[Index];
-      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-      if (Bind.ValueType = SQL_C_WCHAR) then begin
-        fUniTemp := ConSettings.ConvFuncs.ZStringToUnicode(Value, ConSettings.CTRL_CP);
-        SetUnicodeString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, fUniTemp);
-      end else if (Bind.ValueType = SQL_C_CHAR) then begin
-        fRawTemp := ConSettings.ConvFuncs.ZStringToRaw(Value, ConSettings.CTRL_CP, FClientCP);
-        BindRaw(Index, FRawTemp, FClientCP);
-      end else
-       SetPAnsiChar(Index, Pointer(Value), Length(Value))
-    end else if FClientEncoding = ceUTF16 then begin
-      fUniTemp := ZRawToUnicode(Value, FClientCP);
-      BindList.Put(Index, stUnicodeString, fUniTemp);
-    end else begin
-      fRawTemp := ConSettings.ConvFuncs.ZStringToRaw(Value, ConSettings.CTRL_CP, FClientCP);
-      BindList.Put(Index, stString, Value, FClientCP);
-    end;
-  end else if FClientEncoding = ceUTF16
-    then BindRaw(Index, Value, ConSettings.CTRL_CP)
-    else BindRaw(Index, Value, FClientCP);
+  if FClientEncoding = ceUTF16
+  then BindRaw(Index, Value, GetW2A2WConversionCodePage(ConSettings))
+  else BindRaw(Index, Value, FClientCP);
   {$ENDIF}
 end;
 
@@ -3136,7 +3115,7 @@ function TZODBCStatementW.ExecutDirect: RETCODE;
 begin
   Result := TODBC3UnicodePlainDriver(fPlainDriver).SQLExecDirectW(fHSTMT, Pointer(WSQL), Length(WSQL));
   if not Result in [SQL_NO_DATA, SQL_SUCCESS, SQL_PARAM_DATA_AVAILABLE] then
-    FODBCConnectionW.HandleStmtErrorOrWarningW(Result, fHSTMT, SQL, lcExecute, Self);
+    FODBCConnection.HandleErrorOrWarning(Result, fHSTMT, SQL_HANDLE_STMT, SQL, lcExecute, Self);
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecute, Self);
 end;
@@ -3153,7 +3132,7 @@ function TZODBCStatementA.ExecutDirect: RETCODE;
 begin
   Result := TODBC3RawPlainDriver(fPlainDriver).SQLExecDirect(fHSTMT, Pointer(fASQL), Length(fASQL));
   if not Result in [SQL_NO_DATA, SQL_SUCCESS, SQL_PARAM_DATA_AVAILABLE] then
-    FODBCConnectionA.HandleStmtErrorOrWarningA(Result, fHSTMT, SQL, lcExecute, Self);
+    FODBCConnection.HandleErrorOrWarning(Result, fHSTMT, SQL_HANDLE_STMT, SQL, lcExecute, Self);
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecute, Self);
 end;

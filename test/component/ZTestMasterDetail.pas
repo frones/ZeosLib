@@ -97,7 +97,7 @@ type
 implementation
 
 uses Classes, ZDbcIntfs, ZSqlMonitor, ZdbcLogging,
-  ZAbstractRODataset, ZCompatibility, ZSysUtils;
+  ZDatasetUtils, ZAbstractRODataset, ZCompatibility, ZSysUtils;
 
 const TestRowID = 1000;
 
@@ -322,16 +322,16 @@ var
   begin
     MasterQuery.Append;
     MasterQuery.FieldByName('dep_id').AsInteger := TestRowID + Index;
-    MasterQuery.FieldByName('dep_name').AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
-    MasterQuery.FieldByName('dep_shname').AsString := 'abc';
-    MasterQuery.FieldByName('dep_address').AsString := GetDBTestString(Str2, Connection.DbcConnection.GetConSettings);
+    MasterQuery.FieldByName('dep_name').AsString := GetDBTestString(Str1, ttField);
+    MasterQuery.FieldByName('dep_shname').AsString := 'a''b''c';
+    MasterQuery.FieldByName('dep_address').AsString := GetDBTestString(Str2, ttField);
 
     CheckEquals(True, (MasterQuery.State = dsInsert), 'MasterQuery Insert-State');
 
     DetailQuery.Append;
     DetailQuery.FieldByName('p_id').AsInteger := TestRowID + Index;
     DetailQuery.FieldByName('p_dep_id').AsInteger := TestRowID + Index;
-    DetailQuery.FieldByName('p_name').AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
+    DetailQuery.FieldByName('p_name').AsString := GetDBTestString(Str1, ttField);
     DetailQuery.FieldByName('p_begin_work').AsDateTime := now;
     DetailQuery.FieldByName('p_end_work').AsDateTime := now;
     DetailQuery.FieldByName('p_picture').AsString := '';
@@ -402,14 +402,13 @@ begin
   MasterQuery.Options := MasterQuery.Options + [doDontSortOnPost];
   try
     MasterQuery.Open;
-
-    CheckStringFieldType(MasterQuery.FieldByName('dep_name').DataType, Connection.ControlsCodePage);
-    CheckStringFieldType(MasterQuery.FieldByName('dep_shname').DataType, Connection.ControlsCodePage);
+    CheckStringFieldType(MasterQuery.FieldByName('dep_name'), Connection.ControlsCodePage);
+    CheckStringFieldType(MasterQuery.FieldByName('dep_shname'), Connection.ControlsCodePage);
       //ASA curiousity: if NCHAR and VARCHAR fields set to UTF8-CodePage we get the LONG_Char types as fieldTypes for !some! fields
     if (ProtocolType = protASA) and (Connection.DbcConnection.GetConSettings.ClientCodePage^.CP = 65001) then
-      CheckMemoFieldType(MasterQuery.FieldByName('dep_address').DataType, Connection.ControlsCodePage)
+      CheckMemoFieldType(MasterQuery.FieldByName('dep_address'), Connection.ControlsCodePage)
     else
-      CheckStringFieldType(MasterQuery.FieldByName('dep_address').DataType, Connection.ControlsCodePage);
+      CheckStringFieldType(MasterQuery.FieldByName('dep_address'), Connection.ControlsCodePage);
 
     DetailQuery.SQL.Text := 'SELECT * FROM people';
     DetailQuery.MasterSource := MasterDataSource;
@@ -420,9 +419,9 @@ begin
     //CommitCount := 0;
     MasterQuery.Append;
     MasterQuery.FieldByName('dep_id').AsInteger := TestRowID;
-    MasterQuery.FieldByName('dep_name').AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
+    MasterQuery.FieldByName('dep_name').AsString := GetDBTestString(Str1, ttField);
     MasterQuery.FieldByName('dep_shname').AsString := 'ab''c';
-    MasterQuery.FieldByName('dep_address').AsString := GetDBTestString(Str2, Connection.DbcConnection.GetConSettings);
+    MasterQuery.FieldByName('dep_address').AsString := GetDBTestString(Str2, ttField);
 
     CheckEquals(True, (MasterQuery.State = dsInsert), 'MasterQuery Insert-State');
 

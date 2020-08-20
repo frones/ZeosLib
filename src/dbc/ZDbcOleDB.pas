@@ -81,7 +81,7 @@ type
     function SupportsMARSConnection: Boolean;
     function GetByteBufferAddress: PByteBuffer;
     procedure HandleErrorOrWarning(Status: HRESULT; LoggingCategory: TZLoggingCategory;
-      const Msg: UnicodeString; const Sender: IImmediatelyReleasable;
+      const LogMessage: SQLString; const Sender: IImmediatelyReleasable;
       const aStatus: TDBBINDSTATUSDynArray = nil);
   end;
 
@@ -103,15 +103,15 @@ type
     FLastWarning: EZSQLWarning;
     procedure SetProviderProps(DBinit: Boolean);
   protected
-    procedure InternalCreate; override;
     function OleDbGetDBPropValue(const APropIDs: array of DBPROPID): string; overload;
     function OleDbGetDBPropValue(APropID: DBPROPID): Integer; overload;
     procedure InternalSetTIL(Level: TZTransactIsolationLevel);
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload; override;
     procedure InternalClose; override;
   public
+    procedure AfterConstruction; override;
     destructor Destroy; override;
-
+  public
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareCallWithParams(const Name: String; Info: TStrings):
       IZCallableStatement;
@@ -143,7 +143,7 @@ type
     function GetMalloc: IMalloc;
     function SupportsMARSConnection: Boolean;
     procedure HandleErrorOrWarning(Status: HRESULT; LoggingCategory:  TZLoggingCategory;
-      const Msg: UnicodeString; const Sender: IImmediatelyReleasable;
+      const LogMessage: SQLString; const Sender: IImmediatelyReleasable;
       const aStatus: TDBBINDSTATUSDynArray = nil);
   end;
 
@@ -226,15 +226,6 @@ begin
 end;
 
 { TZOleDBConnection }
-procedure TZOleDBConnection.InternalCreate;
-begin
-  CoInit;
-  OleCheck(CoGetMalloc(1,fMalloc));
-  FMetadata := TOleDBDatabaseMetadata.Create(Self, URL);
-  FRetaining := False; //not StrToBoolEx(URL.Properties.Values['hard_commit']);
-  Inherited SetAutoCommit(True);
-  //Open;
-end;
 
 const
   TIL: array[TZTransactIsolationLevel] of ISOLATIONLEVEL =
@@ -292,19 +283,17 @@ begin
   Cmd := CreateCommand;
   FillChar(pParams, SizeOf(TDBParams), #0);
   Status := Cmd.SetCommandText(DBGUID_DEFAULT, Pointer(SQL));
+  {$IFNDEF UNICODE}
+  if (Status <> S_OK) or DriverManager.HasLoggingListener then
+    FLogMessage := ZUnicodeToRaw(SQL, zCP_UTF8);
+  {$ENDIF}
   if Status <> S_OK then
-    HandleErrorOrWarning(Status, LoggingCategory, SQL, Self);
+    HandleErrorOrWarning(Status, LoggingCategory, {$IFDEF UNICODE}SQL{$ELSE}FLogMessage{$ENDIF}, Self);
   Status := Cmd.Execute(nil, DB_NULLGUID,pParams,nil,nil);
   if Status <> S_OK then
-     HandleErrorOrWarning(Status, LoggingCategory, SQL, Self, nil)
-  else if DriverManager.HasLoggingListener then begin
-    {$IFDEF UNICODE}
-    DriverManager.LogMessage(LoggingCategory, URL.Protocol, SQL);
-    {$ELSE}
-    FLogMessage := ZUnicodeToRaw(SQL, zCP_UTF8);
-    DriverManager.LogMessage(LoggingCategory, URL.Protocol, FLogMessage);
-    {$ENDIF}
-  end;
+     HandleErrorOrWarning(Status, LoggingCategory, {$IFDEF UNICODE}SQL{$ELSE}FLogMessage{$ENDIF}, Self, nil)
+  else if DriverManager.HasLoggingListener then
+    DriverManager.LogMessage(LoggingCategory, URL.Protocol, {$IFDEF UNICODE}SQL{$ELSE}FLogMessage{$ENDIF});
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -571,10 +560,11 @@ begin
 end;
 
 procedure TZOleDBConnection.HandleErrorOrWarning(Status: HRESULT;
-  LoggingCategory: TZLoggingCategory; const Msg: UnicodeString;
+  LoggingCategory: TZLoggingCategory; const LogMessage: SQLString;
   const Sender: IImmediatelyReleasable; const aStatus: TDBBINDSTATUSDynArray);
 var
-  OleDBErrorMessage, FirstSQLState: UnicodeString;
+  OleDBErrorMessage: UnicodeString;
+  SQLState: SQLString;
   ErrorInfo, ErrorInfoDetails: IErrorInfo;
   SQLErrorInfo: ISQLErrorInfo;
   MSSQLErrorInfo: ISQLServerErrorInfo;
@@ -584,194 +574,189 @@ var
   ErrorCount: ULONG;
   WS: WideString;
   StringsBufferPtr: PWideChar;
-  s: string;
   Writer: TZUnicodeSQLStringWriter;
   MessageAdded: Boolean;
-  Exception: EZSQLThrowable;
-  {$IFNDEF UNICODE}
-  CP: Word;
-  {$ENDIF UNICODE}
+  Error: EZSQLThrowable;
+  ExeptionClass: EZSQLThrowableClass;
+  FormatStr: String;
 begin
-  if Status <> S_OK then begin // get OleDB specific error information
-    Writer := TZUnicodeSQLStringWriter.Create(1024+Length(Msg));
-    ErrorInfo := nil;
-    try
-      if IsError(Status) then
-        if Status < 0 //avoid range check error for some negative unknown errors
-        then OleDBErrorMessage := 'OLEDB Error '
-        else OleDBErrorMessage := UnicodeString(SysErrorMessage(Status))
-      else OleDBErrorMessage := 'OLEDB Warning ';
-      FirstSQLState := '';
-      FirstErrorCode := Status;
-      GetErrorInfo(0,ErrorInfo);
-      if Assigned(ErrorInfo) then begin
-        ErrorRecords := ErrorInfo as IErrorRecords;
-        ErrorRecords.GetRecordCount(ErrorCount);
-        for i := 0 to ErrorCount-1 do begin
-          MessageAdded := False;
-          { get all error interface we know }
-          SQLErrorInfo := nil;
-          if Failed(ErrorRecords.GetCustomErrorObject(i, IID_ISQLErrorInfo, IUnknown(SQLErrorInfo))) then
-            SQLErrorInfo := nil;
-          ErrorInfoDetails := nil;
-          if Failed(ErrorRecords.GetErrorInfo(i,GetSystemDefaultLCID,ErrorInfoDetails)) then
-            ErrorInfoDetails := nil;
-          MSSQLErrorInfo := nil;
-          if Failed(ErrorRecords.GetCustomErrorObject(i, IID_ISQLServerErrorInfo, IUnknown(MSSQLErrorInfo))) then
-            MSSQLErrorInfo := nil;
-
-          { get common error info: }
-          if (SQLErrorInfo <> nil) then try
-            WS := '';
-            SQLErrorInfo.GetSQLInfo(WS, ErrorCode );
-            if I = 0 then begin
-              FirstErrorCode := ErrorCode;
-              FirstSQLState := WS;
-            end;
-            Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
-            Writer.AddText('SQLState: ', OleDBErrorMessage);
-            Writer.AddText(Pointer(WS), Length(WS), OleDBErrorMessage);
-            Writer.AddText(' Native Error: ', OleDBErrorMessage);
-            Writer.AddOrd(ErrorCode, OleDBErrorMessage);
-            WS := '';
-          finally
-            SQLErrorInfo := nil;
-          end;
-          if (ErrorInfoDetails <> nil) then try
-            if Succeeded(ErrorInfoDetails.GetDescription(WS)) and (WS <> '') then begin
-              Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
-              Writer.AddText('Error message: ', OleDBErrorMessage);
-              Writer.AddText(Pointer(WS), Length(WS), OleDBErrorMessage);
-              MessageAdded := True;
-            end;
-            if Succeeded(ErrorInfoDetails.GetSource(WS)) and (WS <> '') then begin
-              Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
-              Writer.AddText('Source: ', OleDBErrorMessage);
-              Writer.AddText(Pointer(WS), Length(WS), OleDBErrorMessage);
-              WS := '';
-            end;
-          finally
-            ErrorInfoDetails := nil;
-            //OleCheck(SetErrorInfo(0, ErrorInfoDetails));
-            WS := '';
-          end;
-          if Assigned(MSSQLErrorInfo) then try
-            Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
-            Writer.AddText('SQLServer details: ', OleDBErrorMessage);
-            SSErrorPtr := nil;
-            StringsBufferPtr:= nil;
-            try //try use a SQL Server error interface
-              if Succeeded(MSSQLErrorInfo.GetErrorInfo(SSErrorPtr, StringsBufferPtr)) and Assigned(SSErrorPtr) then begin
-                if not MessageAdded and (SSErrorPtr^.pwszMessage <> nil) and (PWord(SSErrorPtr^.pwszMessage)^ <> 0) then begin
-                  Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
-                  Writer.AddText('Error message: ', OleDBErrorMessage);
-                  Writer.AddText(SSErrorPtr^.pwszMessage, {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(SSErrorPtr^.pwszMessage), OleDBErrorMessage);
-                end;
-                if (SSErrorPtr^.pwszServer <> nil) and (PWord(SSErrorPtr^.pwszServer)^ <> 0) then begin
-                  Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
-                  Writer.AddText('Server: ', OleDBErrorMessage);
-                  Writer.AddText(SSErrorPtr^.pwszServer, {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(SSErrorPtr^.pwszServer), OleDBErrorMessage);
-                end;
-                if (SSErrorPtr^.pwszProcedure <> nil) and (PWord(SSErrorPtr^.pwszProcedure)^ <> 0) then begin
-                  Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
-                  Writer.AddText('Procedure: ', OleDBErrorMessage);
-                  Writer.AddText(SSErrorPtr^.pwszProcedure, {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(SSErrorPtr^.pwszProcedure), OleDBErrorMessage);
-                end;
-                Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
-                Writer.AddText('Line: ', OleDBErrorMessage);
-                Writer.AddOrd(SSErrorPtr^.wLineNumber, OleDBErrorMessage);
-                Writer.AddText(', Error state: ', OleDBErrorMessage);
-                Writer.AddOrd(SSErrorPtr^.bState, OleDBErrorMessage);
-                Writer.AddText(', Severity: ', OleDBErrorMessage);
-                Writer.AddOrd(SSErrorPtr^.bClass, OleDBErrorMessage);
-              end;
-            finally
-              if Assigned(SSErrorPtr) then CoTaskMemFree(SSErrorPtr);
-              if Assigned(StringsBufferPtr) then CoTaskMemFree(StringsBufferPtr);
-            end
-          finally
-            MSSQLErrorInfo := nil;
-          end;
-        end;
-      end;
-      // retrieve binding information from Status[]
-      if aStatus <> nil then begin
+  if Status = S_OK then Exit;
+  // get OleDB specific error information
+  Writer := TZUnicodeSQLStringWriter.Create(1024);
+  ErrorInfo := nil;
+  Error := nil;
+  try
+    if IsError(Status) then
+      if Status < 0 //avoid range check error for some negative unknown errors
+      then OleDBErrorMessage := 'OLEDB Error '
+      else OleDBErrorMessage := UnicodeString(SysErrorMessage(Status))
+    else OleDBErrorMessage := 'OLEDB Warning ';
+    SQLState := '';
+    FirstErrorCode := Status;
+    GetErrorInfo(0,ErrorInfo);
+    if Assigned(ErrorInfo) then begin
+      ErrorRecords := ErrorInfo as IErrorRecords;
+      ErrorRecords.GetRecordCount(ErrorCount);
+      for i := 0 to ErrorCount-1 do begin
         MessageAdded := False;
-        for i := 0 to high(aStatus) do
-          if aStatus[i]<>ZPlainOleDBDriver.DBBINDSTATUS_OK then Begin
-            if not MessageAdded then begin
-              Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
-              Writer.AddText('Binding failure(s): ', OleDBErrorMessage);
-              MessageAdded := True;
-            end;
-            Writer.AddText('Status[', OleDBErrorMessage);
-            Writer.AddOrd(i{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, OleDBErrorMessage);
-            Writer.AddText(']="', OleDBErrorMessage);
-            if aStatus[i]<=cardinal(high(TOleDBBindStatus)) then begin
-              S := GetEnumName(TypeInfo(TOleDBBindStatus),aStatus[i]);
-              {$IFDEF UNICODE}
-              Writer.AddText(S, OleDBErrorMessage);
-              {$ELSE}
-              Writer.AddAscii7Text(Pointer(S), Length(S), OleDBErrorMessage);
-              {$ENDIF}
-            end else
-              Writer.AddOrd(aStatus[i], OleDBErrorMessage);
-            Writer.AddChar('"', OleDBErrorMessage);
-            Writer.AddChar(',', OleDBErrorMessage);
+        { get all error interface we know }
+        SQLErrorInfo := nil;
+        if Failed(ErrorRecords.GetCustomErrorObject(i, IID_ISQLErrorInfo, IUnknown(SQLErrorInfo))) then
+          SQLErrorInfo := nil;
+        ErrorInfoDetails := nil;
+        if Failed(ErrorRecords.GetErrorInfo(i,GetSystemDefaultLCID,ErrorInfoDetails)) then
+          ErrorInfoDetails := nil;
+        MSSQLErrorInfo := nil;
+        if Failed(ErrorRecords.GetCustomErrorObject(i, IID_ISQLServerErrorInfo, IUnknown(MSSQLErrorInfo))) then
+          MSSQLErrorInfo := nil;
+
+        { get common error info: }
+        if (SQLErrorInfo <> nil) then try
+          WS := '';
+          SQLErrorInfo.GetSQLInfo(WS, ErrorCode );
+          if I = 0 then begin
+            FirstErrorCode := ErrorCode;
+            SQLState := {$IFNDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(WS);
           end;
-        Writer.CancelLastComma(OleDBErrorMessage);
-      end;
-      if (Msg <> '') and (not IsError(Status) or not DriverManager.HasLoggingListener) then begin
-        Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
-        Writer.AddText('SQL: ', OleDBErrorMessage);
-        Writer.AddText(Msg, OleDBErrorMessage);
-      end;
-      Writer.Finalize(OleDBErrorMessage);
-      if FirstSQLState = '' then begin
-        FirstErrorCode := Status;
-        FirstSQLState := {$IFNDEF UNCIODE}UnicodeString{$ENDIF}(IntToHex(Status,8));
-      end;
-      {$IFNDEF UNICODE}
-      CP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
-      {$ENDIF UNICODE}
-      if IsError(Status) then begin // raise exception
-        if DriverManager.HasLoggingListener then begin
-          LogError(LoggingCategory, FirstErrorCode, Sender,
-            {$IFDEF UNICODE}Msg{$ELSE}ZUnicodeToRaw(Msg, zCP_UTF8){$ENDIF},
-            {$IFDEF UNICODE}OleDBErrorMessage{$ELSE}ZUnicodeToRaw(OleDBErrorMessage, zCP_UTF8){$ENDIF});
-          if (Msg <> '') then begin
-            Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
-            Writer.AddText('SQL: ', OleDBErrorMessage);
-            Writer.AddText(Msg, OleDBErrorMessage);
-            Writer.Finalize(OleDBErrorMessage);
-          end;
+          Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+          Writer.AddText('SQLState: ', OleDBErrorMessage);
+          Writer.AddText(Pointer(WS), Length(WS), OleDBErrorMessage);
+          Writer.AddText(' Native Error: ', OleDBErrorMessage);
+          Writer.AddOrd(ErrorCode, OleDBErrorMessage);
+          WS := '';
+        finally
+          SQLErrorInfo := nil;
         end;
-        {$IFNDEF UNICODE}
-        Exception := EZSQLException.CreateWithCodeAndStatus(FirstErrorCode, ZUnicodeToRaw(FirstSQLState, CP), ZUnicodeToRaw(OleDBErrorMessage, CP));
-        {$ELSE}
-        Exception := EZSQLException.CreateWithCodeAndStatus(FirstErrorCode, FirstSQLState, OleDBErrorMessage);
-        {$ENDIF}
-        if Exception is EZSQLConnectionLost then if Sender <> nil
-          then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(Exception))
-          else ReleaseImmediat(Sender, EZSQLConnectionLost(Exception));
-        if Exception <> nil then
-          raise Exception;
-      end else begin
-        if DriverManager.HasLoggingListener then
-          DriverManager.LogMessage(LoggingCategory, URL.Protocol,
-            {$IFDEF UNICODE}OleDBErrorMessage{$ELSE}ZUnicodeToRaw(OleDBErrorMessage, zCP_UTF8){$ENDIF});
-        ClearWarnings;
-        {$IFNDEF UNICODE}
-        FLastWarning := EZSQLWarning.CreateWithCodeAndStatus(FirstErrorCode, ZUnicodeToRaw(FirstSQLState, CP), ZUnicodeToRaw(OleDBErrorMessage, CP));
-        {$ELSE}
-        FLastWarning := EZSQLWarning.CreateWithCodeAndStatus(FirstErrorCode, FirstSQLState, OleDBErrorMessage);
-        {$ENDIF}
+        if (ErrorInfoDetails <> nil) then try
+          if Succeeded(ErrorInfoDetails.GetDescription(WS)) and (WS <> '') then begin
+            Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+            Writer.AddText('Error message: ', OleDBErrorMessage);
+            Writer.AddText(Pointer(WS), Length(WS), OleDBErrorMessage);
+            MessageAdded := True;
+          end;
+          if Succeeded(ErrorInfoDetails.GetSource(WS)) and (WS <> '') then begin
+            Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+            Writer.AddText('Source: ', OleDBErrorMessage);
+            Writer.AddText(Pointer(WS), Length(WS), OleDBErrorMessage);
+            WS := '';
+          end;
+        finally
+          ErrorInfoDetails := nil;
+          //OleCheck(SetErrorInfo(0, ErrorInfoDetails));
+          WS := '';
+        end;
+        if Assigned(MSSQLErrorInfo) then try
+          Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+          Writer.AddText('SQLServer details: ', OleDBErrorMessage);
+          SSErrorPtr := nil;
+          StringsBufferPtr:= nil;
+          try //try use a SQL Server error interface
+            if Succeeded(MSSQLErrorInfo.GetErrorInfo(SSErrorPtr, StringsBufferPtr)) and Assigned(SSErrorPtr) then begin
+              if not MessageAdded and (SSErrorPtr^.pwszMessage <> nil) and (PWord(SSErrorPtr^.pwszMessage)^ <> 0) then begin
+                Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+                Writer.AddText('Error message: ', OleDBErrorMessage);
+                Writer.AddText(SSErrorPtr^.pwszMessage, {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(SSErrorPtr^.pwszMessage), OleDBErrorMessage);
+              end;
+              if (SSErrorPtr^.pwszServer <> nil) and (PWord(SSErrorPtr^.pwszServer)^ <> 0) then begin
+                Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+                Writer.AddText('Server: ', OleDBErrorMessage);
+                Writer.AddText(SSErrorPtr^.pwszServer, {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(SSErrorPtr^.pwszServer), OleDBErrorMessage);
+              end;
+              if (SSErrorPtr^.pwszProcedure <> nil) and (PWord(SSErrorPtr^.pwszProcedure)^ <> 0) then begin
+                Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+                Writer.AddText('Procedure: ', OleDBErrorMessage);
+                Writer.AddText(SSErrorPtr^.pwszProcedure, {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(SSErrorPtr^.pwszProcedure), OleDBErrorMessage);
+              end;
+              Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+              Writer.AddText('Line: ', OleDBErrorMessage);
+              Writer.AddOrd(SSErrorPtr^.wLineNumber, OleDBErrorMessage);
+              Writer.AddText(', Error state: ', OleDBErrorMessage);
+              Writer.AddOrd(SSErrorPtr^.bState, OleDBErrorMessage);
+              Writer.AddText(', Severity: ', OleDBErrorMessage);
+              Writer.AddOrd(SSErrorPtr^.bClass, OleDBErrorMessage);
+            end;
+          finally
+            if Assigned(SSErrorPtr) then CoTaskMemFree(SSErrorPtr);
+            if Assigned(StringsBufferPtr) then CoTaskMemFree(StringsBufferPtr);
+          end
+        finally
+          MSSQLErrorInfo := nil;
+        end;
       end;
-    finally
-      FreeAndNil(Writer);
-      OleCheck(SetErrorInfo(0, nil));
     end;
+    // retrieve binding information from Status[]
+    if aStatus <> nil then begin
+      MessageAdded := False;
+      for i := 0 to high(aStatus) do
+        if aStatus[i]<>ZPlainOleDBDriver.DBBINDSTATUS_OK then Begin
+          if not MessageAdded then begin
+            Writer.AddLineFeedIfNotEmpty(OleDBErrorMessage);
+            Writer.AddText('Binding failure(s): ', OleDBErrorMessage);
+            MessageAdded := True;
+          end;
+          Writer.AddText('Status[', OleDBErrorMessage);
+          Writer.AddOrd(i{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, OleDBErrorMessage);
+          Writer.AddText(']="', OleDBErrorMessage);
+          if aStatus[i]<=cardinal(high(TOleDBBindStatus)) then begin
+            FlogMessage := GetEnumName(TypeInfo(TOleDBBindStatus),aStatus[i]);
+            {$IFDEF UNICODE}
+            Writer.AddText(FlogMessage, OleDBErrorMessage);
+            {$ELSE}
+            Writer.AddAscii7Text(Pointer(FlogMessage), Length(FlogMessage), OleDBErrorMessage);
+            {$ENDIF}
+          end else
+            Writer.AddOrd(aStatus[i], OleDBErrorMessage);
+          Writer.AddChar('"', OleDBErrorMessage);
+          Writer.AddChar(',', OleDBErrorMessage);
+        end;
+      Writer.CancelLastComma(OleDBErrorMessage);
+    end;
+    Writer.Finalize(OleDBErrorMessage);
+    {$IFNDEF UNICODE}
+    FlogMessage := ZUnicodeToRaw(OleDBErrorMessage, {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}
+      {$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF});
+    {$ELSE}
+    FlogMessage := OleDBErrorMessage;
+    {$ENDIF}
+    OleDBErrorMessage := '';
+    if SQLState = '' then begin
+      FirstErrorCode := Status;
+      SQLState := IntToHex(Status,8);
+    end;
+    if DriverManager.HasLoggingListener then
+      LogError(LoggingCategory, ErrorCode, Sender, LogMessage, FLogMessage);
+    if IsError(Status) then
+      if (SQLState = '08S01') and (GetServerProvider = spMSSQL)
+      then ExeptionClass := EZSQLConnectionLost
+      else ExeptionClass := EZSQLException
+    else ExeptionClass := EZSQLWarning;
+    if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '') then
+      if LoggingCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
+      then FormatStr := SSQLError3
+      else FormatStr := SSQLError4
+    else FormatStr := SSQLError2;
+    if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '')
+    then FLogMessage := Format(FormatStr, [FLogMessage, FirstErrorCode, LogMessage])
+    else FLogMessage := Format(FormatStr, [FLogMessage, FirstErrorCode]);
+    Error := ExeptionClass.CreateWithCodeAndStatus(ErrorCode, SQLState, FLogMessage);
+    FLogMessage := '';
+    if ExeptionClass = EZSQLWarning then begin//that's a Warning
+      ClearWarnings;
+      if not RaiseWarnings or (LoggingCategory = lcConnect) then begin
+        FLastWarning := EZSQLWarning(Error);
+        Error := nil;
+      end;
+    end else if ExeptionClass = EZSQLConnectionLost then begin
+      if (Sender <> nil)
+      then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(Error))
+      else ReleaseImmediat(Self, EZSQLConnectionLost(Error));
+    end;
+  finally
+    FreeAndNil(Writer);
+    OleCheck(SetErrorInfo(0, nil));
   end;
+  if Error <> nil then
+    raise Error;
 end;
 
 {**
@@ -813,6 +798,15 @@ begin
     end;
     TransactIsolationLevel := Level;
   end;
+end;
+
+procedure TZOleDBConnection.AfterConstruction;
+begin
+  CoInit;
+  OleCheck(CoGetMalloc(1,fMalloc));
+  FMetadata := TOleDBDatabaseMetadata.Create(Self, URL);
+  Inherited SetAutoCommit(True);
+  inherited AfterConstruction;
 end;
 
 {**

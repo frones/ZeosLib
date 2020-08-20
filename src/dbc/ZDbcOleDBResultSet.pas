@@ -84,7 +84,7 @@ type
     FRowStates: TDBROWSTATUSDynArray;
     fpcColumns: DBORDINAL;
     fTempBlob: IZBlob;
-    fClientCP, fCtrlCP: Word;
+    fClientCP: Word;
     FOleDBConnection: IZOleDBConnection;
     FByteBuffer: PByteBuffer;
   private
@@ -803,7 +803,7 @@ set_from_buf:           Len := Result - PAnsiChar(fByteBuffer);
                       end;
     DBTYPE_WSTR:    if FColBind.cbMaxLen = 0 then begin
                       fTempBlob := GetBlob(ColumnIndex);
-                      Result := fTempBlob.GetPAnsiChar(fCtrlCP, fRawTemp, Len);
+                      Result := fTempBlob.GetPAnsiChar(GetW2A2WConversionCodePage(ConSettings), fRawTemp, Len);
                       fTempBlob := nil;
                     end else begin
                       Result := FData;
@@ -811,7 +811,7 @@ set_from_buf:           Len := Result - PAnsiChar(fByteBuffer);
                       if FColBind.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0
                       then Len := GetAbsorbedTrailingSpacesLen(PWideChar(Result), FLength)
                       else Len := FLength;
-                      FRawTemp := PUnicodeToRaw(PWideChar(Result), Len, fCtrlCP);
+                      FRawTemp := PUnicodeToRaw(PWideChar(Result), Len, GetW2A2WConversionCodePage(ConSettings));
 set_from_tmp:         Len := Length(FRawTemp);
                       if Len = 0
                       then Result := PEmptyAnsiString
@@ -2112,7 +2112,6 @@ begin
   FOleDBConnection := (Statement.GetConnection as IZOleDBConnection);
   FByteBuffer := FOleDBConnection.GetByteBufferAddress;
   inherited Create(Statement, Statement.GetSQL, nil, FOleDBConnection.GetConSettings);
-  fCtrlCP := ConSettings.CTRL_CP;
   fClientCP := ConSettings.ClientCodePage.CP;
   FColBuffer := ParamBuffer;
   J := 0;
@@ -2194,7 +2193,6 @@ begin
   FCurrentBufRowNo := 0;
   FRowsObtained := 0;
   FHROWS := nil;
-  fCtrlCP := ConSettings.CTRL_CP;
   fClientCP := ConSettings.ClientCodePage.CP;
   Open;
 end;
@@ -2320,7 +2318,11 @@ begin
     begin
       ColumnInfo := TZColumnInfo.Create;
       if (prgInfo.pwszName<>nil) and (prgInfo.pwszName^<>#0) then
-        ColumnInfo.ColumnLabel := String(prgInfo^.pwszName);
+        {$IFDEF UNICODE}
+        System.SetString(ColumnInfo.ColumnLabel, prgInfo^.pwszName, {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(prgInfo^.pwszName));
+        {$ELSE}
+        ColumnInfo.ColumnLabel := PUnicodeToRaw(prgInfo^.pwszName, {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(prgInfo^.pwszName), zCP_UTF8);
+        {$ENDIF}
       ColumnInfo.ColumnType := ConvertOleDBTypeToSQLType(prgInfo^.wType,
         prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG <> 0,
         prgInfo.bScale, prgInfo.bPrecision);

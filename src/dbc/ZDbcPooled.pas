@@ -180,6 +180,8 @@ type
     destructor Destroy; override;
 
     procedure SetOnConnectionLostErrorHandler(Handler: TOnConnectionLostError);
+    procedure SetAddLogMsgToExceptionOrWarningMsg(Value: Boolean);
+    procedure SetRaiseWarnings(Value: Boolean);
 
     function GetBinaryEscapeString(const Value: TBytes): String;
 
@@ -685,14 +687,25 @@ begin
   GetConnection.RollbackPrepared(transactionid);
 end;
 
+procedure TZDbcPooledConnection.SetAddLogMsgToExceptionOrWarningMsg(
+  Value: Boolean);
+begin
+  GetConnection.SetAddLogMsgToExceptionOrWarningMsg(Value);
+end;
+
 procedure TZDbcPooledConnection.SetAutoCommit(Value: Boolean);
 begin
-  GetConnection.SetAutoCommit(Value);  
+  GetConnection.SetAutoCommit(Value);
 end;
 
 procedure TZDbcPooledConnection.SetCatalog(const Value: string);
 begin
   GetConnection.SetCatalog(Value);
+end;
+
+procedure TZDbcPooledConnection.SetRaiseWarnings(Value: Boolean);
+begin
+  GetConnection.SetRaiseWarnings(Value);
 end;
 
 procedure TZDbcPooledConnection.SetReadOnly(Value: Boolean);

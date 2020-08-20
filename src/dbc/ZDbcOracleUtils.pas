@@ -423,7 +423,9 @@ type
   private
     FParent: TZOraProcDescriptor_A;
     FConnection: IZOracleConnection;
+    {$IFDEF UNICODE}
     FRawCP: Word;
+    {$ENDIF}
 
     procedure InternalDescribeObject(Obj: POCIHandle);
     function InternalDescribe(const Name: RawByteString; _Type: UB4;
@@ -434,7 +436,7 @@ type
     procedure ConcatParentName(NotArgName: Boolean; {$IFDEF AUTOREFCOUNT}const{$ENDIF}
       SQLWriter: TZRawSQLStringWriter; var Result: RawByteString; const IC: IZIdentifierConvertor);
     constructor Create({$IFDEF AUTOREFCOUNT} const {$ENDIF}Parent: TZOraProcDescriptor_A;
-      Const Connection: IZOracleConnection; RawCP: Word);
+      Const Connection: IZOracleConnection{$IFDEF UNICODE}; RawCP: Word{$ENDIF UNICODE});
     destructor Destroy; override;
   public
     SchemaName, AttributeName, TypeName: RawByteString;
@@ -445,8 +447,9 @@ type
   TZOraProcDescriptor_W = class(TZOraProcDescriptor)
   private
     FParent: TZOraProcDescriptor_W;
+    {$IFNDEF UNICODE}
     FRawCP: Word;
-
+    {$ENDIF UNICODE}
     procedure InternalDescribeObject(Obj: POCIHandle);
     function InternalDescribe(const Name: UnicodeString; _Type: UB4;
       Owner: POCIHandle): Sword;
@@ -458,7 +461,7 @@ type
       SQLWriter: TZUnicodeSQLStringWriter; var Result: UnicodeString; const IC: IZIdentifierConvertor);
 
     constructor Create({$IFDEF AUTOREFCOUNT} const {$ENDIF}Parent: TZOraProcDescriptor_W;
-      Const Connection: IZOracleConnection; RawCP: Word);
+      Const Connection: IZOracleConnection{$IFNDEF UNICODE}; RawCP: Word{$ENDIF});
     destructor Destroy; override;
   public
     SchemaName, AttributeName, TypeName: UnicodeString;
@@ -1719,12 +1722,14 @@ begin
 end;
 
 constructor TZOraProcDescriptor_A.Create({$IFDEF AUTOREFCOUNT} const {$ENDIF}
-  Parent: TZOraProcDescriptor_A; Const Connection: IZOracleConnection;
-  RawCP: Word);
+  Parent: TZOraProcDescriptor_A; Const Connection: IZOracleConnection{$IFDEF UNICODE};
+  RawCP: Word{$ENDIF});
 begin
   inherited Create(Connection, nil, OCI_PTYPE_UNK, Connection.GetErrorHandle);
   fParent := Parent;
+  {$IFDEF UNICODE}
   FRawCP := RawCP;
+  {$ENDIF UNICODE}
   FConnection := Connection;
 end;
 
@@ -1817,7 +1822,7 @@ begin
     Status := FPlainDriver.OCIParamGet(arglst, OCI_DTYPE_PARAM, FOCIError, arg, N);
     if Status <> OCI_SUCCESS then
       FConnection.HandleErrorOrWarning(FOCIError, Status, lcOther, OCIAttrGetA, Self);
-    Param := TZOraProcDescriptor_A.Create(Self, FConnection, CP);
+    Param := TZOraProcDescriptor_A.Create(Self, FConnection{$IFDEF UNICODE}, CP{$ENDIF});
     Args.Add(Param);
     Param.SchemaName := SchemaName;
     { get the object type }
@@ -1859,7 +1864,7 @@ begin
             Param.csid := OCI_UTF16ID;
           end else if Consettings.ClientCodePage.Encoding <> ceUTF16 then begin
             Param.DataSize := Param.Precision * ConSettings.ClientCodePage.CharWidth;
-            Param.CodePage := ConSettings.ClientCodePage.CP;
+            Param.CodePage := CP;
           end else begin
             Param.DataSize := Param.Precision shl 1;
             Param.CodePage := zCP_UTF16;
@@ -1868,7 +1873,7 @@ begin
         end else if (Param.csform = SQLCS_NCHAR) or (Consettings.ClientCodePage.Encoding = ceUTF16) then begin
           Param.SQLType := stUnicodeStream;
           Param.CodePage := zCP_UTF16
-        end else Param.CodePage := ConSettings.ClientCodePage.CP;
+        end else Param.CodePage := CP;
         Param.csid := Param.GetUb2(OCI_ATTR_CHARSET_ID);
       end;
     end else
@@ -1997,12 +2002,14 @@ begin
 end;
 
 constructor TZOraProcDescriptor_W.Create({$IFDEF AUTOREFCOUNT} const {$ENDIF}
-  Parent: TZOraProcDescriptor_W; Const Connection: IZOracleConnection;
-  RawCP: Word);
+  Parent: TZOraProcDescriptor_W; Const Connection: IZOracleConnection{$IFNDEF UNICODE};
+  RawCP: Word{$ENDIF});
 begin
   inherited Create(Connection, nil, OCI_PTYPE_UNK, Connection.GetErrorHandle);
   fParent := Parent;
+  {$IFNDEF UNICODE}
   FRawCP := RawCP;
+  {$ENDIF UNICODE}
 end;
 
 procedure TZOraProcDescriptor_W.Describe(_Type: UB4;
@@ -2169,7 +2176,7 @@ begin
     Status := FPlainDriver.OCIParamGet(arglst, OCI_DTYPE_PARAM, FOCIError, arg, N);
     if Status <> OCI_SUCCESS then
       FConnection.HandleErrorOrWarning(FOCIError, Status, lcOther, 'OCIParamGet', Self);
-    Param := TZOraProcDescriptor_W.Create(Self, FConnection, CP);
+    Param := TZOraProcDescriptor_W.Create(Self, FConnection{$IFNDEF UNICODE}, CP{$ENDIF});
     Args.Add(Param);
     Param.SchemaName := SchemaName;
     { get the object type }

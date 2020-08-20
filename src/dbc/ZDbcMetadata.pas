@@ -83,7 +83,7 @@ type
                   {$ELSE} set of Char {$ENDIF};
 
   {** Defines a metadata resultset column definition. }
-  TZMetadataColumnDef = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
+  TZMetadataColumnDef = record
     Name: string;
     SQLType: TZSQLType;
     Length: Integer
@@ -772,7 +772,8 @@ var
 
 implementation
 
-uses ZFastCode, ZVariant, ZCollections, ZMessages, ZDbcProperties, ZDbcUtils;
+uses ZFastCode, ZVariant, ZCollections, ZMessages, ZEncoding,
+  ZDbcProperties, ZDbcUtils;
 
 { TZAbstractDatabaseInfo }
 
@@ -2318,6 +2319,13 @@ begin
       with ColumnInfo do begin
         ColumnLabel := ColumnsDefs[I].Name;
         ColumnType := ColumnsDefs[I].SQLType;
+        if ColumnType in [stString, stUnicodeString] then
+          if (FConSettings.ClientCodePage.Encoding = ceUTF16) then begin
+            ColumnType := TZSQLType(Ord(ColumnType)+1);
+            ColumnCodePage := zCP_UTF16;
+          end else if FConSettings.ClientCodePage.Encoding = ceUTF8 then
+            ColumnCodePage := zCP_UTF8
+          else ColumnCodePage := FConSettings.ClientCodePage.CP;
         Precision := ColumnsDefs[I].Length;
       end;
       ColumnsInfo.Add(ColumnInfo);
@@ -2422,8 +2430,7 @@ begin
   DestResultSet.SetConcurrency(rcUpdatable);
 
   Metadata := SrcResultSet.GetMetadata;
-  IsUTF16 :=  (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
-             (ConSettings^.ClientCodePage^.Encoding = ceUTF16);
+  IsUTF16 := (ConSettings^.ClientCodePage^.Encoding = ceUTF16);
 
   while SrcResultSet.Next do
   begin

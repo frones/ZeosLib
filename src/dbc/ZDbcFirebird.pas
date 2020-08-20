@@ -117,11 +117,11 @@ type
     FStatus: IStatus;
     FUtil: IUtil;
     FPlainDriver: TZFirebirdPlainDriver;
-    function ConstructConnectionString: String;
   protected
-    procedure InternalCreate; override;
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
+  public
+    procedure AfterConstruction; override;
   public { IZFirebirdConnection }
     function GetActiveTransaction: IZFirebirdTransaction;
     function GetAttachment: IAttachment;
@@ -183,10 +183,14 @@ uses ZFastCode, ZDbcFirebirdStatement, ZDbcInterbaseFirebirdMetadata, ZEncoding,
 function TZFirebirdDriver.Connect(const Url: TZURL): IZConnection;
 var iPlainDriver: IZPlainDriver;
     FirebirdPlainDriver: TZFirebirdPlainDriver;
+    S: String;
 begin
   iPlainDriver := GetPlainDriver(URL, True);
+  S := URL.Properties.Values[ConnProps_FirebirdAPI];
+  if S <> '' then
+    S := LowerCase(S);
   FirebirdPlainDriver := iPlainDriver.GetInstance as TZFirebirdPlainDriver;
-  if Assigned(FirebirdPlainDriver.fb_get_master_interface) then
+  if Assigned(FirebirdPlainDriver.fb_get_master_interface) and (S <> 'legacy') then
     Result := TZFirebirdConnection.Create(URL)
   else
     {$IFDEF ZEOS_DISABLE_INTERBASE}
@@ -219,34 +223,12 @@ begin
   end;
 end;
 
-{**
-  Constructs the connection string for the current connection
-}
-function TZFirebirdConnection.ConstructConnectionString: String;
-var Protocol: String;
+procedure TZFirebirdConnection.AfterConstruction;
 begin
-  Protocol := Info.Values[ConnProps_FBProtocol];
-  Protocol := LowerCase(Protocol);
-  if ((Protocol = 'inet') or (Protocol = 'wnet') or (Protocol = 'xnet')) then begin
-    Result := Protocol+'://';
-    if protocol = 'inet' then begin
-      Result := Result + HostName;
-      if Port <> 0 then
-        Result := Result + ':' + ZFastCode.IntToStr(Port);
-      Result := Result + '/' + Database
-    end else if Protocol = 'wnet' then begin
-      if HostName <> '' then
-        Result := Result + HostName;
-      Result := Result + '/' + Database
-    end else
-      Result := Result + Database;
-  end else if (Protocol <> 'local') and (HostName <> 'localhost') and (HostName <> '') then
-    if Port <> 0
-      then Result := HostName + '/' + ZFastCode.IntToStr(Port) + ':' + Database
-      else Result := HostName + ':' + Database
-    else if StrToBoolEx(Info.Values[ConnProps_CreateNewDatabase])
-      then Result := Database
-      else Result := '';
+  FPlainDriver := PlainDriver.GetInstance as TZFirebirdPlainDriver;
+  { set default sql dialect it can be overriden }
+  FMaster := FPlainDriver.fb_get_master_interface;
+  inherited AfterConstruction;
 end;
 
 {**
@@ -400,17 +382,6 @@ begin
   end;
 end;
 
-{**
-  Constructs this object and assignes the main properties.
-}
-procedure TZFirebirdConnection.InternalCreate;
-begin
-  FPlainDriver := PlainDriver.GetInstance as TZFirebirdPlainDriver;
-  inherited InternalCreate;
-  { set default sql dialect it can be overriden }
-  FMaster := FPlainDriver.fb_get_master_interface;
-end;
-
 function TZFirebirdConnection.IsFirebirdLib: Boolean;
 begin
   Result := True;
@@ -427,13 +398,14 @@ end;
 procedure TZFirebirdConnection.Open;
 var
   ti: IZFirebirdTransaction;
-  DPB{$IFDEF UNICODE},R{$ENDIF}: RawByteString;
-  DBCP, ConnectionString, CSNoneCP, CreateDB: String;
-  DBName: array[0..512] of AnsiChar;
-  P: PAnsiChar;
+  DPB: RawByteString;
+  DBCP, CSNoneCP, CreateDB: String;
+  ConnectionString: SQLString;
   DBCreated: Boolean;
   Statement: IZStatement;
+  {$IFDEF UNICODE}
   CP: Word;
+  {$ENDIF}
   TimeOut: Cardinal;
   procedure PrepareDPB;
   var
@@ -441,20 +413,22 @@ var
     P: PAnsiChar;
     L: LengthInt;
   begin
+    {$IFDEF UNICODE}
     if (Info.IndexOf('isc_dpb_utf8_filename') = -1)
     then CP := zOSCodePage
     else CP := zCP_UTF8;
+    {$ENDIF}
     {$IFDEF UNICODE}
     R := ZUnicodeToRaw(ConnectionString, CP);
     {$ELSE}
-    R := ZConvertStringToRawWithAutoEncode(ConnectionString, ConSettings^.CTRL_CP, CP);
+    R :=  ConnectionString;
     {$ENDIF}
-    DPB := GenerateDPB(FPlainDriver, Info, ConSettings, CP);
+    DPB := GenerateDPB(FPlainDriver, Info {$IFDEF UNICODE},CP{$ENDIF});
     P := Pointer(R);
-    L := Min(SizeOf(DBName)-1, Length(R){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
-    if P <> nil then
-      Move(P^, DBName[0], L);
-    AnsiChar((PAnsiChar(@DBName[0])+L)^) := AnsiChar(#0);
+    L := Min(1024, Length(R){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
+    if L > 0 then
+      Move(P^, FByteBuffer[0], L);
+    PByte(PAnsiChar(@FByteBuffer[0])+L)^ := 0;
   end;
 label reconnect, jmpTimeOuts;
 begin
@@ -478,7 +452,7 @@ begin
   if (CreateDB <> '') and StrToBoolEx(CreateDB) then begin
     DBCP := Info.Values[ConnProps_isc_dpb_set_db_charset];
     PrepareDPB;
-    FAttachment := FProvider.createDatabase(FStatus, @DBName[0], Smallint(Length(DPB)),Pointer(DPB));
+    FAttachment := FProvider.createDatabase(FStatus, @FByteBuffer[0], Smallint(Length(DPB)),Pointer(DPB));
     Info.Values[ConnProps_CreateNewDatabase] := ''; //prevent recreation on open
     DBCreated := True;
     FLogMessage := 'CREATE DATABASE "'+URL.Database+'" AS USER "'+ URL.UserName+'"';
@@ -495,14 +469,8 @@ reconnect:
     FStatus := FMaster.getStatus;
   if FAttachment = nil then begin
     PrepareDPB;
-    FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);;
-    {$IFDEF UNICODE}
-    R := ZUnicodeToRaw(URL.Database, CP);
-    P := Pointer(R);
-    {$ELSE}
-    P := Pointer(URL.Database);
-    {$ENDIF}
-    FAttachment := FProvider.attachDatabase(FStatus, PAnsichar(P), Length(DPB), Pointer(DPB));
+    FLogMessage := Format(SConnect2AsUser, [ConnectionString, URL.UserName]);;
+    FAttachment := FProvider.attachDatabase(FStatus, @FByteBuffer[0], Length(DPB), Pointer(DPB));
     if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
       HandleErrorOrWarning(lcConnect, PARRAY_ISC_STATUS(FStatus.getErrors),
         FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
@@ -511,12 +479,12 @@ reconnect:
       DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
   end;
   { Dialect could have changed by isc_dpb_set_db_SQL_dialect command }
-  DBName[0] := AnsiChar(isc_info_db_SQL_Dialect);
-  FAttachment.getInfo(FStatus, 1, @DBName[0], SizeOf(DBName)-1, @DBName[1]);
+  FByteBuffer[0] := isc_info_db_SQL_Dialect;
+  FAttachment.getInfo(FStatus, 1, @FByteBuffer[0], SizeOf(TByteBuffer)-1, @FByteBuffer[1]);
   if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
     HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.getInfo', Self);
-  if DBName[1] = AnsiChar(isc_info_db_SQL_Dialect)
-  then FDialect := ReadInterbase6Number(FPlainDriver, DBName[2])
+  if FByteBuffer[1] = isc_info_db_SQL_Dialect
+  then FDialect := ReadInterbase6Number(FPlainDriver, FByteBuffer[2])
   else FDialect := SQL_DIALECT_V5;
   inherited SetAutoCommit(AutoCommit or (Info.IndexOf(TxnProps_isc_tpb_autocommit) <> -1));
   FRestartTransaction := not AutoCommit;

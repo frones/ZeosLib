@@ -275,7 +275,7 @@ begin
     Query.SQL.Text := 'select p_name ||'',''|| p_name from people';
     Query.Open;
     CheckEquals(1, Query.FieldCount);
-    CheckStringFieldType(Query.Fields[0].DataType, Connection.ControlsCodePage);
+    CheckStringFieldType(Query.Fields[0], Connection.ControlsCodePage);
     CheckEquals('Vasia Pupkin,Vasia Pupkin', Query.Fields[0].AsString, 'The SQLite concat');
     Query.Next;
     CheckEquals('Andy Karto,Andy Karto', Query.Fields[0].AsString, 'The SQLite concat');
@@ -320,24 +320,20 @@ begin
   Result := pl_all_sqlite;
 end;
 
-{**
-  NUMBER must be froat
-}
 procedure ZTestCompSQLiteBugReportMBCs.Mantis248_TestNonASCIICharSelect;
 const TestRowID = 248;
 var
   Query: TZQuery;
   RowCounter: Integer;
   I: Integer;
-  ConSettings: PZConSettings;
   CP: Word;
   procedure InsertValues(TestString: UnicodeString);
   begin
     Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
-    Query.ParamByName('s_char').AsString := GetDBTestString(TestString, ConSettings);
-    Query.ParamByName('s_varchar').AsString := GetDBTestString(TestString, ConSettings);
-    Query.ParamByName('s_nchar').AsString := GetDBTestString(TestString, ConSettings);
-    Query.ParamByName('s_nvarchar').AsString := GetDBTestString(TestString, ConSettings);
+    Query.ParamByName('s_char').AsString := GetDBTestString(TestString, ttParam);
+    Query.ParamByName('s_varchar').AsString := GetDBTestString(TestString, ttParam);
+    Query.ParamByName('s_nchar').AsString := GetDBTestString(TestString, ttParam);
+    Query.ParamByName('s_nvarchar').AsString := GetDBTestString(TestString, ttParam);
 
     Query.ExecSQL;
     inc(RowCounter);
@@ -345,25 +341,10 @@ var
 
   procedure CheckColumnValues(const TestString: UnicodeString);
   begin
-    {$IFDEF UNICODE}
-    CheckEquals(TestString, Query.FieldByName('s_char').AsString);
-    CheckEquals(TestString, Query.FieldByName('s_varchar').AsString);
-    CheckEquals(TestString, Query.FieldByName('s_nchar').AsString);
-    CheckEquals(TestString, Query.FieldByName('s_nvarchar').AsString);
-    {$ELSE}
-    If Connection.ControlsCodePage = cCP_UTF16
-    then CheckEquals(TestString, Query.FieldByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_char')
-    else CheckEquals(ZUnicodeToString(TestString, CP), Query.FieldByName('s_char').AsString, 's_char');
-    If Connection.ControlsCodePage = cCP_UTF16
-    then CheckEquals(TestString, Query.FieldByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_varchar')
-    else CheckEquals(ZUnicodeToString(TestString, CP), Query.FieldByName('s_varchar').AsString, 's_varchar');
-    If Connection.ControlsCodePage = cCP_UTF16
-    then CheckEquals(TestString, Query.FieldByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_nchar')
-    else CheckEquals(ZUnicodeToString(TestString, CP), Query.FieldByName('s_nchar').AsString, 's_nchar');
-    If Connection.ControlsCodePage = cCP_UTF16
-    then CheckEquals(TestString, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 's_nvarchar')
-    else CheckEquals(ZUnicodeToString(TestString, CP), Query.FieldByName('s_nvarchar').AsString, 's_nvarchar');
-    {$ENDIF}
+    CheckEquals(TestString, Query.FieldByName('s_char'));
+    CheckEquals(TestString, Query.FieldByName('s_varchar'));
+    CheckEquals(TestString, Query.FieldByName('s_nchar'));
+    CheckEquals(TestString, Query.FieldByName('s_nvarchar'));
   end;
 begin
 //??  if SkipForReason(srClosedBug) then Exit;
@@ -371,17 +352,11 @@ begin
   Query := CreateQuery;
   Connection.Connect;
   Check(Connection.Connected);
-  ConSettings := Connection.DbcConnection.GetConSettings;
   try
     RowCounter := 0;
-    if ConSettings.AutoEncode and not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_WIN1251) or (ZOSCodePage = zcp_DOS855) or (ZOSCodePage = zCP_KOI8R)) then
-      Exit;
-    if ConSettings.AutoEncode
-    then CP := ConSettings.CTRL_CP
-    else CP := ConSettings.ClientCodePage.CP;
-    //eh the russion dull text can no be mapped to other charsets then:
-    if not ((CP = zCP_UTF8) or (CP = zCP_WIN1251) or (CP = zcp_DOS855) or (CP = zCP_KOI8R))
-      {add some more if you run into same issue !!} then
+    CP := GetTransliterateCodePage(Connection.ControlsCodePage);
+    if (CP <> zCP_UTF8) and (CP <> zCP_WIN1251) and (CP <> zcp_DOS855) and (CP <> zCP_KOI8R) and
+       (Connection.ControlsCodePage <> cCP_UTF16) then
       Exit;
     Query.SQL.Text := 'Insert into string_values (s_id, s_char, s_varchar, s_nchar, s_nvarchar)'+
       ' values (:s_id, :s_char, :s_varchar, :s_nchar, :s_nvarchar)';
@@ -394,34 +369,53 @@ begin
     Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
     Query.Open;
     CheckEquals(True, Query.RecordCount = 5);
-
-    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToString(Str2, zCP_UTF8)+'%''';
+    {$IFDEF UNICODE}
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+Str2+'%''';
+    {$ELSE}
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToRaw(Str2, zCP_UTF8)+'%''';
+    {$ENDIF}
     Query.Open;
     CheckEquals(True, Query.RecordCount = 1);
     CheckColumnValues(Str2);
 
-    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToString(Str3, zCP_UTF8)+'%''';
+    {$IFDEF UNICODE}
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+Str3+'%''';
+    {$ELSE}
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToRaw(Str3, zCP_UTF8)+'%''';
+    {$ENDIF}
     Query.Open;
     CheckEquals(True, Query.RecordCount = 2);
     CheckColumnValues(Str2);
     Query.Next;
     CheckColumnValues(Str3);
 
-    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToString(Str4, zCP_UTF8)+'%''';
+    {$IFDEF UNICODE}
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+Str4+'%''';
+    {$ELSE}
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToRaw(Str4, zCP_UTF8)+'%''';
+    {$ENDIF}
     Query.Open;
     CheckEquals(True, Query.RecordCount = 2);
     CheckColumnValues(Str2);
     Query.Next;
     CheckColumnValues(Str4);
 
-    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToString(Str5, zCP_UTF8)+'%''';
+    {$IFDEF UNICODE}
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+Str5+'%''';
+    {$ELSE}
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToRaw(Str5, zCP_UTF8)+'%''';
+    {$ENDIF}
     Query.Open;
     CheckEquals(True, Query.RecordCount = 2);
     CheckColumnValues(Str2);
     Query.Next;
     CheckColumnValues(Str5);
 
-    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToString(Str6, zCP_UTF8)+'%''';
+    {$IFDEF UNICODE}
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+Str6+'%''';
+    {$ELSE}
+    Query.SQL.Text := 'select * from string_values where s_char like ''%'+ZUnicodeToRaw(Str6, zCP_UTF8)+'%''';
+    {$ENDIF}
     Query.Open;
     CheckEquals(True, Query.RecordCount = 2);
     CheckColumnValues(Str2);

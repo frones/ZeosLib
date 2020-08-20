@@ -535,11 +535,7 @@ begin
       if Value.IsClob then begin
         P := RefCntLob.GetPAnsiChar(CP, R, Len);
         FRawTemp := SQLQuotedStr(P, Len, AnsiChar(#39))
-      end else begin
-        P := Value.GetBuffer(R, Len);
-        FRawTemp := GetValidatedAnsiStringFromBuffer(P, Len, ConSettings, CP);
-        FRawTemp := SQLQuotedStr(FRawTemp, AnsiChar(#39));
-      end;
+      end else raise CreateConversionError(Index, stBinaryStream, stAsciiStream);
       BindList.Put(Index, stAsciiStream, FRawTemp, CP);
     end else begin
       P := RefCntLob.GetBuffer(R, Len);
@@ -774,14 +770,8 @@ begin
   if (FClientCP = zCP_UTF8) or FIsNCharIndex[ParameterIndex]
   then CP := zCP_UTF8
   else CP := FClientCP;
-  if ConSettings.AutoEncode then begin
-    FRawTemp := ConSettings.ConvFuncs.ZStringToRaw(Value, ConSettings.CTRL_CP, CP);
-    P := Pointer(FRawTemp);
-    L := Length(FRawTemp);
-  end else begin
-    P := Pointer(Value);
-    L := Length(Value);
-  end;
+  P := Pointer(Value);
+  L := Length(Value);
   FRawTemp := SQLQuotedStr(P, L, #39);
   BindList.Put(ParameterIndex, stString, FRawTemp, CP);
   {$ENDIF}
@@ -971,8 +961,8 @@ begin
         {$IFDEF UNICODE}
         ColumnInfo.ColumnLabel := PRawToUnicode(Data, StrLen(Data), FClientCP);
         {$ELSE}
-        ZSetString(PAnsiChar(Data), StrLen(Data), fRawTemp);
-        ColumnInfo.ColumnLabel := ConSettings.ConvFuncs.ZRawToString(fRawTemp, FClientCP, ConSettings.CTRL_CP);
+        ZSetString(PAnsiChar(Data), StrLen(Data), fRawTemp{$IFDEF WITH_RAWBYTESTRING}, fClientCP{$ENDIF});
+        ColumnInfo.ColumnLabel := fRawTemp;
         {$ENDIF}
         RetType := FPLainDriver.dbRetType(FHandle, N);
         Data := FPlainDriver.dbRetData(FHandle, N);
@@ -1201,7 +1191,11 @@ procedure TZDBLIBPreparedRPCStatement.RegisterParameter(ParameterIndex: Integer;
   PrecisionOrSize, Scale: LengthInt);
 begin
   inherited;
-  FParamNames[ParameterIndex] := ConSettings.ConvFuncs.ZStringToRaw(Name, ConSettings.CTRL_CP, FClientCP);
+  {$IFDEF UNICODE}
+  FParamNames[ParameterIndex] := ZUnicodeToRaw(Name, FClientCP);
+  {$ELSE}
+  FParamNames[ParameterIndex] := Name;
+  {$ENDIF}
 end;
 
 {$IFNDEF NO_ANSISTRING}
@@ -1394,9 +1388,7 @@ begin
   {$IFDEF UNICODE}
   SetUnicodeString(ParameterIndex, Value);
   {$ELSE}
-  if ConSettings.AutoEncode
-  then SetRawByteString(ParameterIndex, ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings.CTRL_CP, FClientCP))
-  else SetRawByteString(ParameterIndex, Value)
+  SetRawByteString(ParameterIndex, Value)
   {$ENDIF}
 end;
 

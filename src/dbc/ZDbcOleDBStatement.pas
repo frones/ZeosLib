@@ -439,20 +439,19 @@ begin
           @FRowsAffected,@FMultipleResults);
         if Failed(Status) then
           FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-            WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+            SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
         if Assigned(FMultipleResults) then begin
           Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
             IID_IRowset, @FRowsAffected, @FRowSet);
           if Failed(Status) then
-            FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
-              {$IFDEF DEBUG}'IMultipleResults.GetResult'{$ELSE}''{$ENDIF},
-              IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
+            FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+              SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
         end;
       end else begin
         Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@FRowSet);
         if Failed(Status) then
           FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-            WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+            SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
       end;
       if DriverManager.HasLoggingListener then
          DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
@@ -498,7 +497,7 @@ begin
       @FRowsAffected,@FMultipleResults);
     if Failed(Status) then
       FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-        WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
     if Assigned(FMultipleResults) then begin
       Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
         DB_NULLGUID, @FRowsAffected, nil);
@@ -511,7 +510,7 @@ begin
     Status := FCommand.Execute(nil, DB_NULLGUID,FDBParams,@FRowsAffected,nil);
     if Failed(Status) then
       FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-        WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
   end;
   if DriverManager.HasLoggingListener then
      DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
@@ -571,7 +570,7 @@ begin
         FDBParams,@FRowsAffected,@FMultipleResults);
       if Failed(Status) then
         FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-          WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+          SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
       if Assigned(FMultipleResults) then begin
         Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
           IID_IRowset, @FRowsAffected, @FRowSet);
@@ -584,7 +583,7 @@ begin
       Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@FRowSet);
       if Failed(Status) then
         FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-          WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+          SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
     end;
     if DriverManager.HasLoggingListener then
        DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
@@ -670,7 +669,7 @@ begin
     Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@RowSet);
     if Failed(Status) then
       FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-        WSQL, IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
+        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
     Result := Assigned(RowSet);
     if DriverManager.HasLoggingListener then
        DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
@@ -701,7 +700,7 @@ begin
         try
           Status := CommandPrepare.UnPrepare;
           if Failed(Status) then
-            FOleDBConnection.HandleErrorOrWarning(Status, lcUnprepStmt, WSQL,
+            FOleDBConnection.HandleErrorOrWarning(Status, lcUnprepStmt, SQL,
               IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
           if DriverManager.HasLoggingListener then
             LogPrepStmtMessage(lcUnprepStmt);
@@ -810,9 +809,7 @@ begin
       if (SQLType in [stString, stUnicodeString]) then
       case ZArray.VArrayVariantType of
         {$IFNDEF UNICODE}
-        vtString: if ConSettings^.AutoEncode
-                  then W1 := zCP_None
-                  else W1 := ConSettings^.CTRL_CP;
+        vtString: W1 := GetW2A2WConversionCodePage(ConSettings);
         {$ENDIF}
         vtAnsiString: W1 := ZOSCodePage;
         vtUTF8String: W1 := zCP_UTF8;
@@ -1189,8 +1186,7 @@ begin
     stString, stUnicodeString:
       case Arr.VArrayVariantType of
         {$IFNDEF UNICODE}
-        vtString:   if not ConSettings^.AutoEncode then
-                      CP := ConSettings^.CTRL_CP;
+        vtString:   CP := GetW2A2WConversionCodePage(ConSettings);
         {$ENDIF}
         vtUTF8String: CP := zCP_UTF8;
         vtAnsiString: CP := ZOSCodePage;
@@ -1524,7 +1520,7 @@ jmpRecreate:
       end else if Status = DTS_E_OLEDBERROR then begin
         fDEFERPREPARE := True;
         goto jmpRecreate;
-      end else FOleDBConnection.HandleErrorOrWarning(Status, lcPrepStmt, WSQL,
+      end else FOleDBConnection.HandleErrorOrWarning(Status, lcPrepStmt, SQL,
         IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
     end;
     //DBInfo := Connection.GetMetadata.GetDatabaseInfo;
@@ -1815,7 +1811,7 @@ begin
           PPointer(Data)^ := Value.GetPAnsiChar(FClientCP, FRawTemp, Len);
           DBLENGTH^ := Len;
         end else
-Fix_CLob: SetBLob(Index, stAsciiStream, CreateRawCLobFromBlob(Value, ConSettings, FOpenLobStreams));
+Fix_CLob: raise CreateConversionError(Index, stBinaryStream, stAsciiStream);
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
               Value.SetCodePageTo(zCP_UTF16);
               PPointer(Data)^ := Value.GetPWideChar(fUniTemp, Len);
@@ -2851,9 +2847,7 @@ begin
   {$IFDEF UNICODE}
   SetUnicodeString(Index, Value);
   {$ELSE}
-  if ConSettings^.AutoEncode
-  then BindRaw(Index, Value, zCP_NONE)
-  else BindRaw(Index, Value, ConSettings^.CTRL_CP);
+  BindRaw(Index, Value, GetW2A2WConversionCodePage(ConSettings));
   {$ENDIF}
 end;
 

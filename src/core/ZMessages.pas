@@ -180,6 +180,7 @@ const
   function SUnsupportedByDriver   : String;
 
   function SConnectionIsNotOpened: String;
+  function SConnectionIsOpened: String;
   function SInvalidOpInAutoCommit: String;
   function SInvalidOpInNonAutoCommit: String;
   function SInvalidOpPrepare: String;
@@ -354,6 +355,7 @@ var
   SUnsupportedByDriver   : String;
 
   SConnectionIsNotOpened: String;
+  SConnectionIsOpened: String;
   SInvalidOpInAutoCommit: String;
   SInvalidOpInNonAutoCommit: String;
   SInvalidOpPrepare: String;
@@ -457,6 +459,8 @@ var
 
 implementation
 
+uses ZCompatibility;
+
 resourcestring
   {$IFNDEF WITH_RTLCONSTS_SInvalidGuidArray}
     cInvalidGuidArray = 'Byte-Array or Buffer for GUID must have exact %s Bytes';
@@ -472,8 +476,8 @@ resourcestring
 {$IFDEF FRENCH}
   cSSQLError1 = 'Erreur SQL: %s';
   cSSQLError2 = 'Erreur SQL: %s Code: %d';
-  cSSQLError3 = 'Erreur SQL: %s Code: %d SQL: %s';
-  cSSQLError4 = 'Erreur SQL: %s Code: %d Message: %s';
+  cSSQLError3 = 'Erreur SQL: %s '+LineEnding+'Code: %d SQL: %s';
+  cSSQLError4 = 'Erreur SQL: %s '+LineEnding+'Code: %d Message: %s';
 
   cSListCapacityError = 'Capacitй de liste hors limite (%d)';
   cSListCountError = 'Compteur de liste (count) hors limite (%d)';
@@ -530,6 +534,7 @@ resourcestring
   cSUnsupportedByDriver    = 'Le driver d''origine ne supporte pas cette fonctionnalitй: [%s]';
 
   cSConnectionIsNotOpened = 'Connexion non encore ouverte';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit = 'Opйration non valide en mode AutoCommit';
   cSInvalidOpInNonAutoCommit = 'Opйration non valide si le mode n''est pas AutoCommit';
   cSInvalidOpPrepare = 'Prйparer une transaction n''est possible qu''en en dйmarrant une (Starttransaction) d''abord (!)';
@@ -635,8 +640,8 @@ resourcestring
 {$IFDEF PORTUGUESE}
   cSSQLError1 = 'Erro SQL: %s';
   cSSQLError2 = 'Erro SQL: %s Cуdigo: %d';
-  cSSQLError3 = 'Erro SQL: %s Cуdigo: %d SQL: %s';
-  cSSQLError4 = 'Erro SQL: %s Cуdigo: %d Mensagem: %s';
+  cSSQLError3 = 'Erro SQL: %s '+LineEnding+'Cуdigo: %d SQL: %s';
+  cSSQLError4 = 'Erro SQL: %s '+LineEnding+'Cуdigo: %d Mensagem: %s';
 
   cSListCapacityError = 'Capacidade da Lista fora do limite (%d)';
   cSListCountError = 'Contagem da Lista fora do limite (%d)';
@@ -693,6 +698,7 @@ resourcestring
   cSUnsupportedByDriver    = 'O Driver nгo suporta este recurso nativamente: [%s]';
 
   cSConnectionIsNotOpened = 'Conexгo ainda nгo estб aberta.';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit = 'Operaзгo invбlida no modo AutoCommit.';
   cSInvalidOpInNonAutoCommit = 'Operaзгo invбlida quando o modo AutoCommit й False.';
   cSInvalidOpPrepare = 'Prepare transaction somente й possнvel apуs comandar StartTransaction';
@@ -795,8 +801,8 @@ resourcestring
 {$IFDEF DUTCH}
   cSSQLError1 = 'SQL Fout: %s';
   cSSQLError2 = 'SQL Fout: %s Code: %d';
-  cSSQLError3 = 'SQL Fout: %s Code: %d SQL: %s';
-  cSSQLError4 = 'SQL Fout: %s Code: %d Bericht: %s';
+  cSSQLError3 = 'SQL Fout: %s '+LineEnding+'Code: %d SQL: %s';
+  cSSQLError4 = 'SQL Fout: %s '+LineEnding+'Code: %d Bericht: %s';
 
   cSListCapacityError = 'Lijst capaciteit buiten bereik (%d)';
   cSListCountError = 'Lijst aantal buiten bereik (%d)';
@@ -853,6 +859,7 @@ resourcestring
   cSUnsupportedByDriver    = 'De driver ondersteunt deze functie niet: [%s]';
 
   cSConnectionIsNotOpened = 'Verbinding is niet gemaakt.';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit = 'Ongeldige operatie in AutoCommit mode.';
   cSInvalidOpInNonAutoCommit = 'Ongeldige operatie in non AutoCommit mode.';
   cSInvalidOpPrepare = 'Transactie voorbereiden is enkel mogelijk bij de eerste aanroep van Starttransaction!';
@@ -958,8 +965,8 @@ resourcestring
 {$IFDEF GERMAN}
   cSSQLError1 = 'SQL Fehler: %s';
   cSSQLError2 = 'SQL Fehler: %s Code: %d';
-  cSSQLError3 = 'SQL Fehler: %s Code: %d SQL: %s';
-  cSSQLError4 = 'SQL Fehler: %s Code: %d Meldung: %s';
+  cSSQLError3 = 'SQL Fehler: %s '+LineEnding+'Code: %d SQL: %s';
+  cSSQLError4 = 'SQL Fehler: %s '+LineEnding+'Code: %d Meldung: %s';
 
   cSListCapacityError = 'Die Listenkapazitдt ьbersteigt die definierte Grenze (%d)';
   cSListCountError = 'Der Listenzдhler ist auЯerhalb seiner definierten Grenzen (%d)';
@@ -1016,6 +1023,7 @@ resourcestring
   cSUnsupportedProtocol = 'Nicht unterstьtztes Protokoll: %s';
 
   cSConnectionIsNotOpened = 'Die Verbindung zur Datenbank ist noch nicht hergestellt';
+  cSConnectionIsOpened = 'Die Verbindung zur Datenbank ist bereits hergestellt';
   cSInvalidOpInAutoCommit = 'Ungьltige Operation im AUTOCOMMIT-Modus';
   cSInvalidOpInNonAutoCommit = 'Ungьltige Operation auЯerhalb des AUTOCOMMIT-Modus';
   cSInvalidOpPrepare = 'Transaktion vorzubereiten ist nur beim ersten Aufruf von Starttransaction mцglich!';
@@ -1119,8 +1127,8 @@ resourcestring
 {$IFDEF SPANISH} //Spanish translations
   cSSQLError1 = 'Error SQL: %s';
   cSSQLError2 = 'Error SQL: %s Cуdigo: %d';
-  cSSQLError3 = 'Error SQL: %s Cуdigo: %d SQL: %s';
-  cSSQLError4 = 'Error SQL: %s Cуdigo: %d Mensage: %s';
+  cSSQLError3 = 'Error SQL: %s '+LineEnding+'Cуdigo: %d SQL: %s';
+  cSSQLError4 = 'Error SQL: %s '+LineEnding+'Cуdigo: %d Mensage: %s';
 
   cSListCapacityError = 'List capacity fuera de lнmites (%d)';
   cSListCountError = 'List count fuera de lнmites (%d)';
@@ -1177,6 +1185,7 @@ resourcestring
   cSUnsupportedByDriver    = 'Translate: Driver can not support this feature natively: [%s]';
 
   cSConnectionIsNotOpened = 'La conexiуn no ha sido abierta todavнa';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit = 'Operaciуn invбlida en modo AutoCommit';
   cSInvalidOpInNonAutoCommit = 'Operaciуn invбlida en modo No-AutoCommit';
   cSInvalidOpPrepare = 'Translate : Prepare transaction only possible on matching first(!) Starttransaction';
@@ -1282,8 +1291,8 @@ resourcestring
 
   SSQLError1 = 'SQL Eroare: %s';
   cSSQLError2 = 'SQL Eroare: %s Cod: %d';
-  cSSQLError3 = 'SQL Eroare: %s Cod: %d SQL: %s';
-  cSSQLError4 = 'SQL Eroare: %s Cod: %d Mesaj: %s';
+  cSSQLError3 = 'SQL Eroare: %s '+LineEnding+'Cod: %d SQL: %s';
+  cSSQLError4 = 'SQL Eroare: %s '+LineEnding+'Cod: %d Mesaj: %s';
 
   cSListCapacityError = 'Capacitatea listei este оn afara limitelor (%d)';
   cSListCountError = 'Contorul listei este оn afara limitelor (%d)';
@@ -1340,6 +1349,7 @@ resourcestring
   cSUnsupportedByDriver    = 'Driver nu poate suporta aceastг facilitate : [%s]';
 
   cSConnectionIsNotOpened = 'Conexiune nu este deschisг incг';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit = 'Operaюie invalidг оn modul AutoCommit';
   cSInvalidOpInNonAutoCommit = 'Operaюie invalidг оn modul non AutoCommit ';
   cSInvalidOpPrepare = 'Prepare transaction only possible on matching first(!) Starttransaction';
@@ -1441,8 +1451,8 @@ resourcestring
   {$IFDEF INDONESIAN}
   cSSQLError1 = 'Kesalahan SQL: %s';
   cSSQLError2 = 'Kesalahan SQL: %s Kode: %d';
-  cSSQLError3 = 'Kesalahan SQL: %s Kode: %d SQL: %s';
-  cSSQLError4 = 'Kesalahan SQL: %s Kode: %d Pesan: %s';
+  cSSQLError3 = 'Kesalahan SQL: %s '+LineEnding+'Kode: %d SQL: %s';
+  cSSQLError4 = 'Kesalahan SQL: %s '+LineEnding+'Kode: %d Pesan: %s';
 
   cSListCapacityError = 'Kapasitas List diluar jangkauan (%d)';
   cSListCountError = 'Jumlah List diluar jangkauan (%d)';
@@ -1499,6 +1509,7 @@ resourcestring
   cSUnsupportedByDriver    = 'Driver tidak mendukung fitur: [%s]';
 
   cSConnectionIsNotOpened = 'Koneksi belum dibuka';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit = 'Operasi tidak valid pada mode AUTOCOMMIT';
   cSInvalidOpInNonAutoCommit = 'Operasi tidak valid pada mode non AUTOCOMMIT';
   cSInvalidOpPrepare = 'Persiapan transaksi hanya mungkin pada (!) Starttransaction pertama';
@@ -1603,8 +1614,8 @@ resourcestring
 {$IFDEF RUSSIAN}
   cSSQLError1                               = 'Ошибка в SQL выражении: %s';
   cSSQLError2                               = 'Ошибка в SQL выражении: %s Код ошибки: %d';
-  cSSQLError3                               = 'Ошибка в SQL выражении: %s Код ошибки: %d SQL: %s';
-  cSSQLError4                               = 'Ошибка в SQL выражении: %s Код ошибки: %d Сообщение: %s';
+  cSSQLError3                               = 'Ошибка в SQL выражении: %s '+LineEnding+'Код ошибки: %d SQL: %s';
+  cSSQLError4                               = 'Ошибка в SQL выражении: %s '+LineEnding+'Код ошибки: %d Сообщение: %s';
 
   cSListCapacityError                       = 'Размер списка вышел за границы (%d)';
   cSListCountError                          = 'Счетчик списка вышел за границы (%d)';
@@ -1661,6 +1672,7 @@ resourcestring
   cSUnsupportedByDriver                     = 'Драйвер не поддерживает данную возможность : [%s]';
 
   cSConnectionIsNotOpened                   = 'Подключение не открыто';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit                   = 'Неверная операция в режиме автоподтверждения (AutoCommit)';
   cSInvalidOpInNonAutoCommit                = 'Неверная операция в режиме НЕ автоподтверждения (non AutoCommit)';
   cSInvalidOpPrepare                        = 'Подготовка транзанкции возможна только при первом использовании(!) StartTransaction';
@@ -1766,8 +1778,8 @@ resourcestring
 {$IFDEF CZECH}
   cSSQLError1 = 'SQL chyba: %s';
   cSSQLError2 = 'SQL chyba: %s kуd: %d';
-  cSSQLError3 = 'SQL chyba: %s kуd: %d SQL: %s';
-  cSSQLError4 = 'SQL chyba: %s kуd: %d Hlбљenн: %s';
+  cSSQLError3 = 'SQL chyba: %s '+LineEnding+'kуd: %d SQL: %s';
+  cSSQLError4 = 'SQL chyba: %s '+LineEnding+'kуd: %d Hlбљenн: %s';
 
   cSListCapacityError = 'Kapacita seznamu je mimo rozsah (%d)';
   cSListCountError = 'Poиet seznamщ je mimo rozsah (%d)';
@@ -1824,6 +1836,7 @@ resourcestring
   cSUnsupportedByDriver    = 'Ovladaи nepodporuje tuto vlastnost: [%s]';
 
   cSConnectionIsNotOpened = 'Spojenн nenн otevшeno';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit = 'Nesprбvnб operace v mуdu AutoCommit';
   cSInvalidOpInNonAutoCommit = 'Nesprбvnб operace v mуdu NE AutoCommit';
   cSInvalidOpPrepare = '"Prepare" transakce je moћnй pouze jako prvnн! Starttransaction';
@@ -1931,8 +1944,8 @@ resourcestring
 {$IFDEF POLISH}
   cSSQLError1 = 'Bі№d SQL: %s';
   cSSQLError2 = 'Bі№d SQL: %s Kod: %d';
-  cSSQLError3 = 'Bі№d SQL: %s Kod: %d SQL: %s';
-  cSSQLError4 = 'Bі№d SQL: %s Kod: %d Komunikat: %s';
+  cSSQLError3 = 'Bі№d SQL: %s '+LineEnding+'Kod: %d SQL: %s';
+  cSSQLError4 = 'Bі№d SQL: %s '+LineEnding+'Kod: %d Komunikat: %s';
 
   cSListCapacityError = 'Przekroczona pojemnoњж listy (%d)';
   cSListCountError = 'Licznik listy poza zakresem (%d)';
@@ -1989,6 +2002,7 @@ resourcestring
   cSUnsupportedByDriver    = 'Sterownik nie obsіuguje tej wіaњciwoњci natywnie: [%s]';
 
   cSConnectionIsNotOpened = 'Jeszcze nie nawi№zano poі№czenia';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit = 'Bікdna operacja w trybie AutoCommit';
   cSInvalidOpInNonAutoCommit = 'Bікdna operacja przy wyі№czonym AutoCommit';
   cSInvalidOpPrepare = 'Przygotowanie transakcji moїliwe jest tylko przy pierwszym(!) Starttransaction';
@@ -2093,8 +2107,8 @@ resourcestring
 
   cSSQLError1 = 'SQL Error: %s';
   cSSQLError2 = 'SQL Error: %s Code: %d';
-  cSSQLError3 = 'SQL Error: %s Code: %d SQL: %s';
-  cSSQLError4 = 'SQL Error: %s Code: %d Message: %s';
+  cSSQLError3 = 'SQL Error: %s '+LineEnding+'Code: %d SQL: %s';
+  cSSQLError4 = 'SQL Error: %s '+LineEnding+'Code: %d Message: %s';
 
   cSListCapacityError = 'List capacity out of bounds (%d)';
   cSListCountError = 'List count out of bounds (%d)';
@@ -2151,6 +2165,7 @@ resourcestring
   cSUnsupportedByDriver    = 'Driver can not support this feature natively: [%s]';
 
   cSConnectionIsNotOpened = 'Connection is not opened yet';
+  cSConnectionIsOpened = 'Translate: Connection is opened';
   cSInvalidOpInAutoCommit = 'Invalid operation in AutoCommit mode';
   cSInvalidOpInNonAutoCommit = 'Invalid operation in non AutoCommit mode';
   cSInvalidOpPrepare = 'Prepare transaction only possible on matching first(!) Starttransaction';
@@ -2576,6 +2591,11 @@ end;
 function SConnectionIsNotOpened: String;
 begin
   Result := ConvertZMessageToRaw(cSConnectionIsNotOpened);
+end;
+
+function SConnectionIsOpened: String;
+begin
+  Result := ConvertZMessageToRaw(cSConnectionIsOpened);
 end;
 
 function SInvalidOpInAutoCommit: String;
@@ -3082,6 +3102,7 @@ begin
   SUnsupportedByDriver := cSUnsupportedByDriver;
 
   SConnectionIsNotOpened := cSConnectionIsNotOpened;
+  SConnectionIsOpened := cSConnectionIsOpened;
   SInvalidOpInAutoCommit := cSInvalidOpInAutoCommit;
   SInvalidOpInNonAutoCommit := cSInvalidOpInNonAutoCommit;
   SInvalidOpPrepare := cSInvalidOpPrepare;

@@ -1814,7 +1814,7 @@ var
       else begin
         if (SQLType <> stBinaryStream) then begin
           if not Supports(Lob, IZCLob, CLob)
-          then TInterfaceDynArray(Value)[i] := CreateRawCLobFromBlob(Lob, ConSettings, FOpenLobStreams)
+          then raise CreateConversionError(ParameterIndex, stBinaryStream, stAsciiStream)
           else CLob.SetCodePageTo(ClientCP);
         end;
         P := Lob.GetBuffer(FRawTemp, L);
@@ -1848,15 +1848,6 @@ var
     {$IFDEF WITH_VAR_INIT_WARNING}ClientStrings := nil;{$ENDIF}
     SetLength(ClientStrings, BatchDMLArrayCount);
     case VariantType of
-      {$IFNDEF UNICODE}
-      vtString: begin
-          for I := 0 to BatchDMLArrayCount -1 do begin
-            ClientStrings[i] := ConSettings^.ConvFuncs.ZStringToRaw(TStringDynArray(Value)[i], ConSettings^.CTRL_CP, ClientCP);
-            BufferSize := BufferSize + Cardinal(Length(ClientStrings[i]))+1;
-          end;
-          goto move_from_temp;
-        end;
-      {$ENDIF}
       {$IFNDEF NO_ANSISTRING}
       vtAnsiString: begin
           for I := 0 to BatchDMLArrayCount -1 do begin
@@ -2138,9 +2129,8 @@ begin
         Bind^.length_address^ := Bind^.length;
         case VariantType of
           {$IFNDEF UNICODE}
-          vtString: if not ConSettings.AutoEncode and (ConSettings^.CTRL_CP = ClientCP)
-            then BindRaw
-            else BindRawFromConvertion;
+          vtString:
+            BindRaw;
           {$ENDIF}
           {$IFNDEF NO_ANSISTRING}
           vtAnsiString: if (ZOSCodePage = ClientCP)

@@ -659,7 +659,6 @@ var
   I: Integer;
   SDyn: TStringDynArray;
   Url: TZURL;
-  CodePage: PZCodePage;
   PlainDriver: IZPlainDriver;
   Driver: IZDriver;
 begin
@@ -688,58 +687,8 @@ begin
       finally
         Url.Free;
       end;
-      for i := 0 to high(SDyn) do begin
-        CodePage := PlainDriver.ValidateCharEncoding(SDyn[i]);
-        if (CodePage.Encoding = ceUTF16)
-        then List.Append(SDyn[i])
-        else case Connection.ControlsCodePage of
-          cGET_ACP:
-            if ( CodePage.CP = ZOSCodePage )
-            then List.Append(SDyn[i])
-            else if Connection.AutoEncodeStrings then
-              {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(UNICODE)}
-              List.Append(SDyn[i]); //result are ?valid? but does that makes sence for all if not CP_UTF8?
-              {$ELSE}
-                {$IFDEF WITH_LCONVENCODING} //Lazarus only
-                if ( IsLConvEncodingCodePage(CodePage.CP) ) or
-                   ( CodePage.Encoding = ceUTF8 ) then
-                  List.Append(SDyn[i]); //allways valid because result is allways UTF8 which lazarus expects
-                {$ENDIF}
-              {$IFEND}
-          {$IFNDEF UNICODE}
-          cCP_UTF8:
-            if (CodePage.Encoding = ceUTF8)
-            then List.Append(SDyn[i])
-            else if Connection.AutoEncodeStrings then
-              {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) }
-              List.Append(SDyn[i]); //All charsets can be converted to UTF8 if a valid WideString-Manager does exists
-              {$ELSE}
-                {$IFDEF WITH_LCONVENCODING} //Lazarus only
-                if ( IsLConvEncodingCodePage(CodePage.CP) ) then
-                  List.Append(SDyn[i])
-                {$ENDIF}
-              {$IFEND}
-          {$ENDIF}
-          else
-            {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(UNICODE)}
-            List.Append(SDyn[i]); //all remaining charset can be converted to wide if a valid WideString-Manager does exists
-            {$ELSE}
-              {$IFDEF WITH_LCONVENCODING} //Lazarus only
-              if ( IsLConvEncodingCodePage(CodePage.CP) ) or //Lazarus can convert to UTF8 then we convert to wide (double En/Decoding!)
-                 ( CodePage.Encoding = ceUTF8 ) or //decode the strings to wide
-                 ( CodePage.CP = ZOSCodePage ) then //to allow a valid cast
-                List.Append(SDyn[i]); //all these charset can be converted to wide
-              {$ELSE}
-              if ( CodePage.CP = ZOSCodePage ) or //to allow a valid cast
-                 {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
-                 (CodePage.CP = DefaultSystemCodePage) or
-                 {$ENDIF}
-                 ( CodePage.Encoding = ceUTF8 ) then //decode the strings to wide
-                List.Append(SDyn[i]);
-              {$ENDIF}
-            {$IFEND}
-        end;
-      end;
+      for i := 0 to high(SDyn) do
+        List.Append(SDyn[i]);
       TStringList(List).Sort;
     end;
   end;

@@ -108,7 +108,6 @@ type
     function MoveAbsolute(Row: Integer): Boolean; override;
     function GetRow: NativeInt; override;
     function IsNull(ColumnIndex: Integer): Boolean;
-    function GetString(ColumnIndex: Integer): String;
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
     function GetUTF8String(ColumnIndex: Integer): UTF8String;
     function GetRawByteString(ColumnIndex: Integer): RawByteString;
@@ -367,7 +366,7 @@ begin
     {$IFDEF UNICODE}
     ColName := F.Name;
     {$ELSE}
-    ColName := PUnicodeToRaw(Pointer(F.Name), Length(F.Name), ConSettings.CTRL_CP);
+    ColName := PUnicodeToRaw(Pointer(F.Name), Length(F.Name), zCP_UTF8);
     {$ENDIF}
     ColType := F.Type_;
     ColumnInfo.ColumnLabel := ColName;
@@ -587,42 +586,6 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>String</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
-function TZAdoResultSet.GetString(ColumnIndex: Integer): String;
-var P: {$IFDEF UNICODE}PWidechar{$ELSE}PAnsiChar{$ENDIF};
-  L: NativeUInt;
-begin
-  {$IFDEF UNICODE}
-  P := GetPWideChar(ColumnIndex, L);
-  if (P <> nil) and (L > 0) then
-    if P = Pointer(FUniTemp)
-    then Result := FUniTemp
-    else System.SetString(Result, P, L)
-  else Result := '';
-  {$ELSE}
-  if ConSettings.AutoEncode then
-    if ConSettings.CTRL_CP = zCP_UTF8
-    then Result := GetUTF8String(ColumnIndex)
-    else Result := GetAnsiString(ColumnIndex)
-  else begin
-    P := GetPAnsiChar(ColumnIndex, L);
-    if (P <> nil) and (L > 0) then
-      if P = Pointer(FRawTemp)
-      then Result := FRawTemp
-      else System.SetString(Result, P, L)
-    else Result := '';
-  end;
-  {$ENDIF}
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
   a <code>AnsiString</code> in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
@@ -797,7 +760,7 @@ Set_From_Buf:           Len := Result - PAnsiChar(fByteBuffer);
                       end;
         else begin
           PW := GetPWideChar(ColumnIndex, Len);
-          FRawTemp := PUnicodeToRaw(PW, Len, ConSettings.CTRL_CP);
+          FRawTemp := PUnicodeToRaw(PW, Len, GetW2A2WConversionCodePage(ConSettings));
           Result := Pointer(FRawTemp);
           Len := Length(FRawTemp);
         end;

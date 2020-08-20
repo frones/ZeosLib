@@ -97,7 +97,6 @@ type
   private
     function DetermineASACharSet: String;
   protected
-    procedure InternalCreate; override;
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
   public
@@ -106,6 +105,8 @@ type
       const Msg: SQLString; const Sender: IImmediatelyReleasable);
     function GetPlainDriver: TZSQLAnywherePlainDriver;
     function Get_api_version: Tsacapi_u32;
+  public
+    procedure AfterConstruction; override;
   public
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareCallWithParams(const Name: String; Info: TStrings):
@@ -226,10 +227,11 @@ var err_len, st_len: Tsize_t;
   State, ErrMsg, FormatStr, ErrorString: String;
   ErrCode: Tsacapi_i32;
   StateBuf: array[0..5] of Byte;
-  Exception: EZSQLException;
+  AException: EZSQLThrowable;
   P: PAnsiChar;
+  msgCP: Word;
   {$IFNDEF UNICODE}
-  CP: Word;
+  errCP: Word;
   {$ENDIF}
 begin
   P := @FByteBuffer[0];
@@ -245,48 +247,54 @@ begin
   err_len := ZFastCode.StrLen(P);
   st_len := FSQLAnyPlainDriver.sqlany_sqlstate(Fa_sqlany_connection, @StateBuf[0], SizeOf(StateBuf));
   Dec(st_len);
+  if ConSettings.ClientCodePage <> nil
+  then msgCP := ConSettings.ClientCodePage.CP
+  else msgCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
 
   {$IFDEF UNICODE}
   State := USASCII7ToUnicodeString(@StateBuf[0], st_Len);
-  ErrMsg := PRawToUnicode(P, err_Len, ZOSCodePage);
+  ErrMsg := PRawToUnicode(P, err_Len, msgCP);
   {$ELSE}
   State := '';
   System.SetString(State, PAnsiChar(@StateBuf[0]), st_Len);
-  {$IFDEF WITH_VAR_INIT_WARNING}ErrMsg := ''; {$ENDIF}
-  System.SetString(ErrMsg, P, err_Len);
-  CP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
-  if CP <> zCP_UTF8 then
-    ErrMsg := ConvertZMsgToRaw(ErrMsg, zCP_UTF8, CP);
+  ErrMsg := '';
+  errCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
+  if errCP <> msgCP then begin
+    ErrMsg := '';
+    PRawToRawConvert(P, err_len, msgCP, errCP, RawByteString(ErrMsg));
+  end else System.SetString(ErrMsg, P, err_Len);
   {$ENDIF}
-  if Msg <> '' then
-    if LoggingCategory in [lcExecute, lcTransaction, lcPrepStmt]
+  if DriverManager.HasLoggingListener then
+    LogError(LoggingCategory, ErrCode, Sender, Msg, ErrMsg);
+  if AddLogMsgToExceptionOrWarningMsg and (Msg <> '') then
+    if LoggingCategory in [lcExecute, lcExecPrepStmt, lcPrepStmt]
     then FormatStr := SSQLError3
     else FormatStr := SSQLError4
   else FormatStr := SSQLError2;
-  if Msg <> ''
+  if AddLogMsgToExceptionOrWarningMsg and (Msg <> '')
   then ErrorString := Format(FormatStr, [ErrMsg, ErrCode, Msg])
   else ErrorString := Format(FormatStr, [ErrMsg, ErrCode]);
   if Assigned(FSQLAnyPlainDriver.sqlany_clear_error) then
     FSQLAnyPlainDriver.sqlany_clear_error(Fa_sqlany_connection);
   if ErrCode > 0 then begin//that's a Warning
     ClearWarnings;
-    FLastWarning := EZSQLWarning.CreateWithCodeAndStatus(ErrCode, State, ErrorString);
-    if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(LoggingCategory, URL.Protocol, ErrorString);
+    AException := EZSQLWarning.CreateWithCodeAndStatus(ErrCode, State, ErrorString);
+    if not RaiseWarnings or (LoggingCategory = lcConnect) then begin
+      FLastWarning := EZSQLWarning(AException);
+      AException := nil;
+    end;
   end else begin  //that's an error
-    if DriverManager.HasLoggingListener then
-      LogError(LoggingCategory, ErrCode, Sender, Msg, ErrMsg);
     if (ErrCode = SQLE_CONNECTION_NOT_FOUND) or (ErrCode = SQLE_CONNECTION_TERMINATED) or
        (ErrCode = SQLE_COMMUNICATIONS_ERROR) then begin
-      Exception := EZSQLConnectionLost.CreateWithCodeAndStatus(ErrCode, State, ErrorString);
+      AException := EZSQLConnectionLost.CreateWithCodeAndStatus(ErrCode, State, ErrorString);
       if (Sender <> nil)
-      then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(Exception))
-      else ReleaseImmediat(Self, EZSQLConnectionLost(Exception));
+      then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(AException))
+      else ReleaseImmediat(Self, EZSQLConnectionLost(AException));
     end else
-      Exception := EZSQLException.CreateWithCodeAndStatus(ErrCode, State, ErrorString);
-    if Exception <> nil then
-       raise Exception;
+      AException := EZSQLException.CreateWithCodeAndStatus(ErrCode, State, ErrorString);
   end;
+  if AException <> nil then
+    raise AException;
 end;
 
 const
@@ -299,6 +307,14 @@ const
   After a call to this method, the method <code>getWarnings</code>
     returns null until a new warning is reported for this Connection.
 }
+procedure TZSQLAnywhereConnection.AfterConstruction;
+begin
+  FSQLAnyPlainDriver := PlainDriver.GetInstance as TZSQLAnywherePlainDriver;
+  FMetadata := TZASADatabaseMetadata.Create(Self, URL);
+  inherited AfterConstruction;
+  Fapi_version := SQLANY_API_VERSION_5;
+end;
+
 procedure TZSQLAnywhereConnection.ClearWarnings;
 begin
   FreeAndNil(FLastWarning);
@@ -422,13 +438,6 @@ begin
   Fa_sqlany_connection := nil;
   FSQLAnyPlainDriver.sqlany_fini_ex(Fa_sqlany_interface_context);
   Fa_sqlany_interface_context := nil;
-end;
-
-procedure TZSQLAnywhereConnection.InternalCreate;
-begin
-  FSQLAnyPlainDriver := TZSQLAnywherePlainDriver(GetIZPlainDriver.GetInstance);
-  Self.FMetadata := TZASADatabaseMetadata.Create(Self, URL);
-  Fapi_version := SQLANY_API_VERSION_5;
 end;
 
 procedure TZSQLAnywhereConnection.Open;

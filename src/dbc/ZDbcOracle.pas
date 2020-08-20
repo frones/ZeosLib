@@ -126,10 +126,11 @@ type
     procedure ExecuteImmediat(const SQL: UnicodeString; var Stmt: POCIStmt; LoggingCategory: TZLoggingCategory); overload;
     procedure InternalSetCatalog(const Catalog: String);
   protected
-    procedure InternalCreate; override;
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload; override;
+  public
+    procedure AfterConstruction; override;
   public { IZTransactionManager }
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
@@ -160,7 +161,6 @@ type
     function GetCatalog: string; override;
 
     procedure ClearWarnings; override;
-    procedure SetLastWarning(const Warning: EZSQLWarning);
   public { IZOracleConnection }
     function GetConnectionHandle: POCIEnv;
     function GetServiceContextHandle: POCISvcCtx;
@@ -249,7 +249,7 @@ var
 implementation
 {$IFNDEF ZEOS_DISABLE_ORACLE}
 
-uses
+uses {$IFNDEF UNICODE}ZDbcUtils,{$ENDIF}
   ZMessages, ZGenericSqlToken, ZDbcOracleStatement, ZSysUtils, ZFastCode,
   ZDbcOracleUtils, ZDbcOracleMetadata, ZOracleToken, ZOracleAnalyser, ZDbcProperties,
   ZCollections, ZEncoding;
@@ -330,30 +330,6 @@ begin
 end;
 
 { TZOracleConnection }
-
-{**
-  Constructs this object and assignes the main properties.
-}
-procedure TZOracleConnection.InternalCreate;
-var S: String;
-begin
-  FPlainDriver := TZOraclePlainDriver(PlainDriver.GetInstance);
-  FMetaData := TZOracleDatabaseMetadata.Create(Self, URL);
-  fGlobalTransactions[False] := TZCollection.Create;
-  fGlobalTransactions[True ] := TZCollection.Create;
-  TransactIsolationLevel := tiReadCommitted;
-
-  { Sets a default properties }
-  if Self.Port = 0 then
-      Self.Port := 1521;
-  S := Info.Values[ConnProps_ServerCachedStmts];
-  if (S = '') or StrToBoolEx(S, False)
-  then FStmtMode := OCI_STMT_CACHE //use by default
-  else FStmtMode := OCI_DEFAULT;
-  S := Info.Values[ConnProps_StatementCache];
-  FStatementPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(S, 30); //default = 20
-  FBlobPrefetchSize := StrToIntDef(Info.Values[ConnProps_BlobPrefetchSize], 8*1024);
-end;
 
 procedure TZOracleConnection.InternalSetCatalog(const Catalog: String);
 begin
@@ -513,7 +489,7 @@ begin
     Status := FPlainDriver.OCIServerAttach(FServerHandle, FErrorHandle,
       Pointer(URL.Database), Length(URL.Database) shl 1, 0);
     {$ELSE}
-    US := ZRawToUnicode(URL.Database, ConSettings.CTRL_CP);
+    US := ZRawToUnicode(URL.Database, GetW2A2WConversionCodePage(ConSettings));
     Status := FPlainDriver.OCIServerAttach(FServerHandle, FErrorHandle,
       Pointer(US), Length(US) shl 1, 0);
     {$ENDIF}
@@ -558,10 +534,10 @@ begin
     FPlainDriver.OCIAttrSet(FSessionHandle, OCI_HTYPE_SESSION,
       Pointer(Password), Length(Password) shl 1, OCI_ATTR_PASSWORD, FErrorHandle);
     {$ELSE}
-    US := ZRawToUnicode(URL.UserName, ConSettings.CTRL_CP);
+    US := ZRawToUnicode(URL.UserName, GetW2A2WConversionCodePage(ConSettings));
     FPlainDriver.OCIAttrSet(FSessionHandle, OCI_HTYPE_SESSION, Pointer(US),
       Length(US) shl 1, OCI_ATTR_USERNAME, FErrorHandle);
-    US := ZRawToUnicode(URL.Password, ConSettings.CTRL_CP);
+    US := ZRawToUnicode(URL.Password, GetW2A2WConversionCodePage(ConSettings));
     FPlainDriver.OCIAttrSet(FSessionHandle, OCI_HTYPE_SESSION, Pointer(US),
       Length(US) shl 1, OCI_ATTR_PASSWORD, FErrorHandle);
     {$ENDIF}
@@ -635,10 +611,31 @@ End;
   After a call to this method, the method <code>getWarnings</code>
     returns null until a new warning is reported for this Connection.
 }
+procedure TZOracleConnection.AfterConstruction;
+begin
+  FPlainDriver := PlainDriver.GetInstance as TZOraclePlainDriver;
+  FMetaData := TZOracleDatabaseMetadata.Create(Self, URL);
+  inherited AfterConstruction;
+  fGlobalTransactions[False] := TZCollection.Create;
+  fGlobalTransactions[True ] := TZCollection.Create;
+  TransactIsolationLevel := tiReadCommitted;
+
+  { Sets a default properties }
+  if Self.Port = 0 then
+    Self.Port := 1521;
+  FLogMessage := Info.Values[ConnProps_ServerCachedStmts];
+  if (FLogMessage = '') or StrToBoolEx(FLogMessage, False)
+  then FStmtMode := OCI_STMT_CACHE //use by default
+  else FStmtMode := OCI_DEFAULT;
+  FLogMessage := Info.Values[ConnProps_StatementCache];
+  FStatementPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(FLogMessage, 30); //default = 20
+  FLogMessage := '';
+  FBlobPrefetchSize := StrToIntDef(Info.Values[ConnProps_BlobPrefetchSize], 8*1024);
+end;
+
 procedure TZOracleConnection.ClearWarnings;
 begin
-  if fWarning <> nil then
-    FreeAndNil(fWarning);
+   FreeAndNil(fWarning);
 end;
 
 {**
@@ -930,12 +927,6 @@ begin
     if not Closed and (Value <> '') then
       InternalSetCatalog(Value);
   end;
-end;
-
-procedure TZOracleConnection.SetLastWarning(const Warning: EZSQLWarning);
-begin
-  ClearWarnings;
-  FWarning := Warning;
 end;
 
 {**
@@ -1256,24 +1247,24 @@ JmpConcat:
     OCI_CONTINUE:         ErrorMessage := 'OCI_CONTINUE';
     else                  ErrorMessage := '';
   end;
-  if ErrorMessage = '' then
-    Exit;
-  if (Status <> OCI_SUCCESS_WITH_INFO) and DriverManager.HasLoggingListener then
+  if ErrorMessage = '' then Exit;
+  if DriverManager.HasLoggingListener then
     LogError(LogCategory, FirstErrorCode, Sender, LogMessage, ErrorMessage);
-  if LogMessage <> '' then
-    if LogCategory in [lcExecute, lcTransaction, lcPrepStmt]
+  if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '') then
+    if LogCategory in [lcExecute, lcTransaction, lcPrepStmt, lcExecPrepStmt]
     then FormatStr := SSQLError3
     else FormatStr := SSQLError4
   else FormatStr := SSQLError2;
-  if LogMessage <> ''
+  if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '')
   then ErrorString := Format(FormatStr, [ErrorMessage, FirstErrorCode, LogMessage])
   else ErrorString := Format(FormatStr, [ErrorMessage, FirstErrorCode]);
   AException := AExceptionClass.CreateWithCode(FirstErrorCode, ErrorString);
   if (Status = OCI_SUCCESS_WITH_INFO) then begin
-    if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(LogCategory, URL.Protocol, ErrorMessage);
-    SetLastWarning(EZSQLWarning(AException));
-    //AException := nil;
+    ClearWarnings;
+    if not RaiseWarnings or (LogCategory = lcConnect) then begin
+      FWarning := EZSQLWarning(AException);
+      AException := nil;
+    end;
   end else if AExceptionClass = EZSQLConnectionLost then
     if Sender <> nil
     then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(aException))

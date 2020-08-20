@@ -126,6 +126,7 @@ type
     FSelectedRow: PZRowBuffer;
     FUpdatedRow: PZRowBuffer;
     FInsertedRow: PZRowBuffer;
+    FEmptyRow: PZRowBuffer; //improve the MoveToInitialRow in insert state
     FRowAccessor: TZRowAccessor;
     FNewRowAccessor: TZRowAccessor;
     FOldRowAccessor: TZRowAccessor;
@@ -294,7 +295,6 @@ type
     procedure CancelUpdates; virtual;
     procedure RevertRecord; virtual;
     procedure MoveToInitialRow; virtual;
-    procedure MoveToUpdateRow;
     procedure PostUpdatesCached; virtual;
     procedure DisposeCachedUpdates; virtual;
     {$IFDEF USE_SYNCOMMONS}
@@ -642,13 +642,16 @@ begin
   CheckClosed;
   if (RowNo >= 1) and (RowNo <= LastRowNo) and (FSelectedRow <> nil) then begin
     Index := LocateRow(FInitialRowsList, FSelectedRow.Index);
-    if Index >= 0 then begin
-      FSelectedRow := FInitialRowsList[Index];
-      FRowAccessor.RowBuffer := FSelectedRow;
-    end else if FCachedUpdates and (FUpdatedRow.Index = FSelectedRow.Index) and (FUpdatedRow.UpdateType = utModified) then begin
-      FSelectedRow := FRowsList[FUpdatedRow.Index];
-      FRowAccessor.RowBuffer := FSelectedRow;
+    if Index >= 0 then
+      FRowAccessor.RowBuffer := FInitialRowsList[Index]//do not set the FSelectedRow
+    else if (FUpdatedRow.Index <> -1) and (FUpdatedRow.Index = FSelectedRow.Index) and (FUpdatedRow.UpdateType = utModified) then
+      FRowAccessor.RowBuffer := FRowsList[FUpdatedRow.Index]////do not set the FSelectedRow;
+    else if FRowAccessor.RowBuffer = FInsertedRow then begin
+      if FEmptyRow = nil then
+        FEmptyRow := FRowAccessor.AllocBuffer;
+      FRowAccessor.RowBuffer := FEmptyRow;
     end;
+
   end else
     FRowAccessor.RowBuffer := nil;
 end;
@@ -869,6 +872,11 @@ begin
     FRowAccessor.DisposeBuffer(FInsertedRow);
     FInsertedRow := nil;
     FSelectedRow := nil;
+
+    if FEmptyRow <> nil then begin
+      FRowAccessor.DisposeBuffer(FEmptyRow);
+      FEmptyRow := nil;
+    end;
 
     FreeAndNil(FRowsList);
     FreeAndNil(FInitialRowsList);
@@ -1857,10 +1865,8 @@ begin
     else Blob.Open(lsmWrite);
     if Blob.QueryInterface(IZCLob, Clob) = S_OK then begin
       CP := FRowAccessor.GetColumnCodePage(ColumnIndex);
-      if ConSettings^.AutoEncode
-      then CP := zCP_None
-      else if CP = zCP_UTF16 then
-        CP := ConSettings.CTRL_CP;
+      if CP = zCP_UTF16 then
+        CP := GetW2A2WConversionCodePage(ConSettings);
       Clob.SetStream(Value, CP);
     end else Blob.SetStream(Value);
   end;
@@ -2230,35 +2236,6 @@ begin
 end;
 
 {**
-  Moves the cursor to the update row.  The current cursor position is
-  remembered while the cursor is positioned on the update row.
-
-  The update row is a special row associated with an updatable
-  result set.  It is essentially a buffer where a new row may
-  be constructed by calling the <code>updateXXX</code> methods prior to
-  updateing the row into the result set.
-
-  Only the <code>updateXXX</code>, <code>getXXX</code>,
-  and <code>updateRow</code> methods may be
-  called when the cursor is on the update row.  All of the columns in
-  a result set must be given a value each time this method is
-  called before calling <code>updateRow</code>.
-  An <code>updateXXX</code> method must be called before a
-  <code>getXXX</code> method can be called on a column value.
-}
-procedure TZAbstractCachedResultSet.MoveToUpdateRow;
-begin
-  CheckClosed;
-  if (RowAccessor.RowBuffer = FSelectedRow) and (FSelectedRow <> FUpdatedRow) then begin
-    FSelectedRow := FUpdatedRow;
-    RowAccessor.RowBuffer := FSelectedRow;
-    RowAccessor.CloneFrom(PZRowBuffer(FRowsList[RowNo - 1]));
-    FUpdatedRow.Index := FSelectedRow.Index;
-    FUpdatedRow.UpdateType := utModified;
-  end;
-end;
-
-{**
   Moves the cursor to the remembered cursor position, usually the
   current row.  This method has no effect if the cursor is not on
   the insert row.
@@ -2267,9 +2244,10 @@ procedure TZAbstractCachedResultSet.MoveToCurrentRow;
 begin
   CheckClosed;
   if (RowNo >= 1) and (RowNo <= LastRowNo) then
-    if (FSelectedRow.Index = FUpdatedRow.Index) and (FUpdatedRow.UpdateType = utModified)
-    then FRowAccessor.RowBuffer := FUpdatedRow
-    else FRowAccessor.RowBuffer := FSelectedRow
+    if (FSelectedRow.Index = FUpdatedRow.Index) and (FUpdatedRow.UpdateType = utModified) then begin
+      FRowAccessor.RowBuffer := FUpdatedRow;
+      FSelectedRow := FUpdatedRow;
+    end else FRowAccessor.RowBuffer := FSelectedRow
   else FRowAccessor.RowBuffer := nil;
 end;
 

@@ -193,9 +193,13 @@ begin
             Fields[i].AsString := RandomStr(ConnectionConfig.PerformanceFieldSizes[i]);
           ftMemo, ftFmtMemo:
             (Fields[i] as TBlobField).LoadFromStream(FAsciiStream);
-          {$IFDEF WITH_WIDEFIELDS}
-          ftWideString{$IFNDEF FPC}, ftFixedWideChar{$ENDIF}:
+          ftWideString{$IF declared(ftFixedWideChar)}, ftFixedWideChar{$IFEND}:
+            {$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}
             Fields[i].AsWideString := WideString(RandomStr(ConnectionConfig.PerformanceFieldSizes[i]));
+            {$ELSE}
+            TWideStringField(Fields[i]).Value := WideString(RandomStr(ConnectionConfig.PerformanceFieldSizes[i]));
+            {$ENDIF}
+          {$IFDEF WITH_WIDEMEMO}
           ftWideMemo:
             (Fields[i] as TBlobField).LoadFromStream(FUnicodeStream);
           {$ENDIF}

@@ -123,9 +123,10 @@ type
 implementation
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 
-{$IFDEF WITH_UNITANSISTRINGS}
-uses AnsiStrings;
-{$ENDIF}
+
+uses ZMessages
+{$IFDEF UNICODE},ZEncoding{$ENDIF}
+{$IFDEF WITH_UNITANSISTRINGS},AnsiStrings{$ENDIF};
 
 { TZPgEventAlerter }
 
@@ -232,8 +233,7 @@ var
   Res: TPGresult;
 begin
   if not Boolean(Pos('postgresql', FConnection.Protocol)) then
-    raise EZDatabaseError.Create('Ivalid connection protocol. Need <postgres>, get ' +
-      FConnection.Protocol + '.');
+    raise EZDatabaseError.Create(Format(SUnsupportedProtocol, [FConnection.Protocol]));
   if FActive then
     Exit;
   if not Assigned(FConnection) then
@@ -248,8 +248,12 @@ begin
   if Handle = nil then
     Exit;
   for I := 0 to FChildEvents.Count-1 do begin
-    Tmp := 'listen ' + ICon.GetConSettings.ConvFuncs.ZStringToRaw(FChildEvents.Strings[I],
-      ICon.GetConSettings.CTRL_CP, ICon.GetConSettings.ClientCodePage.CP);
+    {$IFDEF UNICODE}
+    Tmp := ZUnicodeToRaw(FChildEvents.Strings[I], ICon.GetConSettings.ClientCodePage.CP);
+    {$ELSE}
+    Tmp := FChildEvents.Strings[I];
+    {$ENDIF}
+    Tmp := 'listen ' + Tmp;
     Res := PlainDRV.PQExec(Handle, Pointer(Tmp));
     if (PlainDRV.PQresultStatus(Res) <> TZPostgreSQLExecStatusType(PGRES_COMMAND_OK)) then begin
       PlainDRV.PQclear(Res);
@@ -280,8 +284,12 @@ begin
   if Handle = nil then
     Exit;
   for I := 0 to FChildEvents.Count-1 do begin
-    Tmp := 'unlisten ' + ICon.GetConSettings.ConvFuncs.ZStringToRaw(FChildEvents.Strings[I],
-      ICon.GetConSettings.CTRL_CP, ICon.GetConSettings.ClientCodePage.CP);
+    {$IFDEF UNICODE}
+    Tmp := ZUnicodeToRaw(FChildEvents.Strings[I], ICon.GetConSettings.ClientCodePage.CP);
+    {$ELSE}
+    Tmp := FChildEvents.Strings[I];
+    {$ENDIF}
+    Tmp := 'unlisten ' + Tmp;
     Res := PlainDRV.PQExec(Handle, Pointer(Tmp));
     if (PlainDRV.PQresultStatus(Res) <> TZPostgreSQLExecStatusType(PGRES_COMMAND_OK)) then begin
       PlainDRV.PQclear(Res);

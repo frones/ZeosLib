@@ -126,7 +126,7 @@ type
     constructor Create(const Connection: IZPostgreSQLConnection;
       const SQL: string; Info: TStrings);
   public
-    function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; override;
+    function GetRawEncodedSQL(const SQL: SQLString): RawByteString; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -293,7 +293,7 @@ var
         if BindList.SQLTypes[Index] in [stUnicodeStream, stAsciiStream] then begin
           if TempBlob.IsClob
           then TempBlob.SetCodePageTo(FClientCP)
-          else TInterfaceDynArray(Dyn)[j] := CreateRawCLobFromBlob(TempBlob, ConSettings, FOpenLobStreams);
+          else raise CreateConversionError(Index, stBinaryStream, stAsciiStream);
           goto LenOfBuf;
         end else if FOidAsBlob then begin
           if not Supports(TempBlob, IZPostgreSQLOidBlob, WriteTempBlob) then begin
@@ -383,10 +383,6 @@ LenOfBuf: PA := TempBlob.GetBuffer(FRawTemp, L);
     {$IFDEF WITH_VAR_INIT_WARNING}FTempRaws := nil;{$ENDIF}
     SetLength(FTempRaws, DynArrayLen);
     case Arr.VArrayVariantType of
-      {$IFNDEF UNICODE}
-      vtString:   for J := 0 to DynArrayLen -1 do
-                    FTempRaws[j] := ConSettings.ConvFuncs.ZStringToRaw(TStringDynArray(Dyn)[j], ConSettings.CTRL_CP, CP);
-      {$ENDIF}
       {$IFNDEF NO_ANSISTRING}
       vtAnsiString: for J := 0 to DynArrayLen -1 do begin
                       FUniTemp := PRawToUnicode(Pointer(TRawByteStringDynArray(Dyn)[j]), Length(TRawByteStringDynArray(Dyn)[j]), zOSCodePage);
@@ -803,9 +799,8 @@ begin
                           then BindDequotedStrings;
           {$IFEND}
           {$IFNDEF UNICODE}
-          vtString:       if (not ConSettings^.AutoEncode and (CP = ConSettings^.CTRL_CP))
-                          then BindRawStrings
-                          else BindConvertedStrings;
+
+          vtString:       BindRawStrings;
           {$ENDIF}
           {$IFNDEF NO_ANSISTRING}
           vtAnsiString:   if (CP= ZOSCodePage)
@@ -1408,13 +1403,13 @@ end;
 
 const cFrom: PChar = 'FROM';
 function TZAbstractPostgreSQLPreparedStatementV3.GetRawEncodedSQL(
-  const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
+  const SQL: SQLString): RawByteString;
 var
   I, C, FirstComposePos, BracketCnt, J: Integer;
   ParamsCnt: Cardinal;
   Tokens: TZTokenList;
   Token: PZToken;
-  tmp{$IFNDEF UNICODE}, Fraction{$ENDIF}: RawByteString;
+  tmp: RawByteString;
   SQLWriter, ParamWriter: TZRawSQLStringWriter;
   ComparePrefixTokens: TPreparablePrefixTokens;
   procedure Add(const Value: RawByteString; const Param: Boolean);
@@ -1476,9 +1471,7 @@ begin
           {$IFDEF UNICODE}
           Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, FClientCP);
           {$ELSE}
-          if Consettings.AutoEncode
-          then ParamWriter.Finalize(Tmp)
-          else Tmp := Tokens.AsString(FirstComposePos, I-1);
+          Tmp := Tokens.AsString(FirstComposePos, I-1);
           {$ENDIF}
           Add(Tmp, False);
           if (Token.P^ = '?') then begin
@@ -1499,25 +1492,14 @@ begin
           end;
           Add(Tmp, True);
           Tmp := '';
-        end {$IFNDEF UNICODE} else if (FirstComposePos <= I) and ConSettings.AutoEncode then
-          case (Token.TokenType) of
-            ttQuoted, ttComment,
-            ttWord, ttQuotedIdentifier: begin
-                Fraction := ConSettings^.ConvFuncs.ZStringToRaw(TokenAsString(Token^), ConSettings^.CTRL_CP, FClientCP);
-                ParamWriter.AddText(Fraction, Tmp);
-              end;
-            else ParamWriter.AddText(Token.P, Token.L, tmp);
-          end
-        {$ENDIF};
+        end;
       end;
       I := Tokens.Count -1;
       if (FirstComposePos <= I) then begin
         {$IFDEF UNICODE}
         Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, FClientCP);
         {$ELSE}
-        if ConSettings.AutoEncode
-        then ParamWriter.Finalize(Tmp)
-        else Tmp := Tokens.AsString(FirstComposePos, I);
+        Tmp := Tokens.AsString(FirstComposePos, I);
         {$ENDIF}
         Add(Tmp, False);
       end;
@@ -1890,7 +1872,7 @@ begin
   if (Value <> nil) and (SQLType in [stAsciiStream, stUnicodeStream]) then begin
     if Value.IsClob
     then Value.SetCodePageTo(FClientCP)
-    else RefCntLob := CreateRawCLobFromBlob(Value, ConSettings, FOpenLobStreams);
+    else raise CreateConversionError(Index, stBinaryStream, stAsciiStream);
     SQLType := stAsciiStream;
   end;
   BindList.Put(Index, SQLType, RefCntLob);
@@ -2172,7 +2154,11 @@ begin
   CheckParameterIndex(I);
   BindList.SetParamTypes(ParameterIndex , SQLType, ParamType);
   if Name <> '' then
-    FParamNames[ParameterIndex] := ConSettings.ConvFuncs.ZStringToRaw(Name, ConSettings.CTRL_CP, FClientCP);
+    {$IFDEF UNICODE}
+    FParamNames[ParameterIndex] := ZUnicodeToRaw(Name, FClientCP);
+    {$ELSE}
+    FParamNames[ParameterIndex] := Name;
+    {$ENDIF}
 
   if ParamType in [pctOut, pctReturn] then begin
     FOutParamCount := 0;

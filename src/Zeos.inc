@@ -46,7 +46,7 @@
 {$DEFINE ZEOS73UP}
 
 {$IF (defined(FPC) and (defined(CPU386) or defined(CPUX86_64))) or defined(MSWINDOWS)}
-  {.$DEFINE INTEL_ASM} //allow intel syntax assembler
+  {.$DEFINE INTEL_ASM} //allow intel syntax assembler commented is stated as buggy ):
 {$IFEND}
 
 // Uncomment these defines to disable some DB drivers (reduce binary size)
@@ -144,6 +144,8 @@
   {$IF CompilerVersion < 15}
      "Delphi versions below Delphi 7 aren't supported anymore"
   {$ELSE}
+    {$DEFINE WITH_FTWIDESTRING}                 //Have ftWideString
+    {$DEFINE TWIDESTRINGFIELD_DATABUFFER_IS_PWIDESTRING}
     {$DEFINE WITH_UINT64_C1118_ERROR}       //D7-D2005 has proplems to assign code constants for UInt64
     {$DEFINE WITH_MILLISECONDOFTHEYEAR_BUG} //D7-D005 Bug -> a Int64 Cast of SecondOfTheYear(AValue) is missing
     {.$DEFINE PatchSystemMove}               //replaces System.Move by FastCode-Project Move proc
@@ -154,10 +156,10 @@
     {$IF CompilerVersion >= 16} //Delphi 8+
       {$IF CompilerVersion >= 17} //Delphi 2005+
         {$DEFINE WITH_INLINE}          // compiler supports inline methodes
-
         {$DEFINE WITH_C5242_OR_C4963_INTERNAL_ERROR} //D2005..2009 Has an internal error with some inlined endian swap code.
         {$DEFINE NO_INLINE_SIZE_CHECK} //so old compilers need the Math unit for PUnicodeToRaw -> suppress hints
         {$IF CompilerVersion >= 18} //Delphi 2006+
+          {$UNDEF TWIDESTRINGFIELD_DATABUFFER_IS_PWIDESTRING}
           {$UNDEF WITH_UINT64_C1118_ERROR}            //2006+ has no problems to assign code constants for UInt64
           {$UNDEF WITH_MILLISECONDOFTHEYEAR_BUG}      //D7-D005 Bug -> a Int64 Cast of SecondOfTheYear(AValue) is fixed
           {$UNDEF Use_FastCodeFillChar}               //FastCode FillChar() is included since D2006
@@ -170,15 +172,13 @@
           {$DEFINE WITH_WIDEDATASET}                  //TWidedataset exists
           {$DEFINE WITH_PWIDECHAR_TOWIDESTRING}       //Able to pass pwidechar to a widestring parameter
           {$DEFINE WITH_IPROVIDERWIDE}                //IProvider -W widestring using interface
-          {$DEFINE WITH_MM_CAN_REALLOC_EXTERNAL_MEM}  //sinc FastMM4 Memorymanager IDE can FreeMem/AllocMem/ReallocMem for Pointers which have been allocated in a different object
           {$DEFINE WITH_ASLARGEINT}                   // tlargeint aslargeint. Fixed 2.6.0+ or 2.6.2+ probably
           {$DEFINE WITH_WIDEMEMO}                     //Have ftWideMemo
-          {$DEFINE WITH_FTWIDESTRING}                 //Have ftWideString
+          {$DEFINE WITH_PARAM_ASWIDESTRING}           //TParam support the AsWideString property 
           {$DEFINE WITH_FTFIXEDWIDECHAR}              //Have ftFixedWideChar
-          {$DEFINE WITH_WIDEFIELDS}	                  //Wide-fields are supported (common define for ftWideString/ftWideMemo)
           {$DEFINE WITH_CLASS_VARS}                   //Class variables/methods are supported
           {$DEFINE WITH_UNIT_WIDESTRINGS}             //unit WideStrings introduced
-          {$DEFINE WITH_VIRTUAL_TFIELD_ASWIDESTRING}
+          {$DEFINE WITH_VIRTUAL_TFIELD_ASWIDESTRING}  //TField supports the AsWideString property
 
           {$IF CompilerVersion >= 18.5} //Delphi 2007+
             {$UNDEF VER150BELOW}      //found in ZTestBugCompPostgreSql.pas

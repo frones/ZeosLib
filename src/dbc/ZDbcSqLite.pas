@@ -101,10 +101,10 @@ type
     FUndefinedVarcharAsStringLength: Integer;
     FCatalog: string;
     FHandle: Psqlite;
+    FLastWarning: EZSQLWarning;
     FPlainDriver: TZSQLitePlainDriver;
     FTransactionStmts: array[TSQLite3TransactionAction] of Psqlite3_stmt;
   protected
-    procedure InternalCreate; override;
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory; var Stmt: Psqlite3_stmt); overload;
@@ -116,6 +116,8 @@ type
     procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
       ErrorCode: Integer; const LogMessage: String;
       const Sender: IImmediatelyReleasable);
+  public
+    procedure AfterConstruction; override;
   public
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareCallWithParams(const Name: String; Info: TStrings):
@@ -158,10 +160,10 @@ implementation
 {$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 
 uses
-  ZSysUtils, ZDbcSqLiteStatement, ZSqLiteToken, ZFastCode, ZDbcProperties,
-  ZDbcSqLiteUtils, ZDbcSqLiteMetadata, ZSqLiteAnalyser, ZEncoding, ZMessages,
-  ZDbcUtils
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  ZSysUtils, ZClasses, ZEncoding, ZMessages, ZFastCode,
+  ZSqLiteToken, ZSqLiteAnalyser,
+  ZDbcSqLiteStatement, ZDbcProperties, ZDbcSqLiteUtils, ZDbcSqLiteMetadata,
+  ZDbcUtils;
 
 { TZSQLiteDriver }
 
@@ -246,19 +248,6 @@ const cTransactionActionStmt: Array[TSQLite3TransactionAction] of RawByteString 
   'ROLLBACK TRANSACTION');
 
 { TZSQLiteConnection }
-
-{**
-  Constructs this object and assignes the main properties.
-}
-procedure TZSQLiteConnection.InternalCreate;
-begin
-  FPlainDriver := TZSQLitePlainDriver(PlainDriver.GetInstance);
-  FMetadata := TZSQLiteDatabaseMetadata.Create(Self, Url);
-  //https://sqlite.org/pragma.html#pragma_read_uncommitted
-  inherited SetTransactionIsolation(tiSerializable);
-  CheckCharEncoding('UTF-8');
-  FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
-end;
 
 {**
   Set encryption key for a database
@@ -552,77 +541,108 @@ procedure TZSQLiteConnection.HandleErrorOrWarning(
   LogCategory: TZLoggingCategory; ErrorCode: Integer; const LogMessage: String;
   const Sender: IImmediatelyReleasable);
 var
-  ErrorStr, ErrorMsg: SQLString;
+  ErrorStr: RawByteString;
   P: PAnsiChar;
   L: NativeUInt;
+  Writer: TZRawSQLStringWriter;
+  AExceptionClass: EZSQLThrowableClass;
+  AException: EZSQLThrowable;
+  FormatStr: String;
 begin
   if (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then Exit;
-  ErrorMsg := '';
-  ErrorStr := '';
-  if Assigned(FPlainDriver.sqlite3_extended_errcode) then
-    ErrorCode := FPlainDriver.sqlite3_extended_errcode(FHandle);
-  if ( FHandle <> nil ) and ( Assigned(FPlainDriver.sqlite3_errstr) ) then begin
-    P := FPlainDriver.sqlite3_errstr(ErrorCode);
-    if P <> nil then begin
-      L := StrLen(P);
-      ZSysUtils.Trim(L, P);
-    end else L := 0;
-    ZSysUtils.Trim(L, P);
-    {$IFDEF UNICODE}
-    ErrorStr := PRawToUnicode(P, L, zCP_UTF8);
-    {$ELSE}
-    ZSetString(P, L, ErrorStr{$IFDEF WITH_RAWBYTESTRING}, zCP_UTF8{$ENDIF});
-    {$ENDIF}
+  ErrorStr := EmptyRaw;
+  Writer := TZRawSQLStringWriter.Create(1024);
+  try
+    if Assigned(FPlainDriver.sqlite3_extended_errcode) then
+      ErrorCode := FPlainDriver.sqlite3_extended_errcode(FHandle);
+    if ( FHandle <> nil ) and ( Assigned(FPlainDriver.sqlite3_errstr) ) then begin
+      P := FPlainDriver.sqlite3_errstr(ErrorCode);
+      if P <> nil then begin
+        L := StrLen(P);
+        ZSysUtils.Trim(L, P);
+      end else L := 0;
+      if L > 0 then
+      Writer.AddText(P, L, ErrorStr);
+    end else case ErrorCode of
+      SQLITE_ERROR:       Writer.AddText('SQL logic error or missing database', ErrorStr);
+      SQLITE_INTERNAL:    Writer.AddText('internal SQLite implementation flaw', ErrorStr);
+      SQLITE_PERM:        Writer.AddText('access permission denied', ErrorStr);
+      SQLITE_ABORT:       Writer.AddText('callback requested query abort', ErrorStr);
+      SQLITE_BUSY:        Writer.AddText('database is locked', ErrorStr);
+      SQLITE_LOCKED:      Writer.AddText('database table is locked', ErrorStr);
+      SQLITE_NOMEM:       Writer.AddText('out of memory', ErrorStr);
+      SQLITE_READONLY:    Writer.AddText('attempt to write a readonly database', ErrorStr);
+      SQLITE_INTERRUPT:   Writer.AddText('interrupted', ErrorStr);
+      SQLITE_IOERR:       Writer.AddText('disk I/O error', ErrorStr);
+      SQLITE_CORRUPT:     Writer.AddText('database disk image is malformed', ErrorStr);
+      SQLITE_NOTFOUND:    Writer.AddText('table or record not found', ErrorStr);
+      SQLITE_FULL:        Writer.AddText('database is full', ErrorStr);
+      SQLITE_CANTOPEN:    Writer.AddText('unable to open database file', ErrorStr);
+      SQLITE_PROTOCOL:    Writer.AddText('database locking protocol failure', ErrorStr);
+      SQLITE_EMPTY:       Writer.AddText('table contains no data', ErrorStr);
+      SQLITE_SCHEMA:      Writer.AddText('database schema has changed', ErrorStr);
+      SQLITE_TOOBIG:      Writer.AddText('too much data for one table row', ErrorStr);
+      SQLITE_CONSTRAINT:  Writer.AddText('constraint failed', ErrorStr);
+      SQLITE_MISMATCH:    Writer.AddText('datatype mismatch', ErrorStr);
+      SQLITE_MISUSE:      Writer.AddText('library routine called out of sequence', ErrorStr);
+      SQLITE_NOLFS:       Writer.AddText('kernel lacks large file support', ErrorStr);
+      SQLITE_AUTH:        Writer.AddText('authorization denied', ErrorStr);
+      SQLITE_FORMAT:      Writer.AddText('auxiliary database format error', ErrorStr);
+      SQLITE_RANGE:       Writer.AddText('bind index out of range', ErrorStr);
+      SQLITE_NOTADB:      Writer.AddText('file is encrypted or is not a database', ErrorStr);
+      else                Writer.AddText('unknown error', ErrorStr);
+    end;
+    if ( FHandle <> nil ) and ( Assigned(FPlainDriver.sqlite3_errmsg) ) then begin
+      P := FPlainDriver.sqlite3_errmsg(FHandle);
+      if P <> nil then begin
+        L := StrLen(P);
+        ZSysUtils.Trim(L, P);
+      end else L := 0;
+      if L > 0 then begin
+        Writer.AddLineFeedIfNotEmpty(ErrorStr);
+        Writer.AddText('Message : ', ErrorStr);
+        Writer.AddText(P, L, ErrorStr);
+      end;
+    end;
+    Writer.Finalize(ErrorStr);
+  finally
+    FreeAndNil(Writer);
   end;
-  if ErrorStr = '' then
-    case ErrorCode of
-      SQLITE_OK:          ErrorStr := 'not an error';
-      SQLITE_ERROR:       ErrorStr := 'SQL logic error or missing database';
-      SQLITE_INTERNAL:    ErrorStr := 'internal SQLite implementation flaw';
-      SQLITE_PERM:        ErrorStr := 'access permission denied';
-      SQLITE_ABORT:       ErrorStr := 'callback requested query abort';
-      SQLITE_BUSY:        ErrorStr := 'database is locked';
-      SQLITE_LOCKED:      ErrorStr := 'database table is locked';
-      SQLITE_NOMEM:       ErrorStr := 'out of memory';
-      SQLITE_READONLY:    ErrorStr := 'attempt to write a readonly database';
-      SQLITE_INTERRUPT:   ErrorStr := 'interrupted';
-      SQLITE_IOERR:       ErrorStr := 'disk I/O error';
-      SQLITE_CORRUPT:     ErrorStr := 'database disk image is malformed';
-      SQLITE_NOTFOUND:    ErrorStr := 'table or record not found';
-      SQLITE_FULL:        ErrorStr := 'database is full';
-      SQLITE_CANTOPEN:    ErrorStr := 'unable to open database file';
-      SQLITE_PROTOCOL:    ErrorStr := 'database locking protocol failure';
-      SQLITE_EMPTY:       ErrorStr := 'table contains no data';
-      SQLITE_SCHEMA:      ErrorStr := 'database schema has changed';
-      SQLITE_TOOBIG:      ErrorStr := 'too much data for one table row';
-      SQLITE_CONSTRAINT:  ErrorStr := 'constraint failed';
-      SQLITE_MISMATCH:    ErrorStr := 'datatype mismatch';
-      SQLITE_MISUSE:      ErrorStr := 'library routine called out of sequence';
-      SQLITE_NOLFS:       ErrorStr := 'kernel lacks large file support';
-      SQLITE_AUTH:        ErrorStr := 'authorization denied';
-      SQLITE_FORMAT:      ErrorStr := 'auxiliary database format error';
-      SQLITE_RANGE:       ErrorStr := 'bind index out of range';
-      SQLITE_NOTADB:      ErrorStr := 'file is encrypted or is not a database';
-      else                ErrorStr := 'unknown error';
-    end
-  else if ( FHandle <> nil ) and ( Assigned(FPlainDriver.sqlite3_errmsg) ) then begin
-    P := FPlainDriver.sqlite3_errmsg(FHandle);
-    if P <> nil then begin
-      L := StrLen(P);
-      ZSysUtils.Trim(L, P);
-    end else L := 0;
-    ZSysUtils.Trim(L, P);
-    {$IFDEF UNICODE}
-    ErrorMsg := PRawToUnicode(P, L, zCP_UTF8);
-    {$ELSE}
-    ZSetString(P, L, ErrorMsg{$IFDEF WITH_RAWBYTESTRING}, zCP_UTF8{$ENDIF});
-    {$ENDIF}
-  end;
-  if ErrorMsg <> '' then
-    ErrorStr := 'Error: '+ErrorStr+LineEnding+'Message: '+ErrorMsg;
+  if ErrorStr = EmptyRaw then Exit;
+  {$IFDEF UNICODE}
+  FLogMessage := ZRawToUnicode(ErrorStr, zCP_UTF8);
+  {$ELSE}
+  FLogMessage := ErrorStr;
+  {$ENDIF}
   if DriverManager.HasLoggingListener then
-    LogError(LogCategory, ErrorCode, Sender, LogMessage, ErrorStr);
-  raise EZSQLException.CreateWithCode(ErrorCode, Format(SSQLError1, [ErrorStr]));
+    LogError(LogCategory, ErrorCode, Sender, LogMessage, FLogMessage);
+  if ErrorCode = SQLITE_WARNING
+  then AExceptionClass := EZSQLWarning
+  else if (ErrorCode = SQLITE_IOERR)
+    then AExceptionClass := EZSQLConnectionLost
+    else AExceptionClass := EZSQLException;
+  if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '') then
+    if LogCategory in [lcExecute, lcExecPrepStmt, lcPrepStmt]
+    then FormatStr := SSQLError3
+    else FormatStr := SSQLError4
+  else FormatStr := SSQLError2;
+  if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '')
+  then FLogMessage := Format(FormatStr, [FLogMessage, ErrorCode, LogMessage])
+  else FLogMessage := Format(FormatStr, [FLogMessage, ErrorCode]);
+  AException := AExceptionClass.CreateWithCode(ErrorCode, FLogMessage);
+  if ErrorCode = SQLITE_WARNING then begin
+    ClearWarnings;
+    if not RaiseWarnings then begin
+      FLastWarning := EZSQLWarning(AException);
+      AException := nil;
+    end;
+  end else if (AExceptionClass = EZSQLConnectionLost) then begin
+    if (Sender <> nil)
+    then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(AException))
+    else ReleaseImmediat(Self, EZSQLConnectionLost(AException));
+  end;
+  if AException <> nil then
+     raise AException;
 end;
 
 {**
@@ -643,6 +663,17 @@ end;
   used only when auto-commit mode has been disabled.
   @see #setAutoCommit
 }
+procedure TZSQLiteConnection.AfterConstruction;
+begin
+  FPlainDriver := PlainDriver.GetInstance as TZSQLitePlainDriver;
+  FMetadata := TZSQLiteDatabaseMetadata.Create(Self, Url);
+  inherited AfterConstruction;
+  //https://sqlite.org/pragma.html#pragma_read_uncommitted
+  inherited SetTransactionIsolation(tiSerializable);
+  CheckCharEncoding('UTF-8');
+  FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
+end;
+
 procedure TZSQLiteConnection.Commit;
 var S: RawByteString;
 begin

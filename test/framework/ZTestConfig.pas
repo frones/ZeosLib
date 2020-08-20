@@ -116,7 +116,6 @@ const
   EXTENDED_CCP_UTF8_KEY        = 'extended.ccp_utf8';
   EXTENDED_CCP_UTF16_KEY       = 'extended.ccp_utf16';
   EXTENDED_CODEPAGES_KEY       = 'extended.codepages';
-  EXTENDED_AUTOENCODING_KEY    = 'extended.autoencoding';
 
 const
   { Names of the connection configuration keys. }

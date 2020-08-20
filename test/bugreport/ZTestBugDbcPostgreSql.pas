@@ -83,6 +83,7 @@ type
     procedure Test_Mantis0000148;
     procedure Test_Mantis0000229;
     procedure Test_TrailingSpaces;
+    procedure Test_ForeignKeyViolation;
   end;
 
   TZTestDbcPostgreSQLBugReportMBCs = class(TZAbstractDbcSQLTestCaseMBCs)
@@ -607,7 +608,7 @@ var
   Statement: IZStatement;
   Metadata: IZResultSetMetadata;
 begin
-  if SkipForReason(srClosedBug) then Exit;
+  //if SkipForReason(srClosedBug) then Exit;
 
   with (Connection as IZPostgreSQLConnection) do
   begin
@@ -642,6 +643,83 @@ begin
 
   Check(not ResultSet.Next);
   Statement.Close;
+end;
+
+procedure TZTestDbcPostgreSQLBugReport.Test_ForeignKeyViolation;
+var PStmt, PStmt2: IZPreparedStatement;
+  Stmt: IZStatement;
+  j: Integer;
+  RS: IZResultSet;
+begin
+  Connection.Open;
+  Connection.StartTransaction;
+  CheckFalse(Connection.IsClosed);
+  Stmt := Connection.CreateStatement;
+  PStmt := nil;
+  Stmt.ExecuteUpdate('delete from equipment2');
+  PStmt := Connection.PrepareStatement('insert into equipment2 values(?,?) returning dep_id, eq_id');
+  PStmt2 := Connection.PrepareStatement('select * from equipment2 where dep_id = 3');
+  try
+    for j := 1 to 4 do begin
+      PStmt.SetInt(FirstDbcIndex, 3);
+      PStmt.SetInt(FirstDbcIndex+1, j);
+      RS := PStmt.ExecuteQueryPrepared;
+      CheckFalse(RS = nil, 'there is a resultset');
+      Check(RS.Next, 'there is a row');
+      CheckEquals(3, RS.GetInt(FirstDbcIndex), 'the dep_id');
+      CheckEquals(j, RS.GetInt(FirstDbcIndex+1), 'the eq_id');
+      Rs.ResetCursor;
+    end;
+    PStmt.SetInt(FirstDbcIndex, 3);
+    PStmt.SetInt(FirstDbcIndex+1, 5);
+    try
+      RS := PStmt.ExecuteQueryPrepared;
+      Check(False);
+    except
+      on E: Exception do
+        CheckNotTestFailure(E);
+    end;
+    try
+      RS := PStmt2.ExecuteQueryPrepared;
+      Check(False);
+    except
+      on E: Exception do
+        CheckNotTestFailure(E);
+    end;
+  finally
+    Connection.Rollback;
+  end;
+  Connection.StartTransaction;
+  try
+    for j := 1 to 4 do begin
+      PStmt.SetInt(FirstDbcIndex, 3);
+      PStmt.SetInt(FirstDbcIndex+1, j);
+      RS := PStmt.ExecuteQueryPrepared;
+      CheckFalse(RS = nil, 'there is a resultset');
+      Check(RS.Next, 'there is a row');
+      CheckEquals(3, RS.GetInt(FirstDbcIndex), 'the dep_id');
+      CheckEquals(j, RS.GetInt(FirstDbcIndex+1), 'the eq_id');
+      Rs.ResetCursor;
+    end;
+    PStmt.SetInt(FirstDbcIndex, 3);
+    PStmt.SetInt(FirstDbcIndex+1, 5);
+    try
+      RS := PStmt.ExecuteQueryPrepared;
+      Check(False);
+    except
+      on E: Exception do
+        CheckNotTestFailure(E);
+    end;
+    try
+      RS := PStmt2.ExecuteQueryPrepared;
+      Check(False);
+    except
+      on E: Exception do
+        CheckNotTestFailure(E);
+    end;
+  finally
+    Connection.Rollback;
+  end;
 end;
 
 { http://zeosbugs.firmos.at/view.php?id=148

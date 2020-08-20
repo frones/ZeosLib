@@ -164,11 +164,20 @@ implementation
 uses
   Variants, Math, {$IFNDEF FPC}Windows{inline},{$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
-  ZEncoding, ZDbcLogging, ZDbcResultSet, ZFastCode,
+  ZEncoding, ZDbcLogging, ZDbcResultSet, ZFastCode, ZPlainOleDBDriver,
   ZDbcMetadata, ZDbcResultSetMetadata, ZDbcAdoResultSet,
   ZMessages, ZDbcProperties;
 
 var DefaultPreparableTokens: TPreparablePrefixTokens;
+
+const cParamIOs: array[TZProcedureColumnType] of ParameterDirectionEnum = (
+  {pctUnknown,} adParamInput,
+  {pctIn,}adParamInput,
+  {pctInOut,} adParamInputOutput,
+  {pctOut,} adParamOutput,
+  {pctReturn,} adParamReturnValue,
+  {pctResultSet} adParamUnknown
+  );
 
 { TZAbstractAdoStatement }
 
@@ -339,7 +348,7 @@ begin
       // FAdoCommand.Properties['Defer Prepare'].Value := False;
       end else
         fDEFERPREPARE := StrToBoolEx(S);
-      if not fDEFERPREPARE then begin
+      if (not fDEFERPREPARE and (BindList.Capacity = 0)) or (FCommandType = adCmdStoredProc) then begin
         RestartTimer;
         FAdoCommand.Prepared := True;
         if DriverManager.HasLoggingListener then
@@ -370,39 +379,28 @@ end;
 
 function TZAdoPreparedStatement.CheckParameterIndex(Index, ASize: Integer;
   SQLType: TZSQLType): TDataTypeEnum;
-var ParamDirection: ParameterDirectionEnum;
-  I: Integer;
-  W: WideString;
-  V: OleVariant;
+var I: Integer;
+  procedure AddParam(Number: Integer);
+  var Param: _Parameter;
+      W: WideString;
+  begin
+    W := 'Param'+IntToUnicode(Number);
+    Param := fAdoCommand.CreateParameter(W, adVariant, cParamIOs[BindList[i].ParamType], SizeOf(OleVariant), EmptyParam);
+    fAdoCommand.Parameters.Append(Param);
+  end;
 begin
   if not Prepared then Prepare;
+  if not FEmulatedParams and FRefreshParamsFailed and (BindList.Count < (Index+1)) and (BindList.Capacity >= (Index+1)) then
+    for i := BindList.Count to Index do
+      AddParam(I+1);
+  if (FEmulatedParams or FRefreshParamsFailed) and (BindList.Capacity < (Index+1)) then
+    raise CreateBindVarOutOfRangeError(Index);
   inherited CheckParameterIndex(Index);
-  if FEmulatedParams then
-    Result := adBSTR
-  else if FRefreshParamsFailed then begin
-    Result := ZSQLTypeToAdoType[SQLType];
-    if (fAdoCommand.Parameters.Count < Index -1) then begin
-      if BindList[Index].ParamType = pctUnknown
-      then ParamDirection := adParamInput
-      else ParamDirection := ZProcedureColumnType2AdoType[BindList[Index].ParamType];
-      for I := fAdoCommand.Parameters.Count to Index do begin
-        V := null;
-        W := 'Param'+IntToUnicode(I+1);
-        fAdoCommand.Parameters.Append(fAdoCommand.CreateParameter(W, adVariant, ParamDirection, SizeOf(OleVariant), V));
-      end;
-      fAdoCommand.Parameters.Append(fAdoCommand.CreateParameter('Param'+IntToUnicode(Index+1),
-         ConvertSqlTypeToAdo(SQLType), ParamDirection, ASize, null));
-    end else with fAdoCommand.Parameters[Index] do begin
-      Type_ := Result;
-      Size := ASize
-    end
-  end else begin
-    if (Index <0) or (fAdoCommand.Parameters.Count < Index +1) then begin
-      {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := Format(SBindVarOutOfRange, [Index]);
-      raise EZSQLException.Create({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
-    end;
-    Result := fAdoCommand.Parameters[Index].Type_;
-  end;
+  if FEmulatedParams
+  then Result := adBSTR
+  else if FRefreshParamsFailed
+    then Result := ZSQLTypeToAdoType[SQLType]
+    else Result := fAdoCommand.Parameters[Index].Type_;
 end;
 
 constructor TZAdoPreparedStatement.Create(
@@ -425,6 +423,9 @@ function TZAdoPreparedStatement.CreateResultSet: IZResultSet;
     PD: PDecimal;
     L: NativeUInt;
     AdType: TDataTypeEnum;
+    {$IFNDEF UNICODE}
+    Name: WideString;
+    {$ENDIF}
   begin
     ColumnsInfo := TObjectList.Create;
     try
@@ -434,7 +435,8 @@ function TZAdoPreparedStatement.CreateResultSet: IZResultSet;
         ColumnInfo := TZColumnInfo.Create;
         with ColumnInfo do begin
           {$IFNDEF UNICODE}
-          ColumnLabel := PUnicodeToRaw(Pointer(FAdoCommand.Parameters.Item[i].Name), Length(FAdoCommand.Parameters.Item[i].Name), ConSettings^.CTRL_CP);
+          Name := FAdoCommand.Parameters.Item[i].Name;
+          ColumnLabel := PUnicodeToRaw(Pointer(Name), Length(Name), ZCP_UTF8);
           {$ELSE}
           ColumnLabel := FAdoCommand.Parameters.Item[i].Name;
           {$ENDIF}
@@ -539,10 +541,12 @@ begin
 end;
 
 procedure TZAdoPreparedStatement.PrepareInParameters;
-var i: Integer;
+(*var i: Integer;
 begin
   { test if we can access the parameter collection }
-  try
+  if fDEFERPREPARE then
+    FRefreshParamsFailed := True
+  else try
     if BindList.Count <> FAdoCommand.Parameters.Count then //this could cause an AV
       BindList.Count := FAdoCommand.Parameters.Count;
     FRefreshParamsFailed := False;
@@ -557,6 +561,58 @@ begin
     FAdoCommand.Parameters.Append(FAdoCommand.CreateParameter('DummyParam', adVariant, adParamInput, SizeOf(OleVariant), null));
     FAdoCommand.Parameters.Delete('DummyParam');
     FRefreshParamsFailed := True;
+  end;*)
+var
+  I: Integer;
+  ParamCount: NativeUInt;
+  ParamInfo: PDBParamInfoArray;
+  NamesBuffer: PPOleStr;
+  Name: WideString;
+  Parameter: _Parameter;
+  Direction: ParameterDirectionEnum;
+  OLEDBCommand: ICommand;
+  OLEDBParameters: ICommandWithParameters;
+  CommandPrepare: ICommandPrepare;
+begin
+  if (FCommandType = adCmdStoredProc) or (Bindlist.Capacity = 0) then Exit;
+  OLEDBCommand := (FAdoCommand as ADOCommandConstruction).OLEDBCommand as ICommand;
+  OLEDBCommand.QueryInterface(ICommandWithParameters, OLEDBParameters);
+  if Assigned(OLEDBParameters) and not fDEFERPREPARE then begin
+    OLEDBParameters.SetParameterInfo(0, nil, nil);
+    ParamInfo := nil;
+    NamesBuffer := nil;
+    try
+      OLEDBCommand.QueryInterface(ICommandPrepare, CommandPrepare);
+      if Assigned(CommandPrepare) then CommandPrepare.Prepare(0);
+      if OLEDBParameters.GetParameterInfo(ParamCount{%H-}, PDBPARAMINFO(ParamInfo), NamesBuffer) = S_OK then begin
+        for I := 0 to ParamCount - 1 do
+          with ParamInfo[I] do begin
+            { When no default name, fabricate one like ADO does }
+            if pwszName = nil then
+              Name := 'Param' + ZFastCode.IntToUnicode(I+1) else { Do not localize }
+              Name := pwszName;
+            { ADO maps DBTYPE_BYTES to adVarBinary }
+            if wType = DBTYPE_BYTES then wType := adVarBinary;
+            { ADO maps DBTYPE_STR to adVarChar }
+            if wType = DBTYPE_STR then wType := adVarChar;
+            { ADO maps DBTYPE_WSTR to adVarWChar }
+            if wType = DBTYPE_WSTR then wType := adVarWChar;
+            Direction := dwFlags and $F;
+            { Verify that the Direction is initialized }
+            if Direction = adParamUnknown then
+              Direction := cParamIOs[BindList[i].ParamType];
+            Parameter := FAdoCommand.CreateParameter(Name, wType, Direction, ulParamSize, EmptyParam);
+            Parameter.Precision := bPrecision;
+            Parameter.NumericScale := ParamInfo[I].bScale;
+            Parameter.Attributes := dwFlags and $FFFFFFF0; { Mask out Input/Output flags }
+          end;
+        FRefreshParamsFailed := False;
+      end else FRefreshParamsFailed := True;
+    finally
+      if Assigned(CommandPrepare) then CommandPrepare.Unprepare;
+      if (ParamInfo <> nil) then ZAdoMalloc.Free(ParamInfo);
+      if (NamesBuffer <> nil) then ZAdoMalloc.Free(NamesBuffer);
+    end;
   end;
 end;
 
@@ -1193,15 +1249,22 @@ end;
 
 procedure TZAdoPreparedStatement.SetString(Index: Integer;
   const AValue: String);
+var PW: PWideChar;
+  L: NativeUInt;
 begin
   {$IFDEF UNICODE}
-  SetPWideChar(Index, Pointer(AValue), Length(AValue));
+  L := Length(AValue);
+  if L = 0
+  then PW := PEmptyUnicodeString
+  else PW := Pointer(AValue);
   {$ELSE}
-  if Consettings.AutoEncode
-  then fUniTemp := ConSettings.ConvFuncs.ZStringToUnicode(AValue, ConSettings^.CTRL_CP)
-  else fUniTemp := PRawToUnicode(Pointer(AValue), Length(AValue), FClientCP);
-  SetPWideChar(Index, Pointer(fUniTemp), Length(fUniTemp));
+  fUniTemp := ZRawToUnicode(AValue, GetW2A2WConversionCodePage(ConSettings));
+  L := Length(fUniTemp);
+  if L = 0
+  then PW := PEmptyUnicodeString
+  else PW := Pointer(fUniTemp);
   {$ENDIF}
+  SetPWideChar(Index, PW, L);
 end;
 
 procedure TZAdoPreparedStatement.SetTime(Index: Integer;

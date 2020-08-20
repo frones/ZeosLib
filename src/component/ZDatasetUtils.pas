@@ -73,9 +73,22 @@ type
   end;
   TZFieldsLookUpDynArray = array of TZFieldsLookUp;
 
-  {** Defines the Target Ansi codepages for the Controls }
-  TZControlsCodePage = ({$IFDEF UNICODE}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
-
+  {** Defines the target Field-Type }
+  TZTransliterationType = (ttField, ttParam,ttSQL);
+  TZControlsCodePage = ( //EH: my name is obsolate it should be TZCharacterFieldType, left for backward compatibility
+  {$IFDEF UNICODE}
+    cCP_UTF16, cGET_ACP, cDynamic
+  {$ELSE}
+    {$IFDEF FPC}
+      {$IFDEF LCL}
+        cCP_UTF8, cCP_UTF16, cGET_ACP, cDynamic
+      {$ELSE LCL}
+        cGET_ACP, cCP_UTF16, cCP_UTF8, cDynamic
+      {$ENDIF LCL}
+    {$ELSE FPC}
+      cGET_ACP, cCP_UTF16, cCP_UTF8, cDynamic
+    {$ENDIF FPC}
+  {$ENDIF UNICODE});
 {**
   Converts DBC Field Type to TDataset Field Type.
   @param Value an initial DBC field type.
@@ -94,12 +107,13 @@ function ConvertDatasetToDbcType(Value: TFieldType): TZSQLType;
 {**
   Converts field definitions into column information objects.
   @param Fields a collection of field definitions.
-  @param ControlsCodePage the codepage used for the String fields
+  @param StringFieldCodePage the codepage used for the String fields
     which are not data-fields
   @param DataFieldsOnly indicate if the ResultList contains fkDataFields only
   @return a collection of column information objects.
 }
-function ConvertFieldsToColumnInfo(Fields: TFields; ControlsCodePage: Word; DataFieldsOnly: Boolean): TObjectList;
+function ConvertFieldsToColumnInfo(Fields: TFields; StringFieldCodePage: Word;
+  NoDataFieldsOnly: Boolean): TObjectList;
 
 {**
   Converts a field definitions into column information objects.
@@ -107,7 +121,7 @@ function ConvertFieldsToColumnInfo(Fields: TFields; ControlsCodePage: Word; Data
   @param NativeColumnCodePage the codepage used for the String/memo fields
   @return a column information object.
 }
-function ConvertFieldToColumnInfo(Field: TField; NativeColumnCodePage: Word): TZColumnInfo;
+function ConvertFieldToColumnInfo(Field: TField; StringFieldCodePage: Word): TZColumnInfo;
 
 {**
   Defines fields indices for the specified dataset.
@@ -224,17 +238,6 @@ procedure DefineSortedFields(DataSet: TDataset;
   out CompareKinds: TComparisonKindArray; out OnlyDataFields: Boolean);
 
 {**
-  Creates a fields lookup table to define fixed position
-  of the field in dataset.
-  @param FieldDefs a collection of TDataset fielddefss in initial order.
-  @param Fields a collection of TDataset fields in initial order.
-  @param IndexPairList creates a collection of index pairs.
-  @returns a fields lookup table.
-}
-function CreateFieldsLookupTable(const Metadata: IZResultSetMetadata;
-  Fields: TFields; out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
-
-{**
   Defines an original field index in the dataset.
   @param FieldsLookupTable a lookup table to define original index.
   @param Field a TDataset field object.
@@ -267,6 +270,7 @@ procedure SplitQualifiedObjectName(const QualifiedName: string;
   const SupportsCatalogs, SupportsSchemas: Boolean;
   out Catalog, Schema, ObjectName: string); overload;
 
+function GetTransliterateCodePage(ControlsCodePage: TZControlsCodePage): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 {**
   Assigns a Statement value from a TParam
   @param Index the index of Statement.SetParam(Idex..);
@@ -334,7 +338,7 @@ implementation
 uses
   FmtBCD, Variants,
   ZFastCode, ZMessages, ZGenericSqlToken, ZAbstractRODataset,
-  ZSysUtils, ZDbcResultSet, ZEncoding;
+  ZSysUtils, ZDbcResultSet, ZDbcUtils, ZEncoding;
 
 {**
   Converts DBC Field Type to TDataset Field Type.
@@ -374,9 +378,9 @@ begin
       //Result := ftCurrency;
       Result := ftBCD;
     stString: if Precision <= 0
-      then {$IFDEF WITH_WIDEMEMO}if CPType = cCP_UTF16
-        then Result := ftWideMemo
-        else {$ENDIF}Result := ftMemo
+      then if CPType = cCP_UTF16
+        then Result := {$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}
+        else Result := ftMemo
       else if CPType = cCP_UTF16
         then Result := ftWideString
         else Result := ftString;
@@ -390,21 +394,21 @@ begin
       Result := ftTime;
     stTimestamp:
       Result := ftDateTime;
-    stAsciiStream: {$IFDEF WITH_WIDEMEMO}if CPType = cCP_UTF16
-        then Result := ftWideMemo
-        else {$ENDIF}Result := ftMemo;
+    stAsciiStream: if CPType = cCP_UTF16
+        then Result := {$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}
+        else Result := ftMemo;
     stBinaryStream:
       Result := ftBlob;
     stUnicodeString: if (Precision <= 0) or (Precision > dsMaxStringSize)
-      then {$IFDEF WITH_WIDEMEMO}if CPType = cCP_UTF16
-        then Result := ftWideMemo
-        else {$ENDIF}Result := ftMemo
+      then if (CPType = cCP_UTF16) or (CPType = cDynamic)
+        then Result := {$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}
+        else Result := ftMemo
       else if CPType = cCP_UTF16
         then Result := ftWideString
         else Result := ftString;
-    stUnicodeStream: {$IFDEF WITH_WIDEMEMO}if CPType = cCP_UTF16
-        then Result := ftWideMemo
-        else {$ENDIF}Result := ftMemo;
+    stUnicodeStream: if (CPType = cCP_UTF16)or (CPType = cDynamic)
+        then Result := {$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}
+        else Result := ftMemo;
     {$IFDEF WITH_FTDATASETSUPPORT}
     stDataSet:
       Result := ftDataSet;
@@ -504,8 +508,8 @@ end;
     which are not data-fields
   @return a collection of column information objects.
 }
-function ConvertFieldsToColumnInfo(Fields: TFields; ControlsCodePage: Word;
-  DataFieldsOnly: Boolean): TObjectList;
+function ConvertFieldsToColumnInfo(Fields: TFields; StringFieldCodePage: Word;
+  NoDataFieldsOnly: Boolean): TObjectList;
 var
   I: Integer;
   Current: TField;
@@ -514,34 +518,8 @@ begin
   Result := TObjectList.Create(True);
   for I := 0 to Fields.Count - 1 do begin
     Current := Fields[I];
-    if (Current.FieldKind = fkData) and DataFieldsOnly then continue;
-    {all other fields (created for the accessor) or calculated oslt. }
-    (*case Current.DataType of
-      ftBoolean: if (Current is TZBooleanField) then Continue;
-      {$IFDEF WITH_FTBYTE}ftByte: if Current is TZByteField then Continue; {$ENDIF}
-      {$IFDEF WITH_FTBYTE}ftShortInt: if Current is TZShortIntField then Continue; {$ENDIF}
-      ftWord: if (Current is TZWordField) then Continue;
-      ftSmallInt: if (Current is TZSmallIntField) then Continue;
-      ftInteger: if (Current is TZIntegerField) then Continue;
-      {$IFDEF WITH_FTLONGWORD}ftLongWord: if Current is TZCardinalField then Continue;{$ENDIF}
-      ftLargeInt: if (Current is TZInt64Field) then Continue;
-      {$IFDEF WITH_FTSINGLE}ftSingle: if Current is TZSingleField then Continue;{$ENDIF}
-      ftTime: if Current is TZTimeField then Continue;
-      ftDate: if Current is TZDateField then Continue;
-      ftDateTime: if Current is TZDateTimeField then Continue;
-      ftFloat: if Current is TZDoubleField then Continue;
-      ftBCD: if Current is TZBCDField then Continue;
-      ftFmtBCD: if Current is TZFmtBCDField then Continue;
-      ftBytes: if Current is TZBytesField then Continue;
-      ftVarBytes: if Current is TZVarBytesField then Continue;
-      ftString: if Current is TZRawStringField then Continue;
-      ftWideString: if Current is TZUnicodeStringField then Continue;
-      ftMemo: if Current is TZRawCLobField then Continue;
-      {$IFDEF WITH_WIDEMEMO}ftWideMemo: if Current is TZUnicodeCLobField then Continue;{$ENDIF}
-      ftBlob: if Current is TZBLobField then Continue;
-    end;*)
-
-    ColumnInfo := ConvertFieldToColumnInfo(Current, ControlsCodePage);
+    if (Current.FieldKind = fkData) and NoDataFieldsOnly then continue;
+    ColumnInfo := ConvertFieldToColumnInfo(Current, StringFieldCodePage);
     Result.Add(ColumnInfo);
   end;
 end;
@@ -552,17 +530,16 @@ end;
   @param NativeColumnCodePage the codepage used for the String/memo fields
   @return a column information object.
 }
-function ConvertFieldToColumnInfo(Field: TField; NativeColumnCodePage: Word): TZColumnInfo;
+function ConvertFieldToColumnInfo(Field: TField; StringFieldCodePage: Word): TZColumnInfo;
 begin
   Result := TZColumnInfo.Create;
-
   Result.ColumnType := ConvertDatasetToDbcType(Field.DataType);
   Result.ColumnName := Field.FieldName;
   Result.Precision := Field.Size;
   if Field.DataType in [ftBCD, ftFmtBCD] then
     Result.Scale := Field.DataSize
   else if Field.DataType in [ftMemo, ftString, ftFixedChar] then
-    Result.ColumnCodePage := NativeColumnCodePage
+    Result.ColumnCodePage := StringFieldCodePage
   else if Field.DataType in [{$IFDEF WITH_FTWIDEMEMO}ftWideMemo, {$ENDIF}
     ftWideString{$IFDEF WITH_FTFIXEDWIDECHAR}, ftFixedWideChar{$ENDIF}] then
     Result.ColumnCodePage := zCP_UTF16;
@@ -837,9 +814,11 @@ var
       //ftString, ftMemo:
         //Variables.Values[I] := EncodeString(TField(Fields[I]).AsString);
     {$IFNDEF UNICODE}
-      {$IFDEF WITH_FTWIDESTRING}
-      ftWidestring{$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}:
+      {$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}
+      ftWidestring, ftWideMemo:
         Variables.Values[I] := EncodeUnicodeString(TField(Fields[I]).AsWideString);
+      {$ELSE}
+      ftWidestring: Variables.Values[I] := EncodeUnicodeString(TWideStringField(Fields[I]).Value);
       {$ENDIF}
     {$ENDIF}
       ftBytes, ftVarBytes:
@@ -1423,39 +1402,6 @@ begin
 end;
 
 {**
-  Creates a fields lookup table to define fixed position
-  of the field in dataset.
-  @param FieldDefs a collection of TDataset fielddefss in initial order.
-  @param Fields a collection of TDataset fields in initial order.
-  @param IndexPairList creates a collection of index pairs.
-  @returns a fields lookup table.
-}
-function CreateFieldsLookupTable(const Metadata: IZResultSetMetadata;
-  Fields: TFields; out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
-var I, Idx: Integer;
-  a: Integer;
-begin
-  {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
-  SetLength(Result, Fields.Count);
-  IndexPairList := TZIndexPairList.Create;
-  IndexPairList.Capacity := Fields.Count;
-  a := FirstDbcIndex;
-  for I := 0 to Fields.Count - 1 do begin
-    Result[i].Field := Fields[I];
-    Idx := Metadata.FindColumn(Fields[I].FieldName);
-    if Idx = InvalidDbcIndex then begin
-      Result[i].DataSource := dltAccessor;
-      Result[i].Index := a;
-      Inc(a);
-    end else begin
-      Result[i].DataSource := dltResultSet;
-      Result[i].Index := Idx;
-      IndexPairList.Add(Idx, i);
-    end;
-  end;
-end;
-
-{**
   Defines an original field index in the dataset.
   @param FieldsLookupTable a lookup table to define original index.
   @param Field a TDataset field object.
@@ -1489,6 +1435,7 @@ begin
     Result := nil;
     Exit;
   end;
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
   SetLength(Result, Length(FieldRefs));
   for I := 0 to High(Result) do
     for J := 0 to high(FieldsLookupTable) do
@@ -1622,84 +1569,53 @@ begin
       ExtractStrings(['.'], [' '], PChar(QualifiedName), SL);
       case SL.Count of
         0, 1: ;
-        2:
-          begin
-            if SupportsCatalogs then
-            begin
+        2:  if SupportsCatalogs then begin
               Catalog := SL.Strings[0];
-              if SupportsSchemas then
-                Schema := SL.Strings[1]
-              else
-                ObjectName := SL.Strings[1];
-            end
-            else
-              if SupportsSchemas then
-              begin
-                Schema := SL.Strings[0];
-                ObjectName := SL.Strings[1];
-              end
-              else
-                ObjectName := SL.Strings[0]+'.'+SL.Strings[1];
-          end;
-        3:
-          if SupportsCatalogs then
-          begin
-            Catalog := SL.Strings[0];
-            if SupportsSchemas then
-            begin
-              Schema := SL.Strings[1];
-              ObjectName := SL.Strings[2]
-            end
-            else
-              ObjectName := SL.Strings[1]+'.'+SL.Strings[2];
-          end
-          else
-            if SupportsSchemas then
-            begin
+              if SupportsSchemas
+              then Schema := SL.Strings[1]
+              else ObjectName := SL.Strings[1];
+            end else if SupportsSchemas then begin
+              Schema := SL.Strings[0];
+              ObjectName := SL.Strings[1];
+            end else
+              ObjectName := SL.Strings[0]+'.'+SL.Strings[1];
+        3:  if SupportsCatalogs then begin
+              Catalog := SL.Strings[0];
+              if SupportsSchemas then begin
+                Schema := SL.Strings[1];
+                ObjectName := SL.Strings[2]
+              end else
+                ObjectName := SL.Strings[1]+'.'+SL.Strings[2];
+            end else if SupportsSchemas then begin
               Schema := SL.Strings[0];
               ObjectName := SL.Strings[1]+'.'+SL.Strings[2];
-            end
-            else
+            end else
               ObjectName := SL.Strings[0]+'.'+SL.Strings[1]+'.'+SL.Strings[2];
-        else
-          if SupportsCatalogs then
-          begin
-            Catalog := SL.Strings[0];
-            if SupportsSchemas then
-            begin
-              Schema := SL.Strings[1];
-              for i := 2 to SL.Count-1 do
-                if i = 2 then
-                  ObjectName := SL.Strings[i]
-                else
-                  ObjectName := ObjectName+'.'+SL.Strings[i];
-            end
-            else
-            begin
-              ObjectName := '';
-              for i := 2 to SL.Count-1 do
-                if I = 2 then
-                  ObjectName := SL.Strings[i]
-                else
-                  ObjectName := ObjectName+'.'+SL.Strings[i];
-            end;
-          end
-          else
-            if SupportsSchemas then
-            begin
+        else if SupportsCatalogs then begin
+              Catalog := SL.Strings[0];
+              if SupportsSchemas then begin
+                Schema := SL.Strings[1];
+                for i := 2 to SL.Count-1 do
+                  if i = 2
+                  then ObjectName := SL.Strings[i]
+                  else ObjectName := ObjectName+'.'+SL.Strings[i];
+              end else begin
+                ObjectName := '';
+                for i := 2 to SL.Count-1 do
+                  if I = 2
+                  then ObjectName := SL.Strings[i]
+                  else ObjectName := ObjectName+'.'+SL.Strings[i];
+              end;
+            end else if SupportsSchemas then begin
               Schema := SL.Strings[0];
               for i := 1 to SL.Count-1 do
-                if i = 1 then
-                  ObjectName := SL.Strings[i]
-                else
-                  ObjectName := ObjectName+'.'+SL.Strings[i];
-            end
-            else
-              for i := 0 to SL.Count-1 do
-                if I = 0 then
-                  ObjectName := SL.Strings[i]
-                else
-                  ObjectName := ObjectName+'.'+SL.Strings[i];
+                if i = 1
+                then ObjectName := SL.Strings[i]
+                else ObjectName := ObjectName+'.'+SL.Strings[i];
+              end else for i := 0 to SL.Count-1 do
+                if I = 0
+                then ObjectName := SL.Strings[i]
+                else ObjectName := ObjectName+'.'+SL.Strings[i];
         end;
     finally
       SL.Free;
@@ -1707,6 +1623,25 @@ begin
   end;
 end;
 
+function GetTransliterateCodePage(ControlsCodePage: TZControlsCodePage): Word;
+begin
+  case ControlsCodePage of
+    {$IFNDEF UNICODE}
+    cCP_UTF8: Result := zCP_UTF8;
+    {$ENDIF}
+    cGET_ACP:  Result := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF};
+    {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
+    else Result := DefaultSystemCodePage
+    {$ELSE}
+      {$IFDEF LCL}
+      else Result := zCP_UTF8
+      {$ELSE}
+      else Result := ZOSCodePage;
+      {$ENDIF}
+    {$ENDIF}
+  end;
+end;
+type THackParam = class(TParam);
 {**
   Assigns a Statement value from a TParam
   @param Index the index of Statement.SetXxxx(ColumnIndex, xxx);
@@ -1795,7 +1730,19 @@ begin
       {$IFNDEF UNICODE}
       if (TVarData(Param.Value).VType = varOleStr) {$IFDEF WITH_varUString} or (TVarData(Param.Value).VType = varUString){$ENDIF}
       then Statement.SetUnicodeString(Index, Param.Value)
-      else {$ENDIF}Statement.SetString(Index, Param.AsString);
+      else begin
+        ConSettings := TZAbstractRODataset(THackParam(Param).DataSet).Connection.DbcConnection.GetConSettings;
+        if ConSettings.ClientCodePage.Encoding = ceUTF16 then begin
+          CP := TZAbstractRODataset(THackParam(Param).DataSet).Connection.RawCharacterTransliterateOptions.GetRawTransliterateCodePage(ttParam);
+          if CP = zCP_UTF8
+          then Statement.SetUTF8String(Index, Param.AsString)
+          else Statement.SetAnsiString(Index, Param.AsString);
+        end else
+          Statement.SetRawByteString(Index, Param.AsString);
+      end;
+      {$ELSE}
+      Statement.SetUnicodeString(Index, Param.AsString);
+      {$ENDIF}
     ftBytes, ftVarBytes:
         {$IFDEF TPARAM_HAS_ASBYTES}
         Statement.SetBytes(Index, Param.AsBytes);
@@ -1828,7 +1775,7 @@ begin
     ftDateTime:
       Statement.SetTimestamp(Index, Param.AsDateTime);
     ftMemo, ftFmtMemo{$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}: begin
-        ConSettings := Statement.GetConnection.GetConSettings;
+        ConSettings := TZAbstractRODataset(THackParam(Param).DataSet).Connection.DbcConnection.GetConSettings;
         case TvarData(Param.Value).VType of //it's worth it checking the type i.e. Encodings
           {$IFDEF WITH_varUString}varUString,{$ENDIF}
           {$IFDEF UNICODE}varString,{$ENDIF} //otherwise we get a conversion warning
@@ -1845,15 +1792,7 @@ begin
               R := RawByteString(TVarData(Param.Value).VString);
               P :=  Pointer(R);
               if P <> nil
-              (*{$IFDEF WITH_DEFAULTSYSTEMCODEPAGE} //FPC 2.7+
-              then CP := StringCodePage(R)
-              {$ELSE}*)
-              then if ConSettings.AutoEncode
-                then CP := zCP_NONE
-                else if (ConSettings.ClientCodePage.Encoding = ceUTF16)
-                  then CP := ConSettings.CTRL_CP
-                  else CP := ConSettings.ClientCodePage.CP
-              {.$ENDIF}
+              then CP := TZAbstractRODataset(THackParam(Param).DataSet).Connection.RawCharacterTransliterateOptions.GetRawTransliterateCodePage(ttParam)
               else begin
                 CP := ConSettings.ClientCodePage.CP;
                 P := PEmptyAnsiString;
@@ -1876,22 +1815,10 @@ begin
                  Lob := TZLocalMemCLob.CreateWithData(PWideChar(P), L shr 1, ConSettings, nil);
                  Statement.SetBlob(Index, stUnicodeStream, Lob);
               end else {$ENDIF}begin
-                if ConSettings.ClientCodePage.Encoding = ceUTF16
-                then CP := ConSettings.CTRL_CP
+                if ConSettings^.ClientCodePage.Encoding = ceUTF16
+                //then CP := GetTransliterateCodePage(TZAbstractRODataset(THackParam(Param).DataSet).Connection.ControlsCodePage)
+                then CP := TZAbstractRODataset(THackParam(Param).DataSet).Connection.RawCharacterTransliterateOptions.GetRawTransliterateCodePage(ttParam)
                 else CP := ConSettings.ClientCodePage.CP;
-                if ConSettings.AutoEncode then case ZDetectUTF8Encoding(P, L) of
-                  etAnsi: if CP = zCP_UTF8 then //otherwise we'll keep the code page
-                        if (ConSettings^.ClientCodePage^.CP = zCP_UTF8) then
-                          if (ConSettings^.CTRL_CP = zCP_UTF8) then
-                            if (ZOSCodePage = zCP_UTF8) then
-                            {no idea what to do with ansiencoding, if everything if set to UTF8!}
-                              CP := zCP_WIN1252 //all convertions would fail so.. let the server raise an error!
-                            else CP := ZOSCodePage
-                          else CP := ConSettings^.CTRL_CP
-                        else CP := ConSettings^.ClientCodePage^.CP;
-                  etUTF8: CP := zCP_UTF8;
-                  else {etUSASCII}; //do nothing just satisfy FPC 3.1+
-                end;
                 Lob := TZLocalMemCLob.CreateWithData(PAnsiChar(P), L, CP, ConSettings, nil);
                 Statement.SetBlob(Index, stAsciiStream, Lob);
               end;

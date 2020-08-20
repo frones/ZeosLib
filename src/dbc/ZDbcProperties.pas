@@ -140,9 +140,8 @@ const
   ConnProps_Transliterate = 'Transliterate';
   // Type: CP_UTF16 | CP_UTF8 | GET_ACP
   // Same as ControlsCodePage property
-  ConnProps_ControlsCP = 'controls_cp';
-  // Type: CP_UTF8 | GET_ACP
-  // Same as ControlsCodePage property
+  ConnProps_ControlsCP = 'controls_cp'; //dreprecaded use ConnProps_RawStringEncoding  instead
+  // Type: DB_CP | CP_UTF8 | DefaultSystemCodePage
   ConnProps_RawStringEncoding = 'RawStringEncoding';
   // Type: INT
   // The login timeout to use in seconds.
@@ -181,8 +180,17 @@ const
   ///  If the driver(f.e. SQLite) supports the 'T' delimiter do not hasitate to use it!
   /// </remarks>
   ConnProps_DateTimeWriteFormat = 'DatetimeWriteFormat';
-  // Type: STR
-  // Sets TZAbstractDatabaseInfo.IdentifierQuotes property, refer to Zeos manual for details
+  /// <type>String</type>
+  /// <summary>
+  ///  Sets TZAbstractDatabaseInfo.IdentifierQuotes property. The quote chars
+  ///  are relevant for Postgres dollar quoting, multi drivers like ado, odbc,
+  ///  OleDB same as SQLite whare all known identifier quotes are allowed
+  /// </summary>
+  /// <default>""</default>
+  /// <remarks>
+  ///  the quote char(s) count can contain a single char like sql standard " or
+  ///  maximum two characters
+  /// </remarks>
   ConnProps_IdentifierQuotes = 'identifier_quotes';
 
   { Parameters common for all DBC's }
@@ -667,6 +675,20 @@ const
   // Type: INT
   // Execution timeout in seconds
   ConnProps_StatementTimeOut = DSProps_StatementTimeOut;
+  /// <type>Enum</type>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_FirebirdAPI]={legacy|interface}</syntax>
+  /// <values>legacy|interface</syntax>
+  /// <summary>
+  ///  defines the Firebird API which is used used for. The default for firebird
+  ///  3+ is object API. If "legacy" is set the old firebird legacy API is used.
+  /// </summary>
+  /// <default>interface</default>
+  /// <remarks>
+  ///  If the library version is lower then 3.0 the parameter is ignored
+  ///  and the legacy API is always used
+  /// </remarks>
+  ConnProps_FirebirdAPI = 'FirebirdAPI';
 {$ENDIF ENABLE_FIREBIRD}
 
 {$IFDEF ENABLE_SQLITE}

@@ -127,6 +127,7 @@ type
     procedure TestSF238;
     procedure TestSF418_SortedFields;
     procedure TestSF418_IndexFieldNames;
+    procedure TestSF434;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -244,16 +245,15 @@ begin
     Query.SQL.Text := 'SELECT * FROM people';
     Query.Open;
     Query.Append;
-//    Query.FieldByName('p_id').AsInteger := TEST_ROW_ID;
-//    Query.Post;
+    Query.FieldByName('p_id').AsInteger := TEST_ROW_ID;
+    Query.Post;
     Query.Close;
-(*
+
     { Remove newly created record }
     Query.SQL.Text := 'DELETE FROM people WHERE p_id=:id';
     Query.ParamByName('id').AsInteger := TEST_ROW_ID;
     Query.ExecSQL;
     CheckEquals(1, Query.RowsAffected);
-*)
   finally
     Query.Free;
   end;
@@ -1899,6 +1899,51 @@ begin
   end;
 end;
 
+(* I use the MS SQL-Server 2014 and 2016. I work in the ZConnection with the
+  protocol "ado". In the ZQuery, an SQL command with one parameter is executed.
+  The query does not return any result (Recordcount = 0). Now ZQuery is closed,
+  the parameter changed and ZQuery opened again. Again there is no result,
+  although the query should result in several lines. When debugging,
+  I noticed that the changed parameter was not adopted
+  (down to the depth of the sources). It works perfectly with the
+  "mssql" protocol. If the SQL command is set before the second
+  parameter transfer, it also works.
+
+Example:
+ZQuery.SQL.Text: = 'select * from article where artno like :0';
+ZQuery.Params [0] .asString: = 'A';
+ZQuery.Open;
+// ZQuery.Recordcount = 0 (OK)
+...
+ZQuery.Close;
+ZQuery.Params [0] .asString: = 'B%';
+ZQuery.Open;
+// ZQuery.Recordcount = 0 (not OK => 'B%' was not set)
+*)
+procedure ZTestCompCoreBugReport.TestSF434;
+var
+  Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  Query.Connection.Connect;
+  try
+    CheckEquals(False, Query.CachedUpdates);
+
+    Query.SQL.Text := 'SELECT * FROM people where p_name like :'+Char(Ord('0')+Ord(Connection.DbcConnection.GetServerProvider = spPostgreSQL));
+    Query.Params[0].AsString := 'A';
+    Query.Open;
+    CheckEquals(0, Query.RecordCount, 'there is no Row');
+    Query.Close;
+    Query.Params[0].AsString := 'A%';
+    Query.Open;
+    CheckEquals(2, Query.RecordCount, 'there are two rows');
+  finally
+    Query.Free;
+  end;
+end;
+
 procedure ZTestCompCoreBugReport.TestSF418_IndexFieldNames;
 var
   Query: TZReadOnlyQuery;
@@ -1942,6 +1987,7 @@ procedure ZTestCompCoreBugReport.TestSF270_1;
 var
   Query: TZQuery;
   PersonName: String;
+  Succeeded: Boolean;
 begin
   if SkipForReason(srClosedBug) then Exit;
 
@@ -1954,11 +2000,13 @@ begin
     Query.Edit;
     Query.FieldByName('p_name').AsString := '';
     Query.FieldByName('p_name').AsString := PersonName;
+    Succeeded := False;
     try
       Query.Post;
-    except
-      Query.Cancel;
-      raise;
+      Succeeded := True;
+    finally
+      if not Succeeded then
+        Query.Cancel;
     end;
     Query.Close;
   finally
@@ -2150,8 +2198,8 @@ const {Test Strings}
   Str3: UnicodeString = #$041E#$0434#$043D#$043E#$0439#$0020#$0438#$0437#$0020#$043D#$0430#$0438#$0431#$043E#$043B#$0435#$0435;
   Str4: UnicodeString = #$0442#$0440#$0438#$0432#$0438#$0430#$043B#$044C#$043D#$044B#$0445#$0020#$0437#$0430#$0434#$0430#$0447;
   Str5: UnicodeString = #$0440#$0435#$0448#$0430#$0435#$043C#$044B#$0445#$0020#$043C#$043D#$043E#$0433#$0438#$043C#$0438;
-  Str6: UnicodeString = #$043A#$043E#$043B#$043B#$0435#$043A#$0442#$0438#$0432#$0430#$043C+
-                      #$0438#$0020#$043F#$0440#$043E#$0433#$0440#$0430#$043C#$043C#$0438#$0441#$0442#$043E#$0432;
+  (*Str6: UnicodeString = #$043A#$043E#$043B#$043B#$0435#$043A#$0442#$0438#$0432#$0430#$043C+
+                      #$0438#$0020#$043F#$0440#$043E#$0433#$0440#$0430#$043C#$043C#$0438#$0441#$0442#$043E#$0432;*)
 
 {$IFDEF MSWINDOWS}
 procedure ZTestCompCoreBugReportMBCs.TestUnicodeBehavior;
@@ -2164,11 +2212,6 @@ var
   CP: Word;
   {$IFDEF UNICODE}
   DSCCString: RawByteString;
-  {$ELSE}
-    {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE} //FPC silently converts the string cp's
-    R: RawByteString;
-    S: String;
-    {$ENDIF}
   {$ENDIF}
 begin
   (*Str1 := 'This is an ASCII text and should work on any database.';
@@ -2196,6 +2239,7 @@ begin
     Check(Query.Connection.Connected, 'Connected');
     ConSettings := connection.DbcConnection.GetConSettings;
     CP := ConSettings.ClientCodePage.CP;
+    Check(CP <> 0, 'The Codepage can not be zero');
     with Query do
     begin
       SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
@@ -2206,11 +2250,11 @@ begin
       SQL.Text := 'INSERT INTO people(p_id, p_name, p_resume)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
       ParamByName('P_ID').AsInteger := TEST_ROW_ID;
-      ParamByName('P_NAME').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}  := Str3;
+      ParamByName('P_NAME').{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}  := Str3;
       CheckEquals(3, Query.Params.Count, 'Param.Count');
-      SL.Text := GetDBTestString(Str2, ConSettings);
+      SL.Text := GetDBTestString(Str2, ttParam);
       {$IFDEF UNICODE} //the unicode compiler are converting the streams into DefaultSystemCodePage
-      if not ConSettings.AutoEncode and (CP <> DefaultSystemCodePage) and (ConSettings.ClientCodePage.Encoding <> ceUTF16) then begin
+      if (CP <> DefaultSystemCodePage) and (ConSettings.ClientCodePage.Encoding <> ceUTF16) then begin
         DSCCString := ZUnicodeToRaw(SL.Text, CP);
         StrStream1.Write(Pointer(DSCCString)^, Length(DSCCString));
         StrStream1.Position := 0;
@@ -2225,27 +2269,11 @@ begin
         StrStream1 := TMemoryStream.Create;
         Open;
 
-        (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
-
-        CheckEquals(Str2+UnicodeString(LineEnding), StrStream1, FieldByName('P_RESUME').DataType, ConSettings, Connection.ControlsCodePage, 'Param().LoadFromStream(StringStream, ftMemo) '+Protocol);
+        CheckEquals(Str2+UnicodeString(LineEnding), FieldByName('P_RESUME'));
         {$IFDEF UNICODE}
         CheckEquals(Str3, FieldByName('P_NAME').AsString, 'Field(P_NAME) as String');
         {$ELSE}
-        if Connection.ControlsCodePage = cCP_UTF16 then
-          CheckEquals(Str3, FieldByName('P_NAME').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'Field(P_NAME) as WideString '+Protocol)
-        else begin
-          if (ConSettings.AutoEncode) or (ConSettings^.ClientCodePage.Encoding = ceUTF16) then
-            CP := ConSettings.CTRL_CP;
-          {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
-          R := ZUnicodeToRaw(Str3, CP);
-          S := FieldByName('P_NAME').AsString;
-          CheckEquals(Length(R), Length(S), 'Length Field(P_NAME) as String '+Protocol);
-          Check(CompareMem(Pointer(R), Pointer(S), Length(R)), 'Memory equals Field(P_NAME) as String '+Protocol);
-          CheckEquals(R, FieldByName('P_NAME').AsString, 'Field(P_NAME) as String '+Protocol);
-          {$ELSE}
-          CheckEquals(ZUnicodeToRaw(Str3, CP), FieldByName('P_NAME').AsString, 'Field(P_NAME) as String '+Protocol);
-          {$ENDIF}
-        END;
+        CheckEquals(Str3, FieldByName('P_NAME'));
         {$ENDIF}
       finally
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
@@ -2269,20 +2297,19 @@ var
   RowCounter: Integer;
   I: Integer;
   Str1, Str2, Str3, Str4, Str5, Str6: UnicodeString;
-  ConSettings: PZConSettings;
   procedure InsertValues(s_char, s_varchar, s_nchar, s_nvarchar: UnicodeString);
   begin
     Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
     if Query.Connection.ControlsCodePage = cCP_UTF16 then begin
-      Query.ParamByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_char;
-      Query.ParamByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_varchar;
-      Query.ParamByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_nchar;
-      Query.ParamByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_nvarchar;
+      Query.ParamByName('s_char').{$IFDEF WITH_PARAM_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_char;
+      Query.ParamByName('s_varchar').{$IFDEF WITH_PARAM_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_varchar;
+      Query.ParamByName('s_nchar').{$IFDEF WITH_PARAM_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_nchar;
+      Query.ParamByName('s_nvarchar').{$IFDEF WITH_PARAM_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_nvarchar;
     end else begin
-      Query.ParamByName('s_char').AsString := GetDBTestString(s_char, ConSettings);;
-      Query.ParamByName('s_varchar').AsString := GetDBTestString(s_varchar, ConSettings);
-      Query.ParamByName('s_nchar').AsString := GetDBTestString(s_nchar, ConSettings);
-      Query.ParamByName('s_nvarchar').AsString := GetDBTestString(s_nvarchar, ConSettings);
+      Query.ParamByName('s_char').AsString := GetDBTestString(s_char, ttParam);
+      Query.ParamByName('s_varchar').AsString := GetDBTestString(s_varchar, ttParam);
+      Query.ParamByName('s_nchar').AsString := GetDBTestString(s_nchar, ttParam);
+      Query.ParamByName('s_nvarchar').AsString := GetDBTestString(s_nvarchar, ttParam);
     end;
     Query.ExecSQL;
     inc(RowCounter);
@@ -2327,7 +2354,6 @@ begin
   Query := CreateQuery;
   Connection.Connect;  //DbcConnection needed
   Check(Connection.Connected);
-  ConSettings := Connection.DbcConnection.GetConSettings;
   try
     RowCounter := 0;
     Query.SQL.Text := 'Insert into string_values (s_id, s_char, s_varchar, s_nchar, s_nvarchar)'+
@@ -2342,21 +2368,21 @@ begin
     Query.Open;
     CheckEquals(True, Query.RecordCount = 5);
     if ProtocolType in [protASA, protASACAPI] then //ASA has a limitation of 125chars for like statements
-      Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str2, ConSettings , 125),'%'''])
+      Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str2, ttSQL, 125),'%'''])
     else
-      Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str2, ConSettings),'%''']);
+      Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str2, ttSQL),'%''']);
     Query.Open;
     CheckEquals(1, Query.RecordCount, 'RowCount of Str2 '+Protocol);
-    Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str3, ConSettings),'%''']);
+    Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str3, ttSQL),'%''']);
     Query.Open;
     CheckEquals(2, Query.RecordCount, 'RowCount of Str3  '+Protocol);
-    Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str4, ConSettings),'%''']);
+    Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str4, ttSQL),'%''']);
     Query.Open;
     CheckEquals(2, Query.RecordCount, 'RowCount of Str4 '+Protocol);
-    Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str5, ConSettings),'%''']);
+    Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str5, ttSQL),'%''']);
     Query.Open;
     CheckEquals(2, Query.RecordCount, 'RowCount of Str5 '+Protocol);
-    Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str6, ConSettings),'%''']);
+    Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str6, ttSQL),'%''']);
     Query.Open;
   finally
     for i := TestRowID to TestRowID+RowCounter do
@@ -2386,7 +2412,7 @@ const
   procedure InsertValue(const id: Integer; const value: UnicodeString);
   begin
     Query.ParamByName('id').AsInteger := id;
-    Query.ParamByName('string').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := value;
+    Query.ParamByName('string').{$IFDEF WITH_PARAM_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := value;
     Query.ExecSQL;
   end;
 begin
@@ -2402,7 +2428,7 @@ begin
     {no unicode strings or utf8 allowed}
     if ((Connection.ControlsCodePage = cGET_ACP)
 {$IF defined(MSWINDOWS) and not (defined(LCL) and defined(WITH_DEFAULTSYSTEMCODEPAGE))} //LCL is hacking the default-systemcodepage so they can pass this test pass nice (utf8 to Widcharmove)
-          or (Connection.ControlsCodePage = cCP_UTF8)
+          {$IFNDEF UNICODE}or (Connection.ControlsCodePage = cCP_UTF8){$ENDIF}
 {$IFEND}
       ) and not ((ZOSCodePage = zCP_UTF8) or (ZOSCodePage = zCP_EUC_CN) or (ZOSCodePage = zCP_csISO2022JP)) then
       Exit;
@@ -2428,22 +2454,22 @@ begin
       Query.SQL.Text := 'select s_id, s_nvarchar from string_values where s_id in (1001, 1002, 1003, 1004, 1005, 1006) order by s_id';
       Query.Open;
       CheckEquals(1001, Query.FieldByName('s_id').AsInteger);
-      CheckEquals(Str1, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
+      CheckEquals(Str1, Query.FieldByName('s_nvarchar').{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1002, Query.FieldByName('s_id').AsInteger);
-      CheckEquals(Str2, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
+      CheckEquals(Str2, Query.FieldByName('s_nvarchar').{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1003, Query.FieldByName('s_id').AsInteger);
-      CheckEquals(Str3, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
+      CheckEquals(Str3, Query.FieldByName('s_nvarchar').{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1004, Query.FieldByName('s_id').AsInteger);
-      CheckEquals(Str4, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
+      CheckEquals(Str4, Query.FieldByName('s_nvarchar').{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1005, Query.FieldByName('s_id').AsInteger);
-      CheckEquals(Str5, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
+      CheckEquals(Str5, Query.FieldByName('s_nvarchar').{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1006, Query.FieldByName('s_id').AsInteger);
-      CheckEquals(Str6, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
+      CheckEquals(Str6, Query.FieldByName('s_nvarchar').{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Assert(CP <> 0);
       Assert(Consettings <> nil);
     finally

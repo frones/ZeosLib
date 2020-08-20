@@ -901,7 +901,7 @@ var
     try
       Query.SQL.Text := 'select * from Mantis229';
       Query.Open;
-      CheckMemoFieldType(Query.Fields[0].DataType, Connection.ControlsCodePage);
+      CheckMemoFieldType(Query.Fields[0], Connection.ControlsCodePage);
       CheckEquals('Mantis229', Query.Fields[0].AsString);
     finally
       Query.Free;
@@ -916,7 +916,7 @@ var
     try
       Query.SQL.Text := 'select * from Mantis229';
       Query.Open;
-      CheckStringFieldType(Query.Fields[0].DataType, Connection.ControlsCodePage);
+      CheckStringFieldType(Query.Fields[0], Connection.ControlsCodePage);
       CheckEquals('Mantis229', Query.Fields[0].AsString);
     finally
       Query.Free;
@@ -1027,7 +1027,7 @@ begin
       'LEFT JOIN Ticket51_B ON Ticket51_B."t1_id" = Ticket51_A."ID" '+
       'WHERE Ticket51_A."order_id" = 2';
     Query.Open;
-    CheckMemoFieldType(Query.Fields[2].DataType, Connection.ControlsCodePage);
+    CheckMemoFieldType(Query.Fields[2], Connection.ControlsCodePage);
     CheckEquals('MyName', Query.Fields[2].AsString);
   finally
     Query.Free;
@@ -1048,8 +1048,8 @@ begin
   Query := CreateQuery;
   Query.SQL.Text := 'select cast( name as varchar(100)), cast(setting as varchar(100)) from pg_settings';
   Query.Open;
-  CheckStringFieldType(Query.Fields[0].DataType, Connection.ControlsCodePage);
-  CheckStringFieldType(Query.Fields[1].DataType, Connection.ControlsCodePage);
+  CheckStringFieldType(Query.Fields[0], Connection.ControlsCodePage);
+  CheckStringFieldType(Query.Fields[1], Connection.ControlsCodePage);
   Query.Close;
   Query.Free;
 end;
@@ -1072,7 +1072,7 @@ begin
   {$IFDEF UNICODE}
   Query.ParamByName('test').AsString := QuoteString1;
   {$ELSE}
-  Query.ParamByName('test').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := QuoteString1;
+  Query.ParamByName('test').{$IFDEF WITH_PARAM_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := QuoteString1;
   {$ENDIF}
 
   Query.Open;
@@ -1091,17 +1091,13 @@ begin
   {$IFDEF UNICODE}
   Query.ParamByName('test').AsString := QuoteString2;
   {$ELSE}
-  Query.ParamByName('test').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := QuoteString2;
+  Query.ParamByName('test').{$IFDEF WITH_PARAM_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := QuoteString2;
   {$ENDIF}
   Query.Open;
   {$IFDEF UNICODE}
   CheckEquals(QuoteString2, Query.Fields[0].AsString);
   {$ELSE}
-  If Connection.ControlsCodePage = cCP_UTF16 then
-    CheckEquals(QuoteString2, Query.Fields[0].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF})
-  else if ConSettings.AutoEncode
-    then CheckEquals(ZUnicodeToRaw(QuoteString2, ConSettings.CTRL_CP), Query.Fields[0].AsString)
-    else CheckEquals(ZUnicodeToRaw(QuoteString2, CP), Query.Fields[0].AsString);
+  CheckEquals(QuoteString2, Query.Fields[0]);
   {$ENDIF}
   Query.Close;
 end;

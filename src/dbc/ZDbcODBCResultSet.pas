@@ -273,8 +273,8 @@ procedure TAbstractODBCResultSet.CheckStmtError(RETCODE: SQLRETURN);
   procedure HandleError;
   begin
     if Statement <> nil
-    then FODBCConnection.HandleStmtErrorOrWarning(RETCODE, fPHSTMT^, Statement.GetSQL, lcExecute, Self)
-    else FODBCConnection.HandleStmtErrorOrWarning(RETCODE, fPHSTMT^, 'MetaData-call', lcExecute, Self);
+    then FODBCConnection.HandleErrorOrWarning(RETCODE, fPHSTMT^, SQL_HANDLE_STMT, Statement.GetSQL, lcExecute, Self)
+    else FODBCConnection.HandleErrorOrWarning(RETCODE, fPHSTMT^, SQL_HANDLE_STMT, 'MetaData-call', lcExecute, Self);
   end;
 begin
   if RETCODE <> SQL_SUCCESS then
@@ -1032,16 +1032,16 @@ Set_Results:          Len := Result - PAnsiChar(FByteBuffer);
                       then Len := TimeToRaw(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
                           PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction, Result,
-                          ConSettings^.DisplayFormatSettings.TimeFormat, False, False)
+                          ConSettings^.ReadFormatSettings.TimeFormat, False, False)
                       else Len := TimeToRaw(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
                         PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0, Result,
-                          ConSettings^.DisplayFormatSettings.TimeFormat, False, False);
+                          ConSettings^.ReadFormatSettings.TimeFormat, False, False);
                     end;
       stDate:       begin
                       Result := PAnsiChar(FByteBuffer);
                       Len := DateToRaw(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
                         PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day, Result,
-                          ConSettings^.DisplayFormatSettings.DateFormat, False, PSQL_DATE_STRUCT(fColDataPtr)^.year < 0);
+                          ConSettings^.ReadFormatSettings.DateFormat, False, PSQL_DATE_STRUCT(fColDataPtr)^.year < 0);
                     end;
       stTimeStamp:  begin
                       Result := PAnsiChar(FByteBuffer);
@@ -1050,7 +1050,7 @@ Set_Results:          Len := Result - PAnsiChar(FByteBuffer);
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction, Result,
-                          ConSettings^.DisplayFormatSettings.DateTimeFormat,
+                          ConSettings^.ReadFormatSettings.DateTimeFormat,
                           False, PSQL_DATE_STRUCT(fColDataPtr)^.year < 0);
                     end;
       stString, stUnicodeString: begin
@@ -1167,27 +1167,34 @@ Set_Results:          Len := Result - PWideChar(FByteBuffer);
                       then Len := TimeToUni(PSQL_SS_TIME2_STRUCT(fColDataPtr)^.hour,
                         PSQL_SS_TIME2_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIME2_STRUCT(fColDataPtr)^.second,
                           PSQL_SS_TIME2_STRUCT(fColDataPtr)^.fraction, Result,
-                          ConSettings^.DisplayFormatSettings.TimeFormat, False, False)
+                          ConSettings^.ReadFormatSettings.TimeFormat, False, False)
                       else Len := TimeToUni(PSQL_TIME_STRUCT(fColDataPtr)^.hour,
                         PSQL_TIME_STRUCT(fColDataPtr)^.minute, PSQL_TIME_STRUCT(fColDataPtr)^.second, 0, Result,
-                          ConSettings^.DisplayFormatSettings.TimeFormat, False, False);
+                          ConSettings^.ReadFormatSettings.TimeFormat, False, False);
                     end;
       stDate:       begin
                       Result := PWideChar(FByteBuffer);
-                      DateTimeToUnicodeSQLDate(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
+                      Len := DateTimeToUnicodeSQLDate(EncodeDate(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
                         PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day), Result,
-                          ConSettings^.DisplayFormatSettings, False);
-                      Len := ConSettings^.DisplayFormatSettings.DateFormatLen;
+                          ConSettings^.ReadFormatSettings, False);
                     end;
       stTimeStamp:  begin
                       Result := PWideChar(FByteBuffer);
-                      Len := DateTimeToUni(Abs(PSQL_DATE_STRUCT(fColDataPtr)^.year),
-                        PSQL_DATE_STRUCT(fColDataPtr)^.month, PSQL_DATE_STRUCT(fColDataPtr)^.day,
+                      if (ODBC_CType = SQL_C_BINARY) or (ODBC_CType = SQL_C_SS_TIMESTAMPOFFSET)
+                      then Len := DateTimeToUni(Abs(PSQL_SS_TIMESTAMPOFFSET_STRUCT(fColDataPtr)^.year),
+                        PSQL_SS_TIMESTAMPOFFSET_STRUCT(fColDataPtr)^.month, PSQL_SS_TIMESTAMPOFFSET_STRUCT(fColDataPtr)^.day,
+                        PSQL_SS_TIMESTAMPOFFSET_STRUCT(fColDataPtr)^.hour,
+                        PSQL_SS_TIMESTAMPOFFSET_STRUCT(fColDataPtr)^.minute, PSQL_SS_TIMESTAMPOFFSET_STRUCT(fColDataPtr)^.second,
+                        PSQL_SS_TIMESTAMPOFFSET_STRUCT(fColDataPtr)^.fraction, Result,
+                        ConSettings^.ReadFormatSettings.DateTimeFormat, False,
+                        PSQL_SS_TIMESTAMPOFFSET_STRUCT(fColDataPtr)^.year < 0)
+                      else Len := DateTimeToUni(Abs(PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year),
+                        PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.month, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.day,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.hour,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.minute, PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.second,
                         PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.fraction, Result,
-                        ConSettings^.DisplayFormatSettings.DateTimeFormat, False,
-                        PSQL_DATE_STRUCT(fColDataPtr)^.year < 0);
+                        ConSettings^.ReadFormatSettings.DateTimeFormat, False,
+                        PSQL_TIMESTAMP_STRUCT(fColDataPtr)^.year < 0);
                     end;
       stString, stUnicodeString: begin
                       if fIsUnicodeDriver then begin
@@ -1311,7 +1318,7 @@ begin
         end;
       stAsciiStream, stUnicodeStream: begin
           if fIsUnicodeDriver
-          then CP := ConSettings^.CTRL_CP
+          then CP := GetW2A2WConversionCodePage(ConSettings)
           else CP := FClientCP;
           FTemplob := GetBlob(ColumnIndex);
           if FTemplob <> nil then begin
@@ -1667,14 +1674,16 @@ begin
   fZBufferSize := ZBufferSize;
   Ret := fPLainDriver.SQLGetFunctions(ConnectionHandle, SQL_API_SQLCOLATTRIBUTE, @Supported);
   if Ret <> SQL_SUCCESS then
-    FODBCConnection.HandleDbcErrorOrWarning(Ret, 'SQLGetFunctions', lcOther, Statement);
+    FODBCConnection.HandleErrorOrWarning(Ret, ConnectionHandle, SQL_HANDLE_DBC,
+      'SQLGetFunctions', lcOther, Statement);
   fEnhancedColInfo := EnhancedColInfo and (Supported = SQL_TRUE);
   fCurrentBufRowNo := 0;
   fFreeHandle := not Assigned(StmtHandle);
   Ret := fPlainDriver.SQLGetInfo(ConnectionHandle,
     SQL_GETDATA_EXTENSIONS, @fSQL_GETDATA_EXTENSIONS, SizeOf(SQLUINTEGER), nil);
   if Ret <> SQL_SUCCESS then
-    FODBCConnection.HandleDbcErrorOrWarning(Ret, 'SQLGetInfo', lcOther, Statement);
+    FODBCConnection.HandleErrorOrWarning(Ret, ConnectionHandle, SQL_HANDLE_DBC,
+      'SQLGetInfo', lcOther, Statement);
   FByteBuffer := FODBCConnection.GetByteBufferAddress;
   ResultSetType := rtForwardOnly;
   ResultSetConcurrency := rcReadOnly;
@@ -1695,7 +1704,8 @@ begin
     False);
   Ret := fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, ConnectionHandle, StmtHandle);
   if Ret <> SQL_SUCCESS then
-    Connection.HandleDbcErrorOrWarning(Ret, 'SQLAllocHandle(Stmt)', lcOther, Self);
+    Connection.HandleErrorOrWarning(Ret, ConnectionHandle, SQL_HANDLE_DBC,
+      'SQLAllocHandle(Stmt)', lcOther, Self);
 end;
 
 {**
@@ -2005,7 +2015,7 @@ begin
     {$IFDEF UNICODE}
     System.SetString(Result, PWideChar(Pointer(Buf)), StringLength shr 1)
     {$ELSE}
-    Result := PUnicodeToRaw(PWideChar(Pointer(Buf)), StringLength shr 1, FClientCP)
+    Result := PUnicodeToRaw(PWideChar(Pointer(Buf)), StringLength shr 1, zCP_UTF8)
     {$ENDIF}
   else Result := '';
 end;
@@ -2165,7 +2175,7 @@ begin
           SQL_C_BINARY, OffSetPtr, MaxBufSize, StrLen_or_IndPtr));
         Inc(OffSetPtr, MaxBufSize);
       end;
-      Assert(SQL_SUCCEDED(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_BINARY, OffSetPtr, MaxBufSize, StrLen_or_IndPtr)));
+      Assert(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_BINARY, OffSetPtr, MaxBufSize, StrLen_or_IndPtr) = SQL_SUCCESS);
     end else if StrLen_or_IndPtr^ = SQL_NO_TOTAL then begin
       SetCapacity(MaxBufSize);
       OffSetPtr := @FDataRefAddress.VarLenData.Data;
@@ -2206,7 +2216,7 @@ begin
         Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr));
         Inc(OffSetPtr, (MaxBufSize-SizeOf(AnsiChar)));
       end;
-      Assert(SQL_SUCCEDED(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr)));
+      Assert(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr) = SQL_SUCCESS);
     end else begin
       Assert(StrLen_or_IndPtr^ = SQL_NO_TOTAL);
       SetCapacity(MaxBufSize);
@@ -2248,7 +2258,7 @@ begin
         Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr));
         Inc(OffSetPtr, (MaxBufSize-SizeOf(WideChar)));
       end;
-      Assert(SQL_SUCCEDED(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr)));
+      Assert(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr) = SQL_SUCCESS);
     end else begin
       Assert(StrLen_or_IndPtr^ = SQL_NO_TOTAL);
       SetCapacity(MaxBufSize);

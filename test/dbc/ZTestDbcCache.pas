@@ -130,7 +130,7 @@ type
 
 implementation
 
-uses ZTestConsts;
+uses ZTestConsts,ZEncoding, ZDbcUtils;
 
 const
   stBooleanIndex        = FirstDbcIndex + 0;
@@ -225,12 +225,12 @@ begin
     Add(GetColumnsInfo(stFloatIndex, stFloat, ntNullable, False, True));
     Add(GetColumnsInfo(stDoubleIndex, stDouble, ntNullable, False, True));
     Add(GetColumnsInfo(stBigDecimalIndex, stBigDecimal, ntNullable, False, True));
-    TZColumnInfo(Result[Add(GetColumnsInfo(stStringIndex, stString, ntNullable, False, True))]).ColumnCodePage := FConSettings.CTRL_CP;
+    TZColumnInfo(Result[Add(GetColumnsInfo(stStringIndex, stString, ntNullable, False, True))]).ColumnCodePage := GetW2A2WConversionCodePage(@FConSettings);
     Add(GetColumnsInfo(stBytesIndex, stBytes, ntNullable, False, True));
     Add(GetColumnsInfo(stDateIndex, stDate, ntNullable, False, True));
     Add(GetColumnsInfo(stTimeIndex, stTime, ntNullable, False, True));
     Add(GetColumnsInfo(stTimestampIndex, stTimestamp, ntNullable, False, True));
-    TZColumnInfo(Result[Add(GetColumnsInfo(stAsciiStreamIndex, stAsciiStream, ntNullable, False, True))]).ColumnCodePage := FConSettings.CTRL_CP;
+    TZColumnInfo(Result[Add(GetColumnsInfo(stAsciiStreamIndex, stAsciiStream, ntNullable, False, True))]).ColumnCodePage := GetW2A2WConversionCodePage(@FConSettings);
     TZColumnInfo(Result[Add(GetColumnsInfo(stUnicodeStreamIndex, stUnicodeStream, ntNullable, False, True))]).ColumnCodePage := 1200;
     Add(GetColumnsInfo(stBinaryStreamIndex, stBinaryStream, ntNullable, False, True));
   end;
@@ -292,11 +292,9 @@ begin
   FByteArray[4] := 4;
 
   FConSettings := ConSettingsDummy;
-  FConSettings.DisplayFormatSettings.DateFormat := DefDateFormatYMD;
   FConSettings.ReadFormatSettings.DateFormat := DefDateFormatYMD;
   FConSettings.WriteFormatSettings.DateFormat := DefDateFormatYMD;
 
-  FConSettings.DisplayFormatSettings.DateTimeFormat := DefDateFormatYMD + ' ' + DefTimeFormatMsecs;
   FConSettings.ReadFormatSettings.DateTimeFormat := DefDateFormatYMD + ' ' + DefTimeFormatMsecs;
   FConSettings.WriteFormatSettings.DateTimeFormat := DefDateFormatYMD + ' ' + DefTimeFormatMsecs;
 
@@ -632,7 +630,7 @@ begin
   with RowAccessor do
   begin
     TryDateToDateTime(FDate, DT);
-    CheckEquals(FormatDateTime(ConSettings^.DisplayFormatSettings.DateFormat, DT),
+    CheckEquals(FormatDateTime(ConSettings^.ReadFormatSettings.DateFormat, DT),
       GetString(stDateIndex, WasNull), 'GetString');
     GetDate(stDateIndex, WasNull, D);
     Check(ZCompareDate(FDate, D)= 0, 'GetDate');
@@ -877,7 +875,7 @@ begin
   with RowAccessor do
   begin
     Check(TryTimeToDateTime(FTime, DT), 'TimeConvert');
-    CheckEquals(FormatDateTime(ConSettings^.DisplayFormatSettings.TimeFormat, DT),
+    CheckEquals(FormatDateTime(ConSettings^.ReadFormatSettings.TimeFormat, DT),
       GetString(stTimeIndex, WasNull), 'GetString');
     GetTime(stTimeIndex, WasNull, T);
     Check(TryTimeToDateTime(T, DT2), 'TimeConvert');
@@ -902,7 +900,7 @@ begin
   with RowAccessor do
   begin
     Check(TryTimeStampToDateTime(FTimeStamp, DT), 'TimeStampConvert');
-    CheckEquals(FormatDateTime(ConSettings^.DisplayFormatSettings.DateTimeFormat, DT),
+    CheckEquals(FormatDateTime(ConSettings^.ReadFormatSettings.DateTimeFormat, DT),
       GetString(stTimestampIndex, WasNull), 'GetString');
     GetDate(stTimestampIndex, WasNull, D);
     Check(TryDateToDateTime(FDate, DT2), 'DateConvert');

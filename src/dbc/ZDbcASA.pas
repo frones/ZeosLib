@@ -103,7 +103,6 @@ type
     procedure SetOption(Temporary: Integer; const LogMsg: String;
       const Option, Value: RawByteString; LoggingCategory: TZLoggingCategory);
   protected
-    procedure InternalCreate; override;
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
   public
@@ -111,6 +110,8 @@ type
     function GetPlainDriver: TZASAPlainDriver;
     procedure HandleErrorOrWarning(LoggingCategory: TZLoggingCategory;
       const Msg: SQLString; const Sender: IImmediatelyReleasable);
+  public
+    procedure AfterConstruction; override;
   public
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareCallWithParams(const Name: String; Info: TStrings):
@@ -304,15 +305,6 @@ begin
 end;
 
 {**
-  Constructs this object and assignes the main properties.
-}
-procedure TZASAConnection.InternalCreate;
-begin
-  FPlainDriver := TZASAPlainDriver(GetIZPlainDriver.GetInstance);
-  Self.FMetadata := TZASADatabaseMetadata.Create(Self, URL);
-end;
-
-{**
   Creates a <code>Statement</code> object for sending
   SQL statements to the database.
   SQL statements without parameters are normally
@@ -369,9 +361,10 @@ procedure TZASAConnection.HandleErrorOrWarning(
   LoggingCategory: TZLoggingCategory; const Msg: SQLString;
   const Sender: IImmediatelyReleasable);
 var err_len: Integer;
-  State, ErrMsg, FormatStr: String;
+  SQLState, FormatStr: String;
   ErrCode: an_sql_code;
-  Exception: EZSQLException;
+  Error: EZSQLThrowable;
+  ExeptionClass: EZSQLThrowableClass;
   P: PAnsiChar;
   {$IFNDEF UNICODE}excCP,{$ENDIF}msgCP: Word;
 begin
@@ -383,7 +376,7 @@ begin
   PByte(P)^ := 0;
   if ConSettings.ClientCodePage <> nil
   then msgCP := ConSettings.ClientCodePage.CP
-  else msgCP := ZOSCodePage;
+  else msgCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
 {$IFNDEF UNICODE}
   excCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}
       {$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
@@ -391,45 +384,48 @@ begin
   P := FPlainDriver.sqlError_Message(FHandle, P, SizeOf(TByteBuffer)-1);
   err_len := ZFastCode.StrLen(P);
   {$IFDEF UNICODE}
-  State := USASCII7ToUnicodeString(@FHandle.sqlState[0], 5);
-  ErrMsg := PRawToUnicode(P, err_Len, msgCP);
+  SQLState := USASCII7ToUnicodeString(@FHandle.sqlState[0], 5);
+  FLogMessage := PRawToUnicode(P, err_Len, msgCP);
   {$ELSE}
-  State := '';
-  ZSetString(PAnsiChar(@FHandle.sqlState[0]), 5, State);
+  SQLState := '';
+  ZSetString(PAnsiChar(@FHandle.sqlState[0]), 5, SQLState);
+  FLogMessage := '';
   if excCP <> msgCP
-  then ErrMsg := ConvertZMsgToRaw(P, err_len, msgCP, excCP)
-  else begin
-    ErrMsg := '';
-    System.SetString(ErrMsg, P, err_Len);
-  end;
+  then PRawToRawConvert(P, err_len, msgCP, excCP, FLogMessage)
+  else System.SetString(FLogMessage, P, err_Len);
   {$ENDIF}
+  if DriverManager.HasLoggingListener then
+    LogError(LoggingCategory, ErrCode, Sender, Msg, FLogMessage);
+  if ErrCode > 0 //that's a Warning
+  then ExeptionClass := EZSQLWarning
+  else if (ErrCode = SQLE_CONNECTION_NOT_FOUND) or
+    (ErrCode = SQLE_CONNECTION_TERMINATED) or (ErrCode = SQLE_COMMUNICATIONS_ERROR)
+    then ExeptionClass := EZSQLConnectionLost
+    else ExeptionClass := EZSQLException;
+  if AddLogMsgToExceptionOrWarningMsg and (Msg <> '') then
+    if LoggingCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
+    then FormatStr := SSQLError3
+    else FormatStr := SSQLError4
+  else FormatStr := SSQLError2;
+  if AddLogMsgToExceptionOrWarningMsg and (Msg <> '')
+  then FLogMessage := Format(FormatStr, [FLogMessage, ErrCode, Msg])
+  else FLogMessage := Format(FormatStr, [FLogMessage, ErrCode]);
+  Error := ExeptionClass.CreateWithCodeAndStatus(ErrCode, SQLState, FLogMessage);
+  FLogMessage := '';
   if ErrCode > 0 then begin//that's a Warning
     ClearWarnings;
-    FLastWarning := EZSQLWarning.CreateWithCodeAndStatus(ErrCode, State, ErrMsg);
-    if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(LoggingCategory, URL.Protocol, ErrMsg);
-  end else begin  //that's an error
-    if DriverManager.HasLoggingListener then
-      LogError(LoggingCategory, ErrCode, Sender, Msg, ErrMsg);
-    if Msg <> '' then
-      if LoggingCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
-      then FormatStr := SSQLError3
-      else FormatStr := SSQLError4
-    else FormatStr := SSQLError2;
-    if Msg <> ''
-    then ErrMsg := Format(FormatStr, [ErrMsg, ErrCode, Msg])
-    else ErrMsg := Format(FormatStr, [ErrMsg, ErrCode]);
-    if (ErrCode = SQLE_CONNECTION_NOT_FOUND) or (ErrCode = SQLE_CONNECTION_TERMINATED) or
-       (ErrCode = SQLE_COMMUNICATIONS_ERROR) then begin
-      Exception := EZSQLConnectionLost.CreateWithCodeAndStatus(ErrCode, State, ErrMsg);
-      if (Sender <> nil)
-      then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(Exception))
-      else ReleaseImmediat(Self, EZSQLConnectionLost(Exception));
-    end else
-      Exception := EZSQLException.CreateWithCodeAndStatus(ErrCode, State, ErrMsg);
-    if Exception <> nil then
-       raise Exception;
+    if not RaiseWarnings then begin
+      FLastWarning := EZSQLWarning(Error);
+      Error := nil;
+    end;
+  end else if (ErrCode = SQLE_CONNECTION_NOT_FOUND) or (ErrCode = SQLE_CONNECTION_TERMINATED) or
+     (ErrCode = SQLE_COMMUNICATIONS_ERROR) then begin
+    if (Sender <> nil)
+    then Sender.ReleaseImmediat(Sender, EZSQLConnectionLost(Error))
+    else ReleaseImmediat(Self, EZSQLConnectionLost(Error));
   end;
+  if Error <> nil then
+     raise Error;
 end;
 
 function TZASAConnection.GetServerProvider: TZServerProvider;
@@ -539,6 +535,13 @@ end;
 function TZASAConnection.GetWarnings: EZSQLWarning;
 begin
   Result := FLastWarning;
+end;
+
+procedure TZASAConnection.AfterConstruction;
+begin
+  FPlainDriver := PlainDriver.GetInstance as TZASAPlainDriver;
+  FMetadata := TZASADatabaseMetadata.Create(Self, URL);
+  inherited AfterConstruction;
 end;
 
 {**
