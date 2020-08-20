@@ -394,9 +394,9 @@ begin
       Result := ftTime;
     stTimestamp:
       Result := ftDateTime;
-    stAsciiStream: {$IFDEF WITH_WIDEMEMO}if CPType = cCP_UTF16
-        then Result := ftWideMemo
-        else {$ENDIF}Result := ftMemo;
+    stAsciiStream: if CPType = cCP_UTF16
+        then Result := {$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}
+        else Result := ftMemo;
     stBinaryStream:
       Result := ftBlob;
     stUnicodeString: if (Precision <= 0) or (Precision > dsMaxStringSize)
@@ -814,9 +814,11 @@ var
       //ftString, ftMemo:
         //Variables.Values[I] := EncodeString(TField(Fields[I]).AsString);
     {$IFNDEF UNICODE}
-      {$IFDEF WITH_FTWIDESTRING}
-      ftWidestring{$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}:
+      {$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}
+      ftWidestring, ftWideMemo:
         Variables.Values[I] := EncodeUnicodeString(TField(Fields[I]).AsWideString);
+      {$ELSE}
+      ftWidestring: Variables.Values[I] := EncodeUnicodeString(TWideStringField(Fields[I]).Value);
       {$ENDIF}
     {$ENDIF}
       ftBytes, ftVarBytes:

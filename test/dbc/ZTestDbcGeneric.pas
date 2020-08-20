@@ -134,7 +134,7 @@ type
 implementation
 
 uses StrUtils, ZSysUtils, ZTestConsts, ZFastCode, ZVariant,
-  ZDbcResultSet, ZDbcCachedResultSet, ZDbcConnection, ZClasses;
+  ZDbcResultSet, ZDbcCachedResultSet, ZDbcConnection;
 
 { TZGenericTestDbcResultSet }
 procedure TZGenericTestDbcResultSet.CancelCommand;

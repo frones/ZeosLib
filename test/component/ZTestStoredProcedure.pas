@@ -770,16 +770,16 @@ begin
   StoredProc.Params[7].AsFloat := SQLTime;
   StoredProc.Params[8].AsFloat := SQLTime;
   StoredProc.Params[9].AsInteger := 40000;
-  StoredProc.Params[10].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
+  StoredProc.Params[10].{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
   StoredProc.Params[11].AsDate := SQLTime;
   StoredProc.Params[12].AsTime := SQLTime;
   StoredProc.Params[13].AsSmallInt := 40;
   StoredProc.Params[14].AsDateTime := SQLTime;
   StoredProc.Params[15].AsDateTime := SQLTime;
-  StoredProc.Params[20].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
-  StoredProc.Params[21].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
-  StoredProc.Params[22].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
-  StoredProc.Params[23].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
+  StoredProc.Params[20].{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
+  StoredProc.Params[21].{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
+  StoredProc.Params[22].{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
+  StoredProc.Params[23].{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := Str1;
   StoredProc.Params[24].Value := StrToBytes(AnsiString('121415'));
   StoredProc.Params[25].AsString := 'a';
   StoredProc.Params[26].AsInteger := 50000;
@@ -834,7 +834,7 @@ begin
   CheckEquals(Str1, StoredProc.Fields[10].AsString, 'P11 String');
   {$ELSE}
   If Connection.ControlsCodePage = cCP_UTF16
-  then CheckEquals(Str1, StoredProc.Fields[10].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'P11 String')
+  then CheckEquals(Str1, StoredProc.Fields[10].{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}, 'P11 String')
   else CheckEquals(Str1, StoredProc.Fields[10], 'P11 String');
   {$ENDIF}
   CheckStringFieldType(StoredProc.Fields[10], Connection.ControlsCodePage);

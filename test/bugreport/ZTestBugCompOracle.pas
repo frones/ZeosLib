@@ -254,8 +254,8 @@ begin
     Query.Insert;
     Query.FieldByName('b_id').AsInteger := row_id;
     Query.FieldByName('b_long').AsString := 'aaa';
-    Query.FieldByName('b_nclob').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := testString+testString;
-    Query.FieldByName('b_clob').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := testString+testString+testString;
+    Query.FieldByName('b_nclob').{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := testString+testString;
+    Query.FieldByName('b_clob').{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := testString+testString+testString;
     (Query.FieldByName('b_blob') as TBlobField).LoadFromStream(BinFileStream);
     Query.Post;
     Dir := GetBFILEDir;
@@ -282,11 +282,15 @@ begin
         CheckEquals(teststring+teststring, Query.FieldByName('b_nclob').AsString, 'value of b_nclob field');
         CheckEquals(teststring+teststring+teststring, Query.FieldByName('b_clob').AsString, 'value of b_clob field');
         {$ELSE}
-          {$IFDEF WITH_FTWIDESTRING}
           if Connection.ControlsCodePage = cCP_UTF16 then begin
+            {$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}
             CheckEquals(teststring+teststring, UnicodeString(Query.FieldByName('b_nclob').AsWideString), 'value of b_nclob field');
             CheckEquals(teststring+teststring+teststring, UnicodeString(Query.FieldByName('b_clob').AsWideString), 'value of b_clob field');
-          end else {$ENDIF}
+            {$ELSE}
+            CheckEquals(teststring+teststring, UnicodeString(TWideStringField(Query.FieldByName('b_nclob')).Value), 'value of b_nclob field');
+            CheckEquals(teststring+teststring+teststring, UnicodeString(TWideStringField(Query.FieldByName('b_clob')).Value), 'value of b_clob field');
+            {$ENDIF}
+          end else
            if Connection.ControlsCodePage = cCP_UTF8 then begin
             CheckEquals(UTF8Encode(teststring+teststring), Query.FieldByName('b_nclob').AsString, 'value of b_nclob field');
             CheckEquals(UTF8Encode(teststring+teststring+teststring), Query.FieldByName('b_clob').AsString, 'value of b_clob field');

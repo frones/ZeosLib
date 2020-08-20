@@ -78,6 +78,7 @@
 
 {$DEFINE WITH_PARAM_ASLARGEINT} //supportet since FPC 2.0.4 -> see http://zeoslib.sourceforge.net/viewtopic.php?p=68484#p68484
 {$DEFINE WITH_FTWIDESTRING}  // Supported from somewhere between 2.2 and 2.4
+{$DEFINE WITH_PARAM_ASWIDESTRING}
 
 {$IF FPC_FULLVERSION>=20500}  // Upgrade to 2.6.x asap.
   {$DEFINE FPC2_5UP} // Used in code

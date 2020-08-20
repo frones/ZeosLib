@@ -2192,7 +2192,7 @@ begin
             {$IFDEF UNICODE}Param.DataType := ftString;{$ENDIF} //Hack: D12_UP sets ftWideString on assigning a UnicodeString
           end;
         ftWideString:
-          {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF} := Statement.GetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+          {$IFDEF WITH_PARAM_ASWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF} := Statement.GetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         ftMemo:
           begin
             Param.AsMemo := Statement.GetString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
@@ -2896,10 +2896,8 @@ var
   S: TTimeStamp absolute TS;
   FieldCP, ColumnCP: Word;
   PA: PAnsiChar absolute TS;
-  {$IFNDEF TWIDESTRINGFIELD_DATABUFFER_IS_PWIDESTRING}
   PW: PWideChar absolute TS;
   L: NativeUInt;
-  {$ENDIF}
 begin
   if not Active then
     raise EZDatabaseError.Create(SOperationIsNotAllowed4);
@@ -3335,6 +3333,10 @@ begin
         {$ENDIF WITH_FTTIMESTAMP_FIELD}*);
 
         if FieldType in [ftBytes, ftVarBytes, ftString, ftWidestring] then begin
+          {$IFNDEF WIT_WIDEMEMO}
+          if (Connection.ControlsCodePage = cCP_UTF16) and (FieldType = ftWidestring) and (SQLType in [stAsciiStream, stUnicodeStream])
+          then Size := (MaxInt shr 1)-2
+          else{$ENDIF}
           Size := GetPrecision(I);
         end else {$IFDEF WITH_FTGUID} if FieldType = ftGUID then
           Size := 38

@@ -669,14 +669,12 @@ var  MaxTestMode, TestMode: Byte;
     {$ENDIF}
 
     { CP_UTF16 (Wide-Field) is not supported for D7 and older FPC }
-    {$IFDEF WITH_WIDEFIELDS}
     if FExtended_cGet_UTF16 then
       {$IFDEF UNICODE}
       CloneConfig(''); //CP_UTF16 is default for D12_UP -> no clone!
       {$ELSE}
       CloneConfig('CP_UTF16');
       {$ENDIF}
-    {$ENDIF}
 
     if not (FExtended_cGet_ACP or FExtended_cGet_UTF8 or FExtended_cGet_UTF16) then
       CloneConfig('');
@@ -1544,24 +1542,29 @@ procedure TZAbstractCompSQLTestCase.CheckEquals(const OrgStr: UnicodeString;
 var ATemp, ATemp2: AnsiString;
     WTmp: UnicodeString;
     Stream: TMemoryStream;
-    Idx: Integer;
+    Idx, Size: Integer;
     ControlsCodePage: TZControlsCodePage;
     ColumnCP, StringCP{, TransliterateCP}: Word;
     ConSettings: PZConSettings;
+    SQLType: TZSQLType;
 begin
-  Idx := THackDataSet(Actual.DataSet).ResultSetMetadata.FindColumn(Actual.FieldName);
-  Check(Idx > InvalidDbcIndex, Protocol+': the native column index was not found');
-  ConSettings := THackDataSet(Actual.DataSet).Connection.DbcConnection.GetConSettings;
-  ControlsCodePage := THackDataSet(Actual.DataSet).Connection.ControlsCodePage;
-  if ConSettings.ClientCodePage.Encoding = ceUTF16 then begin
-    ColumnCP := zCP_UTF16;
-    StringCP := GetTransliterateCodePage(ControlsCodepage);
-  end else begin
-    ColumnCP := THackDataSet(Actual.DataSet).ResultSetMetadata.GetColumnCodePage(Idx);
-    case THackDataSet(Actual.DataSet).Connection.RawCharacterTransliterateOptions.Encoding of
-      encDB_CP: StringCP := ConSettings.ClientCodePage.CP;
-      encUTF8: StringCP := zCP_UTF8;
-      else StringCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF};
+  with THackDataSet(Actual.DataSet) do begin
+    Idx := ResultSetMetadata.FindColumn(Actual.FieldName);
+    Check(Idx > InvalidDbcIndex, Protocol+': the native column index was not found');
+    ConSettings := ResultSet.GetConSettings;
+    ControlsCodePage := Connection.ControlsCodePage;
+    SQLType := ResultSetMetadata.GetColumnType(Idx);
+    Size := ResultSetMetadata.GetPrecision(idx);
+    if ConSettings.ClientCodePage.Encoding = ceUTF16 then begin
+      ColumnCP := zCP_UTF16;
+      StringCP := GetTransliterateCodePage(ControlsCodepage);
+    end else begin
+      ColumnCP := THackDataSet(Actual.DataSet).ResultSetMetadata.GetColumnCodePage(Idx);
+      case THackDataSet(Actual.DataSet).Connection.RawCharacterTransliterateOptions.Encoding of
+        encDB_CP: StringCP := ConSettings.ClientCodePage.CP;
+        encUTF8: StringCP := zCP_UTF8;
+        else StringCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF};
+      end;
     end;
   end;
   //TransliterateCP := THackDataSet(Actual.DataSet).Connection.RawCharacterTransliterateOptions.GetRawTransliterateCodePage(ttField);
@@ -1577,6 +1580,16 @@ begin
       {$ENDIF}
     CheckEquals(ATemp, Actual.AsString, Protocol+': The raw string of Field '+Actual.FieldName);
     {$ENDIF}
+    {$IFNDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}
+    if (Size <= 0) or (SQLType in [stAsciiStream, stUnicodeStream]) then begin
+      CheckEquals((MaxInt shr 1)-2, Actual.Size, Protocol+': The Size of the Field: '+Actual.FieldName);
+      Check((SQLType in [stAsciiStream, stUnicodeStream]) or ((SQLType in [stString, stUnicodeString]) and (Size <= 0)),
+        Protocol+': The underlaying SQLType of the Field: '+Actual.FieldName);
+      Exit;
+    end;{$ENDIF}
+    CheckEquals(Size, Actual.Size, Protocol+': The Size of the Field '+Actual.FieldName);
+    Check((SQLType in [stString, stUnicodeString]) ,
+      Protocol+': The underlaying SQLType of the Field: '+Actual.FieldName);
   end else {$IFDEF WITH_WIDEMEMO}if Actual.InheritsFrom(TWideMemoField) then begin
     CheckEquals(OrgStr, TWideMemoField(Actual).Value, Protocol+': The UTF16 value of Field: '+Actual.FieldName);
     Check((ControlsCodePage = cCP_UTF16) or ((ControlsCodePage = cDynamic) and (ColumnCP = zCP_UTF16)), Protocol+': The FieldType-W type');
@@ -1593,13 +1606,11 @@ begin
       Stream.Free;
     end;
     {$IFNDEF UNICODE}
-      {$IFDEF WITH_DEFAULSYSTEMCODEPAGE}
     ATemp := ZUnicodeToRaw(OrgStr, StringCP);
-      {$ELSE}
-    ATemp := AnsiString(OrgStr);
-      {$ENDIF}
     CheckEquals(ATemp, Actual.AsString, Protocol+' The raw string of Field '+Actual.FieldName);
     {$ENDIF}
+    Check((SQLType in [stAsciiStream, stUnicodeStream]) or ((SQLType in [stString, stUnicodeString]) and (Size <= 0)),
+      Protocol+': The underlaying SQLType of the Field: '+Actual.FieldName);
   end else {$ENDIF} if Actual.InheritsFrom(TStringField) then begin
     if (ColumnCP = zCP_UTF16) or (TStringField(Actual).Transliterate) then
       StringCP := GetTransliterateCodePage(ControlsCodepage);
@@ -1607,6 +1618,9 @@ begin
     ATemp2 := TStringField(Actual).{$IFDEF WITH_ASANSISTRING}AsAnsiString{$ELSE}AsString{$ENDIF};
     CheckEquals(ATemp, Atemp2, Protocol+': The raw value of Field: '+Actual.FieldName);
     Check(ControlsCodePage in [cGET_ACP, {$IFNDEF UNICODE}cCP_UTF8,{$ENDIF}cDynamic], Protocol+': The FieldType-A type');
+    CheckEquals(Size, Actual.Size, Protocol+': The Size of the StringField '+Actual.FieldName);
+    Check((SQLType in [stString, stUnicodeString]) ,
+      Protocol+': The underlaying SQLType of the Field: '+Actual.FieldName);
   end else if Actual.InheritsFrom(TMemoField) then begin
     Stream := TMemoryStream.Create;
     if (ColumnCP = zCP_UTF16) or TMemoField(Actual).Transliterate then begin
@@ -1625,10 +1639,12 @@ begin
     end;
     if (ColumnCP = zCP_UTF16) or (TMemoField(Actual).Transliterate and (StringCP <> ColumnCP))
     then ATemp := ZUnicodeToRaw(OrgStr, StringCP)
-    else ATemp := AnsiString(OrgStr);
+    else ATemp := ZUnicodeToRaw(OrgStr, ColumnCP);
     ATemp2 := TStringField(Actual).{$IFDEF WITH_ASANSISTRING}AsAnsiString{$ELSE}AsString{$ENDIF};
     CheckEquals(ATemp, Atemp2, Protocol+': The raw value of Field: '+Actual.FieldName);
     Check(ControlsCodePage in [cGET_ACP, {$IFNDEF UNICODE}cCP_UTF8,{$ENDIF}cDynamic], Protocol+' The FieldType-A type');
+    Check((SQLType in [stAsciiStream, stUnicodeStream]) or ((SQLType in [stString, stUnicodeString]) and (Size <= 0)),
+      Protocol+': The underlaying SQLType of the Field: '+Actual.FieldName);
   end else
     Check(False, Protocol+': wrong overload called');
 end;

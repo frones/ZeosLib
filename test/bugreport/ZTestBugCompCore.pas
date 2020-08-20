@@ -2250,7 +2250,7 @@ begin
       SQL.Text := 'INSERT INTO people(p_id, p_name, p_resume)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
       ParamByName('P_ID').AsInteger := TEST_ROW_ID;
-      ParamByName('P_NAME').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}  := Str3;
+      ParamByName('P_NAME').{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF}  := Str3;
       CheckEquals(3, Query.Params.Count, 'Param.Count');
       SL.Text := GetDBTestString(Str2, ttParam);
       {$IFDEF UNICODE} //the unicode compiler are converting the streams into DefaultSystemCodePage
@@ -2269,8 +2269,7 @@ begin
         StrStream1 := TMemoryStream.Create;
         Open;
 
-        (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
-        CheckEquals(Str2+UnicodeString(LineEnding), StrStream1, FieldByName('P_RESUME'), ConSettings, 'Param().LoadFromStream(StringStream, ftMemo) '+Protocol);
+        CheckEquals(Str2+UnicodeString(LineEnding), FieldByName('P_RESUME'));
         {$IFDEF UNICODE}
         CheckEquals(Str3, FieldByName('P_NAME').AsString, 'Field(P_NAME) as String');
         {$ELSE}
@@ -2302,10 +2301,10 @@ var
   begin
     Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
     if Query.Connection.ControlsCodePage = cCP_UTF16 then begin
-      Query.ParamByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_char;
-      Query.ParamByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_varchar;
-      Query.ParamByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_nchar;
-      Query.ParamByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_nvarchar;
+      Query.ParamByName('s_char').{$IFDEF WITH_PARAM_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_char;
+      Query.ParamByName('s_varchar').{$IFDEF WITH_PARAM_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_varchar;
+      Query.ParamByName('s_nchar').{$IFDEF WITH_PARAM_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_nchar;
+      Query.ParamByName('s_nvarchar').{$IFDEF WITH_PARAM_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := s_nvarchar;
     end else begin
       Query.ParamByName('s_char').AsString := GetDBTestString(s_char, ttParam);
       Query.ParamByName('s_varchar').AsString := GetDBTestString(s_varchar, ttParam);
@@ -2413,7 +2412,7 @@ const
   procedure InsertValue(const id: Integer; const value: UnicodeString);
   begin
     Query.ParamByName('id').AsInteger := id;
-    Query.ParamByName('string').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := value;
+    Query.ParamByName('string').{$IFDEF WITH_PARAM_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := value;
     Query.ExecSQL;
   end;
 begin
@@ -2455,22 +2454,22 @@ begin
       Query.SQL.Text := 'select s_id, s_nvarchar from string_values where s_id in (1001, 1002, 1003, 1004, 1005, 1006) order by s_id';
       Query.Open;
       CheckEquals(1001, Query.FieldByName('s_id').AsInteger);
-      CheckEquals(Str1, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
+      CheckEquals(Str1, Query.FieldByName('s_nvarchar').{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1002, Query.FieldByName('s_id').AsInteger);
-      CheckEquals(Str2, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
+      CheckEquals(Str2, Query.FieldByName('s_nvarchar').{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1003, Query.FieldByName('s_id').AsInteger);
-      CheckEquals(Str3, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
+      CheckEquals(Str3, Query.FieldByName('s_nvarchar').{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1004, Query.FieldByName('s_id').AsInteger);
-      CheckEquals(Str4, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
+      CheckEquals(Str4, Query.FieldByName('s_nvarchar').{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1005, Query.FieldByName('s_id').AsInteger);
-      CheckEquals(Str5, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
+      CheckEquals(Str5, Query.FieldByName('s_nvarchar').{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Query.Next;
       CheckEquals(1006, Query.FieldByName('s_id').AsInteger);
-      CheckEquals(Str6, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
+      CheckEquals(Str6, Query.FieldByName('s_nvarchar').{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF});
       Assert(CP <> 0);
       Assert(Consettings <> nil);
     finally

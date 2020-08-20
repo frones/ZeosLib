@@ -1072,7 +1072,7 @@ begin
   {$IFDEF UNICODE}
   Query.ParamByName('test').AsString := QuoteString1;
   {$ELSE}
-  Query.ParamByName('test').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := QuoteString1;
+  Query.ParamByName('test').{$IFDEF WITH_PARAM_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := QuoteString1;
   {$ENDIF}
 
   Query.Open;
@@ -1091,7 +1091,7 @@ begin
   {$IFDEF UNICODE}
   Query.ParamByName('test').AsString := QuoteString2;
   {$ELSE}
-  Query.ParamByName('test').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := QuoteString2;
+  Query.ParamByName('test').{$IFDEF WITH_PARAM_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := QuoteString2;
   {$ENDIF}
   Query.Open;
   {$IFDEF UNICODE}

@@ -1602,8 +1602,7 @@ begin
         StrStream1 := TMemoryStream.Create;
         Open;
 
-        (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
-        CheckEquals(str2+LineEnding, StrStream1, FieldByName('P_RESUME'), ConSettings, 'Param().LoadFromStream(StringStream, ftMemo)');
+        CheckEquals(str2+LineEnding, FieldByName('P_RESUME'), 'Param().LoadFromStream(StringStream, ftMemo)');
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
         CheckEquals(1, Params.Count);
         Params[0].DataType := ftInteger;
@@ -1661,7 +1660,7 @@ var
     {$IFDEF UNICODE}
     iqry.ParamByName('s1').AsString := WS;
     {$ELSE}
-    iqry.ParamByName('s1').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := WS;
+    iqry.ParamByName('s1').{$IFDEF WITH_PARAM_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := WS;
     {$ENDIF}
     iqry.ExecSQL;
   end;
