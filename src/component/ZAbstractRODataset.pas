@@ -187,6 +187,9 @@ type
     FLinkedFields: string; {renamed by bangfauzan}
     FIndexFieldNames: String; {bangfauzan addition}
     FUniTemp: UnicodeString;
+    {$IFNDEF UNICODE}
+    FRawTemp: RawByteString;
+    {$ENDIF}
     FCharEncoding: TZCharEncoding;
 
     FIndexFields: {$IFDEF WITH_GENERIC_TLISTTFIELD}TList<TField>{$ELSE}TList{$ENDIF};
@@ -231,6 +234,7 @@ type
     procedure OnBlobUpdate(AField: NativeInt);
     function GetFieldIndex(AField: TField): Integer;
     procedure SetDisableZFields(Value: Boolean);
+    function CreateFieldsLookupTable(out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
   private
     function GetReadOnly: Boolean;
     procedure SetReadOnly(Value: Boolean);
@@ -2851,8 +2855,7 @@ end;
 function TZAbstractRODataset.GetFieldIndex(AField: TField): Integer;
 begin
   if FFieldsLookupTable = nil then
-    FFieldsLookupTable := CreateFieldsLookupTable(FResultSetMetadata,
-      Fields, FResultSet2AccessorIndexList);
+    FFieldsLookupTable := CreateFieldsLookupTable(FResultSet2AccessorIndexList);
   Result := DefineFieldIndex(FieldsLookupTable, AField);
 end;
 
@@ -3340,6 +3343,15 @@ begin
         else
           Size := 0;
         FName := GetColumnLabel(I);
+        {$IFNDEF UNICODE}
+        if (FCharEncoding = ceUTF16) //dbc internaly stores everything in UTF8
+          {$IF defined(WITH_DEFAULTSYSTEMCODEPAGE) or not defined(LCL)}
+            and ({$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF} <> zCP_UTF8)
+          {$IFEND}then begin
+          PRawToRawConvert(Pointer(FName), Length(FName), zCP_UTF8, {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF}, FRawTemp);
+          FName := FRawTemp;
+        end;
+        {$ENDIF UNICODE}
         if (SQLType in [stBoolean..stBinaryStream]) and not FDisableZFields
         then FieldDef := TZFieldDef.Create(FieldDefs, FName, FieldType, SQLType, Size, False, I)
         else FieldDef := TFieldDef.Create(FieldDefs, FName, FieldType, Size, False, I);
@@ -3352,14 +3364,6 @@ begin
           end else
             Attributes := Attributes + [faReadonly];
           Precision := GetPrecision(I);
-          {$IF not defined(UNICODE) and not defined(LCL)}
-          //EH: dbc internaly strores everthing in utf if a unicode(UTF8/UTF16) driver is used so what about fieldnames here?
-          //we can not change the FieldName (it would break building the lookups) but we can fix the DisplayNames
-          //is that a good idea? not sure yet! Just a logic decision.
-          if (Ord(FCharEncoding) >= Ord(ceUTF8)) and Connection.RawCharacterTransliterateOptions.RawFields and
-             ({$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF} <> zCP_UTF8) then
-            PRawToRawConvert(Pointer(FName), Length(FName), zCP_UTF8, {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF}, RawByteString(FName));
-          {$IFEND}
           DisplayName := FName;
           if GetOrgColumnLabel(i) <> GetColumnLabel(i) then
              Attributes := Attributes + [faUnNamed];
@@ -4269,8 +4273,7 @@ begin
   if Binding then begin
     if FResultSet2AccessorIndexList <> nil then
       FreeAndNil(FResultSet2AccessorIndexList);
-    FFieldsLookupTable := CreateFieldsLookupTable(FResultSetMetadata,
-      Fields, FResultSet2AccessorIndexList);
+    FFieldsLookupTable := CreateFieldsLookupTable(FResultSet2AccessorIndexList);
   end;
   inherited BindFields(Binding);
 end;
@@ -4915,6 +4918,48 @@ begin
   end;
   if Result = nil then
     Result := TMemoryStream.Create;
+end;
+
+{**
+  Creates a fields lookup table to define fixed position
+  of the field in dataset.
+  @param IndexPairList reaturns a collection of index pairs.
+  @returns a fields lookup table.
+}
+function TZAbstractRODataset.CreateFieldsLookupTable(
+  out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
+var I, Idx: Integer;
+  a: Integer;
+  FieldName: String;
+begin
+  Result := nil;
+  SetLength(Result, Fields.Count);
+  IndexPairList := TZIndexPairList.Create;
+  IndexPairList.Capacity := Fields.Count;
+  a := FirstDbcIndex;
+  for I := 0 to Fields.Count - 1 do begin
+    Result[i].Field := Fields[I];
+    FieldName := Fields[I].FieldName;
+    {$IFNDEF UNICODE}
+    if (FCharEncoding = ceUTF16) //dbc internaly stores everything in UTF8
+      {$IF defined(WITH_DEFAULTSYSTEMCODEPAGE) or not defined(LCL)}
+        and ({$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF} <> zCP_UTF8)
+      {$IFEND}then begin
+      PRawToRawConvert(Pointer(FieldName), Length(FieldName), zCP_UTF8, {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF}, FRawTemp);
+      FieldName := FRawTemp;
+    end;
+    {$ENDIF}
+    Idx := FResultSetMetadata.FindColumn(FieldName);
+    if Idx = InvalidDbcIndex then begin
+      Result[i].DataSource := dltAccessor;
+      Result[i].Index := a;
+      Inc(a);
+    end else begin
+      Result[i].DataSource := dltResultSet;
+      Result[i].Index := Idx;
+      IndexPairList.Add(Idx, i);
+    end;
+  end;
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // empty function - parameter not used intentionally

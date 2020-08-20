@@ -238,17 +238,6 @@ procedure DefineSortedFields(DataSet: TDataset;
   out CompareKinds: TComparisonKindArray; out OnlyDataFields: Boolean);
 
 {**
-  Creates a fields lookup table to define fixed position
-  of the field in dataset.
-  @param FieldDefs a collection of TDataset fielddefss in initial order.
-  @param Fields a collection of TDataset fields in initial order.
-  @param IndexPairList creates a collection of index pairs.
-  @returns a fields lookup table.
-}
-function CreateFieldsLookupTable(const Metadata: IZResultSetMetadata;
-  Fields: TFields; out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
-
-{**
   Defines an original field index in the dataset.
   @param FieldsLookupTable a lookup table to define original index.
   @param Field a TDataset field object.
@@ -1411,39 +1400,6 @@ begin
 end;
 
 {**
-  Creates a fields lookup table to define fixed position
-  of the field in dataset.
-  @param FieldDefs a collection of TDataset fielddefss in initial order.
-  @param Fields a collection of TDataset fields in initial order.
-  @param IndexPairList creates a collection of index pairs.
-  @returns a fields lookup table.
-}
-function CreateFieldsLookupTable(const Metadata: IZResultSetMetadata;
-  Fields: TFields; out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
-var I, Idx: Integer;
-  a: Integer;
-begin
-  {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}
-  SetLength(Result, Fields.Count);
-  IndexPairList := TZIndexPairList.Create;
-  IndexPairList.Capacity := Fields.Count;
-  a := FirstDbcIndex;
-  for I := 0 to Fields.Count - 1 do begin
-    Result[i].Field := Fields[I];
-    Idx := Metadata.FindColumn(Fields[I].FieldName);
-    if Idx = InvalidDbcIndex then begin
-      Result[i].DataSource := dltAccessor;
-      Result[i].Index := a;
-      Inc(a);
-    end else begin
-      Result[i].DataSource := dltResultSet;
-      Result[i].Index := Idx;
-      IndexPairList.Add(Idx, i);
-    end;
-  end;
-end;
-
-{**
   Defines an original field index in the dataset.
   @param FieldsLookupTable a lookup table to define original index.
   @param Field a TDataset field object.
@@ -1772,7 +1728,19 @@ begin
       {$IFNDEF UNICODE}
       if (TVarData(Param.Value).VType = varOleStr) {$IFDEF WITH_varUString} or (TVarData(Param.Value).VType = varUString){$ENDIF}
       then Statement.SetUnicodeString(Index, Param.Value)
-      else {$ENDIF}Statement.SetString(Index, Param.AsString);
+      else begin
+        ConSettings := TZAbstractRODataset(THackParam(Param).DataSet).Connection.DbcConnection.GetConSettings;
+        if ConSettings.ClientCodePage.Encoding = ceUTF16 then begin
+          CP := TZAbstractRODataset(THackParam(Param).DataSet).Connection.RawCharacterTransliterateOptions.GetRawTransliterateCodePage(ttParam);
+          if CP = zCP_UTF8
+          then Statement.SetUTF8String(Index, Param.AsString)
+          else Statement.SetAnsiString(Index, Param.AsString);
+        end else
+          Statement.SetRawByteString(Index, Param.AsString);
+      end;
+      {$ELSE}
+      Statement.SetUnicodeString(Index, Param.AsString);
+      {$ENDIF}
     ftBytes, ftVarBytes:
         {$IFDEF TPARAM_HAS_ASBYTES}
         Statement.SetBytes(Index, Param.AsBytes);
@@ -1805,7 +1773,7 @@ begin
     ftDateTime:
       Statement.SetTimestamp(Index, Param.AsDateTime);
     ftMemo, ftFmtMemo{$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}: begin
-        ConSettings := Statement.GetConnection.GetConSettings;
+        ConSettings := TZAbstractRODataset(THackParam(Param).DataSet).Connection.DbcConnection.GetConSettings;
         case TvarData(Param.Value).VType of //it's worth it checking the type i.e. Encodings
           {$IFDEF WITH_varUString}varUString,{$ENDIF}
           {$IFDEF UNICODE}varString,{$ENDIF} //otherwise we get a conversion warning

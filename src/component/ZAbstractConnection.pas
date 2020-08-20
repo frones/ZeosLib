@@ -407,15 +407,15 @@ type
   /// implement a raw to utf16 and vice verca setting object
   TZRawCharacterTransliterateOptions = class(TPersistent)
   private
-    FConnection: TZAbstractConnection;
+    {$IFDEF AUTOREFCOUNT}[WEAK]{$ENDIF}FConnection: TZAbstractConnection;
     {$IFNDEF UNICODE}
     FSQL: Boolean;
     {$ENDIF}
     FEncoding: TZW2A2WEncodingSource;
     FParams: Boolean;
     FFields: Boolean;
-    {$IFNDEF UNICODE}
     function GetSQL: Boolean;
+    {$IFNDEF UNICODE}
     procedure SetSQL(Value: Boolean);
     {$ENDIF UNICODE}
     function GetEncoding: TZW2A2WEncodingSource;
@@ -424,9 +424,7 @@ type
     Constructor Create(AOwner: TZAbstractConnection);
     function GetRawTransliterateCodePage(Target: TZTransliterationType): Word;
   published
-    {$IFNDEF UNICODE}
-    property SQL: Boolean read GetSQL write SetSQL stored true default False;
-    {$ENDIF}
+    property SQL: Boolean read GetSQL {$IFNDEF UNICODE}write SetSQL stored True{$ELSE}stored False{$ENDIF} default False;
     //this option is not reachable in Component-Layer for the Unicode-Compilers
     //it's always DB_CP!! But in DBC it's also interesting. Thus another enumerator
     property Encoding: TZW2A2WEncodingSource read GetEncoding
@@ -1902,26 +1900,25 @@ begin
   end;
   if Transliterate then
     case GetEncoding of
-      encDefaultSystemCodePage: Result := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF};
+      encDefaultSystemCodePage: Result := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}ZOSCodePage{$ENDIF}{$ENDIF};
       encDB_CP: if ConSettings.ClientCodePage.Encoding = ceUTF16
-                then Result := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}zCP_UTF8{$ENDIF}
-                (*then Result := zCP_UTF8(*if ConSettings.ClientCodePage.CP = zCP_UTF16
-                  then Result := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF}
-                  else Result := ConSettings.ClientCodePage.CP*)
+                then Result := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}ZOSCodePage{$ENDIF}{$ENDIF}
                 else Result := ConSettings.ClientCodePage.CP;
       else {encUTF8:} Result := zCP_UTF8;
     end
   else Result := ConSettings.ClientCodePage.CP;
 end;
 
-{$IFNDEF UNICODE}
 function TZRawCharacterTransliterateOptions.GetSQL: Boolean;
 begin
+{$IFNDEF UNICODE}
   if FConnection.Connected and (FConnection.DbcConnection.GetConSettings.ClientCodePage.Encoding =ceUTF16)
   then Result := True
   else Result := FSQL;
-end;
+{$ELSE UNICODE}
+  Result := False;
 {$ENDIF UNICODE}
+end;
 
 procedure TZRawCharacterTransliterateOptions.SetEncoding(
   Value: TZW2A2WEncodingSource);
