@@ -120,6 +120,7 @@ type
     procedure TestTicked389;
     procedure TestProcAbtest_WithParamCheck;
     procedure TestProcAbtest_WithoutParamCheck;
+    procedure TestTicket304;
     procedure TestBigIntError;
   end;
 
@@ -1965,6 +1966,62 @@ begin
     Query.Close;
   finally
     Query.Free;
+  end;
+end;
+
+procedure TZTestCompMySQLBugReport.TestTicket304;
+var
+  qy: TZquery;
+begin
+  qy := CreateQuery;
+  try
+    qy.SQL.Text := 'delete from TableTicket304';
+    qy.ExecSQL;
+    qy.SQL.Text := 'select * from TableTicket304';
+    qy.Open;
+    CheckEquals(Ord(ftFloat), Ord(qy.FieldByName('LATITUDE').DataType), 'datatype of LATITUDE');
+    CheckEquals(Ord(ftFloat), Ord(qy.FieldByName('LONGITUDE').DataType), 'datatype of LONGITUDE');
+    CheckEquals(Ord(ftBlob), Ord(qy.FieldByName('point_field').DataType), 'datatype of point_field');
+    CheckEquals(Ord(ftBlob), Ord(qy.FieldByName('geometry_field').DataType), 'datatype of geometry_field');
+    qy.Append;
+    qy.Fields[0].AsInteger := 1;
+    qy.FieldByName('LATITUDE').AsFloat := 10;
+    qy.FieldByName('LONGITUDE').AsFloat := 20;
+    qy.Post;
+    qy.Close;
+    qy.Open;
+    CheckEquals(1, qy.RecordCount, 'there is a row');
+    Check(qy.FieldByName('point_field').IsNull, 'The point_field should be null');
+    Check(qy.FieldByName('geometry_field').IsNull, 'The geometry_field should be null');
+    qy.Edit;
+    qy.FieldByName('LATITUDE').AsFloat := 20;
+    qy.FieldByName('LONGITUDE').AsFloat := 40;
+    qy.Post;
+    qy.Close;
+    qy.Open;
+    CheckEquals(1, qy.RecordCount, 'there is a row');
+    CheckFalse(qy.FieldByName('point_field').IsNull, 'The point_field should not be null');
+    CheckFalse(qy.FieldByName('geometry_field').IsNull, 'The geometry_field should not be null');
+    qy.Edit;
+    qy.FieldByName('point_field').Clear;
+    try
+      qy.Post;
+      Check(False, 'The trigger should forbit this');
+    except
+    end;
+    qy.Close;
+    qy.Open;
+    qy.Edit;
+    qy.FieldByName('geometry_field').Clear;
+    try
+      qy.Post;
+      Check(False, 'The trigger should forbit this');
+    except
+    end;
+  finally
+    qy.SQL.Text := 'delete from TableTicket304';
+    qy.ExecSQL;
+    qy.Free;
   end;
 end;
 

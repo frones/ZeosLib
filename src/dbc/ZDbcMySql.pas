@@ -474,18 +474,22 @@ begin
           MYSQL_OPT_CONNECT_TIMEOUT,
           MYSQL_OPT_PROTOCOL,
           MYSQL_OPT_READ_TIMEOUT,
-          MYSQL_OPT_WRITE_TIMEOUT:
-            if Info.Values[sMyOpt] <> '' then
-            begin
+          MYSQL_OPT_WRITE_TIMEOUT,
+          MYSQL_OPT_MAX_ALLOWED_PACKET,
+          MYSQL_OPT_NET_BUFFER_LENGTH,
+          MYSQL_OPT_SSL_MODE,
+          MYSQL_OPT_RETRY_COUNT,
+          MYSQL_OPT_SSL_FIPS_MODE,
+          MYSQL_OPT_ZSTD_COMPRESSION_LEVEL:
+            if Info.Values[sMyOpt] <> '' then begin
 setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def{$ENDIF}(Info.Values[sMyOpt], 0);
               FPlainDriver.mysql_options(FHandle, myopt, @UIntOpt);
             end;
           MYSQL_OPT_LOCAL_INFILE: {optional empty or unsigned int}
-            if Info.Values[sMyOpt] <> '' then
-              goto setuint
-            else
-              if Info.IndexOf(sMyOpt) > -1 then
-                FPlainDriver.mysql_options(FHandle, myopt, nil);
+            if Info.Values[sMyOpt] <> ''
+            then goto setuint
+            else if Info.IndexOf(sMyOpt) > -1 then
+              FPlainDriver.mysql_options(FHandle, myopt, nil);
           { no value options }
           MYSQL_OPT_COMPRESS,
           MYSQL_OPT_GUESS_CONNECTION,
@@ -503,15 +507,18 @@ setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def
           MYSQL_OPT_SSL_VERIFY_SERVER_CERT,
           MYSQL_ENABLE_CLEARTEXT_PLUGIN,
           MYSQL_OPT_CAN_HANDLE_EXPIRED_PASSWORDS,
-          MYSQL_OPT_SSL_ENFORCE:
-            if Info.Values[sMyOpt] <> '' then
-            begin
+          MYSQL_OPT_SSL_ENFORCE,
+          MYSQL_OPT_GET_SERVER_PUBLIC_KEY,
+          MYSQL_OPT_OPTIONAL_RESULTSET_METADATA:
+            if Info.Values[sMyOpt] <> '' then begin
               MyBoolOpt := Ord(StrToBoolEx(Info.Values[sMyOpt]));
               FPlainDriver.mysql_options(FHandle, myopt, @MyBoolOpt);
             end;
           { unsigned char * options }
           MYSQL_OPT_SSL_KEY, MYSQL_OPT_SSL_CERT,
-          MYSQL_OPT_SSL_CA, MYSQL_OPT_SSL_CAPATH, MYSQL_OPT_SSL_CIPHER: ;//skip, processed down below
+          MYSQL_OPT_SSL_CA, MYSQL_OPT_SSL_CAPATH, MYSQL_OPT_SSL_CIPHER,
+          MYSQL_OPT_TLS_CIPHERSUITES,
+          MYSQL_OPT_COMPRESSION_ALGORITHMS: ;//skip, processed down below
           else  begin
                   S := Info.Values[sMyOpt];
                   if S <> '' then begin

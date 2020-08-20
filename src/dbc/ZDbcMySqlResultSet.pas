@@ -1268,6 +1268,8 @@ begin
   if FieldOffsets.charsetnr > 0
   then bind^.binary := (PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.charsetnr)^ = 63) and (PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG <> 0)
   else bind^.binary := (PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.flags)^ and BINARY_FLAG <> 0);
+  if bind^.buffer_type_address^ = FIELD_TYPE_GEOMETRY then //MySQL does not accept Type 255 as binding type
+    bind^.buffer_type_address^ := FIELD_TYPE_BLOB;
 
   case bind^.buffer_type_address^ of
     FIELD_TYPE_BIT: case PUInt(PAnsiChar(MYSQL_FIELD)+FieldOffsets.length)^ of

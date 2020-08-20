@@ -635,6 +635,7 @@ resourcestring
   cSRowBufferWidthExceeded ='La taille du buffer de lignes a été dépassée. Essayez d''utiliser moins ou de plus longues colonnes dans la requête SQL.';
   cSPreviousResultStillOpen = 'L''ensemble de données résultat précédent de cette instruction est encore ouvert';
 //--- end added by Serge Girard ------------------------------------
+  cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
 {$ELSE !FRENCH}
 // -> ms, 09/05/2005
 {$IFDEF PORTUGUESE}
@@ -796,6 +797,7 @@ resourcestring
   cSInvalidUpdateCount   = '%d registro(s) atualizados. Apenas um registro deveria ter sido atualizado.';
 
   cSRowBufferWidthExceeded ='O tamanho do buffer para linhas (Rows) foi excedido. Tente usar menos ou mais colunas na query SQL';
+  cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
 {$ELSE}
 
 {$IFDEF DUTCH}
@@ -958,6 +960,7 @@ resourcestring
   cSInvalidUpdateCount     = '%d record(s) gewijzigd. Slechts 1 record had gewijzigd mogen zijn.';
 
   cSRowBufferWidthExceeded ='Rij buffer grootte overschreden. Probeer minder kolommen te gebruiken in je SQL query.';
+  cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
 {$ELSE}
 // <- ms, 09/05/2005
 
@@ -1122,6 +1125,7 @@ resourcestring
   cSInvalidUpdateCount     = '%d Datensätze geändert. Exakt ein Datensatz sollte geändert werden.';
 
   cSRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
+  cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
 {$ELSE}
   // -> fduenas, 28/06/2005
 {$IFDEF SPANISH} //Spanish translations
@@ -1285,6 +1289,7 @@ resourcestring
   cSInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.';
 
   cSRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
+  cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
 {$ELSE}
 
 {$IFDEF ROMANA}
@@ -1447,6 +1452,7 @@ resourcestring
 
   cSRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
   // <-- added by tohenk
+  cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
   {$ELSE}
   {$IFDEF INDONESIAN}
   cSSQLError1 = 'Kesalahan SQL: %s';
@@ -1610,6 +1616,7 @@ resourcestring
   cSRowBufferWidthExceeded = 'Lebar buffer baris terlampaui. Coba kurangi atau gunakan kolom yang lebih panjang dalam query SQL.';
   // <--- end added by tohenk
   //--- begin added by ORMADA --------------------------------------------------
+  cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
 {$ELSE}
 {$IFDEF RUSSIAN}
   cSSQLError1                               = 'Îøèáêà â SQL âûðàæåíèè: %s';
@@ -1772,6 +1779,7 @@ resourcestring
   cSInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.';
 
   cSRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
+  cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
 {$ELSE}
 
 //--- added by Petr Stasiak - pestasoft.com ------------------------------------
@@ -1938,6 +1946,7 @@ resourcestring
   cSRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
 //--- end added by Petr Stasiak - pestasoft.com ------------------------------------
 
+  cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
 {$ELSE}
 
 //--- added by pawelsel --------------------------------------------------------
@@ -2102,6 +2111,7 @@ resourcestring
   cSInvalidUpdateCount     = 'Liczba zaktualizowanych rekordów: %d. tylko jeden rekord powinien byæ zaktualizowany.';
 
   cSRowBufferWidthExceeded ='Przekroczono rozmiar bufora. Spróbuj u¿yæ mniejszej liczby kolumn lub d³u¿szych kolumn w zapytaniu SQL.';
+  cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
 
 {$ELSE} // default: ENGLISH
 
@@ -2265,6 +2275,7 @@ resourcestring
   cSInvalidUpdateCount     = '%d record(s) updated. Only one record should have been updated.';
 
   cSRowBufferWidthExceeded ='Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
+  cSBackgroundOperationStillRunning = 'A background operation is still running!';
 
 {$ENDIF} // POLISH
 
@@ -3200,6 +3211,7 @@ begin
   SInvalidUpdateCount := cSInvalidUpdateCount;
 
   SRowBufferWidthExceeded := cSRowBufferWidthExceeded;
+  SBackgroundOperationStillRunning := cSBackgroundOperationStillRunning;
 end;
 
 initialization

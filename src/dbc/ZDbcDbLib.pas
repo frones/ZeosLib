@@ -283,7 +283,7 @@ begin
       lLogFile := URL.Properties.Values[ConnProps_TDSVersion];
       TDSVersion := StrToIntDef(lLogFile, TDSDBVERSION_UNKNOWN);
       if TDSVersion = TDSDBVERSION_UNKNOWN then begin
-        lLogFile := URL.Properties.Values[ConnProps_TDSVersion];
+        lLogFile := URL.Properties.Values[ConnProps_TDSProtocolVersion];
         if (lLogFile <> '') and (FplainDriver.DBLibraryVendorType <> lvtMS) then begin
           P := Pointer(lLogFile);
           if P^ = Char('5') then
