@@ -2276,9 +2276,10 @@ procedure TZAbstractCachedResultSet.MoveToCurrentRow;
 begin
   CheckClosed;
   if (RowNo >= 1) and (RowNo <= LastRowNo) then
-    if (FSelectedRow.Index = FUpdatedRow.Index) and (FUpdatedRow.UpdateType = utModified)
-    then FRowAccessor.RowBuffer := FUpdatedRow
-    else FRowAccessor.RowBuffer := FSelectedRow
+    if (FSelectedRow.Index = FUpdatedRow.Index) and (FUpdatedRow.UpdateType = utModified) then begin
+      FRowAccessor.RowBuffer := FUpdatedRow;
+      FSelectedRow := FUpdatedRow;
+    end else FRowAccessor.RowBuffer := FSelectedRow
   else FRowAccessor.RowBuffer := nil;
 end;
 
