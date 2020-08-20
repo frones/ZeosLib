@@ -57,7 +57,7 @@ interface
 uses
   {$IFDEF USE_SYNCOMMONS}SynCommons, {$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} TypInfo, FmtBcd,
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF}, TypInfo, FmtBcd,
   ZCompatibility, ZDbcIntfs, ZTokenizer, ZVariant, ZSysUtils,
   ZDbcResultSetMetadata;
 
