@@ -2394,8 +2394,9 @@ begin
         end;
     dsEdit: begin
         RowBuffer := PZRowBuffer(ActiveBuffer);
-        if RowBuffer.Index <> FResultSet.GetRow then
-          FResultSet.MoveAbsolute(RowBuffer.Index);
+        if RowBuffer.Index <> FResultSet.GetRow
+        then FResultSet.MoveAbsolute(RowBuffer.Index)
+        else ResultSet.MoveToCurrentRow; //in case Old/New/CurValue was called before -- quirky grids..
       end;
     dsInsert: begin
         RowBuffer := PZRowBuffer(ActiveBuffer);

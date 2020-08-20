@@ -1948,6 +1948,10 @@ begin
     CheckEquals(eq_name, 'Volvo');
     eq_name := Query.Fields[1].CurValue;
     CheckEquals(eq_name, 'Nissan');
+    eq_name := Query.Fields[1].OldValue;
+    CheckEquals(eq_name, 'Volvo');
+    eq_name := Query.Fields[1].Value;
+    CheckEquals(eq_name, 'Nissan');
     Query.Post;
     eq_name := Query.Fields[1].OldValue;
     CheckEquals(eq_name, 'Volvo');

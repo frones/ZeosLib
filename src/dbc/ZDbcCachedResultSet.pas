@@ -646,7 +646,7 @@ begin
     if Index >= 0 then begin
       FSelectedRow := FInitialRowsList[Index];
       FRowAccessor.RowBuffer := FSelectedRow;
-    end else if FCachedUpdates and (FUpdatedRow.Index = FSelectedRow.Index) and (FUpdatedRow.UpdateType = utModified) then begin
+    end else if (FUpdatedRow.Index <> -1) and (FUpdatedRow.Index = FSelectedRow.Index) and (FUpdatedRow.UpdateType = utModified) then begin
       FSelectedRow := FRowsList[FUpdatedRow.Index];
       FRowAccessor.RowBuffer := FSelectedRow;
     end else if FRowAccessor.RowBuffer = FInsertedRow then begin
