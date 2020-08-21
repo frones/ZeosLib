@@ -542,8 +542,8 @@ function CompareSingle_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 var aDiv: Single;
 begin
   Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then begin
-    if PSingle(V1)^ > PSingle(V2)^ then
+  if Result = BothNotNull then
+    if PSingle(V1)^ > PSingle(V2)^ then begin
       aDiv := PSingle(V1)^ - PSingle(V2)^;
       Result := Ord(aDiv > FLOAT_COMPARE_PRECISION_SINGLE);
     end else begin
