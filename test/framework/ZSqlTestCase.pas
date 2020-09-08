@@ -58,10 +58,8 @@ interface
 {$I ZTestFramework.inc}
 
 uses
-{$IFNDEF VER130BELOW}
-  Types,
-{$ENDIF}
-  {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, DB, Contnrs,
+  {$IFNDEF VER130BELOW}Types, {$ENDIF} {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF},
+  Classes, SysUtils, DB, Contnrs, FmtBCD,
   ZDataset, ZDatasetUtils, ZAbstractConnection,
   ZCompatibility, ZDbcIntfs, ZConnection, ZTestCase, ZScriptParser, ZDbcLogging;
 
@@ -265,6 +263,8 @@ type
     procedure Fail(Msg: string; ErrorAddr: Pointer = nil);{$IFNDEF FPC}  override; {$ENDIF}
     procedure LogEvent(Event: TZLoggingEvent);
 
+    procedure CheckEquals(Expected, Actual: TBCD;
+      const Msg: string = ''); overload;
     { Different convenience methods. }
     function CreateDbcConnection: IZConnection; virtual;
     function CreateDatasetConnection: TZConnection; virtual;
@@ -1164,6 +1164,12 @@ end;
 function TZAbstractSQLTestCase.CreateDbcConnection: IZConnection;
 begin
   Result := FCurrentConnectionConfig.CreateDbcConnection;
+end;
+
+procedure TZAbstractSQLTestCase.CheckEquals(Expected, Actual: TBCD;
+  const Msg: string);
+begin
+  Check(ZSysUtils.ZBCDCompare(Expected, Actual) = 0, Msg);
 end;
 
 {**
