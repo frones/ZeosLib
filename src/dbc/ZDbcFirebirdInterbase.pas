@@ -1112,7 +1112,7 @@ begin
     LogError(LogCategory, ErrorCode, Sender, LogMessage, ErrorString);
   { in case second isc_status is zero(no error) and third is tagged as a warning it's a /are multiple warning(s)
     otoh it's an error with a possible warning(s)}
-  if (StatusVector[1] = 0) and (StatusVector[2] = isc_arg_warning)
+  if (StatusVector[1] = 0)
   then ExeptionClass := EZSQLWarning
   else if (ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection) or
       (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_idle) or
