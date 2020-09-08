@@ -77,13 +77,14 @@ type
     procedure TestBin_Collation;
     procedure TestTicket365;
     procedure TestTicket284;
+    procedure TestTicket442;
   end;
 
 {$ENDIF ZEOS_DISABLE_MYSQL}
 implementation
 {$IFNDEF ZEOS_DISABLE_MYSQL}
 
-uses ZTestCase, ZSysUtils, ZPlainMySqlDriver, FmtBCD;
+uses ZTestCase, ZSysUtils, ZPlainMySqlDriver, FmtBCD, ZDbcLogging;
 
 { TZTestDbcMySQLBugReport }
 
@@ -496,6 +497,49 @@ begin
     Stmt.Close;
     Stmt := nil;
   end;
+end;
+
+procedure TZTestDbcMySQLBugReport.TestTicket442;
+const
+  INS_DATA: array[0..1] of array[0..1] of string = (
+    ('1112690','Label1'),
+    ('1112656','Label2')
+  );
+var
+  i: Integer;
+  pStmt: IZPreparedStatement;
+begin
+  Connection.ExecuteImmediat('delete from table_ticket_442', lcExecute);
+  pStmt := Connection.PrepareStatement('INSERT INTO table_ticket_442 VALUES (?, ?)');
+  (*Q.SQL.Text := 'DROP TABLE IF EXISTS table_ticket_442';
+  Q.ExecSQL;
+
+  Q.SQL.Text := 'CREATE TABLE `table_ticket_442` (' +
+  '`objectid` int(11) NOT NULL, ' +
+  '`label` varchar(255) NOT NULL, ' +
+  'PRIMARY KEY (`objectid`)' +
+  ') ENGINE=InnoDB DEFAULT CHARSET=latin1';
+  Q.ExecSQL;
+
+  Q.SQL.Text := 'INSERT INTO table_ticket_442 VALUES (:id, :label)';
+  *)
+  for i := 0 to High(INS_DATA) do begin
+    pStmt.SetInt(FirstDbcIndex, StrToInt(INS_DATA[i][0]));
+    pStmt.SetString(FirstDbcIndex+1, INS_DATA[i][1]);
+    pStmt.ExecuteUpdatePrepared;
+  end;
+  try
+    pStmt.SetInt(FirstDbcIndex, StrToInt(INS_DATA[0][0]));
+    pStmt.SetString(FirstDbcIndex+1, 'bar');
+    pStmt.ExecuteUpdatePrepared;
+    Fail('(?) 1112690 not in INS_DATA');
+  except
+    on E: Exception do
+      CheckNotTestFailure(E, 'Expected behavior');
+  end;
+  pStmt.SetInt(FirstDbcIndex, StrToInt(INS_DATA[1][0])+1);
+  pStmt.SetString(FirstDbcIndex+1, 'foot');
+  pStmt.ExecuteUpdatePrepared;
 end;
 
 initialization

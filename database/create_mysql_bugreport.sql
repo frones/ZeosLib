@@ -495,3 +495,9 @@ CREATE TABLE TableTicked389 (
 CREATE TABLE biginterror (
   f bigint(20) unsigned DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf16;
+
+CREATE TABLE table_ticket_442 (
+  `objectid` int(11) NOT NULL, 
+  `label` varchar(255) NOT NULL, 
+  PRIMARY KEY (`objectid`) 
+  );
