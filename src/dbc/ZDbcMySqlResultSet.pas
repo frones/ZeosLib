@@ -285,7 +285,8 @@ implementation
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
-  ZFastCode, ZSysUtils, ZMessages, ZEncoding,
+  ZFastCode, ZSysUtils, ZMessages, ZEncoding, ZTokenizer,
+  ZGenericSqlAnalyser,
   ZDbcUtils, ZDbcMetadata, ZDbcLogging;
 
 { TZMySQLResultSetMetadata }
@@ -387,25 +388,45 @@ var
   Current: TZColumnInfo;
   I: Integer;
   TableColumns: IZResultSet;
+  Connection: IZConnection;
+  Driver: IZDriver;
+  IdentifierConvertor: IZIdentifierConvertor;
+  Analyser: IZStatementAnalyser;
+  Tokenizer: IZTokenizer;
 begin
-  if not FHas_ExtendedColumnInfos then
-    inherited LoadColumns
-  else if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
-    for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
-      Current := TZColumnInfo(ResultSet.ColumnsInfo[i]);
-      ClearColumn(Current);
-      if Current.TableName = '' then
-        continue;
-      TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(Metadata.GetIdentifierConvertor.Quote(Current.TableName)),'');
-      if TableColumns <> nil then begin
-        TableColumns.BeforeFirst;
-        while TableColumns.Next do
-          if TableColumns.GetString(ColumnNameIndex) = Current.ColumnName then begin
-            FillColumInfoFromGetColumnsRS(Current, TableColumns, Current.ColumnName);
-            Break;
+  if not FHas_ExtendedColumnInfos
+  then inherited LoadColumns
+  else begin
+    Connection := Metadata.GetConnection;
+    Driver := Connection.GetDriver;
+    Analyser := Driver.GetStatementAnalyser;
+    Tokenizer := Driver.GetTokenizer;
+    IdentifierConvertor := Metadata.GetIdentifierConvertor;
+    try
+      if Analyser.DefineSelectSchemaFromQuery(Tokenizer, SQL) <> nil then
+        for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
+          Current := TZColumnInfo(ResultSet.ColumnsInfo[i]);
+          ClearColumn(Current);
+          if Current.TableName = '' then
+            continue;
+          TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(IdentifierConvertor.Quote(Current.TableName)),'');
+          if TableColumns <> nil then begin
+            TableColumns.BeforeFirst;
+            while TableColumns.Next do
+              if TableColumns.GetString(ColumnNameIndex) = Current.ColumnName then begin
+                FillColumInfoFromGetColumnsRS(Current, TableColumns, Current.ColumnName);
+                Break;
+              end;
           end;
-      end;
+        end;
+    finally
+      Driver := nil;
+      Connection := nil;
+      Analyser := nil;
+      Tokenizer := nil;
+      IdentifierConvertor := nil;
     end;
+  end;
   Loaded := True;
 end;
 

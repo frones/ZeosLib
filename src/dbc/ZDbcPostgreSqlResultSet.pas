@@ -268,10 +268,11 @@ implementation
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 
 uses
-  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} Math, SysConst,
-  ZMessages, ZEncoding, ZFastCode, ZDbcPostgreSqlMetadata, ZDbcMetadata,
-  ZDbcPostgreSqlUtils, ZDbcUtils, ZDbcProperties, TypInfo,
-  ZVariant;
+  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} Math, SysConst, TypInfo,
+  ZMessages, ZEncoding, ZFastCode, ZVariant, ZTokenizer,
+  ZGenericSqlAnalyser, ZSelectSchema,
+  ZDbcPostgreSqlMetadata, ZDbcMetadata, ZDbcPostgreSqlUtils, ZDbcUtils,
+  ZDbcProperties;
 
 { TZPostgreSQLResultSet }
 
@@ -2439,36 +2440,46 @@ end;
   Initializes columns with additional data.
 }
 procedure TZPostgresResultSetMetadata.LoadColumns;
-{$IFNDEF ZEOS_TEST_ONLY}
 var
   Current: TZPGColumnInfo;
   I: Integer;
+  TableColumns: IZResultSet;
+  Connection: IZConnection;
+  Driver: IZDriver;
+  Analyser: IZStatementAnalyser;
+  Tokenizer: IZTokenizer;
   PGMetaData: IZPGDatabaseMetadata;
-  RS: IZResultSet;
-{$ENDIF}
 begin
-  {$IFDEF ZEOS_TEST_ONLY}
-  inherited LoadColumns;
-  {$ELSE}
-  if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
-    for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
-      Current := TZPGColumnInfo(ResultSet.ColumnsInfo[i]);
-      ClearColumn(Current);
-      PGMetaData := MetaData as IZPGDatabaseMetadata;
-      RS := PGMetaData.GetColumnsByTableOID(Current.TableOID);
-      if RS <> nil then begin
-        RS.BeforeFirst;
-        while RS.Next do
-          if RS.GetInt(TableColColumnOrdPosIndex) = Current.TableColNo then begin
-            FillColumInfoFromGetColumnsRS(Current, RS, RS.GetString(ColumnNameIndex));
-            Break;
-          end else
-            if RS.GetInt(TableColColumnOrdPosIndex) > Current.TableColNo then
+  Connection := Metadata.GetConnection;
+  Driver := Connection.GetDriver;
+  Analyser := Driver.GetStatementAnalyser;
+  Tokenizer := Driver.GetTokenizer;
+  PGMetaData := MetaData as IZPGDatabaseMetadata;
+  try
+    if Analyser.DefineSelectSchemaFromQuery(Tokenizer, SQL) <> nil then
+      for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
+        Current := TZPGColumnInfo(ResultSet.ColumnsInfo[i]);
+        ClearColumn(Current);
+        TableColumns := PGMetaData.GetColumnsByTableOID(Current.TableOID);
+        if TableColumns <> nil then begin
+          TableColumns.BeforeFirst;
+          while TableColumns.Next do
+            if TableColumns.GetInt(TableColColumnOrdPosIndex) = Current.TableColNo then begin
+              FillColumInfoFromGetColumnsRS(Current, TableColumns, TableColumns.GetString(ColumnNameIndex));
               Break;
+            end else if TableColumns.GetInt(TableColColumnOrdPosIndex) > Current.TableColNo then
+              Break;
+        end;
       end;
-    end;
+  finally
+    Driver := nil;
+    Connection := nil;
+    Analyser := nil;
+    Tokenizer := nil;
+    IdentifierConvertor := nil;
+    PGMetaData := nil;
+  end;
   Loaded := True;
-  {$ENDIF}
 end;
 
 { TZPostgreSQLCachedResolver }
