@@ -621,6 +621,8 @@ begin
     FEventCallback := nil;
   end;
   FEventCallback := TFBEventCallback.Create(Self, 'EventCallback');
+  if FEvents <> nil then
+    FEvents.Release;
   FEvents := fParent.FAttachment.queEvents(fParent.FStatus, FEventCallback,
     EventBufferLen, BytePtr(EventBuffer));
 end;
@@ -660,6 +662,7 @@ begin
   inherited Create;
   FName := aName;
   FOwner := aOwner;
+  FRefCnt := 1;
 end;
 
 procedure TFBEventCallback.eventCallbackFunction(length: Cardinal;
