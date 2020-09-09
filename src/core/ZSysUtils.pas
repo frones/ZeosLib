@@ -7489,7 +7489,7 @@ begin
     if GetPacketBCDOffSets(Value1, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1) then
       ZPackBCDToLeft(Value1, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1);
     if GetPacketBCDOffSets(Value2, pNibble2, pLastNibble2, Prec2, Scale2, GetFB2) then
-      ZPackBCDToLeft(Value2, pNibble2, pNibble2, Prec2, Scale2, GetFB2);
+      ZPackBCDToLeft(Value2, pNibble2, pLastNibble2, Prec2, Scale2, GetFB2);
     {determine digits before fractions start: }
     s1 := Integer(Prec1)-Scale1;
     s2 := Integer(Prec2)-Scale2;

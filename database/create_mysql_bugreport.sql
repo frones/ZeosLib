@@ -501,3 +501,10 @@ CREATE TABLE table_ticket_442 (
   `label` varchar(255) NOT NULL, 
   PRIMARY KEY (`objectid`) 
   );
+
+CREATE TABLE table_p156227 (
+  `id`int not null,
+  `SaleDateTime` date NOT NULL, 
+  `VatLow` numeric(10,2) NOT NULL, 
+  PRIMARY KEY (`id`) 
+  );

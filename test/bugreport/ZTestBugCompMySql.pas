@@ -122,6 +122,7 @@ type
     procedure TestProcAbtest_WithoutParamCheck;
     procedure TestTicket304;
     procedure TestBigIntError;
+    procedure TestBCD_Refresh_p156227;
   end;
 
 {$ENDIF ZEOS_DISABLE_MYSQL}
@@ -2127,6 +2128,58 @@ begin
     CheckEquals('xxxxxxxx', Query.ParamByName('P5').AsString, 'The OutParam-Result of a exec pro abtest');
   finally
     Query.Free;
+  end;
+end;
+
+(*
+Hello,
+
+I have a table in a mysql database with a field defined as Decimal(10,2). To connect to this table
+I have a ZQuery component with the following SQL query:
+
+SELECT DATE(SaleDateTime), SUM(VatLow)
+FROM tblsale
+GROUP BY DATE(SaleDateTime)
+
+A DBGrid is connected to ZQuery.
+
+I can open the query, but whenever I try to refresh the table an exception is raised of class 'External:SIGSEGV' in file
+ZSysUtils.pas at line 7454. This occurs whenever SUM(VatLow) is 0.00.
+I also noticed that after opening the query, the value 0.00 is displayed as 0000000.00 and other values are displayed
+correctly.
+
+Is there a way solve this?
+
+My environment is:
+- Lazarus/FPC in Windows 10 build with fpcupdeluxe
+- ZEOS 7.3 installed with fpcdeluxe using testing branch
+
+see: https://zeoslib.sourceforge.io/viewtopic.php?f=28&p=156227#p156227
+*)
+procedure TZTestCompMySQLBugReport.TestBCD_Refresh_p156227;
+var Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.Connection.Connect;
+    Query.Connection.ExecuteDirect('delete from table_p156227');
+    Query.Connection.ExecuteDirect('insert into table_p156227 values '+
+      '(1, Cast(''2020-09-09'' as date), 12345678.90), '+
+      '(2, Cast(''2020-09-09'' as date), 12345678.90), '+
+      '(3, Cast(''2020-09-09'' as date), 12345678.90)');
+    Query.SQL.Text := 'select DATE(SaleDateTime), SUM(VatLow) '+
+      'from table_p156227 '+
+      'group by DATE(SaleDateTime)';
+    Query.Open;
+    Query.Connection.ExecuteDirect('update table_p156227 set VatLow = 0 where 1=1');
+    try
+      Query.Refresh;
+    Finally
+      Query.Connection.Disconnect;
+      Query.Close;
+    End;
+  finally
+    FreeAndNil(Query);
   end;
 end;
 
