@@ -810,7 +810,8 @@ var I: Integer;
   SQLWriter: TZRawSQLStringWriter;
 begin
   if FCachedQueryRaw = nil then begin
-    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SQL, ConSettings,
+    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SQL,
+      {$IFDEF UNICODE}ConSettings.ClientCodePage.CP,{$ENDIF}
       Connection.GetDriver.GetTokenizer, FIsParamIndex, nil,
       @DefaultPreparableTokens, FTokenMatchIndex);
     FCountOfQueryParams := 0;

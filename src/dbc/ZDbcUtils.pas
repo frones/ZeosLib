@@ -231,7 +231,7 @@ procedure Curr2DBNumeric_BE(const Src: Currency; Dest: PDB_NUMERIC; const Numeri
 
 procedure MoveReverseByteOrder(Dest, Src: PAnsiChar; Len: LengthInt);
 
-function TokenizeSQLQueryRaw(const SQL: SQLString; ConSettings: PZConSettings;
+function TokenizeSQLQueryRaw(const SQL: SQLString; {$IFDEF UNICODE}RawCP: Word;{$ENDIF}
   const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
   IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
   var TokenMatchIndex: Integer): TRawByteStringDynArray;
@@ -1169,15 +1169,12 @@ end;
   @returns a list of splitted sections.
 }
 function TokenizeSQLQueryRaw(const SQL: SQLString;
-  ConSettings: PZConSettings;
+  {$IFDEF UNICODE}RawCP: Word;{$ENDIF}
   const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
   IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
   var TokenMatchIndex: Integer): TRawByteStringDynArray;
 var
   I, C, N, FirstComposePos: Integer;
-  {$IFDEF UNICODE}
-  CP: Word;
-  {$ENDIF}
   NextIsNChar, ParamFound: Boolean;
   Tokens: TZTokenList;
   Token: PZToken;
@@ -1201,9 +1198,6 @@ var
   end;
 begin
   ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSE}Pos{$ENDIF}('?', SQL) > 0);
-  {$IFDEF UNICODE}
-  CP := ConSettings^.ClientCodePage^.CP;
-  {$ENDIF}
   if ParamFound or Assigned(ComparePrefixTokens) then begin
     Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
     try
@@ -1238,13 +1232,13 @@ begin
       if ParamFound and Tokens.IsEqual(I, Char('?')) then begin
         if (FirstComposePos < Tokens.Count-1) then
           {$IFDEF UNICODE}
-          Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, CP);
+          Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, RawCP);
           {$ELSE}
           Tmp := Tokens.AsString(FirstComposePos, I-1);
           {$ENDIF}
           Add(Tmp, False);
           {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-          Add(ZUnicodeToRaw(Tokens.AsString(I, I), CP), True);
+          Add(ZUnicodeToRaw(Tokens.AsString(I, I), RawCP), True);
           {$ELSE}
           Add('?', True);
           {$ENDIF}
@@ -1257,7 +1251,7 @@ begin
       I := Tokens.Count -1;
       if (FirstComposePos <= Tokens.Count-1) then begin
         {$IFDEF UNICODE}
-        Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, CP);
+        Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, RawCP);
         {$ELSE}
         Tmp := Tokens.AsString(FirstComposePos, I);
         {$ENDIF}
@@ -1269,7 +1263,7 @@ begin
   end else
     {$IFDEF UNICODE}
     begin
-      Tmp := ZUnicodeToRaw(SQL, CP);
+      Tmp := ZUnicodeToRaw(SQL, RawCP);
       Add(Tmp);
     end;
     {$ELSE}
