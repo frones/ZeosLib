@@ -497,7 +497,7 @@ implementation
 {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 
 uses ZSysUtils, ZFastCode, ZEncoding, ZMessages, ZVariant,
-  ZInterbaseToken, ZInterbaseAnalyser,
+  ZInterbaseToken, ZInterbaseAnalyser, ZSelectSchema,
   ZDbcMetadata, ZDbcProperties,
   ZDbcInterbaseFirebirdMetadata;
 
@@ -1099,6 +1099,9 @@ var
   Error: EZSQLThrowable;
   ExeptionClass: EZSQLThrowableClass;
 begin
+  { usually first isc_status is gds_arg_gds .. }
+  if (StatusVector[1] = 0) and (StatusVector[2] = isc_arg_end) then
+    Exit; //neither Warning nor an Error
   InterbaseStatusVector := InterpretInterbaseStatus(StatusVector);
   ErrorCode := InterbaseStatusVector[0].SQLCode;
   ErrorString := '';
@@ -1107,7 +1110,9 @@ begin
 
   if DriverManager.HasLoggingListener then
     LogError(LogCategory, ErrorCode, Sender, LogMessage, ErrorString);
-  if (StatusVector[1] = isc_arg_end) and (StatusVector[2] = isc_arg_warning)
+  { in case second isc_status is zero(no error) and third is tagged as a warning it's a /are multiple warning(s)
+    otoh it's an error with a possible warning(s)}
+  if (StatusVector[1] = 0)
   then ExeptionClass := EZSQLWarning
   else if (ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection) or
       (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_idle) or
@@ -1695,34 +1700,46 @@ end;
   Initializes columns with additional data.
 }
 procedure TZInterbaseFirebirdResultSetMetadata.LoadColumns;
-{$IFNDEF ZEOS_TEST_ONLY}
 var
   Current: TZColumnInfo;
   I: Integer;
   TableColumns: IZResultSet;
-{$ENDIF}
+  Connection: IZConnection;
+  Driver: IZDriver;
+  IdentifierConvertor: IZIdentifierConvertor;
+  Analyser: IZStatementAnalyser;
+  Tokenizer: IZTokenizer;
 begin
-  {$IFDEF ZEOS_TEST_ONLY}
-  inherited LoadColumns;
-  {$ELSE}
-  if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
-    for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
-      Current := TZColumnInfo(ResultSet.ColumnsInfo[i]);
-      ClearColumn(Current);
-      if Current.TableName = '' then
-        continue;
-      TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(Metadata.GetIdentifierConvertor.Quote(Current.TableName)),'');
-      if TableColumns <> nil then begin
-        TableColumns.BeforeFirst;
-        while TableColumns.Next do
-          if TableColumns.GetString(ColumnNameIndex) = Current.ColumnName then begin
-            FillColumInfoFromGetColumnsRS(Current, TableColumns, Current.ColumnName);
-            Break;
-          end;
+  Connection := Metadata.GetConnection;
+  Driver := Connection.GetDriver;
+  Analyser := Driver.GetStatementAnalyser;
+  Tokenizer := Driver.GetTokenizer;
+  IdentifierConvertor := Metadata.GetIdentifierConvertor;
+  try
+    if Analyser.DefineSelectSchemaFromQuery(Tokenizer, SQL) <> nil then
+      for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
+        Current := TZColumnInfo(ResultSet.ColumnsInfo[i]);
+        ClearColumn(Current);
+        if Current.TableName = '' then
+          continue;
+        TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(IdentifierConvertor.Quote(Current.TableName)),'');
+        if TableColumns <> nil then begin
+          TableColumns.BeforeFirst;
+          while TableColumns.Next do
+            if TableColumns.GetString(ColumnNameIndex) = Current.ColumnName then begin
+              FillColumInfoFromGetColumnsRS(Current, TableColumns, Current.ColumnName);
+              Break;
+            end;
+        end;
       end;
-    end;
+  finally
+    Driver := nil;
+    Connection := nil;
+    Analyser := nil;
+    Tokenizer := nil;
+    IdentifierConvertor := nil;
+  end;
   Loaded := True;
-  {$ENDIF}
 end;
 
 procedure TZInterbaseFirebirdResultSetMetadata.SetColumnPrecisionFromGetColumnsRS(

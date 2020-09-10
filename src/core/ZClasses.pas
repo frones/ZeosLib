@@ -64,8 +64,8 @@ uses
 const
   ZEOS_MAJOR_VERSION = 7;
   ZEOS_MINOR_VERSION = 3;
-  ZEOS_SUB_VERSION = 0;
-  ZEOS_STATUS = 'alpha';
+  ZEOS_SUB_VERSION = 1;
+  ZEOS_STATUS = 'beta';
   ZEOS_VERSION = Char(48+ZEOS_MAJOR_VERSION)+'.'+
                  Char(48+ZEOS_MINOR_VERSION)+'.'+
                  Char(48+ZEOS_SUB_VERSION)+'-'+ZEOS_STATUS;

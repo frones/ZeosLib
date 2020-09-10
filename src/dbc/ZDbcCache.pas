@@ -539,10 +539,19 @@ begin
 end;
 
 function CompareSingle_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+var aDiv: Single;
 begin
   Result := NullsCompareMatrix[Null1, Null2];
   if Result = BothNotNull then
-    Result := Ord(CompareValue(PSingle(V1)^, PSingle(V2)^));
+    if PSingle(V1)^ > PSingle(V2)^ then begin
+      aDiv := PSingle(V1)^ - PSingle(V2)^;
+      Result := Ord(aDiv > FLOAT_COMPARE_PRECISION_SINGLE);
+    end else begin
+      aDiv := PSingle(V2)^ - PSingle(V1)^;
+      Result := -Ord(aDiv > FLOAT_COMPARE_PRECISION_SINGLE);
+    end;
+    //commented! fails see: https://sourceforge.net/p/zeoslib/tickets/435/
+    //Result := Ord(CompareValue(PSingle(V1)^, PSingle(V2)^));
 end;
 
 function CompareSingle_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;

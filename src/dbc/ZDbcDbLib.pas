@@ -822,7 +822,7 @@ begin
     then AutoCommit := Value
     else if Value then begin
       FSavePoints.Clear;
-      ExecuteImmediat(RawByteString('commit'), lcOther);
+      ExecuteImmediat(RawByteString('commit'), lcTransaction);
       AutoCommit := True;
     end else
       StartTransaction;
@@ -1138,8 +1138,8 @@ begin
     {$ENDIF TEST_CALLBACK}
     if FSQLErrors <> nil then
       FSQLErrors.Clear;
-    if FSQLErrors <> nil then
-      FSQLErrors.Clear;
+    if FSQLMessages <> nil then
+      FSQLMessages.Clear;
     if DriverManager.HasLoggingListener then begin
       FLogMessage := 'CLOSE CONNECTION TO "'+HostName+'" DATABASE "'+URL.Database+'"';
       DriverManager.LogMessage(lcDisconnect, URL.Protocol, FLogMessage);

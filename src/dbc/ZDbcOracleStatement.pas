@@ -503,32 +503,29 @@ begin
   Result := LastUpdateCount;
 end;
 
-{$IFDEF NEXTGEN}{$HINTS OFF}{$ENDIF}//wrong hint OldSize assigned value is never used
 procedure TZAbstractOracleStatement.InitBuffer(SQLType: TZSQLType;
   OCIBind: PZOCIParamBind; Index, ElementCnt: Cardinal; ActualLength: LengthInt);
 var
   Status: sword;
-  I, OldSize: Integer;
+  I, J: Integer;
   acsid: ub2;
 begin
   { free Desciptors }
-  if (OCIBind.DescriptorType <> 0) and (OCIBind.DescriptorType <> OCI_DTYPE_LOB) then begin //do not free the descripors of the lobs
+  if (OCIBind.DescriptorType <> NO_DTYPE) and (OCIBind.DescriptorType <> OCI_DTYPE_LOB) then begin //do not free the descripors of the lobs
     if (OCIBind.DescriptorType <> SQLType2OCIDescriptor[SQLType]) then
-      OldSize := 0
+      J := 0
     else if (OCIBind.DescriptorType = SQLType2OCIDescriptor[SQLType]) and (ElementCnt < OCIBind.curelen) then
-      OldSize := ElementCnt
-    else OldSize := OCIBind.curelen;
-    for I := OCIBind.curelen-1 downto OldSize do begin
+      J := ElementCnt
+    else J := OCIBind.curelen;
+    for I := OCIBind.curelen-1 downto J do begin
       Status := FPlainDriver.OCIDescriptorFree(PPOCIDescriptor(PAnsiChar(OCIBind.valuep)+I*SizeOf(POCIDescriptor))^, OCIBind.DescriptorType);
       if Status <> OCI_SUCCESS then
         FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecute, 'OCIDescriptorFree', Self);
     end;
   end;
-
   OCIBind.DescriptorType := SQLType2OCIDescriptor[SQLType];
   OCIBind.dty := SQLType2OCIType[SQLType];
 
-  OldSize := OCIBind.value_sz;
   {check if the parameter type was registered before -> they should be valid only }
   if (BindList[Index].ParamType <> pctUnknown) and (SQLType <> BindList[Index].SQLType) then
     raise EZSQLException.Create(SUnKnownParamDataType);
@@ -550,7 +547,7 @@ begin
     GetMem(OCIBind.indp, SizeOf(SB2)*ElementCnt); //alloc mem for indicators
   end;
   //alloc buffer space
-  if (OCIBind.DescriptorType <> 0) then begin
+  if (OCIBind.DescriptorType <> NO_DTYPE) then begin
     ReallocMem(OCIBind.valuep, OCIBind.value_sz*Integer(ElementCnt));
     if (OCIBind.DescriptorType <> OCI_DTYPE_LOB) then //EH: do not alloc descrptors for the lobs
       for I := OCIBind.curelen to ElementCnt -1 do begin
@@ -562,7 +559,7 @@ begin
       end;
   end else begin
     if OCIBind.valuep <> nil then begin
-      FreeMem(OCIBind.valuep, OldSize*Integer(OCIBind.curelen));
+      FreeMem(OCIBind.valuep);
       OCIBind.valuep := nil;
     end;
     if (not ((ElementCnt > 1) and (Ord(SQLType) < Ord(stCurrency)) and (OCIBind.dty <> SQLT_VNU) )) then
@@ -584,7 +581,6 @@ begin
     end;
   end;
 end;
-{$IFDEF NEXTGEN}{$HINTS ON}{$ENDIF}//wrong hint OldSize assigned value is never used
 
 {**
   prepares the statement on the server
@@ -2120,7 +2116,7 @@ begin
               end;
     SQLT_CLOB: AsLob;
     else
-jmpFail: CreateConversionError({$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stUnicodeString, SQLType);
+jmpFail: CreateConversionError(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stUnicodeString, SQLType);
   end;
   Bind.indp[0] := 0;
   {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}

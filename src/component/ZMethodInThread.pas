@@ -1,3 +1,54 @@
+{*********************************************************}
+{                                                         }
+{                 Zeos Database Objects                   }
+{     Launch a database operation in the background       }
+{                                                         }
+{        Originally written by Sergey Seroukhov           }
+{                                                         }
+{*********************************************************}
+
+{@********************************************************}
+{    Copyright (c) 1999-2020 Zeos Development Group       }
+{                                                         }
+{ License Agreement:                                      }
+{                                                         }
+{ This library is distributed in the hope that it will be }
+{ useful, but WITHOUT ANY WARRANTY; without even the      }
+{ implied warranty of MERCHANTABILITY or FITNESS FOR      }
+{ A PARTICULAR PURPOSE.  See the GNU Lesser General       }
+{ Public License for more details.                        }
+{                                                         }
+{ The source code of the ZEOS Libraries and packages are  }
+{ distributed under the Library GNU General Public        }
+{ License (see the file COPYING / COPYING.ZEOS)           }
+{ with the following  modification:                       }
+{ As a special exception, the copyright holders of this   }
+{ library give you permission to link this library with   }
+{ independent modules to produce an executable,           }
+{ regardless of the license terms of these independent    }
+{ modules, and to copy and distribute the resulting       }
+{ executable under terms of your choice, provided that    }
+{ you also meet, for each linked independent module,      }
+{ the terms and conditions of the license of that module. }
+{ An independent module is a module which is not derived  }
+{ from or based on this library. If you modify this       }
+{ library, you may extend this exception to your version  }
+{ of the library, but you are not obligated to do so.     }
+{ If you do not wish to do so, delete this exception      }
+{ statement from your version.                            }
+{                                                         }
+{                                                         }
+{ The project web site is located on:                     }
+{   http://zeos.firmos.at  (FORUM)                        }
+{   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
+{   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
+{                                                         }
+{   http://www.sourceforge.net/projects/zeoslib.          }
+{                                                         }
+{                                                         }
+{                                 Zeos Development Group. }
+{********************************************************@}
+
 Unit ZMethodInThread;
 
 Interface
@@ -8,6 +59,8 @@ Type
  TProcedureOfObject = Procedure Of Object;
  TErrorEvent = Procedure(Sender: TObject; Error: Exception) Of Object;
 
+ /// <summary>Execute database component operations in a background thread, leaving the VCL thread responsive. Background operations can be
+ /// gracefully terminated (where supported) with TZConnection.AbortOperation.</summary>
  TZMethodInThread = Class
  private
   _connection: TZAbstractConnection;
@@ -29,21 +82,64 @@ Type
  public
   Constructor Create;
   Destructor Destroy; Override;
+  /// <summary>Gives information about the status of the background thread</summary>
+  /// <returns>True if there is a background operation in progress, false if not</returns>
   Property IsRunning: Boolean Read GetThreadRunning;
+  /// <summary>The OnError event fires if an exception was raised during the background operation</summary>
+  /// <remarks>The event handler is executed in the background thread's context. Always pay attention for proper synchronization!</remarks>
   Property OnError: TErrorEvent Read _methoderror Write SetOnError;
+  /// <summary>The OnFinish event fires when the background operation ended. The OnFinish event always fires, even if an error happened (except if killed)</summary>
+  /// <remarks>The event handles is executed in the background thread's context. Always pay attention for proper synchronization!</remarks>
   Property OnFinish: TNotifyEvent Read _methodfinish Write SetOnFinish;
+  /// <summary>Returns the thread ID of the backgroun operation</summary>
+  /// <returns>The thread ID of the background operation, or 0 if there is none</returns>
   Property ThreadID: Cardinal Read GetThreadId;
+  /// <summary>Apply the changes of a dataset to the database in the background</summary>
+  /// <param name="inDataSet">The dataset where the method should be executed</param>
+  /// <remarks>This method returns immediately. Use the event handlers (or poll the .IsRunning property) to react when the operation finishes.</remarks>
   Procedure ApplyUpdates(inDataSet: TZAbstractDataset);
+  /// <summary>Connect to a database in the background</summary>
+  /// <param name="inConnection">The connection where the method should be executed</param>
+  /// <remarks>This method returns immediately. Use the event handlers (or poll the .IsRunning property) to react when the operation finishes.</remarks>
   Procedure Connect(inConnection: TZAbstractConnection);
+  /// <summary>Commit the current transaction to the database in the background</summary>
+  /// <param name="inConnection">The connection where the method should be executed</param>
+  /// <remarks>This method returns immediately. Use the event handlers (or poll the .IsRunning property) to react when the operation finishes.</remarks>
   Procedure Commit(inConnection: TZAbstractConnection);
+  /// <summary>Disconnect from a database in the background</summary>
+  /// <param name="inConnection">The connection where the method should be executed</param>
+  /// <remarks>This method returns immediately. Use the event handlers (or poll the .IsRunning property) to react when the operation finishes.</remarks>
   Procedure Disconnect(inConnection: TZAbstractConnection);
+  /// <summary>Execute an INSERT/UPDATE/DELETE query in the background</summary>
+  /// <param name="inDataSet">The dataset where the method should be executed</param>
+  /// <remarks>This method returns immediately. Use the event handlers (or poll the .IsRunning property) to react when the operation finishes.</remarks>
   Procedure ExecSQL(inDataSet: TZAbstractRODataSet);
+  /// <summary>Load the results of a SELECT query in the background</summary>
+  /// <param name="inDataSet">The dataset where the method should be executed</param>
+  /// <remarks>This method returns immediately. Use the event handlers (or poll the .IsRunning property) to react when the operation finishes.</remarks>
   Procedure Open(inDataSet: TZAbstractRODataset);
+  /// <summary>Post changes made in the dataset to the database in the background</summary>
+  /// <param name="inDataSet">The dataset where the method should be executed</param>
+  /// <remarks>This method returns immediately. Use the event handlers (or poll the .IsRunning property) to react when the operation finishes.</remarks>
   Procedure Post(inDataSet: TZAbstractRODataset);
+  /// <summary>Reload the results of a SELECT query in the background</summary>
+  /// <param name="inDataSet">The dataset where the method should be executed</param>
+  /// <remarks>This method returns immediately. Use the event handlers (or poll the .IsRunning property) to react when the operation finishes.</remarks>
   Procedure Refresh(inDataSet: TZAbstractRODataset);
+  /// <summary>Roll back the current transaction in the background</summary>
+  /// <param name="inConnection">The connection where the method should be executed</param>
+  /// <remarks>This method returns immediately. Use the event handlers (or poll the .IsRunning property) to react when the operation finishes.</remarks>
   Procedure Rollback(inConnection: TZAbstractConnection);
+  /// <summary>Start a new transaction in the background</summary>
+  /// <param name="inConnection">The connection where the method should be executed</param>
+  /// <remarks>This method returns immediately. Use the event handlers (or poll the .IsRunning property) to react when the operation finishes.</remarks>
   Procedure StartTransaction(inConnection: TZAbstractConnection);
+  /// <summary>Pause the program flow until the background operation finishes</summary>
+  /// <remarks>This method is blocking, causing the calling thread to hang. If called from the VCL thread, the application will appear frozen.</remarks>
   Procedure WaitFor;
+  /// <summary>Ungracefully terminate the background operation</summary>
+  /// <param name="inAreYouSure">Are you sure you want to immediately terminate the background operation?</param>
+  /// <remarks>Terminating a thread is unsafe and can cause appication instability, data corruption and memory leaks. Don't use this in normal circumstances.</remarks>
   Procedure Kill(inAreYouSure: Boolean);
  End;
 
@@ -138,16 +234,22 @@ Procedure TZMethodInThread.InternalOpen;
 Var
  afteropen, afterscroll: TDataSetNotifyEvent;
 Begin
+ // Disable event handlers
  afteropen := _dataset.AfterOpen;
  afterscroll := _dataset.AfterScroll;
  _dataset.AfterOpen := nil;
  _dataset.AfterScroll := nil;
  Try
+  // First, open the dataset
   _dataset.Open;
+  // We also have to call .FetchAll to make sure everything is downloaded. Not doing this will cause the application to fetch all data even
+  // if we just want to access .RecordCount.
   _dataset.FetchAll;
+  // Now that all data is set and ready, execute the event handlers - if any
   If Assigned(afteropen) Then afteropen(_dataset);
   If Assigned(afterscroll) Then afterscroll(_dataset);
  Finally
+  // Reassign event handles
   _dataset.AfterOpen := afteropen;
   _dataset.AfterScroll := afterscroll;
   _dataset := nil;
@@ -165,15 +267,13 @@ End;
 
 Procedure TZMethodInThread.Kill(inAreYouSure: Boolean);
 Begin
- // Confirmation parameter is included because terminating a thread like
- // this is potentially dangerous and can cause application instability.
- // Normally noone should use this ever, just wait for the database server
- // to interrupt the action after calling .AbortOperation
- If Not inAreYouSure Then Exit;
+ // Confirmation parameter is included because terminating a thread like this is potentially dangerous and can cause application instability.
+ // Normally noone should use this ever, just wait for the database server to interrupt the action after calling .AbortOperation
+ If inAreYouSure And Self.IsRunning Then
  {$IF defined(MSWINDOWS)}
-  If Self.IsRunning Then TerminateThread(_methodthread.Handle, 0);
+   TerminateThread(_methodthread.Handle, 0);
  {$ELSE IF defined(LINUX)}
-  If Self.IsRunning Then pthread_kill(_methodthread.Handle, SIGSTOP);
+   pthread_kill(_methodthread.Handle, SIGSTOP);
  {$ENDIF}
 End;
 

@@ -2142,7 +2142,7 @@ begin
     Driver := InternalGetDriver(URL);
     if Driver = nil then
       raise EZSQLException.Create(SDriverWasNotFound);
-    Result := GetClientVersion(Url);
+    Result := Driver.GetClientVersion(Url);
   finally
     FDriversCS.Leave;
   end;

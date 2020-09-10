@@ -3941,7 +3941,7 @@ var I: Integer;
   SQLWriter: TZRawSQLStringWriter;
 begin
   if FCachedQueryRaw = nil then begin
-    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SQL, ConSettings,
+    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SQL,{$IFDEF UNICODE} ConSettings.ClientCodePage.CP,{$ENDIF}
       Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
       GetCompareFirstKeywordStrings, FTokenMatchIndex);
     FCountOfQueryParams := 0;
@@ -4894,7 +4894,7 @@ end;
 procedure TZAbstractCallableStatement.SetDouble(ParameterIndex: Integer;
   const Value: Double);
 begin
-  BindDouble({$IFNDEF GENERIC_INDEX}ParameterIndex-1{$ENDIF}, stDouble, Value);
+  BindDouble(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble, Value);
 end;
 
 {**
@@ -4908,7 +4908,7 @@ end;
 procedure TZAbstractCallableStatement.SetFloat(ParameterIndex: Integer;
   Value: Single);
 begin
-  BindDouble({$IFNDEF GENERIC_INDEX}ParameterIndex-1{$ENDIF}, stFloat, Value);
+  BindDouble(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stFloat, Value);
 end;
 
 {**

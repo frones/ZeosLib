@@ -771,6 +771,8 @@ var Status: Integer;
 begin
   if Pointer(SQL) = nil then
     Exit;
+  if Closed then Open;
+
   Status := FPlainDriver.mysql_real_query(FHandle,
     Pointer(SQL), Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF});
   if (Status <> 0) or DriverManager.HasLoggingListener then
@@ -1090,9 +1092,9 @@ procedure TZMySQLConnection.HandleErrorOrWarning(
   LogCategory: TZLoggingCategory; MYSQL_STMT: PMYSQL_STMT;
   const LogMessage: SQLString; const Sender: IImmediatelyReleasable);
 var
-  FormatStr: String;
+  FormatStr, SQLState: String;
   ErrorCode: Integer;
-  P: PAnsiChar;
+  P, S: PAnsiChar;
   L: NativeUInt;
   Error: EZSQLThrowable;
   AExceptionClass: EZSQLThrowableClass;
@@ -1102,12 +1104,17 @@ var
   {$ENDIF}
 label jmpErr;
 begin
+  S := nil;
   if Assigned(MYSQL_STMT) then begin
     ErrorCode := FPlainDriver.mysql_stmt_errno(MYSQL_STMT);
     P := FPlainDriver.mysql_stmt_error(MYSQL_STMT);
+    if Assigned(FPlainDriver.mysql_stmt_sqlstate) then
+      S := FPlainDriver.mysql_stmt_sqlstate(MYSQL_STMT);
   end else begin
     ErrorCode := FPlainDriver.mysql_errno(FHandle);
     P := FPlainDriver.mysql_error(FHandle);
+    if Assigned(FPlainDriver.mysql_stmt_sqlstate) then
+      S := FPlainDriver.mysql_sqlstate(FHandle);
   end;
   if (ErrorCode <> 0) then begin
     if (ConSettings <> nil) and (ConSettings.ClientCodePage <> nil)
@@ -1128,6 +1135,16 @@ begin
       if excCP <> msgCP
       then PRawToRawConvert(P, l, msgCP, excCP, FLogMessage)
       else System.SetString(FLogMessage, P, l);
+      {$ENDIF}
+    end;
+    SQLState := '';
+    if S <> nil then begin
+      L := StrLen(S);
+      Trim(L, S);
+      {$IFDEF UNICODE}
+      SQLState := ASCII7ToUnicodeString(S, L);
+      {$ELSE}
+      System.SetString(SQLState, s, l);
       {$ENDIF}
     end;
     if (FLogMessage = '') then
@@ -1165,7 +1182,7 @@ jmpErr:   if not FSilentError
       if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '')
       then FLogMessage := Format(FormatStr, [FLogMessage, ErrorCode, LogMessage])
       else FLogMessage := Format(FormatStr, [FLogMessage, ErrorCode]);
-      Error := AExceptionClass.CreateWithCode(ErrorCode, FLogMessage);
+      Error := AExceptionClass.CreateWithCodeAndStatus(ErrorCode, SQLState, FLogMessage);
       FLogMessage := '';
       if AExceptionClass = EZSQLConnectionLost then
         if Sender <> nil

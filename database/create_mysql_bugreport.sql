@@ -461,3 +461,16 @@ CREATE TABLE TableTicked389 (
 CREATE TABLE biginterror (
   f bigint(20) unsigned DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf16;
+
+CREATE TABLE table_ticket_442 (
+  `objectid` int(11) NOT NULL, 
+  `label` varchar(255) NOT NULL, 
+  PRIMARY KEY (`objectid`) 
+  );
+
+CREATE TABLE table_p156227 (
+  `id`int not null,
+  `SaleDateTime` date NOT NULL, 
+  `VatLow` numeric(10,2) NOT NULL, 
+  PRIMARY KEY (`id`) 
+  );

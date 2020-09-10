@@ -61,11 +61,11 @@ uses
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZClasses, ZDbcIntfs, ZDbcStatement, ZDbcMySql, ZVariant, ZPlainMySqlDriver,
   ZCompatibility, ZDbcLogging, ZDbcUtils, ZDbcMySqlUtils, ZCollections;
-                                                                                   
+
 type
   TMySQLPreparable = (myDelete, myInsert, myUpdate, mySelect, mySet, myCall);
   TOpenCursorCallback = procedure of Object;
-  THandleStatus = (hsUnknown, hsAllocated, hsExecutedPrepared, hsExecutedOnce, hsReset);
+  TMyStmtHandleStatus = (myhsUnknown, myhsAllocated, myhsFailed, myhsExecutedPrepared, myhsExecutedOnce);
 
   TZAbstractMySQLPreparedStatement = class(TZRawParamDetectPreparedStatement)
   private
@@ -78,8 +78,8 @@ type
     FMySQL_FieldType_Bit_1_IsBoolean, //self-descriptive isn't it?
     FInitial_emulate_prepare, //the user given mode
     FBindAgain, //if types or pointer locations do change(realloc f.e.) we need to bind again -> this is dead slow with mysql
-    FChunkedData, //just skip the binding loop for sending long data
-    FStmtHandleIsExecuted: Boolean; //identify state of stmt handle for flushing pending results?
+    FChunkedData: Boolean; //just skip the binding loop for sending long data
+    FMyHandleStatus: TMyStmtHandleStatus;
     FPreparablePrefixTokens: TPreparablePrefixTokens;
     FBindOffset: PMYSQL_BINDOFFSETS;
     FPrefetchRows: Ulong; //Number of rows to fetch from server at a time when using a cursor.
@@ -414,7 +414,7 @@ begin
             'mysql_stmt_close', IImmediatelyReleasable(FWeakImmediatRelPtr));
       finally
         FMYSQL_STMT := nil;
-        FStmtHandleIsExecuted := False;
+        FMyHandleStatus := myhsUnknown;
         if ParamCount > 0 then
           ReallocBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffset,
             ParamCount*Ord(FMYSQL_aligned_BINDs<>nil), 0, 1);
@@ -473,8 +473,9 @@ begin
     Result := False;
     LastResultSet := nil;
     LastUpdateCount := -1;
-    if FEmulatedParams or not FStmtHandleIsExecuted then begin
+    if FEmulatedParams then begin
       if Assigned(FPlainDriver.mysql_next_result) and Assigned(FPMYSQL^) then begin
+        //if FPlainDriver.mysql_more_results(FPMYSQL^) = 0 then Exit;
         Status := FPlainDriver.mysql_next_result(FPMYSQL^);
         if Status > 0 //if status is -1 then there are no more resuls
         then FMySQLConnection.HandleErrorOrWarning(lcExecute, nil, SQL,
@@ -489,6 +490,10 @@ begin
         end;
       end;
     end else if Assigned(FPlainDriver.mysql_stmt_next_result) and Assigned(FMYSQL_STMT) then begin
+      //see: https://bugs.mysql.com/bug.php?id=43608
+      {if Assigned(FPlainDriver.mysql_stmt_more_results) then begin
+        if FPlainDriver.mysql_stmt_more_results(FMYSQL_STMT) = 0 then Exit;
+      end else if FPlainDriver.mysql_more_results(FPMYSQL^) = 0 then Exit;}
       Status := FPlainDriver.mysql_stmt_next_result(FMYSQL_STMT);
       if Status > 0 //if status is -1 then there are no more resuls
       then FMySQLConnection.HandleErrorOrWarning(lcExecute, FMYSQL_STMT, SQL,
@@ -632,7 +637,7 @@ begin
   FPMYSQL^ := nil;
   FMYSQL_STMT := nil;
   FBindAgain := True;
-  FStmtHandleIsExecuted := False;
+  FMyHandleStatus := myhsUnknown;
   inherited ReleaseImmediat(Sender, AError);
 end;
 
@@ -736,8 +741,9 @@ begin
   if FEmulatedParams or (FMYSQL_STMT = nil)
   then Result := ExecuteEmulated
   else begin
-    FStmtHandleIsExecuted := True; //keep this even if an error is thrown
+    FMyHandleStatus := myhsFailed;
     if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
+      FMyHandleStatus := myhsExecutedPrepared;
       FieldCount := FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT);
       if FieldCount = 0
       then LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
@@ -814,8 +820,9 @@ begin
   if FEmulatedParams or (FMYSQL_STMT = nil)
   then ExecEmulated
   else begin
-    FStmtHandleIsExecuted := True; //keep this even if an error is thrown
+    FMyHandleStatus := myhsFailed;
     if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
+      FMyHandleStatus := myhsExecutedPrepared;
       FieldCount := FplainDriver.mysql_stmt_field_count(FMYSQL_STMT);
       if FieldCount = 0
       then LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
@@ -869,7 +876,7 @@ begin
     IZResultSet(FOpenResultSet).Close;
   if Assigned(FOutParamResultSet) then
     FOutParamResultSet.ResetCursor;
-  if (FEmulatedParams or not FStmtHandleIsExecuted) and (FPMYSQL^ <> nil) then
+  if (FEmulatedParams) then
     //old lib's do not have mysql_next_result method
     while Assigned(FPlainDriver.mysql_next_result) do begin
       Status := FPlainDriver.mysql_next_result(FPMYSQL^);
@@ -887,7 +894,7 @@ begin
         Break;
       end;
     end
-  else if (FMYSQL_STMT <> nil) and FStmtHandleIsExecuted then
+  else if (FMYSQL_STMT <> nil) and (Ord(FMyHandleStatus) >= Ord(myhsExecutedPrepared)) then
     while Assigned(FPlainDriver.mysql_stmt_next_result) do begin
       Status := FPlainDriver.mysql_stmt_next_result(FMYSQL_STMT);
       if Status = -1 then
@@ -949,8 +956,9 @@ begin
   if FEmulatedParams or (FMYSQL_STMT = nil)
   then ExecuteEmulated
   else begin
-    FStmtHandleIsExecuted := True; //keep this even if an error is thrown
+    FMyHandleStatus := myhsFailed;
     if FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0 then begin
+      FMyHandleStatus := myhsExecutedPrepared;
       FieldCount := FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT);
       if FieldCount = 0 // we can call this function if fielcount is zero only
       then LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
@@ -991,7 +999,7 @@ end;
 function TZAbstractMySQLPreparedStatement.GetUpdateCount: Integer;
 begin
   Result := inherited GetUpdateCount;
-  if FEmulatedParams or not FStmtHandleIsExecuted then begin
+  if FEmulatedParams then begin
     if (Result = -1) and Assigned(FPMYSQL^) and (FPlainDriver.mysql_field_count(FPMYSQL^) = 0) then begin
       LastUpdateCount := FPlainDriver.mysql_affected_rows(FPMYSQL^);
       Result := LastUpdateCount;
@@ -1125,7 +1133,7 @@ begin
   if (FMYSQL_STMT = nil) then
     FMYSQL_STMT := FPlainDriver.mysql_stmt_init(FPMYSQL^);
   FBindAgain := True;
-  FStmtHandleIsExecuted := False;
+  FMyHandleStatus := myhsAllocated;
   if (FPlainDriver.mysql_stmt_prepare(FMYSQL_STMT, Pointer(FASQL), length(FASQL)) <> 0) then
     FMySQLConnection.HandleErrorOrWarning(lcPrepStmt, FMYSQL_STMT, SQL,
       IImmediatelyReleasable(FWeakImmediatRelPtr));

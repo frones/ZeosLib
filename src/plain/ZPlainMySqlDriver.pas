@@ -846,6 +846,7 @@ type
     mysql_eof:                    function(Result: PMYSQL_RES): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_errno:                  function(mysql: PMYSQL): UInt; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_error:                  function(mysql: PMYSQL): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_sqlstate:               function(mysql: PMYSQL): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_escape_string:          function(PTo, PFrom: PAnsiChar; Len: ULong): ULong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_fetch_field:            function(Result: PMYSQL_RES): PMYSQL_FIELD; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_fetch_field_direct:     function(Result: PMYSQL_RES; FieldNo: UInt): PMYSQL_FIELD; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
@@ -1059,6 +1060,7 @@ begin
   @mysql_eof                    := GetAddress('mysql_eof');
   @mysql_errno                  := GetAddress('mysql_errno');
   @mysql_error                  := GetAddress('mysql_error');
+  @mysql_sqlstate               := GetAddress('mysql_sqlstate');
   @mysql_escape_string          := GetAddress('mysql_escape_string');
   @mysql_fetch_field            := GetAddress('mysql_fetch_field');
   @mysql_fetch_field_direct     := GetAddress('mysql_fetch_field_direct');

@@ -6723,6 +6723,8 @@ begin
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     FResultSet.UpdateDate(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+      DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
 
@@ -6984,7 +6986,7 @@ begin
     T := Value;
     if (T.Fractions > 0) then
       T.Fractions := ZSysUtils.RoundNanoFractionTo(T.Fractions, fScale);
-    FRowAccessor.SetTime(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, T);
+    FResultSet.UpdateTime(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, T);
     if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
       DataEvent(deFieldChange, NativeInt(Self));
   end;

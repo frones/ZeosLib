@@ -435,17 +435,18 @@ end;
 function TZASASQLDA.GetFieldIndex(const Name: String): Word;
 var FieldName: String;
   P1, P2: PChar;
+  L: NativeInt;
 begin
+  P1 := Pointer(Name);
+  L := Length(Name);
   for Result := 0 to FSQLDA.sqld - 1 do begin
     FieldName := GetFieldName(Result);
-    P1 := Pointer(Name);
     P2 := Pointer(FieldName);
-    if Length(FieldName) = Length(name) then
-      if StrLIComp(P1, P2, Length(name)) = 0 then
+    if Length(FieldName) = L then
+      if StrLIComp(P1, P2, L) = 0 then
         Exit;
   end;
   raise CreateException( Format( SFieldNotFound1, [name]));
-  Result := 0; // satisfy compiler
 end;
 
 {**

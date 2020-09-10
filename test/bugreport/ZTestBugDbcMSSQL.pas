@@ -71,13 +71,14 @@ type
     procedure TestTicket375_B;
     procedure TestTicket375_C;
     procedure TestTicket380;
+    procedure TestTicket441;
   end;
 
 {$ENDIF ZEOS_DISABLE_MSSQL_SYBASE}
 implementation
 {$IFNDEF ZEOS_DISABLE_MSSQL_SYBASE}
 
-uses ZDbcProperties;
+uses ZSysUtils, ZDbcProperties, FmtBCD;
 
 { ZTestDbcMSSQLBugReport }
 
@@ -254,6 +255,48 @@ begin
     finally
       Stmt := nil;
     end;
+  end;
+end;
+
+procedure ZTestDbcMSSQLBugReport.TestTicket441;
+var
+  Stmt: IZStatement;
+  RS: IZResultSet;
+  MetaData: IZResultSetMetaData;
+  eBCD, aBCD: TBCD;
+begin
+  RS := nil;
+  MetaData := nil;
+  Stmt := Connection.CreateStatement;
+  try
+    CheckFalse(Connection.IsClosed, 'Failed to establish a connection');
+    if Connection.GetServerProvider <> spMSSQL then
+      Exit;
+    Check(Stmt <> nil);
+    With Stmt do begin
+      RS := ExecuteQuery('select cast(3.14159 as decimal(15,5))');
+      try
+        Check(RS.Next, 'there is a row in the tmp table');
+        MetaData := Rs.GetMetadata;
+        try
+          CheckEquals(stBigDecimal, Rs.GetMetadata.GetColumnType(FirstDbcIndex), 'the columntye');
+        finally
+          MetaData := nil;
+        end;
+        Check(ZSysUtils.{$IFDEF UNICODE}TryUniToBcd{$ELSE}TryRawToBCD{$ENDIF}('3.14159', eBCD, '.'));
+        Rs.GetBigDecimal(FirstDbcIndex, aBCD);
+        CheckEquals(eBCD, aBCD, 'the BCD-Value of 3.14159');
+        CheckEquals('3.14159', RS.GetString(FirstDbcIndex), 'the BCD-Value of 3.14159');
+      finally
+        if Rs <> nil then begin
+          Rs.Close;
+          Rs := nil;
+        end;
+      end;
+      Close;
+    end;
+  finally
+    Stmt := nil
   end;
 end;
 

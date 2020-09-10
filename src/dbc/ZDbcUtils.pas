@@ -231,7 +231,7 @@ procedure Curr2DBNumeric_BE(const Src: Currency; Dest: PDB_NUMERIC; const Numeri
 
 procedure MoveReverseByteOrder(Dest, Src: PAnsiChar; Len: LengthInt);
 
-function TokenizeSQLQueryRaw(const SQL: SQLString; ConSettings: PZConSettings;
+function TokenizeSQLQueryRaw(const SQL: SQLString; {$IFDEF UNICODE}RawCP: Word;{$ENDIF}
   const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
   IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
   var TokenMatchIndex: Integer): TRawByteStringDynArray;
@@ -695,8 +695,6 @@ end;
 procedure SQLNumeric2BCD(Src: PDB_NUMERIC; var Dest: TBCD; NumericLen: Integer);
 var
   Remainder, NextDigit, Precision, Scale: Word;
-  remPrecision: SmallInt absolute NextDigit;
-  signPrecision: SmallInt absolute Precision;
   NumericVal: array [0..SQL_MAX_NUMERIC_LEN - 1] of Byte;
   pDigitCopy, pNumDigit, pNibble, pFirstNibble, pLastNibble: PAnsiChar;
   ValueIsOdd: Boolean;
@@ -723,10 +721,10 @@ begin
   if Src.scale > Precision then begin
     NextDigit := Src.scale - Src.precision;
     Precision := Precision + NextDigit;
-    FillChar(Dest.Fraction, MaxFMTBcdDigits, #0);
   end;
+  FillChar(Dest.Fraction, MaxFMTBcdDigits, #0);
   ValueIsOdd := Precision and 1 = 1; //indicate how we write into the buffer
-  pLastNibble := pFirstNibble + MaxFMTBcdDigits -1;
+  pLastNibble := pFirstNibble + MaxFMTBcdDigits -1; //overflow remainder
   pNibble := pFirstNibble + ((Precision-1) shr 1); { address last bcd nibble we write in}
   if ValueIsOdd then begin
     PByte(pNibble)^ := 0; //clear last nibble
@@ -744,7 +742,7 @@ begin
     NextDigit := PByte(pNumDigit)^ + Remainder;
     PByte(pNumDigit)^ := NextDigit div 100;
     Remainder := ZBase100Byte2BcdNibbleLookup[NextDigit - (PByte(pNumDigit)^ * 100){mod 100}];
-    if PNibble <= PLastNibble then //overflow save
+    if PNibble <= pLastNibble then //overflow save
       if ValueIsOdd then begin //my new lookup version with bool algebra only
         PByte(pNibble+1)^ := PByte(pNibble+1)^ or ((Byte(Remainder) and $0F) shl 4);
         PByte(pNibble)^   := (Byte(Remainder) shr 4);
@@ -761,50 +759,12 @@ begin
     if PByte(pDigitCopy+NumericLen)^ = 0 then
       Dec(NumericLen); //as long we've no zero we've to loop again
   end;
-  Inc(pNibble, 1+Ord(ValueIsOdd));
-  pLastNibble := pFirstNibble + ((Precision+1) shr 1)-1; { address last bcd nibble }
-  Precision := (PLastNibble +1 - PNibble) shl 1 - Ord(ValueIsOdd);
-  {left pack the Bcd fraction }
-  remPrecision := Precision - Src.Scale;
-  while (signPrecision >= remPrecision) do begin
-    if ValueIsOdd and (PByte(pNibble)^ and $0F = 0) then
-      Inc(pNibble)
-    else if not (not ValueIsOdd and (PByte(pNibble)^ shr 4 = 0)) then
-      Break;
-    Dec(Precision);
-    ValueIsOdd := not ValueIsOdd;
-  end;
-  {move or left pact the fraction}
-  ValueIsOdd := (PByte(pNibble)^ shr 4 = 0);
-  if (PNibble > PNumDigit) or ValueIsOdd then begin {move nibbles foreward}
-    PNumDigit := PFirstNibble;
-    while (pNibble <= pLastNibble) do begin
-      if (PNibble > PNumDigit) then
-        PByte(PNumDigit)^ := PByte(pNibble)^;
-      if ValueIsOdd then begin
-        if PNumDigit < pLastNibble then
-          PByte(PNumDigit)^ := Byte((PByte(PNumDigit)^ and $0f) shl 4) or Byte(PByte(pNibble+1)^ shr 4);
-      end;
-      Inc(PNumDigit);
-      Inc(pNibble);
-    end;
-  end;
-  {right pack the Bcd scale fraction }
-  pLastNibble := pFirstNibble + ((Precision+1) shr 1)-1; { address last bcd nibble }
-  ValueIsOdd := Precision and 1 = 1;
-  while Scale > 0 do begin
-    if ValueIsOdd and (PByte(PLastNibble)^ shr 4 = 0) then
-      Dec(pLastNibble)
-    else if not (not ValueIsOdd and ((PByte(PLastNibble)^ and $0F) = 0)) then
-      Break;
-    Dec(Precision);
-    Dec(Scale);
-    ValueIsOdd := not ValueIsOdd;
-  end;
   Dest.Precision := Precision;
   if Src.sign = 0 then //negative ?
     Scale := Scale + (1 shl 7);
   Dest.SignSpecialPlaces := Scale;
+  if GetPacketBCDOffSets(Dest, PNibble, PLastNibble, Precision, Scale, ValueIsOdd) then
+    ZPackBCDToLeft(Dest, pNibble, pLastNibble, Precision, Scale, ValueIsOdd);
   if Pointer(pDigitCopy) <> Pointer(@NumericVal[0]) then
     FreeMem(pDigitCopy);
 end;
@@ -965,7 +925,6 @@ begin
     NumericLen := 1;
     Exit;
   end;
-
   { prepare local digit buffer }
   NumericLen := (pLastDigit - pNumDigit);
   if NumericLen >= SQL_MAX_NUMERIC_LEN
@@ -1210,15 +1169,12 @@ end;
   @returns a list of splitted sections.
 }
 function TokenizeSQLQueryRaw(const SQL: SQLString;
-  ConSettings: PZConSettings;
+  {$IFDEF UNICODE}RawCP: Word;{$ENDIF}
   const Tokenizer: IZTokenizer; var IsParamIndex: TBooleanDynArray;
   IsNCharIndex: PBooleanDynArray; ComparePrefixTokens: PPreparablePrefixTokens;
   var TokenMatchIndex: Integer): TRawByteStringDynArray;
 var
   I, C, N, FirstComposePos: Integer;
-  {$IFDEF UNICODE}
-  CP: Word;
-  {$ENDIF}
   NextIsNChar, ParamFound: Boolean;
   Tokens: TZTokenList;
   Token: PZToken;
@@ -1242,9 +1198,6 @@ var
   end;
 begin
   ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSE}Pos{$ENDIF}('?', SQL) > 0);
-  {$IFDEF UNICODE}
-  CP := ConSettings^.ClientCodePage^.CP;
-  {$ENDIF}
   if ParamFound or Assigned(ComparePrefixTokens) then begin
     Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
     try
@@ -1279,13 +1232,13 @@ begin
       if ParamFound and Tokens.IsEqual(I, Char('?')) then begin
         if (FirstComposePos < Tokens.Count-1) then
           {$IFDEF UNICODE}
-          Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, CP);
+          Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I-1].P-Tokens[FirstComposePos].P+Tokens[I-1].L, RawCP);
           {$ELSE}
           Tmp := Tokens.AsString(FirstComposePos, I-1);
           {$ENDIF}
           Add(Tmp, False);
           {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-          Add(ZUnicodeToRaw(Tokens.AsString(I, I), CP), True);
+          Add(ZUnicodeToRaw(Tokens.AsString(I, I), RawCP), True);
           {$ELSE}
           Add('?', True);
           {$ENDIF}
@@ -1298,7 +1251,7 @@ begin
       I := Tokens.Count -1;
       if (FirstComposePos <= Tokens.Count-1) then begin
         {$IFDEF UNICODE}
-        Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, CP);
+        Tmp := PUnicodeToRaw(Tokens[FirstComposePos].P, Tokens[I].P-Tokens[FirstComposePos].P+Tokens[I].L, RawCP);
         {$ELSE}
         Tmp := Tokens.AsString(FirstComposePos, I);
         {$ENDIF}
@@ -1310,7 +1263,7 @@ begin
   end else
     {$IFDEF UNICODE}
     begin
-      Tmp := ZUnicodeToRaw(SQL, CP);
+      Tmp := ZUnicodeToRaw(SQL, RawCP);
       Add(Tmp);
     end;
     {$ELSE}
