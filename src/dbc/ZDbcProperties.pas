@@ -260,6 +260,7 @@ const
   // Treat varchar fields without a length limit as if they had a length limit
   // of <maxlength> thus making these fields usable with TDBEdit components.
   DSProps_UndefVarcharAsStringLength = 'Undefined_Varchar_AsString_Length';
+
 {$IFEND}
 
 {$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_POSTGRESQL) OR DEFINED(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}
@@ -721,6 +722,10 @@ const
   // if Value is 'EXCLUSIVE' we're assuming you want emulate a ReadCommitted transaction
   // which blocks read transactions while the transaction is underway
   TxnProps_TransactionBehaviour = 'TransactionBehaviour';
+  // Type: BOOLEAN
+  // Treat "INT" fields in any kind as Int64, means ignore all subtypes like
+  // smallint
+  DSProps_SQLiteIntAffinity = 'SQLiteIntAffinity';
 {$ENDIF}
 
 {$IFDEF ENABLE_ORACLE}

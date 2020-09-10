@@ -74,6 +74,7 @@ type
     FBindOrdinalBoolValues, //do we bind 0/1 as Boolean?
     FHasLoggingListener: Boolean;
     FBindLater, //Late bindings?
+    FSQLiteIntAffinity, //see docs
     FLateBound: Boolean; //LateBound done reset is'nt called -> continue LateBindings
     FByteBuffer: PByteBuffer;
     FSQLiteConnection: IZSQLiteConnection;
@@ -180,7 +181,8 @@ var
 begin
   { Creates a native result set. }
   NativeResultSet := TZSQLiteResultSet.Create(Self, Self.SQL,
-    @FStmtHandle, @FErrorCode, FUndefinedVarcharAsStringLength, ResetCallBack);
+    @FStmtHandle, @FErrorCode, FUndefinedVarcharAsStringLength, ResetCallBack,
+    FSQLiteIntAffinity);
   NativeResultSet.SetConcurrency(rcReadOnly);
 
   if (GetResultSetConcurrency = rcUpdatable)
@@ -322,6 +324,7 @@ begin
   FBindDoubleDateTimeValues :=  StrToBoolEx(DefineStatementParameter(Self, DSProps_BindDoubleDateTimeValues, 'false'));
   FUndefinedVarcharAsStringLength := StrToIntDef(DefineStatementParameter(Self, DSProps_UndefVarcharAsStringLength, '0'), 0);
   fBindOrdinalBoolValues := StrToBoolEx(DefineStatementParameter(Self, DSProps_BindOrdinalBoolValues, 'false'));
+  FSQLiteIntAffinity := StrToBoolEx(DefineStatementParameter(Self, DSProps_SQLiteIntAffinity, 'false'));
   FHasLoggingListener := DriverManager.HasLoggingListener;
 end;
 

@@ -101,7 +101,7 @@ type
     Fsqlite3_stmt: Psqlite3_stmt;
     FColumnCount: Integer;
     FPlainDriver: TZSQLitePlainDriver;
-    FFirstRow: Boolean;
+    FFirstRow, FSQLiteIntAffinity: Boolean;
     FUndefinedVarcharAsStringLength: Integer;
     FResetCallBack: TResetCallBack;
     FCurrDecimalSep: Char;
@@ -113,7 +113,7 @@ type
     constructor Create(const Statement: IZStatement;
       const SQL: string; Psqlite3_stmt: PPsqlite3_stmt;
       PErrorCode: PInteger; UndefinedVarcharAsStringLength: Integer;
-      ResetCallBack: TResetCallback);
+      ResetCallBack: TResetCallback; SQLiteIntAffinity: Boolean);
 
     procedure ResetCursor; override;
 
@@ -524,7 +524,7 @@ end;
 constructor TZSQLiteResultSet.Create(const Statement: IZStatement;
   const SQL: string; Psqlite3_stmt: PPsqlite3_stmt;
   PErrorCode: PInteger; UndefinedVarcharAsStringLength: Integer;
-  ResetCallBack: TResetCallback);
+  ResetCallBack: TResetCallback; SQLiteIntAffinity: Boolean);
 var Metadata: TContainedObject;
 begin
   FSQLiteConnection := Statement.GetConnection as IZSQLiteConnection;
@@ -543,6 +543,7 @@ begin
   FUndefinedVarcharAsStringLength := UndefinedVarcharAsStringLength;
   FFirstRow := True;
   FResetCallBack := ResetCallBack;
+  FSQLiteIntAffinity := SQLiteIntAffinity;
 
   Open;
 end;
@@ -603,7 +604,7 @@ begin
         ZSetString(P, ZFastCode.StrLen(P), tmp);
       end;
       ColumnType := ConvertSQLiteTypeToSQLType(tmp, FUndefinedVarcharAsStringLength,
-        FieldPrecision, FieldDecimals);
+        FieldPrecision, FieldDecimals, FSQLiteIntAffinity);
 
       if ColumnType in [stString, stAsciiStream] then begin
         ColumnCodePage := zCP_UTF8;
@@ -1458,7 +1459,6 @@ begin
   { Defines an index of autoincrement field. }
   FAutoColumnIndex := 0;
   for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX} - 1{$ENDIF} do
-  begin
     if Metadata.IsAutoIncrement(I) and
       (Metadata.GetColumnType(I) in [stByte, stShort, stSmall, stLongWord,
         stInteger, stUlong, stLong]) then
@@ -1466,7 +1466,6 @@ begin
       FAutoColumnIndex := I;
       Break;
     end;
-  end;
 end;
 
 {**
