@@ -101,7 +101,7 @@ type
     FMaxLobSize: ULong;
     FDatabaseName: String;
     FIKnowMyDatabaseName, FMySQL_FieldType_Bit_1_IsBoolean,
-    FSupportsBitType: Boolean;
+    FSupportsBitType, FSupportsReadOnly: Boolean;
     FPlainDriver: IZMySQLPlainDriver;
     procedure InternalSetIsolationLevel(Level: TZTransactIsolationLevel);
   protected
@@ -128,6 +128,7 @@ type
 
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     procedure SetAutoCommit(Value: Boolean); override;
+    procedure SetReadOnly(Value: Boolean); override;
     {ADDED by fduenas 15-06-2006}
     function GetClientVersion: Integer; override;
     function GetHostVersion: Integer; override;
@@ -297,6 +298,10 @@ const
     'SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED',
     'SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ',
     'SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE');
+  MySQLSessionTransactionReadOnly: array[Boolean] of
+    {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF} = (
+    'SET SESSION TRANSACTION READ ONLY',
+    'SET SESSION TRANSACTION READ WRITE');
 procedure TZMySQLConnection.InternalSetIsolationLevel(
   Level: TZTransactIsolationLevel);
 begin
@@ -550,10 +555,20 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     FMySQL_FieldType_Bit_1_IsBoolean := StrToBoolEx(Info.Values['MySQL_FieldType_Bit_1_IsBoolean']);
     (GetMetadata as IZMySQLDatabaseMetadata).SetMySQL_FieldType_Bit_1_IsBoolean(FMySQL_FieldType_Bit_1_IsBoolean);
     FSupportsBitType := (
-      (    GetPlainDriver.IsMariaDBDriver and (ClientVersion >= 100109) ) or
-      (not GetPlainDriver.IsMariaDBDriver and (ClientVersion >=  50003) ) ) and (GetHostVersion >= EncodeSQLVersioning(5,0,3));
+      (    FPlainDriver.IsMariaDBDriver and (ClientVersion >= 100109) ) or
+      (not FPlainDriver.IsMariaDBDriver and (ClientVersion >=  50003) ) ) and (GetHostVersion >= EncodeSQLVersioning(5,0,3));
+    //if not explizit !un!set -> assume as default since Zeos 7.3
+    with (GetMetadata as IZMySQLDatabaseMetadata) do begin
+      SetMySQL_FieldType_Bit_1_IsBoolean(FMySQL_FieldType_Bit_1_IsBoolean);
+      FSupportsReadOnly := ( IsMariaDB and (GetHostVersion >= EncodeSQLVersioning(10,0,0))) or
+                           ( IsMySQL and (GetHostVersion >= EncodeSQLVersioning( 5,6,0)));
+      SetDataBaseName(GetDatabaseName);
+    end;
+    if FSupportsReadOnly and ReadOnly then begin
+      ReadOnly := False;
+      SetReadOnly(True);
+    end;
 
-    (GetMetadata as IZMySQLDatabaseMetadata).SetDataBaseName(GetDatabaseName);
   except
     GetPlainDriver.Close(FHandle);
     FHandle := nil;
@@ -770,6 +785,32 @@ end;
 procedure TZMySQLConnection.SetCatalog(const Catalog: string);
 begin
   FCatalog := Catalog;
+end;
+
+{**
+  Puts this connection in read-only mode as a hint to enable
+  database optimizations.
+
+  <P><B>Note:</B> This method cannot be called while in the
+  middle of a transaction.
+
+  @param readOnly true enables read-only mode; false disables
+    read-only mode.
+}
+procedure TZMySQLConnection.SetReadOnly(Value: Boolean);
+begin
+  if Value <> ReadOnly then begin
+    if not Closed then begin
+      if not FSupportsReadOnly then
+        raise EZSQLException.Create(SUnsupportedOperation);
+      if GetPlainDriver.ExecRealQuery(FHandle,
+        Pointer(MySQLSessionTransactionReadOnly[Value]), Length(MySQLSessionTransactionReadOnly[Value])) <> 0 then
+          CheckMySQLError(GetPlainDriver, FHandle, lcTransaction, MySQLSessionTransactionReadOnly[Value], ConSettings);
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, MySQLSessionTransactionReadOnly[Value]);
+    end;
+    ReadOnly := Value;
+  end;
 end;
 
 {**

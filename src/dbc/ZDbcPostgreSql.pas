@@ -1141,6 +1141,7 @@ begin
   end;
 end;
 
+const cROTxn: array[Boolean] of RawByteString = (' READ WRITE', ' READ ONLY');
 {**
   Sets a new transact isolation level. tiNone, tiReadUncommitted
   will be mapped to tiReadCommitted since PostgreSQL will treat
@@ -1168,7 +1169,7 @@ begin
         tiSerializable:
           SQL := SQL + RawByteString('SERIALIZABLE');
       end;
-
+      SQL := SQL + cROTxn[ReadOnly];
       QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
       CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL ,QueryHandle);
       GetPlainDriver.PQclear(QueryHandle);
