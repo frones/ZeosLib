@@ -831,9 +831,8 @@ procedure RefreshParameters(const AdoCommand: ZPlainAdo.Command;
         OLEDBCommand.QueryInterface(ICommandPrepare, CommandPrepare);
         if Assigned(CommandPrepare) then CommandPrepare.Prepare(0);
         if OLEDBParameters.GetParameterInfo(ParamCount{%H-}, PDBPARAMINFO(ParamInfo), NamesBuffer) = S_OK then
-          for I := 0 to ParamCount - 1 do
-            with ParamInfo[I] do
-            begin
+          if ParamCount > 0 then for I := 0 to ParamCount - 1 do
+            with ParamInfo[I] do begin
               { When no default name, fabricate one like ADO does }
               if pwszName = nil then
                 Name := 'Param' + ZFastCode.IntToUnicode(I+1) else { Do not localize }

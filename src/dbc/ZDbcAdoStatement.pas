@@ -159,6 +159,7 @@ begin
   FAdoCommand := CoCommand.Create;
   inherited Create(Connection, SQL, Info);
   FAdoCommand.CommandText := WSQL;
+  FAdoCommand.CommandType := adCmdText;
   FAdoConnection := Connection as IZAdoConnection;
   FAdoCommand._Set_ActiveConnection(FAdoConnection.GetAdoConnection);
 end;
@@ -211,13 +212,13 @@ begin
       begin
         for i := 0 to InParamCount-1 do
           if ClientVarManager.IsNull(InParamValues[i]) then
-            if (InParamDefaultValues[i] <> '') and (UpperCase(InParamDefaultValues[i]) <> 'NULL') and
+            {if (InParamDefaultValues[i] <> '') and (UpperCase(InParamDefaultValues[i]) <> 'NULL') and
             StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
             begin
               ClientVarManager.SetAsString(InParamValues[i], InParamDefaultValues[i]);
               ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], InParamValues[i], adParamInput)
             end
-            else
+            else}
               ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], NullVariant, adParamInput)
           else
             ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], InParamValues[i], adParamInput)
@@ -757,6 +758,7 @@ begin
   FAdoCommand.CommandText := WSQL;
   FAdoConnection := Connection as IZAdoConnection;
   FAdoCommand._Set_ActiveConnection(FAdoConnection.GetAdoConnection);
+  FAdoCommand.CommandType := adCmdText;
 end;
 
 constructor TZAdoEmulatedPreparedStatement.Create(Connection: IZConnection;
