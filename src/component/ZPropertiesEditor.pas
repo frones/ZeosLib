@@ -3720,7 +3720,8 @@ initialization
   RegisterZProperties([@ZProp_Encrypted, @ZProp_BusyTimeout, @ZProp_CacheSize,
     @ZProp_Synchronous, @ZProp_LockingMode, @ZProp_ForeignKeys,
     @ZProp_journal_mode, @ZProp_BindDoubleDateTimeValues,
-    @ZProp_BindOrdinalBoolValues, @ZProp_SQLiteTransactionBehaviour]);
+    @ZProp_BindOrdinalBoolValues, @ZProp_SQLiteTransactionBehaviour,
+    @ZProp_SQLiteIntAffinity]);
 {$ENDIF}
 {$IF declared(ZProp_CachedLobs)}
   RegisterZProperty(@ZProp_CachedLobs);
