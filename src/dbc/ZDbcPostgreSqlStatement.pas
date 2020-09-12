@@ -917,15 +917,18 @@ var
   CachedResultSet: TZPostgresCachedResultSet;
   Resolver: TZPostgreSQLCachedResolver;
   Metadata: IZResultSetMetadata;
+  ServerMajorVersion: Integer;
 begin
   NativeResultSet := TZPostgreSQLResultSet.Create(Self, Self.SQL, FPostgreSQLConnection,
     @Fres, @FPQResultFormat, fServerCursor, FUndefinedVarcharAsStringLength);
   if (GetResultSetConcurrency = rcUpdatable) or (ServerCursor and (GetResultSetType <> rtForwardOnly)) then begin
     Metadata := NativeResultSet.GetMetaData;
-    if (FPostgreSQLConnection.GetServerMajorVersion > 7) then
+    ServerMajorVersion := FPostgreSQLConnection.GetServerMajorVersion;
+    if (ServerMajorVersion >= 10) then
+      Resolver := TZPostgreSQLCachedResolverV10up.Create(Self, Metadata)
+    else if (ServerMajorVersion > 7) then
       Resolver := TZPostgreSQLCachedResolverV8up.Create(Self, Metadata)
-    else if ((FPostgreSQLConnection.GetServerMajorVersion = 7) and
-        (FPostgreSQLConnection.GetServerMinorVersion >= 4))
+    else if ((ServerMajorVersion = 7) and (FPostgreSQLConnection.GetServerMinorVersion >= 4))
     then Resolver := TZPostgreSQLCachedResolverV74up.Create(Self, Metadata)
     else Resolver := TZPostgreSQLCachedResolver.Create(Self, Metadata);
     CachedResultSet := TZPostgresCachedResultSet.Create(NativeResultSet, Self.SQL, Resolver, ConSettings);
@@ -1367,15 +1370,14 @@ begin
     else Fres := PGExecutePrepared;
   if Fres <> nil then begin
     Status := FPlainDriver.PQresultStatus(Fres);
-    if ((Status = PGRES_TUPLES_OK) or (Status = PGRES_SINGLE_TUPLE)) and
-       (BindList.HasOutOrInOutOrResultParam) then begin
-      if not Assigned(LastResultSet) then
-        FOutParamResultSet := CreateResultSet(fServerCursor);
-      LastUpdateCount := RawToIntDef(FPlainDriver.PQcmdTuples(Fres), 0);
-    end else begin
-      LastUpdateCount := RawToIntDef(FPlainDriver.PQcmdTuples(Fres), 0);
+    LastUpdateCount := RawToIntDef(FPlainDriver.PQcmdTuples(Fres), 0);
+    if ((Status = PGRES_TUPLES_OK) or (Status = PGRES_SINGLE_TUPLE)) then begin
+      if LastResultSet = nil then
+        LastResultSet := CreateResultSet(fServerCursor);
+      if (BindList.HasOutOrInOutOrResultParam) then
+          FOutParamResultSet := CreateResultSet(fServerCursor);
+    end else
       FPlainDriver.PQclear(Fres);
-    end;
   end;
   Result := LastUpdateCount;
   { Logging Execution }

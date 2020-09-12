@@ -280,6 +280,7 @@ function CreateBinaryException: EZSQLException;
 function CreateNonBinaryException: EZSQLException;
 function CreateConversionError(ColumnIndex: Integer; Actual, Expected: TZSQLType): EZSQLException;
 function CreateBindVarOutOfRangeError(Index: Integer): EZSQLException;
+function CreateColumnWasNotFoundException(const ColumnName: String): EZSQLException;
 
 function GetW2A2WConversionCodePage(ConSettings: PZConSettings): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
@@ -2267,6 +2268,11 @@ end;
 function CreateBindVarOutOfRangeError(Index: Integer): EZSQLException;
 begin
   Result := EZSQLException.Create(Format(SBindVarOutOfRange, [Index]));
+end;
+
+function CreateColumnWasNotFoundException(const ColumnName: String): EZSQLException;
+begin
+  Result := EZSQLException.Create(Format(SColumnWasNotFound, [ColumnName]));
 end;
 
 function GetW2A2WConversionCodePage(ConSettings: PZConSettings): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
