@@ -1551,6 +1551,7 @@ var
   FCommandWithParameters: ICommandWithParameters;
   DescripedDBPARAMINFO: TDBParamInfoDynArray;
   Status: HResult;
+  Malloc: IMalloc;
 begin
   if not fBindImmediat then
     Exit;
@@ -1583,9 +1584,15 @@ begin
         FDBParams.hAccessor := 0;
       end;
     finally
-      if Assigned(FParamInfoArray) and (Pointer(FParamInfoArray) <> Pointer(DescripedDBPARAMINFO)) then
-        (GetConnection as IZOleDBConnection).GetMalloc.Free(FParamInfoArray);
-      if Assigned(FNamesBuffer) then (GetConnection as IZOleDBConnection).GetMalloc.Free(FNamesBuffer);
+      Malloc := FOleDBConnection.GetMalloc;
+      try
+        if Assigned(FParamInfoArray) and (Pointer(FParamInfoArray) <> Pointer(DescripedDBPARAMINFO)) then
+          Malloc.Free(FParamInfoArray);
+        if Assigned(FNamesBuffer) then
+          Malloc.Free(FNamesBuffer);
+      finally
+        Malloc := nil;
+      end;
       FCommandWithParameters := nil;
     end;
   end else begin
