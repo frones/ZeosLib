@@ -151,7 +151,7 @@ begin
   Statement := Connection.CreateStatement;
   try
     CheckNotNull(Statement);
-    if Connection.GetHostVersion < 10 then
+    if Connection.GetHostVersion < ZSysUtils.EncodeSQLVersioning(10, 0, 0) then
       Exit;
     ResultSet := nil;
     try
@@ -199,7 +199,7 @@ begin
   Statement := Connection.CreateStatement;
   try
     CheckNotNull(Statement);
-    if Connection.GetHostVersion < 10 then
+    if Connection.GetHostVersion < EncodeSQLVersioning(10, 0, 0) then
       Exit;
     ResultSet := nil;
     try

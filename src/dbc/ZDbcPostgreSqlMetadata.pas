@@ -3289,9 +3289,9 @@ begin
         + 'dsc.description, ' {description_index}
         + 'dn.nspname as cnspname, ' {cnspname_index}
         + 'case t.typtype when ''d'' then t.oid else null end as domain_oid, ';
-      if PGConnection.GetHostVersion >= 10
+      if HasMinimumServerVersion(10, 0)
       then SQL := SQL + 'a.attidentity'
-      else SQL := SQL + 'NULL:TEXT';
+      else SQL := SQL + 'NULL::TEXT';
       SQL := SQL
         + ' FROM pg_catalog.pg_namespace n '
         + ' JOIN pg_catalog.pg_class c ON (c.relnamespace = n.oid) '
