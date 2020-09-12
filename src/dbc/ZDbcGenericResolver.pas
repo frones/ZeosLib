@@ -492,7 +492,6 @@ end;
   Forms a INSERT statements.
   @return the composed insert SQL
 }
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "NewRowAccessor" not used} {$ENDIF}
 function TZGenerateSQLCachedResolver.FormInsertStatement(
   NewRowAccessor: TZRowAccessor): SQLString;
 var
@@ -555,7 +554,6 @@ begin
     FreeAndNil(SQLWriter);
   end;
 end;
-{$IFDEF FPC} {$POP} {$ENDIF} // empty function - parameter not used intentionally
 
 {**
   Forms an UPDATE statements.
