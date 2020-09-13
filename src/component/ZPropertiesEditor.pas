@@ -1017,6 +1017,7 @@ const
     Protocols: (Count: 2; Items: @All_Postgres_SQLite);
   );
 {$IFEND}
+
 {$IF declared(ConnProps_Provider)}
   const AllOleDBAndADO: array[0..1] of String =
     ('OleDB','ADO');
@@ -3092,7 +3093,17 @@ const
     Providers: (Count: 1; Items: @cSqlite3upProvider);
     Protocols: (Count: 1; Items: @cSQLiteProtocol);
   );
+  ZProp_SQLiteIntAffinity : TZProperty = (
+    Name: DSProps_SQLiteIntAffinity;
+    Purpose: 'Treat "INT" fields in any kind as Int64, means ignore all subtypes '+
+      'like smallint';
+    ValueType: pvtEnum; LevelTypes: [pltConnection, pltStatement];
+    Values: cBoolEnum; Default: cBoolFalse; Alias: '';
+    Providers: (Count: 1; Items: @cSqlite3upProvider);
+    Protocols: (Count: 1; Items: @cSQLiteProtocol);
+  );
 {$ENDIF}
+
 {$IFDEF ENABLE_ASA}
   cASAProvider: TZPropertyProvider = (
     Provider: spASA; MinimumServerVersion: 0;
@@ -3709,7 +3720,8 @@ initialization
   RegisterZProperties([@ZProp_Encrypted, @ZProp_BusyTimeout, @ZProp_CacheSize,
     @ZProp_Synchronous, @ZProp_LockingMode, @ZProp_ForeignKeys,
     @ZProp_journal_mode, @ZProp_BindDoubleDateTimeValues,
-    @ZProp_BindOrdinalBoolValues, @ZProp_SQLiteTransactionBehaviour]);
+    @ZProp_BindOrdinalBoolValues, @ZProp_SQLiteTransactionBehaviour,
+    @ZProp_SQLiteIntAffinity]);
 {$ENDIF}
 {$IF declared(ZProp_CachedLobs)}
   RegisterZProperty(@ZProp_CachedLobs);

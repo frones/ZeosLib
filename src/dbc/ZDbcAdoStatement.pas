@@ -98,7 +98,7 @@ type
   private
     FRefreshParamsFailed, FEmulatedParams: Boolean;
   protected
-    function CheckParameterIndex(Index, ASize: Integer; SQLType: TZSQLType): TDataTypeEnum; reintroduce;
+    function CheckParameterIndex(Index: Integer; SQLType: TZSQLType): TDataTypeEnum; reintroduce;
     procedure PrepareInParameters; override;
     function CreateResultSet: IZResultSet; override;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
@@ -377,7 +377,7 @@ end;
 
 { TZAdoPreparedStatement }
 
-function TZAdoPreparedStatement.CheckParameterIndex(Index, ASize: Integer;
+function TZAdoPreparedStatement.CheckParameterIndex(Index: Integer;
   SQLType: TZSQLType): TDataTypeEnum;
 var I: Integer;
   procedure AddParam(Number: Integer);
@@ -628,7 +628,7 @@ procedure TZAdoPreparedStatement.SetBigDecimal(Index: Integer;
 var V: OleVariant;
 label set_var;
 begin
-  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SizeOf(tagDec), stBigDecimal) of
+  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBigDecimal) of
     adBoolean:  begin
                   tagVariant(V).vt := VT_BOOL;
                   tagVariant(V).vbool := BCDCompare(AValue, NullBCD) <> 0;
@@ -663,7 +663,7 @@ begin
   Lob := AValue; //inc refcnt else FPC leaks many memory
   if (AValue = nil) or (aValue.IsEmpty) then
     SetNull(Index, SQLType)
-  else case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, 0, SQLType) of
+  else case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SQLType) of
     adBSTR, adChar, adVarChar, adLongVarChar, adWChar, adVarWChar,
     adLongVarWChar: if Lob.IsClob then begin
                       Lob.SetCodePageTo(zCP_UTF16);
@@ -688,7 +688,7 @@ procedure TZAdoPreparedStatement.SetBoolean(Index: Integer;
   AValue: Boolean);
 var V: OleVariant;
 begin
-  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SizeOf(WordBool), stBoolean) of
+  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBoolean) of
     adBoolean: begin
         tagVariant(V).vt := VT_BOOL;
         tagVariant(V).vbool := AValue;
@@ -705,7 +705,7 @@ end;
 procedure TZAdoPreparedStatement.SetByte(Index: Integer; AValue: Byte);
 var V: OleVariant;
 begin
-  if CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SizeOf(Byte), stByte) = adUnsignedTinyInt then begin
+  if CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stByte) = adUnsignedTinyInt then begin
     tagVariant(V).vt := VT_UI1;
     tagVariant(V).bVal := AValue;
     FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
@@ -729,7 +729,7 @@ procedure TZAdoPreparedStatement.SetBytes(ParameterIndex: Integer; Value: PByte;
 begin
   if (Value = nil) or (Len = 0) then
     SetNull(ParameterIndex, stBytes)
-  else case CheckParameterIndex(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, 0, stBytes) of
+  else case CheckParameterIndex(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBytes) of
     adBinary,
     adVarBinary,
     adLongVarBinary: SetPBytes(ParameterIndex, Value, Len);
@@ -757,7 +757,7 @@ begin
   then SetNull(Index, stBytes)
   else begin
     L := Length(AValue);
-    case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, L, stBytes) of
+    case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBytes) of
       adGUID: begin
                 Assert(L=SizeOf(TGUID), 'UID-Size missmatch');
                 GUIDToBuffer(@UID.D1, PWideChar(fByteBuffer), [guidWithBrackets, guidSet0Term]);
@@ -792,7 +792,7 @@ var V: OleVariant;
   I64: Int64 absolute AValue;
 label set_var;
 begin
-  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SizeOf(Currency), stCurrency) of
+  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stCurrency) of
     adCurrency: begin
                   tagVariant(V).vt := VT_CY;
                   tagVariant(V).cyVal := AValue;
@@ -849,7 +849,7 @@ procedure TZAdoPreparedStatement.SetDate(Index: Integer;
 var V: OleVariant;
 label jmp_assign;
 begin
-  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SizeOf(Double), stDate) of
+  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDate) of
     adDBDate, adDBTime, adDBTimeStamp:
                 with FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do begin
                   if Size <> 8 then //size is initializesd to ole record sizes are not 8
@@ -880,7 +880,7 @@ var V: OleVariant;
 label set_var;
 begin
   V := null;
-  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SizeOf(Double), stDouble) of
+  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stDouble) of
     adTinyInt, adSmallInt, adInteger, adBigInt, adUnsignedTinyInt,
     adUnsignedSmallInt, adUnsignedInt, adUnsignedBigInt:
                   SetLong(Index, Trunc(AValue));
@@ -926,7 +926,7 @@ var V: OleVariant;
   BCD: TBCD;
 label set_var;
 begin
-  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SizeOf(Single), stFloat) of
+  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stFloat) of
     adTinyInt, adSmallInt, adInteger, adBigInt, adUnsignedTinyInt,
     adUnsignedSmallInt, adUnsignedInt, adUnsignedBigInt:
                   SetLong(Index, Trunc(AValue));
@@ -980,7 +980,7 @@ var V: OleVariant;
 label set_var;
 begin
   V := null;
-  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SizeOf(Integer), stInteger) of
+  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stInteger) of
     adTinyInt:  begin
                   tagVariant(V).vt := VT_I1;
                   PShortInt(@tagVariant(V).cVal)^ := AValue;
@@ -1045,7 +1045,7 @@ var V: OleVariant;
   P: PWideChar absolute PD;
 label set_var;
 begin
-  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SizeOf(Int64), stLong) of
+  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLong) of
     adTinyInt:  begin
                   tagVariant(V).vt := VT_I1;
                   PShortInt(@tagVariant(V).cVal)^ := AValue;
@@ -1111,7 +1111,7 @@ procedure TZAdoPreparedStatement.SetNull(Index: Integer;
   SQLType: TZSQLType);
 begin
   {$IFNDEF GENERIC_INDEX}Index := Index-1{$ENDIF};
-  CheckParameterIndex(Index, ZSQLTypeToAdoParamSize[SQLType], SQLType);
+  CheckParameterIndex(Index, SQLType);
   if FEmulatedParams
   then BindList.Put(Index, SQLType, cNullUni)
   else FAdoCommand.Parameters[Index].Value := null;
@@ -1123,7 +1123,7 @@ var V: OleVariant;
 begin
   if AValue = nil then
     SetNull(Index, stBytes)
-  else case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Len, stBytes) of
+  else case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBytes) of
     adBinary,
     adVarBinary,
     adLongVarBinary: if FEmulatedParams then begin
@@ -1164,7 +1164,7 @@ label set_BSTR;
 begin
   if FEmulatedParams then
     SetEmulatedValue
-  else case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Len, stUnicodeString) of
+  else case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stUnicodeString) of
     adTinyInt, adSmallInt, adInteger, adUnsignedTinyInt, adUnsignedSmallInt:
       SetInt(Index, UniCodeToIntDef(Value, Value+Len, 0));
     adBigInt: SetLong(Index, UniCodeToInt64Def(Value, Value+Len, 0));
@@ -1213,7 +1213,7 @@ procedure TZAdoPreparedStatement.SetRawByteString(Index: Integer;
 var L: LengthInt;
 begin
   L := Length(AValue);
-  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, L, stString) of
+  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stString) of
     adBinary, adVarBinary, adLongVarBinary:
       SetPBytes(Index, Pointer(AValue), L);
     else begin
@@ -1227,7 +1227,7 @@ procedure TZAdoPreparedStatement.SetShort(Index: Integer;
   AValue: ShortInt);
 var V: OleVariant;
 begin
-  if CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SizeOf(ShortInt), stShort) = adTinyInt then begin
+  if CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stShort) = adTinyInt then begin
     tagVariant(V).vt := VT_UI1;
     PShortInt(@tagVariant(V).cVal)^ := AValue;
     FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
@@ -1239,7 +1239,7 @@ procedure TZAdoPreparedStatement.SetSmall(Index: Integer;
   AValue: SmallInt);
 var V: OleVariant;
 begin
-  if CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SizeOf(SmallInt), stSmall) = adSmallInt then begin
+  if CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stSmall) = adSmallInt then begin
     tagVariant(V).vt := VT_I2;
     tagVariant(V).iVal := AValue;
     FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
@@ -1272,7 +1272,7 @@ procedure TZAdoPreparedStatement.SetTime(Index: Integer;
 var V: OleVariant;
 label jmp_assign;
 begin
-  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SizeOf(Double), stTime) of
+  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTime) of
     adDBDate, adDBTime, adDBTimeStamp:
                 with FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do begin
                   if Size <> 8 then //size is initializesd to ole record sizes which are not 8
@@ -1301,7 +1301,7 @@ procedure TZAdoPreparedStatement.SetTimestamp(Index: Integer;
 var V: OleVariant;
 label jmp_Assign;
 begin
-  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SizeOf(Double), stTimeStamp) of
+  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stTimeStamp) of
     adDBTimeStamp, adDBDate, adDBTime:
             with FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do begin
               if Size <> 8 then //size is initializesd to ole record sizes are not 8
@@ -1333,7 +1333,7 @@ var V: OleVariant;
   P: PWideChar absolute PD;
 label set_var;
 begin
-  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SizeOf(Cardinal), stLongWord) of
+  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stLongWord) of
     adTinyInt:  begin
                   tagVariant(V).vt := VT_I1;
                   PShortInt(@tagVariant(V).cVal)^ := AValue;
@@ -1398,7 +1398,7 @@ var V: OleVariant;
   P: PWideChar absolute PD;
 label set_var;
 begin
-  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SizeOf(Uint64), stULong) of
+  case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stULong) of
     adTinyInt, adSmallInt, adInteger, adBigInt: SetLong(Index, AValue);
     adUnsignedTinyInt: begin
                   tagVariant(V).vt := VT_UI1;
@@ -1464,7 +1464,7 @@ end;
 procedure TZAdoPreparedStatement.SetWord(Index: Integer; AValue: Word);
 var V: OleVariant;
 begin
-  if CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, SizeOf(Word), stWord) = adUnsignedSmallInt then begin
+  if CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stWord) = adUnsignedSmallInt then begin
     tagVariant(V).vt := VT_UI2;
     tagVariant(V).uiVal := AValue;
     FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;

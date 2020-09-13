@@ -65,11 +65,12 @@ uses
   @param string field type value
   @param Precision the column precision or size
   @param Decimals the column position after decimal point
+  @param SQLiteIntAffinity the column position after decimal point
   @result the SQLType field type value
 }
 function ConvertSQLiteTypeToSQLType(var TypeName: RawByteString;
   UndefinedVarcharAsStringLength: Integer; out Precision: Integer;
-  out Decimals: Integer): TZSQLType;
+  out Decimals: Integer; SQLiteIntAffinity: Boolean = False): TZSQLType;
 
 {**
   Decodes a SQLite Version Value and Encodes it to a Zeos SQL Version format:
@@ -96,7 +97,7 @@ uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
 }
 function ConvertSQLiteTypeToSQLType(var TypeName: RawByteString;
   UndefinedVarcharAsStringLength: Integer; out Precision: Integer;
-  out Decimals: Integer): TZSQLType;
+  out Decimals: Integer; SQLiteIntAffinity: Boolean = False): TZSQLType;
 var
   pBL, pBR, pC: Integer;
   P: PAnsiChar;
@@ -134,6 +135,8 @@ begin
     (* EH: This is a hack to use integer affinity for Currency type ranges *)
     if (Decimals > 0) and (Decimals <= 4) and (Precision >= Decimals) and (Precision <= zDbcUtils.sAlignCurrencyScale2Precision[Decimals]) then
       Result := stCurrency
+    else if SQLiteIntAffinity then
+      Result := stLong
     else begin
       if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('TINY')) or StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('INT8')) then
         Result := stShort
@@ -181,7 +184,6 @@ begin
   else if ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('TEXT'), TypeName) > 0 then
     Result := stAsciiStream;
   if (Result = stInteger) and (Precision <> 0) then
-  begin
     if Precision <= 2 then
       Result := stByte
     else if Precision <= 4 then
@@ -190,7 +192,6 @@ begin
       Result := stInteger
     else
       Result := stLong;
-  end;
 
   if (Result = stString) and (Precision = 0) then
     if (UndefinedVarcharAsStringLength = 0) then

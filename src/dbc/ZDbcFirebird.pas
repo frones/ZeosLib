@@ -450,6 +450,8 @@ begin
   DBCreated := False;
   CreateDB := Info.Values[ConnProps_CreateNewDatabase];
   if (CreateDB <> '') and StrToBoolEx(CreateDB) then begin
+    if (Info.Values[ConnProps_isc_dpb_lc_ctype] <> '') and (Info.Values[ConnProps_isc_dpb_set_db_charset] = '') then
+      Info.Values[ConnProps_isc_dpb_set_db_charset] := Info.Values[ConnProps_isc_dpb_lc_ctype];
     DBCP := Info.Values[ConnProps_isc_dpb_set_db_charset];
     PrepareDPB;
     FAttachment := FProvider.createDatabase(FStatus, @FByteBuffer[0], Smallint(Length(DPB)),Pointer(DPB));

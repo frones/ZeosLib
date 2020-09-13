@@ -82,7 +82,6 @@ type
     FDatabaseMetadata: IZDatabaseMetadata;
     FIdentifierConvertor: IZIdentifierConvertor;
 
-    FInsertColumns: TZIndexPairList;
     FUpdateColumns: TZIndexPairList;
     FWhereColumns: TZIndexPairList;
     FCurrentWhereColumns: TZIndexPairList;
@@ -94,6 +93,8 @@ type
     FUpdateStatements: TZHashMap;
     FDeleteStatements: TZHashMap;
   protected
+    FInsertColumns: TZIndexPairList;
+    FInsertStatements: TZHashMap;
     InsertStatement: IZPreparedStatement;
 
     function ComposeFullTableName(const Catalog, Schema, Table: SQLString;
@@ -104,7 +105,7 @@ type
     procedure SetResolverStatementParamters(const Statement: IZStatement;
       {$IFDEF AUTOREFCOUNT}const {$ENDIF}Params: TStrings); virtual;
 
-    procedure FillInsertColumnsPairList;
+    procedure FillInsertColumnsPairList(NewRowAccessor: TZRowAccessor);
     procedure FillUpdateColumns(const OldRowAccessor,NewRowAccessor: TZRowAccessor);
     procedure FillWhereKeyColumns(IncrementDestIndexBy: Integer);
     procedure FillWhereAllColumns(IncrementDestIndexBy: Integer;
@@ -115,6 +116,7 @@ type
       write FDatabaseMetadata;
     property IdentifierConvertor: IZIdentifierConvertor
       read FIdentifierConvertor write FIdentifierConvertor;
+    property Statement: IZStatement read FStatement;
 
     property UpdateColumnsLookup: TZIndexPairList read FUpdateColumns;
     { all determined WhereColumns cached }
@@ -131,7 +133,7 @@ type
 
     procedure FormWhereClause(const SQLWriter: TZSQLStringWriter;
       const OldRowAccessor: TZRowAccessor; var Result: SQLString); virtual;
-    function FormInsertStatement: SQLString;
+    function FormInsertStatement(NewRowAccessor: TZRowAccessor): SQLString; virtual;
     function FormUpdateStatement(
       const OldRowAccessor, NewRowAccessor: TZRowAccessor): SQLString;
     function FormDeleteStatement(const OldRowAccessor: TZRowAccessor): SQLString;
@@ -187,6 +189,7 @@ begin
     DSProps_Where, 'keyonly')) = 'ALL';
   FUpdateStatements := TZHashMap.Create;
   FDeleteStatements := TZHashMap.Create;
+  FInsertStatements := TZHashMap.Create;
 end;
 
 {**
@@ -213,6 +216,7 @@ begin
 
   FreeAndNil(FDeleteStatements);
   FreeAndNil(FUpdateStatements);
+  FreeAndNil(FInsertStatements);
 
   FlustStmt(InsertStatement);
   if RefreshResultSet <> nil then
@@ -306,7 +310,7 @@ begin
   FUpdateColumns.Clear;
   { Use precached parameters. }
   if FInsertColumns.Count = 0 then
-    FillInsertColumnsPairList;
+    FillInsertColumnsPairList(NewRowAccessor);
   { Defines parameters for UpdateAll mode. }
   if UpdateAll then
     FUpdateColumns.Assign(FInsertColumns)
@@ -488,7 +492,8 @@ end;
   Forms a INSERT statements.
   @return the composed insert SQL
 }
-function TZGenerateSQLCachedResolver.FormInsertStatement: SQLString;
+function TZGenerateSQLCachedResolver.FormInsertStatement(
+  NewRowAccessor: TZRowAccessor): SQLString;
 var
   I, ColumnIndex: Integer;
   Tmp: SQLString;
@@ -508,8 +513,10 @@ begin
     SQLWriter.AddChar(' ', Result);
     SQLWriter.AddChar('(', Result);
     if FInsertColumns.Count = 0 then
-      FillInsertColumnsPairList;
-    if FInsertColumns.Count = 0 then begin
+      FillInsertColumnsPairList(NewRowAccessor);
+    if (FInsertColumns.Count = 0) and not
+       {test for generated always cols }
+       ((Metadata.GetColumnCount > 0) and Metadata.IsAutoIncrement(FirstDbcIndex)) then begin
       Result := '';
       Exit;
     end;
@@ -615,7 +622,7 @@ begin
   end;
 end;
 
-procedure TZGenerateSQLCachedResolver.FillInsertColumnsPairList;
+procedure TZGenerateSQLCachedResolver.FillInsertColumnsPairList(NewRowAccessor: TZRowAccessor);
 var I, J: Integer;
   Tmp: String;
 begin
@@ -624,7 +631,7 @@ begin
   J := FirstDbcIndex;
   for I := FirstDbcIndex to FInsertColumns.Capacity{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
     Tmp := Metadata.GetTableName(I);
-    if (Tmp = '') or not Metadata.IsWritable(I) then continue;
+    if (Tmp = '') or not Metadata.IsWritable(I) or (Metadata.IsAutoIncrement(I) and NewRowAccessor.IsNull(I)) then continue;
     Tmp := Metadata.GetColumnName(I);
     if Tmp <> '' then begin
       FInsertColumns.Add(J, I);
@@ -679,6 +686,7 @@ var
   lValidateUpdateCount : Boolean;
   TempKey              : IZAnyValue;
   SenderStatement      : IZStatement;
+  Val                  : IZInterface;
   {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
   function CreateInvalidUpdateCountException: EZSQLException; //suppress _U/LStrArrClear
   begin
@@ -693,9 +701,16 @@ begin
     utInserted:
       begin
         if (InsertStatement = nil) or InsertStatement.IsClosed then begin
-          SQL := FormInsertStatement;
-          InsertStatement := CreateResolverStatement(SQL);
-          Statement := InsertStatement;
+          InsertStatement := nil;
+          SQL := FormInsertStatement(NewRowAccessor);
+          TempKey := TZAnyValue.CreateWithInteger(Hash(SQL));
+          Val := FInsertStatements.Get(TempKey);
+          If (Val = nil) or (Val.QueryInterface(IZPreparedStatement, InsertStatement) <> S_OK) or InsertStatement.IsClosed then begin
+            if (Val <> nil) then
+              FInsertStatements.Remove(TempKey);
+            InsertStatement := CreateResolverStatement(SQL);
+            FInsertStatements.Put(TempKey, InsertStatement);
+          end;
         end;
         Statement := InsertStatement;
         NewRowAccessor.FillStatement(Statement, FInsertColumns, Metadata);
@@ -776,7 +791,7 @@ var Stmt: IZPreparedStatement;
     SQL := 'SELECT ';
     try
       if FInsertColumns.Count = 0 then
-        FillInsertColumnsPairList;
+        FillInsertColumnsPairList(RowAccessor);
       if FInsertColumns.Count = 0 then
         Exit;
       for I := 0 to FInsertColumns.Count-1 do begin

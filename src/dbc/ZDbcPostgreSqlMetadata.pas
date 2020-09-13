@@ -297,7 +297,6 @@ type
     function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
 
   public
-    destructor Destroy; override;
     function GetIdentifierConvertor: IZIdentifierConvertor; override;
     procedure ClearCache; override;
  end;
@@ -1314,14 +1313,6 @@ end;
 
 { TZPostgreSQLDatabaseMetadata }
 
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZPostgreSQLDatabaseMetadata.Destroy;
-begin
-  inherited Destroy;
-end;
 
 {**
   Constructs a database information object and returns the interface to it. Used
@@ -3259,19 +3250,22 @@ const
   description_index = FirstDbcIndex + 9;
   cnspname_index    = FirstDbcIndex + 10;
   cdomain_oid_Index = FirstDbcIndex + 11;
+  attidentity_Index = FirstDbcIndex + 12;
 var
   Len: NativeUInt;
   TypeOid: Cardinal;
   AttTypMod, Precision: Integer;
   SQL, PgType: string;
   SQLType: TZSQLType;
-  CheckVisibility: Boolean;
+  B: Boolean;
+  P: PAnsiChar;
   ColumnNameCondition, TableNameCondition, SchemaCondition, CatalogCondition: string;
   PGConnection: IZPostgreSQLConnection;
 label FillSizes;
 begin
   //http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=11174
-  CheckVisibility := (GetConnection as IZPostgreSQLConnection).CheckFieldVisibility;
+  PGConnection := GetConnection as IZPostgreSQLConnection;
+  B := PGConnection.CheckFieldVisibility;
   if TableOID = '' then begin
     CatalogCondition := ConstructNameCondition(Catalog,'dn.relname');
     SchemaCondition := ConstructNameCondition(SchemaPattern,'n.nspname');
@@ -3280,61 +3274,65 @@ begin
   end;
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
-  if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
-  begin
-    SQL := 'SELECT n.nspname,' {nspname_index}
-      + 'c.relname,' {relname_index}
-      //+ 'case t.typtype when ''d'' then t.typname else a.attname end as attname,' {attname_index}
-      + 'a.attname,' {attname_index}
-      + 'case t.typtype when ''d'' then t.typbasetype else t.oid end as atttypid,' {atttypid_index}
-      + 'case t.typtype when ''d'' then t.typnotnull else a.attnotnull end as attnotnull,' {attnotnull_index}
-      + 'case t.typtype when ''d'' then t.typtypmod else a.atttypmod end as atttypmod,' {atttypmod_index}
-      + 'case t.typtype when ''d'' then t.typlen else a.attlen end as attlen,' {attlen_index}
-      + 'a.attnum,' {attnum_index}
-      + 'pg_get_expr(def.adbin, def.adrelid) as adsrc,' {adsrc_index}
-      + 'dsc.description, ' {description_index}
-      + 'dn.nspname as cnspname, ' {cnspname_index}
-      + 'case t.typtype when ''d'' then t.oid else null end as domain_oid'
-      + ' FROM pg_catalog.pg_namespace n '
-      + ' JOIN pg_catalog.pg_class c ON (c.relnamespace = n.oid) '
-      + ' JOIN pg_catalog.pg_attribute a ON (a.attrelid=c.oid) '
-      + ' JOIN pg_catalog.pg_type t ON (t.oid = a.atttypid)'
-      + ' LEFT JOIN pg_catalog.pg_attrdef def ON (a.attrelid=def.adrelid AND a.attnum = def.adnum)'
-      + ' LEFT JOIN pg_catalog.pg_description dsc ON (c.oid=dsc.objoid AND a.attnum = dsc.objsubid) '
-      + ' LEFT JOIN pg_catalog.pg_class dc ON (dc.oid=dsc.classoid AND dc.relname=''pg_class'') '
-      + ' LEFT JOIN pg_catalog.pg_namespace dn ON (dc.relnamespace=dn.oid AND dn.nspname=''pg_catalog'') ';
-    if TableOID <> '' then
-      SQL := SQL + ' WHERE a.attnum > 0 AND c.oid = '+TableOID
-    else begin
-        SQL := SQL + ' WHERE a.attnum > 0 AND NOT a.attisdropped';
-      if Catalog <> '' then
-        SQL := SQL + ' AND ' + CatalogCondition;
-      if SchemaPattern <> '' then
-        SQL := SQL + ' AND ' + SchemaCondition;
-      //not by default: because of Speed decrease: http://http://zeoslib.sourceforge.net/viewtopic.php?p=16646&sid=130
-      if CheckVisibility then
-        SQL := SQL + ' AND pg_table_is_visible (c.oid) ';
+  with (GetDatabaseInfo as IZPostgreDBInfo) do begin
+    if HasMinimumServerVersion(7, 3) then begin
+      SQL := 'SELECT n.nspname,' {nspname_index}
+        + 'c.relname,' {relname_index}
+        //+ 'case t.typtype when ''d'' then t.typname else a.attname end as attname,' {attname_index}
+        + 'a.attname,' {attname_index}
+        + 'case t.typtype when ''d'' then t.typbasetype else t.oid end as atttypid,' {atttypid_index}
+        + 'case t.typtype when ''d'' then t.typnotnull else a.attnotnull end as attnotnull,' {attnotnull_index}
+        + 'case t.typtype when ''d'' then t.typtypmod else a.atttypmod end as atttypmod,' {atttypmod_index}
+        + 'case t.typtype when ''d'' then t.typlen else a.attlen end as attlen,' {attlen_index}
+        + 'a.attnum,' {attnum_index}
+        + 'pg_get_expr(def.adbin, def.adrelid) as adsrc,' {adsrc_index}
+        + 'dsc.description, ' {description_index}
+        + 'dn.nspname as cnspname, ' {cnspname_index}
+        + 'case t.typtype when ''d'' then t.oid else null end as domain_oid, ';
+      if HasMinimumServerVersion(10, 0)
+      then SQL := SQL + 'a.attidentity'
+      else SQL := SQL + 'NULL::TEXT';
+      SQL := SQL
+        + ' FROM pg_catalog.pg_namespace n '
+        + ' JOIN pg_catalog.pg_class c ON (c.relnamespace = n.oid) '
+        + ' JOIN pg_catalog.pg_attribute a ON (a.attrelid=c.oid) '
+        + ' JOIN pg_catalog.pg_type t ON (t.oid = a.atttypid)'
+        + ' LEFT JOIN pg_catalog.pg_attrdef def ON (a.attrelid=def.adrelid AND a.attnum = def.adnum)'
+        + ' LEFT JOIN pg_catalog.pg_description dsc ON (c.oid=dsc.objoid AND a.attnum = dsc.objsubid) '
+        + ' LEFT JOIN pg_catalog.pg_class dc ON (dc.oid=dsc.classoid AND dc.relname=''pg_class'') '
+        + ' LEFT JOIN pg_catalog.pg_namespace dn ON (dc.relnamespace=dn.oid AND dn.nspname=''pg_catalog'') ';
+      if TableOID <> '' then
+        SQL := SQL + ' WHERE a.attnum > 0 AND c.oid = '+TableOID
+      else begin
+          SQL := SQL + ' WHERE a.attnum > 0 AND NOT a.attisdropped';
+        if Catalog <> '' then
+          SQL := SQL + ' AND ' + CatalogCondition;
+        if SchemaPattern <> '' then
+          SQL := SQL + ' AND ' + SchemaCondition;
+        //not by default: because of Speed decrease: http://http://zeoslib.sourceforge.net/viewtopic.php?p=16646&sid=130
+        if B then
+          SQL := SQL + ' AND pg_table_is_visible (c.oid) ';
+      end;
+    end else begin
+      SQL := 'SELECT NULL::text AS nspname,' {nspname_index}
+        + 'c.relname,' {relname_index}
+        + 'a.attname,' {attname_index}
+        + 'a.atttypid,' {atttypid_index}
+        + 'a.attnotnull,' {attnotnull_index}
+        + 'a.atttypmod,' {atttypmod_index}
+        + 'a.attlen,' {attlen_index}
+        + 'a.attnum,' {attnum_index}
+        + 'NULL AS adsrc,' {adsrc_index}
+        + 'NULL AS description, ' {description_index}
+        + 'NULL::text AS cnspname' {cnspname_index}
+        + 'NULL::OID as domain_oid,'
+        + 'NULL::TEXT as attidentity '
+        + 'FROM pg_class c, pg_attribute a';
+      if TableOID <> '' then
+        SQL := SQL + ' WHERE c.oid = '+TableOID
+      else
+        SQL := SQL + ' WHERE a.attrelid=c.oid AND a.attnum > 0 ';
     end;
-  end
-  else
-  begin
-    SQL := 'SELECT NULL::text AS nspname,' {nspname_index}
-      + 'c.relname,' {relname_index}
-      + 'a.attname,' {attname_index}
-      + 'a.atttypid,' {atttypid_index}
-      + 'a.attnotnull,' {attnotnull_index}
-      + 'a.atttypmod,' {atttypmod_index}
-      + 'a.attlen,' {attlen_index}
-      + 'a.attnum,' {attnum_index}
-      + 'NULL AS adsrc,' {adsrc_index}
-      + 'NULL AS description, ' {description_index}
-      + 'NULL::text AS cnspname' {cnspname_index}
-      + 'NULL::OID as domain_oid'
-      + 'FROM pg_class c, pg_attribute a';
-    if TableOID <> '' then
-      SQL := SQL + ' WHERE c.oid = '+TableOID
-    else
-      SQL := SQL + ' WHERE a.attrelid=c.oid AND a.attnum > 0 ';
   end;
 
   if TableOID = '' then begin
@@ -3344,7 +3342,6 @@ begin
       SQL := SQL+ ' AND ' + ColumnNameCondition;
   end;
   SQL := SQL+ ' ORDER BY nspname,relname,attnum';
-  GetConnection.QueryInterface(IZPostgreSQLConnection,PGConnection);
   with PGConnection.CreateStatement.ExecuteQuery(SQL) do begin
     while Next do begin
       AttTypMod := GetInt(atttypmod_index);
@@ -3379,15 +3376,14 @@ FillSizes:Result.UpdateInt(TableColColumnSizeIndex, Precision);
             //tag fixed size fields by having scale equal to precision
             Result.UpdateInt(TableColColumnDecimalDigitsIndex, Precision);
         end else if (PgType = 'varchar') then
-          if ( (GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength = 0 ) then begin
+          if ( PGConnection.GetUndefinedVarcharAsStringLength = 0 ) then begin
             Result.UpdateInt(TableColColumnTypeIndex, Ord(GetSQLTypeByOid(TEXTOID, -1))); //Assume text-lob instead
             Result.UpdateInt(TableColColumnSizeIndex, 0); // need no size for streams
           end else begin //keep the string type but with user defined count of chars
-            Precision := (GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength;
+            Precision := PGConnection.GetUndefinedVarcharAsStringLength;
             goto FillSizes;
           end
-        else
-          Result.UpdateInt(TableColColumnSizeIndex, 0);
+        else Result.UpdateInt(TableColColumnSizeIndex, 0);
       end else if (TypeOID = UUIDOID) then begin
         // I set break point and see code reaching here. Below assignments, I have no idea what I am doing.
         Result.UpdateInt(TableColColumnCharOctetLengthIndex, 16); // MSSQL returns 16 here - which makes sense since a GUID is 16 bytes long.
@@ -3418,17 +3414,22 @@ FillSizes:Result.UpdateInt(TableColColumnSizeIndex, Precision);
         Result.UpdateString(TableColColumnIsNullableIndex, 'YES');
         Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
       end;
+      P := GetPAnsiChar(attidentity_Index, Len);
+      B := (P <> nil) and (PByte(P)^ <> 0);
+      Result.UpdateBoolean(TableColColumnAutoIncIndex, B);
 
       Result.UpdatePAnsiChar(TableColColumnRemarksIndex, GetPAnsiChar(description_index {description}, Len), Len);
       Result.UpdatePAnsiChar(TableColColumnColDefIndex, GetPAnsiChar(adsrc_index {adsrc}, Len), Len);
       Result.UpdateInt(TableColColumnCharOctetLengthIndex, Result.GetInt(attlen_index));
       Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(attnum_index));
 
-      Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.IsCaseSensitive(GetString(attname_index)));
+      SQL := GetString(attname_index);
+      Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.IsCaseSensitive(SQL));
       Result.UpdateBoolean(TableColColumnSearchableIndex, True);
-      Result.UpdateBoolean(TableColColumnWritableIndex, True);
-      Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);
-      Result.UpdateBoolean(TableColColumnReadonlyIndex, False);
+      B := (P <> nil) and (PByte(P)^ = Byte('a'));
+      Result.UpdateBoolean(TableColColumnWritableIndex, not B);
+      Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, not B);
+      Result.UpdateBoolean(TableColColumnReadonlyIndex, B);
       if not IsNull(cdomain_oid_Index) then
         PGConnection.AddDomain2BaseTypeIfNotExists(GetUInt(cdomain_oid_Index), TypeOid);
       Result.InsertRow;

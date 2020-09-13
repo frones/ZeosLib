@@ -1822,22 +1822,21 @@ procedure TZInterbaseFirebirdCachedResolver.UpdateAutoIncrementFields(
 var
   I, ColumnIdx: Integer;
   RS: IZResultSet;
+  ColumnName: String;
 begin
-  //inherited;
-
   RS := InsertStatement.GetResultSet;
-  if RS = nil then
-    Exit;
-
-  for I := 0 to FInsertReturningFields.Count - 1 do
-  begin
-    ColumnIdx := Metadata.FindColumn(FInsertReturningFields[I]);
-    if ColumnIdx = InvalidDbcIndex then
-      raise EZSQLException.Create(Format(SColumnWasNotFound, [FInsertReturningFields[I]]));
-    NewRowAccessor.SetValue(ColumnIdx, RS.GetValueByName(FInsertReturningFields[I]));
+  if RS <> nil then try
+    for I := 0 to FInsertReturningFields.Count - 1 do begin
+      ColumnName := FInsertReturningFields[I];
+      ColumnIdx := Metadata.FindColumn(ColumnName);
+      if ColumnIdx = InvalidDbcIndex then
+        raise CreateColumnWasNotFoundException(ColumnName);
+      NewRowAccessor.SetValue(ColumnIdx, RS.GetValueByName(FInsertReturningFields[I]));
+    end;
+  finally
+    RS.Close; { Without Close RS keeps circular ref to Statement causing mem leak }
+    RS := nil;
   end;
-
-  RS.Close; { Without Close RS keeps circular ref to Statement causing mem leak }
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 

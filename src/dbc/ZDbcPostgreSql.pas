@@ -1317,7 +1317,7 @@ end;
 }
 function TZPostgreSQLConnection.GetHostVersion: Integer;
 begin
- Result := GetServerMajorVersion*1000000+GetServerMinorversion*1000+GetServerSubversion;
+  Result := ZSysUtils.EncodeSQLVersioning(GetServerMajorVersion, GetServerMinorversion, GetServerSubversion)
 end;
 
 {**

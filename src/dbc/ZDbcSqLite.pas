@@ -81,6 +81,7 @@ type
     ['{A4B797A9-7CF7-4DE9-A5BB-693DD32D07D2}']
     function GetConnectionHandle: Psqlite;
     function GetUndefinedVarcharAsStringLength: Integer;
+    function GetSQLiteIntAffinity: Boolean;
     function enable_load_extension(OnOff: Integer): Integer;
     function load_extension(zFile: PAnsiChar; zProc: Pointer; var pzErrMsg: PAnsiChar): Integer;
     function GetByteBufferAddress: PByteBuffer;
@@ -99,6 +100,7 @@ type
     IZSQLiteConnection, IZTransaction)
   private
     FUndefinedVarcharAsStringLength: Integer;
+    FSQLiteIntAffinity: Boolean;
     FCatalog: string;
     FHandle: Psqlite;
     FLastWarning: EZSQLWarning;
@@ -110,6 +112,7 @@ type
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory; var Stmt: Psqlite3_stmt); overload;
   public //IZSQLiteConnection
     function GetUndefinedVarcharAsStringLength: Integer;
+    function GetSQLiteIntAffinity: Boolean;
     function enable_load_extension(OnOff: Integer): Integer;
     function load_extension(zFile: PAnsiChar; zProc: Pointer; var pzErrMsg: PAnsiChar): Integer;
     function GetPlainDriver: TZSQLitePlainDriver;
@@ -340,6 +343,8 @@ begin
   TmpInt := StrToIntDef(Info.Values[ConnProps_BusyTimeout], -1);
   if TmpInt >= 0 then
     FPlainDriver.sqlite3_busy_timeout(FHandle, TmpInt);
+  FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
+  FSQLiteIntAffinity := StrToBoolEx(Info.Values[DSProps_SQLiteIntAffinity], false);
 
   inherited Open;
 
@@ -656,13 +661,6 @@ begin
   Result := 1;
 end;
 
-{**
-  Makes all changes made since the previous
-  commit/rollback permanent and releases any database locks
-  currently held by the Connection. This method should be
-  used only when auto-commit mode has been disabled.
-  @see #setAutoCommit
-}
 procedure TZSQLiteConnection.AfterConstruction;
 begin
   FPlainDriver := PlainDriver.GetInstance as TZSQLitePlainDriver;
@@ -671,9 +669,15 @@ begin
   //https://sqlite.org/pragma.html#pragma_read_uncommitted
   inherited SetTransactionIsolation(tiSerializable);
   CheckCharEncoding('UTF-8');
-  FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
 end;
 
+{**
+  Makes all changes made since the previous
+  commit/rollback permanent and releases any database locks
+  currently held by the Connection. This method should be
+  used only when auto-commit mode has been disabled.
+  @see #setAutoCommit
+}
 procedure TZSQLiteConnection.Commit;
 var S: RawByteString;
 begin
@@ -868,6 +872,11 @@ end;
 function TZSQLiteConnection.GetServerProvider: TZServerProvider;
 begin
   Result := spSQLite;
+end;
+
+function TZSQLiteConnection.GetSQLiteIntAffinity: Boolean;
+begin
+  Result := FSQLiteIntAffinity;
 end;
 
 function TZSQLiteConnection.GetHostVersion: Integer;
