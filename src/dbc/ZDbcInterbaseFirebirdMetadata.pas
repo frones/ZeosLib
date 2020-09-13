@@ -320,6 +320,9 @@ var
   tmp: string;
   Buffer: array[0..IBBigLocalBufferLength - 1] of AnsiChar;
   isc_info: Byte;
+  P: PChar;
+  PA: PAnsiChar absolute P;
+  L: NativeUInt;
 begin
   if FServerVersion = '' then begin
     Connection := Metadata.GetConnection;
@@ -359,12 +362,29 @@ begin
     FProductVersion := Copy(FServerVersion, ZFastCode.Pos(DBProvider[FIsFireBird],
       FServerVersion)+8+Ord(not FIsFireBird)+1, Length(FServerVersion));
     I := ZFastCode.Pos('.', FProductVersion);
-    FHostVersion := StrToInt(Copy(FProductVersion, 1, I-1))*1000000;
+    P := Pointer(FProductVersion);
+    FHostVersion := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P, P+(I-1), 0)*1000000;
     if ZFastCode.Pos(' ', FProductVersion) > 0 then //possible beta or alfa release
       tmp := Copy(FProductVersion, I+1, ZFastCode.Pos(' ', FProductVersion)-I-1)
     else
       tmp := Copy(FProductVersion, I+1, MaxInt);
     FHostVersion := FHostVersion + StrToInt(tmp)*1000;
+    { determine release version see http://www.firebirdfaq.org/faq223/ }
+    if FIsFireBird and (FHostVersion > 2001000) then begin
+      with Connection.CreateStatement.ExecuteQuery('SELECT rdb$get_context(''SYSTEM'', ''ENGINE_VERSION'') from rdb$database') do begin
+        if Next then begin
+          PA := GetPAnsiChar(FirstDbcIndex, L);
+          Inc(PA, NativeInt(L));
+          I := 0;
+          while (PByte(PA-1)^ <> Byte('.')) do begin
+            Dec(PA);
+            Inc(I);
+          end;
+          FHostVersion := FHostVersion+RawToIntDef(PA, PA+I, 0);
+        end;
+        Close;
+      end;
+    end;
   end;
 end;
 
