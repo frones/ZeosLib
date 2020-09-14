@@ -405,6 +405,8 @@ var
   R: RawByteString;
   CP: Word;
   {$ENDIF}
+  S: String;
+  mode: ub4;
   procedure CleanupOnFail;
   begin
     FPlainDriver.OCIHandleFree(FDescibeHandle, OCI_HTYPE_DESCRIBE);
@@ -559,8 +561,10 @@ begin
   FPlainDriver.OCIAttrSet(FSessionHandle,OCI_HTYPE_SESSION,@fBlobPrefetchSize,0,
     OCI_ATTR_DEFAULT_LOBPREFETCH_SIZE,FErrorHandle);
   Succeeded := False;
+  S := Info.Values[ConnProps_OCIAuthenticateMode];
+  Mode := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def{$ENDIF}(S, OCI_DEFAULT);
   Status := FPlainDriver.OCISessionBegin(FContextHandle, FErrorHandle,
-    FSessionHandle, OCI_CRED_RDBMS, OCI_DEFAULT);
+    FSessionHandle, OCI_CRED_RDBMS, Mode);
   if Status <> OCI_SUCCESS then try
     HandleErrorOrWarning(FErrorHandle, Status, lcConnect, FLogMessage, Self);
     Succeeded := True;
