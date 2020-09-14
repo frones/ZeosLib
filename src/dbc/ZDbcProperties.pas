@@ -747,6 +747,22 @@ const
   // Sets value for OCI_ATTR_PREFETCH_MEMORY option, refer to Oracle manual for details
   DSProps_RowPrefetchSize = 'row_prefetch_size';
 
+  /// <type>Int</type>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_OCIAuthenticateMode]=mode</syntax>
+  /// <summary>
+  ///  Specifies the various modes of operation.
+  ///  The constants are defined in ZPlainOracleDriver.pas
+  /// </summary>
+  /// <remarks>
+  ///  Valid modes are:
+  ///  OCI_DEFAULT - in this mode, the user session context returned may only ever be set with the same server context specified in svchp. For encoding, the server handle uses the setting in the environment handle.
+  ///  OCI_MIGRATE - in this mode, the new user session context may be set in a service handle with a different server handle. This mode establishes the user session context. To create a migratable session, the service handle must already be set with a non-migratable user session, which becomes the "creator" session of the migratable session. That is, a migratable session must have a non-migratable parent session.
+  ///  OCI_SYSDBA - in this mode, the user is authenticated for SYSDBA access.
+  ///  OCI_SYSOPER - in this mode, the user is authenticated for SYSOPER access.
+  ///  OCI_PRELIM_AUTH - this mode may only be used with OCI_SYSDBA or OCI_SYSOPER to authenticate for certain administration tasks.
+  /// </remarks>
+  ConnProps_OCIAuthenticateMode = 'OCIAuthenticateMode';
 {$ENDIF}
 
 {$IFDEF ENABLE_ASA}

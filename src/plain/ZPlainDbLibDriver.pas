@@ -1350,6 +1350,8 @@ type
     FdbSetMaxprocs_S: function(MaxProcs: SmallInt): RETCODE; cdecl;
     FdbSetMaxprocs_I: function(MaxProcs: DBINT): RETCODE; cdecl;
     FdbSetMaxprocs_stdcall: function(MaxProcs: DBINT): RETCODE; stdcall; //sybase has widened the type!
+    FdbSetTime: function(Seconds: Integer): RETCODE; cdecl;
+    FdbSetTime_stdcall: function(Seconds: Integer): RETCODE; stdcall;
     FdbUse: function(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; cdecl;
     FdbUse_stdcall: function(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; stdcall;
     Fdbvarylen_MS: function(Proc: PDBPROCESS; Column: Integer): LongBool; cdecl;
@@ -1467,6 +1469,7 @@ type
     function dbSetLoginTime(Seconds: Integer): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbSetLName(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbSetTime(Seconds: Integer): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar; Int_Param: Integer): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbVaryLen(dbProc: PDBPROCESS; Column: Integer): DBBOOL; {$IFDEF WITH_INLINE}inline; {$ENDIF}
@@ -1553,6 +1556,7 @@ type
     dbSetLoginTime: function(Seconds: Integer): RETCODE; cdecl;
     dbSetLName: function(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE; cdecl;
     dbSetMaxprocs: function(MaxProcs: DBINT): RETCODE; cdecl;
+    dbSetTime: function(Seconds: DBINT): RETCODE; cdecl;
     dbSetOpt: function(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar; Int_Param: Integer): RETCODE; cdecl;
     dbUse: function(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; cdecl;
     dbvarylen: function(Proc: PDBPROCESS; Column: Integer): DBBOOL; cdecl;
@@ -2679,6 +2683,13 @@ begin
     else        Result := FdbSetOpt_MS(dbProc, Option, Char_Param);
   end;
 end;
+
+function TZDBLIBPLainDriver.dbSetTime(Seconds: Integer): RETCODE;
+begin
+  if Assigned(FdbSetTime)
+  then Result := FdbSetTime(Seconds)
+  else Result := FdbSetTime_stdcall(Seconds);
+end;
 {$ENDIF MSWINDOWS}
 
 function TZDBLIBPLainDriver.dbsetversion(Version: DBINT): RETCODE;
@@ -3024,6 +3035,7 @@ begin
       @FdbOpen_stdcall := GetAddress('dbopen');
       @FdbSetLoginTime_stdcall := GetAddress('dbsetlogintime');
       @FdbsetLName_stdcall := GetAddress('dbsetlname');
+      @FdbSetTime_stdCall := GetAddress('dbsettime');
       @FdbSqlExec_stdcall := GetAddress('dbsqlexec');
       @FdbSqlOk_stdcall := GetAddress('dbsqlok');
       @FdbSqlSend_stdcall := GetAddress('dbsqlsend');
@@ -3099,6 +3111,7 @@ begin
 
       @{$IFDEF MSWINDOWS}FdbSetLoginTime{$ELSE}dbSetLoginTime{$ENDIF} := GetAddress('dbsetlogintime');
       @{$IFDEF MSWINDOWS}FdbsetLName{$ELSE}dbsetLName{$ENDIF} := GetAddress('dbsetlname');
+      @{$IFDEF MSWINDOWS}FdbSetTime{$ELSE}dbSetTime{$ENDIF} := GetAddress('dbsettime');
       @{$IFDEF MSWINDOWS}FdbSqlExec{$ELSE}dbSqlExec{$ENDIF} := GetAddress('dbsqlexec');
       @{$IFDEF MSWINDOWS}FdbSqlOk{$ELSE}dbSqlOk{$ENDIF} := GetAddress('dbsqlok');
       @{$IFDEF MSWINDOWS}FdbSqlSend{$ELSE}dbSqlSend{$ENDIF} := GetAddress('dbsqlsend');

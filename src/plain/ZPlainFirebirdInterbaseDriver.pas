@@ -114,11 +114,10 @@ const
   SQL_BOOLEAN                    = 590; // IB7
   SQL_TIMESTAMP_TZ_EX_FB         = 32748; //FB4+
   SQL_TIME_TZ_EX_FB              = 32756; //FB4+
-  SQL_INT128_FB                  = 32752; //FB4+
+  SQL_DEC_FIXED                  = 32758; //FB4+
   SQL_TIMESTAMP_TZ_FB            = 32754; //FB4+
-  SQL_TIME_TZ_FB                 = 32756; //FB4+
-  SQL_DEC16_FB                   = 32760; //FB4+
-  SQL_DEC34_FB                   = 32762; //FB4+
+  SQL_DEC16                      = 32760; //FB4+
+  SQL_DEC34                      = 32762; //FB4+
   SQL_BOOLEAN_FB                 = 32764; //FB3+
   SQL_NULL                       = 32766; //FB25+
 

@@ -3104,6 +3104,64 @@ const
   );
 {$ENDIF}
 
+{$IFDEF ENABLE_ORACLE}
+  cOracleProvider: TZPropertyProvider = (
+    Provider: spOracle; MinimumServerVersion: 0;
+    MinimumClientVersion: 0; MinimumProtocolVersion: 0;);
+  cOracleProtocol: String = 'oracle';
+  ZProp_ServerCachedStmts : TZProperty = (
+    Name: ConnProps_ServerCachedStmts;
+    Purpose: 'If enabled or not specified, sets StatementMode to OCI_STMT_CACHE (refer to Oracle manual for details)';
+    ValueType: pvtEnum; LevelTypes: [pltConnection, pltStatement];
+    Values: cBoolEnum; Default: cBoolTrue; Alias: '';
+    Providers: (Count: 1; Items: @cOracleProvider);
+    Protocols: (Count: 1; Items: @cOracleProtocol);
+  );
+  ZProp_BlobPrefetchSize : TZProperty = (
+    Name: ConnProps_BlobPrefetchSize;
+    Purpose: 'Sets value for OCI_ATTR_DEFAULT_LOBPREFETCH_SIZE option, refer to Oracle manual for details';
+    ValueType: pvtNumber; LevelTypes: [pltConnection, pltStatement];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cOracleProvider);
+    Protocols: (Count: 1; Items: @cOracleProtocol);
+  );
+  ZProp_StatementCache : TZProperty = (
+    Name: ConnProps_StatementCache;
+    Purpose: 'Sets value for OCI_ATTR_STMTCACHESIZE option, refer to Oracle manual for details';
+    ValueType: pvtNumber; LevelTypes: [pltConnection, pltStatement];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cOracleProvider);
+    Protocols: (Count: 1; Items: @cOracleProtocol);
+  );
+  ZProp_row_prefetch_size : TZProperty = (
+    Name: DSProps_RowPrefetchSize;
+    Purpose: 'Sets value for OCI_ATTR_PREFETCH_MEMORY option, refer to Oracle manual for details';
+    ValueType: pvtNumber; LevelTypes: [pltConnection, pltStatement];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cOracleProvider);
+    Protocols: (Count: 1; Items: @cOracleProtocol);
+  );
+  ZProp_OCIAuthenticateMode : TZProperty = (
+    Name: ConnProps_OCIAuthenticateMode;
+    Purpose: 'Specifies the various modes of operation. '+ LineEnding+
+      'The constants are defined in ZPlainOracleDriver.pas'+LineEnding+
+      'Valid modes are: '+LineEnding+
+      'OCI_DEFAULT - in this mode, the user session context returned may only ever be set with the same server context specified in svchp. For encoding, the server handle uses the setting in the environment handle.'+LineEnding+
+      'OCI_MIGRATE - in this mode, the new user session context may be set in a '+
+      'service handle with a different server handle. This mode establishes the user session context. '+
+      'To create a migratable session, the service handle must already be set '+
+      'with a non-migratable user session, which becomes the "creator" session '+
+      'of the migratable session. That is, a migratable session must have a non-migratable parent session.'+LineEnding+
+      'OCI_SYSDBA - in this mode, the user is authenticated for SYSDBA access.'+LineEnding+
+      'OCI_SYSOPER - in this mode, the user is authenticated for SYSOPER access.'+LineEnding+
+      'OCI_PRELIM_AUTH - this mode may only be used with OCI_SYSDBA or OCI_SYSOPER to authenticate for certain administration tasks.';
+    ValueType: pvtNumber; LevelTypes: [pltConnection, pltStatement];
+    Values: ''; Default: '0'; Alias: '';
+    Providers: (Count: 1; Items: @cOracleProvider);
+    Protocols: (Count: 1; Items: @cOracleProtocol);
+  );
+{$ENDIF}
+
 {$IFDEF ENABLE_ASA}
   cASAProvider: TZPropertyProvider = (
     Provider: spASA; MinimumServerVersion: 0;
@@ -3722,6 +3780,10 @@ initialization
     @ZProp_journal_mode, @ZProp_BindDoubleDateTimeValues,
     @ZProp_BindOrdinalBoolValues, @ZProp_SQLiteTransactionBehaviour,
     @ZProp_SQLiteIntAffinity]);
+{$ENDIF}
+{$IFDEF ENABLE_ORACLE}
+  RegisterZProperties([@ZProp_ServerCachedStmts,@ZProp_BlobPrefetchSize,
+    @ZProp_StatementCache,@ZProp_row_prefetch_size,@ZProp_OCIAuthenticateMode]);
 {$ENDIF}
 {$IF declared(ZProp_CachedLobs)}
   RegisterZProperty(@ZProp_CachedLobs);

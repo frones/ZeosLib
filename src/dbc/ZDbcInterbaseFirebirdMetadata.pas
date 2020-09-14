@@ -320,6 +320,9 @@ var
   tmp: string;
   Buffer: array[0..IBBigLocalBufferLength - 1] of AnsiChar;
   isc_info: Byte;
+  P: PChar;
+  PA: PAnsiChar absolute P;
+  L: NativeUInt;
 begin
   if FServerVersion = '' then begin
     Connection := Metadata.GetConnection;
@@ -359,12 +362,29 @@ begin
     FProductVersion := Copy(FServerVersion, ZFastCode.Pos(DBProvider[FIsFireBird],
       FServerVersion)+8+Ord(not FIsFireBird)+1, Length(FServerVersion));
     I := ZFastCode.Pos('.', FProductVersion);
-    FHostVersion := StrToInt(Copy(FProductVersion, 1, I-1))*1000000;
+    P := Pointer(FProductVersion);
+    FHostVersion := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P, P+(I-1), 0)*1000000;
     if ZFastCode.Pos(' ', FProductVersion) > 0 then //possible beta or alfa release
       tmp := Copy(FProductVersion, I+1, ZFastCode.Pos(' ', FProductVersion)-I-1)
     else
       tmp := Copy(FProductVersion, I+1, MaxInt);
     FHostVersion := FHostVersion + StrToInt(tmp)*1000;
+    { determine release version see http://www.firebirdfaq.org/faq223/ }
+    if FIsFireBird and (FHostVersion > 2001000) then begin
+      with Connection.CreateStatement.ExecuteQuery('SELECT rdb$get_context(''SYSTEM'', ''ENGINE_VERSION'') from rdb$database') do begin
+        if Next then begin
+          PA := GetPAnsiChar(FirstDbcIndex, L);
+          Inc(PA, NativeInt(L));
+          I := 0;
+          while (PByte(PA-1)^ <> Byte('.')) do begin
+            Dec(PA);
+            Inc(I);
+          end;
+          FHostVersion := FHostVersion+RawToIntDef(PA, PA+I, 0);
+        end;
+        Close;
+      end;
+    end;
   end;
 end;
 
@@ -1746,7 +1766,7 @@ const
   DEFAULT_SOURCE_DOMAIN_Index = FirstDbcIndex + 14;
   COMPUTED_SOURCE_Index       = FirstDbcIndex + 15;
   CHARACTER_SET_ID_Index      = FirstDbcIndex + 16;
-
+  IDENTITY_TYPE_Index         = FirstDbcIndex + 17;
 var
   SQL, ColumnName, ColumnDomain: string;
   BLRSubType, SubTypeName, FieldScale, FieldLength, Precision: Integer;
@@ -1755,6 +1775,7 @@ var
   GUIDProps: TZInterbaseFirebirdConnectionGUIDProps;
   L: NativeUInt;
   P: PAnsiChar;
+  Connection: IZConnection;
 label GUID_Size, Str_Size;
 begin
   Result := inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
@@ -1763,14 +1784,18 @@ begin
     'RF.RDB$RELATION_NAME');
   LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
     'RF.RDB$FIELD_NAME');
-
+  Connection := GetConnection;
   SQL := ' SELECT RF.RDB$RELATION_NAME, RF.RDB$FIELD_NAME, RF.RDB$FIELD_POSITION,'
     + ' RF.RDB$NULL_FLAG, RF.RDB$FIELD_SOURCE, F.RDB$FIELD_LENGTH,'
     + ' F.RDB$FIELD_SCALE, T.RDB$TYPE_NAME, F.RDB$FIELD_TYPE,'
     + ' F.RDB$FIELD_SUB_TYPE, F.RDB$DESCRIPTION, F.RDB$CHARACTER_LENGTH,'
     + ' F.RDB$FIELD_PRECISION, RF.RDB$DEFAULT_SOURCE, F.RDB$DEFAULT_SOURCE'
     + ' as RDB$DEFAULT_SOURCE_DOMAIN, F.RDB$COMPUTED_SOURCE,'
-    + ' F.RDB$CHARACTER_SET_ID FROM RDB$RELATION_FIELDS RF'
+    + ' F.RDB$CHARACTER_SET_ID, ';
+  if Connection.GetHostVersion < 3000000 then
+    SQL := SQL + 'CAST(NULL AS INT) as ';
+  SQL := SQL + 'RDB$IDENTITY_TYPE'
+    + ' FROM RDB$RELATION_FIELDS RF'
     + ' JOIN RDB$FIELDS F ON (F.RDB$FIELD_NAME = RF.RDB$FIELD_SOURCE)'
     + ' LEFT JOIN RDB$TYPES T ON (F.RDB$FIELD_TYPE = T.RDB$TYPE'
     + ' and T.RDB$FIELD_NAME = ''RDB$FIELD_TYPE'')'
@@ -1778,9 +1803,9 @@ begin
     + AppendCondition(LTableNamePattern) + AppendCondition(LColumnNamePattern)
     + ' ORDER BY RF.RDB$RELATION_NAME, RF.RDB$FIELD_POSITION';
 
-  GUIDProps := (GetConnection as IZInterbaseFirebirdConnection).GetGUIDProps;
+  GUIDProps := (Connection as IZInterbaseFirebirdConnection).GetGUIDProps;
 
-  with CreateStatement.ExecuteQuery(SQL) do begin
+  with Connection.CreateStatement.ExecuteQuery(SQL) do begin
     while Next do begin
       BLRSubType := GetInt(FIELD_TYPE_Index);
       // For text fields subtype = 0, we get codepage number instead
@@ -1882,12 +1907,13 @@ Str_Size:   Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldLength);  
       Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetInt(FIELD_SCALE_Index));   //CHAR_OCTET_LENGTH
       Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(FIELD_POSITION_Index)+ 1);   //ORDINAL_POSITION
       Result.UpdateString(TableColColumnIsNullableIndex, YesNoStrs[IsNull(NULL_FLAG_Index)]);   //IS_NULLABLE
-     // Result.UpdateNull(TableColColumnAutoIncIndex); //AUTO_INCREMENT
-
+      if not IsNull(IDENTITY_TYPE_Index) then
+        Result.UpdateBoolean(TableColColumnAutoIncIndex, True); //AUTO_INCREMENT
       Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.IsCaseSensitive(ColumnName)); //CASE_SENSITIVE
 
       Result.UpdateBoolean(TableColColumnSearchableIndex, True); //SEARCHABLE
-      if isNull(COMPUTED_SOURCE_Index) and (ColumnName <> 'RDB$DB_KEY') then begin
+      if isNull(COMPUTED_SOURCE_Index) and (ColumnName <> 'RDB$DB_KEY') and
+        (IsNull(IDENTITY_TYPE_Index) or (GetInt(IDENTITY_TYPE_Index) = 1)) then begin
         Result.UpdateBoolean(TableColColumnWritableIndex, True); //WRITABLE
         Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True); //DEFINITELYWRITABLE
         Result.UpdateBoolean(TableColColumnReadonlyIndex, False); //READONLY

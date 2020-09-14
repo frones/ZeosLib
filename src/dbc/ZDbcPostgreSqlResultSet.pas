@@ -246,6 +246,7 @@ type
   {** Implements a specialized cached resolver for PostgreSQL version 10.0 and up. }
   TZPostgreSQLCachedResolverV10up = class(TZPostgreSQLCachedResolverV8up)
   protected
+    FInsertReturningFields: TStrings;
     FHasAutoIncrementColumns, FHasWritableAutoIncrementColumns: Boolean;
     FReturningPairs: TZIndexPairList;
   public
@@ -2767,15 +2768,21 @@ end;
 { TZPostgreSQLCachedResolverV10up }
 
 procedure TZPostgreSQLCachedResolverV10up.AfterConstruction;
+var
+  Fields: string;
 begin
   inherited;
   FReturningPairs := TZIndexPairList.Create;
+  Fields := Statement.GetParameters.Values[DSProps_InsertReturningFields];
+  if Fields <> '' then
+    FInsertReturningFields := ExtractFields(Fields, [';', ',']);
 end;
 
 procedure TZPostgreSQLCachedResolverV10up.BeforeDestruction;
 begin
   inherited;
   FreeAndNil(FReturningPairs);
+  FreeAndNil(FInsertReturningFields);
 end;
 
 {**
@@ -2795,10 +2802,10 @@ begin
   I := MetaData.GetColumnCount;
   SQLWriter := TZSQLStringWriter.Create(512+(I shl 5));
   {$IF DECLARED(DSProps_InsertReturningFields)}
-  Tmp := Statement.GetParameters.Values[DSProps_InsertReturningFields];
-  if Tmp <> ''
-  then Fields := ExtractFields(Tmp, [',', ';'])
-  else Fields := nil;
+  if FInsertReturningFields <> nil then begin
+    Fields := TStringList.Create;
+    Fields.Assign(FInsertReturningFields);
+  end else Fields := nil;
   {$IFEND}
   Result := 'INSERT INTO ';
   try

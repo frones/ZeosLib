@@ -275,6 +275,7 @@ begin
         then Result := stAsciiStream
         else Result := stBinaryStream;
     SQL_ARRAY: Result := stArray;
+    SQL_DEC_FIXED, SQL_DEC16,SQL_DEC34: Result := stBigDecimal;
     else  Result := stUnknown;
   end;
 end;
@@ -400,6 +401,8 @@ begin
                 SQL_SHORT:  Precision := 4;
                 SQL_LONG:   Precision := 9;
                 SQL_INT64:  Precision := 18;
+                SQL_DEC34,
+                SQL_DEC_FIXED: Precision := 34;
                 {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //nothing todo
               end;
             end;
