@@ -2776,7 +2776,6 @@ begin
   Fields := Statement.GetParameters.Values[DSProps_InsertReturningFields];
   if Fields <> '' then
     FInsertReturningFields := ExtractFields(Fields, [';', ',']);
-  FReturningPairs := TZIndexPairList.Create;
 end;
 
 procedure TZPostgreSQLCachedResolverV10up.BeforeDestruction;

@@ -7254,7 +7254,7 @@ begin
     TS := Value; //make a copy might be a non writable const
     if (TS.Fractions > 0) then
       TS.Fractions := ZSysUtils.RoundNanoFractionTo(TS.Fractions, fScale);
-    FRowAccessor.SetTimestamp(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, TS);
+    FResultSet.UpdateTimestamp(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, TS);
     if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
       DataEvent(deFieldChange, NativeInt(Self));
   end;
@@ -9453,15 +9453,17 @@ end;
 procedure TZRawCLobField.SetPWideChar(P: Pointer; Len: NativeUint);
 var Clob: IZClob;
     R: RawByteString;
+    ConSettings: PZConSettings;
 begin
   if not FBound then
     raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
+    ConSettings := FRowAccessor.ConSettings;
     if (FColumnCP = zCP_UTF16) then begin
        if P = nil then
           P:= PEmptyUnicodeString;
-       CLob := TZLocalMemCLob.CreateWithData(nil, 0, FRowAccessor.ConSettings, FOpenLobStreams);
+       CLob := TZLocalMemCLob.CreateWithData(nil, 0, ConSettings, FOpenLobStreams);
        Clob.SetPWideChar(P, Len); //notify updated
     end else begin
       R := PUnicodeToRaw(P,Len,FColumnCP);
@@ -9469,7 +9471,7 @@ begin
       if Len = 0
       then P := PEmptyUnicodeString
       else P := Pointer(R);
-      CLob := TZLocalMemCLob.CreateWithData(nil, 0, FColumnCP, FRowAccessor.ConSettings, FOpenLobStreams);
+      CLob := TZLocalMemCLob.CreateWithData(nil, 0, FColumnCP, ConSettings, FOpenLobStreams);
       CLob.SetPAnsiChar(P, FColumnCP, Len);
     end;
     FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Clob);
@@ -10070,7 +10072,6 @@ begin
   L := Length(Value);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
-    FRowAccessor.SetNotNull(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
     BLob.QueryInterface(IZCLob, Clob);
     if (FColumnCP = zCP_UTF16)
