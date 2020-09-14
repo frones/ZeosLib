@@ -3147,10 +3147,14 @@ const
       'The constants are defined in ZPlainOracleDriver.pas'+LineEnding+
       'Valid modes are: '+LineEnding+
       'OCI_DEFAULT - in this mode, the user session context returned may only ever be set with the same server context specified in svchp. For encoding, the server handle uses the setting in the environment handle.'+LineEnding+
-      'OCI_MIGRATE - in this mode, the new user session context may be set in a service handle with a different server handle. This mode establishes the user session context. To create a migratable session, the service handle must already be set with a non-migratable user session, which becomes the "creator" session of the migratable session. That is, a migratable session must have a non-migratable parent session.'+LineEnding+
+      'OCI_MIGRATE - in this mode, the new user session context may be set in a '+
+      'service handle with a different server handle. This mode establishes the user session context. '+
+      'To create a migratable session, the service handle must already be set '+
+      'with a non-migratable user session, which becomes the "creator" session '+
+      'of the migratable session. That is, a migratable session must have a non-migratable parent session.'+LineEnding+
       'OCI_SYSDBA - in this mode, the user is authenticated for SYSDBA access.'+LineEnding+
       'OCI_SYSOPER - in this mode, the user is authenticated for SYSOPER access.'+LineEnding+
-      'OCI_PRELIM_AUTH - this mode may only be used with OCI_SYSDBA or OCI_SYSOPER to authenticate for certain administration tasks.'
+      'OCI_PRELIM_AUTH - this mode may only be used with OCI_SYSDBA or OCI_SYSOPER to authenticate for certain administration tasks.';
     ValueType: pvtNumber; LevelTypes: [pltConnection, pltStatement];
     Values: ''; Default: '0'; Alias: '';
     Providers: (Count: 1; Items: @cOracleProvider);
