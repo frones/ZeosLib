@@ -1784,7 +1784,7 @@ type
   Tntrace_relation_t = Integer;
   PTraceCounts = ^TTraceCounts;
   TTraceCounts = Record
-    trc_relation_id     : ntrace_relation_t;
+    trc_relation_id     : Tntrace_relation_t;
     trc_relation_name   : PAnsiChar;
     trc_counters        : PInt64;
   end;
