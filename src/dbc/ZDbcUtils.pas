@@ -1438,36 +1438,6 @@ begin
   end;
 end;
 
-function TestEncoding(const Bytes: TByteDynArray; const Size: Cardinal): TZCharEncoding;
-begin
-  Result := ceDefault;
-  {EgonHugeist:
-    Step one: Findout, what's comming in! To avoid User-Bugs as good as possible
-      it is possible that a PAnsiChar OR a PWideChar was written into
-      the Stream!!!  And these chars could be trunced with changing the
-      Stream.Size.
-      I know this can lead to pain with two byte ansi chars, but what else can i do?
-    step two: detect the encoding }
-
-  if (Size mod 2 = 0) and ( ZFastCode.StrLen(Pointer(Bytes)) {%H-}< Size ) then //Sure PWideChar written!! A #0 was in the byte-sequence!
-    result := ceUTF16
-  else
-    //if ConSettings.AutoEncode then
-      case ZDetectUTF8Encoding(Pointer(Bytes), Size) of
-        etUSASCII: Result := ceDefault; //Exact!
-        etAnsi:
-          { Sure this isn't right in all cases!
-            Two/four byte WideChars causing the same result!
-            Leads to pain! Is there a way to get a better test?
-            I've to start from the premise the function which calls this func
-            should decide wether ansi or unicode}
-          Result := ceAnsi;
-        etUTF8: Result := ceUTF8; //Exact!
-      end
-    //else
-      //Result := ceDefault
-end;
-
 function CreateUnsupportedParameterTypeException(Index: Integer; ParamType: TZSQLType): EZSQLException;
 var TypeName: String;
 begin

@@ -861,6 +861,12 @@ var
   I: Integer;
 begin
   inherited AfterClose;
+  //required for FPC which has a different logic freeing the interfaces..
+  //the reolver caches some dml stmts, even if we close the resultset and nil the
+  //intf afterwards, FPC holds the rs in memory, thus some "Object is in use"
+  //errors may mappen, see TZTestDbcInterbaseCase.Test_GENERATED_BY_DEFAULT_64 f.e.
+  FNativeResolver := nil;
+  FResolver := nil; //required for FPC
   if Assigned(FRowAccessor) then begin
     for I := 0 to FRowsList.Count - 1 do
       FRowAccessor.DisposeBuffer(PZRowBuffer(FRowsList[I]));

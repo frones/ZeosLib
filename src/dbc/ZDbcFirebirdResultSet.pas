@@ -259,8 +259,8 @@ begin
       Result := stDouble;
     SQL_BOOLEAN, SQL_BOOLEAN_FB:
       Result := stBoolean;
-    SQL_DATE: Result := stTimestamp;
-    SQL_TYPE_TIME: Result := stTime;
+    SQL_DATE, SQL_TIMESTAMP_TZ, SQL_TIMESTAMP_TZ_EX: Result := stTimestamp;
+    SQL_TYPE_TIME, SQL_TIME_TZ, SQL_TIME_TZ_EX: Result := stTime;
     SQL_TYPE_DATE: Result := stDate;
     SQL_INT64:
         //https://firebirdsql.org/file/documentation/reference_manuals/fblangref25-en/html/fblangref25-datatypes-fixedtypes.html

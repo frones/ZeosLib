@@ -1014,8 +1014,8 @@ testBCD:  Scale := Abs(Scale);
         else //http://sourceforge.net/p/zeoslib/tickets/111/
           Result := stBinaryStream;
       end;
-    blr_dec64,
-    blr_dec128,
+    blr_dec64: Result := stDouble; //assume the DEC16 has 64 bit and an 16digit mantissa whereas a double has 15digit mantissa..Exaptable?
+    blr_dec128: Result := stString; //yet defined, we have no Soft-128Bit Decimal128 IEEE 754
     blr_int128: Result := stBigDecimal;
     else
       Result := ZDbcIntfs.stUnknown;

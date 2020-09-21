@@ -562,7 +562,7 @@ begin
     SetLength(TableType, 1);
     TableType[0] := 'TABLE';
     try
-      ResultSet := Connection.GetMetadata.GetTables('','','GENERATED_ALWAYS_64',TableType);
+      ResultSet := Connection.GetMetadata.GetTables('','','GENERATED_BY_DEFAULT_64',TableType);
       if ResultSet.Next then
         Statement.ExecuteUpdate('drop table GENERATED_BY_DEFAULT_64');
       Statement.ExecuteUpdate('CREATE TABLE GENERATED_BY_DEFAULT_64 ( '+

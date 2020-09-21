@@ -4877,6 +4877,10 @@ begin
       FBatchStmts[B].Obj._Release;
       FBatchStmts[B].Obj := nil;
     end;
+  if FOutParamResultSet <> nil then begin
+    FOutParamResultSet.Close;
+    FOutParamResultSet := nil;
+  end;
   if FOutData <> nil then begin
     FreeMem(FOutData);
     FOutData := nil;

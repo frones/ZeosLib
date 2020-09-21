@@ -578,7 +578,7 @@ begin
     if FFBStatement.vTable.version > 3 then begin
       TimeOut := StrToInt(DefineStatementParameter(Self, DSProps_StatementTimeOut, '0'));
       if TimeOut <> 0 then begin
-        IStatement_V4(FFBStatement).setTimeout(FStatus, TimeOut);
+        FFBStatement.setTimeout(FStatus, TimeOut);
         if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
           FFBConnection.HandleErrorOrWarning(lcPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self);
       end;
@@ -645,12 +645,20 @@ begin
         for Index := 0 to FInMessageCount -1 do with FInParamDescripors[Index] do begin
         {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
           sqltype := MessageMetadata.getType(FStatus, Index);
-          if sqltype = SQL_TEXT then //length might be zero
+          sqllen := MessageMetadata.getLength(FStatus, Index);
+          if sqltype = SQL_TEXT then begin //length might be zero
             sqltype := SQL_VARYING; //we don't use the fixed char fields. We don't space padd the data nor changing the sqllen
+            sqllen := sqllen + SizeOf(ISC_USHORT)
+          end else if sqltype = SQL_TIMESTAMP_TZ then begin
+            sqllen := SizeOf(TISC_TIMESTAMP);
+            sqltype := SQL_TIMESTAMP
+          end else if sqltype = SQL_TIME_TZ then begin
+            sqllen := SizeOf(TISC_TIME);
+            sqltype := SQL_TYPE_TIME;
+          end;
           MetadataBuilder.setType(FStatus, Index, sqltype);
           SubType := MessageMetadata.getSubType(FStatus, Index);
           MetadataBuilder.setSubType(FStatus, Index, SubType);
-          sqllen := MessageMetadata.getLength(FStatus, Index);
           if sqltype = SQL_VARYING then
             sqllen := ((sqllen shr 2) + 1) shl 2; //4Byte align incluing 4 bytes reserved for overlongs {let fb raise the Exception}
           MetadataBuilder.setLength(FStatus, Index, sqllen);
@@ -719,7 +727,7 @@ begin
     { create blob handle }
     Attachment := FFBConnection.GetAttachment;
     Transaction := FFBConnection.GetActiveTransaction.GetTransaction;
-    Blob := Attachment.createBlob(FStatus, Transaction, ISC_QUADPtr(sqldata), 0, nil);
+    Blob := Attachment.createBlob(FStatus, Transaction, PISC_QUAD(sqldata), 0, nil);
     { put data to blob }
     CurPos := 0;
     SegLen := DefaultBlobSegmentSize;

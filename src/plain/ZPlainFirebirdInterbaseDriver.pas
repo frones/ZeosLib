@@ -64,8 +64,7 @@ interface
 {$ENDIF}
 
 uses Types,
-  {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZCompatibility, ZPlainDriver, ZPlainLoader
-  {$IFNDEF ZEOS_DISABLE_FIREBIRD}, ZPlainFirebird{$ENDIF};
+  {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZCompatibility, ZPlainDriver, ZPlainLoader;
 
 const
   IBLocalBufferLength = 512;
@@ -112,10 +111,12 @@ const
   SQL_TYPE_DATE                  = 570;
   SQL_INT64                      = 580;
   SQL_BOOLEAN                    = 590; // IB7
-  SQL_TIMESTAMP_TZ_EX_FB         = 32748; //FB4+
-  SQL_TIME_TZ_EX_FB              = 32756; //FB4+
-  SQL_DEC_FIXED                  = 32758; //FB4+
-  SQL_TIMESTAMP_TZ_FB            = 32754; //FB4+
+  SQL_TIMESTAMP_TZ_EX            = 32748; //FB4+
+  SQL_TIME_TZ_EX                 = 32750; //FB4+
+  SQL_INT128                     = 32752; //FB4+
+  SQL_TIMESTAMP_TZ               = 32754; //FB4+
+  SQL_TIME_TZ                    = 32756; //FB4+
+  SQL_DEC_FIXED                  = 32758; //FB4 Beta 1 not present in Beta2
   SQL_DEC16                      = 32760; //FB4+
   SQL_DEC34                      = 32762; //FB4+
   SQL_BOOLEAN_FB                 = 32764; //FB3+
@@ -1667,7 +1668,9 @@ const
   fb_info_creation_timestamp_tz  = 139;
 
 type
-
+  {$IF not declared(Int16)} //D7..D2006
+  Int16 = SmallInt;
+  {$IFEND}
   ISC_SCHAR            = AnsiChar;
   ISC_UCHAR            = AnsiChar;
   ISC_SHORT            = SmallInt; { 16 bit signed }
@@ -1732,9 +1735,9 @@ type
 
   { Time & Date Support }
   TISC_DATE = Integer;
-  PISC_DATE = ^ISC_DATE;
+  PISC_DATE = ^TISC_DATE;
   TISC_TIME = Integer;
-  PISC_TIME = ^ISC_TIME;
+  PISC_TIME = ^TISC_TIME;
 
   PFB_DEC16 = ^TFB_DEC16;
   TFB_DEC16 = array [1..1] of Int64;
@@ -1747,21 +1750,21 @@ type
 
   PISC_TIME_TZ = ^TISC_TIME_TZ;
   TISC_TIME_TZ = record
-    utc_time: ISC_TIME;
+    utc_time: TISC_TIME;
     time_zone: ISC_USHORT;
   end;
 
   PISC_TIME_TZ_EX = ^TISC_TIME_TZ_EX;
   TISC_TIME_TZ_EX = record
-    utc_time: ISC_TIME;
+    utc_time: TISC_TIME;
     time_zone: ISC_USHORT;
     ext_offset: ISC_SHORT;
   end;
 
   PISC_TIMESTAMP = ^TISC_TIMESTAMP;
   TISC_TIMESTAMP = record
-    timestamp_date: ISC_DATE;
-    timestamp_time: ISC_TIME;
+    timestamp_date: TISC_DATE;
+    timestamp_time: TISC_TIME;
   end;
 
   PISC_TIMESTAMP_TZ = ^TISC_TIMESTAMP_TZ;
@@ -1803,7 +1806,7 @@ type
   end;
 
   { Blob id structure }
-  TISC_QUAD            = array[0..1] of ISC_LONG;
+  TISC_QUAD            = Int64;//array[0..1] of ISC_LONG;
   PISC_QUAD            = ^TISC_QUAD;
 
   TISC_ARRAY_BOUND = record
@@ -2317,7 +2320,7 @@ type
   protected
     procedure LoadApi; override;
   public
-    fb_get_master_interface: function: IMaster; cdecl;
+    fb_get_master_interface: function: TObject{IMaster}; cdecl;
   {$ENDIF ZEOS_DISABLE_FIREBIRD}
   end;
 

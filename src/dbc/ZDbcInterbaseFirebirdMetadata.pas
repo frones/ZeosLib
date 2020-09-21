@@ -1889,10 +1889,14 @@ Str_Size:   Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldLength);  
                                 P := Pointer(cCURRENT_DATE);
                                 L := Length(cCURRENT_DATE);
                               end;
+              blr_ex_time_tz,
+              blr_sql_time_tz,
               blr_sql_time:   begin
                                 P := Pointer(cCURRENT_TIME);
                                 L := Length(cCURRENT_TIME);
                               end;
+              blr_ex_timestamp_tz,
+              blr_timestamp_tz,
               blr_timestamp:  begin
                                 P := Pointer(cCURRENT_TIMESTAMP);
                                 L := Length(cCURRENT_TIMESTAMP);
