@@ -61,7 +61,7 @@ uses
   ZMessages, ZCompatibility, FmtBCD;
 
 type
-  {** some formats for it's purpose }
+  /// <summary>Declares a TZFormatSettings record.</summary>
   TZFormatSettings = Record
     DateFormat: String;
     DateFormatLen: Byte;
@@ -71,6 +71,7 @@ type
     DateTimeFormatLen: Byte;
   End;
 
+  /// <summary>Implements a EArgumentException if not known by compiler</summary>
   {$IF NOT DECLARED(EArgumentException)}
   EArgumentException = Class(Exception);
   {$IFEND}
@@ -162,540 +163,675 @@ function EndsWith(const Str, SubStr: RawByteString): Boolean; overload;
 /// <returns><c>True</c> if Str ends with SubStr</returns>
 function EndsWith(const Str, SubStr: UnicodeString): Boolean; overload;
 
-{** EH:
-  Converts SQL PAnsiChar into float value.
-  Possible is SQLFloat, Float, Hex, Money+Suffix
-  @param Value an Pointer to raw data we want to convert.
-  @param Def a default value if the value can not be converted.
-  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
-  @return a converted value or Def if conversion did fail.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts a PAnsiChar into an Extendend float value.
+///  Supported string formats are SQLFloat, Float, Hex, Money+Suffix</summary>
+/// <param>"Value" a PAnsiChar of a raw character buffer we want to convert.</param>
+/// <param>"Def" a default value if the value can not be converted.</param>
+/// <param>"Len" the length in bytes of the given buffer. If Len is zero the buffer should be #0 terminated.</param>
+/// <returns>a converted value or Def if conversion fails.</returns>
 function SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended; Len: NativeUInt = 0): Extended; overload;
 
-{** EH:
-  Converts SQL PAnsiChar into float value.
-  Possible is SQLFloat, Float, Hex, Money+Suffix
-  @param Value an Pointer to raw data we want to convert.
-  @param Def a default value if the value can not be converted.
-  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
-  @param Result return a converted value or Def if conversion did fail.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts PAnsiChar into an Extendend float value.
+///  Supported string formats are SQLFloat, Float, Hex, Money+Suffix</summary>
+/// <param>"Value" a PAnsiChar of a raw character buffer we want to convert.</param>
+/// <param>"Def" a default value if the value can not be converted.</param>
+/// <param>"Result" return a converted value or Def if conversion fails.</param>
+/// <param>"Len" the length in bytes of the given buffer. If Len is zero the buffer should be #0 terminated.</param>
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended; out Result: Extended; Len: NativeUInt = 0); overload;
 
-
-{** EH:
-  Converts SQL PAnsiChar into currency value.
-  Possible is SQLFloat, Float, Hex, Money+Suffix
-  @param Value an Pointer to raw data we want to convert.
-  @param Def a default value if the value can not be converted.
-  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
-  @param Result return a converted value or Def if conversion did fail.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts PAnsiChar into a Currency value.
+///  Supported string formats are SQLFloat, Float, Hex, Money+Suffix</summary>
+/// <param>"Value" a PAnsiChar of a raw character buffer we want to convert.</param>
+/// <param>"Def" a default value if the value can not be converted.</param>
+/// <param>"Result" return a converted value or Def if conversion fails.</param>
+/// <param>"Len" the length in bytes of the given buffer. If Len is zero the buffer should be #0 terminated.</param>
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Currency; out Result: Currency; Len: NativeUInt = 0); overload;
 
-{** EH:
-  Converts SQL PAnsiChar into currency value.
-  Possible is SQLFloat, Float, Money+Suffix
-  @param Value an Pointer to raw data we want to convert.
-  @param Def a default value if the value can not be converted.
-  @param DecimalSep a reference to decimal seperator to be used;
-          we will initialize this sep with '.' or replace it if with the Sep we found
-  @param Result return a converted value or Def if conversion did fail.
-  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts PAnsiChar into a Currency value.
+///  Supported string formats are SQLFloat, Float, Hex, Money+Suffix</summary>
+/// <param>"Value" a PAnsiChar of a raw character buffer we want to convert.</param>
+/// <param>"Def" a default value if the value can not be converted.</param>
+/// <param>"DecimalSep" a reference to decimal seperator to be used.
+///  We will initialize this sep with '.' or replace it with the Sep we found</param>
+/// <param>"Result" return a converted value or Def if conversion fails.</param>
+/// <param>"Len" the length in bytes of the given buffer. If Len is zero the buffer should be #0 terminated.</param>
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Currency; Var DecimalSep: Char; out Result: Currency; Len: NativeUInt = 0); overload;
+
 {$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
-{** EH:
-  Converts SQL PAnsiChar into double precison value.
-  Possible is SQLFloat, Float, Hex, Money+Suffix
-  @param Value an Pointer to raw data we want to convert.
-  @param Def a default value if the value can not be converted.
-  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
-  @param Result return a converted value or Def if conversion did fail.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts PAnsiChar into a Double value.
+///  Supported string formats are SQLFloat, Float, Hex, Money+Suffix</summary>
+/// <param>"Value" a PAnsiChar of a raw character buffer we want to convert.</param>
+/// <param>"Def" a default value if the value can not be converted.</param>
+/// <param>"Result" return a converted value or Def if conversion fails.</param>
+/// <param>"Len" the length in bytes of the given buffer. If Len is zero the buffer should be #0 terminated.</param>
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Double; out Result: Double; Len: NativeUInt = 0); overload;
 {$IFEND}
-{** EH:
-  Converts SQL PAnsiChar into single precison value.
-  Possible is SQLFloat, Float, Hex, Money+Suffix
-  @param Value an Pointer to raw data we want to convert.
-  @param Def a default value if the value can not be converted.
-  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
-  @param Result return a converted value or Def if conversion did fail.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts PAnsiChar into a Single value.
+///  Supported string formats are SQLFloat, Float, Hex, Money+Suffix</summary>
+/// <param>"Value" a PAnsiChar of a raw character buffer we want to convert.</param>
+/// <param>"Def" a default value if the value can not be converted.</param>
+/// <param>"Result" return a converted value or Def if conversion fails.</param>
+/// <param>"Len" the length in bytes of the given buffer. If Len is zero the buffer should be #0 terminated.</param>
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Single; out Result: Single; Len: NativeUInt = 0); overload;
 
-{** EH:
-  Converts SQL PWideChar into REAL10 value.
-  Possible is SQLFloat, Float, Hex, Money+Suffix
-  @param Value an Pointer to UTF16 data we want to convert.
-  @param Def a default value if the value can not be converted.
-  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
-  @return a converted value or Def if conversion did fail.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts a PWideChar into an Extendend float value.
+///  Supported string formats are SQLFloat, Float, Hex, Money+Suffix</summary>
+/// <param>"Value" a Pointer to an UTF16 character buffer we want to convert.</param>
+/// <param>"Def" a default value if the value can not be converted.</param>
+/// <param>"Len" the length in words of the given buffer. If Len is zero the buffer should be #0#0 terminated.</param>
+/// <returns>a converted value or Def if conversion fails.</returns>
 function SQLStrToFloatDef(Value: PWideChar; const Def: Extended; Len: NativeUInt = 0): Extended; overload;
 
-{** EH:
-  Converts a UTF16 buffer into REAL10 value.
-  Possible is SQLFloat, Float, Hex, Money+Suffix
-  @param Value an Pointer to UTF16 data we want to convert.
-  @param Def a default value if the value can not be converted.
-  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
-  @param Result return a converted value or Def if conversion did fail.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts PWideChar into an Extendend float value.
+///  Supported string formats are SQLFloat, Float, Hex, Money+Suffix</summary>
+/// <param>"Value" a Pointer to an UTF16 character buffer we want to convert.</param>
+/// <param>"Def" a default value if the value can not be converted.</param>
+/// <param>"Result" return a converted value or Def if conversion fails.</param>
+/// <param>"Len" the length in words of the given buffer. If Len is zero the buffer should be #0 terminated.</param>
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Extended; out Result: Extended; Len: NativeUInt = 0); overload;
 
-{** EH:
-  Converts a UTF16 buffer into currency value.
-  Possible is SQLFloat, Float, Money+Suffix
-  @param Value an Pointer to UTF16 data we want to convert.
-  @param Def a default value if the value can not be converted.
-  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
-  @param Result return a converted value or Def if conversion did fail.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts PWideChar into an Extendend float value.
+///  Supported string formats are SQLFloat, Float, Hex, Money+Suffix</summary>
+/// <param>"Value" a Pointer to an UTF16 character buffer we want to convert.</param>
+/// <param>"Def" a default value if the value can not be converted.</param>
+/// <param>"Result" return a converted value or Def if conversion fails.</param>
+/// <param>"Len" the length in words of the given buffer. If Len is zero the buffer should be #0 terminated.</param>
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Currency; out Result: Currency; Len: NativeUInt = 0); overload;
 
-{** EH:
-  Converts a UTF16 buffer into currency value.
-  Possible is SQLFloat, Float, Money+Suffix
-  @param Value an Pointer to UTF16 data we want to convert.
-  @param Def a default value if the value can not be converted.
-  @param DecimalSep a reference to decimal seperator to be used;
-          we will initialize this sep with '.' or replace it if with the Sep we found
-  @param Result return a converted value or Def if conversion did fail.
-  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts PWideChar into a Currency value.
+///  Supported string formats are SQLFloat, Float, Hex, Money+Suffix</summary>
+/// <param>"Value" a Pointer to an UTF16 character buffer we want to convert.</param>
+/// <param>"Def" a default value if the value can not be converted.</param>
+/// <param>"DecimalSep" DecimalSep a reference to decimal seperator to be used.
+///  We will initialize this sep with '.' or replace it if with the Sep was found</param>
+/// <param>"Result" return a converted value or Def if conversion fails.</param>
+/// <param>"Len" the length in words of the given buffer. If Len is zero the buffer should be #0 terminated.</param>
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Currency; Var DecimalSep: Char; out Result: Currency; Len: NativeUInt = 0); overload;
+
 {$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
-{** EH:
-  Converts a UTF16 buffer into double precsion value.
-  Possible is SQLFloat, Float, Hex, Money+Suffix
-  @param Value an Pointer to UTF16 data we want to convert.
-  @param Def a default value if the value can not be converted.
-  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
-  @param Result return a converted value or Def if conversion did fail.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts PWideChar into a Double float value.
+///  Supported string formats are SQLFloat, Float, Hex, Money+Suffix</summary>
+/// <param>"Value" a Pointer to an UTF16 character buffer we want to convert.</param>
+/// <param>"Def" a default value if the value can not be converted.</param>
+/// <param>"Result" return a converted value or Def if conversion fails.</param>
+/// <param>"Len" the length in words of the given buffer. If Len is zero the buffer should be #0 terminated.</param>
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Double; out Result: Double; Len: NativeUInt = 0); overload;
 {$IFEND}
-{** EH:
-  Converts a UTF16 buffer into single precsion value.
-  Possible is SQLFloat, Float, Hex, Money+Suffix
-  @param Value an Pointer to UTF16 data we want to convert.
-  @param Def a default value if the value can not be converted.
-  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
-  @param Result return a converted value or Def if conversion did fail.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts PWideChar into a Single float value.
+///  Supported string formats are SQLFloat, Float, Hex, Money+Suffix</summary>
+/// <param>"Value" a Pointer to an UTF16 character buffer we want to convert.</param>
+/// <param>"Def" a default value if the value can not be converted.</param>
+/// <param>"Result" return a converted value or Def if conversion fails.</param>
+/// <param>"Len" the length in words of the given buffer. If Len is zero the buffer should be #0 terminated.</param>
 procedure SQLStrToFloatDef(Value: PWideChar; const Def: Single; out Result: Single; Len: NativeUInt = 0); overload;
 
-{**
-  Converts a character buffer into pascal string.
-  @param Buffer a character buffer pointer.
-  @param Length a buffer length.
-  @return a string retrived from the buffer.
-}
+/// <summary>Converts a character buffer into pascal string.</summary>
+/// <param>"Buffer" a character buffer pointer.</param>
+/// <param>"Length" the buffer length.</param>
+/// <returns>a string retrived from the buffer.</returns>
 {$IFDEF UNICODE}
 function BufferToStr(Buffer: PWideChar; Length: Integer): string;
 {$ELSE}
 function BufferToStr(Buffer: PAnsiChar; Length: Integer): string;
 {$ENDIF}
 
-{**
-  Converts a character buffer into pascal string.
-  @param Buffer a character buffer pointer.
-  @param Length a buffer length.
-  @return a TBytes retrived from the buffer.
-}
+/// <summary>Converts a buffer into an array of bytes.</summary>
+/// <param>"Buffer" a buffer pointer.</param>
+/// <param>"Length" the buffer length.</param>
+/// <returns>a TBytes retrieved from the buffer.</returns>
 function BufferToBytes(Buffer: Pointer; Length: Integer): TBytes; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
-{**
-  Converts a string into boolean value.
-  @param Str a RawByteString value.
-  @param CheckInt Check for "0" char too?
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
-}
+/// <summary>Case insensitive conversion of a RawByteString into boolean value.</summary>
+/// <param>"Str" a RawByteString value to be converted.</param>
+/// <param>"CheckInt" Check for "0" char too? Default is True</param>
+/// <returns><c>True</c> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0</returns>
 function StrToBoolEx(const Str: RawByteString; const CheckInt: Boolean = True): Boolean; overload;
 
-{**
-  Converts a zero terminated raw buffer into boolean value.
-  @param Str a PAnsiChar value.
-  @param CheckInt Check for "0" char too?
-  @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Case insensitive conversion of a Raw zero terminated buffer
+///  into boolean value.</summary>
+/// <param>"Str" a RawByteString buffer to be converted.</param>
+/// <param>"CheckInt" Check for "0" char too? Default is True</param>
+/// >param>"IgnoreTrailingSaces" Ignore trailing spaces for fixed char fields f.e.
+/// <returns><c>True</c> if Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0</returns>
 function StrToBoolEx(Str: PAnsiChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
 
-{**
-  Converts a raw buffer into boolean value.
-  @param Str a PAnsiChar value.
-  @param PEnd points to the end of the buffer.
-  @param CheckInt Check for "0" char too?
-  @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Case insensitive conversion of a Raw buffer into boolean value.</summary>
+/// <param>"Buf" a RawByteString buffer to be converted.</param>
+/// <param>"PEnd" the end of then buffer. Usually the zero byte</param>
+/// <param>"CheckInt" Check for "0" char too? Default is True</param>
+/// >param>"IgnoreTrailingSaces" Ignore trailing spaces for fixed char fields f.e.
+/// <returns><c>True</c> if Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0</returns>
 function StrToBoolEx(Buf, PEnd: PAnsiChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
 
-{**
-  Converts a string into boolean value.
-  @param Str a UnicodeString value.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
-}
+/// <summary>Case insensitive conversion of a UnicodeString into boolean value.</summary>
+/// <param>"Str" a UnicodeString value to be converted.</param>
+/// <param>"CheckInt" Check for "0" char too? Default is True</param>
+/// <returns><c>True</c> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0</returns>
 function StrToBoolEx(const Str: UnicodeString; const CheckInt: Boolean = True): Boolean; overload;
 
-{**
-  Converts a zero terminated UTF16 buffer into boolean value.
-  @param Str a PWideChar value.
-  @param CheckInt Check for "0" char too?
-  @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Case insensitive conversion of a UTF16 zero terminated buffer
+///  into boolean value.</summary>
+/// <param>"Str" a UTF16 buffer to be converted.</param>
+/// <param>"CheckInt" Check for "0" char too? Default is True</param>
+/// >param>"IgnoreTrailingSaces" Ignore trailing spaces for fixed char fields f.e.
+/// <returns><c>True</c> if Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0</returns>
 function StrToBoolEx(Str: PWideChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
 
-{**
-  Converts a UTF16 buffer into boolean value.
-  @param Buf a PWideChar value.
-  @param PEnd points to the end of the buffer.
-  @param CheckInt Check for "0" char too?
-  @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Case insensitive conversion of a UTF16 buffer into boolean value.</summary>
+/// <param>"Buf" a UTF16 buffer to be converted.</param>
+/// <param>"PEnd" the end of then buffer. Usually the zero word</param>
+/// <param>"CheckInt" Check for "0" char too? Default is True</param>
+/// >param>"IgnoreTrailingSaces" Ignore trailing spaces for fixed char fields f.e.
+/// <returns><c>True</c> if Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0</returns>
 function StrToBoolEx(Buf, PEnd: PWideChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
 
-{**
-  Converts a boolean into string value.
-  @param Bool a boolean value.
-  @return <code>"True"</code> or <code>"False"</code>
-}
+/// <summary>Converts a boolean into a UnicodeString value.</summary>
+/// <param>"Value" a boolean value</param>
+/// <returns><c>"True"</c> or <c>"False"</c></returns>
 function BoolToUnicodeEx(Value: Boolean): UnicodeString; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
-{**
-  Converts a boolean into RawByteString value.
-  @param Bool a boolean value.
-  @return <code>"True"</code> or <code>"False"</code>
-}
+/// <summary>Converts a boolean into a RawByteString value.</summary>
+/// <param>"Value" a boolean value</param>
+/// <returns><c>"True"</c> or <c>"False"</c></returns>
 function BoolToRawEx(Value: Boolean): RawByteString; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
-{**
-  Converts a boolean into native string value.
-  @param Bool a boolean value.
-  @return <code>"True"</code> or <code>"False"</code>
-}
+/// <summary>Converts a boolean into a String value.</summary>
+/// <param>"Value" a boolean value</param>
+/// <returns><c>"True"</c> or <c>"False"</c></returns>
 function BoolToStrEx(Value: Boolean): string; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
 {$IFDEF ENABLE_POSTGRESQL}
-{**
-  Checks if the specified string can represent an IP address.
-  @param Str a string value.
-  @return <code>True</code> if the string can represent an IP address
-    or <code>False</code> otherwise.
-}
+/// <summary>Checks if the specified string can represent an IP address.</summary>
+/// <param>"Str" a string value.</param>
+/// <returns><c>True</c> if the string can represent an IP address
+///  or <c>False</c> otherwise.</returns>
 function IsIpAddr(const Str: string): Boolean;
 {$ENDIF}
 
-{**
-  Splits string using the multiple chars.
-  @param Str the source string
-  @param Delimiters the delimiters string
-  @return the result list where plased delimited string
-}
+/// <summary>Splits a string using the multiple chars.</summary>
+/// <param>"Str" the source string.</param>
+/// <param>"Delimiters" Str the delimiters string.</param>
+/// <returns>result list where plased delimited string.</returns>
 function SplitString(const Str, Delimiters: string): TStrings;
 
-{**
-  Puts to list a splitted string using the multiple chars which replaces
-  the previous list content.
-  @param List a list with strings.
-  @param Str the source string
-  @param Delimiters the delimiters string
-}
+/// <summary>Puts to list a splitted string using the multiple chars which
+///  replaces the previous list content.</summary>
+/// <param>"List" a list with strings.</param>
+/// <param>"Str" the source string</param>
+/// <param>"Delimiters" the delimiters string</param>
 procedure PutSplitString(List: TStrings; const Str, Delimiters: string);
 
-{**
-  Appends to list a splitted string using the multiple chars.
-  @param List a list with strings.
-  @param Str the source string
-  @param Delimiters the delimiters string
-}
+/// <summary>Appends to list a splitted string using the multiple chars.</summary>
+/// <param>"List" a list with strings.</param>
+/// <param>"Str" the source string</param>
+/// <param>"Delimiters" the delimiters string</param>
 procedure AppendSplitString(List: TStrings; const Str, Delimiters: string);
 
-{**
-  Composes a string from the specified strings list delimited with
-  a special character.
-  @param List a list of strings.
-  @param Delimiter a delimiter string.
-  @return a composed string from the list.
-}
+/// <summary>Composes a string from the specified strings list delimited with
+///  a special character.</summary>
+/// <param>"List" a list of strings.</param>
+/// <param>"Delimiter" a delimiters string.</param>
+/// <returns>a composed string from the list.</returns>
 function ComposeString(List: TStrings; const Delimiter: string): string;
 
-{**
-  Converts a float value into SQL string with '.' delimiter.
-  @param Value a float value to be converted.
-  @return a converted string value.
-}
+/// <summary>Converts a float value into SQL string with '.' decimal seperator.</summary>
+/// <param>"Value" a float value to be converted.</param>
+/// <returns>a converted string value.</returns>
 function FloatToSQLStr(Value: Extended): string;
 
-{**
-  Converts SQL string with '.' delimiter into a float value.
-  @param Str a string value to be converted.
-  @return a converted float value.
-}
+/// <summary>Converts SQL string with '.' decimal seperator into a float value.</summary>
+/// <param>"Str" a string value to be converted.</param>
+/// <returns>a converted float value.</returns>
 function SQLStrToFloat(const Str: String): Extended;
 
-{**
-  Puts to list a splitted string using the delimiter string which replaces
-  the previous list content.
-  @param List a list with strings.
-  @param Str the source string
-  @param Delimiters the delimiter string
-}
+/// <summary>Puts to list a splitted string using the delimiter string which replaces
+///  the previous list content.</summary>
+/// <param>"List" a list with strings.</param>
+/// <param>"Str" the source string</param>
+/// <param>"Delimiters" the delimiters string</param>
 procedure PutSplitStringEx(List: TStrings; const Str, Delimiter: string);
 
-{**
-  Splits string using the delimiter string.
-  @param Str the source string
-  @param Delimiters the delimiter string
-  @return the result list where plased delimited string
-}
+/// <summary>Splits string using the delimiter string.</summary>
+/// <param>"Str" the source string</param>
+/// <param>"Delimiters" the delimiters string.</param>
+/// <returns>the result list where placed delimited string.</returns>
 function SplitStringEx(const Str, Delimiter: string): TStrings;
 
-{**
-  Appends to list a splitted string using the delimeter string.
-  @param List a list with strings.
-  @param Str the source string
-  @param Delimiters the delimiters string
-}
+/// <summary>Appends to list a splitted string using the delimeter string.</summary>
+/// <param>"List" a list with strings.</param>
+/// <param>"Str" the source string</param>
+/// <param>"Delimiters" the delimiters string.</param>
+/// <returns>the result list where placed delimited string.</returns>
 procedure AppendSplitStringEx(List: TStrings; const Str, Delimiter: string);
 
-{**
-  Converts bytes into a AnsiString representation.
-  @param Value an array of bytes to be converted.
-  @return a converted AnsiString.
-}
+/// <summary>Converts bytes into a RawByteString representation.</summary>
+/// <param>"Value" an array of bytes to be converted.</param>
+/// <returns>a converted RawByteString.</returns>
 function BytesToStr(const Value: TBytes): RawByteString;
 
-{**
-  Converts a RawByteString into an array of bytes.
-  @param Value a UTF8String to be converted.
-  @return a converted array of bytes.
-}
+/// <summary>Converts a RawByteString into an array of bytes.</summary>
+/// <param>"Value" a RawByteString to be converted.</param>
+/// <returns>an array of bytes.</returns>
 function StrToBytes(const Value: RawByteString): TBytes; overload;
 
-{**
-  Converts bytes into a variant representation.
-  @param Value an array of bytes to be converted.
-  @return a converted variant.
-}
 {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
+/// <summary>Converts an array of bytes into a variant representation.</summary>
+/// <param>"Value" an array of bytes to be converted.</param>
+/// <returns>a converted variant.</returns>
 function BytesToVar(const Value: TBytes): Variant; overload;
 {$ENDIF}
+
+/// <summary>Converts the RawByteString containing bytes into a byte-array
+///  variant representation.</summary>
+/// <param>"Value" a RawByteString to be converted.</param>
+/// <returns>a byte-array converted variant.</returns>
 function BytesToVar(const Value: RawByteString): Variant; {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}overload;{$ENDIF}
 
-{**
-  Converts variant into an array of bytes.
-  @param Value a varaint to be converted.
-  @return a converted array of bytes.
-}
+/// <summary>Converts variant into an array of bytes.</summary>
+/// <param>"Value" a varaint to be converted.</param>
+/// <returns>a converted array of bytes.</returns>
 function VarToBytes(const Value: Variant): TBytes;
 
-{** EH:
-  Converts raw SQL Date (DateFormat) to TZDate value
-  We do not check if the date is valid. We just convert !numers! into the
-  Result record using the Formatstring. Valid format tokens are:
-    'Y'/'y' for the year,
-    'M'/'n' for the month's,
-    'D'/'d' for the Day.
-    The year may be negative using explicit '-' to sign as is.
-    Valid delimiters (if given) are space,minus,slash,backslash
-  @param Value a pointer to the raw encoded date string.
-  @param Len the length of the buffer
-  @param format a DateFormat string used for the convertion.
-  @param Result the record we write in.
-  @return true if the conversion was successful.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts a raw SQL Date (DateFormat) to TZDate value.
+///  We do not check if the date is valid. We just convert numbers into the
+///  Result record using the Formatstring as match pattern. Valid format tokens are:
+///  'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day.
+///  The year may be negative using explicit '-' to sign as is.
+///  Valid delimiters (if given) are ' ','-','\','/'.
+///  Long names are not supported.</summary>
+/// <param>"Value" a pointer to the raw encoded date string buffer.</param>
+/// <param>"Len" the length of the buffer.</param>
+/// <param>"Format" a DateFormat string used for the convertion.</param>
+/// <param>"Result" a reference to the TZDate-record we write in.</param>
+/// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
 function TryRawToDate(Value: PAnsiChar; Len: Cardinal;
   const Format: String; var Date: TZDate): Boolean;
 
-{** EH:
-  Converts unicode SQL Date (DateFormat) to TZDate value
-  We do not check if the date is valid. We just convert !numers! into the
-  Result record using the Formatstring. Valid format tokens are:
-    'Y'/'y' for the year,
-    'M'/'n' for the month's,
-    'D'/'d' for the Day.
-    The year may be negative using explicit '-' to sign as is.
-    Valid delimiters (if given) are space,minus,slash,backslash
-  @param Value a pointer to the UTF16 encoded date string.
-  @param Len the length of the buffer
-  @param format a DateFormat string used for the convertion.
-  @param Result the record we write in.
-  @return true if the conversion was successful.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts an UTF16 SQL Date to TZDate value.
+///  We do not check if the date is valid. We just convert numbers into the
+///  Result record using the Formatstring as match pattern. Valid format tokens are:
+///  'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day.
+///  The year may be negative using explicit '-' to sign as is.
+///  Valid delimiters (if given) are ' ','-','\','/'.
+///  Long names are not supported.</summary>
+/// <param>"Value" a pointer to the UTF16 encoded date string buffer.</param>
+/// <param>"Len" the length in words of the buffer.</param>
+/// <param>"Format" a DateFormat string used for the convertion.</param>
+/// <param>"Result" a reference to the TZDate-record we write in.</param>
+/// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
 function TryUniToDate(Value: PWideChar; Len: Cardinal;
   const Format: String; var Date: TZDate): Boolean;
 
-{** EH:
-  Converts raw SQL Time (TimeFormat) to TZTime value
-  We do not check if the time is valid. We just convert !numers! into the
-  Result record using the Formatstring. Valid format tokens are:
-    'H'/'h' for the year,
-    'M'/'n'/'N','n' for the minute,
-    'S'/'s' for the seconds.
-    '.','F','f','Z'/'z' for the Fractions.
-    The hour may be negative using explicit '-' to sign as is.
-    Valid delimiters (if given) are space,minus,slash,backslash,doubledot
-  @param Value a pointer to the raw encoded time string.
-  @param Len the length of the buffer
-  @param format a TimeFormat string used for the convertion.
-  @param Result the record we write in.
-  @return true if the conversion was successful.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts a raw SQL Date to TZTime value.
+///  We do not check if the time is valid. We just convert numbers into the
+///  Result record using the Formatstring as match pattern. Valid format tokens are:
+///  'H'/'h' for hour,'M'/'m'/'N'/'n' for minute,'S'/'s' for second, '.','F','f','Z'/'z' for fractions.
+///  The hour may be negative using explicit '-' to sign as is.
+///  Valid delimiters (if given) are ' ','-','\','/','.',':'.</summary>
+/// <param>"Value" a pointer to the raw encoded date string buffer.</param>
+/// <param>"Len" the length of the buffer.</param>
+/// <param>"Format" a TimeFormat string used for the convertion.</param>
+/// <param>"Result" a reference to the TZTime-record we write in.</param>
+/// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
 function TryRawToTime(Value: PAnsiChar; Len: Cardinal;
   const Format: String; var Time: TZTime): Boolean;
 
-{** EH:
-  Converts uniocde SQL Time (TimeFormat) to TZTime value
-  We do not check if the time is valid. We just convert !numers! into the
-  Result record using the Formatstring. Valid format tokens are:
-    'H'/'h' for the year,
-    'M'/'n'/'N','n' for the minute,
-    'S'/'s' for the seconds.
-    'Z'/'z' for the Fractions.
-    The hour may be negative using explicit '-' to sign as is.
-    Valid delimiters (if given) are space,minus,slash,backslash,dot,doubledot
-  @param Value a pointer to the UTF16 encoded time string.
-  @param Len the length of the buffer
-  @param format a TimeFormat string used for the convertion.
-  @param Result the record we write in.
-  @return true if the conversion was successful.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts an UTF16 SQL Date to TZTime value.
+///  We do not check if the time is valid. We just convert numbers into the
+///  Result record using the Formatstring as match pattern. Valid format tokens are:
+///  'H'/'h' for hour,'M'/'m'/'N'/'n' for minute,'S'/'s' for second, '.','F','f','Z'/'z' for fractions.
+///  The hour may be negative using explicit '-' to sign as is.
+///  Valid delimiters (if given) are ' ','-','\','/','.',':'.</summary>
+/// <param>"Value" a pointer to the UTF16 encoded date string buffer.</param>
+/// <param>"Len" the length in words of the buffer.</param>
+/// <param>"Format" a TimeFormat string used for the convertion.</param>
+/// <param>"Result" a reference to the TZTime-record we write in.</param>
+/// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
 function TryUniToTime(Value: PWideChar; Len: Cardinal;
   const Format: String; var Time: TZTime): Boolean;
 
-{** EH:
-  Converts raw SQL TimeStamp (TimeStampFormat) to TZTimeStamp value
-  We do not check if the time is valid. We just convert !numers! into the
-  Result record using the Formatstring. Valid format tokens are:
-    'Y'/'y' for the year,
-    'M'/'n' for the month's,
-    'D'/'d' for the Day.
-    'H'/'h' for the year,
-    'N','n' for the minute,
-    'S'/'s' for the seconds.
-    'P'/'p' for the UTC offset.
-    The year may be negative using explicit '-' to sign as is.
-    Valid delimiters (if given) are space,minus,slash,backslash,dot,doubledot
-  @param Value a pointer to the raw encoded string.
-  @param Len the length of the buffer
-  @param format a TimeStampFormat string used for the convertion.
-  @param Result the record we write in.
-  @return true if the conversion was successful.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts a raw SQL TimeStamp to TZTimeStamp value.
+///  We do not check if the timestamp is valid. We just convert numbers into the
+///  Result record using the Formatstring as match pattern. Valid format tokens are:
+///  'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day, 'H'/'h' for hour,
+///  'N'/'n' for minute, 'S'/'s' for second, '.','F','f','Z'/'z' for fractions,
+///  'P'/'p' for the UTC offset. The year may be negative using explicit '-' to
+///  sign as is. Valid delimiters (if given) are ' ','-','\','/','.',':'.</summary>
+/// <param>"Value" a pointer to the raw encoded date string buffer.</param>
+/// <param>"Len" the length in bytes of the buffer.</param>
+/// <param>"Format" a Timestamp-Format string used for the convertion.</param>
+/// <param>"Result" a reference to the TZTimeStamp-record we write in.</param>
+/// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
 function TryRawToTimeStamp(Value: PAnsiChar; Len: Cardinal;
   const Format: String; var TimeStamp: TZTimeStamp): Boolean;
 
-{** EH:
-  Converts unicode SQL TimeStamp (TimeStampFormat) to TZTimeStamp value
-  We do not check if the time is valid. We just convert !numers! into the
-  Result record using the Formatstring. Valid format tokens are:
-    'Y'/'y' for the year,
-    'M'/'n' for the month's,
-    'D'/'d' for the Day.
-    'H'/'h' for the year,
-    'N','n' for the minute,
-    'S'/'s' for the seconds.
-    'Z'/'z' for the Fractions.
-    'P'/'p' for the UTC offset.
-    The year may be negative using explicit '-' to sign as is.
-    Valid delimiters (if given) are space,minus,slash,backslash,dot,doubledot
-  @param Value a pointer to the UTF16 encoded string.
-  @param Len the length of the buffer
-  @param format a TimeStampFormat string used for the convertion.
-  @param Result the record we write in.
-  @return true if the conversion was successful.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts an UTF16 SQL TimeStamp to TZTimeStamp value.
+///  We do not check if the timestamp is valid. We just convert numbers into the
+///  Result record using the Formatstring as match pattern. Valid format tokens are:
+///  'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day, 'H'/'h' for hour,
+///  'N'/'n' for minute, 'S'/'s' for second, '.','F','f','Z'/'z' for fractions,
+///  'P'/'p' for the UTC offset. The year may be negative using explicit '-' to
+///  sign as is. Valid delimiters (if given) are ' ','-','\','/','.',':'.</summary>
+/// <param>"Value" a pointer to the UTF16 encoded date string buffer.</param>
+/// <param>"Len" the length in words of the buffer.</param>
+/// <param>"Format" a Timestamp-Format string used for the convertion.</param>
+/// <param>"Result" a reference to the TZTimeStamp-record we write in.</param>
+/// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
 function TryUniToTimeStamp(Value: PWideChar; Len: Cardinal;
   const Format: String; var TimeStamp: TZTimeStamp): Boolean;
 
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Trys to converts a TZDate-Value into a pascal TDateTime representation</summary>
+/// <param>"Value" a TZDate value to be converted.</param>
+/// <param>"DT" a reference to the TDateTime-Value we try to convert in.</param>
+/// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
 function TryDateToDateTime(const Value: TZDate; var DT: TDateTime): Boolean;
+
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Trys to converts a TZTime-Value into a pascal TDateTime representation</summary>
+/// <param>"Value" a TZTime value to be converted.</param>
+/// <param>"DT" a reference to the TDateTime-Value we try to convert in.</param>
+/// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
 function TryTimeToDateTime(const Value: TZTime; var DT: TDateTime): Boolean;
+
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Trys to converts a TZTimeStamp-Value into a pascal TDateTime representation</summary>
+/// <param>"Value" a TZTimeStamp value to be converted.</param>
+/// <param>"DT" a reference to the TDateTime-Value we try to convert in.</param>
+/// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
 function TryTimeStampToDateTime(const Value: TZTimeStamp; var DT: TDateTime): Boolean;
 
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Decodes a pascal TDateTime vlaue into the TZDate reprensentation/summary>
+/// <param>"Value" a TDateTime value to be converted.</param>
+/// <param>"Date" a reference to the TZDate-Value we decode in.</param>
 procedure DecodeDateTimeToDate(const Value: TDateTime; var Date: TZDate);
+
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Decodes a pascal TDateTime vlaue into the TZTime reprensentation/summary>
+/// <param>"Value" a TDateTime value to be converted.</param>
+/// <param>"Time" a reference to the TZTime-Value we decode in.</param>
 procedure DecodeDateTimeToTime(const Value: TDateTime; var Time: TZTime);
+
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Decodes a pascal TDateTime vlaue into the TZTimeStamp reprensentation/summary>
+/// <param>"Value" a TDateTime value to be converted.</param>
+/// <param>"TimeStamp" a reference to the TZTimeStamp-Value we decode in.</param>
 procedure DecodeDateTimeToTimeStamp(const Value: TDateTime; var TimeStamp: TZTimeStamp);
 
+/// <Autor>EgonHugeist</Autor>
+/// <summary>converts a TZTime-Value into the TZTimeStamp reprensentation/summary>
+/// <param>"Time" a TZTime value to be converted.</param>
+/// <param>"TS" a reference to the TZTimeStamp-Value we convert in.</param>
 procedure TimeStampFromTime(const Time: TZTime; var TS: TZTimeStamp);
+
+/// <Autor>EgonHugeist</Autor>
+/// <summary>converts a TZDate-Value into the TZTimeStamp reprensentation/summary>
+/// <param>"Date" a TZDate value to be converted.</param>
+/// <param>"TS" a reference to the TZTimeStamp-Value we convert in.</param>
 procedure TimeStampFromDate(const Date: TZDate; var TS: TZTimeStamp);
 
+/// <Autor>EgonHugeist</Autor>
+/// <summary>converts a TZTimeStamp-Value into the TZTime reprensentation/summary>
+/// <param>"TS" a TZTimeStamp value to be converted.</param>
+/// <param>"Time" a reference to the TZTime-Value we convert in.</param>
 procedure TimeFromTimeStamp(const TS: TZTimeStamp; var Time: TZTime);
+
+/// <Autor>EgonHugeist</Autor>
+/// <summary>converts a TZTimeStamp-Value into the TZDate reprensentation/summary>
+/// <param>"TS" a TZTimeStamp value to be converted.</param>
+/// <param>"Date" a reference to the TZDate-Value we convert in.</param>
 procedure DateFromTimeStamp(const TS: TZTimeStamp; var Date: TZDate);
 
+/// <Autor>EgonHugeist</Autor>
+/// <summary>compares two pascal TDateTime-Values/summary>
+/// <param>"Value1" the first value to be compared.</param>
+/// <param>"Value2" the second value to be compared.</param>
+/// <returns><c>0</c> if both values are equal, -1 if Value1 is less than Value2,
+///  1 otherwise</returns>
 function ZCompareDateTime(const Value1, Value2: TDateTime): Integer;
+
+/// <Autor>EgonHugeist</Autor>
+/// <summary>compares two TZDate-Values/summary>
+/// <param>"Value1" the first value to be compared.</param>
+/// <param>"Value2" the second value to be compared.</param>
+/// <returns><c>0</c> if both values are equal, -1 if Value1 is less than Value2,
+///  1 otherwise</returns>
 function ZCompareDate(const Value1, Value2: TZDate): Integer;
+
+/// <Autor>EgonHugeist</Autor>
+/// <summary>compares two TZTime-Values/summary>
+/// <param>"Value1" the first value to be compared.</param>
+/// <param>"Value2" the second value to be compared.</param>
+/// <returns><c>0</c> if both values are equal, -1 if Value1 is less than Value2,
+///  1 otherwise</returns>
 function ZCompareTime(const Value1, Value2: TZTime): Integer;
+
+/// <Autor>EgonHugeist</Autor>
+/// <summary>compares two TZTimeStamp-Values/summary>
+/// <param>"Value1" the first value to be compared.</param>
+/// <param>"Value2" the second value to be compared.</param>
+/// <returns><c>0</c> if both values are equal, -1 if Value1 is less than Value2,
+///  1 otherwise</returns>
 function ZCompareTimeStamp(const Value1, Value2: TZTimeStamp): Integer;
 
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Trys to convert a character buffer into a TZDate-representation
+///  We do not check if the date is valid. We just convert numbers into the
+///  Result record using the TZFormatSettings as match pattern. Valid format tokens are:
+///  'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day.
+///  The year may be negative using explicit '-' to sign as is.
+///  Valid delimiters (if given) are ' ','-','\','/'.
+///  Long names are not supported. If conversion fails, a second approach using
+///  ISO8601 format is made</summary>
+/// <param>"P" the pointer to a raw encoded buffer to be converted.</param>
+/// <param>"Len" the length of the buffer.</param>
+/// <param>"FormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"Date" a reference to the TZDate-record we write in.</param>
+/// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
 function TryPCharToDate(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var Date: TZDate): Boolean; overload;
+
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Trys to convert a character buffer into a TZDate-representation
+///  We do not check if the date is valid. We just convert numbers into the
+///  Result record using the TZFormatSettings as match pattern. Valid format tokens are:
+///  'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day.
+///  The year may be negative using explicit '-' to sign as is.
+///  Valid delimiters (if given) are ' ','-','\','/'. Long names are not supported.
+///  If conversion fails, a second approach using ISO8601 format is performed</summary>
+/// <param>"P" the pointer to a UTF16 encoded buffer to be converted.</param>
+/// <param>"Len" the length in words of the buffer.</param>
+/// <param>"FormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"Date" a reference to the TZDate-record we write in.</param>
+/// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
 function TryPCharToDate(P: PWideChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var Date: TZDate): Boolean; overload;
+
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts a raw SQL Time to TZTime value.
+///  We do not check if the time is valid. We just convert numbers into the
+///  Result record using the Formatstring as match pattern. Valid format tokens are:
+///  'H'/'h' for hour,'M'/'m'/'N'/'n' for minute,'S'/'s' for second, '.','F','f','Z'/'z' for fractions.
+///  The hour may be negative using explicit '-' to sign as is.
+///  Valid delimiters (if given) are ' ','-','\','/','.',':'. If conversion
+///  fails, a second approach using ISO8601 format is performed</summary>
+/// <param>"P" a pointer to the raw encoded time string buffer.</param>
+/// <param>"Len" the length of the buffer.</param>
+/// <param>"Format" a TimeFormat string used for the convertion.</param>
+/// <param>"Result" a reference to the TZTime-record we write in.</param>
+/// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise.</returns>
 function TryPCharToTime(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var Time: TZTime): Boolean; overload;
+
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Converts a UTF16 SQL Time to TZTime value.
+///  We do not check if the time is valid. We just convert numbers into the
+///  Result record using the Formatstring as match pattern. Valid format tokens are:
+///  'H'/'h' for hour,'M'/'m'/'N'/'n' for minute,'S'/'s' for second, '.','F','f','Z'/'z' for fractions.
+///  The hour may be negative using explicit '-' to sign as is.
+///  Valid delimiters (if given) are ' ','-','\','/','.',':'. If conversion
+///  fails, a second approach using ISO8601 format is performed</summary>
+/// <param>"P" a pointer to the UTF16 encoded time string buffer.</param>
+/// <param>"Len" the length in words of the buffer.</param>
+/// <param>"Format" a TimeFormat string used for the convertion.</param>
+/// <param>"Result" a reference to the TZTime-record we write in.</param>
+/// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise.</returns>
 function TryPCharToTime(P: PWideChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var Time: TZTime): Boolean; overload;
+
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Try to converts a raw SQL TimeStamp to TZTimeStamp value.
+///  We do not check if the timestamp is valid. We just convert numbers into the
+///  Result record using the Formatstring as match pattern. Valid format tokens are:
+///  'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day, 'H'/'h' for hour,
+///  'N'/'n' for minute, 'S'/'s' for second, '.','F','f','Z'/'z' for fractions,
+///  'P'/'p' for the UTC offset. The year may be negative using explicit '-' to
+///  sign as is. Valid delimiters (if given) are ' ','-','\','/','.',':'. If
+///  conversion fails, a second approach using ISO8601 format is performed</summary>
+/// <param>"P" a pointer to the raw encoded timestamp string buffer.</param>
+/// <param>"Len" the length in bytes of the buffer.</param>
+/// <param>"Format" a Timestamp-Format string used for the convertion.</param>
+/// <param>"Result" a reference to the TZTimeStamp-record we write in.</param>
+/// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
 function TryPCharToTimeStamp(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var TimeStamp: TZTimeStamp): Boolean; overload;
+
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Try to converts a UTF16 SQL TimeStamp to TZTimeStamp value.
+///  We do not check if the timestamp is valid. We just convert numbers into the
+///  Result record using the Formatstring as match pattern. Valid format tokens are:
+///  'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day, 'H'/'h' for hour,
+///  'N'/'n' for minute, 'S'/'s' for second, '.','F','f','Z'/'z' for fractions,
+///  'P'/'p' for the UTC offset. The year may be negative using explicit '-' to
+///  sign as is. Valid delimiters (if given) are ' ','-','\','/','.',':'. If
+///  conversion fails, a second approach using ISO8601 format is performed</summary>
+/// <param>"P" a pointer to the UTF16 encoded timestamp string buffer.</param>
+/// <param>"Len" the length in words of the buffer.</param>
+/// <param>"Format" a Timestamp-Format string used for the convertion.</param>
+/// <param>"Result" a reference to the TZTimeStamp-record we write in.</param>
+/// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
 function TryPCharToTimeStamp(P: PWideChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var TimeStamp: TZTimeStamp): Boolean; overload;
+
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Try to converts a raw SQL TimeStamp to pascal TDateTime value.
+///  We do not check if the timestamp is valid. We just convert numbers into the
+///  Result record using the Formatstring as match pattern. Valid format tokens are:
+///  'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day, 'H'/'h' for hour,
+///  'N'/'n' for minute, 'S'/'s' for second, '.','F','f','Z'/'z' for fractions,
+///  'P'/'p' for the UTC offset. The year may be negative using explicit '-' to
+///  sign as is. Valid delimiters (if given) are ' ','-','\','/','.',':'. If
+///  conversion fails, a second approach using ISO8601 format is performed</summary>
+/// <param>"P" a pointer to the raw encoded timestamp string buffer.</param>
+/// <param>"Len" the length in bytes of the buffer.</param>
+/// <param>"Format" a Timestamp-Format string used for the convertion.</param>
+/// <param>"Result" a reference to the TDateTime value we write in.</param>
+/// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
 function TryPCharToDateTime(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var DateTime: TDateTime): Boolean; overload;
+
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Try to converts a UTF16 SQL TimeStamp to pascal TDateTime value.
+///  We do not check if the timestamp is valid. We just convert numbers into the
+///  Result record using the Formatstring as match pattern. Valid format tokens are:
+///  'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day, 'H'/'h' for hour,
+///  'N'/'n' for minute, 'S'/'s' for second, '.','F','f','Z'/'z' for fractions,
+///  'P'/'p' for the UTC offset. The year may be negative using explicit '-' to
+///  sign as is. Valid delimiters (if given) are ' ','-','\','/','.',':'. If
+///  conversion fails, a second approach using ISO8601 format is performed</summary>
+/// <param>"P" a pointer to the UTF16 encoded timestamp string buffer.</param>
+/// <param>"Len" the length in words of the buffer.</param>
+/// <param>"Format" a Timestamp-Format string used for the convertion.</param>
+/// <param>"Result" a reference to the TDateTime value we write in.</param>
+/// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
 function TryPCharToDateTime(P: PWideChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var DateTime: TDateTime): Boolean; overload;
 
-{**
-  Converts Ansi SQL Date/Time to TDateTime
-  @param Value a date and time string.
-  @return a decoded TDateTime value.
-}
+/// <summary>Converts an ISO8601 formated String into a pascal TDateTime value.</summary>
+/// <param>"Value" a UnicodeString to be converted.</param>
+/// <returns>a converted value or zero if conversion fails.</returns>
 function AnsiSQLDateToDateTime(const Value: UnicodeString): TDateTime; overload;
+
+/// <summary>Converts an ISO8601 formated String into a pascal TDateTime value.</summary>
+/// <param>"P" a pointer to a UTF16 buffer to be converted.</param>
+/// <param>"L" the length in words of the buffer.</param>
+/// <returns>a converted value or zero if conversion fails.</returns>
 function AnsiSQLDateToDateTime(P: PWideChar; L: LengthInt): TDateTime; overload;
+
+/// <summary>Converts an ISO8601 formated String into a pascal TDateTime value.</summary>
+/// <param>"Value" a RawByteString to be converted.</param>
+/// <returns>a converted value or zero if conversion fails.</returns>
 function AnsiSQLDateToDateTime(const Value: RawByteString): TDateTime; overload;
+
+/// <summary>Converts an ISO8601 formated String into a pascal TDateTime value.</summary>
+/// <param>"P" a pointer to a raw encoded buffer to be converted.</param>
+/// <param>"L" the length in bytes of the buffer.</param>
+/// <returns>a converted value or zero if conversion fails.</returns>
 function AnsiSQLDateToDateTime(P: PAnsiChar; L: LengthInt): TDateTime; overload;
 
-{** EH:
-  Converts DateTime value into a raw encoded string with format pattern
-  @param Value a TDateTime value.
-  @param ConFormatSettings then DateFormat settings of the result.
-  @param Quoted if the result should be quoted.
-  @param Suffix a suffix string which can be appendened to the result String
-    i.e. Postgres ::date.
-  @return a formated RawByteString with Date-Format pattern.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Convert a pascal TDateTime value into a string. Valid format tokens
+///  are: 'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day.
+///  Valid delimiters (if given) are ' ','-','\','/'.
+///  Long names are not supported.</summary>
+/// <param>"Value" the value to be converted.</param>
+/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"Quoted" if the result should be quoted with a #39 char.</param>
+/// <param>"Suffix" ia suffix string which can be appendened to the result
+///  String i.e. Postgres ::date.</param>
+/// <returns>a formated RawByteString in Date-Format pattern</returns>
 function DateTimeToRawSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString; overload;
 
-{** EH:
-  Converts DateTime value into a raw buffer with format pattern
-  @param Value a TDateTime value.
-  @param Buf the raw buffer to write in.
-  @param ConFormatSettings then DateFormat settings of the result.
-  @param Quoted if the result should be quoted.
-  @param Suffix a suffix string which can be appendened to the result String
-    i.e. Postgres ::date.
-  @return the length in bytes of written value.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Convert a pascal TDateTime value into a string buffer. Valid format
+///  tokens are: 'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day.
+///  Valid delimiters (if given) are ' ','-','\','/'.
+///  Long names are not supported.</summary>
+/// <param>"Value" the value to be converted.</param>
+/// <param>"Buf" the raw buffer we write in.</param>
+/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"Quoted" if the result should be quoted with a #39 char.</param>
+/// <param>"Suffix" ia suffix string which can be appendened to the result
+///  String i.e. Postgres ::date.</param>
+/// <returns>the length in bytes of written value.</returns>
 function DateTimeToRawSQLDate(const Value: TDateTime; Buf: PAnsichar;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): Word; overload;
 
-{** EH:
-  Converts date values into a buffer with format pattern
-  We don't take care for the ranges of the Values. That's users turn to do!
-  I'm aware year/month/day with value 0 do not exist but MySQL f.e. allows it!
-  @param Year a Year value with range of 0..9999.
-  @param Month a Month value with range of 0..12.
-  @param Day a Day value with range of 0..31.
-  @param Buf a raw buffer we write in.
-  @param Format the !valid! result format.
-  @param Quoted if the result should be quoted.
-  @param Negative if the date is negative (i.e. bc).
-  @return the length in bytes of written value.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Convert a Year, Month, Day values into a string buffer. Valid format
+///  tokens are: 'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day.
+///  Valid delimiters (if given) are ' ','-','\','/'.
+///  Long names are not supported.</summary>
+/// <param>"Year" the year of the date string.</param>
+/// <param>"Month" the month of the date string.</param>
+/// <param>"Day" the day of the date string.</param>
+/// <param>"Buf" the raw buffer we write in.</param>
+/// <param>"Format" the format template</param>
+/// <param>"Quoted" if the result should be quoted with a #39 char.</param>
+/// <param>"Neagtive" if the year is negative.</param>
+/// <returns>the length in bytes of written value.</returns>
 function DateToRaw(Year, Month, Day: Word; Buf: PAnsichar;
   const Format: String; Quoted, Negative: Boolean): Byte;
 
@@ -1512,14 +1648,6 @@ begin
   end;
 end;
 
-{** EH:
-  Converts SQL PAnsiChar into float value.
-  Possible is SQLFloat, Float, Hex, Money+Suffix
-  @param Value an Pointer to raw data we want to convert.
-  @param Def a default value if the value can not be converted.
-  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
-  @return a converted value or Def if conversion did fail.
-}
 function SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended;
   Len: NativeUInt = 0): Extended;
 begin
@@ -1596,14 +1724,6 @@ Fail:
   Result := False;
 end;
 
-{** EH:
-  Converts SQL PAnsiChar into float value.
-  Possible is SQLFloat, Float, Hex, Money+Suffix
-  @param Value an Pointer to raw data we want to convert.
-  @param Def a default value if the value can not be converted.
-  @param Len the length of the buffer. If Len is zero we the buffer should be #0 terminated.
-  @param Result return a converted value or Def if conversion did fail.
-}
 procedure SQLStrToFloatDef(Value: PAnsiChar; const Def: Extended;
   out Result: Extended; Len: NativeUInt);
 var
@@ -1755,13 +1875,6 @@ begin
   end;
 end;
 
-{**
-  Converts SQL Unicode String into float value.
-  Possible is SQLFloat, Float, Hex, Money+Suffix and ThousandSeparators
-  @param Str an SQL AnsiString/RawByteString with comma or dot delimiter.
-  @param Def a default value if the string can not be converted.
-  @return a converted value or Def if conversion was failt.
-}
 function SQLStrToFloatDef(Value: PWideChar; const Def: Extended;
   Len: NativeUInt = 0): Extended;
 begin
@@ -2014,7 +2127,6 @@ begin
   end;
 end;
 
-{ Convert string buffer into pascal string }
 {$IFDEF UNICODE}
 function BufferToStr(Buffer: PWideChar; Length: Integer): string;
 {$ELSE}
@@ -2033,23 +2145,11 @@ begin
   {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Buffer^, Pointer(Result)^, Length);
 end;
 
-{**
-  Converts a string into boolean value.
-  @param Str a RawByteString value.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
-}
 function StrToBoolEx(const Str: RawByteString; const CheckInt: Boolean = True): Boolean;
 begin
   Result := StrToBoolEx(PAnsiChar(Pointer(Str)), CheckInt, False);
 end;
 
-{**
-  Converts a string into boolean value.
-  @param Str a PAnsiChar value.
-  @param CheckInt Check for "0" char too?
-  @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
-}
 function StrToBoolEx(Str: PAnsiChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean;
 label SkipSpaces;
@@ -2098,14 +2198,6 @@ SkipSpaces: while PByte(Str)^ = Ord(' ') do Inc(Str);
     end;
 end;
 
-{**
-  Converts a string into boolean value.
-  @param Buf the raw string buffer.
-  @param PEnd the end of the string buffer, might be a trailing #0 term.
-  @param CheckInt Check for "0" char too?
-  @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
-}
 function StrToBoolEx(Buf, PEnd: PAnsiChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
 var P: PAnsiChar;
@@ -2136,23 +2228,11 @@ begin
   end;
 end;
 
-{**
-  Converts a string into boolean value.
-  @param Str a UnicodeString value.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
-}
 function StrToBoolEx(const Str: UnicodeString; const CheckInt: Boolean = True): Boolean;
 begin
   Result := StrToBoolEx(PWideChar(Pointer(Str)), CheckInt, False);
 end;
 
-{**
-  Converts a string into boolean value.
-  @param Str a PWideChar value.
-  @param CheckInt Check for "0" char too?
-  @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
-}
 function StrToBoolEx(Str: PWideChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean;
 label SkipSpaces;
@@ -2201,14 +2281,6 @@ SkipSpaces: while PWord(Str)^ = Ord(' ') do Inc(Str);
     end;
 end;
 
-{**
-  Converts a string into boolean value.
-  @param Buf the usc2 string buffer.
-  @param PEnd the end of the string buffer, might be a trailing #0 term.
-  @param CheckInt Check for "0" char too?
-  @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
-  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/'ON'/<>0
-}
 function StrToBoolEx(Buf, PEnd: PWideChar; const CheckInt: Boolean = True;
   const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
 var P: PWideChar;
@@ -2239,43 +2311,22 @@ begin
   end;
 end;
 
-{**
-  Converts a boolean into string value.
-  @param Bool a boolean value.
-  @return <code>"True"</code> or <code>"False"</code>
-}
 function BoolToUnicodeEx(Value: Boolean): UnicodeString;
 begin
   Result := BoolStrsW[Value];
 end;
 
-{**
-  Converts a boolean into string value.
-  @param Bool a boolean value.
-  @return <code>"True"</code> or <code>"False"</code>
-}
 function BoolToRawEx(Value: Boolean): RawByteString;
 begin
   Result := BoolStrsRaw[Value];
 end;
 
-{**
-  Converts a boolean into native string value.
-  @param Bool a boolean value.
-  @return <code>"True"</code> or <code>"False"</code>
-}
 function BoolToStrEx(Value: Boolean): string;
 begin
   Result := BoolStrs[Value];
 end;
 
 {$IFDEF ENABLE_POSTGRESQL}
-{**
-  Checks if the specified string can represent an IP address.
-  @param Str a string value.
-  @return <code>True</code> if the string can represent an IP address
-    or <code>False</code> otherwise.
-}
 function IsIpAddr(const Str: string): Boolean;
 LAbel LExit;
 var
@@ -2356,12 +2407,6 @@ begin
     List.Add(Str);
 end;*)
 
-{**
-  Splits string using the multiple chars.
-  @param Str the source string
-  @param Delimiters the delimiters string
-  @return the result list where plased delimited string
-}
 function SplitString(const Str, Delimiters: string): TStrings;
 begin
   Result := TStringList.Create;
@@ -2373,37 +2418,17 @@ begin
   end;
 end;
 
-{**
-  Puts to list a splitted string using the multiple chars which replaces
-  the previous list content.
-  @param List a list with strings.
-  @param Str the source string
-  @param Delimiters the delimiters string
-}
 procedure PutSplitString(List: TStrings; const Str, Delimiters: string);
 begin
   List.Clear;
   SplitToStringList(List, Str, Delimiters);
 end;
 
-{**
-  Appends to list a splitted string using the multiple chars.
-  @param List a list with strings.
-  @param Str the source string
-  @param Delimiters the delimiters string
-}
 procedure AppendSplitString(List: TStrings; const Str, Delimiters: string);
 begin
   SplitToStringList(List, Str, Delimiters);
 end;
 
-{**
-  Composes a string from the specified strings list delimited with
-  a special character.
-  @param List a list of strings.
-  @param Delimiter a delimiter string.
-  @return a composed string from the list.
-}
 function ComposeString(List: TStrings; const Delimiter: string): string;
 var
   i, Len, DelimLen: Integer;
@@ -2412,8 +2437,7 @@ var
 begin
   DelimLen := Length(Delimiter);
   Len := 0;
-  if List.Count > 0 then
-  begin
+  if List.Count > 0 then begin
     Inc(Len, Length(List[0]));
     for i := 1 to List.Count - 1 do
       Inc(Len, DelimLen + Length(List[i]));
@@ -2421,28 +2445,20 @@ begin
   {$IFDEF FPC}Result := '';{$ENDIF}
   SetLength(Result, Len);
   P := Pointer(Result);
-  for i := 0 to List.Count - 1 do
-  begin
-    if (i > 0) and (DelimLen > 0) then
-    begin
+  for i := 0 to List.Count - 1 do begin
+    if (i > 0) and (DelimLen > 0) then begin
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Delimiter)^, P^, DelimLen * SizeOf(Char));
       Inc(P, DelimLen);
     end;
     S := List[i];
     Len := Length(S);
-    if Len > 0 then
-    begin
+    if Len > 0 then begin
       {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(S)^, P^, Len * SizeOf(Char));
       Inc(P, Len);
     end;
   end;
 end;
 
-{**
-  Converts a float value into SQL string with '.' delimiter.
-  @param Value a float value to be converted.
-  @return a converted string value.
-}
 function FloatToSQLStr(Value: Extended): string;
 begin
   Result := FloatToStr(Value, FmtSettFloatDot);
@@ -2507,12 +2523,6 @@ begin
   SplitToStringListEx(List, Str, Delimiter);
 end;
 
-{**
-  Splits string using the delimiter string.
-  @param Str the source string
-  @param Delimiters the delimiter string
-  @return the result list where plased delimited string
-}
 function SplitStringEx(const Str, Delimiter: string): TStrings;
 begin
   Result := TStringList.Create;
@@ -2524,22 +2534,11 @@ begin
   end;
 end;
 
-{**
-  Appends to list a splitted string using the delimeter string.
-  @param List a list with strings.
-  @param Str the source string
-  @param Delimiters the delimiters string
-}
 procedure AppendSplitStringEx(List: TStrings; const Str, Delimiter: string);
 begin
   SplitToStringListEx(List, Str, Delimiter);
 end;
 
-{**
-  Converts bytes into a AnsiString representation.
-  @param Value an array of bytes to be converted.
-  @return a converted AnsiString.
-}
 function BytesToStr(const Value: TBytes): RawByteString;
 {$IF defined(MISS_RBS_SETSTRING_OVERLOAD) and not defined(WITH_TBYTES_AS_RAWBYTESTRING)}
 var L: Integer;
@@ -2559,11 +2558,6 @@ begin
   {$ENDIF}
 end;
 
-{**
-  Converts a RawByteString into an array of bytes.
-  @param Value a RawByteString to be converted.
-  @return a converted array of bytes.
-}
 function StrToBytes(const Value: RawByteString): TBytes;
 var L: Integer;
 begin
@@ -2574,11 +2568,6 @@ begin
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Result)^, L);
 end;
 
-{**
-  Converts bytes into a variant representation.
-  @param Value an array of bytes to be converted.
-  @return a converted variant.
-}
 function BytesToVar(const Value: TBytes): Variant;
 var
   I: Integer;
@@ -2603,11 +2592,6 @@ begin
 end;
 {$ENDIF WITH_TBYTES_AS_RAWBYTESTRING}
 
-{**
-  Converts variant into an array of bytes.
-  @param Value a varaint to be converted.
-  @return a converted array of bytes.
-}
 function VarToBytes(const Value: Variant): TBytes;
 var
   I: Integer;
@@ -2622,23 +2606,6 @@ begin
     Result[I] := Value[I];
 end;
 
-{**
-  Converts Ansi SQL Date (DateFormat) to TZDate
-  We do not check if the date is valid. We just convert the numers into the
-  Result record using the Formatstring. Valid format tokens are:
-    'Y'/'y' for the year,
-    'M'/'n' for the month's,
-    'D'/'d' for the Day.
-    The year may be negative using explicit '-' to sign as is.
-    Valid delimiters (if given) are space,minus,slash,backslash
-  We do not check if the date is valid. We just try convert the numers into the
-  result record using the format-string.
-  @param Value a pointer to the raw encoded date string.
-  @param Len the length of the buffer
-  @param Dateformat a DateFormat string used for the convertion.
-  @param Result the record we write in.
-  @return @return <code>True</code> if the conversion was successful.
-}
 function TryRawToDate(Value: PAnsiChar; Len: Cardinal;
   const Format: String; var Date: TZDate): Boolean;
 var VEnd: PAnsiChar;
@@ -2694,21 +2661,6 @@ Next:   Inc(Value);
   Result := True;
 end;
 
-{** EH:
-  Converts raw SQL Date (DateFormat) to TZDate value
-  We do not check if the date is valid. We just convert the numers into the
-  Result record using the Formatstring. Valid format tokens are:
-    'Y'/'y' for the year,
-    'M'/'n' for the month's,
-    'D'/'d' for the Day.
-    The year may be negative using explicit '-' to sign as is.
-    Valid delimiters (if given) are space,minus,slash,backslash
-  @param Value a pointer to the raw encoded date string.
-  @param Len the length of the buffer
-  @param Dateformat a DateFormat string used for the convertion.
-  @param Result the record we write in.
-  @return true if the conversion was successful.
-}
 function TryUniToDate(Value: PWideChar; Len: Cardinal;
   const Format: String; var Date: TZDate): Boolean;
 var VEnd: PWideChar;
@@ -2763,22 +2715,6 @@ IncF:   Inc(PF);
   Result := True;
 end;
 
-{** EH:
-  Converts raw SQL Time (TimeFormat) to TZTime value
-  We do not check if the time is valid. We just convert the numers into the
-  Result record using the Formatstring. Valid format tokens are:
-    'H'/'h' for the year,
-    'M'/'n'/'N','n' for the minute,
-    'S'/'s' for the seconds.
-    'Z'/'z' for the Fractions.
-    The hour may be negative using explicit '-' to sign as is.
-    Valid delimiters (if given) are space,minus,slash,backslash,doubledot
-  @param Value a pointer to the raw encoded time string.
-  @param Len the length of the buffer
-  @param timeformat a TimeFormat string used for the convertion.
-  @param Result the record we write in.
-  @return true if the conversion was successful.
-}
 function TryRawToTime(Value: PAnsiChar; Len: Cardinal;
   const Format: String; var Time: TZTime): Boolean;
 var VEnd, PFDot: PAnsiChar;
@@ -2870,22 +2806,6 @@ zFlush: Inc(Value);
   Result := True;
 end;
 
-{** EH:
-  Converts uniocde SQL Time (TimeFormat) to TZTime value
-  We do not check if the time is valid. We just convert !numers! into the
-  Result record using the Formatstring. Valid format tokens are:
-    'H'/'h' for the year,
-    'M'/'n'/'N','n' for the minute,
-    'S'/'s' for the seconds.
-    'Z'/'z' for the Fractions.
-    The hour may be negative using explicit '-' to sign as is.
-    Valid delimiters (if given) are space,minus,slash,backslash,doubledot
-  @param Value a pointer to the UTF16 encoded time string.
-  @param Len the length of the buffer
-  @param timeformat a TimeFormat string used for the convertion.
-  @param Result the record we write in.
-  @return true if the conversion was successful.
-}
 function TryUniToTime(Value: PWideChar; Len: Cardinal;
   const Format: String; var Time: TZTime): Boolean;
 var VEnd, PFDot: PWideChar;
@@ -2978,26 +2898,6 @@ zFlush: Inc(Value);
   Result := True;
 end;
 
-{** EH:
-  Converts raw SQL TimeStamp (TimeStampFormat) to TZTimeStamp value
-  We do not check if the time is valid. We just convert !numers! into the
-  Result record using the Formatstring. Valid format tokens are:
-    'Y'/'y' for the year,
-    'M'/'n' for the month's,
-    'D'/'d' for the Day.
-    'H'/'h' for the year,
-    'N','n' for the minute,
-    'S'/'s' for the seconds.
-    'Z'/'z' for the Fractions.
-    'P'/'p' for the UTC offset.
-    The year may be negative using explicit '-' to sign as is.
-    Valid delimiters (if given) are space,minus,slash,backslash,dot,doubledot
-  @param Value a pointer to the raw encoded string.
-  @param Len the length of the buffer
-  @param format a TimeStampFormat string used for the convertion.
-  @param Result the record we write in.
-  @return true if the conversion was successful.
-}
 function TryRawToTimeStamp(Value: PAnsiChar; Len: Cardinal;
   const Format: String; var TimeStamp: TZTimeStamp): Boolean;
 var VEnd{End of value +1}, PTZ{remander of TimeZone sign},
@@ -3123,26 +3023,6 @@ zFlush: Inc(Value);
   Result := True;
 end;
 
-{** EH:
-  Converts unicode SQL TimeStamp (TimeStampFormat) to TZTimeStamp value
-  We do not check if the time is valid. We just convert !numers! into the
-  Result record using the Formatstring. Valid format tokens are:
-    'Y'/'y' for the year,
-    'M'/'n' for the month's,
-    'D'/'d' for the Day.
-    'H'/'h' for the year,
-    'N','n' for the minute,
-    'S'/'s' for the seconds.
-    'Z'/'z' for the Fractions.
-    'P'/'p' for the UTC offset.
-    The year may be negative using explicit '-' to sign as is.
-    Valid delimiters (if given) are space,minus,slash,backslash,dot,doubledot
-  @param Value a pointer to the UTF16 encoded string.
-  @param Len the length of the buffer
-  @param format a TimeStampFormat string used for the convertion.
-  @param Result the record we write in.
-  @return true if the conversion was successful.
-}
 function TryUniToTimeStamp(Value: PWideChar; Len: Cardinal;
   const Format: String; var TimeStamp: TZTimeStamp): Boolean;
 var VEnd{End of value +1}, PTZ{remander of TimeZone sign},

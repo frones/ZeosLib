@@ -67,6 +67,13 @@ type
   public
     constructor Create(const Col: IZCollection);
 
+    /// <summary>
+    ///  Gets a next iterated element from the collection.
+    /// </summary>
+    /// <returns>
+    ///   a next iterated element from the collection or <c>nil</c>
+    ///   if no more elements.
+    /// </returns>
     function HasNext: Boolean;
     function Next: IZInterface;
   end;

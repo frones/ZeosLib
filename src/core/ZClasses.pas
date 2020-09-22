@@ -104,10 +104,14 @@ type
   end;
   {$ENDIF}
 
-  {** Replacement for generic interface type. }
+  /// <summary>
+  ///   Replacement for generic interface type.
+  /// </summary>
   IZInterface = IUnknown;
 
-  {** Represents an interface for all abstract object. }
+  /// <summary>
+  ///   Represents an interface for all abstract object.
+  /// </summary>
   IZObject = interface(IZInterface)
     ['{EF46E5F7-00CF-4DDA-BED0-057D6686AEE0}']
     function Equals(const Value: IZInterface): Boolean;
@@ -117,24 +121,45 @@ type
     function InstanceOf(const IId: TGUID): Boolean;
   end;
 
-  {** Represents a fake interface for coparable objects. }
+  /// <summary>
+  ///   Represents a fake interface for coparable objects.
+  /// </summary>
   IZComparable = interface(IZObject)
     ['{04112081-F07B-4BBF-A757-817816EB67C1}']
   end;
 
-  {** Represents an interface to clone objects. }
+  /// <summary>
+  ///   Represents an interface to clone objects.
+  /// </summary>
   IZClonnable = interface(IZObject)
     ['{ECB7F3A4-7B2E-4130-BA66-54A2D43C0149}']
   end;
 
-  {** Represents a generic collection iterator interface. }
+  /// <summary>
+  ///   Represents a generic collection iterator interface.
+  /// </summary>
   IZIterator = interface(IZObject)
     ['{D964DDD0-2308-4D9B-BD36-5810632512F7}']
+    /// <summary>
+    ///  Checks has the iterated collection more elements.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if iterated collection has more elements.
+    /// </returns>
     function HasNext: Boolean;
+    /// <summary>
+    ///  Gets a next iterated element from the collection.
+    /// </summary>
+    /// <returns>
+    ///   a next iterated element from the collection or <c>nil</c>
+    ///   if no more elements.
+    /// </returns>
     function Next: IZInterface;
   end;
 
-  {** Represents a collection of object interfaces. }
+  /// <summary>
+  ///   Represents a collection of object interfaces.
+  /// </summary>
   IZCollection = interface(IZClonnable)
     ['{51417C87-F992-4CAD-BC53-CF3925DD6E4C}']
 
