@@ -99,77 +99,67 @@ var
   YesNoStrsRaw: array[Boolean] of RawByteString;
   {$ENDIF}
 
-{**
-  Determines a position of a first delimiter.
-  @param Delimiters a string with possible delimiters.
-  @param Str a string to be checked.
-  @return a position of the first found delimiter or 0 if no delimiters was found.
-}
+/// <summary>Determines a position of a first delimiter.</summary>
+/// <param>"Delimiters" a string with possible delimiters</param>
+/// <param>"Str" a string to be checked.</param>
+/// <returns>a position of the first found delimiter or
+///  <c>0</c> if no delimiters was found</returns>
 function FirstDelimiter(const Delimiters, Str: string): Integer;
 
-{**
-  Determines a position of a LAST delimiter.
-  @param Delimiters a string with possible delimiters.
-  @param Str a string to be checked.
-  @return a position of the last found delimiter or 0 if no delimiters was found.
-}
+/// <summary>Determines a position of a last delimiter.</summary>
+/// <param>"Delimiters" a string with possible delimiters</param>
+/// <param>"Str" a string to be checked.</param>
+/// <returns>a position of the first found delimiter or
+///  <c>0</c> if no delimiters was found</returns>
 function LastDelimiter(const Delimiters, Str: string): Integer;
 
-{**
-  Compares two Buffers with fixed length
-  @param P1 first Pointer
-  @param P2 seconds Pointer
-  @return <code>Integer</code> if the memory equals else return PByte(P1)-PByte(B2)
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Compares two Buffers with fixed length.</summary>
+/// <param>"P1" the first Pointer to be compared</param>
+/// <param>"P2" the second Pointer to be compared</param>
+/// <param>"Len" the length in bytes of the given buffers</param>
+/// <returns><c>0</c> if the memory equals else return byte diff on first
+///  failing postion</returns>
 function ZMemLComp(P1, P2: PAnsiChar; Len: Cardinal): Integer;
 
-{**
-  Compares two PWideChars without stopping at #0 (Unicode Version)
-  @param P1 first PWideChars
-  @param P2 seconds PWideChars
-  @return <code>True</code> if the memory at P1 and P2 are equal
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Compares two WideChar Buffers with fixed length.</summary>
+/// <param>"P1" the first Pointer to be compared</param>
+/// <param>"P2" the second Pointer to be compared</param>
+/// <param>"Len" the length in words of the given buffers</param>
+/// <returns><c>True</c> if the memory equals</returns>
 function MemLCompUnicode(P1, P2: PWideChar; Len: Integer): Boolean;
 
-{**
-  Compares two PAnsiChars without stopping at #0
-  @param P1 first PAnsiChar
-  @param P2 seconds PAnsiChar
-  @return <code>True</code> if the memory at P1 and P2 are equal
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Compares two raw Buffers with fixed length.</summary>
+/// <param>"P1" the first Pointer to be compared</param>
+/// <param>"P2" the second Pointer to be compared</param>
+/// <param>"Len" the length in bytes of the given buffers</param>
+/// <returns><c>True</c> if the memory equals</returns>
 function MemLCompAnsi(P1, P2: PAnsiChar; Len: Integer): Boolean;
 
-{**
-  Checks is the string starts with substring.
-  @param Str a WideString/UnicodeString to be checked.
-  @param SubStr a WideString/UnicodeString to test at the start of the Str.
-  @return <code>True</code> if Str started with SubStr;
-}
+/// <summary>Checks is the string starts with substring.</summary>
+/// <param>"Str" a UnicodeString to be compared</param>
+/// <param>"SubStr">a UnicodeString to test at the start of the Str</param>
+/// <returns><c>True</c> if Str starts with SubStr</returns>
 function StartsWith(const Str, SubStr: UnicodeString): Boolean; overload;
 
-{**
-  Checks is the string starts with substring.
-  @param Str a AnsiString/RawByteString to be checked.
-  @param SubStr a AnsiString/RawByteString to test at the start of the Str.
-  @return <code>True</code> if Str started with SubStr;
-}
-
+/// <summary>Checks is the string starts with substring.</summary>
+/// <param>"Str">a RawByteString to be compared</param>
+/// <param>"SubStr">a RawByteString to test at the start of the Str</param>
+/// <returns><c>True</c> if Str starts with SubStr</returns>
 function StartsWith(const Str, SubStr: RawByteString): Boolean; overload;
 
-{**
-  Checks is the string ends with substring.
-  @param Str a AnsiString/RawByteString to be checked.
-  @param SubStr a AnsiString/RawByteString to test at the end of the Str.
-  @return <code>True</code> if Str ended with SubStr;
-}
+/// <summary>Checks is the string ends with substring.</summary>
+/// <param>"Str">a RawByteString the String to be compared</param>
+/// <param>"SubStr">a RawByteString to test at the end of the Str</param>
+/// <returns><c>True</c> if Str ends with SubStr</returns>
 function EndsWith(const Str, SubStr: RawByteString): Boolean; overload;
 
-{**
-  Checks is the string ends with substring.
-  @param Str a WideString/UnicodeString to be checked.
-  @param SubStr a WideString/UnicodeString to test at the end of the Str.
-  @return <code>True</code> if Str ended with SubStr;
-}
+/// <summary>Checks is the string ends with substring.</summary>
+/// <param>"Str">a UnicodeString the String to be compared</param>
+/// <param>"SubStr">a UnicodeString to test at the end of the Str</param>
+/// <returns><c>True</c> if Str ends with SubStr</returns>
 function EndsWith(const Str, SubStr: UnicodeString): Boolean; overload;
 
 {** EH:
@@ -1357,12 +1347,6 @@ var
   r8Zeros: RawByteString;
 {$ENDIF}
 
-{**
-  Determines a position of a first delimiter.
-  @param Delimiters a string with possible delimiters.
-  @param Str a string to be checked.
-  @return a position of the first found delimiter or 0 or -1(Zero based strings) if no delimiters was found.
-}
 function FirstDelimiter(const Delimiters, Str: string): Integer;
 var P: PChar absolute Str;
   PStart, PEnd, PDStart, PDEnd: PChar;
@@ -1385,12 +1369,6 @@ begin
   end;
 end;
 
-{**
-  Determines a position of a LAST delimiter.
-  @param Delimiters a string with possible delimiters.
-  @param Str a string to be checked.
-  @return a position of the last found delimiter or 0 if no delimiters was found.
-}
 function LastDelimiter(const Delimiters, Str: string): Integer;
 var P: PChar absolute Str;
   PStart, PEnd, PDStart, PDEnd: PChar;
@@ -1413,24 +1391,6 @@ begin
   end;
 end;
 
-{**
-  Compares two PWideChars without stopping at #0 (Unicode Version)
-  @param P1 first PWideChar
-  @param P2 seconds PWideChar
-  @return <code>True</code> if the memory at P1 and P2 are equal
-}
-function MemLCompUnicode(P1, P2: PWideChar; Len: Integer): Boolean;
-begin
-  Result := ZMemLComp(Pointer(P1), Pointer(P2), Len shl 1) = 0;
-end;
-
-{**  EH:
-  Compares two Pointers with a maximum len
-  @param P1 first PAnsiChar
-  @param P2 seconds PAnsiChar
-  @return <code>Integer</code> 0 if the memory at P1 and P2 are equal, otherwise
-    return the byte difference
-}
 function ZMemLComp(P1, P2: PAnsiChar; Len: Cardinal): Integer;
 Label Fail;
 var
@@ -1480,23 +1440,16 @@ Fail:
   end;
 end;
 
-{**
-  Compares two PAnsiChars without stopping at #0
-  @param P1 first PAnsiChar
-  @param P2 seconds PAnsiChar
-  @return <code>True</code> if the memory at P1 and P2 are equal
-}
+function MemLCompUnicode(P1, P2: PWideChar; Len: Integer): Boolean;
+begin
+  Result := ZMemLComp(Pointer(P1), Pointer(P2), Len shl 1) = 0;
+end;
+
 function MemLCompAnsi(P1, P2: PAnsiChar; Len: Integer): Boolean;
 begin
   Result := ZMemLComp(P1, P2, Len) = 0;
 end;
 
-{**
-  Checks is the string starts with substring.
-  @param Str a AnsiString/RaweByteString to be checked.
-  @param SubStr a AnsiString/RaweByteString to test at the start of the Str.
-  @return <code>True</code> if Str started with SubStr;
-}
 function StartsWith(const Str, SubStr: RawByteString): Boolean;
 var
   LenSubStr: Integer;
@@ -1511,12 +1464,6 @@ begin
   end;
 end;
 
-{**
-  Checks is the string starts with substring.
-  @param Str a WideString/UnicodeString to be checked.
-  @param SubStr a WideString/UnicodeString to test at the start of the Str.
-  @return <code>True</code> if Str started with SubStr;
-}
 function StartsWith(const Str, SubStr: UnicodeString): Boolean;
 var
   LenSubStr: Integer;
@@ -1531,12 +1478,6 @@ begin
   end;
 end;
 
-{**
-  Checks is the string ends with substring.
-  @param Str a WideString/UnicodeString to be checked.
-  @param SubStr a WideString/UnicodeString to test at the end of the Str.
-  @return <code>True</code> if Str ended with SubStr;
-}
 function EndsWith(const Str, SubStr: UnicodeString): Boolean;
 var
   LenSubStr: Integer;
@@ -1554,12 +1495,6 @@ begin
   end;
 end;
 
-{**
-  Checks is the string ends with substring.
-  @param Str a AnsiString/RawbyteString to be checked.
-  @param SubStr a AnsiString/RawbyteString to test at the end of the Str.
-  @return <code>True</code> if Str ended with SubStr;
-}
 function EndsWith(const Str, SubStr: RawByteString): Boolean;
 var
   LenSubStr: Integer;
@@ -7489,7 +7424,7 @@ begin
     if GetPacketBCDOffSets(Value1, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1) then
       ZPackBCDToLeft(Value1, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1);
     if GetPacketBCDOffSets(Value2, pNibble2, pLastNibble2, Prec2, Scale2, GetFB2) then
-      ZPackBCDToLeft(Value2, pNibble2, pLastNibble2, Prec2, Scale2, GetFB2);
+      ZPackBCDToLeft(Value2, pNibble2, pNibble2, Prec2, Scale2, GetFB2);
     {determine digits before fractions start: }
     s1 := Integer(Prec1)-Scale1;
     s2 := Integer(Prec2)-Scale2;
