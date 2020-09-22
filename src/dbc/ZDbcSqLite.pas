@@ -306,27 +306,46 @@ end;
 }
 procedure TZSQLiteConnection.Open;
 var
-  SQL: RawByteString;
-  TmpInt: Integer;
+  SQL, zVfs: RawByteString;
+  TmpInt, Flags: Integer;
+  S: String;
 begin
   if not Closed then
     Exit;
 
   FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);
+  if Assigned(FPlainDriver.sqlite3_open_v2)
+  then S := Info.Values[ConnProps_SQLiteOpen_zVfs]
+  else S := '';
   {$IFDEF UNICODE}
   SQL := ZUnicodeToRaw(DataBase, zCP_UTF8);
+  zVfs := ZUnicodeToRaw(S, zCP_UTF8);
   {$ELSE}
     {$IFDEF LCL}
     SQL := DataBase;
+    zVfs := S;
     {$ELSE}
     if ZEncoding.ZDetectUTF8Encoding(Pointer(DataBase), Length(DataBase)) = etANSI then begin
       SQL := '';
       PRawToRawConvert(Pointer(DataBase), Length(DataBase), zOSCodePage, zCP_UTF8, SQL)
     end else SQL := DataBase;
+    if ZEncoding.ZDetectUTF8Encoding(Pointer(S), Length(S)) = etANSI then begin
+      zVfs := '';
+      PRawToRawConvert(Pointer(S), Length(S), zOSCodePage, zCP_UTF8, zVfs)
+    end else begin
+      SQL := DataBase;
+      zVfs := S;
+    end;
     {$ENDIF}
   {$ENDIF}
-  //patch by omaga software see https://sourceforge.net/p/zeoslib/tickets/312/
-  TmpInt := FPlainDriver.sqlite3_open(Pointer(SQL), FHandle);
+  if Assigned(FPlainDriver.sqlite3_open_v2)
+  then S := Info.Values[ConnProps_SQLiteOpen_Flags]
+  else S := '';
+  Flags := StrToIntDef(S, 0);
+  if Assigned(FPlainDriver.sqlite3_open_v2) and ((Flags <> 0) or (Pointer(zVfs) <> nil))
+  then TmpInt := FPlainDriver.sqlite3_open_v2(Pointer(SQL), FHandle, Flags, Pointer(zVfs))
+  else //patch by omaga software see https://sourceforge.net/p/zeoslib/tickets/312/
+    TmpInt := FPlainDriver.sqlite3_open(Pointer(SQL), FHandle);
   if TmpInt <> SQLITE_OK then
     HandleErrorOrWarning(lcConnect, TmpInt, FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
   if DriverManager.HasLoggingListener then
