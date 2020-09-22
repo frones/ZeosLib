@@ -82,6 +82,7 @@ type
     function GetActiveTransaction: IZFirebirdTransaction;
     function GetAttachment: IAttachment;
     function GetStatus: IStatus;
+    function GetUtil: IUtil;
     function GetPlainDriver: TZFirebirdPlainDriver;
   end;
 
@@ -127,6 +128,7 @@ type
     function GetAttachment: IAttachment;
     function GetStatus: IStatus;
     function GetPlainDriver: TZFirebirdPlainDriver;
+    function GetUtil: IUtil;
   public { IZTransactionManager }
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
@@ -362,6 +364,11 @@ end;
 function TZFirebirdConnection.GetStatus: IStatus;
 begin
   Result := FStatus;
+end;
+
+function TZFirebirdConnection.GetUtil: IUtil;
+begin
+  Result := FUtil;
 end;
 
 procedure TZFirebirdConnection.InternalClose;
