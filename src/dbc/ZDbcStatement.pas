@@ -2686,6 +2686,7 @@ var
 begin
   SetLength(FOutParamValues, NewParamCount);
   SetLength(FOutParamTypes, NewParamCount);
+  SetLength(FNCharDetected, NewParamCount);
   for I := FOutParamCount to NewParamCount - 1 do
   begin
     FOutParamValues[I] := NullVariant;
