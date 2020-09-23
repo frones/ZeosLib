@@ -835,52 +835,64 @@ function DateTimeToRawSQLDate(const Value: TDateTime; Buf: PAnsichar;
 function DateToRaw(Year, Month, Day: Word; Buf: PAnsichar;
   const Format: String; Quoted, Negative: Boolean): Byte;
 
-{** EH:
-  Converts date value into a WideString/UnicodeString with format pattern
-  @param Value a TDateTime value.
-  @param ConFormatSettings then DateFormat settings of the result.
-  @param Quoted if the result should be quoted.
-  @param Suffix a suffix string which can be appendened to the result String
-    i.e. Postgres ::date.
-  @return a formated WideString/UnicodeString with Date-Format pattern.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Convert a pascal TDateTime value into a string. Valid format tokens
+///  are: 'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day.
+///  Valid delimiters (if given) are ' ','-','\','/'.
+///  Long names are not supported.</summary>
+/// <param>"Value" the value to be converted.</param>
+/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"Quoted" if the result should be quoted with a #39 char.</param>
+/// <param>"Suffix" ia suffix string which can be appendened to the result
+///  String i.e. Postgres ::date.</param>
+/// <returns>a formated UnicodeString in Date-Format pattern</returns>
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: UnicodeString = ''): UnicodeString; overload;
 
-{** EH:
-  Converts date value into a UCS2 buffer with format pattern
-  @param Value a TDateTime value.
-  @param Buf the UCS2 buffer to write in.
-  @param ConFormatSettings then DateFormat settings of the result.
-  @param Quoted if the result should be quoted.
-  @param Suffix a suffix string which can be appendened to the result String
-    i.e. Postgres ::date.
-  @return the length in code-points of written value.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Convert a pascal TDateTime value into a string buffer. Valid format
+///  tokens are: 'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day.
+///  Valid delimiters (if given) are ' ','-','\','/'.
+///  Long names are not supported.</summary>
+/// <param>"Value" the value to be converted.</param>
+/// <param>"Buf" the UTF16 buffer we write in.</param>
+/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"Quoted" if the result should be quoted with a #39 char.</param>
+/// <param>"Suffix" ia suffix string which can be appendened to the result
+///  String i.e. Postgres ::date.</param>
+/// <returns>the length in words of written value.</returns>
 function DateTimeToUnicodeSQLDate(const Value: TDateTime; Buf: PWideChar;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: UnicodeString = ''): Word; overload;
 
-{** EH:
-  Converts date values into a buffer with format pattern
-  We don't take care for the ranges of the Values. That's users turn to do!
-  I'm aware year/month/day with value 0 do not exist but MySQL f.e. allows it!
-  @param Year a Year value with range of 0..9999.
-  @param Month a Month value with range of 0..12.
-  @param Day a Day value with range of 0..31.
-  @param Buf a UCS2 buffer we write in.
-  @param Format the !valid! result format.
-  @param Quoted if the result should be quoted.
-  @param Negative if the date is negative (i.e. bc).
-  @return the length in code-points of written value.
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Convert a Year, Month, Day values into a string buffer. Valid format
+///  tokens are: 'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day.
+///  Valid delimiters (if given) are ' ','-','\','/'.
+///  Long names are not supported.</summary>
+/// <param>"Year" the year of the date string.</param>
+/// <param>"Month" the month of the date string.</param>
+/// <param>"Day" the day of the date string.</param>
+/// <param>"Buf" the UTF16 buffer we write in.</param>
+/// <param>"Format" the format template</param>
+/// <param>"Quoted" if the result should be quoted with a #39 char.</param>
+/// <param>"Neagtive" if the year is negative.</param>
+/// <returns>the length in words of written value.</returns>
 function DateToUni(Year, Month, Day: Word; Buf: PWideChar;
   const Format: String; Quoted, Negative: Boolean): Byte;
 
-{**
-  Converts DateTime value to native string
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Convert a pascal TDateTime value into a string. Valid format tokens
+///  are: 'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day.
+///  Valid delimiters (if given) are ' ','-','\','/'.
+///  Long names are not supported.</summary>
+/// <param>"Value" the value to be converted.</param>
+/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"Quoted" if the result should be quoted with a #39 char.</param>
+/// <param>"Suffix" ia suffix string which can be appendened to the result
+///  String i.e. Postgres ::date.</param>
+/// <returns>a formated String in Date-Format pattern</returns>
 function DateTimeToSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; const Suffix: string = ''): string;
