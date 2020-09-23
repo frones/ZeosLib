@@ -93,9 +93,11 @@ type
     FProvider: TDBLibProvider;
     FServerAnsiCodePage: Word;
     FPlainDriver: IZDBLibPlainDriver;
+    fHostVersion: Integer;
     function GetProvider: TDBLibProvider;
     procedure InternalSetTransactionIsolation(Level: TZTransactIsolationLevel);
     procedure DetermineMSDateFormat;
+    procedure DetermineProductVersion;
     function DetermineMSServerCollation: String;
     function DetermineMSServerCodePage(const Collation: String): Word;
   protected
@@ -132,6 +134,7 @@ type
 
     function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
+    function GetHostVersion: Integer; override;
     function GetServerAnsiCodePage: Word;
 	
     function GetServerProvider: TZServerProvider; override;	
@@ -421,6 +424,11 @@ begin
   Result := FHandle;
 end;
 
+function TZDBLibConnection.GetHostVersion: Integer;
+begin
+  Result := fHostVersion;
+end;
+
 procedure TZDBLibConnection.CheckDBLibError(LogCategory: TZLoggingCategory; const LogMessage: RawByteString);
 var errStr: String;
 begin
@@ -505,8 +513,10 @@ begin
    Using DATE and DATETIME in ISO 8601 format is multi-language supported:
    DATE Un-separated
    DATETIME as YYYY-MM-DDTHH:NN:SS }
-  if (FProvider = dpMsSQL) then
+  if (FProvider = dpMsSQL) then begin
     DetermineMSDateFormat;
+    DetermineProductVersion;
+  end;
   ConSettings^.WriteFormatSettings.DateFormat := 'YYYYMMDD';
   ConSettings^.WriteFormatSettings.DateTimeFormat := 'YYYY-MM-DDTHH:NN:SS';
   SetDateTimeFormatProperties(False);
@@ -669,6 +679,48 @@ const
 procedure TZDBLibConnection.InternalSetTransactionIsolation(Level: TZTransactIsolationLevel);
 begin
   InternalExecuteStatement(DBLibIsolationLevels[FProvider = dpSybase, Level]);
+end;
+
+procedure TZDBLibConnection.DetermineProductVersion;
+var P, PDot, PEnd: PChar;
+  MajorVersion: Integer;
+  MiniorVersion: Integer;
+  SubVersion: Integer;
+  ProductVersion: String;
+begin
+  with CreateStatement.ExecuteQuery('select Cast(SERVERPROPERTY(''productversion'') as varchar(500))') do begin
+    if Next then begin
+      ProductVersion := GetString(FirstDbcIndex);
+      if ProductVersion <> '' then begin
+        MajorVersion := 0;
+        MiniorVersion := 0;
+        SubVersion := 0;
+        P := Pointer(ProductVersion);
+        PEnd := p + Length(ProductVersion);
+        PDot := P;
+        while (PDot < PEnd) and ((Ord(PDot^) >= Ord('0')) and (Ord(PDot^) <= Ord('9'))) do
+          Inc(PDot);
+        if PDot^ = '.' then begin
+          MajorVersion := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P, PDot, 0);
+          P := PDot +1;
+          PDot := P +1;
+          while (PDot < PEnd) and ((Ord(PDot^) >= Ord('0')) and (Ord(PDot^) <= Ord('9'))) do
+            Inc(PDot);
+          if PDot^ = '.' then begin
+            MiniorVersion := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P, PDot, 0);
+            P := PDot +1;
+            PDot := P +1;
+            while (PDot < PEnd) and ((Ord(PDot^) >= Ord('0')) and (Ord(PDot^) <= Ord('9'))) do
+              Inc(PDot);
+            SubVersion := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P, PDot, 0);
+          end;
+        end;
+        (Self.GetMetadata.GetDatabaseInfo as IZDbLibDatabaseInfo).SetProductVersion(ProductVersion);
+        fHostVersion := EncodeSQLVersioning(MajorVersion, MiniorVersion, SubVersion);
+      end;
+    end;
+    Close;
+  end;
 end;
 
 procedure TZDBLibConnection.DetermineMSDateFormat;

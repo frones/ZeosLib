@@ -247,7 +247,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 
 uses
-  ZDbcUtils, ZDbcSqLite, ZFastCode, ZSelectSchema, ZClasses, ZMatchPattern,
+  ZDbcUtils, ZDbcSqLite, ZFastCode, ZSelectSchema, ZMatchPattern,
   ZEncoding;
 
 { TZSQLiteDatabaseInfo }

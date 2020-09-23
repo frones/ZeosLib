@@ -308,6 +308,8 @@ var
   Status: Integer;
   LogMessage: RawByteString;
   OCI_CLIENT_CHARSET_ID,  OCI_CLIENT_NCHARSET_ID: ub2;
+  S: String;
+  mode: ub4;
   procedure CleanupOnFail;
   begin
     GetPlainDriver.HandleFree(FDescibeHandle, OCI_HTYPE_DESCRIBE);
@@ -387,8 +389,10 @@ begin
     Length(Password), OCI_ATTR_PASSWORD, FErrorHandle);
   GetPlainDriver.AttrSet(FSessionHandle,OCI_HTYPE_SESSION,@fBlobPrefetchSize,0,
     OCI_ATTR_DEFAULT_LOBPREFETCH_SIZE,FErrorHandle);
+  S := Info.Values['OCIAuthenticateMode'];
+  Mode := StrToIntDef(S, OCI_DEFAULT);
   Status := GetPlainDriver.SessionBegin(FContextHandle, FErrorHandle,
-    FSessionHandle, OCI_CRED_RDBMS, OCI_DEFAULT);
+    FSessionHandle, OCI_CRED_RDBMS, Mode);
   try
     CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcConnect, LogMessage, ConSettings);
   except

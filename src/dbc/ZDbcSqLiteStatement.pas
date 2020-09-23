@@ -111,7 +111,7 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS} AnsiStrings,{$ENDIF} ZDbcSqLiteUtils,
   ZDbcSqLiteResultSet, ZSysUtils, ZEncoding, ZMessages, ZDbcCachedResultSet,
-  ZDbcUtils, ZClasses;
+  ZDbcUtils;
 
 (* out of use now...
 procedure BindingDestructor(Value: PAnsiChar); cdecl;
@@ -312,7 +312,7 @@ var pzTail: PAnsichar;
 begin
   if not Prepared then
   begin
-    FErrorCode := FPlainDriver.Prepare_v2(FHandle, Pointer(ASQL), Length(ASQL), FStmtHandle, pzTail);
+    FErrorCode := FPlainDriver.Prepare_v2(FHandle, Pointer(ASQL), Length(ASQL), FStmtHandle, pzTail{%H-});
     CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, lcPrepStmt, ASQL, ConSettings, FExtendedErrorMessage);
     inherited Prepare;
   end;

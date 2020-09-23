@@ -3272,15 +3272,16 @@ begin
   case Value.VType of
     vtBoolean: Result := Value.VBoolean;
     vtBytes: Result := BytesToVar(Value.VBytes);
-    vtInteger:
-      if (Value.VInteger > -MaxInt) and (Value.VInteger < MaxInt) then
-        Result := Integer(Value.VInteger)
-      else
-{$ifdef fpc}
-        Result := Value.VInteger;
-{$else}
-        Result := ZFastCode.IntToStr(Value.VInteger);
-{$endif}
+    vtInteger: if (Value.VInteger > -MaxInt) and (Value.VInteger < MaxInt)
+      then Result := Integer(Value.VInteger)
+      else Result := Value.VInteger;
+    vtUInteger: if Int64Rec(Value.VUInteger).Hi = 0
+      then Result := Int64Rec(Value.VUInteger).Lo
+      else {$IFDEF WITH_VARIANT_UINT64}
+            Result := Value.VUInteger;
+          {$ELSE}
+            Result := ZFastCode.IntToStr(Value.VUInteger);
+          {$ENDIF}
     vtFloat: Result := Value.VFloat;
     vtString: Result := Value.VString;
     {$IFNDEF NO_ANSISTRING}
@@ -3342,8 +3343,11 @@ begin
     varDate: Result := EncodeDateTime(Value);
     varShortInt, varWord, varLongWord:
       Result := EncodeInteger(Value);
-    varInt64{$IFDEF WITH_VARIANT_UINT64},varUInt64{$ENDIF}:
+    varInt64:
       Result := EncodeInteger(Value);
+    {$IFDEF WITH_VARIANT_UINT64}
+    varUInt64: Result := EncodeUInteger(Value);
+    {$ENDIF}
   else
     Result := EncodeNull;
   end;

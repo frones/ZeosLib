@@ -189,8 +189,9 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  ZEncoding, ZFastCode, ZSysUtils, ZDbcMetadata, ZClasses,
-  ZDbcLogging;
+  ZEncoding, ZFastCode, ZSysUtils, ZClasses, ZTokenizer,
+  ZGenericSqlAnalyser,
+  ZDbcMetadata, ZDbcLogging;
 
 procedure GetPCharFromTextVar(SQLCode: SmallInt; sqldata: Pointer; sqllen: Short; out P: PAnsiChar; out Len: NativeUInt); {$IF defined(WITH_INLINE)} inline; {$IFEND}
 begin
@@ -1993,27 +1994,45 @@ var
   Current: TZColumnInfo;
   I: Integer;
   TableColumns: IZResultSet;
+  Connection: IZConnection;
+  Driver: IZDriver;
+  IdentifierConvertor: IZIdentifierConvertor;
+  Analyser: IZStatementAnalyser;
+  Tokenizer: IZTokenizer;
 {$ENDIF}
 begin
   {$IFDEF ZEOS_TEST_ONLY}
   inherited LoadColumns;
   {$ELSE}
-  if Metadata.GetConnection.GetDriver.GetStatementAnalyser.DefineSelectSchemaFromQuery(Metadata.GetConnection.GetDriver.GetTokenizer, SQL) <> nil then
-    for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
-      Current := TZColumnInfo(ResultSet.ColumnsInfo[i]);
-      ClearColumn(Current);
-      if Current.TableName = '' then
-        continue;
-      TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(Metadata.GetIdentifierConvertor.Quote(Current.TableName)),'');
-      if TableColumns <> nil then begin
-        TableColumns.BeforeFirst;
-        while TableColumns.Next do
-          if TableColumns.GetString(ColumnNameIndex) = Current.ColumnName then begin
-            FillColumInfoFromGetColumnsRS(Current, TableColumns, Current.ColumnName);
-            Break;
-          end;
+  Connection := Metadata.GetConnection;
+  Driver := Connection.GetDriver;
+  Analyser := Driver.GetStatementAnalyser;
+  Tokenizer := Driver.GetTokenizer;
+  IdentifierConvertor := Metadata.GetIdentifierConvertor;
+  try
+    if Analyser.DefineSelectSchemaFromQuery(Tokenizer, SQL) <> nil then
+      for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
+        Current := TZColumnInfo(ResultSet.ColumnsInfo[i]);
+        ClearColumn(Current);
+        if Current.TableName = '' then
+          continue;
+        TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(IdentifierConvertor.Quote(Current.TableName)),'');
+        if TableColumns <> nil then begin
+          TableColumns.BeforeFirst;
+          while TableColumns.Next do
+            if TableColumns.GetString(ColumnNameIndex) = Current.ColumnName then begin
+              FillColumInfoFromGetColumnsRS(Current, TableColumns, Current.ColumnName);
+              Break;
+            end;
+        end;
       end;
-    end;
+  finally
+    Driver := nil;
+    Connection := nil;
+    Analyser := nil;
+    Tokenizer := nil;
+    IdentifierConvertor := nil;
+  end;
   Loaded := True;
   {$ENDIF}
 end;

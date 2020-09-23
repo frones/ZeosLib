@@ -49,6 +49,10 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
+/// <summary>
+///  This unit contains all DBC layer interfaces, base exception types, the driver manager, TZURL and others...
+/// </summary>
+
 unit ZDbcIntfs;
 
 interface

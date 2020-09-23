@@ -1101,7 +1101,7 @@ begin
         if CaseInsensitive then begin
           if DecodedKeyValues[I].VType = vtString then begin
             DecodedKeyValues[I].VString := Uppercase(DecodedKeyValues[I].VString);
-            DecodedKeyValues[I].VUnicodeString := DecodedKeyValues[I].VString;
+            DecodedKeyValues[I].VUnicodeString := DecodedKeyValues{%H-}[I].VString;
           end else begin
             DecodedKeyValues[I].VUnicodeString :=
               {$IFDEF UNICODE}AnsiUpperCase{$ELSE}WideUpperCase{$ENDIF}(DecodedKeyValues[I].VUnicodeString);
@@ -1144,7 +1144,7 @@ begin
               if DecodedKeyValues[I].VType = vtString then
               begin
                 DecodedKeyValues[I].VString := Uppercase(DecodedKeyValues[I].VString);
-                DecodedKeyValues[I].VUnicodeString := DecodedKeyValues[I].VString;
+                DecodedKeyValues[I].VUnicodeString := DecodedKeyValues{%H-}[I].VString;
               end
               else
               begin
@@ -1373,7 +1373,7 @@ begin
       {$IF not defined(cpui386) and defined(FPC)}
       TimeStamp := MSecsToTimeStamp(System.Trunc(Int(TDateTime(Buffer^))));
       {$ELSE}
-        TimeStamp := MSecsToTimeStamp(TDateTime(Buffer^));
+        TimeStamp := MSecsToTimeStamp(TDateTime(Buffer^){%H-});
       {$IFEND}
     except
       TimeStamp.Time := 0;

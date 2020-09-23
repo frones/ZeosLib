@@ -2751,7 +2751,7 @@ begin
     UpdateCursorPos; //see http://sourceforge.net/p/zeoslib/tickets/89/
     if (CurrentRow > 0) and (CurrentRow <= CurrentRows.Count) and
        (CurrentRows.Count > 0) then
-      RowNo := NativeInt(CurrentRows[CurrentRow - 1])
+      RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1])
     else
       RowNo := -1;
     CurrentRows.Clear;
@@ -2884,7 +2884,7 @@ begin
 
   if Result = grOK then
   begin
-    RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
+    RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
     if ResultSet.GetRow <> RowNo then
       ResultSet.MoveAbsolute(RowNo);
     RowAccessor.RowBuffer := PZRowBuffer(Buffer);
@@ -2920,7 +2920,7 @@ begin
       RowBuffer := PZRowBuffer(CalcBuffer);
     dsOldValue, dsNewValue, dsCurValue:
       begin
-        RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
+        RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
         if RowNo <> ResultSet.GetRow then
           CheckBiDirectional;
 
@@ -3479,7 +3479,9 @@ procedure TZAbstractRODataset.InternalOpen;
 var
   ColumnList: TObjectList;
   I: Integer;
+  {$IFDEF WITH_TAUTOREFRESHFLAG}
   MetaData: IZResultSetMetaData;
+  {$ENDIF WITH_TAUTOREFRESHFLAG}
 begin
   {$IFNDEF FPC}
   If (csDestroying in Componentstate) then
@@ -3519,7 +3521,9 @@ begin
     {$ENDIF}
     begin
       CreateFields;
+      {$IFDEF WITH_TAUTOREFRESHFLAG}
       MetaData := ResultSet.GetMetadata;
+      {$ENDIF WITH_TAUTOREFRESHFLAG}
       if not (doNoAlignDisplayWidth in FOptions) then
         for i := 0 to Fields.Count -1 do begin
           if Fields[i].DataType = ftString then
@@ -4273,7 +4277,7 @@ begin
   begin
     if CurrentRow > 0 then
     begin
-      RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
+      RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
       if ResultSet.GetRow <> RowNo then
         ResultSet.MoveAbsolute(RowNo);
 
@@ -4555,7 +4559,7 @@ begin
         if I >= RowCount then
           Break;
 
-        RowNo := Integer(CurrentRows[I]);
+        RowNo := {%H-}Integer(CurrentRows[I]);
         ResultSet.MoveAbsolute(RowNo);
 
         RowAccessor.RowBuffer := SearchRowBuffer;
@@ -4597,7 +4601,7 @@ begin
       if I >= RowCount then
         Break;
 
-      RowNo := Integer(CurrentRows[I]);
+      RowNo := {%H-}Integer(CurrentRows[I]);
       ResultSet.MoveAbsolute(RowNo);
 
       if CompareFieldsFromResultSet(FieldRefs, DecodedKeyValues,
@@ -4680,7 +4684,7 @@ begin
   SearchRowBuffer := PZRowBuffer(AllocRecordBuffer);
   {$ENDIF}
   try
-    RowNo := Integer(CurrentRows[RowNo - 1]);
+    RowNo := {%H-}Integer(CurrentRows[RowNo - 1]);
     if ResultSet.GetRow <> RowNo then
       ResultSet.MoveAbsolute(RowNo);
 
@@ -4715,7 +4719,7 @@ begin
   Result := usUnmodified;
   if (ResultSet <> nil) and (CurrentRows.Count > 0) then
   begin
-    RowNo := Integer(CurrentRows[CurrentRow - 1]);
+    RowNo := {%H-}Integer(CurrentRows[CurrentRow - 1]);
     if ResultSet.GetRow <> RowNo then
       ResultSet.MoveAbsolute(RowNo);
 
@@ -4883,7 +4887,7 @@ begin
 
     if (CurrentRow <= CurrentRows.Count) and (CurrentRows.Count > 0)
       and (CurrentRow > 0) then
-      RowNo := NativeInt(CurrentRows[CurrentRow - 1])
+      RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1])
     else
       RowNo := -1;
 
@@ -4932,7 +4936,7 @@ begin
       end;
     end;
 
-    CurrentRow := CurrentRows.IndexOf(Pointer(RowNo)) + 1;
+    CurrentRow := CurrentRows.IndexOf({%H-}Pointer(RowNo)) + 1;
     CurrentRow := Min(Max(0, CurrentRow), CurrentRows.Count);
     if not (State in [dsInactive]) then
        Resync([]);
@@ -4949,7 +4953,7 @@ end;
 function TZAbstractRODataset.ClearSort(Item1, Item2: Pointer): Integer;
 begin
   //no real pointer addresses here, just a Integer represented as Pointer! -> overflow save!
-  Result := NativeInt(Item1) - NativeInt(Item2);
+  Result := {%H-}NativeInt(Item1) - {%H-}NativeInt(Item2);
 end;
 
 {**
@@ -4966,7 +4970,7 @@ var
   RowNo: NativeInt;
 begin
   { Gets the first row. }
-  RowNo := NativeInt(Item1);
+  RowNo := {%H-}NativeInt(Item1);
   ResultSet.MoveAbsolute(RowNo);
   RowAccessor.RowBuffer := FSortRowBuffer1;
   RowAccessor.RowBuffer^.Index := RowNo;
@@ -4975,7 +4979,7 @@ begin
   GetCalcFields(TGetCalcFieldsParamType(FSortRowBuffer1));
 
   { Gets the second row. }
-  RowNo := NativeInt(Item2);
+  RowNo := {%H-}NativeInt(Item2);
   ResultSet.MoveAbsolute(RowNo);
   RowAccessor.RowBuffer := FSortRowBuffer2;
   RowAccessor.RowBuffer^.Index := RowNo;
@@ -4999,7 +5003,7 @@ end;
 }
 function TZAbstractRODataset.LowLevelSort(Item1, Item2: Pointer): Integer;
 begin
-  Result := ResultSet.CompareRows(Integer(Item1), Integer(Item2),
+  Result := ResultSet.CompareRows({%H-}Integer(Item1), {%H-}Integer(Item2),
     FSortedFieldIndices, FCompareFuncs);
 end;
 
@@ -5642,7 +5646,7 @@ function TZField.GetAsBCD: TBcd;
 var IsNull: Boolean;
 begin
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
-    TryStrToBcd((DataSet as TZAbstractRODataset).FRowAccessor.GetString(FFieldIndex, IsNull), Result)
+    TryStrToBcd((DataSet as TZAbstractRODataset).FRowAccessor.GetString(FFieldIndex, IsNull), Result{%H-})
   else
     Result := NullBcd;
 end;
@@ -5805,7 +5809,7 @@ function TZField.GetAsGuid: TGUID;
 var IsNull: Boolean;
   Bytes: TBytes;
 begin
-  FillChar(Result, SizeOf(Result), #0);
+  FillChar(Result{%H-}, SizeOf(Result), #0);
   if GetActiveRowBuffer then //need this call to get active RowBuffer.
   begin
     Bytes := (DataSet as TZAbstractRODataset).FRowAccessor.GetBytes(FFieldIndex, IsNull);

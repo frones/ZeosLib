@@ -143,7 +143,7 @@ begin
     Result := stString
   else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('BOOL')) then
     Result := stBoolean
-  else if ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('INT'), TypeName) > 0 then
+  else if ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('INT'), TypeName) > 0 then begin
     if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('TINY')) then
       Result := stShort
     else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('SMALL')) then
@@ -152,8 +152,10 @@ begin
              (TypeName = 'INTEGER') then //http://www.sqlite.org/autoinc.html
       Result := stLong
     else //includes 'INT' / 'MEDIUMINT'
-      Result := stInteger
-  else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('REAL')) then
+      Result := stInteger;
+    if PosEx({$IFDEF UNICODE}RawByteString{$ENDIF}('UNSIGEND'), TypeName) > 0 then
+      Result := TZSQLType(Ord(Result)-1);
+  end else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('REAL')) then
     Result := stDouble
   else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('FLOAT')) then
     Result := stDouble

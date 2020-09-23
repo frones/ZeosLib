@@ -94,6 +94,7 @@ type
     function dbSetLSecure(Login: PLOGINREC): RETCODE;
     function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE;
     function dbSetVersion(Version: DBINT): RETCODE;
+    function dbSetTime(Seconds: Integer): RETCODE;
     function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
     function dbCancel(dbProc: PDBPROCESS): RETCODE;
     function dbCmd(const dbProc: PDBPROCESS; const Cmd: PAnsiChar): RETCODE;
@@ -261,6 +262,7 @@ type
       Char_Param: PAnsiChar): RETCODE; cdecl;
     FdbSetOpt_stdcall: function(dbProc: PDBPROCESS; Option: Integer;
       Char_Param: PAnsiChar; Int_Param: Integer): RETCODE; stdcall;
+    FdbSetTime_stdcall: function(Seconds: Integer): RETCODE; stdcall;
     FdbUse_stdcall: function(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; stdcall;
     Fdbvarylen_MS: function(Proc: PDBPROCESS; Column: Integer): LongBool; cdecl;
     Fdbvarylen_stdcall: function(Proc: PDBPROCESS; Column: Integer): DBBOOL; stdcall;
@@ -408,6 +410,7 @@ type
     FdbSetOpt_SYB: function(dbProc: PDBPROCESS; Option: Integer;
       Char_Param: PAnsiChar; Int_Param: Integer): RETCODE; cdecl;
     FdbSetMaxprocs_SYB: function(MaxProcs: DBINT): RETCODE; cdecl;
+    FdbSetTime: function(Seconds: Integer): RETCODE; cdecl;
     FdbUse: function(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; cdecl;
     Fdbvarylen_SYB: function(Proc: PDBPROCESS; Column: Integer): DBBOOL; cdecl;
     // Fdb12hour: function(dbproc: PDBPROCESS; Language: PAnsiChar): DBBOOL; cdecl; //no MS
@@ -479,6 +482,7 @@ type
     function dbSetLSecure(Login: PLOGINREC): RETCODE;
     function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE;
     function dbSetVersion(Version: DBINT): RETCODE;
+    function dbSetTime(Seconds: Integer): RETCODE;
     function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
     function dbCancel(dbProc: PDBPROCESS): RETCODE;
     function dbCmd(const dbProc: PDBPROCESS; const Cmd: PAnsiChar): RETCODE;
@@ -1561,6 +1565,15 @@ begin
 {$IFDEF MSWINDOWS} end; {$ENDIF}
 end;
 
+function TZDBLibAbstractPlainDriver.dbSetTime(Seconds: Integer): RETCODE;
+begin
+  {$IFDEF MSWINDOWS}if Assigned(FdbSetTime_stdcall) then
+    Result := FdbSetTime_stdcall(Seconds)
+  else {$ENDIF MSWINDOWS}if Assigned(FdbSetTime) then
+    Result := FdbSetTime(Seconds)
+  else Result := DBFAIL;
+end;
+
 function TZDBLibAbstractPlainDriver.dbSetVersion(Version: DBINT): RETCODE;
 begin
   {$IFDEF MSWINDOWS}if Assigned(FdbSetVersion_stdcall) then
@@ -1885,6 +1898,7 @@ begin
       @FdbOpen_stdcall := GetAddress('dbopen');
       @FdbSetLoginTime_stdcall := GetAddress('dbsetlogintime');
       @FdbSetLName_stdcall := GetAddress('dbsetlname');
+      @FdbSetTime_stdCall := GetAddress('dbsettime');
       @FdbSqlExec_stdcall := GetAddress('dbsqlexec');
       @FdbSqlOk_stdcall := GetAddress('dbsqlok');
       @Fdbsqlsend_stdcall := GetAddress('dbsqlsend');
@@ -1974,6 +1988,7 @@ begin
 
       @FdbSetLoginTime := GetAddress('dbsetlogintime');
       @FdbSetLName := GetAddress('dbsetlname');
+      @FdbSetTime := GetAddress('dbsettime');
       @FdbSqlExec := GetAddress('dbsqlexec');
       @FdbSqlOk := GetAddress('dbsqlok');
       @Fdbsqlsend := GetAddress('dbsqlsend');

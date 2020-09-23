@@ -297,9 +297,10 @@ end;
 procedure TZSQLiteConnection.Open;
 var
   LogMessage: RawByteString;
-  SQL: RawByteString;
-  TmpInt: Integer;
+  SQL, zVfs: RawByteString;
+  TmpInt, Flags: Integer;
   Stmt: IZStatement;
+  S: String;
 begin
   if not Closed then
     Exit;
@@ -307,8 +308,15 @@ begin
   LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
 
   SQL := {$IFDEF UNICODE}UTF8String{$ENDIF}(Database);
+  S := Info.Values['SQLiteOpen_Flags'];
+  Flags := StrToIntDef(S, 0);
+  S := Info.Values['SQLiteOpen_zVfs'];
+  zVfs := {$IFDEF UNICODE}UTF8String{$ENDIF}(S);
+
   //patch by omaga software see https://sourceforge.net/p/zeoslib/tickets/312/
-  TmpInt := GetPlainDriver.open(Pointer(SQL), FHandle);
+  if (zVfs <> '') or (Flags <> 0)
+  then TmpInt := GetPlainDriver.open_V2(Pointer(SQL), FHandle, Flags, Pointer(zVfs))
+  else TmpInt := GetPlainDriver.open(Pointer(SQL), FHandle);
   if TmpInt <> SQLITE_OK then
     CheckSQLiteError(FPlainDriver, FHandle, TmpInt, lcConnect, LogMessage, ConSettings, FExtendedErrorMessage);
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
@@ -396,7 +404,7 @@ begin
   with FTransactionStmts[Action] do begin
     if Stmt = nil then
       CheckSQLiteError(GetPlainDriver, FHandle,
-        GetPlainDriver.Prepare(FHandle, Pointer(SQL), nBytes, Stmt, pzTail),
+        GetPlainDriver.Prepare(FHandle, Pointer(SQL), nBytes, Stmt, pzTail{%H-}),
           lcExecute, SQL, ConSettings, FExtendedErrorMessage);
     try
       CheckSQLiteError(GetPlainDriver, FHandle, GetPlainDriver.Step(Stmt),

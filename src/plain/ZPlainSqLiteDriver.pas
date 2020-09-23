@@ -156,6 +156,31 @@ const
   SQLITE_BLOB    = 4;
   SQLITE_NULL    = 5;
 
+  //flags for sqlite3_open_v2
+  SQLITE_OPEN_READONLY        = $00000001; //Ok for sqlite3_open_v2()
+  SQLITE_OPEN_READWRITE       = $00000002; //Ok for sqlite3_open_v2()
+  SQLITE_OPEN_CREATE          = $00000004; //Ok for sqlite3_open_v2()
+  SQLITE_OPEN_DELETEONCLOSE   = $00000008; //VFS only
+  SQLITE_OPEN_EXCLUSIVE       = $00000010; //VFS only
+  SQLITE_OPEN_AUTOPROXY       = $00000020; //VFS only
+  SQLITE_OPEN_URI             = $00000040; //Ok for sqlite3_open_v2()
+  SQLITE_OPEN_MEMORY          = $00000080; //Ok for sqlite3_open_v2()
+  SQLITE_OPEN_MAIN_DB         = $00000100; //VFS only
+  SQLITE_OPEN_TEMP_DB         = $00000200; //VFS only
+  SQLITE_OPEN_TRANSIENT_DB    = $00000400; //VFS only
+  SQLITE_OPEN_MAIN_JOURNAL    = $00000800; //VFS only
+  SQLITE_OPEN_TEMP_JOURNAL    = $00001000; //VFS only
+  SQLITE_OPEN_SUBJOURNAL      = $00002000; //VFS only
+  SQLITE_OPEN_SUPER_JOURNAL   = $00004000; //VFS only
+  SQLITE_OPEN_NOMUTEX         = $00008000; //Ok for sqlite3_open_v2()
+  SQLITE_OPEN_FULLMUTEX       = $00010000; //Ok for sqlite3_open_v2()
+  SQLITE_OPEN_SHAREDCACHE     = $00020000; //Ok for sqlite3_open_v2()
+  SQLITE_OPEN_PRIVATECACHE    = $00040000; //Ok for sqlite3_open_v2()
+  SQLITE_OPEN_WAL             = $00080000; //VFS only
+  SQLITE_OPEN_NOFOLLOW        = $01000000; //Ok for sqlite3_open_v2()
+  Reserved                    = $00F00000;
+  //Legacy compatibility
+  SQLITE_OPEN_MASTER_JOURNAL  = $00004000; //VFS only
 type
   Psqlite = Pointer;
   Psqlite_func = Pointer;
@@ -193,6 +218,7 @@ type
 
     function CompiledWith_SQLITE_ENABLE_COLUMN_METADATA: Boolean;
     function Open(const filename: PAnsiChar; var Handle: Psqlite): Integer;
+    function open_v2(const filename: PAnsiChar; var sqlite: Psqlite; flags: integer; zVfs: PAnsiChar): Integer;
     function Close(db: Psqlite): Integer;
     function Execute(db: Psqlite; const sql: PAnsiChar;
       sqlite_callback: Tsqlite_callback; arg: Pointer;
@@ -304,6 +330,7 @@ type
   TZSQLiteBaseDriver = class (TZAbstractPlainDriver, IZPlainDriver, IZSQLitePlainDriver)
   private
     sqlite3_open: function(const filename: PAnsiChar;var Qsqlite: Psqlite): Integer; cdecl;
+    sqlite3_open_v2: function(const filename: PAnsiChar; var sqlite: Psqlite; flags: integer; zVfs: PAnsiChar): Integer; cdecl;
     sqlite3_close: function(db: Psqlite): Integer; cdecl;
 
     { prepared statement api }
@@ -425,10 +452,9 @@ type
     function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
   public
-    constructor Create;
-
     function CompiledWith_SQLITE_ENABLE_COLUMN_METADATA: Boolean;
     function Open(const filename: PAnsiChar; var Handle: Psqlite): Integer;
+    function open_v2(const filename: PAnsiChar; var sqlite: Psqlite; flags: integer; zVfs: PAnsiChar): Integer;
     function Close(db: Psqlite): Integer;
     function Execute(db: Psqlite; const sql: PAnsiChar;
       sqlite_callback: Tsqlite_callback; arg: Pointer;
@@ -534,6 +560,8 @@ type
 
     function ReKey(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
     function Key(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
+  public
+    constructor Create;
   end;
 
   {** Implements a driver for SQLite 3 }
@@ -774,6 +802,14 @@ begin
   else
     Result := sqlite3_open(filename, Handle);
 {$ENDIF}
+end;
+
+function TZSQLiteBaseDriver.open_v2(const filename: PAnsiChar;
+  var sqlite: Psqlite; flags: integer; zVfs: PAnsiChar): Integer;
+begin
+  if Assigned(sqlite3_open_v2) and ((flags <> 0) or (zVfs <> nil))
+  then Result := sqlite3_open_v2(filename, sqlite, flags, zVfs)
+  else Result := sqlite3_open(filename, sqlite);
 end;
 
 procedure TZSQLiteBaseDriver.ProgressHandler(db: Psqlite; p1: Integer;
@@ -1104,6 +1140,7 @@ begin
 { ************** Load adresses of API Functions ************* }
   with Loader do begin
   @sqlite3_open                   := GetAddress('sqlite3_open');
+  @sqlite3_open_v2                := GetAddress('sqlite3_open_v2');
   @sqlite3_close                  := GetAddress('sqlite3_close');
 
   { prepared Statment api }
