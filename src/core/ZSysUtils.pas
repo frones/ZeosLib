@@ -1383,19 +1383,23 @@ procedure Double2BCD(const Value: Double; var Result: TBCD);
 function GetPacketBCDOffSets({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD;
   out PNibble, PLastNibble: PAnsiChar; out Precision, Scale: Word; out GetFirstBCDHalfByte: Boolean): Boolean;
 
-{** EH:
-   pack the bcd to top of data, remove useless trailing or leading zeros
-   @param Value the value to be packet
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>pack the bcd to top of data, remove useless trailing or leading zeros.</summary>
+/// <param>"Value" a reference to the TBCD record which should be packed.</param>
+/// <param>"PNibble" a reference to the first nibble containing significant data.</param>
+/// <param>"PLastNibble" a reference to the last nibble containing significant data.</param>
+/// <param>"Precision" the new Precision we write.</param>
+/// <param>"Scale" the new Scale we write.</param>
+/// <param>"GetFirstBCDHalfByte" does the first half-byte count?</param>
 procedure ZPackBCDToLeft(var Value: TBCD; var PNibble, PLastNibble: PAnsiChar;
   Precision, Scale: Word; GetFirstBCDHalfByte: Boolean);
 
-{** EH:
-   compare two bcd's
-   @param Value1 the first value to be compared return a packet bcd if not packet
-   @param Value2 the second value to be compared return a packet bcd if not packet
-   @return 0 if equal or -1 if value1 is smaller than value2 or 1 if value1 is smaller than value2
-}
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Compares and packs two TBCD records.</summary>
+/// <param>"Value1" a reference to the first BCD that should pe compared.</param>
+/// <param>"Value2" a reference to the second BCD that should pe compared.</param>
+/// <returns><c>0</c> if both values are equal, -1 if Value1 is less than Value2,
+///  1 otherwise</returns>
 function ZBCDCompare(var Value1, Value2: TBCD): Integer;
 
 Type TCurrRoundToScale = 0..4;
@@ -7286,12 +7290,6 @@ begin
   Value.SignSpecialPlaces := Scale or SignSpecialPlacesArr[GetFirstBCDHalfByte];
 end;
 
-{** EH:
-   compare two bcd's
-   @param Value1 the first value to be compared return a packet bcd if not packet
-   @param Value2 the second value to be compared return a packet bcd if not packet
-   @return 0 if equal or -1 if value1 is smaller than value2 or 1 if value1 is smaller than value2
-}
 function ZBCDCompare(var Value1, Value2: TBCD): Integer;
 var PNibble1, PNibble2, PLastNibble1, PLastNibble2, PNibble, PLastNibble: PAnsiChar;
     Prec1, Prec2, Scale1, Scale2: Word;
@@ -7304,7 +7302,7 @@ begin
     if GetPacketBCDOffSets(Value1, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1) then
       ZPackBCDToLeft(Value1, pNibble1, pLastNibble1, Prec1, Scale1, GetFB1);
     if GetPacketBCDOffSets(Value2, pNibble2, pLastNibble2, Prec2, Scale2, GetFB2) then
-      ZPackBCDToLeft(Value2, pNibble2, pNibble2, Prec2, Scale2, GetFB2);
+      ZPackBCDToLeft(Value2, pNibble2, pLastNibble2, Prec2, Scale2, GetFB2);
     {determine digits before fractions start: }
     s1 := Integer(Prec1)-Scale1;
     s2 := Integer(Prec2)-Scale2;
