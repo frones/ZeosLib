@@ -54,6 +54,7 @@ type
     DATABASE_NAME           : String;
     DATABASE_USER           : String;
     DATABASE_PASSWORD       : String;
+    DATABASE_PROPERTIES     : String;
   end;
   TSQLTestConfigDynArray = array of TSQLTestConfig;
 
@@ -99,6 +100,7 @@ begin
       DATABASE_NAME := ZTestConfig.TestConfig.ReadProperty(S, DATABASE_NAME_KEY, '');
       DATABASE_USER := ZTestConfig.TestConfig.ReadProperty(S, DATABASE_USER_KEY, '');
       DATABASE_PASSWORD := ZTestConfig.TestConfig.ReadProperty(S, DATABASE_PASSWORD_KEY, '');
+      DATABASE_PROPERTIES := ZTestConfig.TestConfig.ReadProperty(S, DATABASE_PROPERTIES_KEY, '');
     end;
   end;
   tcGroupChanging(Sender, X);
@@ -110,6 +112,7 @@ begin
 end;
 
 procedure TMainForm.tcGroupChanging(Sender: TObject; var AllowChange: Boolean);
+var Props: TStrings;
 begin
   AllowChange := True;
   if ZConnection1.Connected then
@@ -122,6 +125,9 @@ begin
     ZConnection1.Database := DATABASE_NAME;
     ZConnection1.User := DATABASE_USER;
     ZConnection1.Password := DATABASE_PASSWORD;
+    Props := SplitString(DATABASE_PROPERTIES, ';');
+    ZConnection1.Properties.Assign(Props);
+    FreeAndNil(Props);
   end;
 end;
 
