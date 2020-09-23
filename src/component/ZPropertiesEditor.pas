@@ -3112,6 +3112,7 @@ const
     Values: cBoolEnum; Default: ''; Alias: '';
     Providers: (Count: 1; Items: @cSqlite3upProvider);
     Protocols: (Count: 1; Items: @cSQLiteProtocol);
+  );
   ZProp_SQLiteOpen_zVfs : TZProperty = (
     Name: ConnProps_SQLiteOpen_zVfs;
     Purpose: 'Support sqlite_open_v2'+LineEnding+
@@ -3120,6 +3121,7 @@ const
     Values: cBoolEnum; Default: ''; Alias: '';
     Providers: (Count: 1; Items: @cSqlite3upProvider);
     Protocols: (Count: 1; Items: @cSQLiteProtocol);
+  );
 {$ENDIF}
 
 {$IFDEF ENABLE_ORACLE}

@@ -615,14 +615,14 @@ begin
             MetadataBuilder.setType(FStatus, flags, sqltype);
             sqltype := CS_NONE; //use charset none
             MetadataBuilder.setCharSet(FStatus, flags, sqltype);
-            sqltype := IDecFloat34.STRING_SIZE;
+            sqltype := {$IFDEF WITH_CLASS_CONST}IDecFloat34.STRING_SIZE{$ELSE}IDecFloat34_STRING_SIZE{$ENDIF};
             MetadataBuilder.setLength(FStatus, flags, sqltype);
           end else if (sqltype = SQL_INT128) or (sqltype = SQL_DEC_FIXED) then begin
             sqltype := SQL_VARYING;
             MetadataBuilder.setType(FStatus, flags, sqltype);
             sqltype := CS_NONE;
             MetadataBuilder.setCharSet(FStatus, flags, sqltype);
-            sqltype := IInt128.STRING_SIZE;
+            sqltype := {$IFDEF WITH_CLASS_CONST}IInt128.STRING_SIZE{$ELSE}IInt128_STRING_SIZE{$ENDIF};
             MetadataBuilder.setLength(FStatus, flags, sqltype);
           end else begin
             MetadataBuilder.setType(FStatus, flags, sqltype);

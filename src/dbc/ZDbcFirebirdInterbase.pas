@@ -1128,7 +1128,6 @@ begin
       (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_engine)
     then ExeptionClass := EZSQLConnectionLost
     else ExeptionClass := EZIBSQLException;
-
   PInt64(StatusVector)^ := 0; //init for fb3up
   PInt64(PAnsiChar(StatusVector)+8)^ := 0; //init for fb3up
   if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '') then
@@ -1181,16 +1180,29 @@ function TZInterbaseFirebirdConnection.InterpretInterbaseStatus(
   StatusVector: PARRAY_ISC_STATUS): TZIBStatusVector;
 var StatusIdx: Integer;
     pCurrStatus: PZIBStatus;
+    {$IF defined(Unicode) or defined(WITH_RAWBYTESTRING)}
+    CP: Word;
+    {$IFEND}
 begin
   Result := nil;
   StatusIdx := 0;
+  {$IF defined(Unicode) or defined(WITH_RAWBYTESTRING)}
+  if ConSettings.ClientCodePage = nil
+  then CP := DefaultSystemCodePage
+  else CP := ConSettings.ClientCodePage.CP;
+  {$IFEND}
   repeat
     SetLength(Result, Length(Result) + 1);
     pCurrStatus := @Result[High(Result)]; // save pointer to avoid multiple High() calls
     // SQL code and status
     pCurrStatus.SQLCode := FInterbaseFirebirdPlainDriver.isc_sqlcode(PISC_STATUS(StatusVector));
     FInterbaseFirebirdPlainDriver.isc_sql_interprete(pCurrStatus.SQLCode, @FByteBuffer[0], SizeOf(TByteBuffer)-1);
-    pCurrStatus.SQLMessage := ConvertConnRawToString({$IFDEF UNICODE}ConSettings,{$ENDIF}@FByteBuffer[0]);
+    if FByteBuffer[0] <> 0 then
+      {$IFDEF UNICODE}
+      pCurrStatus.SQLMessage := PRawToUnicode(PAnsiChar(@FByteBuffer[0]), ZFastCode.StrLen(@FByteBuffer[0]), CP);
+      {$ELSE}
+      ZSetString(PAnsiChar(@FByteBuffer[0]), ZFastCode.StrLen(@FByteBuffer[0]), RawByteString(pCurrStatus.SQLMessage){$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF});
+      {$ENDIF}
     // IB data
     pCurrStatus.IBDataType := StatusVector[StatusIdx];
     case StatusVector[StatusIdx] of
@@ -4878,10 +4890,6 @@ begin
       FBatchStmts[B].Obj._Release;
       FBatchStmts[B].Obj := nil;
     end;
-  if FOutParamResultSet <> nil then begin
-    FOutParamResultSet.Close;
-    FOutParamResultSet := nil;
-  end;
   if FOutData <> nil then begin
     FreeMem(FOutData);
     FOutData := nil;
