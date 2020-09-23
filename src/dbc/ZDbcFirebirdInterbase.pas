@@ -4363,6 +4363,7 @@ procedure TZAbstractFirebirdInterbasePreparedStatement.SetPWideChar(Index: Cardi
 var TS: TZTimeStamp;
     D: TZDate absolute TS;
     T: TZTime absolute TS;
+    P: Pointer;
 Label Fail;
 begin
   {$R-}
@@ -4401,10 +4402,10 @@ begin
                         then FRawTemp := PUnicodeToRaw(Value, Len, codepage)
                         else FRawTemp := UnicodeStringToAscii7(Value, Len);
                         if FRawTemp <> ''
-                        then sqldata := Pointer(FRawTemp)
-                        else sqldata := PEmptyAnsiString;
+                        then P := Pointer(FRawTemp)
+                        else P := PEmptyAnsiString;
                         Len := Length(FRawTemp);
-                        WriteLobBuffer(Index, sqldata, Len)
+                        WriteLobBuffer(Index, P, Len)
                       end;
       SQL_TYPE_DATE : if TryPCharToDate(Value, Len, ConSettings^.WriteFormatSettings, D)
                       then isc_encode_date(PISC_DATE(sqldata)^, D.Year, D.Month, D.Day)
