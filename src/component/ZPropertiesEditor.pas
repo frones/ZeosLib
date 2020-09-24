@@ -3102,6 +3102,26 @@ const
     Providers: (Count: 1; Items: @cSqlite3upProvider);
     Protocols: (Count: 1; Items: @cSQLiteProtocol);
   );
+  ZProp_SQLiteOpen_Flags : TZProperty = (
+    Name: ConnProps_SQLiteOpen_Flags;
+    Purpose: 'Support sqlite_open_v2'+LineEnding+
+      'see: https://www.sqlite.org/c3ref/open.html'+LineEnding+
+      'all values are defined in ZPlainSqLiteDriver.pas'+LineEnding+
+      'i.e. thread-safety';
+    ValueType: pvtNumber; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cSqlite3upProvider);
+    Protocols: (Count: 1; Items: @cSQLiteProtocol);
+  );
+  ZProp_SQLiteOpen_zVfs : TZProperty = (
+    Name: ConnProps_SQLiteOpen_zVfs;
+    Purpose: 'Support sqlite_open_v2'+LineEnding+
+      'see: https://www.sqlite.org/c3ref/open.html';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cSqlite3upProvider);
+    Protocols: (Count: 1; Items: @cSQLiteProtocol);
+  );
 {$ENDIF}
 
 {$IFDEF ENABLE_ORACLE}
@@ -3763,7 +3783,7 @@ initialization
 
   RegisterZProperties([@ZProp_UID, @ZProp_Username, @ZProp_PWD, @ZProp_Password,
     @ZProp_LibLocation, @ZProp_CodePage, @ZProp_AutoEncodeStrings, //@ZProp_Transliterate,
-    @ZProp_ControlsCP, {@ZProp_RawStringEncoding, }@ZProp_Timeout,
+    @ZProp_ControlsCP, @ZProp_Timeout,
     @ZProp_DateReadFormat, @ZProp_DateWriteFormat, @ZProp_TimeReadFormat,
     @ZProp_TimeWriteFormat, @ZProp_DateTimeReadFormat, @ZProp_DateTimeWriteFormat,
     @ZProp_IdentifierQuotes, @ZProp_UpdateMode, @ZProp_WhereMode, @ZProp_CalcDefauls,
@@ -3779,7 +3799,7 @@ initialization
     @ZProp_Synchronous, @ZProp_LockingMode, @ZProp_ForeignKeys,
     @ZProp_journal_mode, @ZProp_BindDoubleDateTimeValues,
     @ZProp_BindOrdinalBoolValues, @ZProp_SQLiteTransactionBehaviour,
-    @ZProp_SQLiteIntAffinity]);
+    @ZProp_SQLiteIntAffinity, @ZProp_SQLiteOpen_Flags, @ZProp_SQLiteOpen_zVfs]);
 {$ENDIF}
 {$IFDEF ENABLE_ORACLE}
   RegisterZProperties([@ZProp_ServerCachedStmts,@ZProp_BlobPrefetchSize,

@@ -65,14 +65,17 @@ type
    IZDbLibDatabaseInfo = Interface(IZDataBaseInfo)
      ['{A99F9433-6A2F-40C8-9D15-96FE5632654E}']
      procedure InitIdentifierCase(const Collation: String);
+     procedure SetProductVersion(const Value: String);
    End;
   // technobot 2008-06-25 - methods moved as is from TZDbLibBaseDatabaseMetadata:
   {** Implements MsSql Database Information. }
   TZDbLibDatabaseInfo = class(TZAbstractDatabaseInfo, IZDbLibDatabaseInfo)
   private
     fCaseIdentifiers: TZIdentifierCase;
+    fProductVersion: String;
   public
     procedure InitIdentifierCase(const Collation: String);
+    procedure SetProductVersion(const Value: String);
   public
     // database/driver/server info:
     function GetDatabaseProductName: string; override;
@@ -210,14 +213,12 @@ type
   TZMsSqlDatabaseInfo = class(TZDbLibDatabaseInfo)
     // database/driver/server info:
     function GetDatabaseProductName: string; override;
-    function GetDatabaseProductVersion: string; override;
     function GetDriverName: string; override;
   end;
 
   TZSybaseDatabaseInfo = class(TZDbLibDatabaseInfo)
     // database/driver/server info:
     function GetDatabaseProductName: string; override;
-    function GetDatabaseProductVersion: string; override;
     function GetDriverName: string; override;
   end;
 
@@ -337,7 +338,7 @@ end;
 }
 function TZDbLibDatabaseInfo.GetDatabaseProductVersion: string;
 begin
-  Result := '';
+  Result := fProductVersion;
 end;
 
 {**
@@ -403,6 +404,11 @@ end;
   case insensitive and store them in lower case?
   @return <code>true</code> if so; <code>false</code> otherwise
 }
+procedure TZDbLibDatabaseInfo.SetProductVersion(const Value: String);
+begin
+  fProductVersion := Value;
+end;
+
 function TZDbLibDatabaseInfo.StoresLowerCaseIdentifiers: Boolean;
 begin
   Result := false;
@@ -1369,15 +1375,6 @@ begin
 end;
 
 {**
-  What's the version of this database product?
-  @return database version
-}
-function TZMsSqlDatabaseInfo.GetDatabaseProductVersion: string;
-begin
-  Result := '7+';
-end;
-
-{**
   What's the name of this JDBC driver?
   @return JDBC driver name
 }
@@ -1393,15 +1390,6 @@ end;
 function TZSybaseDatabaseInfo.GetDatabaseProductName: string;
 begin
   Result := 'Sybase';
-end;
-
-{**
-  What's the version of this database product?
-  @return database version
-}
-function TZSybaseDatabaseInfo.GetDatabaseProductVersion: string;
-begin
-  Result := '12+';
 end;
 
 {**
@@ -1798,13 +1786,15 @@ function TZMsSqlDatabaseMetadata.UncachedGetColumns(const Catalog: string;
 var
   SQLType: TZSQLType;
   tmp: String;
+  Connection: IZConnection;
+  Statement: IZStatement;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
-
-  with GetStatement.ExecuteQuery('exec sys.sp_columns '+
+  Connection := GetConnection;
+  Statement := Connection.CreateStatement;
+  with Statement.ExecuteQuery('exec sys.sp_columns '+
       ComposeObjectString(TableNamePattern)+', '+ComposeObjectString(SchemaPattern)+', '+
-      ComposeObjectString(Catalog)+', '+ComposeObjectString(ColumnNamePattern)) do
-  begin
+      ComposeObjectString(Catalog)+', '+ComposeObjectString(ColumnNamePattern)) do begin
     while Next do begin
       Result.MoveToInsertRow;
       Result.UpdateString(CatalogNameIndex, GetStringByName('TABLE_QUALIFIER'));
@@ -1855,7 +1845,7 @@ begin
       Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetIntByName('CHAR_OCTET_LENGTH'));
       Result.UpdateInt(TableColColumnOrdPosIndex, GetIntByName('ORDINAL_POSITION'));
       Result.UpdateString(TableColColumnIsNullableIndex, tmp);
-      if (GetConnection as IZDBLibConnection).GetProvider = dpMsSQL then
+      if Connection.GetServerProvider = spMsSQL then
         Result.UpdateBoolean(TableColColumnSearchableIndex,
           not (GetSmallByName('SS_DATA_TYPE') in [34, 35]));
       Result.InsertRow;
@@ -1864,11 +1854,14 @@ begin
   end;
 
   if not Result.IsBeforeFirst then begin
-
     // hint by Jan: I am not sure wether this statement still works with SQL Server 2000 or before.
     Result.BeforeFirst;
-    with GetStatement.ExecuteQuery(
-      Format('select c.colid, c.name, c.type, c.prec, c.scale, c.colstat, c.status, c.iscomputed '
+    if Connection.GetHostVersion < EncodeSQLVersioning(9, 0, 0) then
+      Tmp :=  'select c.colid, c.name, c.type, c.prec, '+
+        'c.scale, c.colstat, c.status, c.iscomputed from syscolumns c '+
+        'inner join sysobjects o on (o.id = c.id) where o.name COLLATE Latin1_General_CS_AS = '+
+      DeComposeObjectString(TableNamePattern)+' and c.number=0 order by colid'
+    else Tmp := Format('select c.colid, c.name, c.type, c.prec, c.scale, c.colstat, c.status, c.iscomputed '
       + ' from syscolumns c '
       + '   inner join sys.sysobjects o on (o.id = c.id) '
       + '   inner join sys.schemas s on (o.uid = s.schema_id) '
@@ -1876,11 +1869,10 @@ begin
       + '   and (o.name like %0:s escape ''%2:s'' or (%0:s is null)) '
       + '   and (s.name like %1:s escape ''%2:s'' or (%1:s is null)) '
       + ' order by colid ',
-      [DeComposeObjectString(TableNamePattern), DeComposeObjectString(SchemaPattern), GetDataBaseInfo.GetSearchStringEscape])) do
+      [DeComposeObjectString(TableNamePattern), DeComposeObjectString(SchemaPattern), GetDataBaseInfo.GetSearchStringEscape]);
+    with Statement.ExecuteQuery(Tmp) do begin
       // hint http://blog.sqlauthority.com/2007/04/30/case-sensitive-sql-query-search/ for the collation setting to get a case sensitive behavior
-    begin
-      while Next do
-      begin
+      while Next do begin
         Result.Next;
         Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetSmallByName('status') and $80) <> 0);
         Result.UpdateBoolean(TableColColumnSearchableIndex,
@@ -1893,8 +1885,7 @@ begin
           Result.GetBoolean(TableColColumnWritableIndex));
         Result.UpdateBoolean(TableColColumnReadonlyIndex,
           not Result.GetBoolean(TableColColumnWritableIndex));
-        if Result.GetBoolean(TableColColumnAutoIncIndex) then
-        begin
+        if Result.GetBoolean(TableColColumnAutoIncIndex) then begin
           Result.UpdateSmall(TableColColumnNullableIndex, 1);
           Result.UpdateString(TableColColumnIsNullableIndex, 'YES');
         end;

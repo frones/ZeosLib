@@ -1128,7 +1128,6 @@ begin
       (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_engine)
     then ExeptionClass := EZSQLConnectionLost
     else ExeptionClass := EZIBSQLException;
-
   PInt64(StatusVector)^ := 0; //init for fb3up
   PInt64(PAnsiChar(StatusVector)+8)^ := 0; //init for fb3up
   if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '') then
@@ -1181,16 +1180,29 @@ function TZInterbaseFirebirdConnection.InterpretInterbaseStatus(
   StatusVector: PARRAY_ISC_STATUS): TZIBStatusVector;
 var StatusIdx: Integer;
     pCurrStatus: PZIBStatus;
+    {$IF defined(Unicode) or defined(WITH_RAWBYTESTRING)}
+    CP: Word;
+    {$IFEND}
 begin
   Result := nil;
   StatusIdx := 0;
+  {$IF defined(Unicode) or defined(WITH_RAWBYTESTRING)}
+  if ConSettings.ClientCodePage = nil
+  then CP := DefaultSystemCodePage
+  else CP := ConSettings.ClientCodePage.CP;
+  {$IFEND}
   repeat
     SetLength(Result, Length(Result) + 1);
     pCurrStatus := @Result[High(Result)]; // save pointer to avoid multiple High() calls
     // SQL code and status
     pCurrStatus.SQLCode := FInterbaseFirebirdPlainDriver.isc_sqlcode(PISC_STATUS(StatusVector));
     FInterbaseFirebirdPlainDriver.isc_sql_interprete(pCurrStatus.SQLCode, @FByteBuffer[0], SizeOf(TByteBuffer)-1);
-    pCurrStatus.SQLMessage := ConvertConnRawToString({$IFDEF UNICODE}ConSettings,{$ENDIF}@FByteBuffer[0]);
+    if FByteBuffer[0] <> 0 then
+      {$IFDEF UNICODE}
+      pCurrStatus.SQLMessage := PRawToUnicode(PAnsiChar(@FByteBuffer[0]), ZFastCode.StrLen(@FByteBuffer[0]), CP);
+      {$ELSE}
+      ZSetString(PAnsiChar(@FByteBuffer[0]), ZFastCode.StrLen(@FByteBuffer[0]), RawByteString(pCurrStatus.SQLMessage){$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF});
+      {$ENDIF}
     // IB data
     pCurrStatus.IBDataType := StatusVector[StatusIdx];
     case StatusVector[StatusIdx] of
@@ -4363,6 +4375,7 @@ procedure TZAbstractFirebirdInterbasePreparedStatement.SetPWideChar(Index: Cardi
 var TS: TZTimeStamp;
     D: TZDate absolute TS;
     T: TZTime absolute TS;
+    P: Pointer;
 Label Fail;
 begin
   {$R-}
@@ -4401,10 +4414,10 @@ begin
                         then FRawTemp := PUnicodeToRaw(Value, Len, codepage)
                         else FRawTemp := UnicodeStringToAscii7(Value, Len);
                         if FRawTemp <> ''
-                        then sqldata := Pointer(FRawTemp)
-                        else sqldata := PEmptyAnsiString;
+                        then P := Pointer(FRawTemp)
+                        else P := PEmptyAnsiString;
                         Len := Length(FRawTemp);
-                        WriteLobBuffer(Index, sqldata, Len)
+                        WriteLobBuffer(Index, P, Len)
                       end;
       SQL_TYPE_DATE : if TryPCharToDate(Value, Len, ConSettings^.WriteFormatSettings, D)
                       then isc_encode_date(PISC_DATE(sqldata)^, D.Year, D.Month, D.Day)

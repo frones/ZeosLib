@@ -82,6 +82,7 @@ type
     function GetActiveTransaction: IZFirebirdTransaction;
     function GetAttachment: IAttachment;
     function GetStatus: IStatus;
+    function GetUtil: IUtil;
     function GetPlainDriver: TZFirebirdPlainDriver;
   end;
 
@@ -127,6 +128,7 @@ type
     function GetAttachment: IAttachment;
     function GetStatus: IStatus;
     function GetPlainDriver: TZFirebirdPlainDriver;
+    function GetUtil: IUtil;
   public { IZTransactionManager }
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
@@ -227,7 +229,7 @@ procedure TZFirebirdConnection.AfterConstruction;
 begin
   FPlainDriver := PlainDriver.GetInstance as TZFirebirdPlainDriver;
   { set default sql dialect it can be overriden }
-  FMaster := FPlainDriver.fb_get_master_interface;
+  FMaster := IMaster(FPlainDriver.fb_get_master_interface);
   inherited AfterConstruction;
 end;
 
@@ -362,6 +364,11 @@ end;
 function TZFirebirdConnection.GetStatus: IStatus;
 begin
   Result := FStatus;
+end;
+
+function TZFirebirdConnection.GetUtil: IUtil;
+begin
+  Result := FUtil;
 end;
 
 procedure TZFirebirdConnection.InternalClose;
@@ -563,20 +570,21 @@ jmpTimeOuts:
   if (FAttachment.vTable.version >= 4) and (FHostVersion >= 4000000) then begin
     TimeOut := StrToIntDef(Info.Values[ConnProps_StatementTimeOut], 0);
     if TimeOut > 0 then begin
-      IAttachment_V4(FAttachment).SetStatementTimeOut(Fstatus, TimeOut);
+      FAttachment.SetStatementTimeOut(Fstatus, TimeOut);
       if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
         HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors),
           'IAttachment.SetStatmentTimeOut', IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
     TimeOut := StrToIntDef(Info.Values[ConnProps_SessionIdleTimeOut], 0);
     if TimeOut > 16 then begin
-      IAttachment_V4(FAttachment).setIdleTimeout(Fstatus, TimeOut);
+      FAttachment.setIdleTimeout(Fstatus, TimeOut);
       if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
         HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors),
           'IAttachment.setIdleTimeout', IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
   end;
-
+  if (FHostVersion >= 4000000) and (Info.Values[ConnProps_isc_dpb_session_time_zone] = '') then
+    ExecuteImmediat('SET TIME ZONE LOCAL', lcExecute);
 end;
 
 {**

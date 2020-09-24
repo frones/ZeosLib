@@ -2321,7 +2321,7 @@ begin
         ColumnType := ColumnsDefs[I].SQLType;
         if ColumnType in [stString, stUnicodeString] then
           if (FConSettings.ClientCodePage.Encoding = ceUTF16) then begin
-            ColumnType := TZSQLType(Ord(ColumnType)+1);
+            ColumnType := stUnicodeString;
             ColumnCodePage := zCP_UTF16;
           end else if FConSettings.ClientCodePage.Encoding = ceUTF8 then
             ColumnCodePage := zCP_UTF8

@@ -90,7 +90,7 @@ type
     procedure RegisterCursor;
   public
     Constructor Create(const Statement: IZStatement; const SQL: String;
-      MessageMetadata: IMessageMetadata; Status: IStatus;
+      OrgMessageMetadata, NewMessageMetadata: IMessageMetadata; Status: IStatus;
       DataBuffer: Pointer);
   public
     function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
@@ -102,7 +102,7 @@ type
     FResultSetAddr: PIResultSet;
   public
     Constructor Create(const Statement: IZStatement; const SQL: String;
-      MessageMetadata: IMessageMetadata; Status: IStatus;
+      OrgMessageMetadata, NewMessageMetadata: IMessageMetadata; Status: IStatus;
       DataBuffer: Pointer; ResultSet: PIResultSet);
     procedure ResetCursor; override;
 
@@ -120,7 +120,7 @@ type
   TZFirebirdOutParamResultSet = class(TZAbstractFirebirdResultSet)
   public
     Constructor Create(const Statement: IZStatement; const SQL: String;
-      MessageMetadata: IMessageMetadata; Status: IStatus;
+      OrgMessageMetadata, NewMessageMetadata: IMessageMetadata; Status: IStatus;
       DataBuffer: Pointer);
   public { Traversal/Positioning }
     function Next: Boolean; override;
@@ -259,8 +259,8 @@ begin
       Result := stDouble;
     SQL_BOOLEAN, SQL_BOOLEAN_FB:
       Result := stBoolean;
-    SQL_DATE: Result := stTimestamp;
-    SQL_TYPE_TIME: Result := stTime;
+    SQL_DATE, SQL_TIMESTAMP_TZ, SQL_TIMESTAMP_TZ_EX: Result := stTimestamp;
+    SQL_TYPE_TIME, SQL_TIME_TZ, SQL_TIME_TZ_EX: Result := stTime;
     SQL_TYPE_DATE: Result := stDate;
     SQL_INT64:
         //https://firebirdsql.org/file/documentation/reference_manuals/fblangref25-en/html/fblangref25-datatypes-fixedtypes.html
@@ -275,14 +275,16 @@ begin
         then Result := stAsciiStream
         else Result := stBinaryStream;
     SQL_ARRAY: Result := stArray;
-    SQL_DEC_FIXED, SQL_DEC16,SQL_DEC34: Result := stBigDecimal;
+    SQL_DEC16: Result := stDouble;
+    SQL_DEC34: Result := stString;
+    SQL_INT128, SQL_DEC_FIXED: Result := stBigDecimal;
     else  Result := stUnknown;
   end;
 end;
 { TZAbstractFirebirdResultSet }
 
 constructor TZAbstractFirebirdResultSet.Create(const Statement: IZStatement;
-  const SQL: String; MessageMetadata: IMessageMetadata;
+  const SQL: String; OrgMessageMetadata, NewMessageMetadata: IMessageMetadata;
   Status: IStatus; DataBuffer: Pointer);
 var I, Len, OffSet: Cardinal;
   CP_ID: Word;
@@ -298,7 +300,7 @@ begin
   FFirstRow := True;
   FDataBuffer := DataBuffer;
 
-  I := MessageMetadata.getCount(FStatus);
+  I := OrgMessageMetadata.getCount(FStatus);
   if i = 0 then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   ColumnsInfo.Capacity := I;
@@ -311,7 +313,7 @@ begin
     ColumnInfo := TZInterbaseFirebirdColumnInfo.Create;
     ColumnsInfo.Add(ColumnInfo);
     with ColumnInfo do begin
-      P := MessageMetadata.getRelation(FStatus, I);
+      P := OrgMessageMetadata.getRelation(FStatus, I);
       Len := ZFastCode.StrLen(P);
       {$IFDEF UNICODE}
       TableName := PRawToUnicode(P, Len, CP_ID);
@@ -320,7 +322,7 @@ begin
       {$ENDIF}
       if TableName <> '' then begin //firebird does not corectly clear the name
         //see TestColumnTypeAndTableDetermination we get a 'ADD' in buffer back
-        P := MessageMetadata.getField(FStatus, I);
+        P := OrgMessageMetadata.getField(FStatus, I);
         Len := ZFastCode.StrLen(P);
         {$IFDEF UNICODE}
         ColumnName := PRawToUnicode(P, Len, CP_ID);
@@ -328,38 +330,41 @@ begin
         System.SetString(ColumnName, P, Len);
         {$ENDIF}
       end;
-      P := MessageMetadata.getAlias(FStatus, I);
+      P := OrgMessageMetadata.getAlias(FStatus, I);
       Len := ZFastCode.StrLen(P);
       {$IFDEF UNICODE}
       ColumnLabel := PRawToUnicode(P, Len, CP_ID);
       {$ELSE}
       System.SetString(ColumnLabel, P, Len);
       {$ENDIF}
-      sqltype := MessageMetadata.getType(FStatus, I);
-      sqlsubType := MessageMetadata.getSubType(FStatus, I);
-      Len := MessageMetadata.getLength(FStatus, I);
-      sqlscale := MessageMetadata.getScale(FStatus, I);
+      sqltype := OrgMessageMetadata.getType(FStatus, I);
+      sqlsubType := OrgMessageMetadata.getSubType(FStatus, I);
+      sqlscale := OrgMessageMetadata.getScale(FStatus, I);
       Scale := -sqlscale;
       if (sqltype = SQL_TEXT) or (sqltype = SQL_VARYING) then begin //SQL_BLOB
-        CP_ID := Word(MessageMetadata.getCharSet(FStatus, I)) and 255;
+        CP_ID := Word(OrgMessageMetadata.getCharSet(FStatus, I)) and 255;
         ColumnType := ConvertIB_FBType2SQLType(sqltype, CP_ID, sqlscale);
       end else
         ColumnType := ConvertIB_FBType2SQLType(sqltype, sqlsubtype, sqlscale);
+      sqltype := NewMessageMetadata.getType(FStatus, I);
+      sqlsubType := NewMessageMetadata.getSubType(FStatus, I);
+      sqlscale := NewMessageMetadata.getScale(FStatus, I);
+      Len := NewMessageMetadata.getLength(FStatus, I);
       if FGUIDProps.ColumnIsGUID(ColumnType, len, ColumnName) then
         ColumnType := stGUID;
-      if MessageMetadata.isNullable(FStatus, I) then begin
-        OffSet := MessageMetadata.getNullOffset(FStatus, I);
+      if OrgMessageMetadata.isNullable(FStatus, I) then begin
+        OffSet := NewMessageMetadata.getNullOffset(FStatus, I);
         sqlind := PISC_SHORT(PAnsiChar(FDataBuffer)+OffSet);
         Nullable := ntNullable;
       end;
-      OffSet := MessageMetadata.getOffset(FStatus, I);
+      OffSet := NewMessageMetadata.getOffset(FStatus, I);
       sqldata := PAnsiChar(FDataBuffer)+OffSet;
       if sqlind = sqldata then
         sqlind := nil;
       case ColumnType of
         stString, stGUID: begin
             //see test Bug#886194, we retrieve 565 as CP... the modula returns the FBID of CP
-            CP_ID := Word(MessageMetadata.getCharSet(FStatus, I)) and 255;
+            CP_ID := Word(OrgMessageMetadata.getCharSet(FStatus, I)) and 255;
             //see: http://sourceforge.net/p/zeoslib/tickets/97/
             if (CP_ID = ConSettings^.ClientCodePage^.ID)
             then ZCodePageInfo := ConSettings^.ClientCodePage
@@ -401,8 +406,10 @@ begin
                 SQL_SHORT:  Precision := 4;
                 SQL_LONG:   Precision := 9;
                 SQL_INT64:  Precision := 18;
-                SQL_DEC34,
-                SQL_DEC_FIXED: Precision := 34;
+                //SQL_DEC16:  Precision := 16;
+                //SQL_DEC34:  Precision := 34;
+                SQL_INT128,
+                SQL_DEC_FIXED: Precision := 38;
                 {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF} //nothing todo
               end;
             end;
@@ -465,10 +472,10 @@ end;
 { TZFirebirdResultSet }
 
 constructor TZFirebirdResultSet.Create(const Statement: IZStatement;
-  const SQL: String; MessageMetadata: IMessageMetadata;
+  const SQL: String; OrgMessageMetadata, NewMessageMetadata: IMessageMetadata;
   Status: IStatus; DataBuffer: Pointer; ResultSet: PIResultSet);
 begin
-  inherited Create(Statement, SQL, MessageMetadata, Status, DataBuffer);
+  inherited Create(Statement, SQL, OrgMessageMetadata, NewMessageMetadata, Status, DataBuffer);
   FResultset := ResultSet^;
   FResultSetAddr := ResultSet;
 end;
@@ -811,10 +818,11 @@ end;
 { TZFirebirdOutParamResultSet }
 
 constructor TZFirebirdOutParamResultSet.Create(const Statement: IZStatement;
-  const SQL: String; MessageMetadata: IMessageMetadata;
+  const SQL: String; OrgMessageMetadata, NewMessageMetadata: IMessageMetadata;
   Status: IStatus; DataBuffer: Pointer);
 begin
-  inherited Create(Statement, SQL, MessageMetadata, Status, DataBuffer);
+  inherited Create(Statement, SQL, OrgMessageMetadata, NewMessageMetadata,
+    Status, DataBuffer);
   LastRowNo := 1;
 end;
 

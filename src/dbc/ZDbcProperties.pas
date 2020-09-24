@@ -722,10 +722,26 @@ const
   // if Value is 'EXCLUSIVE' we're assuming you want emulate a ReadCommitted transaction
   // which blocks read transactions while the transaction is underway
   TxnProps_TransactionBehaviour = 'TransactionBehaviour';
-  // Type: BOOLEAN
-  // Treat "INT" fields in any kind as Int64, means ignore all subtypes like
-  // smallint
+  /// <type>Enum</type>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[DSProps_SQLiteIntAffinity]={False|True}</syntax>
+  /// <values>true|False</syntax>
+  /// <summary>
+  ///  Treat "INT" fields in any kind as Int64, means ignore all subtypes like
+  ///  [smallint, int32, MEDIUMINT]</summary>
+  /// <default>False</default>
   DSProps_SQLiteIntAffinity = 'SQLiteIntAffinity';
+  /// <type>Integer</type>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_SQLiteOpenFlags]=value</syntax>
+  /// <values>are defined in ZPlainSqLiteDriver.pas</syntax>
+  /// <summary>see: https://www.sqlite.org/c3ref/open.html</summary>
+  ConnProps_SQLiteOpen_Flags = 'SQLiteOpen_Flags';
+  /// <type>String</type>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_SQLiteOpen_zVfs]=value</syntax>
+  /// <summary>see: https://www.sqlite.org/c3ref/open.html</summary>
+  ConnProps_SQLiteOpen_zVfs = 'SQLiteOpen_zVfs';
 {$ENDIF}
 
 {$IFDEF ENABLE_ORACLE}

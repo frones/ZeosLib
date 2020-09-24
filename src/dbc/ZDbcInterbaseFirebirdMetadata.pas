@@ -1622,8 +1622,10 @@ function TZInterbase6DatabaseMetadata.UncachedGetTables(const Catalog: string;
 var
   SQL, TableNameCondition: string;
   I: Integer;
+  VRS: IZVirtualResultSet;
 begin
   Result := inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
+  Result.QueryInterface(IZVirtualResultSet, VRS);
 
   TableNameCondition := ConstructNameCondition(TableNamePattern,
     'RDB$RELATION_NAME');
@@ -1651,9 +1653,7 @@ begin
   end;
   SQL := SQL + 'ORDER BY RDB$RELATION_NAME';
 
-  Result := CopyToVirtualResultSet(
-    CreateStatement.ExecuteQuery(SQL),
-    ConstructVirtualResultSet(TableColumnsDynArray));
+  Result := CopyToVirtualResultSet(CreateStatement.ExecuteQuery(SQL),VRS);
 end;
 
 {**

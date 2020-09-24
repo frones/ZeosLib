@@ -103,9 +103,11 @@ type
     FDBLibMessageHandler: IZDBLibMessageHandler;
     {$ENDIF TEST_CALLBACK}
     FLastWarning: EZSQLWarning;
+    fHostVersion: Integer;
     function GetProvider: TDBLibProvider;
     procedure InternalSetTransactionIsolation(Level: TZTransactIsolationLevel);
     procedure DetermineMSDateFormat;
+    procedure DetermineProductVersion;
     function DetermineMSServerCollation: String;
     //function DetermineMSServerCodePage(const Collation: String): Word;
     {$IFDEF TEST_CALLBACK}
@@ -151,6 +153,7 @@ type
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
 
+    function GetHostVersion: Integer; override;
   public
     function GetServerAnsiCodePage: Word;
     function GetPlainDriver: TZDBLIBPLainDriver;
@@ -379,6 +382,12 @@ begin
         FPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(RawTemp));
         CheckCharEncoding(Info.Values[ConnProps_CodePage]);
       end;
+    end else begin
+      lLogFile := UpperCase(Info.Values[ConnProps_CodePage]);
+      if (lLogFile = 'UTF-8') then begin
+        lLogFile := lLogFile+' invalid client characterset for ntwdblib.dll';
+        raise EZSQLException.Create(lLogFile);
+      end;
     end;
     CheckDBLibError(lcConnect, FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
     {$IFDEF UNICODE}
@@ -418,6 +427,11 @@ begin
       Open;
     end;
   Result := FHandle;
+end;
+
+function TZDBLibConnection.GetHostVersion: Integer;
+begin
+  Result := fHostVersion
 end;
 
 function TZDBLibConnection.GetPlainDriver: TZDBLIBPLainDriver;
@@ -687,8 +701,10 @@ begin
    Using DATE and DATETIME in ISO 8601 format is multi-language supported:
    DATE Un-separated
    DATETIME as YYYY-MM-DDTHH:NN:SS }
-  if (FProvider = dpMsSQL) then
+  if (FProvider = dpMsSQL) then begin
     DetermineMSDateFormat;
+    DetermineProductVersion;
+  end;
   ConSettings^.WriteFormatSettings.DateFormat := 'YYYYMMDD';
   ConSettings^.WriteFormatSettings.DateTimeFormat := 'YYYY-MM-DDTHH:NN:SS';
   SetDateTimeFormatProperties(False);
@@ -899,6 +915,48 @@ begin
   end;
 end;
 
+procedure TZDBLibConnection.DetermineProductVersion;
+var P, PDot, PEnd: PChar;
+  MajorVersion: Integer;
+  MiniorVersion: Integer;
+  SubVersion: Integer;
+  ProductVersion: String;
+begin
+  with CreateStatement.ExecuteQuery('select Cast(SERVERPROPERTY(''productversion'') as varchar(500))') do begin
+    if Next then begin
+      ProductVersion := GetString(FirstDbcIndex);
+      if ProductVersion <> '' then begin
+        MajorVersion := 0;
+        MiniorVersion := 0;
+        SubVersion := 0;
+        P := Pointer(ProductVersion);
+        PEnd := p + Length(ProductVersion);
+        PDot := P;
+        while (PDot < PEnd) and ((Ord(PDot^) >= Ord('0')) and (Ord(PDot^) <= Ord('9'))) do
+          Inc(PDot);
+        if PDot^ = '.' then begin
+          MajorVersion := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P, PDot, 0);
+          P := PDot +1;
+          PDot := P +1;
+          while (PDot < PEnd) and ((Ord(PDot^) >= Ord('0')) and (Ord(PDot^) <= Ord('9'))) do
+            Inc(PDot);
+          if PDot^ = '.' then begin
+            MiniorVersion := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P, PDot, 0);
+            P := PDot +1;
+            PDot := P +1;
+            while (PDot < PEnd) and ((Ord(PDot^) >= Ord('0')) and (Ord(PDot^) <= Ord('9'))) do
+              Inc(PDot);
+            SubVersion := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P, PDot, 0);
+          end;
+        end;
+        (Self.GetMetadata.GetDatabaseInfo as IZDbLibDatabaseInfo).SetProductVersion(ProductVersion);
+        fHostVersion := EncodeSQLVersioning(MajorVersion, MiniorVersion, SubVersion);
+      end;
+    end;
+    Close;
+  end;
+end;
+
 procedure TZDBLibConnection.DetermineMSDateFormat;
 {$IFDEF UNICODE}
 var
@@ -1050,7 +1108,7 @@ begin
     AutoCommit := False;
     Result := 1;
   end else begin
-    S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count);
+    S := '"SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count)+'"';
     ExecuteImmediat('SAVE TRANSACTION '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S), lcTransaction);
     Result := FSavePoints.Add(S)+2;
   end;

@@ -71,6 +71,8 @@ because we need the version field and the VTable in our object ...
 
 5. to avoid overdozed rtti, add the "public" and "protected" keywords to all
   VTable and Impl(dispatcher) objects
+6. Make a string replace : QWord -> UInt64 etc
+
 }
 unit ZPlainFirebird;
 
@@ -80,22 +82,12 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_FIREBIRD}  //if set we've a empty unit
 
-uses ZCompatibility;//Classes, SysUtils;
+uses ZCompatibility, ZPlainFirebirdInterbaseDriver;
 
-type
-
-  {$IFNDEF FPC}
-  QWord = UInt64;
-  {$ELSE}
+  {$IFDEF FPC}
   {$INTERFACES CORBA}
   {$OBJECTCHECKS OFF}
   {$ENDIF}
-  {$IF not declared(Int16)} //D7..D2006
-  Int16 = SmallInt;
-  {$IFEND}
-  {$IF not declared(PAnsiChar)} //nextgen
-  PAnsiChar = MarshaledAString;
-  {$IFEND}
 
 {$IFNDEF WITH_CLASS_CONST}
 const
@@ -138,8 +130,13 @@ const
   IBatchCompletionState_EXECUTE_FAILED = Integer(-1);
   IBatchCompletionState_SUCCESS_NO_INFO = Integer(-2);
   IBatchCompletionState_NO_MORE_ERRORS = Cardinal(-1);
-type
+
+  IDecFloat16_STRING_SIZE = Cardinal(24);
+  IDecFloat34_STRING_SIZE = Cardinal(43);
+  IInt128_STRING_SIZE = Cardinal(46);
 {$ENDIF WITH_CLASS_CONST}
+
+type
   IVersioned = class;
   IReferenceCounted = class;
   IDisposable = class;
@@ -163,11 +160,9 @@ type
   IMetadataBuilder = class;
   IResultSet = class;
   IStatement = class;
-  //added in FB4
-  IBatch = class;
-  IBatchCompletionState = class;
-  IReplicator = class;
-  //end added in FB4
+  IBatch = class; {FB4}
+  IBatchCompletionState = class; {FB4}
+  IReplicator = class; {FB4}
   IRequest = class;
   IEvents = class;
   IAttachment = class;
@@ -188,6 +183,7 @@ type
   IListUsers = class;
   ILogonInfo = class;
   IManagement = class;
+  IAuthBlock = class; {FB4}
   IWireCryptPlugin = class;
   ICryptKeyCallback = class;
   IKeyHolderPlugin = class;
@@ -229,66 +225,28 @@ type
   IUdrProcedureFactory = class;
   IUdrTriggerFactory = class;
   IUdrPlugin = class;
+  IDecFloat16 = class; {FB4}
+  IDecFloat34 = class;{FB4}
+  IInt128 = class; {FB4}
+  IReplicatedRecord = class; {FB4}
+  IReplicatedBlob = class; {FB4}
+  IReplicatedTransaction = class; {FB4}
+  IReplicatedSession = class; {FB4}
 
-  (*FbException = class(Exception)
-  public
-    constructor create(status: IStatus); virtual;
-    destructor Destroy(); override;
-
-    function getStatus: IStatus;
-
-    class procedure checkException(status: IStatus);
-    class procedure catchException(status: IStatus; e: Exception);
-
-  private
-    status: IStatus;
-  end;*)
-
-  ISC_DATE = Integer;
-  ISC_TIME = Integer;
-  ISC_QUAD = array [1..2] of Integer;
-
-  ntrace_relation_t = Integer;
-  TraceCounts = Record
-    trc_relation_id    : ntrace_relation_t;
-    trc_relation_name  : PAnsiChar;
-    trc_counters    : ^Int64;
-  end;
-  TraceCountsPtr = ^TraceCounts;
-  PerformanceInfo = Record
-    pin_time      : Int64;
-    pin_counters    : ^Int64;
-    pin_count      : NativeUInt;
-    pin_tables      : TraceCountsPtr;
-    pin_records_fetched  : Int64;
-  end;
-
-  Dsc = Record
-    dsc_dtype, dsc_scale: Byte;
-    dsc_length, dsc_sub_type, dsc_flags: Int16;
-    dsc_address: ^Byte;
-  end;
   BooleanPtr = ^Boolean;
-  BytePtr = ^Byte;
-  CardinalPtr = ^Cardinal;
-  IKeyHolderPluginPtr = ^IKeyHolderPlugin;
-  ISC_QUADPtr = ^ISC_QUAD;
-  Int64Ptr = ^Int64;
-  NativeIntPtr = ^NativeInt;
-  PerformanceInfoPtr = ^PerformanceInfo;
-  dscPtr = ^dsc;
+  PIKeyHolderPlugin = ^IKeyHolderPlugin;
 
   IReferenceCounted_addRefPtr = procedure(this: IReferenceCounted); cdecl;
   IReferenceCounted_releasePtr = function(this: IReferenceCounted): Integer; cdecl;
   IDisposable_disposePtr = procedure(this: IDisposable); cdecl;
   IStatus_initPtr = procedure(this: IStatus); cdecl;
   IStatus_getStatePtr = function(this: IStatus): Cardinal; cdecl;
-  IStatus_setErrors2Ptr = procedure(this: IStatus; length: Cardinal; value: NativeIntPtr); cdecl;
-  IStatus_setWarnings2Ptr = procedure(this: IStatus; length: Cardinal; value: NativeIntPtr); cdecl;
-  IStatus_setErrorsPtr = procedure(this: IStatus; value: NativeIntPtr); cdecl;
-  IStatus_setWarningsPtr = procedure(this: IStatus; value: NativeIntPtr); cdecl;
-  IStatus_getErrorsPtr = function(this: IStatus): NativeIntPtr; cdecl;
-  IStatus_getWarningsPtr = function(this: IStatus): NativeIntPtr; cdecl;
+  IStatus_setErrors2Ptr = procedure(this: IStatus; length: Cardinal; value: PNativeInt); cdecl;
+  IStatus_setWarnings2Ptr = procedure(this: IStatus; length: Cardinal; value: PNativeInt); cdecl;
+  IStatus_setErrorsPtr = procedure(this: IStatus; value: PNativeInt); cdecl;
+  IStatus_setWarningsPtr = procedure(this: IStatus; value: PNativeInt); cdecl;
+  IStatus_getErrorsPtr = function(this: IStatus): PNativeInt; cdecl;
+  IStatus_getWarningsPtr = function(this: IStatus): PNativeInt; cdecl;
   IStatus_clonePtr = function(this: IStatus): IStatus; cdecl;
   IMaster_getStatusPtr = function(this: IMaster): IStatus; cdecl;
   IMaster_getDispatcherPtr = function(this: IMaster): IProvider; cdecl;
@@ -321,12 +279,14 @@ type
   IFirebirdConf_asIntegerPtr = function(this: IFirebirdConf; key: Cardinal): Int64; cdecl;
   IFirebirdConf_asStringPtr = function(this: IFirebirdConf; key: Cardinal): PAnsiChar; cdecl;
   IFirebirdConf_asBooleanPtr = function(this: IFirebirdConf; key: Cardinal): Boolean; cdecl;
+  IFirebirdConf_getVersionPtr = function(this: IFirebirdConf; status: IStatus): Cardinal; cdecl;
   IPluginConfig_getConfigFileNamePtr = function(this: IPluginConfig): PAnsiChar; cdecl;
   IPluginConfig_getDefaultConfigPtr = function(this: IPluginConfig; status: IStatus): IConfig; cdecl;
   IPluginConfig_getFirebirdConfPtr = function(this: IPluginConfig; status: IStatus): IFirebirdConf; cdecl;
-  IPluginConfig_setReleaseDelayPtr = procedure(this: IPluginConfig; status: IStatus; microSeconds: QWord); cdecl;
+  IPluginConfig_setReleaseDelayPtr = procedure(this: IPluginConfig; status: IStatus; microSeconds: UInt64); cdecl;
   IPluginFactory_createPluginPtr = function(this: IPluginFactory; status: IStatus; factoryParameter: IPluginConfig): IPluginBase; cdecl;
   IPluginModule_doCleanPtr = procedure(this: IPluginModule); cdecl;
+  {FB4}IPluginModule_threadDetachPtr = procedure(this: IPluginModule); cdecl;
   IPluginManager_registerPluginFactoryPtr = procedure(this: IPluginManager; pluginType: Cardinal; defaultName: PAnsiChar; factory: IPluginFactory); cdecl;
   IPluginManager_registerModulePtr = procedure(this: IPluginManager; cleanup: IPluginModule); cdecl;
   IPluginManager_unregisterModulePtr = procedure(this: IPluginManager; cleanup: IPluginModule); cdecl;
@@ -335,23 +295,24 @@ type
   IPluginManager_releasePluginPtr = procedure(this: IPluginManager; plugin: IPluginBase); cdecl;
   ICryptKey_setSymmetricPtr = procedure(this: ICryptKey; status: IStatus; type_: PAnsiChar; keyLength: Cardinal; key: Pointer); cdecl;
   ICryptKey_setAsymmetricPtr = procedure(this: ICryptKey; status: IStatus; type_: PAnsiChar; encryptKeyLength: Cardinal; encryptKey: Pointer; decryptKeyLength: Cardinal; decryptKey: Pointer); cdecl;
-  ICryptKey_getEncryptKeyPtr = function(this: ICryptKey; length: CardinalPtr): Pointer; cdecl;
-  ICryptKey_getDecryptKeyPtr = function(this: ICryptKey; length: CardinalPtr): Pointer; cdecl;
+  ICryptKey_getEncryptKeyPtr = function(this: ICryptKey; length: PCardinal): Pointer; cdecl;
+  ICryptKey_getDecryptKeyPtr = function(this: ICryptKey; length: PCardinal): Pointer; cdecl;
   IConfigManager_getDirectoryPtr = function(this: IConfigManager; code: Cardinal): PAnsiChar; cdecl;
   IConfigManager_getFirebirdConfPtr = function(this: IConfigManager): IFirebirdConf; cdecl;
   IConfigManager_getDatabaseConfPtr = function(this: IConfigManager; dbName: PAnsiChar): IFirebirdConf; cdecl;
   IConfigManager_getPluginConfigPtr = function(this: IConfigManager; configuredPlugin: PAnsiChar): IConfig; cdecl;
   IConfigManager_getInstallDirectoryPtr = function(this: IConfigManager): PAnsiChar; cdecl;
   IConfigManager_getRootDirectoryPtr = function(this: IConfigManager): PAnsiChar; cdecl;
-  IEventCallback_eventCallbackFunctionPtr = procedure(this: IEventCallback; length: Cardinal; events: BytePtr); cdecl;
-  IBlob_getInfoPtr = procedure(this: IBlob; status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr); cdecl;
-  IBlob_getSegmentPtr = function(this: IBlob; status: IStatus; bufferLength: Cardinal; buffer: Pointer; segmentLength: CardinalPtr): Integer; cdecl;
+  IConfigManager_getDefaultSecurityDbPtr = function(this: IConfigManager): PAnsiChar; cdecl;
+  IEventCallback_eventCallbackFunctionPtr = procedure(this: IEventCallback; length: Cardinal; events: PByte); cdecl;
+  IBlob_getInfoPtr = procedure(this: IBlob; status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte); cdecl;
+  IBlob_getSegmentPtr = function(this: IBlob; status: IStatus; bufferLength: Cardinal; buffer: Pointer; segmentLength: PCardinal): Integer; cdecl;
   IBlob_putSegmentPtr = procedure(this: IBlob; status: IStatus; length: Cardinal; buffer: Pointer); cdecl;
   IBlob_cancelPtr = procedure(this: IBlob; status: IStatus); cdecl;
   IBlob_closePtr = procedure(this: IBlob; status: IStatus); cdecl;
   IBlob_seekPtr = function(this: IBlob; status: IStatus; mode: Integer; offset: Integer): Integer; cdecl;
-  ITransaction_getInfoPtr = procedure(this: ITransaction; status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr); cdecl;
-  ITransaction_preparePtr = procedure(this: ITransaction; status: IStatus; msgLength: Cardinal; message: BytePtr); cdecl;
+  ITransaction_getInfoPtr = procedure(this: ITransaction; status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte); cdecl;
+  ITransaction_preparePtr = procedure(this: ITransaction; status: IStatus; msgLength: Cardinal; message: PByte); cdecl;
   ITransaction_commitPtr = procedure(this: ITransaction; status: IStatus); cdecl;
   ITransaction_commitRetainingPtr = procedure(this: ITransaction; status: IStatus); cdecl;
   ITransaction_rollbackPtr = procedure(this: ITransaction; status: IStatus); cdecl;
@@ -375,6 +336,8 @@ type
   IMessageMetadata_getNullOffsetPtr = function(this: IMessageMetadata; status: IStatus; index: Cardinal): Cardinal; cdecl;
   IMessageMetadata_getBuilderPtr = function(this: IMessageMetadata; status: IStatus): IMetadataBuilder; cdecl;
   IMessageMetadata_getMessageLengthPtr = function(this: IMessageMetadata; status: IStatus): Cardinal; cdecl;
+  IMessageMetadata_getAlignmentPtr = function(this: IMessageMetadata; status: IStatus): Cardinal; cdecl;
+  IMessageMetadata_getAlignedLengthPtr = function(this: IMessageMetadata; status: IStatus): Cardinal; cdecl;
   IMetadataBuilder_setTypePtr = procedure(this: IMetadataBuilder; status: IStatus; index: Cardinal; type_: Cardinal); cdecl;
   IMetadataBuilder_setSubTypePtr = procedure(this: IMetadataBuilder; status: IStatus; index: Cardinal; subType: Integer); cdecl;
   IMetadataBuilder_setLengthPtr = procedure(this: IMetadataBuilder; status: IStatus; index: Cardinal; length: Cardinal); cdecl;
@@ -385,6 +348,10 @@ type
   IMetadataBuilder_removePtr = procedure(this: IMetadataBuilder; status: IStatus; index: Cardinal); cdecl;
   IMetadataBuilder_addFieldPtr = function(this: IMetadataBuilder; status: IStatus): Cardinal; cdecl;
   IMetadataBuilder_getMetadataPtr = function(this: IMetadataBuilder; status: IStatus): IMessageMetadata; cdecl;
+  IMetadataBuilder_setFieldPtr = procedure(this: IMetadataBuilder; status: IStatus; index: Cardinal; field: PAnsiChar); cdecl;
+  IMetadataBuilder_setRelationPtr = procedure(this: IMetadataBuilder; status: IStatus; index: Cardinal; relation: PAnsiChar); cdecl;
+  IMetadataBuilder_setOwnerPtr = procedure(this: IMetadataBuilder; status: IStatus; index: Cardinal; owner: PAnsiChar); cdecl;
+  IMetadataBuilder_setAliasPtr = procedure(this: IMetadataBuilder; status: IStatus; index: Cardinal; alias: PAnsiChar); cdecl;
   IResultSet_fetchNextPtr = function(this: IResultSet; status: IStatus; message: Pointer): Integer; cdecl;
   IResultSet_fetchPriorPtr = function(this: IResultSet; status: IStatus; message: Pointer): Integer; cdecl;
   IResultSet_fetchFirstPtr = function(this: IResultSet; status: IStatus; message: Pointer): Integer; cdecl;
@@ -396,10 +363,10 @@ type
   IResultSet_getMetadataPtr = function(this: IResultSet; status: IStatus): IMessageMetadata; cdecl;
   IResultSet_closePtr = procedure(this: IResultSet; status: IStatus); cdecl;
   IResultSet_setDelayedOutputFormatPtr = procedure(this: IResultSet; status: IStatus; format: IMessageMetadata); cdecl;
-  IStatement_getInfoPtr = procedure(this: IStatement; status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr); cdecl;
+  IStatement_getInfoPtr = procedure(this: IStatement; status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte); cdecl;
   IStatement_getTypePtr = function(this: IStatement; status: IStatus): Cardinal; cdecl;
   IStatement_getPlanPtr = function(this: IStatement; status: IStatus; detailed: Boolean): PAnsiChar; cdecl;
-  IStatement_getAffectedRecordsPtr = function(this: IStatement; status: IStatus): QWord; cdecl;
+  IStatement_getAffectedRecordsPtr = function(this: IStatement; status: IStatus): UInt64; cdecl;
   IStatement_getInputMetadataPtr = function(this: IStatement; status: IStatus): IMessageMetadata; cdecl;
   IStatement_getOutputMetadataPtr = function(this: IStatement; status: IStatus): IMessageMetadata; cdecl;
   IStatement_executePtr = function(this: IStatement; status: IStatus; transaction: ITransaction; inMetadata: IMessageMetadata; inBuffer: Pointer; outMetadata: IMessageMetadata; outBuffer: Pointer): ITransaction; cdecl;
@@ -407,42 +374,67 @@ type
   IStatement_setCursorNamePtr = procedure(this: IStatement; status: IStatus; name: PAnsiChar); cdecl;
   IStatement_freePtr = procedure(this: IStatement; status: IStatus); cdecl;
   IStatement_getFlagsPtr = function(this: IStatement; status: IStatus): Cardinal; cdecl;
-  IRequest_receivePtr = procedure(this: IRequest; status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: BytePtr); cdecl;
-  IRequest_sendPtr = procedure(this: IRequest; status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: BytePtr); cdecl;
-  IRequest_getInfoPtr = procedure(this: IRequest; status: IStatus; level: Integer; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr); cdecl;
+  IStatement_getTimeoutPtr = function(this: IStatement; status: IStatus): Cardinal; cdecl;
+  IStatement_setTimeoutPtr = procedure(this: IStatement; status: IStatus; timeOut: Cardinal); cdecl;
+  IStatement_createBatchPtr = function(this: IStatement; status: IStatus; inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch; cdecl;
+  IBatch_addPtr = procedure(this: IBatch; status: IStatus; count: Cardinal; inBuffer: Pointer); cdecl;
+  IBatch_addBlobPtr = procedure(this: IBatch; status: IStatus; length: Cardinal; inBuffer: Pointer; blobId: PISC_QUAD; parLength: Cardinal; par: PByte); cdecl;
+  IBatch_appendBlobDataPtr = procedure(this: IBatch; status: IStatus; length: Cardinal; inBuffer: Pointer); cdecl;
+  IBatch_addBlobStreamPtr = procedure(this: IBatch; status: IStatus; length: Cardinal; inBuffer: Pointer); cdecl;
+  IBatch_registerBlobPtr = procedure(this: IBatch; status: IStatus; existingBlob: PISC_QUAD; blobId: PISC_QUAD); cdecl;
+  IBatch_executePtr = function(this: IBatch; status: IStatus; transaction: ITransaction): IBatchCompletionState; cdecl;
+  IBatch_cancelPtr = procedure(this: IBatch; status: IStatus); cdecl;
+  IBatch_getBlobAlignmentPtr = function(this: IBatch; status: IStatus): Cardinal; cdecl;
+  IBatch_getMetadataPtr = function(this: IBatch; status: IStatus): IMessageMetadata; cdecl;
+  IBatch_setDefaultBpbPtr = procedure(this: IBatch; status: IStatus; parLength: Cardinal; par: PByte); cdecl;
+  IBatchCompletionState_getSizePtr = function(this: IBatchCompletionState; status: IStatus): Cardinal; cdecl;
+  IBatchCompletionState_getStatePtr = function(this: IBatchCompletionState; status: IStatus; pos: Cardinal): Integer; cdecl;
+  IBatchCompletionState_findErrorPtr = function(this: IBatchCompletionState; status: IStatus; pos: Cardinal): Cardinal; cdecl;
+  IBatchCompletionState_getStatusPtr = procedure(this: IBatchCompletionState; status: IStatus; to_: IStatus; pos: Cardinal); cdecl;
+  IReplicator_processPtr = procedure(this: IReplicator; status: IStatus; length: Cardinal; data: PByte); cdecl;
+  IReplicator_closePtr = procedure(this: IReplicator; status: IStatus); cdecl;
+  IRequest_receivePtr = procedure(this: IRequest; status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: Pointer); cdecl;
+  IRequest_sendPtr = procedure(this: IRequest; status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: Pointer); cdecl;
+  IRequest_getInfoPtr = procedure(this: IRequest; status: IStatus; level: Integer; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte); cdecl;
   IRequest_startPtr = procedure(this: IRequest; status: IStatus; tra: ITransaction; level: Integer); cdecl;
-  IRequest_startAndSendPtr = procedure(this: IRequest; status: IStatus; tra: ITransaction; level: Integer; msgType: Cardinal; length: Cardinal; message: BytePtr); cdecl;
+  IRequest_startAndSendPtr = procedure(this: IRequest; status: IStatus; tra: ITransaction; level: Integer; msgType: Cardinal; length: Cardinal; message: Pointer); cdecl;
   IRequest_unwindPtr = procedure(this: IRequest; status: IStatus; level: Integer); cdecl;
   IRequest_freePtr = procedure(this: IRequest; status: IStatus); cdecl;
   IEvents_cancelPtr = procedure(this: IEvents; status: IStatus); cdecl;
-  IAttachment_getInfoPtr = procedure(this: IAttachment; status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr); cdecl;
-  IAttachment_startTransactionPtr = function(this: IAttachment; status: IStatus; tpbLength: Cardinal; tpb: BytePtr): ITransaction; cdecl;
-  IAttachment_reconnectTransactionPtr = function(this: IAttachment; status: IStatus; length: Cardinal; id: BytePtr): ITransaction; cdecl;
-  IAttachment_compileRequestPtr = function(this: IAttachment; status: IStatus; blrLength: Cardinal; blr: BytePtr): IRequest; cdecl;
-  IAttachment_transactRequestPtr = procedure(this: IAttachment; status: IStatus; transaction: ITransaction; blrLength: Cardinal; blr: BytePtr; inMsgLength: Cardinal; inMsg: BytePtr; outMsgLength: Cardinal; outMsg: BytePtr); cdecl;
-  IAttachment_createBlobPtr = function(this: IAttachment; status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; bpbLength: Cardinal; bpb: BytePtr): IBlob; cdecl;
-  IAttachment_openBlobPtr = function(this: IAttachment; status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; bpbLength: Cardinal; bpb: BytePtr): IBlob; cdecl;
-  IAttachment_getSlicePtr = function(this: IAttachment; status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; sdlLength: Cardinal; sdl: BytePtr; paramLength: Cardinal; param: BytePtr; sliceLength: Integer; slice: BytePtr): Integer; cdecl;
-  IAttachment_putSlicePtr = procedure(this: IAttachment; status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; sdlLength: Cardinal; sdl: BytePtr; paramLength: Cardinal; param: BytePtr; sliceLength: Integer; slice: BytePtr); cdecl;
-  IAttachment_executeDynPtr = procedure(this: IAttachment; status: IStatus; transaction: ITransaction; length: Cardinal; dyn: BytePtr); cdecl;
+  IAttachment_getInfoPtr = procedure(this: IAttachment; status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte); cdecl;
+  IAttachment_startTransactionPtr = function(this: IAttachment; status: IStatus; tpbLength: Cardinal; tpb: PByte): ITransaction; cdecl;
+  IAttachment_reconnectTransactionPtr = function(this: IAttachment; status: IStatus; length: Cardinal; id: PByte): ITransaction; cdecl;
+  IAttachment_compileRequestPtr = function(this: IAttachment; status: IStatus; blrLength: Cardinal; blr: PByte): IRequest; cdecl;
+  IAttachment_transactRequestPtr = procedure(this: IAttachment; status: IStatus; transaction: ITransaction; blrLength: Cardinal; blr: PByte; inMsgLength: Cardinal; inMsg: PByte; outMsgLength: Cardinal; outMsg: PByte); cdecl;
+  IAttachment_createBlobPtr = function(this: IAttachment; status: IStatus; transaction: ITransaction; id: PISC_QUAD; bpbLength: Cardinal; bpb: PByte): IBlob; cdecl;
+  IAttachment_openBlobPtr = function(this: IAttachment; status: IStatus; transaction: ITransaction; id: PISC_QUAD; bpbLength: Cardinal; bpb: PByte): IBlob; cdecl;
+  IAttachment_getSlicePtr = function(this: IAttachment; status: IStatus; transaction: ITransaction; id: PISC_QUAD; sdlLength: Cardinal; sdl: PByte; paramLength: Cardinal; param: PByte; sliceLength: Integer; slice: PByte): Integer; cdecl;
+  IAttachment_putSlicePtr = procedure(this: IAttachment; status: IStatus; transaction: ITransaction; id: PISC_QUAD; sdlLength: Cardinal; sdl: PByte; paramLength: Cardinal; param: PByte; sliceLength: Integer; slice: PByte); cdecl;
+  IAttachment_executeDynPtr = procedure(this: IAttachment; status: IStatus; transaction: ITransaction; length: Cardinal; dyn: PByte); cdecl;
   IAttachment_preparePtr = function(this: IAttachment; status: IStatus; tra: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; flags: Cardinal): IStatement; cdecl;
   IAttachment_executePtr = function(this: IAttachment; status: IStatus; transaction: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata; inBuffer: Pointer; outMetadata: IMessageMetadata; outBuffer: Pointer): ITransaction; cdecl;
   IAttachment_openCursorPtr = function(this: IAttachment; status: IStatus; transaction: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata; inBuffer: Pointer; outMetadata: IMessageMetadata; cursorName: PAnsiChar; cursorFlags: Cardinal): IResultSet; cdecl;
-  IAttachment_queEventsPtr = function(this: IAttachment; status: IStatus; callback: IEventCallback; length: Cardinal; events: BytePtr): IEvents; cdecl;
+  IAttachment_queEventsPtr = function(this: IAttachment; status: IStatus; callback: IEventCallback; length: Cardinal; events: PByte): IEvents; cdecl;
   IAttachment_cancelOperationPtr = procedure(this: IAttachment; status: IStatus; option: Integer); cdecl;
   IAttachment_pingPtr = procedure(this: IAttachment; status: IStatus); cdecl;
   IAttachment_detachPtr = procedure(this: IAttachment; status: IStatus); cdecl;
   IAttachment_dropDatabasePtr = procedure(this: IAttachment; status: IStatus); cdecl;
+  IAttachment_getIdleTimeoutPtr = function(this: IAttachment; status: IStatus): Cardinal; cdecl;
+  IAttachment_setIdleTimeoutPtr = procedure(this: IAttachment; status: IStatus; timeOut: Cardinal); cdecl;
+  IAttachment_getStatementTimeoutPtr = function(this: IAttachment; status: IStatus): Cardinal; cdecl;
+  IAttachment_setStatementTimeoutPtr = procedure(this: IAttachment; status: IStatus; timeOut: Cardinal); cdecl;
+  IAttachment_createBatchPtr = function(this: IAttachment; status: IStatus; transaction: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch; cdecl;
+  IAttachment_createReplicatorPtr = function(this: IAttachment; status: IStatus): IReplicator; cdecl;
   IService_detachPtr = procedure(this: IService; status: IStatus); cdecl;
-  IService_queryPtr = procedure(this: IService; status: IStatus; sendLength: Cardinal; sendItems: BytePtr; receiveLength: Cardinal; receiveItems: BytePtr; bufferLength: Cardinal; buffer: BytePtr); cdecl;
-  IService_startPtr = procedure(this: IService; status: IStatus; spbLength: Cardinal; spb: BytePtr); cdecl;
-  IProvider_attachDatabasePtr = function(this: IProvider; status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: BytePtr): IAttachment; cdecl;
-  IProvider_createDatabasePtr = function(this: IProvider; status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: BytePtr): IAttachment; cdecl;
-  IProvider_attachServiceManagerPtr = function(this: IProvider; status: IStatus; service: PAnsiChar; spbLength: Cardinal; spb: BytePtr): IService; cdecl;
+  IService_queryPtr = procedure(this: IService; status: IStatus; sendLength: Cardinal; sendItems: PByte; receiveLength: Cardinal; receiveItems: PByte; bufferLength: Cardinal; buffer: PByte); cdecl;
+  IService_startPtr = procedure(this: IService; status: IStatus; spbLength: Cardinal; spb: PByte); cdecl;
+  IProvider_attachDatabasePtr = function(this: IProvider; status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: PByte): IAttachment; cdecl;
+  IProvider_createDatabasePtr = function(this: IProvider; status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: PByte): IAttachment; cdecl;
+  IProvider_attachServiceManagerPtr = function(this: IProvider; status: IStatus; service: PAnsiChar; spbLength: Cardinal; spb: PByte): IService; cdecl;
   IProvider_shutdownPtr = procedure(this: IProvider; status: IStatus; timeout: Cardinal; reason: Integer); cdecl;
   IProvider_setDbCryptCallbackPtr = procedure(this: IProvider; status: IStatus; cryptCallback: ICryptKeyCallback); cdecl;
   IDtcStart_addAttachmentPtr = procedure(this: IDtcStart; status: IStatus; att: IAttachment); cdecl;
-  IDtcStart_addWithTpbPtr = procedure(this: IDtcStart; status: IStatus; att: IAttachment; length: Cardinal; tpb: BytePtr); cdecl;
+  IDtcStart_addWithTpbPtr = procedure(this: IDtcStart; status: IStatus; att: IAttachment; length: Cardinal; tpb: PByte); cdecl;
   IDtcStart_startPtr = function(this: IDtcStart; status: IStatus): ITransaction; cdecl;
   IDtc_joinPtr = function(this: IDtc; status: IStatus; one: ITransaction; two: ITransaction): ITransaction; cdecl;
   IDtc_startBuilderPtr = function(this: IDtc; status: IStatus): IDtcStart; cdecl;
@@ -451,14 +443,15 @@ type
   IWriter_setTypePtr = procedure(this: IWriter; status: IStatus; value: PAnsiChar); cdecl;
   IWriter_setDbPtr = procedure(this: IWriter; status: IStatus; value: PAnsiChar); cdecl;
   IServerBlock_getLoginPtr = function(this: IServerBlock): PAnsiChar; cdecl;
-  IServerBlock_getDataPtr = function(this: IServerBlock; length: CardinalPtr): BytePtr; cdecl;
+  IServerBlock_getDataPtr = function(this: IServerBlock; length: PCardinal): PByte; cdecl;
   IServerBlock_putDataPtr = procedure(this: IServerBlock; status: IStatus; length: Cardinal; data: Pointer); cdecl;
   IServerBlock_newKeyPtr = function(this: IServerBlock; status: IStatus): ICryptKey; cdecl;
   IClientBlock_getLoginPtr = function(this: IClientBlock): PAnsiChar; cdecl;
   IClientBlock_getPasswordPtr = function(this: IClientBlock): PAnsiChar; cdecl;
-  IClientBlock_getDataPtr = function(this: IClientBlock; length: CardinalPtr): BytePtr; cdecl;
+  IClientBlock_getDataPtr = function(this: IClientBlock; length: PCardinal): PByte; cdecl;
   IClientBlock_putDataPtr = procedure(this: IClientBlock; status: IStatus; length: Cardinal; data: Pointer); cdecl;
   IClientBlock_newKeyPtr = function(this: IClientBlock; status: IStatus): ICryptKey; cdecl;
+  IClientBlock_getAuthBlockPtr = function(this: IClientBlock; status: IStatus): IAuthBlock; cdecl;
   IServer_authenticatePtr = function(this: IServer; status: IStatus; sBlock: IServerBlock; writerInterface: IWriter): Integer; cdecl;
   IServer_setDbCryptCallbackPtr = procedure(this: IServer; status: IStatus; cryptCallback: ICryptKeyCallback); cdecl;
   IClient_authenticatePtr = function(this: IClient; status: IStatus; cBlock: IClientBlock): Integer; cdecl;
@@ -485,22 +478,31 @@ type
   ILogonInfo_rolePtr = function(this: ILogonInfo): PAnsiChar; cdecl;
   ILogonInfo_networkProtocolPtr = function(this: ILogonInfo): PAnsiChar; cdecl;
   ILogonInfo_remoteAddressPtr = function(this: ILogonInfo): PAnsiChar; cdecl;
-  ILogonInfo_authBlockPtr = function(this: ILogonInfo; length: CardinalPtr): BytePtr; cdecl;
+  ILogonInfo_authBlockPtr = function(this: ILogonInfo; length: PCardinal): PByte; cdecl;
   IManagement_startPtr = procedure(this: IManagement; status: IStatus; logonInfo: ILogonInfo); cdecl;
   IManagement_executePtr = function(this: IManagement; status: IStatus; user: IUser; callback: IListUsers): Integer; cdecl;
   IManagement_commitPtr = procedure(this: IManagement; status: IStatus); cdecl;
   IManagement_rollbackPtr = procedure(this: IManagement; status: IStatus); cdecl;
+  IAuthBlock_getTypePtr = function(this: IAuthBlock): PAnsiChar; cdecl;
+  IAuthBlock_getNamePtr = function(this: IAuthBlock): PAnsiChar; cdecl;
+  IAuthBlock_getPluginPtr = function(this: IAuthBlock): PAnsiChar; cdecl;
+  IAuthBlock_getSecurityDbPtr = function(this: IAuthBlock): PAnsiChar; cdecl;
+  IAuthBlock_getOriginalPluginPtr = function(this: IAuthBlock): PAnsiChar; cdecl;
+  IAuthBlock_nextPtr = function(this: IAuthBlock; status: IStatus): Boolean; cdecl;
+  IAuthBlock_firstPtr = function(this: IAuthBlock; status: IStatus): Boolean; cdecl;
   IWireCryptPlugin_getKnownTypesPtr = function(this: IWireCryptPlugin; status: IStatus): PAnsiChar; cdecl;
   IWireCryptPlugin_setKeyPtr = procedure(this: IWireCryptPlugin; status: IStatus; key: ICryptKey); cdecl;
   IWireCryptPlugin_encryptPtr = procedure(this: IWireCryptPlugin; status: IStatus; length: Cardinal; from: Pointer; to_: Pointer); cdecl;
   IWireCryptPlugin_decryptPtr = procedure(this: IWireCryptPlugin; status: IStatus; length: Cardinal; from: Pointer; to_: Pointer); cdecl;
+  IWireCryptPlugin_getSpecificDataPtr = function(this: IWireCryptPlugin; status: IStatus; keyType: PAnsiChar; length: PCardinal): PByte; cdecl;
+  IWireCryptPlugin_setSpecificDataPtr = procedure(this: IWireCryptPlugin; status: IStatus; keyType: PAnsiChar; length: Cardinal; data: PByte); cdecl;
   ICryptKeyCallback_callbackPtr = function(this: ICryptKeyCallback; dataLength: Cardinal; data: Pointer; bufferLength: Cardinal; buffer: Pointer): Cardinal; cdecl;
   IKeyHolderPlugin_keyCallbackPtr = function(this: IKeyHolderPlugin; status: IStatus; callback: ICryptKeyCallback): Integer; cdecl;
   IKeyHolderPlugin_keyHandlePtr = function(this: IKeyHolderPlugin; status: IStatus; keyName: PAnsiChar): ICryptKeyCallback; cdecl;
   IKeyHolderPlugin_useOnlyOwnKeysPtr = function(this: IKeyHolderPlugin; status: IStatus): Boolean; cdecl;
   IKeyHolderPlugin_chainHandlePtr = function(this: IKeyHolderPlugin; status: IStatus): ICryptKeyCallback; cdecl;
   IDbCryptInfo_getDatabaseFullPathPtr = function(this: IDbCryptInfo; status: IStatus): PAnsiChar; cdecl;
-  IDbCryptPlugin_setKeyPtr = procedure(this: IDbCryptPlugin; status: IStatus; length: Cardinal; sources: IKeyHolderPluginPtr; keyName: PAnsiChar); cdecl;
+  IDbCryptPlugin_setKeyPtr = procedure(this: IDbCryptPlugin; status: IStatus; length: Cardinal; sources: PIKeyHolderPlugin; keyName: PAnsiChar); cdecl;
   IDbCryptPlugin_encryptPtr = procedure(this: IDbCryptPlugin; status: IStatus; length: Cardinal; from: Pointer; to_: Pointer); cdecl;
   IDbCryptPlugin_decryptPtr = procedure(this: IDbCryptPlugin; status: IStatus; length: Cardinal; from: Pointer; to_: Pointer); cdecl;
   IDbCryptPlugin_setInfoPtr = procedure(this: IDbCryptPlugin; status: IStatus; info: IDbCryptInfo); cdecl;
@@ -537,22 +539,33 @@ type
   IExternalEngine_makeProcedurePtr = function(this: IExternalEngine; status: IStatus; context: IExternalContext; metadata: IRoutineMetadata; inBuilder: IMetadataBuilder; outBuilder: IMetadataBuilder): IExternalProcedure; cdecl;
   IExternalEngine_makeTriggerPtr = function(this: IExternalEngine; status: IStatus; context: IExternalContext; metadata: IRoutineMetadata; fieldsBuilder: IMetadataBuilder): IExternalTrigger; cdecl;
   ITimer_handlerPtr = procedure(this: ITimer); cdecl;
-  ITimerControl_startPtr = procedure(this: ITimerControl; status: IStatus; timer: ITimer; microSeconds: QWord); cdecl;
+  ITimerControl_startPtr = procedure(this: ITimerControl; status: IStatus; timer: ITimer; microSeconds: UInt64); cdecl;
   ITimerControl_stopPtr = procedure(this: ITimerControl; status: IStatus; timer: ITimer); cdecl;
   IVersionCallback_callbackPtr = procedure(this: IVersionCallback; status: IStatus; text: PAnsiChar); cdecl;
   IUtil_getFbVersionPtr = procedure(this: IUtil; status: IStatus; att: IAttachment; callback: IVersionCallback); cdecl;
-  IUtil_loadBlobPtr = procedure(this: IUtil; status: IStatus; blobId: ISC_QUADPtr; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean); cdecl;
-  IUtil_dumpBlobPtr = procedure(this: IUtil; status: IStatus; blobId: ISC_QUADPtr; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean); cdecl;
-  IUtil_getPerfCountersPtr = procedure(this: IUtil; status: IStatus; att: IAttachment; countersSet: PAnsiChar; counters: Int64Ptr); cdecl;
+  IUtil_loadBlobPtr = procedure(this: IUtil; status: IStatus; blobId: PISC_QUAD; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean); cdecl;
+  IUtil_dumpBlobPtr = procedure(this: IUtil; status: IStatus; blobId: PISC_QUAD; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean); cdecl;
+  IUtil_getPerfCountersPtr = procedure(this: IUtil; status: IStatus; att: IAttachment; countersSet: PAnsiChar; counters: PInt64); cdecl;
   IUtil_executeCreateDatabasePtr = function(this: IUtil; status: IStatus; stmtLength: Cardinal; creatDBstatement: PAnsiChar; dialect: Cardinal; stmtIsCreateDb: BooleanPtr): IAttachment; cdecl;
-  IUtil_decodeDatePtr = procedure(this: IUtil; date: ISC_DATE; year: CardinalPtr; month: CardinalPtr; day: CardinalPtr); cdecl;
-  IUtil_decodeTimePtr = procedure(this: IUtil; time: ISC_TIME; hours: CardinalPtr; minutes: CardinalPtr; seconds: CardinalPtr; fractions: CardinalPtr); cdecl;
-  IUtil_encodeDatePtr = function(this: IUtil; year: Cardinal; month: Cardinal; day: Cardinal): ISC_DATE; cdecl;
-  IUtil_encodeTimePtr = function(this: IUtil; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal): ISC_TIME; cdecl;
+  IUtil_decodeDatePtr = procedure(this: IUtil; date: TISC_DATE; year: PCardinal; month: PCardinal; day: PCardinal); cdecl;
+  IUtil_decodeTimePtr = procedure(this: IUtil; time: TISC_TIME; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal); cdecl;
+  IUtil_encodeDatePtr = function(this: IUtil; year: Cardinal; month: Cardinal; day: Cardinal): TISC_DATE; cdecl;
+  IUtil_encodeTimePtr = function(this: IUtil; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal): TISC_TIME; cdecl;
   IUtil_formatStatusPtr = function(this: IUtil; buffer: PAnsiChar; bufferSize: Cardinal; status: IStatus): Cardinal; cdecl;
   IUtil_getClientVersionPtr = function(this: IUtil): Cardinal; cdecl;
-  IUtil_getXpbBuilderPtr = function(this: IUtil; status: IStatus; kind: Cardinal; buf: BytePtr; len: Cardinal): IXpbBuilder; cdecl;
+  IUtil_getXpbBuilderPtr = function(this: IUtil; status: IStatus; kind: Cardinal; buf: PByte; len: Cardinal): IXpbBuilder; cdecl;
   IUtil_setOffsetsPtr = function(this: IUtil; status: IStatus; metadata: IMessageMetadata; callback: IOffsetsCallback): Cardinal; cdecl;
+  IUtil_getDecFloat16Ptr = function(this: IUtil; status: IStatus): IDecFloat16; cdecl;
+  IUtil_getDecFloat34Ptr = function(this: IUtil; status: IStatus): IDecFloat34; cdecl;
+  IUtil_getTransactionByHandlePtr = function(this: IUtil; status: IStatus; hndlPtr: Pisc_tr_handle): ITransaction; cdecl;
+  IUtil_getStatementByHandlePtr = function(this: IUtil; status: IStatus; hndlPtr: Pisc_stmt_handle): IStatement; cdecl;
+  IUtil_decodeTimeTzPtr = procedure(this: IUtil; status: IStatus; timeTz: PISC_TIME_TZ; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar); cdecl;
+  IUtil_decodeTimeStampTzPtr = procedure(this: IUtil; status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ; year: PCardinal; month: PCardinal; day: PCardinal; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar); cdecl;
+  IUtil_encodeTimeTzPtr = procedure(this: IUtil; status: IStatus; timeTz: PISC_TIME_TZ; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal; timeZone: PAnsiChar); cdecl;
+  IUtil_encodeTimeStampTzPtr = procedure(this: IUtil; status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ; year: Cardinal; month: Cardinal; day: Cardinal; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal; timeZone: PAnsiChar); cdecl;
+  IUtil_getInt128Ptr = function(this: IUtil; status: IStatus): IInt128; cdecl;
+  IUtil_decodeTimeTzExPtr = procedure(this: IUtil; status: IStatus; timeTz: PISC_TIME_TZ_EX; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar); cdecl;
+  IUtil_decodeTimeStampTzExPtr = procedure(this: IUtil; status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ_EX; year: PCardinal; month: PCardinal; day: PCardinal; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar); cdecl;
   IOffsetsCallback_setOffsetPtr = procedure(this: IOffsetsCallback; status: IStatus; index: Cardinal; offset: Cardinal; nullOffset: Cardinal); cdecl;
   IXpbBuilder_clearPtr = procedure(this: IXpbBuilder; status: IStatus); cdecl;
   IXpbBuilder_removeCurrentPtr = procedure(this: IXpbBuilder; status: IStatus); cdecl;
@@ -571,9 +584,9 @@ type
   IXpbBuilder_getIntPtr = function(this: IXpbBuilder; status: IStatus): Integer; cdecl;
   IXpbBuilder_getBigIntPtr = function(this: IXpbBuilder; status: IStatus): Int64; cdecl;
   IXpbBuilder_getStringPtr = function(this: IXpbBuilder; status: IStatus): PAnsiChar; cdecl;
-  IXpbBuilder_getBytesPtr = function(this: IXpbBuilder; status: IStatus): BytePtr; cdecl;
+  IXpbBuilder_getBytesPtr = function(this: IXpbBuilder; status: IStatus): PByte; cdecl;
   IXpbBuilder_getBufferLengthPtr = function(this: IXpbBuilder; status: IStatus): Cardinal; cdecl;
-  IXpbBuilder_getBufferPtr = function(this: IXpbBuilder; status: IStatus): BytePtr; cdecl;
+  IXpbBuilder_getBufferPtr = function(this: IXpbBuilder; status: IStatus): PByte; cdecl;
   ITraceConnection_getKindPtr = function(this: ITraceConnection): Cardinal; cdecl;
   ITraceConnection_getProcessIDPtr = function(this: ITraceConnection): Integer; cdecl;
   ITraceConnection_getUserNamePtr = function(this: ITraceConnection): PAnsiChar; cdecl;
@@ -589,21 +602,23 @@ type
   ITraceTransaction_getReadOnlyPtr = function(this: ITraceTransaction): Boolean; cdecl;
   ITraceTransaction_getWaitPtr = function(this: ITraceTransaction): Integer; cdecl;
   ITraceTransaction_getIsolationPtr = function(this: ITraceTransaction): Cardinal; cdecl;
-  ITraceTransaction_getPerfPtr = function(this: ITraceTransaction): PerformanceInfoPtr; cdecl;
+  ITraceTransaction_getPerfPtr = function(this: ITraceTransaction): PPerformanceInfo; cdecl;
+  ITraceTransaction_getInitialIDPtr = function(this: ITraceTransaction): Int64; cdecl;
+  ITraceTransaction_getPreviousIDPtr = function(this: ITraceTransaction): Int64; cdecl;
   ITraceParams_getCountPtr = function(this: ITraceParams): Cardinal; cdecl;
-  ITraceParams_getParamPtr = function(this: ITraceParams; idx: Cardinal): dscPtr; cdecl;
+  ITraceParams_getParamPtr = function(this: ITraceParams; idx: Cardinal): Pdsc; cdecl;
   ITraceParams_getTextUTF8Ptr = function(this: ITraceParams; status: IStatus; idx: Cardinal): PAnsiChar; cdecl;
   ITraceStatement_getStmtIDPtr = function(this: ITraceStatement): Int64; cdecl;
-  ITraceStatement_getPerfPtr = function(this: ITraceStatement): PerformanceInfoPtr; cdecl;
+  ITraceStatement_getPerfPtr = function(this: ITraceStatement): PPerformanceInfo; cdecl;
   ITraceSQLStatement_getTextPtr = function(this: ITraceSQLStatement): PAnsiChar; cdecl;
   ITraceSQLStatement_getPlanPtr = function(this: ITraceSQLStatement): PAnsiChar; cdecl;
   ITraceSQLStatement_getInputsPtr = function(this: ITraceSQLStatement): ITraceParams; cdecl;
   ITraceSQLStatement_getTextUTF8Ptr = function(this: ITraceSQLStatement): PAnsiChar; cdecl;
   ITraceSQLStatement_getExplainedPlanPtr = function(this: ITraceSQLStatement): PAnsiChar; cdecl;
-  ITraceBLRStatement_getDataPtr = function(this: ITraceBLRStatement): BytePtr; cdecl;
+  ITraceBLRStatement_getDataPtr = function(this: ITraceBLRStatement): PByte; cdecl;
   ITraceBLRStatement_getDataLengthPtr = function(this: ITraceBLRStatement): Cardinal; cdecl;
   ITraceBLRStatement_getTextPtr = function(this: ITraceBLRStatement): PAnsiChar; cdecl;
-  ITraceDYNRequest_getDataPtr = function(this: ITraceDYNRequest): BytePtr; cdecl;
+  ITraceDYNRequest_getDataPtr = function(this: ITraceDYNRequest): PByte; cdecl;
   ITraceDYNRequest_getDataLengthPtr = function(this: ITraceDYNRequest): Cardinal; cdecl;
   ITraceDYNRequest_getTextPtr = function(this: ITraceDYNRequest): PAnsiChar; cdecl;
   ITraceContextVariable_getNameSpacePtr = function(this: ITraceContextVariable): PAnsiChar; cdecl;
@@ -611,16 +626,16 @@ type
   ITraceContextVariable_getVarValuePtr = function(this: ITraceContextVariable): PAnsiChar; cdecl;
   ITraceProcedure_getProcNamePtr = function(this: ITraceProcedure): PAnsiChar; cdecl;
   ITraceProcedure_getInputsPtr = function(this: ITraceProcedure): ITraceParams; cdecl;
-  ITraceProcedure_getPerfPtr = function(this: ITraceProcedure): PerformanceInfoPtr; cdecl;
+  ITraceProcedure_getPerfPtr = function(this: ITraceProcedure): PPerformanceInfo; cdecl;
   ITraceFunction_getFuncNamePtr = function(this: ITraceFunction): PAnsiChar; cdecl;
   ITraceFunction_getInputsPtr = function(this: ITraceFunction): ITraceParams; cdecl;
   ITraceFunction_getResultPtr = function(this: ITraceFunction): ITraceParams; cdecl;
-  ITraceFunction_getPerfPtr = function(this: ITraceFunction): PerformanceInfoPtr; cdecl;
+  ITraceFunction_getPerfPtr = function(this: ITraceFunction): PPerformanceInfo; cdecl;
   ITraceTrigger_getTriggerNamePtr = function(this: ITraceTrigger): PAnsiChar; cdecl;
   ITraceTrigger_getRelationNamePtr = function(this: ITraceTrigger): PAnsiChar; cdecl;
   ITraceTrigger_getActionPtr = function(this: ITraceTrigger): Integer; cdecl;
   ITraceTrigger_getWhichPtr = function(this: ITraceTrigger): Integer; cdecl;
-  ITraceTrigger_getPerfPtr = function(this: ITraceTrigger): PerformanceInfoPtr; cdecl;
+  ITraceTrigger_getPerfPtr = function(this: ITraceTrigger): PPerformanceInfo; cdecl;
   ITraceServiceConnection_getServiceIDPtr = function(this: ITraceServiceConnection): Pointer; cdecl;
   ITraceServiceConnection_getServiceMgrPtr = function(this: ITraceServiceConnection): PAnsiChar; cdecl;
   ITraceServiceConnection_getServiceNamePtr = function(this: ITraceServiceConnection): PAnsiChar; cdecl;
@@ -632,8 +647,9 @@ type
   ITraceSweepInfo_getOSTPtr = function(this: ITraceSweepInfo): Int64; cdecl;
   ITraceSweepInfo_getOATPtr = function(this: ITraceSweepInfo): Int64; cdecl;
   ITraceSweepInfo_getNextPtr = function(this: ITraceSweepInfo): Int64; cdecl;
-  ITraceSweepInfo_getPerfPtr = function(this: ITraceSweepInfo): PerformanceInfoPtr; cdecl;
+  ITraceSweepInfo_getPerfPtr = function(this: ITraceSweepInfo): PPerformanceInfo; cdecl;
   ITraceLogWriter_writePtr = function(this: ITraceLogWriter; buf: Pointer; size: Cardinal): Cardinal; cdecl;
+  ITraceLogWriter_write_sPtr = function(this: ITraceLogWriter; status: IStatus; buf: Pointer; size: Cardinal): Cardinal; cdecl;
   ITraceInitInfo_getConfigTextPtr = function(this: ITraceInitInfo): PAnsiChar; cdecl;
   ITraceInitInfo_getTraceSessionIDPtr = function(this: ITraceInitInfo): Integer; cdecl;
   ITraceInitInfo_getTraceSessionNamePtr = function(this: ITraceInitInfo): PAnsiChar; cdecl;
@@ -644,7 +660,7 @@ type
   ITracePlugin_trace_get_errorPtr = function(this: ITracePlugin): PAnsiChar; cdecl;
   ITracePlugin_trace_attachPtr = function(this: ITracePlugin; connection: ITraceDatabaseConnection; create_db: Boolean; att_result: Cardinal): Boolean; cdecl;
   ITracePlugin_trace_detachPtr = function(this: ITracePlugin; connection: ITraceDatabaseConnection; drop_db: Boolean): Boolean; cdecl;
-  ITracePlugin_trace_transaction_startPtr = function(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; tpb_length: Cardinal; tpb: BytePtr; tra_result: Cardinal): Boolean; cdecl;
+  ITracePlugin_trace_transaction_startPtr = function(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; tpb_length: Cardinal; tpb: PByte; tra_result: Cardinal): Boolean; cdecl;
   ITracePlugin_trace_transaction_endPtr = function(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; commit: Boolean; retain_context: Boolean; tra_result: Cardinal): Boolean; cdecl;
   ITracePlugin_trace_proc_executePtr = function(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; procedure_: ITraceProcedure; started: Boolean; proc_result: Cardinal): Boolean; cdecl;
   ITracePlugin_trace_trigger_executePtr = function(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; trigger: ITraceTrigger; started: Boolean; trig_result: Cardinal): Boolean; cdecl;
@@ -657,12 +673,12 @@ type
   ITracePlugin_trace_dyn_executePtr = function(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; request: ITraceDYNRequest; time_millis: Int64; req_result: Cardinal): Boolean; cdecl;
   ITracePlugin_trace_service_attachPtr = function(this: ITracePlugin; service: ITraceServiceConnection; att_result: Cardinal): Boolean; cdecl;
   ITracePlugin_trace_service_startPtr = function(this: ITracePlugin; service: ITraceServiceConnection; switches_length: Cardinal; switches: PAnsiChar; start_result: Cardinal): Boolean; cdecl;
-  ITracePlugin_trace_service_queryPtr = function(this: ITracePlugin; service: ITraceServiceConnection; send_item_length: Cardinal; send_items: BytePtr; recv_item_length: Cardinal; recv_items: BytePtr; query_result: Cardinal): Boolean; cdecl;
+  ITracePlugin_trace_service_queryPtr = function(this: ITracePlugin; service: ITraceServiceConnection; send_item_length: Cardinal; send_items: PByte; recv_item_length: Cardinal; recv_items: PByte; query_result: Cardinal): Boolean; cdecl;
   ITracePlugin_trace_service_detachPtr = function(this: ITracePlugin; service: ITraceServiceConnection; detach_result: Cardinal): Boolean; cdecl;
   ITracePlugin_trace_event_errorPtr = function(this: ITracePlugin; connection: ITraceConnection; status: ITraceStatusVector; function_: PAnsiChar): Boolean; cdecl;
   ITracePlugin_trace_event_sweepPtr = function(this: ITracePlugin; connection: ITraceDatabaseConnection; sweep: ITraceSweepInfo; sweep_state: Cardinal): Boolean; cdecl;
   ITracePlugin_trace_func_executePtr = function(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; function_: ITraceFunction; started: Boolean; func_result: Cardinal): Boolean; cdecl;
-  ITraceFactory_trace_needsPtr = function(this: ITraceFactory): QWord; cdecl;
+  ITraceFactory_trace_needsPtr = function(this: ITraceFactory): UInt64; cdecl;
   ITraceFactory_trace_createPtr = function(this: ITraceFactory; status: IStatus; init_info: ITraceInitInfo): ITracePlugin; cdecl;
   IUdrFunctionFactory_setupPtr = procedure(this: IUdrFunctionFactory; status: IStatus; context: IExternalContext; metadata: IRoutineMetadata; inBuilder: IMetadataBuilder; outBuilder: IMetadataBuilder); cdecl;
   IUdrFunctionFactory_newItemPtr = function(this: IUdrFunctionFactory; status: IStatus; context: IExternalContext; metadata: IRoutineMetadata): IExternalFunction; cdecl;
@@ -674,15 +690,48 @@ type
   IUdrPlugin_registerFunctionPtr = procedure(this: IUdrPlugin; status: IStatus; name: PAnsiChar; factory: IUdrFunctionFactory); cdecl;
   IUdrPlugin_registerProcedurePtr = procedure(this: IUdrPlugin; status: IStatus; name: PAnsiChar; factory: IUdrProcedureFactory); cdecl;
   IUdrPlugin_registerTriggerPtr = procedure(this: IUdrPlugin; status: IStatus; name: PAnsiChar; factory: IUdrTriggerFactory); cdecl;
+  IDecFloat16_toBcdPtr = procedure(this: IDecFloat16; from: PFB_DEC16; sign: PInteger; bcd: PByte; exp: PInteger); cdecl;
+  IDecFloat16_toStringPtr = procedure(this: IDecFloat16; status: IStatus; from: PFB_DEC16; bufferLength: Cardinal; buffer: PAnsiChar); cdecl;
+  IDecFloat16_fromBcdPtr = procedure(this: IDecFloat16; sign: Integer; bcd: PByte; exp: Integer; to_: PFB_DEC16); cdecl;
+  IDecFloat16_fromStringPtr = procedure(this: IDecFloat16; status: IStatus; from: PAnsiChar; to_: PFB_DEC16); cdecl;
+  IDecFloat34_toBcdPtr = procedure(this: IDecFloat34; from: PFB_DEC34; sign: PInteger; bcd: PByte; exp: PInteger); cdecl;
+  IDecFloat34_toStringPtr = procedure(this: IDecFloat34; status: IStatus; from: PFB_DEC34; bufferLength: Cardinal; buffer: PAnsiChar); cdecl;
+  IDecFloat34_fromBcdPtr = procedure(this: IDecFloat34; sign: Integer; bcd: PByte; exp: Integer; to_: PFB_DEC34); cdecl;
+  IDecFloat34_fromStringPtr = procedure(this: IDecFloat34; status: IStatus; from: PAnsiChar; to_: PFB_DEC34); cdecl;
+  IInt128_toStringPtr = procedure(this: IInt128; status: IStatus; from: PFB_I128; scale: Integer; bufferLength: Cardinal; buffer: PAnsiChar); cdecl;
+  IInt128_fromStringPtr = procedure(this: IInt128; status: IStatus; scale: Integer; from: PAnsiChar; to_: PFB_I128); cdecl;
+  IReplicatedRecord_getRawLengthPtr = function(this: IReplicatedRecord): Cardinal; cdecl;
+  IReplicatedRecord_getRawDataPtr = function(this: IReplicatedRecord): PByte; cdecl;
+  IReplicatedBlob_getLengthPtr = function(this: IReplicatedBlob): Cardinal; cdecl;
+  IReplicatedBlob_isEofPtr = function(this: IReplicatedBlob): Boolean; cdecl;
+  IReplicatedBlob_getSegmentPtr = function(this: IReplicatedBlob; length: Cardinal; buffer: PByte): Cardinal; cdecl;
+  IReplicatedTransaction_preparePtr = function(this: IReplicatedTransaction): Boolean; cdecl;
+  IReplicatedTransaction_commitPtr = function(this: IReplicatedTransaction): Boolean; cdecl;
+  IReplicatedTransaction_rollbackPtr = function(this: IReplicatedTransaction): Boolean; cdecl;
+  IReplicatedTransaction_startSavepointPtr = function(this: IReplicatedTransaction): Boolean; cdecl;
+  IReplicatedTransaction_releaseSavepointPtr = function(this: IReplicatedTransaction): Boolean; cdecl;
+  IReplicatedTransaction_rollbackSavepointPtr = function(this: IReplicatedTransaction): Boolean; cdecl;
+  IReplicatedTransaction_insertRecordPtr = function(this: IReplicatedTransaction; name: PAnsiChar; record_: IReplicatedRecord): Boolean; cdecl;
+  IReplicatedTransaction_updateRecordPtr = function(this: IReplicatedTransaction; name: PAnsiChar; orgRecord: IReplicatedRecord; newRecord: IReplicatedRecord): Boolean; cdecl;
+  IReplicatedTransaction_deleteRecordPtr = function(this: IReplicatedTransaction; name: PAnsiChar; record_: IReplicatedRecord): Boolean; cdecl;
+  IReplicatedTransaction_storeBlobPtr = function(this: IReplicatedTransaction; blobId: TISC_QUAD; blob: IReplicatedBlob): Boolean; cdecl;
+  IReplicatedTransaction_executeSqlPtr = function(this: IReplicatedTransaction; sql: PAnsiChar): Boolean; cdecl;
+  IReplicatedTransaction_executeSqlIntlPtr = function(this: IReplicatedTransaction; charset: Cardinal; sql: PAnsiChar): Boolean; cdecl;
+  IReplicatedSession_getStatusPtr = function(this: IReplicatedSession): IStatus; cdecl;
+  IReplicatedSession_startTransactionPtr = function(this: IReplicatedSession; number: Int64): IReplicatedTransaction; cdecl;
+  IReplicatedSession_cleanupTransactionPtr = function(this: IReplicatedSession; number: Int64): Boolean; cdecl;
+  IReplicatedSession_setSequencePtr = function(this: IReplicatedSession; name: PAnsiChar; value: Int64): Boolean; cdecl;
 
   VersionedVTable = class
+  public
     version: NativeInt;
   end;
 
   IVersioned = class
+  public
     vTable: VersionedVTable;
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 0;
+    const VERSION = 1;
     {$ENDIF WITH_CLASS_CONST}
   end;
 
@@ -723,9 +772,8 @@ type
   IDisposable = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 1;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
-
     procedure dispose();
   end;
 
@@ -752,23 +800,22 @@ type
   IStatus = class(IDisposable)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 10;
-    const STATE_WARNINGS = Cardinal(1);
-    const STATE_ERRORS = Cardinal(2);
+    const VERSION = 3;
+    const STATE_WARNINGS = Cardinal($1);
+    const STATE_ERRORS = Cardinal($2);
     const RESULT_ERROR = Integer(-1);
     const RESULT_OK = Integer(0);
     const RESULT_NO_DATA = Integer(1);
     const RESULT_SEGMENT = Integer(2);
     {$ENDIF WITH_CLASS_CONST}
-
     procedure init();
     function getState(): Cardinal;
-    procedure setErrors2(length: Cardinal; value: NativeIntPtr);
-    procedure setWarnings2(length: Cardinal; value: NativeIntPtr);
-    procedure setErrors(value: NativeIntPtr);
-    procedure setWarnings(value: NativeIntPtr);
-    function getErrors(): NativeIntPtr;
-    function getWarnings(): NativeIntPtr;
+    procedure setErrors2(length: Cardinal; value: PNativeInt);
+    procedure setWarnings2(length: Cardinal; value: PNativeInt);
+    procedure setErrors(value: PNativeInt);
+    procedure setWarnings(value: PNativeInt);
+    function getErrors(): PNativeInt;
+    function getWarnings(): PNativeInt;
     function clone(): IStatus;
   end;
 
@@ -779,12 +826,12 @@ type
     procedure dispose(); virtual; abstract;
     procedure init(); virtual; abstract;
     function getState(): Cardinal; virtual; abstract;
-    procedure setErrors2(length: Cardinal; value: NativeIntPtr); virtual; abstract;
-    procedure setWarnings2(length: Cardinal; value: NativeIntPtr); virtual; abstract;
-    procedure setErrors(value: NativeIntPtr); virtual; abstract;
-    procedure setWarnings(value: NativeIntPtr); virtual; abstract;
-    function getErrors(): NativeIntPtr; virtual; abstract;
-    function getWarnings(): NativeIntPtr; virtual; abstract;
+    procedure setErrors2(length: Cardinal; value: PNativeInt); virtual; abstract;
+    procedure setWarnings2(length: Cardinal; value: PNativeInt); virtual; abstract;
+    procedure setErrors(value: PNativeInt); virtual; abstract;
+    procedure setWarnings(value: PNativeInt); virtual; abstract;
+    function getErrors(): PNativeInt; virtual; abstract;
+    function getWarnings(): PNativeInt; virtual; abstract;
     function clone(): IStatus; virtual; abstract;
   end;
 
@@ -807,7 +854,7 @@ type
   IMaster = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 12;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     function getStatus(): IStatus;
     function getDispatcher(): IProvider;
@@ -850,7 +897,7 @@ type
   IPluginBase = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 4;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
     procedure setOwner(r: IReferenceCounted);
     function getOwner(): IReferenceCounted;
@@ -860,6 +907,7 @@ type
   public
     constructor create;
   protected
+    procedure addRef(); virtual; abstract;
     function release(): Integer; virtual; abstract;
     procedure setOwner(r: IReferenceCounted); virtual; abstract;
     function getOwner(): IReferenceCounted; virtual; abstract;
@@ -877,7 +925,7 @@ type
   IPluginSet = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 7;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
     function getName(): PAnsiChar;
     function getModuleName(): PAnsiChar;
@@ -911,7 +959,7 @@ type
   IConfigEntry = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 7;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
     function getName(): PAnsiChar;
     function getValue(): PAnsiChar;
@@ -943,7 +991,7 @@ type
   IConfig = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 5;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
     function find(status: IStatus; name: PAnsiChar): IConfigEntry;
     function findValue(status: IStatus; name: PAnsiChar; value: PAnsiChar): IConfigEntry;
@@ -967,17 +1015,19 @@ type
     asInteger: IFirebirdConf_asIntegerPtr;
     asString: IFirebirdConf_asStringPtr;
     asBoolean: IFirebirdConf_asBooleanPtr;
+    getVersion: IFirebirdConf_getVersionPtr;
   end;
 
   IFirebirdConf = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 6;
+    const VERSION = 4;
     {$ENDIF WITH_CLASS_CONST}
     function getKey(name: PAnsiChar): Cardinal;
     function asInteger(key: Cardinal): Int64;
     function asString(key: Cardinal): PAnsiChar;
     function asBoolean(key: Cardinal): Boolean;
+    function getVersion(status: IStatus): Cardinal;
   end;
 
   IFirebirdConfImpl = class(IFirebirdConf)
@@ -990,6 +1040,7 @@ type
     function asInteger(key: Cardinal): Int64; virtual; abstract;
     function asString(key: Cardinal): PAnsiChar; virtual; abstract;
     function asBoolean(key: Cardinal): Boolean; virtual; abstract;
+    function getVersion(status: IStatus): Cardinal; virtual; abstract;
   end;
 
   PluginConfigVTable = class(ReferenceCountedVTable)
@@ -1003,12 +1054,12 @@ type
   IPluginConfig = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 6;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
     function getConfigFileName(): PAnsiChar;
     function getDefaultConfig(status: IStatus): IConfig;
     function getFirebirdConf(status: IStatus): IFirebirdConf;
-    procedure setReleaseDelay(status: IStatus; microSeconds: QWord);
+    procedure setReleaseDelay(status: IStatus; microSeconds: UInt64);
   end;
 
   IPluginConfigImpl = class(IPluginConfig)
@@ -1020,7 +1071,7 @@ type
     function getConfigFileName(): PAnsiChar; virtual; abstract;
     function getDefaultConfig(status: IStatus): IConfig; virtual; abstract;
     function getFirebirdConf(status: IStatus): IFirebirdConf; virtual; abstract;
-    procedure setReleaseDelay(status: IStatus; microSeconds: QWord); virtual; abstract;
+    procedure setReleaseDelay(status: IStatus; microSeconds: UInt64); virtual; abstract;
   end;
 
   PluginFactoryVTable = class(VersionedVTable)
@@ -1031,7 +1082,7 @@ type
   IPluginFactory = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 1;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     function createPlugin(status: IStatus; factoryParameter: IPluginConfig): IPluginBase;
   end;
@@ -1046,14 +1097,16 @@ type
   PluginModuleVTable = class(VersionedVTable)
   protected
     doClean: IPluginModule_doCleanPtr;
+    threadDetach: IPluginModule_threadDetachPtr;{FB4}
   end;
 
   IPluginModule = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 1;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
     procedure doClean();
+    procedure threadDetach();{FB4}
   end;
 
   IPluginModuleImpl = class(IPluginModule)
@@ -1061,6 +1114,7 @@ type
     constructor create;
   protected
     procedure doClean(); virtual; abstract;
+    procedure threadDetach(); virtual; abstract;
   end;
 
   PluginManagerVTable = class(VersionedVTable)
@@ -1076,7 +1130,7 @@ type
   IPluginManager = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 6;
+    const VERSION = 2;
     const TYPE_PROVIDER = Cardinal(1);
     const TYPE_FIRST_NON_LIB = Cardinal(2);
     const TYPE_AUTH_SERVER = Cardinal(3);
@@ -1120,12 +1174,12 @@ type
   ICryptKey = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 4;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     procedure setSymmetric(status: IStatus; type_: PAnsiChar; keyLength: Cardinal; key: Pointer);
     procedure setAsymmetric(status: IStatus; type_: PAnsiChar; encryptKeyLength: Cardinal; encryptKey: Pointer; decryptKeyLength: Cardinal; decryptKey: Pointer);
-    function getEncryptKey(length: CardinalPtr): Pointer;
-    function getDecryptKey(length: CardinalPtr): Pointer;
+    function getEncryptKey(length: PCardinal): Pointer;
+    function getDecryptKey(length: PCardinal): Pointer;
   end;
 
   ICryptKeyImpl = class(ICryptKey)
@@ -1134,8 +1188,8 @@ type
   protected
     procedure setSymmetric(status: IStatus; type_: PAnsiChar; keyLength: Cardinal; key: Pointer); virtual; abstract;
     procedure setAsymmetric(status: IStatus; type_: PAnsiChar; encryptKeyLength: Cardinal; encryptKey: Pointer; decryptKeyLength: Cardinal; decryptKey: Pointer); virtual; abstract;
-    function getEncryptKey(length: CardinalPtr): Pointer; virtual; abstract;
-    function getDecryptKey(length: CardinalPtr): Pointer; virtual; abstract;
+    function getEncryptKey(length: PCardinal): Pointer; virtual; abstract;
+    function getDecryptKey(length: PCardinal): Pointer; virtual; abstract;
   end;
 
   ConfigManagerVTable = class(VersionedVTable)
@@ -1146,12 +1200,13 @@ type
     getPluginConfig: IConfigManager_getPluginConfigPtr;
     getInstallDirectory: IConfigManager_getInstallDirectoryPtr;
     getRootDirectory: IConfigManager_getRootDirectoryPtr;
+    getDefaultSecurityDb: IConfigManager_getDefaultSecurityDbPtr;
   end;
 
   IConfigManager = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 6;
+    const VERSION = 3;
     const DIR_BIN = Cardinal(0);
     const DIR_SBIN = Cardinal(1);
     const DIR_CONF = Cardinal(2);
@@ -1169,7 +1224,8 @@ type
     const DIR_LOG = Cardinal(14);
     const DIR_GUARD = Cardinal(15);
     const DIR_PLUGINS = Cardinal(16);
-    const DIR_COUNT = Cardinal(17);
+    const DIR_TZDATA = Cardinal(17);
+    const DIR_COUNT = Cardinal(18);
     {$ENDIF WITH_CLASS_CONST}
     function getDirectory(code: Cardinal): PAnsiChar;
     function getFirebirdConf(): IFirebirdConf;
@@ -1177,6 +1233,7 @@ type
     function getPluginConfig(configuredPlugin: PAnsiChar): IConfig;
     function getInstallDirectory(): PAnsiChar;
     function getRootDirectory(): PAnsiChar;
+    function getDefaultSecurityDb(): PAnsiChar;
   end;
 
   IConfigManagerImpl = class(IConfigManager)
@@ -1189,6 +1246,7 @@ type
     function getPluginConfig(configuredPlugin: PAnsiChar): IConfig; virtual; abstract;
     function getInstallDirectory(): PAnsiChar; virtual; abstract;
     function getRootDirectory(): PAnsiChar; virtual; abstract;
+    function getDefaultSecurityDb(): PAnsiChar; virtual; abstract;
   end;
 
   EventCallbackVTable = class(ReferenceCountedVTable)
@@ -1201,7 +1259,7 @@ type
     {$IFDEF WITH_CLASS_CONST}
     const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
-    procedure eventCallbackFunction(length: Cardinal; events: BytePtr);
+    procedure eventCallbackFunction(length: Cardinal; events: PByte);
   end;
 
   IEventCallbackImpl = class(IEventCallback)
@@ -1210,7 +1268,7 @@ type
   protected
     procedure addRef(); virtual; abstract;
     function release(): Integer; virtual; abstract;
-    procedure eventCallbackFunction(length: Cardinal; events: BytePtr); virtual; abstract;
+    procedure eventCallbackFunction(length: Cardinal; events: PByte); virtual; abstract;
   end;
 
   BlobVTable = class(ReferenceCountedVTable)
@@ -1226,10 +1284,10 @@ type
   IBlob = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 8;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
-    procedure getInfo(status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr);
-    function getSegment(status: IStatus; bufferLength: Cardinal; buffer: Pointer; segmentLength: CardinalPtr): Integer;
+    procedure getInfo(status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte);
+    function getSegment(status: IStatus; bufferLength: Cardinal; buffer: Pointer; segmentLength: PCardinal): Integer;
     procedure putSegment(status: IStatus; length: Cardinal; buffer: Pointer);
     procedure cancel(status: IStatus);
     procedure close(status: IStatus);
@@ -1242,8 +1300,8 @@ type
   protected
     procedure addRef(); virtual; abstract;
     function release(): Integer; virtual; abstract;
-    procedure getInfo(status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr); virtual; abstract;
-    function getSegment(status: IStatus; bufferLength: Cardinal; buffer: Pointer; segmentLength: CardinalPtr): Integer; virtual; abstract;
+    procedure getInfo(status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte); virtual; abstract;
+    function getSegment(status: IStatus; bufferLength: Cardinal; buffer: Pointer; segmentLength: PCardinal): Integer; virtual; abstract;
     procedure putSegment(status: IStatus; length: Cardinal; buffer: Pointer); virtual; abstract;
     procedure cancel(status: IStatus); virtual; abstract;
     procedure close(status: IStatus); virtual; abstract;
@@ -1267,10 +1325,10 @@ type
   ITransaction = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 12;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
-    procedure getInfo(status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr);
-    procedure prepare(status: IStatus; msgLength: Cardinal; message: BytePtr);
+    procedure getInfo(status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte);
+    procedure prepare(status: IStatus; msgLength: Cardinal; message: PByte);
     procedure commit(status: IStatus);
     procedure commitRetaining(status: IStatus);
     procedure rollback(status: IStatus);
@@ -1287,8 +1345,8 @@ type
   protected
     procedure addRef(); virtual; abstract;
     function release(): Integer; virtual; abstract;
-    procedure getInfo(status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr); virtual; abstract;
-    procedure prepare(status: IStatus; msgLength: Cardinal; message: BytePtr); virtual; abstract;
+    procedure getInfo(status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte); virtual; abstract;
+    procedure prepare(status: IStatus; msgLength: Cardinal; message: PByte); virtual; abstract;
     procedure commit(status: IStatus); virtual; abstract;
     procedure commitRetaining(status: IStatus); virtual; abstract;
     procedure rollback(status: IStatus); virtual; abstract;
@@ -1316,12 +1374,14 @@ type
     getNullOffset: IMessageMetadata_getNullOffsetPtr;
     getBuilder: IMessageMetadata_getBuilderPtr;
     getMessageLength: IMessageMetadata_getMessageLengthPtr;
+    getAlignment: IMessageMetadata_getAlignmentPtr;
+    getAlignedLength: IMessageMetadata_getAlignedLengthPtr;
   end;
 
   IMessageMetadata = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 17;
+    const VERSION = 4;
     {$ENDIF WITH_CLASS_CONST}
     function getCount(status: IStatus): Cardinal;
     function getField(status: IStatus; index: Cardinal): PAnsiChar;
@@ -1338,6 +1398,8 @@ type
     function getNullOffset(status: IStatus; index: Cardinal): Cardinal;
     function getBuilder(status: IStatus): IMetadataBuilder;
     function getMessageLength(status: IStatus): Cardinal;
+    function getAlignment(status: IStatus): Cardinal;
+    function getAlignedLength(status: IStatus): Cardinal;
   end;
 
   IMessageMetadataImpl = class(IMessageMetadata)
@@ -1361,6 +1423,8 @@ type
     function getNullOffset(status: IStatus; index: Cardinal): Cardinal; virtual; abstract;
     function getBuilder(status: IStatus): IMetadataBuilder; virtual; abstract;
     function getMessageLength(status: IStatus): Cardinal; virtual; abstract;
+    function getAlignment(status: IStatus): Cardinal; virtual; abstract;
+    function getAlignedLength(status: IStatus): Cardinal; virtual; abstract;
   end;
 
   MetadataBuilderVTable = class(ReferenceCountedVTable)
@@ -1375,12 +1439,16 @@ type
     remove: IMetadataBuilder_removePtr;
     addField: IMetadataBuilder_addFieldPtr;
     getMetadata: IMetadataBuilder_getMetadataPtr;
+    setField: IMetadataBuilder_setFieldPtr;
+    setRelation: IMetadataBuilder_setRelationPtr;
+    setOwner: IMetadataBuilder_setOwnerPtr;
+    setAlias: IMetadataBuilder_setAliasPtr;
   end;
 
   IMetadataBuilder = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 12;
+    const VERSION = 4;
     {$ENDIF WITH_CLASS_CONST}
     procedure setType(status: IStatus; index: Cardinal; type_: Cardinal);
     procedure setSubType(status: IStatus; index: Cardinal; subType: Integer);
@@ -1392,6 +1460,10 @@ type
     procedure remove(status: IStatus; index: Cardinal);
     function addField(status: IStatus): Cardinal;
     function getMetadata(status: IStatus): IMessageMetadata;
+    procedure setField(status: IStatus; index: Cardinal; field: PAnsiChar);
+    procedure setRelation(status: IStatus; index: Cardinal; relation: PAnsiChar);
+    procedure setOwner(status: IStatus; index: Cardinal; owner: PAnsiChar);
+    procedure setAlias(status: IStatus; index: Cardinal; alias: PAnsiChar);
   end;
 
   IMetadataBuilderImpl = class(IMetadataBuilder)
@@ -1410,6 +1482,10 @@ type
     procedure remove(status: IStatus; index: Cardinal); virtual; abstract;
     function addField(status: IStatus): Cardinal; virtual; abstract;
     function getMetadata(status: IStatus): IMessageMetadata; virtual; abstract;
+    procedure setField(status: IStatus; index: Cardinal; field: PAnsiChar); virtual; abstract;
+    procedure setRelation(status: IStatus; index: Cardinal; relation: PAnsiChar); virtual; abstract;
+    procedure setOwner(status: IStatus; index: Cardinal; owner: PAnsiChar); virtual; abstract;
+    procedure setAlias(status: IStatus; index: Cardinal; alias: PAnsiChar); virtual; abstract;
   end;
 
   ResultSetVTable = class(ReferenceCountedVTable)
@@ -1430,7 +1506,7 @@ type
   IResultSet = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 13;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
     function fetchNext(status: IStatus; message: Pointer): Integer;
     function fetchPrior(status: IStatus; message: Pointer): Integer;
@@ -1446,7 +1522,6 @@ type
   end;
 
   IResultSetImpl = class(IResultSet)
-  public
     constructor create;
   protected
     procedure addRef(); virtual; abstract;
@@ -1477,30 +1552,33 @@ type
     setCursorName: IStatement_setCursorNamePtr;
     free: IStatement_freePtr;
     getFlags: IStatement_getFlagsPtr;
+    getTimeout: IStatement_getTimeoutPtr;
+    setTimeout: IStatement_setTimeoutPtr;
+    createBatch: IStatement_createBatchPtr;
   end;
 
   IStatement = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 13;
-    const PREPARE_PREFETCH_NONE = Cardinal(0);
-    const PREPARE_PREFETCH_TYPE = Cardinal(1);
-    const PREPARE_PREFETCH_INPUT_PARAMETERS = Cardinal(2);
-    const PREPARE_PREFETCH_OUTPUT_PARAMETERS = Cardinal(4);
-    const PREPARE_PREFETCH_LEGACY_PLAN = Cardinal(8);
-    const PREPARE_PREFETCH_DETAILED_PLAN = Cardinal(16);
-    const PREPARE_PREFETCH_AFFECTED_RECORDS = Cardinal(32);
-    const PREPARE_PREFETCH_FLAGS = Cardinal(64);
+    const VERSION = 4;
+    const PREPARE_PREFETCH_NONE = Cardinal($0);
+    const PREPARE_PREFETCH_TYPE = Cardinal($1);
+    const PREPARE_PREFETCH_INPUT_PARAMETERS = Cardinal($2);
+    const PREPARE_PREFETCH_OUTPUT_PARAMETERS = Cardinal($4);
+    const PREPARE_PREFETCH_LEGACY_PLAN = Cardinal($8);
+    const PREPARE_PREFETCH_DETAILED_PLAN = Cardinal($10);
+    const PREPARE_PREFETCH_AFFECTED_RECORDS = Cardinal($20);
+    const PREPARE_PREFETCH_FLAGS = Cardinal($40);
     const PREPARE_PREFETCH_METADATA = Cardinal(IStatement.PREPARE_PREFETCH_TYPE or IStatement.PREPARE_PREFETCH_FLAGS or IStatement.PREPARE_PREFETCH_INPUT_PARAMETERS or IStatement.PREPARE_PREFETCH_OUTPUT_PARAMETERS);
     const PREPARE_PREFETCH_ALL = Cardinal(IStatement.PREPARE_PREFETCH_METADATA or IStatement.PREPARE_PREFETCH_LEGACY_PLAN or IStatement.PREPARE_PREFETCH_DETAILED_PLAN or IStatement.PREPARE_PREFETCH_AFFECTED_RECORDS);
-    const FLAG_HAS_CURSOR = Cardinal(1);
-    const FLAG_REPEAT_EXECUTE = Cardinal(2);
-    const CURSOR_TYPE_SCROLLABLE = Cardinal(1);
+    const FLAG_HAS_CURSOR = Cardinal($1);
+    const FLAG_REPEAT_EXECUTE = Cardinal($2);
+    const CURSOR_TYPE_SCROLLABLE = Cardinal($1);
     {$ENDIF WITH_CLASS_CONST}
-    procedure getInfo(status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr);
+    procedure getInfo(status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte);
     function getType(status: IStatus): Cardinal;
     function getPlan(status: IStatus; detailed: Boolean): PAnsiChar;
-    function getAffectedRecords(status: IStatus): QWord;
+    function getAffectedRecords(status: IStatus): UInt64;
     function getInputMetadata(status: IStatus): IMessageMetadata;
     function getOutputMetadata(status: IStatus): IMessageMetadata;
     function execute(status: IStatus; transaction: ITransaction; inMetadata: IMessageMetadata; inBuffer: Pointer; outMetadata: IMessageMetadata; outBuffer: Pointer): ITransaction;
@@ -1508,6 +1586,10 @@ type
     procedure setCursorName(status: IStatus; name: PAnsiChar);
     procedure free(status: IStatus);
     function getFlags(status: IStatus): Cardinal;
+    //Added by FB4+
+    function getTimeout(status: IStatus): Cardinal;
+    procedure setTimeout(status: IStatus; timeOut: Cardinal);
+    function createBatch(status: IStatus; inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch;
   end;
 
   IStatementImpl = class(IStatement)
@@ -1516,10 +1598,10 @@ type
   protected
     procedure addRef(); virtual; abstract;
     function release(): Integer; virtual; abstract;
-    procedure getInfo(status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr); virtual; abstract;
+    procedure getInfo(status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte); virtual; abstract;
     function getType(status: IStatus): Cardinal; virtual; abstract;
     function getPlan(status: IStatus; detailed: Boolean): PAnsiChar; virtual; abstract;
-    function getAffectedRecords(status: IStatus): QWord; virtual; abstract;
+    function getAffectedRecords(status: IStatus): UInt64; virtual; abstract;
     function getInputMetadata(status: IStatus): IMessageMetadata; virtual; abstract;
     function getOutputMetadata(status: IStatus): IMessageMetadata; virtual; abstract;
     function execute(status: IStatus; transaction: ITransaction; inMetadata: IMessageMetadata; inBuffer: Pointer; outMetadata: IMessageMetadata; outBuffer: Pointer): ITransaction; virtual; abstract;
@@ -1527,51 +1609,29 @@ type
     procedure setCursorName(status: IStatus; name: PAnsiChar); virtual; abstract;
     procedure free(status: IStatus); virtual; abstract;
     function getFlags(status: IStatus): Cardinal; virtual; abstract;
-  end;
-
-  { since FB4+ }
-  StatementVTable_V4 = class(StatementVTable)
-  protected
-    getTimeout: function(this: IStatement; status: IStatus): Cardinal; cdecl;
-    setTimeout: procedure(this: IStatement; status: IStatus; timeout: Cardinal); cdecl;
-    createBatch: function(this: IStatement; status: IStatus; inMetadata: IMessageMetadata; parLength: Cardinal; par: Pointer): IBatch; cdecl;
-  end;
-
-  IStatement_V4 = class(IStatement)
-  public
-    function getTimeout(status: IStatus): Cardinal;
-    procedure setTimeout(status: IStatus; timeout: Cardinal);
-    function createBatch(status: IStatus; inMetadata: IMessageMetadata; parLength: Cardinal; par: Pointer): IBatch;
-  end;
-
-  IStatementImpl_V4 = class(IStatement_V4)
-  public
-    constructor create;
-  protected
     function getTimeout(status: IStatus): Cardinal; virtual; abstract;
-    procedure setTimeout(status: IStatus; timeout: Cardinal);  virtual; abstract;
-    function createBatch(status: IStatus; inMetadata: IMessageMetadata; parLength: Cardinal; par: Pointer): IBatch; virtual; abstract;
+    procedure setTimeout(status: IStatus; timeOut: Cardinal); virtual; abstract;
+    function createBatch(status: IStatus; inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch; virtual; abstract;
   end;
 
   BatchVTable = class(ReferenceCountedVTable)
   protected
-    add: procedure(this: IBatch; status: IStatus; count: Cardinal; inBuffer: Pointer); cdecl;
-    addBlob: procedure(this: IBatch; status: IStatus; length: Cardinal; inBuffer: Pointer; blobId: ISC_QUADptr; parLength: Cardinal; par: PByte); cdecl;
-    appendBlobData: procedure(this: IBatch; status: IStatus; length: Cardinal; inBuffer: Pointer); cdecl;
-    addBlobStream: procedure(this: IBatch; status: IStatus; length: Cardinal; inBuffer: Pointer); cdecl;
-    registerBlob: procedure(this: IBatch; status: IStatus; existingBlob: ISC_QUADPtr; blobId: ISC_QUADPtr); cdecl;
-    execute: function(this: IBatch; status: IStatus; transaction: ITransaction): IBatchCompletionState; cdecl;
-    cancel: procedure(this: IBatch; status: IStatus); cdecl;
-    getBlobAlignment: function(this: IBatch; status: IStatus): Cardinal; cdecl;
-    getMetadata: function(this: IBatch; status: IStatus): IMessageMetadata; cdecl;
-    setDefaultBpb: procedure(this: IBatch; status: IStatus; parLength: Cardinal; par: PByte); cdecl;
+    add: IBatch_addPtr;
+    addBlob: IBatch_addBlobPtr;
+    appendBlobData: IBatch_appendBlobDataPtr;
+    addBlobStream: IBatch_addBlobStreamPtr;
+    registerBlob: IBatch_registerBlobPtr;
+    execute: IBatch_executePtr;
+    cancel: IBatch_cancelPtr;
+    getBlobAlignment: IBatch_getBlobAlignmentPtr;
+    getMetadata: IBatch_getMetadataPtr;
+    setDefaultBpb: IBatch_setDefaultBpbPtr;
   end;
 
   IBatch = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = Cardinal(3);
-
+    const VERSION = 3;
     const VERSION1 = Byte(1);
     const TAG_MULTIERROR = Byte(1);
     const TAG_RECORD_COUNTS = Byte(2);
@@ -1584,12 +1644,11 @@ type
     const BLOB_STREAM = Byte(3);
     const BLOB_SEGHDR_ALIGN = Cardinal(2);
     {$ENDIF WITH_CLASS_CONST}
-
     procedure add(status: IStatus; count: Cardinal; inBuffer: Pointer);
-    procedure addBlob(status: IStatus; length: Cardinal; inBuffer: Pointer; blobId: ISC_QUADptr; parLength: Cardinal; par: PByte);
+    procedure addBlob(status: IStatus; length: Cardinal; inBuffer: Pointer; blobId: PISC_QUAD; parLength: Cardinal; par: PByte);
     procedure appendBlobData(status: IStatus; length: Cardinal; inBuffer: Pointer);
     procedure addBlobStream(status: IStatus; length: Cardinal; inBuffer: Pointer);
-    procedure registerBlob(status: IStatus; existingBlob: ISC_QUADPtr; blobId: ISC_QUADPtr);
+    procedure registerBlob(status: IStatus; existingBlob: PISC_QUAD; blobId: PISC_QUAD);
     function execute(status: IStatus; transaction: ITransaction): IBatchCompletionState;
     procedure cancel(status: IStatus);
     function getBlobAlignment(status: IStatus): Cardinal;
@@ -1601,11 +1660,13 @@ type
   public
     constructor create;
   protected
+    procedure addRef(); virtual; abstract;
+    function release(): Integer; virtual; abstract;
     procedure add(status: IStatus; count: Cardinal; inBuffer: Pointer); virtual; abstract;
-    procedure addBlob(status: IStatus; length: Cardinal; inBuffer: Pointer; blobId: ISC_QUADptr; parLength: Cardinal; par: PByte); virtual; abstract;
+    procedure addBlob(status: IStatus; length: Cardinal; inBuffer: Pointer; blobId: PISC_QUAD; parLength: Cardinal; par: PByte); virtual; abstract;
     procedure appendBlobData(status: IStatus; length: Cardinal; inBuffer: Pointer); virtual; abstract;
     procedure addBlobStream(status: IStatus; length: Cardinal; inBuffer: Pointer); virtual; abstract;
-    procedure registerBlob(status: IStatus; existingBlob: ISC_QUADPtr; blobId: ISC_QUADPtr); virtual; abstract;
+    procedure registerBlob(status: IStatus; existingBlob: PISC_QUAD; blobId: PISC_QUAD); virtual; abstract;
     function execute(status: IStatus; transaction: ITransaction): IBatchCompletionState; virtual; abstract;
     procedure cancel(status: IStatus); virtual; abstract;
     function getBlobAlignment(status: IStatus): Cardinal; virtual; abstract;
@@ -1615,48 +1676,47 @@ type
 
   BatchCompletionStateVTable = class(DisposableVTable)
   protected
-    getSize: function(this: IBatchCompletionState; status: IStatus): Cardinal; cdecl;
-    getState: function(this: IBatchCompletionState; status: IStatus; pos: Cardinal): Integer; cdecl;
-    findError: function(this: IBatchCompletionState; status: IStatus; pos: Cardinal): Cardinal; cdecl;
-    getStatus: function(this: IBatchCompletionState; status, _to: IStatus; pos: Cardinal): Cardinal; cdecl;
+    getSize: IBatchCompletionState_getSizePtr;
+    getState: IBatchCompletionState_getStatePtr;
+    findError: IBatchCompletionState_findErrorPtr;
+    getStatus: IBatchCompletionState_getStatusPtr;
   end;
 
   IBatchCompletionState = class(IDisposable)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = Cardinal(3);
-
+    const VERSION = 3;
     const EXECUTE_FAILED = Integer(-1);
     const SUCCESS_NO_INFO = Integer(-2);
-    const NO_MORE_ERRORS = Cardinal(-1);
+    const NO_MORE_ERRORS = Cardinal($ffffffff);
     {$ENDIF WITH_CLASS_CONST}
-
     function getSize(status: IStatus): Cardinal;
     function getState(status: IStatus; pos: Cardinal): Integer;
     function findError(status: IStatus; pos: Cardinal): Cardinal;
-    function getStatus(status, _to: IStatus; pos: Cardinal): Cardinal;
+    procedure getStatus(status: IStatus; to_: IStatus; pos: Cardinal);
   end;
 
   IBatchCompletionStateImpl = class(IBatchCompletionState)
   public
     constructor create;
   protected
+    procedure dispose(); virtual; abstract;
     function getSize(status: IStatus): Cardinal; virtual; abstract;
     function getState(status: IStatus; pos: Cardinal): Integer; virtual; abstract;
     function findError(status: IStatus; pos: Cardinal): Cardinal; virtual; abstract;
-    function getStatus(status, _to: IStatus; pos: Cardinal): Cardinal; virtual; abstract;
+    procedure getStatus(status: IStatus; to_: IStatus; pos: Cardinal); virtual; abstract;
   end;
 
-  IReplicatorVTable = class(ReferenceCountedVTable)
+  ReplicatorVTable = class(ReferenceCountedVTable)
   protected
-    process: procedure(this: IReplicator; status: IStatus; length: Cardinal; data: PByte); cdecl;
-    close: procedure(this: IReplicator; status: IStatus); cdecl;
+    process: IReplicator_processPtr;
+    close: IReplicator_closePtr;
   end;
 
   IReplicator = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = Cardinal(3);
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
     procedure process(status: IStatus; length: Cardinal; data: PByte);
     procedure close(status: IStatus);
@@ -1666,6 +1726,8 @@ type
   public
     constructor create;
   protected
+    procedure addRef(); virtual; abstract;
+    function release(): Integer; virtual; abstract;
     procedure process(status: IStatus; length: Cardinal; data: PByte); virtual; abstract;
     procedure close(status: IStatus); virtual; abstract;
   end;
@@ -1684,14 +1746,13 @@ type
   IRequest = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 9;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
-
-    procedure receive(status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: BytePtr);
-    procedure send(status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: BytePtr);
-    procedure getInfo(status: IStatus; level: Integer; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr);
+    procedure receive(status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: Pointer);
+    procedure send(status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: Pointer);
+    procedure getInfo(status: IStatus; level: Integer; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte);
     procedure start(status: IStatus; tra: ITransaction; level: Integer);
-    procedure startAndSend(status: IStatus; tra: ITransaction; level: Integer; msgType: Cardinal; length: Cardinal; message: BytePtr);
+    procedure startAndSend(status: IStatus; tra: ITransaction; level: Integer; msgType: Cardinal; length: Cardinal; message: Pointer);
     procedure unwind(status: IStatus; level: Integer);
     procedure free(status: IStatus);
   end;
@@ -1702,11 +1763,11 @@ type
   protected
     procedure addRef(); virtual; abstract;
     function release(): Integer; virtual; abstract;
-    procedure receive(status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: BytePtr); virtual; abstract;
-    procedure send(status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: BytePtr); virtual; abstract;
-    procedure getInfo(status: IStatus; level: Integer; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr); virtual; abstract;
+    procedure receive(status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: Pointer); virtual; abstract;
+    procedure send(status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: Pointer); virtual; abstract;
+    procedure getInfo(status: IStatus; level: Integer; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte); virtual; abstract;
     procedure start(status: IStatus; tra: ITransaction; level: Integer); virtual; abstract;
-    procedure startAndSend(status: IStatus; tra: ITransaction; level: Integer; msgType: Cardinal; length: Cardinal; message: BytePtr); virtual; abstract;
+    procedure startAndSend(status: IStatus; tra: ITransaction; level: Integer; msgType: Cardinal; length: Cardinal; message: Pointer); virtual; abstract;
     procedure unwind(status: IStatus; level: Integer); virtual; abstract;
     procedure free(status: IStatus); virtual; abstract;
   end;
@@ -1753,31 +1814,44 @@ type
     ping: IAttachment_pingPtr;
     detach: IAttachment_detachPtr;
     dropDatabase: IAttachment_dropDatabasePtr;
+    getIdleTimeout: IAttachment_getIdleTimeoutPtr;
+    setIdleTimeout: IAttachment_setIdleTimeoutPtr;
+    getStatementTimeout: IAttachment_getStatementTimeoutPtr;
+    setStatementTimeout: IAttachment_setStatementTimeoutPtr;
+    createBatch: IAttachment_createBatchPtr;
+    createReplicator: IAttachment_createReplicatorPtr;
   end;
 
   IAttachment = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 20;
+    const VERSION = 4;
     {$ENDIF WITH_CLASS_CONST}
-    procedure getInfo(status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr);
-    function startTransaction(status: IStatus; tpbLength: Cardinal; tpb: BytePtr): ITransaction;
-    function reconnectTransaction(status: IStatus; length: Cardinal; id: BytePtr): ITransaction;
-    function compileRequest(status: IStatus; blrLength: Cardinal; blr: BytePtr): IRequest;
-    procedure transactRequest(status: IStatus; transaction: ITransaction; blrLength: Cardinal; blr: BytePtr; inMsgLength: Cardinal; inMsg: BytePtr; outMsgLength: Cardinal; outMsg: BytePtr);
-    function createBlob(status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; bpbLength: Cardinal; bpb: BytePtr): IBlob;
-    function openBlob(status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; bpbLength: Cardinal; bpb: BytePtr): IBlob;
-    function getSlice(status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; sdlLength: Cardinal; sdl: BytePtr; paramLength: Cardinal; param: BytePtr; sliceLength: Integer; slice: BytePtr): Integer;
-    procedure putSlice(status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; sdlLength: Cardinal; sdl: BytePtr; paramLength: Cardinal; param: BytePtr; sliceLength: Integer; slice: BytePtr);
-    procedure executeDyn(status: IStatus; transaction: ITransaction; length: Cardinal; dyn: BytePtr);
+    procedure getInfo(status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte);
+    function startTransaction(status: IStatus; tpbLength: Cardinal; tpb: PByte): ITransaction;
+    function reconnectTransaction(status: IStatus; length: Cardinal; id: PByte): ITransaction;
+    function compileRequest(status: IStatus; blrLength: Cardinal; blr: PByte): IRequest;
+    procedure transactRequest(status: IStatus; transaction: ITransaction; blrLength: Cardinal; blr: PByte; inMsgLength: Cardinal; inMsg: PByte; outMsgLength: Cardinal; outMsg: PByte);
+    function createBlob(status: IStatus; transaction: ITransaction; id: PISC_QUAD; bpbLength: Cardinal; bpb: PByte): IBlob;
+    function openBlob(status: IStatus; transaction: ITransaction; id: PISC_QUAD; bpbLength: Cardinal; bpb: PByte): IBlob;
+    function getSlice(status: IStatus; transaction: ITransaction; id: PISC_QUAD; sdlLength: Cardinal; sdl: PByte; paramLength: Cardinal; param: PByte; sliceLength: Integer; slice: PByte): Integer;
+    procedure putSlice(status: IStatus; transaction: ITransaction; id: PISC_QUAD; sdlLength: Cardinal; sdl: PByte; paramLength: Cardinal; param: PByte; sliceLength: Integer; slice: PByte);
+    procedure executeDyn(status: IStatus; transaction: ITransaction; length: Cardinal; dyn: PByte);
     function prepare(status: IStatus; tra: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; flags: Cardinal): IStatement;
     function execute(status: IStatus; transaction: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata; inBuffer: Pointer; outMetadata: IMessageMetadata; outBuffer: Pointer): ITransaction;
     function openCursor(status: IStatus; transaction: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata; inBuffer: Pointer; outMetadata: IMessageMetadata; cursorName: PAnsiChar; cursorFlags: Cardinal): IResultSet;
-    function queEvents(status: IStatus; callback: IEventCallback; length: Cardinal; events: BytePtr): IEvents;
+    function queEvents(status: IStatus; callback: IEventCallback; length: Cardinal; events: PByte): IEvents;
     procedure cancelOperation(status: IStatus; option: Integer);
     procedure ping(status: IStatus);
     procedure detach(status: IStatus);
     procedure dropDatabase(status: IStatus);
+    //added in FB4+
+    function getIdleTimeout(status: IStatus): Cardinal;
+    procedure setIdleTimeout(status: IStatus; timeOut: Cardinal);
+    function getStatementTimeout(status: IStatus): Cardinal;
+    procedure setStatementTimeout(status: IStatus; timeOut: Cardinal);
+    function createBatch(status: IStatus; transaction: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch;
+    function createReplicator(status: IStatus): IReplicator;
   end;
 
   IAttachmentImpl = class(IAttachment)
@@ -1786,61 +1860,29 @@ type
   protected
     procedure addRef(); virtual; abstract;
     function release(): Integer; virtual; abstract;
-    procedure getInfo(status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr); virtual; abstract;
-    function startTransaction(status: IStatus; tpbLength: Cardinal; tpb: BytePtr): ITransaction; virtual; abstract;
-    function reconnectTransaction(status: IStatus; length: Cardinal; id: BytePtr): ITransaction; virtual; abstract;
-    function compileRequest(status: IStatus; blrLength: Cardinal; blr: BytePtr): IRequest; virtual; abstract;
-    procedure transactRequest(status: IStatus; transaction: ITransaction; blrLength: Cardinal; blr: BytePtr; inMsgLength: Cardinal; inMsg: BytePtr; outMsgLength: Cardinal; outMsg: BytePtr); virtual; abstract;
-    function createBlob(status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; bpbLength: Cardinal; bpb: BytePtr): IBlob; virtual; abstract;
-    function openBlob(status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; bpbLength: Cardinal; bpb: BytePtr): IBlob; virtual; abstract;
-    function getSlice(status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; sdlLength: Cardinal; sdl: BytePtr; paramLength: Cardinal; param: BytePtr; sliceLength: Integer; slice: BytePtr): Integer; virtual; abstract;
-    procedure putSlice(status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; sdlLength: Cardinal; sdl: BytePtr; paramLength: Cardinal; param: BytePtr; sliceLength: Integer; slice: BytePtr); virtual; abstract;
-    procedure executeDyn(status: IStatus; transaction: ITransaction; length: Cardinal; dyn: BytePtr); virtual; abstract;
+    procedure getInfo(status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte); virtual; abstract;
+    function startTransaction(status: IStatus; tpbLength: Cardinal; tpb: PByte): ITransaction; virtual; abstract;
+    function reconnectTransaction(status: IStatus; length: Cardinal; id: PByte): ITransaction; virtual; abstract;
+    function compileRequest(status: IStatus; blrLength: Cardinal; blr: PByte): IRequest; virtual; abstract;
+    procedure transactRequest(status: IStatus; transaction: ITransaction; blrLength: Cardinal; blr: PByte; inMsgLength: Cardinal; inMsg: PByte; outMsgLength: Cardinal; outMsg: PByte); virtual; abstract;
+    function createBlob(status: IStatus; transaction: ITransaction; id: PISC_QUAD; bpbLength: Cardinal; bpb: PByte): IBlob; virtual; abstract;
+    function openBlob(status: IStatus; transaction: ITransaction; id: PISC_QUAD; bpbLength: Cardinal; bpb: PByte): IBlob; virtual; abstract;
+    function getSlice(status: IStatus; transaction: ITransaction; id: PISC_QUAD; sdlLength: Cardinal; sdl: PByte; paramLength: Cardinal; param: PByte; sliceLength: Integer; slice: PByte): Integer; virtual; abstract;
+    procedure putSlice(status: IStatus; transaction: ITransaction; id: PISC_QUAD; sdlLength: Cardinal; sdl: PByte; paramLength: Cardinal; param: PByte; sliceLength: Integer; slice: PByte); virtual; abstract;
+    procedure executeDyn(status: IStatus; transaction: ITransaction; length: Cardinal; dyn: PByte); virtual; abstract;
     function prepare(status: IStatus; tra: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; flags: Cardinal): IStatement; virtual; abstract;
     function execute(status: IStatus; transaction: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata; inBuffer: Pointer; outMetadata: IMessageMetadata; outBuffer: Pointer): ITransaction; virtual; abstract;
     function openCursor(status: IStatus; transaction: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata; inBuffer: Pointer; outMetadata: IMessageMetadata; cursorName: PAnsiChar; cursorFlags: Cardinal): IResultSet; virtual; abstract;
-    function queEvents(status: IStatus; callback: IEventCallback; length: Cardinal; events: BytePtr): IEvents; virtual; abstract;
+    function queEvents(status: IStatus; callback: IEventCallback; length: Cardinal; events: PByte): IEvents; virtual; abstract;
     procedure cancelOperation(status: IStatus; option: Integer); virtual; abstract;
     procedure ping(status: IStatus); virtual; abstract;
     procedure detach(status: IStatus); virtual; abstract;
     procedure dropDatabase(status: IStatus); virtual; abstract;
-  end;
-
-  Attachment_V4VTable = class(AttachmentVTable)
-  protected
-    getIdleTimeout: function(Self: IAttachment; status: IStatus): Cardinal; cdecl;
-    setIdleTimeout: procedure(Self: IAttachment; status: IStatus; timeOut: Cardinal); cdecl;
-    getStatementTimeout: function(Self: IAttachment; status: IStatus): Cardinal; cdecl;
-    setStatementTimeout: procedure(Self: IAttachment; status: IStatus; timeOut: Cardinal); cdecl;
-    createBatch: function(Self: IAttachment; status: IStatus; transaction: ITransaction;
-      stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal;
-      inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch; cdecl;
-    createReplicator: function(Self: IAttachment; status: IStatus): IReplicator; cdecl;
-  end;
-
-  IAttachment_V4 = class(IAttachment)
-  public
-    function getIdleTimeout(status: IStatus): Cardinal;
-    procedure setIdleTimeout(status: IStatus; timeOut: Cardinal);
-    function getStatementTimeout(status: IStatus): Cardinal;
-    procedure setStatementTimeout(status: IStatus; timeOut: Cardinal);
-    function createBatch(status: IStatus; transaction: ITransaction;
-      stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal;
-      inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch;
-    function createReplicator(status: IStatus): IReplicator;
-  end;
-
-  IAttachment_V4Impl = class(IAttachment_V4)
-  public
-    constructor create;
-  protected
     function getIdleTimeout(status: IStatus): Cardinal; virtual; abstract;
     procedure setIdleTimeout(status: IStatus; timeOut: Cardinal); virtual; abstract;
     function getStatementTimeout(status: IStatus): Cardinal; virtual; abstract;
     procedure setStatementTimeout(status: IStatus; timeOut: Cardinal); virtual; abstract;
-    function createBatch(status: IStatus; transaction: ITransaction;
-      stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal;
-      inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch; virtual; abstract;
+    function createBatch(status: IStatus; transaction: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch; virtual; abstract;
     function createReplicator(status: IStatus): IReplicator; virtual; abstract;
   end;
 
@@ -1854,11 +1896,11 @@ type
   IService = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 5;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
     procedure detach(status: IStatus);
-    procedure query(status: IStatus; sendLength: Cardinal; sendItems: BytePtr; receiveLength: Cardinal; receiveItems: BytePtr; bufferLength: Cardinal; buffer: BytePtr);
-    procedure start(status: IStatus; spbLength: Cardinal; spb: BytePtr);
+    procedure query(status: IStatus; sendLength: Cardinal; sendItems: PByte; receiveLength: Cardinal; receiveItems: PByte; bufferLength: Cardinal; buffer: PByte);
+    procedure start(status: IStatus; spbLength: Cardinal; spb: PByte);
   end;
 
   IServiceImpl = class(IService)
@@ -1868,8 +1910,8 @@ type
     procedure addRef(); virtual; abstract;
     function release(): Integer; virtual; abstract;
     procedure detach(status: IStatus); virtual; abstract;
-    procedure query(status: IStatus; sendLength: Cardinal; sendItems: BytePtr; receiveLength: Cardinal; receiveItems: BytePtr; bufferLength: Cardinal; buffer: BytePtr); virtual; abstract;
-    procedure start(status: IStatus; spbLength: Cardinal; spb: BytePtr); virtual; abstract;
+    procedure query(status: IStatus; sendLength: Cardinal; sendItems: PByte; receiveLength: Cardinal; receiveItems: PByte; bufferLength: Cardinal; buffer: PByte); virtual; abstract;
+    procedure start(status: IStatus; spbLength: Cardinal; spb: PByte); virtual; abstract;
   end;
 
   ProviderVTable = class(PluginBaseVTable)
@@ -1884,11 +1926,11 @@ type
   IProvider = class(IPluginBase)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 9;
+    const VERSION = 4;
     {$ENDIF WITH_CLASS_CONST}
-    function attachDatabase(status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: BytePtr): IAttachment;
-    function createDatabase(status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: BytePtr): IAttachment;
-    function attachServiceManager(status: IStatus; service: PAnsiChar; spbLength: Cardinal; spb: BytePtr): IService;
+    function attachDatabase(status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: PByte): IAttachment;
+    function createDatabase(status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: PByte): IAttachment;
+    function attachServiceManager(status: IStatus; service: PAnsiChar; spbLength: Cardinal; spb: PByte): IService;
     procedure shutdown(status: IStatus; timeout: Cardinal; reason: Integer);
     procedure setDbCryptCallback(status: IStatus; cryptCallback: ICryptKeyCallback);
   end;
@@ -1901,9 +1943,9 @@ type
     function release(): Integer; virtual; abstract;
     procedure setOwner(r: IReferenceCounted); virtual; abstract;
     function getOwner(): IReferenceCounted; virtual; abstract;
-    function attachDatabase(status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: BytePtr): IAttachment; virtual; {cdecl; }abstract;
-    function createDatabase(status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: BytePtr): IAttachment; virtual; abstract;
-    function attachServiceManager(status: IStatus; service: PAnsiChar; spbLength: Cardinal; spb: BytePtr): IService; virtual; abstract;
+    function attachDatabase(status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: PByte): IAttachment; virtual; abstract;
+    function createDatabase(status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: PByte): IAttachment; virtual; abstract;
+    function attachServiceManager(status: IStatus; service: PAnsiChar; spbLength: Cardinal; spb: PByte): IService; virtual; abstract;
     procedure shutdown(status: IStatus; timeout: Cardinal; reason: Integer); virtual; abstract;
     procedure setDbCryptCallback(status: IStatus; cryptCallback: ICryptKeyCallback); virtual; abstract;
   end;
@@ -1918,10 +1960,10 @@ type
   IDtcStart = class(IDisposable)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 4;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
     procedure addAttachment(status: IStatus; att: IAttachment);
-    procedure addWithTpb(status: IStatus; att: IAttachment; length: Cardinal; tpb: BytePtr);
+    procedure addWithTpb(status: IStatus; att: IAttachment; length: Cardinal; tpb: PByte);
     function start(status: IStatus): ITransaction;
   end;
 
@@ -1931,7 +1973,7 @@ type
   protected
     procedure dispose(); virtual; abstract;
     procedure addAttachment(status: IStatus; att: IAttachment); virtual; abstract;
-    procedure addWithTpb(status: IStatus; att: IAttachment; length: Cardinal; tpb: BytePtr); virtual; abstract;
+    procedure addWithTpb(status: IStatus; att: IAttachment; length: Cardinal; tpb: PByte); virtual; abstract;
     function start(status: IStatus): ITransaction; virtual; abstract;
   end;
 
@@ -1959,6 +2001,7 @@ type
   end;
 
   AuthVTable = class(PluginBaseVTable)
+  protected
   end;
 
   IAuth = class(IPluginBase)
@@ -1993,7 +2036,7 @@ type
   IWriter = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 4;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     procedure reset();
     procedure add(status: IStatus; name: PAnsiChar);
@@ -2022,10 +2065,10 @@ type
   IServerBlock = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 4;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     function getLogin(): PAnsiChar;
-    function getData(length: CardinalPtr): BytePtr;
+    function getData(length: PCardinal): PByte;
     procedure putData(status: IStatus; length: Cardinal; data: Pointer);
     function newKey(status: IStatus): ICryptKey;
   end;
@@ -2035,7 +2078,7 @@ type
     constructor create;
   protected
     function getLogin(): PAnsiChar; virtual; abstract;
-    function getData(length: CardinalPtr): BytePtr; virtual; abstract;
+    function getData(length: Cardinal): PByte; virtual; abstract;
     procedure putData(status: IStatus; length: Cardinal; data: Pointer); virtual; abstract;
     function newKey(status: IStatus): ICryptKey; virtual; abstract;
   end;
@@ -2047,18 +2090,21 @@ type
     getData: IClientBlock_getDataPtr;
     putData: IClientBlock_putDataPtr;
     newKey: IClientBlock_newKeyPtr;
+    getAuthBlock: IClientBlock_getAuthBlockPtr;
   end;
 
   IClientBlock = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 7;
+    const VERSION = 4;
     {$ENDIF WITH_CLASS_CONST}
     function getLogin(): PAnsiChar;
     function getPassword(): PAnsiChar;
-    function getData(length: CardinalPtr): BytePtr;
+    function getData(length: PCardinal): PByte;
     procedure putData(status: IStatus; length: Cardinal; data: Pointer);
     function newKey(status: IStatus): ICryptKey;
+    //Added in FB4+
+    function getAuthBlock(status: IStatus): IAuthBlock;
   end;
 
   IClientBlockImpl = class(IClientBlock)
@@ -2069,9 +2115,10 @@ type
     function release(): Integer; virtual; abstract;
     function getLogin(): PAnsiChar; virtual; abstract;
     function getPassword(): PAnsiChar; virtual; abstract;
-    function getData(length: CardinalPtr): BytePtr; virtual; abstract;
+    function getData(length: Cardinal): PByte; virtual; abstract;
     procedure putData(status: IStatus; length: Cardinal; data: Pointer); virtual; abstract;
     function newKey(status: IStatus): ICryptKey; virtual; abstract;
+    function getAuthBlock(status: IStatus): IAuthBlock; virtual; abstract;
   end;
 
   ServerVTable = class(AuthVTable)
@@ -2135,7 +2182,7 @@ type
   IUserField = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 3;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     function entered(): Integer;
     function specified(): Integer;
@@ -2160,7 +2207,7 @@ type
   ICharUserField = class(IUserField)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 5;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
     function get(): PAnsiChar;
     procedure set_(status: IStatus; newValue: PAnsiChar);
@@ -2186,7 +2233,7 @@ type
   IIntUserField = class(IUserField)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 5;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
     function get(): Integer;
     procedure set_(status: IStatus; newValue: Integer);
@@ -2221,7 +2268,7 @@ type
   IUser = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 11;
+    const VERSION = 2;
     const OP_USER_ADD = Cardinal(1);
     const OP_USER_MODIFY = Cardinal(2);
     const OP_USER_DELETE = Cardinal(3);
@@ -2267,7 +2314,7 @@ type
   IListUsers = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 1;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     procedure list(status: IStatus; user: IUser);
   end;
@@ -2291,13 +2338,13 @@ type
   ILogonInfo = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 5;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     function name(): PAnsiChar;
     function role(): PAnsiChar;
     function networkProtocol(): PAnsiChar;
     function remoteAddress(): PAnsiChar;
-    function authBlock(length: CardinalPtr): BytePtr;
+    function authBlock(length: PCardinal): PByte;
   end;
 
   ILogonInfoImpl = class(ILogonInfo)
@@ -2308,7 +2355,7 @@ type
     function role(): PAnsiChar; virtual; abstract;
     function networkProtocol(): PAnsiChar; virtual; abstract;
     function remoteAddress(): PAnsiChar; virtual; abstract;
-    function authBlock(length: CardinalPtr): BytePtr; virtual; abstract;
+    function authBlock(length: PCardinal): PByte; virtual; abstract;
   end;
 
   ManagementVTable = class(PluginBaseVTable)
@@ -2322,7 +2369,7 @@ type
   IManagement = class(IPluginBase)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 8;
+    const VERSION = 4;
     {$ENDIF WITH_CLASS_CONST}
     procedure start(status: IStatus; logonInfo: ILogonInfo);
     function execute(status: IStatus; user: IUser; callback: IListUsers): Integer;
@@ -2344,23 +2391,67 @@ type
     procedure rollback(status: IStatus); virtual; abstract;
   end;
 
+  AuthBlockVTable = class(VersionedVTable)
+  protected
+    getType: IAuthBlock_getTypePtr;
+    getName: IAuthBlock_getNamePtr;
+    getPlugin: IAuthBlock_getPluginPtr;
+    getSecurityDb: IAuthBlock_getSecurityDbPtr;
+    getOriginalPlugin: IAuthBlock_getOriginalPluginPtr;
+    next: IAuthBlock_nextPtr;
+    first: IAuthBlock_firstPtr;
+  end;
+
+  IAuthBlock = class(IVersioned)
+  public
+    {$IFDEF WITH_CLASS_CONST}
+    const VERSION = 2;
+    {$ENDIF WITH_CLASS_CONST}
+    function getType(): PAnsiChar;
+    function getName(): PAnsiChar;
+    function getPlugin(): PAnsiChar;
+    function getSecurityDb(): PAnsiChar;
+    function getOriginalPlugin(): PAnsiChar;
+    function next(status: IStatus): Boolean;
+    function first(status: IStatus): Boolean;
+  end;
+
+  IAuthBlockImpl = class(IAuthBlock)
+  public
+    constructor create;
+  protected
+    function getType(): PAnsiChar; virtual; abstract;
+    function getName(): PAnsiChar; virtual; abstract;
+    function getPlugin(): PAnsiChar; virtual; abstract;
+    function getSecurityDb(): PAnsiChar; virtual; abstract;
+    function getOriginalPlugin(): PAnsiChar; virtual; abstract;
+    function next(status: IStatus): Boolean; virtual; abstract;
+    function first(status: IStatus): Boolean; virtual; abstract;
+  end;
+
   WireCryptPluginVTable = class(PluginBaseVTable)
   protected
     getKnownTypes: IWireCryptPlugin_getKnownTypesPtr;
     setKey: IWireCryptPlugin_setKeyPtr;
     encrypt: IWireCryptPlugin_encryptPtr;
     decrypt: IWireCryptPlugin_decryptPtr;
+    //add in FB4
+    getSpecificData: IWireCryptPlugin_getSpecificDataPtr;
+    setSpecificData: IWireCryptPlugin_setSpecificDataPtr;
   end;
 
   IWireCryptPlugin = class(IPluginBase)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 8;
+    const VERSION = 5;
     {$ENDIF WITH_CLASS_CONST}
     function getKnownTypes(status: IStatus): PAnsiChar;
     procedure setKey(status: IStatus; key: ICryptKey);
     procedure encrypt(status: IStatus; length: Cardinal; from: Pointer; to_: Pointer);
     procedure decrypt(status: IStatus; length: Cardinal; from: Pointer; to_: Pointer);
+    //add in FB4
+    function getSpecificData(status: IStatus; keyType: PAnsiChar; length: PCardinal): PByte;
+    procedure setSpecificData(status: IStatus; keyType: PAnsiChar; length: Cardinal; data: PByte);
   end;
 
   IWireCryptPluginImpl = class(IWireCryptPlugin)
@@ -2375,6 +2466,8 @@ type
     procedure setKey(status: IStatus; key: ICryptKey); virtual; abstract;
     procedure encrypt(status: IStatus; length: Cardinal; from: Pointer; to_: Pointer); virtual; abstract;
     procedure decrypt(status: IStatus; length: Cardinal; from: Pointer; to_: Pointer); virtual; abstract;
+    function getSpecificData(status: IStatus; keyType: PAnsiChar; length: Cardinal): PByte; virtual; abstract;
+    procedure setSpecificData(status: IStatus; keyType: PAnsiChar; length: Cardinal; data: PByte); virtual; abstract;
   end;
 
   CryptKeyCallbackVTable = class(VersionedVTable)
@@ -2385,13 +2478,12 @@ type
   ICryptKeyCallback = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 1;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     function callback(dataLength: Cardinal; data: Pointer; bufferLength: Cardinal; buffer: Pointer): Cardinal;
   end;
 
   ICryptKeyCallbackImpl = class(ICryptKeyCallback)
-  public
     constructor create;
   protected
     function callback(dataLength: Cardinal; data: Pointer; bufferLength: Cardinal; buffer: Pointer): Cardinal; virtual; abstract;
@@ -2408,7 +2500,7 @@ type
   IKeyHolderPlugin = class(IPluginBase)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 8;
+    const VERSION = 5;
     {$ENDIF WITH_CLASS_CONST}
     function keyCallback(status: IStatus; callback: ICryptKeyCallback): Integer;
     function keyHandle(status: IStatus; keyName: PAnsiChar): ICryptKeyCallback;
@@ -2463,9 +2555,9 @@ type
   IDbCryptPlugin = class(IPluginBase)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 8;
+    const VERSION = 5;
     {$ENDIF WITH_CLASS_CONST}
-    procedure setKey(status: IStatus; length: Cardinal; sources: IKeyHolderPluginPtr; keyName: PAnsiChar);
+    procedure setKey(status: IStatus; length: Cardinal; sources: PIKeyHolderPlugin; keyName: PAnsiChar);
     procedure encrypt(status: IStatus; length: Cardinal; from: Pointer; to_: Pointer);
     procedure decrypt(status: IStatus; length: Cardinal; from: Pointer; to_: Pointer);
     procedure setInfo(status: IStatus; info: IDbCryptInfo);
@@ -2479,7 +2571,7 @@ type
     function release(): Integer; virtual; abstract;
     procedure setOwner(r: IReferenceCounted); virtual; abstract;
     function getOwner(): IReferenceCounted; virtual; abstract;
-    procedure setKey(status: IStatus; length: Cardinal; sources: IKeyHolderPluginPtr; keyName: PAnsiChar); virtual; abstract;
+    procedure setKey(status: IStatus; length: Cardinal; sources: PIKeyHolderPlugin; keyName: PAnsiChar); virtual; abstract;
     procedure encrypt(status: IStatus; length: Cardinal; from: Pointer; to_: Pointer); virtual; abstract;
     procedure decrypt(status: IStatus; length: Cardinal; from: Pointer; to_: Pointer); virtual; abstract;
     procedure setInfo(status: IStatus; info: IDbCryptInfo); virtual; abstract;
@@ -2502,7 +2594,7 @@ type
   IExternalContext = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 10;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     function getMaster(): IMaster;
     function getEngine(status: IStatus): IExternalEngine;
@@ -2540,7 +2632,7 @@ type
   IExternalResultSet = class(IDisposable)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 2;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
     function fetch(status: IStatus): Boolean;
   end;
@@ -2653,7 +2745,7 @@ type
   IRoutineMetadata = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 9;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     function getPackage(status: IStatus): PAnsiChar;
     function getName(status: IStatus): PAnsiChar;
@@ -2694,7 +2786,7 @@ type
   IExternalEngine = class(IPluginBase)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 10;
+    const VERSION = 4;
     {$ENDIF WITH_CLASS_CONST}
     procedure open(status: IStatus; context: IExternalContext; charSet: PAnsiChar; charSetSize: Cardinal);
     procedure openAttachment(status: IStatus; context: IExternalContext);
@@ -2753,7 +2845,7 @@ type
     {$IFDEF WITH_CLASS_CONST}
     const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
-    procedure start(status: IStatus; timer: ITimer; microSeconds: QWord);
+    procedure start(status: IStatus; timer: ITimer; microSeconds: UInt64);
     procedure stop(status: IStatus; timer: ITimer);
   end;
 
@@ -2761,7 +2853,7 @@ type
   public
     constructor create;
   protected
-    procedure start(status: IStatus; timer: ITimer; microSeconds: QWord); virtual; abstract;
+    procedure start(status: IStatus; timer: ITimer; microSeconds: UInt64); virtual; abstract;
     procedure stop(status: IStatus; timer: ITimer); virtual; abstract;
   end;
 
@@ -2773,7 +2865,7 @@ type
   IVersionCallback = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 1;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     procedure callback(status: IStatus; text: PAnsiChar);
   end;
@@ -2800,26 +2892,49 @@ type
     getClientVersion: IUtil_getClientVersionPtr;
     getXpbBuilder: IUtil_getXpbBuilderPtr;
     setOffsets: IUtil_setOffsetsPtr;
+    getDecFloat16: IUtil_getDecFloat16Ptr;
+    getDecFloat34: IUtil_getDecFloat34Ptr;
+    getTransactionByHandle: IUtil_getTransactionByHandlePtr;
+    getStatementByHandle: IUtil_getStatementByHandlePtr;
+    decodeTimeTz: IUtil_decodeTimeTzPtr;
+    decodeTimeStampTz: IUtil_decodeTimeStampTzPtr;
+    encodeTimeTz: IUtil_encodeTimeTzPtr;
+    encodeTimeStampTz: IUtil_encodeTimeStampTzPtr;
+    getInt128: IUtil_getInt128Ptr;
+    decodeTimeTzEx: IUtil_decodeTimeTzExPtr;
+    decodeTimeStampTzEx: IUtil_decodeTimeStampTzExPtr;
   end;
 
   IUtil = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 13;
+    const VERSION = 4;
     {$ENDIF WITH_CLASS_CONST}
     procedure getFbVersion(status: IStatus; att: IAttachment; callback: IVersionCallback);
-    procedure loadBlob(status: IStatus; blobId: ISC_QUADPtr; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean);
-    procedure dumpBlob(status: IStatus; blobId: ISC_QUADPtr; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean);
-    procedure getPerfCounters(status: IStatus; att: IAttachment; countersSet: PAnsiChar; counters: Int64Ptr);
+    procedure loadBlob(status: IStatus; blobId: PISC_QUAD; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean);
+    procedure dumpBlob(status: IStatus; blobId: PISC_QUAD; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean);
+    procedure getPerfCounters(status: IStatus; att: IAttachment; countersSet: PAnsiChar; counters: PInt64);
     function executeCreateDatabase(status: IStatus; stmtLength: Cardinal; creatDBstatement: PAnsiChar; dialect: Cardinal; stmtIsCreateDb: BooleanPtr): IAttachment;
-    procedure decodeDate(date: ISC_DATE; year: CardinalPtr; month: CardinalPtr; day: CardinalPtr);
-    procedure decodeTime(time: ISC_TIME; hours: CardinalPtr; minutes: CardinalPtr; seconds: CardinalPtr; fractions: CardinalPtr);
-    function encodeDate(year: Cardinal; month: Cardinal; day: Cardinal): ISC_DATE;
-    function encodeTime(hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal): ISC_TIME;
+    procedure decodeDate(date: TISC_DATE; year: PCardinal; month: PCardinal; day: PCardinal);
+    procedure decodeTime(time: TISC_TIME; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal);
+    function encodeDate(year: Cardinal; month: Cardinal; day: Cardinal): TISC_DATE;
+    function encodeTime(hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal): TISC_TIME;
     function formatStatus(buffer: PAnsiChar; bufferSize: Cardinal; status: IStatus): Cardinal;
     function getClientVersion(): Cardinal;
-    function getXpbBuilder(status: IStatus; kind: Cardinal; buf: BytePtr; len: Cardinal): IXpbBuilder;
+    function getXpbBuilder(status: IStatus; kind: Cardinal; buf: PByte; len: Cardinal): IXpbBuilder;
     function setOffsets(status: IStatus; metadata: IMessageMetadata; callback: IOffsetsCallback): Cardinal;
+    //Added in FB4
+    function getDecFloat16(status: IStatus): IDecFloat16;
+    function getDecFloat34(status: IStatus): IDecFloat34;
+    function getTransactionByHandle(status: IStatus; hndlPtr: Pisc_tr_handle): ITransaction;
+    function getStatementByHandle(status: IStatus; hndlPtr: Pisc_stmt_handle): IStatement;
+    procedure decodeTimeTz(status: IStatus; timeTz: PISC_TIME_TZ; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar);
+    procedure decodeTimeStampTz(status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ; year: PCardinal; month: PCardinal; day: PCardinal; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar);
+    procedure encodeTimeTz(status: IStatus; timeTz: PISC_TIME_TZ; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal; timeZone: PAnsiChar);
+    procedure encodeTimeStampTz(status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ; year: Cardinal; month: Cardinal; day: Cardinal; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal; timeZone: PAnsiChar);
+    function getInt128(status: IStatus): IInt128;
+    procedure decodeTimeTzEx(status: IStatus; timeTz: PISC_TIME_TZ_EX; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar);
+    procedure decodeTimeStampTzEx(status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ_EX; year: PCardinal; month: PCardinal; day: PCardinal; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar);
   end;
 
   IUtilImpl = class(IUtil)
@@ -2827,18 +2942,29 @@ type
     constructor create;
   protected
     procedure getFbVersion(status: IStatus; att: IAttachment; callback: IVersionCallback); virtual; abstract;
-    procedure loadBlob(status: IStatus; blobId: ISC_QUADPtr; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean); virtual; abstract;
-    procedure dumpBlob(status: IStatus; blobId: ISC_QUADPtr; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean); virtual; abstract;
-    procedure getPerfCounters(status: IStatus; att: IAttachment; countersSet: PAnsiChar; counters: Int64Ptr); virtual; abstract;
+    procedure loadBlob(status: IStatus; blobId: PISC_QUAD; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean); virtual; abstract;
+    procedure dumpBlob(status: IStatus; blobId: PISC_QUAD; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean); virtual; abstract;
+    procedure getPerfCounters(status: IStatus; att: IAttachment; countersSet: PAnsiChar; counters: PInt64); virtual; abstract;
     function executeCreateDatabase(status: IStatus; stmtLength: Cardinal; creatDBstatement: PAnsiChar; dialect: Cardinal; stmtIsCreateDb: BooleanPtr): IAttachment; virtual; abstract;
-    procedure decodeDate(date: ISC_DATE; year: CardinalPtr; month: CardinalPtr; day: CardinalPtr); virtual; abstract;
-    procedure decodeTime(time: ISC_TIME; hours: CardinalPtr; minutes: CardinalPtr; seconds: CardinalPtr; fractions: CardinalPtr); virtual; abstract;
-    function encodeDate(year: Cardinal; month: Cardinal; day: Cardinal): ISC_DATE; virtual; abstract;
-    function encodeTime(hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal): ISC_TIME; virtual; abstract;
+    procedure decodeDate(date: TISC_DATE; year: Cardinal; month: Cardinal; day: Cardinal); virtual; abstract;
+    procedure decodeTime(time: TISC_TIME; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal); virtual; abstract;
+    function encodeDate(year: Cardinal; month: Cardinal; day: Cardinal): TISC_DATE; virtual; abstract;
+    function encodeTime(hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal): TISC_TIME; virtual; abstract;
     function formatStatus(buffer: PAnsiChar; bufferSize: Cardinal; status: IStatus): Cardinal; virtual; abstract;
     function getClientVersion(): Cardinal; virtual; abstract;
-    function getXpbBuilder(status: IStatus; kind: Cardinal; buf: BytePtr; len: Cardinal): IXpbBuilder; virtual; abstract;
+    function getXpbBuilder(status: IStatus; kind: Cardinal; buf: PByte; len: Cardinal): IXpbBuilder; virtual; abstract;
     function setOffsets(status: IStatus; metadata: IMessageMetadata; callback: IOffsetsCallback): Cardinal; virtual; abstract;
+    function getDecFloat16(status: IStatus): IDecFloat16; virtual; abstract;
+    function getDecFloat34(status: IStatus): IDecFloat34; virtual; abstract;
+    function getTransactionByHandle(status: IStatus; hndlPtr: Pisc_tr_handle): ITransaction; virtual; abstract;
+    function getStatementByHandle(status: IStatus; hndlPtr: Pisc_stmt_handle): IStatement; virtual; abstract;
+    procedure decodeTimeTz(status: IStatus; timeTz: PISC_TIME_TZ; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar); virtual; abstract;
+    procedure decodeTimeStampTz(status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ; year: PCardinal; month: PCardinal; day: PCardinal; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar); virtual; abstract;
+    procedure encodeTimeTz(status: IStatus; timeTz: PISC_TIME_TZ; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal; timeZone: PAnsiChar); virtual; abstract;
+    procedure encodeTimeStampTz(status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ; year: Cardinal; month: Cardinal; day: Cardinal; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal; timeZone: PAnsiChar); virtual; abstract;
+    function getInt128(status: IStatus): IInt128; virtual; abstract;
+    procedure decodeTimeTzEx(status: IStatus; timeTz: PISC_TIME_TZ_EX; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar); virtual; abstract;
+    procedure decodeTimeStampTzEx(status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ_EX; year: PCardinal; month: PCardinal; day: PCardinal; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar); virtual; abstract;
   end;
 
   OffsetsCallbackVTable = class(VersionedVTable)
@@ -2849,7 +2975,7 @@ type
   IOffsetsCallback = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 1;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     procedure setOffset(status: IStatus; index: Cardinal; offset: Cardinal; nullOffset: Cardinal);
   end;
@@ -2888,11 +3014,16 @@ type
   IXpbBuilder = class(IDisposable)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 21;
+    const VERSION = 3;
     const DPB = Cardinal(1);
     const SPB_ATTACH = Cardinal(2);
     const SPB_START = Cardinal(3);
     const TPB = Cardinal(4);
+    const BATCH = Cardinal(5);
+    const BPB = Cardinal(6);
+    const SPB_SEND = Cardinal(7);
+    const SPB_RECEIVE = Cardinal(8);
+    const SPB_RESPONSE = Cardinal(9);
     {$ENDIF WITH_CLASS_CONST}
     procedure clear(status: IStatus);
     procedure removeCurrent(status: IStatus);
@@ -2911,9 +3042,9 @@ type
     function getInt(status: IStatus): Integer;
     function getBigInt(status: IStatus): Int64;
     function getString(status: IStatus): PAnsiChar;
-    function getBytes(status: IStatus): BytePtr;
+    function getBytes(status: IStatus): PByte;
     function getBufferLength(status: IStatus): Cardinal;
-    function getBuffer(status: IStatus): BytePtr;
+    function getBuffer(status: IStatus): PByte;
   end;
 
   IXpbBuilderImpl = class(IXpbBuilder)
@@ -2938,9 +3069,9 @@ type
     function getInt(status: IStatus): Integer; virtual; abstract;
     function getBigInt(status: IStatus): Int64; virtual; abstract;
     function getString(status: IStatus): PAnsiChar; virtual; abstract;
-    function getBytes(status: IStatus): BytePtr; virtual; abstract;
+    function getBytes(status: IStatus): PByte; virtual; abstract;
     function getBufferLength(status: IStatus): Cardinal; virtual; abstract;
-    function getBuffer(status: IStatus): BytePtr; virtual; abstract;
+    function getBuffer(status: IStatus): PByte; virtual; abstract;
   end;
 
   TraceConnectionVTable = class(VersionedVTable)
@@ -2959,7 +3090,7 @@ type
   ITraceConnection = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 9;
+    const VERSION = 2;
     const KIND_DATABASE = Cardinal(1);
     const KIND_SERVICE = Cardinal(2);
     {$ENDIF WITH_CLASS_CONST}
@@ -2998,7 +3129,7 @@ type
   ITraceDatabaseConnection = class(ITraceConnection)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 11;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
     function getConnectionID(): Int64;
     function getDatabaseName(): PAnsiChar;
@@ -3028,22 +3159,28 @@ type
     getWait: ITraceTransaction_getWaitPtr;
     getIsolation: ITraceTransaction_getIsolationPtr;
     getPerf: ITraceTransaction_getPerfPtr;
+    getInitialID: ITraceTransaction_getInitialIDPtr;
+    getPreviousID: ITraceTransaction_getPreviousIDPtr;
   end;
 
   ITraceTransaction = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 5;
+    const VERSION = 3;
     const ISOLATION_CONSISTENCY = Cardinal(1);
     const ISOLATION_CONCURRENCY = Cardinal(2);
     const ISOLATION_READ_COMMITTED_RECVER = Cardinal(3);
     const ISOLATION_READ_COMMITTED_NORECVER = Cardinal(4);
+    const ISOLATION_READ_COMMITTED_READ_CONSISTENCY = Cardinal(5);
     {$ENDIF WITH_CLASS_CONST}
     function getTransactionID(): Int64;
     function getReadOnly(): Boolean;
     function getWait(): Integer;
     function getIsolation(): Cardinal;
-    function getPerf(): PerformanceInfoPtr;
+    function getPerf(): PPerformanceInfo;
+    //Added in FB4
+    function getInitialID(): Int64;
+    function getPreviousID(): Int64;
   end;
 
   ITraceTransactionImpl = class(ITraceTransaction)
@@ -3054,7 +3191,9 @@ type
     function getReadOnly(): Boolean; virtual; abstract;
     function getWait(): Integer; virtual; abstract;
     function getIsolation(): Cardinal; virtual; abstract;
-    function getPerf(): PerformanceInfoPtr; virtual; abstract;
+    function getPerf(): PPerformanceInfo; virtual; abstract;
+    function getInitialID(): Int64; virtual; abstract;
+    function getPreviousID(): Int64; virtual; abstract;
   end;
 
   TraceParamsVTable = class(VersionedVTable)
@@ -3070,7 +3209,7 @@ type
     const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
     function getCount(): Cardinal;
-    function getParam(idx: Cardinal): dscPtr;
+    function getParam(idx: Cardinal): Pdsc;
     function getTextUTF8(status: IStatus; idx: Cardinal): PAnsiChar;
   end;
 
@@ -3079,7 +3218,7 @@ type
     constructor create;
   protected
     function getCount(): Cardinal; virtual; abstract;
-    function getParam(idx: Cardinal): dscPtr; virtual; abstract;
+    function getParam(idx: Cardinal): Pdsc; virtual; abstract;
     function getTextUTF8(status: IStatus; idx: Cardinal): PAnsiChar; virtual; abstract;
   end;
 
@@ -3095,7 +3234,7 @@ type
     const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     function getStmtID(): Int64;
-    function getPerf(): PerformanceInfoPtr;
+    function getPerf(): PPerformanceInfo;
   end;
 
   ITraceStatementImpl = class(ITraceStatement)
@@ -3103,7 +3242,7 @@ type
     constructor create;
   protected
     function getStmtID(): Int64; virtual; abstract;
-    function getPerf(): PerformanceInfoPtr; virtual; abstract;
+    function getPerf(): PPerformanceInfo; virtual; abstract;
   end;
 
   TraceSQLStatementVTable = class(TraceStatementVTable)
@@ -3118,7 +3257,7 @@ type
   ITraceSQLStatement = class(ITraceStatement)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 7;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
     function getText(): PAnsiChar;
     function getPlan(): PAnsiChar;
@@ -3132,7 +3271,7 @@ type
     constructor create;
   protected
     function getStmtID(): Int64; virtual; abstract;
-    function getPerf(): PerformanceInfoPtr; virtual; abstract;
+    function getPerf(): PPerformanceInfo; virtual; abstract;
     function getText(): PAnsiChar; virtual; abstract;
     function getPlan(): PAnsiChar; virtual; abstract;
     function getInputs(): ITraceParams; virtual; abstract;
@@ -3150,9 +3289,9 @@ type
   ITraceBLRStatement = class(ITraceStatement)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 5;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
-    function getData(): BytePtr;
+    function getData(): PByte;
     function getDataLength(): Cardinal;
     function getText(): PAnsiChar;
   end;
@@ -3162,8 +3301,8 @@ type
     constructor create;
   protected
     function getStmtID(): Int64; virtual; abstract;
-    function getPerf(): PerformanceInfoPtr; virtual; abstract;
-    function getData(): BytePtr; virtual; abstract;
+    function getPerf(): PPerformanceInfo; virtual; abstract;
+    function getData(): PByte; virtual; abstract;
     function getDataLength(): Cardinal; virtual; abstract;
     function getText(): PAnsiChar; virtual; abstract;
   end;
@@ -3178,9 +3317,9 @@ type
   ITraceDYNRequest = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 3;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
-    function getData(): BytePtr;
+    function getData(): PByte;
     function getDataLength(): Cardinal;
     function getText(): PAnsiChar;
   end;
@@ -3189,7 +3328,7 @@ type
   public
     constructor create;
   protected
-    function getData(): BytePtr; virtual; abstract;
+    function getData(): PByte; virtual; abstract;
     function getDataLength(): Cardinal; virtual; abstract;
     function getText(): PAnsiChar; virtual; abstract;
   end;
@@ -3204,7 +3343,7 @@ type
   ITraceContextVariable = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 3;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     function getNameSpace(): PAnsiChar;
     function getVarName(): PAnsiChar;
@@ -3230,11 +3369,11 @@ type
   ITraceProcedure = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 3;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     function getProcName(): PAnsiChar;
     function getInputs(): ITraceParams;
-    function getPerf(): PerformanceInfoPtr;
+    function getPerf(): PPerformanceInfo;
   end;
 
   ITraceProcedureImpl = class(ITraceProcedure)
@@ -3243,7 +3382,7 @@ type
   protected
     function getProcName(): PAnsiChar; virtual; abstract;
     function getInputs(): ITraceParams; virtual; abstract;
-    function getPerf(): PerformanceInfoPtr; virtual; abstract;
+    function getPerf(): PPerformanceInfo; virtual; abstract;
   end;
 
   TraceFunctionVTable = class(VersionedVTable)
@@ -3257,12 +3396,12 @@ type
   ITraceFunction = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 4;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     function getFuncName(): PAnsiChar;
     function getInputs(): ITraceParams;
     function getResult(): ITraceParams;
-    function getPerf(): PerformanceInfoPtr;
+    function getPerf(): PPerformanceInfo;
   end;
 
   ITraceFunctionImpl = class(ITraceFunction)
@@ -3272,7 +3411,7 @@ type
     function getFuncName(): PAnsiChar; virtual; abstract;
     function getInputs(): ITraceParams; virtual; abstract;
     function getResult(): ITraceParams; virtual; abstract;
-    function getPerf(): PerformanceInfoPtr; virtual; abstract;
+    function getPerf(): PPerformanceInfo; virtual; abstract;
   end;
 
   TraceTriggerVTable = class(VersionedVTable)
@@ -3287,7 +3426,7 @@ type
   ITraceTrigger = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 5;
+    const VERSION = 2;
     const TYPE_ALL = Cardinal(0);
     const TYPE_BEFORE = Cardinal(1);
     const TYPE_AFTER = Cardinal(2);
@@ -3296,7 +3435,7 @@ type
     function getRelationName(): PAnsiChar;
     function getAction(): Integer;
     function getWhich(): Integer;
-    function getPerf(): PerformanceInfoPtr;
+    function getPerf(): PPerformanceInfo;
   end;
 
   ITraceTriggerImpl = class(ITraceTrigger)
@@ -3307,7 +3446,7 @@ type
     function getRelationName(): PAnsiChar; virtual; abstract;
     function getAction(): Integer; virtual; abstract;
     function getWhich(): Integer; virtual; abstract;
-    function getPerf(): PerformanceInfoPtr; virtual; abstract;
+    function getPerf(): PPerformanceInfo; virtual; abstract;
   end;
 
   TraceServiceConnectionVTable = class(TraceConnectionVTable)
@@ -3320,7 +3459,7 @@ type
   ITraceServiceConnection = class(ITraceConnection)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 12;
+    const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
     function getServiceID(): Pointer;
     function getServiceMgr(): PAnsiChar;
@@ -3356,7 +3495,7 @@ type
   ITraceStatusVector = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 4;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     function hasError(): Boolean;
     function hasWarning(): Boolean;
@@ -3386,13 +3525,13 @@ type
   ITraceSweepInfo = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 5;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     function getOIT(): Int64;
     function getOST(): Int64;
     function getOAT(): Int64;
     function getNext(): Int64;
-    function getPerf(): PerformanceInfoPtr;
+    function getPerf(): PPerformanceInfo;
   end;
 
   ITraceSweepInfoImpl = class(ITraceSweepInfo)
@@ -3403,20 +3542,23 @@ type
     function getOST(): Int64; virtual; abstract;
     function getOAT(): Int64; virtual; abstract;
     function getNext(): Int64; virtual; abstract;
-    function getPerf(): PerformanceInfoPtr; virtual; abstract;
+    function getPerf(): PPerformanceInfo; virtual; abstract;
   end;
 
   TraceLogWriterVTable = class(ReferenceCountedVTable)
   protected
     write: ITraceLogWriter_writePtr;
+    write_s: ITraceLogWriter_write_sPtr;
   end;
 
   ITraceLogWriter = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 3;
+    const VERSION = 4;
     {$ENDIF WITH_CLASS_CONST}
     function write(buf: Pointer; size: Cardinal): Cardinal;
+    //added in FB4
+    function write_s(status: IStatus; buf: Pointer; size: Cardinal): Cardinal;
   end;
 
   ITraceLogWriterImpl = class(ITraceLogWriter)
@@ -3426,6 +3568,7 @@ type
     procedure addRef(); virtual; abstract;
     function release(): Integer; virtual; abstract;
     function write(buf: Pointer; size: Cardinal): Cardinal; virtual; abstract;
+    function write_s(status: IStatus; buf: Pointer; size: Cardinal): Cardinal; virtual; abstract;
   end;
 
   TraceInitInfoVTable = class(VersionedVTable)
@@ -3442,7 +3585,7 @@ type
   ITraceInitInfo = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 7;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     function getConfigText(): PAnsiChar;
     function getTraceSessionID(): Integer;
@@ -3494,7 +3637,7 @@ type
   ITracePlugin = class(IReferenceCounted)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 23;
+    const VERSION = 3;
     const RESULT_SUCCESS = Cardinal(0);
     const RESULT_FAILED = Cardinal(1);
     const RESULT_UNAUTHORIZED = Cardinal(2);
@@ -3506,7 +3649,7 @@ type
     function trace_get_error(): PAnsiChar;
     function trace_attach(connection: ITraceDatabaseConnection; create_db: Boolean; att_result: Cardinal): Boolean;
     function trace_detach(connection: ITraceDatabaseConnection; drop_db: Boolean): Boolean;
-    function trace_transaction_start(connection: ITraceDatabaseConnection; transaction: ITraceTransaction; tpb_length: Cardinal; tpb: BytePtr; tra_result: Cardinal): Boolean;
+    function trace_transaction_start(connection: ITraceDatabaseConnection; transaction: ITraceTransaction; tpb_length: Cardinal; tpb: PByte; tra_result: Cardinal): Boolean;
     function trace_transaction_end(connection: ITraceDatabaseConnection; transaction: ITraceTransaction; commit: Boolean; retain_context: Boolean; tra_result: Cardinal): Boolean;
     function trace_proc_execute(connection: ITraceDatabaseConnection; transaction: ITraceTransaction; procedure_: ITraceProcedure; started: Boolean; proc_result: Cardinal): Boolean;
     function trace_trigger_execute(connection: ITraceDatabaseConnection; transaction: ITraceTransaction; trigger: ITraceTrigger; started: Boolean; trig_result: Cardinal): Boolean;
@@ -3519,7 +3662,7 @@ type
     function trace_dyn_execute(connection: ITraceDatabaseConnection; transaction: ITraceTransaction; request: ITraceDYNRequest; time_millis: Int64; req_result: Cardinal): Boolean;
     function trace_service_attach(service: ITraceServiceConnection; att_result: Cardinal): Boolean;
     function trace_service_start(service: ITraceServiceConnection; switches_length: Cardinal; switches: PAnsiChar; start_result: Cardinal): Boolean;
-    function trace_service_query(service: ITraceServiceConnection; send_item_length: Cardinal; send_items: BytePtr; recv_item_length: Cardinal; recv_items: BytePtr; query_result: Cardinal): Boolean;
+    function trace_service_query(service: ITraceServiceConnection; send_item_length: Cardinal; send_items: PByte; recv_item_length: Cardinal; recv_items: PByte; query_result: Cardinal): Boolean;
     function trace_service_detach(service: ITraceServiceConnection; detach_result: Cardinal): Boolean;
     function trace_event_error(connection: ITraceConnection; status: ITraceStatusVector; function_: PAnsiChar): Boolean;
     function trace_event_sweep(connection: ITraceDatabaseConnection; sweep: ITraceSweepInfo; sweep_state: Cardinal): Boolean;
@@ -3535,7 +3678,7 @@ type
     function trace_get_error(): PAnsiChar; virtual; abstract;
     function trace_attach(connection: ITraceDatabaseConnection; create_db: Boolean; att_result: Cardinal): Boolean; virtual; abstract;
     function trace_detach(connection: ITraceDatabaseConnection; drop_db: Boolean): Boolean; virtual; abstract;
-    function trace_transaction_start(connection: ITraceDatabaseConnection; transaction: ITraceTransaction; tpb_length: Cardinal; tpb: BytePtr; tra_result: Cardinal): Boolean; virtual; abstract;
+    function trace_transaction_start(connection: ITraceDatabaseConnection; transaction: ITraceTransaction; tpb_length: Cardinal; tpb: PByte; tra_result: Cardinal): Boolean; virtual; abstract;
     function trace_transaction_end(connection: ITraceDatabaseConnection; transaction: ITraceTransaction; commit: Boolean; retain_context: Boolean; tra_result: Cardinal): Boolean; virtual; abstract;
     function trace_proc_execute(connection: ITraceDatabaseConnection; transaction: ITraceTransaction; procedure_: ITraceProcedure; started: Boolean; proc_result: Cardinal): Boolean; virtual; abstract;
     function trace_trigger_execute(connection: ITraceDatabaseConnection; transaction: ITraceTransaction; trigger: ITraceTrigger; started: Boolean; trig_result: Cardinal): Boolean; virtual; abstract;
@@ -3548,7 +3691,7 @@ type
     function trace_dyn_execute(connection: ITraceDatabaseConnection; transaction: ITraceTransaction; request: ITraceDYNRequest; time_millis: Int64; req_result: Cardinal): Boolean; virtual; abstract;
     function trace_service_attach(service: ITraceServiceConnection; att_result: Cardinal): Boolean; virtual; abstract;
     function trace_service_start(service: ITraceServiceConnection; switches_length: Cardinal; switches: PAnsiChar; start_result: Cardinal): Boolean; virtual; abstract;
-    function trace_service_query(service: ITraceServiceConnection; send_item_length: Cardinal; send_items: BytePtr; recv_item_length: Cardinal; recv_items: BytePtr; query_result: Cardinal): Boolean; virtual; abstract;
+    function trace_service_query(service: ITraceServiceConnection; send_item_length: Cardinal; send_items: PByte; recv_item_length: Cardinal; recv_items: PByte; query_result: Cardinal): Boolean; virtual; abstract;
     function trace_service_detach(service: ITraceServiceConnection; detach_result: Cardinal): Boolean; virtual; abstract;
     function trace_event_error(connection: ITraceConnection; status: ITraceStatusVector; function_: PAnsiChar): Boolean; virtual; abstract;
     function trace_event_sweep(connection: ITraceDatabaseConnection; sweep: ITraceSweepInfo; sweep_state: Cardinal): Boolean; virtual; abstract;
@@ -3564,7 +3707,7 @@ type
   ITraceFactory = class(IPluginBase)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 6;
+    const VERSION = 4;
     const TRACE_EVENT_ATTACH = Cardinal(0);
     const TRACE_EVENT_DETACH = Cardinal(1);
     const TRACE_EVENT_TRANSACTION_START = Cardinal(2);
@@ -3587,7 +3730,7 @@ type
     const TRACE_EVENT_FUNC_EXECUTE = Cardinal(19);
     const TRACE_EVENT_MAX = Cardinal(20);
     {$ENDIF WITH_CLASS_CONST}
-    function trace_needs(): QWord;
+    function trace_needs(): UInt64;
     function trace_create(status: IStatus; init_info: ITraceInitInfo): ITracePlugin;
   end;
 
@@ -3599,7 +3742,7 @@ type
     function release(): Integer; virtual; abstract;
     procedure setOwner(r: IReferenceCounted); virtual; abstract;
     function getOwner(): IReferenceCounted; virtual; abstract;
-    function trace_needs(): QWord; virtual; abstract;
+    function trace_needs(): UInt64; virtual; abstract;
     function trace_create(status: IStatus; init_info: ITraceInitInfo): ITracePlugin; virtual; abstract;
   end;
 
@@ -3610,7 +3753,6 @@ type
   end;
 
   IUdrFunctionFactory = class(IDisposable)
-  public
     {$IFDEF WITH_CLASS_CONST}
     const VERSION = 3;
     {$ENDIF WITH_CLASS_CONST}
@@ -3652,6 +3794,7 @@ type
   end;
 
   UdrTriggerFactoryVTable = class(DisposableVTable)
+  protected
     setup: IUdrTriggerFactory_setupPtr;
     newItem: IUdrTriggerFactory_newItemPtr;
   end;
@@ -3685,7 +3828,7 @@ type
   IUdrPlugin = class(IVersioned)
   public
     {$IFDEF WITH_CLASS_CONST}
-    const VERSION = 4;
+    const VERSION = 2;
     {$ENDIF WITH_CLASS_CONST}
     function getMaster(): IMaster;
     procedure registerFunction(status: IStatus; name: PAnsiChar; factory: IUdrFunctionFactory);
@@ -3703,1693 +3846,239 @@ type
     procedure registerTrigger(status: IStatus; name: PAnsiChar; factory: IUdrTriggerFactory); virtual; abstract;
   end;
 
-  //function fb_get_master_interface : IMaster; cdecl; external 'fbclient'; commented, otherwise the linker wants to link fbclient
+  DecFloat16VTable = class(VersionedVTable)
+  protected
+    toBcd: IDecFloat16_toBcdPtr;
+    toString: IDecFloat16_toStringPtr;
+    fromBcd: IDecFloat16_fromBcdPtr;
+    fromString: IDecFloat16_fromStringPtr;
+  end;
+
+  IDecFloat16 = class(IVersioned)
+  public
+    {$IFDEF WITH_CLASS_CONST}
+    const VERSION = 2;
+    const BCD_SIZE = Cardinal(16);
+    const STRING_SIZE = Cardinal(24);
+    {$ENDIF WITH_CLASS_CONST}
+    procedure toBcd(from: PFB_DEC16; sign: PInteger; bcd: PByte; exp: PInteger);
+    procedure toString(status: IStatus; from: PFB_DEC16; bufferLength: Cardinal; buffer: PAnsiChar); reintroduce;
+    procedure fromBcd(sign: Integer; bcd: PByte; exp: Integer; to_: PFB_DEC16);
+    procedure fromString(status: IStatus; from: PAnsiChar; to_: PFB_DEC16);
+  end;
+
+  IDecFloat16Impl = class(IDecFloat16)
+  public
+    constructor create;
+  protected
+    procedure toBcd(from: PFB_DEC16; sign: PInteger; bcd: PByte; exp: PInteger); virtual; abstract;
+    procedure toString(status: IStatus; from: PFB_DEC16; bufferLength: Cardinal; buffer: PAnsiChar); virtual; abstract;
+    procedure fromBcd(sign: Integer; bcd: PByte; exp: Integer; to_: PFB_DEC16); virtual; abstract;
+    procedure fromString(status: IStatus; from: PAnsiChar; to_: PFB_DEC16); virtual; abstract;
+  end;
+
+  DecFloat34VTable = class(VersionedVTable)
+  protected
+    toBcd: IDecFloat34_toBcdPtr;
+    toString: IDecFloat34_toStringPtr;
+    fromBcd: IDecFloat34_fromBcdPtr;
+    fromString: IDecFloat34_fromStringPtr;
+  end;
+
+  IDecFloat34 = class(IVersioned)
+  public
+    {$IFDEF WITH_CLASS_CONST}
+    const VERSION = 2;
+    const BCD_SIZE = Cardinal(34);
+    const STRING_SIZE = Cardinal(43);
+    {$ENDIF WITH_CLASS_CONST}
+    procedure toBcd(from: PFB_DEC34; sign: PInteger; bcd: PByte; exp: PInteger);
+    procedure toString(status: IStatus; from: PFB_DEC34; bufferLength: Cardinal; buffer: PAnsiChar); reintroduce;
+    procedure fromBcd(sign: Integer; bcd: PByte; exp: Integer; to_: PFB_DEC34);
+    procedure fromString(status: IStatus; from: PAnsiChar; to_: PFB_DEC34);
+  end;
+
+  IDecFloat34Impl = class(IDecFloat34)
+  public
+    constructor create;
+  protected
+    procedure toBcd(from: PFB_DEC34; sign: PInteger; bcd: PByte; exp: PInteger); virtual; abstract;
+    procedure toString(status: IStatus; from: PFB_DEC34; bufferLength: Cardinal; buffer: PAnsiChar); virtual; abstract;
+    procedure fromBcd(sign: Integer; bcd: PByte; exp: Integer; to_: PFB_DEC34); virtual; abstract;
+    procedure fromString(status: IStatus; from: PAnsiChar; to_: PFB_DEC34); virtual; abstract;
+  end;
+
+  Int128VTable = class(VersionedVTable)
+  protected
+    toString: IInt128_toStringPtr;
+    fromString: IInt128_fromStringPtr;
+  end;
+
+  IInt128 = class(IVersioned)
+  public
+    {$IFDEF WITH_CLASS_CONST}
+    const VERSION = 2;
+    const STRING_SIZE = Cardinal(46);
+    {$ENDIF WITH_CLASS_CONST}
+    procedure toString(status: IStatus; from: PFB_I128; scale: Integer; bufferLength: Cardinal; buffer: PAnsiChar); reintroduce;
+    procedure fromString(status: IStatus; scale: Integer; from: PAnsiChar; to_: PFB_I128);
+  end;
+
+  IInt128Impl = class(IInt128)
+  public
+    constructor create;
+  protected
+    procedure toString(status: IStatus; from: PFB_I128; scale: Integer; bufferLength: Cardinal; buffer: PAnsiChar); virtual; abstract;
+    procedure fromString(status: IStatus; scale: Integer; from: PAnsiChar; to_: PFB_I128); virtual; abstract;
+  end;
+
+  ReplicatedRecordVTable = class(VersionedVTable)
+  protected
+    getRawLength: IReplicatedRecord_getRawLengthPtr;
+    getRawData: IReplicatedRecord_getRawDataPtr;
+  end;
+
+  IReplicatedRecord = class(IVersioned)
+  public
+    {$IFDEF WITH_CLASS_CONST}
+    const VERSION = 2;
+    {$ENDIF WITH_CLASS_CONST}
+    function getRawLength(): Cardinal;
+    function getRawData(): PByte;
+  end;
+
+  IReplicatedRecordImpl = class(IReplicatedRecord)
+  public
+    constructor create;
+  protected
+    function getRawLength(): Cardinal; virtual; abstract;
+    function getRawData(): PByte; virtual; abstract;
+  end;
+
+  ReplicatedBlobVTable = class(VersionedVTable)
+  protected
+    getLength: IReplicatedBlob_getLengthPtr;
+    isEof: IReplicatedBlob_isEofPtr;
+    getSegment: IReplicatedBlob_getSegmentPtr;
+  end;
+
+  IReplicatedBlob = class(IVersioned)
+  public
+    {$IFDEF WITH_CLASS_CONST}
+    const VERSION = 2;
+    {$ENDIF WITH_CLASS_CONST}
+    function getLength(): Cardinal;
+    function isEof(): Boolean;
+    function getSegment(length: Cardinal; buffer: PByte): Cardinal;
+  end;
+
+  IReplicatedBlobImpl = class(IReplicatedBlob)
+  public
+    constructor create;
+  protected
+    function getLength(): Cardinal; virtual; abstract;
+    function isEof(): Boolean; virtual; abstract;
+    function getSegment(length: Cardinal; buffer: PByte): Cardinal; virtual; abstract;
+  end;
+
+  ReplicatedTransactionVTable = class(DisposableVTable)
+  protected
+    prepare: IReplicatedTransaction_preparePtr;
+    commit: IReplicatedTransaction_commitPtr;
+    rollback: IReplicatedTransaction_rollbackPtr;
+    startSavepoint: IReplicatedTransaction_startSavepointPtr;
+    releaseSavepoint: IReplicatedTransaction_releaseSavepointPtr;
+    rollbackSavepoint: IReplicatedTransaction_rollbackSavepointPtr;
+    insertRecord: IReplicatedTransaction_insertRecordPtr;
+    updateRecord: IReplicatedTransaction_updateRecordPtr;
+    deleteRecord: IReplicatedTransaction_deleteRecordPtr;
+    storeBlob: IReplicatedTransaction_storeBlobPtr;
+    executeSql: IReplicatedTransaction_executeSqlPtr;
+    executeSqlIntl: IReplicatedTransaction_executeSqlIntlPtr;
+  end;
+
+  IReplicatedTransaction = class(IDisposable)
+  public
+    {$IFDEF WITH_CLASS_CONST}
+    const VERSION = 3;
+    {$ENDIF WITH_CLASS_CONST}
+    function prepare(): Boolean;
+    function commit(): Boolean;
+    function rollback(): Boolean;
+    function startSavepoint(): Boolean;
+    function releaseSavepoint(): Boolean;
+    function rollbackSavepoint(): Boolean;
+    function insertRecord(name: PAnsiChar; record_: IReplicatedRecord): Boolean;
+    function updateRecord(name: PAnsiChar; orgRecord: IReplicatedRecord; newRecord: IReplicatedRecord): Boolean;
+    function deleteRecord(name: PAnsiChar; record_: IReplicatedRecord): Boolean;
+    function storeBlob(blobId: TISC_QUAD; blob: IReplicatedBlob): Boolean;
+    function executeSql(sql: PAnsiChar): Boolean;
+    function executeSqlIntl(charset: Cardinal; sql: PAnsiChar): Boolean;
+  end;
+
+  IReplicatedTransactionImpl = class(IReplicatedTransaction)
+  public
+    constructor create;
+  protected
+    procedure dispose(); virtual; abstract;
+    function prepare(): Boolean; virtual; abstract;
+    function commit(): Boolean; virtual; abstract;
+    function rollback(): Boolean; virtual; abstract;
+    function startSavepoint(): Boolean; virtual; abstract;
+    function releaseSavepoint(): Boolean; virtual; abstract;
+    function rollbackSavepoint(): Boolean; virtual; abstract;
+    function insertRecord(name: PAnsiChar; record_: IReplicatedRecord): Boolean; virtual; abstract;
+    function updateRecord(name: PAnsiChar; orgRecord: IReplicatedRecord; newRecord: IReplicatedRecord): Boolean; virtual; abstract;
+    function deleteRecord(name: PAnsiChar; record_: IReplicatedRecord): Boolean; virtual; abstract;
+    function storeBlob(blobId: TISC_QUAD; blob: IReplicatedBlob): Boolean; virtual; abstract;
+    function executeSql(sql: PAnsiChar): Boolean; virtual; abstract;
+    function executeSqlIntl(charset: Cardinal; sql: PAnsiChar): Boolean; virtual; abstract;
+  end;
+
+  ReplicatedSessionVTable = class(DisposableVTable)
+  protected
+    getStatus: IReplicatedSession_getStatusPtr;
+    startTransaction: IReplicatedSession_startTransactionPtr;
+    cleanupTransaction: IReplicatedSession_cleanupTransactionPtr;
+    setSequence: IReplicatedSession_setSequencePtr;
+  end;
+
+  IReplicatedSession = class(IDisposable)
+  public
+    {$IFDEF WITH_CLASS_CONST}
+    const VERSION = 3;
+    {$ENDIF WITH_CLASS_CONST}
+    function getStatus(): IStatus;
+    function startTransaction(number: Int64): IReplicatedTransaction;
+    function cleanupTransaction(number: Int64): Boolean;
+    function setSequence(name: PAnsiChar; value: Int64): Boolean;
+  end;
+
+  IReplicatedSessionImpl = class(IReplicatedSession)
+  public
+    constructor create;
+  protected
+    procedure dispose(); virtual; abstract;
+    function getStatus(): IStatus; virtual; abstract;
+    function startTransaction(number: Int64): IReplicatedTransaction; virtual; abstract;
+    function cleanupTransaction(number: Int64): Boolean; virtual; abstract;
+    function setSequence(name: PAnsiChar; value: Int64): Boolean; virtual; abstract;
+  end;
+
+  //function fb_get_master_interface : IMaster; cdecl; external 'fbclient';
 
 const
-  isc_dpb_version1 = byte(1);
-  isc_dpb_version2 = byte(2);
-  isc_dpb_cdd_pathname = byte(1);
-  isc_dpb_allocation = byte(2);
-  isc_dpb_journal = byte(3);
-  isc_dpb_page_size = byte(4);
-  isc_dpb_num_buffers = byte(5);
-  isc_dpb_buffer_length = byte(6);
-  isc_dpb_debug = byte(7);
-  isc_dpb_garbage_collect = byte(8);
-  isc_dpb_verify = byte(9);
-  isc_dpb_sweep = byte(10);
-  isc_dpb_enable_journal = byte(11);
-  isc_dpb_disable_journal = byte(12);
-  isc_dpb_dbkey_scope = byte(13);
-  isc_dpb_number_of_users = byte(14);
-  isc_dpb_trace = byte(15);
-  isc_dpb_no_garbage_collect = byte(16);
-  isc_dpb_damaged = byte(17);
-  isc_dpb_license = byte(18);
-  isc_dpb_sys_user_name = byte(19);
-  isc_dpb_encrypt_key = byte(20);
-  isc_dpb_activate_shadow = byte(21);
-  isc_dpb_sweep_interval = byte(22);
-  isc_dpb_delete_shadow = byte(23);
-  isc_dpb_force_write = byte(24);
-  isc_dpb_begin_log = byte(25);
-  isc_dpb_quit_log = byte(26);
-  isc_dpb_no_reserve = byte(27);
-  isc_dpb_user_name = byte(28);
-  isc_dpb_password = byte(29);
-  isc_dpb_password_enc = byte(30);
-  isc_dpb_sys_user_name_enc = byte(31);
-  isc_dpb_interp = byte(32);
-  isc_dpb_online_dump = byte(33);
-  isc_dpb_old_file_size = byte(34);
-  isc_dpb_old_num_files = byte(35);
-  isc_dpb_old_file = byte(36);
-  isc_dpb_old_start_page = byte(37);
-  isc_dpb_old_start_seqno = byte(38);
-  isc_dpb_old_start_file = byte(39);
-  isc_dpb_drop_walfile = byte(40);
-  isc_dpb_old_dump_id = byte(41);
-  isc_dpb_wal_backup_dir = byte(42);
-  isc_dpb_wal_chkptlen = byte(43);
-  isc_dpb_wal_numbufs = byte(44);
-  isc_dpb_wal_bufsize = byte(45);
-  isc_dpb_wal_grp_cmt_wait = byte(46);
-  isc_dpb_lc_messages = byte(47);
-  isc_dpb_lc_ctype = byte(48);
-  isc_dpb_cache_manager = byte(49);
-  isc_dpb_shutdown = byte(50);
-  isc_dpb_online = byte(51);
-  isc_dpb_shutdown_delay = byte(52);
-  isc_dpb_reserved = byte(53);
-  isc_dpb_overwrite = byte(54);
-  isc_dpb_sec_attach = byte(55);
-  isc_dpb_disable_wal = byte(56);
-  isc_dpb_connect_timeout = byte(57);
-  isc_dpb_dummy_packet_interval = byte(58);
-  isc_dpb_gbak_attach = byte(59);
-  isc_dpb_sql_role_name = byte(60);
-  isc_dpb_set_page_buffers = byte(61);
-  isc_dpb_working_directory = byte(62);
-  isc_dpb_sql_dialect = byte(63);
-  isc_dpb_set_db_readonly = byte(64);
-  isc_dpb_set_db_sql_dialect = byte(65);
-  isc_dpb_gfix_attach = byte(66);
-  isc_dpb_gstat_attach = byte(67);
-  isc_dpb_set_db_charset = byte(68);
-  isc_dpb_gsec_attach = byte(69);
-  isc_dpb_address_path = byte(70);
-  isc_dpb_process_id = byte(71);
-  isc_dpb_no_db_triggers = byte(72);
-  isc_dpb_trusted_auth = byte(73);
-  isc_dpb_process_name = byte(74);
-  isc_dpb_trusted_role = byte(75);
-  isc_dpb_org_filename = byte(76);
-  isc_dpb_utf8_filename = byte(77);
-  isc_dpb_ext_call_depth = byte(78);
-  isc_dpb_auth_block = byte(79);
-  isc_dpb_client_version = byte(80);
-  isc_dpb_remote_protocol = byte(81);
-  isc_dpb_host_name = byte(82);
-  isc_dpb_os_user = byte(83);
-  isc_dpb_specific_auth_data = byte(84);
-  isc_dpb_auth_plugin_list = byte(85);
-  isc_dpb_auth_plugin_name = byte(86);
-  isc_dpb_config = byte(87);
-  isc_dpb_nolinger = byte(88);
-  isc_dpb_reset_icu = byte(89);
-  isc_dpb_map_attach = byte(90);
-    isc_dpb_session_time_zone = byte(91);
-    isc_dpb_set_db_replica = byte(92);
-    isc_dpb_set_bind = byte(93);
-    isc_dpb_decfloat_round = byte(94);
-    isc_dpb_decfloat_traps = byte(95);
-
-  isc_dpb_address = byte(1);
-  isc_dpb_addr_protocol = byte(1);
-  isc_dpb_addr_endpoint = byte(2);
-  isc_dpb_addr_flags = byte(3);
-  isc_dpb_addr_flag_conn_compressed = $01;
-  isc_dpb_addr_flag_conn_encrypted = $02;
-  isc_dpb_pages = byte(1);
-  isc_dpb_records = byte(2);
-  isc_dpb_indices = byte(4);
-  isc_dpb_transactions = byte(8);
-  isc_dpb_no_update = byte(16);
-  isc_dpb_repair = byte(32);
-  isc_dpb_ignore = byte(64);
-  isc_dpb_shut_cache = $1;
-  isc_dpb_shut_attachment = $2;
-  isc_dpb_shut_transaction = $4;
-  isc_dpb_shut_force = $8;
-  isc_dpb_shut_mode_mask = $70;
-  isc_dpb_shut_default = $0;
-  isc_dpb_shut_normal = $10;
-  isc_dpb_shut_multi = $20;
-  isc_dpb_shut_single = $30;
-  isc_dpb_shut_full = $40;
   RDB_system = byte(1);
   RDB_id_assigned = byte(2);
-  isc_tpb_version1 = byte(1);
-  isc_tpb_version3 = byte(3);
-  isc_tpb_consistency = byte(1);
-  isc_tpb_concurrency = byte(2);
-  isc_tpb_shared = byte(3);
-  isc_tpb_protected = byte(4);
-  isc_tpb_exclusive = byte(5);
-  isc_tpb_wait = byte(6);
-  isc_tpb_nowait = byte(7);
-  isc_tpb_read = byte(8);
-  isc_tpb_write = byte(9);
-  isc_tpb_lock_read = byte(10);
-  isc_tpb_lock_write = byte(11);
-  isc_tpb_verb_time = byte(12);
-  isc_tpb_commit_time = byte(13);
-  isc_tpb_ignore_limbo = byte(14);
-  isc_tpb_read_committed = byte(15);
-  isc_tpb_autocommit = byte(16);
-  isc_tpb_rec_version = byte(17);
-  isc_tpb_no_rec_version = byte(18);
-  isc_tpb_restart_requests = byte(19);
-  isc_tpb_no_auto_undo = byte(20);
-  isc_tpb_lock_timeout = byte(21);
-  isc_bpb_version1 = byte(1);
-  isc_bpb_source_type = byte(1);
-  isc_bpb_target_type = byte(2);
-  isc_bpb_type = byte(3);
-  isc_bpb_source_interp = byte(4);
-  isc_bpb_target_interp = byte(5);
-  isc_bpb_filter_parameter = byte(6);
-  isc_bpb_storage = byte(7);
-  isc_bpb_type_segmented = $0;
-  isc_bpb_type_stream = $1;
-  isc_bpb_storage_main = $0;
-  isc_bpb_storage_temp = $2;
-  isc_spb_version1 = byte(1);
-  isc_spb_current_version = byte(2);
-  isc_spb_version3 = byte(3);
-  isc_spb_command_line = byte(105);
-  isc_spb_dbname = byte(106);
-  isc_spb_verbose = byte(107);
-  isc_spb_options = byte(108);
-  isc_spb_address_path = byte(109);
-  isc_spb_process_id = byte(110);
-  isc_spb_trusted_auth = byte(111);
-  isc_spb_process_name = byte(112);
-  isc_spb_trusted_role = byte(113);
-  isc_spb_verbint = byte(114);
-  isc_spb_auth_block = byte(115);
-  isc_spb_auth_plugin_name = byte(116);
-  isc_spb_auth_plugin_list = byte(117);
-  isc_spb_utf8_filename = byte(118);
-  isc_spb_client_version = byte(119);
-  isc_spb_remote_protocol = byte(120);
-  isc_spb_host_name = byte(121);
-  isc_spb_os_user = byte(122);
-  isc_spb_config = byte(123);
-  isc_spb_expected_db = byte(124);
-  isc_action_svc_backup = byte(1);
-  isc_action_svc_restore = byte(2);
-  isc_action_svc_repair = byte(3);
-  isc_action_svc_add_user = byte(4);
-  isc_action_svc_delete_user = byte(5);
-  isc_action_svc_modify_user = byte(6);
-  isc_action_svc_display_user = byte(7);
-  isc_action_svc_properties = byte(8);
-  isc_action_svc_add_license = byte(9);
-  isc_action_svc_remove_license = byte(10);
-  isc_action_svc_db_stats = byte(11);
-  isc_action_svc_get_ib_log = byte(12);
-  isc_action_svc_get_fb_log = byte(12);
-  isc_action_svc_nbak = byte(20);
-  isc_action_svc_nrest = byte(21);
-  isc_action_svc_trace_start = byte(22);
-  isc_action_svc_trace_stop = byte(23);
-  isc_action_svc_trace_suspend = byte(24);
-  isc_action_svc_trace_resume = byte(25);
-  isc_action_svc_trace_list = byte(26);
-  isc_action_svc_set_mapping = byte(27);
-  isc_action_svc_drop_mapping = byte(28);
-  isc_action_svc_display_user_adm = byte(29);
-  isc_action_svc_validate = byte(30);
-  isc_action_svc_last = byte(31);
-  isc_info_svc_svr_db_info = byte(50);
-  isc_info_svc_get_license = byte(51);
-  isc_info_svc_get_license_mask = byte(52);
-  isc_info_svc_get_config = byte(53);
-  isc_info_svc_version = byte(54);
-  isc_info_svc_server_version = byte(55);
-  isc_info_svc_implementation = byte(56);
-  isc_info_svc_capabilities = byte(57);
-  isc_info_svc_user_dbpath = byte(58);
-  isc_info_svc_get_env = byte(59);
-  isc_info_svc_get_env_lock = byte(60);
-  isc_info_svc_get_env_msg = byte(61);
-  isc_info_svc_line = byte(62);
-  isc_info_svc_to_eof = byte(63);
-  isc_info_svc_timeout = byte(64);
-  isc_info_svc_get_licensed_users = byte(65);
-  isc_info_svc_limbo_trans = byte(66);
-  isc_info_svc_running = byte(67);
-  isc_info_svc_get_users = byte(68);
-  isc_info_svc_auth_block = byte(69);
-  isc_info_svc_stdin = byte(78);
-  isc_spb_sec_userid = byte(5);
-  isc_spb_sec_groupid = byte(6);
-  isc_spb_sec_username = byte(7);
-  isc_spb_sec_password = byte(8);
-  isc_spb_sec_groupname = byte(9);
-  isc_spb_sec_firstname = byte(10);
-  isc_spb_sec_middlename = byte(11);
-  isc_spb_sec_lastname = byte(12);
-  isc_spb_sec_admin = byte(13);
-  isc_spb_lic_key = byte(5);
-  isc_spb_lic_id = byte(6);
-  isc_spb_lic_desc = byte(7);
-  isc_spb_bkp_file = byte(5);
-  isc_spb_bkp_factor = byte(6);
-  isc_spb_bkp_length = byte(7);
-  isc_spb_bkp_skip_data = byte(8);
-  isc_spb_bkp_stat = byte(15);
-  isc_spb_bkp_ignore_checksums = $01;
-  isc_spb_bkp_ignore_limbo = $02;
-  isc_spb_bkp_metadata_only = $04;
-  isc_spb_bkp_no_garbage_collect = $08;
-  isc_spb_bkp_old_descriptions = $10;
-  isc_spb_bkp_non_transportable = $20;
-  isc_spb_bkp_convert = $40;
-  isc_spb_bkp_expand = $80;
-  isc_spb_bkp_no_triggers = $8000;
-  isc_spb_prp_page_buffers = byte(5);
-  isc_spb_prp_sweep_interval = byte(6);
-  isc_spb_prp_shutdown_db = byte(7);
-  isc_spb_prp_deny_new_attachments = byte(9);
-  isc_spb_prp_deny_new_transactions = byte(10);
-  isc_spb_prp_reserve_space = byte(11);
-  isc_spb_prp_write_mode = byte(12);
-  isc_spb_prp_access_mode = byte(13);
-  isc_spb_prp_set_sql_dialect = byte(14);
-  isc_spb_prp_activate = $0100;
-  isc_spb_prp_db_online = $0200;
-  isc_spb_prp_nolinger = $0400;
-  isc_spb_prp_force_shutdown = byte(41);
-  isc_spb_prp_attachments_shutdown = byte(42);
-  isc_spb_prp_transactions_shutdown = byte(43);
-  isc_spb_prp_shutdown_mode = byte(44);
-  isc_spb_prp_online_mode = byte(45);
-  isc_spb_prp_sm_normal = byte(0);
-  isc_spb_prp_sm_multi = byte(1);
-  isc_spb_prp_sm_single = byte(2);
-  isc_spb_prp_sm_full = byte(3);
-  isc_spb_prp_res_use_full = byte(35);
-  isc_spb_prp_res = byte(36);
-  isc_spb_prp_wm_async = byte(37);
-  isc_spb_prp_wm_sync = byte(38);
-  isc_spb_prp_am_readonly = byte(39);
-  isc_spb_prp_am_readwrite = byte(40);
-  isc_spb_rpr_commit_trans = byte(15);
-  isc_spb_rpr_rollback_trans = byte(34);
-  isc_spb_rpr_recover_two_phase = byte(17);
-  isc_spb_tra_id = byte(18);
-  isc_spb_single_tra_id = byte(19);
-  isc_spb_multi_tra_id = byte(20);
-  isc_spb_tra_state = byte(21);
-  isc_spb_tra_state_limbo = byte(22);
-  isc_spb_tra_state_commit = byte(23);
-  isc_spb_tra_state_rollback = byte(24);
-  isc_spb_tra_state_unknown = byte(25);
-  isc_spb_tra_host_site = byte(26);
-  isc_spb_tra_remote_site = byte(27);
-  isc_spb_tra_db_path = byte(28);
-  isc_spb_tra_advise = byte(29);
-  isc_spb_tra_advise_commit = byte(30);
-  isc_spb_tra_advise_rollback = byte(31);
-  isc_spb_tra_advise_unknown = byte(33);
-  isc_spb_tra_id_64 = byte(46);
-  isc_spb_single_tra_id_64 = byte(47);
-  isc_spb_multi_tra_id_64 = byte(48);
-  isc_spb_rpr_commit_trans_64 = byte(49);
-  isc_spb_rpr_rollback_trans_64 = byte(50);
-  isc_spb_rpr_recover_two_phase_64 = byte(51);
-  isc_spb_rpr_validate_db = $01;
-  isc_spb_rpr_sweep_db = $02;
-  isc_spb_rpr_mend_db = $04;
-  isc_spb_rpr_list_limbo_trans = $08;
-  isc_spb_rpr_check_db = $10;
-  isc_spb_rpr_ignore_checksum = $20;
-  isc_spb_rpr_kill_shadows = $40;
-  isc_spb_rpr_full = $80;
-  isc_spb_rpr_icu = $0800;
-  isc_spb_res_buffers = byte(9);
-  isc_spb_res_page_size = byte(10);
-  isc_spb_res_length = byte(11);
-  isc_spb_res_access_mode = byte(12);
-  isc_spb_res_fix_fss_data = byte(13);
-  isc_spb_res_fix_fss_metadata = byte(14);
-  isc_spb_res_deactivate_idx = $0100;
-  isc_spb_res_no_shadow = $0200;
-  isc_spb_res_no_validity = $0400;
-  isc_spb_res_one_at_a_time = $0800;
-  isc_spb_res_replace = $1000;
-  isc_spb_res_create = $2000;
-  isc_spb_res_use_all_space = $4000;
-  isc_spb_val_tab_incl = byte(1);
-  isc_spb_val_tab_excl = byte(2);
-  isc_spb_val_idx_incl = byte(3);
-  isc_spb_val_idx_excl = byte(4);
-  isc_spb_val_lock_timeout = byte(5);
-  isc_spb_num_att = byte(5);
-  isc_spb_num_db = byte(6);
-  isc_spb_sts_table = byte(64);
-  isc_spb_sts_data_pages = $01;
-  isc_spb_sts_db_log = $02;
-  isc_spb_sts_hdr_pages = $04;
-  isc_spb_sts_idx_pages = $08;
-  isc_spb_sts_sys_relations = $10;
-  isc_spb_sts_record_versions = $20;
-  isc_spb_sts_nocreation = $80;
-  isc_spb_sts_encryption = $100;
-  isc_spb_nbk_level = byte(5);
-  isc_spb_nbk_file = byte(6);
-  isc_spb_nbk_direct = byte(7);
-  isc_spb_nbk_no_triggers = $01;
-  isc_spb_trc_id = byte(1);
-  isc_spb_trc_name = byte(2);
-  isc_spb_trc_cfg = byte(3);
-  isc_sdl_version1 = byte(1);
-  isc_sdl_eoc = byte(255);
-  isc_sdl_relation = byte(2);
-  isc_sdl_rid = byte(3);
-  isc_sdl_field = byte(4);
-  isc_sdl_fid = byte(5);
-  isc_sdl_struct = byte(6);
-  isc_sdl_variable = byte(7);
-  isc_sdl_scalar = byte(8);
-  isc_sdl_tiny_integer = byte(9);
-  isc_sdl_short_integer = byte(10);
-  isc_sdl_long_integer = byte(11);
-  isc_sdl_add = byte(13);
-  isc_sdl_subtract = byte(14);
-  isc_sdl_multiply = byte(15);
-  isc_sdl_divide = byte(16);
-  isc_sdl_negate = byte(17);
-  isc_sdl_begin = byte(31);
-  isc_sdl_end = byte(32);
-  isc_sdl_do3 = byte(33);
-  isc_sdl_do2 = byte(34);
-  isc_sdl_do1 = byte(35);
-  isc_sdl_element = byte(36);
-  isc_blob_untyped = byte(0);
-  isc_blob_text = byte(1);
-  isc_blob_blr = byte(2);
-  isc_blob_acl = byte(3);
-  isc_blob_ranges = byte(4);
-  isc_blob_summary = byte(5);
-  isc_blob_format = byte(6);
-  isc_blob_tra = byte(7);
-  isc_blob_extfile = byte(8);
-  isc_blob_debug_info = byte(9);
-  isc_blob_max_predefined_subtype = byte(10);
-  fb_shut_confirmation = byte(1);
-  fb_shut_preproviders = byte(2);
-  fb_shut_postproviders = byte(4);
-  fb_shut_finish = byte(8);
-  fb_shut_exit = byte(16);
-  fb_cancel_disable = byte(1);
-  fb_cancel_enable = byte(2);
-  fb_cancel_raise = byte(3);
-  fb_cancel_abort = byte(4);
-  fb_dbg_version = byte(1);
-  fb_dbg_end = byte(255);
-  fb_dbg_map_src2blr = byte(2);
-  fb_dbg_map_varname = byte(3);
-  fb_dbg_map_argument = byte(4);
-  fb_dbg_subproc = byte(5);
-  fb_dbg_subfunc = byte(6);
-  fb_dbg_map_curname = byte(7);
-  fb_dbg_arg_input = byte(0);
-  fb_dbg_arg_output = byte(1);
-  isc_facility    = 20;
-  isc_err_base    = 335544320;
-  isc_err_factor    = 1;
-  isc_arg_end    = 0;  (* end of argument list *)
-  isc_arg_gds    = 1;  (* generic DSRI status value *)
-  isc_arg_string    = 2;  (* string argument *)
-  isc_arg_cstring    = 3;  (* count & string argument *)
-  isc_arg_number    = 4;  (* numeric argument (long) *)
-  isc_arg_interpreted  = 5;  (* interpreted status code (string) *)
-  isc_arg_vms    = 6;  (* VAX/VMS status code (long) *)
-  isc_arg_unix    = 7;  (* UNIX error code *)
-  isc_arg_domain    = 8;  (* Apollo/Domain error code *)
-  isc_arg_dos    = 9;  (* MSDOS/OS2 error code *)
-  isc_arith_except                     = 335544321;
-  isc_bad_dbkey                        = 335544322;
-  isc_bad_db_format                    = 335544323;
-  isc_bad_db_handle                    = 335544324;
-  isc_bad_dpb_content                  = 335544325;
-  isc_bad_dpb_form                     = 335544326;
-  isc_bad_req_handle                   = 335544327;
-  isc_bad_segstr_handle                = 335544328;
-  isc_bad_segstr_id                    = 335544329;
-  isc_bad_tpb_content                  = 335544330;
-  isc_bad_tpb_form                     = 335544331;
-  isc_bad_trans_handle                 = 335544332;
-  isc_bug_check                        = 335544333;
-  isc_convert_error                    = 335544334;
-  isc_db_corrupt                       = 335544335;
-  isc_deadlock                         = 335544336;
-  isc_excess_trans                     = 335544337;
-  isc_from_no_match                    = 335544338;
-  isc_infinap                          = 335544339;
-  isc_infona                           = 335544340;
-  isc_infunk                           = 335544341;
-  isc_integ_fail                       = 335544342;
-  isc_invalid_blr                      = 335544343;
-  isc_io_error                         = 335544344;
-  isc_lock_conflict                    = 335544345;
-  isc_metadata_corrupt                 = 335544346;
-  isc_not_valid                        = 335544347;
-  isc_no_cur_rec                       = 335544348;
-  isc_no_dup                           = 335544349;
-  isc_no_finish                        = 335544350;
-  isc_no_meta_update                   = 335544351;
-  isc_no_priv                          = 335544352;
-  isc_no_recon                         = 335544353;
-  isc_no_record                        = 335544354;
-  isc_no_segstr_close                  = 335544355;
-  isc_obsolete_metadata                = 335544356;
-  isc_open_trans                       = 335544357;
-  isc_port_len                         = 335544358;
-  isc_read_only_field                  = 335544359;
-  isc_read_only_rel                    = 335544360;
-  isc_read_only_trans                  = 335544361;
-  isc_read_only_view                   = 335544362;
-  isc_req_no_trans                     = 335544363;
-  isc_req_sync                         = 335544364;
-  isc_req_wrong_db                     = 335544365;
-  isc_segment                          = 335544366;
-  isc_segstr_eof                       = 335544367;
-  isc_segstr_no_op                     = 335544368;
-  isc_segstr_no_read                   = 335544369;
-  isc_segstr_no_trans                  = 335544370;
-  isc_segstr_no_write                  = 335544371;
-  isc_segstr_wrong_db                  = 335544372;
-  isc_sys_request                      = 335544373;
-  isc_stream_eof                       = 335544374;
-  isc_unavailable                      = 335544375;
-  isc_unres_rel                        = 335544376;
-  isc_uns_ext                          = 335544377;
-  isc_wish_list                        = 335544378;
-  isc_wrong_ods                        = 335544379;
-  isc_wronumarg                        = 335544380;
-  isc_imp_exc                          = 335544381;
-  isc_random                           = 335544382;
-  isc_fatal_conflict                   = 335544383;
-  isc_badblk                           = 335544384;
-  isc_invpoolcl                        = 335544385;
-  isc_nopoolids                        = 335544386;
-  isc_relbadblk                        = 335544387;
-  isc_blktoobig                        = 335544388;
-  isc_bufexh                           = 335544389;
-  isc_syntaxerr                        = 335544390;
-  isc_bufinuse                         = 335544391;
-  isc_bdbincon                         = 335544392;
-  isc_reqinuse                         = 335544393;
-  isc_badodsver                        = 335544394;
-  isc_relnotdef                        = 335544395;
-  isc_fldnotdef                        = 335544396;
-  isc_dirtypage                        = 335544397;
-  isc_waifortra                        = 335544398;
-  isc_doubleloc                        = 335544399;
-  isc_nodnotfnd                        = 335544400;
-  isc_dupnodfnd                        = 335544401;
-  isc_locnotmar                        = 335544402;
-  isc_badpagtyp                        = 335544403;
-  isc_corrupt                          = 335544404;
-  isc_badpage                          = 335544405;
-  isc_badindex                         = 335544406;
-  isc_dbbnotzer                        = 335544407;
-  isc_tranotzer                        = 335544408;
-  isc_trareqmis                        = 335544409;
-  isc_badhndcnt                        = 335544410;
-  isc_wrotpbver                        = 335544411;
-  isc_wroblrver                        = 335544412;
-  isc_wrodpbver                        = 335544413;
-  isc_blobnotsup                       = 335544414;
-  isc_badrelation                      = 335544415;
-  isc_nodetach                         = 335544416;
-  isc_notremote                        = 335544417;
-  isc_trainlim                         = 335544418;
-  isc_notinlim                         = 335544419;
-  isc_traoutsta                        = 335544420;
-  isc_connect_reject                   = 335544421;
-  isc_dbfile                           = 335544422;
-  isc_orphan                           = 335544423;
-  isc_no_lock_mgr                      = 335544424;
-  isc_ctxinuse                         = 335544425;
-  isc_ctxnotdef                        = 335544426;
-  isc_datnotsup                        = 335544427;
-  isc_badmsgnum                        = 335544428;
-  isc_badparnum                        = 335544429;
-  isc_virmemexh                        = 335544430;
-  isc_blocking_signal                  = 335544431;
-  isc_lockmanerr                       = 335544432;
-  isc_journerr                         = 335544433;
-  isc_keytoobig                        = 335544434;
-  isc_nullsegkey                       = 335544435;
-  isc_sqlerr                           = 335544436;
-  isc_wrodynver                        = 335544437;
-  isc_funnotdef                        = 335544438;
-  isc_funmismat                        = 335544439;
-  isc_bad_msg_vec                      = 335544440;
-  isc_bad_detach                       = 335544441;
-  isc_noargacc_read                    = 335544442;
-  isc_noargacc_write                   = 335544443;
-  isc_read_only                        = 335544444;
-  isc_ext_err                          = 335544445;
-  isc_non_updatable                    = 335544446;
-  isc_no_rollback                      = 335544447;
-  isc_bad_sec_info                     = 335544448;
-  isc_invalid_sec_info                 = 335544449;
-  isc_misc_interpreted                 = 335544450;
-  isc_update_conflict                  = 335544451;
-  isc_unlicensed                       = 335544452;
-  isc_obj_in_use                       = 335544453;
-  isc_nofilter                         = 335544454;
-  isc_shadow_accessed                  = 335544455;
-  isc_invalid_sdl                      = 335544456;
-  isc_out_of_bounds                    = 335544457;
-  isc_invalid_dimension                = 335544458;
-  isc_rec_in_limbo                     = 335544459;
-  isc_shadow_missing                   = 335544460;
-  isc_cant_validate                    = 335544461;
-  isc_cant_start_journal               = 335544462;
-  isc_gennotdef                        = 335544463;
-  isc_cant_start_logging               = 335544464;
-  isc_bad_segstr_type                  = 335544465;
-  isc_foreign_key                      = 335544466;
-  isc_high_minor                       = 335544467;
-  isc_tra_state                        = 335544468;
-  isc_trans_invalid                    = 335544469;
-  isc_buf_invalid                      = 335544470;
-  isc_indexnotdefined                  = 335544471;
-  isc_login                            = 335544472;
-  isc_invalid_bookmark                 = 335544473;
-  isc_bad_lock_level                   = 335544474;
-  isc_relation_lock                    = 335544475;
-  isc_record_lock                      = 335544476;
-  isc_max_idx                          = 335544477;
-  isc_jrn_enable                       = 335544478;
-  isc_old_failure                      = 335544479;
-  isc_old_in_progress                  = 335544480;
-  isc_old_no_space                     = 335544481;
-  isc_no_wal_no_jrn                    = 335544482;
-  isc_num_old_files                    = 335544483;
-  isc_wal_file_open                    = 335544484;
-  isc_bad_stmt_handle                  = 335544485;
-  isc_wal_failure                      = 335544486;
-  isc_walw_err                         = 335544487;
-  isc_logh_small                       = 335544488;
-  isc_logh_inv_version                 = 335544489;
-  isc_logh_open_flag                   = 335544490;
-  isc_logh_open_flag2                  = 335544491;
-  isc_logh_diff_dbname                 = 335544492;
-  isc_logf_unexpected_eof              = 335544493;
-  isc_logr_incomplete                  = 335544494;
-  isc_logr_header_small                = 335544495;
-  isc_logb_small                       = 335544496;
-  isc_wal_illegal_attach               = 335544497;
-  isc_wal_invalid_wpb                  = 335544498;
-  isc_wal_err_rollover                 = 335544499;
-  isc_no_wal                           = 335544500;
-  isc_drop_wal                         = 335544501;
-  isc_stream_not_defined               = 335544502;
-  isc_wal_subsys_error                 = 335544503;
-  isc_wal_subsys_corrupt               = 335544504;
-  isc_no_archive                       = 335544505;
-  isc_shutinprog                       = 335544506;
-  isc_range_in_use                     = 335544507;
-  isc_range_not_found                  = 335544508;
-  isc_charset_not_found                = 335544509;
-  isc_lock_timeout                     = 335544510;
-  isc_prcnotdef                        = 335544511;
-  isc_prcmismat                        = 335544512;
-  isc_wal_bugcheck                     = 335544513;
-  isc_wal_cant_expand                  = 335544514;
-  isc_codnotdef                        = 335544515;
-  isc_xcpnotdef                        = 335544516;
-  isc_except                           = 335544517;
-  isc_cache_restart                    = 335544518;
-  isc_bad_lock_handle                  = 335544519;
-  isc_jrn_present                      = 335544520;
-  isc_wal_err_rollover2                = 335544521;
-  isc_wal_err_logwrite                 = 335544522;
-  isc_wal_err_jrn_comm                 = 335544523;
-  isc_wal_err_expansion                = 335544524;
-  isc_wal_err_setup                    = 335544525;
-  isc_wal_err_ww_sync                  = 335544526;
-  isc_wal_err_ww_start                 = 335544527;
-  isc_shutdown                         = 335544528;
-  isc_existing_priv_mod                = 335544529;
-  isc_primary_key_ref                  = 335544530;
-  isc_primary_key_notnull              = 335544531;
-  isc_ref_cnstrnt_notfound             = 335544532;
-  isc_foreign_key_notfound             = 335544533;
-  isc_ref_cnstrnt_update               = 335544534;
-  isc_check_cnstrnt_update             = 335544535;
-  isc_check_cnstrnt_del                = 335544536;
-  isc_integ_index_seg_del              = 335544537;
-  isc_integ_index_seg_mod              = 335544538;
-  isc_integ_index_del                  = 335544539;
-  isc_integ_index_mod                  = 335544540;
-  isc_check_trig_del                   = 335544541;
-  isc_check_trig_update                = 335544542;
-  isc_cnstrnt_fld_del                  = 335544543;
-  isc_cnstrnt_fld_rename               = 335544544;
-  isc_rel_cnstrnt_update               = 335544545;
-  isc_constaint_on_view                = 335544546;
-  isc_invld_cnstrnt_type               = 335544547;
-  isc_primary_key_exists               = 335544548;
-  isc_systrig_update                   = 335544549;
-  isc_not_rel_owner                    = 335544550;
-  isc_grant_obj_notfound               = 335544551;
-  isc_grant_fld_notfound               = 335544552;
-  isc_grant_nopriv                     = 335544553;
-  isc_nonsql_security_rel              = 335544554;
-  isc_nonsql_security_fld              = 335544555;
-  isc_wal_cache_err                    = 335544556;
-  isc_shutfail                         = 335544557;
-  isc_check_constraint                 = 335544558;
-  isc_bad_svc_handle                   = 335544559;
-  isc_shutwarn                         = 335544560;
-  isc_wrospbver                        = 335544561;
-  isc_bad_spb_form                     = 335544562;
-  isc_svcnotdef                        = 335544563;
-  isc_no_jrn                           = 335544564;
-  isc_transliteration_failed           = 335544565;
-  isc_start_cm_for_wal                 = 335544566;
-  isc_wal_ovflow_log_required          = 335544567;
-  isc_text_subtype                     = 335544568;
-  isc_dsql_error                       = 335544569;
-  isc_dsql_command_err                 = 335544570;
-  isc_dsql_constant_err                = 335544571;
-  isc_dsql_cursor_err                  = 335544572;
-  isc_dsql_datatype_err                = 335544573;
-  isc_dsql_decl_err                    = 335544574;
-  isc_dsql_cursor_update_err           = 335544575;
-  isc_dsql_cursor_open_err             = 335544576;
-  isc_dsql_cursor_close_err            = 335544577;
-  isc_dsql_field_err                   = 335544578;
-  isc_dsql_internal_err                = 335544579;
-  isc_dsql_relation_err                = 335544580;
-  isc_dsql_procedure_err               = 335544581;
-  isc_dsql_request_err                 = 335544582;
-  isc_dsql_sqlda_err                   = 335544583;
-  isc_dsql_var_count_err               = 335544584;
-  isc_dsql_stmt_handle                 = 335544585;
-  isc_dsql_function_err                = 335544586;
-  isc_dsql_blob_err                    = 335544587;
-  isc_collation_not_found              = 335544588;
-  isc_collation_not_for_charset        = 335544589;
-  isc_dsql_dup_option                  = 335544590;
-  isc_dsql_tran_err                    = 335544591;
-  isc_dsql_invalid_array               = 335544592;
-  isc_dsql_max_arr_dim_exceeded        = 335544593;
-  isc_dsql_arr_range_error             = 335544594;
-  isc_dsql_trigger_err                 = 335544595;
-  isc_dsql_subselect_err               = 335544596;
-  isc_dsql_crdb_prepare_err            = 335544597;
-  isc_specify_field_err                = 335544598;
-  isc_num_field_err                    = 335544599;
-  isc_col_name_err                     = 335544600;
-  isc_where_err                        = 335544601;
-  isc_table_view_err                   = 335544602;
-  isc_distinct_err                     = 335544603;
-  isc_key_field_count_err              = 335544604;
-  isc_subquery_err                     = 335544605;
-  isc_expression_eval_err              = 335544606;
-  isc_node_err                         = 335544607;
-  isc_command_end_err                  = 335544608;
-  isc_index_name                       = 335544609;
-  isc_exception_name                   = 335544610;
-  isc_field_name                       = 335544611;
-  isc_token_err                        = 335544612;
-  isc_union_err                        = 335544613;
-  isc_dsql_construct_err               = 335544614;
-  isc_field_aggregate_err              = 335544615;
-  isc_field_ref_err                    = 335544616;
-  isc_order_by_err                     = 335544617;
-  isc_return_mode_err                  = 335544618;
-  isc_extern_func_err                  = 335544619;
-  isc_alias_conflict_err               = 335544620;
-  isc_procedure_conflict_error         = 335544621;
-  isc_relation_conflict_err            = 335544622;
-  isc_dsql_domain_err                  = 335544623;
-  isc_idx_seg_err                      = 335544624;
-  isc_node_name_err                    = 335544625;
-  isc_table_name                       = 335544626;
-  isc_proc_name                        = 335544627;
-  isc_idx_create_err                   = 335544628;
-  isc_wal_shadow_err                   = 335544629;
-  isc_dependency                       = 335544630;
-  isc_idx_key_err                      = 335544631;
-  isc_dsql_file_length_err             = 335544632;
-  isc_dsql_shadow_number_err           = 335544633;
-  isc_dsql_token_unk_err               = 335544634;
-  isc_dsql_no_relation_alias           = 335544635;
-  isc_indexname                        = 335544636;
-  isc_no_stream_plan                   = 335544637;
-  isc_stream_twice                     = 335544638;
-  isc_stream_not_found                 = 335544639;
-  isc_collation_requires_text          = 335544640;
-  isc_dsql_domain_not_found            = 335544641;
-  isc_index_unused                     = 335544642;
-  isc_dsql_self_join                   = 335544643;
-  isc_stream_bof                       = 335544644;
-  isc_stream_crack                     = 335544645;
-  isc_db_or_file_exists                = 335544646;
-  isc_invalid_operator                 = 335544647;
-  isc_conn_lost                        = 335544648;
-  isc_bad_checksum                     = 335544649;
-  isc_page_type_err                    = 335544650;
-  isc_ext_readonly_err                 = 335544651;
-  isc_sing_select_err                  = 335544652;
-  isc_psw_attach                       = 335544653;
-  isc_psw_start_trans                  = 335544654;
-  isc_invalid_direction                = 335544655;
-  isc_dsql_var_conflict                = 335544656;
-  isc_dsql_no_blob_array               = 335544657;
-  isc_dsql_base_table                  = 335544658;
-  isc_duplicate_base_table             = 335544659;
-  isc_view_alias                       = 335544660;
-  isc_index_root_page_full             = 335544661;
-  isc_dsql_blob_type_unknown           = 335544662;
-  isc_req_max_clones_exceeded          = 335544663;
-  isc_dsql_duplicate_spec              = 335544664;
-  isc_unique_key_violation             = 335544665;
-  isc_srvr_version_too_old             = 335544666;
-  isc_drdb_completed_with_errs         = 335544667;
-  isc_dsql_procedure_use_err           = 335544668;
-  isc_dsql_count_mismatch              = 335544669;
-  isc_blob_idx_err                     = 335544670;
-  isc_array_idx_err                    = 335544671;
-  isc_key_field_err                    = 335544672;
-  isc_no_delete                        = 335544673;
-  isc_del_last_field                   = 335544674;
-  isc_sort_err                         = 335544675;
-  isc_sort_mem_err                     = 335544676;
-  isc_version_err                      = 335544677;
-  isc_inval_key_posn                   = 335544678;
-  isc_no_segments_err                  = 335544679;
-  isc_crrp_data_err                    = 335544680;
-  isc_rec_size_err                     = 335544681;
-  isc_dsql_field_ref                   = 335544682;
-  isc_req_depth_exceeded               = 335544683;
-  isc_no_field_access                  = 335544684;
-  isc_no_dbkey                         = 335544685;
-  isc_jrn_format_err                   = 335544686;
-  isc_jrn_file_full                    = 335544687;
-  isc_dsql_open_cursor_request         = 335544688;
-  isc_ib_error                         = 335544689;
-  isc_cache_redef                      = 335544690;
-  isc_cache_too_small                  = 335544691;
-  isc_log_redef                        = 335544692;
-  isc_log_too_small                    = 335544693;
-  isc_partition_too_small              = 335544694;
-  isc_partition_not_supp               = 335544695;
-  isc_log_length_spec                  = 335544696;
-  isc_precision_err                    = 335544697;
-  isc_scale_nogt                       = 335544698;
-  isc_expec_short                      = 335544699;
-  isc_expec_long                       = 335544700;
-  isc_expec_ushort                     = 335544701;
-  isc_escape_invalid                   = 335544702;
-  isc_svcnoexe                         = 335544703;
-  isc_net_lookup_err                   = 335544704;
-  isc_service_unknown                  = 335544705;
-  isc_host_unknown                     = 335544706;
-  isc_grant_nopriv_on_base             = 335544707;
-  isc_dyn_fld_ambiguous                = 335544708;
-  isc_dsql_agg_ref_err                 = 335544709;
-  isc_complex_view                     = 335544710;
-  isc_unprepared_stmt                  = 335544711;
-  isc_expec_positive                   = 335544712;
-  isc_dsql_sqlda_value_err             = 335544713;
-  isc_invalid_array_id                 = 335544714;
-  isc_extfile_uns_op                   = 335544715;
-  isc_svc_in_use                       = 335544716;
-  isc_err_stack_limit                  = 335544717;
-  isc_invalid_key                      = 335544718;
-  isc_net_init_error                   = 335544719;
-  isc_loadlib_failure                  = 335544720;
-  isc_network_error                    = 335544721;
-  isc_net_connect_err                  = 335544722;
-  isc_net_connect_listen_err           = 335544723;
-  isc_net_event_connect_err            = 335544724;
-  isc_net_event_listen_err             = 335544725;
-  isc_net_read_err                     = 335544726;
-  isc_net_write_err                    = 335544727;
-  isc_integ_index_deactivate           = 335544728;
-  isc_integ_deactivate_primary         = 335544729;
-  isc_cse_not_supported                = 335544730;
-  isc_tra_must_sweep                   = 335544731;
-  isc_unsupported_network_drive        = 335544732;
-  isc_io_create_err                    = 335544733;
-  isc_io_open_err                      = 335544734;
-  isc_io_close_err                     = 335544735;
-  isc_io_read_err                      = 335544736;
-  isc_io_write_err                     = 335544737;
-  isc_io_delete_err                    = 335544738;
-  isc_io_access_err                    = 335544739;
-  isc_udf_exception                    = 335544740;
-  isc_lost_db_connection               = 335544741;
-  isc_no_write_user_priv               = 335544742;
-  isc_token_too_long                   = 335544743;
-  isc_max_att_exceeded                 = 335544744;
-  isc_login_same_as_role_name          = 335544745;
-  isc_reftable_requires_pk             = 335544746;
-  isc_usrname_too_long                 = 335544747;
-  isc_password_too_long                = 335544748;
-  isc_usrname_required                 = 335544749;
-  isc_password_required                = 335544750;
-  isc_bad_protocol                     = 335544751;
-  isc_dup_usrname_found                = 335544752;
-  isc_usrname_not_found                = 335544753;
-  isc_error_adding_sec_record          = 335544754;
-  isc_error_modifying_sec_record       = 335544755;
-  isc_error_deleting_sec_record        = 335544756;
-  isc_error_updating_sec_db            = 335544757;
-  isc_sort_rec_size_err                = 335544758;
-  isc_bad_default_value                = 335544759;
-  isc_invalid_clause                   = 335544760;
-  isc_too_many_handles                 = 335544761;
-  isc_optimizer_blk_exc                = 335544762;
-  isc_invalid_string_constant          = 335544763;
-  isc_transitional_date                = 335544764;
-  isc_read_only_database               = 335544765;
-  isc_must_be_dialect_2_and_up         = 335544766;
-  isc_blob_filter_exception            = 335544767;
-  isc_exception_access_violation       = 335544768;
-  isc_exception_datatype_missalignment = 335544769;
-  isc_exception_array_bounds_exceeded  = 335544770;
-  isc_exception_float_denormal_operand = 335544771;
-  isc_exception_float_divide_by_zero   = 335544772;
-  isc_exception_float_inexact_result   = 335544773;
-  isc_exception_float_invalid_operand  = 335544774;
-  isc_exception_float_overflow         = 335544775;
-  isc_exception_float_stack_check      = 335544776;
-  isc_exception_float_underflow        = 335544777;
-  isc_exception_integer_divide_by_zero = 335544778;
-  isc_exception_integer_overflow       = 335544779;
-  isc_exception_unknown                = 335544780;
-  isc_exception_stack_overflow         = 335544781;
-  isc_exception_sigsegv                = 335544782;
-  isc_exception_sigill                 = 335544783;
-  isc_exception_sigbus                 = 335544784;
-  isc_exception_sigfpe                 = 335544785;
-  isc_ext_file_delete                  = 335544786;
-  isc_ext_file_modify                  = 335544787;
-  isc_adm_task_denied                  = 335544788;
-  isc_extract_input_mismatch           = 335544789;
-  isc_insufficient_svc_privileges      = 335544790;
-  isc_file_in_use                      = 335544791;
-  isc_service_att_err                  = 335544792;
-  isc_ddl_not_allowed_by_db_sql_dial   = 335544793;
-  isc_cancelled                        = 335544794;
-  isc_unexp_spb_form                   = 335544795;
-  isc_sql_dialect_datatype_unsupport   = 335544796;
-  isc_svcnouser                        = 335544797;
-  isc_depend_on_uncommitted_rel        = 335544798;
-  isc_svc_name_missing                 = 335544799;
-  isc_too_many_contexts                = 335544800;
-  isc_datype_notsup                    = 335544801;
-  isc_dialect_reset_warning            = 335544802;
-  isc_dialect_not_changed              = 335544803;
-  isc_database_create_failed           = 335544804;
-  isc_inv_dialect_specified            = 335544805;
-  isc_valid_db_dialects                = 335544806;
-  isc_sqlwarn                          = 335544807;
-  isc_dtype_renamed                    = 335544808;
-  isc_extern_func_dir_error            = 335544809;
-  isc_date_range_exceeded              = 335544810;
-  isc_inv_client_dialect_specified     = 335544811;
-  isc_valid_client_dialects            = 335544812;
-  isc_optimizer_between_err            = 335544813;
-  isc_service_not_supported            = 335544814;
-  isc_generator_name                   = 335544815;
-  isc_udf_name                         = 335544816;
-  isc_bad_limit_param                  = 335544817;
-  isc_bad_skip_param                   = 335544818;
-  isc_io_32bit_exceeded_err            = 335544819;
-  isc_invalid_savepoint                = 335544820;
-  isc_dsql_column_pos_err              = 335544821;
-  isc_dsql_agg_where_err               = 335544822;
-  isc_dsql_agg_group_err               = 335544823;
-  isc_dsql_agg_column_err              = 335544824;
-  isc_dsql_agg_having_err              = 335544825;
-  isc_dsql_agg_nested_err              = 335544826;
-  isc_exec_sql_invalid_arg             = 335544827;
-  isc_exec_sql_invalid_req             = 335544828;
-  isc_exec_sql_invalid_var             = 335544829;
-  isc_exec_sql_max_call_exceeded       = 335544830;
-  isc_conf_access_denied               = 335544831;
-  isc_wrong_backup_state               = 335544832;
-  isc_wal_backup_err                   = 335544833;
-  isc_cursor_not_open                  = 335544834;
-  isc_bad_shutdown_mode                = 335544835;
-  isc_concat_overflow                  = 335544836;
-  isc_bad_substring_offset             = 335544837;
-  isc_foreign_key_target_doesnt_exist  = 335544838;
-  isc_foreign_key_references_present   = 335544839;
-  isc_no_update                        = 335544840;
-  isc_cursor_already_open              = 335544841;
-  isc_stack_trace                      = 335544842;
-  isc_ctx_var_not_found                = 335544843;
-  isc_ctx_namespace_invalid            = 335544844;
-  isc_ctx_too_big                      = 335544845;
-  isc_ctx_bad_argument                 = 335544846;
-  isc_identifier_too_long              = 335544847;
-  isc_except2                          = 335544848;
-  isc_malformed_string                 = 335544849;
-  isc_prc_out_param_mismatch           = 335544850;
-  isc_command_end_err2                 = 335544851;
-  isc_partner_idx_incompat_type        = 335544852;
-  isc_bad_substring_length             = 335544853;
-  isc_charset_not_installed            = 335544854;
-  isc_collation_not_installed          = 335544855;
-  isc_att_shutdown                     = 335544856;
-  isc_blobtoobig                       = 335544857;
-  isc_must_have_phys_field             = 335544858;
-  isc_invalid_time_precision           = 335544859;
-  isc_blob_convert_error               = 335544860;
-  isc_array_convert_error              = 335544861;
-  isc_record_lock_not_supp             = 335544862;
-  isc_partner_idx_not_found            = 335544863;
-  isc_tra_num_exc                      = 335544864;
-  isc_field_disappeared                = 335544865;
-  isc_met_wrong_gtt_scope              = 335544866;
-  isc_subtype_for_internal_use         = 335544867;
-  isc_illegal_prc_type                 = 335544868;
-  isc_invalid_sort_datatype            = 335544869;
-  isc_collation_name                   = 335544870;
-  isc_domain_name                      = 335544871;
-  isc_domnotdef                        = 335544872;
-  isc_array_max_dimensions             = 335544873;
-  isc_max_db_per_trans_allowed         = 335544874;
-  isc_bad_debug_format                 = 335544875;
-  isc_bad_proc_BLR                     = 335544876;
-  isc_key_too_big                      = 335544877;
-  isc_concurrent_transaction           = 335544878;
-  isc_not_valid_for_var                = 335544879;
-  isc_not_valid_for                    = 335544880;
-  isc_need_difference                  = 335544881;
-  isc_long_login                       = 335544882;
-  isc_fldnotdef2                       = 335544883;
-  isc_invalid_similar_pattern          = 335544884;
-  isc_bad_teb_form                     = 335544885;
-  isc_tpb_multiple_txn_isolation       = 335544886;
-  isc_tpb_reserv_before_table          = 335544887;
-  isc_tpb_multiple_spec                = 335544888;
-  isc_tpb_option_without_rc            = 335544889;
-  isc_tpb_conflicting_options          = 335544890;
-  isc_tpb_reserv_missing_tlen          = 335544891;
-  isc_tpb_reserv_long_tlen             = 335544892;
-  isc_tpb_reserv_missing_tname         = 335544893;
-  isc_tpb_reserv_corrup_tlen           = 335544894;
-  isc_tpb_reserv_null_tlen             = 335544895;
-  isc_tpb_reserv_relnotfound           = 335544896;
-  isc_tpb_reserv_baserelnotfound       = 335544897;
-  isc_tpb_missing_len                  = 335544898;
-  isc_tpb_missing_value                = 335544899;
-  isc_tpb_corrupt_len                  = 335544900;
-  isc_tpb_null_len                     = 335544901;
-  isc_tpb_overflow_len                 = 335544902;
-  isc_tpb_invalid_value                = 335544903;
-  isc_tpb_reserv_stronger_wng          = 335544904;
-  isc_tpb_reserv_stronger              = 335544905;
-  isc_tpb_reserv_max_recursion         = 335544906;
-  isc_tpb_reserv_virtualtbl            = 335544907;
-  isc_tpb_reserv_systbl                = 335544908;
-  isc_tpb_reserv_temptbl               = 335544909;
-  isc_tpb_readtxn_after_writelock      = 335544910;
-  isc_tpb_writelock_after_readtxn      = 335544911;
-  isc_time_range_exceeded              = 335544912;
-  isc_datetime_range_exceeded          = 335544913;
-  isc_string_truncation                = 335544914;
-  isc_blob_truncation                  = 335544915;
-  isc_numeric_out_of_range             = 335544916;
-  isc_shutdown_timeout                 = 335544917;
-  isc_att_handle_busy                  = 335544918;
-  isc_bad_udf_freeit                   = 335544919;
-  isc_eds_provider_not_found           = 335544920;
-  isc_eds_connection                   = 335544921;
-  isc_eds_preprocess                   = 335544922;
-  isc_eds_stmt_expected                = 335544923;
-  isc_eds_prm_name_expected            = 335544924;
-  isc_eds_unclosed_comment             = 335544925;
-  isc_eds_statement                    = 335544926;
-  isc_eds_input_prm_mismatch           = 335544927;
-  isc_eds_output_prm_mismatch          = 335544928;
-  isc_eds_input_prm_not_set            = 335544929;
-  isc_too_big_blr                      = 335544930;
-  isc_montabexh                        = 335544931;
-  isc_modnotfound                      = 335544932;
-  isc_nothing_to_cancel                = 335544933;
-  isc_ibutil_not_loaded                = 335544934;
-  isc_circular_computed                = 335544935;
-  isc_psw_db_error                     = 335544936;
-  isc_invalid_type_datetime_op         = 335544937;
-  isc_onlycan_add_timetodate           = 335544938;
-  isc_onlycan_add_datetotime           = 335544939;
-  isc_onlycansub_tstampfromtstamp      = 335544940;
-  isc_onlyoneop_mustbe_tstamp          = 335544941;
-  isc_invalid_extractpart_time         = 335544942;
-  isc_invalid_extractpart_date         = 335544943;
-  isc_invalidarg_extract               = 335544944;
-  isc_sysf_argmustbe_exact             = 335544945;
-  isc_sysf_argmustbe_exact_or_fp       = 335544946;
-  isc_sysf_argviolates_uuidtype        = 335544947;
-  isc_sysf_argviolates_uuidlen         = 335544948;
-  isc_sysf_argviolates_uuidfmt         = 335544949;
-  isc_sysf_argviolates_guidigits       = 335544950;
-  isc_sysf_invalid_addpart_time        = 335544951;
-  isc_sysf_invalid_add_datetime        = 335544952;
-  isc_sysf_invalid_addpart_dtime       = 335544953;
-  isc_sysf_invalid_add_dtime_rc        = 335544954;
-  isc_sysf_invalid_diff_dtime          = 335544955;
-  isc_sysf_invalid_timediff            = 335544956;
-  isc_sysf_invalid_tstamptimediff      = 335544957;
-  isc_sysf_invalid_datetimediff        = 335544958;
-  isc_sysf_invalid_diffpart            = 335544959;
-  isc_sysf_argmustbe_positive          = 335544960;
-  isc_sysf_basemustbe_positive         = 335544961;
-  isc_sysf_argnmustbe_nonneg           = 335544962;
-  isc_sysf_argnmustbe_positive         = 335544963;
-  isc_sysf_invalid_zeropowneg          = 335544964;
-  isc_sysf_invalid_negpowfp            = 335544965;
-  isc_sysf_invalid_scale               = 335544966;
-  isc_sysf_argmustbe_nonneg            = 335544967;
-  isc_sysf_binuuid_mustbe_str          = 335544968;
-  isc_sysf_binuuid_wrongsize           = 335544969;
-  isc_missing_required_spb             = 335544970;
-  isc_net_server_shutdown              = 335544971;
-  isc_bad_conn_str                     = 335544972;
-  isc_bad_epb_form                     = 335544973;
-  isc_no_threads                       = 335544974;
-  isc_net_event_connect_timeout        = 335544975;
-  isc_sysf_argmustbe_nonzero           = 335544976;
-  isc_sysf_argmustbe_range_inc1_1      = 335544977;
-  isc_sysf_argmustbe_gteq_one          = 335544978;
-  isc_sysf_argmustbe_range_exc1_1      = 335544979;
-  isc_internal_rejected_params         = 335544980;
-  isc_sysf_fp_overflow                 = 335544981;
-  isc_udf_fp_overflow                  = 335544982;
-  isc_udf_fp_nan                       = 335544983;
-  isc_instance_conflict                = 335544984;
-  isc_out_of_temp_space                = 335544985;
-  isc_eds_expl_tran_ctrl               = 335544986;
-  isc_no_trusted_spb                   = 335544987;
-  isc_package_name                     = 335544988;
-  isc_cannot_make_not_null             = 335544989;
-  isc_feature_removed                  = 335544990;
-  isc_view_name                        = 335544991;
-  isc_lock_dir_access                  = 335544992;
-  isc_invalid_fetch_option             = 335544993;
-  isc_bad_fun_BLR                      = 335544994;
-  isc_func_pack_not_implemented        = 335544995;
-  isc_proc_pack_not_implemented        = 335544996;
-  isc_eem_func_not_returned            = 335544997;
-  isc_eem_proc_not_returned            = 335544998;
-  isc_eem_trig_not_returned            = 335544999;
-  isc_eem_bad_plugin_ver               = 335545000;
-  isc_eem_engine_notfound              = 335545001;
-  isc_attachment_in_use                = 335545002;
-  isc_transaction_in_use               = 335545003;
-  isc_pman_cannot_load_plugin          = 335545004;
-  isc_pman_module_notfound             = 335545005;
-  isc_pman_entrypoint_notfound         = 335545006;
-  isc_pman_module_bad                  = 335545007;
-  isc_pman_plugin_notfound             = 335545008;
-  isc_sysf_invalid_trig_namespace      = 335545009;
-  isc_unexpected_null                  = 335545010;
-  isc_type_notcompat_blob              = 335545011;
-  isc_invalid_date_val                 = 335545012;
-  isc_invalid_time_val                 = 335545013;
-  isc_invalid_timestamp_val            = 335545014;
-  isc_invalid_index_val                = 335545015;
-  isc_formatted_exception              = 335545016;
-  isc_async_active                     = 335545017;
-  isc_private_function                 = 335545018;
-  isc_private_procedure                = 335545019;
-  isc_request_outdated                 = 335545020;
-  isc_bad_events_handle                = 335545021;
-  isc_cannot_copy_stmt                 = 335545022;
-  isc_invalid_boolean_usage            = 335545023;
-  isc_sysf_argscant_both_be_zero       = 335545024;
-  isc_spb_no_id                        = 335545025;
-  isc_ee_blr_mismatch_null             = 335545026;
-  isc_ee_blr_mismatch_length           = 335545027;
-  isc_ss_out_of_bounds                 = 335545028;
-  isc_missing_data_structures          = 335545029;
-  isc_protect_sys_tab                  = 335545030;
-  isc_libtommath_generic               = 335545031;
-  isc_wroblrver2                       = 335545032;
-  isc_trunc_limits                     = 335545033;
-  isc_info_access                      = 335545034;
-  isc_svc_no_stdin                     = 335545035;
-  isc_svc_start_failed                 = 335545036;
-  isc_svc_no_switches                  = 335545037;
-  isc_svc_bad_size                     = 335545038;
-  isc_no_crypt_plugin                  = 335545039;
-  isc_cp_name_too_long                 = 335545040;
-  isc_cp_process_active                = 335545041;
-  isc_cp_already_crypted               = 335545042;
-  isc_decrypt_error                    = 335545043;
-  isc_no_providers                     = 335545044;
-  isc_null_spb                         = 335545045;
-  isc_max_args_exceeded                = 335545046;
-  isc_ee_blr_mismatch_names_count      = 335545047;
-  isc_ee_blr_mismatch_name_not_found   = 335545048;
-  isc_bad_result_set                   = 335545049;
-  isc_wrong_message_length             = 335545050;
-  isc_no_output_format                 = 335545051;
-  isc_item_finish                      = 335545052;
-  isc_miss_config                      = 335545053;
-  isc_conf_line                        = 335545054;
-  isc_conf_include                     = 335545055;
-  isc_include_depth                    = 335545056;
-  isc_include_miss                     = 335545057;
-  isc_protect_ownership                = 335545058;
-  isc_badvarnum                        = 335545059;
-  isc_sec_context                      = 335545060;
-  isc_multi_segment                    = 335545061;
-  isc_login_changed                    = 335545062;
-  isc_auth_handshake_limit             = 335545063;
-  isc_wirecrypt_incompatible           = 335545064;
-  isc_miss_wirecrypt                   = 335545065;
-  isc_wirecrypt_key                    = 335545066;
-  isc_wirecrypt_plugin                 = 335545067;
-  isc_secdb_name                       = 335545068;
-  isc_auth_data                        = 335545069;
-  isc_auth_datalength                  = 335545070;
-  isc_info_unprepared_stmt             = 335545071;
-  isc_idx_key_value                    = 335545072;
-  isc_forupdate_virtualtbl             = 335545073;
-  isc_forupdate_systbl                 = 335545074;
-  isc_forupdate_temptbl                = 335545075;
-  isc_cant_modify_sysobj               = 335545076;
-  isc_server_misconfigured             = 335545077;
-  isc_alter_role                       = 335545078;
-  isc_map_already_exists               = 335545079;
-  isc_map_not_exists                   = 335545080;
-  isc_map_load                         = 335545081;
-  isc_map_aster                        = 335545082;
-  isc_map_multi                        = 335545083;
-  isc_map_undefined                    = 335545084;
-  isc_baddpb_damaged_mode              = 335545085;
-  isc_baddpb_buffers_range             = 335545086;
-  isc_baddpb_temp_buffers              = 335545087;
-  isc_map_nodb                         = 335545088;
-  isc_map_notable                      = 335545089;
-  isc_miss_trusted_role                = 335545090;
-  isc_set_invalid_role                 = 335545091;
-  isc_cursor_not_positioned            = 335545092;
-  isc_dup_attribute                    = 335545093;
-  isc_dyn_no_priv                      = 335545094;
-  isc_dsql_cant_grant_option           = 335545095;
-  isc_read_conflict                    = 335545096;
-  isc_crdb_load                        = 335545097;
-  isc_crdb_nodb                        = 335545098;
-  isc_crdb_notable                     = 335545099;
-  isc_interface_version_too_old        = 335545100;
-  isc_fun_param_mismatch               = 335545101;
-  isc_savepoint_backout_err            = 335545102;
-  isc_domain_primary_key_notnull       = 335545103;
-  isc_invalid_attachment_charset       = 335545104;
-  isc_map_down                         = 335545105;
-  isc_login_error                      = 335545106;
-  isc_already_opened                   = 335545107;
-  isc_bad_crypt_key                    = 335545108;
 
-  isc_att_shut_killed                  = 335545130; //since FB4
-  isc_att_shut_idle                    = 335545131; //since FB4
-  isc_att_shut_db_down                 = 335545132; //since FB4
-  isc_att_shut_engine                  = 335545133; //since FB4
-
-  isc_encrypt_error                    = 335545109;
-  isc_gfix_db_name                     = 335740929;
-  isc_gfix_invalid_sw                  = 335740930;
-  isc_gfix_incmp_sw                    = 335740932;
-  isc_gfix_replay_req                  = 335740933;
-  isc_gfix_pgbuf_req                   = 335740934;
-  isc_gfix_val_req                     = 335740935;
-  isc_gfix_pval_req                    = 335740936;
-  isc_gfix_trn_req                     = 335740937;
-  isc_gfix_full_req                    = 335740940;
-  isc_gfix_usrname_req                 = 335740941;
-  isc_gfix_pass_req                    = 335740942;
-  isc_gfix_subs_name                   = 335740943;
-  isc_gfix_wal_req                     = 335740944;
-  isc_gfix_sec_req                     = 335740945;
-  isc_gfix_nval_req                    = 335740946;
-  isc_gfix_type_shut                   = 335740947;
-  isc_gfix_retry                       = 335740948;
-  isc_gfix_retry_db                    = 335740951;
-  isc_gfix_exceed_max                  = 335740991;
-  isc_gfix_corrupt_pool                = 335740992;
-  isc_gfix_mem_exhausted               = 335740993;
-  isc_gfix_bad_pool                    = 335740994;
-  isc_gfix_trn_not_valid               = 335740995;
-  isc_gfix_unexp_eoi                   = 335741012;
-  isc_gfix_recon_fail                  = 335741018;
-  isc_gfix_trn_unknown                 = 335741036;
-  isc_gfix_mode_req                    = 335741038;
-  isc_gfix_pzval_req                   = 335741042;
-  isc_dsql_dbkey_from_non_table        = 336003074;
-  isc_dsql_transitional_numeric        = 336003075;
-  isc_dsql_dialect_warning_expr        = 336003076;
-  isc_sql_db_dialect_dtype_unsupport   = 336003077;
-  isc_sql_dialect_conflict_num         = 336003079;
-  isc_dsql_warning_number_ambiguous    = 336003080;
-  isc_dsql_warning_number_ambiguous1   = 336003081;
-  isc_dsql_warn_precision_ambiguous    = 336003082;
-  isc_dsql_warn_precision_ambiguous1   = 336003083;
-  isc_dsql_warn_precision_ambiguous2   = 336003084;
-  isc_dsql_ambiguous_field_name        = 336003085;
-  isc_dsql_udf_return_pos_err          = 336003086;
-  isc_dsql_invalid_label               = 336003087;
-  isc_dsql_datatypes_not_comparable    = 336003088;
-  isc_dsql_cursor_invalid              = 336003089;
-  isc_dsql_cursor_redefined            = 336003090;
-  isc_dsql_cursor_not_found            = 336003091;
-  isc_dsql_cursor_exists               = 336003092;
-  isc_dsql_cursor_rel_ambiguous        = 336003093;
-  isc_dsql_cursor_rel_not_found        = 336003094;
-  isc_dsql_cursor_not_open             = 336003095;
-  isc_dsql_type_not_supp_ext_tab       = 336003096;
-  isc_dsql_feature_not_supported_ods   = 336003097;
-  isc_primary_key_required             = 336003098;
-  isc_upd_ins_doesnt_match_pk          = 336003099;
-  isc_upd_ins_doesnt_match_matching    = 336003100;
-  isc_upd_ins_with_complex_view        = 336003101;
-  isc_dsql_incompatible_trigger_type   = 336003102;
-  isc_dsql_db_trigger_type_cant_change = 336003103;
-  isc_dsql_record_version_table        = 336003104;
-  isc_dsql_invalid_sqlda_version       = 336003105;
-  isc_dsql_sqlvar_index                = 336003106;
-  isc_dsql_no_sqlind                   = 336003107;
-  isc_dsql_no_sqldata                  = 336003108;
-  isc_dsql_no_input_sqlda              = 336003109;
-  isc_dsql_no_output_sqlda             = 336003110;
-  isc_dsql_wrong_param_num             = 336003111;
-  isc_dyn_filter_not_found             = 336068645;
-  isc_dyn_func_not_found               = 336068649;
-  isc_dyn_index_not_found              = 336068656;
-  isc_dyn_view_not_found               = 336068662;
-  isc_dyn_domain_not_found             = 336068697;
-  isc_dyn_cant_modify_auto_trig        = 336068717;
-  isc_dyn_dup_table                    = 336068740;
-  isc_dyn_proc_not_found               = 336068748;
-  isc_dyn_exception_not_found          = 336068752;
-  isc_dyn_proc_param_not_found         = 336068754;
-  isc_dyn_trig_not_found               = 336068755;
-  isc_dyn_charset_not_found            = 336068759;
-  isc_dyn_collation_not_found          = 336068760;
-  isc_dyn_role_not_found               = 336068763;
-  isc_dyn_name_longer                  = 336068767;
-  isc_dyn_column_does_not_exist        = 336068784;
-  isc_dyn_role_does_not_exist          = 336068796;
-  isc_dyn_no_grant_admin_opt           = 336068797;
-  isc_dyn_user_not_role_member         = 336068798;
-  isc_dyn_delete_role_failed           = 336068799;
-  isc_dyn_grant_role_to_user           = 336068800;
-  isc_dyn_inv_sql_role_name            = 336068801;
-  isc_dyn_dup_sql_role                 = 336068802;
-  isc_dyn_kywd_spec_for_role           = 336068803;
-  isc_dyn_roles_not_supported          = 336068804;
-  isc_dyn_domain_name_exists           = 336068812;
-  isc_dyn_field_name_exists            = 336068813;
-  isc_dyn_dependency_exists            = 336068814;
-  isc_dyn_dtype_invalid                = 336068815;
-  isc_dyn_char_fld_too_small           = 336068816;
-  isc_dyn_invalid_dtype_conversion     = 336068817;
-  isc_dyn_dtype_conv_invalid           = 336068818;
-  isc_dyn_zero_len_id                  = 336068820;
-  isc_dyn_gen_not_found                = 336068822;
-  isc_max_coll_per_charset             = 336068829;
-  isc_invalid_coll_attr                = 336068830;
-  isc_dyn_wrong_gtt_scope              = 336068840;
-  isc_dyn_coll_used_table              = 336068843;
-  isc_dyn_coll_used_domain             = 336068844;
-  isc_dyn_cannot_del_syscoll           = 336068845;
-  isc_dyn_cannot_del_def_coll          = 336068846;
-  isc_dyn_table_not_found              = 336068849;
-  isc_dyn_coll_used_procedure          = 336068851;
-  isc_dyn_scale_too_big                = 336068852;
-  isc_dyn_precision_too_small          = 336068853;
-  isc_dyn_miss_priv_warning            = 336068855;
-  isc_dyn_ods_not_supp_feature         = 336068856;
-  isc_dyn_cannot_addrem_computed       = 336068857;
-  isc_dyn_no_empty_pw                  = 336068858;
-  isc_dyn_dup_index                    = 336068859;
-  isc_dyn_package_not_found            = 336068864;
-  isc_dyn_schema_not_found             = 336068865;
-  isc_dyn_cannot_mod_sysproc           = 336068866;
-  isc_dyn_cannot_mod_systrig           = 336068867;
-  isc_dyn_cannot_mod_sysfunc           = 336068868;
-  isc_dyn_invalid_ddl_proc             = 336068869;
-  isc_dyn_invalid_ddl_trig             = 336068870;
-  isc_dyn_funcnotdef_package           = 336068871;
-  isc_dyn_procnotdef_package           = 336068872;
-  isc_dyn_funcsignat_package           = 336068873;
-  isc_dyn_procsignat_package           = 336068874;
-  isc_dyn_defvaldecl_package_proc      = 336068875;
-  isc_dyn_package_body_exists          = 336068877;
-  isc_dyn_invalid_ddl_func             = 336068878;
-  isc_dyn_newfc_oldsyntax              = 336068879;
-  isc_dyn_func_param_not_found         = 336068886;
-  isc_dyn_routine_param_not_found      = 336068887;
-  isc_dyn_routine_param_ambiguous      = 336068888;
-  isc_dyn_coll_used_function           = 336068889;
-  isc_dyn_domain_used_function         = 336068890;
-  isc_dyn_alter_user_no_clause         = 336068891;
-  isc_dyn_duplicate_package_item       = 336068894;
-  isc_dyn_cant_modify_sysobj           = 336068895;
-  isc_dyn_cant_use_zero_increment      = 336068896;
-  isc_dyn_cant_use_in_foreignkey       = 336068897;
-  isc_dyn_defvaldecl_package_func      = 336068898;
-  isc_gbak_unknown_switch              = 336330753;
-  isc_gbak_page_size_missing           = 336330754;
-  isc_gbak_page_size_toobig            = 336330755;
-  isc_gbak_redir_ouput_missing         = 336330756;
-  isc_gbak_switches_conflict           = 336330757;
-  isc_gbak_unknown_device              = 336330758;
-  isc_gbak_no_protection               = 336330759;
-  isc_gbak_page_size_not_allowed       = 336330760;
-  isc_gbak_multi_source_dest           = 336330761;
-  isc_gbak_filename_missing            = 336330762;
-  isc_gbak_dup_inout_names             = 336330763;
-  isc_gbak_inv_page_size               = 336330764;
-  isc_gbak_db_specified                = 336330765;
-  isc_gbak_db_exists                   = 336330766;
-  isc_gbak_unk_device                  = 336330767;
-  isc_gbak_blob_info_failed            = 336330772;
-  isc_gbak_unk_blob_item               = 336330773;
-  isc_gbak_get_seg_failed              = 336330774;
-  isc_gbak_close_blob_failed           = 336330775;
-  isc_gbak_open_blob_failed            = 336330776;
-  isc_gbak_put_blr_gen_id_failed       = 336330777;
-  isc_gbak_unk_type                    = 336330778;
-  isc_gbak_comp_req_failed             = 336330779;
-  isc_gbak_start_req_failed            = 336330780;
-  isc_gbak_rec_failed                  = 336330781;
-  isc_gbak_rel_req_failed              = 336330782;
-  isc_gbak_db_info_failed              = 336330783;
-  isc_gbak_no_db_desc                  = 336330784;
-  isc_gbak_db_create_failed            = 336330785;
-  isc_gbak_decomp_len_error            = 336330786;
-  isc_gbak_tbl_missing                 = 336330787;
-  isc_gbak_blob_col_missing            = 336330788;
-  isc_gbak_create_blob_failed          = 336330789;
-  isc_gbak_put_seg_failed              = 336330790;
-  isc_gbak_rec_len_exp                 = 336330791;
-  isc_gbak_inv_rec_len                 = 336330792;
-  isc_gbak_exp_data_type               = 336330793;
-  isc_gbak_gen_id_failed               = 336330794;
-  isc_gbak_unk_rec_type                = 336330795;
-  isc_gbak_inv_bkup_ver                = 336330796;
-  isc_gbak_missing_bkup_desc           = 336330797;
-  isc_gbak_string_trunc                = 336330798;
-  isc_gbak_cant_rest_record            = 336330799;
-  isc_gbak_send_failed                 = 336330800;
-  isc_gbak_no_tbl_name                 = 336330801;
-  isc_gbak_unexp_eof                   = 336330802;
-  isc_gbak_db_format_too_old           = 336330803;
-  isc_gbak_inv_array_dim               = 336330804;
-  isc_gbak_xdr_len_expected            = 336330807;
-  isc_gbak_open_bkup_error             = 336330817;
-  isc_gbak_open_error                  = 336330818;
-  isc_gbak_missing_block_fac           = 336330934;
-  isc_gbak_inv_block_fac               = 336330935;
-  isc_gbak_block_fac_specified         = 336330936;
-  isc_gbak_missing_username            = 336330940;
-  isc_gbak_missing_password            = 336330941;
-  isc_gbak_missing_skipped_bytes       = 336330952;
-  isc_gbak_inv_skipped_bytes           = 336330953;
-  isc_gbak_err_restore_charset         = 336330965;
-  isc_gbak_err_restore_collation       = 336330967;
-  isc_gbak_read_error                  = 336330972;
-  isc_gbak_write_error                 = 336330973;
-  isc_gbak_db_in_use                   = 336330985;
-  isc_gbak_sysmemex                    = 336330990;
-  isc_gbak_restore_role_failed         = 336331002;
-  isc_gbak_role_op_missing             = 336331005;
-  isc_gbak_page_buffers_missing        = 336331010;
-  isc_gbak_page_buffers_wrong_param    = 336331011;
-  isc_gbak_page_buffers_restore        = 336331012;
-  isc_gbak_inv_size                    = 336331014;
-  isc_gbak_file_outof_sequence         = 336331015;
-  isc_gbak_join_file_missing           = 336331016;
-  isc_gbak_stdin_not_supptd            = 336331017;
-  isc_gbak_stdout_not_supptd           = 336331018;
-  isc_gbak_bkup_corrupt                = 336331019;
-  isc_gbak_unk_db_file_spec            = 336331020;
-  isc_gbak_hdr_write_failed            = 336331021;
-  isc_gbak_disk_space_ex               = 336331022;
-  isc_gbak_size_lt_min                 = 336331023;
-  isc_gbak_svc_name_missing            = 336331025;
-  isc_gbak_not_ownr                    = 336331026;
-  isc_gbak_mode_req                    = 336331031;
-  isc_gbak_just_data                   = 336331033;
-  isc_gbak_data_only                   = 336331034;
-  isc_gbak_missing_interval            = 336331078;
-  isc_gbak_wrong_interval              = 336331079;
-  isc_gbak_verify_verbint              = 336331081;
-  isc_gbak_option_only_restore         = 336331082;
-  isc_gbak_option_only_backup          = 336331083;
-  isc_gbak_option_conflict             = 336331084;
-  isc_gbak_param_conflict              = 336331085;
-  isc_gbak_option_repeated             = 336331086;
-  isc_gbak_max_dbkey_recursion         = 336331091;
-  isc_gbak_max_dbkey_length            = 336331092;
-  isc_gbak_invalid_metadata            = 336331093;
-  isc_gbak_invalid_data                = 336331094;
-  isc_gbak_inv_bkup_ver2               = 336331096;
-  isc_gbak_db_format_too_old2          = 336331100;
-  isc_dsql_too_old_ods                 = 336397205;
-  isc_dsql_table_not_found             = 336397206;
-  isc_dsql_view_not_found              = 336397207;
-  isc_dsql_line_col_error              = 336397208;
-  isc_dsql_unknown_pos                 = 336397209;
-  isc_dsql_no_dup_name                 = 336397210;
-  isc_dsql_too_many_values             = 336397211;
-  isc_dsql_no_array_computed           = 336397212;
-  isc_dsql_implicit_domain_name        = 336397213;
-  isc_dsql_only_can_subscript_array    = 336397214;
-  isc_dsql_max_sort_items              = 336397215;
-  isc_dsql_max_group_items             = 336397216;
-  isc_dsql_conflicting_sort_field      = 336397217;
-  isc_dsql_derived_table_more_columns  = 336397218;
-  isc_dsql_derived_table_less_columns  = 336397219;
-  isc_dsql_derived_field_unnamed       = 336397220;
-  isc_dsql_derived_field_dup_name      = 336397221;
-  isc_dsql_derived_alias_select        = 336397222;
-  isc_dsql_derived_alias_field         = 336397223;
-  isc_dsql_auto_field_bad_pos          = 336397224;
-  isc_dsql_cte_wrong_reference         = 336397225;
-  isc_dsql_cte_cycle                   = 336397226;
-  isc_dsql_cte_outer_join              = 336397227;
-  isc_dsql_cte_mult_references         = 336397228;
-  isc_dsql_cte_not_a_union             = 336397229;
-  isc_dsql_cte_nonrecurs_after_recurs  = 336397230;
-  isc_dsql_cte_wrong_clause            = 336397231;
-  isc_dsql_cte_union_all               = 336397232;
-  isc_dsql_cte_miss_nonrecursive       = 336397233;
-  isc_dsql_cte_nested_with             = 336397234;
-  isc_dsql_col_more_than_once_using    = 336397235;
-  isc_dsql_unsupp_feature_dialect      = 336397236;
-  isc_dsql_cte_not_used                = 336397237;
-  isc_dsql_col_more_than_once_view     = 336397238;
-  isc_dsql_unsupported_in_auto_trans   = 336397239;
-  isc_dsql_eval_unknode                = 336397240;
-  isc_dsql_agg_wrongarg                = 336397241;
-  isc_dsql_agg2_wrongarg               = 336397242;
-  isc_dsql_nodateortime_pm_string      = 336397243;
-  isc_dsql_invalid_datetime_subtract   = 336397244;
-  isc_dsql_invalid_dateortime_add      = 336397245;
-  isc_dsql_invalid_type_minus_date     = 336397246;
-  isc_dsql_nostring_addsub_dial3       = 336397247;
-  isc_dsql_invalid_type_addsub_dial3   = 336397248;
-  isc_dsql_invalid_type_multip_dial1   = 336397249;
-  isc_dsql_nostring_multip_dial3       = 336397250;
-  isc_dsql_invalid_type_multip_dial3   = 336397251;
-  isc_dsql_mustuse_numeric_div_dial1   = 336397252;
-  isc_dsql_nostring_div_dial3          = 336397253;
-  isc_dsql_invalid_type_div_dial3      = 336397254;
-  isc_dsql_nostring_neg_dial3          = 336397255;
-  isc_dsql_invalid_type_neg            = 336397256;
-  isc_dsql_max_distinct_items          = 336397257;
-  isc_dsql_alter_charset_failed        = 336397258;
-  isc_dsql_comment_on_failed           = 336397259;
-  isc_dsql_create_func_failed          = 336397260;
-  isc_dsql_alter_func_failed           = 336397261;
-  isc_dsql_create_alter_func_failed    = 336397262;
-  isc_dsql_drop_func_failed            = 336397263;
-  isc_dsql_recreate_func_failed        = 336397264;
-  isc_dsql_create_proc_failed          = 336397265;
-  isc_dsql_alter_proc_failed           = 336397266;
-  isc_dsql_create_alter_proc_failed    = 336397267;
-  isc_dsql_drop_proc_failed            = 336397268;
-  isc_dsql_recreate_proc_failed        = 336397269;
-  isc_dsql_create_trigger_failed       = 336397270;
-  isc_dsql_alter_trigger_failed        = 336397271;
-  isc_dsql_create_alter_trigger_failed = 336397272;
-  isc_dsql_drop_trigger_failed         = 336397273;
-  isc_dsql_recreate_trigger_failed     = 336397274;
-  isc_dsql_create_collation_failed     = 336397275;
-  isc_dsql_drop_collation_failed       = 336397276;
-  isc_dsql_create_domain_failed        = 336397277;
-  isc_dsql_alter_domain_failed         = 336397278;
-  isc_dsql_drop_domain_failed          = 336397279;
-  isc_dsql_create_except_failed        = 336397280;
-  isc_dsql_alter_except_failed         = 336397281;
-  isc_dsql_create_alter_except_failed  = 336397282;
-  isc_dsql_recreate_except_failed      = 336397283;
-  isc_dsql_drop_except_failed          = 336397284;
-  isc_dsql_create_sequence_failed      = 336397285;
-  isc_dsql_create_table_failed         = 336397286;
-  isc_dsql_alter_table_failed          = 336397287;
-  isc_dsql_drop_table_failed           = 336397288;
-  isc_dsql_recreate_table_failed       = 336397289;
-  isc_dsql_create_pack_failed          = 336397290;
-  isc_dsql_alter_pack_failed           = 336397291;
-  isc_dsql_create_alter_pack_failed    = 336397292;
-  isc_dsql_drop_pack_failed            = 336397293;
-  isc_dsql_recreate_pack_failed        = 336397294;
-  isc_dsql_create_pack_body_failed     = 336397295;
-  isc_dsql_drop_pack_body_failed       = 336397296;
-  isc_dsql_recreate_pack_body_failed   = 336397297;
-  isc_dsql_create_view_failed          = 336397298;
-  isc_dsql_alter_view_failed           = 336397299;
-  isc_dsql_create_alter_view_failed    = 336397300;
-  isc_dsql_recreate_view_failed        = 336397301;
-  isc_dsql_drop_view_failed            = 336397302;
-  isc_dsql_drop_sequence_failed        = 336397303;
-  isc_dsql_recreate_sequence_failed    = 336397304;
-  isc_dsql_drop_index_failed           = 336397305;
-  isc_dsql_drop_filter_failed          = 336397306;
-  isc_dsql_drop_shadow_failed          = 336397307;
-  isc_dsql_drop_role_failed            = 336397308;
-  isc_dsql_drop_user_failed            = 336397309;
-  isc_dsql_create_role_failed          = 336397310;
-  isc_dsql_alter_role_failed           = 336397311;
-  isc_dsql_alter_index_failed          = 336397312;
-  isc_dsql_alter_database_failed       = 336397313;
-  isc_dsql_create_shadow_failed        = 336397314;
-  isc_dsql_create_filter_failed        = 336397315;
-  isc_dsql_create_index_failed         = 336397316;
-  isc_dsql_create_user_failed          = 336397317;
-  isc_dsql_alter_user_failed           = 336397318;
-  isc_dsql_grant_failed                = 336397319;
-  isc_dsql_revoke_failed               = 336397320;
-  isc_dsql_cte_recursive_aggregate     = 336397321;
-  isc_dsql_mapping_failed              = 336397322;
-  isc_dsql_alter_sequence_failed       = 336397323;
-  isc_dsql_create_generator_failed     = 336397324;
-  isc_dsql_set_generator_failed        = 336397325;
-  isc_dsql_wlock_simple                = 336397326;
-  isc_dsql_firstskip_rows              = 336397327;
-  isc_dsql_wlock_aggregates            = 336397328;
-  isc_dsql_wlock_conflict              = 336397329;
-  isc_dsql_max_exception_arguments     = 336397330;
-  isc_dsql_string_byte_length          = 336397331;
-  isc_dsql_string_char_length          = 336397332;
-  isc_dsql_max_nesting                 = 336397333;
-  isc_gsec_cant_open_db                = 336723983;
-  isc_gsec_switches_error              = 336723984;
-  isc_gsec_no_op_spec                  = 336723985;
-  isc_gsec_no_usr_name                 = 336723986;
-  isc_gsec_err_add                     = 336723987;
-  isc_gsec_err_modify                  = 336723988;
-  isc_gsec_err_find_mod                = 336723989;
-  isc_gsec_err_rec_not_found           = 336723990;
-  isc_gsec_err_delete                  = 336723991;
-  isc_gsec_err_find_del                = 336723992;
-  isc_gsec_err_find_disp               = 336723996;
-  isc_gsec_inv_param                   = 336723997;
-  isc_gsec_op_specified                = 336723998;
-  isc_gsec_pw_specified                = 336723999;
-  isc_gsec_uid_specified               = 336724000;
-  isc_gsec_gid_specified               = 336724001;
-  isc_gsec_proj_specified              = 336724002;
-  isc_gsec_org_specified               = 336724003;
-  isc_gsec_fname_specified             = 336724004;
-  isc_gsec_mname_specified             = 336724005;
-  isc_gsec_lname_specified             = 336724006;
-  isc_gsec_inv_switch                  = 336724008;
-  isc_gsec_amb_switch                  = 336724009;
-  isc_gsec_no_op_specified             = 336724010;
-  isc_gsec_params_not_allowed          = 336724011;
-  isc_gsec_incompat_switch             = 336724012;
-  isc_gsec_inv_username                = 336724044;
-  isc_gsec_inv_pw_length               = 336724045;
-  isc_gsec_db_specified                = 336724046;
-  isc_gsec_db_admin_specified          = 336724047;
-  isc_gsec_db_admin_pw_specified       = 336724048;
-  isc_gsec_sql_role_specified          = 336724049;
-  isc_gstat_unknown_switch             = 336920577;
-  isc_gstat_retry                      = 336920578;
-  isc_gstat_wrong_ods                  = 336920579;
-  isc_gstat_unexpected_eof             = 336920580;
-  isc_gstat_open_err                   = 336920605;
-  isc_gstat_read_err                   = 336920606;
-  isc_gstat_sysmemex                   = 336920607;
-  isc_fbsvcmgr_bad_am                  = 336986113;
-  isc_fbsvcmgr_bad_wm                  = 336986114;
-  isc_fbsvcmgr_bad_rs                  = 336986115;
-  isc_fbsvcmgr_info_err                = 336986116;
-  isc_fbsvcmgr_query_err               = 336986117;
-  isc_fbsvcmgr_switch_unknown          = 336986118;
-  isc_fbsvcmgr_bad_sm                  = 336986159;
-  isc_fbsvcmgr_fp_open                 = 336986160;
-  isc_fbsvcmgr_fp_read                 = 336986161;
-  isc_fbsvcmgr_fp_empty                = 336986162;
-  isc_fbsvcmgr_bad_arg                 = 336986164;
-  isc_utl_trusted_switch               = 337051649;
-  isc_nbackup_missing_param            = 337117213;
-  isc_nbackup_allowed_switches         = 337117214;
-  isc_nbackup_unknown_param            = 337117215;
-  isc_nbackup_unknown_switch           = 337117216;
-  isc_nbackup_nofetchpw_svc            = 337117217;
-  isc_nbackup_pwfile_error             = 337117218;
-  isc_nbackup_size_with_lock           = 337117219;
-  isc_nbackup_no_switch                = 337117220;
-  isc_nbackup_err_read                 = 337117223;
-  isc_nbackup_err_write                = 337117224;
-  isc_nbackup_err_seek                 = 337117225;
-  isc_nbackup_err_opendb               = 337117226;
-  isc_nbackup_err_fadvice              = 337117227;
-  isc_nbackup_err_createdb             = 337117228;
-  isc_nbackup_err_openbk               = 337117229;
-  isc_nbackup_err_createbk             = 337117230;
-  isc_nbackup_err_eofdb                = 337117231;
-  isc_nbackup_fixup_wrongstate         = 337117232;
-  isc_nbackup_err_db                   = 337117233;
-  isc_nbackup_userpw_toolong           = 337117234;
-  isc_nbackup_lostrec_db               = 337117235;
-  isc_nbackup_lostguid_db              = 337117236;
-  isc_nbackup_err_eofhdrdb             = 337117237;
-  isc_nbackup_db_notlock               = 337117238;
-  isc_nbackup_lostguid_bk              = 337117239;
-  isc_nbackup_page_changed             = 337117240;
-  isc_nbackup_dbsize_inconsistent      = 337117241;
-  isc_nbackup_failed_lzbk              = 337117242;
-  isc_nbackup_err_eofhdrbk             = 337117243;
-  isc_nbackup_invalid_incbk            = 337117244;
-  isc_nbackup_unsupvers_incbk          = 337117245;
-  isc_nbackup_invlevel_incbk           = 337117246;
-  isc_nbackup_wrong_orderbk            = 337117247;
-  isc_nbackup_err_eofbk                = 337117248;
-  isc_nbackup_err_copy                 = 337117249;
-  isc_nbackup_err_eofhdr_restdb        = 337117250;
-  isc_nbackup_lostguid_l0bk            = 337117251;
-  isc_nbackup_switchd_parameter        = 337117255;
-  isc_nbackup_user_stop                = 337117257;
-  isc_nbackup_deco_parse               = 337117259;
-  isc_trace_conflict_acts              = 337182750;
-  isc_trace_act_notfound               = 337182751;
-  isc_trace_switch_once                = 337182752;
-  isc_trace_param_val_miss             = 337182753;
-  isc_trace_param_invalid              = 337182754;
-  isc_trace_switch_unknown             = 337182755;
-  isc_trace_switch_svc_only            = 337182756;
-  isc_trace_switch_user_only           = 337182757;
-  isc_trace_switch_param_miss          = 337182758;
-  isc_trace_param_act_notcompat        = 337182759;
-  isc_trace_mandatory_switch_miss      = 337182760;
-
-{$ENDIF ZEOS_DISABLE_FIREBIRD}
 implementation
-{$IFNDEF ZEOS_DISABLE_FIREBIRD}
+
+const IntfErrors: array[0..2] of NativeInt = (isc_ib_error, isc_interface_version_too_old, isc_arg_end);
+
+procedure SetIntfToOldVersionError(status: IStatus);
+begin
+  Status.setErrors2(2, @IntfErrors[0]);
+end;
 
 procedure IReferenceCounted.addRef();
 begin
@@ -5416,32 +4105,32 @@ begin
   Result := StatusVTable(vTable).getState(Self);
 end;
 
-procedure IStatus.setErrors2(length: Cardinal; value: NativeIntPtr);
+procedure IStatus.setErrors2(length: Cardinal; value: PNativeInt);
 begin
   StatusVTable(vTable).setErrors2(Self, length, value);
 end;
 
-procedure IStatus.setWarnings2(length: Cardinal; value: NativeIntPtr);
+procedure IStatus.setWarnings2(length: Cardinal; value: PNativeInt);
 begin
   StatusVTable(vTable).setWarnings2(Self, length, value);
 end;
 
-procedure IStatus.setErrors(value: NativeIntPtr);
+procedure IStatus.setErrors(value: PNativeInt);
 begin
   StatusVTable(vTable).setErrors(Self, value);
 end;
 
-procedure IStatus.setWarnings(value: NativeIntPtr);
+procedure IStatus.setWarnings(value: PNativeInt);
 begin
   StatusVTable(vTable).setWarnings(Self, value);
 end;
 
-function IStatus.getErrors(): NativeIntPtr;
+function IStatus.getErrors(): PNativeInt;
 begin
   Result := StatusVTable(vTable).getErrors(Self);
 end;
 
-function IStatus.getWarnings(): NativeIntPtr;
+function IStatus.getWarnings(): PNativeInt;
 begin
   Result := StatusVTable(vTable).getWarnings(Self);
 end;
@@ -5606,6 +4295,11 @@ begin
   Result := FirebirdConfVTable(vTable).asBoolean(Self, key);
 end;
 
+function IFirebirdConf.getVersion(status: IStatus): Cardinal;
+begin
+  Result := FirebirdConfVTable(vTable).getVersion(Self, status);
+end;
+
 function IPluginConfig.getConfigFileName(): PAnsiChar;
 begin
   Result := PluginConfigVTable(vTable).getConfigFileName(Self);
@@ -5621,7 +4315,7 @@ begin
   Result := PluginConfigVTable(vTable).getFirebirdConf(Self, status);
 end;
 
-procedure IPluginConfig.setReleaseDelay(status: IStatus; microSeconds: QWord);
+procedure IPluginConfig.setReleaseDelay(status: IStatus; microSeconds: UInt64);
 begin
   PluginConfigVTable(vTable).setReleaseDelay(Self, status, microSeconds);
 end;
@@ -5634,6 +4328,12 @@ end;
 procedure IPluginModule.doClean();
 begin
   PluginModuleVTable(vTable).doClean(Self);
+end;
+
+procedure IPluginModule.threadDetach();
+begin
+  if vTable.version >= 3 then //since FB4
+    PluginModuleVTable(vTable).threadDetach(Self);
 end;
 
 procedure IPluginManager.registerPluginFactory(pluginType: Cardinal; defaultName: PAnsiChar; factory: IPluginFactory);
@@ -5676,12 +4376,12 @@ begin
   CryptKeyVTable(vTable).setAsymmetric(Self, status, type_, encryptKeyLength, encryptKey, decryptKeyLength, decryptKey);
 end;
 
-function ICryptKey.getEncryptKey(length: CardinalPtr): Pointer;
+function ICryptKey.getEncryptKey(length: PCardinal): Pointer;
 begin
   Result := CryptKeyVTable(vTable).getEncryptKey(Self, length);
 end;
 
-function ICryptKey.getDecryptKey(length: CardinalPtr): Pointer;
+function ICryptKey.getDecryptKey(length: PCardinal): Pointer;
 begin
   Result := CryptKeyVTable(vTable).getDecryptKey(Self, length);
 end;
@@ -5716,501 +4416,485 @@ begin
   Result := ConfigManagerVTable(vTable).getRootDirectory(Self);
 end;
 
-procedure IEventCallback.eventCallbackFunction(length: Cardinal; events: BytePtr);
+function IConfigManager.getDefaultSecurityDb(): PAnsiChar;
+begin
+  Result := ConfigManagerVTable(vTable).getDefaultSecurityDb(Self);
+end;
+
+procedure IEventCallback.eventCallbackFunction(length: Cardinal; events: PByte);
 begin
   EventCallbackVTable(vTable).eventCallbackFunction(Self, length, events);
 end;
 
-procedure IBlob.getInfo(status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr);
+procedure IBlob.getInfo(status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte);
 begin
   BlobVTable(vTable).getInfo(Self, status, itemsLength, items, bufferLength, buffer);
-//  FbException.checkException(status);
 end;
 
-function IBlob.getSegment(status: IStatus; bufferLength: Cardinal; buffer: Pointer; segmentLength: CardinalPtr): Integer;
+function IBlob.getSegment(status: IStatus; bufferLength: Cardinal; buffer: Pointer; segmentLength: PCardinal): Integer;
 begin
   Result := BlobVTable(vTable).getSegment(Self, status, bufferLength, buffer, segmentLength);
-//  FbException.checkException(status);
 end;
 
 procedure IBlob.putSegment(status: IStatus; length: Cardinal; buffer: Pointer);
 begin
   BlobVTable(vTable).putSegment(Self, status, length, buffer);
-//  FbException.checkException(status);
 end;
 
 procedure IBlob.cancel(status: IStatus);
 begin
   BlobVTable(vTable).cancel(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IBlob.close(status: IStatus);
 begin
   BlobVTable(vTable).close(Self, status);
-  //FbException.checkException(status);
 end;
 
 function IBlob.seek(status: IStatus; mode: Integer; offset: Integer): Integer;
 begin
   Result := BlobVTable(vTable).seek(Self, status, mode, offset);
-//  FbException.checkException(status);
 end;
 
-procedure ITransaction.getInfo(status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr);
+procedure ITransaction.getInfo(status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte);
 begin
   TransactionVTable(vTable).getInfo(Self, status, itemsLength, items, bufferLength, buffer);
-//  FbException.checkException(status);
 end;
 
-procedure ITransaction.prepare(status: IStatus; msgLength: Cardinal; message: BytePtr);
+procedure ITransaction.prepare(status: IStatus; msgLength: Cardinal; message: PByte);
 begin
   TransactionVTable(vTable).prepare(Self, status, msgLength, message);
-//  FbException.checkException(status);
 end;
 
 procedure ITransaction.commit(status: IStatus);
 begin
   TransactionVTable(vTable).commit(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure ITransaction.commitRetaining(status: IStatus);
 begin
   TransactionVTable(vTable).commitRetaining(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure ITransaction.rollback(status: IStatus);
 begin
   TransactionVTable(vTable).rollback(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure ITransaction.rollbackRetaining(status: IStatus);
 begin
   TransactionVTable(vTable).rollbackRetaining(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure ITransaction.disconnect(status: IStatus);
 begin
   TransactionVTable(vTable).disconnect(Self, status);
-//  FbException.checkException(status);
 end;
 
 function ITransaction.join(status: IStatus; transaction: ITransaction): ITransaction;
 begin
   Result := TransactionVTable(vTable).join(Self, status, transaction);
-//  FbException.checkException(status);
 end;
 
 function ITransaction.validate(status: IStatus; attachment: IAttachment): ITransaction;
 begin
   Result := TransactionVTable(vTable).validate(Self, status, attachment);
-//  FbException.checkException(status);
 end;
 
 function ITransaction.enterDtc(status: IStatus): ITransaction;
 begin
   Result := TransactionVTable(vTable).enterDtc(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IMessageMetadata.getCount(status: IStatus): Cardinal;
 begin
   Result := MessageMetadataVTable(vTable).getCount(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IMessageMetadata.getField(status: IStatus; index: Cardinal): PAnsiChar;
 begin
   Result := MessageMetadataVTable(vTable).getField(Self, status, index);
-//  FbException.checkException(status);
 end;
 
 function IMessageMetadata.getRelation(status: IStatus; index: Cardinal): PAnsiChar;
 begin
   Result := MessageMetadataVTable(vTable).getRelation(Self, status, index);
-  //FbException.checkException(status);
 end;
 
 function IMessageMetadata.getOwner(status: IStatus; index: Cardinal): PAnsiChar;
 begin
   Result := MessageMetadataVTable(vTable).getOwner(Self, status, index);
-  //FbException.checkException(status);
 end;
 
 function IMessageMetadata.getAlias(status: IStatus; index: Cardinal): PAnsiChar;
 begin
   Result := MessageMetadataVTable(vTable).getAlias(Self, status, index);
-  //FbException.checkException(status);
 end;
 
 function IMessageMetadata.getType(status: IStatus; index: Cardinal): Cardinal;
 begin
   Result := MessageMetadataVTable(vTable).getType(Self, status, index);
-  //FbException.checkException(status);
 end;
 
 function IMessageMetadata.isNullable(status: IStatus; index: Cardinal): Boolean;
 begin
   Result := MessageMetadataVTable(vTable).isNullable(Self, status, index);
-  //FbException.checkException(status);
 end;
 
 function IMessageMetadata.getSubType(status: IStatus; index: Cardinal): Integer;
 begin
   Result := MessageMetadataVTable(vTable).getSubType(Self, status, index);
-  //FbException.checkException(status);
 end;
 
 function IMessageMetadata.getLength(status: IStatus; index: Cardinal): Cardinal;
 begin
   Result := MessageMetadataVTable(vTable).getLength(Self, status, index);
-  //FbException.checkException(status);
 end;
 
 function IMessageMetadata.getScale(status: IStatus; index: Cardinal): Integer;
 begin
   Result := MessageMetadataVTable(vTable).getScale(Self, status, index);
-  //FbException.checkException(status);
 end;
 
 function IMessageMetadata.getCharSet(status: IStatus; index: Cardinal): Cardinal;
 begin
   Result := MessageMetadataVTable(vTable).getCharSet(Self, status, index);
-  //FbException.checkException(status);
 end;
 
 function IMessageMetadata.getOffset(status: IStatus; index: Cardinal): Cardinal;
 begin
   Result := MessageMetadataVTable(vTable).getOffset(Self, status, index);
-  //FbException.checkException(status);
 end;
 
 function IMessageMetadata.getNullOffset(status: IStatus; index: Cardinal): Cardinal;
 begin
   Result := MessageMetadataVTable(vTable).getNullOffset(Self, status, index);
-//  FbException.checkException(status);
 end;
 
 function IMessageMetadata.getBuilder(status: IStatus): IMetadataBuilder;
 begin
   Result := MessageMetadataVTable(vTable).getBuilder(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IMessageMetadata.getMessageLength(status: IStatus): Cardinal;
 begin
   Result := MessageMetadataVTable(vTable).getMessageLength(Self, status);
-//  FbException.checkException(status);
+end;
+
+function IMessageMetadata.getAlignment(status: IStatus): Cardinal;
+begin
+  if vTable.version < 4 then begin
+    SetIntfToOldVersionError(status);
+    Result := 0;
+  end else
+    Result := MessageMetadataVTable(vTable).getAlignment(Self, status);
+end;
+
+function IMessageMetadata.getAlignedLength(status: IStatus): Cardinal;
+begin
+  if vTable.version < 4 then begin
+    SetIntfToOldVersionError(status);
+    Result := 0;
+  end else
+    Result := MessageMetadataVTable(vTable).getAlignedLength(Self, status);
 end;
 
 procedure IMetadataBuilder.setType(status: IStatus; index: Cardinal; type_: Cardinal);
 begin
   MetadataBuilderVTable(vTable).setType(Self, status, index, type_);
-//  FbException.checkException(status);
 end;
 
 procedure IMetadataBuilder.setSubType(status: IStatus; index: Cardinal; subType: Integer);
 begin
   MetadataBuilderVTable(vTable).setSubType(Self, status, index, subType);
-//  FbException.checkException(status);
 end;
 
 procedure IMetadataBuilder.setLength(status: IStatus; index: Cardinal; length: Cardinal);
 begin
   MetadataBuilderVTable(vTable).setLength(Self, status, index, length);
-//  FbException.checkException(status);
 end;
 
 procedure IMetadataBuilder.setCharSet(status: IStatus; index: Cardinal; charSet: Cardinal);
 begin
   MetadataBuilderVTable(vTable).setCharSet(Self, status, index, charSet);
-//  FbException.checkException(status);
 end;
 
 procedure IMetadataBuilder.setScale(status: IStatus; index: Cardinal; scale: Integer);
 begin
   MetadataBuilderVTable(vTable).setScale(Self, status, index, scale);
-//  FbException.checkException(status);
 end;
 
 procedure IMetadataBuilder.truncate(status: IStatus; count: Cardinal);
 begin
   MetadataBuilderVTable(vTable).truncate(Self, status, count);
-//  FbException.checkException(status);
 end;
 
 procedure IMetadataBuilder.moveNameToIndex(status: IStatus; name: PAnsiChar; index: Cardinal);
 begin
   MetadataBuilderVTable(vTable).moveNameToIndex(Self, status, name, index);
-//  FbException.checkException(status);
 end;
 
 procedure IMetadataBuilder.remove(status: IStatus; index: Cardinal);
 begin
   MetadataBuilderVTable(vTable).remove(Self, status, index);
-//  FbException.checkException(status);
 end;
 
 function IMetadataBuilder.addField(status: IStatus): Cardinal;
 begin
   Result := MetadataBuilderVTable(vTable).addField(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IMetadataBuilder.getMetadata(status: IStatus): IMessageMetadata;
 begin
   Result := MetadataBuilderVTable(vTable).getMetadata(Self, status);
-//  FbException.checkException(status);
+end;
+
+procedure IMetadataBuilder.setField(status: IStatus; index: Cardinal; field: PAnsiChar);
+begin
+  MetadataBuilderVTable(vTable).setField(Self, status, index, field);
+end;
+
+procedure IMetadataBuilder.setRelation(status: IStatus; index: Cardinal; relation: PAnsiChar);
+begin
+  MetadataBuilderVTable(vTable).setRelation(Self, status, index, relation);
+end;
+
+procedure IMetadataBuilder.setOwner(status: IStatus; index: Cardinal; owner: PAnsiChar);
+begin
+  MetadataBuilderVTable(vTable).setOwner(Self, status, index, owner);
+end;
+
+procedure IMetadataBuilder.setAlias(status: IStatus; index: Cardinal; alias: PAnsiChar);
+begin
+  MetadataBuilderVTable(vTable).setAlias(Self, status, index, alias);
 end;
 
 function IResultSet.fetchNext(status: IStatus; message: Pointer): Integer;
 begin
   Result := ResultSetVTable(vTable).fetchNext(Self, status, message);
-  //FbException.checkException(status);
 end;
 
 function IResultSet.fetchPrior(status: IStatus; message: Pointer): Integer;
 begin
   Result := ResultSetVTable(vTable).fetchPrior(Self, status, message);
-  //FbException.checkException(status);
 end;
 
 function IResultSet.fetchFirst(status: IStatus; message: Pointer): Integer;
 begin
   Result := ResultSetVTable(vTable).fetchFirst(Self, status, message);
-  //FbException.checkException(status);
 end;
 
 function IResultSet.fetchLast(status: IStatus; message: Pointer): Integer;
 begin
   Result := ResultSetVTable(vTable).fetchLast(Self, status, message);
-  //FbException.checkException(status);
 end;
 
 function IResultSet.fetchAbsolute(status: IStatus; position: Integer; message: Pointer): Integer;
 begin
   Result := ResultSetVTable(vTable).fetchAbsolute(Self, status, position, message);
-  //FbException.checkException(status);
 end;
 
 function IResultSet.fetchRelative(status: IStatus; offset: Integer; message: Pointer): Integer;
 begin
   Result := ResultSetVTable(vTable).fetchRelative(Self, status, offset, message);
-  //FbException.checkException(status);
 end;
 
 function IResultSet.isEof(status: IStatus): Boolean;
 begin
   Result := ResultSetVTable(vTable).isEof(Self, status);
-  //FbException.checkException(status);
 end;
 
 function IResultSet.isBof(status: IStatus): Boolean;
 begin
   Result := ResultSetVTable(vTable).isBof(Self, status);
-  //FbException.checkException(status);
 end;
 
 function IResultSet.getMetadata(status: IStatus): IMessageMetadata;
 begin
   Result := ResultSetVTable(vTable).getMetadata(Self, status);
-  //FbException.checkException(status);
 end;
 
 procedure IResultSet.close(status: IStatus);
 begin
   ResultSetVTable(vTable).close(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IResultSet.setDelayedOutputFormat(status: IStatus; format: IMessageMetadata);
 begin
   ResultSetVTable(vTable).setDelayedOutputFormat(Self, status, format);
-//  FbException.checkException(status);
 end;
 
-procedure IStatement.getInfo(status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr);
+procedure IStatement.getInfo(status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte);
 begin
   StatementVTable(vTable).getInfo(Self, status, itemsLength, items, bufferLength, buffer);
-//  FbException.checkException(status);
 end;
 
 function IStatement.getType(status: IStatus): Cardinal;
 begin
   Result := StatementVTable(vTable).getType(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IStatement.getPlan(status: IStatus; detailed: Boolean): PAnsiChar;
 begin
   Result := StatementVTable(vTable).getPlan(Self, status, detailed);
-//  FbException.checkException(status);
 end;
 
-function IStatement.getAffectedRecords(status: IStatus): QWord;
+function IStatement.getAffectedRecords(status: IStatus): UInt64;
 begin
   Result := StatementVTable(vTable).getAffectedRecords(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IStatement.getInputMetadata(status: IStatus): IMessageMetadata;
 begin
   Result := StatementVTable(vTable).getInputMetadata(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IStatement.getOutputMetadata(status: IStatus): IMessageMetadata;
 begin
   Result := StatementVTable(vTable).getOutputMetadata(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IStatement.execute(status: IStatus; transaction: ITransaction; inMetadata: IMessageMetadata; inBuffer: Pointer; outMetadata: IMessageMetadata; outBuffer: Pointer): ITransaction;
 begin
   Result := StatementVTable(vTable).execute(Self, status, transaction, inMetadata, inBuffer, outMetadata, outBuffer);
-//  FbException.checkException(status);
 end;
 
 function IStatement.openCursor(status: IStatus; transaction: ITransaction; inMetadata: IMessageMetadata; inBuffer: Pointer; outMetadata: IMessageMetadata; flags: Cardinal): IResultSet;
 begin
   Result := StatementVTable(vTable).openCursor(Self, status, transaction, inMetadata, inBuffer, outMetadata, flags);
-//  FbException.checkException(status);
 end;
 
 procedure IStatement.setCursorName(status: IStatus; name: PAnsiChar);
 begin
   StatementVTable(vTable).setCursorName(Self, status, name);
-//  FbException.checkException(status);
 end;
 
 procedure IStatement.free(status: IStatus);
 begin
   StatementVTable(vTable).free(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IStatement.getFlags(status: IStatus): Cardinal;
 begin
   Result := StatementVTable(vTable).getFlags(Self, status);
-//  FbException.checkException(status);
 end;
 
-{ IStatement_V4 }
-
-function IStatement_V4.createBatch(status: IStatus; inMetadata: IMessageMetadata;
-  parLength: Cardinal; par: Pointer): IBatch;
+function IStatement.getTimeout(status: IStatus): Cardinal;
 begin
-  Result := StatementVTable_V4(vTable).createBatch(Self, status, inMetadata, parLength, par);
+  if vTable.version < 4 then begin
+    SetIntfToOldVersionError(status);
+    Result := 0;
+  end else
+    Result := StatementVTable(vTable).getTimeout(Self, status);
 end;
 
-function IStatement_V4.getTimeout(status: IStatus): Cardinal;
+procedure IStatement.setTimeout(status: IStatus; timeOut: Cardinal);
 begin
-  Result := StatementVTable_V4(vTable).getTimeout(Self, status);
+  if vTable.version < 4
+  then SetIntfToOldVersionError(status)
+  else StatementVTable(vTable).setTimeout(Self, status, timeOut);
 end;
 
-procedure IStatement_V4.setTimeout(status: IStatus; timeout: Cardinal);
+function IStatement.createBatch(status: IStatus; inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch;
 begin
-  StatementVTable_V4(vTable).setTimeout(Self, status, timeout);
+  if vTable.version < 4 then begin
+    SetIntfToOldVersionError(status);
+    Result := nil;
+  end else
+    Result := StatementVTable(vTable).createBatch(Self, status, inMetadata, parLength, par);
 end;
-
-{ IBatch }
 
 procedure IBatch.add(status: IStatus; count: Cardinal; inBuffer: Pointer);
 begin
-  BatchVTable(VTable).add(Self, status, count, inBuffer);
+  BatchVTable(vTable).add(Self, status, count, inBuffer);
 end;
 
-procedure IBatch.addBlob(status: IStatus; length: Cardinal; inBuffer: Pointer;
-  blobId: ISC_QUADptr; parLength: Cardinal; par: PByte);
+procedure IBatch.addBlob(status: IStatus; length: Cardinal; inBuffer: Pointer; blobId: PISC_QUAD; parLength: Cardinal; par: PByte);
 begin
-  BatchVTable(VTable).addBlob(Self, status, length, inBuffer, blobId, parLength, par);
+  BatchVTable(vTable).addBlob(Self, status, length, inBuffer, blobId, parLength, par);
 end;
 
-procedure IBatch.addBlobStream(status: IStatus; length: Cardinal;
-  inBuffer: Pointer);
+procedure IBatch.appendBlobData(status: IStatus; length: Cardinal; inBuffer: Pointer);
 begin
-  BatchVTable(VTable).addBlobStream(Self, status, length, inBuffer);
+  BatchVTable(vTable).appendBlobData(Self, status, length, inBuffer);
 end;
 
-procedure IBatch.appendBlobData(status: IStatus; length: Cardinal;
-  inBuffer: Pointer);
+procedure IBatch.addBlobStream(status: IStatus; length: Cardinal; inBuffer: Pointer);
 begin
-  BatchVTable(VTable).appendBlobData(Self, status, length, inBuffer);
+  BatchVTable(vTable).addBlobStream(Self, status, length, inBuffer);
+end;
+
+procedure IBatch.registerBlob(status: IStatus; existingBlob: PISC_QUAD; blobId: PISC_QUAD);
+begin
+  BatchVTable(vTable).registerBlob(Self, status, existingBlob, blobId);
+end;
+
+function IBatch.execute(status: IStatus; transaction: ITransaction): IBatchCompletionState;
+begin
+  Result := BatchVTable(vTable).execute(Self, status, transaction);
 end;
 
 procedure IBatch.cancel(status: IStatus);
 begin
-  BatchVTable(VTable).cancel(Self, Status)
-end;
-
-function IBatch.execute(status: IStatus;
-  transaction: ITransaction): IBatchCompletionState;
-begin
-  Result := BatchVTable(VTable).execute(Self, status, transaction);
+  BatchVTable(vTable).cancel(Self, status);
 end;
 
 function IBatch.getBlobAlignment(status: IStatus): Cardinal;
 begin
-  Result := BatchVTable(VTable).getBlobAlignment(Self, status);
+  Result := BatchVTable(vTable).getBlobAlignment(Self, status);
 end;
 
 function IBatch.getMetadata(status: IStatus): IMessageMetadata;
 begin
-  Result := BatchVTable(VTable).getMetadata(Self, status);
+  Result := BatchVTable(vTable).getMetadata(Self, status);
 end;
 
-procedure IBatch.registerBlob(status: IStatus; existingBlob,
-  blobId: ISC_QUADPtr);
+procedure IBatch.setDefaultBpb(status: IStatus; parLength: Cardinal; par: PByte);
 begin
-  BatchVTable(VTable).registerBlob(Self, status, existingBlob, blobId);
-end;
-
-procedure IBatch.setDefaultBpb(status: IStatus; parLength: Cardinal;
-  par: PByte);
-begin
-  BatchVTable(VTable).setDefaultBpb(Self, status, parLength, par);
-end;
-
-{ IBatchCompletionState }
-
-function IBatchCompletionState.findError(status: IStatus;
-  pos: Cardinal): Cardinal;
-begin
-  Result := BatchCompletionStateVTable(VTable).findError(Self, status, pos);
+  BatchVTable(vTable).setDefaultBpb(Self, status, parLength, par);
 end;
 
 function IBatchCompletionState.getSize(status: IStatus): Cardinal;
 begin
-  Result := BatchCompletionStateVTable(VTable).getSize(Self, status);
+  Result := BatchCompletionStateVTable(vTable).getSize(Self, status);
 end;
 
-function IBatchCompletionState.getState(status: IStatus;
-  pos: Cardinal): Integer;
+function IBatchCompletionState.getState(status: IStatus; pos: Cardinal): Integer;
 begin
-  Result := BatchCompletionStateVTable(VTable).getState(Self, status, pos);
+  Result := BatchCompletionStateVTable(vTable).getState(Self, status, pos);
 end;
 
-function IBatchCompletionState.getStatus(status, _to: IStatus;
-  pos: Cardinal): Cardinal;
+function IBatchCompletionState.findError(status: IStatus; pos: Cardinal): Cardinal;
 begin
-  Result := BatchCompletionStateVTable(VTable).getStatus(Self, status, _to, pos);
+  Result := BatchCompletionStateVTable(vTable).findError(Self, status, pos);
 end;
 
-procedure IRequest.receive(status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: BytePtr);
+procedure IBatchCompletionState.getStatus(status: IStatus; to_: IStatus; pos: Cardinal);
+begin
+  BatchCompletionStateVTable(vTable).getStatus(Self, status, to_, pos);
+end;
+
+procedure IReplicator.process(status: IStatus; length: Cardinal; data: PByte);
+begin
+  ReplicatorVTable(vTable).process(Self, status, length, data);
+end;
+
+procedure IReplicator.close(status: IStatus);
+begin
+  ReplicatorVTable(vTable).close(Self, status);
+end;
+
+procedure IRequest.receive(status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: Pointer);
 begin
   RequestVTable(vTable).receive(Self, status, level, msgType, length, message);
 end;
 
-procedure IRequest.send(status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: BytePtr);
+procedure IRequest.send(status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: Pointer);
 begin
   RequestVTable(vTable).send(Self, status, level, msgType, length, message);
 end;
 
-procedure IRequest.getInfo(status: IStatus; level: Integer; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr);
+procedure IRequest.getInfo(status: IStatus; level: Integer; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte);
 begin
   RequestVTable(vTable).getInfo(Self, status, level, itemsLength, items, bufferLength, buffer);
 end;
@@ -6220,7 +4904,7 @@ begin
   RequestVTable(vTable).start(Self, status, tra, level);
 end;
 
-procedure IRequest.startAndSend(status: IStatus; tra: ITransaction; level: Integer; msgType: Cardinal; length: Cardinal; message: BytePtr);
+procedure IRequest.startAndSend(status: IStatus; tra: ITransaction; level: Integer; msgType: Cardinal; length: Cardinal; message: Pointer);
 begin
   RequestVTable(vTable).startAndSend(Self, status, tra, level, msgType, length, message);
 end;
@@ -6240,52 +4924,52 @@ begin
   EventsVTable(vTable).cancel(Self, status);
 end;
 
-procedure IAttachment.getInfo(status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr);
+procedure IAttachment.getInfo(status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte);
 begin
   AttachmentVTable(vTable).getInfo(Self, status, itemsLength, items, bufferLength, buffer);
 end;
 
-function IAttachment.startTransaction(status: IStatus; tpbLength: Cardinal; tpb: BytePtr): ITransaction;
+function IAttachment.startTransaction(status: IStatus; tpbLength: Cardinal; tpb: PByte): ITransaction;
 begin
   Result := AttachmentVTable(vTable).startTransaction(Self, status, tpbLength, tpb);
 end;
 
-function IAttachment.reconnectTransaction(status: IStatus; length: Cardinal; id: BytePtr): ITransaction;
+function IAttachment.reconnectTransaction(status: IStatus; length: Cardinal; id: PByte): ITransaction;
 begin
   Result := AttachmentVTable(vTable).reconnectTransaction(Self, status, length, id);
 end;
 
-function IAttachment.compileRequest(status: IStatus; blrLength: Cardinal; blr: BytePtr): IRequest;
+function IAttachment.compileRequest(status: IStatus; blrLength: Cardinal; blr: PByte): IRequest;
 begin
   Result := AttachmentVTable(vTable).compileRequest(Self, status, blrLength, blr);
 end;
 
-procedure IAttachment.transactRequest(status: IStatus; transaction: ITransaction; blrLength: Cardinal; blr: BytePtr; inMsgLength: Cardinal; inMsg: BytePtr; outMsgLength: Cardinal; outMsg: BytePtr);
+procedure IAttachment.transactRequest(status: IStatus; transaction: ITransaction; blrLength: Cardinal; blr: PByte; inMsgLength: Cardinal; inMsg: PByte; outMsgLength: Cardinal; outMsg: PByte);
 begin
   AttachmentVTable(vTable).transactRequest(Self, status, transaction, blrLength, blr, inMsgLength, inMsg, outMsgLength, outMsg);
 end;
 
-function IAttachment.createBlob(status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; bpbLength: Cardinal; bpb: BytePtr): IBlob;
+function IAttachment.createBlob(status: IStatus; transaction: ITransaction; id: PISC_QUAD; bpbLength: Cardinal; bpb: PByte): IBlob;
 begin
   Result := AttachmentVTable(vTable).createBlob(Self, status, transaction, id, bpbLength, bpb);
 end;
 
-function IAttachment.openBlob(status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; bpbLength: Cardinal; bpb: BytePtr): IBlob;
+function IAttachment.openBlob(status: IStatus; transaction: ITransaction; id: PISC_QUAD; bpbLength: Cardinal; bpb: PByte): IBlob;
 begin
   Result := AttachmentVTable(vTable).openBlob(Self, status, transaction, id, bpbLength, bpb);
 end;
 
-function IAttachment.getSlice(status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; sdlLength: Cardinal; sdl: BytePtr; paramLength: Cardinal; param: BytePtr; sliceLength: Integer; slice: BytePtr): Integer;
+function IAttachment.getSlice(status: IStatus; transaction: ITransaction; id: PISC_QUAD; sdlLength: Cardinal; sdl: PByte; paramLength: Cardinal; param: PByte; sliceLength: Integer; slice: PByte): Integer;
 begin
   Result := AttachmentVTable(vTable).getSlice(Self, status, transaction, id, sdlLength, sdl, paramLength, param, sliceLength, slice);
 end;
 
-procedure IAttachment.putSlice(status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; sdlLength: Cardinal; sdl: BytePtr; paramLength: Cardinal; param: BytePtr; sliceLength: Integer; slice: BytePtr);
+procedure IAttachment.putSlice(status: IStatus; transaction: ITransaction; id: PISC_QUAD; sdlLength: Cardinal; sdl: PByte; paramLength: Cardinal; param: PByte; sliceLength: Integer; slice: PByte);
 begin
   AttachmentVTable(vTable).putSlice(Self, status, transaction, id, sdlLength, sdl, paramLength, param, sliceLength, slice);
 end;
 
-procedure IAttachment.executeDyn(status: IStatus; transaction: ITransaction; length: Cardinal; dyn: BytePtr);
+procedure IAttachment.executeDyn(status: IStatus; transaction: ITransaction; length: Cardinal; dyn: PByte);
 begin
   AttachmentVTable(vTable).executeDyn(Self, status, transaction, length, dyn);
 end;
@@ -6305,7 +4989,7 @@ begin
   Result := AttachmentVTable(vTable).openCursor(Self, status, transaction, stmtLength, sqlStmt, dialect, inMetadata, inBuffer, outMetadata, cursorName, cursorFlags);
 end;
 
-function IAttachment.queEvents(status: IStatus; callback: IEventCallback; length: Cardinal; events: BytePtr): IEvents;
+function IAttachment.queEvents(status: IStatus; callback: IEventCallback; length: Cardinal; events: PByte): IEvents;
 begin
   Result := AttachmentVTable(vTable).queEvents(Self, status, callback, length, events);
 end;
@@ -6330,50 +5014,54 @@ begin
   AttachmentVTable(vTable).dropDatabase(Self, status);
 end;
 
-{ IAttachment_V4 }
-
-function IAttachment_V4.createBatch(status: IStatus; transaction: ITransaction;
-  stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal;
-  inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch;
+function IAttachment.getIdleTimeout(status: IStatus): Cardinal;
 begin
-  Result := Attachment_V4VTable(vTable).createBatch(Self, status, transaction,
-    stmtLength, sqlStmt, dialect, inMetadata, parLength, par);
+  if vTable.version < 4 then begin
+    SetIntfToOldVersionError(status);
+    Result := 0;
+  end else
+    Result := AttachmentVTable(vTable).getIdleTimeout(Self, status);
 end;
 
-function IAttachment_V4.createReplicator(status: IStatus): IReplicator;
+procedure IAttachment.setIdleTimeout(status: IStatus; timeOut: Cardinal);
 begin
-  Result := Attachment_V4VTable(vTable).createReplicator(Self, status);
+  if vTable.version < 4
+  then SetIntfToOldVersionError(status)
+  else AttachmentVTable(vTable).setIdleTimeout(Self, status, timeOut);
 end;
 
-function IAttachment_V4.getIdleTimeout(status: IStatus): Cardinal;
+function IAttachment.getStatementTimeout(status: IStatus): Cardinal;
 begin
-  Result := Attachment_V4VTable(vTable).getIdleTimeout(Self, status);
+  if vTable.version < 4 then begin
+    SetIntfToOldVersionError(status);
+    Result := 0;
+  end else
+    Result := AttachmentVTable(vTable).getStatementTimeout(Self, status);
 end;
 
-function IAttachment_V4.getStatementTimeout(status: IStatus): Cardinal;
+procedure IAttachment.setStatementTimeout(status: IStatus; timeOut: Cardinal);
 begin
-  Result := Attachment_V4VTable(vTable).getStatementTimeout(Self, status);
+  if vTable.version < 4
+  then SetIntfToOldVersionError(status)
+  else AttachmentVTable(vTable).setStatementTimeout(Self, status, timeOut);
 end;
 
-procedure IAttachment_V4.setIdleTimeout(status: IStatus; timeOut: Cardinal);
+function IAttachment.createBatch(status: IStatus; transaction: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch;
 begin
-  Attachment_V4VTable(vTable).setIdleTimeout(Self, status, timeOut);
+  if vTable.version < 4 then begin
+    SetIntfToOldVersionError(status);
+    Result := nil;
+  end else
+    Result := AttachmentVTable(vTable).createBatch(Self, status, transaction, stmtLength, sqlStmt, dialect, inMetadata, parLength, par);
 end;
 
-procedure IAttachment_V4.setStatementTimeout(status: IStatus;
-  timeOut: Cardinal);
+function IAttachment.createReplicator(status: IStatus): IReplicator;
 begin
-  Attachment_V4VTable(vTable).setStatementTimeout(Self, status, timeOut);
-end;
-
-{ IAttachment_V4Impl }
-
-var
-  IAttachment_V4Impl_vTable: Attachment_V4VTable;
-
-constructor IAttachment_V4Impl.create;
-begin
-  vTable := IAttachment_V4Impl_vTable;
+  if vTable.version < 4 then begin
+    SetIntfToOldVersionError(status);
+    Result := nil;
+  end else
+    Result := AttachmentVTable(vTable).createReplicator(Self, status);
 end;
 
 procedure IService.detach(status: IStatus);
@@ -6381,27 +5069,27 @@ begin
   ServiceVTable(vTable).detach(Self, status);
 end;
 
-procedure IService.query(status: IStatus; sendLength: Cardinal; sendItems: BytePtr; receiveLength: Cardinal; receiveItems: BytePtr; bufferLength: Cardinal; buffer: BytePtr);
+procedure IService.query(status: IStatus; sendLength: Cardinal; sendItems: PByte; receiveLength: Cardinal; receiveItems: PByte; bufferLength: Cardinal; buffer: PByte);
 begin
   ServiceVTable(vTable).query(Self, status, sendLength, sendItems, receiveLength, receiveItems, bufferLength, buffer);
 end;
 
-procedure IService.start(status: IStatus; spbLength: Cardinal; spb: BytePtr);
+procedure IService.start(status: IStatus; spbLength: Cardinal; spb: PByte);
 begin
   ServiceVTable(vTable).start(Self, status, spbLength, spb);
 end;
 
-function IProvider.attachDatabase(status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: BytePtr): IAttachment;
+function IProvider.attachDatabase(status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: PByte): IAttachment;
 begin
   Result := ProviderVTable(vTable).attachDatabase(Self, status, fileName, dpbLength, dpb);
 end;
 
-function IProvider.createDatabase(status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: BytePtr): IAttachment;
+function IProvider.createDatabase(status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: PByte): IAttachment;
 begin
   Result := ProviderVTable(vTable).createDatabase(Self, status, fileName, dpbLength, dpb);
 end;
 
-function IProvider.attachServiceManager(status: IStatus; service: PAnsiChar; spbLength: Cardinal; spb: BytePtr): IService;
+function IProvider.attachServiceManager(status: IStatus; service: PAnsiChar; spbLength: Cardinal; spb: PByte): IService;
 begin
   Result := ProviderVTable(vTable).attachServiceManager(Self, status, service, spbLength, spb);
 end;
@@ -6421,7 +5109,7 @@ begin
   DtcStartVTable(vTable).addAttachment(Self, status, att);
 end;
 
-procedure IDtcStart.addWithTpb(status: IStatus; att: IAttachment; length: Cardinal; tpb: BytePtr);
+procedure IDtcStart.addWithTpb(status: IStatus; att: IAttachment; length: Cardinal; tpb: PByte);
 begin
   DtcStartVTable(vTable).addWithTpb(Self, status, att, length, tpb);
 end;
@@ -6466,7 +5154,7 @@ begin
   Result := ServerBlockVTable(vTable).getLogin(Self);
 end;
 
-function IServerBlock.getData(length: CardinalPtr): BytePtr;
+function IServerBlock.getData(length: PCardinal): PByte;
 begin
   Result := ServerBlockVTable(vTable).getData(Self, length);
 end;
@@ -6491,7 +5179,7 @@ begin
   Result := ClientBlockVTable(vTable).getPassword(Self);
 end;
 
-function IClientBlock.getData(length: CardinalPtr): BytePtr;
+function IClientBlock.getData(length: PCardinal): PByte;
 begin
   Result := ClientBlockVTable(vTable).getData(Self, length);
 end;
@@ -6499,31 +5187,35 @@ end;
 procedure IClientBlock.putData(status: IStatus; length: Cardinal; data: Pointer);
 begin
   ClientBlockVTable(vTable).putData(Self, status, length, data);
-//  FbException.checkException(status);
 end;
 
 function IClientBlock.newKey(status: IStatus): ICryptKey;
 begin
   Result := ClientBlockVTable(vTable).newKey(Self, status);
-//  FbException.checkException(status);
+end;
+
+function IClientBlock.getAuthBlock(status: IStatus): IAuthBlock;
+begin
+  if vTable.version < 4 then begin
+    SetIntfToOldVersionError(status);
+    Result := nil;
+  end else
+    Result := ClientBlockVTable(vTable).getAuthBlock(Self, status);
 end;
 
 function IServer.authenticate(status: IStatus; sBlock: IServerBlock; writerInterface: IWriter): Integer;
 begin
   Result := ServerVTable(vTable).authenticate(Self, status, sBlock, writerInterface);
-//  FbException.checkException(status);
 end;
 
 procedure IServer.setDbCryptCallback(status: IStatus; cryptCallback: ICryptKeyCallback);
 begin
   ServerVTable(vTable).setDbCryptCallback(Self, status, cryptCallback);
-//  FbException.checkException(status);
 end;
 
 function IClient.authenticate(status: IStatus; cBlock: IClientBlock): Integer;
 begin
   Result := ClientVTable(vTable).authenticate(Self, status, cBlock);
-//  FbException.checkException(status);
 end;
 
 function IUserField.entered(): Integer;
@@ -6539,7 +5231,6 @@ end;
 procedure IUserField.setEntered(status: IStatus; newValue: Integer);
 begin
   UserFieldVTable(vTable).setEntered(Self, status, newValue);
-//  FbException.checkException(status);
 end;
 
 function ICharUserField.get(): PAnsiChar;
@@ -6550,7 +5241,6 @@ end;
 procedure ICharUserField.set_(status: IStatus; newValue: PAnsiChar);
 begin
   CharUserFieldVTable(vTable).set_(Self, status, newValue);
-//  FbException.checkException(status);
 end;
 
 function IIntUserField.get(): Integer;
@@ -6561,7 +5251,6 @@ end;
 procedure IIntUserField.set_(status: IStatus; newValue: Integer);
 begin
   IntUserFieldVTable(vTable).set_(Self, status, newValue);
-//  FbException.checkException(status);
 end;
 
 function IUser.operation(): Cardinal;
@@ -6617,13 +5306,11 @@ end;
 procedure IUser.clear(status: IStatus);
 begin
   UserVTable(vTable).clear(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IListUsers.list(status: IStatus; user: IUser);
 begin
   ListUsersVTable(vTable).list(Self, status, user);
-//  FbException.checkException(status);
 end;
 
 function ILogonInfo.name(): PAnsiChar;
@@ -6646,7 +5333,7 @@ begin
   Result := LogonInfoVTable(vTable).remoteAddress(Self);
 end;
 
-function ILogonInfo.authBlock(length: CardinalPtr): BytePtr;
+function ILogonInfo.authBlock(length: PCardinal): PByte;
 begin
   Result := LogonInfoVTable(vTable).authBlock(Self, length);
 end;
@@ -6654,49 +5341,92 @@ end;
 procedure IManagement.start(status: IStatus; logonInfo: ILogonInfo);
 begin
   ManagementVTable(vTable).start(Self, status, logonInfo);
-//  FbException.checkException(status);
 end;
 
 function IManagement.execute(status: IStatus; user: IUser; callback: IListUsers): Integer;
 begin
   Result := ManagementVTable(vTable).execute(Self, status, user, callback);
-//  FbException.checkException(status);
 end;
 
 procedure IManagement.commit(status: IStatus);
 begin
   ManagementVTable(vTable).commit(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IManagement.rollback(status: IStatus);
 begin
   ManagementVTable(vTable).rollback(Self, status);
-//  FbException.checkException(status);
+end;
+
+function IAuthBlock.getType(): PAnsiChar;
+begin
+  Result := AuthBlockVTable(vTable).getType(Self);
+end;
+
+function IAuthBlock.getName(): PAnsiChar;
+begin
+  Result := AuthBlockVTable(vTable).getName(Self);
+end;
+
+function IAuthBlock.getPlugin(): PAnsiChar;
+begin
+  Result := AuthBlockVTable(vTable).getPlugin(Self);
+end;
+
+function IAuthBlock.getSecurityDb(): PAnsiChar;
+begin
+  Result := AuthBlockVTable(vTable).getSecurityDb(Self);
+end;
+
+function IAuthBlock.getOriginalPlugin(): PAnsiChar;
+begin
+  Result := AuthBlockVTable(vTable).getOriginalPlugin(Self);
+end;
+
+function IAuthBlock.next(status: IStatus): Boolean;
+begin
+  Result := AuthBlockVTable(vTable).next(Self, status);
+end;
+
+function IAuthBlock.first(status: IStatus): Boolean;
+begin
+  Result := AuthBlockVTable(vTable).first(Self, status);
 end;
 
 function IWireCryptPlugin.getKnownTypes(status: IStatus): PAnsiChar;
 begin
   Result := WireCryptPluginVTable(vTable).getKnownTypes(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IWireCryptPlugin.setKey(status: IStatus; key: ICryptKey);
 begin
   WireCryptPluginVTable(vTable).setKey(Self, status, key);
-//  FbException.checkException(status);
 end;
 
 procedure IWireCryptPlugin.encrypt(status: IStatus; length: Cardinal; from: Pointer; to_: Pointer);
 begin
   WireCryptPluginVTable(vTable).encrypt(Self, status, length, from, to_);
-//  FbException.checkException(status);
 end;
 
 procedure IWireCryptPlugin.decrypt(status: IStatus; length: Cardinal; from: Pointer; to_: Pointer);
 begin
   WireCryptPluginVTable(vTable).decrypt(Self, status, length, from, to_);
-//  FbException.checkException(status);
+end;
+
+function IWireCryptPlugin.getSpecificData(status: IStatus; keyType: PAnsiChar; length: PCardinal): PByte;
+begin
+  if vTable.version < 4 then begin
+    SetIntfToOldVersionError(status);
+    Result := nil;
+  end else
+    Result := WireCryptPluginVTable(vTable).getSpecificData(Self, status, keyType, length);
+end;
+
+procedure IWireCryptPlugin.setSpecificData(status: IStatus; keyType: PAnsiChar; length: Cardinal; data: PByte);
+begin
+  if vTable.version < 4
+  then SetIntfToOldVersionError(status)
+  else WireCryptPluginVTable(vTable).setSpecificData(Self, status, keyType, length, data);
 end;
 
 function ICryptKeyCallback.callback(dataLength: Cardinal; data: Pointer; bufferLength: Cardinal; buffer: Pointer): Cardinal;
@@ -6707,55 +5437,46 @@ end;
 function IKeyHolderPlugin.keyCallback(status: IStatus; callback: ICryptKeyCallback): Integer;
 begin
   Result := KeyHolderPluginVTable(vTable).keyCallback(Self, status, callback);
-//  FbException.checkException(status);
 end;
 
 function IKeyHolderPlugin.keyHandle(status: IStatus; keyName: PAnsiChar): ICryptKeyCallback;
 begin
   Result := KeyHolderPluginVTable(vTable).keyHandle(Self, status, keyName);
-//  FbException.checkException(status);
 end;
 
 function IKeyHolderPlugin.useOnlyOwnKeys(status: IStatus): Boolean;
 begin
   Result := KeyHolderPluginVTable(vTable).useOnlyOwnKeys(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IKeyHolderPlugin.chainHandle(status: IStatus): ICryptKeyCallback;
 begin
   Result := KeyHolderPluginVTable(vTable).chainHandle(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IDbCryptInfo.getDatabaseFullPath(status: IStatus): PAnsiChar;
 begin
   Result := DbCryptInfoVTable(vTable).getDatabaseFullPath(Self, status);
-//  FbException.checkException(status);
 end;
 
-procedure IDbCryptPlugin.setKey(status: IStatus; length: Cardinal; sources: IKeyHolderPluginPtr; keyName: PAnsiChar);
+procedure IDbCryptPlugin.setKey(status: IStatus; length: Cardinal; sources: PIKeyHolderPlugin; keyName: PAnsiChar);
 begin
   DbCryptPluginVTable(vTable).setKey(Self, status, length, sources, keyName);
-//  FbException.checkException(status);
 end;
 
 procedure IDbCryptPlugin.encrypt(status: IStatus; length: Cardinal; from: Pointer; to_: Pointer);
 begin
   DbCryptPluginVTable(vTable).encrypt(Self, status, length, from, to_);
-//  FbException.checkException(status);
 end;
 
 procedure IDbCryptPlugin.decrypt(status: IStatus; length: Cardinal; from: Pointer; to_: Pointer);
 begin
   DbCryptPluginVTable(vTable).decrypt(Self, status, length, from, to_);
-//  FbException.checkException(status);
 end;
 
 procedure IDbCryptPlugin.setInfo(status: IStatus; info: IDbCryptInfo);
 begin
   DbCryptPluginVTable(vTable).setInfo(Self, status, info);
-//  FbException.checkException(status);
 end;
 
 function IExternalContext.getMaster(): IMaster;
@@ -6766,19 +5487,16 @@ end;
 function IExternalContext.getEngine(status: IStatus): IExternalEngine;
 begin
   Result := ExternalContextVTable(vTable).getEngine(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IExternalContext.getAttachment(status: IStatus): IAttachment;
 begin
   Result := ExternalContextVTable(vTable).getAttachment(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IExternalContext.getTransaction(status: IStatus): ITransaction;
 begin
   Result := ExternalContextVTable(vTable).getTransaction(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IExternalContext.getUserName(): PAnsiChar;
@@ -6814,133 +5532,111 @@ end;
 function IExternalResultSet.fetch(status: IStatus): Boolean;
 begin
   Result := ExternalResultSetVTable(vTable).fetch(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IExternalFunction.getCharSet(status: IStatus; context: IExternalContext; name: PAnsiChar; nameSize: Cardinal);
 begin
   ExternalFunctionVTable(vTable).getCharSet(Self, status, context, name, nameSize);
-//  FbException.checkException(status);
 end;
 
 procedure IExternalFunction.execute(status: IStatus; context: IExternalContext; inMsg: Pointer; outMsg: Pointer);
 begin
   ExternalFunctionVTable(vTable).execute(Self, status, context, inMsg, outMsg);
-//  FbException.checkException(status);
 end;
 
 procedure IExternalProcedure.getCharSet(status: IStatus; context: IExternalContext; name: PAnsiChar; nameSize: Cardinal);
 begin
   ExternalProcedureVTable(vTable).getCharSet(Self, status, context, name, nameSize);
-//  FbException.checkException(status);
 end;
 
 function IExternalProcedure.open(status: IStatus; context: IExternalContext; inMsg: Pointer; outMsg: Pointer): IExternalResultSet;
 begin
   Result := ExternalProcedureVTable(vTable).open(Self, status, context, inMsg, outMsg);
-//  FbException.checkException(status);
 end;
 
 procedure IExternalTrigger.getCharSet(status: IStatus; context: IExternalContext; name: PAnsiChar; nameSize: Cardinal);
 begin
   ExternalTriggerVTable(vTable).getCharSet(Self, status, context, name, nameSize);
-//  FbException.checkException(status);
 end;
 
 procedure IExternalTrigger.execute(status: IStatus; context: IExternalContext; action: Cardinal; oldMsg: Pointer; newMsg: Pointer);
 begin
   ExternalTriggerVTable(vTable).execute(Self, status, context, action, oldMsg, newMsg);
-//  FbException.checkException(status);
 end;
 
 function IRoutineMetadata.getPackage(status: IStatus): PAnsiChar;
 begin
   Result := RoutineMetadataVTable(vTable).getPackage(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IRoutineMetadata.getName(status: IStatus): PAnsiChar;
 begin
   Result := RoutineMetadataVTable(vTable).getName(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IRoutineMetadata.getEntryPoint(status: IStatus): PAnsiChar;
 begin
   Result := RoutineMetadataVTable(vTable).getEntryPoint(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IRoutineMetadata.getBody(status: IStatus): PAnsiChar;
 begin
   Result := RoutineMetadataVTable(vTable).getBody(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IRoutineMetadata.getInputMetadata(status: IStatus): IMessageMetadata;
 begin
   Result := RoutineMetadataVTable(vTable).getInputMetadata(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IRoutineMetadata.getOutputMetadata(status: IStatus): IMessageMetadata;
 begin
   Result := RoutineMetadataVTable(vTable).getOutputMetadata(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IRoutineMetadata.getTriggerMetadata(status: IStatus): IMessageMetadata;
 begin
   Result := RoutineMetadataVTable(vTable).getTriggerMetadata(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IRoutineMetadata.getTriggerTable(status: IStatus): PAnsiChar;
 begin
   Result := RoutineMetadataVTable(vTable).getTriggerTable(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IRoutineMetadata.getTriggerType(status: IStatus): Cardinal;
 begin
   Result := RoutineMetadataVTable(vTable).getTriggerType(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IExternalEngine.open(status: IStatus; context: IExternalContext; charSet: PAnsiChar; charSetSize: Cardinal);
 begin
   ExternalEngineVTable(vTable).open(Self, status, context, charSet, charSetSize);
-//  FbException.checkException(status);
 end;
 
 procedure IExternalEngine.openAttachment(status: IStatus; context: IExternalContext);
 begin
   ExternalEngineVTable(vTable).openAttachment(Self, status, context);
-//  FbException.checkException(status);
 end;
 
 procedure IExternalEngine.closeAttachment(status: IStatus; context: IExternalContext);
 begin
   ExternalEngineVTable(vTable).closeAttachment(Self, status, context);
-//  FbException.checkException(status);
 end;
 
 function IExternalEngine.makeFunction(status: IStatus; context: IExternalContext; metadata: IRoutineMetadata; inBuilder: IMetadataBuilder; outBuilder: IMetadataBuilder): IExternalFunction;
 begin
   Result := ExternalEngineVTable(vTable).makeFunction(Self, status, context, metadata, inBuilder, outBuilder);
-//  FbException.checkException(status);
 end;
 
 function IExternalEngine.makeProcedure(status: IStatus; context: IExternalContext; metadata: IRoutineMetadata; inBuilder: IMetadataBuilder; outBuilder: IMetadataBuilder): IExternalProcedure;
 begin
   Result := ExternalEngineVTable(vTable).makeProcedure(Self, status, context, metadata, inBuilder, outBuilder);
-//  FbException.checkException(status);
 end;
 
 function IExternalEngine.makeTrigger(status: IStatus; context: IExternalContext; metadata: IRoutineMetadata; fieldsBuilder: IMetadataBuilder): IExternalTrigger;
 begin
   Result := ExternalEngineVTable(vTable).makeTrigger(Self, status, context, metadata, fieldsBuilder);
-//  FbException.checkException(status);
 end;
 
 procedure ITimer.handler();
@@ -6948,70 +5644,62 @@ begin
   TimerVTable(vTable).handler(Self);
 end;
 
-procedure ITimerControl.start(status: IStatus; timer: ITimer; microSeconds: QWord);
+procedure ITimerControl.start(status: IStatus; timer: ITimer; microSeconds: UInt64);
 begin
   TimerControlVTable(vTable).start(Self, status, timer, microSeconds);
-//  FbException.checkException(status);
 end;
 
 procedure ITimerControl.stop(status: IStatus; timer: ITimer);
 begin
   TimerControlVTable(vTable).stop(Self, status, timer);
-//  FbException.checkException(status);
 end;
 
 procedure IVersionCallback.callback(status: IStatus; text: PAnsiChar);
 begin
   VersionCallbackVTable(vTable).callback(Self, status, text);
-//  FbException.checkException(status);
 end;
 
 procedure IUtil.getFbVersion(status: IStatus; att: IAttachment; callback: IVersionCallback);
 begin
   UtilVTable(vTable).getFbVersion(Self, status, att, callback);
-//  FbException.checkException(status);
 end;
 
-procedure IUtil.loadBlob(status: IStatus; blobId: ISC_QUADPtr; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean);
+procedure IUtil.loadBlob(status: IStatus; blobId: PISC_QUAD; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean);
 begin
   UtilVTable(vTable).loadBlob(Self, status, blobId, att, tra, file_, txt);
-//  FbException.checkException(status);
 end;
 
-procedure IUtil.dumpBlob(status: IStatus; blobId: ISC_QUADPtr; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean);
+procedure IUtil.dumpBlob(status: IStatus; blobId: PISC_QUAD; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean);
 begin
   UtilVTable(vTable).dumpBlob(Self, status, blobId, att, tra, file_, txt);
-//  FbException.checkException(status);
 end;
 
-procedure IUtil.getPerfCounters(status: IStatus; att: IAttachment; countersSet: PAnsiChar; counters: Int64Ptr);
+procedure IUtil.getPerfCounters(status: IStatus; att: IAttachment; countersSet: PAnsiChar; counters: PInt64);
 begin
   UtilVTable(vTable).getPerfCounters(Self, status, att, countersSet, counters);
-//  FbException.checkException(status);
 end;
 
 function IUtil.executeCreateDatabase(status: IStatus; stmtLength: Cardinal; creatDBstatement: PAnsiChar; dialect: Cardinal; stmtIsCreateDb: BooleanPtr): IAttachment;
 begin
   Result := UtilVTable(vTable).executeCreateDatabase(Self, status, stmtLength, creatDBstatement, dialect, stmtIsCreateDb);
-//  FbException.checkException(status);
 end;
 
-procedure IUtil.decodeDate(date: ISC_DATE; year: CardinalPtr; month: CardinalPtr; day: CardinalPtr);
+procedure IUtil.decodeDate(date: TISC_DATE; year: PCardinal; month: PCardinal; day: PCardinal);
 begin
   UtilVTable(vTable).decodeDate(Self, date, year, month, day);
 end;
 
-procedure IUtil.decodeTime(time: ISC_TIME; hours: CardinalPtr; minutes: CardinalPtr; seconds: CardinalPtr; fractions: CardinalPtr);
+procedure IUtil.decodeTime(time: TISC_TIME; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal);
 begin
   UtilVTable(vTable).decodeTime(Self, time, hours, minutes, seconds, fractions);
 end;
 
-function IUtil.encodeDate(year: Cardinal; month: Cardinal; day: Cardinal): ISC_DATE;
+function IUtil.encodeDate(year: Cardinal; month: Cardinal; day: Cardinal): TISC_DATE;
 begin
   Result := UtilVTable(vTable).encodeDate(Self, year, month, day);
 end;
 
-function IUtil.encodeTime(hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal): ISC_TIME;
+function IUtil.encodeTime(hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal): TISC_TIME;
 begin
   Result := UtilVTable(vTable).encodeTime(Self, hours, minutes, seconds, fractions);
 end;
@@ -7026,142 +5714,206 @@ begin
   Result := UtilVTable(vTable).getClientVersion(Self);
 end;
 
-function IUtil.getXpbBuilder(status: IStatus; kind: Cardinal; buf: BytePtr; len: Cardinal): IXpbBuilder;
+function IUtil.getXpbBuilder(status: IStatus; kind: Cardinal; buf: PByte; len: Cardinal): IXpbBuilder;
 begin
   Result := UtilVTable(vTable).getXpbBuilder(Self, status, kind, buf, len);
-//  FbException.checkException(status);
 end;
 
 function IUtil.setOffsets(status: IStatus; metadata: IMessageMetadata; callback: IOffsetsCallback): Cardinal;
 begin
   Result := UtilVTable(vTable).setOffsets(Self, status, metadata, callback);
-//  FbException.checkException(status);
+end;
+
+function IUtil.getDecFloat16(status: IStatus): IDecFloat16;
+begin
+  if vTable.version < 4 then begin
+    SetIntfToOldVersionError(status);
+    Result := nil;
+  end else
+    Result := UtilVTable(vTable).getDecFloat16(Self, status);
+end;
+
+function IUtil.getDecFloat34(status: IStatus): IDecFloat34;
+begin
+  if vTable.version < 4 then begin
+    SetIntfToOldVersionError(status);
+    Result := nil;
+  end else
+    Result := UtilVTable(vTable).getDecFloat34(Self, status);
+end;
+
+function IUtil.getTransactionByHandle(status: IStatus; hndlPtr: Pisc_tr_handle): ITransaction;
+begin
+  if vTable.version < 4 then begin
+    SetIntfToOldVersionError(status);
+    Result := nil;
+  end else
+    Result := UtilVTable(vTable).getTransactionByHandle(Self, status, hndlPtr);
+end;
+
+function IUtil.getStatementByHandle(status: IStatus; hndlPtr: Pisc_stmt_handle): IStatement;
+begin
+  if vTable.version < 4 then begin
+    SetIntfToOldVersionError(status);
+    Result := nil;
+  end else
+    Result := UtilVTable(vTable).getStatementByHandle(Self, status, hndlPtr);
+end;
+
+procedure IUtil.decodeTimeTz(status: IStatus; timeTz: PISC_TIME_TZ; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar);
+begin
+  if vTable.version < 4
+  then SetIntfToOldVersionError(status)
+  else UtilVTable(vTable).decodeTimeTz(Self, status, timeTz, hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
+end;
+
+procedure IUtil.decodeTimeStampTz(status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ; year: PCardinal; month: PCardinal; day: PCardinal; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar);
+begin
+  if vTable.version < 4
+  then SetIntfToOldVersionError(status)
+  else UtilVTable(vTable).decodeTimeStampTz(Self, status, timeStampTz, year, month, day, hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
+end;
+
+procedure IUtil.encodeTimeTz(status: IStatus; timeTz: PISC_TIME_TZ; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal; timeZone: PAnsiChar);
+begin
+  if vTable.version < 4
+  then SetIntfToOldVersionError(status)
+  else UtilVTable(vTable).encodeTimeTz(Self, status, timeTz, hours, minutes, seconds, fractions, timeZone);
+end;
+
+procedure IUtil.encodeTimeStampTz(status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ; year: Cardinal; month: Cardinal; day: Cardinal; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal; timeZone: PAnsiChar);
+begin
+  if vTable.version < 4
+  then SetIntfToOldVersionError(status)
+  else UtilVTable(vTable).encodeTimeStampTz(Self, status, timeStampTz, year, month, day, hours, minutes, seconds, fractions, timeZone);
+end;
+
+function IUtil.getInt128(status: IStatus): IInt128;
+begin
+  if vTable.version < 4 then begin
+    SetIntfToOldVersionError(status);
+    Result := nil;
+  end else
+    Result := UtilVTable(vTable).getInt128(Self, status);
+end;
+
+procedure IUtil.decodeTimeTzEx(status: IStatus; timeTz: PISC_TIME_TZ_EX; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar);
+begin
+  if vTable.version < 4
+  then SetIntfToOldVersionError(status)
+  else UtilVTable(vTable).decodeTimeTzEx(Self, status, timeTz, hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
+end;
+
+procedure IUtil.decodeTimeStampTzEx(status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ_EX; year: PCardinal; month: PCardinal; day: PCardinal; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar);
+begin
+  if vTable.version < 4
+  then SetIntfToOldVersionError(status)
+  else UtilVTable(vTable).decodeTimeStampTzEx(Self, status, timeStampTz, year, month, day, hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
 end;
 
 procedure IOffsetsCallback.setOffset(status: IStatus; index: Cardinal; offset: Cardinal; nullOffset: Cardinal);
 begin
   OffsetsCallbackVTable(vTable).setOffset(Self, status, index, offset, nullOffset);
-//  FbException.checkException(status);
 end;
 
 procedure IXpbBuilder.clear(status: IStatus);
 begin
   XpbBuilderVTable(vTable).clear(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IXpbBuilder.removeCurrent(status: IStatus);
 begin
   XpbBuilderVTable(vTable).removeCurrent(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IXpbBuilder.insertInt(status: IStatus; tag: Byte; value: Integer);
 begin
   XpbBuilderVTable(vTable).insertInt(Self, status, tag, value);
-//  FbException.checkException(status);
 end;
 
 procedure IXpbBuilder.insertBigInt(status: IStatus; tag: Byte; value: Int64);
 begin
   XpbBuilderVTable(vTable).insertBigInt(Self, status, tag, value);
-//  FbException.checkException(status);
 end;
 
 procedure IXpbBuilder.insertBytes(status: IStatus; tag: Byte; bytes: Pointer; length: Cardinal);
 begin
   XpbBuilderVTable(vTable).insertBytes(Self, status, tag, bytes, length);
-//  FbException.checkException(status);
 end;
 
 procedure IXpbBuilder.insertString(status: IStatus; tag: Byte; str: PAnsiChar);
 begin
   XpbBuilderVTable(vTable).insertString(Self, status, tag, str);
-//  FbException.checkException(status);
 end;
 
 procedure IXpbBuilder.insertTag(status: IStatus; tag: Byte);
 begin
   XpbBuilderVTable(vTable).insertTag(Self, status, tag);
-//  FbException.checkException(status);
 end;
 
 function IXpbBuilder.isEof(status: IStatus): Boolean;
 begin
   Result := XpbBuilderVTable(vTable).isEof(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IXpbBuilder.moveNext(status: IStatus);
 begin
   XpbBuilderVTable(vTable).moveNext(Self, status);
-//  FbException.checkException(status);
 end;
 
 procedure IXpbBuilder.rewind(status: IStatus);
 begin
   XpbBuilderVTable(vTable).rewind(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IXpbBuilder.findFirst(status: IStatus; tag: Byte): Boolean;
 begin
   Result := XpbBuilderVTable(vTable).findFirst(Self, status, tag);
-//  FbException.checkException(status);
 end;
 
 function IXpbBuilder.findNext(status: IStatus): Boolean;
 begin
   Result := XpbBuilderVTable(vTable).findNext(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IXpbBuilder.getTag(status: IStatus): Byte;
 begin
   Result := XpbBuilderVTable(vTable).getTag(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IXpbBuilder.getLength(status: IStatus): Cardinal;
 begin
   Result := XpbBuilderVTable(vTable).getLength(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IXpbBuilder.getInt(status: IStatus): Integer;
 begin
   Result := XpbBuilderVTable(vTable).getInt(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IXpbBuilder.getBigInt(status: IStatus): Int64;
 begin
   Result := XpbBuilderVTable(vTable).getBigInt(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IXpbBuilder.getString(status: IStatus): PAnsiChar;
 begin
   Result := XpbBuilderVTable(vTable).getString(Self, status);
-//  FbException.checkException(status);
 end;
 
-function IXpbBuilder.getBytes(status: IStatus): BytePtr;
+function IXpbBuilder.getBytes(status: IStatus): PByte;
 begin
   Result := XpbBuilderVTable(vTable).getBytes(Self, status);
-//  FbException.checkException(status);
 end;
 
 function IXpbBuilder.getBufferLength(status: IStatus): Cardinal;
 begin
   Result := XpbBuilderVTable(vTable).getBufferLength(Self, status);
-//  FbException.checkException(status);
 end;
 
-function IXpbBuilder.getBuffer(status: IStatus): BytePtr;
+function IXpbBuilder.getBuffer(status: IStatus): PByte;
 begin
   Result := XpbBuilderVTable(vTable).getBuffer(Self, status);
-//  FbException.checkException(status);
 end;
 
 function ITraceConnection.getKind(): Cardinal;
@@ -7239,9 +5991,23 @@ begin
   Result := TraceTransactionVTable(vTable).getIsolation(Self);
 end;
 
-function ITraceTransaction.getPerf(): PerformanceInfoPtr;
+function ITraceTransaction.getPerf(): PPerformanceInfo;
 begin
   Result := TraceTransactionVTable(vTable).getPerf(Self);
+end;
+
+function ITraceTransaction.getInitialID(): Int64;
+begin
+  if vTable.version < 4
+  then Result := 0
+  else Result := TraceTransactionVTable(vTable).getInitialID(Self);
+end;
+
+function ITraceTransaction.getPreviousID(): Int64;
+begin
+  if vTable.version < 4
+  then Result := 0
+  else Result := TraceTransactionVTable(vTable).getPreviousID(Self);
 end;
 
 function ITraceParams.getCount(): Cardinal;
@@ -7249,7 +6015,7 @@ begin
   Result := TraceParamsVTable(vTable).getCount(Self);
 end;
 
-function ITraceParams.getParam(idx: Cardinal): dscPtr;
+function ITraceParams.getParam(idx: Cardinal): Pdsc;
 begin
   Result := TraceParamsVTable(vTable).getParam(Self, idx);
 end;
@@ -7257,7 +6023,6 @@ end;
 function ITraceParams.getTextUTF8(status: IStatus; idx: Cardinal): PAnsiChar;
 begin
   Result := TraceParamsVTable(vTable).getTextUTF8(Self, status, idx);
-//  FbException.checkException(status);
 end;
 
 function ITraceStatement.getStmtID(): Int64;
@@ -7265,7 +6030,7 @@ begin
   Result := TraceStatementVTable(vTable).getStmtID(Self);
 end;
 
-function ITraceStatement.getPerf(): PerformanceInfoPtr;
+function ITraceStatement.getPerf(): PPerformanceInfo;
 begin
   Result := TraceStatementVTable(vTable).getPerf(Self);
 end;
@@ -7295,7 +6060,7 @@ begin
   Result := TraceSQLStatementVTable(vTable).getExplainedPlan(Self);
 end;
 
-function ITraceBLRStatement.getData(): BytePtr;
+function ITraceBLRStatement.getData(): PByte;
 begin
   Result := TraceBLRStatementVTable(vTable).getData(Self);
 end;
@@ -7310,7 +6075,7 @@ begin
   Result := TraceBLRStatementVTable(vTable).getText(Self);
 end;
 
-function ITraceDYNRequest.getData(): BytePtr;
+function ITraceDYNRequest.getData(): PByte;
 begin
   Result := TraceDYNRequestVTable(vTable).getData(Self);
 end;
@@ -7350,7 +6115,7 @@ begin
   Result := TraceProcedureVTable(vTable).getInputs(Self);
 end;
 
-function ITraceProcedure.getPerf(): PerformanceInfoPtr;
+function ITraceProcedure.getPerf(): PPerformanceInfo;
 begin
   Result := TraceProcedureVTable(vTable).getPerf(Self);
 end;
@@ -7370,7 +6135,7 @@ begin
   Result := TraceFunctionVTable(vTable).getResult(Self);
 end;
 
-function ITraceFunction.getPerf(): PerformanceInfoPtr;
+function ITraceFunction.getPerf(): PPerformanceInfo;
 begin
   Result := TraceFunctionVTable(vTable).getPerf(Self);
 end;
@@ -7395,7 +6160,7 @@ begin
   Result := TraceTriggerVTable(vTable).getWhich(Self);
 end;
 
-function ITraceTrigger.getPerf(): PerformanceInfoPtr;
+function ITraceTrigger.getPerf(): PPerformanceInfo;
 begin
   Result := TraceTriggerVTable(vTable).getPerf(Self);
 end;
@@ -7455,7 +6220,7 @@ begin
   Result := TraceSweepInfoVTable(vTable).getNext(Self);
 end;
 
-function ITraceSweepInfo.getPerf(): PerformanceInfoPtr;
+function ITraceSweepInfo.getPerf(): PPerformanceInfo;
 begin
   Result := TraceSweepInfoVTable(vTable).getPerf(Self);
 end;
@@ -7463,6 +6228,15 @@ end;
 function ITraceLogWriter.write(buf: Pointer; size: Cardinal): Cardinal;
 begin
   Result := TraceLogWriterVTable(vTable).write(Self, buf, size);
+end;
+
+function ITraceLogWriter.write_s(status: IStatus; buf: Pointer; size: Cardinal): Cardinal;
+begin
+  if vTable.version < 4 then begin
+    SetIntfToOldVersionError(status);
+    Result := 0;
+  end else
+    Result := TraceLogWriterVTable(vTable).write_s(Self, status, buf, size);
 end;
 
 function ITraceInitInfo.getConfigText(): PAnsiChar;
@@ -7515,7 +6289,7 @@ begin
   Result := TracePluginVTable(vTable).trace_detach(Self, connection, drop_db);
 end;
 
-function ITracePlugin.trace_transaction_start(connection: ITraceDatabaseConnection; transaction: ITraceTransaction; tpb_length: Cardinal; tpb: BytePtr; tra_result: Cardinal): Boolean;
+function ITracePlugin.trace_transaction_start(connection: ITraceDatabaseConnection; transaction: ITraceTransaction; tpb_length: Cardinal; tpb: PByte; tra_result: Cardinal): Boolean;
 begin
   Result := TracePluginVTable(vTable).trace_transaction_start(Self, connection, transaction, tpb_length, tpb, tra_result);
 end;
@@ -7580,7 +6354,7 @@ begin
   Result := TracePluginVTable(vTable).trace_service_start(Self, service, switches_length, switches, start_result);
 end;
 
-function ITracePlugin.trace_service_query(service: ITraceServiceConnection; send_item_length: Cardinal; send_items: BytePtr; recv_item_length: Cardinal; recv_items: BytePtr; query_result: Cardinal): Boolean;
+function ITracePlugin.trace_service_query(service: ITraceServiceConnection; send_item_length: Cardinal; send_items: PByte; recv_item_length: Cardinal; recv_items: PByte; query_result: Cardinal): Boolean;
 begin
   Result := TracePluginVTable(vTable).trace_service_query(Self, service, send_item_length, send_items, recv_item_length, recv_items, query_result);
 end;
@@ -7605,7 +6379,7 @@ begin
   Result := TracePluginVTable(vTable).trace_func_execute(Self, connection, transaction, function_, started, func_result);
 end;
 
-function ITraceFactory.trace_needs(): QWord;
+function ITraceFactory.trace_needs(): UInt64;
 begin
   Result := TraceFactoryVTable(vTable).trace_needs(Self);
 end;
@@ -7613,43 +6387,36 @@ end;
 function ITraceFactory.trace_create(status: IStatus; init_info: ITraceInitInfo): ITracePlugin;
 begin
   Result := TraceFactoryVTable(vTable).trace_create(Self, status, init_info);
-//  FbException.checkException(status);
 end;
 
 procedure IUdrFunctionFactory.setup(status: IStatus; context: IExternalContext; metadata: IRoutineMetadata; inBuilder: IMetadataBuilder; outBuilder: IMetadataBuilder);
 begin
   UdrFunctionFactoryVTable(vTable).setup(Self, status, context, metadata, inBuilder, outBuilder);
-//  FbException.checkException(status);
 end;
 
 function IUdrFunctionFactory.newItem(status: IStatus; context: IExternalContext; metadata: IRoutineMetadata): IExternalFunction;
 begin
   Result := UdrFunctionFactoryVTable(vTable).newItem(Self, status, context, metadata);
-//  FbException.checkException(status);
 end;
 
 procedure IUdrProcedureFactory.setup(status: IStatus; context: IExternalContext; metadata: IRoutineMetadata; inBuilder: IMetadataBuilder; outBuilder: IMetadataBuilder);
 begin
   UdrProcedureFactoryVTable(vTable).setup(Self, status, context, metadata, inBuilder, outBuilder);
-//  FbException.checkException(status);
 end;
 
 function IUdrProcedureFactory.newItem(status: IStatus; context: IExternalContext; metadata: IRoutineMetadata): IExternalProcedure;
 begin
   Result := UdrProcedureFactoryVTable(vTable).newItem(Self, status, context, metadata);
-//  FbException.checkException(status);
 end;
 
 procedure IUdrTriggerFactory.setup(status: IStatus; context: IExternalContext; metadata: IRoutineMetadata; fieldsBuilder: IMetadataBuilder);
 begin
   UdrTriggerFactoryVTable(vTable).setup(Self, status, context, metadata, fieldsBuilder);
-//  FbException.checkException(status);
 end;
 
 function IUdrTriggerFactory.newItem(status: IStatus; context: IExternalContext; metadata: IRoutineMetadata): IExternalTrigger;
 begin
   Result := UdrTriggerFactoryVTable(vTable).newItem(Self, status, context, metadata);
-//  FbException.checkException(status);
 end;
 
 function IUdrPlugin.getMaster(): IMaster;
@@ -7660,19 +6427,171 @@ end;
 procedure IUdrPlugin.registerFunction(status: IStatus; name: PAnsiChar; factory: IUdrFunctionFactory);
 begin
   UdrPluginVTable(vTable).registerFunction(Self, status, name, factory);
-//  FbException.checkException(status);
 end;
 
 procedure IUdrPlugin.registerProcedure(status: IStatus; name: PAnsiChar; factory: IUdrProcedureFactory);
 begin
   UdrPluginVTable(vTable).registerProcedure(Self, status, name, factory);
-//  FbException.checkException(status);
 end;
 
 procedure IUdrPlugin.registerTrigger(status: IStatus; name: PAnsiChar; factory: IUdrTriggerFactory);
 begin
   UdrPluginVTable(vTable).registerTrigger(Self, status, name, factory);
-//  FbException.checkException(status);
+end;
+
+procedure IDecFloat16.toBcd(from: PFB_DEC16; sign: PInteger; bcd: PByte; exp: PInteger);
+begin
+  DecFloat16VTable(vTable).toBcd(Self, from, sign, bcd, exp);
+end;
+
+procedure IDecFloat16.toString(status: IStatus; from: PFB_DEC16; bufferLength: Cardinal; buffer: PAnsiChar);
+begin
+  DecFloat16VTable(vTable).toString(Self, status, from, bufferLength, buffer);
+end;
+
+procedure IDecFloat16.fromBcd(sign: Integer; bcd: PByte; exp: Integer; to_: PFB_DEC16);
+begin
+  DecFloat16VTable(vTable).fromBcd(Self, sign, bcd, exp, to_);
+end;
+
+procedure IDecFloat16.fromString(status: IStatus; from: PAnsiChar; to_: PFB_DEC16);
+begin
+  DecFloat16VTable(vTable).fromString(Self, status, from, to_);
+end;
+
+procedure IDecFloat34.toBcd(from: PFB_DEC34; sign: PInteger; bcd: PByte; exp: PInteger);
+begin
+  DecFloat34VTable(vTable).toBcd(Self, from, sign, bcd, exp);
+end;
+
+procedure IDecFloat34.toString(status: IStatus; from: PFB_DEC34; bufferLength: Cardinal; buffer: PAnsiChar);
+begin
+  DecFloat34VTable(vTable).toString(Self, status, from, bufferLength, buffer);
+end;
+
+procedure IDecFloat34.fromBcd(sign: Integer; bcd: PByte; exp: Integer; to_: PFB_DEC34);
+begin
+  DecFloat34VTable(vTable).fromBcd(Self, sign, bcd, exp, to_);
+end;
+
+procedure IDecFloat34.fromString(status: IStatus; from: PAnsiChar; to_: PFB_DEC34);
+begin
+  DecFloat34VTable(vTable).fromString(Self, status, from, to_);
+end;
+
+procedure IInt128.toString(status: IStatus; from: PFB_I128; scale: Integer; bufferLength: Cardinal; buffer: PAnsiChar);
+begin
+  Int128VTable(vTable).toString(Self, status, from, scale, bufferLength, buffer);
+end;
+
+procedure IInt128.fromString(status: IStatus; scale: Integer; from: PAnsiChar; to_: PFB_I128);
+begin
+  Int128VTable(vTable).fromString(Self, status, scale, from, to_);
+end;
+
+function IReplicatedRecord.getRawLength(): Cardinal;
+begin
+  Result := ReplicatedRecordVTable(vTable).getRawLength(Self);
+end;
+
+function IReplicatedRecord.getRawData(): PByte;
+begin
+  Result := ReplicatedRecordVTable(vTable).getRawData(Self);
+end;
+
+function IReplicatedBlob.getLength(): Cardinal;
+begin
+  Result := ReplicatedBlobVTable(vTable).getLength(Self);
+end;
+
+function IReplicatedBlob.isEof(): Boolean;
+begin
+  Result := ReplicatedBlobVTable(vTable).isEof(Self);
+end;
+
+function IReplicatedBlob.getSegment(length: Cardinal; buffer: PByte): Cardinal;
+begin
+  Result := ReplicatedBlobVTable(vTable).getSegment(Self, length, buffer);
+end;
+
+function IReplicatedTransaction.prepare(): Boolean;
+begin
+  Result := ReplicatedTransactionVTable(vTable).prepare(Self);
+end;
+
+function IReplicatedTransaction.commit(): Boolean;
+begin
+  Result := ReplicatedTransactionVTable(vTable).commit(Self);
+end;
+
+function IReplicatedTransaction.rollback(): Boolean;
+begin
+  Result := ReplicatedTransactionVTable(vTable).rollback(Self);
+end;
+
+function IReplicatedTransaction.startSavepoint(): Boolean;
+begin
+  Result := ReplicatedTransactionVTable(vTable).startSavepoint(Self);
+end;
+
+function IReplicatedTransaction.releaseSavepoint(): Boolean;
+begin
+  Result := ReplicatedTransactionVTable(vTable).releaseSavepoint(Self);
+end;
+
+function IReplicatedTransaction.rollbackSavepoint(): Boolean;
+begin
+  Result := ReplicatedTransactionVTable(vTable).rollbackSavepoint(Self);
+end;
+
+function IReplicatedTransaction.insertRecord(name: PAnsiChar; record_: IReplicatedRecord): Boolean;
+begin
+  Result := ReplicatedTransactionVTable(vTable).insertRecord(Self, name, record_);
+end;
+
+function IReplicatedTransaction.updateRecord(name: PAnsiChar; orgRecord: IReplicatedRecord; newRecord: IReplicatedRecord): Boolean;
+begin
+  Result := ReplicatedTransactionVTable(vTable).updateRecord(Self, name, orgRecord, newRecord);
+end;
+
+function IReplicatedTransaction.deleteRecord(name: PAnsiChar; record_: IReplicatedRecord): Boolean;
+begin
+  Result := ReplicatedTransactionVTable(vTable).deleteRecord(Self, name, record_);
+end;
+
+function IReplicatedTransaction.storeBlob(blobId: TISC_QUAD; blob: IReplicatedBlob): Boolean;
+begin
+  Result := ReplicatedTransactionVTable(vTable).storeBlob(Self, blobId, blob);
+end;
+
+function IReplicatedTransaction.executeSql(sql: PAnsiChar): Boolean;
+begin
+  Result := ReplicatedTransactionVTable(vTable).executeSql(Self, sql);
+end;
+
+function IReplicatedTransaction.executeSqlIntl(charset: Cardinal; sql: PAnsiChar): Boolean;
+begin
+  Result := ReplicatedTransactionVTable(vTable).executeSqlIntl(Self, charset, sql);
+end;
+
+function IReplicatedSession.getStatus(): IStatus;
+begin
+  Result := ReplicatedSessionVTable(vTable).getStatus(Self);
+end;
+
+function IReplicatedSession.startTransaction(number: Int64): IReplicatedTransaction;
+begin
+  Result := ReplicatedSessionVTable(vTable).startTransaction(Self, number);
+end;
+
+function IReplicatedSession.cleanupTransaction(number: Int64): Boolean;
+begin
+  Result := ReplicatedSessionVTable(vTable).cleanupTransaction(Self, number);
+end;
+
+function IReplicatedSession.setSequence(name: PAnsiChar; value: Int64): Boolean;
+begin
+  Result := ReplicatedSessionVTable(vTable).setSequence(Self, name, value);
 end;
 
 var
@@ -7729,32 +6648,32 @@ begin
   Result := IStatusImpl(this).getState();
 end;
 
-procedure IStatusImpl_setErrors2Dispatcher(this: IStatus; length: Cardinal; value: NativeIntPtr); cdecl;
+procedure IStatusImpl_setErrors2Dispatcher(this: IStatus; length: Cardinal; value: PNativeInt); cdecl;
 begin
   IStatusImpl(this).setErrors2(length, value);
 end;
 
-procedure IStatusImpl_setWarnings2Dispatcher(this: IStatus; length: Cardinal; value: NativeIntPtr); cdecl;
+procedure IStatusImpl_setWarnings2Dispatcher(this: IStatus; length: Cardinal; value: PNativeInt); cdecl;
 begin
   IStatusImpl(this).setWarnings2(length, value);
 end;
 
-procedure IStatusImpl_setErrorsDispatcher(this: IStatus; value: NativeIntPtr); cdecl;
+procedure IStatusImpl_setErrorsDispatcher(this: IStatus; value: PNativeInt); cdecl;
 begin
   IStatusImpl(this).setErrors(value);
 end;
 
-procedure IStatusImpl_setWarningsDispatcher(this: IStatus; value: NativeIntPtr); cdecl;
+procedure IStatusImpl_setWarningsDispatcher(this: IStatus; value: PNativeInt); cdecl;
 begin
   IStatusImpl(this).setWarnings(value);
 end;
 
-function IStatusImpl_getErrorsDispatcher(this: IStatus): NativeIntPtr; cdecl;
+function IStatusImpl_getErrorsDispatcher(this: IStatus): PNativeInt; cdecl;
 begin
   Result := IStatusImpl(this).getErrors();
 end;
 
-function IStatusImpl_getWarningsDispatcher(this: IStatus): NativeIntPtr; cdecl;
+function IStatusImpl_getWarningsDispatcher(this: IStatus): PNativeInt; cdecl;
 begin
   Result := IStatusImpl(this).getWarnings();
 end;
@@ -7784,92 +6703,52 @@ end;
 
 function IMasterImpl_getPluginManagerDispatcher(this: IMaster): IPluginManager; cdecl;
 begin
-//  try
-    Result := IMasterImpl(this).getPluginManager();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IMasterImpl(this).getPluginManager();
 end;
 
 function IMasterImpl_getTimerControlDispatcher(this: IMaster): ITimerControl; cdecl;
 begin
-//  try
-    Result := IMasterImpl(this).getTimerControl();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IMasterImpl(this).getTimerControl();
 end;
 
 function IMasterImpl_getDtcDispatcher(this: IMaster): IDtc; cdecl;
 begin
-//  try
-    Result := IMasterImpl(this).getDtc();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IMasterImpl(this).getDtc();
 end;
 
 function IMasterImpl_registerAttachmentDispatcher(this: IMaster; provider: IProvider; attachment: IAttachment): IAttachment; cdecl;
 begin
-//  try
-    Result := IMasterImpl(this).registerAttachment(provider, attachment);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IMasterImpl(this).registerAttachment(provider, attachment);
 end;
 
 function IMasterImpl_registerTransactionDispatcher(this: IMaster; attachment: IAttachment; transaction: ITransaction): ITransaction; cdecl;
 begin
-//  try
-    Result := IMasterImpl(this).registerTransaction(attachment, transaction);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IMasterImpl(this).registerTransaction(attachment, transaction);
 end;
 
 function IMasterImpl_getMetadataBuilderDispatcher(this: IMaster; status: IStatus; fieldCount: Cardinal): IMetadataBuilder; cdecl;
 begin
-//  try
-    Result := IMasterImpl(this).getMetadataBuilder(status, fieldCount);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IMasterImpl(this).getMetadataBuilder(status, fieldCount);
 end;
 
 function IMasterImpl_serverModeDispatcher(this: IMaster; mode: Integer): Integer; cdecl;
 begin
-//  try
-    Result := IMasterImpl(this).serverMode(mode);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IMasterImpl(this).serverMode(mode);
 end;
 
 function IMasterImpl_getUtilInterfaceDispatcher(this: IMaster): IUtil; cdecl;
 begin
-//  try
-    Result := IMasterImpl(this).getUtilInterface();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IMasterImpl(this).getUtilInterface();
 end;
 
 function IMasterImpl_getConfigManagerDispatcher(this: IMaster): IConfigManager; cdecl;
 begin
-//  try
-    Result := IMasterImpl(this).getConfigManager();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IMasterImpl(this).getConfigManager();
 end;
 
 function IMasterImpl_getProcessExitingDispatcher(this: IMaster): Boolean; cdecl;
 begin
-//  try
-    Result := IMasterImpl(this).getProcessExiting();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IMasterImpl(this).getProcessExiting();
 end;
 
 var
@@ -7882,38 +6761,22 @@ end;
 
 procedure IPluginBaseImpl_addRefDispatcher(this: IPluginBase); cdecl;
 begin
-//  try
-    IPluginBaseImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IPluginBaseImpl(this).addRef();
 end;
 
 function IPluginBaseImpl_releaseDispatcher(this: IPluginBase): Integer; cdecl;
 begin
-//  try
-    Result := IPluginBaseImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IPluginBaseImpl(this).release();
 end;
 
 procedure IPluginBaseImpl_setOwnerDispatcher(this: IPluginBase; r: IReferenceCounted); cdecl;
 begin
-//  try
-    IPluginBaseImpl(this).setOwner(r);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IPluginBaseImpl(this).setOwner(r);
 end;
 
 function IPluginBaseImpl_getOwnerDispatcher(this: IPluginBase): IReferenceCounted; cdecl;
 begin
-//  try
-    Result := IPluginBaseImpl(this).getOwner();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IPluginBaseImpl(this).getOwner();
 end;
 
 var
@@ -7926,65 +6789,37 @@ end;
 
 procedure IPluginSetImpl_addRefDispatcher(this: IPluginSet); cdecl;
 begin
-//  try
-    IPluginSetImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IPluginSetImpl(this).addRef();
 end;
 
 function IPluginSetImpl_releaseDispatcher(this: IPluginSet): Integer; cdecl;
 begin
-//  try
-    Result := IPluginSetImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IPluginSetImpl(this).release();
 end;
 
 function IPluginSetImpl_getNameDispatcher(this: IPluginSet): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IPluginSetImpl(this).getName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IPluginSetImpl(this).getName();
 end;
 
 function IPluginSetImpl_getModuleNameDispatcher(this: IPluginSet): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IPluginSetImpl(this).getModuleName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IPluginSetImpl(this).getModuleName();
 end;
 
 function IPluginSetImpl_getPluginDispatcher(this: IPluginSet; status: IStatus): IPluginBase; cdecl;
 begin
-//  try
-    Result := IPluginSetImpl(this).getPlugin(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IPluginSetImpl(this).getPlugin(status);
 end;
 
 procedure IPluginSetImpl_nextDispatcher(this: IPluginSet; status: IStatus); cdecl;
 begin
-//  try
-    IPluginSetImpl(this).next(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IPluginSetImpl(this).next(status);
 end;
 
 procedure IPluginSetImpl_set_Dispatcher(this: IPluginSet; status: IStatus; s: PAnsiChar); cdecl;
 begin
-//  try
-    IPluginSetImpl(this).set_(status, s);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IPluginSetImpl(this).set_(status, s);
 end;
 
 var
@@ -7997,65 +6832,37 @@ end;
 
 procedure IConfigEntryImpl_addRefDispatcher(this: IConfigEntry); cdecl;
 begin
-//  try
-    IConfigEntryImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IConfigEntryImpl(this).addRef();
 end;
 
 function IConfigEntryImpl_releaseDispatcher(this: IConfigEntry): Integer; cdecl;
 begin
-//  try
-    Result := IConfigEntryImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IConfigEntryImpl(this).release();
 end;
 
 function IConfigEntryImpl_getNameDispatcher(this: IConfigEntry): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IConfigEntryImpl(this).getName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IConfigEntryImpl(this).getName();
 end;
 
 function IConfigEntryImpl_getValueDispatcher(this: IConfigEntry): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IConfigEntryImpl(this).getValue();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IConfigEntryImpl(this).getValue();
 end;
 
 function IConfigEntryImpl_getIntValueDispatcher(this: IConfigEntry): Int64; cdecl;
 begin
-//  try
-    Result := IConfigEntryImpl(this).getIntValue();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IConfigEntryImpl(this).getIntValue();
 end;
 
 function IConfigEntryImpl_getBoolValueDispatcher(this: IConfigEntry): Boolean; cdecl;
 begin
-//  try
-    Result := IConfigEntryImpl(this).getBoolValue();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IConfigEntryImpl(this).getBoolValue();
 end;
 
 function IConfigEntryImpl_getSubConfigDispatcher(this: IConfigEntry; status: IStatus): IConfig; cdecl;
 begin
-//  try
-    Result := IConfigEntryImpl(this).getSubConfig(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IConfigEntryImpl(this).getSubConfig(status);
 end;
 
 var
@@ -8068,47 +6875,27 @@ end;
 
 procedure IConfigImpl_addRefDispatcher(this: IConfig); cdecl;
 begin
-//  try
-    IConfigImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IConfigImpl(this).addRef();
 end;
 
 function IConfigImpl_releaseDispatcher(this: IConfig): Integer; cdecl;
 begin
-//  try
-    Result := IConfigImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IConfigImpl(this).release();
 end;
 
 function IConfigImpl_findDispatcher(this: IConfig; status: IStatus; name: PAnsiChar): IConfigEntry; cdecl;
 begin
-//  try
-    Result := IConfigImpl(this).find(status, name);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IConfigImpl(this).find(status, name);
 end;
 
 function IConfigImpl_findValueDispatcher(this: IConfig; status: IStatus; name: PAnsiChar; value: PAnsiChar): IConfigEntry; cdecl;
 begin
-//  try
-    Result := IConfigImpl(this).findValue(status, name, value);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IConfigImpl(this).findValue(status, name, value);
 end;
 
 function IConfigImpl_findPosDispatcher(this: IConfig; status: IStatus; name: PAnsiChar; pos: Cardinal): IConfigEntry; cdecl;
 begin
-//  try
-    Result := IConfigImpl(this).findPos(status, name, pos);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IConfigImpl(this).findPos(status, name, pos);
 end;
 
 var
@@ -8121,56 +6908,37 @@ end;
 
 procedure IFirebirdConfImpl_addRefDispatcher(this: IFirebirdConf); cdecl;
 begin
-//  try
-    IFirebirdConfImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IFirebirdConfImpl(this).addRef();
 end;
 
 function IFirebirdConfImpl_releaseDispatcher(this: IFirebirdConf): Integer; cdecl;
 begin
-//  try
-    Result := IFirebirdConfImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IFirebirdConfImpl(this).release();
 end;
 
 function IFirebirdConfImpl_getKeyDispatcher(this: IFirebirdConf; name: PAnsiChar): Cardinal; cdecl;
 begin
-//  try
-    Result := IFirebirdConfImpl(this).getKey(name);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IFirebirdConfImpl(this).getKey(name);
 end;
 
 function IFirebirdConfImpl_asIntegerDispatcher(this: IFirebirdConf; key: Cardinal): Int64; cdecl;
 begin
-//  try
-    Result := IFirebirdConfImpl(this).asInteger(key);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IFirebirdConfImpl(this).asInteger(key);
 end;
 
 function IFirebirdConfImpl_asStringDispatcher(this: IFirebirdConf; key: Cardinal): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IFirebirdConfImpl(this).asString(key);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IFirebirdConfImpl(this).asString(key);
 end;
 
 function IFirebirdConfImpl_asBooleanDispatcher(this: IFirebirdConf; key: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := IFirebirdConfImpl(this).asBoolean(key);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IFirebirdConfImpl(this).asBoolean(key);
+end;
+
+function IFirebirdConfImpl_getVersionDispatcher(this: IFirebirdConf; status: IStatus): Cardinal; cdecl;
+begin
+  Result := IFirebirdConfImpl(this).getVersion(status);
 end;
 
 var
@@ -8183,56 +6951,32 @@ end;
 
 procedure IPluginConfigImpl_addRefDispatcher(this: IPluginConfig); cdecl;
 begin
-//  try
-    IPluginConfigImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IPluginConfigImpl(this).addRef();
 end;
 
 function IPluginConfigImpl_releaseDispatcher(this: IPluginConfig): Integer; cdecl;
 begin
-//  try
-    Result := IPluginConfigImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IPluginConfigImpl(this).release();
 end;
 
 function IPluginConfigImpl_getConfigFileNameDispatcher(this: IPluginConfig): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IPluginConfigImpl(this).getConfigFileName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IPluginConfigImpl(this).getConfigFileName();
 end;
 
 function IPluginConfigImpl_getDefaultConfigDispatcher(this: IPluginConfig; status: IStatus): IConfig; cdecl;
 begin
-//  try
-    Result := IPluginConfigImpl(this).getDefaultConfig(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IPluginConfigImpl(this).getDefaultConfig(status);
 end;
 
 function IPluginConfigImpl_getFirebirdConfDispatcher(this: IPluginConfig; status: IStatus): IFirebirdConf; cdecl;
 begin
-//  try
-    Result := IPluginConfigImpl(this).getFirebirdConf(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IPluginConfigImpl(this).getFirebirdConf(status);
 end;
 
-procedure IPluginConfigImpl_setReleaseDelayDispatcher(this: IPluginConfig; status: IStatus; microSeconds: QWord); cdecl;
+procedure IPluginConfigImpl_setReleaseDelayDispatcher(this: IPluginConfig; status: IStatus; microSeconds: UInt64); cdecl;
 begin
-//  try
-    IPluginConfigImpl(this).setReleaseDelay(status, microSeconds);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IPluginConfigImpl(this).setReleaseDelay(status, microSeconds);
 end;
 
 var
@@ -8245,11 +6989,7 @@ end;
 
 function IPluginFactoryImpl_createPluginDispatcher(this: IPluginFactory; status: IStatus; factoryParameter: IPluginConfig): IPluginBase; cdecl;
 begin
-//  try
-    Result := IPluginFactoryImpl(this).createPlugin(status, factoryParameter);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IPluginFactoryImpl(this).createPlugin(status, factoryParameter);
 end;
 
 var
@@ -8262,11 +7002,12 @@ end;
 
 procedure IPluginModuleImpl_doCleanDispatcher(this: IPluginModule); cdecl;
 begin
-//  try
-    IPluginModuleImpl(this).doClean();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IPluginModuleImpl(this).doClean();
+end;
+
+procedure IPluginModuleImpl_threadDetachDispatcher(this: IPluginModule); cdecl;
+begin
+  IPluginModuleImpl(this).threadDetach();
 end;
 
 var
@@ -8279,56 +7020,32 @@ end;
 
 procedure IPluginManagerImpl_registerPluginFactoryDispatcher(this: IPluginManager; pluginType: Cardinal; defaultName: PAnsiChar; factory: IPluginFactory); cdecl;
 begin
-//  try
-    IPluginManagerImpl(this).registerPluginFactory(pluginType, defaultName, factory);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IPluginManagerImpl(this).registerPluginFactory(pluginType, defaultName, factory);
 end;
 
 procedure IPluginManagerImpl_registerModuleDispatcher(this: IPluginManager; cleanup: IPluginModule); cdecl;
 begin
-//  try
-    IPluginManagerImpl(this).registerModule(cleanup);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IPluginManagerImpl(this).registerModule(cleanup);
 end;
 
 procedure IPluginManagerImpl_unregisterModuleDispatcher(this: IPluginManager; cleanup: IPluginModule); cdecl;
 begin
-//  try
-    IPluginManagerImpl(this).unregisterModule(cleanup);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IPluginManagerImpl(this).unregisterModule(cleanup);
 end;
 
 function IPluginManagerImpl_getPluginsDispatcher(this: IPluginManager; status: IStatus; pluginType: Cardinal; namesList: PAnsiChar; firebirdConf: IFirebirdConf): IPluginSet; cdecl;
 begin
-//  try
-    Result := IPluginManagerImpl(this).getPlugins(status, pluginType, namesList, firebirdConf);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IPluginManagerImpl(this).getPlugins(status, pluginType, namesList, firebirdConf);
 end;
 
 function IPluginManagerImpl_getConfigDispatcher(this: IPluginManager; status: IStatus; filename: PAnsiChar): IConfig; cdecl;
 begin
-//  try
-    Result := IPluginManagerImpl(this).getConfig(status, filename);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IPluginManagerImpl(this).getConfig(status, filename);
 end;
 
 procedure IPluginManagerImpl_releasePluginDispatcher(this: IPluginManager; plugin: IPluginBase); cdecl;
 begin
-//  try
-    IPluginManagerImpl(this).releasePlugin(plugin);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IPluginManagerImpl(this).releasePlugin(plugin);
 end;
 
 var
@@ -8341,38 +7058,22 @@ end;
 
 procedure ICryptKeyImpl_setSymmetricDispatcher(this: ICryptKey; status: IStatus; type_: PAnsiChar; keyLength: Cardinal; key: Pointer); cdecl;
 begin
-//  try
-    ICryptKeyImpl(this).setSymmetric(status, type_, keyLength, key);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  ICryptKeyImpl(this).setSymmetric(status, type_, keyLength, key);
 end;
 
 procedure ICryptKeyImpl_setAsymmetricDispatcher(this: ICryptKey; status: IStatus; type_: PAnsiChar; encryptKeyLength: Cardinal; encryptKey: Pointer; decryptKeyLength: Cardinal; decryptKey: Pointer); cdecl;
 begin
-//  try
-    ICryptKeyImpl(this).setAsymmetric(status, type_, encryptKeyLength, encryptKey, decryptKeyLength, decryptKey);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  ICryptKeyImpl(this).setAsymmetric(status, type_, encryptKeyLength, encryptKey, decryptKeyLength, decryptKey);
 end;
 
-function ICryptKeyImpl_getEncryptKeyDispatcher(this: ICryptKey; length: CardinalPtr): Pointer; cdecl;
+function ICryptKeyImpl_getEncryptKeyDispatcher(this: ICryptKey; length: PCardinal): Pointer; cdecl;
 begin
-//  try
-    Result := ICryptKeyImpl(this).getEncryptKey(length);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ICryptKeyImpl(this).getEncryptKey(length);
 end;
 
-function ICryptKeyImpl_getDecryptKeyDispatcher(this: ICryptKey; length: CardinalPtr): Pointer; cdecl;
+function ICryptKeyImpl_getDecryptKeyDispatcher(this: ICryptKey; length: PCardinal): Pointer; cdecl;
 begin
-//  try
-    Result := ICryptKeyImpl(this).getDecryptKey(length);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ICryptKeyImpl(this).getDecryptKey(length);
 end;
 
 var
@@ -8385,56 +7086,37 @@ end;
 
 function IConfigManagerImpl_getDirectoryDispatcher(this: IConfigManager; code: Cardinal): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IConfigManagerImpl(this).getDirectory(code);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IConfigManagerImpl(this).getDirectory(code);
 end;
 
 function IConfigManagerImpl_getFirebirdConfDispatcher(this: IConfigManager): IFirebirdConf; cdecl;
 begin
-//  try
-    Result := IConfigManagerImpl(this).getFirebirdConf();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IConfigManagerImpl(this).getFirebirdConf();
 end;
 
 function IConfigManagerImpl_getDatabaseConfDispatcher(this: IConfigManager; dbName: PAnsiChar): IFirebirdConf; cdecl;
 begin
-//  try
-    Result := IConfigManagerImpl(this).getDatabaseConf(dbName);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IConfigManagerImpl(this).getDatabaseConf(dbName);
 end;
 
 function IConfigManagerImpl_getPluginConfigDispatcher(this: IConfigManager; configuredPlugin: PAnsiChar): IConfig; cdecl;
 begin
-//  try
-    Result := IConfigManagerImpl(this).getPluginConfig(configuredPlugin);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IConfigManagerImpl(this).getPluginConfig(configuredPlugin);
 end;
 
 function IConfigManagerImpl_getInstallDirectoryDispatcher(this: IConfigManager): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IConfigManagerImpl(this).getInstallDirectory();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IConfigManagerImpl(this).getInstallDirectory();
 end;
 
 function IConfigManagerImpl_getRootDirectoryDispatcher(this: IConfigManager): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IConfigManagerImpl(this).getRootDirectory();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IConfigManagerImpl(this).getRootDirectory();
+end;
+
+function IConfigManagerImpl_getDefaultSecurityDbDispatcher(this: IConfigManager): PAnsiChar; cdecl;
+begin
+  Result := IConfigManagerImpl(this).getDefaultSecurityDb();
 end;
 
 var
@@ -8447,29 +7129,17 @@ end;
 
 procedure IEventCallbackImpl_addRefDispatcher(this: IEventCallback); cdecl;
 begin
-//  try
-    IEventCallbackImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IEventCallbackImpl(this).addRef();
 end;
 
 function IEventCallbackImpl_releaseDispatcher(this: IEventCallback): Integer; cdecl;
 begin
-//  try
-    Result := IEventCallbackImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IEventCallbackImpl(this).release();
 end;
 
-procedure IEventCallbackImpl_eventCallbackFunctionDispatcher(this: IEventCallback; length: Cardinal; events: BytePtr); cdecl;
+procedure IEventCallbackImpl_eventCallbackFunctionDispatcher(this: IEventCallback; length: Cardinal; events: PByte); cdecl;
 begin
-//  try
-    IEventCallbackImpl(this).eventCallbackFunction(length, events);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IEventCallbackImpl(this).eventCallbackFunction(length, events);
 end;
 
 var
@@ -8482,74 +7152,42 @@ end;
 
 procedure IBlobImpl_addRefDispatcher(this: IBlob); cdecl;
 begin
-//  try
-    IBlobImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IBlobImpl(this).addRef();
 end;
 
 function IBlobImpl_releaseDispatcher(this: IBlob): Integer; cdecl;
 begin
-//  try
-    Result := IBlobImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IBlobImpl(this).release();
 end;
 
-procedure IBlobImpl_getInfoDispatcher(this: IBlob; status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr); cdecl;
+procedure IBlobImpl_getInfoDispatcher(this: IBlob; status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte); cdecl;
 begin
-//  try
-    IBlobImpl(this).getInfo(status, itemsLength, items, bufferLength, buffer);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IBlobImpl(this).getInfo(status, itemsLength, items, bufferLength, buffer);
 end;
 
-function IBlobImpl_getSegmentDispatcher(this: IBlob; status: IStatus; bufferLength: Cardinal; buffer: Pointer; segmentLength: CardinalPtr): Integer; cdecl;
+function IBlobImpl_getSegmentDispatcher(this: IBlob; status: IStatus; bufferLength: Cardinal; buffer: Pointer; segmentLength: PCardinal): Integer; cdecl;
 begin
-//  try
-    Result := IBlobImpl(this).getSegment(status, bufferLength, buffer, segmentLength);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IBlobImpl(this).getSegment(status, bufferLength, buffer, segmentLength);
 end;
 
 procedure IBlobImpl_putSegmentDispatcher(this: IBlob; status: IStatus; length: Cardinal; buffer: Pointer); cdecl;
 begin
-//  try
-    IBlobImpl(this).putSegment(status, length, buffer);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IBlobImpl(this).putSegment(status, length, buffer);
 end;
 
 procedure IBlobImpl_cancelDispatcher(this: IBlob; status: IStatus); cdecl;
 begin
-//  try
-    IBlobImpl(this).cancel(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IBlobImpl(this).cancel(status);
 end;
 
 procedure IBlobImpl_closeDispatcher(this: IBlob; status: IStatus); cdecl;
 begin
-//  try
-    IBlobImpl(this).close(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IBlobImpl(this).close(status);
 end;
 
 function IBlobImpl_seekDispatcher(this: IBlob; status: IStatus; mode: Integer; offset: Integer): Integer; cdecl;
 begin
-//  try
-    Result := IBlobImpl(this).seek(status, mode, offset);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IBlobImpl(this).seek(status, mode, offset);
 end;
 
 var
@@ -8562,110 +7200,62 @@ end;
 
 procedure ITransactionImpl_addRefDispatcher(this: ITransaction); cdecl;
 begin
-//  try
-    ITransactionImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  ITransactionImpl(this).addRef();
 end;
 
 function ITransactionImpl_releaseDispatcher(this: ITransaction): Integer; cdecl;
 begin
-//  try
-    Result := ITransactionImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITransactionImpl(this).release();
 end;
 
-procedure ITransactionImpl_getInfoDispatcher(this: ITransaction; status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr); cdecl;
+procedure ITransactionImpl_getInfoDispatcher(this: ITransaction; status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte); cdecl;
 begin
-//  try
-    ITransactionImpl(this).getInfo(status, itemsLength, items, bufferLength, buffer);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  ITransactionImpl(this).getInfo(status, itemsLength, items, bufferLength, buffer);
 end;
 
-procedure ITransactionImpl_prepareDispatcher(this: ITransaction; status: IStatus; msgLength: Cardinal; message: BytePtr); cdecl;
+procedure ITransactionImpl_prepareDispatcher(this: ITransaction; status: IStatus; msgLength: Cardinal; message: PByte); cdecl;
 begin
-//  try
-    ITransactionImpl(this).prepare(status, msgLength, message);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  ITransactionImpl(this).prepare(status, msgLength, message);
 end;
 
 procedure ITransactionImpl_commitDispatcher(this: ITransaction; status: IStatus); cdecl;
 begin
-//  try
-    ITransactionImpl(this).commit(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  ITransactionImpl(this).commit(status);
 end;
 
 procedure ITransactionImpl_commitRetainingDispatcher(this: ITransaction; status: IStatus); cdecl;
 begin
-//  try
-    ITransactionImpl(this).commitRetaining(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  ITransactionImpl(this).commitRetaining(status);
 end;
 
 procedure ITransactionImpl_rollbackDispatcher(this: ITransaction; status: IStatus); cdecl;
 begin
-//  try
-    ITransactionImpl(this).rollback(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  ITransactionImpl(this).rollback(status);
 end;
 
 procedure ITransactionImpl_rollbackRetainingDispatcher(this: ITransaction; status: IStatus); cdecl;
 begin
-//  try
-    ITransactionImpl(this).rollbackRetaining(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  ITransactionImpl(this).rollbackRetaining(status);
 end;
 
 procedure ITransactionImpl_disconnectDispatcher(this: ITransaction; status: IStatus); cdecl;
 begin
-//  try
-    ITransactionImpl(this).disconnect(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  ITransactionImpl(this).disconnect(status);
 end;
 
 function ITransactionImpl_joinDispatcher(this: ITransaction; status: IStatus; transaction: ITransaction): ITransaction; cdecl;
 begin
-//  try
-    Result := ITransactionImpl(this).join(status, transaction);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := ITransactionImpl(this).join(status, transaction);
 end;
 
 function ITransactionImpl_validateDispatcher(this: ITransaction; status: IStatus; attachment: IAttachment): ITransaction; cdecl;
 begin
-//  try
-    Result := ITransactionImpl(this).validate(status, attachment);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := ITransactionImpl(this).validate(status, attachment);
 end;
 
 function ITransactionImpl_enterDtcDispatcher(this: ITransaction; status: IStatus): ITransaction; cdecl;
 begin
-//  try
-    Result := ITransactionImpl(this).enterDtc(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := ITransactionImpl(this).enterDtc(status);
 end;
 
 var
@@ -8678,155 +7268,97 @@ end;
 
 procedure IMessageMetadataImpl_addRefDispatcher(this: IMessageMetadata); cdecl;
 begin
-//  try
-    IMessageMetadataImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IMessageMetadataImpl(this).addRef();
 end;
 
 function IMessageMetadataImpl_releaseDispatcher(this: IMessageMetadata): Integer; cdecl;
 begin
-//  try
-    Result := IMessageMetadataImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IMessageMetadataImpl(this).release();
 end;
 
 function IMessageMetadataImpl_getCountDispatcher(this: IMessageMetadata; status: IStatus): Cardinal; cdecl;
 begin
-//  try
-    Result := IMessageMetadataImpl(this).getCount(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IMessageMetadataImpl(this).getCount(status);
 end;
 
 function IMessageMetadataImpl_getFieldDispatcher(this: IMessageMetadata; status: IStatus; index: Cardinal): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IMessageMetadataImpl(this).getField(status, index);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IMessageMetadataImpl(this).getField(status, index);
 end;
 
 function IMessageMetadataImpl_getRelationDispatcher(this: IMessageMetadata; status: IStatus; index: Cardinal): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IMessageMetadataImpl(this).getRelation(status, index);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IMessageMetadataImpl(this).getRelation(status, index);
 end;
 
 function IMessageMetadataImpl_getOwnerDispatcher(this: IMessageMetadata; status: IStatus; index: Cardinal): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IMessageMetadataImpl(this).getOwner(status, index);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IMessageMetadataImpl(this).getOwner(status, index);
 end;
 
 function IMessageMetadataImpl_getAliasDispatcher(this: IMessageMetadata; status: IStatus; index: Cardinal): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IMessageMetadataImpl(this).getAlias(status, index);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IMessageMetadataImpl(this).getAlias(status, index);
 end;
 
 function IMessageMetadataImpl_getTypeDispatcher(this: IMessageMetadata; status: IStatus; index: Cardinal): Cardinal; cdecl;
 begin
-//  try
-    Result := IMessageMetadataImpl(this).getType(status, index);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IMessageMetadataImpl(this).getType(status, index);
 end;
 
 function IMessageMetadataImpl_isNullableDispatcher(this: IMessageMetadata; status: IStatus; index: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := IMessageMetadataImpl(this).isNullable(status, index);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IMessageMetadataImpl(this).isNullable(status, index);
 end;
 
 function IMessageMetadataImpl_getSubTypeDispatcher(this: IMessageMetadata; status: IStatus; index: Cardinal): Integer; cdecl;
 begin
-//  try
-    Result := IMessageMetadataImpl(this).getSubType(status, index);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IMessageMetadataImpl(this).getSubType(status, index);
 end;
 
 function IMessageMetadataImpl_getLengthDispatcher(this: IMessageMetadata; status: IStatus; index: Cardinal): Cardinal; cdecl;
 begin
-//  try
-    Result := IMessageMetadataImpl(this).getLength(status, index);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IMessageMetadataImpl(this).getLength(status, index);
 end;
 
 function IMessageMetadataImpl_getScaleDispatcher(this: IMessageMetadata; status: IStatus; index: Cardinal): Integer; cdecl;
 begin
-//  try
-    Result := IMessageMetadataImpl(this).getScale(status, index);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IMessageMetadataImpl(this).getScale(status, index);
 end;
 
 function IMessageMetadataImpl_getCharSetDispatcher(this: IMessageMetadata; status: IStatus; index: Cardinal): Cardinal; cdecl;
 begin
-//  try
-    Result := IMessageMetadataImpl(this).getCharSet(status, index);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IMessageMetadataImpl(this).getCharSet(status, index);
 end;
 
 function IMessageMetadataImpl_getOffsetDispatcher(this: IMessageMetadata; status: IStatus; index: Cardinal): Cardinal; cdecl;
 begin
-//  try
-    Result := IMessageMetadataImpl(this).getOffset(status, index);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IMessageMetadataImpl(this).getOffset(status, index);
 end;
 
 function IMessageMetadataImpl_getNullOffsetDispatcher(this: IMessageMetadata; status: IStatus; index: Cardinal): Cardinal; cdecl;
 begin
-//  try
-    Result := IMessageMetadataImpl(this).getNullOffset(status, index);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IMessageMetadataImpl(this).getNullOffset(status, index);
 end;
 
 function IMessageMetadataImpl_getBuilderDispatcher(this: IMessageMetadata; status: IStatus): IMetadataBuilder; cdecl;
 begin
-//  try
-    Result := IMessageMetadataImpl(this).getBuilder(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IMessageMetadataImpl(this).getBuilder(status);
 end;
 
 function IMessageMetadataImpl_getMessageLengthDispatcher(this: IMessageMetadata; status: IStatus): Cardinal; cdecl;
 begin
-//  try
-    Result := IMessageMetadataImpl(this).getMessageLength(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IMessageMetadataImpl(this).getMessageLength(status);
+end;
+
+function IMessageMetadataImpl_getAlignmentDispatcher(this: IMessageMetadata; status: IStatus): Cardinal; cdecl;
+begin
+  Result := IMessageMetadataImpl(this).getAlignment(status);
+end;
+
+function IMessageMetadataImpl_getAlignedLengthDispatcher(this: IMessageMetadata; status: IStatus): Cardinal; cdecl;
+begin
+  Result := IMessageMetadataImpl(this).getAlignedLength(status);
 end;
 
 var
@@ -8839,110 +7371,82 @@ end;
 
 procedure IMetadataBuilderImpl_addRefDispatcher(this: IMetadataBuilder); cdecl;
 begin
-//  try
-    IMetadataBuilderImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IMetadataBuilderImpl(this).addRef();
 end;
 
 function IMetadataBuilderImpl_releaseDispatcher(this: IMetadataBuilder): Integer; cdecl;
 begin
-//  try
-    Result := IMetadataBuilderImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IMetadataBuilderImpl(this).release();
 end;
 
 procedure IMetadataBuilderImpl_setTypeDispatcher(this: IMetadataBuilder; status: IStatus; index: Cardinal; type_: Cardinal); cdecl;
 begin
-//  try
-    IMetadataBuilderImpl(this).setType(status, index, type_);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IMetadataBuilderImpl(this).setType(status, index, type_);
 end;
 
 procedure IMetadataBuilderImpl_setSubTypeDispatcher(this: IMetadataBuilder; status: IStatus; index: Cardinal; subType: Integer); cdecl;
 begin
-//  try
-    IMetadataBuilderImpl(this).setSubType(status, index, subType);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IMetadataBuilderImpl(this).setSubType(status, index, subType);
 end;
 
 procedure IMetadataBuilderImpl_setLengthDispatcher(this: IMetadataBuilder; status: IStatus; index: Cardinal; length: Cardinal); cdecl;
 begin
-//  try
-    IMetadataBuilderImpl(this).setLength(status, index, length);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IMetadataBuilderImpl(this).setLength(status, index, length);
 end;
 
 procedure IMetadataBuilderImpl_setCharSetDispatcher(this: IMetadataBuilder; status: IStatus; index: Cardinal; charSet: Cardinal); cdecl;
 begin
-//  try
-    IMetadataBuilderImpl(this).setCharSet(status, index, charSet);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IMetadataBuilderImpl(this).setCharSet(status, index, charSet);
 end;
 
 procedure IMetadataBuilderImpl_setScaleDispatcher(this: IMetadataBuilder; status: IStatus; index: Cardinal; scale: Integer); cdecl;
 begin
-//  try
-    IMetadataBuilderImpl(this).setScale(status, index, scale);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IMetadataBuilderImpl(this).setScale(status, index, scale);
 end;
 
 procedure IMetadataBuilderImpl_truncateDispatcher(this: IMetadataBuilder; status: IStatus; count: Cardinal); cdecl;
 begin
-//  try
-    IMetadataBuilderImpl(this).truncate(status, count);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IMetadataBuilderImpl(this).truncate(status, count);
 end;
 
 procedure IMetadataBuilderImpl_moveNameToIndexDispatcher(this: IMetadataBuilder; status: IStatus; name: PAnsiChar; index: Cardinal); cdecl;
 begin
-//  try
-    IMetadataBuilderImpl(this).moveNameToIndex(status, name, index);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IMetadataBuilderImpl(this).moveNameToIndex(status, name, index);
 end;
 
 procedure IMetadataBuilderImpl_removeDispatcher(this: IMetadataBuilder; status: IStatus; index: Cardinal); cdecl;
 begin
-//  try
-    IMetadataBuilderImpl(this).remove(status, index);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IMetadataBuilderImpl(this).remove(status, index);
 end;
 
 function IMetadataBuilderImpl_addFieldDispatcher(this: IMetadataBuilder; status: IStatus): Cardinal; cdecl;
 begin
-//  try
-    Result := IMetadataBuilderImpl(this).addField(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IMetadataBuilderImpl(this).addField(status);
 end;
 
 function IMetadataBuilderImpl_getMetadataDispatcher(this: IMetadataBuilder; status: IStatus): IMessageMetadata; cdecl;
 begin
-//  try
-    Result := IMetadataBuilderImpl(this).getMetadata(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IMetadataBuilderImpl(this).getMetadata(status);
+end;
+
+procedure IMetadataBuilderImpl_setFieldDispatcher(this: IMetadataBuilder; status: IStatus; index: Cardinal; field: PAnsiChar); cdecl;
+begin
+  IMetadataBuilderImpl(this).setField(status, index, field);
+end;
+
+procedure IMetadataBuilderImpl_setRelationDispatcher(this: IMetadataBuilder; status: IStatus; index: Cardinal; relation: PAnsiChar); cdecl;
+begin
+  IMetadataBuilderImpl(this).setRelation(status, index, relation);
+end;
+
+procedure IMetadataBuilderImpl_setOwnerDispatcher(this: IMetadataBuilder; status: IStatus; index: Cardinal; owner: PAnsiChar); cdecl;
+begin
+  IMetadataBuilderImpl(this).setOwner(status, index, owner);
+end;
+
+procedure IMetadataBuilderImpl_setAliasDispatcher(this: IMetadataBuilder; status: IStatus; index: Cardinal; alias: PAnsiChar); cdecl;
+begin
+  IMetadataBuilderImpl(this).setAlias(status, index, alias);
 end;
 
 var
@@ -8955,119 +7459,67 @@ end;
 
 procedure IResultSetImpl_addRefDispatcher(this: IResultSet); cdecl;
 begin
-//  try
-    IResultSetImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IResultSetImpl(this).addRef();
 end;
 
 function IResultSetImpl_releaseDispatcher(this: IResultSet): Integer; cdecl;
 begin
-//  try
-    Result := IResultSetImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IResultSetImpl(this).release();
 end;
 
 function IResultSetImpl_fetchNextDispatcher(this: IResultSet; status: IStatus; message: Pointer): Integer; cdecl;
 begin
-//  try
-    Result := IResultSetImpl(this).fetchNext(status, message);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IResultSetImpl(this).fetchNext(status, message);
 end;
 
 function IResultSetImpl_fetchPriorDispatcher(this: IResultSet; status: IStatus; message: Pointer): Integer; cdecl;
 begin
-//  try
-    Result := IResultSetImpl(this).fetchPrior(status, message);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IResultSetImpl(this).fetchPrior(status, message);
 end;
 
 function IResultSetImpl_fetchFirstDispatcher(this: IResultSet; status: IStatus; message: Pointer): Integer; cdecl;
 begin
-//  try
-    Result := IResultSetImpl(this).fetchFirst(status, message);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IResultSetImpl(this).fetchFirst(status, message);
 end;
 
 function IResultSetImpl_fetchLastDispatcher(this: IResultSet; status: IStatus; message: Pointer): Integer; cdecl;
 begin
-//  try
-    Result := IResultSetImpl(this).fetchLast(status, message);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IResultSetImpl(this).fetchLast(status, message);
 end;
 
 function IResultSetImpl_fetchAbsoluteDispatcher(this: IResultSet; status: IStatus; position: Integer; message: Pointer): Integer; cdecl;
 begin
-//  try
-    Result := IResultSetImpl(this).fetchAbsolute(status, position, message);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IResultSetImpl(this).fetchAbsolute(status, position, message);
 end;
 
 function IResultSetImpl_fetchRelativeDispatcher(this: IResultSet; status: IStatus; offset: Integer; message: Pointer): Integer; cdecl;
 begin
-//  try
-    Result := IResultSetImpl(this).fetchRelative(status, offset, message);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IResultSetImpl(this).fetchRelative(status, offset, message);
 end;
 
 function IResultSetImpl_isEofDispatcher(this: IResultSet; status: IStatus): Boolean; cdecl;
 begin
-//  try
-    Result := IResultSetImpl(this).isEof(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IResultSetImpl(this).isEof(status);
 end;
 
 function IResultSetImpl_isBofDispatcher(this: IResultSet; status: IStatus): Boolean; cdecl;
 begin
-//  try
-    Result := IResultSetImpl(this).isBof(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IResultSetImpl(this).isBof(status);
 end;
 
 function IResultSetImpl_getMetadataDispatcher(this: IResultSet; status: IStatus): IMessageMetadata; cdecl;
 begin
-//  try
-    Result := IResultSetImpl(this).getMetadata(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IResultSetImpl(this).getMetadata(status);
 end;
 
 procedure IResultSetImpl_closeDispatcher(this: IResultSet; status: IStatus); cdecl;
 begin
-//  try
-    IResultSetImpl(this).close(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IResultSetImpl(this).close(status);
 end;
 
 procedure IResultSetImpl_setDelayedOutputFormatDispatcher(this: IResultSet; status: IStatus; format: IMessageMetadata); cdecl;
 begin
-//  try
-    IResultSetImpl(this).setDelayedOutputFormat(status, format);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IResultSetImpl(this).setDelayedOutputFormat(status, format);
 end;
 
 var
@@ -9080,119 +7532,82 @@ end;
 
 procedure IStatementImpl_addRefDispatcher(this: IStatement); cdecl;
 begin
-//  try
-    IStatementImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IStatementImpl(this).addRef();
 end;
 
 function IStatementImpl_releaseDispatcher(this: IStatement): Integer; cdecl;
 begin
-//  try
-    Result := IStatementImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IStatementImpl(this).release();
 end;
 
-procedure IStatementImpl_getInfoDispatcher(this: IStatement; status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr); cdecl;
+procedure IStatementImpl_getInfoDispatcher(this: IStatement; status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte); cdecl;
 begin
-//  try
-    IStatementImpl(this).getInfo(status, itemsLength, items, bufferLength, buffer);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IStatementImpl(this).getInfo(status, itemsLength, items, bufferLength, buffer);
 end;
 
 function IStatementImpl_getTypeDispatcher(this: IStatement; status: IStatus): Cardinal; cdecl;
 begin
-//  try
-    Result := IStatementImpl(this).getType(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IStatementImpl(this).getType(status);
 end;
 
 function IStatementImpl_getPlanDispatcher(this: IStatement; status: IStatus; detailed: Boolean): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IStatementImpl(this).getPlan(status, detailed);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IStatementImpl(this).getPlan(status, detailed);
 end;
 
-function IStatementImpl_getAffectedRecordsDispatcher(this: IStatement; status: IStatus): QWord; cdecl;
+function IStatementImpl_getAffectedRecordsDispatcher(this: IStatement; status: IStatus): UInt64; cdecl;
 begin
-//  try
-    Result := IStatementImpl(this).getAffectedRecords(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IStatementImpl(this).getAffectedRecords(status);
 end;
 
 function IStatementImpl_getInputMetadataDispatcher(this: IStatement; status: IStatus): IMessageMetadata; cdecl;
 begin
-//  try
-    Result := IStatementImpl(this).getInputMetadata(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IStatementImpl(this).getInputMetadata(status);
 end;
 
 function IStatementImpl_getOutputMetadataDispatcher(this: IStatement; status: IStatus): IMessageMetadata; cdecl;
 begin
-//  try
-    Result := IStatementImpl(this).getOutputMetadata(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IStatementImpl(this).getOutputMetadata(status);
 end;
 
 function IStatementImpl_executeDispatcher(this: IStatement; status: IStatus; transaction: ITransaction; inMetadata: IMessageMetadata; inBuffer: Pointer; outMetadata: IMessageMetadata; outBuffer: Pointer): ITransaction; cdecl;
 begin
-//  try
-    Result := IStatementImpl(this).execute(status, transaction, inMetadata, inBuffer, outMetadata, outBuffer);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IStatementImpl(this).execute(status, transaction, inMetadata, inBuffer, outMetadata, outBuffer);
 end;
 
 function IStatementImpl_openCursorDispatcher(this: IStatement; status: IStatus; transaction: ITransaction; inMetadata: IMessageMetadata; inBuffer: Pointer; outMetadata: IMessageMetadata; flags: Cardinal): IResultSet; cdecl;
 begin
-//  try
-    Result := IStatementImpl(this).openCursor(status, transaction, inMetadata, inBuffer, outMetadata, flags);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IStatementImpl(this).openCursor(status, transaction, inMetadata, inBuffer, outMetadata, flags);
 end;
 
 procedure IStatementImpl_setCursorNameDispatcher(this: IStatement; status: IStatus; name: PAnsiChar); cdecl;
 begin
-//  try
-    IStatementImpl(this).setCursorName(status, name);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IStatementImpl(this).setCursorName(status, name);
 end;
 
 procedure IStatementImpl_freeDispatcher(this: IStatement; status: IStatus); cdecl;
 begin
-//  try
-    IStatementImpl(this).free(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IStatementImpl(this).free(status);
 end;
 
 function IStatementImpl_getFlagsDispatcher(this: IStatement; status: IStatus): Cardinal; cdecl;
 begin
-//  try
-    Result := IStatementImpl(this).getFlags(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IStatementImpl(this).getFlags(status);
+end;
+
+function IStatementImpl_getTimeoutDispatcher(this: IStatement; status: IStatus): Cardinal; cdecl;
+begin
+  Result := IStatementImpl(this).getTimeout(status);
+end;
+
+procedure IStatementImpl_setTimeoutDispatcher(this: IStatement; status: IStatus; timeOut: Cardinal); cdecl;
+begin
+  IStatementImpl(this).setTimeout(status, timeOut);
+end;
+
+function IStatementImpl_createBatchDispatcher(this: IStatement; status: IStatus; inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch; cdecl;
+begin
+  Result := IStatementImpl(this).createBatch(status, inMetadata, parLength, par);
 end;
 
 var
@@ -9203,77 +7618,42 @@ begin
   vTable := IStatementImpl_vTable;
 end;
 
-var
-  IStatementImpl_vTable_V4: StatementVTable_V4;
-
-function IStatementImpl_V4_getTimeoutDispatcher(this: IStatement_V4; status: IStatus): Cardinal; cdecl;
-begin
-  Result := IStatementImpl_V4(this).getTimeout(status)
-end;
-
-procedure IStatementImpl_V4_setTimeoutDispatcher(this: IStatementImpl_V4; status: IStatus; timeout: Cardinal); cdecl;
-begin
-  IStatementImpl_V4(this).setTimeout(status, timeout);
-end;
-
-function IStatementImpl_V4_createBatchDispatcher(this: IStatementImpl_V4;
-  status: IStatus; inMetadata: IMessageMetadata; parLength: Cardinal;
-  par: Pointer): IBatch; cdecl;
-begin
-  Result := IStatementImpl_V4(this).createBatch(Status, inMetadata, parLength, par);
-end;
-
-{ IStatementImpl_V4 }
-
-constructor IStatementImpl_V4.create;
-begin
-  vTable := IStatementImpl_vTable_V4;
-end;
-
-var
-  IBatchImpl_vTable: BatchVTable;
-
 procedure IBatchImpl_addRefDispatcher(this: IBatch); cdecl;
 begin
-  IBatchImpl(this).addRef;
+  IBatchImpl(this).addRef();
 end;
 
 function IBatchImpl_releaseDispatcher(this: IBatch): Integer; cdecl;
 begin
-  Result := IBatchImpl(this).release;
+  Result := IBatchImpl(this).release();
 end;
 
-procedure IBatchImpl_addDispatcher(this: IBatch; status: IStatus; count: Cardinal;
-inBuffer: Pointer); cdecl;
+procedure IBatchImpl_addDispatcher(this: IBatch; status: IStatus; count: Cardinal; inBuffer: Pointer); cdecl;
 begin
-  IBatchImpl(this).Add(status, count, inBuffer);
+  IBatchImpl(this).add(status, count, inBuffer);
 end;
 
-procedure IBatchImpl_addBlobDispatcher(this: IBatch; status: IStatus; length: Cardinal; inBuffer: Pointer; blobId: ISC_QUADptr; parLength: Cardinal; par: PByte); cdecl;
+procedure IBatchImpl_addBlobDispatcher(this: IBatch; status: IStatus; length: Cardinal; inBuffer: Pointer; blobId: PISC_QUAD; parLength: Cardinal; par: PByte); cdecl;
 begin
   IBatchImpl(this).addBlob(status, length, inBuffer, blobId, parLength, par);
 end;
 
-procedure IBatchImpl_appendBlobDataDispatcher(this: IBatch; status: IStatus;
-  length: Cardinal; inBuffer: Pointer); cdecl;
+procedure IBatchImpl_appendBlobDataDispatcher(this: IBatch; status: IStatus; length: Cardinal; inBuffer: Pointer); cdecl;
 begin
-  IBatchImpl(this).appendBlobData(status, length, inbuffer);
+  IBatchImpl(this).appendBlobData(status, length, inBuffer);
 end;
 
-procedure IBatchImpl_addBlobStreamDispatcher(this: IBatch; status: IStatus;
-  length: Cardinal; inBuffer: Pointer); cdecl;
+procedure IBatchImpl_addBlobStreamDispatcher(this: IBatch; status: IStatus; length: Cardinal; inBuffer: Pointer); cdecl;
 begin
   IBatchImpl(this).addBlobStream(status, length, inBuffer);
 end;
 
-procedure IBatchImpl_registerBlobDispatcher(this: IBatch; status: IStatus;
-  existingBlob: ISC_QUADPtr; blobId: ISC_QUADPtr); cdecl;
+procedure IBatchImpl_registerBlobDispatcher(this: IBatch; status: IStatus; existingBlob: PISC_QUAD; blobId: PISC_QUAD); cdecl;
 begin
   IBatchImpl(this).registerBlob(status, existingBlob, blobId);
 end;
 
-function IBatchImpl_executeDispatcher(this: IBatch; status: IStatus;
-  transaction: ITransaction): IBatchCompletionState; cdecl;
+function IBatchImpl_executeDispatcher(this: IBatch; status: IStatus; transaction: ITransaction): IBatchCompletionState; cdecl;
 begin
   Result := IBatchImpl(this).execute(status, transaction);
 end;
@@ -9298,83 +7678,69 @@ begin
   IBatchImpl(this).setDefaultBpb(status, parLength, par);
 end;
 
-{ IBatchImpl }
+var
+  IBatchImpl_vTable: BatchVTable;
 
 constructor IBatchImpl.create;
 begin
   vTable := IBatchImpl_vTable;
 end;
 
-var
-  IBatchCompletionStateImpl_VTable: BatchCompletionStateVTable;
-
-procedure IBatchCompletionImpl_DisposeDispatcher(this: IBatchCompletionState); cdecl;
+procedure IBatchCompletionStateImpl_disposeDispatcher(this: IBatchCompletionState); cdecl;
 begin
-  IBatchCompletionStateImpl(this).dispose;
+  IBatchCompletionStateImpl(this).dispose();
 end;
 
-function IBatchCompletionImpl_getSizeDispatcher(this: IBatchCompletionState; status: IStatus): Cardinal; cdecl;
+function IBatchCompletionStateImpl_getSizeDispatcher(this: IBatchCompletionState; status: IStatus): Cardinal; cdecl;
 begin
-  Result := IBatchCompletionStateImpl(this).getSize(status)
+  Result := IBatchCompletionStateImpl(this).getSize(status);
 end;
 
-function IBatchCompletionImpl_getStateDispatcher(this: IBatchCompletionState; status: IStatus; pos: Cardinal): Integer; cdecl;
+function IBatchCompletionStateImpl_getStateDispatcher(this: IBatchCompletionState; status: IStatus; pos: Cardinal): Integer; cdecl;
 begin
   Result := IBatchCompletionStateImpl(this).getState(status, pos);
 end;
 
-function IBatchCompletionImpl_findErrorDispatcher(this: IBatchCompletionState; status: IStatus; pos: Cardinal): Cardinal; cdecl;
+function IBatchCompletionStateImpl_findErrorDispatcher(this: IBatchCompletionState; status: IStatus; pos: Cardinal): Cardinal; cdecl;
 begin
   Result := IBatchCompletionStateImpl(this).findError(status, pos);
 end;
 
-function IBatchCompletionImpl_getStatusDispatcher(this: IBatchCompletionState; status, _to: IStatus; pos: Cardinal): Cardinal; cdecl;
+procedure IBatchCompletionStateImpl_getStatusDispatcher(this: IBatchCompletionState; status: IStatus; to_: IStatus; pos: Cardinal); cdecl;
 begin
-  Result := IBatchCompletionStateImpl(this).getStatus(status, _to, pos);
+  IBatchCompletionStateImpl(this).getStatus(status, to_, pos);
 end;
+
+var
+  IBatchCompletionStateImpl_vTable: BatchCompletionStateVTable;
 
 constructor IBatchCompletionStateImpl.create;
 begin
-  vTable := IBatchCompletionStateImpl_VTable;
+  vTable := IBatchCompletionStateImpl_vTable;
 end;
 
-{ IReplicator }
-
-var
-  IReplicatorImpl_vTable: IReplicatorVTable;
-
-procedure IReplicator_addRefDispatcher(this: IReplicator); cdecl;
+procedure IReplicatorImpl_addRefDispatcher(this: IReplicator); cdecl;
 begin
-  IReplicatorImpl(this).addRef;
+  IReplicatorImpl(this).addRef();
 end;
 
-function IReplicator_releaseDispatcher(this: IReplicator): Integer; cdecl;
+function IReplicatorImpl_releaseDispatcher(this: IReplicator): Integer; cdecl;
 begin
-  Result := IReplicatorImpl(this).release;
+  Result := IReplicatorImpl(this).release();
 end;
 
-procedure IReplicator_closeDispatcher(this: IReplicator; status: IStatus); cdecl;
-begin
-  IReplicatorImpl(this).close(status);
-end;
-
-procedure IReplicator_processDispatcher(this: IReplicator; status: IStatus;
-  length: Cardinal; data: PByte); cdecl;
+procedure IReplicatorImpl_processDispatcher(this: IReplicator; status: IStatus; length: Cardinal; data: PByte); cdecl;
 begin
   IReplicatorImpl(this).process(status, length, data);
 end;
 
-procedure IReplicator.close(status: IStatus);
+procedure IReplicatorImpl_closeDispatcher(this: IReplicator; status: IStatus); cdecl;
 begin
-  IReplicatorVTable(VTable).close(Self, status);
+  IReplicatorImpl(this).close(status);
 end;
 
-procedure IReplicator.process(status: IStatus; length: Cardinal; data: PByte);
-begin
-  IReplicatorVTable(VTable).process(Self, status, length, data);
-end;
-
-{ IReplicatorImpl }
+var
+  IReplicatorImpl_vTable: ReplicatorVTable;
 
 constructor IReplicatorImpl.create;
 begin
@@ -9383,83 +7749,47 @@ end;
 
 procedure IRequestImpl_addRefDispatcher(this: IRequest); cdecl;
 begin
-//  try
-    IRequestImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IRequestImpl(this).addRef();
 end;
 
 function IRequestImpl_releaseDispatcher(this: IRequest): Integer; cdecl;
 begin
-//  try
-    Result := IRequestImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IRequestImpl(this).release();
 end;
 
-procedure IRequestImpl_receiveDispatcher(this: IRequest; status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: BytePtr); cdecl;
+procedure IRequestImpl_receiveDispatcher(this: IRequest; status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: Pointer); cdecl;
 begin
-//  try
-    IRequestImpl(this).receive(status, level, msgType, length, message);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IRequestImpl(this).receive(status, level, msgType, length, message);
 end;
 
-procedure IRequestImpl_sendDispatcher(this: IRequest; status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: BytePtr); cdecl;
+procedure IRequestImpl_sendDispatcher(this: IRequest; status: IStatus; level: Integer; msgType: Cardinal; length: Cardinal; message: Pointer); cdecl;
 begin
-//  try
-    IRequestImpl(this).send(status, level, msgType, length, message);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IRequestImpl(this).send(status, level, msgType, length, message);
 end;
 
-procedure IRequestImpl_getInfoDispatcher(this: IRequest; status: IStatus; level: Integer; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr); cdecl;
+procedure IRequestImpl_getInfoDispatcher(this: IRequest; status: IStatus; level: Integer; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte); cdecl;
 begin
-//  try
-    IRequestImpl(this).getInfo(status, level, itemsLength, items, bufferLength, buffer);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IRequestImpl(this).getInfo(status, level, itemsLength, items, bufferLength, buffer);
 end;
 
 procedure IRequestImpl_startDispatcher(this: IRequest; status: IStatus; tra: ITransaction; level: Integer); cdecl;
 begin
-//  try
-    IRequestImpl(this).start(status, tra, level);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IRequestImpl(this).start(status, tra, level);
 end;
 
-procedure IRequestImpl_startAndSendDispatcher(this: IRequest; status: IStatus; tra: ITransaction; level: Integer; msgType: Cardinal; length: Cardinal; message: BytePtr); cdecl;
+procedure IRequestImpl_startAndSendDispatcher(this: IRequest; status: IStatus; tra: ITransaction; level: Integer; msgType: Cardinal; length: Cardinal; message: Pointer); cdecl;
 begin
-//  try
-    IRequestImpl(this).startAndSend(status, tra, level, msgType, length, message);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IRequestImpl(this).startAndSend(status, tra, level, msgType, length, message);
 end;
 
 procedure IRequestImpl_unwindDispatcher(this: IRequest; status: IStatus; level: Integer); cdecl;
 begin
-//  try
-    IRequestImpl(this).unwind(status, level);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IRequestImpl(this).unwind(status, level);
 end;
 
 procedure IRequestImpl_freeDispatcher(this: IRequest; status: IStatus); cdecl;
 begin
-//  try
-    IRequestImpl(this).free(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IRequestImpl(this).free(status);
 end;
 
 var
@@ -9472,29 +7802,17 @@ end;
 
 procedure IEventsImpl_addRefDispatcher(this: IEvents); cdecl;
 begin
-//  try
-    IEventsImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IEventsImpl(this).addRef();
 end;
 
 function IEventsImpl_releaseDispatcher(this: IEvents): Integer; cdecl;
 begin
-//  try
-    Result := IEventsImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IEventsImpl(this).release();
 end;
 
 procedure IEventsImpl_cancelDispatcher(this: IEvents; status: IStatus); cdecl;
 begin
-//  try
-    IEventsImpl(this).cancel(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IEventsImpl(this).cancel(status);
 end;
 
 var
@@ -9507,182 +7825,132 @@ end;
 
 procedure IAttachmentImpl_addRefDispatcher(this: IAttachment); cdecl;
 begin
-//  try
-    IAttachmentImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IAttachmentImpl(this).addRef();
 end;
 
 function IAttachmentImpl_releaseDispatcher(this: IAttachment): Integer; cdecl;
 begin
-//  try
-    Result := IAttachmentImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IAttachmentImpl(this).release();
 end;
 
-procedure IAttachmentImpl_getInfoDispatcher(this: IAttachment; status: IStatus; itemsLength: Cardinal; items: BytePtr; bufferLength: Cardinal; buffer: BytePtr); cdecl;
+procedure IAttachmentImpl_getInfoDispatcher(this: IAttachment; status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte); cdecl;
 begin
-//  try
-    IAttachmentImpl(this).getInfo(status, itemsLength, items, bufferLength, buffer);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IAttachmentImpl(this).getInfo(status, itemsLength, items, bufferLength, buffer);
 end;
 
-function IAttachmentImpl_startTransactionDispatcher(this: IAttachment; status: IStatus; tpbLength: Cardinal; tpb: BytePtr): ITransaction; cdecl;
+function IAttachmentImpl_startTransactionDispatcher(this: IAttachment; status: IStatus; tpbLength: Cardinal; tpb: PByte): ITransaction; cdecl;
 begin
-//  try
-    Result := IAttachmentImpl(this).startTransaction(status, tpbLength, tpb);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IAttachmentImpl(this).startTransaction(status, tpbLength, tpb);
 end;
 
-function IAttachmentImpl_reconnectTransactionDispatcher(this: IAttachment; status: IStatus; length: Cardinal; id: BytePtr): ITransaction; cdecl;
+function IAttachmentImpl_reconnectTransactionDispatcher(this: IAttachment; status: IStatus; length: Cardinal; id: PByte): ITransaction; cdecl;
 begin
-//  try
-    Result := IAttachmentImpl(this).reconnectTransaction(status, length, id);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IAttachmentImpl(this).reconnectTransaction(status, length, id);
 end;
 
-function IAttachmentImpl_compileRequestDispatcher(this: IAttachment; status: IStatus; blrLength: Cardinal; blr: BytePtr): IRequest; cdecl;
+function IAttachmentImpl_compileRequestDispatcher(this: IAttachment; status: IStatus; blrLength: Cardinal; blr: PByte): IRequest; cdecl;
 begin
-//  try
-    Result := IAttachmentImpl(this).compileRequest(status, blrLength, blr);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IAttachmentImpl(this).compileRequest(status, blrLength, blr);
 end;
 
-procedure IAttachmentImpl_transactRequestDispatcher(this: IAttachment; status: IStatus; transaction: ITransaction; blrLength: Cardinal; blr: BytePtr; inMsgLength: Cardinal; inMsg: BytePtr; outMsgLength: Cardinal; outMsg: BytePtr); cdecl;
+procedure IAttachmentImpl_transactRequestDispatcher(this: IAttachment; status: IStatus; transaction: ITransaction; blrLength: Cardinal; blr: PByte; inMsgLength: Cardinal; inMsg: PByte; outMsgLength: Cardinal; outMsg: PByte); cdecl;
 begin
-//  try
-    IAttachmentImpl(this).transactRequest(status, transaction, blrLength, blr, inMsgLength, inMsg, outMsgLength, outMsg);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IAttachmentImpl(this).transactRequest(status, transaction, blrLength, blr, inMsgLength, inMsg, outMsgLength, outMsg);
 end;
 
-function IAttachmentImpl_createBlobDispatcher(this: IAttachment; status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; bpbLength: Cardinal; bpb: BytePtr): IBlob; cdecl;
+function IAttachmentImpl_createBlobDispatcher(this: IAttachment; status: IStatus; transaction: ITransaction; id: PISC_QUAD; bpbLength: Cardinal; bpb: PByte): IBlob; cdecl;
 begin
-//  try
-    Result := IAttachmentImpl(this).createBlob(status, transaction, id, bpbLength, bpb);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IAttachmentImpl(this).createBlob(status, transaction, id, bpbLength, bpb);
 end;
 
-function IAttachmentImpl_openBlobDispatcher(this: IAttachment; status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; bpbLength: Cardinal; bpb: BytePtr): IBlob; cdecl;
+function IAttachmentImpl_openBlobDispatcher(this: IAttachment; status: IStatus; transaction: ITransaction; id: PISC_QUAD; bpbLength: Cardinal; bpb: PByte): IBlob; cdecl;
 begin
-//  try
-    Result := IAttachmentImpl(this).openBlob(status, transaction, id, bpbLength, bpb);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IAttachmentImpl(this).openBlob(status, transaction, id, bpbLength, bpb);
 end;
 
-function IAttachmentImpl_getSliceDispatcher(this: IAttachment; status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; sdlLength: Cardinal; sdl: BytePtr; paramLength: Cardinal; param: BytePtr; sliceLength: Integer; slice: BytePtr): Integer; cdecl;
+function IAttachmentImpl_getSliceDispatcher(this: IAttachment; status: IStatus; transaction: ITransaction; id: PISC_QUAD; sdlLength: Cardinal; sdl: PByte; paramLength: Cardinal; param: PByte; sliceLength: Integer; slice: PByte): Integer; cdecl;
 begin
-//  try
-    Result := IAttachmentImpl(this).getSlice(status, transaction, id, sdlLength, sdl, paramLength, param, sliceLength, slice);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IAttachmentImpl(this).getSlice(status, transaction, id, sdlLength, sdl, paramLength, param, sliceLength, slice);
 end;
 
-procedure IAttachmentImpl_putSliceDispatcher(this: IAttachment; status: IStatus; transaction: ITransaction; id: ISC_QUADPtr; sdlLength: Cardinal; sdl: BytePtr; paramLength: Cardinal; param: BytePtr; sliceLength: Integer; slice: BytePtr); cdecl;
+procedure IAttachmentImpl_putSliceDispatcher(this: IAttachment; status: IStatus; transaction: ITransaction; id: PISC_QUAD; sdlLength: Cardinal; sdl: PByte; paramLength: Cardinal; param: PByte; sliceLength: Integer; slice: PByte); cdecl;
 begin
-//  try
-    IAttachmentImpl(this).putSlice(status, transaction, id, sdlLength, sdl, paramLength, param, sliceLength, slice);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IAttachmentImpl(this).putSlice(status, transaction, id, sdlLength, sdl, paramLength, param, sliceLength, slice);
 end;
 
-procedure IAttachmentImpl_executeDynDispatcher(this: IAttachment; status: IStatus; transaction: ITransaction; length: Cardinal; dyn: BytePtr); cdecl;
+procedure IAttachmentImpl_executeDynDispatcher(this: IAttachment; status: IStatus; transaction: ITransaction; length: Cardinal; dyn: PByte); cdecl;
 begin
-//  try
-    IAttachmentImpl(this).executeDyn(status, transaction, length, dyn);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IAttachmentImpl(this).executeDyn(status, transaction, length, dyn);
 end;
 
 function IAttachmentImpl_prepareDispatcher(this: IAttachment; status: IStatus; tra: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; flags: Cardinal): IStatement; cdecl;
 begin
-//  try
-    Result := IAttachmentImpl(this).prepare(status, tra, stmtLength, sqlStmt, dialect, flags);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IAttachmentImpl(this).prepare(status, tra, stmtLength, sqlStmt, dialect, flags);
 end;
 
 function IAttachmentImpl_executeDispatcher(this: IAttachment; status: IStatus; transaction: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata; inBuffer: Pointer; outMetadata: IMessageMetadata; outBuffer: Pointer): ITransaction; cdecl;
 begin
-//  try
-    Result := IAttachmentImpl(this).execute(status, transaction, stmtLength, sqlStmt, dialect, inMetadata, inBuffer, outMetadata, outBuffer);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IAttachmentImpl(this).execute(status, transaction, stmtLength, sqlStmt, dialect, inMetadata, inBuffer, outMetadata, outBuffer);
 end;
 
 function IAttachmentImpl_openCursorDispatcher(this: IAttachment; status: IStatus; transaction: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata; inBuffer: Pointer; outMetadata: IMessageMetadata; cursorName: PAnsiChar; cursorFlags: Cardinal): IResultSet; cdecl;
 begin
-//  try
-    Result := IAttachmentImpl(this).openCursor(status, transaction, stmtLength, sqlStmt, dialect, inMetadata, inBuffer, outMetadata, cursorName, cursorFlags);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IAttachmentImpl(this).openCursor(status, transaction, stmtLength, sqlStmt, dialect, inMetadata, inBuffer, outMetadata, cursorName, cursorFlags);
 end;
 
-function IAttachmentImpl_queEventsDispatcher(this: IAttachment; status: IStatus; callback: IEventCallback; length: Cardinal; events: BytePtr): IEvents; cdecl;
+function IAttachmentImpl_queEventsDispatcher(this: IAttachment; status: IStatus; callback: IEventCallback; length: Cardinal; events: PByte): IEvents; cdecl;
 begin
-//  try
-    Result := IAttachmentImpl(this).queEvents(status, callback, length, events);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IAttachmentImpl(this).queEvents(status, callback, length, events);
 end;
 
 procedure IAttachmentImpl_cancelOperationDispatcher(this: IAttachment; status: IStatus; option: Integer); cdecl;
 begin
-//  try
-    IAttachmentImpl(this).cancelOperation(status, option);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IAttachmentImpl(this).cancelOperation(status, option);
 end;
 
 procedure IAttachmentImpl_pingDispatcher(this: IAttachment; status: IStatus); cdecl;
 begin
-//  try
-    IAttachmentImpl(this).ping(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IAttachmentImpl(this).ping(status);
 end;
 
 procedure IAttachmentImpl_detachDispatcher(this: IAttachment; status: IStatus); cdecl;
 begin
-//  try
-    IAttachmentImpl(this).detach(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IAttachmentImpl(this).detach(status);
 end;
 
 procedure IAttachmentImpl_dropDatabaseDispatcher(this: IAttachment; status: IStatus); cdecl;
 begin
-//  try
-    IAttachmentImpl(this).dropDatabase(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IAttachmentImpl(this).dropDatabase(status);
+end;
+
+function IAttachmentImpl_getIdleTimeoutDispatcher(this: IAttachment; status: IStatus): Cardinal; cdecl;
+begin
+  Result := IAttachmentImpl(this).getIdleTimeout(status);
+end;
+
+procedure IAttachmentImpl_setIdleTimeoutDispatcher(this: IAttachment; status: IStatus; timeOut: Cardinal); cdecl;
+begin
+  IAttachmentImpl(this).setIdleTimeout(status, timeOut);
+end;
+
+function IAttachmentImpl_getStatementTimeoutDispatcher(this: IAttachment; status: IStatus): Cardinal; cdecl;
+begin
+  Result := IAttachmentImpl(this).getStatementTimeout(status);
+end;
+
+procedure IAttachmentImpl_setStatementTimeoutDispatcher(this: IAttachment; status: IStatus; timeOut: Cardinal); cdecl;
+begin
+  IAttachmentImpl(this).setStatementTimeout(status, timeOut);
+end;
+
+function IAttachmentImpl_createBatchDispatcher(this: IAttachment; status: IStatus; transaction: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch; cdecl;
+begin
+  Result := IAttachmentImpl(this).createBatch(status, transaction, stmtLength, sqlStmt, dialect, inMetadata, parLength, par);
+end;
+
+function IAttachmentImpl_createReplicatorDispatcher(this: IAttachment; status: IStatus): IReplicator; cdecl;
+begin
+  Result := IAttachmentImpl(this).createReplicator(status);
 end;
 
 var
@@ -9693,87 +7961,29 @@ begin
   vTable := IAttachmentImpl_vTable;
 end;
 
-function IAttachment_V4Impl_getIdleTimeoutDispatcher(Self: IAttachment_V4;
-  status: IStatus): Cardinal; cdecl;
-begin
-  Result := IAttachment_V4Impl(Self).getIdleTimeout(Status);
-end;
-
-procedure IAttachment_V4Impl_setIdleTimeoutDispatcher(Self: IAttachment_V4;
-  status: IStatus; timeOut: Cardinal); cdecl;
-begin
-  IAttachment_V4Impl(Self).setIdleTimeout(Status, timeOut);
-end;
-
-function IAttachment_V4Impl_getStatementTimeoutDispatcher(Self: IAttachment_V4;
-  status: IStatus): Cardinal; cdecl;
-begin
-  Result := IAttachment_V4Impl(Self).getStatementTimeout(Status);
-end;
-
-procedure IAttachment_V4Impl_setStatementTimeoutDispatcher(Self: IAttachment_V4;
-  status: IStatus; timeOut: Cardinal); cdecl;
-begin
-  IAttachment_V4Impl(Self).setIdleTimeout(Status, timeOut);
-end;
-
-function IAttachment_V4Impl_createBatchDispatcher(Self: IAttachment_V4;
-  status: IStatus; transaction: ITransaction; stmtLength: Cardinal;
-  sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata;
-  parLength: Cardinal; par: PByte): IBatch; cdecl;
-begin
-  Result := IAttachment_V4Impl(Self).createBatch(Status, transaction,
-    stmtLength, sqlStmt, dialect, inMetadata, parLength, par);
-end;
-
-function IAttachment_V4Impl_createReplicatorDispatcher(Self: IAttachment_V4; status: IStatus): IReplicator; cdecl;
-begin
-  Result := IAttachment_V4Impl(Self).createReplicator(Status);
-end;
-
 procedure IServiceImpl_addRefDispatcher(this: IService); cdecl;
 begin
-//  try
-    IServiceImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IServiceImpl(this).addRef();
 end;
 
 function IServiceImpl_releaseDispatcher(this: IService): Integer; cdecl;
 begin
-//  try
-    Result := IServiceImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IServiceImpl(this).release();
 end;
 
 procedure IServiceImpl_detachDispatcher(this: IService; status: IStatus); cdecl;
 begin
-//  try
-    IServiceImpl(this).detach(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IServiceImpl(this).detach(status);
 end;
 
-procedure IServiceImpl_queryDispatcher(this: IService; status: IStatus; sendLength: Cardinal; sendItems: BytePtr; receiveLength: Cardinal; receiveItems: BytePtr; bufferLength: Cardinal; buffer: BytePtr); cdecl;
+procedure IServiceImpl_queryDispatcher(this: IService; status: IStatus; sendLength: Cardinal; sendItems: PByte; receiveLength: Cardinal; receiveItems: PByte; bufferLength: Cardinal; buffer: PByte); cdecl;
 begin
-//  try
-    IServiceImpl(this).query(status, sendLength, sendItems, receiveLength, receiveItems, bufferLength, buffer);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IServiceImpl(this).query(status, sendLength, sendItems, receiveLength, receiveItems, bufferLength, buffer);
 end;
 
-procedure IServiceImpl_startDispatcher(this: IService; status: IStatus; spbLength: Cardinal; spb: BytePtr); cdecl;
+procedure IServiceImpl_startDispatcher(this: IService; status: IStatus; spbLength: Cardinal; spb: PByte); cdecl;
 begin
-//  try
-    IServiceImpl(this).start(status, spbLength, spb);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IServiceImpl(this).start(status, spbLength, spb);
 end;
 
 var
@@ -9786,83 +7996,47 @@ end;
 
 procedure IProviderImpl_addRefDispatcher(this: IProvider); cdecl;
 begin
-//  try
-    IProviderImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IProviderImpl(this).addRef();
 end;
 
 function IProviderImpl_releaseDispatcher(this: IProvider): Integer; cdecl;
 begin
-//  try
-    Result := IProviderImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IProviderImpl(this).release();
 end;
 
 procedure IProviderImpl_setOwnerDispatcher(this: IProvider; r: IReferenceCounted); cdecl;
 begin
-//  try
-    IProviderImpl(this).setOwner(r);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IProviderImpl(this).setOwner(r);
 end;
 
 function IProviderImpl_getOwnerDispatcher(this: IProvider): IReferenceCounted; cdecl;
 begin
-//  try
-    Result := IProviderImpl(this).getOwner();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IProviderImpl(this).getOwner();
 end;
 
-function IProviderImpl_attachDatabaseDispatcher(this: IProvider; status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: BytePtr): IAttachment; cdecl;
+function IProviderImpl_attachDatabaseDispatcher(this: IProvider; status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: PByte): IAttachment; cdecl;
 begin
-//  try
-    Result := IProviderImpl(this).attachDatabase(status, fileName, dpbLength, dpb);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IProviderImpl(this).attachDatabase(status, fileName, dpbLength, dpb);
 end;
 
-function IProviderImpl_createDatabaseDispatcher(this: IProvider; status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: BytePtr): IAttachment; cdecl;
+function IProviderImpl_createDatabaseDispatcher(this: IProvider; status: IStatus; fileName: PAnsiChar; dpbLength: Cardinal; dpb: PByte): IAttachment; cdecl;
 begin
-//  try
-    Result := IProviderImpl(this).createDatabase(status, fileName, dpbLength, dpb);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IProviderImpl(this).createDatabase(status, fileName, dpbLength, dpb);
 end;
 
-function IProviderImpl_attachServiceManagerDispatcher(this: IProvider; status: IStatus; service: PAnsiChar; spbLength: Cardinal; spb: BytePtr): IService; cdecl;
+function IProviderImpl_attachServiceManagerDispatcher(this: IProvider; status: IStatus; service: PAnsiChar; spbLength: Cardinal; spb: PByte): IService; cdecl;
 begin
-//  try
-    Result := IProviderImpl(this).attachServiceManager(status, service, spbLength, spb);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IProviderImpl(this).attachServiceManager(status, service, spbLength, spb);
 end;
 
 procedure IProviderImpl_shutdownDispatcher(this: IProvider; status: IStatus; timeout: Cardinal; reason: Integer); cdecl;
 begin
-//  try
-    IProviderImpl(this).shutdown(status, timeout, reason);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IProviderImpl(this).shutdown(status, timeout, reason);
 end;
 
 procedure IProviderImpl_setDbCryptCallbackDispatcher(this: IProvider; status: IStatus; cryptCallback: ICryptKeyCallback); cdecl;
 begin
-//  try
-    IProviderImpl(this).setDbCryptCallback(status, cryptCallback);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IProviderImpl(this).setDbCryptCallback(status, cryptCallback);
 end;
 
 var
@@ -9875,38 +8049,22 @@ end;
 
 procedure IDtcStartImpl_disposeDispatcher(this: IDtcStart); cdecl;
 begin
-//  try
-    IDtcStartImpl(this).dispose();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IDtcStartImpl(this).dispose();
 end;
 
 procedure IDtcStartImpl_addAttachmentDispatcher(this: IDtcStart; status: IStatus; att: IAttachment); cdecl;
 begin
-//  try
-    IDtcStartImpl(this).addAttachment(status, att);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IDtcStartImpl(this).addAttachment(status, att);
 end;
 
-procedure IDtcStartImpl_addWithTpbDispatcher(this: IDtcStart; status: IStatus; att: IAttachment; length: Cardinal; tpb: BytePtr); cdecl;
+procedure IDtcStartImpl_addWithTpbDispatcher(this: IDtcStart; status: IStatus; att: IAttachment; length: Cardinal; tpb: PByte); cdecl;
 begin
-//  try
-    IDtcStartImpl(this).addWithTpb(status, att, length, tpb);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IDtcStartImpl(this).addWithTpb(status, att, length, tpb);
 end;
 
 function IDtcStartImpl_startDispatcher(this: IDtcStart; status: IStatus): ITransaction; cdecl;
 begin
-//  try
-    Result := IDtcStartImpl(this).start(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IDtcStartImpl(this).start(status);
 end;
 
 var
@@ -9919,20 +8077,12 @@ end;
 
 function IDtcImpl_joinDispatcher(this: IDtc; status: IStatus; one: ITransaction; two: ITransaction): ITransaction; cdecl;
 begin
-//  try
-    Result := IDtcImpl(this).join(status, one, two);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IDtcImpl(this).join(status, one, two);
 end;
 
 function IDtcImpl_startBuilderDispatcher(this: IDtc; status: IStatus): IDtcStart; cdecl;
 begin
-//  try
-    Result := IDtcImpl(this).startBuilder(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IDtcImpl(this).startBuilder(status);
 end;
 
 var
@@ -9945,38 +8095,22 @@ end;
 
 procedure IAuthImpl_addRefDispatcher(this: IAuth); cdecl;
 begin
-//  try
-    IAuthImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IAuthImpl(this).addRef();
 end;
 
 function IAuthImpl_releaseDispatcher(this: IAuth): Integer; cdecl;
 begin
-//  try
-    Result := IAuthImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IAuthImpl(this).release();
 end;
 
 procedure IAuthImpl_setOwnerDispatcher(this: IAuth; r: IReferenceCounted); cdecl;
 begin
-//  try
-    IAuthImpl(this).setOwner(r);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IAuthImpl(this).setOwner(r);
 end;
 
 function IAuthImpl_getOwnerDispatcher(this: IAuth): IReferenceCounted; cdecl;
 begin
-//  try
-    Result := IAuthImpl(this).getOwner();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IAuthImpl(this).getOwner();
 end;
 
 var
@@ -9989,38 +8123,22 @@ end;
 
 procedure IWriterImpl_resetDispatcher(this: IWriter); cdecl;
 begin
-//  try
-    IWriterImpl(this).reset();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IWriterImpl(this).reset();
 end;
 
 procedure IWriterImpl_addDispatcher(this: IWriter; status: IStatus; name: PAnsiChar); cdecl;
 begin
-//  try
-    IWriterImpl(this).add(status, name);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IWriterImpl(this).add(status, name);
 end;
 
 procedure IWriterImpl_setTypeDispatcher(this: IWriter; status: IStatus; value: PAnsiChar); cdecl;
 begin
-//  try
-    IWriterImpl(this).setType(status, value);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IWriterImpl(this).setType(status, value);
 end;
 
 procedure IWriterImpl_setDbDispatcher(this: IWriter; status: IStatus; value: PAnsiChar); cdecl;
 begin
-//  try
-    IWriterImpl(this).setDb(status, value);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IWriterImpl(this).setDb(status, value);
 end;
 
 var
@@ -10033,38 +8151,22 @@ end;
 
 function IServerBlockImpl_getLoginDispatcher(this: IServerBlock): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IServerBlockImpl(this).getLogin();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IServerBlockImpl(this).getLogin();
 end;
 
-function IServerBlockImpl_getDataDispatcher(this: IServerBlock; length: CardinalPtr): BytePtr; cdecl;
+function IServerBlockImpl_getDataDispatcher(this: IServerBlock; length: Cardinal): PByte; cdecl;
 begin
-//  try
-    Result := IServerBlockImpl(this).getData(length);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IServerBlockImpl(this).getData(length);
 end;
 
 procedure IServerBlockImpl_putDataDispatcher(this: IServerBlock; status: IStatus; length: Cardinal; data: Pointer); cdecl;
 begin
-//  try
-    IServerBlockImpl(this).putData(status, length, data);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IServerBlockImpl(this).putData(status, length, data);
 end;
 
 function IServerBlockImpl_newKeyDispatcher(this: IServerBlock; status: IStatus): ICryptKey; cdecl;
 begin
-//  try
-    Result := IServerBlockImpl(this).newKey(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IServerBlockImpl(this).newKey(status);
 end;
 
 var
@@ -10077,65 +8179,42 @@ end;
 
 procedure IClientBlockImpl_addRefDispatcher(this: IClientBlock); cdecl;
 begin
-//  try
-    IClientBlockImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IClientBlockImpl(this).addRef();
 end;
 
 function IClientBlockImpl_releaseDispatcher(this: IClientBlock): Integer; cdecl;
 begin
-//  try
-    Result := IClientBlockImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IClientBlockImpl(this).release();
 end;
 
 function IClientBlockImpl_getLoginDispatcher(this: IClientBlock): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IClientBlockImpl(this).getLogin();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IClientBlockImpl(this).getLogin();
 end;
 
 function IClientBlockImpl_getPasswordDispatcher(this: IClientBlock): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IClientBlockImpl(this).getPassword();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IClientBlockImpl(this).getPassword();
 end;
 
-function IClientBlockImpl_getDataDispatcher(this: IClientBlock; length: CardinalPtr): BytePtr; cdecl;
+function IClientBlockImpl_getDataDispatcher(this: IClientBlock; length: Cardinal): PByte; cdecl;
 begin
-//  try
-    Result := IClientBlockImpl(this).getData(length);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IClientBlockImpl(this).getData(length);
 end;
 
 procedure IClientBlockImpl_putDataDispatcher(this: IClientBlock; status: IStatus; length: Cardinal; data: Pointer); cdecl;
 begin
-//  try
-    IClientBlockImpl(this).putData(status, length, data);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IClientBlockImpl(this).putData(status, length, data);
 end;
 
 function IClientBlockImpl_newKeyDispatcher(this: IClientBlock; status: IStatus): ICryptKey; cdecl;
 begin
-//  try
-    Result := IClientBlockImpl(this).newKey(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IClientBlockImpl(this).newKey(status);
+end;
+
+function IClientBlockImpl_getAuthBlockDispatcher(this: IClientBlock; status: IStatus): IAuthBlock; cdecl;
+begin
+  Result := IClientBlockImpl(this).getAuthBlock(status);
 end;
 
 var
@@ -10148,56 +8227,32 @@ end;
 
 procedure IServerImpl_addRefDispatcher(this: IServer); cdecl;
 begin
-//  try
-    IServerImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IServerImpl(this).addRef();
 end;
 
 function IServerImpl_releaseDispatcher(this: IServer): Integer; cdecl;
 begin
-//  try
-    Result := IServerImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IServerImpl(this).release();
 end;
 
 procedure IServerImpl_setOwnerDispatcher(this: IServer; r: IReferenceCounted); cdecl;
 begin
-//  try
-    IServerImpl(this).setOwner(r);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IServerImpl(this).setOwner(r);
 end;
 
 function IServerImpl_getOwnerDispatcher(this: IServer): IReferenceCounted; cdecl;
 begin
-//  try
-    Result := IServerImpl(this).getOwner();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IServerImpl(this).getOwner();
 end;
 
 function IServerImpl_authenticateDispatcher(this: IServer; status: IStatus; sBlock: IServerBlock; writerInterface: IWriter): Integer; cdecl;
 begin
-//  try
-    Result := IServerImpl(this).authenticate(status, sBlock, writerInterface);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IServerImpl(this).authenticate(status, sBlock, writerInterface);
 end;
 
 procedure IServerImpl_setDbCryptCallbackDispatcher(this: IServer; status: IStatus; cryptCallback: ICryptKeyCallback); cdecl;
 begin
-//  try
-    IServerImpl(this).setDbCryptCallback(status, cryptCallback);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IServerImpl(this).setDbCryptCallback(status, cryptCallback);
 end;
 
 var
@@ -10210,47 +8265,27 @@ end;
 
 procedure IClientImpl_addRefDispatcher(this: IClient); cdecl;
 begin
-//  try
-    IClientImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IClientImpl(this).addRef();
 end;
 
 function IClientImpl_releaseDispatcher(this: IClient): Integer; cdecl;
 begin
-//  try
-    Result := IClientImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IClientImpl(this).release();
 end;
 
 procedure IClientImpl_setOwnerDispatcher(this: IClient; r: IReferenceCounted); cdecl;
 begin
-//  try
-    IClientImpl(this).setOwner(r);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IClientImpl(this).setOwner(r);
 end;
 
 function IClientImpl_getOwnerDispatcher(this: IClient): IReferenceCounted; cdecl;
 begin
-//  try
-    Result := IClientImpl(this).getOwner();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IClientImpl(this).getOwner();
 end;
 
 function IClientImpl_authenticateDispatcher(this: IClient; status: IStatus; cBlock: IClientBlock): Integer; cdecl;
 begin
-//  try
-    Result := IClientImpl(this).authenticate(status, cBlock);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IClientImpl(this).authenticate(status, cBlock);
 end;
 
 var
@@ -10263,29 +8298,17 @@ end;
 
 function IUserFieldImpl_enteredDispatcher(this: IUserField): Integer; cdecl;
 begin
-//  try
-    Result := IUserFieldImpl(this).entered();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IUserFieldImpl(this).entered();
 end;
 
 function IUserFieldImpl_specifiedDispatcher(this: IUserField): Integer; cdecl;
 begin
-//  try
-    Result := IUserFieldImpl(this).specified();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IUserFieldImpl(this).specified();
 end;
 
 procedure IUserFieldImpl_setEnteredDispatcher(this: IUserField; status: IStatus; newValue: Integer); cdecl;
 begin
-//  try
-    IUserFieldImpl(this).setEntered(status, newValue);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IUserFieldImpl(this).setEntered(status, newValue);
 end;
 
 var
@@ -10298,47 +8321,27 @@ end;
 
 function ICharUserFieldImpl_enteredDispatcher(this: ICharUserField): Integer; cdecl;
 begin
-//  try
-    Result := ICharUserFieldImpl(this).entered();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ICharUserFieldImpl(this).entered();
 end;
 
 function ICharUserFieldImpl_specifiedDispatcher(this: ICharUserField): Integer; cdecl;
 begin
-//  try
-    Result := ICharUserFieldImpl(this).specified();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ICharUserFieldImpl(this).specified();
 end;
 
 procedure ICharUserFieldImpl_setEnteredDispatcher(this: ICharUserField; status: IStatus; newValue: Integer); cdecl;
 begin
-//  try
-    ICharUserFieldImpl(this).setEntered(status, newValue);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  ICharUserFieldImpl(this).setEntered(status, newValue);
 end;
 
 function ICharUserFieldImpl_getDispatcher(this: ICharUserField): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ICharUserFieldImpl(this).get();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ICharUserFieldImpl(this).get();
 end;
 
 procedure ICharUserFieldImpl_set_Dispatcher(this: ICharUserField; status: IStatus; newValue: PAnsiChar); cdecl;
 begin
-//  try
-    ICharUserFieldImpl(this).set_(status, newValue);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  ICharUserFieldImpl(this).set_(status, newValue);
 end;
 
 var
@@ -10351,47 +8354,27 @@ end;
 
 function IIntUserFieldImpl_enteredDispatcher(this: IIntUserField): Integer; cdecl;
 begin
-//  try
-    Result := IIntUserFieldImpl(this).entered();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IIntUserFieldImpl(this).entered();
 end;
 
 function IIntUserFieldImpl_specifiedDispatcher(this: IIntUserField): Integer; cdecl;
 begin
-//  try
-    Result := IIntUserFieldImpl(this).specified();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IIntUserFieldImpl(this).specified();
 end;
 
 procedure IIntUserFieldImpl_setEnteredDispatcher(this: IIntUserField; status: IStatus; newValue: Integer); cdecl;
 begin
-//  try
-    IIntUserFieldImpl(this).setEntered(status, newValue);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IIntUserFieldImpl(this).setEntered(status, newValue);
 end;
 
 function IIntUserFieldImpl_getDispatcher(this: IIntUserField): Integer; cdecl;
 begin
-//  try
-    Result := IIntUserFieldImpl(this).get();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IIntUserFieldImpl(this).get();
 end;
 
 procedure IIntUserFieldImpl_set_Dispatcher(this: IIntUserField; status: IStatus; newValue: Integer); cdecl;
 begin
-//  try
-    IIntUserFieldImpl(this).set_(status, newValue);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IIntUserFieldImpl(this).set_(status, newValue);
 end;
 
 var
@@ -10404,101 +8387,57 @@ end;
 
 function IUserImpl_operationDispatcher(this: IUser): Cardinal; cdecl;
 begin
-//  try
-    Result := IUserImpl(this).operation();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IUserImpl(this).operation();
 end;
 
 function IUserImpl_userNameDispatcher(this: IUser): ICharUserField; cdecl;
 begin
-//  try
-    Result := IUserImpl(this).userName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IUserImpl(this).userName();
 end;
 
 function IUserImpl_passwordDispatcher(this: IUser): ICharUserField; cdecl;
 begin
-//  try
-    Result := IUserImpl(this).password();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IUserImpl(this).password();
 end;
 
 function IUserImpl_firstNameDispatcher(this: IUser): ICharUserField; cdecl;
 begin
-//  try
-    Result := IUserImpl(this).firstName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IUserImpl(this).firstName();
 end;
 
 function IUserImpl_lastNameDispatcher(this: IUser): ICharUserField; cdecl;
 begin
-//  try
-    Result := IUserImpl(this).lastName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IUserImpl(this).lastName();
 end;
 
 function IUserImpl_middleNameDispatcher(this: IUser): ICharUserField; cdecl;
 begin
-//  try
-    Result := IUserImpl(this).middleName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IUserImpl(this).middleName();
 end;
 
 function IUserImpl_commentDispatcher(this: IUser): ICharUserField; cdecl;
 begin
-//  try
-    Result := IUserImpl(this).comment();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IUserImpl(this).comment();
 end;
 
 function IUserImpl_attributesDispatcher(this: IUser): ICharUserField; cdecl;
 begin
-//  try
-    Result := IUserImpl(this).attributes();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IUserImpl(this).attributes();
 end;
 
 function IUserImpl_activeDispatcher(this: IUser): IIntUserField; cdecl;
 begin
-//  try
-    Result := IUserImpl(this).active();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IUserImpl(this).active();
 end;
 
 function IUserImpl_adminDispatcher(this: IUser): IIntUserField; cdecl;
 begin
-//  try
-    Result := IUserImpl(this).admin();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IUserImpl(this).admin();
 end;
 
 procedure IUserImpl_clearDispatcher(this: IUser; status: IStatus); cdecl;
 begin
-//  try
-    IUserImpl(this).clear(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IUserImpl(this).clear(status);
 end;
 
 var
@@ -10511,11 +8450,7 @@ end;
 
 procedure IListUsersImpl_listDispatcher(this: IListUsers; status: IStatus; user: IUser); cdecl;
 begin
-//  try
-    IListUsersImpl(this).list(status, user);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IListUsersImpl(this).list(status, user);
 end;
 
 var
@@ -10528,47 +8463,27 @@ end;
 
 function ILogonInfoImpl_nameDispatcher(this: ILogonInfo): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ILogonInfoImpl(this).name();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ILogonInfoImpl(this).name();
 end;
 
 function ILogonInfoImpl_roleDispatcher(this: ILogonInfo): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ILogonInfoImpl(this).role();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ILogonInfoImpl(this).role();
 end;
 
 function ILogonInfoImpl_networkProtocolDispatcher(this: ILogonInfo): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ILogonInfoImpl(this).networkProtocol();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ILogonInfoImpl(this).networkProtocol();
 end;
 
 function ILogonInfoImpl_remoteAddressDispatcher(this: ILogonInfo): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ILogonInfoImpl(this).remoteAddress();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ILogonInfoImpl(this).remoteAddress();
 end;
 
-function ILogonInfoImpl_authBlockDispatcher(this: ILogonInfo; length: CardinalPtr): BytePtr; cdecl;
+function ILogonInfoImpl_authBlockDispatcher(this: ILogonInfo; length: PCardinal): PByte; cdecl;
 begin
-//  try
-    Result := ILogonInfoImpl(this).authBlock(length);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ILogonInfoImpl(this).authBlock(length);
 end;
 
 var
@@ -10581,74 +8496,42 @@ end;
 
 procedure IManagementImpl_addRefDispatcher(this: IManagement); cdecl;
 begin
-//  try
-    IManagementImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IManagementImpl(this).addRef();
 end;
 
 function IManagementImpl_releaseDispatcher(this: IManagement): Integer; cdecl;
 begin
-//  try
-    Result := IManagementImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IManagementImpl(this).release();
 end;
 
 procedure IManagementImpl_setOwnerDispatcher(this: IManagement; r: IReferenceCounted); cdecl;
 begin
-//  try
-    IManagementImpl(this).setOwner(r);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IManagementImpl(this).setOwner(r);
 end;
 
 function IManagementImpl_getOwnerDispatcher(this: IManagement): IReferenceCounted; cdecl;
 begin
-//  try
-    Result := IManagementImpl(this).getOwner();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IManagementImpl(this).getOwner();
 end;
 
 procedure IManagementImpl_startDispatcher(this: IManagement; status: IStatus; logonInfo: ILogonInfo); cdecl;
 begin
-//  try
-    IManagementImpl(this).start(status, logonInfo);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IManagementImpl(this).start(status, logonInfo);
 end;
 
 function IManagementImpl_executeDispatcher(this: IManagement; status: IStatus; user: IUser; callback: IListUsers): Integer; cdecl;
 begin
-//  try
-    Result := IManagementImpl(this).execute(status, user, callback);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IManagementImpl(this).execute(status, user, callback);
 end;
 
 procedure IManagementImpl_commitDispatcher(this: IManagement; status: IStatus); cdecl;
 begin
-//  try
-    IManagementImpl(this).commit(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IManagementImpl(this).commit(status);
 end;
 
 procedure IManagementImpl_rollbackDispatcher(this: IManagement; status: IStatus); cdecl;
 begin
-//  try
-    IManagementImpl(this).rollback(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IManagementImpl(this).rollback(status);
 end;
 
 var
@@ -10659,76 +8542,97 @@ begin
   vTable := IManagementImpl_vTable;
 end;
 
+function IAuthBlockImpl_getTypeDispatcher(this: IAuthBlock): PAnsiChar; cdecl;
+begin
+  Result := IAuthBlockImpl(this).getType();
+end;
+
+function IAuthBlockImpl_getNameDispatcher(this: IAuthBlock): PAnsiChar; cdecl;
+begin
+  Result := IAuthBlockImpl(this).getName();
+end;
+
+function IAuthBlockImpl_getPluginDispatcher(this: IAuthBlock): PAnsiChar; cdecl;
+begin
+  Result := IAuthBlockImpl(this).getPlugin();
+end;
+
+function IAuthBlockImpl_getSecurityDbDispatcher(this: IAuthBlock): PAnsiChar; cdecl;
+begin
+  Result := IAuthBlockImpl(this).getSecurityDb();
+end;
+
+function IAuthBlockImpl_getOriginalPluginDispatcher(this: IAuthBlock): PAnsiChar; cdecl;
+begin
+  Result := IAuthBlockImpl(this).getOriginalPlugin();
+end;
+
+function IAuthBlockImpl_nextDispatcher(this: IAuthBlock; status: IStatus): Boolean; cdecl;
+begin
+  Result := IAuthBlockImpl(this).next(status);
+end;
+
+function IAuthBlockImpl_firstDispatcher(this: IAuthBlock; status: IStatus): Boolean; cdecl;
+begin
+  Result := IAuthBlockImpl(this).first(status);
+end;
+
+var
+  IAuthBlockImpl_vTable: AuthBlockVTable;
+
+constructor IAuthBlockImpl.create;
+begin
+  vTable := IAuthBlockImpl_vTable;
+end;
+
 procedure IWireCryptPluginImpl_addRefDispatcher(this: IWireCryptPlugin); cdecl;
 begin
-//  try
-    IWireCryptPluginImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IWireCryptPluginImpl(this).addRef();
 end;
 
 function IWireCryptPluginImpl_releaseDispatcher(this: IWireCryptPlugin): Integer; cdecl;
 begin
-//  try
-    Result := IWireCryptPluginImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IWireCryptPluginImpl(this).release();
 end;
 
 procedure IWireCryptPluginImpl_setOwnerDispatcher(this: IWireCryptPlugin; r: IReferenceCounted); cdecl;
 begin
-//  try
-    IWireCryptPluginImpl(this).setOwner(r);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IWireCryptPluginImpl(this).setOwner(r);
 end;
 
 function IWireCryptPluginImpl_getOwnerDispatcher(this: IWireCryptPlugin): IReferenceCounted; cdecl;
 begin
-//  try
-    Result := IWireCryptPluginImpl(this).getOwner();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IWireCryptPluginImpl(this).getOwner();
 end;
 
 function IWireCryptPluginImpl_getKnownTypesDispatcher(this: IWireCryptPlugin; status: IStatus): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IWireCryptPluginImpl(this).getKnownTypes(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IWireCryptPluginImpl(this).getKnownTypes(status);
 end;
 
 procedure IWireCryptPluginImpl_setKeyDispatcher(this: IWireCryptPlugin; status: IStatus; key: ICryptKey); cdecl;
 begin
-//  try
-    IWireCryptPluginImpl(this).setKey(status, key);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IWireCryptPluginImpl(this).setKey(status, key);
 end;
 
 procedure IWireCryptPluginImpl_encryptDispatcher(this: IWireCryptPlugin; status: IStatus; length: Cardinal; from: Pointer; to_: Pointer); cdecl;
 begin
-//  try
-    IWireCryptPluginImpl(this).encrypt(status, length, from, to_);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IWireCryptPluginImpl(this).encrypt(status, length, from, to_);
 end;
 
 procedure IWireCryptPluginImpl_decryptDispatcher(this: IWireCryptPlugin; status: IStatus; length: Cardinal; from: Pointer; to_: Pointer); cdecl;
 begin
-//  try
-    IWireCryptPluginImpl(this).decrypt(status, length, from, to_);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IWireCryptPluginImpl(this).decrypt(status, length, from, to_);
+end;
+
+function IWireCryptPluginImpl_getSpecificDataDispatcher(this: IWireCryptPlugin; status: IStatus; keyType: PAnsiChar; length: Cardinal): PByte; cdecl;
+begin
+  Result := IWireCryptPluginImpl(this).getSpecificData(status, keyType, length);
+end;
+
+procedure IWireCryptPluginImpl_setSpecificDataDispatcher(this: IWireCryptPlugin; status: IStatus; keyType: PAnsiChar; length: Cardinal; data: PByte); cdecl;
+begin
+  IWireCryptPluginImpl(this).setSpecificData(status, keyType, length, data);
 end;
 
 var
@@ -10741,11 +8645,7 @@ end;
 
 function ICryptKeyCallbackImpl_callbackDispatcher(this: ICryptKeyCallback; dataLength: Cardinal; data: Pointer; bufferLength: Cardinal; buffer: Pointer): Cardinal; cdecl;
 begin
-//  try
-    Result := ICryptKeyCallbackImpl(this).callback(dataLength, data, bufferLength, buffer);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ICryptKeyCallbackImpl(this).callback(dataLength, data, bufferLength, buffer);
 end;
 
 var
@@ -10758,74 +8658,42 @@ end;
 
 procedure IKeyHolderPluginImpl_addRefDispatcher(this: IKeyHolderPlugin); cdecl;
 begin
-//  try
-    IKeyHolderPluginImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IKeyHolderPluginImpl(this).addRef();
 end;
 
 function IKeyHolderPluginImpl_releaseDispatcher(this: IKeyHolderPlugin): Integer; cdecl;
 begin
-//  try
-    Result := IKeyHolderPluginImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IKeyHolderPluginImpl(this).release();
 end;
 
 procedure IKeyHolderPluginImpl_setOwnerDispatcher(this: IKeyHolderPlugin; r: IReferenceCounted); cdecl;
 begin
-//  try
-    IKeyHolderPluginImpl(this).setOwner(r);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IKeyHolderPluginImpl(this).setOwner(r);
 end;
 
 function IKeyHolderPluginImpl_getOwnerDispatcher(this: IKeyHolderPlugin): IReferenceCounted; cdecl;
 begin
-//  try
-    Result := IKeyHolderPluginImpl(this).getOwner();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IKeyHolderPluginImpl(this).getOwner();
 end;
 
 function IKeyHolderPluginImpl_keyCallbackDispatcher(this: IKeyHolderPlugin; status: IStatus; callback: ICryptKeyCallback): Integer; cdecl;
 begin
-//  try
-    Result := IKeyHolderPluginImpl(this).keyCallback(status, callback);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IKeyHolderPluginImpl(this).keyCallback(status, callback);
 end;
 
 function IKeyHolderPluginImpl_keyHandleDispatcher(this: IKeyHolderPlugin; status: IStatus; keyName: PAnsiChar): ICryptKeyCallback; cdecl;
 begin
-//  try
-    Result := IKeyHolderPluginImpl(this).keyHandle(status, keyName);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IKeyHolderPluginImpl(this).keyHandle(status, keyName);
 end;
 
 function IKeyHolderPluginImpl_useOnlyOwnKeysDispatcher(this: IKeyHolderPlugin; status: IStatus): Boolean; cdecl;
 begin
-//  try
-    Result := IKeyHolderPluginImpl(this).useOnlyOwnKeys(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IKeyHolderPluginImpl(this).useOnlyOwnKeys(status);
 end;
 
 function IKeyHolderPluginImpl_chainHandleDispatcher(this: IKeyHolderPlugin; status: IStatus): ICryptKeyCallback; cdecl;
 begin
-//  try
-    Result := IKeyHolderPluginImpl(this).chainHandle(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IKeyHolderPluginImpl(this).chainHandle(status);
 end;
 
 var
@@ -10838,29 +8706,17 @@ end;
 
 procedure IDbCryptInfoImpl_addRefDispatcher(this: IDbCryptInfo); cdecl;
 begin
-//  try
-    IDbCryptInfoImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IDbCryptInfoImpl(this).addRef();
 end;
 
 function IDbCryptInfoImpl_releaseDispatcher(this: IDbCryptInfo): Integer; cdecl;
 begin
-//  try
-    Result := IDbCryptInfoImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IDbCryptInfoImpl(this).release();
 end;
 
 function IDbCryptInfoImpl_getDatabaseFullPathDispatcher(this: IDbCryptInfo; status: IStatus): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IDbCryptInfoImpl(this).getDatabaseFullPath(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IDbCryptInfoImpl(this).getDatabaseFullPath(status);
 end;
 
 var
@@ -10873,74 +8729,42 @@ end;
 
 procedure IDbCryptPluginImpl_addRefDispatcher(this: IDbCryptPlugin); cdecl;
 begin
-//  try
-    IDbCryptPluginImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IDbCryptPluginImpl(this).addRef();
 end;
 
 function IDbCryptPluginImpl_releaseDispatcher(this: IDbCryptPlugin): Integer; cdecl;
 begin
-//  try
-    Result := IDbCryptPluginImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IDbCryptPluginImpl(this).release();
 end;
 
 procedure IDbCryptPluginImpl_setOwnerDispatcher(this: IDbCryptPlugin; r: IReferenceCounted); cdecl;
 begin
-//  try
-    IDbCryptPluginImpl(this).setOwner(r);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IDbCryptPluginImpl(this).setOwner(r);
 end;
 
 function IDbCryptPluginImpl_getOwnerDispatcher(this: IDbCryptPlugin): IReferenceCounted; cdecl;
 begin
-//  try
-    Result := IDbCryptPluginImpl(this).getOwner();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IDbCryptPluginImpl(this).getOwner();
 end;
 
-procedure IDbCryptPluginImpl_setKeyDispatcher(this: IDbCryptPlugin; status: IStatus; length: Cardinal; sources: IKeyHolderPluginPtr; keyName: PAnsiChar); cdecl;
+procedure IDbCryptPluginImpl_setKeyDispatcher(this: IDbCryptPlugin; status: IStatus; length: Cardinal; sources: PIKeyHolderPlugin; keyName: PAnsiChar); cdecl;
 begin
-//  try
-    IDbCryptPluginImpl(this).setKey(status, length, sources, keyName);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IDbCryptPluginImpl(this).setKey(status, length, sources, keyName);
 end;
 
 procedure IDbCryptPluginImpl_encryptDispatcher(this: IDbCryptPlugin; status: IStatus; length: Cardinal; from: Pointer; to_: Pointer); cdecl;
 begin
-//  try
-    IDbCryptPluginImpl(this).encrypt(status, length, from, to_);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IDbCryptPluginImpl(this).encrypt(status, length, from, to_);
 end;
 
 procedure IDbCryptPluginImpl_decryptDispatcher(this: IDbCryptPlugin; status: IStatus; length: Cardinal; from: Pointer; to_: Pointer); cdecl;
 begin
-//  try
-    IDbCryptPluginImpl(this).decrypt(status, length, from, to_);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IDbCryptPluginImpl(this).decrypt(status, length, from, to_);
 end;
 
 procedure IDbCryptPluginImpl_setInfoDispatcher(this: IDbCryptPlugin; status: IStatus; info: IDbCryptInfo); cdecl;
 begin
-//  try
-    IDbCryptPluginImpl(this).setInfo(status, info);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IDbCryptPluginImpl(this).setInfo(status, info);
 end;
 
 var
@@ -10953,92 +8777,52 @@ end;
 
 function IExternalContextImpl_getMasterDispatcher(this: IExternalContext): IMaster; cdecl;
 begin
-//  try
-    Result := IExternalContextImpl(this).getMaster();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IExternalContextImpl(this).getMaster();
 end;
 
 function IExternalContextImpl_getEngineDispatcher(this: IExternalContext; status: IStatus): IExternalEngine; cdecl;
 begin
-//  try
-    Result := IExternalContextImpl(this).getEngine(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IExternalContextImpl(this).getEngine(status);
 end;
 
 function IExternalContextImpl_getAttachmentDispatcher(this: IExternalContext; status: IStatus): IAttachment; cdecl;
 begin
-//  try
-    Result := IExternalContextImpl(this).getAttachment(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IExternalContextImpl(this).getAttachment(status);
 end;
 
 function IExternalContextImpl_getTransactionDispatcher(this: IExternalContext; status: IStatus): ITransaction; cdecl;
 begin
-//  try
-    Result := IExternalContextImpl(this).getTransaction(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IExternalContextImpl(this).getTransaction(status);
 end;
 
 function IExternalContextImpl_getUserNameDispatcher(this: IExternalContext): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IExternalContextImpl(this).getUserName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IExternalContextImpl(this).getUserName();
 end;
 
 function IExternalContextImpl_getDatabaseNameDispatcher(this: IExternalContext): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IExternalContextImpl(this).getDatabaseName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IExternalContextImpl(this).getDatabaseName();
 end;
 
 function IExternalContextImpl_getClientCharSetDispatcher(this: IExternalContext): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IExternalContextImpl(this).getClientCharSet();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IExternalContextImpl(this).getClientCharSet();
 end;
 
 function IExternalContextImpl_obtainInfoCodeDispatcher(this: IExternalContext): Integer; cdecl;
 begin
-//  try
-    Result := IExternalContextImpl(this).obtainInfoCode();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IExternalContextImpl(this).obtainInfoCode();
 end;
 
 function IExternalContextImpl_getInfoDispatcher(this: IExternalContext; code: Integer): Pointer; cdecl;
 begin
-//  try
-    Result := IExternalContextImpl(this).getInfo(code);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IExternalContextImpl(this).getInfo(code);
 end;
 
 function IExternalContextImpl_setInfoDispatcher(this: IExternalContext; code: Integer; value: Pointer): Pointer; cdecl;
 begin
-//  try
-    Result := IExternalContextImpl(this).setInfo(code, value);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IExternalContextImpl(this).setInfo(code, value);
 end;
 
 var
@@ -11051,20 +8835,12 @@ end;
 
 procedure IExternalResultSetImpl_disposeDispatcher(this: IExternalResultSet); cdecl;
 begin
-//  try
-    IExternalResultSetImpl(this).dispose();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IExternalResultSetImpl(this).dispose();
 end;
 
 function IExternalResultSetImpl_fetchDispatcher(this: IExternalResultSet; status: IStatus): Boolean; cdecl;
 begin
-//  try
-    Result := IExternalResultSetImpl(this).fetch(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IExternalResultSetImpl(this).fetch(status);
 end;
 
 var
@@ -11077,29 +8853,17 @@ end;
 
 procedure IExternalFunctionImpl_disposeDispatcher(this: IExternalFunction); cdecl;
 begin
-//  try
-    IExternalFunctionImpl(this).dispose();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IExternalFunctionImpl(this).dispose();
 end;
 
 procedure IExternalFunctionImpl_getCharSetDispatcher(this: IExternalFunction; status: IStatus; context: IExternalContext; name: PAnsiChar; nameSize: Cardinal); cdecl;
 begin
-//  try
-    IExternalFunctionImpl(this).getCharSet(status, context, name, nameSize);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IExternalFunctionImpl(this).getCharSet(status, context, name, nameSize);
 end;
 
 procedure IExternalFunctionImpl_executeDispatcher(this: IExternalFunction; status: IStatus; context: IExternalContext; inMsg: Pointer; outMsg: Pointer); cdecl;
 begin
-//  try
-    IExternalFunctionImpl(this).execute(status, context, inMsg, outMsg);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IExternalFunctionImpl(this).execute(status, context, inMsg, outMsg);
 end;
 
 var
@@ -11112,29 +8876,17 @@ end;
 
 procedure IExternalProcedureImpl_disposeDispatcher(this: IExternalProcedure); cdecl;
 begin
-//  try
-    IExternalProcedureImpl(this).dispose();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IExternalProcedureImpl(this).dispose();
 end;
 
 procedure IExternalProcedureImpl_getCharSetDispatcher(this: IExternalProcedure; status: IStatus; context: IExternalContext; name: PAnsiChar; nameSize: Cardinal); cdecl;
 begin
-//  try
-    IExternalProcedureImpl(this).getCharSet(status, context, name, nameSize);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IExternalProcedureImpl(this).getCharSet(status, context, name, nameSize);
 end;
 
 function IExternalProcedureImpl_openDispatcher(this: IExternalProcedure; status: IStatus; context: IExternalContext; inMsg: Pointer; outMsg: Pointer): IExternalResultSet; cdecl;
 begin
-//  try
-    Result := IExternalProcedureImpl(this).open(status, context, inMsg, outMsg);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IExternalProcedureImpl(this).open(status, context, inMsg, outMsg);
 end;
 
 var
@@ -11147,29 +8899,17 @@ end;
 
 procedure IExternalTriggerImpl_disposeDispatcher(this: IExternalTrigger); cdecl;
 begin
-//  try
-    IExternalTriggerImpl(this).dispose();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IExternalTriggerImpl(this).dispose();
 end;
 
 procedure IExternalTriggerImpl_getCharSetDispatcher(this: IExternalTrigger; status: IStatus; context: IExternalContext; name: PAnsiChar; nameSize: Cardinal); cdecl;
 begin
-//  try
-    IExternalTriggerImpl(this).getCharSet(status, context, name, nameSize);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IExternalTriggerImpl(this).getCharSet(status, context, name, nameSize);
 end;
 
 procedure IExternalTriggerImpl_executeDispatcher(this: IExternalTrigger; status: IStatus; context: IExternalContext; action: Cardinal; oldMsg: Pointer; newMsg: Pointer); cdecl;
 begin
-//  try
-    IExternalTriggerImpl(this).execute(status, context, action, oldMsg, newMsg);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IExternalTriggerImpl(this).execute(status, context, action, oldMsg, newMsg);
 end;
 
 var
@@ -11182,83 +8922,47 @@ end;
 
 function IRoutineMetadataImpl_getPackageDispatcher(this: IRoutineMetadata; status: IStatus): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IRoutineMetadataImpl(this).getPackage(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IRoutineMetadataImpl(this).getPackage(status);
 end;
 
 function IRoutineMetadataImpl_getNameDispatcher(this: IRoutineMetadata; status: IStatus): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IRoutineMetadataImpl(this).getName(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IRoutineMetadataImpl(this).getName(status);
 end;
 
 function IRoutineMetadataImpl_getEntryPointDispatcher(this: IRoutineMetadata; status: IStatus): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IRoutineMetadataImpl(this).getEntryPoint(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IRoutineMetadataImpl(this).getEntryPoint(status);
 end;
 
 function IRoutineMetadataImpl_getBodyDispatcher(this: IRoutineMetadata; status: IStatus): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IRoutineMetadataImpl(this).getBody(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IRoutineMetadataImpl(this).getBody(status);
 end;
 
 function IRoutineMetadataImpl_getInputMetadataDispatcher(this: IRoutineMetadata; status: IStatus): IMessageMetadata; cdecl;
 begin
-//  try
-    Result := IRoutineMetadataImpl(this).getInputMetadata(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IRoutineMetadataImpl(this).getInputMetadata(status);
 end;
 
 function IRoutineMetadataImpl_getOutputMetadataDispatcher(this: IRoutineMetadata; status: IStatus): IMessageMetadata; cdecl;
 begin
-//  try
-    Result := IRoutineMetadataImpl(this).getOutputMetadata(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IRoutineMetadataImpl(this).getOutputMetadata(status);
 end;
 
 function IRoutineMetadataImpl_getTriggerMetadataDispatcher(this: IRoutineMetadata; status: IStatus): IMessageMetadata; cdecl;
 begin
-//  try
-    Result := IRoutineMetadataImpl(this).getTriggerMetadata(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IRoutineMetadataImpl(this).getTriggerMetadata(status);
 end;
 
 function IRoutineMetadataImpl_getTriggerTableDispatcher(this: IRoutineMetadata; status: IStatus): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IRoutineMetadataImpl(this).getTriggerTable(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IRoutineMetadataImpl(this).getTriggerTable(status);
 end;
 
 function IRoutineMetadataImpl_getTriggerTypeDispatcher(this: IRoutineMetadata; status: IStatus): Cardinal; cdecl;
 begin
-//  try
-    Result := IRoutineMetadataImpl(this).getTriggerType(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IRoutineMetadataImpl(this).getTriggerType(status);
 end;
 
 var
@@ -11271,92 +8975,52 @@ end;
 
 procedure IExternalEngineImpl_addRefDispatcher(this: IExternalEngine); cdecl;
 begin
-//  try
-    IExternalEngineImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IExternalEngineImpl(this).addRef();
 end;
 
 function IExternalEngineImpl_releaseDispatcher(this: IExternalEngine): Integer; cdecl;
 begin
-//  try
-    Result := IExternalEngineImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IExternalEngineImpl(this).release();
 end;
 
 procedure IExternalEngineImpl_setOwnerDispatcher(this: IExternalEngine; r: IReferenceCounted); cdecl;
 begin
-//  try
-    IExternalEngineImpl(this).setOwner(r);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IExternalEngineImpl(this).setOwner(r);
 end;
 
 function IExternalEngineImpl_getOwnerDispatcher(this: IExternalEngine): IReferenceCounted; cdecl;
 begin
-//  try
-    Result := IExternalEngineImpl(this).getOwner();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IExternalEngineImpl(this).getOwner();
 end;
 
 procedure IExternalEngineImpl_openDispatcher(this: IExternalEngine; status: IStatus; context: IExternalContext; charSet: PAnsiChar; charSetSize: Cardinal); cdecl;
 begin
-//  try
-    IExternalEngineImpl(this).open(status, context, charSet, charSetSize);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IExternalEngineImpl(this).open(status, context, charSet, charSetSize);
 end;
 
 procedure IExternalEngineImpl_openAttachmentDispatcher(this: IExternalEngine; status: IStatus; context: IExternalContext); cdecl;
 begin
-//  try
-    IExternalEngineImpl(this).openAttachment(status, context);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IExternalEngineImpl(this).openAttachment(status, context);
 end;
 
 procedure IExternalEngineImpl_closeAttachmentDispatcher(this: IExternalEngine; status: IStatus; context: IExternalContext); cdecl;
 begin
-//  try
-    IExternalEngineImpl(this).closeAttachment(status, context);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IExternalEngineImpl(this).closeAttachment(status, context);
 end;
 
 function IExternalEngineImpl_makeFunctionDispatcher(this: IExternalEngine; status: IStatus; context: IExternalContext; metadata: IRoutineMetadata; inBuilder: IMetadataBuilder; outBuilder: IMetadataBuilder): IExternalFunction; cdecl;
 begin
-//  try
-    Result := IExternalEngineImpl(this).makeFunction(status, context, metadata, inBuilder, outBuilder);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IExternalEngineImpl(this).makeFunction(status, context, metadata, inBuilder, outBuilder);
 end;
 
 function IExternalEngineImpl_makeProcedureDispatcher(this: IExternalEngine; status: IStatus; context: IExternalContext; metadata: IRoutineMetadata; inBuilder: IMetadataBuilder; outBuilder: IMetadataBuilder): IExternalProcedure; cdecl;
 begin
-//  try
-    Result := IExternalEngineImpl(this).makeProcedure(status, context, metadata, inBuilder, outBuilder);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IExternalEngineImpl(this).makeProcedure(status, context, metadata, inBuilder, outBuilder);
 end;
 
 function IExternalEngineImpl_makeTriggerDispatcher(this: IExternalEngine; status: IStatus; context: IExternalContext; metadata: IRoutineMetadata; fieldsBuilder: IMetadataBuilder): IExternalTrigger; cdecl;
 begin
-//  try
-    Result := IExternalEngineImpl(this).makeTrigger(status, context, metadata, fieldsBuilder);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IExternalEngineImpl(this).makeTrigger(status, context, metadata, fieldsBuilder);
 end;
 
 var
@@ -11369,29 +9033,17 @@ end;
 
 procedure ITimerImpl_addRefDispatcher(this: ITimer); cdecl;
 begin
-//  try
-    ITimerImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  ITimerImpl(this).addRef();
 end;
 
 function ITimerImpl_releaseDispatcher(this: ITimer): Integer; cdecl;
 begin
-//  try
-    Result := ITimerImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITimerImpl(this).release();
 end;
 
 procedure ITimerImpl_handlerDispatcher(this: ITimer); cdecl;
 begin
-//  try
-    ITimerImpl(this).handler();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  ITimerImpl(this).handler();
 end;
 
 var
@@ -11402,22 +9054,14 @@ begin
   vTable := ITimerImpl_vTable;
 end;
 
-procedure ITimerControlImpl_startDispatcher(this: ITimerControl; status: IStatus; timer: ITimer; microSeconds: QWord); cdecl;
+procedure ITimerControlImpl_startDispatcher(this: ITimerControl; status: IStatus; timer: ITimer; microSeconds: UInt64); cdecl;
 begin
-//  try
-    ITimerControlImpl(this).start(status, timer, microSeconds);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  ITimerControlImpl(this).start(status, timer, microSeconds);
 end;
 
 procedure ITimerControlImpl_stopDispatcher(this: ITimerControl; status: IStatus; timer: ITimer); cdecl;
 begin
-//  try
-    ITimerControlImpl(this).stop(status, timer);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  ITimerControlImpl(this).stop(status, timer);
 end;
 
 var
@@ -11430,11 +9074,7 @@ end;
 
 procedure IVersionCallbackImpl_callbackDispatcher(this: IVersionCallback; status: IStatus; text: PAnsiChar); cdecl;
 begin
-//  try
-    IVersionCallbackImpl(this).callback(status, text);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IVersionCallbackImpl(this).callback(status, text);
 end;
 
 var
@@ -11447,119 +9087,122 @@ end;
 
 procedure IUtilImpl_getFbVersionDispatcher(this: IUtil; status: IStatus; att: IAttachment; callback: IVersionCallback); cdecl;
 begin
-//  try
-    IUtilImpl(this).getFbVersion(status, att, callback);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IUtilImpl(this).getFbVersion(status, att, callback);
 end;
 
-procedure IUtilImpl_loadBlobDispatcher(this: IUtil; status: IStatus; blobId: ISC_QUADPtr; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean); cdecl;
+procedure IUtilImpl_loadBlobDispatcher(this: IUtil; status: IStatus; blobId: PISC_QUAD; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean); cdecl;
 begin
-//  try
-    IUtilImpl(this).loadBlob(status, blobId, att, tra, file_, txt);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IUtilImpl(this).loadBlob(status, blobId, att, tra, file_, txt);
 end;
 
-procedure IUtilImpl_dumpBlobDispatcher(this: IUtil; status: IStatus; blobId: ISC_QUADPtr; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean); cdecl;
+procedure IUtilImpl_dumpBlobDispatcher(this: IUtil; status: IStatus; blobId: PISC_QUAD; att: IAttachment; tra: ITransaction; file_: PAnsiChar; txt: Boolean); cdecl;
 begin
-//  try
-    IUtilImpl(this).dumpBlob(status, blobId, att, tra, file_, txt);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IUtilImpl(this).dumpBlob(status, blobId, att, tra, file_, txt);
 end;
 
-procedure IUtilImpl_getPerfCountersDispatcher(this: IUtil; status: IStatus; att: IAttachment; countersSet: PAnsiChar; counters: Int64Ptr); cdecl;
+procedure IUtilImpl_getPerfCountersDispatcher(this: IUtil; status: IStatus; att: IAttachment; countersSet: PAnsiChar; counters: PInt64); cdecl;
 begin
-//  try
-    IUtilImpl(this).getPerfCounters(status, att, countersSet, counters);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IUtilImpl(this).getPerfCounters(status, att, countersSet, counters);
 end;
 
 function IUtilImpl_executeCreateDatabaseDispatcher(this: IUtil; status: IStatus; stmtLength: Cardinal; creatDBstatement: PAnsiChar; dialect: Cardinal; stmtIsCreateDb: BooleanPtr): IAttachment; cdecl;
 begin
-//  try
-    Result := IUtilImpl(this).executeCreateDatabase(status, stmtLength, creatDBstatement, dialect, stmtIsCreateDb);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IUtilImpl(this).executeCreateDatabase(status, stmtLength, creatDBstatement, dialect, stmtIsCreateDb);
 end;
 
-procedure IUtilImpl_decodeDateDispatcher(this: IUtil; date: ISC_DATE; year: CardinalPtr; month: CardinalPtr; day: CardinalPtr); cdecl;
+procedure IUtilImpl_decodeDateDispatcher(this: IUtil; date: TISC_DATE; year: Cardinal; month: Cardinal; day: Cardinal); cdecl;
 begin
-//  try
-    IUtilImpl(this).decodeDate(date, year, month, day);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IUtilImpl(this).decodeDate(date, year, month, day);
 end;
 
-procedure IUtilImpl_decodeTimeDispatcher(this: IUtil; time: ISC_TIME; hours: CardinalPtr; minutes: CardinalPtr; seconds: CardinalPtr; fractions: CardinalPtr); cdecl;
+procedure IUtilImpl_decodeTimeDispatcher(this: IUtil; time: TISC_TIME; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal); cdecl;
 begin
-//  try
-    IUtilImpl(this).decodeTime(time, hours, minutes, seconds, fractions);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IUtilImpl(this).decodeTime(time, hours, minutes, seconds, fractions);
 end;
 
-function IUtilImpl_encodeDateDispatcher(this: IUtil; year: Cardinal; month: Cardinal; day: Cardinal): ISC_DATE; cdecl;
+function IUtilImpl_encodeDateDispatcher(this: IUtil; year: Cardinal; month: Cardinal; day: Cardinal): TISC_DATE; cdecl;
 begin
-//  try
-    Result := IUtilImpl(this).encodeDate(year, month, day);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IUtilImpl(this).encodeDate(year, month, day);
 end;
 
-function IUtilImpl_encodeTimeDispatcher(this: IUtil; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal): ISC_TIME; cdecl;
+function IUtilImpl_encodeTimeDispatcher(this: IUtil; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal): TISC_TIME; cdecl;
 begin
-//  try
-    Result := IUtilImpl(this).encodeTime(hours, minutes, seconds, fractions);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IUtilImpl(this).encodeTime(hours, minutes, seconds, fractions);
 end;
 
 function IUtilImpl_formatStatusDispatcher(this: IUtil; buffer: PAnsiChar; bufferSize: Cardinal; status: IStatus): Cardinal; cdecl;
 begin
-//  try
-    Result := IUtilImpl(this).formatStatus(buffer, bufferSize, status);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IUtilImpl(this).formatStatus(buffer, bufferSize, status);
 end;
 
 function IUtilImpl_getClientVersionDispatcher(this: IUtil): Cardinal; cdecl;
 begin
-//  try
-    Result := IUtilImpl(this).getClientVersion();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IUtilImpl(this).getClientVersion();
 end;
 
-function IUtilImpl_getXpbBuilderDispatcher(this: IUtil; status: IStatus; kind: Cardinal; buf: BytePtr; len: Cardinal): IXpbBuilder; cdecl;
+function IUtilImpl_getXpbBuilderDispatcher(this: IUtil; status: IStatus; kind: Cardinal; buf: PByte; len: Cardinal): IXpbBuilder; cdecl;
 begin
-//  try
-    Result := IUtilImpl(this).getXpbBuilder(status, kind, buf, len);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IUtilImpl(this).getXpbBuilder(status, kind, buf, len);
 end;
 
 function IUtilImpl_setOffsetsDispatcher(this: IUtil; status: IStatus; metadata: IMessageMetadata; callback: IOffsetsCallback): Cardinal; cdecl;
 begin
-//  try
-    Result := IUtilImpl(this).setOffsets(status, metadata, callback);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IUtilImpl(this).setOffsets(status, metadata, callback);
+end;
+
+function IUtilImpl_getDecFloat16Dispatcher(this: IUtil; status: IStatus): IDecFloat16; cdecl;
+begin
+  Result := IUtilImpl(this).getDecFloat16(status);
+end;
+
+function IUtilImpl_getDecFloat34Dispatcher(this: IUtil; status: IStatus): IDecFloat34; cdecl;
+begin
+  Result := IUtilImpl(this).getDecFloat34(status);
+end;
+
+function IUtilImpl_getTransactionByHandleDispatcher(this: IUtil; status: IStatus; hndlPtr: Pisc_tr_handle): ITransaction; cdecl;
+begin
+  Result := IUtilImpl(this).getTransactionByHandle(status, hndlPtr);
+end;
+
+function IUtilImpl_getStatementByHandleDispatcher(this: IUtil; status: IStatus; hndlPtr: Pisc_stmt_handle): IStatement; cdecl;
+begin
+  Result := IUtilImpl(this).getStatementByHandle(status, hndlPtr);
+end;
+
+procedure IUtilImpl_decodeTimeTzDispatcher(this: IUtil; status: IStatus; timeTz: PISC_TIME_TZ; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar); cdecl;
+begin
+  IUtilImpl(this).decodeTimeTz(status, timeTz, hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
+end;
+
+procedure IUtilImpl_decodeTimeStampTzDispatcher(this: IUtil; status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ; year: PCardinal; month: PCardinal; day: PCardinal; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar); cdecl;
+begin
+  IUtilImpl(this).decodeTimeStampTz(status, timeStampTz, year, month, day, hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
+end;
+
+procedure IUtilImpl_encodeTimeTzDispatcher(this: IUtil; status: IStatus; timeTz: PISC_TIME_TZ; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal; timeZone: PAnsiChar); cdecl;
+begin
+  IUtilImpl(this).encodeTimeTz(status, timeTz, hours, minutes, seconds, fractions, timeZone);
+end;
+
+procedure IUtilImpl_encodeTimeStampTzDispatcher(this: IUtil; status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ; year: Cardinal; month: Cardinal; day: Cardinal; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal; timeZone: PAnsiChar); cdecl;
+begin
+  IUtilImpl(this).encodeTimeStampTz(status, timeStampTz, year, month, day, hours, minutes, seconds, fractions, timeZone);
+end;
+
+function IUtilImpl_getInt128Dispatcher(this: IUtil; status: IStatus): IInt128; cdecl;
+begin
+  Result := IUtilImpl(this).getInt128(status);
+end;
+
+procedure IUtilImpl_decodeTimeTzExDispatcher(this: IUtil; status: IStatus; timeTz: PISC_TIME_TZ_EX; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar); cdecl;
+begin
+  IUtilImpl(this).decodeTimeTzEx(status, timeTz, hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
+end;
+
+procedure IUtilImpl_decodeTimeStampTzExDispatcher(this: IUtil; status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ_EX; year: PCardinal; month: PCardinal; day: PCardinal; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar); cdecl;
+begin
+  IUtilImpl(this).decodeTimeStampTzEx(status, timeStampTz, year, month, day, hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
 end;
 
 var
@@ -11572,11 +9215,7 @@ end;
 
 procedure IOffsetsCallbackImpl_setOffsetDispatcher(this: IOffsetsCallback; status: IStatus; index: Cardinal; offset: Cardinal; nullOffset: Cardinal); cdecl;
 begin
-//  try
-    IOffsetsCallbackImpl(this).setOffset(status, index, offset, nullOffset);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IOffsetsCallbackImpl(this).setOffset(status, index, offset, nullOffset);
 end;
 
 var
@@ -11589,191 +9228,107 @@ end;
 
 procedure IXpbBuilderImpl_disposeDispatcher(this: IXpbBuilder); cdecl;
 begin
-//  try
-    IXpbBuilderImpl(this).dispose();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IXpbBuilderImpl(this).dispose();
 end;
 
 procedure IXpbBuilderImpl_clearDispatcher(this: IXpbBuilder; status: IStatus); cdecl;
 begin
-//  try
-    IXpbBuilderImpl(this).clear(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IXpbBuilderImpl(this).clear(status);
 end;
 
 procedure IXpbBuilderImpl_removeCurrentDispatcher(this: IXpbBuilder; status: IStatus); cdecl;
 begin
-//  try
-    IXpbBuilderImpl(this).removeCurrent(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IXpbBuilderImpl(this).removeCurrent(status);
 end;
 
 procedure IXpbBuilderImpl_insertIntDispatcher(this: IXpbBuilder; status: IStatus; tag: Byte; value: Integer); cdecl;
 begin
-//  try
-    IXpbBuilderImpl(this).insertInt(status, tag, value);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IXpbBuilderImpl(this).insertInt(status, tag, value);
 end;
 
 procedure IXpbBuilderImpl_insertBigIntDispatcher(this: IXpbBuilder; status: IStatus; tag: Byte; value: Int64); cdecl;
 begin
-//  try
-    IXpbBuilderImpl(this).insertBigInt(status, tag, value);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IXpbBuilderImpl(this).insertBigInt(status, tag, value);
 end;
 
 procedure IXpbBuilderImpl_insertBytesDispatcher(this: IXpbBuilder; status: IStatus; tag: Byte; bytes: Pointer; length: Cardinal); cdecl;
 begin
-//  try
-    IXpbBuilderImpl(this).insertBytes(status, tag, bytes, length);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IXpbBuilderImpl(this).insertBytes(status, tag, bytes, length);
 end;
 
 procedure IXpbBuilderImpl_insertStringDispatcher(this: IXpbBuilder; status: IStatus; tag: Byte; str: PAnsiChar); cdecl;
 begin
-//  try
-    IXpbBuilderImpl(this).insertString(status, tag, str);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IXpbBuilderImpl(this).insertString(status, tag, str);
 end;
 
 procedure IXpbBuilderImpl_insertTagDispatcher(this: IXpbBuilder; status: IStatus; tag: Byte); cdecl;
 begin
-//  try
-    IXpbBuilderImpl(this).insertTag(status, tag);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IXpbBuilderImpl(this).insertTag(status, tag);
 end;
 
 function IXpbBuilderImpl_isEofDispatcher(this: IXpbBuilder; status: IStatus): Boolean; cdecl;
 begin
-//  try
-    Result := IXpbBuilderImpl(this).isEof(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IXpbBuilderImpl(this).isEof(status);
 end;
 
 procedure IXpbBuilderImpl_moveNextDispatcher(this: IXpbBuilder; status: IStatus); cdecl;
 begin
-//  try
-    IXpbBuilderImpl(this).moveNext(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IXpbBuilderImpl(this).moveNext(status);
 end;
 
 procedure IXpbBuilderImpl_rewindDispatcher(this: IXpbBuilder; status: IStatus); cdecl;
 begin
-//  try
-    IXpbBuilderImpl(this).rewind(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IXpbBuilderImpl(this).rewind(status);
 end;
 
 function IXpbBuilderImpl_findFirstDispatcher(this: IXpbBuilder; status: IStatus; tag: Byte): Boolean; cdecl;
 begin
-//  try
-    Result := IXpbBuilderImpl(this).findFirst(status, tag);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IXpbBuilderImpl(this).findFirst(status, tag);
 end;
 
 function IXpbBuilderImpl_findNextDispatcher(this: IXpbBuilder; status: IStatus): Boolean; cdecl;
 begin
-//  try
-    Result := IXpbBuilderImpl(this).findNext(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IXpbBuilderImpl(this).findNext(status);
 end;
 
 function IXpbBuilderImpl_getTagDispatcher(this: IXpbBuilder; status: IStatus): Byte; cdecl;
 begin
-//  try
-    Result := IXpbBuilderImpl(this).getTag(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IXpbBuilderImpl(this).getTag(status);
 end;
 
 function IXpbBuilderImpl_getLengthDispatcher(this: IXpbBuilder; status: IStatus): Cardinal; cdecl;
 begin
-//  try
-    Result := IXpbBuilderImpl(this).getLength(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IXpbBuilderImpl(this).getLength(status);
 end;
 
 function IXpbBuilderImpl_getIntDispatcher(this: IXpbBuilder; status: IStatus): Integer; cdecl;
 begin
-//  try
-    Result := IXpbBuilderImpl(this).getInt(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IXpbBuilderImpl(this).getInt(status);
 end;
 
 function IXpbBuilderImpl_getBigIntDispatcher(this: IXpbBuilder; status: IStatus): Int64; cdecl;
 begin
-//  try
-    Result := IXpbBuilderImpl(this).getBigInt(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IXpbBuilderImpl(this).getBigInt(status);
 end;
 
 function IXpbBuilderImpl_getStringDispatcher(this: IXpbBuilder; status: IStatus): PAnsiChar; cdecl;
 begin
-//  try
-    Result := IXpbBuilderImpl(this).getString(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IXpbBuilderImpl(this).getString(status);
 end;
 
-function IXpbBuilderImpl_getBytesDispatcher(this: IXpbBuilder; status: IStatus): BytePtr; cdecl;
+function IXpbBuilderImpl_getBytesDispatcher(this: IXpbBuilder; status: IStatus): PByte; cdecl;
 begin
-//  try
-    Result := IXpbBuilderImpl(this).getBytes(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IXpbBuilderImpl(this).getBytes(status);
 end;
 
 function IXpbBuilderImpl_getBufferLengthDispatcher(this: IXpbBuilder; status: IStatus): Cardinal; cdecl;
 begin
-//  try
-    Result := IXpbBuilderImpl(this).getBufferLength(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IXpbBuilderImpl(this).getBufferLength(status);
 end;
 
-function IXpbBuilderImpl_getBufferDispatcher(this: IXpbBuilder; status: IStatus): BytePtr; cdecl;
+function IXpbBuilderImpl_getBufferDispatcher(this: IXpbBuilder; status: IStatus): PByte; cdecl;
 begin
-//  try
-    Result := IXpbBuilderImpl(this).getBuffer(status);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IXpbBuilderImpl(this).getBuffer(status);
 end;
 
 var
@@ -11786,83 +9341,47 @@ end;
 
 function ITraceConnectionImpl_getKindDispatcher(this: ITraceConnection): Cardinal; cdecl;
 begin
-//  try
-    Result := ITraceConnectionImpl(this).getKind();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceConnectionImpl(this).getKind();
 end;
 
 function ITraceConnectionImpl_getProcessIDDispatcher(this: ITraceConnection): Integer; cdecl;
 begin
-//  try
-    Result := ITraceConnectionImpl(this).getProcessID();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceConnectionImpl(this).getProcessID();
 end;
 
 function ITraceConnectionImpl_getUserNameDispatcher(this: ITraceConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceConnectionImpl(this).getUserName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceConnectionImpl(this).getUserName();
 end;
 
 function ITraceConnectionImpl_getRoleNameDispatcher(this: ITraceConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceConnectionImpl(this).getRoleName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceConnectionImpl(this).getRoleName();
 end;
 
 function ITraceConnectionImpl_getCharSetDispatcher(this: ITraceConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceConnectionImpl(this).getCharSet();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceConnectionImpl(this).getCharSet();
 end;
 
 function ITraceConnectionImpl_getRemoteProtocolDispatcher(this: ITraceConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceConnectionImpl(this).getRemoteProtocol();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceConnectionImpl(this).getRemoteProtocol();
 end;
 
 function ITraceConnectionImpl_getRemoteAddressDispatcher(this: ITraceConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceConnectionImpl(this).getRemoteAddress();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceConnectionImpl(this).getRemoteAddress();
 end;
 
 function ITraceConnectionImpl_getRemoteProcessIDDispatcher(this: ITraceConnection): Integer; cdecl;
 begin
-//  try
-    Result := ITraceConnectionImpl(this).getRemoteProcessID();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceConnectionImpl(this).getRemoteProcessID();
 end;
 
 function ITraceConnectionImpl_getRemoteProcessNameDispatcher(this: ITraceConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceConnectionImpl(this).getRemoteProcessName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceConnectionImpl(this).getRemoteProcessName();
 end;
 
 var
@@ -11875,101 +9394,57 @@ end;
 
 function ITraceDatabaseConnectionImpl_getKindDispatcher(this: ITraceDatabaseConnection): Cardinal; cdecl;
 begin
-//  try
-    Result := ITraceDatabaseConnectionImpl(this).getKind();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceDatabaseConnectionImpl(this).getKind();
 end;
 
 function ITraceDatabaseConnectionImpl_getProcessIDDispatcher(this: ITraceDatabaseConnection): Integer; cdecl;
 begin
-//  try
-    Result := ITraceDatabaseConnectionImpl(this).getProcessID();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceDatabaseConnectionImpl(this).getProcessID();
 end;
 
 function ITraceDatabaseConnectionImpl_getUserNameDispatcher(this: ITraceDatabaseConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceDatabaseConnectionImpl(this).getUserName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceDatabaseConnectionImpl(this).getUserName();
 end;
 
 function ITraceDatabaseConnectionImpl_getRoleNameDispatcher(this: ITraceDatabaseConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceDatabaseConnectionImpl(this).getRoleName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceDatabaseConnectionImpl(this).getRoleName();
 end;
 
 function ITraceDatabaseConnectionImpl_getCharSetDispatcher(this: ITraceDatabaseConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceDatabaseConnectionImpl(this).getCharSet();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceDatabaseConnectionImpl(this).getCharSet();
 end;
 
 function ITraceDatabaseConnectionImpl_getRemoteProtocolDispatcher(this: ITraceDatabaseConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceDatabaseConnectionImpl(this).getRemoteProtocol();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceDatabaseConnectionImpl(this).getRemoteProtocol();
 end;
 
 function ITraceDatabaseConnectionImpl_getRemoteAddressDispatcher(this: ITraceDatabaseConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceDatabaseConnectionImpl(this).getRemoteAddress();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceDatabaseConnectionImpl(this).getRemoteAddress();
 end;
 
 function ITraceDatabaseConnectionImpl_getRemoteProcessIDDispatcher(this: ITraceDatabaseConnection): Integer; cdecl;
 begin
-//  try
-    Result := ITraceDatabaseConnectionImpl(this).getRemoteProcessID();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceDatabaseConnectionImpl(this).getRemoteProcessID();
 end;
 
 function ITraceDatabaseConnectionImpl_getRemoteProcessNameDispatcher(this: ITraceDatabaseConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceDatabaseConnectionImpl(this).getRemoteProcessName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceDatabaseConnectionImpl(this).getRemoteProcessName();
 end;
 
 function ITraceDatabaseConnectionImpl_getConnectionIDDispatcher(this: ITraceDatabaseConnection): Int64; cdecl;
 begin
-//  try
-    Result := ITraceDatabaseConnectionImpl(this).getConnectionID();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceDatabaseConnectionImpl(this).getConnectionID();
 end;
 
 function ITraceDatabaseConnectionImpl_getDatabaseNameDispatcher(this: ITraceDatabaseConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceDatabaseConnectionImpl(this).getDatabaseName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceDatabaseConnectionImpl(this).getDatabaseName();
 end;
 
 var
@@ -11982,47 +9457,37 @@ end;
 
 function ITraceTransactionImpl_getTransactionIDDispatcher(this: ITraceTransaction): Int64; cdecl;
 begin
-//  try
-    Result := ITraceTransactionImpl(this).getTransactionID();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceTransactionImpl(this).getTransactionID();
 end;
 
 function ITraceTransactionImpl_getReadOnlyDispatcher(this: ITraceTransaction): Boolean; cdecl;
 begin
-//  try
-    Result := ITraceTransactionImpl(this).getReadOnly();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceTransactionImpl(this).getReadOnly();
 end;
 
 function ITraceTransactionImpl_getWaitDispatcher(this: ITraceTransaction): Integer; cdecl;
 begin
-//  try
-    Result := ITraceTransactionImpl(this).getWait();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceTransactionImpl(this).getWait();
 end;
 
 function ITraceTransactionImpl_getIsolationDispatcher(this: ITraceTransaction): Cardinal; cdecl;
 begin
-//  try
-    Result := ITraceTransactionImpl(this).getIsolation();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceTransactionImpl(this).getIsolation();
 end;
 
-function ITraceTransactionImpl_getPerfDispatcher(this: ITraceTransaction): PerformanceInfoPtr; cdecl;
+function ITraceTransactionImpl_getPerfDispatcher(this: ITraceTransaction): PPerformanceInfo; cdecl;
 begin
-//  try
-    Result := ITraceTransactionImpl(this).getPerf();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceTransactionImpl(this).getPerf();
+end;
+
+function ITraceTransactionImpl_getInitialIDDispatcher(this: ITraceTransaction): Int64; cdecl;
+begin
+  Result := ITraceTransactionImpl(this).getInitialID();
+end;
+
+function ITraceTransactionImpl_getPreviousIDDispatcher(this: ITraceTransaction): Int64; cdecl;
+begin
+  Result := ITraceTransactionImpl(this).getPreviousID();
 end;
 
 var
@@ -12035,29 +9500,17 @@ end;
 
 function ITraceParamsImpl_getCountDispatcher(this: ITraceParams): Cardinal; cdecl;
 begin
-//  try
-    Result := ITraceParamsImpl(this).getCount();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceParamsImpl(this).getCount();
 end;
 
-function ITraceParamsImpl_getParamDispatcher(this: ITraceParams; idx: Cardinal): dscPtr; cdecl;
+function ITraceParamsImpl_getParamDispatcher(this: ITraceParams; idx: Cardinal): Pdsc; cdecl;
 begin
-//  try
-    Result := ITraceParamsImpl(this).getParam(idx);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceParamsImpl(this).getParam(idx);
 end;
 
 function ITraceParamsImpl_getTextUTF8Dispatcher(this: ITraceParams; status: IStatus; idx: Cardinal): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceParamsImpl(this).getTextUTF8(status, idx);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := ITraceParamsImpl(this).getTextUTF8(status, idx);
 end;
 
 var
@@ -12070,20 +9523,12 @@ end;
 
 function ITraceStatementImpl_getStmtIDDispatcher(this: ITraceStatement): Int64; cdecl;
 begin
-//  try
-    Result := ITraceStatementImpl(this).getStmtID();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceStatementImpl(this).getStmtID();
 end;
 
-function ITraceStatementImpl_getPerfDispatcher(this: ITraceStatement): PerformanceInfoPtr; cdecl;
+function ITraceStatementImpl_getPerfDispatcher(this: ITraceStatement): PPerformanceInfo; cdecl;
 begin
-//  try
-    Result := ITraceStatementImpl(this).getPerf();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceStatementImpl(this).getPerf();
 end;
 
 var
@@ -12096,65 +9541,37 @@ end;
 
 function ITraceSQLStatementImpl_getStmtIDDispatcher(this: ITraceSQLStatement): Int64; cdecl;
 begin
-//  try
-    Result := ITraceSQLStatementImpl(this).getStmtID();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceSQLStatementImpl(this).getStmtID();
 end;
 
-function ITraceSQLStatementImpl_getPerfDispatcher(this: ITraceSQLStatement): PerformanceInfoPtr; cdecl;
+function ITraceSQLStatementImpl_getPerfDispatcher(this: ITraceSQLStatement): PPerformanceInfo; cdecl;
 begin
-//  try
-    Result := ITraceSQLStatementImpl(this).getPerf();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceSQLStatementImpl(this).getPerf();
 end;
 
 function ITraceSQLStatementImpl_getTextDispatcher(this: ITraceSQLStatement): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceSQLStatementImpl(this).getText();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceSQLStatementImpl(this).getText();
 end;
 
 function ITraceSQLStatementImpl_getPlanDispatcher(this: ITraceSQLStatement): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceSQLStatementImpl(this).getPlan();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceSQLStatementImpl(this).getPlan();
 end;
 
 function ITraceSQLStatementImpl_getInputsDispatcher(this: ITraceSQLStatement): ITraceParams; cdecl;
 begin
-//  try
-    Result := ITraceSQLStatementImpl(this).getInputs();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceSQLStatementImpl(this).getInputs();
 end;
 
 function ITraceSQLStatementImpl_getTextUTF8Dispatcher(this: ITraceSQLStatement): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceSQLStatementImpl(this).getTextUTF8();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceSQLStatementImpl(this).getTextUTF8();
 end;
 
 function ITraceSQLStatementImpl_getExplainedPlanDispatcher(this: ITraceSQLStatement): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceSQLStatementImpl(this).getExplainedPlan();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceSQLStatementImpl(this).getExplainedPlan();
 end;
 
 var
@@ -12167,47 +9584,27 @@ end;
 
 function ITraceBLRStatementImpl_getStmtIDDispatcher(this: ITraceBLRStatement): Int64; cdecl;
 begin
-//  try
-    Result := ITraceBLRStatementImpl(this).getStmtID();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceBLRStatementImpl(this).getStmtID();
 end;
 
-function ITraceBLRStatementImpl_getPerfDispatcher(this: ITraceBLRStatement): PerformanceInfoPtr; cdecl;
+function ITraceBLRStatementImpl_getPerfDispatcher(this: ITraceBLRStatement): PPerformanceInfo; cdecl;
 begin
-//  try
-    Result := ITraceBLRStatementImpl(this).getPerf();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceBLRStatementImpl(this).getPerf();
 end;
 
-function ITraceBLRStatementImpl_getDataDispatcher(this: ITraceBLRStatement): BytePtr; cdecl;
+function ITraceBLRStatementImpl_getDataDispatcher(this: ITraceBLRStatement): PByte; cdecl;
 begin
-//  try
-    Result := ITraceBLRStatementImpl(this).getData();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceBLRStatementImpl(this).getData();
 end;
 
 function ITraceBLRStatementImpl_getDataLengthDispatcher(this: ITraceBLRStatement): Cardinal; cdecl;
 begin
-//  try
-    Result := ITraceBLRStatementImpl(this).getDataLength();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceBLRStatementImpl(this).getDataLength();
 end;
 
 function ITraceBLRStatementImpl_getTextDispatcher(this: ITraceBLRStatement): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceBLRStatementImpl(this).getText();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceBLRStatementImpl(this).getText();
 end;
 
 var
@@ -12218,31 +9615,19 @@ begin
   vTable := ITraceBLRStatementImpl_vTable;
 end;
 
-function ITraceDYNRequestImpl_getDataDispatcher(this: ITraceDYNRequest): BytePtr; cdecl;
+function ITraceDYNRequestImpl_getDataDispatcher(this: ITraceDYNRequest): PByte; cdecl;
 begin
-//  try
-    Result := ITraceDYNRequestImpl(this).getData();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceDYNRequestImpl(this).getData();
 end;
 
 function ITraceDYNRequestImpl_getDataLengthDispatcher(this: ITraceDYNRequest): Cardinal; cdecl;
 begin
-//  try
-    Result := ITraceDYNRequestImpl(this).getDataLength();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceDYNRequestImpl(this).getDataLength();
 end;
 
 function ITraceDYNRequestImpl_getTextDispatcher(this: ITraceDYNRequest): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceDYNRequestImpl(this).getText();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceDYNRequestImpl(this).getText();
 end;
 
 var
@@ -12255,29 +9640,17 @@ end;
 
 function ITraceContextVariableImpl_getNameSpaceDispatcher(this: ITraceContextVariable): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceContextVariableImpl(this).getNameSpace();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceContextVariableImpl(this).getNameSpace();
 end;
 
 function ITraceContextVariableImpl_getVarNameDispatcher(this: ITraceContextVariable): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceContextVariableImpl(this).getVarName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceContextVariableImpl(this).getVarName();
 end;
 
 function ITraceContextVariableImpl_getVarValueDispatcher(this: ITraceContextVariable): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceContextVariableImpl(this).getVarValue();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceContextVariableImpl(this).getVarValue();
 end;
 
 var
@@ -12290,29 +9663,17 @@ end;
 
 function ITraceProcedureImpl_getProcNameDispatcher(this: ITraceProcedure): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceProcedureImpl(this).getProcName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceProcedureImpl(this).getProcName();
 end;
 
 function ITraceProcedureImpl_getInputsDispatcher(this: ITraceProcedure): ITraceParams; cdecl;
 begin
-//  try
-    Result := ITraceProcedureImpl(this).getInputs();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceProcedureImpl(this).getInputs();
 end;
 
-function ITraceProcedureImpl_getPerfDispatcher(this: ITraceProcedure): PerformanceInfoPtr; cdecl;
+function ITraceProcedureImpl_getPerfDispatcher(this: ITraceProcedure): PPerformanceInfo; cdecl;
 begin
-//  try
-    Result := ITraceProcedureImpl(this).getPerf();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceProcedureImpl(this).getPerf();
 end;
 
 var
@@ -12325,38 +9686,22 @@ end;
 
 function ITraceFunctionImpl_getFuncNameDispatcher(this: ITraceFunction): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceFunctionImpl(this).getFuncName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceFunctionImpl(this).getFuncName();
 end;
 
 function ITraceFunctionImpl_getInputsDispatcher(this: ITraceFunction): ITraceParams; cdecl;
 begin
-//  try
-    Result := ITraceFunctionImpl(this).getInputs();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceFunctionImpl(this).getInputs();
 end;
 
 function ITraceFunctionImpl_getResultDispatcher(this: ITraceFunction): ITraceParams; cdecl;
 begin
-//  try
-    Result := ITraceFunctionImpl(this).getResult();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceFunctionImpl(this).getResult();
 end;
 
-function ITraceFunctionImpl_getPerfDispatcher(this: ITraceFunction): PerformanceInfoPtr; cdecl;
+function ITraceFunctionImpl_getPerfDispatcher(this: ITraceFunction): PPerformanceInfo; cdecl;
 begin
-//  try
-    Result := ITraceFunctionImpl(this).getPerf();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceFunctionImpl(this).getPerf();
 end;
 
 var
@@ -12369,47 +9714,27 @@ end;
 
 function ITraceTriggerImpl_getTriggerNameDispatcher(this: ITraceTrigger): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceTriggerImpl(this).getTriggerName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceTriggerImpl(this).getTriggerName();
 end;
 
 function ITraceTriggerImpl_getRelationNameDispatcher(this: ITraceTrigger): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceTriggerImpl(this).getRelationName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceTriggerImpl(this).getRelationName();
 end;
 
 function ITraceTriggerImpl_getActionDispatcher(this: ITraceTrigger): Integer; cdecl;
 begin
-//  try
-    Result := ITraceTriggerImpl(this).getAction();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceTriggerImpl(this).getAction();
 end;
 
 function ITraceTriggerImpl_getWhichDispatcher(this: ITraceTrigger): Integer; cdecl;
 begin
-//  try
-    Result := ITraceTriggerImpl(this).getWhich();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceTriggerImpl(this).getWhich();
 end;
 
-function ITraceTriggerImpl_getPerfDispatcher(this: ITraceTrigger): PerformanceInfoPtr; cdecl;
+function ITraceTriggerImpl_getPerfDispatcher(this: ITraceTrigger): PPerformanceInfo; cdecl;
 begin
-//  try
-    Result := ITraceTriggerImpl(this).getPerf();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceTriggerImpl(this).getPerf();
 end;
 
 var
@@ -12422,110 +9747,62 @@ end;
 
 function ITraceServiceConnectionImpl_getKindDispatcher(this: ITraceServiceConnection): Cardinal; cdecl;
 begin
-//  try
-    Result := ITraceServiceConnectionImpl(this).getKind();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceServiceConnectionImpl(this).getKind();
 end;
 
 function ITraceServiceConnectionImpl_getProcessIDDispatcher(this: ITraceServiceConnection): Integer; cdecl;
 begin
-//  try
-    Result := ITraceServiceConnectionImpl(this).getProcessID();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceServiceConnectionImpl(this).getProcessID();
 end;
 
 function ITraceServiceConnectionImpl_getUserNameDispatcher(this: ITraceServiceConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceServiceConnectionImpl(this).getUserName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceServiceConnectionImpl(this).getUserName();
 end;
 
 function ITraceServiceConnectionImpl_getRoleNameDispatcher(this: ITraceServiceConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceServiceConnectionImpl(this).getRoleName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceServiceConnectionImpl(this).getRoleName();
 end;
 
 function ITraceServiceConnectionImpl_getCharSetDispatcher(this: ITraceServiceConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceServiceConnectionImpl(this).getCharSet();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceServiceConnectionImpl(this).getCharSet();
 end;
 
 function ITraceServiceConnectionImpl_getRemoteProtocolDispatcher(this: ITraceServiceConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceServiceConnectionImpl(this).getRemoteProtocol();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceServiceConnectionImpl(this).getRemoteProtocol();
 end;
 
 function ITraceServiceConnectionImpl_getRemoteAddressDispatcher(this: ITraceServiceConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceServiceConnectionImpl(this).getRemoteAddress();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceServiceConnectionImpl(this).getRemoteAddress();
 end;
 
 function ITraceServiceConnectionImpl_getRemoteProcessIDDispatcher(this: ITraceServiceConnection): Integer; cdecl;
 begin
-//  try
-    Result := ITraceServiceConnectionImpl(this).getRemoteProcessID();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceServiceConnectionImpl(this).getRemoteProcessID();
 end;
 
 function ITraceServiceConnectionImpl_getRemoteProcessNameDispatcher(this: ITraceServiceConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceServiceConnectionImpl(this).getRemoteProcessName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceServiceConnectionImpl(this).getRemoteProcessName();
 end;
 
 function ITraceServiceConnectionImpl_getServiceIDDispatcher(this: ITraceServiceConnection): Pointer; cdecl;
 begin
-//  try
-    Result := ITraceServiceConnectionImpl(this).getServiceID();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceServiceConnectionImpl(this).getServiceID();
 end;
 
 function ITraceServiceConnectionImpl_getServiceMgrDispatcher(this: ITraceServiceConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceServiceConnectionImpl(this).getServiceMgr();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceServiceConnectionImpl(this).getServiceMgr();
 end;
 
 function ITraceServiceConnectionImpl_getServiceNameDispatcher(this: ITraceServiceConnection): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceServiceConnectionImpl(this).getServiceName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceServiceConnectionImpl(this).getServiceName();
 end;
 
 var
@@ -12538,38 +9815,22 @@ end;
 
 function ITraceStatusVectorImpl_hasErrorDispatcher(this: ITraceStatusVector): Boolean; cdecl;
 begin
-//  try
-    Result := ITraceStatusVectorImpl(this).hasError();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceStatusVectorImpl(this).hasError();
 end;
 
 function ITraceStatusVectorImpl_hasWarningDispatcher(this: ITraceStatusVector): Boolean; cdecl;
 begin
-//  try
-    Result := ITraceStatusVectorImpl(this).hasWarning();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceStatusVectorImpl(this).hasWarning();
 end;
 
 function ITraceStatusVectorImpl_getStatusDispatcher(this: ITraceStatusVector): IStatus; cdecl;
 begin
-//  try
-    Result := ITraceStatusVectorImpl(this).getStatus();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceStatusVectorImpl(this).getStatus();
 end;
 
 function ITraceStatusVectorImpl_getTextDispatcher(this: ITraceStatusVector): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceStatusVectorImpl(this).getText();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceStatusVectorImpl(this).getText();
 end;
 
 var
@@ -12582,47 +9843,27 @@ end;
 
 function ITraceSweepInfoImpl_getOITDispatcher(this: ITraceSweepInfo): Int64; cdecl;
 begin
-//  try
-    Result := ITraceSweepInfoImpl(this).getOIT();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceSweepInfoImpl(this).getOIT();
 end;
 
 function ITraceSweepInfoImpl_getOSTDispatcher(this: ITraceSweepInfo): Int64; cdecl;
 begin
-//  try
-    Result := ITraceSweepInfoImpl(this).getOST();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceSweepInfoImpl(this).getOST();
 end;
 
 function ITraceSweepInfoImpl_getOATDispatcher(this: ITraceSweepInfo): Int64; cdecl;
 begin
-//  try
-    Result := ITraceSweepInfoImpl(this).getOAT();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceSweepInfoImpl(this).getOAT();
 end;
 
 function ITraceSweepInfoImpl_getNextDispatcher(this: ITraceSweepInfo): Int64; cdecl;
 begin
-//  try
-    Result := ITraceSweepInfoImpl(this).getNext();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceSweepInfoImpl(this).getNext();
 end;
 
-function ITraceSweepInfoImpl_getPerfDispatcher(this: ITraceSweepInfo): PerformanceInfoPtr; cdecl;
+function ITraceSweepInfoImpl_getPerfDispatcher(this: ITraceSweepInfo): PPerformanceInfo; cdecl;
 begin
-//  try
-    Result := ITraceSweepInfoImpl(this).getPerf();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceSweepInfoImpl(this).getPerf();
 end;
 
 var
@@ -12635,29 +9876,22 @@ end;
 
 procedure ITraceLogWriterImpl_addRefDispatcher(this: ITraceLogWriter); cdecl;
 begin
-//  try
-    ITraceLogWriterImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  ITraceLogWriterImpl(this).addRef();
 end;
 
 function ITraceLogWriterImpl_releaseDispatcher(this: ITraceLogWriter): Integer; cdecl;
 begin
-//  try
-    Result := ITraceLogWriterImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceLogWriterImpl(this).release();
 end;
 
 function ITraceLogWriterImpl_writeDispatcher(this: ITraceLogWriter; buf: Pointer; size: Cardinal): Cardinal; cdecl;
 begin
-//  try
-    Result := ITraceLogWriterImpl(this).write(buf, size);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceLogWriterImpl(this).write(buf, size);
+end;
+
+function ITraceLogWriterImpl_write_sDispatcher(this: ITraceLogWriter; status: IStatus; buf: Pointer; size: Cardinal): Cardinal; cdecl;
+begin
+  Result := ITraceLogWriterImpl(this).write_s(status, buf, size);
 end;
 
 var
@@ -12670,65 +9904,37 @@ end;
 
 function ITraceInitInfoImpl_getConfigTextDispatcher(this: ITraceInitInfo): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceInitInfoImpl(this).getConfigText();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceInitInfoImpl(this).getConfigText();
 end;
 
 function ITraceInitInfoImpl_getTraceSessionIDDispatcher(this: ITraceInitInfo): Integer; cdecl;
 begin
-//  try
-    Result := ITraceInitInfoImpl(this).getTraceSessionID();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceInitInfoImpl(this).getTraceSessionID();
 end;
 
 function ITraceInitInfoImpl_getTraceSessionNameDispatcher(this: ITraceInitInfo): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceInitInfoImpl(this).getTraceSessionName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceInitInfoImpl(this).getTraceSessionName();
 end;
 
 function ITraceInitInfoImpl_getFirebirdRootDirectoryDispatcher(this: ITraceInitInfo): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceInitInfoImpl(this).getFirebirdRootDirectory();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceInitInfoImpl(this).getFirebirdRootDirectory();
 end;
 
 function ITraceInitInfoImpl_getDatabaseNameDispatcher(this: ITraceInitInfo): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITraceInitInfoImpl(this).getDatabaseName();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceInitInfoImpl(this).getDatabaseName();
 end;
 
 function ITraceInitInfoImpl_getConnectionDispatcher(this: ITraceInitInfo): ITraceDatabaseConnection; cdecl;
 begin
-//  try
-    Result := ITraceInitInfoImpl(this).getConnection();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceInitInfoImpl(this).getConnection();
 end;
 
 function ITraceInitInfoImpl_getLogWriterDispatcher(this: ITraceInitInfo): ITraceLogWriter; cdecl;
 begin
-//  try
-    Result := ITraceInitInfoImpl(this).getLogWriter();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceInitInfoImpl(this).getLogWriter();
 end;
 
 var
@@ -12741,209 +9947,117 @@ end;
 
 procedure ITracePluginImpl_addRefDispatcher(this: ITracePlugin); cdecl;
 begin
-//  try
-    ITracePluginImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  ITracePluginImpl(this).addRef();
 end;
 
 function ITracePluginImpl_releaseDispatcher(this: ITracePlugin): Integer; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).release();
 end;
 
 function ITracePluginImpl_trace_get_errorDispatcher(this: ITracePlugin): PAnsiChar; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_get_error();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_get_error();
 end;
 
 function ITracePluginImpl_trace_attachDispatcher(this: ITracePlugin; connection: ITraceDatabaseConnection; create_db: Boolean; att_result: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_attach(connection, create_db, att_result);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_attach(connection, create_db, att_result);
 end;
 
 function ITracePluginImpl_trace_detachDispatcher(this: ITracePlugin; connection: ITraceDatabaseConnection; drop_db: Boolean): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_detach(connection, drop_db);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_detach(connection, drop_db);
 end;
 
-function ITracePluginImpl_trace_transaction_startDispatcher(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; tpb_length: Cardinal; tpb: BytePtr; tra_result: Cardinal): Boolean; cdecl;
+function ITracePluginImpl_trace_transaction_startDispatcher(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; tpb_length: Cardinal; tpb: PByte; tra_result: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_transaction_start(connection, transaction, tpb_length, tpb, tra_result);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_transaction_start(connection, transaction, tpb_length, tpb, tra_result);
 end;
 
 function ITracePluginImpl_trace_transaction_endDispatcher(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; commit: Boolean; retain_context: Boolean; tra_result: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_transaction_end(connection, transaction, commit, retain_context, tra_result);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_transaction_end(connection, transaction, commit, retain_context, tra_result);
 end;
 
 function ITracePluginImpl_trace_proc_executeDispatcher(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; procedure_: ITraceProcedure; started: Boolean; proc_result: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_proc_execute(connection, transaction, procedure_, started, proc_result);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_proc_execute(connection, transaction, procedure_, started, proc_result);
 end;
 
 function ITracePluginImpl_trace_trigger_executeDispatcher(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; trigger: ITraceTrigger; started: Boolean; trig_result: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_trigger_execute(connection, transaction, trigger, started, trig_result);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_trigger_execute(connection, transaction, trigger, started, trig_result);
 end;
 
 function ITracePluginImpl_trace_set_contextDispatcher(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; variable: ITraceContextVariable): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_set_context(connection, transaction, variable);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_set_context(connection, transaction, variable);
 end;
 
 function ITracePluginImpl_trace_dsql_prepareDispatcher(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; statement: ITraceSQLStatement; time_millis: Int64; req_result: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_dsql_prepare(connection, transaction, statement, time_millis, req_result);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_dsql_prepare(connection, transaction, statement, time_millis, req_result);
 end;
 
 function ITracePluginImpl_trace_dsql_freeDispatcher(this: ITracePlugin; connection: ITraceDatabaseConnection; statement: ITraceSQLStatement; option: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_dsql_free(connection, statement, option);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_dsql_free(connection, statement, option);
 end;
 
 function ITracePluginImpl_trace_dsql_executeDispatcher(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; statement: ITraceSQLStatement; started: Boolean; req_result: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_dsql_execute(connection, transaction, statement, started, req_result);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_dsql_execute(connection, transaction, statement, started, req_result);
 end;
 
 function ITracePluginImpl_trace_blr_compileDispatcher(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; statement: ITraceBLRStatement; time_millis: Int64; req_result: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_blr_compile(connection, transaction, statement, time_millis, req_result);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_blr_compile(connection, transaction, statement, time_millis, req_result);
 end;
 
 function ITracePluginImpl_trace_blr_executeDispatcher(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; statement: ITraceBLRStatement; req_result: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_blr_execute(connection, transaction, statement, req_result);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_blr_execute(connection, transaction, statement, req_result);
 end;
 
 function ITracePluginImpl_trace_dyn_executeDispatcher(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; request: ITraceDYNRequest; time_millis: Int64; req_result: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_dyn_execute(connection, transaction, request, time_millis, req_result);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_dyn_execute(connection, transaction, request, time_millis, req_result);
 end;
 
 function ITracePluginImpl_trace_service_attachDispatcher(this: ITracePlugin; service: ITraceServiceConnection; att_result: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_service_attach(service, att_result);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_service_attach(service, att_result);
 end;
 
 function ITracePluginImpl_trace_service_startDispatcher(this: ITracePlugin; service: ITraceServiceConnection; switches_length: Cardinal; switches: PAnsiChar; start_result: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_service_start(service, switches_length, switches, start_result);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_service_start(service, switches_length, switches, start_result);
 end;
 
-function ITracePluginImpl_trace_service_queryDispatcher(this: ITracePlugin; service: ITraceServiceConnection; send_item_length: Cardinal; send_items: BytePtr; recv_item_length: Cardinal; recv_items: BytePtr; query_result: Cardinal): Boolean; cdecl;
+function ITracePluginImpl_trace_service_queryDispatcher(this: ITracePlugin; service: ITraceServiceConnection; send_item_length: Cardinal; send_items: PByte; recv_item_length: Cardinal; recv_items: PByte; query_result: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_service_query(service, send_item_length, send_items, recv_item_length, recv_items, query_result);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_service_query(service, send_item_length, send_items, recv_item_length, recv_items, query_result);
 end;
 
 function ITracePluginImpl_trace_service_detachDispatcher(this: ITracePlugin; service: ITraceServiceConnection; detach_result: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_service_detach(service, detach_result);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_service_detach(service, detach_result);
 end;
 
 function ITracePluginImpl_trace_event_errorDispatcher(this: ITracePlugin; connection: ITraceConnection; status: ITraceStatusVector; function_: PAnsiChar): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_event_error(connection, status, function_);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_event_error(connection, status, function_);
 end;
 
 function ITracePluginImpl_trace_event_sweepDispatcher(this: ITracePlugin; connection: ITraceDatabaseConnection; sweep: ITraceSweepInfo; sweep_state: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_event_sweep(connection, sweep, sweep_state);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_event_sweep(connection, sweep, sweep_state);
 end;
 
 function ITracePluginImpl_trace_func_executeDispatcher(this: ITracePlugin; connection: ITraceDatabaseConnection; transaction: ITraceTransaction; function_: ITraceFunction; started: Boolean; func_result: Cardinal): Boolean; cdecl;
 begin
-//  try
-    Result := ITracePluginImpl(this).trace_func_execute(connection, transaction, function_, started, func_result);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITracePluginImpl(this).trace_func_execute(connection, transaction, function_, started, func_result);
 end;
 
 var
@@ -12956,56 +10070,32 @@ end;
 
 procedure ITraceFactoryImpl_addRefDispatcher(this: ITraceFactory); cdecl;
 begin
-//  try
-    ITraceFactoryImpl(this).addRef();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  ITraceFactoryImpl(this).addRef();
 end;
 
 function ITraceFactoryImpl_releaseDispatcher(this: ITraceFactory): Integer; cdecl;
 begin
-//  try
-    Result := ITraceFactoryImpl(this).release();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceFactoryImpl(this).release();
 end;
 
 procedure ITraceFactoryImpl_setOwnerDispatcher(this: ITraceFactory; r: IReferenceCounted); cdecl;
 begin
-//  try
-    ITraceFactoryImpl(this).setOwner(r);
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  ITraceFactoryImpl(this).setOwner(r);
 end;
 
 function ITraceFactoryImpl_getOwnerDispatcher(this: ITraceFactory): IReferenceCounted; cdecl;
 begin
-//  try
-    Result := ITraceFactoryImpl(this).getOwner();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceFactoryImpl(this).getOwner();
 end;
 
-function ITraceFactoryImpl_trace_needsDispatcher(this: ITraceFactory): QWord; cdecl;
+function ITraceFactoryImpl_trace_needsDispatcher(this: ITraceFactory): UInt64; cdecl;
 begin
-//  try
-    Result := ITraceFactoryImpl(this).trace_needs();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := ITraceFactoryImpl(this).trace_needs();
 end;
 
 function ITraceFactoryImpl_trace_createDispatcher(this: ITraceFactory; status: IStatus; init_info: ITraceInitInfo): ITracePlugin; cdecl;
 begin
-//  try
-    Result := ITraceFactoryImpl(this).trace_create(status, init_info);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := ITraceFactoryImpl(this).trace_create(status, init_info);
 end;
 
 var
@@ -13018,29 +10108,17 @@ end;
 
 procedure IUdrFunctionFactoryImpl_disposeDispatcher(this: IUdrFunctionFactory); cdecl;
 begin
-//  try
-    IUdrFunctionFactoryImpl(this).dispose();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IUdrFunctionFactoryImpl(this).dispose();
 end;
 
 procedure IUdrFunctionFactoryImpl_setupDispatcher(this: IUdrFunctionFactory; status: IStatus; context: IExternalContext; metadata: IRoutineMetadata; inBuilder: IMetadataBuilder; outBuilder: IMetadataBuilder); cdecl;
 begin
-//  try
-    IUdrFunctionFactoryImpl(this).setup(status, context, metadata, inBuilder, outBuilder);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IUdrFunctionFactoryImpl(this).setup(status, context, metadata, inBuilder, outBuilder);
 end;
 
 function IUdrFunctionFactoryImpl_newItemDispatcher(this: IUdrFunctionFactory; status: IStatus; context: IExternalContext; metadata: IRoutineMetadata): IExternalFunction; cdecl;
 begin
-//  try
-    Result := IUdrFunctionFactoryImpl(this).newItem(status, context, metadata);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IUdrFunctionFactoryImpl(this).newItem(status, context, metadata);
 end;
 
 var
@@ -13053,29 +10131,17 @@ end;
 
 procedure IUdrProcedureFactoryImpl_disposeDispatcher(this: IUdrProcedureFactory); cdecl;
 begin
-//  try
-    IUdrProcedureFactoryImpl(this).dispose();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IUdrProcedureFactoryImpl(this).dispose();
 end;
 
 procedure IUdrProcedureFactoryImpl_setupDispatcher(this: IUdrProcedureFactory; status: IStatus; context: IExternalContext; metadata: IRoutineMetadata; inBuilder: IMetadataBuilder; outBuilder: IMetadataBuilder); cdecl;
 begin
-//  try
-    IUdrProcedureFactoryImpl(this).setup(status, context, metadata, inBuilder, outBuilder);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IUdrProcedureFactoryImpl(this).setup(status, context, metadata, inBuilder, outBuilder);
 end;
 
 function IUdrProcedureFactoryImpl_newItemDispatcher(this: IUdrProcedureFactory; status: IStatus; context: IExternalContext; metadata: IRoutineMetadata): IExternalProcedure; cdecl;
 begin
-//  try
-    Result := IUdrProcedureFactoryImpl(this).newItem(status, context, metadata);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IUdrProcedureFactoryImpl(this).newItem(status, context, metadata);
 end;
 
 var
@@ -13088,29 +10154,17 @@ end;
 
 procedure IUdrTriggerFactoryImpl_disposeDispatcher(this: IUdrTriggerFactory); cdecl;
 begin
-//  try
-    IUdrTriggerFactoryImpl(this).dispose();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  IUdrTriggerFactoryImpl(this).dispose();
 end;
 
 procedure IUdrTriggerFactoryImpl_setupDispatcher(this: IUdrTriggerFactory; status: IStatus; context: IExternalContext; metadata: IRoutineMetadata; fieldsBuilder: IMetadataBuilder); cdecl;
 begin
-//  try
-    IUdrTriggerFactoryImpl(this).setup(status, context, metadata, fieldsBuilder);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IUdrTriggerFactoryImpl(this).setup(status, context, metadata, fieldsBuilder);
 end;
 
 function IUdrTriggerFactoryImpl_newItemDispatcher(this: IUdrTriggerFactory; status: IStatus; context: IExternalContext; metadata: IRoutineMetadata): IExternalTrigger; cdecl;
 begin
-//  try
-    Result := IUdrTriggerFactoryImpl(this).newItem(status, context, metadata);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  Result := IUdrTriggerFactoryImpl(this).newItem(status, context, metadata);
 end;
 
 var
@@ -13123,38 +10177,22 @@ end;
 
 function IUdrPluginImpl_getMasterDispatcher(this: IUdrPlugin): IMaster; cdecl;
 begin
-//  try
-    Result := IUdrPluginImpl(this).getMaster();
-//  except
-//    on e: Exception do FbException.catchException(nil, e);
-//  end
+  Result := IUdrPluginImpl(this).getMaster();
 end;
 
 procedure IUdrPluginImpl_registerFunctionDispatcher(this: IUdrPlugin; status: IStatus; name: PAnsiChar; factory: IUdrFunctionFactory); cdecl;
 begin
-//  try
-    IUdrPluginImpl(this).registerFunction(status, name, factory);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IUdrPluginImpl(this).registerFunction(status, name, factory);
 end;
 
 procedure IUdrPluginImpl_registerProcedureDispatcher(this: IUdrPlugin; status: IStatus; name: PAnsiChar; factory: IUdrProcedureFactory); cdecl;
 begin
-//  try
-    IUdrPluginImpl(this).registerProcedure(status, name, factory);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IUdrPluginImpl(this).registerProcedure(status, name, factory);
 end;
 
 procedure IUdrPluginImpl_registerTriggerDispatcher(this: IUdrPlugin; status: IStatus; name: PAnsiChar; factory: IUdrTriggerFactory); cdecl;
 begin
-//  try
-    IUdrPluginImpl(this).registerTrigger(status, name, factory);
-//  except
-//    on e: Exception do FbException.catchException(status, e);
-//  end
+  IUdrPluginImpl(this).registerTrigger(status, name, factory);
 end;
 
 var
@@ -13164,50 +10202,227 @@ constructor IUdrPluginImpl.create;
 begin
   vTable := IUdrPluginImpl_vTable;
 end;
-(*
-constructor FbException.create(status: IStatus);
+
+procedure IDecFloat16Impl_toBcdDispatcher(this: IDecFloat16; from: PFB_DEC16; sign: PInteger; bcd: PByte; exp: PInteger); cdecl;
 begin
-  inherited Create('FbException');
-  self.status := status.clone;
+  IDecFloat16Impl(this).toBcd(from, sign, bcd, exp);
 end;
 
-destructor FbException.Destroy();
+procedure IDecFloat16Impl_toStringDispatcher(this: IDecFloat16; status: IStatus; from: PFB_DEC16; bufferLength: Cardinal; buffer: PAnsiChar); cdecl;
 begin
-  status.dispose;
-  inherited Destroy;
+  IDecFloat16Impl(this).toString(status, from, bufferLength, buffer);
 end;
 
-function FbException.getStatus: IStatus;
+procedure IDecFloat16Impl_fromBcdDispatcher(this: IDecFloat16; sign: Integer; bcd: PByte; exp: Integer; to_: PFB_DEC16); cdecl;
 begin
-  Result := status;
+  IDecFloat16Impl(this).fromBcd(sign, bcd, exp, to_);
 end;
 
-class procedure FbException.checkException(status: IStatus);
+procedure IDecFloat16Impl_fromStringDispatcher(this: IDecFloat16; status: IStatus; from: PAnsiChar; to_: PFB_DEC16); cdecl;
 begin
-  if ((status.getState and {$IFNDEF WITH_CLASS_CONST}IStatus_STATE_ERRORS{$ELSE}status.STATE_ERRORS{$ENDIF}) <> 0) then
-    raise FbException.create(status);
+  IDecFloat16Impl(this).fromString(status, from, to_);
 end;
 
-class procedure FbException.catchException(status: IStatus; e: Exception);
 var
-  statusVector: array[0..4] of NativeIntPtr;
-  msg: {$IF not declared(AnsiString)}RawByteString{$ELSE}AnsiString{$IFEND};
+  IDecFloat16Impl_vTable: DecFloat16VTable;
+
+constructor IDecFloat16Impl.create;
 begin
-  if (e.inheritsFrom(FbException)) then
-    status.setErrors(FbException(e).getStatus.getErrors)
-  else
-  begin
-    msg := e.message;
+  vTable := IDecFloat16Impl_vTable;
+end;
 
-    statusVector[0] := NativeIntPtr(isc_arg_gds);
-    statusVector[1] := NativeIntPtr(isc_random);
-    statusVector[2] := NativeIntPtr(isc_arg_string);
-    statusVector[3] := NativeIntPtr(PAnsiChar(msg));
-    statusVector[4] := NativeIntPtr(isc_arg_end);
+procedure IDecFloat34Impl_toBcdDispatcher(this: IDecFloat34; from: PFB_DEC34; sign: PInteger; bcd: PByte; exp: PInteger); cdecl;
+begin
+  IDecFloat34Impl(this).toBcd(from, sign, bcd, exp);
+end;
 
-    status.setErrors(@statusVector);
-  end
-end; *)
+procedure IDecFloat34Impl_toStringDispatcher(this: IDecFloat34; status: IStatus; from: PFB_DEC34; bufferLength: Cardinal; buffer: PAnsiChar); cdecl;
+begin
+  IDecFloat34Impl(this).toString(status, from, bufferLength, buffer);
+end;
+
+procedure IDecFloat34Impl_fromBcdDispatcher(this: IDecFloat34; sign: Integer; bcd: PByte; exp: Integer; to_: PFB_DEC34); cdecl;
+begin
+  IDecFloat34Impl(this).fromBcd(sign, bcd, exp, to_);
+end;
+
+procedure IDecFloat34Impl_fromStringDispatcher(this: IDecFloat34; status: IStatus; from: PAnsiChar; to_: PFB_DEC34); cdecl;
+begin
+  IDecFloat34Impl(this).fromString(status, from, to_);
+end;
+
+var
+  IDecFloat34Impl_vTable: DecFloat34VTable;
+
+constructor IDecFloat34Impl.create;
+begin
+  vTable := IDecFloat34Impl_vTable;
+end;
+
+procedure IInt128Impl_toStringDispatcher(this: IInt128; status: IStatus; from: PFB_I128; scale: Integer; bufferLength: Cardinal; buffer: PAnsiChar); cdecl;
+begin
+  IInt128Impl(this).toString(status, from, scale, bufferLength, buffer);
+end;
+
+procedure IInt128Impl_fromStringDispatcher(this: IInt128; status: IStatus; scale: Integer; from: PAnsiChar; to_: PFB_I128); cdecl;
+begin
+  IInt128Impl(this).fromString(status, scale, from, to_);
+end;
+
+var
+  IInt128Impl_vTable: Int128VTable;
+
+constructor IInt128Impl.create;
+begin
+  vTable := IInt128Impl_vTable;
+end;
+
+function IReplicatedRecordImpl_getRawLengthDispatcher(this: IReplicatedRecord): Cardinal; cdecl;
+begin
+  Result := IReplicatedRecordImpl(this).getRawLength();
+end;
+
+function IReplicatedRecordImpl_getRawDataDispatcher(this: IReplicatedRecord): PByte; cdecl;
+begin
+  Result := IReplicatedRecordImpl(this).getRawData();
+end;
+
+var
+  IReplicatedRecordImpl_vTable: ReplicatedRecordVTable;
+
+constructor IReplicatedRecordImpl.create;
+begin
+  vTable := IReplicatedRecordImpl_vTable;
+end;
+
+function IReplicatedBlobImpl_getLengthDispatcher(this: IReplicatedBlob): Cardinal; cdecl;
+begin
+  Result := IReplicatedBlobImpl(this).getLength();
+end;
+
+function IReplicatedBlobImpl_isEofDispatcher(this: IReplicatedBlob): Boolean; cdecl;
+begin
+  Result := IReplicatedBlobImpl(this).isEof();
+end;
+
+function IReplicatedBlobImpl_getSegmentDispatcher(this: IReplicatedBlob; length: Cardinal; buffer: PByte): Cardinal; cdecl;
+begin
+  Result := IReplicatedBlobImpl(this).getSegment(length, buffer);
+end;
+
+var
+  IReplicatedBlobImpl_vTable: ReplicatedBlobVTable;
+
+constructor IReplicatedBlobImpl.create;
+begin
+  vTable := IReplicatedBlobImpl_vTable;
+end;
+
+procedure IReplicatedTransactionImpl_disposeDispatcher(this: IReplicatedTransaction); cdecl;
+begin
+  IReplicatedTransactionImpl(this).dispose();
+end;
+
+function IReplicatedTransactionImpl_prepareDispatcher(this: IReplicatedTransaction): Boolean; cdecl;
+begin
+  Result := IReplicatedTransactionImpl(this).prepare();
+end;
+
+function IReplicatedTransactionImpl_commitDispatcher(this: IReplicatedTransaction): Boolean; cdecl;
+begin
+  Result := IReplicatedTransactionImpl(this).commit();
+end;
+
+function IReplicatedTransactionImpl_rollbackDispatcher(this: IReplicatedTransaction): Boolean; cdecl;
+begin
+  Result := IReplicatedTransactionImpl(this).rollback();
+end;
+
+function IReplicatedTransactionImpl_startSavepointDispatcher(this: IReplicatedTransaction): Boolean; cdecl;
+begin
+  Result := IReplicatedTransactionImpl(this).startSavepoint();
+end;
+
+function IReplicatedTransactionImpl_releaseSavepointDispatcher(this: IReplicatedTransaction): Boolean; cdecl;
+begin
+  Result := IReplicatedTransactionImpl(this).releaseSavepoint();
+end;
+
+function IReplicatedTransactionImpl_rollbackSavepointDispatcher(this: IReplicatedTransaction): Boolean; cdecl;
+begin
+  Result := IReplicatedTransactionImpl(this).rollbackSavepoint();
+end;
+
+function IReplicatedTransactionImpl_insertRecordDispatcher(this: IReplicatedTransaction; name: PAnsiChar; record_: IReplicatedRecord): Boolean; cdecl;
+begin
+  Result := IReplicatedTransactionImpl(this).insertRecord(name, record_);
+end;
+
+function IReplicatedTransactionImpl_updateRecordDispatcher(this: IReplicatedTransaction; name: PAnsiChar; orgRecord: IReplicatedRecord; newRecord: IReplicatedRecord): Boolean; cdecl;
+begin
+  Result := IReplicatedTransactionImpl(this).updateRecord(name, orgRecord, newRecord);
+end;
+
+function IReplicatedTransactionImpl_deleteRecordDispatcher(this: IReplicatedTransaction; name: PAnsiChar; record_: IReplicatedRecord): Boolean; cdecl;
+begin
+  Result := IReplicatedTransactionImpl(this).deleteRecord(name, record_);
+end;
+
+function IReplicatedTransactionImpl_storeBlobDispatcher(this: IReplicatedTransaction; blobId: TISC_QUAD; blob: IReplicatedBlob): Boolean; cdecl;
+begin
+  Result := IReplicatedTransactionImpl(this).storeBlob(blobId, blob);
+end;
+
+function IReplicatedTransactionImpl_executeSqlDispatcher(this: IReplicatedTransaction; sql: PAnsiChar): Boolean; cdecl;
+begin
+  Result := IReplicatedTransactionImpl(this).executeSql(sql);
+end;
+
+function IReplicatedTransactionImpl_executeSqlIntlDispatcher(this: IReplicatedTransaction; charset: Cardinal; sql: PAnsiChar): Boolean; cdecl;
+begin
+  Result := IReplicatedTransactionImpl(this).executeSqlIntl(charset, sql);
+end;
+
+var
+  IReplicatedTransactionImpl_vTable: ReplicatedTransactionVTable;
+
+constructor IReplicatedTransactionImpl.create;
+begin
+  vTable := IReplicatedTransactionImpl_vTable;
+end;
+
+procedure IReplicatedSessionImpl_disposeDispatcher(this: IReplicatedSession); cdecl;
+begin
+  IReplicatedSessionImpl(this).dispose();
+end;
+
+function IReplicatedSessionImpl_getStatusDispatcher(this: IReplicatedSession): IStatus; cdecl;
+begin
+  Result := IReplicatedSessionImpl(this).getStatus();
+end;
+
+function IReplicatedSessionImpl_startTransactionDispatcher(this: IReplicatedSession; number: Int64): IReplicatedTransaction; cdecl;
+begin
+  Result := IReplicatedSessionImpl(this).startTransaction(number);
+end;
+
+function IReplicatedSessionImpl_cleanupTransactionDispatcher(this: IReplicatedSession; number: Int64): Boolean; cdecl;
+begin
+  Result := IReplicatedSessionImpl(this).cleanupTransaction(number);
+end;
+
+function IReplicatedSessionImpl_setSequenceDispatcher(this: IReplicatedSession; name: PAnsiChar; value: Int64): Boolean; cdecl;
+begin
+  Result := IReplicatedSessionImpl(this).setSequence(name, value);
+end;
+
+var
+  IReplicatedSessionImpl_vTable: ReplicatedSessionVTable;
+
+constructor IReplicatedSessionImpl.create;
+begin
+  vTable := IReplicatedSessionImpl_vTable;
+end;
 
 initialization
   IVersionedImpl_vTable := VersionedVTable.create;
@@ -13286,13 +10501,14 @@ initialization
   IConfigImpl_vTable.findPos := @IConfigImpl_findPosDispatcher;
 
   IFirebirdConfImpl_vTable := FirebirdConfVTable.create;
-  IFirebirdConfImpl_vTable.version := 6;
+  IFirebirdConfImpl_vTable.version := 7;
   IFirebirdConfImpl_vTable.addRef := @IFirebirdConfImpl_addRefDispatcher;
   IFirebirdConfImpl_vTable.release := @IFirebirdConfImpl_releaseDispatcher;
   IFirebirdConfImpl_vTable.getKey := @IFirebirdConfImpl_getKeyDispatcher;
   IFirebirdConfImpl_vTable.asInteger := @IFirebirdConfImpl_asIntegerDispatcher;
   IFirebirdConfImpl_vTable.asString := @IFirebirdConfImpl_asStringDispatcher;
   IFirebirdConfImpl_vTable.asBoolean := @IFirebirdConfImpl_asBooleanDispatcher;
+  IFirebirdConfImpl_vTable.getVersion := @IFirebirdConfImpl_getVersionDispatcher;
 
   IPluginConfigImpl_vTable := PluginConfigVTable.create;
   IPluginConfigImpl_vTable.version := 6;
@@ -13308,8 +10524,9 @@ initialization
   IPluginFactoryImpl_vTable.createPlugin := @IPluginFactoryImpl_createPluginDispatcher;
 
   IPluginModuleImpl_vTable := PluginModuleVTable.create;
-  IPluginModuleImpl_vTable.version := 1;
+  IPluginModuleImpl_vTable.version := 2;
   IPluginModuleImpl_vTable.doClean := @IPluginModuleImpl_doCleanDispatcher;
+  IPluginModuleImpl_vTable.threadDetach := @IPluginModuleImpl_threadDetachDispatcher;
 
   IPluginManagerImpl_vTable := PluginManagerVTable.create;
   IPluginManagerImpl_vTable.version := 6;
@@ -13328,13 +10545,14 @@ initialization
   ICryptKeyImpl_vTable.getDecryptKey := @ICryptKeyImpl_getDecryptKeyDispatcher;
 
   IConfigManagerImpl_vTable := ConfigManagerVTable.create;
-  IConfigManagerImpl_vTable.version := 6;
+  IConfigManagerImpl_vTable.version := 7;
   IConfigManagerImpl_vTable.getDirectory := @IConfigManagerImpl_getDirectoryDispatcher;
   IConfigManagerImpl_vTable.getFirebirdConf := @IConfigManagerImpl_getFirebirdConfDispatcher;
   IConfigManagerImpl_vTable.getDatabaseConf := @IConfigManagerImpl_getDatabaseConfDispatcher;
   IConfigManagerImpl_vTable.getPluginConfig := @IConfigManagerImpl_getPluginConfigDispatcher;
   IConfigManagerImpl_vTable.getInstallDirectory := @IConfigManagerImpl_getInstallDirectoryDispatcher;
   IConfigManagerImpl_vTable.getRootDirectory := @IConfigManagerImpl_getRootDirectoryDispatcher;
+  IConfigManagerImpl_vTable.getDefaultSecurityDb := @IConfigManagerImpl_getDefaultSecurityDbDispatcher;
 
   IEventCallbackImpl_vTable := EventCallbackVTable.create;
   IEventCallbackImpl_vTable.version := 3;
@@ -13369,7 +10587,7 @@ initialization
   ITransactionImpl_vTable.enterDtc := @ITransactionImpl_enterDtcDispatcher;
 
   IMessageMetadataImpl_vTable := MessageMetadataVTable.create;
-  IMessageMetadataImpl_vTable.version := 17;
+  IMessageMetadataImpl_vTable.version := 19;
   IMessageMetadataImpl_vTable.addRef := @IMessageMetadataImpl_addRefDispatcher;
   IMessageMetadataImpl_vTable.release := @IMessageMetadataImpl_releaseDispatcher;
   IMessageMetadataImpl_vTable.getCount := @IMessageMetadataImpl_getCountDispatcher;
@@ -13387,9 +10605,11 @@ initialization
   IMessageMetadataImpl_vTable.getNullOffset := @IMessageMetadataImpl_getNullOffsetDispatcher;
   IMessageMetadataImpl_vTable.getBuilder := @IMessageMetadataImpl_getBuilderDispatcher;
   IMessageMetadataImpl_vTable.getMessageLength := @IMessageMetadataImpl_getMessageLengthDispatcher;
+  IMessageMetadataImpl_vTable.getAlignment := @IMessageMetadataImpl_getAlignmentDispatcher;
+  IMessageMetadataImpl_vTable.getAlignedLength := @IMessageMetadataImpl_getAlignedLengthDispatcher;
 
   IMetadataBuilderImpl_vTable := MetadataBuilderVTable.create;
-  IMetadataBuilderImpl_vTable.version := 12;
+  IMetadataBuilderImpl_vTable.version := 16;
   IMetadataBuilderImpl_vTable.addRef := @IMetadataBuilderImpl_addRefDispatcher;
   IMetadataBuilderImpl_vTable.release := @IMetadataBuilderImpl_releaseDispatcher;
   IMetadataBuilderImpl_vTable.setType := @IMetadataBuilderImpl_setTypeDispatcher;
@@ -13402,6 +10622,10 @@ initialization
   IMetadataBuilderImpl_vTable.remove := @IMetadataBuilderImpl_removeDispatcher;
   IMetadataBuilderImpl_vTable.addField := @IMetadataBuilderImpl_addFieldDispatcher;
   IMetadataBuilderImpl_vTable.getMetadata := @IMetadataBuilderImpl_getMetadataDispatcher;
+  IMetadataBuilderImpl_vTable.setField := @IMetadataBuilderImpl_setFieldDispatcher;
+  IMetadataBuilderImpl_vTable.setRelation := @IMetadataBuilderImpl_setRelationDispatcher;
+  IMetadataBuilderImpl_vTable.setOwner := @IMetadataBuilderImpl_setOwnerDispatcher;
+  IMetadataBuilderImpl_vTable.setAlias := @IMetadataBuilderImpl_setAliasDispatcher;
 
   IResultSetImpl_vTable := ResultSetVTable.create;
   IResultSetImpl_vTable.version := 13;
@@ -13420,7 +10644,7 @@ initialization
   IResultSetImpl_vTable.setDelayedOutputFormat := @IResultSetImpl_setDelayedOutputFormatDispatcher;
 
   IStatementImpl_vTable := StatementVTable.create;
-  IStatementImpl_vTable.version := 13;
+  IStatementImpl_vTable.version := 16;
   IStatementImpl_vTable.addRef := @IStatementImpl_addRefDispatcher;
   IStatementImpl_vTable.release := @IStatementImpl_releaseDispatcher;
   IStatementImpl_vTable.getInfo := @IStatementImpl_getInfoDispatcher;
@@ -13434,28 +10658,12 @@ initialization
   IStatementImpl_vTable.setCursorName := @IStatementImpl_setCursorNameDispatcher;
   IStatementImpl_vTable.free := @IStatementImpl_freeDispatcher;
   IStatementImpl_vTable.getFlags := @IStatementImpl_getFlagsDispatcher;
+  IStatementImpl_vTable.getTimeout := @IStatementImpl_getTimeoutDispatcher;
+  IStatementImpl_vTable.setTimeout := @IStatementImpl_setTimeoutDispatcher;
+  IStatementImpl_vTable.createBatch := @IStatementImpl_createBatchDispatcher;
 
-  IStatementImpl_vTable_v4 := StatementVTable_v4.create;
-  IStatementImpl_vTable_v4.version := 14;
-  IStatementImpl_vTable_v4.addRef := @IStatementImpl_addRefDispatcher;
-  IStatementImpl_vTable_v4.release := @IStatementImpl_releaseDispatcher;
-  IStatementImpl_vTable_v4.getInfo := @IStatementImpl_getInfoDispatcher;
-  IStatementImpl_vTable_v4.getType := @IStatementImpl_getTypeDispatcher;
-  IStatementImpl_vTable_v4.getPlan := @IStatementImpl_getPlanDispatcher;
-  IStatementImpl_vTable_v4.getAffectedRecords := @IStatementImpl_getAffectedRecordsDispatcher;
-  IStatementImpl_vTable_v4.getInputMetadata := @IStatementImpl_getInputMetadataDispatcher;
-  IStatementImpl_vTable_v4.getOutputMetadata := @IStatementImpl_getOutputMetadataDispatcher;
-  IStatementImpl_vTable_v4.execute := @IStatementImpl_executeDispatcher;
-  IStatementImpl_vTable_v4.openCursor := @IStatementImpl_openCursorDispatcher;
-  IStatementImpl_vTable_v4.setCursorName := @IStatementImpl_setCursorNameDispatcher;
-  IStatementImpl_vTable_v4.free := @IStatementImpl_freeDispatcher;
-  IStatementImpl_vTable_v4.getFlags := @IStatementImpl_getFlagsDispatcher;
-  IStatementImpl_vTable_v4.getTimeout := @IStatementImpl_v4_getTimeoutDispatcher;
-  IStatementImpl_vTable_v4.setTimeout := @IStatementImpl_v4_setTimeoutDispatcher;
-  IStatementImpl_vTable_v4.createBatch := @IStatementImpl_v4_createBatchDispatcher;
-
-  IBatchImpl_vTable := BatchVTable.Create;
-  IBatchImpl_vTable.version := 3;
+  IBatchImpl_vTable := BatchVTable.create;
+  IBatchImpl_vTable.version := 12;
   IBatchImpl_vTable.addRef := @IBatchImpl_addRefDispatcher;
   IBatchImpl_vTable.release := @IBatchImpl_releaseDispatcher;
   IBatchImpl_vTable.add := @IBatchImpl_addDispatcher;
@@ -13469,20 +10677,20 @@ initialization
   IBatchImpl_vTable.getMetadata := @IBatchImpl_getMetadataDispatcher;
   IBatchImpl_vTable.setDefaultBpb := @IBatchImpl_setDefaultBpbDispatcher;
 
-  IBatchCompletionStateImpl_VTable := BatchCompletionStateVTable.Create;
-  IBatchCompletionStateImpl_VTable.version := 3;
-  IBatchCompletionStateImpl_VTable.dispose := @IBatchCompletionImpl_DisposeDispatcher;
-  IBatchCompletionStateImpl_VTable.getSize := @IBatchCompletionImpl_getSizeDispatcher;
-  IBatchCompletionStateImpl_VTable.getState := @IBatchCompletionImpl_getStateDispatcher;
-  IBatchCompletionStateImpl_VTable.findError := @IBatchCompletionImpl_findErrorDispatcher;
-  IBatchCompletionStateImpl_VTable.getStatus := @IBatchCompletionImpl_getStatusDispatcher;
+  IBatchCompletionStateImpl_vTable := BatchCompletionStateVTable.create;
+  IBatchCompletionStateImpl_vTable.version := 5;
+  IBatchCompletionStateImpl_vTable.dispose := @IBatchCompletionStateImpl_disposeDispatcher;
+  IBatchCompletionStateImpl_vTable.getSize := @IBatchCompletionStateImpl_getSizeDispatcher;
+  IBatchCompletionStateImpl_vTable.getState := @IBatchCompletionStateImpl_getStateDispatcher;
+  IBatchCompletionStateImpl_vTable.findError := @IBatchCompletionStateImpl_findErrorDispatcher;
+  IBatchCompletionStateImpl_vTable.getStatus := @IBatchCompletionStateImpl_getStatusDispatcher;
 
-  IReplicatorImpl_vTable := IReplicatorVTable.Create;
-  IReplicatorImpl_vTable.version := 3;
-  IReplicatorImpl_vTable.addRef := @IReplicator_addRefDispatcher;
-  IReplicatorImpl_vTable.release := @IReplicator_releaseDispatcher;
-  IReplicatorImpl_vTable.close := @IReplicator_closeDispatcher;
-  IReplicatorImpl_vTable.process := @IReplicator_processDispatcher;
+  IReplicatorImpl_vTable := ReplicatorVTable.create;
+  IReplicatorImpl_vTable.version := 4;
+  IReplicatorImpl_vTable.addRef := @IReplicatorImpl_addRefDispatcher;
+  IReplicatorImpl_vTable.release := @IReplicatorImpl_releaseDispatcher;
+  IReplicatorImpl_vTable.process := @IReplicatorImpl_processDispatcher;
+  IReplicatorImpl_vTable.close := @IReplicatorImpl_closeDispatcher;
 
   IRequestImpl_vTable := RequestVTable.create;
   IRequestImpl_vTable.version := 9;
@@ -13503,7 +10711,7 @@ initialization
   IEventsImpl_vTable.cancel := @IEventsImpl_cancelDispatcher;
 
   IAttachmentImpl_vTable := AttachmentVTable.create;
-  IAttachmentImpl_vTable.version := 20;
+  IAttachmentImpl_vTable.version := 26;
   IAttachmentImpl_vTable.addRef := @IAttachmentImpl_addRefDispatcher;
   IAttachmentImpl_vTable.release := @IAttachmentImpl_releaseDispatcher;
   IAttachmentImpl_vTable.getInfo := @IAttachmentImpl_getInfoDispatcher;
@@ -13524,35 +10732,12 @@ initialization
   IAttachmentImpl_vTable.ping := @IAttachmentImpl_pingDispatcher;
   IAttachmentImpl_vTable.detach := @IAttachmentImpl_detachDispatcher;
   IAttachmentImpl_vTable.dropDatabase := @IAttachmentImpl_dropDatabaseDispatcher;
-
-  IAttachment_V4Impl_vTable := Attachment_V4VTable.Create;
-  IAttachment_V4Impl_vTable.version := 20;
-  IAttachment_V4Impl_vTable.addRef := @IAttachmentImpl_addRefDispatcher;
-  IAttachment_V4Impl_vTable.release := @IAttachmentImpl_releaseDispatcher;
-  IAttachment_V4Impl_vTable.getInfo := @IAttachmentImpl_getInfoDispatcher;
-  IAttachment_V4Impl_vTable.startTransaction := @IAttachmentImpl_startTransactionDispatcher;
-  IAttachment_V4Impl_vTable.reconnectTransaction := @IAttachmentImpl_reconnectTransactionDispatcher;
-  IAttachment_V4Impl_vTable.compileRequest := @IAttachmentImpl_compileRequestDispatcher;
-  IAttachment_V4Impl_vTable.transactRequest := @IAttachmentImpl_transactRequestDispatcher;
-  IAttachment_V4Impl_vTable.createBlob := @IAttachmentImpl_createBlobDispatcher;
-  IAttachment_V4Impl_vTable.openBlob := @IAttachmentImpl_openBlobDispatcher;
-  IAttachment_V4Impl_vTable.getSlice := @IAttachmentImpl_getSliceDispatcher;
-  IAttachment_V4Impl_vTable.putSlice := @IAttachmentImpl_putSliceDispatcher;
-  IAttachment_V4Impl_vTable.executeDyn := @IAttachmentImpl_executeDynDispatcher;
-  IAttachment_V4Impl_vTable.prepare := @IAttachmentImpl_prepareDispatcher;
-  IAttachment_V4Impl_vTable.execute := @IAttachmentImpl_executeDispatcher;
-  IAttachment_V4Impl_vTable.openCursor := @IAttachmentImpl_openCursorDispatcher;
-  IAttachment_V4Impl_vTable.queEvents := @IAttachmentImpl_queEventsDispatcher;
-  IAttachment_V4Impl_vTable.cancelOperation := @IAttachmentImpl_cancelOperationDispatcher;
-  IAttachment_V4Impl_vTable.ping := @IAttachmentImpl_pingDispatcher;
-  IAttachment_V4Impl_vTable.detach := @IAttachmentImpl_detachDispatcher;
-  IAttachment_V4Impl_vTable.dropDatabase := @IAttachmentImpl_dropDatabaseDispatcher;
-  IAttachment_V4Impl_vTable.getIdleTimeout := @IAttachment_V4Impl_getIdleTimeoutDispatcher;
-  IAttachment_V4Impl_vTable.setIdleTimeout := @IAttachment_V4Impl_setIdleTimeoutDispatcher;
-  IAttachment_V4Impl_vTable.getStatementTimeout := @IAttachment_V4Impl_getStatementTimeoutDispatcher;
-  IAttachment_V4Impl_vTable.setStatementTimeout := @IAttachment_V4Impl_setStatementTimeoutDispatcher;
-  IAttachment_V4Impl_vTable.createBatch := @IAttachment_V4Impl_createBatchDispatcher;
-  IAttachment_V4Impl_vTable.createReplicator := @IAttachment_V4Impl_createReplicatorDispatcher;
+  IAttachmentImpl_vTable.getIdleTimeout := @IAttachmentImpl_getIdleTimeoutDispatcher;
+  IAttachmentImpl_vTable.setIdleTimeout := @IAttachmentImpl_setIdleTimeoutDispatcher;
+  IAttachmentImpl_vTable.getStatementTimeout := @IAttachmentImpl_getStatementTimeoutDispatcher;
+  IAttachmentImpl_vTable.setStatementTimeout := @IAttachmentImpl_setStatementTimeoutDispatcher;
+  IAttachmentImpl_vTable.createBatch := @IAttachmentImpl_createBatchDispatcher;
+  IAttachmentImpl_vTable.createReplicator := @IAttachmentImpl_createReplicatorDispatcher;
 
   IServiceImpl_vTable := ServiceVTable.create;
   IServiceImpl_vTable.version := 5;
@@ -13608,7 +10793,7 @@ initialization
   IServerBlockImpl_vTable.newKey := @IServerBlockImpl_newKeyDispatcher;
 
   IClientBlockImpl_vTable := ClientBlockVTable.create;
-  IClientBlockImpl_vTable.version := 7;
+  IClientBlockImpl_vTable.version := 8;
   IClientBlockImpl_vTable.addRef := @IClientBlockImpl_addRefDispatcher;
   IClientBlockImpl_vTable.release := @IClientBlockImpl_releaseDispatcher;
   IClientBlockImpl_vTable.getLogin := @IClientBlockImpl_getLoginDispatcher;
@@ -13616,6 +10801,7 @@ initialization
   IClientBlockImpl_vTable.getData := @IClientBlockImpl_getDataDispatcher;
   IClientBlockImpl_vTable.putData := @IClientBlockImpl_putDataDispatcher;
   IClientBlockImpl_vTable.newKey := @IClientBlockImpl_newKeyDispatcher;
+  IClientBlockImpl_vTable.getAuthBlock := @IClientBlockImpl_getAuthBlockDispatcher;
 
   IServerImpl_vTable := ServerVTable.create;
   IServerImpl_vTable.version := 6;
@@ -13693,8 +10879,18 @@ initialization
   IManagementImpl_vTable.commit := @IManagementImpl_commitDispatcher;
   IManagementImpl_vTable.rollback := @IManagementImpl_rollbackDispatcher;
 
+  IAuthBlockImpl_vTable := AuthBlockVTable.create;
+  IAuthBlockImpl_vTable.version := 7;
+  IAuthBlockImpl_vTable.getType := @IAuthBlockImpl_getTypeDispatcher;
+  IAuthBlockImpl_vTable.getName := @IAuthBlockImpl_getNameDispatcher;
+  IAuthBlockImpl_vTable.getPlugin := @IAuthBlockImpl_getPluginDispatcher;
+  IAuthBlockImpl_vTable.getSecurityDb := @IAuthBlockImpl_getSecurityDbDispatcher;
+  IAuthBlockImpl_vTable.getOriginalPlugin := @IAuthBlockImpl_getOriginalPluginDispatcher;
+  IAuthBlockImpl_vTable.next := @IAuthBlockImpl_nextDispatcher;
+  IAuthBlockImpl_vTable.first := @IAuthBlockImpl_firstDispatcher;
+
   IWireCryptPluginImpl_vTable := WireCryptPluginVTable.create;
-  IWireCryptPluginImpl_vTable.version := 8;
+  IWireCryptPluginImpl_vTable.version := 10;
   IWireCryptPluginImpl_vTable.addRef := @IWireCryptPluginImpl_addRefDispatcher;
   IWireCryptPluginImpl_vTable.release := @IWireCryptPluginImpl_releaseDispatcher;
   IWireCryptPluginImpl_vTable.setOwner := @IWireCryptPluginImpl_setOwnerDispatcher;
@@ -13703,6 +10899,8 @@ initialization
   IWireCryptPluginImpl_vTable.setKey := @IWireCryptPluginImpl_setKeyDispatcher;
   IWireCryptPluginImpl_vTable.encrypt := @IWireCryptPluginImpl_encryptDispatcher;
   IWireCryptPluginImpl_vTable.decrypt := @IWireCryptPluginImpl_decryptDispatcher;
+  IWireCryptPluginImpl_vTable.getSpecificData := @IWireCryptPluginImpl_getSpecificDataDispatcher;
+  IWireCryptPluginImpl_vTable.setSpecificData := @IWireCryptPluginImpl_setSpecificDataDispatcher;
 
   ICryptKeyCallbackImpl_vTable := CryptKeyCallbackVTable.create;
   ICryptKeyCallbackImpl_vTable.version := 1;
@@ -13813,7 +11011,7 @@ initialization
   IVersionCallbackImpl_vTable.callback := @IVersionCallbackImpl_callbackDispatcher;
 
   IUtilImpl_vTable := UtilVTable.create;
-  IUtilImpl_vTable.version := 13;
+  IUtilImpl_vTable.version := 24;
   IUtilImpl_vTable.getFbVersion := @IUtilImpl_getFbVersionDispatcher;
   IUtilImpl_vTable.loadBlob := @IUtilImpl_loadBlobDispatcher;
   IUtilImpl_vTable.dumpBlob := @IUtilImpl_dumpBlobDispatcher;
@@ -13827,6 +11025,17 @@ initialization
   IUtilImpl_vTable.getClientVersion := @IUtilImpl_getClientVersionDispatcher;
   IUtilImpl_vTable.getXpbBuilder := @IUtilImpl_getXpbBuilderDispatcher;
   IUtilImpl_vTable.setOffsets := @IUtilImpl_setOffsetsDispatcher;
+  IUtilImpl_vTable.getDecFloat16 := @IUtilImpl_getDecFloat16Dispatcher;
+  IUtilImpl_vTable.getDecFloat34 := @IUtilImpl_getDecFloat34Dispatcher;
+  IUtilImpl_vTable.getTransactionByHandle := @IUtilImpl_getTransactionByHandleDispatcher;
+  IUtilImpl_vTable.getStatementByHandle := @IUtilImpl_getStatementByHandleDispatcher;
+  IUtilImpl_vTable.decodeTimeTz := @IUtilImpl_decodeTimeTzDispatcher;
+  IUtilImpl_vTable.decodeTimeStampTz := @IUtilImpl_decodeTimeStampTzDispatcher;
+  IUtilImpl_vTable.encodeTimeTz := @IUtilImpl_encodeTimeTzDispatcher;
+  IUtilImpl_vTable.encodeTimeStampTz := @IUtilImpl_encodeTimeStampTzDispatcher;
+  IUtilImpl_vTable.getInt128 := @IUtilImpl_getInt128Dispatcher;
+  IUtilImpl_vTable.decodeTimeTzEx := @IUtilImpl_decodeTimeTzExDispatcher;
+  IUtilImpl_vTable.decodeTimeStampTzEx := @IUtilImpl_decodeTimeStampTzExDispatcher;
 
   IOffsetsCallbackImpl_vTable := OffsetsCallbackVTable.create;
   IOffsetsCallbackImpl_vTable.version := 1;
@@ -13883,12 +11092,14 @@ initialization
   ITraceDatabaseConnectionImpl_vTable.getDatabaseName := @ITraceDatabaseConnectionImpl_getDatabaseNameDispatcher;
 
   ITraceTransactionImpl_vTable := TraceTransactionVTable.create;
-  ITraceTransactionImpl_vTable.version := 5;
+  ITraceTransactionImpl_vTable.version := 7;
   ITraceTransactionImpl_vTable.getTransactionID := @ITraceTransactionImpl_getTransactionIDDispatcher;
   ITraceTransactionImpl_vTable.getReadOnly := @ITraceTransactionImpl_getReadOnlyDispatcher;
   ITraceTransactionImpl_vTable.getWait := @ITraceTransactionImpl_getWaitDispatcher;
   ITraceTransactionImpl_vTable.getIsolation := @ITraceTransactionImpl_getIsolationDispatcher;
   ITraceTransactionImpl_vTable.getPerf := @ITraceTransactionImpl_getPerfDispatcher;
+  ITraceTransactionImpl_vTable.getInitialID := @ITraceTransactionImpl_getInitialIDDispatcher;
+  ITraceTransactionImpl_vTable.getPreviousID := @ITraceTransactionImpl_getPreviousIDDispatcher;
 
   ITraceParamsImpl_vTable := TraceParamsVTable.create;
   ITraceParamsImpl_vTable.version := 3;
@@ -13983,10 +11194,11 @@ initialization
   ITraceSweepInfoImpl_vTable.getPerf := @ITraceSweepInfoImpl_getPerfDispatcher;
 
   ITraceLogWriterImpl_vTable := TraceLogWriterVTable.create;
-  ITraceLogWriterImpl_vTable.version := 3;
+  ITraceLogWriterImpl_vTable.version := 4;
   ITraceLogWriterImpl_vTable.addRef := @ITraceLogWriterImpl_addRefDispatcher;
   ITraceLogWriterImpl_vTable.release := @ITraceLogWriterImpl_releaseDispatcher;
   ITraceLogWriterImpl_vTable.write := @ITraceLogWriterImpl_writeDispatcher;
+  ITraceLogWriterImpl_vTable.write_s := @ITraceLogWriterImpl_write_sDispatcher;
 
   ITraceInitInfoImpl_vTable := TraceInitInfoVTable.create;
   ITraceInitInfoImpl_vTable.version := 7;
@@ -14058,6 +11270,60 @@ initialization
   IUdrPluginImpl_vTable.registerProcedure := @IUdrPluginImpl_registerProcedureDispatcher;
   IUdrPluginImpl_vTable.registerTrigger := @IUdrPluginImpl_registerTriggerDispatcher;
 
+  IDecFloat16Impl_vTable := DecFloat16VTable.create;
+  IDecFloat16Impl_vTable.version := 4;
+  IDecFloat16Impl_vTable.toBcd := @IDecFloat16Impl_toBcdDispatcher;
+  IDecFloat16Impl_vTable.toString := @IDecFloat16Impl_toStringDispatcher;
+  IDecFloat16Impl_vTable.fromBcd := @IDecFloat16Impl_fromBcdDispatcher;
+  IDecFloat16Impl_vTable.fromString := @IDecFloat16Impl_fromStringDispatcher;
+
+  IDecFloat34Impl_vTable := DecFloat34VTable.create;
+  IDecFloat34Impl_vTable.version := 4;
+  IDecFloat34Impl_vTable.toBcd := @IDecFloat34Impl_toBcdDispatcher;
+  IDecFloat34Impl_vTable.toString := @IDecFloat34Impl_toStringDispatcher;
+  IDecFloat34Impl_vTable.fromBcd := @IDecFloat34Impl_fromBcdDispatcher;
+  IDecFloat34Impl_vTable.fromString := @IDecFloat34Impl_fromStringDispatcher;
+
+  IInt128Impl_vTable := Int128VTable.create;
+  IInt128Impl_vTable.version := 2;
+  IInt128Impl_vTable.toString := @IInt128Impl_toStringDispatcher;
+  IInt128Impl_vTable.fromString := @IInt128Impl_fromStringDispatcher;
+
+  IReplicatedRecordImpl_vTable := ReplicatedRecordVTable.create;
+  IReplicatedRecordImpl_vTable.version := 2;
+  IReplicatedRecordImpl_vTable.getRawLength := @IReplicatedRecordImpl_getRawLengthDispatcher;
+  IReplicatedRecordImpl_vTable.getRawData := @IReplicatedRecordImpl_getRawDataDispatcher;
+
+  IReplicatedBlobImpl_vTable := ReplicatedBlobVTable.create;
+  IReplicatedBlobImpl_vTable.version := 3;
+  IReplicatedBlobImpl_vTable.getLength := @IReplicatedBlobImpl_getLengthDispatcher;
+  IReplicatedBlobImpl_vTable.isEof := @IReplicatedBlobImpl_isEofDispatcher;
+  IReplicatedBlobImpl_vTable.getSegment := @IReplicatedBlobImpl_getSegmentDispatcher;
+
+  IReplicatedTransactionImpl_vTable := ReplicatedTransactionVTable.create;
+  IReplicatedTransactionImpl_vTable.version := 13;
+  IReplicatedTransactionImpl_vTable.dispose := @IReplicatedTransactionImpl_disposeDispatcher;
+  IReplicatedTransactionImpl_vTable.prepare := @IReplicatedTransactionImpl_prepareDispatcher;
+  IReplicatedTransactionImpl_vTable.commit := @IReplicatedTransactionImpl_commitDispatcher;
+  IReplicatedTransactionImpl_vTable.rollback := @IReplicatedTransactionImpl_rollbackDispatcher;
+  IReplicatedTransactionImpl_vTable.startSavepoint := @IReplicatedTransactionImpl_startSavepointDispatcher;
+  IReplicatedTransactionImpl_vTable.releaseSavepoint := @IReplicatedTransactionImpl_releaseSavepointDispatcher;
+  IReplicatedTransactionImpl_vTable.rollbackSavepoint := @IReplicatedTransactionImpl_rollbackSavepointDispatcher;
+  IReplicatedTransactionImpl_vTable.insertRecord := @IReplicatedTransactionImpl_insertRecordDispatcher;
+  IReplicatedTransactionImpl_vTable.updateRecord := @IReplicatedTransactionImpl_updateRecordDispatcher;
+  IReplicatedTransactionImpl_vTable.deleteRecord := @IReplicatedTransactionImpl_deleteRecordDispatcher;
+  IReplicatedTransactionImpl_vTable.storeBlob := @IReplicatedTransactionImpl_storeBlobDispatcher;
+  IReplicatedTransactionImpl_vTable.executeSql := @IReplicatedTransactionImpl_executeSqlDispatcher;
+  IReplicatedTransactionImpl_vTable.executeSqlIntl := @IReplicatedTransactionImpl_executeSqlIntlDispatcher;
+
+  IReplicatedSessionImpl_vTable := ReplicatedSessionVTable.create;
+  IReplicatedSessionImpl_vTable.version := 5;
+  IReplicatedSessionImpl_vTable.dispose := @IReplicatedSessionImpl_disposeDispatcher;
+  IReplicatedSessionImpl_vTable.getStatus := @IReplicatedSessionImpl_getStatusDispatcher;
+  IReplicatedSessionImpl_vTable.startTransaction := @IReplicatedSessionImpl_startTransactionDispatcher;
+  IReplicatedSessionImpl_vTable.cleanupTransaction := @IReplicatedSessionImpl_cleanupTransactionDispatcher;
+  IReplicatedSessionImpl_vTable.setSequence := @IReplicatedSessionImpl_setSequenceDispatcher;
+
 finalization
   IVersionedImpl_vTable.destroy;
   IReferenceCountedImpl_vTable.destroy;
@@ -14082,14 +11348,12 @@ finalization
   IMetadataBuilderImpl_vTable.destroy;
   IResultSetImpl_vTable.destroy;
   IStatementImpl_vTable.destroy;
-  IStatementImpl_vTable_V4.destroy;
-  IBatchImpl_vTable.Destroy;
-  IBatchCompletionStateImpl_VTable.Destroy;
-  IReplicatorImpl_vTable.Destroy;
+  IBatchImpl_vTable.destroy;
+  IBatchCompletionStateImpl_vTable.destroy;
+  IReplicatorImpl_vTable.destroy;
   IRequestImpl_vTable.destroy;
   IEventsImpl_vTable.destroy;
   IAttachmentImpl_vTable.destroy;
-  IAttachment_V4Impl_vTable.Destroy;
   IServiceImpl_vTable.destroy;
   IProviderImpl_vTable.destroy;
   IDtcStartImpl_vTable.destroy;
@@ -14107,6 +11371,7 @@ finalization
   IListUsersImpl_vTable.destroy;
   ILogonInfoImpl_vTable.destroy;
   IManagementImpl_vTable.destroy;
+  IAuthBlockImpl_vTable.destroy;
   IWireCryptPluginImpl_vTable.destroy;
   ICryptKeyCallbackImpl_vTable.destroy;
   IKeyHolderPluginImpl_vTable.destroy;
@@ -14148,6 +11413,12 @@ finalization
   IUdrProcedureFactoryImpl_vTable.destroy;
   IUdrTriggerFactoryImpl_vTable.destroy;
   IUdrPluginImpl_vTable.destroy;
-
+  IDecFloat16Impl_vTable.destroy;
+  IDecFloat34Impl_vTable.destroy;
+  IInt128Impl_vTable.destroy;
+  IReplicatedRecordImpl_vTable.destroy;
+  IReplicatedBlobImpl_vTable.destroy;
+  IReplicatedTransactionImpl_vTable.destroy;
+  IReplicatedSessionImpl_vTable.destroy;
 {$ENDIF ZEOS_DISABLE_FIREBIRD}
 end.

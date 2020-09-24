@@ -5036,7 +5036,7 @@ function RawToUInt64(const Value: RawByteString) : UInt64;
 var
   E: Integer;
 begin
-  Result := ValUInt64_JOH_PAS_8_a_raw(Pointer(Value), E{%H-});
+    Result := ValUInt64_JOH_PAS_8_a_raw(Pointer(Value), E{%H-});
   if E <> 0 then
     raise EConvertError.CreateResFmt(@SInvalidInteger, [Value]);
 end;
