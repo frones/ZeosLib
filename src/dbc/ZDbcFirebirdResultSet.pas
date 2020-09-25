@@ -913,9 +913,12 @@ procedure TZFirebirdLobStream.CloseLob;
 begin
   Assert(FLobIsOpen);
   FBlob.close(FStatus);
-  if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
-    FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.close', Self);
-  FBlob.release;
+  try
+    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+      FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.close', Self);
+  finally
+    FBlob.release;
+  end;
   FLobIsOpen := False;
   FPosition := 0;
 end;
