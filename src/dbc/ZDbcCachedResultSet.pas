@@ -85,6 +85,7 @@ type
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
 
     procedure SetTransaction(const Value: IZTransaction);
+    function HasAutoCommitTransaction: Boolean;
   end;
 
   {** Represents a cached result set. }
@@ -704,12 +705,24 @@ begin
     while i < FInitialRowsList.Count do begin
       OldRowAccessor.RowBuffer := PZRowBuffer(FInitialRowsList[i]);
       NewRowAccessor.RowBuffer := PZRowBuffer(FCurrentRowsList[i]);
-      Inc(i);
       { Updates default field values. }
       if NewRowAccessor.RowBuffer.UpdateType in [utInserted, utModified] then
         CalculateRowDefaults(NewRowAccessor);
       { Posts row updates. }
       PostRowUpdates(OldRowAccessor, NewRowAccessor);
+      if Resolver.HasAutoCommitTransaction then begin
+        if NewRowAccessor.RowBuffer.UpdateType <> utDeleted then begin
+          NewRowAccessor.RowBuffer.UpdateType := utUnmodified;
+          if (FSelectedRow <> nil)
+            and (FSelectedRow.Index = NewRowAccessor.RowBuffer.Index) then
+              FSelectedRow.UpdateType := utUnmodified;
+        end;
+        { Remove cached rows. }
+        OldRowAccessor.Dispose;
+        FInitialRowsList.Delete(i);
+        FCurrentRowsList.Delete(i);
+      end else
+        Inc(i);
     end;
   end;
 end;
