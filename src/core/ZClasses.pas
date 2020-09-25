@@ -1683,7 +1683,7 @@ begin
     P := Pointer(Result);
     L := Length(Result)-1;
     Inc(P, L);
-    if (L >= 1) and (PWord(P)^ = Word(',')) then
+    if (L >= 1) and (PWord(P)^ = Word(Value)) then
       SetLength(Result, L);
   end;
 end;

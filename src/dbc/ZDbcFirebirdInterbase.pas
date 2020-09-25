@@ -5032,7 +5032,7 @@ end;
 function TZAbstractInterbaseFirebirdCallableStatement.CreateExecutionStatement(
   const StoredProcName: String): TZAbstractPreparedStatement;
 var
-  I: Integer;
+  I, C: Integer;
   SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND};
   SQLWriter: TZSQLStringWriter;
   Conn: IZInterbaseFirebirdConnection;
@@ -5048,12 +5048,19 @@ begin
   SQLWriter.AddText(StoredProcName, SQL);
   if BindList.Capacity >0 then
     SQLWriter.AddChar('(', SQL);
+  C := 0;
   for I := 0 to BindList.Capacity -1 do
-    if not (BindList.ParamTypes[I] in [pctOut,pctReturn]) then
+    if not (BindList.ParamTypes[I] in [pctOut,pctReturn]) then begin
       SQLWriter.AddText('?,', SQL);
+      Inc(C);
+    end;
   if BindList.Capacity > 0 then begin
-    SQLWriter.CancelLastComma(SQL);
-    SQLWriter.AddChar(')', SQL);
+    if C > 0 then begin
+      SQLWriter.CancelLastComma(SQL);
+      SQLWriter.AddChar(')', SQL);
+    end
+    else
+      SQLWriter.CancelLastCharIfExists('(', SQL);
   end;
   SQLWriter.Finalize(SQL);
   FreeAndNil(SQLWriter);
