@@ -83,6 +83,18 @@ type
     function GetSupportedProtocols: TStringDynArray;
     function GetClientCodePages(const Url: TZURL): TStringDynArray;
     function Connect(const Url: string; Info: TStrings = nil): IZConnection; overload;// deprecated;
+    /// <summary>Attempts to create a database connection to the given URL.
+    ///  The driver should return "null" if it realizes it is the wrong kind
+    ///  of driver to connect to the given URL. This will be common, as when
+    ///  the zeos driver manager is asked to connect to a given URL it passes
+    ///  the URL to each loaded driver in turn.
+    ///  The driver should raise a SQLException if it is the right
+    ///  driver to connect to the given URL, but has trouble loading the
+    ///  library. </summary>
+    ///  <param> url the TZURL Object used to find the Driver, it's library and
+    ///    assigns the connection properties.</param>
+    ///  <returns> a <c>IZConnection</c> interface that represents a
+    ///    connection to the URL</returns>
     function Connect(const {%H-}Url: TZURL): IZConnection; overload; virtual;
     function AcceptsURL(const Url: string): Boolean; virtual;
 

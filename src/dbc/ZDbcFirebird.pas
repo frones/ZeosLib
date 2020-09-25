@@ -68,21 +68,46 @@ type
   {** Implements Interbase6 Database Driver. }
   TZFirebirdDriver = class(TZInterbaseFirebirdDriver)
   public
+    /// <summary>Constructs this object with default properties.</summary>
     constructor Create; override;
+    /// <summary>Attempts to create a database connection to the given URL.
+    ///  The driver should return "null" if it realizes it is the wrong kind
+    ///  of driver to connect to the given URL. This will be common, as when
+    ///  the zeos driver manager is asked to connect to a given URL it passes
+    ///  the URL to each loaded driver in turn.
+    ///  The driver should raise a EZSQLException if it is the right
+    ///  driver to connect to the given URL, but has trouble loading the
+    ///  library.</summary>
+    /// <param>Url the TZURL Object used to find the Driver, it's library and
+    ///  assigns the connection properties.</param>
+    /// <returns>a <c>IZConnection</c> interface that represents a
+    ///  connection to the URL</returns>
     function Connect(const Url: TZURL): IZConnection; override;
   end;
 
   IZFirebirdTransaction = interface(IZInterbaseFirebirdTransaction)
     ['{CBCAE412-34E8-489A-A022-EAE325F6D460}']
+    /// <summary>Get the Firebird ITransaction corba interface.</summary>
+    /// <returns>The Firebird ITransaction corba interface.</returns>
     function GetTransaction: ITransaction;
   end;
 
   IZFirebirdConnection = interface(IZInterbaseFirebirdConnection)
     ['{C986AC0E-BC37-44B5-963F-65646333AF7C}']
+    /// <summary>Get the active IZFirebirdTransaction com interface.</summary>
+    /// <returns>The IZFirebirdTransaction com interface.</returns>
     function GetActiveTransaction: IZFirebirdTransaction;
+    /// <summary>Get the Firebird IAttachment corba interface.</summary>
+    /// <returns>The Firebird IAttachment corba interface.</returns>
     function GetAttachment: IAttachment;
+    /// <summary>Get the Firebird IStatus corba interface.</summary>
+    /// <returns>The Firebird IStatus corba interface.</returns>
     function GetStatus: IStatus;
+    /// <summary>Get the Firebird IUtil corba interface.</summary>
+    /// <returns>The Firebird IUtil corba interface.</returns>
     function GetUtil: IUtil;
+    /// <summary>Get the TZFirebirdPlainDriver object.</summary>
+    /// <returns>The TZFirebirdPlainDriver object.</returns>
     function GetPlainDriver: TZFirebirdPlainDriver;
   end;
 
@@ -91,14 +116,54 @@ type
   private
     FTransaction: ITransaction;
   protected
+    /// <summary>Is the transaction is started?</summary>
+    /// <returns><c>True</c> if so otherwise <c>False</c>.</returns>
     function TxnIsStarted: Boolean; override;
+    /// <summary>This method is called when a Txn should end.
+    ///  It tests if we can fetch all data to the cached resultset and if no
+    ///  uncached lob's are underway.</summary>
+    /// <returns><c>True</c> if so otherwise <c>False</c>.</returns>
     function TestCachedResultsAndForceFetchAll: Boolean; override;
   public { implement ITransaction}
+    /// <summary>Makes all changes made since the previous commit/rollback
+    ///  permanent and releases any database locks
+    ///  currently held by the Connection. This method should be
+    ///  used only when auto-commit mode has been disabled. If Option
+    ///  "Hard_Commit" is set to true or TestCachedResultsAndForceFetchAll returns
+    ///  True the transaction is committed. Otherwise if "Hard_Commit" isn't set
+    ///  to true a retained_commit is performed, and the txn get's removed
+    ///  from the transaction manger. Later if all streams are closed a final
+    ///  commit is called to release the garbage.</summary>
     procedure Commit;
+    /// <summary>Perform a Commit or Rollback as retained done by User before.
+    ///  Removes this interface from Parent-Transaction manager.</summary>
     procedure Close;
+    /// <summary>Test if the transaction is underway on the server.</summary>
+    /// <returns><c>True</c> if so otherwise <c>False</c>.</returns>
     function IsClosed: Boolean;
+    /// <summary>Drops all changes made since the previous
+    ///  commit/rollback and releases any database locks currently held
+    ///  by this Connection. This method should be used only when auto-
+    ///  commit has been disabled. If Option "Hard_Commit" is set to true
+    ///  or TestCachedResultsAndForceFetchAll returns True the transaction
+    ///  is rolled back. Otherwise if "Hard_Commit" isn't set
+    ///  to true a retained_rollback is performed, and the txn get's removed
+    ///  from the transaction manger. Later if all streams are closed a final
+    ///  rollback is called to release the garbage.</summary>
     procedure Rollback;
+    /// <summary>Get the IZConnection com interface of the current transaction.</summary>
+    /// <returns>an IZConnection com interface.</returns>
     function GetConnection: IZConnection;
+    /// <summary>Starts transaction support or saves the current transaction.
+    ///  If the connection is closed, the connection will be opened.
+    ///  If a transaction is underway a nested transaction or a savepoint will
+    ///  be spawned. While the tranaction(s) is/are underway the AutoCommit
+    ///  property is set to False. Ending up the transaction with a commit
+    ///  rollback the autocommit property will be restored if changing the
+    ///  autocommit mode was triggered by a starttransaction call.</summary>
+    /// <returns>the current txn-level. 1 means a transaction was started.
+    ///  2 means the transaction was saved. 3 means the previous savepoint
+    ///  got saved too and so on</returns>
     function StartTransaction: Integer;
   public
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
@@ -202,9 +267,6 @@ begin
     {$ENDIF ZEOS_DISABLE_INTERBASE}
 end;
 
-{**
-  Constructs this object with default properties.
-}
 constructor TZFirebirdDriver.Create;
 begin
   inherited Create;
@@ -678,13 +740,6 @@ begin
   end;
 end;
 
-{**
-  Makes all changes made since the previous
-  commit/rollback permanent and releases any database locks
-  currently held by the Connection. This method should be
-  used only when auto-commit mode has been disabled.
-  @see #setAutoCommit
-}
 procedure TZFirebirdTransaction.Commit;
 var S: RawByteString;
 begin
@@ -752,13 +807,6 @@ begin
   end;
 end;
 
-{**
-  Drops all changes made since the previous
-  commit/rollback and releases any database locks currently held
-  by this Connection. This method should be used only when auto-
-  commit has been disabled.
-  @see #setAutoCommit
-}
 procedure TZFirebirdTransaction.Rollback;
 var S: RawByteString;
 begin
@@ -790,18 +838,6 @@ begin
   end;
 end;
 
-{**
-  Starts transaction support or saves the current transaction.
-  If the connection is closed, the connection will be opened.
-  If a transaction is underway a nested transaction or a savepoint will be
-  spawned. While the tranaction(s) is/are underway the AutoCommit property is
-  set to False. Ending up the transaction with a commit/rollback the autocommit
-  property will be restored if changing the autocommit mode was triggered by a
-  starttransaction call.
-  @return the current txn-level. 1 means a transaction was started.
-  2 means the transaction was saved. 3 means the previous savepoint got saved
-  too and so on
-}
 function TZFirebirdTransaction.StartTransaction: Integer;
 var S: String;
 begin
