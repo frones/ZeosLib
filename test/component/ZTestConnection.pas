@@ -130,25 +130,26 @@ procedure TZTestConnectionCase.TestLoginPromptConnection;
 var
     locUserName,locPassword : string;
 begin
-  if Connection.Protocol = 'sqlite' then
-    exit;
+  if Connection.Protocol = 'mssql' then
+    Fail('Making this test fail to get everything else tested for SQL Server 2000. This test hangs forever with FreeTDS and SQL 2000.');
 
   locUserName := Connection.User;
   locPassword := Connection.Password;
   Connection.Disconnect;
   Connection.LoginPrompt := true;
-  Connection.User := '';
-  Connection.Password := '';
+//  Connection.User := '';
+//  Connection.Password := '';
   gloUserName := 'x';
-  gloPassword := '';
+  gloPassword := 'y';
   Connection.OnLogin := ConnLogin;
   try
     Connection.Connect;
-    //Fail('We never expect to reach this place. It means we were allowed to login using invalid user credentials.');
+    if Connection.DbcConnection.GetServerProvider <> spSQLite then
+      Fail('We never expect to reach this place. It means we were allowed to login using invalid user credentials.');
   except
     CheckEquals(false,Connection.Connected);
   end;
-  Connection.Disconnect; // I assume, sqlite would allow conecting anyway.
+  Connection.Disconnect;
   gloUserName := locUserName;
   gloPassword := locPassword;
   Connection.Connect;
