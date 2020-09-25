@@ -102,6 +102,7 @@ type
     procedure TestSF418_DESC;
     procedure TestSF418_ASC;
     procedure TestSF427;
+    procedure TestSF443;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1539,6 +1540,34 @@ begin
   end;
 end;
 
+
+procedure ZTestCompInterbaseBugReport.TestSF443;
+const DescAsc: Array[boolean] of String = (' DESC',' ASC');
+var
+  Query: TZReadOnlyQuery;
+  B: Boolean;
+begin
+  Query := CreateReadOnlyQuery;
+  try
+    Query.SQL.Text := 'select * from date_values where d_date>2020-09-25';
+    try
+      Query.Open;
+    except
+      on E:Exception do
+        CheckNotTestFailure(E, 'missing date quotes');
+    end;
+    Check(Query.Active);
+    Check(Query.Eof);
+    Query.SQL.Text := 'select * from date_values';
+    for B := false to true do begin
+      Query.Active := False;
+      Query.IndexFieldNames := 'd_id' +DescAsc[b];
+      Query.Open;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
 
 { ZTestCompInterbaseBugReportMBCs }
 

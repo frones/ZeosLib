@@ -736,25 +736,28 @@ begin
     end;
     Status := FResultSet.fetchNext(FStatus, FDataBuffer);
     Result := Status = {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_OK{$ELSE}IStatus_RESULT_OK{$ENDIF};
-    if not Result then begin
+    if not Result then try
       if Status = {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_NO_DATA{$ELSE}IStatus_RESULT_NO_DATA{$ENDIF} then begin
-        if LastRowNo < RowNo then
-          LastRowNo := RowNo;
-        RowNo := RowNo +1; //set AfterLast
         if GetType = rtForwardOnly then begin
           FResultSet.Close(FStatus); //dereister cursor from Txn
           if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
             FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.close', Self);
-          FResultSet.release;
-          FResultSet := nil;
-          FResultSetAddr^ := nil;
-          if (FFBTransaction <> nil) then
-            DeRegisterCursor;
         end;
       end else
-        FFBConnection.HandleErrorOrWarning(lcExecute, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.fetchNext', Self);
+        FFBConnection.HandleErrorOrWarning(lcFetch, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.fetchNext', Self);
       if not LastRowFetchLogged and DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
+    finally
+      if LastRowNo < RowNo then
+        LastRowNo := RowNo;
+      RowNo := RowNo+1; //tag as after last keep this, else the FPC grids are getting viny nilly
+      //if statement is prepared but a syntax error did happen on execute only
+      //example TestSF443
+      FResultSet.release;
+      FResultSet := nil;
+      FResultSetAddr^ := nil;
+      if (FFBTransaction <> nil) then
+        DeRegisterCursor;
     end else begin
       RowNo := RowNo +1;
       if LastRowNo < RowNo then
