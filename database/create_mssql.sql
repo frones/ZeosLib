@@ -320,6 +320,37 @@ create table bcd_values
 go
 
 /*==============================================================*/
+/* Table : ADQA_All_type                                        */
+/*==============================================================*/
+CREATE TABLE ADQA_All_types (
+  tbigint bigint NULL,
+  tbinary binary(50) NULL,
+  tbit bit NULL,
+  tchar char(10) COLLATE Polish_CI_AS NULL,
+  tdatetime datetime NULL,
+  tfloat float NULL,
+  timage image NULL,
+  tint int NULL,
+  tmoney money NULL,
+  tnchar nchar(10) COLLATE Polish_CI_AS NULL,
+  tntext ntext COLLATE Polish_CI_AS NULL,
+  tnumeric numeric(18, 10) NULL,
+  tnvarchar nvarchar(50) COLLATE Polish_CI_AS NULL,
+  treal real NULL,
+  tsmalldatetime smalldatetime NULL,
+  tsmallint smallint NULL,
+  tsmallmoney smallmoney NULL,
+  tsql_variant sql_variant NULL,
+  ttext text COLLATE Polish_CI_AS NULL,
+  ttimestamp timestamp NULL,
+  ttinyint tinyint NULL,
+  tuniqueidentifier uniqueidentifier NULL,
+  tvarbinary varbinary(50) NULL,
+  tvarchar varchar(50) COLLATE Polish_CI_AS NULL
+);
+go
+
+/*==============================================================*/
 /* Stored procedure: procedure1                                 */
 /*==============================================================*/
 create procedure procedure1
