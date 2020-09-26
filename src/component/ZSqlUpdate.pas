@@ -139,6 +139,7 @@ type
     procedure DefineProperties(Filer: TFiler); override;
 
     procedure SetTransaction(const Value: IZTransaction);
+    function HasAutoCommitTransaction: Boolean;
     procedure CalculateDefaults(const Sender: IZCachedResultSet;
       const RowAccessor: TZRowAccessor);
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
@@ -298,6 +299,13 @@ begin
   else
     Result := FDeleteSQL;
   end;
+end;
+
+function TZUpdateSQL.HasAutoCommitTransaction: Boolean;
+begin
+  if (FTransaction <> nil)
+  then Result := FTransaction.GetAutoCommit
+  else Result := TZAbstractRODataset(Dataset).Connection.AutoCommit;
 end;
 
 {**

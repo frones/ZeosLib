@@ -141,6 +141,7 @@ type
       const ColumnsLookup: TZIndexPairList): SQLString; virtual;
   public //implement IZCachedResolver
     procedure SetTransaction(const Value: IZTransaction); virtual;
+    function HasAutoCommitTransaction: Boolean;
 
     procedure CalculateDefaults(const Sender: IZCachedResultSet; const RowAccessor: TZRowAccessor);
     procedure PostUpdates(const Sender: IZCachedResultSet;
@@ -486,6 +487,13 @@ begin
       Inc(N);
     end;
   end;
+end;
+
+function TZGenerateSQLCachedResolver.HasAutoCommitTransaction: Boolean;
+begin
+  if FTransaction <> nil
+  then Result := FTransaction.GetAutoCommit
+  else Result := Connection.GetAutoCommit;
 end;
 
 {**

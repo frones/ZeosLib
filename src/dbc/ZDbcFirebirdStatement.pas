@@ -146,7 +146,7 @@ type
       Params: TStrings);
   end;
 
-  /// <summary>Implements and IZPreparedStatement for Firebird.</summary>
+  /// <summary>Implements an IZPreparedStatement for Firebird.</summary>
   TZFirebirdPreparedStatement = class(TZAbstractFirebirdStatement,
     IZPreparedStatement);
 
@@ -806,6 +806,8 @@ begin
     Attachment := FFBConnection.GetAttachment;
     Transaction := FFBConnection.GetActiveTransaction.GetTransaction;
     Blob := Attachment.createBlob(FStatus, Transaction, PISC_QUAD(sqldata), 0, nil);
+    if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+      FFBConnection.HandleErrorOrWarning(lcBindPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.createBlob', Self);
     { put data to blob }
     CurPos := 0;
     SegLen := DefaultBlobSegmentSize;
@@ -820,9 +822,12 @@ begin
     end;
     { close blob handle }
     Blob.close(FStatus);
-    if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-      FFBConnection.HandleErrorOrWarning(lcBindPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.close', Self);
-    Blob.release;
+    try
+      if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+        FFBConnection.HandleErrorOrWarning(lcBindPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.close', Self);
+    finally
+      Blob.release;
+    end;
     sqlind^ := ISC_NOTNULL;
   end;
 end;

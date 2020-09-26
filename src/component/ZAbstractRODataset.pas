@@ -1095,6 +1095,9 @@ type
     function GetAsUnicodeString: UnicodeString; {$IFDEF WITH_VIRTUAL_TFIELD_ASUNICODESTRING}override;{$ENDIF}
     procedure SetAsUnicodeString(const Value: UnicodeString); {$IFDEF WITH_VIRTUAL_TFIELD_ASUNICODESTRING}override;{$ENDIF}
     {$ENDIF}
+    {$IFDEF TFIELD_HAS_ASBYTES}
+    function GetAsBytes: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF}; override;
+    {$ENDIF}
   public
     constructor Create(AOwner: TComponent); override;
     procedure Clear; override;
@@ -1143,6 +1146,9 @@ type
     {$IFNDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}
     function GetAsUnicodeString: UnicodeString; {$IFDEF WITH_VIRTUAL_TFIELD_ASUNICODESTRING}override;{$ENDIF}
     procedure SetAsUnicodeString(const Value: UnicodeString); {$IFDEF WITH_VIRTUAL_TFIELD_ASUNICODESTRING}override;{$ENDIF}
+    {$ENDIF}
+    {$IFDEF TFIELD_HAS_ASBYTES}
+    function GetAsBytes: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF}; override;
     {$ENDIF}
   protected
     procedure Bind(Binding: Boolean); override;
@@ -8720,6 +8726,42 @@ begin
   else Result := False;
 end;
 
+{$IFDEF TFIELD_HAS_ASBYTES}
+function TZRawStringField.GetAsBytes: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF};
+var TransliterateCP: Word;
+    P: Pointer;
+    L:  NativeUint;
+label jmpSet1, jmpSetL;
+begin
+  Result := nil;
+  if IsRowDataAvailable then with TZAbstractRODataset(DataSet) do begin
+    TransliterateCP := GetTransliterateCodePage(Connection.ControlsCodePage);
+    if (FColumnCP = zCP_UTF16) then begin
+      P := FResultSet.GetPWideChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, L);
+      if L > 0 then begin
+        SetLength(Result, L shl 2);
+        L := ZEncoding.PUnicode2PRawBuf(P, Pointer(Result), L, L shl 2, TransliterateCP);
+        goto jmpSetL;
+      end else goto jmpSet1;
+    end else begin
+      P := FResultSet.GetPAnsiChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, L);
+      if (L > 0) then
+        if Transliterate then begin
+          SetLength(Result, L shl 2);
+          L := PRawToPRawBuf(P, Pointer(Result), L, L shl 2, FColumnCP, TransliterateCP);
+jmpSetL:  SetLength(Result, L+1);
+        end else begin
+          SetLength(Result, L+1);
+          Move(P^, Pointer(Result)^, L);
+        end
+      else
+jmpSet1: SetLength(Result, 1);
+    end;
+    PByte(PAnsiChar(Result)+L)^ := 0;
+  end else Result := nil;
+end;
+{$ENDIF}
+
 function TZRawStringField.GetAsString: String;
 {$IFNDEF UNICODE}
 var TransliterateCP: Word;
@@ -9061,6 +9103,22 @@ begin
   else Result := '';
 end;
 {$ENDIF NO_ANSISTRING}
+
+{$IFDEF TFIELD_HAS_ASBYTES}
+function TZUnicodeStringField.GetAsBytes: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF};
+var P: Pointer;
+    L:  NativeUint;
+begin
+  Result := nil;
+  if IsRowDataAvailable then with TZAbstractRODataset(DataSet) do begin
+    P := FResultSet.GetPWideChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, L);
+    L := L shl 1;
+    SetLength(Result, L+2);
+    Move(P^, Pointer(Result)^, L);
+    PWord(PAnsiChar(Result)+L)^ := 0;
+  end else Result := nil;
+end;
+{$ENDIF TFIELD_HAS_ASBYTES}
 
 function TZUnicodeStringField.GetAsString: String;
 {$IFNDEF UNICODE}
@@ -10073,7 +10131,7 @@ begin
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
-    BLob.QueryInterface(IZCLob, Clob);
+    Blob.QueryInterface(IZCLob, Clob);
     if (FColumnCP = zCP_UTF16)
     then SetW(GetTransliterateCodePage(TZAbstractRODataset(DataSet).Connection.ControlsCodePage))
     else CLob.SetPAnsiChar(P, FColumnCP, L);

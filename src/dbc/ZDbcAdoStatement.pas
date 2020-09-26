@@ -257,13 +257,16 @@ begin
       if (FAdoRecordSet = nil) or (FAdoRecordSet.MaxRecords <> MaxRows) then begin
         FAdoRecordSet := CoRecordSet.Create;
         FAdoRecordSet.MaxRecords := MaxRows;
-        FAdoRecordSet._Set_ActiveConnection(FAdoCommand.Get_ActiveConnection);
-        if (GetResultSetType = rtForwardOnly) or (GetResultSetConcurrency = rcUpdatable)
-        then FAdoRecordSet.CursorLocation := adUseServer
-        else FAdoRecordSet.CursorLocation := adUseClient;
-        FAdoRecordSet.CacheSize := 128*1024;
-        FAdoRecordSet.MaxRecords := MaxRows;
-        FAdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockReadOnly, adOptionUnspecified);
+        //handle a MSAccess issue: https://zeoslib.sourceforge.io/viewtopic.php?f=50&t=127118
+        if Self.FAdoConnection.GetServerProvider <> spMSJet then begin
+          FAdoRecordSet._Set_ActiveConnection(FAdoCommand.Get_ActiveConnection);
+          if (GetResultSetType = rtForwardOnly) or (GetResultSetConcurrency = rcUpdatable)
+          then FAdoRecordSet.CursorLocation := adUseServer
+          else FAdoRecordSet.CursorLocation := adUseClient;
+          FAdoRecordSet.CacheSize := 128*1024;
+          FAdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockReadOnly, adOptionUnspecified);
+        end else
+          FAdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockOptimistic, adAsyncFetch);
       end else
         FAdoRecordSet.Requery(adOptionUnspecified);
     end else

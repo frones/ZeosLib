@@ -123,7 +123,6 @@ type
     procedure SetType(Value: TZResultSetType);
     procedure SetConcurrency(Value: TZResultSetConcurrency);
 
-    function Next: Boolean; virtual;
     procedure BeforeClose; virtual;
     procedure Close; virtual;
     procedure AfterClose; virtual;
@@ -214,16 +213,52 @@ type
     // Traversal/Positioning
     //---------------------------------------------------------------------
 
+    /// <summary>Moves the cursor down one row from its current position. A
+    ///  <c>ResultSet</c> cursor is initially positioned before the first row;
+    ///  the first call to the method <c>next</c> makes the first row the
+    ///  current row; the second call makes the second row the current row, and
+    ///  so on. If an input stream is open for the current row, a call to the
+    ///  method <c>next</c> will implicitly close it. A <c>ResultSet</c>
+    ///  object's warning chain is cleared when a new row is read.</summary>
+    /// <returns><c>true</c> if the new current row is valid; <c>false</c> if
+    ///  there are no more rows</returns>
+    function Next: Boolean; virtual;
+    /// <summary>Indicates whether the cursor is before the first row in this
+    ///  <c>ResultSet</c> object.</summary>
+    /// <returns><c>true</c> if the cursor is before the first row; <c>false</c>
+    ///  if the cursor is at any other position or the result set contains no
+    ///  rows</returns>
     function IsBeforeFirst: Boolean; virtual;
+    /// <summary>Indicates whether the cursor is after the last row in this
+    ///  <c>ResultSet</c> object.
+    /// <returns><c>true</c> if the cursor is after the last row; <c>false</c>
+    ///  if the cursor is at any other position or the result set contains no
+    ///  rows</returns>
     function IsAfterLast: Boolean; virtual;
     function IsFirst: Boolean; virtual;
     function IsLast: Boolean; virtual;
     procedure BeforeFirst; virtual;
     procedure AfterLast; virtual;
     function First: Boolean; virtual;
+    /// <summary>Moves the cursor to the last row in this <c>ResultSet</c>
+    ///  object.</summary>
+    /// <returns><c>true</c> if the cursor is on a valid row; <c>false</c> if
+    ///  there are no rows in the result set </returns>
     function Last: Boolean; virtual;
     function GetRow: NativeInt; virtual;
     function MoveAbsolute(Row: Integer): Boolean; virtual;
+    /// <summary>Moves the cursor a relative number of rows, either positive
+    ///  or negative. Attempting to move beyond the first/last row in the
+    ///  result set positions the cursor before/after the the first/last row.
+    ///  Calling <c>relative(0)</c> is valid, but does not change the cursor
+    ///  position. Note: Calling the method <c>relative(1)</c> is different
+    ///  from calling the method <c>next()</c> because is makes sense to call
+    ///  <c>next()</c> when there is no current row, for example, when the
+    ///  cursor is positioned before the first row or after the last row of the
+    ///  result set. </summary>
+    /// <param>"Rows" the relative number of rows to move the cursor.</param>
+    /// <returns><c>true</c> if the cursor is on a row;<c>false</c> otherwise
+    /// </returns>
     function MoveRelative(Rows: Integer): Boolean; virtual;
     function Previous: Boolean; virtual;
 
@@ -2354,14 +2389,6 @@ end;
 // Traversal/Positioning
 //---------------------------------------------------------------------
 
-{**
-  Indicates whether the cursor is before the first row in
-  this <code>ResultSet</code> object.
-
-  @return <code>true</code> if the cursor is before the first row;
-    <code>false</code> if the cursor is at any other position or the
-    result set contains no rows
-}
 function TZAbstractResultSet.IsBeforeFirst: Boolean;
 begin
   Result := (FRowNo = 0);
@@ -2372,14 +2399,6 @@ begin
   Result := fClosed;
 end;
 
-{**
-  Indicates whether the cursor is after the last row in
-  this <code>ResultSet</code> object.
-
-  @return <code>true</code> if the cursor is after the last row;
-    <code>false</code> if the cursor is at any other position or the
-    result set contains no rows
-}
 function TZAbstractResultSet.IsAfterLast: Boolean;
 begin
   Result := {(FLastRowNo > 0) and} (FRowNo > FLastRowNo);
@@ -2456,13 +2475,6 @@ begin
   Result := MoveAbsolute(1);
 end;
 
-{**
-  Moves the cursor to the last row in
-  this <code>ResultSet</code> object.
-
-  @return <code>true</code> if the cursor is on a valid row;
-    <code>false</code> if there are no rows in the result set
-}
 function TZAbstractResultSet.Last: Boolean;
 begin
   Result := MoveAbsolute(FLastRowNo);
@@ -2553,21 +2565,6 @@ begin
   Result := MoveAbsolute(FRowNo - 1);
 end;
 
-{**
-  Moves the cursor down one row from its current position.
-  A <code>ResultSet</code> cursor is initially positioned
-  before the first row; the first call to the method
-  <code>next</code> makes the first row the current row; the
-  second call makes the second row the current row, and so on.
-
-  <P>If an input stream is open for the current row, a call
-  to the method <code>next</code> will
-  implicitly close it. A <code>ResultSet</code> object's
-  warning chain is cleared when a new row is read.
-
-  @return <code>true</code> if the new current row is valid;
-    <code>false</code> if there are no more rows
-}
 function TZAbstractResultSet.Next: Boolean;
 begin
   Result := MoveAbsolute(FRowNo + 1);

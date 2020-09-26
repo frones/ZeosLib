@@ -120,6 +120,7 @@ type
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet;RowAccessor: TZRowAccessor);
 
     procedure SetTransaction(const Value: IZTransaction);
+    function HasAutoCommitTransaction: Boolean;
   end;
 
 implementation
@@ -1009,6 +1010,11 @@ end;
   @param OldRowAccessor a row accessor which contains old column values.
   @param NewRowAccessor a row accessor which contains new column values.
 }
+function TZEmptyResolver.HasAutoCommitTransaction: Boolean;
+begin
+  Result := True;
+end;
+
 procedure TZEmptyResolver.PostUpdates(const Sender: IZCachedResultSet;
   UpdateType: TZRowUpdateType; const OldRowAccessor,
   NewRowAccessor: TZRowAccessor);

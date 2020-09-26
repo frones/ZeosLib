@@ -104,16 +104,14 @@ type
   end;
   {$ENDIF}
 
-  /// <summary>
-  ///   Replacement for generic interface type.
-  /// </summary>
+  /// <summary>Replacement for generic interface type.</summary>
   IZInterface = IUnknown;
 
-  /// <summary>
-  ///   Represents an interface for all abstract object.
-  /// </summary>
+  /// <summary>Represents an interface for all abstract object.</summary>
   IZObject = interface(IZInterface)
     ['{EF46E5F7-00CF-4DDA-BED0-057D6686AEE0}']
+    /// <summary>Checks has the iterated collection more elements.</summary>
+    /// <returns><c>True</c> if iterated collection has more elements.</returns>
     function Equals(const Value: IZInterface): Boolean;
     function GetHashCode: LongInt;
     function Clone: IZInterface;
@@ -121,39 +119,25 @@ type
     function InstanceOf(const IId: TGUID): Boolean;
   end;
 
-  /// <summary>
-  ///   Represents a fake interface for coparable objects.
-  /// </summary>
+  /// <summary>Represents a fake interface for coparable objects.</summary>
   IZComparable = interface(IZObject)
     ['{04112081-F07B-4BBF-A757-817816EB67C1}']
   end;
 
-  /// <summary>
-  ///   Represents an interface to clone objects.
-  /// </summary>
+  /// <summary>Represents an interface to clone objects.</summary>
   IZClonnable = interface(IZObject)
     ['{ECB7F3A4-7B2E-4130-BA66-54A2D43C0149}']
   end;
 
-  /// <summary>
-  ///   Represents a generic collection iterator interface.
-  /// </summary>
+  /// <summary>Represents a generic collection iterator interface.</summary>
   IZIterator = interface(IZObject)
     ['{D964DDD0-2308-4D9B-BD36-5810632512F7}']
-    /// <summary>
-    ///  Checks has the iterated collection more elements.
-    /// </summary>
-    /// <returns>
-    ///   <c>True</c> if iterated collection has more elements.
-    /// </returns>
+    /// <summary>Checks has the iterated collection more elements.</summary>
+    /// <returns><c>True</c> if iterated collection has more elements.</returns>
     function HasNext: Boolean;
-    /// <summary>
-    ///  Gets a next iterated element from the collection.
-    /// </summary>
-    /// <returns>
-    ///   a next iterated element from the collection or <c>nil</c>
-    ///   if no more elements.
-    /// </returns>
+    /// <summary>Gets a next iterated element from the collection.</summary>
+    /// <returns>a next iterated element from the collection or <c>nil</c>
+    ///  if no more elements.</returns>
     function Next: IZInterface;
   end;
 
@@ -1683,7 +1667,7 @@ begin
     P := Pointer(Result);
     L := Length(Result)-1;
     Inc(P, L);
-    if (L >= 1) and (PWord(P)^ = Word(',')) then
+    if (L >= 1) and (PWord(P)^ = Word(Value)) then
       SetLength(Result, L);
   end;
 end;

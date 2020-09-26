@@ -92,6 +92,7 @@ type
     Constructor Create(const Statement: IZStatement; const SQL: String;
       OrgMessageMetadata, NewMessageMetadata: IMessageMetadata; Status: IStatus;
       DataBuffer: Pointer);
+    procedure ResetCursor; override;
   public
     function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
   end;
@@ -104,15 +105,69 @@ type
     Constructor Create(const Statement: IZStatement; const SQL: String;
       OrgMessageMetadata, NewMessageMetadata: IMessageMetadata; Status: IStatus;
       DataBuffer: Pointer; ResultSet: PIResultSet);
+  public
+    /// <summary>Resets the Cursor position to Row 0, and releases servver
+    ///  and client resources.</summary>
     procedure ResetCursor; override;
-
   public { Traversal/Positioning }
+    /// <summary>Indicates whether the cursor is before the first row in this
+    ///  <c>ResultSet</c> object.</summary>
+    /// <returns><c>true</c> if the cursor is before the first row; <c>false</c>
+    ///  if the cursor is at any other position or the result set contains no
+    ///  rows</returns>
     function IsBeforeFirst: Boolean; override;
+    /// <summary>Indicates whether the cursor is after the last row in this
+    ///  <c>ResultSet</c> object.
+    /// <returns><c>true</c> if the cursor is after the last row; <c>false</c>
+    ///  if the cursor is at any other position or the result set contains no
+    ///  rows</returns>
     function IsAfterLast: Boolean; override;
     function First: Boolean; override;
+    /// <summary>Moves the cursor to the last row in this <c>ResultSet</c>
+    ///  object.</summary>
+    /// <returns><c>true</c> if the cursor is on a valid row; <c>false</c> if
+    ///  there are no rows in the result set </returns>
     function Last: Boolean; override;
+    /// <summary>Moves the cursor down one row from its current position. A
+    ///  <c>ResultSet</c> cursor is initially positioned before the first row;
+    ///  the first call to the method <c>next</c> makes the first row the
+    ///  current row; the second call makes the second row the current row, and
+    ///  so on. If an input stream is open for the current row, a call to the
+    ///  method <c>next</c> will implicitly close it. A <c>ResultSet</c>
+    ///  object's warning chain is cleared when a new row is read.</summary>
+    /// <returns><c>true</c> if the new current row is valid; <c>false</c> if
+    ///  there are no more rows</returns>
     function Next: Boolean; override;
+    /// <summary>Moves the cursor to the given row number in
+    ///  this <c>ResultSet</c> object. If the row number is positive, the cursor
+    ///  moves to the given row number with respect to the beginning of the
+    ///  result set. The first row is row 1, the second is row 2, and so on.
+    ///  If the given row number is negative, the cursor moves to
+    ///  an absolute row position with respect to the end of the result set.
+    ///  For example, calling the method <c>absolute(-1)</c> positions the
+    ///  cursor on the last row; calling the method <c>absolute(-2)</c>
+    ///  moves the cursor to the next-to-last row, and so on. An attempt to
+    ///  position the cursor beyond the first/last row in the result set leaves
+    ///  the cursor before the first row or after the last row.
+    ///  <B>Note:</B> Calling <c>absolute(1)</c> is the same
+    ///  as calling <c>first()</c>. Calling <c>absolute(-1)</c>
+    ///  is the same as calling <c>last()</c>.</summary>
+    /// <param>"Row" the absolute position to be moved.</param>
+    /// <returns><c>true</c> if the cursor is on the result set;<c>false</c>
+    ///  otherwise</returns>
     function MoveAbsolute(Row: Integer): Boolean; override;
+    /// <summary>Moves the cursor a relative number of rows, either positive
+    ///  or negative. Attempting to move beyond the first/last row in the
+    ///  result set positions the cursor before/after the the first/last row.
+    ///  Calling <c>relative(0)</c> is valid, but does not change the cursor
+    ///  position. Note: Calling the method <c>relative(1)</c> is different
+    ///  from calling the method <c>next()</c> because is makes sense to call
+    ///  <c>next()</c> when there is no current row, for example, when the
+    ///  cursor is positioned before the first row or after the last row of the
+    ///  result set. </summary>
+    /// <param>"Rows" the relative number of rows to move the cursor.</param>
+    /// <returns><c>true</c> if the cursor is on a row;<c>false</c> otherwise
+    /// </returns>
     function MoveRelative(Rows: Integer): Boolean; override;
     function Previous: Boolean; override;
   end;
@@ -123,7 +178,33 @@ type
       OrgMessageMetadata, NewMessageMetadata: IMessageMetadata; Status: IStatus;
       DataBuffer: Pointer);
   public { Traversal/Positioning }
+    /// <summary>Moves the cursor down one row from its current position. A
+    ///  <c>ResultSet</c> cursor is initially positioned before the first row;
+    ///  the first call to the method <c>next</c> makes the first row the
+    ///  current row; the second call makes the second row the current row, and
+    ///  so on. If an input stream is open for the current row, a call to the
+    ///  method <c>next</c> will implicitly close it. A <c>ResultSet</c>
+    ///  object's warning chain is cleared when a new row is read.
+    /// <returns><c>true</c> if the new current row is valid; <c>false</c> if
+    ///  there are no more rows</returns>
     function Next: Boolean; override;
+    /// <summary>Moves the cursor to the given row number in
+    ///  this <c>ResultSet</c> object. If the row number is positive, the cursor
+    ///  moves to the given row number with respect to the beginning of the
+    ///  result set. The first row is row 1, the second is row 2, and so on.
+    ///  If the given row number is negative, the cursor moves to
+    ///  an absolute row position with respect to the end of the result set.
+    ///  For example, calling the method <c>absolute(-1)</c> positions the
+    ///  cursor on the last row; calling the method <c>absolute(-2)</c>
+    ///  moves the cursor to the next-to-last row, and so on. An attempt to
+    ///  position the cursor beyond the first/last row in the result set leaves
+    ///  the cursor before the first row or after the last row.
+    ///  <B>Note:</B> Calling <c>absolute(1)</c> is the same
+    ///  as calling <c>first()</c>. Calling <c>absolute(-1)</c>
+    ///  is the same as calling <c>last()</c>.</summary>
+    /// <param>"Row" the absolute position to be moved.</param>
+    /// <returns><c>true</c> if the cursor is on the result set;<c>false</c>
+    ///  otherwise</returns>
     function MoveAbsolute(Row: Integer): Boolean; override;
   end;
 
@@ -469,6 +550,13 @@ begin
   FFBTransaction.RegisterOpencursor(IZResultSet(TransactionResultSet));
 end;
 
+procedure TZAbstractFirebirdResultSet.ResetCursor;
+begin
+  inherited ResetCursor;
+  if FFBTransaction <> nil then
+    DeRegisterCursor;
+end;
+
 { TZFirebirdResultSet }
 
 constructor TZFirebirdResultSet.Create(const Statement: IZStatement;
@@ -518,14 +606,6 @@ begin
   end;
 end;
 
-{**
-  Indicates whether the cursor is after the last row in
-  this <code>ResultSet</code> object.
-
-  @return <code>true</code> if the cursor is after the last row;
-    <code>false</code> if the cursor is at any other position or the
-    result set contains no rows
-}
 function TZFirebirdResultSet.IsAfterLast: Boolean;
 begin
   if ResultSetType = rtForwardOnly then
@@ -542,14 +622,6 @@ begin
   end;
 end;
 
-{**
-  Indicates whether the cursor is before the first row in
-  this <code>ResultSet</code> object.
-
-  @return <code>true</code> if the cursor is before the first row;
-    <code>false</code> if the cursor is at any other position or the
-    result set contains no rows
-}
 function TZFirebirdResultSet.IsBeforeFirst: Boolean;
 begin
   if ResultSetType = rtForwardOnly then
@@ -566,13 +638,6 @@ begin
   end;
 end;
 
-{**
-  Moves the cursor to the last row in
-  this <code>ResultSet</code> object.
-
-  @return <code>true</code> if the cursor is on a valid row;
-    <code>false</code> if there are no rows in the result set
-}
 function TZFirebirdResultSet.Last: Boolean;
 var Status: Integer;
 begin
@@ -600,33 +665,6 @@ begin
   end;
 end;
 
-{**
-  Moves the cursor to the given row number in
-  this <code>ResultSet</code> object.
-
-  <p>If the row number is positive, the cursor moves to
-  the given row number with respect to the
-  beginning of the result set.  The first row is row 1, the second
-  is row 2, and so on.
-
-  <p>If the given row number is negative, the cursor moves to
-  an absolute row position with respect to
-  the end of the result set.  For example, calling the method
-  <code>absolute(-1)</code> positions the
-  cursor on the last row; calling the method <code>absolute(-2)</code>
-  moves the cursor to the next-to-last row, and so on.
-
-  <p>An attempt to position the cursor beyond the first/last row in
-  the result set leaves the cursor before the first row or after
-  the last row.
-
-  <p><B>Note:</B> Calling <code>absolute(1)</code> is the same
-  as calling <code>first()</code>. Calling <code>absolute(-1)</code>
-  is the same as calling <code>last()</code>.
-
-  @return <code>true</code> if the cursor is on the result set;
-    <code>false</code> otherwise
-}
 function TZFirebirdResultSet.MoveAbsolute(Row: Integer): Boolean;
 var Status: Integer;
 begin
@@ -659,23 +697,6 @@ begin
   end;
 end;
 
-{**
-  Moves the cursor a relative number of rows, either positive or negative.
-  Attempting to move beyond the first/last row in the
-  result set positions the cursor before/after the
-  the first/last row. Calling <code>relative(0)</code> is valid, but does
-  not change the cursor position.
-
-  <p>Note: Calling the method <code>relative(1)</code>
-  is different from calling the method <code>next()</code>
-  because is makes sense to call <code>next()</code> when there
-  is no current row,
-  for example, when the cursor is positioned before the first row
-  or after the last row of the result set.
-
-  @return <code>true</code> if the cursor is on a row;
-    <code>false</code> otherwise
-}
 function TZFirebirdResultSet.MoveRelative(Rows: Integer): Boolean;
 var Status: Integer;
 begin
@@ -736,25 +757,28 @@ begin
     end;
     Status := FResultSet.fetchNext(FStatus, FDataBuffer);
     Result := Status = {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_OK{$ELSE}IStatus_RESULT_OK{$ENDIF};
-    if not Result then begin
+    if not Result then try
       if Status = {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_NO_DATA{$ELSE}IStatus_RESULT_NO_DATA{$ENDIF} then begin
-        if LastRowNo < RowNo then
-          LastRowNo := RowNo;
-        RowNo := RowNo +1; //set AfterLast
         if GetType = rtForwardOnly then begin
           FResultSet.Close(FStatus); //dereister cursor from Txn
           if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
             FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.close', Self);
-          FResultSet.release;
-          FResultSet := nil;
-          FResultSetAddr^ := nil;
-          if (FFBTransaction <> nil) then
-            DeRegisterCursor;
         end;
       end else
-        FFBConnection.HandleErrorOrWarning(lcExecute, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.fetchNext', Self);
+        FFBConnection.HandleErrorOrWarning(lcFetch, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.fetchNext', Self);
       if not LastRowFetchLogged and DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
+    finally
+      if LastRowNo < RowNo then
+        LastRowNo := RowNo;
+      RowNo := RowNo+1; //tag as after last keep this, else the FPC grids are getting viny nilly
+      //if statement is prepared but a syntax error did happen on execute only
+      //example TestSF443
+      FResultSet.release;
+      FResultSet := nil;
+      FResultSetAddr^ := nil;
+      if (FFBTransaction <> nil) then
+        DeRegisterCursor;
     end else begin
       RowNo := RowNo +1;
       if LastRowNo < RowNo then
@@ -802,17 +826,20 @@ end;
 
 procedure TZFirebirdResultSet.ResetCursor;
 begin
-  inherited ResetCursor;
-  if FResultSet <> nil then begin
-    FResultSet.close(FStatus);
-    if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-      FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.close', Self);
-    FResultSet.release;
-    FResultSet := nil;
-    FResultSetAddr^ := nil;
+  try
+    if FResultSet <> nil then begin
+      FResultSet.close(FStatus);
+      if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+        FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.close', Self);
+    end;
+  finally
+    if FResultSet <> nil then begin
+      FResultSet.release;
+      FResultSet := nil;
+      FResultSetAddr^ := nil;
+    end;
+    inherited ResetCursor;
   end;
-  if FFBTransaction <> nil then
-    DeRegisterCursor;
 end;
 
 { TZFirebirdOutParamResultSet }
@@ -826,61 +853,20 @@ begin
   LastRowNo := 1;
 end;
 
-{**
-  Moves the cursor to the given row number in
-  this <code>ResultSet</code> object.
-
-  <p>If the row number is positive, the cursor moves to
-  the given row number with respect to the
-  beginning of the result set.  The first row is row 1, the second
-  is row 2, and so on.
-
-  <p>If the given row number is negative, the cursor moves to
-  an absolute row position with respect to
-  the end of the result set.  For example, calling the method
-  <code>absolute(-1)</code> positions the
-  cursor on the last row; calling the method <code>absolute(-2)</code>
-  moves the cursor to the next-to-last row, and so on.
-
-  <p>An attempt to position the cursor beyond the first/last row in
-  the result set leaves the cursor before the first row or after
-  the last row.
-
-  <p><B>Note:</B> Calling <code>absolute(1)</code> is the same
-  as calling <code>first()</code>. Calling <code>absolute(-1)</code>
-  is the same as calling <code>last()</code>.
-
-  @return <code>true</code> if the cursor is on the result set;
-    <code>false</code> otherwise
-}
 function TZFirebirdOutParamResultSet.MoveAbsolute(Row: Integer): Boolean;
 begin
   Result := not Closed and ((Row = 1) or (Row = 0));
-  RowNo := Row;
+  if (Row >= 0) and (Row <= 2) then
+    RowNo := Row;
 end;
 
-{**
-  Moves the cursor down one row from its current position.
-  A <code>ResultSet</code> cursor is initially positioned
-  before the first row; the first call to the method
-  <code>next</code> makes the first row the current row; the
-  second call makes the second row the current row, and so on.
-
-  <P>If an input stream is open for the current row, a call
-  to the method <code>next</code> will
-  implicitly close it. A <code>ResultSet</code> object's
-  warning chain is cleared when a new row is read.
-
-  @return <code>true</code> if the new current row is valid;
-    <code>false</code> if there are no more rows
-}
 function TZFirebirdOutParamResultSet.Next: Boolean;
 begin
   Result := not Closed and (RowNo = 0);
   if RowNo = 0 then
     RowNo := 1
   else if RowNo = 1 then
-    RowNo := 1
+    RowNo := 2; //set AfterLast
 end;
 
 { TZFirebirdLobStream }
@@ -910,9 +896,12 @@ procedure TZFirebirdLobStream.CloseLob;
 begin
   Assert(FLobIsOpen);
   FBlob.close(FStatus);
-  if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
-    FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.close', Self);
-  FBlob.release;
+  try
+    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+      FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.close', Self);
+  finally
+    FBlob.release;
+  end;
   FLobIsOpen := False;
   FPosition := 0;
 end;
