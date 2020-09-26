@@ -1538,7 +1538,7 @@ function SQLQuotedStr(Src: PAnsiChar; Len: LengthInt; Quote: AnsiChar): RawByteS
 /// <param>"S" a String to be quoted.</param>
 /// <param>"QuoteLeft" the left quote-char to be used.</param>
 /// <param>"QuoteRight" the right quote-char to be used.</param>
-/// <returns>the quoted tring.</returns>
+/// <returns>the quoted String.</returns>
 function SQLQuotedStr(const S: string; QuoteLeft, QuoteRight: Char): string; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
 /// <Autor>Fr0sT</Autor>
@@ -1550,12 +1550,42 @@ function SQLQuotedStr(const S: string; QuoteLeft, QuoteRight: Char): string; ove
 /// <param>"Len" the length of the buffer.</param>
 /// <param>"QuoteLeft" the left quote-char to be used.</param>
 /// <param>"QuoteRight" the right quote-char to be used.</param>
-/// <returns>the quoted tring.</returns>
+/// <returns>The quoted String.</returns>
 function SQLQuotedStr(Src: PChar; Len: LengthInt; QuoteLeft, QuoteRight: Char): string; overload;
 
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Standard dequoting of a String.</summary>
+/// <param>"S" a String to be dequoted.</param>
+/// <param>"QuoteChar" the quote-char to be used.</param>
+/// <returns>The dequoted String. If Quotes are not given or quote-count
+///  dosn't match the Quote rules, then the original string is returned.</returns>
 function SQLDequotedStr(const S: string; QuoteChar: Char): string; overload;
+
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Standard dequoting of a string buffer.</summary>
+/// <param>"Src" a buffer to be dequoted.</param>
+/// <param>"Len" the buffer length. Either count of bytes for Ansi-Compiler or
+///  words for Unicode comiler.</param>
+/// <param>"QuoteChar" the quote-char to be used.</param>
+/// <returns>The dequoted String. If Quotes are not given or quote-count
+///  dosn't match the Quote rules, then the original string is returned.</returns>
 function SQLDequotedStr(Src: PChar; Len: LengthInt; QuoteChar: Char): string; overload;
+
+/// <Autor>Fr0sT</Autor>
+/// <summary>Dequoting of a string buffer using different quote chars for State&End.</summary>
+/// <param>"S" a String to be dequoted.</param>
+/// <param>"QuoteLeft" the left quote-char to be used.</param>
+/// <param>"QuoteRight" the rigth quote-char to be used.</param>
+/// <returns>The dequoted String. If Quotes are not matching the dequoting rules
+///  a EArgumentException is raised (Decison by Autor). </returns>
 function SQLDequotedStr(const S: string; QuoteLeft, QuoteRight: Char): string; overload;
+
+/// <Autor>EgonHugeist</Autor>
+/// <summary>Standard dequoting of a raw buffer.</summary>
+/// <param>"S" a String to be dequoted.</param>
+/// <param>"QuoteChar" the quote-char to be used.</param>
+/// <returns>The dequoted String. If Quotes are not given or quote-count
+///  dosn't match the Quote rules, then the original string is returned.</returns>
 procedure SQLDequotedStr(pSrc, pDst: PAnsiChar; var Len: LengthInt; QuoteChar: AnsiChar); overload;
 
 function SameText(Val1, Val2: PAnsiChar; Len: LengthInt): Boolean; overload;
@@ -3667,6 +3697,7 @@ begin
   Exit;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : hint local variable "TS" does not seem to be intialized} {$ENDIF}
 function TryPCharToDate(P: PAnsiChar; Len: Cardinal;
   const FormatSettings: TZFormatSettings; var Date: TZDate): Boolean;
 var TS: TZTimeStamp;
@@ -3676,7 +3707,7 @@ begin
     if not Result and not FormatCompare(FormatSettings.DateFormat, DefDateFormatYMD, FormatSettings.DateFormatLen) then
       Result := TryRawToDate(P,  Len, DefDateFormatYMD, Date);
   end else begin
-    Result := TryPCharToTimeStamp(P, Len, FormatSettings, TS{%H-});
+    Result := TryPCharToTimeStamp(P, Len, FormatSettings, TS);
     if Result then begin
       Date.Year := TS.Year;
       Date.Month := Ts.Month;
@@ -3686,7 +3717,9 @@ begin
       PInt64(@Date.Year)^ := 0;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : hint local variable "TS" does not seem to be intialized} {$ENDIF}
 function TryPCharToDate(P: PWideChar; Len: Cardinal;
   const FormatSettings: TZFormatSettings; var Date: TZDate): Boolean;
 var TS: TZTimeStamp;
@@ -3696,7 +3729,7 @@ begin
     if not Result and not FormatCompare(FormatSettings.DateFormat, DefDateFormatYMD, FormatSettings.DateFormatLen) then
       Result := TryUniToDate(P,  Len, DefDateFormatYMD, Date);
   end else begin
-    Result := TryPCharToTimeStamp(P, Len, FormatSettings, TS{%H-});
+    Result := TryPCharToTimeStamp(P, Len, FormatSettings, TS);
     if Result then begin
       Date.Year := TS.Year;
       Date.Month := Ts.Month;
@@ -3706,7 +3739,9 @@ begin
       PInt64(@Date.Year)^ := 0;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : hint local variable "TS" does not seem to be intialized} {$ENDIF}
 function TryPCharToTime(P: PAnsiChar; Len: Cardinal;
   const FormatSettings: TZFormatSettings; var Time: TZTime): Boolean;
 var TS: TZTimeStamp;
@@ -3716,7 +3751,7 @@ begin
     if (PByte(P+2)^ = Ord(':')) or (Len = FormatSettings.TimeFormatLen)
     then Result := TryRawToTime(P, Len, FormatSettings.TimeFormat, Time)
     else begin
-      Result := TryPCharToTimeStamp(P, Len, FormatSettings, TS{%H-});
+      Result := TryPCharToTimeStamp(P, Len, FormatSettings, TS);
       if Result then begin
         Time.Hour := TS.Hour;
         Time.Minute := TS.Minute;
@@ -3730,7 +3765,9 @@ begin
     PInt64(@Time.Second)^ := 0;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : hint local variable "TS" does not seem to be intialized} {$ENDIF}
 function TryPCharToTime(P: PWideChar; Len: Cardinal;
   const FormatSettings: TZFormatSettings; var Time: TZTime): Boolean;
 var TS: TZTimeStamp;
@@ -3740,7 +3777,7 @@ begin
     if (PWord(P+2)^ = Ord(':')) or (Len = FormatSettings.TimeFormatLen)
     then Result := TryUniToTime(P, Len, FormatSettings.TimeFormat, Time)
     else begin
-      Result := TryPCharToTimeStamp(P, Len, FormatSettings, TS{%H-});
+      Result := TryPCharToTimeStamp(P, Len, FormatSettings, TS);
       if Result then begin
         Time.Hour := TS.Hour;
         Time.Minute := TS.Minute;
@@ -3754,6 +3791,7 @@ begin
     PInt64(@Time.Second)^ := 0;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TryPCharToTimeStamp(P: PAnsiChar; Len: Cardinal;
   const FormatSettings: TZFormatSettings; var TimeStamp: TZTimeStamp): Boolean;
@@ -3804,27 +3842,31 @@ begin
   else Result := False;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : hint local variable "TS" does not seem to be intialized} {$ENDIF}
 function TryPCharToDateTime(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var DateTime: TDateTime): Boolean;
 var TS: TZTimeStamp;
 begin
-  if TryPCharToTimeStamp(P, Len, FormatSettings, TS{%H-}) then
+  if TryPCharToTimeStamp(P, Len, FormatSettings, TS) then
     Result := TryTimeStampToDateTime(TS, DateTime)
   else begin
     Result := False;
     Datetime := 0;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : hint local variable "TS" does not seem to be intialized} {$ENDIF}
 function TryPCharToDateTime(P: PWideChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var DateTime: TDateTime): Boolean;
 var TS: TZTimeStamp;
 begin
-  if TryPCharToTimeStamp(P, Len, FormatSettings, TS{%H-}) then
+  if TryPCharToTimeStamp(P, Len, FormatSettings, TS) then
     Result := TryTimeStampToDateTime(TS, DateTime)
   else begin
     Result := False;
     Datetime := 0;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function AnsiSQLDateToDateTime(P: PWideChar; L: LengthInt): TDateTime;
 var

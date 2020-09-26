@@ -1543,8 +1543,9 @@ type
   IZResultSet = interface(IImmediatelyReleasable)
     ['{8F4C4D10-2425-409E-96A9-7142007CC1B2}']
 
-    function Next: Boolean;
     procedure Close;
+    /// <summary>Resets the Cursor position to Row 0, and releases servver
+    ///  and client resources.</summary>
     procedure ResetCursor;
     function WasNull: Boolean;
     function IsClosed: Boolean;
@@ -1658,42 +1659,56 @@ type
     // Traversal/Positioning
     //---------------------------------------------------------------------
 
+    /// <summary>Moves the cursor down one row from its current position. A
+    ///  <c>ResultSet</c> cursor is initially positioned before the first row;
+    ///  the first call to the method <c>next</c> makes the first row the
+    ///  current row; the second call makes the second row the current row, and
+    ///  so on. If an input stream is open for the current row, a call to the
+    ///  method <c>next</c> will implicitly close it. A <c>ResultSet</c>
+    ///  object's warning chain is cleared when a new row is read.</summary>
+    /// <returns><c>true</c> if the new current row is valid; <c>false</c> if
+    ///  there are no more rows</returns>
+    function Next: Boolean;
+    /// <summary>Indicates whether the cursor is before the first row in this
+    ///  <c>ResultSet</c> object.</summary>
+    /// <returns><c>true</c> if the cursor is before the first row; <c>false</c>
+    ///  if the cursor is at any other position or the result set contains no
+    ///  rows</returns>
     function IsBeforeFirst: Boolean;
+    /// <summary>Indicates whether the cursor is after the last row in this
+    ///  <c>ResultSet</c> object.
+    /// <returns><c>true</c> if the cursor is after the last row; <c>false</c>
+    ///  if the cursor is at any other position or the result set contains no
+    ///  rows</returns>
     function IsAfterLast: Boolean;
     function IsFirst: Boolean;
     function IsLast: Boolean;
     procedure BeforeFirst;
     procedure AfterLast;
     function First: Boolean;
+    /// <summary>Moves the cursor to the last row in this <c>ResultSet</c>
+    ///  object.</summary>
+    /// <returns><c>true</c> if the cursor is on a valid row; <c>false</c> if
+    ///  there are no rows in the result set </returns>
     function Last: Boolean;
     function GetRow: NativeInt;
-
-    /// <summary>
-    ///  Moves the cursor to the given row number in
-    ///  this <c>ResultSet</c> object.
-    ///  If the row number is positive, the cursor moves to
-    ///  the given row number with respect to the
-    ///  beginning of the result set.  The first row is row 1, the second
-    ///  is row 2, and so on.
+    /// <summary>Moves the cursor to the given row number in
+    ///  this <c>ResultSet</c> object. If the row number is positive, the cursor
+    ///  moves to the given row number with respect to the beginning of the
+    ///  result set. The first row is row 1, the second is row 2, and so on.
     ///  If the given row number is negative, the cursor moves to
-    ///  an absolute row position with respect to
-    ///  the end of the result set.  For example, calling the method
-    ///  <c>absolute(-1)</c> positions the
+    ///  an absolute row position with respect to the end of the result set.
+    ///  For example, calling the method <c>absolute(-1)</c> positions the
     ///  cursor on the last row; calling the method <c>absolute(-2)</c>
-    ///  moves the cursor to the next-to-last row, and so on.
-    ///  An attempt to position the cursor beyond the first/last row in
-    ///  the result set leaves the cursor before the first row or after
-    ///  the last row.
+    ///  moves the cursor to the next-to-last row, and so on. An attempt to
+    ///  position the cursor beyond the first/last row in the result set leaves
+    ///  the cursor before the first row or after the last row.
     ///  <B>Note:</B> Calling <c>absolute(1)</c> is the same
     ///  as calling <c>first()</c>. Calling <c>absolute(-1)</c>
-    ///  is the same as calling <c>last()</c>.
-    /// </summary>
-    /// <param name="Row"><see cref="System.Integer"/>
-    /// </param>
-    /// <returns>
-    /// <see cref="System.Boolean"/>
-    /// <c>true</c> if the cursor is on the result set;<c>false</c> otherwise
-    /// </returns>
+    ///  is the same as calling <c>last()</c>.</summary>
+    /// <param>"Row" the absolute position to be moved.</param>
+    /// <returns><c>true</c> if the cursor is on the result set;<c>false</c>
+    ///  otherwise</returns>
     function MoveAbsolute(Row: Integer): Boolean;
     /// <summary>Moves the cursor a relative number of rows, either positive
     ///  or negative. Attempting to move beyond the first/last row in the

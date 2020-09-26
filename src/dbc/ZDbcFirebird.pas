@@ -198,10 +198,26 @@ type
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
   public
-    function CreateStatementWithParams(Info: TStrings): IZStatement;
-    function PrepareStatementWithParams(const Name: string; Info: TStrings):
+    function CreateStatementWithParams(Params: TStrings): IZStatement;
+    function PrepareStatementWithParams(const Name: string; Params: TStrings):
       IZPreparedStatement;
-    function PrepareCallWithParams(const SQL: string; Info: TStrings):
+    /// <summary>Creates a <code>CallableStatement</code> object for calling
+    ///  database stored procedures. The <code>CallableStatement</code> object
+    ///  provides methods for setting up its IN and OUT parameters, and methods
+    ///  for executing the call to a stored procedure. Note: This method is
+    ///  optimized for handling stored procedure call statements. Some drivers
+    ///  may send the call statement to the database when the method
+    ///  <c>prepareCall</c> is done; others may wait until the
+    ///  <c>CallableStatement</c> object is executed. This has no direct effect
+    ///  on users; however, it does affect which method throws certain
+    ///  EZSQLExceptions. Result sets created using the returned
+    ///  IZCallableStatement will have forward-only type and read-only
+    ///  concurrency, by default.</summary>
+    /// <param>"Name" a procedure or function name.</param>
+    /// <param>"Parameters" a statement parameters list.</param>
+    /// <returns> a new IZCallableStatement interface containing the
+    ///  pre-compiled SQL statement <returns>
+    function PrepareCallWithParams(const Name: string; Params: TStrings):
       IZCallableStatement;
   public
     function IsFirebirdLib: Boolean; override;
@@ -224,29 +240,6 @@ uses ZFastCode, ZDbcFirebirdStatement, ZDbcInterbaseFirebirdMetadata, ZEncoding,
 
 { TZFirebirdDriver }
 
-{**
-  Attempts to make a database connection to the given URL.
-  The driver should return "null" if it realizes it is the wrong kind
-  of driver to connect to the given URL.  This will be common, as when
-  the zeos driver manager is asked to connect to a given URL it passes
-  the URL to each loaded driver in turn.
-
-  <P>The driver should raise a SQLException if it is the right
-  driver to connect to the given URL, but has trouble connecting to
-  the database.
-
-  <P>The java.util.Properties argument can be used to passed arbitrary
-  string tag/value pairs as connection arguments.
-  Normally at least "user" and "password" properties should be
-  included in the Properties.
-
-  @param url the URL of the database to which to connect
-  @param info a list of arbitrary string tag/value pairs as
-    connection arguments. Normally at least a "user" and
-    "password" property should be included.
-  @return a <code>Connection</code> object that represents a
-    connection to the URL
-}
 function TZFirebirdDriver.Connect(const Url: TZURL): IZConnection;
 var iPlainDriver: IZPlainDriver;
     FirebirdPlainDriver: TZFirebirdPlainDriver;
@@ -310,7 +303,7 @@ end;
   @return a new Statement object
 }
 function TZFirebirdConnection.CreateStatementWithParams(
-  Info: TStrings): IZStatement;
+  Params: TStrings): IZStatement;
 begin
   if IsClosed then
     Open;
@@ -677,46 +670,20 @@ end;
   @return a new PreparedStatement object containing the
     pre-compiled statement
 }
-function TZFirebirdConnection.PrepareCallWithParams(const SQL: string;
-  Info: TStrings): IZCallableStatement;
+function TZFirebirdConnection.PrepareCallWithParams(const Name: string;
+  Params: TStrings): IZCallableStatement;
 begin
   if IsClosed then
     Open;
-  Result := TZFirebirdCallableStatement.Create(Self, SQL, Info);
+  Result := TZFirebirdCallableStatement.Create(Self, Name, Params);
 end;
 
-{**
-  Creates a <code>CallableStatement</code> object for calling
-  database stored procedures.
-  The <code>CallableStatement</code> object provides
-  methods for setting up its IN and OUT parameters, and
-  methods for executing the call to a stored procedure.
-
-  <P><B>Note:</B> This method is optimized for handling stored
-  procedure call statements. Some drivers may send the call
-  statement to the database when the method <code>prepareCall</code>
-  is done; others
-  may wait until the <code>CallableStatement</code> object
-  is executed. This has no
-  direct effect on users; however, it does affect which method
-  throws certain SQLExceptions.
-
-  Result sets created using the returned CallableStatement will have
-  forward-only type and read-only concurrency, by default.
-
-  @param Name a procedure or function identifier
-    parameter placeholders. Typically this  statement is a JDBC
-    function call escape string.
-  @param Info a statement parameters.
-  @return a new CallableStatement object containing the
-    pre-compiled SQL statement
-}
 function TZFirebirdConnection.PrepareStatementWithParams(const Name: string;
-  Info: TStrings): IZPreparedStatement;
+  Params: TStrings): IZPreparedStatement;
 begin
   if IsClosed then
     Open;
-  Result := TZFirebirdPreparedStatement.Create(Self, Name, Info);
+  Result := TZFirebirdPreparedStatement.Create(Self, Name, Params);
 end;
 
 var
