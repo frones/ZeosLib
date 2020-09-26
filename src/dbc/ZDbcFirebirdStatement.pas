@@ -146,7 +146,7 @@ type
       Params: TStrings);
   end;
 
-  /// <summary>Implements and IZPreparedStatement for Firebird.</summary>
+  /// <summary>Implements an IZPreparedStatement for Firebird.</summary>
   TZFirebirdPreparedStatement = class(TZAbstractFirebirdStatement,
     IZPreparedStatement);
 

@@ -135,8 +135,8 @@ type
     ///  from the transaction manger. Later if all streams are closed a final
     ///  commit is called to release the garbage.</summary>
     procedure Commit;
-    /// <summary>Perform a Commit or Rollback as retained done by User before.
-    ///  Removes this interface from Parent-Transaction manager.</summary>
+    /// <summary>Perform a "hard" Commit or Rollback as retained done by User
+    ///  before. Removes this interface from Parent-Transaction manager.</summary>
     procedure Close;
     /// <summary>Test if the transaction is underway on the server.</summary>
     /// <returns><c>True</c> if so otherwise <c>False</c>.</returns>
@@ -214,7 +214,7 @@ type
     ///  IZCallableStatement will have forward-only type and read-only
     ///  concurrency, by default.</summary>
     /// <param>"Name" a procedure or function name.</param>
-    /// <param>"Parameters" a statement parameters list.</param>
+    /// <param>"Params" a statement parameters list.</param>
     /// <returns> a new IZCallableStatement interface containing the
     ///  pre-compiled SQL statement <returns>
     function PrepareCallWithParams(const Name: string; Params: TStrings):

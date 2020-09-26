@@ -138,7 +138,23 @@ type
     procedure SetActiveTransaction(const Value: IZTransaction);
   public
     function CreateStatementWithParams(Info: TStrings): IZStatement;
-    function PrepareCallWithParams(const Name: String; Info: TStrings):
+    /// <summary>Creates a <code>CallableStatement</code> object for calling
+    ///  database stored procedures. The <code>CallableStatement</code> object
+    ///  provides methods for setting up its IN and OUT parameters, and methods
+    ///  for executing the call to a stored procedure. Note: This method is
+    ///  optimized for handling stored procedure call statements. Some drivers
+    ///  may send the call statement to the database when the method
+    ///  <c>prepareCall</c> is done; others may wait until the
+    ///  <c>CallableStatement</c> object is executed. This has no direct effect
+    ///  on users; however, it does affect which method throws certain
+    ///  EZSQLExceptions. Result sets created using the returned
+    ///  IZCallableStatement will have forward-only type and read-only
+    ///  concurrency, by default.</summary>
+    /// <param>"Name" a procedure or function name.</param>
+    /// <param>"Params" a statement parameters list.</param>
+    /// <returns> a new IZCallableStatement interface containing the
+    ///  pre-compiled SQL statement <returns>
+    function PrepareCallWithParams(const Name: String; Params: TStrings):
       IZCallableStatement;
     function PrepareStatementWithParams(const SQL: string; Info: TStrings):
       IZPreparedStatement;
@@ -743,13 +759,13 @@ end;
     pre-compiled SQL statement
 }
 function TZOracleConnection.PrepareCallWithParams(const Name: String;
-  Info: TStrings): IZCallableStatement;
+  Params: TStrings): IZCallableStatement;
 begin
   if IsClosed then
      Open;
   if ConSettings.ClientCodePage.ID = OCI_UTF16ID
-  then Result := TZOracleCallableStatement_W.Create(Self, Name, Info)
-  else Result := TZOracleCallableStatement_A.Create(Self, Name, Info);
+  then Result := TZOracleCallableStatement_W.Create(Self, Name, Params)
+  else Result := TZOracleCallableStatement_A.Create(Self, Name, Params);
 end;
 
 {**
