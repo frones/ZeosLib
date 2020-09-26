@@ -61,7 +61,7 @@ uses
   Variants,
 {$ENDIF}
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset,
-  ZDbcIntfs, ZSqlTestCase,ZCompatibility;
+  ZDbcIntfs, ZSqlTestCase,ZCompatibility, ZDbcDbLib;
 
 type
 
@@ -201,8 +201,15 @@ procedure TZTestCompMSSqlBugReport.Test959307;
 var
   Query: TZQuery;
   StoredProc: TZStoredProc;
+  DblibConn: IZDBLibConnection;
 begin
   if SkipForReason(srClosedBug) then Exit;
+  Connection.Connect;
+  if Supports(Connection.DbcConnection, IZDBLibConnection, DblibConn) then begin
+    if (DblibConn.GetHostVersion < 9000000) and (DblibConn.GetServerProvider = spMSSQL) then
+      Fail('This test cannot succeed for MS SQL 2000 with DBLib. The dblib API (dbrpcparam) doesn''t allow to distinguish between empty strings and null.');
+  end;
+
   {perfectly resolveable with ODBC, OleDB, ADO}
   StoredProc := TZStoredProc.Create(nil);
   Query := CreateQuery;
