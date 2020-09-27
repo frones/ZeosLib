@@ -348,6 +348,7 @@ begin
   FetchResults;
   while GetMoreResults and (FlastResultSet = nil) do ;
   Result := GetResultSet;
+  FlastResultSet := nil;
 end;
 
 {**
