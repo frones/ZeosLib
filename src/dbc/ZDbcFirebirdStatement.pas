@@ -150,6 +150,12 @@ type
   TZFirebirdPreparedStatement = class(TZAbstractFirebirdStatement,
     IZPreparedStatement);
 
+  /// <summary>Implements an IZPreparedStatement for Firebird.</summary>
+  TZFirebird4upPreparedStatement = class(TZFirebirdPreparedStatement)
+  protected
+    procedure ExecuteBatchDml; override;
+  end;
+
   /// <summary>Implements an IZCallableStatement for Firebird.</summary>
   TZFirebirdCallableStatement = class(TZAbstractInterbaseFirebirdCallableStatement)
   protected
@@ -161,6 +167,24 @@ type
     function InternalCreateExecutionStatement(const Connection: IZInterbaseFirebirdConnection;
       const SQL: String; Params: TStrings): TZAbstractPreparedStatement; override;
   end;
+
+  /// <summary>Implements an internal Batch dml statement for Firebird 4up.</summary>
+  TZFirebird4BatchPreparedStatement = class(TZAbstractFirebirdStatement,
+    IZPreparedStatement)
+  private
+    FInMessageLength, FOutMessageLength: Cardinal;
+    FBatch: IBatch;
+  protected
+    /// <summary>Execute the Batch dml</summary>
+    procedure ExecuteBatchDml; override;
+  public
+    /// <summary>creates this object</summary>
+    /// <param>"Owner" the owner firebird-statement object.</param>
+    Constructor Create(const Owner: TZAbstractFirebirdStatement);
+    /// <summary>destroys this object and releases all resources.</summary>
+    destructor Destroy; override;
+  end;
+
 
 {$ENDIF ZEOS_DISABLE_FIREBIRD}
 implementation
@@ -448,7 +472,7 @@ begin
     if ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
        ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0)  then
       FFBConnection.HandleErrorOrWarning(lcExecPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self);
-  end else ExceuteBatch;
+  end else ExecuteBatchDml;
 end;
 
 function TZAbstractFirebirdStatement.ExecutePrepared: Boolean;
@@ -847,6 +871,86 @@ function TZFirebirdCallableStatement.InternalCreateExecutionStatement(
   Params: TStrings): TZAbstractPreparedStatement;
 begin
   Result := TZFirebirdPreparedStatement.Create(Connection as IZFirebirdConnection, SQL, Params);
+end;
+
+{ TZFirebird4BatchPreparedStatement }
+
+constructor TZFirebird4BatchPreparedStatement.Create(
+  const Owner: TZAbstractFirebirdStatement);
+begin
+  inherited Create(Owner.FFBConnection, '', Owner.Info);
+  {$IFDEF UNICODE}
+  FwSQL := Owner.FwSQL;
+  {$ELSE}
+  FaSQL := Owner.FaSQL;
+  {$ENDIF}
+  FInMessageMetadata := Owner.FInMessageMetadata;
+  FInMessageMetadata.addRef;
+  FInMessageLength := FInMessageMetadata.getMessageLength(FStatus);
+  if FOutMessageMetadata <> nil then begin
+    FOutMessageLength := FOutMessageMetadata.getMessageLength(FStatus);
+    GetMem(FOutData, Integer(FOutMessageLength)*FMaxRowsPerBatch);
+  end;
+  FMaxRowsPerBatch := Owner.BatchDMLArrayCount;
+  GetMem(FInData, Integer(FInMessageLength)*FMaxRowsPerBatch);
+  FBatch := Owner.FFBStatement.createBatch(FStatus, FInMessageMetadata, 0, nil);
+  if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+    FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IStatement.createBatch', Self);
+  FPrepared := True;
+  BindList.SetCount(Owner.BindList.Count);
+  FInParamDescripors := Owner.FInParamDescripors;
+end;
+
+destructor TZFirebird4BatchPreparedStatement.Destroy;
+begin
+  FInParamDescripors := nil;
+  inherited;
+  if FBatch <> nil then
+    FBatch.Release;
+end;
+
+procedure TZFirebird4BatchPreparedStatement.ExecuteBatchDml;
+var Transaction: ITransaction;
+begin
+  Transaction := FFBConnection.GetActiveTransaction.GetTransaction;
+  FBatch.add(fStatus, Cardinal(FMaxRowsPerBatch), FInData);
+  if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+    FFBConnection.HandleErrorOrWarning(lcBindPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBatch.add', Self);
+  FBatch.execute(Fstatus, Transaction);
+  if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+    FFBConnection.HandleErrorOrWarning(lcExecPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBatch.execute', Self);
+  LastUpdateCount := FMaxRowsPerBatch;
+end;
+
+{ TZFirebird4upPreparedStatement }
+
+procedure TZFirebird4upPreparedStatement.ExecuteBatchDml;
+var i, J: Integer;
+  Succeeded: Boolean;
+  BatchStatement: TZFirebird4BatchPreparedStatement;
+begin
+  Connection.StartTransaction;
+  Succeeded := False;
+  BatchStatement := TZFirebird4BatchPreparedStatement.Create(Self);
+  try
+    for i := 0 to BatchDMLArrayCount -1 do begin
+      BindSQLDAInParameters(BindList, BatchStatement, i, 1);
+      for j := 0 to BindList.Count -1 do begin
+        with BatchStatement.FInParamDescripors[j] do begin
+          sqldata := sqldata + BatchStatement.FInMessageLength;
+          PAnsiChar(sqlind) := PAnsiChar(sqlind) + BatchStatement.FInMessageLength;
+        end;
+      end;
+    end;
+    BatchStatement.ExecuteBatchDml;
+    Succeeded := True;
+  finally
+    FreeAndNil(BatchStatement);
+    if Succeeded
+    then Connection.Commit
+    else Connection.Rollback;
+  end;
+  LastUpdateCount := BatchDMLArrayCount;
 end;
 
 initialization

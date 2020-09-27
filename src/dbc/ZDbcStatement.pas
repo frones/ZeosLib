@@ -328,10 +328,10 @@ type
   TZAbstractPreparedStatement = class(TZAbstractStatement, IImmediatelyReleasable)
   private
     FBatchDMLArrayCount: ArrayLenInt;
-    FPrepared : Boolean;
     FSupportsDMLBatchArrays: Boolean;
     FBindList: TZBindList;
   protected
+    FPrepared: Boolean;
     FOpenLobStreams: TZSortedList;
     FUniTemp: UnicodeString;
     FRawTemp: RawByteString;

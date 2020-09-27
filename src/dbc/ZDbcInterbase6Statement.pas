@@ -408,7 +408,7 @@ begin
         else            LastUpdateCount := -1;
       end;
     end;
-  end else ExceuteBatch;
+  end else ExecuteBatchDml;
 end;
 
 procedure TZAbstractInterbase6PreparedStatement.ReleaseConnection;
