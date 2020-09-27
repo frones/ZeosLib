@@ -71,6 +71,7 @@ Type
   _threaderror: Exception;
   Procedure CheckRunning;
   Procedure InternalOpen;
+  Procedure InternalRefresh;
   Procedure InternalStartTransaction;
   Procedure SetOnError(Const inErrorEvent: TErrorEvent);
   Procedure SetOnFinish(Const inFinishEvent: TNotifyEvent);
@@ -256,6 +257,32 @@ Begin
  End;
 End;
 
+Procedure TZMethodInThread.InternalRefresh;
+Var
+ afteropen, afterscroll: TDataSetNotifyEvent;
+Begin
+ // Disable event handlers
+ afteropen := _dataset.AfterOpen;
+ afterscroll := _dataset.AfterScroll;
+ _dataset.AfterOpen := nil;
+ _dataset.AfterScroll := nil;
+ Try
+  // First, refresh the dataset
+  _dataset.Refresh;
+  // We also have to call .FetchAll to make sure everything is downloaded. Not doing this will cause the application to fetch all data even
+  // if we just want to access .RecordCount.
+  _dataset.FetchAll;
+  // Now that all data is set and ready, execute the event handlers - if any
+  If Assigned(afteropen) Then afteropen(_dataset);
+  If Assigned(afterscroll) Then afterscroll(_dataset);
+ Finally
+  // Reassign event handles
+  _dataset.AfterOpen := afteropen;
+  _dataset.AfterScroll := afterscroll;
+  _dataset := nil;
+ End;
+End;
+
 Procedure TZMethodInThread.InternalStartTransaction;
 Begin
  Try
@@ -291,7 +318,9 @@ End;
 
 Procedure TZMethodInThread.Refresh(inDataSet: TZAbstractRODataset);
 Begin
- StartMethodThread(inDataSet.Refresh);
+ Self.CheckRunning;
+ _dataset := inDataSet;
+ StartMethodThread(InternalRefresh);
 End;
 
 Procedure TZMethodInThread.Rollback(inConnection: TZAbstractConnection);
