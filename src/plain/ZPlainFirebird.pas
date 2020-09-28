@@ -113,6 +113,17 @@ const
   IStatement_FLAG_REPEAT_EXECUTE = Cardinal(2);
   IStatement_CURSOR_TYPE_SCROLLABLE = Cardinal(1);
 
+  IXpbBuilder_VERSION = 3;
+  IXpbBuilder_DPB = Cardinal(1);
+  IXpbBuilder_SPB_ATTACH = Cardinal(2);
+  IXpbBuilder_SPB_START = Cardinal(3);
+  IXpbBuilder_TPB = Cardinal(4);
+  IXpbBuilder_BATCH = Cardinal(5);
+  IXpbBuilder_BPB = Cardinal(6);
+  IXpbBuilder_SPB_SEND = Cardinal(7);
+  IXpbBuilder_SPB_RECEIVE = Cardinal(8);
+  IXpbBuilder_SPB_RESPONSE = Cardinal(9);
+
   IBatch_VERSION = Cardinal(3);
   IBatch_VERSION1 = Byte(1);
   IBatch_TAG_MULTIERROR = Byte(1);
