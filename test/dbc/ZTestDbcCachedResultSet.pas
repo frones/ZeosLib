@@ -564,7 +564,7 @@ begin
         CheckEquals(FLong, GetLong(stLongIndex), 'GetLong');
         CheckEquals(FFloat, GetFloat(stFloatIndex), 0, 'GetFloat');
         CheckEquals(FDouble, GetDouble(stDoubleIndex), 0, 'GetDouble');
-        GetBigDecimal(stBigDecimalIndex, BCD);
+        GetBigDecimal(stBigDecimalIndex, BCD{%H-});
         CheckEquals(BcdToStr(FBigDecimal), BcdToStr(BCD), 'GetBigDecimal');
         CheckEquals(FString, GetString(stStringIndex), 'GetString');
         CheckEquals(FDate, GetDate(stDateIndex), 0, 'GetDate');
@@ -711,7 +711,7 @@ begin
         CheckEquals(FLong, GetLong(stLongIndex), 'Field changed; GetLong');
         CheckEquals(FFloat, GetFloat(stFloatIndex), 0, 'Field changed; GetFloat');
         CheckEquals(FDouble, GetDouble(stDoubleIndex), 0, 'Field changed; GetDouble');
-        GetBigDecimal(stBigDecimalIndex, BCD);
+        GetBigDecimal(stBigDecimalIndex, BCD{%H-});
         CheckEquals(BcdToStr(FBigDecimal), BcdToStr(BCD), 'Field changed; GetBigDecimal');
         CheckEquals(FString, GetString(stStringIndex), 'Field changed; GetString');
         CheckEquals(FByteArray, GetBytes(stBytesIndex), 'Field changed; GetBytes');
