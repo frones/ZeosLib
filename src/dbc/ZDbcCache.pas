@@ -2779,8 +2779,10 @@ begin
       stTime: Result := (PZTime(Data)^.Hour or PZTime(Data)^.Minute or PZTime(Data)^.Second or PZTime(Data)^.Fractions) <> 0;
       stTimeStamp: Result := (PZTimeStamp(Data)^.Year or PZTimeStamp(Data)^.Month or PZTimeStamp(Data)^.Day or
         PZTimeStamp(Data)^.Hour or PZTimeStamp(Data)^.Minute or PZTimeStamp(Data)^.Second or PZTimeStamp(Data)^.Fractions) <> 0;
-      stString: Result := StrToBoolEx(PPAnsiChar(Data)^+PAnsiInc, False);
-      stUnicodeString: Result := StrToBoolEx(ZPPWideChar(Data)^+PWideInc, False);
+      stString: if Data^ <> nil then
+        Result := StrToBoolEx(PPAnsiChar(Data)^+PAnsiInc, False);
+      stUnicodeString: if Data^ <> nil then
+        Result := StrToBoolEx(ZPPWideChar(Data)^+PWideInc, False);
       stUnicodeStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty
           then Result := StrToBoolEx(PIZlob(Data)^.GetPWideChar(fUniTemp, Len))
           else IsNull := True;
