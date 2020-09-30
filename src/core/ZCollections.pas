@@ -94,34 +94,78 @@ type
     procedure SetCapacity(NewCapacity: Integer);
     procedure SetCount(NewCount: Integer);
   public
+    /// <summary>Constructs this object.</summary>
     constructor Create;
+    /// <summary>Destroys this object.</summary>
     destructor Destroy; override;
-
+    /// <summary>Clones an object instance.</summary>
+    /// <returns> a clonned object interface.</returns>
     function Clone: IZInterface; override;
+    /// <summary>Converts this object into the string representation.</summary>
+    /// <returns>a string representation for this object.</returns>
     function ToString: string; override;
-
+    /// <summary>Gets a collection element from the specified position.</summary>
+    /// <param>"Index" a position index of the element.</param>
+    /// <returns>a requested element.</returns>
     function Get(Index: Integer): IZInterface;
+    /// <summary>Puts a specified object into defined position.</summary>
+    /// <param>"Index" a position index.</param>
+    /// <param>"Item" an object to be put.</param>
     procedure Put(Index: Integer; const Item: IZInterface);
+    /// <summary>Defines an index of the specified object inside this colleciton.</summary>
+    /// <param>"Item" an object to be found.</param>
+    /// <returns>an object position index or -1 if it was not found.</returns>
     function IndexOf(const Item: IZInterface): Integer;
+    /// <summary>Gets a number of the stored element in this collection.</summary>
+    /// <returns>a number of stored elements.</returns>
     function GetCount: Integer;
+    /// <summary>Gets a created iterator for this collection.</summary>
+    /// <returns>a created iterator for this collection.</returns>
     function GetIterator: IZIterator;
-
+    /// <summary>Gets the first element from this collection.</summary>
+    /// <returns>the first element.</returns>
     function First: IZInterface;
+    /// <summary>Gets the last object from this collection.</summary>
+    /// <returns>return the last object.</returns>
     function Last: IZInterface;
-
+    /// <summary>Adds a new object at the and of this collection.</summary>
+    /// <param>"Item" an object to be added.</param>
+    /// <returns>a position of the added object.</returns>
     function Add(const Item: IZInterface): Integer;
+    /// <summary>Inserts an object into specified position.</summary>
+    /// <param>"Index" a position index.</param>
+    /// <param>"Item" an object to be inserted.</param>
     procedure Insert(Index: Integer; const Item: IZInterface);
+    /// <summary>Removes an existed object which equals to the specified one.</summary>
+    /// <param>"Item" an object to be removed.</param>
+    /// <returns>an index of the removed object.</returns>
     function Remove(const Item: IZInterface): Integer;
-
+    /// <summary>Exchanges two element in the collection.</summary>
+    /// <param>"Index1" an index of the first element.</param>
+    /// <param>"Index2" an index of the second element.</param>
     procedure Exchange(Index1, Index2: Integer);
+    /// <summary>Deletes an object from the specified position.</summary>
+    /// <param>"Index" the index of the object to be deleted.</param>
     procedure Delete(Index: Integer);
+    /// <summary>Clears the content of this collection.</summary>
     procedure Clear;
-
+    /// <summary>Checks is the specified object is stored in this collection.</summary>
+    /// <param>"Item" an object to be searched.</param>
+    /// <returns><c>True</c> if the object was found in the collection.</returns>
     function Contains(const Item: IZInterface): Boolean;
+    /// <summary>Checks are all the object in this collection.</summary>
+    /// <param>"Col" a collection of objects to be checked.</param>
+    /// <returns><c>True</c> if all objects are in this collection.</returns>
     function ContainsAll(const Col: IZCollection): Boolean;
+    /// <summary>Adds all elements from the specified collection into this collection.</summary>
+    /// <param>"Col" a collection of objects to be added.</param>
+    /// <returns><c>True</c> if this collection was changed</returns>
     function AddAll(const Col: IZCollection): Boolean;
+    /// <summary>Removes all the elements from the specified collection.</summary>
+    /// <param>"Col" a collection of objects to be removed.</param>
+    /// <returns><c>True</c> if this collection was changed</returns>
     function RemoveAll(const Col: IZCollection): Boolean;
-
+  public
     property Count: Integer read GetCount;
     property Items[Index: Integer]: IZInterface read Get write Put; default;
   end;
@@ -364,11 +408,6 @@ begin
   Result := Collection;
 end;
 
-{**
-  Adds a new object at the and of this collection.
-  @param Item an object to be added.
-  @return a position of the added object.
-}
 function TZCollection.Add(const Item: IZInterface): Integer;
 begin
   Result := FCount;
@@ -379,11 +418,6 @@ begin
   Inc(FCount);
 end;
 
-{**
-  Adds all elements from the specified collection into this collection.
-  @param Col a collection of objects to be added.
-  @return <code>True</code> is the collection was changed.
-}
 function TZCollection.AddAll(const Col: IZCollection): Boolean;
 var
   I: Integer;
@@ -402,38 +436,23 @@ begin
   SetCapacity(0);
 end;
 
-{**
-  Checks is the specified object is stored in this collection.
-  @return <code>True</code> if the object was found in the collection.
-}
 function TZCollection.Contains(const Item: IZInterface): Boolean;
 begin
   Result := IndexOf(Item) >= 0;
 end;
 
-{**
-  Checks are all the object in this collection.
-  @param Col a collection of objects to be checked.
-  @return <code>True</code> if all objects are in this collection.
-}
 function TZCollection.ContainsAll(const Col: IZCollection): Boolean;
 var
   I: Integer;
 begin
   Result := Col.Count > 0;
   for I := 0 to Col.Count - 1 do
-  begin
-    if IndexOf(Col[I]) < 0 then
-    begin
+    if IndexOf(Col[I]) < 0 then begin
       Result := False;
       Break;
     end;
-  end;
 end;
 
-{**
-  Deletes an object from the specified position.
-}
 procedure TZCollection.Delete(Index: Integer);
 begin
   {$IFNDEF DISABLE_CHECKING}
@@ -451,11 +470,6 @@ begin
   end;
 end;
 
-{**
-  Exchanges two element in the collection.
-  @param Index1 an index of the first element.
-  @param Index2 an index of the second element.
-}
 procedure TZCollection.Exchange(Index1, Index2: Integer);
 var
   Item: IZInterface;
@@ -471,20 +485,11 @@ begin
   FList^[Index2] := Item;
 end;
 
-{**
-  Gets the first element from this collection.
-  @return the first element.
-}
 function TZCollection.First: IZInterface;
 begin
   Result := Get(0);
 end;
 
-{**
-  Gets a collection element from the specified position.
-  @param Index a position index of the element.
-  @return a requested element.
-}
 function TZCollection.Get(Index: Integer): IZInterface;
 begin
   {$IFNDEF DISABLE_CHECKING}
@@ -494,29 +499,16 @@ begin
   Result := FList^[Index];
 end;
 
-{**
-  Gets a number of the stored element in this collection.
-  @return a number of stored elements.
-}
 function TZCollection.GetCount: Integer;
 begin
   Result := FCount;
 end;
 
-{**
-  Gets a created iterator for this collection.
-  @return a created iterator for this collection.
-}
 function TZCollection.GetIterator: IZIterator;
 begin
   Result := TZIterator.Create(Self);
 end;
 
-{**
-  Defines an index of the specified object inside this colleciton.
-  @param Item an object to be found.
-  @return an object position index or -1 if it was not found.
-}
 function TZCollection.IndexOf(const Item: IZInterface): Integer;
 var
   I: Integer;
@@ -528,26 +520,18 @@ begin
     Exit;
 
   { Find IComparable objects }
-  if Item.QueryInterface(IZComparable, Comparable) = 0 then
-  begin
-    for I := 0 to FCount - 1 do
-    begin
-      if Comparable.Equals(FList^[I]) then
-      begin
+  if Item.QueryInterface(IZComparable, Comparable) = 0 then begin
+    for I := 0 to FCount - 1 do begin
+      if Comparable.Equals(FList^[I]) then begin
         Result := I;
         Break;
       end;
     end;
     Comparable := nil;
-  end
-  { Find ordinary objects }
-  else
-  begin
+  end else begin { Find ordinary objects }
     Unknown := Item;
-    for I := 0 to FCount - 1 do
-    begin
-      if Unknown = FList^[I] then
-      begin
+    for I := 0 to FCount - 1 do begin
+      if Unknown = FList^[I] then begin
         Result := I;
         Break;
       end;
@@ -556,11 +540,6 @@ begin
   end;
 end;
 
-{**
-  Inserts an object into specified position.
-  @param Index a position index.
-  @param Item an object to be inserted.
-}
 procedure TZCollection.Insert(Index: Integer; const Item: IZInterface);
 begin
   {$IFNDEF DISABLE_CHECKING}
@@ -580,20 +559,11 @@ begin
   Inc(FCount);
 end;
 
-{**
-  Gets the last object from this collection.
-  @return the last object.
-}
 function TZCollection.Last: IZInterface;
 begin
   Result := Get(FCount - 1);
 end;
 
-{**
-  Puts a specified object into defined position.
-  @param Index a position index.
-  @param Items ab object to be put.
-}
 procedure TZCollection.Put(Index: Integer; const Item: IZInterface);
 begin
   {$IFNDEF DISABLE_CHECKING}
@@ -603,11 +573,6 @@ begin
   FList^[Index] := Item;
 end;
 
-{**
-  Removes an existed object which equals to the specified one.
-  @param Item an object to be removed.
-  @return an index of the removed object.
-}
 function TZCollection.Remove(const Item: IZInterface): Integer;
 begin
   Result := IndexOf(Item);
@@ -615,11 +580,6 @@ begin
     Delete(Result);
 end;
 
-{**
-  Removes all the elements from the specified collection.
-  @param Col a collection of object to be removed.
-  @return <code>True</code> if this collection was changed.
-}
 function TZCollection.RemoveAll(const Col: IZCollection): Boolean;
 var
   I: Integer;

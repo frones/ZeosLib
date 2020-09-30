@@ -113,9 +113,19 @@ type
     /// <summary>Checks has the iterated collection more elements.</summary>
     /// <returns><c>True</c> if iterated collection has more elements.</returns>
     function Equals(const Value: IZInterface): Boolean;
+    /// <summary>Gets a unique hash for this object.</summary>
+    /// <returns>a unique hash for this object.</returns>
     function GetHashCode: LongInt;
+    /// <summary>Clones an object instance.</summary>
+    /// <returns> a clonned object interface.</returns>
     function Clone: IZInterface;
+    /// <summary>Converts this object into the string representation.</summary>
+    /// <returns>a string representation for this object.</returns>
     function ToString: string;
+    /// <summary>Checks is this object implements a specified interface.</summary>
+    /// <param>"IId" an interface id.</param>
+    /// <returns><c>True</c> if this object support the interface:
+    ///  <c>False</c> otherwise.</returns>
     function InstanceOf(const IId: TGUID): Boolean;
   end;
 
@@ -141,32 +151,69 @@ type
     function Next: IZInterface;
   end;
 
-  /// <summary>
-  ///   Represents a collection of object interfaces.
-  /// </summary>
+  /// <summary>Represents a collection of object interfaces.</summary>
   IZCollection = interface(IZClonnable)
     ['{51417C87-F992-4CAD-BC53-CF3925DD6E4C}']
-
+    /// <summary>Gets a collection element from the specified position.</summary>
+    /// <param>"Index" a position index of the element.</param>
+    /// <returns>a requested element.</returns>
     function Get(Index: Integer): IZInterface;
+    /// <summary>Puts a specified object into defined position.</summary>
+    /// <param>"Index" a position index.</param>
+    /// <param>"Item" an object to be put.</param>
     procedure Put(Index: Integer; const Item: IZInterface);
+    /// <summary>Defines an index of the specified object inside this colleciton.</summary>
+    /// <param>"Item" an object to be found.</param>
+    /// <returns>an object position index or -1 if it was not found.</returns>
     function IndexOf(const Item: IZInterface): Integer;
+    /// <summary>Gets a number of the stored element in this collection.</summary>
+    /// <returns>a number of stored elements.</returns>
     function GetCount: Integer;
+    /// <summary>Gets a created iterator for this collection.</summary>
+    /// <returns>a created iterator for this collection.</returns>
     function GetIterator: IZIterator;
-
+    /// <summary>Gets the first element from this collection.</summary>
+    /// <returns>the first element.</returns>
     function First: IZInterface;
+    /// <summary>Gets the last object from this collection.</summary>
+    /// <returns>return the last object.</returns>
     function Last: IZInterface;
-
+    /// <summary>Adds a new object at the and of this collection.</summary>
+    /// <param>"Item" an object to be added.</param>
+    /// <returns>a position of the added object.</returns>
     function Add(const Item: IZInterface): Integer;
+    /// <summary>Inserts an object into specified position.</summary>
+    /// <param>"Index" a position index.</param>
+    /// <param>"Item" an object to be inserted.</param>
     procedure Insert(Index: Integer; const Item: IZInterface);
+    /// <summary>Removes an existed object which equals to the specified one.</summary>
+    /// <param>"Item" an object to be removed.</param>
+    /// <returns>an index of the removed object.</returns>
     function Remove(const Item: IZInterface): Integer;
-
+    /// <summary>Exchanges two element in the collection.</summary>
+    /// <param>"Index1" an index of the first element.</param>
+    /// <param>"Index2" an index of the second element.</param>
     procedure Exchange(Index1, Index2: Integer);
+    /// <summary>Deletes an object from the specified position.</summary>
+    /// <param>"Index" the index of the object to be deleted.</param>
     procedure Delete(Index: Integer);
+    /// <summary>Clears the content of this collection.</summary>
     procedure Clear;
-
+    /// <summary>Checks is the specified object is stored in this collection.</summary>
+    /// <param>"Item" an object to be searched.</param>
+    /// <returns><c>True</c> if the object was found in the collection.</returns>
     function Contains(const Item: IZInterface): Boolean;
+    /// <summary>Checks are all the object in this collection.</summary>
+    /// <param>"Col" a collection of objects to be checked.</param>
+    /// <returns><c>True</c> if all objects are in this collection.</returns>
     function ContainsAll(const Col: IZCollection): Boolean;
+    /// <summary>Adds all elements from the specified collection into this collection.</summary>
+    /// <param>"Col" a collection of objects to be added.</param>
+    /// <returns><c>True</c> if this collection was changed</returns>
     function AddAll(const Col: IZCollection): Boolean;
+    /// <summary>Removes all the elements from the specified collection.</summary>
+    /// <param>"Col" a collection of objects to be removed.</param>
+    /// <returns><c>True</c> if this collection was changed</returns>
     function RemoveAll(const Col: IZCollection): Boolean;
 
     property Count: Integer read GetCount;
@@ -210,11 +257,21 @@ type
   public
     // Parameter type differs from base (TObject)
     function Equals(const Value: IZInterface): Boolean; {$IFDEF WITH_NEWTOBJECT} reintroduce; {$ENDIF} virtual;
-    // Result type differs from base (PtrInt @ FPC, Integer @ Delphi)
+    {Result type differs from base (PtrInt @ FPC, Integer @ Delphi) }
+    /// <summary>Gets a unique hash for this object.</summary>
+    /// <returns>a unique hash for this object.</returns>
     function GetHashCode: LongInt; {$IFDEF WITH_NEWTOBJECT} reintroduce; {$ENDIF} virtual;
+    /// <summary>Clones an object instance.</summary>
+    /// <returns>a clonned object interface.</returns>
     function Clone: IZInterface; virtual;
-    // Result type differs from base (ansistring/shortstring @ FPC, string @ Delphi)
+    {Result type differs from base (ansistring/shortstring @ FPC, string @ Delphi)}
+    /// <summary>Converts this object into the string representation.</summary>
+    /// <returns>a string representation for this object.</returns>
     function ToString: string; {$IFDEF WITH_NEWTOBJECT} reintroduce; {$ENDIF} virtual;
+    /// <summary>Checks is this object implements a specified interface.</summary>
+    /// <param>"IId" an interface id.</param>
+    /// <returns><c>True</c> if this object support the interface:
+    ///  <c>False</c> otherwise.</returns>
     function InstanceOf(const IId: TGUID): Boolean;
   end;
 
@@ -487,39 +544,22 @@ begin
    Result := False;
 end;
 
-{**
-  Gets a unique hash for this object.
-  @return a unique hash for this object.
-}
 function TZAbstractObject.GetHashCode: LongInt;
 begin
   Result := LongInt(Self);
 end;
 
-{**
-  Clones an object instance.
-  @return a clonned object instance.
-}
 function TZAbstractObject.Clone: IZInterface;
 begin
   raise Exception.Create(SClonningIsNotSupported);
   result := nil;
 end;
 
-{**
-  Checks is this object implements a specified interface.
-  @param IId an interface id.
-  @return <code>True</code> if this object support the interface.
-}
 function TZAbstractObject.InstanceOf(const IId: TGUID): Boolean;
 begin
   Result := GetInterfaceEntry(IId) <> nil;
 end;
 
-{**
-  Converts this object into the string representation.
-  @return a string representation for this object.
-}
 function TZAbstractObject.ToString: string;
 begin
   Result := Format('%s <%p>', [ClassName, Pointer(Self)])

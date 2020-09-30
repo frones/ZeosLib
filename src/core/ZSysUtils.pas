@@ -5855,7 +5855,6 @@ begin
   GUIDToBuffer(@GUID.D1, P, Options);
 end;
 
-//EgonHugeist: my conversion is 10x faster than IDE's
 function GUIDToRaw(const GUID: TGUID; WithBrackets: Boolean): RawByteString;
 var Options: TGUIDConvOptions;
   P: PAnsiChar;
@@ -5880,7 +5879,6 @@ begin
   GUIDToBuffer(Buffer, P, Options);
 end;
 
-//EgonHugeist: my conversion is 10x faster than IDE's
 function GUIDToRaw(const Bts: TBytes; WithBrackets: Boolean): RawByteString;
 var Options: TGUIDConvOptions;
   P: PAnsiChar;
@@ -5910,7 +5908,6 @@ begin
   GUIDToBuffer(Value, P, Options);
 end;
 
-//EgonHugeist: my conversion is 10x faster than IDE's
 function GUIDToUnicode(const GUID: TGUID; WithBrackets: Boolean): UnicodeString;
 var Options: TGUIDConvOptions;
   P: PWideChar;
@@ -5922,7 +5919,6 @@ begin
   GUIDToBuffer(@GUID.D1, P, Options);
 end;
 
-//EgonHugeist: my conversion is 10x faster than IDE's
 function GUIDToUnicode(const Bts: TBytes; WithBrackets: Boolean): UnicodeString;
 var Options: TGUIDConvOptions;
   P: PWideChar;
