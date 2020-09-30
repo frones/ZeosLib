@@ -527,11 +527,15 @@ end;
 
 procedure TZDbLibDatabaseInfo.InitIdentifierCase(const Collation: String);
 begin
+  (*
   if ZFastCode.Pos('_CI_', Collation) > 0
   then fCaseIdentifiers := icLower
   else if (ZFastCode.Pos('_BIN', Collation) > 0){SQLServer} or (ZFastCode.Pos('bin_', Collation) > 0) {Sybase}
   then fCaseIdentifiers := icSpecial
   else fCaseIdentifiers := icMixed;
+  *)
+  // SQL Server _always_ stores mixed case identifiers. Matching is done via collations. Zeos should not tamper with Identifiers.
+  fCaseIdentifiers := icMixed;
 end;
 
 {**
@@ -1793,7 +1797,11 @@ begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
   Connection := GetConnection;
   Statement := Connection.CreateStatement;
-  with Statement.ExecuteQuery('exec sys.sp_columns '+
+  if Connection.GetHostVersion < EncodeSQLVersioning(9, 0, 0) then
+    tmp := ' sp_columns '
+  else
+    tmp := ' sys.sp_columns ';
+  with Statement.ExecuteQuery('exec' + tmp +
       ComposeObjectString(TableNamePattern)+', '+ComposeObjectString(SchemaPattern)+', '+
       ComposeObjectString(Catalog)+', '+ComposeObjectString(ColumnNamePattern)) do begin
     while Next do
@@ -1859,8 +1867,8 @@ begin
     if Connection.GetHostVersion < EncodeSQLVersioning(9, 0, 0) then
       Tmp :=  'select c.colid, c.name, c.type, c.prec, '+
         'c.scale, c.colstat, c.status, c.iscomputed from syscolumns c '+
-        'inner join sysobjects o on (o.id = c.id) where o.name COLLATE Latin1_General_CS_AS = '+
-      DeComposeObjectString(TableNamePattern)+' and c.number=0 order by colid'
+        'inner join sysobjects o on (o.id = c.id) where o.name like '+
+      DeComposeObjectString(TableNamePattern)+' escape ''' + GetDataBaseInfo.GetSearchStringEscape + ''' and c.number=0 order by colid'
     else Tmp := Format('select c.colid, c.name, c.type, c.prec, c.scale, c.colstat, c.status, c.iscomputed '
       + ' from syscolumns c '
       + '   inner join sys.sysobjects o on (o.id = c.id) '
@@ -1927,10 +1935,16 @@ end;
 }
 function TZMsSqlDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
+var
+  procname: String;
 begin
     Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
 
-    with GetStatement.ExecuteQuery('exec sys.sp_column_privileges '+
+    if GetConnection.GetHostVersion < EncodeSQLVersioning(9, 0, 0) then
+      procname := 'sp_column_privileges'
+    else
+      procname := 'sys.sp_column_privileges';
+    with GetStatement.ExecuteQuery('exec ' + procname + ' '+
       ComposeObjectString(Table)+', '+ComposeObjectString(Schema)+', '+
       ComposeObjectString(Catalog)+', '+ComposeObjectString(ColumnNamePattern)) do
     begin
