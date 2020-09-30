@@ -159,9 +159,9 @@ begin
     CheckEquals('QWERT', GetString(col_longek_index), 'the value of longek long field');
     LongLobRow3 := GetBlob(col_longek_index);
 
-    CheckEquals('ASD', LongLobRow1.{$IFDEF UNICODE}GetUnicodeString{$ELSE}GetRawByteString{$ENDIF}, 'the value of longek row 1');
-    CheckEquals('ASDF', LongLobRow2.{$IFDEF UNICODE}GetUnicodeString{$ELSE}GetRawByteString{$ENDIF}, 'the value of longek row 2');
-    CheckEquals('QWERT', LongLobRow3.{$IFDEF UNICODE}GetUnicodeString{$ELSE}GetRawByteString{$ENDIF}, 'the value of longek row 3');
+    CheckEquals('ASD', LongLobRow1.{$IFDEF UNICODE}GetUnicodeString{$ELSE}GetRawByteString(Connection.GetConSettings.ClientCodePage.CP){$ENDIF}, 'the value of longek row 1');
+    CheckEquals('ASDF', LongLobRow2.{$IFDEF UNICODE}GetUnicodeString{$ELSE}GetRawByteString(Connection.GetConSettings.ClientCodePage.CP){$ENDIF}, 'the value of longek row 2');
+    CheckEquals('QWERT', LongLobRow3.{$IFDEF UNICODE}GetUnicodeString{$ELSE}GetRawByteString(Connection.GetConSettings.ClientCodePage.CP){$ENDIF}, 'the value of longek row 3');
   finally
     LongLobRow1 := nil;
     LongLobRow2 := nil;
