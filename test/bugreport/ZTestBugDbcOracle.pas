@@ -69,6 +69,7 @@ type
   published
     procedure TestNum1;
     procedure TestBlobValues;
+    procedure TestTicket437;
   end;
 
 {$ENDIF ZEOS_DISABLE_ORACLE}
@@ -112,6 +113,59 @@ begin
     CheckEquals(True, Next, 'ResultSet.Next');
     CheckEquals(1, GetInt(col_id_Index), 'id value');
     CheckEquals(54321.0123456789, GetDouble(col_num_Index), 1E-11, 'Num value');
+    Close;
+  end;
+end;
+
+procedure TZTestDbcOracleBugReport.TestTicket437;
+const
+  col_id_Index      = FirstDbcIndex;
+  col_text_Index    = col_id_Index +1;
+  col_clobek_index  = col_text_Index +1;
+  col_longek_index  = col_clobek_index +1;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+  LongLobRow1, LongLobRow2, LongLobRow3: IZBlob;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Statement := Connection.CreateStatement;
+  Statement.SetResultSetType(rtScrollInsensitive);
+  Statement.SetResultSetConcurrency(rcUpdatable);
+
+  ResultSet := Statement.ExecuteQuery('select * from table_ticket437 order by id');
+  with ResultSet do try
+    with GetMetadata do
+    begin
+      CheckEquals(stInteger, GetColumnType(col_id_Index), 'id column type');
+      CheckEquals(stString, GetColumnType(col_text_Index), 'text column type');
+      CheckEquals(stAsciiStream, GetColumnType(col_clobek_index), 'clobek column type');
+      CheckEquals(stAsciiStream, GetColumnType(col_longek_index), 'longek column type');
+    end;
+    Check(Next, 'ResultSet.Next');
+    CheckEquals('ASD', GetString(col_text_Index), 'the value of text varchar2(4000) field');
+    CheckEquals('ASD', GetString(col_clobek_index), 'the value of clobek clob field');
+    CheckEquals('ASD', GetString(col_longek_index), 'the value of longek long field');
+    LongLobRow1 := GetBlob(col_longek_index);
+    Check(Next, 'ResultSet.Next');
+    CheckEquals('ASDF', GetString(col_text_Index), 'the value of text varchar2(4000) field');
+    CheckEquals('ASDF', GetString(col_clobek_index), 'the value of clobek clob field');
+    CheckEquals('ASDF', GetString(col_longek_index), 'the value of longek long field');
+    LongLobRow2 := GetBlob(col_longek_index);
+    Check(Next, 'ResultSet.Next');
+    CheckEquals('QWERT', GetString(col_text_Index), 'the value of text varchar2(4000) field');
+    CheckEquals('QWERT', GetString(col_clobek_index), 'the value of clobek clob field');
+    CheckEquals('QWERT', GetString(col_longek_index), 'the value of longek long field');
+    LongLobRow3 := GetBlob(col_longek_index);
+
+    CheckEquals('ASD', LongLobRow1.{$IFDEF UNICODE}GetUnicodeString{$ELSE}GetRawByteString(Connection.GetConSettings.ClientCodePage.CP){$ENDIF}, 'the value of longek row 1');
+    CheckEquals('ASDF', LongLobRow2.{$IFDEF UNICODE}GetUnicodeString{$ELSE}GetRawByteString(Connection.GetConSettings.ClientCodePage.CP){$ENDIF}, 'the value of longek row 2');
+    CheckEquals('QWERT', LongLobRow3.{$IFDEF UNICODE}GetUnicodeString{$ELSE}GetRawByteString(Connection.GetConSettings.ClientCodePage.CP){$ENDIF}, 'the value of longek row 3');
+  finally
+    LongLobRow1 := nil;
+    LongLobRow2 := nil;
+    LongLobRow3 := nil;
     Close;
   end;
 end;

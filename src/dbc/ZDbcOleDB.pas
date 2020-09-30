@@ -39,7 +39,7 @@
 {                                                         }
 {                                                         }
 { The project web site is located on:                     }
-{   http://zeos.firmos.at  (FORUM)                        }
+{   https://zeoslib.sourceforge.io/ (FORUM)               }
 {   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
 {   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
 {                                                         }
@@ -101,6 +101,7 @@ type
     FAutoCommitTIL: ISOLATIONLEVEL;
     FRestartTransaction: Boolean;
     FLastWarning: EZSQLWarning;
+    FHostVersion: Integer;
     procedure SetProviderProps(DBinit: Boolean);
   protected
     function OleDbGetDBPropValue(const APropIDs: array of DBPROPID): string; overload;
@@ -153,6 +154,7 @@ type
     procedure ClearWarnings; override;
 
     function GetServerProvider: TZServerProvider; override;
+    function GetHostVersion: Integer; override;
   public { IZOleDBConnection }
     function GetSession: IUnknown;
     function CreateCommand: ICommandText;
@@ -531,6 +533,27 @@ begin
 end;
 
 {**
+  Gets the host's full version number. Initially this should be 0.
+  The format of the version returned must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this server's full version number
+}
+function TZOleDBConnection.GetHostVersion: Integer;
+  procedure DetermineProductVersion;
+  var ProductVersion: String;
+  begin
+    ProductVersion := GetMetadata.GetDatabaseInfo.GetDatabaseProductVersion;
+    fHostVersion := SQLServerProductToHostVersion(ProductVersion);
+  end;
+begin
+  if (fHostVersion = -1) then
+    DetermineProductVersion;
+  Result := fHostVersion;
+end;
+
+{**
   Creates a <code>Statement</code> object for sending
   SQL statements to the database.
   SQL statements without parameters are normally
@@ -822,6 +845,7 @@ begin
   OleCheck(CoGetMalloc(1,fMalloc));
   FMetadata := TOleDBDatabaseMetadata.Create(Self, URL);
   Inherited SetAutoCommit(True);
+  FHostVersion := -1;
   inherited AfterConstruction;
 end;
 

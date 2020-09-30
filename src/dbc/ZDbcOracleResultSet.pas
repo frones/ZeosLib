@@ -39,7 +39,7 @@
 {                                                         }
 {                                                         }
 { The project web site is located on:                     }
-{   http://zeos.firmos.at  (FORUM)                        }
+{   https://zeoslib.sourceforge.io/ (FORUM)               }
 {   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
 {   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
 {                                                         }
@@ -604,7 +604,16 @@ begin
       if (Current.ColumnCodePage = zCP_UTF16) or IsMBCSCodePage(Current.ColumnCodePage)
       then ColumnInfo.ColumnType := stUnicodeStream
       else ColumnInfo.ColumnType := stAsciiStream
-    else if Current.ColumnType in [stString, stUnicodeString] then
+    else if (Current.ColumnType = stBinaryStream) and ((Current.dty = SQLT_VBI) or (Current.dty =  SQLT_LVB) or (Current.dty =  SQLT_LNG)) then begin
+      ColumnInfo.ColumnType := stBytes;
+      ColumnInfo.Precision := -1;
+    end else if ((Current.ColumnType in [stAsciiStream, stUnicodeStream]) and
+      ((Current.dty = SQLT_VST) or (Current.dty = SQLT_VCS) or (Current.dty = SQLT_LVC) or (Current.dty = SQLT_LNG))) then begin
+      if Current.ColumnCodePage = zCP_UTF16
+      then ColumnInfo.ColumnType := stUnicodeString
+      else ColumnInfo.ColumnType := stString;
+      ColumnInfo.Precision := -1;
+    end else if Current.ColumnType in [stString, stUnicodeString] then
       if (Current.ColumnCodePage = zCP_UTF16)
       then ColumnInfo.ColumnType := stUnicodeString
       else ColumnInfo.ColumnType := stString

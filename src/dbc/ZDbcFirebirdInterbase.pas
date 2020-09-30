@@ -39,7 +39,7 @@
 {                                                         }
 {                                                         }
 { The project web site is located on:                     }
-{   http://zeos.firmos.at  (FORUM)                        }
+{   https://zeoslib.sourceforge.io/ (FORUM)               }
 {   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
 {   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
 {                                                         }
@@ -376,7 +376,7 @@ type
     FInData, FOutData: Pointer;
     FCodePageArray: TWordDynArray;
     FByteBuffer: PByteBuffer;
-    procedure ExceuteBatch;
+    procedure ExecuteBatchDml; virtual;
     function SplittQuery(const SQL: SQLString): RawByteString;
 
     procedure WriteLobBuffer(Index: Cardinal; P: PAnsiChar; Len: NativeUInt); virtual; abstract;
@@ -493,6 +493,9 @@ type
     constructor Create(const Statement: IZStatement); overload;
     function ColumnIsGUID(SQLType: TZSQLType; DataSize: Integer; const ColumnName: string): Boolean;
   end;
+
+procedure BindSQLDAInParameters(BindList: TZBindList;
+  Stmt: TZAbstractFirebirdInterbasePreparedStatement; ArrayOffSet, ArrayItersCount: Integer);
 
 const
   sCS_NONE = 'NONE';
@@ -3577,7 +3580,7 @@ begin
     end;
 end;
 
-procedure TZAbstractFirebirdInterbasePreparedStatement.ExceuteBatch;
+procedure TZAbstractFirebirdInterbasePreparedStatement.ExecuteBatchDml;
 var ArrayOffSet: Integer;
   Succeeded: Boolean;
 begin

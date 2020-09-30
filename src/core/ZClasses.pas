@@ -39,7 +39,7 @@
 {                                                         }
 {                                                         }
 { The project web site is located on:                     }
-{   http://zeos.firmos.at  (FORUM)                        }
+{   https://zeoslib.sourceforge.io/ (FORUM)               }
 {   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
 {   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
 {                                                         }
@@ -113,9 +113,19 @@ type
     /// <summary>Checks has the iterated collection more elements.</summary>
     /// <returns><c>True</c> if iterated collection has more elements.</returns>
     function Equals(const Value: IZInterface): Boolean;
+    /// <summary>Gets a unique hash for this object.</summary>
+    /// <returns>a unique hash for this object.</returns>
     function GetHashCode: LongInt;
+    /// <summary>Clones an object instance.</summary>
+    /// <returns> a clonned object interface.</returns>
     function Clone: IZInterface;
+    /// <summary>Converts this object into the string representation.</summary>
+    /// <returns>a string representation for this object.</returns>
     function ToString: string;
+    /// <summary>Checks is this object implements a specified interface.</summary>
+    /// <param>"IId" an interface id.</param>
+    /// <returns><c>True</c> if this object support the interface:
+    ///  <c>False</c> otherwise.</returns>
     function InstanceOf(const IId: TGUID): Boolean;
   end;
 
@@ -141,49 +151,100 @@ type
     function Next: IZInterface;
   end;
 
-  /// <summary>
-  ///   Represents a collection of object interfaces.
-  /// </summary>
+  /// <summary>Represents a collection of object interfaces.</summary>
   IZCollection = interface(IZClonnable)
     ['{51417C87-F992-4CAD-BC53-CF3925DD6E4C}']
-
+    /// <summary>Gets a collection element from the specified position.</summary>
+    /// <param>"Index" a position index of the element.</param>
+    /// <returns>a requested element.</returns>
     function Get(Index: Integer): IZInterface;
+    /// <summary>Puts a specified object into defined position.</summary>
+    /// <param>"Index" a position index.</param>
+    /// <param>"Item" an object to be put.</param>
     procedure Put(Index: Integer; const Item: IZInterface);
+    /// <summary>Defines an index of the specified object inside this colleciton.</summary>
+    /// <param>"Item" an object to be found.</param>
+    /// <returns>an object position index or -1 if it was not found.</returns>
     function IndexOf(const Item: IZInterface): Integer;
+    /// <summary>Gets a number of the stored element in this collection.</summary>
+    /// <returns>a number of stored elements.</returns>
     function GetCount: Integer;
+    /// <summary>Gets a created iterator for this collection.</summary>
+    /// <returns>a created iterator for this collection.</returns>
     function GetIterator: IZIterator;
-
+    /// <summary>Gets the first element from this collection.</summary>
+    /// <returns>the first element.</returns>
     function First: IZInterface;
+    /// <summary>Gets the last object from this collection.</summary>
+    /// <returns>return the last object.</returns>
     function Last: IZInterface;
-
+    /// <summary>Adds a new object at the and of this collection.</summary>
+    /// <param>"Item" an object to be added.</param>
+    /// <returns>a position of the added object.</returns>
     function Add(const Item: IZInterface): Integer;
+    /// <summary>Inserts an object into specified position.</summary>
+    /// <param>"Index" a position index.</param>
+    /// <param>"Item" an object to be inserted.</param>
     procedure Insert(Index: Integer; const Item: IZInterface);
+    /// <summary>Removes an existed object which equals to the specified one.</summary>
+    /// <param>"Item" an object to be removed.</param>
+    /// <returns>an index of the removed object.</returns>
     function Remove(const Item: IZInterface): Integer;
-
+    /// <summary>Exchanges two element in the collection.</summary>
+    /// <param>"Index1" an index of the first element.</param>
+    /// <param>"Index2" an index of the second element.</param>
     procedure Exchange(Index1, Index2: Integer);
+    /// <summary>Deletes an object from the specified position.</summary>
+    /// <param>"Index" the index of the object to be deleted.</param>
     procedure Delete(Index: Integer);
+    /// <summary>Clears the content of this collection.</summary>
     procedure Clear;
-
+    /// <summary>Checks is the specified object is stored in this collection.</summary>
+    /// <param>"Item" an object to be searched.</param>
+    /// <returns><c>True</c> if the object was found in the collection.</returns>
     function Contains(const Item: IZInterface): Boolean;
+    /// <summary>Checks are all the object in this collection.</summary>
+    /// <param>"Col" a collection of objects to be checked.</param>
+    /// <returns><c>True</c> if all objects are in this collection.</returns>
     function ContainsAll(const Col: IZCollection): Boolean;
+    /// <summary>Adds all elements from the specified collection into this collection.</summary>
+    /// <param>"Col" a collection of objects to be added.</param>
+    /// <returns><c>True</c> if this collection was changed</returns>
     function AddAll(const Col: IZCollection): Boolean;
+    /// <summary>Removes all the elements from the specified collection.</summary>
+    /// <param>"Col" a collection of objects to be removed.</param>
+    /// <returns><c>True</c> if this collection was changed</returns>
     function RemoveAll(const Col: IZCollection): Boolean;
 
     property Count: Integer read GetCount;
     property Items[Index: Integer]: IZInterface read Get write Put; default;
   end;
 
-  {** Represents a hash map interface. }
+  /// <summary>Represents a hash map interface.</summary>
   IZHashMap = interface(IZClonnable)
     ['{782C64F4-AD09-4F56-AF2B-E4193A05BBCE}']
-
+    /// <summary>Gets a interface by it's key.</summary>
+    /// <param>"Key" a key interface.</param>
+    /// <returns> found value interface or <c>nil</c> otherwise.</returns>
     function Get(const Key: IZInterface): IZInterface;
+    /// <summary>Put a new key/value pair interfaces.</summary>
+    /// <param>"Key" a key interface.</param>
+    /// <param>"Value" a value interface.</param>
     procedure Put(const Key: IZInterface; const Value: IZInterface);
+    /// <summary>Gets a readonly collection of keys.</summary>
+    /// <returns>a readonly collection of keys.</returns>
     function GetKeys: IZCollection;
+    /// <summary>Gets a readonly collection of values.</summary>
+    /// <returns>a readonly collection of values.</returns>
     function GetValues: IZCollection;
+    /// <summary>Gets a number of elements in this hash map.</summary>
+    /// <returns>a number of elements in this hash map.</returns>
     function GetCount: Integer;
-
+    /// <summary>Removes the element from the map by it's key.</summary>
+    /// <param>"Key" a key interface of the element.</param>
+    /// <returns><c>true</c> if the hash map was changed.</returns>
     function Remove(const Key: IZInterface): Boolean;
+    /// <summary>Clears this hash map and removes all elements.</summary>
     procedure Clear;
 
     property Count: Integer read GetCount;
@@ -191,40 +252,58 @@ type
     property Values: IZCollection read GetValues;
   end;
 
-  {** Represents a stack interface. }
+  /// <summary>Represents a stack interface.</summary>
   IZStack = interface(IZClonnable)
     ['{8FEA0B3F-0C02-4E70-BD8D-FB0F42D4497B}']
-
+    /// <summary>Gets an element from the top this stack without removing it.</summary>
+    /// <returns>an element from the top of the stack.</returns>
     function Peek: IZInterface;
+    /// <summary>Gets an element from the top this stack and remove it.</summary>
+    /// <returns>an element from the top of the stack.</returns>
     function Pop: IZInterface;
+    /// <summary>Puts a new element to the top of this stack.</summary>
+    /// <param>"Value" a new element to be put.</param>
     procedure Push(const Value: IZInterface);
+    /// <summary>Gets a count of the stored elements.</summary>
+    /// <returns>an elements count.</returns>
     function GetCount: Integer;
 
     property Count: Integer read GetCount;
   end;
 
-  {** Implements an abstract interfaced object. }
-  // New TObject contains some methods with the same names but it has different
-  // result/parameter types so we just hide the inherited methods
+  {New TObject contains some methods with the same names but it has different
+   result/parameter types so we just hide the inherited methods}
+  /// <summary>Implements an abstract interfaced object.</summary>
   TZAbstractObject = class(TInterfacedObject, IZObject)
   public
     // Parameter type differs from base (TObject)
     function Equals(const Value: IZInterface): Boolean; {$IFDEF WITH_NEWTOBJECT} reintroduce; {$ENDIF} virtual;
-    // Result type differs from base (PtrInt @ FPC, Integer @ Delphi)
+    {Result type differs from base (PtrInt @ FPC, Integer @ Delphi) }
+    /// <summary>Gets a unique hash for this object.</summary>
+    /// <returns>a unique hash for this object.</returns>
     function GetHashCode: LongInt; {$IFDEF WITH_NEWTOBJECT} reintroduce; {$ENDIF} virtual;
+    /// <summary>Clones an object instance.</summary>
+    /// <returns>a clonned object interface.</returns>
     function Clone: IZInterface; virtual;
-    // Result type differs from base (ansistring/shortstring @ FPC, string @ Delphi)
+    {Result type differs from base (ansistring/shortstring @ FPC, string @ Delphi)}
+    /// <summary>Converts this object into the string representation.</summary>
+    /// <returns>a string representation for this object.</returns>
     function ToString: string; {$IFDEF WITH_NEWTOBJECT} reintroduce; {$ENDIF} virtual;
+    /// <summary>Checks is this object implements a specified interface.</summary>
+    /// <param>"IId" an interface id.</param>
+    /// <returns><c>True</c> if this object support the interface:
+    ///  <c>False</c> otherwise.</returns>
     function InstanceOf(const IId: TGUID): Boolean;
   end;
 
   {$IFDEF NO_UNIT_CONTNRS}
+  /// <summary>In case unit Contrsis not availalbe, implement a TObjectList</summary>
   TObjectList = class(TObjectList<TObject>);
   {$ENDIF}
 
-  {** EH:
-    implements a threaded timer which does not belong to the
-    windows message queue nor VCL/FMX}
+  /// <author>EgonHugeist</author>
+  /// <summary>implements a threaded timer which does not belong to the
+  ///  windows message queue nor VCL/FMX.</summary>
   TZThreadTimer = class(TObject)
   private
     FEnabled: Boolean;
@@ -236,10 +315,17 @@ type
     procedure SetInterval(const Value: Cardinal);
     procedure SetOnTimer(Value: TThreadMethod);
   public
+    /// <summary>Constructs this object and assignes the main properties.</summary>
     constructor Create; overload;
+    /// <summary>Constructs this object and assignes the main properties.</summary>
+    /// <param>"OnTimer" a TThreadMethod called if timer triggered.</param>
+    /// <param>"Interval" a timer interval.</param>
+    /// <param>"Enabled" indicate if the timer should start.</param>
     constructor Create(OnTimer: TThreadMethod;
       Interval: Cardinal; Enabled: Boolean); overload;
+    /// <summary>Destroys this object and cleanups the memory.</summary>
     destructor Destroy; override;
+    /// <summary>Resets the timer.</summary>
     procedure Reset;
   public
     property Enabled: Boolean read FEnabled write SetEnabled default False;
@@ -247,6 +333,8 @@ type
     property OnTimer: TThreadMethod read FOnTimer write SetOnTimer;
   end;
 
+  {$IFDEF TEST_CALLBACK}
+  /// <author>EgonHugeist</author>
   TCallbackPatch = packed record   //does the job nice .. with stdcall
     popEax          : byte;     // $58 pop EAX
     pushSelf_opcode : byte;     // $B8
@@ -256,18 +344,22 @@ type
     jump_target     : Pointer;  // @TObject.DummyCallback
   end;
 
-  {** implements a dispatcher to map C-DLL callbacks
-      to a pascal TMethod of Object}
+  /// <author>EgonHugeist</author>
+  /// <summary>implements a dispatcher to map C-DLL callbacks to a pascal
+  ///  TMethod of Object</summary>
   TZMethodToDllCallbackDispatcher = class(TInterfacedObject)
   private
     FProcedure: TCallbackPatch;
   protected
+    /// <summary>Returns an address which should be registered to the DLL interface</summary>
     function GetProcedureAddress: Pointer;
   public
     constructor Create(const Instance: TObject; methodAddr: pointer);
   end;
+  {$ENDIF TEST_CALLBACK}
 
-  {** EH: implements a buffered raw encoded writer }
+  /// <author>EgonHugeist</author>
+  /// <summary>implements a buffered raw encoded writer</summary>
   TZRawSQLStringWriter = class(TObject)
   private
     function FlushBuff(Var Dest: RawByteString; ReservedLen: LengthInt): PAnsiChar; overload;
@@ -487,39 +579,22 @@ begin
    Result := False;
 end;
 
-{**
-  Gets a unique hash for this object.
-  @return a unique hash for this object.
-}
 function TZAbstractObject.GetHashCode: LongInt;
 begin
   Result := LongInt(Self);
 end;
 
-{**
-  Clones an object instance.
-  @return a clonned object instance.
-}
 function TZAbstractObject.Clone: IZInterface;
 begin
   raise Exception.Create(SClonningIsNotSupported);
   result := nil;
 end;
 
-{**
-  Checks is this object implements a specified interface.
-  @param IId an interface id.
-  @return <code>True</code> if this object support the interface.
-}
 function TZAbstractObject.InstanceOf(const IId: TGUID): Boolean;
 begin
   Result := GetInterfaceEntry(IId) <> nil;
 end;
 
-{**
-  Converts this object into the string representation.
-  @return a string representation for this object.
-}
 function TZAbstractObject.ToString: string;
 begin
   Result := Format('%s <%p>', [ClassName, Pointer(Self)])
@@ -637,6 +712,9 @@ begin
     end;
 end;
 
+{$IFDEF TEST_CALLBACK}
+{ TZMethodToDllCallbackDispatcher }
+
 constructor TZMethodToDllCallbackDispatcher.Create(const Instance: TObject;
   methodAddr: Pointer);
 begin
@@ -651,11 +729,11 @@ begin
   end;
 end;
 
-{** Returns an address which should be registered to the DLL interface }
 function TZMethodToDllCallbackDispatcher.GetProcedureAddress: Pointer;
 begin
   Result := @FProcedure;
 end;
+{$ENDIF TEST_CALLBACK}
 
 { TZRawSQLStringWriter }
 

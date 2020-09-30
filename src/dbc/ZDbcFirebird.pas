@@ -39,7 +39,7 @@
 {                                                         }
 {                                                         }
 { The project web site is located on:                     }
-{   http://zeos.firmos.at  (FORUM)                        }
+{   https://zeoslib.sourceforge.io/ (FORUM)               }
 {   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
 {   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
 {                                                         }
@@ -199,7 +199,7 @@ type
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
   public
     function CreateStatementWithParams(Params: TStrings): IZStatement;
-    function PrepareStatementWithParams(const Name: string; Params: TStrings):
+    function PrepareStatementWithParams(const SQL: string; Params: TStrings):
       IZPreparedStatement;
     /// <summary>Creates a <code>CallableStatement</code> object for calling
     ///  database stored procedures. The <code>CallableStatement</code> object
@@ -678,12 +678,14 @@ begin
   Result := TZFirebirdCallableStatement.Create(Self, Name, Params);
 end;
 
-function TZFirebirdConnection.PrepareStatementWithParams(const Name: string;
+function TZFirebirdConnection.PrepareStatementWithParams(const SQL: string;
   Params: TStrings): IZPreparedStatement;
 begin
   if IsClosed then
     Open;
-  Result := TZFirebirdPreparedStatement.Create(Self, Name, Params);
+  {if Self.FHostVersion >= 4000000
+  then Result := TZFirebird4upPreparedStatement.Create(Self, SQL, Params)
+  else }Result := TZFirebirdPreparedStatement.Create(Self, SQL, Params);
 end;
 
 var

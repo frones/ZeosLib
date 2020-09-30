@@ -39,7 +39,7 @@
 {                                                         }
 {                                                         }
 { The project web site is located on:                     }
-{   http://zeos.firmos.at  (FORUM)                        }
+{   https://zeoslib.sourceforge.io/ (FORUM)               }
 {   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
 {   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
 {                                                         }
@@ -932,42 +932,13 @@ begin
 end;
 
 procedure TZDBLibConnection.DetermineProductVersion;
-var P, PDot, PEnd: PChar;
-  MajorVersion: Integer;
-  MiniorVersion: Integer;
-  SubVersion: Integer;
-  ProductVersion: String;
+var ProductVersion: String;
 begin
   with CreateStatement.ExecuteQuery('select Cast(SERVERPROPERTY(''productversion'') as varchar(500))') do begin
     if Next then begin
       ProductVersion := GetString(FirstDbcIndex);
-      if ProductVersion <> '' then begin
-        MajorVersion := 0;
-        MiniorVersion := 0;
-        SubVersion := 0;
-        P := Pointer(ProductVersion);
-        PEnd := p + Length(ProductVersion);
-        PDot := P;
-        while (PDot < PEnd) and ((Ord(PDot^) >= Ord('0')) and (Ord(PDot^) <= Ord('9'))) do
-          Inc(PDot);
-        if PDot^ = '.' then begin
-          MajorVersion := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P, PDot, 0);
-          P := PDot +1;
-          PDot := P +1;
-          while (PDot < PEnd) and ((Ord(PDot^) >= Ord('0')) and (Ord(PDot^) <= Ord('9'))) do
-            Inc(PDot);
-          if PDot^ = '.' then begin
-            MiniorVersion := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P, PDot, 0);
-            P := PDot +1;
-            PDot := P +1;
-            while (PDot < PEnd) and ((Ord(PDot^) >= Ord('0')) and (Ord(PDot^) <= Ord('9'))) do
-              Inc(PDot);
-            SubVersion := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P, PDot, 0);
-          end;
-        end;
-        (Self.GetMetadata.GetDatabaseInfo as IZDbLibDatabaseInfo).SetProductVersion(ProductVersion);
-        fHostVersion := EncodeSQLVersioning(MajorVersion, MiniorVersion, SubVersion);
-      end;
+      (Self.GetMetadata.GetDatabaseInfo as IZDbLibDatabaseInfo).SetProductVersion(ProductVersion);
+      fHostVersion := SQLServerProductToHostVersion(ProductVersion);
     end;
     Close;
   end;

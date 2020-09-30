@@ -39,7 +39,7 @@
 {                                                         }
 {                                                         }
 { The project web site is located on:                     }
-{   http://zeos.firmos.at  (FORUM)                        }
+{   https://zeoslib.sourceforge.io/ (FORUM)               }
 {   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
 {   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
 {                                                         }
@@ -92,6 +92,7 @@ type
   private
     fServerProvider: TZServerProvider;
     FTransactionLevel: Integer;
+    FHostVersion: Integer;
   protected
     FAdoConnection: ZPlainAdo.Connection;
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload; override;
@@ -138,6 +139,7 @@ type
     procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
 
+    function GetHostVersion: Integer; override;
     function GetServerProvider: TZServerProvider; override;
   end;
 
@@ -486,6 +488,7 @@ begin
   CoInit;
   FAdoConnection := CoConnection.Create;
   FMetadata := TZAdoDatabaseMetadata.Create(Self, URL);
+  fHostVersion := -1;
   inherited AfterConstruction;
 end;
 
@@ -622,6 +625,27 @@ end;
 function TZAdoConnection.GetCatalog: string;
 begin
   Result := String(FAdoConnection.DefaultDatabase);
+end;
+
+{**
+  Gets the host's full version number. Initially this should be 0.
+  The format of the version returned must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this server's full version number
+}
+function TZAdoConnection.GetHostVersion: Integer;
+  procedure DetermineProductVersion;
+  var ProductVersion: String;
+  begin
+    ProductVersion := GetMetadata.GetDatabaseInfo.GetDatabaseProductVersion;
+    fHostVersion := SQLServerProductToHostVersion(ProductVersion);
+  end;
+begin
+  if (fHostVersion = -1) then
+    DetermineProductVersion;
+  Result := fHostVersion;
 end;
 
 function TZAdoConnection.GetServerProvider: TZServerProvider;

@@ -70,3 +70,6 @@ go
 if ((select Cast(Left(Cast(SERVERPROPERTY ('productversion') as varchar(50)), CHARINDEX('.', Cast(SERVERPROPERTY ('productversion') as varchar(50)), 2)-1) as Int)) >= 9/*V2005Andup*/)
   EXECUTE('drop SEQUENCE generate_id')
 go
+
+drop TABLE ADQA_All_types
+go

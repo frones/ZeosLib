@@ -39,7 +39,7 @@
 {                                                         }
 {                                                         }
 { The project web site is located on:                     }
-{   http://zeos.firmos.at  (FORUM)                        }
+{   https://zeoslib.sourceforge.io/ (FORUM)               }
 {   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
 {   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
 {                                                         }
@@ -3297,12 +3297,12 @@ end;
 }
 procedure TZAbstractRODataset.InternalInitFieldDefs;
 var
-  I, {J,} Size: Integer;
+  I, J, Size: Integer;
   AutoInit: Boolean;
   FieldType: TFieldType;
   SQLType: TZSQLType;
   ResultSet: IZResultSet;
-  //FieldName: string;
+  FieldName: string;
   FName: string;
   //ConSettings: PZConSettings;
   FieldDef: TFieldDef;
@@ -3351,7 +3351,14 @@ begin
           Size := GetScale(I)
         else
           Size := 0;
-        FName := GetColumnLabel(I);
+
+        J := 0;
+        FieldName := GetColumnLabel(I);
+        FName := FieldName;
+        while FieldDefs.IndexOf(FName) >= 0 do begin
+          Inc(J);
+          FName := Format('%s_%d', [FieldName, J]);
+        end;
         {$IFNDEF UNICODE}
         if (FCharEncoding = ceUTF16) //dbc internaly stores everything in UTF8
           {$IF defined(WITH_DEFAULTSYSTEMCODEPAGE) or not defined(LCL)}

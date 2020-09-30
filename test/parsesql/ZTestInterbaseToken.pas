@@ -75,9 +75,9 @@ type
     procedure TestWordState;
     procedure TestNumberState;
   end;
-{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
-implementation
 {$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
+implementation
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 
 { TZTestInterbaseTokenizer }
 
