@@ -3082,8 +3082,10 @@ begin
       stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
       stCurrency: Result := PInt64(Data)^ div 10000;
       stBigDecimal: Result := BCD2Int64(PBCD(Data)^);
-      stString: Result := RawToInt64Def(PPAnsiChar(Data)^+PAnsiInc, 0);
-      stUnicodeString: Result := UnicodeToInt64Def(ZPPWideChar(Data)^+PWideInc, 0);
+      stString: if Data^ <> nil then
+        Result := RawToInt64Def(PPAnsiChar(Data)^+PAnsiInc, 0);
+      stUnicodeString: if Data^ <> nil then
+        Result := UnicodeToInt64Def(ZPPWideChar(Data)^+PWideInc, 0);
       stAsciiStream: begin
           PA := GetPAnsiChar(ColumnIndex, IsNull, Len);
           Result := RawToInt64Def(PA, PA+Len, 0);
@@ -3137,8 +3139,10 @@ begin
       stDouble: Result := PDouble(Data)^;
       stCurrency: Result := PCurrency(Data)^;
       stBigDecimal: Result := BCDToDouble(PBCD(Data)^);
-      stString: SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PCardinal(PPointer(Data)^)^);
-      stUnicodeString: SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PCardinal(PPointer(Data)^)^ shr 1);
+      stString: if Data^ <> nil then
+        SQLStrToFloatDef(PPAnsiChar(Data)^+PAnsiInc, 0, Result, PCardinal(PPointer(Data)^)^);
+      stUnicodeString: if Data^ <> nil then
+        SQLStrToFloatDef(ZPPWideChar(Data)^+PWideInc, 0, Result, PCardinal(PPointer(Data)^)^ shr 1);
       stAsciiStream: if (Data^ <> nil) and not PIZlob(Data)^.IsEmpty then begin
             PA := PIZlob(Data)^.GetPAnsiChar(FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], fRawTemp, Len);
             SQLStrToFloatDef(PA, 0, Result, Len)
@@ -3985,7 +3989,8 @@ begin
     stDouble: PDouble(Data)^ := Ord(Value);
     stCurrency: PCurrency(Data)^ := Ord(Value);
     stBigDecimal: ScaledOrdinal2BCD(Word(Value), 0, PBCD(Data)^);
-    stString, stUnicodeString: SetString(ColumnIndex, BoolStrs[Value]);
+    stString: SetRawByteString(ColumnIndex, BoolStrsRaw[Value]);
+    stUnicodeString: SetUnicodeString(ColumnIndex, BoolStrsW[Value]);
     else raise ZDbcUtils.CreateConversionError(ColumnIndex, FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], stBoolean)
   end;
 end;
