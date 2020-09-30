@@ -39,7 +39,7 @@
 {                                                         }
 {                                                         }
 { The project web site is located on:                     }
-{   http://zeos.firmos.at  (FORUM)                        }
+{   https://zeoslib.sourceforge.io/ (FORUM)               }
 {   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
 {   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
 {                                                         }
@@ -1877,14 +1877,18 @@ type
     function IsEmpty: Boolean;
   end;
 
-  /// <summary>
-  ///   ResultSet metadata interface.
-  /// </summary>
+  /// <summary>ResultSet metadata interface.</summary>
   IZResultSetMetadata = interface(IZInterface)
     ['{47CA2144-2EA7-42C4-8444-F5154369B2D7}']
-
+    /// <summary>Maps the given <c>Metadata</c> column name to its
+    ///  <c>Metadata</c> column index. First searches with case-sensivity then,
+    ///  if nothing matches, a case.insensitive search is performed.
+    /// <param>"ColumnName" the name of the column</param>
+    /// <returns>the column index of the given column name or an
+    ///  InvalidDbcIndex if nothing was found</returns>
     function FindColumn(const ColumnName: string): Integer;
-
+    /// <summary>get the number of columns in this <c>ResultSet</c> interface.</summary>
+    /// <returns>the number of columns</returns>
     function GetColumnCount: Integer;
     function IsAutoIncrement(ColumnIndex: Integer): Boolean;
     function IsCaseSensitive(ColumnIndex: Integer): Boolean;
@@ -1905,6 +1909,7 @@ type
     function GetColumnType(ColumnIndex: Integer): TZSQLType;
     function GetColumnTypeName(ColumnIndex: Integer): string;
     function IsReadOnly(ColumnIndex: Integer): Boolean;
+    procedure SetReadOnly(ColumnIndex: Integer; Value: Boolean);
     function IsWritable(ColumnIndex: Integer): Boolean;
     function IsDefinitelyWritable(ColumnIndex: Integer): Boolean;
     function GetDefaultValue(ColumnIndex: Integer): string;

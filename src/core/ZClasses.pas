@@ -39,7 +39,7 @@
 {                                                         }
 {                                                         }
 { The project web site is located on:                     }
-{   http://zeos.firmos.at  (FORUM)                        }
+{   https://zeoslib.sourceforge.io/ (FORUM)               }
 {   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
 {   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
 {                                                         }
@@ -220,17 +220,31 @@ type
     property Items[Index: Integer]: IZInterface read Get write Put; default;
   end;
 
-  {** Represents a hash map interface. }
+  /// <summary>Represents a hash map interface.</summary>
   IZHashMap = interface(IZClonnable)
     ['{782C64F4-AD09-4F56-AF2B-E4193A05BBCE}']
-
+    /// <summary>Gets a interface by it's key.</summary>
+    /// <param>"Key" a key interface.</param>
+    /// <returns> found value interface or <c>nil</c> otherwise.</returns>
     function Get(const Key: IZInterface): IZInterface;
+    /// <summary>Put a new key/value pair interfaces.</summary>
+    /// <param>"Key" a key interface.</param>
+    /// <param>"Value" a value interface.</param>
     procedure Put(const Key: IZInterface; const Value: IZInterface);
+    /// <summary>Gets a readonly collection of keys.</summary>
+    /// <returns>a readonly collection of keys.</returns>
     function GetKeys: IZCollection;
+    /// <summary>Gets a readonly collection of values.</summary>
+    /// <returns>a readonly collection of values.</returns>
     function GetValues: IZCollection;
+    /// <summary>Gets a number of elements in this hash map.</summary>
+    /// <returns>a number of elements in this hash map.</returns>
     function GetCount: Integer;
-
+    /// <summary>Removes the element from the map by it's key.</summary>
+    /// <param>"Key" a key interface of the element.</param>
+    /// <returns><c>true</c> if the hash map was changed.</returns>
     function Remove(const Key: IZInterface): Boolean;
+    /// <summary>Clears this hash map and removes all elements.</summary>
     procedure Clear;
 
     property Count: Integer read GetCount;
@@ -238,21 +252,28 @@ type
     property Values: IZCollection read GetValues;
   end;
 
-  {** Represents a stack interface. }
+  /// <summary>Represents a stack interface.</summary>
   IZStack = interface(IZClonnable)
     ['{8FEA0B3F-0C02-4E70-BD8D-FB0F42D4497B}']
-
+    /// <summary>Gets an element from the top this stack without removing it.</summary>
+    /// <returns>an element from the top of the stack.</returns>
     function Peek: IZInterface;
+    /// <summary>Gets an element from the top this stack and remove it.</summary>
+    /// <returns>an element from the top of the stack.</returns>
     function Pop: IZInterface;
+    /// <summary>Puts a new element to the top of this stack.</summary>
+    /// <param>"Value" a new element to be put.</param>
     procedure Push(const Value: IZInterface);
+    /// <summary>Gets a count of the stored elements.</summary>
+    /// <returns>an elements count.</returns>
     function GetCount: Integer;
 
     property Count: Integer read GetCount;
   end;
 
-  {** Implements an abstract interfaced object. }
-  // New TObject contains some methods with the same names but it has different
-  // result/parameter types so we just hide the inherited methods
+  {New TObject contains some methods with the same names but it has different
+   result/parameter types so we just hide the inherited methods}
+  /// <summary>Implements an abstract interfaced object.</summary>
   TZAbstractObject = class(TInterfacedObject, IZObject)
   public
     // Parameter type differs from base (TObject)
@@ -276,12 +297,13 @@ type
   end;
 
   {$IFDEF NO_UNIT_CONTNRS}
+  /// <summary>In case unit Contrsis not availalbe, implement a TObjectList</summary>
   TObjectList = class(TObjectList<TObject>);
   {$ENDIF}
 
-  {** EH:
-    implements a threaded timer which does not belong to the
-    windows message queue nor VCL/FMX}
+  /// <author>EgonHugeist</author>
+  /// <summary>implements a threaded timer which does not belong to the
+  ///  windows message queue nor VCL/FMX.</summary>
   TZThreadTimer = class(TObject)
   private
     FEnabled: Boolean;
@@ -293,10 +315,17 @@ type
     procedure SetInterval(const Value: Cardinal);
     procedure SetOnTimer(Value: TThreadMethod);
   public
+    /// <summary>Constructs this object and assignes the main properties.</summary>
     constructor Create; overload;
+    /// <summary>Constructs this object and assignes the main properties.</summary>
+    /// <param>"OnTimer" a TThreadMethod called if timer triggered.</param>
+    /// <param>"Interval" a timer interval.</param>
+    /// <param>"Enabled" indicate if the timer should start.</param>
     constructor Create(OnTimer: TThreadMethod;
       Interval: Cardinal; Enabled: Boolean); overload;
+    /// <summary>Destroys this object and cleanups the memory.</summary>
     destructor Destroy; override;
+    /// <summary>Resets the timer.</summary>
     procedure Reset;
   public
     property Enabled: Boolean read FEnabled write SetEnabled default False;
@@ -304,6 +333,8 @@ type
     property OnTimer: TThreadMethod read FOnTimer write SetOnTimer;
   end;
 
+  {$IFDEF TEST_CALLBACK}
+  /// <author>EgonHugeist</author>
   TCallbackPatch = packed record   //does the job nice .. with stdcall
     popEax          : byte;     // $58 pop EAX
     pushSelf_opcode : byte;     // $B8
@@ -313,18 +344,22 @@ type
     jump_target     : Pointer;  // @TObject.DummyCallback
   end;
 
-  {** implements a dispatcher to map C-DLL callbacks
-      to a pascal TMethod of Object}
+  /// <author>EgonHugeist</author>
+  /// <summary>implements a dispatcher to map C-DLL callbacks to a pascal
+  ///  TMethod of Object</summary>
   TZMethodToDllCallbackDispatcher = class(TInterfacedObject)
   private
     FProcedure: TCallbackPatch;
   protected
+    /// <summary>Returns an address which should be registered to the DLL interface</summary>
     function GetProcedureAddress: Pointer;
   public
     constructor Create(const Instance: TObject; methodAddr: pointer);
   end;
+  {$ENDIF TEST_CALLBACK}
 
-  {** EH: implements a buffered raw encoded writer }
+  /// <author>EgonHugeist</author>
+  /// <summary>implements a buffered raw encoded writer</summary>
   TZRawSQLStringWriter = class(TObject)
   private
     function FlushBuff(Var Dest: RawByteString; ReservedLen: LengthInt): PAnsiChar; overload;
@@ -677,6 +712,9 @@ begin
     end;
 end;
 
+{$IFDEF TEST_CALLBACK}
+{ TZMethodToDllCallbackDispatcher }
+
 constructor TZMethodToDllCallbackDispatcher.Create(const Instance: TObject;
   methodAddr: Pointer);
 begin
@@ -691,11 +729,11 @@ begin
   end;
 end;
 
-{** Returns an address which should be registered to the DLL interface }
 function TZMethodToDllCallbackDispatcher.GetProcedureAddress: Pointer;
 begin
   Result := @FProcedure;
 end;
+{$ENDIF TEST_CALLBACK}
 
 { TZRawSQLStringWriter }
 

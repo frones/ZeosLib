@@ -39,7 +39,7 @@
 {                                                         }
 {                                                         }
 { The project web site is located on:                     }
-{   http://zeos.firmos.at  (FORUM)                        }
+{   https://zeoslib.sourceforge.io/ (FORUM)               }
 {   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
 {   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
 {                                                         }
@@ -158,10 +158,16 @@ type
     constructor Create(const Metadata: IZDatabaseMetadata; const SQL: string;
       ParentResultSet: TZAbstractResultSet);
     destructor Destroy; override;
-
+    /// <summary>Maps the given <c>Metadata</c> column name to its
+    ///  <c>Metadata</c> column index. First searches with case-sensivity then,
+    ///  if nothing matches, a case.insensitive search is performed.
+    /// <param>"ColumnName" the name of the column</param>
+    /// <returns>the column index of the given column name or an
+    ///  InvalidDbcIndex if nothing was found</returns>
     function FindColumn(const ColumnName: string): Integer;
-
-    function GetColumnCount: Integer; virtual;
+    /// <summary>get the number of columns in this <c>ResultSet</c> interface.</summary>
+    /// <returns>the number of columns</returns>
+    function GetColumnCount: Integer;
     function IsAutoIncrement(ColumnIndex: Integer): Boolean; virtual;
     function IsCaseSensitive(ColumnIndex: Integer): Boolean; virtual;
     function IsSearchable(ColumnIndex: Integer): Boolean; virtual;
@@ -182,6 +188,7 @@ type
     function GetColumnType(ColumnIndex: Integer): TZSQLType; virtual;
     function GetColumnTypeName(ColumnIndex: Integer): string; virtual;
     function IsReadOnly(ColumnIndex: Integer): Boolean; virtual;
+    procedure SetReadOnly(ColumnIndex: Integer; Value: Boolean); virtual;
     function IsWritable(ColumnIndex: Integer): Boolean; virtual;
     function IsDefinitelyWritable(ColumnIndex: Integer): Boolean; virtual;
     function GetDefaultValue(ColumnIndex: Integer): string; virtual;
@@ -292,15 +299,6 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-
-{**
-  Maps the given <code>Metadata</code> column name to its
-  <code>Metadata</code> column index.
-  First searches with case-sensivity then without
-
-  @param columnName the name of the column
-  @return the column index of the given column name
-}
 function TZAbstractResultSetMetadata.FindColumn(const ColumnName: string): Integer;
 var
   I: Integer;
@@ -964,6 +962,16 @@ begin
     FIdentifierConvertor := Value.GetIdentifierConvertor
   else
     FIdentifierConvertor := TZDefaultIdentifierConvertor.Create(FMetadata);
+end;
+
+procedure TZAbstractResultSetMetadata.SetReadOnly(ColumnIndex: Integer;
+  Value: Boolean);
+begin
+  with TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
+    if Value <> ReadOnly then
+      if Value
+      then ReadOnly := True
+      else ReadOnly := IsWritable(ColumnIndex);
 end;
 
 procedure TZAbstractResultSetMetadata.SetReadOnlyFromGetColumnsRS(
