@@ -100,7 +100,9 @@ type
   private
     FLoaded: Boolean;
     FMetadata: IZDatabaseMetadata;
-    FColumnsLabels: TStrings;
+    FColumnsLabelsCS, //a case sensitive list of unique column labels
+    FColumnsLabelsCI: TStrings;  //a lower case list of unique column labels if still duplicate values exist
+
     FSQL: string;
     FTableColumns: TZHashMap;
     FIdentifierConvertor: IZIdentifierConvertor;
@@ -146,7 +148,7 @@ type
     procedure ReplaceStarColumns(const SelectSchema: IZSelectSchema);
 
     property MetaData: IZDatabaseMetadata read FMetadata write SetMetadata;
-    property ColumnsLabels: TStrings read FColumnsLabels write FColumnsLabels;
+    property ColumnsLabels: TStrings read FColumnsLabelsCS write FColumnsLabelsCS;
     property SQL: string read FSQL write FSQL;
     property IdentifierConvertor: IZIdentifierConvertor
       read FIdentifierConvertor write FIdentifierConvertor;
@@ -243,7 +245,8 @@ begin
   FIdentifierConvertor := nil;
   FMetadata := nil;
   FreeAndNil(FTableColumns);
-  FreeAndNil(FColumnsLabels);
+  FreeAndNil(FColumnsLabelsCS);
+  FreeAndNil(FColumnsLabelsCI);
   inherited Destroy;
 end;
 
@@ -301,20 +304,24 @@ end;
 function TZAbstractResultSetMetadata.FindColumn(const ColumnName: string): Integer;
 var
   I: Integer;
-  ColumnNameUpper: string;
+  ColumnNameLower: string;
 begin
   { Search for case sensitive columns. }
   for I := FirstDbcIndex to GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-    if GetColumnLabel(I) = ColumnName then
-    begin
+    if GetColumnLabel(I) = ColumnName then begin
       Result := I;
       Exit;
     end;
-
   { Search for case insensitive columns. }
-  ColumnNameUpper := AnsiUpperCase(ColumnName);
-  for I := FirstDbcIndex to GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-    if AnsiUpperCase(GetColumnLabel(I)) = ColumnNameUpper then
+  ColumnNameLower := AnsiLowerCase(ColumnName);
+  if FColumnsLabelsCI <> nil then begin//alive only if caseinsensitive duplicates exist (to find fields of DataSetLogic)
+    Result := FColumnsLabelsCI.IndexOf(ColumnNameLower);
+    if Result > -1 then begin
+      {$IFNDEF GENERIC_INDEX}Inc(Result);{$ENDIF}
+      Exit;
+    end;
+  end else for I := FirstDbcIndex to GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    if AnsiLowerCase(GetColumnLabel(I)) = ColumnNameLower then
     begin
       Result := I;
       Exit;
@@ -409,16 +416,18 @@ end;
   @return the suggested column title
 }
 function TZAbstractResultSetMetadata.GetColumnLabel(ColumnIndex: Integer): string;
-var
-  I, J, N: Integer;
-  ColumnName, OrgLabel: string;
-  ColumnsInfo: TObjectList;
-  B: Boolean;
-begin
-  { Prepare unique column labels. }
-  if FColumnsLabels = nil then begin
+  procedure FillListAndMakeUnique;
+  var
+    I, J, N: Integer;
+    ColumnName, OrgLabel: string;
+    ColumnsInfo: TObjectList;
+    B, HasLowerLabelDuplicates: Boolean;
+  begin
     ColumnsInfo := FResultSet.ColumnsInfo;
-    FColumnsLabels := TStringList.Create;
+    FColumnsLabelsCS := TStringList.Create;
+    FColumnsLabelsCI := TStringList.Create;
+    HasLowerLabelDuplicates := False;
+    { fills a case sensitive unique list }
     for I := 0 to ColumnsInfo.Count - 1 do begin
       N := 0;
       ColumnName := TZColumnInfo(ColumnsInfo[I]).ColumnLabel;
@@ -438,9 +447,27 @@ begin
         if N > 0 then
           ColumnName := OrgLabel + '_' + ZFastCode.IntToStr(N);
       Until Not b;
-      FColumnsLabels.Add(ColumnName);
+      FColumnsLabelsCS.Add(ColumnName);
     end;
+    { fills a case insensitive unique list }
+    for I := 0 to FColumnsLabelsCS.Count - 1 do begin
+      N := 0;
+      OrgLabel := FColumnsLabelsCS[I];
+      ColumnName := AnsiLowerCase(OrgLabel);
+      while FColumnsLabelsCI.IndexOf(ColumnName) > -1 do begin
+        Inc(N);
+        ColumnName := OrgLabel + '_' + ZFastCode.IntToStr(N);
+        HasLowerLabelDuplicates := True;
+      end;
+      FColumnsLabelsCI.Add(ColumnName);
+    end;
+    if not HasLowerLabelDuplicates then
+      FreeAndNil(FColumnsLabelsCI);
   end;
+begin
+  { Prepare unique column labels. }
+  if FColumnsLabelsCS = nil then
+    FillListAndMakeUnique;
   Result := ColumnsLabels[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
 end;
 
