@@ -896,7 +896,7 @@ procedure TZGenerateSQLCachedResolver.SetSearchable(ColumnIndex: Integer;
 begin
   if Metadata.IsSearchable(ColumnIndex) <> Value then begin
     Metadata.SetSearchable(ColumnIndex, Value);
-    if Metadata.IsSearchable(ColumnIndex) =  Value then
+    if Metadata.IsSearchable(ColumnIndex) = Value then
       FWhereColumns.Clear;
   end;
 end;

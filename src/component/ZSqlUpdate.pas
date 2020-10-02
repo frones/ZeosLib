@@ -312,12 +312,12 @@ begin
   else Result := TZAbstractRODataset(Dataset).Connection.AutoCommit;
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Sender" not used} {$ENDIF}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "ColumnIndex,Value" not used} {$ENDIF}
 procedure TZUpdateSQL.SetSearchable(ColumnIndex: Integer; Value: Boolean);
 begin
   //noting todo here, it's user task..
 end;
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Sender" not used} {$ENDIF}
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets a DML statements for specified action.
@@ -405,7 +405,7 @@ begin
   end;
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Sender" not used} {$ENDIF}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "ColumnIndex,Value" not used} {$ENDIF}
 procedure TZUpdateSQL.SetReadOnly(ColumnIndex: Integer; Value: Boolean);
 begin
   //nothing todo here it's users task

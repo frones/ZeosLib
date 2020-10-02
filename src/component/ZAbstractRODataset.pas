@@ -501,7 +501,7 @@ type
     function PSInTransaction: Boolean; override;
   {$ENDIF}
   protected
-    procedure DataEvent(Event: TDataEvent; Info: Longint); override;
+    procedure DataEvent(Event: TDataEvent; Info: {$IFDEF FPC}PtrInt{$ELSE}NativeInt{$ENDIF}); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -4114,7 +4114,7 @@ begin
   GotoRow(PZRowBuffer(Buffer)^.Index);
 end;
 
-procedure TZAbstractRODataset.DataEvent(Event: TDataEvent; Info: Integer);
+procedure TZAbstractRODataset.DataEvent(Event: TDataEvent; Info: {$IFDEF FPC}PtrInt{$ELSE}NativeInt{$ENDIF});
 var I, j: Integer;
 begin
   inherited DataEvent(Event, Info);

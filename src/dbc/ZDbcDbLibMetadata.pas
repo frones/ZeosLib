@@ -315,7 +315,7 @@ type
 implementation
 {$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 
-uses ZFastCode, ZDbcDbLibUtils, ZDbcDbLib;
+uses ZFastCode, ZDbcDbLibUtils;
 
 { TZDbLibDatabaseInfo }
 
@@ -525,6 +525,7 @@ begin
   Result := 'DATEADD,DATEDIFF,DATENAME,DATEPART,DAY,GETDATE,MONTH,YEAR';
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Collation" not used} {$ENDIF}
 procedure TZDbLibDatabaseInfo.InitIdentifierCase(const Collation: String);
 begin
   (*
@@ -537,6 +538,7 @@ begin
   // SQL Server _always_ stores mixed case identifiers. Matching is done via collations. Zeos should not tamper with Identifiers.
   fCaseIdentifiers := icMixed;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets the string that can be used to escape wildcard characters.
