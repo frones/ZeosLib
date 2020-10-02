@@ -2712,6 +2712,7 @@ end;
 
   @return <code>ResultSet</code> - each row is an SQL type description
 }
+{$IFDEF FPC} {$PUSH} {$WARN 4057 off : Local variable "GUID" does not seem to be initialized} {$ENDIF}
 function TOleDBDatabaseMetadata.UncachedGetTypeInfo: IZResultSet;
 const iIS_LONG = TypeInfoNumPrecRadix;
 var
@@ -2797,6 +2798,7 @@ begin
       Close;
     end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets a description of a table's indices and statistics. They are
