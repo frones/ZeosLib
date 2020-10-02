@@ -152,6 +152,10 @@ type
       const Resolver: IZCachedResolver); virtual;
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
+    //EH: get some fields skipped for dml
+    procedure SetReadOnly(ColumnIndex: Integer; Value: Boolean);
+    //EH: get some fields skipped for the where clause
+    procedure SetSearchable(ColumnIndex: Integer; Value: Boolean);
   end;
   //just an alias for compatibility
   TZGenericCachedResolver = TZGenerateSQLCachedResolver;
@@ -267,8 +271,9 @@ begin
   SQLWriter := TZSQLStringWriter.Create(512);
   try
     for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
-      Temp := ComposeFullTableName(Metadata.GetCatalogName(I),
-        Metadata.GetSchemaName(I), Metadata.GetTableName(I), SQLWriter);
+      if not Metadata.IsReadOnly(I) and Metadata.IsWritable(I) then
+        Temp := ComposeFullTableName(Metadata.GetCatalogName(I),
+          Metadata.GetSchemaName(I), Metadata.GetTableName(I), SQLWriter);
       if (Result = '') and (Temp <> '') then
         Result := Temp
       else if (Result <> '') and (Temp <> '') and (Temp <> Result) then
@@ -639,7 +644,8 @@ begin
   J := FirstDbcIndex;
   for I := FirstDbcIndex to FInsertColumns.Capacity{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
     Tmp := Metadata.GetTableName(I);
-    if (Tmp = '') or not Metadata.IsWritable(I) or (Metadata.IsAutoIncrement(I) and NewRowAccessor.IsNull(I)) then continue;
+    if (Tmp = '') or Metadata.IsReadOnly(I) or  not Metadata.IsWritable(I) or
+       (Metadata.IsAutoIncrement(I) and NewRowAccessor.IsNull(I)) then continue;
     Tmp := Metadata.GetColumnName(I);
     if Tmp <> '' then begin
       FInsertColumns.Add(J, I);
@@ -708,7 +714,7 @@ begin
   case UpdateType of
     utInserted:
       begin
-        if (InsertStatement = nil) or InsertStatement.IsClosed then begin
+        if (InsertStatement = nil) or InsertStatement.IsClosed or (FInsertColumns.Count = 0) then begin
           InsertStatement := nil;
           SQL := FormInsertStatement(NewRowAccessor);
           TempKey := TZAnyValue.CreateWithInteger(Hash(SQL));
@@ -725,7 +731,7 @@ begin
       end;
     utDeleted:
       begin
-        if not FWhereAll then begin
+        if not FWhereAll or (FWhereColumns.Count = 0) then begin
           If (FDeleteStatements.Count = 0) or (FDeleteStatements.Values[0] as IZPreparedStatement).IsClosed then begin
             SQL := FormDeleteStatement(OldRowAccessor);
             Statement := CreateResolverStatement(SQL);
@@ -867,10 +873,32 @@ begin
   end;
 end;
 
+procedure TZGenerateSQLCachedResolver.SetReadOnly(ColumnIndex: Integer;
+  Value: Boolean);
+begin
+  if Metadata.IsReadOnly(ColumnIndex) <> Value then begin
+    Metadata.SetReadOnly(ColumnIndex, Value);
+    if Metadata.IsReadOnly(ColumnIndex) = Value then begin
+      FInsertColumns.Clear;
+      FUpdateColumns.Clear;
+    end;
+  end;
+end;
+
 procedure TZGenerateSQLCachedResolver.SetResolverStatementParamters(
   const Statement: IZStatement; {$IFDEF AUTOREFCOUNT}const {$ENDIF} Params: TStrings);
 begin
   Params.Assign(Statement.GetParameters);
+end;
+
+procedure TZGenerateSQLCachedResolver.SetSearchable(ColumnIndex: Integer;
+  Value: Boolean);
+begin
+  if Metadata.IsSearchable(ColumnIndex) <> Value then begin
+    Metadata.SetSearchable(ColumnIndex, Value);
+    if Metadata.IsSearchable(ColumnIndex) =  Value then
+      FWhereColumns.Clear;
+  end;
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Sender" not used} {$ENDIF}

@@ -567,7 +567,7 @@ var
   {$ELSE}
   BM:TBookMarkStr{%H-};
   {$ENDIF}
-  I: Integer;
+  I, j: Integer;
 begin
   if (FSequenceField <> '') and Assigned(FSequence) then
     if FieldByName(FSequenceField).IsNull then
@@ -594,6 +594,13 @@ begin
             TZAbstractDataset(MasterLink.DataSet).CachedUpdates);
         end;
 
+    for i := 0 to Fields.Count -1 do
+      if not (pfInUpdate in Fields[i].ProviderFlags) or not (pfInWhere in Fields[i].ProviderFlags) then
+        for j := 0 to high(FieldsLookupTable) do
+          if (FieldsLookupTable[j].Field = Fields[i]) and (FieldsLookupTable[j].DataSource = dltResultSet) then begin
+            FCachedResolver.SetReadOnly(FieldsLookupTable[j].Index, Fields[i].ReadOnly or not (pfInUpdate in Fields[i].ProviderFlags));
+            FCachedResolver.SetSearchable(FieldsLookupTable[j].Index, (pfInWhere in Fields[i].ProviderFlags));
+          end;
     if State = dsInsert then
       {$IFNDEF WITH_InternalAddRecord_TRecBuf}
       InternalAddRecord(RowBuffer, False)

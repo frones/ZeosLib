@@ -500,7 +500,8 @@ type
     procedure PSSetParams(AParams: TParams); override;
     function PSInTransaction: Boolean; override;
   {$ENDIF}
-
+  protected
+    procedure DataEvent(Event: TDataEvent; Info: Longint); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -3176,8 +3177,7 @@ begin
   end else
     raise EZDatabaseError.Create(SRowDataIsNotAvailable);
 
-  if Field.FieldKind = fkData then
-  begin
+  if Field.FieldKind = fkData then begin
     OldRowBuffer.Index := -1;
     NewRowBuffer.Index := -1;
   end;
@@ -4112,6 +4112,19 @@ end;
 procedure TZAbstractRODataset.InternalSetToRecord(Buffer: TRecordBuffer);
 begin
   GotoRow(PZRowBuffer(Buffer)^.Index);
+end;
+
+procedure TZAbstractRODataset.DataEvent(Event: TDataEvent; Info: Integer);
+var I, j: Integer;
+begin
+  inherited DataEvent(Event, Info);
+  if Event = deLayoutChange then
+    for i := 0 to Fields.Count -1 do
+      for j := 0 to high(FieldsLookupTable) do
+        if (FieldsLookupTable[j].Field = Fields[i]) and (FieldsLookupTable[j].DataSource = dltResultSet) then begin
+          FResultSetMetadata.SetReadOnly(FieldsLookupTable[j].Index, Fields[i].ReadOnly or not (pfInUpdate in Fields[i].ProviderFlags));
+          FResultSetMetadata.SetSearchable(FieldsLookupTable[j].Index, (pfInWhere in Fields[i].ProviderFlags));
+        end;
 end;
 
 {$IFNDEF WITH_VIRTUAL_DEFCHANGED}

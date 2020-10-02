@@ -73,7 +73,6 @@ type
   {** Resolver to post updates. }
   IZCachedResolver = interface (IZInterface)
     ['{546ED716-BB88-468C-8CCE-D7111CF5E1EF}']
-
     procedure CalculateDefaults(const Sender: IZCachedResultSet;
       const RowAccessor: TZRowAccessor);
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
@@ -83,6 +82,10 @@ type
       const OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
+    //EH: get some fields skipped for dml
+    procedure SetReadOnly(ColumnIndex: Integer; Value: Boolean);
+    //EH: get some fields sjipped for the where clause
+    procedure SetSearchable(ColumnIndex: Integer; Value: Boolean);
 
     procedure SetTransaction(const Value: IZTransaction);
     function HasAutoCommitTransaction: Boolean;

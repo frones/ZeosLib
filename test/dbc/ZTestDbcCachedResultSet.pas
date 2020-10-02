@@ -121,6 +121,10 @@ type
 
     procedure SetTransaction(const Value: IZTransaction);
     function HasAutoCommitTransaction: Boolean;
+    //EH: get some fields skipped for dml
+    procedure SetReadOnly(ColumnIndex: Integer; Value: Boolean);
+    //EH: get some fields skipped for the where clause
+    procedure SetSearchable(ColumnIndex: Integer; Value: Boolean);
   end;
 
 implementation
@@ -1033,6 +1037,16 @@ procedure TZEmptyResolver.RefreshCurrentRow(const Sender: IZCachedResultSet;RowA
 begin
 end;
 
+
+procedure TZEmptyResolver.SetReadOnly(ColumnIndex: Integer; Value: Boolean);
+begin
+
+end;
+
+procedure TZEmptyResolver.SetSearchable(ColumnIndex: Integer; Value: Boolean);
+begin
+
+end;
 
 procedure TZEmptyResolver.SetTransaction(const Value: IZTransaction);
 begin

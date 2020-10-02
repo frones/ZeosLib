@@ -1893,6 +1893,7 @@ type
     function IsAutoIncrement(ColumnIndex: Integer): Boolean;
     function IsCaseSensitive(ColumnIndex: Integer): Boolean;
     function IsSearchable(ColumnIndex: Integer): Boolean;
+    procedure SetSearchable(ColumnIndex: Integer; Value: Boolean);
     function IsCurrency(ColumnIndex: Integer): Boolean;
     function IsNullable(ColumnIndex: Integer): TZColumnNullableType;
 

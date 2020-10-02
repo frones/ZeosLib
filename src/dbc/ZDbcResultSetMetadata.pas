@@ -70,7 +70,7 @@ type
   public
     AutoIncrement: Boolean;
     CaseSensitive: Boolean;
-    Searchable: Boolean;
+    Searchable, SearchableDisabled: Boolean;
     Currency: Boolean; //note we'll map all fixed numbers to stCurrency(ftBCD)
                         //if Scale&Precision allows it. But if a field is a true
                         //currency field like MS/PG-Money should be indicated here
@@ -171,6 +171,7 @@ type
     function IsAutoIncrement(ColumnIndex: Integer): Boolean; virtual;
     function IsCaseSensitive(ColumnIndex: Integer): Boolean; virtual;
     function IsSearchable(ColumnIndex: Integer): Boolean; virtual;
+    procedure SetSearchable(ColumnIndex: Integer; Value: Boolean);
     function IsCurrency(ColumnIndex: Integer): Boolean; virtual;
     function IsNullable(ColumnIndex: Integer): TZColumnNullableType; virtual;
 
@@ -368,9 +369,14 @@ end;
 }
 function TZAbstractResultSetMetadata.IsSearchable(ColumnIndex: Integer): Boolean;
 begin
-  if not Loaded then
-     LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Searchable;
+  with TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
+    if SearchableDisabled then
+      Result := False
+    else begin
+      if not Loaded then
+        LoadColumns;
+      Result := Searchable;
+    end;
 end;
 
 {**
@@ -962,6 +968,13 @@ begin
     FIdentifierConvertor := Value.GetIdentifierConvertor
   else
     FIdentifierConvertor := TZDefaultIdentifierConvertor.Create(FMetadata);
+end;
+
+procedure TZAbstractResultSetMetadata.SetSearchable(ColumnIndex: Integer;
+  Value: Boolean);
+begin
+  with TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
+    SearchableDisabled := not Value;
 end;
 
 procedure TZAbstractResultSetMetadata.SetReadOnly(ColumnIndex: Integer;
