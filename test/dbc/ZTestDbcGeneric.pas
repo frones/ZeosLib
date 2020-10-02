@@ -702,7 +702,8 @@ begin
       else
         StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
       SetAsciiStream(Insert_p_resume_Index, StrStream);
-      if ProtocolType = protPostgre then //PQExecParams can't convert str to smallint
+      if (ProtocolType = protPostgre) or (ProtocolType = protSybase) then //PQExecParams can't convert str to smallint
+        //and Sybase: https://sourceforge.net/p/zeoslib/tickets/281/
         SetNull(Insert_p_redundant_Index, stSmall)
       else
         SetNull(Insert_p_redundant_Index, stString);
