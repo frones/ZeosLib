@@ -307,7 +307,7 @@ function TZFirebirdConnection.CreateStatementWithParams(
 begin
   if IsClosed then
     Open;
-  Result := TZFirebirdStatement.Create(Self, Info);
+  Result := TZFirebirdStatement.Create(Self, Params);
 end;
 
 {**
