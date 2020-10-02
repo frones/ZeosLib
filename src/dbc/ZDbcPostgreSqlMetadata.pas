@@ -2202,9 +2202,9 @@ begin
       + ' FROM pg_class c, pg_user u WHERE u.usesysid = c.relowner '
       + ' AND c.relkind = ''r'' ';
   end;
-
-  SQL := SQL + ' AND ' + TableNameCondition
-    + ' ORDER BY nspname, relname';
+  if TableNameCondition <> '' then
+    SQL := SQL + ' AND ' + TableNameCondition;
+  SQL := SQL + ' ORDER BY nspname, relname';
 
   Permissions := TStringList.Create;
   PermissionsExp := TStringList.Create;
