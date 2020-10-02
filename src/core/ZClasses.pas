@@ -359,114 +359,421 @@ type
   {$ENDIF TEST_CALLBACK}
 
   /// <author>EgonHugeist</author>
-  /// <summary>implements a buffered raw encoded writer</summary>
+  /// <summary>implements a buffered raw encoded sql serializer.</summary>
   TZRawSQLStringWriter = class(TObject)
   private
+    /// <summary>flush the buffer and reserves bytes</summary>
+    /// <param>"Dest" the reference to the raw string we finally write in.</param>
+    /// <param>"ReservedLen" the number of bytes to be reserved</param>
     function FlushBuff(Var Dest: RawByteString; ReservedLen: LengthInt): PAnsiChar; overload;
+    /// <summary>adds a unsigned 32bit ordinal as sql representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Digits" the number of digits of the value.</param>
+    /// <param>"Negative" prepend a negative sign first?</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddOrd32(Value: Cardinal; Digits: Byte; Negative: Boolean; var Result: RawByteString);
+    /// <summary>adds a unsigned 64bit ordinal as sql representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Digits" the number of digits of the value.</param>
+    /// <param>"Negative" prepend a negative sign first?</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddOrd64(const Value: UInt64; Digits: Byte; Negative: Boolean; var Result: RawByteString);
   protected
     FBuf, //the buffer we use as temporary storage
     FPos, //the current position of the buffer. Points always to the first writeable char
     FEnd: PAnsiChar; //the end of the buffer
   public
+    /// <summary>constructs this object and assigns main properties.</summary>
+    /// <param>"AnsiCharCapacity" the Buffer capacity. If less than 255 it get's
+    ///  ignored.</param>
     constructor Create(AnsiCharCapacity: Integer);
+    /// <summary>Destroys this object and cleanups the memory.</summary>
     destructor Destroy; override;
   public
+    /// <summary>increases the temporary writing buffer.</summary>
+    /// <param>"AnsiCharCapacity" the Buffer capacity. If less than current it
+    ///  get's ignored.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure IncreaseCapacityTo(AnsiCharCapacity: Integer; var Result: RawByteString);
+    /// <summary>Add a ansi char.</summary>
+    /// <param>"Value" the char to be added.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddChar(Value: AnsiChar;      var Result: RawByteString);
+    /// <summary>Add a raw text from a buffer.</summary>
+    /// <param>"Value" the buffer we read from.</param>
+    /// <param>"L" the length in bytes of the buffer.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddText(Value: PAnsiChar; L: LengthInt; var Result: RawByteString); overload;
+    /// <summary>Add a RawByteString.</summary>
+    /// <param>"Value" the string to be added.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddText(const Value: RawByteString; var Result: RawByteString); overload;
+    /// <summary>Adds a binary buffer as HEX representation to a RawByteString.</summary>
+    /// <param>"Value" the buffer we read from.</param>
+    /// <param>"L" the length in bytes of the buffer.</param>
+    /// <param>"ODBC" use ODBX 0x prefix or prefix the string with x and quote the hex block?</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddHexBinary(Value: PByte; L: LengthInt; ODBC: Boolean; var Result: RawByteString); overload;
+    /// <summary>Adds a byte array as HEX representation to a RawByteString.</summary>
+    /// <param>"Value" the dynamic byte array.</param>
+    /// <param>"ODBC" use ODBX 0x prefix or prefix the string with x and quote the hex block?</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddHexBinary(const Value: TBytes; ODBC: Boolean; var Result: RawByteString); overload;
+    /// <summary>Adds ascii7 text from a UnicodeString.</summary>
+    /// <param>"AsciiValue" the source string.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddAscii7UTF16Text(const AsciiValue: UnicodeString; var Result: RawByteString);
     {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
+    /// <summary>Adds ascii7 text from a UnicodeString.</summary>
+    /// <param>"AsciiValue" the source string.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddText(const AsciiValue: UnicodeString; var Result: RawByteString); overload;
     {$ENDIF}
+    /// <summary>Adds text from a buffer and quotes it.</summary>
+    /// <param>"Value" the buffer we read from.</param>
+    /// <param>"L" the length in bytes of the buffer.</param>
+    /// <param>"QuoteChar" the quote char to be used.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddTextQuoted(Value: PAnsiChar; L: LengthInt; QuoteChar: AnsiChar; var Result: RawByteString); overload;
+    /// <summary>Adds text from a raw string and quotes it.</summary>
+    /// <param>"Value" the string to be added.</param>
+    /// <param>"QuoteChar" the quote char to be used.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddTextQuoted(const Value: RawByteString; QuoteChar: AnsiChar; var Result: RawByteString); overload;
+    /// <summary>adds a unsigned 8bit ordinal as sql representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddOrd(Value: Byte;           var Result: RawByteString); overload;
+    /// <summary>adds a signed 8bit ordinal as sql representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddOrd(Value: ShortInt;       var Result: RawByteString); overload;
+    /// <summary>adds a unsigned 16bit ordinal as sql representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddOrd(Value: Word;           var Result: RawByteString); overload;
+    /// <summary>adds a signed 16bit ordinal as sql representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddOrd(Value: SmallInt;       var Result: RawByteString); overload;
+    /// <summary>adds a unsigned 32bit ordinal as sql representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddOrd(Value: Cardinal;       var Result: RawByteString); overload;
+    /// <summary>adds a signed 32bit ordinal as sql representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddOrd(Value: Integer;        var Result: RawByteString); overload;
+    /// <summary>adds a unsigned 64bit ordinal as sql representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddOrd(const Value: UInt64;   var Result: RawByteString); overload;
+    /// <summary>adds a signed 64bit ordinal as sql representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddOrd(const Value: Int64;    var Result: RawByteString); overload;
+    /// <summary>adds pointer ordinal as sql representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddOrd(Value: Pointer;        var Result: RawByteString); overload;
+    /// <summary>adds single floating point value as sql representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddFloat(Value: Single;       var Result: RawByteString); overload;
+    /// <summary>adds double floating point value as sql representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddFloat(const Value: Double; var Result: RawByteString); overload;
-    procedure AddDecimal(const Value: Currency;   var Result: RawByteString); overload;
+    /// <summary>adds a currency value as sql representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
+    procedure AddDecimal(const Value: Currency; var Result: RawByteString); overload;
+    /// <summary>adds a BCD value as sql representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddDecimal(const Value: TBCD; var Result: RawByteString); overload;
+    /// <summary>adds a TDateTime value as sql date representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Format" the format pattern.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddDate(const Value: TDateTime; const Format: String; var Result: RawByteString); overload;
+    /// <summary>adds a TZDate value as sql date representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Format" the format pattern.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddDate(const Value: TZDate; const Format: String; var Result: RawByteString); overload;
+    /// <summary>adds a TDateTime value as sql time representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Format" the format pattern.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddTime(const Value: TDateTime; const Format: String; var Result: RawByteString); overload;
+    /// <summary>adds a TZTime value as sql time representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Format" the format pattern.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddTime(const Value: TZTime; const Format: String; var Result: RawByteString); overload;
+    /// <summary>adds a TDateTime value as sql timestamp representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Format" the format pattern.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddDateTime(const Value: TDateTime; const Format: String; var Result: RawByteString);
+    /// <summary>adds a TZTimeStamp value as sql timestamp representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Format" the format pattern.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddTimeStamp(const Value: TZTimeStamp; const Format: String; var Result: RawByteString);
+    /// <summary>adds a GUID value as sql representation to the
+    ///  current sequence of bytes</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Options" the conversion options.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddGUID(const Value: TGUID; Options: TGUIDConvOptions; var Result: RawByteString);
+    /// <summary>finalize the Result, flush the buffer into the string</summary>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure Finalize(var Result: RawByteString);
+    /// <summary>cancels the last comma if exists.</summary>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure CancelLastComma(var Result: RawByteString);
+    /// <summary>cancels the last char if exists.</summary>
+    /// <param>"Char" the character to be canceled.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure CancelLastCharIfExists(Value: AnsiChar; var Result: RawByteString);
+    /// <summary>Replaces last char or adds the char.</summary>
+    /// <param>"OldChar" the character to be replaced.</param>
+    /// <param>"NewChar" the character to be replace or add.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure ReplaceOrAddLastChar(OldChar, NewChar: AnsiChar; var Result: RawByteString);
+    /// <summary>add a line feed if neiter buffer nor result is empty.</summary>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddLineFeedIfNotEmpty(var Result: RawByteString);
   end;
 
-  {** EH: implements a buffered UTF16 encoded writer }
+  /// <author>EgonHugeist</author>
+  /// <summary>implements a buffered UTF16 encoded sql serializer.</summary>
   TZUnicodeSQLStringWriter = class(TObject)
   private
+    /// <summary>flush the buffer and reserves words</summary>
+    /// <param>"Dest" the reference to the raw string we finally write in.</param>
+    /// <param>"ReservedLen" the number of words to be reserved</param>
     function FlushBuff(Var Dest: UnicodeString; ReservedLen: LengthInt): PWideChar; overload;
+    /// <summary>adds a unsigned 32bit ordinal as sql representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Digits" the number of digits of the value.</param>
+    /// <param>"Negative" prepend a negative sign first?</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddOrd32(Value: Cardinal; Digits: Byte; Negative: Boolean; var Result: UnicodeString);
+    /// <summary>adds a unsigned 64bit ordinal as sql representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Digits" the number of digits of the value.</param>
+    /// <param>"Negative" prepend a negative sign first?</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure AddOrd64(const Value: UInt64; Digits: Byte; Negative: Boolean; var Result: UnicodeString);
   protected
     FBuf, //the buffer we use as temporary storage
     FPos, //the current position of the buffer. Points always to the first writeable char
     FEnd: PWideChar; //the end of the buffer
   public
+    /// <summary>constructs this object and assigns main properties.</summary>
+    /// <param>"WideCharCapacity" the Buffer capacity. If less than 255 it get's
+    ///  ignored.</param>
     constructor Create(WideCharCapacity: Integer);
+    /// <summary>Destroys this object and cleanups the memory.</summary>
     destructor Destroy; override;
   public
+    /// <summary>increases the temporary writing buffer.</summary>
+    /// <param>"WideCharCapacity" the Buffer capacity. If less than current it
+    ///  get's ignored.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure IncreaseCapacityTo(WideCharCapacity: Integer; var Result: UnicodeString);
+    /// <summary>Add a UTF16 text from a buffer.</summary>
+    /// <param>"Value" the buffer we read from.</param>
+    /// <param>"L" the length in words of the buffer.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure AddText(Value: PWideChar; L: LengthInt; var Result: UnicodeString); overload;
+    /// <summary>Add a UnicodeString.</summary>
+    /// <param>"Value" the string to be added.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure AddText(const Value: UnicodeString; var Result: UnicodeString); overload;
+    /// <summary>Adds text from a buffer and quote it.</summary>
+    /// <param>"Value" the buffer we read from.</param>
+    /// <param>"L" the length in words of the buffer.</param>
+    /// <param>"QuoteChar" the quote char to be used.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure AddTextQuoted(Value: PWideChar; L: LengthInt; QuoteChar: Char; var Result: UnicodeString); overload;
+    /// <summary>Adds text from a UTF16 string and quotes it.</summary>
+    /// <param>"Value" the string to be added.</param>
+    /// <param>"QuoteChar" the quote char to be used.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure AddTextQuoted(const Value: UnicodeString; QuoteChar: Char; var Result: UnicodeString); overload;
+    /// <summary>Adds ascii7 text from a raw buffer.</summary>
+    /// <param>"Value" the buffer we read from.</param>
+    /// <param>"L" the length in words of the buffer.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddAscii7Text(Value: PAnsiChar; L: LengthInt; var Result: UnicodeString); overload;
+    /// <summary>Adds a binary buffer as HEX representation to a UnicodeString.</summary>
+    /// <param>"Value" the buffer we read from.</param>
+    /// <param>"L" the length in words of the buffer.</param>
+    /// <param>"ODBC" use ODBX 0x prefix or prefix the string with x and quote the hex block?</param>
+    /// <param>"Result" the reference to the UnicodeString we finally write in.</param>
     procedure AddHexBinary(Value: PByte; L: LengthInt; ODBC: Boolean; var Result: UnicodeString); overload;
+    /// <summary>Adds a byte array as HEX representation to a UnicodeString.</summary>
+    /// <param>"Value" the dynamic byte array.</param>
+    /// <param>"ODBC" use ODBX 0x prefix or prefix the string with x and quote the hex block?</param>
+    /// <param>"Result" the reference to the UnicodeString we finally write in.</param>
     procedure AddHexBinary(const Value: TBytes; ODBC: Boolean; var Result: UnicodeString); overload;
-    procedure AddChar(Value: WideChar;      var Result: UnicodeString);
-    procedure AddOrd(Value: Byte;           var Result: UnicodeString); overload;
-    procedure AddOrd(Value: ShortInt;       var Result: UnicodeString); overload;
-    procedure AddOrd(Value: Word;           var Result: UnicodeString); overload;
-    procedure AddOrd(Value: SmallInt;       var Result: UnicodeString); overload;
-    procedure AddOrd(Value: Cardinal;       var Result: UnicodeString); overload;
-    procedure AddOrd(Value: Integer;        var Result: UnicodeString); overload;
-    procedure AddOrd(const Value: UInt64;   var Result: UnicodeString); overload;
-    procedure AddOrd(const Value: Int64;    var Result: UnicodeString); overload;
-    procedure AddFloat(Value: Single;       var Result: UnicodeString); overload;
+    /// <summary>Add a wide char.</summary>
+    /// <param>"Value" the char to be added.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
+    procedure AddChar(Value: WideChar; var Result: UnicodeString);
+    /// <summary>adds a unsigned 8bit ordinal as sql representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
+    procedure AddOrd(Value: Byte; var Result: UnicodeString); overload;
+    /// <summary>adds a signed 8bit ordinal as sql representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
+    procedure AddOrd(Value: ShortInt; var Result: UnicodeString); overload;
+    /// <summary>adds a unsigned 16bit ordinal as sql representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
+    procedure AddOrd(Value: Word; var Result: UnicodeString); overload;
+    /// <summary>adds a signed 16bit ordinal as sql representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
+    procedure AddOrd(Value: SmallInt; var Result: UnicodeString); overload;
+    /// <summary>adds a unsigned 32bit ordinal as sql representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
+    procedure AddOrd(Value: Cardinal; var Result: UnicodeString); overload;
+    /// <summary>adds a signed 32bit ordinal as sql representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
+    procedure AddOrd(Value: Integer; var Result: UnicodeString); overload;
+    /// <summary>adds a unsigned 64bit ordinal as sql representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
+    procedure AddOrd(const Value: UInt64; var Result: UnicodeString); overload;
+    /// <summary>adds a signed 64bit ordinal as sql representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
+    procedure AddOrd(const Value: Int64; var Result: UnicodeString); overload;
+    /// <summary>adds a single floating point value as sql representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
+    procedure AddFloat(Value: Single; var Result: UnicodeString); overload;
+    /// <summary>adds a double floating point value as sql representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure AddFloat(const Value: Double; var Result: UnicodeString); overload;
+    /// <summary>adds a currency value as sql representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure AddDecimal(const Value: Currency; var Result: UnicodeString); overload;
+    /// <summary>adds a BCD value as sql representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure AddDecimal(const Value: TBCD; var Result: UnicodeString); overload;
+    /// <summary>adds a TDateTime value as sql date representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure AddDate(const Value: TDateTime; const Format: String; var Result: UnicodeString); overload;
+    /// <summary>adds a TZDate value as sql date representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure AddDate(const Value: TZDate; const Format: String; var Result: UnicodeString); overload;
+    /// <summary>adds a TDateTime value as sql time representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure AddTime(const Value: TDateTime; const Format: String; var Result: UnicodeString); overload;
+    /// <summary>adds a TZTime value as sql time representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure AddTime(const Value: TZTime; const Format: String; var Result: UnicodeString); overload;
+    /// <summary>adds a TDateTime value as sql timestamp representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure AddDateTime(const Value: TDateTime; const Format: String; var Result: UnicodeString);
+    /// <summary>adds a TZTimeStamp value as sql timestamp representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure AddTimeStamp(const Value: TZTimeStamp; const Format: String; var Result: UnicodeString);
+    /// <summary>adds a GUID value as sql representation to the
+    ///  current sequence of words</summary>
+    /// <param>"Value" the value to be converted.</param>
+    /// <param>"Options" the conversion options.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure AddGUID(const Value: TGUID; Options: TGUIDConvOptions; var Result: UnicodeString);
+    /// <summary>finalize the Result, flush the buffer into the string</summary>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure Finalize(var Result: UnicodeString);
+    /// <summary>cancels the last comma if exists.</summary>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure CancelLastComma(var Result: UnicodeString);
+    /// <summary>Cancels the last char if exists.</summary>
+    /// <param>"Char" the character to be canceled.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure CancelLastCharIfExists(Value: WideChar; var Result: UnicodeString);
+    /// <summary>Replaces last char or adds the char.</summary>
+    /// <param>"OldChar" the character to be replaced.</param>
+    /// <param>"NewChar" the character to be replace or add.</param>
+    /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure ReplaceOrAddLastChar(OldChar, NewChar: WideChar; var Result: UnicodeString);
+    /// <summary>add a line feed if neiter buffer nor result is empty.</summary>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddLineFeedIfNotEmpty(var Result: UnicodeString);
   end;
 
+  /// <author>EgonHugeist</author>
+  /// <summary>implements a buffered string sql serializer.</summary>
   TZSQLStringWriter = {$IFDEF UNICODE}TZUnicodeSQLStringWriter{$ELSE}TZRawSQLStringWriter{$ENDIF};
 
-  {** Modified comparison function. }
+  /// <author>EgonHugeist</author>
+  /// <summary>implements list compare function</summary>
   TZListSortCompare = function (Item1, Item2: Pointer): Integer of object;
 
-  {** Modified list of pointers. }
+  /// <author>EgonHugeist</author>
+  /// <summary>implements a modified list of pointers.</summary>
   TZSortedList = class({$IFDEF TLIST_IS_DEPRECATED}TObject{$ELSE}TList{$ENDIF})
   {$IFDEF TLIST_IS_DEPRECATED}
   private
@@ -499,13 +806,27 @@ type
     property List: TPointerList read FList;
     property Capacity: Integer read FCapacity write SetCapacity;
   {$ENDIF}
+    /// <summary>sorts this list</summary>
+    /// <param>"Compare" a comparison function.</param>
     procedure Sort(Compare: TZListSortCompare);
   end;
 
   {$IF NOT DECLARED(EArgumentException)}
-  type
-    EArgumentException = Class(Exception);
+  /// <summary>implements a EArgumentException if not known.</summary>
+  EArgumentException = Class(Exception);
   {$IFEND}
+
+/// <author>Aleksandr Sharahov see http://guildalfa.ru/alsha/</author>
+/// <summary>Performs hybrid sort algorithm for the list. changes by
+///  EgonHugeist: Replace cardinal casts by using our NativeUInt to make it
+///  64Bit compatible too. Note Alexandr wrote: For max of speed it is very
+///  important to use procedures QuickSort_0AA and HybridSort_0AA as is
+///  (not in class, not included in other procedure, and not changed parameters
+///  and code). ~1.57 times faster than Delphi QuickSort on E6850</summary>
+/// <param>"List" a reference to a Pointer array.</param>
+/// <param>"Count" the count of Pointers in the array.</param>
+/// <param>"Compare" the List compare function.</param>
+procedure HybridSortSha_0AA(List: PPointerList; Count: integer; Compare: TZListSortCompare);
 
 implementation
 
@@ -564,11 +885,6 @@ end;
 
 { TZAbstractObject }
 
-{**
-  Checks is the specified value equals to this object.
-  @param Value an interface to some object.
-  @return <code>True</code> if the objects are identical.
-}
 function TZAbstractObject.Equals(const Value: IZInterface): Boolean;
 begin
   if Value <> nil then
@@ -1842,17 +2158,6 @@ end;
 
 { TZSortedList }
 
-{**
-  Origial Autor: Aleksandr Sharahov
-  see http://guildalfa.ru/alsha/
-  Performs hybrid sort algorithm for the list.
-  changes by EgonHugeist:
-  Replace cardinal casts by using our NativeUInt to make it 64Bit compatible too
-  Note Alexandr wrote: For max of speed it is very impotant to use procedures
-    QuickSort_0AA and HybridSort_0AA as is (not in class, not included
-    in other procedure, and not changed parameters and code).
-}
-//~1.57 times faster than Delphi QuickSort on E6850
 {$Q-}
 {$R-}
 const
@@ -2154,10 +2459,7 @@ begin
   end;
 end;
 {$ENDIF TLIST_IS_DEPRECATED}
-{**
-  Performs sorting for this list.
-  @param Compare a comparison function.
-}
+
 procedure TZSortedList.Sort(Compare: TZListSortCompare);
 begin
   {$IFDEF TLIST_ISNOT_PPOINTERLIST}
