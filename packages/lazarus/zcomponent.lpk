@@ -3,7 +3,6 @@
   <Package Version="4">
     <PathDelim Value="\"/>
     <Name Value="zcomponent"/>
-    <Type Value="RunAndDesignTime"/>
     <AddToProjectUsesSection Value="True"/>
     <CompilerOptions>
       <Version Value="11"/>
@@ -23,10 +22,9 @@
         <CustomOptions Value="-dZEOSDEBUG"/>
       </Other>
     </CompilerOptions>
-    <Description Value="Zeos Database Components
-"/>
+    <Description Value="Zeos Database Components"/>
     <Version Major="7" Minor="3"/>
-    <Files Count="19">
+    <Files Count="16">
       <Item1>
         <Filename Value="..\..\src\component\ZAbstractConnection.pas"/>
         <UnitName Value="ZAbstractConnection"/>
@@ -44,68 +42,55 @@
         <UnitName Value="ZAbstractTable"/>
       </Item4>
       <Item5>
-        <Filename Value="..\..\src\component\ZComponentReg.pas"/>
-        <HasRegisterProc Value="True"/>
-        <UnitName Value="ZComponentReg"/>
-      </Item5>
-      <Item6>
         <Filename Value="..\..\src\component\ZConnection.pas"/>
         <UnitName Value="ZConnection"/>
-      </Item6>
-      <Item7>
+      </Item5>
+      <Item6>
         <Filename Value="..\..\src\component\ZConnectionGroup.pas"/>
         <UnitName Value="ZConnectionGroup"/>
-      </Item7>
-      <Item8>
+      </Item6>
+      <Item7>
         <Filename Value="..\..\src\component\ZDatasetUtils.pas"/>
         <UnitName Value="ZDatasetUtils"/>
-      </Item8>
-      <Item9>
+      </Item7>
+      <Item8>
         <Filename Value="..\..\src\component\ZGroupedConnection.pas"/>
         <UnitName Value="ZGroupedConnection"/>
-      </Item9>
-      <Item10>
+      </Item8>
+      <Item9>
         <Filename Value="..\..\src\component\ZIBEventAlerter.pas"/>
         <UnitName Value="ZIBEventAlerter"/>
-      </Item10>
-      <Item11>
+      </Item9>
+      <Item10>
         <Filename Value="..\..\src\component\ZPgEventAlerter.pas"/>
         <UnitName Value="ZPgEventAlerter"/>
-      </Item11>
-      <Item12>
+      </Item10>
+      <Item11>
         <Filename Value="..\..\src\component\ZSqlMetadata.pas"/>
         <UnitName Value="ZSqlMetadata"/>
-      </Item12>
-      <Item13>
+      </Item11>
+      <Item12>
         <Filename Value="..\..\src\component\ZSqlMonitor.pas"/>
         <UnitName Value="ZSqlMonitor"/>
-      </Item13>
-      <Item14>
+      </Item12>
+      <Item13>
         <Filename Value="..\..\src\component\ZSqlProcessor.pas"/>
         <UnitName Value="ZSqlProcessor"/>
-      </Item14>
-      <Item15>
+      </Item13>
+      <Item14>
         <Filename Value="..\..\src\component\ZSqlStrings.pas"/>
         <UnitName Value="ZSqlStrings"/>
-      </Item15>
-      <Item16>
+      </Item14>
+      <Item15>
         <Filename Value="..\..\src\component\ZSqlUpdate.pas"/>
         <UnitName Value="ZSqlUpdate"/>
-      </Item16>
-      <Item17>
+      </Item15>
+      <Item16>
         <Filename Value="..\..\src\component\ZStoredProcedure.pas"/>
         <UnitName Value="ZStoredProcedure"/>
-      </Item17>
-      <Item18>
-        <Filename Value="..\..\src\component\ZUpdateSqlEditor.pas"/>
-        <UnitName Value="ZUpdateSqlEditor"/>
-      </Item18>
-      <Item19>
-        <Filename Value="..\..\src\component\ZPropertiesEditor.pas"/>
-        <UnitName Value="ZPropertiesEditor"/>
-      </Item19>
+      </Item16>
     </Files>
-    <RequiredPkgs Count="6">
+    <RequiredPkgs Count="5">
       <Item1>
         <PackageName Value="zplain"/>
         <MaxVersion Major="7" Minor="2"/>
@@ -127,12 +112,9 @@
         <MinVersion Major="7" Minor="3" Valid="True"/>
       </Item4>
       <Item5>
-        <PackageName Value="IDEIntf"/>
-      </Item5>
-      <Item6>
         <PackageName Value="FCL"/>
         <MinVersion Major="1" Valid="True"/>
-      </Item6>
+      </Item5>
     </RequiredPkgs>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>

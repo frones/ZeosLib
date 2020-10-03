@@ -56,7 +56,7 @@ interface
 uses
   SysUtils, {Messages, }Classes, ZDbcIntfs, DB, {Forms,}
   ZCompatibility, ZAbstractConnection, ZSequence, //Dialogs,
-  ZConnectionGroup;// {$IFDEF FPC}, LMessages{$ENDIF};
+  ZConnectionGroup ;
 (*
 {$IFNDEF FPC}
  const  CM_ZCONNECTIONGROUPCHANGED = WM_USER + 100;

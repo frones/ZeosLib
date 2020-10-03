@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <Package Version="4">
+    <PathDelim Value="\"/>
+    <Name Value="zcomponentdesign"/>
+    <Type Value="DesignTime"/>
+    <AddToProjectUsesSection Value="True"/>
+    <CompilerOptions>
+      <Version Value="11"/>
+      <PathDelim Value="\"/>
+      <SearchPaths>
+        <OtherUnitFiles Value="..\..\src\component"/>
+        <UnitOutputDirectory Value="lib\zcomponent\$(TargetCPU)-$(TargetOS)"/>
+      </SearchPaths>
+      <Parsing>
+        <SyntaxOptions>
+          <SyntaxMode Value="Delphi"/>
+          <CStyleOperator Value="False"/>
+          <UseAnsiStrings Value="False"/>
+        </SyntaxOptions>
+      </Parsing>
+      <Other>
+        <CustomOptions Value="-dZEOSDEBUG"/>
+      </Other>
+    </CompilerOptions>
+    <Description Value="Zeos Database Components"/>
+    <Version Major="7" Minor="3"/>
+    <Files Count="3">
+      <Item1>
+        <Filename Value="..\..\src\component\ZComponentReg.pas"/>
+        <HasRegisterProc Value="True"/>
+        <UnitName Value="ZComponentReg"/>
+      </Item1>
+      <Item2>
+        <Filename Value="..\..\src\component\ZUpdateSqlEditor.pas"/>
+        <UnitName Value="ZUpdateSqlEditor"/>
+      </Item2>
+      <Item3>
+        <Filename Value="..\..\src\component\ZPropertiesEditor.pas"/>
+        <UnitName Value="ZPropertiesEditor"/>
+      </Item3>
+    </Files>
+    <RequiredPkgs Count="7">
+      <Item1>
+        <PackageName Value="zcomponent"/>
+        <MinVersion Major="7" Minor="3" Valid="True"/>
+      </Item1>
+      <Item2>
+        <PackageName Value="zplain"/>
+        <MaxVersion Major="7" Minor="2"/>
+        <MinVersion Major="7" Minor="3" Valid="True"/>
+      </Item2>
+      <Item3>
+        <PackageName Value="zparsesql"/>
+        <MaxVersion Major="7" Minor="3"/>
+        <MinVersion Major="7" Minor="3" Valid="True"/>
+      </Item3>
+      <Item4>
+        <PackageName Value="zdbc"/>
+        <MaxVersion Major="7" Minor="2"/>
+        <MinVersion Major="7" Minor="3" Valid="True"/>
+      </Item4>
+      <Item5>
+        <PackageName Value="zcore"/>
+        <MaxVersion Major="7" Minor="3"/>
+        <MinVersion Major="7" Minor="3" Valid="True"/>
+      </Item5>
+      <Item6>
+        <PackageName Value="IDEIntf"/>
+      </Item6>
+      <Item7>
+        <PackageName Value="FCL"/>
+        <MinVersion Major="1" Valid="True"/>
+      </Item7>
+    </RequiredPkgs>
+    <UsageOptions>
+      <UnitPath Value="$(PkgOutDir)"/>
+    </UsageOptions>
+    <PublishOptions>
+      <Version Value="2"/>
+      <IgnoreBinaries Value="False"/>
+    </PublishOptions>
+    <CustomOptions Items="ExternHelp" Version="2">
+      <_ExternHelp Items="Count"/>
+    </CustomOptions>
+  </Package>
+</CONFIG>
