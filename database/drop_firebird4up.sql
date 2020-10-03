@@ -1,0 +1,1 @@
+drop table firebird4datatypes;

@@ -103,6 +103,7 @@ type
     procedure TestSF418_ASC;
     procedure TestSF427;
     procedure TestSF443;
+    procedure TestSF_Internal7;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1564,6 +1565,48 @@ begin
       Query.IndexFieldNames := 'd_id' +DescAsc[b];
       Query.Open;
     end;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure ZTestCompInterbaseBugReport.TestSF_Internal7;
+const DescAsc: Array[boolean] of String = (' DESC',' ASC');
+var
+  Query: TZReadOnlyQuery;
+  Field: TField;
+begin
+  Connection.Connect;
+  if Connection.DbcConnection.GetHostVersion < 4000000 then
+    Fail('This test can only be run on Firebird 4+');
+
+  Query := CreateReadOnlyQuery;
+  try
+    Query.SQL.Text := 'select * from firebird4datatypes';
+    Query.Open;
+    Check(Query.Active);
+
+    Field := Query.FindField('time_with_time_zone');
+    Check(Assigned(Field), 'Field time_with_time_zone not found.');
+    Check(Field.DataType = ftTime, 'Field time_with_time_zone is not of type ftTime');
+
+    Field := Query.FindField('timestamp_with_time_zone');
+    Check(Assigned(Field), 'Field timestamp_with_time_zone not found.');
+    Check(Field.DataType = ftDateTime, 'Field timestamp_with_time_zone is not of type ftDateTime');
+
+    Field := Query.FindField('decfloat16');
+    Check(Assigned(Field), 'Field decfloat16 not found.');
+    Check(Field.DataType = ftFloat, 'Field decfloat16 is not of type ftFloat');
+
+    Field := Query.FindField('decfloat34');
+    Check(Assigned(Field), 'Field decfloat34 not found.');
+    Check(Field.DataType = ftFloat, 'Field decfloat34 is not of type ftFloat');
+
+    Field := Query.FindField('float30');
+    Check(Assigned(Field), 'Field float30 not found.');
+    Check(Field.DataType = ftFloat, 'Field float30 is not of type ftFloat');
+
+    Query.Close;
   finally
     Query.Free;
   end;
