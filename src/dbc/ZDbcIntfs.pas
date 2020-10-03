@@ -803,7 +803,8 @@ type
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet;
 
     function GetConnection: IZConnection;
-    function GetIdentifierConvertor: IZIdentifierConvertor;
+    function GetIdentifierConvertor: IZIdentifierConvertor; deprecated;
+    function GetIdentifierConverter: IZIdentifierConverter; //typo fixed
 
     procedure ClearCache; overload;
     procedure ClearCache(const Key: string); overload;

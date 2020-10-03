@@ -59,8 +59,10 @@ interface
 {$IFNDEF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
-  ZDbcConnection, ZPlainMySqlDriver;
+  ZClasses, ZSysUtils, ZCompatibility,
+  ZPlainMySqlDriver,
+  ZSelectSchema,
+  ZDbcIntfs, ZDbcMetadata, ZDbcConnection;
 
 type
 
@@ -214,6 +216,8 @@ type
     ['{204A7ABF-36B2-4753-9F48-4942619C31FA}']
     procedure SetMySQL_FieldType_Bit_1_IsBoolean(Value: Boolean);
     procedure SetDataBaseName(const Value: String);
+    procedure Set_lower_case_table_names(Value: Byte);
+    function Get_lower_case_table_names: Byte;
     function isMySQL: Boolean;
     function isMariaDB: Boolean;
   end;
@@ -223,12 +227,11 @@ type
     FInfo: TStrings;
     FMySQL_FieldType_Bit_1_IsBoolean: Boolean;
     FBoolCachedResultSets: IZCollection;
-    Flower_case_table_names: SmallInt;
+    Flower_case_table_names: Byte;
     FKnowServerType: Boolean;
     FIsMariaDB: Boolean;
     FIsMySQL: Boolean;
   protected
-    function lower_case_table_names: Boolean;
     procedure detectServerType;
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-26
 
@@ -285,11 +288,26 @@ type
     constructor Create(Connection: TZAbstractDbcConnection; const Url: TZURL); override;
     destructor Destroy; override;
   public
+    function GetIdentifierConverter: IZIdentifierConverter; override;
+  public
+    function Get_lower_case_table_names: Byte;
+    procedure Set_lower_case_table_names(Value: Byte);
     procedure SetMySQL_FieldType_Bit_1_IsBoolean(Value: Boolean);
     procedure SetDataBaseName(const Value: String);
     procedure ClearCache; override;
     function isMySQL: Boolean;
     function isMariaDB: Boolean;
+  end;
+
+  {** Implements a MySQL Case Sensitive/Unsensitive identifier convertor. }
+  TZMySQLIdentifierConverter = class (TZDefaultIdentifierConvertor)
+  private
+    Flower_case_table_names: Byte;
+  public
+    constructor Create(const Metadata: IZDatabaseMetadata;
+      lower_case_table_names: Byte);
+  public
+    function Quote(const Value: string; Qualifier: TZIdentifierQualifier = iqUnspecified): string; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
@@ -299,8 +317,8 @@ implementation
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   {$IFDEF UNICODE}ZEncoding,{$ENDIF}
-  ZFastCode, ZMessages, ZDbcMySqlUtils, ZDbcUtils, ZCollections,
-  ZDbcProperties, ZDbcMySql;
+  ZFastCode, ZMessages, ZCollections,
+  ZDbcMySqlUtils, ZDbcUtils, ZDbcProperties, ZDbcMySql;
 
 { TZMySQLDatabaseInfo }
 
@@ -1017,8 +1035,8 @@ begin
 
   FInfo.Values[DSProps_UseResult] := 'True';
   FBoolCachedResultSets := TZCollection.Create;
-  Flower_case_table_names := -1;
 
+  Flower_case_table_names := $FF;
   FIsMariaDB := false;
   FIsMySQL := false;
   FKnowServerType := false;
@@ -1062,15 +1080,14 @@ begin
     OutNamePattern := NormalizePatternCase(NamePattern);
 end;
 
-function TZMySQLDatabaseMetadata.lower_case_table_names: Boolean;
+function TZMySQLDatabaseMetadata.GetIdentifierConverter: IZIdentifierConverter;
 begin
-  if Flower_case_table_names = -1 then
-    with GetConnection.CreateStatement.ExecuteQuery('show variables like ''lower_case_table_names''') do begin
-      Next;
-      Flower_case_table_names := GetByte(FirstDBCIndex);
-      Close;
-    end;
-  Result := Flower_case_table_names > 0;
+  Result := TZMySQLIdentifierConverter.Create(Self, Flower_case_table_names);
+end;
+
+function TZMySQLDatabaseMetadata.Get_lower_case_table_names: Byte;
+begin
+  Result := Flower_case_table_names;
 end;
 
 procedure TZMySQLDatabaseMetadata.SetDataBaseName(const Value: String);
@@ -1089,6 +1106,14 @@ begin
         CachedResultSets.Remove(CachedResultSets.Keys[idx]);
       FBoolCachedResultSets.Delete(i);
     end;
+  end;
+end;
+
+procedure TZMySQLDatabaseMetadata.Set_lower_case_table_names(Value: Byte);
+begin
+  if Flower_case_table_names <> Value then begin
+    Flower_case_table_names := Value;
+    FIC := TZMySQLIdentifierConverter.Create(Self, Flower_case_table_names);
   end;
 end;
 
@@ -1134,8 +1159,7 @@ begin
 
   GetCatalogAndNamePattern(Catalog, SchemaPattern, TableNamePattern,
     LCatalog, LTableNamePattern);
-  if lower_case_table_names then
-    LTableNamePattern := LowerCase(LTableNamePattern);
+  LTableNamePattern := IC.Quote(LTableNamePattern, iqTable);
   with (GetConnection as IZMySQLConnection) do begin
     with CreateStatementWithParams(FInfo).ExecuteQuery(
       Format('SHOW TABLES FROM %s LIKE ''%s''',
@@ -1156,8 +1180,7 @@ begin
       try
         RS := CreateStatementWithParams(FInfo).ExecuteQuery(
           Format('SHOW COLUMNS FROM %s.%s',
-          [IC.Quote(LCatalog),
-           IC.Quote(LTableNamePattern)]));
+          [IC.Quote(LCatalog, iqCatalog), LTableNamePattern]));
         if (RS <> nil) then begin
           if RS.Next then begin
             Result.MoveToInsertRow;
@@ -1312,8 +1335,8 @@ begin
 
       with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
         Format('SHOW FULL COLUMNS FROM %s.%s LIKE ''%s''',
-        [IC.Quote(TempCatalog),
-        IC.Quote(TempTableNamePattern),
+        [IC.Quote(TempCatalog, iqCatalog),
+        IC.Quote(TempTableNamePattern, iqTable),
         TempColumnNamePattern])) do
       begin
         ColumnIndexes[1] := FindColumn('Field');
@@ -1700,8 +1723,8 @@ begin
 
   with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
     Format('SHOW KEYS FROM %s.%s',
-    [IC.Quote(LCatalog),
-    IC.Quote(LTable)])) do
+    [IC.Quote(LCatalog, iqCatalog),
+    IC.Quote(LTable, iqTable)])) do
   begin
     ColumnIndexes[1] := FindColumn('Key_name');
     ColumnIndexes[2] := FindColumn('Column_name');
@@ -1816,7 +1839,7 @@ begin
   try
     with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
       Format('SHOW TABLE STATUS FROM %s LIKE ''%s''',
-      [IC.Quote(LCatalog), LTable])) do
+      [IC.Quote(LCatalog, iqCatalog), LTable])) do
     begin
       ColumnIndexes[1] := FindColumn('Type');
       ColumnIndexes[2] := FindColumn('Comment');
@@ -1958,7 +1981,7 @@ begin
   try
     with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
       Format('SHOW TABLE STATUS FROM %s',
-      [IC.Quote(LCatalog)])) do
+      [IC.Quote(LCatalog, iqCatalog)])) do
     begin
       ColumnIndexes[1] := FindColumn('Type');
       ColumnIndexes[2] := FindColumn('Comment');
@@ -2107,7 +2130,7 @@ begin
   try
     with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
       Format('SHOW TABLE STATUS FROM %s',
-      [IC.Quote(LForeignCatalog)])) do
+      [IC.Quote(LForeignCatalog, iqCatalog)])) do
     begin
       ColumnIndexes[1] := FindColumn('Type');
       ColumnIndexes[2] := FindColumn('Comment');
@@ -2351,8 +2374,8 @@ begin
 
   with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
     Format('SHOW INDEX FROM %s.%s',
-    [IC.Quote(LCatalog),
-    IC.Quote(LTable)])) do
+    [IC.Quote(LCatalog, iqCatalog),
+    IC.Quote(LTable, iqTable)])) do
   begin
     ColumnIndexes[1] := FindColumn('Table');
     ColumnIndexes[2] := FindColumn('Non_unique');
@@ -3208,5 +3231,26 @@ begin
   result := FIsMariaDB;
 end;
 
+{ TZMySQLIdentifierConverter }
+
+constructor TZMySQLIdentifierConverter.Create(
+  const Metadata: IZDatabaseMetadata; lower_case_table_names: Byte);
+begin
+  inherited Create(Metadata);
+  Flower_case_table_names := lower_case_table_names;
+end;
+
+function TZMySQLIdentifierConverter.Quote(const Value: string;
+  Qualifier: TZIdentifierQualifier): string;
+begin
+  if Qualifier in [iqCatalog, iqSchema, iqTable, iqEvent, iqTrigger] then begin
+    Result := AnsiLowerCase(Value);
+    if GetIdentifierCase(Value, true) = icSpecial then
+      Result := SQLQuotedStr(Value, '"');
+  end else
+    Result := inherited Quote(Value, Qualifier);
+end;
+
+initialization
 {$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 end.

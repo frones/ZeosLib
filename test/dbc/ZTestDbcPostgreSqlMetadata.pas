@@ -794,8 +794,8 @@ var QuoteStr: string;
 begin
   QuoteStr := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
 
-  CheckEquals(QuoteStr[1]+'A9A'+QuoteStr[Length(QuoteStr)], Metadata.GetIdentifierConvertor.Quote('A9A'));
-  CheckEquals(QuoteStr[1]+'a9A'+QuoteStr[Length(QuoteStr)], Metadata.GetIdentifierConvertor.Quote('a9A'));
+  CheckEquals(QuoteStr[1]+'A9A'+QuoteStr[Length(QuoteStr)], Metadata.GetIdentifierConverter.Quote('A9A'));
+  CheckEquals(QuoteStr[1]+'a9A'+QuoteStr[Length(QuoteStr)], Metadata.GetIdentifierConverter.Quote('a9A'));
 end;
 
 initialization

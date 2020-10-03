@@ -1730,7 +1730,7 @@ var
   TableColumns: IZResultSet;
   Connection: IZConnection;
   Driver: IZDriver;
-  IdentifierConvertor: IZIdentifierConvertor;
+  IdentifierConverter: IZIdentifierConverter;
   Analyser: IZStatementAnalyser;
   Tokenizer: IZTokenizer;
 begin
@@ -1738,7 +1738,7 @@ begin
   Driver := Connection.GetDriver;
   Analyser := Driver.GetStatementAnalyser;
   Tokenizer := Driver.GetTokenizer;
-  IdentifierConvertor := Metadata.GetIdentifierConvertor;
+  IdentifierConverter := Metadata.GetIdentifierConverter;
   try
     if Analyser.DefineSelectSchemaFromQuery(Tokenizer, SQL) <> nil then
       for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
@@ -1746,7 +1746,7 @@ begin
         ClearColumn(Current);
         if Current.TableName = '' then
           continue;
-        TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(IdentifierConvertor.Quote(Current.TableName)),'');
+        TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(IdentifierConverter.Quote(Current.TableName, iqTable)),'');
         if TableColumns <> nil then begin
           TableColumns.BeforeFirst;
           while TableColumns.Next do
@@ -1761,7 +1761,7 @@ begin
     Connection := nil;
     Analyser := nil;
     Tokenizer := nil;
-    IdentifierConvertor := nil;
+    IdentifierConverter := nil;
   end;
   Loaded := True;
 end;
@@ -1873,7 +1873,7 @@ begin
     for I := 0 to FInsertColumns.Count-1 do begin
       ColumnIndex := PZIndexPair(FInsertColumns[i])^.ColumnIndex;
       Tmp := Metadata.GetColumnName(ColumnIndex);
-      Tmp := IdentifierConvertor.Quote(Tmp);
+      Tmp := IdentifierConverter.Quote(Tmp, iqColumn);
       SQLWriter.AddText(Tmp, Result);
       SQLWriter.AddChar(',', Result);
     end;
@@ -1904,7 +1904,7 @@ begin
             Fields.Delete(ColumnIndex); { avoid duplicates }
         end;
         {$IFEND}
-        Tmp := IdentifierConvertor.Quote(Tmp);
+        Tmp := IdentifierConverter.Quote(Tmp, iqColumn);
         SQLWriter.AddText(Tmp, Result);
         SQLWriter.AddChar(',', Result);
       end;
@@ -1918,7 +1918,7 @@ begin
         if ColumnIndex = InvalidDbcIndex then
           raise CreateColumnWasNotFoundException(Tmp);
         FReturningPairs.Add(ColumnIndex, FReturningPairs.Count{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        Tmp := IdentifierConvertor.Quote(Tmp);
+        Tmp := IdentifierConverter.Quote(Tmp, iqColumn);
         SQLWriter.AddText(Tmp, Result);
         SQLWriter.AddChar(',', Result);
       end;
@@ -1984,7 +1984,7 @@ begin
     if I > 0 then
       SQLWriter.AddText(' AND ', Result);
     S := MetaData.GetColumnName(idx);
-    Tmp := IdentifierConvertor.Quote(S);
+    Tmp := IdentifierConverter.Quote(S, iqColumn);
     SQLWriter.AddText(Tmp, Result);
     if (Metadata.IsNullable(Idx) = ntNullable)
     then SQLWriter.AddText(' IS NOT DISTINCT FROM ?', Result)

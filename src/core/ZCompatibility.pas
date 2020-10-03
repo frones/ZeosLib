@@ -141,7 +141,6 @@ type
   {$IFEND}
 {$IFDEF FPC}
 {$IFDEF WITH_RAWBYTESTRING}
-Type
   PAnsiRec = ^TAnsiRec;
   TAnsiRec = Record
     CodePage    : TSystemCodePage;

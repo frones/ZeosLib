@@ -1238,7 +1238,7 @@ begin
   begin
     if (Fields[I].FieldKind = fkData)
       and not (Fields[I].DataType in [ftBlob, ftGraphic, ftMemo, ftBytes, ftVarBytes {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}]) then
-      AppendSepString(Result, IdConverter.Quote(Fields[I].FieldName), ',');
+      AppendSepString(Result, IdConverter.Quote(Fields[I].FieldName, iqColumn), ',');
   end;
 end;
 

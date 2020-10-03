@@ -80,7 +80,7 @@ type
     FStatement : IZStatement;
     FTransaction: IZTransaction;
     FDatabaseMetadata: IZDatabaseMetadata;
-    FIdentifierConvertor: IZIdentifierConvertor;
+    FIdentifierConverter: IZIdentifierConverter;
 
     FUpdateColumns: TZIndexPairList;
     FWhereColumns: TZIndexPairList;
@@ -114,8 +114,8 @@ type
 
     property DatabaseMetadata: IZDatabaseMetadata read FDatabaseMetadata
       write FDatabaseMetadata;
-    property IdentifierConvertor: IZIdentifierConvertor
-      read FIdentifierConvertor write FIdentifierConvertor;
+    property IdentifierConverter: IZIdentifierConverter
+      read FIdentifierConverter write FIdentifierConverter;
     property Statement: IZStatement read FStatement;
 
     property UpdateColumnsLookup: TZIndexPairList read FUpdateColumns;
@@ -178,7 +178,7 @@ begin
   Connection := Statement.GetConnection;
   Self.Metadata := Metadata;
   FDatabaseMetadata := Statement.GetConnection.GetMetadata;
-  FIdentifierConvertor := FDatabaseMetadata.GetIdentifierConvertor;
+  FIdentifierConverter := FDatabaseMetadata.GetIdentifierConverter;
 
   FInsertColumns := TZIndexPairList.Create;
 
@@ -243,16 +243,16 @@ begin
   Result := '';
   if Table <> '' then begin
     if (Catalog <> '') and FDatabaseMetadata.GetDatabaseInfo.SupportsCatalogsInDataManipulation then begin
-      Tmp := IdentifierConvertor.Quote(Catalog);
+      Tmp := IdentifierConverter.Quote(Catalog, iqCatalog);
       SQLWriter.AddText(Tmp, Result);
       SQLWriter.AddChar('.', Result);
     end;
     if (Schema <> '') and FDatabaseMetadata.GetDatabaseInfo.SupportsSchemasInDataManipulation then begin
-      Tmp := IdentifierConvertor.Quote(Schema);
+      Tmp := IdentifierConverter.Quote(Schema, iqSchema);
       SQLWriter.AddText(Tmp, Result);
       SQLWriter.AddChar('.', Result);
     end;
-    Tmp := IdentifierConvertor.Quote(Table);
+    Tmp := IdentifierConverter.Quote(Table, iqTable);
     SQLWriter.AddText(Tmp, Result);
     SQLWriter.Finalize(Result);
   end;
@@ -395,8 +395,8 @@ begin
       {For exact results: quote all identifiers SEE: http://sourceforge.net/p/zeoslib/tickets/81/
       If table names have mixed case ConstructNameCondition will return wrong results
       and we fall back to WhereAll}
-      PrimaryKeys := DatabaseMetadata.GetPrimaryKeys(IdentifierConvertor.Quote(Catalog),
-        IdentifierConvertor.Quote(Schema), IdentifierConvertor.Quote(Table));
+      PrimaryKeys := DatabaseMetadata.GetPrimaryKeys(IdentifierConverter.Quote(Catalog, iqCatalog),
+        IdentifierConverter.Quote(Schema, iqSchema), IdentifierConverter.Quote(Table, iqTable));
       while PrimaryKeys.Next do
         if not AddColumn(Table, PrimaryKeys.GetString(ColumnNameIndex), FWhereColumns) then
           Break;
@@ -480,7 +480,7 @@ begin
       SQLWriter.AddText(' AND ', Result);
     IDX := PZIndexPair(FWhereColumns[i]).ColumnIndex;
     Condition := MetaData.GetColumnName(Idx);
-    Condition := IdentifierConvertor.Quote(Condition);
+    Condition := IdentifierConverter.Quote(Condition, iqColumn);
     SQLWriter.AddText(Condition, Result);
     if OldRowAccessor.IsNull(IDX) then begin
       SQLWriter.AddText(' IS NULL', Result);
@@ -536,7 +536,7 @@ begin
     for I := 0 to FInsertColumns.Count-1 do begin
       ColumnIndex := PZIndexPair(FInsertColumns[i])^.ColumnIndex;
       Tmp := Metadata.GetColumnName(ColumnIndex);
-      Tmp := IdentifierConvertor.Quote(Tmp);
+      Tmp := IdentifierConverter.Quote(Tmp, iqColumn);
       SQLWriter.AddText(Tmp, Result);
       SQLWriter.AddChar(',', Result);
     end;
@@ -556,7 +556,7 @@ begin
       for I := 0 to Fields.Count - 1 do begin
         if I > 0 then
           SQLWriter.AddChar(',', Result);
-        Tmp := IdentifierConvertor.Quote(Fields[I]);
+        Tmp := IdentifierConverter.Quote(Fields[I], iqColumn);
         SQLWriter.AddText(Tmp, Result);
       end;
       Fields.Free;
@@ -597,7 +597,7 @@ begin
       if I > 0 then
         SQLWriter.AddChar(',', Result);
       Temp := MetaData.GetColumnName(ColumnIndex);
-      Temp := IdentifierConvertor.Quote(Temp);
+      Temp := IdentifierConverter.Quote(Temp, iqColumn);
       SQLWriter.AddText(Temp, Result);
       SQLWriter.AddText('=?', Result);
     end;
@@ -811,7 +811,7 @@ var Stmt: IZPreparedStatement;
       for I := 0 to FInsertColumns.Count-1 do begin
         ColumnIndex := PZIndexPair(FInsertColumns[i])^.ColumnIndex;
         Tmp := Metadata.GetColumnName(ColumnIndex);
-        Tmp := IdentifierConvertor.Quote(Tmp);
+        Tmp := IdentifierConverter.Quote(Tmp, iqColumn);
         SQLWriter.AddText(Tmp, SQL);
         SQLWriter.AddChar(',', SQL);
       end;

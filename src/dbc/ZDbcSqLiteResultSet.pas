@@ -325,7 +325,7 @@ var
   TableColumns: IZResultSet;
   Connection: IZConnection;
   Driver: IZDriver;
-  IdentifierConvertor: IZIdentifierConvertor;
+  IdentifierConverter: IZIdentifierConverter;
   Analyser: IZStatementAnalyser;
   Tokenizer: IZTokenizer;
 begin
@@ -336,7 +336,7 @@ begin
     Driver := Connection.GetDriver;
     Analyser := Driver.GetStatementAnalyser;
     Tokenizer := Driver.GetTokenizer;
-    IdentifierConvertor := Metadata.GetIdentifierConvertor;
+    IdentifierConverter := Metadata.GetIdentifierConverter;
     try
       if Analyser.DefineSelectSchemaFromQuery(Tokenizer, SQL) <> nil then
         for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
@@ -344,7 +344,7 @@ begin
           ClearColumn(Current);
           if Current.TableName = '' then
             continue;
-          TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(IdentifierConvertor.Quote(Current.TableName)),'');
+          TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(IdentifierConverter.Quote(Current.TableName, iqTable)),'');
           if TableColumns <> nil then begin
             TableColumns.BeforeFirst;
             while TableColumns.Next do
@@ -359,7 +359,7 @@ begin
       Connection := nil;
       Analyser := nil;
       Tokenizer := nil;
-      IdentifierConvertor := nil;
+      IdentifierConverter := nil;
     end;
   end;
   Loaded := True;

@@ -105,7 +105,7 @@ type
 
     FSQL: string;
     FTableColumns: TZHashMap;
-    FIdentifierConvertor: IZIdentifierConvertor;
+    FIdentifierConverter: IZIdentifierConverter;
     FResultSet: TZAbstractResultSet;
     procedure SetMetadata(const Value: IZDatabaseMetadata);
   protected
@@ -150,8 +150,8 @@ type
     property MetaData: IZDatabaseMetadata read FMetadata write SetMetadata;
     property ColumnsLabels: TStrings read FColumnsLabelsCS write FColumnsLabelsCS;
     property SQL: string read FSQL write FSQL;
-    property IdentifierConvertor: IZIdentifierConvertor
-      read FIdentifierConvertor write FIdentifierConvertor;
+    property IdentifierConverter: IZIdentifierConverter
+      read FIdentifierConverter write FIdentifierConverter;
     property Loaded: Boolean read FLoaded write FLoaded;
     property ResultSet: TZAbstractResultSet read FResultSet write FResultSet;
   public
@@ -250,7 +250,7 @@ end;
 }
 destructor TZAbstractResultSetMetadata.Destroy;
 begin
-  FIdentifierConvertor := nil;
+  FIdentifierConverter := nil;
   FMetadata := nil;
   FreeAndNil(FTableColumns);
   FreeAndNil(FColumnsLabelsCS);
@@ -790,7 +790,7 @@ var
 begin
   { Initializes single columns with specified table. }
   FieldRef := SelectSchema.LinkFieldByIndexAndShortName(ColumnIndex,
-    ColumnInfo.ColumnLabel, IdentifierConvertor);
+    ColumnInfo.ColumnLabel, IdentifierConverter);
   if ReadColumnByRef(FieldRef, ColumnInfo) then //else double processing down below
     Exit;
  //EH commented: http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=71516&start=15
@@ -804,8 +804,8 @@ begin
   while {(ColumnInfo.ColumnName = '') and }(I < SelectSchema.TableCount) and not Found do begin
     TableRef := SelectSchema.Tables[I];
     if Assigned(FieldRef)
-    then AName := IdentifierConvertor.ExtractQuote(FieldRef.Field)
-    else AName := IdentifierConvertor.ExtractQuote(ColumnInfo.ColumnLabel);
+    then AName := IdentifierConverter.ExtractQuote(FieldRef.Field)
+    else AName := IdentifierConverter.ExtractQuote(ColumnInfo.ColumnLabel);
     Found := ReadColumnByName(AName, TableRef, ColumnInfo);
     Inc(I);
   end;
@@ -965,9 +965,9 @@ procedure TZAbstractResultSetMetadata.SetMetadata(
 begin
   FMetadata := Value;
   if Value<>nil then
-    FIdentifierConvertor := Value.GetIdentifierConvertor
+    FIdentifierConverter := Value.GetIdentifierConverter
   else
-    FIdentifierConvertor := TZDefaultIdentifierConvertor.Create(FMetadata);
+    FIdentifierConverter := TZDefaultIdentifierConverter.Create(FMetadata);
 end;
 
 procedure TZAbstractResultSetMetadata.SetSearchable(ColumnIndex: Integer;
@@ -1031,7 +1031,7 @@ begin
   StatementAnalyser := Driver.GetStatementAnalyser;
   SelectSchema := StatementAnalyser.DefineSelectSchemaFromQuery(Tokenizer, SQL);
   if Assigned(SelectSchema) then begin
-    SelectSchema.LinkReferences(IdentifierConvertor);
+    SelectSchema.LinkReferences(IdentifierConverter);
     ReplaceStarColumns(SelectSchema);
     FillByIndices := SelectSchema.FieldCount = FResultSet.ColumnsInfo.Count;
     J := -1;

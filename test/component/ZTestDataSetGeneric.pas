@@ -164,7 +164,7 @@ uses
   ZEncoding, ZFastCode,
   DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties,
   ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF},
-  TypInfo, ZDbcInterbaseFirebirdMetadata;
+  TypInfo, ZDbcInterbaseFirebirdMetadata, ZSelectSchema;
 
 { TZGenericTestDataSet }
 
@@ -2264,7 +2264,7 @@ end;
 procedure TZGenericTestDataSet.TestSpaced_Names;
 var
   Query: TZQuery;
-
+  IC: IZIdentifierConverter;
   function GetNonQuotedAlias(const Value: String): String;
   begin
     case ConnectionConfig.Provider of
@@ -2279,9 +2279,10 @@ var
 begin
   Query := CreateQuery;
   Connection.Connect;
+  IC := Connection.DbcConnection.GetMetadata.GetIdentifierConverter;
   try
     { test generic field names }
-    Query.SQL.Text := 'select * from '+Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Spaced Names');
+    Query.SQL.Text := 'select * from '+IC.Quote('Spaced Names');
     Query.Open;
     CheckEquals('Cs Data1', Query.Fields[1].DisplayName);
     CheckEquals('cs data2', Query.Fields[2].DisplayName);
@@ -2300,10 +2301,10 @@ begin
     Query.Post;
     { test alias names without spaces and quoting rules }
     Query.SQL.Text := 'select cs_id, '+
-      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Cs Data1')+' as CsData1, '+
-      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('cs data2')+' as csdata2, '+
-      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('cS data3')+' as cSdata3 from '+
-      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Spaced Names');
+      IC.Quote('Cs Data1', iqColumn)+' as CsData1, '+
+      IC.Quote('cs data2', iqColumn)+' as csdata2, '+
+      IC.Quote('cS data3', iqColumn)+' as cSdata3 from '+
+      IC.Quote('Spaced Names');
     Query.Open;
     CheckEquals(GetNonQuotedAlias('CsData1'), Query.Fields[1].DisplayName);
     CheckEquals(GetNonQuotedAlias('csdata2'), Query.Fields[2].DisplayName);
@@ -2316,13 +2317,13 @@ begin
     Query.Post;
     { test alias names without spaces but with quoting rules }
     Query.SQL.Text := 'select cs_id, '+
-      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Cs Data1')+' as '+
-        Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('CsData1')+', '+
-      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('cs data2')+' as '+
-        Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('csdata2')+', '+
-      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('cS data3')+' as '+
-        Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('cSdata3')+
-       ' from '+Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Spaced Names');
+      IC.Quote('Cs Data1', iqColumn)+' as '+
+        IC.Quote('CsData1', iqColumn)+', '+
+      IC.Quote('cs data2', iqColumn)+' as '+
+        IC.Quote('csdata2', iqColumn)+', '+
+      IC.Quote('cS data3', iqColumn)+' as '+
+        IC.Quote('cSdata3')+
+       ' from '+IC.Quote('Spaced Names', iqTable);
     Query.Open;
     CheckEquals('CsData1', Query.Fields[1].DisplayName);
     CheckEquals('csdata2', Query.Fields[2].DisplayName);
@@ -2335,13 +2336,13 @@ begin
     Query.Post;
     { test alias names with spaces and quoting rules }
     Query.SQL.Text := 'select cs_id, '+
-      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Cs Data1')+' as '+
-        Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Cs  Data1')+', '+
-      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('cs data2')+' as '+
-        Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('cs  data2')+', '+
-      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('cS data3')+' as '+
-        Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('cS  data3')+
-       ' from '+Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Spaced Names');
+      IC.Quote('Cs Data1', iqColumn)+' as '+
+        IC.Quote('Cs  Data1', iqColumn)+', '+
+      IC.Quote('cs data2', iqColumn)+' as '+
+        IC.Quote('cs  data2', iqColumn)+', '+
+      IC.Quote('cS data3', iqColumn)+' as '+
+        IC.Quote('cS  data3', iqColumn)+
+       ' from '+IC.Quote('Spaced Names', iqTable);
     Query.Open;
     CheckEquals('Cs  Data1', Query.Fields[1].DisplayName);
     CheckEquals('cs  data2', Query.Fields[2].DisplayName);
@@ -2353,7 +2354,7 @@ begin
     Query.FieldByName('cS  data3').AsInteger := TEST_ROW_ID+3;
     Query.Post;
   finally
-    Query.SQL.Text := 'delete from '+Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Spaced Names')+
+    Query.SQL.Text := 'delete from '+IC.Quote('Spaced Names')+
       ' where cs_id > '+SysUtils.IntToStr(TEST_ROW_ID-1);
     Query.ExecSQL;
     Query.Free;

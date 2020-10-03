@@ -1903,7 +1903,7 @@ procedure TZOraProcDescriptor_A.Describe(_Type: UB4; const Name: RawByteString);
 var
   ProcSQL, tmp: RawByteString;
   Status, ps, ps2: sword;
-  IC: IZIdentifierConvertor;
+  IC: IZIdentifierConverter;
   {$IFDEF UNICODE}
   S: String;
   {$ENDIF}
@@ -1912,7 +1912,7 @@ begin
   OCIEnv := FConnection.GetConnectionHandle;
   ProcSQL := Name;
 
-  IC := FConnection.GetMetadata.GetIdentifierConvertor;
+  IC := FConnection.GetMetadata.GetIdentifierConverter;
   { describe the object: }
   Status := InternalDescribe(ProcSQL, _Type, OCIEnv);
   if (Status <> OCI_SUCCESS) then begin
@@ -1975,7 +1975,7 @@ end;
 
 procedure TZOraProcDescriptor_W.ConcatParentName(NotArgName: Boolean;
   {$IFDEF AUTOREFCOUNT} const {$ENDIF}SQLWriter: TZUnicodeSQLStringWriter;
-  var Result: UnicodeString; const IC: IZIdentifierConvertor);
+  var Result: UnicodeString; const IC: IZIdentifierConverter);
 {$IFNDEF UNICODE}
 var S: UnicodeString;
     R: RawByteString;
@@ -2017,7 +2017,7 @@ procedure TZOraProcDescriptor_W.Describe(_Type: UB4;
 var
   ProcSQL, tmp: UnicodeString;
   Status, ps, ps2: sword;
-  IC: IZIdentifierConvertor;
+  IC: IZIdentifierConverter;
   {$IFNDEF UNICODE}
   S: String;
   {$ENDIF}
@@ -2026,7 +2026,7 @@ begin
   OCIEnv := FConnection.GetConnectionHandle;
   ProcSQL := Name;
 
-  IC := FConnection.GetMetadata.GetIdentifierConvertor;
+  IC := FConnection.GetMetadata.GetIdentifierConverter;
   { describe the object: }
   Status := InternalDescribe(ProcSQL, _Type, OCIEnv);
   if (Status <> OCI_SUCCESS) then begin

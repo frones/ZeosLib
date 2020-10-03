@@ -77,7 +77,7 @@ type
 
 implementation
 
-uses Classes, ZDbcIntfs, ZDbcProperties;
+uses Classes, ZSysUtils, ZDbcIntfs, ZDbcProperties;
 
 { TZTestExecSQLCase }
 
@@ -128,32 +128,41 @@ end;
 
 procedure TZTestConnectionCase.TestLoginPromptConnection;
 var
-    locUserName,locPassword : string;
+  locUserName,locPassword : string;
+  DataBaseStrings: TStrings;
 begin
-  if Connection.Protocol = 'mssql' then
-    Fail('Making this test fail to get everything else tested for SQL Server 2000. This test hangs forever with FreeTDS and SQL 2000.');
-
-  locUserName := Connection.User;
-  locPassword := Connection.Password;
-  Connection.Disconnect;
-  Connection.LoginPrompt := true;
-//  Connection.User := '';
-//  Connection.Password := '';
-  gloUserName := 'x';
-  gloPassword := 'y';
-  Connection.OnLogin := ConnLogin;
+  DataBaseStrings := SplitString(Connection.DataBase, ';');
+  Check(DataBaseStrings <> nil);
+  Connection.Properties.Values[ConnProps_Timeout] := '2';
   try
+  //  if Connection.Protocol = 'mssql' then
+    //  Fail('Making this test fail to get everything else tested for SQL Server 2000. This test hangs forever with FreeTDS and SQL 2000.');
+    locUserName := Connection.User;
+    locPassword := Connection.Password;
+    Connection.Disconnect;
+    Connection.LoginPrompt := true;
+  //  Connection.User := '';
+  //  Connection.Password := '';
+    gloUserName := 'x';
+    gloPassword := 'y';
+    Connection.OnLogin := ConnLogin;
+    try
+      Connection.Connect;
+      if (Connection.DbcConnection.GetServerProvider <> spSQLite) and
+        not StrToBoolEx(DataBaseStrings.Values[ConnProps_TrustedConnection]) and
+        not StrToBoolEx(DataBaseStrings.Values[ConnProps_Trusted]) then
+        Fail('We never expect to reach this place. It means we were allowed to login using invalid user credentials.');
+    except
+      CheckEquals(false,Connection.Connected);
+    end;
+    Connection.Disconnect;
+    gloUserName := locUserName;
+    gloPassword := locPassword;
     Connection.Connect;
-    if Connection.DbcConnection.GetServerProvider <> spSQLite then
-      Fail('We never expect to reach this place. It means we were allowed to login using invalid user credentials.');
-  except
-    CheckEquals(false,Connection.Connected);
+    CheckEquals(true,Connection.Connected);
+  finally
+    FreeAndNil(DataBaseStrings);
   end;
-  Connection.Disconnect;
-  gloUserName := locUserName;
-  gloPassword := locPassword;
-  Connection.Connect;
-  CheckEquals(true,Connection.Connected);
 end;
 
 procedure TZTestConnectionCase.TestTransactionBehavior;
