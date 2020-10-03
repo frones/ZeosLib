@@ -123,6 +123,7 @@ type
     procedure TestTicket304;
     procedure TestBigIntError;
     procedure TestBCD_Refresh_p156227;
+    procedure TestTicket265;
   end;
 
 {$ENDIF ZEOS_DISABLE_MYSQL}
@@ -1967,6 +1968,21 @@ begin
     Query.Close;
   finally
     Query.Free;
+  end;
+end;
+
+{Exists will return false even if the table exists when run on a table with upper-case name on MySQL.}
+
+procedure TZTestCompMySQLBugReport.TestTicket265;
+var tbl: TZTable;
+begin
+  tbl := CreateTable;
+  Check(tbl <> nil);
+  try
+    tbl.TableName := 'PEOPLE';
+    Check(tbl.Exists);
+  finally
+    FreeAndNil(tbl);
   end;
 end;
 
