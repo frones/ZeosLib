@@ -226,7 +226,6 @@ type
   TZDbLibBaseDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   protected
     function ConvertEscapes(const Pattern: String): String;
-    function GetSP_Prefix(const Catalog, Schema: String): String;
     function ComposeObjectString(const S: String; Const NullText: String = 'null';
       QuoteChar: Char = #39): String;
     function DecomposeObjectString(const S: String): String; override;
@@ -1223,15 +1222,6 @@ end;
 
 
 { TZDbLibBaseDatabaseMetadata }
-
-function TZDbLibBaseDatabaseMetadata.GetSP_Prefix(const Catalog, Schema: String): String;
-begin
-  if (UpperCase(Catalog) = 'INFORMATION_SCHEMA') or
-     (UpperCase(Schema)  = 'INFORMATION_SCHEMA') then
-    Result := ''
-  else
-    Result := Catalog+'.'+ConvertEscapes(Schema)+'.';
-end;
 
 {**
   Composes a object name, SQLQuotedStror NullText
