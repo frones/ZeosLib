@@ -1588,23 +1588,23 @@ begin
 
     Field := Query.FindField('time_with_time_zone');
     Check(Assigned(Field), 'Field time_with_time_zone not found.');
-    Check(Field.DataType = ftTime, 'Field time_with_time_zone is not of type ftTime');
+    CheckEquals(ftTime, Field.DataType, 'Field time_with_time_zone is not of type ftTime');
 
     Field := Query.FindField('timestamp_with_time_zone');
     Check(Assigned(Field), 'Field timestamp_with_time_zone not found.');
-    Check(Field.DataType = ftDateTime, 'Field timestamp_with_time_zone is not of type ftDateTime');
+    CheckEquals(ftDateTime, Field.DataType, 'Field timestamp_with_time_zone is not of type ftDateTime');
 
     Field := Query.FindField('decfloat16');
     Check(Assigned(Field), 'Field decfloat16 not found.');
-    Check(Field.DataType = ftFloat, 'Field decfloat16 is not of type ftFloat');
+    CheckEquals(ftFloat, Field.DataType, 'Field decfloat16 is not of type ftFloat');
 
     Field := Query.FindField('decfloat34');
     Check(Assigned(Field), 'Field decfloat34 not found.');
-    Check(Field.DataType = ftFloat, 'Field decfloat34 is not of type ftFloat');
+    CheckStringFieldType(Field, Connection.ControlsCodePage);
 
     Field := Query.FindField('float30');
     Check(Assigned(Field), 'Field float30 not found.');
-    Check(Field.DataType = ftFloat, 'Field float30 is not of type ftFloat');
+    CheckEquals(ftFloat, Field.DataType, 'Field float30 is not of type ftFloat');
 
     Query.Close;
   finally
