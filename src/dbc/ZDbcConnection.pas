@@ -473,7 +473,7 @@ implementation
 uses ZMessages,{$IFNDEF TLIST_IS_DEPRECATED}ZSysUtils, {$ENDIF}
   ZEncoding, ZFastCode, ZSelectSchema,
   ZDbcMetadata, ZDbcUtils, ZDbcProperties,
-  StrUtils
+  StrUtils, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
   {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
