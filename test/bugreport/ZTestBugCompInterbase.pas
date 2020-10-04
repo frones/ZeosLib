@@ -733,6 +733,9 @@ begin
     try
       Connection.User := '';
       Connection.Connect;
+      if not ((Connection.DbcConnection.GetServerProvider = spIB_FB) and //in case of embedded or trusted auth this test is not resolvable
+          (Connection.DbcConnection.GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and
+          (Connection.DbcConnection.GetHostVersion >= 3000000) ) then
       Fail('Problems with change user name');
     except on E: Exception do
       CheckNotTestFailure(E);

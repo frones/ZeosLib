@@ -77,7 +77,8 @@ type
 
 implementation
 
-uses Classes, ZSysUtils, ZDbcIntfs, ZDbcProperties;
+uses Classes, ZSysUtils, ZDbcIntfs, ZDbcProperties
+  {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}, ZDbcInterbaseFirebirdMetadata{$ENDIF};
 
 { TZTestExecSQLCase }
 
@@ -155,8 +156,11 @@ begin
     try
       Connection.Connect;
       if (Connection.DbcConnection.GetServerProvider <> spSQLite) and
-        not StrToBoolEx(DataBaseStrings.Values[ConnProps_TrustedConnection]) and
-        not StrToBoolEx(DataBaseStrings.Values[ConnProps_Trusted]) then
+         not StrToBoolEx(DataBaseStrings.Values[ConnProps_TrustedConnection]) and
+         not StrToBoolEx(DataBaseStrings.Values[ConnProps_Trusted]) and
+         not ((Connection.DbcConnection.GetServerProvider = spIB_FB) and //in case of embedded this test is not resolvable
+          (Connection.DbcConnection.GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and
+          (Connection.DbcConnection.GetHostVersion >= 3000000) and (Connection.HostName = '')) then
         Fail('We never expect to reach this place. It means we were allowed to login using invalid user credentials.');
     except
       CheckEquals(false,Connection.Connected);
