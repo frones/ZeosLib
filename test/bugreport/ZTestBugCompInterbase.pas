@@ -1571,14 +1571,16 @@ begin
 end;
 
 procedure ZTestCompInterbaseBugReport.TestSF_Internal7;
-const DescAsc: Array[boolean] of String = (' DESC',' ASC');
+//const DescAsc: Array[boolean] of String = (' DESC',' ASC');
 var
   Query: TZReadOnlyQuery;
   Field: TField;
 begin
   Connection.Connect;
-  if Connection.DbcConnection.GetHostVersion < 4000000 then
-    Fail('This test can only be run on Firebird 4+');
+  Check(Connection.Connected);
+  if (Connection.DbcConnection.GetHostVersion < 4000000) or not (Connection.DbcConnection.GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird then
+    Exit;
+    //Fail('This test can only be run on Firebird 4+');
 
   Query := CreateReadOnlyQuery;
   try
