@@ -5152,11 +5152,6 @@ end;
   @exception SQLException if a database access error occurs
 }
 {$IFNDEF NO_ANSISTRING}
-{$IFDEF FPC}
-  {$PUSH}
-  {$WARN 5093 off : Function result variable of a managed type does not seem to be initialized} //cpu 32
-  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} //cpu 64
-{$ENDIF} // ZSetString does the job even if NOT required
 function TZAbstractCallableStatement_A.GetAnsiString(
   ParameterIndex: Integer): AnsiString;
 var
@@ -5165,14 +5160,14 @@ var
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   FExecStatement.GetPChar(ParameterIndex, Pointer(P), L, FClientCP);
-  if (FClientCP = ZOSCodePage) then
-    ZSetString(P, L, Result)
-  else begin
+  if (FClientCP = ZOSCodePage) then begin
+    {$IFDEF FPC}Result := '';{$ENDIF}
+    ZSetString(P, L, Result);
+  end else begin
     FUniTemp := PRawToUnicode(P, L, FClientCP);
     Result := ZUnicodeToRaw(FUniTemp, ZOSCodePage);
   end;
 end;
-{$IFDEF FPC} {$POP} {$ENDIF}
 {$ENDIF NO_ANSISTRING}
 
 {**
@@ -5191,11 +5186,6 @@ end;
   is <code>null</code>.
   @exception SQLException if a database access error occurs
 }
-{$IFDEF FPC}
-  {$PUSH}
-  {$WARN 5093 off : Function result variable of a managed type does not seem to be initialized} //cpu 32
-  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} //cpu 64
-{$ENDIF} // ZSetString does the job even if NOT required
 function TZAbstractCallableStatement_A.GetRawByteString(
   ParameterIndex: Integer): RawByteString;
 var
@@ -5204,9 +5194,9 @@ var
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   FExecStatement.GetPChar(ParameterIndex, Pointer(P), L, FClientCP);
+  {$IFDEF FPC}Result := '';{$ENDIF}
   ZSetString(P, L, Result)
 end;
-{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Retrieves the value of a JDBC <code>CHAR</code>, <code>VARCHAR</code>,
@@ -5276,11 +5266,6 @@ end;
   @exception SQLException if a database access error occurs
 }
 {$IFNDEF NO_UTF8STRING}
-{$IFDEF FPC}
-  {$PUSH}
-  {$WARN 5093 off : Function result variable of a managed type does not seem to be initialized} //cpu 32
-  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized} //cpu 64
-{$ENDIF} // ZSetString does the job even if NOT required
 function TZAbstractCallableStatement_A.GetUTF8String(
   ParameterIndex: Integer): UTF8String;
 var
@@ -5289,15 +5274,14 @@ var
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   FExecStatement.GetPChar(ParameterIndex, Pointer(P), L, FClientCP);
-  if (FClientCP = zCP_UTF8) then
-    ZSetString(P, L, Result)
-  else begin
+  if (FClientCP = zCP_UTF8) then begin
+    {$IFDEF FPC}Result := '';{$ENDIF}
+    ZSetString(P, L, Result);
+  end else begin
     FUniTemp := PRawToUnicode(P, L, FClientCP);
     Result := ZUnicodeToRaw(FUniTemp, ZOSCodePage);
   end;
 end;
-{$IFDEF FPC} {$POP} {$ENDIF} // ZSetString does the job even if NOT required
-
 {$ENDIF}
 
 {**

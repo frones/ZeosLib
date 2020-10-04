@@ -568,7 +568,7 @@ procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: WideString;
   const Msg: string);
 begin
   if (Expected = Actual) then
-    Fail(Msg + ComparisonMsg(String(Expected), String(Actual), False))
+    Fail(Msg + ComparisonMsg(String(Expected), String(Actual){$IFDEF WITH_ComparisonMsg_aCheckEqual}, False{$ENDIF}))
   else
     Check(True);
 end;
@@ -587,7 +587,7 @@ procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: UInt64;
   const Msg: string);
 begin
   if (Expected = Actual) then
-    Fail(Msg + ComparisonMsg(IntToStr(Expected), IntToStr(Actual), False))
+    Fail(Msg + ComparisonMsg(IntToStr(Expected), IntToStr(Actual) {$IFDEF WITH_ComparisonMsg_aCheckEqual}, False{$ENDIF}))
   else
     Check(True);
 end;
@@ -602,7 +602,7 @@ procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: Int64;
   const Msg: string);
 begin
   if (Expected = Actual) then
-    Fail(Msg + ComparisonMsg(IntToStr(Expected), IntToStr(Actual), False))
+    Fail(Msg + ComparisonMsg(IntToStr(Expected), IntToStr(Actual) {$IFDEF WITH_ComparisonMsg_aCheckEqual}, False{$ENDIF}))
   else
     Check(True);
 end;
@@ -788,7 +788,7 @@ initialization
   encDefaultSystemCodePage
     {$ELSE}
       {$IFDEF LCL}
-    encCP_UTF8
+    encUTF8
       {$ELSE}
     encDefaultSystemCodePage
       {$ENDIF}

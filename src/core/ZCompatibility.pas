@@ -103,6 +103,9 @@ type
   {$IF not declared(PNativeUInt)} //since FPC2.7 this type is declared too avoid inconsitent builds
   PNativeUInt           = ^NativeUInt;
   {$IFEND}
+  {$IF not declared(PNativeInt)} //since FPC2.6.4 this type is declared too avoid inconsitent builds
+  PNativeInt           = ^NativeInt;
+  {$IFEND}
 {$ELSE}
   {$IFNDEF HAVE_TRUE_NATIVE_TYPES}  //introduced since D2007 but "stable" since XE2
   NativeInt             = Integer;

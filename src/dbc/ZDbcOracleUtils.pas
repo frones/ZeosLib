@@ -1743,13 +1743,17 @@ var P: PAnsiChar;
   parmh: POCIHandle;
   Descriptor: POCIDescribe;
   tmp: RawByteString;
+  {$IFDEF WITH_RAWBYTESTRING}
   ConSettings: PZConSettings;
+  {$ENDIF WITH_RAWBYTESTRING}
   OCISvcCtx: POCISvcCtx;
 begin
   //https://www.bnl.gov/phobos/Detectors/Computing/Orant/doc/appdev.804/a58234/describe.htm#440341
   //section describing the stored procedure
   Descriptor := nil;
+  {$IFDEF WITH_RAWBYTESTRING}
   ConSettings := FConnection.GetConSettings;
+  {$ENDIF WITH_RAWBYTESTRING}
   OCISvcCtx   := FConnection.GetServiceContextHandle;
   { get a descriptor handle for the param/obj }
   Result := FPlainDriver.OCIHandleAlloc(Owner, Descriptor, OCI_HTYPE_DESCRIBE, 0, nil);
