@@ -614,7 +614,7 @@ type
     {$IFDEF WITH_TSQLTIMESTAMP_RECORD}
     function GetAsSQLTimeStamp: TSQLTimeStamp; override;
     {$ENDIF}
-    procedure Bind(Binding: Boolean); {$IFDEF WITH_TFIELD_BIND_METHOD}override;{$ENDIF}
+    procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
   public
     constructor Create(AOwner: TComponent); override;
   public
@@ -650,7 +650,7 @@ type
     procedure GetText(var Text: string; DisplayText: Boolean); override;
     procedure SetAsTimeStamp(const Value: TZTimeStamp);
     procedure SetAsDateTime(Value: TDateTime); override;
-    procedure Bind(Binding: Boolean); {$IFDEF WITH_TFIELD_BIND_METHOD}override;{$ENDIF}
+    procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
   public
     constructor Create(AOwner: TComponent); override;
   public
@@ -686,7 +686,7 @@ type
     procedure SetAsTime(const Value: TZTime);
     procedure GetText(var Text: string; DisplayText: Boolean); override;
     procedure SetAsDateTime(Value: TDateTime); override;
-    procedure Bind(Binding: Boolean); {$IFDEF WITH_TFIELD_BIND_METHOD}override;{$ENDIF}
+    procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
   public
     property Value: TZTime read GetAsTime write SetAsTime;
     property SecondFractionsScale: Integer read fScale;
@@ -712,7 +712,7 @@ type
     function GetAsVariant: Variant; override;
     procedure SetAsBoolean(Value: Boolean); override;
     procedure SetVarValue(const Value: Variant); override;
-    procedure Bind(Binding: Boolean); {$IFDEF WITH_TFIELD_BIND_METHOD}override;{$ENDIF}
+    procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
   public
     procedure Clear; override;
   end;
@@ -726,7 +726,7 @@ type
     procedure SetAsSmallInt(Value: SmallInt);
     function IsRowDataAvailable: Boolean;
   protected
-    procedure Bind(Binding: Boolean); {$IFDEF WITH_TFIELD_BIND_METHOD}override;{$ENDIF}
+    procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
     function GetIsNull: Boolean; override;
     procedure SetAsInteger(Value: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF}); override;
     function GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF}; override;
@@ -745,7 +745,7 @@ type
   {$IFDEF WITH_FTSHORTINT}
     function IsRowDataAvailable: Boolean;
   protected
-    procedure Bind(Binding: Boolean); {$IFDEF WITH_TFIELD_BIND_METHOD}override;{$ENDIF}
+    procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
   {$ENDIF}
   protected
     procedure SetAsInteger(Value: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF}); override;
@@ -767,7 +767,7 @@ type
     procedure SetAsWord(Value: Word);
     function IsRowDataAvailable: Boolean;
   protected
-    procedure Bind(Binding: Boolean); {$IFDEF WITH_TFIELD_BIND_METHOD}override;{$ENDIF}
+    procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
     function GetIsNull: Boolean; override;
     procedure SetAsInteger(Value: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF}); override;
     function GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF}; override;
@@ -789,7 +789,7 @@ type
   {$IFDEF WITH_FTBYTE}
     function IsRowDataAvailable: Boolean;
   protected
-    procedure Bind(Binding: Boolean); {$IFDEF WITH_TFIELD_BIND_METHOD}override;{$ENDIF}
+    procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
   {$ENDIF}
   protected
     procedure SetAsInteger(Value: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF}); override;
@@ -813,7 +813,7 @@ type
     procedure SetAsInt(Value: Integer);
     function IsRowDataAvailable: Boolean;
   protected
-    procedure Bind(Binding: Boolean); {$IFDEF WITH_TFIELD_BIND_METHOD}override;{$ENDIF}
+    procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
     function GetIsNull: Boolean; override;
     function FilledValueWasNull(var Value: Integer): Boolean;
     function GetAsString: string; override;
@@ -837,7 +837,7 @@ type
     function IsRowDataAvailable: Boolean;
     function FilledValueWasNull(var Value: Largeint): Boolean;
   protected
-    procedure Bind(Binding: Boolean); {$IFDEF WITH_TFIELD_BIND_METHOD}override;{$ENDIF}
+    procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
     function GetIsNull: Boolean; override;
     function GetAsLargeInt: LargeInt; {$IFDEF TFIELD_HAS_ASLARGEINT}override;{$ELSE}virtual;{$ENDIF}
     procedure SetAsLargeInt(Value: LargeInt); {$IFDEF TFIELD_HAS_ASLARGEINT}override;{$ELSE}virtual;{$ENDIF}
@@ -871,7 +871,7 @@ type
     function GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF}; override;
     function GetAsLargeInt: Largeint; {$IF not defined(WITH_FTLONGWORD) or defined(TFIELD_HAS_ASLARGEINT)} override;{$IFEND}
     {$IFDEF WITH_FTLONGWORD}
-    procedure Bind(Binding: Boolean); {$IFDEF WITH_TFIELD_BIND_METHOD}override;{$ENDIF}
+    procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
     function GetAsLongWord: {$IFDEF HAVE_TFIELD_32BIT_ASLONGWORD}Cardinal{$ELSE}LongWord{$ENDIF}; override;
     {$ENDIF WITH_FTLONGWORD}
     function GetAsString: string; override;
