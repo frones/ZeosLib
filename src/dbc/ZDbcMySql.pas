@@ -646,8 +646,8 @@ setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def
       else Set_lower_case_table_names({$IFDEF WINDOWS}1{$ELSE}{$IFDEF DARWIN}2{$ELSE}0{$ENDIF}{$ENDIF});
       Close;
     end;
-    SQL := LowerCase(FClientCodePage);
-    if (SQL = 'utf8') and (IsMariaDB or (GetHostVersion >= EncodeSQLVersioning(4,1,0))) then begin
+    sMyOpt := LowerCase(FClientCodePage);
+    if (sMyOpt = 'utf8') and (IsMariaDB or (GetHostVersion >= EncodeSQLVersioning(4,1,0))) then begin
       CheckCharEncoding('utf8mb4');
       //EH: MariaDB needs a explizit set of charset to be synced on Client<>Server!
       SQL := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FClientCodePage);
@@ -805,10 +805,16 @@ Var
  killquery: SQLString;
  izc: IZConnection;
 Begin
-  // https://dev.mysql.com/doc/refman/5.7/en/mysql-kill.html
-  killquery := 'KILL QUERY ' + IntToStr(FPlainDriver.mysql_thread_id(FHandle));
-  izc := DriverManager.GetConnection(GetURL);
-  Result := izc.CreateStatement.ExecuteUpdate(killquery);
+  { EH untested, just prepared
+  if Assigned(FPlainDriver.mariadb_cancel) then begin
+    Result := FPlainDriver.mariadb_cancel(FHandle);
+    FPlainDriver.mariadb_reconnect(FHandle)
+  end else }begin
+    // https://dev.mysql.com/doc/refman/5.7/en/mysql-kill.html
+    killquery := 'KILL QUERY ' + IntToStr(FPlainDriver.mysql_thread_id(FHandle));
+    izc := DriverManager.GetConnection(GetURL);
+    Result := izc.CreateStatement.ExecuteUpdate(killquery);
+  end;
 End;
 
 {**
