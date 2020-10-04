@@ -172,7 +172,7 @@ procedure AddStringFunctions(Functions : TZFunctionsList);
 
 implementation
 
-uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} Math, StrUtils,
+uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} StrUtils,
   ZSysUtils, ZMessages, ZCompatibility, ZFastCode;
 
 {$IFDEF WITH_TSYSCHARSET_DEPRECATED}
