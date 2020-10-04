@@ -149,6 +149,38 @@ type
     MYSQL_OPT_COMPRESSION_ALGORITHMS,
     MYSQL_OPT_ZSTD_COMPRESSION_LEVEL
   );
+  TMariaDBOption = (
+    { MariaDB specific }
+    MYSQL_PROGRESS_CALLBACK=5999,
+    MYSQL_OPT_NONBLOCK);
+  TMariaDBConnectorOption = (
+    { MariaDB Connector/C specific }
+    MYSQL_DATABASE_DRIVER=7000,
+    MARIADB_OPT_SSL_FP,             // deprecated, use MARIADB_OPT_TLS_PEER_FP instead
+    MARIADB_OPT_SSL_FP_LIST,        // deprecated, use MARIADB_OPT_TLS_PEER_FP_LIST instead
+    MARIADB_OPT_TLS_PASSPHRASE,     // passphrase for encrypted certificates
+    MARIADB_OPT_TLS_CIPHER_STRENGTH,
+    MARIADB_OPT_TLS_VERSION,
+    MARIADB_OPT_TLS_PEER_FP,            // single finger print for server certificate verification
+    MARIADB_OPT_TLS_PEER_FP_LIST,       // finger print white list for server certificate verification
+    MARIADB_OPT_CONNECTION_READ_ONLY,
+    MYSQL_OPT_CONNECT_ATTRS,        // for mysql_get_optionv
+    MARIADB_OPT_USERDATA,
+    MARIADB_OPT_CONNECTION_HANDLER,
+    MARIADB_OPT_PORT,
+    MARIADB_OPT_UNIXSOCKET,
+    MARIADB_OPT_PASSWORD,
+    MARIADB_OPT_HOST,
+    MARIADB_OPT_USER,
+    MARIADB_OPT_SCHEMA,
+    MARIADB_OPT_DEBUG,
+    MARIADB_OPT_FOUND_ROWS,
+    MARIADB_OPT_MULTI_RESULTS,
+    MARIADB_OPT_MULTI_STATEMENTS,
+    MARIADB_OPT_INTERACTIVE,
+    MARIADB_OPT_PROXY_HEADER,
+    MARIADB_OPT_IO_WAIT
+  );
 const
   TMySqlOptionMinimumVersion: array[TMySqlOption] of Integer =
     (
@@ -952,6 +984,28 @@ type
     mysql_stmt_more_results:      function(stmt: PMYSQL_STMT): my_bool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
     mariadb_stmt_execute_direct:  function(stmt: PMYSQL_STMT; query: PAnsiChar; Length: ULong): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    /// <summary>From MariaDB-Docs:
+    ///  Immediately aborts a connection by making all subsequent
+    ///  read/write operations fail. mariadb_cancel() does not invalidate memory
+    ///  used for mysql structure, nor close any communication channels. To free
+    ///  the memory, mysql_close() must be called. mariadb_cancel() is useful to
+    ///  break long queries in situations where sending KILL is not possible.
+    /// </summary>
+    /// <param>"mysql" mysql handle, which was previously allocated
+    ///  by mysql_init() or mysql_real_connect().</param>
+    /// <returns>???</returns>
+    mariadb_cancel: function(mysql: PMYSQL): integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    /// <summary>From MariaDB-Docs:
+    ///  mariadb_reconnect() tries to reconnect to a server in case the
+    ///  connection died due to timeout or other errors. It uses the same
+    ///  credentials which were specified in mysql_real_connect().
+    /// </summary>
+    /// <param>"mysql" mysql handle, which was previously allocated
+    ///  by mysql_init() or mysql_real_connect().</param>
+    /// <returns>0 on success; an error, if the option MYSQL_OPT_RECONNECT
+    ///  wasn't specified before.</returns>
+    mariadb_reconnect: function(mysql: PMYSQL): my_bool;
+
   protected
     function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
@@ -1134,6 +1188,8 @@ begin
   @mysql_stmt_affected_rows     := GetAddress('mysql_stmt_affected_rows');
   @mysql_stmt_attr_get          := GetAddress('mysql_stmt_attr_get');
   @mariadb_stmt_execute_direct  := GetAddress('mariadb_stmt_execute_direct');
+  @mariadb_cancel               := GetAddress('mariadb_cancel');
+  @mariadb_reconnect            := GetAddress('mariadb_reconnect');
 
   //http://dev.mysql.com/doc/refman/4.1/en/mysql-stmt-attr-set.html
   //http://dev.mysql.com/doc/refman/5.0/en/mysql-stmt-attr-set.html
