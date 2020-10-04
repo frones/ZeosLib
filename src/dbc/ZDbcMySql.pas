@@ -646,6 +646,17 @@ setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def
       else Set_lower_case_table_names({$IFDEF WINDOWS}1{$ELSE}{$IFDEF DARWIN}2{$ELSE}0{$ENDIF}{$ENDIF});
       Close;
     end;
+    SQL := LowerCase(FClientCodePage);
+    if (SQL = 'utf8') and (IsMariaDB or (GetHostVersion >= EncodeSQLVersioning(4,1,0))) then begin
+      CheckCharEncoding('utf8mb4');
+      //EH: MariaDB needs a explizit set of charset to be synced on Client<>Server!
+      SQL := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FClientCodePage);
+      if not Assigned(FPlainDriver.mysql_set_character_set) or
+            (FPlainDriver.mysql_set_character_set(FHandle, Pointer(SQL)) <> 0) then begin //failed? might be possible the function does not exists
+        SQL := 'SET NAMES '+SQL;
+        ExecuteImmediat(SQL, lcOther);
+      end;
+    end;
   end;
 
   { Sets transaction isolation level. }
