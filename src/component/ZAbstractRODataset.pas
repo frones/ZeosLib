@@ -717,8 +717,6 @@ type
     procedure Clear; override;
   end;
 
-{ TZShortIntField }
-
   TZSmallIntField = class(TSmallIntField)
   private
     FFieldIndex: Integer;
@@ -4301,6 +4299,10 @@ end;
   @param Binding decides if the field is bound or not.
 }
 procedure TZAbstractRODataset.BindFields(Binding: Boolean);
+{$IFNDEF WITH_VIRTUAL_TFIELD_BIND}
+var I: Integer;
+  Field: TField;
+{$ENDIF WITH_VIRTUAL_TFIELD_BIND}
 begin
   if Binding then begin
     if FResultSet2AccessorIndexList <> nil then
@@ -4308,6 +4310,60 @@ begin
     FFieldsLookupTable := CreateFieldsLookupTable(FResultSet2AccessorIndexList);
   end;
   inherited BindFields(Binding);
+{$IFNDEF WITH_VIRTUAL_TFIELD_BIND}
+  if not FDisableZFields then
+    for i := 0 to Fields.Count -1 do begin
+      Field := Fields[i];
+      if (Field is TZDateField) then
+        TZDateField(Field).Bind(Binding)
+      else if (Field is TZDateTimeField) then
+        TZDateField(TZDateTimeField).Bind(Binding)
+      else if (Field is TZTimeField) then
+        TZTimeField(Field).Bind(Binding)
+      else if (Field is TZBooleanField) then
+        TZBooleanField(Field).Bind(Binding)
+      else if (Field is TZSmallIntField) then
+        TZSmallIntField(Field).Bind(Binding)
+      else if (Field is TZShortIntField) then
+        TZShortIntField(Field).Bind(Binding)
+      else if (Field is TZWordField) then
+        TZWordField(Field).Bind(Binding)
+      else if (Field is TZByteField) then
+        TZByteField(Field).Bind(Binding)
+      else if (Field is TZIntegerField) then
+        TZIntegerField(Field).Bind(Binding)
+      else if (Field is TZInt64Field) then
+        TZInt64Field(Field).Bind(Binding)
+      else if (Field is TZUInt64Field) then
+        TZUInt64Field(Field).Bind(Binding)
+      else if (Field is TZDoubleField) then
+        TZDoubleField(Field).Bind(Binding)
+      else if (Field is TZSingleField) then
+        TZSingleField(Field).Bind(Binding)
+      else if (Field is TZBCDField) then
+        TZBCDField(Field).Bind(Binding)
+      else if (Field is TZFMTBCDField) then
+        TZFMTBCDField(Field).Bind(Binding)
+      else if (Field is TZGuidField) then
+        TZGuidField(Field).Bind(Binding)
+      else if (Field is TZRawStringField) then
+        TZRawStringField(Field).Bind(Binding)
+      else if (Field is TZUnicodeStringField) then
+        TZUnicodeStringField(Field).Bind(Binding)
+      else if (Field is TZBytesField) then
+        TZBytesField(Field).Bind(Binding)
+      else if (Field is TZVarBytesField) then
+        TZVarBytesField(Field).Bind(Binding)
+      else if (Field is TZRawCLobField) then
+        TZRawCLobField(Field).Bind(Binding)
+      else if (Field is TZUnicodeCLobField) then
+        TZUnicodeCLobField(Field).Bind(Binding)
+      else if (Field is TZUnicodeCLobField) then
+        TZUnicodeCLobField(Field).Bind(Binding)
+      else if (Field is TZBlobField) then
+        TZBlobField(Field).Bind(Binding);
+    end;
+  {$ENDIF WITH_VIRTUAL_TFIELD_BIND}
 end;
 
 {**
