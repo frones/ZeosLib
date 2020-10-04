@@ -148,6 +148,7 @@
         {$ENDIF}
         {$DEFINE WITH_RAWBYTESTRING_CONVERSION_BUG} //2.7 gen did bad conversions with possible data-loss here
         {$IF FPC_FULLVERSION>30000}       // will be introduced in 3.0+
+          {$DEFINE WITH_WITH_TFIELD_BIND_METHOD} //TField.Bind(Binding) is supported
           {$DEFINE WITH_PARAM_ASBCD} //TParam.AsBcd is supported
           {$DEFINE WITH_tagVARIANT_UINT64} //ActiveX tagVariant supports Int64/uInt64 values not sure about the proper FPC version here
           {$DEFINE WITH_varUString} //Variant now supports refcounted UnicodeStrings
