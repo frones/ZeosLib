@@ -130,13 +130,19 @@ procedure TZTestConnectionCase.TestLoginPromptConnection;
 var
   locUserName,locPassword : string;
   DataBaseStrings: TStrings;
+  HostVersion: Integer;
 begin
   DataBaseStrings := SplitString(Connection.DataBase, ';');
   Check(DataBaseStrings <> nil);
-  Connection.Properties.Values[ConnProps_Timeout] := '2';
+  //Connection.Properties.Values[ConnProps_Timeout] := '2'; that still doesn't work with Jenkins
   try
-  //  if Connection.Protocol = 'mssql' then
-    //  Fail('Making this test fail to get everything else tested for SQL Server 2000. This test hangs forever with FreeTDS and SQL 2000.');
+    if (Connection.Protocol = 'mssql') then begin
+      Connection.Connect;
+      Check(Connection.Connected);
+      HostVersion := Connection.DbcConnection.GetHostVersion;
+      if (HostVersion >= ZSysUtils.EncodeSQLVersioning(8,0,0)) and (HostVersion < ZSysUtils.EncodeSQLVersioning(9,0,0)) then
+        Fail('Making this test fail to get everything else tested for SQL Server 2000. This test hangs forever with FreeTDS and SQL 2000.');
+    end;
     locUserName := Connection.User;
     locPassword := Connection.Password;
     Connection.Disconnect;
