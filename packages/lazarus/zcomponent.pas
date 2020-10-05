@@ -9,7 +9,7 @@ interface
 
 uses
   ZAbstractConnection, ZAbstractDataset, ZAbstractRODataset, ZAbstractTable, 
-  ZConnection, ZConnectionGroup, ZDatasetUtils, ZGroupedConnection, 
+  ZConnection, ZConnectionGroup, ZDataset, ZDatasetUtils, ZGroupedConnection, 
   ZIBEventAlerter, ZPgEventAlerter, ZSqlMetadata, ZSqlMonitor, ZSqlProcessor, 
   ZSqlStrings, ZSqlUpdate, ZStoredProcedure;
 

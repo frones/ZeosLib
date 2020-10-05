@@ -1750,7 +1750,10 @@ begin
     Query.ExecSQL;
 
     Query.SQL.Text := 'INSERT INTO equipment (eq_id, eq_name) VALUES (:u, :u1)';
-    Query.ParamByName('u').AsString := IntToStr(TEST_ROW_ID - 2);
+    //EH: i don't understand the string assignment here. however..
+    if Query.Connection.DbcConnection.GetServerProvider = spASE
+    then Query.ParamByName('u').AsInteger := TEST_ROW_ID - 2
+    else Query.ParamByName('u').AsString := IntToStr(TEST_ROW_ID - 2);
     Query.ParamByName('u1').AsString := 'ab''cd''ef';
     Query.ExecSQL;
     Query.ParamByName('u').AsInteger := TEST_ROW_ID - 1;
