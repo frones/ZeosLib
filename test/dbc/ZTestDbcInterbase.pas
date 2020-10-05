@@ -92,7 +92,7 @@ type
     procedure TestLongStatements;
     procedure Test_GENERATED_ALWAYS_64;
     procedure Test_GENERATED_BY_DEFAULT_64;
-    procedure Test_DECFLOAT;
+    procedure Test_DECFIXED;
     procedure Test_TIMEZONE;
   end;
 
@@ -497,7 +497,7 @@ begin
   Statement.Close;
 end;
 
-procedure TZTestDbcInterbaseCase.Test_DECFLOAT;
+procedure TZTestDbcInterbaseCase.Test_DECFIXED;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -512,19 +512,19 @@ begin
     SetLength(TableType, 1);
     TableType[0] := 'TABLE';
     try
-      ResultSet := Connection.GetMetadata.GetTables('','','DECFLOAT_VALUES',TableType);
+      ResultSet := Connection.GetMetadata.GetTables('','','DECFIXED_VALUES',TableType);
       if ResultSet.Next then
-        Statement.ExecuteUpdate('drop table DECFLOAT_VALUES');
-      Statement.ExecuteUpdate('CREATE TABLE DECFLOAT_VALUES( '+
+        Statement.ExecuteUpdate('drop table DECFIXED_VALUES');
+      Statement.ExecuteUpdate('CREATE TABLE DECFIXED_VALUES( '+
         'id bigint GENERATED ALWAYS AS IDENTITY NOT NULL, '+
         'DECIMAL_34_0 decimal(34,0) NOT NULL, '+
-        'CONSTRAINT pk_DECFLOAT_VALUES_id PRIMARY KEY(id)) ');
-      Statement.ExecuteUpdate('insert into DECFLOAT_VALUES(DECIMAL_34_0) '+
+        'CONSTRAINT pk_DECFIXED_VALUES_id PRIMARY KEY(id)) ');
+      Statement.ExecuteUpdate('insert into DECFIXED_VALUES(DECIMAL_34_0) '+
         'VALUES(1234567890123456789012345678901234)');
       Statement.SetResultSetType(rtScrollInsensitive);
       Statement.SetResultSetConcurrency(rcUpdatable);
 
-      ResultSet := Statement.ExecuteQuery('SELECT * FROM DECFLOAT_VALUES');
+      ResultSet := Statement.ExecuteQuery('SELECT * FROM DECFIXED_VALUES');
       try
         CheckNotNull(ResultSet);
         ResultSet.Next;
@@ -544,7 +544,7 @@ begin
         ResultSet := nil;
       end;
     finally
-      Statement.ExecuteUpdate('drop table DECFLOAT_VALUES');
+      Statement.ExecuteUpdate('drop table DECFIXED_VALUES');
       Statement.Close;
     end;
   finally
