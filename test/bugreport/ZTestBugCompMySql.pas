@@ -2096,6 +2096,7 @@ begin
   Check(Query <> nil);
   try
     {$IFNDEF CPU64}
+    Connection.Connect;
     //there is no 32 bit dll for MySQL 8+, but the test can pass using libmariadb of v10+
     //otherwise using last 6.1 connection we cat a Maleformed communication error
     if (Query.Connection.DbcConnection.GetMetadata as IZMySQLDatabaseMetadata).IsMySQL and
