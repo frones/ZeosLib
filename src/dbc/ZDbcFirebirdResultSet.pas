@@ -122,6 +122,10 @@ type
     ///  if the cursor is at any other position or the result set contains no
     ///  rows</returns>
     function IsAfterLast: Boolean; override;
+    /// <summary>Moves the cursor to the first row in this <c>ResultSet</c>
+    ///  object.</summary>
+    /// <returns><c>true</c> if the cursor is on a valid row; <c>false</c> if
+    ///  there are no rows in the resultset</returns>
     function First: Boolean; override;
     /// <summary>Moves the cursor to the last row in this <c>ResultSet</c>
     ///  object.</summary>
@@ -568,13 +572,6 @@ begin
   FResultSetAddr := ResultSet;
 end;
 
-{**
-  Moves the cursor to the first row in
-  this <code>ResultSet</code> object.
-
-  @return <code>true</code> if the cursor is on a valid row;
-  <code>false</code> if there are no rows in the result set
-}
 function TZFirebirdResultSet.First: Boolean;
 var Status: Integer;
 begin

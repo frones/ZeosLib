@@ -1702,6 +1702,10 @@ type
     function IsLast: Boolean;
     procedure BeforeFirst;
     procedure AfterLast;
+    /// <summary>Moves the cursor to the first row in this <c>ResultSet</c>
+    ///  object.</summary>
+    /// <returns><c>true</c> if the cursor is on a valid row; <c>false</c> if
+    ///  there are no rows in the resultset</returns>
     function First: Boolean;
     /// <summary>Moves the cursor to the last row in this <c>ResultSet</c>
     ///  object.</summary>
