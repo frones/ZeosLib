@@ -3566,62 +3566,56 @@ var
   IndexName: string;
   ColumnNames: TStrings;
 begin
-    Result := ConstructVirtualResultSet(BestRowIdentColumnsDynArray);
-    ColumnNames := TStringList.Create;
-    try
-      { Tries primary keys. }
-      with GetPrimaryKeys(Catalog, Schema, Table) do
-      begin
-        while Next do
-          ColumnNames.Add(GetString(PrimaryKeyColumnNameIndex));
-        Close;
-      end;
-
-      { Tries unique indices. }
-      if ColumnNames.Count = 0 then
-      begin
-        with GetIndexInfo(Catalog, Schema, Table, True, False) do
-        begin
-          IndexName := '';
-          while Next do
-          begin
-            if IndexName = '' then
-              IndexName := GetString(IndexInfoColIndexNameIndex);
-            if GetString(IndexInfoColIndexNameIndex) = IndexName then
-              ColumnNames.Add(GetString(ColumnNameIndex));
-          end;
-          Close;
-        end;
-      end;
-
-      with GetColumns(Catalog, AddEscapeCharToWildcards(Schema), AddEscapeCharToWildcards(Table), '') do
-      begin
-        while Next do
-        begin
-          if (ColumnNames.Count <> 0) and (ColumnNames.IndexOf(
-            GetString(ColumnNameIndex)) < 0) then
-            Continue;
-          if (ColumnNames.Count = 0)
-            and (TZSQLType(GetSmall(TableColColumnTypeIndex)) in
-            [stBytes, stBinaryStream, stAsciiStream, stUnicodeStream]) then
-            Continue;
-
-          Result.MoveToInsertRow;
-          Result.UpdateInt(BestRowIdentScopeIndex, Ord(sbrSession));
-          Result.UpdateString(BestRowIdentColNameIndex, GetString(ColumnNameIndex));
-          Result.UpdateSmall(BestRowIdentDataTypeIndex, GetSmall(TableColColumnTypeIndex));
-          Result.UpdateString(BestRowIdentTypeNameIndex, GetString(TableColColumnTypeNameIndex));
-          Result.UpdateInt(BestRowIdentColSizeIndex, GetInt(TableColColumnSizeIndex));
-          Result.UpdateInt(BestRowIdentBufLengthIndex, GetInt(TableColColumnBufLengthIndex));
-          Result.UpdateInt(BestRowIdentDecimalDigitsIndex, GetInt(TableColColumnDecimalDigitsIndex));
-          Result.UpdateInt(BestRowIdentPseudoColumnIndex, Ord(brNotPseudo));
-          Result.InsertRow;
-        end;
-        Close;
-      end;
-    finally
-      ColumnNames.Free;
+  Result := ConstructVirtualResultSet(BestRowIdentColumnsDynArray);
+  ColumnNames := TStringList.Create;
+  try
+    { Tries primary keys. }
+    with GetPrimaryKeys(Catalog, Schema, Table) do begin
+      while Next do
+        ColumnNames.Add(GetString(PrimaryKeyColumnNameIndex));
+      Close;
     end;
+    { Tries unique indices. }
+    if ColumnNames.Count = 0 then
+    begin
+      with GetIndexInfo(Catalog, Schema, Table, True, False) do begin
+        IndexName := '';
+        while Next do begin
+          if IndexName = '' then
+            IndexName := GetString(IndexInfoColIndexNameIndex);
+          if GetString(IndexInfoColIndexNameIndex) = IndexName then
+            ColumnNames.Add(GetString(IndexInfoColColumnNameIndex));
+        end;
+        Close;
+      end;
+    end;
+
+    with GetColumns(Catalog, AddEscapeCharToWildcards(Schema), AddEscapeCharToWildcards(Table), '') do begin
+      while Next do begin
+        if (ColumnNames.Count <> 0) and (ColumnNames.IndexOf(
+          GetString(ColumnNameIndex)) < 0) then
+          Continue;
+        if (ColumnNames.Count = 0)
+          and (TZSQLType(GetSmall(TableColColumnTypeIndex)) in
+          [stBytes, stBinaryStream, stAsciiStream, stUnicodeStream]) then
+          Continue;
+
+        Result.MoveToInsertRow;
+        Result.UpdateInt(BestRowIdentScopeIndex, Ord(sbrSession));
+        Result.UpdateString(BestRowIdentColNameIndex, GetString(ColumnNameIndex));
+        Result.UpdateSmall(BestRowIdentDataTypeIndex, GetSmall(TableColColumnTypeIndex));
+        Result.UpdateString(BestRowIdentTypeNameIndex, GetString(TableColColumnTypeNameIndex));
+        Result.UpdateInt(BestRowIdentColSizeIndex, GetInt(TableColColumnSizeIndex));
+        Result.UpdateInt(BestRowIdentBufLengthIndex, GetInt(TableColColumnBufLengthIndex));
+        Result.UpdateInt(BestRowIdentDecimalDigitsIndex, GetInt(TableColColumnDecimalDigitsIndex));
+        Result.UpdateInt(BestRowIdentPseudoColumnIndex, Ord(brNotPseudo));
+        Result.InsertRow;
+      end;
+      Close;
+    end;
+  finally
+    ColumnNames.Free;
+  end;
 end;
 
 {**
