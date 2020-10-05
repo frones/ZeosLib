@@ -143,7 +143,7 @@ begin
   CheckEquals(BestRowIdentDecimalDigitsIndex, ResultSet.FindColumn('DECIMAL_DIGITS'));
   CheckEquals(BestRowIdentPseudoColumnIndex, ResultSet.FindColumn('PSEUDO_COLUMN'));
 
-  ResultSet.Next;
+  Check(ResultSet.Next);
   CheckEquals('2', ResultSet.GetStringByName('SCOPE'));
   CheckEquals('p_id', ResultSet.GetStringByName('COLUMN_NAME'));
   CheckEquals(ord(stSmall), ResultSet.GetIntByName('DATA_TYPE'));
