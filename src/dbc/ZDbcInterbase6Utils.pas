@@ -1286,6 +1286,7 @@ begin
         then Result := stAsciiStream
         else Result := stBinaryStream;
     SQL_ARRAY: Result := stArray;
+    SQL_DEC_FIXED, SQL_INT128: Result := stBigDecimal;
     else  Result := stString;
   end;
 end;
