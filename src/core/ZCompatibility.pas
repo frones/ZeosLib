@@ -79,6 +79,9 @@ type
     {$IFNDEF ENDIAN_BIG}hi,lo{$ELSE}lo, hi{$ENDIF}: UInt64;
   end;
   {$IFEND}
+  {$IF not declared(PUInt128)}
+  PUInt128 = ^UInt128;
+  {$IFEND}
   {$IF not declared(Int128)}
   Int128                = packed record
     {$IFNDEF ENDIAN_BIG}
@@ -89,6 +92,9 @@ type
     hi: Int64;
     {$ENDIF}
   end;
+  {$IFEND}
+  {$IF not declared(PInt128)}
+  PInt128 = ^Int128;
   {$IFEND}
   {$IF not declared(PPLongWord)}
   PPLongWord            = ^PLongWord;
