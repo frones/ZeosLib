@@ -80,6 +80,8 @@
 {$DEFINE WITH_FTWIDESTRING}  // Supported from somewhere between 2.2 and 2.4
 {$DEFINE WITH_PARAM_ASWIDESTRING}
 
+{$DEFINE WITH_ACTIVE_DATASET_ERROR_ON_FIRST_ROW_BUG} // FPC datasets are activ on open a query but first next errors out
+
 {$IF FPC_FULLVERSION>=20500}  // Upgrade to 2.6.x asap.
   {$DEFINE FPC2_5UP} // Used in code
   {$DEFINE WITH_NEWTOBJECT}

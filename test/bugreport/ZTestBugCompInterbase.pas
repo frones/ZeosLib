@@ -1552,6 +1552,7 @@ var
   B: Boolean;
 begin
   Query := CreateReadOnlyQuery;
+  Check(Query <> nil);
   try
     Query.SQL.Text := 'select * from date_values where d_date>2020-09-25';
     try
@@ -1560,8 +1561,10 @@ begin
       on E:Exception do
         CheckNotTestFailure(E, 'missing date quotes');
     end;
-    Check(Query.Active);
+    {$IFDEF WITH_ACTIVE_DATASET_ERROR_ON_FIRST_ROW_BUG}
+    Check(Query.Active); //that's a FPC bug. Delphi datasets are closed
     Check(Query.Eof);
+    {$ENDIF}
     Query.SQL.Text := 'select * from date_values';
     for B := false to true do begin
       Query.Active := False;
