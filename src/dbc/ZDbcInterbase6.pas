@@ -613,6 +613,12 @@ reconnect:
     end;
   end else if FClientCodePage = '' then
     CheckCharEncoding(DBCP);
+  if (FHostVersion >= 4000000) then begin
+    if (Info.Values[ConnProps_isc_dpb_session_time_zone] = '') then
+      ExecuteImmediat('SET TIME ZONE LOCAL', lcExecute);
+    ExecuteImmediat('SET BIND OF TIME ZONE TO LEGACY', lcExecute);
+    ExecuteImmediat('SET BIND OF DECFLOAT TO LEGACY', lcExecute);
+  end;
 end;
 
 {**
