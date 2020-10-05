@@ -1159,11 +1159,11 @@ begin
 
   GetCatalogAndNamePattern(Catalog, SchemaPattern, TableNamePattern,
     LCatalog, LTableNamePattern);
-  LTableNamePattern := IC.Quote(LTableNamePattern, iqTable);
+  //LTableNamePattern := IC.Quote(LTableNamePattern, iqTable);
   with (GetConnection as IZMySQLConnection) do begin
     with CreateStatementWithParams(FInfo).ExecuteQuery(
       Format('SHOW TABLES FROM %s LIKE ''%s''',
-      [IC.Quote(LCatalog), LTableNamePattern])) do begin
+      [LCatalog, LTableNamePattern])) do begin
       while Next do begin
         Result.MoveToInsertRow;
         Result.UpdateString(CatalogNameIndex, LCatalog);
@@ -1180,7 +1180,7 @@ begin
       try
         RS := CreateStatementWithParams(FInfo).ExecuteQuery(
           Format('SHOW COLUMNS FROM %s.%s',
-          [IC.Quote(LCatalog, iqCatalog), LTableNamePattern]));
+          [LCatalog, LTableNamePattern]));
         if (RS <> nil) then begin
           if RS.Next then begin
             Result.MoveToInsertRow;
@@ -3242,11 +3242,17 @@ end;
 
 function TZMySQLIdentifierConverter.Quote(const Value: string;
   Qualifier: TZIdentifierQualifier): string;
+var
+  QuoteDelim: string;
+  PQ: PChar absolute QuoteDelim;
 begin
   if Qualifier in [iqCatalog, iqSchema, iqTable, iqEvent, iqTrigger] then begin
     Result := AnsiLowerCase(Value);
     if GetIdentifierCase(Value, true) = icSpecial then
-      Result := SQLQuotedStr(Value, '"');
+      QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
+      if QuoteDelim = '' then
+        QuoteDelim := '`';
+      Result := SQLQuotedStr(Value, PQ^);
   end else
     Result := inherited Quote(Value, Qualifier);
 end;
