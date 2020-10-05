@@ -724,13 +724,13 @@ begin
           end else if (sqltype = SQL_TIME_TZ) or  (sqltype = SQL_TIME_TZ_EX) then begin
             sqllen := SizeOf(TISC_TIME);
             sqltype := SQL_TYPE_TIME;
-          end else if sqltype = SQL_DEC16 then begin
+          end else if (sqltype = SQL_DEC16) or (sqltype = SQL_DEC34) then begin
             sqltype := SQL_DOUBLE;
             sqllen := SizeOf(Double);
-          end else if (sqltype = SQL_DEC34) then begin
+          end (*else if (sqltype = SQL_DEC34) then begin
             sqltype := SQL_VARYING;
             sqllen := {$IFDEF WITH_CLASS_CONST}IDecFloat34.STRING_SIZE{$ELSE}IDecFloat34_STRING_SIZE{$ENDIF};
-          end else if (sqltype = SQL_INT128) or (sqltype = SQL_DEC_FIXED) then begin
+          end *)else if (sqltype = SQL_INT128) or (sqltype = SQL_DEC_FIXED) then begin
             sqltype := SQL_VARYING;
             sqllen := {$IFDEF WITH_CLASS_CONST}IInt128.STRING_SIZE{$ELSE}IInt128_STRING_SIZE{$ENDIF};
           end;

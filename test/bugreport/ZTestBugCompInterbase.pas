@@ -1608,7 +1608,7 @@ begin
 
     Field := Query.FindField('decfloat34');
     Check(Assigned(Field), 'Field decfloat34 not found.');
-    CheckStringFieldType(Field, Connection.ControlsCodePage);
+    CheckEquals(ftFloat, Field.DataType, 'Field decfloat34 is not of type ftFloat');
 
     Field := Query.FindField('float30');
     Check(Assigned(Field), 'Field float30 not found.');
