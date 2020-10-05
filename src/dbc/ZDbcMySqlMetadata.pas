@@ -236,7 +236,7 @@ type
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-26
 
     procedure GetCatalogAndNamePattern(const Catalog, SchemaPattern,
-      NamePattern: string; out OutCatalog, OutNamePattern: string);
+      NamePattern: string; NameQualifier: TZIdentifierQualifier; out OutCatalog, OutNamePattern: string);
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
 //    function UncachedGetSchemas: IZResultSet; override; -> Not implemented
@@ -317,7 +317,7 @@ implementation
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   {$IFDEF UNICODE}ZEncoding,{$ENDIF}
-  ZFastCode, ZMessages, ZCollections,
+  ZFastCode, ZMessages, ZCollections, ZMatchPattern,
   ZDbcMySqlUtils, ZDbcUtils, ZDbcProperties, ZDbcMySql;
 
 { TZMySQLDatabaseInfo }
@@ -1062,22 +1062,28 @@ begin
 end;
 
 procedure TZMySQLDatabaseMetadata.GetCatalogAndNamePattern(const Catalog,
-  SchemaPattern, NamePattern: string; out OutCatalog, OutNamePattern: string);
+  SchemaPattern, NamePattern: string; NameQualifier: TZIdentifierQualifier;
+  out OutCatalog, OutNamePattern: string);
 begin
   if Catalog = '' then
-  begin
-    if SchemaPattern <> '' then
-      OutCatalog := NormalizePatternCase(SchemaPattern)
-    else
-      OutCatalog := NormalizePatternCase(FDatabase);
-  end
-  else
-    OutCatalog := NormalizePatternCase(Catalog);
-
-  if NamePattern = '' then
-    OutNamePattern := '%'
-  else
-    OutNamePattern := NormalizePatternCase(NamePattern);
+    if SchemaPattern <> ''
+    then OutCatalog := SchemaPattern
+    else OutCatalog := FDatabase
+  else OutCatalog := Catalog;
+  if FIC.IsQuoted(OutCatalog) then
+    OutCatalog := FIC.ExtractQuote(OutCatalog);
+  if Flower_case_table_names > 0 then
+    OutCatalog := AnsiLowerCase(OutCatalog);
+  if NamePattern = ''
+  then OutNamePattern := '%'
+  else begin
+    if FIC.IsQuoted(NamePattern)
+    then OutNamePattern := FIC.ExtractQuote(NamePattern)
+    else OutNamePattern := NamePattern;
+    if (NameQualifier in [iqCatalog, iqSchema, iqTable, iqEvent, iqTrigger]) and
+       (Flower_case_table_names > 0) then
+      OutNamePattern := AnsiLowerCase(OutNamePattern);
+  end;
 end;
 
 function TZMySQLDatabaseMetadata.GetIdentifierConverter: IZIdentifierConverter;
@@ -1152,49 +1158,74 @@ function TZMySQLDatabaseMetadata.UncachedGetTables(const Catalog: string;
   const Types: TStringDynArray): IZResultSet;
 var
   Len: NativeUInt;
-  LCatalog, LTableNamePattern: string;
+  LCatalog, LTableNamePattern, Tmp: string;
   RS: IZResultSet;
+  List: TStrings;
+  I: Integer;
+  MySQLCon: IZMySQLConnection;
 begin
   Result := inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
-
-  GetCatalogAndNamePattern(Catalog, SchemaPattern, TableNamePattern,
-    LCatalog, LTableNamePattern);
-  //LTableNamePattern := IC.Quote(LTableNamePattern, iqTable);
-  with (GetConnection as IZMySQLConnection) do begin
-    with CreateStatementWithParams(FInfo).ExecuteQuery(
-      Format('SHOW TABLES FROM %s LIKE ''%s''',
-      [LCatalog, LTableNamePattern])) do begin
-      while Next do begin
-        Result.MoveToInsertRow;
-        Result.UpdateString(CatalogNameIndex, LCatalog);
-        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(FirstDbcIndex, Len), Len);
-        Result.UpdateString(TableColumnsSQLType, 'TABLE');
-        Result.InsertRow;
-      end;
-      Close;
-    end;
-
-    // If a table was specified but not found, check if it could be a temporary table
-    if not Result.First and (LTableNamePattern <> '%') then begin
-      SetSilentError(true);
+  List := TStringList.Create;
+  MySQLCon := GetConnection as IZMySQLConnection;
+  try
+    GetCatalogAndNamePattern(Catalog, SchemaPattern, TableNamePattern,
+      iqTable, LCatalog, LTableNamePattern);
+    if (Catalog = '') and (SchemaPattern <> '') and not HasNoWildcards(SchemaPattern) then begin
+      LCatalog := StripEscape(SchemaPattern);
+      RS := GetCatalogs;
       try
-        RS := CreateStatementWithParams(FInfo).ExecuteQuery(
-          Format('SHOW COLUMNS FROM %s.%s',
-          [LCatalog, LTableNamePattern]));
-        if (RS <> nil) then begin
-          if RS.Next then begin
-            Result.MoveToInsertRow;
-            Result.UpdateString(CatalogNameIndex, LCatalog);
-            Result.UpdateString(TableNameIndex, LTableNamePattern);
-            Result.UpdateString(TableColumnsSQLType, 'TABLE');
-            Result.InsertRow;
-          end;
-          Rs.Close;
+        while RS.Next do begin
+          Tmp := RS.GetString(FirstDbcIndex);
+          if ZMatchPattern.Like(LCatalog, Pointer(Tmp), Length(Tmp)) then
+            List.Add(Tmp);
         end;
       finally
-        SetSilentError(False);
+        RS.Close;
+        RS := nil;
+      end;
+    end else
+      List.Add(LCatalog);
+    for i := List.Count -1 downto 0 do begin
+      LCatalog := List[i];
+      List.Delete(I);
+      with MySQLCon.CreateStatementWithParams(FInfo).ExecuteQuery(
+        Format('SHOW TABLES FROM %s LIKE ''%s''',
+        [IC.Quote(LCatalog, iqCatalog), LTableNamePattern])) do begin
+        while Next do begin
+          Result.MoveToInsertRow;
+          Result.UpdateString(CatalogNameIndex, LCatalog);
+          Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(FirstDbcIndex, Len), Len);
+          Result.UpdateString(TableColumnsSQLType, 'TABLE');
+          Result.InsertRow;
+        end;
+        Close;
+      end;
+
+      // If a table was specified but not found, check if it could be a temporary table
+      if not Result.First and (LTableNamePattern <> '%') then begin
+        MySQLCon.SetSilentError(true);
+        try
+          RS := MySQLCon.CreateStatementWithParams(FInfo).ExecuteQuery(
+            Format('SHOW COLUMNS FROM %s.%s',
+            [IC.Quote(LCatalog, iqCatalog), IC.Quote(LTableNamePattern, iqTable)]));
+          if (RS <> nil) then begin
+            if RS.Next then begin
+              Result.MoveToInsertRow;
+              Result.UpdateString(CatalogNameIndex, LCatalog);
+              Result.UpdateString(TableNameIndex, LTableNamePattern);
+              Result.UpdateString(TableColumnsSQLType, 'TABLE');
+              Result.InsertRow;
+            end;
+            Rs.Close;
+          end;
+        finally
+          MySQLCon.SetSilentError(False);
+        end;
       end;
     end;
+  finally
+    FreeAndNil(List);
+    MySQLCon := nil;
   end;
 end;
 
@@ -1307,24 +1338,20 @@ var
   OrdPosition: Integer;
 
   TableNameList: TStrings;
-  TableNameLength: Integer;
   ColumnIndexes : Array[1..7] of integer;
 begin
   Result := inherited UncachedGetColumns(Catalog, SchemaPattern,
     TableNamePattern, ColumnNamePattern);
 
   GetCatalogAndNamePattern(Catalog, SchemaPattern, ColumnNamePattern,
-    TempCatalog, TempColumnNamePattern);
+    iqColumn, TempCatalog, TempColumnNamePattern);
 
-  TableNameLength := 0;
   TableNameList := TStringList.Create;
   AddToBoolCache := False;
   try
     with GetTables(Catalog, SchemaPattern, TableNamePattern, nil) do begin
-      while Next do begin
+      while Next do
         TableNameList.Add(GetString(TableNameIndex)); //TABLE_NAME
-        TableNameLength := Max(TableNameLength, Length(TableNameList[TableNameList.Count - 1]));
-      end;
       Close;
     end;
 
@@ -1709,7 +1736,8 @@ function TZMySQLDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
   Len: NativeUInt;
-  KeyType: string;
+  P: PAnsiChar;
+  L: NativeUInt;
   LCatalog, LTable: string;
   ColumnIndexes : Array[1..3] of integer;
 begin
@@ -1719,22 +1747,20 @@ begin
   Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
 
   GetCatalogAndNamePattern(Catalog, Schema, Table,
-    LCatalog, LTable);
+    iqTable, LCatalog, LTable);
 
   with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
     Format('SHOW KEYS FROM %s.%s',
     [IC.Quote(LCatalog, iqCatalog),
-    IC.Quote(LTable, iqTable)])) do
-  begin
+    IC.Quote(LTable, iqTable)])) do begin
     ColumnIndexes[1] := FindColumn('Key_name');
     ColumnIndexes[2] := FindColumn('Column_name');
     ColumnIndexes[3] := FindColumn('Seq_in_index');
     while Next do
     begin
-      KeyType := UpperCase(GetString(ColumnIndexes[1]));
-      KeyType := Copy(KeyType, 1, 3);
-      if KeyType = 'PRI' then
-      begin
+      P := GetPAnsiChar(ColumnIndexes[1], L);
+      Trim(L, P);
+      if (L >= 3) and ZSysUtils.SameText(PAnsiChar('PRI'), P, 3) then begin
         Result.MoveToInsertRow;
         Result.UpdateString(CatalogNameIndex, LCatalog);
         Result.UpdateString(SchemaNameIndex, '');
@@ -1832,7 +1858,7 @@ begin
   Result := inherited UncachedGetImportedKeys(Catalog, Schema, Table);
 
   GetCatalogAndNamePattern(Catalog, Schema, Table,
-    LCatalog, LTable);
+    iqTable, LCatalog, LTable);
 
   KeyList := TStringList.Create;
   CommentList := TStringList.Create;
@@ -1974,7 +2000,7 @@ begin
   Result:=inherited UncachedGetExportedKeys(Catalog, Schema, Table);
 
   GetCatalogAndNamePattern(Catalog, Schema, Table,
-    LCatalog, LTable);
+    iqTable, LCatalog, LTable);
 
   KeyList := TStringList.Create;
   CommentList := TStringList.Create;
@@ -2360,49 +2386,56 @@ function TZMySQLDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
   const Schema: string; const Table: string; Unique: Boolean;
   Approximate: Boolean): IZResultSet;
 var
-  Len: NativeUInt;
+  RS: IZResultSet;
   LCatalog, LTable: string;
-  ColumnIndexes : Array[1..7] of integer;
-begin
-  if Table = '' then
-    raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
-
-  Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
-
-  GetCatalogAndNamePattern(Catalog, Schema, Table,
-    LCatalog, LTable);
-
-  with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
-    Format('SHOW INDEX FROM %s.%s',
-    [IC.Quote(LCatalog, iqCatalog),
-    IC.Quote(LTable, iqTable)])) do
+  procedure FillResult(const Result: IZResultSet; const Catalog, Table: String);
+  var
+    Len: NativeUInt;
+    ColumnIndexes : Array[1..7] of integer;
   begin
-    ColumnIndexes[1] := FindColumn('Table');
-    ColumnIndexes[2] := FindColumn('Non_unique');
-    ColumnIndexes[3] := FindColumn('Key_name');
-    ColumnIndexes[4] := FindColumn('Seq_in_index');
-    ColumnIndexes[5] := FindColumn('Column_name');
-    ColumnIndexes[6] := FindColumn('Collation');
-    ColumnIndexes[7] := FindColumn('Cardinality');
-    while Next do
-    begin
-      Result.MoveToInsertRow;
-      Result.UpdateString(CatalogNameIndex, LCatalog);
-      //Result.UpdateNull(SchemaNameIndex);
-      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(ColumnIndexes[1], Len), Len);
-      Result.UpdateString(IndexInfoColNonUniqueIndex, LowerCase(BoolStrs[GetInt(ColumnIndexes[2]) = 0]));
-      //Result.UpdateNull(IndexInfoColIndexQualifierIndex);
-      Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, GetPAnsiChar(ColumnIndexes[3], Len), Len);
-      Result.UpdateByte(IndexInfoColTypeIndex, Ord(tiOther));
-      Result.UpdateInt(IndexInfoColOrdPositionIndex, GetInt(ColumnIndexes[4]));
-      Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, GetPAnsiChar(ColumnIndexes[5], Len), Len);
-      Result.UpdatePAnsiChar(IndexInfoColAscOrDescIndex, GetPAnsiChar(ColumnIndexes[6], Len), Len);
-      Result.UpdatePAnsiChar(IndexInfoColCardinalityIndex, GetPAnsiChar(ColumnIndexes[7], Len), Len);
-      Result.UpdateInt(IndexInfoColPagesIndex, 0);
-      //Result.UpdateNull(IndexInfoColFilterConditionIndex);
-      Result.InsertRow;
+    with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
+      'SHOW INDEX FROM '+IC.Quote(Catalog)+'.'+IC.Quote(Table)) do begin
+      ColumnIndexes[1] := FindColumn('Table');
+      ColumnIndexes[2] := FindColumn('Non_unique');
+      ColumnIndexes[3] := FindColumn('Key_name');
+      ColumnIndexes[4] := FindColumn('Seq_in_index');
+      ColumnIndexes[5] := FindColumn('Column_name');
+      ColumnIndexes[6] := FindColumn('Collation');
+      ColumnIndexes[7] := FindColumn('Cardinality');
+      while Next do begin
+        Result.MoveToInsertRow;
+        Result.UpdateString(CatalogNameIndex, Catalog);
+        //Result.UpdateNull(SchemaNameIndex);
+        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(ColumnIndexes[1], Len), Len);
+        Result.UpdateString(IndexInfoColNonUniqueIndex, LowerCase(BoolStrs[GetInt(ColumnIndexes[2]) = 0]));
+        //Result.UpdateNull(IndexInfoColIndexQualifierIndex);
+        Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, GetPAnsiChar(ColumnIndexes[3], Len), Len);
+        Result.UpdateByte(IndexInfoColTypeIndex, Ord(tiOther));
+        Result.UpdateInt(IndexInfoColOrdPositionIndex, GetInt(ColumnIndexes[4]));
+        Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, GetPAnsiChar(ColumnIndexes[5], Len), Len);
+        Result.UpdatePAnsiChar(IndexInfoColAscOrDescIndex, GetPAnsiChar(ColumnIndexes[6], Len), Len);
+        Result.UpdatePAnsiChar(IndexInfoColCardinalityIndex, GetPAnsiChar(ColumnIndexes[7], Len), Len);
+        Result.UpdateInt(IndexInfoColPagesIndex, 0);
+        //Result.UpdateNull(IndexInfoColFilterConditionIndex);
+        Result.InsertRow;
+      end;
+      Close;
     end;
-    Close;
+  end;
+begin
+  Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
+  GetCatalogAndNamePattern(Catalog, Schema, Table,
+    iqTable, LCatalog, LTable);
+  if Table = '' then begin
+    RS := GetTables(Catalog, AddEscapeCharToWildcards(Schema), AddEscapeCharToWildcards(Table), nil);
+    while RS.Next do begin
+      LCatalog := RS.GetString(CatalogNameIndex);
+      LTable := RS.GetString(TableNameIndex);
+      FillResult(Result, LCatalog, LTable);
+    end;
+    RS.Close;
+  end else begin
+    FillResult(Result, LCatalog, LTable);
   end;
 end;
 
@@ -3248,11 +3281,12 @@ var
 begin
   if Qualifier in [iqCatalog, iqSchema, iqTable, iqEvent, iqTrigger] then begin
     Result := AnsiLowerCase(Value);
-    if GetIdentifierCase(Value, true) = icSpecial then
+    if GetIdentifierCase(Value, true) = icSpecial then begin
       QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
       if QuoteDelim = '' then
         QuoteDelim := '`';
       Result := SQLQuotedStr(Value, PQ^);
+    end;
   end else
     Result := inherited Quote(Value, Qualifier);
 end;
