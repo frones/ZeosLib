@@ -3111,7 +3111,7 @@ set_Results:            Len := Result - PAnsiChar(FByteBuffer);
                           TempDate.Second, TempDate.Fractions * 10000,
                           Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
                       end;
-      else ZDbcUtils.CreateConversionError(ColumnIndex, ColumnType, stString);
+      else Raise CreateConversionError(ColumnIndex, ColumnType, stString);
     end;
   end;
 end;
@@ -3241,7 +3241,7 @@ set_Results:            Len := Result - PWideChar(FByteBuffer);
                           TempDate.Second, TempDate.Fractions * 100000,
                           Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
                       end;
-      else ZDbcUtils.CreateConversionError(ColumnIndex, ColumnType, stUnicodeString);
+      else raise CreateConversionError(ColumnIndex, ColumnType, stUnicodeString);
     end;
   end;
 end;
