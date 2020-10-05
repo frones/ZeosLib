@@ -3279,15 +3279,16 @@ var
   QuoteDelim: string;
   PQ: PChar absolute QuoteDelim;
 begin
-  if Qualifier in [iqCatalog, iqSchema, iqTable, iqEvent, iqTrigger] then begin
-    Result := AnsiLowerCase(Value);
+  if (Qualifier in [iqCatalog, iqSchema, iqTable, iqEvent, iqTrigger]) then
     if GetIdentifierCase(Value, true) = icSpecial then begin
       QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
       if QuoteDelim = '' then
         QuoteDelim := '`';
       Result := SQLQuotedStr(Value, PQ^);
-    end;
-  end else
+    end else if (Flower_case_table_names > 0)
+      then Result := AnsiLowerCase(Value)
+      else Result := Value
+  else
     Result := inherited Quote(Value, Qualifier);
 end;
 
