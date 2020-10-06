@@ -1203,6 +1203,7 @@ var StatusIdx: Integer;
     {$IF defined(Unicode) or defined(WITH_RAWBYTESTRING)}
     CP: Word;
     {$IFEND}
+    BugFixNextIsArgEnd: Boolean;
 begin
   Result := nil;
   StatusIdx := 0;
@@ -1263,12 +1264,14 @@ begin
       else
         Break;
     end; // case
-
+    BugFixNextIsArgEnd := StatusVector[StatusIdx] = isc_arg_end;
     // isc_interprete is deprecated so use fb_interpret instead if available
     if Assigned(FInterbaseFirebirdPlainDriver.fb_interpret) then begin
       if FInterbaseFirebirdPlainDriver.fb_interpret(@FByteBuffer[0], SizeOf(TByteBuffer)-1, @StatusVector) = 0 then
         Break;
     end else if FInterbaseFirebirdPlainDriver.isc_interprete(@FByteBuffer[0], @StatusVector) = 0 then
+      Break;
+    if BugFixNextIsArgEnd then
       Break;
     pCurrStatus.IBMessage := ConvertConnRawToString({$IFDEF UNICODE}
             ConSettings,{$ENDIF}@FByteBuffer[0]);

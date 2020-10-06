@@ -188,6 +188,7 @@ type
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
   public
     procedure AfterConstruction; override;
+    Destructor Destroy; override;
   public { IZFirebirdConnection }
     function GetActiveTransaction: IZFirebirdTransaction;
     function GetAttachment: IAttachment;
@@ -334,6 +335,15 @@ begin
   fTransactions.Add(Result);
 end;
 
+destructor TZFirebirdConnection.Destroy;
+begin
+  inherited;
+  if FStatus <> nil then begin
+    FStatus.Dispose;
+    FStatus := nil;
+  end;
+end;
+
 procedure TZFirebirdConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 var ZTrans: IZFirebirdTransaction;
@@ -439,10 +449,6 @@ begin
   if FProvider <> nil then begin
     FProvider.release;
     FProvider := nil;
-  end;
-  if FStatus <> nil then begin
-    FStatus.dispose;
-    FStatus := nil;
   end;
 end;
 

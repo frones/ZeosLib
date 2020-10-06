@@ -2406,8 +2406,8 @@ end;
 constructor EZSQLThrowable.CreateClone(const E: EZSQLThrowable);
 begin
   inherited Create(E.Message);
-  FErrorCode:=E.ErrorCode;
-  FStatusCode:=E.Statuscode;
+  FErrorCode := E.ErrorCode;
+  FStatusCode := E.Statuscode;
   if E.SpecificData <> nil then
     FSpecificData := E.SpecificData.Clone;
 end;
