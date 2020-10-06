@@ -356,6 +356,14 @@ type
     Obj: TZAbstractFirebirdInterbasePreparedStatement;
     PreparedRowsOfArray: Integer;
   end;
+  /// <summary>Implements a List for IB and FB containing original sqltype and
+  ///  sqlscale</summary>
+  TZIBFBOrgSqlTypeAndScaleList = class(TZSortedList)
+  public
+    function Add(sqltype: Cardinal; scale: Integer; Nullable: Boolean): Integer;
+    procedure Clear; override;
+  end;
+
 
   {** Implements IZPreparedStatement for Firebird and Interbase. }
   TZAbstractFirebirdInterbasePreparedStatement = class(TZAbstractPreparedStatement)
@@ -376,6 +384,7 @@ type
     FInData, FOutData: Pointer;
     FCodePageArray: TWordDynArray;
     FByteBuffer: PByteBuffer;
+    FOrgTypeList: TZIBFBOrgSqlTypeAndScaleList;
     procedure ExecuteBatchDml; virtual;
     function SplittQuery(const SQL: SQLString): RawByteString;
 
@@ -391,6 +400,7 @@ type
   public
     Constructor Create(const Connection: IZInterbaseFirebirdConnection;
       const SQL: String; Info: TStrings);
+    Destructor Destroy; override;
   public
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
       var AError: EZSQLConnectionLost); override;
@@ -492,6 +502,13 @@ type
   public
     constructor Create(const Statement: IZStatement); overload;
     function ColumnIsGUID(SQLType: TZSQLType; DataSize: Integer; const ColumnName: string): Boolean;
+  end;
+
+  PZIBFBOrgSqlTypeAndScale = ^TZIBFBOrgSqlTypeAndScale;
+  TZIBFBOrgSqlTypeAndScale = record
+    sqltype: cardinal;
+    scale: Integer;
+    Nullable: Boolean;
   end;
 
 procedure BindSQLDAInParameters(BindList: TZBindList;
@@ -2395,6 +2412,10 @@ begin
       SQL_TIMESTAMP,
       SQL_TYPE_DATE,
       SQL_TYPE_TIME : Double2BCD(GetDouble(ColumnIndex), Result);
+      (*SQL_DEC_FIXED, SQL_INT128: begin
+          P := GetPCharFromTextVar(Len);
+          LastWasNull := not TryRawToBCD(P, Len, Result, '.');
+        end;*)
       else raise CreateConversionError(ColumnIndex, ColumnType, stBigDecimal);
     end;
   end;
@@ -3007,7 +3028,7 @@ end;
 
 {**
   Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
+  of this <code>ResultSet</code> object as          8
   a <code>TZAnsiRec</code> in the Delphi programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
@@ -3511,6 +3532,16 @@ begin
   FDialect := Connection.GetDialect;
   FCodePageArray := Connection.GetInterbaseFirebirdPlainDriver.GetCodePageArray;
   FCodePageArray[FDB_CP_ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
+  FOrgTypeList := TZIBFBOrgSqlTypeAndScaleList.Create;
+end;
+
+destructor TZAbstractFirebirdInterbasePreparedStatement.Destroy;
+begin
+  inherited;
+  if FOrgTypeList <> nil then begin
+    FOrgTypeList.Clear;
+    FreeAndNil(FOrgTypeList);
+  end;
 end;
 
 procedure BindSQLDAInParameters(BindList: TZBindList;
@@ -5068,6 +5099,27 @@ begin
   SQLWriter.Finalize(SQL);
   FreeAndNil(SQLWriter);
   Result := InternalCreateExecutionStatement(Conn, SQL, Info);
+end;
+
+{ TZIBFBOrgSqlTypeAndScaleList }
+
+function TZIBFBOrgSqlTypeAndScaleList.Add(sqltype: Cardinal; scale: Integer;
+  Nullable: Boolean): Integer;
+var P: PZIBFBOrgSqlTypeAndScale;
+begin
+  GetMem(P, SizeOf(TZIBFBOrgSqlTypeAndScale));
+  P.sqltype := sqltype;
+  P.scale := scale;
+  p.Nullable := Nullable;
+  Result := inherited Add(P);
+end;
+
+procedure TZIBFBOrgSqlTypeAndScaleList.Clear;
+var I: Integer;
+begin
+  for i := 0 to Count -1 do
+    FreeMem(Items[i]);
+  inherited Clear;
 end;
 
 initialization
