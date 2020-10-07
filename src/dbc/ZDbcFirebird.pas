@@ -728,7 +728,7 @@ begin
     FTransaction.release;
     FTransaction := nil;
     fSavepoints.Clear;
-	  if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
       HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(FStatus.getErrors),
         sCommitMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
     FOwner.ReleaseTransaction(IZTransaction(FWeakIZTransactionPtr));
@@ -757,12 +757,13 @@ begin
       FTransaction.commitRetaining(FStatus);
       ReleaseTransaction(IZTransaction(FWeakIZTransactionPtr));
     end;
-	  if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
       HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(FStatus.getErrors),
         sCommitMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
   finally
-    if fDoLog and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, URL.Protocol, sCommitMsg);
+    if fDoLog and (ZDbcIntfs.DriverManager <> nil) and
+       ZDbcIntfs.DriverManager.HasLoggingListener then //don't use the local DriverManager of ZDbcConnection
+      ZDbcIntfs.DriverManager.LogMessage(lcTransaction, URL.Protocol, sCommitMsg);
   end;
 end;
 
@@ -824,12 +825,13 @@ begin
       FTransaction.rollbackRetaining(FStatus);
       ReleaseTransaction(IZTransaction(FWeakIZTransactionPtr));
     end;
-	  if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
       HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(FStatus.getErrors),
         sRollbackMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
   finally
-    if fDoLog and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, URL.Protocol, sRollbackMsg);
+    if fDoLog and (ZDbcIntfs.DriverManager <> nil) and
+       ZDbcIntfs.DriverManager.HasLoggingListener then //don't use the local DriverManager of ZDbcConnection
+      ZDbcIntfs.DriverManager.LogMessage(lcTransaction, URL.Protocol, sRollbackMsg);
   end;
 end;
 
@@ -844,7 +846,8 @@ begin
         Length(FTPB){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, Pointer(FTPB));
       FTransaction.AddRef;
       Result := Ord(not Self.FAutoCommit);
-      DriverManager.LogMessage(lcTransaction, URL.Protocol, 'TRANSACTION STARTED.');
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcTransaction, URL.Protocol, 'TRANSACTION STARTED.');
     end else begin
       Result := FSavePoints.Count+2;
       S := 'SP'+ZFastcode.IntToStr(NativeUInt(Self))+'_'+ZFastCode.IntToStr(Result);
