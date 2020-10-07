@@ -120,6 +120,8 @@ const
 const
   { Names of the connection configuration keys. }
   DATABASE_LIBLOCATION_KEY    = 'liblocation';
+  DATABASE_LIBLOCATION_KEY32  = 'liblocation32';
+  DATABASE_LIBLOCATION_KEY64  = 'liblocation64';
   DATABASE_ALIAS_KEY          = 'alias';
   DATABASE_PROTOCOL_KEY       = 'protocol';
   DATABASE_HOST_KEY           = 'host';
