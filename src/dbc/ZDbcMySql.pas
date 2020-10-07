@@ -612,51 +612,69 @@ setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def
       CheckCharEncoding(FClientCodePage);
     end;
     inherited Open;
-    if TMySqlOptionMinimumVersion[MYSQL_OPT_MAX_ALLOWED_PACKET] < GetHostVersion then begin
-      S := Info.Values[ConnProps_MYSQL_OPT_MAX_ALLOWED_PACKET];
-      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def{$ENDIF}(S, 0);
-      if (UIntOpt <> 0) then begin
-        SQL := 'SET GLOBAL max_allowed_packet='+IntToRaw(UIntOpt);
+  finally
+    if Closed then begin
+      FPlainDriver.mysql_close(FHandle);
+      FHandle := nil;
+    end;
+  end;
+  if TMySqlOptionMinimumVersion[MYSQL_OPT_MAX_ALLOWED_PACKET] < GetHostVersion then begin
+    S := Info.Values[ConnProps_MYSQL_OPT_MAX_ALLOWED_PACKET];
+    UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def{$ENDIF}(S, 0);
+    if (UIntOpt <> 0) then begin
+      SQL := 'SET GLOBAL max_allowed_packet='+IntToRaw(UIntOpt);
+      ExecuteImmediat(SQL, lcOther);
+    end;
+  end;
+  //no real version check required -> the user can simply switch off treading
+  //enum('Y','N')
+  S := Info.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean];
+  FMySQL_FieldType_Bit_1_IsBoolean := StrToBoolEx(S);
+  FSupportsBitType := (
+    (    FPlainDriver.IsMariaDBDriver and (ClientVersion >= 100109) ) or
+    (not FPlainDriver.IsMariaDBDriver and (ClientVersion >=  50003) ) ) and (GetHostVersion >= EncodeSQLVersioning(5,0,3));
+  //if not explizit !un!set -> assume as default since Zeos 7.3
+  FMySQL_FieldType_Bit_1_IsBoolean := FMySQL_FieldType_Bit_1_IsBoolean or (FSupportsBitType and (S = ''));
+  with (GetMetadata as IZMySQLDatabaseMetadata) do begin
+    SetMySQL_FieldType_Bit_1_IsBoolean(FMySQL_FieldType_Bit_1_IsBoolean);
+    FSupportsReadOnly := ( IsMariaDB and (GetHostVersion >= EncodeSQLVersioning(10,0,0))) or
+                         ( IsMySQL and (GetHostVersion >= EncodeSQLVersioning( 5,6,0)));
+    SetDataBaseName(GetDatabaseName);
+    with CreateStatement.ExecuteQuery('show variables like "lower_case_table_names"') do begin
+      if next
+      then Set_lower_case_table_names(GetByte(FirstDBCIndex))
+      else Set_lower_case_table_names({$IFDEF WINDOWS}1{$ELSE}{$IFDEF DARWIN}2{$ELSE}0{$ENDIF}{$ENDIF});
+      Close;
+    end;
+    sMyOpt := LowerCase(FClientCodePage);
+    if (sMyOpt = 'utf8') and (IsMariaDB or (GetHostVersion >= EncodeSQLVersioning(4,1,0))) then begin
+      CheckCharEncoding('utf8mb4');
+      //EH: MariaDB needs a explizit set of charset to be synced on Client<>Server!
+      SQL := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FClientCodePage);
+      if not Assigned(FPlainDriver.mysql_set_character_set) or
+            (FPlainDriver.mysql_set_character_set(FHandle, Pointer(SQL)) <> 0) then begin //failed? might be possible the function does not exists
+        SQL := 'SET NAMES '+SQL;
         ExecuteImmediat(SQL, lcOther);
       end;
     end;
-    //no real version check required -> the user can simply switch off treading
-    //enum('Y','N')
-    S := Info.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean];
-    FMySQL_FieldType_Bit_1_IsBoolean := StrToBoolEx(S);
-    FSupportsBitType := (
-      (    FPlainDriver.IsMariaDBDriver and (ClientVersion >= 100109) ) or
-      (not FPlainDriver.IsMariaDBDriver and (ClientVersion >=  50003) ) ) and (GetHostVersion >= EncodeSQLVersioning(5,0,3));
-    //if not explizit !un!set -> assume as default since Zeos 7.3
-    FMySQL_FieldType_Bit_1_IsBoolean := FMySQL_FieldType_Bit_1_IsBoolean or (FSupportsBitType and (S = ''));
-    with (GetMetadata as IZMySQLDatabaseMetadata) do begin
-      SetMySQL_FieldType_Bit_1_IsBoolean(FMySQL_FieldType_Bit_1_IsBoolean);
-      FSupportsReadOnly := ( IsMariaDB and (GetHostVersion >= EncodeSQLVersioning(10,0,0))) or
-                           ( IsMySQL and (GetHostVersion >= EncodeSQLVersioning( 5,6,0)));
-      SetDataBaseName(GetDatabaseName);
-    end;
-
-    { Sets transaction isolation level. }
-    if not (TransactIsolationLevel in [tiNone,tiRepeatableRead]) then
-      ExecuteImmediat(MySQLSessionTransactionIsolation[TransactIsolationLevel], lcTransaction);
-    if (FSupportsReadOnly and ReadOnly) then
-      ExecuteImmediat(MySQLSessionTransactionReadOnly[ReadOnly], lcTransaction);
-
-    { Sets an auto commit mode. }
-    if not AutoCommit then begin
-      AutoCommit := True;
-      SetAutoCommit(False);
-    end;
-    if FSupportsReadOnly and ReadOnly then begin
-      ReadOnly := False;
-      SetReadOnly(True);
-    end;
-
-  except
-    FPlainDriver.mysql_close(FHandle);
-    FHandle := nil;
-    raise;
   end;
+
+  { Sets transaction isolation level. }
+  if not (TransactIsolationLevel in [tiNone,tiRepeatableRead]) then
+    ExecuteImmediat(MySQLSessionTransactionIsolation[TransactIsolationLevel], lcTransaction);
+  if (FSupportsReadOnly and ReadOnly) then
+    ExecuteImmediat(MySQLSessionTransactionReadOnly[ReadOnly], lcTransaction);
+
+  { Sets an auto commit mode. }
+  if not AutoCommit then begin
+    AutoCommit := True;
+    SetAutoCommit(False);
+  end;
+  if FSupportsReadOnly and ReadOnly then begin
+    ReadOnly := False;
+    SetReadOnly(True);
+  end;
+
 
   if FClientCodePage = '' then begin //workaround for MySQL 4 down
     with CreateStatement.ExecuteQuery('show variables like "character_set_database"') do begin
@@ -787,10 +805,16 @@ Var
  killquery: SQLString;
  izc: IZConnection;
 Begin
-  // https://dev.mysql.com/doc/refman/5.7/en/mysql-kill.html
-  killquery := 'KILL QUERY ' + IntToStr(FPlainDriver.mysql_thread_id(FHandle));
-  izc := DriverManager.GetConnection(GetURL);
-  Result := izc.CreateStatement.ExecuteUpdate(killquery);
+  { EH untested, just prepared
+  if Assigned(FPlainDriver.mariadb_cancel) then begin
+    Result := FPlainDriver.mariadb_cancel(FHandle);
+    FPlainDriver.mariadb_reconnect(FHandle)
+  end else }begin
+    // https://dev.mysql.com/doc/refman/5.7/en/mysql-kill.html
+    killquery := 'KILL QUERY ' + IntToStr(FPlainDriver.mysql_thread_id(FHandle));
+    izc := DriverManager.GetConnection(GetURL);
+    Result := izc.CreateStatement.ExecuteUpdate(killquery);
+  end;
 End;
 
 {**

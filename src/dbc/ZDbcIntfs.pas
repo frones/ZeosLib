@@ -803,7 +803,8 @@ type
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet;
 
     function GetConnection: IZConnection;
-    function GetIdentifierConvertor: IZIdentifierConvertor;
+    function GetIdentifierConvertor: IZIdentifierConvertor; deprecated;
+    function GetIdentifierConverter: IZIdentifierConverter; //typo fixed
 
     procedure ClearCache; overload;
     procedure ClearCache(const Key: string); overload;
@@ -1701,6 +1702,10 @@ type
     function IsLast: Boolean;
     procedure BeforeFirst;
     procedure AfterLast;
+    /// <summary>Moves the cursor to the first row in this <c>ResultSet</c>
+    ///  object.</summary>
+    /// <returns><c>true</c> if the cursor is on a valid row; <c>false</c> if
+    ///  there are no rows in the resultset</returns>
     function First: Boolean;
     /// <summary>Moves the cursor to the last row in this <c>ResultSet</c>
     ///  object.</summary>
@@ -1893,6 +1898,7 @@ type
     function IsAutoIncrement(ColumnIndex: Integer): Boolean;
     function IsCaseSensitive(ColumnIndex: Integer): Boolean;
     function IsSearchable(ColumnIndex: Integer): Boolean;
+    procedure SetSearchable(ColumnIndex: Integer; Value: Boolean);
     function IsCurrency(ColumnIndex: Integer): Boolean;
     function IsNullable(ColumnIndex: Integer): TZColumnNullableType;
 
@@ -2400,8 +2406,8 @@ end;
 constructor EZSQLThrowable.CreateClone(const E: EZSQLThrowable);
 begin
   inherited Create(E.Message);
-  FErrorCode:=E.ErrorCode;
-  FStatusCode:=E.Statuscode;
+  FErrorCode := E.ErrorCode;
+  FStatusCode := E.Statuscode;
   if E.SpecificData <> nil then
     FSpecificData := E.SpecificData.Clone;
 end;

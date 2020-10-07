@@ -153,7 +153,7 @@ type
     procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
       StatusVector: PARRAY_ISC_STATUS; const LogMessage: SQLString;
       const Sender: IImmediatelyReleasable);
-    function InterpretInterbaseStatus(StatusVector: PARRAY_ISC_STATUS): TZIBStatusVector;
+    function InterpretInterbaseStatus(var StatusVector: PARRAY_ISC_STATUS): TZIBStatusVector;
     procedure SetActiveTransaction(const Value: IZTransaction);
     function GenerateTPB(AutoCommit, ReadOnly: Boolean; TransactIsolationLevel: TZTransactIsolationLevel;
       Info: TStrings): RawByteString;
@@ -356,6 +356,14 @@ type
     Obj: TZAbstractFirebirdInterbasePreparedStatement;
     PreparedRowsOfArray: Integer;
   end;
+  /// <summary>Implements a List for IB and FB containing original sqltype and
+  ///  sqlscale</summary>
+  TZIBFBOrgSqlTypeAndScaleList = class(TZSortedList)
+  public
+    function Add(sqltype: Cardinal; scale: Integer; Nullable: Boolean): Integer;
+    procedure Clear; override;
+  end;
+
 
   {** Implements IZPreparedStatement for Firebird and Interbase. }
   TZAbstractFirebirdInterbasePreparedStatement = class(TZAbstractPreparedStatement)
@@ -376,6 +384,7 @@ type
     FInData, FOutData: Pointer;
     FCodePageArray: TWordDynArray;
     FByteBuffer: PByteBuffer;
+    FOrgTypeList: TZIBFBOrgSqlTypeAndScaleList;
     procedure ExecuteBatchDml; virtual;
     function SplittQuery(const SQL: SQLString): RawByteString;
 
@@ -391,6 +400,7 @@ type
   public
     Constructor Create(const Connection: IZInterbaseFirebirdConnection;
       const SQL: String; Info: TStrings);
+    Destructor Destroy; override;
   public
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
       var AError: EZSQLConnectionLost); override;
@@ -492,6 +502,13 @@ type
   public
     constructor Create(const Statement: IZStatement); overload;
     function ColumnIsGUID(SQLType: TZSQLType; DataSize: Integer; const ColumnName: string): Boolean;
+  end;
+
+  PZIBFBOrgSqlTypeAndScale = ^TZIBFBOrgSqlTypeAndScale;
+  TZIBFBOrgSqlTypeAndScale = record
+    sqltype: cardinal;
+    scale: Integer;
+    Nullable: Boolean;
   end;
 
 procedure BindSQLDAInParameters(BindList: TZBindList;
@@ -1106,33 +1123,42 @@ procedure TZInterbaseFirebirdConnection.HandleErrorOrWarning(
 var
   FormatStr, ErrorString: string;
   ErrorCode: Integer;
+  StatusArg, WarningArg: ISC_STATUS;
   i: Integer;
   InterbaseStatusVector: TZIBStatusVector;
   Error: EZSQLThrowable;
   ExeptionClass: EZSQLThrowableClass;
+  OrgStatusVector: PARRAY_ISC_STATUS; //remainder for initialization
 begin
   { usually first isc_status is gds_arg_gds .. }
-  if (StatusVector[1] = 0) and (StatusVector[2] = isc_arg_end) then
+  StatusArg := StatusVector[1];
+  WarningArg := StatusVector[2];
+  if (StatusArg = isc_arg_end) and (WarningArg = isc_arg_end) then begin
     Exit; //neither Warning nor an Error
+  end;
+  OrgStatusVector := StatusVector;
   InterbaseStatusVector := InterpretInterbaseStatus(StatusVector);
   ErrorCode := InterbaseStatusVector[0].SQLCode;
   ErrorString := '';
-  for i := Low(InterbaseStatusVector) to High(InterbaseStatusVector) do
+  for i := Low(InterbaseStatusVector) to High(InterbaseStatusVector) do begin
     AppendSepString(ErrorString, InterbaseStatusVector[i].IBMessage, '; ');
+    if AddLogMsgToExceptionOrWarningMsg and (InterbaseStatusVector[i].IBMessage = '') then
+      AppendSepString(ErrorString, InterbaseStatusVector[i].SQLMessage, '; ');
+  end;
 
   if DriverManager.HasLoggingListener then
     LogError(LogCategory, ErrorCode, Sender, LogMessage, ErrorString);
   { in case second isc_status is zero(no error) and third is tagged as a warning it's a /are multiple warning(s)
     otoh it's an error with a possible warning(s)}
-  if (StatusVector[1] = 0)
+  if (WarningArg = isc_arg_warning)
   then ExeptionClass := EZSQLWarning
   else if (ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection) or
       (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_idle) or
       (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_engine)
     then ExeptionClass := EZSQLConnectionLost
     else ExeptionClass := EZIBSQLException;
-  PInt64(StatusVector)^ := 0; //init for fb3up
-  PInt64(PAnsiChar(StatusVector)+8)^ := 0; //init for fb3up
+  //used for clearing the current status vector, OTH, we permanently need a new IStatus, or IStatus.Init.
+  FillChar(Pointer(OrgStatusVector)^, (PAnsiChar(StatusVector) - PAnsiChar(OrgStatusVector))+SizeOf(ISC_STATUS), #0);//init the vector again for FB3+
   if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '') then
     if LogCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
     then FormatStr := SSQLError3
@@ -1167,10 +1193,17 @@ begin
 end;
 
 procedure TZInterbaseFirebirdConnection.InternalClose;
+var I: Integer;
+  Txn: IZTransaction;
 begin
   AutoCommit := not FRestartTransaction;
-  fTransactions.Clear;
-  fActiveTransaction := nil;
+  if fTransactions <> nil then begin
+    for I := fTransactions.Count -1 downto 0 do
+      if (fTransactions[i] <> nil) and (fTransactions[i].QueryInterface(IZTransaction, Txn) = S_OK) then
+        Txn.Close;
+    fTransactions.Clear;
+    fActiveTransaction := nil;
+  end;
 end;
 
 {**
@@ -1180,15 +1213,16 @@ end;
 }
 {$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZInterbaseFirebirdConnection.InterpretInterbaseStatus(
-  StatusVector: PARRAY_ISC_STATUS): TZIBStatusVector;
-var StatusIdx: Integer;
+  var StatusVector: PARRAY_ISC_STATUS): TZIBStatusVector;
+var //StatusIdx: Integer; EH: that leads to ugly rangecheck issues, since FP_Interpret is incrementing the ptr -> dead memory
     pCurrStatus: PZIBStatus;
     {$IF defined(Unicode) or defined(WITH_RAWBYTESTRING)}
     CP: Word;
     {$IFEND}
+    NextStatusVector{EH: that should mimic Fr0st's vector array, but does not overrun the memory}: PARRAY_ISC_STATUS;
 begin
   Result := nil;
-  StatusIdx := 0;
+  //StatusIdx := 0;
   {$IF defined(Unicode) or defined(WITH_RAWBYTESTRING)}
   if ConSettings.ClientCodePage = nil
   then CP := DefaultSystemCodePage
@@ -1206,9 +1240,12 @@ begin
       {$ELSE}
       ZSetString(PAnsiChar(@FByteBuffer[0]), ZFastCode.StrLen(@FByteBuffer[0]), RawByteString(pCurrStatus.SQLMessage){$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF});
       {$ENDIF}
+    //older compile would gangle about possibly unassigned, newers gangle about assigned but never used
+    //so let's use the variable in next cast line and all are happy
+    NextStatusVector := StatusVector;
     // IB data
-    pCurrStatus.IBDataType := StatusVector[StatusIdx];
-    case StatusVector[StatusIdx] of
+    pCurrStatus.IBDataType := PISC_STATUS(NextStatusVector)^;//StatusVector[StatusIdx];
+    case PISC_STATUS(StatusVector)^ {StatusVector[StatusIdx]} of
       isc_arg_end:  // end of argument list
         Break;
       isc_arg_gds,  // Long int code
@@ -1223,22 +1260,25 @@ begin
       isc_arg_netware,
       isc_arg_win32:
         begin
-          pCurrStatus.IBDataInt := StatusVector[StatusIdx + 1];
-          Inc(StatusIdx, 2);
+          pCurrStatus.IBDataInt := StatusVector[{StatusIdx + }1];
+          NextStatusVector := @StatusVector[2];
+          //Inc(StatusIdx, 2);
         end;
       isc_arg_string,  // pointer to string
       isc_arg_interpreted,
       isc_arg_sql_state:
         begin
           pCurrStatus.IBDataStr := ConvertConnRawToString({$IFDEF UNICODE}
-            ConSettings,{$ENDIF}Pointer(StatusVector[StatusIdx + 1]));
-          Inc(StatusIdx, 2);
+            ConSettings,{$ENDIF}Pointer(StatusVector[{StatusIdx + }1]));
+          NextStatusVector := @StatusVector[2];
+          //Inc(StatusIdx, 2);
         end;
       isc_arg_cstring: // length and pointer to string
         begin
           pCurrStatus.IBDataStr := ConvertConnRawToString({$IFDEF UNICODE}
-            ConSettings,{$ENDIF}Pointer(StatusVector[StatusIdx + 2]), StatusVector[StatusIdx + 1]);
-          Inc(StatusIdx, 3);
+            ConSettings,{$ENDIF}Pointer(StatusVector[{StatusIdx + }2]), StatusVector[{StatusIdx + }1]);
+          NextStatusVector := @StatusVector[3];
+          //Inc(StatusIdx, 3);
         end;
       isc_arg_warning: begin// must not happen for error vector
         Break; //how to handle a warning? I just need an example
@@ -1246,12 +1286,15 @@ begin
       else
         Break;
     end; // case
-
-    // isc_interprete is deprecated so use fb_interpret instead if available
     if Assigned(FInterbaseFirebirdPlainDriver.fb_interpret) then begin
       if FInterbaseFirebirdPlainDriver.fb_interpret(@FByteBuffer[0], SizeOf(TByteBuffer)-1, @StatusVector) = 0 then
         Break;
     end else if FInterbaseFirebirdPlainDriver.isc_interprete(@FByteBuffer[0], @StatusVector) = 0 then
+      Break;
+    if PAnsiChar(StatusVector) < PAnsiChar(NextStatusVector) then
+      StatusVector := NextStatusVector;
+    if PISC_Status(StatusVector)^ = isc_arg_end then //EH: otoh in some
+      //cirumstances we add a empty status see test TestDbcTransaction
       Break;
     pCurrStatus.IBMessage := ConvertConnRawToString({$IFDEF UNICODE}
             ConSettings,{$ENDIF}@FByteBuffer[0]);
@@ -1471,7 +1514,7 @@ begin
   QueryInterface(IZTransaction, Trans);
   FWeakIZTransactionPtr := Pointer(Trans);
   Trans := nil;
-  inherited;
+  inherited AfterConstruction;
 end;
 
 procedure TZInterbaseFirebirdTransaction.BeforeDestruction;
@@ -1730,7 +1773,7 @@ var
   TableColumns: IZResultSet;
   Connection: IZConnection;
   Driver: IZDriver;
-  IdentifierConvertor: IZIdentifierConvertor;
+  IdentifierConverter: IZIdentifierConverter;
   Analyser: IZStatementAnalyser;
   Tokenizer: IZTokenizer;
 begin
@@ -1738,7 +1781,7 @@ begin
   Driver := Connection.GetDriver;
   Analyser := Driver.GetStatementAnalyser;
   Tokenizer := Driver.GetTokenizer;
-  IdentifierConvertor := Metadata.GetIdentifierConvertor;
+  IdentifierConverter := Metadata.GetIdentifierConverter;
   try
     if Analyser.DefineSelectSchemaFromQuery(Tokenizer, SQL) <> nil then
       for I := 0 to ResultSet.ColumnsInfo.Count - 1 do begin
@@ -1746,7 +1789,7 @@ begin
         ClearColumn(Current);
         if Current.TableName = '' then
           continue;
-        TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(IdentifierConvertor.Quote(Current.TableName)),'');
+        TableColumns := Metadata.GetColumns(Current.CatalogName, Current.SchemaName, Metadata.AddEscapeCharToWildcards(IdentifierConverter.Quote(Current.TableName, iqTable)),'');
         if TableColumns <> nil then begin
           TableColumns.BeforeFirst;
           while TableColumns.Next do
@@ -1761,7 +1804,7 @@ begin
     Connection := nil;
     Analyser := nil;
     Tokenizer := nil;
-    IdentifierConvertor := nil;
+    IdentifierConverter := nil;
   end;
   Loaded := True;
 end;
@@ -1873,7 +1916,7 @@ begin
     for I := 0 to FInsertColumns.Count-1 do begin
       ColumnIndex := PZIndexPair(FInsertColumns[i])^.ColumnIndex;
       Tmp := Metadata.GetColumnName(ColumnIndex);
-      Tmp := IdentifierConvertor.Quote(Tmp);
+      Tmp := IdentifierConverter.Quote(Tmp, iqColumn);
       SQLWriter.AddText(Tmp, Result);
       SQLWriter.AddChar(',', Result);
     end;
@@ -1904,7 +1947,7 @@ begin
             Fields.Delete(ColumnIndex); { avoid duplicates }
         end;
         {$IFEND}
-        Tmp := IdentifierConvertor.Quote(Tmp);
+        Tmp := IdentifierConverter.Quote(Tmp, iqColumn);
         SQLWriter.AddText(Tmp, Result);
         SQLWriter.AddChar(',', Result);
       end;
@@ -1918,7 +1961,7 @@ begin
         if ColumnIndex = InvalidDbcIndex then
           raise CreateColumnWasNotFoundException(Tmp);
         FReturningPairs.Add(ColumnIndex, FReturningPairs.Count{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        Tmp := IdentifierConvertor.Quote(Tmp);
+        Tmp := IdentifierConverter.Quote(Tmp, iqColumn);
         SQLWriter.AddText(Tmp, Result);
         SQLWriter.AddChar(',', Result);
       end;
@@ -1984,7 +2027,7 @@ begin
     if I > 0 then
       SQLWriter.AddText(' AND ', Result);
     S := MetaData.GetColumnName(idx);
-    Tmp := IdentifierConvertor.Quote(S);
+    Tmp := IdentifierConverter.Quote(S, iqColumn);
     SQLWriter.AddText(Tmp, Result);
     if (Metadata.IsNullable(Idx) = ntNullable)
     then SQLWriter.AddText(' IS NOT DISTINCT FROM ?', Result)
@@ -2395,6 +2438,10 @@ begin
       SQL_TIMESTAMP,
       SQL_TYPE_DATE,
       SQL_TYPE_TIME : Double2BCD(GetDouble(ColumnIndex), Result);
+      (*SQL_DEC_FIXED, SQL_INT128: begin
+          P := GetPCharFromTextVar(Len);
+          LastWasNull := not TryRawToBCD(P, Len, Result, '.');
+        end;*)
       else raise CreateConversionError(ColumnIndex, ColumnType, stBigDecimal);
     end;
   end;
@@ -3007,7 +3054,7 @@ end;
 
 {**
   Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
+  of this <code>ResultSet</code> object as          8
   a <code>TZAnsiRec</code> in the Delphi programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
@@ -3111,7 +3158,7 @@ set_Results:            Len := Result - PAnsiChar(FByteBuffer);
                           TempDate.Second, TempDate.Fractions * 10000,
                           Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
                       end;
-      else ZDbcUtils.CreateConversionError(ColumnIndex, ColumnType, stString);
+      else Raise CreateConversionError(ColumnIndex, ColumnType, stString);
     end;
   end;
 end;
@@ -3241,7 +3288,7 @@ set_Results:            Len := Result - PWideChar(FByteBuffer);
                           TempDate.Second, TempDate.Fractions * 100000,
                           Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
                       end;
-      else ZDbcUtils.CreateConversionError(ColumnIndex, ColumnType, stUnicodeString);
+      else raise CreateConversionError(ColumnIndex, ColumnType, stUnicodeString);
     end;
   end;
 end;
@@ -3511,6 +3558,16 @@ begin
   FDialect := Connection.GetDialect;
   FCodePageArray := Connection.GetInterbaseFirebirdPlainDriver.GetCodePageArray;
   FCodePageArray[FDB_CP_ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
+  FOrgTypeList := TZIBFBOrgSqlTypeAndScaleList.Create;
+end;
+
+destructor TZAbstractFirebirdInterbasePreparedStatement.Destroy;
+begin
+  inherited;
+  if FOrgTypeList <> nil then begin
+    FOrgTypeList.Clear;
+    FreeAndNil(FOrgTypeList);
+  end;
 end;
 
 procedure BindSQLDAInParameters(BindList: TZBindList;
@@ -5068,6 +5125,27 @@ begin
   SQLWriter.Finalize(SQL);
   FreeAndNil(SQLWriter);
   Result := InternalCreateExecutionStatement(Conn, SQL, Info);
+end;
+
+{ TZIBFBOrgSqlTypeAndScaleList }
+
+function TZIBFBOrgSqlTypeAndScaleList.Add(sqltype: Cardinal; scale: Integer;
+  Nullable: Boolean): Integer;
+var P: PZIBFBOrgSqlTypeAndScale;
+begin
+  GetMem(P, SizeOf(TZIBFBOrgSqlTypeAndScale));
+  P.sqltype := sqltype;
+  P.scale := scale;
+  p.Nullable := Nullable;
+  Result := inherited Add(P);
+end;
+
+procedure TZIBFBOrgSqlTypeAndScaleList.Clear;
+var I: Integer;
+begin
+  for i := 0 to Count -1 do
+    FreeMem(Items[i]);
+  inherited Clear;
 end;
 
 initialization

@@ -1069,6 +1069,7 @@ begin
     Inc(pNuDigits);
     Inc(pNibble);
   end;
+  PCardinal(pNibble+Byte(HalfNibbles))^ := 0; //some compilers read over lastnibble (FPC+XE10.3x64 f.e.)
   if Positive
   then Bcd.SignSpecialPlaces := Byte(Scale)
   else Bcd.SignSpecialPlaces := Byte(Scale) or $80;
@@ -1743,13 +1744,17 @@ var P: PAnsiChar;
   parmh: POCIHandle;
   Descriptor: POCIDescribe;
   tmp: RawByteString;
+  {$IFDEF WITH_RAWBYTESTRING}
   ConSettings: PZConSettings;
+  {$ENDIF WITH_RAWBYTESTRING}
   OCISvcCtx: POCISvcCtx;
 begin
   //https://www.bnl.gov/phobos/Detectors/Computing/Orant/doc/appdev.804/a58234/describe.htm#440341
   //section describing the stored procedure
   Descriptor := nil;
+  {$IFDEF WITH_RAWBYTESTRING}
   ConSettings := FConnection.GetConSettings;
+  {$ENDIF WITH_RAWBYTESTRING}
   OCISvcCtx   := FConnection.GetServiceContextHandle;
   { get a descriptor handle for the param/obj }
   Result := FPlainDriver.OCIHandleAlloc(Owner, Descriptor, OCI_HTYPE_DESCRIBE, 0, nil);
@@ -1903,7 +1908,7 @@ procedure TZOraProcDescriptor_A.Describe(_Type: UB4; const Name: RawByteString);
 var
   ProcSQL, tmp: RawByteString;
   Status, ps, ps2: sword;
-  IC: IZIdentifierConvertor;
+  IC: IZIdentifierConverter;
   {$IFDEF UNICODE}
   S: String;
   {$ENDIF}
@@ -1912,7 +1917,7 @@ begin
   OCIEnv := FConnection.GetConnectionHandle;
   ProcSQL := Name;
 
-  IC := FConnection.GetMetadata.GetIdentifierConvertor;
+  IC := FConnection.GetMetadata.GetIdentifierConverter;
   { describe the object: }
   Status := InternalDescribe(ProcSQL, _Type, OCIEnv);
   if (Status <> OCI_SUCCESS) then begin
@@ -1975,7 +1980,7 @@ end;
 
 procedure TZOraProcDescriptor_W.ConcatParentName(NotArgName: Boolean;
   {$IFDEF AUTOREFCOUNT} const {$ENDIF}SQLWriter: TZUnicodeSQLStringWriter;
-  var Result: UnicodeString; const IC: IZIdentifierConvertor);
+  var Result: UnicodeString; const IC: IZIdentifierConverter);
 {$IFNDEF UNICODE}
 var S: UnicodeString;
     R: RawByteString;
@@ -2017,7 +2022,7 @@ procedure TZOraProcDescriptor_W.Describe(_Type: UB4;
 var
   ProcSQL, tmp: UnicodeString;
   Status, ps, ps2: sword;
-  IC: IZIdentifierConvertor;
+  IC: IZIdentifierConverter;
   {$IFNDEF UNICODE}
   S: String;
   {$ENDIF}
@@ -2026,7 +2031,7 @@ begin
   OCIEnv := FConnection.GetConnectionHandle;
   ProcSQL := Name;
 
-  IC := FConnection.GetMetadata.GetIdentifierConvertor;
+  IC := FConnection.GetMetadata.GetIdentifierConverter;
   { describe the object: }
   Status := InternalDescribe(ProcSQL, _Type, OCIEnv);
   if (Status <> OCI_SUCCESS) then begin

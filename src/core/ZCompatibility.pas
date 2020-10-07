@@ -79,6 +79,9 @@ type
     {$IFNDEF ENDIAN_BIG}hi,lo{$ELSE}lo, hi{$ENDIF}: UInt64;
   end;
   {$IFEND}
+  {$IF not declared(PUInt128)}
+  PUInt128 = ^UInt128;
+  {$IFEND}
   {$IF not declared(Int128)}
   Int128                = packed record
     {$IFNDEF ENDIAN_BIG}
@@ -89,6 +92,9 @@ type
     hi: Int64;
     {$ENDIF}
   end;
+  {$IFEND}
+  {$IF not declared(PInt128)}
+  PInt128 = ^Int128;
   {$IFEND}
   {$IF not declared(PPLongWord)}
   PPLongWord            = ^PLongWord;
@@ -102,6 +108,9 @@ type
   {$IFEND}
   {$IF not declared(PNativeUInt)} //since FPC2.7 this type is declared too avoid inconsitent builds
   PNativeUInt           = ^NativeUInt;
+  {$IFEND}
+  {$IF not declared(PNativeInt)} //since FPC2.6.4 this type is declared too avoid inconsitent builds
+  PNativeInt           = ^NativeInt;
   {$IFEND}
 {$ELSE}
   {$IFNDEF HAVE_TRUE_NATIVE_TYPES}  //introduced since D2007 but "stable" since XE2
@@ -141,7 +150,6 @@ type
   {$IFEND}
 {$IFDEF FPC}
 {$IFDEF WITH_RAWBYTESTRING}
-Type
   PAnsiRec = ^TAnsiRec;
   TAnsiRec = Record
     CodePage    : TSystemCodePage;

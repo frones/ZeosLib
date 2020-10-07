@@ -80,6 +80,8 @@
 {$DEFINE WITH_FTWIDESTRING}  // Supported from somewhere between 2.2 and 2.4
 {$DEFINE WITH_PARAM_ASWIDESTRING}
 
+{$DEFINE WITH_ACTIVE_DATASET_ERROR_ON_FIRST_ROW_BUG} // FPC datasets are activ on open a query but first next errors out
+
 {$IF FPC_FULLVERSION>=20500}  // Upgrade to 2.6.x asap.
   {$DEFINE FPC2_5UP} // Used in code
   {$DEFINE WITH_NEWTOBJECT}
@@ -126,39 +128,42 @@
 {$ENDIF}
 
   {$DEFINE WITH_FUNIDIRECTIONAL} // FPC has references a field instead of a setter here.  (at least in 2.6.0)
-
-  {$IFDEF FPC_FULLVERSION>20601}
+  {$IF FPC_FULLVERSION>20601}
     {$UNDEF WITH_FPC_FTTIME_BUG} //seems like the never FPC2.6.2 also have fixed the NativData bug for TTimeFields+TDataSet
-    {$IF FPC_FULLVERSION>20700}       // will be introduced in 2.7+
-      {$ifndef MSEgui}
-        {$DEFINE WITH_TBOOKMARK}        // Have TBookmark
-      {.§ELSE}
-        {.$DEFINE UNICODE} //16bit UTF16-Encoded see https://zeoslib.sourceforge.io/viewtopic.php?t=4688
-      {$endif}
-      {$DEFINE TFIELD_HAS_ASBYTES}          // TField.AsBytes is supported
-      {$DEFINE TFIELD_HAS_ASLARGEINT}  // TFIeld.AsLargeInt is supported
-      {$UNDEF WITH_FPC_BOF_BUG}
-      {$UNDEF WITH_FPC_MODIFIED_BUG}
-      {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
-      {$DEFINE WITH_FPC_STRING_CONVERSION} //After string conversions to RawByteString like AnsiToUTF8 the results are equal to original value
-      {$DEFINE WITH_DEFAULTSYSTEMCODEPAGE}
-      {$DEFINE MISS_RBS_SETSTRING_OVERLOAD} //SetString overload for RawByteString is missing
-      {$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //Hack for *nix systems where i couldn't locate this define )):
-        {$DEFINE FPC_HAS_BUILTIN_WIDESTR_MANAGER}
-      {$ENDIF}
-      {$DEFINE WITH_RAWBYTESTRING_CONVERSION_BUG} //2.7 gen did bad conversions with possible data-loss here
-      {$IF FPC_FULLVERSION>30000}       // will be introduced in 3.0+
-        {$DEFINE WITH_tagVARIANT_UINT64} //ActiveX tagVariant supports Int64/uInt64 values not sure about the proper FPC version here
-        {$DEFINE WITH_varUString} //Variant now supports refcounted UnicodeStrings
-        {$UNDEF WITH_RAWBYTESTRING_CONVERSION_BUG} //issue seems to be fixed
-        {$DEFINE WITH_VIRTUAL_TFIELD_BIND} //TField has procedure Bind(Binding: Boolean);
-        {$IF FPC_FULLVERSION>=30100}
-          {$UNDEF MISS_RBS_SETSTRING_OVERLOAD} //SetString overload for RawByteString is available now
-          {$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined} //suppress warning that marks all Variant operators f.ex.
+    {$IF FPC_FULLVERSION>20602}
+      {$IF FPC_FULLVERSION>20700}       // will be introduced in 2.7+
+        {$ifndef MSEgui}
+          {$DEFINE WITH_TBOOKMARK}        // Have TBookmark
+        {.§ELSE}
+          {.$DEFINE UNICODE} //16bit UTF16-Encoded see https://zeoslib.sourceforge.io/viewtopic.php?t=4688
+        {$endif}
+        {$DEFINE TFIELD_HAS_ASBYTES}          // TField.AsBytes is supported
+        {$DEFINE TFIELD_HAS_ASLARGEINT}  // TFIeld.AsLargeInt is supported
+        {$UNDEF WITH_FPC_BOF_BUG}
+        {$UNDEF WITH_FPC_MODIFIED_BUG}
+        {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
+        {$DEFINE WITH_FPC_STRING_CONVERSION} //After string conversions to RawByteString like AnsiToUTF8 the results are equal to original value
+        {$DEFINE WITH_DEFAULTSYSTEMCODEPAGE}
+        {$DEFINE MISS_RBS_SETSTRING_OVERLOAD} //SetString overload for RawByteString is missing
+        {$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //Hack for *nix systems where i couldn't locate this define )):
+          {$DEFINE FPC_HAS_BUILTIN_WIDESTR_MANAGER}
+        {$ENDIF}
+        {$DEFINE WITH_RAWBYTESTRING_CONVERSION_BUG} //2.7 gen did bad conversions with possible data-loss here
+        {$IF FPC_FULLVERSION>30000}       // will be introduced in 3.0+
+          {$DEFINE WITH_WITH_TFIELD_BIND_METHOD} //TField.Bind(Binding) is supported
+          {$DEFINE WITH_PARAM_ASBCD} //TParam.AsBcd is supported
+          {$DEFINE WITH_tagVARIANT_UINT64} //ActiveX tagVariant supports Int64/uInt64 values not sure about the proper FPC version here
+          {$DEFINE WITH_varUString} //Variant now supports refcounted UnicodeStrings
+          {$UNDEF WITH_RAWBYTESTRING_CONVERSION_BUG} //issue seems to be fixed
+          {$DEFINE WITH_VIRTUAL_TFIELD_BIND} //TField has procedure Bind(Binding: Boolean);
+          {$IF FPC_FULLVERSION>=30100}
+            {$UNDEF MISS_RBS_SETSTRING_OVERLOAD} //SetString overload for RawByteString is available now
+            {$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined} //suppress warning that marks all Variant operators f.ex.
 
-          {$DEFINE WITH_ASANSISTRING} // TField.AsAnsiString is supported
-          {$DEFINE WITH_VIRTUAL_TFIELD_ASUTF8STRING} // //TField has virtual getter+Setter for the UTF8Strings
-          {$DEFINE WITH_VIRTUAL_TFIELD_ASUNICODESTRING} //TField has virtual getter+Setter for the UnicodeStrings
+            {$DEFINE WITH_ASANSISTRING} // TField.AsAnsiString is supported
+            {$DEFINE WITH_VIRTUAL_TFIELD_ASUTF8STRING} // //TField has virtual getter+Setter for the UTF8Strings
+            {$DEFINE WITH_VIRTUAL_TFIELD_ASUNICODESTRING} //TField has virtual getter+Setter for the UnicodeStrings
+          {$IFEND}
         {$IFEND}
       {$IFEND}
     {$IFEND}

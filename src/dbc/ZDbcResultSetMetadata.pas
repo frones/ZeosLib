@@ -70,7 +70,7 @@ type
   public
     AutoIncrement: Boolean;
     CaseSensitive: Boolean;
-    Searchable: Boolean;
+    Searchable, SearchableDisabled: Boolean;
     Currency: Boolean; //note we'll map all fixed numbers to stCurrency(ftBCD)
                         //if Scale&Precision allows it. But if a field is a true
                         //currency field like MS/PG-Money should be indicated here
@@ -105,7 +105,7 @@ type
 
     FSQL: string;
     FTableColumns: TZHashMap;
-    FIdentifierConvertor: IZIdentifierConvertor;
+    FIdentifierConverter: IZIdentifierConverter;
     FResultSet: TZAbstractResultSet;
     procedure SetMetadata(const Value: IZDatabaseMetadata);
   protected
@@ -150,8 +150,8 @@ type
     property MetaData: IZDatabaseMetadata read FMetadata write SetMetadata;
     property ColumnsLabels: TStrings read FColumnsLabelsCS write FColumnsLabelsCS;
     property SQL: string read FSQL write FSQL;
-    property IdentifierConvertor: IZIdentifierConvertor
-      read FIdentifierConvertor write FIdentifierConvertor;
+    property IdentifierConverter: IZIdentifierConverter
+      read FIdentifierConverter write FIdentifierConverter;
     property Loaded: Boolean read FLoaded write FLoaded;
     property ResultSet: TZAbstractResultSet read FResultSet write FResultSet;
   public
@@ -171,6 +171,7 @@ type
     function IsAutoIncrement(ColumnIndex: Integer): Boolean; virtual;
     function IsCaseSensitive(ColumnIndex: Integer): Boolean; virtual;
     function IsSearchable(ColumnIndex: Integer): Boolean; virtual;
+    procedure SetSearchable(ColumnIndex: Integer; Value: Boolean);
     function IsCurrency(ColumnIndex: Integer): Boolean; virtual;
     function IsNullable(ColumnIndex: Integer): TZColumnNullableType; virtual;
 
@@ -249,7 +250,7 @@ end;
 }
 destructor TZAbstractResultSetMetadata.Destroy;
 begin
-  FIdentifierConvertor := nil;
+  FIdentifierConverter := nil;
   FMetadata := nil;
   FreeAndNil(FTableColumns);
   FreeAndNil(FColumnsLabelsCS);
@@ -368,9 +369,14 @@ end;
 }
 function TZAbstractResultSetMetadata.IsSearchable(ColumnIndex: Integer): Boolean;
 begin
-  if not Loaded then
-     LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Searchable;
+  with TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
+    if SearchableDisabled then
+      Result := False
+    else begin
+      if not Loaded then
+        LoadColumns;
+      Result := Searchable;
+    end;
 end;
 
 {**
@@ -784,7 +790,7 @@ var
 begin
   { Initializes single columns with specified table. }
   FieldRef := SelectSchema.LinkFieldByIndexAndShortName(ColumnIndex,
-    ColumnInfo.ColumnLabel, IdentifierConvertor);
+    ColumnInfo.ColumnLabel, IdentifierConverter);
   if ReadColumnByRef(FieldRef, ColumnInfo) then //else double processing down below
     Exit;
  //EH commented: http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=71516&start=15
@@ -798,8 +804,8 @@ begin
   while {(ColumnInfo.ColumnName = '') and }(I < SelectSchema.TableCount) and not Found do begin
     TableRef := SelectSchema.Tables[I];
     if Assigned(FieldRef)
-    then AName := IdentifierConvertor.ExtractQuote(FieldRef.Field)
-    else AName := IdentifierConvertor.ExtractQuote(ColumnInfo.ColumnLabel);
+    then AName := IdentifierConverter.ExtractQuote(FieldRef.Field)
+    else AName := IdentifierConverter.ExtractQuote(ColumnInfo.ColumnLabel);
     Found := ReadColumnByName(AName, TableRef, ColumnInfo);
     Inc(I);
   end;
@@ -959,9 +965,16 @@ procedure TZAbstractResultSetMetadata.SetMetadata(
 begin
   FMetadata := Value;
   if Value<>nil then
-    FIdentifierConvertor := Value.GetIdentifierConvertor
+    FIdentifierConverter := Value.GetIdentifierConverter
   else
-    FIdentifierConvertor := TZDefaultIdentifierConvertor.Create(FMetadata);
+    FIdentifierConverter := TZDefaultIdentifierConverter.Create(FMetadata);
+end;
+
+procedure TZAbstractResultSetMetadata.SetSearchable(ColumnIndex: Integer;
+  Value: Boolean);
+begin
+  with TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
+    SearchableDisabled := not Value;
 end;
 
 procedure TZAbstractResultSetMetadata.SetReadOnly(ColumnIndex: Integer;
@@ -1018,7 +1031,7 @@ begin
   StatementAnalyser := Driver.GetStatementAnalyser;
   SelectSchema := StatementAnalyser.DefineSelectSchemaFromQuery(Tokenizer, SQL);
   if Assigned(SelectSchema) then begin
-    SelectSchema.LinkReferences(IdentifierConvertor);
+    SelectSchema.LinkReferences(IdentifierConverter);
     ReplaceStarColumns(SelectSchema);
     FillByIndices := SelectSchema.FieldCount = FResultSet.ColumnsInfo.Count;
     J := -1;

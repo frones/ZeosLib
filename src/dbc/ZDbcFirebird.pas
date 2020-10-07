@@ -188,6 +188,7 @@ type
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
   public
     procedure AfterConstruction; override;
+    Destructor Destroy; override;
   public { IZFirebirdConnection }
     function GetActiveTransaction: IZFirebirdTransaction;
     function GetAttachment: IAttachment;
@@ -285,6 +286,8 @@ begin
   FPlainDriver := PlainDriver.GetInstance as TZFirebirdPlainDriver;
   { set default sql dialect it can be overriden }
   FMaster := IMaster(FPlainDriver.fb_get_master_interface);
+  FStatus := FMaster.getStatus;
+  FUtil := FMaster.getUtilInterface;
   inherited AfterConstruction;
 end;
 
@@ -307,7 +310,7 @@ function TZFirebirdConnection.CreateStatementWithParams(
 begin
   if IsClosed then
     Open;
-  Result := TZFirebirdStatement.Create(Self, Info);
+  Result := TZFirebirdStatement.Create(Self, Params);
 end;
 
 {**
@@ -330,6 +333,16 @@ begin
     Params := Info;
   Result := TZFirebirdTransaction.Create(Self, AutoCommit, ReadOnly, TransactIsolationLevel, Params);
   fTransactions.Add(Result);
+end;
+
+destructor TZFirebirdConnection.Destroy;
+begin
+  inherited;
+  if FStatus <> nil then begin
+    FStatus.Dispose;
+    FStatus := nil;
+  end;
+  //How to free IStatus and IMaster?
 end;
 
 procedure TZFirebirdConnection.ExecuteImmediat(const SQL: RawByteString;
@@ -438,10 +451,6 @@ begin
     FProvider.release;
     FProvider := nil;
   end;
-  if FStatus <> nil then begin
-    FStatus.dispose;
-    FStatus := nil;
-  end;
 end;
 
 function TZFirebirdConnection.IsFirebirdLib: Boolean;
@@ -492,13 +501,11 @@ var
       Move(P^, FByteBuffer[0], L);
     PByte(PAnsiChar(@FByteBuffer[0])+L)^ := 0;
   end;
-label reconnect, jmpTimeOuts;
+label reconnect;
 begin
   if not Closed then
     Exit;
   FProvider := FMaster.getDispatcher;
-  FStatus := FMaster.getStatus;
-  FUtil := FMaster.getUtilInterface;
   DBCP := '';
   if TransactIsolationLevel = tiReadUncommitted then
     raise EZSQLException.Create('Isolation level do not capable');
@@ -510,118 +517,134 @@ begin
   ConnectionString := ConstructConnectionString;
 
   DBCreated := False;
-  CreateDB := Info.Values[ConnProps_CreateNewDatabase];
-  if (CreateDB <> '') and StrToBoolEx(CreateDB) then begin
-    if (Info.Values[ConnProps_isc_dpb_lc_ctype] <> '') and (Info.Values[ConnProps_isc_dpb_set_db_charset] = '') then
-      Info.Values[ConnProps_isc_dpb_set_db_charset] := Info.Values[ConnProps_isc_dpb_lc_ctype];
-    DBCP := Info.Values[ConnProps_isc_dpb_set_db_charset];
-    PrepareDPB;
-    FAttachment := FProvider.createDatabase(FStatus, @FByteBuffer[0], Smallint(Length(DPB)),Pointer(DPB));
-    Info.Values[ConnProps_CreateNewDatabase] := ''; //prevent recreation on open
-    DBCreated := True;
-    FLogMessage := 'CREATE DATABASE "'+URL.Database+'" AS USER "'+ URL.UserName+'"';
+  reconnect:
+  try
+    CreateDB := Info.Values[ConnProps_CreateNewDatabase];
+    if (CreateDB <> '') and StrToBoolEx(CreateDB) and not DBCreated then begin
+      if (Info.Values[ConnProps_isc_dpb_lc_ctype] <> '') and (Info.Values[ConnProps_isc_dpb_set_db_charset] = '') then
+        Info.Values[ConnProps_isc_dpb_set_db_charset] := Info.Values[ConnProps_isc_dpb_lc_ctype];
+      DBCP := Info.Values[ConnProps_isc_dpb_set_db_charset];
+      PrepareDPB;
+      FAttachment := FProvider.createDatabase(FStatus, @FByteBuffer[0], Smallint(Length(DPB)),Pointer(DPB));
+      Info.Values[ConnProps_CreateNewDatabase] := ''; //prevent recreation on open
+      DBCreated := True;
+      FLogMessage := 'CREATE DATABASE "'+URL.Database+'" AS USER "'+ URL.UserName+'"';
+      if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+      try
+        HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors),
+          FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
+      finally
+        FProvider.release;
+        FProvider := nil;
+      end;
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
+    end;
+    if FProvider = nil then
+      FProvider := FMaster.getDispatcher;
+    if FStatus  = nil then
+      FStatus := FMaster.getStatus;
+    if FAttachment = nil then begin
+      PrepareDPB;
+      FLogMessage := Format(SConnect2AsUser, [ConnectionString, URL.UserName]);;
+      FAttachment := FProvider.attachDatabase(FStatus, @FByteBuffer[0], Length(DPB), Pointer(DPB));
+      if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+        HandleErrorOrWarning(lcConnect, PARRAY_ISC_STATUS(FStatus.getErrors),
+          FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
+      { Logging connection action }
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
+    end;
+    { Dialect could have changed by isc_dpb_set_db_SQL_dialect command }
+    FByteBuffer[0] := isc_info_db_SQL_Dialect;
+    FAttachment.getInfo(FStatus, 1, @FByteBuffer[0], SizeOf(TByteBuffer)-1, @FByteBuffer[1]);
     if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
-      HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors),
-        FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
-    if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
-  end;
-reconnect:
-  if FProvider = nil then
-    FProvider := FMaster.getDispatcher;
-  if FStatus  = nil then
-    FStatus := FMaster.getStatus;
-  if FAttachment = nil then begin
-    PrepareDPB;
-    FLogMessage := Format(SConnect2AsUser, [ConnectionString, URL.UserName]);;
-    FAttachment := FProvider.attachDatabase(FStatus, @FByteBuffer[0], Length(DPB), Pointer(DPB));
-    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
-      HandleErrorOrWarning(lcConnect, PARRAY_ISC_STATUS(FStatus.getErrors),
-        FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
-    { Logging connection action }
-    if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
-  end;
-  { Dialect could have changed by isc_dpb_set_db_SQL_dialect command }
-  FByteBuffer[0] := isc_info_db_SQL_Dialect;
-  FAttachment.getInfo(FStatus, 1, @FByteBuffer[0], SizeOf(TByteBuffer)-1, @FByteBuffer[1]);
-  if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
-    HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.getInfo', Self);
-  if FByteBuffer[1] = isc_info_db_SQL_Dialect
-  then FDialect := ReadInterbase6Number(FPlainDriver, FByteBuffer[2])
-  else FDialect := SQL_DIALECT_V5;
-  inherited SetAutoCommit(AutoCommit or (Info.IndexOf(TxnProps_isc_tpb_autocommit) <> -1));
-  FRestartTransaction := not AutoCommit;
+      HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.getInfo', Self);
+    if FByteBuffer[1] = isc_info_db_SQL_Dialect
+    then FDialect := ReadInterbase6Number(FPlainDriver, FByteBuffer[2])
+    else FDialect := SQL_DIALECT_V5;
+    inherited SetAutoCommit(AutoCommit or (Info.IndexOf(TxnProps_isc_tpb_autocommit) <> -1));
+    FRestartTransaction := not AutoCommit;
 
-  FHardCommit := StrToBoolEx(Info.Values[ConnProps_HardCommit]);
-  if (DBCP <> '') and not DBCreated then
-    goto jmpTimeOuts;
-  inherited Open;
+    FHardCommit := StrToBoolEx(Info.Values[ConnProps_HardCommit]);
+    inherited Open;
+  finally
+    if Closed then begin
+      if FAttachment <> nil then begin
+        FAttachment.Release;
+        FAttachment := nil;
+      end;
+      if FProvider <> nil then begin
+        FProvider.Release;
+        FProvider := nil;
+      end;
+    end;
+  end;
   with GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo do
   begin
     CollectServerInformations; //keep this one first!
     FHostVersion := GetHostVersion;
     FXSQLDAMaxSize := GetMaxSQLDASize;
   end;
-
-  {Check for ClientCodePage: if empty switch to database-defaults
-    and/or check for charset 'NONE' which has a different byte-width
-    and no convertions where done except the collumns using collations}
-  if not DBCreated then begin
-    Statement := CreateStatementWithParams(nil);
-    try
-      with Statement.ExecuteQuery('SELECT RDB$CHARACTER_SET_NAME FROM RDB$DATABASE') do begin
-        if Next then DBCP := GetString(FirstDbcIndex);
-        Close;
+  if (DBCP = '') and not DBCreated then begin
+    {Check for ClientCodePage: if empty switch to database-defaults
+      and/or check for charset 'NONE' which has a different byte-width
+      and no convertions where done except the collumns using collations}
+    if not DBCreated then begin
+      Statement := CreateStatementWithParams(nil);
+      try
+        with Statement.ExecuteQuery('SELECT RDB$CHARACTER_SET_NAME FROM RDB$DATABASE') do begin
+          if Next then DBCP := GetString(FirstDbcIndex);
+          Close;
+        end;
+      finally
+        Statement := nil;
       end;
-    finally
-      Statement := nil;
+      ti := GetActiveTransaction;
+      try
+        ti.Close;
+      finally
+        ti := nil;
+      end;
     end;
-    ti := GetActiveTransaction;
-    try
-      ti.Close;
-    finally
-      ti := nil;
-    end;
+    if DBCP = 'NONE' then begin { SPECIAL CASE CHARCTERSET "NONE":
+      EH: the server makes !NO! charset conversion if CS_NONE.
+      Attaching a CS "NONE" db with a characterset <> CS_NONE has this effect:
+      All field codepages are retrieved as the given client-characterset.
+      This works nice as long the fields have it's own charset definition.
+      But what's the encoding of the CS_NONE fields? The more what about CLOB encoding?
+
+      If we're attaching the db with CS "NONE" all userdefined field CP's are
+      returned gracefully. Zeos can convert everything to your Controls-CP.
+      Except the CP_NONE fields. And the text lob's where encoding is unknown too.
+      For the Unicode-IDE's this case is a nightmare. Jan's suggestion is to use
+      the fields as Byte/BlobFields only. My idea is to use such fields with the
+      CPWIN1252 Charset which maps each byte to words and vice versa.
+      So no information is lost and the data is still readable "somehow".
+
+      Side-note: see: https://firebirdsql.org/rlsnotesh/str-charsets.html
+      Any DDL/DML in non ASCII7 range will give a maleformed string if encoding is
+      different to UTF8/UNICODE_FSS because the RDB$-Tables have a
+      UNICODE_FSS collation}
+
+      {test if charset is not given or is CS_NONE }
+      if CSNoneCP = ''
+      then CSNoneCP := FClientCodePage
+      else if FCLientCodePage <> ''
+        then CSNoneCP := FCLientCodePage
+        else CSNoneCP := 'WIN1252'; {WIN1252 would be optimal propably}
+      ResetCurrentClientCodePage(CSNoneCP, False);
+      ConSettings^.ClientCodePage^.ID := 0;
+      //Now notify our metadata object all fields are retrieved in utf8 encoding
+      (FMetadata as TZInterbase6DatabaseMetadata).SetUTF8CodePageInfo;
+      if (FCLientCodePage <> DBCP) then begin
+        Info.Values[ConnProps_isc_dpb_lc_ctype] := DBCP;
+        InternalClose;
+        goto reconnect; //build new TDB and reopen in SC_NONE mode
+      end;
+    end else if FClientCodePage = '' then
+      CheckCharEncoding(DBCP);
   end;
-  if DBCP = 'NONE' then begin { SPECIAL CASE CHARCTERSET "NONE":
-    EH: the server makes !NO! charset conversion if CS_NONE.
-    Attaching a CS "NONE" db with a characterset <> CS_NONE has this effect:
-    All field codepages are retrieved as the given client-characterset.
-    This works nice as long the fields have it's own charset definition.
-    But what's the encoding of the CS_NONE fields? The more what about CLOB encoding?
-
-    If we're attaching the db with CS "NONE" all userdefined field CP's are
-    returned gracefully. Zeos can convert everything to your Controls-CP.
-    Except the CP_NONE fields. And the text lob's where encoding is unknown too.
-    For the Unicode-IDE's this case is a nightmare. Jan's suggestion is to use
-    the fields as Byte/BlobFields only. My idea is to use such fields with the
-    CPWIN1252 Charset which maps each byte to words and vice versa.
-    So no information is lost and the data is still readable "somehow".
-
-    Side-note: see: https://firebirdsql.org/rlsnotesh/str-charsets.html
-    Any DDL/DML in non ASCII7 range will give a maleformed string if encoding is
-    different to UTF8/UNICODE_FSS because the RDB$-Tables have a
-    UNICODE_FSS collation}
-
-    {test if charset is not given or is CS_NONE }
-    if CSNoneCP = ''
-    then CSNoneCP := FClientCodePage
-    else if FCLientCodePage <> ''
-      then CSNoneCP := FCLientCodePage
-      else CSNoneCP := 'WIN1252'; {WIN1252 would be optimal propably}
-    ResetCurrentClientCodePage(CSNoneCP, False);
-    ConSettings^.ClientCodePage^.ID := 0;
-    //Now notify our metadata object all fields are retrieved in utf8 encoding
-    (FMetadata as TZInterbase6DatabaseMetadata).SetUTF8CodePageInfo;
-    if (FCLientCodePage <> DBCP) then begin
-      Info.Values[ConnProps_isc_dpb_lc_ctype] := DBCP;
-      InternalClose;
-      goto reconnect; //build new TDB and reopen in SC_NONE mode
-    end;
-  end else if FClientCodePage = '' then
-    CheckCharEncoding(DBCP);
-jmpTimeOuts:
   if (FAttachment.vTable.version >= 4) and (FHostVersion >= 4000000) then begin
     TimeOut := StrToIntDef(Info.Values[ConnProps_StatementTimeOut], 0);
     if TimeOut > 0 then begin
@@ -638,8 +661,12 @@ jmpTimeOuts:
           'IAttachment.setIdleTimeout', IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
   end;
-  if (FHostVersion >= 4000000) and (Info.Values[ConnProps_isc_dpb_session_time_zone] = '') then
-    ExecuteImmediat('SET TIME ZONE LOCAL', lcExecute);
+  if (FHostVersion >= 4000000) then begin
+    if (Info.Values[ConnProps_isc_dpb_session_time_zone] = '') then
+      ExecuteImmediat('SET TIME ZONE LOCAL', lcExecute);
+    ExecuteImmediat('SET BIND OF TIME ZONE TO LEGACY', lcExecute);
+    ExecuteImmediat('SET BIND OF DECFLOAT TO LEGACY', lcExecute);
+  end;
 end;
 
 {**
@@ -702,7 +729,7 @@ begin
     FTransaction.release;
     FTransaction := nil;
     fSavepoints.Clear;
-	  if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
       HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(FStatus.getErrors),
         sCommitMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
     FOwner.ReleaseTransaction(IZTransaction(FWeakIZTransactionPtr));
@@ -731,12 +758,13 @@ begin
       FTransaction.commitRetaining(FStatus);
       ReleaseTransaction(IZTransaction(FWeakIZTransactionPtr));
     end;
-	  if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
       HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(FStatus.getErrors),
         sCommitMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
   finally
-    if fDoLog and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, URL.Protocol, sCommitMsg);
+    if fDoLog and (ZDbcIntfs.DriverManager <> nil) and
+       ZDbcIntfs.DriverManager.HasLoggingListener then //don't use the local DriverManager of ZDbcConnection
+      ZDbcIntfs.DriverManager.LogMessage(lcTransaction, URL.Protocol, sCommitMsg);
   end;
 end;
 
@@ -798,12 +826,13 @@ begin
       FTransaction.rollbackRetaining(FStatus);
       ReleaseTransaction(IZTransaction(FWeakIZTransactionPtr));
     end;
-	  if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
       HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(FStatus.getErrors),
         sRollbackMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
   finally
-    if fDoLog and DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, URL.Protocol, sRollbackMsg);
+    if fDoLog and (ZDbcIntfs.DriverManager <> nil) and
+       ZDbcIntfs.DriverManager.HasLoggingListener then //don't use the local DriverManager of ZDbcConnection
+      ZDbcIntfs.DriverManager.LogMessage(lcTransaction, URL.Protocol, sRollbackMsg);
   end;
 end;
 
@@ -818,7 +847,8 @@ begin
         Length(FTPB){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, Pointer(FTPB));
       FTransaction.AddRef;
       Result := Ord(not Self.FAutoCommit);
-      DriverManager.LogMessage(lcTransaction, URL.Protocol, 'TRANSACTION STARTED.');
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcTransaction, URL.Protocol, 'TRANSACTION STARTED.');
     end else begin
       Result := FSavePoints.Count+2;
       S := 'SP'+ZFastcode.IntToStr(NativeUInt(Self))+'_'+ZFastCode.IntToStr(Result);

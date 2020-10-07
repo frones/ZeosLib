@@ -168,6 +168,8 @@ type
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     function StartTransaction: Integer;
   public
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
+  public
     function PingServer: Integer; override;
     function AbortOperation: Integer; override;
 
@@ -676,6 +678,30 @@ begin
     fAttachedTransaction.StartTransaction;
     AutoCommit := not FRestartTransaction;
   end;
+end;
+
+procedure TZOracleConnection.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+var Imm: IImmediatelyReleasable;
+  B: Boolean;
+  I: Integer;
+begin
+  if (fAttachedTransaction <> nil) and (fAttachedTransaction.QueryInterface(IImmediatelyReleasable, imm) = S_OK) and (imm <> Sender) then begin
+    imm.ReleaseImmediat(Sender, AError);
+    fAttachedTransaction := nil;
+  end;
+  if (fLocalTransaction <> nil) and (fLocalTransaction.QueryInterface(IImmediatelyReleasable, imm) = S_OK) and (imm <> Sender) then begin
+    imm.ReleaseImmediat(Sender, AError);
+    fLocalTransaction := nil;
+  end;
+  for b := false to true do
+    if fGlobalTransactions[b] <> nil then begin
+      for i := fGlobalTransactions[b].Count -1 downto 0 do
+        if (fGlobalTransactions[b] <> nil) and (fGlobalTransactions[b].QueryInterface(IImmediatelyReleasable, imm) = S_OK) and (imm <> Sender) then
+          imm.ReleaseImmediat(Sender, AError);
+      fGlobalTransactions[b].Clear;
+    end;
+  inherited ReleaseImmediat(Sender, AError);
 end;
 
 procedure TZOracleConnection.ReleaseTransaction(

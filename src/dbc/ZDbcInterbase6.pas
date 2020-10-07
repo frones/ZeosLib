@@ -449,8 +449,9 @@ begin
   FHandle := 0;
   DBCreated := False;
   { Create new db if needed }
-  if (Info.Values[ConnProps_CreateNewDatabase] <> '') then begin
-    CreateDB := Info.Values[ConnProps_CreateNewDatabase];
+  CreateDB := Info.Values[ConnProps_CreateNewDatabase];
+  CreateDB := Trim(CreateDB);
+  if (CreateDB <> '') then begin
     if (GetClientVersion >= 2005000) and IsFirebirdLib and (Length(CreateDB)<=4) and StrToBoolEx(CreateDB, False) then begin
       if (Info.Values[ConnProps_isc_dpb_lc_ctype] <> '') and (Info.Values[ConnProps_isc_dpb_set_db_charset] = '') then
         Info.Values[ConnProps_isc_dpb_set_db_charset] := Info.Values[ConnProps_isc_dpb_lc_ctype];
@@ -463,6 +464,22 @@ begin
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
     end else begin
+      DBCP := Uppercase(CreateDB);
+      I := PosEx('CREATE', DBCP);
+      if (I < 1) or (PosEx('DATABASE', DBCP) < 1) then begin
+        DBCP := QuotedStr(URL.Database);
+        CreateDB := 'CREATE DATABASE '+DBCP;
+        DBCP := QuotedStr(URL.UserName);
+        CreateDB := CreateDB + ' USER '+DBCP;
+        DBCP := QuotedStr(URL.Password);
+        CreateDB := CreateDB + ' PASSWORD '+DBCP;
+        DBCP := Info.Values[ConnProps_isc_dpb_page_size];
+        if DBCP <> '' then
+          CreateDB := CreateDb + ' page_size '+FClientCodePage;
+        if FClientCodePage <> '' then
+          CreateDB := CreateDb + ' CHARACTER SET '+FClientCodePage;
+      end;
+      DBCP := '';
       {$IFDEF UNICODE}
       DPB := ZUnicodeToRaw(CreateDB, zOSCodePage);
       {$ELSE}
@@ -596,6 +613,12 @@ reconnect:
     end;
   end else if FClientCodePage = '' then
     CheckCharEncoding(DBCP);
+  if (FHostVersion >= 4000000) then begin
+    if (Info.Values[ConnProps_isc_dpb_session_time_zone] = '') then
+      ExecuteImmediat('SET TIME ZONE LOCAL', lcExecute);
+    ExecuteImmediat('SET BIND OF TIME ZONE TO LEGACY', lcExecute);
+    ExecuteImmediat('SET BIND OF DECFLOAT TO LEGACY', lcExecute);
+  end;
 end;
 
 {**

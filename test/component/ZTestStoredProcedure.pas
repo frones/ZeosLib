@@ -258,6 +258,15 @@ begin
     S := S+'a';
     P2 := 100 - I;
   end;
+  StoredProc.Params[0].AsInteger:= 50;
+  StoredProc.Params[2].AsString:= 'a';
+  for i:= 1 to 9 do begin
+    StoredProc.Close;
+    StoredProc.Params[1].Value :=  i;
+    StoredProc.Open;
+    while not StoredProc.Eof do
+      StoredProc.Next;
+  end;
   StoredProc.Unprepare;
   StoredProc.Open;
   StoredProc.ParamByName('P1').AsInteger := 50;

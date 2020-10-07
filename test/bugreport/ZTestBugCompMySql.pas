@@ -123,13 +123,14 @@ type
     procedure TestTicket304;
     procedure TestBigIntError;
     procedure TestBCD_Refresh_p156227;
+    procedure TestTicket265;
   end;
 
 {$ENDIF ZEOS_DISABLE_MYSQL}
 implementation
 {$IFNDEF ZEOS_DISABLE_MYSQL}
 
-uses ZTestCase, ZDbcMySQL, ZSysUtils, ZDbcProperties;
+uses ZTestCase, ZDbcMySQL, ZSysUtils, ZDbcProperties, ZDbcMySqlMetadata;
 
 { TZTestCompMySQLBugReport }
 
@@ -1970,6 +1971,29 @@ begin
   end;
 end;
 
+{Exists will return false even if the table exists when run on a table with upper-case name on MySQL.}
+
+procedure TZTestCompMySQLBugReport.TestTicket265;
+var tbl: TZTable;
+begin
+  tbl := CreateTable;
+  Check(tbl <> nil);
+  try
+    tbl.Connection.Connect;
+    tbl.TableName := 'PEOPLE';
+    if (tbl.Connection.DbcConnection.GetMetadata as IZMySQLDatabaseMetadata).Get_lower_case_table_names > 0 then //not resolvable on case sensitive servers
+      Check(tbl.Exists)
+    else try
+      Check(tbl.Exists)
+    except
+      on E:Exception do
+        CheckNotTestFailure(E);
+    end;
+  finally
+    FreeAndNil(tbl);
+  end;
+end;
+
 procedure TZTestCompMySQLBugReport.TestTicket304;
 var
   qy: TZquery;
@@ -2069,7 +2093,17 @@ begin
   if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
+  Check(Query <> nil);
   try
+    {$IFNDEF CPU64}
+    Connection.Connect;
+    //there is no 32 bit dll for MySQL 8+, but the test can pass using libmariadb of v10+
+    //otherwise using last 6.1 connection we cat a Maleformed communication error
+    if (Query.Connection.DbcConnection.GetMetadata as IZMySQLDatabaseMetadata).IsMySQL and
+       (Query.Connection.DbcConnection.GetHostVersion >= EncodeSQLVersioning(8,0,0)) and
+       (Query.Connection.DbcConnection.GetClientVersion < EncodeSQLVersioning(7,0,0)) then
+         Exit;
+    {$ENDIF}
     SQL := 'CALL abtest(?, ?, ?, ?, ?)';
     Query.ParamCheck := False;
     Query.SQL.Text := SQL;
@@ -2104,7 +2138,17 @@ begin
   if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
+  Check(Query <> nil);
   try
+    Query.Connection.Connect;
+    {$IFNDEF CPU64}
+    //there is no 32 bit dll for MySQL 8+, but the test can pass using libmariadb of v10+
+    //otherwise using last 6.1 connection we cat a Maleformed communication error
+    if (Query.Connection.DbcConnection.GetMetadata as IZMySQLDatabaseMetadata).IsMySQL and
+       (Query.Connection.DbcConnection.GetHostVersion >= EncodeSQLVersioning(8,0,0)) and
+       (Query.Connection.DbcConnection.GetClientVersion < EncodeSQLVersioning(7,0,0)) then
+         Exit;
+    {$ENDIF}
     Query.ParamCheck := False;
     SQL := 'CALL abtest(?, ?, ?, ?, ?)';
     Query.SQL.Text := SQL;

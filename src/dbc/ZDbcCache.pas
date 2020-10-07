@@ -2528,14 +2528,11 @@ end;
     value returned is <code>null</code>
 }
 {$IFNDEF NO_UTF8STRING}
-{$IFDEF FPC} {$PUSH}
-  {$WARN 5093 off : Function result variable of a managed type does not seem to be initialized}
-  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized}
-{$ENDIF} // ZSetString does the job even if NOT required
 function TZRowAccessor.GetUTF8String(ColumnIndex: Integer; out IsNull: Boolean): UTF8String;
 var P: Pointer;
   L: NativeUInt;
 begin
+  Result := '';
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
     stString, stAsciiStream:  begin
                         P := GetPAnsiChar(ColumnIndex, IsNull, L);
@@ -2545,14 +2542,12 @@ begin
                           else begin
                             FUniTemp := PRawToUnicode(P, L, fClientCP);
                             Result := PUnicodeToRaw(Pointer(FUniTemp), Length(fUniTemp), zCP_UTF8);
-                          end
-                        else Result := '';
+                          end;
                       end;
     stUnicodeString, stUnicodeStream:  begin
                         P := GetPWideChar(ColumnIndex, IsNull, L);
-                        if L > 0
-                        then Result := PUnicodeToRaw(P, L, zCP_UTF8)
-                        else Result := '';
+                        if L > 0 then
+                           Result := PUnicodeToRaw(P, L, zCP_UTF8);
                       end;
     else begin
       P := GetPAnsiChar(ColumnIndex, IsNull, L);
@@ -2560,7 +2555,6 @@ begin
     end;
   end;
 end;
-{$IFDEF FPC} {$POP} {$ENDIF} // ZSetString does the job even if NOT required
 {$ENDIF}
 
 {**
@@ -2572,18 +2566,14 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-{$IFDEF FPC} {$PUSH}
-  {$WARN 5093 off : Function result variable of a managed type does not seem to be initialized}
-  {$WARN 5094 off : Function result variable of a managed type does not seem to be initialized}
-{$ENDIF} // ZSetString does the job even if NOT required
 function TZRowAccessor.GetRawByteString(ColumnIndex: Integer; out IsNull: Boolean): RawByteString;
 var P: PAnsichar;
   L: NativeUInt;
 begin
+  {$IFDEF FPC}Result := '';{$ENDIF}
   P := GetPAnsiChar(ColumnIndex, IsNull, L);
   ZSetString(P, L, Result);
 end;
-{$IFDEF FPC} {$POP} {$ENDIF} // ZSetString does the job even if NOT required
 
 {**
   Gets the value of the designated column in the current row

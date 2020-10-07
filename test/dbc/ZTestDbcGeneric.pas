@@ -133,7 +133,7 @@ type
 
 implementation
 
-uses StrUtils, ZSysUtils, ZTestConsts, ZFastCode, ZVariant,
+uses StrUtils, ZSysUtils, ZTestConsts, ZFastCode, ZVariant, ZSelectSchema,
   ZDbcResultSet, ZDbcCachedResultSet, ZDbcConnection;
 
 { TZGenericTestDbcResultSet }
@@ -273,10 +273,10 @@ begin
   Metadata := Connection.GetMetadata;
   if not Metadata.GetDatabaseInfo.SupportsMixedCaseQuotedIdentifiers then
     Exit;
-  Sql := 'DELETE FROM '+MetaData.GetIdentifierConvertor.Quote('Case_Sensitive')+' where cs_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
+  Sql := 'DELETE FROM '+MetaData.GetIdentifierConverter.Quote('Case_Sensitive', iqTable)+' where cs_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   Connection.CreateStatement.ExecuteUpdate(Sql);
 
-  Sql := 'SELECT * FROM '+MetaData.GetIdentifierConvertor.Quote('Case_Sensitive')+' WHERE cs_id = ?';
+  Sql := 'SELECT * FROM '+MetaData.GetIdentifierConverter.Quote('Case_Sensitive', iqTable)+' WHERE cs_id = ?';
   { Inserts row to "Case_Sensitive" table }
   Statement := Connection.PrepareStatement(Sql);
   CheckNotNull(Statement);
@@ -702,7 +702,8 @@ begin
       else
         StrStream.LoadFromFile(TestFilePath('text/lgpl.txt'));
       SetAsciiStream(Insert_p_resume_Index, StrStream);
-      if ProtocolType = protPostgre then //PQExecParams can't convert str to smallint
+      if (ProtocolType = protPostgre) or (ProtocolType = protSybase) then //PQExecParams can't convert str to smallint
+        //and Sybase: https://sourceforge.net/p/zeoslib/tickets/281/
         SetNull(Insert_p_redundant_Index, stSmall)
       else
         SetNull(Insert_p_redundant_Index, stString);

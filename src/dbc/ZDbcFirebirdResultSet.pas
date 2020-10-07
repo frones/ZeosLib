@@ -90,8 +90,8 @@ type
     procedure RegisterCursor;
   public
     Constructor Create(const Statement: IZStatement; const SQL: String;
-      OrgMessageMetadata, NewMessageMetadata: IMessageMetadata; Status: IStatus;
-      DataBuffer: Pointer);
+      MessageMetadata: IMessageMetadata; OrgTypeList: TZIBFBOrgSqlTypeAndScaleList;
+      Status: IStatus; DataBuffer: Pointer);
     procedure ResetCursor; override;
   public
     function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
@@ -103,8 +103,8 @@ type
     FResultSetAddr: PIResultSet;
   public
     Constructor Create(const Statement: IZStatement; const SQL: String;
-      OrgMessageMetadata, NewMessageMetadata: IMessageMetadata; Status: IStatus;
-      DataBuffer: Pointer; ResultSet: PIResultSet);
+      MessageMetadata: IMessageMetadata; OrgTypeList: TZIBFBOrgSqlTypeAndScaleList;
+      Status: IStatus; DataBuffer: Pointer; ResultSet: PIResultSet);
   public
     /// <summary>Resets the Cursor position to Row 0, and releases servver
     ///  and client resources.</summary>
@@ -122,6 +122,10 @@ type
     ///  if the cursor is at any other position or the result set contains no
     ///  rows</returns>
     function IsAfterLast: Boolean; override;
+    /// <summary>Moves the cursor to the first row in this <c>ResultSet</c>
+    ///  object.</summary>
+    /// <returns><c>true</c> if the cursor is on a valid row; <c>false</c> if
+    ///  there are no rows in the resultset</returns>
     function First: Boolean; override;
     /// <summary>Moves the cursor to the last row in this <c>ResultSet</c>
     ///  object.</summary>
@@ -175,8 +179,8 @@ type
   TZFirebirdOutParamResultSet = class(TZAbstractFirebirdResultSet)
   public
     Constructor Create(const Statement: IZStatement; const SQL: String;
-      OrgMessageMetadata, NewMessageMetadata: IMessageMetadata; Status: IStatus;
-      DataBuffer: Pointer);
+      MessageMetadata: IMessageMetadata; OrgTypeList: TZIBFBOrgSqlTypeAndScaleList;
+      Status: IStatus; DataBuffer: Pointer);
   public { Traversal/Positioning }
     /// <summary>Moves the cursor down one row from its current position. A
     ///  <c>ResultSet</c> cursor is initially positioned before the first row;
@@ -336,6 +340,7 @@ begin
           Result := stBigDecimal;
     SQL_FLOAT:
       Result := stFloat;
+    SQL_DEC16, SQL_DEC34,
     SQL_DOUBLE, SQL_D_FLOAT:
       Result := stDouble;
     SQL_BOOLEAN, SQL_BOOLEAN_FB:
@@ -356,8 +361,6 @@ begin
         then Result := stAsciiStream
         else Result := stBinaryStream;
     SQL_ARRAY: Result := stArray;
-    SQL_DEC16: Result := stDouble;
-    SQL_DEC34: Result := stString;
     SQL_INT128, SQL_DEC_FIXED: Result := stBigDecimal;
     else  Result := stUnknown;
   end;
@@ -365,7 +368,8 @@ end;
 { TZAbstractFirebirdResultSet }
 
 constructor TZAbstractFirebirdResultSet.Create(const Statement: IZStatement;
-  const SQL: String; OrgMessageMetadata, NewMessageMetadata: IMessageMetadata;
+  const SQL: String; MessageMetadata: IMessageMetadata;
+  OrgTypeList: TZIBFBOrgSqlTypeAndScaleList;
   Status: IStatus; DataBuffer: Pointer);
 var I, Len, OffSet: Cardinal;
   CP_ID: Word;
@@ -381,7 +385,7 @@ begin
   FFirstRow := True;
   FDataBuffer := DataBuffer;
 
-  I := OrgMessageMetadata.getCount(FStatus);
+  I := MessageMetadata.getCount(FStatus);
   if i = 0 then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   ColumnsInfo.Capacity := I;
@@ -394,7 +398,7 @@ begin
     ColumnInfo := TZInterbaseFirebirdColumnInfo.Create;
     ColumnsInfo.Add(ColumnInfo);
     with ColumnInfo do begin
-      P := OrgMessageMetadata.getRelation(FStatus, I);
+      P := MessageMetadata.getRelation(FStatus, I);
       Len := ZFastCode.StrLen(P);
       {$IFDEF UNICODE}
       TableName := PRawToUnicode(P, Len, CP_ID);
@@ -403,7 +407,7 @@ begin
       {$ENDIF}
       if TableName <> '' then begin //firebird does not corectly clear the name
         //see TestColumnTypeAndTableDetermination we get a 'ADD' in buffer back
-        P := OrgMessageMetadata.getField(FStatus, I);
+        P := MessageMetadata.getField(FStatus, I);
         Len := ZFastCode.StrLen(P);
         {$IFDEF UNICODE}
         ColumnName := PRawToUnicode(P, Len, CP_ID);
@@ -411,41 +415,43 @@ begin
         System.SetString(ColumnName, P, Len);
         {$ENDIF}
       end;
-      P := OrgMessageMetadata.getAlias(FStatus, I);
+      P := MessageMetadata.getAlias(FStatus, I);
       Len := ZFastCode.StrLen(P);
       {$IFDEF UNICODE}
       ColumnLabel := PRawToUnicode(P, Len, CP_ID);
       {$ELSE}
       System.SetString(ColumnLabel, P, Len);
       {$ENDIF}
-      sqltype := OrgMessageMetadata.getType(FStatus, I);
-      sqlsubType := OrgMessageMetadata.getSubType(FStatus, I);
-      sqlscale := OrgMessageMetadata.getScale(FStatus, I);
+      sqltype := PZIBFBOrgSqlTypeAndScale(OrgTypeList[i]).sqltype;
+      sqlsubType := MessageMetadata.getSubType(FStatus, I);
+      sqlscale := PZIBFBOrgSqlTypeAndScale(OrgTypeList[i]).scale;
       Scale := -sqlscale;
       if (sqltype = SQL_TEXT) or (sqltype = SQL_VARYING) then begin //SQL_BLOB
-        CP_ID := Word(OrgMessageMetadata.getCharSet(FStatus, I)) and 255;
+        CP_ID := Word(MessageMetadata.getCharSet(FStatus, I)) and 255;
         ColumnType := ConvertIB_FBType2SQLType(sqltype, CP_ID, sqlscale);
       end else
         ColumnType := ConvertIB_FBType2SQLType(sqltype, sqlsubtype, sqlscale);
-      sqltype := NewMessageMetadata.getType(FStatus, I);
-      sqlsubType := NewMessageMetadata.getSubType(FStatus, I);
-      sqlscale := NewMessageMetadata.getScale(FStatus, I);
-      Len := NewMessageMetadata.getLength(FStatus, I);
+      //if (sqltype <> SQL_INT128) and (sqltype <> SQL_DEC_FIXED) then
+        sqltype := MessageMetadata.getType(FStatus, I);
+      sqlsubType := MessageMetadata.getSubType(FStatus, I);
+      sqlscale := MessageMetadata.getScale(FStatus, I);
+      Len := MessageMetadata.getLength(FStatus, I);
       if FGUIDProps.ColumnIsGUID(ColumnType, len, ColumnName) then
         ColumnType := stGUID;
-      if OrgMessageMetadata.isNullable(FStatus, I) then begin
-        OffSet := NewMessageMetadata.getNullOffset(FStatus, I);
+      //if MessageMetadata.isNullable(FStatus, I) then begin EH: bug in 4.0, Nullable isn't copied and not setable with builder
+      if PZIBFBOrgSqlTypeAndScale(OrgTypeList[i]).Nullable then begin
+        OffSet := MessageMetadata.getNullOffset(FStatus, I);
         sqlind := PISC_SHORT(PAnsiChar(FDataBuffer)+OffSet);
         Nullable := ntNullable;
       end;
-      OffSet := NewMessageMetadata.getOffset(FStatus, I);
+      OffSet := MessageMetadata.getOffset(FStatus, I);
       sqldata := PAnsiChar(FDataBuffer)+OffSet;
       if sqlind = sqldata then
         sqlind := nil;
       case ColumnType of
         stString, stGUID: begin
             //see test Bug#886194, we retrieve 565 as CP... the modula returns the FBID of CP
-            CP_ID := Word(OrgMessageMetadata.getCharSet(FStatus, I)) and 255;
+            CP_ID := Word(MessageMetadata.getCharSet(FStatus, I)) and 255;
             //see: http://sourceforge.net/p/zeoslib/tickets/97/
             if (CP_ID = ConSettings^.ClientCodePage^.ID)
             then ZCodePageInfo := ConSettings^.ClientCodePage
@@ -560,21 +566,15 @@ end;
 { TZFirebirdResultSet }
 
 constructor TZFirebirdResultSet.Create(const Statement: IZStatement;
-  const SQL: String; OrgMessageMetadata, NewMessageMetadata: IMessageMetadata;
-  Status: IStatus; DataBuffer: Pointer; ResultSet: PIResultSet);
+  const SQL: String; MessageMetadata: IMessageMetadata;
+  OrgTypeList: TZIBFBOrgSqlTypeAndScaleList; Status: IStatus;
+  DataBuffer: Pointer; ResultSet: PIResultSet);
 begin
-  inherited Create(Statement, SQL, OrgMessageMetadata, NewMessageMetadata, Status, DataBuffer);
+  inherited Create(Statement, SQL, MessageMetadata, OrgTypeList, Status, DataBuffer);
   FResultset := ResultSet^;
   FResultSetAddr := ResultSet;
 end;
 
-{**
-  Moves the cursor to the first row in
-  this <code>ResultSet</code> object.
-
-  @return <code>true</code> if the cursor is on a valid row;
-  <code>false</code> if there are no rows in the result set
-}
 function TZFirebirdResultSet.First: Boolean;
 var Status: Integer;
 begin
@@ -845,11 +845,10 @@ end;
 { TZFirebirdOutParamResultSet }
 
 constructor TZFirebirdOutParamResultSet.Create(const Statement: IZStatement;
-  const SQL: String; OrgMessageMetadata, NewMessageMetadata: IMessageMetadata;
+  const SQL: String; MessageMetadata: IMessageMetadata; OrgTypeList: TZIBFBOrgSqlTypeAndScaleList;
   Status: IStatus; DataBuffer: Pointer);
 begin
-  inherited Create(Statement, SQL, OrgMessageMetadata, NewMessageMetadata,
-    Status, DataBuffer);
+  inherited Create(Statement, SQL, MessageMetadata, OrgTypeList, Status, DataBuffer);
   LastRowNo := 1;
 end;
 

@@ -128,6 +128,8 @@ type
     procedure TestSF418_SortedFields;
     procedure TestSF418_IndexFieldNames;
     procedure TestSF434;
+    procedure TestSF310_JoinedUpdate_SetReadOnly;
+    procedure TestSF310_JoinedUpdate_ProviderFlags;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -150,7 +152,10 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  SysUtils, ZDatasetUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcMetadata, ZEncoding;
+  SysUtils,
+  ZSysUtils, ZEncoding,
+  ZDbcMetadata,
+  ZDatasetUtils, ZAbstractDataset, ZTestConsts, ZTestCase;
 
 { ZTestCompCoreBugReport }
 
@@ -1745,7 +1750,10 @@ begin
     Query.ExecSQL;
 
     Query.SQL.Text := 'INSERT INTO equipment (eq_id, eq_name) VALUES (:u, :u1)';
-    Query.ParamByName('u').AsString := IntToStr(TEST_ROW_ID - 2);
+    //EH: i don't understand the string assignment here. however..
+    if Query.Connection.DbcConnection.GetServerProvider = spASE
+    then Query.ParamByName('u').AsInteger := TEST_ROW_ID - 2
+    else Query.ParamByName('u').AsString := IntToStr(TEST_ROW_ID - 2);
     Query.ParamByName('u1').AsString := 'ab''cd''ef';
     Query.ExecSQL;
     Query.ParamByName('u').AsInteger := TEST_ROW_ID - 1;
@@ -2165,6 +2173,72 @@ begin
     Query.Open;
     Check(true);
   finally
+    FreeAndNil(Query);
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF310_JoinedUpdate_ProviderFlags;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  Check(Query <> nil);
+  try
+    Query.Connection.Connect;
+    Query.Connection.StartTransaction;
+    //Exit;
+    Query.SQL.Text := 'select c.c_id, c.c_name, c.c_seal, c.c_date_came, '+
+      'c.c_date_out, c.c_weight, c.c_width, c.c_height, c.c_cost, '+
+      'c.c_attributes, dep.dep_name, dep.dep_shname, dep_address '+
+      'from cargo c left join department dep on dep.dep_id = c.c_dep_id '+
+      'where c.c_id = '+IntToStr(TEST_ROW_ID);
+    Query.Open;
+    Query.FieldByName('dep_name').ReadOnly := True;
+    Query.FieldByName('dep_shname').ReadOnly := True;
+    Query.FieldByName('dep_address').ReadOnly := True;
+    Query.Append;
+    Query.FieldByName('c_id').AsInteger := TEST_ROW_ID;
+    Query.Post;
+    Query.Close;
+    Query.Unprepare; //now test updates using provider flags -> Refresh fields
+    Query.WhereMode := wmWhereAll; //to test if the joined fields are ignored in the where clause
+    Query.Open;
+    CheckFalse(Query.Eof, 'there is a row now');
+    Query.Edit;
+    Query.FieldByName('dep_name').ProviderFlags := [];
+    Query.FieldByName('dep_shname').ProviderFlags := [];
+    Query.FieldByName('dep_address').ProviderFlags := [];
+    Query.FieldByName('c_name').AsString := 'Ticket310';
+    Query.Post;
+  finally
+    Query.Connection.Rollback;
+    FreeAndNil(Query);
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF310_JoinedUpdate_SetReadOnly;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  Check(Query <> nil);
+  try
+    Query.Connection.Connect;
+    Query.Connection.StartTransaction;
+    Query.SQL.Text := 'select c.c_id, c.c_name, c.c_seal, c.c_date_came, '+
+      'c.c_date_out, c.c_weight, c.c_width, c.c_height, c.c_cost, '+
+      'c.c_attributes, dep.dep_name, dep.dep_shname, dep_address '+
+      'from cargo c left join department dep on dep.dep_id = c.c_dep_id '+
+      'where c.c_id = '+IntToStr(TEST_ROW_ID);
+    Query.Open;
+    Query.FieldByName('dep_name').ReadOnly := True;
+    Query.FieldByName('dep_shname').ReadOnly := True;
+    Query.FieldByName('dep_address').ReadOnly := True;
+    Query.Append;
+    Query.FieldByName('c_id').AsInteger := TEST_ROW_ID;
+    Query.Post;
+  finally
+    Query.Connection.Rollback;
     FreeAndNil(Query);
   end;
 end;

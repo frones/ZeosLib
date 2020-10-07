@@ -3,7 +3,6 @@
   <Package Version="4">
     <PathDelim Value="\"/>
     <Name Value="zcomponent"/>
-    <Type Value="RunAndDesignTime"/>
     <AddToProjectUsesSection Value="True"/>
     <CompilerOptions>
       <Version Value="11"/>
@@ -23,10 +22,9 @@
         <CustomOptions Value="-dZEOSDEBUG"/>
       </Other>
     </CompilerOptions>
-    <Description Value="Zeos Database Components
-"/>
+    <Description Value="Zeos Database Components"/>
     <Version Major="7" Minor="3"/>
-    <Files Count="19">
+    <Files Count="17">
       <Item1>
         <Filename Value="..\..\src\component\ZAbstractConnection.pas"/>
         <UnitName Value="ZAbstractConnection"/>
@@ -44,17 +42,16 @@
         <UnitName Value="ZAbstractTable"/>
       </Item4>
       <Item5>
-        <Filename Value="..\..\src\component\ZComponentReg.pas"/>
-        <HasRegisterProc Value="True"/>
-        <UnitName Value="ZComponentReg"/>
-      </Item5>
-      <Item6>
         <Filename Value="..\..\src\component\ZConnection.pas"/>
         <UnitName Value="ZConnection"/>
-      </Item6>
-      <Item7>
+      </Item5>
+      <Item6>
         <Filename Value="..\..\src\component\ZConnectionGroup.pas"/>
         <UnitName Value="ZConnectionGroup"/>
+      </Item6>
+      <Item7>
+        <Filename Value="..\..\src\component\ZDataset.pas"/>
+        <UnitName Value="ZDataset"/>
       </Item7>
       <Item8>
         <Filename Value="..\..\src\component\ZDatasetUtils.pas"/>
@@ -96,16 +93,8 @@
         <Filename Value="..\..\src\component\ZStoredProcedure.pas"/>
         <UnitName Value="ZStoredProcedure"/>
       </Item17>
-      <Item18>
-        <Filename Value="..\..\src\component\ZUpdateSqlEditor.pas"/>
-        <UnitName Value="ZUpdateSqlEditor"/>
-      </Item18>
-      <Item19>
-        <Filename Value="..\..\src\component\ZPropertiesEditor.pas"/>
-        <UnitName Value="ZPropertiesEditor"/>
-      </Item19>
     </Files>
-    <RequiredPkgs Count="6">
+    <RequiredPkgs Count="5">
       <Item1>
         <PackageName Value="zplain"/>
         <MaxVersion Major="7" Minor="2"/>
@@ -127,12 +116,9 @@
         <MinVersion Major="7" Minor="3" Valid="True"/>
       </Item4>
       <Item5>
-        <PackageName Value="IDEIntf"/>
-      </Item5>
-      <Item6>
         <PackageName Value="FCL"/>
         <MinVersion Major="1" Valid="True"/>
-      </Item6>
+      </Item5>
     </RequiredPkgs>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>

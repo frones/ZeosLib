@@ -77,7 +77,8 @@ type
 
 implementation
 
-uses Classes, ZDbcIntfs, ZDbcProperties;
+uses Classes, ZSysUtils, ZDbcIntfs, ZDbcProperties
+  {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}, ZDbcInterbaseFirebirdMetadata{$ENDIF};
 
 { TZTestExecSQLCase }
 
@@ -128,32 +129,50 @@ end;
 
 procedure TZTestConnectionCase.TestLoginPromptConnection;
 var
-    locUserName,locPassword : string;
+  locUserName,locPassword : string;
+  DataBaseStrings: TStrings;
+  HostVersion: Integer;
 begin
-  if Connection.Protocol = 'mssql' then
-    Fail('Making this test fail to get everything else tested for SQL Server 2000. This test hangs forever with FreeTDS and SQL 2000.');
-
-  locUserName := Connection.User;
-  locPassword := Connection.Password;
-  Connection.Disconnect;
-  Connection.LoginPrompt := true;
-//  Connection.User := '';
-//  Connection.Password := '';
-  gloUserName := 'x';
-  gloPassword := 'y';
-  Connection.OnLogin := ConnLogin;
+  DataBaseStrings := SplitString(Connection.DataBase, ';');
+  Check(DataBaseStrings <> nil);
+  //Connection.Properties.Values[ConnProps_Timeout] := '2'; that still doesn't work with Jenkins
   try
+    if (Connection.Protocol = 'mssql') then begin
+      Connection.Connect;
+      Check(Connection.Connected);
+      HostVersion := Connection.DbcConnection.GetHostVersion;
+      if (HostVersion >= ZSysUtils.EncodeSQLVersioning(8,0,0)) and (HostVersion < ZSysUtils.EncodeSQLVersioning(9,0,0)) then
+        Fail('Making this test fail to get everything else tested for SQL Server 2000. This test hangs forever with FreeTDS and SQL 2000.');
+    end;
+    locUserName := Connection.User;
+    locPassword := Connection.Password;
+    Connection.Disconnect;
+    Connection.LoginPrompt := true;
+  //  Connection.User := '';
+  //  Connection.Password := '';
+    gloUserName := 'x';
+    gloPassword := 'y';
+    Connection.OnLogin := ConnLogin;
+    try
+      Connection.Connect;
+      if (Connection.DbcConnection.GetServerProvider <> spSQLite) and
+         not StrToBoolEx(DataBaseStrings.Values[ConnProps_TrustedConnection]) and
+         not StrToBoolEx(DataBaseStrings.Values[ConnProps_Trusted]) and
+         not ((Connection.DbcConnection.GetServerProvider = spIB_FB) and //in case of embedded this test is not resolvable
+          (Connection.DbcConnection.GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and
+          (Connection.DbcConnection.GetHostVersion >= 3000000) and (Connection.HostName = '')) then
+        Fail('We never expect to reach this place. It means we were allowed to login using invalid user credentials.');
+    except
+      CheckEquals(false,Connection.Connected);
+    end;
+    Connection.Disconnect;
+    gloUserName := locUserName;
+    gloPassword := locPassword;
     Connection.Connect;
-    if Connection.DbcConnection.GetServerProvider <> spSQLite then
-      Fail('We never expect to reach this place. It means we were allowed to login using invalid user credentials.');
-  except
-    CheckEquals(false,Connection.Connected);
+    CheckEquals(true,Connection.Connected);
+  finally
+    FreeAndNil(DataBaseStrings);
   end;
-  Connection.Disconnect;
-  gloUserName := locUserName;
-  gloPassword := locPassword;
-  Connection.Connect;
-  CheckEquals(true,Connection.Connected);
 end;
 
 procedure TZTestConnectionCase.TestTransactionBehavior;

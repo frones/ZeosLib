@@ -226,7 +226,6 @@ type
   TZDbLibBaseDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   protected
     function ConvertEscapes(const Pattern: String): String;
-    function GetSP_Prefix(const Catalog, Schema: String): String;
     function ComposeObjectString(const S: String; Const NullText: String = 'null';
       QuoteChar: Char = #39): String;
     function DecomposeObjectString(const S: String): String; override;
@@ -315,7 +314,7 @@ type
 implementation
 {$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 
-uses ZFastCode, ZDbcDbLibUtils, ZDbcDbLib;
+uses ZFastCode, ZDbcDbLibUtils;
 
 { TZDbLibDatabaseInfo }
 
@@ -525,6 +524,7 @@ begin
   Result := 'DATEADD,DATEDIFF,DATENAME,DATEPART,DAY,GETDATE,MONTH,YEAR';
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Collation" not used} {$ENDIF}
 procedure TZDbLibDatabaseInfo.InitIdentifierCase(const Collation: String);
 begin
   (*
@@ -537,6 +537,7 @@ begin
   // SQL Server _always_ stores mixed case identifiers. Matching is done via collations. Zeos should not tamper with Identifiers.
   fCaseIdentifiers := icMixed;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets the string that can be used to escape wildcard characters.
@@ -1221,15 +1222,6 @@ end;
 
 
 { TZDbLibBaseDatabaseMetadata }
-
-function TZDbLibBaseDatabaseMetadata.GetSP_Prefix(const Catalog, Schema: String): String;
-begin
-  if (UpperCase(Catalog) = 'INFORMATION_SCHEMA') or
-     (UpperCase(Schema)  = 'INFORMATION_SCHEMA') then
-    Result := ''
-  else
-    Result := Catalog+'.'+ConvertEscapes(Schema)+'.';
-end;
 
 {**
   Composes a object name, SQLQuotedStror NullText

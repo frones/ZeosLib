@@ -1266,11 +1266,16 @@ begin
           Result := stBigDecimal;
     SQL_FLOAT:
       Result := stFloat;
+    SQL_DEC16, SQL_DEC34,
     SQL_DOUBLE, SQL_D_FLOAT:
       Result := stDouble;
     SQL_BOOLEAN, SQL_BOOLEAN_FB:
       Result := stBoolean;
+    SQL_TIMESTAMP_TZ_EX,
+    SQL_TIMESTAMP_TZ,
     SQL_DATE: Result := stTimestamp;
+    SQL_TIME_TZ_EX,
+    SQL_TIME_TZ,
     SQL_TYPE_TIME: Result := stTime;
     SQL_TYPE_DATE: Result := stDate;
     SQL_INT64:
@@ -1286,6 +1291,7 @@ begin
         then Result := stAsciiStream
         else Result := stBinaryStream;
     SQL_ARRAY: Result := stArray;
+    SQL_DEC_FIXED, SQL_INT128: Result := stBigDecimal;
     else  Result := stString;
   end;
 end;

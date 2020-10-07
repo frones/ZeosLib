@@ -62,18 +62,31 @@ uses ZClasses
 
 type
 
-  {** Implements an enum for and identifier case Sensitive/Unsensitive value }
+  /// <summary>defines an enum for and identifier case Sensitive/Unsensitive
+  ///  value.</summary>
   TZIdentifierCase = (icNone, icLower, icUpper, icMixed, icSpecial);
 
-  {** Case Sensitive/Unsensitive identificator processor. }
-  IZIdentifierConvertor = interface (IZInterface)
+  /// <author>EgonHugeist</author>
+  /// <summary>defines an enumerator for the quoting rules of qualifiers.</summary>
+  TZIdentifierQualifier = (iqUnspecified, iqCatalog, iqSchema, iqTable, iqEvent,
+    iqTrigger, iqStoredProcedure, iqStoredFunction, iqSequence, iqColumn,
+    iqParameter, iqIndex, iqForeignKey);
+
+  /// <summary>Case Sensitive/Unsensitive identificator processor.</summary>
+  IZIdentifierConverter = interface (IZInterface)
     ['{2EB07B9B-1E96-4A42-8084-6F98D9140B27}']
     function IsCaseSensitive(const Value: string): Boolean;
     function IsQuoted(const Value: string): Boolean;
     function GetIdentifierCase(const Value: String; TestKeyWords: Boolean): TZIdentifierCase;
-    function Quote(const Value: string): string;
+    /// <summary>Quotes the identifier string.</summary>
+    /// <param>"Value" an identifier string.</param>
+    /// <param>"Qualifier" an identifier qualifier. Default is <c>iqUnspecified</c>.</param>
+    /// <returns>a quoted string.</returns>
+    function Quote(const Value: string; Qualifier: TZIdentifierQualifier = iqUnspecified): string;
     function ExtractQuote(const Value: string): string;
   end;
+
+  IZIdentifierConvertor = IZIdentifierConverter; //EH: keep that alias for compatibility
 
   {** Implements a table reference assembly. }
   TZTableRef = class (TObject)
@@ -127,14 +140,14 @@ type
 
     procedure AddTable({$IFDEF AUTOREFCOUNT}const{$ENDIF}TableRef: TZTableRef);
 
-    procedure LinkReferences(const Convertor: IZIdentifierConvertor);
+    procedure LinkReferences(const Converter: IZIdentifierConverter);
 
     function FindTableByFullName(const Catalog, Schema, Table: string): TZTableRef;
     function FindTableByShortName(const Table: string): TZTableRef;
     function FindFieldByShortName(const Field: string): TZFieldRef;
 
     function LinkFieldByIndexAndShortName(ColumnIndex: Integer; const Field: string;
-      const Convertor: IZIdentifierConvertor): TZFieldRef;
+      const Converter: IZIdentifierConverter): TZFieldRef;
 
     function GetFieldCount: Integer;
     function GetTableCount: Integer;
@@ -153,7 +166,7 @@ type
     FFields: TObjectList;
     FTables: TObjectList;
 
-    procedure ConvertIdentifiers(const Convertor: IZIdentifierConvertor);
+    procedure ConvertIdentifiers(const Converter: IZIdentifierConverter);
   public
     constructor Create;
     destructor Destroy; override;
@@ -164,14 +177,14 @@ type
 
     procedure AddTable({$IFDEF AUTOREFCOUNT}const{$ENDIF}TableRef: TZTableRef);
 
-    procedure LinkReferences(const Convertor: IZIdentifierConvertor);
+    procedure LinkReferences(const Converter: IZIdentifierConverter);
 
     function FindTableByFullName(const Catalog, Schema, Table: string): TZTableRef;
     function FindTableByShortName(const Table: string): TZTableRef;
     function FindFieldByShortName(const Field: string): TZFieldRef;
 
     function LinkFieldByIndexAndShortName(ColumnIndex: Integer; const Field: string;
-      const Convertor: IZIdentifierConvertor): TZFieldRef;
+      const Converter: IZIdentifierConverter): TZFieldRef;
 
     function GetFieldCount: Integer;
     function GetTableCount: Integer;
@@ -393,7 +406,7 @@ end;
   @return a found field reference object or <code>null</code> otherwise.
 }
 function TZSelectSchema.LinkFieldByIndexAndShortName(ColumnIndex: Integer;
-  const Field: string; const Convertor: IZIdentifierConvertor): TZFieldRef;
+  const Field: string; const Converter: IZIdentifierConverter): TZFieldRef;
 var
   I: Integer;
   Current: TZFieldRef;
@@ -403,8 +416,8 @@ begin
   if Field = '' then
     Exit;
 
-  FieldQuoted := Convertor.Quote(Field);
-  FieldUnquoted := Convertor.ExtractQuote(Field);
+  FieldQuoted := Converter.Quote(Field);
+  FieldUnquoted := Converter.ExtractQuote(Field);
 
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
@@ -468,9 +481,9 @@ end;
 
 {**
   Convert all table and field identifiers..
-  @param Convertor an identifier convertor.
+  @param Converter an identifier Converter.
 }
-procedure TZSelectSchema.ConvertIdentifiers(const Convertor: IZIdentifierConvertor);
+procedure TZSelectSchema.ConvertIdentifiers(const Converter: IZIdentifierConverter);
 var
   I: Integer;
   function ExtractNeedlessQuote(const Value : String) : String;
@@ -480,12 +493,12 @@ var
       Result := '';
       Exit;
     end;
-    Result := Convertor.ExtractQuote(Value);
-    if Convertor.GetIdentifierCase(Result, True) in [icMixed, icSpecial] then
+    Result := Converter.ExtractQuote(Value);
+    if Converter.GetIdentifierCase(Result, True) in [icMixed, icSpecial] then
       Result := Value;
   end;
 begin
-  if Convertor = nil then Exit;
+  if Converter = nil then Exit;
 
   for I := 0 to FFields.Count - 1 do
   begin
@@ -513,16 +526,16 @@ end;
 
 {**
   Links references between fields and tables.
-  @param Convertor an identifier convertor.
+  @param Converter an identifier Converter.
 }
-procedure TZSelectSchema.LinkReferences(const Convertor: IZIdentifierConvertor);
+procedure TZSelectSchema.LinkReferences(const Converter: IZIdentifierConverter);
 var
   I, J: Integer;
   FieldRef: TZFieldRef;
   TableRef: TZTableRef;
   TempFields: TObjectList;
 begin
-  ConvertIdentifiers(Convertor);
+  ConvertIdentifiers(Converter);
   TempFields := FFields;
   FFields := TObjectList.Create;
 

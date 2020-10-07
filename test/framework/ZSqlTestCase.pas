@@ -459,7 +459,6 @@ begin
   Result.UserName := UserName;
   Result.Password := Password;
   Result.LibLocation := LibLocation;
-
   for I := 0 to High(Properties) do
     Result.Properties.Add(Properties[I]);
   Result.Properties.Add(Param);
@@ -578,7 +577,13 @@ constructor TZConnectionConfig.Create(ConnectionName: String);
 begin
   Create;
   FName := ConnectionName;
-  FLibLocation := TestConfig.ReadProperty(FName, DATABASE_LIBLOCATION_KEY, '');
+  {$IFDEF CPU64}
+  FLibLocation := TestConfig.ReadProperty(FName, DATABASE_LIBLOCATION_KEY64, '');
+  {$ELSE}
+  FLibLocation := TestConfig.ReadProperty(FName, DATABASE_LIBLOCATION_KEY32, '');
+  {$ENDIF}
+  if FLibLocation = '' then
+    FLibLocation := TestConfig.ReadProperty(FName, DATABASE_LIBLOCATION_KEY, '');
   FAlias := TestConfig.ReadProperty(FName, DATABASE_ALIAS_KEY, '');
   FProtocol := TestConfig.ReadProperty(FName, DATABASE_PROTOCOL_KEY, '');
   FHostName := TestConfig.ReadProperty(FName, DATABASE_HOST_KEY,

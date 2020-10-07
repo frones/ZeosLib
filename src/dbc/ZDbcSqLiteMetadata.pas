@@ -1343,7 +1343,7 @@ var
       aiIdx := ZFastCode.Pos('AUTOINCREMENT', CreateSQLUp);
       if (aiIdx > 0) then begin
         if IC.IsCaseSensitive(ColumnName) then
-          ColumnName := IC.Quote(ColumnName);
+          ColumnName := IC.Quote(ColumnName, iqColumn);
         colIdx := ZFastCode.Pos(ColumnName, CreateSQL);
         if (colIdx > 0) and (colIdx < aiIdx) then begin
           colIdx := PosEx('INTEGER', CreateSQLUp, colIdx);

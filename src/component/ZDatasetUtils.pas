@@ -1238,7 +1238,7 @@ begin
   begin
     if (Fields[I].FieldKind = fkData)
       and not (Fields[I].DataType in [ftBlob, ftGraphic, ftMemo, ftBytes, ftVarBytes {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}]) then
-      AppendSepString(Result, IdConverter.Quote(Fields[I].FieldName), ',');
+      AppendSepString(Result, IdConverter.Quote(Fields[I].FieldName, iqColumn), ',');
   end;
 end;
 
@@ -1725,7 +1725,7 @@ begin
         {$ENDIF}
         else Statement.SetLong(Index, {$IFDEF WITH_PARAM_ASLARGEINT}Param.AsLargeInt{$ELSE}StrToInt64(Param.AsString){$ENDIF});
       end;
-    ftBCD:  Statement.SetCurrency(Index, Param.AsBCD);
+    ftBCD:  Statement.SetCurrency(Index, Param.{$IFDEF WITH_PARAM_ASBCD}AsBCD{$ELSE}AsCurrency{$ENDIF});
     ftString, ftFixedChar{$IFDEF WITH_FTWIDESTRING}, ftWideString{$ENDIF}:
       {$IFNDEF UNICODE}
       if (TVarData(Param.Value).VType = varOleStr) {$IFDEF WITH_varUString} or (TVarData(Param.Value).VType = varUString){$ENDIF}

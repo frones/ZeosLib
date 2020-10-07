@@ -732,7 +732,7 @@ function TZOracleCallableStatement_A.CreateExecutionStatement(
 var
   ProcSQL: RawByteString;
   SQLWriter: TZRawSQLStringWriter;
-  IC: IZIdentifierConvertor;
+  IC: IZIdentifierConverter;
 
   procedure AddArgs({$IFDEF AUTOREFCOUNT}const{$ENDIF}Params: TObjectList);
   var I: Integer;
@@ -807,7 +807,7 @@ var
     end;
   end;
 begin
-  IC := Connection.GetMetadata.GetIdentifierConvertor;
+  IC := Connection.GetMetadata.GetIdentifierConverter;
   SQLWriter := TZRawSQLStringWriter.Create(1024);
   try
     if FProcDescriptor = nil then
@@ -2791,7 +2791,7 @@ function TZOracleCallableStatement_W.CreateExecutionStatement(
 var
   ProcSQL: UnicodeString;
   SQLWriter: TZUnicodeSQLStringWriter;
-  IC: IZIdentifierConvertor;
+  IC: IZIdentifierConverter;
 
   procedure AddArgs({$IFDEF AUTOREFCOUNT}const{$ENDIF}Params: TObjectList);
   var I: Integer;
@@ -2866,7 +2866,7 @@ var
     end;
   end;
 begin
-  IC := Connection.GetMetadata.GetIdentifierConvertor;
+  IC := Connection.GetMetadata.GetIdentifierConverter;
   SQLWriter := TZUnicodeSQLStringWriter.Create(1024);
   try
     if FProcDescriptor = nil then

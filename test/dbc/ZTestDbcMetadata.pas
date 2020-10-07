@@ -146,14 +146,14 @@ var QuoteStr: string;
 begin
   QuoteStr := MD.GetDatabaseInfo.GetIdentifierQuoteString;
 
-  CheckEquals(QuoteStr[1]+'99'+QuoteStr[Length(QuoteStr)],   MD.GetIdentifierConvertor.Quote('99'));
-  CheckEquals(QuoteStr[1]+'9A'+QuoteStr[Length(QuoteStr)],   MD.GetIdentifierConvertor.Quote('9A'));
-  CheckEquals(QuoteStr[1]+'A9 A'+QuoteStr[Length(QuoteStr)], MD.GetIdentifierConvertor.Quote('A9 A'));
-  CheckEquals(QuoteStr[1]+'VALUE'+QuoteStr[Length(QuoteStr)], MD.GetIdentifierConvertor.Quote('VALUE'));
-  CheckEquals(QuoteStr[1]+'values'+QuoteStr[Length(QuoteStr)], MD.GetIdentifierConvertor.Quote('values'));
+  CheckEquals(QuoteStr[1]+'99'+QuoteStr[Length(QuoteStr)],   MD.GetIdentifierConverter.Quote('99'));
+  CheckEquals(QuoteStr[1]+'9A'+QuoteStr[Length(QuoteStr)],   MD.GetIdentifierConverter.Quote('9A'));
+  CheckEquals(QuoteStr[1]+'A9 A'+QuoteStr[Length(QuoteStr)], MD.GetIdentifierConverter.Quote('A9 A'));
+  CheckEquals(QuoteStr[1]+'VALUE'+QuoteStr[Length(QuoteStr)], MD.GetIdentifierConverter.Quote('VALUE'));
+  CheckEquals(QuoteStr[1]+'values'+QuoteStr[Length(QuoteStr)], MD.GetIdentifierConverter.Quote('values'));
 
   if MD.GetDatabaseInfo.StoresUpperCaseIdentifiers then
-    CheckEquals('A9A', MD.GetIdentifierConvertor.Quote('A9A'));
+    CheckEquals('A9A', MD.GetIdentifierConverter.Quote('A9A'));
 end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetTableTypes;

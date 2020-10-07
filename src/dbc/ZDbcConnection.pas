@@ -471,8 +471,9 @@ const
 implementation
 
 uses ZMessages,{$IFNDEF TLIST_IS_DEPRECATED}ZSysUtils, {$ENDIF}
-  ZDbcMetadata, ZDbcUtils, ZEncoding, ZFastCode,
-  ZDbcProperties, StrUtils, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}
+  ZEncoding, ZFastCode, ZSelectSchema,
+  ZDbcMetadata, ZDbcUtils, ZDbcProperties,
+  StrUtils, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
   {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
@@ -1806,7 +1807,7 @@ end;
 procedure TZIdentifierSequence.SetName(const Value: string);
 var QuotedName: String;
 begin
-  QuotedName := FConnection.GetMetadata.GetIdentifierConvertor.Quote(Value);
+  QuotedName := FConnection.GetMetadata.GetIdentifierConverter.Quote(Value, iqSequence);
   inherited SetName(QuotedName);
 end;
 
@@ -1814,7 +1815,7 @@ end;
 
 function TZMSSQLSequence.GetCurrentValueSQL: string;
 begin
-  Result := 'select next value for '+FConnection.GetMetadata.GetIdentifierConvertor.Quote(FName);
+  Result := 'select next value for '+FConnection.GetMetadata.GetIdentifierConverter.Quote(FName, iqSequence);
 end;
 
 function TZMSSQLSequence.GetNextValueSQL: string;
@@ -2296,8 +2297,20 @@ end;
 
 procedure TZAbstractSuccedaneousTxnConnection.ReleaseImmediat(
   const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+var I: Integer;
+  Imm: IImmediatelyReleasable;
 begin
   inherited;
+  if (fActiveTransaction <> nil) and (fActiveTransaction.QueryInterface(IImmediatelyReleasable, imm) = S_OK) and (imm <> Sender) then begin
+    imm.ReleaseImmediat(Sender, AError);
+    fActiveTransaction := nil;
+  end;
+  if fTransactions <> nil then begin
+    for I := fTransactions.Count -1 downto 0 do
+      if (fTransactions[i] <> nil) and (fTransactions[i].QueryInterface(IImmediatelyReleasable, imm) = S_OK) and (imm <> Sender) then
+        imm.ReleaseImmediat(Sender, AError);
+    fTransactions.Clear;
+  end;
 end;
 
 procedure TZAbstractSuccedaneousTxnConnection.ReleaseTransaction(
