@@ -1123,7 +1123,7 @@ procedure TZInterbaseFirebirdConnection.HandleErrorOrWarning(
 var
   FormatStr, ErrorString: string;
   ErrorCode: Integer;
-  Status: ISC_STATUS;
+  StatusArg, WarningArg: ISC_STATUS;
   i: Integer;
   InterbaseStatusVector: TZIBStatusVector;
   Error: EZSQLThrowable;
@@ -1131,8 +1131,9 @@ var
   OrgStatusVector: PARRAY_ISC_STATUS; //remainder for initialization
 begin
   { usually first isc_status is gds_arg_gds .. }
-  Status := StatusVector[1];
-  if (Status = 0) and (StatusVector[2] = isc_arg_end) then begin
+  StatusArg := StatusVector[1];
+  WarningArg := StatusVector[2];
+  if (StatusArg = isc_arg_end) and (WarningArg = isc_arg_end) then begin
     Exit; //neither Warning nor an Error
   end;
   OrgStatusVector := StatusVector;
@@ -1149,7 +1150,7 @@ begin
     LogError(LogCategory, ErrorCode, Sender, LogMessage, ErrorString);
   { in case second isc_status is zero(no error) and third is tagged as a warning it's a /are multiple warning(s)
     otoh it's an error with a possible warning(s)}
-  if (Status = 0{???})
+  if (WarningArg = isc_arg_warning)
   then ExeptionClass := EZSQLWarning
   else if (ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection) or
       (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_idle) or

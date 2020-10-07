@@ -342,6 +342,7 @@ begin
     FStatus.Dispose;
     FStatus := nil;
   end;
+  //How to free IStatus and IMaster?
 end;
 
 procedure TZFirebirdConnection.ExecuteImmediat(const SQL: RawByteString;
