@@ -6840,6 +6840,7 @@ begin
   end;
   LastWasZero := True;
   LastPlace := ((Precision - 1) shr 1);
+  PCardinal(@Result.Fraction[LastPlace+1])^ := 0; //some compilers read over lastnibble (FPC+XE10.3x64 f.e.)
   if (Precision and 1) = 1 then
     if Digits = 1 then begin
       Result.Fraction[LastPlace] := Byte(Value) shl 4;
@@ -6901,9 +6902,7 @@ label Done;
 begin
   Digits := GetOrdinalDigits(Value);
   if (Digits = 1) and (byte(Value) = 0) then begin
-    Result.Fraction[0] := 0;
-    Result.Precision := 1;
-    Result.SignSpecialPlaces := 0;
+    PCardinal(@Result.Precision)^ := ZInitZeroBCD;
     Exit;
   end;
   if Digits < Scale then begin
@@ -6916,6 +6915,7 @@ begin
   end;
   LastWasZero := True;
   LastPlace := ((Precision - 1) shr 1);
+  PCardinal(@Result.Fraction[LastPlace+1])^ := 0; //some compilers read over lastnibble (FPC+XE10.3x64 f.e.)
   if Precision and 1 = 1 then
     if Digits = 1 then begin
       Result.Fraction[LastPlace] := Byte(Value) shl 4;
@@ -6977,9 +6977,7 @@ label Done;
 begin
   Digits := GetOrdinalDigits(Value);
   if (Digits = 1) and (byte(Value) = 0) then begin
-    Result.Fraction[0] := 0;
-    Result.Precision := 1;
-    Result.SignSpecialPlaces := 0;
+    PCardinal(@Result.Precision)^ := ZInitZeroBCD;
     Exit;
   end;
   if Digits < Scale then begin
@@ -6991,6 +6989,7 @@ begin
     FirstPlace := 0;
   end;
   LastPlace := ((Precision - 1) shr 1);
+  PCardinal(@Result.Fraction[LastPlace+1])^ := 0; //some compilers read over lastnibble (FPC+XE10.3x64 f.e.)
   LastWasZero := True;
   if Precision and 1 = 1 then
     if Digits = 1 then begin

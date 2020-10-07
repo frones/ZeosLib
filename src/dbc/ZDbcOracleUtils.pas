@@ -1069,6 +1069,7 @@ begin
     Inc(pNuDigits);
     Inc(pNibble);
   end;
+  PCardinal(pNibble)^ := 0; //some compilers read over lastnibble (FPC+XE10.3x64 f.e.)
   if Positive
   then Bcd.SignSpecialPlaces := Byte(Scale)
   else Bcd.SignSpecialPlaces := Byte(Scale) or $80;
