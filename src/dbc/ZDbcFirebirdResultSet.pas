@@ -762,7 +762,9 @@ begin
         if GetType = rtForwardOnly then begin
           FResultSet.Close(FStatus); //dereister cursor from Txn
           if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-            FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.close', Self);
+            FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.close', Self)
+          else // Close() releases intf on success
+            FResultSet:= nil;
         end;
       end else
         FFBConnection.HandleErrorOrWarning(lcFetch, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.fetchNext', Self);
@@ -774,7 +776,8 @@ begin
       RowNo := RowNo+1; //tag as after last keep this, else the FPC grids are getting viny nilly
       //if statement is prepared but a syntax error did happen on execute only
       //example TestSF443
-      FResultSet.release;
+      if Assigned(FResultSet) then
+        FResultSet.release;
       FResultSet := nil;
       FResultSetAddr^ := nil;
       if (FFBTransaction <> nil) then
@@ -830,7 +833,11 @@ begin
     if FResultSet <> nil then begin
       FResultSet.close(FStatus);
       if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-        FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.close', Self);
+        FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IResultSet.close', Self)
+      else begin // Close() releases intf on success
+        FResultSet:= nil;
+        FResultSetAddr^:= nil;
+      end;
     end;
   finally
     if FResultSet <> nil then begin
