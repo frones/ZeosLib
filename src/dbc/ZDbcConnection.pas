@@ -2297,8 +2297,20 @@ end;
 
 procedure TZAbstractSuccedaneousTxnConnection.ReleaseImmediat(
   const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+var I: Integer;
+  Imm: IImmediatelyReleasable;
 begin
   inherited;
+  if (fActiveTransaction <> nil) and (fActiveTransaction.QueryInterface(IImmediatelyReleasable, imm) = S_OK) and (imm <> Sender) then begin
+    imm.ReleaseImmediat(Sender, AError);
+    fActiveTransaction := nil;
+  end;
+  if fTransactions <> nil then begin
+    for I := fTransactions.Count -1 downto 0 do
+      if (fTransactions[i] <> nil) and (fTransactions[i].QueryInterface(IImmediatelyReleasable, imm) = S_OK) and (imm <> Sender) then
+        imm.ReleaseImmediat(Sender, AError);
+    fTransactions.Clear;
+  end;
 end;
 
 procedure TZAbstractSuccedaneousTxnConnection.ReleaseTransaction(
