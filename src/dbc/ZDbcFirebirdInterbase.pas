@@ -153,7 +153,7 @@ type
     procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
       StatusVector: PARRAY_ISC_STATUS; const LogMessage: SQLString;
       const Sender: IImmediatelyReleasable);
-    function InterpretInterbaseStatus(StatusVector: PARRAY_ISC_STATUS): TZIBStatusVector;
+    function InterpretInterbaseStatus(var StatusVector: PARRAY_ISC_STATUS): TZIBStatusVector;
     procedure SetActiveTransaction(const Value: IZTransaction);
     function GenerateTPB(AutoCommit, ReadOnly: Boolean; TransactIsolationLevel: TZTransactIsolationLevel;
       Info: TStrings): RawByteString;
@@ -1123,33 +1123,41 @@ procedure TZInterbaseFirebirdConnection.HandleErrorOrWarning(
 var
   FormatStr, ErrorString: string;
   ErrorCode: Integer;
+  Status: ISC_STATUS;
   i: Integer;
   InterbaseStatusVector: TZIBStatusVector;
   Error: EZSQLThrowable;
   ExeptionClass: EZSQLThrowableClass;
+  OrgStatusVector: PARRAY_ISC_STATUS; //remainder for initialization
 begin
   { usually first isc_status is gds_arg_gds .. }
-  if (StatusVector[1] = 0) and (StatusVector[2] = isc_arg_end) then
+  Status := StatusVector[1];
+  if (Status = 0) and (StatusVector[2] = isc_arg_end) then begin
     Exit; //neither Warning nor an Error
+  end;
+  OrgStatusVector := StatusVector;
   InterbaseStatusVector := InterpretInterbaseStatus(StatusVector);
   ErrorCode := InterbaseStatusVector[0].SQLCode;
   ErrorString := '';
-  for i := Low(InterbaseStatusVector) to High(InterbaseStatusVector) do
+  for i := Low(InterbaseStatusVector) to High(InterbaseStatusVector) do begin
     AppendSepString(ErrorString, InterbaseStatusVector[i].IBMessage, '; ');
+    if AddLogMsgToExceptionOrWarningMsg and (InterbaseStatusVector[i].IBMessage = '') then
+      AppendSepString(ErrorString, InterbaseStatusVector[i].SQLMessage, '; ');
+  end;
 
   if DriverManager.HasLoggingListener then
     LogError(LogCategory, ErrorCode, Sender, LogMessage, ErrorString);
   { in case second isc_status is zero(no error) and third is tagged as a warning it's a /are multiple warning(s)
     otoh it's an error with a possible warning(s)}
-  if (StatusVector[1] = 0)
+  if (Status = 0{???})
   then ExeptionClass := EZSQLWarning
   else if (ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection) or
       (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_idle) or
       (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_engine)
     then ExeptionClass := EZSQLConnectionLost
     else ExeptionClass := EZIBSQLException;
-  PInt64(StatusVector)^ := 0; //init for fb3up
-  PInt64(PAnsiChar(StatusVector)+8)^ := 0; //init for fb3up
+  //used for clearing the current status vector, OTH, we permanently need a new IStatus, or IStatus.Init.
+  FillChar(Pointer(OrgStatusVector)^, (PAnsiChar(StatusVector) - PAnsiChar(OrgStatusVector))+SizeOf(ISC_STATUS), #0);//init the vector again for FB3+
   if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '') then
     if LogCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
     then FormatStr := SSQLError3
@@ -1197,16 +1205,16 @@ end;
 }
 {$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZInterbaseFirebirdConnection.InterpretInterbaseStatus(
-  StatusVector: PARRAY_ISC_STATUS): TZIBStatusVector;
-var StatusIdx: Integer;
+  var StatusVector: PARRAY_ISC_STATUS): TZIBStatusVector;
+var //StatusIdx: Integer; EH: that leads to ugly rangecheck issues, since FP_Interpret is incrementing the ptr -> dead memory
     pCurrStatus: PZIBStatus;
     {$IF defined(Unicode) or defined(WITH_RAWBYTESTRING)}
     CP: Word;
     {$IFEND}
-    BugFixNextIsArgEnd: Boolean;
+    NextStatusVector{EH: that should mimic Fr0st's vector array, but does not overrun the memory}: PARRAY_ISC_STATUS;
 begin
   Result := nil;
-  StatusIdx := 0;
+  //StatusIdx := 0;
   {$IF defined(Unicode) or defined(WITH_RAWBYTESTRING)}
   if ConSettings.ClientCodePage = nil
   then CP := DefaultSystemCodePage
@@ -1225,8 +1233,8 @@ begin
       ZSetString(PAnsiChar(@FByteBuffer[0]), ZFastCode.StrLen(@FByteBuffer[0]), RawByteString(pCurrStatus.SQLMessage){$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF});
       {$ENDIF}
     // IB data
-    pCurrStatus.IBDataType := StatusVector[StatusIdx];
-    case StatusVector[StatusIdx] of
+    pCurrStatus.IBDataType := PISC_STATUS(StatusVector)^;//StatusVector[StatusIdx];
+    case PISC_STATUS(StatusVector)^ {StatusVector[StatusIdx]} of
       isc_arg_end:  // end of argument list
         Break;
       isc_arg_gds,  // Long int code
@@ -1241,22 +1249,25 @@ begin
       isc_arg_netware,
       isc_arg_win32:
         begin
-          pCurrStatus.IBDataInt := StatusVector[StatusIdx + 1];
-          Inc(StatusIdx, 2);
+          pCurrStatus.IBDataInt := StatusVector[{StatusIdx + }1];
+          NextStatusVector := @StatusVector[2];
+          //Inc(StatusIdx, 2);
         end;
       isc_arg_string,  // pointer to string
       isc_arg_interpreted,
       isc_arg_sql_state:
         begin
           pCurrStatus.IBDataStr := ConvertConnRawToString({$IFDEF UNICODE}
-            ConSettings,{$ENDIF}Pointer(StatusVector[StatusIdx + 1]));
-          Inc(StatusIdx, 2);
+            ConSettings,{$ENDIF}Pointer(StatusVector[{StatusIdx + }1]));
+          NextStatusVector := @StatusVector[2];
+          //Inc(StatusIdx, 2);
         end;
       isc_arg_cstring: // length and pointer to string
         begin
           pCurrStatus.IBDataStr := ConvertConnRawToString({$IFDEF UNICODE}
-            ConSettings,{$ENDIF}Pointer(StatusVector[StatusIdx + 2]), StatusVector[StatusIdx + 1]);
-          Inc(StatusIdx, 3);
+            ConSettings,{$ENDIF}Pointer(StatusVector[{StatusIdx + }2]), StatusVector[{StatusIdx + }1]);
+          NextStatusVector := @StatusVector[3];
+          //Inc(StatusIdx, 3);
         end;
       isc_arg_warning: begin// must not happen for error vector
         Break; //how to handle a warning? I just need an example
@@ -1264,14 +1275,15 @@ begin
       else
         Break;
     end; // case
-    BugFixNextIsArgEnd := StatusVector[StatusIdx] = isc_arg_end;
-    // isc_interprete is deprecated so use fb_interpret instead if available
     if Assigned(FInterbaseFirebirdPlainDriver.fb_interpret) then begin
       if FInterbaseFirebirdPlainDriver.fb_interpret(@FByteBuffer[0], SizeOf(TByteBuffer)-1, @StatusVector) = 0 then
         Break;
     end else if FInterbaseFirebirdPlainDriver.isc_interprete(@FByteBuffer[0], @StatusVector) = 0 then
       Break;
-    if BugFixNextIsArgEnd then
+    if PAnsiChar(StatusVector) < PAnsiChar(NextStatusVector) then
+      StatusVector := NextStatusVector;
+    if PISC_Status(StatusVector)^ = isc_arg_end then //EH: otoh in some
+      //cirumstances we add a empty status see test TestDbcTransaction
       Break;
     pCurrStatus.IBMessage := ConvertConnRawToString({$IFDEF UNICODE}
             ConSettings,{$ENDIF}@FByteBuffer[0]);
@@ -1491,7 +1503,7 @@ begin
   QueryInterface(IZTransaction, Trans);
   FWeakIZTransactionPtr := Pointer(Trans);
   Trans := nil;
-  inherited;
+  inherited AfterConstruction;
 end;
 
 procedure TZInterbaseFirebirdTransaction.BeforeDestruction;
