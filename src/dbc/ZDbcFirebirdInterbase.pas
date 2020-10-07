@@ -1192,10 +1192,17 @@ begin
 end;
 
 procedure TZInterbaseFirebirdConnection.InternalClose;
+var I: Integer;
+  Txn: IZTransaction;
 begin
   AutoCommit := not FRestartTransaction;
-  fTransactions.Clear;
-  fActiveTransaction := nil;
+  if fTransactions <> nil then begin
+    for I := fTransactions.Count -1 downto 0 do
+      if (fTransactions[i] <> nil) and (fTransactions[i].QueryInterface(IZTransaction, Txn) = S_OK) then
+        Txn.Close;
+    fTransactions.Clear;
+    fActiveTransaction := nil;
+  end;
 end;
 
 {**
@@ -1232,8 +1239,11 @@ begin
       {$ELSE}
       ZSetString(PAnsiChar(@FByteBuffer[0]), ZFastCode.StrLen(@FByteBuffer[0]), RawByteString(pCurrStatus.SQLMessage){$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF});
       {$ENDIF}
+    //older compile would gangle about possibly unassigned, newers gangle about assigned but never used
+    //so let's use the variable in next cast line and all are happy
+    NextStatusVector := StatusVector;
     // IB data
-    pCurrStatus.IBDataType := PISC_STATUS(StatusVector)^;//StatusVector[StatusIdx];
+    pCurrStatus.IBDataType := PISC_STATUS(NextStatusVector)^;//StatusVector[StatusIdx];
     case PISC_STATUS(StatusVector)^ {StatusVector[StatusIdx]} of
       isc_arg_end:  // end of argument list
         Break;
