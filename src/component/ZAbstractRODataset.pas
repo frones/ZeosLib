@@ -4993,7 +4993,8 @@ begin
             ConSettings := FConnection.DbcConnection.GetConSettings;
             CP := GetTransliterateCodePage(Connection.ControlsCodePage);
             if not ((FCharEncoding = ceUTF16) or
-               (TMemoField(TField).Transliterate and (CP <> ConSettings.ClientCodePage.CP))) then
+      {XE10.3 x64 bug: a ObjectCast of a descendand doesn't work -> use exact class or the "As" operator}
+              ((Field as TMemoField).Transliterate and (CP <> ConSettings.ClientCodePage.CP))) then
               CP := ConSettings.ClientCodePage.CP;
             Assert(Blob.QueryInterface(IZCLob, CLob) = S_OK);
             Result := Clob.GetStream(CP);
