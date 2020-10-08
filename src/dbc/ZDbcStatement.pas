@@ -4093,9 +4093,9 @@ begin
           ZSysUtils.ScaledOrdinal2Bcd(Value, 0, fBCDTemp);
           BindList.Put(Index, fBCDTemp);
         end;
-      else FBindList.Put(Index, SQLType, P4Bytes(@Value));
+      else FBindList.Put(Index, SQLType, {$IFDEF CPU64}P8Bytes{$ELSE}P4Bytes{$ENDIF}(@Value));
     end;
-  end else FBindList.Put(Index, SQLType, P4Bytes(@Value));
+  end else FBindList.Put(Index, SQLType, {$IFDEF CPU64}P8Bytes{$ELSE}P4Bytes{$ENDIF}(@Value));
 end;
 
 procedure TZAbstractCallableStatement.BindUnsignedOrdinal(Index: Integer;
@@ -4124,9 +4124,9 @@ begin
           ZSysUtils.ScaledOrdinal2Bcd(Value, 0, fBCDTemp, False);
           BindList.Put(Index, fBCDTemp);
         end;
-      else FBindList.Put(Index, SQLType, P4Bytes(@Value));
+      else FBindList.Put(Index, SQLType, {$IFDEF CPU64}P8Bytes{$ELSE}P4Bytes{$ENDIF}(@Value));
     end;
-  end else FBindList.Put(Index, SQLType, P4Bytes(@Value));
+  end else FBindList.Put(Index, SQLType, {$IFDEF CPU64}P8Bytes{$ELSE}P4Bytes{$ENDIF}(@Value));
 end;
 
 {**

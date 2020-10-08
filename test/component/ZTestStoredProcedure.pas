@@ -78,6 +78,7 @@ type
   published
     procedure TestStoredProc;
     procedure Test_abtest;
+    procedure Test_abtest_bigint;
   end;
 
 
@@ -273,6 +274,22 @@ begin
   StoredProc.ParamByName('P2').AsInteger := 100;
   StoredProc.ParamByName('P3').AsString := 'a';
   StoredProc.Open;
+end;
+
+procedure TZTestInterbaseStoredProcedure.Test_abtest_bigint;
+var
+  i: integer;
+begin
+  StoredProc.StoredProcName := 'ABTEST_BIGINT';
+  StoredProc.Params[0].AsInteger:= 50;
+  StoredProc.Params[2].AsString:= 'a';
+  for i:= 1 to 9 do begin
+    StoredProc.Close;
+    StoredProc.Params[1].Value :=  i;
+    StoredProc.Open;
+    while not StoredProc.Eof do
+      StoredProc.Next;
+  end;
 end;
 
 { TZTestDbLibStoredProcedure }
