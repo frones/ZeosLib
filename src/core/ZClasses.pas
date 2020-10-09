@@ -769,40 +769,88 @@ type
   TZSQLStringWriter = {$IFDEF UNICODE}TZUnicodeSQLStringWriter{$ELSE}TZRawSQLStringWriter{$ENDIF};
 
   /// <author>EgonHugeist</author>
-  /// <summary>implements a list object with custom element size. The class
-  ///  is designed to use one memory block with size of element * Capacity</summary>
+  /// <summary>implements a list object with custom element size. The class is
+  ///  designed to use one memory block with an untyped array of elements.</summary>
   TZCustomElementList = class(TObject)
   private
-    FElements: Pointer;
-    FCount, FCapacity: NativeUInt;
+    FCount, FCapacity: NativeInt;
     FElementSize: Cardinal;
     FElementNeedsFinalize: Boolean;
   protected
+    FElements: Pointer; //the buffer of the elements
+  protected
+    /// <summary>Get the address of an element in the list. It is an error
+    ///  remembering the address while the element capacity changes. The address
+    ///  might be invalid then.</summary>
+    /// <param>"Index" the index of the element.</param>
+    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
     function Get(Index: NativeInt): Pointer;
+    /// <summary>Grows the Memory used for the array of elements.
+    ///  If ElementNeedsFinalize is set to true, the memory will be zeroed out.
+    ///  </summary>
     procedure Grow; virtual;
+    /// <summary>Notify about an action which will or was performed.
+    ///  if ElementNeedsFinalize is False the method will never be called.
+    ///  Otherwise you may finalize maged types beeing part of each element,
+    ///  such as Strings, Objects etc.</summary>
+    /// <param>"Ptr" the address of the element an action happens for.</param>
+    /// <param>"Index" the index of the element.</param>
+    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
     procedure Notify(Ptr: Pointer; Action: TListNotification); virtual;
-    procedure SetCapacity(NewCapacity: NativeUInt);
-    procedure SetCount(NewCount: NativeUInt);
-    function Add(out Index: NativeInt): Pointer;
+    /// <summary>Sets a capacity of elementsizes. If capacity is less than Count
+    ///  and error get's thrown. Relloc memory Otherwise. If ElementNeedsFinalize
+    ///  is set to true, the memory will be zeroed out otherwise content is
+    ///  unknown.</summary>
+    /// <param>"NewCapacity" the new element capacity.</param>
+    procedure SetCapacity(NewCapacity: NativeInt);
+    /// <summary>Sets the Count of elements. If Count is greater than Capacity
+    ///  the memory grows to exact required amount. If Count is less than old
+    ///  count the elements getting deleted.</summary>
+    /// <param>"NewCount" the new element count.</param>
+    procedure SetCount(NewCount: NativeInt);
+    /// <summary>Adds an element on top of data.</summary>
+    /// <param>"Index" returns the element index.</param>
+    /// <returns> the address of the element.</param>
+    function Add(out Index: NativeInt): Pointer; overload;
+    /// <summary>Inserts an element on its position.</summary>
+    /// <param>"Index" the element index.</param>
+    /// <returns> the address of the element.</param>
     function Insert(Index: NativeInt): Pointer;
   public
+    /// <summary>Raises and EListError.</summary>
+    /// <param>"Msg" the error message.</param>
+    /// <param>"Data" the error data.</param>
     class procedure Error(const Msg: string; Data: NativeInt); overload; virtual;
+    /// <summary>Raises and EListError.</summary>
+    /// <param>"Msg" a resourcestring rec referenc.</param>
+    /// <param>"Data" the error data.</param>
     class procedure Error(Msg: PResStringRec; Data: NativeInt); overload;
   public
-    destructor Destroy; override;
+    /// <summary>Create this object and assigns main properties.</summary>
+    /// <param>"ElementSize" a size of the element hold in array.</param>
+    /// <param>"ElementNeedsFinalize" indicate if a users finalize is
+    ///  required on removing the items and if the memory needs to be zeroed out
+    ///  on growing the buffer.</param>
     constructor Create(ElementSize: Cardinal; ElementNeedsFinalize: Boolean);
+    /// <summary>destroys this object and releases all recources.</summary>
+    destructor Destroy; override;
+  public
+    /// <summary>Clears all elements and frees the memory.</summary>
     procedure Clear;
+    /// <summary>Delete an element on given position.</summary>
+    /// <param>"Index" the position of the element to be removed.</param>
     procedure Delete(Index: NativeInt);
-    property Count: NativeUInt read FCount write SetCount;
+  public
+    property Count: NativeInt read FCount write SetCount;
     property Items[Index: NativeInt]: Pointer read Get; default;
-    property Capacity: NativeUInt read FCapacity write SetCapacity;
+    property Capacity: NativeInt read FCapacity write SetCapacity;
     property ElementSize: Cardinal read FElementSize;
     property ElementNeedsFinalize: Boolean read FElementNeedsFinalize;
   end;
 
   /// <author>EgonHugeist</author>
   /// <summary>implements list compare function</summary>
-  TZListSortCompare = function (Item1, Item2: Pointer): Integer of object;
+  TZListSortCompare = function(Item1, Item2: Pointer): Integer of object;
 
   /// <author>EgonHugeist</author>
   /// <summary>implements a modified list of pointers.</summary>
@@ -2504,16 +2552,18 @@ end;
 
 { TZCustomElementList }
 
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZCustomElementList.Add(out Index: NativeInt): Pointer;
 begin
   Index := FCount;
   if FCount = FCapacity then
     Grow;
-  Result := Pointer(NativeUInt(FElements)+(FCount*FElementSize));
+  Result := Pointer(NativeUInt(FElements)+(NativeUInt(FCount)*FElementSize));
   Inc(FCount);
   if FElementNeedsFinalize then
     Notify(Result, lnAdded);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZCustomElementList.Clear;
 begin
@@ -2529,6 +2579,7 @@ begin
   FElementNeedsFinalize := ElementNeedsFinalize;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 procedure TZCustomElementList.Delete(Index: NativeInt);
 var P, P2: Pointer;
 begin
@@ -2540,15 +2591,16 @@ begin
   Dec(FCount);
   if FElementNeedsFinalize then
     Notify(P, lnDeleted);
-  if NativeUInt(Index) < FCount then begin
+  if Index < FCount then begin
     P2 := Pointer(NativeUInt(P)+FElementSize);
-    Move(P2^, P^, (FCount - NativeUint(Index)) * FElementSize);
+    Move(P2^, P^, (FCount - Index) * NativeInt(FElementSize));
   end;
   if FElementNeedsFinalize then begin
     P := Pointer(NativeUInt(FElements)+(NativeUInt(FCount)*FElementSize));
     FillChar(P^, FElementSize, #0);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 destructor TZCustomElementList.Destroy;
 begin
@@ -2598,15 +2650,17 @@ end;
 {$ENDIF}
 {$IFEND}
 
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZCustomElementList.Get(Index: NativeInt): Pointer;
 begin
-  if NativeUint(Index) >= FCount then
+  if (Index<0) or (Index >= FCount) then
     Error(@SListIndexError, Index);
   Result := Pointer(NativeUInt(FElements)+(NativeUInt(Index)*FElementSize));
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZCustomElementList.Grow;
-var Delta: NativeUInt;
+var Delta: NativeInt;
 begin
   if FCapacity > 64
   then Delta := FCapacity div 4
@@ -2616,6 +2670,7 @@ begin
   SetCapacity(FCapacity + Delta);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZCustomElementList.Insert(Index: NativeInt): Pointer;
 var P: Pointer;
 begin
@@ -2626,9 +2681,9 @@ begin
   if FCount = FCapacity then
     Grow;
   Result := Pointer(NativeUInt(FElements)+(NativeUInt(Index)*FElementSize));
-  if NativeUInt(Index) < FCount then begin
+  if Index < FCount then begin
     P := Pointer(NativeUInt(Result)+FElementSize);
-    System.Move(Result^, P^, (FCount - NativeUInt(Index)) * FElementSize);
+    System.Move(Result^, P^, (FCount - Index) * NativeInt(FElementSize));
   end;
   Inc(FCount);
   if FElementNeedsFinalize then begin
@@ -2636,13 +2691,17 @@ begin
     Notify(Result, lnAdded);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Ptr/Action" not used} {$ENDIF}
 procedure TZCustomElementList.Notify(Ptr: Pointer; Action: TListNotification);
 begin
   //do nothing its for custom records, having managed types
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
-procedure TZCustomElementList.SetCapacity(NewCapacity: NativeUInt);
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+procedure TZCustomElementList.SetCapacity(NewCapacity: NativeInt);
 var P: Pointer;
 begin
   {$IFNDEF DISABLE_CHECKING}
@@ -2650,37 +2709,40 @@ begin
     Error(@SListCapacityError, NewCapacity);
   {$ENDIF DISABLE_CHECKING}
   if NewCapacity <> FCapacity then begin
-    ReallocMem(FElements, NewCapacity * FElementSize*2);
+    ReallocMem(FElements, NewCapacity * NativeInt(FElementSize*2));
     if FElementNeedsFinalize and (NewCapacity>FCapacity) then begin
       P := Pointer(NativeUInt(FElements)+(NativeUInt(FCount)*FElementSize));
-      FillChar(P^, FElementSize*(NewCapacity-FCapacity), #0);
+      FillChar(P^, NativeInt(FElementSize)*(NewCapacity-FCapacity), #0);
     end;
     FCapacity := NewCapacity;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
-procedure TZCustomElementList.SetCount(NewCount: NativeUInt);
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+procedure TZCustomElementList.SetCount(NewCount: NativeInt);
 var I: NativeInt;
     P: Pointer;
 begin
   {$IFNDEF DISABLE_CHECKING}
-  if (NewCount > {$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
+  if (NewCount <0) or (NewCount > {$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
     Error(@SListCountError, NewCount);
   {$ENDIF DISABLE_CHECKING}
   if NewCount <> FCount then begin
     if NewCount > FCapacity then
       SetCapacity(NewCount);
     if FElementNeedsFinalize and (NewCount < FCount) then begin
-      P := Pointer(NativeUInt(FElements)+(FCount*FElementSize));
+      P := Pointer(NativeUInt(FElements)+(NativeUInt(FCount)*FElementSize));
       for I := FCount - 1 downto NewCount do begin
         Dec(NativeUInt(P), FElementSize);
         Notify(p, lnDeleted);
       end;
-      FillChar(P^, (FCount - NewCount)*FElementSize, #0);
+      FillChar(P^, (FCount - NewCount)*NativeInt(FElementSize), #0);
     end;
     FCount := NewCount;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 end.
 

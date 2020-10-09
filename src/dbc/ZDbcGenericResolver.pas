@@ -90,12 +90,13 @@ type
     FWhereAll: Boolean;
     FUpdateAll: Boolean;
 
+  protected
     FUpdateStatements: TZHashMap;
     FDeleteStatements: TZHashMap;
-  protected
     FInsertColumns: TZIndexPairList;
     FInsertStatements: TZHashMap;
     InsertStatement: IZPreparedStatement;
+    procedure FlushCache(Collection: TZHashMap);
 
     function ComposeFullTableName(const Catalog, Schema, Table: SQLString;
       {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter): SQLString;
@@ -214,18 +215,22 @@ begin
   FDatabaseMetadata := nil;
 
   FreeAndNil(FInsertColumns);
-
   FreeAndNil(FUpdateColumns);
   FreeAndNil(FWhereColumns);
   FreeAndNil(FCurrentWhereColumns);
 
+  FlushCache(FDeleteStatements);
   FreeAndNil(FDeleteStatements);
+  FlushCache(FUpdateStatements);
   FreeAndNil(FUpdateStatements);
+  FlushCache(FInsertStatements);
   FreeAndNil(FInsertStatements);
 
   FlustStmt(InsertStatement);
-  if RefreshResultSet <> nil then
-     RefreshResultSet.Close;
+  if RefreshResultSet <> nil then begin
+    RefreshResultSet.Close;
+    RefreshResultSet := nil;
+  end;
   inherited Destroy;
 end;
 
@@ -414,6 +419,22 @@ CopyParams:
       WhereColumnsLookup.Add(IndexPair.SrcOrDestIndex+IncrementDestIndexBy, IndexPair.ColumnIndex)
     end;
   end;
+end;
+
+procedure TZGenerateSQLCachedResolver.FlushCache(Collection: TZHashMap);
+var I: Integer;
+  Values: IZCollection;
+  Stmt: IZStatement;
+  Intf: IZInterface;
+begin
+  if Collection = nil then Exit;
+  Values := Collection.GetValues;
+  for i := 0 to Values.Count -1 do begin
+    Intf := Values[i];
+    if (Intf <> nil) and (Intf.QueryInterface(IZStatement, Stmt) = S_OK) and not Stmt.IsClosed then
+      Stmt.Close;
+  end;
+  Collection.Clear;
 end;
 
 {**
@@ -859,16 +880,20 @@ begin
       if (FUpdateStatements.Count > 0) then
         Col := FUpdateStatements.GetValues
       else if (FDeleteStatements.Count > 0) then
-        Col := FDeleteStatements.GetValues;
-      if (Col <> nil) then
-        Col[0].QueryInterface(IZStatement, Stmt);
+        Col := FDeleteStatements.GetValues
+      else if (FInsertStatements.Count > 0) then
+        Col := FInsertStatements.GetValues;
+      if (Col <> nil)
+      then Col[0].QueryInterface(IZStatement, Stmt)
+      else Stmt := nil;
     end;
     { test if statement is part of session -> FB always all others will fail}
     if (Stmt <> nil) and ((Value = nil) or (Stmt.GetConnection <> Value.GetConnection)) then begin
       Stmt.Close;
       InsertStatement := nil;
-      FUpdateStatements.Clear;
-      FDeleteStatements.Clear;
+      FlushCache(FInsertStatements);
+      FlushCache(FUpdateStatements);
+      FlushCache(FDeleteStatements);
     end;
   end;
 end;

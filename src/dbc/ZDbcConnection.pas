@@ -2323,7 +2323,7 @@ procedure TZAbstractSuccedaneousTxnConnection.ReleaseImmediat(
 var I: Integer;
   Imm: IImmediatelyReleasable;
 begin
-  inherited;
+  inherited ReleaseImmediat(Sender, AError);
   if (fActiveTransaction <> nil) and (fActiveTransaction.QueryInterface(IImmediatelyReleasable, imm) = S_OK) and (imm <> Sender) then begin
     imm.ReleaseImmediat(Sender, AError);
     fActiveTransaction := nil;
