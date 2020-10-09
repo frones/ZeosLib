@@ -2245,13 +2245,8 @@ begin
     if Failed(Status) then
       FOleDBConnection.HandleErrorOrWarning(Status, lcOther, 'IRowSet.GetNextRows', Self);
     if FRowsObtained > 0 then begin
-      if DBROWCOUNT(FRowsObtained) < FRowCount then
-      begin //reserve required mem only
-        SetLength(FColBuffer, NativeInt(FRowsObtained) * FRowSize);
-        MaxRows := FRowsObtained;
-      end
-      else //reserve full allowed mem
-        SetLength(FColBuffer, (FRowCount * FRowSize));
+      SetLength(FColBuffer, NativeInt(FRowsObtained) * FRowSize);
+      FRowCount := FRowsObtained;
       SetLength(FRowStates, FRowsObtained);
       goto fetch_data;
     end else //we do NOT need a buffer here!

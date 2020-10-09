@@ -489,20 +489,21 @@ var RS: IZResultSet;
   C: Currency;
   procedure CheckField(ColumnIndex, Precision, Scale: Integer; SQLType: TZSQLType; const Value: String);
   var S: String;
-    {BCD_A, BCD_E,} BCD: TBCD;
+    BCD_A, BCD_E: TBCD;
   begin
     S := RS.GetMetadata.GetColumnLabel(ColumnIndex);
     //firbird can't pass this tests -> missing precision in native RS but with metainformation it should be able to
     if (ProtocolType = protSQLite) and (SQLType = stBigDecimal) then
       Exit;
-    RS.GetBigDecimal(ColumnIndex, BCD{%H-});
+    RS.GetBigDecimal(ColumnIndex, BCD_A{%H-});
     if not ((Provider = spIB_FB) and (RS.GetType = rtForwardOnly)) then
       CheckEquals(Precision, Ord(RS.GetMetadata.GetPrecision(ColumnIndex)), Protocol+': Precision mismatch, for column "'+S+'"');
     if not (((ColumnIndex = BigD18_1_Index) or (ColumnIndex = Curr15_2_Index)) and
               (RS.GetType = rtForwardOnly) and (Provider = spIB_FB)) then
       CheckEquals(Ord(SQLType), Ord(RS.GetMetadata.GetColumnType(ColumnIndex)), Protocol+': SQLType mismatch, for column "'+S+'"');
+    BCD_E := Str2BCD(Value{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF});
     CheckEquals(Scale, Ord(RS.GetMetadata.GetScale(ColumnIndex)), Protocol+': Scale mismatch, for column "'+S+'"');
-    CheckEquals(0, BcdCompare(BCD, Str2BCD(Value{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF})), Protocol+': BCD compare mismatch, for column "'+S+'", Expected: ' + Value + ' got: ' + BcdToStr(BCD));
+    CheckEquals(0, BcdCompare(BCD_A, BCD_E), Protocol+': BCD compare mismatch, for column "'+S+'", Expected: ' + Value + ' got: ' + BcdToStr(BCD_A));
   end;
   procedure TestColTypes(ResultSetType: TZResultSetType);
   var i: Integer;

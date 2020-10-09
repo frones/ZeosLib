@@ -1397,9 +1397,7 @@ type
     /// <summary>
     ///  Returns the ChunkSize for reading/writing large lobs
     /// </summary>
-    /// <returns>
-    ///  the chunksize in bytes.
-    /// </returns>
+    /// <returns>the chunksize in bytes.</returns>
     function GetChunkSize: Integer;
 
     /// <summary>
@@ -1417,22 +1415,22 @@ type
     /// </returns>
     function GetWarnings: EZSQLWarning;
 
-    /// <summary>
-    ///  Clears all the warnings reported on this <c>Statement</c>
-    ///  object. After a call to this method,
-    ///  the method <c>getWarnings</c> will return
-    ///  <c>nil</c> until a new warning is reported for this
-    ///  <c>Statement</c> object.
-    /// </summary>
+    /// <summary>Clears all the warnings reported on this <c>Statement</c>
+    ///  object. After a call to this method,the method <c>getWarnings</c> will
+    ///  return <c>nil</c> until a new warning is reported for this
+    ///  <c>Statement</c> object.</summary>
     procedure ClearWarnings;
-    procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
-
+    /// <summary>The sender resultsets get's closed. Notify owner
+    ///  <c>Statement</c> about it. The statment, if rexecuted, will
+    ///  create a new resultset interface.</summary>
+    /// <param>"Sender" the closing resultset.</param>
+    procedure FreeOpenResultSetReference(const Sender: IZResultSet);
+    /// <summary>Result a unique internal Id per class.</summary>
+    /// <returns>the the new class id.</returns>
     function GetStatementId: NativeUInt;
   end;
 
-  /// <summary>
-  ///   Prepared SQL statement interface.
-  /// </summary>
+  /// <summary>Prepared SQL statement interface.</summary>
   IZPreparedStatement = interface(IZStatement)
     ['{990B8477-AF11-4090-8821-5B7AFEA9DD70}']
     /// <summary>Executes the SQL query in this <c>PreparedStatement</c> object
@@ -1898,9 +1896,8 @@ type
     {$ENDIF USE_SYNCOMMONS}
   end;
 
-  /// <summary>
-  ///   TDataSet interface.
-  /// </summary>
+  /// <summary>implements DataSet interface. Just prepare and will be omitted
+  ///  in future releases</summary>
   IZDataSet = interface(IZInterface)
     ['{DBC24011-EF26-4FD8-AC8B-C3E01619494A}']
     //function GetDataSet: TDataSet;

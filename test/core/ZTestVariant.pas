@@ -802,6 +802,7 @@ procedure TZClientVarManagerConvertCase.SetupConSettings;
 begin
   ConSettings^.W2A2WEncodingSource := encDefaultSystemCodePage;
   ConSettings^.ClientCodePage^.CP := ZOSCodePage;
+  ConSettings^.ClientCodePage^.Encoding := {$IFDEF MSWINDOWS}ceAnsi{$ELSE}ceUTF8{$ENDIF};
   ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := True;
   if GetW2A2WConversionCodePage(ConSettings) = zCP_UTF8 then
     FNotEqualClientCP := 1252
@@ -844,6 +845,7 @@ begin
   inherited;
   ConSettings^.W2A2WEncodingSource := encUTF8;
   ConSettings^.ClientCodePage^.CP := zCP_UTF8;
+  ConSettings^.ClientCodePage.Encoding := ceUTF8;
   FNotEqualClientCP := zCP_WIN1252;
 end;
 
@@ -852,6 +854,7 @@ procedure TZClientVarManagerConvertCase_ControlsCP_UTF8_ClientCP_WIN1252.SetupCo
 begin
   inherited;
   ConSettings^.ClientCodePage^.CP := zCP_WIN1252;
+  ConSettings^.ClientCodePage.Encoding := ceAnsi;
   FNotEqualClientCP := zCP_UTF8;
 End;
 
@@ -862,6 +865,7 @@ begin
   inherited;
   ConSettings^.W2A2WEncodingSource := encDB_CP;
   ConSettings^.ClientCodePage^.CP := zCP_WIN1252;
+  ConSettings^.ClientCodePage.Encoding := ceAnsi;
   FNotEqualClientCP := zCP_UTF8;
 end;
 
@@ -870,12 +874,14 @@ procedure TZClientVarManagerConvertCase_ControlsCP_WIN1252_ClientCP_UTF8.SetupCo
 begin
   inherited;
   ConSettings^.ClientCodePage^.CP := zCP_UTF8;
+  ConSettings^.ClientCodePage.Encoding := ceUTF8;
   FNotEqualClientCP := zCP_WIN1252;
 end;
 
 initialization
   TestConSettings := New(PZConSettings);
   TestConSettings^.ClientCodePage := New(PZCodePage);
+  FillChar(TestConSettings^.ClientCodePage^, SizeOf(TZCodePage), #0);
 
   RegisterTest('core',TZTestVariantCase.Suite);
   RegisterTest('core',TZDefVarManagerConvertCase.Suite);

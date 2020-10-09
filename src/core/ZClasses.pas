@@ -769,6 +769,38 @@ type
   TZSQLStringWriter = {$IFDEF UNICODE}TZUnicodeSQLStringWriter{$ELSE}TZRawSQLStringWriter{$ENDIF};
 
   /// <author>EgonHugeist</author>
+  /// <summary>implements a list object with custom element size. The class
+  ///  is designed to use one memory block with size of element * Capacity</summary>
+  TZCustomElementList = class(TObject)
+  private
+    FElements: Pointer;
+    FCount, FCapacity: NativeUInt;
+    FElementSize: Cardinal;
+    FElementNeedsFinalize: Boolean;
+  protected
+    function Get(Index: NativeInt): Pointer;
+    procedure Grow; virtual;
+    procedure Notify(Ptr: Pointer; Action: TListNotification); virtual;
+    procedure SetCapacity(NewCapacity: NativeUInt);
+    procedure SetCount(NewCount: NativeUInt);
+    function Add(out Index: NativeInt): Pointer;
+    function Insert(Index: NativeInt): Pointer;
+  public
+    class procedure Error(const Msg: string; Data: NativeInt); overload; virtual;
+    class procedure Error(Msg: PResStringRec; Data: NativeInt); overload;
+  public
+    destructor Destroy; override;
+    constructor Create(ElementSize: Cardinal; ElementNeedsFinalize: Boolean);
+    procedure Clear;
+    procedure Delete(Index: NativeInt);
+    property Count: NativeUInt read FCount write SetCount;
+    property Items[Index: NativeInt]: Pointer read Get; default;
+    property Capacity: NativeUInt read FCapacity write SetCapacity;
+    property ElementSize: Cardinal read FElementSize;
+    property ElementNeedsFinalize: Boolean read FElementNeedsFinalize;
+  end;
+
+  /// <author>EgonHugeist</author>
   /// <summary>implements list compare function</summary>
   TZListSortCompare = function (Item1, Item2: Pointer): Integer of object;
 
@@ -2469,6 +2501,186 @@ begin
   {$ENDIF}
 end;
 
+
+{ TZCustomElementList }
+
+function TZCustomElementList.Add(out Index: NativeInt): Pointer;
+begin
+  Index := FCount;
+  if FCount = FCapacity then
+    Grow;
+  Result := Pointer(NativeUInt(FElements)+(FCount*FElementSize));
+  Inc(FCount);
+  if FElementNeedsFinalize then
+    Notify(Result, lnAdded);
+end;
+
+procedure TZCustomElementList.Clear;
+begin
+  SetCount(0);
+  SetCapacity(0);
+end;
+
+constructor TZCustomElementList.Create(ElementSize: Cardinal;
+  ElementNeedsFinalize: Boolean);
+begin
+  inherited Create;
+  FElementSize := ElementSize;
+  FElementNeedsFinalize := ElementNeedsFinalize;
+end;
+
+procedure TZCustomElementList.Delete(Index: NativeInt);
+var P, P2: Pointer;
+begin
+  {$IFNDEF DISABLE_CHECKING}
+  if NativeUInt(Index) >= FCount then
+    Error(@SListIndexError, Index);
+  {$ENDIF DISABLE_CHECKING}
+  P := Pointer(NativeUInt(FElements)+(NativeUInt(Index)*FElementSize));
+  Dec(FCount);
+  if FElementNeedsFinalize then
+    Notify(P, lnDeleted);
+  if NativeUInt(Index) < FCount then begin
+    P2 := Pointer(NativeUInt(P)+FElementSize);
+    Move(P2^, P^, (FCount - NativeUint(Index)) * FElementSize);
+  end;
+  if FElementNeedsFinalize then begin
+    P := Pointer(NativeUInt(FElements)+(NativeUInt(FCount)*FElementSize));
+    FillChar(P^, FElementSize, #0);
+  end;
+end;
+
+destructor TZCustomElementList.Destroy;
+begin
+  Clear;
+  inherited Destroy;
+end;
+
+{$IF not defined(FPC) and not defined(WITH_ReturnAddress)}
+{$IFOPT O+}
+  // Turn off optimizations to force creating a EBP stack frame and
+  // place params on the stack.
+  {$DEFINE OPTIMIZATIONSON}
+  {$O-}
+{$ENDIF}
+{$IFEND}
+class procedure TZCustomElementList.Error(Msg: PResStringRec; Data: NativeInt);
+begin
+  {$IFDEF WITH_ReturnAddress}
+  raise EListError.CreateFmt(LoadResString(Msg), [Data]) at ReturnAddress;
+  {$ELSE}
+    {$IFDEF FPC}
+  raise EListError.CreateFmt(LoadResString(Msg), [Data]) at get_caller_addr(get_frame);
+    {$ELSE}
+  raise EListError.CreateFmt(LoadResString(Msg), [Data]) at
+    PPointer(NativeInt(@Msg) + SizeOf(Msg) + SizeOf(Self) + SizeOf(Pointer))^;
+    {$ENDIF}
+  {$ENDIF}
+end;
+
+class procedure TZCustomElementList.Error(const Msg: string; Data: NativeInt);
+begin
+  {$IFDEF WITH_ReturnAddress}
+  raise EListError.CreateFmt(Msg, [Data]) at ReturnAddress;
+  {$ELSE}
+    {$IFDEF FPC}
+  raise EListError.CreateFmt(Msg, [Data]) at get_caller_addr(get_frame);
+    {$ELSE}
+  raise EListError.CreateFmt(Msg, [Data]) at
+    PPointer(NativeInt(@Msg) + SizeOf(Msg) + SizeOf(Self) + SizeOf(Pointer))^;
+    {$ENDIF}
+  {$ENDIF}
+end;
+{$IF not defined(FPC) and not defined(WITH_ReturnAddress)}
+{$IFDEF OPTIMIZATIONSON}
+  {$UNDEF OPTIMIZATIONSON}
+  {$O+}
+{$ENDIF}
+{$IFEND}
+
+function TZCustomElementList.Get(Index: NativeInt): Pointer;
+begin
+  if NativeUint(Index) >= FCount then
+    Error(@SListIndexError, Index);
+  Result := Pointer(NativeUInt(FElements)+(NativeUInt(Index)*FElementSize));
+end;
+
+procedure TZCustomElementList.Grow;
+var Delta: NativeUInt;
+begin
+  if FCapacity > 64
+  then Delta := FCapacity div 4
+  else if FCapacity > 8
+    then Delta := 16
+    else Delta := 4;
+  SetCapacity(FCapacity + Delta);
+end;
+
+function TZCustomElementList.Insert(Index: NativeInt): Pointer;
+var P: Pointer;
+begin
+  {$IFNDEF DISABLE_CHECKING}
+  if NativeUInt(Index) > FCount then
+    Error(@SListIndexError, Index);
+  {$ENDIF DISABLE_CHECKING}
+  if FCount = FCapacity then
+    Grow;
+  Result := Pointer(NativeUInt(FElements)+(NativeUInt(Index)*FElementSize));
+  if NativeUInt(Index) < FCount then begin
+    P := Pointer(NativeUInt(Result)+FElementSize);
+    System.Move(Result^, P^, (FCount - NativeUInt(Index)) * FElementSize);
+  end;
+  Inc(FCount);
+  if FElementNeedsFinalize then begin
+    FillChar(Result^, FElementSize, #0);
+    Notify(Result, lnAdded);
+  end;
+end;
+
+procedure TZCustomElementList.Notify(Ptr: Pointer; Action: TListNotification);
+begin
+  //do nothing its for custom records, having managed types
+end;
+
+procedure TZCustomElementList.SetCapacity(NewCapacity: NativeUInt);
+var P: Pointer;
+begin
+  {$IFNDEF DISABLE_CHECKING}
+  if (NewCapacity < FCount) or (NewCapacity > {$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
+    Error(@SListCapacityError, NewCapacity);
+  {$ENDIF DISABLE_CHECKING}
+  if NewCapacity <> FCapacity then begin
+    ReallocMem(FElements, NewCapacity * FElementSize*2);
+    if FElementNeedsFinalize and (NewCapacity>FCapacity) then begin
+      P := Pointer(NativeUInt(FElements)+(NativeUInt(FCount)*FElementSize));
+      FillChar(P^, FElementSize*(NewCapacity-FCapacity), #0);
+    end;
+    FCapacity := NewCapacity;
+  end;
+end;
+
+procedure TZCustomElementList.SetCount(NewCount: NativeUInt);
+var I: NativeInt;
+    P: Pointer;
+begin
+  {$IFNDEF DISABLE_CHECKING}
+  if (NewCount > {$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
+    Error(@SListCountError, NewCount);
+  {$ENDIF DISABLE_CHECKING}
+  if NewCount <> FCount then begin
+    if NewCount > FCapacity then
+      SetCapacity(NewCount);
+    if FElementNeedsFinalize and (NewCount < FCount) then begin
+      P := Pointer(NativeUInt(FElements)+(FCount*FElementSize));
+      for I := FCount - 1 downto NewCount do begin
+        Dec(NativeUInt(P), FElementSize);
+        Notify(p, lnDeleted);
+      end;
+      FillChar(P^, (FCount - NewCount)*FElementSize, #0);
+    end;
+    FCount := NewCount;
+  end;
+end;
 
 end.
 
