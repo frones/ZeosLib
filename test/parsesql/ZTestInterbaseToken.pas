@@ -54,7 +54,10 @@
 unit ZTestInterbaseToken;
 
 interface
+
 {$I ZParseSql.inc}
+
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZTokenizer,
   ZInterbaseToken, ZTestTokenizer;
@@ -73,8 +76,9 @@ type
     procedure TestWordState;
     procedure TestNumberState;
   end;
-
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 implementation
+{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 
 { TZTestInterbaseTokenizer }
 
@@ -185,5 +189,6 @@ end;
 
 initialization
   RegisterTest('parsesql',TZTestInterbaseTokenizer.Suite);
+{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
 end.
 

@@ -306,6 +306,7 @@ begin
   FetchResults;
   while GetMoreResults and (LastResultSet = nil) do ;
   Result := GetResultSet;
+  FlastResultSet := nil;
 end;
 
 {**

@@ -77,7 +77,6 @@ type
     FEscapeProcessing: Boolean;
     FQueryTimeout: Integer;
     FLastUpdateCount: Integer;
-    FLastResultSet: IZResultSet;
     FFetchDirection: TZFetchDirection;
     FFetchSize: Integer;
     FResultSetConcurrency: TZResultSetConcurrency;
@@ -92,6 +91,7 @@ type
     FCachedLob: Boolean;
     procedure SetLastResultSet(const ResultSet: IZResultSet);
   protected
+    FLastResultSet: IZResultSet;
     FCursorName: RawByteString;
     fWBuffer: array[Byte] of WideChar;
     fABuffer: array[Byte] of AnsiChar;
