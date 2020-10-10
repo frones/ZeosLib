@@ -929,6 +929,21 @@ reconnect:
     end;
   end else if FClientCodePage = '' then
     CheckCharEncoding(DBCP);
+  if (FHostVersion >= 4000000) then with CreateStatement do begin
+    if (Info.Values['isc_dpb_session_time_zone'] = '') then
+      ExecuteUpdate('SET TIME ZONE LOCAL');
+    ExecuteUpdate('SET BIND OF TIME ZONE TO LEGACY');
+    ExecuteUpdate('SET BIND OF DECFLOAT TO LEGACY');
+    ExecuteUpdate('SET BIND OF NUMERIC(38) TO LEGACY');
+    Close;
+    ti := GetActiveTransaction;
+    try
+      ti.CloseTransaction;
+      FTransactionManager.RemoveTransactionFromList(TI);
+    finally
+      ti := nil;
+    end;
+  end;
 end;
 
 {**

@@ -150,6 +150,38 @@ type
     MYSQL_OPT_COMPRESSION_ALGORITHMS,
     MYSQL_OPT_ZSTD_COMPRESSION_LEVEL
   );
+  TMariaDBOption = (
+    { MariaDB specific }
+    MYSQL_PROGRESS_CALLBACK=5999,
+    MYSQL_OPT_NONBLOCK);
+  TMariaDBConnectorOption = (
+    { MariaDB Connector/C specific }
+    MYSQL_DATABASE_DRIVER=7000,
+    MARIADB_OPT_SSL_FP,             // deprecated, use MARIADB_OPT_TLS_PEER_FP instead
+    MARIADB_OPT_SSL_FP_LIST,        // deprecated, use MARIADB_OPT_TLS_PEER_FP_LIST instead
+    MARIADB_OPT_TLS_PASSPHRASE,     // passphrase for encrypted certificates
+    MARIADB_OPT_TLS_CIPHER_STRENGTH,
+    MARIADB_OPT_TLS_VERSION,
+    MARIADB_OPT_TLS_PEER_FP,            // single finger print for server certificate verification
+    MARIADB_OPT_TLS_PEER_FP_LIST,       // finger print white list for server certificate verification
+    MARIADB_OPT_CONNECTION_READ_ONLY,
+    MYSQL_OPT_CONNECT_ATTRS,        // for mysql_get_optionv
+    MARIADB_OPT_USERDATA,
+    MARIADB_OPT_CONNECTION_HANDLER,
+    MARIADB_OPT_PORT,
+    MARIADB_OPT_UNIXSOCKET,
+    MARIADB_OPT_PASSWORD,
+    MARIADB_OPT_HOST,
+    MARIADB_OPT_USER,
+    MARIADB_OPT_SCHEMA,
+    MARIADB_OPT_DEBUG,
+    MARIADB_OPT_FOUND_ROWS,
+    MARIADB_OPT_MULTI_RESULTS,
+    MARIADB_OPT_MULTI_STATEMENTS,
+    MARIADB_OPT_INTERACTIVE,
+    MARIADB_OPT_PROXY_HEADER,
+    MARIADB_OPT_IO_WAIT
+  );
 const
   TMySqlOptionMinimumVersion: array[TMySqlOption] of Integer =
     (

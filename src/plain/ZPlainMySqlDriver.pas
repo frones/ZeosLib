@@ -353,6 +353,28 @@ type
     mysql_stmt_store_result:      function(stmt: PMYSQL_STMT): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
     mariadb_stmt_execute_direct:  function(stmt: PMYSQL_STMT; query: PAnsiChar; Length: ULong): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    /// <summary>From MariaDB-Docs:
+    ///  Immediately aborts a connection by making all subsequent
+    ///  read/write operations fail. mariadb_cancel() does not invalidate memory
+    ///  used for mysql structure, nor close any communication channels. To free
+    ///  the memory, mysql_close() must be called. mariadb_cancel() is useful to
+    ///  break long queries in situations where sending KILL is not possible.
+    /// </summary>
+    /// <param>"mysql" mysql handle, which was previously allocated
+    ///  by mysql_init() or mysql_real_connect().</param>
+    /// <returns>???</returns>
+    mariadb_cancel: function(mysql: PMYSQL): integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    /// <summary>From MariaDB-Docs:
+    ///  mariadb_reconnect() tries to reconnect to a server in case the
+    ///  connection died due to timeout or other errors. It uses the same
+    ///  credentials which were specified in mysql_real_connect().
+    /// </summary>
+    /// <param>"mysql" mysql handle, which was previously allocated
+    ///  by mysql_init() or mysql_real_connect().</param>
+    /// <returns>0 on success; an error, if the option MYSQL_OPT_RECONNECT
+    ///  wasn't specified before.</returns>
+    mariadb_reconnect: function(mysql: PMYSQL): my_bool;
+
   protected
     ServerArgs: array of PAnsiChar;
     ServerArgsRaw: array of RawByteString;
