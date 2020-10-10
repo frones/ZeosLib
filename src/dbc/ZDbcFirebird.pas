@@ -680,6 +680,12 @@ begin
       ExecuteImmediat('SET TIME ZONE LOCAL', lcExecute);
     ExecuteImmediat('SET BIND OF TIME ZONE TO LEGACY', lcExecute);
     ExecuteImmediat('SET BIND OF DECFLOAT TO LEGACY', lcExecute);
+    ti := GetActiveTransaction;
+    try
+      ti.Close;
+    finally
+      ti := nil;
+    end;
   end;
 end;
 
