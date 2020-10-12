@@ -1823,10 +1823,8 @@ procedure SetStatementParam(Index: Integer;
 var
   Stream: TStream;
   BlobData: TBlobData;
-  {$IFDEF WITH_WIDEMEMO}
   P: Pointer;
   UniTemp: ZWideString;
-  {$ENDIF}
 begin
   if Param.IsNull then
     Statement.SetNull(Index, ConvertDatasetToDbcType(Param.DataType))
