@@ -791,7 +791,7 @@ type
     procedure Grow; virtual;
     /// <summary>Notify about an action which will or was performed.
     ///  if ElementNeedsFinalize is False the method will never be called.
-    ///  Otherwise you may finalize maged types beeing part of each element,
+    ///  Otherwise you may finalize managed types beeing part of each element,
     ///  such as Strings, Objects etc.</summary>
     /// <param>"Ptr" the address of the element an action happens for.</param>
     /// <param>"Index" the index of the element.</param>
@@ -2745,5 +2745,3 @@ end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 end.
-
-
