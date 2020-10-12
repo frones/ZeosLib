@@ -456,12 +456,13 @@ type
     Obj: TZAbstractFirebirdInterbasePreparedStatement;
     PreparedRowsOfArray: Integer;
   end;
-  /// <summary>Implements a List for IB and FB containing original sqltype and
-  ///  sqlscale</summary>
-  TZIBFBOrgSqlTypeAndScaleList = class(TZSortedList)
+  /// <summary>Implements a List for IB and FB containing original sqltype,
+  ///  sqlscale and nullable infos</summary>
+  TZIBFBOrgSqlTypeAndScaleList = class(TZCustomElementList)
   public
-    function Add(sqltype: Cardinal; scale: Integer; Nullable: Boolean): Integer;
-    procedure Clear; override;
+    function Add(sqltype: Cardinal; scale: Integer; Nullable: Boolean): NativeInt;
+  public
+    constructor Create;
   end;
 
 
@@ -5197,22 +5198,18 @@ end;
 { TZIBFBOrgSqlTypeAndScaleList }
 
 function TZIBFBOrgSqlTypeAndScaleList.Add(sqltype: Cardinal; scale: Integer;
-  Nullable: Boolean): Integer;
+  Nullable: Boolean): NativeInt;
 var P: PZIBFBOrgSqlTypeAndScale;
 begin
-  GetMem(P, SizeOf(TZIBFBOrgSqlTypeAndScale));
+  P := inherited Add(Result);
   P.sqltype := sqltype;
   P.scale := scale;
   p.Nullable := Nullable;
-  Result := inherited Add(P);
 end;
 
-procedure TZIBFBOrgSqlTypeAndScaleList.Clear;
-var I: Integer;
+constructor TZIBFBOrgSqlTypeAndScaleList.Create;
 begin
-  for i := 0 to Count -1 do
-    FreeMem(Items[i]);
-  inherited Clear;
+  inherited Create(SizeOf(TZIBFBOrgSqlTypeAndScale), False);
 end;
 
 initialization
