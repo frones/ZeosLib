@@ -916,33 +916,6 @@ const
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
   );
-  ZProp_UpdateMode : TZProperty = (
-    Name: DSProps_Update;
-    Purpose: 'Determine how to genearate the update statement params.'+LineEnding+
-      'Using All brings best performance(minior stmt-caching) for tables whith a low field-count -> normailization dude!'+LineEnding+
-      'Otherwise the behavior might be vice versa. Same as TZDataset.UpdateMode property';
-    ValueType: pvtEnum; LevelTypes: [pltResolver];
-    Values: 'all|changed'; Default: 'changed'; Alias: '';
-    Providers: (Count: 0; Items: nil);
-    Protocols: (Count: 0; Items: nil);
-  );
-  ZProp_WhereMode : TZProperty = (
-    Name: DSProps_Where;
-    Purpose: 'Determine how to genearate the where clause. Same as TZDataset.WhereMode property';
-    ValueType: pvtEnum; LevelTypes: [pltResolver];
-    Values: 'all|keyonly'; Default: 'keyonly'; Alias: '';
-    Providers: (Count: 0; Items: nil);
-    Protocols: (Count: 0; Items: nil);
-  );
-  ZProp_CalcDefauls : TZProperty = (
-    Name: DSProps_Defaults;
-    Purpose: 'Calc defaults for empty columns? It will decrease your performance using it.'+LineEnding+
-             'If your table has no default values declared, turn it off!';
-    ValueType: pvtEnum; LevelTypes: [pltResolver];
-    Values: cBoolEnum; Default: cBoolTrue; Alias: '';
-    Providers: (Count: 0; Items: nil);
-    Protocols: (Count: 0; Items: nil);
-  );
 {$IF declared(DSProps_PreferPrepared)}
   ZProp_PreferPrepared : TZProperty = (
     Name: DSProps_PreferPrepared;
@@ -4039,8 +4012,7 @@ initialization
     @ZProp_ControlsCP, @ZProp_Timeout,
     @ZProp_DateReadFormat, @ZProp_DateWriteFormat, @ZProp_TimeReadFormat,
     @ZProp_TimeWriteFormat, @ZProp_DateTimeReadFormat, @ZProp_DateTimeWriteFormat,
-    @ZProp_IdentifierQuotes, @ZProp_UpdateMode, @ZProp_WhereMode, @ZProp_CalcDefauls,
-    @ZProp_KeyFields, @ZProp_AffectedRows]);
+    @ZProp_IdentifierQuotes, @ZProp_KeyFields, @ZProp_AffectedRows]);
 {$IF declared(DSProps_PreferPrepared)}
   RegisterZProperty(@ZProp_PreferPrepared);
 {$IFEND}

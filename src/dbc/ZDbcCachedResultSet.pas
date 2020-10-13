@@ -82,13 +82,39 @@ type
       const OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
-    //EH: get some fields skipped for dml
-    procedure SetReadOnly(ColumnIndex: Integer; Value: Boolean);
-    //EH: get some fields sjipped for the where clause
-    procedure SetSearchable(ColumnIndex: Integer; Value: Boolean);
-
     procedure SetTransaction(const Value: IZTransaction);
     function HasAutoCommitTransaction: Boolean;
+  end;
+
+  IZGenerateSQLCachedResolver = interface(IZCachedResolver)
+    ['{D2694EF6-F6B6-4A11-BB46-456ED63DCC18}']
+    /// <summary>Set the readonly state of a field. The value will be ignored
+    ///  if the field is not writable.</summary>
+    /// <param>"ColumnIndex" the columnnumber of the field.</param>
+    /// <param>"Value" if <c>true</c> then the field will be ignored on
+    ///  generating the dml's.</param>
+    procedure SetReadOnly(ColumnIndex: Integer; Value: Boolean);
+    /// <summary>Set the searchable state of a field. The value will be ignored
+    ///  if the field is not searchable at all e.g. LOB's.</summary>
+    /// <param>"ColumnIndex" the columnnumber of the field.</param>
+    /// <param>"Value" if <c>true</c> then the field will be ignored on
+    ///  generating the where clause of the dml's.</param>
+    procedure SetSearchable(ColumnIndex: Integer; Value: Boolean);
+    /// <summary>Set the Calculate null columns defaults.</summary>
+    /// <param>"Value" <c>true</c> means calc defaults.</param>
+    procedure SetCalcDefaults(Value: Boolean);
+    /// <summary>Set the WhereAll state for generating the where clause of the
+    ///  dml's. The value will be ignored if no indexfields are defined and
+    ///  if no primary key is available. If both conditions are true the
+    ///  whereAll mode is always true.</summary>
+    /// <param>"Value" <c>true</c> means use all searchable columns. Otherwise
+    ///  the primary key will or given index fields are used.</param>
+    procedure SetWhereAll(Value: Boolean);
+    /// <summary>Set the updateAll state for generating the dml's. <c>true</c>
+    ///  means use all updatable columns. Otherwise only changed fields are used
+    ///  for updates.</summary>
+    /// <param>"Value" the UpdateAll mode should be used.</param>
+    procedure SetUpdateAll(Value: Boolean);
   end;
 
   {** Represents a cached result set. }

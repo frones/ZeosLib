@@ -88,6 +88,7 @@ type
     FUpdateObject: TZUpdateSQL;
     FCachedResultSet: IZCachedResultSet;
     FCachedResolver: IZCachedResolver;
+    FGenDMLResolver: IZGenerateSQLCachedResolver;
     FOnApplyUpdateError: TDataSetErrorEvent;
     FOnUpdateRecord: TUpdateRecordEvent;
     FUpdateMode: TZUpdateMode;
@@ -135,9 +136,6 @@ type
     procedure DOBeforeApplyUpdates; {bangfauzan addition}
     procedure DOAfterApplyUpdates; {bangfauzan addition}
 
-
-    function CreateStatement(const SQL: string; Properties: TStrings):
-      IZPreparedStatement; override;
     function CreateResultSet(const SQL: string; MaxRows: Integer):
       IZResultSet; override;
     {$IFDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES}
@@ -201,6 +199,7 @@ type
     property OnEditError;
     property OnPostError;
     property OnNewRecord;
+    property Options default [doCalcDefaults, doPreferPrepared];
   end;
 
 implementation
@@ -270,6 +269,7 @@ begin
         FUpdateObject.GetInterface(IZCachedResolver, TempResolver);
         CachedResultSet.SetResolver(TempResolver);
         SetTxns2Resolver(TempResolver);
+        FGenDMLResolver := nil;
       end else begin
         {EH: now test if the old FUpdateObject intf equals with current cached resolver }
         if FCachedResolver = TempResolver then
@@ -279,6 +279,7 @@ begin
             -> Component interfaces are not refcounted by default}
           FCachedResolver := CachedResultSet.GetNativeResolver;
         CachedResultSet.SetResolver(FCachedResolver);
+        FCachedResolver.QueryInterface(IZGenerateSQLCachedResolver, FGenDMLResolver);
         SetTxns2Resolver(FCachedResolver);
       end;
   end;
@@ -307,8 +308,7 @@ end;
 }
 procedure TZAbstractDataset.SetCachedUpdates(Value: Boolean);
 begin
-  if FCachedUpdates <> Value then
-  begin
+  if FCachedUpdates <> Value then begin
     FCachedUpdates := Value;
     if Active and (CachedResultSet <> nil) then
       CachedResultSet.SetCachedUpdates(Value);
@@ -345,8 +345,10 @@ begin
   if FUpdateMode <> Value then
   begin
     FUpdateMode := Value;
-    if Active then
-      Close;
+    if FGenDMLResolver <> nil then
+      FGenDMLResolver.SetUpdateAll(FUpdateMode = umUpdateAll);
+    {if Active then
+      Close;}
   end;
 end;
 
@@ -356,43 +358,12 @@ end;
 }
 procedure TZAbstractDataset.SetWhereMode(Value: TZWhereMode);
 begin
-  if FWhereMode <> Value then
-  begin
+  if FWhereMode <> Value then begin
     FWhereMode := Value;
-    if Active then
-      Close;
-  end;
-end;
-
-{**
-  Creates a DBC statement for the query.
-  @param SQL an SQL query.
-  @param Properties a statement specific properties.
-  @returns a created DBC statement.
-}
-function TZAbstractDataset.CreateStatement(
-  const SQL: string; Properties: TStrings): IZPreparedStatement;
-var
-  Temp: TStrings;
-begin
-  Temp := TStringList.Create;
-  try
-    Temp.AddStrings(Properties);
-
-    { Sets update mode property.}
-    case FUpdateMode of
-      umUpdateAll: Temp.Values[DSProps_Update] := 'all';
-      umUpdateChanged: Temp.Values[DSProps_Update] := 'changed';
-    end;
-    { Sets where mode property. }
-    case FWhereMode of
-      wmWhereAll: Temp.Values[DSProps_Where] := 'all';
-      wmWhereKeyOnly: Temp.Values[DSProps_Where] := 'keyonly';
-    end;
-
-    Result := inherited CreateStatement(SQL, Temp);
-  finally
-    Temp.Free;
+    if FGenDMLResolver <> nil then
+      FGenDMLResolver.SetWhereAll(FWhereMode = wmWhereAll);
+    {if Active then
+      Close;}
   end;
 end;
 
@@ -410,15 +381,19 @@ begin
   if not Assigned(Result) then
     Exit;
 
-  if Result.QueryInterface(IZCachedResultSet, FCachedResultSet) = 0 then
-  begin
-    CachedResultSet := Result as IZCachedResultSet;
-    CachedResolver := CachedResultSet.GetResolver;
-    CachedResultSet.SetCachedUpdates(CachedUpdates);
+  if Result.QueryInterface(IZCachedResultSet, FCachedResultSet) = 0 then begin
+    FCachedResultSet := Result as IZCachedResultSet;
+    FCachedResolver := CachedResultSet.GetResolver;
+    FCachedResultSet.SetCachedUpdates(CachedUpdates);
     if FUpdateObject <> nil then begin
       CachedResultSet.SetResolver(FUpdateObject);
       SetTxns2Resolver(FUpdateObject);
     end else SetTxns2Resolver(CachedResolver);
+    if (FCachedResolver <> nil) and (FCachedResolver.QueryInterface(IZGenerateSQLCachedResolver, FGenDMLResolver) = S_OK) then begin
+      FGenDMLResolver.SetUpdateAll(FUpdateMode = umUpdateAll);
+      FGenDMLResolver.SetWhereAll(FWhereMode = wmWhereAll);
+      FGenDMLResolver.SetCalcDefaults(doCalcDefaults in Options);
+    end;
   end;
 end;
 
@@ -441,7 +416,8 @@ begin
       CachedResultSet.Close;
       CachedResultSet := nil;
     end;}
-    CachedResolver := nil;
+    FCachedResolver := nil;
+    FGenDMLResolver := nil;
   end;
 end;
 
@@ -594,13 +570,14 @@ begin
             TZAbstractDataset(MasterLink.DataSet).CachedUpdates);
         end;
 
-    for i := 0 to Fields.Count -1 do
-      if not (pfInUpdate in Fields[i].ProviderFlags) or not (pfInWhere in Fields[i].ProviderFlags) then
-        for j := 0 to high(FieldsLookupTable) do
-          if (FieldsLookupTable[j].Field = Fields[i]) and (FieldsLookupTable[j].DataSource = dltResultSet) then begin
-            FCachedResolver.SetReadOnly(FieldsLookupTable[j].Index, Fields[i].ReadOnly or not (pfInUpdate in Fields[i].ProviderFlags));
-            FCachedResolver.SetSearchable(FieldsLookupTable[j].Index, (pfInWhere in Fields[i].ProviderFlags));
-          end;
+    if FGenDMLResolver <> nil then
+      for i := 0 to Fields.Count -1 do
+        if not (pfInUpdate in Fields[i].ProviderFlags) or not (pfInWhere in Fields[i].ProviderFlags) then
+          for j := 0 to high(FieldsLookupTable) do
+            if (FieldsLookupTable[j].Field = Fields[i]) and (FieldsLookupTable[j].DataSource = dltResultSet) then begin
+              FGenDMLResolver.SetReadOnly(FieldsLookupTable[j].Index, Fields[i].ReadOnly or not (pfInUpdate in Fields[i].ProviderFlags));
+              FGenDMLResolver.SetSearchable(FieldsLookupTable[j].Index, (pfInWhere in Fields[i].ProviderFlags));
+            end;
     if State = dsInsert then
       {$IFNDEF WITH_InternalAddRecord_TRecBuf}
       InternalAddRecord(RowBuffer, False)
@@ -655,8 +632,7 @@ var
   RowNo: NativeInt;
   RowBuffer: PZRowBuffer;
 begin
-  if (CachedResultSet <> nil) and GetActiveBuffer(RowBuffer) then
-  begin
+  if (CachedResultSet <> nil) and GetActiveBuffer(RowBuffer) then begin
     Connection.ShowSqlHourGlass;
     try
       RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
@@ -670,8 +646,7 @@ begin
       end;
 
       { Filters the row }
-      if not FilterRow(RowNo) then
-      begin
+      if not FilterRow(RowNo) then begin
         CurrentRows.Delete(CurrentRow - 1);
         if not FetchRows(CurrentRow) then
           CurrentRow := Min(CurrentRows.Count, CurrentRow);
@@ -691,15 +666,14 @@ var
   RowBuffer: PZRowBuffer;
 begin
   if (CachedResultSet <> nil) and GetActiveBuffer(RowBuffer) then
-    if (CurrentRow > 0) and (State = dsEdit) then
-    begin
+    if (CurrentRow > 0) and (State = dsEdit) then begin
       RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
       CachedResultSet.MoveAbsolute(RowNo);
       RowAccessor.RowBuffer := RowBuffer;
       CachedResultSet.RevertRecord;
     end
-  else if (State = dsInsert) then
-    CachedResultSet.RevertRecord;
+    else if (State = dsInsert) then
+      CachedResultSet.RevertRecord;
 end;
 
 {**
@@ -711,18 +685,13 @@ procedure TZAbstractDataset.Notification(AComponent: TComponent;
   Operation: TOperation);
 begin
   inherited Notification(AComponent, Operation);
-
-  if (Operation = opRemove) then
-  begin
-    if (AComponent = FUpdateObject) then
-    begin
+  if (Operation = opRemove) then begin
+    if (AComponent = FUpdateObject) then begin
       Close;
       FUpdateObject := nil;
     end;
     if (AComponent = FSequence) then
-    begin
       FSequence := nil;
-    end;
   end;
 end;
 
@@ -774,7 +743,6 @@ end;
 procedure TZAbstractDataset.CommitUpdates;
 begin
   CheckBrowseMode;
-
   if (CachedResultSet <> nil) and CachedResultSet.IsPendingUpdates then
     CachedResultSet.DisposeCachedUpdates;
 end;
@@ -786,10 +754,8 @@ procedure TZAbstractDataset.CancelUpdates;
 begin
   if State in [dsEdit, dsInsert] then
     Cancel;
-
   if CachedResultSet <> nil then
     CachedResultSet.CancelUpdates;
-
   if not (State in [dsInactive]) then
     RereadRows;
 end;
@@ -798,15 +764,12 @@ end;
   Reverts the previous status for the current row.
 }
 procedure TZAbstractDataset.RefreshCurrentRow(const RefreshDetails:Boolean);
-var
-    RowNo: NativeInt;
+var RowNo: NativeInt;
     i: Integer;
-    ostate:TDataSetState;
+    ostate: TDataSetState;
 begin
-  if State=dsBrowse then
-  begin
-    if CachedResultSet <> nil then
-    begin
+  if State=dsBrowse then begin
+    if CachedResultSet <> nil then begin
       UpdateCursorPos;
       RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
       CachedResultSet.MoveAbsolute(RowNo);
@@ -815,8 +778,7 @@ begin
       begin
         if RefreshDetails then
           Resync([])
-        else
-        begin
+        else begin
           ostate:=State;
           SetTempState(dsInternalCalc);
           try
@@ -828,11 +790,8 @@ begin
         end;
       end;
     end;
-  end
-  else
-  begin
+  end else
     raise EZDatabaseError.Create(SInternalError);
-  end;
 end;
 
 
@@ -944,34 +903,24 @@ var
 
       case DestField.DataType of
         ftLargeInt:
-          begin
-            if SrcField.DataType = ftLargeInt then
-            begin
-              TLargeIntField(DestField).AsLargeInt :=
-                TLargeIntField(SrcField).AsLargeInt;
-            end
-            else
-              DestField.AsInteger := SrcField.AsInteger;
-          end;
+            if SrcField.DataType = ftLargeInt
+            then TLargeIntField(DestField).AsLargeInt := TLargeIntField(SrcField).AsLargeInt
+            else DestField.AsInteger := SrcField.AsInteger;
         ftBlob, ftMemo {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}:
-          begin
-            if SrcField.DataType in [ftBlob, ftMemo {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}] then
-            begin
-              SrcStream := SrcDataset.CreateBlobStream(SrcField, bmRead);
+          if SrcField.DataType in [ftBlob, ftMemo {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}] then begin
+            SrcStream := SrcDataset.CreateBlobStream(SrcField, bmRead);
+            try
+              DestStream := DestDataset.CreateBlobStream(DestField, bmWrite);
               try
-                DestStream := DestDataset.CreateBlobStream(DestField, bmWrite);
-                try
-                  DestStream.CopyFrom(SrcStream, 0);
-                finally
-                  DestStream.Free;
-                end;
+                DestStream.CopyFrom(SrcStream, 0);
               finally
-                SrcStream.Free;
+                DestStream.Free;
               end;
-            end
-            else
-              DestField.AsVariant := SrcField.AsVariant;
-          end;
+            finally
+              SrcStream.Free;
+            end;
+          end else
+            DestField.AsVariant := SrcField.AsVariant;
         else
           DestField.AsVariant := SrcField.AsVariant;
       end;
@@ -998,31 +947,22 @@ begin
     { Applies updates. }
     try
       case UpdateKind of
-        ukModify:
-          begin
-            if LocateRecord then
-            begin
+        ukModify: if LocateRecord then begin
               Self.Edit;
               CopyRecord(Delta, Self);
               Self.Post;
               Result := True;
             end;
-          end;
-        ukInsert:
-          begin
+        ukInsert: begin
             Self.Append;
             CopyRecord(Delta, Self);
             Self.Post;
             Result := True;
           end;
-        ukDelete:
-          begin
-            if LocateRecord then
-            begin
+        ukDelete: if LocateRecord then begin
               Self.Delete;
               Result := True;
             end;
-          end;
       end;
     except
       Result := False;

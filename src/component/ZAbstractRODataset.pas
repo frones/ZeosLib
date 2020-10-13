@@ -3430,13 +3430,8 @@ begin
   try
     if Assigned(Properties) then
       Temp.AddStrings(Properties);
-    { Define TDataset specific parameters. }
-    Temp.Values[DSProps_Defaults] := BoolStrs[doCalcDefaults in FOptions];
     {$IF declared(DSProps_PreferPrepared)}
     Temp.Values[DSProps_PreferPrepared] := BoolStrs[doPreferPrepared in FOptions];
-    {$IFEND}
-    {$IF declared(DSProps_CachedLobs)}
-    Temp.Values[DSProps_CachedLobs] := BoolStrs[doCachedLobs in FOptions];
     {$IFEND}
     if FTransaction <> nil
     then Txn := THackTransaction(FTransaction).GetIZTransaction

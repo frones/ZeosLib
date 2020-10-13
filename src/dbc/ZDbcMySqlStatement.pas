@@ -370,7 +370,7 @@ begin
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, DSProps_UseResult, 'false'));
   if not FUseResult then
     ResultSetType := rtScrollInsensitive;
-  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, DSProps_Defaults, 'true'));
+  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, DSProps_MySQLUseDefaults, 'true'));
   FPrefetchRows := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_PrefetchRows, '1'),1);
   //JDBC prepares after 4th execution
   FMinExecCount2Prepare := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(DefineStatementParameter(Self, DSProps_MinExecCntBeforePrepare, '2'), 2);
