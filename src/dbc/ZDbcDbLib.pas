@@ -608,7 +608,6 @@ begin
           SQLWriter.AddText('] : ', rException);
           SQLWriter.AddText(lErrorEntry^.OsErrStr, rException);
         end;
-        Dispose(lErrorEntry);
       end;
     end;
     SQLWriter.Finalize(rException);
@@ -637,7 +636,6 @@ begin
             SQLWriter.Finalize(rException);
           end;
         end;
-        Dispose(lMesageEntry);
       end;
     end;
     FSQLMessages.Count := 0; //clear the list
@@ -659,7 +657,7 @@ begin
     else FLogMessage := rException;
     {$ENDIF}
     rException := EmptyRaw;
-  end else begin
+  end else if rWarningOrInfo <> EmptyRaw then begin
     ExeptionClass := EZSQLWarning;
     {$IFDEF UNICODE}
     FLogMessage := ZRawToUnicode(rWarningOrInfo, msgCP);
@@ -671,7 +669,7 @@ begin
     else FLogMessage := rWarningOrInfo;
     {$ENDIF}
     rException := rWarningOrInfo;
-  end;
+  end else exit;
   {$IFDEF UNICODE}
   if DriverManager.HasLoggingListener then
     LogError(LoggingCategory, FirstError, Sender, LogMessage, FLogMessage);
