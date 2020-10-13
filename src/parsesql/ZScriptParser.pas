@@ -191,217 +191,19 @@ begin
   ParseText(#10 + Line + #10);
 end;
 
+const
+  ParseOptions: array[Boolean] of TZTokenOptions = ([], [toSkipComments]);
+  ConCatDelim: array[Boolean] of String = (LineEnding, ' ');
+  pGO: PChar = 'GO';
+  pDelimiter: PChar = 'DELIMITER';
+  pSet: PChar = 'SET';
+  pTerm: PChar = 'TERM';
+
 {**
   Parses a complete text with several lines.
   @oaram Text a text of the SQL script to be parsed.
 }
-const ParseOptions: array[Boolean] of TZTokenOptions = ([], [toSkipComments]);
-const ConCatDelim: array[Boolean] of String = (LineEnding, ' ');
 procedure TZSQLScriptParser.ParseText(const Text: string);
-{$IFDEF NO_PCHAR_KUNGFU}
-const SetTerm = String('SET TERM ');
-var
-  Tokens: TZTokenList;
-  TokenType: TZTokenType;
-  TokenValue: string;
-  TokenIndex, iPos: Integer;
-  SQL, Temp: string;
-  EndOfStatement: Boolean;
-  Extract: Boolean;
-  LastComment: String;
-  P1: PChar;
-  P2: PChar absolute Temp;
-
-  function CountChars(const Str: string; Chr: Char): Integer;
-  var P, PEnd: PChar;
-  begin
-    Result := 0;
-    P := Pointer(Str);
-    PEnd := P+Length(Str);
-    while P < PEnd do begin
-      Inc(Result, Ord(P^ = Chr));
-      Inc(P);
-    end;
-  end;
-
-  procedure SetNextToken;
-  begin
-    TokenValue := Tokens.AsString(TokenIndex);
-    TokenType := Tokens[TokenIndex]^.TokenType;
-    Inc(TokenIndex);
-  end;
-
-begin
-  if Tokenizer = nil then
-    raise Exception.Create(STokenizerIsNotDefined);
-
-  if CleanupStatements
-  then Tokens := Tokenizer.TokenizeBufferToList(Text, [toSkipComments])
-  else Tokens := Tokenizer.TokenizeBufferToList(Text, []);
-
-  if ( (DelimiterType = dtDelimiter) or
-       (DelimiterType = dtSetTerm) ) and
-     ( Delimiter = '' ) then
-    Delimiter := ';'; //use default delimiter
-
-  if (DelimiterType = dtDefault) then
-    Delimiter := ';'; //use default delimiter
-
-  TokenIndex := 0;
-  SQL := FUncompletedStatement;
-  if SQL <> '' then
-    if CleanupStatements
-    then SQL := SQL + ' '
-    else SQL := SQL + #10;
-  FUncompletedStatement := '';
-  FStatements.Clear;
-  try
-    repeat
-      SetNextToken;
-
-      case DelimiterType of
-        dtGo:
-          EndOfStatement := (UpperCase(TokenValue) = 'GO');
-        dtEmptyLine:
-          begin
-            EndOfStatement := False;
-            if TokenType = ttWhitespace then begin
-              Temp := TokenValue;
-              while (CountChars(Temp, #10) < 2) and (TokenType = ttWhitespace) do begin
-                SetNextToken;
-                if TokenType = ttWhitespace then
-                  Temp := Temp + TokenValue;
-              end;
-              EndOfStatement := (TokenType = ttWhitespace) or EndsWith(Sql, #10);
-              if not EndOfStatement then
-                if SQL <> '' then
-                  SQL := Trim(SQL) + ' ';
-            end;
-          end;
-        dtDelimiter,
-        dtDefault,
-        dtSetTerm:
-          begin
-            EndOfStatement := False;
-            if not (TokenType in [ttWhitespace, ttEOF]) then
-            begin
-              if (DelimiterType = dtDelimiter) and (Uppercase(TokenValue) = 'DELIMITER') then
-              begin
-                Delimiter := '';
-                Temp := TokenValue; {process the DELIMITER}
-                Temp := Temp + Tokens.AsString(TokenIndex); {process the first ' ' char}
-                Inc(TokenIndex);
-                while TokenType <> ttWhitespace do begin
-                  SetNextToken;
-                  if not (TokenType in [ttWhitespace, ttEOF]) then
-                    Delimiter := Delimiter + TokenValue; //get the new delimiter
-                end;
-                SQL := SQL + Temp + Delimiter;
-                EndOfStatement := True;
-              end
-              else
-              begin
-                Temp := TokenValue;
-                Extract := True;
-                P1 := Pointer(Delimiter);
-                while (P1^=P2^) and (Length(Delimiter) > Length(Temp)) and
-                      not (TokenType in [ttWhitespace, ttEOF]) do begin
-                  SetNextToken;
-                  if not (TokenType in [ttWhitespace, ttEOF]) then
-                  begin
-                    Temp := Temp + TokenValue;
-                    Extract := True;
-                  end else
-                    Extract := False;
-                end;
-                EndOfStatement := (Delimiter = Temp);
-                if not EndOfStatement then
-                begin
-                  if Extract then
-                    Temp := Copy(Temp, 1, Length(Temp) - Length(TokenValue));
-                  SQL := SQL + Temp;
-                end;
-              end;
-            end;
-          end;
-        else
-          EndOfStatement := False;
-      end;
-
-      if TokenType = ttEOF then Break;
-
-      { Processes the end of statements. }
-      if EndOfStatement then
-      begin
-        if CleanupStatements then
-          SQL := Trim(SQL);
-        if SQL <> '' then
-        begin
-          if not CleanupStatements
-          then Temp := Trim(SQL)
-          else Temp := SQL;
-          if (DelimiterType = dtSetTerm) and StartsWith(UpperCase(Temp), SetTerm) then
-              Delimiter := Copy(Temp, 10, Length(Temp) - 9)
-          else if (DelimiterType = dtSetTerm) and ( ZFastCode.Pos(SetTerm, UpperCase(Temp)) > 0) then begin
-            iPos := ZFastCode.Pos(SetTerm, UpperCase(Temp))+8;
-            Delimiter := Copy(Temp, iPos+1, Length(Temp) - iPos);
-            LastComment := TrimRight(Copy(Temp, 1, iPos-9));
-          end else if (DelimiterType = dtDelimiter) and StartsWith(UpperCase(Temp), 'DELIMITER ') then
-            Delimiter := Copy(Temp, 11, Length(Temp) - 10)
-          else begin
-            if (DelimiterType = dtEmptyLine) and EndsWith(SQL, ';') then
-              SQL := Copy(SQL, 1, Length(SQL) - 1);
-            if LastComment <> '' then
-              SQL := LastComment+#13#10+SQL;
-            if CleanupStatements then
-              SQL := Trim(SQL);
-            FStatements.Add(SQL);
-            LastComment := '';
-          end;
-        end;
-        SQL := '';
-      { Adds a whitespace token. }
-      end else if CleanupStatements and (TokenType = ttWhitespace) then begin
-        if SQL <> '' then
-          SQL := Trim(SQL) + ' ';
-      { Adds a default token. }
-      end else begin
-        // --> ms, 20/10/2005
-        // TokenValue is not a ttWhitespace (#32)
-        if (TokenType = ttWhitespace) and (TokenValue > '') then begin
-          // SQL is not emtyp
-          if (SQL <> '') then begin
-            // is last token:
-            if (Tokenindex = Tokens.count-1) then
-              TokenValue := '';
-            // next(!) token is also ttWhitespace or delimiter
-            // (TokenIndex was already incremented!)
-            if (Tokenindex < Tokens.Count-1) then
-              if (Tokens[TokenIndex]^.TokenType = ttWhitespace) or Tokens.IsEqual(TokenIndex, Delimiter) then
-                TokenValue := '';
-          end else // SQL is empty
-            TokenValue := '';
-        end;
-        if ((SQL = '') and (trim(TokenValue) = '')) then
-          TokenValue := '';
-        // <-- ms
-        SQL := SQL + TokenValue;
-      end;
-    until TokenType = ttEOF;
-    if ( LastComment <> '' ) and ( FStatements.Count > 0) then
-      if CleanupStatements then
-        FStatements[FStatements.Count-1] := FStatements[FStatements.Count-1]+' '+Trim(LastComment)
-      else
-        FStatements[FStatements.Count-1] := FStatements[FStatements.Count-1]+#13#10+LastComment;
-  finally
-    Tokens.Free;
-  end;
-
-  if CleanupStatements then
-    SQL := Trim(SQL);
-  if SQL <> '' then
-    FUncompletedStatement := SQL;
-{$ELSE}
 //new version of EgonHugeist which composes complex scripts more than 100x faster than old version
 var
   Tokens: TZTokenList;
@@ -463,7 +265,7 @@ begin
       SetNextToken;
       if Token.TokenType <> ttEOF then
       case DelimiterType of
-        dtGo:   if (Token.TokenType = ttWord) and (Token.L = 2) and SameText(Token.P, PChar('GO'), 2) then
+        dtGo:   if (Token.TokenType = ttWord) and (Token.L = 2) and SameText(Token.P, pGO, 2) then
                   EndTokenIndex := TokenIndex -2;
         dtEmptyLine:
             if Token.TokenType = ttWhitespace then begin
@@ -491,7 +293,7 @@ begin
         dtDelimiter:
             if (Token.TokenType = DelimTokenType) and (((L = 1) and (PDelim^ = Token.P^)) or ((Token.P+L < PEnd) and SameText(Token.P, PDelim, L))) then
               goto jmpTerm
-            else if (Token.TokenType = ttWord) and (Token.L = 9) and SameText(Token.P, PChar('DELIMITER'), 9) then begin
+            else if (Token.TokenType = ttWord) and (Token.L = 9) and SameText(Token.P, pDelimiter, 9) then begin
               SetNextToken;
               if (Token.TokenType = ttWhitespace) then //Left trim the delimiter
                 SetNextToken;
@@ -510,14 +312,14 @@ jmpTerm:      EndTokenIndex := TokenIndex -2;
               if Tokens[EndTokenIndex].TokenType = ttWhiteSpace then //trim right before delimiter
                 Dec(EndTokenIndex);
               LastCommentIdx := TokenIndex+Ord(Tokens[TokenIndex].TokenType = ttWhiteSpace);
-            end else if (Token.TokenType = ttWord) and (Token.L = 3) and SameText(Token.P, PChar('SET'), 3) then begin //test for SET TERM___X(delimiter)
+            end else if (Token.TokenType = ttWord) and (Token.L = 3) and SameText(Token.P, pSet, 3) then begin //test for SET TERM___X(delimiter)
               TempIDX := TokenIndex; //remainder
               while True do begin //secondary inner loop scans for 'TERM', extracts new delimiter and pads these processed tokens away
                 SetNextToken;
                 case Token.TokenType of
                   ttWhitespace: continue;
                   ttEOF: Break;
-                  ttWord: if (Token.L = 4) and SameText(Token.P, PChar('TERM'), 4) then begin //"SET TERM" reached
+                  ttWord: if (Token.L = 4) and SameText(Token.P, pTerm, 4) then begin //"SET TERM" reached
                             {EH: compose LastComment logic first: IIUC every string before "SET TERM ' is concated to previous stmt if it exits! }
                             if TempIDX > 2 then begin //handle a skript starting with "SET TERM x ; "
                               N := TempIDX -(2+Ord(Tokens[TempIDX-2].TokenType = ttWhiteSpace));
@@ -606,7 +408,6 @@ jmpEOF:
   finally
     Tokens.Free;
   end;
-{$ENDIF}
 end;
 
 end.
