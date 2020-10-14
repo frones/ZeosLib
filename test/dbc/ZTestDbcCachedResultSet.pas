@@ -654,7 +654,8 @@ begin
     FResultSet := CachedResultSet;
     FResultSet.SetResolver(TZEmptyResolver.Create);
     FillResultSet(FResultSet, ROWS_COUNT);
-
+    FResultSet.PostUpdatesCached;
+    CheckFalse(FResultSet.IsPendingUpdates);
     with FResultSet do
     begin
       { Update record values to null}

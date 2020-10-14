@@ -584,8 +584,12 @@ type
     ///  values. See DatabaseInfo.SupportsTransactionIsolationLevel</param>
     procedure SetTransactionIsolation(Value: TZTransactIsolationLevel);
     /// <summary>Gets the current auto-commit state. See setAutoCommit.</summary>
-    /// <returns>the current state of auto-commit mode.</returns>
+    /// <returns><c>True</c> if the transaction is in autocommit mode;
+    ///  <c>False</c> otherwise.</returns>
     function GetAutoCommit: Boolean;
+    /// <summary>Gets the current readonly-commit state. See setReadonly.</summary>
+    /// <returns><c>True</c> if the transaction is readonly; <c>False</c>
+    ///  otherwise.</returns>
     function IsReadOnly: Boolean;
     procedure SetReadOnly(Value: Boolean);
     procedure Close;
@@ -594,21 +598,15 @@ type
 
   IZTransactionManager = interface(IImmediatelyReleasable)
     ['{BF61AD03-1072-473D-AF1F-67F90DFB4E6A}']
-    /// <summary>
-    ///  Creates a <code>Transaction</code>
-    ///  <param name="AutoCommit">the AutoCommit mode.</param>
-    ///  <param name="ReadOnly">the ReadOnly mode.</param>
-    ///  <param name="TransactIsolationLevel">the TransactIsolationLevel one of
-    ///   the TRANSACTION_* isolation values with the
-    ///   exception of TRANSACTION_NONE; some databases may not support other values
-    ///   @see DatabaseMetaData#supportsTransactionIsolationLevel
-    ///  </param>
-    ///  <param name="Params">a list of properties used for the transaction.</param>
-    /// </summary>
-    /// <returns>
-    ///  returns the Transaction object.
-    ///   @see IZTransaction
-    /// </returns>
+    /// <summary>Creates a <c>Transaction</c></summary>
+    /// <param>"AutoCommit" the AutoCommit mode.</param>
+    /// <param>"ReadOnly" the ReadOnly mode.</param>
+    /// <param>"TransactIsolationLevel" the TransactIsolationLevel one of the
+    ///  TRANSACTION_* isolation values with the exception of TRANSACTION_NONE;
+    ///  some databases may not support other values see
+    ///  DatabaseInfo.supportsTransactionIsolationLevel</param>
+    /// <param>"Params" a list of properties used for the transaction.</param>
+    /// <returns>returns the Transaction interface.</returns>
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
     procedure ReleaseTransaction(const Value: IZTransaction);

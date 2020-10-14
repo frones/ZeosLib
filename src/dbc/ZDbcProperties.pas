@@ -744,7 +744,7 @@ const
   /// <type>Enum</type>
   /// <usage>Connection</usage>
   /// <syntax>Properties.Values[DSProps_SQLiteIntAffinity]={False|True}</syntax>
-  /// <values>true|False</syntax>
+  /// <values>true|False</values>
   /// <summary>
   ///  Treat "INT" fields in any kind as Int64, means ignore all subtypes like
   ///  [smallint, int32, MEDIUMINT]</summary>
@@ -753,7 +753,7 @@ const
   /// <type>Integer</type>
   /// <usage>Connection</usage>
   /// <syntax>Properties.Values[ConnProps_SQLiteOpenFlags]=value</syntax>
-  /// <values>are defined in ZPlainSqLiteDriver.pas</syntax>
+  /// <values>are defined in ZPlainSqLiteDriver.pas</values>
   /// <summary>see: https://www.sqlite.org/c3ref/open.html</summary>
   ConnProps_SQLiteOpen_Flags = 'SQLiteOpen_Flags';
   /// <type>String</type>
