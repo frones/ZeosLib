@@ -1556,7 +1556,7 @@ begin
     end;
     RowNo := Row;
   end else begin
-    RaiseForwardOnlyException;
+    raise EZSQLException.Create('This resultset is forward only.');
   end;
 end;
 

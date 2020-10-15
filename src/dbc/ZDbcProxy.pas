@@ -87,8 +87,8 @@ type
 
   { TZProxyConnection }
 
-  TZDbcProxyConnection = class({$IFNDEF ZEOS73UP}TZAbstractConnection{$ELSE}TZAbstractDbcConnection{$ENDIF},
-    IZConnection, IZDbcProxyConnection)
+  TZDbcProxyConnection = class({$IFNDEF ZEOS73UP}TZAbstractConnection{$ELSE}TZAbstractSuccedaneousTxnConnection{$ENDIF},
+    IZConnection, IZTransaction, IZDbcProxyConnection)
   private
     FPlainDriver: IZProxyPlainDriver;
     FConnIntf: IZDbcProxy;
@@ -102,7 +102,7 @@ type
     FStartTransactionUsed: Boolean;
     {$ENDIF}
   protected
-    procedure InternalCreate; override;
+    procedure AfterConstruction; override;
     procedure transferProperties(PropName, PropValue: String);
     procedure applyProperties(const Properties: String);
     function encodeProperties(PropName, PropValue: String): String;
@@ -139,7 +139,6 @@ type
     ///  was started. 2 means the transaction was saved. 3 means the previous
     ///  savepoint got saved too and so on.</returns>
     function StartTransaction: Integer;
-    function GetConnectionTransaction: IZTransaction;
     {$ENDIF}
 
     procedure Open; override;
@@ -279,11 +278,14 @@ end;
 {**
   Constructs this object and assignes the main properties.
 }
-procedure TZDbcProxyConnection.InternalCreate;
+procedure TZDbcProxyConnection.AfterConstruction;
+var
+  PlainDrv: IZProxyPlainDriver;
 begin
   FMetadata := TZProxyDatabaseMetadata.Create(Self, Url);
   FConnIntf := GetPlainDriver.GetLibraryInterface;
   if not assigned(FConnIntf) then raise Exception.Create(GetPlainDriver.GetLastErrorStr);
+  inherited AfterConstruction;
 end;
 
 {**
@@ -302,12 +304,12 @@ begin
   FStartTransactionUsed := false;
   {$ENDIF}
 
-  LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
+  LogMessage := 'CONNECT TO "'+ URL.Database + '" AS USER "' + URL.UserName + '"';
 
   PropList := encodeProperties('autocommit', BoolToStr(GetAutoCommit, True));
   FConnIntf.Connect(User, Password, HostName, Database, PropList, MyDbInfo);
 
-  DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
+  DriverManager.LogMessage(lcConnect, URL.Protocol , LogMessage);
   FDbInfo := MyDbInfo;
   inherited Open;
   applyProperties(PropList);
@@ -449,10 +451,12 @@ begin
   Result := 1;
 end;
 
+(*
 function TZDbcProxyConnection.GetConnectionTransaction: IZTransaction;
 begin
   raise Exception.Create('Unsupported');
 end;
+*)
 {$ENDIF}
 
 {**
@@ -470,12 +474,12 @@ var
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
-  LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
+  LogMessage := 'DISCONNECT FROM "' + URL.Database + '"';
 
   FConnIntf.Disconnect;
 
   if Assigned(DriverManager) and DriverManager.HasLoggingListener then //thread save
-    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
+    DriverManager.LogMessage(lcDisconnect, URL.Protocol, LogMessage);
 end;
 
 function TZDbcProxyConnection.GetClientVersion: Integer;
@@ -502,6 +506,8 @@ end;
 }
 function TZDbcProxyConnection.GetPlainDriver: IZProxyPlainDriver;
 begin
+  if not Assigned(PlainDriver) then
+    raise EZSQLException.Create('The f*****g plain driver is not assigned.');
   if fPlainDriver = nil then
     fPlainDriver := PlainDriver as IZProxyPlainDriver;
   Result := fPlainDriver;

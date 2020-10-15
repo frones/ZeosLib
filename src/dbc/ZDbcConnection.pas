@@ -2237,7 +2237,7 @@ end;
 procedure TZAbstractSuccedaneousTxnConnection.AfterConstruction;
 var Trans: IZTransaction;
 begin
-  QueryInterface(IZTransaction, Trans);
+  Trans := Self as IZTransaction; //QueryInterface(IZTransaction, Trans);
   fWeakTxnPtr := Pointer(Trans);
   Trans := nil;
   inherited AfterConstruction;
