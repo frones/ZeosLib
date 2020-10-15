@@ -849,8 +849,57 @@ type
   end;
 
   /// <author>EgonHugeist</author>
-  /// <summary>implements list compare function</summary>
+  /// <summary>implements list of exchangeable custom elements</summary>
+  TZExchangeableCustomElementList = class(TZCustomElementList)
+  private
+    FElementBuffer: Pointer;
+    /// <summary>Exchange two elements on given addresses.</summary>
+    /// <param>"P1" the address of the first element to be exchanged.</param>
+    /// <param>"P2" the address of the second element to be exchanged.</param>
+    procedure InternalExchange(P1, P2: Pointer);
+  public
+    procedure AfterConstruction; override;
+    procedure BeforeDestruction; override;
+  public
+    /// <summary>Exchange two elements on given positions.</summary>
+    /// <param>"Item1" the position of the first element to be exchanged.</param>
+    /// <param>"Item2" the position of the second element to be exchanged.</param>
+    procedure Exchange(Item1, Item2: NativeInt);
+  end;
+
+  /// <author>EgonHugeist</author>
+  /// <summary>implements sort compare function.</summary>
+  TZSortCompare = function(Item1, Item2: Pointer): Integer;
+  /// <author>EgonHugeist</author>
+  /// <summary>implements list compare object function</summary>
   TZListSortCompare = function(Item1, Item2: Pointer): Integer of object;
+
+  /// <author>EgonHugeist</author>
+  /// <summary>implements list of sortable custom elements</summary>
+  TZSortableCustomElementList = class(TZExchangeableCustomElementList)
+  private
+    /// <author>Aleksandr Sharahov see http://guildalfa.ru/alsha/</author>
+    /// <summary>Performs hybrid sort algorithm for the element list.<summary>
+    /// <param>"L" an address of an element.</param>
+    /// <param>"R" an address of an element.</param>
+    /// <param>"Compare" a global comparision function.</param>
+    procedure QuickSortSha_0AA(L, R: PAnsiChar; Compare: TZSortCompare); overload;
+    /// <author>Aleksandr Sharahov see http://guildalfa.ru/alsha/</author>
+    /// <summary>Performs hybrid sort algorithm for the element list.<summary>
+    /// <param>"L" an address of an element.</param>
+    /// <param>"R" an address of an element.</param>
+    /// <param>"Compare" an object comparision function.</param>
+    procedure QuickSortSha_0AA(L, R: PAnsiChar; Compare: TZListSortCompare); overload;
+  public
+    /// <author>Aleksandr Sharahov see http://guildalfa.ru/alsha/</author>
+    /// <summary>Performs hybrid sort algorithm for the element list.<summary>
+    /// <param>"Compare" a global comparision function.</param>
+    procedure Sort(Compare: TZSortCompare); overload;
+    /// <author>Aleksandr Sharahov see http://guildalfa.ru/alsha/</author>
+    /// <summary>Performs hybrid sort algorithm for the element list.<summary>
+    /// <param>"Compare" an object comparision function.</param>
+    procedure Sort(Compare: TZListSortCompare); overload;
+  end;
 
   /// <author>EgonHugeist</author>
   /// <summary>implements a modified list of pointers.</summary>
@@ -2258,24 +2307,23 @@ begin;
     T := (J-I) shr 1 and MSOP + I;
 
     if Compare(PPointer(J)^, PPointer(I)^)<0 then begin
+      //save I
       P := PNativeUInt(I)^;
+      //replace i by j
       PNativeUInt(I)^ := PNativeUInt(J)^;
+      //replace i by j
       PNativeUInt(J)^ := P;
     end;
     P := PNativeUInt(T)^;
-    if Compare(Pointer(P), PPointer(I)^)<0 then
-    begin
+    if Compare(Pointer(P), PPointer(I)^)<0 then begin
       P := PNativeUInt(I)^;
       PNativeUInt(I)^ := PNativeUInt(T)^;
       PNativeUInt(T)^ := P;
-    end
-    else
-      if Compare(PPointer(J)^, Pointer(P)) < 0 then
-      begin
-        P := PNativeUInt(J)^;
-        PNativeUInt(J)^ := PNativeUInt(T)^;
-        PNativeUInt(T)^ := P;
-      end;
+    end else if Compare(PPointer(J)^, Pointer(P)) < 0 then begin
+      P := PNativeUInt(J)^;
+      PNativeUInt(J)^ := PNativeUInt(T)^;
+      PNativeUInt(T)^ := P;
+    end;
 
     repeat
       Inc(I,SOP);
@@ -2297,14 +2345,11 @@ begin;
       until I >= J;
     Dec(I,SOP); Inc(J,SOP);
 
-    if I-L <= R-J then
-    begin
+    if I-L <= R-J then begin
       if L + InsLast * SOP < I then
         QuickSortSha_0AA(L, I, Compare);
       L := J;
-    end
-    else
-    begin
+    end else begin
       if J + InsLast * SOP < R
         then QuickSortSha_0AA(J, R, Compare);
       R := I;
@@ -2743,5 +2788,211 @@ begin
   end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
+
+{ TZExchangeableCustomElementList }
+
+procedure TZExchangeableCustomElementList.AfterConstruction;
+begin
+  inherited;
+  GetMem(FElementBuffer, FElementSize);
+end;
+
+procedure TZExchangeableCustomElementList.BeforeDestruction;
+begin
+  inherited;
+  FreeMem(FElementBuffer);
+
+end;
+
+procedure TZExchangeableCustomElementList.Exchange(Item1, Item2: NativeInt);
+var P1, P2: Pointer;
+begin
+  P1 := Get(Item1);
+  P2 := Get(item2);
+  InternalExchange(P1, P2);
+end;
+
+procedure TZExchangeableCustomElementList.InternalExchange(P1, P2: Pointer);
+begin
+  Move(P2^, FElementBuffer^, ElementSize);
+  Move(P1^, P2^, ElementSize);
+  Move(FElementBuffer^, P1^, ElementSize);
+end;
+
+{ TZSortableCustomElementList }
+
+procedure TZSortableCustomElementList.QuickSortSha_0AA(L, R: PAnsiChar;
+  Compare: TZSortCompare);
+var
+  I, J, T: PAnsiChar;
+begin;
+  while true do begin
+    I := L;
+    J := R;
+    if J-I <= InsLast * NativeInt(FElementSize) then break;
+    {$IFDEF FPC}
+    T := PAnsiChar(NativeUint((J-I)) shr 1 and (NativeUint(-NativeInt(FElementSize))) + NativeUint(I));
+    {$ELSE}
+    T := (J-I) shr 1 and (NativeUint(-NativeInt(FElementSize))) + I;
+    {$ENDIF}
+    if Compare(J, I) < 0 then
+      InternalExchange(j, i);
+    if Compare(t, I)<0 then
+      InternalExchange(T, I)
+    else if Compare(J, T) < 0 then
+      InternalExchange(J, T);
+    repeat
+      Inc(I,FElementSize);
+    until not (Compare(I, T) < 0);
+    repeat
+      Dec(J,FElementSize)
+    until not (Compare(T, J) < 0);
+    if I < J then
+      repeat
+        InternalExchange(j, i);
+        repeat
+          Inc(I,FElementSize{SOP});
+        until not (Compare(I, T) < 0 );
+        repeat
+          Dec(J,FElementSize{SOP});
+        until not (Compare(T, J) < 0);
+      until I >= J;
+    Dec(I,FElementSize); Inc(J,FElementSize{SOP});
+
+    if I-L <= R-J then begin
+      if L + InsLast * FElementSize < I then
+        QuickSortSha_0AA(L, I, Compare);
+      L := J;
+    end else begin
+      if J + InsLast * FElementSize < R
+        then QuickSortSha_0AA(J, R, Compare);
+      R := I;
+    end;
+  end;
+end;
+
+procedure TZSortableCustomElementList.QuickSortSha_0AA(L, R: PAnsiChar;
+  Compare: TZListSortCompare);
+var
+  I, J, T: PAnsiChar;
+begin;
+  while true do begin
+    I := L;
+    J := R;
+    if J-I <= InsLast * NativeInt(FElementSize) then break;
+    {$IFDEF FPC}
+    T := PAnsiChar(NativeUint((J-I)) shr 1 and (NativeUint(-NativeInt(FElementSize))) + NativeUint(I));
+    {$ELSE}
+    T := (J-I) shr 1 and (NativeUint(-NativeInt(FElementSize))) + I;
+    {$ENDIF}
+    if Compare(J, I) < 0 then
+      InternalExchange(j, i);
+    if Compare(t, I)<0 then
+      InternalExchange(T, I)
+    else if Compare(J, T) < 0 then
+      InternalExchange(J, T);
+    repeat
+      Inc(I,FElementSize);
+    until not (Compare(I, T) < 0);
+    repeat
+      Dec(J,FElementSize)
+    until not (Compare(T, J) < 0);
+    if I < J then
+      repeat
+        InternalExchange(j, i);
+        repeat
+          Inc(I,FElementSize{SOP});
+        until not (Compare(I, T) < 0 );
+        repeat
+          Dec(J,FElementSize{SOP});
+        until not (Compare(T, J) < 0);
+      until I >= J;
+    Dec(I,FElementSize); Inc(J,FElementSize{SOP});
+
+    if I-L <= R-J then begin
+      if L + InsLast * FElementSize < I then
+        QuickSortSha_0AA(L, I, Compare);
+      L := J;
+    end else begin
+      if J + InsLast * FElementSize < R
+        then QuickSortSha_0AA(J, R, Compare);
+      R := I;
+    end;
+  end;
+end;
+
+procedure TZSortableCustomElementList.Sort(Compare: TZSortCompare);
+var
+  I, J, L, R: PAnsiChar;
+begin;
+  if (FCount>1) then begin
+    L := FElements;
+    R := PAnsiChar(FElements)+((NativeUInt(FCount)-1)*FElementSize);
+    J := R;
+    if Count-1 > InsLast then begin
+      J := PAnsiChar(FElements)+(InsLast*FElementSize);
+      QuickSortSha_0AA(L, R, Compare);
+    end;
+
+    I := L;
+    repeat;
+      if Compare(J, I) < 0 then I := J;
+      dec(J,FElementSize);
+    until J <= L;
+
+    if I > L then InternalExchange(I,L);
+    J := L + FElementSize;
+    while true do begin
+      repeat;
+        if J >= R then exit;
+        inc(J,FElementSize);
+      until Compare(J, J-FElementSize) < 0;
+      I := J - FElementSize;
+      Move(J^, FElementBuffer^, FElementSize);
+      repeat;
+        InternalExchange(I,I+FElementSize);
+        dec(I,FElementSize);
+      until not (Compare(L,I) < 0);
+      Move(FElementBuffer^, (I + FElementSize)^, FElementSize);
+    end;
+  end;
+end;
+
+procedure TZSortableCustomElementList.Sort(Compare: TZListSortCompare);
+var
+  I, J, L, R: PAnsiChar;
+begin;
+  if (FCount>1) then begin
+    L := FElements;
+    R := PAnsiChar(FElements)+((NativeUInt(FCount)-1)*FElementSize);
+    J := R;
+    if Count-1 > InsLast then begin
+      J := PAnsiChar(FElements)+(InsLast*FElementSize);
+      QuickSortSha_0AA(L, R, Compare);
+    end;
+
+    I := L;
+    repeat;
+      if Compare(J, I) < 0 then I := J;
+      dec(J,FElementSize);
+    until J <= L;
+
+    if I > L then InternalExchange(I,L);
+    J := L + FElementSize;
+    while true do begin
+      repeat;
+        if J >= R then exit;
+        inc(J,FElementSize);
+      until Compare(J, J-FElementSize) < 0;
+      I := J - FElementSize;
+      Move(J^, FElementBuffer^, FElementSize);
+      repeat;
+        InternalExchange(I,I+FElementSize);
+        dec(I,FElementSize);
+      until not (Compare(L,I) < 0);
+      Move(FElementBuffer^, (I + FElementSize)^, FElementSize);
+    end;
+  end;
+end;
 
 end.
