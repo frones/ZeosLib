@@ -351,7 +351,7 @@ type
     property RaiseWarnings: Boolean read fRaiseWarnings write fRaiseWarnings;
   end;
 
-  TZAbstractSuccedaneousTxnConnection = class(TZAbstractDbcConnection,
+  TZAbstractSingleTxnConnection = class(TZAbstractDbcConnection,
     IZTransactionManager)
   protected
     FSavePoints: TStrings;
@@ -2232,12 +2232,12 @@ begin
   Result := FUseWComparsions;
 end;
 
-{ TZAbstractSuccedaneousTxnConnection }
+{ TZAbstractSingleTxnConnection }
 
-procedure TZAbstractSuccedaneousTxnConnection.AfterConstruction;
+procedure TZAbstractSingleTxnConnection.AfterConstruction;
 var Trans: IZTransaction;
 begin
-  Trans := Self as IZTransaction; //QueryInterface(IZTransaction, Trans);
+  QueryInterface(IZTransaction, Trans);
   fWeakTxnPtr := Pointer(Trans);
   Trans := nil;
   inherited AfterConstruction;
@@ -2245,7 +2245,7 @@ begin
   fTransactions := TZCollection.Create;
 end;
 
-procedure TZAbstractSuccedaneousTxnConnection.ClearTransactions;
+procedure TZAbstractSingleTxnConnection.ClearTransactions;
 var I: Integer;
     Txn: IZTransaction;
 begin
@@ -2256,7 +2256,7 @@ begin
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "AutoCommit" not used} {$ENDIF}
-function TZAbstractSuccedaneousTxnConnection.CreateTransaction(AutoCommit,
+function TZAbstractSingleTxnConnection.CreateTransaction(AutoCommit,
   ReadOnly: Boolean; TransactIsolationLevel: TZTransactIsolationLevel;
   Params: TStrings): IZTransaction;
 var URL: TZURL;
@@ -2280,7 +2280,7 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-destructor TZAbstractSuccedaneousTxnConnection.Destroy;
+destructor TZAbstractSingleTxnConnection.Destroy;
 begin
   try
     inherited Destroy;
@@ -2290,24 +2290,28 @@ begin
   end;
 end;
 
-function TZAbstractSuccedaneousTxnConnection.GetConnection: IZConnection;
+function TZAbstractSingleTxnConnection.GetConnection: IZConnection;
 begin
   Result := IZConnection(fWeakReferenceOfSelfInterface);
 end;
 
-function TZAbstractSuccedaneousTxnConnection.GetConnectionTransaction: IZTransaction;
+function TZAbstractSingleTxnConnection.GetConnectionTransaction: IZTransaction;
 begin
+  {$IFDEF DEBUG}
+  if fWeakTxnPtr = nil then
+    raise EZSQLException.Create(SUnsupportedOperation);
+  {$ENDIF}
   Result := IZTransaction(fWeakTxnPtr);
 end;
 
-function TZAbstractSuccedaneousTxnConnection.GetTransactionLevel: Integer;
+function TZAbstractSingleTxnConnection.GetTransactionLevel: Integer;
 begin
   Result := Ord(not AutoCommit);
   if FSavePoints <> nil then
     Result := Result + FSavePoints.Count;
 end;
 
-function TZAbstractSuccedaneousTxnConnection.IsTransactionValid(
+function TZAbstractSingleTxnConnection.IsTransactionValid(
   const Value: IZTransaction): Boolean;
 begin
   if Value = nil then
@@ -2318,7 +2322,7 @@ begin
     Result := fTransactions.IndexOf(Value) >= 0;
 end;
 
-procedure TZAbstractSuccedaneousTxnConnection.ReleaseImmediat(
+procedure TZAbstractSingleTxnConnection.ReleaseImmediat(
   const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 var I: Integer;
   Imm: IImmediatelyReleasable;
@@ -2336,7 +2340,7 @@ begin
   end;
 end;
 
-procedure TZAbstractSuccedaneousTxnConnection.ReleaseTransaction(
+procedure TZAbstractSingleTxnConnection.ReleaseTransaction(
   const Value: IZTransaction);
 begin
   if Pointer(Value) = fWeakTxnPtr

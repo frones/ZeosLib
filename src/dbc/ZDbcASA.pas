@@ -89,7 +89,7 @@ type
 
   { TZASAConnection }
 
-  TZASAConnection = class(TZAbstractSuccedaneousTxnConnection, IZConnection,
+  TZASAConnection = class(TZAbstractSingleTxnConnection, IZConnection,
     IZASAConnection, IZTransaction)
   private
     FSQLCA: TZASASQLCA;

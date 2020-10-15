@@ -96,7 +96,7 @@ type
   {** Implements SQLite Database Connection. }
 
   { TZSQLiteConnection }
-  TZSQLiteConnection = class(TZAbstractSuccedaneousTxnConnection, IZConnection,
+  TZSQLiteConnection = class(TZAbstractSingleTxnConnection, IZConnection,
     IZSQLiteConnection, IZTransaction)
   private
     FUndefinedVarcharAsStringLength: Integer;

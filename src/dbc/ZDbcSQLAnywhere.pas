@@ -86,7 +86,7 @@ type
 
   { TZSQLAnywhereConnection }
 
-  TZSQLAnywhereConnection = class(TZAbstractSuccedaneousTxnConnection,
+  TZSQLAnywhereConnection = class(TZAbstractSingleTxnConnection,
     IZConnection, IZTransaction, IZSQLAnywhereConnection)
   private
     FSQLAnyPlainDriver: TZSQLAnywherePlainDriver;

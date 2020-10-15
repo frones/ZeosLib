@@ -87,7 +87,7 @@ type
   end;
 
   {** Implements a generic Ado Connection. }
-  TZAdoConnection = class(TZAbstractSuccedaneousTxnConnection, IZConnection,
+  TZAdoConnection = class(TZAbstractSingleTxnConnection, IZConnection,
     IZAdoConnection, IZTransaction)
   private
     fServerProvider: TZServerProvider;

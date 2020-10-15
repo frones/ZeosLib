@@ -103,7 +103,7 @@ type
   ///  implements an oracle OCI connection.
   /// </summary>
   {** Implements Oracle Database Connection. }
-  TZOracleConnection = class(TZAbstractSuccedaneousTxnConnection, IZConnection,
+  TZOracleConnection = class(TZAbstractSingleTxnConnection, IZConnection,
     IZOracleConnection, IZTransaction)
   private
     FCatalog: string;

@@ -87,7 +87,7 @@ type
 
   { TZProxyConnection }
 
-  TZDbcProxyConnection = class({$IFNDEF ZEOS73UP}TZAbstractConnection{$ELSE}TZAbstractSuccedaneousTxnConnection{$ENDIF},
+  TZDbcProxyConnection = class({$IFNDEF ZEOS73UP}TZAbstractConnection{$ELSE}TZAbstractSingleTxnConnection{$ENDIF},
     IZConnection, IZTransaction, IZDbcProxyConnection)
   private
     FPlainDriver: IZProxyPlainDriver;
