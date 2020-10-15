@@ -87,8 +87,8 @@ type
 
   { TZProxyConnection }
 
-  TZDbcProxyConnection = class({$IFNDEF ZEOS73UP}TZAbstractConnection{$ELSE}TZAbstractDbcConnection{$ENDIF},
-    IZConnection, IZDbcProxyConnection)
+  TZDbcProxyConnection = class({$IFNDEF ZEOS73UP}TZAbstractConnection{$ELSE}TZAbstractSingleTxnConnection{$ENDIF},
+    IZConnection, IZTransaction, IZDbcProxyConnection)
   private
     FPlainDriver: IZProxyPlainDriver;
     FConnIntf: IZDbcProxy;
@@ -102,7 +102,7 @@ type
     FStartTransactionUsed: Boolean;
     {$ENDIF}
   protected
-    procedure InternalCreate; override;
+    procedure AfterConstruction; override;
     procedure transferProperties(PropName, PropValue: String);
     procedure applyProperties(const Properties: String);
     function encodeProperties(PropName, PropValue: String): String;
@@ -115,12 +115,30 @@ type
     function PrepareStatementWithParams(const SQL: string; Info: TStrings): IZPreparedStatement;
     function PrepareCallWithParams(const SQL: string; Info: TStrings): IZCallableStatement;
     {$ENDIF}
-
+    /// <summary>If the current transaction is saved the current savepoint get's
+    ///  released. Otherwise makes all changes made since the previous commit/
+    ///  rollback permanent and releases any database locks currently held by
+    ///  the Connection. This method should be used only when auto-commit mode
+    ///  has been disabled. See setAutoCommit.</summary>
     procedure Commit;
+    /// <summary>If the current transaction is saved the current savepoint get's
+    ///  rolled back. Otherwise drops all changes made since the previous
+    ///  commit/rollback and releases any database locks currently held by this
+    ///  Connection. This method should be used only when auto-commit has been
+    ///  disabled. See setAutoCommit.</summary>
     procedure Rollback;
     {$IFDEF ZEOS73UP}
+    /// <summary>Starts transaction support or saves the current transaction.
+    ///  If the connection is closed, the connection will be opened.
+    ///  If a transaction is underway a nested transaction or a savepoint will
+    ///  be spawned. While the tranaction(s) is/are underway the AutoCommit
+    ///  property is set to False. Ending up the transaction with a
+    ///  commit/rollback the autocommit property will be restored if changing
+    ///  the autocommit mode was triggered by a starttransaction call.</summary>
+    /// <returns>Returns the current txn-level. 1 means a expicit transaction
+    ///  was started. 2 means the transaction was saved. 3 means the previous
+    ///  savepoint got saved too and so on.</returns>
     function StartTransaction: Integer;
-    function GetConnectionTransaction: IZTransaction;
     {$ENDIF}
 
     procedure Open; override;
@@ -132,6 +150,13 @@ type
     // ReadOnly needs no implementation - it is only valid for connecting
     procedure SetCatalog(const Catalog: string); override;
     function GetCatalog: string; override;
+    /// <summary>Attempts to change the transaction isolation level to the one
+    ///  given. The constants defined in the interface <c>Connection</c> are the
+    ///  possible transaction isolation levels. Note: This method cannot be
+    ///  called while in the middle of a transaction.
+    /// <param>"value" one of the TRANSACTION_* isolation values with the
+    ///  exception of TRANSACTION_NONE; some databases may not support other
+    ///  values. See DatabaseInfo.SupportsTransactionIsolationLevel</param>
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     procedure SetUseMetadata(Value: Boolean); override;
     // AutoEncodeStrings is not supported
@@ -253,11 +278,14 @@ end;
 {**
   Constructs this object and assignes the main properties.
 }
-procedure TZDbcProxyConnection.InternalCreate;
+procedure TZDbcProxyConnection.AfterConstruction;
+var
+  PlainDrv: IZProxyPlainDriver;
 begin
   FMetadata := TZProxyDatabaseMetadata.Create(Self, Url);
   FConnIntf := GetPlainDriver.GetLibraryInterface;
   if not assigned(FConnIntf) then raise Exception.Create(GetPlainDriver.GetLastErrorStr);
+  inherited AfterConstruction;
 end;
 
 {**
@@ -276,12 +304,12 @@ begin
   FStartTransactionUsed := false;
   {$ENDIF}
 
-  LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
+  LogMessage := 'CONNECT TO "'+ URL.Database + '" AS USER "' + URL.UserName + '"';
 
   PropList := encodeProperties('autocommit', BoolToStr(GetAutoCommit, True));
   FConnIntf.Connect(User, Password, HostName, Database, PropList, MyDbInfo);
 
-  DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
+  DriverManager.LogMessage(lcConnect, URL.Protocol , LogMessage);
   FDbInfo := MyDbInfo;
   inherited Open;
   applyProperties(PropList);
@@ -381,13 +409,6 @@ begin
 end;
 {$ENDIF}
 
-{**
-  Makes all changes made since the previous
-  commit/rollback permanent and releases any database locks
-  currently held by the Connection. This method should be
-  used only when auto-commit mode has been disabled.
-  @see #setAutoCommit
-}
 procedure TZDbcProxyConnection.Commit;
 begin
   if not Closed then
@@ -403,13 +424,6 @@ begin
       raise Exception.Create(SInvalidOpInAutoCommit);
 end;
 
-{**
-  Drops all changes made since the previous
-  commit/rollback and releases any database locks currently held
-  by this Connection. This method should be used only when auto-
-  commit has been disabled.
-  @see #setAutoCommit
-}
 procedure TZDbcProxyConnection.Rollback;
 begin
   if not Closed then
@@ -437,10 +451,12 @@ begin
   Result := 1;
 end;
 
+(*
 function TZDbcProxyConnection.GetConnectionTransaction: IZTransaction;
 begin
   raise Exception.Create('Unsupported');
 end;
+*)
 {$ENDIF}
 
 {**
@@ -458,12 +474,12 @@ var
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
-  LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
+  LogMessage := 'DISCONNECT FROM "' + URL.Database + '"';
 
   FConnIntf.Disconnect;
 
   if Assigned(DriverManager) and DriverManager.HasLoggingListener then //thread save
-    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
+    DriverManager.LogMessage(lcDisconnect, URL.Protocol, LogMessage);
 end;
 
 function TZDbcProxyConnection.GetClientVersion: Integer;
@@ -490,6 +506,8 @@ end;
 }
 function TZDbcProxyConnection.GetPlainDriver: IZProxyPlainDriver;
 begin
+  if not Assigned(PlainDriver) then
+    raise EZSQLException.Create('The f*****g plain driver is not assigned.');
   if fPlainDriver = nil then
     fPlainDriver := PlainDriver as IZProxyPlainDriver;
   Result := fPlainDriver;

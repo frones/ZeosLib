@@ -87,6 +87,7 @@ type
     procedure TestQuestionMarks;
     procedure TestDbcBCDValues;
     procedure TestDbcTransaction;
+    procedure TestInsertFailAndCorrectCachedUpdates;
   end;
 
   TZGenericTestDbcArrayBindings = class(TZAbstractDbcSQLTestCase)
@@ -489,20 +490,21 @@ var RS: IZResultSet;
   C: Currency;
   procedure CheckField(ColumnIndex, Precision, Scale: Integer; SQLType: TZSQLType; const Value: String);
   var S: String;
-    {BCD_A, BCD_E,} BCD: TBCD;
+    BCD_A, BCD_E: TBCD;
   begin
     S := RS.GetMetadata.GetColumnLabel(ColumnIndex);
     //firbird can't pass this tests -> missing precision in native RS but with metainformation it should be able to
     if (ProtocolType = protSQLite) and (SQLType = stBigDecimal) then
       Exit;
-    RS.GetBigDecimal(ColumnIndex, BCD{%H-});
+    RS.GetBigDecimal(ColumnIndex, BCD_A{%H-});
     if not ((Provider = spIB_FB) and (RS.GetType = rtForwardOnly)) then
       CheckEquals(Precision, Ord(RS.GetMetadata.GetPrecision(ColumnIndex)), Protocol+': Precision mismatch, for column "'+S+'"');
     if not (((ColumnIndex = BigD18_1_Index) or (ColumnIndex = Curr15_2_Index)) and
               (RS.GetType = rtForwardOnly) and (Provider = spIB_FB)) then
       CheckEquals(Ord(SQLType), Ord(RS.GetMetadata.GetColumnType(ColumnIndex)), Protocol+': SQLType mismatch, for column "'+S+'"');
+    Check({$IFDEF UNICODE}TryUniToBcd{$ELSE}TryRawToBcd{$ENDIF}(Value, BCD_E, '.'), 'BCD conversion from '+Value+' was successfull, we are hiding compiler bugs!!!');
     CheckEquals(Scale, Ord(RS.GetMetadata.GetScale(ColumnIndex)), Protocol+': Scale mismatch, for column "'+S+'"');
-    CheckEquals(0, BcdCompare(BCD, Str2BCD(Value{$IFDEF HAVE_BCDTOSTR_FORMATSETTINGS}, FmtSettFloatDot{$ENDIF})), Protocol+': BCD compare mismatch, for column "'+S+'", Expected: ' + Value + ' got: ' + BcdToStr(BCD));
+    CheckEquals(0, BcdCompare(BCD_A, BCD_E), Protocol+': BCD compare mismatch, for column "'+S+'", Expected: ' + Value + ' got: ' + BcdToStr(BCD_A));
   end;
   procedure TestColTypes(ResultSetType: TZResultSetType);
   var i: Integer;
@@ -1818,6 +1820,68 @@ begin
       Stmt := Connection.CreateStatement;
       Stmt.ExecuteUpdate('delete from people where p_id > 9');
     end;
+  end;
+end;
+
+procedure TZGenericTestDbcResultSet.TestInsertFailAndCorrectCachedUpdates;
+const
+  c_id_Index          = FirstDbcIndex + 0;
+  c_dep_id_index      = FirstDbcIndex + 1;
+var
+  Sql: string;
+  Statement: IZPreparedStatement;
+  ResultSet: IZResultSet;
+  CachedRS: IZCachedResultSet;
+  Resolver: IZCachedResolver;
+  Succeeded: Boolean;
+begin
+  Sql := 'DELETE FROM cargo where c_dep_id >= ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
+  Connection.CreateStatement.ExecuteUpdate(Sql);
+  Connection.StartTransaction;
+  try
+    { Creates prepared statement for cargo table }
+    Statement := Connection.PrepareStatement(
+      'select c_id, c_dep_id from cargo where c_id >= '+ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
+    CheckNotNull(Statement);
+    Statement.SetResultSetConcurrency(rcUpdatable);
+    Statement.SetResultSetType(rtScrollSensitive);
+    ResultSet := Statement.ExecuteQueryPrepared;
+    Check(ResultSet.QueryInterface(IZCachedResultSet, CachedRS) = S_OK);
+    Resolver := CachedRs.GetNativeResolver;
+    Check(Resolver <> nil);
+    CachedRs.SetCachedUpdates(True);
+    ResultSet.MoveToInsertRow;
+    ResultSet.UpdateInt(c_id_Index, TEST_ROW_ID);
+    ResultSet.UpdateInt(c_dep_id_index, TEST_ROW_ID); //false index
+    ResultSet.InsertRow;
+    ResultSet.MoveToInsertRow;
+    ResultSet.UpdateInt(c_id_Index, TEST_ROW_ID+1);
+    ResultSet.UpdateInt(c_dep_id_index, 1); //Line agency
+    ResultSet.InsertRow;
+    Succeeded := False;
+    if Connection.GetServerProvider = spPostgreSQL then //hide postgres broken transaction quirk
+      Connection.StartTransaction; //use a savepoint
+    try
+      CachedRs.PostUpdatesCached;
+      Succeeded := True;
+    except
+      on E:Exception do
+        CheckNotTestFailure(E);
+    end;
+    if Connection.GetServerProvider = spPostgreSQL then //hide postgres broken transaction quirk
+      Connection.Rollback; //rollback to savepoint
+    CheckFalse(Succeeded, 'the constraint should forbit inserting the row');
+    ResultSet.First; //move to failing row
+    ResultSet.UpdateInt(c_dep_id_index, 3); //Delivery agency
+    ResultSet.UpdateRow;
+    CachedRs.PostUpdatesCached;
+    CachedRs.DisposeCachedUpdates;
+    CheckFalse(CachedRs.IsPendingUpdates, 'no more pending updates');
+  finally
+    Resolver := nil;
+    CachedRs.Close;
+    Connection.Rollback;
+    Connection.CreateStatement.ExecuteUpdate(Sql);
   end;
 end;
 

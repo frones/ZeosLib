@@ -202,15 +202,6 @@ const
     from Connection properties retrieved. If it is empty too, the default value
     is returned (usually empty string for options of type STR) }
 
-  // Type: all | changed
-  // Same as Dataset.UpdateMode property
-  DSProps_Update = 'update';
-  // Type: all | keyonly
-  // Same as Dataset.WhereMode property
-  DSProps_Where = 'where';
-  // Type: BOOLEAN
-  // Same as TZDatasetOptions.doCalcDefaults in Dataset.Options property
-  DSProps_Defaults = 'defaults';
   // Type: BOOLEAN
   // Same as TZDatasetOptions.doPreferPrepared in Dataset.Options property
   DSProps_PreferPrepared = 'PreferPrepared';
@@ -460,6 +451,8 @@ const
   // So you can't use it within using metainformations or multiple active
   // resultsets!
   DSProps_UseResult = 'UseResult';
+  // Type: BOOLEAN
+  DSProps_MySQLUseDefaults = 'UseDefaults';
   // Type: INT
   // Sets STMT_ATTR_PREFETCH_ROWS option, refer to MySql manual for details
   DSProps_PrefetchRows = 'prefetch_rows';
@@ -751,7 +744,7 @@ const
   /// <type>Enum</type>
   /// <usage>Connection</usage>
   /// <syntax>Properties.Values[DSProps_SQLiteIntAffinity]={False|True}</syntax>
-  /// <values>true|False</syntax>
+  /// <values>true|False</values>
   /// <summary>
   ///  Treat "INT" fields in any kind as Int64, means ignore all subtypes like
   ///  [smallint, int32, MEDIUMINT]</summary>
@@ -760,7 +753,7 @@ const
   /// <type>Integer</type>
   /// <usage>Connection</usage>
   /// <syntax>Properties.Values[ConnProps_SQLiteOpenFlags]=value</syntax>
-  /// <values>are defined in ZPlainSqLiteDriver.pas</syntax>
+  /// <values>are defined in ZPlainSqLiteDriver.pas</values>
   /// <summary>see: https://www.sqlite.org/c3ref/open.html</summary>
   ConnProps_SQLiteOpen_Flags = 'SQLiteOpen_Flags';
   /// <type>String</type>

@@ -190,22 +190,25 @@ var
   ColumnType: TZProcedureColumnType;
   SQLType: TZSQLType;
   Precision: Integer;
+  Metadata: IZDatabaseMetadata;
+  DatabaseInfo: IZDatabaseInfo;
 begin
-  if AnsiCompareText(Trim(SQL.Text), Trim(Value)) <> 0 then
-  begin
+  Catalog := Trim(SQL.Text);
+  ObjectName := Trim(Value);
+  if (AnsiCompareText(Catalog, ObjectName) <> 0) or ((Params.Count = 0) and
+     not (csDesigning in ComponentState) and not Active) then begin
     SQL.Text := Value;
-    if ParamCheck and (Value <> '') and not (csLoading in ComponentState) and Assigned(Connection) then
-    begin
+    if ParamCheck and (Value <> '') and not (csLoading in ComponentState) and Assigned(Connection) then begin
       CheckConnected;
+      Metadata := Connection.DbcConnection.GetMetadata;
+      DatabaseInfo := Metadata.GetDatabaseInfo;
       Connection.ShowSQLHourGlass;
       try
-        SplitQualifiedObjectName(Value,
-          Connection.DbcConnection.GetMetadata.GetDatabaseInfo.SupportsCatalogsInProcedureCalls,
-          Connection.DbcConnection.GetMetadata.GetDatabaseInfo.SupportsSchemasInProcedureCalls,
-          Catalog, Schema, ObjectName);
-        Schema := Connection.DbcConnection.GetMetadata.AddEscapeCharToWildcards(Schema);
-        ObjectName := Connection.DbcConnection.GetMetadata.AddEscapeCharToWildcards(ObjectName);
-        FMetaResultSet := Connection.DbcConnection.GetMetadata.GetProcedureColumns(Catalog, Schema, ObjectName, '');
+        SplitQualifiedObjectName(Value, DatabaseInfo.SupportsCatalogsInProcedureCalls,
+          DatabaseInfo.SupportsSchemasInProcedureCalls, Catalog, Schema, ObjectName);
+        Schema := Metadata.AddEscapeCharToWildcards(Schema);
+        ObjectName := Metadata.AddEscapeCharToWildcards(ObjectName);
+        FMetaResultSet := Metadata.GetProcedureColumns(Catalog, Schema, ObjectName, '');
         OldParams := TParams.Create;
         try
           OldParams.Assign(Params);
@@ -227,6 +230,8 @@ begin
         end;
       finally
         Connection.HideSQLHourGlass;
+        DatabaseInfo := nil;
+        Metadata := nil;
       end;
     end;
   end;

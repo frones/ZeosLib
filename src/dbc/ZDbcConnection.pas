@@ -75,13 +75,32 @@ type
     procedure AddSupportedProtocol(const AProtocol: String);
     function AddPlainDriverToCache(const PlainDriver: IZPlainDriver; const Protocol: string = ''; const LibLocation: string = ''): String;
     function GetPlainDriverFromCache(const Protocol, LibLocation: string): IZPlainDriver;
+    /// <summary>Gets plain driver for selected protocol.</summary>
+    /// <param>"url" the URL of the driver.</param>
+    /// <returns>a selected plaindriver interface.</returns>
     function GetPlainDriver(const Url: TZURL; const InitDriver: Boolean = True): IZPlainDriver; virtual;
   public
     constructor Create; virtual;
     destructor Destroy; override;
 
+    /// <summary>Get an array of protocols supported by the driver.</summary>
+    /// <returns>an array of protocol names.</returns>
     function GetSupportedProtocols: TStringDynArray;
+    /// <summary>Get an array of character sets supported by the driver.</summary>
+    /// <returns>an array of character set names.</returns>
     function GetClientCodePages(const Url: TZURL): TStringDynArray;
+    /// <summary>Attempts to create a database connection to the given URL.
+    ///  The driver should return "null" if it realizes it is the wrong kind
+    ///  of driver to connect to the given URL. This will be common, as when
+    ///  the zeos driver manager is asked to connect to a given URL it passes
+    ///  the URL to each loaded driver in turn.
+    ///  The driver should raise a EZSQLException if it is the right
+    ///  driver to connect to the given URL, but has trouble loading the
+    ///  library.</summary>
+    /// <param>"url" the connection url to find the Driver.</param>
+    /// <param>"Info" a Connection parameter list.</param>
+    /// <returns>a <c>IZConnection</c> interface that represents a
+    ///  connection to the URL</returns>
     function Connect(const Url: string; Info: TStrings = nil): IZConnection; overload;// deprecated;
     /// <summary>Attempts to create a database connection to the given URL.
     ///  The driver should return "null" if it realizes it is the wrong kind
@@ -96,14 +115,50 @@ type
     ///  <returns> a <c>IZConnection</c> interface that represents a
     ///    connection to the URL</returns>
     function Connect(const {%H-}Url: TZURL): IZConnection; overload; virtual;
+    /// <summary>Returns true if the driver thinks that it can open a connection
+    ///  to the given URL.  Typically drivers will return true if they
+    ///  understand the subprotocol specified in the URL and false if they
+    ///  don't.</summary>
+    /// <param>"url" the URL of the database</param>
+    /// <returns>true if this driver can connect to the given URL.</returns>
     function AcceptsURL(const Url: string): Boolean; virtual;
-
+    /// <summary>Gets information about the possible properties for this driver.
+    ///  The getPropertyInfo method is intended to allow a generic GUI tool to
+    ///  discover what properties it should prompt a human for in order to get
+    ///  enough information to connect to a database.  Note that depending on
+    ///  the values the human has supplied so far, additional values may become
+    ///  necessary, so it may be necessary to iterate though several calls
+    ///  to getPropertyInfo.</summary>
+    /// <param>"url" the URL of the database to which to connect.</param>
+    /// <param>"info" a proposed list of tag/value pairs that will be sent on
+    ///  connect open.</param>
+    /// <returns>an array of DriverPropertyInfo objects describing possible
+    ///  properties.  This array may be an empty array if no properties
+    ///  are required.</returns>
     function GetPropertyInfo(const {%H-}Url: string; {%H-}Info: TStrings): TStrings; virtual;
+    /// <summary>Gets the driver's major version number. Initially this should
+    ///  be 1.</summary>
+    /// <returns>this driver's major version number.</returns>
     function GetMajorVersion: Integer; virtual;
+    /// <summary>Gets the driver's minor version number. Initially this should
+    ///  be 0.</summary>
+    /// <returns>this driver's minor version number.</returns>
     function GetMinorVersion: Integer; virtual;
+    /// <summary>Gets the driver's sub version (revision) number. Initially
+    ///  this should be 0.</summary>
+    /// <returns>this driver's minor version number.</returns>
     function GetSubVersion: Integer; virtual;
+    /// <summary>Creates a generic tokenizer object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
     function GetTokenizer: IZTokenizer; virtual;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
     function GetStatementAnalyser: IZStatementAnalyser; virtual;
+    /// <summary>Returns the version of the plain driver library that will be
+    ///  used to open a connection to the given URL.</summary>
+    /// <param>"url" the URL of the databaseparam</param>
+    /// <returns>the version number of the plain driver library for the give
+    ///  URL.</returns>
     function GetClientVersion(const {%H-}Url: string): Integer; virtual;
   end;
 
@@ -201,7 +256,28 @@ type
 
     function NativeSQL(const SQL: string): string; virtual;
 
+    /// <summary>Sets this connection's auto-commit mode. If a connection is in
+    ///  auto-commit mode, then all its SQL statements will be executed and
+    ///  committed as individual transactions. Otherwise, its SQL statements are
+    ///  grouped into transactions that are terminated by a call to either the
+    ///  method <c>commit</c> or the method <c>rollback</c>. By default, new
+    ///  connections are in auto-commit mode. The commit occurs when the
+    ///  statement completes or the next execute occurs, whichever comes first.
+    ///  In the case of statements returning a ResultSet, the statement
+    ///  completes when the last row of the ResultSet has been retrieved or the
+    ///  ResultSet has been closed. In advanced cases, a single statement may
+    ///  return multiple results as well as output parameter values. In these
+    ///  cases the commit occurs when all results and output parameter values
+    ///  have been retrieved. It is not recommented setting autoCommit to false
+    ///  because a call to either the method <c>commit</c> or the method
+    ///  <c>rollback</c> will restart the transaction. It's use full only if
+    ///  repeately many opertions are done and no startTransaction is intended
+    ///  to use. If you change mode to true the current Transaction and it's
+    ///  nested SavePoints are committed then.</summary>
+    /// <param>"Value" true enables auto-commit; false disables auto-commit.</param>
     procedure SetAutoCommit(Value: Boolean); virtual;
+    /// <summary>Gets the current auto-commit state. See setAutoCommit.</summary>
+    /// <returns>the current state of auto-commit mode.</returns>
     function GetAutoCommit: Boolean; virtual;
 
     //2Phase Commit Support initially for PostgresSQL (firmos) 21022006
@@ -216,7 +292,17 @@ type
 
     procedure Open; virtual;
     procedure Close;
-
+    /// <summary>Releases all driver handles and set the object in a closed
+    ///  Zombi mode waiting for destruction. Each known supplementary object,
+    ///  supporting this interface, gets called too. This may be a recursive
+    ///  call from parant to childs or vice vera. So finally all resources
+    ///  to the servers are released. This method is triggered by a connecton
+    ///  loss. Don't use it by hand except you know what you are doing.</summary>
+    /// <param>"Sender" the object that did notice the connection lost.</param>
+    /// <param>"AError" a reference to an EZSQLConnectionLost error.
+    ///  You may free and nil the error object so no Error is thrown by the
+    ///  generating method. So we start from the premisse you have your own
+    ///  error handling in any kind.</param>
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); virtual;
     function IsClosed: Boolean; virtual;
 
@@ -236,6 +322,13 @@ type
     procedure SetCatalog(const {%H-}Catalog: string); virtual;
     function GetCatalog: string; virtual;
 
+    /// <summary>Attempts to change the transaction isolation level to the one
+    ///  given. The constants defined in the interface <c>Connection</c> are the
+    ///  possible transaction isolation levels. Note: This method cannot be
+    ///  called while in the middle of a transaction.
+    /// <param>"value" one of the TRANSACTION_* isolation values with the
+    ///  exception of TRANSACTION_NONE; some databases may not support other
+    ///  values. See DatabaseInfo.SupportsTransactionIsolationLevel</param>
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); virtual;
     function GetTransactionIsolation: TZTransactIsolationLevel; virtual;
 
@@ -258,7 +351,7 @@ type
     property RaiseWarnings: Boolean read fRaiseWarnings write fRaiseWarnings;
   end;
 
-  TZAbstractSuccedaneousTxnConnection = class(TZAbstractDbcConnection,
+  TZAbstractSingleTxnConnection = class(TZAbstractDbcConnection,
     IZTransactionManager)
   protected
     FSavePoints: TStrings;
@@ -267,7 +360,15 @@ type
     fActiveTransaction: IZTransaction;
     fWeakTxnPtr: Pointer;
   public //implement IZTransaction
+    /// <summary>Get's the owner connection that produced that object instance.
+    /// </summary>
+    /// <returns>the connection object interface.</returns>
     function GetConnection: IZConnection;
+    /// <summary>Get the nested transaction level. -1 means no active
+    ///  transaction, 0 means the txn is in AutoCommit-Mode, 1 means a expicit
+    ///  transaction was started. 2 means the transaction was saved. 3 means the
+    ///  previous savepoint got saved too and so on.</summary>
+    /// <returns>Returns the current txn-level. </returns>
     function GetTransactionLevel: Integer;
   public //implement IZTransactionManager
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
@@ -277,6 +378,17 @@ type
     procedure ClearTransactions;
     function GetConnectionTransaction: IZTransaction;
   public //implement IImmediatelyReleasable
+    /// <summary>Releases all driver handles and set the object in a closed
+    ///  Zombi mode waiting for destruction. Each known supplementary object,
+    ///  supporting this interface, gets called too. This may be a recursive
+    ///  call from parant to childs or vice vera. So finally all resources
+    ///  to the servers are released. This method is triggered by a connecton
+    ///  loss. Don't use it by hand except you know what you are doing.</summary>
+    /// <param>"Sender" the object that did notice the connection lost.</param>
+    /// <param>"AError" a reference to an EZSQLConnectionLost error.
+    ///  You may free and nil the error object so no Error is thrown by the
+    ///  generating method. So we start from the premisse you have your own
+    ///  error handling in any kind.</param>
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
   public
     procedure AfterConstruction; override;
@@ -299,6 +411,9 @@ type
     procedure DoNotify; virtual;
     function CheckEvents: string; virtual;
 
+    /// <summary>Get's the owner connection that produced that object instance.
+    /// </summary>
+    /// <returns>the connection object interface.</returns>
     function GetConnection: IZConnection; virtual;
   end;
 
@@ -600,14 +715,6 @@ begin
   Result := nil;
 end;
 
-{**
-  Returns true if the driver thinks that it can open a connection
-  to the given URL.  Typically drivers will return true if they
-  understand the subprotocol specified in the URL and false if
-  they don't.
-  @param url the URL of the database
-  @return true if this driver can connect to the given URL
-}
 function TZAbstractDriver.AcceptsURL(const Url: string): Boolean;
 var
   I: Integer;
@@ -666,11 +773,6 @@ begin
   end;
 end;
 
-{**
-  Gets plain driver for selected protocol.
-  @param Url a database connection URL.
-  @return a selected plaindriver.
-}
 function TZAbstractDriver.GetPlainDriver(const Url: TZURL;
   const InitDriver: Boolean): IZPlainDriver;
 begin
@@ -685,77 +787,40 @@ begin
   end;
 end;
 
-{**
-  Gets information about the possible properties for this driver.
-  <p>The getPropertyInfo method is intended to allow a generic GUI tool to
-  discover what properties it should prompt a human for in order to get
-  enough information to connect to a database.  Note that depending on
-  the values the human has supplied so far, additional values may become
-  necessary, so it may be necessary to iterate though several calls
-  to getPropertyInfo.
-
-  @param url the URL of the database to which to connect
-  @param info a proposed list of tag/value pairs that will be sent on
-    connect open
-  @return an array of DriverPropertyInfo objects describing possible
-    properties.  This array may be an empty array if no properties
-    are required.
-}
 function TZAbstractDriver.GetPropertyInfo(const Url: string; Info: TStrings): TStrings;
 begin
   Result := nil;
 end;
 
-{**
-  Gets the driver's major version number. Initially this should be 1.
-  @return this driver's major version number
-}
 function TZAbstractDriver.GetMajorVersion: Integer;
 begin
   Result := 1;
 end;
 
-{**
-  Gets the driver's minor version number. Initially this should be 0.
-  @return this driver's minor version number
-}
 function TZAbstractDriver.GetMinorVersion: Integer;
 begin
   Result := 0;
 end;
 
-{**
-  Gets the driver's sub version (revision) number. Initially this should be 0.
-  @return this driver's sub version number
-}
 function TZAbstractDriver.GetSubVersion: Integer;
 begin
- Result := 0;
+  Result := 0;
 end;
-{**
-  Creates a generic statement analyser object.
-  @returns a generic statement analyser object.
-}
+
 function TZAbstractDriver.GetStatementAnalyser: IZStatementAnalyser;
 begin
   Result := TZGenericStatementAnalyser.Create; { thread save! Allways return a new Analyser! }
 end;
 
-{**
-  Creates a generic tokenizer object.
-  @returns a created generic tokenizer object.
-}
 function TZAbstractDriver.GetTokenizer: IZTokenizer;
 begin
   Result := TZGenericSQLTokenizer.Create;
 end;
 
-{**
-  Returns the version of the plain driver library that will be used to open a connection
-  to the given URL.
-  @param url the URL of the database
-  @return the version number of the plain driver library for the give URL
-}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5033 off : Function result does not seem to be set}
+  {$WARN 5024 off : Parameter "Event" not used}
+{$ENDIF}
 function TZAbstractDriver.GetClientVersion(const Url: string): Integer;
 begin
   Result := 0;
@@ -1211,36 +1276,11 @@ begin
   fAddLogMsgToExceptionOrWarningMsg := Value;
 end;
 
-{**
-  Sets this connection's auto-commit mode.
-  If a connection is in auto-commit mode, then all its SQL
-  statements will be executed and committed as individual
-  transactions.  Otherwise, its SQL statements are grouped into
-  transactions that are terminated by a call to either
-  the method <code>commit</code> or the method <code>rollback</code>.
-  By default, new connections are in auto-commit mode.
-
-  The commit occurs when the statement completes or the next
-  execute occurs, whichever comes first. In the case of
-  statements returning a ResultSet, the statement completes when
-  the last row of the ResultSet has been retrieved or the
-  ResultSet has been closed. In advanced cases, a single
-  statement may return multiple results as well as output
-  parameter values. In these cases the commit occurs when all results and
-  output parameter values have been retrieved.
-
-  @param autoCommit true enables auto-commit; false disables auto-commit.
-}
 procedure TZAbstractDbcConnection.SetAutoCommit(Value: Boolean);
 begin
   FAutoCommit := Value;
 end;
 
-{**
-  Gets the current auto-commit state.
-  @return the current state of auto-commit mode
-  @see #setAutoCommit
-}
 function TZAbstractDbcConnection.GetAutoCommit: Boolean;
 begin
   Result := FAutoCommit;
@@ -1519,18 +1559,6 @@ begin
   Result := '';
 end;
 
-{**
-  Attempts to change the transaction isolation level to the one given.
-  The constants defined in the interface <code>Connection</code>
-  are the possible transaction isolation levels.
-
-  <P><B>Note:</B> This method cannot be called while
-  in the middle of a transaction.
-
-  @param level one of the TRANSACTION_* isolation values with the
-    exception of TRANSACTION_NONE; some databases may not support other values
-  @see DatabaseMetaData#supportsTransactionIsolationLevel
-}
 procedure TZAbstractDbcConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 begin
@@ -1677,11 +1705,6 @@ procedure TZAbstractNotification.DoNotify;
 begin
 end;
 
-{**
-  Returns the <code>Connection</code> object
-  that produced this <code>Statement</code> object.
-  @return the connection that produced this statement
-}
 function TZAbstractNotification.GetConnection: IZConnection;
 begin
   Result := FConnection;
@@ -2209,9 +2232,9 @@ begin
   Result := FUseWComparsions;
 end;
 
-{ TZAbstractSuccedaneousTxnConnection }
+{ TZAbstractSingleTxnConnection }
 
-procedure TZAbstractSuccedaneousTxnConnection.AfterConstruction;
+procedure TZAbstractSingleTxnConnection.AfterConstruction;
 var Trans: IZTransaction;
 begin
   QueryInterface(IZTransaction, Trans);
@@ -2222,7 +2245,7 @@ begin
   fTransactions := TZCollection.Create;
 end;
 
-procedure TZAbstractSuccedaneousTxnConnection.ClearTransactions;
+procedure TZAbstractSingleTxnConnection.ClearTransactions;
 var I: Integer;
     Txn: IZTransaction;
 begin
@@ -2233,7 +2256,7 @@ begin
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "AutoCommit" not used} {$ENDIF}
-function TZAbstractSuccedaneousTxnConnection.CreateTransaction(AutoCommit,
+function TZAbstractSingleTxnConnection.CreateTransaction(AutoCommit,
   ReadOnly: Boolean; TransactIsolationLevel: TZTransactIsolationLevel;
   Params: TStrings): IZTransaction;
 var URL: TZURL;
@@ -2257,7 +2280,7 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-destructor TZAbstractSuccedaneousTxnConnection.Destroy;
+destructor TZAbstractSingleTxnConnection.Destroy;
 begin
   try
     inherited Destroy;
@@ -2267,24 +2290,28 @@ begin
   end;
 end;
 
-function TZAbstractSuccedaneousTxnConnection.GetConnection: IZConnection;
+function TZAbstractSingleTxnConnection.GetConnection: IZConnection;
 begin
   Result := IZConnection(fWeakReferenceOfSelfInterface);
 end;
 
-function TZAbstractSuccedaneousTxnConnection.GetConnectionTransaction: IZTransaction;
+function TZAbstractSingleTxnConnection.GetConnectionTransaction: IZTransaction;
 begin
+  {$IFDEF DEBUG}
+  if fWeakTxnPtr = nil then
+    raise EZSQLException.Create(SUnsupportedOperation);
+  {$ENDIF}
   Result := IZTransaction(fWeakTxnPtr);
 end;
 
-function TZAbstractSuccedaneousTxnConnection.GetTransactionLevel: Integer;
+function TZAbstractSingleTxnConnection.GetTransactionLevel: Integer;
 begin
   Result := Ord(not AutoCommit);
   if FSavePoints <> nil then
     Result := Result + FSavePoints.Count;
 end;
 
-function TZAbstractSuccedaneousTxnConnection.IsTransactionValid(
+function TZAbstractSingleTxnConnection.IsTransactionValid(
   const Value: IZTransaction): Boolean;
 begin
   if Value = nil then
@@ -2295,12 +2322,12 @@ begin
     Result := fTransactions.IndexOf(Value) >= 0;
 end;
 
-procedure TZAbstractSuccedaneousTxnConnection.ReleaseImmediat(
+procedure TZAbstractSingleTxnConnection.ReleaseImmediat(
   const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 var I: Integer;
   Imm: IImmediatelyReleasable;
 begin
-  inherited;
+  inherited ReleaseImmediat(Sender, AError);
   if (fActiveTransaction <> nil) and (fActiveTransaction.QueryInterface(IImmediatelyReleasable, imm) = S_OK) and (imm <> Sender) then begin
     imm.ReleaseImmediat(Sender, AError);
     fActiveTransaction := nil;
@@ -2313,7 +2340,7 @@ begin
   end;
 end;
 
-procedure TZAbstractSuccedaneousTxnConnection.ReleaseTransaction(
+procedure TZAbstractSingleTxnConnection.ReleaseTransaction(
   const Value: IZTransaction);
 begin
   if Pointer(Value) = fWeakTxnPtr

@@ -769,8 +769,137 @@ type
   TZSQLStringWriter = {$IFDEF UNICODE}TZUnicodeSQLStringWriter{$ELSE}TZRawSQLStringWriter{$ENDIF};
 
   /// <author>EgonHugeist</author>
-  /// <summary>implements list compare function</summary>
-  TZListSortCompare = function (Item1, Item2: Pointer): Integer of object;
+  /// <summary>implements a list object with custom element size. The class is
+  ///  designed to use one memory block with an untyped array of elements.</summary>
+  TZCustomElementList = class(TObject)
+  private
+    FCount, FCapacity: NativeInt;
+    FElementSize: Cardinal;
+    FElementNeedsFinalize: Boolean;
+  protected
+    FElements: Pointer; //the buffer of the elements
+  protected
+    /// <summary>Get the address of an element in the list. It is an error
+    ///  remembering the address while the element capacity changes. The address
+    ///  might be invalid then.</summary>
+    /// <param>"Index" the index of the element.</param>
+    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
+    function Get(Index: NativeInt): Pointer;
+    /// <summary>Grows the Memory used for the array of elements.
+    ///  If ElementNeedsFinalize is set to true, the memory will be zeroed out.
+    ///  </summary>
+    procedure Grow; virtual;
+    /// <summary>Notify about an action which will or was performed.
+    ///  if ElementNeedsFinalize is False the method will never be called.
+    ///  Otherwise you may finalize managed types beeing part of each element,
+    ///  such as Strings, Objects etc.</summary>
+    /// <param>"Ptr" the address of the element an action happens for.</param>
+    /// <param>"Index" the index of the element.</param>
+    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
+    procedure Notify(Ptr: Pointer; Action: TListNotification); virtual;
+    /// <summary>Sets a capacity of elementsizes. If capacity is less than Count
+    ///  and error get's thrown. Relloc memory Otherwise. If ElementNeedsFinalize
+    ///  is set to true, the memory will be zeroed out otherwise content is
+    ///  unknown.</summary>
+    /// <param>"NewCapacity" the new element capacity.</param>
+    procedure SetCapacity(NewCapacity: NativeInt);
+    /// <summary>Sets the Count of elements. If Count is greater than Capacity
+    ///  the memory grows to exact required amount. If Count is less than old
+    ///  count the elements getting deleted.</summary>
+    /// <param>"NewCount" the new element count.</param>
+    procedure SetCount(NewCount: NativeInt);
+    /// <summary>Adds an element on top of data.</summary>
+    /// <param>"Index" returns the element index.</param>
+    /// <returns> the address of the element.</param>
+    function Add(out Index: NativeInt): Pointer; overload;
+    /// <summary>Inserts an element on its position.</summary>
+    /// <param>"Index" the element index.</param>
+    /// <returns> the address of the element.</param>
+    function Insert(Index: NativeInt): Pointer;
+  public
+    /// <summary>Raises and EListError.</summary>
+    /// <param>"Msg" the error message.</param>
+    /// <param>"Data" the error data.</param>
+    class procedure Error(const Msg: string; Data: NativeInt); overload; virtual;
+    /// <summary>Raises and EListError.</summary>
+    /// <param>"Msg" a resourcestring rec referenc.</param>
+    /// <param>"Data" the error data.</param>
+    class procedure Error(Msg: PResStringRec; Data: NativeInt); overload;
+  public
+    /// <summary>Create this object and assigns main properties.</summary>
+    /// <param>"ElementSize" a size of the element hold in array.</param>
+    /// <param>"ElementNeedsFinalize" indicate if a users finalize is
+    ///  required on removing the items and if the memory needs to be zeroed out
+    ///  on growing the buffer.</param>
+    constructor Create(ElementSize: Cardinal; ElementNeedsFinalize: Boolean);
+    /// <summary>destroys this object and releases all recources.</summary>
+    destructor Destroy; override;
+  public
+    /// <summary>Clears all elements and frees the memory.</summary>
+    procedure Clear;
+    /// <summary>Delete an element on given position.</summary>
+    /// <param>"Index" the position of the element to be removed.</param>
+    procedure Delete(Index: NativeInt);
+  public
+    property Count: NativeInt read FCount write SetCount;
+    property Items[Index: NativeInt]: Pointer read Get; default;
+    property Capacity: NativeInt read FCapacity write SetCapacity;
+    property ElementSize: Cardinal read FElementSize;
+    property ElementNeedsFinalize: Boolean read FElementNeedsFinalize;
+  end;
+
+  /// <author>EgonHugeist</author>
+  /// <summary>implements list of exchangeable custom elements</summary>
+  TZExchangeableCustomElementList = class(TZCustomElementList)
+  private
+    FElementBuffer: Pointer;
+    /// <summary>Exchange two elements on given addresses.</summary>
+    /// <param>"P1" the address of the first element to be exchanged.</param>
+    /// <param>"P2" the address of the second element to be exchanged.</param>
+    procedure InternalExchange(P1, P2: Pointer);
+  public
+    procedure AfterConstruction; override;
+    procedure BeforeDestruction; override;
+  public
+    /// <summary>Exchange two elements on given positions.</summary>
+    /// <param>"Item1" the position of the first element to be exchanged.</param>
+    /// <param>"Item2" the position of the second element to be exchanged.</param>
+    procedure Exchange(Item1, Item2: NativeInt);
+  end;
+
+  /// <author>EgonHugeist</author>
+  /// <summary>implements sort compare function.</summary>
+  TZSortCompare = function(Item1, Item2: Pointer): Integer;
+  /// <author>EgonHugeist</author>
+  /// <summary>implements list compare object function</summary>
+  TZListSortCompare = function(Item1, Item2: Pointer): Integer of object;
+
+  /// <author>EgonHugeist</author>
+  /// <summary>implements list of sortable custom elements</summary>
+  TZSortableCustomElementList = class(TZExchangeableCustomElementList)
+  private
+    /// <author>Aleksandr Sharahov see http://guildalfa.ru/alsha/</author>
+    /// <summary>Performs hybrid sort algorithm for the element list.<summary>
+    /// <param>"L" an address of an element.</param>
+    /// <param>"R" an address of an element.</param>
+    /// <param>"Compare" a global comparision function.</param>
+    procedure QuickSortSha_0AA(L, R: PAnsiChar; Compare: TZSortCompare); overload;
+    /// <author>Aleksandr Sharahov see http://guildalfa.ru/alsha/</author>
+    /// <summary>Performs hybrid sort algorithm for the element list.<summary>
+    /// <param>"L" an address of an element.</param>
+    /// <param>"R" an address of an element.</param>
+    /// <param>"Compare" an object comparision function.</param>
+    procedure QuickSortSha_0AA(L, R: PAnsiChar; Compare: TZListSortCompare); overload;
+  public
+    /// <author>Aleksandr Sharahov see http://guildalfa.ru/alsha/</author>
+    /// <summary>Performs hybrid sort algorithm for the element list.<summary>
+    /// <param>"Compare" a global comparision function.</param>
+    procedure Sort(Compare: TZSortCompare); overload;
+    /// <author>Aleksandr Sharahov see http://guildalfa.ru/alsha/</author>
+    /// <summary>Performs hybrid sort algorithm for the element list.<summary>
+    /// <param>"Compare" an object comparision function.</param>
+    procedure Sort(Compare: TZListSortCompare); overload;
+  end;
 
   /// <author>EgonHugeist</author>
   /// <summary>implements a modified list of pointers.</summary>
@@ -2178,24 +2307,23 @@ begin;
     T := (J-I) shr 1 and MSOP + I;
 
     if Compare(PPointer(J)^, PPointer(I)^)<0 then begin
+      //save I
       P := PNativeUInt(I)^;
+      //replace i by j
       PNativeUInt(I)^ := PNativeUInt(J)^;
+      //replace i by j
       PNativeUInt(J)^ := P;
     end;
     P := PNativeUInt(T)^;
-    if Compare(Pointer(P), PPointer(I)^)<0 then
-    begin
+    if Compare(Pointer(P), PPointer(I)^)<0 then begin
       P := PNativeUInt(I)^;
       PNativeUInt(I)^ := PNativeUInt(T)^;
       PNativeUInt(T)^ := P;
-    end
-    else
-      if Compare(PPointer(J)^, Pointer(P)) < 0 then
-      begin
-        P := PNativeUInt(J)^;
-        PNativeUInt(J)^ := PNativeUInt(T)^;
-        PNativeUInt(T)^ := P;
-      end;
+    end else if Compare(PPointer(J)^, Pointer(P)) < 0 then begin
+      P := PNativeUInt(J)^;
+      PNativeUInt(J)^ := PNativeUInt(T)^;
+      PNativeUInt(T)^ := P;
+    end;
 
     repeat
       Inc(I,SOP);
@@ -2217,14 +2345,11 @@ begin;
       until I >= J;
     Dec(I,SOP); Inc(J,SOP);
 
-    if I-L <= R-J then
-    begin
+    if I-L <= R-J then begin
       if L + InsLast * SOP < I then
         QuickSortSha_0AA(L, I, Compare);
       L := J;
-    end
-    else
-    begin
+    end else begin
       if J + InsLast * SOP < R
         then QuickSortSha_0AA(J, R, Compare);
       R := I;
@@ -2470,6 +2595,404 @@ begin
 end;
 
 
+{ TZCustomElementList }
+
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+function TZCustomElementList.Add(out Index: NativeInt): Pointer;
+begin
+  Index := FCount;
+  if FCount = FCapacity then
+    Grow;
+  Result := Pointer(NativeUInt(FElements)+(NativeUInt(FCount)*FElementSize));
+  Inc(FCount);
+  if FElementNeedsFinalize then
+    Notify(Result, lnAdded);
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+procedure TZCustomElementList.Clear;
+begin
+  SetCount(0);
+  SetCapacity(0);
+end;
+
+constructor TZCustomElementList.Create(ElementSize: Cardinal;
+  ElementNeedsFinalize: Boolean);
+begin
+  inherited Create;
+  FElementSize := ElementSize;
+  FElementNeedsFinalize := ElementNeedsFinalize;
+end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+procedure TZCustomElementList.Delete(Index: NativeInt);
+var P, P2: Pointer;
+begin
+  {$IFNDEF DISABLE_CHECKING}
+  if NativeUInt(Index) >= FCount then
+    Error(@SListIndexError, Index);
+  {$ENDIF DISABLE_CHECKING}
+  P := Pointer(NativeUInt(FElements)+(NativeUInt(Index)*FElementSize));
+  Dec(FCount);
+  if FElementNeedsFinalize then
+    Notify(P, lnDeleted);
+  if Index < FCount then begin
+    P2 := Pointer(NativeUInt(P)+FElementSize);
+    Move(P2^, P^, (FCount - Index) * NativeInt(FElementSize));
+  end;
+  if FElementNeedsFinalize then begin
+    P := Pointer(NativeUInt(FElements)+(NativeUInt(FCount)*FElementSize));
+    FillChar(P^, FElementSize, #0);
+  end;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+destructor TZCustomElementList.Destroy;
+begin
+  Clear;
+  inherited Destroy;
+end;
+
+{$IF not defined(FPC) and not defined(WITH_ReturnAddress)}
+{$IFOPT O+}
+  // Turn off optimizations to force creating a EBP stack frame and
+  // place params on the stack.
+  {$DEFINE OPTIMIZATIONSON}
+  {$O-}
+{$ENDIF}
+{$IFEND}
+class procedure TZCustomElementList.Error(Msg: PResStringRec; Data: NativeInt);
+begin
+  {$IFDEF WITH_ReturnAddress}
+  raise EListError.CreateFmt(LoadResString(Msg), [Data]) at ReturnAddress;
+  {$ELSE}
+    {$IFDEF FPC}
+  raise EListError.CreateFmt(LoadResString(Msg), [Data]) at get_caller_addr(get_frame);
+    {$ELSE}
+  raise EListError.CreateFmt(LoadResString(Msg), [Data]) at
+    PPointer(NativeInt(@Msg) + SizeOf(Msg) + SizeOf(Self) + SizeOf(Pointer))^;
+    {$ENDIF}
+  {$ENDIF}
+end;
+
+class procedure TZCustomElementList.Error(const Msg: string; Data: NativeInt);
+begin
+  {$IFDEF WITH_ReturnAddress}
+  raise EListError.CreateFmt(Msg, [Data]) at ReturnAddress;
+  {$ELSE}
+    {$IFDEF FPC}
+  raise EListError.CreateFmt(Msg, [Data]) at get_caller_addr(get_frame);
+    {$ELSE}
+  raise EListError.CreateFmt(Msg, [Data]) at
+    PPointer(NativeInt(@Msg) + SizeOf(Msg) + SizeOf(Self) + SizeOf(Pointer))^;
+    {$ENDIF}
+  {$ENDIF}
+end;
+{$IF not defined(FPC) and not defined(WITH_ReturnAddress)}
+{$IFDEF OPTIMIZATIONSON}
+  {$UNDEF OPTIMIZATIONSON}
+  {$O+}
+{$ENDIF}
+{$IFEND}
+
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+function TZCustomElementList.Get(Index: NativeInt): Pointer;
+begin
+  if (Index<0) or (Index >= FCount) then
+    Error(@SListIndexError, Index);
+  Result := Pointer(NativeUInt(FElements)+(NativeUInt(Index)*FElementSize));
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+procedure TZCustomElementList.Grow;
+var Delta: NativeInt;
+begin
+  if FCapacity > 64
+  then Delta := FCapacity div 4
+  else if FCapacity > 8
+    then Delta := 16
+    else Delta := 4;
+  SetCapacity(FCapacity + Delta);
+end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+function TZCustomElementList.Insert(Index: NativeInt): Pointer;
+var P: Pointer;
+begin
+  {$IFNDEF DISABLE_CHECKING}
+  if NativeUInt(Index) > FCount then
+    Error(@SListIndexError, Index);
+  {$ENDIF DISABLE_CHECKING}
+  if FCount = FCapacity then
+    Grow;
+  Result := Pointer(NativeUInt(FElements)+(NativeUInt(Index)*FElementSize));
+  if Index < FCount then begin
+    P := Pointer(NativeUInt(Result)+FElementSize);
+    System.Move(Result^, P^, (FCount - Index) * NativeInt(FElementSize));
+  end;
+  Inc(FCount);
+  if FElementNeedsFinalize then begin
+    FillChar(Result^, FElementSize, #0);
+    Notify(Result, lnAdded);
+  end;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Ptr/Action" not used} {$ENDIF}
+procedure TZCustomElementList.Notify(Ptr: Pointer; Action: TListNotification);
+begin
+  //do nothing its for custom records, having managed types
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+procedure TZCustomElementList.SetCapacity(NewCapacity: NativeInt);
+var P: Pointer;
+begin
+  {$IFNDEF DISABLE_CHECKING}
+  if (NewCapacity < FCount) or (NewCapacity > {$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
+    Error(@SListCapacityError, NewCapacity);
+  {$ENDIF DISABLE_CHECKING}
+  if NewCapacity <> FCapacity then begin
+    ReallocMem(FElements, NewCapacity * NativeInt(FElementSize*2));
+    if FElementNeedsFinalize and (NewCapacity>FCapacity) then begin
+      P := Pointer(NativeUInt(FElements)+(NativeUInt(FCount)*FElementSize));
+      FillChar(P^, NativeInt(FElementSize)*(NewCapacity-FCapacity), #0);
+    end;
+    FCapacity := NewCapacity;
+  end;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+procedure TZCustomElementList.SetCount(NewCount: NativeInt);
+var I: NativeInt;
+    P: Pointer;
+begin
+  {$IFNDEF DISABLE_CHECKING}
+  if (NewCount <0) or (NewCount > {$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
+    Error(@SListCountError, NewCount);
+  {$ENDIF DISABLE_CHECKING}
+  if NewCount <> FCount then begin
+    if NewCount > FCapacity then
+      SetCapacity(NewCount);
+    if FElementNeedsFinalize and (NewCount < FCount) then begin
+      P := Pointer(NativeUInt(FElements)+(NativeUInt(FCount)*FElementSize));
+      for I := FCount - 1 downto NewCount do begin
+        Dec(NativeUInt(P), FElementSize);
+        Notify(p, lnDeleted);
+      end;
+      FillChar(P^, (FCount - NewCount)*NativeInt(FElementSize), #0);
+    end;
+    FCount := NewCount;
+  end;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{ TZExchangeableCustomElementList }
+
+procedure TZExchangeableCustomElementList.AfterConstruction;
+begin
+  inherited;
+  GetMem(FElementBuffer, FElementSize);
+end;
+
+procedure TZExchangeableCustomElementList.BeforeDestruction;
+begin
+  inherited;
+  FreeMem(FElementBuffer);
+
+end;
+
+procedure TZExchangeableCustomElementList.Exchange(Item1, Item2: NativeInt);
+var P1, P2: Pointer;
+begin
+  P1 := Get(Item1);
+  P2 := Get(item2);
+  InternalExchange(P1, P2);
+end;
+
+procedure TZExchangeableCustomElementList.InternalExchange(P1, P2: Pointer);
+begin
+  Move(P2^, FElementBuffer^, ElementSize);
+  Move(P1^, P2^, ElementSize);
+  Move(FElementBuffer^, P1^, ElementSize);
+end;
+
+{ TZSortableCustomElementList }
+
+procedure TZSortableCustomElementList.QuickSortSha_0AA(L, R: PAnsiChar;
+  Compare: TZSortCompare);
+var
+  I, J, T: PAnsiChar;
+begin;
+  while true do begin
+    I := L;
+    J := R;
+    if J-I <= InsLast * NativeInt(FElementSize) then break;
+    {$IFDEF FPC}
+    T := PAnsiChar(NativeUint((J-I)) shr 1 and (NativeUint(-NativeInt(FElementSize))) + NativeUint(I));
+    {$ELSE}
+    T := (J-I) shr 1 and (NativeUint(-NativeInt(FElementSize))) + I;
+    {$ENDIF}
+    if Compare(J, I) < 0 then
+      InternalExchange(j, i);
+    if Compare(t, I)<0 then
+      InternalExchange(T, I)
+    else if Compare(J, T) < 0 then
+      InternalExchange(J, T);
+    repeat
+      Inc(I,FElementSize);
+    until not (Compare(I, T) < 0);
+    repeat
+      Dec(J,FElementSize)
+    until not (Compare(T, J) < 0);
+    if I < J then
+      repeat
+        InternalExchange(j, i);
+        repeat
+          Inc(I,FElementSize{SOP});
+        until not (Compare(I, T) < 0 );
+        repeat
+          Dec(J,FElementSize{SOP});
+        until not (Compare(T, J) < 0);
+      until I >= J;
+    Dec(I,FElementSize); Inc(J,FElementSize{SOP});
+
+    if I-L <= R-J then begin
+      if L + InsLast * FElementSize < I then
+        QuickSortSha_0AA(L, I, Compare);
+      L := J;
+    end else begin
+      if J + InsLast * FElementSize < R
+        then QuickSortSha_0AA(J, R, Compare);
+      R := I;
+    end;
+  end;
+end;
+
+procedure TZSortableCustomElementList.QuickSortSha_0AA(L, R: PAnsiChar;
+  Compare: TZListSortCompare);
+var
+  I, J, T: PAnsiChar;
+begin;
+  while true do begin
+    I := L;
+    J := R;
+    if J-I <= InsLast * NativeInt(FElementSize) then break;
+    {$IFDEF FPC}
+    T := PAnsiChar(NativeUint((J-I)) shr 1 and (NativeUint(-NativeInt(FElementSize))) + NativeUint(I));
+    {$ELSE}
+    T := (J-I) shr 1 and (NativeUint(-NativeInt(FElementSize))) + I;
+    {$ENDIF}
+    if Compare(J, I) < 0 then
+      InternalExchange(j, i);
+    if Compare(t, I)<0 then
+      InternalExchange(T, I)
+    else if Compare(J, T) < 0 then
+      InternalExchange(J, T);
+    repeat
+      Inc(I,FElementSize);
+    until not (Compare(I, T) < 0);
+    repeat
+      Dec(J,FElementSize)
+    until not (Compare(T, J) < 0);
+    if I < J then
+      repeat
+        InternalExchange(j, i);
+        repeat
+          Inc(I,FElementSize{SOP});
+        until not (Compare(I, T) < 0 );
+        repeat
+          Dec(J,FElementSize{SOP});
+        until not (Compare(T, J) < 0);
+      until I >= J;
+    Dec(I,FElementSize); Inc(J,FElementSize{SOP});
+
+    if I-L <= R-J then begin
+      if L + InsLast * FElementSize < I then
+        QuickSortSha_0AA(L, I, Compare);
+      L := J;
+    end else begin
+      if J + InsLast * FElementSize < R
+        then QuickSortSha_0AA(J, R, Compare);
+      R := I;
+    end;
+  end;
+end;
+
+procedure TZSortableCustomElementList.Sort(Compare: TZSortCompare);
+var
+  I, J, L, R: PAnsiChar;
+begin;
+  if (FCount>1) then begin
+    L := FElements;
+    R := PAnsiChar(FElements)+((NativeUInt(FCount)-1)*FElementSize);
+    J := R;
+    if Count-1 > InsLast then begin
+      J := PAnsiChar(FElements)+(InsLast*FElementSize);
+      QuickSortSha_0AA(L, R, Compare);
+    end;
+
+    I := L;
+    repeat;
+      if Compare(J, I) < 0 then I := J;
+      dec(J,FElementSize);
+    until J <= L;
+
+    if I > L then InternalExchange(I,L);
+    J := L + FElementSize;
+    while true do begin
+      repeat;
+        if J >= R then exit;
+        inc(J,FElementSize);
+      until Compare(J, J-FElementSize) < 0;
+      I := J - FElementSize;
+      Move(J^, FElementBuffer^, FElementSize);
+      repeat;
+        InternalExchange(I,I+FElementSize);
+        dec(I,FElementSize);
+      until not (Compare(L,I) < 0);
+      Move(FElementBuffer^, (I + FElementSize)^, FElementSize);
+    end;
+  end;
+end;
+
+procedure TZSortableCustomElementList.Sort(Compare: TZListSortCompare);
+var
+  I, J, L, R: PAnsiChar;
+begin;
+  if (FCount>1) then begin
+    L := FElements;
+    R := PAnsiChar(FElements)+((NativeUInt(FCount)-1)*FElementSize);
+    J := R;
+    if Count-1 > InsLast then begin
+      J := PAnsiChar(FElements)+(InsLast*FElementSize);
+      QuickSortSha_0AA(L, R, Compare);
+    end;
+
+    I := L;
+    repeat;
+      if Compare(J, I) < 0 then I := J;
+      dec(J,FElementSize);
+    until J <= L;
+
+    if I > L then InternalExchange(I,L);
+    J := L + FElementSize;
+    while true do begin
+      repeat;
+        if J >= R then exit;
+        inc(J,FElementSize);
+      until Compare(J, J-FElementSize) < 0;
+      I := J - FElementSize;
+      Move(J^, FElementBuffer^, FElementSize);
+      repeat;
+        InternalExchange(I,I+FElementSize);
+        dec(I,FElementSize);
+      until not (Compare(L,I) < 0);
+      Move(FElementBuffer^, (I + FElementSize)^, FElementSize);
+    end;
+  end;
+end;
+
 end.
-
-

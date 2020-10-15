@@ -451,9 +451,9 @@ procedure TZAbstractBeginnerPreparedStatement.LogPrepStmtMessage(Category: TZLog
 begin
   if DriverManager.HasLoggingListener then
     if msg <> EmptyRaw then
-      DriverManager.LogMessage(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId)+' : '+Msg)
+      DriverManager.LogMessage(Category, Connection.GetIZPlainDriver.GetProtocol, 'Statement '+IntToRaw(FStatementId)+' : '+Msg)
     else
-      DriverManager.LogMessage(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId));
+      DriverManager.LogMessage(Category, Connection.GetIZPlainDriver.GetProtocol, 'Statement '+IntToRaw(FStatementId));
 end;
 
 
@@ -983,12 +983,33 @@ end;
 }
 procedure TZAbstractBeginnerPreparedStatement.SetAsciiStream(
   ParameterIndex: Integer; const Value: TStream);
+var
+  MyMemoryStream: TMemoryStream;
+  NeedToRelease: Boolean;
+  OriginalPos: Int64;
 begin
-  if TMemoryStream(Value).Memory = nil
-  then SetBlob(ParameterIndex, stAsciiStream, TZAbstractClob.CreateWithData(PEmptyAnsiString, Value.Size, ConSettings^.ClientCodePage^.CP, ConSettings))
-  else if ConSettings^.AutoEncode
-    then SetBlob(ParameterIndex, stAsciiStream, TZAbstractClob.CreateWithData(TMemoryStream(Value).Memory, Value.Size, zCP_NONE, ConSettings))
-    else SetBlob(ParameterIndex, stAsciiStream, TZAbstractClob.CreateWithData(TMemoryStream(Value).Memory, Value.Size, ConSettings^.ClientCodePage^.CP, ConSettings));
+  NeedToRelease := False;
+  if (Value is TMemoryStream) then begin
+    MyMemoryStream := Value as TMemoryStream;
+  end else begin
+    MyMemoryStream := TMemoryStream.Create;
+    NeedToRelease := true;
+  end;
+  try
+    if NeedToRelease then begin
+      OriginalPos := Value.Position;
+      Value.Seek(0, soBeginning);
+      MyMemoryStream.CopyFrom(Value, Value.Size);
+      Value.Seek(OriginalPos, soBeginning);
+    end;
+
+    if MyMemoryStream.Memory = nil
+    then SetBlob(ParameterIndex, stAsciiStream, TZAbstractClob.CreateWithData(PEmptyAnsiString, Value.Size, ConSettings^.ClientCodePage^.CP, ConSettings))
+    else SetBlob(ParameterIndex, stAsciiStream, TZAbstractClob.CreateWithData(MyMemoryStream.Memory, Value.Size, ConSettings^.ClientCodePage^.CP, ConSettings));
+  finally
+    if NeedToRelease then
+      FreeAndNil(MyMemoryStream);
+  end;
 end;
 
 {**

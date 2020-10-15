@@ -67,9 +67,14 @@ uses
   ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver;
 
 const
-  { generic constant for first column/parameter index }
+  /// <summary>generic constant for first column/parameter index.
+  ///  Note in zeos 8.1+ we use zero based index. Means the <c>GENERIC_INDEX</c>
+  ///  will be removed.</summary>
   FirstDbcIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   { generic constant for invalid column/parameter index }
+  /// <summary>generic constant for an invalid column/parameter index.
+  ///  Note in zeos 8.1+ we use based zero index. Means the <c>GENERIC_INDEX</c>
+  ///  will be removed.</summary>
   InvalidDbcIndex = {$IFDEF GENERIC_INDEX}-1{$ELSE}0{$ENDIF};
 const
   { Constants from JDBC DatabaseMetadata }
@@ -142,6 +147,8 @@ type
     procedure SetConSettingsFromInfo(Info: TStrings);
     property ConSettings: PZConSettings read FConSettings write FConSettings;
   public
+    /// <summary>Get a reference to the actual connection settings.</summary>
+    /// <returns>the TZConSettings record refrence.</returns>
     function GetConSettings: PZConSettings;
   end;
 
@@ -218,9 +225,7 @@ type
 
   // Data types
 type
-  /// <summary>
-  ///  Defines supported SQL types.
-  /// </summary>
+  /// <summary>Defines supported SQL types.</summary>
   TZSQLType = (stUnknown,
     //fixed size DataTypes first
     stBoolean,
@@ -242,101 +247,77 @@ type
 
   TZSQLTypeArray = array of TZSQLType;
 
-  /// <summary>
-  ///  Defines a transaction isolation level.
-  /// </summary>
+  /// <summary>Defines a transaction isolation level.</summary>
   TZTransactIsolationLevel = (tiNone, tiReadUncommitted, tiReadCommitted,
     tiRepeatableRead, tiSerializable);
 
+  /// <summary>Defines a set of transaction isolation level.</summary>
   TZSupportedTransactIsolationLevels = set of TZTransactIsolationLevel;
 
-  /// <summary>
-  ///  Defines a resultset fetch direction.
-  /// </summary>
+  /// <summary>Defines a resultset fetch direction.</summary>
   TZFetchDirection = (fdForward, fdReverse, fdUnknown);
 
-  /// <summary>
-  ///  Defines a type of result set.
-  /// </summary>
+  /// <summary>Defines a type of result set.</summary>
   TZResultSetType = (rtForwardOnly, rtScrollInsensitive, rtScrollSensitive);
 
-  /// <summary>
-  ///  Defines a result set concurrency type.
-  /// </summary>
+  /// <summary>Defines a result set concurrency type.</summary>
   TZResultSetConcurrency = (rcReadOnly, rcUpdatable);
 
-  /// <summary>
-  ///  Defines a nullable type for the column.
-  /// </summary>
+  /// <summary>Defines a nullable type for the column.</summary>
   TZColumnNullableType = (ntNoNulls, ntNullable, ntNullableUnknown);
 
-  /// <summary>
-  ///  Defines a nullable type for the column.
-  /// </summary>
+  /// <summary>Defines a nullable type for the column.</summary>
   TZProcedureResultType = (prtUnknown, prtNoResult, prtReturnsResult);
 
-  /// <summary>
-  ///  Defines a column type for the procedures.
-  /// </summary>
+  /// <summary>Defines a column type for the procedures.</summary>
   TZProcedureColumnType = (pctUnknown, pctIn, pctInOut, pctOut, pctReturn,
     pctResultSet);
 
-  /// <summary>
-  ///  Defines a dynamic array of column types for the procedures.
+  /// <summary>Defines a dynamic array of column types for the procedures.
   /// </summary>
   TZProcedureColumnTypeDynArray = array of TZProcedureColumnType;
 
-  /// <summary>
-  ///  Defines a best row identifier.
-  /// </summary>
+  /// <summary>Defines a best row identifier.</summary>
   TZBestRowIdentifier = (brUnknown, brNotPseudo, brPseudo);
 
-  /// <summary>
-  ///  Defines a scope best row identifier.
-  /// </summary>
+  /// <summary>Defines a scope best row identifier.</summary>
   TZScopeBestRowIdentifier = (sbrTemporary, sbrTransaction, sbrSession);
 
-  /// <summary>
-  ///  Defines a version column.
-  /// </summary>
+  /// <summary>Defines a version column.</summary>
   TZVersionColumn = (vcUnknown, vcNotPseudo, vcPseudo);
 
+  /// <summary>Defines a imported key type enumerator.</summary>
   TZImportedKey = (ikCascade, ikRestrict, ikSetNull, ikNoAction, ikSetDefault,
     ikInitiallyDeferred, ikInitiallyImmediate, ikNotDeferrable);
 
+  /// <summary>Defines a table index type enumerator.</summary>
   TZTableIndex = (tiStatistic, tiClustered, tiHashed, tiOther);
 
-  /// <summary>
-  ///   Defines a post update mode.
-  /// </summary>
+  /// <summary>Defines a post update mode.</summary>
   TZPostUpdatesMode = (poColumnsAll, poColumnsChanged);
 
-  /// <summary>
-  ///   Defines a locate mode.
-  /// </summary>
+  /// <summary>Defines a locate mode.</summary>
   TZLocateUpdatesMode = (loWhereAll, loWhereChanged, loWhereKeyOnly);
 
-  /// <summary>
-  ///   Defines a MoreResults state.
-  /// </summary>
+  /// <summary>Defines a MoreResults state.</summary>
   TZMoreResultsIndicator = (mriUnknown, mriHasNoMoreResults, mriHasMoreResults);
 
-  /// <summary>
-  ///  Defines the server type.
-  /// </summary>
+  /// <summary>Defines the server type.</summary>
   TZServerProvider = (spUnknown, spMSSQL, spMSJet, spOracle, spASE, spASA,
     spPostgreSQL, spIB_FB, spMySQL, spNexusDB, spSQLite, spDB2, spAS400,
     spInformix, spCUBRID, spFoxPro);
 
-  /// <summary>
-  ///  Defines a LOB stream mode.
-  /// </summary>
+  /// <summary>Defines a LOB stream mode.</summary>
   TZLobStreamMode = (lsmRead, lsmWrite, lsmReadWrite);
 
+  /// <summary>Defines a reference to the static TByteBuffer.</summary>
   PByteBuffer = ^TByteBuffer;
+  /// <summary>Defines a static TByteBuffer.</summary>
   TByteBuffer = array[0..1024] of Byte;
 
+  /// <summary>Defines a reference to the static TWordBuffer.</summary>
   PWordBuffer = ^TWordBuffer;
+  /// <summary>Defines a static TWordBuffer.</summary>
   TWordBuffer = array[0..512] of Word;
 
 
@@ -359,184 +340,117 @@ type
   IZSequence = interface;
   IZDataSet = interface;
 
-  /// <summary>
-  ///   Driver Manager interface.
-  /// </summary>
+  /// <summary>Defines the Driver Manager interface.</summary>
   IZDriverManager = interface(IZInterface)
     ['{8874B9AA-068A-4C0C-AE75-9DB1EA9E3720}']
-    /// <summary>
-    ///  Locates a required driver and opens a connection to the specified database.
-    /// </summary>
-    /// <param name="Url">
-    ///   a database connection Url.
-    /// </param>
-    /// <returns>
-    ///   an opened connection.
-    /// </returns>
+    /// <summary>Locates a required driver and opens a connection to the
+    ///  specified database.</summary>
+    /// <param>"Url" a database connection Url.</param>
+    /// <returns>an created connection interface.</returns>
     function GetConnection(const Url: string): IZConnection;
-    /// <summary>
-    ///  Locates a required driver and opens a connection to the specified database.
-    /// </summary>
-    /// <param name="Url">
-    ///   a database connection Url.
-    /// </param>
-    /// <param name="Info">
-    ///   a list of extra connection parameters.
-    /// </param>
-    /// <returns>
-    ///   an opened connection.
-    /// </returns>
+    /// <summary>Locates a required driver and opens a connection to the
+    ///  specified database.</summary>
+    /// <param>"Url" a database connection Url.</param>
+    /// <param>="Info" a list of extra connection parameters.</param>
+    /// <returns>an created connection.</returns>
     function GetConnectionWithParams(const Url: string; Info: TStrings): IZConnection;
-    /// <summary>
-    ///  Locates a required driver and opens a connection to the specified database.
-    /// </summary>
-    /// <param name="Url">
-    ///   a database connection url.
-    /// </param>
-    /// <param name="User">
-    ///   a user's name.
-    /// </param>
-    /// <param name="Password">
-    ///   a user's password.
-    /// </param>
-    /// <returns>
-    ///   an opened connection.
-    /// </returns>
+    /// <summary>Locates a required driver and opens a connection to the
+    ///  specified database.</summary>
+    /// <param>="Url" a database connection url.</param>
+    /// <param>="User" a user's name.</param>
+    /// <param>"Password">a user's password.</param>
+    /// <returns>an created connection.</returns>
     function GetConnectionWithLogin(const Url: string; const User: string;
       const Password: string): IZConnection;
-    /// <summary>
-    ///  Gets a driver which accepts the specified url.
-    /// </summary>
-    /// <param name="Url">
-    ///   a database connection url.
-    /// </param>
-    /// <returns>
-    ///   a found driver or <c>nil</c> otherwise.
-    /// </returns>
+    /// <summary>Gets a driver which accepts the specified url.</summary>
+    /// <param>"Url" a database connection url.</param>
+    /// <returns>a found driver or <c>nil</c> otherwise.</returns>
     function GetDriver(const Url: string): IZDriver;
-    /// <summary>
-    ///  Locates a required driver and returns the client library version number.
-    /// </summary>
-    /// <param name="Url">
-    ///  a database connection Url.
-    /// </param>
-    /// <returns>
-    ///  client library version number.
-    /// </returns>
+    /// <summary>Locates a required driver and returns the client library
+    ///  version number.</summary>
+    /// <param>"Url"a database connection Url.</param>
+    /// <returns>client library version number.</returns>
     function GetClientVersion(const Url: string): Integer;
-    /// <summary>
-    ///    Registers a driver for specific database.
-    /// </summary>
-    /// <param name="Driver">
-    ///    a driver to be registered.
-    /// </param>
+    /// <summary>Registers a driver for specific database.</summary>
+    /// <param>"Driver" a driver to be registered.</param>
     procedure RegisterDriver(const Driver: IZDriver);
-    /// <summary>
-    ///    Unregisters a driver for specific database.
-    /// </summary>
-    /// <param name="Driver">
-    ///    a driver to be unregistered.
-    /// </param>
+    /// <summary>Unregisters a driver for specific database.</summary>
+    /// <param>"Driver" a driver to be unregistered.</param>
     procedure DeregisterDriver(const Driver: IZDriver);
-    /// <summary>
-    ///  Gets a collection of registered drivers.
-    /// </summary>
-    /// <returns>
-    ///   an unmodifiable collection with registered drivers.
-    /// </returns>
+    /// <summary>Gets a collection of registered drivers.</summary>
+    /// <returns>an unmodifiable collection with registered drivers.</returns>
     function GetDrivers: IZCollection;
-    /// <summary>
-    ///  Adds a logging listener to log SQL events.
-    /// </summary>
-    /// <param name="Listener">
-    ///  a logging interface to be added.
-    /// </param>
+    /// <summary>Adds a logging listener to log SQL events.</summary>
+    /// <param>"Listener" a logging interface to be added.</param>
     procedure AddLoggingListener(const Listener: IZLoggingListener);
-    /// <summary>
-    ///  Removes a logging listener from the list.
-    /// </summary>
-    /// <param name="Listener">
-    ///  a logging interface to be removed.
-    /// </param>
+    /// <summary>Removes a logging listener from the list.</summary>
+    /// <param>"Listener" a logging interface to be removed.</param>
     procedure RemoveLoggingListener(const Listener: IZLoggingListener);
+    /// <summary>Is a listener registerd?</summary>
+    /// <returns><c>true</c> if a listener is available; <c>false</c> otherwise.
+    /// </returns>
     function HasLoggingListener: Boolean;
-    /// <summary>
-    ///  Logs a message about event with normal result code.
-    /// </summary>
-    /// <param name="Category">
-    ///  a category of the message.
-    /// </param>
-    /// <param name="Protocol">
-    ///  a name of the protocol.
-    /// </param>
-    /// <param name="Msg">
-    ///  a description message.
-    /// </param>
+    /// <summary>Logs a message about event with normal result code.</summary>
+    /// <param>"Category" a category of the message.</param>
+    /// <param>"Protocol" a name of the protocol.</param>
+    /// <param>"Msg" a description message.</param>
     procedure LogMessage(Category: TZLoggingCategory; const Protocol: String;
       const Msg: SQLString); overload;
+    /// <summary>Logs a message about event with normal result code.</summary>
+    /// <param>"Category" a category of the message.</param>
+    /// <param>"Sender" a IZLoggingObject.</param>
     procedure LogMessage(const Category: TZLoggingCategory; const Sender: IZLoggingObject); overload;
-    /// <summary>
-    ///  Logs a message about event with error result code.
-    /// </summary>
-    /// <param name="Category">
-    ///   the category of the message.
-    /// </param>
-    /// <param name="Protocol">
-    ///   the name of the protocol.
-    /// </param>
-    /// <param name="Msg">
-    ///   a description message.
-    /// </param>
-    /// <param name="ErrorCode">
-    ///   an error code.
-    /// </param>
-    /// <param name="Error">
-    ///   an error message.
-    /// </param>
+    /// <summary>Logs a message about event with error result code.</summary>
+    /// <param>"Category" the category of the message.</param>
+    /// <param>"Protocol" the name of the protocol.</param>
+    /// <param>"Msg" a description message.</param>
+    /// <param>"ErrorCode" an error code.</param>
+    /// <param>"Error" an error message string.</param>
     procedure LogError(Category: TZLoggingCategory; const Protocol: String;
       const Msg: SQLString; ErrorCode: Integer; const Error: SQLString);
-    /// <summary>
-    ///  Constructs a valid URL
-    /// </summary>
-    /// <param name="Protocol">
-    ///  the Driver-protocol (must be assigned).
-    /// </param>
-    /// <param name="HostName">
-    ///  the hostname (could be empty).
-    /// </param>
-    /// <param name="Database">
-    ///  the connection-database (could be empty).
-    /// </param>
-    /// <param name="UserName">
-    ///  the username (could be empty).
-    /// </param>
-    /// <param name="Password">
-    ///  the password(could be empty).
-    /// </param>
-    /// <param name="Port">
-    ///  the Server-Port (could be 0).
-    /// </param>
-    /// <param name="Properties">
-    ///  the Database-Properties (could be empty).
-    /// </param>
-    /// <param name="LibLocation">
-    ///  optional. The library name with optional full path.
-    /// </param>
+    /// <summary>Constructs a valid URL</summary>
+    /// <param>"Protocol" the Driver-protocol (must be assigned).</param>
+    /// <param>"HostName" the hostname (could be empty).</param>
+    /// <param>"Database" the connection-database (could be empty).</param>
+    /// <param>"UserName" the username (could be empty).</param>
+    /// <param>"Password" the password(could be empty).</param>
+    /// <param>"Port" the Server-Port (could be 0).</param>
+    /// <param>"Properties" the Database-Properties (could be empty).</param>
+    /// <param>"LibLocation" optional. The library name with optional absolute
+    ///  path.</param>
+    /// <returns>a valid URL</returns>
     function ConstructURL(const Protocol, HostName, Database,
       UserName, Password: String; const Port: Integer;
       const Properties: TStrings = nil; const LibLocation: String = ''): String;
+    /// <summary>Adds garbage interfaces to keep them alive for a while.</summary>
+    /// <param>"Value" a garbage interface.</param>
     procedure AddGarbage(const Value: IZInterface);
+    /// <summary>Clears the garbage list. All collected interfaces get
+    ///  dereferenced.</summary>
     procedure ClearGarbageCollector;
   end;
 
-  /// <summary>
-  ///   Database Driver interface.
-  /// </summary>
+  /// <summary>Database Driver interface.</summary>
   IZDriver = interface(IZInterface)
     ['{2157710E-FBD8-417C-8541-753B585332E2}']
-
+    /// <summary>Get an array of protocols supported by the driver.</summary>
+    /// <returns>an array of protocol names.</returns>
     function GetSupportedProtocols: TStringDynArray;
+    /// <summary>Get an array of character sets supported by the driver.</summary>
+    /// <returns>an array of character set names.</returns>
     function GetClientCodePages(const Url: TZURL): TStringDynArray;
+    /// <summary>Attempts to create a database connection to the given URL.
+    ///  The driver should return "null" if it realizes it is the wrong kind
+    ///  of driver to connect to the given URL. This will be common, as when
+    ///  the zeos driver manager is asked to connect to a given URL it passes
+    ///  the URL to each loaded driver in turn.
+    ///  The driver should raise a EZSQLException if it is the right
+    ///  driver to connect to the given URL, but has trouble loading the
+    ///  library.</summary>
+    /// <param>"url" the connection url to find the Driver.</param>
+    /// <param>"Info" a Connection parameter list.</param>
+    /// <returns>a <c>IZConnection</c> interface that represents a
+    ///  connection to the URL</returns>
     function Connect(const Url: string; Info: TStrings): IZConnection; overload;
     /// <summary>Attempts to create a database connection to the given URL.
     ///  The driver should return "null" if it realizes it is the wrong kind
@@ -546,78 +460,153 @@ type
     ///  The driver should raise a EZSQLException if it is the right
     ///  driver to connect to the given URL, but has trouble loading the
     ///  library.</summary>
-    /// <param> url the TZURL Object used to find the Driver, it's library and
+    /// <param>"url" the TZURL Object used to find the Driver, it's library and
     ///  assigns the connection properties.</param>
     /// <returns>a <c>IZConnection</c> interface that represents a
     ///  connection to the URL</returns>
     function Connect(const Url: TZURL): IZConnection; overload;
+    /// <summary>Returns the version of the plain driver library that will be
+    ///  used to open a connection to the given URL.</summary>
+    /// <param>"url" the URL of the databaseparam</param>
+    /// <returns>the version number of the plain driver library for the give
+    ///  URL.</returns>
     function GetClientVersion(const Url: string): Integer;
+    /// <summary>Returns true if the driver thinks that it can open a connection
+    ///  to the given URL.  Typically drivers will return true if they
+    ///  understand the subprotocol specified in the URL and false if they
+    ///  don't.</summary>
+    /// <param>"url" the URL of the database</param>
+    /// <returns>true if this driver can connect to the given URL.</returns>
     function AcceptsURL(const Url: string): Boolean;
+    /// <summary>Gets plain driver for selected protocol.</summary>
+    /// <param>"url" the URL of the driver.</param>
+    /// <returns>a selected plaindriver interface.</returns>
     function GetPlainDriver(const Url: TZURL; const InitDriver: Boolean = True): IZPlainDriver;
-
+    /// <summary>Not yet implemented.
+    ///  Gets information about the possible properties for this driver.
+    ///  The getPropertyInfo method is intended to allow a generic GUI tool to
+    ///  discover what properties it should prompt a human for in order to get
+    ///  enough information to connect to a database.  Note that depending on
+    ///  the values the human has supplied so far, additional values may become
+    ///  necessary, so it may be necessary to iterate though several calls
+    ///  to getPropertyInfo.</summary>
+    /// <param>"url" the URL of the database to which to connect.</param>
+    /// <param>"info" a proposed list of tag/value pairs that will be sent on
+    ///  connect open.</param>
+    /// <returns>an array of DriverPropertyInfo objects describing possible
+    ///  properties.  This array may be an empty array if no properties
+    ///  are required.</returns>
     function GetPropertyInfo(const Url: string; Info: TStrings): TStrings;
+    /// <summary>Gets the driver's major version number. Initially this should
+    ///  be 1.</summary>
+    /// <returns>this driver's major version number.</returns>
     function GetMajorVersion: Integer;
+    /// <summary>Gets the driver's minor version number. Initially this should
+    ///  be 0.</summary>
+    /// <returns>this driver's minor version number.</returns>
     function GetMinorVersion: Integer;
+    /// <summary>Gets the driver's sub version (revision) number. Initially
+    ///  this should be 0.</summary>
+    /// <returns>this driver's minor version number.</returns>
     function GetSubVersion: Integer;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
     function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
     function GetStatementAnalyser: IZStatementAnalyser;
   end;
 
-  /// <summary>
-  ///   an immediately releasable interface.
-  /// </summary>
+  /// <author>EgonHugeist</author>
+  /// <summary>Implements an immediately releasable interface.</summary>
   IImmediatelyReleasable = interface(IZInterface)
     ['{7AA5A5DA-5EC7-442E-85B0-CCCC71C13169}']
+    /// <summary>Releases all driver handles and set the object in a closed
+    ///  Zombi mode waiting for destruction. Each known supplementary object,
+    ///  supporting this interface, gets called too. This may be a recursive
+    ///  call from parant to childs or vice vera. So finally all resources
+    ///  to the servers are released. This method is triggered by a connecton
+    ///  loss. Don't use it by hand except you know what you are doing.</summary>
+    /// <param>"Sender" the object that did notice the connection lost.</param>
+    /// <param>"AError" a reference to an EZSQLConnectionLost error.
+    ///  You may free and nil the error object so no Error is thrown by the
+    ///  generating method. So we start from the premisse you have your own
+    ///  error handling in any kind.</param>
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+    /// <summary>Get a reference to the actual connection settings.</summary>
+    /// <returns>the TZConSettings record refrence.</returns>
     function GetConSettings: PZConSettings;
   end;
 
+  /// <author>EgonHugeist</author>
+  /// <summary>Implements a transaction interface.</summary>
   IZTransaction = interface(IImmediatelyReleasable)
     ['{501FDB3C-4D44-4BE3-8BB3-547976E6500E}']
+    /// <summary>If the current transaction is saved the current savepoint get's
+    ///  released. Otherwise makes all changes made since the previous commit/
+    ///  rollback permanent and releases any database locks currently held by
+    ///  the Connection. This method should be used only when auto-commit mode
+    ///  has been disabled. See setAutoCommit.</summary>
     procedure Commit;
+    /// <summary>If the current transaction is saved the current savepoint get's
+    ///  rolled back. Otherwise drops all changes made since the previous
+    ///  commit/rollback and releases any database locks currently held by this
+    ///  Connection. This method should be used only when auto-commit has been
+    ///  disabled. See setAutoCommit.</summary>
     procedure Rollback;
-    /// <summary>
-    ///  Starts transaction support or saves the current transaction.
+    /// <summary>Starts transaction support or saves the current transaction.
     ///  If the connection is closed, the connection will be opened.
-    ///  If a transaction is underway a nested transaction or a savepoint will be spawned.
-    ///  While the tranaction(s) is/are underway the AutoCommit property is set to False.
-    ///  Ending up the transaction with a commit/rollback the autocommit property will be restored
-    ///  if changing the autocommit mode was triggered by a starttransaction call.
-    /// </summary>
-    /// <returns>
-    ///  Returns the current txn-level. -1 means no active transaction,
-    ///  0 means the txn is in AutoCommit-Mode, 1 means a expicit transaction was started.
-    ///  2 means the transaction was saved. 3 means the previous savepoint got saved too and so on
-    /// </returns>
+    ///  If a transaction is underway a nested transaction or a savepoint will
+    ///  be spawned. While the tranaction(s) is/are underway the AutoCommit
+    ///  property is set to False. Ending up the transaction with a
+    ///  commit/rollback the autocommit property will be restored if changing
+    ///  the autocommit mode was triggered by a starttransaction call.</summary>
+    /// <returns>The current txn-level. 1 means a expicit transaction
+    ///  was started. 2 means the transaction was saved. 3 means the previous
+    ///  savepoint got saved too and so on.</returns>
     function StartTransaction: Integer;
+    /// <summary>Get's the owner connection that produced that object instance.
+    /// </summary>
+    /// <returns>the connection object interface.</returns>
     function GetConnection: IZConnection;
+    /// <summary>Get the nested transaction level. -1 means no active
+    ///  transaction, 0 means the txn is in AutoCommit-Mode, 1 means a expicit
+    ///  transaction was started. 2 means the transaction was saved. 3 means the
+    ///  previous savepoint got saved too and so on.</summary>
+    /// <returns>Returns the current txn-level. </returns>
     function GetTransactionLevel: Integer;
+    /// <summary>Attempts to change the transaction isolation level to the one
+    ///  given. The constants defined in the interface <c>Connection</c> are the
+    ///  possible transaction isolation levels. Note: This method cannot be
+    ///  called while in the middle of a transaction.
+    /// <param>"value" one of the TRANSACTION_* isolation values with the
+    ///  exception of TRANSACTION_NONE; some databases may not support other
+    ///  values. See DatabaseInfo.SupportsTransactionIsolationLevel</param>
     procedure SetTransactionIsolation(Value: TZTransactIsolationLevel);
+    /// <summary>Gets the current auto-commit state. See setAutoCommit.</summary>
+    /// <returns><c>True</c> if the transaction is in autocommit mode;
+    ///  <c>False</c> otherwise.</returns>
     function GetAutoCommit: Boolean;
+    /// <summary>Gets the current readonly-commit state. See setReadonly.</summary>
+    /// <returns><c>True</c> if the transaction is readonly; <c>False</c>
+    ///  otherwise.</returns>
     function IsReadOnly: Boolean;
     procedure SetReadOnly(Value: Boolean);
     procedure Close;
     function IsClosed: Boolean;
-   // procedure SetProperties(Value: TStrings);
   end;
 
   IZTransactionManager = interface(IImmediatelyReleasable)
     ['{BF61AD03-1072-473D-AF1F-67F90DFB4E6A}']
-    /// <summary>
-    ///  Creates a <code>Transaction</code>
-    ///  <param name="AutoCommit">the AutoCommit mode.</param>
-    ///  <param name="ReadOnly">the ReadOnly mode.</param>
-    ///  <param name="TransactIsolationLevel">the TransactIsolationLevel one of
-    ///   the TRANSACTION_* isolation values with the
-    ///   exception of TRANSACTION_NONE; some databases may not support other values
-    ///   @see DatabaseMetaData#supportsTransactionIsolationLevel
-    ///  </param>
-    ///  <param name="Params">a list of properties used for the transaction.</param>
-    /// </summary>
-    /// <returns>
-    ///  returns the Transaction object.
-    ///   @see IZTransaction
-    /// </returns>
+    /// <summary>Creates a <c>Transaction</c></summary>
+    /// <param>"AutoCommit" the AutoCommit mode.</param>
+    /// <param>"ReadOnly" the ReadOnly mode.</param>
+    /// <param>"TransactIsolationLevel" the TransactIsolationLevel one of the
+    ///  TRANSACTION_* isolation values with the exception of TRANSACTION_NONE;
+    ///  some databases may not support other values see
+    ///  DatabaseInfo.supportsTransactionIsolationLevel</param>
+    /// <param>"Params" a list of properties used for the transaction.</param>
+    /// <returns>returns the Transaction interface.</returns>
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
     procedure ReleaseTransaction(const Value: IZTransaction);
@@ -676,24 +665,51 @@ type
     function CreateSequence(const Sequence: string; BlockSize: Integer): IZSequence;
 
     function NativeSQL(const SQL: string): string;
-
+    /// <summary>Sets this connection's auto-commit mode. If a connection is in
+    ///  auto-commit mode, then all its SQL statements will be executed and
+    ///  committed as individual transactions. Otherwise, its SQL statements are
+    ///  grouped into transactions that are terminated by a call to either the
+    ///  method <c>commit</c> or the method <c>rollback</c>. By default, new
+    ///  connections are in auto-commit mode. The commit occurs when the
+    ///  statement completes or the next execute occurs, whichever comes first.
+    ///  In the case of statements returning a ResultSet, the statement
+    ///  completes when the last row of the ResultSet has been retrieved or the
+    ///  ResultSet has been closed. In advanced cases, a single statement may
+    ///  return multiple results as well as output parameter values. In these
+    ///  cases the commit occurs when all results and output parameter values
+    ///  have been retrieved. It is not recommented setting autoCommit to false
+    ///  because a call to either the method <c>commit</c> or the method
+    ///  <c>rollback</c> will restart the transaction. It's use full only if
+    ///  repeately many opertions are done and no startTransaction is intended
+    ///  to use. If you change mode to true the current Transaction and it's
+    ///  nested SavePoints are committed then.</summary>
+    /// <param>"Value" true enables auto-commit; false disables auto-commit.</param>
     procedure SetAutoCommit(Value: Boolean);
+    /// <summary>Gets the current auto-commit state. See setAutoCommit.</summary>
+    /// <returns>the current state of auto-commit mode.</returns>
     function GetAutoCommit: Boolean;
-
+    /// <summary>If the current transaction is saved the current savepoint get's
+    ///  released. Otherwise makes all changes made since the previous commit/
+    ///  rollback permanent and releases any database locks currently held by
+    ///  the Connection. This method should be used only when auto-commit mode
+    ///  has been disabled. See setAutoCommit.</summary>
     procedure Commit;
+    /// <summary>If the current transaction is saved the current savepoint get's
+    ///  rolled back. Otherwise drops all changes made since the previous
+    ///  commit/rollback and releases any database locks currently held by this
+    ///  Connection. This method should be used only when auto-commit has been
+    ///  disabled. See setAutoCommit.</summary>
     procedure Rollback;
-    /// <summary>
-    ///  Starts transaction support or saves the current transaction.
+    /// <summary>Starts transaction support or saves the current transaction.
     ///  If the connection is closed, the connection will be opened.
-    ///  If a transaction is underway a nested transaction or a savepoint will be spawned.
-    ///  While the tranaction(s) is/are underway the AutoCommit property is set to False.
-    ///  Ending up the transaction with a commit/rollback the autocommit property will be restored
-    ///  if changing the autocommit mode was triggered by a starttransaction call.
-    /// </summary>
-    /// <returns>
-    ///  Returns the current txn-level. 1 means a transaction was started.
-    ///  2 means the transaction was saved. 3 means the previous savepoint got saved too and so on
-    /// </returns>
+    ///  If a transaction is underway a nested transaction or a savepoint will
+    ///  be spawned. While the tranaction(s) is/are underway the AutoCommit
+    ///  property is set to False. Ending up the transaction with a
+    ///  commit/rollback the autocommit property will be restored if changing
+    ///  the autocommit mode was triggered by a starttransaction call.</summary>
+    /// <returns>The current txn-level. 1 means a expicit transaction
+    ///  was started. 2 means the transaction was saved. 3 means the previous
+    ///  savepoint got saved too and so on.</returns>
     function StartTransaction: Integer;
     function GetConnectionTransaction: IZTransaction;
 
@@ -725,6 +741,13 @@ type
     procedure SetCatalog(const Value: string);
     function GetCatalog: string;
 
+    /// <summary>Attempts to change the transaction isolation level to the one
+    ///  given. The constants defined in the interface <c>Connection</c> are the
+    ///  possible transaction isolation levels. Note: This method cannot be
+    ///  called while in the middle of a transaction.
+    /// <param>"value" one of the TRANSACTION_* isolation values with the
+    ///  exception of TRANSACTION_NONE; some databases may not support other
+    ///  values. See DatabaseInfo.SupportsTransactionIsolationLevel</param>
     procedure SetTransactionIsolation(Value: TZTransactIsolationLevel);
     function GetTransactionIsolation: TZTransactIsolationLevel;
 
@@ -1372,9 +1395,7 @@ type
     /// <summary>
     ///  Returns the ChunkSize for reading/writing large lobs
     /// </summary>
-    /// <returns>
-    ///  the chunksize in bytes.
-    /// </returns>
+    /// <returns>the chunksize in bytes.</returns>
     function GetChunkSize: Integer;
 
     /// <summary>
@@ -1392,22 +1413,22 @@ type
     /// </returns>
     function GetWarnings: EZSQLWarning;
 
-    /// <summary>
-    ///  Clears all the warnings reported on this <c>Statement</c>
-    ///  object. After a call to this method,
-    ///  the method <c>getWarnings</c> will return
-    ///  <c>nil</c> until a new warning is reported for this
-    ///  <c>Statement</c> object.
-    /// </summary>
+    /// <summary>Clears all the warnings reported on this <c>Statement</c>
+    ///  object. After a call to this method,the method <c>getWarnings</c> will
+    ///  return <c>nil</c> until a new warning is reported for this
+    ///  <c>Statement</c> object.</summary>
     procedure ClearWarnings;
-    procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
-
+    /// <summary>The sender resultsets get's closed. Notify owner
+    ///  <c>Statement</c> about it. The statment, if rexecuted, will
+    ///  create a new resultset interface.</summary>
+    /// <param>"Sender" the closing resultset.</param>
+    procedure FreeOpenResultSetReference(const Sender: IZResultSet);
+    /// <summary>Result a unique internal Id per class.</summary>
+    /// <returns>the the new class id.</returns>
     function GetStatementId: NativeUInt;
   end;
 
-  /// <summary>
-  ///   Prepared SQL statement interface.
-  /// </summary>
+  /// <summary>Prepared SQL statement interface.</summary>
   IZPreparedStatement = interface(IZStatement)
     ['{990B8477-AF11-4090-8821-5B7AFEA9DD70}']
     /// <summary>Executes the SQL query in this <c>PreparedStatement</c> object
@@ -1536,16 +1557,14 @@ type
     procedure RegisterParamType(ParameterIndex:integer;ParamType:Integer); //deprecated;
   end;
 
-  /// <summary>
-  ///   Defines a compare method
-  /// </summary>
+  /// <summary>Defines a compare method</summary>
   TCompareFunc = function(const Null1, Null2: Boolean; const V1, V2): Integer;
+  /// <summary>Defines an array of compare methods.</summary>
   TCompareFuncs = Array of TCompareFunc;
 
-  /// <summary>
-  ///   Defines Column-Comparison kinds
-  /// </summary>
+  /// <summary>Defines Column-Comparison kinds</summary>
   TComparisonKind = (ckAscending{greater than}, ckDescending{less than}, ckEquals);
+  /// <summary>Defines an array of compaison kinds.</summary>
   TComparisonKindArray = Array of TComparisonKind;
 
   {$IFDEF USE_SYNCOMMONS}
@@ -1559,12 +1578,26 @@ type
   /// </summary>
   IZResultSet = interface(IImmediatelyReleasable)
     ['{8F4C4D10-2425-409E-96A9-7142007CC1B2}']
-
+    /// <summary>Releases this <c>ResultSet</c> object's database and resources
+    ///  immediately instead of waiting for this to happen when it is
+    ///  automatically closed. Note: A <c>ResultSet</c> object is automatically
+    ///  closed by the <c>Statement</c> object that generated it when that
+    ///  <c>Statement</c> object is closed, or is used to retrieve the next
+    ///  result from a sequence of multiple results. A <c>ResultSet</c> object
+    ///  is also automatically closed when it is garbage collected.</summary>
     procedure Close;
-    /// <summary>Resets the Cursor position to Row 0, and releases servver
-    ///  and client resources.</summary>
+    /// <summary>Resets the Cursor position to beforeFirst, releases server and
+    ///  client resources but keeps buffers or Column-Informations alive.</summary>
     procedure ResetCursor;
+    /// <summary>Reports whether the last column read had a value of SQL
+    ///  <c>NULL</c>. Note that you must first call one of the <c>getXXX</c>
+    ///  methods on a column to try to read its value and then call the method
+    ///  <c>wasNull</c> to see if the value read was SQL <c>NULL</c>.</summary>
+    /// <returns><c>true</c> if the last column value read was SQL <c>NULL</c>
+    ///  and <c>false</c> otherwise.</returns>
     function WasNull: Boolean;
+    /// <summary>Indicates whether the this <c>ResultSet</c> is closed.</summary>
+    /// <returns><c>true</c> if closed; <c>false</c> otherwise.</returns>
     function IsClosed: Boolean;
 
     //======================================================================
@@ -1693,14 +1726,30 @@ type
     ///  rows</returns>
     function IsBeforeFirst: Boolean;
     /// <summary>Indicates whether the cursor is after the last row in this
-    ///  <c>ResultSet</c> object.
+    ///  <c>ResultSet</c> object.</summary>
     /// <returns><c>true</c> if the cursor is after the last row; <c>false</c>
     ///  if the cursor is at any other position or the result set contains no
     ///  rows</returns>
     function IsAfterLast: Boolean;
+    /// <summary>Indicates whether the cursor is on the first row of this
+    ///  <c>ResultSet</c> object.<summary>
+    /// <returns><c>true</c> if the cursor is on the first row;
+    ///  <c>false</c> otherwise.</returns>
     function IsFirst: Boolean;
+    /// <summary>Indicates whether the cursor is on the last row of this
+    ///  <c>ResultSet</c> object. Note: Calling the method <c>isLast</c> may be
+    ///  expensive because the driver might need to fetch ahead one row in order
+    ///  to determine whether the current row is the last row in the result set.
+    /// </summary>
+    /// <returns><c>true</c> if the cursor is on the last row;
+    ///  <c>false</c> otherwise.</returns>
     function IsLast: Boolean;
+    /// <summary>Moves the cursor to the top of this <c>ResultSet</c> interface,
+    ///  just before the first row.</summary>
     procedure BeforeFirst;
+    /// <summary>Moves the cursor to the end of this <c>ResultSet</c> interface,
+    ///  just after the last row. This method has no effect if the result set
+    ///  contains no rows.</summary>
     procedure AfterLast;
     /// <summary>Moves the cursor to the first row in this <c>ResultSet</c>
     ///  object.</summary>
@@ -1712,6 +1761,10 @@ type
     /// <returns><c>true</c> if the cursor is on a valid row; <c>false</c> if
     ///  there are no rows in the result set </returns>
     function Last: Boolean;
+    /// <summary>Retrieves the current row number. The first row is number 1,
+    ///  the second number 2, and so on.
+    /// <returns>the current row number; <c>0</c> if there is no current row
+    /// <returns>
     function GetRow: NativeInt;
     /// <summary>Moves the cursor to the given row number in
     ///  this <c>ResultSet</c> object. If the row number is positive, the cursor
@@ -1744,6 +1797,12 @@ type
     /// <returns><c>true</c> if the cursor is on a row;<c>false</c> otherwise
     /// </returns>
     function MoveRelative(Rows: Integer): Boolean;
+    /// <summary>Moves the cursor to the previous row in this <c>ResultSet</c>
+    ///  interface. Note: Calling the method <c>previous()</c> is not the same
+    ///  as calling the method <c>relative(-1)</c> because it makes sense to
+    ///  call<c>previous()</c> when there is no current row.</summary>
+    /// <returns><c>true</c> if the cursor is on a valid row; <c>false</c> if it
+    ///  is off the result set</returns>
     function Previous: Boolean;
 
     //---------------------------------------------------------------------
@@ -1873,9 +1932,8 @@ type
     {$ENDIF USE_SYNCOMMONS}
   end;
 
-  /// <summary>
-  ///   TDataSet interface.
-  /// </summary>
+  /// <summary>implements DataSet interface. Just prepare and will be omitted
+  ///  in future releases</summary>
   IZDataSet = interface(IZInterface)
     ['{DBC24011-EF26-4FD8-AC8B-C3E01619494A}']
     //function GetDataSet: TDataSet;

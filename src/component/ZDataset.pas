@@ -97,7 +97,6 @@ type
     property IndexFieldNames; {bangfauzan addition}
     property UpdateMode;
     property WhereMode;
-    property Options default [doCalcDefaults, doPreferPrepared];
     property Sequence;
     property SequenceField;
   end;
@@ -119,7 +118,6 @@ type
     property IndexFieldNames; {bangfauzan addition}
     property UpdateMode;
     property WhereMode;
-    property Options default [doCalcDefaults, doPreferPrepared];
     property Sequence;
     property SequenceField;
   end;

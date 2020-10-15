@@ -121,10 +121,6 @@ type
 
     procedure SetTransaction(const Value: IZTransaction);
     function HasAutoCommitTransaction: Boolean;
-    //EH: get some fields skipped for dml
-    procedure SetReadOnly(ColumnIndex: Integer; Value: Boolean);
-    //EH: get some fields skipped for the where clause
-    procedure SetSearchable(ColumnIndex: Integer; Value: Boolean);
   end;
 
 implementation
@@ -658,7 +654,8 @@ begin
     FResultSet := CachedResultSet;
     FResultSet.SetResolver(TZEmptyResolver.Create);
     FillResultSet(FResultSet, ROWS_COUNT);
-
+    FResultSet.PostUpdatesCached;
+    CheckFalse(FResultSet.IsPendingUpdates);
     with FResultSet do
     begin
       { Update record values to null}
@@ -997,6 +994,7 @@ end;
 
 { TZEmptyResolver }
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "...." not used} {$ENDIF}
 {**
   Calculate default values for the fields.
   @param Sender a cached result set object.
@@ -1038,20 +1036,12 @@ begin
 end;
 
 
-procedure TZEmptyResolver.SetReadOnly(ColumnIndex: Integer; Value: Boolean);
-begin
-
-end;
-
-procedure TZEmptyResolver.SetSearchable(ColumnIndex: Integer; Value: Boolean);
-begin
-
-end;
-
 procedure TZEmptyResolver.SetTransaction(const Value: IZTransaction);
 begin
 
 end;
+
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 initialization
   RegisterTest('dbc',TZTestCachedResultSetCase.Suite);

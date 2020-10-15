@@ -1562,7 +1562,7 @@ begin
         CheckNotTestFailure(E, 'missing date quotes');
     end;
     {$IFDEF WITH_ACTIVE_DATASET_ERROR_ON_FIRST_ROW_BUG}
-    Check(Query.Active); //that's a FPC bug. Delphi datasets are closed
+   /// Check(Query.Active); //that's a FPC bug. Delphi datasets are closed and is related to the DBGRIDS only
     Check(Query.Eof);
     {$ENDIF}
     Query.SQL.Text := 'select * from date_values';
@@ -1644,8 +1644,8 @@ var
   SL: TStringList;
   {$IFDEF UNICODE}
   R: RawByteString;
-  {$ENDIF}
   ConSettings: PZConSettings;
+  {$ENDIF}
 begin
 //??  if SkipForReason(srClosedBug) then Exit;
   Query := CreateQuery;
@@ -1656,8 +1656,9 @@ begin
     begin
       SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
       ExecSQL;
+      {$IFDEF UNICODE}
       ConSettings := Connection.DbcConnection.GetConSettings;
-
+      {$ENDIF UNICODE}
 
       SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';

@@ -1731,7 +1731,6 @@ begin
       if (TVarData(Param.Value).VType = varOleStr) {$IFDEF WITH_varUString} or (TVarData(Param.Value).VType = varUString){$ENDIF}
       then Statement.SetUnicodeString(Index, Param.Value)
       else begin
-        {$IFDEF DEBUG}Assert(THackParam(Param).DataSet.InheritsFrom(TZAbstractRODataset), 'Wrong parameter dataset');{$ENDIF}
         ConSettings := TZAbstractRODataset(THackParam(Param).DataSet).Connection.DbcConnection.GetConSettings;
         if ConSettings.ClientCodePage.Encoding = ceUTF16 then begin
           CP := TZAbstractRODataset(THackParam(Param).DataSet).Connection.RawCharacterTransliterateOptions.GetRawTransliterateCodePage(ttParam);
@@ -1776,7 +1775,6 @@ begin
     ftDateTime:
       Statement.SetTimestamp(Index, Param.AsDateTime);
     ftMemo, ftFmtMemo{$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}: begin
-        {$IFDEF DEBUG}Assert(THackParam(Param).DataSet.InheritsFrom(TZAbstractRODataset), 'Wrong parameter dataset');{$ENDIF}
         ConSettings := TZAbstractRODataset(THackParam(Param).DataSet).Connection.DbcConnection.GetConSettings;
         case TvarData(Param.Value).VType of //it's worth it checking the type i.e. Encodings
           {$IFDEF WITH_varUString}varUString,{$ENDIF}

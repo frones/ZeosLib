@@ -73,11 +73,11 @@ type
     ColumnIndex: Integer;
   end;
 
-  TZIndexPairList = class(TZSortedList)
+  TZIndexPairList = class(TZCustomElementList)
   public
+    constructor Create;
     procedure Assign(Src: TZIndexPairList);
-    function Add(SrcOrDestIndex, ColumnIndex: Integer): Integer;
-    procedure Clear; override;
+    function Add(SrcOrDestIndex, ColumnIndex: Integer): NativeInt;
   end;
 
   PPZVarLenData = ^PZVarLenData;
@@ -5118,13 +5118,12 @@ end;
   @param ColumnIndex is the ColumnIndex of the MetaData or RowAccessor
   @return the new index in the list
 }
-function TZIndexPairList.Add(SrcOrDestIndex, ColumnIndex: Integer): Integer;
+function TZIndexPairList.Add(SrcOrDestIndex, ColumnIndex: Integer): NativeInt;
 var P: PZIndexPair;
 begin
-  GetMem(P, SizeOf(TZIndexPair));
+  P := inherited Add(Result);
   P.SrcOrDestIndex := SrcOrDestIndex;
   P.ColumnIndex := ColumnIndex;
-  Result := inherited Add(P);
 end;
 
 {**
@@ -5143,15 +5142,9 @@ begin
   end;
 end;
 
-{**
-  clears all items and relaeses the memory
-}
-procedure TZIndexPairList.Clear;
-var I: Integer;
+constructor TZIndexPairList.Create;
 begin
-  for i := 0 to Count -1 do
-    FreeMem(Items[i]);
-  inherited Clear;
+  inherited Create(SizeOf(TZIndexPair), False);
 end;
 
 { TZRowAccessorLob }

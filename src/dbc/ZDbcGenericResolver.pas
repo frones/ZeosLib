@@ -75,7 +75,8 @@ type
 
   { TZGenerateSQLCachedResolver }
 
-  TZGenerateSQLCachedResolver = class (TZAbstractCachedResolver, IZCachedResolver)
+  TZGenerateSQLCachedResolver = class (TZAbstractCachedResolver, IZCachedResolver,
+    IZGenerateSQLCachedResolver)
   private
     FStatement : IZStatement;
     FTransaction: IZTransaction;
@@ -90,12 +91,13 @@ type
     FWhereAll: Boolean;
     FUpdateAll: Boolean;
 
+  protected
     FUpdateStatements: TZHashMap;
     FDeleteStatements: TZHashMap;
-  protected
     FInsertColumns: TZIndexPairList;
     FInsertStatements: TZHashMap;
     InsertStatement: IZPreparedStatement;
+    procedure FlushCache(Collection: TZHashMap);
 
     function ComposeFullTableName(const Catalog, Schema, Table: SQLString;
       {$IFDEF AUTOREFCOUNT}const {$ENDIF}SQLWriter: TZSQLStringWriter): SQLString;
@@ -152,10 +154,33 @@ type
       const Resolver: IZCachedResolver); virtual;
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
-    //EH: get some fields skipped for dml
+    /// <summary>Set the readonly state of a field. The value will be ignored
+    ///  if the field is not writable.</summary>
+    /// <param>"ColumnIndex" the columnnumber of the field.</param>
+    /// <param>"Value" if <c>true</c> then the field will be ignored on
+    ///  generating the dml's.</param>
     procedure SetReadOnly(ColumnIndex: Integer; Value: Boolean);
-    //EH: get some fields skipped for the where clause
+    /// <summary>Set the searchable state of a field. The value will be ignored
+    ///  if the field is not searchable at all e.g. LOB's.</summary>
+    /// <param>"ColumnIndex" the columnnumber of the field.</param>
+    /// <param>"Value" if <c>true</c> then the field will be ignored on
+    ///  generating the where clause of the dml's.</param>
     procedure SetSearchable(ColumnIndex: Integer; Value: Boolean);
+    /// <summary>Set the Calculate null columns defaults.</summary>
+    /// <param>"Value" <c>true</c> means calc defaults.</param>
+    procedure SetCalcDefaults(Value: Boolean);
+    /// <summary>Set the WhereAll state for generating the where clause of the
+    ///  dml's. The value will be ignored if no indexfields are defined and
+    ///  if no primary key is available. If both conditions are true the
+    ///  whereAll mode is always true.</summary>
+    /// <param>"Value" <c>true</c> means use all searchable columns. Otherwise
+    ///  the primary key will or given index fields are used.</param>
+    procedure SetWhereAll(Value: Boolean);
+    /// <summary>Set the updateAll state for generating the dml's. <c>true</c>
+    ///  means use all updatable columns. Otherwise only changed fields are used
+    ///  for updates.</summary>
+    /// <param>"Value" the UpdateAll mode should be used.</param>
+    procedure SetUpdateAll(Value: Boolean);
   end;
   //just an alias for compatibility
   TZGenericCachedResolver = TZGenerateSQLCachedResolver;
@@ -186,12 +211,7 @@ begin
   FWhereColumns := TZIndexPairList.Create;
   FCurrentWhereColumns := TZIndexPairList.Create;
 
-  FCalcDefaults := StrToBoolEx(DefineStatementParameter(Statement,
-    DSProps_Defaults, 'true'));
-  FUpdateAll := UpperCase(DefineStatementParameter(Statement,
-    DSProps_Update, 'changed')) = 'ALL';
-  FWhereAll := UpperCase(DefineStatementParameter(Statement,
-    DSProps_Where, 'keyonly')) = 'ALL';
+  FCalcDefaults := True;
   FUpdateStatements := TZHashMap.Create;
   FDeleteStatements := TZHashMap.Create;
   FInsertStatements := TZHashMap.Create;
@@ -214,18 +234,22 @@ begin
   FDatabaseMetadata := nil;
 
   FreeAndNil(FInsertColumns);
-
   FreeAndNil(FUpdateColumns);
   FreeAndNil(FWhereColumns);
   FreeAndNil(FCurrentWhereColumns);
 
+  FlushCache(FDeleteStatements);
   FreeAndNil(FDeleteStatements);
+  FlushCache(FUpdateStatements);
   FreeAndNil(FUpdateStatements);
+  FlushCache(FInsertStatements);
   FreeAndNil(FInsertStatements);
 
   FlustStmt(InsertStatement);
-  if RefreshResultSet <> nil then
-     RefreshResultSet.Close;
+  if RefreshResultSet <> nil then begin
+    RefreshResultSet.Close;
+    RefreshResultSet := nil;
+  end;
   inherited Destroy;
 end;
 
@@ -414,6 +438,22 @@ CopyParams:
       WhereColumnsLookup.Add(IndexPair.SrcOrDestIndex+IncrementDestIndexBy, IndexPair.ColumnIndex)
     end;
   end;
+end;
+
+procedure TZGenerateSQLCachedResolver.FlushCache(Collection: TZHashMap);
+var I: Integer;
+  Values: IZCollection;
+  Stmt: IZStatement;
+  Intf: IZInterface;
+begin
+  if Collection = nil then Exit;
+  Values := Collection.GetValues;
+  for i := 0 to Values.Count -1 do begin
+    Intf := Values[i];
+    if (Intf <> nil) and (Intf.QueryInterface(IZStatement, Stmt) = S_OK) and not Stmt.IsClosed then
+      Stmt.Close;
+  end;
+  Collection.Clear;
 end;
 
 {**
@@ -859,17 +899,38 @@ begin
       if (FUpdateStatements.Count > 0) then
         Col := FUpdateStatements.GetValues
       else if (FDeleteStatements.Count > 0) then
-        Col := FDeleteStatements.GetValues;
-      if (Col <> nil) then
-        Col[0].QueryInterface(IZStatement, Stmt);
+        Col := FDeleteStatements.GetValues
+      else if (FInsertStatements.Count > 0) then
+        Col := FInsertStatements.GetValues;
+      if (Col <> nil)
+      then Col[0].QueryInterface(IZStatement, Stmt)
+      else Stmt := nil;
     end;
     { test if statement is part of session -> FB always all others will fail}
     if (Stmt <> nil) and ((Value = nil) or (Stmt.GetConnection <> Value.GetConnection)) then begin
       Stmt.Close;
       InsertStatement := nil;
-      FUpdateStatements.Clear;
-      FDeleteStatements.Clear;
+      FlushCache(FInsertStatements);
+      FlushCache(FUpdateStatements);
+      FlushCache(FDeleteStatements);
     end;
+  end;
+end;
+
+procedure TZGenerateSQLCachedResolver.SetCalcDefaults(Value: Boolean);
+begin
+  FCalcDefaults := Value;
+end;
+
+procedure TZGenerateSQLCachedResolver.SetUpdateAll(Value: Boolean);
+begin
+  FUpdateAll := Value;
+end;
+
+procedure TZGenerateSQLCachedResolver.SetWhereAll(Value: Boolean);
+begin
+  if FWhereAll <> Value then begin
+    FWhereAll := Value;
   end;
 end;
 

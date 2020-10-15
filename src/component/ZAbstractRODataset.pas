@@ -3430,13 +3430,8 @@ begin
   try
     if Assigned(Properties) then
       Temp.AddStrings(Properties);
-    { Define TDataset specific parameters. }
-    Temp.Values[DSProps_Defaults] := BoolStrs[doCalcDefaults in FOptions];
     {$IF declared(DSProps_PreferPrepared)}
     Temp.Values[DSProps_PreferPrepared] := BoolStrs[doPreferPrepared in FOptions];
-    {$IFEND}
-    {$IF declared(DSProps_CachedLobs)}
-    Temp.Values[DSProps_CachedLobs] := BoolStrs[doCachedLobs in FOptions];
     {$IFEND}
     if FTransaction <> nil
     then Txn := THackTransaction(FTransaction).GetIZTransaction
@@ -4993,7 +4988,8 @@ begin
             ConSettings := FConnection.DbcConnection.GetConSettings;
             CP := GetTransliterateCodePage(Connection.ControlsCodePage);
             if not ((FCharEncoding = ceUTF16) or
-               (TMemoField(TField).Transliterate and (CP <> ConSettings.ClientCodePage.CP))) then
+      {XE10.3 x64 bug: a ObjectCast of a descendand doesn't work -> use exact class or the "As" operator}
+              ((Field as TMemoField).Transliterate and (CP <> ConSettings.ClientCodePage.CP))) then
               CP := ConSettings.ClientCodePage.CP;
             Assert(Blob.QueryInterface(IZCLob, CLob) = S_OK);
             Result := Clob.GetStream(CP);

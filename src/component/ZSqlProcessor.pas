@@ -372,30 +372,31 @@ begin
     raise EZDatabaseError.Create(SConnectionIsNotAssigned);
 
   FConnection.ShowSQLHourGlass;
+  SQL := TZSQLStrings.Create;
   try
-    SQL := TZSQLStrings.Create;
     SQL.Dataset := Self;
     SQL.ParamCheck := FScript.ParamCheck;
     SQL.MultiStatements := False;
     Parse;
 
-    for I := 0 to Pred(StatementCount) do
-    begin
+    for I := 0 to Pred(StatementCount) do begin
       Action := eaSkip;
       DoBeforeExecute(I);
       repeat
         try
           SQL.Text := GetStatement(I);
-{http://zeos.firmos.at/viewtopic.php?t=2885&start=0&postdays=0&postorder=asc&highlight=}
-          if SQL.StatementCount > 0 then
-            begin
-              Statement := CreateStatement(SQL.Statements[0].SQL, nil);
+          {https://zeoslib.sourceforge.io/viewtopic.php?f=50&t=127636}
+          if SQL.StatementCount > 0 then begin
+            Statement := CreateStatement(SQL.Statements[0].SQL, nil);
+            try
               SetStatementParams(Statement, SQL.Statements[0].ParamNamesArray,
                 FParams);
               Statement.ExecuteUpdatePrepared;
+            finally
+              Statement.Close; //see test Test1049821: if LastResultSet is assigned
+              Statement := nil;
             end;
-          Statement.Close; //see test Test1049821: if LastResultSet is assigned
-          Statement := nil;
+          end;
         except
           on E: Exception do
           begin

@@ -148,10 +148,6 @@ type
       Const OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
 
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
-    //EH: get some fields skipped for dml
-    procedure SetReadOnly(ColumnIndex: Integer; Value: Boolean);
-    //EH: get some fields skipped for the where clause
-    procedure SetSearchable(ColumnIndex: Integer; Value: Boolean);
 
     procedure Rebuild(SQLStrings: TZSQLStrings);
     procedure RebuildAll;
@@ -312,13 +308,6 @@ begin
   else Result := TZAbstractRODataset(Dataset).Connection.AutoCommit;
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "ColumnIndex,Value" not used} {$ENDIF}
-procedure TZUpdateSQL.SetSearchable(ColumnIndex: Integer; Value: Boolean);
-begin
-  //noting todo here, it's user task..
-end;
-{$IFDEF FPC} {$POP} {$ENDIF}
-
 {**
   Sets a DML statements for specified action.
   @param UpdateKind a type of the DML statements.
@@ -404,14 +393,6 @@ begin
         FStmts[ut].Clear;
   end;
 end;
-
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "ColumnIndex,Value" not used} {$ENDIF}
-procedure TZUpdateSQL.SetReadOnly(ColumnIndex: Integer; Value: Boolean);
-begin
-  //nothing todo here it's users task
-end;
-{$IFDEF FPC} {$POP} {$ENDIF}
-
 
 procedure TZUpdateSQL.SetRefreshSQL(Value: TStrings);
 begin
@@ -897,9 +878,12 @@ begin
     {$IFDEF WITH_CASE_WARNING}else;{$ENDIF}// do nothing
   end;
 
-  if Dataset is TZAbstractRODataset then
+  if (Dataset is TZAbstractRODataset) then
     (Dataset as TZAbstractRODataset).Connection.ShowSqlHourGlass;
-  CalcDefaultValues := ZSysUtils.StrToBoolEx(DefineStatementParameter(Sender.GetStatement, DSProps_Defaults, 'true'));
+  if (Dataset is TZAbstractDataset) then
+    CalcDefaultValues := doCalcDefaults in (Dataset as TZAbstractDataset).Options
+  else CalcDefaultValues := False;
+    //(Dataset as TZAbstractRODataset). ZSysUtils.StrToBoolEx(DefineStatementParameter(Sender.GetStatement, DSProps_Defaults, 'true'));
   try
     for I := 0 to Config.StatementCount - 1 do begin
       if (FStmts[UpdateType].Count <= i) or not (FStmts[UpdateType][i].QueryInterface(IZPreparedStatement, Statement) = S_OK) or

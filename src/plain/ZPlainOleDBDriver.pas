@@ -1274,6 +1274,10 @@ const
 
 
   { errors from oledberr.h }
+  DB_S_STOPLIMITREACHED = HRESULT($00040ED6); //Execution stopped because a resource limit was reached. Results obtained so far were returned, but execution cannot resume.
+  DB_S_ENDOFROWSET = HRESULT($00040EC6); //Start or end of rowset or chapter was reached.
+  DB_S_ROWLIMITEXCEEDED = HRESULT($00040EC0); //Fetching requested number of rows will exceed total number of active rows supported by the rowset.
+
   DB_E_PARAMUNAVAILABLE = HRESULT($80040E51); //cannot derive parameter information and SetParameterInfo has not been called
   DB_E_ERRORSOCCURRED = HRESULT($80040E21); //Multiple-step OLE DB operation generated errors. Check each OLE DB status value, if available. No work was done.
   DB_E_ERRORSINCOMMAND = HRESULT($80040E14); //One or more errors occurred during processing of command.

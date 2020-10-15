@@ -99,47 +99,33 @@ type
   TZTokenArray = array[0..{$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF} - 1] of TZToken;
 
   TZTokenCase = (tcSensitive, tcInsensitive);
-  TZTokenList = class
-  private
-    FTokens: PZTokenArray;
-    FCount: Integer;
-    FCapacity: Integer;
-    procedure Grow;
-    procedure SetCapacity(NewCapacity: Integer);
-    procedure SetCount(NewCount: Integer);
-    {$IFNDEF DISABLE_CHECKING}
-    class procedure Error(const Msg: string; Data: Integer);
-    {$ENDIF}
+  TZTokenList = class(TZCustomElementList)
   public
-    constructor Create;
-    destructor Destroy; override;
+    constructor Create(Capacity: Cardinal = 32);
   public
-    function Add(const Item: TZToken): Integer;
-    procedure Insert(Index: Integer; const Item: TZToken);
-    procedure Delete(Index: Integer);
+    function Add(const Item: TZToken): NativeInt;
+    procedure Insert(Index: NativeInt; const Item: TZToken);
 
-    procedure Put(Index: Integer; const Item: TZToken);
-    function Get(Index: Integer): TZToken;
+    procedure Put(Index: NativeInt; const Item: TZToken);
+    function Get(Index: NativeInt): TZToken;
 
-    function GetToken(Index: Integer): PZToken;
+    function GetToken(Index: NativeInt): PZToken;
 
     function AsString: String; overload;
-    function AsString(Index: Integer): String; overload;
-    function AsString(iStart, iEnd: Integer): String; overload;
-    function AsFloat(Index: Integer): Extended;
-    function AsInt64(Index: Integer): Int64;
+    function AsString(Index: NativeInt): String; overload;
+    function AsString(iStart, iEnd: NativeInt): String; overload;
+    function AsFloat(Index: NativeInt): Extended;
+    function AsInt64(Index: NativeInt): Int64;
 
-    function IsEqual(Index: Integer; const Value: Char): Boolean; overload;
-    function IsEqual(Index: Integer; const Value: String; TokenCase: TZTokenCase = tcSensitive): Boolean; overload;
-    function IsEqual(Index: Integer; TokenType: TZTokenType; const Value: String;
+    function IsEqual(Index: NativeInt; const Value: Char): Boolean; overload;
+    function IsEqual(Index: NativeInt; const Value: String; TokenCase: TZTokenCase = tcSensitive): Boolean; overload;
+    function IsEqual(Index: NativeInt; TokenType: TZTokenType; const Value: String;
       TokenCase: TZTokenCase = tcSensitive): Boolean; overload;
 
-    procedure Clear;
     procedure Assign(Source: TZTokenList);
-
-    property Count: Integer read FCount;
-    property Items[Index: Integer]: TZToken read Get write Put;
-    property Tokens[Index: Integer]: PZToken read GetToken; default;
+  public
+    property Items[Index: NativeInt]: TZToken read Get write Put;
+    property Tokens[Index: NativeInt]: PZToken read GetToken; default;
   end;
 
   // Forward declaration
@@ -1273,7 +1259,7 @@ begin
   Result := TZTokenList.Create;
   LastTokenType := ttUnknown;
 
-  if Result.FCapacity < (EOS-Buffer) shr 5 then
+  if Result.Capacity < (EOS-Buffer) shr 5 then
     Result.SetCapacity((EOS-Buffer) shr 5);
 
   while Buffer < EOS do begin
@@ -1440,10 +1426,11 @@ end;
   @param Item an object to be added.
   @return a position of the added object.
 }
-function TZTokenList.Add(const Item: TZToken): Integer;
+function TZTokenList.Add(const Item: TZToken): NativeInt;
+var P: PZToken;
 begin
-  Result := FCount;
-  Insert(Result, Item);
+  P := inherited Add(Result);
+  P^ := Item;
 end;
 
 {**
@@ -1452,10 +1439,10 @@ end;
 procedure TZTokenList.Assign(Source: TZTokenList);
 begin
   SetCount(Source.Count);
-  Move(Source.FTokens^, FTokens^, SizeOf(TZToken)*FCount);
+  Move(Source.FElements^, FElements^, SizeOf(TZToken)*Count);
 end;
 
-function TZTokenList.AsString(iStart, iEnd: Integer): String;
+function TZTokenList.AsString(iStart, iEnd: NativeInt): String;
 var
   i: Integer;
   P: PChar;
@@ -1463,63 +1450,27 @@ begin
   P := nil;
   {$R-}
   for i := iStart to iEnd do
-    Inc(P, FTokens^[I].L);
+    Inc(P, PZTokenArray(FElements)[I].L);
   {$IFDEF FPC} Result := '';{$ENDIF}
   SetLength(Result, P-PChar(nil));
   P := Pointer(Result);
   for i := iStart to iEnd do begin
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FTokens^[I].P^, P^, FTokens^[I].L * SizeOf(Char));
-    Inc(P, FTokens^[I].L);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(PZTokenArray(FElements)[I].P^, P^, PZTokenArray(FElements)[I].L * SizeOf(Char));
+    Inc(P, PZTokenArray(FElements)[I].L);
   end;
  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
 {**
-  Clears the content of this collection.
-}
-procedure TZTokenList.Clear;
-begin
-  SetCount(0);
-  SetCapacity(0);
-end;
-
-{**
   Creates this collection and assignes main properties.
 }
-constructor TZTokenList.Create;
+constructor TZTokenList.Create(Capacity: Cardinal = 32);
 begin
-  SetCapacity(32);
+  inherited Create(SizeOf(TZToken), False);
+  SetCapacity(Capacity);
 end;
 
-{**
-  Deletes an object from the specified position.
-}
-procedure TZTokenList.Delete(Index: Integer);
-begin
-  {$IFNDEF DISABLE_CHECKING}
-  if (Index < 0) or (Index >= FCount) then
-    Error(SListIndexError, Index);
-  {$ENDIF}
-  Dec(FCount);
-  if Index < FCount then begin
-    {$R-}
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FTokens^[Index + 1], FTokens^[Index],
-      (FCount - Index) * SizeOf(TZToken));
-    FillChar(FTokens^[FCount], SizeOf(TZToken), #0);
-    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  end;
-end;
-
-{**
-  Destroys this object and frees the memory.
-}
-destructor TZTokenList.Destroy;
-begin
-  Clear;
-  inherited;
-end;
-
-function TZTokenList.IsEqual(Index: Integer; const Value: String;
+function TZTokenList.IsEqual(Index: NativeInt; const Value: String;
   TokenCase: TZTokenCase = tcSensitive): Boolean;
 var
   Token: PZToken;
@@ -1535,7 +1486,7 @@ begin
   end;
 end;
 
-function TZTokenList.IsEqual(Index: Integer; TokenType: TZTokenType;
+function TZTokenList.IsEqual(Index: NativeInt; TokenType: TZTokenType;
   const Value: String; TokenCase: TZTokenCase): Boolean;
 begin
   if GetToken(Index)^.TokenType = TokenType
@@ -1543,18 +1494,7 @@ begin
   else Result := False;
 end;
 
-{$IFNDEF DISABLE_CHECKING}
-class procedure TZTokenList.Error(const Msg: string; Data: Integer);
-begin
-  {$IFDEF FPC}
-  raise EListError.CreateFmt(Msg,[Data]) at get_caller_addr(get_frame);
-  {$ELSE}
-  raise EListError.CreateFmt(Msg, [Data]) at ReturnAddress
-  {$ENDIF}
-end;
-{$ENDIF}
-
-function TZTokenList.IsEqual(Index: Integer; const Value: Char): Boolean;
+function TZTokenList.IsEqual(Index: NativeInt; const Value: Char): Boolean;
 var Token: PZToken;
 begin
   Token := GetToken(Index);
@@ -1566,7 +1506,7 @@ end;
   @param Index a position index of the element.
   @return a requested element.
 }
-function TZTokenList.Get(Index: Integer): TZToken;
+function TZTokenList.Get(Index: NativeInt): TZToken;
 begin
   Result := GetToken(Index)^;
 end;
@@ -1576,31 +1516,9 @@ end;
   @param Index a position index of the element.
   @return a requested element.
 }
-function TZTokenList.GetToken(Index: Integer): PZToken;
+function TZTokenList.GetToken(Index: NativeInt): PZToken;
 begin
-  {$IFNDEF DISABLE_CHECKING}
-  if (Index < 0) or (Index >= FCount) then
-    Error(SListIndexError, Index);
-  {$ENDIF}
-  {$R-}
-  Result := @FTokens^[Index];
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-end;
-
-{**
-  Increases an element count.
-}
-procedure TZTokenList.Grow;
-var
-  Delta: Integer;
-begin
-  if FCapacity > 64 then
-    Delta := FCapacity div 4
-  else if FCapacity > 8 then
-    Delta := 16
-  else
-    Delta := 4;
-  SetCapacity(FCapacity + Delta);
+  Result := inherited Get(Index);
 end;
 
 {**
@@ -1608,74 +1526,25 @@ end;
   @param Index a position index.
   @param Item an object to be inserted.
 }
-procedure TZTokenList.Insert(Index: Integer; const Item: TZToken);
+procedure TZTokenList.Insert(Index: NativeInt; const Item: TZToken);
+var P: PZToken;
 begin
-  {$IFNDEF DISABLE_CHECKING}
-  if (Index < 0) or (Index > FCount) then
-    Error(SListIndexError, Index);
-  {$ENDIF}
-  if FCount = FCapacity then
-    Grow;
-  if Index < FCount then
-  {$R-}
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FTokens^[Index], FTokens^[Index + 1],
-      (FCount - Index) * SizeOf(TZToken));
-  Move(Item.P, FTokens^[Index].P, SizeOf(TZToken));
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-  Inc(FCount);
+  P := inherited Insert(Index);
+  P^ := Item;
 end;
 
-procedure TZTokenList.Put(Index: Integer; const Item: TZToken);
+procedure TZTokenList.Put(Index: NativeInt; const Item: TZToken);
+var P: PZToken;
 begin
-  {$IFNDEF DISABLE_CHECKING}
-  if (Index < 0) or (Index >= FCount) then
-    Error(SListIndexError, Index);
-  {$ENDIF}
-  {$R-}
-  FTokens^[Index] := Item;
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-end;
-
-{**
-  Sets a new list capacity.
-  @param NewCapacity a new list capacity.
-}
-procedure TZTokenList.SetCapacity(NewCapacity: Integer);
-begin
-  {$IFNDEF DISABLE_CHECKING}
-  if (NewCapacity < FCount) or (NewCapacity > {$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
-    Error(SListCapacityError, NewCapacity);
-  {$ENDIF}
-  if NewCapacity <> FCapacity then begin
-    ReallocMem(FTokens, NewCapacity * SizeOf(TZToken));
-    if NewCapacity > FCapacity then
-  {$R-}
-      FillChar(FTokens^[FCount], (NewCapacity - FCapacity) * SizeOf(TZToken), #0);
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    FCapacity := NewCapacity;
-  end;
-end;
-
-{**
-  Sets a new element count.
-  @param NewCount a new element count.
-}
-procedure TZTokenList.SetCount(NewCount: Integer);
-begin
-  {$IFNDEF DISABLE_CHECKING}
-  if (NewCount < 0) or (NewCount > {$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
-    Error(SListCountError, NewCount);
-  {$ENDIF}
-  if NewCount > FCapacity then
-    SetCapacity(NewCount);
-  FCount := NewCount;
+  P := Inherited Get(Index);
+  P^ := Item;
 end;
 
 {**
   convert a Token to a floating-point value
   @param Index of element.
 }
-function TZTokenList.AsFloat(Index: Integer): Extended;
+function TZTokenList.AsFloat(Index: NativeInt): Extended;
 {var
   Token: PZToken;
   C: Char;}
@@ -1696,7 +1565,7 @@ end;
   convert a Token to a Int64 value
   @param Index of element.
 }
-function TZTokenList.AsInt64(Index: Integer): Int64;
+function TZTokenList.AsInt64(Index: NativeInt): Int64;
 {var
   Token: PZToken;
   C: Char;}
@@ -1721,11 +1590,12 @@ end;
   @param Index of element.
   @param TokenCase the result case of the token.
 }
-function TZTokenList.AsString(Index: Integer): String;
+function TZTokenList.AsString(Index: NativeInt): String;
 var
   Token: PZToken;
 begin
   Token := GetToken(Index);
+  {$IFDEF FPC}Result := '';{$ENDIF}
   SetString(Result, Token.P, Token.L);
 end;
 
@@ -1737,17 +1607,19 @@ function TZTokenList.AsString: String;
 var
   i: Integer;
   P: PChar;
+  Token: PZToken;
 begin
   P := nil;
   {$R-}
-  for i := 0 to FCount - 1 do
-    Inc(P, FTokens^[I].L);
+  for i := 0 to Count - 1 do
+    Inc(P, PZTokenArray(FElements)[I].L);
   {$IFDEF FPC} Result := '';{$ENDIF}
   SetLength(Result, P-PChar(Nil));
   P := Pointer(Result);
-  for i := 0 to FCount - 1 do begin
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FTokens^[I].P^, P^, FTokens^[I].L * SizeOf(Char));
-    Inc(P, FTokens^[I].L);
+  for i := 0 to Count - 1 do begin
+    Token := Inherited Get(I);
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Token.P^, P^, Token.L * SizeOf(Char));
+    Inc(P, Token.L);
   end;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;

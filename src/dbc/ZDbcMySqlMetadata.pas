@@ -315,7 +315,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 
 uses
-  Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
+  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   {$IFDEF UNICODE}ZEncoding,{$ENDIF}
   ZFastCode, ZMessages, ZCollections, ZMatchPattern,
   ZDbcMySqlUtils, ZDbcUtils, ZDbcProperties, ZDbcMySql;
