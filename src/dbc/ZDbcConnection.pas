@@ -972,6 +972,12 @@ begin
     If Supports(IZStatement(fRegisteredStatements[I]), IImmediatelyReleasable, ImmediatelyReleasable)
       and (Sender <> ImmediatelyReleasable) then
       ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+  if FDisposeCodePage then
+  begin
+    Dispose(ConSettings^.ClientCodePage);
+    ConSettings^.ClientCodePage := nil;
+    FDisposeCodePage := False;
+  end;
   if Assigned(FOnConnectionLostError) and (FError <> nil) then
     FOnConnectionLostError(FError);
 end;

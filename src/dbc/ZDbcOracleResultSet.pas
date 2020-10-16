@@ -135,6 +135,19 @@ type
     {$ENDIF USE_SYNCOMMONS}
   public //implement IZOracleResultSet
     procedure AssignColumnsInfo(const Dest: TObjectList);
+  public
+    /// <summary>Releases all driver handles and set the object in a closed
+    ///  Zombi mode waiting for destruction. Each known supplementary object,
+    ///  supporting this interface, gets called too. This may be a recursive
+    ///  call from parant to childs or vice vera. So finally all resources
+    ///  to the servers are released. This method is triggered by a connecton
+    ///  loss. Don't use it by hand except you know what you are doing.</summary>
+    /// <param>"Sender" the object that did notice the connection lost.</param>
+    /// <param>"AError" a reference to an EZSQLConnectionLost error.
+    ///  You may free and nil the error object so no Error is thrown by the
+    ///  generating method. So we start from the premisse you have your own
+    ///  error handling in any kind.</param>
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
   end;
 
   TZOracleResultSet_A = class(TZOracleAbstractResultSet_A, IZResultSet)
@@ -188,6 +201,7 @@ type
     FplainDriver: TZOraclePlainDriver;
     FLocatorAllocated: Boolean; //need to know if we destroy the stream if the locator should be freed too
     FIsCloned: Boolean;
+    procedure FreeOCIResources;
   protected
     function CreateLobStream(CodePage: Word; LobStreamMode: TZLobStreamMode): TStream; override;
   public
@@ -762,6 +776,14 @@ begin
   Result := (FColumns^.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].valuep = nil) or
             (FColumns^.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].indp^[FCurrentRowBufIndex] < 0);
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+end;
+
+procedure TZOracleAbstractResultSet_A.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+begin
+  inherited ReleaseImmediat(Sender, AError);
+  FreeOracleSQLVars;
+  FOracleConnection := nil;
 end;
 
 {**
@@ -2601,7 +2623,7 @@ label Success;  //ugly but faster and no double code
 begin
   { Checks for maximum row. }
   Result := False;
-  if (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) or (FStmtHandle = nil) then
+  if Closed or (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) or (FStmtHandle = nil) then
     Exit;
 
   if RowNo = 0 then begin//fetch Iteration count of rows
@@ -3271,21 +3293,29 @@ begin
   Result := FlobStream;
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "B" does not seem to be initialized} {$ENDIF}
 destructor TZAbstractOracleBlob.Destroy;
+begin
+  FreeOCIResources;
+  inherited;
+end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "B" does not seem to be initialized} {$ENDIF}
+procedure TZAbstractOracleBlob.FreeOCIResources;
 var Status: sword;
   B: LongBool;
 begin
   if (FLobLocator <> nil) and FLocatorAllocated then try
-    Status := FPlainDriver.OCILobIsOpen(FOCISvcCtx, FOCIError, FLobLocator, B);
-    if Status <> OCI_SUCCESS then
-      FOracleConnection.HandleErrorOrWarning(FOCIError, status,
-        lcOther, 'OCILobIsOpen', Self);
-    if B then begin
-      Status := FPlainDriver.OCILobClose(FOCISvcCtx, FOCIError, FLobLocator);
+    if not FReleased then begin
+      Status := FPlainDriver.OCILobIsOpen(FOCISvcCtx, FOCIError, FLobLocator, B);
       if Status <> OCI_SUCCESS then
         FOracleConnection.HandleErrorOrWarning(FOCIError, status,
-          lcOther, 'OCILobClose', Self);
+          lcOther, 'OCILobIsOpen', Self);
+      if B then begin
+        Status := FPlainDriver.OCILobClose(FOCISvcCtx, FOCIError, FLobLocator);
+        if Status <> OCI_SUCCESS then
+          FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+            lcOther, 'OCILobClose', Self);
+      end;
     end;
   finally
     Status := FPlainDriver.OCIDescriptorFree(FLobLocator, FDescriptorType);
@@ -3294,8 +3324,8 @@ begin
       FOracleConnection.HandleErrorOrWarning(FOCIError, status,
         lcOther, 'OCIDescriptorFree', Self);
   end;
-  inherited;
 end;
+
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 function TZAbstractOracleBlob.GetConSettings: PZConSettings;
@@ -3332,6 +3362,8 @@ end;
 procedure TZAbstractOracleBlob.ReleaseImmediat(
   const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 begin
+  FReleased := True;
+  FreeOCIResources;
   FLobLocator := nil;
   FOracleConnection := nil;
   if FLobStream <> nil
@@ -3505,7 +3537,11 @@ begin
   then Result := 0
   else begin
     if Not IsOpen then
-      Open;
+      Open; //this can now lead to connection loss;
+    if FReleased then begin
+      Result := 0;
+      Exit;
+    end;
     Status := FplainDriver.OCILobGetLength2(FOCISvcCtx, FOCIError, FOwnerLob.FlobLocator, lenp);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     Result := lenp;
@@ -3529,7 +3565,7 @@ begin
   if not IsOpen then
     Open;
   Result := 0; //init
-  if Count = 0 then Exit;
+  if (Count = 0) or FReleased then Exit;
 
   { get bytes/(single-byte)character count of lob }
   Status := FplainDriver.OCILobGetLength2(FOCISvcCtx, FOCIError, FOwnerLob.FlobLocator, asize);

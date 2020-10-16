@@ -3139,6 +3139,7 @@ begin
     end;
     FOutParamResultSet := nil;
   end;
+  SetParamCount(0);
   inherited ReleaseImmediat(Sender, AError);
 end;
 

@@ -922,6 +922,10 @@ const
   OCI_NUMBER_UNSIGNED = 0;                        // Unsigned type -- ubX
   OCI_NUMBER_SIGNED = 2;                          // Signed type -- sbX
 
+  // some connection issued errors:
+  ORA_03113_end_of_file_on_communication_channel = 3113;
+  ORA_03114_not_connected_to_ORACLE = 3114;
+
 type
   {** Represents a generic interface to Oracle native API. }
   IZOraclePlainDriver = interface (IZPlainDriver)

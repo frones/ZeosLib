@@ -64,25 +64,36 @@ type
 
   {** Implements a DBC bug report test case for Oracle }
   TZTestDbcOracleBugReport = class(TZAbstractDbcSQLTestCase)
+  private
+    FConnLostError: EZSQLConnectionLost;
+    procedure FOnConnectionLost(var AError: EZSQLConnectionLost);
   protected
     function GetSupportedProtocols: string; override;
   published
     procedure TestNum1;
     procedure TestBlobValues;
     procedure TestTicket437;
+    procedure TestConnectionLossTicket452;
   end;
 
 {$ENDIF ZEOS_DISABLE_ORACLE}
 implementation
 {$IFNDEF ZEOS_DISABLE_ORACLE}
 
-uses ZTestCase;
+uses ZTestCase, ZDbcLogging;
 
 { TZTestDbcOracleBugReport }
 
+procedure TZTestDbcOracleBugReport.FOnConnectionLost(
+  var AError: EZSQLConnectionLost);
+begin
+  FConnLostError := AError;
+  AError := nil;
+end;
+
 function TZTestDbcOracleBugReport.GetSupportedProtocols: string;
 begin
-  Result := 'oracle,oracle-9i';
+  Result := 'oracle';
 end;
 
 {**
@@ -179,6 +190,55 @@ begin
     CheckEquals(6, GetMetadata.GetColumnCount);
     Check(next);
     Close;
+  end;
+end;
+
+procedure TZTestDbcOracleBugReport.TestConnectionLossTicket452;
+var CL_Connection: IZConnection;
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+  SQL: String;
+  NCLOB, longLob: IZBlob;
+  Stream: TStream;
+begin
+  CL_Connection := DriverManager.GetConnection(Connection.GetURL);
+  Check(CL_Connection <> nil);
+  Stream := nil;
+  try
+    CL_Connection.SetOnConnectionLostErrorHandler(FOnConnectionLost);
+    Statement := CL_Connection.CreateStatement;
+    ResultSet := Statement.ExecuteQuery('SELECT SID, SERIAL# FROM V$SESSION WHERE AUDSID = Sys_Context(''USERENV'', ''SESSIONID'')');
+    try
+      ResultSet.Next;
+    except
+      Fail('To get this test runinng use SQLPLUS, login as SYSDBA and EXECUTE: "grant select on SYS.V_$SESSION to [My_USERNAME]"');
+    end;
+    SQL := 'ALTER SYSTEM DISCONNECT SESSION ''' + ResultSet.GetString(FirstDbcIndex)+ ',' + ResultSet.GetString(FirstDbcIndex+1) + ''' IMMEDIATE';
+    ResultSet.Close;
+    ResultSet := Statement.ExecuteQuery('select * from blob_values');
+    Check(ResultSet.Next);
+    Check(ResultSet.Next);
+    longLob := ResultSet.GetBlob(FirstDbcIndex+1);
+    longLob.Open(lsmRead);
+    NCLOB := ResultSet.GetBlob(FirstDbcIndex+2);
+    NCLOB.Open(lsmRead);
+    //now kill connection
+    Connection.ExecuteImmediat(SQL, lcDisconnect);
+    Stream := NCLOB.GetStream;
+    CheckEquals(0, Stream.Size); //this shcould now also trigger the connlost error
+    Check(ResultSet.IsClosed, 'the resultset should be closed');
+    //now try to do "something" to get a communication error 3113
+    //the FOnConnectionLost handler should hide the exception
+    CheckFalse(ResultSet.Next);
+    Check(NCLOB.IsEmpty, 'no more data after connection lost error');
+    //Check(longLob.IsEmpty, 'no more data after connection lost error');
+    Check(FConnLostError <> nil, 'There is a connection lost error!');
+    Check(ResultSet.IsClosed, 'the resultset should be closed');
+    Check(Statement.IsClosed, 'the statement should be closed');
+    Check(CL_Connection.IsClosed);
+  finally
+    FreeAndnil(Stream);
+    FreeAndNil(FConnLostError);
   end;
 end;
 
