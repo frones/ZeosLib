@@ -464,6 +464,8 @@ procedure TZOracleConnection.ExecuteImmediat(const SQL: RawByteString;
 var Stmt: POCIStmt;
   Status: sword;
 begin
+  if IsClosed then
+    Open;
   if ConSettings.ClientCodePage.ID = OCI_UTF16ID
   then inherited ExecuteImmediat(SQL, LoggingCategory)
   else begin
@@ -1167,6 +1169,9 @@ procedure TZOracleConnection.ExecuteImmediat(const SQL: UnicodeString;
 var Stmt: POCIStmt;
   Status: sword;
 begin
+  if IsClosed then
+    Open;
+
   if ConSettings.ClientCodePage.ID <> OCI_UTF16ID
   then inherited ExecuteImmediat(SQL, LoggingCategory)
   else begin

@@ -2322,7 +2322,7 @@ begin
     1, 0, nil, nil, OCI_DESCRIBE_ONLY);
   if Status <> OCI_SUCCESS then
     FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
-      'OCIStmtExecute', Self);
+      Statement.GetSQL, Self);
   { Resize SQLVARS structure if needed }
   Status := FPlainDriver.OCIAttrGet(FStmtHandle, OCI_HTYPE_STMT, @ColumnCount,
     nil, OCI_ATTR_PARAM_COUNT, FOCIError);
