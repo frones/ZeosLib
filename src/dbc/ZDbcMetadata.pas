@@ -5220,12 +5220,14 @@ end;
   @return <code>True</code> if the string case sensitive.
 }
 function TZDefaultIdentifierConverter.IsCaseSensitive(const Value: string): Boolean;
+var DataBaseInfo: IZDataBaseInfo;
 begin
+  DataBaseInfo := Metadata.GetDatabaseInfo;
   case GetIdentifierCase(Value, True) of
-    icLower:   Result := Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers;
-    icUpper:   Result := Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers;
+    icLower:   Result := not DatabaseInfo.StoresMixedCaseIdentifiers and DatabaseInfo.StoresUpperCaseIdentifiers;
+    icUpper:   Result := not DatabaseInfo.StoresMixedCaseIdentifiers and DatabaseInfo.StoresLowerCaseIdentifiers;
     icSpecial: Result := True;
-    icMixed:   Result := not Metadata.GetDatabaseInfo.StoresMixedCaseIdentifiers;
+    icMixed:   Result := not DatabaseInfo.StoresMixedCaseIdentifiers;
     else Result := False;
   end;
 end;
