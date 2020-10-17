@@ -866,12 +866,12 @@ jmpW2A:             fRawTemp := PUnicodeToRaw(PWideChar(Result), Len, GetW2A2WCo
               Len := 8;
             end;
           vnuNegInt: begin
+              Len := NegOrdNVU2Raw(POCINumber(Result), FvnuInfo, PAnsiChar(fByteBuffer));
               Result := PAnsiChar(fByteBuffer);
-              Len := NegOrdNVU2Raw(POCINumber(Result), FvnuInfo, Result);
             end;
           vnuPosInt: begin
+              Len := PosOrdNVU2Raw(POCINumber(Result), FvnuInfo, PAnsiChar(fByteBuffer));
               Result := PAnsiChar(fByteBuffer);
-              Len := PosOrdNVU2Raw(POCINumber(Result), FvnuInfo, Result);
             end;
           vnuPosCurr: begin
               CurrToRaw(PosNvu2Curr(POCINumber(Result), FvnuInfo), PAnsiChar(fByteBuffer), @Result);
