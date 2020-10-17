@@ -2754,7 +2754,8 @@ begin
       ColumnInfo.dty := CurrentVar^.dty;
       {Reset the column type which can be changed by user before}
       if CurrentVar^.ColType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
-        if ConSettings.ClientCodePage.Encoding = ceUTF16
+        if (ConSettings.ClientCodePage.Encoding = ceUTF16) or
+           (CurrentVar^.ColType in [stUnicodeString, stUnicodeStream])
         then ColumnInfo.ColumnCodePage := zCP_UTF16
         else ColumnInfo.ColumnCodePage := FClientCP
       else if CurrentVar^.ColType in [stBytes, stBinaryStream]
