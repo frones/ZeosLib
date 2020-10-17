@@ -517,7 +517,7 @@ type
   protected
     FWeakRefOfBlob, FWeakRefOfClob: Pointer;
     FColumnCodePage, RawControlsCP: Word;
-    FIsUpdated: Boolean;
+    FIsUpdated, FReleased: Boolean;
     FLobStreamMode: TZLobStreamMode;
     FConSettings: PZConSettings;
     FOnUpdateHandler: TOnLobUpdate;
@@ -3383,13 +3383,19 @@ end;
 procedure TZAbstractResultSet.ReleaseImmediat(const Sender: IImmediatelyReleasable;
   var AError: EZSQLConnectionLost);
 var ImmediatelyReleasable: IImmediatelyReleasable;
+  i: Integer;
 begin
-  if not FClosed and Assigned(Statement){virtual RS ! } then
-  begin
+  if not FClosed and Assigned(Statement){virtual RS ! } then begin
+    FColumnsInfo.Clear;
     FClosed := True;
     FRowNo := 0;
     FLastRowNo := 0;
     LastWasNull := True;
+    for I := FOpenLobStreams.Count -1 downto 0 do
+      if (FOpenLobStreams[0] <> nil) and TObject(FOpenLobStreams[i]).GetInterface(IImmediatelyReleasable, ImmediatelyReleasable)
+        and (Sender <> ImmediatelyReleasable) then
+          ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+    FOpenLobStreams.Clear;
     if Supports(Statement, IImmediatelyReleasable, ImmediatelyReleasable) and
        (ImmediatelyReleasable <> Sender) then
       ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
@@ -4362,7 +4368,8 @@ destructor TZImmediatelyReleasableLobStream.Destroy;
 var Idx: Integer;
 begin
   Idx := FOpenLobStreams.IndexOf(Pointer(Self));
-  FOpenLobStreams.Delete(Idx);
+  if idx >= 0 then
+    FOpenLobStreams.Delete(Idx);
   inherited;
 end;
 
@@ -4381,8 +4388,17 @@ end;
 
 procedure TZImmediatelyReleasableLobStream.ReleaseImmediat(
   const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+var idx: Integer;
+  imm: IImmediatelyReleasable;
 begin
+  if FReleased then Exit;
   FReleased := True;
+  Idx := FOpenLobStreams.IndexOf(Pointer(Self));
+  if idx >= 0 then
+    FOpenLobStreams.Delete(Idx);
+  if (FOwnerLob <> nil) and (FOwnerLob.QueryInterface(IImmediatelyReleasable, Imm) = S_OK) and
+     (imm <> Sender) then
+    Imm.ReleaseImmediat(Sender, AError);
   if (FOwner <> Sender) and (FOwner <> nil) then
      FOwner.ReleaseImmediat(Sender, AError);
 end;

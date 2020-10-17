@@ -2913,7 +2913,7 @@ function TZAbstractPreparedStatement.GetUnicodeString(
 begin
   {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
   Result := fOutParamResultSet.GetUnicodeString(ParamterIndex2ResultSetIndex(ParameterIndex));
-  if (BindList.ParamTypes[ParameterIndex] = pctInOut) then
+  if (BindList.ParamTypes[ParameterIndex] = pctInOut) and not FSupportsBidirectionalParamIO then
     IZPreparedStatement(FWeakIZPreparedStatementPtr).SetUnicodeString(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result)
 end;
 
@@ -2923,7 +2923,7 @@ function TZAbstractPreparedStatement.GetUTF8String(
 begin
   {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
   Result := fOutParamResultSet.GetUTF8String(ParamterIndex2ResultSetIndex(ParameterIndex));
-  if (BindList.ParamTypes[ParameterIndex] = pctInOut) then
+  if (BindList.ParamTypes[ParameterIndex] = pctInOut) and not FSupportsBidirectionalParamIO then
     IZPreparedStatement(FWeakIZPreparedStatementPtr).SetUTF8String(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result)
 end;
 {$ENDIF NO_UTF8STRING}
@@ -3009,7 +3009,7 @@ function TZAbstractPreparedStatement.IsNull(ParameterIndex: Integer): Boolean;
 begin
   {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
   Result := fOutParamResultSet.IsNull(ParamterIndex2ResultSetIndex(ParameterIndex));
-  if Result and (BindList.ParamTypes[ParameterIndex] = pctInOut) then
+  if Result and (BindList.ParamTypes[ParameterIndex] = pctInOut) and not FSupportsBidirectionalParamIO then
     IZPreparedStatement(FWeakIZPreparedStatementPtr).SetNull(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BindList.SQLTypes[ParameterIndex]);
 end;
 
@@ -3139,6 +3139,7 @@ begin
     end;
     FOutParamResultSet := nil;
   end;
+  SetParamCount(0);
   inherited ReleaseImmediat(Sender, AError);
 end;
 

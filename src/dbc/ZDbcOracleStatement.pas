@@ -99,6 +99,19 @@ type
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
+    /// <summary>Releases all driver handles and set the object in a closed
+    ///  Zombi mode waiting for destruction. Each known supplementary object,
+    ///  supporting this interface, gets called too. This may be a recursive
+    ///  call from parant to childs or vice vera. So finally all resources
+    ///  to the servers are released. This method is triggered by a connecton
+    ///  loss. Don't use it by hand except you know what you are doing.</summary>
+    /// <param>"Sender" the object that did notice the connection lost.</param>
+    /// <param>"AError" a reference to an EZSQLConnectionLost error.
+    ///  You may free and nil the error object so no Error is thrown by the
+    ///  generating method. So we start from the premisse you have your own
+    ///  error handling in any kind.</param>
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
+      var AError: EZSQLConnectionLost); override;
   end;
 
   {** Implements Prepared SQL Statement for Oracle }
@@ -340,6 +353,7 @@ begin
   FRowPrefetchMemory := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_RowPrefetchSize, ''), 131072);
   FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_InternalBufSize, ''), 131072);
   FCharSetID := ConSettings.ClientCodePage.ID;
+  FSupportsBidirectionalParamIO := True;
 end;
 
 function TZAbstractOracleStatement.CreateResultSet: IZResultSet;
@@ -527,8 +541,14 @@ begin
   OCIBind.dty := SQLType2OCIType[SQLType];
 
   {check if the parameter type was registered before -> they should be valid only }
-  if (BindList[Index].ParamType <> pctUnknown) and (SQLType <> BindList[Index].SQLType) then
-    raise EZSQLException.Create(SUnKnownParamDataType);
+  if Boolean(BindList[Index].ParamType) then
+    case SQLType of
+      stUnicodeString: ;//do nothing
+      stString: if FCharSetID = OCI_UTF16ID then
+        SQLType := stUnicodeString;
+      else if (SQLType <> BindList[Index].SQLType) then
+        raise EZSQLException.Create(SUnKnownParamDataType);
+    end;
   if (SQLType in [stLong, stULong]) and not FCanBindInt64 then begin
     OCIBind.dty := SQLT_VNU;
     OCIBind.value_sz := SizeOf(TOCINumber);
@@ -658,6 +678,13 @@ begin
   FOracleConnection := nil;
 end;
 
+procedure TZAbstractOracleStatement.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+begin
+  inherited ReleaseImmediat(Sender, AError);
+  Unprepare;
+end;
+
 {**
   Sets a new parameter capacity and initializes the buffers.
   @param NewParamCount a new parameters count.
@@ -699,7 +726,6 @@ begin
   try
     inherited Unprepare;
   finally
-
     if FOCIStmt <> nil then begin
       if FServerStmtCache
       then Status := FPlainDriver.OCIStmtRelease(FOCIStmt, FOCIError, nil, 0, OCI_STMTCACHE_DELETE)
@@ -941,12 +967,17 @@ begin
   else SQLType := stString;
   if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.value_sz < Len+SizeOf(Integer)) or (Bind.curelen <> 1) then
     InitBuffer(SQLType, Bind, Index, 1, Len);
-  if Bind.dty = SQLT_LVC then begin
-    POCILong(Bind.valuep).Len := Len;
-    if Len > 0 then
-      Move(Buf^, POCILong(Bind.valuep).data[0], Len);
-    Bind.indp[0] := 0;
-  end else if Bind.dty = SQLT_CLOB then begin
+  if Bind.dty = SQLT_LVC then
+    if SQLType = stUnicodeString then
+      POCILong(Bind.valuep).Len := ZEncoding.PRaw2PUnicodeBuf(Buf, @POCILong(Bind.valuep).data[0],
+        Len, ZDbcUtils.GetW2A2WConversionCodePage(ConSettings))
+    else begin
+      POCILong(Bind.valuep).Len := Len;
+      if Len > 0 then
+        Move(Buf^, POCILong(Bind.valuep).data[0], Len);
+      Bind.indp[0] := 0;
+    end
+  else if Bind.dty = SQLT_CLOB then begin
     Lob := TZOracleClob.Create(FOracleConnection, nil, SQLCS_IMPLICIT, FClientCP, FOpenLobStreams);
     if Len > 0 then
       Lob.SetPAnsiChar(Buf, FClientCP, Len);
@@ -2090,8 +2121,9 @@ begin
   if Boolean(BindList[Index].ParamType) and Boolean(BindList[Index].SQLType)
   then SQLType := BindList[Index].SQLType
   else SQLType := stUnicodeString;
-  if SQLType = stString then
+  if (SQLType = stString) then
     SQLType := stUnicodeString;
+
   ByteSize := WLen shl 1;
   if (BindList[Index].SQLType <> SQLType) or (Bind.valuep = nil) or (Bind.curelen <> 1) or (Bind.value_sz < ByteSize +SizeOf(Integer) ) then
     InitBuffer(SQLType, Bind, Index, 1, ByteSize);
@@ -2736,6 +2768,8 @@ var
   i, j: Integer;
 begin
   CheckParameterIndex(ParameterIndex);
+  if SQLType = stString then
+    SQLType := stUnicodeString;
   inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name,
     PrecisionOrSize, Scale);
   {$R-}

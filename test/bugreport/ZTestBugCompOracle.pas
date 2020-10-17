@@ -82,6 +82,7 @@ type
     procedure TestOutParam1;
     procedure TestOutParam2;
     procedure TestDuplicateColumnNames;
+    procedure TestForum_Topic_128125;
   end;
 
 {$ENDIF ZEOS_DISABLE_ORACLE}
@@ -212,6 +213,51 @@ begin
   end;
 end;
 
+//see https://zeoslib.sourceforge.io/viewtopic.php?f=50&t=128125
+procedure ZTestCompOracleBugReport.TestForum_Topic_128125;
+var Query: TZQuery;
+    Param: TParam;
+begin
+  Query := CreateQuery;
+  Check(Query <> nil);
+  try
+    Query.SQL.Text := 'BEGIN :ParamOut ::= ''Input: ''|| :ParamIn; END;';
+    Param := Query.ParamByName('ParamIn');
+    Param.ParamType := ptInput;
+    Param.AsString := 'Testing';  // Sets datatype to ftWideString which works
+    {$IFDEF UNICODE}//non unicode compiler clearing the result!!
+    Param.DataType := ftString;   // UnComment this to see the error.
+    {$ENDIF}
+    Param := Query.ParamByName('ParamOut');
+    Param.ParamType := ptInputOutput;
+    Param.DataType := ftString;       // Correct output
+
+    Query.ExecSQL;
+
+    CheckEquals('Input: Testing', Query.Params[0].AsString, 'the value of param 0');
+    CheckEquals('Testing', Query.Params[1].AsString, 'the value of param 1');
+
+    Param := Query.ParamByName('ParamIn');
+    Param.ParamType := ptInput;
+    {$IFNDEF UNICODE}//non unicode compiler clearing the result!!
+    Param.DataType := ftWideString;
+    {$ENDIF}
+    Param.AsString := 'Testing';  // Sets datatype to ftWideString which works
+    //Param.DataType := ftWideString;
+
+    Param := Query.ParamByName('ParamOut');
+    Param.ParamType := ptInputOutput;
+    Param.DataType := ftWideString;   // Looks like utf-16 as ansi.
+
+    Query.ExecSQL;
+
+    CheckEquals('Input: Testing', Query.Params[0].AsString, 'the value of param 0');
+    CheckEquals('Testing', Query.Params[1].AsString, 'the value of param 1');
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
 procedure ZTestCompOracleBugReport.TestNCLOBValues;
 const
   row_id = 1000;
@@ -254,6 +300,7 @@ begin
     Query.Insert;
     Query.FieldByName('b_id').AsInteger := row_id;
     Query.FieldByName('b_long').AsString := 'aaa';
+    CheckEquals('aaa', Query.FieldByName('b_long').AsString);
     Query.FieldByName('b_nclob').{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := testString+testString;
     Query.FieldByName('b_clob').{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}AsWideString{$ELSE}Value{$ENDIF} := testString+testString+testString;
     (Query.FieldByName('b_blob') as TBlobField).LoadFromStream(BinFileStream);

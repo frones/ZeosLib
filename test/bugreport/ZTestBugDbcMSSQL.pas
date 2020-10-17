@@ -279,7 +279,7 @@ begin
         Check(RS.Next, 'there is a row in the tmp table');
         MetaData := Rs.GetMetadata;
         try
-          CheckEquals(stBigDecimal, Rs.GetMetadata.GetColumnType(FirstDbcIndex), 'the columntye');
+          CheckEquals(stBigDecimal, Metadata.GetColumnType(FirstDbcIndex), 'the columntye');
         finally
           MetaData := nil;
         end;

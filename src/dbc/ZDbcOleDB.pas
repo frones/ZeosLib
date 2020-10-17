@@ -113,7 +113,7 @@ type
     procedure AfterConstruction; override;
     destructor Destroy; override;
   public
-    function CreateStatementWithParams(Info: TStrings): IZStatement;
+    function CreateStatementWithParams(Params: TStrings): IZStatement;
     /// <summary>Creates a <code>CallableStatement</code> object for calling
     ///  database stored procedures. The <code>CallableStatement</code> object
     ///  provides methods for setting up its IN and OUT parameters, and methods
@@ -624,10 +624,10 @@ end;
   @return a new Statement object
 }
 function TZOleDBConnection.CreateStatementWithParams(
-  Info: TStrings): IZStatement;
+  Params: TStrings): IZStatement;
 begin
   if Closed then Open;
-  Result := TZOleDBPreparedStatement.Create(Self, '', Info);
+  Result := TZOleDBPreparedStatement.Create(Self, '', Params);
 end;
 
 {**

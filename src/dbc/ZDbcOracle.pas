@@ -125,6 +125,7 @@ type
     procedure ExecuteImmediat(const SQL: RawByteString; var Stmt: POCIStmt; LoggingCategory: TZLoggingCategory); overload;
     procedure ExecuteImmediat(const SQL: UnicodeString; var Stmt: POCIStmt; LoggingCategory: TZLoggingCategory); overload;
     procedure InternalSetCatalog(const Catalog: String);
+    procedure CleanupOnFail;
   protected
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
@@ -464,6 +465,8 @@ procedure TZOracleConnection.ExecuteImmediat(const SQL: RawByteString;
 var Stmt: POCIStmt;
   Status: sword;
 begin
+  if IsClosed then
+    Open;
   if ConSettings.ClientCodePage.ID = OCI_UTF16ID
   then inherited ExecuteImmediat(SQL, LoggingCategory)
   else begin
@@ -530,19 +533,6 @@ var
   {$ENDIF}
   S: String;
   mode: ub4;
-  procedure CleanupOnFail;
-  begin
-    FPlainDriver.OCIHandleFree(FDescibeHandle, OCI_HTYPE_DESCRIBE);
-    FDescibeHandle := nil;
-    FPlainDriver.OCIHandleFree(FContextHandle, OCI_HTYPE_SVCCTX);
-    FContextHandle := nil;
-    FPlainDriver.OCIHandleFree(FErrorHandle, OCI_HTYPE_ERROR);
-    FErrorHandle := nil;
-    FPlainDriver.OCIHandleFree(FServerHandle, OCI_HTYPE_SERVER);
-    FServerHandle := nil;
-    FPlainDriver.OCIHandleFree(FOCIEnv, OCI_HTYPE_ENV);
-    FOCIEnv := nil;
-  end;
   procedure GetRawCharacterSet;
   {$IFNDEF UNICODE}
   var P: PWidechar;
@@ -760,6 +750,20 @@ begin
   FBlobPrefetchSize := StrToIntDef(Info.Values[ConnProps_BlobPrefetchSize], 8*1024);
 end;
 
+procedure TZOracleConnection.CleanupOnFail;
+begin
+  FPlainDriver.OCIHandleFree(FDescibeHandle, OCI_HTYPE_DESCRIBE);
+  FDescibeHandle := nil;
+  FPlainDriver.OCIHandleFree(FContextHandle, OCI_HTYPE_SVCCTX);
+  FContextHandle := nil;
+  FPlainDriver.OCIHandleFree(FErrorHandle, OCI_HTYPE_ERROR);
+  FErrorHandle := nil;
+  FPlainDriver.OCIHandleFree(FServerHandle, OCI_HTYPE_SERVER);
+  FServerHandle := nil;
+  FPlainDriver.OCIHandleFree(FOCIEnv, OCI_HTYPE_ENV);
+  FOCIEnv := nil;
+end;
+
 procedure TZOracleConnection.ClearWarnings;
 begin
    FreeAndNil(fWarning);
@@ -800,6 +804,7 @@ begin
       fGlobalTransactions[b].Clear;
     end;
   inherited ReleaseImmediat(Sender, AError);
+  CleanupOnFail;
 end;
 
 procedure TZOracleConnection.ReleaseTransaction(
@@ -1167,6 +1172,9 @@ procedure TZOracleConnection.ExecuteImmediat(const SQL: UnicodeString;
 var Stmt: POCIStmt;
   Status: sword;
 begin
+  if IsClosed then
+    Open;
+
   if ConSettings.ClientCodePage.ID <> OCI_UTF16ID
   then inherited ExecuteImmediat(SQL, LoggingCategory)
   else begin
@@ -1326,7 +1334,8 @@ JmpConcat:
             then WriterW.AddLineFeedIfNotEmpty({$IFDEF UNICODE}ErrorMessage{$ELSE}ErrorMessageW{$ENDIF})
             else begin
               FirstErrorCode := ErrorCode;
-              if (FirstErrorCode = 3314) and (LogCategory <> lcConnect) then //disconnect
+              if (FirstErrorCode = ORA_03113_end_of_file_on_communication_channel) or
+                 (FirstErrorCode = ORA_03114_not_connected_to_ORACLE) and (LogCategory <> lcConnect) then //disconnect
                 AExceptionClass := EZSQLConnectionLost;
             end;
             L := {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(PWideChar(@fByteBuffer[0]));
@@ -1356,7 +1365,8 @@ JmpConcat:
             then WriterA.AddLineFeedIfNotEmpty({$IFNDEF UNICODE}ErrorMessage{$ELSE}ErrorMessageA{$ENDIF})
             else begin
               FirstErrorCode := ErrorCode;
-              if (FirstErrorCode = 3314) and (LogCategory <> lcConnect) then //disconnect
+              if (FirstErrorCode = ORA_03113_end_of_file_on_communication_channel) or
+                 ((FirstErrorCode = ORA_03114_not_connected_to_ORACLE) and (LogCategory <> lcConnect)) then //disconnect
                 AExceptionClass := EZSQLConnectionLost;
             end;
             L := StrLen(PAnsiChar(@fByteBuffer[0]));
@@ -1597,7 +1607,8 @@ begin
   fSavepoints.Clear;
   FOCITrans := nil;
   FStarted := False;
-  fBranches.Clear;
+  if fBranches <> nil then
+    fBranches.Clear;
   if (FOwner <> nil) then begin
     FOwner.QueryInterface(IImmediatelyReleasable, imm);
     if (imm <> Sender) then
