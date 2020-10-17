@@ -141,6 +141,8 @@ begin
   try
     Query.SQL.Text := 'select * from ADQA_All_types';
     Query.Open;
+    CheckEquals(ftVarBytes, Query.FieldByName('tvarbinary').DataType, 'DataType of tvarbinary-field');
+    CheckEquals(ftBytes, Query.FieldByName('tbinary').DataType, 'DataType of tbinary-field');
     Query.Close;
   finally
     Query.Free;
