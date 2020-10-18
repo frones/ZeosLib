@@ -1491,28 +1491,27 @@ end;
 { TZOracleTransaction }
 
 procedure TZOracleTransaction.BeforeDestruction;
-var Status: sword;
 begin
   inherited BeforeDestruction;
-  if FOCITrans <> nil then begin
-    try
-      fSavepoints.Clear;
-      if FStarted then
-        RollBack;
-    finally
-      if FOCITrans <> nil then begin
-        Status := FOwner.FPlainDriver.OCIHandleFree(FOCITrans, OCI_HTYPE_TRANS);
-        FOCITrans := nil;
-        if Status <> OCI_SUCCESS then
-          FOwner.HandleErrorOrWarning(FOwner.FErrorHandle, Status, lcTransaction, 'OCIHandleFree', Self);
-      end;
-    end;
-  end;
+  Close;
   fSavepoints.Free;
 end;
 
 procedure TZOracleTransaction.Close;
+var Status: sword;
 begin
+  if FOCITrans <> nil then try
+    fSavepoints.Clear;
+    if FStarted then
+      RollBack;
+  finally
+    if FOCITrans <> nil then begin
+      Status := FOwner.FPlainDriver.OCIHandleFree(FOCITrans, OCI_HTYPE_TRANS);
+      FOCITrans := nil;
+      if (Status <> OCI_SUCCESS) and (FRefCount > 0) then
+        FOwner.HandleErrorOrWarning(FOwner.FErrorHandle, Status, lcTransaction, 'OCIHandleFree', Self);
+    end;
+  end;
 end;
 
 procedure TZOracleTransaction.Commit;
