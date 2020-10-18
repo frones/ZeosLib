@@ -206,6 +206,11 @@ type
 
     procedure Open; override;
 
+    /// <summary>Puts this connection in read-only mode as a hint to enable
+    ///  database optimizations. Note: This method cannot be called while in the
+    ///  middle of a transaction.</summary>
+    /// <param>"value" true enables read-only mode; false disables read-only
+    ///  mode.</param>
     procedure SetReadOnly(Value: Boolean); override;
 
     procedure SetCatalog(const Value: string); override;

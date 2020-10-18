@@ -122,6 +122,11 @@ type
     destructor Destroy; override;
     procedure AfterConstruction; override;
 
+    /// <summary>Puts this connection in read-only mode as a hint to enable
+    ///  database optimizations. Note: This method cannot be called while in the
+    ///  middle of a transaction.</summary>
+    /// <param>"value" true enables read-only mode; false disables read-only
+    ///  mode.</param>
     procedure SetReadOnly(Value: Boolean); override;
     function GetCatalog: string; override;
     procedure SetCatalog(const Catalog: string); override;
@@ -781,16 +786,6 @@ begin
   fLastWarning := Warning;
 end;
 
-{**
-  Puts this connection in read-only mode as a hint to enable
-  database optimizations.
-
-  <P><B>Note:</B> This method cannot be called while in the
-  middle of a transaction.
-
-  @param readOnly true enables read-only mode; false disables
-    read-only mode.
-}
 const AccessMode: array[Boolean] of Pointer = (SQL_MODE_READ_WRITE, SQL_MODE_READ_ONLY);
 procedure TZAbstractODBCConnection.SetReadOnly(Value: Boolean);
 var Ret: SQLRETURN;

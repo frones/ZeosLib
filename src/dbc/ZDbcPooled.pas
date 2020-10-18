@@ -233,6 +233,11 @@ type
     function GetParameters: TStrings;
     function GetClientVersion: Integer;
     function GetHostVersion: Integer;
+    /// <summary>Puts this connection in read-only mode as a hint to enable
+    ///  database optimizations. Note: This method cannot be called while in the
+    ///  middle of a transaction.</summary>
+    /// <param>"value" true enables read-only mode; false disables read-only
+    ///  mode.</param>
     procedure SetReadOnly(Value: Boolean);
     function IsReadOnly: Boolean;
     procedure SetCatalog(const Value: string);

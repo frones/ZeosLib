@@ -587,10 +587,16 @@ type
     /// <returns><c>True</c> if the transaction is in autocommit mode;
     ///  <c>False</c> otherwise.</returns>
     function GetAutoCommit: Boolean;
-    /// <summary>Gets the current readonly-commit state. See setReadonly.</summary>
+    /// <summary>Check if the current transaction is readonly. See setReadonly.
+    ///  </summary>
     /// <returns><c>True</c> if the transaction is readonly; <c>False</c>
     ///  otherwise.</returns>
     function IsReadOnly: Boolean;
+    /// <summary>Puts this transaction in read-only mode as a hint to enable
+    ///  database optimizations. Note: This method cannot be called while in the
+    ///  middle of a transaction.</summary>
+    /// <param>"value" true enables read-only mode; false disables read-only
+    ///  mode.</param>
     procedure SetReadOnly(Value: Boolean);
     procedure Close;
     function IsClosed: Boolean;
@@ -735,7 +741,16 @@ type
     function GetClientVersion: Integer;
     function GetHostVersion: Integer;
 
+    /// <summary>Puts this connection in read-only mode as a hint to enable
+    ///  database optimizations. Note: This method cannot be called while in the
+    ///  middle of a transaction.</summary>
+    /// <param>"value" true enables read-only mode; false disables read-only
+    ///  mode.</param>
     procedure SetReadOnly(Value: Boolean);
+    /// <summary>Check if the current conenction is readonly. See setReadonly.
+    ///  </summary>
+    /// <returns><c>True</c> if the conenction is readonly; <c>False</c>
+    ///  otherwise.</returns>
     function IsReadOnly: Boolean;
 
     procedure SetCatalog(const Value: string);
@@ -1973,6 +1988,11 @@ type
     function GetColumnType(ColumnIndex: Integer): TZSQLType;
     function GetColumnTypeName(ColumnIndex: Integer): string;
     function IsReadOnly(ColumnIndex: Integer): Boolean;
+    /// <summary>Set the readonly state of a field. The value will be ignored
+    ///  if the field is not writable.</summary>
+    /// <param>"ColumnIndex" the columnnumber of the field.</param>
+    /// <param>"Value" if <c>true</c> then the field will be ignored on
+    ///  generating the dml's.</param>
     procedure SetReadOnly(ColumnIndex: Integer; Value: Boolean);
     function IsWritable(ColumnIndex: Integer): Boolean;
     function IsDefinitelyWritable(ColumnIndex: Integer): Boolean;

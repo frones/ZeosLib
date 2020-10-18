@@ -315,7 +315,16 @@ type
     function GetHostVersion: Integer; virtual;
     {END ADDED by fduenas 15-06-2006}
     function GetDescription: String;
+    /// <summary>Puts this connection in read-only mode as a hint to enable
+    ///  database optimizations. Note: This method cannot be called while in the
+    ///  middle of a transaction.</summary>
+    /// <param>"value" true enables read-only mode; false disables read-only
+    ///  mode.</param>
     procedure SetReadOnly(Value: Boolean); virtual;
+    /// <summary>Check if the current conenction is readonly. See setReadonly.
+    ///  </summary>
+    /// <returns><c>True</c> if the conenction is readonly; <c>False</c>
+    ///  otherwise.</returns>
     function IsReadOnly: Boolean; virtual;
     function GetURL: String;
 
@@ -1497,25 +1506,11 @@ begin
   fRaiseWarnings := Value;
 end;
 
-{**
-  Puts this connection in read-only mode as a hint to enable
-  database optimizations.
-
-  <P><B>Note:</B> This method cannot be called while in the
-  middle of a transaction.
-
-  @param readOnly true enables read-only mode; false disables
-    read-only mode.
-}
 procedure TZAbstractDbcConnection.SetReadOnly(Value: Boolean);
 begin
   FReadOnly := Value;
 end;
 
-{**
-  Tests to see if the connection is in read-only mode.
-  @return true if connection is read-only and false otherwise
-}
 function TZAbstractDbcConnection.IsReadOnly: Boolean;
 begin
   Result := FReadOnly;

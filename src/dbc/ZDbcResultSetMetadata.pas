@@ -189,6 +189,11 @@ type
     function GetColumnType(ColumnIndex: Integer): TZSQLType; virtual;
     function GetColumnTypeName(ColumnIndex: Integer): string; virtual;
     function IsReadOnly(ColumnIndex: Integer): Boolean; virtual;
+    /// <summary>Set the readonly state of a field. The value will be ignored
+    ///  if the field is not writable.</summary>
+    /// <param>"ColumnIndex" the columnnumber of the field.</param>
+    /// <param>"Value" if <c>true</c> then the field will be ignored on
+    ///  generating the dml's.</param>
     procedure SetReadOnly(ColumnIndex: Integer; Value: Boolean); virtual;
     function IsWritable(ColumnIndex: Integer): Boolean; virtual;
     function IsDefinitelyWritable(ColumnIndex: Integer): Boolean; virtual;
