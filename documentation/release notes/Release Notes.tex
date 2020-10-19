@@ -30,7 +30,7 @@
 
 \pagestyle{plain}
 
-\title{Zeos 7.2.6 Release Notes}
+\title{Zeos 7.2.8 Release Notes}
 \author{Jan Baumgarten}
 \date{\today}
 %\overfullrule=2mm
@@ -40,12 +40,92 @@
 \maketitle
 
 \section*{Zeos 7.2}
-The Zeos Team is proud to announce the availability of Zeos 7.2.6 as a stable release.
+The Zeos Team is proud to announce the availability of Zeos 7.2.8 as a stable release.
 This is the newest stable version of Zeos.
 It deprecates Zeos 7.1, and all prior versions of Zeos 7.2 which will not be supported anymore.
 Zeos 7.2 has seen tons of bug fixes and improvements.
 We urge all people still using older versions of Zeos to upgrade.
 If you have any problems with Zeos 7.2, please get in contact with us on the forums (\url{http://zeoslib.sourceforge.net}) or on the bugtracker (\url{https://sourceforge.net/p/zeoslib/tickets/}).
+
+\chapter{Zeos 7.2.8 Release Notes}
+
+\section{General}
+\label{sec:Rev8_General}
+
+\subsection{Sequence support for several servers and protocols}
+\label{sec:Rev8_General_Sequences}
+Zeos now implements sequence support for the following servers:
+\begin{itemize}
+\item Adaptive Server Anywhere
+\item Adaptive Server Enterprise
+\item Cubrid
+\item DB2
+\item Informix
+\item Microsoft SQL Server
+\item Oracle
+\end{itemize}
+For Servers that don't have their own protocols in Zeos Sequences are supported using the ADO bridge.
+
+\section{MySQL / MariaDB}
+\subsection{Fixes}
+The following improvements were done for the MySQL / MariaDB driver:
+\begin{itemize}
+\item Zeos now supports new options, introduced in MySQL 8, like MYSQL\_\-OPT\_\-GET\_\-SERVER\_\-PUBLIC\_\-KEY.
+\item Zeos can now distinguish between MySQL and MariaDB. Users that need this possibility, should check out TZMySQL\-Database\-Info.\-Get\-Database\-Product\-Name on the DBC layer.
+\end{itemize}
+
+\subsection{Known problems that will not get fixed}
+Zeos 7.2 only supports the datetime type with up to three decimal places.
+So datetime(4), datetime(5) and datetime(6) are not supported by Zeos 7.2.
+Support for these is implemented in the Zeos 8.0 Beta.
+
+\section{PostgreSQL}
+Zeos 7.2 now supports procedures as introduced with PostgreSQL 11.
+They get used in the same way as functions get used, namely TZStoredProc on the component layer and IZCallableStatement on the DBC layer.
+
+\section{SQLite}
+
+\subsection{possibly breaking changes}
+
+The sqlite driver now understands the UNSIGNED keyword in column declarations.
+Until Zeos 7.2.6 this keword was ignored and all columns were unsigned.
+So columns might change type now, i.e. columns of type stShot (Short Int) get stByte (Byte).
+
+\subsection{other changes}
+\begin{itemize}
+\item The sqlite driver now supports using wildcards in GetColumns. This improves the possibilities for fetching metadata using TZSqlMetadata.
+\item The sqlite driver now supports using enable\_load\_extension and load\_extension.
+\item The sqlite driver now is thread safe in the same way that other drivers are thread safe: One connection and all components that connect to it must be in the same thread. Use one connection per thread.
+\end{itemize}
+
+\section{Firebird / Interbase}
+\begin{itemize}
+\item Starting with Firebird 3.0 Firebird supports SQL statements with up to 10MB. Zeos now can use these statements. They may not contain the \#0 character because it gets used as a terminator there.
+\item Zeos has seen some changes to make it work better on Interbase servers.
+\item Zeos 7.2 is now prepared to meet Firebird 4.0 in the wild. New data types are not supported. Zeos instructs Firebird 4.0 to enable legacy translation on these data types. If you neeed these new data types, please switch to Zeos 8.0.
+\end{itemize}
+
+\section{dblib (MS SQL Server / Adaptive Server Enterprise)}
+
+\subsection{Fixes}
+
+\begin{itemize}
+\item Zeos now has a correct implementation of dbsettime. Using this function users can set a timeout for the execution of SQL statements.
+\item Zeos has seen some changes that make it compatible with Microsoft SQL Server 2000 again.
+\end{itemize}
+
+\subsection{Known Problems}
+
+The Zeos team has seen lockups with Microsoft SQL Server 2000 when a wrong user password was supplied.
+This was seen in conjunction with FreeTDS.
+We are not sure wether this is a bug in MS SQL Server 2000, FreeTDS or Zeos.
+Please migrate to newer versions if at all possible.
+We didn't see this problem there.
+
+\section{Oracle}
+
+Zeos now has a new parameter OCIAuthenticateMode to manipulate the OCI authentication mode.
+For more information see \url{https://docs.oracle.com/cd/B10501_01/appdev.920/a96584/oci15r13.htm}.
 
 \chapter{Zeos 7.2.6 Release Notes}
 
