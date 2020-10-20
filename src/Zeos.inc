@@ -100,6 +100,7 @@
   {$IFEND}
   {$DEFINE DELPHI}
   // Defines that go for ALL still supported Delphi's   (usually means they were under ifndef fpc)
+  {$DEFINE WITH_SqlTimSt_UNIT}            //Unit SqlTimSt.pas is available
   {$DEFINE WITH_SBCDOVERFLOW}             //DBConsts have error message SBcdOverflow
   {$DEFINE WITH_SInvalidBcdValue}         //DBConsts have error message SInvalidBcdValue
   {$DEFINE WITH_DBTABLES}                 //Have the BDE DBTables Unit
@@ -239,6 +240,7 @@
                   {$DEFINE WITH_TOBJECTLIST_REQUIRES_CLASSES}       //TObjectList.Remove, add ... are inlined need unit classes
 
                   {$IF CompilerVersion >= 23} //Delphi XE2+
+                    {$DEFINE WITH_ReturnAddress} //Exports ReturnAddress for error addressing
                     {$IFNDEF MSWINDOWS}
                       {$DEFINE HAVE_GetProcAddressW} //GetProcAddress uses a PWideChar 
                     {$ENDIF}
