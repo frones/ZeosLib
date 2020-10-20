@@ -59,7 +59,7 @@ uses
 {$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
-  Variants, Types, SysUtils, Classes, FMTBcd, {$IFNDEF FPC}SqlTimSt,{$ENDIF}
+  Variants, Types, SysUtils, Classes, FMTBcd, {$IFDEF WITH_SqlTimSt_UNIT}}SqlTimSt,{$ENDIF}
   TypInfo, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
   ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings, ZCompatibility, ZExpression,
   ZDbcCache, ZDbcCachedResultSet, ZDatasetUtils, ZClasses
