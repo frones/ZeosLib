@@ -821,10 +821,6 @@ type
     /// <param>"Msg" the error message.</param>
     /// <param>"Data" the error data.</param>
     class procedure Error(const Msg: string; Data: NativeInt); overload; virtual;
-    /// <summary>Raises and EListError.</summary>
-    /// <param>"Msg" a resourcestring rec referenc.</param>
-    /// <param>"Data" the error data.</param>
-    class procedure Error(Msg: PResStringRec; Data: NativeInt); overload;
   public
     /// <summary>Create this object and assigns main properties.</summary>
     /// <param>"ElementSize" a size of the element hold in array.</param>
@@ -836,7 +832,7 @@ type
     destructor Destroy; override;
   public
     /// <summary>Clears all elements and frees the memory.</summary>
-    procedure Clear;
+    procedure Clear; virtual;
     /// <summary>Delete an element on given position.</summary>
     /// <param>"Index" the position of the element to be removed.</param>
     procedure Delete(Index: NativeInt);
@@ -936,7 +932,7 @@ type
     property Capacity: Integer read FCapacity write SetCapacity;
   {$ENDIF}
     /// <summary>sorts this list</summary>
-    /// <param>"Compare" a comparison function.</param>
+    /// <param>"Compare" a object comparison function.</param>
     procedure Sort(Compare: TZListSortCompare);
   end;
 
@@ -2661,20 +2657,6 @@ end;
   {$O-}
 {$ENDIF}
 {$IFEND}
-class procedure TZCustomElementList.Error(Msg: PResStringRec; Data: NativeInt);
-begin
-  {$IFDEF WITH_ReturnAddress}
-  raise EListError.CreateFmt(LoadResString(Msg), [Data]) at ReturnAddress;
-  {$ELSE}
-    {$IFDEF FPC}
-  raise EListError.CreateFmt(LoadResString(Msg), [Data]) at get_caller_addr(get_frame);
-    {$ELSE}
-  raise EListError.CreateFmt(LoadResString(Msg), [Data]) at
-    PPointer(NativeInt(@Msg) + SizeOf(Msg) + SizeOf(Self) + SizeOf(Pointer))^;
-    {$ENDIF}
-  {$ENDIF}
-end;
-
 class procedure TZCustomElementList.Error(const Msg: string; Data: NativeInt);
 begin
   {$IFDEF WITH_ReturnAddress}
@@ -2699,7 +2681,7 @@ end;
 function TZCustomElementList.Get(Index: NativeInt): Pointer;
 begin
   if (Index<0) or (Index >= FCount) then
-    Error(@SListIndexError, Index);
+    Error(SListIndexError, Index);
   Result := Pointer(NativeUInt(FElements)+(NativeUInt(Index)*FElementSize));
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
@@ -2754,6 +2736,8 @@ begin
     Error(@SListCapacityError, NewCapacity);
   {$ENDIF DISABLE_CHECKING}
   if NewCapacity <> FCapacity then begin
+    if NewCapacity < FCount then
+      SetCount(NewCapacity);
     ReallocMem(FElements, NewCapacity * NativeInt(FElementSize*2));
     if FElementNeedsFinalize and (NewCapacity>FCapacity) then begin
       P := Pointer(NativeUInt(FElements)+(NativeUInt(FCount)*FElementSize));
