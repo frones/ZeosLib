@@ -188,6 +188,11 @@ type
     ///  exception of TRANSACTION_NONE; some databases may not support other
     ///  values. See DatabaseInfo.SupportsTransactionIsolationLevel</param>
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
+    /// <summary>Puts this connection in read-only mode as a hint to enable
+    ///  database optimizations. Note: This method cannot be called while in the
+    ///  middle of a transaction.</summary>
+    /// <param>"value" true enables read-only mode; false disables read-only
+    ///  mode.</param>
     procedure SetReadOnly(Value: Boolean); override;
     /// <summary>Sets this connection's auto-commit mode. If a connection is in
     ///  auto-commit mode, then all its SQL statements will be executed and
@@ -234,7 +239,8 @@ type
   End;
 
   {** EH: implements a IB/FB transaction }
-  TZInterbaseFirebirdTransaction = class(TZImmediatelyReleasableObject, IImmediatelyReleasable)
+  TZInterbaseFirebirdTransaction = class(TZImmediatelyReleasableObject,
+    IImmediatelyReleasable)
   protected
     FWeakIZTransactionPtr: Pointer;
     fSavepoints: TStrings;
@@ -265,6 +271,9 @@ type
     procedure RegisterOpenUnCachedLob(const Lob: IZlob);
     procedure DeRegisterOpenCursor(const CursorRS: IZResultSet);
     procedure DeRegisterOpenUnCachedLob(const Lob: IZlob);
+    function GetOpenCursorCount: Integer;
+    function GetTPB: RawByteString;
+  public // implement IZTransaction
     /// <summary>Get the nested transaction level. -1 means no active
     ///  transaction, 0 means the txn is in AutoCommit-Mode, 1 means a expicit
     ///  transaction was started. 2 means the transaction was saved. 3 means the
@@ -279,9 +288,16 @@ type
     ///  exception of TRANSACTION_NONE; some databases may not support other
     ///  values. See DatabaseInfo.SupportsTransactionIsolationLevel</param>
     procedure SetTransactionIsolation(Value: TZTransactIsolationLevel);
-    function GetOpenCursorCount: Integer;
-    function GetTPB: RawByteString;
+    /// <summary>Check if the current transaction is readonly. See setReadonly.
+    ///  </summary>
+    /// <returns><c>True</c> if the transaction is readonly; <c>False</c>
+    ///  otherwise.</returns>
     function IsReadOnly: Boolean;
+    /// <summary>Puts this transaction in read-only mode as a hint to enable
+    ///  database optimizations. Note: This method cannot be called while in the
+    ///  middle of a transaction.</summary>
+    /// <param>"value" true enables read-only mode; false disables read-only
+    ///  mode.</param>
     procedure SetReadOnly(Value: Boolean);
     /// <summary>Gets the current auto-commit state. See setAutoCommit.</summary>
     /// <returns>the current state of auto-commit mode.</returns>
@@ -806,13 +822,6 @@ begin
   FreeAndNil(FLastWarning);
 end;
 
-{**
-  Makes all changes made since the previous
-  commit/rollback permanent and releases any database locks
-  currently held by the Connection. This method should be
-  used only when auto-commit mode has been disabled.
-  @see #setAutoCommit
-}
 procedure TZInterbaseFirebirdConnection.Commit;
 begin
   if Closed then
@@ -1446,13 +1455,6 @@ begin
   raise EZSQLException.Create('release an invalid Transaction');
 end;
 
-{**
-  Drops all changes made since the previous
-  commit/rollback and releases any database locks currently held
-  by this Connection. This method should be used only when auto-
-  commit has been disabled.
-  @see #setAutoCommit
-}
 procedure TZInterbaseFirebirdConnection.Rollback;
 begin
   if Closed then
@@ -1491,16 +1493,6 @@ begin
   end;
 end;
 
-{**
-  Puts this connection in read-only mode as a hint to enable
-  database optimizations.
-
-  <P><B>Note:</B> This method cannot be called while in the
-  middle of a transaction.
-
-  @param readOnly true enables read-only mode; false disables
-    read-only mode.
-}
 procedure TZInterbaseFirebirdConnection.SetReadOnly(Value: Boolean);
 begin
   if (ReadOnly <> Value) then begin
@@ -1827,7 +1819,7 @@ end;
 function TZInterbaseFirebirdResultSetMetadata.IsAutoIncrement(
   ColumnIndex: Integer): Boolean;
 begin
-  Result := False; //not supported by FB/IB
+  Result := False; //not supported by FB<3/IB
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 

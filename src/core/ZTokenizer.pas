@@ -432,6 +432,18 @@ type
 
     function TokenizeBufferToList(const Buffer: string; Options: TZTokenOptions): TZTokenList; overload;
     function TokenizeBufferToList(Buffer, NTerm: PChar; Options: TZTokenOptions): TZTokenList; overload;
+    /// <summary>
+    ///   Tokenizes a stream into a string list of tokens.
+    /// </summary>
+    /// <param name="Stream">
+    ///   A stream to be tokenized. Needs to be seekable, i.e. no compressed stream.
+    /// </param>
+    /// <param name="Options">
+    ///   A a set of tokenizer options.
+    /// </param>
+    /// <returns>
+    ///  A string list where Items are tokens and Objects are token types.
+    /// </returns>
     function TokenizeStreamToList(Stream: TStream; Options: TZTokenOptions): TZTokenList;
 
     function TokenizeBuffer(const Buffer: string; Options: TZTokenOptions): TZTokenDynArray; deprecated;
@@ -1348,9 +1360,14 @@ end;
 }
 function TZTokenizer.TokenizeStreamToList(Stream: TStream;
   Options: TZTokenOptions): TZTokenList;
+var
+  OriginalPosition: Int64;
 begin
-  Result := TokenizeBufferToList(PChar(TMemoryStream(Stream).Memory),
-    PChar(TMemoryStream(Stream).Memory)+(Stream.Size div SizeOf(Char)), Options);
+  OriginalPosition := Stream.Position;
+  Stream.Position := 0;
+  Stream.Read(Pointer(FBuffer)^, Stream.Size div SizeOf(Char));
+  Stream.Position := OriginalPosition;
+  Result := TokenizeBufferToList(FBuffer, Options);
 end;
 
 {**

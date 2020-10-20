@@ -234,6 +234,11 @@ type
     ///  nested SavePoints are committed then.</summary>
     /// <param>"Value" true enables auto-commit; false disables auto-commit.</param>
     procedure SetAutoCommit(Value: Boolean); override;
+    /// <summary>Puts this connection in read-only mode as a hint to enable
+    ///  database optimizations. Note: This method cannot be called while in the
+    ///  middle of a transaction.</summary>
+    /// <param>"value" true enables read-only mode; false disables read-only
+    ///  mode.</param>
     procedure SetReadOnly(Value: Boolean); override;
     /// <summary>Attempts to change the transaction isolation level to the one
     ///  given. The constants defined in the interface <c>Connection</c> are the
@@ -1479,18 +1484,6 @@ end;
 const cRWSession: Array[Boolean] of RawByteString = (
   'SET SESSION CHARACTERISTICS AS TRANSACTION READ WRITE',
   'SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY');
-{**
-  Puts this connection in read-only mode as a hint to enable
-  database optimizations. This procedure does nothing for PosgreSQL
-  versions prior to 7.4 because they don't support changing a transaction to
-  read only.
-
-  <P><B>Note:</B> This method cannot be called while in the
-  middle of a transaction.
-
-  @param readOnly true enables read-only mode; false disables
-    read-only mode.
-}
 procedure TZPostgreSQLConnection.SetReadOnly(Value: Boolean);
 begin
   if Value <> ReadOnly then begin

@@ -83,6 +83,7 @@ type
     procedure TestOutParam2;
     procedure TestDuplicateColumnNames;
     procedure TestForum_Topic_128125;
+    procedure TestConnectionLossTicket452_Comp;
   end;
 
 {$ENDIF ZEOS_DISABLE_ORACLE}
@@ -93,7 +94,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  ZTestCase, ZSysUtils, ZEncoding;
+  ZTestCase, ZSysUtils, ZEncoding, ZConnection;
 
 { ZTestCompOracleBugReport }
 
@@ -196,6 +197,44 @@ begin
 end;
 
 (*
+see: https://zeoslib.sourceforge.io/viewtopic.php?f=37&p=158452
+*)
+procedure ZTestCompOracleBugReport.TestConnectionLossTicket452_Comp;
+var LossCon: TZConnection;
+  SQL: String;
+  Query: TZQuery;
+begin
+  LossCon := TZConnection.Create(nil);
+  Query := TZQuery.Create(nil);
+  Query.Connection := LossCon;
+  Connection.Connect;
+  try
+    LossCon.User := Connection.User;
+    LossCon.HostName := Connection.HostName;
+    LossCon.Port := Connection.Port;
+    LossCon.Database := Connection.Database;
+    LossCon.Password := Connection.Password;
+    LossCon.Protocol := Connection.Protocol;
+    LossCon.Catalog := Connection.Catalog;
+    LossCon.LibraryLocation := Connection.LibraryLocation;
+    LossCon.Properties.Assign(Connection.Properties);
+    LossCon.Connect;
+    Query.SQL.Text := 'SELECT SID, SERIAL# FROM V$SESSION WHERE AUDSID = Sys_Context(''USERENV'', ''SESSIONID'')';
+    try
+      Query.Open;
+    except
+      Fail('To get this test runinng use SQLPLUS, login as SYSDBA and EXECUTE: "grant select on SYS.V_$SESSION to [My_USERNAME]"');
+    end;
+    SQL := 'ALTER SYSTEM DISCONNECT SESSION ''' + Query.Fields[0].AsString+ ',' + Query.Fields[1].AsString + ''' IMMEDIATE';
+    Connection.ExecuteDirect(SQL);
+    LossCon.Disconnect; //silence
+  finally
+    FreeAndNil(Query);
+    FreeAndNil(LossCon);
+  end;
+end;
+
+(*
 see: https://zeoslib.sourceforge.io/viewtopic.php?f=50&p=150356#p150356
 *)
 procedure ZTestCompOracleBugReport.TestDuplicateColumnNames;
@@ -204,7 +243,8 @@ begin
   Query := CreateQuery;
   Check(Query <> nil);
   try
-    Query.SQL.Text := 'select people.p_id, people.p_dep_id as p_id_1, p1.p_id, p1.p_dep_id as p_id_1 from people join people p1 on p1.p_id = people.p_id';
+    Query.SQL.Text := 'select people.p_id, people.p_dep_id as p_id_1, p1.p_id,'+
+      ' p1.p_dep_id as p_id_1 from people join people p1 on p1.p_id = people.p_id';
     Query.Open;
     Check(Query.Active);
     Query.Next;

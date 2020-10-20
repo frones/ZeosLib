@@ -125,7 +125,7 @@ type
     procedure ExecuteImmediat(const SQL: RawByteString; var Stmt: POCIStmt; LoggingCategory: TZLoggingCategory); overload;
     procedure ExecuteImmediat(const SQL: UnicodeString; var Stmt: POCIStmt; LoggingCategory: TZLoggingCategory); overload;
     procedure InternalSetCatalog(const Catalog: String);
-    procedure CleanupOnFail;
+    procedure FreeAllocatedHandles;
   protected
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
@@ -174,6 +174,11 @@ type
     ///  Connection. This method should be used only when auto-commit has been
     ///  disabled. See setAutoCommit.</summary>
     procedure Rollback;
+    /// <summary>Puts this connection in read-only mode as a hint to enable
+    ///  database optimizations. Note: This method cannot be called while in the
+    ///  middle of a transaction.</summary>
+    /// <param>"value" true enables read-only mode; false disables read-only
+    ///  mode.</param>
     procedure SetReadOnly(Value: Boolean); override;
     /// <summary>Sets this connection's auto-commit mode. If a connection is in
     ///  auto-commit mode, then all its SQL statements will be executed and
@@ -335,7 +340,16 @@ type
     ///  was started. 2 means the transaction was saved. 3 means the previous
     ///  savepoint got saved too and so on.</returns>
     function StartTransaction: Integer;
+    /// <summary>Check if the current transaction is readonly. See setReadonly.
+    ///  </summary>
+    /// <returns><c>True</c> if the transaction is readonly; <c>False</c>
+    ///  otherwise.</returns>
     function IsReadOnly: Boolean;
+    /// <summary>Puts this connection in read-only mode as a hint to enable
+    ///  database optimizations. Note: This method cannot be called while in the
+    ///  middle of a transaction.</summary>
+    /// <param>"value" true enables read-only mode; false disables read-only
+    ///  mode.</param>
     procedure SetReadOnly(Value: Boolean);
     /// <summary>Gets the current auto-commit state. See setAutoCommit.</summary>
     /// <returns>the current state of auto-commit mode.</returns>
@@ -621,7 +635,7 @@ begin
     Succeeded := True;
   finally
     if not Succeeded then
-      CleanupOnFail;
+      FreeAllocatedHandles;
   end;
 
   if fcharset = 0 then begin
@@ -631,7 +645,7 @@ begin
     FPlainDriver.OCIAttrGet(FOCIEnv, OCI_HTYPE_ENV, @ncharset,
       nil, OCI_NLS_NCHARSET_ID, FErrorHandle);
     if ncharset <> OCI_UTF16ID then begin
-      CleanupOnFail;
+      FreeAllocatedHandles;
       Open;//recursive call we can not patch the env varibles using OCIAttrSet
       Exit;
     end;
@@ -683,7 +697,7 @@ begin
     Succeeded := True;
   finally
     if not Succeeded then
-      CleanupOnFail;
+      FreeAllocatedHandles;
   end;
   FPlainDriver.OCIAttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FSessionHandle, 0,
     OCI_ATTR_SESSION, FErrorHandle);
@@ -750,18 +764,32 @@ begin
   FBlobPrefetchSize := StrToIntDef(Info.Values[ConnProps_BlobPrefetchSize], 8*1024);
 end;
 
-procedure TZOracleConnection.CleanupOnFail;
+procedure TZOracleConnection.FreeAllocatedHandles;
 begin
-  FPlainDriver.OCIHandleFree(FDescibeHandle, OCI_HTYPE_DESCRIBE);
-  FDescibeHandle := nil;
-  FPlainDriver.OCIHandleFree(FContextHandle, OCI_HTYPE_SVCCTX);
-  FContextHandle := nil;
-  FPlainDriver.OCIHandleFree(FErrorHandle, OCI_HTYPE_ERROR);
-  FErrorHandle := nil;
-  FPlainDriver.OCIHandleFree(FServerHandle, OCI_HTYPE_SERVER);
-  FServerHandle := nil;
-  FPlainDriver.OCIHandleFree(FOCIEnv, OCI_HTYPE_ENV);
-  FOCIEnv := nil;
+  if FSessionHandle <> nil then begin
+    FPlainDriver.OCIHandleFree(FSessionHandle, OCI_HTYPE_SESSION);
+    FSessionHandle := nil;
+  end;
+  if FDescibeHandle <> nil then begin
+    FPlainDriver.OCIHandleFree(FDescibeHandle, OCI_HTYPE_DESCRIBE);
+    FDescibeHandle := nil;
+  end;
+  if FContextHandle <> nil then begin
+    FPlainDriver.OCIHandleFree(FContextHandle, OCI_HTYPE_SVCCTX);
+    FContextHandle := nil;
+  end;
+  if FErrorHandle <> nil then begin
+    FPlainDriver.OCIHandleFree(FErrorHandle, OCI_HTYPE_ERROR);
+    FErrorHandle := nil;
+  end;
+  if FServerHandle <> nil then begin
+    FPlainDriver.OCIHandleFree(FServerHandle, OCI_HTYPE_SERVER);
+    FServerHandle := nil;
+  end;
+  if FOCIEnv <> nil then begin
+    FPlainDriver.OCIHandleFree(FOCIEnv, OCI_HTYPE_ENV);
+    FOCIEnv := nil;
+  end;
 end;
 
 procedure TZOracleConnection.ClearWarnings;
@@ -804,7 +832,7 @@ begin
       fGlobalTransactions[b].Clear;
     end;
   inherited ReleaseImmediat(Sender, AError);
-  CleanupOnFail;
+  FreeAllocatedHandles;
 end;
 
 procedure TZOracleConnection.ReleaseTransaction(
@@ -967,31 +995,7 @@ begin
           HandleErrorOrWarning(FErrorHandle, Status, lcDisconnect, LogMessage, Self);
       end;
     finally
-      { Frees all handles }
-      if FDescibeHandle <> nil then begin
-        FPlainDriver.OCIHandleFree(FDescibeHandle, OCI_HTYPE_DESCRIBE);
-        FDescibeHandle := nil;
-      end;
-      if FSessionHandle <> nil then begin
-        FPlainDriver.OCIHandleFree(FSessionHandle, OCI_HTYPE_SESSION);
-        FSessionHandle := nil;
-      end;
-      if FContextHandle <> nil then begin
-        FPlainDriver.OCIHandleFree(FContextHandle, OCI_HTYPE_SVCCTX);
-        FContextHandle := nil;
-      end;
-      if FServerHandle <> nil then begin
-        FPlainDriver.OCIHandleFree(FServerHandle, OCI_HTYPE_SERVER);
-        FServerHandle := nil;
-      end;
-      if FErrorHandle <> nil then begin
-        FPlainDriver.OCIHandleFree(FErrorHandle, OCI_HTYPE_ERROR);
-        FErrorHandle := nil;
-      end;
-      if FOCIEnv <> nil then begin
-        FPlainDriver.OCIHandleFree(FOCIEnv, OCI_HTYPE_ENV);
-        FOCIEnv := nil;
-      end;
+      FreeAllocatedHandles;
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcConnect, URL.Protocol, LogMessage);
     end;
@@ -1071,16 +1075,6 @@ begin
   end;
 end;
 
-{**
-  Puts this connection in read-only mode as a hint to enable
-  database optimizations.
-
-  <P><B>Note:</B> This method cannot be called while in the
-  middle of a transaction.
-
-  @param readOnly true enables read-only mode; false disables
-    read-only mode.
-}
 procedure TZOracleConnection.SetReadOnly(Value: Boolean);
 begin
    if (Value and (TransactIsolationLevel = tiSerializable)) then
@@ -1497,26 +1491,27 @@ end;
 { TZOracleTransaction }
 
 procedure TZOracleTransaction.BeforeDestruction;
-var Status: sword;
 begin
   inherited BeforeDestruction;
-  if FOCITrans <> nil then begin
-    try
-      fSavepoints.Clear;
-      if FStarted then
-        RollBack;
-      Status := FOwner.FPlainDriver.OCIHandleFree(FOCITrans, OCI_HTYPE_TRANS);
-      if Status <> OCI_SUCCESS then
-        FOwner.HandleErrorOrWarning(FOwner.FErrorHandle, Status, lcTransaction, 'OCIHandleFree', Self);
-    finally
-      FOCITrans := nil;
-    end;
-  end;
+  Close;
   fSavepoints.Free;
 end;
 
 procedure TZOracleTransaction.Close;
+var Status: sword;
 begin
+  if FOCITrans <> nil then try
+    fSavepoints.Clear;
+    if FStarted then
+      RollBack;
+  finally
+    if FOCITrans <> nil then begin
+      Status := FOwner.FPlainDriver.OCIHandleFree(FOCITrans, OCI_HTYPE_TRANS);
+      FOCITrans := nil;
+      if (Status <> OCI_SUCCESS) and (FRefCount > 0) then
+        FOwner.HandleErrorOrWarning(FOwner.FErrorHandle, Status, lcTransaction, 'OCIHandleFree', Self);
+    end;
+  end;
 end;
 
 procedure TZOracleTransaction.Commit;
@@ -1603,12 +1598,18 @@ end;
 procedure TZOracleTransaction.ReleaseImmediat(
   const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 var imm: IImmediatelyReleasable;
+    Status: sword;
 begin
   fSavepoints.Clear;
-  FOCITrans := nil;
   FStarted := False;
   if fBranches <> nil then
     fBranches.Clear;
+  if FOCITrans <> nil then begin
+    Status := FOwner.FPlainDriver.OCIHandleFree(FOCITrans, OCI_HTYPE_TRANS);
+    FOCITrans := nil;
+    if Status <> OCI_SUCCESS then
+      FOwner.HandleErrorOrWarning(FOwner.FErrorHandle, Status, lcTransaction, 'OCIHandleFree', Self);
+  end;
   if (FOwner <> nil) then begin
     FOwner.QueryInterface(IImmediatelyReleasable, imm);
     if (imm <> Sender) then
@@ -1627,7 +1628,7 @@ begin
   else try
     Status := FOwner.FPlainDriver.OCITransRollback(FOwner.FContextHandle,
       FOwner.FErrorHandle, OCI_DEFAULT);
-    if Status <> OCI_SUCCESS then
+    if (Status <> OCI_SUCCESS) and (FRefCount > 0) then
       FOwner.HandleErrorOrWarning(FOwner.FErrorHandle, Status, lcTransaction, 'TRANSACTION ROLLBACK', Self);
   finally
     FStarted := False;
