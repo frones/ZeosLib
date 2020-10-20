@@ -44,6 +44,7 @@
 //common compilation directives
 {$DEFINE ZEOS72UP}
 {$DEFINE ZEOS73UP}
+{$DEFINE ZEOS80UP}
 
 {$IF (defined(FPC) and (defined(CPU386) or defined(CPUX86_64))) or defined(MSWINDOWS)}
   {.$DEFINE INTEL_ASM} //allow intel syntax assembler commented is stated as buggy ):
