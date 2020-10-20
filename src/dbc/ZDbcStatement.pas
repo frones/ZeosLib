@@ -255,63 +255,57 @@ type
 
   PZTimeStamp = ^TZTimeStamp;
 
-  PZTParamValueArray = ^TZTParamValueArray;
-  {** Defines a static array of bind values. }
-  TZTParamValueArray = array[0..High(Word)] of TZBindValue;
-
   TZAbstractPreparedStatement = class; //forward
-  TZBindList = class
+  //EH: the new binding list
+  TZBindList = class(TZCustomElementList)
   private
-    FValues: PZTParamValueArray;
-    FCount: Integer;
-    FCapacity: Integer;
     FConSettings: PZConSettings;
-    procedure Grow;
-    {$IFNDEF DISABLE_CHECKING}
-    class procedure Error(const Msg: string; Data: Integer);
-    {$ENDIF}
-    function AquireBuffer(Index: Integer; SQLType: TZSQLType; BindType: TZBindType): PZBindValue; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
-    procedure SetCapacity(NewCapacity: Integer);
-    function Get(Index: Integer): PZBindValue; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-    function GetBindType(Index: Integer): TZBindType; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-    function GetSQLType(Index: Integer): TZSQLType; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-    function GetType(Index: Integer): TZProcedureColumnType; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-    function GetVariant(Index: Integer): TZVariant;
-    function GetArray(Index: Integer): PZArray; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-    function Get8Byte(Index: Integer): P8Bytes; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-    function Get4Byte(Index: Integer): P4Bytes; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+    function AquireBuffer(Index: NativeInt; SQLType: TZSQLType; BindType: TZBindType): PZBindValue; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
+    function Get(Index: NativeInt): PZBindValue; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+    function GetBindType(Index: NativeInt): TZBindType; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+    function GetSQLType(Index: NativeInt): TZSQLType; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+    function GetType(Index: NativeInt): TZProcedureColumnType; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+    function GetVariant(Index: NativeInt): TZVariant;
+    function GetArray(Index: NativeInt): PZArray; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+    function Get8Byte(Index: NativeInt): P8Bytes; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+    function Get4Byte(Index: NativeInt): P4Bytes; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+  protected
+    /// <summary>Notify about an action which will or was performed.
+    ///  if ElementNeedsFinalize is False the method will never be called.
+    ///  Otherwise you may finalize managed types beeing part of each element,
+    ///  such as Strings, Objects etc.</summary>
+    /// <param>"Ptr" the address of the element an action happens for.</param>
+    /// <param>"Index" the index of the element.</param>
+    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
+    procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
     constructor Create(ConSettings: PZConSettings);
-    destructor Destroy; override;
   public
-    procedure Clear;
-    procedure ClearValue(Index: Integer); //{$IFDEF WITH_INLINE}inline;{$ENDIF}
-    procedure Delete(Index: Integer);
+    procedure Clear; override;
+    procedure ClearValue(Index: NativeInt);
     procedure ClearValues;
 
-    procedure Put(Index: Integer; Value: Boolean); overload;
-    procedure Put(Index: Integer; SQLType: TZSQLType; _8Byte: P8Bytes); overload;
-    procedure Put(Index: Integer; SQLType: TZSQLType; _4Byte: P4Bytes); overload;
-    procedure Put(Index: Integer; const Value: TBCD); overload;
-    procedure Put(Index: Integer; const Value: TZTime); overload;
-    procedure Put(Index: Integer; const Value: TZDate); overload;
-    procedure Put(Index: Integer; const Value: TZTimeStamp); overload;
-    procedure Put(Index: Integer; SQLType: TZSQLType; const Value: TBytes); overload;
-    procedure Put(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); overload;
-    procedure Put(Index: Integer; SQLType: TZSQLType; const Value: RawByteString; CP: Word); overload;
-    procedure Put(Index: Integer; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; CP: Word); overload;
-    procedure Put(Index: Integer; SQLType: TZSQLType; const Value: UnicodeString); overload;
-    procedure Put(Index: Integer; const Value: TZArray; AddArrayRef: Boolean); overload;
-    procedure Put(Index: Integer; SQLType: TZSQLType; const Value: IZBLob); overload;
-    procedure Put(Index: Integer; Value: PZBindValue); overload;
-    procedure Put(Index: Integer; const Value: TGUID); overload;
-    function AquireCustomValue(Index: Integer; SQLType: TZSQLType; Len: LengthInt): Pointer;
-    function AquireMinCustomValue(Index: Integer; SQLType: TZSQLType; Len: LengthInt): Pointer;
+    procedure Put(Index: NativeInt; Value: Boolean); overload;
+    procedure Put(Index: NativeInt; SQLType: TZSQLType; _8Byte: P8Bytes); overload;
+    procedure Put(Index: NativeInt; SQLType: TZSQLType; _4Byte: P4Bytes); overload;
+    procedure Put(Index: NativeInt; const Value: TBCD); overload;
+    procedure Put(Index: NativeInt; const Value: TZTime); overload;
+    procedure Put(Index: NativeInt; const Value: TZDate); overload;
+    procedure Put(Index: NativeInt; const Value: TZTimeStamp); overload;
+    procedure Put(Index: NativeInt; SQLType: TZSQLType; const Value: TBytes); overload;
+    procedure Put(Index: NativeInt; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); overload;
+    procedure Put(Index: NativeInt; SQLType: TZSQLType; const Value: RawByteString; CP: Word); overload;
+    procedure Put(Index: NativeInt; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; CP: Word); overload;
+    procedure Put(Index: NativeInt; SQLType: TZSQLType; const Value: UnicodeString); overload;
+    procedure Put(Index: NativeInt; const Value: TZArray; AddArrayRef: Boolean); overload;
+    procedure Put(Index: NativeInt; SQLType: TZSQLType; const Value: IZBLob); overload;
+    procedure Put(Index: NativeInt; Value: PZBindValue); overload;
+    procedure Put(Index: NativeInt; const Value: TGUID); overload;
+    function AquireCustomValue(Index: NativeInt; SQLType: TZSQLType; Len: LengthInt): Pointer;
+    function AquireMinCustomValue(Index: NativeInt; SQLType: TZSQLType; Len: LengthInt): Pointer;
 
-    procedure SetCount(NewCount: Integer);
-    procedure SetNull(Index: Integer; SQLType: TZSQLType);
-    procedure FlushAll;
-    procedure SetParamTypes(Index: Integer; SQLType: TZSQLType; ParamIO: TZProcedureColumnType);
+    procedure SetNull(Index: NativeInt; SQLType: TZSQLType);
+    procedure SetParamTypes(Index: NativeInt; SQLType: TZSQLType; ParamIO: TZProcedureColumnType);
 
     procedure BindValuesToStatement(Stmt: TZAbstractPreparedStatement);
   public
@@ -321,16 +315,14 @@ type
     HasResultSetParam: Boolean;
     function HasOutOrInOutOrResultParam: Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
   public
-    property Count: Integer read FCount write SetCount;
-    property Capacity: Integer read FCapacity write SetCapacity;
-    property Bindings[Index: Integer]: PZBindValue read Get; default;
-    property ParamTypes[Index: Integer]: TZProcedureColumnType read GetType;
-    property Variants[Index: Integer]: TZVariant read GetVariant;
-    property SQLTypes[Index: Integer]: TZSQLType read GetSQLType;
-    property BindTypes[Index: Integer]: TZBindType read GetBindType;
-    property Arrays[Index: Integer]: PZArray read GetArray;
-    property _8Bytes[Index: Integer]: P8Bytes read Get8Byte;
-    property _4Bytes[Index: Integer]: P4Bytes read Get4Byte;
+    property Bindings[Index: NativeInt]: PZBindValue read Get; default;
+    property ParamTypes[Index: NativeInt]: TZProcedureColumnType read GetType;
+    property Variants[Index: NativeInt]: TZVariant read GetVariant;
+    property SQLTypes[Index: NativeInt]: TZSQLType read GetSQLType;
+    property BindTypes[Index: NativeInt]: TZBindType read GetBindType;
+    property Arrays[Index: NativeInt]: PZArray read GetArray;
+    property _8Bytes[Index: NativeInt]: P8Bytes read Get8Byte;
+    property _4Bytes[Index: NativeInt]: P4Bytes read Get4Byte;
   end;
 
   {** Implements Abstract Prepared SQL Statement. }
@@ -1586,7 +1578,7 @@ end;
 
 { TZBindList }
 
-function TZBindList.AquireCustomValue(Index: Integer; SQLType: TZSQLType;
+function TZBindList.AquireCustomValue(Index: NativeInt; SQLType: TZSQLType;
   Len: LengthInt): Pointer;
 var BindValue: PZBindValue;
 begin
@@ -1602,7 +1594,7 @@ begin
   Result := PAnsiChar(BindValue.Value)+SizeOf(LengthInt);
 end;
 
-function TZBindList.AquireMinCustomValue(Index: Integer; SQLType: TZSQLType;
+function TZBindList.AquireMinCustomValue(Index: NativeInt; SQLType: TZSQLType;
   Len: LengthInt): Pointer;
 var BindValue: PZBindValue;
 begin
@@ -1625,7 +1617,7 @@ var
   BCD: TBCD;
 begin
   Assert(Stmt.FWeakIZPreparedStatementPtr <> nil, 'Interface not supported');
-  for i := 0 to FCount -1 do begin
+  for i := 0 to Count -1 do begin
     BindValue := Get(I);
     if Ord(BindValue.ParamType) < Ord(pctOut) then begin
       case BindValue.BindType of
@@ -1697,189 +1689,93 @@ end;
 
 procedure TZBindList.Clear;
 begin
-  SetCount(0);
-  SetCapacity(0);
+  inherited Clear;
   HasOutParam := False;
   HasInOutParam := False;
   HasReturnParam := False;
   HasResultSetParam := False;
 end;
 
-procedure TZBindList.ClearValue(Index: Integer);
+procedure TZBindList.ClearValue(Index: NativeInt);
 var BindValue: PZBindValue;
 begin
-  BindValue := Get(Index);
-  if BindValue.Value <> nil then begin
-    if (TZBindTypeSize[BindValue.BindType] = 0) then
-      case BindValue.BindType of
-        zbtRawString,
-        zbtUTF8String
-        {$IFNDEF NO_ANSISTRING}
-        ,zbtAnsiString{$ENDIF}: RawByteString(BindValue.Value) := EmptyRaw; //dec refcnt
-        zbtUniString: UnicodeString(BindValue.Value) := '';
-        zbtBytes:     TBytes(BindValue.Value) := nil;
-        zbtLob:       IZBlob(BindValue.Value) := nil;
-        zbtCustom:    begin
-                        FreeMem(BindValue.Value, PLengthInt(BindValue.Value)^+SizeOf(LengthInt));
-                        BindValue.Value := nil;
-                      end;
-        else          BindValue.Value := nil;
-      end
-    else begin
-      if BindValue.BindType = zbtRefArray then begin
-        if PZArray(BindValue.Value).vArray <> nil then
-          ZDbcUtils.DeReferenceArray(PZArray(BindValue.Value).vArray,
-            TZSQLType(PZArray(BindValue.Value).VArrayType), PZArray(BindValue.Value).VArrayVariantType);
-        if PZArray(BindValue.Value).VIsNullArray <> nil then
-          ZDbcUtils.DeReferenceArray(PZArray(BindValue.Value)^.VIsNullArray,
-            TZSQLType(PZArray(BindValue.Value).VIsNullArrayType), PZArray(BindValue.Value).VIsNullArrayVariantType);
-      end;
-      FreeMem(BindValue.Value, TZBindTypeSize[BindValue.BindType]);
-      BindValue.Value := nil;
-    end;
-  end;
-  BindValue.BindType := zbtNull;
+  BindValue := inherited Get(Index);
+  Notify(BindValue, lnDeleted);
 end;
 
 procedure TZBindList.ClearValues;
-var I: Integer;
+var I: NativeInt;
+    BindValue: PZBindValue;
 begin
-  for I := 0 to FCount -1 do
-    ClearValue(I);
+  for I := 0 to Count -1 do begin
+    BindValue := inherited Get(i);
+    Notify(BindValue, lnDeleted);
+  end;
 end;
 
 constructor TZBindList.Create(ConSettings: PZConSettings);
 begin
-  inherited Create;
+  inherited Create(SizeOf(TZBindValue), True);
   FConSettings := ConSettings;
 end;
 
-procedure TZBindList.Delete(Index: Integer);
+function TZBindList.Get(Index: NativeInt): PZBindValue;
 begin
-  {$IFNDEF DISABLE_CHECKING}
-  if (Index < 0) or (Index >= FCount) then
-    Error(SListIndexError, Index);
-  {$ENDIF}
-  ClearValue(Index);
-  Dec(FCount);
-  {$R-}
-  if Index < FCount then
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(FValues^[Index + 1], FValues^[Index],
-      (FCount - Index) * SizeOf(TZBindValue));
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  Result := inherited Get(Index);
 end;
 
-destructor TZBindList.Destroy;
-begin
-  Clear;
-  inherited;
-end;
-
-{$IFNDEF DISABLE_CHECKING}
-class procedure TZBindList.Error(const Msg: string; Data: Integer);
-begin
-  {$IFDEF FPC}
-  raise EListError.CreateFmt(Msg,[Data]) at get_caller_addr(get_frame);
-  {$ELSE}
-  raise EListError.CreateFmt(Msg, [Data]) at ReturnAddress;
-  {$ENDIF}
-end;
-{$ENDIF}
-
-procedure TZBindList.FlushAll;
-var I: Integer;
-begin
-  for i := 0 to FCount -1 do
-    ClearValue(I);
-end;
-
-function TZBindList.Get(Index: Integer): PZBindValue;
-begin
-  {$IFNDEF DISABLE_CHECKING}
-  if (Index < 0) or (Index >= FCount) then
-    Error(SListIndexError, Index);
-  {$ENDIF}
-  {$R-}
-  Result := @FValues^[Index];
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-end;
-
-function TZBindList.Get4Byte(Index: Integer): P4Bytes;
-begin
-  {$IFNDEF DISABLE_CHECKING}
-  if (Index < 0) or (Index >= FCount) then
-    Error(SListIndexError, Index);
-  {$ENDIF}
-  {$R-}
-  if FValues^[Index].BindType = zbt4Byte
-  then Result := @FValues^[Index].Value
-  else raise EZSQLException.Create(SUnsupportedDataType);
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-end;
-
-function TZBindList.Get8Byte(Index: Integer): P8Bytes;
-begin
-  {$IFNDEF DISABLE_CHECKING}
-  if (Index < 0) or (Index >= FCount) then
-    Error(SListIndexError, Index);
-  {$ENDIF}
-  {$R-}
-  if FValues^[Index].BindType = zbt8Byte
-  then Result := {$IFDEF CPU64}@{$ENDIF}FValues^[Index].Value
-  else raise EZSQLException.Create(SUnsupportedDataType);
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-end;
-
-function TZBindList.GetArray(Index: Integer): PZArray;
-begin
-  {$IFNDEF DISABLE_CHECKING}
-  if (Index < 0) or (Index >= FCount) then
-    Error(SListIndexError, Index);
-  {$ENDIF}
-  {$R-}
-  if FValues^[Index].BindType = zbtArray
-  then Result := FValues^[Index].Value
-  else raise EZSQLException.Create(SUnsupportedDataType);
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-end;
-
-function TZBindList.GetBindType(Index: Integer): TZBindType;
-begin
-  {$IFNDEF DISABLE_CHECKING}
-  if (Index < 0) or (Index >= FCount) then
-    Error(SListIndexError, Index);
-  {$ENDIF}
-  {$R-}
-  Result := FValues^[Index].BindType
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-end;
-
-function TZBindList.GetSQLType(Index: Integer): TZSQLType;
-begin
-  {$IFNDEF DISABLE_CHECKING}
-  if (Index < 0) or (Index >= FCount) then
-    Error(SListIndexError, Index);
-  {$ENDIF}
-  {$R-}
-  Result := FValues^[Index].SQLType
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-end;
-
-function TZBindList.GetType(Index: Integer): TZProcedureColumnType;
-begin
-  {$IFNDEF DISABLE_CHECKING}
-  if (Index < 0) or (Index >= FCount) then
-    Error(SListIndexError, Index);
-  {$ENDIF}
-  {$R-}
-  Result := FValues^[Index].ParamType
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-end;
-
-function TZBindList.GetVariant(Index: Integer): TZVariant;
+function TZBindList.Get4Byte(Index: NativeInt): P4Bytes;
 var BindValue: PZBindValue;
 begin
-  BindValue := Get(Index);
+  BindValue := inherited Get(Index);
+  if BindValue.BindType = zbt4Byte
+  then Result := @BindValue.Value
+  else raise EZSQLException.Create(SUnsupportedDataType);
+end;
+
+function TZBindList.Get8Byte(Index: NativeInt): P8Bytes;
+var BindValue: PZBindValue;
+begin
+  BindValue := inherited Get(Index);
+  if BindValue.BindType = zbt8Byte
+  then Result := {$IFDEF CPU64}@{$ENDIF}BindValue.Value
+  else raise EZSQLException.Create(SUnsupportedDataType);
+end;
+
+function TZBindList.GetArray(Index: NativeInt): PZArray;
+var BindValue: PZBindValue;
+begin
+  BindValue := inherited Get(Index);
+  if BindValue.BindType = zbtArray
+  then Result := BindValue.Value
+  else raise EZSQLException.Create(SUnsupportedDataType);
+end;
+
+function TZBindList.GetBindType(Index: NativeInt): TZBindType;
+var BindValue: PZBindValue;
+begin
+  BindValue := inherited Get(Index);
+  Result := BindValue.BindType
+end;
+
+function TZBindList.GetSQLType(Index: NativeInt): TZSQLType;
+var BindValue: PZBindValue;
+begin
+  BindValue := inherited Get(Index);
+  Result := BindValue.SQLType
+end;
+
+function TZBindList.GetType(Index: NativeInt): TZProcedureColumnType;
+var BindValue: PZBindValue;
+begin
+  BindValue := inherited Get(Index);
+  Result := BindValue.ParamType
+end;
+
+function TZBindList.GetVariant(Index: NativeInt): TZVariant;
+var BindValue: PZBindValue;
+begin
+  BindValue := inherited Get(Index);
   if (BindValue.Value = nil) then
     Result := NullVariant
   else case BindValue.BindType of
@@ -1935,45 +1831,62 @@ begin
   end;
 end;
 
-procedure TZBindList.Grow;
-var
-  Delta: Integer;
-begin
-  if FCapacity > 64 then
-    Delta := FCapacity div 4
-  else if FCapacity > 8 then
-    Delta := 16
-  else
-    Delta := 4;
-  SetCapacity(FCapacity + Delta);
-end;
-
 function TZBindList.HasOutOrInOutOrResultParam: Boolean;
 begin
   Result := HasOutParam or HasReturnParam or HasInOutParam or HasResultSetParam;
 end;
 
-function TZBindList.AquireBuffer(Index: Integer; SQLType: TZSQLType;
+procedure TZBindList.Notify(Ptr: Pointer; Action: TListNotification);
+var BindValue: PZBindValue absolute Ptr;
+begin
+  if (Action = lnDeleted) then begin
+    if (TZBindTypeSize[BindValue.BindType] = 0) then
+      case BindValue.BindType of
+        zbtRawString,
+        zbtUTF8String
+        {$IFNDEF NO_ANSISTRING}
+        ,zbtAnsiString{$ENDIF}: RawByteString(BindValue.Value) := EmptyRaw; //dec refcnt
+        zbtUniString: UnicodeString(BindValue.Value) := '';
+        zbtBytes:     TBytes(BindValue.Value) := nil;
+        zbtLob:       IZBlob(BindValue.Value) := nil;
+        zbtCustom:    begin
+                        FreeMem(BindValue.Value);
+                        BindValue.Value := nil;
+                      end;
+        else          BindValue.Value := nil;
+      end
+    else begin
+      if BindValue.BindType = zbtRefArray then begin
+        if PZArray(BindValue.Value).vArray <> nil then
+          ZDbcUtils.DeReferenceArray(PZArray(BindValue.Value).vArray,
+            TZSQLType(PZArray(BindValue.Value).VArrayType), PZArray(BindValue.Value).VArrayVariantType);
+        if PZArray(BindValue.Value).VIsNullArray <> nil then
+          ZDbcUtils.DeReferenceArray(PZArray(BindValue.Value)^.VIsNullArray,
+            TZSQLType(PZArray(BindValue.Value).VIsNullArrayType), PZArray(BindValue.Value).VIsNullArrayVariantType);
+      end;
+      FreeMem(BindValue.Value, TZBindTypeSize[BindValue.BindType]);
+      BindValue.Value := nil;
+    end;
+    BindValue.BindType := zbtNull;
+  end;
+end;
+
+function TZBindList.AquireBuffer(Index: NativeInt; SQLType: TZSQLType;
   BindType: TZBindType): PZBindValue;
 begin
-  {$IFNDEF DISABLE_CHECKING}
-  if (Index < 0) or (Index > High(Word)) then
-    Error(SListIndexError, Index);
-  {$ENDIF}
-  while (Index+1 > FCapacity) do
-    Grow;
-  {$R-}
-  if (FValues^[Index].BindType <> zbtNull) and (FValues^[Index].BindType <> BindType) then
-    ClearValue(Index);
-  if Index+1 > FCount then
-    FCount := Index+1;
-  Result := @FValues^[Index];
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  if Index+1 > Count then begin
+    Count := Index+1;
+    Result := inherited Get(Index);
+  end else begin
+    Result := inherited Get(Index);
+    if (Result.BindType <> zbtNull) and (Result.BindType <> BindType) then
+      Notify(Result, lnDeleted);
+  end;
   Result.SQLType := SQLType;
   Result.BindType := BindType;
 end;
 
-procedure TZBindList.Put(Index: Integer; SQLType: TZSQLType;
+procedure TZBindList.Put(Index: NativeInt; SQLType: TZSQLType;
   Buf: Pointer; Len: LengthInt);
 var BindValue: PZBindValue;
 begin
@@ -1993,13 +1906,13 @@ begin
   end;
 end;
 
-procedure TZBindList.Put(Index: Integer; SQLType: TZSQLType;
+procedure TZBindList.Put(Index: NativeInt; SQLType: TZSQLType;
   const Value: UnicodeString);
 begin
   UnicodeString(AquireBuffer(Index, SQLType, zbtUniString).Value) := Value;
 end;
 
-procedure TZBindList.Put(Index: Integer; const Value: TZArray; AddArrayRef: Boolean);
+procedure TZBindList.Put(Index: NativeInt; const Value: TZArray; AddArrayRef: Boolean);
 var BindValue: PZBindValue;
 begin
   if AddArrayRef then begin
@@ -2028,13 +1941,13 @@ begin
   end;
 end;
 
-procedure TZBindList.Put(Index: Integer; SQLType: TZSQLType;
+procedure TZBindList.Put(Index: NativeInt; SQLType: TZSQLType;
   const Value: IZBLob);
 begin
   IZBLob(AquireBuffer(Index, SQLType, zbtLob).Value) := Value;
 end;
 
-procedure TZBindList.Put(Index: Integer; const Value: TZTimeStamp);
+procedure TZBindList.Put(Index: NativeInt; const Value: TZTimeStamp);
 var BindValue: PZBindValue;
 begin
   BindValue := AquireBuffer(Index, stTimeStamp, zbtTimeStamp);
@@ -2043,7 +1956,7 @@ begin
   PZTimeStamp(BindValue.Value)^ := Value;
 end;
 
-procedure TZBindList.Put(Index: Integer; const Value: TBCD);
+procedure TZBindList.Put(Index: NativeInt; const Value: TBCD);
 var BindValue: PZBindValue;
 begin
   BindValue := AquireBuffer(Index, stBigDecimal, zbtBCD);
@@ -2052,7 +1965,7 @@ begin
   PBCD(BindValue.Value)^ := Value;
 end;
 
-procedure TZBindList.Put(Index: Integer; SQLType: TZSQLType;
+procedure TZBindList.Put(Index: NativeInt; SQLType: TZSQLType;
   const Value: RawByteString; CP: Word);
 var BindValue: PZBindValue;
 begin
@@ -2075,7 +1988,7 @@ begin
   RawByteString(BindValue.Value) := Value;
 end;
 
-procedure TZBindList.Put(Index: Integer; SQLType: TZSQLType; const Value: TBytes);
+procedure TZBindList.Put(Index: NativeInt; SQLType: TZSQLType; const Value: TBytes);
 begin
   if Pointer(Value) = nil then
     raise EZSQLException.Create(SBindingFailure);
@@ -2083,13 +1996,13 @@ begin
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 4056 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
-procedure TZBindList.Put(Index: Integer; Value: Boolean);
+procedure TZBindList.Put(Index: NativeInt; Value: Boolean);
 begin
   AquireBuffer(Index, stBoolean, zbtPointer).Value := Pointer(Byte(Value));
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-procedure TZBindList.Put(Index: Integer; SQLType: TZSQLType; _8Byte: P8Bytes);
+procedure TZBindList.Put(Index: NativeInt; SQLType: TZSQLType; _8Byte: P8Bytes);
 var BindValue: PZBindValue;
 begin
   BindValue := AquireBuffer(Index, SQLType, zbt8Byte);
@@ -2102,7 +2015,7 @@ begin
   {$ENDIF}
 end;
 
-procedure TZBindList.Put(Index: Integer; SQLType: TZSQLType; Buf: Pointer;
+procedure TZBindList.Put(Index: NativeInt; SQLType: TZSQLType; Buf: Pointer;
   Len: LengthInt; CP: Word);
 var BindValue: PZBindValue;
 begin
@@ -2118,7 +2031,7 @@ begin
   PZCharRec(BindValue.Value).CP := CP;
 end;
 
-procedure TZBindList.Put(Index: Integer; Value: PZBindValue);
+procedure TZBindList.Put(Index: NativeInt; Value: PZBindValue);
 begin
   case Value.BindType of
     zbtNull:      SetNull(Index, Value.SQLType);
@@ -2144,61 +2057,49 @@ begin
   end;
 end;
 
-procedure TZBindList.Put(Index: Integer; SQLType: TZSQLType; _4Byte: P4Bytes);
+procedure TZBindList.Put(Index: NativeInt; SQLType: TZSQLType; _4Byte: P4Bytes);
 var BindValue: PZBindValue;
 begin
   BindValue := AquireBuffer(Index, SQLType, zbt4Byte);
   P4Bytes(@BindValue.Value)^ := _4Byte^;
 end;
 
-procedure TZBindList.SetCapacity(NewCapacity: Integer);
-var
-  I: Integer;
+procedure TZBindList.Put(Index: NativeInt; const Value: TGUID);
+var BindValue: PZBindValue;
 begin
-  {$IFNDEF DISABLE_CHECKING}
-  if (NewCapacity < 0) or (NewCapacity > High(Word)) then
-    Error(SListCapacityError, NewCapacity);
-  {$ENDIF}
-  if NewCapacity < FCount then begin
-    for I := FCount - 1 downto NewCapacity do
-      ClearValue(I);
-    FCount := NewCapacity;
-  end;
-  {$R-}
-  if NewCapacity <> FCapacity then begin
-    ReallocMem(FValues, NewCapacity * SizeOf(TZBindValue));
-    if NewCapacity > FCapacity then
-      FillChar(FValues^[FCapacity], (NewCapacity - FCapacity) * SizeOf(TZBindValue), #0);
-    FCapacity := NewCapacity;
-  end;
-  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  BindValue := AquireBuffer(Index, stGUID, zbtGUID);
+  if BindValue.Value = nil then
+    GetMem(BindValue.Value, SizeOf(TGUID));
+  PGUID(BindValue.Value)^ := Value;
 end;
 
-procedure TZBindList.SetCount(NewCount: Integer);
-var
-  I: Integer;
+procedure TZBindList.Put(Index: NativeInt; const Value: TZDate);
+var BindValue: PZBindValue;
 begin
-  {$IFNDEF DISABLE_CHECKING}
-  if (NewCount < 0) or (NewCount > High(Word)) then
-    Error(SListCountError, NewCount);
-  {$ENDIF}
-  if NewCount > FCapacity then
-    SetCapacity(NewCount);
-  if NewCount < FCount then
-    for I := FCount - 1 downto NewCount do
-      ClearValue(I);
-  FCount := NewCount;
+  BindValue := AquireBuffer(Index, stDate, zbtDate);
+  if BindValue.Value = nil then
+    GetMem(BindValue.Value, SizeOf(TZDate));
+  PZDate(BindValue.Value)^ := Value;
 end;
 
-procedure TZBindList.SetNull(Index: Integer; SQLType: TZSQLType);
+procedure TZBindList.Put(Index: NativeInt; const Value: TZTime);
+var BindValue: PZBindValue;
+begin
+  BindValue := AquireBuffer(Index, stTime, zbtTime);
+  if BindValue.Value = nil then
+    GetMem(BindValue.Value, SizeOf(TZTime));
+  PZTime(BindValue.Value)^ := Value;
+end;
+
+procedure TZBindList.SetNull(Index: NativeInt; SQLType: TZSQLType);
 begin
   AquireBuffer(Index, SQLType, zbtNull);
 end;
 
-procedure TZBindList.SetParamTypes(Index: Integer; SQLType: TZSQLType;
+procedure TZBindList.SetParamTypes(Index: NativeInt; SQLType: TZSQLType;
   ParamIO: TZProcedureColumnType);
 var BindValue: PZBindValue;
-  procedure Convert(Index: Integer; OldSQLType, NewSQLType: TZSQLType);
+  procedure Convert(Index: NativeInt; OldSQLType, NewSQLType: TZSQLType);
   var Src, Dest: TZVariant;
     VariantManager: IZVariantManager;
   begin
@@ -2256,9 +2157,9 @@ var BindValue: PZBindValue;
     end;
   end;
 begin
-  if FCount < Index+1 then
+  if Count < Index+1 then
     SetCount(Index+1);
-  BindValue := Get(Index);
+  BindValue := inherited Get(Index);
   if (BindValue.SQLType <> SQLType) and (BindValue.SQLType <> stUnknown) then
     Convert(Index, BindValue.SQLType, SQLType);
   BindValue.ParamType := ParamIO;
@@ -3369,9 +3270,13 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetParamCount(NewParamCount: Integer);
 begin
-  if (NewParamCount = 0) or (NewParamCount > FBindList.Capacity) then
-    SetBindCapacity(NewParamCount);
-  FBindList.SetCount(NewParamCount);
+  if (NewParamCount = 0) then
+   FBindList.SetCount(0)
+  else begin
+    if (NewParamCount > FBindList.Capacity) then
+      SetBindCapacity(NewParamCount);
+    FBindList.SetCount(NewParamCount);
+  end;
 end;
 
 procedure TZAbstractPreparedStatement.SetNullArray(ParameterIndex: Integer;
@@ -3611,6 +3516,7 @@ end;
 }
 procedure TZAbstractPreparedStatement.UnPrepareInParameters;
 begin
+  SetParamCount(0);
   SetBindCapacity(0);
 end;
 
@@ -3640,33 +3546,6 @@ begin
       FBatchDMLArrayCount := Len
     else if (FBatchDMLArrayCount <> 0) and (Len <> FBatchDMLArrayCount) then
       raise Exception.Create('Array count does not equal with initial count!')
-end;
-
-procedure TZBindList.Put(Index: Integer; const Value: TGUID);
-var BindValue: PZBindValue;
-begin
-  BindValue := AquireBuffer(Index, stGUID, zbtGUID);
-  if BindValue.Value = nil then
-    GetMem(BindValue.Value, SizeOf(TGUID));
-  PGUID(BindValue.Value)^ := Value;
-end;
-
-procedure TZBindList.Put(Index: Integer; const Value: TZDate);
-var BindValue: PZBindValue;
-begin
-  BindValue := AquireBuffer(Index, stDate, zbtDate);
-  if BindValue.Value = nil then
-    GetMem(BindValue.Value, SizeOf(TZDate));
-  PZDate(BindValue.Value)^ := Value;
-end;
-
-procedure TZBindList.Put(Index: Integer; const Value: TZTime);
-var BindValue: PZBindValue;
-begin
-  BindValue := AquireBuffer(Index, stTime, zbtTime);
-  if BindValue.Value = nil then
-    GetMem(BindValue.Value, SizeOf(TZTime));
-  PZTime(BindValue.Value)^ := Value;
 end;
 
 { TZRawPreparedStatement }

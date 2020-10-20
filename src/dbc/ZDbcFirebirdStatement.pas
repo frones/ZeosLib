@@ -704,8 +704,8 @@ begin
     //alloc space for lobs, arrays, param-types
     if (FOutMessageMetadata <> nil) and ((FStatementType = stExecProc) or
        ((FStatementType = stSelect) and BindList.HasOutOrInOutOrResultParam))
-    then BindList.SetCount(FInMessageCount + FOutMessageCount)
-    else BindList.SetCount(FInMessageCount);
+    then BindList.Count := FInMessageCount + FOutMessageCount
+    else BindList.Count := FInMessageCount;
     if FInMessageCount > 0 then begin
       GetMem(FInParamDescripors, FInMessageCount * SizeOf(TZInterbaseFirerbirdParam));
       MetadataBuilder := MessageMetadata.getBuilder(FStatus);
@@ -888,7 +888,7 @@ begin
   BatchStatement._AddRef;
   BatchStatement.FPrepared := True; //skip second prepare on binding the vals
   BatchStatement.FInParamDescripors := FInParamDescripors; //use our offsets
-  BatchStatement.BindList.SetCount(BindList.Count); //skip checkparameter
+  BatchStatement.BindList.Count := BindList.Count; //skip checkparameter
   BatchStatement.FInData := FInData; //now the helper instance scriples in memory of this instance
   try
     Transaction := FFBConnection.GetActiveTransaction.GetTransaction;

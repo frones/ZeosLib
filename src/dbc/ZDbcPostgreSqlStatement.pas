@@ -2110,7 +2110,7 @@ begin
       res := FPlainDriver.PQdescribePrepared(FconnAddress^, Pointer(FRawPlanname));
       boundOIDs := nil;
       try
-        BindList.SetCount(FplainDriver.PQnparams(res)+FOutParamCount);
+        BindList.Count := FplainDriver.PQnparams(res)+FOutParamCount;
         for i := 0 to BindList.Count-FOutParamCount-1 do begin
           pgOID := FplainDriver.PQparamtype(res, i);
           NewSQLType := PostgreSQLToSQLType(fOIDAsBlob, pgOID, -1);
