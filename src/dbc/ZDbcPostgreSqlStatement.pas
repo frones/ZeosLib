@@ -1515,7 +1515,7 @@ begin
         {$ENDIF}
         Add(Tmp, False);
       end;
-      SetBindCapacity(ParamsCnt);
+      SetParamCount(ParamsCnt);
     finally
       SQLWriter.Finalize(Result);
       FreeAndNil(SQLWriter);
@@ -1543,7 +1543,7 @@ begin
     SetLength(FPQParamOIDs, BindList.Capacity);
     SetLength(FParamNames, BindList.Capacity);
     { rebind since the realloc did change the addresses of the hooked values}
-    for i := 0 to Capacity -1 do
+    for i := 0 to BindList.Count -1 do
       if BindList.BindTypes[i] {$IFDEF CPU64}in [zbt4Byte, zbt8Byte]{$ELSE}= zbt4Byte{$ENDIF} then
         FPQparamValues[I] := @BindList[I].Value;
   end;

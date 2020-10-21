@@ -60,8 +60,9 @@ interface
 {$IFEND}
 {$IFNDEF ZEOS_DISABLE_ADO}
 uses
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
-  ZCompatibility, ZSysUtils, FmtBCD,
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX, FmtBCD,
+  {$IFNDEF FPC}ZClasses,{$ENDIF}//for inlined methods of TZBindList
+  ZCompatibility, ZSysUtils,
   ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant, ZDbcAdoUtils,
   ZDbcOleDBStatement, ZDbcUtils;
 

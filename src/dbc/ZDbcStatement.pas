@@ -3865,7 +3865,7 @@ begin
     end;
     SQLWriter.Finalize(Result);
     FreeAndNil(SQLWriter);
-    SetBindCapacity(FCountOfQueryParams);
+    SetParamCount(FCountOfQueryParams);
   end else
     Result := Inherited GetRawEncodedSQL(SQL);
 end;
@@ -3898,7 +3898,7 @@ begin
     end;
     SQLWriter.Finalize(Result);
     FreeAndNil(SQLWriter);
-    SetBindCapacity(FCountOfQueryParams);
+    SetParamCount(FCountOfQueryParams);
   end else
     Result := inherited GetUnicodeEncodedSQL(SQL);
 end;
