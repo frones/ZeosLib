@@ -415,7 +415,8 @@ begin
     if Status <> OCI_SUCCESS then
       FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcOther, 'OCIAttrGet', Self);
     LastUpdateCount := upCnt;
-    if (FStatementType = OCI_STMT_BEGIN) and (BindList.HasOutOrInOutOrResultParam) then
+    if (BindList.HasOutOrInOutOrResultParam) and
+       ((FStatementType < OCI_STMT_CREATE) or (FStatementType > OCI_STMT_ALTER)) then
       FOutParamResultSet := CreateResultSet;
     { logging execution }
     if DriverManager.HasLoggingListener then
@@ -443,7 +444,9 @@ begin
     DriverManager.LogMessage(lcBindPrepStmt,Self);
   RestartTimer;
   { Executes the statement and gets a resultset. }
-  if (FStatementType = OCI_STMT_BEGIN) and (BindList.HasOutOrInOutOrResultParam) then begin
+    if (BindList.HasOutOrInOutOrResultParam) and
+       (FStatementType > OCI_STMT_SELECT) and
+       ((FStatementType < OCI_STMT_CREATE) or (FStatementType > OCI_STMT_ALTER)) then begin
     Status := FPlainDriver.OCIStmtExecute(FOracleConnection.GetServiceContextHandle,
         FOCIStmt, FOCIError, Max(1, BatchDMLArrayCount), 0, nil, nil, CommitMode[Connection.GetAutoCommit]);
     if Status <> OCI_SUCCESS then
@@ -508,7 +511,8 @@ begin
       FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt, SQL, Self);
     FPlainDriver.OCIAttrGet(FOCIStmt, OCI_HTYPE_STMT, @upCnt, nil, OCI_ATTR_ROW_COUNT, FOCIError);
     LastUpdateCount := upCnt;
-    if ((FStatementType = OCI_STMT_BEGIN) or (FStatementType = OCI_STMT_DECLARE)) and (BindList.HasOutOrInOutOrResultParam) then
+    if (BindList.HasOutOrInOutOrResultParam) and
+       ((FStatementType < OCI_STMT_CREATE) or (FStatementType > OCI_STMT_ALTER)) then
       FOutParamResultSet := CreateResultSet;
     { logging execution }
     if DriverManager.HasLoggingListener then

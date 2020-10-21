@@ -83,6 +83,7 @@ type
     procedure TestOutParam2;
     procedure TestDuplicateColumnNames;
     procedure TestForum_Topic_128125;
+    procedure TestForum_Topic_128125_b;
     procedure TestConnectionLossTicket452_Comp;
   end;
 
@@ -294,6 +295,28 @@ begin
     CheckEquals('Input: Testing', Query.Params[0].AsString, 'the value of param 0');
     CheckEquals('Testing', Query.Params[1].AsString, 'the value of param 1');
   finally
+    FreeAndNil(Query);
+  end;
+end;
+
+procedure ZTestCompOracleBugReport.TestForum_Topic_128125_b;
+var Query: TZQuery;
+begin
+  Connection.Connect;
+  Query := CreateQuery;
+  Check(Query <> nil);
+  try
+    Connection.StartTransaction;
+    Query.SQL.Text := 'delete from people where p_id = 1 RETURNING p_name INTO :BIND3';
+    with Query.ParamByName('BIND3') do begin
+      ParamType := ptOutput;
+      DataType := ftString;
+      Size := 40;
+      Query.ExecSQL;
+      CheckEquals('Vasia Pupkin', AsString, 'the returned value of param 0');
+    end;
+  finally
+    Connection.Rollback;
     FreeAndNil(Query);
   end;
 end;
