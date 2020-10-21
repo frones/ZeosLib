@@ -3348,8 +3348,15 @@ begin
           {$IFNDEF WIT_WIDEMEMO}
           if (Connection.ControlsCodePage = cCP_UTF16) and (FieldType = ftWidestring) and (SQLType in [stAsciiStream, stUnicodeStream])
           then Size := (MaxInt shr 1)-2
-          else{$ENDIF}
-          Size := GetPrecision(I);
+          else{$ENDIF} begin
+            Size := GetPrecision(I);
+            {$IFNDEF WITH_CODEPAGE_AWARE_FIELD}
+            if FDisableZFields and (FieldType = ftString) then
+              if (Connection.ControlsCodePage = cGET_ACP) or (GetColumnCodePage(I) = ZOSCodePage)
+              then Size := Size * ZOSCodePageMaxCharSize
+              else Size := Size shl 2; //utf8? dynamic CP?
+            {$ENDIF WITH_CODEPAGE_AWARE_FIELD}
+          end;
         end else {$IFDEF WITH_FTGUID} if FieldType = ftGUID then
           Size := 38
         else {$ENDIF} if FieldType in [ftBCD, ftFmtBCD{, ftTime, ftDateTime}] then
