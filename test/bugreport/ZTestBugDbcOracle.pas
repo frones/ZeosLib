@@ -74,6 +74,7 @@ type
     procedure TestBlobValues;
     procedure TestTicket437;
     procedure TestConnectionLossTicket452;
+    procedure TestTicket455;
   end;
 
 {$ENDIF ZEOS_DISABLE_ORACLE}
@@ -178,6 +179,23 @@ begin
     LongLobRow2 := nil;
     LongLobRow3 := nil;
     Close;
+  end;
+end;
+
+(* If TZStoredProc StoredProcName is set to a name that doesn't exist then
+executing it will give an access violation. Error occurs in BuildFunction where
+it refers to Descriptor.Args[0], but args is nil.*)
+procedure TZTestDbcOracleBugReport.TestTicket455;
+var Stmt: IZCallableStatement;
+begin
+  Stmt := Connection.PrepareCall('TestTicket455');
+  Check(Stmt <> nil);
+  try
+    Stmt.ExecuteUpdatePrepared;
+    Fail('This test can''t pass');
+  Except
+    on E:Exception do
+      Check(E is EZSQLException, 'We expect an SQLException here');
   end;
 end;
 
