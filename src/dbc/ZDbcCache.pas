@@ -2336,7 +2336,7 @@ begin
                     Result := @TinyBuffer[0];
                   end;
       stCurrency: begin
-                    CurrToRaw(PCurrency(Data)^, @TinyBuffer[0], @Result);
+                    CurrToRaw(PCurrency(Data)^, '.', @TinyBuffer[0], @Result);
 Set_Results:        Len := Result - PAnsiChar(@TinyBuffer[0]);
                     Result := @TinyBuffer[0];
                   end;
@@ -2644,7 +2644,7 @@ begin
                     Result := @TinyBuffer[0];
                   end;
       stCurrency: begin
-                    CurrToUnicode(PCurrency(Data)^, @TinyBuffer[0], @Result);
+                    CurrToUnicode(PCurrency(Data)^, '.', @TinyBuffer[0], @Result);
 Set_Results:        Len := Result - PWideChar(@TinyBuffer[0]);
                     Result := @TinyBuffer[0];
                   end;
@@ -4312,12 +4312,12 @@ begin
     stCurrency: PCurrency(Data)^ := Value;
     stBigDecimal: Currency2Bcd(Value, PBCD(Data)^);
     stString, stAsciiStream: begin
-        CurrToRaw(Value, @TinyBuffer[0], @Data);
+        CurrToRaw(Value, '.', @TinyBuffer[0], @Data);
         L := PAnsiChar(Data)-PAnsiChar(@TinyBuffer[0]);
         SetPAnsiChar(ColumnIndex, @TinyBuffer[0], L);
       end;
     stUnicodeString, stUnicodeStream: begin
-        CurrToUnicode(Value, @TinyBuffer[0], @Data);
+        CurrToUnicode(Value, '.', @TinyBuffer[0], @Data);
         L := PWideChar(Data)-PWideChar(@TinyBuffer[0]);
         SetPWideChar(ColumnIndex, @TinyBuffer[0], L);
       end;

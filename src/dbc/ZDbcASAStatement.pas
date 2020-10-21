@@ -730,7 +730,7 @@ end;
 procedure TZASAPreparedStatement.SetCurrency(Index: Integer;
   const Value: Currency);
 begin
-  SetRawByteString(Index, CurrToRaw(Value));
+  SetRawByteString(Index, CurrToRaw(Value, '.'));
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}

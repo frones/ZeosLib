@@ -2294,7 +2294,7 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetCurrency(Index: Integer;
   const Value: Currency);
 var SQLType: TZSQLType;
-procedure SetAsRaw; begin BindRawStr(Index, CurrToRaw(Value)); end;
+procedure SetAsRaw; begin BindRawStr(Index, CurrToRaw(Value,'.')); end;
 var Idx: Integer;
 begin
   Idx := Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF};

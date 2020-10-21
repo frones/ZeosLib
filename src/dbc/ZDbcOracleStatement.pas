@@ -1371,7 +1371,7 @@ begin
   else if Bind.dty = SQLT_BDOUBLE then
     PDouble(Bind.valuep)^ := Value
   else begin
-    CurrToRaw(Value, PAnsiChar(@POCIVary(Bind.valuep).data[0]), @P);
+    CurrToRaw(Value, '.', PAnsiChar(@POCIVary(Bind.valuep).data[0]), @P);
     POCIVary(Bind.valuep).Len := P-@POCIVary(Bind.valuep).data[0];
   end;
   Bind.indp[0] := 0;

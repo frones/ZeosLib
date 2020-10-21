@@ -58,6 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD, Types,
+  {$IFNDEF FPC}ZClasses,{$ENDIF} //inlined Get method of TZCustomElementList
   ZCompatibility, ZVariant, ZPlainSqLiteDriver,
   ZDbcIntfs, ZDbcStatement, ZDbcSqLite, ZDbcLogging;
 

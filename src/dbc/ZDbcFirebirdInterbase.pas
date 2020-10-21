@@ -4125,7 +4125,7 @@ begin
                         PISC_INT64(sqldata)^ := I64 * IBScaleDivisor[4+sqlscale]; //inc sqlscale digits
       SQL_TEXT,
       SQL_VARYING   : begin
-                        CurrToRaw(Value, PAnsiChar(FByteBuffer), @P);
+                        CurrToRaw(Value, '.', PAnsiChar(FByteBuffer), @P);
                         L := P - PAnsiChar(FByteBuffer);
                         if LengthInt(sqllen) < L then
                           L := LengthInt(sqllen);

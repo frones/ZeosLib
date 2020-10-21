@@ -1711,7 +1711,7 @@ begin
   if (FPos + 24 < FEnd)
   then P := FPos
   else P := @Buffer[0];
-  CurrToRaw(Value, P, @P2);
+  CurrToRaw(Value, '.', P, @P2);
   L := P2-P;
   if P = FPos
   then Inc(FPos, L)
@@ -1823,7 +1823,7 @@ begin
   if (FPos+24 < FEnd)
   then P := FPos
   else P := @Buffer[0];
-  CurrToUnicode(Value, P, @P2);
+  CurrToUnicode(Value, '.', P, @P2);
   L := P2-P;
   if P = FPos
   then Inc(FPos, L)
@@ -2680,8 +2680,10 @@ end;
 {$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZCustomElementList.Get(Index: NativeInt): Pointer;
 begin
-  if (Index<0) or (Index >= FCount) then
-    Error(SListIndexError, Index);
+  {$IFNDEF DISABLE_CHECKING}
+  if NativeUInt(Index) > FCount then
+    Error(@SListIndexError, Index);
+  {$ENDIF DISABLE_CHECKING}
   Result := Pointer(NativeUInt(FElements)+(NativeUInt(Index)*FElementSize));
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}

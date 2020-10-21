@@ -957,7 +957,7 @@ begin
                       Result := PAnsiChar(fByteBuffer);
                     end;
         stCurrency: begin
-                      CurrToRaw(GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), PAnsiChar(fByteBuffer), @PEnd);
+                      CurrToRaw(GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), '.', PAnsiChar(fByteBuffer), @PEnd);
 JmpPEndTinyBuf:       Result := PAnsiChar(fByteBuffer);
                       Len := PEnd - Result;
                     end;
@@ -1144,7 +1144,7 @@ begin
                     end;
         stCurrency: begin
                       C := GetCurrency(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-                      CurrToUnicode(C, PWideChar(fByteBuffer), @PEnd);
+                      CurrToUnicode(C, '.', PWideChar(fByteBuffer), @PEnd);
 JmpPEndTinyBuf:       Result := PWideChar(fByteBuffer);
                       Len := PEnd - Result;
                     end;

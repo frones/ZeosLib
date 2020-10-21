@@ -716,7 +716,7 @@ begin
                         goto Set_From_Buf;
                       end;
       VT_CY:          begin
-                        CurrToRaw(PCurrency(FValueAddr)^, PAnsiChar(fByteBuffer), @Result);
+                        CurrToRaw(PCurrency(FValueAddr)^, '.', PAnsiChar(fByteBuffer), @Result);
 Set_From_Buf:           Len := Result - PAnsiChar(fByteBuffer);
                         Result := PAnsiChar(fByteBuffer);
                       end;
@@ -812,7 +812,7 @@ begin
                         goto Set_From_Buf;
                       end;
       VT_CY:          begin
-                        CurrToUnicode(PCurrency(FValueAddr)^, PWideChar(fByteBuffer), @Result);
+                        CurrToUnicode(PCurrency(FValueAddr)^, '.', PWideChar(fByteBuffer), @Result);
 Set_From_Buf:           Len := Result - PWideChar(fByteBuffer);
                         Result := PWideChar(fByteBuffer);
                       end;

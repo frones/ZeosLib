@@ -618,7 +618,7 @@ procedure TZDBLibPreparedStatementEmulated.SetCurrency(ParameterIndex: Integer;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
-  BindList.Put(ParameterIndex, stCurrency, CurrToRaw(Value), FClientCP);
+  BindList.Put(ParameterIndex, stCurrency, CurrToRaw(Value, '.'), FClientCP);
 end;
 
 procedure TZDBLibPreparedStatementEmulated.SetDate(ParameterIndex: Integer;
@@ -1295,7 +1295,7 @@ procedure TZDBLIBPreparedRPCStatement.SetCurrency(ParameterIndex: Integer;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
-  BindList.Put(ParameterIndex, stString, CurrToRaw(Value), FClientCP);
+  BindList.Put(ParameterIndex, stString, CurrToRaw(Value, '.'), FClientCP);
 end;
 
 procedure TZDBLIBPreparedRPCStatement.SetDate(ParameterIndex: Integer;
