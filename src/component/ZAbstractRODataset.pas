@@ -1419,7 +1419,8 @@ type
     {$ENDIF}
   public
     constructor Create(Owner: TFieldDefs; const Name: string; FieldType: TFieldType;
-      SQLType: TZSQLType; Size: Integer; Required: Boolean; FieldNo: Integer); reintroduce;
+      SQLType: TZSQLType; Size: Integer; Required: Boolean; FieldNo: Integer
+      {$IFDEF WITH_CODEPAGE_AWARE_FIELD}; ACodePage: TSystemCodePage = CP_ACP{$ENDIF}); reintroduce;
     {$IFNDEF TFIELDDEF_HAS_CHILDEFS}
     destructor Destroy; override;
     function HasChildDefs: Boolean;
@@ -3307,6 +3308,9 @@ var
   FName: string;
   //ConSettings: PZConSettings;
   FieldDef: TFieldDef;
+  {$IFDEF WITH_CODEPAGE_AWARE_FIELD}
+  CodePage: TSystemCodePage;
+  {$ENDIF}
 begin
   FieldDefs.Clear;
   ResultSet := Self.ResultSet;
@@ -3369,9 +3373,24 @@ begin
           FName := FRawTemp;
         end;
         {$ENDIF UNICODE}
+        {$IFDEF WITH_CODEPAGE_AWARE_FIELD}
+        if FieldType in [ftWideString, ftWideMemo] then
+          CodePage := zCP_UTF16
+        else if FieldType in [ftString, ftFixedChar, ftMemo] then
+          if SQLType in [stUnicodeString, stUnicodeStream] then
+            if Connection.ControlsCodePage = cGET_ACP
+            then CodePage := CP_ACP
+            else CodePage := zCP_UTF8
+          else CodePage := GetColumnCodePage(I)
+        else CodePage := CP_ACP;
+        if (SQLType in [stBoolean..stBinaryStream]) and not FDisableZFields
+        then FieldDef := TZFieldDef.Create(FieldDefs, FName, FieldType, SQLType, Size, False, I, CodePage)
+        else FieldDef := TFieldDef.Create(FieldDefs, FName, FieldType, Size, False, I, CodePage);
+        {$ELSE}
         if (SQLType in [stBoolean..stBinaryStream]) and not FDisableZFields
         then FieldDef := TZFieldDef.Create(FieldDefs, FName, FieldType, SQLType, Size, False, I)
         else FieldDef := TFieldDef.Create(FieldDefs, FName, FieldType, Size, False, I);
+        {$ENDIF}
         with FieldDef do begin
           if not (ReadOnly or IsUniDirectional) then begin
             {$IFNDEF OLDFPC}
@@ -6242,9 +6261,11 @@ end;
 {$ENDIF TFIELDDEF_HAS_CHILDEFS}
 
 constructor TZFieldDef.Create(Owner: TFieldDefs; const Name: string;
-  FieldType: TFieldType; SQLType: TZSQLType; Size: Integer; Required: Boolean; FieldNo: Integer);
+  FieldType: TFieldType; SQLType: TZSQLType; Size: Integer; Required: Boolean; FieldNo: Integer
+  {$IFDEF WITH_CODEPAGE_AWARE_FIELD}; ACodePage: TSystemCodePage = CP_ACP{$ENDIF});
 begin
-  inherited Create(Owner, Name, FieldType, Size, Required, FieldNo);
+  inherited Create(Owner, Name, FieldType, Size, Required, FieldNo
+    {$IFDEF WITH_CODEPAGE_AWARE_FIELD}, ACodePage{$ENDIF});
   FSQLType := SQLType;
 end;
 
