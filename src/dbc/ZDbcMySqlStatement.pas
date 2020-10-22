@@ -1760,7 +1760,7 @@ var
   Bind: PMYSQL_aligned_BIND;
   PEnd: PAnsiChar;
   { move the string conversions into a own proc -> no (U/L)StrClear}
-  procedure EmulatedAsRaw; begin FEmulatedValues[Index] := CurrToRaw(Value) end;
+  procedure EmulatedAsRaw; begin FEmulatedValues[Index] := CurrToRaw(Value, '.') end;
 begin
   {$IFNDEF GENERIC_INDEX}Index := Index -1;{$ENDIF}
   CheckParameterIndex(Index);
@@ -1791,7 +1791,7 @@ begin
       FIELD_TYPE_DOUBLE:    PDouble(Bind^.buffer)^ := Value;
       FIELD_TYPE_NEWDECIMAL,
       FIELD_TYPE_STRING:  begin
-                            CurrToRaw(Value, Bind.buffer, @PEnd);
+                            CurrToRaw(Value, '.', Bind.buffer, @PEnd);
                             Bind^.Length[0] := PEnd-PAnsiChar(Bind.buffer);
                             PByte(PEnd)^ := 0;
                           end;
@@ -2019,7 +2019,7 @@ begin
           P := PAnsiChar(Bind^.buffer)+(SizeOf(Pointer)*BatchDMLArrayCount);
           for i := 0 to BatchDMLArrayCount -1 do begin
             PPointer(PAnsiChar(Bind.Buffer)+i*SizeOf(Pointer))^ := P;
-            CurrToRaw(TCurrencyDynArray(Value)[i], P, @PEnd);
+            CurrToRaw(TCurrencyDynArray(Value)[i], '.', P, @PEnd);
             Bind^.length[i] := PEnd-P;
             PByte(PEnd)^ := 0;
             Inc(P, Bind^.length[i]+1);

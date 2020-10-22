@@ -1784,6 +1784,7 @@ var
   tmp: String;
   Connection: IZConnection;
   Statement: IZStatement;
+  ODBCType: SmallInt;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
   Connection := GetConnection;
@@ -1804,7 +1805,8 @@ begin
       Result.UpdateString(ColumnNameIndex, tmp);
       Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.IsCaseSensitive(tmp));
       //The value in the resultset will be used
-      SQLType := ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), GetIntByName('PRECISION'),
+      ODBCType := GetSmallByName('DATA_TYPE');
+      SQLType := ConvertODBCToSqlType(ODBCType, GetIntByName('PRECISION'),
         GetIntByName('SCALE'));
       tmp := UpperCase(GetStringByName('TYPE_NAME'));
       if SQLType = stUnknown then
@@ -1822,7 +1824,10 @@ begin
       then Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('PRECISION'))
       else Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('LENGTH'));
       Result.UpdateInt(TableColColumnBufLengthIndex, GetIntByName('LENGTH'));
-      Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetIntByName('SCALE'));
+      case ODBCType of
+        1{char}, -8{nchar}, -2{binary}: GetIntByName('PRECISION');
+        else Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetIntByName('SCALE'));
+      end;
       Result.UpdateSmall(TableColColumnNumPrecRadixIndex, GetSmallByName('RADIX'));
       tmp := GetStringByName('IS_NULLABLE');
       if tmp = 'NO' then

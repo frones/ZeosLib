@@ -105,6 +105,7 @@
          {$UNDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD} 
          {$DEFINE WITH_VAR_INIT_WARNING}
          {$DEFINE WITH_CASE_WARNING} //Since FPC 3.2 we've some weird warnigns on using case X of
+         {$DEFINE WITH_CODEPAGE_AWARE_FIELD}
        {$IFEND}
      {$IFEND}
   {$IFEND}

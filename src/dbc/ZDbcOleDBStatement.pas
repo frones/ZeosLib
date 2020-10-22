@@ -2027,18 +2027,18 @@ begin
       DBTYPE_UI8:       PUInt64(Data)^ := PInt64(@Value)^ div 10000;
       {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
       DBTYPE_WSTR: if Bind.cbMaxLen < 44 then begin //(19digits+dot+neg sign) -> test final length
-                    CurrToUnicode(Value, PWideChar(fByteBuffer), @PEnd);
+                    CurrToUnicode(Value, '.', PWideChar(fByteBuffer), @PEnd);
                     PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := PEnd-PAnsiChar(fByteBuffer);//size in bytes
                     if PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ < Bind.cbMaxLen
                     then Move(PWideChar(fByteBuffer)^, Data^, PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^)
                     else RaiseExceeded(Index);
                   end else begin
-                    CurrToUnicode(Value, PWideChar(Data), @PEnd);
+                    CurrToUnicode(Value, '.', PWideChar(Data), @PEnd);
                     PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := PEnd-Data;
                   end;
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
                    PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 48); //8Byte align
-                   CurrToUnicode(Value, ZPPWideChar(Data)^, @PEnd);
+                   CurrToUnicode(Value, '.', ZPPWideChar(Data)^, @PEnd);
                    PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := PEnd-PPAnsiChar(Data)^;
                  end;
       DBTYPE_NUMERIC: begin

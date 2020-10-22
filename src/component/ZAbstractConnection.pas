@@ -188,6 +188,11 @@ type
     procedure SetProperties(Value: TStrings);
     procedure SetTransactIsolationLevel(Value: TZTransactIsolationLevel);
     procedure SetAutoCommit(Value: Boolean);
+    /// <summary>Puts this connection in read-only mode as a hint to enable
+    ///  database optimizations. Note: This method cannot be called while in the
+    ///  middle of a transaction.</summary>
+    /// <param>"value" true enables read-only mode; false disables read-only
+    ///  mode.</param>
     procedure SetReadOnly(Value: Boolean);
     function GetDbcDriver: IZDriver;
     function GetInTransaction: Boolean;
@@ -360,6 +365,11 @@ type
     function GetAutoCommit: Boolean;
     function GetDataSetCount: Integer;
     procedure SetAutoCommit(Value: Boolean);
+    /// <summary>Puts this transaction in read-only mode as a hint to enable
+    ///  database optimizations. Note: This method cannot be called while in the
+    ///  middle of a transaction.</summary>
+    /// <param>"value" true enables read-only mode; false disables read-only
+    ///  mode.</param>
     procedure SetReadOnly(Value: Boolean);
     procedure SetTransactIsolationLevel(Value: TZTransactIsolationLevel);
     function GetDataSet(Index: Integer): TDataSet;
@@ -1025,11 +1035,11 @@ begin
 
     ShowSqlHourGlass;
     try
-      FConnection.SetOnConnectionLostErrorHandler(nil);
       CloseAllDataSets;
       CloseAllSequences;
       CloseAllTransactions;
       FConnection.Close;
+      FConnection.SetOnConnectionLostErrorHandler(nil);
     finally
       FConnection := nil;
       HideSqlHourGlass;

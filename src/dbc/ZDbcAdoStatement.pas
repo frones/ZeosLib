@@ -60,8 +60,9 @@ interface
 {$IFEND}
 {$IFNDEF ZEOS_DISABLE_ADO}
 uses
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
-  ZCompatibility, ZSysUtils, FmtBCD,
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX, FmtBCD,
+  {$IFNDEF FPC}ZClasses,{$ENDIF} //inlined Get method of TZCustomElementList
+  ZCompatibility, ZSysUtils,
   ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant, ZDbcAdoUtils,
   ZDbcOleDBStatement, ZDbcUtils;
 
@@ -841,7 +842,7 @@ begin
 set_var:          FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
                 end;
     else        begin
-                  CurrToUnicode(AValue, PWideChar(fByteBuffer), @PD);
+                  CurrToUnicode(AValue, '.', PWideChar(fByteBuffer), @PD);
                   SetPWideChar(Index, PWideChar(fByteBuffer), PWideChar(PD) - PWideChar(fByteBuffer));
                 end;
   end;

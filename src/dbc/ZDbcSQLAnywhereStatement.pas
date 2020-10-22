@@ -664,7 +664,7 @@ begin
 
   inherited SetBindCapacity(Capacity);
   if OldCapacity <> Capacity then begin
-    BindList.SetCount(Capacity);
+    BindList.Count := Capacity;
     ReallocMem(FIsNullArray, Capacity * SizeOf(Tsacapi_i32));
     FillChar(FIsNullArray^, Capacity * SizeOf(Tsacapi_i32), #0);
     ReallocMem(FLengthArray, Capacity * SizeOf(Tsize_t));
@@ -788,7 +788,7 @@ begin
   CheckParameterIndex(Index);
   data_value := InitDataValue(Index, stCurrency, 0);
   data_value.is_null^ := 0;
-  CurrToRaw(Value, data_value.buffer, @P);
+  CurrToRaw(Value, '.', data_value.buffer, @P);
   data_value.length^ := P - data_value.buffer;
 end;
 

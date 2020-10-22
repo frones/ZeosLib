@@ -689,7 +689,7 @@ begin
       SQLITE_INTEGER: begin
           i64 := FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex);
           if ColumnType = stCurrency
-          then CurrToRaw(C, PAnsiChar(FByteBuffer), @Result)
+          then CurrToRaw(C, '.', PAnsiChar(FByteBuffer), @Result)
           else IntToRaw(I64, PAnsiChar(FByteBuffer), @Result);
           Len := Result - PAnsiChar(FByteBuffer);
           Result := PAnsiChar(FByteBuffer);
@@ -746,7 +746,7 @@ begin
       SQLITE_INTEGER: begin
           i64 := FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, ColumnIndex);
           if ColumnType = stCurrency
-          then CurrToUnicode(C, PWideChar(FByteBuffer), @Result)
+          then CurrToUnicode(C, '.', PWideChar(FByteBuffer), @Result)
           else IntToUnicode(I64, PWideChar(FByteBuffer), @Result);
           Len := Result - PWideChar(FByteBuffer);
           Result := PWideChar(FByteBuffer);

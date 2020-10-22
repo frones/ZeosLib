@@ -2276,11 +2276,11 @@ begin
       SQL_C_DOUBLE:   PDouble(Bind.ParameterValuePtr)^   := Value;
       SQL_C_NUMERIC:  Curr2ODBCNumeric(Value, PSQL_NUMERIC_STRUCT(Bind.ParameterValuePtr));
       SQL_C_WCHAR:    begin
-                        CurrToUnicode(Value, PWideChar(fByteBuffer), @PW);
+                        CurrToUnicode(Value, '.', PWideChar(fByteBuffer), @PW);
                         SetPWideChar(Index, PWideChar(fByteBuffer), PW - PWideChar(fByteBuffer));
                       end;
       SQL_C_CHAR:     begin
-                        CurrToRaw(Value, PAnsiChar(fByteBuffer), @PA);
+                        CurrToRaw(Value, '.', PAnsiChar(fByteBuffer), @PA);
                         SetPAnsiChar(Index, PAnsiChar(fByteBuffer), PA - PAnsiChar(fByteBuffer));
                       end;
       else raise CreateUnsupportedParamType(Index, Bind.ValueType, stCurrency);

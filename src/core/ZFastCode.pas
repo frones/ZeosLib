@@ -315,11 +315,11 @@ function IntToUnicode(Value: Integer): UnicodeString; overload;
 function IntToUnicode(const Value: Int64): UnicodeString; overload;
 function IntToUnicode(const Value: UInt64): UnicodeString; overload;
 
-procedure CurrToRaw(const Value: Currency; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
-function CurrToRaw(const Value: Currency): RawByteString; overload;
+procedure CurrToRaw(const Value: Currency; DecimalSep: Char; Buf: PAnsiChar; PEnd: PPAnsiChar = nil); overload;
+function CurrToRaw(const Value: Currency; DecimalSep: Char): RawByteString; overload;
 
-procedure CurrToUnicode(const Value: Currency; Buf: PWideChar; PEnd: ZPPWideChar = nil); overload;
-function CurrToUnicode(const Value: Currency): UnicodeString; overload;
+procedure CurrToUnicode(const Value: Currency; DecimalSep: Char; Buf: PWideChar; PEnd: ZPPWideChar = nil); overload;
+function CurrToUnicode(const Value: Currency; DecimalSep: Char): UnicodeString; overload;
 
 function RawToInt(const Value: RawByteString): Integer; overload;
 function RawToInt(const Value: PAnsiChar): Integer; overload;
@@ -3216,7 +3216,7 @@ begin
   IntToRaw(Value, Pointer(Result), Digits);
 end;
 
-procedure CurrToRaw(const Value: Currency; Buf: PAnsiChar; PEnd: PPAnsiChar = nil);
+procedure CurrToRaw(const Value: Currency; DecimalSep: Char; Buf: PAnsiChar; PEnd: PPAnsiChar = nil);
 var
   I64: UInt64;
   I64Rec: Int64Rec absolute I64;
@@ -3243,7 +3243,7 @@ begin
       IntToRaw(i64, Buf, Digits);
       Inc(Buf, Digits);
       PCardinal(Buf-3)^ := PCardinal(Buf-4)^; //move trailing digits one pos forward;
-      PByte(Buf-4)^ := Ord('.');
+      PByte(Buf-4)^ := Ord(DecimalSep);
     end;
     //dec by trailing zeroes
     if PByte(Buf)^ = Ord('0') then begin
@@ -3261,16 +3261,17 @@ begin
   else PByte(Buf)^ := Ord(#0);
 end;
 
-function CurrToRaw(const Value: Currency): RawByteString;
+function CurrToRaw(const Value: Currency; DecimalSep: Char): RawByteString;
 var buf: array[0..31] of AnsiChar;
   P: PAnsiChar;
 begin
-  CurrToRaw(Value, @buf[0], @P);
+  CurrToRaw(Value, DecimalSep, @buf[0], @P);
   {$IFDEF FPC}Result := '';{$ENDIF}
   ZSetString(PAnsiChar(@Buf[0]), P-PAnsiChar(@Buf[0]), Result);
 end;
 
-procedure CurrToUnicode(const Value: Currency; Buf: PWideChar; PEnd: ZPPWideChar = nil);
+procedure CurrToUnicode(const Value: Currency; DecimalSep: Char; Buf: PWideChar;
+  PEnd: ZPPWideChar = nil);
 var
   I64: UInt64;
   I64Rec: Int64Rec absolute I64;
@@ -3299,7 +3300,7 @@ begin
       Inc(Buf, Digits);
       I64 := PUInt64(Buf-4)^; //localize (CPU32 makes two cadinal moves and the value would be incorrect then)
       PUInt64(Buf-3)^ := i64; //move trailing digits one pos forward;
-      PWord(Buf-4)^ := Ord('.');
+      PWord(Buf-4)^ := Ord(DecimalSep);
     end;
     if PWord(Buf)^ = Ord('0') then begin
       if PWord(Buf-1)^ = Ord('0') then
@@ -3316,11 +3317,11 @@ begin
   else PWord(Buf)^ := Ord(#0);
 end;
 
-function CurrToUnicode(const Value: Currency): UnicodeString;
+function CurrToUnicode(const Value: Currency; DecimalSep: Char): UnicodeString;
 var buf: array[0..31] of WideChar;
   P: PWideChar;
 begin
-  CurrToUnicode(Value, @buf[0], @P);
+  CurrToUnicode(Value, DecimalSep, @buf[0], @P);
   System.SetString(Result, PWideChar(@Buf[0]), P-PWideChar(@Buf[0]));
 end;
 

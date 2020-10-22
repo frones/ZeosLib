@@ -381,8 +381,10 @@ label AssignGeneric;
         Precision := 19;
         Currency := True;
       end else begin
-        Scale := 0;
         Precision := ColInfo.MaxLength;
+        if TDSType in [tdsBinary, tdsChar, tdsBigBinary, tdsBigChar, tdsBigNChar]
+        then Scale := Precision
+        else Scale := 0;
       end;
       ColumnType := ConvertTDSTypeToSqlType(TDSType, Precision, Scale);
       if ColumnType = stUnknown

@@ -790,7 +790,7 @@ begin
                         Len := FloatToSQLRaw(PDouble(FData)^, Result);
                       end;
     DBTYPE_CY:        begin
-                        CurrToRaw(PCurrency(FData)^, PAnsiChar(fByteBuffer), @Result);
+                        CurrToRaw(PCurrency(FData)^, '.', PAnsiChar(fByteBuffer), @Result);
 set_from_buf:           Len := Result - PAnsiChar(fByteBuffer);
                         Result := PAnsiChar(fByteBuffer);
                       end;
@@ -941,7 +941,7 @@ begin
                         Len := FloatToSQLUnicode(PDouble(FData)^, Result);
                       end;
     DBTYPE_CY:        begin
-                        CurrToUnicode(PCurrency(FData)^, PWideChar(fByteBuffer), @Result);
+                        CurrToUnicode(PCurrency(FData)^, '.', PWideChar(fByteBuffer), @Result);
 set_from_buf:           Len := Result - PWideChar(fByteBuffer);
                         Result := PWideChar(fByteBuffer);
                       end;

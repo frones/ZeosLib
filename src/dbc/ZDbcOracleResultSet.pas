@@ -874,11 +874,11 @@ jmpW2A:             fRawTemp := PUnicodeToRaw(PWideChar(Result), Len, GetW2A2WCo
               Result := PAnsiChar(fByteBuffer);
             end;
           vnuPosCurr: begin
-              CurrToRaw(PosNvu2Curr(POCINumber(Result), FvnuInfo), PAnsiChar(fByteBuffer), @Result);
+              CurrToRaw(PosNvu2Curr(POCINumber(Result), FvnuInfo), '.', PAnsiChar(fByteBuffer), @Result);
               goto set_Result;
             end;
           vnuNegCurr: begin
-              CurrToRaw(NegNvu2Curr(POCINumber(Result), FvnuInfo), PAnsiChar(fByteBuffer), @Result);
+              CurrToRaw(NegNvu2Curr(POCINumber(Result), FvnuInfo), '.', PAnsiChar(fByteBuffer), @Result);
               goto set_Result;
             end;
           else begin
@@ -1055,11 +1055,11 @@ jmpA2W:           FUniTemp := PRawToUnicode(P, Len, FClientCP);
               goto set_Result;
             end;
           vnuPosCurr: begin
-              CurrToUnicode(PosNvu2Curr(POCINumber(P), FvnuInfo), PWideChar(fByteBuffer), @Result);
+              CurrToUnicode(PosNvu2Curr(POCINumber(P), FvnuInfo), '.', PWideChar(fByteBuffer), @Result);
               goto set_Result;
             end;
           vnuNegCurr: begin
-              CurrToUnicode(NegNvu2Curr(POCINumber(P), FvnuInfo), PWideChar(fByteBuffer), @Result);
+              CurrToUnicode(NegNvu2Curr(POCINumber(P), FvnuInfo), '.', PWideChar(fByteBuffer), @Result);
               goto set_Result;
             end;
           else begin

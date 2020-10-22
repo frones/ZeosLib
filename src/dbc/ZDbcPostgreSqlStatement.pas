@@ -1515,7 +1515,7 @@ begin
         {$ENDIF}
         Add(Tmp, False);
       end;
-      SetBindCapacity(ParamsCnt);
+      SetParamCount(ParamsCnt);
     finally
       SQLWriter.Finalize(Result);
       FreeAndNil(SQLWriter);
@@ -1543,7 +1543,7 @@ begin
     SetLength(FPQParamOIDs, BindList.Capacity);
     SetLength(FParamNames, BindList.Capacity);
     { rebind since the realloc did change the addresses of the hooked values}
-    for i := 0 to Capacity -1 do
+    for i := 0 to BindList.Count -1 do
       if BindList.BindTypes[i] {$IFDEF CPU64}in [zbt4Byte, zbt8Byte]{$ELSE}= zbt4Byte{$ENDIF} then
         FPQparamValues[I] := @BindList[I].Value;
   end;
@@ -2110,7 +2110,7 @@ begin
       res := FPlainDriver.PQdescribePrepared(FconnAddress^, Pointer(FRawPlanname));
       boundOIDs := nil;
       try
-        BindList.SetCount(FplainDriver.PQnparams(res)+FOutParamCount);
+        BindList.Count := FplainDriver.PQnparams(res)+FOutParamCount;
         for i := 0 to BindList.Count-FOutParamCount-1 do begin
           pgOID := FplainDriver.PQparamtype(res, i);
           NewSQLType := PostgreSQLToSQLType(fOIDAsBlob, pgOID, -1);
@@ -2294,7 +2294,7 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetCurrency(Index: Integer;
   const Value: Currency);
 var SQLType: TZSQLType;
-procedure SetAsRaw; begin BindRawStr(Index, CurrToRaw(Value)); end;
+procedure SetAsRaw; begin BindRawStr(Index, CurrToRaw(Value,'.')); end;
 var Idx: Integer;
 begin
   Idx := Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF};

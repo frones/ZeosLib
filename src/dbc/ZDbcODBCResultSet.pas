@@ -1004,7 +1004,7 @@ begin
                       Result := PAnsiChar(FByteBuffer);
                     end;
       stCurrency:   begin
-                      CurrToRaw(ODBCNumeric2Curr(fColDataPtr), PAnsiChar(FByteBuffer), @Result);
+                      CurrToRaw(ODBCNumeric2Curr(fColDataPtr), '.', PAnsiChar(FByteBuffer), @Result);
 Set_Results:          Len := Result - PAnsiChar(FByteBuffer);
                       Result := PAnsiChar(FByteBuffer);
                     end;
@@ -1138,7 +1138,7 @@ begin
                       Result := PWideChar(FByteBuffer);
                     end;
       stCurrency:   begin
-                      CurrToUnicode(ODBCNumeric2Curr(fColDataPtr), PWideChar(FByteBuffer), @Result);
+                      CurrToUnicode(ODBCNumeric2Curr(fColDataPtr), '.', PWideChar(FByteBuffer), @Result);
 Set_Results:          Len := Result - PWideChar(FByteBuffer);
                       Result := PWideChar(FByteBuffer);
                     end;
