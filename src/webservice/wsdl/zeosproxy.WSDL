@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-7"?>
+<?xml version="1.0" encoding="utf-8"?>
 <definitions name="zproxy" xmlns="http://schemas.xmlsoap.org/wsdl/" xmlns:tns="zproxy" xmlns:wst="urn:wst_base" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" targetNamespace="zproxy">
   <types>
     <xsd:schema xmlns="http://www.w3.org/2001/XMLSchema" xmlns:tns="zproxy" targetNamespace="zproxy"/>
