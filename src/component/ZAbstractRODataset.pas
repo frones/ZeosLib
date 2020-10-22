@@ -417,7 +417,7 @@ type
     {$ENDIF}
   protected { Abstracts methods }
     {$IFNDEF WITH_InternalAddRecord_TRecBuf}
-    procedure InternalAddRecord(Buffer: Pointer; Append: Boolean); override;
+    procedure InternalAddRecord({%H-}Buffer: Pointer; {%H-}Append: Boolean); override;
     {$ELSE}
     procedure InternalAddRecord(Buffer: TRecBuf; Append: Boolean); override;
     {$ENDIF}
@@ -442,8 +442,8 @@ type
     {$ELSE}
     procedure FreeRecBuf(var Buffer: TRecBuf); override;
     {$ENDIF}
-    function CreateNestedDataSet(DataSetField: TDataSetField): TDataSet; {$IFDEF WITH_FTDATASETSUPPORT}override;{$ENDIF}
-    procedure CloseBlob(Field: TField); override;
+    function CreateNestedDataSet({%H-}DataSetField: TDataSetField): TDataSet; {$IFDEF WITH_FTDATASETSUPPORT}override;{$ENDIF}
+    procedure CloseBlob({%H-}Field: TField); override;
 
     procedure CheckFieldCompatibility(Field: TField; AFieldDef: TFieldDef); {$IFDEF WITH_CHECKFIELDCOMPATIBILITY} override;{$ENDIF}
     procedure CreateFields; override;
@@ -528,7 +528,7 @@ type
     function PSGetKeyFields: string; override;
     function PSExecuteStatement(const ASQL: string; AParams: TParams;
       {$IFDEF WITH_IProviderSupportNG}var ResultSet: TDataSet
-      {$ELSE} ResultSet: Pointer = nil{$ENDIF}): Integer; override;
+      {$ELSE} {%H-}ResultSet: Pointer = nil{$ENDIF}): Integer; override;
     procedure PSSetCommandText(const CommandText: string); override;
     {$ENDIF}
     function PSGetUpdateException(E: Exception;
@@ -536,8 +536,8 @@ type
     function PSIsSQLBased: Boolean; override;
     function PSIsSQLSupported: Boolean; override;
     procedure PSReset; override;
-    function PSUpdateRecord(UpdateKind: TUpdateKind;
-      Delta: TDataSet): Boolean; override;
+    function PSUpdateRecord({%H-}UpdateKind: TUpdateKind;
+      {%H-}Delta: TDataSet): Boolean; override;
     procedure PSExecute; override;
     function PSGetParams: TParams; override;
     procedure PSSetParams(AParams: TParams); override;
@@ -690,7 +690,7 @@ type
     function GetAsAnsiString: AnsiString; {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
-    function GetAsUTF8String: UTF8String; {$IFDEF WITH_ASUTF8STRING}override;{$ENDIF}
+    function GetAsUTF8String: UTF8String; {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
     {$ENDIF}
     function GetAsRawByteString: RawByteString;
     { record/array types }
@@ -732,7 +732,7 @@ type
     procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
-    procedure SetAsUTF8String(const Value: UTF8String); {$IFDEF WITH_ASUTF8STRING}override;{$ENDIF}
+    procedure SetAsUTF8String(const Value: UTF8String); {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
     {$ENDIF}
     procedure SetAsRawByteString(const Value: RawByteString);
 
@@ -878,7 +878,7 @@ type
     procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
-    procedure SetAsUTF8String(const Value: UTF8String); {$IFDEF WITH_ASUTF8STRING}override;{$ENDIF}
+    procedure SetAsUTF8String(const Value: UTF8String); {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
     {$ENDIF}
     procedure SetAsRawByteString(const Value: RawByteString);
   protected
@@ -1542,7 +1542,7 @@ type
     procedure ReadUnNamed(Reader: TReader);
     procedure WriteUnNamed(Writer: TWriter);
   protected
-    class procedure CheckTypeSize(Value: Integer); override;
+    class procedure CheckTypeSize({%H-}Value: Integer); override;
     {$IFNDEF WITH_VIRTUAL_TFIELD_BIND}
     procedure Bind(Binding: Boolean); virtual;
     {$ENDIF}
@@ -1767,8 +1767,9 @@ type
     function GetChildDefsClass: TFieldDefsClass; virtual;
     {$ENDIF}
   public
-    constructor Create(Owner: TFieldDefs; const Name: string;
-      DataType: TZSQLType; Size: Integer; Required: Boolean; FieldNo: Integer); reintroduce; overload;
+    constructor Create(Owner: TFieldDefs; const Name: string; FieldType: TFieldType;
+      SQLType: TZSQLType; Size: Integer; Required: Boolean; FieldNo: Integer
+      {$IFDEF WITH_CODEPAGE_AWARE_FIELD}; ACodePage: TSystemCodePage = CP_ACP{$ENDIF}); reintroduce;
     {$IFNDEF TFIELDDEF_HAS_CHILDEFS}
     destructor Destroy; override;
     function HasChildDefs: Boolean;
@@ -2910,7 +2911,7 @@ var
   CachedResultSet: IZCachedResultSet;
 begin
   RowBuffer := nil;
-  case State of
+  {%H-}case State of
     dsBrowse,dsblockread:
       if not IsEmpty then
         RowBuffer := PZRowBuffer(ActiveBuffer);
@@ -3291,10 +3292,15 @@ var
   I, J, Size: Integer;
   AutoInit: Boolean;
   FieldType: TFieldType;
+  SQLType: TZSQLType;
   ResultSet: IZResultSet;
   FieldName: string;
   FName: string;
+  {$IFDEF WITH_CODEPAGE_AWARE_FIELD}
+  CodePage: TSystemCodePage;
+  {$ELSE}
   ConSettings: PZConSettings;
+  {$ENDIF}
 begin
   FieldDefs.Clear;
   ResultSet := Self.ResultSet;
@@ -3316,20 +3322,24 @@ begin
 
     with ResultSet.GetMetadata do
     begin
+    {$IFNDEF WITH_CODEPAGE_AWARE_FIELD}
     ConSettings := ResultSet.GetConSettings;
+    {$ENDIF}
     if GetColumnCount > 0 then
       for I := FirstDbcIndex to GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
       begin
-        FieldType := ConvertDbcToDatasetType(GetColumnType(I));
+        SQLType := GetColumnType(I);
+        FieldType := ConvertDbcToDatasetType(SQLType);
         if (FieldType = ftCurrency) and not ResultSet.GetMetadata.IsCurrency(I) then
            FieldType := ftBCD;
         if FieldType in [ftBytes, ftVarBytes, ftString, ftWidestring] then begin
           Size := GetPrecision(I);
+          {$IFNDEF WITH_CODEPAGE_AWARE_FIELD}
           if (FieldType = ftString) then
             if (ConSettings^.CPType = cCP_UTF8)
             then Size := Size * 4
             else Size := Size * ZOSCodePageMaxCharSize
-          else if (FieldType = ftWideString) and (doAlignMaxRequiredWideStringFieldSize in Options) {and (ConSettings.ClientCodePage.CharWidth > 3)} then
+          else {$ENDIF}if (FieldType = ftWideString) and (doAlignMaxRequiredWideStringFieldSize in Options) {and (ConSettings.ClientCodePage.CharWidth > 3)} then
             Size := Size * 2;
 
             {if (ConSettings^.CPType = cCP_UTF8) or (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
@@ -3357,9 +3367,20 @@ begin
           Inc(J);
           FName := Format('%s_%d', [FieldName, J]);
         end;
+        {$IFDEF WITH_CODEPAGE_AWARE_FIELD}
+        if FieldType in [ftWideString, ftWideMemo] then
+          CodePage := zCP_UTF16
+        else if FieldType in [ftString, ftFixedChar, ftMemo] then
+          if SQLType in [stUnicodeString, stUnicodeStream] then
+            if Connection.ControlsCodePage = cGET_ACP
+            then CodePage := CP_ACP
+            else CodePage := zCP_UTF8
+          else CodePage := GetColumnCodePage(I)
+        else CodePage := CP_ACP;
+        {$ENDIF}
 
         if FUseZFields then
-          with TZFieldDef.Create(FieldDefs, FName, GetColumnType(I), Size, False, I) do begin
+          with TZFieldDef.Create(FieldDefs, FName, FieldType, SQLType, Size, False, I{$IFDEF WITH_CODEPAGE_AWARE_FIELD}, CodePage{$ENDIF}) do begin
             if not (ReadOnly or IsUniDirectional) then begin
               {$IFNDEF OLDFPC}
               Required := IsWritable(I) and (IsNullable(I) = ntNoNulls);
@@ -3370,7 +3391,7 @@ begin
             Precision := GetPrecision(I);
             DisplayName := FName;
           end
-        else with TFieldDef.Create(FieldDefs, FName, FieldType, Size, False, I) do begin
+        else with TFieldDef.Create(FieldDefs, FName, FieldType, Size, False, I{$IFDEF WITH_CODEPAGE_AWARE_FIELD}, CodePage{$ENDIF}) do begin
           if not (ReadOnly or IsUniDirectional) then begin
             {$IFNDEF OLDFPC}
             Required := IsWritable(I) and (IsNullable(I) = ntNoNulls);
@@ -7133,10 +7154,12 @@ end;
 {$ENDIF TFIELDDEF_HAS_CHILDEFS}
 
 constructor TZFieldDef.Create(Owner: TFieldDefs; const Name: string;
-  DataType: TZSQLType; Size: Integer; Required: Boolean; FieldNo: Integer);
+  FieldType: TFieldType; SQLType: TZSQLType; Size: Integer; Required: Boolean; FieldNo: Integer
+  {$IFDEF WITH_CODEPAGE_AWARE_FIELD}; ACodePage: TSystemCodePage = CP_ACP{$ENDIF});
 begin
-  inherited Create(Owner, Name, ConvertDbcToDatasetType(DataType), Size, Required, FieldNo);
-  FSQLType := DataType;
+  inherited Create(Owner, Name, FieldType, Size, Required, FieldNo
+    {$IFDEF WITH_CODEPAGE_AWARE_FIELD}, ACodePage{$ENDIF});
+  FSQLType := SQLType;
 end;
 
 {$IFNDEF TFIELDDEF_HAS_CHILDEFS}

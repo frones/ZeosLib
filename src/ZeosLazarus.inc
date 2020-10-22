@@ -104,6 +104,15 @@
      {$DEFINE WITH_FTGUID} //TStringField descendant TGuidField is supported
      {$DEFINE FPC2_6UP}
      {$DEFINE WITH_VIRTUAL_TFIELD_ASWIDESTRING}
+     {$IF FPC_FULLVERSION>=30000}
+       {$DEFINE WITH_TESTCASE_ERROR_ADDRESS} //testcase methods like Fail() have error address pointer
+       {$IF FPC_FULLVERSION>=30200}
+         {$UNDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD} 
+         {$DEFINE WITH_VAR_INIT_WARNING}
+         {$DEFINE WITH_CASE_WARNING} //Since FPC 3.2 we've some weird warnigns on using case X of
+         {$DEFINE WITH_CODEPAGE_AWARE_FIELD}
+       {$IFEND}
+     {$IFEND}
   {$IFEND}
 
   {$IF FPC_FULLVERSION>=30000}
