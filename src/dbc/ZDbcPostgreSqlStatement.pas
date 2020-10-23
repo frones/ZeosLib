@@ -962,6 +962,7 @@ var
   function CreateBatchDMLStmt: TZPostgreSQLPreparedStatementV3;
   var I, OffSet, N: Cardinal;
     aOID: OID;
+    P, PEnd: PAnsiChar;
     SQL: RawByteString;
     SQLWriter: TZRawSQLStringWriter;
   begin
@@ -1055,10 +1056,25 @@ unnest(array[$1]::int8[])
     SQLWriter := TZRawSQLStringWriter.Create(Length(fASQL)+BindList.Count shl 4);
     N := 1;
     OffSet := 0;
+    if FTokenMatchIndex = Ord(dmlDelete) then begin
+      P := Pointer(FCachedQueryRaw[0]);
+      PEnd := P + Length(FCachedQueryRaw[0]);
+      //Take care the "=" oparater gets replaced by and "in" op if not in brackets already
+      while (PEnd > P) and (PByte(PEnd)^ <= Byte(' ')) do
+        Dec(PEnd);
+      if (PEnd > P) and (PByte(PEnd)^ = Byte('=')) then begin
+        SQLWriter.AddText(P, PEnd - P, SQL);
+        SQLWriter.AddText(' in ', SQL);
+      end else
+        SQLWriter.AddText(P, Length(FCachedQueryRaw[0]), SQL);
+    end;
     //first build up a new string with unnest($n)::xyz[] surrounded params
-    for I := 0 to high(FCachedQueryRaw) do
+    for I := Ord(FTokenMatchIndex = Ord(dmlDelete)) to high(FCachedQueryRaw) do
       if IsParamIndex[i] then begin
         if BindList[OffSet].BindType in [zbtArray, zbtRefArray] then begin
+
+          if FTokenMatchIndex = Ord(dmlDelete) then
+            SQLWriter.AddText('(select ', SQL);
           SQLWriter.AddText('unnest($', SQL);
           SQLWriter.AddOrd(N, SQL);
           SQLWriter.AddText('::', SQL);
@@ -1066,6 +1082,8 @@ unnest(array[$1]::int8[])
           fRawTemp := {$IFDEF UNICODE}ZSysUtils.UnicodeStringToASCII7{$ENDIF}(FPostgreSQLConnection.GetTypeNameByOid(aOID));
           SQLWriter.AddText(fRawTemp, SQL);
           SQLWriter.AddText('[])', SQL);
+          if FTokenMatchIndex = Ord(dmlDelete) then
+            SQLWriter.AddChar(')', SQL);
           Inc(OffSet);
         end else begin
           SQLWriter.AddChar(AnsiChar('$'), SQL);
@@ -1086,6 +1104,8 @@ unnest(array[$1]::int8[])
   ,unnest($5::timestamp[])
   ,unnest($6::int8[])
   ,unnest($7::int8[]))
+  or
+  delete from public.SampleRecord where ID in (select unnest($1::int8[]))
 
   This approach took me ages. No description somewhere, just two (not working) example on
   Stack overflow... The Array.h ported Macros -> Trash !
