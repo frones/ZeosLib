@@ -82,8 +82,8 @@ type
     function GetConnectionHandle: Psqlite;
     function GetUndefinedVarcharAsStringLength: Integer;
     function GetSQLiteIntAffinity: Boolean;
-    function enable_load_extension(OnOff: Integer): Integer;
-    function load_extension(zFile: PAnsiChar; zProc: Pointer; var pzErrMsg: PAnsiChar): Integer;
+    function enable_load_extension(OnOff: Boolean): Integer;
+    function load_extension(const zFile, zProc: String; out ErrMsg: String): Integer;
     function GetByteBufferAddress: PByteBuffer;
     function GetPlainDriver: TZSQLitePlainDriver;
     procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
@@ -113,8 +113,8 @@ type
   public //IZSQLiteConnection
     function GetUndefinedVarcharAsStringLength: Integer;
     function GetSQLiteIntAffinity: Boolean;
-    function enable_load_extension(OnOff: Integer): Integer;
-    function load_extension(zFile: PAnsiChar; zProc: Pointer; var pzErrMsg: PAnsiChar): Integer;
+    function enable_load_extension(OnOff: Boolean): Integer;
+    function load_extension(const zFile, zProc: String; out ErrMsg: String): Integer;
     function GetPlainDriver: TZSQLitePlainDriver;
     procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
       ErrorCode: Integer; const LogMessage: String;
@@ -334,11 +334,47 @@ begin
   Result := ErrorCode;
 end;
 
-function TZSQLiteConnection.load_extension(zFile: PAnsiChar; zProc: Pointer;
-  var pzErrMsg: PAnsiChar): Integer;
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : hint local variable "pzErrMsg" does not seem to be intialized} {$ENDIF}
+function TZSQLiteConnection.load_extension(const zFile, zProc: String;
+  out ErrMsg: String): Integer;
+var rFile, rProc: RawByteString;
+  pzErrMsg: PAnsiChar;
+  L: LengthInt;
 begin
-  Result := FPlainDriver.sqlite3_load_extension(FHandle, zFile, zProc, pzErrMsg);
+  {$IFDEF UNICODE}
+  rFile := ZUnicodeToRaw(zFile, zCP_UTF8);
+  rProc := ZUnicodeToRaw(zProc, zCP_UTF8);
+  {$ELSE !UNICODE}
+    {$IF defined(LCL) or not defined(MSWINDOWS)}
+  rFile := zFile;
+  rProc := zProc;
+    {$ELSE}
+  if ZDetectUTF8Encoding(Pointer(zFile), Length(zFile)) = etANSI then begin
+    rFile := '';
+    PRawToRawConvert(Pointer(zFile), Length(zFile), zOSCodePage, zCP_UTF8, rFile)
+  end else rFile := zFile;
+  if ZDetectUTF8Encoding(Pointer(zProc), Length(zProc)) = etANSI then begin
+    rProc := '';
+    PRawToRawConvert(Pointer(zProc), Length(zProc), zOSCodePage, zCP_UTF8, rProc)
+  end else rProc := zProc;
+    {$IFEND}
+  {$ENDIF UNICODE}
+  Result := FPlainDriver.sqlite3_load_extension(FHandle, Pointer(rFile), Pointer(rProc), pzErrMsg);
+  if (Result = SQLITE_ERROR) then begin
+    L := StrLen(pzErrMsg);
+    {$IFDEF UNICODE}
+    ErrMsg := PRawToUnicode(pzErrMsg, L, zCP_UTF8);
+    {$ELSE}
+      {$IF defined(LCL) or not defined(MSWINDOWS)}
+      System.SetString(ErrMsg, pzErrMsg, L);
+      {$ELSE}
+      PRawToRawConvert(pzErrMsg, L, zCP_UTF8, zOSCodePage, RawByteString(ErrMsg));
+      {$IFEND}
+    {$ENDIF}
+    FPlainDriver.sqlite3_free(pzErrMsg);
+  end else ErrMsg := '';
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Reencrypt a database with a new key. The old/current key needs to be
@@ -527,9 +563,9 @@ begin
   Result := TZSQLiteStatement.Create(Self, Info);
 end;
 
-function TZSQLiteConnection.enable_load_extension(OnOff: Integer): Integer;
+function TZSQLiteConnection.enable_load_extension(OnOff: Boolean): Integer;
 begin
-  Result := FPlainDriver.sqlite3_enable_load_extension(FHandle, OnOff);
+  Result := FPlainDriver.sqlite3_enable_load_extension(FHandle, Ord(OnOff));
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "PZTail" does not seem to be initialized} {$ENDIF}

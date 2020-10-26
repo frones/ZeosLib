@@ -80,13 +80,16 @@ type
     procedure TestGUIDs;
     procedure Test_GENERATED_ALWAYS_64;
     procedure Test_GENERATED_BY_DEFAULT_64;
+    procedure Test_BatchDelete_equal_operator;
+    procedure Test_BatchDelete_in_operator;
   end;
 
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 implementation
 {$ENDIF ZEOS_DISABLE_POSTGRESQL}
 
-uses SysUtils, ZTestConsts, ZSysUtils, ZVariant;
+uses Types,
+  SysUtils, ZTestConsts, ZSysUtils, ZVariant;
 
 { TZTestDbcPostgreSQLCase }
 
@@ -141,6 +144,60 @@ begin
   Check(not Statement.Execute('UPDATE equipment SET eq_name=eq_name'));
   Check(Statement.Execute('SELECT * FROM equipment'));
   Statement.Close;
+end;
+
+procedure TZTestDbcPostgreSQLCase.Test_BatchDelete_equal_operator;
+var
+  Statement: IZPreparedStatement;
+  ResultSet: IZResultSet;
+  IntArray: TIntegerDynArray;
+begin
+  IntArray := nil;
+  Statement := Connection.PrepareStatement('delete from people where p_id = ?');
+  CheckEquals(1, Connection.StartTransaction);
+  try
+    if Connection.GetHostVersion < ZSysUtils.EncodeSQLVersioning(8, 0, 0) then
+      Exit;
+    SetLength(IntArray, 4);
+    IntArray[0] := 1;
+    IntArray[1] := 2;
+    IntArray[2] := 3;
+    IntArray[3] := 4;
+    CheckNotNull(Statement);
+    ResultSet := nil;
+    Statement.SetDataArray(FirstDbcIndex, IntArray, stInteger);
+    Statement.ExecuteUpdatePrepared;
+  finally
+    Connection.Rollback;
+    Connection.Close;
+  end;
+end;
+
+procedure TZTestDbcPostgreSQLCase.Test_BatchDelete_in_operator;
+var
+  Statement: IZPreparedStatement;
+  ResultSet: IZResultSet;
+  IntArray: TIntegerDynArray;
+begin
+  IntArray := nil;
+  Statement := Connection.PrepareStatement('delete from people where p_id in (?)');
+  CheckEquals(1, Connection.StartTransaction);
+  try
+    if Connection.GetHostVersion < ZSysUtils.EncodeSQLVersioning(8, 0, 0) then
+      Exit;
+    SetLength(IntArray, 4);
+    IntArray[0] := 1;
+    IntArray[1] := 2;
+    IntArray[2] := 3;
+    IntArray[3] := 4;
+    CheckNotNull(Statement);
+    ResultSet := nil;
+    Statement.SetDataArray(FirstDbcIndex, IntArray, stInteger);
+    Statement.ExecuteUpdatePrepared;
+  finally
+    Connection.Rollback;
+    Connection.Close;
+  end;
 end;
 
 procedure TZTestDbcPostgreSQLCase.Test_GENERATED_ALWAYS_64;

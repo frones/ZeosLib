@@ -178,6 +178,14 @@ type
     ///  transaction manger. Later if all streams are closed a final
     ///  commit is called to release the garbage.</summary>
     procedure Commit;
+    /// <summary>Perform a "hard" Commit or Rollback as retained done by User
+    ///  before. Removes this interface from Parent-Transaction manager.
+    ///  Releases a transaction and resources immediately
+    ///  instead of waiting for them to be automatically released. If the
+    ///  transaction is underway a rollback will be done. Note: A
+    ///  Transaction is automatically closed when the Conenction closes or it is
+    ///  garbage collected. Certain fatal errors also result in a closed
+    //// Transaction.</summary>
     procedure Close;
     /// <summary>Get's the owner connection that produced that object instance.
     /// </summary>

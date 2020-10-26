@@ -137,7 +137,13 @@ type
     ///  commit is called to release the garbage.</summary>
     procedure Commit;
     /// <summary>Perform a "hard" Commit or Rollback as retained done by User
-    ///  before. Removes this interface from Parent-Transaction manager.</summary>
+    ///  before. Removes this interface from Parent-Transaction manager.
+    ///  Releases a transaction and resources immediately
+    ///  instead of waiting for them to be automatically released. If the
+    ///  transaction is underway a rollback will be done. Note: A
+    ///  Transaction is automatically closed when the Conenction closes or it is
+    ///  garbage collected. Certain fatal errors also result in a closed
+    //// Transaction.</summary>
     procedure Close;
     /// <summary>Test if the transaction is underway on the server.</summary>
     /// <returns><c>True</c> if so otherwise <c>False</c>.</returns>

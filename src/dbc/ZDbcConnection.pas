@@ -291,6 +291,10 @@ type
     function EscapeString(const Value: RawByteString): RawByteString; overload; virtual;
 
     procedure Open; virtual;
+    /// <summary>Releases a Connection's database and resources immediately
+    ///  instead of waiting for them to be automatically released. Note: A
+    ///  Connection is automatically closed when it is garbage collected.
+    ///  Certain fatal errors also result in a closed Connection.</summary>
     procedure Close;
     /// <summary>Releases all driver handles and set the object in a closed
     ///  Zombi mode waiting for destruction. Each known supplementary object,
@@ -1358,16 +1362,6 @@ procedure TZAbstractDbcConnection.ExecuteImmediat(const SQL: UnicodeString;
 begin
   ExecuteImmediat(ZUnicodeToRaw(SQL, ConSettings.ClientCodePage.CP), LoggingCategory);
 end;
-
-{**
-  Releases a Connection's database and JDBC resources
-  immediately instead of waiting for
-  them to be automatically released.
-
-  <P><B>Note:</B> A Connection is automatically closed when it is
-  garbage collected. Certain fatal errors also result in a closed
-  Connection.
-}
 
 procedure TZAbstractDbcConnection.Close;
 var RefCountAdded: Boolean;

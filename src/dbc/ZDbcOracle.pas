@@ -304,6 +304,12 @@ type
     ///  the Connection. This method should be used only when auto-commit mode
     ///  has been disabled. See setAutoCommit.</summary>
     procedure Commit;
+    /// <summary>Releases a transaction and resources immediately
+    ///  instead of waiting for them to be automatically released. If the
+    ///  transaction is underway a rollback will be done. Note: A
+    ///  Transaction is automatically closed when the Conenction closes or it is
+    ///  garbage collected. Certain fatal errors also result in a closed
+    //// Transaction.</summary>
     procedure Close;
     /// <summary>Get's the owner connection that produced that object instance.
     /// </summary>
@@ -354,8 +360,13 @@ type
     /// <summary>Gets the current auto-commit state. See setAutoCommit.</summary>
     /// <returns>the current state of auto-commit mode.</returns>
     function GetAutoCommit: Boolean;
+    /// <summary>Test if this <c>Transaction</c> object is closed.</summary>
+    /// <returns><c>True</c> if the transaction is closed; <c>False</c>
+    ///  otherwise.</returns>
+    function IsClosed: Boolean;
   public { IZOracleTransaction }
     function GetTrHandle: POCITrans;
+  public { IImmediatelyReleasable }
     /// <summary>Releases all driver handles and set the object in a closed
     ///  Zombi mode waiting for destruction. Each known supplementary object,
     ///  supporting this interface, gets called too. This may be a recursive
@@ -368,7 +379,6 @@ type
     ///  generating method. So we start from the premisse you have your own
     ///  error handling in any kind.</param>
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
-    function IsClosed: Boolean;
   public
     constructor CreateLocal(const Owner: TZOracleConnection);
     constructor CreateGlobal(const Owner: TZOracleConnection; TxnMode: TZOCITxnMode;

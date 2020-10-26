@@ -159,6 +159,18 @@ type
     function GetSQL : String;
 
     procedure BeforeClose; virtual;
+    /// <summary>
+    ///  Releases this <c>Statement</c> object's database
+    ///  resources immediately instead of waiting for
+    ///  this to happen when it is automatically closed.
+    ///  It is generally good practice to release resources as soon as
+    ///  you are finished with them to avoid tying up database
+    ///  resources.
+    ///  <para><b>Note:</b> A <c>Statement</c> object is automatically closed when its
+    ///    reference counter becomes zero. When a <c>Statement</c> object is closed, its current
+    ///    <c>ResultSet</c> object, if one exists, is also closed.
+    ///  </para>
+    /// </summary>
     procedure Close;
     procedure AfterClose; virtual;
     function IsClosed: Boolean;
@@ -935,17 +947,6 @@ begin
   DriverManager.LogMessage(lcExecute,Self);
 end;
 
-{**
-  Releases this <code>Statement</code> object's database
-  and JDBC resources immediately instead of waiting for
-  this to happen when it is automatically closed.
-  It is generally good practice to release resources as soon as
-  you are finished with them to avoid tying up database
-  resources.
-  <P><B>Note:</B> A <code>Statement</code> object is automatically closed when it is
-  garbage collected. When a <code>Statement</code> object is closed, its current
-  <code>ResultSet</code> object, if one exists, is also closed.
-}
 procedure TZAbstractStatement.Close;
 var RefCountAdded: Boolean;
 begin
