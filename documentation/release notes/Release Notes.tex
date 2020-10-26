@@ -38,6 +38,7 @@
 
 \begin{document}
 \maketitle
+\tableofcontents
 
 \section*{Zeos 7.2}
 The Zeos Team is proud to announce the availability of Zeos 7.2.8 as a stable release.
@@ -52,9 +53,12 @@ If you have any problems with Zeos 7.2, please get in contact with us on the for
 \section{General}
 \label{sec:Rev8_General}
 
-\subsection{Sequence support for several servers and protocols}
-\label{sec:Rev8_General_Sequences}
-Zeos now implements sequence support for the following servers:
+\subsection{Newly introduced Features}
+\label{sec:Rev8_General_Features}
+
+\subsubsection{Sequence support for several servers and protocols}
+\label{sec:Rev8_General_Features_Sequences}
+Zeos now implements additional sequence support for the following servers:
 \begin{itemize}
 \item Adaptive Server Anywhere
 \item Adaptive Server Enterprise
@@ -65,6 +69,19 @@ Zeos now implements sequence support for the following servers:
 \item Oracle
 \end{itemize}
 For Servers that don't have their own protocols in Zeos Sequences are supported using the ADO bridge.
+Firebird, Interbase and PostgreSQL already had support for sequences.
+
+\subsubsection{Support for Character Set aware TStringField on FPC 3.2}
+\label{sec:Rev8_General_Features_TSTringField}
+On Free Pascal 3.2 Zeos 7.2 now supports setting the character set awareness of TStringField.
+Because of this the Size property now reports the correct size.
+This should have a direct impact on all GUI controls using this property.
+
+\subsection{Known Problems}
+When using Cached Updates, it is not possible to add a row and then edit that row before posting to the database.
+This bug cannot be fixed in Zeos 7.2.
+It has been fixed in the upcoming Zeos 8.0.
+Please use database transactions instead.
 
 \section{MySQL / MariaDB}
 \subsection{Fixes}
@@ -91,12 +108,28 @@ The sqlite driver now understands the UNSIGNED keyword in column declarations.
 Until Zeos 7.2.6 this keword was ignored and all columns were unsigned.
 So columns might change type now, i.e. columns of type stShot (Short Int) get stByte (Byte).
 
-\subsection{other changes}
-\begin{itemize}
-\item The sqlite driver now supports using wildcards in GetColumns. This improves the possibilities for fetching metadata using TZSqlMetadata.
-\item The sqlite driver now supports using enable\_load\_extension and load\_extension.
-\item The sqlite driver now is thread safe in the same way that other drivers are thread safe: One connection and all components that connect to it must be in the same thread. Use one connection per thread.
-\end{itemize}
+\subsection{New Features}
+
+\subsubsection{Wildcard searches in SQLite metadata}
+The sqlite driver now supports using wildcards in GetColumns.
+This improves the possibilities for fetching metadata on table columns using TZSqlMetadata.
+
+\subsubsection{Support for enable\_load\_extension and load\_extension}
+The sqlite driver now supports using enable\_load\_extension and load\_extension.
+To use these, one currently has to dig up the plain driver interface.
+There they were added to the IZSQLiteConnection interface on the DBC layer of Zeos.
+For a documentation on how to use them, please refer to the SQLite documentation (\url{https://www.sqlite.org/c3ref/enable_load_extension.html}, \url{https://www.sqlite.org/c3ref/load_extension.html}).
+
+\subsubsection{Support for Thread Safety}
+The SQLite driver now can be configured to use sqlite3\_open\_v2 by setting at least one of two new parameters:
+SQLiteOpen\_Flags and SQLiteOpen\_zVfs were introduced.
+If one of these parameters is set, the SQLite driver will use flags, so one configure SQLite to be usable in a thread safe manner.
+SQLiteOpen\_Flags maps to the flags parameter of sqlite3\_open\_v2.
+SQLiteOpen\_zVfs maps to the zVfs parameter of sqlite3\_open\_v2.
+For the usage of these parameters please refer to the SQLite documentation (\url{http://sqlite.org/c3ref/open.html}).
+When configured for thread safety, the same rules apply as for all other drivers:
+One connection and all components that connect to it must be in the same thread.
+Use one connection per thread.
 
 \section{Firebird / Interbase}
 \begin{itemize}
@@ -743,7 +776,7 @@ In previous versions of Zeos this wasn't guaranteed, leading to undefined behavi
 
 \chapter{The future development of Zeos}
 \label{chap:FutureDevelopmentOfZeosRev}
-The next version of Zeos will be Zeos 7.3 which currently is in the making.
+The next version of Zeos will be Zeos 8.0 which currently is in its Beta state.
 Currently the following changes and features are planned:
 \begin{itemize}
 \item support for OLEDB
@@ -754,14 +787,16 @@ Currently the following changes and features are planned:
 \item PostgreSQL 7 databases will not be supported officially anymore
 \item 
   The mssql protocol that uses ntwdblib.dll will not be supported anymore.
-	With Zeos 7.3 there will be plenty of other options to connect to Microsoft SQL Server.
+  With Zeos 7.3 there will be plenty of other options to connect to Microsoft SQL Server.
 \item DBC layer: the use of TZDriverManager.Connect will not be supported with a string anymore, only the use of a TZURL object will be supported.
 \item
   Protocols with version numbers will not be used in Zeos 7.3 anymore (i.e. firebird-2.5 will become firebird).
   Please migrate.
+  Driver names without version numbers were added to Zeos 7.2 to prepare for this.
 \item
   Zeos 7.3 will have support for the Delphi Nextgen compilers - i.e. Android, iOS, MacOS X and Linux.
 \end{itemize}
 If you use any of these new features, please get in contact on the forums (\url{http://zeoslib.sourceforge.net}).
+We like to read about success stories as well as about problems.
 
 \end{document}
