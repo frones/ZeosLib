@@ -349,7 +349,9 @@ begin
     Result := stAsciiStream
   else if (TypeNameLo = 'uuid') then
     Result := stGuid
-  else if StartsWith(TypeNameLo,  'json') then
+  else if StartsWith(TypeNameLo, 'json') then
+    Result := stAsciiStream
+  else if StartsWith(TypeNameLo, 'xml') then
     Result := stAsciiStream
   else
     Result := stUnknown;
@@ -407,7 +409,8 @@ begin
       then Result := stBytes
       else Result := stBinaryStream;
     UUIDOID: Result := stGUID; {uuid}
-    JSONOID, JSONBOID: Result := stAsciiStream;
+    JSONOID, JSONBOID: Result := {$IFDEF ZEOS90UP}stJSON{$ELSE}stAsciiStream{$ENDIF};
+    XMLOID: Result := {$IFDEF ZEOS90UP}stXML{$ELSE}stAsciiStream{$ENDIF};
     INT2VECTOROID, OIDVECTOROID: Result := stAsciiStream; { int2vector/oidvector. no '_aclitem' }
     143,629,651,719,791,1000..OIDARRAYOID,1040,1041,1115,1182,1183,1185,1187,1231,1263,
     1270,1561,1563,2201,2207..2211,2949,2951,3643,3644,3645,3735,3770 : { other array types }
