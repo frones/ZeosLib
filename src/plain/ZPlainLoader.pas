@@ -172,8 +172,6 @@ begin
 end;
 
 function TZNativeLibraryLoader.ZLoadLibrary(const Location: String): Boolean;
-Var
- dllpath: String;
 begin
   if FLoaded then
     Self.FreeNativeLibrary;
@@ -187,14 +185,7 @@ begin
     FHandle := HMODULE(dlopen(PAnsiChar(Location), RTLD_GLOBAL));
   {$ENDIF}
 {$ELSE}
-  If (Location <> '') And (Pos(':', Location) = 0) Then // relative path...
-  Begin
-   If Location[1] <> '\' Then // Real relative path, e.g. DLLs\MSSQL
-     dllpath := IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0))) + Location
-   Else // \ = root of current drive...
-     dllpath := ExtractFilePath(ParamStr(0))[1] + ':' + Location;
-  End;
-  FHandle := LoadLibraryEx(PChar(dllpath), 0, LOAD_WITH_ALTERED_SEARCH_PATH);
+  FHandle := LoadLibraryEx(PChar(ExpandFileName(Location)), 0, LOAD_WITH_ALTERED_SEARCH_PATH);
 {$ENDIF}
 
   // AB modif END
