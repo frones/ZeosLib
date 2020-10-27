@@ -97,7 +97,7 @@ type
 
 implementation
 
-uses SysUtils, 
+uses SysUtils,
 {$IFDEF MSWINDOWS}
   Windows,
 (*{$ELSE}
@@ -119,7 +119,7 @@ var
 begin
   SetLength(FLocations, Length(Locations));
   for I := 0 to High(Locations) do
-    FLocations[I] := Locations[I]; 
+    FLocations[I] := Locations[I];
   FHandle := INVALID_HANDLE_VALUE;
   FCurrentLocation := '';
   FLoaded := False;
@@ -130,7 +130,7 @@ end;
 }
 destructor TZNativeLibraryLoader.Destroy;
 begin
-  if Loaded then               
+  if Loaded then
     FreeNativeLibrary;
   inherited Destroy;
 end;
@@ -172,21 +172,13 @@ begin
 end;
 
 function TZNativeLibraryLoader.ZLoadLibrary(const Location: String): Boolean;
-var newpath, temp: String; // AB modif
+Var
+ dllpath: String;
 begin
   if FLoaded then
     Self.FreeNativeLibrary;
-  temp := ''; //init for FPC
   FLoaded := False;
   Result := False;
-  newpath := ExtractFilePath(Location);
-  // AB modif BEGIN
-  try
-    if newpath <> '' then begin
-      temp := GetCurrentDir;
-      SetCurrentDir(newpath);
-    end;
-  // AB modif END
 
 {$IFDEF UNIX}
   {$IFDEF FPC}
@@ -195,14 +187,16 @@ begin
     FHandle := HMODULE(dlopen(PAnsiChar(Location), RTLD_GLOBAL));
   {$ENDIF}
 {$ELSE}
-  FHandle := LoadLibrary(PChar(Location));
+  If (Location <> '') And (Pos(':', Location) = 0) Then // relative path...
+  Begin
+   If Location[1] <> '\' Then // Real relative path, e.g. DLLs\MSSQL
+     dllpath := IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0))) + Location
+   Else // \ = root of current drive...
+     dllpath := ExtractFilePath(ParamStr(0))[1] + ':' + Location;
+  End;
+  FHandle := LoadLibraryEx(PChar(dllpath), 0, LOAD_WITH_ALTERED_SEARCH_PATH);
 {$ENDIF}
 
-  // AB modif BEGIN
-  finally
-    if temp<>'' then
-      SetCurrentDir(temp);
-  end;
   // AB modif END
   if (FHandle <> INVALID_HANDLE_VALUE) and (FHandle <> 0) then  begin
     FLoaded := True;
@@ -278,6 +272,3 @@ begin
 end;
 
 end.
-
-
-
