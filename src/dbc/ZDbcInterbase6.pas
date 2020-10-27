@@ -116,7 +116,36 @@ type
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
   public
+    /// <summary>Creates a <c>Statement</c> interface for sending SQL statements
+    ///  to the database. SQL statements without parameters are normally
+    ///  executed using Statement objects. If the same SQL statement
+    ///  is executed many times, it is more efficient to use a
+    ///  <c>PreparedStatement</c> object. Result sets created using the returned
+    ///  <c>Statement</c> interface will by default have forward-only type and
+    ///  read-only concurrency.</summary>
+    /// <param>Info a statement parameters.</param>
+    /// <returns>A new Statement interface</returns>
     function CreateStatementWithParams(Info: TStrings): IZStatement;
+    /// <summary>Creates a <c>PreparedStatement</c> interface for sending
+    ///  parameterized SQL statements to the database. A SQL statement with
+    ///  or without IN parameters can be pre-compiled and stored in a
+    ///  PreparedStatement object. This object can then be used to efficiently
+    ///  execute this statement multiple times.
+    ///  Note: This method is optimized for handling parametric SQL statements
+    ///  that benefit from precompilation. If the driver supports
+    ///  precompilation, the method <c>prepareStatement</c> will send the
+    ///  statement to the database for precompilation. Some drivers may not
+    ///  support precompilation. In this case, the statement may not be sent to
+    ///  the database until the <c>PreparedStatement</c> is executed. This has
+    ///  no direct effect on users; however, it does affect which method throws
+    ///  certain SQLExceptions. Result sets created using the returned
+    ///  PreparedStatement will have forward-only type and read-only
+    ///  concurrency, by default.</summary>
+    /// <param>"SQL" a SQL statement that may contain one or more '?' IN
+    ///  parameter placeholders.</param>
+    /// <param> Info a statement parameter list.</param>
+    /// <returns> a new PreparedStatement object containing the
+    ///  optional pre-compiled statement</returns>
     function PrepareStatementWithParams(const SQL: string; Info: TStrings):
       IZPreparedStatement;
     /// <summary>Creates a <code>CallableStatement</code> object for calling
@@ -134,7 +163,7 @@ type
     /// <param>"Name" a procedure or function name.</param>
     /// <param>"Params" a statement parameters list.</param>
     /// <returns> a new IZCallableStatement interface containing the
-    ///  pre-compiled SQL statement <returns>
+    ///  pre-compiled SQL statement </returns>
     function PrepareCallWithParams(const Name: String; Params: TStrings):
       IZCallableStatement;
 
@@ -746,34 +775,6 @@ begin
   Result := TZInterbase6CallableStatement.Create(Self, Name, Params);
 end;
 
-{**
-  Creates a <code>PreparedStatement</code> object for sending
-  parameterized SQL statements to the database.
-
-  A SQL statement with or without IN parameters can be
-  pre-compiled and stored in a PreparedStatement object. This
-  object can then be used to efficiently execute this statement
-  multiple times.
-
-  <P><B>Note:</B> This method is optimized for handling
-  parametric SQL statements that benefit from precompilation. If
-  the driver supports precompilation,
-  the method <code>prepareStatement</code> will send
-  the statement to the database for precompilation. Some drivers
-  may not support precompilation. In this case, the statement may
-  not be sent to the database until the <code>PreparedStatement</code> is
-  executed.  This has no direct effect on users; however, it does
-  affect which method throws certain SQLExceptions.
-
-  Result sets created using the returned PreparedStatement will have
-  forward-only type and read-only concurrency, by default.
-
-  @param sql a SQL statement that may contain one or more '?' IN
-    parameter placeholders
-  @param Info a statement parameters.
-  @return a new PreparedStatement object containing the
-    pre-compiled statement
-}
 function TZInterbase6Connection.PrepareStatementWithParams(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 begin
@@ -795,20 +796,6 @@ begin
     Result := nil;
 end;
 
-{**
-  Creates a <code>Statement</code> object for sending
-  SQL statements to the database.
-  SQL statements without parameters are normally
-  executed using Statement objects. If the same SQL statement
-  is executed many times, it is more efficient to use a
-  <code>PreparedStatement</code> object.
-  <P>
-  Result sets created using the returned <code>Statement</code>
-  object will by default have forward-only type and read-only concurrency.
-
-  @param Info a statement parameters.
-  @return a new Statement object
-}
 function TZInterbase6Connection.CreateStatementWithParams(
   Info: TStrings): IZStatement;
 begin

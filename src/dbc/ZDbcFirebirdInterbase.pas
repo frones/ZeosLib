@@ -138,7 +138,18 @@ type
     procedure AfterConstruction; override;
     destructor Destroy; override;
   public { IZTransactionManager }
+    /// <summary>Remove the given transaction interface from the manager list.
+    ///  This method will be called from the Transaction interface when the
+    ///  Transaction gets closed. If the interface is unknown an SQLException
+    ///  will be raised.</summary>
+    /// <param>"Value" the Transaction interface which should be removed.</param>
     procedure ReleaseTransaction(const Value: IZTransaction);
+    /// <summary>Test if the interface is known in the Transaction manager.
+    ///  This is usefull if the txn interface was managed, the connection was
+    ///  lost and the txn interface is in destruction.</summary>
+    /// <param>"Value" the Transaction interface which should be checked.</param>
+    /// <returns><c>True</c> if the transaction is known; <c>False</c>
+    ///  otherwise.</returns>
     function IsTransactionValid(const Value: IZTransaction): Boolean;
     procedure ClearTransactions;
   public { implement IZInterbaseFirebirdTransaction }

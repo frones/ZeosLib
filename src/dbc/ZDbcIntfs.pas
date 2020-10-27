@@ -229,8 +229,9 @@ type
   TZSQLType = (stUnknown,
     //fixed size DataTypes first
     stBoolean,
-    stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,  //ordinals
-    stFloat, stDouble, stCurrency, stBigDecimal, //floats
+    stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong, //ordinals
+    stFloat, stDouble, {$IFDEF ZEOS90UP}stDecimal128,{$ENDIF} //floating types
+    stCurrency, stBigDecimal, //ExactTypes
     stDate, stTime, stTimestamp,
     stGUID,
     //now varying size types in equal order
@@ -242,8 +243,11 @@ type
     //it's not worth it handling all obselete TDataSet incompatibilities on Dbc layer
     //that's a problem of component layer only
     stAsciiStream{should be used for raw streams only}, stUnicodeStream{should be used for unicode streams only}, stBinaryStream,
+    {$IFDEF ZEOS90UP}
+    stJSON, stXML, stVariant,
+    {$ENDIF ZEOS90UP}
     //finally the object types
-    stArray, stDataSet);
+    stArray, {$IFDEF ZEOS90UP}stResultSet, stStatement{$ELSE}stDataSet{$ENDIF});
 
   TZSQLTypeArray = array of TZSQLType;
 
@@ -611,6 +615,8 @@ type
     function IsClosed: Boolean;
   end;
 
+  /// <author>EgonHugeist</author>
+  /// <summary>Implements a transaction manager interface.</summary>
   IZTransactionManager = interface(IImmediatelyReleasable)
     ['{BF61AD03-1072-473D-AF1F-67F90DFB4E6A}']
     /// <summary>Creates a <c>Transaction</c></summary>
@@ -624,8 +630,20 @@ type
     /// <returns>returns the Transaction interface.</returns>
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
+    /// <summary>Remove the given transaction interface from the manager list.
+    ///  This method will be called from the Transaction interface when the
+    ///  Transaction gets closed. If the interface is unknown an SQLException
+    ///  will be raised.</summary>
+    /// <param>"Value" the Transaction interface which should be removed.</param>
     procedure ReleaseTransaction(const Value: IZTransaction);
+    /// <summary>Test if the interface is known in the Transaction manager.
+    ///  This is usefull if the txn interface was managed, the connection was
+    ///  lost and the txn interface is in destruction.</summary>
+    /// <param>"Value" the Transaction interface which should be checked.</param>
+    /// <returns><c>True</c> if the transaction is known; <c>False</c>
+    ///  otherwise.</returns>
     function IsTransactionValid(const Value: IZTransaction): Boolean;
+    /// <summary>Clears all transactions.</summary>
     procedure ClearTransactions;
   end;
 
@@ -635,9 +653,7 @@ type
     function UseWComparsions: Boolean;
   End;
 
-  /// <summary>
-  ///   Database Connection interface.
-  /// </summary>
+  /// <summary>Database Connection interface.</summary>
   IZConnection = interface(IImmediatelyReleasable)
     ['{8EEBBD1A-56D1-4EC0-B3BD-42B60591457F}']
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload;
@@ -650,11 +666,81 @@ type
     procedure RegisterStatement(const Value: IZStatement);
     procedure DeregisterStatement(const Statement: IZStatement);
 
+    /// <summary>Creates a <c>Statement</c> interface for sending SQL statements
+    ///  to the database. SQL statements without parameters are normally
+    ///  executed using Statement objects. If the same SQL statement
+    ///  is executed many times, it is more efficient to use a
+    ///  <c>PreparedStatement</c> object. Result sets created using the returned
+    ///  <c>Statement</c> interface will by default have forward-only type and
+    ///  read-only concurrency.</summary>
+    /// <returns>A new Statement interface</returns>
     function CreateStatement: IZStatement;
+    /// <summary>Creates a <c>PreparedStatement</c> interface for sending
+    ///  parameterized SQL statements to the database. A SQL statement with
+    ///  or without IN parameters can be pre-compiled and stored in a
+    ///  PreparedStatement object. This object can then be used to efficiently
+    ///  execute this statement multiple times.
+    ///  Note: This method is optimized for handling parametric SQL statements
+    ///  that benefit from precompilation. If the driver supports
+    ///  precompilation, the method <c>prepareStatement</c> will send the
+    ///  statement to the database for precompilation. Some drivers may not
+    ///  support precompilation. In this case, the statement may not be sent to
+    ///  the database until the <c>PreparedStatement</c> is executed. This has
+    ///  no direct effect on users; however, it does affect which method throws
+    ///  certain SQLExceptions. Result sets created using the returned
+    ///  PreparedStatement will have forward-only type and read-only
+    ///  concurrency, by default.</summary>
+    /// <param>"SQL" a SQL statement that may contain one or more '?' IN
+    ///  parameter placeholders.</param>
+    /// <returns> a new PreparedStatement object containing the
+    ///  optional pre-compiled statement</returns>
     function PrepareStatement(const SQL: string): IZPreparedStatement;
+    /// <summary>Creates a <c>CallableStatement</c> object for calling
+    ///  database stored procedures. The <c>CallableStatement</c> object
+    ///  provides methods for setting up its IN and OUT parameters, and methods
+    ///  for executing the call to a stored procedure. Note: This method is
+    ///  optimized for handling stored procedure call statements. Some drivers
+    ///  may send the call statement to the database when the method
+    ///  <c>prepareCall</c> is done; others may wait until the
+    ///  <c>CallableStatement</c> object is executed. This has no direct effect
+    ///  on users; however, it does affect which method throws certain
+    ///  EZSQLExceptions. Result sets created using the returned
+    ///  IZCallableStatement will have forward-only type and read-only
+    ///  concurrency, by default.</summary>
+    /// <param>"Name" a procedure or function name.</param>
+    /// <returns> a new IZCallableStatement interface containing the
+    ///  pre-compiled SQL statement </returns>
     function PrepareCall(const SQL: string): IZCallableStatement;
-
+    /// <summary>Creates a <c>Statement</c> interface for sending SQL statements
+    ///  to the database. SQL statements without parameters are normally
+    ///  executed using Statement objects. If the same SQL statement
+    ///  is executed many times, it is more efficient to use a
+    ///  <c>PreparedStatement</c> object. Result sets created using the returned
+    ///  <c>Statement</c> interface will by default have forward-only type and
+    ///  read-only concurrency.</summary>
+    /// <param>Info a statement parameters.</param>
+    /// <returns>A new Statement interface</returns>
     function CreateStatementWithParams(Info: TStrings): IZStatement;
+    /// <summary>Creates a <c>PreparedStatement</c> interface for sending
+    ///  parameterized SQL statements to the database. A SQL statement with
+    ///  or without IN parameters can be pre-compiled and stored in a
+    ///  PreparedStatement object. This object can then be used to efficiently
+    ///  execute this statement multiple times.
+    ///  Note: This method is optimized for handling parametric SQL statements
+    ///  that benefit from precompilation. If the driver supports
+    ///  precompilation, the method <c>prepareStatement</c> will send the
+    ///  statement to the database for precompilation. Some drivers may not
+    ///  support precompilation. In this case, the statement may not be sent to
+    ///  the database until the <c>PreparedStatement</c> is executed. This has
+    ///  no direct effect on users; however, it does affect which method throws
+    ///  certain SQLExceptions. Result sets created using the returned
+    ///  PreparedStatement will have forward-only type and read-only
+    ///  concurrency, by default.</summary>
+    /// <param>"SQL" a SQL statement that may contain one or more '?' IN
+    ///  parameter placeholders.</param>
+    /// <param> Info a statement parameter list.</param>
+    /// <returns> a new PreparedStatement object containing the
+    ///  optional pre-compiled statement</returns>
     function PrepareStatementWithParams(const SQL: string; Info: TStrings):
       IZPreparedStatement;
     /// <summary>Creates a <code>CallableStatement</code> object for calling
@@ -672,7 +758,7 @@ type
     /// <param>"Name" a procedure or function name.</param>
     /// <param>"Params" a statement parameters list.</param>
     /// <returns> a new IZCallableStatement interface containing the
-    ///  pre-compiled SQL statement <returns>
+    ///  pre-compiled SQL statement </returns>
     function PrepareCallWithParams(const Name: string; Params: TStrings):
       IZCallableStatement;
 
@@ -761,7 +847,10 @@ type
     /// <returns><c>True</c> if the conenction is readonly; <c>False</c>
     ///  otherwise.</returns>
     function IsReadOnly: Boolean;
-
+    /// <summary>Sets a catalog name in order to select a subspace of this
+    ///  Connection's database in which to work. If the driver does not support
+    ///  catalogs, it will silently ignore this request.</summary>
+    /// <param>"value" new catalog name to be used.</param>
     procedure SetCatalog(const Value: string);
     function GetCatalog: string;
 

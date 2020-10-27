@@ -246,7 +246,35 @@ type
     destructor Destroy; override;
     procedure AfterConstruction; override;
 
+    /// <summary>Creates a <c>Statement</c> interface for sending SQL statements
+    ///  to the database. SQL statements without parameters are normally
+    ///  executed using Statement objects. If the same SQL statement
+    ///  is executed many times, it is more efficient to use a
+    ///  <c>PreparedStatement</c> object. Result sets created using the returned
+    ///  <c>Statement</c> interface will by default have forward-only type and
+    ///  read-only concurrency.</summary>
+    /// <returns>A new Statement interface</returns>
     function CreateStatement: IZStatement;
+    /// <summary>Creates a <c>PreparedStatement</c> interface for sending
+    ///  parameterized SQL statements to the database. A SQL statement with
+    ///  or without IN parameters can be pre-compiled and stored in a
+    ///  PreparedStatement object. This object can then be used to efficiently
+    ///  execute this statement multiple times.
+    ///  Note: This method is optimized for handling parametric SQL statements
+    ///  that benefit from precompilation. If the driver supports
+    ///  precompilation, the method <c>prepareStatement</c> will send the
+    ///  statement to the database for precompilation. Some drivers may not
+    ///  support precompilation. In this case, the statement may not be sent to
+    ///  the database until the <c>PreparedStatement</c> is executed. This has
+    ///  no direct effect on users; however, it does affect which method throws
+    ///  certain SQLExceptions. Result sets created using the returned
+    ///  PreparedStatement will have forward-only type and read-only
+    ///  concurrency, by default.</summary>
+    /// <param>"SQL" a SQL statement that may contain one or more '?' IN
+    ///  parameter placeholders.</param>
+    /// <param> Info a statement parameter list.</param>
+    /// <returns> a new PreparedStatement object containing the
+    ///  optional pre-compiled statement</returns>
     function PrepareStatement(const SQL: string): IZPreparedStatement;
     function PrepareCall(const SQL: string): IZCallableStatement;
 
@@ -331,7 +359,10 @@ type
     ///  otherwise.</returns>
     function IsReadOnly: Boolean; virtual;
     function GetURL: String;
-
+    /// <summary>Sets a catalog name in order to select a subspace of this
+    ///  Connection's database in which to work. If the driver does not support
+    ///  catalogs, it will silently ignore this request.</summary>
+    /// <param>"value" new catalog name to be used.</param>
     procedure SetCatalog(const {%H-}Catalog: string); virtual;
     function GetCatalog: string; virtual;
 
@@ -386,7 +417,18 @@ type
   public //implement IZTransactionManager
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
+    /// <summary>Remove the given transaction interface from the manager list.
+    ///  This method will be called from the Transaction interface when the
+    ///  Transaction gets closed. If the interface is unknown an SQLException
+    ///  will be raised.</summary>
+    /// <param>"Value" the Transaction interface which should be removed.</param>
     procedure ReleaseTransaction(const Value: IZTransaction);
+    /// <summary>Test if the interface is known in the Transaction manager.
+    ///  This is usefull if the txn interface was managed, the connection was
+    ///  lost and the txn interface is in destruction.</summary>
+    /// <param>"Value" the Transaction interface which should be checked.</param>
+    /// <returns><c>True</c> if the transaction is known; <c>False</c>
+    ///  otherwise.</returns>
     function IsTransactionValid(const Value: IZTransaction): Boolean;
     procedure ClearTransactions;
     function GetConnectionTransaction: IZTransaction;
@@ -1535,12 +1577,6 @@ begin
   Result := FURL.URL
 end;
 
-{**
-  Sets a catalog name in order to select
-  a subspace of this Connection's database in which to work.
-  If the driver does not support catalogs, it will
-  silently ignore this request.
-}
 procedure TZAbstractDbcConnection.SetCatalog(const Catalog: string);
 begin
 end;
