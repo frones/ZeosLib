@@ -488,14 +488,14 @@ begin
 end;
 
 procedure TZOracleCallableStatement.UnPrepare;
-const RELEASE_MODE: array[boolean] of integer = (OCI_DEFAULT,OCI_STMTCACHE_DELETE);
+const {%H-}RELEASE_MODE: array[boolean] of integer = (OCI_DEFAULT,OCI_STMTCACHE_DELETE);
 begin
   try
-    if False{FServerStmtCache} then
+    {if FServerStmtCache then
       CheckOracleError(FPlainDriver, FErrorHandle,
         FplainDriver.StmtRelease(FHandle, FErrorHandle, nil, 0, RELEASE_MODE[False]),
       lcExecute, ASQL, ConSettings)
-    else
+    else}
       FreeOracleStatementHandles(FPlainDriver, FHandle, FErrorHandle);
   finally
     inherited Unprepare;

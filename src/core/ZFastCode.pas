@@ -6999,6 +6999,7 @@ end;
 //Optimized for:     Pure-Pascal
 
 //changed to PByte support:
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function StrLen_JOH_PAS_3_a(const Str: PAnsiChar): Cardinal;
 var
   P, PStr: PAnsiChar;
@@ -7040,6 +7041,7 @@ begin
      else
        Inc(Result, 3)
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
   {$ENDIF PUREPASCAL}
 {$ENDIF USE_FAST_STRLEN}
 
