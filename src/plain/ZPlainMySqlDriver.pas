@@ -1005,7 +1005,22 @@ type
     /// <returns>0 on success; an error, if the option MYSQL_OPT_RECONNECT
     ///  wasn't specified before.</returns>
     mariadb_reconnect: function(mysql: PMYSQL): my_bool;
-
+    //see http://docwiki.embarcadero.com/RADStudio/Sydney/de/E2591_Nur_cdecl-Funktionen_d%C3%BCrfen_varargs_verwenden_(Delphi)
+    //so we can't use it because a dynamic loading wouldn't be possilbe anymore
+    //cdecl calling convention is always required to align the result in first place
+    //mysql_optionsv: function(mysql: PMYSQL; Option: TMySqlOption; const Arg: Pointer): Integer; varargs; cdecl;
+    //cirumvent that issue by defining multiple versions with multiple Args
+    //on loading on loading we use always the same address
+    mysql_optionsv_1: function(mysql: PMYSQL; Option: TMySqlOption; const Arg1: Pointer): Integer; cdecl;
+    mysql_optionsv_2: function(mysql: PMYSQL; Option: TMySqlOption; const Arg1, Arg2: Pointer): Integer; cdecl;
+    mysql_optionsv_3: function(mysql: PMYSQL; Option: TMySqlOption; const Arg1, Arg2, Arg3: Pointer): Integer; cdecl;
+    mysql_optionsv_4: function(mysql: PMYSQL; Option: TMySqlOption; const Arg1, Arg2, Arg3, Arg4: Pointer): Integer; cdecl;
+    mysql_optionsv_5: function(mysql: PMYSQL; Option: TMySqlOption; const Arg1, Arg2, Arg3, Arg4, Arg5: Pointer): Integer; cdecl;
+    mysql_optionsv_6: function(mysql: PMYSQL; Option: TMySqlOption; const Arg1, Arg2, Arg3, Arg4, Arg5, Arg6: Pointer): Integer; cdecl;
+    mysql_optionsv_7: function(mysql: PMYSQL; Option: TMySqlOption; const Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7: Pointer): Integer; cdecl;
+    mysql_optionsv_8: function(mysql: PMYSQL; Option: TMySqlOption; const Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8: Pointer): Integer; cdecl;
+    mysql_optionsv_9: function(mysql: PMYSQL; Option: TMySqlOption; const Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9: Pointer): Integer; cdecl;
+    mysql_optionsv_10: function(mysql: PMYSQL; Option: TMySqlOption; const Arg1, Arg2, Arg3, Arg4, Arg5, Arg6, Arg7, Arg8, Arg9, Arg10: Pointer): Integer; cdecl;
   protected
     function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
@@ -1102,128 +1117,139 @@ var
 begin
 { ************** Load adresses of API Functions ************* }
   with Loader do begin
-  @mysql_affected_rows          := GetAddress('mysql_affected_rows');
-  @mysql_character_set_name     := GetAddress('mysql_character_set_name');
-  @mysql_close                  := GetAddress('mysql_close');
-  //@mysql_connect                := GetAddress('mysql_connect');
-  @mysql_create_db              := GetAddress('mysql_create_db');
-  @mysql_data_seek              := GetAddress('mysql_data_seek');
-  //@mysql_debug                  := GetAddress('mysql_debug');
-  @mysql_drop_db                := GetAddress('mysql_drop_db');
-  //@mysql_dump_debug_info        := GetAddress('mysql_dump_debug_info');
-  @mysql_eof                    := GetAddress('mysql_eof');
-  @mysql_errno                  := GetAddress('mysql_errno');
-  @mysql_error                  := GetAddress('mysql_error');
-  @mysql_sqlstate               := GetAddress('mysql_sqlstate');
-  @mysql_escape_string          := GetAddress('mysql_escape_string');
-  @mysql_fetch_field            := GetAddress('mysql_fetch_field');
-  @mysql_fetch_field_direct     := GetAddress('mysql_fetch_field_direct');
-  @mysql_fetch_fields           := GetAddress('mysql_fetch_fields');
-  @mysql_fetch_lengths          := GetAddress('mysql_fetch_lengths');
-  @mysql_fetch_row              := GetAddress('mysql_fetch_row');
-  @mysql_field_seek             := GetAddress('mysql_field_seek');
-  @mysql_field_tell             := GetAddress('mysql_field_tell');
-  @mysql_free_result            := GetAddress('mysql_free_result');
-  @mysql_get_client_info        := GetAddress('mysql_get_client_info');
-  @mysql_get_host_info          := GetAddress('mysql_get_host_info');
-  //@mysql_get_proto_info         := GetAddress('mysql_get_proto_info');
-  @mysql_get_server_info        := GetAddress('mysql_get_server_info');
-  @mysql_info                   := GetAddress('mysql_info');
-  @mysql_init                   := GetAddress('mysql_init');
-  @mysql_insert_id              := GetAddress('mysql_insert_id');
-  //@mysql_kill                   := GetAddress('mysql_kill');
-  //@mysql_list_dbs               := GetAddress('mysql_list_dbs');
-  //@mysql_list_fields            := GetAddress('mysql_list_fields');
-  //@mysql_list_processes         := GetAddress('mysql_list_processes');
-  //@mysql_list_tables            := GetAddress('mysql_list_tables');
-  @mysql_num_fields             := GetAddress('mysql_num_fields');
-  @mysql_num_rows               := GetAddress('mysql_num_rows');
-  @mysql_options                := GetAddress('mysql_options');
-  @mysql_ping                   := GetAddress('mysql_ping');
-  //@mysql_query                  := GetAddress('mysql_query');
-  @mysql_real_connect           := GetAddress('mysql_real_connect');
-  @mysql_real_escape_string     := GetAddress('mysql_real_escape_string');
-  @mysql_real_query             := GetAddress('mysql_real_query');
-  //@mysql_refresh                := GetAddress('mysql_refresh');
-  //@mysql_row_seek               := GetAddress('mysql_row_seek');
-  @mysql_row_tell               := GetAddress('mysql_row_tell');
-  @mysql_select_db              := GetAddress('mysql_select_db');
-  //@mysql_shutdown               := GetAddress('mysql_shutdown');
-  @mysql_ssl_set                := GetAddress('mysql_ssl_set');
-  //@mysql_stat                   := GetAddress('mysql_stat');
-  @mysql_store_result           := GetAddress('mysql_store_result');
-  @mysql_thread_id              := GetAddress('mysql_thread_id');
-  @mysql_use_result             := GetAddress('mysql_use_result');
+    @mysql_affected_rows          := GetAddress('mysql_affected_rows');
+    @mysql_character_set_name     := GetAddress('mysql_character_set_name');
+    @mysql_close                  := GetAddress('mysql_close');
+    //@mysql_connect                := GetAddress('mysql_connect');
+    @mysql_create_db              := GetAddress('mysql_create_db');
+    @mysql_data_seek              := GetAddress('mysql_data_seek');
+    //@mysql_debug                  := GetAddress('mysql_debug');
+    @mysql_drop_db                := GetAddress('mysql_drop_db');
+    //@mysql_dump_debug_info        := GetAddress('mysql_dump_debug_info');
+    @mysql_eof                    := GetAddress('mysql_eof');
+    @mysql_errno                  := GetAddress('mysql_errno');
+    @mysql_error                  := GetAddress('mysql_error');
+    @mysql_sqlstate               := GetAddress('mysql_sqlstate');
+    @mysql_escape_string          := GetAddress('mysql_escape_string');
+    @mysql_fetch_field            := GetAddress('mysql_fetch_field');
+    @mysql_fetch_field_direct     := GetAddress('mysql_fetch_field_direct');
+    @mysql_fetch_fields           := GetAddress('mysql_fetch_fields');
+    @mysql_fetch_lengths          := GetAddress('mysql_fetch_lengths');
+    @mysql_fetch_row              := GetAddress('mysql_fetch_row');
+    @mysql_field_seek             := GetAddress('mysql_field_seek');
+    @mysql_field_tell             := GetAddress('mysql_field_tell');
+    @mysql_free_result            := GetAddress('mysql_free_result');
+    @mysql_get_client_info        := GetAddress('mysql_get_client_info');
+    @mysql_get_host_info          := GetAddress('mysql_get_host_info');
+    //@mysql_get_proto_info         := GetAddress('mysql_get_proto_info');
+    @mysql_get_server_info        := GetAddress('mysql_get_server_info');
+    @mysql_info                   := GetAddress('mysql_info');
+    @mysql_init                   := GetAddress('mysql_init');
+    @mysql_insert_id              := GetAddress('mysql_insert_id');
+    //@mysql_kill                   := GetAddress('mysql_kill');
+    //@mysql_list_dbs               := GetAddress('mysql_list_dbs');
+    //@mysql_list_fields            := GetAddress('mysql_list_fields');
+    //@mysql_list_processes         := GetAddress('mysql_list_processes');
+    //@mysql_list_tables            := GetAddress('mysql_list_tables');
+    @mysql_num_fields             := GetAddress('mysql_num_fields');
+    @mysql_num_rows               := GetAddress('mysql_num_rows');
+    @mysql_options                := GetAddress('mysql_options');
+    @mysql_ping                   := GetAddress('mysql_ping');
+    //@mysql_query                  := GetAddress('mysql_query');
+    @mysql_real_connect           := GetAddress('mysql_real_connect');
+    @mysql_real_escape_string     := GetAddress('mysql_real_escape_string');
+    @mysql_real_query             := GetAddress('mysql_real_query');
+    //@mysql_refresh                := GetAddress('mysql_refresh');
+    //@mysql_row_seek               := GetAddress('mysql_row_seek');
+    @mysql_row_tell               := GetAddress('mysql_row_tell');
+    @mysql_select_db              := GetAddress('mysql_select_db');
+    //@mysql_shutdown               := GetAddress('mysql_shutdown');
+    @mysql_ssl_set                := GetAddress('mysql_ssl_set');
+    //@mysql_stat                   := GetAddress('mysql_stat');
+    @mysql_store_result           := GetAddress('mysql_store_result');
+    @mysql_thread_id              := GetAddress('mysql_thread_id');
+    @mysql_use_result             := GetAddress('mysql_use_result');
 
-  @my_init                      := GetAddress('my_init');
-  @mysql_thread_init            := GetAddress('mysql_thread_init');
-  @mysql_thread_end             := GetAddress('mysql_thread_end');
-  @mysql_thread_safe            := GetAddress('mysql_thread_safe');
+    @my_init                      := GetAddress('my_init');
+    @mysql_thread_init            := GetAddress('mysql_thread_init');
+    @mysql_thread_end             := GetAddress('mysql_thread_end');
+    @mysql_thread_safe            := GetAddress('mysql_thread_safe');
 
-  @mysql_server_init            := GetAddress('mysql_server_init'); //deprecated
-  @mysql_library_init           := GetAddress('mysql_library_init');
-  @mysql_server_end             := GetAddress('mysql_server_end');  //deprecated
-  @mysql_library_end            := GetAddress('mysql_library_end');
+    @mysql_server_init            := GetAddress('mysql_server_init'); //deprecated
+    @mysql_library_init           := GetAddress('mysql_library_init');
+    @mysql_server_end             := GetAddress('mysql_server_end');  //deprecated
+    @mysql_library_end            := GetAddress('mysql_library_end');
 
-  @mysql_change_user            := GetAddress('mysql_change_user');
-  @mysql_field_count            := GetAddress('mysql_field_count');
+    @mysql_change_user            := GetAddress('mysql_change_user');
+    @mysql_field_count            := GetAddress('mysql_field_count');
 
-  @mysql_get_client_version     := GetAddress('mysql_get_client_version');
+    @mysql_get_client_version     := GetAddress('mysql_get_client_version');
 
-  @mysql_send_query             := GetAddress('mysql_send_query');
-  @mysql_read_query_result      := GetAddress('mysql_read_query_result');
+    @mysql_send_query             := GetAddress('mysql_send_query');
+    @mysql_read_query_result      := GetAddress('mysql_read_query_result');
 
-  @mysql_autocommit             := GetAddress('mysql_autocommit');
-  @mysql_commit                 := GetAddress('mysql_commit');
-  @mysql_get_server_version     := GetAddress('mysql_get_server_version');
-  @mysql_hex_string             := GetAddress('mysql_hex_string');
-  @mysql_more_results           := GetAddress('mysql_more_results');
-  @mysql_next_result            := GetAddress('mysql_next_result');
-  @mysql_rollback               := GetAddress('mysql_rollback');
-  @mysql_set_character_set      := GetAddress('mysql_set_character_set');
-  @mysql_set_server_option      := GetAddress('mysql_set_server_option');
-  //@mysql_sqlstate               := GetAddress('mysql_sqlstate');
-  @mysql_warning_count          := GetAddress('mysql_warning_count');
-  {API for PREPARED STATEMENTS}
-  @mysql_stmt_affected_rows     := GetAddress('mysql_stmt_affected_rows');
-  @mysql_stmt_attr_get          := GetAddress('mysql_stmt_attr_get');
-  @mariadb_stmt_execute_direct  := GetAddress('mariadb_stmt_execute_direct');
-  @mariadb_cancel               := GetAddress('mariadb_cancel');
-  @mariadb_reconnect            := GetAddress('mariadb_reconnect');
+    @mysql_autocommit             := GetAddress('mysql_autocommit');
+    @mysql_commit                 := GetAddress('mysql_commit');
+    @mysql_get_server_version     := GetAddress('mysql_get_server_version');
+    @mysql_hex_string             := GetAddress('mysql_hex_string');
+    @mysql_more_results           := GetAddress('mysql_more_results');
+    @mysql_next_result            := GetAddress('mysql_next_result');
+    @mysql_rollback               := GetAddress('mysql_rollback');
+    @mysql_set_character_set      := GetAddress('mysql_set_character_set');
+    @mysql_set_server_option      := GetAddress('mysql_set_server_option');
+    //@mysql_sqlstate               := GetAddress('mysql_sqlstate');
+    @mysql_warning_count          := GetAddress('mysql_warning_count');
+    {API for PREPARED STATEMENTS}
+    @mysql_stmt_affected_rows     := GetAddress('mysql_stmt_affected_rows');
+    @mysql_stmt_attr_get          := GetAddress('mysql_stmt_attr_get');
+    @mariadb_stmt_execute_direct  := GetAddress('mariadb_stmt_execute_direct');
 
-  //http://dev.mysql.com/doc/refman/4.1/en/mysql-stmt-attr-set.html
-  //http://dev.mysql.com/doc/refman/5.0/en/mysql-stmt-attr-set.html
-  if Assigned(mariadb_stmt_execute_direct) or (mysql_get_client_version >= 50107)
-  then @mysql_stmt_attr_set517UP := GetAddress('mysql_stmt_attr_set') //uses mybool
-  else @mysql_stmt_attr_set      := GetAddress('mysql_stmt_attr_set'); //uses ulong
+    //http://dev.mysql.com/doc/refman/4.1/en/mysql-stmt-attr-set.html
+    //http://dev.mysql.com/doc/refman/5.0/en/mysql-stmt-attr-set.html
+    if Assigned(mariadb_stmt_execute_direct) or (mysql_get_client_version >= 50107)
+    then @mysql_stmt_attr_set517UP := GetAddress('mysql_stmt_attr_set') //uses mybool
+    else @mysql_stmt_attr_set      := GetAddress('mysql_stmt_attr_set'); //uses ulong
 
-  @mysql_stmt_bind_param        := GetAddress('mysql_stmt_bind_param');
-  @mysql_stmt_bind_result       := GetAddress('mysql_stmt_bind_result');
-  @mysql_stmt_close             := GetAddress('mysql_stmt_close');
-  @mysql_stmt_data_seek         := GetAddress('mysql_stmt_data_seek');
-  @mysql_stmt_errno             := GetAddress('mysql_stmt_errno');
-  @mysql_stmt_error             := GetAddress('mysql_stmt_error');
-  @mysql_stmt_execute           := GetAddress('mysql_stmt_execute');
-  @mysql_stmt_fetch             := GetAddress('mysql_stmt_fetch');
-  @mysql_stmt_fetch_column      := GetAddress('mysql_stmt_fetch_column');
-  @mysql_stmt_field_count       := GetAddress('mysql_stmt_field_count');
-  @mysql_stmt_free_result       := GetAddress('mysql_stmt_free_result');
-  @mysql_stmt_init              := GetAddress('mysql_stmt_init');
-  @mysql_stmt_insert_id         := GetAddress('mysql_stmt_insert_id');
-  @mysql_stmt_num_rows          := GetAddress('mysql_stmt_num_rows');
-  @mysql_stmt_param_count       := GetAddress('mysql_stmt_param_count');
-  @mysql_stmt_param_metadata    := GetAddress('mysql_stmt_param_metadata');
-  @mysql_stmt_prepare           := GetAddress('mysql_stmt_prepare');
-  @mysql_stmt_reset             := GetAddress('mysql_stmt_reset');
-  @mysql_stmt_result_metadata   := GetAddress('mysql_stmt_result_metadata');
-  //@mysql_stmt_row_seek          := GetAddress('mysql_stmt_row_seek');
-  //@mysql_stmt_row_tell          := GetAddress('mysql_stmt_row_tell');
-  @mysql_stmt_send_long_data    := GetAddress('mysql_stmt_send_long_data');
-  @mysql_stmt_sqlstate          := GetAddress('mysql_stmt_sqlstate');
-  @mysql_stmt_store_result      := GetAddress('mysql_stmt_store_result');
-  @mysql_stmt_more_results      := GetAddress('mysql_stmt_more_results');
-  //@mysql_get_character_set_info := GetAddress('mysql_get_character_set_info');
-  @mysql_stmt_next_result       := GetAddress('mysql_stmt_next_result');
+    @mysql_stmt_bind_param        := GetAddress('mysql_stmt_bind_param');
+    @mysql_stmt_bind_result       := GetAddress('mysql_stmt_bind_result');
+    @mysql_stmt_close             := GetAddress('mysql_stmt_close');
+    @mysql_stmt_data_seek         := GetAddress('mysql_stmt_data_seek');
+    @mysql_stmt_errno             := GetAddress('mysql_stmt_errno');
+    @mysql_stmt_error             := GetAddress('mysql_stmt_error');
+    @mysql_stmt_execute           := GetAddress('mysql_stmt_execute');
+    @mysql_stmt_fetch             := GetAddress('mysql_stmt_fetch');
+    @mysql_stmt_fetch_column      := GetAddress('mysql_stmt_fetch_column');
+    @mysql_stmt_field_count       := GetAddress('mysql_stmt_field_count');
+    @mysql_stmt_free_result       := GetAddress('mysql_stmt_free_result');
+    @mysql_stmt_init              := GetAddress('mysql_stmt_init');
+    @mysql_stmt_insert_id         := GetAddress('mysql_stmt_insert_id');
+    @mysql_stmt_num_rows          := GetAddress('mysql_stmt_num_rows');
+    @mysql_stmt_param_count       := GetAddress('mysql_stmt_param_count');
+    @mysql_stmt_param_metadata    := GetAddress('mysql_stmt_param_metadata');
+    @mysql_stmt_prepare           := GetAddress('mysql_stmt_prepare');
+    @mysql_stmt_reset             := GetAddress('mysql_stmt_reset');
+    @mysql_stmt_result_metadata   := GetAddress('mysql_stmt_result_metadata');
+    //@mysql_stmt_row_seek          := GetAddress('mysql_stmt_row_seek');
+    //@mysql_stmt_row_tell          := GetAddress('mysql_stmt_row_tell');
+    @mysql_stmt_send_long_data    := GetAddress('mysql_stmt_send_long_data');
+    @mysql_stmt_sqlstate          := GetAddress('mysql_stmt_sqlstate');
+    @mysql_stmt_store_result      := GetAddress('mysql_stmt_store_result');
+    @mysql_stmt_more_results      := GetAddress('mysql_stmt_more_results');
+    //@mysql_get_character_set_info := GetAddress('mysql_get_character_set_info');
+    @mysql_stmt_next_result       := GetAddress('mysql_stmt_next_result');
+
+    @mariadb_cancel               := GetAddress('mariadb_cancel');
+    @mariadb_reconnect            := GetAddress('mariadb_reconnect');
+    @mysql_optionsv_1             := GetAddress('mysql_optionsv');
+    @mysql_optionsv_2             := @mysql_optionsv_1;
+    @mysql_optionsv_3             := @mysql_optionsv_1;
+    @mysql_optionsv_4             := @mysql_optionsv_1;
+    @mysql_optionsv_5             := @mysql_optionsv_1;
+    @mysql_optionsv_6             := @mysql_optionsv_1;
+    @mysql_optionsv_7             := @mysql_optionsv_1;
+    @mysql_optionsv_8             := @mysql_optionsv_1;
+    @mysql_optionsv_9             := @mysql_optionsv_1;
+    @mysql_optionsv_10            := @mysql_optionsv_1;
   end;
   ClientInfo := mysql_get_client_info;
   L := ZFastCode.StrLen(ClientInfo);
