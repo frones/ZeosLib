@@ -172,11 +172,21 @@ begin
 end;
 
 function TZNativeLibraryLoader.ZLoadLibrary(const Location: String): Boolean;
+var newpath, temp: String; // AB modif
 begin
   if FLoaded then
     Self.FreeNativeLibrary;
+  temp := ''; //init for FPC
   FLoaded := False;
   Result := False;
+  newpath := ExtractFilePath(Location);
+  // AB modif BEGIN
+  try
+    if newpath <> '' then begin
+      temp := GetCurrentDir;
+      SetCurrentDir(newpath);
+    end;
+  // AB modif END
 
 {$IFDEF UNIX}
   {$IFDEF FPC}
@@ -185,9 +195,20 @@ begin
     FHandle := HMODULE(dlopen(PAnsiChar(Location), RTLD_GLOBAL));
   {$ENDIF}
 {$ELSE}
-  FHandle := LoadLibraryEx(PChar(ExpandFileName(Location)), 0, LOAD_WITH_ALTERED_SEARCH_PATH);
+  // So the thing is... if we don't specify a library location, we only get a dll name here. Like 'oci.dll'
+  // ExpandFileName is so "smart" that it consideres it a relative path and expands it to appear like it's right
+  // next to the application. If the DLL is in the search path, we'll not be able to find it. So let's check if
+  // a path was provided, and if yes, then use LOAD_WITH_ALTERED_SEARCH_PATH. If no, fall back to the "original"
+  // version and let Windows find the DLL somewhere.
+  If newpath <> '' Then FHandle := LoadLibraryEx(PChar(ExpandFileName(Location)), 0, LOAD_WITH_ALTERED_SEARCH_PATH)
+    Else FHandle := LoadLibraryEx(PChar(Location), 0, 0);
 {$ENDIF}
 
+  // AB modif BEGIN
+  finally
+    if temp<>'' then
+      SetCurrentDir(temp);
+  end;
   // AB modif END
   if (FHandle <> INVALID_HANDLE_VALUE) and (FHandle <> 0) then  begin
     FLoaded := True;
