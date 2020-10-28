@@ -1083,7 +1083,7 @@ unnest(array[$1]::int8[])
           SQLWriter.AddText(fRawTemp, SQL);
           SQLWriter.AddText('[])', SQL);
           if FTokenMatchIndex = Ord(dmlDelete) then
-            SQLWriter.AddChar(')', SQL);
+            SQLWriter.AddChar(AnsiChar(')'), SQL);
           Inc(OffSet);
         end else begin
           SQLWriter.AddChar(AnsiChar('$'), SQL);
