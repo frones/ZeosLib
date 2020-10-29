@@ -2227,7 +2227,7 @@ begin
             Continue;
           Grantee := PermissionsExp.Strings[0];
           if Grantee = '' then
-          Grantee := 'PUBLIC';
+            Grantee := 'PUBLIC';
           Privileges := PermissionsExp.Strings[1];
           for J := 1 to Length(Privileges) do
           begin

@@ -1573,6 +1573,7 @@ begin
       + ' AND c.table_name=t.table_name'
       + AppendCondition(SchemaCondition) + AppendCondition(TableNameCondition)
       + AppendCondition(ColumnNameCondition)
+      + ' order by c.column_name, c.column_priv'
     ) do
     begin
       while Next do
@@ -1586,6 +1587,7 @@ begin
 
         AllPrivileges := GetString(column_priv_Index);
         PutSplitString(PrivilegesList, AllPrivileges, ',');
+        TStringList(PrivilegesList).Sort;
 
         for I := 0 to PrivilegesList.Count - 1 do
         begin

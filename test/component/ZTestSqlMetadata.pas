@@ -130,6 +130,13 @@ end;
 
 procedure TZTestSQLMetadataCase.TestTablePrivileges;
 begin
+  Connection.Connect;
+  try
+    Connection.ExecuteDirect(
+      'grant select on people to '+ConnectionConfig.UserName);
+  Except
+    Fail('This test can''t pass if current user has no grant privilieges')
+  end;
   Metadata.MetadataType := mdTablePrivileges;
   Metadata.Open;
   try
