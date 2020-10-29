@@ -1281,7 +1281,8 @@ ExecWithParams:
           if Assigned(FPlainDriver.PQresultErrorField)
           then PError := FPlainDriver.PQresultErrorField(Result,Ord(PG_DIAG_SQLSTATE))
           else PError := FPLainDriver.PQerrorMessage(FconnAddress^);
-          if (PError <> nil) and (PError^ <> #0) then begin
+          if (PError <> nil) and (PError^ <> #0) and
+            FPostgreSQLConnection.GetAutoCommit {we can re-exec only if the txn isn't broken} then begin
             { check for indermine datatype error}
             if Assigned(FPlainDriver.PQresultErrorField) and CompareMem(PError, indeterminate_datatype, 5) then begin
               FPlainDriver.PQclear(Result);
