@@ -2096,6 +2096,16 @@ function CharPos_CI(C: Char; const Str: string): NativeInt;
 /// <returns>a rounded value with millisecond precision</returns>
 function RoundNanoFractionToMillis(const Value: Cardinal): Word;
 
+Type
+  TZBCDScale = 0..MaxFMTBcdFractionSize;
+
+/// <author>EgonHugeist</author>
+/// <summary>rounds a TBCD half away from zero to it's given scale.</summary>
+/// <param>"Value" the value to be rounded.</param>
+/// <param>"Scale" the TZBCDScale used for rounding.</param>
+/// <param>"Precision" the new Precision after rounding.</param>
+procedure ZRoundBCD(var Value: TBCD; Scale: TZBCDScale; Out Precision: Word);
+
 var
   /// <summary>defines a lookup table for Byte to Nibble conversions.</summary>
   ZBase100Byte2BcdNibbleLookup: array[0..99] of Byte;
@@ -7527,10 +7537,13 @@ begin
   { padd leading zeroes away }
   while (Precision > 1) and (Precision > Scale) do begin
     if PByte(pNibble)^ = 0 then begin
-      Inc(PNibble);
-      Dec(Precision, 1+Ord(Precision > 1));
+      Dec(Precision);
       Result := True;
-      Continue;
+      if (Precision > 1) and (Precision > Scale) then begin
+        Inc(PNibble);
+        Dec(Precision);
+        Continue;
+      end else GetFirstBCDHalfByte := False;
     end else if (PByte(pNibble)^ shr 4) = 0 then begin
       GetFirstBCDHalfByte := False;
       Dec(Precision);
@@ -7559,22 +7572,27 @@ end;
 procedure ZPackBCDToLeft(var Value: TBCD; var PNibble, PLastNibble: PAnsiChar;
   Precision, Scale: Word; GetFirstBCDHalfByte: Boolean);
 var PFirstNibble: PAnsiChar;
+  B: Byte absolute GetFirstBCDHalfByte;
 begin
   PFirstNibble := @Value.Fraction[0];
   if (PFirstNibble < PNibble) or not GetFirstBCDHalfByte then begin
-    if GetFirstBCDHalfByte then begin
+    if GetFirstBCDHalfByte then //byte move
       while PNibble <= PLastNibble do begin
         PFirstNibble^ := PNibble^;
         Inc(PNibble);
         Inc(PFirstNibble);
-      end;
-    end else begin
-      while PNibble < PLastNibble do begin
-        PByte(PFirstNibble)^ := Byte((PByte(PNibble)^ and $0F) shl 4) or Byte(PByte(PNibble+1)^ shr 4);
+      end
+    else begin {move half nibbles:
+       /\/\/\/\/\/\...
+      /\/\/\/\/\/... }
+      B := PByte(PNibble)^ and $0F; //save second half byte
+      while (PNibble < PLastNibble) do begin
+        PByte(PFirstNibble)^ := (B shl 4) or (PByte(PNibble+1)^ shr 4);
         Inc(PNibble);
+        B := PByte(PNibble)^ and $0F; //second half byte
         Inc(PFirstNibble);
       end;
-      PByte(PFirstNibble)^ := (PByte(PNibble)^ and $0F) shl 4
+      PByte(PFirstNibble)^ := (B shl 4);
     end;
   end;
   PNibble := @Value.Fraction;
@@ -7877,6 +7895,60 @@ begin
   Modulo := Value - F;
   if Modulo >= HalfFractModulos[3] then
     Result := Result + 1;
+end;
+
+procedure ZRoundBCD(var Value: TBCD; Scale: TZBCDScale; Out Precision: Word);
+var PNibble, PLastNibble: PAnsiChar;
+  BcdScale, BcdPrecision: Word;
+  Negative: Boolean;
+  Current, Prior, Remainder: Byte;
+begin
+  BcdScale := Scale;
+  if GetPacketBCDOffSets(Value, PNibble, PLastNibble, Precision, BcdScale, Negative) then
+    ZPackBCDToLeft(Value, pNibble, pLastNibble, Precision, BcdScale, Negative);
+  if BcdScale <= Scale then Exit; //left packing did the job
+  Negative := (Value.SignSpecialPlaces and $80) = $80;
+  Remainder := 0;
+  Value.SignSpecialPlaces := 9;
+  BcdPrecision := Precision;
+  if Precision < MaxFMTBcdFractionSize-1 then
+    PByte(PLastNibble+1)^ := 0; //clear overlong nibble in case Remainder is not zero after loop
+  while (BcdPrecision > 0) and ((BcdScale > Scale) or Boolean(Remainder)) do begin
+    if Odd(BcdPrecision) then begin
+      Current := PByte(PLastNibble)^ shr 4;
+      PByte(PLastNibble)^ := 0;
+      Dec(PLastNibble);
+      Prior := PByte(PLastNibble)^ and $0F;
+    end else begin
+      Current := PByte(PLastNibble)^ and $0F;
+      Prior := PByte(PLastNibble)^ shr 4;
+    end;
+    Current := Current + Remainder;
+    if (Current >= 5) then
+      if (Prior = 9)
+      then Remainder := 1
+      else begin
+        Remainder := 0;
+        Inc(Prior);
+        if Odd(BcdPrecision) then begin
+          Current := PByte(PLastNibble)^ shr 4;
+          PByte(PLastNibble)^ := (Current shl 4) or Prior;
+        end else
+          PByte(PLastNibble)^ := Prior shl 4;
+      end;
+    if (BcdScale > 0) and (Precision >= BcdScale) then begin
+      Dec(Precision);
+      Dec(BcdScale);
+    end;
+    Dec(BcdPrecision)
+  end;
+  if Remainder <> 0 then begin//all walues have been rounded to 10
+    BcdScale := 0;
+    PByte(PNibble)^ := 1 shl 4;
+    Inc(Precision);
+  end;
+  Value.Precision := Precision;
+  Value.SignSpecialPlaces := SignSpecialPlacesArr[Negative] or BcdScale;
 end;
 
 function CharPos_CI(C: Char; const Str: string): NativeInt;
