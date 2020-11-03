@@ -925,6 +925,7 @@ const
   // some connection issued errors:
   ORA_03113_end_of_file_on_communication_channel = 3113;
   ORA_03114_not_connected_to_ORACLE = 3114;
+  ORA_03135_connection_lost_contact= 3135;
 
 type
   {** Represents a generic interface to Oracle native API. }

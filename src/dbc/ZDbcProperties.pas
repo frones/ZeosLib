@@ -798,6 +798,17 @@ const
   ///  OCI_PRELIM_AUTH - this mode may only be used with OCI_SYSDBA or OCI_SYSOPER to authenticate for certain administration tasks.
   /// </remarks>
   ConnProps_OCIAuthenticateMode = 'OCIAuthenticateMode';
+
+  /// <type>Boolean</type>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_OCIMultiThreaded]=True/False</syntax>
+  /// <summary>
+  ///  If set to true, OCI_THREADED will also be used for initializing the connection environment
+  /// </summary>
+  /// <remarks>
+  ///  If set to true, OCI_THREADED will also be used for initializing the connection environment
+  /// </remarks>
+  ConnProps_OCIMultiThreaded = 'OCIMultiThreaded';
 {$ENDIF}
 
 {$IFDEF ENABLE_ASA}

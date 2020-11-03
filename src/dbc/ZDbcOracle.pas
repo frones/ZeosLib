@@ -626,7 +626,11 @@ begin
 
   { Connect to Oracle database. }
   FErrorHandle := nil;
-  Status := FPlainDriver.OCIEnvNlsCreate(FOCIEnv, OCI_OBJECT, nil, nil, nil,
+  mode := OCI_OBJECT;
+  S := Info.Values[ConnProps_OCIMultiThreaded];
+  if StrToBoolEx(S, False) Then
+    mode := mode + OCI_THREADED;
+  Status := FPlainDriver.OCIEnvNlsCreate(FOCIEnv, mode, nil, nil, nil,
     nil, 0, nil, fcharset, ncharset);
   if Status <> OCI_SUCCESS then
     HandleErrorOrWarning(FErrorHandle, Status, lcOther, 'EnvNlsCreate failed.', Self);
@@ -902,10 +906,15 @@ end;
 }
 function TZOracleConnection.PingServer: Integer;
 begin
-  Result := FPlainDriver.OCIPing(FContextHandle, FErrorHandle, OCI_DEFAULT);
-  if Result <> OCI_SUCCESS then
-    HandleErrorOrWarning(FErrorHandle, Result, lcOther, 'PingServer', Self);
-  Result := 0; //only possible if no exception is raised
+  if Closed or (FContextHandle = nil) Or (FErrorHandle = nil)
+    then Result := -1
+  else
+  begin
+    Result := FPlainDriver.OCIPing(FContextHandle, FErrorHandle, OCI_DEFAULT);
+    if Result <> OCI_SUCCESS then
+      HandleErrorOrWarning(FErrorHandle, Result, lcOther, 'PingServer', Self);
+    Result := 0; //only possible if no exception is raised
+  end;
 end;
 
 {**
@@ -1340,6 +1349,7 @@ JmpConcat:
             else begin
               FirstErrorCode := ErrorCode;
               if (FirstErrorCode = ORA_03113_end_of_file_on_communication_channel) or
+                 (FirstErrorCode = ORA_03135_connection_lost_contact) Or
                  ((FirstErrorCode = ORA_03114_not_connected_to_ORACLE) and (LogCategory <> lcConnect)) then //disconnect
                 AExceptionClass := EZSQLConnectionLost;
             end;
