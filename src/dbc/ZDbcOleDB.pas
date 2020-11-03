@@ -103,6 +103,7 @@ type
     FLastWarning: EZSQLWarning;
     FHostVersion: Integer;
     procedure SetProviderProps(DBinit: Boolean);
+    procedure SetServerProviderFromProductName;
   protected
     function OleDbGetDBPropValue(const APropIDs: array of DBPROPID): string; overload;
     function OleDbGetDBPropValue(APropID: DBPROPID): Integer; overload;
@@ -534,6 +535,18 @@ begin
   end;
 end;
 
+procedure TZOleDBConnection.SetServerProviderFromProductName;
+var ProductName: String;
+begin
+  ProductName := GetMetadata.GetDatabaseInfo.GetDatabaseProductName;
+  if (PosEx('Firebird', ProductName) > 0) or (PosEx('Interbase', ProductName) > 0) then
+    FServerProvider := spIB_FB
+  else if (PosEx('MySQL', ProductName) > 0) or (PosEx('MariaDB', ProductName) > 0) then
+    FServerProvider := spMySQL
+  else if (PosEx('SQL Server', ProductName) > 0) then
+    FServerProvider := spMSSQL;
+end;
+
 function TZOleDBConnection.StartTransaction: Integer;
 var Status: HResult;
   S: String;
@@ -647,7 +660,7 @@ end;
 }
 function TZOleDBConnection.GetServerProvider: TZServerProvider;
 begin
-  Result := spMSSQL;
+  Result := FServerProvider;
 end;
 
 function TZOleDBConnection.GetSession: IUnknown;
@@ -1084,7 +1097,8 @@ begin
     FAutoCommitTIL := TIL[TransactIsolationLevel];
     CheckCharEncoding('CP_UTF16'); //do this by default!
     (GetMetadata.GetDatabaseInfo as IZOleDBDatabaseInfo).InitilizePropertiesFromDBInfo(fDBInitialize, fMalloc);
-    if (GetServerProvider = spMSSQL) then begin
+    SetServerProviderFromProductName;
+    if (FServerProvider = spMSSQL) then begin
       if (Info.Values[ConnProps_DateWriteFormat] = '') or (Info.Values[ConnProps_DateTimeWriteFormat] = '') then begin
         if (Info.Values[ConnProps_DateWriteFormat] = '') then begin
           ConSettings^.WriteFormatSettings.DateFormat := 'YYYYMMDD';  //ISO format which always is accepted by SQLServer
