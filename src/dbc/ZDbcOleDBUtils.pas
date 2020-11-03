@@ -467,7 +467,7 @@ const
     (ProviderNamePrefix: 'SQLNCLI';       Provider: spMSSQL),
     (ProviderNamePrefix: 'SQLOLEDB';      Provider: spMSSQL),
     (ProviderNamePrefix: 'SSISOLEDB';     Provider: spMSSQL),
-    (ProviderNamePrefix: 'MSDASQL';       Provider: spMSSQL), //??
+    (ProviderNamePrefix: 'MSDASQL';       Provider: spUnknown),
     (ProviderNamePrefix: 'MYSQLPROV';     Provider: spMySQL),
     (ProviderNamePrefix: 'IBMDA400';      Provider: spAS400),
     (ProviderNamePrefix: 'IFXOLEDBC';     Provider: spInformix),
@@ -481,7 +481,7 @@ var
   I: Integer;
   ProviderNamePrefixUp: string;
 begin
-  Result := spMSSQL;
+  Result := spUnknown;
   ProviderNamePrefixUp := UpperCase(ProviderNamePrefix);
   for i := low(KnownDriverName2TypeMap) to high(KnownDriverName2TypeMap) do
     if StartsWith(ProviderNamePrefixUp, KnownDriverName2TypeMap[i].ProviderNamePrefix) then begin
