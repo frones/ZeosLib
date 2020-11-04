@@ -3,7 +3,7 @@
 {                 Zeos Database Objects                   }
 {                 charcter encoding unit                  }
 {                                                         }
-{        Originally written by EgonHugeist                }
+{            Originally written by EgonHugeist            }
 {                                                         }
 {*********************************************************}
 
@@ -174,20 +174,98 @@ type
   TCharConversionFlags = set of (
     ccfNoTrailingZero, ccfReplacementCharacterForUnmatchedSurrogate);
 
+/// <author>EgonHugeist.</author>
+/// <summary>Convert a raw encoded string to a UnicodeString.</summary>
+/// <param>"s" the source string to be converted.</param>
+/// <param>"CP" the CodePage of the source string.</param>
+/// <returns>A converted UnicodeString.</returns>
 function ZRawToUnicode(const S: RawByteString; const CP: Word): UnicodeString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
+
+/// <author>EgonHugeist.</author>
+/// <summary>Convert a raw encoded buffer to a UnicodeString.</summary>
+/// <param>"Source" the source buffer to be converted.</param>
+/// <param>"SourceBytes" the size of the buffer.</param>
+/// <param>"CP" the CodePage of the source buffer.</param>
+/// <returns>A converted UnicodeString.</returns>
 function PRawToUnicode(Source: PAnsiChar; SourceBytes: LengthInt; CP: Word): UnicodeString;
+
+/// <author>EgonHugeist</author>
+/// <summary>Convert a raw encoded buffer to a UTF16 Buffer. The buffer must
+///  have enough space reserved for this conversion.</summary>
+/// <param>"Source" the source buffer to be converted.</param>
+/// <param>"Dest" the Dest buffer we write in.</param>
+/// <param>"SourceBytes" the size of the buffer.</param>
+/// <param>"CP" the CodePage of the source buffer.</param>
+/// <returns>The amount of converted words.</returns>
 function PRaw2PUnicodeBuf(Source: PAnsiChar; Dest: Pointer; SourceBytes: LengthInt; CP: Word): LengthInt;
-{**
-  convert raw bytes into utf16 words with maximum of destwords
-  return the full count of words even if the dest was not filled completely
-}
+
+/// <author>EgonHugeist</author>
+/// <summary>Convert MaxWords of a raw encoded buffer into a UTF16 Buffer.</summary>
+/// <param>"Source" the source buffer to be converted.</param>
+/// <param>"Dest" the Dest buffer we write in.</param>
+/// <param>"CP" the CodePage of the source buffer.</param>
+/// <param>"SourceBytes" the size of the source buffer in bytes.</param>
+/// <param>"DestWords" the size of the destination buffer in words.</param>
+/// <returns>The amount of converted words.</returns>
 function PRaw2PUnicode(Source: PAnsiChar; Dest: PWideChar; CP: Word; SourceBytes, DestWords: LengthInt): LengthInt;
+
+/// <author>EgonHugeist</author>
+/// <summary>Convert a UnicodeString into a raw encoded string.</summary>
+/// <param>"US" the UnicodeString to be converted.</param>
+/// <param>"CP" the CodePage of the destination string.</param>
+/// <returns>A raw encoded string.</returns>
 function ZUnicodeToRaw(const US: UnicodeString; CP: Word): RawByteString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
+
+/// <author>EgonHugeist</author>
+/// <summary>Convert a UTF16 Buffer into a raw encoded string.</summary>
+/// <param>"Source" the buffer to be converted.</param>
+/// <param>"SrcWords" the count of words to be converted.</param>
+/// <param>"CP" the CodePage of the destination string.</param>
+/// <returns>A raw encoded string.</returns>
 function PUnicodeToRaw(Source: PWideChar; SrcWords: LengthInt; CP: Word): RawByteString;
+
+/// <author>EgonHugeist</author>
+/// <summary>Convert a UTF16 Buffer into a raw buffer.</summary>
+/// <param>"Source" the buffer to be converted.</param>
+/// <param>"Dest" the buffer we write in.</param>
+/// <param>"SrcWords" the count of words to be converted.</param>
+/// <param>"MaxDestBytes" the size in bytes of the destination buffer.</param>
+/// <param>"CP" the CodePage of the destination buffer.</param>
+/// <returns>The written count of bytes.</returns>
 function PUnicode2PRawBuf(Source: PWideChar; Dest: PAnsiChar; SrcWords, MaxDestBytes: LengthInt; CP: Word): LengthInt;
+
+/// <author>Arnaud Bouchez</author>
+/// <summary>see: syncommons.pas in mORMot framework www.synopse.info
+///  convert a RawUnicode UTF-16 PWideChar into a UTF-8 buffer
+///  orgiginal named as RawUnicodeToUtf8()
+///  - replace system.UnicodeToUtf8 implementation, which is rather slow
+///   since Delphi 2009+
+///  - will append a trailing #0 to the ending PUTF8Char, unless
+///   ccfNoTrailingZero is set
+///   - if ccfReplacementCharacterForUnmatchedSurrogate is set, this function will identify
+///   unmatched surrogate pairs and replace them with EF BF BD // FFFD  Unicode
+///   Replacement character - see https://en.wikipedia.org/wiki/Specials_(Unicode_block)
+/// Changes by EgonHugeist:
+///    - replace PUTF8Char to PAnsichar
+///    - replace PtrInt to NativeUInt
+///    - add hard word cast in the ascii-pair loop .. range-checks did make noise here
+///    - replace the ansichar casts with Byte/word  values -> nextgen
+///    - added three labels ( loop_ascii_pairs,done,next) to loop in code and test ascii-pairs
+///      after each convertion again. so i commented the main repeat loop and all continue/break tests
+/// </summary>
+/// <param>"Dest" the buffer we write in.</param>
+/// <param>"DestLen" the size in bytes of the destination buffer.</param>
+/// <param>"Source" the buffer to be converted.</param>
+/// <param>"SourceLen" the count of words to be converted.</param>
+/// <param>"Flags" the conversion flags.</param>
+/// <returns>The written count of bytes.</returns>
 function PUnicodeToUtf8Buf(Dest: PAnsiChar; DestLen: NativeUint;
   Source: PWideChar; SourceLen: NativeUint; Flags: TCharConversionFlags): NativeUint;
 
+/// <author>EgonHugeist</author>
+/// <summary>Test if the given codepage is a MultiByte one.</summary>
+/// <returns><c>True</c> if the codepage is a multibyte codepage;
+///  <c>False</c> otherwise.</returns>
 function IsMBCSCodePage(CP: Word): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 Type
@@ -197,8 +275,26 @@ Type
   PSBCS_MAP = ^TSBCS_MAP;
   TSBCS_MAP = packed array[$00..$FF] of Word;
 
+/// <author>EgonHugeist</author>
+/// <summary>Detect the encoding of an given buffer.</summary>
+/// <param>"Source" the buffer to be tested.</param>
+/// <param>"Len" the length in bytes of the buffer.</param>
+/// <returns><c>TEncodeType</c> of the buffer.</returns>
 function ZDetectUTF8Encoding(Source: PAnsiChar; Len: NativeUInt): TEncodeType;
+
+/// <author>EgonHugeist</author>
+/// <summary>Convert a ASCII7 buffer to an UnicodeString. Each byte will be
+///  widened to a word.</summary>
+/// <param>"Source" the buffer to be converted.</param>
+/// <param>"Len" the length in bytes of the buffer.</param>
+/// <returns>a converted UnicodeString.</returns>
 function USASCII7ToUnicodeString(Source: PAnsiChar; Len: NativeUInt): UnicodeString; overload;
+
+/// <author>EgonHugeist</author>
+/// <summary>Convert a ASCII7 rawbytestring to an UnicodeString. Each byte will
+///  be widened to a word.</summary>
+/// <param>"Source" the string to be converted.</param>
+/// <returns>a converted UnicodeString.</returns>
 function USASCII7ToUnicodeString(const Source: RawByteString): UnicodeString; overload;
 
 {SBCS codepages $00..FF}
@@ -1066,12 +1162,14 @@ const
   dsMaxRStringSize = 8192; { Maximum string field size declared in DB.pas }
   dsMaxWStringSize = dsMaxRStringSize shr 1;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function ZRawToUnicode(const S: RawByteString; const CP: Word): UnicodeString;
 begin
   if Pointer(S) = nil
   then Result := ''
-  else Result := PRawToUnicode(Pointer(S), {%H-}PLengthInt(NativeUInt(S) - StringLenOffSet)^, CP);
+  else Result := PRawToUnicode(Pointer(S), PLengthInt(NativeUInt(S) - StringLenOffSet)^{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, CP);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   EgonHugeist:
