@@ -223,7 +223,7 @@ implementation
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZFastCode, ZDbcOracleResultSet, ZTokenizer,
-  ZEncoding, ZDbcProperties, ZMessages, ZDbcResultSet,
+  ZEncoding, ZDbcProperties, ZMessages, ZDbcResultSet, ZDbcCachedResultSet,
   ZSelectSchema;
 
 const
@@ -359,7 +359,7 @@ end;
 function TZAbstractOracleStatement.CreateResultSet: IZResultSet;
 var
   NativeResultSet: IZResultSet;
-  CachedResultSet: TZOracleCachedResultSet;
+  CachedResultSet: TZCachedResultset;
 begin
   if FOpenResultSet = nil then begin
     if FStatementType = OCI_STMT_SELECT
@@ -367,7 +367,9 @@ begin
     else NativeResultSet := TZOracleCallableResultSet.Create(Self, SQL, FOCIStmt, FOCIError, FOraVariables, BindList);
     if (GetResultSetConcurrency = rcUpdatable) or (GetResultSetType <> rtForwardOnly) then
     begin
-      CachedResultSet := TZOracleCachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings);
+      if CachedLob
+      then CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings)
+      else CachedResultSet := TZOracleCachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings);
       if (GetResultSetConcurrency = rcUpdatable) and (FStatementType = OCI_STMT_SELECT) then
         CachedResultSet.SetConcurrency(rcUpdatable);
       CachedResultSet.SetResolver(TZOracleCachedResolver.Create(Self, NativeResultSet.GetMetadata));
