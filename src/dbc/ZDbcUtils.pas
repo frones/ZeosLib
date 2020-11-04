@@ -227,6 +227,13 @@ const OneIsNegativeZeroIsPositive: TNumericSign = (0, 1);
 
 procedure Curr2DBNumeric_LE(const Src: Currency; Dest: PDB_NUMERIC; const NumericSign: TNumericSign);
 procedure Curr2DBNumeric_BE(const Src: Currency; Dest: PDB_NUMERIC; const NumericSign: TNumericSign);
+
+/// <summary>Fix the server provider enum if we know the exact provider-name;
+///  otherwise do nothing<summary>
+/// <param>"ProviderName" the name of the provider</param>
+/// <param>"SeverProvider" a referance to to yet known provider</param>
+procedure DBProviderName2ServerProvider(const ProviderName: String; var SeverProvider: TZServerProvider);
+
 {$IFEND}
 
 function SQLServerProductToHostVersion(const ProductVersion: String): Integer;
@@ -1139,6 +1146,22 @@ begin
     end;
   {$ENDIF}
   PInt64(@Dest.val[SizeOf(Currency)])^ := 0;
+end;
+
+procedure DBProviderName2ServerProvider(const ProviderName: String; var SeverProvider: TZServerProvider);
+begin
+  if (PosEx('Firebird', ProviderName) > 0) or (PosEx('Interbase', ProviderName) > 0) then
+    SeverProvider := spIB_FB
+  else if (PosEx('MySQL', ProviderName) > 0) or (PosEx('MariaDB', ProviderName) > 0) then
+    SeverProvider := spMySQL
+  else if (PosEx('SQL Server', ProviderName) > 0) then
+    SeverProvider := spMSSQL
+  else if (PosEx('Postgre', ProviderName) > 0) then
+    SeverProvider := spPostgreSQL
+  else if (PosEx('Access', ProviderName) > 0) then
+    SeverProvider := spMSJet
+  else if (PosEx('Oracle', ProviderName) > 0) then
+    SeverProvider := spOracle;
 end;
 {$IFEND}
 

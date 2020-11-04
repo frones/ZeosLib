@@ -99,6 +99,8 @@ function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS;
 
 function MapOleTypesToZeos(DBType: DBTYPEENUM; Precision, Scale: Integer): DBTYPE;
 
+/// <summary>Try to determine the server-proverder by given Provider-Name</summary>
+/// <returns>the best knonw Server-proveider</returns>
 function ProviderNamePrefix2ServerProvider(const ProviderNamePrefix: String): TZServerProvider;
 
 const SQLType2OleDBTypeEnum: array[TZSQLType] of DBTYPEENUM = (DBTYPE_NULL,
@@ -461,13 +463,13 @@ type
     Provider: TZServerProvider;
   end;
 const
-  KnownDriverName2TypeMap: array[0..13] of TDriverNameAndServerProvider = (
+  KnownDriverName2TypeMap: array[0..12] of TDriverNameAndServerProvider = (
     (ProviderNamePrefix: 'ORAOLEDB';      Provider: spOracle),
     (ProviderNamePrefix: 'MSDAORA';       Provider: spOracle),
     (ProviderNamePrefix: 'SQLNCLI';       Provider: spMSSQL),
     (ProviderNamePrefix: 'SQLOLEDB';      Provider: spMSSQL),
     (ProviderNamePrefix: 'SSISOLEDB';     Provider: spMSSQL),
-    (ProviderNamePrefix: 'MSDASQL';       Provider: spUnknown),
+    //(ProviderNamePrefix: 'MSDASQL';       Provider: spMSSQL), ODBC proivider for everything
     (ProviderNamePrefix: 'MYSQLPROV';     Provider: spMySQL),
     (ProviderNamePrefix: 'IBMDA400';      Provider: spAS400),
     (ProviderNamePrefix: 'IFXOLEDBC';     Provider: spInformix),
