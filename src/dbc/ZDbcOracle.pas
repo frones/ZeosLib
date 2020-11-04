@@ -334,16 +334,17 @@ begin
 
   { Sets a client codepage. }
   OCI_CLIENT_CHARSET_ID := ConSettings.ClientCodePage^.ID;
+  mode := OCI_OBJECT;
+  S := Info.Values['OCIMultiThreaded'];
+  if StrToBoolEx(S, False) Then
+    mode := mode + OCI_THREADED;
   { Connect to Oracle database. }
-  if ( FHandle = nil ) then
-    try
-      FErrorHandle := nil;
-      Status := GetPlainDriver.EnvNlsCreate(FHandle, OCI_OBJECT, nil, nil, nil, nil, 0, nil,
-        OCI_CLIENT_CHARSET_ID, OCI_CLIENT_CHARSET_ID);
-      CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcOther, 'EnvNlsCreate failed.', ConSettings);
-    except
-      raise;
-    end;
+  if ( FHandle = nil ) then begin
+    FErrorHandle := nil;
+    Status := GetPlainDriver.EnvNlsCreate(FHandle, mode, nil, nil, nil, nil, 0, nil,
+      OCI_CLIENT_CHARSET_ID, OCI_CLIENT_CHARSET_ID);
+    CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcOther, 'EnvNlsCreate failed.', ConSettings);
+  end;
   FErrorHandle := nil;
   GetPlainDriver.HandleAlloc(FHandle, FErrorHandle, OCI_HTYPE_ERROR, 0, nil);
   FServerHandle := nil;
@@ -577,9 +578,12 @@ end;
 }
 function TZOracleConnection.PingServer: Integer;
 begin
-  Result := GetPlainDriver.Ping(FContextHandle, FErrorHandle);
-  CheckOracleError(GetPlainDriver, FErrorHandle, Result, lcExecute, 'Ping Server', ConSettings);
-  Result := 0; //only possible if CheckOracleError dosn't raise an exception
+  if Closed or (FContextHandle = nil) Or (FErrorHandle = nil)
+  then Result := -1
+  else begin
+    Result := GetPlainDriver.Ping(FContextHandle, FErrorHandle, OCI_DEFAULT);
+    CheckOracleError(GetPlainDriver, FErrorHandle, Result, lcExecute, 'Ping Server', ConSettings);
+  end;
 end;
 
 {**
