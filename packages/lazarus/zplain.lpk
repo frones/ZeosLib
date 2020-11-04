@@ -17,7 +17,7 @@
       </Parsing>
     </CompilerOptions>
     <Description Value="Zeos Plain Database API"/>
-    <Version Major="7" Minor="3"/>
+    <Version Major="8" Minor="0"/>
     <Files Count="23">
       <Item5>
         <Filename Value="../../src/plain/ZPlainAdo.pas"/>
@@ -99,8 +99,8 @@
     <RequiredPkgs Count="2">
       <Item1>
         <PackageName Value="zcore"/>
-        <MaxVersion Major="7" Minor="3"/>
-        <MinVersion Major="7" Minor="3" Valid="True"/>
+        <MaxVersion Major="8" Minor="0"/>
+        <MinVersion Major="8" Minor="0" Valid="True"/>
       </Item1>
       <Item2>
         <PackageName Value="FCL"/>

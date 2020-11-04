@@ -28,7 +28,7 @@
       </Other>
     </CompilerOptions>
     <Description Value="Zeos Core Classes and Interfaces"/>
-    <Version Major="7" Minor="3"/>
+    <Version Major="8" Minor="0"/>
     <Files Count="15">
       <Item1>
         <Filename Value="../../src/core/ZClasses.pas"/>
