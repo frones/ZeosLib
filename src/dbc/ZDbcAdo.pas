@@ -670,7 +670,6 @@ begin
   if E is EOleException then with E as EOleException do begin
     if DriverManager.HasLoggingListener then
       LogError(LoggingCategory, ErrorCode, Sender, LogMsg, Message);
-    raise EZSQLException.CreateWithCode(ErrorCode, Message);
     if AddLogMsgToExceptionOrWarningMsg and (LogMsg <> '') then
       if LoggingCategory in [lcExecute, lcPrepStmt, lcExecPrepStmt]
       then FormatStr := SSQLError3
