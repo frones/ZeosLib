@@ -2926,6 +2926,10 @@ begin
     end;
     ProcSQL := '';
     SQLWriter.AddText('BEGIN'#10, ProcSQL);
+    if FProcDescriptor.ObjType = OCI_PTYPE_UNK then begin
+      FreeAndNil(FProcDescriptor); //clean up! We re not prepared now
+      raise EZSQLException.Create(SFailedtoInitPrepStmt);
+    end;
     if FProcDescriptor.ObjType = OCI_PTYPE_PKG then
       BuildPackage(FProcDescriptor)
     else if FProcDescriptor.ObjType = OCI_PTYPE_PROC then
