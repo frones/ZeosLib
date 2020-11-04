@@ -641,7 +641,9 @@ begin
   else if Value <> GetConnected then
     if Value
     then Connect
-    else Disconnect;
+    else Disconnect
+  else if Not Value And Assigned(FConnection) Then
+    FConnection := nil; // Make sure to throw away FConnection to ensure reconnecting. Otherwise a next call to .Connect will not do anything!!!
 end;
 
 {**
@@ -1256,11 +1258,21 @@ begin
   LastState := GetConnected;
   If FConnection <> Nil Then
     Begin
-      Result := (FConnection.PingServer=0);
-      // Connection now is false but was true
-      If (Not Result) And (LastState) Then
-        // Generate OnDisconnect event
-        SetConnected(Result);
+      Try
+        Result := (FConnection.PingServer=0);
+        // Connection now is false but was true
+        If (Not Result) And (LastState) Then
+          // Generate OnDisconnect event
+          SetConnected(Result);
+      Except
+        On E:Exception Do
+        Begin
+         If LastState Then
+           // Generate OnDisconnect event
+           SetConnected(False);
+         Raise;
+       End
+      End;
     End
   Else
     // Connection now is false but was true

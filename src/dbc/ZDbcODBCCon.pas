@@ -751,15 +751,18 @@ begin
     AutoCommit := True;
     SetAutoCommit(False);
   end;
-  fRetaining := GetMetaData.GetDatabaseInfo.SupportsOpenCursorsAcrossCommit and
-                GetMetaData.GetDatabaseInfo.SupportsOpenCursorsAcrossRollback;
-  tmp := UpperCase(GetMetaData.GetDatabaseInfo.GetDriverName);
   fServerProvider := spUnknown;
-  for aLen := low(KnownDriverName2TypeMap) to high(KnownDriverName2TypeMap) do
-    if StartsWith(tmp, KnownDriverName2TypeMap[aLen].DriverName) then begin
-      fServerProvider := KnownDriverName2TypeMap[aLen].Provider;
-      Break;
-    end;
+  with GetMetaData.GetDatabaseInfo do begin
+    fRetaining := SupportsOpenCursorsAcrossCommit and
+                  SupportsOpenCursorsAcrossRollback;
+    tmp := UpperCase(GetDriverName);
+    for aLen := low(KnownDriverName2TypeMap) to high(KnownDriverName2TypeMap) do
+      if StartsWith(tmp, KnownDriverName2TypeMap[aLen].DriverName) then begin
+        fServerProvider := KnownDriverName2TypeMap[aLen].Provider;
+        Break;
+      end;
+    DBProviderName2ServerProvider(GetDatabaseProductName, FServerProvider);
+  end;
   if fServerProvider = spMSSQL then begin
     { find out which encoding the raw columns do have }
     with CreateStatement.ExecuteQuery(

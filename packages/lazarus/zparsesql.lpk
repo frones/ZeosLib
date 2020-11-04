@@ -17,7 +17,7 @@
       </Parsing>
     </CompilerOptions>
     <Description Value="Zeos SQL Parsing Classes and Interfaces"/>
-    <Version Major="7" Minor="3"/>
+    <Version Major="8" Minor="0"/>
     <Files Count="19">
       <Item1>
         <Filename Value="../../src/parsesql/ZSybaseToken.pas"/>
@@ -99,7 +99,7 @@
     <RequiredPkgs Count="2">
       <Item1>
         <PackageName Value="zcore"/>
-        <MinVersion Major="7" Minor="3" Valid="True"/>
+        <MinVersion Major="8" Minor="0" Valid="True"/>
       </Item1>
       <Item2>
         <PackageName Value="FCL"/>

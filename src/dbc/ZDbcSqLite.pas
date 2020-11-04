@@ -372,6 +372,7 @@ var rFile, rProc: RawByteString;
   pzErrMsg: PAnsiChar;
   L: LengthInt;
 begin
+  ErrMsg := '';
   {$IFDEF UNICODE}
   rFile := ZUnicodeToRaw(zFile, zCP_UTF8);
   rProc := ZUnicodeToRaw(zProc, zCP_UTF8);
@@ -403,7 +404,7 @@ begin
       {$IFEND}
     {$ENDIF}
     FPlainDriver.sqlite3_free(pzErrMsg);
-  end else ErrMsg := '';
+  end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 

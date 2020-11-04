@@ -49,6 +49,12 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
+(*
+constributors:
+  Mark Ford(MJFShark)
+  Miab3
+*)
+
 unit ZDbcOleDB;
 
 interface
@@ -647,7 +653,7 @@ end;
 }
 function TZOleDBConnection.GetServerProvider: TZServerProvider;
 begin
-  Result := spMSSQL;
+  Result := FServerProvider;
 end;
 
 function TZOleDBConnection.GetSession: IUnknown;
@@ -1083,8 +1089,11 @@ begin
       InternalSetTIL(TransactIsolationLevel);
     FAutoCommitTIL := TIL[TransactIsolationLevel];
     CheckCharEncoding('CP_UTF16'); //do this by default!
-    (GetMetadata.GetDatabaseInfo as IZOleDBDatabaseInfo).InitilizePropertiesFromDBInfo(fDBInitialize, fMalloc);
-    if (GetServerProvider = spMSSQL) then begin
+    With (GetMetadata.GetDatabaseInfo as IZOleDBDatabaseInfo) do begin
+      InitilizePropertiesFromDBInfo(fDBInitialize, fMalloc);
+      DBProviderName2ServerProvider(GetDatabaseProductName, FServerProvider);
+    end;
+    if (FServerProvider = spMSSQL) then begin
       if (Info.Values[ConnProps_DateWriteFormat] = '') or (Info.Values[ConnProps_DateTimeWriteFormat] = '') then begin
         if (Info.Values[ConnProps_DateWriteFormat] = '') then begin
           ConSettings^.WriteFormatSettings.DateFormat := 'YYYYMMDD';  //ISO format which always is accepted by SQLServer

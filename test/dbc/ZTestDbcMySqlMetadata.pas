@@ -180,16 +180,21 @@ begin
 end;
 
 {**
-   Test method GetBestRowIdentifier
+   Test method GetColumnPrivileges
    <p><b>Note:</b><br>
    For adventure of the test it is necessary to execute sql
-   <i>grant select on zeoslib.people to root@localhost;</i></p>
+   <i>grant select on zeoslib.people to root@localhost;</i>
 }
 procedure TZTestMySqlMetadataCase.TestGetColumnPrivileges;
 var
   ResultSet: IZResultSet;
 begin
-  if SkipForReason(srNonZeos) then Exit;
+  try
+    Connection.CreateStatement.ExecuteUpdate(
+      'grant update(p_resume, p_redundant) on '+ConnectionConfig.Database+'.people to '+ConnectionConfig.UserName+'@'+ConnectionConfig.HostName);
+  Except
+    Fail('This test can''t pass if current user has no grant privilieges')
+  end;
 
   ResultSet := Metadata.GetColumnPrivileges('', '', 'people', 'p_r%');
   CheckEquals(CatalogNameIndex, ResultSet.FindColumn('TABLE_CAT'));
@@ -205,9 +210,9 @@ begin
   CheckEquals(uppercase(Database), uppercase(ResultSet.GetStringByName('TABLE_CAT')));
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
-  CheckEquals('p_resume', ResultSet.GetStringByName('COLUMN_NAME'));
-  CheckEquals('root', ResultSet.GetStringByName('GRANTOR'));
-  CheckEquals('people@%', ResultSet.GetStringByName('GRANTEE'));
+  CheckEquals('p_redundant', ResultSet.GetStringByName('COLUMN_NAME'));
+  CheckEquals(ConnectionConfig.UserName+'@'+ConnectionConfig.HostName, ResultSet.GetStringByName('GRANTOR'));
+  CheckEquals(ConnectionConfig.UserName+'@'+ConnectionConfig.HostName, ResultSet.GetStringByName('GRANTEE'));
   CheckEquals('Update', ResultSet.GetStringByName('PRIVILEGE'));
   CheckEquals('', ResultSet.GetStringByName('IS_GRANTABLE'));
 
@@ -215,9 +220,9 @@ begin
   CheckEquals(uppercase(Database), uppercase(ResultSet.GetStringByName('TABLE_CAT')));
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
-  CheckEquals('p_redundant', ResultSet.GetStringByName('COLUMN_NAME'));
-  CheckEquals('root', ResultSet.GetStringByName('GRANTOR'));
-  CheckEquals('people@%', ResultSet.GetStringByName('GRANTEE'));
+  CheckEquals('p_resume', ResultSet.GetStringByName('COLUMN_NAME'));
+  CheckEquals(ConnectionConfig.UserName+'@'+ConnectionConfig.HostName, ResultSet.GetStringByName('GRANTOR'));
+  CheckEquals(ConnectionConfig.UserName+'@'+ConnectionConfig.HostName, ResultSet.GetStringByName('GRANTEE'));
   CheckEquals('Update', ResultSet.GetStringByName('PRIVILEGE'));
   CheckEquals('', ResultSet.GetStringByName('IS_GRANTABLE'));
 
@@ -361,13 +366,12 @@ procedure TZTestMySqlMetadataCase.TestGetTablePrivileges;
 var
   ResultSet: IZResultSet;
 begin
-  { To grant privileges:
-    grant select on zeoslib.people to root@localhost;
-    The result sql is:
-    SELECT host,db,table_name,grantor,user,table_priv from mysql.tables_priv
-    WHERE table_name LIKE 'people';}
-
-  if SkipForReason(srNonZeos) then Exit;
+  try
+    Connection.CreateStatement.ExecuteUpdate(
+      'grant select on '+ConnectionConfig.Database+'.people to '+ConnectionConfig.UserName+'@'+ConnectionConfig.HostName);
+  Except
+    Fail('This test can''t pass if current user has no grant privilieges')
+  end;
 
   ResultSet := Metadata.GetTablePrivileges('', '', 'people');
   CheckEquals(CatalogNameIndex, ResultSet.FindColumn('TABLE_CAT'));
@@ -382,8 +386,8 @@ begin
   CheckEquals(uppercase(Database), uppercase(ResultSet.GetStringByName('TABLE_CAT')));
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
-//!!!  CheckEquals('root@localhost', ResultSet.GetStringByName('GRANTOR'));
-  CheckEquals('root@localhost', ResultSet.GetStringByName('GRANTEE'));
+  CheckEquals(ConnectionConfig.UserName+'@'+ConnectionConfig.HostName, ResultSet.GetStringByName('GRANTOR'));
+  CheckEquals(ConnectionConfig.UserName+'@'+ConnectionConfig.HostName, ResultSet.GetStringByName('GRANTEE'));
   CheckEquals('Select', ResultSet.GetStringByName('PRIVILEGE'));
   CheckEquals('', ResultSet.GetStringByName('IS_GRANTABLE'));
   ResultSet.Close;

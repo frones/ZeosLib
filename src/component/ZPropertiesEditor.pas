@@ -3406,6 +3406,14 @@ const
     Providers: (Count: 1; Items: @cOracleProvider);
     Protocols: (Count: 1; Items: @cOracleProtocol);
   );
+  ZProp_MultiThreaded : TZProperty = (
+    Name: ConnProps_OCIMultiThreaded;
+    Purpose: 'If enabled, OCI_THREADED will also be used for initializing the connection environment (refer to Oracle manual for details)';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: cBoolTrue; Alias: '';
+    Providers: (Count: 1; Items: @cOracleProvider);
+    Protocols: (Count: 1; Items: @cOracleProtocol);
+  );
 {$ENDIF}
 
 {$IFDEF ENABLE_ASA}
@@ -4028,7 +4036,7 @@ initialization
 {$ENDIF}
 {$IFDEF ENABLE_ORACLE}
   RegisterZProperties([@ZProp_ServerCachedStmts,@ZProp_BlobPrefetchSize,
-    @ZProp_StatementCache,@ZProp_row_prefetch_size,@ZProp_OCIAuthenticateMode]);
+    @ZProp_StatementCache,@ZProp_row_prefetch_size,@ZProp_OCIAuthenticateMode,@ZProp_MultiThreaded]);
 {$ENDIF}
 {$IF declared(ZProp_CachedLobs)}
   RegisterZProperty(@ZProp_CachedLobs);
