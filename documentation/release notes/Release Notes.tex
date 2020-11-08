@@ -1,4 +1,9 @@
-%please generate this document using xelatex. Underscores (_) will not be generated correctly otherwise.
+%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+%!                                                            !
+%! please generate this document using xelatex.               !
+%! Underscores (_) will not be generated correctly otherwise. !
+%!                                                            !
+%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 \documentclass[a4paper,12pt,oneside]{book}
 %\usepackage{geometry}
@@ -97,8 +102,16 @@ So datetime(4), datetime(5) and datetime(6) are not supported by Zeos 7.2.
 Support for these is implemented in the Zeos 8.0 Beta.
 
 \section{PostgreSQL}
+
+\subsection{Support for stored procedures}
+
 Zeos 7.2 now supports procedures as introduced with PostgreSQL 11.
 They get used in the same way as functions get used, namely TZStoredProc on the component layer and IZCallableStatement on the DBC layer.
+
+\subsection{changed support for XML and JSON data type}
+
+Fields of type XML and JSON were mapped to string fields in earlier versions.
+Starting with this version, XML and JSON fields get mapped to fields of type ftMemo or ftWideMemo.
 
 \section{SQLite}
 
@@ -157,8 +170,17 @@ We didn't see this problem there.
 
 \section{Oracle}
 
+\subsection{Authentication mode}
+
 Zeos now has a new parameter OCIAuthenticateMode to manipulate the OCI authentication mode.
 For more information see \url{https://docs.oracle.com/cd/B10501_01/appdev.920/a96584/oci15r13.htm}.
+
+\subsection{Multi Threading}
+
+Zeos now can be used in a multi threaded way on Oracle.
+If the new boolean parameter "`OCIMultiThreaded"' is set, Zeos passes "`OCI\_THREADED"' to the Oracle client library.
+When this option is set, Zeos can be used in the usual Zeos way: One connection per thread.
+For more information on "`OCI\_THREADED"' see \url{https://docs.oracle.com/cd/B10501_01/appdev.920/a96584/oci09adv.htm}.
 
 \chapter{Zeos 7.2.6 Release Notes}
 
@@ -196,8 +218,8 @@ See Manual-ZeosDbo-2006.txt for more information.
 \label{sec:Rev6_General_Changes_BinaryConnectonStringsDeprecated}
 
 Use of character sets that move the correct interpretation of strings to the client side is deprecated with this release.
-We will discontinue support for these connection strings with the Zeos 7.3 release.
-In Zeos 7.3 usage of these character sets as connection character sets will lead to an exception.
+We will discontinue support for these connection strings with the Zeos 8.0 release.
+In Zeos 8.0 usage of these character sets as connection character sets will lead to an exception.
 Background:
 Zeos tries to preserve your data.
 The database systems usually are better at character set conversions than we are.
@@ -225,7 +247,7 @@ This will not be fixed in Zeos 7.2 because it requires a major rewrite of the fi
 
 Zeos currently doesn't support the BCD type columns of Delphi.
 NUMERIC and DECIMAL columns still get mapped to floating point types.
-This will be adressed in Zeos 7.3 because it requires a lot of changes in the Zeos core.
+This will be adressed in Zeos 8.0 because it requires a lot of changes in the Zeos core.
 
 \subsubsection{Metadata Caching}
 \label{sec:Rev6_General_KnownProblems_MetadataCaching}
@@ -360,10 +382,10 @@ I.e. use Undefined\_Varchar\_AsString\_Length=40.
 \subsubsection{extended error information}
 \label{sec:Rev6_SQLite_Changes_ExtendedErrorInfo}
 The SQLite driver of Zeos 7.2 now can get extended error information from SQLite and provide much better error descriptions.
-In Zeos 7.3 this will be the default.
+In Zeos 8.0 this will be the default.
 In Zeos 7.2 we introduced the new parameter ExtendedErrorMessage to enable the behaviour.
 Setting this parameter to 1 / Yes / true will get you the extended error messages.
-This parameter will not exist in Zeos 7.3 anymore.
+This parameter will not exist in Zeos 8.0 anymore.
 
 \subsubsection{backup API}
 \label{sec:Rev6_SQLite_Changes_BackupApi}
@@ -642,7 +664,7 @@ In previous versions of Zeos this wasn't guaranteed, leading to undefined behavi
 	For more information see \ref{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings} \nameref{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings}, Page \pageref{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings}.
 \item
   If you still use PostgreSQL 7 databases, we urge you to move on to a newer version.
-	PostgreSQL 7 is deprecated with this version and will be removed with Zeos 7.3.
+	PostgreSQL 7 is deprecated with this version and will be removed with Zeos 8.0.
 \end{itemize}
 
 \subsection{Firebird / Interbase}
@@ -661,7 +683,7 @@ In previous versions of Zeos this wasn't guaranteed, leading to undefined behavi
 	For more information see \ref{sec:Rev4_GeneralChanges_BatchLoading} \nameref{sec:Rev4_GeneralChanges_BatchLoading}, Page \pageref{sec:Rev4_GeneralChanges_BatchLoading}.
 \item 
   If you still use Interbase 5 databases, we urge you to move on to a newer version.
-	Interbase 5 is deprecated with this version and will be removed with Zeos 7.3.	
+	Interbase 5 is deprecated with this version and will be removed with Zeos 8.0.	
 \end{itemize}
 
 \subsection{MySQL / MariaDB}
@@ -679,7 +701,7 @@ In previous versions of Zeos this wasn't guaranteed, leading to undefined behavi
 	The old assumption that an enum('Y','N') is a boolean field is disabled if this parameter is enabled.
 	If this parameter is enabled, enum('Y','N') will be a string field.
 	Other enums behave as before, they will be mapped to a sting filed in any case.
-	This parameter will be enabled by default in Zeos 7.3 if the server version is \textgreater= 5.0.3.
+	This parameter will be enabled by default in Zeos 8.0 if the server version is \textgreater= 5.0.3.
 \item
   Using date and time format settings with MySQL is now supported.
 	This can be used if the parameter preferprepared is disabled (default setting).
@@ -715,7 +737,7 @@ In previous versions of Zeos this wasn't guaranteed, leading to undefined behavi
 	For more information see \ref{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings} \nameref{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings}, Page \pageref{sec:Rev4_GeneralChanges_DateAndTimeFormatSettings}.
 \item 
   If you still use the mssql protocol using ntwdblib.dll to connect to MS SQL Server, we urge you to move on to either use ADO or FreeTDS.
-	The mssql protocol using ntwdblib.dll is not supported by Microsoft for ages now and we will discontinue its support with Zeos 7.3.
+	The mssql protocol using ntwdblib.dll is not supported by Microsoft for ages now and we will discontinue its support with Zeos 8.0.
 \end{itemize}
 
 \subsection{Oracle}
@@ -761,7 +783,7 @@ In previous versions of Zeos this wasn't guaranteed, leading to undefined behavi
 \item 
   Zeos currently doesn't support the BCD type columns of Delphi.
 	NUMERIC and DECIMAL columns still get mapped to floating point types.
-	This will be adressed in Zeos 7.3 because it requires a lot of changes in the Zeos core.
+	This will be adressed in Zeos 8.0 because it requires a lot of changes in the Zeos core.
 \item
   Zeos will usually agressively cache metadata of your database.
 	Because of this scenarios where your database structure is changing constantly, are not well supported.
@@ -787,14 +809,14 @@ Currently the following changes and features are planned:
 \item PostgreSQL 7 databases will not be supported officially anymore
 \item 
   The mssql protocol that uses ntwdblib.dll will not be supported anymore.
-  With Zeos 7.3 there will be plenty of other options to connect to Microsoft SQL Server.
+  With Zeos 8.0 there will be plenty of other options to connect to Microsoft SQL Server.
 \item DBC layer: the use of TZDriverManager.Connect will not be supported with a string anymore, only the use of a TZURL object will be supported.
 \item
-  Protocols with version numbers will not be used in Zeos 7.3 anymore (i.e. firebird-2.5 will become firebird).
+  Protocols with version numbers will not be used in Zeos 8.0 anymore (i.e. firebird-2.5 will become firebird).
   Please migrate.
   Driver names without version numbers were added to Zeos 7.2 to prepare for this.
 \item
-  Zeos 7.3 will have support for the Delphi Nextgen compilers - i.e. Android, iOS, MacOS X and Linux.
+  Zeos 8.0 will have support for the Delphi Nextgen compilers - i.e. Android, iOS, MacOS X and Linux.
 \end{itemize}
 If you use any of these new features, please get in contact on the forums (\url{http://zeoslib.sourceforge.net}).
 We like to read about success stories as well as about problems.
