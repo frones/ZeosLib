@@ -4,7 +4,7 @@ Uses
 {$IFDEF UNIX}{$IFDEF UseCThreads}
   CThreads,
 {$ENDIF}{$ENDIF}
-  DaemonApp, lazdaemonapp, zdbc, ZeosProxyMapperUnit, zeosproxyunit
+  DaemonApp, lazdaemonapp, ZeosProxyMapperUnit, zeosproxyunit
   { add your units here };
 
 begin

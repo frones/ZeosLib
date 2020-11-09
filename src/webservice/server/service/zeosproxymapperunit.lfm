@@ -2,7 +2,7 @@ object ZeosProxyMapper: TZeosProxyMapper
   DaemonDefs = <  
     item
       DaemonClassName = 'TZeosProxyDaemon'
-      Name = 'ZeosWebServiceProxyD'
+      Name = 'TZeosProxyDaemon'
       Description = 'Zeos Web Service Proxy'
       DisplayName = 'Zeos Web Service Proxy'
       Options = [doAllowStop, doAllowPause]
@@ -12,8 +12,8 @@ object ZeosProxyMapper: TZeosProxyMapper
       WinBindings.IDTag = 0
       WinBindings.ServiceType = stWin32
       WinBindings.ErrorSeverity = esIgnore
-      LogStatusReport = False
+      LogStatusReport = True
     end>
-  left = 908
-  top = 353
+  Left = 908
+  Top = 353
 end

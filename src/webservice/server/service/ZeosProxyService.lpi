@@ -24,16 +24,13 @@
       <FormatVersion Value="2"/>
       <Modes Count="0"/>
     </RunParams>
-    <RequiredPackages Count="3">
+    <RequiredPackages Count="2">
       <Item1>
         <PackageName Value="sparta_generics"/>
       </Item1>
       <Item2>
-        <PackageName Value="zdbc"/>
-      </Item2>
-      <Item3>
         <PackageName Value="LazDaemon"/>
-      </Item3>
+      </Item2>
     </RequiredPackages>
     <Units Count="3">
       <Unit0>
@@ -64,7 +61,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\..\..\wst"/>
+      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\..\..\wst;..\..\..\core;..\..\..\parsesql;..\..\..\plain;..\..\..\dbc"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
   </CompilerOptions>
