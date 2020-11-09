@@ -8,6 +8,9 @@ uses
   Classes, SysUtils, DaemonApp;
 
 type
+
+  { TZeosProxyMapper }
+
   TZeosProxyMapper = class(TDaemonMapper)
   private
 
@@ -27,6 +30,7 @@ end;
 
 {$R *.lfm}
 
+{ TZeosProxyMapper }
 
 initialization
   RegisterMapper;

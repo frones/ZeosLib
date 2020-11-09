@@ -5,7 +5,9 @@ unit zeosproxyunit;
 interface
 
 uses
-  Classes, SysUtils, DaemonApp, server_listener;
+  Classes, SysUtils, DaemonApp, server_listener,
+  // for including the Zeos drivers:
+  ZDbcPostgreSql, ZDbcFirebird, ZDbcInterbase6;
 
 type
 
@@ -56,6 +58,7 @@ begin
   AppObject := TwstFPHttpListener.Create('0.0.0.0');
   (AppObject as  TwstFPHttpListener).Options := [loExecuteInThread];
   AppObject.Start();
+  OK := True;
 end;
 
 procedure TZeosProxyDaemon.DataModuleStop(Sender: TCustomDaemon; var OK: Boolean
@@ -63,6 +66,7 @@ procedure TZeosProxyDaemon.DataModuleStop(Sender: TCustomDaemon; var OK: Boolean
 begin
   AppObject.Stop();
   FreeAndNil(AppObject);
+  OK := True;
 end;
 
 
