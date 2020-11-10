@@ -679,11 +679,7 @@ begin
     then ErrorString := Format(FormatStr, [Message, ErrorCode, LogMsg])
     else ErrorString := Format(FormatStr, [Message, ErrorCode]);
     raise EZSQLException.CreateWithCode(ErrorCode, ErrorString);
-  end else begin
-    if DriverManager.HasLoggingListener then
-      LogError(LoggingCategory, 0, Sender, LogMsg, E.Message);
-    raise Exception(E.ClassType).Create(E.Message);
-  end;
+  end else raise Exception(E.ClassType).Create(E.Message);
 end;
 
 initialization
