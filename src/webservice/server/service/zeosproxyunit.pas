@@ -44,10 +44,18 @@ end;
 
 procedure TZeosProxyDaemon.DataModuleStart(Sender: TCustomDaemon;
   var OK: Boolean);
+var
+  configFile: String;
 begin
+  {$IFDEF LINUX}
+  configFile := '/etc/zeosproxy.ini';
+  {$ELSE}
+  configFile := ExtractFilePath(ParamStr(0)) + 'ZDbcProxy.ini';
+  {$ENDIF}
+
   ConnectionManager := TDbcProxyConnectionManager.Create;
   ConfigManager := TDbcProxyConfigManager.Create;
-  ConfigManager.LoadConfigInfo(ExtractFilePath(ParamStr(0)) + 'ZDbcProxy.ini');
+  ConfigManager.LoadConfigInfo(configFile);
 
   //Server_service_RegisterBinaryFormat();
   Server_service_RegisterSoapFormat();

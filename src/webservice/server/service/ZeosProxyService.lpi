@@ -64,6 +64,12 @@
       <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\..\..\wst;..\..\..\core;..\..\..\parsesql;..\..\..\plain;..\..\..\dbc"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
+    <Other>
+      <CustomOptions Value="-dUseCThreads"/>
+      <OtherDefines Count="1">
+        <Define0 Value="UseCThreads"/>
+      </OtherDefines>
+    </Other>
   </CompilerOptions>
   <Debugging>
     <Exceptions Count="3">
