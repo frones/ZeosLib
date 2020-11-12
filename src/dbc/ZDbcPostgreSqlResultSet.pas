@@ -2607,8 +2607,9 @@ var RAColumns: TObjectList;
 begin
   {EH: usuall this code is NOT nessecary if we would handle the types as the
   providers are able to. But in current state we just copy all the incompatibilities
-  from the DataSets into dbc... grumble. the only treamed data pg supports are oid-lobs
-  those we leave as streams, doesn't matter if cached or not, just identify purpose}
+  from the DataSets into dbc... grumble. the only streamed data pg supports are
+  oid-lobs. Those we leave as streams, doesn't matter if cached or not, just
+  identify purpose}
   RAColumns := TObjectList.Create(True);
   CopyColumnsInfo(ColumnsInfo, RAColumns);
   for I := 0 to RAColumns.Count -1 do begin

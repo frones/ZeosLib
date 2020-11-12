@@ -1974,6 +1974,9 @@ begin
           Result := TDateTimeDynArray(ZArray.VArray)[Index];
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
       end;
+    vtTime: TryTimeToDateTime(TZTimeDynArray(ZArray.VArray)[Index], TDateTime(Result));
+    vtDate: TryDateToDateTime(TZDateDynArray(ZArray.VArray)[Index], TDateTime(Result));
+    vtTimeStamp: TryTimestampToDateTime(TZTimestampDynArray(ZArray.VArray)[Index], TDateTime(Result));
     else raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}

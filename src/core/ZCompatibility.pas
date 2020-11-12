@@ -68,6 +68,12 @@ uses
   SysUtils;
 
 type
+  {$IF not declared(TDate)}
+  TDate                = TDateTime;
+  {$IFEND}
+  {$IF not declared(TTime)}
+  TTime                = TDateTime;
+  {$IFEND}
   {$IF not declared(UInt64)}
   UInt64                = QWord;
   {$IFEND}

@@ -224,9 +224,9 @@ implementation
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 
 uses
-  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
-  ZSysUtils, ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils,
-  ZEncoding, ZDbcProperties, ZTokenizer, Types, ZDbcResultSet
+  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}Types,
+  ZSysUtils, ZFastCode, ZMessages, ZEncoding, ZTokenizer, ZDbcCachedResultSet,
+  ZDbcPostgreSqlUtils, ZDbcProperties, ZDbcResultSet, ZDbcPostgreSqlResultSet
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
   {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
@@ -924,7 +924,7 @@ function TZAbstractPostgreSQLPreparedStatementV3.CreateResultSet(
   ServerCursor: Boolean): IZResultSet;
 var
   NativeResultSet: TZPostgreSQLResultSet;
-  CachedResultSet: TZPostgresCachedResultSet;
+  CachedResultSet: TZCachedResultSet;
   Resolver: TZPostgreSQLCachedResolver;
   Metadata: IZResultSetMetadata;
   ServerMajorVersion: Integer;
@@ -941,7 +941,9 @@ begin
     else if ((ServerMajorVersion = 7) and (FPostgreSQLConnection.GetServerMinorVersion >= 4))
     then Resolver := TZPostgreSQLCachedResolverV74up.Create(Self, Metadata)
     else Resolver := TZPostgreSQLCachedResolver.Create(Self, Metadata);
-    CachedResultSet := TZPostgresCachedResultSet.Create(NativeResultSet, Self.SQL, Resolver, ConSettings);
+    if CachedLob
+    then CachedResultSet := TZCachedResultSet.Create(NativeResultSet, Self.SQL, Resolver, ConSettings)
+    else CachedResultSet := TZPostgresCachedResultSet.Create(NativeResultSet, Self.SQL, Resolver, ConSettings);
     if (GetResultSetConcurrency = rcUpdatable) then begin
       CachedResultSet.SetConcurrency(rcUpdatable);
       if ServerCursor then begin //pg is tabular streamed, break blocking for next queries
