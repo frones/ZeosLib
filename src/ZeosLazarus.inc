@@ -83,6 +83,7 @@
 {$DEFINE WITH_ACTIVE_DATASET_ERROR_ON_FIRST_ROW_BUG} // FPC datasets are activ on open a query but first next errors out
 
 {$IF FPC_FULLVERSION>=20500}  // Upgrade to 2.6.x asap.
+  {$DEFINE WITH_DEPRECATED_MESSAGE}
   {$DEFINE FPC2_5UP} // Used in code
   {$DEFINE WITH_NEWTOBJECT}
   {$DEFINE WITH_IPROVIDER}
@@ -132,7 +133,8 @@
   {$IF FPC_FULLVERSION>20601}
     {$UNDEF WITH_FPC_FTTIME_BUG} //seems like the never FPC2.6.2 also have fixed the NativData bug for TTimeFields+TDataSet
     {$IF FPC_FULLVERSION>20602}
-      {$IF FPC_FULLVERSION>20700}       // will be introduced in 2.7+
+     {$DEFINE TENCODING_HAS_CODEPAGE}          //TEncoding has property CodePage  
+     {$IF FPC_FULLVERSION>20700}       // will be introduced in 2.7+
         {$ifndef MSEgui}
           {$DEFINE WITH_TBOOKMARK}        // Have TBookmark
         {.§ELSE}
@@ -151,6 +153,7 @@
         {$ENDIF}
         {$DEFINE WITH_RAWBYTESTRING_CONVERSION_BUG} //2.7 gen did bad conversions with possible data-loss here
         {$IF FPC_FULLVERSION>30000}       // will be introduced in 3.0+
+          {$DEFINE TENCODING_HAS_CODEPAGE}
           {$DEFINE WITH_WITH_TFIELD_BIND_METHOD} //TField.Bind(Binding) is supported
           {$DEFINE WITH_PARAM_ASBCD} //TParam.AsBcd is supported
           {$DEFINE WITH_tagVARIANT_UINT64} //ActiveX tagVariant supports Int64/uInt64 values not sure about the proper FPC version here
