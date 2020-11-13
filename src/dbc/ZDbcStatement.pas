@@ -427,6 +427,7 @@ type
     function GetBLob(ParameterIndex: Integer): IZBlob;
     function GetCLob(ParameterIndex: Integer): IZClob;
 
+    function GetSQLType(Index: Integer): TZSQLType;
     function GetValue(ParameterIndex: Integer): TZVariant;
   public
     constructor Create(const Connection: IZConnection; const SQL: string; {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
@@ -584,6 +585,7 @@ type
     function GetDouble(ParameterIndex: Integer): Double; reintroduce;
     function GetCurrency(ParameterIndex: Integer): Currency; reintroduce;
     procedure GetBigDecimal(ParameterIndex: Integer; var Result: TBCD); reintroduce;
+    procedure GetGUID(ParameterIndex: Integer; var Result: TGUID); reintroduce;
     function GetBytes(ParameterIndex: Integer): TBytes; reintroduce;
     procedure GetDate(ParameterIndex: Integer; var Result: TZDate); reintroduce; overload;
     procedure GetTime(ParameterIndex: Integer; var Result: TZTime); reintroduce; overload;
@@ -2864,6 +2866,13 @@ begin
   Result := {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF};
 end;
 
+function TZAbstractPreparedStatement.GetSQLType(Index: Integer): TZSQLType;
+begin
+  {$IFNDEF GENERIC_INDEX}Dec(Index);{$ENDIF}
+  Index := ParamterIndex2ResultSetIndex(Index);
+  Result := fOutParamResultSet.GetMetadata.GetColumnType(Index);
+end;
+
 function TZAbstractPreparedStatement.GetString(ParameterIndex: Integer): String;
 begin
   {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
@@ -4283,6 +4292,17 @@ begin
     {$IFDEF FPC}Result := 0;{$ENDIF} //satisfy compiler
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   end;
+end;
+
+procedure TZAbstractCallableStatement.GetGUID(ParameterIndex: Integer;
+  var Result: TGUID);
+begin
+  if FExecStatement <> nil then begin
+    FExecStatement.GetGUID(ParameterIndex, Result);
+    if (BindList.ParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = pctInOut) then
+      SetGUID(ParameterIndex, Result);
+  end else
+    raise EZSQLException.Create(SCanNotRetrieveResultSetData);
 end;
 
 {**
