@@ -580,7 +580,7 @@ end;
 
 function CompareCurrency_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  Result := -CompareDouble_Asc(Null1, Null2, V1, V2);
+  Result := -CompareCurrency_Desc(Null1, Null2, V1, V2);
 end;
 
 function CompareCurrency_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
