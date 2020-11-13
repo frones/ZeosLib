@@ -79,6 +79,7 @@ type
     procedure TestAttachAndDetach;
     procedure TestTicket405;
     procedure TestSF431;
+    procedure TestTicket458;
   end;
 
   {** Implements a MBC bug report test case for SQLite components. }
@@ -207,6 +208,37 @@ begin
   finally
     SQLProcessor.Free;
     Connection.ExecuteDirect('DROP TABLE IF EXISTS `station`')
+  end;
+end;
+
+procedure ZTestCompSQLiteBugReport.TestTicket458;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  Query.Connection.Connect;
+  Check(Query.Connection.Connected);
+  try
+    Query.SQL.Text := 'drop table TestTicket458';
+    try
+      Query.ExecSQL;
+    except end;
+    Query.SQL.Text := 'Create table TestTicket458(ID GUID)';
+    Query.ExecSQL;
+    Query.Connection.StartTransaction;
+    try
+      Query.SQL.Text := 'select * from TestTicket458';
+      Query.Open;
+      Query.Close;
+      //CheckEquals(ftGUID, Query.Fields[0].DataType);
+      Query.Connection.ExecuteDirect('create index IDX_TestTicket458_ID on TestTicket458(ID)');
+      Query.Connection.Commit;
+    finally
+      Query.SQL.Text := 'drop table TestTicket458';
+      Query.ExecSQL;
+    end;
+  finally
+    Query.Free;
   end;
 end;
 

@@ -440,13 +440,13 @@ begin
     if Stmt = nil then
       CheckSQLiteError(GetPlainDriver, FHandle,
         GetPlainDriver.Prepare(FHandle, Pointer(SQL), nBytes, Stmt, pzTail{%H-}),
-          lcExecute, SQL, ConSettings, FExtendedErrorMessage);
+          lcTransaction, SQL, ConSettings, FExtendedErrorMessage);
     try
-      CheckSQLiteError(GetPlainDriver, FHandle, GetPlainDriver.Step(Stmt),
-        lcExecute, SQL, ConSettings, FExtendedErrorMessage);
-    finally
+      CheckSQLiteError(FPlainDriver, FHandle, FPlainDriver.Step(Stmt),
+        lcTransaction, SQL, ConSettings, FExtendedErrorMessage);
       if Assigned(DriverManager) and DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
+    finally
       FPlainDriver.reset(Stmt);
     end;
   end;
