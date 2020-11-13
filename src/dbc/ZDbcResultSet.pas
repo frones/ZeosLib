@@ -5176,6 +5176,7 @@ begin
   InternalClear;
   if Value = nil then Exit;
   L := Value.Size;
+  Value.Position := 0;
   if (L = 0) then begin
     if (FColumnCodePage <> zCP_Binary) then
       FDataRefAddress.IsNotNull := 1;
