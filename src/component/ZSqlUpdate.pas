@@ -64,6 +64,7 @@ interface
 
 uses
   SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
+  {$IFDEF TEST_TZPARAM}ZDatasetParam,{$ENDIF}
   ZDbcIntfs, ZDbcCachedResultSet, ZDbcCache, ZSqlStrings, ZClasses;
 
 type
@@ -93,7 +94,7 @@ type
     FRefreshStmt: IZPreparedStatement;
 
     FParamCheck: Boolean;
-    FParams: TParams;
+    FParams: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF};
     FMultiStatements: Boolean;
     FBeforeDeleteSQL: TNotifyEvent;
     FBeforeInsertSQL: TNotifyEvent;
@@ -114,7 +115,7 @@ type
     function GetSQL(UpdateKind: TUpdateKind): TStrings;
     procedure SetSQL(UpdateKind: TUpdateKind; Value: TStrings);
     function GetParamsCount: Word;
-    procedure SetParamsList(Value: TParams);
+    procedure SetParamsList(Value: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF});
     procedure SetParamCheck(Value: Boolean);
     procedure SetMultiStatements(Value: Boolean);
 
@@ -191,7 +192,7 @@ type
     property UseSequenceFieldForRefreshSQL:Boolean read FUseSequenceFieldForRefreshSQL write SetUseSequenceFieldForRefreshSQL;
 
 
-    property Params: TParams read FParams write SetParamsList stored False;
+    property Params: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF} read FParams write SetParamsList stored False;
     property ParamCheck: Boolean read FParamCheck write SetParamCheck default True;
     property MultiStatements: Boolean read FMultiStatements write SetMultiStatements default True;
 
@@ -251,7 +252,7 @@ begin
   FRefreshSQL := TZSQLStrings.Create;
   FRefreshSQL.OnChange:= UpdateParams;
 
-  FParams := TParams.Create(Self);
+  FParams := {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF}.Create(Self);
   FParamCheck := True;
   FMultiStatements := True;
   for RowUpdateType := utModified to utDeleted do
@@ -370,7 +371,7 @@ end;
   Set a new list of SQL parameters.
   @param Value a new list of SQL parameters.
 }
-procedure TZUpdateSQL.SetParamsList(Value: TParams);
+procedure TZUpdateSQL.SetParamsList(Value: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF});
 begin
   FParams.AssignValues(Value);
 end;
@@ -533,9 +534,9 @@ end;
 }
 procedure TZUpdateSQL.RebuildAll;
 var
-  OldParams: TParams;
+  OldParams: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF};
 begin
-  OldParams := TParams.Create;
+  OldParams := {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF}.Create;
   OldParams.Assign(FParams);
   FParams.Clear;
   try
@@ -580,7 +581,7 @@ procedure TZUpdateSQL.FillStatement(const ResultSet: IZCachedResultSet;
   OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var
   I, ColumnIndex: Integer;
-  ParamValue: TParam;
+  ParamValue: {$IFDEF TEST_TZPARAM}TZParam{$ELSE}TParam{$ENDIF};
   ParamName: string;
   OldParam: Boolean;
   WasNull: Boolean;

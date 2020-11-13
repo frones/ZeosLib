@@ -3091,11 +3091,15 @@ procedure TZInterbaseTestGUIDS.Test_SP_ParamGUIDSetVal;
 begin
   Connection.Properties.Values[DSProps_GUIDFields] := 'G_IN,G_OUT';
   SP.StoredProcName := PROC_NAME;
-  {$IFDEF TPARAM_HAS_ASBYTES}
-  SP.Params[0].AsBytes := BufferToBytes(@GuidVal.D1, SizeOf(TGUID));
+  {$IFDEF TEST_TZPARAM}
+  SP.Params[0].AsGUID := GuidVal;
   {$ELSE}
-  Exit; // temp: still can't determine right way to do it on D7
-  SP.Params[0].Value := BytesToVar(BufferToBytes(@GuidVal.D1, SizeOf(TGUID)));
+    {$IFDEF TPARAM_HAS_ASBYTES}
+    SP.Params[0].AsBytes := BufferToBytes(@GuidVal.D1, SizeOf(TGUID));
+    {$ELSE}
+    Exit; // temp: still can't determine right way to do it on D7
+    SP.Params[0].Value := BytesToVar(BufferToBytes(@GuidVal.D1, SizeOf(TGUID)));
+    {$ENDIF}
   {$ENDIF}
   SP.Active := True;
   CheckEquals(1, SP.RecordCount, CurrentTest + ' rec count');

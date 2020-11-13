@@ -64,6 +64,7 @@ uses
   ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings, ZCompatibility, ZExpression,
   ZDbcCache, ZDbcCachedResultSet, ZDatasetUtils, ZClasses
   {$IFNDEF NO_UNIT_CONTNRS},Contnrs{$ENDIF}
+  {$IFDEF TEST_TZPARAM},ZDatasetParam{$ENDIF}
   {$IFDEF WITH_GENERIC_TLISTTFIELD}, Generics.Collections{$ENDIF};
 
 type
@@ -156,7 +157,8 @@ type
     FFetchRow: integer;    // added by Patyi
 
     FSQL: TZSQLStrings;
-    FParams: TParams;
+    FParams: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF};
+    {$IFDEF TEST_TZPARAM}FCompilerParams: TParams;{$ENDIF} //required for IProvider
     FShowRecordTypes: TUpdateStatusSet;
     FOptions: TZDatasetOptions;
     FProperties: TStrings;
@@ -244,7 +246,11 @@ type
     procedure SetParamCheck(Value: Boolean);
     function GetParamChar: Char;
     procedure SetParamChar(Value: Char);
+    {$IFDEF TEST_TZPARAM}
+    procedure SetParams(Value: TZParams);
+    {$ELSE !TEST_TZPARAM}
     procedure SetParams(Value: TParams);
+    {$ENDIF TEST_TZPARAM}
     function GetShowRecordTypes: TUpdateStatusSet;
     procedure SetShowRecordTypes(Value: TUpdateStatusSet);
     procedure SetConnection(Value: TZAbstractConnection);
@@ -287,7 +293,7 @@ type
     function GotoRow(RowNo: NativeInt): Boolean; // added by tohenk
     procedure RereadRows;
     procedure SetStatementParams(const Statement: IZPreparedStatement;
-      const ParamNames: TStringDynArray; Params: TParams;
+      const ParamNames: TStringDynArray; Params: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF};
       DataLink: TDataLink); virtual;
     procedure MasterChanged(Sender: TObject);
     procedure MasterDisabled(Sender: TObject);
@@ -348,7 +354,11 @@ type
     property ParamChar: Char read GetParamChar write SetParamChar
       default ':';
     property SQL: TStrings read GetSQL write SetSQL;
+    {$IFDEF TEST_TZPARAM}
+    property Params: TZParams read FParams write SetParams;
+    {$ELSE !TEST_TZPARAM}
     property Params: TParams read FParams write SetParams;
+    {$ENDIF !TEST_TZPARAM}
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly default True;
     property ShowRecordTypes: TUpdateStatusSet read GetShowRecordTypes
       write SetShowRecordTypes default [usUnmodified, usModified, usInserted];
@@ -509,7 +519,7 @@ type
     procedure FetchAll; virtual;  // added by Patyi
     procedure ExecSQL; virtual;
     function RowsAffected: LongInt;
-    function ParamByName(const Value: string): TParam;
+    function ParamByName(const Value: string): {$IFDEF TEST_TZPARAM}TZParam{$ELSE}TParam{$ENDIF};
 
     {$IFDEF FPC} // FPC has these methods virtual plainly returning False while on Delphi they use FindRecord
     function FindFirst: Boolean; override;
@@ -1115,6 +1125,7 @@ type
     property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
     {$IFEND}
     property AsRawByteString: RawByteString read GetAsRawByteString write SetAsRawByteString;
+    property CodePage: Word read FColumnCP;
   end;
 
   TZUnicodeStringField = class(TWideStringField)
@@ -1251,6 +1262,8 @@ type
     {$IF not defined(NO_ANSISTRING) and not defined(WITH_ASANSISTRING)}
     property AsAnsiString: AnsiString read GetAsAnsiString write SetAsAnsiString;
     {$IFEND}
+    property AsRawByteString: RawByteString read GetAsRawByteString write SetAsRawByteString;
+    property CodePage: Word read FColumnCP;
     procedure Clear; override;
   end;
 
@@ -1538,7 +1551,11 @@ begin
   TZSQLStrings(FSQL).Dataset := Self;
   TZSQLStrings(FSQL).MultiStatements := False;
   FSQL.OnChange := UpdateSQLStrings;
+  {$IFDEF TEST_TZPARAM}
+  FParams := TZParams.Create(Self);
+  {$ELSE !TEST_TZPARAM}
   FParams := TParams.Create(Self);
+  {$ENDIF TEST_TZPARAM}
   FCurrentRows := TZSortedList.Create;
   BookmarkSize := SizeOf(Integer);
   FShowRecordTypes := [usModified, usInserted, usUnmodified];
@@ -1586,6 +1603,9 @@ begin
 
   FreeAndNil(FSQL);
   FreeAndNil(FParams);
+  {$IFDEF TEST_TZPARAM}
+  FreeAndNil(FCompilerParams);
+  {$ENDIF}
   FreeAndNil(FCurrentRows);
   FreeAndNil(FProperties);
   FreeAndNil(FFilterStack);
@@ -1745,7 +1765,7 @@ end;
   Sets a new set of parameters.
   @param Value a set of parameters.
 }
-procedure TZAbstractRODataset.SetParams(Value: TParams);
+procedure TZAbstractRODataset.SetParams(Value: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF});
 begin
   FParams.AssignValues(Value);
 end;
@@ -1793,7 +1813,7 @@ end;
   @param Value a parameter name.
   @return a found parameter object.
 }
-function TZAbstractRODataset.ParamByName(const Value: string): TParam;
+function TZAbstractRODataset.ParamByName(const Value: string): {$IFDEF TEST_TZPARAM}TZParam{$ELSE}TParam{$ENDIF};
 begin
   Result := FParams.ParamByName(Value);
 end;
@@ -1805,7 +1825,7 @@ end;
 procedure TZAbstractRODataset.UpdateSQLStrings(Sender: TObject);
 var
   I: Integer;
-  OldParams: TParams;
+  OldParams: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF};
 begin
   FieldDefs.Clear;
   if Active
@@ -1818,7 +1838,7 @@ begin
   UnPrepare;
   if (csLoading in ComponentState) then
     Exit;
-  OldParams := TParams.Create;
+  OldParams := {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF}.Create;
   OldParams.Assign(FParams);
   FParams.Clear;
 
@@ -2133,20 +2153,29 @@ end;
 procedure TZAbstractRODataset.RetrieveParamValues;
 var
   I: Integer;
-  Param: TParam;
+  Param: {$IFDEF TEST_TZPARAM}TZParam{$ELSE}TParam{$ENDIF};
+  BCD: TBCD;
+  {$IFDEF TEST_TZPARAM}
+  GUID: TGUID absolute BCD;
+  D: TZDate absolute BCD;
+  T: TZTime absolute BCD;
+  TS: TZTimeStamp absolute BCD;
+  {$ELSE}
   TempBlob: IZBlob;
   P: Pointer;
   L: NativeUint;
   R: RawByteString;
-  BCD: TBCD;
-  {$IFDEF WITH_TVALUEBUFFER}
-  VB: TValueBuffer;
+  {$ENDIF}
+  {$IFNDEF TEST_TZPARAM}
+    {$IFDEF WITH_TVALUEBUFFER}
+    VB: TValueBuffer;
+    {$ENDIF}
   {$ENDIF}
 begin
   for I := 0 to Params.Count - 1 do begin
     Param := Params[I];
 
-    if not (Param.ParamType in [ptResult, ptOutput, ptInputOutput]) then
+    if (Ord(Param.ParamType) < Ord(ptOutput)) then
       Continue;
 
     if Statement.IsNull(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then
@@ -2214,6 +2243,28 @@ begin
           Param.DataType := ftWideMemo;
         end;
         {$ENDIF}
+        {$IFDEF TEST_TZPARAM}
+        ftBytes, ftVarBytes:
+          Param.AsBytes := Statement.GetBytes(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        ftGuid: begin
+            Statement.GetGUID(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, GUID);
+            Param.AsGUID := GUID;;
+          end;
+        ftDate: begin
+            Statement.GetDate(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, D);
+            Param.AsZDate := D;
+          end;
+        ftTime:
+          Param.AsTime := Statement.GetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        ftDateTime:
+          Param.AsDateTime := Statement.GetTimestamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        ftBlob:
+          {$IFDEF TBLOBDATA_IS_TBYTES}
+          Param.AsBlob := Statement.GetBytes(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+          {$ELSE}
+          Param.AsBlob := Statement.GetRawByteString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+          {$ENDIF}
+        {$ELSE !TEST_TZPARAM}
         ftBytes, ftVarBytes, ftGuid:
           Param.Value := Statement.GetBytes(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         ftDate:
@@ -2239,6 +2290,7 @@ begin
             Param.Clear;
             TempBlob := nil;
           end
+        {$ENDIF TEST_TZPARAM}
         else
            raise EZDatabaseError.Create(SUnKnownParamDataType);
       end;
@@ -2254,10 +2306,10 @@ end;
   @param DataLink a datalink to get parameters.
 }
 procedure TZAbstractRODataset.SetStatementParams(const Statement: IZPreparedStatement;
-  const ParamNames: TStringDynArray; Params: TParams; DataLink: TDataLink);
+  const ParamNames: TStringDynArray; Params: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF}; DataLink: TDataLink);
 var
   I: Integer;
-  TempParam, Param: TParam;
+  TempParam, Param: {$IFDEF TEST_TZPARAM}TZParam{$ELSE}TParam{$ENDIF};
   Dataset: TDataset;
   Field: TField;
 begin
@@ -2274,27 +2326,20 @@ begin
       SetStatementParam(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Statement, Param);
     end;
   end else begin
-    TempParam := TParam.Create(nil);
+    TempParam := {$IFDEF TEST_TZPARAM}TZParam{$ELSE}TParam{$ENDIF}.Create(nil);
     try
-      for I := Low(ParamNames) to High(ParamNames) do
-      begin
-        if Assigned(Dataset) then
-          Field := Dataset.FindField(ParamNames[I])
-        else
-          Field := nil;
-
-        if Assigned(Field) then
-        begin
+      for I := Low(ParamNames) to High(ParamNames) do begin
+        if Assigned(Dataset)
+        then Field := Dataset.FindField(ParamNames[I])
+        else Field := nil;
+        if Assigned(Field) then begin
           TempParam.AssignField(Field);
           Param := TempParam;
-        end
-        else
-        begin
+        end else begin
           Param := Params.FindParam(ParamNames[I]);
           if not Assigned(Param) or (Param.ParamType in [ptOutput, ptResult]) then
             Continue;
         end;
-
         SetStatementParam(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Statement, Param);
       end;
     finally
@@ -5401,7 +5446,14 @@ end;
 }
 function TZAbstractRODataset.PSGetParams: TParams;
 begin
+  {$IFDEF TEST_TZPARAM}
+  if FCompilerParams = nil then
+    FCompilerParams := TParams.Create;
+  FCompilerParams.Assign(Params);
+  Result := FCompilerParams;
+  {$ELSE}
   Result := Params;
+  {$ENDIF TEST_TZPARAM}
 end;
 
 {**
@@ -5538,21 +5590,45 @@ var
   I: Integer;
   Statement: IZPreparedStatement;
   ParamValue: TParam;
+  {$IFDEF TEST_TZPARAM}ZParam: TZParam;{$ENDIF}
+  HasOutParams: Boolean;
 begin
-  if Assigned(FConnection) then
-  begin
+  if Assigned(FConnection) then begin
     if not FConnection.Connected then
       FConnection.Connect;
+    HasOutParams := False;
     Statement := FConnection.DbcConnection.PrepareStatement(ASQL);
     if (AParams <> nil) and (AParams.Count > 0) then
-      for I := 0 to AParams.Count - 1 do
-      begin
-        ParamValue := AParams[I];
-        SetStatementParam(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Statement, ParamValue);
+      {$IFDEF TEST_TZPARAM}ZParam := TZParam.Create(nil);
+      try
+      {$ENDIF}
+        for I := 0 to AParams.Count - 1 do begin
+          ParamValue := AParams[I];
+          if Ord(ParamValue.ParamType) >= Ord(ptOutput) then begin
+            HasOutParams := True;
+            if ParamValue.ParamType <> ptInputOutput then
+              continue;
+          end;
+          {$IFDEF TEST_TZPARAM}
+          ZParam.Assign(ParamValue);
+          SetStatementParam(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Statement, ZParam);
+          {$ELSE}
+          SetStatementParam(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Statement, ParamValue);
+          {$ENDIF}
+        end;
+      {$IFDEF TEST_TZPARAM}
+      finally
+        FreeAndNil(ZParam);
       end;
+      {$ENDIF TEST_TZPARAM}
     Result := Statement.ExecuteUpdatePrepared;
-  end
-  else
+    if HasOutParams then begin
+      RetrieveParamValues;
+      {$IFDEF TEST_TZPARAM}
+      FParams.AssignTo(AParams);
+      {$ENDIF TEST_TZPARAM}
+    end;
+  end else
     Result := 0;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
