@@ -3296,6 +3296,7 @@ end;
 
 destructor TZAbstractOracleBlob.Destroy;
 begin
+  FLocatorAllocated := False;
   FreeOCIResources;
   inherited;
 end;
@@ -3305,25 +3306,29 @@ procedure TZAbstractOracleBlob.FreeOCIResources;
 var Status: sword;
   B: LongBool;
 begin
-  if (FLobLocator <> nil) and FLocatorAllocated then try
-    if not FReleased then begin
-      Status := FPlainDriver.OCILobIsOpen(FOCISvcCtx, FOCIError, FLobLocator, B);
-      if Status <> OCI_SUCCESS then
-        FOracleConnection.HandleErrorOrWarning(FOCIError, status,
-          lcOther, 'OCILobIsOpen', Self);
-      if B then begin
-        Status := FPlainDriver.OCILobClose(FOCISvcCtx, FOCIError, FLobLocator);
+  Try
+    if (FLobLocator <> nil) and FLocatorAllocated then
+      if not FReleased then begin
+        Status := FPlainDriver.OCILobIsOpen(FOCISvcCtx, FOCIError, FLobLocator, B);
         if Status <> OCI_SUCCESS then
           FOracleConnection.HandleErrorOrWarning(FOCIError, status,
-            lcOther, 'OCILobClose', Self);
+            lcOther, 'OCILobIsOpen', Self);
+        if B then begin
+          Status := FPlainDriver.OCILobClose(FOCISvcCtx, FOCIError, FLobLocator);
+          if Status <> OCI_SUCCESS then
+            FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+              lcOther, 'OCILobClose', Self);
+        end;
       end;
-    end;
   finally
-    Status := FPlainDriver.OCIDescriptorFree(FLobLocator, FDescriptorType);
-    FLobLocator := nil;
-    if Status <> OCI_SUCCESS then
-      FOracleConnection.HandleErrorOrWarning(FOCIError, status,
-        lcOther, 'OCIDescriptorFree', Self);
+    if FLobLocator <> nil Then
+    Begin
+      Status := FPlainDriver.OCIDescriptorFree(FLobLocator, FDescriptorType);
+      FLobLocator := nil;
+      if Status <> OCI_SUCCESS then
+        FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+          lcOther, 'OCIDescriptorFree', Self);
+    End;
   end;
 end;
 
