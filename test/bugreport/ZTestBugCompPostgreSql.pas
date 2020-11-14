@@ -117,6 +117,8 @@ type
     {$ENDIF WITH_TDATASETPROVIDER}
     procedure TestSF354;
     procedure TestSF394;
+    procedure TestSF460_A;
+    procedure TestSF460_B;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1476,6 +1478,56 @@ begin
     FreeAndNil(Query);
   end;
 end;
+
+procedure TZTestCompPostgreSQLBugReport.TestSF460_A;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Append('SELECT 1 AS T');
+    Query.SQL.Append('FROM clients c');
+    Query.SQL.Append('WHERE cast(:USERID as varchar(50)) in (c.manager1, c.manager2) or cast(:CanSeeAll as char(1)) = ''y''');
+    Query.SQL.Append('UNION ALL');
+    Query.SQL.Append('SELECT 2 AS T');
+    Query.SQL.Append('FROM family f join clients c on (f.client = c.id)');
+    Query.SQL.Append('WHERE cast(:USERID as varchar(50)) in (c.manager1, c.manager2) or cast(:CanSeeAll as char(1)) = ''y''');
+    Query.ParamByName('USERID').AsString := '1';
+    Query.ParamByName('CanSeeAll').AsString := 'y';
+    Query.Open;
+    Query.Close;
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestSF460_B;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Append('select X.* from (');
+    Query.SQL.Append('  SELECT cast(1 as integer) AS T');
+    Query.SQL.Append('  FROM clients c');
+    Query.SQL.Append('  WHERE cast(:USERID as varchar(50)) in (c.manager1, c.manager2) or cast(:CanSeeAll as char(1)) = ''y''');
+    Query.SQL.Append('  UNION ALL');
+    Query.SQL.Append('  SELECT cast(2 as integer) AS T');
+    Query.SQL.Append('  FROM family f join clients c on (f.client = c.id)');
+    Query.SQL.Append('  WHERE cast(:USERID as varchar(50)) in (c.manager1, c.manager2) or cast(:CanSeeAll as char(1)) = ''y''');
+    Query.SQL.Append(') as X');
+    Query.SQL.Append('where T >= :MinT or T <= :MaxT');
+    Query.ParamByName('USERID').AsString := '1';
+    Query.ParamByName('CanSeeAll').AsString := 'y';
+    Query.ParamByName('MinT').AsInteger := 1;
+    Query.ParamByName('MaxT').AsInteger := 2;
+    Query.Open;
+    Query.Close;
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
 
 initialization
   RegisterTest('bugreport',TZTestCompPostgreSQLBugReport.Suite);
