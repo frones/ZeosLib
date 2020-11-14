@@ -1,0 +1,186 @@
+\documentclass[a4paper,12pt,oneside]{article}
+%\usepackage{geometry}
+%\usepackage{fancyhdr}
+%\usepackage{amsmath,amsthm,amssymb }
+\usepackage{graphicx}
+%\usepackage{lipsum}
+\usepackage[utf8]{inputenc}
+%\usepackage{ngerman}
+%\usepackage{parskip}
+\usepackage{textcomp}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{placeins}
+
+\setlength{\parskip}{0.2cm}
+
+\hypersetup{
+    pdfborder = {0 0 0},		
+}
+
+% Hurenkinder und Schusterjungen verhindern
+\clubpenalty10000
+\widowpenalty10000
+\displaywidowpenalty=10000
+
+\pagestyle{plain}
+
+\title{Zeos 8.0 Release Notes}
+\author{Jan Baumgarten}
+\date{\today}
+%\overfullrule=2mm
+\begin{document}
+\maketitle
+
+\section{Zeos 8.0}
+The Zeos Team is proud to announce the availability of Zeos 8.0 as a stable release.
+This is the newest stable version of Zeos.
+It deprecates Zeos 7.2 and all prior versions of Zeos.
+Zeos 8.0 has seen tons of bug fixes and improvements.
+We urge all people still using older versions of Zeos to upgrade.
+If you have any problems with Zeos 8.0, please get in contact with us on the forums (\url{http://zeoslib.sourceforge.net}) or on the bugtracker (\url{https://sourceforge.net/p/zeoslib/tickets/}).
+
+\section{General Changes}
+\label{sec:GeneralChanges}
+\subsection{Supported compilers}
+\label{sec:GeneralChanges_SupportedCompilers}
+Zeos 8.0 supports Delphi versions from Delphi 7 to XE 10.4 Seattle.
+Besides the x86 and x86\_64 compilers, Zeos now also supports the Nextgen compilers and so supports all available platforms on Delphi.
+So on Delphi Windows, macOS / Mac OS X, iOS and Android are supported now.
+The Free Pascal compiler is supported from version 3.0 to version 3.2.
+Older versions might work but don't get official support by us anymore.
+
+\subsection{New Drivers}
+\label{sec:GeneralChanges_NewDrivers}
+Zeos 8.0 now comes with some new drivers:
+\begin{itemize}
+  \item OleDB
+	\item ODBC including UnixODBC
+	\item Firebird with new interface based API
+	\item Webservice Proxy Driver
+\end{itemize}
+For a description of these new drivers please see the respective chapters.
+
+\subsection{no more driver versioning}
+We deprecated protocols with server versions during the life time of Zeos 7.2 already.
+These protocols have been removed from Zeos 8.0.
+So protocol names like "firebird-3.0" will not work anymore.
+Please use protocol names without version numbers instead, like "firebird".
+
+\subsection{Property Documentation}
+Zeos drivers support a multitude of parameters. via the "`Properties"' property.
+These parameters are now collected in the new file ZDbcProperties.pas and also in ZPropertiesEditor.pas.
+Based on the latter file, we will release a more detailed documentation for Zeos driver properties.
+
+\subsection{Support for connection loss}
+Zeos 8.0 now supports the programmer in reacting to a connection loss.
+
+\textbf{Jan:} How does this work and which drivers are supported Egonhugeist?
+
+\subsection{New prepare logic}
+Some drivers don't prepare statements on first execution automatically.
+Instead they prepare statements after some executions now.
+This is for cases where statements get used once only.
+Preparing these statements would be a waste of resources in that case.
+This behavior can be influenced by the user.
+
+\textbf{Jan:} Ask Egonhugeist how this is influenced and which drivers work this way.
+
+\subsection{tokens don't have local string variables anymore}
+Tokens don't have local string variables anymore.
+They are only a PChar and a Length.
+This reducees memory impact and keeps the memory manager out of things.
+Tokens are kept in a TZTokenList.
+This List should be used as an interface by users.
+It will copy strings as needed.
+One shouldn't modify anything in the PChars because this will lead to a change in the SQL statement of the user.
+
+\subsection{Discontinued support for character agnostic connection character sets}
+It is hard work and a big impact on Zeos to have support for connection agnostic character sets.
+In the past Zeos tried to read the metadata of the database and to convert the incoming characters accordingly to the current application character set.
+Since database systems do exactly the same if they know the correct character set, we effectively try to double efforts where databases already are good.
+With Zeos 8.0 we will cancel these efforts.
+This greatly simplifies Zeos and leaves room for Zeos developers to work on other things.
+Starting with Zeos 8.0 we raise exceptions if someone tries to use the following character sets on the specified databases as a connection character set:
+
+\begin{itemize}
+  \item 
+    PostgreSQL: SQL\_ASCII
+  \item
+		MySQL: BINARY
+	\item
+    Firebird: none, octetts
+\end{itemize}
+
+\subsection{DBC layer: changed GetPWideChar / GetPAnsiChar Len parameter}
+The Len parameter of the GetPWideChar and GetPAnsiChar method is no longer a pointer.
+A var parameter is used instead.
+
+\subsection{Support for TBCDField / TFMTBCDField}
+For correct support of NUMERIC and DECIMAL field types, Zeos now supports the use of TBCDField and TFMTBCDField.
+The DBC layer has been extended accordingly.
+If you use static field definitions in your forms, you will need to adapt them before compiling your application for Zeos 8.0.
+
+\textbf{Note:}
+TBCDField doesn't usually round values.
+Assigning 1.065 works for a numeric(15,2) database field.
+This value usually will also be presented to the user (TField.AsString).
+To remedy situations where the database would round the value and Zeos and the database have a different view of the fields value, Zeos will round assigned values to the scale defined by the underlying database fields before writing them to the field buffer.
+So Zeos will round 1.065 to 1.07 and then send 1.07 to the database.
+
+\subsection{doPreferPrepared defaults to on now}
+The option doPreferPrepared defaults to on now.
+This leads to Zeos preparing all statements automatically if it sees fit to do so.
+For more information see the documentation on this parameter.
+
+\textbf{Jan:}@Egonhugeist: Is this correct?
+
+\subsection{Ordinal position of return value for stored procedures}
+For database systems, where a return value is defined, like MS SQL Server, the return value has moved to ordinal position 0.
+Please check your applications.
+
+\subsection{support for aborting long running operations}
+Zeos now supports the abortion of long running operations.
+To do so, call TZConnection.AbortOperation from another thread.
+This is supported on MySQL, MariaDB, Oracle, dblib (MS SQL Server, SAP Adaptive Server Enterprise), PostgreSQL, Firebird and SQLite.
+
+\subsection{new method StartTransaction on the DBC layer}
+Until Zeos 8.0 the DBC layer didn't have a way to start transactions besides leaving AutoCommit mode.
+Zoes 8.0 introduces a new StartTransaction method.
+This can save API calls - especially on databases that default to using auto commit because it doesn't start unnecessary transactions after Commit / Rollback.
+
+\subsection{Nested transactions}
+Zeos now supports nested transactions. TZConnection.StartTransaction on the component layer and IZConnection.StartTransaction will return the current transaction nesting level.
+If a transaction already has been started, Zeos will use save points to create nested transactions automatically.
+When issuing a Commit or Rollback, Zeos will act accordingly by releasing save points or rolling back to save points.
+
+\subsection{stBigDecimal and stCurrency have new meaning}
+The two data types stBigDecimal and stCurrency are not used for describing TExtendedFields.
+They now are used for describing decimal and numeric field types.
+
+\subsection{Zeos Field Classes}
+Zeos introduced its own field classes.
+They derive from the original Fields, so can be used almost seamlessly.
+The Zeos field classes can work directly on Zeos internal structures and by this way are way faster then normal TField descandants.
+Also Zeos implements some field classes to support features of databases, that are not supported by the Delphi / Free Pascal TField implementations.
+
+\textbf{Jan:}Option to disable this behavior?
+
+\subsection{New parameters for handling of exceptions and warnings}
+Zeos 8.0 introduces two new parameters for the handling of exceptions and warnings:
+
+\subsubsection{AddLogMsgToExceptionOrWarningMsg }
+This is a boolean option.
+If set to true (default) The offending SQL will be added to exceptions generated by the server.
+If set to false, SQL statements will not be added.
+
+On the DBC layer this option is reflected by the SetAddLogMsgToExceptionOrWarningMsg method.
+
+\subsubsection{RaiseWarningMessages}
+This is a boolean option.
+If set to true, warnings by the SQL server will be raised as exceptions.
+Default is false.
+
+On the DBC layer this option is reflected by the SetRaiseWarningMessages method.
+
+\end{document}
