@@ -92,3 +92,21 @@ CREATE INDEX visitrmandx
   USING btree
   ("RANID");
 
+CREATE DOMAIN yesno as character(1) default 'n' check (value in ('y', 'n'));
+
+create table clients (
+  id varchar(50) not null,
+  name varchar(50),
+  surname varchar(50),
+  manager1 varchar(50),
+  manager2 varchar(50),
+  constraint pk_clients primary key (id)
+);
+
+create table family (
+  id varchar(50) not null,
+  client varchar(50) not null,
+  name varchar(50),
+  surname varchar(50),
+  constraint pk_family primary key (id)
+);
