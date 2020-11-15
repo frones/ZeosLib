@@ -7053,7 +7053,7 @@ begin
           Frmt := ZSysUtils.ReplaceChar(Delim, Sep, Frmt);
       end;
       FSimpleFormat[b] := IsSimpleTimeFormat(Frmt);
-      if FAdjSecFracFmt
+      if FAdjSecFracFmt and (FScale > 0)
       then FFractionFormat[b] := ConvertAsFractionFormat(Frmt, FScale, not FSimpleFormat[b], FFractionLen[b])
       else FFractionFormat[b] := Frmt;
     end;
@@ -7063,7 +7063,7 @@ begin
       if not FAdjSecFracFmt then
         Fraction := RoundNanoFractionTo(Fraction, FScale);
       I := {$IFDEF UNICODE}TimeToUni{$ELSE}TimeToRaw{$ENDIF}(
-        T.Hour, T.Minute, T.Second, Fraction, P, FLastFormat[B], False, T.IsNegative);
+        T.Hour, T.Minute, T.Second, Fraction, P, FFractionFormat[B], False, T.IsNegative);
       System.SetString(Text, P, I);
     end else begin
       if FAdjSecFracFmt
@@ -7283,6 +7283,7 @@ var
   I,J: LengthInt;
   Fraction: Cardinal;
   B: Boolean;
+  B2: Boolean;
   P: PChar;
   Millis: Word;
 begin
@@ -7309,7 +7310,7 @@ begin
     if Frmt <> FLastFormat[B] then begin
       FLastFormat[B] := Frmt;
       FSimpleFormat[b] := IsSimpleDateTimeFormat(Frmt);
-      if FAdjSecFracFmt
+      if FAdjSecFracFmt and (FScale > 0)
       then FFractionFormat[b] := ConvertAsFractionFormat(Frmt, FScale, not FSimpleFormat[b], FFractionLen[b])
       else FFractionFormat[b] := Frmt;
     end;
@@ -7320,22 +7321,22 @@ begin
         Fraction := RoundNanoFractionTo(Fraction, FScale);
       I := {$IFDEF UNICODE}DateTimeToUni{$ELSE}DateTimeToRaw{$ENDIF}(
         TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
-        TS.Second, Fraction, P, FLastFormat[B], False, TS.IsNegative);
+        TS.Second, Fraction, P, FFractionFormat[B], False, TS.IsNegative);
       System.SetString(Text, P, I);
     end else begin
-      B := False;
+      B2 := False;
       if TryEncodeDate(TS.Year, TS.Month, TS.Day, d) then begin
         if FAdjSecFracFmt
         then Millis := 0
         else Millis := RoundNanoFractionToMillis(TS.Fractions);
-        B := TryEncodeTime(TS.Hour, TS.Minute, TS.Second, Millis, DT);
-        if B then
+        B2 := TryEncodeTime(TS.Hour, TS.Minute, TS.Second, Millis, DT);
+        if B2 then
           if d < 0
           then DT := D - DT
           else DT := D + DT;
       end;
-      if B then begin
-        //let the compiler do the complex stuff i.e. AM/PM and user defined additional tokens, week days etc.
+      if B2 then begin
+       //let the compiler do the complex stuff i.e. AM/PM and user defined additional tokens, week days etc.
         DateTimeToString(Text, FFractionFormat[b], DT);
         if FAdjSecFracFmt then begin
           //if shortformat the position may be variable. no chance to cache that info
