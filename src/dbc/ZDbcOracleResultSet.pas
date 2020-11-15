@@ -208,6 +208,8 @@ type
     constructor Create(const Connection: IZOracleConnection;
       LobLocator: POCILobLocator; dty: ub2; const OpenLobStreams: TZSortedList);
     destructor Destroy; override;
+  protected
+    LobIsOpen: Boolean;
   public
     function GetLobLocator: POCILobLocator;
     procedure CopyLocator;
@@ -2742,7 +2744,7 @@ begin
     CreateTemporary;
     FOwnerLob.FIsCloned := False;
     Open;
-  end else if not IsOpen then
+  end else if not FOwnerLob.LobIsOpen then
     Open;
   FOwnerLob.FIsUpdated := True;
 end;
@@ -2750,11 +2752,12 @@ end;
 procedure TZAbstracOracleLobStream.Close;
 var Status: sword;
 begin
-  if IsOpen then begin
+  if FOwnerLob.LobIsOpen then begin
     Status := FPlainDriver.OCILobClose(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator);
     if Status <> OCI_SUCCESS then
       FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
         lcExecPrepStmt, 'OCILobClose', Self);
+    FOwnerLob.LobIsOpen := False;
   end;
 end;
 
@@ -2844,6 +2847,8 @@ procedure TZAbstracOracleLobStream.CreateTemporary;
 var Status: sword;
 begin
   if not FReleased then begin
+    if FOwnerLob.LobIsOpen then
+      Close;
     if FOwnerLob.FLobLocator = nil then
       AllocLobLocator;
     Status := FPlainDriver.OCILobCreateTemporary(FOCISvcCtx, FOCIError,
@@ -2915,22 +2920,26 @@ procedure TZAbstracOracleLobStream.Open;
 var Status: sword;
     mode: ub1;
 begin
-  if not FReleased then begin
+  if not FReleased and not FOwnerLob.LobIsOpen then begin
     mode := OCIOpenModes[fOwnerLob.FLobStreamMode];
     Status := FPlainDriver.OCILobOpen(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator, mode);
     if Status <> OCI_SUCCESS then
       FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
         lcOther, 'OCILobOpen', Self);
+    FOwnerLob.LobIsOpen := True;
+    if FReleased then Exit;
     Status := FplainDriver.OCILobCharSetId(FOCIEnv, FOCIError,
       FOwnerLob.FLobLocator, @Fcsid);
     if Status <> OCI_SUCCESS then
       FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
         lcOther, 'OCILobCharSetId', Self);
+    if FReleased then Exit;
     Status := FplainDriver.OCILobCharSetForm(FOCIEnv, FOCIError,
       FOwnerLob.FLobLocator, @FOwnerLob.FCharsetForm);
     if Status <> OCI_SUCCESS then
       FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
         lcOther, 'OCILobCharSetForm', Self);
+    if FReleased then Exit;
     if FOwnerLob.FDescriptorType <> OCI_DTYPE_FILE then begin
       Status := FplainDriver.OCILobGetChunkSize(FOCISvcCtx, FOCIError,
         FOwnerLob.FLobLocator, FChunk_Size);
@@ -2950,7 +2959,7 @@ begin
   if FReleased
   then Result := 0
   else begin
-    if Not IsOpen then
+    if Not FOwnerLob.LobIsOpen then
       Open;
     Status := FplainDriver.OCILobGetLength(FOCISvcCtx, FOCIError, FOwnerLob.FlobLocator, lenp);
     Result := lenp;
@@ -2971,7 +2980,7 @@ var
 begin
   if (Count < 0) then
     raise ERangeError.CreateRes(@SRangeError);
-  if not IsOpen then
+  if not FOwnerLob.LobIsOpen then
     Open;
   Result := 0;
   if Count = 0 then
@@ -3013,6 +3022,8 @@ var
   Offset, amtp, bufl: ub4;
   pStart: PAnsiChar;
 begin
+  if not FOwnerLob.LobIsOpen then
+    Open;
   OffSet := 1;
   if fchunk_size = 0
   then bufl := 8*1024
@@ -3134,9 +3145,13 @@ begin
     then piece := OCI_NEXT_PIECE
     else piece := OCI_LAST_PIECE
   until Status <> OCI_NEED_DATA;
-  if Status <> OCI_SUCCESS then
-    FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
-      lcOther, 'OCILobWrite', Self);
+  try
+    if Status <> OCI_SUCCESS then
+      FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+        lcOther, 'OCILobWrite', Self);
+  finally
+    Close;
+  end;
 end;
 
 { TZAbstractOracleBlob }
@@ -3265,27 +3280,25 @@ end;
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "B" does not seem to be initialized} {$ENDIF}
 procedure TZAbstractOracleBlob.FreeOCIResources;
 var Status: sword;
-  B: LongBool;
+  Succeeded: Boolean;
 begin
-  if (FLobLocator <> nil) and FLocatorAllocated then try
-    if not FReleased then begin
-      Status := FPlainDriver.OCILobIsOpen(FOCISvcCtx, FOCIError, FLobLocator, B);
-      if Status <> OCI_SUCCESS then
-        FOracleConnection.HandleErrorOrWarning(FOCIError, status,
-          lcOther, 'OCILobIsOpen', Self);
-      if B then begin
+  if (FLobLocator <> nil) and FLocatorAllocated then begin
+    Succeeded := False;
+    try
+      if not FReleased and LobIsOpen then begin
         Status := FPlainDriver.OCILobClose(FOCISvcCtx, FOCIError, FLobLocator);
         if Status <> OCI_SUCCESS then
           FOracleConnection.HandleErrorOrWarning(FOCIError, status,
             lcOther, 'OCILobClose', Self);
       end;
+      Succeeded := True;
+    finally
+      Status := FPlainDriver.OCIDescriptorFree(FLobLocator, FDescriptorType);
+      FLobLocator := nil;
+      if Succeeded and (Status <> OCI_SUCCESS) then
+        FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+          lcOther, 'OCIDescriptorFree', Self);
     end;
-  finally
-    Status := FPlainDriver.OCIDescriptorFree(FLobLocator, FDescriptorType);
-    FLobLocator := nil;
-    if Status <> OCI_SUCCESS then
-      FOracleConnection.HandleErrorOrWarning(FOCIError, status,
-        lcOther, 'OCIDescriptorFree', Self);
   end;
 end;
 
@@ -3499,7 +3512,7 @@ begin
   if FReleased or (FOwnerLob.FlobLocator = nil)
   then Result := 0
   else begin
-    if Not IsOpen then
+    if Not FOwnerLob.LobIsOpen then
       Open; //this can now lead to connection loss;
     if FReleased then begin
       Result := 0;
@@ -3525,7 +3538,7 @@ var
 begin
   if (Count < 0) then
     raise ERangeError.CreateRes(@SRangeError);
-  if not IsOpen then
+  if not FOwnerLob.LobIsOpen then
     Open;
   Result := 0; //init
   if (Count = 0) or FReleased then Exit;
@@ -3565,6 +3578,8 @@ var byte_amtp, char_amtp, bufl, OffSet: oraub8;
   pStart: pAnsiChar;
 begin
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+  if not FOwnerLob.LobIsOpen then
+    Open;
   if FChunk_Size = 0
   then bufl := 8*1024
   else bufl := FChunk_Size; //usually 8k/chunk
@@ -3586,13 +3601,16 @@ begin
     Inc(pBuff, byte_amtp);
     piece := OCI_NEXT_PIECE;
   until Status <> OCI_NEED_DATA;
-  if (Status <> OCI_SUCCESS) then
-    FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
-      lcOther, 'OCILobRead2', Self);
   Result := pBuff - pStart;
   FPosition := Result;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-  Close;
+  try
+    if (Status <> OCI_SUCCESS) then
+      FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+        lcOther, 'OCILobRead2', Self);
+  finally
+    Close;
+  end;
 end;
 
 function TZOracleLobStream64.Seek(const Offset: Int64;
@@ -3736,9 +3754,13 @@ begin
     end;
   until Status <> OCI_NEED_DATA;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
-  if Status <> OCI_SUCCESS then
-    FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
-      lcOther, 'OCILobWrite', Self);
+  try
+    if Status <> OCI_SUCCESS then
+      FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+        lcOther, 'OCILobWrite', Self);
+  finally
+    Close;
+  end;
 end;
 
 { TZOracleCachedResultSet }
