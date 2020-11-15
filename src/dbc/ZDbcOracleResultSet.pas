@@ -2368,14 +2368,6 @@ begin
 
     paramdpp := nil; //init
     FPlainDriver.OCIParamGet(FStmtHandle, OCI_HTYPE_STMT, FOCIError, paramdpp, I);
-    (*CheckOracleError(FPlainDriver, FOCIError,
-      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @char_semantics, nil, OCI_ATTR_CHAR_USED, FOCIError),
-      lcExecute, 'OCI_ATTR_CHAR_USED', ConSettings);
-    if Boolean(char_semantics) then
-      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @CurrentVar^.value_sz, nil, OCI_ATTR_MAXCHAR_SIZE, FOCIError)
-    else*)
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
         @CurrentVar^.value_sz, nil, OCI_ATTR_DATA_SIZE, FOCIError);
     CurrentVar^.value_sz := PUB2(@CurrentVar^.value_sz)^; //full init of all 4 Bytes -> is a ub2
@@ -2418,60 +2410,30 @@ begin
         'OCIAttrGet(OCI_ATTR_SCHEMA_NAME)', Self);
     ColumnInfo.SchemaName := AttributeToString(P, TempColumnNameLen);
     ColumnInfo.CharOctedLength := CurrentVar^.value_sz;
-
+    if CurrentVar.dty in [SQLT_CHR, SQLT_LNG, SQLT_VCS, SQLT_LVC, SQLT_AFC, SQLT_AVC, SQLT_CLOB, SQLT_VST] then begin
+      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+        @ColumnInfo.CharsetForm, nil, OCI_ATTR_CHARSET_FORM, FOCIError);
+      Status := ColumnInfo.CharsetForm
+    end else Status := CurrentVar^.Scale;
     CurrentVar^.ColType := NormalizeOracleTypeToSQLType(CurrentVar.dty,
       CurrentVar.value_sz, CurrentVar^.DescriptorType,
-      CurrentVar.Precision, CurrentVar.Scale, ConSettings, OCI_TYPEPARAM_IN);
+      ColumnInfo.Precision, Status, ConSettings, OCI_TYPEPARAM_IN);
     inc(DescriptorColumnCount, Ord(CurrentVar^.DescriptorType > 0));
     ColumnInfo.Signed := True;
     ColumnInfo.Nullable := ntNullable;
 
     ColumnInfo.ColumnType := CurrentVar^.ColType;
-    ColumnInfo.Scale := CurrentVar^.Scale;
-    if (ColumnInfo.ColumnType in [stString, stAsciiStream]) then begin
-      {EH: Oracle does not calculate true data size if the attachment charset is a multibyte one
-        and is different to the native db charset
-        so we'll increase the buffers to avoid truncation errors
-        and we use 8 byte aligned buffers. Here we go:}
+    if (ColumnInfo.CharsetForm = SQLCS_NCHAR) or ((CurrentVar.dty <> SQLT_LNG) and
+       (ColumnInfo.ColumnType in [stString, stAsciiStream]) and
+       (ConSettings^.ClientCodePage.Encoding = ceUTF16)) then begin
+      ColumnInfo.ColumnCodePage := zCP_UTF16;
+      ColumnInfo.csid := OCI_UTF16ID;
+    end else if (ColumnInfo.ColumnType in [stString, stAsciiStream]) then begin
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @ColumnInfo.CharsetForm, nil, OCI_ATTR_CHARSET_FORM, FOCIError);
-      if ColumnInfo.ColumnType = stString then begin
-          FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-            @ColumnInfo.Precision, nil, OCI_ATTR_DISP_SIZE, FOCIError);
-        if ColumnInfo.CharsetForm = SQLCS_NCHAR then begin
-          CurrentVar^.value_sz := ColumnInfo.Precision;
-          ColumnInfo.Precision := ColumnInfo.Precision shr 1;
-          CurrentVar.ColType := stUnicodeString;
-          ColumnInfo.ColumnCodePage := zCP_UTF16;
-          ColumnInfo.csid := OCI_UTF16ID;
-        end else begin
-          if Consettings.ClientCodePage.Encoding <> ceUTF16 then begin
-            CurrentVar^.value_sz := ColumnInfo.Precision * ConSettings.ClientCodePage.CharWidth;
-            ColumnInfo.ColumnCodePage := FClientCP;
-          end else begin
-            CurrentVar^.value_sz := ColumnInfo.Precision shl 1;
-            ColumnInfo.ColumnCodePage := zCP_UTF16;
-            CurrentVar.ColType := stUnicodeString;
-          end;
-          FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-            @ColumnInfo.csid, nil, OCI_ATTR_CHARSET_ID, FOCIError);
-        end;
-        CurrentVar^.value_sz := ((CurrentVar^.value_sz shr 3)+1) shl 3;
-        ColumnInfo.CharOctedLength := CurrentVar^.value_sz;
-      end else begin
-        if (ColumnInfo.CharsetForm = SQLCS_NCHAR) or (Consettings.ClientCodePage.Encoding = ceUTF16) then begin
-          CurrentVar.ColType := stUnicodeStream;
-          ColumnInfo.ColumnCodePage := zCP_UTF16
-        end else ColumnInfo.ColumnCodePage := FClientCP;
-        FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-          @ColumnInfo.csid, nil, OCI_ATTR_CHARSET_ID, FOCIError);
-      end;
-      ColumnInfo.ColumnType := CurrentVar^.ColType;
-    end else if (ColumnInfo.ColumnType = stBytes ) then begin
-      ColumnInfo.Precision := CurrentVar^.value_sz;
-      ColumnInfo.ColumnCodePage := zCP_Binary
-    end else
-      ColumnInfo.Precision := CurrentVar^.Precision;
+        @ColumnInfo.csid, nil, OCI_ATTR_CHARSET_ID, FOCIError);
+      ColumnInfo.ColumnCodePage := FClientCP;
+    end else if (ColumnInfo.ColumnType = stBytes ) then
+      ColumnInfo.ColumnCodePage := zCP_Binary;
     if CurrentVar.dty = SQLT_NTY  then begin
       Inc(SubObjectColumnCount);
       CurrentVar^.value_sz := 0;//SizeOf(PPOCIDescriptor);

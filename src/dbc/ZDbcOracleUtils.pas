@@ -194,7 +194,7 @@ function ConvertOracleTypeToSQLType(const TypeName: string;
   Precision, Scale: Integer): TZSQLType;
 
 function NormalizeOracleTypeToSQLType(var DataType: ub2; var DataSize: ub4;
-  out DescriptorType: sb4; Precision, ScaleOrCharSetForm: sb2;
+  out DescriptorType: sb4; var Precision: Integer; ScaleOrCharSetForm: sb2;
   ConSettings: PZConSettings; IO: OCITypeParamMode): TZSQLType;
 (*
 function DescribeObject(const PlainDriver: TZOraclePlainDriver; const Connection: IZConnection;
@@ -418,7 +418,8 @@ type
   TZOraProcDescriptor = class(TZOracleAttribute)
   public
     Args: TObjectList;
-    ObjType, Precision, Radix, csform: UB1;
+    ObjType, Radix, csform: UB1;
+    Precision: Integer;
     Scale: SB1;
     DataSize: UB4;
     DataType, CodePage: UB2;
@@ -1188,9 +1189,21 @@ begin
 end;
 
 function NormalizeOracleTypeToSQLType(var DataType: ub2; var DataSize: ub4;
-  out DescriptorType: sb4; Precision, ScaleOrCharSetForm: sb2;
+  out DescriptorType: sb4; var Precision: Integer; ScaleOrCharSetForm: sb2;
   ConSettings: PZConSettings; IO: OCITypeParamMode): TZSQLType;
 label VCS;
+  procedure MaxDataSizeToBytes(var DataSize: ub4; var Precision: Integer);
+  begin
+    if ScaleOrCharSetForm = SQLCS_NCHAR
+    then Precision := DataSize shr 1
+    else begin
+      Precision := DataSize;
+      if (ConSettings.ClientCodePage.Encoding = ceUTF16) then
+        DataSize := DataSize shl 1
+      else if (ConSettings.ClientCodePage.CharWidth > 1) then
+        DataSize := DataSize * Byte(ConSettings.ClientCodePage.CharWidth);
+    end;
+  end;
 begin
   //some notes before digging in:
   // orl.h:
@@ -1279,24 +1292,28 @@ begin
                   DataType := SQLT_BFLOAT;
                 end;
     SQLT_AFC{ CHAR / char[n]}: begin
-                if (DataSize = 0) then begin
-                  if (IO <> OCI_TYPEPARAM_IN) then
-                    DataSize := Max_OCI_String_Size;
-                end;
+                if (DataSize = 0) then
+                  DataSize := 2000; //2000 bytes max
+                MaxDataSizeToBytes(DataSize, Precision);
                 Result := stString;
               end;
     SQLT_RID, { char[n] }
-    SQLT_AVC{CHAR / char[n+1]},
+    SQLT_AVC:{CHAR / char[n+1]} begin
+          if DataSize = 0 then
+            DataSize := 2000; //2000 bytes max
+          goto VCS;
+        end;
     SQLT_CHR, {VARCHAR2 / char[n+1]}
     SQLT_STR,{NULL-terminated STRING, char[n+1]}
     SQLT_VCS {VARCHAR / char[n+sizeof(short integer)]}: begin
-VCS:            DataType := SQLT_VCS;
-                if (DataSize = 0) then begin
-                  if (IO <> OCI_TYPEPARAM_IN) then
-                    DataSize := Max_OCI_String_Size+SizeOf(SmallInt);
-                end else
-                  DataSize := DataSize+SizeOf(SmallInt);
-                Result := stString;
+                if DataSize = 0 then
+                  DataSize := 4000; //4000 bytes max
+VCS:            MaxDataSizeToBytes(DataSize, Precision);
+                DataType := SQLT_VCS;
+                DataSize := DataSize+SizeOf(sb2);
+                if ScaleOrCharSetForm = SQLCS_NCHAR
+                then Result := stUnicodeString
+                else Result := stString;
               end;
     SQLT_DAT: {char[7]} begin
               DataSize := SizeOf(TOraDate);
@@ -1305,8 +1322,10 @@ VCS:            DataType := SQLT_VCS;
     SQLT_BIN, {RAW / unsigned char[n]}
     SQLT_VBI { unsigned char[n+sizeof(short integer)] }: begin
         result := stBytes;
-        if (DataSize = 0) and (IO <> OCI_TYPEPARAM_IN) then
-          DataSize := Max_OCI_Raw_Size;
+        if (DataSize = 0) then
+          DataSize := 2000;
+        if Precision = 0 then
+          Precision := DataSize;
         DataType := SQLT_VBI;
         DataSize := DataSize + SizeOf(SmallInt);
       end;
@@ -1330,7 +1349,7 @@ VCS:            DataType := SQLT_VCS;
             Result := stULong;
           end;
         end;
-    SQLT_VST: begin{ OCI STRING type / *OCIString recommedend by Oracle see:
+    SQLT_VST: begin{EH: OCI STRING type / *OCIString recommedend by Oracle see:
       https://docs.oracle.com/cd/B28359_01/appdev.111/b28395/oci12oty.htm#i421612
       this is a opaque Type...
       but there advice is using the OCIStringXXX functions for Length/data
@@ -1338,44 +1357,49 @@ VCS:            DataType := SQLT_VCS;
       The more ... and for me the only advantage : Bidirectional or out params
       are buffered by OCI we can ignore all length buffers on oversized memallocs
       my crystall ball says this is a PP(Raw/Wide)Char-Struct including length like TOCILong
-      -> just look to OCIRaw/SQLT_LVB of https://docs.oracle.com/cd/B13789_01/appdev.101/b10779/oci11oty.htm#421682}
-        Result := stString;
+      -> just look to OCIRaw/SQLT_LVB of https://docs.oracle.com/cd/B13789_01/appdev.101/b10779/oci11oty.htm#421682
+      might be a good replacement for SQLT_LNG/SQLT_LVC ?}
         if (DataSize = 0) and (IO <> OCI_TYPEPARAM_IN) then
           DataSize := SizeOf(POCIString);
+        if ScaleOrCharSetForm = SQLCS_NCHAR
+        then Result := stUnicodeString //stUnicodeStream
+        else Result := stString; //stAsciiStream
       end;
     SQLT_LNG: { LONG /char[n] } begin
         if (DataSize = 0) or (IO <> OCI_TYPEPARAM_IN) then begin
            DataSize := 128 * 1024;
+           Precision := DataSize;
            Result := stAsciiStream;
-        end else
+        end else begin
+          MaxDataSizeToBytes(DataSize, Precision);
           Result := stString;
-        DataSize := DataSize + SizeOf(Integer);
+        end;
+        DataSize := DataSize + SizeOf(sb4);
         DataType := SQLT_LVC; { EH: http://zeoslib.sourceforge.net/viewtopic.php?t=3530 }
         Exit; //is this correct?
       end;
-    SQLT_LVC { LONG VARCHAR / char[n+sizeof(integer)] }: begin
-        if (DataSize = 0) or (IO <> OCI_TYPEPARAM_IN) then
-          DataSize := Max_OCI_String_Size;
-        if ScaleOrCharSetForm = SQLCS_NCHAR then begin
-          DataSize := Max_OCI_String_Size shl 1;
-          Result := stUnicodeString;//stAsciiStream;
-        end else begin
-          DataSize := Max_OCI_String_Size *ConSettings^.ClientCodePage^.CharWidth;
-          Result := stString;//stAsciiStream;
-        end;
-        DataSize := DataSize + SizeOf(Integer);
+    SQLT_LVC { LONG VARCHAR / char[n+sizeof(integer)] }: begin //up to 2GB
+        if DataSize = 0 then
+         DataSize := 128 * 1024;
+        MaxDataSizeToBytes(DataSize, Precision);
+        if ScaleOrCharSetForm = SQLCS_NCHAR
+        then Result := stUnicodeString //stUnicodeStream
+        else Result := stString; //stAsciiStream
+        DataSize := DataSize + SizeOf(sb4);
       end;
     SQLT_LBI, { LONG RAW / unsigned char[n] }
     SQLT_LVB { LONG VARRAW / unsigned char[n+sizeof(integer)]}:begin
         Result := stBinaryStream;
         if (DataSize = 0) then
-          DataSize := 128 * 1024;
+          DataSize := 128 * 1024; //total allowed: one col per table and limits to 2GB-1
+        Precision := DataSize;
         DataSize := DataSize + SizeOf(Integer);
         DataType := SQLT_LVB;
       end;
     SQLT_RDD {ROWID descriptor / OCIRowid * }: begin
         {DescriptorType := OCI_DTYPE_ROWID;
         DataSize := SizeOf(POCIRowid);}
+        Precision := DataSize;
         DataSize := Max(20, DataSize);
         goto VCS;
       end;
@@ -1389,20 +1413,17 @@ VCS:            DataType := SQLT_VCS;
         then Result := stUnicodeStream
         else Result := stAsciiStream;
         DescriptorType := OCI_DTYPE_LOB;
-        if DataSize > 0 then
-          DataSize := SizeOf(POCILobLocator);
+        DataSize := SizeOf(POCILobLocator);
       end;
     SQLT_BLOB: { Binary LOB descriptor / OCIBlobLocator } begin
         Result := stBinaryStream;
         DescriptorType := OCI_DTYPE_LOB;
-        if DataSize > 0 then
-          DataSize := SizeOf(POCILobLocator);
+        DataSize := SizeOf(POCILobLocator);
       end;
     SQLT_BFILEE, SQLT_CFILEE: { Binary file descriptor / OCILobLocator } begin
         Result := stBinaryStream;
         DescriptorType := OCI_DTYPE_FILE;
-        if DataSize > 0 then
-          DataSize := SizeOf(POCILobLocator);
+        DataSize := SizeOf(POCILobLocator);
       end;
     SQLT_ODT: { OCI DATE type / OCIDate * recommended as well -> no descriptor alloc? }
       begin
@@ -1883,37 +1904,24 @@ begin
         Param.Precision := Param.GetUb1(OCI_ATTR_PRECISION);
         Param.Scale := Param.GetSb1(OCI_ATTR_SCALE);
         Param.Radix := Param.GetUb1(OCI_ATTR_RADIX);
+      end else if Param.DataType in [SQLT_DATE..SQLT_TIMESTAMP_LTZ] then begin
+        Param.Precision := Param.GetUb1(OCI_ATTR_LFPRECISION);
+        Param.Scale := Param.GetSb1(OCI_ATTR_FSPRECISION);
       end;
-      Param.SQLType := NormalizeOracleTypeToSQLType(Param.DataType, Param.DataSize,
-        Param.DescriptorType, Param.Precision, Param.Scale, ConSettings, Param.IODirection);
-      if (Param.SQLType in [stString, stAsciiStream]) then begin
-        {EH: Oracle does not calculate true data size if the attachment charset is a multibyte one
-          and is different to the native db charset
-          so we'll increase the buffers to avoid truncation errors
-          and we use 8 byte aligned buffers. Here we go:}
+      if Param.DataType in [SQLT_CHR, SQLT_LNG, SQLT_VCS, SQLT_LVC, SQLT_AFC, SQLT_AVC, SQLT_CLOB, SQLT_VST] then begin
         Param.csform := Param.GetUb1(OCI_ATTR_CHARSET_FORM);
-        if Param.SQLType = stString then begin
-          //Param.Precision := Param.GetUb1(OCI_ATTR_DISP_SIZE);
-          if Param.csform = SQLCS_NCHAR then begin
-            Param.DataSize := Param.Precision;
-            Param.Precision := Param.Precision shr 1;
-            Param.SQLType := stUnicodeString;
-            Param.CodePage := zCP_UTF16;
-            Param.csid := OCI_UTF16ID;
-          end else if Consettings.ClientCodePage.Encoding <> ceUTF16 then begin
-            Param.DataSize := Param.Precision * ConSettings.ClientCodePage.CharWidth;
-            Param.CodePage := CP;
-          end else begin
-            Param.DataSize := Param.Precision shl 1;
-            Param.CodePage := zCP_UTF16;
-            Param.SQLType := stUnicodeString;
-          end;
-        end else if (Param.csform = SQLCS_NCHAR) or (Consettings.ClientCodePage.Encoding = ceUTF16) then begin
-          Param.SQLType := stUnicodeStream;
-          Param.CodePage := zCP_UTF16
-        end else Param.CodePage := CP;
-        Param.csid := Param.GetUb2(OCI_ATTR_CHARSET_ID);
-      end;
+        Status := Param.csform;
+      end else Status := Param.Scale;
+      Param.SQLType := NormalizeOracleTypeToSQLType(Param.DataType, Param.DataSize,
+        Param.DescriptorType, Param.Precision, Status, ConSettings, Param.IODirection);
+      if (Param.SQLType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then
+        if (Param.csform = SQLCS_NCHAR) or ((Consettings.ClientCodePage.Encoding = ceUTF16) and (Param.DataType <> SQLT_LNG)) then begin
+          Param.CodePage := zCP_UTF16;
+          Param.csid := OCI_UTF16ID;
+        end else begin
+          Param.CodePage := CP;
+          Param.csid := Param.GetUb2(OCI_ATTR_CHARSET_ID);
+        end;
     end else
       Param.InternalDescribeObject(arg);
   end;
