@@ -1676,7 +1676,7 @@ type
     function GetUnicodeString(ParameterIndex: Integer): UnicodeString;
 
     function GetBLob(ParameterIndex: Integer): IZBlob;
-    //function GetCLob(ParameterIndex: Integer): IZClob;
+    function GetCLob(ParameterIndex: Integer): IZClob;
 
     procedure ClearParameters;
   end;

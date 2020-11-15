@@ -1152,7 +1152,8 @@ end;
 function TZOleDBConnection.PrepareCallWithParams(const Name: String;
   Params: TStrings): IZCallableStatement;
 begin
-  if (GetServerProvider = spMSSQL)
+  if Closed then Open;
+  if (FServerProvider = spMSSQL)
   then Result := TZOleDBCallableStatementMSSQL.Create(Self, Name, Params)
   else Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;

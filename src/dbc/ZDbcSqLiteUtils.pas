@@ -182,7 +182,9 @@ begin
   else if ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('CLOB'), TypeName) > 0 then
     Result := stAsciiStream
   else if ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('TEXT'), TypeName) > 0 then
-    Result := stAsciiStream;
+    Result := stAsciiStream
+  else if ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('GUID'), TypeName) > 0 then
+    Result := stGUID;
   if (Result = stInteger) and (Precision <> 0) then
     if Precision <= 2 then
       Result := stByte

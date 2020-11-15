@@ -219,7 +219,7 @@ function TZPostgreSQLSymbolState.NextToken(var SPos: PChar; const NTerm: PChar;
   Tokenizer: TZTokenizer): TZToken;
 var
   DollarCount, BodyTagLen: Integer;
-  TempTag: PChar;
+  TempTag, ParamTag: PChar;
 begin
   Result := inherited NextToken(SPos, NTerm, Tokenizer);
   //detecting Postgre Parameters as one ttWordState:
@@ -233,6 +233,21 @@ begin
       Inc(SPos);
       if SPos^ = '$' then begin
         Inc(DollarCount);
+        if (SPos < NTerm) and (Ord((SPos+1)^) >= Ord('0')) and (Ord((SPos+1)^) <= Ord('9')) then begin //assum we've a syntax like $1 which represents a param
+          ParamTag := SPos;
+          Inc(SPos);
+          while (SPos < NTerm) and (Ord(SPos^) >= Ord('0')) and (Ord(SPos^) <= Ord('9')) do
+            Inc(SPos);
+          if (SPos < NTerm) then
+            if (Ord(SPos^) <= Ord(' ')) then begin
+              //White whitesace found not a body tag!
+              if DollarCount = 1 then begin
+                SPos := ParamTag;
+                Break;
+              end;
+            end else if SPos^ = '$' then
+              Inc(DollarCount);
+        end;
         if DollarCount = 2 then
           BodyTagLen := SPos-Result.P
         else if DollarCount = 3 then

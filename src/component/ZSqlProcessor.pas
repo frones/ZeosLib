@@ -56,6 +56,7 @@ interface
 {$I ZComponent.inc}
 
 uses Types, Classes, SysUtils, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
+  {$IFDEF TEST_TZPARAM}ZDatasetParam,{$ENDIF}
   ZDbcIntfs, ZAbstractConnection, ZScriptParser, ZSqlStrings, ZCompatibility;
 
 type
@@ -81,9 +82,9 @@ type
 
   { TZSQLProcessor }
 
-  TZSQLProcessor = class (TComponent)
+  TZSQLProcessor = class(TComponent)
   private
-    FParams: TParams;
+    FParams: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF};
     FScript: TZSQLStrings;
 
     FScriptParser: TZSQLScriptParser;
@@ -92,7 +93,7 @@ type
     FAfterExecute: TZProcessorNotifyEvent;
     FOnError: TZProcessorErrorEvent;
 
-    procedure SetParams(Value: TParams);
+    procedure SetParams(Value: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF});
     function GetScript: TStrings;
     procedure SetScript(Value: TStrings);
     function GetStatementCount: Integer;
@@ -120,7 +121,7 @@ type
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; virtual;
     procedure SetStatementParams(const Statement: IZPreparedStatement;
-      const ParamNames: TStringDynArray; Params: TParams); virtual;
+      const ParamNames: TStringDynArray; Params: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF}); virtual;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -132,7 +133,7 @@ type
     procedure Parse;
     procedure Clear;
 
-    function ParamByName(const Value: string): TParam;
+    function ParamByName(const Value: string): {$IFDEF TEST_TZPARAM}TZParam{$ELSE}TParam{$ENDIF};
 
     property StatementCount: Integer read GetStatementCount;
     property Statements[Index: Integer]: string read GetStatement;
@@ -141,7 +142,7 @@ type
       default True;
     property ParamChar: Char read GetParamChar write SetParamChar
       default ':';
-    property Params: TParams read FParams write SetParams;
+    property Params: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF} read FParams write SetParams;
     property Script: TStrings read GetScript write SetScript;
     property Connection: TZAbstractConnection read FConnection write SetConnection;
     property DelimiterType: TZDelimiterType read GetDelimiterType
@@ -168,7 +169,7 @@ constructor TZSQLProcessor.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
 
-  FParams := TParams.Create(Self);
+  FParams := {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF}.Create(Self);
   FScript := TZSQLStrings.Create;
   FScript.Dataset := Self;
   FScript.OnChange := UpdateSQLStrings;
@@ -272,7 +273,7 @@ end;
   Sets a new set of parameters.
   @param Value a set of parameters.
 }
-procedure TZSQLProcessor.SetParams(Value: TParams);
+procedure TZSQLProcessor.SetParams(Value: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF});
 begin
   FParams.AssignValues(Value);
 end;
@@ -423,7 +424,7 @@ end;
   @param Value a parameter name.
   @return a found parameter object.
 }
-function TZSQLProcessor.ParamByName(const Value: string): TParam;
+function TZSQLProcessor.ParamByName(const Value: string): {$IFDEF TEST_TZPARAM}TZParam{$ELSE}TParam{$ENDIF};
 begin
   Result := FParams.ParamByName(Value);
 end;
@@ -460,22 +461,16 @@ end;
   @param Params a collection of SQL parameters.
 }
 procedure TZSQLProcessor.SetStatementParams(const Statement: IZPreparedStatement;
-  const ParamNames: TStringDynArray; Params: TParams);
+  const ParamNames: TStringDynArray; Params: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF});
 var
   I: Integer;
-  TempParam, Param: TParam;
+  Param: {$IFDEF TEST_TZPARAM}TZParam{$ELSE}TParam{$ENDIF};
 begin
-  TempParam := TParam.Create(nil);
-  try
-    for I := Low(ParamNames) to High(ParamNames) do
-    begin
-      Param := Params.FindParam(ParamNames[I]);
-      if not Assigned(Param) or (Param.ParamType in [ptOutput, ptResult]) then
-        Continue;
-      SetStatementParam(I+FirstDbcIndex, Statement, Param);
-    end;
-  finally
-    TempParam.Free;
+  for I := Low(ParamNames) to High(ParamNames) do begin
+    Param := Params.FindParam(ParamNames[I]);
+    if not Assigned(Param) or (Param.ParamType in [ptOutput, ptResult]) then
+      Continue;
+    SetStatementParam(I+FirstDbcIndex, Statement, Param);
   end;
 end;
 
@@ -495,9 +490,9 @@ end;
 procedure TZSQLProcessor.UpdateSQLStrings(Sender: TObject);
 var
   I: Integer;
-  OldParams: TParams;
+  OldParams: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF};
 begin
-  OldParams := TParams.Create;
+  OldParams := {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF}.Create;
   OldParams.Assign(FParams);
   FParams.Clear;
 

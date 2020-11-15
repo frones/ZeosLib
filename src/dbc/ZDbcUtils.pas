@@ -1743,6 +1743,27 @@ begin
 end;
 
 function ArrayValueToInteger(ZArray: PZArray; Index: Integer): Integer;
+  function FromBCD: Integer;
+  var BCD: TBCD;
+      Prec: Word;
+  begin
+    BCD := TBCDDynArray(ZArray.VArray)[Index];
+    ZRoundBCD(BCD, 0, Prec);
+    Result := BCD2Int64(BCD);
+  end;
+  function FromFloat: Integer;
+  begin
+    if TZSQLType(ZArray.VArrayType) = stFloat
+    then Result := Trunc(RoundTo(TSingleDynArray(ZArray.VArray)[Index], 0))
+    else Result := Trunc(RoundTo(TDoubleDynArray(ZArray.VArray)[Index], 0))
+  end;
+  function FromCurrency: Integer;
+  var C: Currency;
+      I64: Int64 absolute C;
+  begin
+    C := ZSysUtils.RoundCurrTo(TCurrencyDynArray(ZArray.VArray)[Index], 0);
+    Result := i64 div 10000;
+  end;
 begin
   {$R-}
   case ZArray.VArrayVariantType of
@@ -1765,10 +1786,10 @@ begin
         stInteger:    Result := TIntegerDynArray(ZArray.VArray)[Index];
         stLong:       Result := TInt64DynArray(ZArray.VArray)[Index];
         stULong:      Result := TUInt64DynArray(ZArray.VArray)[Index];
-        stFloat:      Result := Trunc(TSingleDynArray(ZArray.VArray)[Index]);
-        stDouble:     Result := Trunc(TDoubleDynArray(ZArray.VArray)[Index]);
-        stCurrency:   Result := Trunc(TCurrencyDynArray(ZArray.VArray)[Index]);
-        stBigDecimal: Result := Trunc(TExtendedDynArray(ZArray.VArray)[Index]);
+        stFloat,
+        stDouble:     Result := FromFloat;
+        stCurrency:   Result := FromCurrency;
+        stBigDecimal: Result := FromBCD;
         stTime, stDate, stTimeStamp:
           Result := Trunc(TDateTimeDynArray(ZArray.VArray)[Index]);
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
@@ -1779,6 +1800,27 @@ begin
 end;
 
 function ArrayValueToCardinal(ZArray: PZArray; Index: Integer): Cardinal;
+  function FromBCD: Cardinal;
+  var BCD: TBCD;
+      Prec: Word;
+  begin
+    BCD := TBCDDynArray(ZArray.VArray)[Index];
+    ZRoundBCD(BCD, 0, Prec);
+    Result := BCD2UInt64(BCD);
+  end;
+  function FromFloat: Cardinal;
+  begin
+    if TZSQLType(ZArray.VArrayType) = stFloat
+    then Result := Trunc(RoundTo(TSingleDynArray(ZArray.VArray)[Index], 0))
+    else Result := Trunc(RoundTo(TDoubleDynArray(ZArray.VArray)[Index], 0))
+  end;
+  function FromCurrency: Cardinal;
+  var C: Currency;
+      I64: Int64 absolute C;
+  begin
+    C := ZSysUtils.RoundCurrTo(TCurrencyDynArray(ZArray.VArray)[Index], 0);
+    Result := i64 div 10000;
+  end;
 begin
   {$R-}
   case ZArray.VArrayVariantType of
@@ -1801,10 +1843,9 @@ begin
         stInteger:    Result := TIntegerDynArray(ZArray.VArray)[Index];
         stLong:       Result := TInt64DynArray(ZArray.VArray)[Index];
         stULong:      Result := TUInt64DynArray(ZArray.VArray)[Index];
-        stFloat:      Result := Trunc(TSingleDynArray(ZArray.VArray)[Index]);
-        stDouble:     Result := Trunc(TDoubleDynArray(ZArray.VArray)[Index]);
-        stCurrency:   Result := Trunc(TCurrencyDynArray(ZArray.VArray)[Index]);
-        stBigDecimal: Result := Trunc(TExtendedDynArray(ZArray.VArray)[Index]);
+        stFloat, stDouble:     Result := FromFloat;
+        stCurrency:   Result := FromCurrency;
+        stBigDecimal: Result := FromBCD;
         stTime, stDate, stTimeStamp:
           Result := Trunc(TDateTimeDynArray(ZArray.VArray)[Index]);
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
@@ -1815,6 +1856,27 @@ begin
 end;
 
 function ArrayValueToInt64(ZArray: PZArray; Index: Integer): Int64;
+  function FromBCD: Int64;
+  var BCD: TBCD;
+      Prec: Word;
+  begin
+    BCD := TBCDDynArray(ZArray.VArray)[Index];
+    ZRoundBCD(BCD, 0, Prec);
+    Result := BCD2Int64(BCD);
+  end;
+  function FromFloat: Int64;
+  begin
+    if TZSQLType(ZArray.VArrayType) = stFloat
+    then Result := Trunc(RoundTo(TSingleDynArray(ZArray.VArray)[Index], 0))
+    else Result := Trunc(RoundTo(TDoubleDynArray(ZArray.VArray)[Index], 0))
+  end;
+  function FromCurrency: Int64;
+  var C: Currency;
+      I64: Int64 absolute C;
+  begin
+    C := ZSysUtils.RoundCurrTo(TCurrencyDynArray(ZArray.VArray)[Index], 0);
+    Result := i64 div 10000;
+  end;
 begin
   {$R-}
   case ZArray.VArrayVariantType of
@@ -1838,10 +1900,9 @@ begin
         stInteger:    Result := TIntegerDynArray(ZArray.VArray)[Index];
         stLong:       Result := TInt64DynArray(ZArray.VArray)[Index];
         stULong:      Result := TUInt64DynArray(ZArray.VArray)[Index];
-        stFloat:      Result := Trunc(TSingleDynArray(ZArray.VArray)[Index]);
-        stDouble:     Result := Trunc(TDoubleDynArray(ZArray.VArray)[Index]);
-        stCurrency:   Result := Trunc(TCurrencyDynArray(ZArray.VArray)[Index]);
-        stBigDecimal: Result := Trunc(TExtendedDynArray(ZArray.VArray)[Index]);
+        stFloat, stDouble: Result := FromFloat;
+        stCurrency:   Result := FromCurrency;
+        stBigDecimal: Result := FromBCD;
         stTime, stDate, stTimeStamp:
           Result := Trunc(TDateTimeDynArray(ZArray.VArray)[Index]);
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
@@ -1852,6 +1913,27 @@ begin
 end;
 
 function ArrayValueToUInt64(ZArray: PZArray; Index: Integer): UInt64;
+  function FromBCD: UInt64;
+  var BCD: TBCD;
+      Prec: Word;
+  begin
+    BCD := TBCDDynArray(ZArray.VArray)[Index];
+    ZRoundBCD(BCD, 0, Prec);
+    Result := BCD2UInt64(BCD);
+  end;
+  function FromFloat: Int64;
+  begin
+    if TZSQLType(ZArray.VArrayType) = stFloat
+    then Result := Trunc(RoundTo(TSingleDynArray(ZArray.VArray)[Index], 0))
+    else Result := Trunc(RoundTo(TDoubleDynArray(ZArray.VArray)[Index], 0))
+  end;
+  function FromCurrency: Int64;
+  var C: Currency;
+      I64: Int64 absolute C;
+  begin
+    C := ZSysUtils.RoundCurrTo(TCurrencyDynArray(ZArray.VArray)[Index], 0);
+    Result := i64 div 10000;
+  end;
 begin
   {$R-}
   case ZArray.VArrayVariantType of
@@ -1874,10 +1956,9 @@ begin
         stInteger:    Result := TIntegerDynArray(ZArray.VArray)[Index];
         stLong:       Result := TInt64DynArray(ZArray.VArray)[Index];
         stULong:      Result := TUInt64DynArray(ZArray.VArray)[Index];
-        stFloat:      Result := Trunc(TSingleDynArray(ZArray.VArray)[Index]);
-        stDouble:     Result := Trunc(TDoubleDynArray(ZArray.VArray)[Index]);
-        stCurrency:   Result := Trunc(TCurrencyDynArray(ZArray.VArray)[Index]);
-        stBigDecimal: Result := Trunc(TExtendedDynArray(ZArray.VArray)[Index]);
+        stFloat, stDouble: Result := FromFloat;
+        stCurrency:   Result := FromCurrency;
+        stBigDecimal: Result := FromBCD;
         stTime, stDate, stTimeStamp:
           Result := Trunc(TDateTimeDynArray(ZArray.VArray)[Index]);
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
