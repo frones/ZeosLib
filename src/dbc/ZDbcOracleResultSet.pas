@@ -2308,6 +2308,7 @@ var
   defn_or_bindpp: POCIHandle;
   acsid: ub2;
   Status: sword;
+  DataSizeIsByteSize: Boolean;
   function AttributeToString(var P: Pointer; Len: Integer): SQLString;
   begin
     if P <> nil then
@@ -2353,6 +2354,7 @@ begin
   if Status <> OCI_SUCCESS then
     FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
       'OCIAttrGet', Self);
+  DataSizeIsByteSize := FOracleConnection.GetHostVersion >= EncodeSQLVersioning(12, 0, 0);
 
   AllocateOracleSQLVars(FColumns, ColumnCount);
   DescriptorColumnCount := 0; SubObjectColumnCount := 0;
@@ -2419,7 +2421,7 @@ begin
     end else Status := CurrentVar^.Scale;
     CurrentVar^.ColType := NormalizeOracleTypeToSQLType(CurrentVar.dty,
       CurrentVar.value_sz, CurrentVar^.DescriptorType,
-      ColumnInfo.Precision, Status, ConSettings, OCI_TYPEPARAM_IN);
+      ColumnInfo.Precision, Status, ConSettings, OCI_TYPEPARAM_IN, DataSizeIsByteSize);
     inc(DescriptorColumnCount, Ord(CurrentVar^.DescriptorType > 0));
     ColumnInfo.Signed := True;
     ColumnInfo.Nullable := ntNullable;
@@ -2452,10 +2454,12 @@ begin
     end;
     {calc required size of field}
 
-    if CurrentVar^.value_sz > 0 then
+    if CurrentVar^.value_sz > 0 then begin
       if (CurrentVar^.dty = SQLT_VST) or (CurrentVar^.DescriptorType > 0)
       then Inc(RowSize, SizeOf(Pointer)+SizeOf(sb2){NullIndicator})
       else Inc(RowSize, Integer(CurrentVar^.value_sz+SizeOf(sb2)){NullIndicator});
+
+    end;
   end;
   {in case all cols are null we need min 1 defined col-variable to exec the stmt }
   if (RowSize = 0 ) then begin
