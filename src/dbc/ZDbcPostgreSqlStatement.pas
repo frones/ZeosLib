@@ -2037,10 +2037,10 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.InternalBindInt(Index: Integer;
   SQLType: TZSQLType; Value: {$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF});
 var PGSQLType: TZSQLType;
+    InParamIdx: Integer;
 { move the string conversions into a own proc -> no (U/L)StrClear}
-procedure SetAsRaw; begin BindRawStr(Index, IntToRaw(Value)); end;
-var InParamIdx: Integer;
- P: Pointer;
+procedure SetAsRaw; begin BindRawStr(InParamIdx, IntToRaw(Value)); end;
+var P: Pointer;
 begin
   InParamIdx := Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   PGSQLType := OIDToSQLType(InParamIdx, SQLType);
@@ -2092,13 +2092,16 @@ var
     TS: TZTimeStamp;
     D: TZDate absolute TS;
     T: TZTime absolute TS;
+    OldSQLType: TZSQLType;
   begin
+    OldSQLType := BindList.SQLTypes[i];
     if NewSQLType in [stUnicodeString, stUnicodeStream]
     then NewSQLType := TZSQLType(Ord(NewSQLType) -1)
-    else if (NewSQLType = stBigDecimal) and (BindList.SQLTypes[i] = stCurrency)
+    else if (NewSQLType = stBigDecimal) and (OldSQLType = stCurrency)
       then NewSQLType := stCurrency;
-    if (NewSQLType <> BindList.SQLTypes[i]) and (FPQparamValues[I] <> nil) and ((oldoid <> newoid) and (Ord(NewSQLType) <= Ord(stTimestamp))) then
-      case BindList.SQLTypes[i] of
+    if (NewSQLType <> OldSQLType) and (FPQparamValues[I] <> nil) and ((oldoid <> newoid) and
+       ((Ord(NewSQLType) <= Ord(stTimestamp)) or ((Ord(OldSQLType) <= Ord(stTimestamp))))) then
+      case OldSQLType of
         stBoolean:  SetBoolean(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Boolean(PByte(FPQparamValues[i])^));
         stSmall:    SetSmall(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2SmallInt(FPQparamValues[i]));
         stInteger:  SetInt(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PG2Integer(FPQparamValues[i]));
@@ -2162,7 +2165,8 @@ begin
             end;
           tmpOID := FPQParamOIDs[i];
           FPQParamOIDs[i] := pgOID;
-          RebindIfRequired(i, NewSQLType, tmpOID, pgOID);
+          if tmpOID <> pgOID then
+            RebindIfRequired(i, NewSQLType, tmpOID, pgOID);
           if (tmpOID <> pgOID) and Assigned(FOpenResultSet) then
             IZResultSet(FOpenResultSet).Close;
         end;
@@ -2223,9 +2227,9 @@ end;
 }
 procedure TZPostgreSQLPreparedStatementV3.SetBigDecimal(Index: Integer;
   const Value: TBCD);
-var SQLType: TZSQLType;
-procedure SetAsRaw; begin BindRawStr(Index, BcdToSQLRaw(Value)); end;
 var Idx: Integer;
+    SQLType: TZSQLType;
+procedure SetAsRaw; begin BindRawStr(Idx, BcdToSQLRaw(Value)); end;
 begin
   Idx := Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   SQLType := OIDToSQLType(Idx, stBigDecimal);
@@ -2328,8 +2332,8 @@ end;
 procedure TZPostgreSQLPreparedStatementV3.SetCurrency(Index: Integer;
   const Value: Currency);
 var SQLType: TZSQLType;
-procedure SetAsRaw; begin BindRawStr(Index, CurrToRaw(Value,'.')); end;
-var Idx: Integer;
+    Idx: Integer;
+procedure SetAsRaw; begin BindRawStr(Idx, CurrToRaw(Value,'.')); end;
 begin
   Idx := Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   SQLType := OIDToSQLType(Idx, stCurrency);
@@ -2549,8 +2553,8 @@ begin
 {$ELSE}
 { move the string conversions into a own proc -> no (U/L)StrClear}
 var PGSQLType: TZSQLType;
-procedure SetAsRaw; begin SetRawByteString(Index, IntToRaw(Value)); end;
-var Idx: Integer;
+    Idx: Integer;
+procedure SetAsRaw; begin SetRawByteString(Idx, IntToRaw(Value)); end;
 begin
   Idx := Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF};
   PGSQLType := OIDToSQLType(Idx, stLong);
