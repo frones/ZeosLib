@@ -602,25 +602,6 @@ begin
   Result := -CompareBigDecimal_Asc(Null1, Null2, V1, V2);
 end;
 
-function CompareDateTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := ZSysUtils.ZCompareDateTime(PDateTime(V1)^, PDateTime(V2)^)
-end;
-
-function CompareDateTime_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := -CompareDateTime_Asc(Null1, Null2, V1, V2);
-end;
-
-function CompareDateTime_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
-begin
-  Result := NullsEqualMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := ZSysUtils.ZCompareDateTime(PDateTime(V1)^, PDateTime(V2)^)
-end;
-
 function CompareZDate_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
   Result := NullsCompareMatrix[Null1, Null2];
@@ -811,8 +792,8 @@ begin
     {$IFDEF MSWINDOWS}
     SetLastError(0);
     Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
-      PWideChar(Pointer(V1)^)+PWideInc, PCardinal(Pointer(V1)^)^,
-      PWideChar(Pointer(V2)^)+PWideInc, PCardinal(Pointer(V2)^)^) - 2{CSTR_EQUAL};
+      PWideChar(Pointer(V1)^)+PWideInc, PCardinal(Pointer(V1)^)^ shr 1,
+      PWideChar(Pointer(V2)^)+PWideInc, PCardinal(Pointer(V2)^)^ shr 1) - 2{CSTR_EQUAL};
     if GetLastError <> 0 then
       RaiseLastOSError;
     {$ELSE}
@@ -844,7 +825,7 @@ begin
     if Result = 0 then
        Result := ZMemLComp(Pointer(PWideChar(Pointer(V1)^)+PWideInc),
                            Pointer(PWideChar(Pointer(V2)^)+PWideInc),
-                           PCardinal(Pointer(V1)^)^ shl 1);
+                           PCardinal(Pointer(V1)^)^);
   end;
 end;
 
