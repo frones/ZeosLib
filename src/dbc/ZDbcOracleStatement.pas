@@ -2520,8 +2520,12 @@ var
   Tokens: TZTokenList;
   Token: PZToken;
   tmp: RawByteString;
+  {$IFDEF UNICODE}
+  S: String;
+  {$ENDIF}
   SQLWriter, ParamWriter: TZRawSQLStringWriter;
   ComparePrefixTokens: TPreparablePrefixTokens;
+  NameLookUp: TStrings;
   procedure Add(const Value: RawByteString; const Param: Boolean);
   var H: Integer;
   begin
@@ -2540,6 +2544,7 @@ begin
     C := Length(SQL);
     SQLWriter := TZRawSQLStringWriter.Create(C);
     ParamWriter := TZRawSQLStringWriter.Create({$IFDEF UNICODE}16{$ELSE}C shr 4{$ENDIF});
+    NameLookUp := TStringList.Create;
     try
       ComparePrefixTokens := OraPreparableTokens;
       FTokenMatchIndex := -1;
@@ -2578,9 +2583,16 @@ begin
             FirstComposePos := i + 1;
           end else begin
             {$IFDEF UNICODE}
-            Tmp := UnicodeStringToAscii7(Token.P, Tokens[i+1].L+1);
+            System.SetString(S, Token.P, Tokens[i+1].L+1);
+            Tmp := UnicodeStringToAscii7(S);
+            if NameLookUp.IndexOf(S) <> -1
+            then Dec(ParamsCnt)
+            else NameLookUp.Add(S);
             {$ELSE}
             ZSetString(Token.P, Tokens[i+1].L+1, Tmp);
+            if NameLookUp.IndexOf(Tmp) <> -1
+            then Dec(ParamsCnt)
+            else NameLookUp.Add(Tmp);
             {$ENDIF}
             FirstComposePos := i + 2;
           end;
@@ -2604,6 +2616,7 @@ begin
       FreeAndNil(SQLWriter);
       FreeAndNil(ParamWriter);
       FreeAndNil(Tokens);
+      FreeAndNil(NameLookUp);
     end;
   end else
     Result := ASQL;
@@ -2677,8 +2690,10 @@ var
   tmp: UnicodeString;
   SQLWriter, ParamWriter: TZUnicodeSQLStringWriter;
   ComparePrefixTokens: TPreparablePrefixTokens;
+  NameLookUp: TStrings;
   {$IFNDEF UNICODE}
   W2A2WConversionCodePage: Word;
+  S: String;
   {$ENDIF}
   procedure Add(const Value: UnicodeString; const Param: Boolean);
   var H: Integer;
@@ -2692,12 +2707,16 @@ var
   end;
 begin
   if (Length(FCachedQueryUni) = 0) and (SQL <> '') then begin
+    {$IFNDEF UNICODE}
+    S := '';
+    {$ENDIF}
     Result := '';
     Tmp := '';
     Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
     C := Length(SQL);
     SQLWriter := TZUnicodeSQLStringWriter.Create(C);
     ParamWriter := TZUnicodeSQLStringWriter.Create({$IFDEF UNICODE}16{$ELSE}C shr 4{$ENDIF});
+    NameLookUp := TStringList.Create;
     try
       {$IFNDEF UNICODE}
       W2A2WConversionCodePage := GetW2A2WConversionCodePage(ConSettings);
@@ -2740,8 +2759,15 @@ begin
           end else begin
             {$IFDEF UNICODE}
             System.SetString(Tmp, Token.P, Tokens[i+1].L+1);
+            if NameLookUp.IndexOf(Tmp) <> -1
+            then Dec(ParamsCnt)
+            else NameLookUp.Add(Tmp);
             {$ELSE}
+            System.SetString(S, Token.P, Tokens[i+1].L+1);
             Tmp := Ascii7ToUnicodeString(Token.P, Tokens[i+1].L+1);
+            if NameLookUp.IndexOf(S) <> -1
+            then Dec(ParamsCnt)
+            else NameLookUp.Add(S);
             {$ENDIF}
             FirstComposePos := i + 2;
           end;
@@ -2765,6 +2791,7 @@ begin
       FreeAndNil(SQLWriter);
       FreeAndNil(ParamWriter);
       FreeAndNil(Tokens);
+      FreeAndNil(NameLookUp);
     end;
   end else
     Result := WSQL;
