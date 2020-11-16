@@ -69,10 +69,9 @@ type
   TZTestCompMSSqlBugReport = class(TZAbstractCompSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
-
   published
     procedure Test959307; //wrong defined????
-    procedure Test953072; //is this test really solvable? I don't think so
+    procedure Test953072;
     procedure Test728955;
     procedure Test833489;
     procedure Test907497;

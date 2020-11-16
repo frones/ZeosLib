@@ -357,10 +357,11 @@ var
   ParamIndex: Integer;
   ParamIndices: TIntegerDynArray;
   ParamIndexCount: Integer;
-  ParamName, S, NormalizeParam: string;
+  ParamName, S, NormalizedParam: string;
   SQL: SQLString;
   Tokenizer: IZTokenizer;
   SQLStringWriter: TZSQLStringWriter;
+  IgnoreParam: Boolean;
   procedure NextToken;
   begin
     Token := Tokens[TokenIndex];
@@ -406,16 +407,13 @@ begin
             { Check for correct parameter type. }
             if not (Token.TokenType in [ttWord, ttQuoted, ttQuotedIdentifier, ttKeyWord, ttInteger]) then
               raise EZDatabaseError.Create(SIncorrectToken);
-            NormalizeParam := Tokenizer.NormalizeParamToken(Token^, ParamName);
-            SQLStringWriter.AddText(NormalizeParam, SQL);
-            ParamIndex := FindParam(ParamName);
-            if ParamIndex < 0 then
-              ParamIndex := FParams.Add(ParamName);
-
-            Inc(ParamIndexCount);
-            SetLength(ParamIndices, ParamIndexCount);
-            ParamIndices[ParamIndexCount - 1] := ParamIndex;
-
+            NormalizedParam := Tokenizer.NormalizeParamToken(Token^, ParamName, FParams, ParamIndex, IgnoreParam);
+            SQLStringWriter.AddText(NormalizedParam, SQL);
+            if not IgnoreParam then begin
+              Inc(ParamIndexCount);
+              SetLength(ParamIndices, ParamIndexCount);
+              ParamIndices[ParamIndexCount - 1] := ParamIndex;
+            end;
             Continue;
           end else
             SQLStringWriter.AddChar(FParamChar, SQL);

@@ -1854,7 +1854,7 @@ procedure SetStatementParam(Index: Integer;
       //GetEnumName(TypeInfo(TFieldType), Ord(Param.DataType))+')'); //using Typinfo results in collission with tFloatType ):
   end;
 begin
-  if Param.ArraySize = 0 then
+  if TZHackParam(Param).FArraySize = 0 then
     if Param.IsNull then
       Statement.SetNull(Index, Param.SQLType)
     else case TZHackParam(Param).FSQLDataType of

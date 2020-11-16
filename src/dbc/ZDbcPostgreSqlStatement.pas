@@ -1445,8 +1445,10 @@ var
   Tokens: TZTokenList;
   Token: PZToken;
   tmp: RawByteString;
+  {$IFDEF UNICODE}S: String;{$ENDIF}
   SQLWriter, ParamWriter: TZRawSQLStringWriter;
   ComparePrefixTokens: TPreparablePrefixTokens;
+  NameLookUp: TStrings;
   procedure Add(const Value: RawByteString; const Param: Boolean);
   var H: Integer;
   begin
@@ -1459,6 +1461,7 @@ var
   end;
 begin
   if (Length(FCachedQueryRaw) = 0) and (SQL <> '') then begin
+    NameLookUp := TStringList.Create;
     Result := '';
     Tmp := '';
     Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
@@ -1519,9 +1522,16 @@ begin
             FirstComposePos := i + 1;
           end else begin
             {$IFDEF UNICODE}
-            Tmp := UnicodeStringToAscii7(Token.P, Tokens[i+1].L+1);
+            System.SetString(S, Token.P, Tokens[i+1].L+1);
+            Tmp := UnicodeStringToAscii7(S);
+            if NameLookUp.IndexOf(S) <> -1
+            then Dec(ParamsCnt)
+            else NameLookUp.Add(S);
             {$ELSE}
             ZSetString(Token.P, Tokens[i+1].L+1, Tmp);
+            if NameLookUp.IndexOf(Tmp) <> -1
+            then Dec(ParamsCnt)
+            else NameLookUp.Add(Tmp);
             {$ENDIF}
             FirstComposePos := i + 2;
           end;
@@ -1544,6 +1554,7 @@ begin
       FreeAndNil(SQLWriter);
       FreeAndNil(ParamWriter);
       FreeAndNil(Tokens);
+      FreeAndNil(NameLookUp);
     end;
   end else
     Result := ASQL;

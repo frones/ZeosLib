@@ -2675,11 +2675,11 @@ begin
     stDouble: RawToFloat(P, AnsiChar(FDecimalSeperator), FData.pvDouble);
     stCurrency: RawToFloat(P, AnsiChar(FDecimalSeperator), FData.pvCurrency);
     stBigDecimal: FData.pvBCD := RawToBCD(P, L);
-    stDate: if not ZSysUtils.TryRawToDate(P, L, FormatSettings.ShortDateFormat, FData.pvDate) then
+    stDate: if not ZSysUtils.TryRawToDate(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.ShortDateFormat, FData.pvDate) then
               goto jmpFail;
-    stTime: if not ZSysUtils.TryRawToTime(P, L, FormatSettings.LongTimeFormat, FData.pvTime) then
+    stTime: if not ZSysUtils.TryRawToTime(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongTimeFormat, FData.pvTime) then
               goto jmpFail;
-    stTimeStamp: if not ZSysUtils.TryRawToTimestamp(P, L, FormatSettings.LongDateFormat, FData.pvTimeStamp) then
+    stTimeStamp: if not ZSysUtils.TryRawToTimestamp(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongDateFormat, FData.pvTimeStamp) then
               goto jmpFail;
     stGUID: if (L = 36) or (L = 38) then
               ZSysUtils.ValidGUIDToBinary(P, @FData.pvGUID.D1)
@@ -2768,11 +2768,11 @@ begin
     stDouble: RawToFloat(P, AnsiChar(FDecimalSeperator), TDoubleDynArray(FData.pvDynArray.VArray)[Index]);
     stCurrency: RawToFloat(P, AnsiChar(FDecimalSeperator), TCurrencyDynArray(FData.pvDynArray.VArray)[Index]);
     stBigDecimal: TBCDDynArray(FData.pvDynArray.VArray)[Index] := RawToBCD(P, L);
-    stDate: if not ZSysUtils.TryRawToDate(P, L, FormatSettings.ShortDateFormat, TZDateDynArray(FData.pvDynArray.VArray)[Index]) then
+    stDate: if not ZSysUtils.TryRawToDate(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.ShortDateFormat, TZDateDynArray(FData.pvDynArray.VArray)[Index]) then
               goto jmpFail;
-    stTime: if not ZSysUtils.TryRawToTime(P, L, FormatSettings.LongTimeFormat, TZTimeDynArray(FData.pvDynArray.VArray)[Index]) then
+    stTime: if not ZSysUtils.TryRawToTime(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongTimeFormat, TZTimeDynArray(FData.pvDynArray.VArray)[Index]) then
               goto jmpFail;
-    stTimeStamp: if not ZSysUtils.TryRawToTimestamp(P, L, FormatSettings.LongDateFormat, TZTimeStampDynArray(FData.pvDynArray.VArray)[Index]) then
+    stTimeStamp: if not ZSysUtils.TryRawToTimestamp(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongDateFormat, TZTimeStampDynArray(FData.pvDynArray.VArray)[Index]) then
               goto jmpFail;
     stGUID: if (L = 36) or (L = 38) then
               ZSysUtils.ValidGUIDToBinary(P, @TGUIDDynArray(FData.pvDynArray.VArray)[Index].D1)

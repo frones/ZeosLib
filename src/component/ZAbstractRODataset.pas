@@ -2230,7 +2230,11 @@ begin
             {$IFDEF UNICODE}Param.DataType := ftString;{$ENDIF} //Hack: D12_UP sets ftWideString on assigning a UnicodeString
           end;
         ftWideString:
+          {$IFDEF TEST_TZPARAM}
+          Param.AsUnicodeString := Statement.GetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+          {$ELSE}
           {$IFDEF WITH_PARAM_ASWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF} := Statement.GetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+          {$ENDIF}
         ftMemo:
           begin
             Param.AsMemo := Statement.GetString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
@@ -2239,8 +2243,12 @@ begin
         {$IFDEF WITH_WIDEMEMO}
         ftWideMemo:
         begin
+          {$IFDEF TEST_TZPARAM}
+          Param.AsWideMemo := Statement.GetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+          {$ELSE}
           Param.AsWideString := Statement.GetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
           Param.DataType := ftWideMemo;
+          {$ENDIF}
         end;
         {$ENDIF}
         {$IFDEF TEST_TZPARAM}
@@ -2254,10 +2262,14 @@ begin
             Statement.GetDate(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, D);
             Param.AsZDate := D;
           end;
-        ftTime:
-          Param.AsTime := Statement.GetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        ftDateTime:
-          Param.AsDateTime := Statement.GetTimestamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        ftTime: begin
+            Statement.GetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, T);
+            Param.AsZTime := T;
+          end;
+        ftDateTime: begin
+            Statement.GetTimestamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, TS);
+            Param.AsZTimestamp := TS;
+          end;
         ftBlob:
           {$IFDEF TBLOBDATA_IS_TBYTES}
           Param.AsBlob := Statement.GetBytes(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
