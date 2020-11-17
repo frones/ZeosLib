@@ -1,0 +1,12 @@
+[Unit]
+Description=Zeos Proxy Server
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/ZeosProxyService -r
+RemainAfterExit=yes
+TimeoutSec=25
+
+[Install]
+WantedBy=multi-user.target
