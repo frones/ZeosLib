@@ -122,6 +122,7 @@ begin
     Transaction.StartTransaction;
     Succeeded := False;
     with Query do try
+      CheckFalse(Transaction.AutoCommit);
       { Create prepared statement for equipment table }
       Sql.Text := 'INSERT INTO equipment (eq_id, eq_name, eq_type, eq_cost, eq_date, '
           + ' woff_date) VALUES(:q_id, :eq_name, :eq_type, :eq_cost, :eq_date, :woff_date)';
@@ -145,8 +146,9 @@ begin
       else Transaction.Rollback;
     end;
   finally
-    FreeAndNil(Query);
     FreeAndNil(Transaction);
+    FreeAndNil(Query);
+    Connection.ExecuteDirect('DELETE FROM equipment where eq_id = ' + SysUtils.IntToStr(TEST_ROW_ID));
   end;
 end;
 
