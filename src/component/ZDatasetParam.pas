@@ -2658,6 +2658,7 @@ begin
     L := Length(Value);
   if (FSQLDataType = stString) then
       if ((FConSettings <> nil) or SetConsettings) and (FConSettings.ClientCodePage.Encoding = ceUTF16) then begin
+      SetIsNull(True);
       FSQLDataType := stUnicodeString;
       FZVariantType := vtUnicodeString;
     end else if CodePage = zCP_UTF8
@@ -2699,7 +2700,7 @@ begin
                   else {$ENDIF}DestCP := GetDefaultRawCP;
                 ZEncoding.PRawToRawConvert(P, l, CodePage, DestCP, RawByteString(FData.pvPointer));
               end;
-    stUnicodeString: UnicodeString(FData.pvPointer) := ZRawToUnicode(Value, CodePage);
+    stUnicodeString: UnicodeString(FData.pvPointer) := PRawToUnicode(P, L, CodePage);
     stAsciiStream, stUnicodeStream: ConvertRawToCLobVariable(Value, CodePage);
     stBinaryStream: begin
                       if FData.pvPointer = nil then
@@ -2751,6 +2752,7 @@ begin
     L := Length(Value);
   if (FSQLDataType = stString) then
       if ((FConSettings <> nil) or SetConsettings) and (FConSettings.ClientCodePage.Encoding = ceUTF16) then begin
+      SetIsNull(True);
       FSQLDataType := stUnicodeString;
       FZVariantType := vtUnicodeString;
     end else if CodePage = zCP_UTF8

@@ -57,7 +57,8 @@
   miab3
   marsupilami97
   mse
-  EgonHugeist and many others i'm not aware about
+  EgonHugeist
+  and many others
 *)
 
 unit ZAbstractConnection;
@@ -1731,7 +1732,8 @@ begin
   FDatasets := TZSortedList.Create;
   FDisposePendingUpdatesOnRollback := True;
   FApplyPendingUpdatesOnCommit := True;
-  FTransactIsolationLevel := tiReadCommitted
+  FTransactIsolationLevel := tiReadCommitted;
+  FAutoCommit := True;
 end;
 
 function TZAbstractTransaction.GetActive: Boolean;
@@ -1861,14 +1863,12 @@ begin
 end;
 
 function TZAbstractTransaction.StartTransaction: Integer;
-var Txn: IZTransaction;
 begin
-  if GetActive
-  then Txn := FTransaction
-  else Txn := GetIZTransaction;
+  if not GetActive then
+    FTransaction := GetIZTransaction;
   if Assigned(FBeforeStartTransaction) then
     FBeforeStartTransaction(Self);
-  Result := Txn.StartTransaction;
+  Result := FTransaction.StartTransaction;
   if Assigned(FAfterStartTransaction) then
     FAfterStartTransaction(Self);
 end;
