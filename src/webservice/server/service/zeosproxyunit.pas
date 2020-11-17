@@ -50,7 +50,7 @@ begin
   {$IFDEF LINUX}
   configFile := '/etc/zeosproxy.ini';
   {$ELSE}
-  configFile := ExtractFilePath(ParamStr(0)) + 'ZDbcProxy.ini';
+  configFile := ExtractFilePath(ParamStr(0)) + 'zeosproxy.ini';
   {$ENDIF}
 
   ConnectionManager := TDbcProxyConnectionManager.Create;
