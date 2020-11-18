@@ -2308,7 +2308,7 @@ var
   defn_or_bindpp: POCIHandle;
   acsid: ub2;
   Status: sword;
-  DataSizeIsByteSize: Boolean;
+  ScaleOrCharSetForm: sb2;
   function AttributeToString(var P: Pointer; Len: Integer): SQLString;
   begin
     if P <> nil then
@@ -2354,7 +2354,6 @@ begin
   if Status <> OCI_SUCCESS then
     FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
       'OCIAttrGet', Self);
-  DataSizeIsByteSize := FOracleConnection.GetHostVersion >= EncodeSQLVersioning(12, 0, 0);
 
   AllocateOracleSQLVars(FColumns, ColumnCount);
   DescriptorColumnCount := 0; SubObjectColumnCount := 0;
@@ -2371,35 +2370,13 @@ begin
     ColumnsInfo.Add(ColumnInfo);
 
     paramdpp := nil; //init
-    FPlainDriver.OCIParamGet(FStmtHandle, OCI_HTYPE_STMT, FOCIError, paramdpp, I);
-      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @CurrentVar^.value_sz, nil, OCI_ATTR_DATA_SIZE, FOCIError);
-    CurrentVar^.value_sz := PUB2(@CurrentVar^.value_sz)^; //full init of all 4 Bytes -> is a ub2
-    FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-      @CurrentVar^.dty, nil, OCI_ATTR_DATA_TYPE, FOCIError);
-    if CurrentVar^.dty in [SQLT_NUM, SQLT_VNU] then begin //unsigned char[21](binary) see: http://docs.oracle.com/cd/B19306_01/appdev.102/b14250/oci03typ.htm
-      {11g bug: returns Precision 38 for Ordinal values }
-      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @CurrentVar^.Precision, nil, OCI_ATTR_PRECISION, FOCIError);
-      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @CurrentVar^.Scale, nil, OCI_ATTR_SCALE, FOCIError);
-      ColumnInfo.Precision := CurrentVar.Precision;
-      if CurrentVar.Scale > 0 then
-        ColumnInfo.Scale := CurrentVar.Scale;
-    end else if CurrentVar^.dty in [SQLT_DATE..SQLT_TIMESTAMP_LTZ] then begin
-      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @CurrentVar^.Precision, nil, OCI_ATTR_LFPRECISION, FOCIError);
-      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @CurrentVar^.Scale, nil, OCI_ATTR_FSPRECISION, FOCIError);
-      ColumnInfo.Precision := CurrentVar.Precision;
-      if CurrentVar.Scale > 0 then
-        ColumnInfo.Scale := CurrentVar.Scale;
-    end else begin
-      CurrentVar^.Scale := 0;
-      CurrentVar^.Precision := 0;
-    end;
-    ColumnInfo.dty := CurrentVar^.dty;
+
     P := nil; //init
+    FPlainDriver.OCIParamGet(FStmtHandle, OCI_HTYPE_STMT, FOCIError, paramdpp, I);
+    if Status <> OCI_SUCCESS then
+      FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
+        'OCIParamGet', Self);
+
     Status := FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
       @P, @TempColumnNameLen, OCI_ATTR_NAME, FOCIError);
     if Status <> OCI_SUCCESS then
@@ -2413,30 +2390,75 @@ begin
       FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
         'OCIAttrGet(OCI_ATTR_SCHEMA_NAME)', Self);
     ColumnInfo.SchemaName := AttributeToString(P, TempColumnNameLen);
-    ColumnInfo.CharOctedLength := CurrentVar^.value_sz;
+
+    FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+      @CurrentVar^.dty, nil, OCI_ATTR_DATA_TYPE, FOCIError);
+    ColumnInfo.dty := CurrentVar^.dty;
+
     if CurrentVar.dty in [SQLT_CHR, SQLT_LNG, SQLT_VCS, SQLT_LVC, SQLT_AFC, SQLT_AVC, SQLT_CLOB, SQLT_VST] then begin
+      if CurrentVar.dty <> SQLT_CLOB then begin
+        FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+          @acsid, nil, OCI_ATTR_CHAR_SIZE{ub2}, FOCIError);
+        ColumnInfo.Precision := acsid;
+        if CurrentVar.dty = SQLT_AFC then
+          ColumnInfo.Signed := True;
+      end else CurrentVar^.value_sz := SizeOf(POCIDescriptor);
       FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @ColumnInfo.CharsetForm, nil, OCI_ATTR_CHARSET_FORM, FOCIError);
-      Status := ColumnInfo.CharsetForm
-    end else Status := CurrentVar^.Scale;
+        @ColumnInfo.csid, nil, OCI_ATTR_CHARSET_ID, FOCIError);
+      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+        @ColumnInfo.CharsetForm, nil, OCI_ATTR_CHARSET_FORM{ub1}, FOCIError);
+      ScaleOrCharSetForm := ColumnInfo.CharsetForm;
+    end else if CurrentVar^.dty in [SQLT_NUM, SQLT_VNU] then begin //unsigned char[21](binary) see: http://docs.oracle.com/cd/B19306_01/appdev.102/b14250/oci03typ.htm
+      {11g bug: returns Precision 38 for all Ordinal values }
+      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+        @CurrentVar^.Precision, nil, OCI_ATTR_PRECISION, FOCIError);
+      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+        @CurrentVar^.Scale, nil, OCI_ATTR_SCALE, FOCIError);
+      ColumnInfo.Precision := CurrentVar.Precision;
+      if CurrentVar.Scale > 0 then
+        ColumnInfo.Scale := CurrentVar.Scale;
+      CurrentVar.value_sz := SizeOf(TOCINumber);
+      ScaleOrCharSetForm := CurrentVar^.Scale;
+    end else if CurrentVar^.dty in [SQLT_DATE..SQLT_TIMESTAMP_LTZ] then begin
+      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+        @CurrentVar^.Precision, nil, OCI_ATTR_LFPRECISION, FOCIError);
+      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+        @CurrentVar^.Scale, nil, OCI_ATTR_FSPRECISION, FOCIError);
+      ColumnInfo.Precision := CurrentVar.Precision;
+      if CurrentVar.Scale > 0 then
+        ColumnInfo.Scale := CurrentVar.Scale;
+      ScaleOrCharSetForm := CurrentVar^.Scale;
+      CurrentVar.value_sz := SizeOf(POCIDescriptor);
+    end else begin
+      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
+        @acsid, nil, OCI_ATTR_DATA_SIZE, FOCIError);
+      if CurrentVar.dty in [SQLT_RID, SQLT_BIN] then
+        ColumnInfo.Signed := True;
+      CurrentVar^.Precision := 0;
+      CurrentVar^.Scale := 0;
+      ScaleOrCharSetForm := 0;
+    end;
     CurrentVar^.ColType := NormalizeOracleTypeToSQLType(CurrentVar.dty,
       CurrentVar.value_sz, CurrentVar^.DescriptorType,
-      ColumnInfo.Precision, Status, ConSettings, OCI_TYPEPARAM_IN, DataSizeIsByteSize);
-    inc(DescriptorColumnCount, Ord(CurrentVar^.DescriptorType > 0));
-    ColumnInfo.Signed := True;
-    ColumnInfo.Nullable := ntNullable;
-
+      ColumnInfo.Precision, ScaleOrCharSetForm, ConSettings, OCI_TYPEPARAM_IN);
+    ColumnInfo.CharOctedLength := CurrentVar^.value_sz;
+    if CurrentVar^.DescriptorType > 0 then
+      inc(DescriptorColumnCount);
     ColumnInfo.ColumnType := CurrentVar^.ColType;
+    if CurrentVar.dty in [SQLT_AFC, SQLT_BIN] then begin //tag fixed size types
+      ColumnInfo.Scale := ColumnInfo.Precision;
+      ColumnInfo.Signed := True;
+    end else
+      ColumnInfo.Signed := (ColumnInfo.ColumnType in [stSmall, stInteger, stLong, stCurrency, stBigDecimal]);
+    ColumnInfo.Nullable := ntNullable;
     if (ColumnInfo.CharsetForm = SQLCS_NCHAR) or ((CurrentVar.dty <> SQLT_LNG) and
        (ColumnInfo.ColumnType in [stString, stAsciiStream]) and
        (ConSettings^.ClientCodePage.Encoding = ceUTF16)) then begin
       ColumnInfo.ColumnCodePage := zCP_UTF16;
       ColumnInfo.csid := OCI_UTF16ID;
-    end else if (ColumnInfo.ColumnType in [stString, stAsciiStream]) then begin
-      FPlainDriver.OCIAttrGet(paramdpp, OCI_DTYPE_PARAM,
-        @ColumnInfo.csid, nil, OCI_ATTR_CHARSET_ID, FOCIError);
-      ColumnInfo.ColumnCodePage := FClientCP;
-    end else if (ColumnInfo.ColumnType = stBytes ) then
+    end else if (ColumnInfo.ColumnType in [stString, stAsciiStream]) then
+      ColumnInfo.ColumnCodePage := FClientCP
+    else if (ColumnInfo.ColumnType in [stBytes, stBinaryStream]) then
       ColumnInfo.ColumnCodePage := zCP_Binary;
     if CurrentVar.dty = SQLT_NTY  then begin
       Inc(SubObjectColumnCount);

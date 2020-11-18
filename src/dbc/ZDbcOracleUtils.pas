@@ -195,7 +195,7 @@ function ConvertOracleTypeToSQLType(const TypeName: string;
 
 function NormalizeOracleTypeToSQLType(var DataType: ub2; var DataSize: ub4;
   out DescriptorType: sb4; var Precision: Integer; ScaleOrCharSetForm: sb2;
-  ConSettings: PZConSettings; IO: OCITypeParamMode; DataSizeIsByteSize: Boolean): TZSQLType;
+  ConSettings: PZConSettings; IO: OCITypeParamMode): TZSQLType;
 (*
 function DescribeObject(const PlainDriver: TZOraclePlainDriver; const Connection: IZConnection;
   ParamHandle: POCIParam; {%H-}stmt_handle: POCIHandle; Level: ub2): POCIObject;*)
@@ -1190,30 +1190,16 @@ end;
 
 function NormalizeOracleTypeToSQLType(var DataType: ub2; var DataSize: ub4;
   out DescriptorType: sb4; var Precision: Integer; ScaleOrCharSetForm: sb2;
-  ConSettings: PZConSettings; IO: OCITypeParamMode;
-  DataSizeIsByteSize: Boolean): TZSQLType;
+  ConSettings: PZConSettings; IO: OCITypeParamMode): TZSQLType;
 label VCS;
-  procedure MaxDataSizeToBytes(var DataSize: ub4; var Precision: Integer);
+  procedure CharacterSizeToByteSize(var DataSize: ub4; Precision: Integer);
   begin
-    if DataSizeIsByteSize then begin //since v12?
-      if ScaleOrCharSetForm = SQLCS_NCHAR
-      then Precision := DataSize shr 2
-      else begin
-        if (ConSettings.ClientCodePage.Encoding = ceUTF16) then
-          Precision := DataSize shr 1
-        else if (ConSettings.ClientCodePage.CharWidth > 1) then
-          Precision := Precision div Byte(ConSettings.ClientCodePage.CharWidth);
-      end;
-    end else if ScaleOrCharSetForm = SQLCS_NCHAR then begin //v11 only?
-      Precision := DataSize shr 1;
-      DataSize := DataSize shl 1;
-    end else begin
-      Precision := DataSize;
-      if (ConSettings.ClientCodePage.Encoding = ceUTF16) then
-        DataSize := DataSize shl 2
-      else if (ConSettings.ClientCodePage.CharWidth > 1) then
-        DataSize := DataSize * Byte(ConSettings.ClientCodePage.CharWidth);
-    end;
+    //EH: Note NCHAR, NVARCHAR2, CLOB, and NCLOB columns are always character-based.
+    if (ScaleOrCharSetForm = SQLCS_NCHAR) or (ConSettings.ClientCodePage.Encoding = ceUTF16)
+    then DataSize := Precision shl 2
+    else if (ConSettings.ClientCodePage.CharWidth > 1)
+      then DataSize := Precision * Byte(ConSettings.ClientCodePage.CharWidth)
+      else DataSize := Precision;
   end;
 begin
   //some notes before digging in:
@@ -1303,23 +1289,25 @@ begin
                   DataType := SQLT_BFLOAT;
                 end;
     SQLT_AFC{ CHAR / char[n]}: begin
-                if (DataSize = 0) then
-                  DataSize := 2000; //2000 bytes max
-                MaxDataSizeToBytes(DataSize, Precision);
-                Result := stString;
+                if (Precision = 0) then
+                  Precision := 2000; //2000 bytes max
+                CharacterSizeToByteSize(DataSize, Precision);
+                if (ScaleOrCharSetForm = SQLCS_NCHAR)
+                then Result := stUnicodeString
+                else Result := stString;
               end;
     SQLT_RID, { char[n] }
     SQLT_AVC:{CHAR / char[n+1]} begin
-          if DataSize = 0 then
-            DataSize := 2000; //2000 bytes max
+          if Precision = 0 then
+            Precision := 2000; //2000 bytes max
           goto VCS;
         end;
     SQLT_CHR, {VARCHAR2 / char[n+1]}
     SQLT_STR,{NULL-terminated STRING, char[n+1]}
     SQLT_VCS {VARCHAR / char[n+sizeof(short integer)]}: begin
-                if DataSize = 0 then
-                  DataSize := 4000; //4000 bytes max
-VCS:            MaxDataSizeToBytes(DataSize, Precision);
+                if Precision = 0 then
+                  Precision := 4000; //4000 bytes max
+VCS:            CharacterSizeToByteSize(DataSize, Precision);
                 DataType := SQLT_VCS;
                 DataSize := DataSize+SizeOf(sb2);
                 if ScaleOrCharSetForm = SQLCS_NCHAR
@@ -1370,19 +1358,18 @@ VCS:            MaxDataSizeToBytes(DataSize, Precision);
       my crystall ball says this is a PP(Raw/Wide)Char-Struct including length like TOCILong
       -> just look to OCIRaw/SQLT_LVB of https://docs.oracle.com/cd/B13789_01/appdev.101/b10779/oci11oty.htm#421682
       might be a good replacement for SQLT_LNG/SQLT_LVC ?}
-        if (DataSize = 0) and (IO <> OCI_TYPEPARAM_IN) then
-          DataSize := SizeOf(POCIString);
+        DataSize := SizeOf(POCIString);
         if ScaleOrCharSetForm = SQLCS_NCHAR
         then Result := stUnicodeString //stUnicodeStream
         else Result := stString; //stAsciiStream
       end;
     SQLT_LNG: { LONG /char[n] } begin
-        if (DataSize = 0) or (IO <> OCI_TYPEPARAM_IN) then begin
-           DataSize := 128 * 1024;
-           Precision := DataSize;
+        if (Precision = 0) then begin
+           Precision := 128 * 1024;
+           DataSize := Precision;
            Result := stAsciiStream;
         end else begin
-          MaxDataSizeToBytes(DataSize, Precision);
+          DataSize := Precision;
           Result := stString;
         end;
         DataSize := DataSize + SizeOf(sb4);
@@ -1390,9 +1377,9 @@ VCS:            MaxDataSizeToBytes(DataSize, Precision);
         Exit; //is this correct?
       end;
     SQLT_LVC { LONG VARCHAR / char[n+sizeof(integer)] }: begin //up to 2GB
-        if DataSize = 0 then
-         DataSize := 128 * 1024;
-        MaxDataSizeToBytes(DataSize, Precision);
+        if Precision = 0 then
+          Precision := 128 * 1024;
+        CharacterSizeToByteSize(DataSize, Precision);
         if ScaleOrCharSetForm = SQLCS_NCHAR
         then Result := stUnicodeString //stUnicodeStream
         else Result := stString; //stAsciiStream
@@ -1871,10 +1858,8 @@ var
   CP: Word;
   Status: Sword;
   ConSettings: PZConSettings;
-  DataSizeIsByteSize: Boolean;
 begin
   ConSettings := FConnection.GetConSettings;
-  DataSizeIsByteSize := FConnection.GetHostVersion >= EncodeSQLVersioning(12, 0, 0);
   CP := ConSettings.ClientCodePage.CP;
   if ObjType <> OCI_PTYPE_PKG then begin
     { get the overload position }
@@ -1922,11 +1907,13 @@ begin
         Param.Scale := Param.GetSb1(OCI_ATTR_FSPRECISION);
       end;
       if Param.DataType in [SQLT_CHR, SQLT_LNG, SQLT_VCS, SQLT_LVC, SQLT_AFC, SQLT_AVC, SQLT_CLOB, SQLT_VST] then begin
+        if Param.DataType <> SQLT_CLOB then
+          Param.Precision := Param.GetUb2(OCI_ATTR_CHAR_SIZE);
         Param.csform := Param.GetUb1(OCI_ATTR_CHARSET_FORM);
         Status := Param.csform;
       end else Status := Param.Scale;
       Param.SQLType := NormalizeOracleTypeToSQLType(Param.DataType, Param.DataSize,
-        Param.DescriptorType, Param.Precision, Status, ConSettings, Param.IODirection, DataSizeIsByteSize);
+        Param.DescriptorType, Param.Precision, Status, ConSettings, Param.IODirection);
       if (Param.SQLType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then
         if (Param.csform = SQLCS_NCHAR) or ((Consettings.ClientCodePage.Encoding = ceUTF16) and (Param.DataType <> SQLT_LNG)) then begin
           Param.CodePage := zCP_UTF16;
@@ -2214,10 +2201,8 @@ var
   Status: SWord;
   Param: TZOraProcDescriptor_W;
   ConSettings: PZConSettings;
-  DataSizeIsByteSize: Boolean;
 begin
   ConSettings := FConnection.GetConSettings;
-  DataSizeIsByteSize := FConnection.GetHostVersion >= EncodeSQLVersioning(12, 0, 0);
   CP := ConSettings.ClientCodePage.CP;
   if ObjType <> OCI_PTYPE_PKG then begin
     { get the overload position }
@@ -2262,9 +2247,16 @@ begin
         Param.Precision := Param.GetUb1(OCI_ATTR_PRECISION);
         Param.Scale := Param.GetSb1(OCI_ATTR_SCALE);
         Param.Radix := Param.GetUb1(OCI_ATTR_RADIX);
+      end else if Param.DataType in [SQLT_DATE..SQLT_TIMESTAMP_LTZ] then begin
+        Param.Precision := Param.GetUb1(OCI_ATTR_LFPRECISION);
+        Param.Scale := Param.GetUb1(OCI_ATTR_LFPRECISION);
+      end else if Param.DataType in [SQLT_CHR, SQLT_LNG, SQLT_VCS, SQLT_LVC, SQLT_AFC, SQLT_AVC, SQLT_CLOB, SQLT_VST] then begin
+        if Param.DataType <> SQLT_CLOB then
+          Param.Precision := Param.GetUb2(OCI_ATTR_CHAR_SIZE);
+        Param.csform := Param.GetUb1(OCI_ATTR_CHARSET_FORM);
       end;
       Param.SQLType := NormalizeOracleTypeToSQLType(Param.DataType, Param.DataSize,
-        Param.DescriptorType, Param.Precision, Param.Scale, ConSettings, Param.IODirection, DataSizeIsByteSize);
+        Param.DescriptorType, Param.Precision, Param.Scale, ConSettings, Param.IODirection);
       if (Param.SQLType in [stString, stAsciiStream]) then begin
         {EH: Oracle does not calculate true data size if the attachment charset is a multibyte one
           and is different to the native db charset

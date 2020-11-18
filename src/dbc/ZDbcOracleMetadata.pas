@@ -1349,7 +1349,6 @@ var
   i: Integer;
   SQLType: TZSQLType;
   S: {$IFDEF UNICODE}RawByteString{$ELSE}UnicodeString{$ENDIF};
-  DataSizeIsByteSize: Boolean;
 
   function CheckOwner: Boolean;
   begin
@@ -1391,7 +1390,7 @@ var
       end;
       SQLType := NormalizeOracleTypeToSQLType(Arg.DataType,
         Arg.DataSize, Arg.DescriptorType, Arg.Precision, Arg.Scale, ConSettings,
-        Descriptor.IODirection, DataSizeIsByteSize);
+        Descriptor.IODirection);
       if (Ord(SQLType) >= Ord(stString)) and (Ord(SQLType) <= Ord(stBytes))
       then Result.UpdateInt(ProcColPrecisionIndex, Arg.DataSize)
       else Result.UpdateInt(ProcColPrecisionIndex, Arg.Precision);
@@ -1447,7 +1446,7 @@ var
       end;
       SQLType := NormalizeOracleTypeToSQLType(Arg.DataType,
         Arg.DataSize, Arg.DescriptorType, Arg.Precision, Arg.Scale, ConSettings,
-        Descriptor.IODirection, DataSizeIsByteSize);
+        Descriptor.IODirection);
       if (Ord(SQLType) >= Ord(stString)) and (Ord(SQLType) <= Ord(stBytes))
       then Result.UpdateInt(ProcColPrecisionIndex, Arg.DataSize)
       else Result.UpdateInt(ProcColPrecisionIndex, Arg.Precision);
@@ -1505,7 +1504,6 @@ begin
     FreeAndNil(SL);
   end;
   Connection := GetConnection as IZOracleConnection;
-  DataSizeIsByteSize := Connection.GetHostVersion >= EncodeSQLVersioning(12, 0, 0);
   try
     RS := GetProcedures('', TmpSchemaPattern, TempProcedureNamePattern);
     while RS.Next do begin
