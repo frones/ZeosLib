@@ -290,32 +290,35 @@ var
   procedure BindLobs;
   var J: Cardinal;
     N: Integer;
-    TempBlob: IZBlob;
+    Lob: IZlob;
+    CLob: IZCLob;
+    BLob: IZBlob;
     WriteTempBlob: IZPostgreSQLOidBlob;
     PA: Pointer;
     L: NativeUInt;
-    Label LenOfBuf;
   begin
     CP := ConSettings^.ClientCodePage.CP;
     N := 0;
     for J := 0 to DynArrayLen -1 do
-      if (TInterfaceDynArray(Dyn)[j] <> nil) and Supports(TInterfaceDynArray(Dyn)[j], IZBlob, TempBlob) and not TempBlob.IsEmpty then
-        if BindList.SQLTypes[Index] in [stUnicodeStream, stAsciiStream] then begin
-          if TempBlob.IsClob
-          then TempBlob.SetCodePageTo(FClientCP)
+      if (TInterfaceDynArray(Dyn)[j] <> nil) and Supports(TInterfaceDynArray(Dyn)[j], IZClob, Lob) and not Lob.IsEmpty then
+        if TZSQLType(Arr.VArrayType) in [stUnicodeStream, stAsciiStream] then begin
+          if Lob.QueryInterface(IZClob, CLob) = S_OK
+          then CLob.SetCodePageTo(FClientCP)
           else raise CreateConversionError(Index, stBinaryStream, stAsciiStream);
-          goto LenOfBuf;
-        end else if FOidAsBlob then begin
-          if not Supports(TempBlob, IZPostgreSQLOidBlob, WriteTempBlob) then begin
-            WriteTempBlob := TZPostgreSQLOidBlob.CreateFromBlob(TempBlob, FPostgreSQLConnection, FOpenLobStreams);
-            TInterfaceDynArray(Dyn)[j] := WriteTempBlob;
+          Clob.GetBuffer(FRawTemp, L);
+          N := N + Integer(L);
+        end else if Lob.QueryInterface(IZLob, BLob) = S_OK then begin
+          if FOidAsBlob then begin
+            if BLob.QueryInterface(IZPostgreSQLOidBlob, WriteTempBlob) <> S_OK then begin
+              WriteTempBlob := TZPostgreSQLOidBlob.CreateFromBlob(Blob, FPostgreSQLConnection, FOpenLobStreams);
+              TInterfaceDynArray(Dyn)[j] := WriteTempBlob;
+            end;
+            Inc(N, SizeOf(OID));
+          end else begin
+            Blob.GetBuffer(FRawTemp, L);
+            Inc(N, Integer(L));
           end;
-          Inc(N, SizeOf(OID));
-        end else begin
-LenOfBuf: PA := TempBlob.GetBuffer(FRawTemp, L);
-          if PA = nil then L := 0;
-          Inc(N, Integer(L));
-        end;
+        end else raise CreateConversionError(Index, stBinaryStream, stBinaryStream);
     AllocArray(Index, N+(DynArrayLen*SizeOf(int32)), A, P);
     if (BindList.SQLtypes[Index] = stBinaryStream) and FOidAsBlob then begin
       for j := 0 to DynArrayLen -1 do
@@ -331,11 +334,11 @@ LenOfBuf: PA := TempBlob.GetBuffer(FRawTemp, L);
     end else begin
       AllocArray(Index, N+(DynArrayLen*SizeOf(int32)), A, P);
       for J := 0 to DynArrayLen -1 do
-        if not ((TInterfaceDynArray(Dyn)[j] <> nil) and Supports(TInterfaceDynArray(Dyn)[j], IZBlob, TempBlob) and not TempBlob.IsEmpty) then begin
+        if (TInterfaceDynArray(Dyn)[j] = nil) or not Supports(TInterfaceDynArray(Dyn)[j], IZCLob, CLob) or CLob.IsEmpty then begin
           Integer2PG(-1, P);
           Inc(P,SizeOf(int32));
         end else begin
-          PA := TempBlob.GetBuffer(FRawTemp, L);
+          PA := CLob.GetBuffer(FRawTemp, L);
           N := L;
           Integer2PG(N, P);
           Move(PA^, (PAnsiChar(P)+SizeOf(int32))^, N);
@@ -701,8 +704,12 @@ begin
                           PD := @TZDateDynArray(Dyn)[j]
                         else begin
                           PD := @Dat;
-                          if (Arr.VArrayVariantType in [vtNull, vtDateTime])
-                          then  DecodeDateTimeToDate(TDateTimeDynArray(Dyn)[j], Dat)
+                          if Arr.VArrayVariantType = vtTimeStamp then
+                            DateFromTimeStamp(TZTimeStampDynArray(Dyn)[j], Dat)
+                          else if Arr.VArrayVariantType = vtTime then
+                            FillChar(Dat, SizeOf(TZDate), #0)
+                          else if (Arr.VArrayVariantType in [vtNull, vtDateTime])
+                          then DecodeDateTimeToDate(TDateTimeDynArray(Dyn)[j], Dat)
                           else begin
                             DT := ArrayValueToDate(Arr, J, ConSettings^.WriteFormatSettings);
                             DecodeDateTimeToDate(DT, Dat);
@@ -726,7 +733,11 @@ begin
                           PT := @TZTimeDynArray(Dyn)[J]
                         else begin
                           PT := @T;
-                          if (Arr.VArrayVariantType in [vtNull, vtDateTime])
+                          if (Arr.VArrayVariantType = vtTimeStamp) then
+                            TimeFromTimeStamp(TZTimestampDynArray(Dyn)[J], T)
+                          else if (Arr.VArrayVariantType = vtDate) then
+                            FillChar(T, SizeOf(TZTime), #0)
+                          else if (Arr.VArrayVariantType in [vtNull, vtDateTime])
                           then DecodeDateTimeToTime(TDateTimeDynArray(Dyn)[J], T)
                           else begin
                             DT := ArrayValueToTime(Arr, J, ConSettings^.WriteFormatSettings);
@@ -755,7 +766,11 @@ begin
                           PTS := @TZTimeStampDynArray(Dyn)[J]
                         else begin
                           PTS := @TS;
-                          if (Arr.VArrayVariantType in [vtNull, vtDateTime])
+                          if (Arr.VArrayVariantType = vtDate) then
+                            TimestampFromDate(TZDateDynArray(Dyn)[J], TS)
+                          else if (Arr.VArrayVariantType = vtTime) then
+                            TimestampFromTime(TZTimeDynArray(Dyn)[J], TS)
+                          else if (Arr.VArrayVariantType in [vtNull, vtDateTime])
                           then DecodeDateTimeToTimeStamp(TDateTimeDynArray(Dyn)[J], TS)
                           else begin
                             DT := ArrayValueToDatetime(Arr, J, ConSettings^.WriteFormatSettings);

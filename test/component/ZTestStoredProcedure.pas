@@ -785,9 +785,9 @@ begin
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[27].ParamType));
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[27].DataType));
 
-  StoredProc.Params[0].AsSmallInt := 10;
-  StoredProc.Params[1].AsSmallInt := 20;
-  StoredProc.Params[2].AsSmallInt := 30;
+  StoredProc.Params[0].AsSmallInt := 10; //TINYINT(4);
+  StoredProc.Params[1].AsSmallInt := 20; //TINYINT(1);
+  StoredProc.Params[2].AsSmallInt := 30; //SMALLINT(6)
   StoredProc.Params[3].AsInteger := 1000;
   StoredProc.Params[4].AsInteger := 2000;
   StoredProc.Params[5].AsInteger := 30000;
@@ -1209,21 +1209,27 @@ procedure TZTestOracleStoredProcedure.abtest(prefix: string);
 var
   i, P2: integer;
   S: String;
+  OrdinalDataType: TFieldType;
 begin
   StoredProc.StoredProcName := prefix+'ABTEST';
+  I := StoredProc.Connection.DbcConnection.GetHostVersion;
+  if (I >= EncodeSQLVersioning(11,0,0)) and (I < EncodeSQLVersioning(12,0,0))
+  then OrdinalDataType := ftFMTBcd
+  else OrdinalDataType := ftInteger;
+
   CheckEquals(5, StoredProc.Params.Count);
   CheckEquals('P1', StoredProc.Params[0].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
-  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
+  CheckEquals(OrdinalDataType, StoredProc.Params[0].DataType);
   CheckEquals('P2', StoredProc.Params[1].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
-  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
+  CheckEquals(OrdinalDataType, StoredProc.Params[1].DataType);
   CheckEquals('P3', StoredProc.Params[2].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
   CheckStringParamType(StoredProc.Params[2], Connection.ControlsCodePage);
   CheckEquals('P4', StoredProc.Params[3].Name);
   CheckEquals(ord(ptOutput), ord(StoredProc.Params[3].ParamType));
-  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
+  CheckEquals(OrdinalDataType, StoredProc.Params[3].DataType);
   CheckEquals('P5', StoredProc.Params[4].Name);
   CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
   CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
@@ -1232,7 +1238,7 @@ begin
   StoredProc.ParamByName('P2').AsInteger := 100;
   StoredProc.ParamByName('P3').AsString := 'a';
   StoredProc.ExecProc;
-  {$IFDEF FPC}
+  {$IF defined(FPC) and defined(DISABLE_ZPARAM)}
   if (StoredProc.ParamByName('P4').DataType = ftFmtBCD) then
     try
       CheckEquals(600, StoredProc.ParamByName('P4').AsInteger);
@@ -1241,20 +1247,28 @@ begin
       CheckEquals('600', StoredProc.ParamByName('P4').AsString, 'P4 is different');
     end
   else
-  {$ENDIF}
+  {$IFEND}
   CheckEquals(600, StoredProc.ParamByName('P4').AsInteger);
   CheckEquals('aa', StoredProc.ParamByName('P5').AsString);
   CheckEquals(5, StoredProc.Params.Count);
 
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
+{$IFDEF DISABLE_ZPARAM}
+  CheckEquals(ftInteger, StoredProc.Params[0].DataType);
+  CheckEquals(ftInteger, StoredProc.Params[1].DataType);
   {$IFDEF DELPHI14_UP}
-  CheckEquals(ord(ftWideString), ord(StoredProc.Params[2].DataType));
+  CheckEquals(ftWideString, StoredProc.Params[2].DataType);
   {$ELSE}
-  CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));
+  CheckEquals(ftString, StoredProc.Params[2].DataType);
   {$ENDIF}
   //CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
   CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
+{$ELSE}
+  CheckEquals(OrdinalDataType, StoredProc.Params[0].DataType);
+  CheckEquals(OrdinalDataType, StoredProc.Params[1].DataType);
+  CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
+  CheckEquals(OrdinalDataType, StoredProc.Params[3].DataType);
+  CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
+{$ENDIF}
 
   StoredProc.Prepare;
   S := 'a';
@@ -1266,7 +1280,7 @@ begin
     StoredProc.Params[2].AsString:= S;
     StoredProc.ExecProc;
     CheckEquals(S+S, StoredProc.ParamByName('P5').AsString);
-    {$IFDEF FPC}
+    {$IF defined(FPC) and defined(DISABLE_ZPARAM)}
     if (StoredProc.ParamByName('P4').DataType = ftFmtBCD) then
       try
         CheckEquals(I*10+P2, StoredProc.ParamByName('P4').AsInteger);
@@ -1275,7 +1289,7 @@ begin
         CheckEquals(IntToStr(I*10+P2), StoredProc.ParamByName('P4').AsString, 'P4 is different');
       end
     else
-    {$ENDIF}
+    {$IFEND}
     CheckEquals(I*10+P2, StoredProc.ParamByName('P4').AsInteger);
     S := S+'a';
     P2 := 100 - I;

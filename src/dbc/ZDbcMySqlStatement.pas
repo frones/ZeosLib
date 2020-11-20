@@ -2055,7 +2055,7 @@ begin
               PD :=  @D;
             end else if VariantType = vtDate
               then PD :=  @TZDateDynArray(Value)[i]
-              else PTS := nil; //raise TypeMismatch
+              else raise CreateUnsupportedParameterTypeException(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stDate);
             MySQLTime^.year := PD^.Year;
             MySQLTime^.month := PD^.Month;
             MySQLTime^.day := PD^.Day;
@@ -2072,7 +2072,7 @@ begin
               PT :=  @T;
             end else if VariantType = vtTime
               then PT :=  @TZTimeDynArray(Value)[i]
-              else PT := nil; //raise TypeMismatch
+              else raise CreateUnsupportedParameterTypeException(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stTime);
             MySQLTime^.hour := PT.Hour;
             MySQLTime^.minute := PT.Minute;
             MySQLTime^.second := PT.Second;
@@ -2088,9 +2088,9 @@ begin
             if VariantType in [vtNull, vtDateTime] then begin
               ZSysUtils.DecodeDateTimeToTimeStamp(TDateTimeDynArray(Value)[i], TS);
               PTS :=  @TS;
-            end else if VariantType = vtTime
+            end else if VariantType = vtTimeStamp
               then PTS :=  @TZTimeStampDynArray(Value)[i]
-              else PTS := nil; //raise TypeMismatch
+              else raise CreateUnsupportedParameterTypeException(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stTimeStamp);
             MySQLTime^.year := PTS^.Year;
             MySQLTime^.month := PTS^.Month;
             MySQLTime^.day := PTS^.Day;

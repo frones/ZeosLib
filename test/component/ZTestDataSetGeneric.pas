@@ -57,7 +57,8 @@ interface
 uses
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
   ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility, ZVariant,
-  ZAbstractRODataset, ZMessages, ZStoredProcedure;
+  ZAbstractRODataset, ZMessages, ZStoredProcedure
+  {$IFNDEF DISABLE_ZPARAM}, Types, ZDbcUtils{$ENDIF};
 
 type
   {** Implements a test case for . }
@@ -155,12 +156,21 @@ type
   end;
   {$ENDIF}
 
+  {$IFNDEF DISABLE_ZPARAM}
+  TZTestBatchDML = class(TZAbstractCompSQLTestCase)
+  private
+    procedure InternalTestArrayBinding(Query: TZQuery; FirstID, ArrayLen, LastFieldIndex: Integer);
+  published
+    procedure TestBatchDMLArrayBindings;
+  end;
+  {$ENDIF DISABLE_ZPARAM}
+
 implementation
 
 uses
 {$IFNDEF VER130BELOW}
   Variants,
-{$ENDIF}
+{$ENDIF} FmtBCD,
   ZEncoding, ZFastCode,
   DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties,
   ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF},
@@ -3091,7 +3101,7 @@ procedure TZInterbaseTestGUIDS.Test_SP_ParamGUIDSetVal;
 begin
   Connection.Properties.Values[DSProps_GUIDFields] := 'G_IN,G_OUT';
   SP.StoredProcName := PROC_NAME;
-  {$IFDEF TEST_TZPARAM}
+  {$IFNDEF DISABLE_ZPARAM}
   SP.Params[0].AsGUID := GuidVal;
   {$ELSE}
     {$IFDEF TPARAM_HAS_ASBYTES}
@@ -3204,9 +3214,140 @@ begin
 end;
 {$ENDIF}
 
+{$IFNDEF DISABLE_ZPARAM}
+{ TZTestBatchDML }
+
+const
+  hl_id_Index             = 0;
+  hl_Boolean_Index        = 1;
+  hl_Byte_Index           = 2;
+  hl_Short_Index          = 3;
+  hl_Integer_Index        = 4;
+  hl_Long_Index           = 5;
+  hl_Float_Index          = 6;
+  hl_Double_Index         = 7;
+  hl_BigDecimal_Index     = 8;
+  hl_String_Index         = 9;
+  hl_Unicode_Index        = 10;
+  hl_Bytes_Index          = 11;
+  hl_Date_Index           = 12;
+  hl_Time_Index           = 13;
+  hl_Timestamp_Index      = 14;
+  hl_GUID_Index           = 15;
+  hl_AsciiStream_Index    = 16;
+  hl_UnicodeStream_Index  = 17;
+  hl_BinaryStream_Index   = 18;
+
+hlTypeArray: array[hl_id_Index..hl_BinaryStream_Index] of TZSQLType = (
+  stInteger,
+  stBoolean,
+  stByte,
+  stSmall,
+  stInteger,
+  stLong,
+  stFloat,
+  stDouble,
+  stCurrency,
+  stString,
+  stUnicodeString,
+  stBytes,
+  stDate,
+  stTime,
+  stTimestamp,
+  stGUID,
+  stAsciiStream,
+  stUnicodeStream,
+  stBinaryStream);
+
+procedure TZTestBatchDML.InternalTestArrayBinding(Query: TZQuery;
+  FirstID, ArrayLen, LastFieldIndex: Integer);
+var
+  I, J: Integer;
+begin
+  CheckNotNull(Query);
+  Query.Params.BatchDMLCount := ArrayLen;
+  for i := 0 to ArrayLen-1 do begin
+    Query.Params[0].AsIntegers[i] := FirstID+I;
+    for J := 1 to LastFieldIndex do
+      case hlTypeArray[j] of
+        stBoolean:      Query.Params[J].AsBooleans[I] := Boolean(Random(1));
+        stByte:         Query.Params[J].AsByteArray[I] := Random(High(Byte));
+        stShort:        Query.Params[J].AsShortInts[I] := Random(High(Byte))+Low(ShortInt);
+        stWord:         Query.Params[J].AsWords[I] := Random(High(Word));
+        stSmall:        Query.Params[J].AsSmallInts[I] := Random(High(Word))+Low(SmallInt);
+        stInteger:      Query.Params[J].AsIntegers[I] := Random(High(Word))+Low(SmallInt);
+        stLongWord:     Query.Params[J].AsCardinals[I] := Random(High(Word));
+        stLong:         Query.Params[J].AsIntegers[I] := Random(High(Word))+Low(SmallInt);
+        stULong:        Query.Params[J].AsCardinals[I] := Random(High(Word));
+        stFloat:        Query.Params[J].AsSingles[I] := RandomFloat(-5000, 5000);
+        stDouble:       Query.Params[J].AsDoubles[I] := RandomFloat(-5000, 5000);
+        stCurrency:     Query.Params[J].AsCurrencys[I] := RandomFloat(-5000, 5000);
+        stBigDecimal:   Query.Params[J].AsFmtBCDs[I] := DoubleToBCD(RandomFloat(-5000, 5000));
+        stTime:         Query.Params[J].AsTimes[I] := Now;
+        stDate:         Query.Params[J].AsDates[I] := Now;
+        stTimeStamp:    Query.Params[J].AsDateTimes[I] := Now;
+        stGUID:         Query.Params[J].AsGUIDs[i] := RandomGUID;
+        stString:       Query.Params[J].AsStrings[i] := RandomStr(Random(99)+1);
+        stUnicodeString:Query.Params[J].AsUnicodeStrings[i] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(RandomStr(Random(99)+1));
+        stBytes:        Query.Params[J].AsBytesArray[i] := RandomBts(ArrayLen);
+        stAsciiStream:  Query.Params[J].AsMemos[i] := RandomStr(Random(99)+1);
+        stUnicodeStream:Query.Params[J].AsUnicodeMemos[i] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(RandomStr(Random(99)+1));
+        stBinaryStream: Query.Params[J].AsBlobs[i] := RandomBts(ArrayLen);
+      end;
+  end;
+  Query.ExecSQL;
+  CheckEquals(ArrayLen, Query.RowsAffected);
+end;
+
+const
+  LastFieldIndices: array[0..2] of Integer = (hl_Unicode_Index, hl_Date_Index, hl_BinaryStream_Index);
+  HighLoadFields: array[hl_id_Index..hl_BinaryStream_Index] of String = (
+    'hl_id', 'stBoolean', 'stByte', 'stShort', 'stInteger', 'stLong', ''+
+      'stFloat', 'stDouble', 'stBigDecimal', 'stString', 'stUnicodeString', 'stBytes',
+      'stDate', 'stTime', 'stTimestamp', 'stGUID', 'stAsciiStream', 'stUnicodeStream',
+      'stBinaryStream');
+
+procedure TZTestBatchDML.TestBatchDMLArrayBindings;
+var
+  Query:  TZQuery;
+  I, j: Integer;
+  SQL: String;
+begin
+  Connection.Connect;
+  Check(Connection.Connected);
+  if Connection.DbcConnection.GetMetadata.GetDatabaseInfo.SupportsArrayBindings then begin
+    Query := CreateQuery;
+    try
+      for i := low(LastFieldIndices) to high(LastFieldIndices) do begin
+        Connection.ExecuteDirect('delete from high_load');
+        SQL := 'insert into high_load(';
+        for j := hl_id_Index to LastFieldIndices[i] do
+          SQL := SQL+HighLoadFields[j]+',';
+        SQL[Length(SQL)] := ')';
+        SQL := SQL + ' values (';
+        for j := hl_id_Index to LastFieldIndices[i] do
+          SQL := SQL+':'+SysUtils.IntToStr(j+1)+',';
+        SQL[Length(SQL)] := ')';
+        Query.SQL.Text := SQL;
+        InternalTestArrayBinding(Query, 0, 50, LastFieldIndices[i]);
+        InternalTestArrayBinding(Query, 50, 20, LastFieldIndices[i]);
+        InternalTestArrayBinding(Query, 70, 10, LastFieldIndices[i]);
+        Query.Params.BatchDMLCount := 0;
+      end;
+    finally
+      FreeAndNil(Query);
+      Connection.ExecuteDirect('delete from high_load');
+    end;
+  end;
+end;
+
+{$ENDIF DISABLE_ZPARAM}
 initialization
   RegisterTest('component',TZGenericTestDataSet.Suite);
-  {$IFDEF ENABLE_INTERBASE}
+  {$IF defined(ENABLE_INTERBASE) or defined(ENABLE_FIREBIRD)}
   RegisterTest('component',TZInterbaseTestGUIDS.Suite);
+  {$IFEND}
+  {$IFNDEF DISABLE_ZPARAM}
+  RegisterTest('component', TZTestBatchDML.Suite);
   {$ENDIF}
 end.

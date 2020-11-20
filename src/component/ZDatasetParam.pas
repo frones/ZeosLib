@@ -53,6 +53,8 @@ unit ZDatasetParam;
 interface
 
 {$I ZComponent.inc}
+
+{$IFNDEF DISABLE_ZPARAM}
 uses
   Classes, DB, FmtBCD, {$IFDEF WITH_SqlTimSt_UNIT}SqlTimSt,{$ENDIF} Types,
   {$IFDEF WITH_INLINE_ANSICOMPARETEXT}Windows,{$ENDIF}
@@ -101,6 +103,8 @@ type
     FSQLDataType: TZSQLType; //uncoupled datatype contained in FData
     FData: TZParamValue;
     FConSettings: PZConSettings;
+    procedure SetIZBlob(const Value: IZBlob);
+    procedure SetIZCLob(const Value: IZCLob);
     property VariantType: TZVariantType read FZVariantType;
   private
     {$IFDEF AUTOREFCOUNT}[Weak]{$ENDIF}FParamRef: TZParam;
@@ -850,6 +854,10 @@ type
     /// <summary>Represents an array of UInt64 values.</summary>
     property AsUInt64s[Index: Cardinal]: UInt64 read GetAsUInt64s write SetAsUInt64s;
     /// <summary>Specifies the value of a TZParam when it represents a UnicodeString.</summary>
+    property AsUnicodeMemo: UnicodeString read GetAsUnicodeString write SetAsWideMemo;
+    /// <summary>Represents an array of UnicodeString values.</summary>
+    property AsUnicodeMemos[Index: Cardinal]: UnicodeString read GetAsUnicodeStrings write SetAsWideMemos;
+    /// <summary>Specifies the value of a TZParam when it represents a UnicodeString.</summary>
     property AsUnicodeString: UnicodeString read GetAsUnicodeString write SetAsUnicodeString;
     /// <summary>Represents an array of UnicodeString values.</summary>
     property AsUnicodeStrings[Index: Cardinal]: UnicodeString read GetAsUnicodeStrings write SetAsUnicodeStrings;
@@ -976,7 +984,9 @@ type
     property BatchDMLCount: Cardinal read FArraySize write SetArraySize;
   end;
 
+{$ENDIF DISABLE_ZPARAM}
 implementation
+{$IFNDEF DISABLE_ZPARAM}
 
 uses TypInfo, {$IFDEF WITH_DBCONSTS} DBConsts {$ELSE} DBConst{$ENDIF}, Math,
   ZSysUtils, ZFastCode, ZEncoding, ZMessages,
@@ -1232,12 +1242,26 @@ begin
 end;
 
 procedure TZParam.AssignTo(Dest: TPersistent);
+  procedure AssignRtlParam;
+  begin
+    With (Dest as TParam) do begin
+      Value := GetAsVariant;
+      DataType := FDataType;
+      ParamType := FParamType;
+      Precision := FPrecision;
+      Size := FSize;
+      NumericScale := FNumericScale;
+      Name := FName;
+      Bound := FBound;
+      NativeStr := FNativeStr;
+    end;
+  end;
 begin
   if Dest is TZParam then
     Dest.Assign(Self)
-  else if Dest is TParam then begin
-
-  end;
+  else if Dest is TParam then
+    AssignRtlParam
+  else inherited;
 end;
 
 procedure TZParam.CheckDataIndex(Value: Integer);
@@ -2800,7 +2824,7 @@ begin
     else
 jmpFail: raise Self.CreateConversionError(FSQLDataType, stString);
   end;
-  FNull := False;
+  TBooleanDynArray(FData.pvDynArray.VIsNullArray)[Index] := False;
 end;
 
 procedure TZParam.InternalSetAsUnicodeString(const Value: UnicodeString);
@@ -3156,7 +3180,7 @@ var SQLType: TZSQLType;
     end;
   end;
 begin
-  if Value <> FArraySize then begin
+  if (Value <> FArraySize) or ((Value > 0) and (FData.pvDynArray.VArray = nil)) then begin
     if FArraySize = 0 then begin
       SQLType := FSQLDataType;
       VariantType := FZVariantType
@@ -3164,9 +3188,9 @@ begin
       SQLType := TZSQLType(FData.pvDynArray.VArrayType);
       VariantType := FData.pvDynArray.VArrayVariantType;
     end;
-    if FArraySize = 0
-    then SetIsNull(True)
-    else ResizeDynArray(Value);
+    if FArraySize = 0 then
+      SetIsNull(True);
+    ResizeDynArray(Value);
     if Value = 0 then begin
       FSQLDataType := SQLType;
       FZVariantType := VariantType;
@@ -3176,6 +3200,7 @@ begin
       FData.pvDynArray.VIsNullArrayType := Ord(stBoolean);
       FData.pvDynArray.VIsNullArrayVariantType := vtBoolean;
     end;
+    FArraySize := Value;
   end;
 end;
 
@@ -3229,7 +3254,7 @@ begin
         end;
       else goto jmpFail;
     end;
-    FNull := False;
+    TBooleanDynArray(FData.pvDynArray.VIsNullArray)[Index] := False;
   end else
 jmpFail: raise CreateConversionError(TZSQLType(FData.pvDynArray.VArrayType), stBinaryStream);
 end;
@@ -3409,7 +3434,7 @@ begin
       stBigDecimal: ScaledOrdinal2BCD(Value, 0, TBCDDynArray(FData.pvDynArray.VArray)[Index], False);
       else CardinalToString;
     end;
-    FNull := False;
+    TBooleanDynArray(FData.pvDynArray.VIsNullArray)[Index] := False;
   end else raise CreateConversionError(TZSQLType(FData.pvDynArray.VArrayType), stLongWord);
 end;
 
@@ -3633,7 +3658,7 @@ begin
       stString, stAsciiStream: ValueToRawString;
       else ValueToUTF16String;
     end;
-    FNull := False;
+    TBooleanDynArray(FData.pvDynArray.VIsNullArray)[Index] := False;
   end else raise CreateConversionError(TZSQLType(FData.pvDynArray.VArrayType), stDouble);
 end;
 
@@ -3810,7 +3835,7 @@ begin
       stBinaryStream: ValueToBlob;
       else ValueToUTF16String;
     end;
-    FNull := False;
+    TBooleanDynArray(FData.pvDynArray.VIsNullArray)[Index] := False;
   end else raise CreateConversionError(TZSQLType(FData.pvDynArray.VArrayType), stGUID);
 end;
 
@@ -3875,7 +3900,7 @@ begin
       stBigDecimal: ScaledOrdinal2BCD(Value, 0, TBCDDynArray(FData.pvDynArray.VArray)[Index]);
       else IntegerToString;
     end;
-    FNull := False;
+    TBooleanDynArray(FData.pvDynArray.VIsNullArray)[Index] := False;
   end else raise CreateConversionError(TZSQLType(FData.pvDynArray.VArrayType), stLong);
 end;
 
@@ -3940,7 +3965,7 @@ begin
       stBigDecimal: ScaledOrdinal2BCD(Value, 0, TBCDDynArray(FData.pvDynArray.VArray)[Index]);
       else IntegerToString;
     end;
-    FNull := False;
+    TBooleanDynArray(FData.pvDynArray.VIsNullArray)[Index] := False;
   end else raise CreateConversionError(TZSQLType(FData.pvDynArray.VArrayType), stInteger);
 end;
 
@@ -4233,7 +4258,7 @@ begin
       stBigDecimal: ScaledOrdinal2BCD(Value, 0, TBCDDynArray(FData.pvDynArray.VArray)[Index], False);
       else IntegerToString;
     end;
-    FNull := False;
+    TBooleanDynArray(FData.pvDynArray.VIsNullArray)[Index] := False;
   end else raise CreateConversionError(FSQLDataType, stULong);
 end;
 
@@ -4311,8 +4336,10 @@ var vt: TVarType;
     SetAsZTimestamp(zTS);
   end;
   {$ENDIF}
+var SQLType: TZSQLType;
 begin
   CheckDataIndex(-1);
+  SQLType := FSQLType;
   vt := TVarData(Value).VType;
   case vt of
     varEmpty, varNull: SetIsNull(True);
@@ -4373,6 +4400,9 @@ begin
             AsTimeStampOffset(Value)
           else {$ENDIF}raise EVariantError.Create('Unkown Variant type');
   end;
+  if SQLType <> FSQLType then //mimic the TParam behavior
+    SetSQLType(SQLType);
+
 end;
 
 procedure TZParam.SetAsWideMemo(const Value: UnicodeString);
@@ -4796,13 +4826,33 @@ begin
   end;
 end;
 
+procedure TZParam.SetIZBlob(const Value: IZBlob);
+begin
+  CheckDataIndex(-1);
+  SetSQLDataType(stBinaryStream);
+  IZBlob(FData.pvPointer) := Value;
+  SetIsNull((Value = nil) or (Value.IsEmpty));
+end;
+
+procedure TZParam.SetIZCLob(const Value: IZCLob);
+var ASQLType: TZSQLType;
+begin
+  CheckDataIndex(-1);
+  TrySetConnection;
+  if (FConSettings <> nil) and (FConSettings.ClientCodePage.Encoding = ceUTF16)
+  then ASQLType := stUnicodeStream
+  else ASQLType := stAsciiStream;
+  SetSQLDataType(ASQLType);
+  IZClob(FData.pvPointer) := Value;
+  SetIsNull((Value = nil) or (Value.IsEmpty));
+end;
+
 procedure TZParam.SetSQLDataType(Value: TZSQLType);
 begin
   if FSQLDataType <> Value then begin
     if (FArraySize = 0) or (FSQLDataType = stUnknown) then begin
-      if (Ord(FSQLDataType) >= Ord(stString)) or (Ord(Value) >= Ord(stString)) then
+      if (Ord(FSQLDataType) >= Ord(stString)) or ((Ord(Value) >= Ord(stString)) and (FArraySize = 0)) then
         SetIsNull(True);
-      FSQLDataType := Value;
       case Value of
         stDate: FZVariantType := vtDate;
         stTime: FZVariantType := vtTime;
@@ -4812,14 +4862,16 @@ begin
       end;
       if FSQLDataType = stUnknown then begin
         FSQLDataType := Value;
-        if (FArraySize > 0) then
+        if (FArraySize > 0) then begin
+          TZSQLType(FData.pvDynArray.VArrayType) := FSQLDataType;
+          FData.pvDynArray.VArrayVariantType := FZVariantType;
           SetArraySize(FArraySize);
+        end;
       end;
-      if FSQLType = stUnknown then begin
-        FSQLType := Value;
-        FDataType := ConvertDbcToDatasetType(Value, GetDefaultCharacterFieldType(Self),
+      FSQLDataType := Value;
+      FSQLType := Value;
+      FDataType := ConvertDbcToDatasetType(Value, GetDefaultCharacterFieldType(Self),
           Math.Max(FSize, Integer((Value in [stString..stBytes]) and (FSize = 0))));
-      end;
     end else
       raise EZDatabaseError.Create('Fehlermeldung');
   end;
@@ -4932,9 +4984,17 @@ begin
 end;
 
 procedure TZParams.AssignTo(Dest: TPersistent);
+var I: Integer;
+  RtlParam: TParam;
+  SQLParam: TZParam;
 begin
-  inherited;
-
+  if (Dest is TParams) then with Dest as TParams do begin
+    for i := 0 to Count -1 do begin
+      SQLParam := GetItem(i);
+      RtlParam := Items[i];
+      SQLParam.AssignTo(RtlParam);
+    end;
+  end else inherited;
 end;
 
 procedure TZParams.AssignValues(Value: TZParams);
@@ -5093,8 +5153,7 @@ var
   Bool: Boolean;
 begin
   Clear;
-  with Stream do
-  begin
+  with Stream do begin
     ReadBuffer(Version, SizeOf(Version));
     if Version > 2 then //DatabaseError(SInvalidVersion);
     NumItems := 0;
@@ -5141,8 +5200,11 @@ procedure TZParams.SetArraySize(Value: Cardinal);
 var
   I: Integer;
 begin
-  for i := 0 to Count -1 do
-    TZParam(Items[i]).SetArraySize(Value);
+  if Value <> FArraySize then begin
+    for i := 0 to Count -1 do
+      TZParam(Items[i]).SetArraySize(Value);
+    FArraySize := Value;
+  end;
 end;
 
 procedure TZParams.SetItem(Index: Integer; Value: TZParam);
@@ -5176,4 +5238,6 @@ begin
   inherited Update(Item);
 end;
 
+initialization
+{$ENDIF DISABLE_ZPARAM}
 end.

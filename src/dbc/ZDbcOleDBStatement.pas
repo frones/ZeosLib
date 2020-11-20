@@ -810,7 +810,7 @@ var
     TempLob := TInterfaceDynArray(ZData)[J] as IZBLob;
     TempLob.SetCodePageTo(zCP_UTF16);
     PPointer(Data)^:= TempLob.GetPWideChar(fUniTemp, Len);
-    PLen^ := Len;
+    PLen^ := Len shl 1;
   end;
 label W_Len, WStr;
 begin
@@ -950,8 +950,14 @@ begin
                           if (ZArray.VArrayVariantType in [vtNull, vtDateTime])
                           then DecodeDateTimeToTimeStamp(TDateTimeDynArray(ZData)[J], TS)
                           else begin
-                            DateTimeTemp := ArrayValueToDatetime(ZArray, J, ConSettings^.WriteFormatSettings);
-                            DecodeDateTimeToTimeStamp(DateTimeTemp, TS);
+                            if (ZArray.VArrayVariantType = vtDate) then
+                              TimeStampFromDate(TZDateDynArray(ZData)[J], TS)
+                            else if (ZArray.VArrayVariantType = vtTime) then
+                              TimeStampFromTime(TZTimeDynArray(ZData)[J], TS)
+                            else begin
+                              DateTimeTemp := ArrayValueToDatetime(ZArray, J, ConSettings^.WriteFormatSettings);
+                              DecodeDateTimeToTimeStamp(DateTimeTemp, TS);
+                            end;
                           end;
                         end;
                         if wType = DBTYPE_DBTIMESTAMP then begin

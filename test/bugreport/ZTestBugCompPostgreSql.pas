@@ -1507,6 +1507,7 @@ var
 begin
   Query := CreateQuery;
   try
+    Query.SQL.BeginUpdate;
     Query.SQL.Append('select X.* from (');
     Query.SQL.Append('  SELECT cast(1 as integer) AS T');
     Query.SQL.Append('  FROM clients c');
@@ -1517,6 +1518,7 @@ begin
     Query.SQL.Append('  WHERE cast(:USERID as varchar(50)) in (c.manager1, c.manager2) or cast(:CanSeeAll as char(1)) = ''y''');
     Query.SQL.Append(') as X');
     Query.SQL.Append('where T >= :MinT or T <= :MaxT');
+    Query.SQL.EndUpdate;
     Query.ParamByName('USERID').AsString := '1';
     Query.ParamByName('CanSeeAll').AsString := 'y';
     Query.ParamByName('MinT').AsInteger := 1;

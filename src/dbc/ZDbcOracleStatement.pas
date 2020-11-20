@@ -1399,7 +1399,7 @@ label bind_direct;
   {$R-}
   procedure SetLobs;
   var I: Integer;
-    Lob: IZBLob;
+    Lob: IZLob;
     OCIlob: IZOracleLob;
     OraLobs: TInterfaceDynArray;
     Blob: IZBlob;
@@ -1418,8 +1418,8 @@ label bind_direct;
       for i := 0 to ArrayLen -1 do
         if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZLob, Lob) and not Lob.IsEmpty and
             Supports(Lob, IZBlob, Blob) and not Supports(Lob, IZOracleLob, OCILob) then begin
-write_lob:OciLob := TZOracleBlob.CreateFromBlob(Blob, nil, FOracleConnection, FOpenLobStreams);
-          PPOCIDescriptor(PAnsiChar(Bind.valuep)+SizeOf(Pointer)*I)^ := OciLob.GetLobLocator;
+          OciLob := TZOracleBlob.CreateFromBlob(Blob, nil, FOracleConnection, FOpenLobStreams);
+write_lob:PPOCIDescriptor(PAnsiChar(Bind.valuep)+SizeOf(Pointer)*I)^ := OciLob.GetLobLocator;
           OraLobs[i] := OciLob; //destroy old interface or replace it
         {$R-}
           Bind.indp[i] := 0;
@@ -1430,7 +1430,7 @@ write_lob:OciLob := TZOracleBlob.CreateFromBlob(Blob, nil, FOracleConnection, FO
       if (Bind.dty <> SQLT_CLOB) or (Bind.value_sz <> SizeOf(POCIDescriptor)) or (Bind.curelen <> ArrayLen) then
         InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(POCIDescriptor));
       for i := 0 to ArrayLen -1 do
-        if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZBlob, Lob) and not Lob.IsEmpty then begin
+        if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZLob, Lob) and not Lob.IsEmpty then begin
           if Supports(Lob, IZCLob, CLob) then
             if (ConSettings^.ClientCodePage.ID = OCI_UTF16ID)
             then CLob.SetCodePageTo(zCP_UTF16)
@@ -1438,10 +1438,9 @@ write_lob:OciLob := TZOracleBlob.CreateFromBlob(Blob, nil, FOracleConnection, FO
           else raise CreateConversionError(ParameterIndex, stBinaryStream, SQLType);
           if not Supports(Lob, IZOracleLob, OCILob) then begin
             OciLob := TZOracleClob.CreateFromClob(Clob, nil, SQLCS_IMPLICIT, 0, FOracleConnection, FOpenLobStreams);
-            PPOCIDescriptor(PAnsiChar(Bind.valuep)+SizeOf(Pointer)*I)^ := OciLob.GetLobLocator;
-            TInterfaceDynArray(Value)[I] := CLob;
+            //PPOCIDescriptor(PAnsiChar(Bind.valuep)+SizeOf(Pointer)*I)^ := OciLob.GetLobLocator;
+            //TInterfaceDynArray(Value)[I] := CLob;
           end;
-
           goto write_lob;
         end else
           Bind.indp[i] := -1;
@@ -1692,7 +1691,10 @@ bind_direct:
             PD := @D;
           end else if VariantType = vtDate then
             PD := @TZDateDynArray(Value)[I]
-          else begin
+          else if VariantType = vtTimeStamp then begin
+            DateFromTimeStamp(TZTimestampDynArray(Value)[I], D);
+            PD := @D
+          end else begin
             DT := ArrayValueToDate(BindList[ParameterIndex].Value, I, ConSettings^.WriteFormatSettings);
             DecodeDateTimeToDate(DT, D);
             PD := @D;
@@ -1704,7 +1706,7 @@ bind_direct:
           OraDate.Day   := PD^.Day;
         end;
       end;
-    stTime, stTimeStamp: begin //msec precision -> need a descriptor
+    stTime, stTimeStamp: begin //nsec precision -> need a descriptor
         if (Bind.dty <> SQLT_TIMESTAMP) or (Bind.value_sz <> SizeOf(POCIDescriptor)) or (Bind.curelen <> ArrayLen) then
           InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(SizeOf(POCIDescriptor)));
         for i := 0 to ArrayLen -1 do begin
@@ -1716,6 +1718,8 @@ bind_direct:
               DecodeDateTimeToTimeStamp(TDateTimeDynArray(Value)[i], TS)
             else if VariantType = vtTime then
               ZSysUtils.TimeStampFromTime(TZTimeDynArray(Value)[i], TS)
+            else if VariantType = vtDate then
+              ZSysUtils.TimeStampFromDate(TZDateDynArray(Value)[i], TS)
             else begin
               DT := ArrayValueToDatetime(BindList[ParameterIndex].Value, I, ConSettings^.WriteFormatSettings);
               DecodeDateTimeToTimeStamp(DT, TS);

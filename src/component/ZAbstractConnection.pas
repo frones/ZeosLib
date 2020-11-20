@@ -362,6 +362,7 @@ type
     FAfterRollback: TNotifyEvent;
     FConnection: TZAbstractConnection;
     FTransaction: IZTransaction;
+    FTxnLevel: Integer;
     function GetActive: Boolean;
     function GetAutoCommit: Boolean;
     function GetDataSetCount: Integer;
@@ -1684,6 +1685,11 @@ begin
       TZAbstractDataset(FDatasets[i]).Transaction := nil;
   FreeAndNil(FParams);
   FreeAndNil(FDatasets);
+  if (FTransaction <> nil) then begin
+    with GetTransactionManager do
+      if IsTransactionValid(FTransaction) then ReleaseTransaction(FTransaction);
+    FTransaction := nil;
+  end;
   inherited BeforeDestruction;
 end;
 
@@ -1698,7 +1704,7 @@ var I: Integer;
     Row: NativeInt;
     B: Boolean;
 begin
-  if (FTransaction = nil) then
+  if (FTransaction = nil) or FTransaction.GetAutoCommit then
     raise EZDatabaseError.Create(SInvalidOpInAutoCommit);
   if Assigned(FBeforeCommit) then
     FBeforeCommit(Self);
@@ -1863,12 +1869,19 @@ begin
 end;
 
 function TZAbstractTransaction.StartTransaction: Integer;
+var AutoCommit: Boolean;
 begin
-  if not GetActive then
+  AutoCommit := FAutoCommit;
+  if not GetActive then try
+    FAutoCommit := False;
     FTransaction := GetIZTransaction;
+  finally
+    FAutoCommit := AutoCommit;
+  end;
   if Assigned(FBeforeStartTransaction) then
     FBeforeStartTransaction(Self);
   Result := FTransaction.StartTransaction;
+  FTxnLevel := Result;
   if Assigned(FAfterStartTransaction) then
     FAfterStartTransaction(Self);
 end;

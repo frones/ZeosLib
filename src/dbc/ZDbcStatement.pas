@@ -4811,17 +4811,55 @@ begin
           ScaledOrdinal2BCD(PInt64(@Value)^, 0, fBCDTemp);
           BindList.Put(ParameterIndex, fBCDTemp);
         end;
-      else FBindList.Put(ParameterIndex, stCurrency, P8Bytes(@Value));;
+      else FBindList.Put(ParameterIndex, stCurrency, P8Bytes(@Value));
     end;
-  end else FBindList.Put(ParameterIndex, stCurrency, P8Bytes(@Value));;
+  end else FBindList.Put(ParameterIndex, stCurrency, P8Bytes(@Value));
 end;
 
 procedure TZAbstractCallableStatement.SetDate(ParameterIndex: Integer;
   const Value: TZDate);
+var Bind: PZBindValue;
+    DT: TDateTime;
+    procedure SetAsRaw;
+    var L: NativeUInt absolute DT;
+      buf: array[0..ZSysUtils.cMaxDateLen] of Ansichar;
+      tmp: RawByteString;
+    begin
+      with Value do
+        L := DateToRaw(Year, Month, Day, @buf[0], ConSettings.WriteFormatSettings.DateFormat, False, IsNegative);
+      tmp := '';
+      ZSetString(PAnsiChar(@buf[0]), L, tmp{$IFDEF WITH_RAWBYTESTRING}, ConSettings.ClientCodePage.CP{$ENDIF});
+      IZPreparedStatement(FWeakIZPreparedStatementPtr).SetRawByteString(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, tmp);
+    end;
+    procedure SetAsUni;
+    var L: NativeUInt absolute DT;
+      buf: array[0..ZSysUtils.cMaxDateLen] of Widechar;
+      tmp: UnicodeString;
+    begin
+      with Value do
+        L := DateToUni(Year, Month, Day, @buf[0], ConSettings.WriteFormatSettings.DateFormat, False, IsNegative);
+      System.SetString(tmp, PWideChar(@buf[0]), L);
+      IZPreparedStatement(FWeakIZPreparedStatementPtr).SetUnicodeString(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, tmp);
+    end;
+label jmpStr;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
-  FBindList.Put(ParameterIndex, Value);
+  Bind := FBindList[ParameterIndex];
+  {Registered Param ? }
+  if (Bind.SQLType <> stDate) and (Bind.ParamType <> pctUnknown) then begin
+    if (Bind.ParamType = pctOut) and not Connection.UseMetadata then
+      Bind.ParamType := pctInOut;
+    case Bind.SQLType of
+      stBoolean..stBigDecimal: if TryDateToDateTime(Value, DT) then
+                             SetDouble(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, DT)
+                            else goto jmpStr;
+      else
+jmpStr: if ConSettings.ClientCodePage.Encoding = ceUTF16
+          then SetAsUni
+          else SetAsRaw;
+    end;
+  end else FBindList.Put(ParameterIndex, Value);
 end;
 
 procedure TZAbstractCallableStatement.SetDouble(ParameterIndex: Integer;
@@ -4952,18 +4990,94 @@ end;
 
 procedure TZAbstractCallableStatement.SetTime(ParameterIndex: Integer;
   const Value: TZTime);
+var Bind: PZBindValue;
+    DT: TDateTime;
+    procedure SetAsRaw;
+    var L: NativeUInt absolute DT;
+      buf: array[0..ZSysUtils.cMaxTimeLen] of Ansichar;
+      tmp: RawByteString;
+    begin
+      with Value do
+        L := TimeToRaw(Hour, Minute, Second, Fractions, @buf[0], ConSettings.WriteFormatSettings.DateFormat, False, IsNegative);
+      tmp := '';
+      ZSetString(PAnsiChar(@buf[0]), L, tmp{$IFDEF WITH_RAWBYTESTRING}, ConSettings.ClientCodePage.CP{$ENDIF});
+      IZPreparedStatement(FWeakIZPreparedStatementPtr).SetRawByteString(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, tmp);
+    end;
+    procedure SetAsUni;
+    var L: NativeUInt absolute DT;
+      buf: array[0..ZSysUtils.cMaxTimeLen] of Widechar;
+      tmp: UnicodeString;
+    begin
+      with Value do
+        L := TimeToUni(Hour, Minute, Second, Fractions, @buf[0], ConSettings.WriteFormatSettings.DateFormat, False, IsNegative);
+      System.SetString(tmp, PWideChar(@buf[0]), L);
+      IZPreparedStatement(FWeakIZPreparedStatementPtr).SetUnicodeString(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, tmp);
+    end;
+label jmpStr;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
-  FBindList.Put(ParameterIndex, Value);
+  Bind := FBindList[ParameterIndex];
+  {Registered Param ? }
+  if (Bind.SQLType <> stTime) and (Bind.ParamType <> pctUnknown) then begin
+    if (Bind.ParamType = pctOut) and not Connection.UseMetadata then
+      Bind.ParamType := pctInOut;
+    case Bind.SQLType of
+      stBoolean..stBigDecimal: if TryTimeToDateTime(Value, DT) then
+                             SetDouble(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, DT)
+                            else goto jmpStr;
+      else
+jmpStr: if ConSettings.ClientCodePage.Encoding = ceUTF16
+          then SetAsUni
+          else SetAsRaw;
+    end;
+  end else FBindList.Put(ParameterIndex, Value);
 end;
 
 procedure TZAbstractCallableStatement.SetTimestamp(ParameterIndex: Integer;
   const Value: TZTimeStamp);
+var Bind: PZBindValue;
+    DT: TDateTime;
+    procedure SetAsRaw;
+    var L: NativeUInt absolute DT;
+      buf: array[0..ZSysUtils.cMaxTimeStampLen] of Ansichar;
+      tmp: RawByteString;
+    begin
+      with Value do
+        L := DateTimeToRaw(Year, Month, Day, Hour, Minute, Second, Fractions, @buf[0], ConSettings.WriteFormatSettings.DateFormat, False, IsNegative);
+      tmp := '';
+      ZSetString(PAnsiChar(@buf[0]), L, tmp{$IFDEF WITH_RAWBYTESTRING}, ConSettings.ClientCodePage.CP{$ENDIF});
+      IZPreparedStatement(FWeakIZPreparedStatementPtr).SetRawByteString(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, tmp);
+    end;
+    procedure SetAsUni;
+    var L: NativeUInt absolute DT;
+      buf: array[0..ZSysUtils.cMaxTimeStampLen] of Widechar;
+      tmp: UnicodeString;
+    begin
+      with Value do
+        L := DateTimeToUni(Year, Month, Day, Hour, Minute, Second, Fractions, @buf[0], ConSettings.WriteFormatSettings.DateFormat, False, IsNegative);
+      System.SetString(tmp, PWideChar(@buf[0]), L);
+      IZPreparedStatement(FWeakIZPreparedStatementPtr).SetUnicodeString(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, tmp);
+    end;
+label jmpStr;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
-  FBindList.Put(ParameterIndex, Value);
+  Bind := FBindList[ParameterIndex];
+  {Registered Param ? }
+  if (Bind.SQLType <> stTimestamp) and (Bind.ParamType <> pctUnknown) then begin
+    if (Bind.ParamType = pctOut) and not Connection.UseMetadata then
+      Bind.ParamType := pctInOut;
+    case Bind.SQLType of
+      stBoolean..stBigDecimal: if TryTimestampToDateTime(Value, DT) then
+                             SetDouble(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, DT)
+                            else goto jmpStr;
+      else
+jmpStr: if ConSettings.ClientCodePage.Encoding = ceUTF16
+          then SetAsUni
+          else SetAsRaw;
+    end;
+  end else FBindList.Put(ParameterIndex, Value);
 end;
 
 {**

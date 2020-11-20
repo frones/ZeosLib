@@ -609,7 +609,7 @@ begin
     dtE := dtE+EncodeTime(8,30,45,0);
     dtA := Query.Fields[0].AsDateTime;
     CheckEqualsDate(dtE, dtA, [dpYear, dpMonth, dpDay, dpHour, dpMin, dpSec], 'Should be "2020-01-01 08:30:45" ');
-    CheckEquals(query.Fields[0].AsString, DateTimeToStr(dtE{$IFDEF WITH_FORMATSETTINGS}, FormatSettings{$ENDIF}), 'Should be "2020-01-01 08:30:45" ');
+    CheckEquals(DateTimeToStr(dtE{$IFDEF WITH_FORMATSETTINGS}, FormatSettings{$ENDIF}), query.Fields[0].AsString, 'Should be "2020-01-01 08:30:45" ');
     Query.Next;
     CheckFalse(Query.Eof);
     dtA := Query.Fields[0].AsDateTime;

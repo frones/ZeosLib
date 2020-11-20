@@ -95,7 +95,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  {$IFDEF TEST_TZPARAM}ZDatasetParam,{$ENDIF}
+  {$IFNDEF DISABLE_ZPARAM}ZDatasetParam,{$ENDIF}
   ZTestCase, ZSysUtils, ZEncoding, ZConnection;
 
 { ZTestCompOracleBugReport }
@@ -258,7 +258,7 @@ end;
 //see https://zeoslib.sourceforge.io/viewtopic.php?f=50&t=128125
 procedure ZTestCompOracleBugReport.TestForum_Topic_128125;
 var Query: TZQuery;
-    Param: {$IFDEF TEST_TZPARAM}TZParam{$ELSE}TParam{$ENDIF};
+    Param: {$IFNDEF DISABLE_ZPARAM}TZParam{$ELSE}TParam{$ENDIF};
 begin
   Query := CreateQuery;
   Check(Query <> nil);

@@ -61,7 +61,7 @@ uses
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ELSE}ZClasses,{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   {$IFDEF MSWINDOWS}Windows, {$ENDIF}
-  {$IFDEF TEST_TZPARAM}ZDatasetParam,{$ENDIF}
+  {$IFNDEF DISABLE_ZPARAM}ZDatasetParam,{$ENDIF}
   ZDbcIntfs, ZDbcCache, ZCompatibility, ZExpression, ZVariant, ZTokenizer,
   ZDbcResultSetMetadata, ZSelectSchema;
 
@@ -278,12 +278,12 @@ function GetTransliterateCodePage(ControlsCodePage: TZControlsCodePage): Word; {
   @param Statement the PrepredStatement where the values have been assigned
   @param Param the TParam where the value is assigned from
 }
-{$IFNDEF TEST_TZPARAM}
-procedure SetStatementParam(Index: Integer;
-  const Statement: IZPreparedStatement; Param: TParam);
-{$ELSE}
+{$IFNDEF DISABLE_ZPARAM}
 procedure SetStatementParam(Index: Integer;
   const Statement: IZPreparedStatement; Param: TZParam);
+{$ELSE}
+procedure SetStatementParam(Index: Integer;
+  const Statement: IZPreparedStatement; Param: TParam);
 {$ENDIF}
 
 const ProcColDbcToDatasetType: array[TZProcedureColumnType] of TParamType =
@@ -1654,7 +1654,61 @@ end;
   @param Statement the PrepredStatement where the values have been assigned
   @param Param the TParam where the value is assigned from
 }
-{$IFNDEF TEST_TZPARAM}
+{$IFNDEF DISABLE_ZPARAM}
+type TZHackParam = class(TZParam);
+procedure SetStatementParam(Index: Integer;
+  const Statement: IZPreparedStatement; Param: TZParam);
+  function CreateUnknownTypeError: EZDatabaseError;
+  begin
+    Result := EZDatabaseError.Create(SUnKnownParamDataType + ' ('+
+      ZFastCode.IntToStr(Ord(Param.DataType))+')');
+      //GetEnumName(TypeInfo(TFieldType), Ord(Param.DataType))+')'); //using Typinfo results in collission with tFloatType ):
+  end;
+begin
+  if TZHackParam(Param).FArraySize = 0 then
+    if Param.IsNull then
+      Statement.SetNull(Index, TZHackParam(Param).SQLType)
+    else case TZHackParam(Param).FSQLDataType of
+      stBoolean:      Statement.SetBoolean(Index, TZHackParam(Param).FData.pvBool);
+      stByte:         Statement.SetByte(Index, TZHackParam(Param).FData.pvByte);
+      stShort:        Statement.SetShort(Index, TZHackParam(Param).FData.pvShortInt);
+      stWord:         Statement.SetWord(Index, TZHackParam(Param).FData.pvWord);
+      stSmall:        Statement.SetSmall(Index, TZHackParam(Param).FData.pvSmallInt);
+      stInteger:      Statement.SetInt(Index, TZHackParam(Param).FData.pvInteger);
+      stLongWord:     Statement.SetUInt(Index, TZHackParam(Param).FData.pvCardinal);
+      stULong:        Statement.SetULong(Index, TZHackParam(Param).FData.pvUInt64);
+      stLong:         Statement.SetLong(Index, TZHackParam(Param).FData.pvInt64);
+      stFloat:        Statement.SetFloat(Index, TZHackParam(Param).FData.pvSingle);
+      stDouble:       Statement.SetDouble(Index, TZHackParam(Param).FData.pvDouble);
+      stCurrency:     Statement.SetCurrency(Index, TZHackParam(Param).FData.pvCurrency);
+      stBigDecimal:   Statement.SetBigDecimal(Index, TZHackParam(Param).FData.pvBCD);
+      stDate:         Statement.SetDate(Index, TZHackParam(Param).FData.pvDate);
+      stTime:         Statement.SetTime(Index, TZHackParam(Param).FData.pvTime);
+      stTimestamp:    Statement.SetTimestamp(Index, TZHackParam(Param).FData.pvTimeStamp);
+      stGUID:         Statement.SetGuid(Index, TZHackParam(Param).FData.pvGUID);
+      stString:       if TZHackParam(Param).VariantType = vtUTF8String then
+                        Statement.SetUTF8String(Index, UTF8String(TZHackParam(Param).FData.pvPointer))
+                      {$IFNDEF NO_ANSISTRING}
+                      else if TZHackParam(Param).VariantType = vtAnsiString then
+                        Statement.SetAnsiString(Index, AnsiString(TZHackParam(Param).FData.pvPointer))
+                      {$ENDIF}
+                      else Statement.SetRawByteString(Index, RawByteString(TZHackParam(Param).FData.pvPointer));
+      stUnicodeString:Statement.SetUnicodeString(Index, UnicodeString(TZHackParam(Param).FData.pvPointer));
+      stBytes:        Statement.SetBytes(Index, TBytes(TZHackParam(Param).FData.pvPointer));
+      stAsciiStream:  Statement.SetBlob(Index, stAsciiStream, IZClob(TZHackParam(Param).FData.pvPointer));
+      stUnicodeStream:Statement.SetBlob(Index, stUnicodeStream, IZClob(TZHackParam(Param).FData.pvPointer));
+      stBinaryStream: Statement.SetBlob(Index, stBinaryStream, IZBlob(TZHackParam(Param).FData.pvPointer));
+      else raise CreateUnknownTypeError;
+    end
+  else begin
+    Statement.SetDataArray(Index, TZHackParam(Param).FData.pvDynArray.VArray,
+      TZSQLType(TZHackParam(Param).FData.pvDynArray.VArrayType),
+      TZHackParam(Param).FData.pvDynArray.VArrayVariantType);
+    Statement.SetNullArray(Index, stBoolean,
+      TZHackParam(Param).FData.pvDynArray.VIsNullArray, vtNull);
+  end;
+end;
+{$ELSE !DISABLE_ZPARAM}
 type THackParam = class(TParam);
 procedure SetStatementParam(Index: Integer;
   const Statement: IZPreparedStatement; Param: TParam);
@@ -1843,61 +1897,7 @@ begin
       raise CreateUnknownTypeError;
   end;
 end;
-{$ELSE TEST_TZPARAM}
-type TZHackParam = class(TZParam);
-procedure SetStatementParam(Index: Integer;
-  const Statement: IZPreparedStatement; Param: TZParam);
-  function CreateUnknownTypeError: EZDatabaseError;
-  begin
-    Result := EZDatabaseError.Create(SUnKnownParamDataType + ' ('+
-      ZFastCode.IntToStr(Ord(Param.DataType))+')');
-      //GetEnumName(TypeInfo(TFieldType), Ord(Param.DataType))+')'); //using Typinfo results in collission with tFloatType ):
-  end;
-begin
-  if TZHackParam(Param).FArraySize = 0 then
-    if Param.IsNull then
-      Statement.SetNull(Index, Param.SQLType)
-    else case TZHackParam(Param).FSQLDataType of
-      stBoolean:      Statement.SetBoolean(Index, TZHackParam(Param).FData.pvBool);
-      stByte:         Statement.SetByte(Index, TZHackParam(Param).FData.pvByte);
-      stShort:        Statement.SetShort(Index, TZHackParam(Param).FData.pvShortInt);
-      stWord:         Statement.SetWord(Index, TZHackParam(Param).FData.pvWord);
-      stSmall:        Statement.SetSmall(Index, TZHackParam(Param).FData.pvSmallInt);
-      stInteger:      Statement.SetInt(Index, TZHackParam(Param).FData.pvInteger);
-      stLongWord:     Statement.SetUInt(Index, TZHackParam(Param).FData.pvCardinal);
-      stULong:        Statement.SetULong(Index, TZHackParam(Param).FData.pvUInt64);
-      stLong:         Statement.SetLong(Index, TZHackParam(Param).FData.pvInt64);
-      stFloat:        Statement.SetFloat(Index, TZHackParam(Param).FData.pvSingle);
-      stDouble:       Statement.SetDouble(Index, TZHackParam(Param).FData.pvDouble);
-      stCurrency:     Statement.SetCurrency(Index, TZHackParam(Param).FData.pvCurrency);
-      stBigDecimal:   Statement.SetBigDecimal(Index, TZHackParam(Param).FData.pvBCD);
-      stDate:         Statement.SetDate(Index, TZHackParam(Param).FData.pvDate);
-      stTime:         Statement.SetTime(Index, TZHackParam(Param).FData.pvTime);
-      stTimestamp:    Statement.SetTimestamp(Index, TZHackParam(Param).FData.pvTimeStamp);
-      stGUID:         Statement.SetGuid(Index, TZHackParam(Param).FData.pvGUID);
-      stString:       if TZHackParam(Param).VariantType = vtUTF8String then
-                        Statement.SetUTF8String(Index, UTF8String(TZHackParam(Param).FData.pvPointer))
-                      {$IFNDEF NO_ANSISTRING}
-                      else if TZHackParam(Param).VariantType = vtAnsiString then
-                        Statement.SetAnsiString(Index, AnsiString(TZHackParam(Param).FData.pvPointer))
-                      {$ENDIF}
-                      else Statement.SetRawByteString(Index, RawByteString(TZHackParam(Param).FData.pvPointer));
-      stUnicodeString:Statement.SetUnicodeString(Index, UnicodeString(TZHackParam(Param).FData.pvPointer));
-      stBytes:        Statement.SetBytes(Index, TBytes(TZHackParam(Param).FData.pvPointer));
-      stAsciiStream:  Statement.SetBlob(Index, stAsciiStream, IZClob(TZHackParam(Param).FData.pvPointer));
-      stUnicodeStream:Statement.SetBlob(Index, stUnicodeStream, IZClob(TZHackParam(Param).FData.pvPointer));
-      stBinaryStream: Statement.SetBlob(Index, stBinaryStream, IZBlob(TZHackParam(Param).FData.pvPointer));
-      else raise CreateUnknownTypeError;
-    end
-  else begin
-    Statement.SetDataArray(Index, TZHackParam(Param).FData.pvDynArray.VArray,
-      TZSQLType(TZHackParam(Param).FData.pvDynArray.VArrayType),
-      TZHackParam(Param).FData.pvDynArray.VArrayVariantType);
-    Statement.SetNullArray(Index, stBoolean,
-      TZHackParam(Param).FData.pvDynArray.VIsNullArray, vtNull);
-  end;
-end;
-{$ENDIF TEST_TZPARAM}
+{$ENDIF DISABLE_ZPARAM}
 
 function ConvertAsFractionFormat(const Frmt: String; Scale: Integer;
   ReplaceFractions: Boolean; out FractionLen: Integer): String;

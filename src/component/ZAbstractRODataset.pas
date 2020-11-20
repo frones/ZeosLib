@@ -49,6 +49,17 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
+{
+  constributor(s):
+  bangfauzan
+  EgonHugeist
+  fduenas
+  FOS
+  Mark Ford
+  Mark Deams
+  Patyi
+}
+
 unit ZAbstractRODataset;
 
 interface
@@ -64,7 +75,7 @@ uses
   ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings, ZCompatibility, ZExpression,
   ZDbcCache, ZDbcCachedResultSet, ZDatasetUtils, ZClasses
   {$IFNDEF NO_UNIT_CONTNRS},Contnrs{$ENDIF}
-  {$IFDEF TEST_TZPARAM},ZDatasetParam{$ENDIF}
+  {$IFNDEF DISABLE_ZPARAM},ZDatasetParam{$ENDIF}
   {$IFDEF WITH_GENERIC_TLISTTFIELD}, Generics.Collections{$ENDIF};
 
 type
@@ -81,7 +92,8 @@ type
 
   TGetCalcFieldsParamType = {$IFDEF WITH_GETCALCFIELDS_TRECBUF}TRecBuf{$ELSE}TRecordBuffer{$ENDIF};
 
-  TSortType = (stAscending, stDescending, stIgnored);   {bangfauzan addition}
+  /// <author>bangfauzan</author>
+  TSortType = (stAscending, stDescending, stIgnored);
 
   {** Options for dataset. }
   TZDatasetOption = ({$IFNDEF NO_TDATASET_TRANSLATE}doOemTranslate, {$ENDIF}
@@ -154,11 +166,11 @@ type
     FDisableZFields: Boolean;
 
     FRequestLive: Boolean;
-    FFetchRow: integer;    // added by Patyi
+    FFetchRow: integer;
 
     FSQL: TZSQLStrings;
-    FParams: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF};
-    {$IFDEF TEST_TZPARAM}FCompilerParams: TParams;{$ENDIF} //required for IProvider
+    FParams: {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF};
+    {$IFNDEF DISABLE_ZPARAM}FCompilerParams: TParams;{$ENDIF} //required for IProvider
     FShowRecordTypes: TUpdateStatusSet;
     FOptions: TZDatasetOptions;
     FProperties: TStrings;
@@ -186,8 +198,8 @@ type
 
     FDataLink: TDataLink;
     FMasterLink: TMasterDataLink;
-    FLinkedFields: string; {renamed by bangfauzan}
-    FIndexFieldNames: String; {bangfauzan addition}
+    FLinkedFields: string;
+    FIndexFieldNames: String;
     FUniTemp: UnicodeString;
     {$IFNDEF UNICODE}
     FRawTemp: RawByteString;
@@ -196,7 +208,7 @@ type
 
     FIndexFields: {$IFDEF WITH_GENERIC_TLISTTFIELD}TList<TField>{$ELSE}TList{$ENDIF};
     FCachedLobs: WordBool;
-    FSortType : TSortType; {bangfauzan addition}
+    FSortType : TSortType;
     FHasOutParams: Boolean;
     FLastRowFetched: Boolean;
     FSortedFields: string;
@@ -246,11 +258,11 @@ type
     procedure SetParamCheck(Value: Boolean);
     function GetParamChar: Char;
     procedure SetParamChar(Value: Char);
-    {$IFDEF TEST_TZPARAM}
+    {$IFNDEF DISABLE_ZPARAM}
     procedure SetParams(Value: TZParams);
-    {$ELSE !TEST_TZPARAM}
+    {$ELSE !DISABLE_ZPARAM}
     procedure SetParams(Value: TParams);
-    {$ENDIF TEST_TZPARAM}
+    {$ENDIF DISABLE_ZPARAM}
     function GetShowRecordTypes: TUpdateStatusSet;
     procedure SetShowRecordTypes(Value: TUpdateStatusSet);
     procedure SetConnection(Value: TZAbstractConnection);
@@ -259,15 +271,15 @@ type
     procedure SetMasterFields(const Value: string);
     function GetMasterDataSource: TDataSource;
     procedure SetMasterDataSource(Value: TDataSource);
-    function GetLinkedFields: string; {renamed by bangfauzan}
-    procedure SetLinkedFields(const Value: string);  {renamed by bangfauzan}
-    function GetIndexFieldNames : String; {bangfauzan addition}
-    procedure SetIndexFieldNames(const Value : String); {bangfauzan addition}
+    function GetLinkedFields: string;
+    procedure SetLinkedFields(const Value: string);
+    function GetIndexFieldNames : String;
+    procedure SetIndexFieldNames(const Value : String);
     procedure SetOptions(Value: TZDatasetOptions);
-    procedure SetSortedFields(const Value: string); {bangfauzan modification}
+    procedure SetSortedFields(const Value: string);
 
-    function GetSortType : TSortType; {bangfauzan addition}
-    Procedure SetSortType(Value : TSortType); {bangfauzan addition}
+    function GetSortType : TSortType;
+    Procedure SetSortType(Value : TSortType);
 
     procedure UpdateSQLStrings(Sender: TObject);
     procedure ReadParamData(Reader: TReader);
@@ -293,7 +305,7 @@ type
     function GotoRow(RowNo: NativeInt): Boolean; // added by tohenk
     procedure RereadRows;
     procedure SetStatementParams(const Statement: IZPreparedStatement;
-      const ParamNames: TStringDynArray; Params: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF};
+      const ParamNames: TStringDynArray; Params: {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF};
       DataLink: TDataLink); virtual;
     procedure MasterChanged(Sender: TObject);
     procedure MasterDisabled(Sender: TObject);
@@ -348,17 +360,17 @@ type
     property IndexFields: {$IFDEF WITH_GENERIC_TLISTTFIELD}TList<TField>{$ELSE}TList{$ENDIF} read FIndexFields;
     property RequestLive: Boolean read FRequestLive write FRequestLive
       default False;
-    property FetchRow: integer read FFetchRow write FFetchRow default 0;  // added by Patyi
+    property FetchRow: integer read FFetchRow write FFetchRow default 0;
     property ParamCheck: Boolean read GetParamCheck write SetParamCheck
       default True;
     property ParamChar: Char read GetParamChar write SetParamChar
       default ':';
     property SQL: TStrings read GetSQL write SetSQL;
-    {$IFDEF TEST_TZPARAM}
+    {$IFNDEF DISABLE_ZPARAM}
     property Params: TZParams read FParams write SetParams;
-    {$ELSE !TEST_TZPARAM}
+    {$ELSE !DISABLE_ZPARAM}
     property Params: TParams read FParams write SetParams;
-    {$ENDIF !TEST_TZPARAM}
+    {$ENDIF !DISABLE_ZPARAM}
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly default True;
     property ShowRecordTypes: TUpdateStatusSet read GetShowRecordTypes
       write SetShowRecordTypes default [usUnmodified, usModified, usInserted];
@@ -372,9 +384,9 @@ type
     property MasterSource: TDataSource read GetMasterDataSource
       write SetMasterDataSource;
     property LinkedFields: string read GetLinkedFields
-      write SetLinkedFields; {renamed by bangfauzan}
+      write SetLinkedFields;
     property IndexFieldNames:String read GetIndexFieldNames
-      write SetIndexFieldNames; {bangfauzan addition}
+      write SetIndexFieldNames;
     {$IFNDEF WITH_NESTEDDATASETS}
     property NestedDataSets: TList read GetNestedDataSets;
     {$ENDIF}
@@ -519,7 +531,7 @@ type
     procedure FetchAll; virtual;  // added by Patyi
     procedure ExecSQL; virtual;
     function RowsAffected: LongInt;
-    function ParamByName(const Value: string): {$IFDEF TEST_TZPARAM}TZParam{$ELSE}TParam{$ENDIF};
+    function ParamByName(const Value: string): {$IFNDEF DISABLE_ZPARAM}TZParam{$ELSE}TParam{$ENDIF};
 
     {$IFDEF FPC} // FPC has these methods virtual plainly returning False while on Delphi they use FindRecord
     function FindFirst: Boolean; override;
@@ -575,7 +587,7 @@ type
     property Connection: TZAbstractConnection read FConnection write SetConnection;
     property SortedFields: string read FSortedFields write SetSortedFields;
     property SortType : TSortType read FSortType write SetSortType
-      default stAscending; {bangfauzan addition}
+      default stAscending;
     property DisableZFields: Boolean read FDisableZFields write SetDisableZFields default False;
 
     property AutoCalcFields;
@@ -1551,11 +1563,11 @@ begin
   TZSQLStrings(FSQL).Dataset := Self;
   TZSQLStrings(FSQL).MultiStatements := False;
   FSQL.OnChange := UpdateSQLStrings;
-  {$IFDEF TEST_TZPARAM}
+  {$IFNDEF DISABLE_ZPARAM}
   FParams := TZParams.Create(Self);
-  {$ELSE !TEST_TZPARAM}
+  {$ELSE !DISABLE_ZPARAM}
   FParams := TParams.Create(Self);
-  {$ENDIF TEST_TZPARAM}
+  {$ENDIF DISABLE_ZPARAM}
   FCurrentRows := TZSortedList.Create;
   BookmarkSize := SizeOf(Integer);
   FShowRecordTypes := [usModified, usInserted, usUnmodified];
@@ -1603,7 +1615,7 @@ begin
 
   FreeAndNil(FSQL);
   FreeAndNil(FParams);
-  {$IFDEF TEST_TZPARAM}
+  {$IFNDEF DISABLE_ZPARAM}
   FreeAndNil(FCompilerParams);
   {$ENDIF}
   FreeAndNil(FCurrentRows);
@@ -1765,7 +1777,7 @@ end;
   Sets a new set of parameters.
   @param Value a set of parameters.
 }
-procedure TZAbstractRODataset.SetParams(Value: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF});
+procedure TZAbstractRODataset.SetParams(Value: {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF});
 begin
   FParams.AssignValues(Value);
 end;
@@ -1813,7 +1825,7 @@ end;
   @param Value a parameter name.
   @return a found parameter object.
 }
-function TZAbstractRODataset.ParamByName(const Value: string): {$IFDEF TEST_TZPARAM}TZParam{$ELSE}TParam{$ENDIF};
+function TZAbstractRODataset.ParamByName(const Value: string): {$IFNDEF DISABLE_ZPARAM}TZParam{$ELSE}TParam{$ENDIF};
 begin
   Result := FParams.ParamByName(Value);
 end;
@@ -1825,7 +1837,7 @@ end;
 procedure TZAbstractRODataset.UpdateSQLStrings(Sender: TObject);
 var
   I: Integer;
-  OldParams: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF};
+  OldParams: {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF};
 begin
   FieldDefs.Clear;
   if Active
@@ -1838,7 +1850,7 @@ begin
   UnPrepare;
   if (csLoading in ComponentState) then
     Exit;
-  OldParams := {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF}.Create;
+  OldParams := {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF}.Create;
   OldParams.Assign(FParams);
   FParams.Clear;
 
@@ -2153,9 +2165,9 @@ end;
 procedure TZAbstractRODataset.RetrieveParamValues;
 var
   I: Integer;
-  Param: {$IFDEF TEST_TZPARAM}TZParam{$ELSE}TParam{$ENDIF};
+  Param: {$IFNDEF DISABLE_ZPARAM}TZParam{$ELSE}TParam{$ENDIF};
   BCD: TBCD;
-  {$IFDEF TEST_TZPARAM}
+  {$IFNDEF DISABLE_ZPARAM}
   GUID: TGUID absolute BCD;
   D: TZDate absolute BCD;
   T: TZTime absolute BCD;
@@ -2166,7 +2178,7 @@ var
   L: NativeUint;
   R: RawByteString;
   {$ENDIF}
-  {$IFNDEF TEST_TZPARAM}
+  {$IFDEF DISABLE_ZPARAM}
     {$IFDEF WITH_TVALUEBUFFER}
     VB: TValueBuffer;
     {$ENDIF}
@@ -2230,7 +2242,7 @@ begin
             {$IFDEF UNICODE}Param.DataType := ftString;{$ENDIF} //Hack: D12_UP sets ftWideString on assigning a UnicodeString
           end;
         ftWideString:
-          {$IFDEF TEST_TZPARAM}
+          {$IFNDEF DISABLE_ZPARAM}
           Param.AsUnicodeString := Statement.GetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
           {$ELSE}
           {$IFDEF WITH_PARAM_ASWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF} := Statement.GetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
@@ -2243,7 +2255,7 @@ begin
         {$IFDEF WITH_WIDEMEMO}
         ftWideMemo:
         begin
-          {$IFDEF TEST_TZPARAM}
+          {$IFNDEF DISABLE_ZPARAM}
           Param.AsWideMemo := Statement.GetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
           {$ELSE}
           Param.AsWideString := Statement.GetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
@@ -2251,7 +2263,7 @@ begin
           {$ENDIF}
         end;
         {$ENDIF}
-        {$IFDEF TEST_TZPARAM}
+        {$IFNDEF DISABLE_ZPARAM}
         ftBytes, ftVarBytes:
           Param.AsBytes := Statement.GetBytes(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         ftGuid: begin
@@ -2276,7 +2288,7 @@ begin
           {$ELSE}
           Param.AsBlob := Statement.GetRawByteString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
           {$ENDIF}
-        {$ELSE !TEST_TZPARAM}
+        {$ELSE !DISABLE_ZPARAM}
         ftBytes, ftVarBytes, ftGuid:
           Param.Value := Statement.GetBytes(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         ftDate:
@@ -2302,7 +2314,7 @@ begin
             Param.Clear;
             TempBlob := nil;
           end
-        {$ENDIF TEST_TZPARAM}
+        {$ENDIF DISABLE_ZPARAM}
         else
            raise EZDatabaseError.Create(SUnKnownParamDataType);
       end;
@@ -2318,10 +2330,10 @@ end;
   @param DataLink a datalink to get parameters.
 }
 procedure TZAbstractRODataset.SetStatementParams(const Statement: IZPreparedStatement;
-  const ParamNames: TStringDynArray; Params: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF}; DataLink: TDataLink);
+  const ParamNames: TStringDynArray; Params: {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF}; DataLink: TDataLink);
 var
   I: Integer;
-  TempParam, Param: {$IFDEF TEST_TZPARAM}TZParam{$ELSE}TParam{$ENDIF};
+  TempParam, Param: {$IFNDEF DISABLE_ZPARAM}TZParam{$ELSE}TParam{$ENDIF};
   Dataset: TDataset;
   Field: TField;
 begin
@@ -2338,7 +2350,7 @@ begin
       SetStatementParam(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Statement, Param);
     end;
   end else begin
-    TempParam := {$IFDEF TEST_TZPARAM}TZParam{$ELSE}TParam{$ENDIF}.Create(nil);
+    TempParam := {$IFNDEF DISABLE_ZPARAM}TZParam{$ELSE}TParam{$ENDIF}.Create(nil);
     try
       for I := Low(ParamNames) to High(ParamNames) do begin
         if Assigned(Dataset)
@@ -3665,7 +3677,7 @@ begin
       InitFilterFields := False;
 
       IndexFields.Clear;
-      GetFieldList(IndexFields, FLinkedFields); {renamed by bangfauzan}
+      GetFieldList(IndexFields, FLinkedFields);
     end;
 
     { Performs sorting. }
@@ -4031,24 +4043,24 @@ end;
   Gets a list of index field names.
   @returns a list of index field names.
 }
-function TZAbstractRODataset.GetLinkedFields: string; {renamed by bangfauzan}
+function TZAbstractRODataset.GetLinkedFields: string;
 begin
-  Result := FLinkedFields; {renamed by bangfauzan}
+  Result := FLinkedFields;
 end;
 
 {**
   Sets a new list of index field names.
   @param Value a new list of index field names.
 }
-procedure TZAbstractRODataset.SetLinkedFields(const Value: string); {renamed by bangfauzan}
+procedure TZAbstractRODataset.SetLinkedFields(const Value: string);
 begin
-  if FLinkedFields <> Value then {renamed by bangfauzan}
+  if FLinkedFields <> Value then
   begin
-    FLinkedFields := Value; {renamed by bangfauzan}
+    FLinkedFields := Value;
     IndexFields.Clear;
     if State <> dsInactive then
     begin
-      GetFieldList(IndexFields, FLinkedFields); {renamed by bangfauzan}
+      GetFieldList(IndexFields, FLinkedFields);
       RereadRows;
     end;
   end;
@@ -4073,11 +4085,11 @@ end;
 procedure TZAbstractRODataset.SetSortedFields(const Value: string); {bangfauzan modification}
 var aValue: string;
 begin
-  aValue:=Trim(Value); {bangfauzan addition}
+  aValue:=Trim(Value);
   if (FSortedFields <> aValue) or (FIndexFieldNames <> aValue)then {bangfauzan modification}
   begin
     FIndexFieldNames:=aValue;
-    FSortType := GetSortType; {bangfauzan addition}
+    FSortType := GetSortType;
     {removing ASC or DESC behind space}
     if (FSortType <> stIgnored) then
     begin {pawelsel modification}
@@ -5204,9 +5216,9 @@ var
     end;
   end;
 begin
-  //if FIndexFieldNames = '' then exit; {bangfauzan addition}
+  //if FIndexFieldNames = '' then exit;
   if (ResultSet <> nil) and not IsUniDirectional then begin
-    FIndexFieldNames := Trim(FIndexFieldNames); {bangfauzan modification}
+    FIndexFieldNames := Trim(FIndexFieldNames);
     DefineSortedFields(Self, {FSortedFields} FIndexFieldNames {bangfauzan modification},
     FSortedFieldRefs, FSortedComparsionKinds, FSortedOnlyDataFields);
 
@@ -5458,14 +5470,14 @@ end;
 }
 function TZAbstractRODataset.PSGetParams: TParams;
 begin
-  {$IFDEF TEST_TZPARAM}
+  {$IFNDEF DISABLE_ZPARAM}
   if FCompilerParams = nil then
     FCompilerParams := TParams.Create;
-  FCompilerParams.Assign(Params);
+  FParams.AssignTo(FCompilerParams);
   Result := FCompilerParams;
-  {$ELSE}
+  {$ELSE !DISABLE_ZPARAM}
   Result := Params;
-  {$ENDIF TEST_TZPARAM}
+  {$ENDIF DISABLE_ZPARAM}
 end;
 
 {**
@@ -5602,7 +5614,7 @@ var
   I: Integer;
   Statement: IZPreparedStatement;
   ParamValue: TParam;
-  {$IFDEF TEST_TZPARAM}ZParam: TZParam;{$ENDIF}
+  {$IFNDEF DISABLE_ZPARAM}ZParam: TZParam;{$ENDIF}
   HasOutParams: Boolean;
 begin
   if Assigned(FConnection) then begin
@@ -5611,7 +5623,7 @@ begin
     HasOutParams := False;
     Statement := FConnection.DbcConnection.PrepareStatement(ASQL);
     if (AParams <> nil) and (AParams.Count > 0) then
-      {$IFDEF TEST_TZPARAM}ZParam := TZParam.Create(nil);
+      {$IFNDEF DISABLE_ZPARAM}ZParam := TZParam.Create(nil);
       try
       {$ENDIF}
         for I := 0 to AParams.Count - 1 do begin
@@ -5621,24 +5633,24 @@ begin
             if ParamValue.ParamType <> ptInputOutput then
               continue;
           end;
-          {$IFDEF TEST_TZPARAM}
+          {$IFNDEF DISABLE_ZPARAM}
           ZParam.Assign(ParamValue);
           SetStatementParam(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Statement, ZParam);
           {$ELSE}
           SetStatementParam(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Statement, ParamValue);
           {$ENDIF}
         end;
-      {$IFDEF TEST_TZPARAM}
+      {$IFNDEF DISABLE_ZPARAM}
       finally
         FreeAndNil(ZParam);
       end;
-      {$ENDIF TEST_TZPARAM}
+      {$ENDIF DISABLE_ZPARAM}
     Result := Statement.ExecuteUpdatePrepared;
     if HasOutParams then begin
       RetrieveParamValues;
-      {$IFDEF TEST_TZPARAM}
+      {$IFNDEF DISABLE_ZPARAM}
       FParams.AssignTo(AParams);
-      {$ENDIF TEST_TZPARAM}
+      {$ENDIF DISABLE_ZPARAM}
     end;
   end else
     Result := 0;
