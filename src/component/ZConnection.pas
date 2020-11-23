@@ -69,10 +69,7 @@ const
 type
   {** Represents a component which wraps a connection to database. }
   TZConnection = class(TZAbstractConnection)
-  protected
-    FAutoEncodeStrings: Boolean;
   published
-    property AutoEncodeStrings: Boolean read FAutoEncodeStrings write FAutoEncodeStrings;
     property HostName: string read GetHostName write SetHostName;
     property Port: Integer read GetConnPort write SetConnPort;
     property Database: string read GetDatabase write SetDatabase;
