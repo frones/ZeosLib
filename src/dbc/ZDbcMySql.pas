@@ -884,7 +884,7 @@ begin
         IImmediatelyReleasable(FWeakImmediatRelPtr))
     else if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcTransaction, URL.Protocol, sCommitMsg);
-    AutoCommit := True;
+    SetAutoCommit(True);
     if FRestartTransaction then
       StartTransaction;
   end
@@ -914,7 +914,7 @@ begin
         IImmediatelyReleasable(FWeakImmediatRelPtr))
     else if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcTransaction, URL.Protocol, sRollbackMsg);
-    AutoCommit := True;
+    SetAutoCommit(True);
     if FRestartTransaction then
       StartTransaction;
   end;
