@@ -2664,7 +2664,7 @@ begin
           ftSmallint: PSmallInt(Buffer)^ := FResultSet.GetSmall(ColumnIndex);
           ftInteger, ftAutoInc: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}PInteger{$ELSE}PLongInt{$ENDIF}(Buffer)^ := ResultSet.GetInt(ColumnIndex);
           ftBoolean: PWordBool(Buffer)^ := ResultSet.GetBoolean(ColumnIndex);
-          ftWord: FResultSet.GetWord(ColumnIndex);
+          ftWord: PWord(Buffer)^ := FResultSet.GetWord(ColumnIndex);
           ftFloat, ftCurrency: PDouble(Buffer)^ := FResultSet.GetDouble(ColumnIndex);
           ftBcd: begin
               if FNativeFormatOverloadCalled[ftBcd] //circumvent the T[BDE/Client]DataSet bug...
