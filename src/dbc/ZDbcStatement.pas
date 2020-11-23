@@ -2665,7 +2665,7 @@ begin
   if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) or
      not ConSettings.ClientCodePage.IsStringFieldCPConsistent then begin
     Buf := fOutParamResultSet.GetPWideChar(ParamterIndex2ResultSetIndex(Index), L);
-    if BindList.ParamTypes[Index] = pctInOut then begin
+    if not FSupportsBidirectionalParamIO and (BindList.ParamTypes[Index] = pctInOut) then begin
       System.SetString(FUniTemp, PWideChar(Buf), L);
       IZPreparedStatement(FWeakIZPreparedStatementPtr).SetUnicodeString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, FUniTemp);
     end;
@@ -2683,7 +2683,7 @@ begin
   end else begin
     Buf := fOutParamResultSet.GetPAnsiChar(ParamterIndex2ResultSetIndex(Index), L);
     Len := L;
-    if BindList.ParamTypes[Index] = pctInOut then begin
+    if not FSupportsBidirectionalParamIO and (BindList.ParamTypes[Index] = pctInOut) then begin
       ZSetString(Buf, l, fRawTemp);
       IZPreparedStatement(FWeakIZPreparedStatementPtr).SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, FRawTemp);
     end;
@@ -4189,7 +4189,7 @@ procedure TZAbstractCallableStatement.GetBigDecimal(ParameterIndex: Integer;
 begin
   if FExecStatement <> nil then begin
     FExecStatement.GetBigDecimal(ParameterIndex, Result);
-    if (BindList.ParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = pctInOut) then
+    if not FSupportsBidirectionalParamIO and (BindList.ParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = pctInOut) then
       SetBigDecimal(ParameterIndex, Result);
   end else begin
     {$IFDEF FPC}Result := NullBCD;{$ENDIF} //satisfy compiler
@@ -4203,7 +4203,7 @@ begin
   if FExecStatement <> nil then begin
     Result := FExecStatement.GetBoolean(ParameterIndex);
     {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
-    if (BindList.ParamTypes[ParameterIndex] = pctInOut) then
+    if not FSupportsBidirectionalParamIO and (BindList.ParamTypes[ParameterIndex] = pctInOut) then
       BindSignedOrdinal(ParameterIndex, FExecStatement.BindList[ParameterIndex].SQLType, Ord(Result));
   end else begin
     {$IFDEF FPC}Result := False; {$ENDIF}//satisfy compiler
@@ -4215,7 +4215,7 @@ function TZAbstractCallableStatement.GetBytes(ParameterIndex: Integer): TBytes;
 begin
   if FExecStatement <> nil then begin
     Result := FExecStatement.GetBytes(ParameterIndex);
-    if (BindList.ParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = pctInOut) then
+    if not FSupportsBidirectionalParamIO and (BindList.ParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = pctInOut) then
       SetBytes(ParameterIndex, Result);
   end else begin
     {$IFDEF FPC}Result := nil;{$ENDIF} //satisfy compiler
@@ -4228,7 +4228,7 @@ function TZAbstractCallableStatement.GetCurrency(
 begin
   if FExecStatement <> nil then begin
     Result := FExecStatement.GetCurrency(ParameterIndex);
-    if (BindList.ParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = pctInOut) then
+    if not FSupportsBidirectionalParamIO and (BindList.ParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = pctInOut) then
       SetCurrency(ParameterIndex, Result);
   end else begin
     {$IFDEF FPC}Result := 0;{$ENDIF} //satisfy compiler
@@ -4241,7 +4241,7 @@ procedure TZAbstractCallableStatement.GetDate(
 begin
   if FExecStatement <> nil then begin
     FExecStatement.GetDate(ParameterIndex, Result);
-    if (BindList.ParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = pctInOut) then
+    if not FSupportsBidirectionalParamIO and (BindList.ParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = pctInOut) then
       SetDate(ParameterIndex, Result);
   end else begin
     {$IFDEF FPC} FillChar(Result, SizeOf(TZDate), #0);{$ENDIF} //satisfy compiler
@@ -4255,7 +4255,7 @@ begin
   if FExecStatement <> nil then begin
     Result := FExecStatement.GetDouble(ParameterIndex);
     {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
-    if (BindList.ParamTypes[ParameterIndex] = pctInOut) then
+    if not FSupportsBidirectionalParamIO and (BindList.ParamTypes[ParameterIndex] = pctInOut) then
       BindDouble(ParameterIndex, FExecStatement.BindList[ParameterIndex].SQLType, Result);
   end else begin
     {$IFDEF FPC}Result := 0;{$ENDIF} //satisfy compiler
@@ -4286,7 +4286,7 @@ begin
   if FExecStatement <> nil then begin
     Result := FExecStatement.GetFloat(ParameterIndex);
     {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
-    if (BindList.ParamTypes[ParameterIndex] = pctInOut) then
+    if not FSupportsBidirectionalParamIO and (BindList.ParamTypes[ParameterIndex] = pctInOut) then
       BindDouble(ParameterIndex, FExecStatement.BindList[ParameterIndex].SQLType, Result);
   end else begin
     {$IFDEF FPC}Result := 0;{$ENDIF} //satisfy compiler
@@ -4299,7 +4299,7 @@ procedure TZAbstractCallableStatement.GetGUID(ParameterIndex: Integer;
 begin
   if FExecStatement <> nil then begin
     FExecStatement.GetGUID(ParameterIndex, Result);
-    if (BindList.ParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = pctInOut) then
+    if not FSupportsBidirectionalParamIO and (BindList.ParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = pctInOut) then
       SetGUID(ParameterIndex, Result);
   end else
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
@@ -4318,7 +4318,7 @@ begin
   if FExecStatement <> nil then begin
     Result := FExecStatement.GetInt(ParameterIndex);
     {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
-    if (BindList.ParamTypes[ParameterIndex] = pctInOut) then
+    if not FSupportsBidirectionalParamIO and (BindList.ParamTypes[ParameterIndex] = pctInOut) then
       BindSignedOrdinal(ParameterIndex, FExecStatement.BindList[ParameterIndex].SQLType, Result);
   end else begin
     {$IFDEF FPC}Result := 0;{$ENDIF} //satisfy compiler
@@ -4362,7 +4362,7 @@ begin
   if FExecStatement <> nil then begin
     Result := FExecStatement.GetLong(ParameterIndex);
     {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
-    if (BindList.ParamTypes[ParameterIndex] = pctInOut) then
+    if not FSupportsBidirectionalParamIO and (BindList.ParamTypes[ParameterIndex] = pctInOut) then
       {$IFDEF CPU64}
       BindSignedOrdinal(ParameterIndex, FExecStatement.BindList[ParameterIndex].SQLType, Result);
       {$ELSE}
@@ -4493,7 +4493,7 @@ procedure TZAbstractCallableStatement.GetTime(
 begin
   if FExecStatement <> nil then begin
     FExecStatement.GetTime(ParameterIndex, Result);
-    if (BindList.ParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = pctInOut) then
+    if not FSupportsBidirectionalParamIO and (BindList.ParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = pctInOut) then
       SetTime(ParameterIndex, Result);
   end else begin
     {$IFDEF FPC} FillChar(Result, SizeOf(TZTime), #0);{$ENDIF} //satisfy compiler
@@ -4506,7 +4506,7 @@ procedure TZAbstractCallableStatement.GetTimeStamp(ParameterIndex: Integer;
 begin
   if FExecStatement <> nil then begin
     FExecStatement.GetTimeStamp(ParameterIndex, Result);
-    if (BindList.ParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = pctInOut) then
+    if not FSupportsBidirectionalParamIO and (BindList.ParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = pctInOut) then
       SetTimeStamp(ParameterIndex, Result);
   end else begin
     {$IFDEF FPC} FillChar(Result, SizeOf(TZTimeStamp), #0);{$ENDIF} //satisfy compiler
@@ -4520,7 +4520,7 @@ begin
   if FExecStatement <> nil then begin
     Result := FExecStatement.GetUint(ParameterIndex);
     {$IFNDEF GENERIC_INDEX}Dec(ParameterIndex);{$ENDIF}
-    if (BindList.ParamTypes[ParameterIndex] = pctInOut) then
+    if not FSupportsBidirectionalParamIO and (BindList.ParamTypes[ParameterIndex] = pctInOut) then
       BindUnSignedOrdinal(ParameterIndex, FExecStatement.BindList[ParameterIndex].SQLType, Result);
   end else begin
     {$IFDEF FPC}Result := 0;{$ENDIF} //satisfy compiler
@@ -4727,10 +4727,30 @@ end;
 }
 procedure TZAbstractCallableStatement.SetBigDecimal(ParameterIndex: Integer;
   const Value: TBCD);
+var Bind: PZBindValue;
+    C: Currency;
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
-  FBindList.Put(ParameterIndex, Value);
+  Bind := FBindList[ParameterIndex];
+  {Registered Param ? }
+  if (Bind.SQLType <> stBigDecimal) and (Bind.ParamType <> pctUnknown) then begin
+    if (Bind.ParamType = pctOut) and not Connection.UseMetadata then
+      Bind.ParamType := pctInOut;
+    case Bind.SQLType of
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+      stBoolean, stByte, stWord, stLongWord,stULong: SetULong(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD2UInt64(Value));
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+      stShort, stSmall, stInteger, stLong: SetLong(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD2UInt64(Value));
+      stFloat, stDouble, stDate, stTime, stTimeStamp: SetDouble(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCDToDouble(Value));
+      stCurrency: begin
+          BCDToCurr(Value, C);
+          FBindList.Put(ParameterIndex, stCurrency, P8Bytes(@C));
+        end;
+      stBigDecimal: BindList.Put(ParameterIndex, Value);
+      else FBindList.Put(ParameterIndex, Value);
+    end;
+  end else FBindList.Put(ParameterIndex, Value);
 end;
 
 {**
@@ -4915,7 +4935,7 @@ begin
   CheckParameterIndex(ParameterIndex);
   Bind := FBindList[ParameterIndex];
   {Registered Param ? }
-  if (Bind.SQLType <> stULong) and (Bind.ParamType <> pctUnknown) then begin
+  if (Bind.SQLType <> stLong) and (Bind.ParamType <> pctUnknown) then begin
     if (Bind.ParamType = pctOut) and not Connection.UseMetadata then
       Bind.ParamType := pctInOut;
     case Bind.SQLType of
@@ -4970,7 +4990,7 @@ end;
 procedure TZAbstractCallableStatement.SetShort(ParameterIndex: Integer;
   Value: ShortInt);
 begin
-  BindSignedOrdinal(ParameterIndex, stShort, Value);
+  BindSignedOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stShort, Value);
 end;
 
 
