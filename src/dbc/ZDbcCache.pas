@@ -580,7 +580,7 @@ end;
 
 function CompareCurrency_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  Result := -CompareCurrency_Desc(Null1, Null2, V1, V2);
+  Result := -CompareCurrency_Asc(Null1, Null2, V1, V2);
 end;
 
 function CompareCurrency_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -618,9 +618,7 @@ end;
 
 function CompareZDate_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := -ZCompareDate(PZDate(V1)^, PZDate(V2)^)
+  Result := -CompareZDate_Asc(Null1, Null2, V1, V2);
 end;
 
 function CompareZTime_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
@@ -669,9 +667,7 @@ end;
 
 function CompareZTimeStamp_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  Result := NullsCompareMatrix[Null1, Null2];
-  if Result = BothNotNull then
-    Result := -ZCompareTimeStamp(PZTimeStamp(V1)^, PZTimeStamp(V2)^)
+  Result := -CompareZTimeStamp_Asc(Null1, Null2, V1, V2);
 end;
 
 function CompareGUID_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
