@@ -181,7 +181,6 @@ type
   private
     class function CreateConversionError(Current, Expected: TZSQLType): EVariantTypeCastError;
     class function CreateIndexError(Value: Integer): EListError;
-    function ValueToBytes(Index: Integer; SQLType: TZSQLType): {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF};
     procedure SetSQLType(Value: TZSQLType);
     procedure SetSQLDataType(Value: TZSQLType);
     procedure SetDataType(Value: TFieldType);
@@ -1027,7 +1026,7 @@ var
     MS := TMemoryStream.Create;
     try
       StreamPersist.SaveToStream(MS);
-      LoadFromStream(MS, ftGraphic);
+      LoadBinaryFromStream(MS);
     finally
       MS.Free;
     end;
@@ -1083,7 +1082,11 @@ procedure TZParam.AssignField(Field: TField);
       SetAsBytes(VarToBytes(Field.Value))
       {$ENDIF}
     else
+      {$IFDEF TBLOBDATA_IS_TBYTES}
+      SetAsBlob(TBlobField(Field).AsBytes);
+      {$ELSE}
       SetAsBlob(TBlobField(Field).Value);
+      {$ENDIF}
   end;
   procedure MoveRawStrings;
   var CP: Word;
@@ -1403,18 +1406,26 @@ function TZParam.GetAsBytes: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$
 begin
   if GetIsNull
   then Result := nil
-  else if FSQLDataType = stBytes
-    then Result := TBytes(FData.pvPointer)
-    else Result := ValueToBytes(-1, FSQLDataType);
+  else case FSQLDataType of
+    stBytes: Result := TBytes(FData.pvPointer);
+    stBinaryStream: Result := IZBlob(FData.pvPointer).GetBytes;
+    else raise CreateConversionError(FSQLDataType, stBytes);
+  end;
 end;
 
 function TZParam.GetAsBytesArray(Index: Cardinal): {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF};
+  procedure FromBlob;
+  begin
+    Result := (TInterfaceDynArray(FData.pvDynArray.VArray)[Index] as IZBlob).GetBytes;
+  end;
 begin
   if GetIsNulls(Index)
   then Result := nil
-  else if TZSQLType(FData.pvDynArray.VArrayType) = stBytes
-    then Result := TBytesDynArray(FData.pvDynArray.VArray)[Index]
-    else Result := ValueToBytes(-1, FSQLDataType);
+  else case TZSQLType(FData.pvDynArray.VArrayType) of
+    stBytes: Result := TBytesDynArray(FData.pvDynArray.VArray)[Index];
+    stBinaryStream: FromBlob;
+    else raise CreateConversionError(FSQLDataType, stBytes);
+  end;
 end;
 
 function TZParam.GetAsCardinal: Cardinal;
@@ -2071,12 +2082,12 @@ end;
 {$IFNDEF UNICODE}
 function TZParam.GetAsString: String;
 begin
-  Result := GetAsUnicodeString;
+  Result := GetAsRawByteString(GetDefaultRawCP);
 end;
 
 function TZParam.GetAsStrings(Index: Cardinal): String;
 begin
-  Result := GetAsUnicodeStrings(Index);
+  Result := GetAsRawByteStrings(Index, GetDefaultRawCP);
 end;
 {$ENDIF}
 
@@ -2368,7 +2379,7 @@ begin
     else Result := GetAsRawByteStrings(Index, zCP_UTF8)
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5060 off : Function result variable does not seem to be initialized} {$ENDIF}
+{$IFDEF FPC} {$PUSH} {$WARN 5093 off : Function result variable does not seem to be initialized} {$ENDIF}
 function TZParam.GetAsVariant: Variant;
   procedure SetAsRawString(var Result: Variant);
   begin
@@ -2856,9 +2867,9 @@ begin
     stULong: FData.pvUInt64 := UnicodeToUInt64(P, P+L);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: FData.pvInt64 := UnicodeToInt64(P, P+L);
-    stFloat: FData.pvSingle := StrToFloat(Value);
-    stDouble: FData.pvDouble := StrToFloat(Value);
-    stCurrency: SQLStrToFloatDef(P, 0, FDecimalSeperator, FData.pvCurrency, L);
+    stFloat: UnicodeToFloat(P, WideChar(FDecimalSeperator), FData.pvSingle);
+    stDouble: UnicodeToFloat(P, WideChar(FDecimalSeperator), FData.pvDouble);
+    stCurrency: UnicodeToFloat(P, WideChar(FDecimalSeperator), FData.pvCurrency);
     stBigDecimal: if not TryUniToBCD(P, L, FData.pvBCD, '.') then goto jmpErr;
     stDate: if not TryUniToDate(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.ShortDateFormat, FData.pvDate) then goto jmpErr;
     stTime: if not TryUniToTime(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongTimeFormat, FData.pvTime) then goto jmpErr;
@@ -2904,9 +2915,9 @@ begin
     stULong: TUint64DynArray(FData.pvDynArray.VArray)[Index] := UnicodeToUInt64(P, P+L);
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
     stLong: TInt64DynArray(FData.pvDynArray.VArray)[Index] := UnicodeToInt64(P, P+L);
-    stFloat: TSingleDynArray(FData.pvDynArray.VArray)[Index] := StrToFloat(Value);
-    stDouble: TDoubleDynArray(FData.pvDynArray.VArray)[Index] := StrToFloat(Value);
-    stCurrency: SQLStrToFloatDef(P, 0, Self.FDecimalSeperator, TCurrencyDynArray(FData.pvDynArray.VArray)[Index], L);
+    stFloat: UnicodeToFloat(P, WideChar(FDecimalSeperator), TSingleDynArray(FData.pvDynArray.VArray)[Index]);
+    stDouble: UnicodeToFloat(P, WideChar(FDecimalSeperator), TDoubleDynArray(FData.pvDynArray.VArray)[Index]);
+    stCurrency: UnicodeToFloat(P, WideChar(FDecimalSeperator), TCurrencyDynArray(FData.pvDynArray.VArray)[Index]);
     stBigDecimal: if not TryUniToBCD(P, L, TBCDDynArray(FData.pvDynArray.VArray)[Index], '.') then goto jmpErr;
     stDate: if not TryUniToDate(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.ShortDateFormat, TZDateDynArray(FData.pvDynArray.VArray)[Index]) then goto jmpErr;
     stTime: if not TryUniToTime(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongTimeFormat, TZTimeDynArray(FData.pvDynArray.VArray)[Index]) then goto jmpErr;
@@ -3997,8 +4008,18 @@ procedure TZParam.SetAsRawByteString(const Value: RawByteString;
   CodePage: Word);
 begin
   CheckDataIndex(-1);
-  if FDynamicParamType or (FSQLDataType = stUnknown) then
-    SetSQLDataType(stString);
+  if FDynamicParamType or (FSQLDataType = stUnknown) then begin
+    if (CodePage = zCP_Binary)
+    then SetSQLDataType(stBytes)
+    else begin
+      SetSQLDataType(stString);
+      if CodePage = zCP_UTF8
+      then FZVariantType := vtUTF8String
+      else if CodePage = zOSCodePage
+        then FZVariantType := vtAnsiString
+        else FZVariantType := vtRawByteString;
+    end;
+  end;
   InternalSetAsRawByteString(Value, CodePage);
 end;
 
@@ -4007,7 +4028,17 @@ procedure TZParam.SetAsRawByteStrings(Index: Cardinal;
 begin
   CheckDataIndex(Integer(Index));
   if (TZSQLType(FData.pvDynArray.VArrayType) = stUnknown) then
-    SetSQLDataType(stString);
+    if (CodePage = zCP_Binary)
+    then SetSQLDataType(stBytes)
+    else begin
+      SetSQLDataType(stString);
+      if CodePage = zCP_UTF8
+      then FZVariantType := vtUTF8String
+      else if CodePage = zOSCodePage
+        then FZVariantType := vtAnsiString
+        else FZVariantType := vtRawByteString;
+      FData.pvDynArray.VArrayVariantType := FZVariantType;
+    end;
   InternalSetAsRawByteStrings(Index, Value, CodePage);
 end;
 
@@ -4127,7 +4158,6 @@ end;
 
 {$IFNDEF UNICODE}
 procedure TZParam.SetAsStrings(Index: Cardinal; const Value: String);
-var todorem: Boolean;
 begin
   CheckDataIndex(Integer(Index));
   if (FSQLDataType = stUnknown) then
@@ -4857,6 +4887,7 @@ begin
         stDate: FZVariantType := vtDate;
         stTime: FZVariantType := vtTime;
         stTimeStamp: FZVariantType := vtTimeStamp;
+        stString: FZVariantType := vtString;
         stUnicodeString: FZVariantType := vtUnicodeString;
         {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
       end;
@@ -4927,11 +4958,6 @@ begin
     FConSettings := TZAbstractConnection(fConnection).DbcConnection.GetConSettings;
 end;
 
-function TZParam.ValueToBytes(Index: Integer; SQLType: TZSQLType): {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF};
-begin
-
-end;
-
 {$IFDEF TENCODING_HAS_CODEPAGE}
 procedure TZParam.LoadFromFile(const FileName: String; Encoding: TEncoding;
   Index: Integer);
@@ -4990,7 +5016,7 @@ var I: Integer;
 begin
   if (Dest is TParams) then with Dest as TParams do begin
     for i := 0 to Count -1 do begin
-      SQLParam := GetItem(i);
+      SQLParam := Self.GetItem(i);
       RtlParam := Items[i];
       SQLParam.AssignTo(RtlParam);
     end;
@@ -5134,8 +5160,8 @@ function TZParams.ParamByName(const Value: string): TZParam;
     DataSet := GetDataSet;
     Message := Format(SParameterNotFound, [Value]);
     if Assigned(DataSet) and (DataSet.Name <> '') then
-      raise EDatabaseError.Create(Format('%s: %s', [DataSet.Name, Message])) else
-      raise EDatabaseError.Create(Message);
+      Result := EZDatabaseError.Create(Format('%s: %s', [DataSet.Name, Message])) else
+      Result := EZDatabaseError.Create(Message);
   end;
 begin
   Result := FindParam(Value);
@@ -5161,8 +5187,7 @@ begin
       ReadBuffer(NumItems, SizeOf(NumItems)) else
       ReadBuffer(NumItems, 2);
     for I := 0 to NumItems - 1 do
-      with AddParameter do
-      begin
+      with AddParameter do begin
         Temp := 0;
         if Version = 2 then
           ReadBuffer(Temp, SizeOf(Temp)) else

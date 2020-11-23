@@ -808,7 +808,7 @@ var
         Variables.Values[I] := EncodeDouble(TField(Fields[I]).AsFloat);
       {$IFDEF WITH_FTEXTENDED}
       ftExtended:
-        Variables.Values[I] := EncodeDouble(TField(Fields[I]).AsExtended);
+        Variables.Values[I] := EncodeDouble(TField(Fields[I]).{$IFDEF WITH_TFIELD_ASEXTENDED}AsExtended{$ELSE}AsFloat{$ENDIF});
       {$ENDIF}
       {$IFDEF WITH_FTLONGWORD}ftLongword,{$ENDIF}ftLargeInt:
         Variables.Values[I] := EncodeInteger(ResultSet.GetLong(ColumnIndex));
@@ -1289,7 +1289,7 @@ begin
       {$IFDEF WITH_FTEXTENDED}
       ftExtended:
           Result := Abs(ResultSet.GetDouble(ColumnIndex)
-            - Field2.AsExtended) < FLOAT_COMPARE_PRECISION;
+            - Field2.{$IFDEF WITH_TFIELD_ASEXTENDED}AsExtended{$ELSE}AsFloat{$ENDIF}) < FLOAT_COMPARE_PRECISION;
       {$ENDIF}
       {$IFDEF WITH_FTLONGWORD}
       ftLongword:

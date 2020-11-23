@@ -63,7 +63,7 @@
     <PropertyGroup Condition="'$(Base)'!=''">
         <DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
-        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=8.0.0.0;Comments=</VerInfo_Keys>
         <VerInfo_Locale>1031</VerInfo_Locale>
         <DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_ImageBase>00400000</DCC_ImageBase>
@@ -138,6 +138,7 @@
 	<DCCReference Include="..\..\src\component\ZConnection.pas"/>
 	<DCCReference Include="..\..\src\component\ZConnectionGroup.pas"/>
 	<DCCReference Include="..\..\src\component\ZDataset.pas"/>
+	<DCCReference Include="..\..\src\component\ZDatasetParam.pas"/>
 	<DCCReference Include="..\..\src\component\ZDatasetUtils.pas"/>
 	<DCCReference Include="..\..\src\component\ZGroupedConnection.pas"/>
 	<DCCReference Include="..\..\src\component\ZIBEventAlerter.pas"/>
@@ -192,7 +193,7 @@
                     <VersionInfoKeys Name="LegalTrademarks"/>
                     <VersionInfoKeys Name="OriginalFilename"/>
                     <VersionInfoKeys Name="ProductName"/>
-                    <VersionInfoKeys Name="ProductVersion">7.2.0.0</VersionInfoKeys>
+                    <VersionInfoKeys Name="ProductVersion">8.0.0.0</VersionInfoKeys>
                     <VersionInfoKeys Name="Comments"/>
                 </VersionInfoKeys>
                 <Source>

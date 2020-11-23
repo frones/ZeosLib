@@ -11,7 +11,7 @@ uses
   ZAbstractConnection, ZAbstractDataset, ZAbstractRODataset, ZAbstractTable, 
   ZConnection, ZConnectionGroup, ZDataset, ZDatasetUtils, ZGroupedConnection, 
   ZIBEventAlerter, ZPgEventAlerter, ZSqlMetadata, ZSqlMonitor, ZSqlProcessor, 
-  ZSqlStrings, ZSqlUpdate, ZStoredProcedure;
+  ZSqlStrings, ZSqlUpdate, ZStoredProcedure, ZDatasetParam;
 
 implementation
 
