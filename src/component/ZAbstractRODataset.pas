@@ -757,7 +757,7 @@ type
     property Value: SmallInt read GetAsSmallInt write SetAsSmallInt;
   end;
 
-  TZShortIntField = class({$IFDEF WITH_FTSHORTINT}TShortIntField{$ELSE}TZSmallIntField{$ENDIF})
+  TZShortIntField = class({$IF defined(WITH_FTSHORTINT) and declared(TShortIntField)}TShortIntField{$ELSE}TZSmallIntField{$IFEND})
   private
     {$IFDEF WITH_FTSHORTINT}FFieldIndex: Integer;{$ENDIF}
     {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
@@ -801,7 +801,7 @@ type
   end;
 
 { TZByteField }
-  TZByteField = class({$IFDEF WITH_FTBYTE}TByteField{$ELSE}TZWordField{$ENDIF})
+  TZByteField = class({$IF defined(WITH_FTBYTE) and declared(TByteField)}TByteField{$ELSE}TZWordField{$IFEND})
   private
     {$IFDEF WITH_FTBYTE}FFieldIndex: Integer;{$ENDIF}
     {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
@@ -878,33 +878,35 @@ type
     property AsCardinal: Cardinal read GetAsCardinal write SetAsCardinal;
   end;
 
-  TZCardinalField = class({$IFDEF WITH_FTLONGWORD}TLongWordField{$ELSE}TZInt64Field{$ENDIF}) //keep that inherited class to keep InheritsFrom(TLongWordField) alive
+  TZCardinalField = class({$IF defined(WITH_FTLONGWORD) and declared(TLongWordField)}TLongWordField{$ELSE}TZInt64Field{$IFEND}) //keep that inherited class to keep InheritsFrom(TLongWordField) alive
   private
-    {$IFDEF WITH_FTLONGWORD}FFieldIndex: Integer;{$ENDIF}
+    {$IF defined(WITH_FTLONGWORD) and declared(TLongWordField)}
+    FFieldIndex: Integer;
+    FBound: Boolean;
+    function IsRowDataAvailable: Boolean;
+    {$IFEND}
     {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
-    {$IFDEF WITH_FTLONGWORD}FBound: Boolean;{$ENDIF}
-    {$IFDEF WITH_FTLONGWORD}function IsRowDataAvailable: Boolean;{$ENDIF}
   protected
-    function GetAsCardinal: Cardinal; {$IFNDEF WITH_FTLONGWORD}override;{$ENDIF}
-    procedure SetAsCardinal(Value: Cardinal);{$IFNDEF WITH_FTLONGWORD}override;{$ENDIF}
+    function GetAsCardinal: Cardinal; {$IF not (defined(WITH_FTLONGWORD) and declared(TLongWordField))}override;{$IFEND}
+    procedure SetAsCardinal(Value: Cardinal);{$IF not (defined(WITH_FTLONGWORD) and declared(TLongWordField))}override;{$IFEND}
     {$IFDEF WITH_FTLONGWORD}function GetIsNull: Boolean; override;{$ENDIF}
     function FilledValueWasNull(var Value: Cardinal): Boolean;
     function GetAsFloat: Double; override;
     function GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF}; override;
     function GetAsLargeInt: Largeint; {$IF not defined(WITH_FTLONGWORD) or defined(TFIELD_HAS_ASLARGEINT)} override;{$IFEND}
-    {$IFDEF WITH_FTLONGWORD}
+    {$IF defined(WITH_FTLONGWORD) and declared(TLongWordField)}
     procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
     function GetAsLongWord: {$IFDEF HAVE_TFIELD_32BIT_ASLONGWORD}Cardinal{$ELSE}LongWord{$ENDIF}; override;
-    {$ENDIF WITH_FTLONGWORD}
+    {$IFEND}
     function GetAsString: string; override;
     function GetAsVariant: Variant; override;
     procedure GetText(var Text: string; DisplayText: Boolean); override;
     procedure SetAsFloat(Value: Double); override;
     procedure SetAsInteger(Value: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF}); override;
     procedure SetAsLargeInt(Value: Largeint); {$IF not defined(WITH_FTLONGWORD) or defined(TFIELD_HAS_ASLARGEINT)} override;{$IFEND}
-    {$IFDEF WITH_FTLONGWORD}
+    {$IF defined(WITH_FTLONGWORD) and declared(TLongWordField)}
     procedure SetAsLongWord(Value: {$IFDEF HAVE_TFIELD_32BIT_ASLONGWORD}Cardinal{$ELSE}LongWord{$ENDIF}); override;
-    {$ENDIF WITH_FTLONGWORD}
+    {$IFEND}
     procedure SetAsString(const Value: String); override;
     procedure SetVarValue(const Value: Variant); override;
   {$IFDEF WITH_FTLONGWORD}
@@ -930,9 +932,9 @@ type
     function GetAsSingle: Single; override;
     {$ENDIF WITH_FTSINGLE}
     function GetAsFloat: Double; override;
-    {$IFDEF WITH_FTEXTENDED}
+    {$IF defined(WITH_FTEXTENDED) and declared(TExtendedField)}
     function GetAsExtended: Extended; override;
-    {$ENDIF WITH_FTEXTENDED}
+    {$IFEND}
     function GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF}; override;
     function GetAsLargeInt: Largeint; override;
     function GetAsString: string; override;
@@ -943,9 +945,9 @@ type
     procedure SetAsSingle(Value: Single); override;
     {$ENDIF WITH_FTSINGLE}
     procedure SetAsFloat(Value: Double); override;
-    {$IFDEF WITH_FTEXTENDED}
+    {$IF defined(WITH_FTEXTENDED) and declared(TExtendedField)}
     procedure SetAsExtended(Value: Extended); override;
-    {$ENDIF WITH_FTEXTENDED}
+    {$IFEND}
     procedure SetAsInteger(Value: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF}); override;
     procedure SetAsLargeInt(Value: Largeint); override;
     procedure SetAsString(const Value: string); override;
@@ -2204,10 +2206,8 @@ begin
         ftShortInt:
           Param.AsShortInt := Statement.GetShort(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         {$ENDIF WITH_FTSHORTINT}
-        {$IFDEF WITH_FTSHORTINT}
         ftWord:
           Param.AsWord := Statement.GetWord(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        {$ENDIF WITH_FTSHORTINT}
         ftSmallInt:
           Param.AsSmallInt := Statement.GetSmall(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         {$IFDEF WITH_FTLONGWORD}
@@ -5674,6 +5674,10 @@ const
     ftUnknown{ftVariant}, ftUnknown{ftInterface}, ftUnknown{ftIDispatch}, ftGuid, ftTimeStamp, ftFMTBcd // 32..37
 {$IFDEF FPC} //addition types for FPC
     , ftWideString{ftFixedWideChar}, ftWideMemo // 38..39
+    {$IFDEF WITH_FTLONGWORD}
+    , ftTimeStamp{ftOraTimeStamp}, ftDateTime{ftOraInterval} //40..41
+    , ftLongWord, ftShortint, ftByte, ftExtended //42..45
+    {$ENDIF}
 {$ELSE !FPC}
 {$IF CompilerVersion >= 18} //additional Types since D2006 and D2007
     , ftWideString{ftFixedWideChar}, ftWideMemo, ftDateTime{ftOraTimeStamp}, ftDateTime{ftOraInterval} // 38..41
@@ -5961,12 +5965,12 @@ begin
   SetAsUInt64(UInt64(Value));
 end;
 
-{$IFDEF WITH_FTEXTENDED}
+{$IF defined(WITH_FTEXTENDED) and declared(TExtendedField)}
 procedure TZUInt64Field.SetAsExtended(Value: Extended);
 begin
   SetAsLargeInt(Trunc(Value));
 end;
-{$ENDIF WITH_FTEXTENDED}
+{$IFEND}
 
 procedure TZUInt64Field.SetAsFloat(Value: Double);
 begin
@@ -6030,12 +6034,12 @@ begin
   Result := Cardinal(GetAsUInt64);
 end;
 
-{$IFDEF WITH_FTEXTENDED}
+{$IF defined(WITH_FTEXTENDED) and declared(TExtendedField)}
 function TZUInt64Field.GetAsExtended: Extended;
 begin
   Result := GetAsUInt64;
 end;
-{$ENDIF WITH_FTEXTENDED}
+{$IFEND}
 
 function TZUInt64Field.GetAsFloat: Double;
 begin
@@ -7799,7 +7803,7 @@ end;
 
 { TZCardinalField }
 
-{$IFDEF WITH_FTLONGWORD}
+{$IF defined(WITH_FTLONGWORD) and declared(TLongWordField)}
 procedure TZCardinalField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
@@ -7824,7 +7828,7 @@ begin
     end;
   end;
 end;
-{$ENDIF WITH_FTLONGWORD}
+{$IFEND}
 
 {$IFDEF FPC} {$PUSH} {$WARN 5060 off : Function Result does not seem to be initialized} {$ENDIF}
 function TZCardinalField.GetAsCardinal: Cardinal;
@@ -7852,12 +7856,12 @@ begin
   Result := GetAsCardinal;
 end;
 
-{$IFDEF WITH_FTLONGWORD}
+{$IF defined(WITH_FTLONGWORD) and declared(TLongWordField)}
 function TZCardinalField.GetAsLongWord: {$IFDEF HAVE_TFIELD_32BIT_ASLONGWORD}Cardinal{$ELSE}LongWord{$ENDIF};
 begin
   Result := GetAsCardinal;
 end;
-{$ENDIF WITH_FTLONGWORD}
+{$IFEND}
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF} //rolling eyes
 function TZCardinalField.GetAsString: string;
@@ -7974,12 +7978,12 @@ begin
   SetAsCardinal(Value);
 end;
 
-{$IFDEF WITH_FTLONGWORD}
+{$IF defined(WITH_FTLONGWORD) and declared(TLongWordField)}
 procedure TZCardinalField.SetAsLongWord(Value: {$IFDEF HAVE_TFIELD_32BIT_ASLONGWORD}Cardinal{$ELSE}LongWord{$ENDIF});
 begin
   SetAsCardinal(Value);
 end;
-{$ENDIF WITH_FTLONGWORD}
+{$IFEND}
 
 procedure TZCardinalField.SetAsString(const Value: String);
 begin

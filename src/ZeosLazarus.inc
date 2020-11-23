@@ -130,6 +130,7 @@
 
   {$DEFINE WITH_FUNIDIRECTIONAL} // FPC has references a field instead of a setter here.  (at least in 2.6.0)
   {$IF FPC_FULLVERSION>20601}
+    {$DEFINE WITH_DEPRECATED_MESSAGE}  //Compiler supports deprecated messages
     {$UNDEF WITH_FPC_FTTIME_BUG} //seems like the never FPC2.6.2 also have fixed the NativData bug for TTimeFields+TDataSet
     {$IF FPC_FULLVERSION>20602}
       {$IF FPC_FULLVERSION>20700}       // will be introduced in 2.7+
@@ -151,6 +152,7 @@
         {$ENDIF}
         {$DEFINE WITH_RAWBYTESTRING_CONVERSION_BUG} //2.7 gen did bad conversions with possible data-loss here
         {$IF FPC_FULLVERSION>30000}       // will be introduced in 3.0+
+          {$DEFINE TENCODING_HAS_CODEPAGE}
           {$DEFINE WITH_WITH_TFIELD_BIND_METHOD} //TField.Bind(Binding) is supported
           {$DEFINE WITH_PARAM_ASBCD} //TParam.AsBcd is supported
           {$DEFINE WITH_tagVARIANT_UINT64} //ActiveX tagVariant supports Int64/uInt64 values not sure about the proper FPC version here
@@ -160,10 +162,18 @@
           {$IF FPC_FULLVERSION>=30100}
             {$UNDEF MISS_RBS_SETSTRING_OVERLOAD} //SetString overload for RawByteString is available now
             {$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined} //suppress warning that marks all Variant operators f.ex.
-
             {$DEFINE WITH_ASANSISTRING} // TField.AsAnsiString is supported
             {$DEFINE WITH_VIRTUAL_TFIELD_ASUTF8STRING} // //TField has virtual getter+Setter for the UTF8Strings
             {$DEFINE WITH_VIRTUAL_TFIELD_ASUNICODESTRING} //TField has virtual getter+Setter for the UnicodeStrings
+            {$IF FPC_FULLVERSION>=30200}
+              {$DEFINE TBLOBDATA_IS_TBYTES} //TBlobData is an alias for TBytes instead of AnsiString
+              {$IF FPC_FULLVERSION>=30300}
+                {$DEFINE WITH_FTLONGWORD}                 // ftLongWord is supported
+                {$DEFINE WITH_FTSHORTINT}                 // ftShortInt is supported
+                {$DEFINE WITH_FTBYTE}                     // ftByte is supported
+                {$DEFINE WITH_FTEXTENDED}                 // ftExtended is supported
+              {$IFEND} 
+            {$IFEND} 
           {$IFEND}
         {$IFEND}
       {$IFEND}
