@@ -1244,7 +1244,7 @@ begin
       FChunkedData := True;
       Bind^.Length[0] := 0;
     end;
-    Bind^.is_null_address^ := 0;
+    Bind^.is_null_address^ := STMT_INDICATOR_NONE;
   end;
 end;
 
@@ -1318,7 +1318,7 @@ begin
                           end;
       else raise CreateConversionError(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stLongWord, SQLType);
     end;
-    Bind^.is_null_address^ := 0;
+    Bind^.is_null_address^ := STMT_INDICATOR_NONE;
   end;
 end;
 
@@ -1392,7 +1392,7 @@ begin
                           end;
       else raise CreateConversionError(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stInteger, SQLType);
     end;
-    Bind^.is_null_address^ := 0;
+    Bind^.is_null_address^ := STMT_INDICATOR_NONE;
   end;
 end;
 
@@ -1405,7 +1405,10 @@ var
   OffSet, PieceSize: Cardinal;
   array_size: UInt;
 begin
-  if not FEmulatedParams and FBindAgain and (BindList.Count > 0) and (FMYSQL_STMT <> nil) then begin
+  if not FEmulatedParams and (FBindAgain or (FTokenMatchIndex = Ord(myCall)))//handle a MySQL bug:
+     // EH: on sp's we always need to rebind else we get an invalid input parameter error
+     // to veryfy just execute mysql_stmt_execute twice and the error pop's up!
+     and (BindList.Count > 0) and (FMYSQL_STMT <> nil) then begin
     if (BatchDMLArrayCount > 0) then begin
       //set array_size first: https://mariadb.com/kb/en/library/bulk-insert-column-wise-binding/
       array_size := BatchDMLArrayCount;
@@ -1467,7 +1470,7 @@ begin
     if (Bind^.buffer <> nil) or
       ((Bind^.buffer_type_address^ <> FIELD_TYPE_BLOB) and (Bind^.buffer_type_address^ <> FIELD_TYPE_STRING)) then
       InitBuffer(SQLType, Index, Bind, 0);
-    Bind^.is_null_address^ := 0;
+    Bind^.is_null_address^ := STMT_INDICATOR_NONE;
   end;
 end;
 
@@ -1495,11 +1498,11 @@ begin
     if (BindValue.ParamType = pctUnknown) or (BindValue.SQLType in [stBigDecimal, stCurrency, stString, stGUID]) then begin
       if (BindValue.SQLType <> SQLType) or (Bind.buffer_length_address^ < Cardinal(Len+1)) then
         InitBuffer(SQLType, Index, Bind, Len);
-      if Len = 0
-      then PByte(Bind^.buffer)^ := Ord(#0)
-      else {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Bind^.buffer)^, Len+1);
+      if Len > 0 then
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Bind^.buffer)^, Len);
+      PByte(PAnsiChar(Bind^.buffer)+Len)^ := Ord(#0);
       Bind^.Length[0] := Len;
-      Bind^.is_null_address^ := 0;
+      Bind^.is_null_address^ := STMT_INDICATOR_NONE;
     end else
       BindRawStr(Index, Pointer(Value), Len);
   end;
@@ -2215,7 +2218,7 @@ begin
     P^.year := Value.Year;
     P^.month := Value.Month;
     P^.day := Value.Day;
-    Bind^.is_null_address^ := 0;
+    Bind^.is_null_address^ := STMT_INDICATOR_NONE;
   end;
 end;
 
@@ -2556,7 +2559,7 @@ begin
     P^.minute := Value.Minute;
     P^.second := Value.Second;
     P^.second_part := Value.Fractions div 1000;
-    Bind^.is_null_address^ := 0;
+    Bind^.is_null_address^ := STMT_INDICATOR_NONE;
   end;
 end;
 
@@ -2598,7 +2601,7 @@ begin
     P^.minute := Value.Minute;
     P^.second := Value.Second;
     P^.second_part := Value.Fractions div 1000;
-    Bind^.is_null_address^ := 0;
+    Bind^.is_null_address^ := STMT_INDICATOR_NONE;
   end;
 end;
 
@@ -2720,6 +2723,7 @@ begin
   {TZMySQLPreparedStatement(Result).FMinExecCount2Prepare := 0; //prepare immediately
   TZMySQLPreparedStatement(Result).InternalRealPrepare;}
   TZMySQLPreparedStatement(Result).Prepare;
+  FSupportsBidirectionalParamIO := True;
 end;
 
 { TZMySQLCallableStatement56down }
