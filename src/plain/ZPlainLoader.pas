@@ -193,6 +193,8 @@ begin
 {$IFDEF UNIX}
   {$IFDEF FPC}
     FHandle := LoadLibrary(PAnsiChar(Location));
+  {$ELSE IFDEF LINUX64} //Delphi Linux64
+    FHandle := LoadLibrary(PWideChar(Location));
   {$ELSE} //Kylix
     FHandle := HMODULE(dlopen(PAnsiChar(Location), RTLD_GLOBAL));
   {$ENDIF}

@@ -2967,7 +2967,7 @@ type
   protected
     FPreLoader : TZNativeLibraryLoader;
     {$IFDEF ENABLE_INTERBASE_CRYPT}
-    procedure Initialize(const Location: String = ''); virtual;
+    procedure Initialize(const Location: String = ''); Override;
     {$ENDIF}
   public
     constructor Create;
