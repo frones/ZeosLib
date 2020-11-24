@@ -475,7 +475,12 @@ const
     'SET SESSION TRANSACTION READ WRITE');
 
   MySQLCommitMsg: array[Boolean] of SQLString = (
-    'Native SetAutoCommit False call', 'Native SetAutoCommit True call');
+    'SET autocommit=0', 'SET autocommit=1');
+
+const
+  cStartTransaction: {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF} = 'START TRANSACTION';
+  cCommit: {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF} = 'COMMIT';
+  cRollback: {$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF} = 'ROLLBACK';
 
 function TZMySQLConnection.MySQL_FieldType_Bit_1_IsBoolean: Boolean;
 begin
@@ -879,14 +884,13 @@ begin
     ExecuteImmediat(S, lcTransaction);
     FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
-    If FPlainDriver.mysql_commit(FHandle) <> 0 then
-      HandleErrorOrWarning(lcTransaction, nil, sCommitMsg,
-        IImmediatelyReleasable(FWeakImmediatRelPtr))
-    else if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, URL.Protocol, sCommitMsg);
-    SetAutoCommit(True);
-    if FRestartTransaction then
-      StartTransaction;
+(* //see: https://github.com/mariadb-corporation/mariadb-connector-c/blob/3.1/libmariadb/mariadb_lib.c
+    my_bool STDCALL mysql_commit(MYSQL *mysql)
+{
+  return((my_bool)mysql_real_query(mysql, "COMMIT", (unsigned long)strlen("COMMIT")));
+}*)
+    ExecuteImmediat(cCOMMIT, lcTransaction);
+    AutoCommit := not FRestartTransaction;
   end
 end;
 
@@ -909,14 +913,13 @@ begin
     ExecuteImmediat(S, lcTransaction);
     FSavePoints.Delete(FSavePoints.Count-1);
   end else begin
-    If FPlainDriver.mysql_rollback(FHandle) <> 0 then
-      HandleErrorOrWarning(lcTransaction, nil, sRollbackMsg,
-        IImmediatelyReleasable(FWeakImmediatRelPtr))
-    else if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, URL.Protocol, sRollbackMsg);
-    SetAutoCommit(True);
-    if FRestartTransaction then
-      StartTransaction;
+    (* https://github.com/mariadb-corporation/mariadb-connector-c/blob/3.1/libmariadb/mariadb_lib.c
+my_bool STDCALL mysql_rollback(MYSQL *mysql)
+{
+  return((my_bool)mysql_real_query(mysql, "ROLLBACK", (unsigned long)strlen("ROLLBACK")));
+}*)
+    ExecuteImmediat(cROLLBACK, lcTransaction);
+    AutoCommit := not FRestartTransaction;
   end;
 end;
 
@@ -1026,11 +1029,19 @@ begin
   if Closed then
     Open;
   if AutoCommit then begin
+    {EH: Commented out, start a expﬂlicit txn see:
+     https://github.com/mariadb-corporation/mariadb-connector-c/blob/3.1/libmariadb/mariadb_lib.c
+    return((my_bool) mysql_real_query(mysql, (mode) ? "SET autocommit=1" :
+                                         "SET autocommit=0", 16));
+
     if FPlainDriver.mysql_autocommit(FHandle, 0) <> 0 then
       HandleErrorOrWarning(lcTransaction, nil, MySQLCommitMsg[False],
         IImmediatelyReleasable(FWeakImmediatRelPtr))
+
     else if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, URL.Protocol, MySQLCommitMsg[False]);
+      DriverManager.LogMessage(lcTransaction, URL.Protocol, MySQLCommitMsg[False]);}
+
+    ExecuteImmediat(cStartTransaction, lcTransaction);
     AutoCommit := False;
     Result := 1;
   end else begin
@@ -1073,7 +1084,7 @@ begin
     FRestartTransaction := AutoCommit;
     if Closed
     then AutoCommit := Value
-    else if Value then begin
+    {else if Value then begin
       FSavePoints.Clear;
       if FPlainDriver.mysql_autocommit(FHandle, 1) <> 0 then
         HandleErrorOrWarning(lcTransaction, nil, MySQLCommitMsg[True],
@@ -1082,7 +1093,18 @@ begin
         DriverManager.LogMessage(lcTransaction, URL.Protocol, MySQLCommitMsg[True]);
       AutoCommit := True;
     end else
-      StartTransaction;
+      StartTransaction;}
+    else begin
+      if Value then
+        FSavePoints.Clear;
+      if FPlainDriver.mysql_autocommit(FHandle, Ord(Value)) <> 0 then
+        HandleErrorOrWarning(lcTransaction, nil, MySQLCommitMsg[Value],
+          IImmediatelyReleasable(FWeakImmediatRelPtr))
+      else if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcTransaction, URL.Protocol, MySQLCommitMsg[Value]);
+      FRestartTransaction := AutoCommit;
+      AutoCommit := Value;
+    end;
   end;
 end;
 
