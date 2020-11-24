@@ -59,7 +59,7 @@ interface
 uses
   Types, SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
   ZDbcIntfs, ZAbstractDataset, ZCompatibility
-  {$IFDEF TEST_TZPARAM},ZDatasetParam{$ENDIF};
+  {$IFNDEF DISABLE_ZPARAM},ZDatasetParam{$ENDIF};
 
 type
 
@@ -75,7 +75,7 @@ type
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; override;
     procedure SetStatementParams(const Statement: IZPreparedStatement;
-      const ParamNames: TStringDynArray; Params: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF};
+      const ParamNames: TStringDynArray; Params: {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF};
       DataLink: TDataLink); override;
     procedure InternalOpen; override;
   protected
@@ -153,10 +153,10 @@ end;
 }
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "ParamNames/DataLink" not used} {$ENDIF}
 procedure TZStoredProc.SetStatementParams(const Statement: IZPreparedStatement;
-  const ParamNames: TStringDynArray; Params: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF}; DataLink: TDataLink);
+  const ParamNames: TStringDynArray; Params: {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF}; DataLink: TDataLink);
 var
   I: Integer;
-  Param: {$IFDEF TEST_TZPARAM}TZParam{$ELSE}TParam{$ENDIF};
+  Param: {$IFNDEF DISABLE_ZPARAM}TZParam{$ELSE}TParam{$ENDIF};
 begin
   for I := 0 to Params.Count - 1 do begin
     Param := Params[I];
@@ -184,7 +184,7 @@ end;
 
 procedure TZStoredProc.SetStoredProcName(const Value: string);
 var
-  OldParams: {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF};
+  OldParams: {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF};
   Catalog, Schema, ObjectName: string;
   ColumnType: TZProcedureColumnType;
   SQLType: TZSQLType;
@@ -208,7 +208,7 @@ begin
         Schema := Metadata.AddEscapeCharToWildcards(Schema);
         ObjectName := Metadata.AddEscapeCharToWildcards(ObjectName);
         FMetaResultSet := Metadata.GetProcedureColumns(Catalog, Schema, ObjectName, '');
-        OldParams := {$IFDEF TEST_TZPARAM}TZParams{$ELSE}TParams{$ENDIF}.Create;
+        OldParams := {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF}.Create;
         try
           OldParams.Assign(Params);
           Params.Clear;
@@ -218,7 +218,7 @@ begin
             if Ord(SQLType) >= Ord(stString)
             then Precision := FMetaResultSet.GetInt(ProcColLengthIndex)
             else Precision := FMetaResultSet.GetInt(ProcColPrecisionIndex);
-            {$IFDEF TEST_TZPARAM}
+            {$IFNDEF DISABLE_ZPARAM}
             Params.CreateParam(SQLType,
                 FMetaResultSet.GetString(ProcColColumnNameIndex),
                 ProcColDbcToDatasetType[ColumnType], Precision, FMetaResultSet.GetInt(ProcColScaleIndex));

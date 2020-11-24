@@ -1211,7 +1211,8 @@ end;
 function TZInterbase6DatabaseInfo.GetDefaultTransactionIsolation:
   TZTransactIsolationLevel;
 begin
-  Result := tiSerializable;
+  //Result := tiSerializable;
+  Result := tiReadCommitted;
 end;
 
 {**

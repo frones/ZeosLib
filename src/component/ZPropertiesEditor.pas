@@ -797,18 +797,6 @@ const
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
   );
-  ZProp_AutoEncodeStrings : TZProperty = (
-    Name: ConnProps_AutoEncodeStrings;
-    Purpose: 'transliterate between client-characterset and RawStringEncoding'+LineEnding+
-      'this option might be interesting for Ansi-Compilers and drivers like SQLite'+LineEnding+
-      'the more you can work with ut8 encoding and the database encoding is ansi  or vice versa'+LineEnding+
-      '(siltent character conversion with expected character/accedent loss'+LineEnding+
-      '2. deprected might be omitted in future(it''s a guesswork). Test the raw encoded strings against UTF8/Ansi encoding';
-    ValueType: pvtEnum; LevelTypes: [pltConnection];
-    Values: cBoolEnum; Default: cBoolFalse; Alias: ConnProps_Transliterate;
-    Providers: (Count: 0; Items: nil);
-    Protocols: (Count: 0; Items: nil);
-  );
   {ZProp_Transliterate: TZProperty = (
     Name: ConnProps_Transliterate;
     Purpose: 'transliterate between client-characterset and RawStringEncoding'+LineEnding+
@@ -4016,7 +4004,7 @@ initialization
   HideEquals := True;
 
   RegisterZProperties([@ZProp_UID, @ZProp_Username, @ZProp_PWD, @ZProp_Password,
-    @ZProp_LibLocation, @ZProp_CodePage, @ZProp_AutoEncodeStrings, //@ZProp_Transliterate,
+    @ZProp_LibLocation, @ZProp_CodePage, //@ZProp_Transliterate,
     @ZProp_ControlsCP, @ZProp_Timeout,
     @ZProp_DateReadFormat, @ZProp_DateWriteFormat, @ZProp_TimeReadFormat,
     @ZProp_TimeWriteFormat, @ZProp_DateTimeReadFormat, @ZProp_DateTimeWriteFormat,

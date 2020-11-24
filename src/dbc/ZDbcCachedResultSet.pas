@@ -841,6 +841,9 @@ begin
       CurrentRow := FRowsList[FSelectedRow.Index];
       FRowAccessor.ClearBuffer(FSelectedRow);
       FSelectedRow := CurrentRow;
+    end else if (FRowAccessor.RowBuffer = FInsertedRow) then begin
+      FRowAccessor.Clear;
+      FRowAccessor.RowBuffer := FSelectedRow;
     end;
   end;
 end;

@@ -41,6 +41,7 @@
 {********************************************************@}
 {.$DEFINE ZEOS_TEST_ONLY}
 {.$DEFINE GENERIC_INDEX}
+{$DEFINE DISABLE_ZPARAM}
 //common compilation directives
 {$DEFINE ZEOS72UP}
 {$DEFINE ZEOS73UP}
@@ -206,6 +207,7 @@
               {$DEFINE WITH_FTBYTE}                     // ftByte is supported
               {$DEFINE WITH_FTEXTENDED}                 // ftExtended is supported
               {$DEFINE WITH_FTLONGWORD}                 // ftLongWord is supported
+              {$DEFINE WITH_TFIELD_ASEXTENDED}          // TField.AsExtended is supported
               {$DEFINE TPARAM_HAS_ASBYTES}              // TParam.AsBytes is supported
               {$DEFINE HAS_TPARAM_ASSTREAM}             // TParam.AsStream is supported
               {$DEFINE TFIELD_HAS_ASBYTES}              // TField.AsBytes is supported

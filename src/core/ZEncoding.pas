@@ -1162,7 +1162,7 @@ const
   dsMaxRStringSize = 8192; { Maximum string field size declared in DB.pas }
   dsMaxWStringSize = dsMaxRStringSize shr 1;
 
-{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+{$IFDEF FPC} {$PUSH} {$WARN 4056 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function ZRawToUnicode(const S: RawByteString; const CP: Word): UnicodeString;
 begin
   if Pointer(S) = nil
@@ -2049,6 +2049,14 @@ begin
     if (CP = zCP_NONE) or (CP = zCP_UTF16) then
       CP := ZOSCodePage; //random success
     ULen := Min(SrcWords shl 2, High(Integer)-1);
+    if (CP = zCP_UTF8) then begin
+      if Ulen <= dsMaxRStringSize then
+        ZSetString(@Buf[0], PUnicodeToUtf8Buf(@Buf[0], ULen, Source, SrcWords, [ccfNoTrailingZero]), Result{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF})
+      else begin
+        ZSetString(nil, ULen, Result{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF}); //oversized
+        SetLength(Result, PUnicodeToUtf8Buf(Pointer(Result), ULen, Source, SrcWords, [ccfNoTrailingZero]));
+      end
+    end else
     {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
     if Ulen <= dsMaxRStringSize then
       {$IFDEF WITH_UNICODEFROMLOCALECHARS}
@@ -2065,16 +2073,8 @@ begin
       {$ENDIF}
     end;
     {$ELSE}
-    if (CP = zCP_UTF8) then begin
-      if Ulen <= dsMaxRStringSize then
-        ZSetString(@Buf[0], UnicodeToUtf8(@Buf[0], ULen, Source, SrcWords), Result)
-      else begin
-        ZSetString(nil, ULen, Result); //oversized
-        SetLength(Result, UnicodeToUtf8(Pointer(Result), ULen, Source, SrcWords));
-      end
-    end else
       {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
-        WidestringManager.Unicode2AnsiMoveProc(Source, Result, CP, SrcWords);
+      WidestringManager.Unicode2AnsiMoveProc(Source, Result, CP, SrcWords);
       {$ELSE}
       begin
         SetString(US, Source, SrcWords);

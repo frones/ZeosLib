@@ -1312,7 +1312,10 @@ begin
                             PD := @D;
                           end else if Arr.VArrayVariantType = vtDate then
                             PD := @TZDateDynArray(DA)[i]
-                          else begin
+                          else if (Arr.VArrayVariantType = vtTimestamp) then begin
+                            DateFromTimestamp(TZTimestampDynArray(DA)[i], D);
+                            PD := @D;
+                          end else begin
                             DT := ArrayValueToDate(Arr, I, ConSettings^.WriteFormatSettings);
                             DecodeDateTimeToDate(DT, D);
                             PD := @D;
@@ -1330,15 +1333,20 @@ begin
                         if IsNullFromArray(Arr, I) then
                           N[I] := SQL_NULL_DATA
                         else begin
-                          if (Arr.VArrayVariantType in [vtNull, vtDateTime]) then begin
-                            DecodeDateTimeToTime(TDateTimeDynArray(DA)[i], T);
-                            PT := @T;
-                          end else if Arr.VArrayVariantType = vtDate then
+                          if Arr.VArrayVariantType = vtTime then
                             PT := @TZTimeDynArray(DA)[i]
                           else begin
-                            DT := ArrayValueTotime(Arr, I, ConSettings^.WriteFormatSettings);
-                            DecodeDateTimeToTime(DT, T);
                             PT := @T;
+                            if (Arr.VArrayVariantType in [vtNull, vtDateTime]) then
+                              DecodeDateTimeToTime(TDateTimeDynArray(DA)[i], T)
+                            else if Arr.VArrayVariantType = vtTimeStamp then
+                              TimeFromTimeStamp(TZTimeStampDynArray(DA)[i], T)
+                            else if Arr.VArrayVariantType = vtDate then
+                              FillChar(T, SizeOf(TZTime), #0)
+                            else begin
+                              DT := ArrayValueTotime(Arr, I, ConSettings^.WriteFormatSettings);
+                              DecodeDateTimeToTime(DT, T);
+                            end;
                           end;
                           if Bind.ValueType = SQL_C_SS_TIME2 then begin
                             SQL_SS_TIME2_STRUCT.hour := PT.Hour;
@@ -1360,15 +1368,20 @@ begin
                         if IsNullFromArray(Arr, I) then
                           N[I] := SQL_NULL_DATA
                         else begin
-                          if (Arr.VArrayVariantType in [vtNull, vtDateTime]) then begin
-                            DecodeDateTimeToTimeStamp(TDateTimeDynArray(DA)[i], TS);
-                            PTS := @TS;
-                          end else if Arr.VArrayVariantType = vtTimeStamp then
+                          if Arr.VArrayVariantType = vtTimeStamp then
                             PTS := @TZTimeStampDynArray(DA)[i]
                           else begin
-                            DT := ArrayValueToDatetime(Arr, I, ConSettings^.WriteFormatSettings);
-                            DecodeDateTimeToTimeStamp(DT, TS);
                             PTS := @TS;
+                            if (Arr.VArrayVariantType in [vtNull, vtDateTime]) then
+                              DecodeDateTimeToTimeStamp(TDateTimeDynArray(DA)[i], TS)
+                            else if Arr.VArrayVariantType = vtDate then
+                              TimeStampFromDate(TZDateDynArray(DA)[i], TS)
+                            else if Arr.VArrayVariantType = vtTime then
+                              TimeStampFromTime(TZTimeDynArray(DA)[i], TS)
+                            else begin
+                              DT := ArrayValueToDatetime(Arr, I, ConSettings^.WriteFormatSettings);
+                              DecodeDateTimeToTimeStamp(DT, TS);
+                            end;
                           end;
                           if Bind.ValueType = SQL_C_SS_TIMESTAMPOFFSET then begin
                             SQL_SS_TIMESTAMPOFFSET_STRUCT.year := Ts.Year;
@@ -2521,6 +2534,7 @@ end;
 procedure TZAbstractODBCPreparedStatement.SetNull(Index: Integer;
   SQLType: TZSQLType);
 var Bind: PZODBCParamBind;
+label jmpE;
 begin
   {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
   CheckParameterIndex(Index);
@@ -2528,11 +2542,18 @@ begin
     {$R-}
     Bind := @fParamBindings[Index];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+    if (SQLType = stUnknown) then
+      if Bind.Described
+      then SQLType := Bind.SQLType
+      else goto jmpE;
     if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and (Bind.SQLType <> SQLType)) then
       InitBind(Index, 1, SQLType);
     Bind.StrLen_or_IndPtr^ := SQL_NULL_DATA;
-  end else
+  end else begin
+    if SQLType = stUnknown then
+jmpE: raise EZSQLException.Create(SUnsupportedParameterType);
     BindList.SetNull(Index, SQLType);
+  end;
 end;
 
 procedure TZAbstractODBCPreparedStatement.SetPAnsiChar(Index: Integer;

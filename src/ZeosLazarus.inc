@@ -131,6 +131,7 @@
 
   {$DEFINE WITH_FUNIDIRECTIONAL} // FPC has references a field instead of a setter here.  (at least in 2.6.0)
   {$IF FPC_FULLVERSION>20601}
+    {$DEFINE WITH_DEPRECATED_MESSAGE}  //Compiler supports deprecated messages
     {$UNDEF WITH_FPC_FTTIME_BUG} //seems like the never FPC2.6.2 also have fixed the NativData bug for TTimeFields+TDataSet
     {$IF FPC_FULLVERSION>20602}
      {$DEFINE TENCODING_HAS_CODEPAGE}          //TEncoding has property CodePage  
@@ -163,10 +164,18 @@
           {$IF FPC_FULLVERSION>=30100}
             {$UNDEF MISS_RBS_SETSTRING_OVERLOAD} //SetString overload for RawByteString is available now
             {$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined} //suppress warning that marks all Variant operators f.ex.
-
             {$DEFINE WITH_ASANSISTRING} // TField.AsAnsiString is supported
             {$DEFINE WITH_VIRTUAL_TFIELD_ASUTF8STRING} // //TField has virtual getter+Setter for the UTF8Strings
             {$DEFINE WITH_VIRTUAL_TFIELD_ASUNICODESTRING} //TField has virtual getter+Setter for the UnicodeStrings
+            {$IF FPC_FULLVERSION>=30200}
+              {$DEFINE TBLOBDATA_IS_TBYTES} //TBlobData is an alias for TBytes instead of AnsiString
+              {$IF FPC_FULLVERSION>=30300}
+                {$DEFINE WITH_FTLONGWORD}                 // ftLongWord is supported
+                {$DEFINE WITH_FTSHORTINT}                 // ftShortInt is supported
+                {$DEFINE WITH_FTBYTE}                     // ftByte is supported
+                {$DEFINE WITH_FTEXTENDED}                 // ftExtended is supported
+              {$IFEND} 
+            {$IFEND} 
           {$IFEND}
         {$IFEND}
       {$IFEND}
