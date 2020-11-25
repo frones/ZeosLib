@@ -1105,6 +1105,11 @@ begin
   ConSettings.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(CharSet, DoArrange);
   FClientCodePage := ConSettings.ClientCodePage^.Name; //resets the developer choosen ClientCodePage
   FClientVarManager := TZClientVariantManager.Create(ConSettings);
+  if (ConSettings.ClientCodePage.Encoding = ceUTF16) and
+    (Info.Values[ConnProps_RawStringEncoding] = '')
+    {$IF declared(ConnProps_ControlsCP)}and (Info.Values[ConnProps_ControlsCP] = ''){$IFEND}
+    then ConSettings.W2A2WEncodingSource := encUTF8;
+
 end;
 
 {**
