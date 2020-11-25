@@ -880,12 +880,12 @@ type
 
   TZCardinalField = class({$IF defined(WITH_FTLONGWORD) and declared(TLongWordField)}TLongWordField{$ELSE}TZInt64Field{$IFEND}) //keep that inherited class to keep InheritsFrom(TLongWordField) alive
   private
+    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
     {$IF defined(WITH_FTLONGWORD) and declared(TLongWordField)}
     FFieldIndex: Integer;
     FBound: Boolean;
     function IsRowDataAvailable: Boolean;
     {$IFEND}
-    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
   protected
     function GetAsCardinal: Cardinal; {$IF not (defined(WITH_FTLONGWORD) and declared(TLongWordField))}override;{$IFEND}
     procedure SetAsCardinal(Value: Cardinal);{$IF not (defined(WITH_FTLONGWORD) and declared(TLongWordField))}override;{$IFEND}
