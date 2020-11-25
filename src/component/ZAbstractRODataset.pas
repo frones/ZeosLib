@@ -1035,7 +1035,7 @@ type
     procedure SetAsCurrency(Value: Currency); override;
     procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
   public
-    {$IFNDEF WIT_ASLARGEINT}
+    {$IFNDEF WITH_ASLARGEINT}
     property AsLargeInt: LargeInt read GetAsLargeInt write SetAsLargeInt;
     {$ENDIF}
     procedure Clear; override;
@@ -3414,7 +3414,7 @@ begin
         {$ENDIF WITH_FTTIMESTAMP_FIELD}*);
 
         if FieldType in [ftBytes, ftVarBytes, ftString, ftWidestring] then begin
-          {$IFNDEF WIT_WIDEMEMO}
+          {$IFNDEF WITH_WIDEMEMO}
           if (Connection.ControlsCodePage = cCP_UTF16) and (FieldType = ftWidestring) and (SQLType in [stAsciiStream, stUnicodeStream])
           then Size := (MaxInt shr 1)-2
           else{$ENDIF} begin
