@@ -58,7 +58,7 @@ uses
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
   ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility, ZVariant,
   ZAbstractRODataset, ZMessages, ZStoredProcedure
-  {$IFNDEF DISABLE_ZPARAM}, Types, ZDbcUtils{$ENDIF};
+  {$IFNDEF DISABLE_ZPARAM}{$IFNDEF FPC}, Types{$ENDIF}, ZDbcUtils{$ENDIF};
 
 type
   {** Implements a test case for . }
@@ -3219,24 +3219,24 @@ end;
 
 const
   hl_id_Index             = 0;
-  hl_Boolean_Index        = 1;
-  hl_Byte_Index           = 2;
-  hl_Short_Index          = 3;
-  hl_Integer_Index        = 4;
-  hl_Long_Index           = 5;
-  hl_Float_Index          = 6;
-  hl_Double_Index         = 7;
-  hl_BigDecimal_Index     = 8;
-  hl_String_Index         = 9;
-  hl_Unicode_Index        = 10;
-  hl_Bytes_Index          = 11;
-  hl_Date_Index           = 12;
-  hl_Time_Index           = 13;
-  hl_Timestamp_Index      = 14;
-  hl_GUID_Index           = 15;
-  hl_AsciiStream_Index    = 16;
-  hl_UnicodeStream_Index  = 17;
-  hl_BinaryStream_Index   = 18;
+  {%H-}hl_Boolean_Index        = 1;
+  {%H-}hl_Byte_Index           = 2;
+  {%H-}hl_Short_Index          = 3;
+  {%H-}hl_Integer_Index        = 4;
+  {%H-}hl_Long_Index           = 5;
+  {%H-}hl_Float_Index          = 6;
+  {%H-}hl_Double_Index         = 7;
+  {%H-}hl_BigDecimal_Index     = 8;
+  {%H-}hl_String_Index         = 9;
+  {%H-}hl_Unicode_Index        = 10;
+  {%H-}hl_Bytes_Index          = 11;
+  {%H-}hl_Date_Index           = 12;
+  {%H-}hl_Time_Index           = 13;
+  {%H-}hl_Timestamp_Index      = 14;
+  {%H-}hl_GUID_Index           = 15;
+  {%H-}hl_AsciiStream_Index    = 16;
+  {%H-}hl_UnicodeStream_Index  = 17;
+  {%H-}hl_BinaryStream_Index   = 18;
 
 hlTypeArray: array[hl_id_Index..hl_BinaryStream_Index] of TZSQLType = (
   stInteger,
@@ -3263,6 +3263,10 @@ procedure TZTestBatchDML.InternalTestArrayBinding(Query: TZQuery;
   FirstID, ArrayLen, LastFieldIndex: Integer);
 var
   I, J: Integer;
+  {$IFNDEF TBLOBDATA_IS_TBYTES}
+  Bts: TBytes;
+  BlobData: TBlobData;
+  {$ENDIF}
 begin
   CheckNotNull(Query);
   Query.Params.BatchDMLCount := ArrayLen;
@@ -3292,7 +3296,17 @@ begin
         stBytes:        Query.Params[J].AsBytesArray[i] := RandomBts(ArrayLen);
         stAsciiStream:  Query.Params[J].AsMemos[i] := RandomStr(Random(99)+1);
         stUnicodeStream:Query.Params[J].AsUnicodeMemos[i] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(RandomStr(Random(99)+1));
+        {$IFDEF TBLOBDATA_IS_TBYTES}
         stBinaryStream: Query.Params[J].AsBlobs[i] := RandomBts(ArrayLen);
+        {$ELSE !TBLOBDATA_IS_TBYTES}
+        stBinaryStream: begin
+                          Bts := RandomBts(ArrayLen);
+                          BlobData := '';
+                          System.SetString(Blobdata, PAnsiChar(Bts), ArrayLen);
+                          Query.Params[J].AsBlobs[i] := BlobData;
+                        end;
+        {$ENDIF !TBLOBDATA_IS_TBYTES}
+        {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
       end;
   end;
   Query.ExecSQL;
