@@ -4744,8 +4744,9 @@ begin
       stShort, stSmall, stInteger, stLong: SetLong(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCD2UInt64(Value));
       stFloat, stDouble, stDate, stTime, stTimeStamp: SetDouble(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, BCDToDouble(Value));
       stCurrency: begin
+          C := 0;
           BCDToCurr(Value, C);
-          FBindList.Put(ParameterIndex, stCurrency, P8Bytes(@C));
+          FBindList.Put(ParameterIndex, stCurrency, P8Bytes(@C))
         end;
       stBigDecimal: BindList.Put(ParameterIndex, Value);
       else FBindList.Put(ParameterIndex, Value);
