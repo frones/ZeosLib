@@ -1589,42 +1589,275 @@ type
     ///  see IStatement.execute</summary>
     /// <returns>True if a ResultSet is available otherwise false.</returns>
     function ExecutePrepared: Boolean;
-
+    /// <summary>Sets the designated parameter to SQL <c>NULL</c>.
+    ///  <B>Note:</B> You must specify the parameter's SQL type. </summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" the SQL type code defined in <c>ZDbcIntfs.pas</c></param>
     procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
+    /// <summary>Sets the designated parameter to a <c>boolean</c> value.
+    ///  The driver converts this to a SQL <c>Ordinal</c> value when it sends it
+    ///  to the database.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
+    /// <summary>Sets the designated parameter to a <c>Byte</c> value.
+    ///  If not supported by provider, the driver converts this to a SQL
+    ///  <c>Ordinal</c> value when it sends it to the database.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetByte(ParameterIndex: Integer; Value: Byte);
+    /// <summary>Sets the designated parameter to a <c>ShortInt</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetShort(ParameterIndex: Integer; Value: ShortInt);
+    /// <summary>Sets the designated parameter to a <c>Word</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetWord(ParameterIndex: Integer; Value: Word);
+    /// <summary>Sets the designated parameter to a <c>SmallInt</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetSmall(ParameterIndex: Integer; Value: SmallInt);
+    /// <summary>Sets the designated parameter to a <c>Cardinal</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetUInt(ParameterIndex: Integer; Value: Cardinal);
+    /// <summary>Sets the designated parameter to a <c>Integer</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetInt(ParameterIndex: Integer; Value: Integer);
+    /// <summary>Sets the designated parameter to a <c>UInt64</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetULong(ParameterIndex: Integer; const Value: UInt64);
+    /// <summary>Sets the designated parameter to a <c>Int64</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetLong(ParameterIndex: Integer; const Value: Int64);
+    /// <summary>Sets the designated parameter to a <c>Single</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetFloat(ParameterIndex: Integer; Value: Single);
+    /// <summary>Sets the designated parameter to a <c>Double</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetDouble(ParameterIndex: Integer; const Value: Double);
+    /// <summary>Sets the designated parameter to a <c>Currency</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetCurrency(ParameterIndex: Integer; const Value: Currency);
+    /// <summary>Sets the designated parameter to a <c>BigDecimal(TBCD)</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetBigDecimal(ParameterIndex: Integer; const Value: TBCD);
+    /// <summary>Sets the designated parameter to a <c>TZCharRec</c> value.
+    ///  The references need to be valid until the statement is executed.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
+    /// <summary>Sets the designated parameter to a <c>String</c> value.
+    ///  This method equals to SetUnicodeString on Unicode-Compilers. For
+    ///  Raw-String compilers the encoding is defined by W2A2WEncodingSource of
+    ///  the ConnectionSettings record. The driver will convert the string to
+    ///  the Client-Characterset.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetString(ParameterIndex: Integer; const Value: String);
-    procedure SetUnicodeString(ParameterIndex: Integer; const Value: UnicodeString); //AVZ
+    /// <summary>Sets the designated parameter to a <c>UnicodeString</c> value.
+    ///  The references need to be valid until the statement is executed.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
+    procedure SetUnicodeString(ParameterIndex: Integer; const Value: UnicodeString);
+    /// <summary>Sets the designated parameter to a <c>byte array</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); overload;
+    /// <summary>Sets the designated parameter to a <c>ByteArray reference</c> value.
+    ///  The references need to be valid until the statement is executed.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value reference.</param>
+    /// <param>"Len" the Length of the bytes buffer.</param>
     procedure SetBytes(ParameterIndex: Integer; Value: PByte; Len: NativeUInt); overload;
+    /// <summary>Sets the designated parameter to a <c>TGUID</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetGuid(ParameterIndex: Integer; const Value: TGUID);
     {$IFNDEF NO_ANSISTRING}
+    /// <summary>Sets the designated parameter to a <c>AnsiString</c> value.
+    ///  The string must be GET_ACP encoded. The driver will convert the value
+    ///  if the driver uses an different encoding.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString);
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
+    /// <summary>Sets the designated parameter to a <c>AnsiString</c> value.
+    ///  The string must be UTF8 encoded. The driver will convert the value
+    ///  if the driver uses an different encoding.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String);
     {$ENDIF}
+    /// <summary>Sets the designated parameter to a <c>AnsiString</c> value.
+    ///  The string must be DB-CodePage encoded. If the driver uses an UTF16
+    ///  encoding, the driver will convert the value using the conversion rules
+    ///  given by W2A2WEncodingSource of the ConnectionSettings record.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString);
+    /// <summary>Sets the designated parameter to a <c>Date(TDateTime)</c> value.
+    ///  This method is obsolate and left for compatibility. The method always
+    ///  decodes the value and calls the <c>SetDate(Index: Integer; Value: TZDate)</c>
+    ///  overload.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetDate(ParameterIndex: Integer; const Value: TDateTime); overload;
+    /// <summary>Sets the designated parameter to a <c>TZDate</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetDate(ParameterIndex: Integer; const Value: TZDate); overload;
+    /// <summary>Sets the designated parameter to a <c>Time(TDateTime)</c> value.
+    ///  This method is obsolate and left for compatibility. The method always
+    ///  decodes the value and calls the <c>SetTime(Index: Integer; Value: TZtime)</c>
+    ///  overload.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetTime(ParameterIndex: Integer; const Value: TDateTime); overload;
+    /// <summary>Sets the designated parameter to a <c>TZTime</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetTime(ParameterIndex: Integer; const Value: TZTime); overload;
+    /// <summary>Sets the designated parameter to a <c>TDateTime</c> value.
+    ///  This method is obsolate and left for compatibility. The method always
+    ///  decodes the value and calls the
+    ///  <c>SetTimestamp(Index: Integer; Value: TZTimestamp)</c>overload.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime); overload;
+    /// <summary>Sets the designated parameter to a <c>TZTimestamp</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetTimestamp(ParameterIndex: Integer; const Value: TZTimeStamp); overload;
+    /// <summary>Sets the designated parameter to a raw character stream value.
+    ///  The stream must be DB-CodePage encoded. If the driver uses an UTF16
+    ///  encoding, the driver will convert the value using the conversion rules
+    ///  given by W2A2WEncodingSource of the ConnectionSettings record.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetAsciiStream(ParameterIndex: Integer; const Value: TStream);
+    /// <summary>Sets the designated parameter to a UTF16 character stream value.
+    ///  The driver will convert the value to the raw encoding if the driver
+    ///  does not support UTF16 streams.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetUnicodeStream(ParameterIndex: Integer; const Value: TStream);
+    /// <summary>Sets the designated parameter to the given input stream, which
+    ///  will have the specified number of bytes.
+    ///  When a very large binary value is input to a <c>LONGVARBINARY</c>
+    ///  parameter, it may be more practical to send it via a
+    ///  <c>TStream</c> object. The data will be read from the stream
+    ///  as needed until end-of-file is reached.
+    ///  <B>Note:</B> This stream object can either be a standard
+    ///  TStream object or your own subclass that implements the
+    ///  standard interface.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetBinaryStream(ParameterIndex: Integer; const Value: TStream);
     procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType; const Value: IZBlob);
     procedure SetValue(ParameterIndex: Integer; const Value: TZVariant);
