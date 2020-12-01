@@ -1405,46 +1405,44 @@ label bind_direct;
     Blob: IZBlob;
     Clob: IZClob;
     Arr: TZArray;
-  label write_lob;
+    dty: ub2;
   begin
     {$IFDEF WITH_VAR_INIT_WARNING}OraLobs := nil;{$ENDIF}
     SetLength(OraLobs, ArrayLen);
     Arr := PZArray(BindList[ParameterIndex].Value)^;
     Arr.VArray := Pointer(OraLobs);
     BindList.Put(ParameterIndex, Arr, True);
-    if SQLType = stBinaryStream then begin
-      if (Bind.dty <> SQLT_BLOB) or (Bind.value_sz <> SizeOf(POCIDescriptor)) or (Bind.curelen <> ArrayLen) then
-        InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(POCIDescriptor));
-      for i := 0 to ArrayLen -1 do
-        if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZLob, Lob) and not Lob.IsEmpty and
-            Supports(Lob, IZBlob, Blob) and not Supports(Lob, IZOracleLob, OCILob) then begin
-          OciLob := TZOracleBlob.CreateFromBlob(Blob, nil, FOracleConnection, FOpenLobStreams);
-write_lob:PPOCIDescriptor(PAnsiChar(Bind.valuep)+SizeOf(Pointer)*I)^ := OciLob.GetLobLocator;
-          OraLobs[i] := OciLob; //destroy old interface or replace it
-        {$R-}
-          Bind.indp[i] := 0;
-        end else
-          Bind.indp[i] := -1;
-        {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    end else begin
-      if (Bind.dty <> SQLT_CLOB) or (Bind.value_sz <> SizeOf(POCIDescriptor)) or (Bind.curelen <> ArrayLen) then
-        InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(POCIDescriptor));
-      for i := 0 to ArrayLen -1 do
-        if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZLob, Lob) and not Lob.IsEmpty then begin
+    if SQLType = stBinaryStream
+    then dty := SQLT_BLOB
+    else dty := SQLT_CLOB;
+    if (Bind.dty <> dty) or (Bind.value_sz <> SizeOf(POCIDescriptor)) or (Bind.curelen <> ArrayLen) then
+      InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(POCIDescriptor));
+    for i := 0 to ArrayLen -1 do
+      if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZLob, Lob) and not Lob.IsEmpty then begin
+        if SQLType = stBinaryStream then begin
+          if not Supports(Lob, IZBLob, Blob) then
+            raise CreateConversionError(ParameterIndex, SQLType, stBinaryStream);
+          if Lob.QueryInterface(IZOracleLob, OCILob) <> S_OK then
+            OciLob := TZOracleBlob.CreateFromBlob(Blob, nil, FOracleConnection, FOpenLobStreams);
+        end else begin
           if Supports(Lob, IZCLob, CLob) then
             if (ConSettings^.ClientCodePage.ID = OCI_UTF16ID)
             then CLob.SetCodePageTo(zCP_UTF16)
             else CLob.SetCodePageTo(ClientCP)
-          else raise CreateConversionError(ParameterIndex, stBinaryStream, SQLType);
-          if not Supports(Lob, IZOracleLob, OCILob) then begin
+          else raise CreateConversionError(ParameterIndex, SQLType, stUnicodeStream);
+          if not Supports(Lob, IZOracleLob, OCILob) then
             OciLob := TZOracleClob.CreateFromClob(Clob, nil, SQLCS_IMPLICIT, 0, FOracleConnection, FOpenLobStreams);
-            //PPOCIDescriptor(PAnsiChar(Bind.valuep)+SizeOf(Pointer)*I)^ := OciLob.GetLobLocator;
-            //TInterfaceDynArray(Value)[I] := CLob;
-          end;
-          goto write_lob;
-        end else
-          Bind.indp[i] := -1;
-    end;
+        end;
+        PPOCIDescriptor(PAnsiChar(Bind.valuep)+SizeOf(Pointer)*I)^ := OciLob.GetLobLocator;
+        OraLobs[i] := OciLob; //destroy old interface or replace it
+      {$R-}
+        Bind.indp[i] := 0;
+      end else begin
+        Bind.indp[i] := -1;
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+        OraLobs[i] := nil;
+        PPOCIDescriptor(PAnsiChar(Bind.valuep)+SizeOf(Pointer)*I)^ := nil;
+      end;
   end;
   procedure BindRawStrings(const ClientStrings: TRawByteStringDynArray);
   var BufferSize, I: Integer;
@@ -2096,7 +2094,9 @@ begin
   Bind := @FOraVariables[ParameterIndex];
   P := BindList[ParameterIndex].Value;
   for i := 0 to {%H-}PArrayLenInt({%H-}NativeUInt(Value) - ArrayLenOffSet)^{$IFNDEF FPC}-1{$ENDIF} do
-    Bind.indp[I] := -Ord(ZDbcUtils.IsNullFromArray(P, i));
+    if Bind.dty in [SQLT_CLOB, SQLT_BLOB]
+    then Bind.indp[I] := -Ord((PPOCIDescriptor(PAnsiChar(Bind.valuep)+SizeOf(Pointer)*I)^ = nil) or ZDbcUtils.IsNullFromArray(P, i))
+    else Bind.indp[I] := -Ord(ZDbcUtils.IsNullFromArray(P, i));
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
