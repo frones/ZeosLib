@@ -344,7 +344,7 @@ implementation
 uses
   FmtBCD, Variants,
   ZFastCode, ZMessages, ZGenericSqlToken, ZAbstractRODataset,
-  ZSysUtils, ZDbcResultSet, ZDbcUtils, ZEncoding;
+  ZSysUtils, {$IFDEF DISABLE_ZPARAM}ZDbcResultSet, {$ENDIF}ZDbcUtils, ZEncoding;
 
 {**
   Converts DBC Field Type to TDataset Field Type.

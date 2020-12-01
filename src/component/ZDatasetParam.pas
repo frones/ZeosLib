@@ -144,7 +144,7 @@ type
     procedure AssignTo(Dest: TPersistent); override;
 
     procedure GetData(Buffer: Pointer);
-    procedure SetData(Buffer: Pointer; Len: Cardinal = $FFFFFFFF);
+    procedure SetData(Buffer: Pointer; ByteLen: Cardinal = $FFFFFFFF);
     procedure SetBlobData(Buffer: Pointer; Size: Integer);
 
     //function GetDataSize: Integer;
@@ -161,7 +161,7 @@ type
     class function CreateConversionError(Current, Expected: TZSQLType): EVariantTypeCastError;
     class function CreateIndexError(Value: Integer): EListError;
     procedure SetSQLType(Value: TZSQLType);
-    procedure SetSQLDataType(Value: TZSQLType);
+    procedure SetSQLDataType(Value: TZSQLType; ZVarType: TZVariantType);
     procedure SetDataType(Value: TFieldType);
     procedure InternalSetAsUnicodeString(const Value: UnicodeString);
     procedure InternalSetAsUnicodeStrings(Index: Cardinal; const Value: UnicodeString);
@@ -936,7 +936,6 @@ type
     property Value: Variant read GetAsVariant write SetAsVariant stored IsParamStored;
   end;
 
-
   TZParams = class(TCollection)
   private
     FArraySize: Cardinal;
@@ -945,13 +944,13 @@ type
   private
     {$IFDEF AUTOREFCOUNT}[Weak]{$ENDIF}FOwner: TPersistent;
     function GetParamValue(const ParamName: string): Variant;
-    procedure ReadBinaryData(Stream: TStream);
+    //procedure ReadBinaryData(Stream: TStream);
     procedure SetParamValue(const ParamName: string;
       const Value: Variant);
     function GetItem(Index: Integer): TZParam;
     procedure SetItem(Index: Integer; Value: TZParam);
   protected
-    procedure DefineProperties(Filer: TFiler); override;
+    //procedure DefineProperties(Filer: TFiler); override;
     function GetDataSet: TDataSet;
     function GetOwner: TPersistent; override;
     procedure Update(Item: TCollectionItem); override;
@@ -1861,7 +1860,7 @@ jmpLenFromPEnd:   Len := PEnd - PAnsiChar(@TinyBuffer[0]);
                     System.SetString(Result, PAnsiChar(FData.pvPointer), Len);
                     {$ENDIF}
                 end;
-    stUnicodeString: Result := ZUnicodeToRaw(UnicodeString(FData.pvPointer), CP);
+    stUnicodeString: Result := ZUnicodeToRaw(UnicodeString(FData.pvPointer), CodePage);
     stBytes:    {$IFDEF WITH_RAWBYTESTRING}
                 ZSetString(PAnsiChar(FData.pvPointer), Length(TBytes(FData.pvPointer)), Result, 0);
                 {$ELSE}
@@ -2380,7 +2379,10 @@ begin
     else Result := GetAsRawByteStrings(Index, zCP_UTF8)
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5093 off : Function result variable does not seem to be initialized} {$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5093 off : Function result variable does not seem to be initialized}
+  {$WARN 5094 off : Function result variable does not seem to be initialized}
+{$ENDIF}
 function TZParam.GetAsVariant: Variant;
   procedure SetAsRawString(var Result: Variant);
   begin
@@ -3054,7 +3056,7 @@ var BlobAddr: PPointer;
 begin
   if (FDynamicParamType and (FArraySize = 0)) or (FSQLDataType in [stUnknown, stBytes, stBinaryStream]) then begin
     if (FSQLDataType = stUnknown) or (FDynamicParamType and (FArraySize = 0)) then
-      SetSQLDataType(stBinaryStream);
+      SetSQLDataType(stBinaryStream, vtInterface);
     if Stream = nil then begin
       if Index < 0
       then FNull := True
@@ -3230,7 +3232,7 @@ begin
     if not (SQLType in [stAsciiStream, stUnicodeStream]) and (FArraySize = 0) then
       SetIsNull(True);
     if (FDynamicParamType and (FArraySize = 0)) or (FSQLDataType = stUnknown) then
-      SetSQLDataType(SQLType);
+      SetSQLDataType(SQLType, vtInterface);
     case FSQLDataType of
       stBytes: BindAsTBytes;
       stAsciiStream, stUnicodeStream: BindAsCLob;
@@ -3319,7 +3321,7 @@ begin
   if (FArraySize = 0) and (FDynamicParamType or
      (FSQLDataType in [stUnknown, stBytes, stBinaryStream])) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stBinaryStream);
+      SetSQLDataType(stBinaryStream, vtInterface);
     case FSQLDataType of
       stBytes:  TBytes(FData.pvPointer) := {$IFDEF TBLOBDATA_IS_TBYTES}Value{$ELSE}BufferToBytes(Pointer(Value), Length(Value)){$ENDIF};
       stBinaryStream: begin
@@ -3341,13 +3343,13 @@ begin
   CheckDataIndex(Integer(Index));
   if (FDynamicParamType or (FSQLDataType in [stUnknown, stBytes, stBinaryStream])) then begin
     if (FSQLDataType = stUnknown) then
-      SetSQLDataType(stBinaryStream);
+      SetSQLDataType(stBinaryStream, vtInterface);
     case TZSQLType(FData.pvDynArray.VArrayType) of
       stBytes:  TBytesDynArray(FData.pvDynArray.VArray)[Index] := {$IFDEF TBLOBDATA_IS_TBYTES}Value{$ELSE}BufferToBytes(Pointer(Value), Length(Value)){$ENDIF};
       stBinaryStream: begin
           if TPointerDynArray(FData.pvDynArray.VArray)[Index] = nil then
             TInterfaceDynArray(FData.pvDynArray.VArray)[Index] := TZLocalMemBLob.Create(nil);
-          (TInterfaceDynArray(FData.pvDynArray.VArray)[Index] as IZBlob).SetBytes({$IFDEF TBLOBDATA_IS_TBYTES}Value{$ELSE}BufferToBytes(Pointer(Value), Length(Value)){$ENDIF});
+          (TInterfaceDynArray(FData.pvDynArray.VArray)[Index] as IZBlob).SetBuffer(Pointer(Value), Length(Value));
         end;
       else goto jmpFail;
     end;
@@ -3370,7 +3372,7 @@ begin
   if (FDynamicParamType or (FSQLDataType in [stUnknown..stLong, stString,
       stUnicodeString, stAsciiStream, stUnicodeStream])) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stBoolean);
+      SetSQLDataType(stBoolean, vtBoolean);
     case FSQLDataType of
       stBoolean: FData.pvBool := Value;
       stByte..stLong: {$IFDEF CPU64}SetAsInt64{$ELSE}SetAsCardinal{$ENDIF}(Ord(Value));
@@ -3393,7 +3395,7 @@ begin
   CheckDataIndex(Integer(Index));
   if (TZSQLType(FData.pvDynArray.VArrayType) in [stUnknown..stBigDecimal, stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if (TZSQLType(FData.pvDynArray.VArrayType) = stUnknown) then
-      SetSQLDataType(stBoolean);
+      SetSQLDataType(stBoolean, vtBoolean);
     if TZSQLType(FData.pvDynArray.VArrayType) = stBoolean then begin
       TBooleanDynArray(FData.pvDynArray.VArray)[Index] := Value;
       TBooleanDynArray(FData.pvDynArray.VIsNullArray)[Index] := False;
@@ -3409,7 +3411,7 @@ begin
   CheckDataIndex(-1);
   if (FDynamicParamType or (FSQLDataType in [stUnknown..stBigDecimal, stString, stUnicodeString, stAsciiStream, stUnicodeStream])) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stByte);
+      SetSQLDataType(stByte, vtNull);
     case FSQLDataType of
       stBoolean: FData.pvBool := Value <> 0;
       stByte: FData.pvByte := Value;
@@ -3425,7 +3427,7 @@ begin
   CheckDataIndex(Integer(Index));
   if (TZSQLType(FData.pvDynArray.VArrayType) in [stUnknown..stBigDecimal, stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if (TZSQLType(FData.pvDynArray.VArrayType) = stUnknown) then
-      SetSQLDataType(stByte);
+      SetSQLDataType(stByte, vtNull);
     if TZSQLType(FData.pvDynArray.VArrayType) = stByte then begin
       TByteDynArray(FData.pvDynArray.VArray)[Index] := Value;
       TBooleanDynArray(FData.pvDynArray.VIsNullArray)[Index] := False;
@@ -3440,7 +3442,7 @@ begin
   if FDynamicParamType or ((FSQLDataType in [stUnknown, stBytes, stBinaryStream]) or
      ((FSQLDataType = stGUID) and (Length(Value) = SizeOf(TGUID)))) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stBytes);
+      SetSQLDataType(stBytes, vtNull);
     if FSQLDataType = stBytes
     then TBytes(FData.pvPointer) := Value
     else if ((FSQLDataType = stGUID) and (Length(Value) = SizeOf(TGUID))) then
@@ -3467,7 +3469,7 @@ begin
   CheckDataIndex(Integer(Index));
   if (TZSQLType(FData.pvDynArray.VArrayType) in [stUnknown, stBytes, stBinaryStream]) then begin
     if TZSQLType(FData.pvDynArray.VArrayType) = stUnknown then
-      SetSQLDataType(stBytes);
+      SetSQLDataType(stBytes, vtNull);
     TBooleanDynArray(FData.pvDynArray.VIsNullArray)[Index] := False;
     if TZSQLType(FData.pvDynArray.VArrayType) = stBytes
     then TBytesDynArray(FData.pvDynArray.VArray)[Index] := Value
@@ -3488,7 +3490,7 @@ begin
   if (FDynamicParamType or (FSQLDataType in [stUnknown..stBigDecimal, stString,
       stUnicodeString, stAsciiStream, stUnicodeStream])) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stLongWord);
+      SetSQLDataType(stLongWord, vtNull);
     case FSQLDataType of
       stBoolean: FData.pvBool := Value <> 0;
       stByte:     FData.pvByte := Value;
@@ -3522,7 +3524,7 @@ begin
   if (TZSQLType(FData.pvDynArray.VArrayType) in [stUnknown..stBigDecimal,
       stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if TZSQLType(FData.pvDynArray.VArrayType) = stUnknown then
-      SetSQLDataType(stLongWord);
+      SetSQLDataType(stLongWord, vtNull);
     case SQLType of
       stBoolean:  TBooleanDynArray(FData.pvDynArray.VArray)[Index] := Value <> 0;
       stByte:     TByteDynArray(FData.pvDynArray.VArray)[Index] := Value;
@@ -3555,7 +3557,7 @@ begin
   CheckDataIndex(-1);
   if FDynamicParamType or (FSQLDataType in [stUnknown, stBigDecimal, stString, stUnicodeString]) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stCurrency);
+      SetSQLDataType(stCurrency, vtNull);
     case FSQLDataType of
       stCurrency: FData.pvCurrency := Value;
       stBigDecimal: Currency2Bcd(Value, FData.pvBCD);
@@ -3572,7 +3574,7 @@ begin
   CheckDataIndex(Integer(Index));
   if (FArraySize > 0) and (TZSQLType(FData.pvDynArray.VArrayType) in [stUnknown, stCurrency, stBigDecimal]) then begin
     if TZSQLType(FData.pvDynArray.VArrayType) = stUnknown then
-      SetSQLDataType(stCurrency);
+      SetSQLDataType(stCurrency, vtNull);
     TBooleanDynArray(FData.pvDynArray.VIsNullArray)[Index] := False;
     if TZSQLType(FData.pvDynArray.VArrayType) = stCurrency
     then TCurrencyDynArray(FData.pvDynArray.VArray)[Index] := Value
@@ -3596,7 +3598,7 @@ begin
      (FSQLDataType in [stUnknown..stDouble, stDate,stTime,stTimeStamp,stString,
       stUnicodeString, stAsciiStream, stUnicodeStream])) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stTimestamp);
+      SetSQLDataType(stDate, vtDate);
     case FSQLDataType of
       stBoolean: FData.pvBool := Value <> 0;
       stByte..stLong: SetAsInt64(Trunc(Value));
@@ -3628,7 +3630,7 @@ begin
   if (TZSQLType(FData.pvDynArray.VArrayType) in [stUnknown..stDouble, stDate,
       stTime,stTimeStamp,stString,stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if (TZSQLType(FData.pvDynArray.VArrayType) = stUnknown) then
-      SetSQLDataType(stDate);
+      SetSQLDataType(stDate, vtDate);
     case TZSQLType(FData.pvDynArray.VArrayType) of
       stBoolean: TBooleanDynArray(FData.pvDynArray.VArray)[Index] := Value <> 0;
       stByte..stLong: SetAsInt64s(Index, Trunc(Value));
@@ -3660,7 +3662,7 @@ begin
   if (FDynamicParamType or (FSQLDataType in [stUnknown..stDouble, stDate,stTime,
       stTimeStamp,stString, stUnicodeString, stAsciiStream, stUnicodeStream])) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stTimestamp);
+      SetSQLDataType(stTimestamp, vtTimestamp);
     case FSQLDataType of
       stBoolean: FData.pvBool := Value <> 0;
       stByte..stLong: SetAsInt64(Trunc(Value));
@@ -3692,7 +3694,7 @@ begin
   if ((TZSQLType(FData.pvDynArray.VArrayType) in [stUnknown..stDouble, stDate,stTime,
       stTimeStamp,stString, stUnicodeString, stAsciiStream, stUnicodeStream])) then begin
     if (TZSQLType(FData.pvDynArray.VArrayType) = stUnknown) then
-      SetSQLDataType(stTimestamp);
+      SetSQLDataType(stTimestamp, vtTimestamp);
     case TZSQLType(FData.pvDynArray.VArrayType) of
       stBoolean: TBooleanDynArray(FData.pvDynArray.VArray)[Index] := Value <> 0;
       stByte..stLong: SetAsInt64s(Index, Trunc(Value));
@@ -3724,7 +3726,7 @@ begin
   if (FDynamicParamType or (FSQLDataType in [stUnknown..stBigDecimal, stDate,stTime,
       stTimeStamp,stString, stUnicodeString, stAsciiStream, stUnicodeStream])) then begin
     if (FDynamicParamType and (FSQLDataType <> stDouble)) then
-      SetSQLDataType(stDouble);
+      SetSQLDataType(stDouble, vtNull);
     case FSQLDataType of
       stBoolean: FData.pvBool := Value <> 0;
       stByte..stLong: SetAsInt64(Trunc(Value));
@@ -3757,7 +3759,7 @@ begin
   if (TZSQLType(FData.pvDynArray.VArrayType) in [stUnknown..stDouble, stDate,stTime,stTimeStamp,stString,
       stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if (TZSQLType(FData.pvDynArray.VArrayType) = stUnknown) then
-      SetSQLDataType(stDouble);
+      SetSQLDataType(stDouble, vtNull);
     case FSQLDataType of
       stBoolean: TBooleanDynArray(FData.pvDynArray.VArray)[Index] := Value <> 0;
       stByte..stLong: SetAsInt64s(Index, Trunc(Value));
@@ -3804,7 +3806,7 @@ begin
   if (FArraySize = 0) and (FDynamicParamType or
      (FSQLDataType in [stUnknown..stBigDecimal, stString, stUnicodeString, stAsciiStream, stUnicodeStream])) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stBigDecimal);
+      SetSQLDataType(stBigDecimal, vtBigDecimal);
     case FSQLDataType of
       stBoolean: FData.pvBool := BcdCompare(Value, NullBCD) <> 0;
       stByte, stShort, stWord, stSmall, stInteger: SetAsInteger(BCDToInteger(Value));
@@ -3853,7 +3855,7 @@ begin
   if (TZSQLType(FData.pvDynArray.VArrayType) in [stUnknown..stBigDecimal, stString,
       stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if TZSQLType(FData.pvDynArray.VArrayType) = stUnknown then
-      SetSQLDataType(stBigDecimal);
+      SetSQLDataType(stBigDecimal, vtBigDecimal);
     case FSQLDataType of
       stBoolean: TBooleanDynArray(FData.pvDynArray.VArray)[Index] := BcdCompare(Value, NullBCD) <> 0;
       stByte, stShort, stWord, stSmall, stInteger: SetAsIntegers(Index, BCDToInteger(Value));
@@ -3903,7 +3905,7 @@ begin
      (FSQLDataType in [stUnknown, stGUID, stString, stUnicodeString, stBytes,
       stAsciiStream, stUnicodeStream, stBinaryStream])) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stGUID);
+      SetSQLDataType(stGUID, vtGUID);
     case FSQLDataType of
       stGUID: FData.pvGUID := Value;
       stString, stAsciiStream: ValueToRawString;
@@ -3944,7 +3946,7 @@ begin
   if (TZSQLType(FData.pvDynArray.VArrayType) in [stUnknown, stGUID, stString, stUnicodeString, stBytes,
       stAsciiStream, stUnicodeStream, stBinaryStream]) then begin
     if (TZSQLType(FData.pvDynArray.VArrayType) = stUnknown) then
-      SetSQLDataType(stGUID);
+      SetSQLDataType(stGUID, vtGUID);
     case TZSQLType(FData.pvDynArray.VArrayType) of
       stGUID: TGUIDDynArray(FData.pvDynArray.VArray)[Index] := Value;
       stString, stAsciiStream: ValueToRawString;
@@ -3969,7 +3971,7 @@ begin
   if (FDynamicParamType or (FSQLDataType in [stUnknown..stBigDecimal, stString,
       stUnicodeString, stAsciiStream, stUnicodeStream])) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stLong);
+      SetSQLDataType(stLong, vtNull);
     case FSQLDataType of
       stBoolean: FData.pvBool := Value <> 0;
       stByte:     FData.pvByte := Value;
@@ -4002,7 +4004,7 @@ begin
   CheckDataIndex(Integer(Index));
   if (TZSQLType(FData.pvDynArray.VArrayType) in [stUnknown..stBigDecimal, stString, stUnicodeString]) then begin
     if TZSQLType(FData.pvDynArray.VArrayType) = stUnknown then
-      SetSQLDataType(stLong);
+      SetSQLDataType(stLong, vtNull);
     case TZSQLType(FData.pvDynArray.VArrayType) of
       stBoolean:  TBooleanDynArray(FData.pvDynArray.VArray)[Index] := Value <> 0;
       stByte:     TByteDynArray(FData.pvDynArray.VArray)[Index] := Value;
@@ -4036,7 +4038,7 @@ begin
   if (FDynamicParamType or (FSQLDataType in [stUnknown..stBigDecimal, stString,
       stUnicodeString, stAsciiStream, stUnicodeStream])) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stInteger);
+      SetSQLDataType(stInteger, vtNull);
     case FSQLDataType of
       stBoolean: FData.pvBool := Value <> 0;
       stByte:     FData.pvByte := Value;
@@ -4069,7 +4071,7 @@ begin
   CheckDataIndex(Integer(Index));
   if (TZSQLType(FData.pvDynArray.VArrayType) in [stUnknown..stBigDecimal, stString, stUnicodeString]) then begin
     if TZSQLType(FData.pvDynArray.VArrayType) = stUnknown then
-      SetSQLDataType(stInteger);
+      SetSQLDataType(stInteger, vtNull);
     case TZSQLType(FData.pvDynArray.VArrayType) of
       stBoolean:  TBooleanDynArray(FData.pvDynArray.VArray)[Index] := Value <> 0;
       stByte:     TByteDynArray(FData.pvDynArray.VArray)[Index] := Value;
@@ -4095,7 +4097,7 @@ procedure TZParam.SetAsMemo(const Value: String);
 begin
   CheckDataIndex(-1);
   if FDynamicParamType or (FSQLDataType = stUnknown) then
-    SetSQLDataType(stAsciiStream);
+    SetSQLDataType(stAsciiStream, vtInterface);
   {$IFDEF UNICODE}
   InternalSetAsUnicodeString(Value);
   {$ELSE}
@@ -4107,7 +4109,7 @@ procedure TZParam.SetAsMemos(Index: Cardinal; const Value: String);
 begin
   CheckDataIndex(Integer(Index));
   if (TZSQLType(FData.pvDynArray.VArrayType) = stUnknown) then
-    SetSQLDataType(stAsciiStream);
+    SetSQLDataType(stAsciiStream, vtInterface);
   {$IFDEF UNICODE}
   InternalSetAsUnicodeStrings(Index, Value);
   {$ELSE}
@@ -4117,18 +4119,19 @@ end;
 
 procedure TZParam.SetAsRawByteString(const Value: RawByteString;
   CodePage: Word);
+var VariantType: TZVariantType;
 begin
   CheckDataIndex(-1);
   if FDynamicParamType or (FSQLDataType = stUnknown) then begin
     if (CodePage = zCP_Binary)
-    then SetSQLDataType(stBytes)
+    then SetSQLDataType(stBytes, vtBytes)
     else begin
-      SetSQLDataType(stString);
       if CodePage = zCP_UTF8
-      then FZVariantType := vtUTF8String
+      then VariantType := vtUTF8String
       else if CodePage = zOSCodePage
-        then FZVariantType := vtAnsiString
-        else FZVariantType := vtRawByteString;
+        then VariantType := vtAnsiString
+        else VariantType := vtRawByteString;
+      SetSQLDataType(stString, VariantType);
     end;
   end;
   InternalSetAsRawByteString(Value, CodePage);
@@ -4136,19 +4139,19 @@ end;
 
 procedure TZParam.SetAsRawByteStrings(Index: Cardinal;
   const Value: RawByteString; CodePage: Word);
+var VariantType: TZVariantType;
 begin
   CheckDataIndex(Integer(Index));
   if (TZSQLType(FData.pvDynArray.VArrayType) = stUnknown) then
     if (CodePage = zCP_Binary)
-    then SetSQLDataType(stBytes)
+    then SetSQLDataType(stBytes, vtBytes)
     else begin
-      SetSQLDataType(stString);
       if CodePage = zCP_UTF8
-      then FZVariantType := vtUTF8String
+      then VariantType := vtUTF8String
       else if CodePage = zOSCodePage
-        then FZVariantType := vtAnsiString
-        else FZVariantType := vtRawByteString;
-      FData.pvDynArray.VArrayVariantType := FZVariantType;
+        then VariantType := vtAnsiString
+        else VariantType := vtRawByteString;
+      SetSQLDataType(stString, VariantType);
     end;
   InternalSetAsRawByteStrings(Index, Value, CodePage);
 end;
@@ -4157,7 +4160,7 @@ procedure TZParam.SetAsRawMemo(const Value: RawByteString; CodePage: Word);
 begin
   CheckDataIndex(-1);
   if FDynamicParamType or (FSQLDataType = stUnknown) then
-    SetSQLDataType(stAsciiStream);
+    SetSQLDataType(stAsciiStream, vtInterface);
   InternalSetAsRawByteString(Value, CodePage);
 end;
 
@@ -4165,7 +4168,7 @@ procedure TZParam.SetAsRawMemos(Index: Cardinal; const Value: RawByteString; Cod
 begin
   CheckDataIndex(Integer(Index));
   if (TZSQLType(FData.pvDynArray.VArrayType) = stUnknown) then
-    SetSQLDataType(stAsciiStream);
+    SetSQLDataType(stAsciiStream, vtInterface);
   InternalSetAsRawByteStrings(Index, Value, CodePage);
 end;
 
@@ -4175,7 +4178,7 @@ begin
   if FDynamicParamType or (FSQLDataType in [stUnknown..stBigDecimal, stString,
       stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stShort);
+      SetSQLDataType(stShort, vtNull);
     case FSQLDataType of
       stBoolean: FData.pvBool := Value <> 0;
       stShort: FData.pvShortInt := Value;
@@ -4191,7 +4194,7 @@ begin
   CheckDataIndex(Integer(Index));
   if (TZSQLType(FData.pvDynArray.VArrayType) in [stUnknown..stBigDecimal, stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if (TZSQLType(FData.pvDynArray.VArrayType) = stUnknown) then
-      SetSQLDataType(stShort);
+      SetSQLDataType(stShort, vtNull);
     if TZSQLType(FData.pvDynArray.VArrayType) = stShort then begin
       TShortIntDynArray(FData.pvDynArray.VArray)[Index] := Value;
       TBooleanDynArray(FData.pvDynArray.VIsNullArray)[Index] := False;
@@ -4206,7 +4209,7 @@ begin
   if FDynamicParamType or (FSQLDataType in [stUnknown..stBigDecimal, stString,
       stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stFloat);
+      SetSQLDataType(stFloat, vtNull);
     case FSQLDataType of
       stBoolean: FData.pvBool := Value <> 0;
       stFloat: FData.pvSingle := Value;
@@ -4223,7 +4226,7 @@ begin
   if (TZSQLType(FData.pvDynArray.VArrayType) in [stUnknown..stBigDecimal, stString,
       stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if (TZSQLType(FData.pvDynArray.VArrayType) = stUnknown) then
-      SetSQLDataType(stFloat);
+      SetSQLDataType(stFloat, vtNull);
     if TZSQLType(FData.pvDynArray.VArrayType) = stFloat then begin
       TSingleDynArray(FData.pvDynArray.VArray)[Index] := Value;
       TBooleanDynArray(FData.pvDynArray.VIsNullArray)[Index] := False;
@@ -4238,7 +4241,7 @@ begin
   if FDynamicParamType or (FSQLDataType in [stUnknown..stBigDecimal, stString,
     stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stSmall);
+      SetSQLDataType(stSmall, vtNull);
     case FSQLDataType of
       stBoolean: FData.pvBool := Value <> 0;
       stSmall: FData.pvSmallInt := Value;
@@ -4254,7 +4257,7 @@ begin
   CheckDataIndex(Integer(Index));
   if (TZSQLType(FData.pvDynArray.VArrayType) in [stUnknown..stBigDecimal, stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if (TZSQLType(FData.pvDynArray.VArrayType) = stUnknown) then
-      SetSQLDataType(stSmall);
+      SetSQLDataType(stSmall, vtNull);
     if TZSQLType(FData.pvDynArray.VArrayType) = stSmall then begin
       TSmallIntDynArray(FData.pvDynArray.VArray)[Index] := Value;
       TBooleanDynArray(FData.pvDynArray.VIsNullArray)[Index] := False;
@@ -4265,20 +4268,44 @@ end;
 
 {$IFNDEF UNICODE}
 procedure TZParam.SetAsString(const Value: String);
+var VariantType: TZVariantType;
+    CP: Word;
 begin
   CheckDataIndex(-1);
   if FDynamicParamType or (FSQLDataType = stUnknown) then
-    SetSQLDataType(stString);
+    If ((FConSettings <> nil) or SetConsettings) and (FConSettings.ClientCodePage.Encoding = ceUTF16) then
+      SetSQLDataType(stUnicodeString, vtUnicodeString)
+    else begin
+      CP := GetDefaultRawCP;
+      if CP = zCP_UTF8
+      then VariantType := vtUTF8String
+      else if CP = zOSCodePage
+        then VariantType := vtAnsiString
+        else VariantType := vtRawByteString;
+      SetSQLDataType(stString, VariantType);
+    end;
   InternalSetAsRawByteString(Value, GetDefaultRawCP);
 end;
 {$ENDIF UNICODE}
 
 {$IFNDEF UNICODE}
 procedure TZParam.SetAsStrings(Index: Cardinal; const Value: String);
+var VariantType: TZVariantType;
+    CP: Word;
 begin
   CheckDataIndex(Integer(Index));
   if (FSQLDataType = stUnknown) then
-    SetSQLDataType(stString);
+    If ((FConSettings <> nil) or SetConsettings) and (FConSettings.ClientCodePage.Encoding = ceUTF16) then
+      SetSQLDataType(stUnicodeString, vtUnicodeString)
+    else begin
+      CP := GetDefaultRawCP;
+      if CP = zCP_UTF8
+      then VariantType := vtUTF8String
+      else if CP = zOSCodePage
+        then VariantType := vtAnsiString
+        else VariantType := vtRawByteString;
+      SetSQLDataType(stString, VariantType);
+    end;
   InternalSetAsRawByteStrings(Index, Value, GetDefaultRawCP);
 end;
 {$ENDIF UNICODE}
@@ -4297,7 +4324,7 @@ begin
   if (FSQLDataType in [stUnknown..stDouble, stDate,stTime,stTimeStamp,stString,
       stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stTime);
+      SetSQLDataType(stTime, vtTime);
     case FSQLDataType of
       stBoolean: FData.pvBool := Value <> 0;
       stByte..stLong: SetAsInt64(Trunc(Value));
@@ -4329,7 +4356,7 @@ begin
   if (FSQLDataType in [stUnknown..stDouble, stDate,stTime,stTimeStamp,stString,
       stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if (FSQLDataType = stUnknown) then
-      SetSQLDataType(stTime);
+      SetSQLDataType(stTime, vtTime);
     case FSQLDataType of
       stBoolean: TBooleanDynArray(FData.pvDynArray.VArray)[Index] := Value <> 0;
       stByte..stLong: SetAsInt64s(Index, Trunc(Value));
@@ -4358,7 +4385,7 @@ begin
   CheckDataIndex(-1);
   if (FDynamicParamType or (FSQLDataType in [stUnknown..stBigDecimal, stString, stUnicodeString, stAsciiStream, stUnicodeStream])) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stULong);
+      SetSQLDataType(stULong, vtNull);
     case FSQLDataType of
       stBoolean: FData.pvBool := Value <> 0;
       stByte:     FData.pvByte := Value;
@@ -4391,7 +4418,7 @@ begin
   CheckDataIndex(Integer(Index));
   if (TZSQLType(FData.pvDynArray.VArrayType) in [stUnknown..stBigDecimal, stString, stUnicodeString]) then begin
     if TZSQLType(FData.pvDynArray.VArrayType) = stUnknown then
-      SetSQLDataType(stULong);
+      SetSQLDataType(stULong, vtNull);
     case TZSQLType(FData.pvDynArray.VArrayType) of
       stBoolean:  TBooleanDynArray(FData.pvDynArray.VArray)[Index] := Value <> 0;
       stByte:     TByteDynArray(FData.pvDynArray.VArray)[Index] := Value;
@@ -4414,22 +4441,50 @@ begin
 end;
 
 procedure TZParam.SetAsUnicodeString(const Value: UnicodeString);
+var VariantType: TZVariantType;
+    CP: Word;
 begin
   CheckDataIndex(-1);
-  if (Ord(FSQLDataType) <= Ord(stBinaryStream)) then begin
+  if FDynamicParamType or not (FSQLDataType in [stBytes, stBinaryStream]) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stUnicodeString);
+      If ((FConSettings <> nil) or SetConSettings) then
+        if FConSettings.ClientCodePage.Encoding = ceUTF16
+        then SetSQLDataType(stUnicodeString, vtUnicodeString)
+        else begin
+          CP := FConSettings.ClientCodePage.CP;
+          if CP = zCP_UTF8
+          then VariantType := vtUTF8String
+          else if CP = zOSCodePage
+            then VariantType := vtAnsiString
+            else VariantType := vtRawByteString;
+          SetSQLDataType(stString, VariantType);
+        end
+      else SetSQLDataType(stUnicodeString, vtUnicodeString);
     InternalSetAsUnicodeString(Value);
   end else raise CreateConversionError(FSQLDataType, stUnicodeString);
 end;
 
 procedure TZParam.SetAsUnicodeStrings(Index: Cardinal;
   const Value: UnicodeString);
+var VariantType: TZVariantType;
+    CP: Word;
 begin
   CheckDataIndex(Integer(Index));
-  if (Ord(FSQLDataType) <= Ord(stBinaryStream)) then begin
+  if FDynamicParamType or not (FSQLDataType in [stBytes, stBinaryStream]) then begin
     if (FSQLDataType = stUnknown) then
-      SetSQLDataType(stUnicodeString);
+      If ((FConSettings <> nil) or SetConSettings) then
+        if FConSettings.ClientCodePage.Encoding = ceUTF16
+        then SetSQLDataType(stUnicodeString, vtUnicodeString)
+        else begin
+          CP := FConSettings.ClientCodePage.CP;
+          if CP = zCP_UTF8
+          then VariantType := vtUTF8String
+          else if CP = zOSCodePage
+            then VariantType := vtAnsiString
+            else VariantType := vtRawByteString;
+          SetSQLDataType(stString, VariantType);
+        end
+      else SetSQLDataType(stUnicodeString, vtUnicodeString);
     InternalSetAsUnicodeStrings(Index, Value);
   end else raise CreateConversionError(FSQLDataType, stUnicodeString);
 end;
@@ -4492,6 +4547,7 @@ begin
   CheckDataIndex(-1);
   SQLType := FSQLType;
   vt := TVarData(Value).VType;
+  //WriteLn('case vt of');
   case vt of
     varEmpty, varNull: SetIsNull(True);
     varSmallint:  SetAsSmallInt(TVarData(Value).VSmallInt);
@@ -4538,7 +4594,7 @@ begin
     {$ENDIF}
     //varAny      = $0101; { Corba any      257 } {not OLE compatible }
     {$IF declared(varUString)}
-    varUString: SetAsUnicodeString(UnicodeString(TVarData(Value).vAny));
+    varUString: SetAsUnicodeString(UnicodeString(TVarData(Value).VAny));
     {$IFEND}
     (varArray or varByte): SetAsBytes(VarToBytes(Value));
     // custom types range from $110 (272) to $7FF (2047)
@@ -4551,6 +4607,7 @@ begin
             AsTimeStampOffset(Value)
           else {$ENDIF}raise EVariantError.Create('Unkown Variant type');
   end;
+ // WriteLn('SQLType <> FSQLType');
   if SQLType <> FSQLType then //mimic the TParam behavior
     SetSQLType(SQLType);
 end;
@@ -4560,7 +4617,7 @@ begin
   CheckDataIndex(-1);
   if (Ord(FSQLDataType) <= Ord(stBinaryStream)) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stUnicodeStream);
+      SetSQLDataType(stUnicodeStream, vtInterface);
     InternalSetAsUnicodeString(Value);
   end else raise CreateConversionError(FSQLDataType, stUnicodeStream);
 end;
@@ -4570,7 +4627,7 @@ begin
   CheckDataIndex(Integer(Index));
   if (Ord(FSQLDataType) <= Ord(stBinaryStream)) then begin
     if (FSQLDataType = stUnknown) then
-      SetSQLDataType(stUnicodeStream);
+      SetSQLDataType(stUnicodeStream, vtInterface);
     InternalSetAsUnicodeStrings(Index, Value);
   end else raise CreateConversionError(FSQLDataType, stUnicodeStream);
 end;
@@ -4581,7 +4638,7 @@ begin
   if FDynamicParamType or (FSQLDataType in [stUnknown..stBigDecimal, stString,
     stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stWord);
+      SetSQLDataType(stWord, vtNull);
     case FSQLDataType of
       stBoolean: FData.pvBool := Value <> 0;
       stWord: FData.pvWord := Value;
@@ -4597,7 +4654,7 @@ begin
   CheckDataIndex(Integer(Index));
   if (TZSQLType(FData.pvDynArray.VArrayType) in [stUnknown..stBigDecimal, stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if (TZSQLType(FData.pvDynArray.VArrayType) = stUnknown) then
-      SetSQLDataType(stWord);
+      SetSQLDataType(stWord, vtNull);
     if TZSQLType(FData.pvDynArray.VArrayType) = stWord then begin
       TWordDynArray(FData.pvDynArray.VArray)[Index] := Value;
       TBooleanDynArray(FData.pvDynArray.VIsNullArray)[Index] := False;
@@ -4639,7 +4696,7 @@ begin
   if (FDynamicParamType or
      (FSQLDataType in [stUnknown..stTimestamp, stString, stUnicodeString, stAsciiStream, stUnicodeStream])) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stDate);
+      SetSQLDataType(stDate, vtDate);
     case FSQLDataType of
       stTime: FillChar(FData.pvTime, SizeOf(TZTime), #0);
       stDate: FData.pvDate := Value;
@@ -4690,7 +4747,7 @@ begin
   if FDynamicParamType or
      (FSQLDataType in [stUnknown..stTimestamp, stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stDate);
+      SetSQLDataType(stDate, vtDate);
     case FSQLDataType of
       stTime: FillChar(TZTimeDynArray(FData.pvDynArray.VArray)[Index], SizeOf(TZTime), #0);
       stDate: TZDateDynArray(FData.pvDynArray.VArray)[Index] := Value;
@@ -4741,7 +4798,7 @@ begin
   if FDynamicParamType or (FSQLDataType in [stUnknown..stTimestamp, stString,
       stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stTime);
+      SetSQLDataType(stTime, vtTime);
     case FSQLDataType of
       stTime: FData.pvTime := Value;
       stDate: FillChar(FData.pvDate, SizeOf(TZDate), #0);
@@ -4791,7 +4848,7 @@ begin
   CheckDataIndex(Integer(Index));
   if (FSQLDataType in [stUnknown..stTimestamp, stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if (FSQLDataType = stUnknown) then
-      SetSQLDataType(stTime);
+      SetSQLDataType(stTime, vtTime);
     case FSQLDataType of
       stTime: TZTimeDynArray(FData.pvDynArray.VArray)[Index] := Value;
       stDate: FillChar(TZDateDynArray(FData.pvDynArray.VArray)[Index], SizeOf(TZDate), #0);
@@ -4843,7 +4900,7 @@ begin
   if FDynamicParamType or (FSQLDataType in [stUnknown..stTimestamp, stString,
       stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if FDynamicParamType or (FSQLDataType = stUnknown) then
-      SetSQLDataType(stTimestamp);
+      SetSQLDataType(stTimestamp, vtTimestamp);
     case FSQLDataType of
       stTime: TimeFromTimeStamp(Value, FData.pvTime);
       stDate: DateFromTimeStamp(Value, FData.pvDate);
@@ -4895,7 +4952,7 @@ begin
   CheckDataIndex(Integer(Index));
   if (FSQLDataType in [stUnknown..stTimestamp, stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
     if (FSQLDataType = stUnknown) then
-      SetSQLDataType(stTimestamp);
+      SetSQLDataType(stTimestamp, vtTimestamp);
     case FSQLDataType of
       stTime: TimeFromTimeStamp(Value, TZTimeDynArray(FData.pvDynArray.VArray)[Index]);
       stDate: DateFromTimeStamp(Value, TZDateDynArray(FData.pvDynArray.VArray)[Index]);
@@ -4914,15 +4971,8 @@ end;
 {$IFDEF FPC}{$POP}{$ENDIF}
 
 procedure TZParam.SetBlobData(Buffer: Pointer; Size: Integer);
-var Tmp: TBlobdata;
 begin
-  if Buffer = nil
-  then SetIsNull(True)
-  else begin
-    SetLength(Tmp, Size);
-    Move(Buffer^, Pointer(Tmp)^, Size);
-    SetAsBlob(Tmp);
-  end;
+  SetData(Buffer, Size);
 end;
 
 function TZParam.SetConsettings: Boolean;
@@ -4932,22 +4982,44 @@ begin
   else Result := False;
 end;
 
-procedure TZParam.SetData(Buffer: Pointer; Len: Cardinal);
+procedure TZParam.SetData(Buffer: Pointer; ByteLen: Cardinal);
   procedure SetFromWideString;
-  var Len: LengthInt;
-      Tmp: UnicodeString;
+  var Tmp: UnicodeString;
   begin
-    Len := {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(PWideChar(Buffer));
-    System.SetString(Tmp, PWideChar(Buffer), Len);
+    if ByteLen = $FFFFFFFF
+    then ByteLen := {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(PWideChar(Buffer))
+    else ByteLen := ByteLen shr 1;
+    System.SetString(Tmp, PWideChar(Buffer), ByteLen);
     InternalSetAsUnicodeString(tmp);
   end;
   procedure SetFromRawString;
-  var Len: LengthInt;
-      Tmp: RawByteString;
+  var Tmp: RawByteString;
   begin
-    Len := StrLen(PAnsiChar(Buffer));
-    ZSetString(PAnsiChar(Buffer), Len, tmp);
+    if ByteLen = $FFFFFFFF then
+      ByteLen := StrLen(PAnsiChar(Buffer));
+    tmp := '';
+    ZSetString(PAnsiChar(Buffer), ByteLen, tmp);
     InternalSetAsRawByteString(tmp, {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}GetACP{$ENDIF});
+  end;
+  procedure SetFromBytes;
+  var Tmp: TBytes;
+  begin
+    if ByteLen = $FFFFFFFF then
+      ByteLen := StrLen(PAnsiChar(Buffer));
+    Tmp := nil;
+    SetLength(Tmp, ByteLen);
+    Move(Buffer^, Pointer(Tmp)^, ByteLen);
+    SetAsBytes(Tmp);
+  end;
+  procedure SetFromBlobData;
+  var Tmp: TBlobData;
+  begin
+    if ByteLen = $FFFFFFFF then
+      ByteLen := StrLen(PAnsiChar(Buffer));
+    Tmp := {$IFDEF TBLOBDATA_IS_TBYTES}nil{$ELSE}''{$ENDIF};
+    SetLength(Tmp, ByteLen);
+    Move(Buffer^, Pointer(Tmp)^, ByteLen);
+    SetAsBlob(Tmp);
   end;
 begin
   case FDataType of
@@ -4980,20 +5052,15 @@ begin
                   {$ELSE}
                   else SetAsDateTime(TimeStampToDateTime(MSecsToTimeStamp(PDateTime(Buffer)^)));
                   {$ENDIF}
-    ftBytes: ;
-    ftVarBytes: ;
-    ftBlob: ;
-    ftGraphic: ;
-    ftParadoxOle: ;
-    ftTypedBinary: ;
-    ftCursor: ;
+    ftBytes, ftVarBytes: SetFromBytes;
+    ftBlob, ftGraphic, ftTypedBinary, ftParadoxOle, ftOraBlob: SetFromBlobData;
+    //ftCursor: ;
     ftWideString, ftFmtMemo {$IFDEF WITH_WIDEMEMO}, ftWideMemo, ftFixedWideChar {$ENDIF},
     ftDBaseOle:   SetFromWideString;
     ftLargeint:   SetAsInt64(PInt64(Buffer)^);
     ftArray: ;
-    ftReference: ;
-    ftDataSet: ;
-    ftOraBlob: ;
+    //ftReference: ;
+    //ftDataSet: ;
     ftOraClob: ;
     ftVariant:    SetAsVariant(PVariant(Buffer)^);
     ftInterface: ;
@@ -5095,7 +5162,7 @@ end;
 procedure TZParam.SetIZBlob(const Value: IZBlob);
 begin
   CheckDataIndex(-1);
-  SetSQLDataType(stBinaryStream);
+  SetSQLDataType(stBinaryStream, vtInterface);
   IZBlob(FData.pvPointer) := Value;
   SetIsNull((Value = nil) or (Value.IsEmpty));
 end;
@@ -5108,25 +5175,19 @@ begin
   if (FConSettings <> nil) and (FConSettings.ClientCodePage.Encoding = ceUTF16)
   then ASQLType := stUnicodeStream
   else ASQLType := stAsciiStream;
-  SetSQLDataType(ASQLType);
+  SetSQLDataType(ASQLType, vtInterface);
   IZClob(FData.pvPointer) := Value;
   SetIsNull((Value = nil) or (Value.IsEmpty));
 end;
 
-procedure TZParam.SetSQLDataType(Value: TZSQLType);
+procedure TZParam.SetSQLDataType(Value: TZSQLType; ZVarType: TZVariantType);
+var tmpSize: Integer;
 begin
   if FSQLDataType <> Value then begin
     if (FArraySize = 0) or (FSQLDataType = stUnknown) then begin
-      if (Ord(FSQLDataType) >= Ord(stString)) or ((Ord(Value) >= Ord(stString)) and (FArraySize = 0)) then
+      if (FSQLDataType <> stUnknown) and ((Ord(FSQLDataType) >= Ord(stString)) or ((Ord(Value) >= Ord(stString)) and (FArraySize = 0))) then
         SetIsNull(True);
-      case Value of
-        stDate: FZVariantType := vtDate;
-        stTime: FZVariantType := vtTime;
-        stTimeStamp: FZVariantType := vtTimeStamp;
-        stString: FZVariantType := vtString;
-        stUnicodeString: FZVariantType := vtUnicodeString;
-        {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
-      end;
+      FZVariantType := ZVarType;
       if FSQLDataType = stUnknown then begin
         FSQLDataType := Value;
         if (FArraySize > 0) then begin
@@ -5137,14 +5198,23 @@ begin
       end;
       FSQLDataType := Value;
       FSQLType := Value;
-      FDataType := ConvertDbcToDatasetType(Value, GetDefaultCharacterFieldType(Self),
-          Math.Max(FSize, Integer((Value in [stString..stBytes]) and (FSize = 0))));
+      if Value in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
+        FSize := 0;
+        FPrecision := 0;
+      end;
+      if not (Value in [stCurrency, stBigDecimal, stTime, stTimestamp]) then
+        FNumericScale := 0;
+      tmpSize := FSize;
+      if (tmpSize = 0) and (Value in [stString, stUnicodeString, stBytes]) then
+        tmpSize := 1;
+      FDataType := ConvertDbcToDatasetType(Value, GetDefaultCharacterFieldType(Self), tmpSize);
     end else
       raise EZDatabaseError.Create('Fehlermeldung');
   end;
 end;
 
 procedure TZParam.SetSQLType(Value: TZSQLType);
+var tmpSize: Integer;
 begin
   if FSQLType <> Value then begin
     if (FArraySize = 0) or (FSQLType = stUnknown) then begin
@@ -5161,9 +5231,18 @@ begin
         if (FArraySize > 0) then
           SetArraySize(FArraySize);
       end;
-      FDataType := ConvertDbcToDatasetType(Value, GetDefaultCharacterFieldType(Self), FSize);
+      if Value in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
+        FSize := 0;
+        FPrecision := 0;
+      end;
+      if not (Value in [stCurrency, stBigDecimal, stTime, stTimestamp]) then
+        FNumericScale := 0;
+      tmpSize := FSize;
+      if (tmpSize = 0) and (Value in [stString, stUnicodeString, stBytes]) then
+        tmpSize := 1;
+      FDataType := ConvertDbcToDatasetType(Value, GetDefaultCharacterFieldType(Self), tmpSize);
     end else
-      raise EZDatabaseError.Create('Fehlermeldung');
+      raise EZDatabaseError.Create('ArrayType is locked');
   end;
 end;
 
@@ -5303,11 +5382,11 @@ begin
   Result.SetDataSet(GetDataSet);
 end;
 
-procedure TZParams.DefineProperties(Filer: TFiler);
+(*procedure TZParams.DefineProperties(Filer: TFiler);
 begin
   inherited DefineProperties(Filer);
   Filer.DefineBinaryProperty('Data', ReadBinaryData, nil, False);
-end;
+end;*)
 
 function TZParams.FindParam(const Value: string): TZParam;
 var i: Integer;
@@ -5399,7 +5478,7 @@ begin
   if Result = nil then
     raise CreateParameterNotFound;
 end;
-
+(*
 {$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "Buffer/Bool" does not seem to be initialized}{$ENDIF}
 procedure TZParams.ReadBinaryData(Stream: TStream);
 var
@@ -5411,7 +5490,7 @@ begin
   Clear;
   with Stream do begin
     ReadBuffer(Version, SizeOf(Version));
-    if Version > 2 then DatabaseError(SInvalidVersion);
+    if Version > 2 then DatabaseError({$IF not declared(SInvalidVersion)}'Invalid Version'{$ELSE}SInvalidVersion{$IFEND});
     NumItems := 0;
     if Version = 2 then
       ReadBuffer(NumItems, SizeOf(NumItems)) else
@@ -5438,9 +5517,7 @@ begin
           then ReadBuffer(Temp, SizeOf(Temp))
           else ReadBuffer(Temp, 2);
           ReadBuffer(Buffer, Temp);
-          if DataType in [ftBlob, ftGraphic..ftTypedBinary,ftOraBlob, ftOraClob]
-          then SetBlobData(@Buffer, Temp)
-          else SetData(@Buffer, Temp);
+          SetData(@Buffer, Temp);
         end;
         ReadBuffer(Bool, SizeOf(Bool));
         if Bool then
@@ -5450,6 +5527,7 @@ begin
   end;
 end;
 {$IFDEF FPC}{$POP}{$ENDIF}
+*)
 
 procedure TZParams.RemoveParam(Value: TZParam);
 begin
