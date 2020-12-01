@@ -229,10 +229,9 @@ begin
   MemPerRow := XSQLDA_LENGTH(BindCount);
   if Pointer(TypeTokens) = nil then
   begin
-    Assert(InParamCount=BindCount, 'ParamCount missmatch');
+    Assert(InParamCount=BindCount, 'ParamCount missmatch'); //debug only
     SetLength(TypeTokens, BindCount);
-    for ParamIndex := 0 to BindCount-1 do
-    begin
+    for ParamIndex := 0 to BindCount-1 do begin
       case Stmt.FInMessageMetadata.GetType(Stmt.FStatus, ParamIndex) and not (1) of
         SQL_VARYING, SQL_TEXT:
           begin
