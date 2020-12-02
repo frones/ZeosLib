@@ -2970,7 +2970,7 @@ SetLength(MySQL568PreparableTokens, Ord(myCall)+1);
 MySQL568PreparableTokens[Ord(myDelete)].MatchingGroup := 'DELETE';
 MySQL568PreparableTokens[Ord(myInsert)].MatchingGroup := 'INSERT';
 MySQL568PreparableTokens[Ord(myUpdate)].MatchingGroup := 'UPDATE';
-MySQL568PreparableTokens[Ord(mySelect)].MatchingGroup := 'SELECT';
+MySQL568PreparableTokens[Ord(mySelect)].MatchingGroup := 'COMMENTED_OUT_SELECT';
 MySQL568PreparableTokens[Ord(mySet)].MatchingGroup := 'SET';
 MySQL568PreparableTokens[Ord(myCall)].MatchingGroup := 'CALL'; //for non realpreparable api we're emultating it..
 {EH: all others i do ignore -> they are ususall send once }
