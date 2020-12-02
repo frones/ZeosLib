@@ -3019,9 +3019,44 @@ end;
 
 function TZParam.IsEqual(Value: TZParam): Boolean;
   function CompareValues: Boolean;
-  var Todo_remainder: Boolean;
+  var sDiv: Single;
+      dDiff: Double;
   begin
-    Result := True
+    if FNull then
+      Result := True
+    else case FSQLDataType of
+      stBoolean: Result := Ord(FData.pvBool) = Ord(Value.FData.pvBool);
+      stByte, stShort: Result := FData.pvByte = Value.FData.pvByte;
+      stWord, stSmall: Result := FData.pvWord = Value.FData.pvWord;
+      stLongWord, stInteger: Result := FData.pvCardinal = Value.FData.pvCardinal;
+      stLong, stULong, stCurrency: Result := FData.pvInt64 = Value.FData.pvInt64;
+      stBigDecimal: Result := ZBCDCompare(FData.pvBCD, Value.FData.pvBCD) = 0;
+      stFloat: if FData.pvSingle > Value.FData.pvSingle then begin
+                sDiv := FData.pvSingle - Value.FData.pvSingle;
+                Result := sDiv > FLOAT_COMPARE_PRECISION_SINGLE;
+              end else begin
+                sDiv := Value.FData.pvSingle - FData.pvSingle;
+                Result := not (sDiv > FLOAT_COMPARE_PRECISION_SINGLE);
+              end;
+      stDouble: if FData.pvDouble > Value.FData.pvDouble then begin
+                dDiff := FData.pvDouble - Value.FData.pvDouble;
+                Result := dDiff > FLOAT_COMPARE_PRECISION;
+              end else begin
+                dDiff := Value.FData.pvDouble - FData.pvDouble;
+                Result := not (dDiff > FLOAT_COMPARE_PRECISION);
+              end;
+      stDate: Result := ZCompareDate(FData.pvDate, Value.FData.pvDate) = 0;
+      stTime: Result := ZCompareTime(FData.pvTime, Value.FData.pvTime) = 0;
+      stTimeStamp: Result := ZCompareTimestamp(FData.pvTimeStamp, Value.FData.pvTimeStamp) = 0;
+      stGUID: Result := CompareMem(@FData.pvGUID.D1, @Value.FData.pvGUID.D1, SizeOf(TGUID));
+      stString: Result := (Length(RawByteString(FData.pvPointer)) = Length(RawByteString(Value.FData.pvPointer))) and
+        ((FData.pvPointer = nil) or CompareMem(FData.pvPointer, Value.FData.pvPointer, Length(RawByteString(FData.pvPointer))));
+      stUnicodeString: Result := (Length(UnicodeString(FData.pvPointer)) = Length(UnicodeString(Value.FData.pvPointer))) and
+        ((FData.pvPointer = nil) or  CompareMem(FData.pvPointer, Value.FData.pvPointer, Length(UnicodeString(FData.pvPointer)) shl 1));
+      stBytes: Result := (Length(TBytes(FData.pvPointer)) = Length(TBytes(Value.FData.pvPointer))) and
+        ((FData.pvPointer = nil) or CompareMem(FData.pvPointer, Value.FData.pvPointer, Length(TBytes(FData.pvPointer))));
+      else Result := True;
+    end;
   end;
 begin
   Result :=
@@ -5182,7 +5217,7 @@ end;
 procedure TZParam.SetSQLDataType(Value: TZSQLType; ZVarType: TZVariantType);
 var tmpSize: Integer;
 begin
-  if FSQLDataType <> Value then begin
+  if (FSQLDataType <> Value) or (FZVariantType <> ZVarType) then begin
     if (FArraySize = 0) or (FSQLDataType = stUnknown) then begin
       if (FSQLDataType <> stUnknown) and ((Ord(FSQLDataType) >= Ord(stString)) or ((Ord(Value) >= Ord(stString)) and (FArraySize = 0))) then
         SetIsNull(True);
