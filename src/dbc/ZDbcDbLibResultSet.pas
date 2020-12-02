@@ -382,7 +382,8 @@ label AssignGeneric;
         Currency := True;
       end else begin
         Precision := ColInfo.MaxLength;
-        if TDSType in [tdsBinary, tdsChar, tdsBigBinary, tdsBigChar, tdsBigNChar]
+        if (TDSType in [tdsChar, tdsBigBinary, tdsBigChar, tdsBigNChar]) or
+           ((TDSType = tdsBinary) and not ColInfo.VarLength)
         then Scale := Precision
         else Scale := 0;
       end;
@@ -397,7 +398,7 @@ label AssignGeneric;
       Writable := ColInfo.Updatable = 1;
       AutoIncrement := ColInfo.Identity;
       Signed := (ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong, stFloat, stCurrency, stDouble, stBigDecimal]) or
-        ((TDSType = tdsBinary) and not ColInfo.VarLength);
+        ((TDSType = tdsBinary) and not ColInfo.VarLength) or (TDSType in [tdsChar, tdsBigBinary, tdsBigChar, tdsBigNChar]);
     end;
   end;
   function ValueToString(P: PAnsiChar): String;
@@ -407,7 +408,7 @@ label AssignGeneric;
     {$IFDEF UNICODE}
     Result := PRawToUnicode(P, L, FClientCP);
     {$ELSE}
-    {$IFDEF FPC}Result := '';{$ENDIF}//done by ZSetString already
+    {$IFDEF FPC}Result := '';{$ENDIF}
     ZSetString(P, L, Result{$IFDEF WITH_RAWBYTESRING}, FClientCP{$ENDIF});
     {$ENDIF}
   end;
