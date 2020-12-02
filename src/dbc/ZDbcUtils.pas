@@ -1776,6 +1776,7 @@ begin
       if (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16)
       then Result := UnicodeToIntDef(TZCharRecDynArray(ZArray.VArray)[Index].P, 0)
       else Result := RawToIntDef(TZCharRecDynArray(ZArray.VArray)[Index].P, 0);
+    vtBoolean, vtBigDecimal, vtCurrency, vtDouble, vtInteger, vtUInteger,
     vtNull:  case TZSQLType(ZArray.VArrayType) of
         stBoolean:    Result := Ord(TBooleanDynArray(ZArray.VArray)[Index]);
         stByte:       Result := TByteDynArray(ZArray.VArray)[Index];
@@ -1833,6 +1834,7 @@ begin
       if (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16)
       then Result := UnicodeToUInt64Def(TZCharRecDynArray(ZArray.VArray)[Index].P, 0)
       else Result := RawToUInt64Def(TZCharRecDynArray(ZArray.VArray)[Index].P, 0);
+    vtBoolean, vtBigDecimal, vtCurrency, vtDouble, vtInteger, vtUInteger,
     vtNull:  case TZSQLType(ZArray.VArrayType) of
         stBoolean:    Result := Ord(TBooleanDynArray(ZArray.VArray)[Index]);
         stByte:       Result := TByteDynArray(ZArray.VArray)[Index];
@@ -1890,6 +1892,7 @@ begin
       if (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16)
       then Result := UnicodeToInt64Def(TZCharRecDynArray(ZArray.VArray)[Index].P, 0)
       else Result := RawToInt64Def(TZCharRecDynArray(ZArray.VArray)[Index].P, 0);
+    vtBoolean, vtBigDecimal, vtCurrency, vtDouble, vtInteger, vtUInteger,
     vtNull:  case TZSQLType(ZArray.VArrayType) of
         stBoolean:    Result := Ord(TBooleanDynArray(ZArray.VArray)[Index]);
         stByte:       Result := TByteDynArray(ZArray.VArray)[Index];
@@ -1946,6 +1949,7 @@ begin
       if (TZCharRecDynArray(ZArray.VArray)[Index].CP = zCP_UTF16)
       then Result := UnicodeToUInt64Def(TZCharRecDynArray(ZArray.VArray)[Index].P, 0)
       else Result := RawToUInt64Def(TZCharRecDynArray(ZArray.VArray)[Index].P, 0);
+    vtBoolean, vtBigDecimal, vtCurrency, vtDouble, vtInteger, vtUInteger,
     vtNull:  case TZSQLType(ZArray.VArrayType) of
         stBoolean:    Result := Ord(TBooleanDynArray(ZArray.VArray)[Index]);
         stByte:       Result := TByteDynArray(ZArray.VArray)[Index];
@@ -1991,6 +1995,7 @@ begin
         Result, TZCharRecDynArray(ZArray.VArray)[Index].Len)
       else SQLStrToFloatDef(PAnsiChar(TZCharRecDynArray(ZArray.VArray)[Index].P), 0,
         Result, TZCharRecDynArray(ZArray.VArray)[Index].Len);
+    vtBoolean, vtBigDecimal, vtCurrency, vtDouble, vtInteger, vtUInteger,
     vtNull:  case TZSQLType(ZArray.VArrayType) of
         stBoolean:    Result := Ord(TBooleanDynArray(ZArray.VArray)[Index]);
         stByte:       Result := TByteDynArray(ZArray.VArray)[Index];
@@ -2037,6 +2042,7 @@ begin
         Result, TZCharRecDynArray(ZArray.VArray)[Index].Len)
       else SQLStrToFloatDef(PAnsiChar(TZCharRecDynArray(ZArray.VArray)[Index].P), 0,
         Result, TZCharRecDynArray(ZArray.VArray)[Index].Len);
+    vtBoolean, vtBigDecimal, vtCurrency, vtDouble, vtInteger, vtUInteger,
     vtNull:  case TZSQLType(ZArray.VArrayType) of
         stBoolean:    Result := Ord(TBooleanDynArray(ZArray.VArray)[Index]);
         stByte:       Result := TByteDynArray(ZArray.VArray)[Index];
@@ -2050,7 +2056,7 @@ begin
         stFloat:      Result := TSingleDynArray(ZArray.VArray)[Index];
         stDouble:     Result := TDoubleDynArray(ZArray.VArray)[Index];
         stCurrency:   Result := TCurrencyDynArray(ZArray.VArray)[Index];
-        stBigDecimal: Result := TExtendedDynArray(ZArray.VArray)[Index];
+        stBigDecimal: Result := BcdToDouble(TBCDDynArray(ZArray.VArray)[Index]);
         stTime, stDate, stTimeStamp:
           Result := TDateTimeDynArray(ZArray.VArray)[Index];
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
@@ -2094,6 +2100,7 @@ begin
         stTime, stDate, stTimeStamp: Result := TDateTimeDynArray(ZArray.VArray)[Index]  <> 0;
         else raise EZSQLException.Create(IntToStr(ZArray.VArrayType)+' '+SUnsupportedParameterType);
       end;
+    vtBoolean: Result := TBooleanDynArray(ZArray.VArray)[Index];
     else raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SUnsupportedParameterType);
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
@@ -2281,7 +2288,7 @@ W_Conv: ZSysUtils.ValidGUIDToBinary(PWideChar(P), @GUID.D1);
                 end;
         else goto DoRaise;
       end;
-    vtNull: case TZSQLType(ZArray.VArrayType) of
+    vtNull, vtGUID: case TZSQLType(ZArray.VArrayType) of
         stGUID:  GUID^ := TGUIDDynArray(ZArray.VArray)[Index];
         else goto DoRaise;
       end;
@@ -2319,8 +2326,7 @@ A_Conv: Assert(ZSysUtils.TryRawToBcd(PAnsiChar(P), L, BCD, '.'), 'wrong bcd valu
         L := Length(TUnicodeStringDynArray(ZArray.VArray)[Index]);
 W_Conv: Assert(ZSysUtils.TryUniToBcd(PWideChar(P), L, BCD, '.'), 'wrong bcd value');
       end;
-    vtBigDecimal, vtCurrency, vtDouble,
-    vtInteger, vtUInteger,
+    vtBoolean, vtBigDecimal, vtCurrency, vtDouble, vtInteger, vtUInteger,
     vtNull: case TZSQLType(ZArray.VArrayType) of
               stBoolean:    ScaledOrdinal2BCD(Word(Ord(TBooleanDynArray(ZArray.VArray)[Index])), 0, BCD);
               stByte:       ScaledOrdinal2BCD(Word(TByteDynArray(ZArray.VArray)[Index]), 0, BCD, False);
