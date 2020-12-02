@@ -5214,7 +5214,7 @@ var P: Pointer;
 begin
   FOwner := Owner;
   FVarLenDataRef := VarLenDataRef;
-  Assert(VarLenDataRef <> nil);
+  Assert(VarLenDataRef <> nil); //Debug only
   FColumnCodePage := CodePage;
   fLobStreamMode := LobStreamMode;
   FOpenLobStreams := OpenLobStreams;

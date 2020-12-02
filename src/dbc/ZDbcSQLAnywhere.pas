@@ -94,8 +94,10 @@ type
     Fa_sqlany_interface_context: Pa_sqlany_interface_context;
     Fapi_version: Tsacapi_u32;
     FLastWarning: EZSQLWarning;
+    FClientLanguageCP: Word;
   private
     function DetermineASACharSet: String;
+    procedure DetermineClientLanguageCP;
   protected
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
@@ -455,6 +457,60 @@ begin
   Stmt := nil;
 end;
 
+procedure TZSQLAnywhereConnection.DetermineClientLanguageCP;
+var
+  Stmt: IZStatement;
+  RS: IZResultSet;
+  S: String;
+begin
+  Stmt := CreateStatementWithParams(Info);
+  RS := Stmt.ExecuteQuery('SELECT CONNECTION_PROPERTY(''Language'')');
+  if RS.Next
+  then S := RS.GetString(FirstDbcIndex)
+  else S := '';
+  RS := nil;
+  Stmt.Close;
+  Stmt := nil;
+  if S = 'arabic' then
+  else if S = 'czech' then
+    FClientLanguageCP := zCP_WIN1250
+  else if S = 'danish' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'dutch' then
+     FClientLanguageCP := zCP_WIN1252
+  else if (S = 'us_english') or (S = 'english') then
+     FClientLanguageCP := zCP_us_ascii
+  else if S = 'finnish' then
+     FClientLanguageCP := zCP_WIN1252
+  else if S = 'french' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'german' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'greek' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'hebrew' then
+    FClientLanguageCP := zCP_WIN1255
+  else if S = 'hungarian' then
+  else if S = 'italian' then
+  else if S = 'japanese' then
+  else if S = 'korean' then
+  else if S = 'lithuanian' then
+  else if (S = 'norwegian') or (s = 'norweg') then
+  else if S = 'polish' then
+  else if (S = 'portuguese') or (S = 'portugue') then
+  else if S = 'russian' then
+  else if (S = 'chinese') or (S = 'simpchin') then
+  else if S = 'spanish' then
+  else if S = 'swedish' then
+  else if S = 'thai' then
+  else if (S = 'tchinese') or (S = 'tradchin') then
+  else if S = 'turkish' then
+  else if S = 'ukrainian' then
+  else FClientLanguageCP := zOSCodePage;
+  if S = 'german' then
+  else if S = 'DE' then
+end;
+
 procedure TZSQLAnywhereConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 var B: Tsacapi_bool;
@@ -604,6 +660,7 @@ jmpInit:
     S := DetermineASACharSet;
     CheckCharEncoding(S);
   end;
+  DetermineClientLanguageCP;
   if Ord(TransactIsolationLevel) > Ord(tiReadUncommitted) then
     ExecuteImmediat(SQLAnyTIL[TransactIsolationLevel], lcTransaction);
   if AutoCommit

@@ -49,6 +49,11 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
+{
+constributor(s):
+Joe Whale
+}
+
 unit ZDbcFirebirdStatement;
 
 interface
@@ -787,8 +792,11 @@ begin
   if FFBStatement <> nil then begin
     FFBStatement.free(FStatus);
     if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-      FFBConnection.HandleErrorOrWarning(lcUnprepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self);
-    FFBStatement.release;
+      FFBConnection.HandleErrorOrWarning(lcUnprepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self)
+    else // free() releases intf on success
+      FFBStatement:= nil;
+    if Assigned(FFBStatement) then
+      FFBStatement.release;
     FFBStatement := nil;
   end;
 end;

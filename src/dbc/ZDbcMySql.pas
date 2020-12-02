@@ -1029,18 +1029,6 @@ begin
   if Closed then
     Open;
   if AutoCommit then begin
-    {EH: Commented out, start a expplicit txn see:
-     https://github.com/mariadb-corporation/mariadb-connector-c/blob/3.1/libmariadb/mariadb_lib.c
-    return((my_bool) mysql_real_query(mysql, (mode) ? "SET autocommit=1" :
-                                         "SET autocommit=0", 16));
-
-    if FPlainDriver.mysql_autocommit(FHandle, 0) <> 0 then
-      HandleErrorOrWarning(lcTransaction, nil, MySQLCommitMsg[False],
-        IImmediatelyReleasable(FWeakImmediatRelPtr))
-
-    else if DriverManager.HasLoggingListener then
-      DriverManager.LogMessage(lcTransaction, URL.Protocol, MySQLCommitMsg[False]);}
-
     ExecuteImmediat(cStartTransaction, lcTransaction);
     AutoCommit := False;
     Result := 1;
