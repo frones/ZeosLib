@@ -161,7 +161,7 @@ type
     FFilterEnabled: Boolean;
     FFilterExpression: IZExpression;
     FFilterStack: TZExecutionStack;
-    FFilterFieldRefs: TObjectDynArray;
+    FFilterFieldRefs: TZFieldsLookUpDynArray;
     FInitFilterFields: Boolean;
     FDisableZFields: Boolean;
 
@@ -212,7 +212,7 @@ type
     FHasOutParams: Boolean;
     FLastRowFetched: Boolean;
     FSortedFields: string;
-    FSortedFieldRefs: TObjectDynArray;
+    FSortedFieldRefs: TZFieldsLookUpDynArray;
     FSortedFieldIndices: TIntegerDynArray;
     FSortedComparsionKinds: TComparisonKindArray;
     FSortedOnlyDataFields: Boolean;
@@ -345,7 +345,7 @@ type
     property FilterExpression: IZExpression read FFilterExpression
       write FFilterExpression;
     property FilterStack: TZExecutionStack read FFilterStack write FFilterStack;
-    property FilterFieldRefs: TObjectDynArray read FFilterFieldRefs
+    property FilterFieldRefs: TZFieldsLookUpDynArray read FFilterFieldRefs
       write FFilterFieldRefs;
     property InitFilterFields: Boolean read FInitFilterFields
       write FInitFilterFields;
@@ -2051,7 +2051,7 @@ begin
     for I := 0 to MasterLink.Fields.Count - 1 do begin
       if I < IndexFields.Count then
         Result := CompareKeyFields(TField(IndexFields[I]), ResultSet,
-          TField(MasterLink.Fields[I]));
+          TField(MasterLink.Fields[I]), FFieldsLookupTable);
       if not Result then
         Break;
     end;
@@ -2092,7 +2092,7 @@ begin
   { Check the record by filter expression. }
   if FilterEnabled and (FilterExpression.Expression <> '') then begin
     if not InitFilterFields then begin
-      FilterFieldRefs := DefineFilterFields(Self, FilterExpression);
+      FilterFieldRefs := DefineFilterFields(Self, FilterExpression, FFieldsLookupTable);
       InitFilterFields := True;
     end;
     CopyDataFieldsToVars(FilterFieldRefs, ResultSet,
@@ -2216,10 +2216,10 @@ begin
         {$ENDIF WITH_FTLONGWORD}
         ftInteger, ftAutoInc:
           Param.AsInteger := Statement.GetInt(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        {$IFDEF WITH_PARAM_ASLARGEINT}
+        {$IF defined(WITH_PARAM_ASLARGEINT) or not defined(DISABLE_ZPARAM)}
         ftLargeInt:
           Param.AsLargeInt := Statement.GetLong(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-        {$ENDIF}
+        {$IFEND}
         {$IFDEF WITH_FTSINGLE}
         ftSingle:
           Param.AsSingle := Statement.GetFloat(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
@@ -4494,7 +4494,7 @@ var
   KeyFields: string;
   Temp: TZVariantDynArray;
   KeyValues: Variant;
-  FieldRefs: TObjectDynArray;
+  FieldRefs: TZFieldsLookUpDynArray;
   OnlyDataFields: Boolean;
 begin
   OnlyDataFields := False;
@@ -4511,7 +4511,8 @@ begin
         KeyFields := Properties.Values[DSProps_KeyFields]
       else
         KeyFields := DefineKeyFields(Fields, Connection.DbcConnection.GetMetadata.GetIdentifierConverter);
-      FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);
+      FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields,
+        Connection.DbcConnection.GetDriver.GetTokenizer);
       {$IFDEF WITH_VAR_INIT_WARNING}Temp := nil;{$ENDIF}
       SetLength(Temp, Length(FieldRefs));
       RetrieveDataFieldsFromResultSet(FieldRefs, ResultSet, Temp);
@@ -4762,7 +4763,7 @@ function TZAbstractRODataset.InternalLocate(const KeyFields: string;
 var
   RowNo: NativeInt;
   I, RowCount: Integer;
-  FieldRefs: TObjectDynArray;
+  FieldRefs: TZFieldsLookUpDynArray;
   FieldIndices: TZFieldsLookUpDynArray;
   OnlyDataFields: Boolean;
   SearchRowBuffer: PZRowBuffer;
@@ -4780,7 +4781,8 @@ begin
   PartialKey := loPartialKey in Options;
   CaseInsensitive := loCaseInsensitive in Options;
 
-  FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);
+  FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields,
+    Connection.DbcConnection.GetDriver.GetTokenizer);
   FieldIndices := nil;
   if FieldRefs = nil then
      Exit;
@@ -4908,7 +4910,7 @@ function TZAbstractRODataset.Lookup(const KeyFields: string;
   const KeyValues: Variant; const ResultFields: string): Variant;
 var
   RowNo: NativeInt;
-  FieldRefs: TObjectDynArray;
+  FieldRefs: TZFieldsLookUpDynArray;
   FieldIndices: TZFieldsLookUpDynArray;
   OnlyDataFields: Boolean;
   SearchRowBuffer: PZRowBuffer;
@@ -4923,7 +4925,8 @@ begin
      Exit;
 
   { Fill result array }
-  FieldRefs := DefineFields(Self, ResultFields, OnlyDataFields, Connection.DbcConnection.GetDriver.GetTokenizer);
+  FieldRefs := DefineFields(Self, ResultFields, OnlyDataFields,
+    Connection.DbcConnection.GetDriver.GetTokenizer);
   FieldIndices := DefineFieldIndices(FieldsLookupTable, FieldRefs);
   {$IFDEF WITH_VAR_INIT_WARNING}ResultValues := nil;{$ENDIF}
   SetLength(ResultValues, Length(FieldRefs));
@@ -5237,7 +5240,7 @@ begin
         { Converts field objects into field indices. }
         SetLength(FSortedFieldIndices, Length(FSortedFieldRefs));
         for I := 0 to High(FSortedFieldRefs) do
-          FSortedFieldIndices[I] := TField(FSortedFieldRefs[I]).FieldNo{$IFDEF GENERIC_INDEX}-1{$ENDIF};
+          FSortedFieldIndices[I] := FSortedFieldRefs[I].Index;
         { Performs a sorting. }
         FCompareFuncs := ResultSet.GetCompareFuncs(FSortedFieldIndices, FSortedComparsionKinds);
         CurrentRows.Sort(LowLevelSort);
@@ -5253,7 +5256,7 @@ begin
           SetLength(FSortedFieldIndices, Length(FSortedFieldRefs));
           for I := 0 to High(FSortedFieldRefs) do
             FSortedFieldIndices[I] := DefineFieldIndex(FieldsLookupTable,
-              TField(FSortedFieldRefs[I]));
+              TField(FSortedFieldRefs[I].Field));
           { Performs sorting. }
           FCompareFuncs := FFieldsAccessor.GetCompareFuncs(FSortedFieldIndices, FSortedComparsionKinds);
           CurrentRows.Sort(HighLevelSort);

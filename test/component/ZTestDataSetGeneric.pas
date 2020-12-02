@@ -1466,7 +1466,7 @@ end;
 procedure TZGenericTestDataSet.TestDecodingSortedFields;
 var
   Query: TZReadOnlyQuery;
-  FieldRefs: TObjectDynArray;
+  FieldRefs: TZFieldsLookUpDynArray;
   FieldComparsionKinds: TComparisonKindArray;
   OnlyDataFields: Boolean;
 begin
@@ -1477,7 +1477,7 @@ begin
 
     DefineSortedFields(Query, 'p_id', FieldRefs, FieldComparsionKinds, OnlyDataFields);
     CheckEquals(1, Length(FieldRefs));
-    CheckEquals(Integer(Query.Fields[0]), Integer(FieldRefs[0]));
+    Check(Pointer(Query.Fields[0]) = FieldRefs[0].Field);
     CheckEquals(1, Length(FieldComparsionKinds));
     CheckEquals(Ord(ckAscending), Ord(FieldComparsionKinds[0]));
     CheckEquals(True, OnlyDataFields);
@@ -1485,8 +1485,8 @@ begin
     DefineSortedFields(Query, 'p_id ASC, p_name DESC', FieldRefs,
       FieldComparsionKinds, OnlyDataFields);
     CheckEquals(2, Length(FieldRefs));
-    CheckEquals(Integer(Query.Fields[0]), Integer(FieldRefs[0]));
-    CheckEquals(Integer(Query.Fields[2]), Integer(FieldRefs[1]));
+    Check(Pointer(Query.Fields[0]) = FieldRefs[0].Field);
+    Check(Pointer(Query.Fields[2]) = FieldRefs[1].Field);
     CheckEquals(2, Length(FieldComparsionKinds));
     CheckEquals(Ord(ckAscending), Ord(FieldComparsionKinds[0]));
     CheckEquals(Ord(ckDescending), Ord(FieldComparsionKinds[1]));
@@ -2382,7 +2382,7 @@ procedure TZGenericTestDataSet.RunDefineSortedFields;
 var
   Bool: Boolean;
   CompareKinds: TComparisonKindArray;
-  Fields: TObjectDynArray;
+  Fields: TZFieldsLookUpDynArray;
 begin
   DefineSortedFields(FQuery, FFieldList, Fields, CompareKinds, Bool);
 end;
@@ -2392,13 +2392,13 @@ procedure TZGenericTestDataSet.TestDefineFields;
   procedure CheckFieldList(const FieldList: string; const Expect: array of TField);
   var
     Bool: Boolean;
-    Fields: TObjectDynArray;
+    Fields: TZFieldsLookUpDynArray;
     i: Integer;
   begin
     Fields := DefineFields(FQuery, FieldList, Bool, CommonTokenizer);
     CheckEquals(Length(Expect), Length(Fields), 'FieldList "' + FieldList + '" - item count');
     for i := Low(Fields) to High(Fields) do
-      CheckSame(Expect[i], Fields[i], 'FieldList "' + FieldList + '" - item #' + ZFastCode.IntToStr(i));
+      CheckSame(Expect[i], TField(Fields[i].Field), 'FieldList "' + FieldList + '" - item #' + ZFastCode.IntToStr(i));
   end;
 
   procedure CheckExceptionRaised(const FieldList: string; Expect: ExceptClass; const ExpectMsg: string = '');
@@ -2441,7 +2441,7 @@ procedure TZGenericTestDataSet.TestDefineSortedFields;
   procedure CheckFieldList(const FieldList: string; const ExpectFields: array of TField; const ExpectCompareKinds: array of TComparisonKind);
   var
     Bool: Boolean;
-    Fields: TObjectDynArray;
+    Fields: TZFieldsLookUpDynArray;
     CompareKinds: TComparisonKindArray;
     i: Integer;
   begin
@@ -2450,7 +2450,7 @@ procedure TZGenericTestDataSet.TestDefineSortedFields;
     CheckEquals(Length(ExpectCompareKinds), Length(CompareKinds), 'FieldList "' + FieldList + '" - item count');
     for i := Low(Fields) to High(Fields) do
     begin
-      CheckSame(ExpectFields[i], Fields[i], 'FieldList "' + FieldList + '" - item #' + ZFastCode.IntToStr(i));
+      CheckSame(ExpectFields[i], TField(Fields[i].Field), 'FieldList "' + FieldList + '" - item #' + ZFastCode.IntToStr(i));
       CheckEquals(Integer(ExpectCompareKinds[i]), Integer(CompareKinds[i]), 'FieldList "' + FieldList + '" - item #' + ZFastCode.IntToStr(i));
     end;
   end;

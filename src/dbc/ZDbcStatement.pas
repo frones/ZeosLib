@@ -316,6 +316,10 @@ type
     function AquireCustomValue(Index: NativeInt; SQLType: TZSQLType; Len: LengthInt): Pointer;
     function AquireMinCustomValue(Index: NativeInt; SQLType: TZSQLType; Len: LengthInt): Pointer;
 
+    /// <summary>Sets the designated parameter value to SQL <c>NULL</c>.
+    ///  <B>Note:</B> You must specify the parameter's SQL type. </summary>
+    /// <param>"Index" the first parameter is 0, the second is 1, ...</param>
+    /// <param>"SQLType" the SQL type code defined in <c>ZDbcIntfs.pas</c></param>
     procedure SetNull(Index: NativeInt; SQLType: TZSQLType);
     procedure SetParamTypes(Index: NativeInt; SQLType: TZSQLType; ParamIO: TZProcedureColumnType);
 
