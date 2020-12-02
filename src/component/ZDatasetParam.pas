@@ -3025,12 +3025,11 @@ function TZParam.IsEqual(Value: TZParam): Boolean;
   end;
 begin
   Result :=
-    {(FPosition = Value.FPosition) and }(FArraySize = Value.FArraySize) and
-    (FSQLType = Value.FSQLType) and {(FIsCaseSensitive = Value.IsCaseSensitive) and}
+    (FArraySize = Value.FArraySize) and (FSQLType = Value.FSQLType) and
     (FDataType = Value.FDataType) and (FSQLDataType = Value.FSQLDataType) and
     (FPrecision = Value.FPrecision) and (FNumericScale = Value.FNumericScale) and
     (FSize = Value.FSize) and (FNull = Value.FNull) and (FBound = Value.FBound) and
-    (FName = Value.FName) and (FParamType = Value.FParamType) and
+    (FName = Value.FName) and (FParamType = Value.FParamType) and (FNull = Value.FNull) and
     CompareValues;
 end;
 

@@ -843,7 +843,7 @@ begin
       Continue;
 
     ColumnIndex := TField(Fields[I]).FieldNo {$IFDEF GENERIC_INDEX}-1{$ENDIF};
-    if ColumnIndex = -1 then
+    if ColumnIndex = {$IFDEF GENERIC_INDEX}-2{$ELSE}-1{$ENDIF} then
       CopyFromField
     else if not ResultSet.IsNull(ColumnIndex) then
       case TField(Fields[I]).DataType of
