@@ -2664,11 +2664,19 @@ end;
 
 procedure TZParam.GetData(Buffer: Pointer);
   procedure MoveRawByteString;
-  var Tmp: AnsiString;
+  var {$IF defined(LCL) or defined(NO_ANSISTRING)}
+      Tmp: UTF8String;
+      {$ELSE}
+      Tmp: AnsiString;
+      {$IFEND}
       P: Pointer absolute Tmp;
       L: LengthInt;
   begin
+    {$IF defined(LCL) or defined(NO_ANSISTRING)}
+    Tmp := GetAsUTF8String;
+    {$ELSE}
     Tmp := GetAsAnsiString;
+    {$IFEND}
     L := Length(Tmp);
     Move(P^, Buffer^, L);
     PByte(PAnsiChar(Buffer)+L)^ := 0;
@@ -4162,9 +4170,9 @@ begin
     else begin
       if CodePage = zCP_UTF8
       then VariantType := vtUTF8String
-      else if CodePage = zOSCodePage
+      else {$IFNDEF NO_ANSISTRING} if CodePage = zOSCodePage
         then VariantType := vtAnsiString
-        else VariantType := vtRawByteString;
+        else {$ENDIF}VariantType := vtRawByteString;
       SetSQLDataType(stString, VariantType);
     end;
   end;
@@ -4182,9 +4190,9 @@ begin
     else begin
       if CodePage = zCP_UTF8
       then VariantType := vtUTF8String
-      else if CodePage = zOSCodePage
+      else {$IFNDEF NO_ANSISTRING}if CodePage = zOSCodePage
         then VariantType := vtAnsiString
-        else VariantType := vtRawByteString;
+        else {$ENDIF}VariantType := vtRawByteString;
       SetSQLDataType(stString, VariantType);
     end;
   InternalSetAsRawByteStrings(Index, Value, CodePage);
@@ -4488,9 +4496,9 @@ begin
           CP := FConSettings.ClientCodePage.CP;
           if CP = zCP_UTF8
           then VariantType := vtUTF8String
-          else if CP = zOSCodePage
+          else {$IFNDEF NO_ANSISTRING}if CP = zOSCodePage
             then VariantType := vtAnsiString
-            else VariantType := vtRawByteString;
+            else {$ENDIF NO_ANSISTRING}VariantType := vtRawByteString;
           SetSQLDataType(stString, VariantType);
         end
       else SetSQLDataType(stUnicodeString, vtUnicodeString);
@@ -4513,9 +4521,9 @@ begin
           CP := FConSettings.ClientCodePage.CP;
           if CP = zCP_UTF8
           then VariantType := vtUTF8String
-          else if CP = zOSCodePage
+          else {$IFNDEF NO_ANSISTRING}if CP = zOSCodePage
             then VariantType := vtAnsiString
-            else VariantType := vtRawByteString;
+            else {$ENDIF}VariantType := vtRawByteString;
           SetSQLDataType(stString, VariantType);
         end
       else SetSQLDataType(stUnicodeString, vtUnicodeString);
@@ -5587,10 +5595,10 @@ end;
 procedure TZParams.SetParamValue(const ParamName: string; const Value: Variant);
 var
   I: Integer;
-  Params: {$IFDEF WITH_GENERIC_TPARAM_LIST}TList<TParams>{$ELSE}TList{$ENDIF};
+  Params: {$IFDEF WITH_GENERIC_TPARAM_LIST}TList<TZParam>{$ELSE}TList{$ENDIF};
 begin
   if ZFastCode.Pos(';', ParamName) <> 0 then begin
-    Params := {$IFDEF WITH_GENERIC_TPARAM_LIST}TList<TParams>{$ELSE}TList{$ENDIF}.Create;
+    Params := {$IFDEF WITH_GENERIC_TPARAM_LIST}TList<TZParam>{$ELSE}TList{$ENDIF}.Create;
     try
       GetParamList(Params, ParamName);
       for I := 0 to Params.Count - 1 do
