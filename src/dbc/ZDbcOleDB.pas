@@ -1069,7 +1069,8 @@ begin
     OleCheck(DataInitialize.GetDataSource(nil,CLSCTX_INPROC_SERVER,
       Pointer(ConnectString), IID_IDBInitialize,IUnknown(fDBInitialize)));
     DataInitialize := nil; //no longer required!
-    SetProviderProps(True); //set's timeout values
+    if FServerProvider <> spMSJet then
+      SetProviderProps(True); //set's timeout values
     // open the connection to the DB
     Status := fDBInitialize.Initialize;
     if Status <> S_OK then
