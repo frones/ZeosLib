@@ -1035,7 +1035,7 @@ type
     procedure SetAsCurrency(Value: Currency); override;
     procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
   public
-    {$IFNDEF WITH_ASLARGEINT}
+    {$IFNDEF TFIELD_HAS_ASLARGEINT}
     property AsLargeInt: LargeInt read GetAsLargeInt write SetAsLargeInt;
     {$ENDIF}
     procedure Clear; override;

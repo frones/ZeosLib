@@ -826,9 +826,9 @@ var
       ftExtended:
         Variables.Values[I] := EncodeDouble(TField(Fields[I].Field).{$IFDEF WITH_TFIELD_ASEXTENDED}AsExtended{$ELSE}AsFloat{$ENDIF});
       {$ENDIF}
-      {$IFDEF WITH_FTLONGWORD}
-      ftLongword: Variables.Values[I] := EncodeInteger(TField(Fields[I].Field).AsLargeInt);
-      {$ENDIF}
+      {$IF defined(WITH_FTLONGWORD) and declared(TLongWordField)}
+      ftLongword: Variables.Values[I] := EncodeUInteger(TLongWordField(Fields[I].Field).Value);
+      {$IFEND}
       ftLargeInt: Variables.Values[I] := EncodeInteger({$IFDEF TFIELD_HAS_ASLARGEINT}TField{$ELSE}TLargeIntField{$ENDIF}(Fields[I].Field).AsLargeInt);
       ftBCD:
         Variables.Values[I] := EncodeCurrency(ResultSet.GetCurrency(ColumnIndex));
