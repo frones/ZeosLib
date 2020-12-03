@@ -97,9 +97,11 @@ type
     FPlainDriver: TZASAPlainDriver;
     FHostVersion: Integer;
     FLastWarning: EZSQLWarning;
+    FClientLanguageCP: Word;
   private
     function DetermineASACharSet: String;
     procedure DetermineHostVersion;
+    procedure DetermineClientLanguageCP;
     procedure SetOption(Temporary: Integer; const LogMsg: String;
       const Option, Value: RawByteString; LoggingCategory: TZLoggingCategory);
   protected
@@ -435,7 +437,7 @@ var err_len: Integer;
   Error: EZSQLThrowable;
   ExeptionClass: EZSQLThrowableClass;
   P: PAnsiChar;
-  {$IFNDEF UNICODE}excCP,{$ENDIF}msgCP: Word;
+  {$IFNDEF UNICODE}excCP: Word;{$ENDIF}
 begin
   ErrCode := FHandle.SqlCode;
   if (ErrCode = SQLE_NOERROR) or //Nothing todo
@@ -443,9 +445,6 @@ begin
     Exit;
   P := @FByteBuffer[0];
   PByte(P)^ := 0;
-  if ConSettings.ClientCodePage <> nil
-  then msgCP := ConSettings.ClientCodePage.CP
-  else msgCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
 {$IFNDEF UNICODE}
   excCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}
       {$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
@@ -454,13 +453,13 @@ begin
   err_len := ZFastCode.StrLen(P);
   {$IFDEF UNICODE}
   SQLState := USASCII7ToUnicodeString(@FHandle.sqlState[0], 5);
-  FLogMessage := PRawToUnicode(P, err_Len, msgCP);
+  FLogMessage := PRawToUnicode(P, err_Len, FClientLanguageCP);
   {$ELSE}
   SQLState := '';
   ZSetString(PAnsiChar(@FHandle.sqlState[0]), 5, SQLState);
   FLogMessage := '';
-  if excCP <> msgCP
-  then PRawToRawConvert(P, err_len, msgCP, excCP, FLogMessage)
+  if excCP <> FClientLanguageCP
+  then PRawToRawConvert(P, err_len, FClientLanguageCP, excCP, FLogMessage)
   else System.SetString(FLogMessage, P, err_Len);
   {$ENDIF}
   if DriverManager.HasLoggingListener then
@@ -515,6 +514,7 @@ begin
   if not Closed then
      Exit;
 
+  FClientLanguageCP := ZOSCodePage; //init
   FHandle := nil;
   ConnectionString := '';
   try
@@ -587,6 +587,7 @@ begin
 
   if FClientCodePage = ''  then
     CheckCharEncoding(DetermineASACharSet);
+  DetermineClientLanguageCP;
   DetermineHostVersion;
   if FHostVersion >= 17000000 then //chained is deprecated On is comparable with AutoCommit=off
     SetOption(1, 'SET OPTION chained = "on"', 'chained', 'On', lcTransaction);
@@ -752,6 +753,75 @@ begin
   RS := nil;
   Stmt.Close;
   Stmt := nil;
+end;
+
+procedure TZASAConnection.DetermineClientLanguageCP;
+var
+  Stmt: IZStatement;
+  RS: IZResultSet;
+  S: String;
+begin
+  Stmt := CreateStatementWithParams(Info);
+  RS := Stmt.ExecuteQuery('SELECT CONNECTION_PROPERTY(''Language'')');
+  if RS.Next
+  then S := RS.GetString(FirstDbcIndex)
+  else S := '';
+  RS := nil;
+  Stmt.Close;
+  Stmt := nil;
+  if S = 'arabic' then
+    FClientLanguageCP := zCP_WIN1256
+  else if S = 'czech' then
+    FClientLanguageCP := zCP_WIN1250
+  else if S = 'danish' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'dutch' then
+    FClientLanguageCP := zCP_WIN1252
+  else if (S = 'us_english') or (S = 'english') then
+    FClientLanguageCP := zCP_us_ascii
+  else if S = 'finnish' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'french' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'german' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'greek' then
+    FClientLanguageCP := zCP_WIN1253
+  else if S = 'hebrew' then
+    FClientLanguageCP := zCP_WIN1255
+  else if S = 'hungarian' then
+    FClientLanguageCP := zCP_WIN1250
+  else if S = 'italian' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'japanese' then
+    FClientLanguageCP := zCP_SHIFTJS
+  else if S = 'korean' then
+    FClientLanguageCP := zCP_EUCKR
+  else if S = 'lithuanian' then
+    FClientLanguageCP := zCP_WIN1257
+  else if (S = 'norwegian') or (s = 'norweg') then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'polish' then
+    FClientLanguageCP := zCP_WIN1251
+  else if (S = 'portuguese') or (S = 'portugue') then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'russian' then
+    FClientLanguageCP := zCP_WIN1251
+  else if (S = 'chinese') or (S = 'simpchin') then
+    FClientLanguageCP := zCP_GB2312
+  else if S = 'spanish' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'swedish' then
+    FClientLanguageCP := zCP_WIN1252
+  else if S = 'thai' then
+    FClientLanguageCP := zCP_WIN874
+  else if (S = 'tchinese') or (S = 'tradchin') then
+    FClientLanguageCP := zCP_Big5
+  else if S = 'turkish' then
+    FClientLanguageCP := zCP_WIN1254
+  else if S = 'ukrainian' then
+    FClientLanguageCP := zCP_WIN1251
+  else FClientLanguageCP := zOSCodePage;
 end;
 
 procedure TZASAConnection.DetermineHostVersion;
