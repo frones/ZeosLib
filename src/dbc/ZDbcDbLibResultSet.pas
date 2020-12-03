@@ -462,14 +462,12 @@ AssignGeneric:  {this is the old way we did determine the ColumnInformations}
       Currency := TDSType in [tdsMoney, tdsMoney4, tdsMoneyN];
       Signed := not (TDSType = tdsInt1);
     end;
-    if (ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then
-      if (FPlainDriver.DBLibraryVendorType <> lvtMS) then
-        ColumnInfo.ColumnCodePage := FClientCP
-      else if (ColumnInfo.ColumnType in [stAsciiStream, stUnicodeStream]) then
-        ColumnInfo.ColumnCodePage := FClientCP
-      else if (FUserEncoding = ceUTF8)
-        then ColumnInfo.ColumnCodePage := zCP_UTF8
-        else ColumnInfo.ColumnCodePage := zCP_NONE;
+    if (ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then begin
+      ColumnInfo.ColumnCodePage := FClientCP;
+      if (ColumnInfo.ColumnType in [stString, stUnicodeString])
+      then ColumnInfo.Precision := ColumnInfo.Precision div ConSettings.ClientCodePage.CharWidth
+      else ColumnInfo.Precision := -1;
+    end;
     ColumnsInfo.Add(ColumnInfo);
   end;
 
