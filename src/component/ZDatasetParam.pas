@@ -48,6 +48,11 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
+{
+constributors:
+  aehimself
+}
+
 unit ZDatasetParam;
 
 interface
@@ -59,6 +64,7 @@ uses
   Classes, DB, FmtBCD, {$IFDEF WITH_SqlTimSt_UNIT}SqlTimSt,{$ENDIF} Types,
   {$IFDEF WITH_INLINE_ANSICOMPARETEXT}Windows,{$ENDIF}
   {$IFDEF WITH_GENERIC_TPARAM_LIST}Generics.Collections, {$ENDIF}
+  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for some Delphi inlined methods
   SysUtils, Variants,
   ZCompatibility, ZVariant, ZEncoding, ZDbcIntfs;
 
