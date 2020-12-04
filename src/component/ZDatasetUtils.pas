@@ -1729,8 +1729,7 @@ begin
     end
   else begin
     Statement.SetDataArray(Index, TZHackParam(Param).FData.pvDynArray.VArray,
-      TZSQLType(TZHackParam(Param).FData.pvDynArray.VArrayType),
-      TZHackParam(Param).FData.pvDynArray.VArrayVariantType);
+      TZHackParam(Param).FSQLDataType, TZHackParam(Param).FZVariantType);
     Statement.SetNullArray(Index, stBoolean,
       TZHackParam(Param).FData.pvDynArray.VIsNullArray, vtNull);
   end;
