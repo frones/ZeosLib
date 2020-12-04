@@ -41,7 +41,7 @@
 {********************************************************@}
 {.$DEFINE ZEOS_TEST_ONLY}
 {.$DEFINE GENERIC_INDEX}
-{$DEFINE DISABLE_ZPARAM}
+{.$DEFINE DISABLE_ZPARAM}
 //common compilation directives
 {$DEFINE ZEOS72UP}
 {$DEFINE ZEOS73UP}

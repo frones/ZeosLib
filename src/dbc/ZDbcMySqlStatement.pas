@@ -167,6 +167,13 @@ type
     //a performance thing: direct dispatched methods for the interfaces :
     //https://stackoverflow.com/questions/36137977/are-interface-methods-always-virtual
     procedure SetBoolean(Index: Integer; Value: Boolean);
+    /// <summary>Sets the designated parameter to SQL <c>NULL</c>.
+    ///  <B>Note:</B> You must specify the parameter's SQL type. </summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" the SQL type code defined in <c>ZDbcIntfs.pas</c></param>
     procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
     procedure SetByte(ParameterIndex: Integer; Value: Byte);
     procedure SetShort(ParameterIndex: Integer; Value: ShortInt);
@@ -2431,13 +2438,6 @@ begin
 {$ENDIF}
 end;
 
-{**
-  Sets the designated parameter to SQL <code>NULL</code>.
-  <P><B>Note:</B> You must specify the parameter's SQL type.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param sqlType the SQL type code defined in <code>java.sql.Types</code>
-}
 procedure TZMySQLPreparedStatement.SetNull(ParameterIndex: Integer;
   SQLType: TZSQLType);
 var
@@ -2493,7 +2493,7 @@ begin
   then FillChar(Bind^.indicators^, BatchDMLArrayCount, Char(MySQLNullIndicatorMatrix[False, FUseDefaults]))
   else for i := 0 to BatchDMLArrayCount -1 do
     {$R-}
-    Bind^.indicators[I] :=  MySQLNullIndicatorMatrix[IsNullFromArray(aArray, I), FUseDefaults];
+    Bind^.indicators[I] :=  MySQLNullIndicatorMatrix[(Bind^.indicators[i] = Ord(STMT_INDICATOR_NULL)) or IsNullFromArray(aArray, I), FUseDefaults];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
@@ -2970,7 +2970,7 @@ SetLength(MySQL568PreparableTokens, Ord(myCall)+1);
 MySQL568PreparableTokens[Ord(myDelete)].MatchingGroup := 'DELETE';
 MySQL568PreparableTokens[Ord(myInsert)].MatchingGroup := 'INSERT';
 MySQL568PreparableTokens[Ord(myUpdate)].MatchingGroup := 'UPDATE';
-MySQL568PreparableTokens[Ord(mySelect)].MatchingGroup := 'SELECT';
+MySQL568PreparableTokens[Ord(mySelect)].MatchingGroup := 'COMMENTED_OUT_SELECT';
 MySQL568PreparableTokens[Ord(mySet)].MatchingGroup := 'SET';
 MySQL568PreparableTokens[Ord(myCall)].MatchingGroup := 'CALL'; //for non realpreparable api we're emultating it..
 {EH: all others i do ignore -> they are ususall send once }

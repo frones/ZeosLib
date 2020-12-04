@@ -599,6 +599,7 @@ procedure TZTestRowAccessorCase.TestRowAccessorBytes;
   var
     I: Integer;
   begin
+    Result := '';
     for I := 0 to High(BytesArray) do
        Result := Result + Char(BytesArray[I]);
   end;

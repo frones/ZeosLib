@@ -135,8 +135,6 @@ const
   // Codepage to interact with driver
   ConnProps_CodePage = 'codepage';
   // Type: BOOLEAN
-  // Same as TZConnection.AutoEncodeStrings property
-  ConnProps_AutoEncodeStrings = 'AutoEncodeStrings';
   ConnProps_Transliterate = 'Transliterate';
   // Type: CP_UTF16 | CP_UTF8 | GET_ACP
   // Same as ControlsCodePage property

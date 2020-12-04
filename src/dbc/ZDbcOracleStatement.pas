@@ -125,6 +125,13 @@ type
     procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
   public
     procedure SetPWideChar(Index: Integer; Value: PWideChar; WLen: NativeUInt);
+    /// <summary>Sets the designated parameter to SQL <c>NULL</c>.
+    ///  <B>Note:</B> You must specify the parameter's SQL type. </summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" the SQL type code defined in <c>ZDbcIntfs.pas</c></param>
     procedure SetNull(Index: Integer; SQLType: TZSQLType);
     procedure SetBoolean(Index: Integer; Value: Boolean);
     procedure SetByte(Index: Integer; Value: Byte);
@@ -980,7 +987,7 @@ begin
   if Bind.dty = SQLT_LVC then
     if SQLType = stUnicodeString then
       POCILong(Bind.valuep).Len := ZEncoding.PRaw2PUnicodeBuf(Buf, @POCILong(Bind.valuep).data[0],
-        Len, ZDbcUtils.GetW2A2WConversionCodePage(ConSettings))
+        Len, ZDbcUtils.GetW2A2WConversionCodePage(ConSettings)) shl 1
     else begin
       POCILong(Bind.valuep).Len := Len;
       if Len > 0 then
@@ -1405,46 +1412,44 @@ label bind_direct;
     Blob: IZBlob;
     Clob: IZClob;
     Arr: TZArray;
-  label write_lob;
+    dty: ub2;
   begin
     {$IFDEF WITH_VAR_INIT_WARNING}OraLobs := nil;{$ENDIF}
     SetLength(OraLobs, ArrayLen);
     Arr := PZArray(BindList[ParameterIndex].Value)^;
     Arr.VArray := Pointer(OraLobs);
     BindList.Put(ParameterIndex, Arr, True);
-    if SQLType = stBinaryStream then begin
-      if (Bind.dty <> SQLT_BLOB) or (Bind.value_sz <> SizeOf(POCIDescriptor)) or (Bind.curelen <> ArrayLen) then
-        InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(POCIDescriptor));
-      for i := 0 to ArrayLen -1 do
-        if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZLob, Lob) and not Lob.IsEmpty and
-            Supports(Lob, IZBlob, Blob) and not Supports(Lob, IZOracleLob, OCILob) then begin
-          OciLob := TZOracleBlob.CreateFromBlob(Blob, nil, FOracleConnection, FOpenLobStreams);
-write_lob:PPOCIDescriptor(PAnsiChar(Bind.valuep)+SizeOf(Pointer)*I)^ := OciLob.GetLobLocator;
-          OraLobs[i] := OciLob; //destroy old interface or replace it
-        {$R-}
-          Bind.indp[i] := 0;
-        end else
-          Bind.indp[i] := -1;
-        {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    end else begin
-      if (Bind.dty <> SQLT_CLOB) or (Bind.value_sz <> SizeOf(POCIDescriptor)) or (Bind.curelen <> ArrayLen) then
-        InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(POCIDescriptor));
-      for i := 0 to ArrayLen -1 do
-        if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZLob, Lob) and not Lob.IsEmpty then begin
+    if SQLType = stBinaryStream
+    then dty := SQLT_BLOB
+    else dty := SQLT_CLOB;
+    if (Bind.dty <> dty) or (Bind.value_sz <> SizeOf(POCIDescriptor)) or (Bind.curelen <> ArrayLen) then
+      InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, SizeOf(POCIDescriptor));
+    for i := 0 to ArrayLen -1 do
+      if (TInterfaceDynArray(Value)[I] <> nil) and Supports(TInterfaceDynArray(Value)[I], IZLob, Lob) and not Lob.IsEmpty then begin
+        if SQLType = stBinaryStream then begin
+          if not Supports(Lob, IZBLob, Blob) then
+            raise CreateConversionError(ParameterIndex, SQLType, stBinaryStream);
+          if Lob.QueryInterface(IZOracleLob, OCILob) <> S_OK then
+            OciLob := TZOracleBlob.CreateFromBlob(Blob, nil, FOracleConnection, FOpenLobStreams);
+        end else begin
           if Supports(Lob, IZCLob, CLob) then
             if (ConSettings^.ClientCodePage.ID = OCI_UTF16ID)
             then CLob.SetCodePageTo(zCP_UTF16)
             else CLob.SetCodePageTo(ClientCP)
-          else raise CreateConversionError(ParameterIndex, stBinaryStream, SQLType);
-          if not Supports(Lob, IZOracleLob, OCILob) then begin
+          else raise CreateConversionError(ParameterIndex, SQLType, stUnicodeStream);
+          if not Supports(Lob, IZOracleLob, OCILob) then
             OciLob := TZOracleClob.CreateFromClob(Clob, nil, SQLCS_IMPLICIT, 0, FOracleConnection, FOpenLobStreams);
-            //PPOCIDescriptor(PAnsiChar(Bind.valuep)+SizeOf(Pointer)*I)^ := OciLob.GetLobLocator;
-            //TInterfaceDynArray(Value)[I] := CLob;
-          end;
-          goto write_lob;
-        end else
-          Bind.indp[i] := -1;
-    end;
+        end;
+        PPOCIDescriptor(PAnsiChar(Bind.valuep)+SizeOf(Pointer)*I)^ := OciLob.GetLobLocator;
+        OraLobs[i] := OciLob; //destroy old interface or replace it
+      {$R-}
+        Bind.indp[i] := 0;
+      end else begin
+        Bind.indp[i] := -1;
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+        OraLobs[i] := nil;
+        PPOCIDescriptor(PAnsiChar(Bind.valuep)+SizeOf(Pointer)*I)^ := nil;
+      end;
   end;
   procedure BindRawStrings(const ClientStrings: TRawByteStringDynArray);
   var BufferSize, I: Integer;
@@ -1482,7 +1487,7 @@ write_lob:PPOCIDescriptor(PAnsiChar(Bind.valuep)+SizeOf(Pointer)*I)^ := OciLob.G
       BufferSize := Max(BufferSize, Length(TUnicodeStringDynArray(Value)[I]));
     BufferSize := (BufferSize shl 2);
     if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Integer)) or (Bind.curelen <> ArrayLen) then
-      InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, BufferSize);
+      InitBuffer(stString, Bind, ParameterIndex, ArrayLen, BufferSize);
     P := Bind.valuep;
     for i := 0 to ArrayLen -1 do begin
       POCILong(P).Len := Length(TUnicodeStringDynArray(Value)[I]);
@@ -2055,13 +2060,6 @@ begin
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
-{**
-  Sets the designated parameter to SQL <code>NULL</code>.
-  <P><B>Note:</B> You must specify the parameter's SQL type.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param sqlType the SQL type code defined in <code>java.sql.Types</code>
-}
 procedure TZAbstractOraclePreparedStatement.SetNull(Index: Integer;
   SQLType: TZSQLType);
 var
@@ -2096,7 +2094,9 @@ begin
   Bind := @FOraVariables[ParameterIndex];
   P := BindList[ParameterIndex].Value;
   for i := 0 to {%H-}PArrayLenInt({%H-}NativeUInt(Value) - ArrayLenOffSet)^{$IFNDEF FPC}-1{$ENDIF} do
-    Bind.indp[I] := -Ord(ZDbcUtils.IsNullFromArray(P, i));
+    if Bind.dty in [SQLT_CLOB, SQLT_BLOB]
+    then Bind.indp[I] := -Ord((PPOCIDescriptor(PAnsiChar(Bind.valuep)+SizeOf(Pointer)*I)^ = nil) or ZDbcUtils.IsNullFromArray(P, i))
+    else Bind.indp[I] := -Ord(ZDbcUtils.IsNullFromArray(P, i));
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 

@@ -149,7 +149,6 @@ end;
 procedure TZTestDbcPostgreSQLCase.Test_BatchDelete_equal_operator;
 var
   Statement: IZPreparedStatement;
-  ResultSet: IZResultSet;
   IntArray: TIntegerDynArray;
 begin
   IntArray := nil;
@@ -164,7 +163,6 @@ begin
     IntArray[2] := 3;
     IntArray[3] := 4;
     CheckNotNull(Statement);
-    ResultSet := nil;
     Statement.SetDataArray(FirstDbcIndex, IntArray, stInteger);
     Statement.ExecuteUpdatePrepared;
   finally
@@ -176,7 +174,6 @@ end;
 procedure TZTestDbcPostgreSQLCase.Test_BatchDelete_in_operator;
 var
   Statement: IZPreparedStatement;
-  ResultSet: IZResultSet;
   IntArray: TIntegerDynArray;
 begin
   IntArray := nil;
@@ -191,7 +188,6 @@ begin
     IntArray[2] := 3;
     IntArray[3] := 4;
     CheckNotNull(Statement);
-    ResultSet := nil;
     Statement.SetDataArray(FirstDbcIndex, IntArray, stInteger);
     Statement.ExecuteUpdatePrepared;
   finally

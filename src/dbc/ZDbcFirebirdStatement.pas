@@ -49,6 +49,11 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
+{
+constributor(s):
+Joe Whale
+}
+
 unit ZDbcFirebirdStatement;
 
 interface
@@ -229,10 +234,9 @@ begin
   MemPerRow := XSQLDA_LENGTH(BindCount);
   if Pointer(TypeTokens) = nil then
   begin
-    Assert(InParamCount=BindCount, 'ParamCount missmatch');
+    Assert(InParamCount=BindCount, 'ParamCount missmatch'); //debug only
     SetLength(TypeTokens, BindCount);
-    for ParamIndex := 0 to BindCount-1 do
-    begin
+    for ParamIndex := 0 to BindCount-1 do begin
       case Stmt.FInMessageMetadata.GetType(Stmt.FStatus, ParamIndex) and not (1) of
         SQL_VARYING, SQL_TEXT:
           begin
@@ -788,8 +792,11 @@ begin
   if FFBStatement <> nil then begin
     FFBStatement.free(FStatus);
     if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-      FFBConnection.HandleErrorOrWarning(lcUnprepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self);
-    FFBStatement.release;
+      FFBConnection.HandleErrorOrWarning(lcUnprepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self)
+    else // free() releases intf on success
+      FFBStatement:= nil;
+    if Assigned(FFBStatement) then
+      FFBStatement.release;
     FFBStatement := nil;
   end;
 end;

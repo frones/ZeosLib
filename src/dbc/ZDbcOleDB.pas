@@ -588,7 +588,6 @@ begin
     Status := DBProperties.GetProperties(1, @PropIDSet, nPropertySets, prgPropertySets );
     if Status <> S_OK then
       HandleErrorOrWarning(Status, lcOther, 'IID_IDBProperties.GetProperties', Self, nil);
-    Assert( nPropertySets = 1 );
     PropSet := prgPropertySets^;
     for i := 0 to PropSet.cProperties-1 do begin
       if PropSet.rgProperties^[i].dwStatus <> DBPROPSTATUS(DBPROPSTATUS_OK) then
@@ -1021,7 +1020,6 @@ begin
     Status := DBProperties.GetProperties( 1, @PropIDSet, nPropertySets, prgPropertySets );
     if Status <> S_OK then
       HandleErrorOrWarning(Status, lcOther, 'IID_IDBProperties.GetProperties', Self, nil);
-    Assert( nPropertySets = 1 );
     PropSet := prgPropertySets^;
     for i := 0 to PropSet.cProperties-1 do begin
       if PropSet.rgProperties^[i].dwStatus <> DBPROPSTATUS(DBPROPSTATUS_OK) then
@@ -1071,7 +1069,8 @@ begin
     OleCheck(DataInitialize.GetDataSource(nil,CLSCTX_INPROC_SERVER,
       Pointer(ConnectString), IID_IDBInitialize,IUnknown(fDBInitialize)));
     DataInitialize := nil; //no longer required!
-    SetProviderProps(True); //set's timeout values
+    if FServerProvider <> spMSJet then
+      SetProviderProps(True); //set's timeout values
     // open the connection to the DB
     Status := fDBInitialize.Initialize;
     if Status <> S_OK then

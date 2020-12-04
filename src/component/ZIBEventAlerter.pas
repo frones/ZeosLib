@@ -450,7 +450,7 @@ begin
       if EventsReceived then begin
         ProcessEvents;
         QueueEvents;
-      end;
+      end else Sleep(1); //idle the CPU for a MSec
     until Terminated;
     ReturnValue := 0;
   except

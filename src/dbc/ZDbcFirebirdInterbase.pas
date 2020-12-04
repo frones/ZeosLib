@@ -549,6 +549,14 @@ type
       Scale: LengthInt = 0); override;
     //a performance thing: direct dispatched methods for the interfaces :
     //https://stackoverflow.com/questions/36137977/are-interface-methods-always-virtual
+
+    /// <summary>Sets the designated parameter to SQL <c>NULL</c>.
+    ///  <B>Note:</B> You must specify the parameter's SQL type. </summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" the SQL type code defined in <c>ZDbcIntfs.pas</c></param>
     procedure SetNull(Index: Integer; SQLType: TZSQLType);
     procedure SetBoolean(Index: Integer; Value: Boolean);
     procedure SetByte(Index: Integer; Value: Byte);
@@ -4418,13 +4426,6 @@ begin
   end;
 end;
 
-{**
-  Sets the designated parameter to SQL <code>NULL</code>.
-  <P><B>Note:</B> You must specify the parameter's SQL type.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param sqlType the SQL type code defined in <code>ZDbcIntfs.pas.TZSQLType</code>
-}
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "SQLType" not used} {$ENDIF}
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetNull(Index: Integer;
   SQLType: TZSQLType);

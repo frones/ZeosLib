@@ -61,6 +61,7 @@ uses
   {$IFNDEF VER130BELOW}Types, {$ENDIF} {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF},
   Classes, SysUtils, DB, Contnrs, FmtBCD,
   ZDataset, ZDatasetUtils, ZAbstractConnection,
+  {$IFNDEF DISABLE_ZPARAM}ZDatasetParam,{$ENDIF}
   ZCompatibility, ZDbcIntfs, ZConnection, ZTestCase, ZScriptParser, ZDbcLogging;
 
 const
@@ -337,8 +338,8 @@ type
     procedure CheckNotEquals(Expected, Actual: TFieldType;
       const Msg: string = ''); overload;
     procedure CheckStringFieldType(Actual: TField; ControlsCodePage: TZControlsCodePage);
-    procedure CheckStringParamType(Actual: TParam; ControlsCodePage: TZControlsCodePage);
-    procedure CheckMemoParamType(Actual: TParam; ControlsCodePage: TZControlsCodePage);
+    procedure CheckStringParamType(Actual: {$IFNDEF DISABLE_ZPARAM}TZParam{$ELSE}TParam{$ENDIF}; ControlsCodePage: TZControlsCodePage);
+    procedure CheckMemoParamType(Actual: {$IFNDEF DISABLE_ZPARAM}TZParam{$ELSE}TParam{$ENDIF}; ControlsCodePage: TZControlsCodePage);
     procedure CheckMemoFieldType(Actual: TField; ControlsCodePage: TZControlsCodePage);
   end;
 
@@ -1550,7 +1551,7 @@ end;
 }
 procedure TZAbstractCompSQLTestCase.CheckEquals(const OrgStr: UnicodeString;
   Actual: TField; const Msg: string = '');
-var ATemp, ATemp2: AnsiString;
+var ATemp, ATemp2: RawByteString;
     WTmp: UnicodeString;
     Stream: TMemoryStream;
     Idx, Size: Integer;
@@ -1626,7 +1627,9 @@ begin
     if (ColumnCP = zCP_UTF16) or (TStringField(Actual).Transliterate) then
       StringCP := GetTransliterateCodePage(ControlsCodepage);
     ATemp := ZUnicodeToRaw(OrgStr, StringCP);
-    ATemp2 := TStringField(Actual).{$IFDEF WITH_ASANSISTRING}AsAnsiString{$ELSE}AsString{$ENDIF};
+    if (StringCP = ZOSCodePage) or not Actual.InheritsFrom(TZRawStringField)
+    then ATemp2 := TStringField(Actual).{$IFDEF WITH_ASANSISTRING}AsAnsiString{$ELSE}AsString{$ENDIF}
+    else ATemp2 := TZRawStringField(Actual).AsUTF8String;
     CheckEquals(ATemp, Atemp2, Protocol+': The raw value of Field: '+Actual.FieldName);
     Check(ControlsCodePage in [cGET_ACP, {$IFNDEF UNICODE}cCP_UTF8,{$ENDIF}cDynamic], Protocol+': The FieldType-A type');
     CheckEquals(Size, Actual.Size, Protocol+': The Size of the StringField '+Actual.FieldName);
@@ -1651,7 +1654,9 @@ begin
     if (ColumnCP = zCP_UTF16) or (TMemoField(Actual).Transliterate and (StringCP <> ColumnCP))
     then ATemp := ZUnicodeToRaw(OrgStr, StringCP)
     else ATemp := ZUnicodeToRaw(OrgStr, ColumnCP);
-    ATemp2 := TStringField(Actual).{$IFDEF WITH_ASANSISTRING}AsAnsiString{$ELSE}AsString{$ENDIF};
+    if (StringCP = ZOSCodePage) or not Actual.InheritsFrom(TZRawCLobField)
+    then ATemp2 := TStringField(Actual).{$IFDEF WITH_ASANSISTRING}AsAnsiString{$ELSE}AsString{$ENDIF}
+    else ATemp2 := TZRawCLobField(Actual).AsUTF8String;
     CheckEquals(ATemp, Atemp2, Protocol+': The raw value of Field: '+Actual.FieldName);
     Check(ControlsCodePage in [cGET_ACP, {$IFNDEF UNICODE}cCP_UTF8,{$ENDIF}cDynamic], Protocol+' The FieldType-A type');
     Check((SQLType in [stAsciiStream, stUnicodeStream]) or ((SQLType in [stString, stUnicodeString]) and (Size <= 0)),
@@ -1686,7 +1691,7 @@ begin
   end;
 end;
 
-procedure TZAbstractCompSQLTestCase.CheckMemoParamType(Actual: TParam;
+procedure TZAbstractCompSQLTestCase.CheckMemoParamType(Actual: {$IFNDEF DISABLE_ZPARAM}TZParam{$ELSE}TParam{$ENDIF};
   ControlsCodePage: TZControlsCodePage);
 begin
   case ControlsCodePage of
@@ -1698,7 +1703,7 @@ begin
   end;
 end;
 
-procedure TZAbstractCompSQLTestCase.CheckStringParamType(Actual: TParam;
+procedure TZAbstractCompSQLTestCase.CheckStringParamType(Actual: {$IFNDEF DISABLE_ZPARAM}TZParam{$ELSE}TParam{$ENDIF};
   ControlsCodePage: TZControlsCodePage);
 begin
   case ControlsCodePage of

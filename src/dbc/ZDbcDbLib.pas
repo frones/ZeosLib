@@ -566,7 +566,7 @@ begin
     FMetadata := nil;
   FLogMessage := Info.Values[ConnProps_CodePage];
   if (FPlainDriver.DBLibraryVendorType = lvtFreeTDS) and (FLogMessage = '') then
-    {$IF defined(UNICODE) or defined(LCL)}
+    {$IF defined(UNICODE) or defined(LCL) or not defined(MSWINDOWS)}
     Info.Values[ConnProps_CodePage] := 'UTF-8';
     {$ELSE}
     Info.Values[ConnProps_CodePage] := 'ISO-8859-1'; //this is the default CP of free-tds
