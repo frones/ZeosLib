@@ -279,12 +279,12 @@ type
     /// <summary>Test if the TZParam object array value is null.</summary>
     /// <param>"Index" the zero based position in the array.</param>
     /// <returns><c>True</c> if the value is null; <c>False</c> otherwise.</summary>
-    function GetIsNulls(Index: Cardinal): Boolean; overload;
+    function GetIsNulls(Index: Cardinal): Boolean;
     /// <summary>Test if the TZParam object array value is null.</summary>
     /// <param>"Index" the zero based position in the array.</param>
     /// <param>"DataAddress" the address of the data in the array.</param>
     /// <returns><c>True</c> if the value is null; <c>False</c> otherwise.</summary>
-    function GetIsNulls(Index: Integer; out DataAddress: PPointer): Boolean; overload;
+    function GetIsNullsAddr(Index: Integer; out DataAddress: PPointer): Boolean;
     /// <summary>Get the value of a TZParam object as a ShortInt value.</summary>
     /// <returns>the value as a ShortInt.</summary>
     function GetAsShortInt: ShortInt;
@@ -1421,7 +1421,7 @@ end;
 function TZParam.GetAsAnsiStrings(Index: Cardinal): AnsiString;
 var DataAddr: PPointer;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := ''
   else if (FSQLDataType = stString) and (FZVariantType = vtAnsiString)
     then Result := AnsiString(DataAddr^)
@@ -1437,7 +1437,7 @@ end;
 function TZParam.GetAsBooleans(Index: Cardinal): Boolean;
 var DataAddr: PPointer;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := False
   else case FSQLDataType of
     stBoolean: Result := System.PBoolean(DataAddr)^;
@@ -1460,7 +1460,7 @@ end;
 function TZParam.GetAsByteArray(Index: Cardinal): Byte;
 var DataAddr: PPointer;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := 0
   else if FSQLDataType = stByte
     then Result := PByte(DataAddr)^
@@ -1485,7 +1485,7 @@ var DataAddr: PPointer;
       else Result := (IInterface(DataAddr^) as IZClob).GetBytes
   end;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := nil
   else case FSQLDataType of
     stBytes: Result := TBytes(DataAddr^);
@@ -1504,7 +1504,7 @@ end;
 function TZParam.GetAsCardinals(Index: Cardinal): Cardinal;
 var DataAddr: PPointer;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := 0
   else case FSQLDataType of
     stBoolean: Result := Ord(PBoolean(DataAddr)^);
@@ -1530,7 +1530,7 @@ end;
 function TZParam.GetAsCurrencys(Index: Cardinal): Currency;
 var DataAddr: PPointer;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := 0
   else case FSQLDataType of
     stBoolean..stLong: Result := GetAsInt64s(Index);
@@ -1553,7 +1553,7 @@ function TZParam.GetAsDates(Index: Cardinal): TDate;
 var D: TZDate;
     DataAddr: PPointer;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := 0
   else begin
     d := GetAsZDates(Index);
@@ -1571,7 +1571,7 @@ function TZParam.GetAsDateTimes(Index: Cardinal): TDateTime;
 var TS: TZTimeStamp;
     DataAddr: PPointer;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := 0
   else begin
     TS := GetAsZTimeStamps(Index);
@@ -1610,7 +1610,7 @@ label jmpFail;
     end;
   end;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := 0
   else case FSQLDataType of
     stBoolean..stInteger: Result := GetAsInt64s(Index);
@@ -1662,7 +1662,7 @@ label jmpFail;
     end;
   end;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Fillchar(Result, SizeOf(TBCD), #0)
   else case FSQLDataType of
     stBoolean..stInteger, stLong: ScaledOrdinal2Bcd(GetAsInt64s(Index), 0, Result);
@@ -1688,7 +1688,7 @@ var L: LengthInt;
     DataAddr: PPointer;
 label jmpFail;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then FillChar(Result, SizeOf(TGUID), #0)
   else case FSQLDataType of
     stGUID: Result := PGUID(DataAddr)^;
@@ -1739,7 +1739,7 @@ var DataAddr: PPointer;
     Result := i64 div 10000;
   end;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := 0
   else case FSQLDataType of
     stBoolean: Result := Ord(System.PBoolean(DataAddr)^);
@@ -1769,7 +1769,7 @@ end;
 function TZParam.GetAsIntegers(Index: Cardinal): Integer;
 var DataAddr: PPointer;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := 0
   else case FSQLDataType of
     stBoolean: Result := Ord(FData.pvBool);
@@ -1812,7 +1812,7 @@ var Len: LengthInt;
 label jmpLenFromPEnd, jmpSetFromBuf;
 begin
   Result := '';
-  if not GetIsNulls(Integer(Index), DataAddr) then case FSQLDataType of
+  if not GetIsNullsAddr(Integer(Index), DataAddr) then case FSQLDataType of
     stBoolean: Result := BoolStrsRaw[System.PBoolean(DataAddr)^];
     stByte:     begin
                   IntToRaw(Cardinal(PByte(DataAddr)^), @TinyBuffer[0], @PEnd);
@@ -1926,7 +1926,7 @@ end;
 function TZParam.GetAsShortInts(Index: Cardinal): ShortInt;
 var DataAddr: PPointer;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := 0
   else if FSQLDataType = stShort
     then Result := PShortInt(DataAddr)^
@@ -1941,7 +1941,7 @@ end;
 function TZParam.GetAsSingles(Index: Cardinal): Single;
 var DataAddr: PPointer;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := 0
   else if FSQLDataType = stFloat
     then Result := PSingle(DataAddr)^
@@ -1956,7 +1956,7 @@ end;
 function TZParam.GetAsSmallInts(Index: Cardinal): SmallInt;
 var DataAddr: PPointer;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := 0
   else if FSQLDataType = stSmall
     then Result := PSmallInt(DataAddr)^
@@ -1984,7 +1984,7 @@ function TZParam.GetAsTimes(Index: Cardinal): TTime;
 var T: TZTime;
     DataAddr: PPointer;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := 0
   else begin
     T := GetAsZTimes(Index);
@@ -2000,7 +2000,7 @@ begin
   else raise CreateConversionError(stArray, FSQLDataType);
 end;
 
-function TZParam.GetIsNulls(Index: Integer; out DataAddress: PPointer): Boolean;
+function TZParam.GetIsNullsAddr(Index: Integer; out DataAddress: PPointer): Boolean;
 begin
   if ((FArraySize = 0) and (Index >= 0)) or
      ((FArraySize > 0) and ((Index < 0) or (Cardinal(Index) > FArraySize))) then
@@ -2047,7 +2047,7 @@ var DataAddr: PPointer;
     Result := i64 div 10000;
   end;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := 0
   else case FSQLDataType of
     stBoolean: Result := Ord(System.PBoolean(DataAddr)^);
@@ -2091,7 +2091,7 @@ var Len: LengthInt;
 label jmpLenFromPEnd, jmpSetFromBuf;
 begin
   Result := '';
-  if not GetIsNulls(Integer(Index), DataAddr) then case FSQLDataType of
+  if not GetIsNullsAddr(Integer(Index), DataAddr) then case FSQLDataType of
     stBoolean: Result := BoolStrsW[PBoolean(DataAddr)^];
     stByte:     begin
                   IntToUnicode(Cardinal(PByte(DataAddr)^), @TinyBuffer[0], @PEnd);
@@ -2187,7 +2187,7 @@ end;
 function TZParam.GetAsUTF8Strings(Index: Cardinal): UTF8String;
 var DataAddr: PPointer;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := ''
   else if (FSQLDataType = stString) and (FZVariantType = vtUTF8String)
     then Result := UTF8String(DataAddr^)
@@ -2349,7 +2349,7 @@ end;
 function TZParam.GetAsWords(Index: Cardinal): Word;
 var DataAddr: PPointer;
 begin
-  if GetIsNulls(Integer(Index), DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := 0
   else if FSQLDataType = stWord
     then Result := PWord(DataAddr)^
@@ -2365,7 +2365,7 @@ end;
 function TZParam.GetAsZDates(Index: Cardinal): TZDate;
 var DataAddr: PPointer;
 begin
-  if GetIsNulls(Index, DataAddr) or (FSQLDataType = stTime)
+  if GetIsNullsAddr(Index, DataAddr) or (FSQLDataType = stTime)
   then FillChar(Result, SizeOf(TZDate), #0)
   else if FSQLDataType = stDate then
     Result := PZDate(DataAddr)^
@@ -2392,7 +2392,7 @@ end;
 function TZParam.GetAsZTimes(Index: Cardinal): TZTime;
 var DataAddr: PPointer;
 begin
-  if GetIsNulls(Index, DataAddr) or (FSQLDataType = stDate)
+  if GetIsNullsAddr(Index, DataAddr) or (FSQLDataType = stDate)
   then FillChar(Result, SizeOf(TZTime), #0)
   else if FSQLDataType = stTime then
     Result := PZTime(DataAddr)^
@@ -2419,7 +2419,7 @@ end;
 function TZParam.GetAsZTimestamps(Index: Cardinal): TZTimestamp;
 var DataAddr: PPointer;
 begin
-  if GetIsNulls(Index, DataAddr)
+  if GetIsNullsAddr(Index, DataAddr)
   then FillChar(Result, SizeOf(TZTimestamp), #0)
   else if FSQLDataType = stTimeStamp then
     Result := PZTimestamp(DataAddr)^
@@ -3570,7 +3570,7 @@ procedure TZParam.SetAsStrings(Index: Cardinal; const Value: String);
 var VariantType: TZVariantType;
     SQLType: TZSQLType;
     CP: Word;
-    DataAddr: Pointer;
+    DataAddr: PPointer;
     IsNullAddr: System.PBoolean;
 begin
   If ((FConSettings <> nil) or SetConsettings) and (FConSettings.ClientCodePage.Encoding = ceUTF16) then begin
