@@ -2392,20 +2392,32 @@ end;
 function TZParam.GetAsVariant: Variant;
   procedure SetAsRawString(var Result: Variant);
   begin
-    TVarData(Result).VType := varStrArg;
     {$IF defined(LCL) or defined(NO_ANSISTRING)}
+    TVarData(Result).VType := varString;
     UTF8String(TVarData(Result).VString) := GetAsUTF8String;
     {$ELSE}
-    AnsiString(TVarData(Result).VString) := GetAsAnsiString;
+    if {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}GetACP{$ENDIF} = zCP_UTF8 then begin
+      TVarData(Result).VType := varString;
+      UTF8String(TVarData(Result).VString) := GetAsUTF8String;
+    end else if FZVariantType <> vtAnsiString then begin
+      {$IF declared(varUString)}
+      TVarData(Result).VType := varUString;
+      UnicodeString(TVarData(Result).{$IF declared(VUString)}VUString{$ELSE}VAny{$IFEND}) := UnicodeString(FData.pvPointer);
+      {$ELSE}
+      Result := UnicodeString(FData.pvPointer);
+      {$IFEND}
+    end else begin
+      TVarData(Result).VType := varString;
+      AnsiString(TVarData(Result).VString) := GetAsAnsiString;
+    end;
     {$IFEND}
   end;
   procedure SetAsUniStringFromClob(var Result: Variant);
   begin
     {$IF declared(varUString)}
     TVarData(Result).VType := varUString;
-    UnicodeString(TVarData(Result).VString) := GetAsUnicodeString;
+    UnicodeString(TVarData(Result).{$IF declared(VUString)}VUString{$ELSE}VAny{$IFEND}) := GetAsUnicodeString;
     {$ELSE}
-    TVarData(Result).VType := varOleStr;
     Result := GetAsUnicodeString;
     {$IFEND}
   end;
@@ -2414,7 +2426,7 @@ function TZParam.GetAsVariant: Variant;
     Result := BytesToVar(GetAsBytes)
   end;
 begin
-  FillChar(Result, SizeOf(Variant), #0);
+  VarClear(Result);
   If GetIsNull then
     TVarData(Result).VType := varNull
   else case FSQLDataType of
@@ -2507,7 +2519,7 @@ begin
       stUnicodeString:begin
                         {$IF declared(varUString)}
                         TVarData(Result).VType := varUString;
-                        UnicodeString(TVarData(Result).VString) := UnicodeString(FData.pvPointer);
+                        UnicodeString(TVarData(Result).{$IF declared(VUString)}VUString{$ELSE}VAny{$IFEND}) := UnicodeString(FData.pvPointer);
                         {$ELSE}
                         Result := UnicodeString(FData.pvPointer);
                         {$IFEND}
