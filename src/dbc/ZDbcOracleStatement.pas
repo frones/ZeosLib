@@ -1487,7 +1487,7 @@ label bind_direct;
       BufferSize := Max(BufferSize, Length(TUnicodeStringDynArray(Value)[I]));
     BufferSize := (BufferSize shl 2);
     if (Bind.dty <> SQLT_LVC) or (Bind.value_sz < BufferSize+SizeOf(Integer)) or (Bind.curelen <> ArrayLen) then
-      InitBuffer(SQLType, Bind, ParameterIndex, ArrayLen, BufferSize);
+      InitBuffer(stString, Bind, ParameterIndex, ArrayLen, BufferSize);
     P := Bind.valuep;
     for i := 0 to ArrayLen -1 do begin
       POCILong(P).Len := Length(TUnicodeStringDynArray(Value)[I]);
