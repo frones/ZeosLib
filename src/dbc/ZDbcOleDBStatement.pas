@@ -1537,7 +1537,8 @@ begin
 jmpRecreate:
     fBindImmediat := False;
     FCommand := FOleDBConnection.CreateCommand;
-    SetOleCommandProperties;
+    if FOleDBConnection.GetServerProvider <> spMSJet then
+      SetOleCommandProperties;
     Status := fCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL));
     if Failed(Status) then
       FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
