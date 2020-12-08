@@ -2412,14 +2412,14 @@ begin;
   repeat
     I := L;
     J := R;
-    P := List[(L + R) shr 1];
+    P := List^[(L + R) shr 1];
     repeat;
-      while Compare(List[I], P)<0 do
+      while Compare(List^[I], P)<0 do
         Inc(I);         //*
-      while Compare(List[J], P)>0 do
+      while Compare(List^[J], P)>0 do
         Dec(J);         //*
       if I<=J then begin;                            //**
-        T := List[I]; List[I]:=List[J]; List[J]:=T;
+        T := List^[I]; List^[I]:=List^[J]; List^[J]:=T;
         Inc(I);
         Dec(J);
       end;
