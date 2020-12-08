@@ -146,6 +146,11 @@ type
     function HasAutoCommitTransaction: Boolean;
 
     procedure CalculateDefaults(const Sender: IZCachedResultSet; const RowAccessor: TZRowAccessor);
+    /// <summary>Posts updates to database.</summary>
+    /// <param>"Sender" a cached result set inteface.</param>
+    /// <param>"UpdateType" a type of updates.</param>
+    /// <param>"OldRowAccessor" an accessor object to old column values.</param>
+    /// <param>"NewRowAccessor" an accessor object to new column values.</param>
     procedure PostUpdates(const Sender: IZCachedResultSet;
       UpdateType: TZRowUpdateType; const OldRowAccessor, NewRowAccessor: TZRowAccessor); virtual;
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL/MSSQL }
@@ -724,13 +729,6 @@ begin
   end;
 end;
 
-{**
-  Posts updates to database.
-  @param Sender a cached result set object.
-  @param UpdateType a type of updates.
-  @param OldRowAccessor an accessor object to old column values.
-  @param NewRowAccessor an accessor object to new column values.
-}
 procedure TZGenerateSQLCachedResolver.PostUpdates(const Sender: IZCachedResultSet;
   UpdateType: TZRowUpdateType; const OldRowAccessor, NewRowAccessor: TZRowAccessor);
 var
@@ -778,8 +776,13 @@ begin
             TempKey := TZAnyValue.CreateWithInteger(Hash(SQL));
             FDeleteStatements.Clear;
             FDeleteStatements.Put(TempKey, Statement);
-          end else
+          end else begin
+            //refill the FillWhereKeyColumns, the offsets might be changed by a
+            //previous row update see: https://sourceforge.net/p/zeoslib/tickets/461/
+            if PZIndexPair(WhereColumnsLookup[0]).SrcOrDestIndex <> FirstDbcIndex then
+              FillWhereKeyColumns(0);
             Statement := FDeleteStatements.Values[0] as IZPreparedStatement;
+          end;
         end else begin
           SQL := FormDeleteStatement(OldRowAccessor);
           if SQL = '' then Exit;
@@ -1011,7 +1014,6 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-{BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // abstract base class - parameters not used intentionally
  procedure TZGenerateSQLCachedResolver.UpdateAutoIncrementFields(
   const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
@@ -1019,9 +1021,7 @@ end;
 begin
  //Should be implemented at Specific database Level Cached resolver
 end;
-{$IFDEF FPC} {$POP} {$ENDIF} // abstract base class - parameters not used intentionally
-
-{END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
+{$IFDEF FPC} {$POP} {$ENDIF}
 
  (*
 { TZUserDefinedSQLCachedResolver }
