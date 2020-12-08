@@ -2404,6 +2404,11 @@ begin;
     end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+{$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+
 procedure QuickSort(List: PPointerList; L, R: Integer; Compare: TZListSortCompare);
 var
   I, J: Integer;
@@ -2418,7 +2423,7 @@ begin;
         Inc(I);         //*
       while Compare(List^[J], P)>0 do
         Dec(J);         //*
-      if I<=J then begin;                            //**
+      if I<=J then begin                            //**
         T := List^[I]; List^[I]:=List^[J]; List^[J]:=T;
         Inc(I);
         Dec(J);
@@ -2429,12 +2434,6 @@ begin;
     L := I;
   until I >= R;
 end;
-
-
-{$IFDEF FPC} {$POP} {$ENDIF}
-
-{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-{$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 
 {$IFDEF TLIST_IS_DEPRECATED}
 function TZSortedList.Add(Item: Pointer): Integer;
@@ -2612,10 +2611,12 @@ procedure TZSortedList.Sort(Compare: TZListSortCompare);
 begin
   {$IFDEF TLIST_ISNOT_PPOINTERLIST}
   //HybridSortSha_0AA(@List, Count, Compare);
-  QuickSort(@List, 0, Count-1, Compare);
+  if Count > 0 then
+    QuickSort(@List, 0, Count-1, Compare);
   {$ELSE}
   //HybridSortSha_0AA(List, Count, Compare);
-  QuickSort(List, 0, Count-1, Compare);
+  if Count > 0 then
+    QuickSort(List, 0, Count-1, Compare);
   {$ENDIF}
 end;
 
