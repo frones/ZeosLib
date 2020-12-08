@@ -243,8 +243,8 @@ begin
   FField := Field;
   FAlias := Alias;
   FTableRef := TableRef;
-  //http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=71516&sid=97f200f6e575ecf37f4e6364c3102ea5&start=15
-  FLinked := TableRef <> nil; //set linked if a table ref already could be given
+  //EH: Dev-Note the Linked attribute is a tag if a column was found infieldlist!
+  //FLinked := False;
 end;
 
 { TZSelectSchema }
@@ -411,14 +411,9 @@ begin
   {$ENDIF}
 
   { Looks by field index. }
-  if (ColumnIndex >= 0) and (ColumnIndex <= FFields.Count - 1) then
-  begin
+  if (ColumnIndex >= 0) and (ColumnIndex <= FFields.Count - 1) then begin
     Current := TZFieldRef(FFields[ColumnIndex]);
-    if Current.Linked then begin //a linket column has a table ref!
-      Result := Current; //http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=71516&sid=97f200f6e575ecf37f4e6364c3102ea5&start=15
-      exit;
-    end  //note http://sourceforge.net/p/zeoslib/tickets/101/
-    else if ((Current.Alias = Field) or (Current.Field = Field) or (Current.Field = FieldQuoted) or (Current.Alias = FieldUnquoted)) then begin
+    if ((Current.Alias = Field) or (Current.Field = Field) or (Current.Field = FieldQuoted) or (Current.Alias = FieldUnquoted)) then begin
       Result := Current;
       Result.Linked := True;
       Exit;
@@ -426,12 +421,10 @@ begin
   end;
 
   { Looks a field by it's alias. }
-  for I := 0 to FFields.Count - 1 do
-  begin
+  for I := 0 to FFields.Count - 1 do begin
     Current := TZFieldRef(FFields[I]);
     if not Current.Linked and (Current.Alias <> '') and
-       ((Current.Alias = Field) or (Current.Alias = FieldQuoted) or (Current.Alias = FieldUnquoted)) then
-    begin
+       ((Current.Alias = Field) or (Current.Alias = FieldQuoted) or (Current.Alias = FieldUnquoted)) then begin
       Result := Current;
       Result.Linked := True;
       Exit;
@@ -439,13 +432,11 @@ begin
   end;
 
   { Looks a field by field and table aliases. }
-  for I := 0 to FFields.Count - 1 do
-  begin
+  for I := 0 to FFields.Count - 1 do begin
     Current := TZFieldRef(FFields[I]);
-    if not Current.Linked and Assigned(Current.TableRef)
-      and (((Current.TableRef.Alias + '.' + Current.Field) = Field)
-      or (((Current.TableRef.Table + '.' + Current.Field) = Field))) then
-    begin
+    if not Current.Linked and Assigned(Current.TableRef) and
+       (((Current.TableRef.Alias + '.' + Current.Field) = Field) or
+        (((Current.TableRef.Table + '.' + Current.Field) = Field))) then begin
       Result := Current;
       Result.Linked := True;
       Exit;
@@ -453,12 +444,10 @@ begin
   end;
 
   { Looks a field by it's name. }
-  for I := 0 to FFields.Count - 1 do
-  begin
+  for I := 0 to FFields.Count - 1 do begin
     Current := TZFieldRef(FFields[I]);
     if not Current.Linked and (Current.Field <> '') and
-       ((Current.Field = Field) or (Current.Field = FieldQuoted) or (Current.Field = FieldUnquoted)) then
-    begin
+       ((Current.Field = Field) or (Current.Field = FieldQuoted) or (Current.Field = FieldUnquoted)) then begin
       Result := Current;
       Result.Linked := True;
       Exit;
