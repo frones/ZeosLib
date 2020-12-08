@@ -953,6 +953,7 @@ type
 /// <param>"Compare" the List compare function.</param>
 procedure HybridSortSha_0AA(List: PPointerList; Count: integer; Compare: TZListSortCompare);
 
+procedure QuickSort(List: PPointerList; L, R: integer; Compare: TZListSortCompare);
 implementation
 
 uses ZMessages, ZFastCode
@@ -2307,7 +2308,7 @@ begin;
       P := PNativeUInt(I)^;
       //replace i by j
       PNativeUInt(I)^ := PNativeUInt(J)^;
-      //replace i by j
+      //replace j by i savedin P
       PNativeUInt(J)^ := P;
     end;
     P := PNativeUInt(T)^;
@@ -2403,6 +2404,32 @@ begin;
     end;
   end;
 end;
+procedure QuickSort(List: PPointerList; L, R: Integer; Compare: TZListSortCompare);
+var
+  I, J: Integer;
+  P, T: Pointer;
+begin;
+  repeat
+    I := L;
+    J := R;
+    P := List[(L + R) shr 1];
+    repeat;
+      while Compare(List[I], P)<0 do
+        Inc(I);         //*
+      while Compare(List[J], P)>0 do
+        Dec(J);         //*
+      if I<=J then begin;                            //**
+        T := List[I]; List[I]:=List[J]; List[J]:=T;
+        Inc(I);
+        Dec(J);
+      end;
+    until I>J;
+    if L<J then
+      QuickSort(List, L, J, Compare);      //***
+    L := I;
+  until I >= R;
+end;
+
 
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -2584,9 +2611,11 @@ end;
 procedure TZSortedList.Sort(Compare: TZListSortCompare);
 begin
   {$IFDEF TLIST_ISNOT_PPOINTERLIST}
-  HybridSortSha_0AA(@List, Count, Compare);
+  //HybridSortSha_0AA(@List, Count, Compare);
+  QuickSort(@List, 0, Count-1, Compare);
   {$ELSE}
-  HybridSortSha_0AA(List, Count, Compare);
+  //HybridSortSha_0AA(List, Count, Compare);
+  QuickSort(List, 0, Count-1, Compare);
   {$ENDIF}
 end;
 
