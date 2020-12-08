@@ -2611,11 +2611,11 @@ procedure TZSortedList.Sort(Compare: TZListSortCompare);
 begin
   {$IFDEF TLIST_ISNOT_PPOINTERLIST}
   //HybridSortSha_0AA(@List, Count, Compare);
-  if Count > 0 then
+  if Count > 1 then
     QuickSort(@List, 0, Count-1, Compare);
   {$ELSE}
   //HybridSortSha_0AA(List, Count, Compare);
-  if Count > 0 then
+  if Count > 1 then
     QuickSort(List, 0, Count-1, Compare);
   {$ENDIF}
 end;
