@@ -58,9 +58,9 @@ interface
 {$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 uses
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}
-    System.Types, System.Contnrs
+    System.Types{$IFNDEF NO_UNIT_CONTNRS},System.Contnrs{$ENDIF},
   {$ELSE}
-    {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
+    {$IFNDEF NO_UNIT_CONTNRS} Contnrs,{$ENDIF}
   {$ENDIF}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ZClasses,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZPlainSqLiteDriver,
