@@ -153,11 +153,18 @@ type
     /// <param>"NewRowAccessor" an accessor object to new column values.</param>
     procedure PostUpdates(const Sender: IZCachedResultSet;
       UpdateType: TZRowUpdateType; const OldRowAccessor, NewRowAccessor: TZRowAccessor); virtual;
-    {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL/MSSQL }
+    /// <summary>Posts updates the autoincrement fields.</summary>
+    /// <param>"Sender" a cached result set inteface.</param>
+    /// <param>"UpdateType" a type of updates.</param>
+    /// <param>"OldRowAccessor" an accessor object to old column values.</param>
+    /// <param>"NewRowAccessor" an accessor object to new column values.</param>
+    /// <param>"Resolver" the resolver object used to load the column data.</param>
     procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet;
       UpdateType: TZRowUpdateType; const OldRowAccessor, NewRowAccessor: TZRowAccessor;
       const Resolver: IZCachedResolver); virtual;
-    {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
+    /// <summary>Refreshes the current row.</summary>
+    /// <param>"Sender" a cached result set inteface.</param>
+    /// <param>"RowAccessor" an accessor object to current column values.</param>
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
     /// <summary>Set the readonly state of a field. The value will be ignored
     ///  if the field is not writable.</summary>
@@ -966,11 +973,6 @@ begin
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Sender" not used} {$ENDIF}
- {**
-  Calculate default values for the fields.
-  @param Sender a cached result set object.
-  @param RowAccessor an accessor object to column values.
-}
 procedure TZGenerateSQLCachedResolver.CalculateDefaults(
   const Sender: IZCachedResultSet; const RowAccessor: TZRowAccessor);
 var

@@ -273,12 +273,36 @@ type
     /// <param>"SQL" a SQL statement that may contain one or more '?' IN
     ///  parameter placeholders.</param>
     /// <param> Info a statement parameter list.</param>
-    /// <returns> a new PreparedStatement object containing the
+    /// <returns>a new PreparedStatement object containing the
     ///  optional pre-compiled statement</returns>
     function PrepareStatement(const SQL: string): IZPreparedStatement;
-    function PrepareCall(const SQL: string): IZCallableStatement;
-
+    /// <summary>Creates a <c>CallableStatement</c> object for calling
+    ///  database stored procedures. The <c>CallableStatement</c> object
+    ///  provides methods for setting up its IN and OUT parameters, and methods
+    ///  for executing the call to a stored procedure. Note: This method is
+    ///  optimized for handling stored procedure call statements. Some drivers
+    ///  may send the call statement to the database when the method
+    ///  <c>prepareCall</c> is done; others may wait until the
+    ///  <c>CallableStatement</c> object is executed. This has no direct effect
+    ///  on users; however, it does affect which method throws certain
+    ///  EZSQLExceptions. Result sets created using the returned
+    ///  IZCallableStatement will have forward-only type and read-only
+    ///  concurrency, by default.</summary>
+    /// <param>"Name" a procedure or function name.</param>
+    /// <returns> a new IZCallableStatement interface containing the
+    ///  pre-compiled SQL statement </returns>
+    function PrepareCall(const Name: string): IZCallableStatement;
+    /// <summary>Creates an object to send/recieve notifications from SQL
+    ///  server. An unsupported operation exception will be raised if the driver
+    ///  doesn't support it, </summary>
+    /// <param>"Event" an event name.</param>
+    /// <returns>a created notification object.</returns>
     function CreateNotification(const Event: string): IZNotification; virtual;
+    /// <summary>Creates a sequence generator object.</summary>
+    /// <param>"Sequence" a name of the sequence generator.</param>
+    /// <param>"BlockSize" a number of unique keys requested in one trip to SQL
+    ///  server.</param>
+    /// <returns>returns a created sequence object.</returns>
     function CreateSequence(const Sequence: string; BlockSize: Integer):
       IZSequence; virtual;
 
@@ -1202,51 +1226,11 @@ begin
   SetDateTimeFormatProperties;
 end;
 
-{**
-  Creates a <code>Statement</code> object for sending
-  SQL statements to the database.
-  SQL statements without parameters are normally
-  executed using Statement objects. If the same SQL statement
-  is executed many times, it is more efficient to use a
-  <code>PreparedStatement</code> object.
-  <P>
-  Result sets created using the returned <code>Statement</code>
-  object will by default have forward-only type and read-only concurrency.
-
-  @return a new Statement object
-}
 function TZAbstractDbcConnection.CreateStatement: IZStatement;
 begin
   Result := IZConnection(fWeakReferenceOfSelfInterface).CreateStatementWithParams(nil);
 end;
 
-{**
-  Creates a <code>PreparedStatement</code> object for sending
-  parameterized SQL statements to the database.
-
-  A SQL statement with or without IN parameters can be
-  pre-compiled and stored in a PreparedStatement object. This
-  object can then be used to efficiently execute this statement
-  multiple times.
-
-  <P><B>Note:</B> This method is optimized for handling
-  parametric SQL statements that benefit from precompilation. If
-  the driver supports precompilation,
-  the method <code>prepareStatement</code> will send
-  the statement to the database for precompilation. Some drivers
-  may not support precompilation. In this case, the statement may
-  not be sent to the database until the <code>PreparedStatement</code> is
-  executed.  This has no direct effect on users; however, it does
-  affect which method throws certain SQLExceptions.
-
-  Result sets created using the returned PreparedStatement will have
-  forward-only type and read-only concurrency, by default.
-
-  @param sql a SQL statement that may contain one or more '?' IN
-    parameter placeholders
-  @return a new PreparedStatement object containing the
-    pre-compiled statement
-}
 function TZAbstractDbcConnection.PrepareStatement(const SQL: string): IZPreparedStatement;
 begin
   Result := IZConnection(fWeakReferenceOfSelfInterface).PrepareStatementWithParams(SQL, nil);
@@ -1257,43 +1241,12 @@ begin
   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
-{**
-  Creates a <code>CallableStatement</code> object for calling
-  database stored procedures.
-  The <code>CallableStatement</code> object provides
-  methods for setting up its IN and OUT parameters, and
-  methods for executing the call to a stored procedure.
-
-  <P><B>Note:</B> This method is optimized for handling stored
-  procedure call statements. Some drivers may send the call
-  statement to the database when the method <code>prepareCall</code>
-  is done; others
-  may wait until the <code>CallableStatement</code> object
-  is executed. This has no
-  direct effect on users; however, it does affect which method
-  throws certain SQLExceptions.
-
-  Result sets created using the returned CallableStatement will have
-  forward-only type and read-only concurrency, by default.
-
-  @param sql a SQL statement that may contain one or more '?'
-    parameter placeholders. Typically this  statement is a JDBC
-    function call escape string.
-  @return a new CallableStatement object containing the
-    pre-compiled SQL statement
-}
-
 function TZAbstractDbcConnection.PrepareCall(
-  const SQL: string): IZCallableStatement;
+  const Name: string): IZCallableStatement;
 begin
-  Result := IZConnection(fWeakReferenceOfSelfInterface).PrepareCallWithParams(SQL, nil);
+  Result := IZConnection(fWeakReferenceOfSelfInterface).PrepareCallWithParams(Name, nil);
 end;
 
-{**
-  Creates an object to send/recieve notifications from SQL server.
-  @param Event an event name.
-  @returns a created notification object.
-}
 {$IFDEF FPC} {$PUSH}
   {$WARN 5033 off : Function result does not seem to be set}
   {$WARN 5024 off : Parameter "Event" not used}
@@ -1305,12 +1258,6 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-{**
-  Creates a sequence generator object.
-  @param Sequence a name of the sequence generator.
-  @param BlockSize a number of unique keys requested in one trip to SQL server.
-  @returns a created sequence object.
-}
 function TZAbstractDbcConnection.CreateSequence(const Sequence: string;
   BlockSize: Integer): IZSequence;
 begin

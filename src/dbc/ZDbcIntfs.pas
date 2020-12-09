@@ -249,6 +249,7 @@ type
     //finally the object types
     stArray, {$IFDEF ZEOS90UP}stResultSet, stStatement{$ELSE}stDataSet{$ENDIF});
 
+  /// <summary>Defines a dynamic array of TZSQLType(s).</summary>
   TZSQLTypeArray = array of TZSQLType;
 
   /// <summary>Defines a transaction isolation level.</summary>
@@ -710,7 +711,7 @@ type
     /// <param>"Name" a procedure or function name.</param>
     /// <returns> a new IZCallableStatement interface containing the
     ///  pre-compiled SQL statement </returns>
-    function PrepareCall(const SQL: string): IZCallableStatement;
+    function PrepareCall(const Name: string): IZCallableStatement;
     /// <summary>Creates a <c>Statement</c> interface for sending SQL statements
     ///  to the database. SQL statements without parameters are normally
     ///  executed using Statement objects. If the same SQL statement
@@ -761,8 +762,17 @@ type
     ///  pre-compiled SQL statement </returns>
     function PrepareCallWithParams(const Name: string; Params: TStrings):
       IZCallableStatement;
-
+    /// <summary>Creates an object to send/recieve notifications from SQL
+    ///  server. An unsupported operation exception will be raised if the driver
+    ///  doesn't support it, </summary>
+    /// <param>"Event" an event name.</param>
+    /// <returns>a created notification object.</returns>
     function CreateNotification(const Event: string): IZNotification;
+    /// <summary>Creates a sequence generator object.</summary>
+    /// <param>"Sequence" a name of the sequence generator.</param>
+    /// <param>"BlockSize" a number of unique keys requested in one trip to SQL
+    ///  server.</param>
+    /// <returns>returns a created sequence object.</returns>
     function CreateSequence(const Sequence: string; BlockSize: Integer): IZSequence;
 
     function NativeSQL(const SQL: string): string;
@@ -852,8 +862,9 @@ type
     ///  catalogs, it will silently ignore this request.</summary>
     /// <param>"value" new catalog name to be used.</param>
     procedure SetCatalog(const Value: string);
+    /// <summary>Returns the Connection's current catalog name.</summary>
+    /// <returns>the current catalog name or an empty string.</returns>
     function GetCatalog: string;
-
     /// <summary>Attempts to change the transaction isolation level to the one
     ///  given. The constants defined in the interface <c>Connection</c> are the
     ///  possible transaction isolation levels. Note: This method cannot be

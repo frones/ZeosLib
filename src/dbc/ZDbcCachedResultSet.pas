@@ -73,16 +73,36 @@ type
   {** Resolver to post updates. }
   IZCachedResolver = interface (IZInterface)
     ['{546ED716-BB88-468C-8CCE-D7111CF5E1EF}']
+    /// <summary>Calculate default values for the fields.</summary>
+    /// <param>"Sender" a cached result set object.</param>
+    /// <param>"RowAccessor" an accessor object to column values.</param>
     procedure CalculateDefaults(const Sender: IZCachedResultSet;
       const RowAccessor: TZRowAccessor);
+    /// <summary>Posts updates to database.</summary>
+    /// <param>"Sender" a cached result set inteface.</param>
+    /// <param>"UpdateType" a type of updates.</param>
+    /// <param>"OldRowAccessor" an accessor object to old column values.</param>
+    /// <param>"NewRowAccessor" an accessor object to new column values.</param>
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       const OldRowAccessor, NewRowAccessor: TZRowAccessor);
-    {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
+    /// <summary>Posts updates the autoincrement fields.</summary>
+    /// <param>"Sender" a cached result set inteface.</param>
+    /// <param>"UpdateType" a type of updates.</param>
+    /// <param>"OldRowAccessor" an accessor object to old column values.</param>
+    /// <param>"NewRowAccessor" an accessor object to new column values.</param>
+    /// <param>"Resolver" the resolver object used to load the column data.</param>
     procedure UpdateAutoIncrementFields(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       const OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
-    {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
+    /// <summary>Refreshes the current row.</summary>
+    /// <param>"Sender" a cached result set inteface.</param>
+    /// <param>"RowAccessor" an accessor object to current column values.</param>
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
+    /// <summary>Set a transaction object used for the crud-operations.</summary>
+    /// <param>"Value" the IZTransaction object.</param>
     procedure SetTransaction(const Value: IZTransaction);
+    /// <summary>Test if the resolver-transaction is a autocommit txn.</summary>
+    /// <returns><c>True</c> if the transaction object is in autocommit mode;
+    ///  <c>False</c> otherwise.</returns>
     function HasAutoCommitTransaction: Boolean;
   end;
 
@@ -149,7 +169,7 @@ type
   private
     FCachedUpdates: Boolean;
     FCachedLobs: WordBool;
-    FRowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
+    FRowsList: TZSortedList;
     FInitialRowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     FCurrentRowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     FIndexPairList: TZIndexPairList;
@@ -180,7 +200,7 @@ type
     procedure PrepareRowForUpdates;
 
     property CachedUpdates: Boolean read FCachedUpdates write FCachedUpdates;
-    property RowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF} read FRowsList write FRowsList;
+    property RowsList: TZSortedList read FRowsList write FRowsList;
     property InitialRowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF} read FInitialRowsList
       write FInitialRowsList;
     property CurrentRowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF} read FCurrentRowsList
@@ -857,7 +877,7 @@ begin
   if not Closed then
     raise EZSQLException.Create(SResultsetIsAlreadyOpened);
 
-  FRowsList := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
+  FRowsList := TZSortedList.Create;
   FInitialRowsList := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   FCurrentRowsList := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
 
