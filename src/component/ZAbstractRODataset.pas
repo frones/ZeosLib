@@ -7059,7 +7059,7 @@ var
   Delim, Sep: Char;
   DT: TDateTime;
   T: TZTime;
-  I,J: LengthInt;
+  I: LengthInt;
   Fraction: Cardinal;
   B: Boolean;
   P: PChar;
@@ -7113,19 +7113,6 @@ begin
             Fraction := RoundNanoFractionTo(Fraction, FScale);
             Fraction := Fraction div FractionLength2NanoSecondMulTable[FScale];
             {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Fraction, P, Byte(FScale));
-            if FScale > FFractionLen[B] then begin
-              J := I+FScale;
-              P := Pointer(Text);
-              Inc(P, j-2);
-              Millis := 0;
-              while (J>I) and (P^ = ('0')) do begin
-                Inc(Millis);
-                Dec(J);
-                Dec(P);
-              end;
-              if Millis > 0 then
-                Delete(Text, J, Millis);
-            end;
           end;
         end;
       end else begin
@@ -7311,7 +7298,7 @@ var
   DT, D: TDateTime;
   Delim: Char;
   TS: TZTimeStamp;
-  I,J: LengthInt;
+  I: LengthInt;
   Fraction: Cardinal;
   B: Boolean;
   B2: Boolean;
@@ -7379,19 +7366,6 @@ begin
             Fraction := RoundNanoFractionTo(Fraction, FScale);
             Fraction := Fraction div FractionLength2NanoSecondMulTable[FScale];
             {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Fraction, P, Byte(FScale));
-            if FScale > FFractionLen[B] then begin
-              J := I+FScale;
-              P := Pointer(Text);
-              Inc(P, j-2);
-              Millis := 0;
-              while (J>I) and (P^ = ('0')) do begin
-                Inc(Millis);
-                Dec(J);
-                Dec(P);
-              end;
-              if Millis > 0 then
-                Delete(Text, J, Millis);
-            end;
           end;
         end;
       end else begin
