@@ -2440,7 +2440,7 @@ begin
     end;
     CurrentVar^.ColType := NormalizeOracleTypeToSQLType(CurrentVar.dty,
       CurrentVar.value_sz, CurrentVar^.DescriptorType,
-      ColumnInfo.Precision, ScaleOrCharSetForm, ConSettings, OCI_TYPEPARAM_IN);
+      ColumnInfo.Precision, ScaleOrCharSetForm, ConSettings);
     ColumnInfo.CharOctedLength := CurrentVar^.value_sz;
     if CurrentVar^.DescriptorType > 0 then
       inc(DescriptorColumnCount);

@@ -1389,8 +1389,7 @@ var
         OCI_TYPEPARAM_INOUT : Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctInOut));
       end;
       SQLType := NormalizeOracleTypeToSQLType(Arg.DataType,
-        Arg.DataSize, Arg.DescriptorType, Arg.Precision, Arg.Scale, ConSettings,
-        Descriptor.IODirection);
+        Arg.DataSize, Arg.DescriptorType, Arg.Precision, Arg.Scale, ConSettings);
       if (Ord(SQLType) >= Ord(stString)) and (Ord(SQLType) <= Ord(stBytes))
       then Result.UpdateInt(ProcColPrecisionIndex, Arg.DataSize)
       else Result.UpdateInt(ProcColPrecisionIndex, Arg.Precision);
@@ -1445,8 +1444,7 @@ var
         OCI_TYPEPARAM_INOUT : Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctInOut));
       end;
       SQLType := NormalizeOracleTypeToSQLType(Arg.DataType,
-        Arg.DataSize, Arg.DescriptorType, Arg.Precision, Arg.Scale, ConSettings,
-        Descriptor.IODirection);
+        Arg.DataSize, Arg.DescriptorType, Arg.Precision, Arg.Scale, ConSettings);
       if (Ord(SQLType) >= Ord(stString)) and (Ord(SQLType) <= Ord(stBytes))
       then Result.UpdateInt(ProcColPrecisionIndex, Arg.DataSize)
       else Result.UpdateInt(ProcColPrecisionIndex, Arg.Precision);
