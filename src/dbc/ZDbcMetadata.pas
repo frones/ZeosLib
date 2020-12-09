@@ -4728,11 +4728,11 @@ begin
                   Result := UpperCase(Pattern);
         icUpper: if FDatabaseInfo.StoresLowerCaseIdentifiers then
                    Result := LowerCase(Pattern);
-        icMixed: if not FDatabaseInfo.StoresLowerCaseIdentifiers then
-                  if FDatabaseInfo.StoresUpperCaseIdentifiers then
-                    Result := UpperCase(Pattern)
-                  else
-                    Result := LowerCase(Pattern);
+        icMixed: if not FDatabaseInfo.StoresMixedCaseIdentifiers then
+                   if FDatabaseInfo.StoresUpperCaseIdentifiers then
+                     Result := UpperCase(Pattern)
+                   else
+                     Result := LowerCase(Pattern);
         {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
       end
     end else
