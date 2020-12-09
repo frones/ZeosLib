@@ -69,6 +69,9 @@ uses
   ZCompatibility, ZVariant, ZEncoding, ZDbcIntfs;
 
 type
+  {$IFDEF FPC}
+  PBoolean = ^Boolean;
+  {$ENDIF}
   TZParamValue = record //don't use any managed types here!!!!
     case Integer of
       0:  (pvBool: Boolean);
@@ -172,8 +175,8 @@ type
     procedure SetSQLType(Value: TZSQLType);
     procedure SetSQLDataType(Value: TZSQLType; ZVarType: TZVariantType);
     procedure SetDataType(Value: TFieldType);
-    procedure InternalSetAsUnicodeString(DataAddr: PPointer; IsNullAddr: System.PBoolean; const Value: UnicodeString);
-    procedure InternalSetAsRawByteString(DataAddr: PPointer; IsNullAddr: System.PBoolean; const Value: RawByteString; CodePage: Word);
+    procedure InternalSetAsUnicodeString(DataAddr: PPointer; IsNullAddr: PBoolean; const Value: UnicodeString);
+    procedure InternalSetAsRawByteString(DataAddr: PPointer; IsNullAddr: PBoolean; const Value: RawByteString; CodePage: Word);
     function GetDefaultRawCP: Word;
     function IsEqual(Value: TZParam): Boolean;
     procedure CheckDataIndex(Value: Integer); overload;
@@ -1440,7 +1443,7 @@ begin
   if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := False
   else case FSQLDataType of
-    stBoolean: Result := System.PBoolean(DataAddr)^;
+    stBoolean: Result := PBoolean(DataAddr)^;
     stByte, stShort: Result := PByte(DataAddr)^ <> 0;
     stWord, stSmall: Result := PWord(DataAddr)^ <> 0;
     stLongword, stInteger, stFloat: Result := PCardinal(DataAddr)^ <> 0;
@@ -1742,7 +1745,7 @@ begin
   if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := 0
   else case FSQLDataType of
-    stBoolean: Result := Ord(System.PBoolean(DataAddr)^);
+    stBoolean: Result := Ord(PBoolean(DataAddr)^);
     stByte: Result := PByte(DataAddr)^;
     stShort: Result := PShortInt(DataAddr)^;
     stWord: Result := PWord(DataAddr)^;
@@ -1813,7 +1816,7 @@ label jmpLenFromPEnd, jmpSetFromBuf;
 begin
   Result := '';
   if not GetIsNullsAddr(Integer(Index), DataAddr) then case FSQLDataType of
-    stBoolean: Result := BoolStrsRaw[System.PBoolean(DataAddr)^];
+    stBoolean: Result := BoolStrsRaw[PBoolean(DataAddr)^];
     stByte:     begin
                   IntToRaw(Cardinal(PByte(DataAddr)^), @TinyBuffer[0], @PEnd);
                   goto jmpLenFromPEnd;
@@ -2050,7 +2053,7 @@ begin
   if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := 0
   else case FSQLDataType of
-    stBoolean: Result := Ord(System.PBoolean(DataAddr)^);
+    stBoolean: Result := Ord(PBoolean(DataAddr)^);
     stByte: Result := PByte(DataAddr)^;
     stShort: Result := PShortInt(DataAddr)^;
     stWord: Result := PWord(DataAddr)^;
@@ -2205,7 +2208,7 @@ function TZParam.GetAsVariant: Variant;
     TVarData(Result).VType := varString;
     UTF8String(TVarData(Result).VString) := GetAsUTF8String;
     {$ELSE}
-    if {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}GetACP{$ENDIF} = zCP_UTF8 then begin
+    if {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF} = zCP_UTF8 then begin
       TVarData(Result).VType := varString;
       UTF8String(TVarData(Result).VString) := GetAsUTF8String;
     end else if FZVariantType <> vtAnsiString then begin
@@ -2532,7 +2535,7 @@ begin
 end;
 
 procedure TZParam.InternalSetAsRawByteString(DataAddr: PPointer;
-  IsNullAddr: System.PBoolean; const Value: RawByteString; CodePage: Word);
+  IsNullAddr: PBoolean; const Value: RawByteString; CodePage: Word);
 var P: PAnsiChar;
     L: LengthInt;
     DestCP: Word;
@@ -2583,7 +2586,7 @@ begin
         then FZVariantType := vtAnsiString
         else {$ENDIF}FZVariantType := vtRawByteString;
   case FSQLDataType of
-    stBoolean: System.PBoolean(DataAddr)^ := StrToBoolEx(P, P+L);
+    stBoolean: PBoolean(DataAddr)^ := StrToBoolEx(P, P+L);
     stByte: PByte(DataAddr)^ := ZFastCode.RawToUInt32(P, P+L);
     stWord: PWord(DataAddr)^ := ZFastCode.RawToUInt32(P, P+L);
     stLongWord: PCardinal(DataAddr)^ := ZFastCode.RawToUInt32(P, P+L);
@@ -2631,7 +2634,7 @@ jmpFail: raise Self.CreateConversionError(FSQLDataType, stString);
 end;
 
 procedure TZParam.InternalSetAsUnicodeString(DataAddr: PPointer;
-  IsNullAddr: System.PBoolean; const Value: UnicodeString);
+  IsNullAddr: PBoolean; const Value: UnicodeString);
 var P: PWidechar;
     L: NativeUint;
     procedure SetAsRaw;
@@ -2657,7 +2660,7 @@ begin
   then P := PEmptyUnicodeString
   else P := Pointer(Value);
   case FSQLDataType of
-    stBoolean: System.PBoolean(DataAddr)^ := StrToBoolEx(P, P+L);
+    stBoolean: PBoolean(DataAddr)^ := StrToBoolEx(P, P+L);
     stByte: PByte(DataAddr)^ := UnicodeToUInt32(P,P+L);
     stWord: PWord(DataAddr)^ := UnicodeToUInt32(P,P+L);
     stLongWord: PCardinal(DataAddr)^ := UnicodeToUInt32(P,P+L);
@@ -2757,7 +2760,7 @@ end;
 
 procedure TZParam.LoadBinaryFromStream(Stream: TStream; Index: Integer);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
 begin
   CheckDataIndex(Integer(Index), stBinaryStream, vtInterface, DataAddr, IsNullAddr);
   if Stream = nil then begin
@@ -2836,7 +2839,7 @@ end;
 procedure TZParam.LoadTextFromStream(Stream: TStream; CodePage: Word;
   Index: Integer);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
 var SQLType: TZSQLType;
     procedure BindAsCLob;
     var Clob: IZCLob;
@@ -3013,7 +3016,7 @@ end;
 
 procedure TZParam.SetAsBlobs(Index: Cardinal; const Value: TBlobData);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
 begin
   CheckDataIndex(Integer(Index), stBinaryStream, vtInterface, DataAddr, IsNullAddr);
   case FSQLDataType of
@@ -3040,7 +3043,7 @@ end;
 
 procedure TZParam.SetAsBooleans(Index: Cardinal; Value: Boolean);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
   procedure BindAsString; //keep the _U/AStrClear method  out of main proc
   begin
     case FSQLDataType of
@@ -3066,7 +3069,7 @@ end;
 
 procedure TZParam.SetAsByteArray(Index: Cardinal; Value: Byte);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
 begin
   CheckDataIndex(Integer(Index), stByte, vtNull, DataAddr, IsNullAddr);
   case FSQLDataType of
@@ -3085,7 +3088,7 @@ end;
 
 procedure TZParam.SetAsBytesArray(Index: Cardinal; const Value: TBytes);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
   procedure BytesToBlob;
   var Blob: IZBlob;
   begin
@@ -3115,7 +3118,7 @@ end;
 
 procedure TZParam.SetAsCardinals(Index: Cardinal; Value: Cardinal);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
   procedure CardinalToString; //keep the U/AStrClear aout of main proc
   begin
     if (SQLType = stString) or (SQLType = stAsciiStream)
@@ -3125,7 +3128,7 @@ var DataAddr: PPointer;
 begin
   CheckDataIndex(Integer(Index), stLongWord, vtNull, DataAddr, IsNullAddr);
   case SQLType of
-    stBoolean:  System.PBoolean(DataAddr)^ := Value <> 0;
+    stBoolean:  PBoolean(DataAddr)^ := Value <> 0;
     stByte:     PByte(DataAddr)^ := Value;
     stShort:    PShortInt(DataAddr)^ := Value;
     stWord:     PWord(DataAddr)^ := Value;
@@ -3151,7 +3154,7 @@ end;
 
 procedure TZParam.SetAsCurrencys(Index: Cardinal; const Value: Currency);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
   procedure SetAsOrdinal(Value: Currency);
   begin
     ZSysUtils.RoundCurrTo(Value, 0);
@@ -3166,7 +3169,7 @@ var DataAddr: PPointer;
 begin
   CheckDataIndex(Integer(Index), stCurrency, vtNull, DataAddr, IsNullAddr);
   case FSQLDataType of
-    stBoolean: System.PBoolean(DataAddr)^ := Value <> 0;
+    stBoolean: PBoolean(DataAddr)^ := Value <> 0;
     stByte..stLong: SetAsOrdinal(Value);
     stFloat: PSingle(DataAddr)^ := Value;
     stDouble: PDouble(DataAddr)^ := Value;
@@ -3193,7 +3196,7 @@ procedure TZParam.SetAsDates(Index: Cardinal; const Value: TDate);
   end;
   {$IFDEF FPC}{$POP}{$ENDIF}
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
 begin
   CheckDataIndex(Integer(Index), stDate, vtDate, DataAddr, IsNullAddr);
   case FSQLDataType of
@@ -3223,7 +3226,7 @@ procedure TZParam.SetAsDateTimes(Index: Cardinal; const Value: TDateTime);
   end;
   {$IFDEF FPC}{$POP}{$ENDIF}
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
 begin
   CheckDataIndex(Integer(Index), stTimestamp, vtTimestamp, DataAddr, IsNullAddr);
   case FSQLDataType of
@@ -3245,7 +3248,7 @@ end;
 
 procedure TZParam.SetAsDoubles(Index: Cardinal; const Value: Double);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
   procedure ValueToRawString; //keep the U/AStrClear aout of main proc
   begin
     SetAsRawByteStrings(Index, FloatToRaw(Value), GetDefaultRawCP)
@@ -3257,7 +3260,7 @@ var DataAddr: PPointer;
 begin
   CheckDataIndex(Integer(Index), stDouble, vtNull, DataAddr, IsNullAddr);
   case FSQLDataType of
-    stBoolean: System.PBoolean(DataAddr)^ := Value <> 0;
+    stBoolean: PBoolean(DataAddr)^ := Value <> 0;
     stByte..stLong: SetAsInt64s(Index, Trunc(Value));
     stFloat: PSingle(DataAddr)^ := Value;
     stDouble: PDouble(DataAddr)^ := Value;
@@ -3280,7 +3283,7 @@ end;
 
 procedure TZParam.SetAsFmtBCDs(Index: Cardinal; const Value: TBCD);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
   procedure ValueToRawString; //keep the U/AStrClear aout of main proc
   var Digits: array[0..MaxFMTBcdFractionSize-1+1{sign}+1{dot}] of AnsiChar;
     L: LengthInt;
@@ -3331,7 +3334,7 @@ end;
 
 procedure TZParam.SetAsGUIDs(Index: Cardinal; const Value: TGUID);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
   procedure ValueToRawString;
   var S: RawByteString;
   begin
@@ -3380,7 +3383,7 @@ end;
 
 procedure TZParam.SetAsInt64s(Index: Cardinal; const Value: Int64);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
   procedure IntegerToString; //keep the U/AStrClear out of main proc
   begin
     if FSQLDataType in [stString, stAsciiStream]
@@ -3416,7 +3419,7 @@ end;
 
 procedure TZParam.SetAsIntegers(Index: Cardinal; Value: Integer);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
   procedure IntegerToString; //keep the U/AStrClear out of main proc
   begin
     if FSQLDataType in [stString, stAsciiStream]
@@ -3452,7 +3455,7 @@ end;
 
 procedure TZParam.SetAsMemos(Index: Cardinal; const Value: String);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
 begin
   CheckDataIndex(Integer(Index), {$IFDEF UNICODE}stUnicodeStream{$ELSE}stAsciiStream{$ENDIF}, vtInterface, DataAddr, IsNullAddr);
   {$IFDEF UNICODE}
@@ -3473,7 +3476,7 @@ procedure TZParam.SetAsRawByteStrings(Index: Cardinal;
 var VariantType: TZVariantType;
     SQLType: TZSQLType;
     DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
 begin
   if Codepage = zCP_Binary then begin
     SQLType := stBytes;
@@ -3498,7 +3501,7 @@ end;
 procedure TZParam.SetAsRawMemos(Index: Cardinal; const Value: RawByteString; CodePage: Word);
 var SQLType: TZSQLType;
     DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
 begin
   if Codepage = zCP_Binary
   then SQLType := stBinaryStream
@@ -3514,7 +3517,7 @@ end;
 
 procedure TZParam.SetAsShortInts(Index: Cardinal; Value: ShortInt);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
 begin
   CheckDataIndex(Integer(Index), stShort, vtNull, DataAddr, IsNullAddr);
   if FSQLDataType = stShort then begin
@@ -3531,7 +3534,7 @@ end;
 
 procedure TZParam.SetAsSingles(Index: Cardinal; Value: Single);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
 begin
   CheckDataIndex(Integer(Index), stFloat, vtNull, DataAddr, IsNullAddr);
   if FSQLDataType = stFloat then begin
@@ -3548,7 +3551,7 @@ end;
 
 procedure TZParam.SetAsSmallInts(Index: Cardinal; Value: SmallInt);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
 begin
   CheckDataIndex(Integer(Index), stSmall, vtNull, DataAddr, IsNullAddr);
   if FSQLDataType = stSmall then begin
@@ -3571,7 +3574,7 @@ var VariantType: TZVariantType;
     SQLType: TZSQLType;
     CP: Word;
     DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
 begin
   If ((FConSettings <> nil) or SetConsettings) and (FConSettings.ClientCodePage.Encoding = ceUTF16) then begin
     SQLType := stUnicodeString;
@@ -3605,11 +3608,11 @@ procedure TZParam.SetAsTimes(Index: Cardinal; const Value: TTime);
   end;
   {$IFDEF FPC}{$POP}{$ENDIF}
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
 begin
   CheckDataIndex(Integer(Index), stTime, vtTime, DataAddr, IsNullAddr);
   case FSQLDataType of
-    stBoolean: System.PBoolean(DataAddr)^ := Value <> 0;
+    stBoolean: PBoolean(DataAddr)^ := Value <> 0;
     stByte..stLong: SetAsInt64s(Index, Trunc(Value));
     stFloat: PSingle(DataAddr)^ := Value;
     stDouble: PDouble(DataAddr)^ := Value;
@@ -3632,7 +3635,7 @@ end;
 
 procedure TZParam.SetAsUInt64s(Index: Cardinal; const Value: UInt64);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
   procedure IntegerToString; //keep the U/AStrClear out of main proc
   begin
     if FSQLDataType in [stString, stAsciiStream]
@@ -3642,7 +3645,7 @@ var DataAddr: PPointer;
 begin
   CheckDataIndex(Integer(Index), stULong, vtNull, DataAddr, IsNullAddr);
   case FSQLDataType of
-    stBoolean:  System.PBoolean(DataAddr)^ := Value <> 0;
+    stBoolean:  PBoolean(DataAddr)^ := Value <> 0;
     stByte:     PByte(DataAddr)^ := Value;
     stShort:    PShortInt(DataAddr)^ := Value;
     stWord:     PWord(DataAddr)^ := Value;
@@ -3672,7 +3675,7 @@ end;
 procedure TZParam.SetAsUnicodeStrings(Index: Cardinal;
   const Value: UnicodeString);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
 begin
   CheckDataIndex(Integer(Index), stUnicodeString, vtUnicodeString, DataAddr, IsNullAddr);
   InternalSetAsUnicodeString(DataAddr, IsNullAddr, Value);
@@ -3808,7 +3811,7 @@ end;
 
 procedure TZParam.SetAsWideMemos(Index: Cardinal; const Value: UnicodeString);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
 begin
   CheckDataIndex(Integer(Index), stUnicodeStream, vtInterface, DataAddr, IsNullAddr);
   InternalSetAsUnicodeString(DataAddr, IsNullAddr, Value);
@@ -3821,7 +3824,7 @@ end;
 
 procedure TZParam.SetAsWords(Index: Cardinal; const Value: Word);
 var DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
 begin
   CheckDataIndex(Integer(Index), stWord, vtnull, DataAddr, IsNullAddr);
   if FSQLDataType = stWord then begin
@@ -3840,7 +3843,7 @@ end;
 procedure TZParam.SetAsZDates(Index: Cardinal; const Value: TZDate);
 var DT: TDateTime;
     DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
   procedure SetAsRaw;
   var Buf: array[0..cMaxDateLen] of AnsiChar;
       L: Integer;
@@ -3892,7 +3895,7 @@ end;
 procedure TZParam.SetAsZTimes(Index: Cardinal; const Value: TZTime);
 var DT: TDateTime;
     DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
   procedure SetAsRaw;
   var Buf: array[0..cMaxTimeLen] of AnsiChar;
       L: Integer;
@@ -3944,7 +3947,7 @@ end;
 procedure TZParam.SetAsZTimestamps(Index: Cardinal; const Value: TZTimestamp);
 var DT: TDateTime;
     DataAddr: PPointer;
-    IsNullAddr: System.PBoolean;
+    IsNullAddr: PBoolean;
   procedure SetAsRaw;
   var Buf: array[0..cMaxTimeStampLen] of AnsiChar;
       L: Integer;
