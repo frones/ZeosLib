@@ -98,12 +98,15 @@ type
     procedure SetType(Value: TZResultSetType);
     procedure SetConcurrency(Value: TZResultSetConcurrency);
     procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
+    procedure SortRows(const ColumnIndices: TIntegerDynArray; Descending: Boolean);
   end;
 
   {** Implements Virtual ResultSet. }
   TZVirtualResultSet = class(TZAbstractCachedResultSet, IZVirtualResultSet)
   private
     fConSettings: TZConSettings;
+    fColumnIndices, FCompareFuncs: Pointer; //ovoid RTTI finalize!
+    function ColumnSort(Item1, Item2: Pointer): Integer;
   protected
     procedure CalculateRowDefaults({%H-}RowAccessor: TZRowAccessor); override;
     procedure PostRowUpdates({%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor);
@@ -115,6 +118,7 @@ type
       ConSettings: PZConSettings);
   public
     procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
+    procedure SortRows(const ColumnIndices: TIntegerDynArray; Descending: Boolean);
   end;
 
   {** Implements Unclosable ResultSet which frees all memory if it's not referenced anymore. }
@@ -5083,6 +5087,12 @@ begin
   InitialRowsList.Insert(NewRowNo, P);
 end;
 
+function TZVirtualResultSet.ColumnSort(Item1, Item2: Pointer): Integer;
+begin
+  Result := RowAccessor.CompareBuffers(Item1, Item2,
+    TIntegerDynArray(FColumnIndices), TCompareFuncs(FCompareFuncs));
+end;
+
 {**
   Creates this object and assignes the main properties.
   @param ColumnsInfo a columns info for cached rows.
@@ -5112,6 +5122,22 @@ end;
 procedure TZVirtualResultSet.PostRowUpdates(OldRowAccessor,
   NewRowAccessor: TZRowAccessor);
 begin
+end;
+
+procedure TZVirtualResultSet.SortRows(const ColumnIndices: TIntegerDynArray;
+  Descending: Boolean);
+var I: Integer;
+    ComparisonKind: TComparisonKind;
+begin
+  SetLength(TCompareFuncs(FCompareFuncs), Length(ColumnIndices));
+  if Descending
+  then ComparisonKind := ckDescending
+  else ComparisonKind := ckAscending;
+  for i := low(ColumnIndices) to high(ColumnIndices) do
+    TCompareFuncs(FCompareFuncs)[i] := RowAccessor.GetCompareFunc(ColumnIndices[I], ComparisonKind);
+  fColumnIndices := Pointer(ColumnIndices);
+  RowsList.Sort(ColumnSort);
+  SetLength(TCompareFuncs(FCompareFuncs), 0);
 end;
 
 { TZDefaultIdentifierConverter }
