@@ -380,6 +380,7 @@ type
     procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); virtual;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; virtual;
     function ParamterIndex2ResultSetIndex(Value: Integer): Integer;
+    function CreateBindVarOutOfRangeException(Value: Integer): EZSQLException;
   protected //Properties
     property BatchDMLArrayCount: ArrayLenInt read FBatchDMLArrayCount write FBatchDMLArrayCount;
     property SupportsDMLBatchArrays: Boolean read FSupportsDMLBatchArrays;
@@ -471,7 +472,6 @@ type
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
       var AError: EZSQLConnectionLost); override;
 
-    procedure SetPChar(ParameterIndex: Integer; Value: PChar); virtual;
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); virtual;
     procedure SetGUID(ParameterIndex: Integer; const Value: TGUID); virtual;
     procedure SetDate(ParameterIndex: Integer; const Value: TDateTime); overload; virtual;
@@ -481,9 +481,54 @@ type
     procedure SetAsciiStream(ParameterIndex: Integer; const Value: TStream);
     procedure SetUnicodeStream(ParameterIndex: Integer; const Value: TStream);
     procedure SetBinaryStream(ParameterIndex: Integer; const Value: TStream);
+    /// <summary>Sets the designated parameter to the given blob wrapper object.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" defines the lob constent. Valid values are:
+    ///  stAsciiStream(raw encoded text), stUnicodeStream(UTF16 encoded text)
+    ///  and stBinaryStream(binary data), stJSON, stXML</param>
+    /// <param>"Value" the parameter blob wrapper object to be set.</param>
     procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType; const Value: IZBlob); virtual;
+    /// <summary>Sets the designated parameter to the value. The value content
+    ///  will be decoded and the associated setter will be called.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter blob wrapper object to be set.</param>
     procedure SetValue(ParameterIndex: Integer; const Value: TZVariant);
+    /// <summary>Sets the designated parameter to a null array value. A null
+    ///  array can not be bound if not data array has been bound before. So
+    ///  SetDataArray() needs to be called first.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" the SQLType of the array. Valid value is stBoolean.</param>
+    /// <param>"Value" the parameter null array value to be set. Note we just
+    ///  reference the array address. We do not increment the Array-Refcount.
+    ///  Means you need to keep the arrays alive until the statement has been
+    ///  excuted.</param>
+    /// <param>"VariantType" the VariantType of the array. Valid value is vtNull.</param>
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); virtual;
+    /// <summary>Sets the designated parameter to a data array value. This
+    ///  method usually initializes the BatchArray DML mode unless the parameter
+    ///  was registered as a PLSQLTable ( in (?) )before.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter array value to be set. Note we just
+    ///  reference the array address. We do not increment the Array-Refcount.
+    ///  Means you need to keep the arrays alive until the statement has been
+    ///  excuted.</param>
+    /// <param>"SQLType" the SQLType of the array</param>
+    /// <param>"VariantType" the VariantType of the array. It is used as a
+    ///  subtype like:
+    ///  (SQLType = stString, VariantType = vtUTF8String) or
+    ///  (SQLType = stDate, VariantType = vtDate or vtDateTime) </param>
     procedure SetDataArray(Index: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); virtual;
 
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
@@ -2321,6 +2366,13 @@ begin
   {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := SQL;
 end;
 
+function TZAbstractPreparedStatement.CreateBindVarOutOfRangeException(
+  Value: Integer): EZSQLException;
+begin
+  {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := Format(SBindVarOutOfRange, [Value]);
+  Result := EZSQLException.Create({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
+end;
+
 function TZAbstractPreparedStatement.CreateLogEvent(
   const Category: TZLoggingCategory): TZLoggingEvent;
 var
@@ -3318,27 +3370,6 @@ begin
     PZArray(BindValue.Value).VIsNullArrayVariantType := VariantType;
   end else
     raise EZUnsupportedException.Create(SUnsupportedOperation);
-end;
-
-{**
-  Sets the designated parameter to a Java <code>String</code> value.
-  The driver converts this
-  to an SQL <code>VARCHAR</code> or <code>LONGVARCHAR</code> value
-  (depending on the argument's
-  size relative to the driver's limits on <code>VARCHAR</code> values)
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetPChar(ParameterIndex: Integer;
-  Value: PChar);
-begin
-  {$IFDEF UNICODE}
-  IZPreparedStatement(FWeakIZPreparedStatementPtr).SetUnicodeString(ParameterIndex, Value);
-  {$ELSE}
-  IZPreparedStatement(FWeakIZPreparedStatementPtr).SetRawByteString(ParameterIndex, Value);
-  {$ENDIF}
 end;
 
 {**
