@@ -80,8 +80,12 @@ type
     constructor Create(const Metadata: TZAbstractDatabaseMetadata);
 
     // database/driver/server info:
+    /// <summary>What's the name of this database product?</summary>
+    /// <returns>database product name</returns>
     function GetDatabaseProductName: string; override;
     function GetDatabaseProductVersion: string; override;
+    /// <summary>What's the name of this ZDBC driver?
+    /// <returns>ZDBC driver name</returns>
     function GetDriverName: string; override;
 //    function GetDriverVersion: string; override; -> Same as parent
     function GetDriverMajorVersion: Integer; override;
@@ -126,7 +130,7 @@ type
 //    function SupportsSchemasInIndexDefinitions: Boolean; override; -> Not implemented
 //    function SupportsSchemasInPrivilegeDefinitions: Boolean; override; -> Not implemented
     function SupportsCatalogsInDataManipulation: Boolean; override;
-//    function SupportsCatalogsInProcedureCalls: Boolean; override; -> Not implemented
+    function SupportsCatalogsInProcedureCalls: Boolean; override;
     function SupportsCatalogsInTableDefinitions: Boolean; override;
 //    function SupportsCatalogsInIndexDefinitions: Boolean; override; -> Not implemented
 //    function SupportsCatalogsInPrivilegeDefinitions: Boolean; override; -> Not implemented
@@ -334,10 +338,6 @@ end;
 //----------------------------------------------------------------------
 // First, a variety of minor information about the target database.
 
-{**
-  What's the name of this database product?
-  @return database product name
-}
 function TZMySQLDatabaseInfo.GetDatabaseProductName: string;
   procedure GetFork;
   var S, F: String;
@@ -384,10 +384,6 @@ begin
   Result := FServerVersion;
 end;
 
-{**
-  What's the name of this JDBC driver?
-  @return JDBC driver name
-}
 function TZMySQLDatabaseInfo.GetDriverName: string;
 begin
   Result := 'Zeos Database Connectivity Driver for MySQL';
@@ -670,7 +666,16 @@ var
   MinorVersion: Integer;
 begin
   GetVersion(MajorVersion, MinorVersion);
-  Result := ((MajorVersion = 3) and (MinorVersion >= 22)) or (MajorVersion > 3);
+  Result := (MajorVersion > 3) or ((MajorVersion = 3) and (MinorVersion >= 22));
+end;
+
+{**
+  Can a catalog name be used in a procedure call statement?
+  @return <code>true</code> if so; <code>false</code> otherwise
+}
+function TZMySQLDatabaseInfo.SupportsCatalogsInProcedureCalls: Boolean;
+begin
+  Result := SupportsCatalogsInDataManipulation;
 end;
 
 {**
@@ -679,7 +684,7 @@ end;
 }
 function TZMySQLDatabaseInfo.SupportsCatalogsInTableDefinitions: Boolean;
 begin
-  Result := False;
+  Result := SupportsCatalogsInDataManipulation;
 end;
 
 {**
@@ -1394,7 +1399,7 @@ begin
           Result.UpdateRawByteString(TableColColumnTypeNameIndex, TypeName);
           Result.UpdateInt(TableColColumnSizeIndex, ColumnSize);
 
-          if MySQLType in [stCurrency, stBigDecimal, stString, stUnicodeString] then
+          if MySQLType in [stCurrency, stBigDecimal, stTime, stTimeStamp, stString, stUnicodeString] then
             Result.UpdateInt(TableColColumnDecimalDigitsIndex, ColumnDecimals);
 
           //Result.UpdateNull(TableColColumnNumPrecRadixIndex);
