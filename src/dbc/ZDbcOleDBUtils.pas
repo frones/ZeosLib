@@ -173,7 +173,7 @@ begin
     DBTYPE_FILETIME:    Result := stTimeStamp;
     DBTYPE_PROPVARIANT: Result := stString;
     DBTYPE_XML:         Result := stUnicodeStream;
-    DBTYPE_TABLE:       Result := stDataSet;
+    DBTYPE_TABLE:       Result := stResultSet;
     else //makes compiler happy
       {
       DBTYPE_IDISPATCH:
@@ -249,7 +249,7 @@ begin
     DBTYPE_FILETIME:    Result := stTimeStamp;
     DBTYPE_PROPVARIANT: Result := stString;
     DBTYPE_XML:         Result := stAsciiStream;
-    DBTYPE_TABLE:       Result := stDataSet;
+    DBTYPE_TABLE:       Result := stResultSet;
     else //makes compiler happy
       {
       DBTYPE_IDISPATCH:

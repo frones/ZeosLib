@@ -78,8 +78,12 @@ type
     procedure SetProductVersion(const Value: String);
   public
     // database/driver/server info:
+    /// <summary>What's the name of this database product?</summary>
+    /// <returns>database product name</returns>
     function GetDatabaseProductName: string; override;
     function GetDatabaseProductVersion: string; override;
+    /// <summary>What's the name of this ZDBC driver?
+    /// <returns>ZDBC driver name</returns>
     function GetDriverName: string; override;
 //    function GetDriverVersion: string; override; -> Same as parent
     function GetDriverMajorVersion: Integer; override;
@@ -212,13 +216,21 @@ type
 
   TZMsSqlDatabaseInfo = class(TZDbLibDatabaseInfo)
     // database/driver/server info:
+    /// <summary>What's the name of this database product?</summary>
+    /// <returns>database product name</returns>
     function GetDatabaseProductName: string; override;
+    /// <summary>What's the name of this ZDBC driver?
+    /// <returns>ZDBC driver name</returns>
     function GetDriverName: string; override;
   end;
 
   TZSybaseDatabaseInfo = class(TZDbLibDatabaseInfo)
     // database/driver/server info:
+    /// <summary>What's the name of this database product?</summary>
+    /// <returns>database product name</returns>
     function GetDatabaseProductName: string; override;
+    /// <summary>What's the name of this ZDBC driver?
+    /// <returns>ZDBC driver name</returns>
     function GetDriverName: string; override;
   end;
 
@@ -318,14 +330,9 @@ uses ZFastCode, ZDbcDbLibUtils;
 
 { TZDbLibDatabaseInfo }
 
-{**
 //----------------------------------------------------------------------
 // First, a variety of minor information about the target database.
 
-{**
-  What's the name of this database product?
-  @return database product name
-}
 function TZDbLibDatabaseInfo.GetDatabaseProductName: string;
 begin
   Result := '';
@@ -340,10 +347,6 @@ begin
   Result := fProductVersion;
 end;
 
-{**
-  What's the name of this JDBC driver?
-  @return JDBC driver name
-}
 function TZDbLibDatabaseInfo.GetDriverName: string;
 begin
   Result := 'Zeos Abstract Database Connectivity Driver for DbLib Server';
@@ -1361,37 +1364,21 @@ begin
   Result := UncachedGetCrossReference('', '', '', Catalog, Schema, Table);
 end;
 
-{**
-  What's the name of this database product?
-  @return database product name
-}
 function TZMsSqlDatabaseInfo.GetDatabaseProductName: string;
 begin
   Result := 'MS SQL';
 end;
 
-{**
-  What's the name of this JDBC driver?
-  @return JDBC driver name
-}
 function TZMsSqlDatabaseInfo.GetDriverName: string;
 begin
   Result := 'Zeos Database Connectivity Driver for Microsoft SQL Server';
 end;
 
-{**
-  What's the name of this database product?
-  @return database product name
-}
 function TZSybaseDatabaseInfo.GetDatabaseProductName: string;
 begin
   Result := 'Sybase';
 end;
 
-{**
-  What's the name of this JDBC driver?
-  @return JDBC driver name
-}
 function TZSybaseDatabaseInfo.GetDriverName: string;
 begin
   Result := 'Zeos Database Connectivity Driver for Sybase ASE Server';

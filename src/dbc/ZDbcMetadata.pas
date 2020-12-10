@@ -346,8 +346,12 @@ type
     destructor Destroy; override;
 
     // database/driver/server info:
+    /// <summary>What's the name of this database product?</summary>
+    /// <returns>database product name</returns>
     function GetDatabaseProductName: string; virtual;
     function GetDatabaseProductVersion: string; virtual;
+    /// <summary>What's the name of this ZDBC driver?
+    /// <returns>ZDBC driver name</returns>
     function GetDriverName: string; virtual;
     function GetDriverVersion: string; virtual;
     function GetDriverMajorVersion: Integer; virtual;
@@ -893,10 +897,6 @@ begin
   Result := False;
 end;
 
-{**
-  What's the name of this database product?
-  @return database product name
-}
 function TZAbstractDatabaseInfo.GetDatabaseProductName: string;
 begin
   Result := '';
@@ -911,10 +911,6 @@ begin
   Result := '';
 end;
 
-{**
-  What's the name of this JDBC driver?
-  @return JDBC driver name
-}
 function TZAbstractDatabaseInfo.GetDriverName: string;
 begin
   Result := 'Zeos Database Connectivity Driver';

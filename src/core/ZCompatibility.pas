@@ -106,8 +106,6 @@ type
   PPLongWord            = ^PLongWord;
   {$IFEND}
 {$IFDEF FPC}
-  //handle the deprecated Windows.PBoolean vs System.PBoolen
-  PBoolean = System.PBoolean;
   {$IF not declared(NativeInt)} //since FPC2.7 this type is declared too avoid inconsitent builds
   NativeInt             = PtrInt;
   {$IFEND}

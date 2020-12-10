@@ -50,6 +50,13 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
+{
+constributor(s):
+  aehimself
+  EgonHugeist
+  Martin Schreiber
+}
+
 unit ZDbcMySqlUtils;
 
 interface

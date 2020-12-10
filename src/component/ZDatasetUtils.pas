@@ -417,7 +417,7 @@ begin
         then Result := {$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftWideString{$ENDIF}
         else Result := ftMemo;
     {$IFDEF WITH_FTDATASETSUPPORT}
-    stDataSet:
+    stResultSet:
       Result := ftDataSet;
     {$ENDIF}
     stArray:
@@ -499,7 +499,7 @@ begin
     {$ENDIF}
     {$IFDEF WITH_FTDATASETSUPPORT}
     ftDataSet:
-      Result := stDataSet;
+      Result := stResultSet;
     {$ENDIF}
     ftArray:
       Result := stArray;

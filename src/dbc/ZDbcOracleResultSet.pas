@@ -128,7 +128,7 @@ type
     procedure GetDate(ColumnIndex: Integer; var Result: TZDate); overload;
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); overload;
     procedure GetTimestamp(ColumnIndex: Integer; var Result: TZTimeStamp); overload;
-    function GetDataSet(ColumnIndex: Integer): IZDataSet; override;
+    function GetResultSet(ColumnIndex: Integer): IZResultSet; override;
     function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
     {$IFDEF USE_SYNCOMMONS}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); reintroduce;
@@ -2158,7 +2158,7 @@ end;
   @return a <code>IZResultSet</code> object representing the SQL
     <code>IZResultSet</code> value in the specified column
 }
-function TZOracleAbstractResultSet_A.GetDataSet(ColumnIndex: Integer): IZDataSet;
+function TZOracleAbstractResultSet_A.GetResultSet(ColumnIndex: Integer): IZResultSet;
 var
   SQLVarHolder: PZSQLVar;
   type_Ref: POCIRef;
@@ -2187,7 +2187,7 @@ begin
       {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
         if SQLVarHolder._Obj.is_final_type = 1 then
           // here we've the final object lets's read it to test it
-          // later we only need the reference-pointers to create a new dataset
+          // later we only need the reference-pointers to create a new ResultSet
         else
         begin
            //http://cpansearch.perl.org/src/TIMB/DBD-Oracle-1.26/oci8.c
@@ -2463,12 +2463,12 @@ begin
     if CurrentVar.dty = SQLT_NTY  then begin
       Inc(SubObjectColumnCount);
       CurrentVar^.value_sz := 0;//SizeOf(PPOCIDescriptor);
-      CurrentVar^.ColType := stUnknown;//stDataSet;
+      CurrentVar^.ColType := stUnknown;//stResultSet;
       {
       CurrentVar^._Obj := DescribeObject(FplainDriver, FOracleConnection,
         paramdpp, FStmtHandle, 0);
       if CurrentVar^._Obj.col_typecode = OCI_TYPECODE_TABLE then
-        CurrentVar^.ColType := stDataSet
+        CurrentVar^.ColType := stResultSet
       else if CurrentVar^._Obj.col_typecode = OCI_TYPECODE_VARRAY then
         CurrentVar^.ColType := stArray
       else //more possible types

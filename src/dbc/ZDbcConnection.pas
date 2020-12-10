@@ -388,8 +388,9 @@ type
     ///  catalogs, it will silently ignore this request.</summary>
     /// <param>"value" new catalog name to be used.</param>
     procedure SetCatalog(const {%H-}Catalog: string); virtual;
+    /// <summary>Returns the Connection's current catalog name.</summary>
+    /// <returns>the current catalog name or an empty string.</returns>
     function GetCatalog: string; virtual;
-
     /// <summary>Attempts to change the transaction isolation level to the one
     ///  given. The constants defined in the interface <c>Connection</c> are the
     ///  possible transaction isolation levels. Note: This method cannot be
@@ -398,6 +399,8 @@ type
     ///  exception of TRANSACTION_NONE; some databases may not support other
     ///  values. See DatabaseInfo.SupportsTransactionIsolationLevel</param>
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); virtual;
+    /// <summary>Gets this Connection's current transaction isolation level.</summary>
+    /// <returns>the current TRANSACTION_* mode value.</returns>
     function GetTransactionIsolation: TZTransactIsolationLevel; virtual;
 
     function GetWarnings: EZSQLWarning; virtual;
@@ -1533,10 +1536,6 @@ procedure TZAbstractDbcConnection.SetCatalog(const Catalog: string);
 begin
 end;
 
-{**
-  Returns the Connection's current catalog name.
-  @return the current catalog name or null
-}
 function TZAbstractDbcConnection.GetCatalog: string;
 begin
   Result := '';
@@ -1548,10 +1547,6 @@ begin
   FTransactIsolationLevel := Level;
 end;
 
-{**
-  Gets this Connection's current transaction isolation level.
-  @return the current TRANSACTION_* mode value
-}
 function TZAbstractDbcConnection.GetTransactionIsolation: TZTransactIsolationLevel;
 begin
   Result := FTransactIsolationLevel;

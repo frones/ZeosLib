@@ -3581,7 +3581,7 @@ begin
           raise Exception.Create('Invalid Variant-Type for String-Array binding!');
     stUnicodeString: if not (VariantType in [vtUnicodeString, vtCharRec]) then
           raise Exception.Create('Invalid Variant-Type for String-Array binding!');
-    stArray, stDataSet:
+    stArray, stResultSet:
           raise EZUnsupportedException.Create(sUnsupportedOperation);
     {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
   end;

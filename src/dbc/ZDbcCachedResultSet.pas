@@ -261,7 +261,7 @@ type
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); overload;
     procedure GetTimestamp(ColumnIndex: Integer; var Result: TZTimeStamp); overload;
     function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
-    function GetDefaultExpression(ColumnIndex: Integer): string; override;
+    function GetDefaultExpression(ColumnIndex: Integer): string;
 
     //---------------------------------------------------------------------
     // Traversal/Positioning
@@ -2534,6 +2534,7 @@ begin
     inherited ResetCursor;
   end;
 end;
+
 {**
   Retrieves the  number, types and properties of
   this <code>ResultSet</code> object's columns.

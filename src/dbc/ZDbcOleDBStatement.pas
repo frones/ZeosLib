@@ -2118,7 +2118,7 @@ begin
       stAsciiStream,
       stUnicodeStream,
       stBinaryStream: InitLongBind(ParameterIndex, SQLType2OleDBTypeEnum[SQLType]);
-      stUnknown, stArray, stDataSet: raise CreateOleDBConvertErrror(ParameterIndex, DBTYPE_WSTR, SQLType);
+      stUnknown, stArray, stResultSet: raise CreateOleDBConvertErrror(ParameterIndex, DBTYPE_WSTR, SQLType);
       else InitFixedBind(ParameterIndex, ZSQLTypeToBuffSize[SQLType], SQLType2OleDBTypeEnum[SQLType]);
     end;
   end;
