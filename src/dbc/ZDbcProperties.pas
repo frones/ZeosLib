@@ -260,8 +260,9 @@ const
 {$IFEND}
 
 {$IF DEFINED(ENABLE_ADO) OR DEFINED(ENABLE_OLEDB)}
-  // Type: STR
-  // the ole provider
+  /// <summary>Defines the driver Provider as a String. This property is used
+  ///  for the OleDB connection only. Example:
+  ///  Properties.Values[ConnProps_Provider]=SQLNCLI11.1</summary>
   ConnProps_Provider = 'Provider';
 {$IFEND}
 
@@ -819,9 +820,7 @@ const
   ConnProps_ASTART = 'ASTART';
   ConnProps_AutoStop = 'AutoStop';
   ConnProps_ASTOP = 'ASTOP';
-  {$IFNDEF ENABLE_ODBC}
   ConnProps_CharSet = 'CharSet';
-  {$ENDIF}
   ConnProps_CS = 'CS';
   ConnProps_CommBufferSize = 'CommBufferSize';
   ConnProps_CBSIZE = 'CBSIZE';
@@ -893,7 +892,6 @@ const
   ConnProps_RetryConnectionTimeout = 'RetryConnectionTimeout';
   ConnProps_RetryConnTO = 'RetryConnTO';
   ConnProps_ServerName = 'ServerName';
-  ConnProps_Server = 'Server';
   ConnProps_StartLine = 'StartLine';
   ConnProps_START = 'START';
   ConnProps_Unconditional = 'Unconditional';
@@ -920,13 +918,21 @@ const
 {$IFDEF ENABLE_ODBC}
   // Type: STR, like CP_UTF8
   // Codepage to use (same as ConnProps_CodePage)
-  ConnProps_Charset = 'characterset';
+  ConnProps_Characterset = 'characterset';
   // Type: SQL_DRIVER_COMPLETE | SQL_DRIVER_PROMPT | SQL_DRIVER_COMPLETE_REQUIRED
   // Refer to ODBC manual for details
   ConnProps_DriverCompletion = 'DriverCompletion';
   // Type: BOOLEAN
   // If set, more info about columns will be retrieved
   DSProps_EnhancedColumnInfo = 'enhanced_column_info';
+  /// <summary>Defines the driver as a String. This property is used
+  ///  for the ODBC connection only. Example:
+  ///  Properties.Values[ConnProps_DRIVER]={SQL Server Native Client 11.0}</summary>
+  ConnProps_DRIVER = 'DRIVER';
+  /// <summary>Defines the server as a String. This property is used
+  ///  for the ODBC connection only. Example:
+  ///  Properties.Values[ConnProps_Server]=(localdb)\ZeosLib</summary>
+  ConnProps_Server = 'Server';
 {$ENDIF}
 
 {$IFDEF ENABLE_POOLED}

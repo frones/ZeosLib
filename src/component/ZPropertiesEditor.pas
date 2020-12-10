@@ -3980,12 +3980,42 @@ const
   ConnProps_RetryConnectionTimeout = 'RetryConnectionTimeout';
   ConnProps_RetryConnTO = 'RetryConnTO';
   ConnProps_ServerName = 'ServerName';
-  ConnProps_Server = 'Server';
   ConnProps_StartLine = 'StartLine';
   ConnProps_START = 'START';
   ConnProps_Unconditional = 'Unconditional';
   ConnProps_UNC = 'UNC';
     *)
+{$ENDIF}
+
+{$IFDEF ENABLE_ODBC}
+  cODBCProtocols: array[0..1] of String = ('odbc_a','odbc_w');
+  ZProp_Server : TZProperty = (
+    Name: ConnProps_Server;
+    Purpose: 'Specifies the name of a running database server to which you want to connect.';
+    ValueType: pvtNumber; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @cODBCProtocols);
+  );
+  ZProp_CharacterSet : TZProperty = (
+    Name: ConnProps_CharacterSet;
+    Purpose: 'Specifies the character set to be used on this connection. '+
+      'Syntax: characterset={ NONE | character-set }'+LineEnding+
+      'NONE   Specifying CharSet=NONE requests that the connection use the '+
+      'database CHAR character set.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: ConnProps_CS+','+ConnProps_CodePage;
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @cODBCProtocols);
+  );
+  ZProp_DRIVER : TZProperty = (
+    Name: ConnProps_DRIVER;
+    Purpose: 'Specifies the ODBC driver to be used on this connection.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @cODBCProtocols);
+  );
 {$ENDIF}
 
 initialization
@@ -4131,10 +4161,8 @@ initialization
     @ZProp_Host, @ZProp_Idle, @ZProp_Integrated, @ZProp_INT,@ZProp_Kerberos,
     @ZProp_KRB, @ZProp_LANG, @ZProp_LazyClose, @ZProp_LCLOSE]);
 {$ENDIF}
-
-
-{$IFDEF LCL}
-//{.$i ZPropertiesEditor.lrs}
+{$IFDEF ENABLE_ODBC}
+  RegisterZProperties([@ZProp_Server, @ZProp_CharacterSet, @ZProp_DRIVER]);
 {$ENDIF}
 
 end.
