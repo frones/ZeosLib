@@ -154,7 +154,7 @@ type
 implementation
 
 uses Classes, ZSysUtils, ZDbcIntfs, ZDbcPostgreSQL, ZDatasetUtils,
-  ZCompatibility, ZVariant, ZEncoding;
+  ZCompatibility, ZVariant, ZEncoding, Variants;
 
 
 { TZTestStoredProcedure }
@@ -207,9 +207,9 @@ begin
 
   CheckEquals(2, StoredProc.Params.Count);
   CheckEquals('P1', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(ptInput, StoredProc.Params[0].ParamType);
   CheckEquals('R1', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptOutput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(ptOutput, StoredProc.Params[1].ParamType);
   StoredProc.ParamByName('P1').AsInteger := 12345;
   StoredProc.ExecProc;
   CheckEquals(12346, StoredProc.ParamByName('R1').AsInteger);
@@ -227,15 +227,15 @@ begin
   StoredProc.StoredProcName := 'ABTEST';
   CheckEquals(5, StoredProc.Params.Count);
   CheckEquals('P1', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(ptInput, StoredProc.Params[0].ParamType);
   CheckEquals('P2', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(ptInput, StoredProc.Params[1].ParamType);
   CheckEquals('P3', StoredProc.Params[2].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
+  CheckEquals(ptInput, StoredProc.Params[2].ParamType);
   CheckEquals('P4', StoredProc.Params[3].Name);
-  CheckEquals(ord(ptOutput), ord(StoredProc.Params[3].ParamType));
+  CheckEquals(ptOutput, StoredProc.Params[3].ParamType);
   CheckEquals('P5', StoredProc.Params[4].Name);
-  CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
+  CheckEquals(ptOutput, StoredProc.Params[4].ParamType);
 
   StoredProc.ParamByName('P1').AsInteger := 50;
   StoredProc.ParamByName('P2').AsInteger := 100;
@@ -255,6 +255,7 @@ begin
     StoredProc.Params[2].AsString:= S;
     StoredProc.ExecProc;
     CheckEquals(S+S, StoredProc.ParamByName('P5').AsString);
+    Check(VarIsStr(StoredProc.ParamByName('P5').Value));
     CheckEquals(I*10+P2, StoredProc.ParamByName('P4').AsInteger);
     S := S+'a';
     P2 := 100 - I;
@@ -313,9 +314,9 @@ begin
   CheckEquals(3, StoredProc.Params.Count);
   CheckEquals('@RETURN_VALUE', StoredProc.Params[0].Name);
   CheckEquals('@p1', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(ptInput, StoredProc.Params[1].ParamType);
   CheckEquals('@r1', StoredProc.Params[2].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(ptResult, StoredProc.Params[0].ParamType);
 
   StoredProc.Params[1].AsInteger := 12345;
   StoredProc.ExecProc;
@@ -343,15 +344,15 @@ begin
   StoredProc.StoredProcName := '"ABTEST"';
   CheckEquals(5, StoredProc.Params.Count);
   CheckEquals('p1', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(ptInput, StoredProc.Params[0].ParamType);
   CheckEquals('p2', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(ptInput, StoredProc.Params[1].ParamType);
   CheckEquals('p3', StoredProc.Params[2].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
+  CheckEquals(ptInput, StoredProc.Params[2].ParamType);
   CheckEquals('p4', StoredProc.Params[3].Name);
-  CheckEquals(ord(ptOutput), ord(StoredProc.Params[3].ParamType));
+  CheckEquals(ptOutput,StoredProc.Params[3].ParamType);
   CheckEquals('p5', StoredProc.Params[4].Name);
-  CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
+  CheckEquals(ptOutput,StoredProc.Params[4].ParamType);
 
   StoredProc.ParamByName('p1').AsInteger := 50;
   StoredProc.ParamByName('p2').AsInteger := 100;
@@ -382,13 +383,13 @@ begin
   StoredProc.StoredProcName := 'proc_composite';
   CheckEquals(4, StoredProc.Params.Count);
   CheckEquals('p1', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(ptInput,StoredProc.Params[0].ParamType);
   CheckEquals('p2', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(ptInput,StoredProc.Params[1].ParamType);
   CheckEquals('f1', StoredProc.Params[2].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[2].ParamType));
+  CheckEquals(ptResult,StoredProc.Params[2].ParamType);
   CheckEquals('f2', StoredProc.Params[3].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[3].ParamType));
+  CheckEquals(ptResult,StoredProc.Params[3].ParamType);
 
   StoredProc.ParamByName('p1').AsInteger := 50;
   StoredProc.ParamByName('p2').AsInteger := 100;
@@ -412,11 +413,11 @@ begin
   StoredProc.StoredProcName := 'proc_mixedorder';
   CheckEquals(3, StoredProc.Params.Count);
   CheckEquals('p1', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptOutput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(ptOutput,StoredProc.Params[0].ParamType);
   CheckEquals('p2', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(ptInputOutput,StoredProc.Params[1].ParamType);
   CheckEquals('p3', StoredProc.Params[2].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
+  CheckEquals(ptInput,StoredProc.Params[2].ParamType);
 
   StoredProc.ParamByName('p2').AsInteger := 50;
   StoredProc.ParamByName('p3').AsInteger := 100;
@@ -440,11 +441,11 @@ begin
   StoredProc.StoredProcName := 'proc_nonames';
   CheckEquals(3, StoredProc.Params.Count);
   CheckEquals('$1', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(ptInput,StoredProc.Params[0].ParamType);
   CheckEquals('$2', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(ptInput,StoredProc.Params[1].ParamType);
   CheckEquals('$3', StoredProc.Params[2].Name);
-  CheckEquals(ord(ptOutput), ord(StoredProc.Params[2].ParamType));
+  CheckEquals(ptOutput,StoredProc.Params[2].ParamType);
 
   StoredProc.ParamByName('$1').AsInteger := 50;
   StoredProc.ParamByName('$2').AsInteger := 100;
@@ -465,11 +466,11 @@ begin
   StoredProc.StoredProcName := 'proc_noout';
   CheckEquals(3, StoredProc.Params.Count);
   CheckEquals('p1', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(ptInput,StoredProc.Params[0].ParamType);
   CheckEquals('', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(ptInput,StoredProc.Params[1].ParamType);
   CheckEquals('returnValue', StoredProc.Params[2].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[2].ParamType));
+  CheckEquals(ptResult,StoredProc.Params[2].ParamType);
 
   StoredProc.ParamByName('p1').AsInteger := 50;
   StoredProc.Params[1].AsInteger := 100;
@@ -490,11 +491,11 @@ begin
   StoredProc.StoredProcName := 'proc_onename';
   CheckEquals(3, StoredProc.Params.Count);
   CheckEquals('p1', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(ptInput,StoredProc.Params[0].ParamType);
   CheckEquals('', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(ptInput,StoredProc.Params[1].ParamType);
   CheckEquals('', StoredProc.Params[2].Name);
-  CheckEquals(ord(ptOutput), ord(StoredProc.Params[2].ParamType));
+  CheckEquals(ptOutput,StoredProc.Params[2].ParamType);
 
   StoredProc.ParamByName('p1').AsInteger := 50;
   StoredProc.Params[1].AsInteger := 100;
@@ -520,15 +521,15 @@ begin
   StoredProc.StoredProcName := '"PROC_ABTEST"';
   CheckEquals(5, StoredProc.Params.Count);
   CheckEquals('p1', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(ptInput,StoredProc.Params[0].ParamType);
   CheckEquals('p2', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(ptInput,StoredProc.Params[1].ParamType);
   CheckEquals('p3', StoredProc.Params[2].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
+  CheckEquals(ptInput,StoredProc.Params[2].ParamType);
   CheckEquals('p4', StoredProc.Params[3].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[3].ParamType));
+  CheckEquals(ptInputOutput,StoredProc.Params[3].ParamType);
   CheckEquals('p5', StoredProc.Params[4].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[4].ParamType));
+  CheckEquals(ptInputOutput,StoredProc.Params[4].ParamType);
 
   StoredProc.ParamByName('p1').AsInteger := 50;
   StoredProc.ParamByName('p2').AsInteger := 100;
@@ -559,7 +560,7 @@ begin
   StoredProc.StoredProcName := 'proc_set';
   CheckEquals(1, StoredProc.Params.Count);
   CheckEquals('returnValue', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(ptResult,StoredProc.Params[0].ParamType);
 
   StoredProc.ExecProc;
   CheckEquals('Volvo', StoredProc.ParamByName('returnValue').AsString);
@@ -587,19 +588,19 @@ begin
   StoredProc.StoredProcName := 'ABTEST';
   CheckEquals(5, StoredProc.Params.Count);
   CheckEquals('P1', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
+  CheckEquals(ptInput, StoredProc.Params[0].ParamType);
+  CheckEquals(ftInteger, StoredProc.Params[0].DataType);
   CheckEquals('P2', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
+  CheckEquals(ptInput, StoredProc.Params[1].ParamType);
+  CheckEquals(ftInteger, StoredProc.Params[1].DataType);
   CheckEquals('P3', StoredProc.Params[2].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
+  CheckEquals(ptInput, StoredProc.Params[2].ParamType);
   CheckStringParamType(StoredProc.Params[2], Connection.ControlsCodePage);
   CheckEquals('P4', StoredProc.Params[3].Name);
-  CheckEquals(ord(ptOutput), ord(StoredProc.Params[3].ParamType));
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
+  CheckEquals(ptOutput, StoredProc.Params[3].ParamType);
+  CheckEquals(ftInteger, StoredProc.Params[3].DataType);
   CheckEquals('P5', StoredProc.Params[4].Name);
-  CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
+  CheckEquals(ptOutput, StoredProc.Params[4].ParamType);
   CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
 
   StoredProc.ParamByName('P1').AsInteger := 50;
@@ -610,14 +611,18 @@ begin
   CheckEquals('aa', StoredProc.ParamByName('P5').AsString);
   CheckEquals(5, StoredProc.Params.Count);
 
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
-  {$IFDEF DELPHI14_UP}
-  CheckEquals(ord(ftWideString), ord(StoredProc.Params[2].DataType));
+  CheckEquals(ftInteger, StoredProc.Params[0].DataType);
+  CheckEquals(ftInteger, StoredProc.Params[1].DataType);
+  {$IFNDEF DISABLE_ZPARAM}
+  CheckStringParamType(StoredProc.Params[2], Connection.ControlsCodePage);
   {$ELSE}
-  CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));
+    {$IFDEF DELPHI14_UP}
+  CheckEquals(ftWideString,StoredProc.Params[2].DataType);
+    {$ELSE}
+  CheckEquals(ftString,StoredProc.Params[2].DataType);
+    {$ENDIF}
   {$ENDIF}
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
+  CheckEquals(ftInteger,StoredProc.Params[3].DataType);
   CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
 
   S := 'a';
@@ -644,7 +649,7 @@ begin
   StoredProc.Open;
 
   CheckEquals(2, StoredProc.Fields.Count);
-  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[0].DataType));
+  CheckEquals(ftInteger,StoredProc.Fields[0].DataType);
   CheckStringFieldType(StoredProc.Fields[1], Connection.ControlsCodePage);
 
   CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
@@ -673,117 +678,117 @@ begin
   CheckEquals(28, StoredProc.Params.Count);
 
   CheckEquals('P1', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[0].ParamType));
-  CheckEquals(ord({$IFDEF WITH_FTSHORTINT}ftShortInt{$ELSE}ftSmallInt{$ENDIF}), ord(StoredProc.Params[0].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[0].ParamType);
+  CheckEquals({$IFDEF WITH_FTSHORTINT}ftShortInt{$ELSE}ftSmallInt{$ENDIF},StoredProc.Params[0].DataType);
 
   CheckEquals('P2', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[1].ParamType));
-  CheckEquals(ord({$IFDEF WITH_FTSHORTINT}ftShortInt{$ELSE}ftSmallInt{$ENDIF}), ord(StoredProc.Params[1].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[1].ParamType);
+  CheckEquals({$IFDEF WITH_FTSHORTINT}ftShortInt{$ELSE}ftSmallInt{$ENDIF},StoredProc.Params[1].DataType);
 
   CheckEquals('P3', StoredProc.Params[2].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[2].ParamType));
-  CheckEquals(ord(ftSmallInt), ord(StoredProc.Params[2].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[2].ParamType);
+  CheckEquals(ftSmallInt,StoredProc.Params[2].DataType);
 
   CheckEquals('P4', StoredProc.Params[3].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[3].ParamType));
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[3].ParamType);
+  CheckEquals(ftInteger,StoredProc.Params[3].DataType);
 
   CheckEquals('P5', StoredProc.Params[4].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[4].ParamType));
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[4].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[4].ParamType);
+  CheckEquals(ftInteger,StoredProc.Params[4].DataType);
 
   CheckEquals('P6', StoredProc.Params[5].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[5].ParamType));
-  CheckEquals(ord(ftLargeInt), ord(StoredProc.Params[5].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[5].ParamType);
+  CheckEquals(ftLargeInt,StoredProc.Params[5].DataType);
 
   CheckEquals('P7', StoredProc.Params[6].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[6].ParamType));
-  CheckEquals(ord(ftFloat), ord(StoredProc.Params[6].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[6].ParamType);
+  CheckEquals(ftFloat,StoredProc.Params[6].DataType);
 
   CheckEquals('P8', StoredProc.Params[7].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[7].ParamType));
-  CheckEquals(ord(ftFloat), ord(StoredProc.Params[7].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[7].ParamType);
+  CheckEquals(ftFloat,StoredProc.Params[7].DataType);
 
   CheckEquals('P9', StoredProc.Params[8].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[8].ParamType));
-  CheckEquals(ord(ftFmtBCD), ord(StoredProc.Params[8].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[8].ParamType);
+  CheckEquals(ftFmtBCD,StoredProc.Params[8].DataType);
 
   CheckEquals('P10', StoredProc.Params[9].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[9].ParamType));
-  CheckEquals(ord(ftLargeInt), ord(StoredProc.Params[9].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[9].ParamType);
+  CheckEquals(ftLargeInt,StoredProc.Params[9].DataType);
 
   CheckEquals('P11', StoredProc.Params[10].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[10].ParamType));
+  CheckEquals(ptInputOutput,StoredProc.Params[10].ParamType);
   CheckStringParamType(StoredProc.Params[10], Connection.ControlsCodePage);
 
   CheckEquals('P12', StoredProc.Params[11].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[11].ParamType));
-  CheckEquals(ord(ftDate), ord(StoredProc.Params[11].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[11].ParamType);
+  CheckEquals(ftDate,StoredProc.Params[11].DataType);
 
   CheckEquals('P13', StoredProc.Params[12].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[12].ParamType));
-  CheckEquals(ord(ftTime), ord(StoredProc.Params[12].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[12].ParamType);
+  CheckEquals(ftTime,StoredProc.Params[12].DataType);
 
   CheckEquals('P14', StoredProc.Params[13].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[13].ParamType));
-  CheckEquals(ord(ftWord), ord(StoredProc.Params[13].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[13].ParamType);
+  CheckEquals(ftWord,StoredProc.Params[13].DataType);
 
   CheckEquals('P15', StoredProc.Params[14].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[14].ParamType));
-  CheckEquals(ord(ftDateTime), ord(StoredProc.Params[14].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[14].ParamType);
+  CheckEquals(ftDateTime,StoredProc.Params[14].DataType);
 
   CheckEquals('P16', StoredProc.Params[15].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[15].ParamType));
-  CheckEquals(ord(ftDateTime), ord(StoredProc.Params[15].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[15].ParamType);
+  CheckEquals(ftDateTime,StoredProc.Params[15].DataType);
 
   CheckEquals('P17', StoredProc.Params[16].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[16].ParamType));
-  CheckEquals(ord(ftVarBytes), ord(StoredProc.Params[16].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[16].ParamType);
+  CheckEquals(ftVarBytes,StoredProc.Params[16].DataType);
 
   CheckEquals('P18', StoredProc.Params[17].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[17].ParamType));
-  CheckEquals(ord(ftBlob), ord(StoredProc.Params[17].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[17].ParamType);
+  CheckEquals(ftBlob,StoredProc.Params[17].DataType);
 
   CheckEquals('P19', StoredProc.Params[18].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[18].ParamType));
-  CheckEquals(ord(ftBlob), ord(StoredProc.Params[18].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[18].ParamType);
+  CheckEquals(ftBlob,StoredProc.Params[18].DataType);
 
   CheckEquals('P20', StoredProc.Params[19].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[19].ParamType));
-  CheckEquals(ord(ftBlob), ord(StoredProc.Params[19].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[19].ParamType);
+  CheckEquals(ftBlob,StoredProc.Params[19].DataType);
 
   CheckEquals('P21', StoredProc.Params[20].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[20].ParamType));
+  CheckEquals(ptInputOutput,StoredProc.Params[20].ParamType);
   CheckStringParamType(StoredProc.Params[10], Connection.ControlsCodePage);
 
 
   CheckEquals('P22', StoredProc.Params[21].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[21].ParamType));
+  CheckEquals(ptInputOutput,StoredProc.Params[21].ParamType);
   CheckMemoParamType(StoredProc.Params[21], Connection.ControlsCodePage);
 
   CheckEquals('P23', StoredProc.Params[22].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[22].ParamType));
+  CheckEquals(ptInputOutput,StoredProc.Params[22].ParamType);
   CheckMemoParamType(StoredProc.Params[22], Connection.ControlsCodePage);
 
   CheckEquals('P24', StoredProc.Params[23].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[23].ParamType));
+  CheckEquals(ptInputOutput,StoredProc.Params[23].ParamType);
   CheckMemoParamType(StoredProc.Params[23], Connection.ControlsCodePage);
 
   CheckEquals('P25', StoredProc.Params[24].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[24].ParamType));
-  CheckEquals(ord(ftVarBytes), ord(StoredProc.Params[24].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[24].ParamType);
+  CheckEquals(ftVarBytes,StoredProc.Params[24].DataType);
 
   CheckEquals('P26', StoredProc.Params[25].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[25].ParamType));
+  CheckEquals(ptInputOutput,StoredProc.Params[25].ParamType);
   CheckStringParamType(StoredProc.Params[25], Connection.ControlsCodePage);
 
   CheckEquals('P27', StoredProc.Params[26].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[26].ParamType));
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[26].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[26].ParamType);
+  CheckEquals(ftInteger,StoredProc.Params[26].DataType);
 
   CheckEquals('P28', StoredProc.Params[27].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[27].ParamType));
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[27].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[27].ParamType);
+  CheckEquals(ftInteger,StoredProc.Params[27].DataType);
 
   StoredProc.Params[0].AsSmallInt := 10; //TINYINT(4);
   StoredProc.Params[1].AsSmallInt := 20; //TINYINT(1);
@@ -817,43 +822,43 @@ begin
 
   CheckEquals('P1', StoredProc.Fields[0].DisplayName);
   CheckEquals(10, StoredProc.Fields[0].AsInteger);
-  CheckEquals(Ord({$IFDEF WITH_FTSHORTINT}ftShortInt{$ELSE}ftSmallInt{$ENDIF}), ord(StoredProc.Fields[0].DataType));
+  CheckEquals({$IFDEF WITH_FTSHORTINT}ftShortInt{$ELSE}ftSmallInt{$ENDIF},StoredProc.Fields[0].DataType);
 
   CheckEquals('P2', StoredProc.Fields[1].DisplayName);
   CheckEquals(20, StoredProc.Fields[1].AsInteger);
-  CheckEquals(Ord({$IFDEF WITH_FTSHORTINT}ftShortInt{$ELSE}ftSmallInt{$ENDIF}), ord(StoredProc.Fields[1].DataType));
+  CheckEquals({$IFDEF WITH_FTSHORTINT}ftShortInt{$ELSE}ftSmallInt{$ENDIF},StoredProc.Fields[1].DataType);
 
   CheckEquals('P3', StoredProc.Fields[2].DisplayName);
   CheckEquals(30, StoredProc.Fields[2].AsInteger);
-  CheckEquals(ord(ftSmallint), ord(StoredProc.Fields[2].DataType));
+  CheckEquals(ftSmallint,StoredProc.Fields[2].DataType);
 
   CheckEquals('P4', StoredProc.Fields[3].DisplayName);
   CheckEquals(1000, StoredProc.Fields[3].AsInteger);
-  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[3].DataType));
+  CheckEquals(ftInteger,StoredProc.Fields[3].DataType);
 
   CheckEquals('P5', StoredProc.Fields[4].DisplayName);
   CheckEquals(2000, StoredProc.Fields[4].AsInteger);
-  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[4].DataType));
+  CheckEquals(ftInteger,StoredProc.Fields[4].DataType);
 
   CheckEquals('P6', StoredProc.Fields[5].DisplayName);
   CheckEquals(30000, StoredProc.Fields[5].AsInteger);
-  CheckEquals(ord(ftLargeInt), ord(StoredProc.Fields[5].DataType));
+  CheckEquals(ftLargeInt,StoredProc.Fields[5].DataType);
 
   CheckEquals('P7', StoredProc.Fields[6].DisplayName);
   CheckEquals(True, Abs(SQLTime - StoredProc.Fields[6].AsFloat) < FLOAT_COMPARE_PRECISION);
-  CheckEquals(ord(ftFloat), ord(StoredProc.Fields[6].DataType));
+  CheckEquals(ftFloat,StoredProc.Fields[6].DataType);
 
   CheckEquals('P8', StoredProc.Fields[7].DisplayName);
 //  CheckEquals(True, Abs(SQLTime - StoredProc.Fields[7].AsFloat) < FLOAT_COMPARE_PRECISION_SINGLE);
-  CheckEquals(ord(ftFloat), ord(StoredProc.Fields[7].DataType));
+  CheckEquals(ftFloat,StoredProc.Fields[7].DataType);
 
   CheckEquals('P9', StoredProc.Fields[8].DisplayName);
   //CheckEquals(SQLTime, StoredProc.Fields[8].AsFloat);
-  CheckEquals(ord(ftFmtBCD), ord(StoredProc.Fields[8].DataType));
+  CheckEquals(ftFmtBCD,StoredProc.Fields[8].DataType);
 
   CheckEquals('P10', StoredProc.Fields[9].DisplayName);
   CheckEquals(40000, StoredProc.Fields[9].AsInteger);
-  CheckEquals(Ord(ftLargeInt), ord(StoredProc.Fields[9].DataType));
+  CheckEquals(ftLargeInt,StoredProc.Fields[9].DataType);
 
   CheckEquals('P11', StoredProc.Fields[10].DisplayName);
   {$IFDEF UNICODE}
@@ -867,35 +872,35 @@ begin
 
   CheckEquals('P12', StoredProc.Fields[11].DisplayName);
   CheckEquals(Int(SQLTime), StoredProc.Fields[11].AsDateTime);
-  CheckEquals(ord(ftDate), ord(StoredProc.Fields[11].DataType));
+  CheckEquals(ftDate,StoredProc.Fields[11].DataType);
 
   CheckEquals('P13', StoredProc.Fields[12].DisplayName);
   CheckEquals(StrToTime(TimeToStr(SQLTime)), StoredProc.Fields[12].AsDateTime);
-  CheckEquals(ord(ftTime), ord(StoredProc.Fields[12].DataType));
+  CheckEquals(ftTime,StoredProc.Fields[12].DataType);
 
   CheckEquals('P14', StoredProc.Fields[13].DisplayName);
   CheckEquals(2040, StoredProc.Fields[13].AsInteger);
-  CheckEquals(ord(ftWord), ord(StoredProc.Fields[13].DataType));
+  CheckEquals(ftWord,StoredProc.Fields[13].DataType);
 
   CheckEquals('P15', StoredProc.Fields[14].DisplayName);
   CheckEquals(DateTimeToStr(SQLTime), DateTimeToStr(StoredProc.Fields[14].AsDateTime));
-  CheckEquals(ord(ftDateTime), ord(StoredProc.Fields[14].DataType));
+  CheckEquals(ftDateTime,StoredProc.Fields[14].DataType);
 
   CheckEquals('P16', StoredProc.Fields[15].DisplayName);
   CheckEquals(DateTimeToStr(SQLTime), DateTimeToStr(StoredProc.Fields[15].AsDateTime));
-  CheckEquals(ord(ftDateTime), ord(StoredProc.Fields[15].DataType));
+  CheckEquals(ftDateTime,StoredProc.Fields[15].DataType);
 
   CheckEquals('P17', StoredProc.Fields[16].DisplayName);
   CheckEquals(ftBlob, StoredProc.Fields[16].DataType); //mysql returns FIELD_TYPE_BLOB which is 64kb by default -> fall back to ftBlob
 
   CheckEquals('P18', StoredProc.Fields[17].DisplayName);
-  CheckEquals(ord(ftBlob), ord(StoredProc.Fields[17].DataType));
+  CheckEquals(ftBlob,StoredProc.Fields[17].DataType);
 
   CheckEquals('P19', StoredProc.Fields[18].DisplayName);
-  CheckEquals(ord(ftBlob), ord(StoredProc.Fields[18].DataType));
+  CheckEquals(ftBlob,StoredProc.Fields[18].DataType);
 
   CheckEquals('P20', StoredProc.Fields[19].DisplayName);
-  CheckEquals(ord(ftBlob), ord(StoredProc.Fields[19].DataType));
+  CheckEquals(ftBlob,StoredProc.Fields[19].DataType);
 
   CheckEquals('P21', StoredProc.Fields[20].DisplayName);
 
@@ -922,7 +927,7 @@ begin
     {$ELSE}
     StrToBytes(StoredProc.Fields[24].AsString)
     {$ENDIF});
-  CheckEquals(ord(ftVarBytes), ord(StoredProc.Fields[24].DataType));
+  CheckEquals(ftVarBytes,StoredProc.Fields[24].DataType);
 
   CheckEquals('P26', StoredProc.Fields[25].DisplayName);
   CheckEquals('a', StoredProc.Fields[25].AsString);
@@ -930,11 +935,11 @@ begin
 
   CheckEquals('P27', StoredProc.Fields[26].DisplayName);
   CheckEquals(50000, StoredProc.Fields[26].AsInteger);
-  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[26].DataType));
+  CheckEquals(ftInteger,StoredProc.Fields[26].DataType);
 
   CheckEquals('P28', StoredProc.Fields[27].DisplayName);
   CheckEquals(60000, StoredProc.Fields[27].AsInteger);
-  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[27].DataType));
+  CheckEquals(ftInteger,StoredProc.Fields[27].DataType);
 end;
 
 procedure TZTestMySQLStoredProcedure.Test_FuncReturnInteger;
@@ -943,19 +948,19 @@ begin
   CheckEquals(2, StoredProc.Params.Count);
 
   CheckEquals('ReturnValue', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[0].DataType));
+  CheckEquals(ptResult,StoredProc.Params[0].ParamType);
+  CheckEquals(ftInteger,StoredProc.Params[0].DataType);
 
   CheckEquals('p_in', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[1].DataType));
+  CheckEquals(ptInput,StoredProc.Params[1].ParamType);
+  CheckEquals(ftInteger,StoredProc.Params[1].DataType);
 
   StoredProc.Params[1].AsInteger := 100;
   StoredProc.ExecProc;
 
   CheckEquals('ReturnValue', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[0].DataType));
+  CheckEquals(ptResult,StoredProc.Params[0].ParamType);
+  CheckEquals(ftInteger,StoredProc.Params[0].DataType);
   CheckEquals(110, StoredProc.Params[0].AsInteger);
 
   StoredProc.Params[1].AsInteger := 200;
@@ -963,7 +968,7 @@ begin
   CheckEquals(1, StoredProc.Fields.Count);
 
   CheckEquals('ReturnValue', StoredProc.Fields[0].DisplayName);
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
+  CheckEquals(ftInteger,StoredProc.Fields[0].DataType);
   CheckEquals(210, StoredProc.Fields[0].AsInteger);
 end;
 
@@ -973,11 +978,11 @@ begin
   CheckEquals(2, StoredProc.Params.Count);
 
   CheckEquals('p_id', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[0].DataType));
+  CheckEquals(ptInput,StoredProc.Params[0].ParamType);
+  CheckEquals(ftInteger,StoredProc.Params[0].DataType);
 
   CheckEquals('p_name', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(ptInput,StoredProc.Params[1].ParamType);
   CheckStringParamType(StoredProc.Params[1], Connection.ControlsCodePage);
   StoredProc.Params[0].AsInteger := 2;
   StoredProc.Params[1].AsString := 'Yan Pater';
@@ -994,16 +999,16 @@ begin
   CheckEquals(3, StoredProc.Params.Count);
 
   CheckEquals('p_in', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[0].DataType));
+  CheckEquals(ptInput,StoredProc.Params[0].ParamType);
+  CheckEquals(ftInteger,StoredProc.Params[0].DataType);
 
   CheckEquals('p_out', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptOutput), ord(StoredProc.Params[1].ParamType));
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[1].DataType));
+  CheckEquals(ptOutput,StoredProc.Params[1].ParamType);
+  CheckEquals(ftInteger,StoredProc.Params[1].DataType);
 
   CheckEquals('p_inout', StoredProc.Params[2].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[2].ParamType));
-  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[2].DataType));
+  CheckEquals(ptInputOutput,StoredProc.Params[2].ParamType);
+  CheckEquals(ftInteger,StoredProc.Params[2].DataType);
 
   StoredProc.Params[0].AsInteger := 100;
   StoredProc.Params[1].AsInteger := 200;
@@ -1021,15 +1026,15 @@ begin
     CheckEquals(3, StoredProc.Fields.Count);
 
     CheckEquals('p_in', StoredProc.Fields[0].DisplayName);
-    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
+    CheckEquals(ftInteger,StoredProc.Fields[0].DataType);
     CheckEquals(100, StoredProc.Fields[0].AsInteger);
 
     CheckEquals('p_inout', StoredProc.Fields[1].DisplayName);
-    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[1].DataType));
+    CheckEquals(ftInteger,StoredProc.Fields[1].DataType);
     CheckEquals(300, StoredProc.Fields[1].AsInteger);
 
     CheckEquals('p_out', StoredProc.Fields[2].DisplayName);
-    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[2].DataType));
+    CheckEquals(ftInteger,StoredProc.Fields[2].DataType);
     CheckEquals(0, StoredProc.Fields[2].AsInteger);
 
     {check second resultset}
@@ -1038,15 +1043,15 @@ begin
     CheckEquals(3, StoredProc.Fields.Count);
 
     CheckEquals('p_inout', StoredProc.Fields[0].DisplayName);
-    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
+    CheckEquals(ftInteger,StoredProc.Fields[0].DataType);
     CheckEquals(300, StoredProc.Fields[0].AsInteger);
 
     CheckEquals('p_in', StoredProc.Fields[1].DisplayName);
-    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[1].DataType));
+    CheckEquals(ftInteger,StoredProc.Fields[1].DataType);
     CheckEquals(100, StoredProc.Fields[1].AsInteger);
 
     CheckEquals('p_out', StoredProc.Fields[2].DisplayName);
-    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[2].DataType));
+    CheckEquals(ftInteger,StoredProc.Fields[2].DataType);
     CheckEquals(200, StoredProc.Fields[2].AsInteger);
 
     {check third resultset}
@@ -1055,11 +1060,11 @@ begin
     CheckEquals(2, StoredProc.Fields.Count);
 
     CheckEquals('p_in', StoredProc.Fields[0].DisplayName);
-    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
+    CheckEquals(ftInteger,StoredProc.Fields[0].DataType);
     CheckEquals(100, StoredProc.Fields[0].AsInteger);
 
     CheckEquals('p_inout', StoredProc.Fields[1].DisplayName);
-    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[1].DataType));
+    CheckEquals(ftInteger,StoredProc.Fields[1].DataType);
     CheckEquals(300, StoredProc.Fields[1].AsInteger);
 
     {check fourth resultset}
@@ -1069,7 +1074,7 @@ begin
     CheckEquals('10', StoredProc.Fields[0].DisplayName);
     // behavior inconsistency between mysql and mariadb:
     // mysql maps const ordinals to Largeint, mariadb to integer(if in range)
-  //  CheckEquals(Ord(ftLargeInt), Ord(StoredProc.Fields[0].DataType));
+  //  CheckEquals(ftLargeInt,StoredProc.Fields[0].DataType);
     CheckEquals(10, StoredProc.Fields[0].AsInteger);
 
     CheckTrue(StoredProc.EOR, 'End of results');
@@ -1081,11 +1086,11 @@ begin
     CheckEquals(2, StoredProc.Fields.Count);
 
     CheckEquals('p_in', StoredProc.Fields[0].DisplayName);
-    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
+    CheckEquals(ftInteger,StoredProc.Fields[0].DataType);
     CheckEquals(100, StoredProc.Fields[0].AsInteger);
 
     CheckEquals('p_inout', StoredProc.Fields[1].DisplayName);
-    CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[1].DataType));
+    CheckEquals(ftInteger,StoredProc.Fields[1].DataType);
     CheckEquals(300, StoredProc.Fields[1].AsInteger);
 
     CheckFalse(StoredProc.EOR, 'End of results');
@@ -1107,9 +1112,9 @@ begin
   CheckEquals(3, StoredProc.Params.Count);
   CheckEquals('@RETURN_VALUE', StoredProc.Params[0].Name);
   CheckEquals('@p1', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(ptInput,StoredProc.Params[1].ParamType);
   CheckEquals('@r1', StoredProc.Params[2].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(ptResult,StoredProc.Params[0].ParamType);
 
   StoredProc.Params[1].AsInteger := 12345;
   StoredProc.ExecProc;
@@ -1130,22 +1135,22 @@ begin
   StoredProc.StoredProcName := 'ABTEST';
   CheckEquals(6, StoredProc.Params.Count);
   CheckEquals('@RETURN_VALUE', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
+  CheckEquals(ptResult, StoredProc.Params[0].ParamType);
+  CheckEquals(ftInteger, StoredProc.Params[0].DataType);
   CheckEquals('@p1', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
+  CheckEquals(ptInput, StoredProc.Params[1].ParamType);
+  CheckEquals(ftInteger, StoredProc.Params[1].DataType);
   CheckEquals('@p2', StoredProc.Params[2].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[2].DataType));
+  CheckEquals(ptInput, StoredProc.Params[2].ParamType);
+  CheckEquals(ftInteger, StoredProc.Params[2].DataType);
   CheckEquals('@p3', StoredProc.Params[3].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[3].ParamType));
+  CheckEquals(ptInput, StoredProc.Params[3].ParamType);
   CheckStringParamType(StoredProc.Params[3], Connection.ControlsCodePage);
   CheckEquals('@p4', StoredProc.Params[4].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[4].ParamType));
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[4].DataType));
+  CheckEquals(ptInputOutput, StoredProc.Params[4].ParamType);
+  CheckEquals(ftInteger, StoredProc.Params[4].DataType);
   CheckEquals('@p5', StoredProc.Params[5].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[5].ParamType));
+  CheckEquals(ptInputOutput, StoredProc.Params[5].ParamType);
   CheckStringParamType(StoredProc.Params[5], Connection.ControlsCodePage);
 
   StoredProc.ParamByName('@p1').AsInteger := 50;
@@ -1156,14 +1161,18 @@ begin
   CheckEquals('aa', StoredProc.ParamByName('@p5').AsString);
   CheckEquals(6, StoredProc.Params.Count);
 
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[2].DataType));
-  {$IFDEF DELPHI14_UP}
-  CheckEquals(ord(ftWideString), ord(StoredProc.Params[3].DataType));
+  CheckEquals(ftInteger, StoredProc.Params[1].DataType);
+  CheckEquals(ftInteger, StoredProc.Params[2].DataType);
+  {$IFNDEF DISABLE_ZPARAM}
+  CheckStringParamType(StoredProc.Params[3], Connection.ControlsCodePage);
   {$ELSE}
-  CheckEquals(ord(ftString), ord(StoredProc.Params[3].DataType));
+    {$IFDEF DELPHI14_UP}
+  CheckEquals(ftWideString, StoredProc.Params[3].DataType);
+    {$ELSE}
+  CheckEquals(ftString, StoredProc.Params[3].DataType);
+    {$ENDIF}
   {$ENDIF}
-  CheckEquals(ord(ftInteger), ord(StoredProc.Params[4].DataType));
+  CheckEquals(ftInteger, StoredProc.Params[4].DataType);
   CheckStringParamType(StoredProc.Params[5], Connection.ControlsCodePage);
 
   StoredProc.Prepare;
@@ -1190,8 +1199,8 @@ begin
   CheckEquals('@p4', StoredProc.Params[4].Name);
   StoredProc.Open;
 
-  CheckEquals(3, ord(StoredProc.Fields.Count));
-  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[0].DataType));
+  CheckEquals(3, StoredProc.Fields.Count);
+  CheckEquals(ftInteger,StoredProc.Fields[0].DataType);
   CheckEquals('@RETURN_VALUE', StoredProc.Fields[0].FieldName);
   CheckEquals(ftInteger, StoredProc.Fields[1].DataType); //oledb correctly describes the params
   CheckEquals('@p4', StoredProc.Fields[1].FieldName);
@@ -1202,7 +1211,7 @@ end;
 { TZTestOracleStoredProcedure }
 function TZTestOracleStoredProcedure.GetSupportedProtocols: string;
 begin
-  Result := 'oracle,oracle-9i';
+  Result := 'oracle';
 end;
 
 procedure TZTestOracleStoredProcedure.abtest(prefix: string);
@@ -1219,19 +1228,19 @@ begin
 
   CheckEquals(5, StoredProc.Params.Count);
   CheckEquals('P1', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(ptInput, StoredProc.Params[0].ParamType);
   CheckEquals(OrdinalDataType, StoredProc.Params[0].DataType);
   CheckEquals('P2', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(ptInput, StoredProc.Params[1].ParamType);
   CheckEquals(OrdinalDataType, StoredProc.Params[1].DataType);
   CheckEquals('P3', StoredProc.Params[2].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
+  CheckEquals(ptInput, StoredProc.Params[2].ParamType);
   CheckStringParamType(StoredProc.Params[2], Connection.ControlsCodePage);
   CheckEquals('P4', StoredProc.Params[3].Name);
-  CheckEquals(ord(ptOutput), ord(StoredProc.Params[3].ParamType));
+  CheckEquals(ptOutput, StoredProc.Params[3].ParamType);
   CheckEquals(OrdinalDataType, StoredProc.Params[3].DataType);
   CheckEquals('P5', StoredProc.Params[4].Name);
-  CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
+  CheckEquals(ptOutput, StoredProc.Params[4].ParamType);
   CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
 
   StoredProc.ParamByName('P1').AsInteger := 50;
@@ -1260,12 +1269,11 @@ begin
   {$ELSE}
   CheckEquals(ftString, StoredProc.Params[2].DataType);
   {$ENDIF}
-  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
+  //CheckEquals(ftInteger,StoredProc.Params[3].DataType);
   CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
 {$ELSE}
   CheckEquals(OrdinalDataType, StoredProc.Params[0].DataType);
   CheckEquals(OrdinalDataType, StoredProc.Params[1].DataType);
-  CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
   CheckEquals(OrdinalDataType, StoredProc.Params[3].DataType);
   CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
 {$ENDIF}
@@ -1304,9 +1312,9 @@ begin
   CheckEquals('P5', StoredProc.Params[4].Name);
   StoredProc.Open;
 
-  CheckEquals(2, ord(StoredProc.Fields.Count));
-  // CheckEquals(ord(ftLargeint), ord(StoredProc.Fields[0].DataType));
-  CheckStringParamType(StoredProc.Params[1], Connection.ControlsCodePage);
+  CheckEquals(2, StoredProc.Fields.Count);
+  CheckEquals(OrdinalDataType, StoredProc.Fields[0].DataType);
+  CheckStringFieldType(StoredProc.Fields[1], Connection.ControlsCodePage);
   CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
 
   CheckEquals(600, StoredProc.FieldByName('P4').AsInteger);
@@ -1319,11 +1327,11 @@ begin
   CheckEquals(2, StoredProc.Params.Count);
 
   CheckEquals('ReturnValue', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(ptResult,StoredProc.Params[0].ParamType);
   CheckStringParamType(StoredProc.Params[0], Connection.ControlsCodePage);
 
   CheckEquals('X', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[1].ParamType));
+  CheckEquals(ptInputOutput,StoredProc.Params[1].ParamType);
   CheckStringParamType(StoredProc.Params[1], Connection.ControlsCodePage);
 
 
@@ -1350,8 +1358,8 @@ begin
   StoredProc.StoredProcName := prefix+'simple_func';
   CheckEquals(1, StoredProc.Params.Count);
   CheckEquals('ReturnValue', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
-  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
+  CheckEquals(ptResult,StoredProc.Params[0].ParamType);
+  //CheckEquals(ftInteger,StoredProc.Params[0].DataType);
 
   StoredProc.ExecProc;
 
@@ -1374,8 +1382,8 @@ begin
   StoredProc.StoredProcName := prefix+'simplefunc';
   CheckEquals(1, StoredProc.Params.Count);
   CheckEquals('ReturnValue', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[0].ParamType));
-  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
+  CheckEquals(ptResult,StoredProc.Params[0].ParamType);
+  //CheckEquals(ftInteger,StoredProc.Params[0].DataType);
 
   StoredProc.ExecProc;
 
@@ -1399,40 +1407,40 @@ begin
   CheckEquals(9, StoredProc.Params.Count);
 
   CheckEquals('ABTEST_P1', StoredProc.Params[0].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
-  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[0].DataType));
+  CheckEquals(ptInput,StoredProc.Params[0].ParamType);
+  //CheckEquals(ftInteger,StoredProc.Params[0].DataType);
 
   CheckEquals('ABTEST_P2', StoredProc.Params[1].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
-  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
+  CheckEquals(ptInput,StoredProc.Params[1].ParamType);
+  //CheckEquals(ftInteger,StoredProc.Params[1].DataType);
 
   CheckEquals('ABTEST_P3', StoredProc.Params[2].Name);
-  CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
+  CheckEquals(ptInput,StoredProc.Params[2].ParamType);
   CheckStringParamType(StoredProc.Params[2], Connection.ControlsCodePage);
 
   CheckEquals('ABTEST_P4', StoredProc.Params[3].Name);
-  CheckEquals(ord(ptOutput), ord(StoredProc.Params[3].ParamType));
-  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
+  CheckEquals(ptOutput,StoredProc.Params[3].ParamType);
+  //CheckEquals(ftInteger,StoredProc.Params[3].DataType);
 
   CheckEquals('ABTEST_P5', StoredProc.Params[4].Name);
-  CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
+  CheckEquals(ptOutput,StoredProc.Params[4].ParamType);
   CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
 
   CheckEquals('myfuncInOutReturn_ReturnValue', StoredProc.Params[5].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[5].ParamType));
+  CheckEquals(ptResult,StoredProc.Params[5].ParamType);
   CheckStringParamType(StoredProc.Params[5], Connection.ControlsCodePage);
 
   CheckEquals('myfuncInOutReturn_X', StoredProc.Params[6].Name);
-  CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[6].ParamType));
+  CheckEquals(ptInputOutput,StoredProc.Params[6].ParamType);
   CheckStringParamType(StoredProc.Params[6], Connection.ControlsCodePage);
 
   CheckEquals('SIMPLE_FUNC_ReturnValue', StoredProc.Params[7].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[7].ParamType));
-  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[7].DataType));
+  CheckEquals(ptResult,StoredProc.Params[7].ParamType);
+  //CheckEquals(ftInteger,StoredProc.Params[7].DataType);
 
   CheckEquals('SIMPLEFUNC_ReturnValue', StoredProc.Params[8].Name);
-  CheckEquals(ord(ptResult), ord(StoredProc.Params[8].ParamType));
-  //CheckEquals(ord(ftInteger), ord(StoredProc.Params[8].DataType));
+  CheckEquals(ptResult,StoredProc.Params[8].ParamType);
+  //CheckEquals(ftInteger,StoredProc.Params[8].DataType);
 
   StoredProc.ParamByName('myfuncInOutReturn_X').AsString := 'myfuncInOutReturn';
   StoredProc.ParamByName('ABTEST_P1').AsInteger := 50;
