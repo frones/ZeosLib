@@ -512,7 +512,6 @@ type
     {$ENDIF}
     function PSGetUpdateException(E: Exception;
       Prev: EUpdateError): EUpdateError; override;
-    function PSIsSQLBased: Boolean; override;
     function PSIsSQLSupported: Boolean; override;
     procedure PSReset; override;
     function PSUpdateRecord(UpdateKind: TUpdateKind;
@@ -522,6 +521,7 @@ type
     procedure PSSetParams(AParams: TParams); override;
     function PSInTransaction: Boolean; override;
   {$ENDIF}
+    function PSIsSQLBased: Boolean; {$IFDEF WITH_IPROVIDER}override;{$ELSE}virtual;{$ENDIF}
   protected
     procedure DataEvent(Event: TDataEvent; Info: {$IFDEF FPC}PtrInt{$ELSE}NativeInt{$ENDIF}); override;
   public
@@ -1649,7 +1649,7 @@ begin
     FConnection := Value;
     if FConnection <> nil then begin
       FConnection.RegisterDataSet(Self);
-      if FSQL.Count > 0 then begin
+      if (FSQL.Count > 0) and PSIsSQLBased{do not rebuild all!} then begin
       {EH: force rebuild all of the SQLStrings ->
         in some case the generic tokenizer fails for several reasons like:
         keyword detection, identifier detection, Field::=x(ParamEsacaping to ":=" ) vs. Field::BIGINT (pg-TypeCasting)
@@ -5367,6 +5367,15 @@ begin
   FProperties.Assign(Value);
 end;
 
+{**
+  Checks if dataset can execute SQL queries?
+  @returns <code>True</code> if the query can execute SQL.
+}
+function TZAbstractRODataset.PSIsSQLBased: Boolean;
+begin
+  Result := True;
+end;
+
 {$IFDEF WITH_IPROVIDER}
 
 {**
@@ -5436,15 +5445,6 @@ end;
   @returns <code>True</code> if the query can execute any commands.
 }
 function TZAbstractRODataset.PSIsSQLSupported: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Checks if dataset can execute SQL queries?
-  @returns <code>True</code> if the query can execute SQL.
-}
-function TZAbstractRODataset.PSIsSQLBased: Boolean;
 begin
   Result := True;
 end;

@@ -73,8 +73,8 @@ type
     procedure SetTableName(const Value: string);
 
   protected
-  {$IFDEF WITH_IPROVIDER}
     function PSIsSQLBased: Boolean; override;
+  {$IFDEF WITH_IPROVIDER}
     {$IFDEF  WITH_IPROVIDERWIDE}
     function PSGetTableNameW: WideString; override;
     {$ELSE}
