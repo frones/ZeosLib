@@ -2695,6 +2695,8 @@ begin
     CurrentVar.valuep := ParamValue.valuep;
     CurrentVar.dty := ParamValue.dty;
     CurrentVar.value_sz := ParamValue.value_sz;
+    CurrentVar.Precision := ParamValue.Precision;
+    CurrentVar.Scale := ParamValue.Scale;
     CurrentVar.indp := ParamValue.indp;
     CurrentVar.DescriptorType := ParamValue.DescriptorType;
     CurrentVar.ColType := BindValue.SQLType;
