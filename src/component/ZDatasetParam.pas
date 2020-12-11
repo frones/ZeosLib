@@ -992,6 +992,7 @@ type
     function IsEqual(Value: TZParams): Boolean;
     function ParamByName(const Value: string): TZParam;
     function FindParam(const Value: string): TZParam;
+    procedure FlushParameterConSettings;
   public
     property BatchDMLCount: Cardinal read FArraySize write SetArraySize;
     property Items[Index: Integer]: TZParam read GetItem write SetItem; default;
@@ -4416,6 +4417,13 @@ begin
       Exit;
   end;
   Result := nil;
+end;
+
+procedure TZParams.FlushParameterConSettings;
+var I: Integer;
+begin
+  for i := 0 to Count-1 do
+    Items[i].FConSettings := nil;
 end;
 
 function TZParams.GetDataSet: TDataSet;

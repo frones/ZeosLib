@@ -3738,6 +3738,9 @@ begin
   FCurrentFieldRefIndex := 0;
   {$ENDIF}
   CurrentRows.Clear;
+  {$IFNDEF DISABLE_ZPARAM}
+  FParams.FlushParameterConSettings;
+  {$ENDIF}
 end;
 
 {**
