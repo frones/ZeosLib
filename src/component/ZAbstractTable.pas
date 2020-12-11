@@ -127,8 +127,6 @@ begin
   end;
 end;
 
-{$IFDEF WITH_IPROVIDER}
-
 {**
   Checks if dataset can execute SQL queries?
   @returns <code>True</code> if the query can execute SQL.
@@ -138,6 +136,7 @@ begin
   Result := False;
 end;
 
+{$IFDEF WITH_IPROVIDER}
 {**
   Gets the name of the table.
   @returns the name of this table.

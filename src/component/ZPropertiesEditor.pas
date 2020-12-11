@@ -788,7 +788,7 @@ const
   ZProp_CodePage : TZProperty = (
     Name: ConnProps_CodePage;
     Purpose: 'Codepage to interact with driver'+LineEnding+
-      'for odbc_a it''s implemented as:'+LineEnding+
+      'for odbc_a/ole_db it''s implemented as:'+LineEnding+
       'set a custom codepage to notify zeos about conversion routines note: cp must be equal for all fields else use the W driver.'+LineEnding+
       'first place in a name, second use '':'' for the codepage, third use ''/'' for the maximum amount of bytes per character equal to database defined charset'+LineEnding+
       'example: codepage=latin1:1252/1 or characterset=utf8:65001/4';

@@ -1887,11 +1887,10 @@ begin
             SQL_CHAR, SQL_WCHAR: begin
                 FixedWidth := True;
                 Scale := Precision;
-                Signed := True;
               end;
             SQL_BINARY: begin
                 Precision := ColNumAttribute(ColumnNumber, SQL_DESC_LENGTH);
-                Signed := True;
+                Scale := Precision;
                 FixedWidth := True;
               end;
             SQL_VARCHAR, SQL_WVARCHAR, SQL_VARBINARY:

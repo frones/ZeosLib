@@ -67,12 +67,11 @@ interface
   { Parameters common for all DBC's }
 const
   /// <type>String</type>
-  /// <alias>ConnProps_Username</alias>
+  /// <Alias>username</Alias>
+  /// <Associates>ConnProps_Username,ConnProps_TrustedConnection</Associates>
   /// <usage>Connection</usage>
   /// <syntax>Properties.Values[ConnProps_UID]=userid</syntax>
-  /// <summary>
-  ///  Specifies the user ID used to log in to the database.
-  /// </summary>
+  /// <summary>Specifies the user ID used to log in to the database.</summary>
   /// <remarks>
   ///  You must always supply a user ID when connecting to a database, unless
   ///  you are using an integrated/trusted or Kerberos login.
@@ -80,11 +79,10 @@ const
   ConnProps_UID = 'UID';
   /// <type>String</type>
   /// <alias>ConnProps_UID</alias>
+  /// <Associates>ConnProps_UID,ConnProps_TrustedConnection</Associates>
   /// <usage>Connection</usage>
   /// <syntax>Properties.Values[ConnProps_Username]=username</syntax>
-  /// <summary>
-  ///  Specifies the user name used to log in to the database.
-  /// </summary>
+  /// <summary>Specifies the user name used to log in to the database.</summary>
   /// <remarks>
   ///  You must always supply a user name when connecting to a database, unless
   ///  you are using an integrated/trusted or Kerberos login.
@@ -123,23 +121,73 @@ const
   /// <type>String</type>
   /// <usage>Connection</usage>
   /// <syntax>Properties.Values[ConnProps_LibLocation]=filename</syntax>
-  /// <summary>
-  ///  Provides a filename for a client library.
-  /// </summary>
-  /// <remarks>
-  ///  If provided then we'll try to load the library otherwise the default
-  ///  lib-names will be used for.
+  /// <summary>Provides a filename for a client library.</summary>
+  /// <remarks>If provided then we'll try to load the library otherwise the
+  ///  default lib-names will be used for.
   /// </remarks>
   ConnProps_LibLocation = 'LibLocation';
-  // Type: STR, like CP_UTF8
-  // Codepage to interact with driver
+  /// <Type>String</Type>
+  /// <usage>Connection</usage>
+  /// <Associates>ConnProps_Charset_NONE_Alias</Associates>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_CodePage]={value}</syntax>
+  /// <summary>Specifies the character set to interact with driver.</summary>
+  /// <remarks>If you're accessing a CharacterSet "NONE" Firebird/Interbase
+  ///  database you should always use the CharacterSet "NONE" as connection
+  ///  characterset. In addition it's recommented to specify which characterset
+  ///  the "NONE" represents by adding:
+  ///  <c>Properties.Values['Charset_NONE_Alias'] := 'WIN1251'</c> f.e.
+  ///  For odbc_a and ole_db(raw longvarchar only) it's implemented as:
+  ///  set a custom characterset to notify zeos about conversion routines.
+  ///  <c>Note for ODBC_A</c>: This CodePage must be equal for all fields(ODBC).
+  ///  Otherwise use the ODBC_W driver. It's defined as:
+  ///  First place in a name as an charset alias, second add ':'+(codepage),
+  ///  third add '/'+(maximum amount of bytes per character). The definition
+  ///  must equal to database defined charset.
+  ///  Example: CharacterSet=latin1:1252/1 or CharacterSet=utf8:65001/4
+  /// </remarks>
+  ConnProps_Characterset = 'CharacterSet';
+  /// <PropertyType>String</PropertyType>
+  /// <Alias>CharacterSet</Alias>
+  /// <Associates>ConnProps_Charset_NONE_Alias</Associates>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_CodePage]={value}</syntax>
+  /// <summary>Deprecated use ConnProps_Characterset instead. Specifies the
+  ///  character set to interact with driver.</summary>
+  /// <remarks>If you're accessing a CharacterSet "NONE" Firebird/Interbase
+  ///  database you should always use the CharacterSet "NONE" as connection
+  ///  characterset. In addition it's recommented to specify which characterset
+  ///  the "NONE" represents by adding:
+  ///  <c>Properties.Values['Charset_NONE_Alias'] := 'WIN1251'</c> f.e.
+  ///  For odbc_a and ole_db(raw longvarchar only) it's implemented as:
+  ///  set a custom characterset to notify zeos about conversion routines.
+  ///  <c>Note for ODBC_A</c>: This CodePage must be equal for all fields(ODBC).
+  ///  Otherwise use the ODBC_W driver. It's defined as:
+  ///  First place in a name as an charset alias, second add ':'+(codepage),
+  ///  third add '/'+(maximum amount of bytes per character). The definition
+  ///  must equal to database defined charset.
+  ///  Example: codepage=latin1:1252/1 or codepage=utf8:65001/4
+  /// </remarks>
   ConnProps_CodePage = 'codepage';
-  // Type: BOOLEAN
-  ConnProps_Transliterate = 'Transliterate';
-  // Type: CP_UTF16 | CP_UTF8 | GET_ACP
-  // Same as ControlsCodePage property
-  ConnProps_ControlsCP = 'controls_cp'; //dreprecaded use ConnProps_RawStringEncoding  instead
-  // Type: DB_CP | CP_UTF8 | DefaultSystemCodePage
+  /// <PropertyType>Enumerator</PropertyType>
+  /// <Values>DB_CP|CP_UTF8|DefaultSystemCodePage</Values>
+  /// <Alias>RawStringEncoding</Alias>
+  /// <Associates>ConnProps_RawStringEncoding</Associates>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_ControlsCP]={value}</syntax>
+  /// <summary>dreprecaded use ConnProps_RawStringEncoding  instead;
+  ///  See ConnProps_RawStringEncoding</summary>
+  ConnProps_ControlsCP = 'controls_cp';
+  /// <PropertyType>Enumerator</PropertyType>
+  /// <Values>DB_CP|CP_UTF8|DefaultSystemCodePage</Values>
+  /// <Alias>RawStringEncoding</Alias>
+  /// <Associates>ConnProps_RawStringEncoding</Associates>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_ControlsCP]={value}</syntax>
+  /// <summary>Defines how Zeos treads the SQL and the
+  ///  <c>Get/SetString(Ansi-Compilers)</c> and <c>Get/SetRawByteString</c> for
+  ///  UTF16 columns/parameters/connections on zdbc. These enum-names are mapped
+  ///  the the W2A2WEncodingSource of the connection settings records.</summary>
   ConnProps_RawStringEncoding = 'RawStringEncoding';
   // Type: INT
   // The login timeout to use in seconds.
@@ -543,8 +591,16 @@ const
   // see firebird 3.0 release notes
   ConnProps_FBProtocol = 'fb_protocol';
 
-  // Type: STR
-  // identify the charset "NONE" codepage
+  /// <PropertyType>String</PropertyType>
+  /// <Associates>ConnProps_Characterset</Associates>
+  /// <protocols>firebird,interbase</protocols>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_Charset_NONE_Alias]={value}</syntax>
+  /// <summary>Specifies the character set "NONE" codepage to interact with
+  ///  driver.</summary>
+  /// <remarks>If you're accessing a CharacterSet "NONE" Firebird/Interbase
+  ///  database you should always use the CharacterSet "NONE" as connection
+  ///  characterset.</remarks>
   ConnProps_Charset_NONE_Alias = 'Charset_NONE_Alias';
 
   { Parameters that are for datasets and statements but could be set for connections
@@ -916,9 +972,6 @@ const
 {$ENDIF}
 
 {$IFDEF ENABLE_ODBC}
-  // Type: STR, like CP_UTF8
-  // Codepage to use (same as ConnProps_CodePage)
-  ConnProps_Characterset = 'characterset';
   // Type: SQL_DRIVER_COMPLETE | SQL_DRIVER_PROMPT | SQL_DRIVER_COMPLETE_REQUIRED
   // Refer to ODBC manual for details
   ConnProps_DriverCompletion = 'DriverCompletion';

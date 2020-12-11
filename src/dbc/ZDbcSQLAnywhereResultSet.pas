@@ -1380,13 +1380,15 @@ begin
         sqlany_column_info.max_size := (sqlany_column_info.max_size + 2) * Byte(ConSettings.ClientCodePage^.CharWidth);
         ColumnInfo.CharOctedLength := sqlany_column_info.max_size;
         ColumnInfo.ColumnCodePage := FClientCP;
-        ColumnInfo.Signed := ColumnInfo.NativeType = DT_FIXCHAR;
+        if ColumnInfo.NativeType = DT_FIXCHAR then
+          ColumnInfo.Scale := ColumnInfo.Precision;
       end else if ColumnInfo.ColumnType = stUnicodeString then begin
         ColumnInfo.Precision := sqlany_column_info.max_size;
         sqlany_column_info.max_size := sqlany_column_info.max_size shl 2;
         ColumnInfo.CharOctedLength := sqlany_column_info.max_size;
         ColumnInfo.ColumnCodePage := zCP_UTF8;
-        ColumnInfo.Signed := ColumnInfo.NativeType = DT_NFIXCHAR;
+        if ColumnInfo.NativeType = DT_NFIXCHAR then
+          ColumnInfo.Scale := ColumnInfo.Precision;
       end else if ColumnInfo.ColumnType = stBytes then begin
         ColumnInfo.Precision := sqlany_column_info.max_size;
         ColumnInfo.CharOctedLength := sqlany_column_info.max_size;

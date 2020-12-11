@@ -3368,7 +3368,7 @@ end;
 }
 procedure TZAbstractRODataset.InternalInitFieldDefs;
 var
-  I, J, Size: Integer;
+  I, J, Size, Prec, Scale: Integer;
   AutoInit: Boolean;
   FieldType: TFieldType;
   SQLType: TZSQLType;
@@ -3405,20 +3405,21 @@ begin
     if GetColumnCount > 0 then
       for I := FirstDbcIndex to GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
         SQLType := GetColumnType(I);
-        FieldType := ConvertDbcToDatasetType(SQLType, Connection.ControlsCodePage, GetPrecision(I));
-        if (FieldType = ftVarBytes) and IsSigned(I) then
+        Prec := GetPrecision(I);
+        Scale := GetScale(I);
+        FieldType := ConvertDbcToDatasetType(SQLType, Connection.ControlsCodePage, Prec);
+        if (FieldType = ftVarBytes) and (Prec = Scale) then
           FieldType := ftBytes;
         (*{$IFDEF WITH_FTTIMESTAMP_FIELD}
         else if (FieldType = ftDateTime) and (GetScale(I) > 3) then
           FieldType := ftTimeStamp
         {$ENDIF WITH_FTTIMESTAMP_FIELD}*);
-
+        Size := Prec;
         if FieldType in [ftBytes, ftVarBytes, ftString, ftWidestring] then begin
           {$IFNDEF WITH_WIDEMEMO}
           if (Connection.ControlsCodePage = cCP_UTF16) and (FieldType = ftWidestring) and (SQLType in [stAsciiStream, stUnicodeStream])
           then Size := (MaxInt shr 1)-2
           else{$ENDIF} begin
-            Size := GetPrecision(I);
             {$IFNDEF WITH_CODEPAGE_AWARE_FIELD}
             if FDisableZFields and (FieldType = ftString) then
               if (Connection.ControlsCodePage = cGET_ACP) or (GetColumnCodePage(I) = ZOSCodePage)
@@ -3429,7 +3430,7 @@ begin
         end else {$IFDEF WITH_FTGUID} if FieldType = ftGUID then
           Size := 38
         else {$ENDIF} if FieldType in [ftBCD, ftFmtBCD{, ftTime, ftDateTime}] then
-          Size := GetScale(I)
+          Size := Scale
         else
           Size := 0;
 
@@ -3475,7 +3476,7 @@ begin
             if IsReadOnly(I) then Attributes := Attributes + [faReadonly];
           end else
             Attributes := Attributes + [faReadonly];
-          Precision := GetPrecision(I);
+          Precision := Prec;
           DisplayName := FName;
           if GetOrgColumnLabel(i) <> GetColumnLabel(i) then
              Attributes := Attributes + [faUnNamed];

@@ -1310,14 +1310,16 @@ begin
         if ColumnType = stUnicodeString then begin//ASA calcutates the n column different
           CharOctedLength := GetFieldLength(I);
           Precision := CharOctedLength shr 2; //default UTF8 has 3 bytes only whereas n-cols have 4 bytes
-          Signed := FSQLDA.sqlvar[I].sqlType and $FFFE = DT_NFIXCHAR;
+          if FSQLDA.sqlvar[I].sqlType and $FFFE = DT_NFIXCHAR then
+            Scale := Precision;
         end;
       end else if FieldSqlType in [stString, stAsciiStream] then begin
         ColumnCodePage := ConSettings^.ClientCodePage^.CP;
         if ColumnType = stString then begin
           CharOctedLength := GetFieldLength(I);
           Precision := CharOctedLength div ConSettings^.ClientCodePage^.CharWidth;
-          Signed := FSQLDA.sqlvar[I].sqlType and $FFFE = DT_FIXCHAR;
+          if FSQLDA.sqlvar[I].sqlType and $FFFE = DT_FIXCHAR then
+            Scale := Precision;
         end;
       end else if FieldSqlType = stBytes then begin
         Precision := GetFieldLength(I);

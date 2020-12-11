@@ -1812,7 +1812,7 @@ begin
       else Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('LENGTH'));
       Result.UpdateInt(TableColColumnBufLengthIndex, GetIntByName('LENGTH'));
       case ODBCType of
-        1{char}, -8{nchar}, -2{binary}: GetIntByName('PRECISION');
+        1{char}, -8{nchar}, -2{binary}: Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetIntByName('PRECISION'));
         else Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetIntByName('SCALE'));
       end;
       Result.UpdateSmall(TableColColumnNumPrecRadixIndex, GetSmallByName('RADIX'));

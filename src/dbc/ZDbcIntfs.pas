@@ -999,13 +999,11 @@ type
     function CloneCachedResultSet(const ResultSet: IZResultSet): IZResultSet;
   end;
 
-  /// <summary>
-  ///  Database information interface. Used to describe the database as a whole
-  ///  (version, capabilities, policies, etc).
-  /// </summary>
+  /// <author>technobot</author>
+  /// <summary>Defines the Database information interface. Used to describe the
+  ///  database as a whole (version, capabilities, policies, etc).</summary>
   IZDatabaseInfo = interface(IZInterface)
     ['{107CA354-F594-48F9-8E08-CD797F151EA0}']
-
     // database/driver/server info:
     /// <summary>What's the name of this database product?</summary>
     /// <returns>database product name</returns>
@@ -1016,22 +1014,56 @@ type
     /// <summary>What's the name of this ZDBC driver?
     /// <returns>ZDBC driver name</returns>
     function GetDriverName: string;
+    /// <summary>What's the version of this ZDBC driver?</summary>
+    /// <returns>the ZDBC driver version as string.</returns>
     function GetDriverVersion: string;
     /// <summary>What's this ZDBC driver's major version number?</summary>
     /// <returns>ZDBC driver major version</returns>
     function GetDriverMajorVersion: Integer;
+    /// <summary>What's this ZDBC driver's minor version number?</summary>
+    /// <returns>The ZDBC driver minor version number as Integer.</returns>
     function GetDriverMinorVersion: Integer;
+    /// <summary>What's the server version?</summary>
+    /// <returns>The server version string.</returns>
     function GetServerVersion: string;
 
     // capabilities (what it can/cannot do):
+
+    /// <summary>Can all the procedures returned by getProcedures be called by
+    ///  the current user?</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function AllProceduresAreCallable: Boolean;
+    /// <summary>Can all the tables returned by getTable be SELECTed by the
+    ///  current user?</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function AllTablesAreSelectable: Boolean;
+    /// <summary>Does the database treat mixed case unquoted SQL identifiers as
+    ///  case sensitive and as a result store them in mixed case?
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsMixedCaseIdentifiers: Boolean;
+    /// <summary>Does the database treat mixed case quoted SQL identifiers as
+    ///  case sensitive and as a result store them in mixed case?</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsMixedCaseQuotedIdentifiers: Boolean;
+    /// <summary>Is "ALTER TABLE" with add column supported?</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsAlterTableWithAddColumn: Boolean;
+    /// <summary>Is "ALTER TABLE" with drop column supported?</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsAlterTableWithDropColumn: Boolean;
+    /// <summary>Is column aliasing supported? If so, the SQL AS clause can be
+    ///  used to provide names for computed columns or to provide alias names
+    ///  for columns as required.<summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsColumnAliasing: Boolean;
+    /// <summary>Is the CONVERT function between SQL types supported?</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsConvert: Boolean;
+    /// <summary>Not Yet implemented. Is CONVERT between the given SQL types
+    ///  supported?</summary>
+    /// <param><c>"FromType"</c> the type to convert from</param>
+    /// <param><c>"ToType"</c> the type to convert to</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
       Boolean;
     function SupportsTableCorrelationNames: Boolean;
@@ -1406,7 +1438,7 @@ type
     function GetResultSetType: TZResultSetType;
     /// <summary>Note yet implemented. Propably omitted in future.
     ///  Sets a new value for post updates.</summary>
-    /// <param>="Value" a new value for post updates.</param>
+    /// <param>"Value" a new value for post updates.</param>
     procedure SetPostUpdates(Value: TZPostUpdatesMode);
     /// <summary>Note yet implemented. Propably omitted in future.
     ///  Gets the current value for post updates.</summary>
