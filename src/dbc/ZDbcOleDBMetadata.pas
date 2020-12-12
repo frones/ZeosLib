@@ -114,8 +114,12 @@ type
   public
     constructor Create(const Metadata: TZAbstractDatabaseMetadata);
     // database/driver/server info:
+    /// <summary>What's the name of this database product?</summary>
+    /// <returns>database product name</returns>
     function GetDatabaseProductName: string; override;
     function GetDatabaseProductVersion: string; override;
+    /// <summary>What's the name of this ZDBC driver?
+    /// <returns>ZDBC driver name</returns>
     function GetDriverName: string; override;
     function GetDriverVersion: string; override;
     function GetDriverMajorVersion: Integer; override;
@@ -345,10 +349,6 @@ end;
 //----------------------------------------------------------------------
 // First, a variety of minor information about the target database.
 
-{**
-  What's the name of this database product?
-  @return database product name
-}
 function TZOleDBDatabaseInfo.GetDatabaseProductName: string;
 begin
   Result := fDBPROP_DBMSNAME;
@@ -363,10 +363,6 @@ begin
   Result := fDBPROP_DBMSVER;
 end;
 
-{**
-  What's the name of this JDBC driver?
-  @return JDBC driver name
-}
 function TZOleDBDatabaseInfo.GetDriverName: string;
 begin
   Result := fDBPROP_PROVIDERFRIENDLYNAME;
@@ -1990,6 +1986,8 @@ var
   Len: NativeUInt;
   TypeNames: IZResultSet;
   NameBuf, NamePos: PWideChar;
+  LastORDINAL_POSITION, CurrentORDINAL_POSITION: Integer;
+  DoSort: Boolean;
   procedure InitTableColColumnMap(const RS: IZResultSet);
   begin
     fTableColColumnMap.ColIndices[CatalogNameIndex] := CatalogNameIndex;
@@ -2016,10 +2014,26 @@ var
   begin
     Result := (GetDatabaseInfo as IZOleDBDatabaseInfo).SupportsMaxVarTypes;
   end;
+  procedure SortOrdinalPositions;
+  var VR: IZVirtualResultSet;
+      ColumnIndices: TIntegerDynArray;
+  begin
+    ColumnIndices := nil;
+    if Result.QueryInterface(IZVirtualResultSet, VR) = S_OK then begin
+      SetLength(ColumnIndices, 4);
+      ColumnIndices[0]:= CatalogNameIndex;
+      ColumnIndices[1]:= SchemaNameIndex;
+      ColumnIndices[2]:= TableNameIndex;
+      ColumnIndices[3]:= TableColColumnOrdPosIndex;
+      Vr.BeforeFirst;
+      VR.SortRows(ColumnIndices, False);
+    end;
+  end;
 begin
   Result := inherited UncachedGetColumns(Catalog, SchemaPattern,
       TableNamePattern, ColumnNamePattern);
-
+  DoSort := False;
+  LastORDINAL_POSITION := 0;
   TypeNames := GetTypeInfo; //improve missing TypeNames: https://sourceforge.net/p/zeoslib/tickets/397/
   RS := OleDBOpenSchema(DBSCHEMA_COLUMNS,
     [DecomposeObjectString(Catalog), DecomposeObjectString(SchemaPattern),
@@ -2032,9 +2046,12 @@ begin
         InitTableColColumnMap(RS);
       while Next do begin
         Result.MoveToInsertRow;
-        Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(CatalogNameIndex, Len), Len);
-        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(SchemaNameIndex, Len), Len);
-        Result.UpdatePWideChar(TableNameIndex, GetPWideChar(TableNameIndex, Len), Len);
+        if not IsNull(CatalogNameIndex) then
+          Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar(CatalogNameIndex, Len), Len);
+        if not IsNull(SchemaNameIndex) then
+          Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(SchemaNameIndex, Len), Len);
+        if not IsNull(TableNameIndex) then
+          Result.UpdatePWideChar(TableNameIndex, GetPWideChar(TableNameIndex, Len), Len);
         Result.UpdatePWideChar(ColumnNameIndex, GetPWideChar(ColumnNameIndex, Len), Len);
         Flags := GetInt(fTableColColumnMap.ColIndices[FlagColumn]);
         CurrentOleType := GetSmall(fTableColColumnMap.ColIndices[TableColColumnTypeIndex]);
@@ -2102,7 +2119,10 @@ begin
         Result.UpdatePWideChar(TableColColumnColDefIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnColDefIndex], Len), Len);
         Result.UpdateSmall(TableColColumnSQLDataTypeIndex, GetSmall(fTableColColumnMap.ColIndices[TableColColumnSQLDataTypeIndex]));
         Result.UpdateInt(TableColColumnCharOctetLengthIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnCharOctetLengthIndex]));
-        Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnOrdPosIndex]));
+        CurrentORDINAL_POSITION := GetInt(fTableColColumnMap.ColIndices[TableColColumnOrdPosIndex]);
+        Result.UpdateInt(TableColColumnOrdPosIndex, CurrentORDINAL_POSITION);
+        DoSort := DoSort or (CurrentORDINAL_POSITION < LastORDINAL_POSITION);
+        LastORDINAL_POSITION := CurrentORDINAL_POSITION;
         Result.UpdateUnicodeString(TableColColumnIsNullableIndex, bYesNo[GetBoolean(fTableColColumnMap.ColIndices[TableColColumnIsNullableIndex])]);
         Result.UpdateBoolean(TableColColumnAutoIncIndex, Flags and DBCOLUMNFLAGS_ISROWID = DBCOLUMNFLAGS_ISROWID);
         Result.UpdateBoolean(TableColColumnSearchableIndex, (Flags and (DBCOLUMNFLAGS_ISLONG) = 0));
@@ -2114,6 +2134,9 @@ begin
       Close;
     end;
   end;
+  if DoSort then
+    SortOrdinalPositions;
+
 end;
 
 {**

@@ -446,7 +446,7 @@ begin
     stUnicodeStream:  Result := 'UnicodeStream';
     stBinaryStream:   Result := 'BinaryStream';
     stArray:          Result := 'Array';
-    stDataSet:        Result := 'DataSet';
+    stResultSet:      Result := 'ResultSet';
     else
       Result := 'Unknown';
   end;

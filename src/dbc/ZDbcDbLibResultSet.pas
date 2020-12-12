@@ -128,6 +128,8 @@ type
       ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); override;
     procedure SetColumnPrecisionFromGetColumnsRS(
       {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); override;
+    procedure SetColumnScaleFromGetColumnsRS(
+      {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet); override;
   end;
 
   TZDBLIBColumnInfo = class(TZColumnInfo)
@@ -397,8 +399,7 @@ label AssignGeneric;
       ReadOnly := not (ColInfo.Updatable = 1);
       Writable := ColInfo.Updatable = 1;
       AutoIncrement := ColInfo.Identity;
-      Signed := (ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong, stFloat, stCurrency, stDouble, stBigDecimal]) or
-        ((TDSType = tdsBinary) and not ColInfo.VarLength) or (TDSType in [tdsChar, tdsBigBinary, tdsBigChar, tdsBigNChar]);
+      Signed := (ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong, stFloat, stCurrency, stDouble, stBigDecimal]);
     end;
   end;
   function ValueToString(P: PAnsiChar): String;
@@ -1172,6 +1173,13 @@ procedure TZDblibResultSetMetadata.SetColumnPrecisionFromGetColumnsRS(
 begin
   if (ColumnInfo.ColumnType = stString) or (ColumnInfo.ColumnType = stUnicodeString) then
     ColumnInfo.Precision := TableColumns.GetInt(TableColColumnSizeIndex);
+end;
+
+procedure TZDblibResultSetMetadata.SetColumnScaleFromGetColumnsRS(
+  ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+begin
+  if (ColumnInfo.ColumnType = stBytes) then
+    ColumnInfo.Scale := TableColumns.GetInt(TableColColumnDecimalDigitsIndex);
 end;
 
 {$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit

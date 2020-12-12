@@ -335,6 +335,8 @@ type
     procedure CheckEquals(const OrgStr: UnicodeString; Actual: TField; const Msg: string = ''); overload;
     procedure CheckEquals(Expected, Actual: TFieldType;
       const Msg: string = ''); overload;
+    procedure CheckEquals(Expected, Actual: TParamType;
+      const Msg: string = ''); overload;
     procedure CheckNotEquals(Expected, Actual: TFieldType;
       const Msg: string = ''); overload;
     procedure CheckStringFieldType(Actual: TField; ControlsCodePage: TZControlsCodePage);
@@ -1720,7 +1722,7 @@ procedure TZAbstractCompSQLTestCase.CheckEquals(Expected, Actual: TFieldType;
 var E, A: String;
 begin
   E := TypInfo.GetEnumName(TypeInfo(TFieldType), Ord(Expected));
-  A := TypInfo.GetEnumName(TypeInfo(TFieldType), Ord(Expected));
+  A := TypInfo.GetEnumName(TypeInfo(TFieldType), Ord(Actual));
   inherited CheckEquals(E, A, Msg);
 end;
 
@@ -1790,6 +1792,15 @@ begin
   {$ENDIF}
   if (MaxLen > 0) and (Length(Result) > MaxLen) then
     SetLength(Result, MaxLen);
+end;
+
+procedure TZAbstractCompSQLTestCase.CheckEquals(Expected, Actual: TParamType;
+  const Msg: string);
+var E, A: String;
+begin
+  E := TypInfo.GetEnumName(TypeInfo(TParamType), Ord(Expected));
+  A := TypInfo.GetEnumName(TypeInfo(TParamType), Ord(Actual));
+  inherited CheckEquals(E, A, Msg);
 end;
 
 { TZAbstractDbcSQLTestCaseMBCs }

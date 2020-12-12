@@ -217,7 +217,7 @@ type
   private
     FPlainDriver: TZMySQLPlainDriver;
     FBind: PMYSQL_aligned_BIND;
-    FStmtHandle: PPMYSQL_STMT;
+    FStmtHandle: PMYSQL_STMT;
     FIndex: Cardinal;
     FReleased: Boolean;
     FLobRow: Integer;
@@ -363,9 +363,7 @@ end;
   @return SQL type from java.sql.Types
 }
 function TZMySQLResultSetMetadata.GetColumnType(ColumnIndex: Integer): TZSQLType;
-begin {EH: does anyone know why the LoadColumns was made? Note the column-types are perfect determinable on MySQL}
-  //if not Loaded then
-    // LoadColumns;
+begin
   Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnType;
 end;
 
@@ -848,7 +846,7 @@ begin
     FMYSQL_STMT := FPMYSQL_STMT^;
   if FMYSQL_STMT <> nil then begin
     if not fBindBufferAllocated then begin
-      for I := 0 to Self.ColumnsInfo.Count -1 do begin
+      for I := 0 to ColumnsInfo.Count -1 do begin
         {$R-}
         Bind := @FMYSQL_aligned_BINDs[I];
         {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
@@ -2795,7 +2793,7 @@ begin
   then Result := nil
   else begin
     if LobStreamMode <> lsmWrite then begin
-      if FCurrentRowAddr^ -1 <> FLobRow then begin
+      if (FCurrentRowAddr^ -1 <> FLobRow) then begin
         FPlainDriver.mysql_stmt_data_seek(FStmtHandle, FLobRow);
         Status := FPlainDriver.mysql_stmt_fetch(FStmtHandle);
         if Status = STMT_FETCH_ERROR then
@@ -2807,6 +2805,8 @@ begin
     Result := TZMySQLLobStream.Create(Self);
   end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+  if (FColumnCodePage <> zCP_Binary) and (CodePage <> FColumnCodePage) then
+    Result := TZCodePageConversionStream.Create(Result, FColumnCodePage, CodePage, FConSettings, FOpenLobStreams);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -2892,11 +2892,11 @@ begin
     Count := FOwner.FBind.Length[0] - FOffset;
   FOwner.FBind^.buffer_Length_address^ := Count;
   FOwner.FBind^.buffer_address^ := @Buffer;
-  Status := FOwner.FPlainDriver.mysql_stmt_fetch_column(FOwner.FStmtHandle^, FOwner.FBind.mysql_bind, FOwner.FIndex, Foffset);
+  Status := FOwner.FPlainDriver.mysql_stmt_fetch_column(FOwner.FStmtHandle, FOwner.FBind.mysql_bind, FOwner.FIndex, Foffset);
   FOwner.FBind^.buffer_Length_address^ := 0;
   FOwner.FBind^.buffer_address^ := nil;
   if Status = STMT_FETCH_ERROR then
-    FOwner.FMySQLConnection.HandleErrorOrWarning(lcOther, FOwner.FStmtHandle^,
+    FOwner.FMySQLConnection.HandleErrorOrWarning(lcOther, FOwner.FStmtHandle,
       'mysql_stmt_fetch_column', Self);
   Result := Count;
   FOffSet := Foffset + ULong(Count);
@@ -2926,10 +2926,10 @@ begin
   end;
   if FOwner.FLobStreamMode = lsmRead then
     raise CreateWriteOnlyException;
-  Status := FOwner.FPlainDriver.mysql_stmt_send_long_data(FOwner.FStmtHandle^, FOwner.FIndex,
+  Status := FOwner.FPlainDriver.mysql_stmt_send_long_data(FOwner.FStmtHandle, FOwner.FIndex,
     @Buffer, Count);
   if Status = 1 then
-    FOwner.FMySQLConnection.HandleErrorOrWarning(lcOther, FOwner.FStmtHandle^,
+    FOwner.FMySQLConnection.HandleErrorOrWarning(lcOther, FOwner.FStmtHandle,
       'mysql_stmt_send_long_data', Self);
   Result := Count;
   FOffSet := Foffset + ULong(Result);

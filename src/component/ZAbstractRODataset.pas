@@ -512,7 +512,6 @@ type
     {$ENDIF}
     function PSGetUpdateException(E: Exception;
       Prev: EUpdateError): EUpdateError; override;
-    function PSIsSQLBased: Boolean; override;
     function PSIsSQLSupported: Boolean; override;
     procedure PSReset; override;
     function PSUpdateRecord(UpdateKind: TUpdateKind;
@@ -522,6 +521,7 @@ type
     procedure PSSetParams(AParams: TParams); override;
     function PSInTransaction: Boolean; override;
   {$ENDIF}
+    function PSIsSQLBased: Boolean; {$IFDEF WITH_IPROVIDER}override;{$ELSE}virtual;{$ENDIF}
   protected
     procedure DataEvent(Event: TDataEvent; Info: {$IFDEF FPC}PtrInt{$ELSE}NativeInt{$ENDIF}); override;
   public
@@ -1649,7 +1649,7 @@ begin
     FConnection := Value;
     if FConnection <> nil then begin
       FConnection.RegisterDataSet(Self);
-      if FSQL.Count > 0 then begin
+      if (FSQL.Count > 0) and PSIsSQLBased{do not rebuild all!} then begin
       {EH: force rebuild all of the SQLStrings ->
         in some case the generic tokenizer fails for several reasons like:
         keyword detection, identifier detection, Field::=x(ParamEsacaping to ":=" ) vs. Field::BIGINT (pg-TypeCasting)
@@ -3368,7 +3368,7 @@ end;
 }
 procedure TZAbstractRODataset.InternalInitFieldDefs;
 var
-  I, J, Size: Integer;
+  I, J, Size, Prec, Scale: Integer;
   AutoInit: Boolean;
   FieldType: TFieldType;
   SQLType: TZSQLType;
@@ -3405,20 +3405,21 @@ begin
     if GetColumnCount > 0 then
       for I := FirstDbcIndex to GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
         SQLType := GetColumnType(I);
-        FieldType := ConvertDbcToDatasetType(SQLType, Connection.ControlsCodePage, GetPrecision(I));
-        if (FieldType = ftVarBytes) and IsSigned(I) then
+        Prec := GetPrecision(I);
+        Scale := GetScale(I);
+        FieldType := ConvertDbcToDatasetType(SQLType, Connection.ControlsCodePage, Prec);
+        if (FieldType = ftVarBytes) and (Prec = Scale) then
           FieldType := ftBytes;
         (*{$IFDEF WITH_FTTIMESTAMP_FIELD}
         else if (FieldType = ftDateTime) and (GetScale(I) > 3) then
           FieldType := ftTimeStamp
         {$ENDIF WITH_FTTIMESTAMP_FIELD}*);
-
+        Size := Prec;
         if FieldType in [ftBytes, ftVarBytes, ftString, ftWidestring] then begin
           {$IFNDEF WITH_WIDEMEMO}
           if (Connection.ControlsCodePage = cCP_UTF16) and (FieldType = ftWidestring) and (SQLType in [stAsciiStream, stUnicodeStream])
           then Size := (MaxInt shr 1)-2
           else{$ENDIF} begin
-            Size := GetPrecision(I);
             {$IFNDEF WITH_CODEPAGE_AWARE_FIELD}
             if FDisableZFields and (FieldType = ftString) then
               if (Connection.ControlsCodePage = cGET_ACP) or (GetColumnCodePage(I) = ZOSCodePage)
@@ -3429,7 +3430,7 @@ begin
         end else {$IFDEF WITH_FTGUID} if FieldType = ftGUID then
           Size := 38
         else {$ENDIF} if FieldType in [ftBCD, ftFmtBCD{, ftTime, ftDateTime}] then
-          Size := GetScale(I)
+          Size := Scale
         else
           Size := 0;
 
@@ -3475,7 +3476,7 @@ begin
             if IsReadOnly(I) then Attributes := Attributes + [faReadonly];
           end else
             Attributes := Attributes + [faReadonly];
-          Precision := GetPrecision(I);
+          Precision := Prec;
           DisplayName := FName;
           if GetOrgColumnLabel(i) <> GetColumnLabel(i) then
              Attributes := Attributes + [faUnNamed];
@@ -3738,6 +3739,9 @@ begin
   FCurrentFieldRefIndex := 0;
   {$ENDIF}
   CurrentRows.Clear;
+  {$IFNDEF DISABLE_ZPARAM}
+  FParams.FlushParameterConSettings;
+  {$ENDIF}
 end;
 
 {**
@@ -5364,6 +5368,15 @@ begin
   FProperties.Assign(Value);
 end;
 
+{**
+  Checks if dataset can execute SQL queries?
+  @returns <code>True</code> if the query can execute SQL.
+}
+function TZAbstractRODataset.PSIsSQLBased: Boolean;
+begin
+  Result := True;
+end;
+
 {$IFDEF WITH_IPROVIDER}
 
 {**
@@ -5433,15 +5446,6 @@ end;
   @returns <code>True</code> if the query can execute any commands.
 }
 function TZAbstractRODataset.PSIsSQLSupported: Boolean;
-begin
-  Result := True;
-end;
-
-{**
-  Checks if dataset can execute SQL queries?
-  @returns <code>True</code> if the query can execute SQL.
-}
-function TZAbstractRODataset.PSIsSQLBased: Boolean;
 begin
   Result := True;
 end;
@@ -7059,7 +7063,7 @@ var
   Delim, Sep: Char;
   DT: TDateTime;
   T: TZTime;
-  I,J: LengthInt;
+  I: LengthInt;
   Fraction: Cardinal;
   B: Boolean;
   P: PChar;
@@ -7113,19 +7117,6 @@ begin
             Fraction := RoundNanoFractionTo(Fraction, FScale);
             Fraction := Fraction div FractionLength2NanoSecondMulTable[FScale];
             {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Fraction, P, Byte(FScale));
-            if FScale > FFractionLen[B] then begin
-              J := I+FScale;
-              P := Pointer(Text);
-              Inc(P, j-2);
-              Millis := 0;
-              while (J>I) and (P^ = ('0')) do begin
-                Inc(Millis);
-                Dec(J);
-                Dec(P);
-              end;
-              if Millis > 0 then
-                Delete(Text, J, Millis);
-            end;
           end;
         end;
       end else begin
@@ -7311,7 +7302,7 @@ var
   DT, D: TDateTime;
   Delim: Char;
   TS: TZTimeStamp;
-  I,J: LengthInt;
+  I: LengthInt;
   Fraction: Cardinal;
   B: Boolean;
   B2: Boolean;
@@ -7379,19 +7370,6 @@ begin
             Fraction := RoundNanoFractionTo(Fraction, FScale);
             Fraction := Fraction div FractionLength2NanoSecondMulTable[FScale];
             {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Fraction, P, Byte(FScale));
-            if FScale > FFractionLen[B] then begin
-              J := I+FScale;
-              P := Pointer(Text);
-              Inc(P, j-2);
-              Millis := 0;
-              while (J>I) and (P^ = ('0')) do begin
-                Inc(Millis);
-                Dec(J);
-                Dec(P);
-              end;
-              if Millis > 0 then
-                Delete(Text, J, Millis);
-            end;
           end;
         end;
       end else begin

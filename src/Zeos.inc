@@ -40,7 +40,7 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 {.$DEFINE ZEOS_TEST_ONLY}
-{.$DEFINE GENERIC_INDEX}
+{$DEFINE GENERIC_INDEX}
 {.$DEFINE DISABLE_ZPARAM}
 //common compilation directives
 {$DEFINE ZEOS72UP}

@@ -737,12 +737,9 @@ begin
     {$ENDIF}
     CheckEquals(ord(ftBoolean), ord(Query.Fields[5].DataType));
     //tds returns wrong flags for fixed types... so the test fails
-    if (Protocol = 'mssql') or (Protocol = 'sybase')
-    //if this is fixed by the libs.. this behavior change give us a notifiaction
-    then CheckEquals(ord(ftVarBytes), ord(Query.Fields[6].DataType), 'binary(16)')
-    else CheckEquals(ord(ftBytes), ord(Query.Fields[6].DataType), 'binary(16)');
-    CheckEquals(ord(ftVarBytes), ord(Query.Fields[7].DataType), 'varbinary(16)');
-    CheckEquals(ord(ftBlob), ord(Query.Fields[8].DataType));
+    CheckEquals(ftBytes, Query.Fields[6].DataType, 'binary(16)'); //correct only with metadata
+    CheckEquals(ftVarBytes, Query.Fields[7].DataType, 'varbinary(16)');
+    CheckEquals(ftBlob, Query.Fields[8].DataType, 'Image');
     Query.Insert;
     Query.Fields[0].AsString := 'abc';
     Query.Fields[1].AsInteger := 1;

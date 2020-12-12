@@ -923,10 +923,10 @@ var Idx: Integer;
           else begin
             Self.RegisterParameter(IDX,
               Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], {$IFDEF UNICODE}S{$ELSE}tmp{$ENDIF},
-                Max(LengthInt(Descriptor.DataSize), LengthInt(Descriptor.Precision)), Descriptor.Scale);
+                Descriptor.Precision, Descriptor.Scale);
             FExecStatement.RegisterParameter(IDX,
               Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], {$IFDEF UNICODE}S{$ELSE}tmp{$ENDIF},
-                Max(LengthInt(Descriptor.DataSize), LengthInt(Descriptor.Precision)), Descriptor.Scale);
+                Descriptor.Precision, Descriptor.Scale);
           end;
           Inc(IDX);
         end;
@@ -3016,10 +3016,10 @@ var Idx: Integer;
           else begin
             RegisterParameter(IDX,
               Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], {$IFNDEF UNICODE}S{$ELSE}tmp{$ENDIF},
-                Max(LengthInt(Descriptor.DataSize), LengthInt(Descriptor.Precision)), Descriptor.Scale);
+                Descriptor.Precision, Descriptor.Scale);
             FExecStatement.RegisterParameter(IDX,
               Descriptor.SQLType, OCIParamTypeMatrix[Descriptor.OrdPos = 0][Descriptor.IODirection], {$IFNDEF UNICODE}S{$ELSE}tmp{$ENDIF},
-                Max(LengthInt(Descriptor.DataSize), LengthInt(Descriptor.Precision)), Descriptor.Scale);
+                Descriptor.Precision, Descriptor.Scale);
           end;
           Inc(IDX);
         end;

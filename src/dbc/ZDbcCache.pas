@@ -144,8 +144,8 @@ type
       Value: Pointer; Len: Cardinal); {$IFDEF WITHINLINE} inline; {$ENDIF}
   private
     {store columnswhere mem-deallocation/copy needs an extra sequence of code}
-    FHighVarLenCols, FHighArrayCols, FHighDataSetCols: Integer;
-    FVarLenCols, FArrayCols, FLobCols, FDataSetCols: array of Integer;
+    FHighVarLenCols, FHighArrayCols, FHighResultSetCols: Integer;
+    FVarLenCols, FArrayCols, FLobCols, FResultSetCols: array of Integer;
     FConSettings: PZConSettings;
     function GetColumnSize(ColumnInfo: TZColumnInfo): Integer;
     procedure InternalSetInt(ColumnIndex: Integer; Value: Integer); {$IFDEF WITHINLINE} inline; {$ENDIF}
@@ -241,7 +241,7 @@ type
     function GetUnicodeStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
     function GetBinaryStream(ColumnIndex: Integer; out IsNull: Boolean): TStream;
     function GetBlob(ColumnIndex: Integer; out IsNull: Boolean): IZBlob;
-    function GetDataSet(ColumnIndex: Integer; out IsNull: Boolean): IZDataSet;
+    function GetResultSet(ColumnIndex: Integer; out IsNull: Boolean): IZResultSet;
     function GetValue(ColumnIndex: Integer): TZVariant;
 
     //---------------------------------------------------------------------
@@ -284,7 +284,7 @@ type
     procedure SetUnicodeStream(ColumnIndex: Integer; const Value: TStream);
     procedure SetBinaryStream(ColumnIndex: Integer; const Value: TStream);
     procedure SetBlob(ColumnIndex: Integer; const Value: IZBlob);
-    procedure SetDataSet(ColumnIndex: Integer; const Value: IZDataSet);
+    procedure SetResultSet(ColumnIndex: Integer; const Value: IZResultSet);
     procedure SetValue(ColumnIndex: Integer; const Value: TZVariant);
 
     {$IFDEF USE_SYNCOMMONS}
@@ -354,7 +354,7 @@ const
     );
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // empty function - parameter not used intentionally
-function CompareNothing(const Null1, Null2: Boolean; const V1, V2): Integer; //emergency exit for types we can't sort like arrays, dataset ...
+function CompareNothing(const Null1, Null2: Boolean; const V1, V2): Integer; //emergency exit for types we can't sort like arrays, ResultSet ...
 begin
   Result := 0;
 end;
@@ -1012,16 +1012,16 @@ begin
       SetLength(FArrayCols, Length(FArrayCols)+1);
       FArrayCols[High(FArrayCols)] := I;
     end
-    else if Current.ColumnType = stDataSet then
+    else if Current.ColumnType = stResultSet then
     begin
-      SetLength(FDataSetCols, Length(FDataSetCols)+1);
-      FDataSetCols[High(FDataSetCols)] := I;
+      SetLength(FResultSetCols, Length(FResultSetCols)+1);
+      FResultSetCols[High(FResultSetCols)] := I;
     end;
   end;
   FHighVarLenCols := Length(FVarLenCols)-1;
   FHighArrayCols := Length(FArrayCols)-1;
   FHighLobCols := Length(FLobCols)-1;
-  FHighDataSetCols := Length(FDataSetCols)-1;
+  FHighResultSetCols := Length(FResultSetCols)-1;
   FRowSize := FColumnsSize + RowHeaderSize;
 end;
 
@@ -3751,7 +3751,7 @@ end;
   {$PUSH}
   {$WARN 5024 off : Parameter "ColumnIndex" not used}
 {$ENDIF}
-function TZRowAccessor.GetDataSet(ColumnIndex: Integer; out IsNull: Boolean): IZDataSet;
+function TZRowAccessor.GetResultSet(ColumnIndex: Integer; out IsNull: Boolean): IZResultSet;
 begin
   Result := nil;
   IsNull := True;
@@ -5023,7 +5023,7 @@ end;
   {$PUSH}
   {$WARN 5024 off : Parameter "ColumnIndex/Value" not used}
 {$ENDIF}
-procedure TZRowAccessor.SetDataSet(ColumnIndex: Integer; const Value: IZDataSet);
+procedure TZRowAccessor.SetResultSet(ColumnIndex: Integer; const Value: IZResultSet);
 begin
   //no op by now
 end;

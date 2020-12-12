@@ -61,18 +61,6 @@ uses
   ZSysUtils, ZClasses, ZDbcIntfs, ZDbcResultSetMetadata, ZDbcCachedResultSet,
   ZDbcCache, ZCompatibility, ZSelectSchema, ZDbcConnection;
 
-//commented out because we don't use them and because they have different ordinal values than TZProcedureColumnType
-//const
-//  procedureColumnUnknown = 0;
-//  procedureColumnIn = 1;
-//  procedureColumnInOut = 2;
-//  procedureColumnOut = 4;
-//  procedureColumnReturn = 5;
-//  procedureColumnResult = 3;
-//  procedureNoNulls = 0;
-//  procedureNullable = 1;
-//  procedureNullableUnknown = 2;
-
 type
   TZWildcardsSet= {$IFDEF UNICODE}
                     {$IFNDEF TSYSCHARSET_IS_DEPRECATED}
@@ -98,12 +86,15 @@ type
     procedure SetType(Value: TZResultSetType);
     procedure SetConcurrency(Value: TZResultSetConcurrency);
     procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
+    procedure SortRows(const ColumnIndices: TIntegerDynArray; Descending: Boolean);
   end;
 
   {** Implements Virtual ResultSet. }
   TZVirtualResultSet = class(TZAbstractCachedResultSet, IZVirtualResultSet)
   private
     fConSettings: TZConSettings;
+    fColumnIndices, FCompareFuncs: Pointer; //ovoid RTTI finalize!
+    function ColumnSort(Item1, Item2: Pointer): Integer;
   protected
     procedure CalculateRowDefaults({%H-}RowAccessor: TZRowAccessor); override;
     procedure PostRowUpdates({%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor);
@@ -115,6 +106,7 @@ type
       ConSettings: PZConSettings);
   public
     procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
+    procedure SortRows(const ColumnIndices: TIntegerDynArray; Descending: Boolean);
   end;
 
   {** Implements Unclosable ResultSet which frees all memory if it's not referenced anymore. }
@@ -342,24 +334,66 @@ type
     destructor Destroy; override;
 
     // database/driver/server info:
+    /// <summary>What's the name of this database product?</summary>
+    /// <returns>database product name</returns>
     function GetDatabaseProductName: string; virtual;
+    /// <summary>What's the version of this database product?</summary>
+    /// <returns>database version</returns>
     function GetDatabaseProductVersion: string; virtual;
+    /// <summary>What's the name of this ZDBC driver?
+    /// <returns>ZDBC driver name</returns>
     function GetDriverName: string; virtual;
+    /// <summary>What's the version of this ZDBC driver?</summary>
+    /// <returns>the ZDBC driver version as string.</returns>
     function GetDriverVersion: string; virtual;
+    /// <summary>What's this ZDBC driver's major version number?</summary>
+    /// <returns>ZDBC driver major version</returns>
     function GetDriverMajorVersion: Integer; virtual;
+    /// <summary>What's this ZDBC driver's minor version number?</summary>
+    /// <returns>The ZDBC driver minor version number as Integer.</returns>
     function GetDriverMinorVersion: Integer; virtual;
+    /// <summary>What's the server version?</summary>
+    /// <returns>The server version string.</returns>
     function GetServerVersion: string; virtual;
 
     // capabilities (what it can/cannot do):
+
+    /// <summary>Can all the procedures returned by getProcedures be called by
+    ///  the current user?</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function AllProceduresAreCallable: Boolean; virtual;
+    /// <summary>Can all the tables returned by getTable be SELECTed by the
+    ///  current user?</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function AllTablesAreSelectable: Boolean; virtual;
+    /// <summary>Does the database treat mixed case unquoted SQL identifiers as
+    ///  case sensitive and as a result store them in mixed case?
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsMixedCaseIdentifiers: Boolean; virtual;
+    /// <summary>Does the database treat mixed case quoted SQL identifiers as
+    ///  case sensitive and as a result store them in mixed case?</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsMixedCaseQuotedIdentifiers: Boolean; virtual;
+    /// <summary>Is "ALTER TABLE" with add column supported?</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsAlterTableWithAddColumn: Boolean; virtual;
+    /// <summary>Is "ALTER TABLE" with drop column supported?</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsAlterTableWithDropColumn: Boolean; virtual;
+    /// <summary>Is column aliasing supported? If so, the SQL AS clause can be
+    ///  used to provide names for computed columns or to provide alias names
+    ///  for columns as required.<summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsColumnAliasing: Boolean; virtual;
+    /// <summary>Is the CONVERT function between SQL types supported?</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsConvert: Boolean; virtual;
-    function SupportsConvertForTypes({%H-}FromType: TZSQLType; {%H-}ToType: TZSQLType):
+    /// <summary>Not Yet implemented. Is CONVERT between the given SQL types
+    ///  supported?</summary>
+    /// <param><c>"FromType"</c> the type to convert from</param>
+    /// <param><c>"ToType"</c> the type to convert to</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
+    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
       Boolean; virtual;
     function SupportsTableCorrelationNames: Boolean; virtual;
     function SupportsDifferentTableCorrelationNames: Boolean; virtual;
@@ -824,21 +858,11 @@ end;
 //----------------------------------------------------------------------
 // First, a variety of minor information about the target database.
 
-{**
-  Can all the procedures returned by getProcedures be called by the
-  current user?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
 function TZAbstractDatabaseInfo.AllProceduresAreCallable: Boolean;
 begin
   Result := True;
 end;
 
-{**
-  Can all the tables returned by getTable be SELECTed by the
-  current user?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
 function TZAbstractDatabaseInfo.AllTablesAreSelectable: Boolean;
 begin
   Result := True;
@@ -889,10 +913,6 @@ begin
   Result := False;
 end;
 
-{**
-  What's the name of this database product?
-  @return database product name
-}
 function TZAbstractDatabaseInfo.GetDatabaseProductName: string;
 begin
   Result := '';
@@ -907,10 +927,6 @@ begin
   Result := '';
 end;
 
-{**
-  What's the name of this JDBC driver?
-  @return JDBC driver name
-}
 function TZAbstractDatabaseInfo.GetDriverName: string;
 begin
   Result := 'Zeos Database Connectivity Driver';
@@ -925,28 +941,16 @@ begin
   Result := Format('%d.%d', [GetDriverMajorVersion, GetDriverMinorVersion]);
 end;
 
-{**
-  What's this JDBC driver's major version number?
-  @return JDBC driver major version
-}
 function TZAbstractDatabaseInfo.GetDriverMajorVersion: Integer;
 begin
   Result := 1;
 end;
 
-{**
-  What's this JDBC driver's minor version number?
-  @return JDBC driver minor version number
-}
 function TZAbstractDatabaseInfo.GetDriverMinorVersion: Integer;
 begin
   Result := 0;
 end;
 
-{**
-  Returns the server version
-  @return the server version string
-}
 function TZAbstractDatabaseInfo.GetServerVersion: string;
 begin
   Result := '';
@@ -970,12 +974,6 @@ begin
   Result := False;
 end;
 
-{**
-  Does the database treat mixed case unquoted SQL identifiers as
-  case sensitive and as a result store them in mixed case?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return false.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
 function TZAbstractDatabaseInfo.SupportsMixedCaseIdentifiers: Boolean;
 begin
   Result := False;
@@ -1011,12 +1009,6 @@ begin
   Result := True;
 end;
 
-{**
-  Does the database treat mixed case quoted SQL identifiers as
-  case sensitive and as a result store them in mixed case?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver will always return true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
 function TZAbstractDatabaseInfo.SupportsMixedCaseQuotedIdentifiers: Boolean;
 begin
   Result := True;
@@ -1175,33 +1167,16 @@ end;
 //--------------------------------------------------------------------
 // Functions describing which features are supported.
 
-{**
-  Is "ALTER TABLE" with add column supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
 function TZAbstractDatabaseInfo.SupportsAlterTableWithAddColumn: Boolean;
 begin
   Result := True;
 end;
 
-{**
-  Is "ALTER TABLE" with drop column supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
 function TZAbstractDatabaseInfo.SupportsAlterTableWithDropColumn: Boolean;
 begin
   Result := True;
 end;
 
-{**
-  Is column aliasing supported?
-
-  <P>If so, the SQL AS clause can be used to provide names for
-  computed columns or to provide alias names for columns as
-  required.
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
 function TZAbstractDatabaseInfo.SupportsColumnAliasing: Boolean;
 begin
   Result := True;
@@ -1218,27 +1193,18 @@ begin
   Result := True;
 end;
 
-{**
-  Is the CONVERT function between SQL types supported?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
 function TZAbstractDatabaseInfo.SupportsConvert: Boolean;
 begin
   Result := False;
 end;
 
-{**
-  Is CONVERT between the given SQL types supported?
-  @param fromType the type to convert from
-  @param toType the type to convert to
-  @return <code>true</code> if so; <code>false</code> otherwise
-  @see Types
-}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF}
 function TZAbstractDatabaseInfo.SupportsConvertForTypes(
   FromType: TZSQLType; ToType: TZSQLType): Boolean;
 begin
   Result := False;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Are table correlation names supported?
@@ -4724,11 +4690,11 @@ begin
                   Result := UpperCase(Pattern);
         icUpper: if FDatabaseInfo.StoresLowerCaseIdentifiers then
                    Result := LowerCase(Pattern);
-        icMixed: if not FDatabaseInfo.StoresLowerCaseIdentifiers then
-                  if FDatabaseInfo.StoresUpperCaseIdentifiers then
-                    Result := UpperCase(Pattern)
-                  else
-                    Result := LowerCase(Pattern);
+        icMixed: if not FDatabaseInfo.StoresMixedCaseIdentifiers then
+                   if FDatabaseInfo.StoresUpperCaseIdentifiers then
+                     Result := UpperCase(Pattern)
+                   else
+                     Result := LowerCase(Pattern);
         {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
       end
     end else
@@ -5083,6 +5049,12 @@ begin
   InitialRowsList.Insert(NewRowNo, P);
 end;
 
+function TZVirtualResultSet.ColumnSort(Item1, Item2: Pointer): Integer;
+begin
+  Result := RowAccessor.CompareBuffers(Item1, Item2,
+    TIntegerDynArray(FColumnIndices), TCompareFuncs(FCompareFuncs));
+end;
+
 {**
   Creates this object and assignes the main properties.
   @param ColumnsInfo a columns info for cached rows.
@@ -5112,6 +5084,22 @@ end;
 procedure TZVirtualResultSet.PostRowUpdates(OldRowAccessor,
   NewRowAccessor: TZRowAccessor);
 begin
+end;
+
+procedure TZVirtualResultSet.SortRows(const ColumnIndices: TIntegerDynArray;
+  Descending: Boolean);
+var I: Integer;
+    ComparisonKind: TComparisonKind;
+begin
+  SetLength(TCompareFuncs(FCompareFuncs), Length(ColumnIndices));
+  if Descending
+  then ComparisonKind := ckDescending
+  else ComparisonKind := ckAscending;
+  for i := low(ColumnIndices) to high(ColumnIndices) do
+    TCompareFuncs(FCompareFuncs)[i] := RowAccessor.GetCompareFunc(ColumnIndices[I], ComparisonKind);
+  fColumnIndices := Pointer(ColumnIndices);
+  RowsList.Sort(ColumnSort);
+  SetLength(TCompareFuncs(FCompareFuncs), 0);
 end;
 
 { TZDefaultIdentifierConverter }

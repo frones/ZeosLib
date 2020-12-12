@@ -2154,21 +2154,28 @@ var lpcCPInfo: _cpinfo;
 {$ENDIF}
 begin
   {$IFDEF MSWINDOWS}
-  ZOSCodePage := GetACP; //available for Windows and WinCE
-  if ZOSCodePage = zCP_UTF16 then begin { has WinCE an ansi CP ??? }
-    ZOSCodePageMaxCharSize := 4;
-    ZOSCodePage := zCP_UTF8;
-  end else If GetCPInfo(ZOSCodePage, lpcCPInfo) then
-    ZOSCodePageMaxCharSize := lpcCPInfo.MaxCharSize
+  ZOSCodePage := GetACP;
+  If GetCPInfo(ZOSCodePage, lpcCPInfo)
+  then ZOSCodePageMaxCharSize := lpcCPInfo.MaxCharSize
   else ZOSCodePageMaxCharSize := 1;
-  {$ELSE}
-  ZOSCodePageMaxCharSize := 4; //utf8
-    {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
-    ZOSCodePage := Word(DefaultSystemCodePage);
-    {$ELSE}
-    ZOSCodePage := zCP_UTF8; //how to determine the current OS CP?
-    {$ENDIF}
-  {$ENDIF}
+  {$ELSE !MSWINDOWS}
+    {$IFDEF FPC}
+      {$ifdef UNIX}
+  ZOSCodePage := GetSystemCodepage;
+  if (ZOSCodePage = CP_NONE) then
+    ZOSCodePage := CP_UTF8;
+      {$ELSE UNIX}
+  if Assigned (WideStringManager.GetStandardCodePageProc)
+  then ZOSCodePage := WideStringManager.GetStandardCodePageProc(scpAnsi)
+  else ZOSCodePage := zCP_UTF8;
+      {$ENDIF UNIX}
+    {$ELSE FPC}
+  ZOSCodePage := zCP_UTF8;
+    {$ENDIF FPC}
+  if ZOSCodePage = zCP_UTF8
+  then ZOSCodePageMaxCharSize := 4
+  else ZOSCodePageMaxCharSize := 1
+  {$ENDIF MSWINDOWS}
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 

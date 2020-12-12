@@ -75,8 +75,12 @@ type
   public
     constructor Create(const Metadata: TZAbstractDatabaseMetadata; ConnectionHandleRef: PSQLHDBC);
     // database/driver/server info:
+    /// <summary>What's the name of this database product?</summary>
+    /// <returns>database product name</returns>
     function GetDatabaseProductName: string; override;
     function GetDatabaseProductVersion: string; override;
+    /// <summary>What's the name of this ZDBC driver?
+    /// <returns>ZDBC driver name</returns>
     function GetDriverName: string; override;
 //    function GetDriverVersion: string; override; -> Same as parent
     function GetDriverMajorVersion: Integer; override;
@@ -353,10 +357,6 @@ end;
 //----------------------------------------------------------------------
 // First, a variety of minor information about the target database.
 
-{**
-  What's the name of this database product?
-  @return database product name
-}
 function TZAbstractODBCDatabaseInfo.GetDatabaseProductName: string;
 begin
   Result := GetStringDbcInfo(SQL_DBMS_NAME);
@@ -371,10 +371,6 @@ begin
   Result := GetStringDbcInfo(SQL_DBMS_VER);
 end;
 
-{**
-  What's the name of this JDBC driver?
-  @return JDBC driver name
-}
 function TZAbstractODBCDatabaseInfo.GetDriverName: string;
 begin
   Result := GetStringDbcInfo(SQL_DRIVER_NAME);

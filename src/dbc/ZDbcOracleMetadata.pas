@@ -69,8 +69,12 @@ type
 //      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
   public
     // database/driver/server info:
+    /// <summary>What's the name of this database product?</summary>
+    /// <returns>database product name</returns>
     function GetDatabaseProductName: string; override;
     function GetDatabaseProductVersion: string; override;
+    /// <summary>What's the name of this ZDBC driver?
+    /// <returns>ZDBC driver name</returns>
     function GetDriverName: string; override;
 //    function GetDriverVersion: string; override; -> Same as parent
     function GetDriverMajorVersion: Integer; override;
@@ -261,10 +265,6 @@ uses
 //----------------------------------------------------------------------
 // First, a variety of minor information about the target database.
 
-{**
-  What's the name of this database product?
-  @return database product name
-}
 function TZOracleDatabaseInfo.GetDatabaseProductName: string;
 begin
   Result := 'Oracle';
@@ -279,10 +279,6 @@ begin
   Result := '';
 end;
 
-{**
-  What's the name of this JDBC driver?
-  @return JDBC driver name
-}
 function TZOracleDatabaseInfo.GetDriverName: string;
 begin
   Result := 'Zeos Database Connectivity Driver for Oracle';
@@ -1389,8 +1385,7 @@ var
         OCI_TYPEPARAM_INOUT : Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctInOut));
       end;
       SQLType := NormalizeOracleTypeToSQLType(Arg.DataType,
-        Arg.DataSize, Arg.DescriptorType, Arg.Precision, Arg.Scale, ConSettings,
-        Descriptor.IODirection);
+        Arg.DataSize, Arg.DescriptorType, Arg.Precision, Arg.Scale, ConSettings);
       if (Ord(SQLType) >= Ord(stString)) and (Ord(SQLType) <= Ord(stBytes))
       then Result.UpdateInt(ProcColPrecisionIndex, Arg.DataSize)
       else Result.UpdateInt(ProcColPrecisionIndex, Arg.Precision);
@@ -1445,8 +1440,7 @@ var
         OCI_TYPEPARAM_INOUT : Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctInOut));
       end;
       SQLType := NormalizeOracleTypeToSQLType(Arg.DataType,
-        Arg.DataSize, Arg.DescriptorType, Arg.Precision, Arg.Scale, ConSettings,
-        Descriptor.IODirection);
+        Arg.DataSize, Arg.DescriptorType, Arg.Precision, Arg.Scale, ConSettings);
       if (Ord(SQLType) >= Ord(stString)) and (Ord(SQLType) <= Ord(stBytes))
       then Result.UpdateInt(ProcColPrecisionIndex, Arg.DataSize)
       else Result.UpdateInt(ProcColPrecisionIndex, Arg.Precision);

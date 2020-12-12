@@ -475,7 +475,8 @@ begin
               CharOctedLength := len;
               Precision := len div Cardinal(ZCodePageInfo^.CharWidth);
             end;
-            Signed := sqltype = SQL_TEXT;
+            if sqltype = SQL_TEXT then
+              Scale := Precision;
           end;
         stAsciiStream, stUnicodeStream: if ConSettings^.ClientCodePage^.ID = CS_NONE
           then if FIsMetadataResultSet

@@ -4133,7 +4133,9 @@ begin
     end else begin
       PInt64(@TimeStamp.Hour)^ := 0;
       PInt64(@TimeStamp.Fractions)^ := 0;
-      Result := TryPCharToDate(P, Len, FormatSettings, PZDate(@TimeStamp.Year)^);
+      Result := TryRawToDate(P, Len, FormatSettings.DateFormat, PZDate(@TimeStamp.Year)^);
+      if not Result and not FormatCompare(FormatSettings.DateFormat, DefDateFormatYMD, 10) then
+        Result := TryRawToDate(P, Len, DefDateFormatYMD, PZDate(@TimeStamp.Year)^);
       TimeStamp.IsNegative := PZDate(@TimeStamp.Year).IsNegative;
       PZDate(@TimeStamp.Year).IsNegative := False;
     end
@@ -4157,7 +4159,9 @@ begin
     end else begin
       PInt64(@TimeStamp.Hour)^ := 0;
       PInt64(@TimeStamp.Fractions)^ := 0;
-      Result := TryPCharToDate(P, Len, FormatSettings, PZDate(@TimeStamp.Year)^);
+      Result := TryUniToDate(P, Len, FormatSettings.DateFormat, PZDate(@TimeStamp.Year)^);
+      if not Result and not FormatCompare(FormatSettings.DateFormat, DefDateFormatYMD, 10) then
+        Result := TryUniToDate(P, Len, DefDateFormatYMD, PZDate(@TimeStamp.Year)^);
       PZDate(@TimeStamp.Year).IsNegative := False;
       TimeStamp.IsNegative := PZDate(@TimeStamp.Year).IsNegative;
     end

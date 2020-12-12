@@ -128,6 +128,8 @@ type
     /// <param>"value" true enables read-only mode; false disables read-only
     ///  mode.</param>
     procedure SetReadOnly(Value: Boolean); override;
+    /// <summary>Returns the Connection's current catalog name.</summary>
+    /// <returns>the current catalog name or an empty string.</returns>
     function GetCatalog: string; override;
     /// <summary>Sets a catalog name in order to select a subspace of this
     ///  Connection's database in which to work. If the driver does not support
@@ -185,7 +187,7 @@ type
     ///  was started. 2 means the transaction was saved. 3 means the previous
     ///  savepoint got saved too and so on.</returns>
     function StartTransaction: Integer;
-
+    /// <summary>Opens a connection to database server with specified parameters.</summary>
     procedure Open; override;
 
     function GetWarnings: EZSQLWarning; override;
@@ -640,9 +642,27 @@ begin
   Result := fODBCVersion;
 end;
 
-{**
-  Opens a connection to database server with specified parameters.
-}
+procedure AssignPropertiesToConnectionStrings(PropertyStrings, ConnectionStrings: TStrings);
+const KnownOdbcProperties: array[0..3] of String = (
+  ConnProps_DRIVER,
+  ConnProps_Server,
+  ConnProps_CharacterSet,
+  ConnProps_TrustedConnection);
+
+var ps, cs: String;
+  I: Integer;
+begin
+  if (PropertyStrings = nil) or (ConnectionStrings = nil) then Exit;
+  for i := low(KnownOdbcProperties) to high(KnownOdbcProperties) do begin
+    ps := PropertyStrings.Values[KnownOdbcProperties[i]];
+    if PS = '' then Continue;
+    cs := ConnectionStrings.Values[KnownOdbcProperties[i]];
+    if CS = '' then
+      ConnectionStrings.Values[KnownOdbcProperties[i]] := PS;
+  end;
+end;
+
+
 {$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinal and pointers is not portable} {$ENDIF}
 procedure TZAbstractODBCConnection.Open;
 type
@@ -712,6 +732,7 @@ begin
       DriverCompletion := SQL_DRIVER_COMPLETE_REQUIRED;
 
   ConnectStrings := SplitString(DataBase, ';');
+  AssignPropertiesToConnectionStrings(Info, ConnectStrings);
   if StrToBoolEx(ConnectStrings.Values[ConnProps_TrustedConnection]) then
     tmp := DataBase
   else

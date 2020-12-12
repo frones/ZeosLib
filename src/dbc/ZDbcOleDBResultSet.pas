@@ -2367,7 +2367,8 @@ begin
                         end;
         stBytes:        begin
 jmpFixedAndSize:          ColumnInfo.Precision := FieldSize;
-                          ColumnInfo.Signed := (prgInfo.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH) <> 0;
+                          if (prgInfo.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH) <> 0 then
+                            ColumnInfo.Scale := ColumnInfo.Precision;
                         end;
         stCurrency,
         stBigDecimal:   begin

@@ -88,6 +88,7 @@ type
     procedure TestDbcBCDValues;
     procedure TestDbcTransaction;
     procedure TestInsertFailAndCorrectCachedUpdates;
+    procedure TestDeleteUpdateDelete;
   end;
 
   TZGenericTestDbcArrayBindings = class(TZAbstractDbcSQLTestCase)
@@ -1820,6 +1821,53 @@ begin
       Stmt := Connection.CreateStatement;
       Stmt.ExecuteUpdate('delete from people where p_id > 9');
     end;
+  end;
+end;
+
+
+//See: https://sourceforge.net/p/zeoslib/tickets/461/
+procedure TZGenericTestDbcResultSet.TestDeleteUpdateDelete;
+const
+  c_id_Index          = FirstDbcIndex + 0;
+  c_dep_id_index      = FirstDbcIndex + 1;
+var
+  Sql: string;
+  Statement: IZPreparedStatement;
+  ResultSet: IZResultSet;
+begin
+  Sql := 'DELETE FROM cargo where c_dep_id >= ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
+  Connection.CreateStatement.ExecuteUpdate(Sql);
+  Connection.StartTransaction;
+  try
+    { Creates prepared statement for cargo table }
+    Statement := Connection.PrepareStatement(
+      'select c_id, c_dep_id from cargo where c_id >= '+ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
+    CheckNotNull(Statement);
+    Statement.SetResultSetConcurrency(rcUpdatable);
+    Statement.SetResultSetType(rtScrollSensitive);
+    ResultSet := Statement.ExecuteQueryPrepared;
+    ResultSet.MoveToInsertRow;
+    ResultSet.UpdateInt(c_id_Index, TEST_ROW_ID);
+    ResultSet.UpdateInt(c_dep_id_index, 1);
+    ResultSet.InsertRow;
+    ResultSet.MoveToInsertRow;
+    ResultSet.UpdateInt(c_id_Index, TEST_ROW_ID+1);
+    ResultSet.UpdateInt(c_dep_id_index, 1);
+    ResultSet.InsertRow;
+    ResultSet.MoveToInsertRow;
+    ResultSet.UpdateInt(c_id_Index, TEST_ROW_ID+2);
+    ResultSet.UpdateInt(c_dep_id_index, 1);
+    ResultSet.InsertRow;
+    ResultSet.First;
+    ResultSet.DeleteRow;
+    ResultSet.Next;
+    ResultSet.UpdateInt(c_dep_id_index, 2);
+    ResultSet.UpdateRow;
+    ResultSet.DeleteRow;
+  finally
+    ResultSet.Close;
+    Connection.Rollback;
+    Connection.CreateStatement.ExecuteUpdate(Sql);
   end;
 end;
 

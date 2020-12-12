@@ -177,21 +177,21 @@ type
     procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
     procedure SetByte(ParameterIndex: Integer; Value: Byte);
     procedure SetShort(ParameterIndex: Integer; Value: ShortInt);
-    procedure SetWord(ParameterIndex: Integer; Value: Word); reintroduce;
-    procedure SetSmall(ParameterIndex: Integer; Value: SmallInt); reintroduce;
-    procedure SetUInt(ParameterIndex: Integer; Value: Cardinal); reintroduce;
-    procedure SetInt(ParameterIndex: Integer; Value: Integer); reintroduce;
-    procedure SetULong(ParameterIndex: Integer; const Value: UInt64); reintroduce;
-    procedure SetLong(ParameterIndex: Integer; const Value: Int64); reintroduce;
+    procedure SetWord(ParameterIndex: Integer; Value: Word);
+    procedure SetSmall(ParameterIndex: Integer; Value: SmallInt);
+    procedure SetUInt(ParameterIndex: Integer; Value: Cardinal);
+    procedure SetInt(ParameterIndex: Integer; Value: Integer);
+    procedure SetULong(ParameterIndex: Integer; const Value: UInt64);
+    procedure SetLong(ParameterIndex: Integer; const Value: Int64);
 
-    procedure SetFloat(Index: Integer; Value: Single); reintroduce;
-    procedure SetDouble(Index: Integer; const Value: Double); reintroduce;
-    procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
-    procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
+    procedure SetFloat(Index: Integer; Value: Single);
+    procedure SetDouble(Index: Integer; const Value: Double);
+    procedure SetCurrency(Index: Integer; const Value: Currency);
+    procedure SetBigDecimal(Index: Integer; const Value: TBCD);
 
-    procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
-    procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
-    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
+    procedure SetDate(Index: Integer; const Value: TZDate); overload;
+    procedure SetTime(Index: Integer; const Value: TZTime); overload;
+    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); overload;
     procedure SetBytes(Index: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
 
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
@@ -260,15 +260,14 @@ procedure TZAbstractMySQLPreparedStatement.CheckParameterIndex(var Value: Intege
 begin
   if ((FMYSQL_STMT <> nil) and (BindList.Count < Value+1)) or
      ((FMYSQL_STMT =  nil) and (BindList.Capacity < Value+1))
-  then begin
-    {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := Format(SBindVarOutOfRange, [Value]);
-    raise EZSQLException.Create({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
-  end else inherited CheckParameterIndex(Value);
+  then raise CreateBindVarOutOfRangeException(Value)
+  else inherited CheckParameterIndex(Value);
 end;
 
 function TZAbstractMySQLPreparedStatement.CheckPrepareSwitchMode: Boolean;
 begin
-  Result := ((not FInitial_emulate_prepare) or (BatchDMLArrayCount > 0 )) and (FMYSQL_STMT = nil) and (TokenMatchIndex <> -1) and
+  Result := ((not FInitial_emulate_prepare) or (BatchDMLArrayCount > 0 )) and
+     (FMYSQL_STMT = nil) and (TokenMatchIndex <> -1) and
      ((BatchDMLArrayCount > 0 ) or (FExecCount = FMinExecCount2Prepare) or
      ((TokenMatchIndex = Ord(myCall)) and ((FPLainDriver.IsMariaDBDriver and (FPLainDriver.mysql_get_client_version >= 100000)) or
      (not FPLainDriver.IsMariaDBDriver and (FPLainDriver.mysql_get_client_version >= 50608)))));
@@ -2970,7 +2969,7 @@ SetLength(MySQL568PreparableTokens, Ord(myCall)+1);
 MySQL568PreparableTokens[Ord(myDelete)].MatchingGroup := 'DELETE';
 MySQL568PreparableTokens[Ord(myInsert)].MatchingGroup := 'INSERT';
 MySQL568PreparableTokens[Ord(myUpdate)].MatchingGroup := 'UPDATE';
-MySQL568PreparableTokens[Ord(mySelect)].MatchingGroup := 'COMMENTED_OUT_SELECT';
+MySQL568PreparableTokens[Ord(mySelect)].MatchingGroup := 'SELECT';
 MySQL568PreparableTokens[Ord(mySet)].MatchingGroup := 'SET';
 MySQL568PreparableTokens[Ord(myCall)].MatchingGroup := 'CALL'; //for non realpreparable api we're emultating it..
 {EH: all others i do ignore -> they are ususall send once }

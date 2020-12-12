@@ -79,8 +79,8 @@ type
       DataLink: TDataLink); override;
     procedure InternalOpen; override;
   protected
-  {$IFDEF WITH_IPROVIDER}
     function PSIsSQLBased: Boolean; override;
+  {$IFDEF WITH_IPROVIDER}
     procedure PSExecute; override;
     {$IFDEF WITH_IPROVIDERWIDE}
     function PSGetTableNameW: WideString; override;
@@ -347,7 +347,6 @@ begin
   end;
 end;
 
-{$IFDEF WITH_IPROVIDER}
 {**
   Checks if dataset can execute SQL queries?
   @returns <code>True</code> if the query can execute SQL.
@@ -357,6 +356,7 @@ begin
   Result := False;
 end;
 
+{$IFDEF WITH_IPROVIDER}
 {**
   Gets the name of the stored procedure.
   @returns the name of this stored procedure.

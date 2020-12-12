@@ -70,12 +70,14 @@ type
     destructor Destroy; override;
 
     // database/driver/server info:
+    /// <summary>What's the name of this database product?</summary>
+    /// <returns>database product name</returns>
     function GetDatabaseProductName: string; override;
     function GetDatabaseProductVersion: string; override;
+    /// <summary>What's the name of this ZDBC driver?
+    /// <returns>ZDBC driver name</returns>
     function GetDriverName: string; override;
 //    function GetDriverVersion: string; override; -> Same as parent
-    function GetDriverMajorVersion: Integer; override;
-    function GetDriverMinorVersion: Integer; override;
 //    function GetServerVersion: string; -> Not implemented
 
     // capabilities (what it can/cannot do):
@@ -288,10 +290,6 @@ begin
   Result := True;
 end;
 
-{**
-  What's the name of this database product?
-  @return database product name
-}
 function TZASADatabaseInfo.GetDatabaseProductName: string;
 begin
   Result := 'Sybase ASA';
@@ -306,31 +304,9 @@ begin
   Result := '7.0+';
 end;
 
-{**
-  What's the name of this JDBC driver?
-  @return JDBC driver name
-}
 function TZASADatabaseInfo.GetDriverName: string;
 begin
   Result := 'Zeos Database Connectivity Driver for Sybase ASA';
-end;
-
-{**
-  What's this JDBC driver's major version number?
-  @return JDBC driver major version
-}
-function TZASADatabaseInfo.GetDriverMajorVersion: Integer;
-begin
-  Result := 1;
-end;
-
-{**
-  What's this JDBC driver's minor version number?
-  @return JDBC driver minor version number
-}
-function TZASADatabaseInfo.GetDriverMinorVersion: Integer;
-begin
-  Result := 0;
 end;
 
 {**

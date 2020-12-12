@@ -195,7 +195,7 @@ function ConvertOracleTypeToSQLType(const TypeName: string;
 
 function NormalizeOracleTypeToSQLType(var DataType: ub2; var DataSize: ub4;
   out DescriptorType: sb4; var Precision: Integer; ScaleOrCharSetForm: sb2;
-  ConSettings: PZConSettings; IO: OCITypeParamMode): TZSQLType;
+  ConSettings: PZConSettings): TZSQLType;
 (*
 function DescribeObject(const PlainDriver: TZOraclePlainDriver; const Connection: IZConnection;
   ParamHandle: POCIParam; {%H-}stmt_handle: POCIHandle; Level: ub2): POCIObject;*)
@@ -1190,7 +1190,7 @@ end;
 
 function NormalizeOracleTypeToSQLType(var DataType: ub2; var DataSize: ub4;
   out DescriptorType: sb4; var Precision: Integer; ScaleOrCharSetForm: sb2;
-  ConSettings: PZConSettings; IO: OCITypeParamMode): TZSQLType;
+  ConSettings: PZConSettings): TZSQLType;
 label VCS;
   procedure CharacterSizeToByteSize(var DataSize: ub4; Precision: Integer);
   begin
@@ -1913,7 +1913,7 @@ begin
         Status := Param.csform;
       end else Status := Param.Scale;
       Param.SQLType := NormalizeOracleTypeToSQLType(Param.DataType, Param.DataSize,
-        Param.DescriptorType, Param.Precision, Status, ConSettings, Param.IODirection);
+        Param.DescriptorType, Param.Precision, Status, ConSettings);
       if (Param.SQLType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]) then
         if (Param.csform = SQLCS_NCHAR) or ((Consettings.ClientCodePage.Encoding = ceUTF16) and (Param.DataType <> SQLT_LNG)) then begin
           Param.CodePage := zCP_UTF16;
@@ -2256,7 +2256,7 @@ begin
         Param.csform := Param.GetUb1(OCI_ATTR_CHARSET_FORM);
       end;
       Param.SQLType := NormalizeOracleTypeToSQLType(Param.DataType, Param.DataSize,
-        Param.DescriptorType, Param.Precision, Param.Scale, ConSettings, Param.IODirection);
+        Param.DescriptorType, Param.Precision, Param.Scale, ConSettings);
       if (Param.SQLType in [stString, stAsciiStream]) then begin
         {EH: Oracle does not calculate true data size if the attachment charset is a multibyte one
           and is different to the native db charset
