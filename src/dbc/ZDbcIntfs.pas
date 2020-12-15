@@ -921,9 +921,18 @@ type
     /// <summary>Is the connection object closed?</summary>
     /// <returns><c>True</c> if Closed; <c>False</c> otherwise</returns>
     function IsClosed: Boolean;
-
+    /// <summary>Gets the parent ZDBC driver.</summary>
+    /// <returns>the parent ZDBC driver interface.</returns>
     function GetDriver: IZDriver;
+    /// <summary>Gets the plain driver.</summary>
+    /// <returns>the plain driver interface.</returns>
     function GetIZPlainDriver: IZPlainDriver;
+    /// <summary>Gets the metadata regarding this connection's database.
+    ///  A Connection's database is able to provide information
+    ///  describing its tables, its supported SQL grammar, its stored
+    ///  procedures, the capabilities of this connection, and so on. This
+    ///  information is made available through a DatabaseMetaData object.</summary>
+    /// <returns>a DatabaseMetaData object for this Connection.</returns>
     function GetMetadata: IZDatabaseMetadata;
     function GetParameters: TStrings;
     function GetClientVersion: Integer;

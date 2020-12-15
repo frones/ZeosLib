@@ -1176,7 +1176,7 @@ begin
 end;
 
 procedure TZDblibResultSetMetadata.SetColumnScaleFromGetColumnsRS(
-  ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
 begin
   if (ColumnInfo.ColumnType = stBytes) then
     ColumnInfo.Scale := TableColumns.GetInt(TableColColumnDecimalDigitsIndex);

@@ -341,7 +341,7 @@ type
     function PingServer: Integer; virtual;
     function AbortOperation: Integer; virtual;
     function EscapeString(const Value: RawByteString): RawByteString; overload; virtual;
-
+    /// <summary>Opens a connection to database server with specified parameters.</summary>
     procedure Open; virtual;
     /// <summary>Releases a Connection's database and resources immediately
     ///  instead of waiting for them to be automatically released. Note: A
@@ -1220,9 +1220,6 @@ begin
   inherited Destroy;
 end;
 
-{**
-  Opens a connection to database server with specified parameters.
-}
 procedure TZAbstractDbcConnection.Open;
 begin
   FClosed := False;
