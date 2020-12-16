@@ -934,8 +934,24 @@ type
     ///  information is made available through a DatabaseMetaData object.</summary>
     /// <returns>a DatabaseMetaData object for this Connection.</returns>
     function GetMetadata: IZDatabaseMetadata;
+    /// <summary>Gets a connection parameters.</summary>
+    /// <returns>a list with connection parameters.</returns>
     function GetParameters: TStrings;
+    /// <author>fduenas</author>
+    /// <summary>Gets the client's full version number. Initially this should be 0.
+    ///  The format of the version returned must be XYYYZZZ where
+    ///  X   = Major version
+    ///  YYY = Minor version
+    ///  ZZZ = Sub version</summary>
+    /// <returns>this clients's full version number</returns>
     function GetClientVersion: Integer;
+    /// <author>fduenas</author>
+    /// <summary>Gets the host's full version number. Initially this should be 0.
+    ///  The format of the version returned must be XYYYZZZ where
+    ///  X   = Major version
+    ///  YYY = Minor version
+    ///  ZZZ = Sub version</summary>
+    /// <returns>this server's full version number</returns>
     function GetHostVersion: Integer;
     /// <summary>Puts this connection in read-only mode as a hint to enable
     ///  database optimizations.</summary>
@@ -968,8 +984,13 @@ type
     /// <summary>Gets this Connection's current transaction isolation level.</summary>
     /// <returns>the current TRANSACTION_* mode value.</returns>
     function GetTransactionIsolation: TZTransactIsolationLevel;
-
+    /// <summary>Returns the first warning reported by calls on this Connection.</summary>
+    /// <remarks>Subsequent warnings will be chained to this EZSQLWarning.</remarks>
+    /// <returns>the first SQLWarning or nil.</returns>
     function GetWarnings: EZSQLWarning;
+    /// <summary>Clears all warnings reported for this <c>Connection</c> object.
+    ///  After a call to this method, the method <c>getWarnings</c> returns nil
+    ///  until a new warning is reported for this Connection.</summary>
     procedure ClearWarnings;
 
     function UseMetadata: boolean;
@@ -3524,7 +3545,7 @@ type
     {$ENDIF USE_SYNCOMMONS}
   end;
 
-  /// <summary>ResultSet metadata interface.</summary>
+  /// <summary>Defines the ResultSet metadata interface.</summary>
   IZResultSetMetadata = interface(IZInterface)
     ['{47CA2144-2EA7-42C4-8444-F5154369B2D7}']
     /// <summary>Maps the given <c>Metadata</c> column name to its
@@ -3537,35 +3558,272 @@ type
     /// <summary>get the number of columns in this <c>ResultSet</c> interface.</summary>
     /// <returns>the number of columns</returns>
     function GetColumnCount: Integer;
+    /// <summary>Indicates whether the designated column is automatically
+    ///  numbered, thus read-only.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function IsAutoIncrement(ColumnIndex: Integer): Boolean;
+    /// <summary>Indicates whether a column's case matters.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function IsCaseSensitive(ColumnIndex: Integer): Boolean;
+    /// <summary>Indicates whether the designated column can be used in a where
+    ///  clause.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function IsSearchable(ColumnIndex: Integer): Boolean;
+    /// <summary>Set if the column can be used in a where
+    ///  clause.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Value" <c>true</c> if the column is searchable;
+    ///  <c>False</c> otherwise.</param>
     procedure SetSearchable(ColumnIndex: Integer; Value: Boolean);
+    /// <summary>Indicates whether the designated column is a cash value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function IsCurrency(ColumnIndex: Integer): Boolean;
+    /// <summary>Indicates the nullability of values in the designated column.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>the nullability status of the given column; one of
+    ///  <c>ntNoNulls</c>, <c>ntNullable</c> or <c>ntNullableUnknown</c></returns>
     function IsNullable(ColumnIndex: Integer): TZColumnNullableType;
-
+    /// <summary>Indicates whether values in the designated column are signed
+    ///  numbers.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function IsSigned(ColumnIndex: Integer): Boolean;
+    /// <summary>Gets the designated column's suggested title for use in
+    ///  printouts and displays.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>a case sensitive unique column title.</returns>
     function GetColumnLabel(ColumnIndex: Integer): string;
+    /// <summary>Gets the designated column's original title for use in
+    ///  printouts and displays returned by the server.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>the server given column title.</returns>
     function GetOrgColumnLabel(ColumnIndex: Integer): string;
+    /// <summary>Get the designated column's name.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>return column name or "" if not applicable</returns>
     function GetColumnName(ColumnIndex: Integer): string;
+    /// <summary>Get the designated column's codepage.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>the column codepage.</returns>
+    /// <remarks>If the column is a [var,long,fixed]binary the returned value is
+    ///  zero. If the column is a text/character column the returned value is
+    ///  depends to the connection characterset or if the Charset is vairable
+    ///  like IB/FB characterset "NONE" it's the column-characterset. Otherwise
+    ///  the value is High(Word) and indicates a zCP_NONE codepage. See
+    ///  ZEncoding.pas.</remarks>
     function GetColumnCodePage(ColumnIndex: Integer): Word;
+    /// <summary>Get the designated column's table's schema.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>schema name or "" if not applicable</returns>
     function GetSchemaName(ColumnIndex: Integer): string;
+    /// <summary>Get the designated column's number of decimal digits for
+    ///  numeric or decimal types or or the number of bytes for binary columns
+    ///  or the number of display characters any other column type</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>precision/bytes/visible characters</returns>
     function GetPrecision(ColumnIndex: Integer): Integer;
+    /// <summary>Gets the designated column's number of digits to right of the
+    ///  decimal point for Numeric or Decimal types or the second fractions for
+    ///  time/timestamp types or the minimum chars/bytes for fixed
+    ///  binary/char/nchar columns, zero otherwise.
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>scale</returns>
     function GetScale(ColumnIndex: Integer): Integer;
+    /// <summary>Gets the designated column's table name.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>table name or "" if not applicable.</returns>
     function GetTableName(ColumnIndex: Integer): string;
+    /// <summary>Gets the designated column's catalog name.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>catalog name or "" if not applicable.</returns>
     function GetCatalogName(ColumnIndex: Integer): string;
+    /// <summary>Retrieves the designated column's SQL type.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>the ZDBC SQL type</returns>
     function GetColumnType(ColumnIndex: Integer): TZSQLType;
+    /// <summary>Retrieves the designated column's database-specific type name.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>type name used by the database or "" if not applicable. If the
+    ///  column type is a user-defined type, then a fully-qualified type name is
+    ///  returned.</returns>
     function GetColumnTypeName(ColumnIndex: Integer): string;
+    /// <summary>Indicates whether the designated column is definitely not
+    ///  writable.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function IsReadOnly(ColumnIndex: Integer): Boolean;
     /// <summary>Set the readonly state of a field. The value will be ignored
     ///  if the field is not writable.</summary>
-    /// <param>"ColumnIndex" the columnnumber of the field.</param>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
     /// <param>"Value" if <c>true</c> then the field will be ignored on
     ///  generating the dml's.</param>
     procedure SetReadOnly(ColumnIndex: Integer; Value: Boolean);
+    /// <summary>Indicates whether it is possible for a write on the designated
+    ///  column to succeed.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function IsWritable(ColumnIndex: Integer): Boolean;
+    /// <summary>Indicates whether a write on the designated column will
+    ///  definitely succeed.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function IsDefinitelyWritable(ColumnIndex: Integer): Boolean;
+    /// <summary>Gets a default value for this field.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>a default value for this field.</returns>
     function GetDefaultValue(ColumnIndex: Integer): string;
+    /// <summary>Finds whether this field has a default value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if this field has a default value; <c>false</c>
+    ///  otherwise.</returns>
     function HasDefaultValue(ColumnIndex: Integer): Boolean;
   end;
 
@@ -3654,7 +3912,9 @@ type
     procedure Unlisten;
     procedure DoNotify;
     function CheckEvents: string;
-
+    /// <summary>Returns the <c>Connection</c> interface
+    ///  that produced this <c>Notification</c> object.</summary>
+    /// <returns>the connection that produced this Notification.</returns>
     function GetConnection: IZConnection;
   end;
 
@@ -3685,17 +3945,16 @@ type
     /// <summary>Returns the SQL to be get the next value.</summary>
     /// <returns>The SQL string</returns>
     function  GetNextValueSQL: string;
-    /// <summary>Returns the <code>Connection</code> interface
-    ///  that produced this <code>Sequence</code> object.</summary>
-    /// <returns> the connection that produced this sequernce.</returns>
+    /// <summary>Returns the <c>Connection</c> interface
+    ///  that produced this <c>Sequence</c> object.</summary>
+    /// <returns>the connection that produced this sequence.</returns>
     function  GetConnection: IZConnection;
   end;
 
 var
-  /// <summary>
-  ///   The common driver manager object.
-  /// </summary>
+  /// <summary>The common driver manager object.</summary>
   DriverManager: IZDriverManager;
+  /// <summary>The global critical section.</summary>
   GlobalCriticalSection: TCriticalSection;
 implementation
 
