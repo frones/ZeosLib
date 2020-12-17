@@ -4141,7 +4141,10 @@ end;
   Performs the internal preparation of the query.
 }
 procedure TZAbstractRODataset.InternalPrepare;
-var I: Integer;
+var I, Cnt: Integer;
+  ParamNamesArray: TStringDynArray;
+  Param: {$IFNDEF DISABLE_ZPARAM}TZParam{$ELSE}TParam{$ENDIF};
+  DoFindParam: Boolean;
 begin
   CheckSQLQuery;
   CheckInactive;  //AVZ - Need to check this
@@ -4152,13 +4155,25 @@ begin
     if (FSQL.StatementCount > 0) and((Statement = nil) or (Statement.GetConnection.IsClosed)) then begin
       Statement := CreateStatement(FSQL.Statements[0].SQL, Properties);
       FHasOutParams := False;
-      for i := 0 to Params.Count -1 do
-        if (Params[I].ParamType <> ptUnknown) then begin
-          FHasOutParams := FHasOutParams or (Ord(Params[I].ParamType) >= Ord(ptOutput));
-          Statement.RegisterParameter(i, ConvertDatasetToDbcType(Params[I].DataType),
-            DatasetTypeToProcColDbc[Params[i].ParamType], Params[i].Name,
-            Max(Params[i].Precision, Params[i].Size), Params[i].NumericScale);
+      ParamNamesArray := FSQL.Statements[0].ParamNamesArray;
+      Cnt := Length(ParamNamesArray);
+      if (ParamNamesArray <> nil) and (Params.Count < Cnt)
+      then DoFindParam := True
+      else begin
+        Cnt := Params.Count;
+        DoFindParam := False;
+      end;
+      for i := 0 to Cnt -1 do begin
+        if DoFindParam
+        then Param := Params.FindParam(ParamNamesArray[I])
+        else Param := Params[i];
+        if (Param.ParamType <> ptUnknown) then begin
+          FHasOutParams := FHasOutParams or (Ord(Param.ParamType) >= Ord(ptOutput));
+          Statement.RegisterParameter(i, ConvertDatasetToDbcType(Param.DataType),
+            DatasetTypeToProcColDbc[Param.ParamType], Param.Name,
+            Max(Param.Precision, Param.Size), Param.NumericScale);
         end;
+      end;
     end else if (Assigned(Statement)) then
       Statement.ClearParameters;
   finally

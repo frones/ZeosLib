@@ -1218,27 +1218,21 @@ procedure TZTestOracleStoredProcedure.abtest(prefix: string);
 var
   i, P2: integer;
   S: String;
-  OrdinalDataType: TFieldType;
 begin
   StoredProc.StoredProcName := prefix+'ABTEST';
-  I := StoredProc.Connection.DbcConnection.GetHostVersion;
-  if (I >= EncodeSQLVersioning(11,0,0)) and (I < EncodeSQLVersioning(12,0,0))
-  then OrdinalDataType := ftFMTBcd
-  else OrdinalDataType := ftInteger;
-
   CheckEquals(5, StoredProc.Params.Count);
   CheckEquals('P1', StoredProc.Params[0].Name);
   CheckEquals(ptInput, StoredProc.Params[0].ParamType);
-  CheckEquals(OrdinalDataType, StoredProc.Params[0].DataType);
+  CheckEquals(ftFmtBCD, StoredProc.Params[0].DataType);
   CheckEquals('P2', StoredProc.Params[1].Name);
   CheckEquals(ptInput, StoredProc.Params[1].ParamType);
-  CheckEquals(OrdinalDataType, StoredProc.Params[1].DataType);
+  CheckEquals(ftFmtBCD, StoredProc.Params[1].DataType);
   CheckEquals('P3', StoredProc.Params[2].Name);
   CheckEquals(ptInput, StoredProc.Params[2].ParamType);
   CheckStringParamType(StoredProc.Params[2], Connection.ControlsCodePage);
   CheckEquals('P4', StoredProc.Params[3].Name);
   CheckEquals(ptOutput, StoredProc.Params[3].ParamType);
-  CheckEquals(OrdinalDataType, StoredProc.Params[3].DataType);
+  CheckEquals(ftFmtBCD, StoredProc.Params[3].DataType);
   CheckEquals('P5', StoredProc.Params[4].Name);
   CheckEquals(ptOutput, StoredProc.Params[4].ParamType);
   CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
@@ -1272,9 +1266,10 @@ begin
   //CheckEquals(ftInteger,StoredProc.Params[3].DataType);
   CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
 {$ELSE}
-  CheckEquals(OrdinalDataType, StoredProc.Params[0].DataType);
-  CheckEquals(OrdinalDataType, StoredProc.Params[1].DataType);
-  CheckEquals(OrdinalDataType, StoredProc.Params[3].DataType);
+  CheckEquals(ftFmtBCD, StoredProc.Params[0].DataType);
+  CheckEquals(ftFmtBCD, StoredProc.Params[1].DataType);
+  CheckStringParamType(StoredProc.Params[2], Connection.ControlsCodePage);
+  CheckEquals(ftFmtBCD, StoredProc.Params[3].DataType);
   CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
 {$ENDIF}
 
@@ -1312,11 +1307,14 @@ begin
   CheckEquals('P5', StoredProc.Params[4].Name);
   StoredProc.Open;
 
-  CheckEquals(2, StoredProc.Fields.Count);
-  CheckEquals(OrdinalDataType, StoredProc.Fields[0].DataType);
-  CheckStringFieldType(StoredProc.Fields[1], Connection.ControlsCodePage);
+  CheckEquals(2, ord(StoredProc.Fields.Count));
+  CheckEquals(ftFmtBCD, StoredProc.Params[0].DataType);
+  CheckEquals(ftFmtBCD, StoredProc.Params[1].DataType);
+  CheckStringParamType(StoredProc.Params[2], Connection.ControlsCodePage);
+  CheckEquals(ftFmtBCD, StoredProc.Params[3].DataType);
   CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
-
+  CheckEquals(ftFmtBCD, StoredProc.Fields[0].DataType);
+  CheckStringFieldType(StoredProc.Fields[1], Connection.ControlsCodePage);
   CheckEquals(600, StoredProc.FieldByName('P4').AsInteger);
   CheckEquals('aa', StoredProc.FieldByName('P5').AsString);
 end;
