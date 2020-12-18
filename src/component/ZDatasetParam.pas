@@ -4022,7 +4022,7 @@ procedure TZParam.SetData(Buffer: Pointer; ByteLen: Cardinal);
       ByteLen := StrLen(PAnsiChar(Buffer));
     tmp := '';
     ZSetString(PAnsiChar(Buffer), ByteLen, tmp);
-    InternalSetAsRawByteString(@FData.pvPointer, @FNull, tmp, {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}GetACP{$ENDIF});
+    InternalSetAsRawByteString(@FData.pvPointer, @FNull, tmp, {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF});
   end;
   procedure SetFromBytes;
   var Tmp: TBytes;
@@ -4561,6 +4561,8 @@ begin
   Value.Collection := nil;
 end;
 
+type TZHackAbstractRODataset = class(TZAbstractRODataset);
+
 procedure TZParams.SetArraySize(Value: Cardinal);
 var
   I: Integer;
@@ -4568,6 +4570,9 @@ begin
   if Value <> FArraySize then begin
     for i := 0 to Count -1 do
       TZParam(Items[i]).SetArraySize(Value);
+    if (Value = 0) and (FOwner <> nil) and (FOwner.InheritsFrom(TZAbstractRODataset)) then
+      with TZHackAbstractRODataset(FOwner as TZAbstractRODataset) do
+        if (Statement <> nil) then Statement.ClearParameters
     FArraySize := Value;
   end;
 end;
