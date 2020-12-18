@@ -57,6 +57,9 @@ interface
 
 uses
   SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  {$IFDEF FPC}
+    {$IFDEF UNIX}unixcp,{$ELSE}{$IFNDEF MSWINDOWS}cwstring,{$ENDIF}{$ENDIF}
+  {$ENDIF}
   {$IFDEF WITH_LCONVENCODING}
   {$MACRO ON}
    LCLVersion, LConvEncoding,

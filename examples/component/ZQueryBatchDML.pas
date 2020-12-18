@@ -88,7 +88,7 @@ begin
         Query.Params[2].AsDateTimes[DMLidx] := now;
       end;
       Query.ExecSQL;
-      Assert(Query.RecordCount = 10);
+      Assert(Query.RowsAffected = 10);
       Succeeded := True;
     finally
       if Succeeded
