@@ -4572,7 +4572,7 @@ begin
       TZParam(Items[i]).SetArraySize(Value);
     if (Value = 0) and (FOwner <> nil) and (FOwner.InheritsFrom(TZAbstractRODataset)) then
       with TZHackAbstractRODataset(FOwner as TZAbstractRODataset) do
-        if (Statement <> nil) then Statement.ClearParameters
+        if (Statement <> nil) then Statement.ClearParameters;
     FArraySize := Value;
   end;
 end;
