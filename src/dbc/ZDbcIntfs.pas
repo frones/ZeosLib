@@ -124,11 +124,18 @@ type
     /// <summary>Destroys this object and releases all resources.</summary>
     destructor Destroy; override;
   public
+    /// <summary>Specifies the ErrorCode value of the EZSQLThrowable.</summary>
     property ErrorCode: Integer read FErrorCode;
-    property StatusCode: string read FStatuscode; // The "String" Errocode // FirmOS
+    /// <author>FirmOS</summary>
+    /// <summary>Specifies the StatusCode value of the EZSQLThrowable.</summary>
+    property StatusCode: string read FStatuscode;
+    /// <author>Fr0sT</summary>
+    /// <summary>Specifies the Provider SpecificData of the EZSQLThrowable.</summary>
     property SpecificData: TZExceptionSpecificData read FSpecificData; // Engine-specific data
   end;
 
+  /// <author>EgonHugeist</summary>
+  /// <summary>Specifies a class of EZSQLThrowable.</summary>
   EZSQLThrowableClass = class of EZSQLThrowable;
 
   /// <summary>Generic SQL exception.</summary>
@@ -172,7 +179,8 @@ type
   end;
 
   /// <author>EgonHugeist</author>
-  /// <summary>defines an interfaceds object containing the connection settings.
+  /// <summary>defines an interfaced object containing the connection settings
+  ///  reference.
   /// </summary>
   TZCodePagedObject = Class(TInterfacedObject)
   private
@@ -181,6 +189,7 @@ type
     /// <summary>Fills the ConSettings record from a given parameter list.</summary>
     /// <param>"Info" the Parameter list.</param>
     procedure SetConSettingsFromInfo(Info: TStrings);
+    /// <summary>Specifies the Connection settings reference.</summary>
     property ConSettings: PZConSettings read FConSettings write FConSettings;
   public
     /// <summary>Get a reference to the actual connection settings.</summary>
@@ -198,6 +207,13 @@ type
   protected
     FWeakImmediatRelPtr: Pointer;
   public
+    /// <summary>Responds after the last constructor has executed.
+    ///  AfterConstruction is called automatically after the object's last
+    ///  constructor has executed. Do not call it explicitly in your applications.
+    ///  The AfterConstruction method implemented in TInterfacedObject
+    ///  decrements the class constructors RefCount. So don't forget to call
+    ///  the inherited Afterconstruction which is triggered as an OnCreate event.
+    /// </summary>
     procedure AfterConstruction; override;
   end;
 
@@ -261,7 +277,6 @@ type
     property OnPropertiesChange: TNotifyEvent read FOnPropertiesChange write FOnPropertiesChange;
   end;
 
-  // Data types
 type
   /// <summary>Defines ZDBC supported SQL types.</summary>
   TZSQLType = (stUnknown,
@@ -622,8 +637,9 @@ type
     ///  possible transaction isolation levels. </summary>
     /// <remarks>This method cannot be called while a explicit transaction is
     ///  started.</remarks>
-    /// <param>"Value" one of the TRANSACTION_* isolation values with the
-    ///  exception of TRANSACTION_NONE; some databases may not support other
+    /// <param>"Value" one of <c>tiNone, tiReadUncommitted, tiReadCommitted,
+    ///  tiRepeatableRead, tiSerializable</c> isolation values with the
+    ///  exception of <c>tiNone</c>; some databases may not support other
     ///  values. See DatabaseInfo.SupportsTransactionIsolationLevel</param>
     procedure SetTransactionIsolation(Value: TZTransactIsolationLevel);
     /// <summary>Gets the current auto-commit state. See setAutoCommit.</summary>
@@ -662,10 +678,11 @@ type
     /// <summary>Creates a <c>Transaction</c></summary>
     /// <param>"AutoCommit" the AutoCommit mode.</param>
     /// <param>"ReadOnly" the ReadOnly mode.</param>
-    /// <param>"TransactIsolationLevel" the TransactIsolationLevel one of the
-    ///  TRANSACTION_* isolation values with the exception of TRANSACTION_NONE;
+    /// <param>"TransactIsolationLevel" the TransactIsolationLevel one of of
+    ///  <c>tiNone, tiReadUncommitted, tiReadCommitted, tiRepeatableRead,
+    ///  tiSerializable</c> isolation values with the exception of <c>tiNone</c>;
     ///  some databases may not support other values see
-    ///  DatabaseInfo.supportsTransactionIsolationLevel</param>
+    ///  DatabaseInfo.SupportsTransactionIsolationLevel</param>
     /// <param>"Params" a list of properties used for the transaction.</param>
     /// <returns>returns the Transaction interface.</returns>
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
@@ -977,8 +994,9 @@ type
     ///  given. The constants defined in the interface <c>Connection</c> are the
     ///  possible transaction isolation levels. Note: This method cannot be
     ///  called while in the middle of a transaction.
-    /// <param>"value" one of the TRANSACTION_* isolation values with the
-    ///  exception of TRANSACTION_NONE; some databases may not support other
+    /// <param>"value" one of <c>tiNone, tiReadUncommitted, tiReadCommitted,
+    ///  tiRepeatableRead, tiSerializable</c> isolation values with the
+    ///  exception of <c>tiNone</c>; some databases may not support other
     ///  values. See DatabaseInfo.SupportsTransactionIsolationLevel</param>
     procedure SetTransactionIsolation(Value: TZTransactIsolationLevel);
     /// <summary>Gets this Connection's current transaction isolation level.</summary>
@@ -1016,21 +1034,164 @@ type
     //function GetURL: string;
     //function GetUserName: string;
 
+    /// <author>technobot</author>
+    /// <summary>Returns general information about the database (version,
+    ///  capabilities,  policies, etc).</summary>
+    /// <returns>the database information object as interface.</returns>
     function GetDatabaseInfo: IZDatabaseInfo;
+    /// <author>EgonHugeist</author>
     function GetTriggers(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet; //EgonHugeist 30.03.2011
-    function GetCollationAndCharSet(const Catalog, Schema, TableName, ColumnName: String): IZResultSet; //EgonHugeist 10.01.2012
-    function GetCharacterSets: IZResultSet; //EgonHugeist 19.01.2012
+      const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet;
+    /// <author>EgonHugeist</author>
+    function GetCollationAndCharSet(const Catalog, Schema, TableName, ColumnName: String): IZResultSet;
+    /// <author>EgonHugeist</author>
+    function GetCharacterSets: IZResultSet;
+    /// <summary>Gets a description of the stored procedures available in a
+    ///  catalog.
+    ///  Only procedure descriptions matching the schema and procedure name
+    ///  criteria are returned. They are ordered by
+    ///  PROCEDURE_SCHEM, and PROCEDURE_NAME.
+    ///  Each procedure description has the the following columns:
+    ///  <c>PROCEDURE_CAT</c> String => procedure catalog (may be null)
+    ///  <c>PROCEDURE_SCHEM</c> String => procedure schema (may be null)
+    ///  <c>PROCEDURE_NAME</c> String => procedure name
+    ///  <c>PROCEDURE_OVERLOAD</c> => a overload indicator (may be null)
+    ///  <c>RESERVED1</c> => for future use
+    ///  <c>RESERVED2</c> => for future use
+    ///  <c>REMARKS</c> String => explanatory comment on the procedure
+    ///  <c>PROCEDURE_TYPE</c> short => kind of procedure:
+    ///   procedureResultUnknown - May return a result
+    ///   procedureNoResult - Does not return a result
+    ///   procedureReturnsResult - Returns a result</summary>
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop schema
+    ///  pattern from the selection criteria</param>
+    /// <param>"ProcedureNamePattern" a procedure name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a procedure description.</returns>
+    /// <remarks>see getSearchStringEscape</remarks>
     function GetProcedures(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet;
+    /// <summary>Gets a description of a catalog's stored procedure parameters
+    ///  and result columns.
+    ///  Only descriptions matching the schema, procedure and
+    ///  parameter name criteria are returned.  They are ordered by
+    ///  PROCEDURE_SCHEM and PROCEDURE_NAME. Within this, the return value,
+    ///  if any, is first. Next are the parameter descriptions in call
+    ///  order. The column descriptions follow in column number order.
+    ///  Each row in the <c>ResultSet</c> is a parameter description or
+    ///  column description with the following fields:
+ 	  ///  <c>PROCEDURE_CAT</c> String => procedure catalog (may be null)
+ 	  ///  <c>PROCEDURE_SCHEM</c> String => procedure schema (may be null)
+ 	  ///  <c>PROCEDURE_NAME</c> String => procedure name
+ 	  ///  <c>COLUMN_NAME</c> String => column/parameter name
+ 	  ///  <c>COLUMN_TYPE</c> Short => kind of column/parameter:
+    ///      Ord(pctUnknown) - nobody knows
+    ///      Ord(pctIn) - IN parameter
+    ///      Ord(pctInOut) - INOUT parameter
+    ///      Ord(pctOut) - OUT parameter
+    ///      Ord(pctReturn) - procedure return value
+    ///      Ord(pctResultSet) - result column in <c>ResultSet</c>
+    ///  <c>DATA_TYPE</c> short => ZDBC SQL type
+ 	  ///  <c>TYPE_NAME</c> String => SQL type name, for a UDT type the
+    ///   type name is fully qualified
+ 	  ///  <c>PRECISION</c> int => precision
+ 	  ///  <c>LENGTH</c> int => length in bytes of data
+ 	  ///  <c>SCALE</c> short => scale, second fractions
+ 	  ///  <c>RADIX</c> short => radix
+ 	  ///  <c>NULLABLE</c> short => can it contain NULL?
+    ///     Ord(ntNoNulls) - does not allow NULL values
+    ///     Ord(ntNullable) - allows NULL values
+    ///     Ord(ntNullableUnknown) - nullability unknown
+ 	  ///  <c>REMARKS</c> String => comment describing parameter/column</summary>
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop
+    ///  schema pattern from the selection criteria</param>
+    /// <param>"ProcedureNamePattern" a procedure name pattern</param>
+    /// <param>"columnNamePattern" a column name pattern</param>
+    /// <returns><c>ResultSet</c> - each row describes a stored procedure
+    ///  parameter or column</returns>
+    /// <remarks>Some databases may not return the column descriptions for a
+    ///  procedure. Additional columns beyond REMARKS can be defined by the
+    ///  database.
+    /// see GetSearchStringEscape</remarks>
     function GetProcedureColumns(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string; const ColumnNamePattern: string): IZResultSet;
-
+    /// <summary>Gets a description of tables available in a catalog.
+    ///  Only table descriptions matching the catalog, schema, table
+    ///  name and type criteria are returned.  They are ordered by
+    ///  TABLE_TYPE, TABLE_SCHEM and TABLE_NAME.
+    ///  Each table description has the following columns:
+ 	  ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+ 	  ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+ 	  ///  <c>TABLE_NAME</c> String => table name
+ 	  ///  <c>TABLE_TYPE</c> String => table type.  Typical types are "TABLE",
+ 	  ///  		"VIEW",	"SYSTEM TABLE", "GLOBAL TEMPORARY",
+ 	  ///  		"LOCAL TEMPORARY", "ALIAS", "SYNONYM".
+ 	  ///  <c>REMARKS</c> String => explanatory comment on the table</summary>
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop schema
+    ///  pattern from the selection criteria</param>
+    /// <param>"TableNamePattern" a table name pattern</param>
+    /// <param>"Types" an array of table types to include; nil returns all
+    ///  types.</param>
+    /// <returns><c>ResultSet</c> - each row is a table description</returns>
+    /// <remarks>Some databases may not return information for
+    ///  all tables. Additional columns beyond REMARKS can be defined by the
+    ///  database.
+    /// see GetSearchStringEscape</remarks>
     function GetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet;
     function GetSchemas: IZResultSet;
     function GetCatalogs: IZResultSet;
     function GetTableTypes: IZResultSet;
+    /// <summary>Gets a description of table columns available in
+    ///  the specified catalog.
+    ///  Only column descriptions matching the catalog, schema pattern, table
+    ///  name pattern and column name criteria are returned. They are ordered by
+    ///  TABLE_SCHEM, TABLE_NAME and ORDINAL_POSITION.
+    ///  Each column description has the following columns:
+    ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+    ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+    ///  <c>TABLE_NAME</c> String => table name
+    ///  <c>COLUMN_NAME</c> String => column name
+    ///  <c>DATA_TYPE</c> short => SQL type from java.sql.Types
+    ///  <c>TYPE_NAME</c> String => Data source dependent type name,
+    ///   for a UDT the type name is fully qualified
+    ///  <c>COLUMN_SIZE</c> int => column size.  For char or date
+    ///      types this is the maximum number of characters, for numeric or
+    ///      decimal types this is precision.
+    ///  <c>BUFFER_LENGTH</c> is not used.
+    ///  <c>DECIMAL_DIGITS</c> int => the number of fractional digits
+    ///  <c>NUM_PREC_RADIX</c> int => Radix (typically either 10 or 2)
+    ///  <c>NULLABLE</c> int => is NULL allowed?
+    ///     Ord(ntNoNulls) - does not allow NULL values
+    ///     Ord(ntNullable) - allows NULL values
+    ///     Ord(ntNullableUnknown) - nullability unknown
+    ///  <c>REMARKS</c> String => comment describing column (may be null)
+    ///  <c>COLUMN_DEF</c> String => default value (may be null)
+    ///  <c>SQL_DATA_TYPE</c> int => unused
+    ///  <c>SQL_DATETIME_SUB</c> int => unused
+    ///  <c>CHAR_OCTET_LENGTH</c> int => for char types the
+    ///        maximum number of bytes in the column
+    ///  <c>ORDINAL_POSITION</c> int	=> index of column in table
+    ///       (starting at 1)
+    ///  <c>IS_NULLABLE</c> String => "NO" means column definitely
+    ///       does not allow NULL values; "YES" means the column might
+    ///       allow NULL values. An empty string means nobody knows.</summary>
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" retrieves those
+    ///  without a schema</param>
+    /// <param>"TableNamePattern" a table name pattern</param>
+    /// <param>"ColumnNamePattern" a column name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a column description</returns>
+    /// <remarks>Some databases may not return information for
+    ///  all tables. Additional columns beyond IS_NULLABLE can be defined by the
+    ///  database.
+    /// see GetSearchStringEscape</remarks>
     function GetColumns(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet;
     function GetColumnPrivileges(const Catalog: string; const Schema: string;
@@ -1063,7 +1224,9 @@ type
 
     function GetUDTs(const Catalog: string; const SchemaPattern: string;
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet;
-
+    /// <summary>Get's the owner connection that produced that object instance.
+    /// </summary>
+    /// <returns>the connection object interface.</returns>
     function GetConnection: IZConnection;
     function GetIdentifierConvertor: IZIdentifierConvertor; deprecated;
     function GetIdentifierConverter: IZIdentifierConverter; //typo fixed

@@ -189,54 +189,60 @@ const
   ///  UTF16 columns/parameters/connections on zdbc. These enum-names are mapped
   ///  the the W2A2WEncodingSource of the connection settings records.</summary>
   ConnProps_RawStringEncoding = 'RawStringEncoding';
-  // Type: INT
-  // The login timeout to use in seconds.
+  /// <PropertyType>Number</PropertyType>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_Timeout]={value}</syntax>
+  /// <summary>Defines the connection/login timeout in seconds. A value smaller
+  ///  than 1 means infinate.</summary>
   ConnProps_Timeout = 'timeout';
-  // Type: STR
-  // Format to display date, like YYYY-MM-DD
-  ConnProps_DateDisplayFormat = 'DateDisplayFormat'; //deprecated not used anymore
-  // Type: STR
-  // Format to read date
+  /// <PropertyType>String</PropertyType>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_DateReadFormat]={value}</syntax>
+  /// <summary>Format to read a date from a database, like YYYY-MM-DD</summary>
+  /// <remarks>Just simple formats are supported. ISO 8601 is prefered.
+  ///  Weekdays, Monthnames and so on are not supported</remarks>
   ConnProps_DateReadFormat = 'DateReadFormat';
-  // Type: STR
-  // Format to write date
+  /// <PropertyType>String</PropertyType>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_DateWriteFormat]={value}</syntax>
+  /// <summary>Format to write a date into a database, like YYYY-MM-DD</summary>
+  /// <remarks>Just simple formats are supported. ISO 8601 is prefered.
+  ///  Weekdays, Monthnames and so on are not supported</remarks>
   ConnProps_DateWriteFormat = 'DateWriteFormat';
-  // Type: STR, like HH:MM:SS
-  // Format to display time
-  ConnProps_TimeDisplayFormat = 'TimeDisplayFormat'; //deprected not used anymore
-  // Type: STR
-  // Format to read time
+  /// <PropertyType>String</PropertyType>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_TimeReadFormat]={value}</syntax>
+  /// <summary>Format to read a time value from a database, like HH:MM:SS.FFF</summary>
   ConnProps_TimeReadFormat = 'TimeReadFormat';
-  // Type: STR
-  // Format to write time
+  /// <PropertyType>String</PropertyType>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_TimeReadFormat]={value}</syntax>
+  /// <summary>Format to write a time value into a database, like HH:MM:SS.FFF</summary>
   ConnProps_TimeWriteFormat = 'TimeWriteFormat';
-  // Type: STR
-  // Format to display date & time
-  ConnProps_DateTimeDisplayFormat = 'DatetimeDisplayFormat'; //deprected not used anymore
-  // Type: STR
-  // Format to read date & time
+  /// <PropertyType>String</PropertyType>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_DateTimeReadFormat]={value}</syntax>
+  /// <summary>Format to read a timestamp from database, like YYYY-MM-DD HH:NN:SS.F</summary>
+  /// <remarks>Just simple formats are supported. ISO 8601 is prefered.
+  ///  If the driver(f.e. SQLite) supports the 'T' delimiter do not hasitate to
+  ///  use it! Weekdays, Monthnames and so on are not supported</remarks>
   ConnProps_DateTimeReadFormat = 'DatetimeReadFormat';
-  /// <type>String</type>
-  /// <summary>
-  ///  Format to read date & time, like YYYY-MM-DD HH:NN:SS.F
-  /// </summary>
-  /// <default>YYYY-MM-DD HH:NN:SS.FFF</default>
-  /// <remarks>
-  ///  Just simple formats are supported. ISO 8601 is prefered.
-  ///  If the driver(f.e. SQLite) supports the 'T' delimiter do not hasitate to use it!
-  /// </remarks>
+  /// <PropertyType>String</PropertyType>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_DateTimeWriteFormat]={value}</syntax>
+  /// <summary>Format to write a timestamp into database, like YYYY-MM-DD HH:NN:SS.F</summary>
+  /// <remarks>Just simple formats are supported. ISO 8601 is prefered.
+  ///  If the driver(f.e. SQLite) supports the 'T' delimiter do not hasitate to
+  ///  use it! Weekdays, Monthnames and so on are not supported</remarks>
   ConnProps_DateTimeWriteFormat = 'DatetimeWriteFormat';
-  /// <type>String</type>
-  /// <summary>
-  ///  Sets TZAbstractDatabaseInfo.IdentifierQuotes property. The quote chars
-  ///  are relevant for Postgres dollar quoting, multi drivers like ado, odbc,
-  ///  OleDB same as SQLite whare all known identifier quotes are allowed
+  /// <PropertyType>String</PropertyType>
+  /// <summary>Sets TZAbstractDatabaseInfo.IdentifierQuotes property. The quote
+  ///  chars are relevant for Postgres dollar quoting, multi drivers like ado,
+  ///  odbc, OleDB same as SQLite where all known identifier quotes are allowed
   /// </summary>
   /// <default>""</default>
-  /// <remarks>
-  ///  the quote char(s) count can contain a single char like sql standard " or
-  ///  maximum two characters
-  /// </remarks>
+  /// <remarks>the quote char(s) count can contain a single char like sql standard " or
+  ///  maximum two characters</remarks>
   ConnProps_IdentifierQuotes = 'identifier_quotes';
 
   { Parameters common for all DBC's }
@@ -263,15 +269,6 @@ const
   DSProps_ValidateUpdateCount = 'ValidateUpdateCount';
 
   { Parameters common for several drivers }
-
-{$IF DEFINED(ENABLE_DBLIB)}
-  { Parameters that are for datasets and statements but could be set for connections
-    (see comment above) }
-
-  // Type: STR, like CP_UTF8
-  // ?
-  DSProps_ResetCodePage = 'ResetCodePage';
-{$IFEND}
 
 {$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}
   { Parameters that are for datasets and statements but could be set for connections

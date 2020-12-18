@@ -143,7 +143,6 @@ type
     FCheckDBDead: Boolean;
     FHandle: PDBPROCESS;
     DBLibColumnCount: Integer;
-    FUserEncoding: TZCharEncoding;
     FDecimalSep: Char;
     FClientCP: Word;
     FByteBuffer: PByteBuffer;
@@ -154,8 +153,7 @@ type
     FDataProvider: TZAbstractDblibDataProvider;
     procedure Open; override;
   public
-    constructor Create(const Statement: IZStatement; const SQL: string;
-      UserEncoding: TZCharEncoding = ceDefault);
+    constructor Create(const Statement: IZStatement; const SQL: string);
     destructor Destroy; override;
 
     procedure BeforeClose; override;
@@ -334,8 +332,7 @@ end;
   @param Statement a related SQL statement object.
   @param Handle a DBLib specific query handle.
 }
-constructor TZDBLibResultSet.Create(const Statement: IZStatement; const SQL: string;
-  UserEncoding: TZCharEncoding);
+constructor TZDBLibResultSet.Create(const Statement: IZStatement; const SQL: string);
 begin
   inherited Create(Statement, SQL,
     TZDblibResultSetMetadata.Create(Statement.GetConnection.GetMetadata, SQL, Self),
@@ -346,7 +343,6 @@ begin
   FByteBuffer := FDBLibConnection.GetByteBufferAddress;
   FSQL := SQL;
   FCheckDBDead := FPlainDriver.GetProtocol = 'mssql';
-  FUserEncoding := UserEncoding;
   //FDataProvider := TZPlainDblibDataProvider.Create(Statement.GetConnection as IZDbLibConnection , FCheckDBDead);
   FDataProvider := TZCachedDblibDataProvider.Create(Statement.GetConnection as IZDbLibConnection);
   FClientCP := ConSettings.ClientCodePage.CP;
