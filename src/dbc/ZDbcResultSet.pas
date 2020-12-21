@@ -4867,8 +4867,8 @@ begin
     Len := 0;
   end else begin
     Stream := CreateLobStream(zCP_UTF16, lsmRead);
-    Len := Stream.Size shr 1;
     try
+      Len := Stream.Size shr 1;
       SetLength(ConversionBuf, Len);
       Stream.Read(Pointer(ConversionBuf)^, Stream.Size);
     finally

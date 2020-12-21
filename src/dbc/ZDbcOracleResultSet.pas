@@ -2875,8 +2875,7 @@ procedure TZAbstracOracleLobStream.CreateTemporary;
 var Status: sword;
 begin
   if not FReleased then begin
-    if FOwnerLob.LobIsOpen then
-      Close;
+    Close;
     if FOwnerLob.FLobLocator = nil then
       AllocLobLocator;
     Status := FPlainDriver.OCILobCreateTemporary(FOCISvcCtx, FOCIError,
@@ -2891,8 +2890,7 @@ end;
 destructor TZAbstracOracleLobStream.Destroy;
 begin
   FOwnerLob.FLobStream := nil;
-  if (FOwnerLob.FLobLocator <> nil) then
-    Close;
+  Close;
   inherited;
 end;
 
