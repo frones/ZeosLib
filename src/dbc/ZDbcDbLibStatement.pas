@@ -68,7 +68,6 @@ type
     FPlainDriver: TZDBLIBPLainDriver;
     FHandle: PDBPROCESS;
     FResults: IZCollection;
-    FUserEncoding: TZCharEncoding;
     FIsNCharIndex: TBooleanDynArray;
     FByteBuffer: PByteBuffer;
     procedure CreateOutParamResultSet; virtual;
@@ -266,16 +265,6 @@ begin
   FHandle := FDBLibConnection.GetConnectionHandle;
   ResultSetType := rtScrollInsensitive;
   FResults := TZCollection.Create;
-  {note: this is a hack! Purpose is to notify Zeos all Charakter columns are
-    UTF8-encoded. e.g. N(VAR)CHAR. Initial idea is made for MSSQL where we've NO
-    valid tdsType to determine (Var)Char(Ansi-Encoding) or N(Var)Char encoding
-    So this is stopping all encoding detections and increases the performance in
-    a high rate. If Varchar fields are fetched you Should use a cast to N-Fields!
-    Else all results are invalid!!!!! Just to invoke later questions!}
-  if DefineStatementParameter(Self, DSProps_ResetCodePage, '') = 'UTF8' then
-    FUserEncoding := ceUTF8
-  else
-    Self.FUserEncoding := ceDefault;
 end;
 
 procedure TZAbstractDBLibStatement.CreateOutParamResultSet;
@@ -405,7 +394,7 @@ begin
       {EH: Developer notes:
        the TDS protocol does NOT support any stmt handles. All actions are
        executed sequentially so in ALL cases we need cached Results NO WAY around!!!}
-      NativeResultSet := TZDBLibResultSet.Create(Self, Self.SQL, FUserEncoding);
+      NativeResultSet := TZDBLibResultSet.Create(Self, Self.SQL);
       CachedResultSet := TZCachedResultSet.Create(NativeResultSet,
         Self.SQL, TZDBLibCachedResolver.Create(Self, NativeResultSet.GetMetaData), ConSettings);
       CachedResultSet.SetType(rtScrollInsensitive);//!!!Cached resultsets are allways this
@@ -932,10 +921,6 @@ begin
   FPlainDriver := TZDBLIBPLainDriver(Connection.GetIZPlainDriver.GetInstance);
   FHandle := FDBLibConnection.GetConnectionHandle;
   FResults := TZCollection.Create;
-  if DefineStatementParameter(Self, DSProps_ResetCodePage, '') = 'UTF8' then
-    FUserEncoding := ceUTF8
-  else
-    Self.FUserEncoding := ceDefault;
 end;
 
 procedure TZDBLIBPreparedRPCStatement.CreateOutParamResultSet;

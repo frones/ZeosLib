@@ -826,6 +826,7 @@ type
     //=====================================================================
 
     function GetWarnings: EZSQLWarning; virtual;
+
     procedure ClearWarnings; virtual;
     /// <summary>Not yet implpemented. Gets the name of the SQL cursor used by
     ///  this <c>ResultSet</c> object. In SQL, a result table is retrieved
@@ -959,6 +960,13 @@ type
     // Properties
     //---------------------------------------------------------------------
 
+    /// <summary>Gives a hint as to the direction in which the rows in this
+    ///  <c>ResultSet</c> object will be processed. Default is fdForward.
+    ///  The initial value is determined by the
+    ///  <c>Statement</c> object
+    ///  that produced this <c>ResultSet</c> object.
+    ///  The fetch direction may be changed at any time.</summary>
+    /// <param>"Value" one of <c>fdForward, fdReverse, fdUnknown</c>.</param>
     procedure SetFetchDirection(Direction: TZFetchDirection); virtual;
     function GetFetchDirection: TZFetchDirection; virtual;
 
@@ -2573,14 +2581,6 @@ begin
   Result := FFetchDirection;
 end;
 
-{**
-  Gives a hint as to the direction in which the rows in this
-  <code>ResultSet</code> object will be processed.
-  The initial value is determined by the
-  <code>Statement</code> object
-  that produced this <code>ResultSet</code> object.
-  The fetch direction may be changed at any time.
-}
 procedure TZAbstractResultSet.SetFetchDirection(Direction: TZFetchDirection);
 begin
   if Direction <> fdForward then

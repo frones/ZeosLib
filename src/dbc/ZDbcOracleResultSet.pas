@@ -566,7 +566,7 @@ begin
         SQLT_BLOB,
         SQLT_BFILEE,
         SQLT_CFILEE     : begin
-                            FTempLob := GetBlob(C+{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+                            FTempLob := GetBlob(C{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
                             P := FTempLob.GetBuffer(fRawTemp, L);
                             JSONWriter.WrBase64(P, L, True);
                             FTempLob := nil;

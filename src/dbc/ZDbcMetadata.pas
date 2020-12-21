@@ -170,11 +170,80 @@ type
       write FCachedResultSets;
     property IC: IZIdentifierConverter read FIC;
   protected
+    /// <summary>Gets a description of tables available in a catalog.
+    ///  Only table descriptions matching the catalog, schema, table
+    ///  name and type criteria are returned. They are ordered by
+    ///  TABLE_TYPE, TABLE_SCHEM and TABLE_NAME.
+    ///  Each table description has the following columns:
+ 	  ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+ 	  ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+ 	  ///  <c>TABLE_NAME</c> String => table name
+ 	  ///  <c>TABLE_TYPE</c> String => table type.  Typical types are "TABLE",
+ 	  ///  		"VIEW",	"SYSTEM TABLE", "GLOBAL TEMPORARY",
+ 	  ///  		"LOCAL TEMPORARY", "ALIAS", "SYNONYM".
+ 	  ///  <c>REMARKS</c> String => explanatory comment on the table</summary>
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop schema
+    ///  pattern from the selection criteria</param>
+    /// <param>"TableNamePattern" a table name pattern</param>
+    /// <param>"Types" an array of table types to include; nil returns all
+    ///  types.</param>
+    /// <returns><c>ResultSet</c> - each row is a table description</returns>
+    /// <remarks>Some databases may not return information for
+    ///  all tables. Additional columns beyond REMARKS can be defined by the
+    ///  database.
+    /// see GetSearchStringEscape</remarks>
     function UncachedGetTables(const {%H-}Catalog: string; const {%H-}SchemaPattern: string;
       const {%H-}TableNamePattern: string; const {%H-}Types: TStringDynArray): IZResultSet; virtual;
     function UncachedGetSchemas: IZResultSet; virtual;
     function UncachedGetCatalogs: IZResultSet; virtual;
     function UncachedGetTableTypes: IZResultSet; virtual;
+    /// <summary>Gets a description of table columns available in
+    ///  the specified catalog.
+    ///  Only column descriptions matching the catalog, schema pattern, table
+    ///  name pattern and column name criteria are returned. They are ordered by
+    ///  TABLE_SCHEM, TABLE_NAME and ORDINAL_POSITION.
+    ///  Each column description has the following columns:
+    ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+    ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+    ///  <c>TABLE_NAME</c> String => table name
+    ///  <c>COLUMN_NAME</c> String => column name
+    ///  <c>DATA_TYPE</c> short => SQL type from java.sql.Types
+    ///  <c>TYPE_NAME</c> String => Data source dependent type name,
+    ///   for a UDT the type name is fully qualified
+    ///  <c>COLUMN_SIZE</c> int => column size.  For char or date
+    ///      types this is the maximum number of characters, for numeric or
+    ///      decimal types this is precision.
+    ///  <c>BUFFER_LENGTH</c> is not used.
+    ///  <c>DECIMAL_DIGITS</c> int => the number of fractional digits
+    ///  <c>NUM_PREC_RADIX</c> int => Radix (typically either 10 or 2)
+    ///  <c>NULLABLE</c> int => is NULL allowed?
+    ///     Ord(ntNoNulls) - does not allow NULL values
+    ///     Ord(ntNullable) - allows NULL values
+    ///     Ord(ntNullableUnknown) - nullability unknown
+    ///  <c>REMARKS</c> String => comment describing column (may be null)
+    ///  <c>COLUMN_DEF</c> String => default value (may be null)
+    ///  <c>SQL_DATA_TYPE</c> int => unused
+    ///  <c>SQL_DATETIME_SUB</c> int => unused
+    ///  <c>CHAR_OCTET_LENGTH</c> int => for char types the
+    ///        maximum number of bytes in the column
+    ///  <c>ORDINAL_POSITION</c> int	=> index of column in table
+    ///       (starting at 1)
+    ///  <c>IS_NULLABLE</c> String => "NO" means column definitely
+    ///       does not allow NULL values; "YES" means the column might
+    ///       allow NULL values. An empty string means nobody knows.</summary>
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" retrieves those
+    ///  without a schema</param>
+    /// <param>"TableNamePattern" a table name pattern</param>
+    /// <param>"ColumnNamePattern" a column name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a column description</returns>
+    /// <remarks>Some databases may not return information for
+    ///  all tables. Additional columns beyond IS_NULLABLE can be defined by the
+    ///  database.
+    /// see GetSearchStringEscape</remarks>
     function UncachedGetColumns(const {%H-}Catalog: string; const {%H-}SchemaPattern: string;
       const {%H-}TableNamePattern: string; const {%H-}ColumnNamePattern: string): IZResultSet; virtual;
     function UncachedGetTablePrivileges(const {%H-}Catalog: string; const {%H-}SchemaPattern: string;
@@ -200,8 +269,76 @@ type
     function UncachedGetCollationAndCharSet(const {%H-}Catalog, {%H-}SchemaPattern,
       {%H-}TableNamePattern, {%H-}ColumnNamePattern: string): IZResultSet; virtual; //EgonHugeist
     function UncachedGetCharacterSets: IZResultSet; virtual; //EgonHugeist
+    /// <summary>Gets a description of the stored procedures available in a
+    ///  catalog. This method needs to be implemented per driver.
+    ///  Only procedure descriptions matching the schema and procedure name
+    ///  criteria are returned. They are ordered by
+    ///  PROCEDURE_SCHEM, and PROCEDURE_NAME.
+    ///  Each procedure description has the the following columns:
+    ///  <c>PROCEDURE_CAT</c> String => procedure catalog (may be null)
+    ///  <c>PROCEDURE_SCHEM</c> String => procedure schema (may be null)
+    ///  <c>PROCEDURE_NAME</c> String => procedure name
+    ///  <c>PROCEDURE_OVERLOAD</c> => a overload indicator (may be null)
+    ///  <c>RESERVED1</c> => for future use
+    ///  <c>RESERVED2</c> => for future use
+    ///  <c>REMARKS</c> String => explanatory comment on the procedure
+    ///  <c>PROCEDURE_TYPE</c> short => kind of procedure:
+    ///   procedureResultUnknown - May return a result
+    ///   procedureNoResult - Does not return a result
+    ///   procedureReturnsResult - Returns a result</summary>
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop schema
+    ///  pattern from the selection criteria</param>
+    /// <param>"ProcedureNamePattern" a procedure name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a procedure description.</returns>
+    /// <remarks>see getSearchStringEscape</remarks>
     function UncachedGetProcedures(const {%H-}Catalog: string; const {%H-}SchemaPattern: string;
       const {%H-}ProcedureNamePattern: string): IZResultSet; virtual;
+    /// <summary>Gets a description of a catalog's stored procedure parameters
+    ///  and result columns. This method needs to be implemented per driver.
+    ///  Only descriptions matching the schema, procedure and
+    ///  parameter name criteria are returned.  They are ordered by
+    ///  PROCEDURE_SCHEM and PROCEDURE_NAME. Within this, the return value,
+    ///  if any, is first. Next are the parameter descriptions in call
+    ///  order. The column descriptions follow in column number order.
+    ///  Each row in the <c>ResultSet</c> is a parameter description or
+    ///  column description with the following fields:
+ 	  ///  <c>PROCEDURE_CAT</c> String => procedure catalog (may be null)
+ 	  ///  <c>PROCEDURE_SCHEM</c> String => procedure schema (may be null)
+ 	  ///  <c>PROCEDURE_NAME</c> String => procedure name
+ 	  ///  <c>COLUMN_NAME</c> String => column/parameter name
+ 	  ///  <c>COLUMN_TYPE</c> Short => kind of column/parameter:
+    ///      Ord(pctUnknown) - nobody knows
+    ///      Ord(pctIn) - IN parameter
+    ///      Ord(pctInOut) - INOUT parameter
+    ///      Ord(pctOut) - OUT parameter
+    ///      Ord(pctReturn) - procedure return value
+    ///      Ord(pctResultSet) - result column in <c>ResultSet</c>
+    ///  <c>DATA_TYPE</c> short => ZDBC SQL type
+ 	  ///  <c>TYPE_NAME</c> String => SQL type name, for a UDT type the
+    ///   type name is fully qualified
+ 	  ///  <c>PRECISION</c> int => precision
+ 	  ///  <c>LENGTH</c> int => length in bytes of data
+ 	  ///  <c>SCALE</c> short => scale, second fractions
+ 	  ///  <c>RADIX</c> short => radix
+ 	  ///  <c>NULLABLE</c> short => can it contain NULL?
+    ///     Ord(ntNoNulls) - does not allow NULL values
+    ///     Ord(ntNullable) - allows NULL values
+    ///     Ord(ntNullableUnknown) - nullability unknown
+ 	  ///  <c>REMARKS</c> String => comment describing parameter/column</summary>
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop
+    ///  schema pattern from the selection criteria</param>
+    /// <param>"ProcedureNamePattern" a procedure name pattern</param>
+    /// <param>"columnNamePattern" a column name pattern</param>
+    /// <returns><c>ResultSet</c> - each row describes a stored procedure
+    ///  parameter or column</returns>
+    /// <remarks>Some databases may not return the column descriptions for a
+    ///  procedure. Additional columns beyond REMARKS can be defined by the
+    ///  database.
+    /// see GetSearchStringEscape</remarks>
     function UncachedGetProcedureColumns(const {%H-}Catalog: string; const {%H-}SchemaPattern: string;
       const {%H-}ProcedureNamePattern: string; const {%H-}ColumnNamePattern: string):
       IZResultSet; virtual;
@@ -219,13 +356,89 @@ type
     function GetURL: string; virtual;
     function GetUserName: string; virtual;
 
-    function GetDatabaseInfo: IZDatabaseInfo; // technobot 2008-06-24 - see also CreateDatabaseInfo method.
-
+    /// <author>technobot</author>
+    /// <summary>Returns general information about the database (version,
+    ///  capabilities,  policies, etc).</summary>
+    /// <returns>the database information object as interface.</returns>
+    function GetDatabaseInfo: IZDatabaseInfo;
+    /// <summary>Gets a description of tables available in a catalog from a
+    ///  cache. If the cache doesn't have a entry for the matching criteria
+    ///  UncachedGetTables is called and the result will be added to the cache.
+    ///  Only table descriptions matching the catalog, schema, table
+    ///  name and type criteria are returned. They are ordered by
+    ///  TABLE_TYPE, TABLE_SCHEM and TABLE_NAME.
+    ///  Each table description has the following columns:
+ 	  ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+ 	  ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+ 	  ///  <c>TABLE_NAME</c> String => table name
+ 	  ///  <c>TABLE_TYPE</c> String => table type.  Typical types are "TABLE",
+ 	  ///  		"VIEW",	"SYSTEM TABLE", "GLOBAL TEMPORARY",
+ 	  ///  		"LOCAL TEMPORARY", "ALIAS", "SYNONYM".
+ 	  ///  <c>REMARKS</c> String => explanatory comment on the table</summary>
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop schema
+    ///  pattern from the selection criteria</param>
+    /// <param>"TableNamePattern" a table name pattern</param>
+    /// <param>"Types" an array of table types to include; nil returns all
+    ///  types.</param>
+    /// <returns><c>ResultSet</c> - each row is a table description</returns>
+    /// <remarks>Some databases may not return information for
+    ///  all tables. Additional columns beyond REMARKS can be defined by the
+    ///  database.
+    /// see GetSearchStringEscape</remarks>
     function GetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet;
     function GetSchemas: IZResultSet;
     function GetCatalogs: IZResultSet;
     function GetTableTypes: IZResultSet;
+    /// <summary>Gets a description of table columns available in
+    ///  the specified catalog from a cache. If the cache doesn't have a entry
+    ///  for the matching criteria UncachedGetTables is called and the result
+    ///  will be added to the cache.
+    ///  Only column descriptions matching the catalog, schema pattern, table
+    ///  name pattern and column name criteria are returned. They are ordered by
+    ///  TABLE_SCHEM, TABLE_NAME and ORDINAL_POSITION.
+    ///  Each column description has the following columns:
+    ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+    ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+    ///  <c>TABLE_NAME</c> String => table name
+    ///  <c>COLUMN_NAME</c> String => column name
+    ///  <c>DATA_TYPE</c> short => SQL type from java.sql.Types
+    ///  <c>TYPE_NAME</c> String => Data source dependent type name,
+    ///   for a UDT the type name is fully qualified
+    ///  <c>COLUMN_SIZE</c> int => column size. For char or date
+    ///      types this is the maximum number of characters, for numeric or
+    ///      decimal types this is precision.
+    ///  <c>BUFFER_LENGTH</c> is not used.
+    ///  <c>DECIMAL_DIGITS</c> int => the number of fractional digits
+    ///  <c>NUM_PREC_RADIX</c> int => Radix (typically either 10 or 2)
+    ///  <c>NULLABLE</c> int => is NULL allowed?
+    ///     Ord(ntNoNulls) - does not allow NULL values
+    ///     Ord(ntNullable) - allows NULL values
+    ///     Ord(ntNullableUnknown) - nullability unknown
+    ///  <c>REMARKS</c> String => comment describing column (may be null)
+    ///  <c>COLUMN_DEF</c> String => default value (may be null)
+    ///  <c>SQL_DATA_TYPE</c> int => unused
+    ///  <c>SQL_DATETIME_SUB</c> int => unused
+    ///  <c>CHAR_OCTET_LENGTH</c> int => for char types the
+    ///        maximum number of bytes in the column
+    ///  <c>ORDINAL_POSITION</c> int	=> index of column in table
+    ///       (starting at 1)
+    ///  <c>IS_NULLABLE</c> String => "NO" means column definitely
+    ///       does not allow NULL values; "YES" means the column might
+    ///       allow NULL values. An empty string means nobody knows.</summary>
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" retrieves those
+    ///  without a schema</param>
+    /// <param>"TableNamePattern" a table name pattern</param>
+    /// <param>"ColumnNamePattern" a column name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a column description</returns>
+    /// <remarks>Some databases may not return information for
+    ///  all tables. Additional columns beyond IS_NULLABLE can be defined by the
+    ///  database.
+    /// see GetSearchStringEscape</remarks>
     function GetColumns(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet;
     function GetTablePrivileges(const Catalog: string; const SchemaPattern: string;
@@ -249,8 +462,80 @@ type
       const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet; //EgonHugesit
     function GetSequences(const Catalog: string; const SchemaPattern: string;
       const SequenceNamePattern: string): IZResultSet;
+    /// <summary>Gets a description of the stored procedures available in a
+    ///  catalog from a cache. If the cache doesn't have a entry for the
+    ///  matching criteria UncachedGetProcedures is called and the result will
+    ///  be added to the cache.
+    ///  Only procedure descriptions matching the schema and procedure name
+    ///  criteria are returned. They are ordered by
+    ///  PROCEDURE_SCHEM, and PROCEDURE_NAME.
+    ///  Each procedure description has the the following columns:
+    ///  <c>PROCEDURE_CAT</c> String => procedure catalog (may be null)
+    ///  <c>PROCEDURE_SCHEM</c> String => procedure schema (may be null)
+    ///  <c>PROCEDURE_NAME</c> String => procedure name
+    ///  <c>PROCEDURE_OVERLOAD</c> => a overload indicator (may be null)
+    ///  <c>RESERVED1</c> => for future use
+    ///  <c>RESERVED2</c> => for future use
+    ///  <c>REMARKS</c> String => explanatory comment on the procedure
+    ///  <c>PROCEDURE_TYPE</c> short => kind of procedure:
+    ///   procedureResultUnknown - May return a result
+    ///   procedureNoResult - Does not return a result
+    ///   procedureReturnsResult - Returns a result</summary>
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop schema
+    ///  pattern from the selection criteria</param>
+    /// <param>"ProcedureNamePattern" a procedure name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a procedure description.</returns>
+    /// <remarks>see getSearchStringEscape</remarks>
     function GetProcedures(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet;
+    /// <summary>Gets a description of a catalog's stored procedure parameters
+    ///  and result columns from a cache. If the cache doesn't have a entry for
+    ///  the matching criteria UncachedGetProcedureColumns is called and the
+    ///  result will be added to the cache.
+    ///  Only descriptions matching the schema, procedure and
+    ///  parameter name criteria are returned.  They are ordered by
+    ///  PROCEDURE_SCHEM and PROCEDURE_NAME. Within this, the return value,
+    ///  if any, is first. Next are the parameter descriptions in call
+    ///  order. The column descriptions follow in column number order.
+    ///  Each row in the <c>ResultSet</c> is a parameter description or
+    ///  column description with the following fields:
+ 	  ///  <c>PROCEDURE_CAT</c> String => procedure catalog (may be null)
+ 	  ///  <c>PROCEDURE_SCHEM</c> String => procedure schema (may be null)
+ 	  ///  <c>PROCEDURE_NAME</c> String => procedure name
+ 	  ///  <c>COLUMN_NAME</c> String => column/parameter name
+ 	  ///  <c>COLUMN_TYPE</c> Short => kind of column/parameter:
+    ///      Ord(pctUnknown) - nobody knows
+    ///      Ord(pctIn) - IN parameter
+    ///      Ord(pctInOut) - INOUT parameter
+    ///      Ord(pctOut) - OUT parameter
+    ///      Ord(pctReturn) - procedure return value
+    ///      Ord(pctResultSet) - result column in <c>ResultSet</c>
+    ///  <c>DATA_TYPE</c> short => ZDBC SQL type
+ 	  ///  <c>TYPE_NAME</c> String => SQL type name, for a UDT type the
+    ///   type name is fully qualified
+ 	  ///  <c>PRECISION</c> int => precision
+ 	  ///  <c>LENGTH</c> int => length in bytes of data
+ 	  ///  <c>SCALE</c> short => scale, second fractions
+ 	  ///  <c>RADIX</c> short => radix
+ 	  ///  <c>NULLABLE</c> short => can it contain NULL?
+    ///     Ord(ntNoNulls) - does not allow NULL values
+    ///     Ord(ntNullable) - allows NULL values
+    ///     Ord(ntNullableUnknown) - nullability unknown
+ 	  ///  <c>REMARKS</c> String => comment describing parameter/column</summary>
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop
+    ///  schema pattern from the selection criteria</param>
+    /// <param>"ProcedureNamePattern" a procedure name pattern</param>
+    /// <param>"columnNamePattern" a column name pattern</param>
+    /// <returns><c>ResultSet</c> - each row describes a stored procedure
+    ///  parameter or column</returns>
+    /// <remarks>Some databases may not return the column descriptions for a
+    ///  procedure. Additional columns beyond REMARKS can be defined by the
+    ///  database.
+    /// see GetSearchStringEscape</remarks>
     function GetProcedureColumns(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string; const ColumnNamePattern: string):
       IZResultSet;
@@ -2550,11 +2835,6 @@ begin
   Result := FURL.UserName;
 end;
 
-{**
-  Returns general information about the database (version, capabilities,
-  policies, etc).
-  @return the database information object interface.
-}
 function TZAbstractDatabaseMetadata.GetDatabaseInfo: IZDatabaseInfo;
 begin
   if not Assigned(FDatabaseInfo) then
@@ -2562,39 +2842,6 @@ begin
   Result := FDatabaseInfo;
 end;
 
-{**
-  Gets a description of the stored procedures available in a
-  catalog.
-
-  <P>Only procedure descriptions matching the schema and
-  procedure name criteria are returned.  They are ordered by
-  PROCEDURE_SCHEM, and PROCEDURE_NAME.
-
-  <P>Each procedure description has the the following columns:
-   <OL>
- 	<LI><B>PROCEDURE_CAT</B> String => procedure catalog (may be null)
- 	<LI><B>PROCEDURE_SCHEM</B> String => procedure schema (may be null)
- 	<LI><B>PROCEDURE_NAME</B> String => procedure name
-   <LI> reserved for future use
-   <LI> reserved for future use
-   <LI> reserved for future use
- 	<LI><B>REMARKS</B> String => explanatory comment on the procedure
- 	<LI><B>PROCEDURE_TYPE</B> short => kind of procedure:
-       <UL>
-       <LI> procedureResultUnknown - May return a result
-       <LI> procedureNoResult - Does not return a result
-       <LI> procedureReturnsResult - Returns a result
-       </UL>
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param procedureNamePattern a procedure name pattern
-  @return <code>ResultSet</code> - each row is a procedure description
-  @see #getSearchStringEscape
-}
 function TZAbstractDatabaseMetadata.GetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 var
@@ -2616,101 +2863,12 @@ begin
   end;
 end;
 
-{**
-  Gets a description of the stored procedures available in a
-  catalog.
-
-  <P>Only procedure descriptions matching the schema and
-  procedure name criteria are returned.  They are ordered by
-  PROCEDURE_SCHEM, and PROCEDURE_NAME.
-
-  <P>Each procedure description has the the following columns:
-   <OL>
- 	<LI><B>PROCEDURE_CAT</B> String => procedure catalog (may be null)
- 	<LI><B>PROCEDURE_SCHEM</B> String => procedure schema (may be null)
- 	<LI><B>PROCEDURE_NAME</B> String => procedure name
-   <LI> reserved for future use
-   <LI> reserved for future use
-   <LI> reserved for future use
- 	<LI><B>REMARKS</B> String => explanatory comment on the procedure
- 	<LI><B>PROCEDURE_TYPE</B> short => kind of procedure:
-       <UL>
-       <LI> procedureResultUnknown - May return a result
-       <LI> procedureNoResult - Does not return a result
-       <LI> procedureReturnsResult - Returns a result
-       </UL>
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param procedureNamePattern a procedure name pattern
-  @return <code>ResultSet</code> - each row is a procedure description
-  @see #getSearchStringEscape
-}
 function TZAbstractDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 begin
   Result := ConstructVirtualResultSet(ProceduresColumnsDynArray);
 end;
 
-{**
-  Gets a description of a catalog's stored procedure parameters
-  and result columns.
-
-  <P>Only descriptions matching the schema, procedure and
-  parameter name criteria are returned.  They are ordered by
-  PROCEDURE_SCHEM and PROCEDURE_NAME. Within this, the return value,
-  if any, is first. Next are the parameter descriptions in call
-  order. The column descriptions follow in column number order.
-
-  <P>Each row in the <code>ResultSet</code> is a parameter description or
-  column description with the following fields:
-   <OL>
- 	<LI><B>PROCEDURE_CAT</B> String => procedure catalog (may be null)
- 	<LI><B>PROCEDURE_SCHEM</B> String => procedure schema (may be null)
- 	<LI><B>PROCEDURE_NAME</B> String => procedure name
- 	<LI><B>COLUMN_NAME</B> String => column/parameter name
- 	<LI><B>COLUMN_TYPE</B> Short => kind of column/parameter:
-       <UL>
-       <LI> procedureColumnUnknown - nobody knows
-       <LI> procedureColumnIn - IN parameter
-       <LI> procedureColumnInOut - INOUT parameter
-       <LI> procedureColumnOut - OUT parameter
-       <LI> procedureColumnReturn - procedure return value
-       <LI> procedureColumnResult - result column in <code>ResultSet</code>
-       </UL>
-   <LI><B>DATA_TYPE</B> short => SQL type from java.sql.Types
- 	<LI><B>TYPE_NAME</B> String => SQL type name, for a UDT type the
-   type name is fully qualified
- 	<LI><B>PRECISION</B> int => precision
- 	<LI><B>LENGTH</B> int => length in bytes of data
- 	<LI><B>SCALE</B> short => scale
- 	<LI><B>RADIX</B> short => radix
- 	<LI><B>NULLABLE</B> short => can it contain NULL?
-       <UL>
-       <LI> procedureNoNulls - does not allow NULL values
-       <LI> procedureNullable - allows NULL values
-       <LI> procedureNullableUnknown - nullability unknown
-       </UL>
- 	<LI><B>REMARKS</B> String => comment describing parameter/column
-   </OL>
-
-  <P><B>Note:</B> Some databases may not return the column
-  descriptions for a procedure. Additional columns beyond
-  REMARKS can be defined by the database.
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param procedureNamePattern a procedure name pattern
-  @param columnNamePattern a column name pattern
-  @return <code>ResultSet</code> - each row describes a stored procedure parameter or
-       column
-  @see #getSearchStringEscape
-}
 function TZAbstractDatabaseMetadata.GetProcedureColumns(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
@@ -2733,62 +2891,6 @@ begin
   end;
 end;
 
-{**
-  Gets a description of a catalog's stored procedure parameters
-  and result columns.
-
-  <P>Only descriptions matching the schema, procedure and
-  parameter name criteria are returned.  They are ordered by
-  PROCEDURE_SCHEM and PROCEDURE_NAME. Within this, the return value,
-  if any, is first. Next are the parameter descriptions in call
-  order. The column descriptions follow in column number order.
-
-  <P>Each row in the <code>ResultSet</code> is a parameter description or
-  column description with the following fields:
-   <OL>
- 	<LI><B>PROCEDURE_CAT</B> String => procedure catalog (may be null)
- 	<LI><B>PROCEDURE_SCHEM</B> String => procedure schema (may be null)
- 	<LI><B>PROCEDURE_NAME</B> String => procedure name
- 	<LI><B>COLUMN_NAME</B> String => column/parameter name
- 	<LI><B>COLUMN_TYPE</B> Short => kind of column/parameter:
-       <UL>
-       <LI> procedureColumnUnknown - nobody knows
-       <LI> procedureColumnIn - IN parameter
-       <LI> procedureColumnInOut - INOUT parameter
-       <LI> procedureColumnOut - OUT parameter
-       <LI> procedureColumnReturn - procedure return value
-       <LI> procedureColumnResult - result column in <code>ResultSet</code>
-       </UL>
-   <LI><B>DATA_TYPE</B> short => SQL type from java.sql.Types
- 	<LI><B>TYPE_NAME</B> String => SQL type name, for a UDT type the
-   type name is fully qualified
- 	<LI><B>PRECISION</B> int => precision
- 	<LI><B>LENGTH</B> int => length in bytes of data
- 	<LI><B>SCALE</B> short => scale
- 	<LI><B>RADIX</B> short => radix
- 	<LI><B>NULLABLE</B> short => can it contain NULL?
-       <UL>
-       <LI> procedureNoNulls - does not allow NULL values
-       <LI> procedureNullable - allows NULL values
-       <LI> procedureNullableUnknown - nullability unknown
-       </UL>
- 	<LI><B>REMARKS</B> String => comment describing parameter/column
-   </OL>
-
-  <P><B>Note:</B> Some databases may not return the column
-  descriptions for a procedure. Additional columns beyond
-  REMARKS can be defined by the database.
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param procedureNamePattern a procedure name pattern
-  @param columnNamePattern a column name pattern
-  @return <code>ResultSet</code> - each row describes a stored procedure parameter or
-       column
-  @see #getSearchStringEscape
-}
 function TZAbstractDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
@@ -2892,36 +2994,6 @@ begin
     [Catalog, SchemaPattern, TableNamePattern, TriggerNamePattern]);
 end;
 
-{**
-  Gets a description of tables available in a catalog.
-
-  <P>Only table descriptions matching the catalog, schema, table
-  name and type criteria are returned.  They are ordered by
-  TABLE_TYPE, TABLE_SCHEM and TABLE_NAME.
-
-  <P>Each table description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>TABLE_TYPE</B> String => table type.  Typical types are "TABLE",
- 			"VIEW",	"SYSTEM TABLE", "GLOBAL TEMPORARY",
- 			"LOCAL TEMPORARY", "ALIAS", "SYNONYM".
- 	<LI><B>REMARKS</B> String => explanatory comment on the table
-   </OL>
-
-  <P><B>Note:</B> Some databases may not return information for
-  all tables.
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param tableNamePattern a table name pattern
-  @param types a list of table types to include; null returns all types
-  @return <code>ResultSet</code> - each row is a table description
-  @see #getSearchStringEscape
-}
 function TZAbstractDatabaseMetadata.GetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const Types: TStringDynArray): IZResultSet;
@@ -2943,36 +3015,6 @@ begin
   end;
 end;
 
-{**
-  Gets a description of tables available in a catalog.
-
-  <P>Only table descriptions matching the catalog, schema, table
-  name and type criteria are returned.  They are ordered by
-  TABLE_TYPE, TABLE_SCHEM and TABLE_NAME.
-
-  <P>Each table description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>TABLE_TYPE</B> String => table type.  Typical types are "TABLE",
- 			"VIEW",	"SYSTEM TABLE", "GLOBAL TEMPORARY",
- 			"LOCAL TEMPORARY", "ALIAS", "SYNONYM".
- 	<LI><B>REMARKS</B> String => explanatory comment on the table
-   </OL>
-
-  <P><B>Note:</B> Some databases may not return information for
-  all tables.
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param tableNamePattern a table name pattern
-  @param types a list of table types to include; null returns all types
-  @return <code>ResultSet</code> - each row is a table description
-  @see #getSearchStringEscape
-}
 function TZAbstractDatabaseMetadata.UncachedGetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const Types: TStringDynArray): IZResultSet;
@@ -3201,57 +3243,6 @@ begin
   end;
 end;
 
-{**
-  Gets a description of table columns available in
-  the specified catalog.
-
-  <P>Only column descriptions matching the catalog, schema, table
-  and column name criteria are returned.  They are ordered by
-  TABLE_SCHEM, TABLE_NAME and ORDINAL_POSITION.
-
-  <P>Each column description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>COLUMN_NAME</B> String => column name
- 	<LI><B>DATA_TYPE</B> short => SQL type from java.sql.Types
- 	<LI><B>TYPE_NAME</B> String => Data source dependent type name,
-   for a UDT the type name is fully qualified
- 	<LI><B>COLUMN_SIZE</B> int => column size.  For char or date
- 	    types this is the maximum number of characters, for numeric or
- 	    decimal types this is precision.
- 	<LI><B>BUFFER_LENGTH</B> is not used.
- 	<LI><B>DECIMAL_DIGITS</B> int => the number of fractional digits
- 	<LI><B>NUM_PREC_RADIX</B> int => Radix (typically either 10 or 2)
- 	<LI><B>NULLABLE</B> int => is NULL allowed?
-       <UL>
-       <LI> columnNoNulls - might not allow NULL values
-       <LI> columnNullable - definitely allows NULL values
-       <LI> columnNullableUnknown - nullability unknown
-       </UL>
- 	<LI><B>REMARKS</B> String => comment describing column (may be null)
-  	<LI><B>COLUMN_DEF</B> String => default value (may be null)
- 	<LI><B>SQL_DATA_TYPE</B> int => unused
- 	<LI><B>SQL_DATETIME_SUB</B> int => unused
- 	<LI><B>CHAR_OCTET_LENGTH</B> int => for char types the
-        maximum number of bytes in the column
- 	<LI><B>ORDINAL_POSITION</B> int	=> index of column in table
-       (starting at 1)
- 	<LI><B>IS_NULLABLE</B> String => "NO" means column definitely
-       does not allow NULL values; "YES" means the column might
-       allow NULL values.  An empty string means nobody knows.
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param tableNamePattern a table name pattern
-  @param columnNamePattern a column name pattern
-  @return <code>ResultSet</code> - each row is a column description
-  @see #getSearchStringEscape
-}
 function TZAbstractDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
