@@ -209,7 +209,7 @@ type
     function GetUnicodeString(ParameterIndex: Integer): ZWideString;
 
     function GetBLob(ParameterIndex: Integer): IZBlob;
-    //function GetCLob(ParameterIndex: Integer): IZClob;
+    function GetCLob(ParameterIndex: Integer): IZClob;
 
     procedure ClearParameters; virtual;
 
@@ -379,6 +379,22 @@ end;
 function TZAbstractBeginnerPreparedStatement.GetClientVariantManger: IZClientVariantManager;
 begin
   Result := FClientVariantManger;
+end;
+
+function TZAbstractBeginnerPreparedStatement.GetCLob(
+  ParameterIndex: Integer): IZClob;
+var
+  Idx: Integer;
+  TempBlob: IZClob;
+begin
+  Idx := ParameterIndex - FirstDbcIndex;
+  if (Idx) >= Length(InParamValues) then
+    raise EZSQLException.Create('Paramter index exceeds parameter count.');
+  if (InParamValues[Idx].VType = vtInterface) and (Supports(InParamValues[Idx].VInterface, IZClob, TempBlob)) then begin
+    Result := TempBlob;
+  end else begin
+    EZSQLException.Create('Paramter is not an IZBlob');
+  end;
 end;
 
 {**
@@ -1184,7 +1200,7 @@ begin
               raise EZSQLException.Create('Invalid Variant-Type for String-Array binding!');
           end;
         stArray:          raise EZSQLException.Create('Invalid SQL-Type for Array binding!');
-        stDataSet: ;
+        stResultSet: ;
       end;
     V.VType := vtArray;
     V.VArray.VArray := Pointer(Value);
