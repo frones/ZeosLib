@@ -51,6 +51,8 @@
 
 unit ZDbcBeginnerStatement;
 
+{$INCLUDE ZDbc.inc}
+
 interface
 
 uses Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} FmtBCD, SysUtils,

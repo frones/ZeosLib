@@ -218,6 +218,8 @@ type
     function GetServerProvider: TZServerProvider; override;
 
     function GetDbInfoStr: ZWideString;
+
+    procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); override;
   end;
 
 var
@@ -687,6 +689,15 @@ end;
 function TZDbcProxyConnection.GetDbInfoStr: ZWideString;
 begin
   Result := FDbInfo;
+end;
+
+procedure TZDbcProxyConnection.ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory);
+var
+  Statement: IZStatement;
+begin
+  Statement := CreateStatementWithParams(nil);
+  Statement.Execute(SQL);
+  Statement.Close;
 end;
 
 initialization
