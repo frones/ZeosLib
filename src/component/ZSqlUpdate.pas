@@ -823,6 +823,7 @@ procedure TZUpdateSQL.PostUpdates(const Sender: IZCachedResultSet;
 var
   I: Integer;
   Statement: IZPreparedStatement;
+  OrigStmt: IZStatement;
   Config: TZSQLStrings;
   CalcDefaultValues,
   ExecuteStatement,
@@ -886,11 +887,17 @@ begin
   else CalcDefaultValues := False;
     //(Dataset as TZAbstractRODataset). ZSysUtils.StrToBoolEx(DefineStatementParameter(Sender.GetStatement, DSProps_Defaults, 'true'));
   try
+    OrigStmt := Sender.GetStatement;
+    if not Assigned(OrigStmt) then
+      if DataSet is TZAbstractDataset then
+        OrigStmt := (DataSet as TZAbstractDataset).DbcStatement;
+    if not Assigned(OrigStmt) then
+      raise Exception.Create('Could not determine a valid statement!');
     for I := 0 to Config.StatementCount - 1 do begin
       if (FStmts[UpdateType].Count <= i) or not (FStmts[UpdateType][i].QueryInterface(IZPreparedStatement, Statement) = S_OK) or
-         Statement.IsClosed or (Sender.GetStatement.GetParameters.Text <> Statement.GetParameters.Text) then begin
-        Statement := Sender.GetStatement.GetConnection.PrepareStatementWithParams(
-          Config.Statements[I].SQL, Sender.GetStatement.GetParameters);
+         Statement.IsClosed or (OrigStmt.GetParameters.Text <> Statement.GetParameters.Text) then begin
+        Statement := OrigStmt.GetConnection.PrepareStatementWithParams(
+          Config.Statements[I].SQL, OrigStmt.GetParameters);
         if (FStmts[UpdateType].Count <= i)
         then FStmts[UpdateType].Add(Statement)
         else FStmts[UpdateType][i] := Statement;
@@ -911,7 +918,7 @@ begin
       end;
       if ExecuteStatement then begin
         // if Property ValidateUpdateCount isn't set : assume it's true
-        Tmp := Sender.GetStatement.GetParameters.Values[DSProps_ValidateUpdateCount];
+        Tmp := OrigStmt.GetParameters.Values[DSProps_ValidateUpdateCount];
         lValidateUpdateCount := (Tmp = '') or StrToBoolEx(Tmp);
 
         lUpdateCount := Statement.ExecuteUpdatePrepared;
