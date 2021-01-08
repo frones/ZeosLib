@@ -567,6 +567,9 @@ type
     /// <summary>add a line feed if neiter buffer nor result is empty.</summary>
     /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddLineFeedIfNotEmpty(var Result: RawByteString);
+    /// <summary>Return the current length if the String get's finalized.</summary>
+    /// <returns>the Length of the string in bytes.</returns>
+    function GetCurrentLength(const Current: RawByteString): Cardinal;
   end;
 
   /// <author>EgonHugeist</author>
@@ -820,7 +823,7 @@ type
     /// <summary>Raises and EListError.</summary>
     /// <param>"Msg" the error message.</param>
     /// <param>"Data" the error data.</param>
-    class procedure Error(const Msg: string; Data: NativeInt); overload; virtual;
+    class procedure Error(const Msg: string; Data: NativeInt); virtual;
   public
     /// <summary>Create this object and assigns main properties.</summary>
     /// <param>"ElementSize" a size of the element hold in array.</param>
@@ -1353,6 +1356,12 @@ begin
     Inc(Result, LRes);
     FPos := FBuf;
   end;
+end;
+
+function TZRawSQLStringWriter.GetCurrentLength(
+  Const Current: RawByteString): Cardinal;
+begin
+  Result := Length(Current) + (FPos - FBuf);
 end;
 
 procedure TZRawSQLStringWriter.IncreaseCapacityTo(AnsiCharCapacity: Integer;
@@ -2735,7 +2744,7 @@ var P: Pointer;
 begin
   {$IFNDEF DISABLE_CHECKING}
   if NativeUInt(Index) > FCount then
-    Error(@SListIndexError, Index);
+    Error(SListIndexError, Index);
   {$ENDIF DISABLE_CHECKING}
   if FCount = FCapacity then
     Grow;
@@ -2765,14 +2774,14 @@ var P: Pointer;
 begin
   {$IFNDEF DISABLE_CHECKING}
   if (NewCapacity < FCount) or (NewCapacity > {$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
-    Error(@SListCapacityError, NewCapacity);
+    Error(SListCapacityError, NewCapacity);
   {$ENDIF DISABLE_CHECKING}
   if NewCapacity <> FCapacity then begin
     if NewCapacity < FCount then
       SetCount(NewCapacity);
-    ReallocMem(FElements, NewCapacity * NativeInt(FElementSize*2));
+    ReallocMem(FElements, NewCapacity * NativeInt(FElementSize));
     if FElementNeedsFinalize and (NewCapacity>FCapacity) then begin
-      P := Pointer(NativeUInt(FElements)+(NativeUInt(FCount)*FElementSize));
+      P := Pointer(NativeUInt(FElements)+(NativeUInt(FCapacity)*FElementSize));
       FillChar(P^, NativeInt(FElementSize)*(NewCapacity-FCapacity), #0);
     end;
     FCapacity := NewCapacity;
@@ -2787,7 +2796,7 @@ var I: NativeInt;
 begin
   {$IFNDEF DISABLE_CHECKING}
   if (NewCount <0) or (NewCount > {$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF}) then
-    Error(@SListCountError, NewCount);
+    Error(SListCountError, NewCount);
   {$ENDIF DISABLE_CHECKING}
   if NewCount <> FCount then begin
     if NewCount > FCapacity then
@@ -2817,7 +2826,6 @@ procedure TZExchangeableCustomElementList.BeforeDestruction;
 begin
   inherited;
   FreeMem(FElementBuffer);
-
 end;
 
 procedure TZExchangeableCustomElementList.Exchange(Item1, Item2: NativeInt);
