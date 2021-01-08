@@ -652,7 +652,7 @@ begin
             Statement.SetGUID(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, UID);
           end;
         stString, stUnicodeString:
-          Statement.SetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetUnicodeString(ColumnIndex, WasNull));
+          Statement.SetCharRec(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetCharRec(ColumnIndex, WasNull));
         stBytes:
           Statement.SetBytes(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetBytes(ColumnIndex, WasNull));
         stDate: begin
