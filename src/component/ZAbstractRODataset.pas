@@ -3720,8 +3720,11 @@ begin
       {$ENDIF}
     FNewRowBuffer := nil;
 
-    if FFieldsAccessor <> RowAccessor then
-      FreeAndNil(FFieldsAccessor);
+    if FFieldsAccessor <> RowAccessor then begin
+      if FFieldsAccessor <> nil then
+        FreeAndNil(FFieldsAccessor);
+    end else
+      FFieldsAccessor := nil;
     FreeAndNil(FResultSet2AccessorIndexList);
     FreeAndNil(FRowAccessor);
     { Destroy default fields }

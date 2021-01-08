@@ -193,8 +193,8 @@ type
 //    function UsesLocalFiles: Boolean; override; -> Not implemented
     function UsesLocalFilePerTable: Boolean; override;
 //    function StoresUpperCaseIdentifiers: Boolean; override; -> Not implemented
-    function StoresLowerCaseIdentifiers: Boolean; override;
-    function StoresMixedCaseIdentifiers: Boolean; override;
+//    function StoresLowerCaseIdentifiers: Boolean; override; -> Not implemented
+//    function StoresMixedCaseIdentifiers: Boolean; override; -> Not implemented
 //    function StoresUpperCaseQuotedIdentifiers: Boolean; override; -> Not implemented
 //    function StoresLowerCaseQuotedIdentifiers: Boolean; override; -> Not implemented
 //    function StoresMixedCaseQuotedIdentifiers: Boolean; override; -> Not implemented
@@ -414,26 +414,6 @@ end;
 function TZMySQLDatabaseInfo.UsesLocalFilePerTable: Boolean;
 begin
   Result := True;
-end;
-
-{**
-  Does the database treat mixed case unquoted SQL identifiers as
-  case insensitive and store them in lower case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZMySQLDatabaseInfo.StoresLowerCaseIdentifiers: Boolean;
-begin
-  Result := True; //https://dev.mysql.com/doc/refman/5.7/en/identifier-case-sensitivity.html
-end;
-
-{**
-  Does the database treat mixed case unquoted SQL identifiers as
-  case insensitive and store them in mixed case?
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-function TZMySQLDatabaseInfo.StoresMixedCaseIdentifiers: Boolean;
-begin
-  Result := False; //https://dev.mysql.com/doc/refman/5.7/en/identifier-case-sensitivity.html
 end;
 
 {**

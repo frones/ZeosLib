@@ -122,6 +122,9 @@ type
     property SequenceField;
   end;
 
+const
+  Zeos80 = true;
+
 implementation
 
 end.

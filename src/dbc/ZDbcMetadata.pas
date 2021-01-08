@@ -4681,11 +4681,10 @@ begin
                   Result := UpperCase(Pattern);
         icUpper: if FDatabaseInfo.StoresLowerCaseIdentifiers then
                    Result := LowerCase(Pattern);
-        icMixed: if not FDatabaseInfo.StoresMixedCaseIdentifiers then
-                   if FDatabaseInfo.StoresUpperCaseIdentifiers then
-                     Result := UpperCase(Pattern)
-                   else
-                     Result := LowerCase(Pattern);
+        icMixed: if FDatabaseInfo.StoresUpperCaseIdentifiers then
+                   Result := UpperCase(Pattern)
+                 else if FDatabaseInfo.StoresLowerCaseIdentifiers then
+                   Result := LowerCase(Pattern);
         {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
       end
     end else
@@ -5148,7 +5147,7 @@ begin
     { Checks for reserved keywords. }
     if Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers and (Result <> icUpper) then
       S := UpperCase(Value)
-    else if not Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers and (Result <> icLower) then
+    else if not Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers and (Result <> icLower) then
       s := LowerCase(Value)
     else S := Value;
     // With sorted list fast binary search is performed
@@ -5247,10 +5246,10 @@ begin
     Result := Value;
     case GetIdentifierCase(Value,True) of
       icMixed:
-        if not Metadata.GetDatabaseInfo.StoresMixedCaseIdentifiers then
           if Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers
           then Result := UpperCase(Result)
-          else Result := LowerCase(Result);
+          else if Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers then
+            Result := LowerCase(Result);
       icLower: if Metadata.GetDatabaseInfo.StoresUpperCaseIdentifiers then
         Result := UpperCase(Result);
       icUpper: if Metadata.GetDatabaseInfo.StoresLowerCaseIdentifiers then

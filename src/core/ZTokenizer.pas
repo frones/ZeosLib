@@ -99,6 +99,8 @@ type
   TZTokenArray = array[0..{$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF} - 1] of TZToken;
 
   TZTokenCase = (tcSensitive, tcInsensitive);
+  /// <author>EgonHugeist</author>
+  /// <summary>Implements a list of TZTokens</summary>
   TZTokenList = class(TZCustomElementList)
   public
     constructor Create(Capacity: Cardinal = 32);
