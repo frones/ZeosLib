@@ -445,20 +445,27 @@ begin
       ColumnLabel := ColumnNode.Attributes['label'];
       ColumnName := ColumnNode.Attributes['name'];
       ColumnType := TZSQLType(GetEnumValue(TypeInfo(TZSQLType), ColumnNode.Attributes['type']));
-      {$IFNDEF ZEOS73UP}
       case ColumnType of
         stString, stUnicodeString:
-          if GetConSettings.CPType = cCP_UTF16 then
-            ColumnType := stUnicodeString
-          else
+          {$IFNDEF ZEOS73UP}if GetConSettings.CPType = cCP_UTF16 then {$ENDIF ZEOS73UP} begin
+            ColumnType := stUnicodeString;
+            ColumnCodePage := zCP_UTF16;
+          {$IFNDEF ZEOS73UP}end else begin
             ColumnType := stString;
+            ColumnCodePage := zCP_UTF8;
+          {$ENDIF ZEOS73UP}
+          end;
         stAsciiStream, stUnicodeStream:
-          if GetConSettings.CPType = cCP_UTF16 then
-            ColumnType := stUnicodeStream
-          else
+          {$IFNDEF ZEOS73UP}if GetConSettings.CPType = cCP_UTF16 then {$ENDIF ZEOS73UP} begin
+            ColumnType := stUnicodeStream;
+            ColumnCodePage := zCP_UTF16;
+          {$IFNDEF ZEOS73UP}
+          end else begin
             ColumnType := stAsciiStream;
+            ColumnCodePage := zCP_UTF8
+          {$ENDIF ZEOS73UP}
+          end;
       end;
-      {$ENDIF}
       DefaultValue := ColumnNode.Attributes['defaultvalue'];
       Precision := StrToInt(ColumnNode.Attributes['precision']);
       Scale := StrToInt(ColumnNode.Attributes['scale']);

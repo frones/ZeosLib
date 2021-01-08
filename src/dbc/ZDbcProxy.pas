@@ -231,7 +231,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_PROXY} //if set we have an empty unit
 
 uses
-  ZSysUtils, ZFastCode,
+  ZSysUtils, ZFastCode, ZEncoding,
   ZDbcProxyMetadata, ZDbcStatement, ZDbcProxyStatement,
   ZMessages, Typinfo
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
@@ -363,6 +363,11 @@ begin
   FDbInfo := MyDbInfo;
   inherited Open;
   applyProperties(PropList);
+  New(ConSettings.ClientCodePage);
+  ConSettings.ClientCodePage.Name := 'UTF16';
+  ConSettings.ClientCodePage.Encoding := ceUTF16;
+  ConSettings.ClientCodePage.CharWidth := 2;
+  ConSettings.ClientCodePage.CP := zCP_UTF16;
 end;
 
 {$IFNDEF ZEOS73UP}
@@ -530,6 +535,7 @@ begin
 
   if Assigned(DriverManager) and DriverManager.HasLoggingListener then //thread save
     DriverManager.LogMessage(lcDisconnect, URL.Protocol, LogMessage);
+  Dispose(ConSettings.ClientCodePage);
 end;
 
 function TZDbcProxyConnection.GetClientVersion: Integer;
