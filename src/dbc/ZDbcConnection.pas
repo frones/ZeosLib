@@ -205,7 +205,15 @@ type
     {$ENDIF}
     FLogMessage: SQLString;
     procedure InternalClose; virtual; abstract;
+    /// <summary>Immediately execute a query and do nothing with the results.</summary>
+    /// <remarks>A new driver needs to implement one of the overloads.</remarks>
+    /// <param>"SQL" a raw encoded query to be executed.</param>
+    /// <param>"LoggingCategory" the LoggingCategory for the Logging listeners.</param>
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; virtual;
+    /// <summary>Immediately execute a query and do nothing with the results.</summary>
+    /// <remarks>A new driver needs to implement one of the overloads.</remarks>
+    /// <param>"SQL" a UTF16 encoded query to be executed.</param>
+    /// <param>"LoggingCategory" the LoggingCategory for the Logging listeners.</param>
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload; virtual;
     procedure SetDateTimeFormatProperties(DetermineFromInfo: Boolean = True);
     procedure ResetCurrentClientCodePage(const Name: String;
