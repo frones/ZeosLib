@@ -130,6 +130,7 @@ type
     procedure TestSF434;
     procedure TestSF310_JoinedUpdate_SetReadOnly;
     procedure TestSF310_JoinedUpdate_ProviderFlags;
+    procedure TestSF469;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -1947,6 +1948,32 @@ begin
     Query.Params[0].AsString := 'A%';
     Query.Open;
     CheckEquals(2, Query.RecordCount, 'there are two rows');
+  finally
+    Query.Free;
+  end;
+end;
+
+{Assume the following code:
+
+Query.SQL.Text := 'select * from users where userid = :userid';
+Query.ParamByName('userid').AsString := 'abc';
+Query.SQL.Text := 'select * from users where username = :userid';
+
+It seems that the third line reinitializes the parameter values to be empty.
+This worked in the past. I am not sure, which revision introduced the change.
+}
+procedure ZTestCompCoreBugReport.TestSF469;
+var
+  Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from users where userid = :userid';
+    Query.ParamByName('userid').AsString := 'abc';
+    CheckEquals('abc', Query.ParamByName('userid').AsString);
+    Query.SQL.Text := 'select * from users where username = :userid';
+    CheckEquals('abc', Query.ParamByName('userid').AsString);
   finally
     Query.Free;
   end;

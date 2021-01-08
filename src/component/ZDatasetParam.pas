@@ -1294,11 +1294,12 @@ begin
   if (Param.FArraySize = 0) and not FNull and (Ord(FSQLDataType) >= Ord(stString)) then begin
     { inc the refcounts }
     FData.pvPointer := nil; //avoid gpf
-    case SQLType of
-      stString: RawByteString(FData.pvPointer) := RawByteString(FData.pvPointer);
-      stUnicodeString: UnicodeString(FData.pvPointer) := UnicodeString(FData.pvPointer);
-      stBytes: TBytes(FData.pvPointer) := TBytes(FData.pvPointer);
-      stAsciiStream, stUnicodeStream: IZCLob(FData.pvPointer) := IZCLob(FData.pvPointer);
+    case SQLType of //handle refcounted variables
+      stString: RawByteString(FData.pvPointer) := RawByteString(Param.FData.pvPointer);
+      stUnicodeString: UnicodeString(FData.pvPointer) := UnicodeString(Param.FData.pvPointer);
+      stBytes: TBytes(FData.pvPointer) := TBytes(Param.FData.pvPointer);
+      stAsciiStream, stUnicodeStream: IZCLob(FData.pvPointer) := IZCLob(Param.FData.pvPointer);
+      stBinaryStream: IZBLob(FData.pvPointer) := IZBLob(Param.FData.pvPointer);
       {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
     end;
   end else if (Param.FArraySize > 0) then begin//increment the dyn array refcounts
