@@ -2780,11 +2780,14 @@ end;
 procedure TZAbstracOracleLobStream.Close;
 var Status: sword;
 begin
-  if FOwnerLob.LobIsOpen then begin
-    Status := FPlainDriver.OCILobClose(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator);
-    if Status <> OCI_SUCCESS then
-      FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
-        lcExecPrepStmt, 'OCILobClose', Self);
+  if FOwnerLob.LobIsOpen then try
+    if FOwnerLob.FLobLocator <> nil then begin //in case of connection loss! -> TestConnectionLossTicket452
+      Status := FPlainDriver.OCILobClose(FOCISvcCtx, FOCIError, FOwnerLob.FLobLocator);
+      if Status <> OCI_SUCCESS then
+        FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, status,
+          lcExecPrepStmt, 'OCILobClose', Self);
+    end;
+  finally
     FOwnerLob.LobIsOpen := False;
   end;
 end;
