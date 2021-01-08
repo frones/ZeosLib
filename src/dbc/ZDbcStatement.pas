@@ -290,6 +290,7 @@ type
     /// <param>"Index" the index of the element.</param>
     /// <returns>The address or raises an EListError if the Index is invalid.</returns>
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+    class function GetElementSize: Integer; virtual;
   public
     constructor Create(ConSettings: PZConSettings);
   public
@@ -341,6 +342,8 @@ type
     property _4Bytes[Index: NativeInt]: P4Bytes read Get4Byte;
   end;
 
+  TZBindListClass = class of TZBindList;
+
   {** Implements Abstract Prepared SQL Statement. }
 
   { TZAbstractPreparedStatement }
@@ -381,6 +384,7 @@ type
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; virtual;
     function ParamterIndex2ResultSetIndex(Value: Integer): Integer;
     function CreateBindVarOutOfRangeException(Value: Integer): EZSQLException;
+    class function GetBindListClass: TZBindListClass; virtual;
   protected //Properties
     property BatchDMLArrayCount: ArrayLenInt read FBatchDMLArrayCount write FBatchDMLArrayCount;
     property SupportsDMLBatchArrays: Boolean read FSupportsDMLBatchArrays;
@@ -827,8 +831,8 @@ begin
     if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then begin
       FWSQL := GetUnicodeEncodedSQL(Value);
     end else begin
-      FASQL := GetRawEncodedSQL(Value);
       FWSQL := Value;
+      FASQL := GetRawEncodedSQL(Value);
     end;
     {$ELSE !UNICODE}
     begin
@@ -1767,7 +1771,7 @@ end;
 
 constructor TZBindList.Create(ConSettings: PZConSettings);
 begin
-  inherited Create(SizeOf(TZBindValue), True);
+  inherited Create(GetElementSize, True);
   FConSettings := ConSettings;
 end;
 
@@ -1808,6 +1812,11 @@ var BindValue: PZBindValue;
 begin
   BindValue := inherited Get(Index);
   Result := BindValue.BindType
+end;
+
+class function TZBindList.GetElementSize: Integer;
+begin
+  Result := SizeOf(TZBindValue);
 end;
 
 function TZBindList.GetSQLType(Index: NativeInt): TZSQLType;
@@ -2359,7 +2368,7 @@ begin
     FWeakIZPreparedStatementPtr := Pointer(iPStmt);
     iPStmt := nil;
   end;
-  FBindList := TZBindList.Create(ConSettings);
+  FBindList := GetBindListClass.Create(ConSettings);
   FClientCP := ConSettings.ClientCodePage.CP;
   FTokenMatchIndex := -1;
   FOpenLobStreams := TZSortedList.Create;
@@ -2605,6 +2614,11 @@ begin
   fOutParamResultSet.GetBigDecimal(ParamterIndex2ResultSetIndex(ParameterIndex), Result);
   if (BindList.ParamTypes[ParameterIndex] = pctInOut) then
     IZPreparedStatement(FWeakIZPreparedStatementPtr).SetBigDecimal(ParameterIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Result)
+end;
+
+class function TZAbstractPreparedStatement.GetBindListClass: TZBindListClass;
+begin
+  Result := TZBindList;
 end;
 
 function TZAbstractPreparedStatement.GetBLob(ParameterIndex: Integer): IZBlob;

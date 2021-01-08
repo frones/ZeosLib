@@ -70,11 +70,13 @@ type
   PZInterbaseFirerbirdParam = ^TZInterbaseFirerbirdParam;
   TZInterbaseFirerbirdParam = record
     sqltype:            Cardinal;      { datatype of field (normalized) }
+    sqlsubtype:         Cardinal;      { subtype of field (normalized) }
     sqlscale:           Integer;       { scale factor }
     codepage:           word;          { the codepage of the field }
     sqllen:             Cardinal;      { length of data area }
     sqldata:            PAnsiChar;     { address of data }
     sqlind:             PISC_SHORT;    { address of indicator }
+    QMarkPosition:      Cardinal;      { the position if the Question Mark in the raw SQL string}
   end;
   PZInterbaseFirerbirdParamArray = ^TZInterbaseFirerbirdParamArray;
   TZInterbaseFirerbirdParamArray = array[byte] of TZInterbaseFirerbirdParam;

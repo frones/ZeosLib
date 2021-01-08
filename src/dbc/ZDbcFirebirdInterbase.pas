@@ -71,15 +71,20 @@ uses
   ZDbcResultSet, ZDbcStatement;
 
 type
-  {** Implements Interbase or Firebird Database Driver }
+  /// <summary>Implements Interbase or Firebird Database Driver</summary>
   TZInterbaseFirebirdDriver = class(TZAbstractDriver)
   public
     function GetTokenizer: IZTokenizer; override;
     function GetStatementAnalyser: IZStatementAnalyser; override;
   end;
 
+  /// <author>Fr0sT</author>
+  /// <summary>Forward implementation of a Interbase or Firebird GUID properties
+  ///  object</summary>
   TZInterbaseFirebirdConnectionGUIDProps = class;
 
+  /// <author>EgonHugeist</author>
+  /// <summary>Defines a Interbase or Firebird transaction interface.</summary>
   IZInterbaseFirebirdTransaction = interface(IZTransaction)
     ['{A30246BA-AFC0-43FF-AB56-AB272281A3C2}']
     procedure DoStartTransaction;
@@ -91,7 +96,7 @@ type
     function GetTPB: RawByteString;
   end;
 
-  {** Represents a Interbase specific connection interface. }
+  /// <summary>Defines a Interbase or Firebird specific connection interface.</summary>
   IZInterbaseFirebirdConnection = interface (IZConnection)
     ['{B4B4136F-3692-454A-8F22-6C5EEE247BC0}']
     function GetDialect: Word;
@@ -152,12 +157,15 @@ type
     ///  otherwise.</returns>
     function IsTransactionValid(const Value: IZTransaction): Boolean;
     procedure ClearTransactions;
-  public { implement IZInterbaseFirebirdTransaction }
+  public
     function IsFirebirdLib: Boolean; virtual; abstract;
     function IsInterbaseLib: Boolean; virtual; abstract;
     function GetGUIDProps: TZInterbaseFirebirdConnectionGUIDProps;
     function StoredProcedureIsSelectable(const ProcName: String): Boolean;
     function GetSubTypeTextCharSetID(const TableName, ColumnName: String): Integer;
+    /// <summary>Return Interbase dialect number. Dialect a dialect Interbase SQL
+    ///  must be 1 or 2 or 3.</summary>
+    /// <returns>the dialect number</returns>
     function GetDialect: Word;
     function GetXSQLDAMaxSize: Cardinal;
     function GetInterbaseFirebirdPlainDriver: TZInterbaseFirebirdPlainDriver;
@@ -236,15 +244,43 @@ type
     ///  was started. 2 means the transaction was saved. 3 means the previous
     ///  savepoint got saved too and so on.</returns>
     function StartTransaction: Integer;
+    /// <author>EgonHugeist</author>
+    /// <summary>Get the active transaction interces of the connection.</summary>
+    /// <returns>The transaction object</returns>
     function GetConnectionTransaction: IZTransaction;
   public
+    /// <summary>Returns the first warning reported by calls on this Connection.</summary>
+    /// <remarks>Subsequent warnings will be chained to this EZSQLWarning.</remarks>
+    /// <returns>the first SQLWarning or nil.</returns>
     function GetWarnings: EZSQLWarning; override;
+    /// <summary>Clears all warnings reported for this <c>Connection</c> object.
+    ///  After a call to this method, the method <c>getWarnings</c> returns nil
+    ///  until a new warning is reported for this Connection.</summary>
     procedure ClearWarnings; override;
     function GetServerProvider: TZServerProvider; override;
     function GetBinaryEscapeString(const Value: TBytes): String; override;
+    /// <author>fduenas</author>
+    /// <summary>Gets the host's full version number. Initially this should be 0.
+    ///  The format of the version returned must be XYYYZZZ where
+    ///  X   = Major version
+    ///  YYY = Minor version
+    ///  ZZZ = Sub version</summary>
+    /// <returns>this server's full version number</returns>
     function GetHostVersion: Integer; override;
+    /// <author>fduenas</author>
+    /// <summary>Gets the client's full version number. Initially this should be 0.
+    ///  The format of the version returned must be XYYYZZZ where
+    ///  X   = Major version
+    ///  YYY = Minor version
+    ///  ZZZ = Sub version</summary>
+    /// <returns>this clients's full version number</returns>
     function GetClientVersion: Integer; override;
   public
+    /// <summary>Creates a sequence generator object.</summary>
+    /// <param>"Sequence" a name of the sequence generator.</param>
+    /// <param>"BlockSize" a number of unique keys requested in one trip to SQL
+    ///  server.</param>
+    /// <returns>returns a created sequence object.</returns>
     function CreateSequence(const Sequence: string; BlockSize: Integer):
       IZSequence; override;
   End;
@@ -464,18 +500,6 @@ type
     {$ENDIF USE_SYNCOMMONS}
   end;
 
-  PZInterbaseFirerbirdParam = ^TZInterbaseFirerbirdParam;
-  TZInterbaseFirerbirdParam = record
-    sqltype:            Cardinal;      { datatype of field (normalized) }
-    sqlscale:           Integer;       { scale factor }
-    codepage:           word;          { the codepage of the field }
-    sqllen:             Cardinal;      { length of data area }
-    sqldata:            PAnsiChar;     { address of data }
-    sqlind:             PISC_SHORT;    { address of indicator }
-  end;
-  PZInterbaseFirerbirdParamArray = ^TZInterbaseFirerbirdParamArray;
-  TZInterbaseFirerbirdParamArray = array[byte] of TZInterbaseFirerbirdParam;
-
   TZAbstractFirebirdInterbasePreparedStatement = class;
 
   {** record for holding batch dml stmts }
@@ -492,7 +516,6 @@ type
     constructor Create;
   end;
 
-
   {** Implements IZPreparedStatement for Firebird and Interbase. }
   TZAbstractFirebirdInterbasePreparedStatement = class(TZAbstractPreparedStatement)
   private
@@ -502,28 +525,29 @@ type
   protected
     FInParamDescripors: PZInterbaseFirerbirdParamArray;
     FBatchStmts: array[Boolean] of TZIB_FBStmt;
-    FCachedQueryRaw: TRawByteStringDynArray;
-    FIsParamIndex: TBooleanDynArray;
     FDB_CP_ID: Word;
     FStatementType: TZIbSqlStatementType;
-    FOutMessageCount, FInMessageCount: Cardinal;
-    FTypeTokens: TRawByteStringDynArray;
-    FDialect: Cardinal;
+    FOutMessageCount, FInMessageCount, FMemPerRow: Cardinal;
+    FDialect, FTypeTokensLen: Cardinal;
+    FQuerySplitted, FReturningFound: Boolean;
     FInData, FOutData: Pointer;
     FCodePageArray: TWordDynArray;
     FByteBuffer: PByteBuffer;
     FOrgTypeList: TZIBFBOrgSqlTypeAndScaleList;
     procedure ExecuteBatchDml; virtual;
     function SplittQuery(const SQL: SQLString): RawByteString;
-
+    function GetExecuteBlockString(RemainingArrayRows: Integer;
+      XSQLDAMaxSize: Cardinal; var PreparedRowsOfArray, MaxRowsPerBatch: Integer;
+      PlainDriver: TZInterbaseFirebirdPlainDriver): RawByteString;
     procedure WriteLobBuffer(Index: Cardinal; P: PAnsiChar; Len: NativeUInt); virtual; abstract;
     function CreateConversionError(Index: Cardinal; Current: TZSQLType): EZSQLException; virtual; abstract;
   protected
     procedure UnPrepareInParameters; override;
     procedure CheckParameterIndex(var Value: Integer); override;
     procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
+    class function GetBindListClass: TZBindListClass; override;
   public
-    function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; override;
+    function GetRawEncodedSQL(const SQL: SQLString): RawByteString; override;
     procedure Unprepare; override;
   public
     Constructor Create(const Connection: IZInterbaseFirebirdConnection;
@@ -544,6 +568,17 @@ type
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
       var AError: EZSQLConnectionLost); override;
   public //setters
+    procedure ClearParameters; override;
+    /// <summary>Register the parameter properties. This method is required for
+    ///  all InOut, Out or Result parameters to access them afterwards. It's not
+    ///  requiered to register In params.</summary>
+    /// <param>"ParameterIndex" the first parameter is 0, the second is 1, ...
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" the parameters SQLType.</param>
+    /// <param>"ParamType" the TZProcedureColumnType of the parameter.</param>
+    /// <param>"PrecisionOrSize" either the Precision for Numeric types or the
+    ///  Length for strings or bytes. The value is ignored for all other types.</param>
+    /// <param>"Scale" the numeric or second-fraction scale of the parameter.</param>
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
       ParamType: TZProcedureColumnType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
       Scale: LengthInt = 0); override;
@@ -656,6 +691,28 @@ type
     sqltype: cardinal;
     scale: Integer;
     Nullable: Boolean;
+  end;
+
+  PZIB_FBBindValue = ^TZIB_FBBindValue;
+  TZIB_FBBindValue = record
+    BindValue: TZBindValue;
+    TypeToken: RawByteString;
+  end;
+  TZInterbaseFirebirdBindList = class(TZBindList)
+  private
+    function Get(Index: NativeInt): PZIB_FBBindValue; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+  protected
+    class function GetElementSize: Integer; override;
+    /// <summary>Notify about an action which will or was performed.
+    ///  if ElementNeedsFinalize is False the method will never be called.
+    ///  Otherwise you may finalize managed types beeing part of each element,
+    ///  such as Strings, Objects etc.</summary>
+    /// <param>"Ptr" the address of the element an action happens for.</param>
+    /// <param>"Index" the index of the element.</param>
+    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
+    procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+  public
+    property Bindings[Index: NativeInt]: PZIB_FBBindValue read Get; default;
   end;
 
 procedure BindSQLDAInParameters(BindList: TZBindList;
@@ -920,12 +977,6 @@ begin
   end;
 end;
 
-{**
-  Creates a sequence generator object.
-  @param Sequence a name of the sequence generator.
-  @param BlockSize a number of unique keys requested in one trip to SQL server.
-  @returns a created sequence object.
-}
 function TZInterbaseFirebirdConnection.CreateSequence(const Sequence: string;
   BlockSize: Integer): IZSequence;
 begin
@@ -1139,25 +1190,12 @@ begin
   else raise EZSQLException.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use parameters!');
 end;
 
-{**
-  Gets the client's full version number. Initially this should be 0.
-  The format of the version returned must be XYYYZZZ where
-   X   = Major version
-   YYY = Minor version
-   ZZZ = Sub version
-  @return this clients's full version number
-}
 function TZInterbaseFirebirdConnection.GetClientVersion: Integer;
 begin
   if FClientVersion = -1 then DetermineClientTypeAndVersion;
   Result := FClientVersion;
 end;
 
-{**
-   Return Interbase dialect number. Dialect a dialect Interbase SQL
-   must be 1 or 2 or 3.
-   @return dialect number
-}
 function TZInterbaseFirebirdConnection.GetDialect: Word;
 begin
   Result := FDialect;
@@ -1168,14 +1206,6 @@ begin
   Result := FGUIDProps;
 end;
 
-{**
-  Gets the host's full version number. Initially this should be 0.
-  The format of the version returned must be XYYYZZZ where
-   X   = Major version
-   YYY = Minor version
-   ZZZ = Sub version
-  @return this server's full version number
-}
 function TZInterbaseFirebirdConnection.GetHostVersion: Integer;
 begin
   Result := FHostVersion;
@@ -1234,12 +1264,6 @@ begin
     fActiveTransaction.QueryInterface(IZTransaction, Result);;
 end;
 
-{**
-  Returns the first warning reported by calls on this Connection.
-  <P><B>Note:</B> Subsequent warnings will be chained to this
-  SQLWarning.
-  @return the first SQLWarning or null
-}
 function TZInterbaseFirebirdConnection.GetWarnings: EZSQLWarning;
 begin
   Result := FlastWarning;
@@ -3626,6 +3650,17 @@ begin
         Dec(Value);
 end;
 
+procedure TZAbstractFirebirdInterbasePreparedStatement.ClearParameters;
+var B: Boolean;
+begin
+  inherited ClearParameters;
+  for B := False to True do
+    if FBatchStmts[B].Obj <> nil then begin
+      FBatchStmts[B].Obj._Release;
+      FBatchStmts[B].Obj := nil;
+    end;
+end;
+
 constructor TZAbstractFirebirdInterbasePreparedStatement.Create(
   const Connection: IZInterbaseFirebirdConnection; const SQL: String;
   Info: TStrings);
@@ -3745,15 +3780,247 @@ begin
   LastUpdateCount := BatchDMLArrayCount;
 end;
 
-function TZAbstractFirebirdInterbasePreparedStatement.GetRawEncodedSQL(
-  const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
+{$IF not declared(PRawByteString)}
+type
+  PRawByteString = ^RawByteString;
+{$IFEND}
+
+
+const
+  sRETURNING = 'RETURNING';
+  EBStart = {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('EXECUTE BLOCK(');
+  EBBegin =  {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}(')AS BEGIN'+LineEnding);
+  EBSuspend =  {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('SUSPEND;'+LineEnding); //required for RETURNING syntax
+  EBEnd = {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('END');
+  LBlockLen = Length(EBStart)+Length(EBBegin)+Length(EBEnd);
+  //cRETURNING: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF} = (sRETURNING);
+
+class function TZAbstractFirebirdInterbasePreparedStatement.GetBindListClass: TZBindListClass;
 begin
+  Result := TZInterbaseFirebirdBindList;
+end;
+
+function TZAbstractFirebirdInterbasePreparedStatement.GetExecuteBlockString(
+  RemainingArrayRows: Integer; XSQLDAMaxSize: Cardinal; var PreparedRowsOfArray,
+  MaxRowsPerBatch: Integer; PlainDriver: TZInterbaseFirebirdPlainDriver): RawByteString;
+var
+  Digits: Byte;
+  Row, ParamIndex, LastPos, InitialStmtLen, ParamNameLen, SingleStmtLength,
+  LastStmLen, HeaderLen, FullHeaderLen, StmtLength: Cardinal;
+  PStmts, PResult, P: PAnsiChar;
+  TypeToken: PRawByteString;
+  procedure ComposeTypeTokens;
+  var TypeToken: PRawByteString;
+    ParamIndex, j: Cardinal;
+    SQLWriter: TZRawSQLStringWriter;
+    CodePageInfo: PZCodePage;
+  begin
+    FTypeTokensLen := 0;
+    SQLWriter := TZRawSQLStringWriter.Create(100);
+    Try
+      {$R-}
+      for ParamIndex := 0 to Cardinal(BindList.Count-1) do with FInParamDescripors[ParamIndex] do begin
+        TypeToken := @TZInterbaseFirebirdBindList(BindList)[ParamIndex].TypeToken;
+      {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+        case sqltype and not (1) of
+          SQL_VARYING, SQL_TEXT:
+            begin
+              CodePageInfo := PlainDriver.ValidateCharEncoding(SqlSubType and 255);
+              SQLWriter.AddText(' VARCHAR(', TypeToken^);
+              J := sqllen - Byte(CodePageInfo.CharWidth);
+              SQLWriter.AddOrd(J div Byte(CodePageInfo.CharWidth), TypeToken^);
+              SQLWriter.AddText(') CHARACTER SET ', TypeToken^);
+              SQLWriter.AddText({$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CodePageInfo.Name), TypeToken^);
+              SQLWriter.AddText('=?', TypeToken^);
+            end;
+          SQL_DOUBLE, SQL_D_FLOAT: SQLWriter.AddText(' DOUBLE PRECISION=?', TypeToken^);
+          SQL_FLOAT: SQLWriter.AddText(' FLOAT=?', TypeToken^);
+          SQL_LONG:
+            if sqlscale = 0
+            then SQLWriter.AddText(' INTEGER=?',TypeToken^)
+            else begin
+              if SqlSubType = RDB_NUMBERS_NUMERIC
+              then SQLWriter.AddText(' NUMERIC(9,', TypeToken^)
+              else SQLWriter.AddText(' DECIMAL(9,', TypeToken^);
+              SQLWriter.AddOrd(Cardinal(-sqlscale), TypeToken^);
+              SQLWriter.AddText(')=?', TypeToken^);
+            end;
+          SQL_SHORT:
+            if sqlscale = 0
+            then SQLWriter.AddText(' SMALLINT=?',TypeToken^)
+            else begin
+              if SqlSubType = RDB_NUMBERS_NUMERIC
+              then SQLWriter.AddText(' NUMERIC(4,', TypeToken^)
+              else SQLWriter.AddText(' DECIMAL(4,', TypeToken^);
+              SQLWriter.AddOrd(Cardinal(-sqlscale), TypeToken^);
+              SQLWriter.AddText(')=?', TypeToken^);
+            end;
+          SQL_TIMESTAMP: SQLWriter.AddText(' TIMESTAMP=?', TypeToken^);
+          SQL_BLOB: if sqlsubtype = isc_blob_text
+            then SQLWriter.AddText(' BLOB SUB_TYPE TEXT=?',TypeToken^)
+            else SQLWriter.AddText(' BLOB=?',TypeToken^);
+          //SQL_ARRAY                      = 540;
+          //SQL_QUAD                       = 550;
+          SQL_TYPE_TIME: SQLWriter.AddText(' TIME=?', TypeToken^);
+          SQL_TYPE_DATE: SQLWriter.AddText(' DATE=?', TypeToken^);
+          SQL_INT64: // IB7
+            if sqlscale = 0
+            then SQLWriter.AddText(' BIGINT=?',TypeToken^)
+            else begin
+              if SqlSubType = RDB_NUMBERS_NUMERIC
+              then SQLWriter.AddText(' NUMERIC(18,', TypeToken^)
+              else SQLWriter.AddText(' DECIMAL(18,', TypeToken^);
+              SQLWriter.AddOrd(Cardinal(-sqlscale), TypeToken^);
+              SQLWriter.AddText(')=?', TypeToken^);
+            end;
+          SQL_BOOLEAN, SQL_BOOLEAN_FB{FB30}:
+             SQLWriter.AddText(' BOOLEAN=?',TypeToken^);
+          SQL_NULL{FB25}:
+             SQLWriter.AddText(' CHAR(1)=?',TypeToken^);
+          else raise ZDbcUtils.CreateUnsupportedParameterTypeException(ParamIndex, stUnknown);
+        end;
+        SQLWriter.Finalize(TypeToken^);
+        FTypeTokensLen := FTypeTokensLen + Cardinal({%H-}PLengthInt(NativeUInt(TypeToken^) - StringLenOffSet)^);
+      end;
+    Finally
+      FreeAndNil(SQLWriter);
+    End;
+  end;
+begin
+  if (BindList.Count = 0) or (RemainingArrayRows = 0) then
+    raise EZSQLException.Create(SInvalidInputParameterCount);
+  Result := '';
+  if Pointer(TZInterbaseFirebirdBindList(BindList)[0].TypeToken) = nil then
+    ComposeTypeTokens;
+  {now let's calc length of stmt to know if we can bound all array data or if we need some more calls}
+  StmtLength := 0;
+  FullHeaderLen := 0;
+  PreparedRowsOfArray := 0;
+  //the question marks will be !replaced! by 'P' but we skip the QMarks while composing so let's add them
+  //each param gets a row num and a param num delimited by '_' so let's add them
+  //each row is terminated by a ';' and a LineBreak let'so s add it too
+  InitialStmtLen := (Length(FASQL)+(BindList.Count*2))+{$IFDEF MSWINDOWS}3{#13#10;}{$ELSE}2{#10;}{$ENDIF};
+  for Row := 0 to RemainingArrayRows -1 do begin
+    LastStmLen := StmtLength;
+    HeaderLen := FTypeTokensLen;
+    Inc(HeaderLen, Cardinal(BindList.Count) * 3); //add all "P","_",";";
+    //Inc(HeaderLen, Cardinal(BindList.Count)); //add all "," even if one to much
+    SingleStmtLength := InitialStmtLen;
+    for ParamIndex := 0 to BindList.Count-1 do begin
+      //calc Parameters length: 'P123_234' -> just the numbers as described above
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+      ParamNameLen := GetOrdinalDigits(ParamIndex)+GetOrdinalDigits(Row);
+      {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+      {inc header}
+      Inc(HeaderLen, ParamNameLen);
+      {inc stmt}
+      Inc(SingleStmtLength, ParamNameLen);
+    end;
+    if MaxRowsPerBatch = 0 then begin//calc maximum batch count if not set already
+      // statment limits http://www.firebirdfaq.org/faq197/
+      if Connection.GetHostVersion >= 3000000 //FBVersion => 3
+      then ParamIndex := 10*1024*1024 //since FB3
+      else ParamIndex := 32*1024;
+      ParamIndex := ParamIndex - LBlockLen;
+      If FReturningFound then
+        ParamIndex := ParamIndex - 9;///Length(cRETURNING);
+      MaxRowsPerBatch := Min(Integer(Cardinal(XSQLDAMaxSize) div FMemPerRow),     {memory limit of XSQLDA structs}
+        Integer(ParamIndex div (HeaderLen+SingleStmtLength)))+1; {10MB limited Also with FB3};
+    end;
+    Inc(StmtLength, HeaderLen+SingleStmtLength);
+    Inc(FullHeaderLen, HeaderLen);
+    //we run into XSQLDA !update! count limit of 255 see:
+    //http://tracker.firebirdsql.org/browse/CORE-3027?page=com.atlassian.jira.plugin.system.issuetabpanels%3Aall-tabpanel
+    if (PreparedRowsOfArray = MaxRowsPerBatch-1) or
+       ((FStatementType = stInsert) and (PreparedRowsOfArray > 255)) or
+       ((FStatementType <> stInsert) and (PreparedRowsOfArray > 125)) then begin
+      StmtLength := LastStmLen;
+      Dec(FullHeaderLen, HeaderLen);
+      Break;
+    end else
+      PreparedRowsOfArray := Row;
+  end;
+
+  {EH: now move our data to result ! ONE ALLOC ! of result (: }
+  {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}
+  SetLength(Result, LengthInt(StmtLength)+LBlockLen-1{limit the one comma which is to much});
+  PResult := Pointer(Result);
+  Move(PAnsiChar(EBStart)^, PResult^, 18);
+  Inc(PResult,14);
+  PStmts := PResult + FullHeaderLen+Length(EBBegin)-1{imit the one comma which is to much};
+  for Row := 0 to PreparedRowsOfArray do begin
+    LastPos := 0;
+    P := Pointer(FASQL);
+    {$R-}
+    for ParamIndex := 0 to BindList.Count-1 do with FInParamDescripors[ParamIndex] do begin
+      TypeToken := @TZInterbaseFirebirdBindList(BindList)[ParamIndex].TypeToken;
+    {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+      // we already marked the positions if the QuestionMarks
+      ParamNameLen := QMarkPosition - LastPos;
+      Move(P^, PStmts^, ParamNameLen);
+      Inc(P, ParamNameLen+1);
+      Inc(PStmts, ParamNameLen);
+      LastPos := QMarkPosition+1;
+      PByte(PStmts)^ := Byte(':');
+      PByte(PStmts+1)^ := Byte('P');
+      Inc(PStmts, 2);
+      if (ParamIndex <> 0) or (Row <> 0) then begin
+        PByte(PResult)^ := Byte(',');
+        Inc(PResult);
+      end;
+      PByte(PResult)^ := Byte('P');
+      Inc(PResult);
+      Digits := ZFastCode.GetOrdinalDigits(Cardinal(ParamIndex));
+      IntToRaw(Cardinal(ParamIndex), PResult, Digits);
+      Inc(PResult, Digits);
+      IntToRaw(Cardinal(ParamIndex), PStmts, Digits);
+      Inc(PStmts, Digits);
+      PByte(PResult)^ := Byte('_');
+      Inc(PResult);
+      PByte(PStmts)^ := Byte('_');
+      Inc(PStmts);
+
+      Digits := ZFastCode.GetOrdinalDigits(Cardinal(Row));
+      IntToRaw(Cardinal(Row), PResult, Digits);
+      Inc(PResult, Digits);
+      IntToRaw(Cardinal(Row), PStmts, Digits);
+      Inc(PStmts, Digits);
+      LastStmLen := Cardinal({%H-}PLengthInt(NativeUInt(TypeToken^) - StringLenOffSet)^);
+      Move(Pointer(TypeToken^)^, PResult^, LastStmLen);
+      Inc(PResult, LastStmLen);
+    end;
+    InitialStmtLen := Cardinal({%H-}PLengthInt(NativeUInt(fASQL) - StringLenOffSet)^) - LastPos;
+    Move(P^, PStmts^, Integer(InitialStmtLen));
+    Inc(PStmts, InitialStmtLen);
+    PByte(PStmts)^ := Byte(';');
+    {$IFDEF MSWINDOWS}
+    PAnsiChar(PStmts+1)^ := AnsiChar(#13);
+    Inc(PStmts);
+    {$ENDIF}
+    PByte(PStmts+1)^ := Byte(#10);
+    Inc(PStmts, 2);
+  end;
+  Move(PAnsiChar(EBBegin)^, PResult^, {$IFDEF MSWINDOWS}11{$ELSE}10{$ENDIF});
+  if FReturningFound then begin
+    Move(PAnsiChar(EBSuspend)^, PStmts^, 8);
+    Inc(PStmts, 8);
+  end;
+  //Move(PAnsiChar(EBEnd)^, PStmts^, 3);
+  PByte(PStmts)^ := Byte('E');
+  PByte(PStmts+1)^ := Byte('N');
+  PByte(PStmts+2)^ := Byte('D');
+  Inc(PreparedRowsOfArray);
+end;
+
+function TZAbstractFirebirdInterbasePreparedStatement.GetRawEncodedSQL(
+  const SQL: SQLString): RawByteString;
+begin
+  {$IFDEF UNICODE}
   if (FDB_CP_ID = CS_NONE)
   then Result := SplittQuery(SQL)
-  {$IFDEF UNICODE}
   else Result := ZUnicodeToRaw(SQL, ConSettings^.ClientCodePage^.CP);
   {$ELSE}
-  else Result := SQL;
+  Result := SQL;
   {$ENDIF}
 end;
 
@@ -3807,7 +4074,8 @@ procedure TZAbstractFirebirdInterbasePreparedStatement.RegisterParameter(Paramet
 begin
   if ParamType = pctResultSet then
     Raise EZUnsupportedException.Create(SUnsupportedOperation);
-  inherited;
+  inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name,
+    PrecisionOrSize, Scale);;
 end;
 
 procedure TZAbstractFirebirdInterbasePreparedStatement.ReleaseImmediat(
@@ -4910,14 +5178,6 @@ jmpWriteLob:            WriteLobBuffer(Index, P, Len);
 end;
 {$ENDIF NO_UTF8STRING}
 
-{**
-  Sets the designated parameter to a <code>unsigned 16bit integer</code> value.
-  The driver converts this
-  to an SQL <code>ShortInt</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetWord(Index: Integer; Value: Word);
 begin
   SetInt(Index, Value);
@@ -4926,86 +5186,92 @@ end;
 function TZAbstractFirebirdInterbasePreparedStatement.SplittQuery(
   const SQL: SQLString): RawByteString;
 var
-  I, ParamCnt, FirstComposePos: Integer;
+  I, InParamCount: Integer;
   Tokens: TZTokenList;
   Token: PZToken;
-  Tmp{$IFDEF UNICODE}, Tmp2{$ENDIF}: RawByteString;
-  ResultWriter, SectionWriter: TZRawSQLStringWriter;
-  procedure Add(const Value: RawByteString; const Param: Boolean = False);
-  begin
-    SetLength(FCachedQueryRaw, Length(FCachedQueryRaw)+1);
-    FCachedQueryRaw[High(FCachedQueryRaw)] := Value;
-    SetLength(FIsParamIndex, Length(FCachedQueryRaw));
-    FIsParamIndex[High(FIsParamIndex)] := Param;
-    ResultWriter.AddText(Value, Result);
-  end;
-
+  DoRealloc: Boolean;
+  Tokenizer: IZTokenizer;
+  {$IFDEF UNICODE}
+  L: Cardinal;
+  FirstComposeToken: PZToken;
+  ResultWriter: TZRawSQLStringWriter;
+  {$ELSE}
+  P: PAnsiChar;
+  {$ENDIF}
 begin
-  ParamCnt := 0;
   Result := '';
-  {$IFDEF UNICODE}Tmp2 := '';{$ENDIF}
-  Tmp := '';
-  Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
-  SectionWriter := TZRawSQLStringWriter.Create(Length(SQL) shr 5);
+  if SQL = '' then Exit;
+  Tokenizer := Connection.GetDriver.GetTokenizer;
+  Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
+  {$IFDEF UNICODE}
   ResultWriter := TZRawSQLStringWriter.Create(Length(SQL) shl 1);
+  {$ELSE}
+  P := Pointer(SQL);
+  Result := SQL;
+  {$ENDIF}
+  InParamCount := 0;
+  DoRealloc := FInParamDescripors = nil;
   try
-    FirstComposePos := 0;
-    FTokenMatchIndex := -1;
     Token := nil;
+    {$IFDEF UNICODE}
+    FirstComposeToken := Tokens[0];
+    {$ENDIF}
     for I := 0 to Tokens.Count -1 do begin
       Token := Tokens[I];
-      if Tokens.IsEqual(I, Char('?')) then begin
-        if (FirstComposePos < I) then
-          {$IFDEF UNICODE}
-          SectionWriter.AddText(PUnicodeToRaw(Tokens[FirstComposePos].P, (Tokens[I-1].P-Tokens[FirstComposePos].P)+ Tokens[I-1].L, FClientCP), Tmp);
-          {$ELSE}
-          SectionWriter.AddText(Tokens[FirstComposePos].P, (Tokens[I-1].P-Tokens[FirstComposePos].P)+ Tokens[I-1].L, Tmp);
-          {$ENDIF}
-        SectionWriter.Finalize(Tmp);
-        Add(Tmp, False);
-        Tmp := '';
-        {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-        Add(ZUnicodeToRaw(Tokens.AsString(I, I), ConSettings^.ClientCodePage^.CP));
+      if (Token.L = 1) and (Token.P^ = Char('?')) then begin
+        if DoRealloc then
+          ReallocMem(FInParamDescripors, SizeOf(TZInterbaseFirerbirdParam)*(InParamCount+1));
+        {$IFDEF UNICODE}
+        if (FirstComposeToken <> nil) then begin
+          Token := Tokens[I-1];
+          L := (Token.P-FirstComposeToken.P)+ Token.L;
+          if (L = 1) and (Ord(FirstComposeToken.P^) <= 127) //micro optimization if previous token is just a ',' f.e.
+          then ResultWriter.AddChar(AnsiChar(FirstComposeToken.P^), Result)
+          else ResultWriter.AddText(PUnicodeToRaw(FirstComposeToken.P, L, FClientCP), Result);
+          if I < Tokens.Count-1
+          then FirstComposeToken := Tokens[I+1]
+          else FirstComposeToken := nil;
+        end;
+        {$R-}FInParamDescripors[InParamCount].QMarkPosition := ResultWriter.GetCurrentLength(Result);{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+        ResultWriter.AddChar(AnsiChar('?'), Result);
         {$ELSE}
-        Add('?', True);
+        {$R-}FInParamDescripors[InParamCount].QMarkPosition := Token.P-P;{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
         {$ENDIF}
-        Inc(ParamCnt);
-        FirstComposePos := i +1;
-      end
+        Inc(InParamCount);
+      end else if (Token.TokenType = ttWord) and (Token.L = 9) and SameText(Token.P, PChar(sRETURNING), 9) then
+        FReturningFound := True
       {$IFDEF UNICODE}
       else if (FDB_CP_ID = CS_NONE) and (//all identifiers collate unicode_fss if CS_NONE
                (Token.TokenType = ttQuotedIdentifier) or
                ((Token.TokenType = ttWord) and (Token.L > 1) and (Token.P^ = '"'))) then begin
-        if (FirstComposePos < I) then begin
-          Tmp2 := PUnicodeToRaw(Tokens[FirstComposePos].P, (Tokens[I-1].P-Tokens[FirstComposePos].P)+ Tokens[I-1].L, FClientCP);
-          SectionWriter.AddText(Tmp2, Tmp);
+        if (FirstComposeToken <> nil) then begin
+          FRawTemp := PUnicodeToRaw(FirstComposeToken.P, (Tokens[I-1].P-FirstComposeToken.P)+ Tokens[I-1].L, FClientCP);
+          ResultWriter.AddText(FRawTemp, Result);
         end;
-        Tmp2 := PUnicodeToRaw(Token.P, Token.L, zCP_UTF8);
-        SectionWriter.AddText(Tmp2, Result);
-        Tmp2 := EmptyRaw;
-        FirstComposePos := I +1;
+        FRawTemp := PUnicodeToRaw(Token.P, Token.L, zCP_UTF8);
+        ResultWriter.AddText(FRawTemp, Result);
+        if I < Tokens.Count-1
+        then FirstComposeToken := Tokens[I+1]
+        else FirstComposeToken := nil;
       end;
       {$ENDIF};
     end;
-    if (FirstComposePos <= Tokens.Count-1) then begin
-      {$IFDEF UNICODE}
-      Tmp2 := PUnicodeToRaw(Tokens[FirstComposePos].P, (Token.P-Tokens[FirstComposePos].P)+ Token.L, FClientCP);
-      SectionWriter.AddText(Tmp2, Tmp);
-      Tmp2 := '';
-      {$ELSE}
-      SectionWriter.AddText(Tokens[FirstComposePos].P, (Token.P-Tokens[FirstComposePos].P)+ Token.L, Tmp);
-      {$ENDIF}
+   {$IFDEF UNICODE}
+    if (FirstComposeToken <> nil) then begin
+      FRawTemp := PUnicodeToRaw(FirstComposeToken.P, (Token.P-FirstComposeToken.P)+Token.L, FClientCP);
+      ResultWriter.AddText(FRawTemp, Result);
     end;
-    SectionWriter.Finalize(Tmp);
-    if Tmp <> EmptyRaw then
-      Add(Tmp, False);
     ResultWriter.Finalize(Result);
+    {$ENDIF}
   finally
     Tokens.Free;
-    FreeAndNil(SectionWriter);
+    {$IFDEF UNICODE}
     FreeAndNil(ResultWriter);
+    {$ENDIF}
+    Tokenizer := nil;
   end;
-  SetBindCapacity(ParamCnt);
+  SetBindCapacity(InParamCount);
+  FQuerySplitted := True;
 end;
 
 {**
@@ -5015,8 +5281,8 @@ procedure TZAbstractFirebirdInterbasePreparedStatement.Unprepare;
 var B: Boolean;
 begin
   inherited Unprepare;
-  SetLength(FCachedQueryRaw, 0);
-  SetLength(FTypeTokens, 0);
+  FQuerySplitted := False;
+  FReturningFound := False;
   for B := False to True do
     if FBatchStmts[B].Obj <> nil then begin
       FBatchStmts[B].Obj._Release;
@@ -5214,6 +5480,26 @@ end;
 constructor TZIBFBOrgSqlTypeAndScaleList.Create;
 begin
   inherited Create(SizeOf(TZIBFBOrgSqlTypeAndScale), False);
+end;
+
+{ TZInterbaseFirebirdBindList }
+
+function TZInterbaseFirebirdBindList.Get(Index: NativeInt): PZIB_FBBindValue;
+begin
+  Result := inherited Get(Index);
+end;
+
+class function TZInterbaseFirebirdBindList.GetElementSize: Integer;
+begin
+  Result := SizeOf(TZIB_FBBindValue);
+end;
+
+procedure TZInterbaseFirebirdBindList.Notify(Ptr: Pointer;
+  Action: TListNotification);
+begin
+  if Action = lnDeleted then
+    PZIB_FBBindValue(Ptr).TypeToken := '';
+  inherited Notify(Ptr, Action);
 end;
 
 initialization
