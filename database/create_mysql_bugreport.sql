@@ -446,6 +446,40 @@ CREATE TABLE TableTicket240 (
 );
 
 /*==============================================================*/
+/* Table for Ticket#304                                         */
+/*==============================================================*/
+CREATE TABLE IF NOT EXISTS TableTicket304 (
+  id_test BIGINT NOT NULL PRIMARY KEY,
+  LATITUDE double precision,
+  LONGITUDE double precision,
+  point_field point DEFAULT NULL,
+  geometry_field geometry DEFAULT NULL
+);
+
+delimiter //
+/*==============================================================*/
+/* trigger for Ticket#304                                       */
+/*==============================================================*/
+CREATE TRIGGER TR_UPD_TableTicket304 BEFORE UPDATE ON TableTicket304 FOR EACH ROW
+BEGIN
+  DECLARE dummy INT;
+  if not NEW.point_field <=> old.point_field then
+    SELECT point_field_changed INTO dummy FROM TableTicket304 WHERE 1=0;
+  END IF;
+  if not NEW.geometry_field <=> old.geometry_field then
+    SELECT geometry_field_changed INTO dummy FROM TableTicket304 WHERE 1=0;
+  END IF;	
+  if NEW.point_field IS NULL AND NEW.LATITUDE IS NOT NULL AND NEW.LONGITUDE IS NOT NULL then
+    SET NEW.point_field = POINT(NEW.LONGITUDE, NEW.LATITUDE); 
+  END IF;
+  if NEW.geometry_field IS NULL AND NEW.LATITUDE IS NOT NULL AND NEW.LONGITUDE IS NOT NULL then
+    SET NEW.geometry_field = POINT(NEW.LONGITUDE, NEW.LATITUDE); 
+  END IF;
+END; //
+delimiter ;
+
+
+/*==============================================================*/
 /* Tables for Ticket#389                                        */
 /*==============================================================*/
 CREATE TABLE TableTicked389 (
