@@ -677,7 +677,7 @@ begin
     end;
   end;
  
-  ResultSet := MD.GetSequences(Catalog, Schema, 'GEN_ID');
+  ResultSet := MD.GetSequences(Catalog, Schema, MD.AddEscapeCharToWildcards('GEN_ID'));
   PrintResultSet(ResultSet, False);
   Check(ResultSet.Next, 'There should be a sequence "GEN_ID"');
   CheckEquals(CatalogNameIndex, Resultset.FindColumn('SEQUENCE_CAT'));
