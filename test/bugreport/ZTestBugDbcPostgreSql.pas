@@ -84,6 +84,7 @@ type
     procedure Test_Mantis0000229;
     procedure Test_TrailingSpaces;
     procedure Test_ForeignKeyViolation;
+    procedure TestTicket472;
   end;
 
   TZTestDbcPostgreSQLBugReportMBCs = class(TZAbstractDbcSQLTestCaseMBCs)
@@ -592,6 +593,51 @@ begin
   end;
 
   Statement.ExecuteQuery('select * from people where p_id=1');
+end;
+
+{
+Zeos maps PostgreSQL interval fields to TZUnicodeStringField now: When
+PostgreSQL calculates an interval of 30 minutes, it gets shown as "1899-12-30 23:30:00.000".
+I am not 100% sure but I assume that in earlier versions of zeos, we used a
+TTimeField because there an interval of 30 minutes was displayed as "00:30:00".
+}
+procedure TZTestDbcPostgreSQLBugReport.TestTicket472;
+var Statement: IZStatement;
+  RS: IZResultSet;
+  TS: TZTimeStamp;
+  S: String;
+begin
+  Check(Connection <> nil);
+  if SkipForReason(srClosedBug) then Exit;
+  Connection.SetAutoCommit(True);
+  Connection.SetTransactionIsolation(tiReadCommitted);
+  Statement := Connection.CreateStatement;
+  RS := Statement.ExecuteQuery('select ''P1Y2M3DT4H5M6.789012S''::Interval');
+  Check(Rs.Next);
+  Rs.GetTimestamp(FirstDbcIndex, TS);
+  CheckEquals(1, Ts.Year, 'The duration year');
+  CheckEquals(2, Ts.Month, 'The duration month');
+  CheckEquals(3, Ts.Day, 'The duration day');
+  CheckEquals(4, Ts.Hour, 'The duration hour');
+  CheckEquals(5, Ts.Minute, 'The duration minute');
+  CheckEquals(6, Ts.Second, 'The duration second');
+  CheckEquals(789012000, Ts.Fractions, 'The duration nano-seconds');
+  CheckFalse(Ts.IsNegative, 'The duration is not negative');
+  S := Rs.GetString(FirstDbcIndex);
+  Check(S <> '');
+  RS := Statement.ExecuteQuery('select ''P-1Y2M3DT4H5M6.789012S''::Interval');
+  Check(Rs.Next);
+  Rs.GetTimestamp(FirstDbcIndex, TS);
+  CheckEquals(0, Ts.Year, 'The duration year');
+  CheckEquals(10, Ts.Month, 'The duration month');
+  CheckEquals(3, Ts.Day, 'The duration day');
+  CheckEquals(4, Ts.Hour, 'The duration hour');
+  CheckEquals(5, Ts.Minute, 'The duration minute');
+  CheckEquals(6, Ts.Second, 'The duration second');
+  CheckEquals(789012000, Ts.Fractions, 'The duration nano-seconds');
+  Check(Ts.IsNegative, 'The duration is negative');
+  S := Rs.GetString(FirstDbcIndex);
+  Check(S <> '');
 end;
 
 {**
