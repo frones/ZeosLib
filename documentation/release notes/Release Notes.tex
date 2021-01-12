@@ -55,14 +55,14 @@ Older versions might work but don't get official support by us anymore.
 Zeos 8.0 now comes with some new drivers:
 \begin{itemize}
   \item OleDB
-	\item ODBC including UnixODBC
+	\item ODBC (including UnixODBC?)
 	\item Firebird with new interface based API
 	\item Webservice Proxy Driver
 \end{itemize}
 For a description of these new drivers please see the respective chapters.
 
 \subsection{no more driver versioning}
-We deprecated protocols with server versions during the life time of Zeos 7.2 already.
+We deprecated protocol names with server versions during the life time of Zeos 7.2 already.
 These protocols have been removed from Zeos 8.0.
 So protocol names like "firebird-3.0" will not work anymore.
 Please use protocol names without version numbers instead, like "firebird".
@@ -111,6 +111,8 @@ Starting with Zeos 8.0 we raise exceptions if someone tries to use the following
 	\item
     Firebird: none, octetts
 \end{itemize}
+
+\textbf{Jan:} How true is this? I am pretty sure, it is not correct anymore!
 
 \subsection{DBC layer: changed GetPWideChar / GetPAnsiChar Len parameter}
 The Len parameter of the GetPWideChar and GetPAnsiChar method is no longer a pointer.
@@ -201,7 +203,7 @@ To get out-params running the parameter IO needs to be set explicit and for some
 \textbf{Jan:}We need more information on how these things work for the information to be more useful.
 
 \subsection{smaller memory footprint}
-By optimizing access in TDataset descandants, Zeos is able to save ion memory now if TZFields are used, which is the default for Zeos 7.3.
+By optimizing access in TDataset descandants, Zeos is able to save on memory now if TZFields are used, which is the default for Zeos 7.3.
 
 \textbf{Jan:}Is this correct? Regarding dependency on TZFields?
 
@@ -250,5 +252,106 @@ Zeos now supports more timeouts, as introduced with Firebird 4.0:
   \item SesssionIdleTimeOut
 \end{itemize}
 
+\subsection{Usage of new interface based API}
+The firebird driver uses the new interface based API that was introduced with Firebird 3.0.
+If the client library doesn't support this new API, it will automatically fall back to the ISC API.
+If you want to force the usage of the old API for some reason, you can set the option "`FirebirdAPI"' on the connection properties.
+If you set this property to "`interface"', the new interface based API will get used.
+If you set this property to "`legacy"', the legacy ISC API will get used.
+
+\section{MySQL / MariaDB}
+
+\subsection{MySQL\_FieldType\_Bit\_1\_IsBoolean is enabled by default}
+
+The parameter MySQL\_FieldType\_Bit\_1\_IsBoolean is enabled by default now if your server version is MySQL >= 5.0.3.
+This means that fields declared as BIT(1) will be treated as boolean fields.
+The old assumption that an enum('Y','N') is a boolean field is disabled if this parameter is enabled.
+If this parameter is enabled, enum('Y','N') will be a string field.
+Other enums behave as before, they will be mapped to a sting filed in any case.
+
+\subsection{Support for batch import API}
+The batch import API introduced in Zeos 7.2 is now supported for MariaDB.
+
+\subsection{Changed parameter names}
+Some parameter names changed.
+See [\#395] and \url{https://sourceforge.net/p/zeoslib/tickets/395/#14a4}
+
+\section{PostgreSQL}
+
+\subsection{Support for batch import API}
+The new batch import API introduced in Zeos 7.2 is now supported for PostgreSQL.
+
+\subsection{usage of binary protocol}
+The PostgreSQL driver now uses the binary protocol for talking to the database.
+This allows faster fetches for the dataset.
+We also prevent rounding errors for TFloatField and escape the "`parsing hell"' for date and time values.
+
+\subsection{compatibility option BindDoubleAsString}
+[r5963] by egonhugeist: add compatibility option BindDoubleAsString.
+Loads users use the Double types for the NUMERIC fields.
+PG does not allow this if we send the params with the FLOAT8OID even if Precision <= 15 (no precision loss).
+So i cirumvent the issue by sending textformat and INVALIDOID to the Server - see [\#282] for the underlying use case.
+
+\section{SQLite}
+
+\subsection{SQLite tokenizer now recognizes backticks as quotes}
+The SQLite tokenizer now correctly recognizes backticks as quotes.
+Even though not standard SQL, backticks are supported by SQLite for compatibility.
+See \url(https://www.sqlite.org/lang\_keywords.html).
+This should make using backticks in SQL safe with SQLite on Zeoslib. [\#235]
+
+\subsection{better error descriptions}
+The SQLite driver now supports the proper use of sqlite3\_errstr which leads to better error descriptions.
+If you use the Error message of exceptions, you should check your code if it needs to be updated. (Ticket \#260)
+
+\textbf:{Note:}
+In Zeos 7.2 we introduced the new parameter "`ExtendedErrorMessage"' for enabling this new behavior.
+In Zeos 7.3 the "`ExtendedErrorMessage"' is removed and the new behavior cannot be disabled.
+
+\subsection{support for GUID fields}
+The sqlite driver now supports GUID fields.
+Fields that have GUID in their type description will be treated as TGuidField. [r7060]
+
+\section{Oracle}
+
+\subsection{UTF8 is aliased}
+The character set UTF8 is now aliased to AL32UTF8 because the Oracle UTF8 is broken.
+It is CESU-8 in reality which Zeos can't convert reliably.
+This might lead to problems on older servers.
+
+\section{dblib (MS SQL Server with freetds / SAP Adaptive Server Enterprise)}
+
+\subsection{discontinued support for ntwdblib.dll}
+We discontinued the support for ntwdblib.dll.
+If you try to use nrtwdblib.dll, Zeos will raise an error.
+Please use freetds instead.
+
+\subsection{new parameter TDSVersion}
+The new parameter TDSVersion can be used in conjunction with Sybase / freetds.
+
+
+\section{OLEDB}
+New driver - needs extensive description.
+
+Should replace ADO bridge.
+
+Don't forget to add "`MarsConn=True"' parameter to the connection string, except UseMetadata is turned off -> for MS SQL Server -> \url(https://sourceforge.net/p/zeoslib/tickets/434/\#9e48)
+
+\section{ADO}
+ADO is deprecated. Use OleDB instead.
+
+\section{ODBC}
+New driver - needs extensive description.
+
+\section{Webservice Proxy}
+New driver - needs extensive description.
+
+\section{new unit - ZMethodInThread}
+This unit allows the execution of a database component operation in a background thread, leaving the VCL thread responsive.
+Background operations can be gracefully terminated (where supported) with TZConnection.AbortOperation.
+
+\textbf{Jan:}
+Needs more documentation.
+I assume it is not allowed to do things on the GUI in the Events of the Component as this would be run as part of the background thread?
 
 \end{document}
