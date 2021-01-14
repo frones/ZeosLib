@@ -54,7 +54,7 @@ library libzdbcproxy;
 {$mode delphi}{$H+}
 
 uses
-  Classes, ZDbcProxyIntf, SysUtils
+  Classes, ZDbcProxyIntf, SysUtils, opensslsockets
   { you can add units after this };
 
 var
