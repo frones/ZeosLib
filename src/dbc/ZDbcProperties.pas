@@ -985,6 +985,16 @@ const
   ConnProps_Server = 'Server';
 {$ENDIF}
 
+{$IFNDEF ZEOS_DISABLE_PROXY}
+  /// <summary>
+  ///   Type: http | https
+  ///   Defines which protocol the Webservicde Proxy driver uses for connecting to the server.
+  ///   If empty, https will be used.
+  ///   Behavior is undefined if an undefined value is set.
+  /// </summary>
+  ConnProps_ProxyProtocol = 'ProxyProtocol';
+{$ENDIF}
+
 {$IFDEF ENABLE_POOLED}
   { These parameters set the same-named properties of TConnectionPool object,
     refer to Zeos manual for details }

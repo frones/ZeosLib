@@ -182,201 +182,6 @@ uses ZMessages, ZSysUtils, ZFastCode, ZEncoding, ZVariant,
   ZDbcLogging, ZDbcFirebirdResultSet, ZDbcResultSet, ZDbcCachedResultSet,
   ZDbcUtils, ZDbcProperties;
 
-const
-  EBStart = {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('EXECUTE BLOCK(');
-  EBBegin =  {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}(')AS BEGIN'+LineEnding);
-  EBSuspend =  {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('SUSPEND;'+LineEnding); //required for RETURNING syntax
-  EBEnd = {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('END');
-  LBlockLen = Length(EBStart)+Length(EBBegin)+Length(EBEnd);
-  cRETURNING: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF} = ('RETURNING');
-function GetExecuteBlockString(const Stmt: TZAbstractFirebirdStatement;
-  const IsParamIndexArray: TBooleanDynArray;
-  const InParamCount, RemainingArrayRows: Integer;
-  const CurrentSQLTokens: TRawByteStringDynArray;
-  var PreparedRowsOfArray,MaxRowsPerBatch: Integer;
-  var TypeTokens: TRawByteStringDynArray;
-  InitialStatementType: TZIbSqlStatementType;
-  const XSQLDAMaxSize: Cardinal): RawByteString;
-var
-  IndexName, ArrayName, tmp: RawByteString;
-  ParamIndex, J: Cardinal;
-  I, BindCount, ParamNameLen, SingleStmtLength, LastStmLen,
-  HeaderLen, FullHeaderLen, StmtLength:  Integer;
-  CodePageInfo: PZCodePage;
-  PStmts, PResult, P: PAnsiChar;
-  ReturningFound: Boolean;
-  MemPerRow: Cardinal;
-
-  procedure Put(const Args: array of RawByteString; var Dest: PAnsiChar);
-  var I: Integer;
-    L: LengthInt;
-  begin
-    for I := low(Args) to high(Args) do //Move data
-      if Pointer(Args[i]) <> nil then begin
-        L := {%H-}PLengthInt(NativeUInt(Args[i]) - StringLenOffSet)^;
-        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Args[i])^, Dest^, L);
-        Inc(Dest, L);
-      end;
-  end;
-  procedure AddParam(const Args: array of RawByteString; var Dest: RawByteString);
-  var I, L: Integer;
-    P: PAnsiChar;
-  begin
-    Dest := ''; L := 0;
-    for I := low(Args) to high(Args) do //Calc String Length
-      Inc(L ,Length(Args[i]));
-    SetLength(Dest, L);
-    P := Pointer(Dest);
-    Put(Args, P);
-  end;
-begin
-  BindCount := Stmt.FInMessageMetadata.GetCount(Stmt.FStatus);
-  MemPerRow := XSQLDA_LENGTH(BindCount);
-  if Pointer(TypeTokens) = nil then
-  begin
-    Assert(InParamCount=BindCount, 'ParamCount missmatch'); //debug only
-    SetLength(TypeTokens, BindCount);
-    for ParamIndex := 0 to BindCount-1 do begin
-      case Stmt.FInMessageMetadata.GetType(Stmt.FStatus, ParamIndex) and not (1) of
-        SQL_VARYING, SQL_TEXT:
-          begin
-            CodePageInfo := Stmt.FPlainDriver.ValidateCharEncoding(Word(Stmt.FInMessageMetadata.GetCharSet(Stmt.FStatus, ParamIndex)) and 255);
-            AddParam([' VARCHAR(', IntToRaw(Stmt.FInMessageMetadata.GetLength(Stmt.FStatus, ParamIndex) div Cardinal(CodePageInfo.CharWidth)),
-            ') CHARACTER SET ', {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(CodePageInfo.Name), '=?' ], TypeTokens[ParamIndex]);
-          end;
-        SQL_DOUBLE, SQL_D_FLOAT:
-           AddParam([' DOUBLE PRECISION=?'], TypeTokens[ParamIndex]);
-        SQL_FLOAT:
-           AddParam([' FLOAT=?'],TypeTokens[ParamIndex]);
-        SQL_LONG:
-          if Stmt.FInMessageMetadata.GetScale(Stmt.FStatus, ParamIndex) = 0 then
-            AddParam([' INTEGER=?'],TypeTokens[ParamIndex])
-          else begin
-            tmp := IntToRaw(-Stmt.FInMessageMetadata.GetScale(Stmt.FStatus, ParamIndex));
-            if Stmt.FInMessageMetadata.GetSubType(Stmt.FStatus, ParamIndex) = RDB_NUMBERS_NUMERIC then
-              AddParam([' NUMERIC(9,', Tmp,')=?'], TypeTokens[ParamIndex])
-            else
-              AddParam([' DECIMAL(9,', Tmp,')=?'],TypeTokens[ParamIndex]);
-          end;
-        SQL_SHORT:
-          if Stmt.FInMessageMetadata.GetScale(Stmt.FStatus, ParamIndex) = 0 then
-            AddParam([' SMALLINT=?'],TypeTokens[ParamIndex])
-          else begin
-            tmp := IntToRaw(-Stmt.FInMessageMetadata.GetScale(Stmt.FStatus, ParamIndex));
-            if Stmt.FInMessageMetadata.GetSubType(Stmt.FStatus, ParamIndex) = RDB_NUMBERS_NUMERIC then
-              AddParam([' NUMERIC(4,', Tmp,')=?'],TypeTokens[ParamIndex])
-            else
-              AddParam([' DECIMAL(4,', Tmp,')=?'],TypeTokens[ParamIndex]);
-          end;
-        SQL_TIMESTAMP:
-           AddParam([' TIMESTAMP=?'],TypeTokens[ParamIndex]);
-        SQL_BLOB:
-          if Stmt.FInMessageMetadata.GetSubType(Stmt.FStatus, ParamIndex) = isc_blob_text then
-            AddParam([' BLOB SUB_TYPE TEXT=?'],TypeTokens[ParamIndex])
-          else
-            AddParam([' BLOB=?'],TypeTokens[ParamIndex]);
-        //SQL_ARRAY                      = 540;
-        //SQL_QUAD                       = 550;
-        SQL_TYPE_TIME:
-           AddParam([' TIME=?'],TypeTokens[ParamIndex]);
-        SQL_TYPE_DATE:
-           AddParam([' DATE=?'],TypeTokens[ParamIndex]);
-        SQL_INT64: // IB7
-          if Stmt.FInMessageMetadata.GetScale(Stmt.FStatus, ParamIndex) = 0 then
-            AddParam([' BIGINT=?'],TypeTokens[ParamIndex])
-          else begin
-            tmp := IntToRaw(-Stmt.FInMessageMetadata.GetScale(Stmt.FStatus, ParamIndex));
-            if Stmt.FInMessageMetadata.GetSubType(Stmt.FStatus, ParamIndex) = RDB_NUMBERS_NUMERIC then
-              AddParam([' NUMERIC(18,', Tmp,')=?'],TypeTokens[ParamIndex])
-            else
-              AddParam([' DECIMAL(18,', Tmp,')=?'],TypeTokens[ParamIndex]);
-          end;
-        SQL_BOOLEAN, SQL_BOOLEAN_FB{FB30}:
-           AddParam([' BOOLEAN=?'],TypeTokens[ParamIndex]);
-        SQL_NULL{FB25}:
-           AddParam([' CHAR(1)=?'],TypeTokens[ParamIndex]);
-      end;
-    end;
-  end;
-  {now let's calc length of stmt to know if we can bound all array data or if we need some more calls}
-  StmtLength := 0;
-  FullHeaderLen := 0;
-  ReturningFound := False;
-  PreparedRowsOfArray := 0;
-
-  for J := 0 to RemainingArrayRows -1 do
-  begin
-    ParamIndex := 0;
-    SingleStmtLength := 0;
-    LastStmLen := StmtLength;
-    HeaderLen := 0;
-    for i := low(CurrentSQLTokens) to high(CurrentSQLTokens) do begin
-      if IsParamIndexArray[i] then begin //calc Parameters size
-        {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-        ParamNameLen := {P}1+GetOrdinalDigits(ParamIndex)+1{_}+GetOrdinalDigits(j);
-        {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-        {inc header}
-        Inc(HeaderLen, ParamNameLen+ {%H-}PLengthInt(NativeUInt(TypeTokens[ParamIndex]) - StringLenOffSet)^+Ord(not ((ParamIndex = 0) and (J=0))){,});
-        {inc stmt}
-        Inc(SingleStmtLength, 1+{:}ParamNameLen);
-        Inc(ParamIndex);
-      end else begin
-        Inc(SingleStmtLength, {%H-}PLengthInt(NativeUInt(CurrentSQLTokens[i]) - StringLenOffSet)^);
-        P := Pointer(CurrentSQLTokens[i]);
-        if not ReturningFound and (Ord(P^) in [Ord('R'), Ord('r')]) and (Length(CurrentSQLTokens[i]) = Length(cRETURNING)) then begin
-          ReturningFound := ZSysUtils.SameText(P, Pointer(cReturning), Length(cRETURNING));
-          Inc(StmtLength, Ord(ReturningFound)*Length(EBSuspend));
-        end;
-      end;
-    end;
-    Inc(SingleStmtLength, 1{;}+Length(LineEnding));
-    if MaxRowsPerBatch = 0 then //calc maximum batch count if not set already
-      MaxRowsPerBatch := {Min(}Integer(XSQLDAMaxSize div MemPerRow);//,     {memory limit of XSQLDA structs}
-        //Integer(((32*1024)-LBlockLen) div (HeaderLen+SingleStmtLength)))+1; {32KB limited Also with FB3};
-    Inc(StmtLength, HeaderLen+SingleStmtLength);
-    Inc(FullHeaderLen, HeaderLen);
-    //we run into XSQLDA !update! count limit of 255 see:
-    //http://tracker.firebirdsql.org/browse/CORE-3027?page=com.atlassian.jira.plugin.system.issuetabpanels%3Aall-tabpanel
-    if //(PreparedRowsOfArray = MaxRowsPerBatch-1) or
-       ((InitialStatementType = stInsert) and (PreparedRowsOfArray = 254)) or
-       ((InitialStatementType <> stInsert) and (PreparedRowsOfArray = 124)) then begin
-      StmtLength := LastStmLen;
-      Dec(FullHeaderLen, HeaderLen);
-      MaxRowsPerBatch := J;
-      Break;
-    end else
-      PreparedRowsOfArray := J;
-  end;
-
-  {EH: now move our data to result ! ONE ALLOC ! of result (: }
-  {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}
-  SetLength(Result, StmtLength+LBlockLen);
-  PResult := Pointer(Result);
-  Put([EBStart], PResult);
-  PStmts := PResult + FullHeaderLen+Length(EBBegin);
-  for J := 0 to PreparedRowsOfArray do begin
-    ParamIndex := 0;
-    for i := low(CurrentSQLTokens) to high(CurrentSQLTokens) do begin
-      if IsParamIndexArray[i] then begin
-        IndexName := IntToRaw(ParamIndex);
-        ArrayName := IntToRaw(J);
-        Put([':P', IndexName, '_', ArrayName], PStmts);
-        if (ParamIndex = 0) and (J=0)
-        then Put(['P', IndexName, '_', ArrayName, TypeTokens[ParamIndex]], PResult)
-        else Put([',P', IndexName, '_', ArrayName, TypeTokens[ParamIndex]], PResult);
-        Inc(ParamIndex);
-      end else
-        Put([CurrentSQLTokens[i]], PStmts);
-    end;
-    Put([';',LineEnding], PStmts);
-  end;
-  Put([EBBegin], PResult);
-  if ReturningFound then
-    Put([EBSuspend], PStmts);
-  Put([EBEnd], PStmts);
-  Inc(PreparedRowsOfArray);
-end;
-
 { TZAbstractFirebirdStatement }
 
 constructor TZAbstractFirebirdStatement.Create(
@@ -566,26 +371,18 @@ label jmpEB;
   end;
   procedure PrepareFinalChunk(Rows: Integer);
   begin
-    FRawTemp := GetExecuteBlockString(Self,
-      FIsParamIndex, BindList.Count, Rows, FCachedQueryRaw,
-      PreparedRowsOfArray, FMaxRowsPerBatch,
-      FTypeTokens, FStatementType, FFBConnection.GetXSQLDAMaxSize);
+    FRawTemp := GetExecuteBlockString(Rows, FFBConnection.GetXSQLDAMaxSize,
+      PreparedRowsOfArray, FMaxRowsPerBatch, FPlainDriver);
     PrepareArrayStmt(FBatchStmts[False]);
   end;
   procedure SplitQueryIntoPieces;
-  var CurrentCS_ID: Integer;
   begin
-    CurrentCS_ID := FDB_CP_ID;
-    try
-      FDB_CP_ID := CS_NONE;
-      GetRawEncodedSQL(SQL);
-    finally
-      FDB_CP_ID := CurrentCS_ID;
-    end;
+    FASQL := SplittQuery(SQL);
   end;
 begin
   if not Prepared then begin
     RestartTimer;
+    FMemPerRow := 0;
     Transaction := FFBConnection.GetActiveTransaction.GetTransaction;
     if FWeakIZPreparedStatementPtr <> nil
     {$IFDEF WITH_CLASS_CONST}
@@ -666,23 +463,21 @@ begin
       end;
       FOutMessageMetadata.release;
       FOutMessageMetadata := MetadataBuilder.getMetadata(FStatus);
-      flags := FOutMessageMetadata.getMessageLength(FStatus);
-      if Flags = 0 then //see TestTicket426 (even if not reproducable with FB3 client)
-        Flags := SizeOf(Cardinal);
-      GetMem(FOutData, flags);
+      FMemPerRow := FOutMessageMetadata.getMessageLength(FStatus);
+      if FMemPerRow = 0 then //see TestTicket426 (even if not reproducable with FB3 client)
+        FMemPerRow := SizeOf(Cardinal);
+      GetMem(FOutData, FMemPerRow);
     end;
     inherited Prepare;
   end;
   if BatchDMLArrayCount > 0 then begin
     //if not done already then split our query into pieces to build the
     //exceute block query
-    if (FCachedQueryRaw = nil) then
+    if (not FQuerySplitted) then
       SplitQueryIntoPieces;
     if FMaxRowsPerBatch = 0 then begin //init to find out max rows per batch
-jmpEB:fRawTemp := GetExecuteBlockString(Self,
-        FIsParamIndex, BindList.Count, BatchDMLArrayCount, FCachedQueryRaw,
-        PreparedRowsOfArray, FMaxRowsPerBatch,
-          FTypeTokens, FStatementType, FFBConnection.GetXSQLDAMaxSize);
+jmpEB:fRawTemp := GetExecuteBlockString(BatchDMLArrayCount, FFBConnection.GetXSQLDAMaxSize,
+        PreparedRowsOfArray, FMaxRowsPerBatch, FPlainDriver);
     end else
       fRawTemp := '';
     FinalChunkSize := (BatchDMLArrayCount mod FMaxRowsPerBatch);
@@ -699,11 +494,13 @@ end;
 procedure TZAbstractFirebirdStatement.PrepareInParameters;
 var MessageMetadata: IMessageMetadata;
     MetadataBuilder: IMetadataBuilder;
-    Index, Tmp, SubType, OrgType: Cardinal;
+    Index, Tmp, OrgType: Cardinal;
     CS_ID: Word;
+    CodePageInfo: PZCodePage;
 begin
   MessageMetadata := FFBStatement.getInputMetadata(FStatus);
   try
+    FMemPerRow := 0;
     FInMessageCount := MessageMetadata.getCount(FStatus);
     //alloc space for lobs, arrays, param-types
     if (FOutMessageMetadata <> nil) and ((FStatementType = stExecProc) or
@@ -711,7 +508,7 @@ begin
     then BindList.Count := FInMessageCount + FOutMessageCount
     else BindList.Count := FInMessageCount;
     if FInMessageCount > 0 then begin
-      GetMem(FInParamDescripors, FInMessageCount * SizeOf(TZInterbaseFirerbirdParam));
+      ReallocMem(FInParamDescripors, FInMessageCount * SizeOf(TZInterbaseFirerbirdParam));
       MetadataBuilder := MessageMetadata.getBuilder(FStatus);
       try
         {$R-}
@@ -740,10 +537,13 @@ begin
             sqllen := {$IFDEF WITH_CLASS_CONST}IInt128.STRING_SIZE{$ELSE}IInt128_STRING_SIZE{$ENDIF};
           end;
           MetadataBuilder.setType(FStatus, Index, sqltype);
-          SubType := MessageMetadata.getSubType(FStatus, Index);
-          MetadataBuilder.setSubType(FStatus, Index, SubType);
-          if sqltype = SQL_VARYING then
-            sqllen := ((sqllen shr 2) + 1) shl 2; //4Byte align incluing 4 bytes reserved for overlongs {let fb raise the Exception}
+          sqlSubType := MessageMetadata.getSubType(FStatus, Index);
+          MetadataBuilder.setSubType(FStatus, Index, sqlSubType);
+          if sqltype = SQL_VARYING then begin
+            CodePageInfo := FPlainDriver.ValidateCharEncoding(MessageMetadata.getCharSet(FStatus, Index));
+            if CodePageInfo <> nil then
+              sqllen := sqllen + Byte(CodePageInfo.CharWidth);
+          end;
           MetadataBuilder.setLength(FStatus, Index, sqllen);
           sqlscale := MessageMetadata.getScale(FStatus, Index);
           MetadataBuilder.setScale(FStatus, Index, sqlscale);
@@ -754,7 +554,8 @@ begin
           end else begin
             Tmp := MessageMetadata.getCharSet(FStatus, Index);
             MetadataBuilder.setCharSet(FStatus, Index, Tmp);
-            if ((sqltype = SQL_BLOB) and (SubType = isc_blob_text)) or (sqltype = SQL_VARYING) then begin
+            if ((sqltype = SQL_BLOB) and (sqlSubType = isc_blob_text)) or (sqltype = SQL_VARYING) then begin
+              sqlSubType := Tmp;
               CS_ID := Word(Tmp) and 255;
               CodePage := FCodePageArray[CS_ID]
             end else CodePage := zCP_Binary
@@ -764,8 +565,8 @@ begin
       finally
         MetadataBuilder.release;
       end;
-      Tmp := FInMessageMetadata.getMessageLength(FStatus);
-      GetMem(FInData, Tmp);
+      FMemPerRow := FInMessageMetadata.getMessageLength(FStatus);
+      GetMem(FInData, FMemPerRow);
       {$R-}
       for Index := 0 to FInMessageCount -1 do with FInParamDescripors[Index] do begin
         {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}

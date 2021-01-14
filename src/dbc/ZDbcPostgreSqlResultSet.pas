@@ -311,8 +311,8 @@ var
   P, pgBuff: PAnsiChar;
   RNo, H, I: Integer;
   TS: TZTimeStamp;
-  DT: TDateTime absolute TS;
-label ProcBts, jmpDate, jmpTime, jmpTS, jmpOIDBLob;
+  Months, Days: Integer absolute TS;
+label ProcBts, jmpTime, jmpTS, jmpOIDBLob;
 begin
   RNo := PGRowNo;
   if JSONWriter.Expand then
@@ -383,7 +383,7 @@ jmpOIDBLob:                   PIZlob(FByteBuffer)^ := TZPostgreSQLOidBlob.Create
                               JSONWriter.Add('"');
                             end;
             stDate        : begin
-jmpDate:                      if jcoMongoISODate in JSONComposeOptions
+                              if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('ISODate("')
                               else if jcoDATETIME_MAGIC in JSONComposeOptions
                                 then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
@@ -396,14 +396,14 @@ jmpDate:                      if jcoMongoISODate in JSONComposeOptions
                               else JSONWriter.Add('"');
                             end;
             stTime        : begin
+                              if Finteger_datetimes
+                              then dt2Time(PG2Int64(P), TS.Hour, TS.Minute, TS.Second, Ts.Fractions)
+                              else dt2Time(PG2Double(P), TS.Hour, TS.Minute, TS.Second, Ts.Fractions);
 jmpTime:                      if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('ISODate("0000-00-00')
                               else if jcoDATETIME_MAGIC in JSONComposeOptions
                                 then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                                 else JSONWriter.Add('"');
-                              if Finteger_datetimes
-                              then dt2Time(PG2Int64(P), TS.Hour, TS.Minute, TS.Second, Ts.Fractions)
-                              else dt2Time(PG2Double(P), TS.Hour, TS.Minute, TS.Second, Ts.Fractions);
                               TimeToIso8601PChar(PUTF8Char(FByteBuffer), True, TS.Hour, TS.Minute, TS.Second, TS.Fractions div NanoSecsPerMSec, 'T', jcoMilliseconds in JSONComposeOptions);
                               JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer), 9+4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions)));
                               if jcoMongoISODate in JSONComposeOptions
@@ -411,14 +411,14 @@ jmpTime:                      if jcoMongoISODate in JSONComposeOptions
                               else JSONWriter.Add('"');
                             end;
             stTimestamp   : begin
+                              if Finteger_datetimes
+                              then PG2DateTime(PInt64(P)^, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions)
+                              else PG2DateTime(PDouble(P)^, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('ISODate("')
                               else if jcoDATETIME_MAGIC in JSONComposeOptions
                                 then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                                 else JSONWriter.Add('"');
-                              if Finteger_datetimes
-                              then PG2DateTime(PInt64(P)^, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions)
-                              else PG2DateTime(PDouble(P)^, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions);
                               DateToIso8601PChar(PUTF8Char(FByteBuffer), True, TS.Year, TS.Month, TS.Day);
                               TimeToIso8601PChar(PUTF8Char(FByteBuffer)+10, True, TS.Hour, TS.Minute, TS.Second, TS.Fractions div NanoSecsPerMSec, 'T', jcoMilliseconds in JSONComposeOptions);
                               JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),19+(4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions))));
@@ -437,22 +437,28 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                               JSONWriter.Add('"');
                             end else if TypeOID = INTERVALOID then begin
                               if Finteger_datetimes
-                              then DT := PG2DateTime(PInt64(P)^)
-                              else DT := PG2DateTime(PDouble(P)^);
-                              DT := DT + (PG2Integer(P+8)-102) * SecsPerDay + PG2Integer(P+12) * SecsPerDay * 30;
-                              P := PAnsiChar(FByteBuffer);
-                              if Int(DT) = 0 then begin
-                                DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
-                                Date2PG(DT, PInteger(P)^);
-                                goto jmpDate;
+                              then PG2Time(PInt64(P)^, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
+                              else PG2Time(PDouble(P)^, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
+                              Months := PG2Integer(P+12);
+                              TS.IsNegative := Months < 0;
+                              if Months < 0 then
+                                Months := -Months;
+                              if Months > 12 then begin
+                                TS.Year := Months div 12;
+                                TS.Month := Months mod 12;
                               end else begin
-                                if Finteger_datetimes
-                                then DateTime2PG(DT, PInt64(P)^)
-                                else DateTime2PG(DT, PDouble(P)^);
-                                if Frac(DT) = 0
-                                then goto jmpTime
-                                else goto jmpTS;
+                                TS.Year := 0;
+                                TS.Month := Months;
                               end;
+                              Days := PG2Integer(P+8);
+                              if Days < 0 then begin
+                                TS.IsNegative := True;
+                                Days := -Days;
+                              end;
+                              TS.Day := Days;
+                              if (TS.Day > 0) or (TS.Month > 0)
+                              then goto jmpTS
+                              else goto jmpTime;
                             end else begin
                               JSONWriter.Add('"');
                               if (TypeOID = CHAROID) or (TypeOID = BPCHAROID)
@@ -903,15 +909,15 @@ var L: LongWord;
   TS: TZTimeStamp absolute BCD;
   {$IFNDEF ENDIAN_BIG}UUID: TGUID absolute BCD;{$ENDIF}
   DT: TDateTime absolute BCD;
-  MS: Word;
   ROW_IDX: Integer;
+  Days, Months: Integer absolute ROW_IDX;
   function FromOIDLob(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
   begin
     FRawTemp := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetString;
     Result := Pointer(FRawTemp);
     Len := Length(FRawTemp);
   end;
-label JmpPEndTinyBuf, JmpStr, jmpTime, jmpDate, jmpTS;
+label JmpPEndTinyBuf, JmpStr, jmpTime, jmpTS;
 begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
@@ -968,7 +974,7 @@ JmpPEndTinyBuf:       Result := PAnsiChar(fByteBuffer);
                     end;
         stDate:     begin
                       PG2Date(PInteger(Result)^, TS.Year, TS.Month, TS.Day);
-jmpDate:              Result := PAnsiChar(fByteBuffer);
+                      Result := PAnsiChar(fByteBuffer);
                       Len := DateToRaw(TS.Year, TS.Month, TS.Day, Result,
                         ConSettings.ReadFormatSettings.DateFormat, False, False);
                     end;
@@ -1014,21 +1020,28 @@ jmpTS:                Result := PAnsiChar(fByteBuffer);
                       Result := PAnsiChar(fByteBuffer);
                     end else if TypeOID = INTERVALOID then begin
                       if Finteger_datetimes
-                      then DT := PG2DateTime(PInt64(Result)^)
-                      else DT := PG2DateTime(PDouble(Result)^);
-                      DT := DT + (PG2Integer(Result+8)-102) * SecsPerDay + PG2Integer(Result+12) * SecsPerDay * 30;
-                      if Frac(DT) = 0 then begin
-                        DecodeTime(DT, TS.Hour, Ts.Minute, Ts.Second, MS);
-                        Ts.Fractions := 0;
-                        goto jmpTime
-                      end else if Int(DT) = 0 then begin
-                        DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
-                        goto jmpDate;
+                      then PG2Time(PInt64(Result)^, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
+                      else PG2Time(PDouble(Result)^, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
+                      Months := PG2Integer(Result+12);
+                      TS.IsNegative := Months < 0;
+                      if Months < 0 then
+                        Months := -Months;
+                      if Months > 12 then begin
+                        TS.Year := Months div 12;
+                        TS.Month := Months mod 12;
+                      end else begin
+                        TS.Year := 0;
+                        TS.Month := Months;
                       end;
-                      DecodeTime(DT, TS.Hour, Ts.Minute, Ts.Second, MS);
-                      DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
-                      Ts.Fractions := 0;
-                      goto jmpTS;
+                      Days := PG2Integer(Result+8);
+                      if Days < 0 then begin
+                        TS.IsNegative := True;
+                        Days := -Days;
+                      end;
+                      TS.Day := Days;
+                      if (TS.Day > 0) or (TS.Month > 0)
+                      then goto jmpTS
+                      else goto jmpTime;
                     end else goto jmpStr;
         stAsciiStream,
         stUnicodeStream:Len := ZFastCode.StrLen(Result);
@@ -1088,8 +1101,8 @@ var P: PAnsiChar;
   UUID: TGUID absolute BCD;
   DT: TDateTime absolute BCD;
   C: Currency absolute BCD;
-  MS: Word;
   ROW_IDX: Integer;
+  Months, Days: Integer absolute ROW_IDX;
   procedure FromOIDLob(ColumnIndex: Integer);
   var Lob: IZBlob;
   begin
@@ -1097,7 +1110,7 @@ var P: PAnsiChar;
     P := Lob.GetBuffer(fRawTemp, Len);
     FUniTemp := Ascii7ToUnicodeString(P, len);
   end;
-label JmpPEndTinyBuf, JmpUni, jmpStr, jmpTxt, jmpRaw, jmpBin, jmpLen, jmpTime, jmpDate, jmpTS;
+label JmpPEndTinyBuf, JmpUni, jmpStr, jmpTxt, jmpRaw, jmpBin, jmpLen, jmpTime, jmpTS;
 begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
@@ -1155,7 +1168,7 @@ JmpPEndTinyBuf:       Result := PWideChar(fByteBuffer);
                     end;
         stDate:     begin
                       PG2Date(PInteger(P)^, TS.Year, TS.Month, TS.Day);
-jmpDate:              Result := PWideChar(fByteBuffer);
+                      Result := PWideChar(fByteBuffer);
                       Len := DateToUni(TS.Year, TS.Month, TS.Day,
                         Result, ConSettings.ReadFormatSettings.DateFormat, False, False);
                     end;
@@ -1201,21 +1214,28 @@ jmpTS:                Result := PWideChar(fByteBuffer);
                       Result := PWideChar(fByteBuffer);
                     end else if TypeOID = INTERVALOID then begin
                       if Finteger_datetimes
-                      then DT := PG2DateTime(PInt64(P)^)
-                      else DT := PG2DateTime(PDouble(P)^);
-                      DT := DT + (PG2Integer(P+8)-102) * SecsPerDay + PG2Integer(P+12) * SecsPerDay * 30;
-                      if Frac(DT) = 0 then begin
-                        DecodeTime(DT, TS.Hour, Ts.Minute, Ts.Second, MS);
-                        Ts.Fractions := 0;
-                        goto jmpTime
-                      end else if Int(DT) = 0 then begin
-                        DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
-                        goto jmpDate;
+                      then PG2Time(PInt64(P)^, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
+                      else PG2Time(PDouble(P)^, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
+                      Months := PG2Integer(P+12);
+                      TS.IsNegative := Months < 0;
+                      if Months < 0 then
+                        Months := -Months;
+                      if Months > 12 then begin
+                        TS.Year := Months div 12;
+                        TS.Month := Months mod 12;
+                      end else begin
+                        TS.Year := 0;
+                        TS.Month := Months;
                       end;
-                      DecodeTime(DT, TS.Hour, Ts.Minute, Ts.Second, MS);
-                      DecodeDate(DT, TS.Year, Ts.Month, Ts.Day);
-                      Ts.Fractions := 0;
-                      goto jmpTS;
+                      Days := PG2Integer(P+8);
+                      if Days < 0 then begin
+                        TS.IsNegative := True;
+                        Days := -Days;
+                      end;
+                      TS.Day := Days;
+                      if (TS.Day > 0) or (TS.Month > 0)
+                      then goto jmpTS
+                      else goto jmpTime;
                     end else goto jmpStr;
         stUnicodeStream,
         stAsciiStream: goto JmpTxt;
@@ -1911,6 +1931,7 @@ procedure TZPostgreSQLResultSet.GetDate(ColumnIndex: Integer;
 var Len: NativeUInt;
     P: PAnsiChar;
     ROW_IDX: Integer;
+    Months, Days: Integer absolute ROW_IDX;
 label from_str, jmpZero;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1960,8 +1981,26 @@ jmpZero:                PInt64(@Result.Year)^ := 0
       stInteger, stLong, stLongWord,
       stFloat, stDouble,
       stCurrency, stBigDecimal:  DecodeDateTimeToDate(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result);
-      stAsciiStream, stUnicodeStream,
-      stString, stUnicodeString:    goto from_str;
+      stAsciiStream, stUnicodeStream: goto from_str;
+      stString, stUnicodeString: if FBinaryValues and (TypeOID = INTERVALOID) then begin
+                    Months := PG2Integer(P+12);
+                    Result.IsNegative := Months < 0;
+                    if Months < 0 then
+                      Months := -Months;
+                    if Months > 12 then begin
+                      Result.Year := Months div 12;
+                      Result.Month := Months mod 12;
+                    end else begin
+                      Result.Year := 0;
+                      Result.Month := Months;
+                    end;
+                    Days := PG2Integer(P+8);
+                    if Days < 0 then begin
+                      Result.IsNegative := True;
+                      Days := -Days;
+                    end;
+                    Result.Day := Days;
+                  end else goto from_str;
       else raise CreatePGConvertError(ColumnIndex, TypeOID);
     end;
   end;
@@ -2032,8 +2071,12 @@ jmpZero:              PCardinal(@Result.Hour)^ := 0;
       stInteger, stLong, stLongWord,
       stFloat, stDouble,
       stCurrency, stBigDecimal: DecodeDateTimeToTime(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), Result);
-      stAsciiStream, stUnicodeStream,
-      stString, stUnicodeString:    goto from_str;
+      stAsciiStream, stUnicodeStream: goto from_str;
+      stString, stUnicodeString: if FBinaryValues and (TypeOID = INTERVALOID) then
+                    if Finteger_datetimes
+                    then PG2Time(PInt64(P)^, Result.Hour, Result.Minute, Result.Second, Result.Fractions)
+                    else PG2Time(PDouble(P)^, Result.Hour, Result.Minute, Result.Second, Result.Fractions)
+                  else goto from_str;
       else raise CreatePGConvertError(ColumnIndex, TypeOID);
     end
   end;
@@ -2054,6 +2097,7 @@ procedure TZPostgreSQLResultSet.GetTimestamp(ColumnIndex: Integer;
 var Len: NativeUInt;
     P: PAnsiChar;
     ROW_IDX: Integer;
+    Months, Days: Integer absolute ROW_IDX;
 label from_str, jmpZero;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2106,8 +2150,30 @@ begin
                       Result.Second, Result.Fractions);
                     PCardinal(@Result.TimeZoneHour)^ := 0;
                     Result.IsNegative := False;
+                  end else
+from_str:           if TypeOID = INTERVALOID then begin
+                    if Finteger_datetimes
+                    then PG2Time(PInt64(P)^, Result.Hour, Result.Minute, Result.Second, Result.Fractions)
+                    else PG2Time(PDouble(P)^, Result.Hour, Result.Minute, Result.Second, Result.Fractions);
+                    Months := PG2Integer(P+12);
+                    Result.IsNegative := Months < 0;
+                    if Months < 0 then
+                      Months := -Months;
+                    if Months > 12 then begin
+                      Result.Year := Months div 12;
+                      Result.Month := Months mod 12;
+                    end else begin
+                      Result.Year := 0;
+                      Result.Month := Months;
+                    end;
+                    Days := PG2Integer(P+8);
+                    if Days < 0 then begin
+                      Result.IsNegative := True;
+                      Days := -Days;
+                    end;
+                    Result.Day := Days;
                   end else begin
-from_str:           Len := StrLen(P);
+                    Len := StrLen(P);
                     LastWasNull := not TryPCharToTimeStamp(P, Len, ConSettings^.ReadFormatSettings, Result);
                     if LastWasNull then begin
 jmpZero:              PInt64(@Result.Year)^ := 0;
