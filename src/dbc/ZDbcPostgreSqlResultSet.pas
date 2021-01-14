@@ -910,7 +910,7 @@ var L: LongWord;
   {$IFNDEF ENDIAN_BIG}UUID: TGUID absolute BCD;{$ENDIF}
   DT: TDateTime absolute BCD;
   ROW_IDX: Integer;
-  Days, Months: Integer absolute ROW_IDX;
+  Days, Months: Integer;
   function FromOIDLob(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
   begin
     FRawTemp := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).GetString;
@@ -1102,7 +1102,7 @@ var P: PAnsiChar;
   DT: TDateTime absolute BCD;
   C: Currency absolute BCD;
   ROW_IDX: Integer;
-  Months, Days: Integer absolute ROW_IDX;
+  Months, Days: Integer;
   procedure FromOIDLob(ColumnIndex: Integer);
   var Lob: IZBlob;
   begin
@@ -1931,7 +1931,7 @@ procedure TZPostgreSQLResultSet.GetDate(ColumnIndex: Integer;
 var Len: NativeUInt;
     P: PAnsiChar;
     ROW_IDX: Integer;
-    Months, Days: Integer absolute ROW_IDX;
+    Months, Days: Integer;
 label from_str, jmpZero;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2097,7 +2097,7 @@ procedure TZPostgreSQLResultSet.GetTimestamp(ColumnIndex: Integer;
 var Len: NativeUInt;
     P: PAnsiChar;
     ROW_IDX: Integer;
-    Months, Days: Integer absolute ROW_IDX;
+    Months, Days: Integer;
 label from_str, jmpZero;
 begin
 {$IFNDEF DISABLE_CHECKING}
