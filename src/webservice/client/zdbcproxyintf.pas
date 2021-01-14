@@ -61,7 +61,7 @@ uses
 
   type IZDbcProxy = Interface(IUnknown)
     ['{374CAA55-95CD-44FE-8FF3-F90BF8D1DF8C}']
-    procedure Connect(const UserName, Password, DbHost, DbName: WideString; var Properties: WideString; out DbInfo: WideString); safecall;
+    procedure Connect(const UserName, Password, ServiceEndpoint, DbName: WideString; var Properties: WideString; out DbInfo: WideString); safecall;
     procedure Disconnect; safecall;
     procedure SetAutoCommit(const Value: LongBool); safecall;
     procedure Commit; safecall;
@@ -98,7 +98,7 @@ uses
       // this is necessary for safecall exception handling
       function SafeCallException(ExceptObject: TObject; ExceptAddr: Pointer): HResult; override;
 
-      procedure Connect(const UserName, Password, DbHost, DbName: WideString; var Properties: WideString; out DbInfo: WideString); safecall;
+      procedure Connect(const UserName, Password, ServiceEndpoint, DbName: WideString; var Properties: WideString; out DbInfo: WideString); safecall;
       procedure Disconnect; safecall;
       procedure SetAutoCommit(const Value: LongBool); safecall;
       procedure Commit; safecall;
@@ -160,26 +160,34 @@ begin
  FService := nil;
 end;
 
-procedure TZDbcProxy.Connect(const UserName, Password, DbHost, DbName: WideString; var Properties: WideString; out DbInfo: WideString); safecall;
+procedure TZDbcProxy.Connect(const UserName, Password, ServiceEndpoint, DbName: WideString; var Properties: WideString; out DbInfo: WideString); safecall;
 var
-  Url: UnicodeString;
   MyDbInfo: UnicodeString;
   MyInProperties: UnicodeString;
   MyOutProperties: UnicodeString;
+
+  Transport: String;
+  ProtocolEnd: Integer;
 begin
- Url := 'http://' + DbHost + ':8000/services/IZeosProxy';
- //FService := wst_CreateInstance_IZeosProxy('SOAP:', 'HTTP:', 'http://127.0.0.1:8000/services/IZeosProxy');
- FService := wst_CreateInstance_IZeosProxy('SOAP:', 'HTTP:', Url);
+  // derive the transport from the protocol
+  Transport := UTF8String(ServiceEndpoint);
+  ProtocolEnd := Pos('://', Transport);
+  Transport := UpperCase(Copy(Transport, 1, ProtocolEnd - 1));
 
-// if using a reverse proxy, this seems to work well:
-// Url := 'https://' + DbHost + '/services/IZeosProxy';
-// //FService := wst_CreateInstance_IZeosProxy('SOAP:', 'HTTP:', 'http://127.0.0.1:8000/services/IZeosProxy');
-// FService := wst_CreateInstance_IZeosProxy('SOAP:', 'HTTP:', Url);
+  if (Transport <> 'HTTP') and (Transport <> 'HTTPS') then
+    raise Exception.Create('Protocols other than http and https are not supported. Given: ' + LowerCase(Transport));
 
- MyInProperties := Properties;
- FConnectionID := FService.Connect(UserName, Password, DbName, MyInProperties, MyOutProperties, MyDbInfo);
- Properties := MyOutProperties;
- DbInfo := MyDbInfo;
+  if Transport = 'HTTPS' then
+    Transport := 'HTTP';
+  Transport := Transport + ':';
+
+  //Create the webservice proxy
+  FService := wst_CreateInstance_IZeosProxy('SOAP:', Transport, ServiceEndpoint);
+
+  MyInProperties := Properties;
+  FConnectionID := FService.Connect(UserName, Password, DbName, MyInProperties, MyOutProperties, MyDbInfo);
+  Properties := MyOutProperties;
+  DbInfo := MyDbInfo;
 end;
 
 procedure TZDbcProxy.Disconnect; safecall;

@@ -94,7 +94,7 @@ type
     FConnIntf: IZDbcProxy;
     FDbInfo: ZWideString;
 
-    //shadow properties - the just mirror the values that are set on the server
+    //shadow properties - they just mirror the values that are set on the server
     FCatalog: String;
     FServerProvider: TZServerProvider;
 
@@ -232,7 +232,7 @@ implementation
 
 uses
   ZSysUtils, ZFastCode, ZEncoding,
-  ZDbcProxyMetadata, ZDbcStatement, ZDbcProxyStatement,
+  ZDbcProxyMetadata, ZDbcStatement, ZDbcProxyStatement, ZDbcProperties,
   ZMessages, Typinfo
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -346,6 +346,7 @@ var
   LogMessage: RawByteString;
   PropList: WideString;
   MyDbInfo: WideString;
+  WsUrl: String; // Webservice URL
 begin
   if not Closed then
     Exit;
@@ -354,10 +355,18 @@ begin
   FStartTransactionUsed := false;
   {$ENDIF}
 
+  WsUrl := URL.Properties.Values[ConnProps_ProxyProtocol];
+  if WsUrl = '' then
+    WsUrl := 'https';
+  WsUrl := WsUrl + '://' + HostName;
+  if Port <> 0 then
+    WsUrl := WsUrl + ':' + ZFastCode.IntToStr(Port);
+  WsUrl := WsUrl + '/services/IZeosProxy';
+
   LogMessage := 'CONNECT TO "'+ URL.Database + '" AS USER "' + URL.UserName + '"';
 
   PropList := encodeProperties('autocommit', BoolToStr(GetAutoCommit, True));
-  FConnIntf.Connect(User, Password, HostName, Database, PropList, MyDbInfo);
+  FConnIntf.Connect(User, Password, WsUrl, Database, PropList, MyDbInfo);
 
   DriverManager.LogMessage(lcConnect, URL.Protocol , LogMessage);
   FDbInfo := MyDbInfo;
