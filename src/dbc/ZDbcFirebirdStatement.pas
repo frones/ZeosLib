@@ -62,13 +62,13 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_FIREBIRD} //if set we have an empty unit
 
-uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} FmtBCD, Types, SysUtils,
+uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} FmtBCD, SysUtils,
   ZCompatibility, ZPlainFirebird, ZPlainFirebirdInterbaseDriver,
   ZDbcIntfs, ZDbcStatement, ZDbcFirebirdInterbase, ZDbcFirebird,
   ZDbcInterbase6Utils;
 
 type
-  /// <summary>Implements a abstract Statement for Firebird.</summary>
+  /// <summary>Implements an abstract Statement for Firebird.</summary>
   TZAbstractFirebirdStatement = Class(TZAbstractFirebirdInterbasePreparedStatement)
   private
     FMaxRowsPerBatch: Integer;

@@ -143,7 +143,10 @@ type
     function ReadColumnByRef(FieldRef: TZFieldRef; ColumnInfo: TZColumnInfo): Boolean;
     function ReadColumnByName(const FieldName: string; TableRef: TZTableRef;
       ColumnInfo: TZColumnInfo): Boolean;
+    /// <summary>Clears specified column information.</summary>
+    /// <param>"ColumnInfo" a column information object.</param>
     procedure ClearColumn(ColumnInfo: TZColumnInfo); virtual;
+    /// <summary>Initializes columns with additional data.</summary>
     procedure LoadColumns; virtual;
     procedure ReplaceStarColumns(const SelectSchema: IZSelectSchema);
 
@@ -816,10 +819,6 @@ begin
     Result := FTableColumns.Get(TableKey) as IZResultSet;
 end;
 
-{**
-  Clears specified column information.
-  @param ColumnInfo a column information object.
-}
 procedure TZAbstractResultSetMetadata.ClearColumn(ColumnInfo: TZColumnInfo);
 begin
   ColumnInfo.ReadOnly := True;
@@ -1150,9 +1149,6 @@ begin
     else ColumnInfo.Writable := TableColumns.GetBoolean(TableColColumnWritableIndex);
 end;
 
-{**
-  Initializes columns with additional data.
-}
 procedure TZAbstractResultSetMetadata.LoadColumns;
 var
   I, j: Integer;

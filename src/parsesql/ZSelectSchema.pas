@@ -120,13 +120,22 @@ type
     constructor Create(IsField: Boolean; const Catalog, Schema, Table,
       Field, Alias: string; TableRef: TZTableRef);
 
+    /// <summary>Indicates if the field is a real field or an aggreagete f.e.</summary>
     property IsField: Boolean read FIsField write FIsField;
+    /// <summary>Defines the catalog of the field.</summary>
     property Catalog: string read FCatalog write FCatalog;
+    /// <summary>Defines the schema of the field.</summary>
     property Schema: string read FSchema write FSchema;
+    /// <summary>Defines the table of the field.</summary>
     property Table: string read FTable write FTable;
+    /// <summary>Defines the fieldname.</summary>
     property Field: string read FField write FField;
+    /// <summary>Defines the table alias of the field.</summary>
     property Alias: string read FAlias write FAlias;
+    /// <summary>Defines the table reference of the field.</summary>
     property TableRef: TZTableRef read FTableRef write FTableRef;
+    /// <summary>Indicates if the FieldRef is linked to a column in the
+    ///  fieldlist.</summary>
     property Linked: Boolean read FLinked write FLinked;
   end;
 

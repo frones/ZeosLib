@@ -132,19 +132,40 @@ type
   public
     constructor Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
     destructor Destroy; override;
-
+    /// <summary>Forms a where clause for UPDATE or DELETE DML statements.</summary>
+    /// <param>"SQLWriter" a TZSQLStringWriter object used for buffered writes</param>
+    /// <param>"OldRowAccessor" an accessor object to old column values.</param>
+    /// <param>"Result" a reference to the Result String the SQLWriter uses
+    ///  for the buffered writes.</param>
     procedure FormWhereClause(const SQLWriter: TZSQLStringWriter;
       const OldRowAccessor: TZRowAccessor; var Result: SQLString); virtual;
+    /// <summary>Forms an INSERT statement.</summary>
+    /// <param>"NewRowAccessor" an accessor object to new column values.</param>
+    /// <returns>the composed insert SQL.</returns>
     function FormInsertStatement(NewRowAccessor: TZRowAccessor): SQLString; virtual;
+    /// <summary>Forms an UPDATE statements.</summary>
+    /// <param>"OldRowAccessor" an accessor object to old column values.</param>
+    /// <param>"NewRowAccessor" an accessor object to new column values.</param>
+    /// <returns>the composed UPDATE SQL.</returns>
     function FormUpdateStatement(
       const OldRowAccessor, NewRowAccessor: TZRowAccessor): SQLString;
+    /// <summary>Forms a DELETE statement.</summary>
+    /// <param>"OldRowAccessor" an accessor object to old column values.</param>
+    /// <returns>the composed DELETE SQL.</returns>
     function FormDeleteStatement(const OldRowAccessor: TZRowAccessor): SQLString;
+    /// <author>Michael Seeger</author>
+    /// <summary>Forms a SELECT statements to calculate default values.</summary>
+    /// <param>"RowAccessor" an accessor object to column values.</param>
+    /// <param>"ColumnsLookup" an TZIndexPairList which holds the NULL columns.</param>
+    /// <returns>the composed SELECT SQL.</returns>
     function FormCalculateStatement(const RowAccessor: TZRowAccessor;
       const ColumnsLookup: TZIndexPairList): SQLString; virtual;
   public //implement IZCachedResolver
     procedure SetTransaction(const Value: IZTransaction); virtual;
     function HasAutoCommitTransaction: Boolean;
-
+    /// <summary>Calculate default values for the fields.</summary>
+    /// <param>"Sender" a cached result set object.</param>
+    /// <param>"RowAccessor" an accessor object to column values.</param>
     procedure CalculateDefaults(const Sender: IZCachedResultSet; const RowAccessor: TZRowAccessor);
     /// <summary>Posts updates to database.</summary>
     /// <param>"Sender" a cached result set inteface.</param>
@@ -512,11 +533,6 @@ begin
     in [stUnknown, stAsciiStream, stBinaryStream, stUnicodeStream]);
 end;
 
-{**
-  Forms a where clause for UPDATE or DELETE DML statements.
-  @param Columns a collection of key columns.
-  @param OldRowAccessor an accessor object to old column values.
-}
 procedure TZGenerateSQLCachedResolver.FormWhereClause(
   const SQLWriter: TZSQLStringWriter; const OldRowAccessor: TZRowAccessor;
   var Result: SQLString);
@@ -553,10 +569,6 @@ begin
   else Result := Connection.GetAutoCommit;
 end;
 
-{**
-  Forms a INSERT statements.
-  @return the composed insert SQL
-}
 function TZGenerateSQLCachedResolver.FormInsertStatement(
   NewRowAccessor: TZRowAccessor): SQLString;
 var
@@ -620,11 +632,6 @@ begin
   end;
 end;
 
-{**
-  Forms an UPDATE statements.
-  @param OldRowAccessor an accessor object to old column values.
-  @param NewRowAccessor an accessor object to new column values.
-}
 function TZGenerateSQLCachedResolver.FormUpdateStatement(
   const OldRowAccessor, NewRowAccessor: TZRowAccessor): SQLString;
 var
@@ -662,11 +669,6 @@ begin
   end;
 end;
 
-{**
-  Forms a where clause for DELETE statements.
-  @param Columns a collection of key columns.
-  @param OldRowAccessor an accessor object to old column values.
-}
 function TZGenerateSQLCachedResolver.FormDeleteStatement(
   const OldRowAccessor: TZRowAccessor): SQLString;
 var
@@ -706,11 +708,6 @@ begin
   end;
 end;
 
-{**
-  Forms a where clause for SELECT statements to calculate default values.
-  @param Columns a collection of key columns.
-  @param OldRowAccessor an accessor object to old column values.
-}
 function TZGenerateSQLCachedResolver.FormCalculateStatement(
   const RowAccessor: TZRowAccessor; const ColumnsLookup: TZIndexPairList): SQLString;
 var
@@ -1028,11 +1025,6 @@ end;
  (*
 { TZUserDefinedSQLCachedResolver }
 
-{**
-  Calculate default values for the fields.
-  @param Sender a cached result set object.
-  @param RowAccessor an accessor object to column values.
-}
 procedure TZUserDefinedSQLCachedResolver.CalculateDefaults(
   const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
 begin

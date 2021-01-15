@@ -67,7 +67,7 @@ uses
 
 type
 
-  {** Implements Abstract Database Driver. }
+  /// <summary>Implements an abstract Database Driver object. </summary>
   TZAbstractDriver = class(TInterfacedObject, IZDriver)
   protected
     FCachedPlainDrivers: IZHashMap;
@@ -82,7 +82,6 @@ type
   public
     constructor Create; virtual;
     destructor Destroy; override;
-
     /// <summary>Get an array of protocols supported by the driver.</summary>
     /// <returns>an array of protocol names.</returns>
     function GetSupportedProtocols: TStringDynArray;
@@ -162,10 +161,7 @@ type
     function GetClientVersion(const {%H-}Url: string): Integer; virtual;
   end;
 
-  {** Implements Abstract Database Connection. }
-
-  { TZAbstractDbcConnection }
-
+  /// <summary>Implements an abstract Database Connection object</summary>
   TZAbstractDbcConnection = class(TZImmediatelyReleasableObject, IImmediatelyReleasable)
   private
     FOnConnectionLostError: TOnConnectionLostError; //error handle which can be registered
@@ -594,7 +590,11 @@ type
   {** Implements a MSSQL sequence. }
   TZMSSQLSequence = class(TZAbstractSequence)
   public
+    /// <summary>Returns the SQL to be get the current value.</summary>
+    /// <returns>The SQL string</returns>
     function GetCurrentValueSQL: string; override;
+    /// <summary>Returns the SQL to be get the next value.</summary>
+    /// <returns>The SQL string</returns>
     function GetNextValueSQL: string; override;
   end;
 
@@ -602,39 +602,53 @@ type
   TZDotCurrvalNextvalSequence = class(TZIdentifierSequence)
   public
     function GetCurrentValueSQL: string; override;
+    /// <summary>Returns the SQL to be get the next value.</summary>
+    /// <returns>The SQL string</returns>
     function GetNextValueSQL: string; override;
   end;
 
   {** Implements a Sybase SQL Anywhere sequence. }
-  TZSybaseASASquence = class(TZDotCurrvalNextvalSequence);
+  TZSybaseASASequence = class(TZDotCurrvalNextvalSequence);
 
   {** Implements an Informix sequence. }
-  TZInformixSquence = class(TZDotCurrvalNextvalSequence);
+  TZInformixSequence = class(TZDotCurrvalNextvalSequence);
 
   {** Implements an DB2 sequence. }
-  TZDB2Squence = class(TZDotCurrvalNextvalSequence);
+  TZDB2Sequence = class(TZDotCurrvalNextvalSequence);
 
   {** Implements an CUBRID sequence. }
-  TZCubridSquence = class(TZDotCurrvalNextvalSequence);
+  TZCubridSequence = class(TZDotCurrvalNextvalSequence);
 
   {** Implements an Oracle sequence. }
   TZOracleSequence = class(TZDotCurrvalNextvalSequence)
   public
+    /// <summary>Returns the SQL to be get the current value.</summary>
+    /// <returns>The SQL string</returns>
     function GetCurrentValueSQL: string; override;
+    /// <summary>Returns the SQL to be get the next value.</summary>
+    /// <returns>The SQL string</returns>
     function GetNextValueSQL: string; override;
   end;
 
   {** Implements a FireBird2+ sequence. }
   TZFirebird2UpSequence = class(TZIdentifierSequence)
   public
+    /// <summary>Returns the SQL to be get the current value.</summary>
+    /// <returns>The SQL string</returns>
     function GetCurrentValueSQL: string; override;
+    /// <summary>Returns the SQL to be get the next value.</summary>
+    /// <returns>The SQL string</returns>
     function GetNextValueSQL: string; override;
   end;
 
   {** Implements a postresql sequence. }
   TZPostgreSQLSequence = class(TZAbstractSequence)
   public
+    /// <summary>Returns the SQL to be get the current value.</summary>
+    /// <returns>The SQL string</returns>
     function GetCurrentValueSQL: string; override;
+    /// <summary>Returns the SQL to be get the next value.</summary>
+    /// <returns>The SQL string</returns>
     function GetNextValueSQL: string; override;
   end;
 
@@ -747,10 +761,10 @@ const
     {spMySQL}     nil,
     {spNexusDB}   nil,
     {spSQLite}    nil,
-    {spDB2}       TZDB2Squence,
+    {spDB2}       TZDB2Sequence,
     {spAS400}     nil,
-    {spInformix}  TZInformixSquence,
-    {spCUBRID}    TZCubridSquence,
+    {spInformix}  TZInformixSequence,
+    {spCUBRID}    TZCubridSequence,
     {spFoxPro}    nil
     );
 

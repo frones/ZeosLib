@@ -1737,29 +1737,19 @@ type
     ///  command in the batch. The elements of the array are ordered according
     ///  to the order in which commands were added to the batch.</returns>
     function ExecuteBatch: TIntegerDynArray;
-    /// <summary>
-    ///  Returns the <c>Connection</c> object
-    ///  that produced this <c>Statement</c> object.
-    /// </summary>
+    /// <summary>Returns the <c>Connection</c> object that produced this
+    ///  <c>Statement</c> object.</summary>
     /// <returns>
     /// <see cref="IZConnection"></see>
     ///  the connection that produced this statement
     /// </returns>
     function GetConnection: IZConnection;
-
-    /// <summary>
-    ///  Gets statement parameters.
-    /// </summary>
-    /// <returns>
-    ///  a list with statement parameters.
-    /// </returns>
+    /// <summary>Gets statement parameters.</summary>
+    /// <returns>a list with statement parameters.</returns>
     function GetParameters: TStrings;
-    /// <summary>
-    ///  Returns the ChunkSize for reading/writing large lobs
-    /// </summary>
+    /// <summary>Returns the ChunkSize for reading/writing large lobs</summary>
     /// <returns>the chunksize in bytes.</returns>
     function GetChunkSize: Integer;
-
     /// <summary>
     ///  Retrieves the first warning reported by calls on this <c>Statement</c> object.
     ///  Subsequent <c>Statement</c> object warnings will be chained to this
@@ -2354,10 +2344,46 @@ type
     /// <returns>if the value is SQL <c>NULL</c>, the value returned is
     ///  <c>nil</c>. The value otherwise.</returns>
     function GetBytes(ParameterIndex: Integer): TBytes; overload;
+    /// <summary>Obsolate use overload instead. Gets the value of the designated
+    ///  parameter as a TDate value. The driver will try to convert the value if
+    ///  it's not a TDateTime value. </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetDate(ParameterIndex: Integer): TDateTime; overload;
     procedure GetDate(ParameterIndex: Integer; Var Result: TZDate); overload;
+    /// <summary>Obsolate use overload instead. Gets the value of the designated
+    ///  parameter as a TTime value. The driver will try to convert the value if
+    ///  it's not a TDateTime value. </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetTime(ParameterIndex: Integer): TDateTime; overload;
     procedure GetTime(ParameterIndex: Integer; Var Result: TZTime); overload;
+    /// <summary>Obsolate use overload instead. Gets the value of the designated
+    ///  parameter as a TDateTime value. The driver will try to convert the
+    ///  value if it's not a TDateTime value. </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetTimestamp(ParameterIndex: Integer): TDateTime; overload;
     procedure GetTimeStamp(Index: Integer; var Result: TZTimeStamp); overload;
     function GetValue(ParameterIndex: Integer): TZVariant;
@@ -4020,6 +4046,10 @@ type
     function GetBuffer(var LocalBuffer: RawByteString; Out Len: NativeUInt): Pointer;
     procedure SetBuffer(Buffer: Pointer; Length: NativeUInt);
 
+    /// <summary>Clones this blob object.</summary>
+    /// <param>"LobStreamMode" the mode the cloned object is used for is one of:
+    ///  <c>lsmRead, lsmWrite, lsmReadWrite</c></param>
+    /// <returns> a cloned blob object.</returns>
     function Clone(LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 
     {Clob operations}

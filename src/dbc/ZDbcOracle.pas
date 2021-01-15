@@ -299,6 +299,11 @@ type
   {** Implements a specialized cached resolver for Oracle. }
   TZOracleCachedResolver = class(TZGenerateSQLCachedResolver)
   public
+    /// <author>Michael Seeger</author>
+    /// <summary>Forms a SELECT statements to calculate default values.</summary>
+    /// <param>"RowAccessor" an accessor object to column values.</param>
+    /// <param>"ColumnsLookup" an TZIndexPairList which holds the NULL columns.</param>
+    /// <returns>the composed SELECT SQL.</returns>
     function FormCalculateStatement(const RowAccessor: TZRowAccessor;
       const ColumnsLookup: TZIndexPairList): string; override;
   end;
@@ -1453,11 +1458,6 @@ end;
 
 { TZOracleCachedResolver }
 
-{**
-  Forms a where clause for SELECT statements to calculate default values.
-  @param Columns a collection of key columns.
-  @param OldRowAccessor an accessor object to old column values.
-}
 function TZOracleCachedResolver.FormCalculateStatement(
   const RowAccessor: TZRowAccessor; const ColumnsLookup: TZIndexPairList): string;
 var

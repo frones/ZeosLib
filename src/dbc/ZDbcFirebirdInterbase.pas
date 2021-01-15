@@ -87,6 +87,7 @@ type
   /// <summary>Defines a Interbase or Firebird transaction interface.</summary>
   IZInterbaseFirebirdTransaction = interface(IZTransaction)
     ['{A30246BA-AFC0-43FF-AB56-AB272281A3C2}']
+    /// <summary>Immediat start an active transaction.</summary>
     procedure DoStartTransaction;
     procedure RegisterOpencursor(const CursorRS: IZResultSet);
     procedure RegisterOpenUnCachedLob(const Lob: IZlob);
@@ -99,12 +100,21 @@ type
   /// <summary>Defines a Interbase or Firebird specific connection interface.</summary>
   IZInterbaseFirebirdConnection = interface (IZConnection)
     ['{B4B4136F-3692-454A-8F22-6C5EEE247BC0}']
+    /// <summary>Return Interbase/Firebird dialect number. The dialect  must be
+    ///  1 or 2 or 3.</summary>
+    /// <returns>the dialect number</returns>
     function GetDialect: Word;
     function GetXSQLDAMaxSize: Cardinal;
     function GetGUIDProps: TZInterbaseFirebirdConnectionGUIDProps;
     function StoredProcedureIsSelectable(const ProcName: String): Boolean;
     function GetSubTypeTextCharSetID(const TableName, ColumnName: String): Integer;
+    /// <summary>Determine if the Client lib-module is a Firebird lib</summary>
+    /// <returns><c>True</c>If it's a Firebird client lib; <c>False</c>
+    ///  otherwise</returns>
     function IsFirebirdLib: Boolean;
+    /// <summary>Determine if the Client lib-module is a Interbase lib</summary>
+    /// <returns><c>True</c>If it's a Interbase client lib; <c>False</c>
+    ///  otherwise</returns>
     function IsInterbaseLib: Boolean;
     function GetInterbaseFirebirdPlainDriver: TZInterbaseFirebirdPlainDriver;
     function GetByteBufferAddress: PByteBuffer;
@@ -158,13 +168,19 @@ type
     function IsTransactionValid(const Value: IZTransaction): Boolean;
     procedure ClearTransactions;
   public
+    /// <summary>Determine if the Client lib-module is a Firebird lib</summary>
+    /// <returns><c>True</c>If it's a Firebird client lib; <c>False</c>
+    ///  otherwise</returns>
     function IsFirebirdLib: Boolean; virtual; abstract;
+    /// <summary>Determine if the Client lib-module is a Interbase lib</summary>
+    /// <returns><c>True</c>If it's a Interbase client lib; <c>False</c>
+    ///  otherwise</returns>
     function IsInterbaseLib: Boolean; virtual; abstract;
     function GetGUIDProps: TZInterbaseFirebirdConnectionGUIDProps;
     function StoredProcedureIsSelectable(const ProcName: String): Boolean;
     function GetSubTypeTextCharSetID(const TableName, ColumnName: String): Integer;
-    /// <summary>Return Interbase dialect number. Dialect a dialect Interbase SQL
-    ///  must be 1 or 2 or 3.</summary>
+    /// <summary>Return Interbase/Firebird dialect number. The dialect  must be
+    ///  1 or 2 or 3.</summary>
     /// <returns>the dialect number</returns>
     function GetDialect: Word;
     function GetXSQLDAMaxSize: Cardinal;
@@ -379,8 +395,14 @@ type
   {** Implements a Interbase6/Firebird sequence. }
   TZInterbaseFirebirdSequence = class(TZIdentifierSequence)
   public
+    /// <summary>Returns the SQL to be get the current value.</summary>
+    /// <returns>The SQL string</returns>
     function GetCurrentValueSQL: string; override;
+    /// <summary>Returns the SQL to be get the next value.</summary>
+    /// <returns>The SQL string</returns>
     function GetNextValueSQL: string; override;
+    /// <summary>Sets the block size for this sequence.</summary>
+    /// <param>Value the block size.</param>
     procedure SetBlockSize(const Value: Integer); override;
   end;
 
@@ -416,7 +438,15 @@ type
     constructor Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
     destructor Destroy; override;
   public
+    /// <summary>Forms an INSERT statements.</summary>
+    /// <param>"NewRowAccessor" an accessor object to new column values.</param>
+    /// <returns>the composed insert SQL.</returns>
     function FormInsertStatement(NewRowAccessor: TZRowAccessor): SQLString; override;
+    /// <author>Michael Seeger</author>
+    /// <summary>Forms a SELECT statements to calculate default values.</summary>
+    /// <param>"RowAccessor" an accessor object to column values.</param>
+    /// <param>"ColumnsLookup" an TZIndexPairList which holds the NULL columns.</param>
+    /// <returns>the composed SELECT SQL.</returns>
     function FormCalculateStatement(const RowAccessor: TZRowAccessor;
       const ColumnsLookup: TZIndexPairList): string; override;
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
@@ -428,6 +458,11 @@ type
   {** Implements a specialized cached resolver for Firebird version 2.0 and up. }
   TZFirebird2upCachedResolver = class(TZInterbaseFirebirdCachedResolver)
   public
+    /// <summary>Forms a where clause for UPDATE or DELETE DML statements.</summary>
+    /// <param>"SQLWriter" a TZSQLStringWriter object used for buffered writes</param>
+    /// <param>"OldRowAccessor" an accessor object to old column values.</param>
+    /// <param>"Result" a reference to the Result String the SQLWriter uses
+    ///  for the buffered writes.</param>
     procedure FormWhereClause(const SQLWriter: TZSQLStringWriter;
       const OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
   end;
@@ -1957,11 +1992,6 @@ begin
   FreeAndNil(FReturningPairs);
 end;
 
-{**
-  Forms a where clause for SELECT statements to calculate default values.
-  @param Columns a collection of key columns.
-  @param OldRowAccessor an accessor object to old column values.
-}
 function TZInterbaseFirebirdCachedResolver.FormCalculateStatement(
   const RowAccessor: TZRowAccessor; const ColumnsLookup: TZIndexPairList): string;
 // --> ms, 30/10/2005
@@ -1978,10 +2008,6 @@ begin
 // <-- ms
 end;
 
-{**
-  Forms a INSERT statements.
-  @return the composed insert SQL
-}
 function TZInterbaseFirebirdCachedResolver.FormInsertStatement(
   NewRowAccessor: TZRowAccessor): SQLString;
 var
