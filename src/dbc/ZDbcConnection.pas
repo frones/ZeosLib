@@ -445,9 +445,15 @@ type
 
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean); virtual;
+    /// <summary>Returns the ServicerProvider for this connection. For some
+    ///  drivers the connection mist be opened to determine the provider.</summary>
+    /// <returns>the ServerProvider or spUnknown if not known.</returns>
     function GetServerProvider: TZServerProvider; virtual;
   protected
+    /// <summary>Get the refrence to a fixed TByteBuffer.</summary>
+    /// <returns>the address of the TByteBuffer</returns>
     function GetByteBufferAddress: PByteBuffer;
+  protected
     property Closed: Boolean read IsClosed write FClosed;
     property AddLogMsgToExceptionOrWarningMsg: Boolean read
       fAddLogMsgToExceptionOrWarningMsg write fAddLogMsgToExceptionOrWarningMsg;
@@ -584,6 +590,8 @@ type
 
   TZIdentifierSequence = Class(TZAbstractSequence)
   protected
+    /// <summary>Sets a name of the sequence generator..</summary>
+    /// <param>"Value" a name of this sequence generator.</param>
     procedure SetName(const Value: string); override;
   End;
 
@@ -601,6 +609,8 @@ type
   {** Implements an abstract sequence using the <Name>.CURRVAL/NEXTVAL Syntax}
   TZDotCurrvalNextvalSequence = class(TZIdentifierSequence)
   public
+    /// <summary>Returns the SQL to be get the current value.</summary>
+    /// <returns>The SQL string</returns>
     function GetCurrentValueSQL: string; override;
     /// <summary>Returns the SQL to be get the next value.</summary>
     /// <returns>The SQL string</returns>

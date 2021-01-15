@@ -350,12 +350,18 @@ type
     function UncachedGetUDTs(const {%H-}Catalog: string; const {%H-}SchemaPattern: string;
       const {%H-}TypeNamePattern: string; const {%H-}Types: TIntegerDynArray): IZResultSet; virtual;
   public
+    /// <summary>Constructs this object and assignes the main properties.</summary>
+    /// <param>"Connection" a database connection object.</param>
+    /// <param>"Url" a database connection url class.</param>
     constructor Create(Connection: TZAbstractDbcConnection; const Url: TZURL); virtual;
+    /// <summary>Destroys this object and cleanups the memory.</summary>
     destructor Destroy; override;
-
+    /// <summary>What's the url for this database?</summary>
+    /// <returns>the url or null if it cannot be generated</returns>
     function GetURL: string; virtual;
+    /// <summary>What's our user name as known to the database?</summary>
+    /// <returns>our database user name</returns>
     function GetUserName: string; virtual;
-
     /// <author>technobot</author>
     /// <summary>Returns general information about the database (version,
     ///  capabilities,  policies, etc).</summary>
@@ -389,8 +395,28 @@ type
     /// see GetSearchStringEscape</remarks>
     function GetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet;
+    /// <summary>Gets the schema names available in this database. The results
+    ///  are ordered by schema name.
+    ///  The schema column is:
+    ///  <C>TABLE_SCHEM</C> String => schema name</summary>
+    /// <returns><c>ResultSet</c> - each row has a single String column that is
+    ///  a schema name</returns>
     function GetSchemas: IZResultSet;
+    /// <summary>Gets the catalog names available in this database. The results
+    ///  are ordered by catalog name.
+    ///  The catalog column is:
+    ///  <C>TABLE_CAT</C> String => catalog name</summary>
+    /// <returns><c>ResultSet</c> - each row has a single String column that is
+    ///  a catalog name</returns>
     function GetCatalogs: IZResultSet;
+    /// <summary>Gets the table types available in this database. The results
+    ///  are ordered by table type.
+    ///  The table type is:
+    ///  <c>TABLE_TYPE</c> String => table type. Typical types are "TABLE",
+    ///  "VIEW", "SYSTEM TABLE", "GLOBAL TEMPORARY","LOCAL TEMPORARY", "ALIAS",
+    ///  "SYNONYM".</summary>
+    /// <returns><c>ResultSet</c> - each row has a single String column that is
+    ///  a table type</returns>
     function GetTableTypes: IZResultSet;
     /// <summary>Gets a description of table columns available in
     ///  the specified catalog from a cache. If the cache doesn't have a entry
@@ -546,7 +572,6 @@ type
     function GetTypeInfo: IZResultSet;
     function GetUDTs(const Catalog: string; const SchemaPattern: string;
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet;
-
 
     function GetConnection: IZConnection; virtual;
 
@@ -806,20 +831,61 @@ type
     IZIdentifierConverter)
   private
     FMetadata: Pointer;
+    /// <summary>Get the underlaying IZMetadata interface.</summary>
+    /// <returns>the owner IZMetadata interface.</returns>
     function GetMetaData: IZDatabaseMetadata;
   protected
     property Metadata: IZDatabaseMetadata read GetMetaData;
-
+    /// <summary>Checks is the specified string in lower case.</summary>
+    /// <param>"Value" an identifier string.</param>
+    /// <returns><c>True</c> if the identifier string is lower case;<c>False</c>
+    ///  otherwise.</returns>
     function IsLowerCase(const Value: string): Boolean;
+    /// <summary>Checks is the specified string in upper case.</summary>
+    /// <param>"Value" an identifier string.</param>
+    /// <returns><c>True</c> if the identifier string is upper case;<c>False</c>
+    ///  otherwise.</returns>
     function IsUpperCase(const Value: string): Boolean;
+    /// <summary>Checks is the specified string in special case.</summary>
+    /// <param>"Value" an identifier string.</param>
+    /// <returns><c>True</c> if the identifier string is special case;
+    ///  <c>False</c> otherwise.</returns>
     function IsSpecialCase(const Value: string): Boolean; virtual;
   public
+    /// <summary>Constructs this default identifier Converter object.</summary>
+    /// <param>"Metadata" the owner database metadata interface.</param>
     constructor Create(const Metadata: IZDatabaseMetadata);
 
+    /// <author>FrOsT</author>
+    /// <summary>Get the indentifier case.</summary>
+    /// <param>"Value" an identifier string.</param>
+    /// <param>"TestKeyWords" indicate if reserved Keywords should be compared.</param>
+    /// <returns>on of the following:
+    ///  icNone - just numbers starting with a underscore found,
+    ///  icLower - the indentifier is lower case,
+    ///  icUpper - the indentifier is upper case,
+    ///  icMixed - the indentifier is mixed case,
+    ///  icSpecial - the identifier is a reserved keyword or contains a
+    ///    character not matching '0'..'9', 'a'..'z' and 'A'..'Z'.</returns>
     function GetIdentifierCase(const Value: String; TestKeyWords: Boolean): TZIdentifierCase;
+    /// <summary>Checks is the string case sensitive.</summary>
+    /// <param>"Value" an identifier string.</param>
+    /// <returns><c>True</c> if the identifier string is case sensitive;
+    ///  <c>False</c> otherwise.</returns>
     function IsCaseSensitive(const Value: string): Boolean;
+    /// <summary>Checks is the string quoted.</summary>
+    /// <param>"Value" an identifier string.</param>
+    /// <return><c>True</c> if the identifier string is case quoted;
+    ///  <c>False</c> otherwise.</returns>
     function IsQuoted(const Value: string): Boolean; virtual;
+    /// <summary>Quotes the identifier string.</summary>
+    /// <param>"Value" an identifier string.</param>
+    /// <param>"Qualifier" an identifier qualifier. Default is <c>iqUnspecified</c>.</param>
+    /// <returns>a quoted string.</returns>
     function Quote(const Value: string; Qualifier: TZIdentifierQualifier = iqUnspecified): string; virtual;
+    /// <summary>Extracts the quote from the idenfitier string.</summary>
+    /// <param>"Value" an identifier string.</param>
+    /// <returns>an extracted and processed string.</returns>
     function ExtractQuote(const Value: string): string; virtual;
   end;
   TZDefaultIdentifierConvertor = TZDefaultIdentifierConverter; //keep that alias for compatibility
@@ -2357,11 +2423,6 @@ end;
 
 { TZAbstractDatabaseMetadata }
 
-{**
-  Constructs this object and assignes the main properties.
-  @param Connection a database connection object.
-  @param Url a database connection url class.
-}
 constructor TZAbstractDatabaseMetadata.Create(Connection: TZAbstractDbcConnection;
   const Url: TZURL);
 begin
@@ -2512,7 +2573,6 @@ begin
     else Result := S;
 end;
 
-{**  Destroys this object and cleanups the memory.}
 destructor TZAbstractDatabaseMetadata.Destroy;
 begin
   FIC := nil;
@@ -2817,19 +2877,11 @@ begin
     Result := Column+' like '+EscapeString(WorkPattern);
 end;
 
-{**
-  What's the url for this database?
-  @return the url or null if it cannot be generated
-}
 function TZAbstractDatabaseMetadata.GetURL: string;
 begin
   Result := GetURLString;
 end;
 
-{**
-  What's our user name as known to the database?
-  @return our database user name
-}
 function TZAbstractDatabaseMetadata.GetUserName: string;
 begin
   Result := FURL.UserName;
@@ -3022,18 +3074,6 @@ begin
   Result := ConstructVirtualResultSet(TableColumnsDynArray);
 end;
 
-{**
-  Gets the schema names available in this database.  The results
-  are ordered by schema name.
-
-  <P>The schema column is:
-   <OL>
- 	<LI><B>TABLE_SCHEM</B> String => schema name
-   </OL>
-
-  @return <code>ResultSet</code> - each row has a single String column that is a
-  schema name
-}
 function TZAbstractDatabaseMetadata.GetSchemas: IZResultSet;
 var
   Key: string;
@@ -3070,18 +3110,6 @@ begin
     Result := ConstructVirtualResultSet(SchemaColumnsDynArray);
 end;
 
-{**
-  Gets the catalog names available in this database.  The results
-  are ordered by catalog name.
-
-  <P>The catalog column is:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => catalog name
-   </OL>
-
-  @return <code>ResultSet</code> - each row has a single String column that is a
-  catalog name
-}
 function TZAbstractDatabaseMetadata.GetCatalogs: IZResultSet;
 var
   Key: string;
@@ -3118,20 +3146,6 @@ begin
     Result := ConstructVirtualResultSet(CatalogColumnsDynArray);
 end;
 
-{**
-  Gets the table types available in this database.  The results
-  are ordered by table type.
-
-  <P>The table type is:
-   <OL>
- 	<LI><B>TABLE_TYPE</B> String => table type.  Typical types are "TABLE",
- 			"VIEW",	"SYSTEM TABLE", "GLOBAL TEMPORARY",
- 			"LOCAL TEMPORARY", "ALIAS", "SYNONYM".
-   </OL>
-
-  @return <code>ResultSet</code> - each row has a single String column that is a
-  table type
-}
 function TZAbstractDatabaseMetadata.GetTableTypes: IZResultSet;
 var
   Key: string;
@@ -5094,10 +5108,6 @@ end;
 
 { TZDefaultIdentifierConverter }
 
-{**
-  Constructs this default identifier Converter object.
-  @param Metadata a database metadata interface.
-}
 constructor TZDefaultIdentifierConverter.Create(
   const Metadata: IZDatabaseMetadata);
 begin
@@ -5105,7 +5115,6 @@ begin
   FMetadata := Pointer(Metadata);
 end;
 
-{** written by FrOsT}
 function TZDefaultIdentifierConverter.GetIdentifierCase(
   const Value: String; TestKeyWords: Boolean): TZIdentifierCase;
 var
@@ -5163,40 +5172,21 @@ begin
   else Result := nil;
 end;
 
-{**
-  Checks is the specified string in lower case.
-  @param an identifier string.
-  @return <code>True</code> is the identifier string in lower case.
-}
 function TZDefaultIdentifierConverter.IsLowerCase(const Value: string): Boolean;
 begin
   Result := GetIdentifierCase(Value, False) = icLower;
 end;
 
-{**
-  Checks is the specified string in upper case.
-  @param an identifier string.
-  @return <code>True</code> is the identifier string in upper case.
-}
 function TZDefaultIdentifierConverter.IsUpperCase(const Value: string): Boolean;
 begin
   Result := GetIdentifierCase(Value, False) = icUpper;
 end;
 
-{**
-  Checks is the specified string in special case.
-  @param an identifier string.
-  @return <code>True</code> is the identifier string in mixed case.
-}
 function TZDefaultIdentifierConverter.IsSpecialCase(const Value: string): Boolean;
 begin
   Result := GetIdentifierCase(Value, True) = icSpecial;
 end;
 
-{**
-  Checks is the string case sensitive.
-  @return <code>True</code> if the string case sensitive.
-}
 function TZDefaultIdentifierConverter.IsCaseSensitive(const Value: string): Boolean;
 var DataBaseInfo: IZDataBaseInfo;
 begin
@@ -5210,10 +5200,6 @@ begin
   end;
 end;
 
-{**
-  Checks is the string quoted.
-  @return <code>True</code> is the string quoted.
-}
 function TZDefaultIdentifierConverter.IsQuoted(const Value: string): Boolean;
 var
   QuoteDelim: string;
@@ -5225,11 +5211,6 @@ begin
             ((PV+Length(Value)-1)^ = (PQ+Length(QuoteDelim)-1)^);
 end;
 
-{**
-  Extracts the quote from the idenfitier string.
-  @param an identifier string.
-  @return a extracted and processed string.
-}
 function TZDefaultIdentifierConverter.ExtractQuote(const Value: string): string;
 var
   QuoteDelim: string;
@@ -5259,11 +5240,6 @@ begin
   end;
 end;
 
-{**
-  Quotes the identifier string.
-  @param an identifier string.
-  @return a quoted string.
-}
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Qualifier" not used} {$ENDIF}
 function TZDefaultIdentifierConverter.Quote(const Value: string;
   Qualifier: TZIdentifierQualifier = iqUnspecified): string;

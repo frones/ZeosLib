@@ -961,13 +961,11 @@ type
   private
     {$IFDEF AUTOREFCOUNT}[Weak]{$ENDIF}FOwner: TPersistent;
     function GetParamValue(const ParamName: string): Variant;
-    //procedure ReadBinaryData(Stream: TStream);
     procedure SetParamValue(const ParamName: string;
       const Value: Variant);
     function GetItem(Index: Integer): TZParam;
     procedure SetItem(Index: Integer; Value: TZParam);
   protected
-    //procedure DefineProperties(Filer: TFiler); override;
     function GetDataSet: TDataSet;
     function GetOwner: TPersistent; override;
     procedure Update(Item: TCollectionItem); override;
@@ -4403,12 +4401,6 @@ begin
   Result.SetDataSet(GetDataSet);
 end;
 
-(*procedure TZParams.DefineProperties(Filer: TFiler);
-begin
-  inherited DefineProperties(Filer);
-  Filer.DefineBinaryProperty('Data', ReadBinaryData, nil, False);
-end;*)
-
 function TZParams.FindParam(const Value: string): TZParam;
 var i: Integer;
 begin
@@ -4506,56 +4498,6 @@ begin
   if Result = nil then
     raise CreateParameterNotFound;
 end;
-(*
-{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "Buffer/Bool" does not seem to be initialized}{$ENDIF}
-procedure TZParams.ReadBinaryData(Stream: TStream);
-var
-  I, Temp, NumItems: Integer;
-  Buffer: array[0..2047] of AnsiChar;
-  Version: Word;
-  Bool: Boolean;
-begin
-  Clear;
-  with Stream do begin
-    ReadBuffer(Version, SizeOf(Version));
-    if Version > 2 then DatabaseError({$IF not declared(SInvalidVersion)}'Invalid Version'{$ELSE}SInvalidVersion{$IFEND});
-    NumItems := 0;
-    if Version = 2 then
-      ReadBuffer(NumItems, SizeOf(NumItems)) else
-      ReadBuffer(NumItems, 2);
-    for I := 0 to NumItems - 1 do
-      with AddParameter do begin
-        Temp := 0;
-        if Version = 2
-        then ReadBuffer(Temp, SizeOf(Temp))
-        else ReadBuffer(Temp, 1);
-        {$IFDEF UNICODE}
-        ReadBuffer(Buffer, Temp);
-        FName := PRawToUnicode(@Buffer[0], Temp, DefaultSystemCodePage);
-        {$ELSE}
-        SetLength(FName, Temp);
-        ReadBuffer(Pointer(FName)^, Temp);
-        {$ENDIF}
-        ReadBuffer(FParamType, SizeOf(FParamType));
-        ReadBuffer(FDataType, SizeOf(FDataType));
-
-        if DataType <> ftUnknown then begin
-          Temp := 0;
-          if Version = 2
-          then ReadBuffer(Temp, SizeOf(Temp))
-          else ReadBuffer(Temp, 2);
-          ReadBuffer(Buffer, Temp);
-          SetData(@Buffer, Temp);
-        end;
-        ReadBuffer(Bool, SizeOf(Bool));
-        if Bool then
-          SetIsNull(True);
-        Stream.ReadBuffer(FBound, SizeOf(Boolean));
-      end;
-  end;
-end;
-{$IFDEF FPC}{$POP}{$ENDIF}
-*)
 
 procedure TZParams.RemoveParam(Value: TZParam);
 begin

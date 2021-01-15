@@ -1024,6 +1024,9 @@ type
     function GetEncoding: TZCharEncoding;
     function GetClientVariantManager: IZClientVariantManager;
     function GetURL: String;
+    /// <summary>Returns the ServicerProvider for this connection. For some
+    ///  drivers the connection mist be opened to determine the provider.</summary>
+    /// <returns>the ServerProvider or spUnknown if not known.</returns>
     function GetServerProvider: TZServerProvider;
   end;
 
@@ -1144,8 +1147,28 @@ type
     /// see GetSearchStringEscape</remarks>
     function GetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet;
+    /// <summary>Gets the schema names available in this database. The results
+    ///  are ordered by schema name.
+    ///  The schema column is:
+    ///  <C>TABLE_SCHEM</C> String => schema name</summary>
+    /// <returns><c>ResultSet</c> - each row has a single String column that is
+    ///  a schema name</returns>
     function GetSchemas: IZResultSet;
+    /// <summary>Gets the catalog names available in this database. The results
+    ///  are ordered by catalog name.
+    ///  The catalog column is:
+    ///  <C>TABLE_CAT</C> String => catalog name</summary>
+    /// <returns><c>ResultSet</c> - each row has a single String column that is
+    ///  a catalog name</returns>
     function GetCatalogs: IZResultSet;
+    /// <summary>Gets the table types available in this database. The results
+    ///  are ordered by table type.
+    ///  The table type is:
+    ///  <c>TABLE_TYPE</c> String => table type. Typical types are "TABLE",
+    ///  "VIEW", "SYSTEM TABLE", "GLOBAL TEMPORARY","LOCAL TEMPORARY", "ALIAS",
+    ///  "SYNONYM".</summary>
+    /// <returns><c>ResultSet</c> - each row has a single String column that is
+    ///  a table type</returns>
     function GetTableTypes: IZResultSet;
     /// <summary>Gets a description of table columns available in
     ///  the specified catalog.
