@@ -1875,10 +1875,6 @@ begin
   FClosed := False;
 end;
 
-{**
-  Resets cursor position of this recordset and
-  the overrides should reset the prepared handles.
-}
 procedure TZAbstractResultSet.ResetCursor;
 begin
   if not FClosed then begin

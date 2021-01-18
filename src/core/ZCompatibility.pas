@@ -196,16 +196,23 @@ const
   FirstStringIndex = {$IFDEF ZERO_BASED_STRINGS}0{$ELSE}1{$ENDIF}; //Str[i] fe.
 
 type
+  /// <author>EgonHugeist</summary>
+  /// <summary>Defines a reference of a Zeos Character ref record</summary>
   PZCharRec = ^TZCharRec;
+  /// <author>EgonHugeist</summary>
+  /// <summary>Defines a Zeos Character ref record</summary>
   TZCharRec = Record
     Len: Cardinal; //Length of String
     P: Pointer;    //Allocated Mem of String including #0 terminator
     CP: Word;      //CodePage of the String
   end;
 
-  { TZSQLTimeStamp }
+  /// <author>EgonHugeist</summary>
+  /// <summary>Defines a reference of a Zeos Timestamp record</summary>
   PZTimeStamp = ^TZTimeStamp;
-  TZTimeStamp = packed record //keep it packed !! // Why? This makes accessing elements slower.
+  /// <author>EgonHugeist</summary>
+  /// <summary>Defines a Zeos Timestamp record</summary>
+  TZTimeStamp = packed record //keep it packed !! -> clear/copy
     Year: Word;
     Month: Word;
     Day: Word;
@@ -217,18 +224,30 @@ type
     TimeZoneMinute:Word;
     IsNegative: WordBool; //MySQL allows negative timestamp values
   end;
+  /// <author>EgonHugeist</summary>
+  /// <summary>Defines an array Zeos Timestamp records</summary>
   TZTimeStampDynArray = array of TZTimeStamp;
 
+  /// <author>EgonHugeist</summary>
+  /// <summary>Defines a reference of a Zeos Date record</summary>
   PZDate = ^TZDate;
+  /// <author>EgonHugeist</summary>
+  /// <summary>Defines a Zeos Date record</summary>
   TZDate = packed record //keep it packed !!
     Year: Word;
     Month: Word;
     Day: Word;
     IsNegative: WordBool; //MySQL allows negative date values
   end;
+  /// <author>EgonHugeist</summary>
+  /// <summary>Defines an array Zeos Date records</summary>
   TZDateDynArray = array of TZDate;
 
+  /// <author>EgonHugeist</summary>
+  /// <summary>Defines a reference of a Zeos Time record</summary>
   PZTime = ^TZTime;
+  /// <author>EgonHugeist</summary>
+  /// <summary>Defines a Zeos Time record</summary>
   TZTime = packed Record //keep it packed !!
     Hour: Word;
     Minute: Word;
@@ -236,6 +255,8 @@ type
     Fractions: Cardinal; //NanoSeconds
     IsNegative: WordBool; //MySQL allows negative time values
   end;
+  /// <author>EgonHugeist</summary>
+  /// <summary>Defines an array Zeos Time records</summary>
   TZTimeDynArray = array of TZTime;
 
   {$IF NOT DECLARED(TBytes)}

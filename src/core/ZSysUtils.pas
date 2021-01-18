@@ -1042,7 +1042,7 @@ function DateTimeToRawSQLTimeStamp(const Value: TDateTime; Buf: PAnsiChar;
   const Suffix: RawByteString = EmptyRaw): Word; overload;
 
 /// <author>EgonHugeist</author>
-/// <summary>Convert a pascal TDateTime value into a String. Valid
+/// <summary>Convert DateTime values into a String. Valid
 ///  format tokens are: 'Y'/'y' for year,'N'/'n' for month,'D'/'d' for day,
 ///  'H'/'h' for hour,'M'/'m' for minute,'S'/'s' for second,
 ///  '.','F','f','Z'/'z' for fractions. Valid delimiters (if given) are
@@ -1096,11 +1096,11 @@ function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime; Buf: PWideChar;
   const Quoted: Boolean; const Suffix: UnicodeString = ''): Word; overload;
 
 /// <author>EgonHugeist</author>
-/// <summary>Convert a pascal TDateTime value into a String. Valid
+/// <summary>Convert DateTime values into a String. Valid
 ///  format tokens are: 'Y'/'y' for year,'N'/'n' for month,'D'/'d' for day,
 ///  'H'/'h' for hour,'M'/'m' for minute,'S'/'s' for second,
 ///  '.','F','f','Z'/'z' for fractions. Valid delimiters (if given) are
-///  ' ','-','\','/','.',':'. Long names are not supported.</summary>
+///  ' ','-','\','/','.',':','T'. Long names are not supported.</summary>
 /// <param>"Year" the year to be converted.</param>
 /// <param>"Month" the month to be converted.</param>
 /// <param>"Day" the day to be converted.</param>
@@ -7363,8 +7363,8 @@ CheckPos:
     goto Fail;
 Finalize:
   if Pos = 0 then begin //zero
-    Bcd.Precision := 10;
-    Bcd.SignSpecialPlaces := 2;
+    Bcd.Precision := 1;//10 = delphi/FPC defaults for a zero BCD are disturbing the FPC users
+    Bcd.SignSpecialPlaces := 0; //2 = delphi/FPC defaults for a zero BCD are disturbing the FPC users
   end else begin
     if Pos > MaxFMTBcdFractionSize
     then goto Fail;
@@ -7480,8 +7480,8 @@ CheckPos:
     goto Fail;
 Finalize:
   if Pos = 0 then begin //zero
-    Bcd.Precision := 10;
-    Bcd.SignSpecialPlaces := 2;
+    Bcd.Precision := 1;//10 = delphi/FPC defaults for a zero BCD are disturbing the FPC users
+    Bcd.SignSpecialPlaces := 0; //2 = delphi/FPC defaults for a zero BCD are disturbing the FPC users
   end else begin
     if Pos > MaxFMTBcdFractionSize
     then goto Fail;

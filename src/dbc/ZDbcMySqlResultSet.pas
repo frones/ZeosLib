@@ -201,7 +201,11 @@ type
     constructor Create(const PlainDriver: TZMySQLPlainDriver; MySQL: PPMySQL;
       MYSQL_STMT: PPMYSQL_STMT; const Statement: IZStatement;
       const Metadata: IZResultSetMetadata);
-
+    /// <summary>Forms a where clause for UPDATE or DELETE DML statements.</summary>
+    /// <param>"SQLWriter" a TZSQLStringWriter object used for buffered writes</param>
+    /// <param>"OldRowAccessor" an accessor object to old column values.</param>
+    /// <param>"Result" a reference to the Result String the SQLWriter uses
+    ///  for the buffered writes.</param>
     procedure FormWhereClause(const SQLWriter: TZSQLStringWriter;
       const OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
@@ -2681,11 +2685,6 @@ begin
     end;
 end;
 
-{**
-  Forms a where clause for UPDATE or DELETE DML statements.
-  @param Columns a collection of key columns.
-  @param OldRowAccessor an accessor object to old column values.
-}
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "OldRowAccessor" not used} {$ENDIF}
 procedure TZMySQLCachedResolver.FormWhereClause(
   const SQLWriter: TZSQLStringWriter;

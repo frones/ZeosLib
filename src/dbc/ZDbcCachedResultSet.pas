@@ -573,10 +573,6 @@ begin
   end;
 end;
 
-{**
-  Calculates column default values..
-  @param RowAccessor a row accessor which contains new column values.
-}
 procedure TZAbstractCachedResultSet.CalculateRowDefaults(
   RowAccessor: TZRowAccessor);
 begin

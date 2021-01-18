@@ -75,18 +75,42 @@ type
   /// <summary>Case Sensitive/Unsensitive identificator processor.</summary>
   IZIdentifierConverter = interface (IZInterface)
     ['{2EB07B9B-1E96-4A42-8084-6F98D9140B27}']
+    /// <summary>Checks is the string case sensitive.</summary>
+    /// <param>"Value" an identifier string.</param>
+    /// <returns><c>True</c> if the identifier string is case sensitive;
+    ///  <c>False</c> otherwise.</returns>
     function IsCaseSensitive(const Value: string): Boolean;
+    /// <summary>Checks is the string quoted.</summary>
+    /// <param>"Value" an identifier string.</param>
+    /// <returns><c>True</c> if the identifier string is case quoted;
+    ///  <c>False</c> otherwise.</returns>
     function IsQuoted(const Value: string): Boolean;
+    /// <author>FrOsT</author>
+    /// <summary>Get the indentifier case.</summary>
+    /// <param>"Value" an identifier string.</param>
+    /// <param>"TestKeyWords" indicate if reserved Keywords should be compared.</param>
+    /// <returns>on of the following:
+    ///  icNone - just numbers starting with a underscore found,
+    ///  icLower - the indentifier is lower case,
+    ///  icUpper - the indentifier is upper case,
+    ///  icMixed - the indentifier is mixed case,
+    ///  icSpecial - the identifier is a reserved keyword or contains a
+    ///    character not matching '_','0'..'9','a'..'z' and 'A'..'Z'.</returns>
     function GetIdentifierCase(const Value: String; TestKeyWords: Boolean): TZIdentifierCase;
     /// <summary>Quotes the identifier string.</summary>
     /// <param>"Value" an identifier string.</param>
     /// <param>"Qualifier" an identifier qualifier. Default is <c>iqUnspecified</c>.</param>
     /// <returns>a quoted string.</returns>
     function Quote(const Value: string; Qualifier: TZIdentifierQualifier = iqUnspecified): string;
+    /// <summary>Extracts the quote from the idenfitier string.</summary>
+    /// <param>"Value" an identifier string.</param>
+    /// <returns>an extracted and processed string.</returns>
     function ExtractQuote(const Value: string): string;
   end;
 
-  IZIdentifierConvertor = IZIdentifierConverter; //EH: keep that alias for compatibility
+  /// <author>EgonoHugeist</author>
+  /// <summary>Defines a backward compatible alias for the IZIdentifierConverter</summary>
+  IZIdentifierConvertor = IZIdentifierConverter;
 
   {** Implements a table reference assembly. }
   TZTableRef = class (TObject)
@@ -120,21 +144,34 @@ type
     constructor Create(IsField: Boolean; const Catalog, Schema, Table,
       Field, Alias: string; TableRef: TZTableRef);
 
+    /// <summary>Indicates if the field is a real field or an aggreagete f.e.</summary>
     property IsField: Boolean read FIsField write FIsField;
+    /// <summary>Defines the catalog of the field.</summary>
     property Catalog: string read FCatalog write FCatalog;
+    /// <summary>Defines the schema of the field.</summary>
     property Schema: string read FSchema write FSchema;
+    /// <summary>Defines the table of the field.</summary>
     property Table: string read FTable write FTable;
+    /// <summary>Defines the fieldname.</summary>
     property Field: string read FField write FField;
+    /// <summary>Defines the table alias of the field.</summary>
     property Alias: string read FAlias write FAlias;
+    /// <summary>Defines the table reference of the field.</summary>
     property TableRef: TZTableRef read FTableRef write FTableRef;
+    /// <summary>Indicates if the FieldRef is linked to a column in the
+    ///  fieldlist.</summary>
     property Linked: Boolean read FLinked write FLinked;
   end;
 
   {** Defines an interface to select assembly. }
   IZSelectSchema = interface (IZInterface)
     ['{3B892975-57E9-4EB7-8DB1-BDDED91E7FBC}']
-
+    /// <summary>Adds a new field to this select schema.</summary>
+    /// <param>"FieldRef" a field reference object.</param>
     procedure AddField({$IFDEF AUTOREFCOUNT}const{$ENDIF}FieldRef: TZFieldRef);
+    /// <summary>Inserts a new field to this select schema.</summary>
+    /// <param>"Index" an index where to insert a new field reference.</param>
+    /// <param>"FieldRef" a field reference object.</param>
     procedure InsertField(Index: Integer; {$IFDEF AUTOREFCOUNT}const{$ENDIF}FieldRef: TZFieldRef);
     procedure DeleteField({$IFDEF AUTOREFCOUNT}const{$ENDIF}FieldRef: TZFieldRef);
 
@@ -171,7 +208,12 @@ type
     constructor Create;
     destructor Destroy; override;
 
+    /// <summary>Adds a new field to this select schema.</summary>
+    /// <param>"FieldRef" a field reference object.</param>
     procedure AddField({$IFDEF AUTOREFCOUNT}const{$ENDIF}FieldRef: TZFieldRef);
+    /// <summary>Inserts a new field to this select schema.</summary>
+    /// <param>"Index" an index where to insert a new field reference.</param>
+    /// <param>"FieldRef" a field reference object.</param>
     procedure InsertField(Index: Integer; {$IFDEF AUTOREFCOUNT}const{$ENDIF}FieldRef: TZFieldRef);
     procedure DeleteField({$IFDEF AUTOREFCOUNT}const{$ENDIF}FieldRef: TZFieldRef);
 
@@ -565,20 +607,11 @@ begin
   end;
 end;
 
-{**
-  Adds a new field to this select schema.
-  @param FieldRef a field reference object.
-}
 procedure TZSelectSchema.AddField({$IFDEF AUTOREFCOUNT}const{$ENDIF}FieldRef: TZFieldRef);
 begin
   FFields.Add(FieldRef);
 end;
 
-{**
-  Inserts a new field to this select schema.
-  @param Index an index where to insert a new field reference.
-  @param FieldRef a field reference object.
-}
 procedure TZSelectSchema.InsertField(Index: Integer; {$IFDEF AUTOREFCOUNT}const{$ENDIF}FieldRef: TZFieldRef);
 begin
   FFields.Insert(Index, FieldRef);

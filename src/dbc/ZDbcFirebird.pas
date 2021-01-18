@@ -64,8 +64,7 @@ uses
   ZPlainFirebird;
 
 type
-
-  {** Implements Interbase6 Database Driver. }
+  /// <summary>Implements Firebird Database Driver.</summary>
   TZFirebirdDriver = class(TZInterbaseFirebirdDriver)
   public
     /// <summary>Constructs this object with default properties.</summary>
@@ -85,6 +84,7 @@ type
     function Connect(const Url: TZURL): IZConnection; override;
   end;
 
+  /// <summary>Defines a special Firebird Transaction interface.</summary>
   IZFirebirdTransaction = interface(IZInterbaseFirebirdTransaction)
     ['{CBCAE412-34E8-489A-A022-EAE325F6D460}']
     /// <summary>Get the Firebird ITransaction corba interface.</summary>
@@ -92,6 +92,7 @@ type
     function GetTransaction: ITransaction;
   end;
 
+  /// <summary>Defines a special Firebird Connection interface.</summary>
   IZFirebirdConnection = interface(IZInterbaseFirebirdConnection)
     ['{C986AC0E-BC37-44B5-963F-65646333AF7C}']
     /// <summary>Get the active IZFirebirdTransaction com interface.</summary>
@@ -111,6 +112,7 @@ type
     function GetPlainDriver: TZFirebirdPlainDriver;
   end;
 
+  /// <summary>Implements a special Firebird Transaction object.</summary>
   TZFirebirdTransaction = class(TZInterbaseFirebirdTransaction,
     IZTransaction, IZFirebirdTransaction, IZInterbaseFirebirdTransaction)
   private
@@ -188,12 +190,15 @@ type
     ///  error handling in any kind.</param>
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
   public { implement IZIBTransaction }
+    /// <summary>Immediat start an active transaction.</summary>
     procedure DoStartTransaction;
   public { implement IZFirebirdTransaction }
+    /// <summary>Get the underlaying OO Corba interface firebird transaction.</summary>
+    /// <returns>Returns the CORBA firebird transaction interface</returns>
     function GetTransaction: ITransaction;
   end;
 
-  { TZFirebirdConnection }
+  /// <summary>Implements a special Firebird Connection object.</summary>
   TZFirebirdConnection = class(TZInterbaseFirebirdConnection, IZConnection,
     IZTransactionManager, IZFirebirdConnection, IZInterbaseFirebirdConnection)
   private
@@ -204,18 +209,43 @@ type
     FUtil: IUtil;
     FPlainDriver: TZFirebirdPlainDriver;
   protected
+    /// <summary>Closes the connection internaly and frees all server resources</summary>
     procedure InternalClose; override;
+    /// <summary>Immediately execute a query and do nothing with the results.</summary>
+    /// <remarks>A new driver needs to implement one of the overloads.</remarks>
+    /// <param>"SQL" a raw encoded query to be executed.</param>
+    /// <param>"LoggingCategory" the LoggingCategory for the Logging listeners.</param>
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
   public
     procedure AfterConstruction; override;
     Destructor Destroy; override;
   public { IZFirebirdConnection }
+    /// <summary>Get the active IZFirebirdTransaction com interface.</summary>
+    /// <returns>The IZFirebirdTransaction com interface.</returns>
     function GetActiveTransaction: IZFirebirdTransaction;
+    /// <summary>Get the Firebird IAttachment corba interface.</summary>
+    /// <returns>The Firebird IAttachment corba interface.</returns>
     function GetAttachment: IAttachment;
+    /// <summary>Get the Firebird IStatus corba interface.</summary>
+    /// <returns>The Firebird IStatus corba interface.</returns>
     function GetStatus: IStatus;
+    /// <summary>Get the TZFirebirdPlainDriver object.</summary>
+    /// <returns>The TZFirebirdPlainDriver object.</returns>
     function GetPlainDriver: TZFirebirdPlainDriver;
+    /// <summary>Get the Firebird IUtil corba interface.</summary>
+    /// <returns>The Firebird IUtil corba interface.</returns>
     function GetUtil: IUtil;
-  public { IZTransactionManager }
+  public { implement IZTransactionManager }
+    /// <summary>Creates a <c>Transaction</c></summary>
+    /// <param>"AutoCommit" the AutoCommit mode.</param>
+    /// <param>"ReadOnly" the ReadOnly mode.</param>
+    /// <param>"TransactIsolationLevel" the TransactIsolationLevel one of of
+    ///  <c>tiNone, tiReadUncommitted, tiReadCommitted, tiRepeatableRead,
+    ///  tiSerializable</c> isolation values with the exception of <c>tiNone</c>;
+    ///  some databases may not support other values see
+    ///  DatabaseInfo.SupportsTransactionIsolationLevel</param>
+    /// <param>"Params" a list of properties used for the transaction.</param>
+    /// <returns>returns the Transaction interface.</returns>
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
   public
@@ -269,11 +299,21 @@ type
     ///  pre-compiled SQL statement </returns>
     function PrepareCallWithParams(const Name: string; Params: TStrings):
       IZCallableStatement;
-  public
+  public { implement IZInterbaseFirebirdConnection }
+    /// <summary>Determine if the Client lib-module is a Firebird lib</summary>
+    /// <returns><c>True</c>If it's a firebird client lib; <c>False</c>
+    ///  otherwise</returns>
     function IsFirebirdLib: Boolean; override;
+    /// <summary>Determine if the Client lib-module is a Interbase lib</summary>
+    /// <returns><c>True</c>If it's a Interbase client lib; <c>False</c>
+    ///  otherwise</returns>
     function IsInterbaseLib: Boolean; override;
   public
+    /// <author>aehimself</author>
+    /// <summary>Immediately abort any kind of queries.</summary>
+    /// <returns>0 if the operation is aborted; Non zero otherwise.</returns>
     function AbortOperation: Integer; override;
+    /// <summary>Opens a connection to database server with specified parameters.</summary>
     procedure Open; override;
   end;
 
@@ -333,7 +373,6 @@ end;
 procedure TZFirebirdConnection.AfterConstruction;
 begin
   FPlainDriver := PlainDriver.GetInstance as TZFirebirdPlainDriver;
-  { set default sql dialect it can be overriden }
   FMaster := IMaster(FPlainDriver.fb_get_master_interface);
   FStatus := FMaster.getStatus;
   FUtil := FMaster.getUtilInterface;
@@ -348,18 +387,6 @@ begin
   Result := TZFirebirdStatement.Create(Self, Params);
 end;
 
-{**
-  Creates a <code>Transaction</code>
-  @param AutoCommit the AutoCommit mode.
-  @param ReadOnly the ReadOnly mode.
-  @param ReadOnly the ReadOnly mode.
-  @param TransactIsolationLevel one of the TRANSACTION_* isolation values with the
-    exception of TRANSACTION_NONE; some databases may not support other values
-  @see DatabaseMetaData#supportsTransactionIsolationLevel
-  @param Value returns the Transaction object.
-  @see IZTransaction
-  @return the index in the manager list of the new transaction
-}
 function TZFirebirdConnection.CreateTransaction(AutoCommit, ReadOnly: Boolean;
   TransactIsolationLevel: TZTransactIsolationLevel;
   Params: TStrings): IZTransaction;
@@ -377,7 +404,7 @@ begin
     FStatus.Dispose;
     FStatus := nil;
   end;
-  //How to free IStatus and IMaster?
+  //How to free IMaster?
 end;
 
 procedure TZFirebirdConnection.ExecuteImmediat(const SQL: RawByteString;
@@ -498,9 +525,6 @@ begin
   Result := False;
 end;
 
-{**
-  Opens a connection to database server with specified parameters.
-}
 procedure TZFirebirdConnection.Open;
 var
   ti: IZFirebirdTransaction;
@@ -710,34 +734,6 @@ begin
   end;
 end;
 
-{**
-  Creates a <code>PreparedStatement</code> object for sending
-  parameterized SQL statements to the database.
-
-  A SQL statement with or without IN parameters can be
-  pre-compiled and stored in a PreparedStatement object. This
-  object can then be used to efficiently execute this statement
-  multiple times.
-
-  <P><B>Note:</B> This method is optimized for handling
-  parametric SQL statements that benefit from precompilation. If
-  the driver supports precompilation,
-  the method <code>prepareStatement</code> will send
-  the statement to the database for precompilation. Some drivers
-  may not support precompilation. In this case, the statement may
-  not be sent to the database until the <code>PreparedStatement</code> is
-  executed.  This has no direct effect on users; however, it does
-  affect which method throws certain SQLExceptions.
-
-  Result sets created using the returned PreparedStatement will have
-  forward-only type and read-only concurrency, by default.
-
-  @param sql a SQL statement that may contain one or more '?' IN
-    parameter placeholders
-  @param Info a statement parameters.
-  @return a new PreparedStatement object containing the
-    pre-compiled statement
-}
 function TZFirebirdConnection.PrepareCallWithParams(const Name: string;
   Params: TStrings): IZCallableStatement;
 begin

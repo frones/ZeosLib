@@ -147,7 +147,7 @@ type
 implementation
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 
-uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} Types, Math,
+uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZSysUtils, ZFastCode, ZEncoding, ZClasses, ZDbcInterbase6ResultSet,
   ZDbcResultSet, ZDbcProperties;
 
@@ -414,12 +414,12 @@ begin
         FResultXSQLDA := TZSQLDA.Create(Connection, ConSettings);
         { Initialise ouput param and fields }
         XSQLDA := FResultXSQLDA.GetData;
-        if FPlainDriver.isc_dsql_describe(@FStatusVector, @FStmtHandle, GetDialect, XSQLDA) <> 0 then
+        if FPlainDriver.isc_dsql_describe(@FStatusVector, @FStmtHandle, Word(FDialect), XSQLDA) <> 0 then
           FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, {$IFDEF DEBUG}'isc_dsql_describe'{$ELSE}''{$ENDIF}, Self);
         FOrgTypeList.Clear;
         if FResultXSQLDA.GetData^.sqld <> FResultXSQLDA.GetData^.sqln then begin
           XSQLDA := FResultXSQLDA.AllocateSQLDA;
-          if FPlainDriver.isc_dsql_describe(@FStatusVector, @FStmtHandle, GetDialect, XSQLDA) <> 0 then
+          if FPlainDriver.isc_dsql_describe(@FStatusVector, @FStmtHandle, Word(FDialect), XSQLDA) <> 0 then
             FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, {$IFDEF DEBUG}'isc_dsql_describe'{$ELSE}''{$ENDIF}, Self);
         end;
         FOutMessageCount := FResultXSQLDA.GetData.sqld;
@@ -523,7 +523,7 @@ begin
       FParamXSQLDA := FParamSQLData.AllocateSQLDA;
     end;
     {check dynamic sql}
-    if FPlainDriver.isc_dsql_describe_bind(@StatusVector, @FStmtHandle, GetDialect, FParamXSQLDA) <> 0 then
+    if FPlainDriver.isc_dsql_describe_bind(@StatusVector, @FStmtHandle, Word(FDialect), FParamXSQLDA) <> 0 then
       FIBConnection.HandleErrorOrWarning(lcBindPrepStmt, @FStatusVector, {$IFDEF DEBUG}'isc_dsql_describe_bind'{$ELSE}''{$ENDIF}, Self);
 
     //alloc space for lobs, arrays, param-types
@@ -535,7 +535,7 @@ begin
     { Resize XSQLDA structure if required }
     if FParamXSQLDA^.sqld <> FParamXSQLDA^.sqln then begin
       FParamXSQLDA := FParamSQLData.AllocateSQLDA;
-      if FPlainDriver.isc_dsql_describe_bind(@StatusVector, @FStmtHandle, GetDialect,FParamXSQLDA) <> 0 then
+      if FPlainDriver.isc_dsql_describe_bind(@StatusVector, @FStmtHandle, Word(FDialect),FParamXSQLDA) <> 0 then
         FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, {$IFDEF DEBUG}'isc_dsql_describe_bind'{$ELSE}''{$ENDIF}, Self);
     end;
     FInMessageCount := FParamXSQLDA^.sqld;
