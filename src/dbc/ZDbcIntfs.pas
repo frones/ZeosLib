@@ -1516,6 +1516,7 @@ type
     ///  <c>false</c> if it is an update count or there are no more results.</returns>
     function Execute(const SQL: RawByteString): Boolean; overload;
     /// <summary>get the current SQL string</summary>
+    /// <returns>the SQL string</returns>
     function GetSQL : String;
     /// <summary>Releases this <c>Statement</c> object's database
     ///  resources immediately instead of waiting for this to happen when it is
@@ -1598,15 +1599,12 @@ type
     ///  the result is an update count or there are no more results.</returns>
     /// <seealso cref="Execute">Execute</seealso>
     function GetResultSet: IZResultSet;
-    /// <summary>
-    ///  Returns the current result as an update count;
+    /// <summary>Returns the current result as an update count;
     ///  if the result is a <c>ResultSet</c> object or there are no more results, -1
     ///  is returned. This method should be called only once per result.
     /// </summary>
-    /// <returns>
-    ///  the current result as an update count; -1 if the current result is a
-    ///  <c>ResultSet</c> object or there are no more results
-    /// </returns>
+    /// <returns>the current result as an update count; -1 if the current result is a
+    ///  <c>ResultSet</c> object or there are no more results</returns>
     /// <seealso cref="Execute">Execute</seealso>
     function GetUpdateCount: Integer;
     /// <summary>Moves to a <c>Statement</c> object's next result.  It returns
@@ -1622,7 +1620,6 @@ type
     /// </returns>
     /// <seealso cref="Execute">Execute</seealso>
     function GetMoreResults: Boolean;
-
     /// <summary>
     ///  Gives the driver a hint as to the direction in which
     ///  the rows in a result set
@@ -1649,7 +1646,6 @@ type
     ///  from this <c>Statement</c> object
     /// </returns>
     function GetFetchDirection: TZFetchDirection;
-
     /// <summary>
     ///  Gives the DBC driver a hint as to the number of rows that should
     ///  be fetched from the database when more rows are needed.  The number
@@ -1989,7 +1985,7 @@ type
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString);
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
-    /// <summary>Sets the designated parameter to a <c>AnsiString</c> value.
+    /// <summary>Sets the designated parameter to a <c>RawByteString</c> value.
     ///  The string must be UTF8 encoded. The driver will convert the value
     ///  if the driver uses an different encoding.</summary>
     /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
@@ -2338,8 +2334,8 @@ type
     ///  as InOut,Out,Result registered parameters can be accessed after the
     ///  statement has been executed and the out params are available.
     ///  Otherwise an EZSQLException is thrown.</param>
-    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
-    ///  <c>NULL-BCD</c>. The value otherwise.</returns>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-BCD</c>. The value otherwise.</param>
     procedure GetBigDecimal(ParameterIndex: Integer; var Result: TBCD);
     /// <summary>Gets the value of the designated parameter as a TGUID value.
     ///  The driver will try to convert the value if it's not a TGUID value.
@@ -2351,8 +2347,8 @@ type
     ///  as InOut,Out,Result registered parameters can be accessed after the
     ///  statement has been executed and the out params are available.
     ///  Otherwise an EZSQLException is thrown.</param>
-    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
-    ///  <c>NULL-GUID</c>. The value otherwise.</returns>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-GUID</c>. The value otherwise.</param>
     procedure GetGUID(Index: Integer; var Result: TGUID);
     /// <summary>Gets the value of the designated parameter as a TBytes value.
     ///  The driver will try to convert the value if it's not a TBytes value.
@@ -2380,6 +2376,17 @@ type
     /// <returns>if the value is SQL <c>NULL</c>, the value returned is
     ///  <c>0</c>. The value otherwise.</returns>
     function GetDate(ParameterIndex: Integer): TDateTime; overload;
+    /// <summary>Gets the value of the designated parameter as a TZDate value.
+    ///  The driver will try to convert the value if it's not a Date value. </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <param>"Result" a reference to the TZDate record. If the value is SQL
+    ///  <c>NULL</c> or the conversion fails, the value get's zero filled.</param>
     procedure GetDate(ParameterIndex: Integer; Var Result: TZDate); overload;
     /// <summary>Obsolate use overload instead. Gets the value of the designated
     ///  parameter as a TTime value. The driver will try to convert the value if
@@ -2394,6 +2401,17 @@ type
     /// <returns>if the value is SQL <c>NULL</c>, the value returned is
     ///  <c>0</c>. The value otherwise.</returns>
     function GetTime(ParameterIndex: Integer): TDateTime; overload;
+    /// <summary>Gets the value of the designated parameter as a TZTime value.
+    ///  The driver will try to convert the value if it's not a Time value. </summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <param>"Result" a reference to the TZTime record. If the value is SQL
+    ///  <c>NULL</c> or the conversion fails, the value get's zero filled.</param>
     procedure GetTime(ParameterIndex: Integer; Var Result: TZTime); overload;
     /// <summary>Obsolate use overload instead. Gets the value of the designated
     ///  parameter as a TDateTime value. The driver will try to convert the
@@ -2408,6 +2426,17 @@ type
     /// <returns>if the value is SQL <c>NULL</c>, the value returned is
     ///  <c>0</c>. The value otherwise.</returns>
     function GetTimestamp(ParameterIndex: Integer): TDateTime; overload;
+    /// <summary>Gets the value of the designated parameter as a TZTimeStamp value.
+    ///  The driver will try to convert the value if it's not a timestamp value.</summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <param>"Result" a reference to the TZTimeStamp record. If the value is SQL
+    ///  <c>NULL</c> or the conversion fails, the value get's zero filled.</param>
     procedure GetTimeStamp(Index: Integer; var Result: TZTimeStamp); overload;
     function GetValue(ParameterIndex: Integer): TZVariant;
 
@@ -2423,7 +2452,12 @@ type
 
     function GetBLob(ParameterIndex: Integer): IZBlob;
     function GetCLob(ParameterIndex: Integer): IZClob;
-
+    /// <summary>Clears the current parameter values immediately.
+    ///  In general, parameter values remain in force for repeated use of a
+    ///  statement. Setting a parameter value automatically clears its
+    ///  previous value.  However, in some cases it is useful to immediately
+    ///  release the resources used by the current parameter values; this can
+    ///  be done by calling the method <c>ClearParameters</c>.</summary>
     procedure ClearParameters;
   end;
 

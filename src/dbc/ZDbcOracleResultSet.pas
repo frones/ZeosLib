@@ -167,7 +167,7 @@ type
   public
     constructor Create(
       const Statement: IZStatement; const SQL: string; StmtHandle: POCIStmt;
-      ErrorHandle: POCIError; OraVariables: PZOCIParamBinds;
+      ErrorHandle: POCIError; ConSettings: PZConSettings;
       {$IFDEF AUTOREFCOUNT}const{$ENDIF}BindList: TZBindList);
   protected
     procedure Open; override;
@@ -394,7 +394,7 @@ implementation
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} SysConst,
-  ZFastCode, ZMessages, ZEncoding, ZDbcUtils;
+  ZFastCode, ZMessages, ZEncoding, ZDbcUtils, ZDbcOracleStatement;
 
 { TZOracleAbstractResultSet_A }
 
@@ -2670,11 +2670,15 @@ end;
 
 constructor TZOracleCallableResultSet.Create(const Statement: IZStatement;
   const SQL: string; StmtHandle: POCIStmt; ErrorHandle: POCIError;
-  OraVariables: PZOCIParamBinds; {$IFDEF AUTOREFCOUNT}const{$ENDIF} BindList: TZBindList);
+  ConSettings: PZConSettings; {$IFDEF AUTOREFCOUNT}const{$ENDIF} BindList: TZBindList);
 var I, N: Integer;
   BindValue: PZBindValue;
-  ParamValue: PZOCIParamBind;
+  OCIBindValue: PZOCIBindValue absolute BindValue;
+  RawBindValue: PZOracleRawBindValue absolute BindValue;
+  UTF16BindValue: PZOracleUTF16BindValue absolute BindValue;
   CurrentVar: PZSQLVar;
+  CharSetID: ub2;
+  CP: Word;
 begin
   N := 0;
   for I := 0 to BindList.Count -1 do
@@ -2684,23 +2688,34 @@ begin
   SetLength(FFieldNames, N);
 
   N := 0;
+  CharSetID := ConSettings.ClientCodePage.ID;
+  {$IFNDEF UNICODE}
+  if CharSetID = OCI_UTF16ID then
+    CP := ZDbcUtils.GetW2A2WConversionCodePage(ConSettings)
+  else {$ENDIF}CP := ConSettings.ClientCodePage.CP;
   for I := 0 to BindList.Count -1 do begin
-    {$R-}
     BindValue := BindList[i];
     if Ord(BindValue.ParamType) <= ord(pctIn) then
       Continue;
-    ParamValue := @OraVariables[i];
+    {$R-}
     CurrentVar := @FColumns.Variables[N];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
-    CurrentVar.valuep := ParamValue.valuep;
-    CurrentVar.dty := ParamValue.dty;
-    CurrentVar.value_sz := ParamValue.value_sz;
-    CurrentVar.Precision := ParamValue.Precision;
-    CurrentVar.Scale := ParamValue.Scale;
-    CurrentVar.indp := ParamValue.indp;
-    CurrentVar.DescriptorType := ParamValue.DescriptorType;
+    CurrentVar.valuep := OCIBindValue.valuep;
+    CurrentVar.dty := OCIBindValue.dty;
+    CurrentVar.value_sz := OCIBindValue.value_sz;
+    CurrentVar.Precision := OCIBindValue.Precision;
+    CurrentVar.Scale := OCIBindValue.Scale;
+    CurrentVar.indp := OCIBindValue.indp;
+    CurrentVar.DescriptorType := OCIBindValue.DescriptorType;
     CurrentVar.ColType := BindValue.SQLType;
-    FFieldNames[N] := ParamValue.ParamName;
+    if CharSetID = OCI_UTF16ID
+    {$IFDEF UNICODE}
+    then FFieldNames[N] := UTF16BindValue.ParamName
+    else FFieldNames[N] := ZRawToUnicode(RawBindValue.ParamName, CP);
+    {$ELSE}
+    then FFieldNames[N] := ZUnicodeToRaw(UTF16BindValue.ParamName, CP)
+    else FFieldNames[N] := RawBindValue.ParamName;
+    {$ENDIF}
     Inc(N);
   end;
   inherited Create(Statement, SQL, StmtHandle, ErrorHandle, 0);

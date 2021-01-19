@@ -971,7 +971,9 @@ function TZPostgreSQLConnection.PrepareStatementWithParams(const SQL: string;
 begin
   if IsClosed then
      Open;
-  Result := TZPostgreSQLPreparedStatementV3.Create(Self, SQL, Info)
+  if (GetServerMajorVersion >= 8) and Assigned(FplainDriver.PQexecParams)
+  then Result := TZPostgreSQLPreparedStatementV3.Create(Self, SQL, Info)
+  else Result := TZPostgrePreparedStatementV2.Create(Self, SQL, Info)
 end;
 
 procedure TZPostgreSQLConnection.PrepareTransaction(const transactionid: string);

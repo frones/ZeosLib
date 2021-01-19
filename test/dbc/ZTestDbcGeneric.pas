@@ -1937,7 +1937,7 @@ end;
 
 const
   hl_id_Index           = FirstDbcIndex;
-  stBooleanArray_Index  = FirstDbcIndex+1;
+  stBoolean_Index       = FirstDbcIndex+1;
   stByte_Index          = FirstDbcIndex+2;
   stShort_Index         = FirstDbcIndex+3;
   stInteger_Index       = FirstDbcIndex+4;
@@ -1988,7 +1988,7 @@ var
     begin
       hl_idArray[i] := FirstID+I;
       stBooleanArray[i] := Boolean(Random(1));
-      stByteArray[i] := Random(255);
+      stByteArray[i] := Random(125);
       stShortArray[i] := I;
       stLongArray[I] := I;
       stIntegerArray[I] := I;
@@ -2014,8 +2014,8 @@ begin
   CheckNotNull(PStatement);
   PrepareSomeData;
   PStatement.SetDataArray(hl_id_Index, hl_idArray, stInteger);
-  if LastFieldIndex >= stBooleanArray_Index then
-    PStatement.SetDataArray(stBooleanArray_Index, stBooleanArray, stBoolean);
+  if LastFieldIndex >= stBoolean_Index then
+    PStatement.SetDataArray(stBoolean_Index, stBooleanArray, stBoolean);
   if LastFieldIndex >= stByte_Index then
     PStatement.SetDataArray(stByte_Index, stByteArray, stByte);
   if LastFieldIndex >= stShort_Index then
@@ -2051,7 +2051,7 @@ begin
   if LastFieldIndex >= stBinaryStream_Index then
     PStatement.SetDataArray(stBinaryStream_Index, stBinaryStreamArray, stBinaryStream);
 
-  for i := stBooleanArray_Index to LastFieldIndex do begin
+  for i := stBoolean_Index to LastFieldIndex do begin
     Randomize;
     case TZSQLType(Random(14)+1) of
       stBoolean:
@@ -2215,8 +2215,8 @@ begin
       InternalTestArrayBinding(PStatement, 70, 10, LastFieldIndices[i]);
       PStatement.ClearParameters;
       PStatement.SetInt(hl_id_Index, 81);
-      if LastFieldIndices[i] >= stBooleanArray_Index then
-        PStatement.SetBoolean(stBooleanArray_Index, stBooleanArray[Random(9)]);
+      if LastFieldIndices[i] >= stBoolean_Index then
+        PStatement.SetBoolean(stBoolean_Index, stBooleanArray[Random(9)]);
       if LastFieldIndices[i] >= stByte_Index then
         PStatement.SetByte(stByte_Index, stByteArray[Random(9)]);
       if LastFieldIndices[i] >= stShort_Index then

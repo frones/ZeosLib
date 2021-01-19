@@ -82,7 +82,7 @@ type
   /// <summary>a reference to Interface list types.</summary>
   PZInterfaceList = ^TZInterfaceList;
 
-  /// <summary>Implenments a collection of interfaces.</summary>
+  /// <summary>Implements a collection of interfaces.</summary>
   TZCollection = class(TZAbstractObject, IZCollection, IZClonnable)
   private
     FList: PZInterfaceList;

@@ -84,7 +84,7 @@ type
   End;
 
   {** Implements Prepared ADO Statement. }
-  TZAbstractOleDBStatement = class(TZUTF16ParamDetectPreparedStatement,
+  TZAbstractOleDBStatement = class(TZUTF16ParamCountPreparedStatement,
     IZOleDBPreparedStatement)
   private
     FMultipleResults: IMultipleResults;
@@ -109,7 +109,8 @@ type
     constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings);
     destructor Destroy; override;
-
+    /// <summary>Do tasks after the statement was closed. For example
+    ///  dispose statement handles.</summary>
     procedure AfterClose; override;
 
     procedure Prepare; override;

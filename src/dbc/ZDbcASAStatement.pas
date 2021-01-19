@@ -88,7 +88,8 @@ type
 
     procedure Prepare; override;
     procedure Unprepare; override;
-
+    /// <summary>Do tasks after the statement was closed. For example
+    ///  dispose statement handles.</summary>
     procedure AfterClose; override;
     procedure Cancel; override;
     function GetMoreResults: Boolean; override;

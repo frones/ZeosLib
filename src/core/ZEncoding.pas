@@ -190,7 +190,15 @@ function ZRawToUnicode(const S: RawByteString; const CP: Word): UnicodeString; {
 /// <param>"SourceBytes" the size of the buffer.</param>
 /// <param>"CP" the CodePage of the source buffer.</param>
 /// <returns>A converted UnicodeString.</returns>
-function PRawToUnicode(Source: PAnsiChar; SourceBytes: LengthInt; CP: Word): UnicodeString;
+function PRawToUnicode(Source: PAnsiChar; SourceBytes: LengthInt; CP: Word): UnicodeString; overload;
+
+/// <author>EgonHugeist.</author>
+/// <summary>Convert a raw encoded buffer to a UnicodeString.</summary>
+/// <param>"Source" the source buffer to be converted.</param>
+/// <param>"SourceBytes" the size of the buffer.</param>
+/// <param>"CP" the CodePage of the source buffer.</param>
+/// <param>"Result" A reference to the converted UnicodeString.</param>
+procedure PRawToUnicode(Source: PAnsiChar; SourceBytes: LengthInt; CP: Word; var Result: UnicodeString); overload;
 
 /// <author>EgonHugeist</author>
 /// <summary>Convert a raw encoded buffer to a UTF16 Buffer. The buffer must
@@ -225,7 +233,15 @@ function ZUnicodeToRaw(const US: UnicodeString; CP: Word): RawByteString; {$IF d
 /// <param>"SrcWords" the count of words to be converted.</param>
 /// <param>"CP" the CodePage of the destination string.</param>
 /// <returns>A raw encoded string.</returns>
-function PUnicodeToRaw(Source: PWideChar; SrcWords: LengthInt; CP: Word): RawByteString;
+function PUnicodeToRaw(Source: PWideChar; SrcWords: LengthInt; CP: Word): RawByteString; overload;
+
+/// <author>EgonHugeist</author>
+/// <summary>Convert a UTF16 Buffer into a raw encoded string.</summary>
+/// <param>"Source" the buffer to be converted.</param>
+/// <param>"SrcWords" the count of words to be converted.</param>
+/// <param>"CP" the CodePage of the destination string.</param>
+/// <param>"Result" A reference to the raw encoded string.</param>
+procedure PUnicodeToRaw(Source: PWideChar; SrcWords: LengthInt; CP: Word; var Result: RawByteString); overload;
 
 /// <author>EgonHugeist</author>
 /// <summary>Convert a UTF16 Buffer into a raw buffer.</summary>
@@ -1797,6 +1813,36 @@ begin
   end;
 end;
 
+procedure PRawToUnicode(Source: PAnsiChar; SourceBytes: LengthInt; CP: Word; var Result: UnicodeString);
+var
+  wlen: LengthInt;
+  wBuf: array[0..dsMaxWStringSize] of WideChar;
+begin
+  if (SourceBytes = 0) or (Source = nil) then
+    Result := ''
+  else begin
+    //test multibyte encodings:
+    if IsMBCSCodePage(cp) then begin
+      if SourceBytes <= dsMaxWStringSize then begin //can we use a static buf? -> avoid memrealloc for the Result String
+        wlen := PRaw2PUnicodeBuf(Source, @wBuf[0], sourceBytes, CP);
+        ZSetString(nil, wlen, Result);
+        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(wBuf[0], Pointer(Result)^, wlen shl 1);
+      end else if CP = zCP_UTF8 then begin
+        wlen := UTF8AsUTF16Words(Source, sourceBytes); //return exactlen
+        ZSetString(nil, wlen, Result);
+        UTF8ToWideChar(Source, SourceBytes, Pointer(Result));
+      end else begin //nope Buf to small
+        ZSetString(nil, SourceBytes, Result);
+        wlen := PRaw2PUnicodeBuf(Source, Pointer(Result), sourceBytes, CP);
+        if wlen <> Length(Result) then
+          SetLength(Result, wlen);
+      end;
+    end else begin //single byte encoding -> encode into result directly
+      ZSetString(nil, SourceBytes, Result);
+      PRaw2PUnicodeBuf(Source, Pointer(Result), sourceBytes, CP);
+    end;
+  end;
+end;
 {**
   convert a raw encoded string into a uniocde buffer
   Dest reserved space must be minimum SourceBytes + trailing #0 in codepoints
@@ -2039,6 +2085,60 @@ end;
 {$ENDIF}
 
 function PUnicodeToRaw(Source: PWideChar; SrcWords: LengthInt; CP: Word): RawByteString;
+var
+  ulen: Integer;
+  Buf: Array[0..dsMaxRStringSize] of AnsiChar;
+{$IF defined(FPC) and not defined(MSWINDOWS) and not defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)}
+  US: UnicodeString;
+{$IFEND}
+begin
+  if SrcWords = 0 then
+    Result := EmptyRaw
+  else begin
+    if (CP = zCP_NONE) or (CP = zCP_UTF16) then
+      CP := ZOSCodePage; //random success
+    ULen := Min(SrcWords shl 2, High(Integer)-1);
+    if (CP = zCP_UTF8) then begin
+      if Ulen <= dsMaxRStringSize then
+        ZSetString(@Buf[0], PUnicodeToUtf8Buf(@Buf[0], ULen, Source, SrcWords, [ccfNoTrailingZero]), Result{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF})
+      else begin
+        ZSetString(nil, ULen, Result{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF}); //oversized
+        SetLength(Result, PUnicodeToUtf8Buf(Pointer(Result), ULen, Source, SrcWords, [ccfNoTrailingZero]));
+      end
+    end else
+    {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
+    if Ulen <= dsMaxRStringSize then
+      {$IFDEF WITH_UNICODEFROMLOCALECHARS}
+      ZSetString(@Buf[0], LocaleCharsFromUnicode(CP, 0, Source, SrcWords, @Buf[0], ulen, NIL, NIL), Result{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF})
+      {$ELSE}
+      ZSetString(@Buf[0], WideCharToMultiByte(CP, 0, Source, SrcWords, @Buf[0], ulen, NIL, NIL), Result{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF})
+      {$ENDIF}
+    else begin
+      ZSetString(nil, ULen, Result{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF}); //oversized
+      {$IFDEF WITH_UNICODEFROMLOCALECHARS}
+      SetLength(Result, LocaleCharsFromUnicode(CP, 0, Source, SrcWords, Pointer(Result), ulen, NIL, NIL)); // Convert Unicode down to Ansi
+      {$ELSE}
+      SetLength(Result, WideCharToMultiByte(CP,0, Source, SrcWords, Pointer(Result), ulen, nil, nil)); // Convert Wide down to Ansi
+      {$ENDIF}
+    end;
+    {$ELSE}
+      {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
+      WidestringManager.Unicode2AnsiMoveProc(Source, Result, CP, SrcWords);
+      {$ELSE}
+      begin
+        SetString(US, Source, SrcWords);
+        {$IFDEF WITH_LCONVENCODING}
+        Result := ZUnicodeToRaw(US, CP);
+        {$ELSE}
+        Result := RawByteString(Source); //random success
+        {$ENDIF}
+      end;
+      {$ENDIF}
+    {$IFEND}
+  end;
+end;
+
+procedure PUnicodeToRaw(Source: PWideChar; SrcWords: LengthInt; CP: Word; var Result: RawByteString); overload;
 var
   ulen: Integer;
   Buf: Array[0..dsMaxRStringSize] of AnsiChar;

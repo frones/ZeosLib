@@ -69,7 +69,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   ZSysUtils, ZDbcIntfs, ZClasses, ZDbcCachedResultSet, ZDbcCache,
   ZCompatibility, ZDbcResultSet, ZFastCode, ZDbcResultsetMetadata,
-  ZPlainODBCDriver, ZDbcODBCCon, ZDbcODBCUtils;
+  ZPlainODBCDriver, ZDbcODBCCon, ZDbcODBCUtils, ZDbcStatement;
 
 type
   { eh: improve missing meta informations of SQLColumns}
@@ -244,14 +244,9 @@ type
   end;
 
   TZParamODBCResultSet = class(TAbstractODBCResultSet, IZResultSet)
-  private
-    FParamCount: Integer;
-    FODBCParamBindArray: PZODBCParamBindArray;
-  protected
-    procedure Open; override;
   public
     constructor Create(const Statement: IZStatement; const SQL: String;
-       ODBCParamBindArray: PZODBCParamBindArray; ParamCount: Integer);
+       BindList: TZBindList);
     function Next: Boolean; reintroduce;
   end;
 
@@ -2298,16 +2293,35 @@ end;
 { TZParamODBCResultSet }
 
 constructor TZParamODBCResultSet.Create(const Statement: IZStatement; const SQL: String;
-  ODBCParamBindArray: PZODBCParamBindArray; ParamCount: Integer);
+  BindList: TZBindList);
+var I: Integer;
+    ColumnInfo: TZODBCOutParamColumnInfo;
+    BindValue: PZBindValue;
+    Bind: PZODBCBindValue absolute BindValue;
 begin
   with Statement.GetConnection do begin
-    inherited Create(Statement, SQL, nil, GetConSettings);
+    inherited Create(Statement, SQL, nil, BindList.ConSettings);
     fIsUnicodeDriver := Supports(GetIZPlainDriver, IODBC3UnicodePlainDriver);
   end;
-  FParamCount := ParamCount;
-  FODBCParamBindArray := ODBCParamBindArray;
+  ColumnsInfo.Clear;
+  for i := 0 to BindList.Count -1 do begin
+    BindValue := BindList[I];
+    if Bind.InputOutputType in [SQL_PARAM_INPUT_OUTPUT, SQL_RESULT_COL,
+      SQL_PARAM_OUTPUT, SQL_RETURN_VALUE, SQL_PARAM_INPUT_OUTPUT_STREAM,
+      SQL_PARAM_OUTPUT_STREAM] then begin
+      ColumnInfo := TZODBCOutParamColumnInfo.Create;
+      ColumnInfo.fODBC_CType :=  Bind.ValueType;
+      ColumnInfo.fColumnBuffer := Bind.ParameterValuePtr;
+      ColumnInfo.fStrLen_or_IndArray := PSQLLENArray(Bind.StrLen_or_IndPtr);
+      ColumnInfo.ColumnLabel := Bind.ParamName;
+      ColumnInfo.ColumnType := BindValue.SQLType;
+      ColumnInfo.Precision := Bind.ColumnSize;
+      ColumnInfo.Scale := Bind.DecimalDigits;
+      ColumnsInfo.Add(ColumnInfo);
+      Inc(fColumnCount);
+    end;
+  end;
   SetType(rtForwardOnly);
-  Open;
 end;
 
 function TZParamODBCResultSet.Next: Boolean;
@@ -2318,34 +2332,6 @@ begin
   RowNo := 1;
   Result := True;
   FCurrentBufRowNo := 1;
-end;
-
-procedure TZParamODBCResultSet.Open;
-var I: Integer;
-  ColumnInfo: TZODBCOutParamColumnInfo;
-  Bind: PZODBCParamBind;
-begin
-  ColumnsInfo.Clear;
-  for i := 0 to FParamCount -1 do begin
-    {$R-}
-    Bind := @FODBCParamBindArray[I];
-    {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
-    if Bind.InputOutputType in [SQL_PARAM_INPUT_OUTPUT, SQL_RESULT_COL,
-      SQL_PARAM_OUTPUT, SQL_RETURN_VALUE, SQL_PARAM_INPUT_OUTPUT_STREAM,
-      SQL_PARAM_OUTPUT_STREAM] then begin
-      ColumnInfo := TZODBCOutParamColumnInfo.Create;
-      ColumnInfo.fODBC_CType :=  Bind.ValueType;
-      ColumnInfo.fColumnBuffer := Bind.ParameterValuePtr;
-      ColumnInfo.fStrLen_or_IndArray := PSQLLENArray(Bind.StrLen_or_IndPtr);
-      ColumnInfo.ColumnLabel := Bind.ParamName;
-      ColumnInfo.ColumnType := Bind.SQLType;
-      ColumnInfo.Precision := Bind.ColumnSize;
-      ColumnInfo.Scale := Bind.DecimalDigits;
-      ColumnsInfo.Add(ColumnInfo);
-      Inc(fColumnCount);
-    end;
-  end;
-  inherited Open;
 end;
 
 { TZODBCachedResultSetW }
