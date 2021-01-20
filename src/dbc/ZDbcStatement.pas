@@ -364,6 +364,8 @@ type
     /// <param>"Index" the index of the element.</param>
     /// <returns>The address or raises an EListError if the Index is invalid.</returns>
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+    /// <summary>Get the size of the custom element of this class.</summary>
+    /// <returns>the size of the custom element.</returns>
     class function GetElementSize: Integer; virtual;
   public
     constructor Create(ConSettings: PZConSettings);
@@ -1005,6 +1007,8 @@ type
   /// <summary>Implements a BindList with QuestionMarks widened BindValue records</summary>
   TZQuestionMarkBindList = class(TZBindList)
   protected
+    /// <summary>Get the size of the custom element of this class.</summary>
+    /// <returns>the size of the custom element.</returns>
     class function GetElementSize: Integer; override;
     /// <summary>Get the address of an element in the list. It is an error
     ///  remembering the address while the element capacity changes. The address

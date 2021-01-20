@@ -293,6 +293,8 @@ type
     function GetClientVersion: Integer; override;
     function GetHostVersion: Integer; override;
     function GetBinaryEscapeString(const Value: TBytes): String; override;
+    /// <summary>Returns the ServicerProvider for this connection.</summary>
+    /// <returns>the ServerProvider</returns>
     function GetServerProvider: TZServerProvider; override;
   end;
 

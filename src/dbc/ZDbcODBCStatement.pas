@@ -254,6 +254,8 @@ type
   /// <summary>Implements a ODBC Bindlist object</summary>
   TZODBCBindList = class(TZBindList)
   protected
+    /// <summary>Get the size of the custom element of this class.</summary>
+    /// <returns>the size of the custom element.</returns>
     class function GetElementSize: Integer; override;
   end;
 

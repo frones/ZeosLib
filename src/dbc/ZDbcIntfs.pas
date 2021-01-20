@@ -93,7 +93,7 @@ type
     function Clone: TZExceptionSpecificData; virtual; abstract;
   end;
 
-  /// <summary>Defines an Abstract SQL exception.</summary>
+  /// <summary>Implements an abstract SQL exception.</summary>
   EZSQLThrowable = class({$IFDEF DO_NOT_DERIVE_FROM_EDATABASEERROR}Exception{$ELSE}EDatabaseError{$ENDIF})
   private
     FErrorCode: Integer;
@@ -166,10 +166,10 @@ type
   /// <summary>defines a reference to the connection settings record.</summary>
   PZConSettings = ^TZConSettings;
   /// <author>EgonHugeist</author>
-  /// <summary>defines the connection settings record.</summary>
+  /// <summary>Defines the connection settings record.</summary>
   TZConSettings = record
     /// <summary>Target/Source CP of raw string conversion.</summary>
-    W2A2WEncodingSource: TZW2A2WEncodingSource; //
+    W2A2WEncodingSource: TZW2A2WEncodingSource;
     /// <summary>A reference to the database characterset information.</summary>
     ClientCodePage: PZCodePage;
     /// <summary>The database ReadFormatSettings.</summary>
@@ -179,9 +179,8 @@ type
   end;
 
   /// <author>EgonHugeist</author>
-  /// <summary>defines an interfaced object containing the connection settings
-  ///  reference.
-  /// </summary>
+  /// <summary>Implements an interfaced object containing the connection
+  ///  settings reference.</summary>
   TZCodePagedObject = Class(TInterfacedObject)
   private
     FConSettings: PZConSettings;
@@ -196,10 +195,6 @@ type
     /// <returns>the TZConSettings record refrence.</returns>
     function GetConSettings: PZConSettings;
   end;
-
-  {** a base class for most dbc-layer objects }
-
-  { TZImmediatelyReleasableObject }
 
   /// <author>EgonHugeist</author>
   /// <summary>Implements an abstract immediately releasable object.</summary>
@@ -217,15 +212,21 @@ type
     procedure AfterConstruction; override;
   end;
 
-  // List of URL properties that could operate with URL-escaped strings
+  /// <summary>Implements an URL String List</summary>
   TZURLStringList = Class(TStringList)
   protected
+    /// <summary>Get the URL text as escaped String.</summary>
+    /// <returns>the as escaped URL String.</returns>
     function GetURLText: String;
+    /// <summary>Set an URL and unascapes the String.</summary>
+    /// <param>"Value" the escaped URL String.</param>
     procedure SetURLText(const Value: string);
   public
+    /// <summary>Represents an escaped URL String property.</summary>
     property URLText: String read GetURLText write SetURLText;
   end;
 
+  /// <summary>Implements an URL object used for generating the URL strings.</summary>
   TZURL = class
   private
     FPrefix: string;
@@ -371,12 +372,12 @@ type
   /// <summary>Defines a reference to the static TByteBuffer.</summary>
   PByteBuffer = ^TByteBuffer;
   /// <summary>Defines a static TByteBuffer.</summary>
-  TByteBuffer = array[0..1024] of Byte;
+  TByteBuffer = array[0..1023] of Byte; //1 kb
 
   /// <summary>Defines a reference to the static TWordBuffer.</summary>
   PWordBuffer = ^TWordBuffer;
   /// <summary>Defines a static TWordBuffer.</summary>
-  TWordBuffer = array[0..512] of Word;
+  TWordBuffer = array[0..511] of Word; //1 kb
 
 
 // Interfaces
@@ -596,7 +597,7 @@ type
   end;
 
   /// <author>EgonHugeist</author>
-  /// <summary>Implements a transaction interface.</summary>
+  /// <summary>Defines a transaction interface.</summary>
   IZTransaction = interface(IImmediatelyReleasable)
     ['{501FDB3C-4D44-4BE3-8BB3-547976E6500E}']
     /// <summary>If the current transaction is saved the current savepoint get's
@@ -1010,19 +1011,37 @@ type
     ///  After a call to this method, the method <c>getWarnings</c> returns nil
     ///  until a new warning is reported for this Connection.</summary>
     procedure ClearWarnings;
-
+    /// <summary>Are metadata used? If <c>True</c> then we can determine if
+    ///  columns are writeable or not. This is required for generating automatic
+    ///  updates.</summary>
+    /// <returns><c>True</c> if metainformations are turned on; <c>False</c>
+    ///  otherwise.</returns>
     function UseMetadata: boolean;
+    /// <summary>Sets the use of metadata informations. This is required for
+    ///  generating automatic updates.</summary>
+    /// <param>"Value" enables or disables the metadata loading.</param>
     procedure SetUseMetadata(Value: Boolean);
 
     function GetBinaryEscapeString(const Value: TBytes): String; overload;
 
+    /// <summary>Escape a string so it's acceptable for the Connection's server.</summary>
+    /// <param>"value" a string that should be escaped</param>
+    /// <returns>an escaped string</returns>
     function GetEscapeString(const Value: UnicodeString): UnicodeString; overload;
+    /// <summary>Escape a string so it's acceptable for the Connection's server.</summary>
+    /// <param>"value" a string that should be escaped</param>
+    /// <returns>an escaped string</returns>
     function GetEscapeString(const Value: RawByteString): RawByteString; overload;
+
     function EscapeString(const Value: RawByteString): RawByteString;
 
-
     function GetEncoding: TZCharEncoding;
+    /// <summary>Gets a VariantManager object which is able to convert values
+    ///  according the client character set informations.</summary>
+    /// <returns>The variant manager object; never <c>nil</c>.</returns>
     function GetClientVariantManager: IZClientVariantManager;
+    /// <summary>Get's the escaped URL used for establishing this connection.</summary>
+    /// <returns>the escaped URL.</returns>
     function GetURL: String;
     /// <summary>Returns the ServicerProvider for this connection. For some
     ///  drivers the connection mist be opened to determine the provider.</summary>
@@ -1217,6 +1236,31 @@ type
     /// see GetSearchStringEscape</remarks>
     function GetColumns(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet;
+    /// <summary>Gets a description of the access rights for a table's columns.
+    ///
+    ///  Only privileges matching the column name criteria are
+    ///  returned. They are ordered by COLUMN_NAME and PRIVILEGE.
+    ///
+    ///  Each privilige description has the following columns:
+ 	  ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+ 	  ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+ 	  ///  <c>TABLE_NAME</c> String => table name
+ 	  ///  <c>COLUMN_NAME</c> String => column name
+ 	  ///  <c>GRANTOR</c> => grantor of access (may be null)
+ 	  ///  <c>GRANTEE</c> String => grantee of access
+ 	  ///  <c>PRIVILEGE</c> String => name of access (SELECT,
+    ///     INSERT, UPDATE, REFRENCES, ...)
+ 	  ///  <c>IS_GRANTABLE</c> String => "YES" if grantee is permitted
+    ///   to grant to others; "NO" if not; null if unknown</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <param>"ColumnNamePattern" a column name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a privilege description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function GetColumnPrivileges(const Catalog: string; const Schema: string;
       const Table: string; const ColumnNamePattern: string): IZResultSet;
 
@@ -4075,7 +4119,8 @@ type
 
   TOnLobUpdate = procedure(Field: NativeInt) of object;
   /// <author>EgonHugeist</author>
-  /// <summary>External or internal blob wrapper object.</summary>
+  /// <summary>Defines a external or internal large object (LOB) wrapper
+  ///  interface.</summary>
   IZLob = interface(IZInterface)
     ['{DCF816A4-F21C-4FBB-837B-A12DCF886A6F}']
     function IsEmpty: Boolean;

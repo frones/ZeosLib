@@ -225,7 +225,8 @@ type
 
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
-
+    /// <summary>Returns the ServicerProvider for this connection.</summary>
+    /// <returns>the ServerProvider</returns>
     function GetServerProvider: TZServerProvider; override;
     function GetHostVersion: Integer; override;
   end;

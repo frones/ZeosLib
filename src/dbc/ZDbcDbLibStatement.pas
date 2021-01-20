@@ -79,6 +79,8 @@ type
   /// <summary>Implements a DBLIB Bindlist object</summary>
   TZDBLibBindList = class(TZQuestionMarkBindList)
   protected
+    /// <summary>Get the size of the custom element of this class.</summary>
+    /// <returns>the size of the custom element.</returns>
     class function GetElementSize: Integer; override;
     /// <summary>Notify about an action which will or was performed.
     ///  if ElementNeedsFinalize is False the method will never be called.

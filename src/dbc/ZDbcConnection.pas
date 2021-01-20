@@ -440,13 +440,26 @@ type
 
     function GetBinaryEscapeString(const Value: TBytes): String; overload; virtual;
 
+    /// <summary>Escape a string so it's acceptable for the Connection's server.</summary>
+    /// <param>"value" a string that should be escaped</param>
+    /// <returns>an escaped string</returns>
     function GetEscapeString(const Value: UnicodeString): UnicodeString; overload; virtual;
+    /// <summary>Escape a string so it's acceptable for the Connection's server.</summary>
+    /// <param>"value" a string that should be escaped</param>
+    /// <returns>an escaped string</returns>
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
-
+    /// <summary>Are metadata used? If <c>True</c> then we can determine if
+    ///  columns are writeable or not. This is required for generating automatic
+    ///  updates.</summary>
+    /// <returns><c>True</c> if metainformations are turned on; <c>False</c>
+    ///  otherwise.</returns>
     function UseMetadata: boolean;
+    /// <summary>Sets the use of metadata informations. This is required for
+    ///  generating automatic updates.</summary>
+    /// <param>"Value" enables or disables the metadata loading.</param>
     procedure SetUseMetadata(Value: Boolean); virtual;
     /// <summary>Returns the ServicerProvider for this connection. For some
-    ///  drivers the connection mist be opened to determine the provider.</summary>
+    ///  drivers the connection must be opened to determine the provider.</summary>
     /// <returns>the ServerProvider or spUnknown if not known.</returns>
     function GetServerProvider: TZServerProvider; virtual;
   protected

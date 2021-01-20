@@ -59,34 +59,48 @@ uses SysUtils, Classes, {$IF not defined(NO_UNIT_CONTNRS) and not defined(FPC)}C
   ZClasses, ZCompatibility, ZVariant, ZTokenizer, ZExprParser;
 
 type
-  {** Defines an expression exception. }
+  /// <summary>Defines an expression exception.</summary>
   TZExpressionError = class (Exception);
 
-  {** Defines an execution stack object. }
+  /// <summary>Implements an execution stack object.</summary>
   TZExecutionStack = class (TObject)
   private
     FValues: TZVariantDynArray;
     FCount: Integer;
     FCapacity: Integer;
-
+    /// <summary>Gets a value from absolute position in the stack.</summary>
+    /// <param>"Index" a value index.</param>
+    /// <returns>a variant value from requested position.</returns>
     function GetValue(Index: Integer): TZVariant;
   public
+    /// <summary>Creates this object.</summary>
     constructor Create;
 
     procedure DecStackPointer(const Value : integer);
+    /// <summary>Gets a value from the top and removes it from the stack.</summary>
+    /// <returns>a value from the top.</returns>
     function Pop: TZVariant;
+    /// <summary>Gets a value from the top of the stack without removing it.</summary>
+    /// <returns>a value from the top.</returns>
     function Peek: TZVariant;
+    /// <summary>Puts a value to the top of the stack.</summary>
+    /// <param>"Value" the value to put on top af stack.</summary>
     procedure Push(const Value: TZVariant);
+    /// <summary>Gets a function parameter by index.</summary>
+    /// <param>"Index" a function parameter index. 0 is used for parameter count.</param>
+    /// <returns>a parameter value.</returns>
     function GetParameter(Index: Integer): TZVariant;
+    /// <summary>Swaps two values on the top of the stack.</summary>
     procedure Swap;
-
+    /// <summary>Clears this stack.</summary>
     procedure Clear;
-
+    /// <summary>Represents the stack count.</summary>
     property Count: Integer read FCount;
+    /// <summary>Access the values by index position.</summary>
     property Values[Index: Integer]: TZVariant read GetValue;
   end;
 
-  {** Defines a list of variables. }
+  /// <summary>Defines a list of variables interface.</summary>
   IZVariablesList = interface (IZInterface)
     ['{F4347F46-32F3-4021-B6DB-7A39BF171275}']
 
@@ -111,7 +125,7 @@ type
       write SetValueByName;
   end;
 
-  {** Defines a function interface. }
+  /// <summary>Defines a function interface.</summary>
   IZFunction = interface (IZInterface)
     ['{E9B3AFF9-6CD9-49C8-AB66-C8CF60ED8686}']
 
@@ -157,7 +171,8 @@ type
     procedure SetDefaultFunctions(const Value: IZFunctionsList);
     function GetAutoVariables: Boolean;
     procedure SetAutoVariables(Value: Boolean);
-
+    /// <summary>Evaluates this expression.</summary>
+    /// <returns>an evaluated expression value.</returns>
     function Evaluate: TZVariant;
     function Evaluate2(const Variables: IZVariablesList): TZVariant;
     function Evaluate3(const Variables: IZVariablesList;
@@ -205,10 +220,15 @@ type
   protected
     function NormalizeValues(var Val1, Val2: TZVariant): Boolean;
   public
+    /// <summary>Creates this expression calculator object.</summary>
     constructor Create;
+    /// <summary>Creates this expression calculator and assignes expression
+    ///  string.</summary>
+    /// <param>"Expression" an expression string.</param>
     constructor CreateWithExpression(const Expression: string);
     destructor Destroy; override;
-
+    /// <summary>Evaluates this expression.</summary>
+    /// <returns>an evaluated expression value.</returns>
     function Evaluate: TZVariant;
     function Evaluate2(const Variables: IZVariablesList): TZVariant;
     function Evaluate3(const Variables: IZVariablesList;
@@ -237,9 +257,6 @@ uses
 
 { TZExecutionStack }
 
-{**
-  Creates this object.
-}
 constructor TZExecutionStack.Create;
 begin
   FCapacity := 100;
@@ -247,20 +264,11 @@ begin
   FCount := 0;
 end;
 
-{**
-  Gets a value from absolute position in the stack.
-  @param Index a value index.
-  @returns a variant value from requested position.
-}
 function TZExecutionStack.GetValue(Index: Integer): TZVariant;
 begin
   Result := FValues[Index];
 end;
 
-{**
-  Gets a value from the top of the stack without removing it.
-  @returns a value from the top.
-}
 function TZExecutionStack.Peek: TZVariant;
 begin
   if FCount > 0 then
@@ -268,11 +276,6 @@ begin
   else Result := NullVariant;
 end;
 
-{**
-  Gets a function parameter by index.
-  @param a function parameter index. O is used for parameter count.
-  @returns a parameter value.
-}
 function TZExecutionStack.GetParameter(Index: Integer): TZVariant;
 begin
   if FCount <= Index then
@@ -283,17 +286,12 @@ end;
 procedure TZExecutionStack.DecStackPointer(const Value : integer);
 begin
   Dec(FCount, Value);
-  if FCount < 0 then
-  begin
+  if FCount < 0 then begin
     FCount := 0;
     raise TZExpressionError.Create(SStackIsEmpty);
   end;
 end;
 
-{**
-  Gets a value from the top and removes it from the stack.
-  @returns a value from the top.
-}
 function TZExecutionStack.Pop: TZVariant;
 begin
   Result := NullVariant;
@@ -303,9 +301,6 @@ begin
   Result := FValues[FCount];
 end;
 
-{**
-  Puts a value to the top of the stack.
-}
 procedure TZExecutionStack.Push(const Value: TZVariant);
 begin
   if FCapacity = FCount then
@@ -324,9 +319,6 @@ begin
   Inc(FCount);
 end;
 
-{**
-  Swaps two values on the top of the stack.
-}
 procedure TZExecutionStack.Swap;
 var
   Temp: TZVariant;
@@ -339,9 +331,6 @@ begin
   FValues[FCount - 2] := Temp;
 end;
 
-{**
-  Clears this stack.
-}
 procedure TZExecutionStack.Clear;
 begin
   FCount := 0;
@@ -349,9 +338,6 @@ end;
 
 { TZExpression }
 
-{**
-  Creates this expression calculator object.
-}
 constructor TZExpression.Create;
 begin
   FTokenizer := TZExpressionTokenizer.Create;
@@ -362,10 +348,6 @@ begin
   FAutoVariables := True;
 end;
 
-{**
-  Creates this expression calculator and assignes expression string.
-  @param Expression an expression string.
-}
 constructor TZExpression.CreateWithExpression(const Expression: string);
 begin
   Create;
@@ -531,10 +513,6 @@ begin
   end;
 end;
 
-{**
-  Evaluates this expression.
-  @returns an evaluated expression value.
-}
 function TZExpression.Evaluate: TZVariant;
 begin
   Result := Evaluate3(FDefaultVariables, FDefaultFunctions);

@@ -83,7 +83,7 @@ type
     procedure SetInParamCount(const NewParamCount: Integer); virtual;
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); virtual;
-    procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: RawByteString = EmptyRaw);
+    procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: String = EmptyRaw);
     function GetInParamLogValue(Value: TZVariant): RawByteString;
     function GetOmitComments: Boolean; virtual;
     function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; virtual;
@@ -465,13 +465,13 @@ end;
   @param Msg a description message.
 }
 procedure TZAbstractBeginnerPreparedStatement.LogPrepStmtMessage(Category: TZLoggingCategory;
-  const Msg: RawByteString = EmptyRaw);
+  const Msg: String = EmptyRaw);
 begin
   if DriverManager.HasLoggingListener then
     if msg <> EmptyRaw then
-      DriverManager.LogMessage(Category, Connection.GetIZPlainDriver.GetProtocol, 'Statement '+IntToRaw(FStatementId)+' : '+Msg)
+      DriverManager.LogMessage(Category, Connection.GetIZPlainDriver.GetProtocol, 'Statement '+{$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(FStatementId)+' : '+Msg)
     else
-      DriverManager.LogMessage(Category, Connection.GetIZPlainDriver.GetProtocol, 'Statement '+IntToRaw(FStatementId));
+      DriverManager.LogMessage(Category, Connection.GetIZPlainDriver.GetProtocol, 'Statement '+{$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(FStatementId));
 end;
 
 
@@ -1550,7 +1550,7 @@ function TZAbstractBeginnerPreparedStatement.CreateLogEvent(
   const Category: TZLoggingCategory): TZLoggingEvent;
 var
   I : integer;
-  LogString : RawByteString;
+  LogString : String;
 begin
   LogString := '';
   case Category of

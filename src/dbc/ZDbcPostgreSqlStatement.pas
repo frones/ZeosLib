@@ -64,9 +64,15 @@ uses
   ZDbcPostgreSql, ZDbcUtils, ZClasses;
 
 type
+  /// <author>EgonHugeist</author>
+  /// <summary>Defines array dml type</summary>
   TArrayDMLType = (dmlInsert = 1, dmlUpdate, dmlDelete);
 
+  /// <author>EgonHugeist</author>
+  /// <summary>forwards the TZPostgreSQLPreparedStatementV3 object</summary>
   TZPostgreSQLPreparedStatementV3 = class; //forward
+  /// <author>EgonHugeist</author>
+  /// <summary>Defines a record holding a batch array dml statement</summary>
   TPGArrayDMLStmt = record
     Obj: TZPostgreSQLPreparedStatementV3;
     Intf: IZPreparedStatement;
@@ -89,6 +95,8 @@ type
   /// <summary>Implements a PostgreSQL Bindlist object</summary>
   TZPostgreSQLBindList = class(TZQuestionMarkBindList)
   protected
+    /// <summary>Get the size of the custom element of this class.</summary>
+    /// <returns>the size of the custom element.</returns>
     class function GetElementSize: Integer; override;
     /// <summary>Notify about an action which will or was performed.
     ///  if ElementNeedsFinalize is False the method will never be called.
@@ -1207,6 +1215,7 @@ var
     I, N: Integer;
     BindValue: PZBindValue;
     QMarkBindValue: PZQMarkPosBindValue absolute BindValue;
+    PostgreSQLBindValue: PZPostgreSQLBindValue absolute BindValue;
     SQLWriter: TZRawSQLStringWriter;
     Data, PA: Pointer;
     P: PAnsiChar;
@@ -1214,6 +1223,9 @@ var
     BCD: TBCD;
     I64: Int64 absolute BCD;
     C: Currency absolute BCD;
+    TS: TZTimeStamp absolute BCD;
+    D: TZDate absolute BCD;
+    T: TZTime absolute BCD;
   begin
     L := Length(FASQL);
     N := BindList.Count shl 4;
@@ -1229,7 +1241,9 @@ var
         for I := 0 to BindList.Count -1 do begin
           BindValue := BindList[I];
           SQLWriter.AddText((P+LastPos), QMarkBindValue.QMarkPosition - LastPos, TmpSQL);
-          LastPos := QMarkBindValue.QMarkPosition + 1;
+          If AnsiChar((P + QMarkBindValue.QMarkPosition)^) = AnsiChar('?')
+          then LastPos := QMarkBindValue.QMarkPosition + 1
+          else LastPos := QMarkBindValue.QMarkPosition + NativeUInt(Length(PostgreSQLBindValue.ParamName));
           case BindValue.BindType of
             zbtNull: SQLWriter.AddText('null', TmpSQL);
             zbt4Byte: begin
@@ -1241,7 +1255,9 @@ var
                   OIDOID:   SQLWriter.AddOrd(PG2Cardinal(Data), TmpSQL);
                   FLOAT4OID:SQLWriter.AddFloat(PG2Single(Data), TmpSQL);
                   DATEOID:  begin
-                              SQLWriter.AddDate(PG2Date(PInteger(Data)^), ConSettings^.WriteFormatSettings.DateFormat, TmpSQL);
+                              PG2Date(PInteger(Data)^, D.Year, D.Month, d.Day);
+                              D.IsNegative := False;
+                              SQLWriter.AddDate(D, ConSettings^.WriteFormatSettings.DateFormat, TmpSQL);
                               SQLWriter.AddText('::date', TmpSQL);
                             end;
                 end;
@@ -1257,14 +1273,18 @@ var
                             end;
                   TIMEOID:  begin
                             if Finteger_datetimes
-                            then SQLWriter.AddTime(PG2Time(PInt64(Data)^), ConSettings^.WriteFormatSettings.TimeFormat, TmpSQL)
-                            else SQLWriter.AddTime(PG2Time(PDouble(Data)^), ConSettings^.WriteFormatSettings.TimeFormat, TmpSQL);
+                            then PG2Time(PInt64(Data)^, T.Hour, T.Minute, T.Second, T.Fractions)
+                            else PG2Time(PDouble(Data)^, T.Hour, T.Minute, T.Second, T.Fractions);
+                            T.IsNegative := False;
+                            SQLWriter.AddTime(T, ConSettings^.WriteFormatSettings.TimeFormat, TmpSQL);
                             SQLWriter.AddText('::time', TmpSQL);
                           end;
                   TIMESTAMPOID: begin
                             if Finteger_datetimes
-                            then SQLWriter.AddDateTime(PG2DateTime(PInt64(Data)^), ConSettings^.WriteFormatSettings.DateTimeFormat, TmpSQL)
-                            else SQLWriter.AddDateTime(PG2DateTime(PDouble(Data)^), ConSettings^.WriteFormatSettings.DateTimeFormat, TmpSQL);
+                            then PG2DateTime(PInt64(Data)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
+                            else PG2DateTime(PDouble(Data)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
+                            TS.IsNegative := False;
+                            SQLWriter.AddTimeStamp(TS, ConSettings^.WriteFormatSettings.DateTimeFormat, TmpSQL);
                             SQLWriter.AddText('::timestamp', TmpSQL);
                           end;
                 end;
