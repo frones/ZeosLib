@@ -2327,14 +2327,7 @@ begin
                       end;
       stString,
       stAsciiStream:  SetAsRawString(Result);
-      stUnicodeString:begin
-                        {$IF declared(varUString)}
-                        TVarData(Result).VType := varUString;
-                        UnicodeString(TVarData(Result).{$IF declared(VUString)}VUString{$ELSE}VAny{$IFEND}) := UnicodeString(FData.pvPointer);
-                        {$ELSE}
-                        Result := UnicodeString(FData.pvPointer);
-                        {$IFEND}
-                      end;
+      stUnicodeString:Result := UnicodeString(FData.pvPointer);
       stUnicodeStream:SetAsUniStringFromClob(Result);
       stBytes,
       stBinaryStream: SetAsBytes(Result);

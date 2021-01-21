@@ -105,6 +105,8 @@ end;
   Runs a test for SQL parameters.
 }
 procedure TZTestExecSQLCase.TestParams;
+var a: Integer;
+    v: Variant;
 begin
   Query.SQL.Text := 'DELETE FROM department WHERE dep_id=:Id';
   CheckEquals(1, Query.Params.Count);
@@ -133,6 +135,15 @@ begin
   Query.Params[0].Value := TEST_ROW_ID;
   Query.ExecSQL;
   CheckEquals(1, Query.RowsAffected);
+  Query.SQL.Text := ':pParam1 :pParam2 :pParam3';
+  Query.Params[0].AsDateTime := Now;
+  Query.Params[1].AsDateTime := Now;
+  Query.Params[2].AsString := 'Hello, world';
+  For a := 0 To Query.Params.Count - 1 Do begin
+    Check(Query.Params[a].Name <> '');
+    V := Query.Params[a].Value;
+    Check((TVarData(V).VType <> varNull) and (TVarData(V).VType <> varEmpty) );
+  end;
 end;
 
 {**
@@ -151,7 +162,7 @@ begin
   CheckEquals(3, Query.Params.Count);
   CheckEquals('Id', Query.Params[0].Name);
   CheckEquals(TEST_ROW_ID, Query.Params[0].AsInteger);
-  CheckEquals(Ord(ftInteger), Ord(Query.Params[0].DataType));
+  CheckEquals(ftInteger, Query.Params[0].DataType);
   CheckEquals('Name', Query.Params[1].Name);
   CheckEquals(True, Query.Params[1].IsNull);
   CheckEquals('Address', Query.Params[2].Name);
