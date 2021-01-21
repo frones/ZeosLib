@@ -921,9 +921,10 @@ type
     /// <author>firmos</author>
     /// <summary>Rolls back the two phase transaction.</summary>
     procedure RollbackPrepared(const transactionid: string);
-    /// <author>firmos</author>
-    /// <summary>Pings the server.</summary>
-    /// <returns>0 if the connection is OK; non zero otherwise.</returns>
+    /// <author>firmos (initially for MySQL 27032006)</author>
+    /// <summary>Ping Current Connection's server, if client was disconnected,
+    ///  the connection is resumed.</summary>
+    /// <returns>0 if succesfull or error code if any error occurs</returns>
     function PingServer: Integer;
     /// <author>aehimself</author>
     /// <summary>Immediately abort any kind of queries.</summary>
@@ -4201,11 +4202,17 @@ type
   /// <summary>Defines the Database notification interface.</summary>
   IZNotification = interface(IZInterface)
     ['{BF785C71-EBE9-4145-8DAE-40674E45EF6F}']
-
+    /// <summary>Gets the event name.</summary>
+    /// <returns>the event name for this notification.</returns>
     function GetEvent: string;
+    /// <summary>Sets a listener to the specified event.</summary>
     procedure Listen;
+    /// <summary>Removes a listener to the specified event.</summary>
     procedure Unlisten;
+    /// <summary>Sends a notification string.</summary>
     procedure DoNotify;
+    /// <summary>Checks for any pending events.</summary>
+    /// <returns>a string with incoming events??</summary>
     function CheckEvents: string;
     /// <summary>Returns the <c>Connection</c> interface
     ///  that produced this <c>Notification</c> object.</summary>

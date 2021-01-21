@@ -2238,10 +2238,9 @@ function TZParam.GetAsVariant: Variant;
     Result := BytesToVar(GetAsBytes)
   end;
 begin
-  VarClear(Result);
-  If GetIsNull then
-    TVarData(Result).VType := varNull
-  else case FSQLDataType of
+  Result := null; //VarInit(Result) changed (let the compiler do the quirk)-> see https://zeoslib.sourceforge.io/viewtopic.php?f=50&p=162991
+  If not GetIsNull then
+    case FSQLDataType of
       stBoolean:     begin
                         TVarData(Result).VType := varBoolean;
                         TVarData(Result).VBoolean := FData.pvBool;

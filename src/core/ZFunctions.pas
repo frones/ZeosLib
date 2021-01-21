@@ -69,10 +69,11 @@ type
     FFunctions: IZCollection;
     FCapacity : Integer;
     FKeys     : Array of Cardinal;
-
-    procedure SetKeyCapacity(const NewCapacity : Integer);
-    procedure SetKey(const aKey : Cardinal; const aPosition : Integer);
-    procedure RegenerateKey(const aPosition : Integer);
+    /// <summary>Sets the capacity of the internal Keystorage.</summary>
+    /// <param>"NewCapacity" the new capacity to be set.</param>
+    procedure SetKeyCapacity(const NewCapacity: Integer);
+    procedure SetKey(const aKey: Cardinal; const aPosition : Integer);
+    procedure RegenerateKey(const aPosition: Integer);
     procedure RegenerateKeys;
   protected
     property Functions: IZCollection read FFunctions write FFunctions;
@@ -80,15 +81,27 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-
+    /// <summary>Gets a number of registered functions.</summary>
+    /// <returns>a number of registered functions.</summary>
     function GetCount: Integer;
+    /// <summary>Gets a name of the functions by it's index.</summary>
+    /// <param>"Index" a functon index.</param>
+    /// <returns>a name of the function.</returns>
     function GetName(Index: Integer): string;
+    /// <summary>Gets a function reference by it's index.</summary>
+    /// <param>"Index" a function index.</param>
+    /// <returns>a function reference.</returns>
     function GetFunction(Index: Integer): IZFunction;
-
+    /// <summary>Adds a new function to this list.</summary>
+    /// <param>"Func" a function reference.</param>
     procedure Add(const Func: IZFunction);
+    /// <summary>Removes a reference to a function by it's name.</summary>
+    /// <param>"Name" a name of the function to be removed.</param>
     procedure Remove(const Name: string);
+    /// <summary>Finds a function reference by it's name.</summary>
+    /// <param>"Name" a name of the function to be found.</param>
     function FindByName(const Name: string): Integer;
-
+    /// <summary>Cleans the list of registered functions.</summary>
     procedure Clear;
   end;
 
@@ -143,13 +156,9 @@ begin
   inherited Destroy;
 end;
 
-{**
-  Sets the capacity of the internal Keystorage.
-}
 procedure TZFunctionsList.SetKeyCapacity(const NewCapacity : Integer);
 begin
-  if NewCapacity <> FCapacity then
-  begin
+  if NewCapacity <> FCapacity then begin
     SetLength(FKeys, NewCapacity);
     FCapacity := NewCapacity;
   end;
@@ -198,21 +207,13 @@ var
 begin
   Result := -1;
   for I := 0 to FFunctions.Count - 1 do
-  begin
     if aKey = FKeys[i] then
-    begin
-      if aName = (FFunctions[I] as IZFunction).Name then
-      begin
+      if aName = (FFunctions[I] as IZFunction).Name then begin
         Result := I;
         Break;
       end;
-    end;
-  end;
 end;
 
-{**
-  Finds a function reference
-}
 function TZFunctionsList.FindByName(const Name: string): Integer;
 var
   aName: string;
@@ -222,10 +223,6 @@ begin
   Result := FindByKeyAndName(Hash({$IFDEF UNICODE}RawByteString{$ENDIF}(aName)), aName);
 end;
 
-{**
-  Adds a new function to this list.
-  @param Func a function reference.
-}
 procedure TZFunctionsList.Add(const Func: IZFunction);
 var
   Index: Integer;
@@ -244,10 +241,6 @@ begin
     raise TZExpressionError.Create('Function '+Func.Name+' already defined!');
 end;
 
-{**
-  Removes a reference to a function by it's name.
-  @param Name a name of the function to be removed.
-}
 procedure TZFunctionsList.Remove(const Name: string);
 var
   Index: Integer;
@@ -260,39 +253,22 @@ begin
   end;
 end;
 
-{**
-  Cleans the list of registered functions.
-}
 procedure TZFunctionsList.Clear;
 begin
   FFunctions.Clear;
   SetKeyCapacity(0);
 end;
 
-{**
-  Gets a number of registered functions.
-  @returns a number of registered functions.
-}
 function TZFunctionsList.GetCount: Integer;
 begin
   Result := FFunctions.Count;
 end;
 
-{**
-  Gets a function reference by it's index.
-  @param Index a function index.
-  @returns a function reference.
-}
 function TZFunctionsList.GetFunction(Index: Integer): IZFunction;
 begin
   Result := FFunctions[Index] as IZFunction;
 end;
 
-{**
-  Gets a name of the functions by it's index.
-  @param Index a functon index.
-  @returns a name of the function.
-}
 function TZFunctionsList.GetName(Index: Integer): string;
 begin
   Result := (FFunctions[Index] as IZFunction).Name;

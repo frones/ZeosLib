@@ -111,7 +111,10 @@ type
   end;
 
   /// <author>EgonHugeist</author>
-  /// <summary>Defines a Interbase or Firebird specific connection interface.</summary>
+  /// <summary>Defines a Interbase or Firebird specific connection interface.
+  ///  Usualy all suplimentary methods of the IZConnection interface should be
+  ///  visible for the "generic" user. Querying that interface should be done by
+  ///  an "advanced" user.</summary>
   IZInterbaseFirebirdConnection = interface (IZConnection)
     ['{B4B4136F-3692-454A-8F22-6C5EEE247BC0}']
     /// <summary>Return Interbase/Firebird dialect number. The dialect  must be
@@ -132,11 +135,23 @@ type
     function IsInterbaseLib: Boolean;
     function GetInterbaseFirebirdPlainDriver: TZInterbaseFirebirdPlainDriver;
     function GetByteBufferAddress: PByteBuffer;
+    /// <summary>Handles possible sql errors or warnings. Each error will raise
+    ///  an EZSQLException. Warnings may be suppressed, see RaiseWarnings.</summary>
+    /// <param>"LogCategory" a logging category if LoggingListeners are
+    ///  registeted on the DriverManager</param>
+    /// <param>"StatusVector" a status vector reference. It contain information
+    ///  about errors or warnings</param>
+    /// <param>"LogMessage" a sql query command or another message which may be
+    ///  logged or added to the Exception string. See
+    ///  AddLogMsgToExceptionOrWarningMsg</param>
+    /// <param>"Sender" the calling object to be used on connection loss</param>
     procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
       StatusVector: PARRAY_ISC_STATUS; const LogMessage: SQLString;
       const Sender: IImmediatelyReleasable);
   end;
 
+  /// <author>EgonHugeist</author>
+  /// <summary>Implemnentss a TZInterbaseFirebirdConnection connection object.</summary>
   TZInterbaseFirebirdConnection = Class(TZAbstractDbcConnection)
   private
     FWeakTransactionManagerPtr: Pointer;
@@ -181,7 +196,7 @@ type
     ///  otherwise.</returns>
     function IsTransactionValid(const Value: IZTransaction): Boolean;
     procedure ClearTransactions;
-  public
+  public { implement IZInterbaseFirebirdConnection }
     /// <summary>Determine if the Client lib-module is a Firebird lib</summary>
     /// <returns><c>True</c>If it's a Firebird client lib; <c>False</c>
     ///  otherwise</returns>
@@ -199,9 +214,24 @@ type
     function GetDialect: Word;
     function GetXSQLDAMaxSize: Cardinal;
     function GetInterbaseFirebirdPlainDriver: TZInterbaseFirebirdPlainDriver;
+    /// <summary>Handles possible sql errors or warnings. Each error will raise
+    ///  an EZSQLException. Warnings may be suppressed, see RaiseWarnings.</summary>
+    /// <param>"LogCategory" a logging category if LoggingListeners are
+    ///  registeted on the DriverManager</param>
+    /// <param>"StatusVector" a status vector reference. It contain information
+    ///  about errors or warnings</param>
+    /// <param>"LogMessage" a sql query command or another message which may be
+    ///  logged or added to the Exception string. See
+    ///  AddLogMsgToExceptionOrWarningMsg</param>
+    /// <param>"Sender" the calling object to be used on connection loss</param>
     procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
       StatusVector: PARRAY_ISC_STATUS; const LogMessage: SQLString;
       const Sender: IImmediatelyReleasable);
+    /// <summary>Processes Interbase or Firebird status vector and returns array
+    ///  of status data.</summary>
+    /// <param>"StatusVector" a TARRAY_ISC_STATUS vector reference. It contains
+    ///  information about an error or warnings.</param>
+    /// <returns>an array of TZIBStatusVector records</returns>
     function InterpretInterbaseStatus(var StatusVector: PARRAY_ISC_STATUS): TZIBStatusVector;
     procedure SetActiveTransaction(const Value: IZTransaction);
     function GenerateTPB(AutoCommit, ReadOnly: Boolean; TransactIsolationLevel: TZTransactIsolationLevel;
@@ -432,6 +462,8 @@ type
   {** Implements Interbase ResultSetMetadata object. }
   TZInterbaseFirebirdResultSetMetadata = Class(TZAbstractResultSetMetadata)
   protected
+    /// <summary>Clears specified column information.</summary>
+    /// <param>"ColumnInfo" a column information object.</param>
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
     procedure LoadColumns; override;
     procedure SetColumnPrecisionFromGetColumnsRS({$IFDEF AUTOREFCOUNT}const{$ENDIF}
@@ -1336,13 +1368,6 @@ begin
   Result := FXSQLDAMaxSize;
 end;
 
-{**
-  Handles possible sql errors or warnings.
-  @param LogCategory a logging category
-  @param StatusVector a status vector. It contain information about error
-  @param LogMessage a sql query command or another message
-  @Param Sender the calling object to be use on connection loss
-}
 procedure TZInterbaseFirebirdConnection.HandleErrorOrWarning(
   LogCategory: TZLoggingCategory; StatusVector: PARRAY_ISC_STATUS;
   const LogMessage: SQLString; const Sender: IImmediatelyReleasable);
@@ -1432,11 +1457,6 @@ begin
   end;
 end;
 
-{**
-  Processes Interbase status vector and returns array of status data.
-  @param StatusVector a status vector. It contain information about error
-  @return array of TInterbaseStatus records
-}
 {$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZInterbaseFirebirdConnection.InterpretInterbaseStatus(
   var StatusVector: PARRAY_ISC_STATUS): TZIBStatusVector;
@@ -1856,10 +1876,6 @@ end;
 
 { TZInterbaseFirebirdResultSetMetadata }
 
-{**
-  Clears specified column information.
-  @param ColumnInfo a column information object.
-}
 procedure TZInterbaseFirebirdResultSetMetadata.ClearColumn(ColumnInfo: TZColumnInfo);
 begin
   ColumnInfo.ReadOnly := True;

@@ -137,50 +137,104 @@ type
     property Name: string read GetName;
   end;
 
-  {** Defines a list of functions. }
+  /// <summary>Defines a list of functions interface.</summary>
   IZFunctionsList = interface (IZInterface)
     ['{54453054-F012-475B-84C3-7E5C46187FDB}']
-
+    /// <summary>Gets a number of registered functions.</summary>
+    /// <returns>a number of registered functions.</summary>
     function GetCount: Integer;
+    /// <summary>Gets a name of the functions by it's index.</summary>
+    /// <param>"Index" a functon index.</param>
+    /// <returns>a name of the function.</returns>
     function GetName(Index: Integer): string;
+    /// <summary>Gets a function reference by it's index.</summary>
+    /// <param>"Index" a function index.</param>
+    /// <returns>a function reference.</returns>
     function GetFunction(Index: Integer): IZFunction;
-
+    /// <summary>Adds a new function to this list.</summary>
+    /// <param>"Func" a function reference.</param>
     procedure Add(const Func: IZFunction);
+    /// <summary>Removes a reference to a function by it's name.</summary>
+    /// <param>"Name" a name of the function to be removed.</param>
     procedure Remove(const Name: string);
+    /// <summary>Finds a function reference by it's name.</summary>
+    /// <param>"Name" a name of the function to be found.</param>
     function FindByName(const Name: string): Integer;
+    /// <summary>Cleans the list of registered functions.</summary>
     procedure Clear;
-
+    /// <summary>Represents a number of registered functions.</summary>
     property Count: Integer read GetCount;
+    /// <summary>Represents a name of the functions by it's index.</summary>
     property Names[Index: Integer]: string read GetName;
+    /// <summary>Represents a function reference by it's index.</summary>
     property Functions[Index: Integer]: IZFunction read GetFunction;
   end;
 
-  {** Defines an interface to expression calculator. }
+  /// <summary>Defines an interface to expression calculator.</summary>
   IZExpression = interface (IZInterface)
     ['{26F9D379-5618-446C-8999-D50FBB2F8560}']
 
+    /// <summary>Gets the current expression tokenizer.</summary>
+    /// <returns>the current expression tokenizer.</returns>
     function GetTokenizer: IZTokenizer;
+    /// <summary>Sets a new expression tokenizer.</summary>
+    /// <param>"Value" a new expression tokenizer.</param>
     procedure SetTokenizer(const Value: IZTokenizer);
+    /// <summary>Gets the current set expression string.</summary>
+    /// <returns>the current expression string.</returns>
     function GetExpression: string;
+    /// <summary>Sets a new expression string.</summary>
+    /// <param>"Value" a new expression string.</param>
     procedure SetExpression(const Value: string);
+    /// <summary>Gets a reference to the current variant manager.</summary>
+    /// <returns>a reference to the current variant manager.</returns>
     function GetVariantManager: IZVariantManager;
+    /// <summary>Sets a new variant manager.</summary>
+    /// <param>"Value" a new variant manager.</param>
     procedure SetVariantManager(const Value: IZVariantManager);
+    /// <summary>Gets a list of default variables.</summary>
+    /// <returns>a list of default variables.</returns>
     function GetDefaultVariables: IZVariablesList;
+    /// <summary>Sets a new list of variables.</summary>
+    /// <param>"Value" a new list of variables.</param>
     procedure SetDefaultVariables(const Value: IZVariablesList);
+    /// <summary>Gets a list of default functions.</summary>
+    /// <returns>a list of default functions.</returns>
     function GetDefaultFunctions: IZFunctionsList;
+    /// <summary>Sets a new list of functions.</summary>
+    /// <param>"Value" a new list of functions.</param>
     procedure SetDefaultFunctions(const Value: IZFunctionsList);
+    /// <summary>Gets the current auto variables create flag.</summary>
+    /// <returns>the auto variables create flag.</returns>
     function GetAutoVariables: Boolean;
+    /// <summary>Sets a new auto variables create flag.</summary>
+    /// <param>"Value" a new auto variables create flag.</param>
     procedure SetAutoVariables(Value: Boolean);
     /// <summary>Evaluates this expression.</summary>
     /// <returns>an evaluated expression value.</returns>
     function Evaluate: TZVariant;
+    /// <summary>Evaluates this expression.</summary>
+    /// <param>"Variables" a list of variables.</param>
+    /// <returns>an evaluated expression value.</returns>
     function Evaluate2(const Variables: IZVariablesList): TZVariant;
+    /// <summary>Evaluates this expression.</summary>
+    /// <param>"Variables" a list of variables.</param>
+    /// <param>"Functions" a list of functions.</param>
+    /// <returns>an evaluated expression value.</returns>
     function Evaluate3(const Variables: IZVariablesList;
       const Functions: IZFunctionsList): TZVariant;
+    /// <summary>Evaluates this expression.</summary>
+    /// <param>"Variables" a list of variables.</param>
+    /// <param>"Functions" a list of functions.</param>
+    /// <param>"Stack" an execution stack.</param>
+    /// <returns>an evaluated expression value.</returns>
     function Evaluate4(const Variables: IZVariablesList;
       const Functions: IZFunctionsList; Stack: TZExecutionStack): TZVariant;
 
+    /// <summary>Creates an empty variables.</summary>
+    /// <param>"Variables" a list of variables.</param>
     procedure CreateVariables(const Variables: IZVariablesList);
+    /// <summary>Clears this class from all data.</summary>
     procedure Clear;
 
     property Tokenizer: IZTokenizer read GetTokenizer write SetTokenizer;
@@ -195,7 +249,7 @@ type
       write SetAutoVariables;
   end;
 
-  {** Implements an expression calculator class. }
+  /// <summary>Implements an expression calculator class.</summary>
   TZExpression = class (TInterfacedObject, IZExpression)
   private
     FTokenizer: IZTokenizer;
@@ -204,18 +258,41 @@ type
     FVariantManager: IZVariantManager;
     FParser: TZExpressionParser;
     FAutoVariables: Boolean;
-
+    /// <summary>Gets the current expression tokenizer.</summary>
+    /// <returns>the current expression tokenizer.</returns>
     function GetTokenizer: IZTokenizer;
+    /// <summary>Sets a new expression tokenizer.</summary>
+    /// <param>"Value" a new expression tokenizer.</param>
     procedure SetTokenizer(const Value: IZTokenizer);
+    /// <summary>Gets the current set expression string.</summary>
+    /// <returns>the current expression string.</returns>
     function GetExpression: string;
+    /// <summary>Sets a new expression string.</summary>
+    /// <param>"Value" a new expression string.</param>
     procedure SetExpression(const Value: string);
+    /// <summary>Gets a reference to the current variant manager.</summary>
+    /// <returns>a reference to the current variant manager.</returns>
     function GetVariantManager: IZVariantManager;
+    /// <summary>Sets a new variant manager.</summary>
+    /// <param>"Value" a new variant manager.</param>
     procedure SetVariantManager(const Value: IZVariantManager);
+    /// <summary>Gets a list of default variables.</summary>
+    /// <returns>a list of default variables.</returns>
     function GetDefaultVariables: IZVariablesList;
+    /// <summary>Sets a new list of variables.</summary>
+    /// <param>"Value" a new list of variables.</param>
     procedure SetDefaultVariables(const Value: IZVariablesList);
+    /// <summary>Gets a list of default functions.</summary>
+    /// <returns>a list of default functions.</returns>
     function GetDefaultFunctions: IZFunctionsList;
+    /// <summary>Sets a new list of functions.</summary>
+    /// <param>"Value" a new list of functions.</param>
     procedure SetDefaultFunctions(const Value: IZFunctionsList);
+    /// <summary>Gets the current auto variables create flag.</summary>
+    /// <returns>the auto variables create flag.</returns>
     function GetAutoVariables: Boolean;
+    /// <summary>Sets a new auto variables create flag.</summary>
+    /// <param>"Value" a new auto variables create flag.</param>
     procedure SetAutoVariables(Value: Boolean);
   protected
     function NormalizeValues(var Val1, Val2: TZVariant): Boolean;
@@ -226,17 +303,32 @@ type
     ///  string.</summary>
     /// <param>"Expression" an expression string.</param>
     constructor CreateWithExpression(const Expression: string);
+    /// <summary>Destroys this object and cleanups the memory.</summary>
     destructor Destroy; override;
     /// <summary>Evaluates this expression.</summary>
     /// <returns>an evaluated expression value.</returns>
     function Evaluate: TZVariant;
+    /// <summary>Evaluates this expression.</summary>
+    /// <param>"Variables" a list of variables.</param>
+    /// <returns>an evaluated expression value.</returns>
     function Evaluate2(const Variables: IZVariablesList): TZVariant;
+    /// <summary>Evaluates this expression.</summary>
+    /// <param>"Variables" a list of variables.</param>
+    /// <param>"Functions" a list of functions.</param>
+    /// <returns>an evaluated expression value.</returns>
     function Evaluate3(const Variables: IZVariablesList;
       const Functions: IZFunctionsList): TZVariant;
+    /// <summary>Evaluates this expression.</summary>
+    /// <param>"Variables" a list of variables.</param>
+    /// <param>"Functions" a list of functions.</param>
+    /// <param>"Stack" an execution stack.</param>
+    /// <returns>an evaluated expression value.</returns>
     function Evaluate4(const Variables: IZVariablesList;
       const Functions: IZFunctionsList; Stack: TZExecutionStack): TZVariant;
-
+    /// <summary>Creates an empty variables.</summary>
+    /// <param>"Variables" a list of variables.</param>
     procedure CreateVariables(const Variables: IZVariablesList);
+    /// <summary>Clears this class from all data.</summary>
     procedure Clear;
 
     property Expression: string read GetExpression write SetExpression;
@@ -354,9 +446,6 @@ begin
   SetExpression(Expression);
 end;
 
-{**
-  Destroys this object and cleanups the memory.
-}
 destructor TZExpression.Destroy;
 begin
   FTokenizer := nil;
@@ -368,73 +457,41 @@ begin
   inherited Destroy;
 end;
 
-{**
-  Gets the current auto variables create flag.
-  @returns the auto variables create flag.
-}
 function TZExpression.GetAutoVariables: Boolean;
 begin
   Result := FAutoVariables;
 end;
 
-{**
-  Sets a new auto variables create flag.
-  @param value a new auto variables create flag.
-}
 procedure TZExpression.SetAutoVariables(Value: Boolean);
 begin
   FAutoVariables := Value;
 end;
 
-{**
-  Gets a list of default functions.
-  @returns a list of default functions.
-}
 function TZExpression.GetDefaultFunctions: IZFunctionsList;
 begin
   Result := FDefaultFunctions;
 end;
 
-{**
-  Sets a new list of functions.
-  @param Value a new list of functions.
-}
 procedure TZExpression.SetDefaultFunctions(const Value: IZFunctionsList);
 begin
   FDefaultFunctions := Value;
 end;
 
-{**
-  Gets a list of default variables.
-  @returns a list of default variables.
-}
 function TZExpression.GetDefaultVariables: IZVariablesList;
 begin
   Result := FDefaultVariables;
 end;
 
-{**
-  Sets a new list of variables.
-  @param Value a new list of variables.
-}
 procedure TZExpression.SetDefaultVariables(const Value: IZVariablesList);
 begin
   FDefaultVariables := Value;
 end;
 
-{**
-  Gets the current set expression string.
-  @returns the current expression string.
-}
 function TZExpression.GetExpression: string;
 begin
   Result := FParser.Expression;
 end;
 
-{**
-  Sets a new expression string.
-  @param Value a new expression string.
-}
 procedure TZExpression.SetExpression(const Value: string);
 begin
   FParser.Expression := Value;
@@ -442,10 +499,6 @@ begin
     CreateVariables(FDefaultVariables);
 end;
 
-{**
-  Gets a reference to the current variant manager.
-  @returns a reference to the current variant manager.
-}
 function TZExpression.GetVariantManager: IZVariantManager;
 begin
   Result := FVariantManager;
@@ -459,47 +512,28 @@ begin
     Val2 := EncodeString(Val2.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF});
 end;
 
-{**
-  Sets a new variant manager.
-  @param Value a new variant manager.
-}
 procedure TZExpression.SetVariantManager(const Value: IZVariantManager);
 begin
   FVariantManager := Value;
 end;
 
-{**
-  Gets the current expression tokenizer.
-  @returns the current expression tokenizer.
-}
 function TZExpression.GetTokenizer: IZTokenizer;
 begin
   Result := FTokenizer;
 end;
 
-{**
-  Sets a new expression tokenizer.
-  @param Value a new expression tokenizer.
-}
 procedure TZExpression.SetTokenizer(const Value: IZTokenizer);
 begin
   FTokenizer := Value;
   FParser.Tokenizer := Value;
 end;
 
-{**
-  Clears this class from all data.
-}
 procedure TZExpression.Clear;
 begin
   FParser.Clear;
   FDefaultVariables.Clear;
 end;
 
-{**
-  Creates an empty variables.
-  @param Variables a list of variables.
-}
 procedure TZExpression.CreateVariables(const Variables: IZVariablesList);
 var
   I: Integer;
@@ -518,22 +552,11 @@ begin
   Result := Evaluate3(FDefaultVariables, FDefaultFunctions);
 end;
 
-{**
-  Evaluates this expression.
-  @param Variables a list of variables.
-  @returns an evaluated expression value.
-}
 function TZExpression.Evaluate2(const Variables: IZVariablesList): TZVariant;
 begin
   Result := Evaluate3(Variables, FDefaultFunctions);
 end;
 
-{**
-  Evaluates this expression.
-  @param Variables a list of variables.
-  @param Functions a list of functions.
-  @returns an evaluated expression value.
-}
 function TZExpression.Evaluate3(const Variables: IZVariablesList;
   const Functions: IZFunctionsList): TZVariant;
 var
@@ -547,13 +570,6 @@ begin
   end;
 end;
 
-{**
-  Evaluates this expression.
-  @param Variables a list of variables.
-  @param Functions a list of functions.
-  @param Stack an execution stack.
-  @returns an evaluated expression value.
-}
 function TZExpression.Evaluate4(const Variables: IZVariablesList;
   const Functions: IZFunctionsList; Stack: TZExecutionStack): TZVariant;
 var

@@ -75,6 +75,8 @@ type
   private
     FHas_ExtendedColumnInfos: Boolean;
   protected
+    /// <summary>Clears specified column information.</summary>
+    /// <param>"ColumnInfo" a column information object.</param>
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
     procedure LoadColumns; override;
   public

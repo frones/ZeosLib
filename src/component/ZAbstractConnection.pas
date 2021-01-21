@@ -52,6 +52,7 @@
 (*
  Constributors:
   cipto,
+  firmos
   HA,
   mdeams (Mark Deams)
   miab3
@@ -115,16 +116,22 @@ uses
   ZDbcIntfs, ZDatasetUtils;
 
 type
-  //HA 090811 New Type TZLoginEvent to make Username and Password persistent
+  /// <author>HA</author>
+  /// <summary>Defines a login event.</summary>
   TZLoginEvent = procedure(Sender: TObject; var Username:string ; var Password: string) of object;
 
+  /// <author>EgonHugeist</author>
+  /// <summary>Forward declaration of the TZAbstractTransaction.</summary>
   TZAbstractTransaction = class;
 
+  /// <author>EgonHugeist</author>
+  /// <summary>Forward declaration of the TZRawCharacterTransliterateOptions.</summary>
   TZRawCharacterTransliterateOptions = class;
-  {** Represents a component which wraps a connection to database. }
 
   { TZAbstractConnection }
 
+  /// <summary>Implements an abstract connection component which wraps a
+  ///  connection to database.</summary>
   TZAbstractConnection = class(TComponent)
   private
     FUseMetaData: Boolean;
@@ -343,8 +350,9 @@ type
     property TestMode : Byte read FTestMode write FTestMode;
     {$ENDIF}
   end;
-  {** EH: Implements an abstract transaction component }
 
+  /// <author>EgonHugeist</author>
+  /// <summary>Implements an abstract transaction component.</summary>
   TZAbstractTransaction = class(TComponent)
   private
     FApplyPendingUpdatesOnCommit: Boolean;
@@ -415,8 +423,9 @@ type
     property DisposePendingUpdatesOnRollback: Boolean read FDisposePendingUpdatesOnRollback
       write FDisposePendingUpdatesOnRollback default True;
   end;
-  ////EgonHugeist
-  /// implement a raw to utf16 and vice verca setting object
+
+  /// <author>EgonHugeist</author>
+  /// <summary>Implements a raw to utf16 and vice verca setting object</summary>
   TZRawCharacterTransliterateOptions = class(TPersistent)
   private
     {$IFDEF AUTOREFCOUNT}[WEAK]{$ENDIF}FConnection: TZAbstractConnection;
