@@ -1286,9 +1286,11 @@ begin
   FNumericScale := Param.FNumericScale;
   FNull := Param.FNull;
   FDataType := Param.FDataType;
-  FParamType := Param.FParamType;
+  if FParamType = ptUnknown then
+    FParamType := Param.FParamType;
   FDecimalSeperator := Param.FDecimalSeperator;
   FSize := Param.FSize;
+  FName := Param.FName;
   if (Param.FArraySize = 0) and not FNull and (Ord(FSQLDataType) >= Ord(stString)) then begin
     { inc the refcounts }
     FData.pvPointer := nil; //avoid gpf
@@ -4345,10 +4347,15 @@ begin
 end;
 
 procedure TZParams.AssignValues(Value: TZParams);
-var I: Integer;
+var
+  I: Integer;
+  P: TZParam;
 begin
-  for i := 0 to Math.Min(Count, Value.Count) -1 do
-    GetItem(i).Assign(Value.GetItem(I));
+  for I := 0 to Value.Count - 1 do begin
+    P := FindParam(Value[I].Name);
+    if P <> nil then
+      P.Assign(Value[I]);
+  end;
 end;
 
 constructor TZParams.Create(Owner: TPersistent);
