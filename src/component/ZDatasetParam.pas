@@ -4104,6 +4104,7 @@ begin
     {$IFDEF WITH_FTSINGLE}
     DB.ftSingle:     SetAsSingle(PSingle(Buffer)^);
     {$ENDIF}
+    else raise CreateConversionError(FSQLType, FSQLType);
   end;
 end;
 

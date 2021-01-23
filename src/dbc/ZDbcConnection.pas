@@ -274,7 +274,7 @@ type
       const Database: string; const User: string; const Password: string;
       Info: TStrings); overload;
     /// <summary>Constructs this object and assignes the main properties.</summary>
-    /// <param>"ZUrl" a connection ZURL-object which exports all connection
+    /// <param>"ZUrl§ a connection ZURL-object which exports all connection
     ///  parameters.</param>
     constructor Create(const ZUrl: TZURL); overload;
     /// <summary>Destroys this object and cleanups the memory.</summary>

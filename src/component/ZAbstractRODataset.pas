@@ -670,6 +670,7 @@ type
     function GetAsSQLTimeStamp: TSQLTimeStamp; override;
     {$ENDIF}
     procedure GetText(var Text: string; DisplayText: Boolean); override;
+    procedure SetAsString(const Value: String); override;
     procedure SetAsTimeStamp(const Value: TZTimeStamp);
     procedure SetAsDateTime(Value: TDateTime); override;
     procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
@@ -708,6 +709,7 @@ type
     procedure SetAsTime(const Value: TZTime);
     procedure GetText(var Text: string; DisplayText: Boolean); override;
     procedure SetAsDateTime(Value: TDateTime); override;
+    procedure SetAsString(const Value: string); override;
     procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
   public
     property Value: TZTime read GetAsTime write SetAsTime;
@@ -7169,7 +7171,7 @@ begin
   FAdjSecFracFmt := Value;
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF} //rolling eyes
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "T" does not seem to be initialized} {$ENDIF} //rolling eyes
 procedure TZTimeField.SetAsDateTime(Value: TDateTime);
   procedure DoValidate;
   begin
@@ -7200,6 +7202,55 @@ begin
   end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF} //rolling eyes
+
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable} // uses pointer maths
+  {$WARN 5057 off : Local variable "T" does not seem to be initialized}
+{$ENDIF}
+procedure TZTimeField.SetAsString(const Value: string);
+var P, PStart, FEnd, PEnd: PChar;
+    Fractions, FractionDigits: Cardinal;
+    ExtractedCopy: String;
+    DT: TDateTime;
+    T: TZTime;
+begin
+  if Value = ''
+  then Clear
+  else begin
+    P := Pointer(Value);
+    Fractions := 0;
+    FractionDigits := 0;
+    PStart := P;
+    PEnd := PStart + Length(Value);
+    while (PStart < PEnd) and (PStart^ <> '.') do
+      Inc(PStart);
+    if PStart <> PEnd then begin
+      Inc(PStart);
+      FEnd := PStart;
+      while (Ord(FEnd^) >= Ord('0')) and (Ord(FEnd^) <= Ord('9')) do
+        Inc(FEnd);
+      FractionDigits := FEnd - PStart;
+    end else FEnd := PEnd;//satisfy compiler
+    if (FractionDigits > 0) and (FractionDigits <= Cardinal(fScale)) then begin
+      Fractions := {$IFDEF UNICODE}UnicodeToUInt32{$ELSE}RawToUInt32{$ENDIF}(PStart, FEnd);
+      Fractions := Fractions * ZSysUtils.FractionLength2NanoSecondMulTable[FractionDigits];
+      Dec(PStart);
+      ExtractedCopy := '';
+      FractionDigits := (NativeUInt(PStart)-NativeUInt(P));
+      SetLength(ExtractedCopy, (PEnd-P)-(FEnd-PStart));
+      Move(P^, Pointer(ExtractedCopy)^, FractionDigits);
+      P := Pointer(NativeUInt(ExtractedCopy)+FractionDigits);
+      Move(FEnd^, P^, (NativeUInt(PEnd)-NativeUInt(FEnd)));
+    end else
+      ExtractedCopy := Value;
+    DT := StrToTime(ExtractedCopy);
+    ZSysUtils.DecodeDateTimeToTime(DT, T);
+    T.Fractions := Fractions;
+    SetAsTime(T);
+  end;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
+
 
 procedure TZTimeField.SetAsTime(const Value: TZTime);
 var T: TZTime;
@@ -7456,6 +7507,54 @@ begin
   end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable} // uses pointer maths
+  {$WARN 5057 off : Local variable "TS" does not seem to be initialized}
+{$ENDIF}
+procedure TZDateTimeField.SetAsString(const Value: String);
+var P, PStart, FEnd, PEnd: PChar;
+    Fractions, FractionDigits: Cardinal;
+    ExtractedCopy: String;
+    DT: TDateTime;
+    TS: TZTimeStamp;
+begin
+  if Value = ''
+  then Clear
+  else begin
+    P := Pointer(Value);
+    Fractions := 0;
+    FractionDigits := 0;
+    PStart := P;
+    PEnd := PStart + Length(Value);
+    while (PStart < PEnd) and (PStart^ <> '.') do
+      Inc(PStart);
+    if PStart <> PEnd then begin
+      Inc(PStart);
+      FEnd := PStart;
+      while (Ord(FEnd^) >= Ord('0')) and (Ord(FEnd^) <= Ord('9')) do
+        Inc(FEnd);
+      FractionDigits := FEnd - PStart;
+    end else FEnd := PEnd;//satisfy compiler
+    if (FractionDigits > 0) and (FractionDigits <= Cardinal(fScale)) then begin
+      Fractions := {$IFDEF UNICODE}UnicodeToUInt32{$ELSE}RawToUInt32{$ENDIF}(PStart, FEnd);
+      Fractions := Fractions * ZSysUtils.FractionLength2NanoSecondMulTable[FractionDigits];
+      Dec(PStart);
+      ExtractedCopy := '';
+      FractionDigits := (NativeUInt(PStart)-NativeUInt(P));
+      SetLength(ExtractedCopy, (PEnd-P)-(FEnd-PStart));
+      Move(P^, Pointer(ExtractedCopy)^, FractionDigits);
+      P := Pointer(NativeUInt(ExtractedCopy)+FractionDigits);
+      Move(FEnd^, P^, (NativeUInt(PEnd)-NativeUInt(FEnd)));
+    end else
+      ExtractedCopy := Value;
+    DT := StrToDateTime(ExtractedCopy);
+    ZSysUtils.DecodeDateTimeToTimeStamp(DT, TS);
+    TS.Fractions := Fractions;
+    SetAsTimeStamp(TS);
+  end;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
 
 procedure TZDateTimeField.SetAsTimeStamp(const Value: TZTimeStamp);
 var TS: TZTimeStamp;
