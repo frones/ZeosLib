@@ -294,7 +294,7 @@ type
   protected
     FTransaction: TZAbstractTransaction;
     procedure CheckOpened;
-    procedure CheckConnected;
+    procedure CheckConnected; virtual;
     procedure CheckBiDirectional;
     procedure CheckSQLQuery; virtual;
     procedure RaiseReadOnlyError;
@@ -1966,7 +1966,8 @@ begin
     if FLastRowFetched
     then Result := CurrentRows.Count >= RowCount
     else begin
-      Connection.ShowSQLHourGlass;
+      if Connection <> nil then
+        Connection.ShowSQLHourGlass;
       try
         if (RowCount = 0) then begin
           while FetchOneRow do;
@@ -1978,7 +1979,8 @@ begin
           Result := CurrentRows.Count >= RowCount;
         end;
       finally
-        Connection.HideSQLHourGlass;
+        if Connection <> nil then
+          Connection.HideSQLHourGlass;
       end;
     end
   else Result := True;
@@ -3382,6 +3384,7 @@ var
   {$IFDEF WITH_CODEPAGE_AWARE_FIELD}
   CodePage: TSystemCodePage;
   {$ENDIF}
+  ControlsCodePage: TZControlsCodePage;
 begin
   FieldDefs.Clear;
   ResultSet := Self.ResultSet;
@@ -3403,13 +3406,17 @@ begin
     { Reads metadata from resultset. }
 
     with FResultSetMetadata do begin
+      if Connection = nil
+      then ControlsCodePage := Low(TZControlsCodePage)
+      else ControlsCodePage := Connection.ControlsCodePage;
+
     //ConSettings := ResultSet.GetConSettings;
     if GetColumnCount > 0 then
       for I := FirstDbcIndex to GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
         SQLType := GetColumnType(I);
         Prec := GetPrecision(I);
         Scale := GetScale(I);
-        FieldType := ConvertDbcToDatasetType(SQLType, Connection.ControlsCodePage, Prec);
+        FieldType := ConvertDbcToDatasetType(SQLType, ControlsCodePage, Prec);
         if (FieldType = ftVarBytes) and (Prec = Scale) then
           FieldType := ftBytes;
         (*{$IFDEF WITH_FTTIMESTAMP_FIELD}
@@ -3598,6 +3605,7 @@ var
   I, Cnt: Integer;
   OldRS: IZResultSet;
   ConSettings: PZConSettings;
+  StringFieldCodePage: Word;
 begin
   {$IFNDEF FPC}
   If (csDestroying in Componentstate) then
@@ -3609,8 +3617,8 @@ begin
   FetchCount := 0;
   CurrentRows.Clear;
   FLastRowFetched := False;
-
-  Connection.ShowSQLHourGlass;
+  if Connection <> nil then
+    Connection.ShowSQLHourGlass;
   OldRS := FResultSet;
   try
     { Creates an SQL statement and resultsets }
@@ -3657,11 +3665,14 @@ begin
 
     if not FRefreshInProgress then begin
       { Initializes accessors and buffers. }
-      ColumnList := ConvertFieldsToColumnInfo(Fields, GetTransliterateCodePage(Connection.ControlsCodePage), True);
+      if Connection = nil
+      then StringFieldCodePage := GetTransliterateCodePage(Low(TZControlsCodePage))
+      else StringFieldCodePage := GetTransliterateCodePage(Connection.ControlsCodePage);
+      ColumnList := ConvertFieldsToColumnInfo(Fields, StringFieldCodePage, True);
       Cnt := ColumnList.Count;
       try
         //the RowAccessor wideneds the fieldbuffers for calculated field
-        FRowAccessor := TZRowAccessor.Create(ColumnList, ResultSet.GetConSettings, FOpenLobStreams, FCachedLobs)
+        FRowAccessor := TZRowAccessor.Create(ColumnList, ConSettings, FOpenLobStreams, FCachedLobs)
       finally
         ColumnList.Free;
       end;
@@ -3687,7 +3698,8 @@ begin
     if FSortedFields <> '' then
       InternalSort;
   finally
-    Connection.HideSQLHourGlass;
+    if Connection <> nil then
+      Connection.HideSQLHourGlass;
     OldRS := nil;
   end;
   if FHasOutParams then
@@ -7513,13 +7525,14 @@ end;
   {$WARN 5057 off : Local variable "TS" does not seem to be initialized}
 {$ENDIF}
 procedure TZDateTimeField.SetAsString(const Value: String);
-var P, PStart, FEnd, PEnd: PChar;
+(*var P, PStart, FEnd, PEnd: PChar;
     Fractions, FractionDigits: Cardinal;
     ExtractedCopy: String;
     DT: TDateTime;
-    TS: TZTimeStamp;
+    TS: TZTimeStamp;*)
 begin
-  if Value = ''
+  inherited SetAsString(Value);
+  (*if Value = ''
   then Clear
   else begin
     P := Pointer(Value);
@@ -7552,7 +7565,7 @@ begin
     ZSysUtils.DecodeDateTimeToTimeStamp(DT, TS);
     TS.Fractions := Fractions;
     SetAsTimeStamp(TS);
-  end;
+  end;*)
 end;
 {$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
 

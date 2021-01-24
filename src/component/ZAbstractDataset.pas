@@ -553,8 +553,8 @@ begin
 
   if not GetActiveBuffer(RowBuffer) then
     raise EZDatabaseError.Create(SInternalError);
-
-  Connection.ShowSqlHourGlass;
+  if Connection <> nil then
+    Connection.ShowSqlHourGlass;
   try
     //revert Master Detail updates makes it possible to update
     // with ForeignKey contraints
@@ -619,7 +619,8 @@ begin
     end;
     {end of bangfauzan addition}
   finally
-    Connection.HideSqlHourGlass;
+    if Connection <> nil then
+      Connection.HideSqlHourGlass;
     //DetailLinks.Free;
   end;
 end;

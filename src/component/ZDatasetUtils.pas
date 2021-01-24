@@ -2047,7 +2047,7 @@ end;
 
 {$IFDEF FPC}
   {$PUSH}
-  {$WARN 5057 off : Locale variable "$1" does not seem to be initialized} //Counters is always initialized
+  {$WARN 5057 off : Locale variable "$Counters" does not seem to be initialized}
 {$ENDIF}
 Type
   TFormatLiterals = (flYear, flMonth, flDay, flHour, flMinute, flSecond, flFraction, flTimeZone);
@@ -2084,7 +2084,7 @@ end;
 
 {$IFDEF FPC}
   {$PUSH}
-  {$WARN 5057 off : Locale variable "$1" does not seem to be initialized} //Counters is always initialized
+  {$WARN 5057 off : Locale variable "Counters" does not seem to be initialized}
 {$ENDIF}
 function IsSimpleDateFormat(const Format: String): Boolean;
 var P, PEnd: PChar;
