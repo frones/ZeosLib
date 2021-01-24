@@ -7379,7 +7379,7 @@ end;
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF} //rolling eyes
 procedure TZDateTimeField.GetText(var Text: string; DisplayText: Boolean);
 var
-  Frmt: string;
+  Frmt, TimeFormat: string;
   DT, D: TDateTime;
   Delim: Char;
   TS: TZTimeStamp;
@@ -7401,14 +7401,14 @@ begin
          (Delim <> {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator)
       then Frmt := ZSysUtils.ReplaceChar(Delim, {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator, {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat)
       else Frmt := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
-      if (FAdjSecFracFmt and (FScale > 0) and (TS.Fractions > 0) ) or
-         (TS.Hour <> 0) or (TS.Minute <> 0) or (TS.Second <> 0) then begin
-        Frmt := Frmt + ' ';
+      TimeFormat := ReplaceChar('m','n',ReplaceChar('M','n',{$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat));
+      if (FAdjSecFracFmt and (FScale > 0)) or
+         ((TS.Hour <> 0) or (TS.Minute <> 0) or (TS.Second <> 0)) then begin
         if FindFirstTimeFormatDelimiter({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat, Delim) and
-           (Delim <> {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator)
-        then Frmt := Frmt + ZSysUtils.ReplaceChar(Delim, {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator, {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat)
-        else Frmt := Frmt + {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
+           (Delim <> {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator) then
+         TimeFormat := ReplaceChar(Delim, {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator, TimeFormat);
       end;
+      Frmt := Frmt +' '+TimeFormat;
     end;
     if Frmt <> FLastFormat[B] then begin
       FLastFormat[B] := Frmt;

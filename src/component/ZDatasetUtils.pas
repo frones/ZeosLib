@@ -1989,7 +1989,9 @@ MoveLast:
       Move(MSEnd^, DotPos^, L * SizeOf(Char));
   end else begin
     Result := Frmt;
-    if DotPos <> nil then begin
+    if (DotPos <> nil) and (SPos <> nil) and (DotPos < SPos) then
+      DotPos := nil;
+    if (DotPos <> nil) then begin
       MSEnd := DotPos+1;
       SetLength(Result, L+Scale);
       DotPos := Pointer(Result);
