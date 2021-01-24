@@ -581,10 +581,10 @@ type
     property DataSetField: TDataSetField read FDataSetField write SetDataSetField;
     {$ENDIF}
     property LastRowFetched: Boolean read FLastRowFetched;
-  published
     property Transaction: TZAbstractTransaction read FTransaction
       write SetTransaction;
     property Connection: TZAbstractConnection read FConnection write SetConnection;
+  published
     property SortedFields: string read FSortedFields write SetSortedFields;
     property SortType : TSortType read FSortType write SetSortType
       default stAscending;

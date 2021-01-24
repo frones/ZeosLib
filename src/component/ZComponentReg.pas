@@ -72,6 +72,7 @@ uses
   ComponentEditors,
   LResources,
 {$ELSE}
+  Windows,
 {$IFNDEF UNIX}
 {$IFNDEF FPC}
   ZUpdateSqlEditor,
@@ -101,7 +102,7 @@ var                                             //
 {$ENDIF}                                        // **** Pitfiend addition end
 begin
   RegisterComponents(ZEOS_DB_PALETTE, [TZConnection,
-    TZTransaction, TZReadOnlyQuery, TZQuery, TZTable, TZUpdateSQL,
+    TZTransaction, TZReadOnlyQuery, TZQuery, TZTable, TZMemTable, TZUpdateSQL,
     TZConnectionGroup, TZGroupedConnection,
     TZStoredProc, TZSQLMetadata, TZSQLProcessor, TZSQLMonitor, TZSequence
     {$IFDEF ENABLE_INTERBASE}, TZIBEventAlerter {$ENDIF}
@@ -117,9 +118,9 @@ begin
 {$IFNDEF FPC}                                   // **** Pitfiend addition start
 {$IF DECLARED(IOTAAboutBoxServices)}
     if Assigned(SplashScreenServices) then
-       SplashScreenServices.AddPluginBitmap('ZEOSLib Open Source Database Objects', 0); // to have a nice icon, a .res file must be included, then replace 0 by loadbitmap(HInstance, 'RESOURCENAME') 
+       SplashScreenServices.AddPluginBitmap('ZEOSLib Open Source Database Objects', loadbitmap(HInstance, 'ZEOSLIBSPLASH')); // to have a nice icon, a .res file must be included, then replace 0 by loadbitmap(HInstance, 'RESOURCENAME')
     if (BorlandIDEServices<>nil) and supports(BorlandIDEServices, IOTAAboutBoxServices, AboutSvcs) then
-       AboutSvcs.AddPluginInfo('ZEOSLib', 'ZEOSLib'+sLineBreak+'OpenSource database components collection'+sLineBreak+sLineBreak+'Forum:http://zeoslib.sourceforge.net', 0, False, 'OpenSource'); // replace 0 by loadbitmap(HInstance, 'RESOURCENAME')
+       AboutSvcs.AddPluginInfo('ZEOSLib', 'ZEOSLib'+sLineBreak+'OpenSource database components collection'+sLineBreak+sLineBreak+'Forum:http://zeoslib.sourceforge.net', loadbitmap(HInstance, 'ZEOSLIBSPLASH'), False, 'OpenSource'); // replace 0 by loadbitmap(HInstance, 'ZEOSLIBSPLASH')
 {$IFEND}
 {$ENDIF}                                        // **** Pitfiend addition end
 
