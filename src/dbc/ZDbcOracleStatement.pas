@@ -218,16 +218,12 @@ type
   /// <summary>Implements a Oracle UTF16 prepared statement</summary>
   TZOraclePreparedStatement_W = Class(TZAbstractOraclePreparedStatement, IZPreparedStatement)
   protected
-    FCachedQueryUni, FParamNames: TUnicodeStringDynArray;
-    FIsParamIndex: TBooleanDynArray;
     class function GetBindListClass: TZBindListClass; override;
-    property IsParamIndex: TBooleanDynArray read FIsParamIndex;
   public
     function GetUnicodeEncodedSQL(const SQL: SQLString): UnicodeString; override;
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
       ParamType: TZProcedureColumnType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
       Scale: LengthInt = 0); override;
-    procedure Unprepare; override;
   End;
 
   /// <author>EgonHugeist</author>
@@ -2898,12 +2894,6 @@ begin
     end;
     OCIBindValue.indp[0] := -1;
   end;
-end;
-
-procedure TZOraclePreparedStatement_W.Unprepare;
-begin
-  inherited Unprepare;
-  SetLength(FCachedQueryUni, 0);
 end;
 
 { TZOracleCallableStatement_W }

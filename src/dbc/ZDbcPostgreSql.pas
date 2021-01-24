@@ -156,7 +156,6 @@ type
     FClientSettingsChanged: Boolean;
     FIs_bytea_output_hex: Boolean;
     FCheckFieldVisibility: Boolean;
-    FNoTableInfoCache: Boolean;
     fPlainDriver: TZPostgreSQLPlainDriver;
     FLastWarning: EZSQLWarning;
     function HasMinimumServerVersion(MajorVersion, MinorVersion, SubVersion: Integer): Boolean;
@@ -693,7 +692,6 @@ begin
   FOidAsBlob := StrToBoolEx(Info.Values[DSProps_OidAsBlob]);
   FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
   FCheckFieldVisibility := StrToBoolEx(Info.Values[ConnProps_CheckFieldVisibility]);
-  FNoTableInfoCache := StrToBoolEx(Info.Values[ConnProps_NoTableInfoCache]);
 
   FNoticeProcessor := NoticeProcessorDispatcher;
   FNoticeReceiver  := NoticeReceiverDispatcher;

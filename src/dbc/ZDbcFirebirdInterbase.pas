@@ -1548,6 +1548,7 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Sender" not used} {$ENDIF}
 procedure TZInterbaseFirebirdConnection.OnPropertiesChange(Sender: TObject);
 var HC: Boolean;
     TPB: RawByteString;
@@ -1560,6 +1561,7 @@ begin
     TransactionParameterPufferChanged;
   FHardCommit := HC;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZInterbaseFirebirdConnection.ReleaseTransaction(
   const Value: IZTransaction);
