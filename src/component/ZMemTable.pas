@@ -57,7 +57,7 @@ interface
 
 uses
   SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
+  {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF},
   ZCompatibility,
   ZDbcIntfs,
   ZAbstractDataset, ZAbstractRODataset;
