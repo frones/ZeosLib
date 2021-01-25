@@ -113,11 +113,22 @@ procedure RaiseYubiOtpError(Status: TYubiOtpStatus);
 ///  The status retuned by the validation server. yosOk means the password is ok.
 /// </returns>
 function VerifyYubiOtp(const BaseUrl: String; OTP: String; out RemainingPassword: String; const ClientId: Integer; const SecretKey: String = ''): TYubiOtpStatus;
+/// <summary>
+///  This function extracts the public identity of a yubikey from a password.
+/// </summary>
+/// <param name="Password">
+///  The password as supplied by the user.
+/// </param>
+function GetYubikeyIdentity(Password: String): String;
 
 implementation
 
 uses
   fphttpclient, opensslsockets, base64;
+
+const
+  DefaultOtpLen = 44; // a Yubikey OTP usually is 44 characters long
+  DefaultPublicIdentityLen = 12; // a yubikex public identity usually is 12 characters long
 
 function EncodeHmacSha1DigestBase64(const Digest: THMACSHA1Digest):String;
 var
@@ -172,8 +183,6 @@ begin
 end;
 
 function VerifyYubiOtp(const BaseUrl: String; OTP: String; out RemainingPassword: String; const ClientId: Integer; const SecretKey: String = ''): TYubiOtpStatus;
-const
-  DefaultOtpLen = 44; // a Yubikey OTP usually is 44 characters long
 var
   OtpLen: Integer;
   URL: String;
@@ -252,6 +261,16 @@ begin
   finally
     FreeAndNil(Lines);
   end;
+end;
+
+function GetYubikeyIdentity(Password:String): String;
+begin
+  if length(Password) < DefaultOtpLen then begin
+    Result := '';
+    Exit;
+  end;
+
+  Result := Copy(Password, Length(Password) - DefaultOtpLen + 1, DefaultPublicIdentityLen);
 end;
 
 initialization
