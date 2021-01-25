@@ -7526,14 +7526,14 @@ end;
   {$WARN 5057 off : Local variable "TS" does not seem to be initialized}
 {$ENDIF}
 procedure TZDateTimeField.SetAsString(const Value: String);
-(*var P, PStart, FEnd, PEnd: PChar;
+var P, PStart, FEnd, PEnd, DateTimeDelimiter: PChar;
     Fractions, FractionDigits: Cardinal;
     ExtractedCopy: String;
     DT: TDateTime;
-    TS: TZTimeStamp;*)
+    TS: TZTimeStamp;
 begin
-  inherited SetAsString(Value);
-  (*if Value = ''
+  //inherited SetAsString(Value);
+  if Value = ''
   then Clear
   else begin
     P := Pointer(Value);
@@ -7541,8 +7541,14 @@ begin
     FractionDigits := 0;
     PStart := P;
     PEnd := PStart + Length(Value);
-    while (PStart < PEnd) and (PStart^ <> '.') do
+    DatTimeDelimiter := nil;
+    while (PStart < PEnd) and (PStart^ <> '.') do begin
       Inc(PStart);
+      if (PStart^ = '.') and (DateTimeDelimiter = nil) then
+        Inc(PStart)
+      else if (PStart^ = ' ') or (Ord(PStart^) or $20 = Ord('t')) then
+        DateTimeDelimiter := PStart;
+    end;
     if PStart <> PEnd then begin
       Inc(PStart);
       FEnd := PStart;
@@ -7566,7 +7572,7 @@ begin
     ZSysUtils.DecodeDateTimeToTimeStamp(DT, TS);
     TS.Fractions := Fractions;
     SetAsTimeStamp(TS);
-  end;*)
+  end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
 
