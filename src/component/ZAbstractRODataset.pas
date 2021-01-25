@@ -7120,7 +7120,7 @@ begin
           Frmt := ZSysUtils.ReplaceChar(Delim, Sep, Frmt);
       end;
       FSimpleFormat[b] := IsSimpleTimeFormat(Frmt);
-      if FAdjSecFracFmt and (FScale > 0)
+      if FAdjSecFracFmt and (FScale > 0) and (T.Fractions > 0)
       then FFractionFormat[b] := ConvertAsFractionFormat(Frmt, FScale, not FSimpleFormat[b], FFractionLen[b])
       else FFractionFormat[b] := Frmt;
     end;
@@ -7385,8 +7385,7 @@ var
   TS: TZTimeStamp;
   I: LengthInt;
   Fraction: Cardinal;
-  B: Boolean;
-  B2: Boolean;
+  B, B2, TimeAdded: Boolean;
   P: PChar;
   Millis: Word;
 begin
@@ -7394,6 +7393,7 @@ begin
   then Text := ''
   else begin
     B := DisplayText and (DisplayFormat <> '');
+    TimeAdded := False;
     if B
     then Frmt := DisplayFormat
     else begin //improve the "C" token of FormatDateTime
@@ -7402,18 +7402,19 @@ begin
       then Frmt := ZSysUtils.ReplaceChar(Delim, {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator, {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat)
       else Frmt := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
       TimeFormat := ReplaceChar('m','n',ReplaceChar('M','n',{$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat));
-      if (FAdjSecFracFmt and (FScale > 0)) or
-         ((TS.Hour <> 0) or (TS.Minute <> 0) or (TS.Second <> 0)) then begin
+      //append time part only if there is "something" to display
+      if ((TS.Hour <> 0) or (TS.Minute <> 0) or (TS.Second <> 0) or (TS.Fractions <> 0)) then begin
         if FindFirstTimeFormatDelimiter({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat, Delim) and
            (Delim <> {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator) then
-         TimeFormat := ReplaceChar(Delim, {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator, TimeFormat);
+        TimeFormat := ReplaceChar(Delim, {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator, TimeFormat);
+        Frmt := Frmt +' '+TimeFormat;
+        TimeAdded := True;
       end;
-      Frmt := Frmt +' '+TimeFormat;
     end;
     if Frmt <> FLastFormat[B] then begin
       FLastFormat[B] := Frmt;
       FSimpleFormat[b] := IsSimpleDateTimeFormat(Frmt);
-      if FAdjSecFracFmt and (FScale > 0)
+      if TimeAdded and (FAdjSecFracFmt and (FScale > 0) and (TS.Fractions <> 0))
       then FFractionFormat[b] := ConvertAsFractionFormat(Frmt, FScale, not FSimpleFormat[b], FFractionLen[b])
       else FFractionFormat[b] := Frmt;
     end;

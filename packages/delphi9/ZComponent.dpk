@@ -42,6 +42,7 @@ contains
   ZDatasetUtils in '..\..\src\component\ZDatasetUtils.pas',
   ZGroupedConnection in '..\..\src\component\ZGroupedConnection.pas',
   ZIBEventAlerter in '..\..\src\component\ZIBEventAlerter.pas',
+  ZMemTable in '..\..\src\component\ZMemTable.pas',
   ZPgEventAlerter in '..\..\src\component\ZPgEventAlerter.pas',
   ZSequence in '..\..\src\component\ZSequence.pas',
   ZSqlMetadata in '..\..\src\component\ZSqlMetadata.pas',

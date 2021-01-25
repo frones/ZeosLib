@@ -1990,7 +1990,9 @@ MoveLast:
   end else begin
     Result := Frmt;
     if (DotPos <> nil) and (SPos <> nil) and (DotPos < SPos) then
-      DotPos := nil;
+      if (SPos < PEnd) and ((SPos+1)^ = '.')
+      then DotPos := (SPos+1)
+      else DotPos := nil;
     if (DotPos <> nil) then begin
       MSEnd := DotPos+1;
       SetLength(Result, L+Scale);
