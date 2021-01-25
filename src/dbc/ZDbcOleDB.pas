@@ -246,7 +246,10 @@ type
 
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
-
+    /// <summary>Returns the ServicerProvider for this connection. For OLEDB
+    ///  the connection must be opened to determine the provider. Otherwise
+    ///  the provider is tested against the driver names</summary>
+    /// <returns>the ServerProvider or spUnknown if not known.</returns>
     function GetServerProvider: TZServerProvider; override;
     function GetHostVersion: Integer; override;
   public { IZOleDBConnection }

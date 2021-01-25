@@ -254,6 +254,8 @@ type
   public
     function GetServerAnsiCodePage: Word;
     function GetPlainDriver: TZDBLIBPLainDriver;
+    /// <summary>Returns the ServicerProvider for this connection.</summary>
+    /// <returns>the ServerProvider or spUnknown if not known.</returns>
     function GetServerProvider: TZServerProvider; override;
   end;
 

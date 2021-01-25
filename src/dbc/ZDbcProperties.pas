@@ -147,7 +147,7 @@ const
   ///  Example: CharacterSet=latin1:1252/1 or CharacterSet=utf8:65001/4
   /// </remarks>
   ConnProps_Characterset = 'CharacterSet';
-  /// <PropertyType>String</PropertyType>
+  /// <type>String</type>
   /// <Alias>CharacterSet</Alias>
   /// <Associates>ConnProps_Charset_NONE_Alias</Associates>
   /// <usage>Connection</usage>
@@ -169,7 +169,7 @@ const
   ///  Example: codepage=latin1:1252/1 or codepage=utf8:65001/4
   /// </remarks>
   ConnProps_CodePage = 'codepage';
-  /// <PropertyType>Enumerator</PropertyType>
+  /// <type>Enumerator</type>
   /// <Values>DB_CP|CP_UTF8|DefaultSystemCodePage</Values>
   /// <Alias>RawStringEncoding</Alias>
   /// <Associates>ConnProps_RawStringEncoding</Associates>
@@ -178,7 +178,7 @@ const
   /// <summary>dreprecaded use ConnProps_RawStringEncoding  instead;
   ///  See ConnProps_RawStringEncoding</summary>
   ConnProps_ControlsCP = 'controls_cp';
-  /// <PropertyType>Enumerator</PropertyType>
+  /// <type>Enumerator</type>
   /// <Values>DB_CP|CP_UTF8|DefaultSystemCodePage</Values>
   /// <Alias>RawStringEncoding</Alias>
   /// <Associates>ConnProps_RawStringEncoding</Associates>
@@ -189,37 +189,37 @@ const
   ///  UTF16 columns/parameters/connections on zdbc. These enum-names are mapped
   ///  the the W2A2WEncodingSource of the connection settings records.</summary>
   ConnProps_RawStringEncoding = 'RawStringEncoding';
-  /// <PropertyType>Number</PropertyType>
+  /// <type>Number</type>
   /// <usage>Connection</usage>
   /// <syntax>Properties.Values[ConnProps_Timeout]={value}</syntax>
   /// <summary>Defines the connection/login timeout in seconds. A value smaller
   ///  than 1 means infinate.</summary>
   ConnProps_Timeout = 'timeout';
-  /// <PropertyType>String</PropertyType>
+  /// <type>String</type>
   /// <usage>Connection</usage>
   /// <syntax>Properties.Values[ConnProps_DateReadFormat]={value}</syntax>
   /// <summary>Format to read a date from a database, like YYYY-MM-DD</summary>
   /// <remarks>Just simple formats are supported. ISO 8601 is prefered.
   ///  Weekdays, Monthnames and so on are not supported</remarks>
   ConnProps_DateReadFormat = 'DateReadFormat';
-  /// <PropertyType>String</PropertyType>
+  /// <type>String</type>
   /// <usage>Connection</usage>
   /// <syntax>Properties.Values[ConnProps_DateWriteFormat]={value}</syntax>
   /// <summary>Format to write a date into a database, like YYYY-MM-DD</summary>
   /// <remarks>Just simple formats are supported. ISO 8601 is prefered.
   ///  Weekdays, Monthnames and so on are not supported</remarks>
   ConnProps_DateWriteFormat = 'DateWriteFormat';
-  /// <PropertyType>String</PropertyType>
+  /// <type>String</type>
   /// <usage>Connection</usage>
   /// <syntax>Properties.Values[ConnProps_TimeReadFormat]={value}</syntax>
   /// <summary>Format to read a time value from a database, like HH:MM:SS.FFF</summary>
   ConnProps_TimeReadFormat = 'TimeReadFormat';
-  /// <PropertyType>String</PropertyType>
+  /// <type>String</type>
   /// <usage>Connection</usage>
   /// <syntax>Properties.Values[ConnProps_TimeReadFormat]={value}</syntax>
   /// <summary>Format to write a time value into a database, like HH:MM:SS.FFF</summary>
   ConnProps_TimeWriteFormat = 'TimeWriteFormat';
-  /// <PropertyType>String</PropertyType>
+  /// <type>String</type>
   /// <usage>Connection</usage>
   /// <syntax>Properties.Values[ConnProps_DateTimeReadFormat]={value}</syntax>
   /// <summary>Format to read a timestamp from database, like YYYY-MM-DD HH:NN:SS.F</summary>
@@ -227,7 +227,7 @@ const
   ///  If the driver(f.e. SQLite) supports the 'T' delimiter do not hasitate to
   ///  use it! Weekdays, Monthnames and so on are not supported</remarks>
   ConnProps_DateTimeReadFormat = 'DatetimeReadFormat';
-  /// <PropertyType>String</PropertyType>
+  /// <type>String</type>
   /// <usage>Connection</usage>
   /// <syntax>Properties.Values[ConnProps_DateTimeWriteFormat]={value}</syntax>
   /// <summary>Format to write a timestamp into database, like YYYY-MM-DD HH:NN:SS.F</summary>
@@ -235,7 +235,7 @@ const
   ///  If the driver(f.e. SQLite) supports the 'T' delimiter do not hasitate to
   ///  use it! Weekdays, Monthnames and so on are not supported</remarks>
   ConnProps_DateTimeWriteFormat = 'DatetimeWriteFormat';
-  /// <PropertyType>String</PropertyType>
+  /// <type>String</type>
   /// <summary>Sets TZAbstractDatabaseInfo.IdentifierQuotes property. The quote
   ///  chars are relevant for Postgres dollar quoting, multi drivers like ado,
   ///  odbc, OleDB same as SQLite where all known identifier quotes are allowed
@@ -512,9 +512,6 @@ const
   // http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=11174
   // http://http://zeoslib.sourceforge.net/viewtopic.php?p=16646&sid=130
   ConnProps_CheckFieldVisibility = 'CheckFieldVisibility';
-  // Type: BOOLEAN
-  // If not set, use cached table info
-  ConnProps_NoTableInfoCache = 'NoTableInfoCache';
   // Type: STR
   // Value used in 'SET standard_conforming_strings = <Value>' query on connect,
   // refer to Postgre manual for details
@@ -554,8 +551,8 @@ const
   // fetch row by row from Server -> do not cache the results in libpq
   DSProps_SingleRowMode = 'SingleRowMode';
   // Type: BOOLEAN
-  // force binary results to be retieved from server. supported since Protocol V3
-  // except libs like pgbouncer which have no pqexecparams/pqexecprepared
+  // force binary results to be retrieved from server. supported since Protocol
+  // V3 except libs like pgbouncer which have no pqexecparams/pqexecprepared
   DSProps_BinaryWireResultMode = 'BinaryWireResultMode';
 {$ENDIF}
 
@@ -582,13 +579,16 @@ const
   // Type: STR, like Domain1[, Domain2, ...] (separators: "," or ";")
   // List of domains; if defined, fields of that domains will get GUID type
   ConnProps_GUIDDomains = 'GUIDDomains';
-  // Type: enum, <INET | WNET | XNET | LOCAL>
-  // can be used to define the firebird protocol to be used
-  // for FB 3.0 this will enable the construction of url style connection strings
-  // see firebird 3.0 release notes
+  /// <type>Enumerator</type>
+  /// <values>INET|WNET|XNET|LOCAL</values>
+  /// <usage>Connection</usage>
+  /// <syntax>Properties.Values[ConnProps_FBProtocol]={value}</syntax>
+  /// <summary>can be used to define the firebird protocol to be used
+  /// for FB 3.0 this will enable the construction of url style connection
+  /// strings see firebird 3.0 release notes</summary>
   ConnProps_FBProtocol = 'fb_protocol';
 
-  /// <PropertyType>String</PropertyType>
+  /// <type>String</type>
   /// <Associates>ConnProps_Characterset</Associates>
   /// <protocols>firebird,interbase</protocols>
   /// <usage>Connection</usage>

@@ -248,6 +248,31 @@ type
       const {%H-}TableNamePattern: string; const {%H-}ColumnNamePattern: string): IZResultSet; virtual;
     function UncachedGetTablePrivileges(const {%H-}Catalog: string; const {%H-}SchemaPattern: string;
       const {%H-}TableNamePattern: string): IZResultSet; virtual;
+    /// <summary>Gets a description of the access rights for a table's columns.
+    ///
+    ///  Only privileges matching the column name criteria are
+    ///  returned. They are ordered by COLUMN_NAME and PRIVILEGE.
+    ///
+    ///  Each privilige description has the following columns:
+ 	  ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+ 	  ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+ 	  ///  <c>TABLE_NAME</c> String => table name
+ 	  ///  <c>COLUMN_NAME</c> String => column name
+ 	  ///  <c>GRANTOR</c> => grantor of access (may be null)
+ 	  ///  <c>GRANTEE</c> String => grantee of access
+ 	  ///  <c>PRIVILEGE</c> String => name of access (SELECT,
+    ///     INSERT, UPDATE, REFRENCES, ...)
+ 	  ///  <c>IS_GRANTABLE</c> String => "YES" if grantee is permitted
+    ///   to grant to others; "NO" if not; null if unknown</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <param>"ColumnNamePattern" a column name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a privilege description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function UncachedGetColumnPrivileges(const {%H-}Catalog: string; const {%H-}Schema: string;
       const {%H-}Table: string; const {%H-}ColumnNamePattern: string): IZResultSet; virtual;
 
@@ -467,8 +492,65 @@ type
     /// see GetSearchStringEscape</remarks>
     function GetColumns(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet;
+{**
+  Gets a description of the access rights for each table available
+  in a catalog. Note that a table privilege applies to one or
+  more columns in the table. It would be wrong to assume that
+  this priviledge applies to all columns (this may be true for
+  some systems but is not true for all.)
+
+  <P>Only privileges matching the schema and table name
+  criteria are returned.  They are ordered by TABLE_SCHEM,
+  TABLE_NAME, and PRIVILEGE.
+
+  <P>Each privilige description has the following columns:
+   <OL>
+ 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
+ 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
+ 	<LI><B>TABLE_NAME</B> String => table name
+ 	<LI><B>GRANTOR</B> => grantor of access (may be null)
+ 	<LI><B>GRANTEE</B> String => grantee of access
+ 	<LI><B>PRIVILEGE</B> String => name of access (SELECT,
+       INSERT, UPDATE, REFRENCES, ...)
+ 	<LI><B>IS_GRANTABLE</B> String => "YES" if grantee is permitted
+       to grant to others; "NO" if not; null if unknown
+   </OL>
+
+  @param catalog a catalog name; "" retrieves those without a
+  catalog; null means drop catalog name from the selection criteria
+  @param schemaPattern a schema name pattern; "" retrieves those
+  without a schema
+  @param tableNamePattern a table name pattern
+  @return <code>ResultSet</code> - each row is a table privilege description
+  @see #getSearchStringEscape
+}
     function GetTablePrivileges(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string): IZResultSet;
+    /// <summary>Gets a description of the access rights for a table's columns
+    ///  from a cache.
+    ///  Only privileges matching the column name criteria are
+    ///  returned. They are ordered by COLUMN_NAME and PRIVILEGE.
+    ///
+    ///  Each privilige description has the following columns:
+ 	  ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+ 	  ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+ 	  ///  <c>TABLE_NAME</c> String => table name
+ 	  ///  <c>COLUMN_NAME</c> String => column name
+ 	  ///  <c>GRANTOR</c> => grantor of access (may be null)
+ 	  ///  <c>GRANTEE</c> String => grantee of access
+ 	  ///  <c>PRIVILEGE</c> String => name of access (SELECT,
+    ///     INSERT, UPDATE, REFRENCES, ...)
+ 	  ///  <c>IS_GRANTABLE</c> String => "YES" if grantee is permitted
+    ///   to grant to others; "NO" if not; null if unknown</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <param>"ColumnNamePattern" a column name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a privilege description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function GetColumnPrivileges(const Catalog: string; const Schema: string;
       const Table: string; const ColumnNamePattern: string): IZResultSet;
     function GetPrimaryKeys(const Catalog: string; const Schema: string;
@@ -3264,34 +3346,6 @@ begin
   Result := ConstructVirtualResultSet(TableColColumnsDynArray);
 end;
 
-{**
-  Gets a description of the access rights for a table's columns.
-
-  <P>Only privileges matching the column name criteria are
-  returned.  They are ordered by COLUMN_NAME and PRIVILEGE.
-
-  <P>Each privilige description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>COLUMN_NAME</B> String => column name
- 	<LI><B>GRANTOR</B> => grantor of access (may be null)
- 	<LI><B>GRANTEE</B> String => grantee of access
- 	<LI><B>PRIVILEGE</B> String => name of access (SELECT,
-       INSERT, UPDATE, REFRENCES, ...)
- 	<LI><B>IS_GRANTABLE</B> String => "YES" if grantee is permitted
-       to grant to others; "NO" if not; null if unknown
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those without a schema
-  @param table a table name
-  @param columnNamePattern a column name pattern
-  @return <code>ResultSet</code> - each row is a column privilege description
-  @see #getSearchStringEscape
-}
 function TZAbstractDatabaseMetadata.GetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 var
@@ -3313,72 +3367,12 @@ begin
   end;
 end;
 
-{**
-  Gets a description of the access rights for a table's columns.
-
-  <P>Only privileges matching the column name criteria are
-  returned.  They are ordered by COLUMN_NAME and PRIVILEGE.
-
-  <P>Each privilige description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>COLUMN_NAME</B> String => column name
- 	<LI><B>GRANTOR</B> => grantor of access (may be null)
- 	<LI><B>GRANTEE</B> String => grantee of access
- 	<LI><B>PRIVILEGE</B> String => name of access (SELECT,
-       INSERT, UPDATE, REFRENCES, ...)
- 	<LI><B>IS_GRANTABLE</B> String => "YES" if grantee is permitted
-       to grant to others; "NO" if not; null if unknown
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those without a schema
-  @param table a table name
-  @param columnNamePattern a column name pattern
-  @return <code>ResultSet</code> - each row is a column privilege description
-  @see #getSearchStringEscape
-}
 function TZAbstractDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 begin
     Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
 end;
 
-{**
-  Gets a description of the access rights for each table available
-  in a catalog. Note that a table privilege applies to one or
-  more columns in the table. It would be wrong to assume that
-  this priviledge applies to all columns (this may be true for
-  some systems but is not true for all.)
-
-  <P>Only privileges matching the schema and table name
-  criteria are returned.  They are ordered by TABLE_SCHEM,
-  TABLE_NAME, and PRIVILEGE.
-
-  <P>Each privilige description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>GRANTOR</B> => grantor of access (may be null)
- 	<LI><B>GRANTEE</B> String => grantee of access
- 	<LI><B>PRIVILEGE</B> String => name of access (SELECT,
-       INSERT, UPDATE, REFRENCES, ...)
- 	<LI><B>IS_GRANTABLE</B> String => "YES" if grantee is permitted
-       to grant to others; "NO" if not; null if unknown
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param tableNamePattern a table name pattern
-  @return <code>ResultSet</code> - each row is a table privilege description
-  @see #getSearchStringEscape
-}
 function TZAbstractDatabaseMetadata.GetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 var

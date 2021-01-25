@@ -1247,6 +1247,14 @@ function ASCII7ToUnicodeString(const Src: RawByteString): UnicodeString; overloa
 function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): UnicodeString; overload;
 
 /// <author>EgonHugeist</author>
+/// <summary>convert a raw buffer into an UnicodeString by widening the
+///  bytes to words. This is safe only if all bytes are less or equal to 127</summary>
+/// <param>"Src" the raw buffer to be converted.</param>
+/// <param>"Len" the length in bytes of the buffer.</param>
+/// <param>"Result" a referenc to the converted UnicodeString</param>
+procedure ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt; var Result: UnicodeString); overload;
+
+/// <author>EgonHugeist</author>
 /// <summary>convert a UnicodeString into an RawbyteString by shorten the
 ///  words to bytes. This is safe only if all words are less or equal to 127</summary>
 /// <param>"Src" the UnicodeString to be converted.</param>
@@ -1260,6 +1268,14 @@ function UnicodeStringToASCII7(const Src: UnicodeString): RawByteString; overloa
 /// <param>"Len" the length in words of the buffer.</param>
 /// <returns>a converted RawByteString</returns>
 function UnicodeStringToASCII7(const Src: PWideChar; const Len: LengthInt): RawByteString; overload;
+
+/// <author>EgonHugeist</author>
+/// <summary>convert a UTF16 buffer into an RawbyteString by shorten the
+///  words to bytes. This is safe only if all words are less or equal to 127</summary>
+/// <param>"Src" the UTF16 buffer to be converted.</param>
+/// <param>"Len" the length in words of the buffer.</param>
+/// <param>"Result" a reference to the converted RawByteString</returns>
+procedure UnicodeStringToASCII7(const Src: PWideChar; const Len: LengthInt; var Result: RawByteString); overload;
 
 /// <author>EgonHugeist</author>
 /// <summary>convert a float value into a RawByteString using ffGeneral format.
@@ -5507,12 +5523,65 @@ begin
   end;
 end;
 
+procedure ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt; var Result: UnicodeString);
+var Source: PByteArray absolute Src;
+  PEnd: PAnsiChar;
+  Dest: PWordArray;
+begin
+  if Src = nil then begin
+    Result := '';
+    Exit;
+  end;
+  System.SetString(Result, nil, Len);
+  Dest := Pointer(Result);
+  PEnd := PAnsiChar(Source)+Len-8;
+  while PAnsiChar(Source) < PEnd do begin//making a octed processing loop
+    Dest[0] := Source[0];
+    Dest[1] := Source[1];
+    Dest[2] := Source[2];
+    Dest[3] := Source[3];
+    Dest[4] := Source[4];
+    Dest[5] := Source[5];
+    Dest[6] := Source[6];
+    Dest[7] := Source[7];
+    Inc(PWideChar(Dest), 8);
+    Inc(PAnsiChar(Src), 8);
+  end;
+  Inc(PEnd, 8);
+  while PAnsiChar(Source) < PEnd do begin//processing final bytes
+    Dest[0] := Source[0];
+    inc(PAnsiChar(Source));
+    inc(PWideChar(Dest));
+  end;
+end;
+
 function UnicodeStringToASCII7(const Src: UnicodeString): RawByteString;
 begin
   Result := UnicodeStringToASCII7(Pointer(Src), Length(Src));
 end;
 
 function UnicodeStringToASCII7(const Src: PWideChar; const Len: LengthInt): RawByteString;
+var i: integer;
+  BArr: PByteArray absolute Result;
+  WArr: PWordArray absolute Src;
+begin
+  if (Src = nil) or (Len = 0) then
+    Result := EmptyRaw
+  else begin
+    {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+    Result := EmptyRaw; //speeds up SetLength x2
+    SetLength(Result, len);
+    {$ELSE}
+    System.SetString(Result,nil, Len);
+    {$ENDIF}
+{$R-}
+    for i := 0 to len-1 do
+      BArr[i] := WArr[i]; //0..255 equals to widechars
+{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
+  end;
+end;
+
+procedure UnicodeStringToASCII7(const Src: PWideChar; const Len: LengthInt; var Result: RawByteString);
 var i: integer;
   BArr: PByteArray absolute Result;
   WArr: PWordArray absolute Src;

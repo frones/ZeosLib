@@ -80,6 +80,7 @@
 			<DCCReference Include="..\..\src\component\ZDatasetUtils.pas"/>
 			<DCCReference Include="..\..\src\component\ZGroupedConnection.pas"/>
 			<DCCReference Include="..\..\src\component\ZIBEventAlerter.pas"/>
+			<DCCReference Include="..\..\src\component\ZMemTable.pas"/>
 			<DCCReference Include="..\..\src\component\ZPgEventAlerter.pas"/>
 			<DCCReference Include="..\..\src\component\ZSequence.pas"/>
 			<DCCReference Include="..\..\src\component\ZSqlMetadata.pas"/>

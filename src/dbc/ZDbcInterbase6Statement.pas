@@ -64,9 +64,8 @@ uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   ZDbcLogging, ZVariant, ZMessages, ZDbcCachedResultSet, ZDbcUtils;
 
 type
-  {** Implements Prepared SQL Statement for Interbase or FireBird. }
-
-  { TZAbstractInterbase6PreparedStatement }
+  /// <summary>Implements a abstract prepared SQL Statement for Interbase or
+  ///  Firebird using the "legacy" api.</summary>
   TZAbstractInterbase6PreparedStatement = class(TZAbstractFirebirdInterbasePreparedStatement)
   private
     FResultXSQLDA: IZSQLDA; //the out param or resultset Interface
@@ -77,18 +76,40 @@ type
     FStatusVector: TARRAY_ISC_STATUS; //the errorcode vector
     FStmtHandle: TISC_STMT_HANDLE; //the smt handle
     FMaxRowsPerBatch: Integer;
+    /// <summary>Internal execute the prepared statment.</summary>
     procedure ExecuteInternal;
   protected
     /// <summary>Prepares eventual structures for binding input parameters.</summary>
     procedure PrepareInParameters; override;
+    /// <summary>Removes eventual structures for binding input parameters.</summary>
     procedure UnPrepareInParameters; override;
   protected
+    /// <summary>Removes the current connection reference from this object.</summary>
+    /// <remarks>This method will be called only if the object is garbage.</remarks>
     procedure ReleaseConnection; override;
+    /// <summary>Creates an resultset if the stmt has been executed.</summary>
+    /// <returns>Returns a new or the same object interface if nothing did
+    ///  change on the object settings.</returns>
     function CreateResultSet: IZResultSet;
+    /// <summary>Creates a temporary lob and sends the buffer to the server.</summary>
+    /// <param>"Index" the index of the blobid field in our databuffer.</param>
+    /// <param>"P" the buffer we send to the server.</param>
+    /// <param>"Len" the length of the buffer we send to the server.</param>
     procedure WriteLobBuffer(Index: Cardinal; P: PAnsiChar; Len: NativeUInt); override;
+    /// <summary>Creates a conversion error.</summary>
+    /// <param>"Index" the index of the parameter.</param>
+    /// <param>"Current" the the current SQLType which can't get converted.</param>
+    /// <returns>The error object.</returns>
     function CreateConversionError(Index: Cardinal; Current: TZSQLType): EZSQLException; override;
   public
+    /// <summary>Constructs this object and assignes the main properties.</summary>
+    /// <param>"Connection" the IZInterbase6Connection interface which creates
+    ///  this object.</param>
+    /// <param>"SQL" the SQL used for this prepared statement</param>
+    /// <param>"Info" a statement parameters list.</param>
     constructor Create(const Connection: IZInterbase6Connection; const SQL: string; Info: TStrings);
+    /// <summary>Do tasks after the statement was closed. For example
+    ///  dispose statement handles.</summary>
     procedure AfterClose; override;
     /// <summary>prepares the statement on the server, allocates all bindings
     ///  and handles</summary>
@@ -129,18 +150,28 @@ type
       var AError: EZSQLConnectionLost); override;
   end;
 
+  /// <summary>Implements a prepared SQL Statement for Interbase or Firebird
+  ///  using the "legacy" api.</summary>
   TZInterbase6PreparedStatement = class(TZAbstractInterbase6PreparedStatement,
     IZPreparedStatement);
 
+  /// <summary>Implements a SQL Statement for Interbase or Firebird
+  ///  using the "legacy" api.</summary>
   TZInterbase6Statement = class(TZAbstractInterbase6PreparedStatement, IZStatement)
   public
     constructor Create(const Connection: IZInterbase6Connection; Info: TStrings);
   end;
 
+  /// <summary>Implements a Callable SQL Statement for Interbase or Firebird.</summary>
   TZInterbase6CallableStatement = class(TZAbstractInterbaseFirebirdCallableStatement)
   protected
+    /// <summary>creates an exceution Statement</summary>
+    /// <param>"Connection" the owner firebird/interbase-connection interface.</param>
+    /// <param>"SQL" the SQL to be prepared and executed.</param>
+    /// <param>"Params" a parameter list to setup behaviors.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function InternalCreateExecutionStatement(const Connection: IZInterbaseFirebirdConnection;
-      const SQL: String; Info: TStrings): TZAbstractPreparedStatement; override;
+      const SQL: String; Params: TStrings): TZAbstractPreparedStatement; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
@@ -254,13 +285,6 @@ begin
   inherited ReleaseImmediat(Sender, AError);
 end;
 
-{**
-  Constructs this object and assignes the main properties.
-  @param Connection a database connection object.
-  @param Handle a connection handle pointer.
-  @param Dialect a dialect Interbase SQL must be 1 or 2 or 3.
-  @param Info a statement parameters.
-}
 constructor TZAbstractInterbase6PreparedStatement.Create(const Connection: IZInterbase6Connection;
   const SQL: string; Info: TStrings);
 begin
@@ -612,9 +636,6 @@ jmpSetL_T:if XSQLVAR.sqltype and 1 = 1
   end;
 end;
 
-{**
-  unprepares the statement, deallocates all bindings and handles
-}
 procedure TZAbstractInterbase6PreparedStatement.Unprepare;
 begin
   FMaxRowsPerBatch := 0;
@@ -673,14 +694,6 @@ begin
   end;
 end;
 
-{**
-  Executes any kind of SQL statement.
-  Some prepared statements return multiple results; the <code>execute</code>
-  method handles these complex statements as well as the simpler
-  form of statements handled by the methods <code>executeQuery</code>
-  and <code>executeUpdate</code>.
-  @see Statement#execute
-}
 function TZAbstractInterbase6PreparedStatement.ExecutePrepared: Boolean;
 begin
   Prepare;
@@ -700,13 +713,6 @@ begin
     DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
 
-{**
-  Executes the SQL query in this <code>PreparedStatement</code> object
-  and returns the result set generated by the query.
-
-  @return a <code>ResultSet</code> object that contains the data produced by the
-    query; never <code>null</code>
-}
 function TZAbstractInterbase6PreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   Prepare;
@@ -727,16 +733,6 @@ begin
     DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
 
-{**
-  Executes the SQL INSERT, UPDATE or DELETE statement
-  in this <code>PreparedStatement</code> object.
-  In addition,
-  SQL statements that return nothing, such as SQL DDL statements,
-  can be executed.
-
-  @return either the row count for INSERT, UPDATE or DELETE statements;
-  or 0 for SQL statements that return nothing
-}
 function TZAbstractInterbase6PreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
   Prepare;
@@ -775,11 +771,10 @@ end;
 
 function TZInterbase6CallableStatement.InternalCreateExecutionStatement(
   const Connection: IZInterbaseFirebirdConnection; const SQL: String;
-  Info: TStrings): TZAbstractPreparedStatement;
+  Params: TStrings): TZAbstractPreparedStatement;
 begin
-  Result := TZInterbase6PreparedStatement.Create(Connection as IZInterbase6Connection, SQL, Info);
+  Result := TZInterbase6PreparedStatement.Create(Connection as IZInterbase6Connection, SQL, Params);
 end;
-
 
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 end.

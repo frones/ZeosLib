@@ -68,7 +68,7 @@ uses
 
 type
   {** Implements Prepared ADO Statement. }
-  TZAbstractAdoStatement = Class(TZUTF16ParamDetectPreparedStatement)
+  TZAbstractAdoStatement = Class(TZUTF16ParamCountPreparedStatement)
   private
     FAdoRecordSet: ZPlainAdo.RecordSet;
     FAdoCommand: ZPlainAdo.Command;
@@ -80,6 +80,8 @@ type
     fDEFERPREPARE: Boolean;
   protected
     function CreateResultSet: IZResultSet; virtual;
+    /// <summary>Removes the current connection reference from this object.</summary>
+    /// <remarks>This method will be called only if the object is garbage.</remarks>
     procedure ReleaseConnection; override;
   public
     constructor CreateWithCommandType(const Connection: IZConnection; const SQL: string;
@@ -1354,6 +1356,7 @@ begin
     adSmallInt: begin
                   tagVariant(V).vt := VT_I2;
                   tagVariant(V).iVal := AValue;
+                  goto set_var;
                 end;
     adInteger:  begin
                   tagVariant(V).vt := VT_I4;

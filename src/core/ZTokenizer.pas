@@ -434,22 +434,7 @@ type
 
     function TokenizeBufferToList(const Buffer: string; Options: TZTokenOptions): TZTokenList; overload;
     function TokenizeBufferToList(Buffer, NTerm: PChar; Options: TZTokenOptions): TZTokenList; overload;
-    /// <summary>
-    ///   Tokenizes a stream into a string list of tokens.
-    /// </summary>
-    /// <param name="Stream">
-    ///   A stream to be tokenized. Needs to be seekable, i.e. no compressed stream.
-    /// </param>
-    /// <param name="Options">
-    ///   A a set of tokenizer options.
-    /// </param>
-    /// <returns>
-    ///  A string list where Items are tokens and Objects are token types.
-    /// </returns>
-    function TokenizeStreamToList(Stream: TStream; Options: TZTokenOptions): TZTokenList;
-
     function TokenizeBuffer(const Buffer: string; Options: TZTokenOptions): TZTokenDynArray; deprecated;
-    function TokenizeStream(Stream: TStream; Options: TZTokenOptions): TZTokenDynArray; deprecated;
 
     function NormalizeParamToken(const Token: TZToken; out ParamName: String;
       LookUpList: TStrings; out ParamIndex: Integer; out IngoreParam: Boolean): String;
@@ -473,7 +458,6 @@ type
     FSymbolState: TZSymbolState;
     FWhitespaceState: TZWhitespaceState;
     FWordState: TZWordState;
-    FBuffer: String;
   protected
     procedure CreateTokenStates; virtual;
   public
@@ -482,11 +466,8 @@ type
 
     function TokenizeBufferToList(const Buffer: string; Options: TZTokenOptions): TZTokenList; overload;
     function TokenizeBufferToList(Buffer, EOS: PChar; Options: TZTokenOptions): TZTokenList; overload;
-    function TokenizeStreamToList(Stream: TStream; Options: TZTokenOptions): TZTokenList;
 
     function TokenizeBuffer(const Buffer: string; Options: TZTokenOptions):
-      TZTokenDynArray;
-    function TokenizeStream(Stream: TStream; Options: TZTokenOptions):
       TZTokenDynArray;
 
     function NormalizeParamToken(const Token: TZToken; out ParamName: String;
@@ -1228,8 +1209,7 @@ var
   I: Integer;
 begin
   {$IFDEF FPC} Result := nil;{$ENDIF}
-  FBuffer := Buffer;
-  List := Self.TokenizeBufferToList(FBuffer, Options);
+  List := Self.TokenizeBufferToList(Buffer, Options);
   try
     SetLength(Result, List.Count);
     for I := 0  to List.Count - 1 do
@@ -1251,8 +1231,7 @@ function TZTokenizer.TokenizeBufferToList(const Buffer: string;
 var
   P: PChar;
 begin
-  FBuffer := Buffer;
-  P := Pointer(FBuffer);
+  P := Pointer(Buffer);
   Result := TokenizeBufferToList(P, p+Length(Buffer), Options);
 end;
 
@@ -1330,48 +1309,6 @@ EOL:Inc(Buffer);
     Token.TokenType := ttEOF;
     Result.Add(Token);
   end;
-end;
-
-{**
-  Tokenizes a stream into a dynamic array of tokens.
-  @param Stream a stream to be tokenized.
-  @param Options a set of tokenizer options.
-  @returns a dynamic array of tokens
-}
-function TZTokenizer.TokenizeStream(Stream: TStream;
-  Options: TZTokenOptions): TZTokenDynArray;
-var
-  I: Integer;
-  List: TZTokenList;
-begin
-  List := TokenizeStreamToList(Stream, Options);
-  {$IFDEF FPC} Result := nil;{$ENDIF}
-  try
-    SetLength(Result, List.Count);
-    for I := 0  to List.Count - 1 do
-      Result[I] := List[I]^;
-  finally
-    List.Free;
-  end;
-end;
-
-{**
-  Tokenizes a stream into a string list of tokens.
-  @param Stream a stream to be tokenized.
-  @param Options a set of tokenizer options.
-  @returns a string list where Items are tokens and
-    Objects are token types.
-}
-function TZTokenizer.TokenizeStreamToList(Stream: TStream;
-  Options: TZTokenOptions): TZTokenList;
-var
-  OriginalPosition: Int64;
-begin
-  OriginalPosition := Stream.Position;
-  Stream.Position := 0;
-  Stream.Read(Pointer(FBuffer)^, Stream.Size div SizeOf(Char));
-  Stream.Position := OriginalPosition;
-  Result := TokenizeBufferToList(FBuffer, Options);
 end;
 
 {**

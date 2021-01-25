@@ -236,6 +236,8 @@ type
   {** Implements SQLAnywhere ResultSetMetadata object. }
   TZSQLAnyWhereResultSetMetadataV4Up = Class(TZAbstractResultSetMetadata)
   protected
+    /// <summary>Clears specified column information.</summary>
+    /// <param>"ColumnInfo" a column information object.</param>
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
   public
     function GetTableName(ColumnIndex: Integer): string; override;

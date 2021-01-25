@@ -765,6 +765,9 @@ type
     /// <summary>add a line feed if neiter buffer nor result is empty.</summary>
     /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure AddLineFeedIfNotEmpty(var Result: UnicodeString);
+    /// <summary>Return the current length if the String get's finalized.</summary>
+    /// <returns>the Length of the string in words.</returns>
+    function GetCurrentLength(const Current: UnicodeString): Cardinal;
   end;
 
   /// <author>EgonHugeist</author>
@@ -2252,6 +2255,12 @@ begin
     Inc(PAnsiChar(Result), LRes);
     FPos := FBuf;
   end;
+end;
+
+function TZUnicodeSQLStringWriter.GetCurrentLength(
+  const Current: UnicodeString): Cardinal;
+begin
+  Result := Length(Current) + (FPos - FBuf);
 end;
 
 procedure TZUnicodeSQLStringWriter.IncreaseCapacityTo(WideCharCapacity: Integer;

@@ -252,6 +252,8 @@ type
     procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString); overload;
 
     function GetDatabaseName: String;
+    /// <summary>Returns the ServicerProvider for this connection.</summary>
+    /// <returns>the ServerProvider</returns>
     function GetServerProvider: TZServerProvider; override;
     function MySQL_FieldType_Bit_1_IsBoolean: Boolean;
     function SupportsFieldTypeBit: Boolean;

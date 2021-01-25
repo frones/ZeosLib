@@ -156,7 +156,6 @@ type
     FClientSettingsChanged: Boolean;
     FIs_bytea_output_hex: Boolean;
     FCheckFieldVisibility: Boolean;
-    FNoTableInfoCache: Boolean;
     fPlainDriver: TZPostgreSQLPlainDriver;
     FLastWarning: EZSQLWarning;
     function HasMinimumServerVersion(MajorVersion, MinorVersion, SubVersion: Integer): Boolean;
@@ -346,6 +345,8 @@ type
 
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
+    /// <summary>Returns the ServicerProvider for this connection.</summary>
+    /// <returns>the ServerProvider</returns>
     function GetServerProvider: TZServerProvider; override;
   end;
 
@@ -691,7 +692,6 @@ begin
   FOidAsBlob := StrToBoolEx(Info.Values[DSProps_OidAsBlob]);
   FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values[DSProps_UndefVarcharAsStringLength], 0);
   FCheckFieldVisibility := StrToBoolEx(Info.Values[ConnProps_CheckFieldVisibility]);
-  FNoTableInfoCache := StrToBoolEx(Info.Values[ConnProps_NoTableInfoCache]);
 
   FNoticeProcessor := NoticeProcessorDispatcher;
   FNoticeReceiver  := NoticeReceiverDispatcher;
@@ -971,7 +971,9 @@ function TZPostgreSQLConnection.PrepareStatementWithParams(const SQL: string;
 begin
   if IsClosed then
      Open;
-  Result := TZPostgreSQLPreparedStatementV3.Create(Self, SQL, Info)
+  if (GetServerMajorVersion >= 8) and Assigned(FplainDriver.PQexecParams)
+  then Result := TZPostgreSQLPreparedStatementV3.Create(Self, SQL, Info)
+  else Result := TZPostgrePreparedStatementV2.Create(Self, SQL, Info)
 end;
 
 procedure TZPostgreSQLConnection.PrepareTransaction(const transactionid: string);

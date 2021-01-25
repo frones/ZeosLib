@@ -242,7 +242,8 @@ type
 
     function ReKey(const Key: string): Integer;
     function Key(const Key: string): Integer;
-
+    /// <summary>Returns the ServicerProvider for this connection.</summary>
+    /// <returns>the ServerProvider</returns>
     function GetServerProvider: TZServerProvider; override;
   end;
 

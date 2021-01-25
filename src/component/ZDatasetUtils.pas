@@ -1989,7 +1989,11 @@ MoveLast:
       Move(MSEnd^, DotPos^, L * SizeOf(Char));
   end else begin
     Result := Frmt;
-    if DotPos <> nil then begin
+    if (DotPos <> nil) and (SPos <> nil) and (DotPos < SPos) then
+      if (SPos < PEnd) and ((SPos+1)^ = '.')
+      then DotPos := (SPos+1)
+      else DotPos := nil;
+    if (DotPos <> nil) then begin
       MSEnd := DotPos+1;
       SetLength(Result, L+Scale);
       DotPos := Pointer(Result);
@@ -2047,7 +2051,7 @@ end;
 
 {$IFDEF FPC}
   {$PUSH}
-  {$WARN 5057 off : Locale variable "$1" does not seem to be initialized} //Counters is always initialized
+  {$WARN 5057 off : Locale variable "$Counters" does not seem to be initialized}
 {$ENDIF}
 Type
   TFormatLiterals = (flYear, flMonth, flDay, flHour, flMinute, flSecond, flFraction, flTimeZone);
@@ -2084,7 +2088,7 @@ end;
 
 {$IFDEF FPC}
   {$PUSH}
-  {$WARN 5057 off : Locale variable "$1" does not seem to be initialized} //Counters is always initialized
+  {$WARN 5057 off : Locale variable "Counters" does not seem to be initialized}
 {$ENDIF}
 function IsSimpleDateFormat(const Format: String): Boolean;
 var P, PEnd: PChar;

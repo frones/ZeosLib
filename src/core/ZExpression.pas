@@ -59,34 +59,48 @@ uses SysUtils, Classes, {$IF not defined(NO_UNIT_CONTNRS) and not defined(FPC)}C
   ZClasses, ZCompatibility, ZVariant, ZTokenizer, ZExprParser;
 
 type
-  {** Defines an expression exception. }
+  /// <summary>Defines an expression exception.</summary>
   TZExpressionError = class (Exception);
 
-  {** Defines an execution stack object. }
+  /// <summary>Implements an execution stack object.</summary>
   TZExecutionStack = class (TObject)
   private
     FValues: TZVariantDynArray;
     FCount: Integer;
     FCapacity: Integer;
-
+    /// <summary>Gets a value from absolute position in the stack.</summary>
+    /// <param>"Index" a value index.</param>
+    /// <returns>a variant value from requested position.</returns>
     function GetValue(Index: Integer): TZVariant;
   public
+    /// <summary>Creates this object.</summary>
     constructor Create;
 
     procedure DecStackPointer(const Value : integer);
+    /// <summary>Gets a value from the top and removes it from the stack.</summary>
+    /// <returns>a value from the top.</returns>
     function Pop: TZVariant;
+    /// <summary>Gets a value from the top of the stack without removing it.</summary>
+    /// <returns>a value from the top.</returns>
     function Peek: TZVariant;
+    /// <summary>Puts a value to the top of the stack.</summary>
+    /// <param>"Value" the value to put on top af stack.</summary>
     procedure Push(const Value: TZVariant);
+    /// <summary>Gets a function parameter by index.</summary>
+    /// <param>"Index" a function parameter index. 0 is used for parameter count.</param>
+    /// <returns>a parameter value.</returns>
     function GetParameter(Index: Integer): TZVariant;
+    /// <summary>Swaps two values on the top of the stack.</summary>
     procedure Swap;
-
+    /// <summary>Clears this stack.</summary>
     procedure Clear;
-
+    /// <summary>Represents the stack count.</summary>
     property Count: Integer read FCount;
+    /// <summary>Access the values by index position.</summary>
     property Values[Index: Integer]: TZVariant read GetValue;
   end;
 
-  {** Defines a list of variables. }
+  /// <summary>Defines a list of variables interface.</summary>
   IZVariablesList = interface (IZInterface)
     ['{F4347F46-32F3-4021-B6DB-7A39BF171275}']
 
@@ -111,7 +125,7 @@ type
       write SetValueByName;
   end;
 
-  {** Defines a function interface. }
+  /// <summary>Defines a function interface.</summary>
   IZFunction = interface (IZInterface)
     ['{E9B3AFF9-6CD9-49C8-AB66-C8CF60ED8686}']
 
@@ -123,49 +137,104 @@ type
     property Name: string read GetName;
   end;
 
-  {** Defines a list of functions. }
+  /// <summary>Defines a list of functions interface.</summary>
   IZFunctionsList = interface (IZInterface)
     ['{54453054-F012-475B-84C3-7E5C46187FDB}']
-
+    /// <summary>Gets a number of registered functions.</summary>
+    /// <returns>a number of registered functions.</summary>
     function GetCount: Integer;
+    /// <summary>Gets a name of the functions by it's index.</summary>
+    /// <param>"Index" a functon index.</param>
+    /// <returns>a name of the function.</returns>
     function GetName(Index: Integer): string;
+    /// <summary>Gets a function reference by it's index.</summary>
+    /// <param>"Index" a function index.</param>
+    /// <returns>a function reference.</returns>
     function GetFunction(Index: Integer): IZFunction;
-
+    /// <summary>Adds a new function to this list.</summary>
+    /// <param>"Func" a function reference.</param>
     procedure Add(const Func: IZFunction);
+    /// <summary>Removes a reference to a function by it's name.</summary>
+    /// <param>"Name" a name of the function to be removed.</param>
     procedure Remove(const Name: string);
+    /// <summary>Finds a function reference by it's name.</summary>
+    /// <param>"Name" a name of the function to be found.</param>
     function FindByName(const Name: string): Integer;
+    /// <summary>Cleans the list of registered functions.</summary>
     procedure Clear;
-
+    /// <summary>Represents a number of registered functions.</summary>
     property Count: Integer read GetCount;
+    /// <summary>Represents a name of the functions by it's index.</summary>
     property Names[Index: Integer]: string read GetName;
+    /// <summary>Represents a function reference by it's index.</summary>
     property Functions[Index: Integer]: IZFunction read GetFunction;
   end;
 
-  {** Defines an interface to expression calculator. }
+  /// <summary>Defines an interface to expression calculator.</summary>
   IZExpression = interface (IZInterface)
     ['{26F9D379-5618-446C-8999-D50FBB2F8560}']
 
+    /// <summary>Gets the current expression tokenizer.</summary>
+    /// <returns>the current expression tokenizer.</returns>
     function GetTokenizer: IZTokenizer;
+    /// <summary>Sets a new expression tokenizer.</summary>
+    /// <param>"Value" a new expression tokenizer.</param>
     procedure SetTokenizer(const Value: IZTokenizer);
+    /// <summary>Gets the current set expression string.</summary>
+    /// <returns>the current expression string.</returns>
     function GetExpression: string;
+    /// <summary>Sets a new expression string.</summary>
+    /// <param>"Value" a new expression string.</param>
     procedure SetExpression(const Value: string);
+    /// <summary>Gets a reference to the current variant manager.</summary>
+    /// <returns>a reference to the current variant manager.</returns>
     function GetVariantManager: IZVariantManager;
+    /// <summary>Sets a new variant manager.</summary>
+    /// <param>"Value" a new variant manager.</param>
     procedure SetVariantManager(const Value: IZVariantManager);
+    /// <summary>Gets a list of default variables.</summary>
+    /// <returns>a list of default variables.</returns>
     function GetDefaultVariables: IZVariablesList;
+    /// <summary>Sets a new list of variables.</summary>
+    /// <param>"Value" a new list of variables.</param>
     procedure SetDefaultVariables(const Value: IZVariablesList);
+    /// <summary>Gets a list of default functions.</summary>
+    /// <returns>a list of default functions.</returns>
     function GetDefaultFunctions: IZFunctionsList;
+    /// <summary>Sets a new list of functions.</summary>
+    /// <param>"Value" a new list of functions.</param>
     procedure SetDefaultFunctions(const Value: IZFunctionsList);
+    /// <summary>Gets the current auto variables create flag.</summary>
+    /// <returns>the auto variables create flag.</returns>
     function GetAutoVariables: Boolean;
+    /// <summary>Sets a new auto variables create flag.</summary>
+    /// <param>"Value" a new auto variables create flag.</param>
     procedure SetAutoVariables(Value: Boolean);
-
+    /// <summary>Evaluates this expression.</summary>
+    /// <returns>an evaluated expression value.</returns>
     function Evaluate: TZVariant;
+    /// <summary>Evaluates this expression.</summary>
+    /// <param>"Variables" a list of variables.</param>
+    /// <returns>an evaluated expression value.</returns>
     function Evaluate2(const Variables: IZVariablesList): TZVariant;
+    /// <summary>Evaluates this expression.</summary>
+    /// <param>"Variables" a list of variables.</param>
+    /// <param>"Functions" a list of functions.</param>
+    /// <returns>an evaluated expression value.</returns>
     function Evaluate3(const Variables: IZVariablesList;
       const Functions: IZFunctionsList): TZVariant;
+    /// <summary>Evaluates this expression.</summary>
+    /// <param>"Variables" a list of variables.</param>
+    /// <param>"Functions" a list of functions.</param>
+    /// <param>"Stack" an execution stack.</param>
+    /// <returns>an evaluated expression value.</returns>
     function Evaluate4(const Variables: IZVariablesList;
       const Functions: IZFunctionsList; Stack: TZExecutionStack): TZVariant;
 
+    /// <summary>Creates an empty variables.</summary>
+    /// <param>"Variables" a list of variables.</param>
     procedure CreateVariables(const Variables: IZVariablesList);
+    /// <summary>Clears this class from all data.</summary>
     procedure Clear;
 
     property Tokenizer: IZTokenizer read GetTokenizer write SetTokenizer;
@@ -180,7 +249,7 @@ type
       write SetAutoVariables;
   end;
 
-  {** Implements an expression calculator class. }
+  /// <summary>Implements an expression calculator class.</summary>
   TZExpression = class (TInterfacedObject, IZExpression)
   private
     FTokenizer: IZTokenizer;
@@ -189,34 +258,77 @@ type
     FVariantManager: IZVariantManager;
     FParser: TZExpressionParser;
     FAutoVariables: Boolean;
-
+    /// <summary>Gets the current expression tokenizer.</summary>
+    /// <returns>the current expression tokenizer.</returns>
     function GetTokenizer: IZTokenizer;
+    /// <summary>Sets a new expression tokenizer.</summary>
+    /// <param>"Value" a new expression tokenizer.</param>
     procedure SetTokenizer(const Value: IZTokenizer);
+    /// <summary>Gets the current set expression string.</summary>
+    /// <returns>the current expression string.</returns>
     function GetExpression: string;
+    /// <summary>Sets a new expression string.</summary>
+    /// <param>"Value" a new expression string.</param>
     procedure SetExpression(const Value: string);
+    /// <summary>Gets a reference to the current variant manager.</summary>
+    /// <returns>a reference to the current variant manager.</returns>
     function GetVariantManager: IZVariantManager;
+    /// <summary>Sets a new variant manager.</summary>
+    /// <param>"Value" a new variant manager.</param>
     procedure SetVariantManager(const Value: IZVariantManager);
+    /// <summary>Gets a list of default variables.</summary>
+    /// <returns>a list of default variables.</returns>
     function GetDefaultVariables: IZVariablesList;
+    /// <summary>Sets a new list of variables.</summary>
+    /// <param>"Value" a new list of variables.</param>
     procedure SetDefaultVariables(const Value: IZVariablesList);
+    /// <summary>Gets a list of default functions.</summary>
+    /// <returns>a list of default functions.</returns>
     function GetDefaultFunctions: IZFunctionsList;
+    /// <summary>Sets a new list of functions.</summary>
+    /// <param>"Value" a new list of functions.</param>
     procedure SetDefaultFunctions(const Value: IZFunctionsList);
+    /// <summary>Gets the current auto variables create flag.</summary>
+    /// <returns>the auto variables create flag.</returns>
     function GetAutoVariables: Boolean;
+    /// <summary>Sets a new auto variables create flag.</summary>
+    /// <param>"Value" a new auto variables create flag.</param>
     procedure SetAutoVariables(Value: Boolean);
   protected
     function NormalizeValues(var Val1, Val2: TZVariant): Boolean;
   public
+    /// <summary>Creates this expression calculator object.</summary>
     constructor Create;
+    /// <summary>Creates this expression calculator and assignes expression
+    ///  string.</summary>
+    /// <param>"Expression" an expression string.</param>
     constructor CreateWithExpression(const Expression: string);
+    /// <summary>Destroys this object and cleanups the memory.</summary>
     destructor Destroy; override;
-
+    /// <summary>Evaluates this expression.</summary>
+    /// <returns>an evaluated expression value.</returns>
     function Evaluate: TZVariant;
+    /// <summary>Evaluates this expression.</summary>
+    /// <param>"Variables" a list of variables.</param>
+    /// <returns>an evaluated expression value.</returns>
     function Evaluate2(const Variables: IZVariablesList): TZVariant;
+    /// <summary>Evaluates this expression.</summary>
+    /// <param>"Variables" a list of variables.</param>
+    /// <param>"Functions" a list of functions.</param>
+    /// <returns>an evaluated expression value.</returns>
     function Evaluate3(const Variables: IZVariablesList;
       const Functions: IZFunctionsList): TZVariant;
+    /// <summary>Evaluates this expression.</summary>
+    /// <param>"Variables" a list of variables.</param>
+    /// <param>"Functions" a list of functions.</param>
+    /// <param>"Stack" an execution stack.</param>
+    /// <returns>an evaluated expression value.</returns>
     function Evaluate4(const Variables: IZVariablesList;
       const Functions: IZFunctionsList; Stack: TZExecutionStack): TZVariant;
-
+    /// <summary>Creates an empty variables.</summary>
+    /// <param>"Variables" a list of variables.</param>
     procedure CreateVariables(const Variables: IZVariablesList);
+    /// <summary>Clears this class from all data.</summary>
     procedure Clear;
 
     property Expression: string read GetExpression write SetExpression;
@@ -237,9 +349,6 @@ uses
 
 { TZExecutionStack }
 
-{**
-  Creates this object.
-}
 constructor TZExecutionStack.Create;
 begin
   FCapacity := 100;
@@ -247,20 +356,11 @@ begin
   FCount := 0;
 end;
 
-{**
-  Gets a value from absolute position in the stack.
-  @param Index a value index.
-  @returns a variant value from requested position.
-}
 function TZExecutionStack.GetValue(Index: Integer): TZVariant;
 begin
   Result := FValues[Index];
 end;
 
-{**
-  Gets a value from the top of the stack without removing it.
-  @returns a value from the top.
-}
 function TZExecutionStack.Peek: TZVariant;
 begin
   if FCount > 0 then
@@ -268,11 +368,6 @@ begin
   else Result := NullVariant;
 end;
 
-{**
-  Gets a function parameter by index.
-  @param a function parameter index. O is used for parameter count.
-  @returns a parameter value.
-}
 function TZExecutionStack.GetParameter(Index: Integer): TZVariant;
 begin
   if FCount <= Index then
@@ -283,17 +378,12 @@ end;
 procedure TZExecutionStack.DecStackPointer(const Value : integer);
 begin
   Dec(FCount, Value);
-  if FCount < 0 then
-  begin
+  if FCount < 0 then begin
     FCount := 0;
     raise TZExpressionError.Create(SStackIsEmpty);
   end;
 end;
 
-{**
-  Gets a value from the top and removes it from the stack.
-  @returns a value from the top.
-}
 function TZExecutionStack.Pop: TZVariant;
 begin
   Result := NullVariant;
@@ -303,9 +393,6 @@ begin
   Result := FValues[FCount];
 end;
 
-{**
-  Puts a value to the top of the stack.
-}
 procedure TZExecutionStack.Push(const Value: TZVariant);
 begin
   if FCapacity = FCount then
@@ -324,9 +411,6 @@ begin
   Inc(FCount);
 end;
 
-{**
-  Swaps two values on the top of the stack.
-}
 procedure TZExecutionStack.Swap;
 var
   Temp: TZVariant;
@@ -339,9 +423,6 @@ begin
   FValues[FCount - 2] := Temp;
 end;
 
-{**
-  Clears this stack.
-}
 procedure TZExecutionStack.Clear;
 begin
   FCount := 0;
@@ -349,9 +430,6 @@ end;
 
 { TZExpression }
 
-{**
-  Creates this expression calculator object.
-}
 constructor TZExpression.Create;
 begin
   FTokenizer := TZExpressionTokenizer.Create;
@@ -362,19 +440,12 @@ begin
   FAutoVariables := True;
 end;
 
-{**
-  Creates this expression calculator and assignes expression string.
-  @param Expression an expression string.
-}
 constructor TZExpression.CreateWithExpression(const Expression: string);
 begin
   Create;
   SetExpression(Expression);
 end;
 
-{**
-  Destroys this object and cleanups the memory.
-}
 destructor TZExpression.Destroy;
 begin
   FTokenizer := nil;
@@ -386,73 +457,41 @@ begin
   inherited Destroy;
 end;
 
-{**
-  Gets the current auto variables create flag.
-  @returns the auto variables create flag.
-}
 function TZExpression.GetAutoVariables: Boolean;
 begin
   Result := FAutoVariables;
 end;
 
-{**
-  Sets a new auto variables create flag.
-  @param value a new auto variables create flag.
-}
 procedure TZExpression.SetAutoVariables(Value: Boolean);
 begin
   FAutoVariables := Value;
 end;
 
-{**
-  Gets a list of default functions.
-  @returns a list of default functions.
-}
 function TZExpression.GetDefaultFunctions: IZFunctionsList;
 begin
   Result := FDefaultFunctions;
 end;
 
-{**
-  Sets a new list of functions.
-  @param Value a new list of functions.
-}
 procedure TZExpression.SetDefaultFunctions(const Value: IZFunctionsList);
 begin
   FDefaultFunctions := Value;
 end;
 
-{**
-  Gets a list of default variables.
-  @returns a list of default variables.
-}
 function TZExpression.GetDefaultVariables: IZVariablesList;
 begin
   Result := FDefaultVariables;
 end;
 
-{**
-  Sets a new list of variables.
-  @param Value a new list of variables.
-}
 procedure TZExpression.SetDefaultVariables(const Value: IZVariablesList);
 begin
   FDefaultVariables := Value;
 end;
 
-{**
-  Gets the current set expression string.
-  @returns the current expression string.
-}
 function TZExpression.GetExpression: string;
 begin
   Result := FParser.Expression;
 end;
 
-{**
-  Sets a new expression string.
-  @param Value a new expression string.
-}
 procedure TZExpression.SetExpression(const Value: string);
 begin
   FParser.Expression := Value;
@@ -460,10 +499,6 @@ begin
     CreateVariables(FDefaultVariables);
 end;
 
-{**
-  Gets a reference to the current variant manager.
-  @returns a reference to the current variant manager.
-}
 function TZExpression.GetVariantManager: IZVariantManager;
 begin
   Result := FVariantManager;
@@ -477,47 +512,28 @@ begin
     Val2 := EncodeString(Val2.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF});
 end;
 
-{**
-  Sets a new variant manager.
-  @param Value a new variant manager.
-}
 procedure TZExpression.SetVariantManager(const Value: IZVariantManager);
 begin
   FVariantManager := Value;
 end;
 
-{**
-  Gets the current expression tokenizer.
-  @returns the current expression tokenizer.
-}
 function TZExpression.GetTokenizer: IZTokenizer;
 begin
   Result := FTokenizer;
 end;
 
-{**
-  Sets a new expression tokenizer.
-  @param Value a new expression tokenizer.
-}
 procedure TZExpression.SetTokenizer(const Value: IZTokenizer);
 begin
   FTokenizer := Value;
   FParser.Tokenizer := Value;
 end;
 
-{**
-  Clears this class from all data.
-}
 procedure TZExpression.Clear;
 begin
   FParser.Clear;
   FDefaultVariables.Clear;
 end;
 
-{**
-  Creates an empty variables.
-  @param Variables a list of variables.
-}
 procedure TZExpression.CreateVariables(const Variables: IZVariablesList);
 var
   I: Integer;
@@ -531,31 +547,16 @@ begin
   end;
 end;
 
-{**
-  Evaluates this expression.
-  @returns an evaluated expression value.
-}
 function TZExpression.Evaluate: TZVariant;
 begin
   Result := Evaluate3(FDefaultVariables, FDefaultFunctions);
 end;
 
-{**
-  Evaluates this expression.
-  @param Variables a list of variables.
-  @returns an evaluated expression value.
-}
 function TZExpression.Evaluate2(const Variables: IZVariablesList): TZVariant;
 begin
   Result := Evaluate3(Variables, FDefaultFunctions);
 end;
 
-{**
-  Evaluates this expression.
-  @param Variables a list of variables.
-  @param Functions a list of functions.
-  @returns an evaluated expression value.
-}
 function TZExpression.Evaluate3(const Variables: IZVariablesList;
   const Functions: IZFunctionsList): TZVariant;
 var
@@ -569,13 +570,6 @@ begin
   end;
 end;
 
-{**
-  Evaluates this expression.
-  @param Variables a list of variables.
-  @param Functions a list of functions.
-  @param Stack an execution stack.
-  @returns an evaluated expression value.
-}
 function TZExpression.Evaluate4(const Variables: IZVariablesList;
   const Functions: IZFunctionsList; Stack: TZExecutionStack): TZVariant;
 var

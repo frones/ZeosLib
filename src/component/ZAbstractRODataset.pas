@@ -294,7 +294,7 @@ type
   protected
     FTransaction: TZAbstractTransaction;
     procedure CheckOpened;
-    procedure CheckConnected;
+    procedure CheckConnected; virtual;
     procedure CheckBiDirectional;
     procedure CheckSQLQuery; virtual;
     procedure RaiseReadOnlyError;
@@ -581,10 +581,10 @@ type
     property DataSetField: TDataSetField read FDataSetField write SetDataSetField;
     {$ENDIF}
     property LastRowFetched: Boolean read FLastRowFetched;
-  published
     property Transaction: TZAbstractTransaction read FTransaction
       write SetTransaction;
     property Connection: TZAbstractConnection read FConnection write SetConnection;
+  published
     property SortedFields: string read FSortedFields write SetSortedFields;
     property SortType : TSortType read FSortType write SetSortType
       default stAscending;
@@ -670,6 +670,7 @@ type
     function GetAsSQLTimeStamp: TSQLTimeStamp; override;
     {$ENDIF}
     procedure GetText(var Text: string; DisplayText: Boolean); override;
+    procedure SetAsString(const Value: String); override;
     procedure SetAsTimeStamp(const Value: TZTimeStamp);
     procedure SetAsDateTime(Value: TDateTime); override;
     procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
@@ -708,6 +709,7 @@ type
     procedure SetAsTime(const Value: TZTime);
     procedure GetText(var Text: string; DisplayText: Boolean); override;
     procedure SetAsDateTime(Value: TDateTime); override;
+    procedure SetAsString(const Value: string); override;
     procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
   public
     property Value: TZTime read GetAsTime write SetAsTime;
@@ -1964,7 +1966,8 @@ begin
     if FLastRowFetched
     then Result := CurrentRows.Count >= RowCount
     else begin
-      Connection.ShowSQLHourGlass;
+      if Connection <> nil then
+        Connection.ShowSQLHourGlass;
       try
         if (RowCount = 0) then begin
           while FetchOneRow do;
@@ -1976,7 +1979,8 @@ begin
           Result := CurrentRows.Count >= RowCount;
         end;
       finally
-        Connection.HideSQLHourGlass;
+        if Connection <> nil then
+          Connection.HideSQLHourGlass;
       end;
     end
   else Result := True;
@@ -3380,6 +3384,7 @@ var
   {$IFDEF WITH_CODEPAGE_AWARE_FIELD}
   CodePage: TSystemCodePage;
   {$ENDIF}
+  ControlsCodePage: TZControlsCodePage;
 begin
   FieldDefs.Clear;
   ResultSet := Self.ResultSet;
@@ -3401,13 +3406,17 @@ begin
     { Reads metadata from resultset. }
 
     with FResultSetMetadata do begin
+      if Connection = nil
+      then ControlsCodePage := Low(TZControlsCodePage)
+      else ControlsCodePage := Connection.ControlsCodePage;
+
     //ConSettings := ResultSet.GetConSettings;
     if GetColumnCount > 0 then
       for I := FirstDbcIndex to GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
         SQLType := GetColumnType(I);
         Prec := GetPrecision(I);
         Scale := GetScale(I);
-        FieldType := ConvertDbcToDatasetType(SQLType, Connection.ControlsCodePage, Prec);
+        FieldType := ConvertDbcToDatasetType(SQLType, ControlsCodePage, Prec);
         if (FieldType = ftVarBytes) and (Prec = Scale) then
           FieldType := ftBytes;
         (*{$IFDEF WITH_FTTIMESTAMP_FIELD}
@@ -3596,6 +3605,7 @@ var
   I, Cnt: Integer;
   OldRS: IZResultSet;
   ConSettings: PZConSettings;
+  StringFieldCodePage: Word;
 begin
   {$IFNDEF FPC}
   If (csDestroying in Componentstate) then
@@ -3607,8 +3617,8 @@ begin
   FetchCount := 0;
   CurrentRows.Clear;
   FLastRowFetched := False;
-
-  Connection.ShowSQLHourGlass;
+  if Connection <> nil then
+    Connection.ShowSQLHourGlass;
   OldRS := FResultSet;
   try
     { Creates an SQL statement and resultsets }
@@ -3655,11 +3665,14 @@ begin
 
     if not FRefreshInProgress then begin
       { Initializes accessors and buffers. }
-      ColumnList := ConvertFieldsToColumnInfo(Fields, GetTransliterateCodePage(Connection.ControlsCodePage), True);
+      if Connection = nil
+      then StringFieldCodePage := GetTransliterateCodePage(Low(TZControlsCodePage))
+      else StringFieldCodePage := GetTransliterateCodePage(Connection.ControlsCodePage);
+      ColumnList := ConvertFieldsToColumnInfo(Fields, StringFieldCodePage, True);
       Cnt := ColumnList.Count;
       try
         //the RowAccessor wideneds the fieldbuffers for calculated field
-        FRowAccessor := TZRowAccessor.Create(ColumnList, ResultSet.GetConSettings, FOpenLobStreams, FCachedLobs)
+        FRowAccessor := TZRowAccessor.Create(ColumnList, ConSettings, FOpenLobStreams, FCachedLobs)
       finally
         ColumnList.Free;
       end;
@@ -3685,7 +3698,8 @@ begin
     if FSortedFields <> '' then
       InternalSort;
   finally
-    Connection.HideSQLHourGlass;
+    if Connection <> nil then
+      Connection.HideSQLHourGlass;
     OldRS := nil;
   end;
   if FHasOutParams then
@@ -7106,7 +7120,7 @@ begin
           Frmt := ZSysUtils.ReplaceChar(Delim, Sep, Frmt);
       end;
       FSimpleFormat[b] := IsSimpleTimeFormat(Frmt);
-      if FAdjSecFracFmt and (FScale > 0)
+      if FAdjSecFracFmt and (FScale > 0) and (T.Fractions > 0)
       then FFractionFormat[b] := ConvertAsFractionFormat(Frmt, FScale, not FSimpleFormat[b], FFractionLen[b])
       else FFractionFormat[b] := Frmt;
     end;
@@ -7169,7 +7183,7 @@ begin
   FAdjSecFracFmt := Value;
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF} //rolling eyes
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "T" does not seem to be initialized} {$ENDIF} //rolling eyes
 procedure TZTimeField.SetAsDateTime(Value: TDateTime);
   procedure DoValidate;
   begin
@@ -7200,6 +7214,55 @@ begin
   end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF} //rolling eyes
+
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable} // uses pointer maths
+  {$WARN 5057 off : Local variable "T" does not seem to be initialized}
+{$ENDIF}
+procedure TZTimeField.SetAsString(const Value: string);
+var P, PStart, FEnd, PEnd: PChar;
+    Fractions, FractionDigits: Cardinal;
+    ExtractedCopy: String;
+    DT: TDateTime;
+    T: TZTime;
+begin
+  if Value = ''
+  then Clear
+  else begin
+    P := Pointer(Value);
+    Fractions := 0;
+    FractionDigits := 0;
+    PStart := P;
+    PEnd := PStart + Length(Value);
+    while (PStart < PEnd) and (PStart^ <> '.') do
+      Inc(PStart);
+    if PStart <> PEnd then begin
+      Inc(PStart);
+      FEnd := PStart;
+      while (Ord(FEnd^) >= Ord('0')) and (Ord(FEnd^) <= Ord('9')) do
+        Inc(FEnd);
+      FractionDigits := FEnd - PStart;
+    end else FEnd := PEnd;//satisfy compiler
+    if (FractionDigits > 0) and (FractionDigits <= Cardinal(fScale)) then begin
+      Fractions := {$IFDEF UNICODE}UnicodeToUInt32{$ELSE}RawToUInt32{$ENDIF}(PStart, FEnd);
+      Fractions := Fractions * ZSysUtils.FractionLength2NanoSecondMulTable[FractionDigits];
+      Dec(PStart);
+      ExtractedCopy := '';
+      FractionDigits := (NativeUInt(PStart)-NativeUInt(P));
+      SetLength(ExtractedCopy, (PEnd-P)-(FEnd-PStart));
+      Move(P^, Pointer(ExtractedCopy)^, FractionDigits);
+      P := Pointer(NativeUInt(ExtractedCopy)+FractionDigits);
+      Move(FEnd^, P^, (NativeUInt(PEnd)-NativeUInt(FEnd)));
+    end else
+      ExtractedCopy := Value;
+    DT := StrToTime(ExtractedCopy);
+    ZSysUtils.DecodeDateTimeToTime(DT, T);
+    T.Fractions := Fractions;
+    SetAsTime(T);
+  end;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
+
 
 procedure TZTimeField.SetAsTime(const Value: TZTime);
 var T: TZTime;
@@ -7316,14 +7379,13 @@ end;
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF} //rolling eyes
 procedure TZDateTimeField.GetText(var Text: string; DisplayText: Boolean);
 var
-  Frmt: string;
+  Frmt, TimeFormat: string;
   DT, D: TDateTime;
   Delim: Char;
   TS: TZTimeStamp;
   I: LengthInt;
   Fraction: Cardinal;
-  B: Boolean;
-  B2: Boolean;
+  B, B2, TimeAdded: Boolean;
   P: PChar;
   Millis: Word;
 begin
@@ -7331,6 +7393,7 @@ begin
   then Text := ''
   else begin
     B := DisplayText and (DisplayFormat <> '');
+    TimeAdded := False;
     if B
     then Frmt := DisplayFormat
     else begin //improve the "C" token of FormatDateTime
@@ -7338,19 +7401,20 @@ begin
          (Delim <> {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator)
       then Frmt := ZSysUtils.ReplaceChar(Delim, {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator, {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat)
       else Frmt := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
-      if (FAdjSecFracFmt and (FScale > 0) and (TS.Fractions > 0) ) or
-         (TS.Hour <> 0) or (TS.Minute <> 0) or (TS.Second <> 0) then begin
-        Frmt := Frmt + ' ';
+      TimeFormat := ReplaceChar('m','n',ReplaceChar('M','n',{$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat));
+      //append time part only if there is "something" to display
+      if ((TS.Hour <> 0) or (TS.Minute <> 0) or (TS.Second <> 0) or (TS.Fractions <> 0)) then begin
         if FindFirstTimeFormatDelimiter({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat, Delim) and
-           (Delim <> {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator)
-        then Frmt := Frmt + ZSysUtils.ReplaceChar(Delim, {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator, {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat)
-        else Frmt := Frmt + {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
+           (Delim <> {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator) then
+        TimeFormat := ReplaceChar(Delim, {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator, TimeFormat);
+        Frmt := Frmt +' '+TimeFormat;
+        TimeAdded := True;
       end;
     end;
     if Frmt <> FLastFormat[B] then begin
       FLastFormat[B] := Frmt;
       FSimpleFormat[b] := IsSimpleDateTimeFormat(Frmt);
-      if FAdjSecFracFmt and (FScale > 0)
+      if TimeAdded and (FAdjSecFracFmt and (FScale > 0) and (TS.Fractions <> 0))
       then FFractionFormat[b] := ConvertAsFractionFormat(Frmt, FScale, not FSimpleFormat[b], FFractionLen[b])
       else FFractionFormat[b] := Frmt;
     end;
@@ -7456,6 +7520,61 @@ begin
   end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable} // uses pointer maths
+  {$WARN 5057 off : Local variable "TS" does not seem to be initialized}
+{$ENDIF}
+procedure TZDateTimeField.SetAsString(const Value: String);
+var P, PStart, FEnd, PEnd, DateTimeDelimiter: PChar;
+    Fractions, FractionDigits: Cardinal;
+    ExtractedCopy: String;
+    DT: TDateTime;
+    TS: TZTimeStamp;
+begin
+  //inherited SetAsString(Value);
+  if Value = ''
+  then Clear
+  else begin
+    P := Pointer(Value);
+    Fractions := 0;
+    FractionDigits := 0;
+    PStart := P;
+    PEnd := PStart + Length(Value);
+    DatTimeDelimiter := nil;
+    while (PStart < PEnd) and (PStart^ <> '.') do begin
+      Inc(PStart);
+      if (PStart^ = '.') and (DateTimeDelimiter = nil) then
+        Inc(PStart)
+      else if (PStart^ = ' ') or (Ord(PStart^) or $20 = Ord('t')) then
+        DateTimeDelimiter := PStart;
+    end;
+    if PStart <> PEnd then begin
+      Inc(PStart);
+      FEnd := PStart;
+      while (Ord(FEnd^) >= Ord('0')) and (Ord(FEnd^) <= Ord('9')) do
+        Inc(FEnd);
+      FractionDigits := FEnd - PStart;
+    end else FEnd := PEnd;//satisfy compiler
+    if (FractionDigits > 0) and (FractionDigits <= Cardinal(fScale)) then begin
+      Fractions := {$IFDEF UNICODE}UnicodeToUInt32{$ELSE}RawToUInt32{$ENDIF}(PStart, FEnd);
+      Fractions := Fractions * ZSysUtils.FractionLength2NanoSecondMulTable[FractionDigits];
+      Dec(PStart);
+      ExtractedCopy := '';
+      FractionDigits := (NativeUInt(PStart)-NativeUInt(P));
+      SetLength(ExtractedCopy, (PEnd-P)-(FEnd-PStart));
+      Move(P^, Pointer(ExtractedCopy)^, FractionDigits);
+      P := Pointer(NativeUInt(ExtractedCopy)+FractionDigits);
+      Move(FEnd^, P^, (NativeUInt(PEnd)-NativeUInt(FEnd)));
+    end else
+      ExtractedCopy := Value;
+    DT := StrToDateTime(ExtractedCopy);
+    ZSysUtils.DecodeDateTimeToTimeStamp(DT, TS);
+    TS.Fractions := Fractions;
+    SetAsTimeStamp(TS);
+  end;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
 
 procedure TZDateTimeField.SetAsTimeStamp(const Value: TZTimeStamp);
 var TS: TZTimeStamp;

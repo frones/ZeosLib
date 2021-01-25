@@ -217,6 +217,8 @@ type
     procedure Open; override;
 
     function AbortOperation: Integer; override;
+    /// <summary>Returns the ServicerProvider for this connection.</summary>
+    /// <returns>the ServerProvider</returns>
     function GetServerProvider: TZServerProvider; override;
   end;
 

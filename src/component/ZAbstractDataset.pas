@@ -167,7 +167,8 @@ type
     property UpdatesPending: Boolean read GetUpdatesPending;
     property Sequence: TZSequence read FSequence write FSequence;
     property SequenceField: string read FSequenceField write FSequenceField;
-
+    property UpdateTransaction: TZAbstractTransaction read FUpdateTransaction
+      write SetUpdateTransaction;
   published
     property UpdateObject: TZUpdateSQL read FUpdateObject write SetUpdateObject;
     property CachedUpdates: Boolean read FCachedUpdates write SetCachedUpdates
@@ -182,8 +183,6 @@ type
       write FBeforeApplyUpdates; {bangfauzan addition}
     property AfterApplyUpdates: TNotifyEvent read FAfterApplyUpdates
       write FAfterApplyUpdates; {bangfauzan addition}
-    property UpdateTransaction: TZAbstractTransaction read FUpdateTransaction
-      write SetUpdateTransaction;
   published
     property BeforeInsert;
     property AfterInsert;
@@ -553,8 +552,8 @@ begin
 
   if not GetActiveBuffer(RowBuffer) then
     raise EZDatabaseError.Create(SInternalError);
-
-  Connection.ShowSqlHourGlass;
+  if Connection <> nil then
+    Connection.ShowSqlHourGlass;
   try
     //revert Master Detail updates makes it possible to update
     // with ForeignKey contraints
@@ -619,7 +618,8 @@ begin
     end;
     {end of bangfauzan addition}
   finally
-    Connection.HideSqlHourGlass;
+    if Connection <> nil then
+      Connection.HideSqlHourGlass;
     //DetailLinks.Free;
   end;
 end;

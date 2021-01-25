@@ -71,8 +71,6 @@ type
   public
     constructor Create; override;
     function Connect(const Url: TZURL): IZConnection; override;
-    function GetMajorVersion: Integer; override;
-    function GetMinorVersion: Integer; override;
     function GetTokenizer: IZTokenizer; override;
   end;
 
@@ -222,6 +220,10 @@ type
     function GetCatalog: string; override;
 
     function GetHostVersion: Integer; override;
+    /// <summary>Returns the ServicerProvider for this connection. For ODBC
+    ///  the connection must be opened to determine the provider. Otherwise
+    ///  the provider is tested against the driver names</summary>
+    /// <returns>the ServerProvider or spUnknown if not known.</returns>
     function GetServerProvider: TZServerProvider; override;
   end;
 
@@ -261,24 +263,6 @@ end;
 function TZAdoDriver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := TZAdoConnection.Create(Url);
-end;
-
-{**
-  Gets the driver's major version number. Initially this should be 1.
-  @return this driver's major version number
-}
-function TZAdoDriver.GetMajorVersion: Integer;
-begin
-  Result := 1;
-end;
-
-{**
-  Gets the driver's minor version number. Initially this should be 0.
-  @return this driver's minor version number
-}
-function TZAdoDriver.GetMinorVersion: Integer;
-begin
-  Result := 0;
 end;
 
 function TZAdoDriver.GetTokenizer: IZTokenizer;

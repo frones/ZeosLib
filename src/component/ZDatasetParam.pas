@@ -1286,9 +1286,11 @@ begin
   FNumericScale := Param.FNumericScale;
   FNull := Param.FNull;
   FDataType := Param.FDataType;
-  FParamType := Param.FParamType;
+  if FParamType = ptUnknown then
+    FParamType := Param.FParamType;
   FDecimalSeperator := Param.FDecimalSeperator;
   FSize := Param.FSize;
+  FName := Param.FName;
   if (Param.FArraySize = 0) and not FNull and (Ord(FSQLDataType) >= Ord(stString)) then begin
     { inc the refcounts }
     FData.pvPointer := nil; //avoid gpf
@@ -2238,10 +2240,9 @@ function TZParam.GetAsVariant: Variant;
     Result := BytesToVar(GetAsBytes)
   end;
 begin
-  VarClear(Result);
-  If GetIsNull then
-    TVarData(Result).VType := varNull
-  else case FSQLDataType of
+  Result := null; //VarInit(Result) changed (let the compiler do the quirk)-> see https://zeoslib.sourceforge.io/viewtopic.php?f=50&p=162991
+  If not GetIsNull then
+    case FSQLDataType of
       stBoolean:     begin
                         TVarData(Result).VType := varBoolean;
                         TVarData(Result).VBoolean := FData.pvBool;
@@ -2328,14 +2329,7 @@ begin
                       end;
       stString,
       stAsciiStream:  SetAsRawString(Result);
-      stUnicodeString:begin
-                        {$IF declared(varUString)}
-                        TVarData(Result).VType := varUString;
-                        UnicodeString(TVarData(Result).{$IF declared(VUString)}VUString{$ELSE}VAny{$IFEND}) := UnicodeString(FData.pvPointer);
-                        {$ELSE}
-                        Result := UnicodeString(FData.pvPointer);
-                        {$IFEND}
-                      end;
+      stUnicodeString:Result := UnicodeString(FData.pvPointer);
       stUnicodeStream:SetAsUniStringFromClob(Result);
       stBytes,
       stBinaryStream: SetAsBytes(Result);
@@ -4112,6 +4106,7 @@ begin
     {$IFDEF WITH_FTSINGLE}
     DB.ftSingle:     SetAsSingle(PSingle(Buffer)^);
     {$ENDIF}
+    else raise CreateConversionError(FSQLType, FSQLType);
   end;
 end;
 
@@ -4352,10 +4347,15 @@ begin
 end;
 
 procedure TZParams.AssignValues(Value: TZParams);
-var I: Integer;
+var
+  I: Integer;
+  P: TZParam;
 begin
-  for i := 0 to Math.Min(Count, Value.Count) -1 do
-    GetItem(i).Assign(Value.GetItem(I));
+  for I := 0 to Value.Count - 1 do begin
+    P := FindParam(Value[I].Name);
+    if P <> nil then
+      P.Assign(Value[I]);
+  end;
 end;
 
 constructor TZParams.Create(Owner: TPersistent);
