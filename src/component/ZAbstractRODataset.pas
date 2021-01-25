@@ -7541,7 +7541,7 @@ begin
     FractionDigits := 0;
     PStart := P;
     PEnd := PStart + Length(Value);
-    DatTimeDelimiter := nil;
+    DateTimeDelimiter := nil;
     while (PStart < PEnd) and (PStart^ <> '.') do begin
       Inc(PStart);
       if (PStart^ = '.') and (DateTimeDelimiter = nil) then
