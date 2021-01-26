@@ -545,6 +545,13 @@
 {$DEFINE ENABLE_POOLED}
 {$ENDIF}
 
+// Enables Webservice connection support
+{$IFNDEF ZEOS_DISABLE_PROXY}
+  {$IFNDEF FPC}
+    {$DEFINE ENABLE_PROXY}
+  {$ENDIF}
+{$ENDIF}
+
 // Prevents loading default libmysql.dll
 {.$DEFINE MYSQL_STRICT_DLL_LOADING}
 
