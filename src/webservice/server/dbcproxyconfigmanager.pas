@@ -56,7 +56,7 @@ unit DbcProxyConfigManager;
 interface
 
 uses
-  Classes, SysUtils, generics.collections, ZDbcIntfs;
+  Classes, SysUtils, generics.collections, ZDbcIntfs, DbcProxySecurityModule;
 
 type
   TDbcProxyConnConfig = record
@@ -68,6 +68,7 @@ type
     LibraryLocation: String;
     Port: Integer;
     Protocol: String;
+    SecurityModule: TZAbstractSecurityModule;
   end;
 
   TDbcProxyConnConfigList = TList<TDbcProxyConnConfig>;
@@ -105,25 +106,45 @@ var
   IniFile: TIniFile;
   Sections: TStringList;
   Section: String;
+  DbPrefix: String;
+  SecPrefix: String;
+  ModuleType: String;
 begin
-  IniFile := TIniFile.Create(SourceFile);
+  IniFile := TIniFile.Create(SourceFile, TEncoding.UTF8);
   try
+    DbPrefix := IniFile.ReadString('general', 'Database Prefix', 'db.');
+    SecPrefix := IniFile.ReadString('general', 'Security Prefix', 'sec.');
     Sections := TStringList.Create;
     try
       IniFile.ReadSections(Sections);
       while Sections.Count > 0 do begin
         Section := Sections.Strings[0];
+        if LowerCase(Copy(Section, 1, Length(DbPrefix))) = DbPrefix then begin
+          ConfigInfo.ConfigName := LowerCase(Copy(Section, Length(DbPrefix) + 1, Length(Section)));
+          ConfigInfo.ClientCodepage := IniFile.ReadString(Section, 'ClientCodepage', 'UTF8');
+          ConfigInfo.Database := IniFile.ReadString(Section, 'Database', '');
+          ConfigInfo.HostName := IniFile.ReadString(Section, 'HostName', '');
+          ConfigInfo.LibraryLocation := IniFile.ReadString(Section, 'LibraryLocation', '');
+          ConfigInfo.Port := IniFile.ReadInteger(Section, 'Port', 0);
+          ConfigInfo.Protocol := IniFile.ReadString(Section, 'Protocol', '');
+          ConfigInfo.Properties := IniFile.ReadString(Section, 'Properties', '');
 
-        ConfigInfo.ConfigName := LowerCase(Section);
-        ConfigInfo.ClientCodepage := IniFile.ReadString(Section, 'ClientCodepage', 'UTF8');
-        ConfigInfo.Database := IniFile.ReadString(Section, 'Database', '');
-        ConfigInfo.HostName := IniFile.ReadString(Section, 'HostName', '');
-        ConfigInfo.LibraryLocation := IniFile.ReadString(Section, 'LibraryLocation', '');
-        ConfigInfo.Port := IniFile.ReadInteger(Section, 'Port', 0);
-        ConfigInfo.Protocol := IniFile.ReadString(Section, 'Protocol', '');
-        ConfigInfo.Properties := IniFile.ReadString(Section, 'Properties', '');
+          Section := IniFile.ReadString(Section, 'Security Module', '');
+          if Section <> '' then begin
+            Section := SecPrefix + Section;
+            ModuleType := LowerCase(IniFile.ReadString(Section, 'Type', ''));
+            if ModuleType = 'yubiotp' then begin
+              ConfigInfo.SecurityModule := TZYubiOtpSecurityModule.Create;
+              ConfigInfo.SecurityModule.LoadConfig(IniFile, Section);
+            end else begin
+              raise Exception.Create('Security module of type ' + ModuleType + ' is unknown.');
+            end;
+          end else begin
+            ConfigInfo.SecurityModule := nil;
+          end;
 
-        ConfigList.Add(ConfigInfo);
+          ConfigList.Add(ConfigInfo);
+        end;
         Sections.Delete(0);
       end;
     finally
@@ -151,6 +172,9 @@ begin
   end;
 
   if not found then raise Exception.Create('No config named ' + ConfigName + ' was found.');
+
+  if Assigned(Cfg.SecurityModule)
+    then Cfg.SecurityModule.CheckPassword(UserName, Password, ConfigName);
 
   Result := DriverManager.ConstructURL(Cfg.Protocol, Cfg.HostName, Cfg.Database, UserName, Password, Cfg.Port, nil, Cfg.LibraryLocation);
 end;

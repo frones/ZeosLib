@@ -185,10 +185,10 @@ Begin
   end;
 
   applyConnectionProperties(Connection, UTF8Encode(InProperties));
-  OutProperties := encodeConnectionProperties(Connection);
+  OutProperties := UnicodeString(encodeConnectionProperties(Connection));
   Connection.Open;
-  DbInfo := encodeDatabaseInfo(Connection);
-  Result := ConnectionManager.AddConnection(Connection);
+  DbInfo := UnicodeString(encodeDatabaseInfo(Connection));
+  Result := UnicodeString(ConnectionManager.AddConnection(Connection));
 End;
 
 procedure TZeosProxy_ServiceImp.Disconnect(
@@ -249,7 +249,7 @@ Begin
   with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
   try
     applyConnectionProperties(ZeosConnection, UTF8Encode(Properties));
-    Result := encodeConnectionProperties(ZeosConnection);
+    Result := UnicodeString(encodeConnectionProperties(ZeosConnection));
   finally
     Unlock;
   end;
@@ -275,11 +275,11 @@ Begin
     if Statement.ExecutePrepared then begin
       ResultSet := Statement.GetResultSet;
       if Assigned(ResultSet) then begin
-        Result := encodeResultSet(ResultSet, MaxRows, Statement.GetUpdateCount);
+        Result := UnicodeString(encodeResultSet(ResultSet, MaxRows, Statement.GetUpdateCount));
       end else
-        Result := IntToStr(Statement.GetUpdateCount);
+        Result := UnicodeString(IntToStr(Statement.GetUpdateCount));
     end else
-      Result := IntToStr(Statement.GetUpdateCount);
+      Result := UnicodeString(IntToStr(Statement.GetUpdateCount));
   finally
     Unlock;
     Statement := nil;
@@ -303,7 +303,7 @@ Begin
   try
     //todo: implement some exploding of Types into the TypesArray
     ResultSet := ZeosConnection.GetMetadata.GetTables(UTF8Encode(Catalog), UTF8Encode(SchemaPattern), UTF8Encode(TableNamePattern), TypesArray);
-    Result := encodeResultSet(ResultSet);
+    Result := UnicodeString(encodeResultSet(ResultSet));
   finally
     Unlock;
   end;
@@ -318,7 +318,7 @@ Begin
   with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
   try
     ResultSet := ZeosConnection.GetMetadata.GetSchemas;
-    Result := encodeResultSet(ResultSet);
+    Result := UnicodeString(encodeResultSet(ResultSet));
   finally
     Unlock;
   end;
@@ -333,7 +333,7 @@ Begin
   with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
   try
     ResultSet := ZeosConnection.GetMetadata.GetCatalogs;
-    Result := encodeResultSet(ResultSet);
+    Result := UnicodeString(encodeResultSet(ResultSet));
   finally
     Unlock;
   end;
@@ -348,7 +348,7 @@ Begin
   with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
   try
     ResultSet := ZeosConnection.GetMetadata.GetTableTypes;
-    Result := encodeResultSet(ResultSet);
+    Result := UnicodeString(encodeResultSet(ResultSet));
   finally
     Unlock;
   end;
@@ -367,7 +367,7 @@ Begin
   with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
   try
     ResultSet := ZeosConnection.GetMetadata.GetColumns(UTF8Encode(Catalog), UTF8Encode(SchemaPattern), UTF8Encode(TableNamePattern), UTF8Encode(ColumnNamePattern));
-    Result := encodeResultSet(ResultSet);
+    Result := UnicodeString(encodeResultSet(ResultSet));
   finally
     Unlock;;
   end;
@@ -385,7 +385,7 @@ Begin
   with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
   try
     ResultSet := ZeosConnection.GetMetadata.GetTablePrivileges(UTF8Encode(Catalog), UTF8Encode(SchemaPattern), UTF8Encode(TableNamePattern));
-    Result := encodeResultSet(ResultSet);
+    Result := UnicodeString(encodeResultSet(ResultSet));
   finally
     Unlock;
   end;
@@ -404,7 +404,7 @@ Begin
   with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
   try
     ResultSet := ZeosConnection.GetMetadata.GetColumnPrivileges(UTF8Encode(Catalog), UTF8Encode(Schema), UTF8Encode(Table), UTF8Encode(ColumnNamePattern));
-    Result := encodeResultSet(ResultSet);
+    Result := UnicodeString(encodeResultSet(ResultSet));
   finally
     Unlock;
   end;
@@ -422,7 +422,7 @@ Begin
   with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
   try
     ResultSet := ZeosConnection.GetMetadata.GetPrimaryKeys(UTF8Encode(Catalog), UTF8Encode(Schema), UTF8Encode(Table));
-    Result := encodeResultSet(ResultSet);
+    Result := UnicodeString(encodeResultSet(ResultSet));
   finally
     Unlock;
   end;
@@ -440,7 +440,7 @@ Begin
   with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
   try
     ResultSet := ZeosConnection.GetMetadata.GetImportedKeys(UTF8Encode(Catalog), UTF8Encode(Schema), UTF8Encode(Table));
-    Result := encodeResultSet(ResultSet);
+    Result := UnicodeString(encodeResultSet(ResultSet));
   finally
     Unlock;
   end;
@@ -458,7 +458,7 @@ Begin
   with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
   try
     ResultSet := ZeosConnection.GetMetadata.GetExportedKeys(UTF8Encode(Catalog), UTF8Encode(Schema), UTF8Encode(Table));
-    Result := encodeResultSet(ResultSet);
+    Result := UnicodeString(encodeResultSet(ResultSet));
   finally
     Unlock;
   end;
@@ -479,7 +479,7 @@ Begin
   with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
   try
     ResultSet := ZeosConnection.GetMetadata.GetCrossReference(UTF8Encode(PrimaryCatalog), UTF8Encode(PrimarySchema), UTF8Encode(PrimaryTable), UTF8Encode(ForeignCatalog), UTF8Encode(ForeignSchema), UTF8Encode(ForeignTable));
-    Result := encodeResultSet(ResultSet);
+    Result := UnicodeString(encodeResultSet(ResultSet));
   finally
     Unlock;
   end;
@@ -499,7 +499,7 @@ Begin
   with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
   try
     ResultSet := ZeosConnection.GetMetadata.GetIndexInfo(UTF8Encode(Catalog), UTF8Encode(Schema), UTF8Encode(Table), Unique, Approximate);
-    Result := encodeResultSet(ResultSet);
+    Result := UnicodeString(encodeResultSet(ResultSet));
   finally
     Unlock;
   end;
@@ -517,7 +517,7 @@ Begin
   with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
   try
     ResultSet := ZeosConnection.GetMetadata.GetSequences(UTF8Encode(Catalog), UTF8Encode(SchemaPattern), UTF8Encode(SequenceNamePattern));
-    Result := encodeResultSet(ResultSet);
+    Result := UnicodeString(encodeResultSet(ResultSet));
   finally
     Unlock;
   end;
@@ -536,7 +536,7 @@ Begin
   with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
   try
     ResultSet := ZeosConnection.GetMetadata.GetTriggers(UTF8Encode(Catalog), UTF8Encode(SchemaPattern), UTF8Encode(TableNamePattern), UTF8Encode(TriggerNamePattern));
-    Result := encodeResultSet(ResultSet);
+    Result := UnicodeString(encodeResultSet(ResultSet));
   finally
     Unlock;
   end;
@@ -554,7 +554,7 @@ Begin
   with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
   try
     ResultSet := ZeosConnection.GetMetadata.GetProcedures(UTF8Encode(Catalog), UTF8Encode(SchemaPattern), UTF8Encode(ProcedureNamePattern));
-    Result := encodeResultSet(ResultSet);
+    Result := UnicodeString(encodeResultSet(ResultSet));
   finally
     Unlock;
   end;
@@ -573,7 +573,7 @@ Begin
   with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
   try
     ResultSet := ZeosConnection.GetMetadata.GetProcedureColumns(UTF8Encode(Catalog), UTF8Encode(SchemaPattern), UTF8Encode(ProcedureNamePattern), UTF8Encode(ColumnNamePattern));
-    Result := encodeResultSet(ResultSet);
+    Result := UnicodeString(encodeResultSet(ResultSet));
   finally
     Unlock;
   end;
@@ -588,7 +588,7 @@ Begin
   with ConnectionManager.LockConnection(UTF8Encode(ConnectionID)) do
   try
     ResultSet := ZeosConnection.GetMetadata.GetCharacterSets;
-    Result := encodeResultSet(ResultSet);
+    Result := UnicodeString(encodeResultSet(ResultSet));
   finally
     Unlock;
   end;
