@@ -143,7 +143,7 @@ var
 begin
   Result := MetadataStart + LineEnding;
   // todo: adapt to the current start and end of Zeos enumerations
-  for x := 1 to MD.GetColumnCount do begin
+  for x := FirstDbcIndex to MD.GetColumnCount - 1 + FirstDbcIndex do begin
     Line := '';
     addProperty('catalogname', MD.GetCatalogName(x));
     addProperty('codepage', IntToStr(MD.GetColumnCodePage(x)));  // is this needed? All data is unicode in the end?
@@ -311,20 +311,20 @@ begin
     SetLength(CF, MD.GetColumnCount);
     for Idx := FirstDbcIndex to MD.GetColumnCount - 1 + FirstDbcIndex do begin
       case MD.GetColumnType(Idx) of
-        stBoolean: CF[Idx - 1] := ConvertBool;
-        stByte, stShort, stWord, stSmall, stLongWord, stInteger: CF[Idx - 1] := ConvertInt;
-        stULong, stLong: CF[Idx - 1] := ConvertInt64;
-        stFloat: CF[Idx - 1] := ConvertSingle;
-        stDouble: CF[Idx - 1] := ConvertDouble;
-        stCurrency: CF[Idx - 1] := ConvertCurrency;
-        stBigDecimal: CF[Idx - 1] := {$IFNDEF ZEOS73UP}ConvertExtended{$ELSE}ConvertBcd{$ENDIF};
-        stString, stUnicodeString: CF[Idx - 1] := ConvertString;
-        stDate: CF[Idx - 1] := ConvertDate;
-        stTime: CF[Idx - 1] := ConvertTime;
-        stTimestamp: CF[Idx - 1] := ConvertDateTime;
-        stAsciiStream, stUnicodeStream: CF[Idx - 1] := ConvertString;
-        stBinaryStream: CF[Idx - 1] := ConvertBinaryStream;
-        stBytes: CF[Idx-1] := ConvertBytes;
+        stBoolean: CF[Idx - FirstDbcIndex] := ConvertBool;
+        stByte, stShort, stWord, stSmall, stLongWord, stInteger: CF[Idx - FirstDbcIndex] := ConvertInt;
+        stULong, stLong: CF[Idx - FirstDbcIndex] := ConvertInt64;
+        stFloat: CF[Idx - FirstDbcIndex] := ConvertSingle;
+        stDouble: CF[Idx - FirstDbcIndex] := ConvertDouble;
+        stCurrency: CF[Idx - FirstDbcIndex] := ConvertCurrency;
+        stBigDecimal: CF[Idx - FirstDbcIndex] := {$IFNDEF ZEOS73UP}ConvertExtended{$ELSE}ConvertBcd{$ENDIF};
+        stString, stUnicodeString: CF[Idx - FirstDbcIndex] := ConvertString;
+        stDate: CF[Idx - FirstDbcIndex] := ConvertDate;
+        stTime: CF[Idx - FirstDbcIndex] := ConvertTime;
+        stTimestamp: CF[Idx - FirstDbcIndex] := ConvertDateTime;
+        stAsciiStream, stUnicodeStream: CF[Idx - FirstDbcIndex] := ConvertString;
+        stBinaryStream: CF[Idx - FirstDbcIndex] := ConvertBinaryStream;
+        stBytes: CF[Idx-FirstDbcIndex] := ConvertBytes;
         else raise Exception.Create('Conversion of type ' + MD.GetColumnTypeName(Idx) + ' is not supported (yet).');
       end;
     end;
@@ -335,11 +335,11 @@ begin
         if (MaxRows <> 0) then
           if (Rows.Count >= MaxRows) then Break;
         Line := '<row>';
-        for idx := 1 to MD.GetColumnCount do begin
+        for idx := FirstDbcIndex to MD.GetColumnCount - 1 + FirstDbcIndex do begin
           if RS.IsNull(idx) then
             Line := Line + ConvertNull
           else
-            Line := Line + CF[Idx - 1](RS, Idx);
+            Line := Line + CF[Idx - FirstDbcIndex](RS, Idx);
         end;
         Rows.Add(Line + '</row>');
       end;

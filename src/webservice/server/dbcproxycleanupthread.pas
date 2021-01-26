@@ -51,7 +51,7 @@
 
 unit dbcproxycleanupthread;
 
-{$mode delphiunicode}{$H+}
+{$mode delphi}{$H+}
 
 interface
 
