@@ -45,6 +45,7 @@ contains
   ZDbcASAResultSet in '..\..\src\dbc\ZDbcASAResultSet.pas',
   ZDbcASAStatement in '..\..\src\dbc\ZDbcASAStatement.pas',
   ZDbcASAUtils in '..\..\src\dbc\ZDbcASAUtils.pas',
+  ZDbcBeginnerStatement in '..\..\src\dbc\ZDbcBeginnerStatement.pas',
   ZDbcCache in '..\..\src\dbc\ZDbcCache.pas',
   ZDbcCachedResultSet in '..\..\src\dbc\ZDbcCachedResultSet.pas',
   ZDbcConnection in '..\..\src\dbc\ZDbcConnection.pas',
