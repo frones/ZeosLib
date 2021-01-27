@@ -1367,7 +1367,11 @@ begin
   ColType := ColInfo.ColumnType;
   case ColType of
     stBinaryStream: begin
+      {$IFDEF NO_ANSISTRING}
+      Bytes := DecodeBase64(Val);
+      {$ELSE}
       Bytes := DecodeBase64(AnsiString(Val));
+      {$ENDIF}
       Result := TZAbstractBlob.CreateWithData(@Bytes[0], Length(Bytes)) as IZBlob;
     end;
     stAsciiStream, stUnicodeStream: begin
@@ -1529,7 +1533,6 @@ begin
   CheckClosed;
 {$ENDIF}
   { Checks for maximum row. }
-  Result := False;
   { Processes negative rows. }
   if Row < 0 then begin
     Row := LastRowNo + Row + 1;

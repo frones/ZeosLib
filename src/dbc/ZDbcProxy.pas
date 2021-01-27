@@ -102,11 +102,11 @@ type
     FStartTransactionUsed: Boolean;
     {$ENDIF}
   protected
-    procedure AfterConstruction; override;
     procedure transferProperties(PropName, PropValue: String);
     procedure applyProperties(const Properties: String);
     function encodeProperties(PropName, PropValue: String): String;
   public
+    procedure AfterConstruction; override;
     {$IFNDEF ZEOS73UP}
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings): IZPreparedStatement; override;
@@ -329,12 +329,11 @@ end;
   Constructs this object and assignes the main properties.
 }
 procedure TZDbcProxyConnection.AfterConstruction;
-var
-  PlainDrv: IZProxyPlainDriver;
 begin
   FMetadata := TZProxyDatabaseMetadata.Create(Self, Url);
   FConnIntf := GetPlainDriver.GetLibraryInterface;
-  if not assigned(FConnIntf) then raise Exception.Create(GetPlainDriver.GetLastErrorStr);
+  if not assigned(FConnIntf) then
+    raise Exception.Create(GetPlainDriver.GetLastErrorStr);
   inherited AfterConstruction;
 end;
 
