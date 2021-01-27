@@ -102,8 +102,7 @@ type
     procedure CreateTokenStates; override;
   public
     function NormalizeParamToken(const Token: TZToken; out ParamName: String;
-      LookUpList: TStrings; out ParamIndex: Integer;
-      out IngoreParam: Boolean): String; override;
+      LookUpList: TStrings; out ParamIndex: Integer): String; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_POSTGRESQL}
@@ -315,8 +314,7 @@ begin
 end;
 
 function TZPostgreSQLTokenizer.NormalizeParamToken(const Token: TZToken;
-  out ParamName: String; LookUpList: TStrings; out ParamIndex: Integer;
-  out IngoreParam: Boolean): String;
+  out ParamName: String; LookUpList: TStrings; out ParamIndex: Integer): String;
 var
   P: PChar;
   C: Cardinal;
@@ -332,11 +330,7 @@ begin
   end else if (Token.L >= 2) and (Ord(Token.P^) in [Ord(#39), Ord('`'), Ord('"'), Ord('[')])
     then ParamName := GetQuoteState.DecodeToken(Token, Token.P^)
     else System.SetString(ParamName, Token.P, Token.L);
-  ParamIndex := LookUpList.IndexOf(ParamName);
-  if ParamIndex = -1 then begin
-    ParamIndex := LookUpList.Add(ParamName);
-    IngoreParam := False;
-  end else IngoreParam := True;
+  ParamIndex := LookUpList.Add(ParamName);
   if Token.TokenType <> ttInteger then begin
     C := Cardinal(ParamIndex )+1;
     B := GetOrdinalDigits(C);

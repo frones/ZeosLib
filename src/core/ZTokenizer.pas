@@ -437,7 +437,7 @@ type
     function TokenizeBuffer(const Buffer: string; Options: TZTokenOptions): TZTokenDynArray; deprecated;
 
     function NormalizeParamToken(const Token: TZToken; out ParamName: String;
-      LookUpList: TStrings; out ParamIndex: Integer; out IngoreParam: Boolean): String;
+      LookUpList: TStrings; out ParamIndex: Integer): String;
 
     function GetCommentState: TZCommentState;
     function GetNumberState: TZNumberState;
@@ -471,7 +471,7 @@ type
       TZTokenDynArray;
 
     function NormalizeParamToken(const Token: TZToken; out ParamName: String;
-      LookUpList: TStrings; out ParamIndex: Integer; out IngoreParam: Boolean): String; virtual;
+      LookUpList: TStrings; out ParamIndex: Integer): String; virtual;
 
     function GetCharacterState(StartChar: Char): TZTokenizerState;
     procedure SetCharacterState(FromChar, ToChar: Char; State: TZTokenizerState);
@@ -1369,17 +1369,13 @@ end;
   Parameter
 }
 function TZTokenizer.NormalizeParamToken(const Token: TZToken;
-  out ParamName: String; LookUpList: TStrings; out ParamIndex: Integer;
-  out IngoreParam: Boolean): String;
+  out ParamName: String; LookUpList: TStrings; out ParamIndex: Integer): String;
 begin
   Result := '?';
   if (Token.L >= 2) and (Ord(Token.P^) in [Ord(#39), Ord('`'), Ord('"'), Ord('[')])
   then ParamName := GetQuoteState.DecodeToken(Token, Token.P^)
   else System.SetString(ParamName, Token.P, Token.L);
-  ParamIndex := LookUpList.IndexOf(ParamName);
-  if ParamIndex < 0 then
-    ParamIndex := LookUpList.Add(ParamName);
-  IngoreParam := False;
+  ParamIndex := LookUpList.Add(ParamName);
 end;
 
 { TZTokenList }

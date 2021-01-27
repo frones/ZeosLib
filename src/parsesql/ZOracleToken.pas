@@ -91,8 +91,7 @@ type
     procedure CreateTokenStates; override;
   public
     function NormalizeParamToken(const Token: TZToken; out ParamName: String;
-      LookUpList: TStrings; out ParamIndex: Integer;
-      out IngoreParam: Boolean): String; override;
+      LookUpList: TStrings; out ParamIndex: Integer): String; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_ORACLE}
@@ -170,8 +169,7 @@ begin
 end;
 
 function TZOracleTokenizer.NormalizeParamToken(const Token: TZToken;
-  out ParamName: String; LookUpList: TStrings; out ParamIndex: Integer;
-  out IngoreParam: Boolean): String;
+  out ParamName: String; LookUpList: TStrings; out ParamIndex: Integer): String;
 var P: PChar;
 begin
   if (Token.L >= 2) and (Ord(Token.P^) in [Ord(#39), Ord('`'), Ord('"'), Ord('[')])
@@ -181,11 +179,7 @@ begin
   P := Pointer(Result);
   P^ := ':';
   Move(Token.P^, (P+1)^, Token.L*SizeOf(Char));
-  ParamIndex := LookUpList.IndexOf(ParamName);
-  if ParamIndex < 0 then begin
-    ParamIndex := LookUpList.Add(ParamName);
-    IngoreParam := False;
-  end else IngoreParam := True;
+  ParamIndex := LookUpList.Add(ParamName);
 end;
 
 {$ENDIF ZEOS_DISABLE_ORACLE}
