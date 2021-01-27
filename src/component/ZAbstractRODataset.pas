@@ -1860,8 +1860,7 @@ begin
 
   try
     for I := 0 to TZSQLStrings(Sender).ParamCount - 1 do
-      If Not Assigned(FParams.FindParam(TZSQLStrings(Sender).ParamNames[I])) Then
-         FParams.CreateParam(ftUnknown, TZSQLStrings(Sender).ParamNames[I], ptUnknown);
+      FParams.CreateParam(ftUnknown, TZSQLStrings(Sender).ParamNames[I], ptUnknown);
     FParams.AssignValues(OldParams);
   finally
     OldParams.Free;
