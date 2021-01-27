@@ -102,6 +102,7 @@ type
     function BOR: Boolean;
     function EOR: Boolean;
   published
+    property Connection;
     property Active;
     property ParamCheck;
     property Params;

@@ -64,10 +64,7 @@
 {.$DEFINE ZEOS_DISABLE_POOLED}
 {.$DEFINE ZEOS_DISABLE_OLEDB}
 {.$DEFINE ZEOS_DISABLE_ODBC}
-// Activate this driver only if you know what you are doing.
-// Currently it only was tested with Delphi XE 7 on Windows.
-{$DEFINE ZEOS_DISABLE_PROXY}
-// Use this only if you know what you are doing. The internal proxy doesn't work.
+{.$DEFINE ZEOS_DISABLE_PROXY}
 {.$DEFINE ZEOS_PROXY_USE_INTERNAL_PROXY}
 
 {.$DEFINE USE_SYNCOMMONS} //enable JSON content support by using SynCommons.pas from Synopse project 
@@ -338,6 +335,7 @@
                           {$ENDIF}  
                           {$IF CompilerVersion >= 27} //Delphi XE6+
                             {$IF CompilerVersion >= 28} //Delphi XE7+
+							  {$DEFINE WITH_NETENCODING}
                               {$DEFINE WITH_OMNIXML}
                               {$UNDEF WITH_DBTABLES} //M.A. In Delphi XE7 no BDE
                               {$DEFINE WITH_LIFECYCLES} //TDataSet.DefaultFields is deprecated use LifeCycles instead							  
@@ -547,9 +545,9 @@
 
 // Enables Webservice connection support
 {$IFNDEF ZEOS_DISABLE_PROXY}
-  {$IFNDEF FPC}
+  {$IF NOT DEFINED(FPC) AND DEFINED(WITH_NETENCODING)}
     {$DEFINE ENABLE_PROXY}
-  {$ENDIF}
+  {$IFEND}
 {$ENDIF}
 
 // Prevents loading default libmysql.dll
