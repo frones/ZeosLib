@@ -66,7 +66,7 @@ interface
 
 {$I ZPlain.inc}
 
-{$IFNDEF ZEOS_DISABLE_PROXY}
+{$IF DEFINED(ENABLE_PROXY) AND DEFINED(ZEOS_PROXY_USE_INTERNAL_PROXY)}
 
 uses Soap.InvokeRegistry, Soap.SOAPHTTPClient, System.Types, Soap.XSBuiltIns;
 
@@ -108,7 +108,7 @@ type
     //     - Eingabe-Part verweist auf kein Element
     procedure Disconnect(const ConnectionID: UnicodeString); stdcall;
 
-    // Entpacken nicht möglich: 
+    // Entpacken nicht möglich:
     //     - Eingabemeldung besteht aus mehreren Parts
     procedure SetAutoCommit(const ConnectionID: UnicodeString; const Value: Boolean); stdcall;
 
@@ -150,7 +150,7 @@ type
     //     - Ausgabe-Part verweist auf kein Element
     function  GetTableTypes(const ConnectionID: UnicodeString): UnicodeString; stdcall;
 
-    // Entpacken nicht möglich: 
+    // Entpacken nicht möglich:
     //     - Eingabemeldung besteht aus mehreren Parts
     //     - Ausgabe-Part verweist auf kein Element
     function  GetColumns(const ConnectionID: UnicodeString; const Catalog: UnicodeString; const SchemaPattern: UnicodeString; const TableNamePattern: UnicodeString; const ColumnNamePattern: UnicodeString): UnicodeString; stdcall;
@@ -192,7 +192,7 @@ type
     function  GetIndexInfo(const ConnectionID: UnicodeString; const Catalog: UnicodeString; const Schema: UnicodeString; const Table: UnicodeString; const Unique: Boolean; const Approximate: Boolean
                            ): UnicodeString; stdcall;
 
-    // Entpacken nicht möglich: 
+    // Entpacken nicht möglich:
     //     - Eingabemeldung besteht aus mehreren Parts
     //     - Ausgabe-Part verweist auf kein Element
     function  GetSequences(const ConnectionID: UnicodeString; const Catalog: UnicodeString; const SchemaPattern: UnicodeString; const SequenceNamePattern: UnicodeString): UnicodeString; stdcall;
@@ -221,9 +221,9 @@ type
 function GetIZeosProxy(UseWSDL: Boolean=System.False; Addr: string=''; HTTPRIO: THTTPRIO = nil): IZeosProxy;
 
 
-{$ENDIF ZEOS_DISABLE_PROXY}
+{$IFEND}
 implementation
-{$IFNDEF ZEOS_DISABLE_PROXY}
+{$IF DEFINED(ENABLE_PROXY) AND DEFINED(ZEOS_PROXY_USE_INTERNAL_PROXY)}
 
 uses System.SysUtils;
 
@@ -270,5 +270,5 @@ initialization
   InvRegistry.RegisterDefaultSOAPAction(TypeInfo(IZeosProxy), 'zproxy/IZeosProxy%operationName%');
   InvRegistry.RegisterInvokeOptions(TypeInfo(IZeosProxy), ioLiteral);
 
-{$ENDIF ZEOS_DISABLE_PROXY}
+{$IFEND}
 end.

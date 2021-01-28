@@ -55,7 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
-{$IFNDEF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$IFDEF ENABLE_PROXY} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
@@ -126,9 +126,9 @@ type
     function ExecutePrepared: Boolean; override;
   end;
 
-{$ENDIF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$ENDIF ENABLE_PROXY} //if set we have an empty unit
 implementation
-{$IFNDEF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$IFDEF ENABLE_PROXY} //if set we have an empty unit
 
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
@@ -352,6 +352,6 @@ initialization
   ProxyFormatSettings.TimeSeparator := ':';
   ProxyFormatSettings.ThousandSeparator := ',';
 
-{$ENDIF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$ENDIF ENABLE_PROXY} //if set we have an empty unit
 end.
 

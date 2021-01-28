@@ -134,6 +134,8 @@ type
   /// <author>EgonHugeist.</author>
   /// <summary>Implements an InMemory Table object.</summary>
   TZMemTable = class(TZAbstractMemTable)
+  public
+    Destructor Destroy; Override;
   published
     property IndexFieldNames; {bangfauzan addition}
   end;
@@ -142,6 +144,15 @@ const
   Zeos80 = true;
 
 implementation
+
+{ TZMemTable }
+
+Destructor TZMemTable.Destroy;
+Begin
+  If Self.Active Then
+    Self.Close;
+  inherited;
+End;
 
 end.
 

@@ -55,7 +55,7 @@ interface
 
 {$I ZPlain.inc}
 
-{$IFNDEF ZEOS_DISABLE_PROXY}
+{$IF DEFINED(ENABLE_PROXY) AND DEFINED(ZEOS_PROXY_USE_INTERNAL_PROXY)}
 
 uses
   Classes, ZPlainProxyDriverIntf, ZPlainProxyDriverSoapProxy;
@@ -63,11 +63,11 @@ uses
 function GetLastErrorStr: WideString; stdcall;
 function GetInterface: IZDbcProxy; stdcall;
 
-{$ENDIF ZEOS_DISABLE_PROXY}
+{$IFEND}
 
 implementation
 
-{$IFNDEF ZEOS_DISABLE_PROXY}
+{$IF DEFINED(ENABLE_PROXY) AND DEFINED(ZEOS_PROXY_USE_INTERNAL_PROXY)}
 
 uses SysUtils, {$IFNDEF NO_SAFECALL}ActiveX, ComObj,{$ENDIF} SOAPHTTPClient;
 
@@ -334,6 +334,6 @@ end;
 initialization
   LastErrorStr := 'No Error happened yet!'
 
-{$ENDIF ZEOS_DISABLE_PROXY}
+{$IFEND}
 
 end.

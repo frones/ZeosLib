@@ -55,7 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
-{$IFNDEF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$IFDEF ENABLE_PROXY} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcConnection, ZPlainProxyDriver, ZPlainProxyDriverIntf,
@@ -226,9 +226,9 @@ var
   {** The common driver manager object. }
   ProxyDriver: IZDriver;
 
-{$ENDIF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$ENDIF ENABLE_PROXY} //if set we have an empty unit
 implementation
-{$IFNDEF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$IFDEF ENABLE_PROXY} //if set we have an empty unit
 
 uses
   ZSysUtils, ZFastCode, ZEncoding,
@@ -722,5 +722,5 @@ finalization
     DriverManager.DeregisterDriver(ProxyDriver);
   ProxyDriver := nil;
 
-{$ENDIF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$ENDIF ENABLE_PROXY} //if set we have an empty unit
 end.

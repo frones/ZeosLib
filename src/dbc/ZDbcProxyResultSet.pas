@@ -55,7 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
-{$IFNDEF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$IFDEF ENABLE_PROXY} //if set we have an empty unit
 uses
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types{$IFNDEF NO_UNIT_CONTNRS}, Contnrs{$ENDIF}{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, System.NetEncoding,
@@ -323,9 +323,9 @@ type
       ParentResultSet: TZAbstractResultSet);
   End;
 
-{$ENDIF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$ENDIF ENABLE_PROXY} //if set we have an empty unit
 implementation
-{$IFNDEF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$IFDEF ENABLE_PROXY} //if set we have an empty unit
 
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} Math,
@@ -1570,6 +1570,6 @@ begin
   end;
 end;
 
-{$ENDIF ZEOS_DISABLE_PROXY} //if set we have an empty unit
+{$ENDIF ENABLE_PROXY} //if set we have an empty unit
 end.
 
