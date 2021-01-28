@@ -114,7 +114,7 @@ begin
 
   RegisterZeosProxyImplementationFactory();
   Server_service_RegisterZeosProxyService();
-  AppObject := TwstFPHttpListener.Create('0.0.0.0');
+  AppObject := TwstFPHttpListener.Create(ConfigManager.IPAddress, ConfigManager.ListeningPort);
   (AppObject as  TwstFPHttpListener).Options := [loExecuteInThread];
   AppObject.Start();
   OK := True;
