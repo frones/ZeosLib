@@ -55,7 +55,7 @@ unit ZPlainProxyDriverIntf;
 
 interface
 
-{$IFNDEF ZEOS_DISABLE_PROXY}
+{$IFDEF ENABLE_PROXY}
 
 uses
   Classes;
@@ -93,13 +93,13 @@ uses
     function GetCharacterSets(): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
   end;
 
-{$ENDIF ZEOS_DISABLE_PROXY}
+{$ENDIF ENABLE_PROXY}
 
 implementation
 
-{$IFNDEF ZEOS_DISABLE_PROXY}
+{$IFDEF ENABLE_PROXY}
 
-{$ENDIF ZEOS_DISABLE_PROXY}
+{$ENDIF ENABLE_PROXY}
 
 end.
 
