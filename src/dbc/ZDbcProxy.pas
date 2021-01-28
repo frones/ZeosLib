@@ -342,7 +342,7 @@ end;
 }
 procedure TZDbcProxyConnection.Open;
 var
-  LogMessage: RawByteString;
+  LogMessage: String;
   PropList: WideString;
   MyDbInfo: WideString;
   WsUrl: String; // Webservice URL
@@ -533,7 +533,7 @@ end;
 }
 procedure TZDbcProxyConnection.InternalClose;
 var
-  LogMessage: RawByteString;
+  LogMessage: String;
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;

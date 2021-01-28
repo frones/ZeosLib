@@ -1560,7 +1560,7 @@ begin
         else
           begin { Prepare Log Output}
             For I := 0 to InParamCount - 1 do
-              LogString := LogString + GetInParamLogValue(InParamValues[I])+',';
+              LogString := LogString + String(GetInParamLogValue(InParamValues[I])+',');
             result := CreateStmtLogEvent(Category, Logstring);
           end;
   else
