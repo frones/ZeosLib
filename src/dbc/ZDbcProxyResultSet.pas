@@ -1533,9 +1533,9 @@ begin
   CheckClosed;
 {$ENDIF}
   { Checks for maximum row. }
-+{$IFDEF FPC} // I suppose FPC compiler needs this initial assignment...?
+{$IFDEF FPC} // I suppose FPC compiler needs this initial assignment...?
    Result := False;
-+{$ENDIF}
+{$ENDIF}
   { Processes negative rows. }
   if Row < 0 then begin
     Row := LastRowNo + Row + 1;
