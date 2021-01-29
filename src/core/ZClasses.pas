@@ -424,7 +424,12 @@ type
     /// <summary>Adds ascii7 text from a UnicodeString.</summary>
     /// <param>"AsciiValue" the source string.</param>
     /// <param>"Result" the reference to the raw string we finally write in.</param>
-    procedure AddAscii7UTF16Text(const AsciiValue: UnicodeString; var Result: RawByteString);
+    procedure AddAscii7UTF16Text(const AsciiValue: UnicodeString; var Result: RawByteString); overload;
+    /// <summary>Adds ascii7 text from a UTF16 buffer.</summary>
+    /// <param>"Buf" the source buffer.</param>
+    /// <param>"Len" the length in words of the source buffer.</param>
+    /// <param>"Result" the reference to the raw string we finally write in.</param>
+    procedure AddAscii7UTF16Text(Buf: PWideChar; Len: NativeUInt; var Result: RawByteString); overload;
     {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
     /// <summary>Adds ascii7 text from a UnicodeString.</summary>
     /// <param>"AsciiValue" the source string.</param>
@@ -1240,6 +1245,25 @@ begin
     Inc(PA);
     Inc(PW);
     Dec(L);
+  end;
+end;
+
+procedure TZRawSQLStringWriter.AddAscii7UTF16Text(Buf: PWideChar;
+  Len: NativeUInt; var Result: RawByteString);
+var PA: PAnsiChar;
+  PEnd: PWideChar;
+begin
+  if Buf = nil then Exit;
+  if Len < NativeUInt(FEnd-FPos) then begin
+    PA := FPos;
+    Inc(FPos, Len);
+  end else
+    PA := FlushBuff(Result, Len);
+  PEnd := Buf + Len;
+  while Buf < PEnd do begin
+    PByte(PA)^ := PWord(Buf)^;
+    Inc(PA);
+    Inc(Buf);
   end;
 end;
 

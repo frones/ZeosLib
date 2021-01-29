@@ -2540,31 +2540,31 @@ begin
     rgPropertySets[1].rgProperties    := @rgProviderProperties;
 
     SetProp(rgPropertySets[0], DBPROP_COMMANDTIMEOUT,    Max(0, fStmtTimeOut)); //Set command time_out static!
-    SetProp(rgPropertySets[0], DBPROP_SERVERCURSOR,      VARIANT_TRUE); //force a server side cursor
+    SetProp(rgPropertySets[0], DBPROP_SERVERCURSOR,      ZVARIANT_TRUE); //force a server side cursor
     if (Provider = spMSSQL) then begin
       //turn off deferred prepare -> raise exception on Prepare if command can't be executed!
       //http://msdn.microsoft.com/de-de/library/ms130779.aspx
       if fDEFERPREPARE
-      then SetProp(rgPropertySets[1], SSPROP_DEFERPREPARE, VARIANT_TRUE)
-      else SetProp(rgPropertySets[1], SSPROP_DEFERPREPARE, VARIANT_FALSE);
+      then SetProp(rgPropertySets[1], SSPROP_DEFERPREPARE, ZVARIANT_TRUE)
+      else SetProp(rgPropertySets[1], SSPROP_DEFERPREPARE, ZVARIANT_FALSE);
     end else begin
       //to avoid http://support.microsoft.com/kb/272358/de we need a
       //FAST_FORWARD(RO) server cursor
       {common sets which are NOT default: according the cursor models of
       http://msdn.microsoft.com/de-de/library/ms130840.aspx }
-      SetProp(rgPropertySets[0], DBPROP_UNIQUEROWS,        VARIANT_FALSE);
+      SetProp(rgPropertySets[0], DBPROP_UNIQUEROWS,        ZVARIANT_FALSE);
       if (Connection as IZOleDBConnection).SupportsMARSConnection then begin
-        SetProp(rgPropertySets[0], DBPROP_OWNINSERT,         VARIANT_FALSE);
-        SetProp(rgPropertySets[0], DBPROP_OWNUPDATEDELETE,   VARIANT_FALSE);
+        SetProp(rgPropertySets[0], DBPROP_OWNINSERT,         ZVARIANT_FALSE);
+        SetProp(rgPropertySets[0], DBPROP_OWNUPDATEDELETE,   ZVARIANT_FALSE);
       end else begin
-        SetProp(rgPropertySets[0], DBPROP_OWNINSERT,         VARIANT_TRUE);  //slow down by 20% but if isn't set it breaks multiple connection ):
-        SetProp(rgPropertySets[0], DBPROP_OWNUPDATEDELETE,   VARIANT_TRUE);  //slow down by 20% but if isn't set it breaks multiple connection ):
+        SetProp(rgPropertySets[0], DBPROP_OWNINSERT,         ZVARIANT_TRUE);  //slow down by 20% but if isn't set it breaks multiple connection ):
+        SetProp(rgPropertySets[0], DBPROP_OWNUPDATEDELETE,   ZVARIANT_TRUE);  //slow down by 20% but if isn't set it breaks multiple connection ):
       end;
-      SetProp(rgPropertySets[0], DBPROP_OTHERINSERT,       VARIANT_TRUE);
-      SetProp(rgPropertySets[0], DBPROP_OTHERUPDATEDELETE, VARIANT_TRUE);
-      SetProp(rgPropertySets[0], DBPROP_UNIQUEROWS,         VARIANT_FALSE);
-      SetProp(rgPropertySets[0], DBPROP_CANFETCHBACKWARDS,  VARIANT_FALSE);
-      SetProp(rgPropertySets[0], DBPROP_CANSCROLLBACKWARDS, VARIANT_FALSE);
+      SetProp(rgPropertySets[0], DBPROP_OTHERINSERT,       ZVARIANT_TRUE);
+      SetProp(rgPropertySets[0], DBPROP_OTHERUPDATEDELETE, ZVARIANT_TRUE);
+      SetProp(rgPropertySets[0], DBPROP_UNIQUEROWS,         ZVARIANT_FALSE);
+      SetProp(rgPropertySets[0], DBPROP_CANFETCHBACKWARDS,  ZVARIANT_FALSE);
+      SetProp(rgPropertySets[0], DBPROP_CANSCROLLBACKWARDS, ZVARIANT_FALSE);
     end;
     try
       Status := FCmdProps.SetProperties(2,@rgPropertySets[0]);

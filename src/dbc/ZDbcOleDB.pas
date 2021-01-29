@@ -513,7 +513,7 @@ begin
       SetProp(PropertySets[0], DBPROP_INIT_GENERALTIMEOUT,StrToIntDef(Info.Values[ConnProps_Timeout], 0));
       //Force Multiple connections -> prevent transactional issues with IDBSchemaRowSet etc
       //http://support2.microsoft.com/default.aspx?scid=kb;en-us;272358
-      SetProp(PropertySets[1], DBPROP_MULTIPLECONNECTIONS,VARIANT_TRUE);
+      SetProp(PropertySets[1], DBPROP_MULTIPLECONNECTIONS,ZVARIANT_TRUE);
       //supported for MSSQL only!!!
       if (Info.Values[ConnProps_TDSPacketSize] <> '') then
       begin
@@ -528,7 +528,7 @@ begin
         PropertySets[0].cProperties     := 0; //init
         PropertySets[0].guidPropertySet := DBPROPSET_DATASOURCE;
         PropertySets[0].rgProperties    := @rgDBPROPSET[0];
-        SetProp(PropertySets[0], DBPROP_MULTIPLECONNECTIONS,VARIANT_FALSE);
+        SetProp(PropertySets[0], DBPROP_MULTIPLECONNECTIONS,ZVARIANT_FALSE);
         cPropertySets := 1;
       end
       else

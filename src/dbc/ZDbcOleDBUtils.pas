@@ -76,8 +76,8 @@ type
     DBBINDSTATUS_MULTIPLESTORAGE);
 
 const
-  VARIANT_TRUE = SmallInt(-1);
-  VARIANT_FALSE = SmallInt(0);
+  ZVARIANT_TRUE = SmallInt(-1);
+  ZVARIANT_FALSE = SmallInt(0);
 
 function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM; IsLong: Boolean;
   Scale, Precision: Integer): TZSQLType; overload;
