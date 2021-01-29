@@ -76,7 +76,11 @@ type
   TDbcProxyConfigManager = class
   protected
     ConfigList: TDbcProxyConnConfigList;
+    FListeningPort: Word;
+    FIPAddress: String;
   public
+    property ListeningPort: Word read FListeningPort;
+    property IPAddress: String read FIPAddress;
     function ConstructUrl(ConfigName, UserName, Password: String): String;
     procedure LoadConfigInfo(SourceFile: String);
     constructor Create;
@@ -114,6 +118,8 @@ begin
   try
     DbPrefix := IniFile.ReadString('general', 'Database Prefix', 'db.');
     SecPrefix := IniFile.ReadString('general', 'Security Prefix', 'sec.');
+    FListeningPort := IniFile.ReadInteger('general', 'Listening Port', 8000);
+    FIPAddress := IniFile.ReadString('general', 'IP Address', '127.0.0.1');
     Sections := TStringList.Create;
     try
       IniFile.ReadSections(Sections);

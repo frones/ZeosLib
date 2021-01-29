@@ -37,9 +37,11 @@ var
   PublicIdentity: String;
   YubikeysUser: String;
   YubiStatus: TYubiOtpStatus;
+  RemainingPassword: String;
 begin
   Yubikeys := TStringList.Create;
   try
+    Yubikeys.NameValueSeparator:=':';
     Yubikeys.LoadFromFile(FYubikeysName, TEncoding.UTF8);
     YubikeysUser := UserName;
     if FAddDatabase then
@@ -47,13 +49,17 @@ begin
     AllowedKeys := ':' + Yubikeys.Values[UserName] + ':';
     PublicIdentity := GetYubikeyIdentity(Password);
     Result := Pos(':' + PublicIdentity + ':', AllowedKeys) > 0;
+    if not Result then
+      raise Exception.Create('This yubikey cannot be used for this user.');
   finally
     FreeAndNil(Yubikeys);
   end;
 
   if Result then begin
-    YubiStatus := VerifyYubiOtp(FBaseURL, Password, Password, FClientID, FSecretKey);
+    YubiStatus := VerifyYubiOtp(FBaseURL, Password, RemainingPassword, FClientID, FSecretKey);
     Result := YubiStatus = yosOk;
+    RaiseYubiOtpError(YubiStatus);
+    Password := RemainingPassword;
   end;
 end;
 

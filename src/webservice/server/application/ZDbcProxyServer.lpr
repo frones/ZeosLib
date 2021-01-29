@@ -129,11 +129,11 @@ begin
 
   RegisterZeosProxyImplementationFactory();
   Server_service_RegisterZeosProxyService();
-  AppObject := TwstFPHttpListener.Create('0.0.0.0');
+  AppObject := TwstFPHttpListener.Create(ConfigManager.IPAddress, ConfigManager.ListeningPort);
   try
     WriteLn('"Web Service Toolkit" HTTP Server sample listening at:');
     WriteLn('');
-    WriteLn('http://0.0.0.0:8000/');
+    WriteLn('http://' + ConfigManager.IPAddress+ ':'+ IntToStr(ConfigManager.ListeningPort)+ '/');
     WriteLn('');
     WriteLn('Press enter to quit.');
     (AppObject as  TwstFPHttpListener).Options := [loExecuteInThread];
