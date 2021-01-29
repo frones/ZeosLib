@@ -24,13 +24,19 @@
       <FormatVersion Value="2"/>
       <Modes Count="0"/>
     </RunParams>
-    <RequiredPackages Count="2">
+    <RequiredPackages Count="4">
       <Item1>
-        <PackageName Value="sparta_generics"/>
+        <PackageName Value="wst_fcltransport"/>
       </Item1>
       <Item2>
-        <PackageName Value="LazDaemon"/>
+        <PackageName Value="wst_core"/>
       </Item2>
+      <Item3>
+        <PackageName Value="sparta_generics"/>
+      </Item3>
+      <Item4>
+        <PackageName Value="LazDaemon"/>
+      </Item4>
     </RequiredPackages>
     <Units Count="3">
       <Unit0>
@@ -61,14 +67,11 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\..\..\wst;..\..\..\core;..\..\..\parsesql;..\..\..\plain;..\..\..\dbc"/>
+      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\core;..\..\..\parsesql;..\..\..\plain;..\..\..\dbc"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Other>
       <CustomOptions Value="-dUseCThreads"/>
-      <OtherDefines Count="1">
-        <Define0 Value="UseCThreads"/>
-      </OtherDefines>
     </Other>
   </CompilerOptions>
   <Debugging>
