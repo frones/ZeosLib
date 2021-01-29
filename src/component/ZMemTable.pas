@@ -205,21 +205,15 @@ begin
         ColumnInfo.ReadOnly := not RequestLive;
         if Current.DataType in [ftBCD, ftFmtBCD] then
           ColumnInfo.Scale := Current.Size
-        else if Current.DataType in [ftMemo, ftString, ftFixedChar] then
-          ColumnInfo.ColumnCodePage := GetTransliterateCodePage(Connection.ControlsCodePage)
         else if Current.DataType in [{$IFDEF WITH_FTWIDEMEMO}ftWideMemo, {$ENDIF}
-          ftWideString{$IFDEF WITH_FTFIXEDWIDECHAR}, ftFixedWideChar{$ENDIF}] then
+          ftWideString{$IFDEF WITH_FTFIXEDWIDECHAR}, ftFixedWideChar{$ENDIF}, ftMemo, ftString, ftFixedChar] then
           ColumnInfo.ColumnCodePage := zCP_UTF16;
         ColumnInfo.ColumnLabel := Current.DisplayName;
         ColumnList.Add(ColumnInfo);
       end;
     end;
-    if (Connection <> nil) and (Connection.Connected)
-    then AConSettings := Connection.DbcConnection.GetConSettings
-    else begin
-      FConSettings.ClientCodePage := @FCharacterSet;
-      AConSettings := @FConSettings;
-    end;
+    FConSettings.ClientCodePage := @FCharacterSet;
+    AConSettings := @FConSettings;
     Result := TZMemResultSetPreparedStatement.Create(AConSettings, ColumnList, Properties);
   finally
     FreeAndNil(ColumnList);
