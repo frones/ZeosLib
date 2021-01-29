@@ -364,6 +364,7 @@ var
   ParamValue: String;
   x: Integer;
   Stream: TStringStream;
+  ParamIdx: Integer;
 
   function GetNodeValue(Node: TDomNode): String;
   begin
@@ -401,53 +402,54 @@ begin
       ParamsNode := Doc.GetChildNodes.Item[0];
 
       for x := 1 to ParamsNode.GetChildNodes.Count do begin
+        ParamIdx := x - 1 + FirstDbcIndex;
         ParamNode := ParamsNode.GetChildNodes.Item[x - 1];
         IsNull := StrToBoolDef(GetNodeValue(ParamNode.Attributes.GetNamedItem('isnull')), false);
         ParamTypeStr := GetNodeValue(ParamNode.Attributes.GetNamedItem('type'));
         ParamType := TZSQLType(GetEnumValue(TypeInfo(ParamType), ParamTypeStr));
         ParamValue := GetNodeValue(ParamNode.Attributes.GetNamedItem('value'));
         if IsNull then
-          Statement.SetNull(x, ParamType)
+          Statement.SetNull(ParamIdx, ParamType)
         else begin
           case ParamType of
             stBoolean:
-              Statement.SetBoolean(x, StrToBool(ParamValue));
+              Statement.SetBoolean(ParamIdx, StrToBool(ParamValue));
             stByte:
-              Statement.SetByte(x, StrToInt(ParamValue));
+              Statement.SetByte(ParamIdx, StrToInt(ParamValue));
             stShort:
-              Statement.SetShort(x, StrToInt(ParamValue));
+              Statement.SetShort(ParamIdx, StrToInt(ParamValue));
             stWord:
-              Statement.SetWord(x, StrToInt(ParamValue));
+              Statement.SetWord(ParamIdx, StrToInt(ParamValue));
             stSmall:
-              Statement.SetSmall(x, StrToInt(ParamValue));
+              Statement.SetSmall(ParamIdx, StrToInt(ParamValue));
             stLongWord:
-              Statement.SetUInt(x, StrToDWord(ParamValue));
+              Statement.SetUInt(ParamIdx, StrToDWord(ParamValue));
             stInteger:
-              Statement.SetInt(x, StrToInt(ParamValue));
+              Statement.SetInt(ParamIdx, StrToInt(ParamValue));
             stULong:
-              Statement.SetULong(x, StrToQWord(ParamValue));
+              Statement.SetULong(ParamIdx, StrToQWord(ParamValue));
             stLong:
-              Statement.SetLong(x, StrToInt64(ParamValue));
+              Statement.SetLong(ParamIdx, StrToInt64(ParamValue));
             stFloat:
-              Statement.SetFloat(x, StrToFloat(ParamValue, ProxyFormatSettings));
+              Statement.SetFloat(ParamIdx, StrToFloat(ParamValue, ProxyFormatSettings));
             stDouble:
-              Statement.SetDouble(x, StrToFloat(ParamValue, ProxyFormatSettings));
+              Statement.SetDouble(ParamIdx, StrToFloat(ParamValue, ProxyFormatSettings));
             stCurrency:
-              Statement.SetCurrency(x, StrToCurr(ParamValue, ProxyFormatSettings));
+              Statement.SetCurrency(ParamIdx, StrToCurr(ParamValue, ProxyFormatSettings));
             stBigDecimal:
-              Statement.SetBigDecimal(x, StrToFloat(ParamValue, ProxyFormatSettings));
+              Statement.SetBigDecimal(ParamIdx, StrToFloat(ParamValue, ProxyFormatSettings));
             stString, stUnicodeString:
-              Statement.SetString(x, ParamValue);
+              Statement.SetString(ParamIdx, ParamValue);
             stDate:
-              Statement.SetDate(x, StrToDate(ParamValue, ProxyFormatSettings));
+              Statement.SetDate(ParamIdx, StrToDate(ParamValue, ProxyFormatSettings));
             stTime:
-              Statement.SetTime(x, StrToTime(ParamValue, ProxyFormatSettings));
+              Statement.SetTime(ParamIdx, StrToTime(ParamValue, ProxyFormatSettings));
             stTimestamp:
-              Statement.SetTimestamp(x, StrToDateTime(ParamValue, ProxyFormatSettings));
+              Statement.SetTimestamp(ParamIdx, StrToDateTime(ParamValue, ProxyFormatSettings));
             stAsciiStream, stUnicodeStream:
-              Statement.SetString(x, ParamValue);
+              Statement.SetString(ParamIdx, ParamValue);
             stBinaryStream, stBytes:
-              Statement.SetBytes(x, BinaryToBytes(ParamValue));
+              Statement.SetBytes(ParamIdx, BinaryToBytes(ParamValue));
             else
               raise Exception.Create('Conversion of parameter of type ' + ParamTypeStr + ' is not supported (yet).');
           end;
