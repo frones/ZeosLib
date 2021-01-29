@@ -55,7 +55,7 @@ Uses
 {$IFDEF UNIX}{$IFDEF UseCThreads}
   CThreads,
 {$ENDIF}{$ENDIF}
-  DaemonApp, lazdaemonapp, ZeosProxyMapperUnit, zeosproxyunit
+  DaemonApp, lazdaemonapp, wst_core, ZeosProxyMapperUnit, zeosproxyunit
   { add your units here };
 
 begin
