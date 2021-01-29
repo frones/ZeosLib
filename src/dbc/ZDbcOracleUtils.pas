@@ -131,7 +131,7 @@ type
   ///  question mark position indicator</summary>
   TZOCIBindValue = record
     /// <summary>the generic TZQMarkPosBindValue record</summary>
-    BindValue:  TZQMarkPosBindValue;
+    BindValue:  TZBindValue;
     /// <summary>An address of a bind handle which is implicitly allocated by
     ///  this call. The bind handle maintains all the bind information for this
     ///  particular input value. The handle is freed implicitly when the
@@ -178,6 +178,8 @@ type
     /// <summary>field.scale used 4 out params; oracle still can't discribe
     ///  them</summary>
     Scale:     sb1;
+    /// <summary>Defines the parametername</summary>
+    ParamName: String;
   end;
 
   PZSQLVar = ^TZSQLVar;

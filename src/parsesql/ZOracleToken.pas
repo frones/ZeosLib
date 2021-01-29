@@ -182,10 +182,9 @@ begin
   P^ := ':';
   Move(Token.P^, (P+1)^, Token.L*SizeOf(Char));
   ParamIndex := LookUpList.IndexOf(ParamName);
-  if ParamIndex < 0 then begin
+  if ParamIndex < 0 then
     ParamIndex := LookUpList.Add(ParamName);
-    IngoreParam := False;
-  end else IngoreParam := True;
+  IngoreParam := False;
 end;
 
 {$ENDIF ZEOS_DISABLE_ORACLE}

@@ -167,7 +167,7 @@ type
   public
     constructor Create(
       const Statement: IZStatement; const SQL: string; StmtHandle: POCIStmt;
-      ErrorHandle: POCIError; ConSettings: PZConSettings;
+      ErrorHandle: POCIError;
       {$IFDEF AUTOREFCOUNT}const{$ENDIF}BindList: TZBindList);
   protected
     procedure Open; override;
@@ -2670,15 +2670,11 @@ end;
 
 constructor TZOracleCallableResultSet.Create(const Statement: IZStatement;
   const SQL: string; StmtHandle: POCIStmt; ErrorHandle: POCIError;
-  ConSettings: PZConSettings; {$IFDEF AUTOREFCOUNT}const{$ENDIF} BindList: TZBindList);
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF} BindList: TZBindList);
 var I, N: Integer;
   BindValue: PZBindValue;
   OCIBindValue: PZOCIBindValue absolute BindValue;
-  RawBindValue: PZOracleRawBindValue absolute BindValue;
-  UTF16BindValue: PZOracleUTF16BindValue absolute BindValue;
   CurrentVar: PZSQLVar;
-  CharSetID: ub2;
-  CP: Word;
 begin
   N := 0;
   for I := 0 to BindList.Count -1 do
@@ -2688,11 +2684,6 @@ begin
   SetLength(FFieldNames, N);
 
   N := 0;
-  CharSetID := ConSettings.ClientCodePage.ID;
-  {$IFNDEF UNICODE}
-  if CharSetID = OCI_UTF16ID then
-    CP := ZDbcUtils.GetW2A2WConversionCodePage(ConSettings)
-  else {$ENDIF}CP := ConSettings.ClientCodePage.CP;
   for I := 0 to BindList.Count -1 do begin
     BindValue := BindList[i];
     if Ord(BindValue.ParamType) <= ord(pctIn) then
@@ -2708,14 +2699,7 @@ begin
     CurrentVar.indp := OCIBindValue.indp;
     CurrentVar.DescriptorType := OCIBindValue.DescriptorType;
     CurrentVar.ColType := BindValue.SQLType;
-    if CharSetID = OCI_UTF16ID
-    {$IFDEF UNICODE}
-    then FFieldNames[N] := UTF16BindValue.ParamName
-    else FFieldNames[N] := ZRawToUnicode(RawBindValue.ParamName, CP);
-    {$ELSE}
-    then FFieldNames[N] := ZUnicodeToRaw(UTF16BindValue.ParamName, CP)
-    else FFieldNames[N] := RawBindValue.ParamName;
-    {$ENDIF}
+    FFieldNames[N] := OCIBindValue.ParamName;
     Inc(N);
   end;
   inherited Create(Statement, SQL, StmtHandle, ErrorHandle, 0);

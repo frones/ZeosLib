@@ -140,6 +140,7 @@ type
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt);
   protected
     procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
+    class function GetBindListClass: TZBindListClass; override;
   public
     procedure SetPWideChar(Index: Integer; Value: PWideChar; WLen: NativeUInt);
     /// <summary>Sets the designated parameter to SQL <c>NULL</c>.
@@ -186,20 +187,8 @@ type
   end;
 
   /// <author>EgonHugeist</author>
-  /// <summary>Defines a reference of the TZOracleUTF16BindValue record</summary>
-  PZOracleUTF16BindValue = ^TZOracleUTF16BindValue;
-  /// <author>EgonHugeist</author>
-  /// <summary>Defines a BindValue record which widened the TZOCIBindValue
-  ///  by a ParameterName</summary>
-  TZOracleUTF16BindValue = record
-    /// <summary>the TZOCIBindValue record</summary>
-    BindValue:  TZOCIBindValue;
-    /// <summary>The parametername</summary>
-    ParamName: UnicodeString;
-  end;
-  /// <author>EgonHugeist</author>
   /// <summary>Implements a PostgreSQL Bindlist object</summary>
-  TZOracleUTF16BindList = class(TZQuestionMarkBindList)
+  TZOracleBindList = class(TZBindList)
   protected
     /// <summary>Get the size of the custom element of this class.</summary>
     /// <returns>the size of the custom element.</returns>
@@ -217,8 +206,6 @@ type
   /// <author>EgonHugeist</author>
   /// <summary>Implements a Oracle UTF16 prepared statement</summary>
   TZOraclePreparedStatement_W = Class(TZAbstractOraclePreparedStatement, IZPreparedStatement)
-  protected
-    class function GetBindListClass: TZBindListClass; override;
   public
     function GetUnicodeEncodedSQL(const SQL: SQLString): UnicodeString; override;
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
@@ -227,41 +214,11 @@ type
   End;
 
   /// <author>EgonHugeist</author>
-  /// <summary>Defines a reference of the TZOracleRawBindValue record</summary>
-  PZOracleRawBindValue = ^TZOracleRawBindValue;
-  /// <author>EgonHugeist</author>
-  /// <summary>Defines a BindValue record which widened the TZQMarkPosBindValue
-  ///  by a ParameterName</summary>
-  TZOracleRawBindValue = record
-    /// <summary>the TZOCIBindValue record</summary>
-    BindValue:  TZOCIBindValue;
-    /// <summary>The parametername</summary>
-    ParamName: RawByteString;
-  end;
-  /// <author>EgonHugeist</author>
-  /// <summary>Implements a Oracle raw Bindlist object</summary>
-  TZOracleRawBindList = class(TZQuestionMarkBindList)
-  protected
-    /// <summary>Get the size of the custom element of this class.</summary>
-    /// <returns>the size of the custom element.</returns>
-    class function GetElementSize: Integer; override;
-    /// <summary>Notify about an action which will or was performed.
-    ///  if ElementNeedsFinalize is False the method will never be called.
-    ///  Otherwise you may finalize managed types beeing part of each element,
-    ///  such as Strings, Objects etc.</summary>
-    /// <param>"Ptr" the address of the element an action happens for.</param>
-    /// <param>"Index" the index of the element.</param>
-    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
-    procedure Notify(Ptr: Pointer; Action: TListNotification); override;
-  end;
-
-  /// <author>EgonHugeist</author>
   /// <summary>Implements a Oracle raw prepared statement</summary>
   TZOraclePreparedStatement_A = Class(TZAbstractOraclePreparedStatement, IZPreparedStatement)
   protected
     FCachedQueryRaw: TRawByteStringDynArray;
     FIsParamIndex: TBooleanDynArray;
-    class function GetBindListClass: TZBindListClass; override;
     property IsParamIndex: TBooleanDynArray read FIsParamIndex;
   public
     function GetRawEncodedSQL(const SQL: SQLString): RawByteString; override;
@@ -446,7 +403,7 @@ begin
   if FOpenResultSet = nil then begin
     if FStatementType = OCI_STMT_SELECT
     then NativeResultSet := TZOracleResultSet_A.Create(Self, SQL, FOCIStmt, FOCIError, FZBufferSize)
-    else NativeResultSet := TZOracleCallableResultSet.Create(Self, SQL, FOCIStmt, FOCIError, ConSettings, BindList);
+    else NativeResultSet := TZOracleCallableResultSet.Create(Self, SQL, FOCIStmt, FOCIError, BindList);
     if (GetResultSetConcurrency = rcUpdatable) or (GetResultSetType <> rtForwardOnly) then
     begin
       if CachedLob
@@ -752,15 +709,11 @@ var
   I, J: Integer;
   BindValue: PZBindValue;
   OCIBindValue: PZOCIBindValue absolute BindValue;
-  RawBindValue: PZOracleRawBindValue absolute BindValue;
-  UTF16BindValue: PZOracleUTF16BindValue absolute BindValue;
 begin
   if NewParamCount <> BindList.Count then begin
     for I := BindList.Count-1 downto NewParamCount do begin
       BindValue := BindList[I];
-      if FCharSetID = OCI_UTF16ID
-      then UTF16BindValue.ParamName := ''
-      else RawBindValue.ParamName := '';
+      OCIBindValue.ParamName := '';
       if OCIBindValue.DescriptorType <> 0 then //deallocate the descriptors
         for J := 0 to OCIBindValue.curelen-1 do
           //this tempory descriprors /locators are cleared by the lobs
@@ -1137,6 +1090,11 @@ begin
   end;
   OCIBindValue.indp[0] := 0;
 end;
+class function TZAbstractOraclePreparedStatement.GetBindListClass: TZBindListClass;
+begin
+  Result := TZOracleBindList;
+end;
+
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
 procedure TZAbstractOraclePreparedStatement.InternalBindDouble(Index: Integer;
@@ -2549,11 +2507,6 @@ end;
 
 { TZOraclePreparedStatement_A }
 
-class function TZOraclePreparedStatement_A.GetBindListClass: TZBindListClass;
-begin
-  Result := TZOracleRawBindList;
-end;
-
 function TZOraclePreparedStatement_A.GetRawEncodedSQL(
   const SQL: SQLString): RawByteString;
 var
@@ -2561,27 +2514,12 @@ var
   ParamsCnt: Cardinal;
   Tokens: TZTokenList;
   Token: PZToken;
-  BindValue: PZQMarkPosBindValue;
-  OCIBindValue: PZOracleRawBindValue absolute BindValue;
   L: Cardinal;
   P: PAnsiChar;
   FirstComposeToken: PZToken;
   SQLWriter: TZRawSQLStringWriter;
   ComparePrefixTokens: PPreparablePrefixTokens;
   Tokenizer: IZTokenizer;
-  function IsDuplicate(const Value: RawByteString; Index: NativeInt): Boolean;
-  var I: NativeInt;
-      BindValue: PZOracleRawBindValue;
-  begin
-    Result := False;
-    for i := 0 to Index -1 do begin
-      BindValue := PZOracleRawBindValue(BindList[I]);
-      if (Value = BindValue.ParamName) then begin
-        Result := True;
-        Break;
-      end;
-    end;
-  end;
 begin
   FOldCapacity := BindList.Capacity;
   Result := '';
@@ -2607,9 +2545,6 @@ begin
         ComparePrefixTokens := nil; //stop compare sequence
       end;
       if (Token.L = 1) and ((Token.P^ = '?') or ((Token.P^ = ':') and (Tokens.Count > i+1) and (Tokens[I+1].TokenType = ttWord))) then begin
-        if BindList.Capacity <= NativeInt(ParamsCnt) then
-          TZOracleRawBindList(BindList).Grow;
-        BindValue := PZQMarkPosBindValue(BindList[ParamsCnt]);
         Inc(ParamsCnt);
         if (FirstComposeToken <> nil) then begin
           L := (Token.P-FirstComposeToken.P);
@@ -2624,36 +2559,21 @@ begin
           SQLWriter.AddText(FirstComposeToken.P, L, Result);
           {$ENDIF}
         end;
-        BindValue.QMarkPosition := SQLWriter.GetCurrentLength(Result);
         SQLWriter.AddChar(AnsiChar(':'), Result);
         if (Token.P^ = '?') then begin
           PByte(FByteBuffer)^ := Byte('P');
-          if (OCIBindValue.ParamName <> '') then begin
-            P := Pointer(OCIBindValue.ParamName);
-            L := Length(OCIBindValue.ParamName);
-            Move(P^, (PAnsiChar(fByteBuffer)+1)^, L);
-          end else begin
-            L := GetOrdinalDigits(ParamsCnt);
-            IntToRaw(ParamsCnt, PAnsiChar(fByteBuffer)+1, Byte(L));
-          end;
+          L := GetOrdinalDigits(ParamsCnt);
+          IntToRaw(ParamsCnt, PAnsiChar(fByteBuffer)+1, Byte(L));
           P := PAnsiChar(fByteBuffer);
           L := L+1;
-          ZSetString(P, L, OCIBindValue.ParamName{$IFDEF WITH_RAWBYTESTRING}, FClientCP{$ENDIF});
-          P := Pointer(OCIBindValue.ParamName);
           SQLWriter.AddText(P, L, Result);
         end else begin
           L := Tokens[i+1].L;
           {$IFDEF UNICODE}
-          UnicodeStringToAscii7(Token.P+1, L, OCIBindValue.ParamName);
-          SQLWriter.AddText(OCIBindValue.ParamName, Result);
+          SQLWriter.AddAscii7UTF16Text(Token.P+1, L, Result);
           {$ELSE}
-          ZSetString(Token.P+1, L, OCIBindValue.ParamName{$IFDEF WITH_RAWBYTESTRING}, FClientCP{$ENDIF});
           SQLWriter.AddText(Token.P+1, L, Result);
           {$ENDIF}
-          if IsDuplicate(OCIBindValue.ParamName, ParamsCnt-1) then begin
-            Dec(ParamsCnt);
-            OCIBindValue.ParamName := '';
-          end;
         end;
         L := I + 1 + Byte(Token.P^ <> '?');
         if NativeInt(L) <= Tokens.Count -1
@@ -2686,7 +2606,6 @@ procedure TZOraclePreparedStatement_A.RegisterParameter(ParameterIndex: Integer;
 var
   BindValue: PZBindValue;
   OCIBindValue: PZOCIBindValue absolute BindValue;
-  RawBindValue: PZOracleRawBindValue absolute BindValue;
 begin
   CheckParameterIndex(ParameterIndex);
   inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name,
@@ -2697,11 +2616,7 @@ begin
   OCIBindValue.Precision := PrecisionOrSize;
   OCIBindValue.Scale := Scale;
   if (Name <> '') then
-    {$IFDEF UNICODE}
-    PUnicodeToRaw(Pointer(Name), Length(Name), FClientCP, RawBindValue.ParamName);
-    {$ELSE}
-    RawBindValue.ParamName := Name;
-    {$ENDIF}
+    OCIBindValue.ParamName := Name;
 
   if ParamType <> pctUnknown then begin
     if (Scale > 0) and (SQLType in [stBoolean..stBigDecimal]) then
@@ -2726,11 +2641,6 @@ end;
 
 { TZOraclePreparedStatement_W }
 
-class function TZOraclePreparedStatement_W.GetBindListClass: TZBindListClass;
-begin
-  Result := TZOracleUTF16BindList;
-end;
-
 function TZOraclePreparedStatement_W.GetUnicodeEncodedSQL(
   const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): UnicodeString;
 var
@@ -2738,27 +2648,12 @@ var
   ParamsCnt: Cardinal;
   Tokens: TZTokenList;
   Token: PZToken;
-  BindValue: PZQMarkPosBindValue;
-  OCIBindValue: PZOracleUTF16BindValue absolute BindValue;
   L: Cardinal;
   P: PWideChar;
   FirstComposeToken: PZToken;
   SQLWriter: TZUnicodeSQLStringWriter;
   ComparePrefixTokens: PPreparablePrefixTokens;
   Tokenizer: IZTokenizer;
-  function IsDuplicate(const Value: UnicodeString; Index: NativeInt): Boolean;
-  var I: NativeInt;
-      BindValue: PZOracleUTF16BindValue;
-  begin
-    Result := False;
-    for i := 0 to Index -1 do begin
-      BindValue := PZOracleUTF16BindValue(BindList[I]);
-      if (Value = BindValue.ParamName) then begin
-        Result := True;
-        Break;
-      end;
-    end;
-  end;
 begin
   FOldCapacity := BindList.Capacity;
   Result := '';
@@ -2784,9 +2679,6 @@ begin
         ComparePrefixTokens := nil; //stop compare sequence
       end;
       if (Token.L = 1) and ((Token.P^ = '?') or ((Token.P^ = ':') and (Tokens.Count > i+1) and (Tokens[I+1].TokenType = ttWord))) then begin
-        if BindList.Capacity <= NativeInt(ParamsCnt) then
-          TZOracleRawBindList(BindList).Grow;
-        BindValue := PZQMarkPosBindValue(BindList[ParamsCnt]);
         Inc(ParamsCnt);
         if (FirstComposeToken <> nil) then begin
           L := (Token.P-FirstComposeToken.P);
@@ -2801,36 +2693,21 @@ begin
           SQLWriter.AddText(FirstComposeToken.P, L, Result);
           {$ENDIF}
         end;
-        BindValue.QMarkPosition := SQLWriter.GetCurrentLength(Result);
         SQLWriter.AddChar(':', Result);
         if (Token.P^ = '?') then begin
           PWord(FByteBuffer)^ := Word('P');
-          if (OCIBindValue.ParamName <> '') then begin
-            P := Pointer(OCIBindValue.ParamName);
-            L := Length(OCIBindValue.ParamName);
-            Move(P^, (PWideChar(fByteBuffer)+1)^, L shl 1);
-          end else begin
-            L := GetOrdinalDigits(ParamsCnt);
-            IntToUnicode(ParamsCnt, PWideChar(fByteBuffer)+1, Byte(L));
-          end;
+          L := GetOrdinalDigits(ParamsCnt);
+          IntToUnicode(ParamsCnt, PWideChar(fByteBuffer)+1, Byte(L));
           P := PWideChar(fByteBuffer);
           L := L+1;
-          System.SetString(OCIBindValue.ParamName, P, L);
-          P := Pointer(OCIBindValue.ParamName);
           SQLWriter.AddText(P, L, Result);
         end else begin
           L := Tokens[i+1].L;
           {$IFNDEF UNICODE}
-          Ascii7ToUnicodeString(Token.P+1, L, OCIBindValue.ParamName);
-          SQLWriter.AddText(OCIBindValue.ParamName, Result);
+          SQLWriter.AddAscii7Text(Token.P+1, L, Result);
           {$ELSE}
-          System.SetString(OCIBindValue.ParamName, Token.P+1, L);
           SQLWriter.AddText(Token.P+1, L, Result);
           {$ENDIF}
-          if IsDuplicate(OCIBindValue.ParamName, ParamsCnt-1) then begin
-            Dec(ParamsCnt);
-            OCIBindValue.ParamName := '';
-          end;
         end;
         L := I + 1 + Byte(Token.P^ <> '?');
         if NativeInt(L) <= Tokens.Count -1
@@ -2863,7 +2740,6 @@ procedure TZOraclePreparedStatement_W.RegisterParameter(ParameterIndex: Integer;
 var
   BindValue: PZBindValue;
   OCIBindValue: PZOCIBindValue absolute BindValue;
-  UTF16BindValue: PZOracleUTF16BindValue absolute BindValue;
 begin
   CheckParameterIndex(ParameterIndex);
   if SQLType = stString then
@@ -2876,11 +2752,7 @@ begin
   OCIBindValue.Precision := PrecisionOrSize;
   OCIBindValue.Scale := Scale;
   if (Name <> '') then
-    {$IFDEF UNICODE}
-    UTF16BindValue.ParamName := Name;
-    {$ELSE}
-    PRawToUnicode(Pointer(Name), Length(Name), GetW2A2WConversionCodePage(ConSettings), UTF16BindValue.ParamName);
-    {$ENDIF}
+    OCIBindValue.ParamName := Name;
   if ParamType <> pctUnknown then begin
     if (Scale > 0) and (SQLType in [stBoolean..stBigDecimal]) then
       SQLType := stBigDecimal;
@@ -3097,29 +2969,15 @@ end;
 
 { TZOracleUTF16BindList }
 
-class function TZOracleUTF16BindList.GetElementSize: Integer;
+class function TZOracleBindList.GetElementSize: Integer;
 begin
-  Result := SizeOf(TZOracleUTF16BindValue);
+  Result := SizeOf(TZOCIBindValue);
 end;
 
-procedure TZOracleUTF16BindList.Notify(Ptr: Pointer; Action: TListNotification);
+procedure TZOracleBindList.Notify(Ptr: Pointer; Action: TListNotification);
 begin
   if (Action = lnDeleted) then
-    PZOracleUTF16BindValue(Ptr).ParamName := '';
-  inherited Notify(Ptr, Action);
-end;
-
-{ TZOracleRawBindList }
-
-class function TZOracleRawBindList.GetElementSize: Integer;
-begin
-  Result := SizeOf(TZOracleRawBindValue);
-end;
-
-procedure TZOracleRawBindList.Notify(Ptr: Pointer; Action: TListNotification);
-begin
-  if (Action = lnDeleted) then
-    PZOracleRawBindValue(Ptr).ParamName := '';
+    PZOCIBindValue(Ptr).ParamName := '';
   inherited Notify(Ptr, Action);
 end;
 
