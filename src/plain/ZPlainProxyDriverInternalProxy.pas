@@ -363,7 +363,7 @@ begin
 
   while ConnectionList.Count > 0 do begin
     try
-      ConnectionID := ConnectionList.KeyNames[0];
+      ConnectionID := ConnectionList.Names[0];
       Url := ConnectionList.Values[ConnectionID];
       ConnectionList.Delete(0);
       Writeln(ConnectionID);
@@ -371,7 +371,7 @@ begin
       FRIO.HTTPWebNode.InvokeOptions := [];
       FService := GetIZeosProxy(false, Url, FRIO);
       FService.Disconnect(ConnectionID);
-      Writeln('Disconnected ' + ConnectionID);
+//      Writeln('Disconnected ' + ConnectionID);
     except
       // do nothing
     end;
