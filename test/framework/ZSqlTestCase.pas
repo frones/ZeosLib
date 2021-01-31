@@ -507,7 +507,7 @@ begin
       protOracle: FProvider := spOracle;
       protASA,
       protASACAPI: FProvider := spASA;
-      protMSSQL, protOleDB, protADO, protODBC, protSybase: begin
+      protMSSQL, protOleDB, protADO, protODBC, protSybase, protWebServiceProxy: begin
           Connection := CreateDbcConnection;
           Connection.Open;
           FProvider := Connection.GetServerProvider;
