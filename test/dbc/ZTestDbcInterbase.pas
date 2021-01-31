@@ -506,7 +506,7 @@ begin
   Statement := Connection.CreateStatement;
   try
     CheckNotNull(Statement);
-    if (Connection as IZInterbaseFirebirdConnection).IsInterbaseLib or (Connection.GetHostVersion < EncodeSQLVersioning(4, 0, 0)) then
+    if (Connection.GetMetadata.GetDatabaseInfo.GetDatabaseProductName <> 'Firebird') or (Connection.GetHostVersion < EncodeSQLVersioning(4, 0, 0)) then
       Exit;
     ResultSet := nil;
     SetLength(TableType, 1);
@@ -561,7 +561,7 @@ begin
   Statement := Connection.CreateStatement;
   try
     CheckNotNull(Statement);
-    if (Connection as IZInterbaseFirebirdConnection).IsInterbaseLib or (Connection.GetHostVersion < EncodeSQLVersioning(4, 0, 0)) then
+    if (Connection.GetMetadata.GetDatabaseInfo.GetDatabaseProductName <> 'Firebird') or (Connection.GetHostVersion < EncodeSQLVersioning(4, 0, 0)) then
       Exit;
     ResultSet := nil;
     SetLength(TableType, 1);
@@ -613,7 +613,7 @@ begin
   Statement := Connection.CreateStatement;
   try
     CheckNotNull(Statement);
-    if (Connection as IZInterbaseFirebirdConnection).IsInterbaseLib or (Connection.GetHostVersion < EncodeSQLVersioning(3, 0, 6)) then
+    if (Connection.GetMetadata.GetDatabaseInfo.GetDatabaseProductName <> 'Firebird') or (Connection.GetHostVersion < EncodeSQLVersioning(3, 0, 6)) then
       Exit;
     ResultSet := nil;
     SetLength(TableType, 1);
@@ -666,7 +666,7 @@ begin
   Statement := Connection.CreateStatement;
   try
     CheckNotNull(Statement);
-    if (Connection as IZInterbaseFirebirdConnection).IsInterbaseLib or (Connection.GetHostVersion < EncodeSQLVersioning(4, 0, 0)) then
+    if (Connection.GetMetadata.GetDatabaseInfo.GetDatabaseProductName <> 'Firebird') or (Connection.GetHostVersion < EncodeSQLVersioning(4, 0, 0)) then
       Exit;
     ResultSet := nil;
     SetLength(TableType, 1);
