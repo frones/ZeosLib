@@ -366,7 +366,7 @@ begin
       ConnectionID := ConnectionList.Names[0];
       Url := ConnectionList.Values[ConnectionID];
       ConnectionList.Delete(0);
-      Writeln(ConnectionID);
+//      Writeln(ConnectionID);
       FRIO := THTTPRIO.Create(nil);
       FRIO.HTTPWebNode.InvokeOptions := [];
       FService := GetIZeosProxy(false, Url, FRIO);
