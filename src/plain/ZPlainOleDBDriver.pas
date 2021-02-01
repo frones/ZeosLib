@@ -1448,7 +1448,7 @@ type
 //Map CoClass to its default interface
 
 //from oledb.h
-  ULONG = LongWord;
+  //ULONG = LongWord;  //Jan: Removed because WinAPI.Windows already has a definition of ULONG which matches this one. (ULONG = LongWord = Cardinal)
   // Length of a non-character object, size
   PDBLENGTH = ^DBLENGTH;
   DBLENGTH = NativeUInt; //ULONGLONG
