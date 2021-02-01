@@ -62,7 +62,7 @@ interface
 {$IFNDEF DISABLE_OLE_METADATA} //if set we have an empty unit
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZSysUtils, ZDbcIntfs, ZDbcMetadata,
+  ZSysUtils, ZDbcIntfs, ZDbcMetadata, Windows,
   ZCompatibility, ZPlainOleDBDriver, ZDbcConnection, ActiveX;
 
 type
