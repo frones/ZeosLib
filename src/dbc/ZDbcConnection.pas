@@ -1989,7 +1989,7 @@ begin
     vtRawByteString: ResTmp := Value.VRawByteString;
     {$IFDEF UNICODE}vtString,{$ENDIF}
     vtUnicodeString:
-      ResTmp := ZUnicodeToRaw(Value.VUnicodeString, zCP_UTF8);
+      ResTmp := ZUnicodeToRaw(Value.VUnicodeString, FClientCP);
     vtCharRec:
       if (Value.VCharRec.CP = zCP_UTF16) then
         ResTmp := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, FClientCP)
@@ -2111,9 +2111,9 @@ begin
                   else RawCPConvert(Value.VRawByteString, ResTmp, ZOSCodePage, zCP_UTF8);
     {$ENDIF}
     vtUTF8String: ResTmp := Value.VRawByteString;
-    vtRawByteString: if ZOSCodePage = FClientCP
+    vtRawByteString: if FClientCP = zCP_UTF8
                      then ResTmp := Value.VRawByteString
-                     else RawCPConvert(Value.VRawByteString, ResTmp, FClientCP, ZOSCodePage);
+                     else RawCPConvert(Value.VRawByteString, ResTmp, FClientCP, zCP_UTF8);
     {$IFDEF UNICODE}vtString,{$ENDIF}
     vtUnicodeString:
       ResTmp := ZUnicodeToRaw(Value.VUnicodeString, zCP_UTF8);
