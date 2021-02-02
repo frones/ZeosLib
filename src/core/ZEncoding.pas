@@ -1738,7 +1738,7 @@ begin
         Inc(Source); Inc(Dest); Inc(Result);
         Dec(SourceBytes); Dec(MaxDestBytes);
       end;
-      if (Result < MaxDestBytes) and (SourceBytes > 0) then begin
+      if (SourceBytes <= MaxDestBytes) and (SourceBytes > 0) then begin
         if SourceBytes <= dsMaxWStringSize
         then P := @wBuf[0]
         else GetMem(P, (SourceBytes+1) shl 1);
