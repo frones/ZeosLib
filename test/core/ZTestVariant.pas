@@ -377,11 +377,19 @@ begin
   {$IFDEF UNICODE}
   Result := UStringVar;
   {$ELSE}
-  if Consettings.W2A2WEncodingSource = encUTF8
+  if ConSettings.W2A2WEncodingSource = encUTF8
   then Result := String_CPUTF8_Var
-  else if ZOSCodePage = zCP_WIN1250
-  then Result := String_CP1250_Var
-  else Result := String_CP1252_Var;
+  else if ConSettings.W2A2WEncodingSource = encDB_CP then begin
+    if (ConSettings.ClientCodePage.Encoding = ceUTF16) or (ConSettings.ClientCodePage.CP = zCP_UTF8)
+    then Result := String_CPUTF8_Var
+    else if ConSettings.ClientCodePage.CP = zCP_WIN1250
+    then Result:= String_CP1250_Var
+    else Result:= String_CP1252_Var;
+  end else begin
+    if ZOSCodePage = zCP_WIN1250
+    then Result := String_CP1250_Var
+    else Result := String_CP1252_Var;
+  end;
   {$ENDIF}
 end;
 
@@ -390,11 +398,19 @@ begin
   {$IFDEF UNICODE}
   Result := UStringVar;
   {$ELSE}
-  if Consettings.W2A2WEncodingSource = encUTF8
+  if ConSettings.W2A2WEncodingSource = encUTF8
   then Result := String_CPUTF8_Var
-  else if ZOSCodePage = zCP_WIN1250
-  then Result := String_CP1250_Var
-  else Result := String_CP1252_Var;
+  else if ConSettings.W2A2WEncodingSource = encDB_CP then begin
+    if (ConSettings.ClientCodePage.Encoding = ceUTF16) or (ConSettings.ClientCodePage.CP = zCP_UTF8)
+    then Result := String_CPUTF8_Var
+    else if ConSettings.ClientCodePage.CP = zCP_WIN1250
+    then Result:= String_CP1250_Var
+    else Result:= String_CP1252_Var;
+  end else begin
+    if ZOSCodePage = zCP_WIN1250
+    then Result := String_CP1250_Var
+    else Result := String_CP1252_Var;
+  end;
   {$ENDIF}
 end;
 
@@ -408,6 +424,8 @@ end;
 procedure TZDefVarManagerConvertCase.SetUp;
 begin
   Manager := {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF};
+
+  TestConSettings^.W2A2WEncodingSource := encDefaultSystemCodePage;
   FillChar(TestConSettings^.ClientCodePage^, SizeOf(TZCodePage), #0);
   ConSettings := TestConSettings;
 end;
@@ -434,7 +452,7 @@ begin
     PAnsiChar(TestVar2.VRawByteString), 'SetAsAnsiString'+GetOptionString);
   TestVar1 := Manager.Convert(TestVar2, vtString);
   CheckEquals(Ord(vtString), Ord(TestVar1.VType), 'ZVariant-Type'+GetOptionString);
-  // if OS codepage differs, ANSI can be unable to contain the characters
+  // if OS codepage differs, ANSI may be unable to contain the characters
   if ZOSCodePage = ConSettings^.ClientCodePage^.CP then
     CheckEquals(Self.GetExpectedStringVar.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF},
       TestVar1.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF}, 'String'+GetOptionString);
@@ -455,7 +473,7 @@ begin
 
   TestVar1 := Manager.Convert(TestVar2, vtUTF8String);
   CheckEquals(Ord(vtUTF8String), Ord(TestVar1.VType), 'ZVariant-Type'+GetOptionString);
-  // if OS codepage differs, ANSI can be unable to contain the characters
+  // if OS codepage differs, ANSI may be unable to contain the characters
   if ZOSCodePage = ConSettings^.ClientCodePage^.CP then
     CheckEquals(UTF8Var.VRawByteString, TestVar1.VRawByteString, 'UTF8String from AnsiString'+GetOptionString);
 end;
@@ -481,7 +499,7 @@ begin
     PAnsiChar(TestVar2.VRawByteString), 'AnsiString'+GetOptionString);
   TestVar1 := Manager.Convert(TestVar2, vtRawByteString);
   CheckEquals(Ord(vtRawByteString), Ord(TestVar1.VType), 'ZVariant-Type'+GetOptionString);
-  // if OS codepage differs, ANSI can be unable to contain the characters
+  // if OS codepage differs, ANSI may be unable to contain the characters
   if ZOSCodePage = ConSettings^.ClientCodePage^.CP then
     CheckEquals(RawVar.VRawByteString, TestVar1.VRawByteString, 'RawByteStringString from AnsiString'+GetOptionString);
 end;
@@ -500,7 +518,7 @@ begin
     PAnsiChar(TestVar2.VRawByteString), 'AnsiString'+GetOptionString);
   TestVar1 := Manager.Convert(TestVar2, vtUnicodeString);
   CheckEquals(Ord(vtUnicodeString), Ord(TestVar1.VType), 'ZVariant-Type'+GetOptionString);
-  // if OS codepage differs, ANSI can be unable to contain the characters
+  // if OS codepage differs, ANSI may be unable to contain the characters
   if ZOSCodePage = ConSettings^.ClientCodePage^.CP then
     CheckEquals(UnicodeVar.VUnicodeString, TestVar1.VUnicodeString, 'UnicodeString from AnsiString'+GetOptionString);
 end;
@@ -592,7 +610,7 @@ end;
 
 procedure TZDefVarManagerConvertCase.Test_RawByteStringFromString;
 var
-  StringVar: TZVariant;
+  StringVar{$IFNDEF UNICODE}, RawVar{$ENDIF}: TZVariant;
 begin
   StringVar := GetTestStringVar;
   TestVar1 := Manager.Convert(StringVar, vtRawByteString);
@@ -601,7 +619,13 @@ begin
   CheckEquals(PAnsiChar(ZUnicodeToRaw(StringVar.VUnicodeString, ConSettings^.ClientCodePage^.CP)),
     PAnsiChar(TestVar1.VRawByteString), 'RawByteString from String'+GetOptionString);
   {$ELSE}
-  CheckEquals(PAnsiChar(StringVar.VRawByteString),
+  if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
+    RawVar := Raw_CPUTF8_Var
+  else if ConSettings^.ClientCodePage^.CP = zCP_WIN1250 then
+    RawVar := Raw_CP1250_Var
+  else
+    RawVar := Raw_CP1252_Var;
+  CheckEquals(PAnsiChar(RawVar.VRawByteString),
     PAnsiChar(TestVar1.VRawByteString), 'RawByteString from String'+GetOptionString);
   {$ENDIF}
   Manager.SetAsRawByteString(TestVar2, TestVar1.VRawByteString);
@@ -610,7 +634,7 @@ begin
   CheckEquals(PAnsiChar(ZUnicodeToRaw(GetExpectedStringVar.VUnicodeString, ConSettings^.ClientCodePage^.CP)),
     PAnsiChar(TestVar2.VRawByteString), 'RawByteString'+GetOptionString);
   {$ELSE}
-  CheckEquals(PAnsiChar(GetExpectedStringVar.VRawByteString),
+  CheckEquals(PAnsiChar(RawVar.VRawByteString),
     PAnsiChar(TestVar2.VRawByteString), 'RawByteString'+GetOptionString);
   {$ENDIF}
   CheckEquals(PAnsiChar(TestVar1.VRawByteString),
@@ -721,7 +745,7 @@ begin
   CheckEquals(ZRawToUnicode(RawVar.VRawByteString, ConSettings^.ClientCodePage^.CP),
     TestVar1.VUnicodeString, 'String from RawByteString'+GetOptionString);
   {$ELSE}
-  CheckEquals(RawVar.VRawByteString,
+  CheckEquals(GetExpectedStringVar.VRawByteString,
     TestVar1.VRawByteString, 'String from RawByteString'+GetOptionString);
   {$ENDIF}
   Manager.SetAsString(TestVar2, TestVar1.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF});
@@ -730,7 +754,7 @@ begin
   CheckEquals(ZRawToUnicode(RawVar.VRawByteString, ConSettings^.ClientCodePage^.CP),
     TestVar2.VUnicodeString, 'String'+GetOptionString);
   {$ELSE}
-  CheckEquals(RawVar.VRawByteString,
+  CheckEquals(GetExpectedStringVar.VRawByteString,
     TestVar2.VRawByteString, 'String'+GetOptionString);
   {$ENDIF}
 
@@ -961,8 +985,12 @@ begin
   inherited;
 {$IFDEF UNICODE}
   FTestStringList.Add(Char($0FC)+Char($0E4)+Char($0F6)+Char($0DF)+Char($0E2)+Char($0E1)+Char($0E0));
+  FTestStringList.Add('extended '+Char($0FC)+Char($0E4)+Char($0F6)+Char($0DF)+Char($0E2)+Char($0E1)+Char($0E0));
 {$ELSE}
-  FTestStringList.Add(Chr($FC)+Chr($E4)+Chr($F6)+Chr($DF)+Chr($E2)+Chr($E1)+Chr($E0));
+  if ZOSCodePage = 1252 then begin
+    FTestStringList.Add(Chr($FC)+Chr($E4)+Chr($F6)+Chr($DF)+Chr($E2)+Chr($E1)+Chr($E0));
+    FTestStringList.Add('extended '+Chr($FC)+Chr($E4)+Chr($F6)+Chr($DF)+Chr($E2)+Chr($E1)+Chr($E0));
+  end;
 {$ENDIF}
 end;
 
@@ -990,9 +1018,15 @@ procedure TZClientVarManagerConvertCaseWin1250.AfterConstruction;
 begin
   inherited;
 {$IFDEF UNICODE}
-  FTestStringList.Add('diacritic test ' + Char($010D)+Char($010E)+Char($011B)+Char($010E)+Char($0148)+Char($0158)+Char($0161)+Char($0164)+Char($017E));
-  FTestStringList.Add(Char($010D)+Char($010E)+Char($011B)+Char($010E)+Char($0148)+Char($0158)+Char($0161)+Char($0164)+Char($017E) + ' after');
-  FTestStringList.Add('test ' + Char($010D)+Char($010E)+Char($011B)+Char($010E)+Char($0148)+' zulu ' +Char($0158)+Char($0161)+Char($0164)+Char($017E));
+  FTestStringList.Add('diacritic test ' + Char($010D)+Char($010E)+Char($011B)+Char($0148)+Char($0158)+Char($0161)+Char($0164)+Char($017E));
+  FTestStringList.Add(Char($010D)+Char($010E)+Char($011B)+Char($0148)+Char($0158)+Char($0161)+Char($0164)+Char($017E) + ' after');
+  FTestStringList.Add('test ' + Char($010D)+Char($010E)+Char($011B)+Char($0148)+' zulu ' +Char($0158)+Char($0161)+Char($0164)+Char($017E));
+{$ELSE}
+  if ZOSCodePage = 1250 then begin
+    FTestStringList.Add('diacritic test ' + Chr($E8)+Chr($CF)+Chr($EC)+Chr($F2)+Chr($D8)+Chr($9A)+Chr($8D)+Chr($9E));
+    FTestStringList.Add(Chr($E8)+Chr($CF)+Chr($EC)+Chr($F2)+Chr($D8)+Chr($9A)+Chr($8D)+Chr($9E) + ' after');
+    FTestStringList.Add('test ' + Chr($E8)+Chr($CF)+Chr($EC)+Chr($F2)+' zulu ' +Chr($D8)+Chr($9A)+Chr($8D)+Chr($9E));
+  end;
 {$ENDIF}
 end;
 

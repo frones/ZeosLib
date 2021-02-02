@@ -1862,11 +1862,11 @@ begin
   Result.VType := vtAnsiString;
   case Value.VType of
     {$IFNDEF UNICODE}
-    vtString: if FClientCP = ZOSCodePage
+    vtString: if FStringCP = ZOSCodePage
               then ResTmp := Value.VRawByteString
               else begin
                 ResTmp := '';
-                PRawToRawConvert(Pointer(Value.VRawByteString), Length(Value.VRawByteString), FClientCP, GetW2A2WConversionCodePage(FConSettings), ResTmp);
+                PRawToRawConvert(Pointer(Value.VRawByteString), Length(Value.VRawByteString), FStringCP, ZOSCodePage, ResTmp);
               end;
     {$ENDIF}
     vtAnsiString: ResTmp := Value.VRawByteString;
@@ -1923,7 +1923,7 @@ begin
       end;
     {$ENDIF}
     vtRawByteString: begin
-        Result.VCharRec.CP := fClientCP;
+        Result.VCharRec.CP := FClientCP;
 SetRaw: if Pointer(Result.VRawByteString) = nil then begin
           Result.VCharRec.Len := 0;
           Result.VCharRec.P := PEmptyAnsiString; //avoid nil result
@@ -1974,7 +1974,9 @@ begin
   Result.VType := vtRawByteString;
   case Value.VType of
     {$IFNDEF UNICODE}
-    vtString: ResTmp := Value.VRawByteString;
+    vtString: if FStringCP = FClientCP
+              then ResTmp := Value.VRawByteString
+              else RawCPConvert(Value.VRawByteString, ResTmp, FStringCP, FClientCP);
     {$ENDIF}
     {$IFNDEF NO_ANSISTRING}
     vtAnsiString: if FClientCP = ZOSCodePage
@@ -2041,9 +2043,7 @@ begin
       {$IFDEF UNICODE}
       ResTmp := Value.VUnicodeString;
       {$ELSE}
-      //hint: VarArrayOf(['Test']) returns allways varOleStr which is type WideString don't change that again
-      //this hint means a cast instead of convert. The user should better use WideString constants!
-      ResTmp := ZUnicodeToRaw(Value.VUnicodeString, {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}ZOSCodePage{$ENDIF}{$ENDIF});
+      ResTmp := ZUnicodeToRaw(Value.VUnicodeString, FStringCP);
       {$ENDIF}
     vtCharRec: if (Value.VCharRec.CP = zCP_UTF16) then
         {$IFDEF UNICODE}
