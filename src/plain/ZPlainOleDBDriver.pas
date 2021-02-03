@@ -56,10 +56,10 @@ interface
 {$I ZPlain.inc}
 
 {$IF not defined(MSWINDOWS) or (defined(ZEOS_DISABLE_ADO) and defined(ZEOS_DISABLE_OLEDB))}
-  {$DEFINE ZEOS_DISABLE_OLEDB}
+  {$DEFINE ZEOS_DISABLE_OLEDB_UNIT}
 {$IFEND}
 
-{$IFNDEF ZEOS_DISABLE_OLEDB}
+{$IFNDEF ZEOS_DISABLE_OLEDB_UNIT}
 
 //  Imported oledb on 08.11.2014 00:47:46 from oledb.tlb of:
 //  http://py-com-tools.googlecode.com/svn/trunk/sdk-tlbs/
@@ -1448,7 +1448,7 @@ type
 //Map CoClass to its default interface
 
 //from oledb.h
-  //ULONG = LongWord;  //Jan: Removed because WinAPI.Windows already has a definition of ULONG which matches this one. (ULONG = LongWord = Cardinal)
+  ULONG = LongWord;
   // Length of a non-character object, size
   PDBLENGTH = ^DBLENGTH;
   DBLENGTH = NativeUInt; //ULONGLONG
@@ -3488,11 +3488,11 @@ type
 function VariantClear(var varg: OleVariant): HResult; stdcall; external 'oleaut32.dll' name 'VariantClear';
 {$IFEND}
 
-{$ENDIF ZEOS_DISABLE_OLEDB}
+{$ENDIF ZEOS_DISABLE_OLEDB_UNIT}
 
 implementation
 
-{$IFNDEF ZEOS_DISABLE_OLEDB}
+{$IFNDEF ZEOS_DISABLE_OLEDB_UNIT}
 
 procedure TZOleDBPlainDriver.LoadCodePages;
 begin
@@ -3523,6 +3523,6 @@ begin
   Result := Self;
 end;
 
-{$ENDIF ZEOS_DISABLE_OLEDB}
+{$ENDIF ZEOS_DISABLE_OLEDB_UNIT}
 
 end.
