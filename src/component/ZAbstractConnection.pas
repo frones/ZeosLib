@@ -52,13 +52,13 @@
 (*
  Constributors:
   cipto,
+  EgonHugeist
   firmos
   HA,
+  marsupilami97
   mdeams (Mark Deams)
   miab3
-  marsupilami97
   mse
-  EgonHugeist
   and many others
 *)
 
@@ -112,8 +112,9 @@ uses
 {$ENDIF}
 
   SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
-  ZClasses, ZCompatibility,
-  ZDbcIntfs, ZDatasetUtils;
+  ZClasses, ZCompatibility, ZSysUtils,
+  ZDbcIntfs,
+  ZDatasetUtils, ZFormatSettings;
 
 type
   /// <author>HA</author>
@@ -173,7 +174,9 @@ type
     FClientCodepage: String;
     FTransactions: TZSortedList;
     FRawCharacterTransliterateOptions: TZRawCharacterTransliterateOptions;
+    FFormatSettings: TZFormatSettings;
     procedure SetRawCharacterTransliterateOptions(Value: TZRawCharacterTransliterateOptions);
+    procedure SetFormatSettings(const Value: TZFormatSettings);
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetConnPort: Integer;
@@ -299,6 +302,7 @@ type
     procedure ShowSQLHourGlass;
     procedure HideSQLHourGlass;
   published
+    property FormatSettings: TZFormatSettings read FFormatSettings write SetFormatSettings;
     property ControlsCodePage: TZControlsCodePage read FControlsCodePage write SetCharacterFieldType;
     property RawCharacterTransliterateOptions: TZRawCharacterTransliterateOptions read FRawCharacterTransliterateOptions write
       SetRawCharacterTransliterateOptions;
@@ -456,9 +460,9 @@ type
 
 implementation
 
-uses ZMessages, ZAbstractRODataset, ZSysUtils,
+uses ZMessages, ZFastCode, ZEncoding,
   ZDbcProperties, ZDbcLogging,
-  ZSequence, ZAbstractDataset, ZEncoding;
+  ZSequence, ZAbstractDataset, ZAbstractRODataset;
 
 var
   SqlHourGlassLock: Integer;
@@ -496,6 +500,7 @@ begin
   FTransactions := TZSortedList.Create;
   FLoginPrompt := False;
   FDesignConnection := False;
+  FFormatSettings := TZFormatSettings.Create(Self);
 end;
 
 {**
@@ -511,6 +516,7 @@ begin
   FSequences.Free;
   FreeAndNil(FTransactions);
   FreeAndNil(FRawCharacterTransliterateOptions);
+  FreeAndNil(FFormatSettings);
   inherited Destroy;
 end;
 
@@ -542,6 +548,11 @@ end;
 procedure TZAbstractConnection.SetDatabase(const Value: String);
 begin
   FURL.Database := Value;
+end;
+
+procedure TZAbstractConnection.SetFormatSettings(const Value: TZFormatSettings);
+begin
+  FFormatSettings.Assign(Value);
 end;
 
 function TZAbstractConnection.GetUser: string;

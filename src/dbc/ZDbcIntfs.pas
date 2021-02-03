@@ -173,9 +173,9 @@ type
     /// <summary>A reference to the database characterset information.</summary>
     ClientCodePage: PZCodePage;
     /// <summary>The database ReadFormatSettings.</summary>
-    ReadFormatSettings: TZFormatSettings;
+    ReadFormatSettings: TZClientFormatSettings;
     /// <summary>The database WriteFormatSettings.</summary>
-    WriteFormatSettings: TZFormatSettings;
+    WriteFormatSettings: TZClientFormatSettings;
   end;
 
   /// <author>EgonHugeist</author>

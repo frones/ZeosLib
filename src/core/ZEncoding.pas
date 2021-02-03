@@ -1181,7 +1181,10 @@ const
   dsMaxRStringSize = 8192; { Maximum string field size declared in DB.pas }
   dsMaxWStringSize = dsMaxRStringSize shr 1;
 
-{$IFDEF FPC} {$PUSH} {$WARN 4056 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+  {$WARN 4056 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
 function ZRawToUnicode(const S: RawByteString; const CP: Word): UnicodeString;
 begin
   if Pointer(S) = nil

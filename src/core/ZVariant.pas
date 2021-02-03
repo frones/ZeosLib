@@ -223,7 +223,7 @@ type
   {** Implements a variant manager with strict convertion rules. }
   TZSoftVariantManager = class (TInterfacedObject, IZVariantManager)
   protected
-    FFormatSettings: TZFormatSettings;
+    FFormatSettings: TZClientFormatSettings;
     procedure ConvertFixedTypesToUnicode(const Value: TZVariant; var Result: UnicodeString);
     procedure ConvertFixedTypesToRaw(const Value: TZVariant; var Result: RawByteString{$IFDEF WITH_RAWBYTESTRING}; CP: Word{$ENDIF});
     procedure PRawCPConvert(Src: PAnsiChar; L: LengthInt; var Dest: RawByteString; FromCP, ToCP: Word);

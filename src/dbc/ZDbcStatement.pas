@@ -6468,7 +6468,9 @@ end;
 procedure TZBeginnerPreparedStatement.SetRawByteString(ParameterIndex: Integer;
   const Value: RawByteString);
 begin
-
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stString, Value, FCLientCP);
 end;
 
 procedure TZBeginnerPreparedStatement.SetShort(ParameterIndex: Integer;

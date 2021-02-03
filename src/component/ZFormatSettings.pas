@@ -1,0 +1,1191 @@
+{*********************************************************}
+{                                                         }
+{              Zeos Format Setting Objects                }
+{                                                         }
+{            Originally written by EgonHugeist            }
+{                                                         }
+{*********************************************************}
+
+{@********************************************************}
+{    Copyright (c) 1999-2020 Zeos Development Group       }
+{                                                         }
+{ License Agreement:                                      }
+{                                                         }
+{ This library is distributed in the hope that it will be }
+{ useful, but WITHOUT ANY WARRANTY; without even the      }
+{ implied warranty of MERCHANTABILITY or FITNESS FOR      }
+{ A PARTICULAR PURPOSE.  See the GNU Lesser General       }
+{ Public License for more details.                        }
+{                                                         }
+{ The source code of the ZEOS Libraries and packages are  }
+{ distributed under the Library GNU General Public        }
+{ License (see the file COPYING / COPYING.ZEOS)           }
+{ with the following  modification:                       }
+{ As a special exception, the copyright holders of this   }
+{ library give you permission to link this library with   }
+{ independent modules to produce an executable,           }
+{ regardless of the license terms of these independent    }
+{ modules, and to copy and distribute the resulting       }
+{ executable under terms of your choice, provided that    }
+{ you also meet, for each linked independent module,      }
+{ the terms and conditions of the license of that module. }
+{ An independent module is a module which is not derived  }
+{ from or based on this library. If you modify this       }
+{ library, you may extend this exception to your version  }
+{ of the library, but you are not obligated to do so.     }
+{ If you do not wish to do so, delete this exception      }
+{ statement from your version.                            }
+{                                                         }
+{                                                         }
+{ The project web site is located on:                     }
+{   https://zeoslib.sourceforge.io/ (FORUM)               }
+{   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
+{   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
+{                                                         }
+{   http://www.sourceforge.net/projects/zeoslib.          }
+{                                                         }
+{                                 Zeos Development Group. }
+{********************************************************@}
+
+unit ZFormatSettings;
+
+interface
+
+{$I ZComponent.inc}
+uses
+  SysUtils, Classes{$IFDEF MSEgui}, mclasses{$ENDIF},
+  ZCompatibility;
+type
+  {$IF not declared(PFormatSettings)}
+  PFormatSettings = ^TFormatSettings;
+  {$IFEND}
+  /// <summary>Defines an event for changed format settings.</summary>
+  TZOnFormatChanged = Procedure of Object;
+
+  /// <summary>Defines format options for the second frations.</summary>
+  TZSecondFractionOption = (
+    /// <summary>use right zero trimmed fractions</summary>
+    foRightZerosTrimmed,
+    /// <summary>zero padding the fraction part as scale defines</summary>
+    foScaleNormalized,
+    /// <summary>strictly align fractions as specified by format. If
+    ///  no fraction part is in the format the fractions are ignored</summary>
+    foSetByFormat
+  );
+
+  /// <summary>implements the TZAbstractTimeFormatSettings.</summary>
+  TZAbstractDateTimeFormatSettings = class(TPersistent)
+  private
+    FFormatSettings: TFormatSettings;
+    FFormat: PString;
+    FOnFormatChanged: TZOnFormatChanged;
+    FInvalidValueText: String;
+    {$IFDEF AUTOREFCOUNT}[WEAK]{$ENDIF}FOwner: TComponent;
+    {$IFDEF AUTOREFCOUNT}[WEAK]{$ENDIF}FParent: TZAbstractDateTimeFormatSettings;
+    /// <summary>Gets the format. If the format is empty and a parent is set,
+    ///  the format of the parent class will be returned, except the owner
+    ///  component is in designing state. If parent is empty too the result will
+    ///  be assigned by calling InternalGetFromFormatSettings</summary>
+    /// <returns>the format string.</returns>
+    function GetFormat: String;
+    /// <summary>Gets the invalid value representation. If the format is empty
+    ///  and the parent object is assigned, the parents invalid value text
+    ///  will be used instead, except the owner component is in designing state.</summary>
+    /// <returns>the invalid value text string.</returns>
+    function GetInvalidValueText: String;
+
+    procedure SetFormatSettings(const Value: TFormatSettings);
+  protected
+    /// <summary>Sets the new format. OnFormatChanged will be called if assigned</summary>
+    /// <param>"Value" the new format to be used.</param>
+    procedure SetFormat(const Value: String); virtual; abstract;
+    /// <summary>Gets the format from the global formatsettings</summary>
+    /// <remarks>abstract forward implementation</remarks>
+    /// <returns>the format string.</returns>
+    function InternalGetFromFormatSettings: String; virtual; abstract;
+    /// <summary>Gets the invalid value representation</summary>
+    /// <remarks>abstract forward implementation</remarks>
+    /// <returns>the invalid value string.</returns>
+    function InternalGetInvalidValueText: String; virtual; abstract;
+    /// <summary>Represents a text for an invalid date/time/timestamp value.</summary>
+    property InvalidValueText: String read GetInvalidValueText write FInvalidValueText;
+  public
+    function GetFormatSettings: PFormatSettings;
+    /// <summary>Assigns the values from a Source object.</summary>
+    /// <param>"Source" the Source object.</param>
+    procedure Assign(Source: TPersistent); override;
+    /// <summary>Creates this object and assigns main properties.</summary>
+    /// <param>"AOwner" the Owner of this object.</param>
+    constructor Create(AOwner: TComponent);
+    procedure SetOnFormatChanged(Value: TZOnFormatChanged);
+  public
+    property FormatSettings: TFormatSettings read FFormatSettings write SetFormatSettings;
+  published
+    /// <summary>Represents the Format of this object or parents format or
+    ///  the format of the global FormatSettings</summary>
+    property Format: String read GetFormat write SetFormat;
+  end;
+
+   /// <summary>implements the TZAbstractSecondFractionFormatSettings.</summary>
+  TZAbstractSecondFractionFormatSettings = class(TZAbstractDateTimeFormatSettings)
+  private
+    FSecondFractionOption: TZSecondFractionOption;
+    /// <summary>Gets the fraction option. If the format is empty and a parent
+    ///  is set, the fraction option of the parent class will be returned.</summary>
+    /// <returns>the fraction option.</returns>
+    function GetSecondFractionOption: TZSecondFractionOption;
+    /// <summary>Gets the fraction seperator. If the format is empty and a parent
+    ///  is set, the fraction seperator of the parent class will be returned.</summary>
+    /// <returns>the fraction seperator.</returns>
+    function GetSecondFractionSeperator: Char;
+    /// <summary>Sets the fraction option. OnFormatChanged will be called if
+    ///  assigned</summary>
+    /// <param>"Value" the new fraction option to be used.</param>
+    procedure SetSecondFractionOption(Value: TZSecondFractionOption);
+    /// <summary>Sets the fraction seperator. OnFormatChanged will be called if
+    ///  assigned</summary>
+    /// <param>"Value" the new fraction seperator to be used.</param>
+    procedure SetSecondFractionSeperator(Value: Char);
+  protected
+    /// <summary>Escapes the fractions of the given format.</summary>
+    /// <param>"NanoFractions" the nano second fractions.</param>
+    /// <param>"Scale" the scale we align according the fraction option.</param>
+    /// <param>"IsNegate" if <c>True</c> then a '-' will be added to either the
+    ///  year or the hours if given.</param>
+    /// <param>"Format" a reference to the format we escape in.</param>
+    procedure EscapeFractionFormat(NanoFractions, Scale: Cardinal; IsNegative: Boolean; var Format: String);
+    /// <summary>Represents the SecondFractionOption of this object or parents
+    ///  SecondFractionOption if the Format is empty</summary>
+    property SecondFractionOption: TZSecondFractionOption read GetSecondFractionOption write SetSecondFractionOption;
+  public
+    /// <summary>Assigns the values from a Source object.</summary>
+    /// <param>"Source" the Source object.</param>
+    procedure Assign(Source: TPersistent); override;
+  published
+    /// <summary>Represents the fraction seperator of this object or parents
+    ///  seperator or the decimal seperator of the global FormatSettings</summary>
+    property SecondFractionSeperator: Char read GetSecondFractionSeperator write SetSecondFractionSeperator;
+  end;
+
+ /// <summary>implements the TZAbstractTimeFormatSettings.</summary>
+  TZAbstractTimeFormatSettings = class(TZAbstractSecondFractionFormatSettings)
+  protected
+    /// <summary>Gets the format from the global formatsettings</summary>
+    /// <returns>the format string.</returns>
+    function InternalGetFromFormatSettings: String; override;
+    /// <summary>Gets the invalid value representation</summary>
+    /// <returns>the invalid value string.</returns>
+    function InternalGetInvalidValueText: String; override;
+    /// <summary>Sets the new format. OnFormatChanged will be called if assigned</summary>
+    /// <param>"Value" the new format to be used.</param>
+    procedure SetFormat(const Value: String); override;
+  public
+    /// <summary>Attempt to convert the time values into a string</summary>
+    /// <param>"Dest" a reference of the string we convert into.</param>
+    /// <param>"Hours" the hours value.</param>
+    /// <param>"Minutes" the minutes value.</param>
+    /// <param>"Seconds" the seconds value.</param>
+    /// <param>"NanoFractions" the nano fractions value.</param>
+    /// <param>"Scale" the Scale to be used.</param>
+    /// <param>"IsNegative" the hours value.</param>
+    /// <returns><c>True</c> if the conversion was successful; <c>False</c> otherwise.</returns>
+    function TryTimeToString(var Dest: String; Hours, Minutes, Seconds: Word;
+      NanoFractions, Scale: Cardinal; IsNegative: Boolean): Boolean;
+    function TryStringToTime(var Dest: TZTime; const Source: String;
+      Scale: Cardinal): Boolean;
+  end;
+
+  /// <summary>implements the TZEditTimeFormatSettings.</summary>
+  TZEditTimeFormatSettings = class(TZAbstractTimeFormatSettings)
+  public
+    /// <summary>Sets a parent to this object..</summary>
+    /// <param>"Value" the new parent of this object.</param>
+    procedure SetParent(const Value: TZEditTimeFormatSettings);
+    /// <summary>Creates this object and assigns main properties.</summary>
+    /// <param>"AOwner" the Owner of this object.</param>
+    constructor Create(AOwner: TComponent);
+  published
+    property SecondFractionOption default foSetByFormat;
+  end;
+
+  /// <summary>implements the TZDisplayTimeFormatSettings.</summary>
+  TZDisplayTimeFormatSettings = Class(TZAbstractTimeFormatSettings)
+  public
+    /// <summary>Sets a parent to this object..</summary>
+    /// <param>"Value" the new parent of this object.</param>
+    procedure SetParent(const Value: TZDisplayTimeFormatSettings);
+  published
+    property InvalidValueText;
+    property SecondFractionOption default foRightZerosTrimmed;
+  End;
+
+  /// <summary>implements the TZAbstractDateFormatSettings.</summary>
+  TZAbstractDateFormatSettings = class(TZAbstractDateTimeFormatSettings)
+  protected
+    /// <summary>Gets the format from the global formatsettings</summary>
+    /// <returns>the format string.</returns>
+    function InternalGetFromFormatSettings: String; override;
+    /// <summary>Gets the invalid value representation</summary>
+    /// <returns>the invalid value string.</returns>
+    function InternalGetInvalidValueText: String; override;
+    /// <summary>Sets the new format. OnFormatChanged will be called if assigned</summary>
+    /// <param>"Value" the new format to be used.</param>
+    procedure SetFormat(const Value: String); override;
+  public
+    /// <summary>Assigns the values from a Source object.</summary>
+    /// <param>"Source" the Source object.</param>
+    procedure Assign(Source: TPersistent); override;
+    function TryDateToStr(Year, Month, Day: Word; IsNegative: Boolean; var Dest: String): Boolean;
+    function TryStrToDate(var Dest: TZDate; const Source: String): Boolean;
+  end;
+
+  /// <summary>implements the TZEditDateFormatSettings.</summary>
+  TZEditDateFormatSettings = Class(TZAbstractDateFormatSettings)
+  public
+    /// <summary>Sets a parent to this object..</summary>
+    /// <param>"Value" the new parent of this object.</param>
+    procedure SetParent(const Value: TZEditDateFormatSettings);
+  End;
+
+  /// <summary>implements the TZDisplayDateFormatSettings.</summary>
+  TZDisplayDateFormatSettings = Class(TZAbstractDateFormatSettings)
+  public
+    /// <summary>Sets a parent to this object..</summary>
+    /// <param>"Value" the new parent of this object.</param>
+    procedure SetParent(const Value: TZDisplayDateFormatSettings);
+  published
+    property InvalidValueText;
+  End;
+
+  /// <summary>implements the TZAbstractTimestampFormatSettings.</summary>
+  TZAbstractTimestampFormatSettings = class(TZAbstractSecondFractionFormatSettings)
+  private
+    FDateFormat, FTimeFormat: PString;
+    FDatePartOnlyIfZeroTime, FTimePartOnlyIfPascalIntegralDate: Boolean;
+    function GetDateFormat: String;
+    procedure SetDateFormat(const Value: String);
+    function GetTimeFormat: String;
+    procedure SetTimeFormat(const Value: String);
+    function GetDatePartOnlyIfZeroTime: Boolean;
+    procedure SetDatePartOnlyIfZeroTime(const Value: Boolean);
+    function GetTimePartOnlyIfPascalIntegralDate: Boolean;
+    procedure SetTimePartOnlyIfPascalIntegralDate(const Value: Boolean);
+  protected
+    /// <summary>Gets the format from the global formatsettings</summary>
+    /// <returns>the format string.</returns>
+    function InternalGetFromFormatSettings: String; override;
+    /// <summary>Gets the invalid value representation</summary>
+    /// <returns>the invalid value string.</returns>
+    function InternalGetInvalidValueText: String; override;
+    /// <summary>Sets the new format. OnFormatChanged will be called if assigned</summary>
+    /// <param>"Value" the new format to be used.</param>
+    procedure SetFormat(const Value: String); override;
+  protected
+    property DateFormat: String read GetDateFormat write SetDateFormat;
+    property TimeFormat: String read GetTimeFormat write SetTimeFormat;
+    property DatePartOnlyIfZeroTime: Boolean Read GetDatePartOnlyIfZeroTime write SetDatePartOnlyIfZeroTime;
+    property TimePartOnlyIfPascalIntegralDate: Boolean read GetTimePartOnlyIfPascalIntegralDate write SetTimePartOnlyIfPascalIntegralDate;
+  public
+    /// <summary>Creates this object and assigns main properties.</summary>
+    /// <param>"AOwner" the Owner of this object.</param>
+    constructor Create(AOwner: TComponent);
+  public
+    function TryTimestampToStr(Year, Month, Day, Hour, Minute, Second: Word;
+      NanoFractions, Scale: Cardinal; IsNegative: Boolean; var Dest: String): Boolean;
+    function TryStrToTimestamp(var Dest: TZTimeStamp; const Source: String;
+      Scale: Cardinal): Boolean;
+  end;
+
+  /// <summary>implements the TZEditTimestampFormatSettings.</summary>
+  TZEditTimestampFormatSettings = Class(TZAbstractTimestampFormatSettings)
+  public
+    /// <summary>Sets a parent to this object..</summary>
+    /// <param>"Value" the new parent of this object.</param>
+    procedure SetParent(Value: TZEditTimestampFormatSettings);
+    /// <summary>Creates this object and assigns main properties.</summary>
+    /// <param>"AOwner" the Owner of this object.</param>
+    constructor Create(AOwner: TComponent);
+  published
+    property SecondFractionOption default foSetByFormat;
+  End;
+
+  /// <summary>implements the TZDisplayTimestampFormatSettings.</summary>
+  TZDisplayTimestampFormatSettings = Class(TZAbstractTimestampFormatSettings)
+  public
+    /// <summary>Sets a parent to this object..</summary>
+    /// <param>"Value" the new parent of this object.</param>
+    procedure SetParent(Value: TZDisplayTimestampFormatSettings);
+    /// <summary>Creates this object and assigns main properties.</summary>
+    /// <param>"AOwner" the Owner of this object.</param>
+    constructor Create(AOwner: TComponent);
+  published
+    property InvalidValueText;
+    property SecondFractionOption default foRightZerosTrimmed;
+    property DateFormat;
+    property TimeFormat;
+    property DatePartOnlyIfZeroTime default True;
+    property TimePartOnlyIfPascalIntegralDate default True;
+  End;
+
+  /// <summary>implements the TZFormatSettings.</summary>
+  TZFormatSettings = class(TPersistent)
+  private
+    FDisplayDateFormatSettings: TZDisplayDateFormatSettings;
+    FEditDateFormatSettings: TZEditDateFormatSettings;
+    FDisplayTimeFormatSettings: TZDisplayTimeFormatSettings;
+    FEditTimeFormatSettings: TZEditTimeFormatSettings;
+    FDisplayTimestampFormatSettings: TZDisplayTimestampFormatSettings;
+    FEditTimestampFormatSettings: TZEditTimestampFormatSettings;
+    procedure SetDisplayDateFormatSettings(const Value: TZDisplayDateFormatSettings);
+    procedure SetDisplayTimeFormatSettings(const Value: TZDisplayTimeFormatSettings);
+    procedure SetDisplayTimestampFormatSettings(const Value: TZDisplayTimestampFormatSettings);
+    procedure SetEditDateFormatSettings(const Value: TZEditDateFormatSettings);
+    procedure SetEditTimeFormatSettings(const Value: TZEditTimeFormatSettings);
+    procedure SetEditTimestampFormatSettings(const Value: TZEditTimestampFormatSettings);
+  public
+    /// <summary>Assigns the values from a Source object.</summary>
+    /// <param>"Source" the Source object.</param>
+    procedure Assign(Source: TPersistent); override;
+    /// <summary>Sets a parent to this object..</summary>
+    /// <param>"Value" the new parent of this object.</param>
+    procedure SetParent(const Value: TZFormatSettings);
+    /// <summary>Creates this object and assigns main properties.</summary>
+    /// <param>"AOwner" the Owner of this object.</param>
+    constructor Create(const AOwner: TComponent);
+    destructor Destroy; override;
+  published
+    property DisplayDateFormatSettings: TZDisplayDateFormatSettings read FDisplayDateFormatSettings write SetDisplayDateFormatSettings;
+    property DisplayTimeFormatSettings: TZDisplayTimeFormatSettings read FDisplayTimeFormatSettings write SetDisplayTimeFormatSettings;
+    property DisplayTimestampFormatSettings: TZDisplayTimestampFormatSettings read FDisplayTimestampFormatSettings write SetDisplayTimestampFormatSettings;
+    property EditDateFormatSettings: TZEditDateFormatSettings read FEditDateFormatSettings write SetEditDateFormatSettings;
+    property EditTimeFormatSettings: TZEditTimeFormatSettings read FEditTimeFormatSettings write SetEditTimeFormatSettings;
+    property EditTimestampFormatSettings: TZEditTimestampFormatSettings read FEditTimestampFormatSettings write SetEditTimestampFormatSettings;
+  end;
+
+implementation
+
+uses ZFastCode, ZSysUtils, ZDatasetUtils;
+
+{ TZAbstractDateTimeFormatSettings }
+
+procedure TZAbstractDateTimeFormatSettings.Assign(Source: TPersistent);
+var ASource: TZAbstractDateTimeFormatSettings;
+begin
+  ASource := Source as TZAbstractDateTimeFormatSettings;
+  if ASource.FFormat = nil
+  then FFormat := nil
+  else SetFormat(ASource.FFormat^);
+  FInvalidValueText := ASource.FInvalidValueText;
+end;
+
+constructor TZAbstractDateTimeFormatSettings.Create(AOwner: TComponent);
+{$IFNDEF WITH_FORMATSETTINGS}
+var I: Integer;
+{$ENDIF}
+begin
+  inherited Create;
+  FOwner := AOwner;
+  {$IFDEF WITH_FORMATSETTINGS}
+  SetFormatSettings(SysUtils.FormatSettings);
+  {$ELSE}
+  FFormatSettings.CurrencyFormat := SysUtils.CurrencyFormat;
+  FFormatSettings.NegCurrFormat := SysUtils.NegCurrFormat;
+  FFormatSettings.ThousandSeparator := SysUtils.ThousandSeparator;
+  FFormatSettings.DecimalSeparator := SysUtils.DecimalSeparator;
+  FFormatSettings.CurrencyDecimals := SysUtils.CurrencyDecimals;
+  FFormatSettings.DateSeparator := SysUtils.DateSeparator;
+  FFormatSettings.TimeSeparator := SysUtils.TimeSeparator;
+  FFormatSettings.ListSeparator := SysUtils.ListSeparator;
+  FFormatSettings.CurrencyString := SysUtils.CurrencyString;
+  FFormatSettings.ShortDateFormat := SysUtils.ShortDateFormat;
+  FFormatSettings.LongDateFormat := SysUtils.LongDateFormat;
+  FFormatSettings.TimeAMString := SysUtils.TimeAMString;
+  FFormatSettings.TimePMString := SysUtils.TimePMString;
+  FFormatSettings.ShortTimeFormat := SysUtils.ShortTimeFormat;
+  FFormatSettings.LongTimeFormat := SysUtils.LongTimeFormat;
+  for I := 1 to 12 do begin
+    FFormatSettings.ShortMonthNames[I] := SysUtils.ShortMonthNames[I];
+    FFormatSettings.LongMonthNames[I] := SysUtils.LongMonthNames[I];
+  end;
+  for I := 1 to 7 do begin
+    FFormatSettings.ShortDayNames[I] := SysUtils.ShortDayNames[I];
+    FFormatSettings.LongDayNames[I] := SysUtils.LongDayNames[I];
+  end;
+  FFormatSettings.TwoDigitYearCenturyWindow := SysUtils.TwoDigitYearCenturyWindow;
+  {$ENDIF}
+end;
+
+function TZAbstractDateTimeFormatSettings.GetFormat: String;
+begin
+  if (FFormat <> nil) then
+    Result := FFormat^
+  else if (csDesigning in FOwner.ComponentState) then
+    Result := ''
+  else if FParent <> nil
+    then Result := FParent.GetFormat
+    else Result := InternalGetFromFormatSettings;
+end;
+
+function TZAbstractDateTimeFormatSettings.GetFormatSettings: PFormatSettings;
+begin
+  if (FFormat <> nil) or (FParent = nil)
+  then Result := @FFormatSettings
+  else Result := FParent.GetFormatSettings;
+end;
+
+function TZAbstractDateTimeFormatSettings.GetInvalidValueText: String;
+begin
+  if (FFormat <> nil) or (csDesigning in FOwner.ComponentState) then
+    Result := FInvalidValueText
+  else if FParent <> nil then
+    Result := FParent.GetInvalidValueText
+  else Result := InternalGetInvalidValueText;
+end;
+
+procedure TZAbstractDateTimeFormatSettings.SetFormatSettings(
+  const Value: TFormatSettings);
+var I: Integer;
+begin
+  FFormatSettings.CurrencyFormat := Value.CurrencyFormat;
+  FFormatSettings.NegCurrFormat := Value.NegCurrFormat;
+  FFormatSettings.ThousandSeparator := Value.ThousandSeparator;
+  FFormatSettings.DecimalSeparator := Value.DecimalSeparator;
+  FFormatSettings.CurrencyDecimals := Value.CurrencyDecimals;
+  FFormatSettings.DateSeparator := Value.DateSeparator;
+  FFormatSettings.TimeSeparator := Value.TimeSeparator;
+  FFormatSettings.ListSeparator := Value.ListSeparator;
+  FFormatSettings.CurrencyString := Value.CurrencyString;
+  FFormatSettings.ShortDateFormat := Value.ShortDateFormat;
+  FFormatSettings.LongDateFormat := Value.LongDateFormat;
+  FFormatSettings.TimeAMString := Value.TimeAMString;
+  FFormatSettings.TimePMString := Value.TimePMString;
+  FFormatSettings.ShortTimeFormat := Value.ShortTimeFormat;
+  FFormatSettings.LongTimeFormat := Value.LongTimeFormat;
+  for I := 1 to 12 do begin
+    FFormatSettings.ShortMonthNames[I] := Value.ShortMonthNames[I];
+    FFormatSettings.LongMonthNames[I] := Value.LongMonthNames[I];
+  end;
+  for I := 1 to 7 do begin
+    FFormatSettings.ShortDayNames[I] := Value.ShortDayNames[I];
+    FFormatSettings.LongDayNames[I] := Value.LongDayNames[I];
+  end;
+  FFormatSettings.TwoDigitYearCenturyWindow := Value.TwoDigitYearCenturyWindow;
+end;
+
+procedure TZAbstractDateTimeFormatSettings.SetOnFormatChanged(
+  Value: TZOnFormatChanged);
+begin
+  FOnFormatChanged := Value;
+end;
+
+{ TZAbstractSecondFractionFormatSettings }
+
+procedure TZAbstractSecondFractionFormatSettings.Assign(Source: TPersistent);
+var AValue: TZAbstractSecondFractionFormatSettings;
+begin
+  AValue := Source as TZAbstractSecondFractionFormatSettings;
+  FSecondFractionOption := AValue.FSecondFractionOption;
+  inherited Assign(Source);
+end;
+
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+  {$WARN 4056 off : Conversion between ordinals and pointers is not portable}
+  {$WARN 4079 off : Converting the operands to "Int64" before doing the add could prevent overflow errors}
+{$ENDIF}
+procedure TZAbstractSecondFractionFormatSettings.EscapeFractionFormat(
+  NanoFractions, Scale: Cardinal; IsNegative: Boolean; var Format: String);
+var P, PEnd, PFractionSep, PSecond, PFractionStart, PFractionEnd, NewP, PYear, PHour: PChar;
+  c: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
+  EscapeCount, L, FractionDigitsInFormat: Cardinal;
+  FormatSettings: PFormatSettings;
+begin
+  P := Pointer(Format);
+  L := Length(Format);
+  PEnd := P+L;
+  FractionDigitsInFormat := 0;
+  EscapeCount := 0;
+  PFractionSep := nil;
+  PSecond := nil;
+  PFractionStart := nil;
+  PYear := nil;
+  PHour := nil;
+  PFractionEnd := nil;
+  FormatSettings := GetFormatSettings;
+  { first count the fraction chars given by format, assign remainders for the
+    fraction seperator and (if not given one of both) the last second pos }
+  while P < PEnd do begin //overflow save (min last address if the zero char)
+    C := {$IFDEF UNICODE}PWord(P)^ or $0020{$ELSE}PByte(P)^ or $20{$ENDIF};
+    if P^ = Char('"') then
+      if Odd(EscapeCount)// and ((P+1)^ <> '"') //each half quote gets an escape quote, nope compiler does it different
+      then Dec(EscapeCount)
+      else Inc(EscapeCount);
+    if (EscapeCount = 0) then
+      if ((C = Ord('z')) or (C = Ord('f'))) then begin
+        if PFractionStart = nil then
+          PFractionStart := P;
+        PFractionEnd := P;
+        Inc(FractionDigitsInFormat)
+      end else if P^ = FormatSettings.DecimalSeparator then
+        PFractionSep := P
+      else if (C = Ord('s')) then
+        PSecond := P
+      else if (C = Ord('y')) and IsNegative then begin
+        if PYear = nil then
+          PYear := P;
+        PHour := nil;
+      end else if (C = Ord('h')) and IsNegative and (PYear = nil) then
+        PHour := P;
+    Inc(P);
+  end;
+  if (PSecond = nil) and (PFractionStart = nil) and (PHour = nil) and (PYear = nil) then
+    Exit;
+  { determine amount of fraction digits -> fix scale ? }
+  if FSecondFractionOption = foRightZerosTrimmed then begin
+    while (NanoFractions > 0) do begin
+      Scale := NanoFractions mod 10;
+      if Scale <> 0
+      then Break
+      else NanoFractions := NanoFractions div 10;
+    end;
+    if NanoFractions = 0
+    then Scale := 0
+    else Scale := GetOrdinalDigits(NanoFractions);
+  end else begin
+    if FSecondFractionOption = foSetByFormat then
+      Scale := FractionDigitsInFormat;
+    if NanoFractions <> Scale then begin
+      NanoFractions := RoundNanoFractionTo(NanoFractions, Scale);
+      NanoFractions := NanoFractions div FractionLength2NanoSecondMulTable[Scale];
+    end;
+  end;
+  P := Pointer(Format);
+  if PFractionStart <> nil then begin
+    Dec(PEnd);
+    if Scale = 0 then begin
+      if PFractionSep = PFractionStart-1 then
+        PFractionStart := PFractionSep;
+      Move((PFractionEnd+1)^, PFractionStart^, (NativeUInt(PEnd)-NativeUInt(PFractionEnd))); //backward move
+      SetLength(Format, L-NativeUInt(((PFractionEnd+1)-PFractionStart)));
+      Exit;
+    end else if ((Scale+2) < FractionDigitsInFormat) then begin  //backward move?
+      Move((PFractionEnd+1)^, (PFractionStart+1+Scale)^, (NativeUInt(PEnd)-NativeUInt(PFractionEnd))); //backward move
+      L := L-(FractionDigitsInFormat-(Scale+2));
+      SetLength(Format, L);
+      NewP := Pointer(Format);
+      PFractionStart := NewP +(PFractionStart-P);
+    end else if ((Scale+2) > FractionDigitsInFormat) then begin//forward move
+      SetLength(Format, L+((Scale+2)-FractionDigitsInFormat));
+      NewP := Pointer(Format);
+      PFractionStart := NewP +(PFractionStart-P);
+      NewP := NewP + (PFractionEnd+1-P);
+      Move(NewP^, (NewP+((Scale+2)-FractionDigitsInFormat))^, (NativeUInt(PEnd)-NativeUInt(PFractionEnd)));
+    end;
+    (PFractionStart)^ := '"';
+    if Scale > 0 then
+      {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(NanoFractions, PFractionStart+1, Byte(Scale));
+    (PFractionStart+1+Scale)^ := '"';
+  end else if (PSecond <> nil) and (Scale > 0) then begin
+    PFractionEnd := PSecond+1;
+    SetLength(Format, L+3+Scale);
+    PFractionSep := Pointer(Format);
+    Inc(PFractionSep, L);
+    EscapeCount := (NativeUInt(PEnd) - NativeUInt(PFractionEnd));
+    if EscapeCount > 0 then begin
+      P := PFractionSep + (PEnd - PFractionEnd);
+      Move(P^, PFractionSep^, EscapeCount); //forward move
+    end;
+    (PFractionSep)^ := '"';
+    (PFractionSep+1)^ := FormatSettings.DecimalSeparator;
+    {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(NanoFractions, PFractionSep+2, Byte(Scale));
+    (PFractionSep+2+Scale)^ := '"';
+  end;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+function TZAbstractSecondFractionFormatSettings.GetSecondFractionOption: TZSecondFractionOption;
+begin
+  if (FFormat <> nil) or (FParent = nil)
+  then Result := FSecondFractionOption
+  else Result := TZAbstractSecondFractionFormatSettings(FParent).GetSecondFractionOption
+end;
+
+function TZAbstractSecondFractionFormatSettings.GetSecondFractionSeperator: Char;
+begin
+  if (FFormat <> nil) or (FParent = nil)
+  then Result := GetFormatSettings.DecimalSeparator
+  else Result := TZAbstractSecondFractionFormatSettings(FParent).GetSecondFractionSeperator;
+end;
+
+procedure TZAbstractSecondFractionFormatSettings.SetSecondFractionOption(
+  Value: TZSecondFractionOption);
+begin
+  if FSecondFractionOption <> Value then begin
+    if Assigned(FOnFormatChanged) then
+      FOnFormatChanged;
+    FSecondFractionOption := Value;
+  end;
+end;
+
+procedure TZAbstractSecondFractionFormatSettings.SetSecondFractionSeperator(
+  Value: Char);
+begin
+  if (FFormat <> nil) and (FFormatSettings.DecimalSeparator <> Value) then begin
+    if Assigned(FOnFormatChanged) then
+      FOnFormatChanged;
+    FFormatSettings.DecimalSeparator := Value;
+  end;
+end;
+
+{ TZAbstractTimeFormatSettings }
+
+function TZAbstractTimeFormatSettings.InternalGetFromFormatSettings: String;
+var Sep, Delim: Char;
+begin
+  Result := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
+  Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator;
+  if FindFirstTimeFormatDelimiter(Result, Delim) and (Delim <> Sep) then
+    ReplaceChar(Result, Delim, Sep);
+end;
+
+function TZAbstractTimeFormatSettings.InternalGetInvalidValueText: String;
+begin
+  Result := 'NAT'
+end;
+
+procedure TZAbstractTimeFormatSettings.SetFormat(const Value: String);
+begin
+  if ((FFormat = nil) and (Value <> '')) or ((FFormat <> nil) and (Value = '')) or (FFormat^ <> Value) then begin
+    if Value <> '' then begin
+      FFormat := @FFormatSettings.LongTimeFormat;
+      FFormat^ := Value;
+    end else FFormat := nil;
+    if Assigned(FOnFormatChanged) then
+      FOnFormatChanged;
+  end;
+end;
+
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+  {$WARN 4056 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
+function TZAbstractTimeFormatSettings.TryStringToTime(var Dest: TZTime;
+  const Source: String; Scale: Cardinal): Boolean;
+var P, PStart, FEnd, PEnd: PChar;
+    Fractions, FractionDigits: Cardinal;
+    ExtractedCopy: String;
+    DT: TDateTime;
+    FractionSep: Char;
+begin
+  Fractions := 0;
+  FractionDigits := 0;
+  P := Pointer(Source);
+  PStart := P;
+  PEnd := PStart + Length(Source);
+  FractionSep := GetSecondFractionSeperator;
+  while (PStart < PEnd) do begin
+    if (PStart^ = '"') then
+      if Odd(FractionDigits)
+      then Dec(FractionDigits)
+      else Inc(FractionDigits);
+    if (FractionDigits = 0) and (PStart^ = FractionSep) then
+      Break;
+    Inc(PStart);
+  end;
+  if PStart <> PEnd then begin
+    Inc(PStart);
+    FEnd := PStart;
+    while (Ord(FEnd^) >= Ord('0')) and (Ord(FEnd^) <= Ord('9')) do
+      Inc(FEnd);
+    FractionDigits := FEnd - PStart;
+  end else begin
+    FEnd := PEnd;//satisfy compiler
+    FractionDigits := 0;
+  end;
+  if (FractionDigits > 0) and (FractionDigits <= Cardinal(Scale)) then begin
+    Fractions := {$IFDEF UNICODE}UnicodeToUInt32{$ELSE}RawToUInt32{$ENDIF}(PStart, FEnd);
+    Fractions := Fractions * ZSysUtils.FractionLength2NanoSecondMulTable[FractionDigits];
+    Dec(PStart);
+    ExtractedCopy := '';
+    FractionDigits := (NativeUInt(PStart)-NativeUInt(P));
+    SetLength(ExtractedCopy, (PEnd-P)-(FEnd-PStart));
+    Move(P^, Pointer(ExtractedCopy)^, FractionDigits);
+    P := Pointer(NativeUInt(ExtractedCopy)+FractionDigits);
+    Move(FEnd^, P^, (NativeUInt(PEnd)-NativeUInt(FEnd)));
+  end else
+    ExtractedCopy := Source;
+  DT := StrToTime(ExtractedCopy);
+  DecodeDateTimeToTime(DT, Dest);
+  Dest.Fractions := Fractions;
+  Result := True;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+function TZAbstractTimeFormatSettings.TryTimeToString(var Dest: String; Hours,
+  Minutes, Seconds: Word; NanoFractions, Scale: Cardinal;
+  IsNegative: Boolean): Boolean;
+var Frmt: String;
+    DT: TDateTime;
+begin
+  Frmt := GetFormat;
+  EscapeFractionFormat(NanoFractions, Scale, IsNegative, Frmt);
+  Result := TryEncodeTime(Hours, Minutes, Seconds, Word(NanoFractions > 0), DT);
+  if Result
+  then Dest := FormatDateTime(Frmt, DT)
+  else Dest := GetInvalidValueText;
+end;
+
+{ TZEditTimeFormatSettings }
+
+constructor TZEditTimeFormatSettings.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FSecondFractionOption := foSetByFormat;
+end;
+
+procedure TZEditTimeFormatSettings.SetParent(
+  const Value: TZEditTimeFormatSettings);
+begin
+  FParent := Value;
+end;
+
+{ TZDisplayTimeFormatSettings }
+
+procedure TZDisplayTimeFormatSettings.SetParent(
+  const Value: TZDisplayTimeFormatSettings);
+begin
+  FParent := Value;
+end;
+
+{ TZAbstractDateFormatSettings }
+
+procedure TZAbstractDateFormatSettings.Assign(Source: TPersistent);
+var AValue: TZAbstractDateFormatSettings;
+begin
+  Avalue := Source as TZAbstractDateFormatSettings;
+  FFormat := AValue.FFormat;
+end;
+
+function TZAbstractDateFormatSettings.InternalGetFromFormatSettings: String;
+var Delim, Sep: Char;
+begin
+  Result := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
+  Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator;
+  if FindFirstDateFormatDelimiter(Result, Delim) and (Delim <> Sep) then
+    Result := ZSysUtils.ReplaceChar(Delim, Sep, Result);
+end;
+
+function TZAbstractDateFormatSettings.InternalGetInvalidValueText: String;
+begin
+  Result := '0000-00-00'
+end;
+
+procedure TZAbstractDateFormatSettings.SetFormat(const Value: String);
+begin
+  if ((FFormat = nil) and (Value <> '')) or ((FFormat <> nil) and (Value = '')) or (FFormat^ <> Value) then begin
+    if Value <> '' then begin
+      FFormat := @FFormatSettings.ShortDateFormat;
+      FFormat^ := Value;
+    end else FFormat := nil;
+    if Assigned(FOnFormatChanged) then
+      FOnFormatChanged;
+  end;
+end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "IsNegative" not used} {$ENDIF}
+function TZAbstractDateFormatSettings.TryDateToStr(Year, Month, Day: Word;
+  IsNegative: Boolean; var Dest: String): Boolean;
+var Frmt: String;
+    DT: TDateTime;
+begin
+  Frmt := GetFormat;
+  Result := TryEncodeDate(Year, Month, Day, DT);
+  if Result
+  then Dest := FormatDateTime(Frmt, DT, GetFormatSettings^)
+  else Dest := GetInvalidValueText;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+function TZAbstractDateFormatSettings.TryStrToDate(var Dest: TZDate;
+  const Source: String): Boolean;
+var DT: TDateTime;
+begin
+  Result := SysUtils.TryStrToDate(Source, DT, GetFormatSettings^);
+  if Result then
+    DecodeDateTimeToDate(DT, Dest);
+end;
+
+{ TZEditDateFormatSettings }
+
+procedure TZEditDateFormatSettings.SetParent(
+  const Value: TZEditDateFormatSettings);
+begin
+  FParent := Value;
+end;
+
+{ TZDisplayDateFormatSettings }
+
+procedure TZDisplayDateFormatSettings.SetParent(
+  const Value: TZDisplayDateFormatSettings);
+begin
+  FParent := Value;
+end;
+
+{ TZAbstractTimestampFormatSettings }
+
+constructor TZAbstractTimestampFormatSettings.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FDatePartOnlyIfZeroTime := True;
+  FTimePartOnlyIfPascalIntegralDate := True;
+end;
+
+function TZAbstractTimestampFormatSettings.GetDateFormat: String;
+var Sep, Delim: Char;
+begin
+  if (FDateFormat <> nil)
+  then Result := FDateFormat^
+  else if (csDesigning in FOwner.ComponentState) then
+    Result := ''
+  else if FParent <> nil
+    then Result := TZAbstractTimestampFormatSettings(FParent).GetDateFormat
+    else begin
+      Result := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
+      Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator;
+      if FindFirstDateFormatDelimiter(Result, Delim) and (Delim <> Sep) then
+        ReplaceChar(Result, Delim, Sep);
+    end;
+end;
+
+function TZAbstractTimestampFormatSettings.GetDatePartOnlyIfZeroTime: Boolean;
+begin
+  if (FFormat <> nil) or (FParent = nil)
+  then Result := FDatePartOnlyIfZeroTime
+  else Result := TZAbstractTimestampFormatSettings(FParent).FDatePartOnlyIfZeroTime;
+end;
+
+function TZAbstractTimestampFormatSettings.GetTimeFormat: String;
+var Sep, Delim: Char;
+begin
+  if (FDateFormat <> nil)
+  then Result := FTimeFormat^
+  else if (csDesigning in FOwner.ComponentState) then
+    Result := ''
+  else if FParent <> nil
+    then Result := TZAbstractTimestampFormatSettings(FParent).GetTimeFormat
+    else begin
+      Result := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
+      Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator;
+      if FindFirstDateFormatDelimiter(Result, Delim) and (Delim <> Sep) then
+        ReplaceChar(Result, Delim, Sep);
+    end;
+end;
+
+function TZAbstractTimestampFormatSettings.GetTimePartOnlyIfPascalIntegralDate: Boolean;
+begin
+  if (FFormat <> nil) or (FParent = nil)
+  then Result := FTimePartOnlyIfPascalIntegralDate
+  else Result := TZAbstractTimestampFormatSettings(FParent).FTimePartOnlyIfPascalIntegralDate;
+end;
+
+function TZAbstractTimestampFormatSettings.InternalGetFromFormatSettings: String;
+var tmp: String;
+  P, PEnd: PChar;
+  Sep, Delim: Char;
+begin
+  tmp := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
+  Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator;
+  if FindFirstTimeFormatDelimiter(tmp, Delim) and (Delim <> Sep)
+  then ReplaceChar(tmp, Delim, Sep)
+  else UniqueString(tmp);
+  P := Pointer(tmp);
+  PEnd := P + Length(tmp);
+  while P < PEnd do begin
+    if (P^ = 'M') or (P^ = 'm') then
+      P^ := 'n';
+    Inc(P);
+  end;
+  Result := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
+  Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator;
+  if FindFirstDateFormatDelimiter(Result, Delim) and (Delim <> Sep) then
+    ReplaceChar(Result, Delim, Sep);
+  Result := Result+' '+tmp;
+end;
+
+function TZAbstractTimestampFormatSettings.InternalGetInvalidValueText: String;
+begin
+  Result := '0000-00-00 00:00:00'
+end;
+
+procedure TZAbstractTimestampFormatSettings.SetDateFormat(const Value: String);
+begin
+  if ((FDateFormat = nil) and (Value <> '')) or ((FDateFormat <> nil) and (Value = '')) or (FDateFormat^ <> Value) then begin
+    if Value <> '' then begin
+      FFormat := @FFormatSettings.ShortDateFormat;
+      FFormat^ := Value;
+    end else FFormat := nil;
+    if Assigned(FOnFormatChanged) then
+      FOnFormatChanged;
+  end;
+end;
+
+procedure TZAbstractTimestampFormatSettings.SetDatePartOnlyIfZeroTime(
+  const Value: Boolean);
+begin
+  if (Value <> FDatePartOnlyIfZeroTime) then begin
+    FDatePartOnlyIfZeroTime := Value;
+    if Assigned(FOnFormatChanged) then
+      FOnFormatChanged;
+  end;
+end;
+
+procedure TZAbstractTimestampFormatSettings.SetFormat(const Value: String);
+begin
+  if ((FFormat = nil) and (Value <> '')) or ((FFormat <> nil) and (Value = '')) or (FFormat^ <> Value) then begin
+    if Value <> '' then begin
+      FFormat := @FFormatSettings.LongDateFormat;
+      FFormat^ := Value;
+    end else FFormat := nil;
+    if Assigned(FOnFormatChanged) then
+      FOnFormatChanged;
+  end;
+end;
+
+procedure TZAbstractTimestampFormatSettings.SetTimeFormat(const Value: String);
+begin
+  if ((FTimeFormat = nil) and (Value <> '')) or ((FTimeFormat <> nil) and (Value = '')) or (FTimeFormat^ <> Value) then begin
+    if Value <> '' then begin
+      FFormat := @FFormatSettings.ShortTimeFormat;
+      FFormat^ := Value;
+    end else FFormat := nil;
+    if Assigned(FOnFormatChanged) then
+      FOnFormatChanged;
+  end;
+end;
+
+procedure TZAbstractTimestampFormatSettings.SetTimePartOnlyIfPascalIntegralDate(
+  const Value: Boolean);
+begin
+  if (Value <> FTimePartOnlyIfPascalIntegralDate) then begin
+    FTimePartOnlyIfPascalIntegralDate := Value;
+    if Assigned(FOnFormatChanged) then
+      FOnFormatChanged;
+  end;
+end;
+
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+  {$WARN 4056 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
+function TZAbstractTimestampFormatSettings.TryStrToTimestamp(
+  var Dest: TZTimeStamp; const Source: String; Scale: Cardinal): Boolean;
+var P, PStart, FEnd, PEnd, DateTimeDelimiter: PChar;
+    Fractions, FractionDigits: Cardinal;
+    ExtractedCopy: String;
+    DT: TDateTime;
+    FractionSep: Char;
+begin
+  P := Pointer(Source);
+  Fractions := 0;
+  FractionDigits := 0;
+  PStart := P;
+  PEnd := PStart + Length(Source);
+  DateTimeDelimiter := nil;
+  FractionSep := GetSecondFractionSeperator;
+  while (PStart < PEnd) do begin
+    if (PStart^ = '"') then
+      if Odd(FractionDigits)
+      then Dec(FractionDigits)
+      else Inc(FractionDigits);
+    if (FractionDigits = 0) then begin
+      if (PStart^ = FractionSep) and (DateTimeDelimiter <> nil) then
+        Break;
+      if (PStart^ = '.') and (DateTimeDelimiter = nil) then
+        Inc(PStart)
+      else if (PStart^ = ' ') or (Ord(PStart^) or $20 = Ord('t')) then
+        DateTimeDelimiter := PStart;
+    end;
+    Inc(PStart);
+  end;
+  if PStart <> PEnd then begin
+    Inc(PStart);
+    FEnd := PStart;
+    while (Ord(FEnd^) >= Ord('0')) and (Ord(FEnd^) <= Ord('9')) do
+      Inc(FEnd);
+    FractionDigits := FEnd - PStart;
+  end else FEnd := PEnd;//satisfy compiler
+  if (FractionDigits > 0) and (FractionDigits <= Cardinal(Scale)) then begin
+    Fractions := {$IFDEF UNICODE}UnicodeToUInt32{$ELSE}RawToUInt32{$ENDIF}(PStart, FEnd);
+    Fractions := Fractions * ZSysUtils.FractionLength2NanoSecondMulTable[FractionDigits];
+    Dec(PStart);
+    ExtractedCopy := '';
+    FractionDigits := (NativeUInt(PStart)-NativeUInt(P));
+    SetLength(ExtractedCopy, (PEnd-P)-(FEnd-PStart));
+    Move(P^, Pointer(ExtractedCopy)^, FractionDigits);
+    P := Pointer(NativeUInt(ExtractedCopy)+FractionDigits);
+    Move(FEnd^, P^, (NativeUInt(PEnd)-NativeUInt(FEnd)));
+  end else
+    ExtractedCopy := Source;
+  Result := TryStrToDateTime(ExtractedCopy, DT, GetFormatSettings^);
+  if Result then begin
+    DecodeDateTimeToTimeStamp(DT, Dest);
+    Dest.Fractions := Fractions;
+  end;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+function TZAbstractTimestampFormatSettings.TryTimestampToStr(Year, Month,
+  Day, Hour, Minute, Second: Word; NanoFractions, Scale: Cardinal; IsNegative: Boolean;
+  var Dest: String): Boolean;
+var Frmt: String;
+    D, T: TDateTime;
+    DateIsPascalIntegralDate: Boolean;
+    TimeIsZero: Boolean;
+label jmpEsc;
+begin
+  DateIsPascalIntegralDate := (Year = 1899) and (Month = 12) and (Day = 30) and not IsNegative;
+  TimeIsZero := (Hour = 0) and (Minute = 0) and (Second = 0) and (NanoFractions = 0);
+  if (FFormat = nil) then
+    if TimeIsZero and FDatePartOnlyIfZeroTime then
+      Frmt := GetDateFormat
+    else if DateIsPascalIntegralDate and FTimePartOnlyIfPascalIntegralDate then begin
+      Frmt := GetTimeFormat;
+      goto jmpEsc;
+    end else begin
+      Frmt := GetFormat;
+      goto jmpEsc;
+    end
+  else begin
+    Frmt := FFormat^;
+jmpEsc:
+    EscapeFractionFormat(NanoFractions, Scale, IsNegative, Frmt);
+  end;
+  Result := TryEncodeDate(Year, Month, Day, D) and TryEncodeTime(Hour, Minute, Second, Ord(NanoFractions > 0), T);
+  if Result then begin
+    if D < 0
+    then D := D - T
+    else D := D + T;
+    Dest := FormatDateTime(Frmt, D, GetFormatSettings^);
+  end else Dest := GetInvalidValueText;
+end;
+
+{ TZDisplayTimestampFormatSettings }
+
+constructor TZDisplayTimestampFormatSettings.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FDatePartOnlyIfZeroTime := True;
+  FTimePartOnlyIfPascalIntegralDate := True;
+end;
+
+procedure TZDisplayTimestampFormatSettings.SetParent(
+  Value: TZDisplayTimestampFormatSettings);
+begin
+  FParent := Value;
+end;
+
+{ TZEditTimestampFormatSettings }
+
+constructor TZEditTimestampFormatSettings.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FSecondFractionOption := foSetByFormat;
+end;
+
+procedure TZEditTimestampFormatSettings.SetParent(Value: TZEditTimestampFormatSettings);
+begin
+  FParent := Value;
+end;
+
+{ TZFormatSettings }
+
+procedure TZFormatSettings.Assign(Source: TPersistent);
+var AValue: TZFormatSettings;
+begin
+  AValue := Source as TZFormatSettings;
+  FDisplayDateFormatSettings.Assign(AValue.FDisplayDateFormatSettings);
+  FEditDateFormatSettings.Assign(AValue.FEditDateFormatSettings);
+  FDisplayTimeFormatSettings.Assign(AValue.FDisplayTimeFormatSettings);
+  FEditTimeFormatSettings.Assign(AValue.FEditTimeFormatSettings);
+  FDisplayTimestampFormatSettings.Assign(AValue.FDisplayTimestampFormatSettings);
+  FEditTimestampFormatSettings.Assign(AValue.FEditTimestampFormatSettings);
+end;
+
+constructor TZFormatSettings.Create(const AOwner: TComponent);
+begin
+  inherited Create;
+  FDisplayDateFormatSettings      := TZDisplayDateFormatSettings.Create(AOwner);
+  FEditDateFormatSettings         := TZEditDateFormatSettings.Create(AOwner);
+  FDisplayTimeFormatSettings      := TZDisplayTimeFormatSettings.Create(AOwner);
+  FEditTimeFormatSettings         := TZEditTimeFormatSettings.Create(AOwner);
+  FDisplayTimestampFormatSettings := TZDisplayTimestampFormatSettings.Create(AOwner);
+  FEditTimestampFormatSettings    := TZEditTimestampFormatSettings.Create(AOwner);
+end;
+
+destructor TZFormatSettings.Destroy;
+begin
+  FreeAndNil(FDisplayDateFormatSettings);
+  FreeAndNil(FEditDateFormatSettings);
+  FreeAndNil(FDisplayTimeFormatSettings);
+  FreeAndNil(FEditTimeFormatSettings);
+  FreeAndNil(FDisplayTimestampFormatSettings);
+  FreeAndNil(FEditTimestampFormatSettings);
+  inherited;
+end;
+
+procedure TZFormatSettings.SetDisplayDateFormatSettings(
+  const Value: TZDisplayDateFormatSettings);
+begin
+  FDisplayDateFormatSettings.Assign(Value);
+end;
+
+procedure TZFormatSettings.SetDisplayTimeFormatSettings(
+  const Value: TZDisplayTimeFormatSettings);
+begin
+  FDisplayTimeFormatSettings.Assign(Value);
+end;
+
+procedure TZFormatSettings.SetDisplayTimestampFormatSettings(
+  const Value: TZDisplayTimestampFormatSettings);
+begin
+  FDisplayTimestampFormatSettings.Assign(Value);
+end;
+
+procedure TZFormatSettings.SetEditDateFormatSettings(
+  const Value: TZEditDateFormatSettings);
+begin
+  FEditDateFormatSettings.Assign(value);
+end;
+
+procedure TZFormatSettings.SetEditTimeFormatSettings(
+  const Value: TZEditTimeFormatSettings);
+begin
+  FEditTimeFormatSettings.Assign(Value);
+end;
+
+procedure TZFormatSettings.SetEditTimestampFormatSettings(
+  const Value: TZEditTimestampFormatSettings);
+begin
+  FEditTimestampFormatSettings.Assign(Value);
+end;
+
+procedure TZFormatSettings.SetParent(const Value: TZFormatSettings);
+begin
+  if Value = nil then begin
+    FDisplayDateFormatSettings.SetParent(nil);
+    FDisplayTimeFormatSettings.SetParent(nil);
+    FDisplayTimestampFormatSettings.SetParent(nil);
+    FEditDateFormatSettings.SetParent(nil);
+    FEditTimeFormatSettings.SetParent(nil);
+    FEditTimestampFormatSettings.SetParent(nil);
+  end else begin
+    FDisplayDateFormatSettings.SetParent(Value.FDisplayDateFormatSettings);
+    FDisplayTimeFormatSettings.SetParent(Value.FDisplayTimeFormatSettings);
+    FDisplayTimestampFormatSettings.SetParent(Value.FDisplayTimestampFormatSettings);
+    FEditDateFormatSettings.SetParent(Value.FEditDateFormatSettings);
+    FEditTimeFormatSettings.SetParent(Value.FEditTimeFormatSettings);
+    FEditTimestampFormatSettings.SetParent(Value.FEditTimestampFormatSettings);
+  end;
+end;
+
+end.

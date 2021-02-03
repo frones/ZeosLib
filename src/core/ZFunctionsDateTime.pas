@@ -62,351 +62,351 @@ uses
 
 type
   {** Implements a DATE function. }
-  TZDateFunction = class (TZAbstractFunction)
+  TZDateFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a TIME function. }
-  TZTimeFunction = class (TZAbstractFunction)
+  TZTimeFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a NOW function. }
-  TZNowFunction = class (TZAbstractFunction)
+  TZNowFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a ENCODEDATE function. }
-  TZEncodeDateFunction = class (TZAbstractFunction)
+  TZEncodeDateFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a ENCODETIME function. }
-  TZEncodeTimeFunction = class (TZAbstractFunction)
+  TZEncodeTimeFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a COMPOSEDATETIME function. }
 
   { TZComposeDateTimeFunction }
 
-  TZComposeDateTimeFunction = class (TZAbstractFunction)
+  TZComposeDateTimeFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a INCDATE function. }
-  TZIncDateFunction = class (TZAbstractFunction)
+  TZIncDateFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a INCTIME function. }
-  TZIncTimeFunction = class (TZAbstractFunction)
+  TZIncTimeFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a ISLEAPYEAR function. }
-  TZIsLeapYearFunction = class (TZAbstractFunction)
+  TZIsLeapYearFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 {-------------------- Extracting functions ----------------------------}
   {** Implements a DATEOF function. }
-  TZDateOfFunction = class (TZAbstractFunction)
+  TZDateOfFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a TIMEOF function. }
-  TZTimeOfFunction = class (TZAbstractFunction)
+  TZTimeOfFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a YEAROF function. }
-  TZYearOfFunction = class (TZAbstractFunction)
+  TZYearOfFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a MONTHOF function. }
-  TZMonthOfFunction = class (TZAbstractFunction)
+  TZMonthOfFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a DAYOF function. }
-  TZDayOfFunction = class (TZAbstractFunction)
+  TZDayOfFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a HOUROF function. }
-  TZHourOfFunction = class (TZAbstractFunction)
+  TZHourOfFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a MINUTEOF function. }
-  TZMinuteOfFunction = class (TZAbstractFunction)
+  TZMinuteOfFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a SECONDOF function. }
-  TZSecondOfFunction = class (TZAbstractFunction)
+  TZSecondOfFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a MILLISECONDOF function. }
-  TZMilliSecondOfFunction = class (TZAbstractFunction)
+  TZMilliSecondOfFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 {-------------------- *OFTHEYEAR Extracting functions ----------------------------}
   {** Implements a WEEKOFTHEYEAR function. }
-  TZWeekOfTheYearFunction = class (TZAbstractFunction)
+  TZWeekOfTheYearFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a DAYOFTHEYEAR function. }
-  TZDayOfTheYearFunction = class (TZAbstractFunction)
+  TZDayOfTheYearFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a HOUROFTHEYEAR function. }
-  TZHourOfTheYearFunction = class (TZAbstractFunction)
+  TZHourOfTheYearFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a MINUTEOFTHEYEAR function. }
-  TZMinuteOfTheYearFunction = class (TZAbstractFunction)
+  TZMinuteOfTheYearFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a SECONDOFTHEYEAR function. }
-  TZSecondOfTheYearFunction = class (TZAbstractFunction)
+  TZSecondOfTheYearFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a MILLISECONDOFTHEYEAR function. }
-  TZMilliSecondOfTheYearFunction = class (TZAbstractFunction)
+  TZMilliSecondOfTheYearFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 {-------------------- *OFTHEMONTH Extracting functions ----------------------------}
   {** Implements a WEEKOFTHEMONTH function. }
-  TZWeekOfTheMonthFunction = class (TZAbstractFunction)
+  TZWeekOfTheMonthFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a HOUROFTHEMONTH function. }
-  TZHourOfTheMonthFunction = class (TZAbstractFunction)
+  TZHourOfTheMonthFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a MINUTEOFTHEMONTH function. }
-  TZMinuteOfTheMonthFunction = class (TZAbstractFunction)
+  TZMinuteOfTheMonthFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a SECONDOFTHEMONTH function. }
-  TZSecondOfTheMonthFunction = class (TZAbstractFunction)
+  TZSecondOfTheMonthFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a MILLISECONDOFTHEMONTH function. }
-  TZMilliSecondOfTheMonthFunction = class (TZAbstractFunction)
+  TZMilliSecondOfTheMonthFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 {-------------------- *OFTHEWEEK Extracting functions ----------------------------}
   {** Implements a DAYOfTheWeek function. }
-  TZDayOfTheWeekFunction = class (TZAbstractFunction)
+  TZDayOfTheWeekFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a HOUROfTheWeek function. }
-  TZHourOfTheWeekFunction = class (TZAbstractFunction)
+  TZHourOfTheWeekFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a MINUTEOfTheWeek function. }
-  TZMinuteOfTheWeekFunction = class (TZAbstractFunction)
+  TZMinuteOfTheWeekFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a SECONDOfTheWeek function. }
-  TZSecondOfTheWeekFunction = class (TZAbstractFunction)
+  TZSecondOfTheWeekFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a MILLISECONDOfTheWeek function. }
-  TZMilliSecondOfTheWeekFunction = class (TZAbstractFunction)
+  TZMilliSecondOfTheWeekFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 
 {---------------- *OFTHEDAY Extracting functions --------------------}
   {** Implements a MINUTEOFTHEDAY function. }
-  TZMinuteOfTheDayFunction = class (TZAbstractFunction)
+  TZMinuteOfTheDayFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a SECONDOFTHEDAY function. }
-  TZSecondOfTheDayFunction = class (TZAbstractFunction)
+  TZSecondOfTheDayFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a MILLISECONDOFTHEDAY function. }
-  TZMilliSecondOfTheDayFunction = class (TZAbstractFunction)
+  TZMilliSecondOfTheDayFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 {---------------- *OfTheHour Extracting functions --------------------}
   {** Implements a SECONDOFTHEHOUR function. }
-  TZSecondOfTheHourFunction = class (TZAbstractFunction)
+  TZSecondOfTheHourFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a MILLISECONDOFTHEHOUR function. }
-  TZMilliSecondOfTheHourFunction = class (TZAbstractFunction)
+  TZMilliSecondOfTheHourFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 {---------------- *OFTHEMINUTE Extracting functions --------------------}
   {** Implements a MILLISECONDOfTheHour function. }
-  TZMilliSecondOfTheMinuteFunction = class (TZAbstractFunction)
+  TZMilliSecondOfTheMinuteFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 {---------------- *BETWEEN functions --------------------}
   {** Implements a YEARSBETWEEN function. }
-  TZYearsBetweenFunction = class (TZAbstractFunction)
+  TZYearsBetweenFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a MONTHSBETWEEN function. }
-  TZMonthsBetweenFunction = class (TZAbstractFunction)
+  TZMonthsBetweenFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a WEEKSBETWEEN function. }
-  TZWeeksBetweenFunction = class (TZAbstractFunction)
+  TZWeeksBetweenFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a DAYSBETWEEN function. }
-  TZDaysBetweenFunction = class (TZAbstractFunction)
+  TZDaysBetweenFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a HOURSBETWEEN function. }
-  TZHoursBetweenFunction = class (TZAbstractFunction)
+  TZHoursBetweenFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a MINUTESBETWEEN function. }
-  TZMinutesBetweenFunction = class (TZAbstractFunction)
+  TZMinutesBetweenFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a SECONDSBETWEEN function. }
-  TZSecondsBetweenFunction = class (TZAbstractFunction)
+  TZSecondsBetweenFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a MILLISECONDSBETWEEN function. }
-  TZMillisecondsBetweenFunction = class (TZAbstractFunction)
+  TZMillisecondsBetweenFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 procedure AddDateTimeFunctions(Functions : TZFunctionsList);

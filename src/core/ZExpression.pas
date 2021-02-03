@@ -63,7 +63,7 @@ type
   TZExpressionError = class (Exception);
 
   /// <summary>Implements an execution stack object.</summary>
-  TZExecutionStack = class (TObject)
+  TZExecutionStack = class(TObject)
   private
     FValues: TZVariantDynArray;
     FCount: Integer;
@@ -103,19 +103,43 @@ type
   /// <summary>Defines a list of variables interface.</summary>
   IZVariablesList = interface (IZInterface)
     ['{F4347F46-32F3-4021-B6DB-7A39BF171275}']
-
+    /// <summary>Gets a number of registered variables.</summary>
+    /// <returns>a number of all registered variables.</returns>
     function GetCount: Integer;
+    /// <summary>Gets a variable name by it's index.</summary>
+    /// <param>"Index" a variable index.</param>
+    /// <returns>a variable name.</returns>
     function GetName(Index: Integer): string;
+    /// <summary>Gets a variable value by it's index.</summary>
+    /// <param>"Index" a variable index.</param>
+    /// <returns>a variable value.</returns>
     function GetValue(Index: Integer): TZVariant;
+    /// <summary>Sets a variable by it's index.</summary>
+    /// <param>"Index" a variable index.</param>
+    /// <param>"Value" a variable value.</param>
     procedure SetValue(Index: Integer; const Value: TZVariant);
+    /// <summary>Gets a variable value by it's name.</summary>
+    /// <param>"Name" a variable name.</param>
+    /// <returns>a variable value.</returns>
     function GetValueByName(const Name: string): TZVariant;
+    /// <summary>Sets a variable by it's name.</summary>
+    /// <param>"Name" a variable name.</param>
+    /// <param>"Value" a variable value.</param>
     procedure SetValueByName(const Name: string; const Value: TZVariant);
-
+    /// <summary>Adds a new variable with value.</summary>
+    /// <param>"Name" a name of the new variable.</param>
+    /// <param>"Value" a value for the new variable.</param>
     procedure Add(const Name: string; const Value: TZVariant);
+    /// <summary>Removes a variable by specified name.</summary>
+    /// <param>"Name" a name of variable to be removed.</param>
     procedure Remove(const Name: string);
+    /// <summary>Finds a variable by specified name.</summary>
+    /// <param>"Name" a name of the variable.</param>
+    /// <returns>a found variable index or <c>-1</c> otherwise.</returns>
     function FindByName(const Name: string): Integer;
-
+    /// <summary>Clears only variable values.</summary>
     procedure ClearValues;
+    /// <summary>Clears all variables.</summary>
     procedure Clear;
 
     property Count: Integer read GetCount;
@@ -128,12 +152,16 @@ type
   /// <summary>Defines a function interface.</summary>
   IZFunction = interface (IZInterface)
     ['{E9B3AFF9-6CD9-49C8-AB66-C8CF60ED8686}']
-
+    /// <summary>Gets the assigned function name.</summary>
+    /// <returns>the assigned function name.</returns>
     function GetName: string;
-
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    //  <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
       const VariantManager: IZVariantManager): TZVariant;
-
+    /// <summary>represents the name of the function</summary>
     property Name: string read GetName;
   end;
 
@@ -173,7 +201,6 @@ type
   /// <summary>Defines an interface to expression calculator.</summary>
   IZExpression = interface (IZInterface)
     ['{26F9D379-5618-446C-8999-D50FBB2F8560}']
-
     /// <summary>Gets the current expression tokenizer.</summary>
     /// <returns>the current expression tokenizer.</returns>
     function GetTokenizer: IZTokenizer;
@@ -395,8 +422,7 @@ end;
 
 procedure TZExecutionStack.Push(const Value: TZVariant);
 begin
-  if FCapacity = FCount then
-  begin
+  if FCapacity = FCount then begin
     Inc(FCapacity, 64);
     SetLength(FValues, FCapacity);
   end;
@@ -535,12 +561,10 @@ begin
 end;
 
 procedure TZExpression.CreateVariables(const Variables: IZVariablesList);
-var
-  I: Integer;
-  Name: string;
+var I: Integer;
+    Name: string;
 begin
-  for I := 0 to FParser.Variables.Count - 1 do
-  begin
+  for I := 0 to FParser.Variables.Count - 1 do begin
     Name := FParser.Variables[I];
     if Variables.FindByName(Name) < 0 then
       Variables.Add(Name, NullVariant);
@@ -574,212 +598,161 @@ function TZExpression.Evaluate4(const Variables: IZVariablesList;
   const Functions: IZFunctionsList; Stack: TZExecutionStack): TZVariant;
 var
   I, Index, ParamsCount: Integer;
-  Current: TZExpressionToken;
+  Current: PZExpressionToken;
   Value1, Value2: TZVariant;
+  function CreateSyntaxErrorNear(Current: PZExpressionToken): TZExpressionError;
+  begin //suppress unwanted _(U/A)StrClr the format leaves in main method
+    Result := TZExpressionError.Create(
+                Format(SSyntaxErrorNear, [SoftVarManager.GetAsString(Current.Value)]))
+  end;
+  function CreateFunctionWasNotFoundError(Current: PZExpressionToken): TZExpressionError;
+  begin //suppress unwanted _(U/A)StrClr the format leaves in main method
+    Result := TZExpressionError.Create( Format(SFunctionWasNotFound,
+      [Current.Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF}]))
+  end;
+  function CreateVariableWasNotFoundError(Current: PZExpressionToken): TZExpressionError;
+  begin //suppress unwanted _(U/A)StrClr the format leaves in main method
+    Result := TZExpressionError.Create( Format(SVariableWasNotFound,
+      [Current.Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF}]))
+  end;
+  function InternalIsMatch({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value1, Value2: TZVariant): Boolean;
+  begin //suppress unwanted _(U/A)StrClr the GetAsString leaves in main method
+    Result := IsMatch(FVariantManager.GetAsString(Value2),
+      FVariantManager.GetAsString(Value1))
+  end;
 begin
   Stack.Clear;
 
-  for I := 0 to FParser.ResultTokens.Count - 1 do
-  begin
-    Current := TZExpressionToken(FParser.ResultTokens[I]);
+  for I := 0 to FParser.ResultTokens.Count - 1 do begin
+    Current := FParser.ResultTokens[I];
     case Current.TokenType of
-      ttConstant:
-        Stack.Push(Current.Value);
-{      ttVariable:
-        begin
-          Index := Variables.FindByName(SoftVarManager.GetAsString(Current.Value));
-          if Index < 0 then
-          begin
-            raise TZExpressionError.Create(
-              Format(SVariableWasNotFound, [SoftVarManager.GetAsString(Current.Value)]));
-          end;
-          Value1 := Variables.Values[Index];
-          Stack.Push(Value1)
-        end;
-}      ttVariable:
-        begin
-          if Current.Value.VType = vtString then
-          begin
+      ttConstant: Stack.Push(Current.Value);
+      ttVariable: begin
+          if Current.Value.VType = vtString then begin
             Index := Variables.FindByName(Current.Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF});
             if Index < 0 then
-            begin
-              raise TZExpressionError.Create(
-                Format(SVariableWasNotFound, [Current.Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF}]));
-            end;
+              raise CreateVariableWasNotFoundError(Current);
            Current.Value := EncodeInteger(Index);
           end;
-          if Current.Value.VType = vtInteger then
-            Stack.Push(Variables.Values[Current.Value.VInteger])
-          else
-            raise TZExpressionError.Create(
-                Format(SSyntaxErrorNear, [SoftVarManager.GetAsString(Current.Value)]));
+          if Current.Value.VType = vtInteger
+          then Stack.Push(Variables.Values[Current.Value.VInteger])
+          else raise CreateSyntaxErrorNear(Current);
         end;
-{      ttFunction:
-        begin
-          Index := Functions.FindByName(SoftVarManager.GetAsString(Current.Value));
-          if Index < 0 then
-          begin
-            raise TZExpressionError.Create(
-              Format(SFunctionWasNotFound, [SoftVarManager.GetAsString(Current.Value)]));
-          end;
-          Value1 := Functions.Functions[Index].Execute(Stack, FVariantManager);
-          ParamsCount := SoftVarManager.GetAsInteger(Stack.Pop);
-          while ParamsCount > 0 do
-          begin
-            Stack.Pop;
-            Dec(ParamsCount);
-          end;
-          Stack.Push(Value1);
-        end;
-}      ttFunction:
-        begin
-          if Current.Value.VType = vtString then
-          begin
+      ttFunction: begin
+          if Current.Value.VType = vtString then begin
             Index := Functions.FindByName(Current.Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF});
             if Index < 0 then
-            begin
-              raise TZExpressionError.Create(
-                Format(SFunctionWasNotFound, [Current.Value.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF}]));
-            end;
+              raise CreateFunctionWasNotFoundError(Current);
             Current.Value := EncodeInterface(Functions.Functions[Index]);
           end;
-          if Current.Value.VType = vtInterface then
-          begin
+          if Current.Value.VType = vtInterface then begin
             Value1 := IZFunction(Current.Value.VInterface).Execute(Stack, FVariantManager);
             ParamsCount := FVariantManager.GetAsInteger(Stack.Pop);
             Stack.DecStackPointer(ParamsCount);
             Stack.Push(Value1);
-          end
-          else
-            raise TZExpressionError.Create(
-                Format(SSyntaxErrorNear, [SoftVarManager.GetAsString(Current.Value)]));
+          end else
+            raise CreateSyntaxErrorNear(Current);
         end;
-      ttAnd:
-        begin
+      ttAnd: begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
           Stack.Push(FVariantManager.OpAnd(Value1, Value2));
         end;
-      ttOr:
-        begin
+      ttOr: begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
           Stack.Push(FVariantManager.OpOr(Value1, Value2));
         end;
-      ttXor:
-        begin
+      ttXor: begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
           Stack.Push(FVariantManager.OpXor(Value1, Value2));
         end;
-      ttNot:
-        Stack.Push(FVariantManager.OpNot(Stack.Pop));
-      ttPlus:
-        begin
+      ttNot: Stack.Push(FVariantManager.OpNot(Stack.Pop));
+      ttPlus: begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
           Stack.Push(FVariantManager.OpAdd(Value1, Value2));
         end;
-      ttMinus:
-        begin
+      ttMinus: begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
           Stack.Push(FVariantManager.OpSub(Value1, Value2));
         end;
-      ttStar:
-        begin
+      ttStar: begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
           Stack.Push(FVariantManager.OpMul(Value1, Value2));
         end;
-      ttSlash:
-        begin
+      ttSlash: begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
           Stack.Push(FVariantManager.OpDiv(Value1, Value2));
         end;
-      ttProcent:
-        begin
+      ttProcent: begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
           Stack.Push(FVariantManager.OpMod(Value1, Value2));
         end;
-      ttEqual:
-        begin
+      ttEqual: begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
           NormalizeValues(Value1, Value2);
           Stack.Push(FVariantManager.OpEqual(Value1, Value2));
         end;
-      ttNotEqual:
-        begin
+      ttNotEqual: begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
           NormalizeValues(Value1, Value2);
           Stack.Push(FVariantManager.OpNotEqual(Value1, Value2));
         end;
-      ttMore:
-        begin
+      ttMore: begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
           NormalizeValues(Value1, Value2);
           Stack.Push(FVariantManager.OpMore(Value1, Value2));
         end;
-      ttLess:
-        begin
+      ttLess: begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
           NormalizeValues(Value1, Value2);
           Stack.Push(FVariantManager.OpLess(Value1, Value2));
         end;
-      ttEqualMore:
-        begin
+      ttEqualMore: begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
           Stack.Push(FVariantManager.OpMoreEqual(Value1, Value2));
         end;
-      ttEqualLess:
-        begin
+      ttEqualLess: begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
           Stack.Push(FVariantManager.OpLessEqual(Value1, Value2));
         end;
-      ttPower:
-        begin
+      ttPower: begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
           Stack.Push(FVariantManager.OpPow(Value1, Value2));
         end;
-      ttUnary:
-        Stack.Push(FVariantManager.OpNegative(Stack.Pop));
-      ttLike:
-        begin
+      ttUnary: Stack.Push(FVariantManager.OpNegative(Stack.Pop));
+      ttLike: begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
-          Stack.Push(EncodeBoolean(
-                       IsMatch(FVariantManager.GetAsString(Value2),
-                               FVariantManager.GetAsString(Value1))));
+          Stack.Push(EncodeBoolean(InternalIsMatch(Value1, Value2)));
         end;
-      ttNotLike:
-        begin
+      ttNotLike: begin
           Value2 := Stack.Pop;
           Value1 := Stack.Pop;
-          Stack.Push(EncodeBoolean(
-                       not IsMatch(FVariantManager.GetAsString(Value2),
-                                   FVariantManager.GetAsString(Value1))));
+          Stack.Push(EncodeBoolean(not InternalIsMatch(Value1, Value2)));
         end;
-      ttIsNull:
-        begin
+      ttIsNull: begin
           Value1 := Stack.Pop;
           Stack.Push(EncodeBoolean(FVariantManager.IsNull(Value1)));
         end;
-      ttIsNotNull:
-        begin
+      ttIsNotNull: begin
           Value1 := Stack.Pop;
           Stack.Push(EncodeBoolean(not FVariantManager.IsNull(Value1)));
         end;
-      else
-        raise TZExpressionError.Create(SInternalError);
+      else raise TZExpressionError.Create(SInternalError);
     end;
   end;
 

@@ -24,7 +24,7 @@
     </CompilerOptions>
     <Description Value="Zeos Database Components"/>
     <Version Major="8" Minor="0"/>
-    <Files Count="19">
+    <Files Count="20">
       <Item1>
         <Filename Value="..\..\src\component\ZAbstractConnection.pas"/>
         <UnitName Value="ZAbstractConnection"/>
@@ -58,49 +58,53 @@
         <UnitName Value="ZDatasetUtils"/>
       </Item8>
       <Item9>
-        <Filename Value="..\..\src\component\ZGroupedConnection.pas"/>
-        <UnitName Value="ZGroupedConnection"/>
+        <Filename Value="..\..\src\component\ZFormatSettings.pas"/>
+        <UnitName Value="ZFormatSettings"/>
       </Item9>
       <Item10>
-        <Filename Value="..\..\src\component\ZIBEventAlerter.pas"/>
-        <UnitName Value="ZIBEventAlerter"/>
+        <Filename Value="..\..\src\component\ZGroupedConnection.pas"/>
+        <UnitName Value="ZGroupedConnection"/>
       </Item10>
       <Item11>
-        <Filename Value="..\..\src\component\ZMemTable.pas"/>
-        <UnitName Value="ZMemTable"/>
+        <Filename Value="..\..\src\component\ZIBEventAlerter.pas"/>
+        <UnitName Value="ZIBEventAlerter"/>
       </Item11>
       <Item12>
-        <Filename Value="..\..\src\component\ZPgEventAlerter.pas"/>
-        <UnitName Value="ZPgEventAlerter"/>
+        <Filename Value="..\..\src\component\ZMemTable.pas"/>
+        <UnitName Value="ZMemTable"/>
       </Item12>
       <Item13>
-        <Filename Value="..\..\src\component\ZSqlMetadata.pas"/>
-        <UnitName Value="ZSqlMetadata"/>
+        <Filename Value="..\..\src\component\ZPgEventAlerter.pas"/>
+        <UnitName Value="ZPgEventAlerter"/>
       </Item13>
       <Item14>
-        <Filename Value="..\..\src\component\ZSqlMonitor.pas"/>
-        <UnitName Value="ZSqlMonitor"/>
+        <Filename Value="..\..\src\component\ZSqlMetadata.pas"/>
+        <UnitName Value="ZSqlMetadata"/>
       </Item14>
       <Item15>
-        <Filename Value="..\..\src\component\ZSqlProcessor.pas"/>
-        <UnitName Value="ZSqlProcessor"/>
+        <Filename Value="..\..\src\component\ZSqlMonitor.pas"/>
+        <UnitName Value="ZSqlMonitor"/>
       </Item15>
       <Item16>
-        <Filename Value="..\..\src\component\ZSqlStrings.pas"/>
-        <UnitName Value="ZSqlStrings"/>
+        <Filename Value="..\..\src\component\ZSqlProcessor.pas"/>
+        <UnitName Value="ZSqlProcessor"/>
       </Item16>
       <Item17>
-        <Filename Value="..\..\src\component\ZSqlUpdate.pas"/>
-        <UnitName Value="ZSqlUpdate"/>
+        <Filename Value="..\..\src\component\ZSqlStrings.pas"/>
+        <UnitName Value="ZSqlStrings"/>
       </Item17>
       <Item18>
-        <Filename Value="..\..\src\component\ZStoredProcedure.pas"/>
-        <UnitName Value="ZStoredProcedure"/>
+        <Filename Value="..\..\src\component\ZSqlUpdate.pas"/>
+        <UnitName Value="ZSqlUpdate"/>
       </Item18>
       <Item19>
+        <Filename Value="..\..\src\component\ZStoredProcedure.pas"/>
+        <UnitName Value="ZStoredProcedure"/>
+      </Item19>
+      <Item20>
         <Filename Value="..\..\src\component\ZDatasetParam.pas"/>
         <UnitName Value="ZDatasetParam"/>
-      </Item19>
+      </Item20>
     </Files>
     <RequiredPkgs Count="5">
       <Item1>

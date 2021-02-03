@@ -69,46 +69,44 @@ type
     ttNumber, ttSymbol, ttQuoted, ttQuotedIdentifier, ttWord, ttKeyword,
     ttWhitespace, ttComment, ttSpecial, ttTime, ttDate, ttDateTime);
 
-  {**
-    Defines options for tokenizing strings.
-  }
+  /// <summary>Defines options for tokenizing strings.</summary>
   TZTokenOption = (toSkipUnknown, toSkipWhitespaces, toSkipComments,
     toSkipEOF, toUnifyWhitespaces, toUnifyNumbers);
+  /// <summary>Defines a set of options for tokenizing strings.</summary>
   TZTokenOptions = set of TZTokenOption;
 
-  {**
-    A token represents a logical chunk of a string. For
-    example, a typical tokenizer would break the string
-    <code>"1.23 <= 12.3"</code> into three tokens: the number
-    1.23, a less-than-or-equal symbol, and the number 12.3. A
-    token is a receptacle, and relies on a tokenizer to decide
-    precisely how to divide a string into tokens.
-  }
+  /// <summary>defines a reference of a Token</summary>
   PZToken = ^TZToken;
+  /// <summary>defines a parsed Token</summary>
+  /// <remarks>A token represents a logical chunk of a string. For example, a
+  ///  typical tokenizer would break the string <code>"1.23&lt;=12.3"</code> into
+  ///  three tokens: the number 1.23, a less-than-or-equal symbol, and the
+  ///  number 12.3. A token is a receptacle, and relies on a tokenizer to decide
+  ///  precisely how to divide a string into tokens.</remarks>
   TZToken = record
     P: PChar; //Begin of token value
     L: LengthInt; //Lengt of Token
     TokenType: TZTokenType;
   end;
 
-  {** Defines a dynamic array of tokens. }
+  /// <summary>Defines a dynamic array of tokens.</summary>
   TZTokenDynArray = array of TZToken;
-
-  PZTokenArray = ^TZTokenArray;
-  {** Defines a static array of tokens. }
-  TZTokenArray = array[0..{$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF} - 1] of TZToken;
 
   TZTokenCase = (tcSensitive, tcInsensitive);
   /// <author>EgonHugeist</author>
   /// <summary>Implements a list of TZTokens</summary>
   TZTokenList = class(TZCustomElementList)
   public
+    /// <summary>Creates this collection and assignes main properties.</summary>
     constructor Create(Capacity: Cardinal = 32);
   public
-    function Add(const Item: TZToken): NativeInt;
-    procedure Insert(Index: NativeInt; const Item: TZToken);
+    /// <summary>Adds a new token at the and of this collection.</summary>
+    /// <param>"Value" an TZToken record to be added.</param>
+    /// <returns>the position of the added object.</returns>
+    function Add({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZToken): NativeInt;
+    procedure Insert(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZToken);
 
-    procedure Put(Index: NativeInt; const Item: TZToken);
+    procedure Put(Index: NativeInt; const Value: TZToken);
     function Get(Index: NativeInt): TZToken;
 
     function GetToken(Index: NativeInt): PZToken;
@@ -121,9 +119,11 @@ type
 
     function IsEqual(Index: NativeInt; const Value: Char): Boolean; overload;
     function IsEqual(Index: NativeInt; const Value: String; TokenCase: TZTokenCase = tcSensitive): Boolean; overload;
+    function IsEqual(Token: PZToken; const Value: String; TokenCase: TZTokenCase = tcSensitive): Boolean; overload;
     function IsEqual(Index: NativeInt; TokenType: TZTokenType; const Value: String;
       TokenCase: TZTokenCase = tcSensitive): Boolean; overload;
-
+    /// <summary>Assignes source elements to this collection.</summary>
+    /// <param>"Source" a list of TZTokens to be assigned.</param>
     procedure Assign(Source: TZTokenList);
   public
     property Items[Index: NativeInt]: TZToken read Get write Put;
@@ -133,28 +133,26 @@ type
   // Forward declaration
   TZTokenizer = class;
 
-  {**
-    A tokenizerState returns a token, given a reader, an initial character
-    read from the reader, and a tokenizer that is conducting an overall
-    tokenization of the reader. The tokenizer will typically have a character
-    state table that decides which state to use, depending on an initial
-    character. If a single character is insufficient, a state such
-    as <code>SlashState</code> will read a second character, and may delegate
-    to another state, such as <code>SlashStarState</code>. This prospect
-    of delegation is the reason that the <code>nextToken()</code> method has a
-    tokenizer argument.
-  }
+  /// <summary>Implements a TZTokenizerState object.</summary>
+  /// <remarks>A TZokenizerState returns a token, given a character buffer, an
+  ///  initial character read from the character buffer, and a tokenizer that is
+  ///  conducting an overall tokenization of the buffer. The tokenizer will
+  ///  typically have a character state table that decides which state to use,
+  ///  depending on an initial character. If a single character is insufficient,
+  ///  a state such as <c>SlashState</c> will read a second character, and may
+  ///  delegate to another state, such as <c>SlashStarState</c>. This prospect
+  ///  of delegation is the reason that the <code>nextToken()</code> method has
+  ///  a tokenizer argument.</remarks>
   TZTokenizerState = class (TObject)
     function NextToken(var SPos: PChar; const NTerm: PChar;
       Tokenizer: TZTokenizer): TZToken; virtual; abstract;
   end;
 
-  {**
-    A NumberState object returns a number from a reader. This
-    state's idea of a number allows an optional, initial
-    minus sign, followed by one or more digits. A decimal
-    point and another string of digits may follow these digits.
-  }
+  /// <summary>Implements a TZNumberState object.</summary>
+  /// <remarks>A NumberState object returns a number from a reader. This state's
+  ///  idea of a number allows an optional, initial minus sign, followed by one
+  ///  or more digits. A decimal point and another string of digits may follow
+  ///  these digits.</remarks>
   TZNumberState = class (TZTokenizerState)
   protected
     function ReadDecDigits(var SPos: PChar; const NTerm: PChar): Boolean;
@@ -164,19 +162,17 @@ type
       Tokenizer: TZTokenizer): TZToken; override;
   end;
 
-  {**
-    A quoteState returns a quoted string token from a reader.
-    This state will collect characters until it sees a match
-    to the character that the tokenizer used to switch to
-    this state. For example, if a tokenizer uses a double-
-    quote character to enter this state, then <code>
-    nextToken()</code> will search for another double-quote
-    until it finds one or finds the end of the reader.
-  }
+  /// <summary>Implements a TZQuoteState object.</summary>
+  /// <remarks>A quoteState returns a quoted string token from a reader. This
+  ///  state will collect characters until it sees a match to the character
+  ///  that the tokenizer used to switch to this state. For example, if a
+  ///  tokenizer uses a double-quote character to enter this state, then
+  ///  <code>nextToken()</code> will search for another double-quote until it
+  ///  finds one or finds the end of the reader.</remarks>
   TZQuoteState = class (TZTokenizerState)
   public
     function NextToken(var SPos: PChar; const NTerm: PChar;
-      {%H-}Tokenizer: TZTokenizer): TZToken; override;
+      Tokenizer: TZTokenizer): TZToken; override;
     function EncodeString(const Value: string; QuoteChar: Char): string; virtual;
     function DecodeString(const Value: string; QuoteChar: Char): string; virtual; deprecated;
     function DecodeToken(const Value: TZToken; QuoteChar: Char): string; virtual;
@@ -581,6 +577,7 @@ end;
 
   @return a quoted string token from a reader
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Tokenizer" not used} {$ENDIF}
 function TZQuoteState.NextToken(var SPos: PChar; const NTerm: PChar;
   Tokenizer: TZTokenizer): TZToken;
 begin
@@ -593,6 +590,7 @@ begin
   Result.L := SPos-Result.P+1;
   Result.TokenType := ttQuoted;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Decodes a string value.
@@ -641,6 +639,7 @@ end;
   @return either just a slash token, or the results of
     delegating to a comment-handling state
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Tokenizer" not used} {$ENDIF}
 function TZCommentState.NextToken(var SPos: PChar; const NTerm: PChar;
   Tokenizer: TZTokenizer): TZToken;
 begin
@@ -655,6 +654,7 @@ begin
   Result.L := SPos-Result.P+1;
   Result.TokenType := ttComment;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZCppCommentState }
 
@@ -1002,6 +1002,7 @@ end;
   Return a symbol token from a reader.
   @return a symbol token from a reader
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Tokenizer" not used} {$ENDIF}
 function TZSymbolState.NextToken(var SPos: PChar; const NTerm: PChar;
   Tokenizer: TZTokenizer): TZToken;
 begin
@@ -1009,6 +1010,7 @@ begin
   Result.P := SPos;
   Result.L := FSymbols.NextSymbol(SPos, NTerm)-Result.P+1;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZWhitespaceState }
 
@@ -1079,6 +1081,7 @@ end;
   Return a word token from a reader.
   @return a word token from a reader
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Tokenizer" not used} {$ENDIF}
 function TZWordState.NextToken(var SPos: PChar; const NTerm: PChar;
   Tokenizer: TZTokenizer): TZToken;
 begin
@@ -1093,6 +1096,7 @@ begin
   Result.L := SPos - Result.P +1;
   Result.TokenType := ttWord;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Establish characters in the given range as valid
@@ -1384,26 +1388,22 @@ end;
 
 { TZTokenList }
 
-{**
-  Adds a new token at the and of this collection.
-  @param Item an object to be added.
-  @return a position of the added object.
-}
-function TZTokenList.Add(const Item: TZToken): NativeInt;
+function TZTokenList.Add({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZToken): NativeInt;
 var P: PZToken;
 begin
   P := inherited Add(Result);
-  P^ := Item;
+  P^ := Value;
 end;
 
-{**
-  Assignes source elements to this collection.
-}
 procedure TZTokenList.Assign(Source: TZTokenList);
 begin
   SetCount(Source.Count);
   Move(Source.FElements^, FElements^, SizeOf(TZToken)*Count);
 end;
+
+type
+  PZTokenArray = ^TZTokenArray;
+  TZTokenArray = array[0..{$IFDEF WITH_MAXLISTSIZE_DEPRECATED}Maxint div 16{$ELSE}MaxListSize{$ENDIF} - 1] of TZToken;
 
 function TZTokenList.AsString(iStart, iEnd: NativeInt): String;
 var
@@ -1424,9 +1424,6 @@ begin
  {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
-{**
-  Creates this collection and assignes main properties.
-}
 constructor TZTokenList.Create(Capacity: Cardinal = 32);
 begin
   inherited Create(SizeOf(TZToken), False);
@@ -1435,18 +1432,10 @@ end;
 
 function TZTokenList.IsEqual(Index: NativeInt; const Value: String;
   TokenCase: TZTokenCase = tcSensitive): Boolean;
-var
-  Token: PZToken;
-  P: PChar;
+var Token: PZToken;
 begin
   Token := GetToken(Index);
-  Result := False;
-  if Length(Value) = Token.L then begin
-    P := Pointer(Value);
-    if TokenCase = tcSensitive
-    then Result := CompareMem(Token.P, P, Token.L*SizeOf(Char))
-    else Result := SameText(Token.P, P, Token.L);
-  end;
+  Result := IsEqual(Token, Value, TokenCase);
 end;
 
 function TZTokenList.IsEqual(Index: NativeInt; TokenType: TZTokenType;
@@ -1489,18 +1478,32 @@ end;
   @param Index a position index.
   @param Item an object to be inserted.
 }
-procedure TZTokenList.Insert(Index: NativeInt; const Item: TZToken);
+procedure TZTokenList.Insert(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZToken);
 var P: PZToken;
 begin
   P := inherited Insert(Index);
-  P^ := Item;
+  P^ := Value;
 end;
 
-procedure TZTokenList.Put(Index: NativeInt; const Item: TZToken);
+function TZTokenList.IsEqual(Token: PZToken; const Value: String;
+  TokenCase: TZTokenCase): Boolean;
+var
+  P: PChar;
+begin
+  Result := False;
+  if Length(Value) = Token.L then begin
+    P := Pointer(Value);
+    if TokenCase = tcSensitive
+    then Result := CompareMem(Token.P, P, Token.L*SizeOf(Char))
+    else Result := SameText(Token.P, P, Token.L);
+  end;
+end;
+
+procedure TZTokenList.Put(Index: NativeInt; const Value: TZToken);
 var P: PZToken;
 begin
   P := Inherited Get(Index);
-  P^ := Item;
+  P^ := Value;
 end;
 
 {**

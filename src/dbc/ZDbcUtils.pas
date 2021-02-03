@@ -259,9 +259,9 @@ function ArrayValueToUInt64(ZArray: PZArray; Index: Integer): UInt64;
 function ArrayValueToCurrency(ZArray: PZArray; Index: Integer): Currency;
 function ArrayValueToDouble(ZArray: PZArray; Index: Integer): Double;
 function ArrayValueToBoolean(ZArray: PZArray; Index: Integer): Boolean;
-function ArrayValueToDate(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
-function ArrayValueToTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
-function ArrayValueToDateTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
+function ArrayValueToDate(ZArray: PZArray; Index: Integer; const FormatSettings: TZClientFormatSettings): TDateTime;
+function ArrayValueToTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZClientFormatSettings): TDateTime;
+function ArrayValueToDateTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZClientFormatSettings): TDateTime;
 procedure ArrayValueToGUID(ZArray: PZArray; Index: Integer; GUID: PGUID);
 procedure ArrayValueToBCD(ZArray: PZArray; Index: Integer; var BCD: TBCD);
 
@@ -1891,7 +1891,7 @@ begin
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
-function ArrayValueToDate(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
+function ArrayValueToDate(ZArray: PZArray; Index: Integer; const FormatSettings: TZClientFormatSettings): TDateTime;
 var P: Pointer;
   L: LengthInt;
   B: Boolean;
@@ -1938,7 +1938,7 @@ Fail: raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+SU
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
-function ArrayValueToTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
+function ArrayValueToTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZClientFormatSettings): TDateTime;
 var P: Pointer;
   L: LengthInt;
   B: Boolean;
@@ -1985,7 +1985,7 @@ Fail:  raise EZSQLException.Create(IntToStr(Ord(ZArray.VArrayVariantType))+' '+S
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
-function ArrayValueToDateTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZFormatSettings): TDateTime;
+function ArrayValueToDateTime(ZArray: PZArray; Index: Integer; const FormatSettings: TZClientFormatSettings): TDateTime;
 var P: Pointer;
   L: LengthInt;
   B: Boolean;

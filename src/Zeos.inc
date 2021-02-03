@@ -235,7 +235,7 @@
                 {$IF CompilerVersion >= 22} //Delphi XE+
                   {$DEFINE WITH_tagVARIANT_UINT64}          // ActivX.tagVariant supports UInt64 Values
                   {$DEFINE TENCODING_HAS_CODEPAGE}          //TEncoding has property CodePage  
-                  {$DEFINE WITH_FORMATSETTINGS}
+                  {$DEFINE WITH_FORMATSETTINGS}             //Unit SysUtils have global FormatSettings
                   {$DEFINE WITH_UNICODEFROMLOCALECHARS}
                   {$DEFINE WITH_RTLCONSTS_SInvalidGuidArray}
                   {$DEFINE HAVE_BCDTOSTR_FORMATSETTINGS} //(Try)BCDToStr/StrToBCD has parameter FormatSettings

@@ -9,9 +9,10 @@ interface
 
 uses
   ZAbstractConnection, ZAbstractDataset, ZAbstractRODataset, ZAbstractTable, 
-  ZConnection, ZConnectionGroup, ZDataset, ZDatasetUtils, ZGroupedConnection, 
-  ZIBEventAlerter, ZMemTable, ZPgEventAlerter, ZSqlMetadata, ZSqlMonitor, 
-  ZSqlProcessor, ZSqlStrings, ZSqlUpdate, ZStoredProcedure, ZDatasetParam;
+  ZConnection, ZConnectionGroup, ZDataset, ZDatasetUtils, ZFormatSettings, 
+  ZGroupedConnection, ZIBEventAlerter, ZMemTable, ZPgEventAlerter, 
+  ZSqlMetadata, ZSqlMonitor, ZSqlProcessor, ZSqlStrings, ZSqlUpdate, 
+  ZStoredProcedure, ZDatasetParam;
 
 implementation
 
