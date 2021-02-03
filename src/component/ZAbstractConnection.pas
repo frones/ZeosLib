@@ -177,6 +177,7 @@ type
     FFormatSettings: TZFormatSettings;
     procedure SetRawCharacterTransliterateOptions(Value: TZRawCharacterTransliterateOptions);
     procedure SetFormatSettings(const Value: TZFormatSettings);
+    function GetFormatSettings: TZFormatSettings;
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetConnPort: Integer;
@@ -302,7 +303,7 @@ type
     procedure ShowSQLHourGlass;
     procedure HideSQLHourGlass;
   published
-    property FormatSettings: TZFormatSettings read FFormatSettings write SetFormatSettings;
+    property FormatSettings: TZFormatSettings read GetFormatSettings write SetFormatSettings;
     property ControlsCodePage: TZControlsCodePage read FControlsCodePage write SetCharacterFieldType;
     property RawCharacterTransliterateOptions: TZRawCharacterTransliterateOptions read FRawCharacterTransliterateOptions write
       SetRawCharacterTransliterateOptions;
@@ -775,6 +776,13 @@ begin
     Result := FConnection.GetDriver
   else
     Result := DriverManager.GetDriver(ConstructURL('', ''));
+end;
+
+function TZAbstractConnection.GetFormatSettings: TZFormatSettings;
+begin
+  if FFormatSettings = nil then
+    FFormatSettings := TZFormatSettings.Create(Self);
+  Result := FFormatSettings;
 end;
 
 {**

@@ -251,6 +251,7 @@ type
     procedure SetDisableZFields(Value: Boolean);
     function CreateFieldsLookupTable(out IndexPairList: TZIndexPairList): TZFieldsLookUpDynArray;
     procedure SetFormatSettings(const Value: TZFormatSettings);
+    function GetFormatSettings: TZFormatSettings;
   private
     function GetReadOnly: Boolean;
     procedure SetReadOnly(Value: Boolean);
@@ -591,7 +592,7 @@ type
     property SortType : TSortType read FSortType write SetSortType
       default stAscending;
     property DisableZFields: Boolean read FDisableZFields write SetDisableZFields default False;
-    property FormatSettings: TZFormatSettings read FFormatSettings write SetFormatSettings;
+    property FormatSettings: TZFormatSettings read GetFormatSettings write SetFormatSettings;
 
     property AutoCalcFields;
     property BeforeOpen;
@@ -624,7 +625,9 @@ type
     FEditDateFormatSettings: TZEditDateFormatSettings;
     {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
     function IsRowDataAvailable: Boolean;
+    function GetDisplayFormatSettings: TZDisplayDateFormatSettings;
     procedure SetDisplayFormatSettings(const Value: TZDisplayDateFormatSettings);
+    function GetEditDateFormatSettings: TZEditDateFormatSettings;
     procedure SetEditFormatSettings(const Value: TZEditDateFormatSettings);
     procedure DisplayFormatChanged;
   protected
@@ -647,8 +650,8 @@ type
   public
     property Value: TZDate read GetAsDate write SetAsDate;
   published
-    property DisplayFormat: TZDisplayDateFormatSettings read FDisplayDateFormatSettings write SetDisplayFormatSettings;
-    property EditFormat: TZEditDateFormatSettings read FEditDateFormatSettings write SetEditFormatSettings;
+    property DisplayFormat: TZDisplayDateFormatSettings read GetDisplayFormatSettings write SetDisplayFormatSettings;
+    property EditFormat: TZEditDateFormatSettings read GetEditDateFormatSettings write SetEditFormatSettings;
   End;
 
   TZDateTimeField = Class(TDateTimeField) //keep that inherited class to keep InheritsFrom(TDateTimeField) alive
@@ -658,7 +661,9 @@ type
     FEditFormatSettings: TZEditTimestampFormatSettings;
     FDisplayFormatSettings: TZDisplayTimestampFormatSettings;
     {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
+    function GetDisplayFormatSettings: TZDisplayTimestampFormatSettings;
     procedure SetDisplayFormatSettings(const Value: TZDisplayTimestampFormatSettings);
+    function GetEditFormatSettings: TZEditTimestampFormatSettings;
     procedure SetEditFormatSettings(const Value: TZEditTimestampFormatSettings);
     function IsRowDataAvailable: Boolean;
     function StoreDisplayFormat: Boolean;
@@ -685,8 +690,8 @@ type
   public
     procedure Clear; override;
   published
-    property EditFormat: TZEditTimestampFormatSettings read FEditFormatSettings write SetEditFormatSettings stored StoreEditFormat;
-    property DisplayFormat: TZDisplayTimestampFormatSettings read FDisplayFormatSettings write SetDisplayFormatSettings stored StoreDisplayFormat;
+    property EditFormat: TZEditTimestampFormatSettings read GetEditFormatSettings write SetEditFormatSettings stored StoreEditFormat;
+    property DisplayFormat: TZDisplayTimestampFormatSettings read GetDisplayFormatSettings write SetDisplayFormatSettings stored StoreDisplayFormat;
     property SecondFractionsScale: Integer read FScale stored False;
   End;
 
@@ -697,7 +702,9 @@ type
     FDisplayTimeFormatSettings: TZDisplayTimeFormatSettings;
     FEditTimeFormatSettings: TZEditTimeFormatSettings;
     {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
+    function GetDisplayFormatSettings: TZDisplayTimeFormatSettings;
     procedure SetDisplayFormatSettings(const Value: TZDisplayTimeFormatSettings);
+    function GetEditFormatSettings: TZEditTimeFormatSettings;
     procedure SetEditFormatSettings(const Value: TZEditTimeFormatSettings);
     function IsRowDataAvailable: Boolean;
     procedure DisplayFormatChanged;
@@ -718,8 +725,8 @@ type
     destructor Destroy; override;
     procedure Clear; override;
   published
-    property DisplayFormat: TZDisplayTimeFormatSettings read FDisplayTimeFormatSettings write SetDisplayFormatSettings;
-    property EditFormat: TZEditTimeFormatSettings read FEditTimeFormatSettings write SetEditFormatSettings;
+    property DisplayFormat: TZDisplayTimeFormatSettings read GetDisplayFormatSettings write SetDisplayFormatSettings;
+    property EditFormat: TZEditTimeFormatSettings read GetEditFormatSettings write SetEditFormatSettings;
     property SecondFractionsScale: Integer read FScale stored False;
   End;
 
@@ -2945,6 +2952,13 @@ begin
   if FFieldsLookupTable = nil then
     FFieldsLookupTable := CreateFieldsLookupTable(FResultSet2AccessorIndexList);
   Result := DefineFieldIndex(FieldsLookupTable, AField);
+end;
+
+function TZAbstractRODataset.GetFormatSettings: TZFormatSettings;
+begin
+  if FFormatSettings = nil then
+    FFormatSettings := TZFormatSettings.Create(Self);
+  Result := FFormatSettings;
 end;
 
 {**
@@ -6911,6 +6925,21 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
+function TZDateField.GetDisplayFormatSettings: TZDisplayDateFormatSettings;
+begin
+  if FDisplayDateFormatSettings = nil then
+    FDisplayDateFormatSettings := TZDisplayDateFormatSettings.Create(Self);
+  Result := FDisplayDateFormatSettings;
+end;
+
+function TZDateField.GetEditDateFormatSettings: TZEditDateFormatSettings;
+begin
+  if FEditDateFormatSettings = nil then
+    FEditDateFormatSettings := TZEditDateFormatSettings.Create(Self);
+  Result := FEditDateFormatSettings;
+end;
+
+
 function TZDateField.GetIsNull: Boolean;
 begin
   if IsRowDataAvailable
@@ -7097,6 +7126,21 @@ begin
   end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
+
+function TZTimeField.GetDisplayFormatSettings: TZDisplayTimeFormatSettings;
+begin
+  if FDisplayTimeFormatSettings = nil then
+    FDisplayTimeFormatSettings := TZDisplayTimeFormatSettings.Create(Self);
+  Result := FDisplayTimeFormatSettings;
+end;
+
+function TZTimeField.GetEditFormatSettings: TZEditTimeFormatSettings;
+begin
+  if FEditTimeFormatSettings = nil then
+    FEditTimeFormatSettings := TZEditTimeFormatSettings.Create(Self);
+  Result := FEditTimeFormatSettings;
+end;
+
 
 function TZTimeField.GetIsNull: Boolean;
 begin
@@ -7342,6 +7386,21 @@ begin
   end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
+
+function TZDateTimeField.GetDisplayFormatSettings: TZDisplayTimestampFormatSettings;
+begin
+  if FDisplayFormatSettings = nil then
+    FDisplayFormatSettings := TZDisplayTimestampFormatSettings.Create(Self);
+  Result := FDisplayFormatSettings;
+end;
+
+function TZDateTimeField.GetEditFormatSettings: TZEditTimestampFormatSettings;
+begin
+  if FEditFormatSettings = nil then
+    FEditFormatSettings := TZEditTimestampFormatSettings.Create(Self);
+  Result := FEditFormatSettings;
+end;
+
 
 function TZDateTimeField.GetIsNull: Boolean;
 begin
