@@ -93,7 +93,8 @@ type
     ///  will be used instead, except the owner component is in designing state.</summary>
     /// <returns>the invalid value text string.</returns>
     function GetInvalidValueText: String;
-
+    /// <summary>Sets the FormatSettings</summary>
+    /// <param>"Value" the TFormatSettings record we assign the values from.</param>
     procedure SetFormatSettings(const Value: TFormatSettings);
   protected
     /// <summary>Sets the new format. OnFormatChanged will be called if assigned</summary>
@@ -107,9 +108,17 @@ type
     /// <remarks>abstract forward implementation</remarks>
     /// <returns>the invalid value string.</returns>
     function InternalGetInvalidValueText: String; virtual; abstract;
-    /// <summary>Represents a text for an invalid date/time/timestamp value.</summary>
+    /// <summary>Represents a text for an invalid date/time/timestamp value.
+    ///  If the format is empty and the parent object is assigned, the parents
+    ///  invalid value text will be used instead, except the owner component is
+    ///  in designing state.</summary>
     property InvalidValueText: String read GetInvalidValueText write FInvalidValueText;
+    /// <summary>Is the Format assigned?</summary>
+    /// <returns><c>True</c> if so; <c>False</c> otherwise.</returns>
+    function IsFormatAssigned: Boolean;
   public
+    /// <summary>Gets a reference of the object TFormatSettings.</summary>
+    /// <returns>the TFormatSettings reference.</returns>
     function GetFormatSettings: PFormatSettings;
     /// <summary>Assigns the values from a Source object.</summary>
     /// <param>"Source" the Source object.</param>
@@ -117,8 +126,11 @@ type
     /// <summary>Creates this object and assigns main properties.</summary>
     /// <param>"AOwner" the Owner of this object.</param>
     constructor Create(AOwner: TComponent);
+    /// <summary>Set a TZOnFormatChanged event handler.</summary>
+    /// <param>"Value" the event to be set.</param>
     procedure SetOnFormatChanged(Value: TZOnFormatChanged);
   public
+    /// <summary>Represents the TFormatSettings of this object.</summary>
     property FormatSettings: TFormatSettings read FFormatSettings write SetFormatSettings;
   published
     /// <summary>Represents the Format of this object or parents format or
@@ -164,7 +176,7 @@ type
   published
     /// <summary>Represents the fraction seperator of this object or parents
     ///  seperator or the decimal seperator of the global FormatSettings</summary>
-    property SecondFractionSeperator: Char read GetSecondFractionSeperator write SetSecondFractionSeperator;
+    property SecondFractionSeperator: Char read GetSecondFractionSeperator write SetSecondFractionSeperator stored IsFormatAssigned;
   end;
 
  /// <summary>implements the TZAbstractTimeFormatSettings.</summary>
@@ -191,6 +203,10 @@ type
     /// <returns><c>True</c> if the conversion was successful; <c>False</c> otherwise.</returns>
     function TryTimeToString(var Dest: String; Hours, Minutes, Seconds: Word;
       NanoFractions, Scale: Cardinal; IsNegative: Boolean): Boolean;
+    /// <summary>Attempt to convert a string into a TZTime value</summary>
+    /// <param>"Dest" a reference of the TZTime record.</param>
+    /// <param>"Source" the string we try to convert from.</param>
+    /// <returns><c>True</c> if the conversion was successful; <c>False</c> otherwise.</returns>
     function TryStringToTime(var Dest: TZTime; const Source: String;
       Scale: Cardinal): Boolean;
   end;
@@ -205,6 +221,8 @@ type
     /// <param>"AOwner" the Owner of this object.</param>
     constructor Create(AOwner: TComponent);
   published
+    /// <summary>Represents the second fraction option of this object or parents
+    ///  second fraction option if the format is not assigned.</summary>
     property SecondFractionOption default foSetByFormat;
   end;
 
@@ -215,8 +233,14 @@ type
     /// <param>"Value" the new parent of this object.</param>
     procedure SetParent(const Value: TZDisplayTimeFormatSettings);
   published
-    property InvalidValueText;
-    property SecondFractionOption default foRightZerosTrimmed;
+    /// <summary>Represents a text for an invalid date/time/timestamp value.
+    ///  If the format is empty and the parent object is assigned, the parents
+    ///  invalid value text will be used instead, except the owner component is
+    ///  in designing state.</summary>
+    property InvalidValueText stored IsFormatAssigned;
+    /// <summary>Represents the second fraction option of this object or parents
+    ///  second fraction option if the format is not assigned.</summary>
+    property SecondFractionOption stored IsFormatAssigned default foRightZerosTrimmed;
   End;
 
   /// <summary>implements the TZAbstractDateFormatSettings.</summary>
@@ -235,7 +259,18 @@ type
     /// <summary>Assigns the values from a Source object.</summary>
     /// <param>"Source" the Source object.</param>
     procedure Assign(Source: TPersistent); override;
+    /// <summary>Attempt to convert the date values into a string</summary>
+    /// <param>"Year" the year value.</param>
+    /// <param>"Month" the month value.</param>
+    /// <param>"Day" the day value.</param>
+    /// <param>"IsNegative" the hours value.</param>
+    /// <param>"Dest" a reference of the string we convert into.</param>
+    /// <returns><c>True</c> if the conversion was successful; <c>False</c> otherwise.</returns>
     function TryDateToStr(Year, Month, Day: Word; IsNegative: Boolean; var Dest: String): Boolean;
+    /// <summary>Attempt to convert a string into a TZDate value</summary>
+    /// <param>"Dest" a reference of the TZDate record.</param>
+    /// <param>"Source" the string we try to convert from.</param>
+    /// <returns><c>True</c> if the conversion was successful; <c>False</c> otherwise.</returns>
     function TryStrToDate(var Dest: TZDate; const Source: String): Boolean;
   end;
 
@@ -254,7 +289,11 @@ type
     /// <param>"Value" the new parent of this object.</param>
     procedure SetParent(const Value: TZDisplayDateFormatSettings);
   published
-    property InvalidValueText;
+    /// <summary>Represents a text for an invalid date/time/timestamp value.
+    ///  If the format is empty and the parent object is assigned, the parents
+    ///  invalid value text will be used instead, except the owner component is
+    ///  in designing state.</summary>
+    property InvalidValueText stored IsFormatAssigned;
   End;
 
   /// <summary>implements the TZAbstractTimestampFormatSettings.</summary>
@@ -262,13 +301,37 @@ type
   private
     FDateFormat, FTimeFormat: PString;
     FDatePartOnlyIfZeroTime, FTimePartOnlyIfPascalIntegralDate: Boolean;
+    /// <summary>Gets the date format used if time value is the zero. If the
+    ///  value is not set the value of the parent is used or the shortdate format
+    ///  of the formatsettings if the parent is not assigned.</summary>
+    /// <returns>the date format string.</returns>
     function GetDateFormat: String;
+    /// <summary>Sets the date format used if time value is zero.</summary>
+    /// <param>"Value" the new date format string.</param>
     procedure SetDateFormat(const Value: String);
+    /// <summary>Gets the time format used if date value is the pascal
+    ///  integral date; alias zero. If the value is not set the value of the
+    ///  parent is used or the longtime format of the formatsettings if the
+    ///  parent is not assigned.</summary>
+    /// <returns>the time format string.</returns>
     function GetTimeFormat: String;
+    /// <summary>Sets the time format used if date value is the pascal
+    ///  integral date; alias zero.</summary>
+    /// <param>"Value" the new time format string.</param>
     procedure SetTimeFormat(const Value: String);
+    /// <summary>Get if the date format used if time value is the zero.</summary>
+    /// <returns><c>True</c> if date format used; <c>False</c> otherwise.</returns>
     function GetDatePartOnlyIfZeroTime: Boolean;
+    /// <summary>Sets if the date format used in case of time value is zero.</summary>
+    /// <param>"Value" the new option to be used.</param>
     procedure SetDatePartOnlyIfZeroTime(const Value: Boolean);
+    /// <summary>Get if the time format used if date value is the pascal
+    ///  integral date; alias zero.</summary>
+    /// <returns><c>True</c> if time format used; <c>False</c> otherwise.</returns>
     function GetTimePartOnlyIfPascalIntegralDate: Boolean;
+    /// <summary>Sets if the time format used in case of date value is the
+    ///  pascal integral date; alias zero.</summary>
+    /// <param>"Value" the new option to be used.</param>
     procedure SetTimePartOnlyIfPascalIntegralDate(const Value: Boolean);
   protected
     /// <summary>Gets the format from the global formatsettings</summary>
@@ -281,19 +344,50 @@ type
     /// <param>"Value" the new format to be used.</param>
     procedure SetFormat(const Value: String); override;
   protected
+    /// <summary>Represents the date format used if time value is the zero. If
+    ///  the value is not set the value of the parent is used or the shortdate
+    ///  format of the formatsettings if the parent is not assigned.</summary>
+    /// <returns>the date format string.</returns>
     property DateFormat: String read GetDateFormat write SetDateFormat;
+    /// <summary>Represents the time format used if date value is the pascal
+    ///  integral date; alias zero. If the value is not set the value of the
+    ///  parent is used or the longtime format of the formatsettings if the
+    ///  parent is not assigned.</summary>
     property TimeFormat: String read GetTimeFormat write SetTimeFormat;
+    /// <summary>Represents if the date format used if time value is the zero.</summary>
     property DatePartOnlyIfZeroTime: Boolean Read GetDatePartOnlyIfZeroTime write SetDatePartOnlyIfZeroTime;
+    /// <summary>Represents if the time format used if date value is the pascal
+    ///  integral date; alias zero.</summary>
     property TimePartOnlyIfPascalIntegralDate: Boolean read GetTimePartOnlyIfPascalIntegralDate write SetTimePartOnlyIfPascalIntegralDate;
   public
     /// <summary>Creates this object and assigns main properties.</summary>
     /// <param>"AOwner" the Owner of this object.</param>
     constructor Create(AOwner: TComponent);
   public
+    /// <summary>Attempt to convert the date and time values into a string</summary>
+    /// <param>"Year" the year value.</param>
+    /// <param>"Month" the month value.</param>
+    /// <param>"Day" the day value.</param>
+    /// <param>"Hours" the hours value.</param>
+    /// <param>"Minutes" the minutes value.</param>
+    /// <param>"Seconds" the seconds value.</param>
+    /// <param>"NanoFractions" the nano fractions value.</param>
+    /// <param>"Scale" the Scale to be used.</param>
+    /// <param>"IsNegative" the hours value.</param>
+    /// <param>"Dest" a reference of the string we convert into.</param>
+    /// <returns><c>True</c> if the conversion was successful; <c>False</c> otherwise.</returns>
     function TryTimestampToStr(Year, Month, Day, Hour, Minute, Second: Word;
       NanoFractions, Scale: Cardinal; IsNegative: Boolean; var Dest: String): Boolean;
+    /// <summary>Attempt to convert a string into a TZTimeStamp value</summary>
+    /// <param>"Dest" a reference of the TZTimeStamp record.</param>
+    /// <param>"Source" the string we try to convert from.</param>
+    /// <param>"Scale" the field fraction scale the string may represent.</param>
+    /// <returns><c>True</c> if the conversion was successful; <c>False</c> otherwise.</returns>
     function TryStrToTimestamp(var Dest: TZTimeStamp; const Source: String;
       Scale: Cardinal): Boolean;
+    /// <summary>Assigns the values from a Source object.</summary>
+    /// <param>"Source" the Source object.</param>
+    procedure Assign(Source: TPersistent); override;
   end;
 
   /// <summary>implements the TZEditTimestampFormatSettings.</summary>
@@ -306,7 +400,9 @@ type
     /// <param>"AOwner" the Owner of this object.</param>
     constructor Create(AOwner: TComponent);
   published
-    property SecondFractionOption default foSetByFormat;
+    /// <summary>Represents the SecondFractionOption of this object or parents
+    ///  SecondFractionOption if the Format is empty</summary>
+    property SecondFractionOption stored IsFormatAssigned default foSetByFormat;
   End;
 
   /// <summary>implements the TZDisplayTimestampFormatSettings.</summary>
@@ -319,11 +415,28 @@ type
     /// <param>"AOwner" the Owner of this object.</param>
     constructor Create(AOwner: TComponent);
   published
-    property InvalidValueText;
+    /// <summary>Represents a text for an invalid date/time/timestamp value.
+    ///  If the format is empty and the parent object is assigned, the parents
+    ///  invalid value text will be used instead, except the owner component is
+    ///  in designing state.</summary>
+    property InvalidValueText stored IsFormatAssigned;
+    /// <summary>Represents the SecondFractionOption of this object or parents
+    ///  SecondFractionOption if the Format is empty</summary>
     property SecondFractionOption default foRightZerosTrimmed;
+    /// <summary>Represents the date format used if time value is the zero. If
+    ///  the value is not set the value of the parent is used or the shortdate
+    ///  format of the formatsettings if the parent is not assigned.</summary>
+    /// <returns>the date format string.</returns>
     property DateFormat;
+    /// <summary>Represents the time format used if date value is the pascal
+    ///  integral date; alias zero. If the value is not set the value of the
+    ///  parent is used or the longtime format of the formatsettings if the
+    ///  parent is not assigned.</summary>
     property TimeFormat;
+    /// <summary>Represents if the date format used if time value is the zero.</summary>
     property DatePartOnlyIfZeroTime default True;
+    /// <summary>Represents if the time format used if date value is the pascal
+    ///  integral date; alias zero.</summary>
     property TimePartOnlyIfPascalIntegralDate default True;
   End;
 
@@ -336,11 +449,23 @@ type
     FEditTimeFormatSettings: TZEditTimeFormatSettings;
     FDisplayTimestampFormatSettings: TZDisplayTimestampFormatSettings;
     FEditTimestampFormatSettings: TZEditTimestampFormatSettings;
+    /// <summary>Sets new values for the internal display date formatsettings.</summary>
+    /// <param>"Value" the new TZDisplayDateFormatSettings object we assign from.</param>
     procedure SetDisplayDateFormatSettings(const Value: TZDisplayDateFormatSettings);
+    /// <summary>Sets new values for the internal display time formatsettings.</summary>
+    /// <param>"Value" the new TZDisplayTimeFormatSettings object we assign from.</param>
     procedure SetDisplayTimeFormatSettings(const Value: TZDisplayTimeFormatSettings);
+    /// <summary>Sets new values for the internal display timestamp formatsettings.</summary>
+    /// <param>"Value" the new TZDisplayTimestampFormatSettings object we assign from.</param>
     procedure SetDisplayTimestampFormatSettings(const Value: TZDisplayTimestampFormatSettings);
+    /// <summary>Sets new values for the internal edit date formatsettings.</summary>
+    /// <param>"Value" the new TZEditDateFormatSettings object we assign from.</param>
     procedure SetEditDateFormatSettings(const Value: TZEditDateFormatSettings);
+    /// <summary>Sets new values for the internal edit time formatsettings.</summary>
+    /// <param>"Value" the new TZEditTimeFormatSettings object we assign from.</param>
     procedure SetEditTimeFormatSettings(const Value: TZEditTimeFormatSettings);
+    /// <summary>Sets new values for the internal edit timestamp formatsettings.</summary>
+    /// <param>"Value" the new TZEditTimestampFormatSettings object we assign from.</param>
     procedure SetEditTimestampFormatSettings(const Value: TZEditTimestampFormatSettings);
   public
     /// <summary>Assigns the values from a Source object.</summary>
@@ -352,6 +477,7 @@ type
     /// <summary>Creates this object and assigns main properties.</summary>
     /// <param>"AOwner" the Owner of this object.</param>
     constructor Create(const AOwner: TComponent);
+    /// <summary>Destroys this object and cleanups the memory.</summary>
     destructor Destroy; override;
   published
     property DisplayDateFormatSettings: TZDisplayDateFormatSettings read FDisplayDateFormatSettings write SetDisplayDateFormatSettings;
@@ -440,6 +566,11 @@ begin
   else if FParent <> nil then
     Result := FParent.GetInvalidValueText
   else Result := InternalGetInvalidValueText;
+end;
+
+function TZAbstractDateTimeFormatSettings.IsFormatAssigned: Boolean;
+begin
+  Result := FFormat <> nil;
 end;
 
 procedure TZAbstractDateTimeFormatSettings.SetFormatSettings(
@@ -566,7 +697,7 @@ begin
       if PFractionSep = PFractionStart-1 then
         PFractionStart := PFractionSep;
       Move((PFractionEnd+1)^, PFractionStart^, (NativeUInt(PEnd)-NativeUInt(PFractionEnd))); //backward move
-      SetLength(Format, L-NativeUInt(((PFractionEnd+1)-PFractionStart)));
+      SetLength(Format, L-NativeUInt(((PFractionEnd+1)-PFractionStart)){+Ord(IsNegative)});
       Exit;
     end else if ((Scale+2) < FractionDigitsInFormat) then begin  //backward move?
       Move((PFractionEnd+1)^, (PFractionStart+1+Scale)^, (NativeUInt(PEnd)-NativeUInt(PFractionEnd))); //backward move
@@ -833,6 +964,15 @@ end;
 
 { TZAbstractTimestampFormatSettings }
 
+procedure TZAbstractTimestampFormatSettings.Assign(Source: TPersistent);
+var AValue: TZAbstractTimestampFormatSettings;
+begin
+  AValue := Source as TZAbstractTimestampFormatSettings;
+  FDatePartOnlyIfZeroTime := AValue.FDatePartOnlyIfZeroTime;
+  FTimePartOnlyIfPascalIntegralDate := AValue.FTimePartOnlyIfPascalIntegralDate;
+  inherited Assign(Source);
+end;
+
 constructor TZAbstractTimestampFormatSettings.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -867,7 +1007,7 @@ end;
 function TZAbstractTimestampFormatSettings.GetTimeFormat: String;
 var Sep, Delim: Char;
 begin
-  if (FDateFormat <> nil)
+  if (FTimeFormat <> nil)
   then Result := FTimeFormat^
   else if (csDesigning in FOwner.ComponentState) then
     Result := ''
