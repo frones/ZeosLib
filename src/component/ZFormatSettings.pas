@@ -488,10 +488,35 @@ type
     property EditTimestampFormatSettings: TZEditTimestampFormatSettings read FEditTimestampFormatSettings write SetEditTimestampFormatSettings;
   end;
 
+  function FindFirstFormatDelimiter(const Format: String; out Delimiter: Char): Boolean;
+
 implementation
 
 uses ZFastCode, ZSysUtils, ZDatasetUtils;
 
+function FindFirstFormatDelimiter(const Format: String; out Delimiter: Char): Boolean;
+var P, PEnd: PChar;
+  EscapeCount: Cardinal;
+begin
+  Delimiter := #0;
+  Result := False;
+  P := Pointer(Format);
+  EscapeCount := 0;
+  PEnd := P + Length(Format);
+  while P < PEnd do begin
+    if (P^ = '"') then
+      if Odd(EscapeCount)
+      then Dec(EscapeCount)
+      else Inc(EscapeCount)
+    else if (EscapeCount = 0) and (((Ord(P^) < Ord('0')) or ((Ord(P^) > Ord('9')))) and
+       (((Ord(P^) or $20 < Ord('a')) or (Ord(P^) or $20 > Ord('z'))))) then begin
+      Delimiter := P^;
+      Result := True;
+      Break;
+    end;
+    Inc(P);
+  end;
+end;
 { TZAbstractDateTimeFormatSettings }
 
 procedure TZAbstractDateTimeFormatSettings.Assign(Source: TPersistent);
@@ -685,7 +710,7 @@ begin
   end else begin
     if FSecondFractionOption = foSetByFormat then
       Scale := FractionDigitsInFormat;
-    if NanoFractions <> Scale then begin
+    if (Scale > 0) and (NanoFractions <> Scale) then begin
       NanoFractions := RoundNanoFractionTo(NanoFractions, Scale);
       NanoFractions := NanoFractions div FractionLength2NanoSecondMulTable[Scale];
     end;
@@ -775,7 +800,7 @@ var Sep, Delim: Char;
 begin
   Result := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
   Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator;
-  if FindFirstTimeFormatDelimiter(Result, Delim) and (Delim <> Sep) then
+  if FindFirstFormatDelimiter(Result, Delim) and (Delim <> Sep) then
     ReplaceChar(Result, Delim, Sep);
 end;
 
@@ -786,7 +811,7 @@ end;
 
 procedure TZAbstractTimeFormatSettings.SetFormat(const Value: String);
 begin
-  if ((FFormat = nil) and (Value <> '')) or ((FFormat <> nil) and (Value = '')) or (FFormat^ <> Value) then begin
+  if ((FFormat = nil) and (Value <> '')) or ((FFormat <> nil) and (Value = '')) or ((FFormat <> nil) and (FFormat^ <> Value)) then begin
     if Value <> '' then begin
       FFormat := @FFormatSettings.LongTimeFormat;
       FFormat^ := Value;
@@ -902,7 +927,7 @@ var Delim, Sep: Char;
 begin
   Result := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
   Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator;
-  if FindFirstDateFormatDelimiter(Result, Delim) and (Delim <> Sep) then
+  if FindFirstFormatDelimiter(Result, Delim) and (Delim <> Sep) then
     Result := ZSysUtils.ReplaceChar(Delim, Sep, Result);
 end;
 
@@ -913,7 +938,7 @@ end;
 
 procedure TZAbstractDateFormatSettings.SetFormat(const Value: String);
 begin
-  if ((FFormat = nil) and (Value <> '')) or ((FFormat <> nil) and (Value = '')) or (FFormat^ <> Value) then begin
+  if ((FFormat = nil) and (Value <> '')) or ((FFormat <> nil) and (Value = '')) or ((FFormat <> nil) and (FFormat^ <> Value)) then begin
     if Value <> '' then begin
       FFormat := @FFormatSettings.ShortDateFormat;
       FFormat^ := Value;
@@ -992,7 +1017,7 @@ begin
     else begin
       Result := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
       Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator;
-      if FindFirstDateFormatDelimiter(Result, Delim) and (Delim <> Sep) then
+      if FindFirstFormatDelimiter(Result, Delim) and (Delim <> Sep) then
         ReplaceChar(Result, Delim, Sep);
     end;
 end;
@@ -1016,7 +1041,7 @@ begin
     else begin
       Result := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
       Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator;
-      if FindFirstDateFormatDelimiter(Result, Delim) and (Delim <> Sep) then
+      if FindFirstFormatDelimiter(Result, Delim) and (Delim <> Sep) then
         ReplaceChar(Result, Delim, Sep);
     end;
 end;
@@ -1035,7 +1060,7 @@ var tmp: String;
 begin
   tmp := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
   Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator;
-  if FindFirstTimeFormatDelimiter(tmp, Delim) and (Delim <> Sep)
+  if FindFirstFormatDelimiter(tmp, Delim) and (Delim <> Sep)
   then ReplaceChar(tmp, Delim, Sep)
   else UniqueString(tmp);
   P := Pointer(tmp);
@@ -1047,7 +1072,7 @@ begin
   end;
   Result := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
   Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator;
-  if FindFirstDateFormatDelimiter(Result, Delim) and (Delim <> Sep) then
+  if FindFirstFormatDelimiter(Result, Delim) and (Delim <> Sep) then
     ReplaceChar(Result, Delim, Sep);
   Result := Result+' '+tmp;
 end;
@@ -1059,7 +1084,7 @@ end;
 
 procedure TZAbstractTimestampFormatSettings.SetDateFormat(const Value: String);
 begin
-  if ((FDateFormat = nil) and (Value <> '')) or ((FDateFormat <> nil) and (Value = '')) or (FDateFormat^ <> Value) then begin
+  if ((FDateFormat = nil) and (Value <> '')) or ((FDateFormat <> nil) and (Value = '')) or ((FDateFormat <> nil) and (FDateFormat^ <> Value)) then begin
     if Value <> '' then begin
       FFormat := @FFormatSettings.ShortDateFormat;
       FFormat^ := Value;
@@ -1081,7 +1106,7 @@ end;
 
 procedure TZAbstractTimestampFormatSettings.SetFormat(const Value: String);
 begin
-  if ((FFormat = nil) and (Value <> '')) or ((FFormat <> nil) and (Value = '')) or (FFormat^ <> Value) then begin
+  if ((FFormat = nil) and (Value <> '')) or ((FFormat <> nil) and (Value = '')) or ((FFormat <> nil) and (FFormat^ <> Value)) then begin
     if Value <> '' then begin
       FFormat := @FFormatSettings.LongDateFormat;
       FFormat^ := Value;
@@ -1093,7 +1118,7 @@ end;
 
 procedure TZAbstractTimestampFormatSettings.SetTimeFormat(const Value: String);
 begin
-  if ((FTimeFormat = nil) and (Value <> '')) or ((FTimeFormat <> nil) and (Value = '')) or (FTimeFormat^ <> Value) then begin
+  if ((FTimeFormat = nil) and (Value <> '')) or ((FTimeFormat <> nil) and (Value = '')) or ((FTimeFormat <> nil) and (FTimeFormat^ <> Value)) then begin
     if Value <> '' then begin
       FFormat := @FFormatSettings.ShortTimeFormat;
       FFormat^ := Value;

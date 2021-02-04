@@ -296,8 +296,6 @@ const DatasetTypeToProcColDbc: array[TParamType] of TZProcedureColumnType =
 function IsSimpleDateTimeFormat(const Format: String): Boolean;
 function IsSimpleDateFormat(const Format: String): Boolean;
 function IsSimpleTimeFormat(const Format: String): Boolean;
-function FindFirstDateFormatDelimiter(const Format: String; out Delimiter: Char): Boolean;
-function FindFirstTimeFormatDelimiter(const Format: String; out Delimiter: Char): Boolean;
 
 const
   FractionAdjust: array[0..9] of String = (
@@ -1900,42 +1898,6 @@ begin
   end;
 end;
 {$ENDIF DISABLE_ZPARAM}
-
-function FindFirstDateFormatDelimiter(const Format: String; out Delimiter: Char): Boolean;
-var P, PEnd: PChar;
-begin
-  Delimiter := #0;
-  Result := False;
-  P := Pointer(Format);
-  PEnd := P + Length(Format);
-  while P < PEnd do begin
-    if (Ord(P^) < Ord('0')) or ((Ord(P^) > Ord('9')) and
-       (((Ord(P^) or $20 < Ord('a')) or (Ord(P^) or $20 > Ord('z'))))) then begin
-      Delimiter := P^;
-      Result := True;
-      Break;
-    end;
-    Inc(P);
-  end;
-end;
-
-function FindFirstTimeFormatDelimiter(const Format: String; out Delimiter: Char): Boolean;
-var P, PEnd: PChar;
-begin
-  Delimiter := #0;
-  Result := False;
-  P := Pointer(Format);
-  PEnd := P + Length(Format);
-  while P < PEnd do begin
-    if (Ord(P^) < Ord('0')) or ((Ord(P^) > Ord('9')) and (Ord(P^) <> Ord('.')) and
-       (((Ord(P^) or $20 < Ord('a')) or (Ord(P^) or $20 > Ord('z'))))) then begin
-      Delimiter := P^;
-      Result := True;
-      Break;
-    end;
-    Inc(P);
-  end;
-end;
 
 {$IFDEF FPC}
   {$PUSH}
