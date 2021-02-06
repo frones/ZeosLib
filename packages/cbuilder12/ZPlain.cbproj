@@ -6,7 +6,7 @@
 			<Config Condition="'$(Config)'==''">Debug</Config>
 			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>
-		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
+		<PropertyGroup Condition="'$(Config)'=='Basis' or '$(Base)'!=''">
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_1)'!=''">
@@ -20,6 +20,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DesignOnlyPackage>false</DesignOnlyPackage>
 			<LinkPackageImports>rtl.bpi</LinkPackageImports>
 			<RuntimeOnlyPackage>true</RuntimeOnlyPackage>
 			<IncludePath>..\..\src\plain;$(IncludePath)</IncludePath>
@@ -83,78 +84,67 @@
 		</PropertyGroup>
 		<ItemGroup>
 			<DelphiCompile Include="..\..\src\plain\ZPlainMySqlDriver.pas">
-				<BuildOrder>62</BuildOrder>
-				<BuildOrder>1</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainSqLiteDriver.pas">
-				<BuildOrder>71</BuildOrder>
-				<BuildOrder>2</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainFirebirdDriver.pas">
-				<BuildOrder>53</BuildOrder>
-				<BuildOrder>4</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainLoader.pas">
-				<BuildOrder>56</BuildOrder>
-				<BuildOrder>7</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainASADriver.pas">
-				<BuildOrder>86</BuildOrder>
-				<BuildOrder>9</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainASAConstants.pas">
-				<BuildOrder>95</BuildOrder>
-				<BuildOrder>10</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainOracleDriver.pas">
-				<BuildOrder>77</BuildOrder>
 				<BuildOrder>12</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainOracleConstants.pas">
-				<BuildOrder>74</BuildOrder>
+			<DelphiCompile Include="..\..\src\plain\ZPlainODBCDriver.pas">
 				<BuildOrder>13</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainAdo.pas">
-				<BuildOrder>17</BuildOrder>
-				<BuildOrder>16</BuildOrder>
+			<DelphiCompile Include="..\..\src\plain\ZPlainFirebirdInterbaseDriver.pas">
+				<BuildOrder>10</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainPostgreSqlDriver.pas">
+			<DelphiCompile Include="..\..\src\plain\ZPlainLoader.pas">
+				<BuildOrder>11</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\plain\ZPlainOracleDriver.pas">
 				<BuildOrder>14</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\plain\ZPlainSqLiteDriver.pas">
 				<BuildOrder>17</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainDbLibDriver.pas">
-				<BuildOrder>23</BuildOrder>
+			<DelphiCompile Include="..\..\src\plain\ZPlainOleDBDriver.pas">
 				<BuildOrder>18</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\plain\ZPlainAdoDriver.pas">
-				<BuildOrder>20</BuildOrder>
-				<BuildOrder>19</BuildOrder>
+			<DelphiCompile Include="..\..\src\plain\ZPlainPostgreSqlDriver.pas">
+				<BuildOrder>15</BuildOrder>
 			</DelphiCompile>
-			<ResFiles Include="ZPlain.res">
-				<BuildOrder>5</BuildOrder>
-				<BuildOrder>20</BuildOrder>
-			</ResFiles>
-			<CppCompile Include="ZPlain.cpp">
-				<BuildOrder>2</BuildOrder>
-				<BuildOrder>21</BuildOrder>
-			</CppCompile>
+			<DelphiCompile Include="..\..\src\plain\ZPlainSQLAnywhere.pas">
+				<BuildOrder>16</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\plain\ZPlainFirebird.pas">
+				<BuildOrder>9</BuildOrder>
+			</DelphiCompile>
 			<PackageImport Include="ZCore.bpi">
-				<BuildOrder>11</BuildOrder>
 				<BuildOrder>22</BuildOrder>
+				<BuildOrder>11</BuildOrder>
 			</PackageImport>
 			<PackageImport Include="rtl.bpi">
 				<BuildOrder>8</BuildOrder>
 				<BuildOrder>23</BuildOrder>
 			</PackageImport>
-			<DelphiCompile Include="..\..\src\plain\ZPlainDbLibConstants.pas">
-				<BuildOrder>26</BuildOrder>
-				<BuildOrder>29</BuildOrder>
+			<ResFiles Include="ZPlain.res">
+				<BuildOrder>5</BuildOrder>
+				<BuildOrder>20</BuildOrder>
+			</ResFiles>
+			<CppCompile Include="ZPlain.cpp">
+				<BuildOrder>21</BuildOrder>
+				<BuildOrder>2</BuildOrder>
+			</CppCompile>
+			<DelphiCompile Include="..\..\src\plain\ZPlainAdo.pas">
+				<BuildOrder>4</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\plain\ZPlainDbLibDriver.pas">
+				<BuildOrder>7</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\plain\ZPlainDriver.pas">
-				<BuildOrder>32</BuildOrder>
-				<BuildOrder>31</BuildOrder>
+				<BuildOrder>8</BuildOrder>
 			</DelphiCompile>
-			<BuildConfiguration Include="Base">
+			<DelphiCompile Include="..\..\src\plain\ZPlainAdoDriver.pas">
+				<BuildOrder>5</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\plain\ZPlainASADriver.pas">
+				<BuildOrder>6</BuildOrder>
+			</DelphiCompile>
+			<BuildConfiguration Include="Basis">
 				<Key>Base</Key>
 			</BuildConfiguration>
 			<BuildConfiguration Include="Release">
@@ -175,7 +165,7 @@
 					<VersionInfo>
 						<VersionInfo Name="IncludeVerInfo">True</VersionInfo>
 						<VersionInfo Name="AutoIncBuild">False</VersionInfo>
-						<VersionInfo Name="MajorVer">7</VersionInfo>
+						<VersionInfo Name="MajorVer">1</VersionInfo>
 						<VersionInfo Name="MinorVer">0</VersionInfo>
 						<VersionInfo Name="Release">0</VersionInfo>
 						<VersionInfo Name="Build">0</VersionInfo>
@@ -196,7 +186,7 @@
 						<VersionInfoKeys Name="LegalTrademarks"/>
 						<VersionInfoKeys Name="OriginalFilename"/>
 						<VersionInfoKeys Name="ProductName"/>
-						<VersionInfoKeys Name="ProductVersion">7.0.0.0</VersionInfoKeys>
+						<VersionInfoKeys Name="ProductVersion">8.0.0.0</VersionInfoKeys>
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
 					<Debugging>

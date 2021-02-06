@@ -82,7 +82,7 @@
 			<DCCReference Include="..\..\src\component\ZDataset.pas"/>
 			<DCCReference Include="..\..\src\component\ZDatasetParam.pas"/>
 			<DCCReference Include="..\..\src\component\ZDatasetUtils.pas"/>
-v			<DCCReference Include="..\..\src\component\ZFormatSettings.pas"/>
+			<DCCReference Include="..\..\src\component\ZFormatSettings.pas"/>
 			<DCCReference Include="..\..\src\component\ZGroupedConnection.pas"/>
 			<DCCReference Include="..\..\src\component\ZIBEventAlerter.pas"/>
 			<DCCReference Include="..\..\src\component\ZMemTable.pas"/>
@@ -94,6 +94,7 @@ v			<DCCReference Include="..\..\src\component\ZFormatSettings.pas"/>
 			<DCCReference Include="..\..\src\component\ZSqlStrings.pas"/>
 			<DCCReference Include="..\..\src\component\ZSqlUpdate.pas"/>
 			<DCCReference Include="..\..\src\component\ZStoredProcedure.pas"/>
+			<DCCReference Include="..\..\src\component\ZTransaction"/>
 			<BuildConfiguration Include="Debug">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>

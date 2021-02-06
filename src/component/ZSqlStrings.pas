@@ -238,24 +238,22 @@ begin
   Result := FStatements.Count;
 end;
 
+type TZProtectedAbstractRODataset = class(TZAbstractRODataset);
+
 function TZSQLStrings.GetTokenizer: IZTokenizer;
 var
   Driver: IZDriver;
 begin
   { Defines a SQL specific tokenizer object. }
   Result := nil;
-  if FDataset is TZAbstractRODataset then
-  begin
-    if Assigned(TZAbstractRODataset(FDataset).Connection) then
-    begin
-      Driver := TZAbstractRODataset(FDataset).Connection.DbcDriver;
+  if FDataset is TZAbstractRODataset then begin
+    if Assigned(TZProtectedAbstractRODataset(FDataset).Connection) then begin
+      Driver := TZProtectedAbstractRODataset(FDataset).Connection.DbcDriver;
       if Assigned(Driver) then
         Result := Driver.GetTokenizer;
     end;
-  end
-  else if FDataset is TZSQLProcessor then
-    if Assigned(TZSQLProcessor(FDataset).Connection) then
-    begin
+  end else if FDataset is TZSQLProcessor then
+    if Assigned(TZSQLProcessor(FDataset).Connection) then begin
       Driver := TZSQLProcessor(FDataset).Connection.DbcDriver;
       if Assigned(Driver) then
         Result := Driver.GetTokenizer;

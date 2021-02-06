@@ -30,6 +30,7 @@ package ZComponent;
 {$IMPLICITBUILD OFF}
 
 requires
+  dbrtl,
   ZDbc;
 
 contains
@@ -52,6 +53,7 @@ contains
   ZSqlProcessor in '..\..\src\component\ZSqlProcessor.pas',
   ZSqlStrings in '..\..\src\component\ZSqlStrings.pas',
   ZSqlUpdate in '..\..\src\component\ZSqlUpdate.pas',
-  ZStoredProcedure in '..\..\src\component\ZStoredProcedure.pas';
+  ZStoredProcedure in '..\..\src\component\ZStoredProcedure.pas',
+  ZTransaction in '..\..\src\component\ZTransaction.pas';
 
 end.

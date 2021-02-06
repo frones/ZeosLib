@@ -75,6 +75,8 @@ type
 
   TWaitMethod = procedure of object;
 
+  TZProtectedAbstractRWTxnUpdateObjDataSet = Class(TZAbstractRWTxnUpdateObjDataSet);
+
   { TZUpdateSQLEditForm }
 
   TZUpdateSQLEditForm = class(TForm)
@@ -124,7 +126,7 @@ type
     procedure SQLMemoKeyPress(Sender: TObject; var Key: Char);
   private
     StmtIndex: Integer;
-    DataSet: TZAbstractDataset;
+    DataSet: TZProtectedAbstractRWTxnUpdateObjDataSet;
     QuoteChar: string;
     ConnectionOpened: Boolean;
     UpdateSQL: TZUpdateSQL;
@@ -599,9 +601,9 @@ var
 begin
   Result := False;
   ConnectionOpened := False;
-  if Assigned(UpdateSQL.DataSet) and (UpdateSQL.DataSet is TZAbstractDataset) then
+  if Assigned(UpdateSQL.DataSet) and (UpdateSQL.DataSet is TZAbstractRWTxnUpdateObjDataSet) then
   begin
-    DataSet := TZAbstractDataset(UpdateSQL.DataSet);
+    DataSet := TZProtectedAbstractRWTxnUpdateObjDataSet(UpdateSQL.DataSet);
     DataSetName := Format('%s%s%s', [DataSet.Owner.Name, DotSep, DataSet.Name]);
     if Assigned(DataSet.Connection) and not DataSet.Connection.Connected then
     begin
@@ -891,7 +893,7 @@ begin
 end;
 
 type
-  THackDataSet = class(TZAbstractDataset);
+  THackDataSet = class(TZAbstractRWDataSet);
   
 procedure TZUpdateSQLEditForm.InitUpdateTableNames;
 var

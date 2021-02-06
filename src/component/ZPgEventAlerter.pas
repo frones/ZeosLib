@@ -67,7 +67,7 @@ interface
 uses
   SysUtils, Classes,
   {$IFDEF TLIST_IS_DEPRECATED}ZSysUtils,{$ENDIF}
-  ZDbcPostgreSql, ZPlainPostgreSqlDriver, ZConnection, ZAbstractRODataset
+  ZDbcPostgreSql, ZPlainPostgreSqlDriver, ZAbstractConnection, ZAbstractRODataset
   {$IFNDEF WITH_RAWBYTESTRING},ZCompatibility{$ENDIF}, ZClasses;
 
 type
@@ -76,13 +76,12 @@ type
 
   { TZPgEventAlerter }
 
-  TZPgEventAlerter = class (TComponent)
+  TZPgEventAlerter = class (TZAbstractConnectionLinkedComponent)
   private
     FActive      : Boolean;
     FEvents      : TStrings;
 
     FTimer       : TZThreadTimer;
-    FConnection: TZConnection;
     FNotifyFired : TZPgNotifyEvent;
 
     FProcessor   : TZPgEventAlerter; //processor component - it will actually handle notifications received from DB
@@ -94,7 +93,7 @@ type
     function  GetInterval   : Cardinal;
     procedure SetInterval   (Value: Cardinal);
     procedure SetEvents     (Value: TStrings);
-    procedure SetConnection (Value: TZConnection);
+    procedure SetConnection (Value: TZAbstractConnection); override;
     procedure TimerTick;
     procedure CheckEvents;
     procedure OpenNotify;
@@ -110,7 +109,7 @@ type
     constructor Create     (AOwner: TComponent); override;
     destructor  Destroy; override;
   published
-    property Connection: TZConnection     read FConnection   write SetConnection;
+    property Connection;
     property Active:     Boolean          read FActive       write SetActive;
     property Events:     TStrings         read FEvents       write SetEvents;
     property Interval:   Cardinal         read GetInterval   write SetInterval    default 250;
@@ -151,12 +150,11 @@ begin
   FTimer         := TZThreadTimer.Create(TimerTick, 250, False);
   FActive        := False;
   if (csDesigning in ComponentState) and Assigned(AOwner) then
-   for I := AOwner.ComponentCount - 1 downto 0 do
-    if AOwner.Components[I] is TZConnection then
-     begin
-        FConnection := AOwner.Components[I] as TZConnection;
-      Break;
-     end;
+    for I := AOwner.ComponentCount - 1 downto 0 do
+      if AOwner.Components[I] is TZAbstractConnection then begin
+        FConnection := AOwner.Components[I] as TZAbstractConnection;
+        Break;
+      end;
 end;
 
 destructor TZPgEventAlerter.Destroy;
@@ -206,7 +204,7 @@ begin
     end;
 end;
 
-procedure TZPgEventAlerter.SetConnection(Value: TZConnection);
+procedure TZPgEventAlerter.SetConnection(Value: TZAbstractConnection);
 begin
   if FConnection <> Value then begin
     if FProcessor = nil then //we are closing notifiers only whern there is no processor attached

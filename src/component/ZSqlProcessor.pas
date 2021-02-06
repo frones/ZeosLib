@@ -82,13 +82,12 @@ type
 
   { TZSQLProcessor }
 
-  TZSQLProcessor = class(TComponent)
+  TZSQLProcessor = class(TZAbstractConnectionLinkedComponent)
   private
     FParams: {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF};
     FScript: TZSQLStrings;
 
     FScriptParser: TZSQLScriptParser;
-    FConnection: TZAbstractConnection;
     FBeforeExecute: TZProcessorNotifyEvent;
     FAfterExecute: TZProcessorNotifyEvent;
     FOnError: TZProcessorErrorEvent;
@@ -98,7 +97,6 @@ type
     procedure SetScript(Value: TStrings);
     function GetStatementCount: Integer;
     function GetStatement(Index: Integer): string;
-    procedure SetConnection(Value: TZAbstractConnection);
     function GetDelimiterType: TZDelimiterType;
     procedure SetDelimiterType(Value: TZDelimiterType);
     function GetDelimiter: string;
@@ -112,6 +110,7 @@ type
     procedure SetParamChar(Value: Char);
     procedure UpdateSQLStrings({%H-}Sender: TObject);
   protected
+    procedure SetConnection(Value: TZAbstractConnection); override;
     procedure CheckConnected;
     function DoOnError(StatementIndex: Integer; E: Exception):
       TZErrorHandleAction;
@@ -144,7 +143,7 @@ type
       default ':';
     property Params: {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF} read FParams write SetParams;
     property Script: TStrings read GetScript write SetScript;
-    property Connection: TZAbstractConnection read FConnection write SetConnection;
+    property Connection;
     property DelimiterType: TZDelimiterType read GetDelimiterType
       write SetDelimiterType default dtDefault;
     property Delimiter: string read GetDelimiter write SetDelimiter;
@@ -220,8 +219,7 @@ end;
 }
 procedure TZSQLProcessor.SetConnection(Value: TZAbstractConnection);
 begin
-  if FConnection <> Value then
-  begin
+  if FConnection <> Value then begin
     FConnection := Value;
     FScriptParser.ClearUncompleted;
   end;

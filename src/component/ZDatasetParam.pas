@@ -2207,33 +2207,21 @@ function TZParam.GetAsVariant: Variant;
   procedure SetAsRawString(var Result: Variant);
   begin
     {$IF defined(LCL) or defined(NO_ANSISTRING)}
-    TVarData(Result).VType := varString;
-    UTF8String(TVarData(Result).VString) := GetAsUTF8String;
+    Result := GetAsUTF8String;
     {$ELSE}
-    if {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF} = zCP_UTF8 then begin
-      TVarData(Result).VType := varString;
-      UTF8String(TVarData(Result).VString) := GetAsUTF8String;
-    end else if FZVariantType <> vtAnsiString then begin
-      {$IF declared(varUString)}
-      TVarData(Result).VType := varUString;
-      UnicodeString(TVarData(Result).{$IF declared(VUString)}VUString{$ELSE}VAny{$IFEND}) := UnicodeString(FData.pvPointer);
-      {$ELSE}
-      Result := UnicodeString(FData.pvPointer);
-      {$IFEND}
-    end else begin
-      TVarData(Result).VType := varString;
-      AnsiString(TVarData(Result).VString) := GetAsAnsiString;
-    end;
+    if ({$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF} = zCP_UTF8) then
+      Result := GetAsUTF8String
+    else if (FZVariantType = vtUTF8String) then
+      Result := GetAsUnicodeString
+    else if FZVariantType <> vtAnsiString then
+      Result := GetAsUnicodeString
+    else
+      Result := GetAsAnsiString;
     {$IFEND}
   end;
   procedure SetAsUniStringFromClob(var Result: Variant);
   begin
-    {$IF declared(varUString)}
-    TVarData(Result).VType := varUString;
-    UnicodeString(TVarData(Result).{$IF declared(VUString)}VUString{$ELSE}VAny{$IFEND}) := GetAsUnicodeString;
-    {$ELSE}
     Result := GetAsUnicodeString;
-    {$IFEND}
   end;
   procedure SetAsBytes(var Result: Variant);
   begin
@@ -4260,6 +4248,8 @@ begin
   end;
 end;
 
+type
+  TZProtectedAbstractRODataset = Class(TZAbstractRODataset);
 function TZParam.TrySetConnection: Boolean;
 var Owner: TPersistent;
 label jmpOwner;
@@ -4267,18 +4257,18 @@ begin
   if FConnection = nil then begin
     Owner := GetOwner;
   jmpOwner:
-    if (FDataSet <> nil) and (TZAbstractRODataset(FDataSet).Connection <> nil) then
-      FConnection := TZAbstractRODataset(FDataSet).Connection
+    if (FDataSet <> nil) and (TZProtectedAbstractRODataset(FDataSet).Connection <> nil) then
+      FConnection := TZProtectedAbstractRODataset(FDataSet).Connection
     else if Owner <> nil then
       if Owner.InheritsFrom(TZParams) then begin
         Owner := (Owner as TZParams).GetOwner;
         goto jmpOwner
       end else if Owner.InheritsFrom(TZAbstractRODataset) then
-        TZAbstractConnection(fConnection) := (Owner as TZAbstractRODataset).Connection
+        TZAbstractConnection(fConnection) := TZProtectedAbstractRODataset(Owner as TZAbstractRODataset).Connection
       else if Owner.InheritsFrom(TZUpdateSQL) then begin
         with Owner as TZUpdateSQL do
           if (Dataset <> nil) then
-            TZAbstractConnection(fConnection) := (Dataset as TZAbstractRODataset).Connection;
+            TZAbstractConnection(fConnection) := TZProtectedAbstractRODataset(Dataset as TZAbstractRODataset).Connection;
       end else if Owner.InheritsFrom(TZSQLProcessor) then
         TZAbstractConnection(fConnection) := (Owner as TZSQLProcessor).Connection;
   end;
@@ -4364,10 +4354,10 @@ begin
   inherited Create(TZParam);
   if (FOwner <> nil) then
     if FOwner.InheritsFrom(TZAbstractRODataset) then
-      TZAbstractConnection(fConnection) := (FOwner as TZAbstractRODataset).Connection
+      TZAbstractConnection(fConnection) := TZProtectedAbstractRODataset(FOwner as TZAbstractRODataset).Connection
     else if FOwner.InheritsFrom(TZUpdateSQL) then with (FOwner as TZUpdateSQL) do begin
       if DataSet <> nil then
-        TZAbstractConnection(fConnection) := (DataSet as TZAbstractRODataset).Connection
+        TZAbstractConnection(fConnection) := TZProtectedAbstractRODataset(DataSet as TZAbstractRODataset).Connection
     end else if FOwner.InheritsFrom(TZSQLProcessor) then
       TZAbstractConnection(fConnection) := (FOwner as TZSQLProcessor).Connection;
 end;

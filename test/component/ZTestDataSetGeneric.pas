@@ -57,7 +57,7 @@ interface
 uses
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
   ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility, ZVariant,
-  ZAbstractRODataset, ZMessages, ZStoredProcedure
+  ZAbstractRODataset, ZMessages, ZStoredProcedure, ZMemTable
   {$IFNDEF DISABLE_ZPARAM}{$IFNDEF FPC}, Types{$ENDIF}, ZDbcUtils{$ENDIF};
 
 type
@@ -164,6 +164,24 @@ type
     procedure TestBatchDMLArrayBindings;
   end;
   {$ENDIF DISABLE_ZPARAM}
+
+  TZAbstractTestMemTable = class(TZAbstractCompSQLTestCase)
+  protected
+    function CreateTable: TZMemTable;
+    class function GetWithConnection: Boolean; virtual; abstract;
+  published
+    procedure Test_aehimself_1;
+  end;
+
+  TZTestMemTableWithConnection = class(TZAbstractTestMemTable)
+  protected
+    class function GetWithConnection: Boolean; override;
+  end;
+
+  TZTestMemTableWithoutConnection = class(TZAbstractTestMemTable)
+  protected
+    class function GetWithConnection: Boolean; override;
+  end;
 
 implementation
 
@@ -3356,8 +3374,51 @@ begin
 end;
 
 {$ENDIF DISABLE_ZPARAM}
+{ TZAbstractTestMemTable }
+
+function TZAbstractTestMemTable.CreateTable: TZMemTable;
+begin
+  Result := TZMemTable.Create(nil);
+  if GetWithConnection then
+    Result.Connection := Connection;
+end;
+
+procedure TZAbstractTestMemTable.Test_aehimself_1;
+var Table: TZMemTable;
+  FieldDef: TFieldDef;
+begin
+  Table := CreateTable;
+  try
+    Table.FieldDefs.Add('MyField', ftString);
+    Table.FieldDefs.Add('MyFieldWithSize', ftString, 20);
+    Table.Open;
+    Table.Append;
+    Table.FieldByName('MyField').AsString := 'Hello, world!';
+    Table.FieldByName('MyFieldWithSize').AsString := 'Hello, world!';
+    Table.Post;
+  finally
+    FreeAndNil(Table);
+  end;
+end;
+
+{ TZTestMemTableWithConnection }
+
+class function TZTestMemTableWithConnection.GetWithConnection: Boolean;
+begin
+  Result := True;
+end;
+
+{ TZTestMemTableWithoutConnection }
+
+class function TZTestMemTableWithoutConnection.GetWithConnection: Boolean;
+begin
+  Result := False;
+end;
+
 initialization
   RegisterTest('component',TZGenericTestDataSet.Suite);
+  RegisterTest('component',TZTestMemTableWithConnection.Suite);
+  RegisterTest('component',TZTestMemTableWithoutConnection.Suite);
   {$IF defined(ENABLE_INTERBASE) or defined(ENABLE_FIREBIRD)}
   RegisterTest('component',TZInterbaseTestGUIDS.Suite);
   {$IFEND}

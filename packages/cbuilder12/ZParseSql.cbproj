@@ -6,7 +6,7 @@
 			<Config Condition="'$(Config)'==''">Debug</Config>
 			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>
-		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
+		<PropertyGroup Condition="'$(Config)'=='Basis' or '$(Base)'!=''">
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_1)'!=''">
@@ -20,6 +20,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DesignOnlyPackage>false</DesignOnlyPackage>
 			<LinkPackageImports>rtl.bpi</LinkPackageImports>
 			<RuntimeOnlyPackage>true</RuntimeOnlyPackage>
 			<IncludePath>..\..\src\parsesql;$(IncludePath)</IncludePath>
@@ -82,53 +83,48 @@
 			<BCC_InlineFunctionExpansion>true</BCC_InlineFunctionExpansion>
 		</PropertyGroup>
 		<ItemGroup>
-			<DelphiCompile Include="..\..\src\parsesql\ZSelectSchema.pas">
-				<BuildOrder>41</BuildOrder>
-				<BuildOrder>0</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\parsesql\ZSybaseAnalyser.pas">
-				<BuildOrder>44</BuildOrder>
-				<BuildOrder>1</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\parsesql\ZScriptParser.pas">
-				<BuildOrder>38</BuildOrder>
-				<BuildOrder>2</BuildOrder>
-			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\parsesql\ZPostgreSqlAnalyser.pas">
-				<BuildOrder>32</BuildOrder>
-				<BuildOrder>3</BuildOrder>
+				<BuildOrder>15</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\parsesql\ZPostgreSqlToken.pas">
-				<BuildOrder>35</BuildOrder>
-				<BuildOrder>4</BuildOrder>
+				<BuildOrder>16</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\parsesql\ZOracleToken.pas">
-				<BuildOrder>56</BuildOrder>
-				<BuildOrder>5</BuildOrder>
+				<BuildOrder>14</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\parsesql\ZSqLiteAnalyser.pas">
-				<BuildOrder>59</BuildOrder>
-				<BuildOrder>6</BuildOrder>
+			<DelphiCompile Include="..\..\src\parsesql\ZOleDBToken.pas">
+				<BuildOrder>12</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\parsesql\ZOracleAnalyser.pas">
-				<BuildOrder>53</BuildOrder>
-				<BuildOrder>7</BuildOrder>
+				<BuildOrder>13</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\parsesql\ZScriptParser.pas">
+				<BuildOrder>17</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\parsesql\ZSybaseAnalyser.pas">
+				<BuildOrder>21</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\parsesql\ZSybaseToken.pas">
-				<BuildOrder>47</BuildOrder>
-				<BuildOrder>8</BuildOrder>
+				<BuildOrder>22</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\parsesql\ZSqLiteToken.pas">
-				<BuildOrder>50</BuildOrder>
-				<BuildOrder>9</BuildOrder>
+				<BuildOrder>20</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\parsesql\ZSelectSchema.pas">
+				<BuildOrder>18</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\parsesql\ZSqLiteAnalyser.pas">
+				<BuildOrder>19</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\parsesql\ZODBCToken.pas">
+				<BuildOrder>11</BuildOrder>
 			</DelphiCompile>
 			<PackageImport Include="rtl.bpi">
 				<BuildOrder>11</BuildOrder>
 				<BuildOrder>10</BuildOrder>
 			</PackageImport>
-			<DelphiCompile Include="..\..\src\parsesql\ZGenericSqlAnalyser.pas">
-				<BuildOrder>14</BuildOrder>
-				<BuildOrder>11</BuildOrder>
+			<DelphiCompile Include="..\..\src\parsesql\ZAdoToken.pas">
+				<BuildOrder>4</BuildOrder>
 			</DelphiCompile>
 			<PackageImport Include="ZCore.bpi">
 				<BuildOrder>8</BuildOrder>
@@ -142,27 +138,25 @@
 				<BuildOrder>5</BuildOrder>
 				<BuildOrder>14</BuildOrder>
 			</ResFiles>
+			<DelphiCompile Include="..\..\src\parsesql\ZGenericSqlAnalyser.pas">
+				<BuildOrder>5</BuildOrder>
+			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\parsesql\ZMySqlAnalyser.pas">
-				<BuildOrder>26</BuildOrder>
-				<BuildOrder>15</BuildOrder>
+				<BuildOrder>9</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\parsesql\ZMySqlToken.pas">
-				<BuildOrder>29</BuildOrder>
-				<BuildOrder>16</BuildOrder>
+				<BuildOrder>10</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\parsesql\ZInterbaseToken.pas">
-				<BuildOrder>23</BuildOrder>
-				<BuildOrder>17</BuildOrder>
+				<BuildOrder>8</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\parsesql\ZGenericSqlToken.pas">
-				<BuildOrder>17</BuildOrder>
-				<BuildOrder>18</BuildOrder>
+				<BuildOrder>6</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\parsesql\ZInterbaseAnalyser.pas">
-				<BuildOrder>20</BuildOrder>
-				<BuildOrder>19</BuildOrder>
+				<BuildOrder>7</BuildOrder>
 			</DelphiCompile>
-			<BuildConfiguration Include="Base">
+			<BuildConfiguration Include="Basis">
 				<Key>Base</Key>
 			</BuildConfiguration>
 			<BuildConfiguration Include="Release">
@@ -183,7 +177,7 @@
 					<VersionInfo>
 						<VersionInfo Name="IncludeVerInfo">True</VersionInfo>
 						<VersionInfo Name="AutoIncBuild">False</VersionInfo>
-						<VersionInfo Name="MajorVer">7</VersionInfo>
+						<VersionInfo Name="MajorVer">1</VersionInfo>
 						<VersionInfo Name="MinorVer">0</VersionInfo>
 						<VersionInfo Name="Release">0</VersionInfo>
 						<VersionInfo Name="Build">0</VersionInfo>
@@ -204,7 +198,7 @@
 						<VersionInfoKeys Name="LegalTrademarks"/>
 						<VersionInfoKeys Name="OriginalFilename"/>
 						<VersionInfoKeys Name="ProductName"/>
-						<VersionInfoKeys Name="ProductVersion">7.0.0.0</VersionInfoKeys>
+						<VersionInfoKeys Name="ProductVersion">8.0.0.0</VersionInfoKeys>
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
 					<Debugging>

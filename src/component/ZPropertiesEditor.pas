@@ -198,7 +198,7 @@ implementation
 
 uses TypInfo, Types,
   ZSysUtils, ZCompatibility,
-  ZAbstractRODataset, ZAbstractDataset, ZAbstractConnection
+  ZAbstractRODataset, ZAbstractDataset, ZAbstractConnection, ZTransaction
   {$IFDEF ENABLE_MYSQL},ZPlainMySqlDriver{$ENDIF};
 
 {$IFNDEF FPC}
@@ -308,6 +308,8 @@ begin
   end;
 end;
 
+Type
+  TZProtectedAbstractRODataSet = Class(TZAbstractRODataSet);
 { TZProperitesEditor }
 
 procedure TZProperitesEditor.Edit;
@@ -331,16 +333,16 @@ jmpProtocol:
         Component := TZAbstractTransaction(Component).Connection;
         goto jmpProtocol;
       end;
-    end else if Component.InheritsFrom(TZAbstractDataset) then begin
+    end else if Component.InheritsFrom(TZAbstractRWTxnUpdateObjDataSet) then begin
       FZPropertyLevelTypes := [pltStatement, pltResolver];
-      if TZAbstractRODataSet(Component).Connection <> nil then begin
-        Component := TZAbstractRODataSet(Component).Connection;
+      if TZProtectedAbstractRODataSet(Component).Connection <> nil then begin
+        Component := TZProtectedAbstractRODataSet(Component).Connection;
         goto jmpProtocol;
       end;
     end else if Component.InheritsFrom(TZAbstractRODataSet) then begin
       FZPropertyLevelTypes := [pltStatement];
-      if TZAbstractRODataSet(Component).Connection <> nil then begin
-        Component := TZAbstractRODataSet(Component).Connection;
+      if TZProtectedAbstractRODataSet(Component).Connection <> nil then begin
+        Component := TZProtectedAbstractRODataSet(Component).Connection;
         goto jmpProtocol;
       end;
     end else Exit;

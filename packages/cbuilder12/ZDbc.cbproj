@@ -6,7 +6,7 @@
 			<Config Condition="'$(Config)'==''">Debug</Config>
 			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>
-		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
+		<PropertyGroup Condition="'$(Config)'=='Basis' or '$(Base)'!=''">
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Debug' or '$(Cfg_1)'!=''">
@@ -20,6 +20,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DesignOnlyPackage>false</DesignOnlyPackage>
 			<LinkPackageImports>rtl.bpi</LinkPackageImports>
 			<RuntimeOnlyPackage>true</RuntimeOnlyPackage>
 			<IncludePath>..\..\src\dbc;$(IncludePath)</IncludePath>
@@ -34,7 +35,7 @@
 			<DCC_UnitSearchPath>.\;$(BDS)\lib;$(BDS)\lib\obj;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_IncludePath>.\;$(BDS)\lib;$(BDS)\lib\obj;$(DCC_IncludePath)</DCC_IncludePath>
 			<BRCC_OutputDir>build\</BRCC_OutputDir>
-			<BRCC_IncludePath>..\..\src\dbc;$(BDS)\include;$(BDS)\include\vcl;build;$(BDS)\include\dinkumware;$(BRCC_IncludePath)</BRCC_IncludePath>
+			<BRCC_IncludePath>..\..\src\dbc;$(BDS)\include;build;$(BDS)\include\dinkumware;$(BRCC_IncludePath)</BRCC_IncludePath>
 			<ILINK_GenerateLibFile>true</ILINK_GenerateLibFile>
 			<BCC_SourceDebuggingOn>true</BCC_SourceDebuggingOn>
 			<BRCC_UserSuppliedOptions> -I..\..\src\dbc;$(BDS)\include;$(BDS)\include\vcl;build;$(BDS)\include\dinkumware</BRCC_UserSuppliedOptions>
@@ -82,243 +83,248 @@
 			<BCC_InlineFunctionExpansion>true</BCC_InlineFunctionExpansion>
 		</PropertyGroup>
 		<ItemGroup>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcAdoResultSet.pas">
-				<BuildOrder>119</BuildOrder>
-				<BuildOrder>0</BuildOrder>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcOleDBStatement.pas">
+				<BuildOrder>51</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcAdoMetadata.pas">
-				<BuildOrder>116</BuildOrder>
-				<BuildOrder>1</BuildOrder>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcOleDBUtils.pas">
+				<BuildOrder>52</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcAdo.pas">
-				<BuildOrder>113</BuildOrder>
-				<BuildOrder>2</BuildOrder>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcOleDBMetadata.pas">
+				<BuildOrder>49</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcAdoStatement.pas">
-				<BuildOrder>122</BuildOrder>
-				<BuildOrder>3</BuildOrder>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcOleDBResultSet.pas">
+				<BuildOrder>50</BuildOrder>
 			</DelphiCompile>
-			<PackageImport Include="dbrtl.bpi">
-				<BuildOrder>131</BuildOrder>
-				<BuildOrder>4</BuildOrder>
-			</PackageImport>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcLogging.pas">
-				<BuildOrder>128</BuildOrder>
-				<BuildOrder>5</BuildOrder>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcOracle.pas">
+				<BuildOrder>53</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcAdoUtils.pas">
-				<BuildOrder>125</BuildOrder>
-				<BuildOrder>6</BuildOrder>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcOracleStatement.pas">
+				<BuildOrder>56</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcCache.pas">
-				<BuildOrder>98</BuildOrder>
-				<BuildOrder>7</BuildOrder>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcOracleUtils.pas">
+				<BuildOrder>57</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcOracleMetadata.pas">
+				<BuildOrder>54</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcOracleResultSet.pas">
+				<BuildOrder>55</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcOleDB.pas">
+				<BuildOrder>48</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcMySqlStatement.pas">
+				<BuildOrder>41</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcMySqlUtils.pas">
+				<BuildOrder>42</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcMySqlMetadata.pas">
+				<BuildOrder>39</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcMySqlResultSet.pas">
+				<BuildOrder>40</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcODBCCon.pas">
+				<BuildOrder>43</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcODBCStatement.pas">
+				<BuildOrder>46</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcODBCUtils.pas">
+				<BuildOrder>47</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcODBCMetadata.pas">
+				<BuildOrder>44</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcODBCResultSet.pas">
+				<BuildOrder>45</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcPooled.pas">
+				<BuildOrder>58</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcSqLite.pas">
+				<BuildOrder>71</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcSqLiteMetadata.pas">
+				<BuildOrder>72</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcSQLAnywhereStatement.pas">
+				<BuildOrder>69</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcSQLAnywhereUtils.pas">
+				<BuildOrder>70</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcSqLiteResultSet.pas">
+				<BuildOrder>73</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\dbc\ZDbcStatement.pas">
-				<BuildOrder>95</BuildOrder>
-				<BuildOrder>8</BuildOrder>
+				<BuildOrder>76</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcUtils.pas">
+				<BuildOrder>77</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcSqLiteStatement.pas">
+				<BuildOrder>74</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcSqLiteUtils.pas">
+				<BuildOrder>75</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcSQLAnywhereResultSet.pas">
+				<BuildOrder>68</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcPostgreSqlResultSet.pas">
+				<BuildOrder>61</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcPostgreSqlStatement.pas">
+				<BuildOrder>62</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcPostgreSql.pas">
+				<BuildOrder>59</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcPostgreSqlMetadata.pas">
+				<BuildOrder>60</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcPostgreSqlUtils.pas">
+				<BuildOrder>63</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\dbc\ZDbcResultSetMetadata.pas">
-				<BuildOrder>92</BuildOrder>
+				<BuildOrder>66</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcSQLAnywhere.pas">
+				<BuildOrder>67</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcProperties.pas">
+				<BuildOrder>64</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcResultSet.pas">
+				<BuildOrder>65</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcASA.pas">
+				<BuildOrder>12</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcASAMetadata.pas">
+				<BuildOrder>13</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcAdoStatement.pas">
+				<BuildOrder>10</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcAdoUtils.pas">
+				<BuildOrder>11</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcASAResultSet.pas">
+				<BuildOrder>14</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcCache.pas">
+				<BuildOrder>17</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcCachedResultSet.pas">
+				<BuildOrder>18</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcASAStatement.pas">
+				<BuildOrder>15</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcASAUtils.pas">
+				<BuildOrder>16</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcAdoResultSet.pas">
 				<BuildOrder>9</BuildOrder>
 			</DelphiCompile>
 			<PackageImport Include="ZPlain.bpi">
 				<BuildOrder>101</BuildOrder>
 				<BuildOrder>10</BuildOrder>
 			</PackageImport>
-			<PackageImport Include="rtl.bpi">
-				<BuildOrder>110</BuildOrder>
-				<BuildOrder>11</BuildOrder>
-			</PackageImport>
-			<PackageImport Include="ZCore.bpi">
-				<BuildOrder>107</BuildOrder>
-				<BuildOrder>12</BuildOrder>
-			</PackageImport>
 			<PackageImport Include="ZParseSql.bpi">
-				<BuildOrder>104</BuildOrder>
 				<BuildOrder>13</BuildOrder>
+				<BuildOrder>104</BuildOrder>
 			</PackageImport>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcSqLiteUtils.pas">
-				<BuildOrder>134</BuildOrder>
-				<BuildOrder>14</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcASA.pas">
-				<BuildOrder>164</BuildOrder>
-				<BuildOrder>15</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcSqLiteStatement.pas">
-				<BuildOrder>161</BuildOrder>
-				<BuildOrder>16</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcSqLiteResultSet.pas">
-				<BuildOrder>158</BuildOrder>
-				<BuildOrder>17</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcASAUtils.pas">
-				<BuildOrder>167</BuildOrder>
-				<BuildOrder>18</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcASAMetadata.pas">
-				<BuildOrder>176</BuildOrder>
-				<BuildOrder>19</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcASAStatement.pas">
-				<BuildOrder>173</BuildOrder>
-				<BuildOrder>20</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcASAResultSet.pas">
-				<BuildOrder>170</BuildOrder>
-				<BuildOrder>21</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcOracleResultSet.pas">
-				<BuildOrder>143</BuildOrder>
-				<BuildOrder>22</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcOracleMetadata.pas">
-				<BuildOrder>140</BuildOrder>
-				<BuildOrder>23</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcOracle.pas">
-				<BuildOrder>137</BuildOrder>
-				<BuildOrder>24</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcOracleStatement.pas">
-				<BuildOrder>146</BuildOrder>
-				<BuildOrder>25</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcSqLiteMetadata.pas">
-				<BuildOrder>155</BuildOrder>
-				<BuildOrder>26</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcSqLite.pas">
-				<BuildOrder>152</BuildOrder>
-				<BuildOrder>27</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcOracleUtils.pas">
-				<BuildOrder>149</BuildOrder>
-				<BuildOrder>28</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcResultSet.pas">
-				<BuildOrder>89</BuildOrder>
-				<BuildOrder>29</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcDbLibStatement.pas">
-				<BuildOrder>26</BuildOrder>
-				<BuildOrder>31</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcDbLibResultSet.pas">
-				<BuildOrder>23</BuildOrder>
-				<BuildOrder>32</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcDbLibUtils.pas">
-				<BuildOrder>32</BuildOrder>
-				<BuildOrder>33</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcInterbase6Metadata.pas">
-				<BuildOrder>41</BuildOrder>
-				<BuildOrder>34</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcInterbase6.pas">
-				<BuildOrder>38</BuildOrder>
-				<BuildOrder>35</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcGenericResolver.pas">
-				<BuildOrder>35</BuildOrder>
-				<BuildOrder>36</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcUtils.pas">
-				<BuildOrder>8</BuildOrder>
-				<BuildOrder>37</BuildOrder>
-			</DelphiCompile>
+			<CppCompile Include="ZDbc.cpp">
+				<BuildOrder>39</BuildOrder>
+				<BuildOrder>2</BuildOrder>
+			</CppCompile>
 			<ResFiles Include="ZDbc.res">
 				<BuildOrder>5</BuildOrder>
 				<BuildOrder>38</BuildOrder>
 			</ResFiles>
-			<CppCompile Include="ZDbc.cpp">
-				<BuildOrder>2</BuildOrder>
-				<BuildOrder>39</BuildOrder>
-			</CppCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcCachedResultSet.pas">
+			<PackageImport Include="ZCore.bpi">
+				<BuildOrder>12</BuildOrder>
+				<BuildOrder>107</BuildOrder>
+			</PackageImport>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcAdo.pas">
+				<BuildOrder>7</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcAdoMetadata.pas">
+				<BuildOrder>8</BuildOrder>
+			</DelphiCompile>
+			<PackageImport Include="rtl.bpi">
+				<BuildOrder>110</BuildOrder>
 				<BuildOrder>11</BuildOrder>
-				<BuildOrder>40</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcDbLibMetadata.pas">
-				<BuildOrder>20</BuildOrder>
-				<BuildOrder>41</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcDbLib.pas">
-				<BuildOrder>17</BuildOrder>
-				<BuildOrder>42</BuildOrder>
-			</DelphiCompile>
+			</PackageImport>
+			<PackageImport Include="dbrtl.bpi">
+				<BuildOrder>4</BuildOrder>
+				<BuildOrder>131</BuildOrder>
+			</PackageImport>
 			<DelphiCompile Include="..\..\src\dbc\ZDbcConnection.pas">
-				<BuildOrder>14</BuildOrder>
-				<BuildOrder>43</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcInterbase6ResultSet.pas">
-				<BuildOrder>44</BuildOrder>
-				<BuildOrder>44</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcPostgreSql.pas">
-				<BuildOrder>74</BuildOrder>
-				<BuildOrder>45</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcMySqlUtils.pas">
-				<BuildOrder>71</BuildOrder>
-				<BuildOrder>46</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcMySqlStatement.pas">
-				<BuildOrder>68</BuildOrder>
-				<BuildOrder>47</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcPostgreSqlMetadata.pas">
-				<BuildOrder>77</BuildOrder>
-				<BuildOrder>48</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcPostgreSqlUtils.pas">
-				<BuildOrder>86</BuildOrder>
-				<BuildOrder>49</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcPostgreSqlStatement.pas">
-				<BuildOrder>83</BuildOrder>
-				<BuildOrder>50</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcPostgreSqlResultSet.pas">
-				<BuildOrder>80</BuildOrder>
-				<BuildOrder>51</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcIntfs.pas">
-				<BuildOrder>53</BuildOrder>
-				<BuildOrder>52</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcInterbase6Utils.pas">
-				<BuildOrder>50</BuildOrder>
-				<BuildOrder>53</BuildOrder>
+				<BuildOrder>19</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\dbc\ZDbcInterbase6Statement.pas">
-				<BuildOrder>47</BuildOrder>
-				<BuildOrder>54</BuildOrder>
+				<BuildOrder>32</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcInterbase6Utils.pas">
+				<BuildOrder>33</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcInterbase6.pas">
+				<BuildOrder>30</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcInterbase6ResultSet.pas">
+				<BuildOrder>31</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcInterbaseFirebirdMetadata.pas">
+				<BuildOrder>34</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\dbc\ZDbcMetadata.pas">
-				<BuildOrder>56</BuildOrder>
-				<BuildOrder>55</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcMySqlResultSet.pas">
-				<BuildOrder>65</BuildOrder>
-				<BuildOrder>56</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcMySqlMetadata.pas">
-				<BuildOrder>62</BuildOrder>
-				<BuildOrder>57</BuildOrder>
+				<BuildOrder>37</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\dbc\ZDbcMySql.pas">
-				<BuildOrder>59</BuildOrder>
-				<BuildOrder>58</BuildOrder>
+				<BuildOrder>38</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\dbc\ZDbcPooled.pas">
-				<BuildOrder>59</BuildOrder>
-				<BuildOrder>59</BuildOrder>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcIntfs.pas">
+				<BuildOrder>35</BuildOrder>
 			</DelphiCompile>
-			<BuildConfiguration Include="Base">
+			<DelphiCompile Include="..\..\src\dbc\ZDbcLogging.pas">
+				<BuildOrder>36</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcGenericResolver.pas">
+				<BuildOrder>29</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcDbLibResultSet.pas">
+				<BuildOrder>22</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcDbLibStatement.pas">
+				<BuildOrder>23</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcDbLib.pas">
+				<BuildOrder>20</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcDbLibMetadata.pas">
+				<BuildOrder>21</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcDbLibUtils.pas">
+				<BuildOrder>24</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcFirebirdResultSet.pas">
+				<BuildOrder>27</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcFirebirdStatement.pas">
+				<BuildOrder>28</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcFirebird.pas">
+				<BuildOrder>25</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\dbc\ZDbcFirebirdInterbase.pas">
+				<BuildOrder>26</BuildOrder>
+			</DelphiCompile>
+			<BuildConfiguration Include="Basis">
 				<Key>Base</Key>
 			</BuildConfiguration>
 			<BuildConfiguration Include="Release">
@@ -339,7 +345,7 @@
 					<VersionInfo>
 						<VersionInfo Name="IncludeVerInfo">True</VersionInfo>
 						<VersionInfo Name="AutoIncBuild">False</VersionInfo>
-						<VersionInfo Name="MajorVer">7</VersionInfo>
+						<VersionInfo Name="MajorVer">1</VersionInfo>
 						<VersionInfo Name="MinorVer">0</VersionInfo>
 						<VersionInfo Name="Release">0</VersionInfo>
 						<VersionInfo Name="Build">0</VersionInfo>
@@ -360,7 +366,7 @@
 						<VersionInfoKeys Name="LegalTrademarks"/>
 						<VersionInfoKeys Name="OriginalFilename"/>
 						<VersionInfoKeys Name="ProductName"/>
-						<VersionInfoKeys Name="ProductVersion">7.0.0.0</VersionInfoKeys>
+						<VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys>
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
 					<Debugging>

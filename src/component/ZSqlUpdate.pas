@@ -271,8 +271,8 @@ begin
   FRefreshSQL.Free;
   {keep track we notify a possible opened DataSet.CachedResultSet about destruction
    else IntfAssign of FPC fails to clear the cached resolver of the CachedResultSet}
-  if Assigned(FDataSet) and (FDataSet is TZAbstractDataset) then
-    TZAbstractDataset(DataSet).UpdateObject := nil;
+  if Assigned(FDataSet) and (FDataSet is TZAbstractRWTxnUpdateObjDataSet) then
+    TZAbstractRWTxnUpdateObjDataSet(DataSet).UpdateObject := nil;
   inherited Destroy;
 end;
 
@@ -302,11 +302,13 @@ begin
   end;
 end;
 
+type TZProtectedAbstractRODataset = Class(TZAbstractRODataset);
+
 function TZUpdateSQL.HasAutoCommitTransaction: Boolean;
 begin
   if (FTransaction <> nil)
   then Result := FTransaction.GetAutoCommit
-  else Result := TZAbstractRODataset(Dataset).Connection.AutoCommit;
+  else Result := TZProtectedAbstractRODataset(Dataset).Connection.AutoCommit;
 end;
 
 {**
@@ -811,6 +813,8 @@ begin
  {END PATCH [1214009] TZUpdateSQL - implemented feature to Calculate default values}
 end;
 
+type
+  TZProtectedAbstractRWTxnUpdateObjDataSet = Class(TZAbstractRWTxnUpdateObjDataSet);
 {**
   Posts updates to database.
   @param Sender a cached result set object.
@@ -831,6 +835,7 @@ var
   Tmp:String;
   lValidateUpdateCount : Boolean;
   lUpdateCount : Integer;
+  ADataSet: TZAbstractRWTxnUpdateObjDataSet;
 
   function SomethingChanged: Boolean;
   var I, J: Integer;
@@ -879,18 +884,13 @@ begin
       DoBeforeModifySQL;
     {$IFDEF WITH_CASE_WARNING}else;{$ENDIF}// do nothing
   end;
-
-  if (Dataset is TZAbstractRODataset) then
-    (Dataset as TZAbstractRODataset).Connection.ShowSqlHourGlass;
-  if (Dataset is TZAbstractDataset) then
-    CalcDefaultValues := doCalcDefaults in (Dataset as TZAbstractDataset).Options
-  else CalcDefaultValues := False;
-    //(Dataset as TZAbstractRODataset). ZSysUtils.StrToBoolEx(DefineStatementParameter(Sender.GetStatement, DSProps_Defaults, 'true'));
+  ADataSet := DataSet as TZAbstractRWTxnUpdateObjDataSet;
+  TZProtectedAbstractRWTxnUpdateObjDataSet(ADataSet).Connection.ShowSqlHourGlass;
+  CalcDefaultValues := doCalcDefaults in ADataSet.Options;
   try
     OrigStmt := Sender.GetStatement;
     if not Assigned(OrigStmt) then
-      if DataSet is TZAbstractDataset then
-        OrigStmt := (DataSet as TZAbstractDataset).DbcStatement;
+      OrigStmt := ADataSet.DbcStatement;
     if not Assigned(OrigStmt) then
       raise Exception.Create('Could not determine a valid statement!');
     for I := 0 to Config.StatementCount - 1 do begin
@@ -949,13 +949,13 @@ begin
           try
             Config:=FRefreshSQL;
             if (UpdateType = utInserted) then
-              if (Dataset is TZAbstractDataset) then
+              if (Dataset is TZAbstractRWTxnUpdateObjDataSet) then
                 if FUseSequenceFieldForRefreshSQL then
-                  if (TZAbstractDataset(DataSet).Sequence <> nil) and
-                     (TZAbstractDataset(DataSet).SequenceField<>'') then
+                  if (TZProtectedAbstractRWTxnUpdateObjDataSet(DataSet).Sequence <> nil) and
+                     (TZProtectedAbstractRWTxnUpdateObjDataSet(DataSet).SequenceField<>'') then
                     Config.Text := StringReplace(UpperCase(Config.Text),
-                      ':OLD_'+UpperCase(TZAbstractDataset(DataSet).SequenceField),
-                      TZAbstractDataset(DataSet).Sequence.GetCurrentValueSQL,[rfReplaceAll]);
+                      ':OLD_'+UpperCase(TZProtectedAbstractRWTxnUpdateObjDataSet(DataSet).SequenceField),
+                      TZProtectedAbstractRWTxnUpdateObjDataSet(DataSet).Sequence.GetCurrentValueSQL,[rfReplaceAll]);
             if CONFIG.StatementCount = 1 then begin
               if (FRefreshStmt = nil) or FRefreshStmt.IsClosed
               then Statement := Sender.GetStatement.GetConnection.PrepareStatement(Config.Statements[0].SQL)
@@ -973,8 +973,7 @@ begin
 //FOSPATCH
 
   finally
-    if Dataset is TZAbstractRODataset then
-      (Dataset as TZAbstractRODataset).Connection.HideSQLHourGlass;
+    TZProtectedAbstractRWTxnUpdateObjDataSet(ADataSet).Connection.HideSQLHourGlass;
   end;
 
   case UpdateType of

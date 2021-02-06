@@ -492,7 +492,7 @@ type
 
 implementation
 
-uses ZFastCode, ZSysUtils, ZDatasetUtils;
+uses ZFastCode, ZSysUtils;
 
 function FindFirstFormatDelimiter(const Format: String; out Delimiter: Char): Boolean;
 var P, PEnd: PChar;

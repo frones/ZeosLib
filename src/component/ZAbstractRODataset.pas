@@ -58,6 +58,8 @@
   Mark Ford
   Mark Deams
   Patyi
+  pawelsel
+  and many others...
 }
 
 unit ZAbstractRODataset;
@@ -76,7 +78,7 @@ uses
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   ZSysUtils, ZCompatibility, ZExpression, ZClasses,
   ZDbcIntfs, ZDbcCache, ZDbcCachedResultSet,
-  ZAbstractConnection, ZDatasetUtils, ZSqlStrings, ZFormatSettings
+  ZAbstractConnection, ZDatasetUtils, ZSqlStrings, ZFormatSettings, ZTransaction
   {$IFNDEF DISABLE_ZPARAM},ZDatasetParam{$ENDIF};
 
 type
@@ -175,7 +177,6 @@ type
     FShowRecordTypes: TUpdateStatusSet;
     FOptions: TZDatasetOptions;
     FProperties: TStrings;
-    FConnection: TZAbstractConnection;
     FStatement: IZPreparedStatement;
     FResultSet: IZResultSet;
     FResultSetMetadata: IZResultSetMetadata;
@@ -268,7 +269,6 @@ type
     {$ENDIF DISABLE_ZPARAM}
     function GetShowRecordTypes: TUpdateStatusSet;
     procedure SetShowRecordTypes(Value: TUpdateStatusSet);
-    procedure SetConnection(Value: TZAbstractConnection);
     procedure SetDataSource(Value: TDataSource);
     function GetMasterFields: string;
     procedure SetMasterFields(const Value: string);
@@ -295,7 +295,13 @@ type
     function  GetUniDirectional: boolean;
     procedure SetProperties(const Value: TStrings); virtual;
   protected
+    FControlsCodePage: TZControlsCodePage;
+    FConnection: TZAbstractConnection;
     FTransaction: TZAbstractTransaction;
+    FConSettings: PZConSettings;
+    /// <summary>Sets database connection object.</summary>
+    /// <param>"Value" a database connection object.</param>
+    procedure SetConnection(Value: TZAbstractConnection); virtual;
     procedure CheckOpened;
     procedure CheckConnected; virtual;
     procedure CheckBiDirectional;
@@ -316,7 +322,7 @@ type
     procedure RetrieveParamValues;
     function GetDataSource: TDataSource; override;
     procedure Prepare4DataManipulation(Field: TField);
-    procedure SetTransaction(Value: TZAbstractTransaction);
+    procedure SetTransaction(Value: TZAbstractTransaction); virtual;
   protected { Internal protected properties. }
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; virtual;
@@ -568,6 +574,9 @@ type
     {$ENDIF}
     procedure Prepare;
     procedure Unprepare;
+  protected
+    property Transaction: TZAbstractTransaction read FTransaction
+      write SetTransaction;
   public
     property Active;
     property Prepared: Boolean read FPrepared write SetPrepared;
@@ -584,9 +593,6 @@ type
     property DataSetField: TDataSetField read FDataSetField write SetDataSetField;
     {$ENDIF}
     property LastRowFetched: Boolean read FLastRowFetched;
-    property Transaction: TZAbstractTransaction read FTransaction
-      write SetTransaction;
-    property Connection: TZAbstractConnection read FConnection write SetConnection;
   published
     property SortedFields: string read FSortedFields write SetSortedFields;
     property SortType : TSortType read FSortType write SetSortType
@@ -607,6 +613,7 @@ type
     property OnFilterRecord;
     property Filter;
     property Filtered;
+    property Connection: TZAbstractConnection read FConnection write SetConnection;
   public
     function NextResultSet: Boolean; virtual;
     function NextRecordSet: Boolean;
@@ -1646,10 +1653,6 @@ begin
   inherited Destroy;
 end;
 
-{**
-  Sets database connection object.
-  @param Value a database connection object.
-}
 procedure TZAbstractRODataset.SetConnection(Value: TZAbstractConnection);
 begin
   if FConnection <> Value then begin
@@ -1657,12 +1660,12 @@ begin
        Close;
     Unprepare;
     if FConnection <> nil then
-      FConnection.UnregisterDataSet(Self);
+      FConnection.UnregisterComponent(Self);
     FConnection := Value;
     if FConnection = nil then
       FFormatSettings.SetParent(nil)
     else begin
-      FConnection.RegisterDataSet(Self);
+      FConnection.RegisterComponent(Self);
       FFormatSettings.SetParent(FConnection.FormatSettings);
       if (FSQL.Count > 0) and PSIsSQLBased{do not rebuild all!} then begin
       {EH: force rebuild all of the SQLStrings ->
@@ -1729,11 +1732,11 @@ begin
     if (FTransaction <> nil) then begin
       if (Statement <> nil) and (THackTransaction(FTransaction).GetIZTransaction.GetConnection <> Statement.GetConnection) then
         Statement.Close;
-      FTransaction.UnregisterDataSet(Self);
+      FTransaction.UnregisterComponent(Self);
     end;
     FTransaction := Value;
     if FTransaction <> nil then begin
-      FTransaction.RegisterDataSet(Self);
+      FTransaction.RegisterComponent(Self);
     end;
   end;
 end;
@@ -2662,7 +2665,7 @@ begin
           ftString: begin
               ColumnCP := FResultSetMetadata.GetColumnCodePage(ColumnIndex);
               if ((ColumnCP = zCP_UTF16) or TStringField(Field).Transliterate) or (FCharEncoding = ceUTF16) then begin
-                FieldCP  := GetTransliterateCodePage(Connection.ControlsCodePage);
+                FieldCP  := GetTransliterateCodePage(FControlsCodePage);
                 P := FResultSet.GetPWideChar(ColumnIndex, blen);
                 Result := P <> nil;
                 if Result then begin
@@ -3141,7 +3144,7 @@ begin
     else if Assigned(Buffer) then
       case Field.DataType of
         ftString: begin
-            FieldCP  := GetTransliterateCodePage(Connection.ControlsCodePage);
+            FieldCP  := GetTransliterateCodePage(FControlsCodePage);
             ColumnCP := FResultSetMetadata.GetColumnCodePage(ColumnIndex);
             PA := PAnsichar(Buffer);
             L := StrLen(PA);
@@ -3425,9 +3428,9 @@ begin
     { Reads metadata from resultset. }
 
     with FResultSetMetadata do begin
-      if Connection = nil
-      then ControlsCodePage := Low(TZControlsCodePage)
-      else ControlsCodePage := Connection.ControlsCodePage;
+      if Connection <> nil
+      then ControlsCodePage := Connection.ControlsCodePage
+      else ControlsCodePage := FControlsCodePage;
 
     //ConSettings := ResultSet.GetConSettings;
     if GetColumnCount > 0 then
@@ -3445,12 +3448,12 @@ begin
         Size := Prec;
         if FieldType in [ftBytes, ftVarBytes, ftString, ftWidestring] then begin
           {$IFNDEF WITH_WIDEMEMO}
-          if (Connection.ControlsCodePage = cCP_UTF16) and (FieldType = ftWidestring) and (SQLType in [stAsciiStream, stUnicodeStream])
+          if (ControlsCodePage = cCP_UTF16) and (FieldType = ftWidestring) and (SQLType in [stAsciiStream, stUnicodeStream])
           then Size := (MaxInt shr 1)-2
           else{$ENDIF} begin
             {$IFNDEF WITH_CODEPAGE_AWARE_FIELD}
             if FDisableZFields and (FieldType = ftString) then
-              if (Connection.ControlsCodePage = cGET_ACP) or (GetColumnCodePage(I) = ZOSCodePage)
+              if (ControlsCodePage = cGET_ACP) or (GetColumnCodePage(I) = ZOSCodePage)
               then Size := Size * ZOSCodePageMaxCharSize
               else Size := Size shl 2; //utf8? dynamic CP?
             {$ENDIF WITH_CODEPAGE_AWARE_FIELD}
@@ -3483,7 +3486,7 @@ begin
           CodePage := zCP_UTF16
         else if FieldType in [ftString, ftFixedChar, ftMemo] then
           if SQLType in [stUnicodeString, stUnicodeStream] then
-            if Connection.ControlsCodePage = cGET_ACP
+            if ControlsCodePage = cGET_ACP
             then CodePage := CP_ACP
             else CodePage := zCP_UTF8
           else CodePage := GetColumnCodePage(I)
@@ -3649,6 +3652,8 @@ begin
         if not (doSmartOpen in FOptions)
         then raise EZDatabaseError.Create(SCanNotOpenResultSet)
         else Exit;
+    if Connection <> nil then
+      FControlsCodePage := Connection.ControlsCodePage;
     ConSettings := ResultSet.GetConSettings;
     FClientCP := ConSettings.ClientCodePage.CP;
     FCharEncoding := ConSettings.ClientCodePage.Encoding;
@@ -3684,9 +3689,7 @@ begin
 
     if not FRefreshInProgress then begin
       { Initializes accessors and buffers. }
-      if Connection = nil
-      then StringFieldCodePage := GetTransliterateCodePage(Low(TZControlsCodePage))
-      else StringFieldCodePage := GetTransliterateCodePage(Connection.ControlsCodePage);
+      StringFieldCodePage := GetTransliterateCodePage(FControlsCodePage);
       ColumnList := ConvertFieldsToColumnInfo(Fields, StringFieldCodePage, True);
       Cnt := ColumnList.Count;
       try
@@ -4139,14 +4142,12 @@ begin
     end;
     FSortedFields := aValue;
     if Active then
-      if not ({$IFDEF FPC}Updatable{$ELSE}Self is TZAbstractDataSet{$ENDIF}) then
+      if not ({$IFDEF FPC}Updatable{$ELSE}Self is TZAbstractRWDataSet{$ENDIF}) then
         InternalSort //enables clearsort which prevents rereading data
+      else if (FSortedFields = '') then
+        InternalRefresh
       else
-        {bangfauzan modification}
-        if (FSortedFields = '') then
-          InternalRefresh
-        else
-          InternalSort;
+        InternalSort;
       {end of bangfauzan modification}
   end;
 end;
@@ -4356,7 +4357,7 @@ procedure TZAbstractRODataset.InternalPost;
   end;
 
 begin
-  if not ({$IFDEF FPC}Updatable{$ELSE}Self is TZAbstractDataSet{$ENDIF}) then
+  if not ({$IFDEF FPC}Updatable{$ELSE}Self is TZAbstractRWDataSet{$ENDIF}) then
     RaiseReadOnlyError;
 
   Checkrequired;
@@ -4788,21 +4789,17 @@ procedure TZAbstractRODataset.Notification(AComponent: TComponent;
 begin
   inherited Notification(AComponent, Operation);
 
-  if (Operation = opRemove) and (AComponent = FConnection) then
-  begin
-    Close;
-    FConnection := nil;
-  end;
-
-  if (Operation = opRemove) and Assigned(FDataLink)
-    and (AComponent = FDataLink.Datasource) then
-    FDataLink.DataSource := nil;
-
-  if (Operation = opRemove) and Assigned(FMasterLink)
-    and (AComponent = FMasterLink.Datasource) then
-  begin
-    FMasterLink.DataSource := nil;
-    RereadRows;
+  if (Operation = opRemove) then begin
+    if (AComponent = FConnection) then begin
+      Close;
+      FConnection := nil;
+    end;
+    if Assigned(FDataLink) and (AComponent = FDataLink.Datasource) then
+      FDataLink.DataSource := nil;
+    if Assigned(FMasterLink) and (AComponent = FMasterLink.Datasource) then begin
+      FMasterLink.DataSource := nil;
+      RereadRows;
+    end;
   end;
 end;
 
@@ -5121,8 +5118,7 @@ var
   RowBuffer: PZRowBuffer;
   Blob: IZBlob;
   CLob: IZCLob;
-  ConSettings: PZConSettings;
-  CP: Word;
+  FieldCP, NativeCP: Word;
 begin
   CheckActive;
 
@@ -5144,14 +5140,14 @@ begin
           end;
         {$ENDIF}
         ftMemo, ftFmtMemo: begin
-            ConSettings := FConnection.DbcConnection.GetConSettings;
-            CP := GetTransliterateCodePage(Connection.ControlsCodePage);
+            FieldCP := GetTransliterateCodePage(FControlsCodePage);
+            NativeCP := FResultSetMetadata.GetColumnCodePage(ColumnIndex);
             if not ((FCharEncoding = ceUTF16) or
       {XE10.3 x64 bug: a ObjectCast of a descendand doesn't work -> use exact class or the "As" operator}
-              ((Field as TMemoField).Transliterate and (CP <> ConSettings.ClientCodePage.CP))) then
-              CP := ConSettings.ClientCodePage.CP;
+              ((Field as TMemoField).Transliterate and (FieldCP <> NativeCP))) then
+                FieldCP := NativeCP;
             Assert(Blob.QueryInterface(IZCLob, CLob) = S_OK);
-            Result := Clob.GetStream(CP);
+            Result := Clob.GetStream(FieldCP);
           end;
         else Result := Blob.GetStream
       end;
@@ -8964,7 +8960,7 @@ begin
       if FCharEncoding = ceUTF16
       then FColumnCP := zCP_UTF16
       else FColumnCP := FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-      Transliterate := Transliterate or (FColumnCP = zCP_UTF16) or (
+      Transliterate := Transliterate or (FColumnCP = zCP_UTF16) or ((TZAbstractRODataset(DataSet).Connection <> nil) and
         TZAbstractRODataset(DataSet).Connection.RawCharacterTransliterateOptions.Fields and
         (FColumnCP <>  GetTransliterateCodePage(Connection.ControlsCodePage)));
       if (FColumnCP = zCP_UTF8)
@@ -9136,7 +9132,7 @@ function TZRawStringField.GetAsVariant: Variant;
 begin
   if IsRowDataAvailable
   then with TZAbstractRODataset(DataSet) do begin
-    if (FCharEncoding <> ceUTF16) and (FColumnCP = GetTransliterateCodePage(TZAbstractRODataset(DataSet).Connection.ControlsCodePage))
+    if (FCharEncoding <> ceUTF16) and (FColumnCP = GetTransliterateCodePage(TZAbstractRODataset(DataSet).FControlsCodePage))
     then Result := FResultSet.GetString(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
     else Result := FResultSet.GetUnicodeString(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     if FResultSet.WasNull then
@@ -9781,7 +9777,7 @@ begin
       if FCharEncoding = ceUTF16
       then FColumnCP := zCP_UTF16
       else FColumnCP := FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-      Transliterate := Transliterate or (FColumnCP = zCP_UTF16) or (
+      Transliterate := Transliterate or (FColumnCP = zCP_UTF16) or ((TZAbstractRODataset(DataSet).Connection <> nil) and 
         TZAbstractRODataset(DataSet).Connection.RawCharacterTransliterateOptions.Fields and
         (FColumnCP <>  GetTransliterateCodePage(Connection.ControlsCodePage)));
     end;
@@ -9872,7 +9868,7 @@ begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
       if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK) then begin
         if (FColumnCP = zCP_UTF16)
-        then CP := GetTransliterateCodePage(TZAbstractRODataset(DataSet).Connection.ControlsCodePage)
+        then CP := GetTransliterateCodePage(TZAbstractRODataset(DataSet).FControlsCodePage)
         else CP := FColumnCP;
         Result := Clob.GetRawByteString(CP);
       end else Result := ''
@@ -9965,7 +9961,7 @@ function TZRawCLobField.GetAsVariant: Variant;
 begin
   if IsRowDataAvailable
   then with TZAbstractRODataset(DataSet) do begin
-    if (FColumnCP = GetTransliterateCodePage(TZAbstractRODataset(DataSet).Connection.ControlsCodePage))
+    if (FColumnCP = GetTransliterateCodePage(TZAbstractRODataset(DataSet).FControlsCodePage))
     then Result := FResultSet.GetString(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
     else Result := FResultSet.GetUnicodeString(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     if FResultSet.WasNull then
@@ -10062,7 +10058,7 @@ begin
     Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
     BLob.QueryInterface(IZCLob, Clob);
     if (FColumnCP = zCP_UTF16)
-    then SetW(GetTransliterateCodePage(TZAbstractRODataset(DataSet).Connection.ControlsCodePage))
+    then SetW(GetTransliterateCodePage(TZAbstractRODataset(DataSet).FControlsCodePage))
     else CLob.SetPAnsiChar(P, FColumnCP, L);
     FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Clob);
     if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
@@ -10097,8 +10093,8 @@ begin
       L := 0;
       P := PEmptyAnsiString
     end else L := ZFastCode.StrLen(P);  //the Delphi/FPC guys did decide to allow no zero byte in middle of a string propably because of Validate(Buffer)
-    if (FColumnCP = zCP_UTF16) or Transliterate
-    then SetW(GetTransliterateCodePage(Connection.ControlsCodePage)) else begin
+    if (FColumnCP = zCP_UTF16) or (Transliterate and (FColumnCP <> GetTransliterateCodePage(TZAbstractRODataset(DataSet).FControlsCodePage)))
+    then SetW(GetTransliterateCodePage(TZAbstractRODataset(DataSet).FControlsCodePage)) else begin
       Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
       BLob.QueryInterface(IZCLob, Clob);
       CLob.SetPAnsiChar(P,FColumnCP,L);
@@ -10246,7 +10242,7 @@ begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
       if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK) then begin
         if FColumnCP = zCP_UTF16
-        then CP := GetTransliterateCodePage(TZAbstractRODataset(DataSet).Connection.ControlsCodePage)
+        then CP := GetTransliterateCodePage(FControlsCodePage)
         else CP := FColumnCP;
         Result := Clob.GetRawByteString(CP);
       end else Result := ''
@@ -10428,7 +10424,7 @@ begin
     Blob := ResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, lsmWrite);
     Blob.QueryInterface(IZCLob, Clob);
     if (FColumnCP = zCP_UTF16)
-    then SetW(GetTransliterateCodePage(TZAbstractRODataset(DataSet).Connection.ControlsCodePage))
+    then SetW(GetTransliterateCodePage(TZAbstractRODataset(DataSet).FControlsCodePage))
     else CLob.SetPAnsiChar(P, FColumnCP, L);
     FResultSet.UpdateLob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Clob);
     if not (State in [dsCalcFields, dsFilter, dsNewValue]) then

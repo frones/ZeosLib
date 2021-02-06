@@ -24,7 +24,7 @@
     </CompilerOptions>
     <Description Value="Zeos Database Components"/>
     <Version Major="8" Minor="0"/>
-    <Files Count="20">
+    <Files Count="21">
       <Item1>
         <Filename Value="..\..\src\component\ZAbstractConnection.pas"/>
         <UnitName Value="ZAbstractConnection"/>
@@ -105,6 +105,10 @@
         <Filename Value="..\..\src\component\ZDatasetParam.pas"/>
         <UnitName Value="ZDatasetParam"/>
       </Item20>
+      <Item21>
+        <Filename Value="..\..\src\component\ZTransaction.pas"/>
+        <UnitName Value="ZDatasetParam"/>
+      </Item21>
     </Files>
     <RequiredPkgs Count="5">
       <Item1>
