@@ -206,6 +206,7 @@ begin
       try
         SplitQualifiedObjectName(Value, DatabaseInfo.SupportsCatalogsInProcedureCalls,
           DatabaseInfo.SupportsSchemasInProcedureCalls, Catalog, Schema, ObjectName);
+        If Catalog = '' Then Catalog := Self.Connection.Catalog;
         Schema := Metadata.AddEscapeCharToWildcards(Schema);
         ObjectName := Metadata.AddEscapeCharToWildcards(ObjectName);
         FMetaResultSet := Metadata.GetProcedureColumns(Catalog, Schema, ObjectName, '');
