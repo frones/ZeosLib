@@ -166,7 +166,7 @@ procedure TZAbstractMemTable.CloneDataFrom(Source: TZAbstractRODataset);
 var Rows: TZSortedList;
     FieldPairs: TZIndexPairList;
     Field: TField;
-    I, ColumnIndex, Idx: Integer;
+    I, ColumnIndex, Idx, SkipCount: Integer;
     RS: IZResultSet;
     CS: IZCachedResultSet;
 begin
@@ -180,14 +180,14 @@ begin
   FieldPairs := TZIndexPairList.Create;
   try
     FieldPairs.Capacity := Source.Fields.Count;
-    idx := FirstDbcIndex;
+    SkipCount := 0;
     for i := 0 to Source.Fields.Count -1 do begin
       Field := Source.Fields[i];
       if Field.Visible and (Field.FieldKind = fkData) then begin
+        IDX := Field.Index;
         ColumnIndex := DefineFieldIndex(TZProtectedAbstractRODataset(Source).FieldsLookupTable, Field);
-        FieldPairs.Add(ColumnIndex, Idx);
-        Inc(Idx);
-      end;
+        FieldPairs.Add(ColumnIndex, (Idx-SkipCount){$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+      end else Inc(SkipCount);
     end;
     FLocalConSettings.ClientCodePage := @FCharacterSet;
     FConSettings := @FLocalConSettings;

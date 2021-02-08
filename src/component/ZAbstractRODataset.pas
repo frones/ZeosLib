@@ -1471,6 +1471,7 @@ type
     {$ENDIF}
     (*function CreateField(Owner: TComponent; ParentField: TObjectField = nil;
       const FieldName: string = ''; CreateChildren: Boolean = True): TField;*)
+    procedure Assign(Source: TPersistent); override;
   {$IFNDEF TFIELDDEF_HAS_CHILDEFS}
   published
     property ChildDefs: TFieldDefs read GetChildDefs write SetChildDefs stored HasChildDefs;
@@ -4161,14 +4162,11 @@ var
 begin
   DisableControls;
   try
-    if FDataLink.DataSource <> nil then
-    begin
+    if FDataLink.DataSource <> nil then begin
       DataSet := FDataLink.DataSource.DataSet;
       if DataSet <> nil then
         if DataSet.Active and not (DataSet.State in [dsSetKey, dsEdit]) then
-        begin
           Refresh;
-        end;
     end;
   finally
     EnableControls;
@@ -6430,6 +6428,13 @@ begin
     Result := TFieldDefs;
 end;
 {$ENDIF TFIELDDEF_HAS_CHILDEFS}
+
+procedure TZFieldDef.Assign(Source: TPersistent);
+begin
+  inherited Assign(Source);
+  if Source is TZFieldDef then
+    FSQLType := TZFieldDef(Source).FSQLType
+end;
 
 constructor TZFieldDef.Create(Owner: TFieldDefs; const Name: string;
   FieldType: TFieldType; SQLType: TZSQLType; Size: Integer; Required: Boolean; FieldNo: Integer

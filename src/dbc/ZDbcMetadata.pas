@@ -5124,7 +5124,9 @@ begin
   try
     if Rows = nil then begin
       if Source.GetType <> rtForwardOnly then
-        Source.First;
+        Source.First
+      else if Source.IsBeforeFirst then
+        Source.Next;
       while not Source.IsAfterLast do begin
         CopyRow(RowAccessor, Source, FieldPairs);
         Source.Next;
@@ -5705,7 +5707,7 @@ begin
   for I := 0 to TempColumns.Count -1 do begin
     Current := TZColumnInfo(TempColumns[i]);
     if Current.ColumnType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
-      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-3);
+      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-3); // no streams 4 sqlite
       Current.Precision := -1;
     end;
   end;

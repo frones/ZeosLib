@@ -176,6 +176,9 @@ type
   TZTestMemTableWithConnection = class(TZAbstractTestMemTable)
   protected
     class function GetWithConnection: Boolean; override;
+  published
+    procedure Test_CloneDataFrom_people;
+    procedure Test_CloneDataFrom_equipment_filtered;
   end;
 
   TZTestMemTableWithoutConnection = class(TZAbstractTestMemTable)
@@ -3385,9 +3388,9 @@ end;
 
 procedure TZAbstractTestMemTable.Test_aehimself_1;
 var Table: TZMemTable;
-  FieldDef: TFieldDef;
 begin
   Table := CreateTable;
+  Check(Table <> nil);
   try
     Table.FieldDefs.Add('MyField', ftString);
     Table.FieldDefs.Add('MyFieldWithSize', ftString, 20);
@@ -3406,6 +3409,53 @@ end;
 class function TZTestMemTableWithConnection.GetWithConnection: Boolean;
 begin
   Result := True;
+end;
+
+procedure TZTestMemTableWithConnection.Test_CloneDataFrom_equipment_filtered;
+var Table: TZMemTable;
+  Query: TZQuery;
+begin
+  Table := CreateTable;
+  Query := CreateQuery;
+  Check(Query <> nil);
+  try
+    Query.SQL.Text := 'SELECT * FROM equipment';
+    Query.Open;
+    Query.Filtered := True;
+    CheckEquals(4, Query.RecordCount, 'RecordCount');
+    Query.FieldByName('eq_id').Index := Query.Fields.Count-1;
+    CheckEquals(False, Query.IsEmpty, 'IsEmpty');
+    Query.Filter := 'eq_date = ''' + DateToStr(Encodedate(2001, 10, 7)) + '''';
+    CheckEquals(1, Query.RecordCount);
+    CheckEquals(2, Query.FieldByName('eq_id').AsInteger, 'field eq_id');
+    Table.CloneDataFrom(Query);
+    CheckEquals(Query.Fields.Count, Table.Fields.Count, 'The fieldcount');
+    CheckEquals(Query.RecordCount, Table.RecordCount, 'The recordCount');
+    CheckEquals(2, Table.FieldByName('eq_id').AsInteger, 'field eq_id');
+    CheckEquals(Query.Fields.Count-1, Table.FieldByName('eq_id').Index, 'field eq_id');
+  finally
+    FreeAndNil(Table);
+    FreeAndNil(Query);
+  end;
+end;
+
+procedure TZTestMemTableWithConnection.Test_CloneDataFrom_people;
+var Table: TZMemTable;
+  Query: TZQuery;
+begin
+  Table := CreateTable;
+  Query := CreateQuery;
+  Check(Query <> nil);
+  try
+    Query.SQL.Text := 'select * from people';
+    Query.Open;
+    Table.CloneDataFrom(Query);
+    CheckEquals(Query.Fields.Count, Table.Fields.Count, 'The fieldcount');
+    CheckEquals(Query.RecordCount, Table.RecordCount, 'The recordCount');
+  finally
+    FreeAndNil(Table);
+    FreeAndNil(Query);
+  end;
 end;
 
 { TZTestMemTableWithoutConnection }
