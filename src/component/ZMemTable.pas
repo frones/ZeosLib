@@ -78,12 +78,14 @@ type
     /// <summary>Sets database connection object.</summary>
     /// <param>"Value" a database connection object.</param>
     procedure SetConnection(Value: TZAbstractConnection); override;
+  public
+    procedure CloneDataFrom(Source: TZAbstractRODataset);
   end;
 
 implementation
 
-uses ZMessages, ZEncoding,
-  ZDbcStatement, ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils,
+uses ZMessages, ZEncoding, ZClasses,
+  ZDbcStatement, ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZDbcCache,
   ZDbcCachedResultSet,
   {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF};
 
@@ -113,7 +115,8 @@ constructor TZMemResultSetPreparedStatement.Create(
 begin
   Self.ConSettings := ConSettings;
   FColumnList := TObjectList.Create;
-  CopyColumnsInfo(AColumnList, FColumnList);
+  if AColumnList <> nil then
+    CopyColumnsInfo(AColumnList, FColumnList);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -154,6 +157,48 @@ procedure TZAbstractMemTable.CheckSQLQuery;
 begin
   if FieldDefs.Count = 0 then
     raise EZDataBaseError.Create(SQueryIsEmpty);
+end;
+
+type
+  TZProtectedAbstractRODataset = Class(TZAbstractRODataset);
+
+procedure TZAbstractMemTable.CloneDataFrom(Source: TZAbstractRODataset);
+var Rows: TZSortedList;
+    FieldPairs: TZIndexPairList;
+    Field: TField;
+    I, ColumnIndex, Idx: Integer;
+    RS: IZResultSet;
+    CS: IZCachedResultSet;
+begin
+  if (Source = nil) or (not Source.Active) then Exit;
+  if Active then Close;
+  if (Source.SortedFields <> '') or (TZProtectedAbstractRODataset(Source).IndexFieldNames <> '') or
+     ((Source.Filter <> '') and Source.Filtered)
+  then Rows := TZProtectedAbstractRODataset(Source).CurrentRows
+  else Rows := nil;
+  { we can't judge if a user did change the field order, thus create a new lookup}
+  FieldPairs := TZIndexPairList.Create;
+  try
+    FieldPairs.Capacity := Source.Fields.Count;
+    idx := FirstDbcIndex;
+    for i := 0 to Source.Fields.Count -1 do begin
+      Field := Source.Fields[i];
+      if Field.Visible and (Field.FieldKind = fkData) then begin
+        ColumnIndex := DefineFieldIndex(TZProtectedAbstractRODataset(Source).FieldsLookupTable, Field);
+        FieldPairs.Add(ColumnIndex, Idx);
+        Inc(Idx);
+      end;
+    end;
+    FLocalConSettings.ClientCodePage := @FCharacterSet;
+    FConSettings := @FLocalConSettings;
+    Statement := TZMemResultSetPreparedStatement.Create(FConSettings, nil, Properties);
+    RS := TZVirtualResultSet.CreateFrom(TZProtectedAbstractRODataset(Source).ResultSet, Rows, FieldPairs, FConSettings);
+    SetAnotherResultset(RS);
+    RS.QueryInterface(IZCachedResultSet, CS);
+    CachedResultSet := CS;
+  finally
+    FreeAndNil(FieldPairs);
+  end;
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "SQL" not used} {$ENDIF}
