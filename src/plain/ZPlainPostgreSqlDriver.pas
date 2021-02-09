@@ -726,6 +726,13 @@ type
     PQsetnonblocking : function(conn: TPGconn; arg: Integer): Integer; cdecl;
 
     PQnotifies      : function(conn: TPGconn): PZPostgreSQLNotify; cdecl;
+    /// <summary>From Postgre dcoumentation:
+    ///  Returns 1 if a command is busy, that is, PQgetResult would
+    ///  block waiting for input. A 0 return indicates that PQgetResult can be
+    ///  called with assurance of not blocking.</summary>
+    /// <remarks>PQisBusy will not itself attempt to read data from the server;
+    ///  therefore PQconsumeInput must be invoked first, or the busy state will
+    ///  never end.</remarks>
     PQisBusy        : function(conn: TPGconn): Integer; cdecl;
     PQconsumeInput  : function(conn: TPGconn): Integer; cdecl;
     PQgetCancel     : function(conn: TPGconn): PGcancel; cdecl;
