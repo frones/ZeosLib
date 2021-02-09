@@ -323,6 +323,8 @@ type
     function GetDataSource: TDataSource; override;
     procedure Prepare4DataManipulation(Field: TField);
     procedure SetTransaction(Value: TZAbstractTransaction); virtual;
+    procedure AddFieldDefFromMetadata(ColumnIndex: Integer;
+      const ResultSetMetaData: IZResultSetMetadata; const FieldName: String);
   protected { Internal protected properties. }
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; virtual;
@@ -1668,7 +1670,7 @@ begin
     else begin
       FConnection.RegisterComponent(Self);
       FFormatSettings.SetParent(FConnection.FormatSettings);
-      if (FSQL.Count > 0) and PSIsSQLBased{do not rebuild all!} then begin
+      if (FSQL.Count > 0) and PSIsSQLBased{do not rebuild all!} and (Fields.Count = 0) then begin
       {EH: force rebuild all of the SQLStrings ->
         in some case the generic tokenizer fails for several reasons like:
         keyword detection, identifier detection, Field::=x(ParamEsacaping to ":=" ) vs. Field::BIGINT (pg-TypeCasting)
@@ -3309,6 +3311,88 @@ begin
   Result := RowAccessor.RowSize;
 end;
 
+procedure TZAbstractRODataset.AddFieldDefFromMetadata(ColumnIndex: Integer;
+  const ResultSetMetaData: IZResultSetMetadata; const FieldName: String);
+var
+  Prec, Scale, Size: Integer;
+  FieldType: TFieldType;
+  SQLType: TZSQLType;
+  FieldDef: TFieldDef;
+  {$IFDEF WITH_CODEPAGE_AWARE_FIELD}
+  CodePage: TSystemCodePage;
+  {$ENDIF}
+  ControlsCodePage: TZControlsCodePage;
+begin
+  with ResultSetMetaData do begin
+    if Connection <> nil
+    then ControlsCodePage := Connection.ControlsCodePage
+    else ControlsCodePage := FControlsCodePage;
+    SQLType := GetColumnType(ColumnIndex);
+    Prec := GetPrecision(ColumnIndex);
+    Scale := GetScale(ColumnIndex);
+    FieldType := ConvertDbcToDatasetType(SQLType, ControlsCodePage, Prec);
+    if (FieldType = ftVarBytes) and (Prec = Scale) then
+      FieldType := ftBytes;
+    (*{$IFDEF WITH_FTTIMESTAMP_FIELD}
+    else if (FieldType = ftDateTime) and (GetScale(ColumnIndex) > 3) then
+      FieldType := ftTimeStamp
+    {$ENDIF WITH_FTTIMESTAMP_FIELD}*);
+    Size := Prec;
+    if FieldType in [ftBytes, ftVarBytes, ftString, ftWidestring] then begin
+      {$IFNDEF WITH_WIDEMEMO}
+      if (ControlsCodePage = cCP_UTF16) and (FieldType = ftWidestring) and (SQLType in [stAsciiStream, stUnicodeStream])
+      then Size := (MaxInt shr 1)-2
+      else{$ENDIF} begin
+        {$IFNDEF WITH_CODEPAGE_AWARE_FIELD}
+        if FDisableZFields and (FieldType = ftString) then
+          if (ControlsCodePage = cGET_ACP) or (GetColumnCodePage(ColumnIndex) = ZOSCodePage)
+          then Size := Size * ZOSCodePageMaxCharSize
+          else Size := Size shl 2; //utf8? dynamic CP?
+        {$ENDIF WITH_CODEPAGE_AWARE_FIELD}
+      end;
+    end else {$IFDEF WITH_FTGUID} if FieldType = ftGUID then
+      Size := 38
+    else {$ENDIF} if FieldType in [ftBCD, ftFmtBCD{, ftTime, ftDateTime}] then
+      Size := Scale
+    else
+      Size := 0;
+    {$IFDEF WITH_CODEPAGE_AWARE_FIELD}
+    if FieldType in [ftWideString, ftWideMemo] then
+      CodePage := zCP_UTF16
+    else if FieldType in [ftString, ftFixedChar, ftMemo] then
+      if SQLType in [stUnicodeString, stUnicodeStream] then
+        if ControlsCodePage = cGET_ACP
+        then CodePage := CP_ACP
+        else CodePage := zCP_UTF8
+      else CodePage := GetColumnCodePage(ColumnIndex)
+    else CodePage := CP_ACP;
+    if (SQLType in [stBoolean..stBinaryStream]) and not FDisableZFields
+    then FieldDef := TZFieldDef.Create(FieldDefs, FieldName, FieldType, SQLType, Size, False, ColumnIndex, CodePage)
+    else FieldDef := TFieldDef.Create(FieldDefs, FieldName, FieldType, Size, False, ColumnIndex, CodePage);
+    {$ELSE}
+    if (SQLType in [stBoolean..stBinaryStream]) and not FDisableZFields
+    then FieldDef := TZFieldDef.Create(FieldDefs, FieldName, FieldType, SQLType, Size, False, ColumnIndex)
+    else FieldDef := TFieldDef.Create(FieldDefs, FieldName, FieldType, Size, False, ColumnIndex);
+    {$ENDIF}
+    with FieldDef do begin
+      if not (ReadOnly or IsUniDirectional) then begin
+        {$IFNDEF OLDFPC}
+        Required := IsWritable(ColumnIndex) and (IsNullable(ColumnIndex) = ntNoNulls);
+        {$ENDIF}
+        if IsReadOnly(ColumnIndex) then Attributes := Attributes + [faReadonly];
+      end else
+        Attributes := Attributes + [faReadonly];
+      Precision := Prec;
+      DisplayName := FieldName;
+      if GetOrgColumnLabel(ColumnIndex) <> GetColumnLabel(ColumnIndex) then
+         Attributes := Attributes + [faUnNamed];
+      //EH: hmm do we miss that or was there a good reason? For me its not relevant..
+      //if (SQLType in [stString, stUnicodeString]) and (GetScale(ColumnIndex) = GetPrecision(ColumnIndex)) then
+        //Attributes := Attributes + [faFixed];
+    end;
+  end;
+end;
+
 {**
   Allocates a buffer for new record.
   @return an allocated record buffer.
@@ -3395,19 +3479,11 @@ end;
 }
 procedure TZAbstractRODataset.InternalInitFieldDefs;
 var
-  I, J, Size, Prec, Scale: Integer;
+  I, J: Integer;
   AutoInit: Boolean;
-  FieldType: TFieldType;
-  SQLType: TZSQLType;
   ResultSet: IZResultSet;
   FieldName: string;
   FName: string;
-  //ConSettings: PZConSettings;
-  FieldDef: TFieldDef;
-  {$IFDEF WITH_CODEPAGE_AWARE_FIELD}
-  CodePage: TSystemCodePage;
-  {$ENDIF}
-  ControlsCodePage: TZControlsCodePage;
 begin
   FieldDefs.Clear;
   ResultSet := Self.ResultSet;
@@ -3429,94 +3505,17 @@ begin
     { Reads metadata from resultset. }
 
     with FResultSetMetadata do begin
-      if Connection <> nil
-      then ControlsCodePage := Connection.ControlsCodePage
-      else ControlsCodePage := FControlsCodePage;
-
-    //ConSettings := ResultSet.GetConSettings;
-    if GetColumnCount > 0 then
-      for I := FirstDbcIndex to GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
-        SQLType := GetColumnType(I);
-        Prec := GetPrecision(I);
-        Scale := GetScale(I);
-        FieldType := ConvertDbcToDatasetType(SQLType, ControlsCodePage, Prec);
-        if (FieldType = ftVarBytes) and (Prec = Scale) then
-          FieldType := ftBytes;
-        (*{$IFDEF WITH_FTTIMESTAMP_FIELD}
-        else if (FieldType = ftDateTime) and (GetScale(I) > 3) then
-          FieldType := ftTimeStamp
-        {$ENDIF WITH_FTTIMESTAMP_FIELD}*);
-        Size := Prec;
-        if FieldType in [ftBytes, ftVarBytes, ftString, ftWidestring] then begin
-          {$IFNDEF WITH_WIDEMEMO}
-          if (ControlsCodePage = cCP_UTF16) and (FieldType = ftWidestring) and (SQLType in [stAsciiStream, stUnicodeStream])
-          then Size := (MaxInt shr 1)-2
-          else{$ENDIF} begin
-            {$IFNDEF WITH_CODEPAGE_AWARE_FIELD}
-            if FDisableZFields and (FieldType = ftString) then
-              if (ControlsCodePage = cGET_ACP) or (GetColumnCodePage(I) = ZOSCodePage)
-              then Size := Size * ZOSCodePageMaxCharSize
-              else Size := Size shl 2; //utf8? dynamic CP?
-            {$ENDIF WITH_CODEPAGE_AWARE_FIELD}
+      if GetColumnCount > 0 then
+        for I := FirstDbcIndex to GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
+          FieldName := GetColumnLabel(I);
+          FName := FieldName;
+          J := 0;
+          while FieldDefs.IndexOf(FName) >= 0 do begin
+            Inc(J);
+            FName := Format('%s_%d', [FieldName, J]);
           end;
-        end else {$IFDEF WITH_FTGUID} if FieldType = ftGUID then
-          Size := 38
-        else {$ENDIF} if FieldType in [ftBCD, ftFmtBCD{, ftTime, ftDateTime}] then
-          Size := Scale
-        else
-          Size := 0;
-
-        J := 0;
-        FieldName := GetColumnLabel(I);
-        FName := FieldName;
-        while FieldDefs.IndexOf(FName) >= 0 do begin
-          Inc(J);
-          FName := Format('%s_%d', [FieldName, J]);
+          AddFieldDefFromMetadata(I, FResultSetMetadata, FName);
         end;
-        {$IFNDEF UNICODE}
-        if (FCharEncoding = ceUTF16) //dbc internaly stores everything in UTF8
-          {$IF defined(WITH_DEFAULTSYSTEMCODEPAGE) or not defined(LCL)}
-            and ({$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF} <> zCP_UTF8)
-          {$IFEND}then begin
-          PRawToRawConvert(Pointer(FName), Length(FName), zCP_UTF8, {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}ZOSCodePage{$ENDIF}, FRawTemp);
-          FName := FRawTemp;
-        end;
-        {$ENDIF UNICODE}
-        {$IFDEF WITH_CODEPAGE_AWARE_FIELD}
-        if FieldType in [ftWideString, ftWideMemo] then
-          CodePage := zCP_UTF16
-        else if FieldType in [ftString, ftFixedChar, ftMemo] then
-          if SQLType in [stUnicodeString, stUnicodeStream] then
-            if ControlsCodePage = cGET_ACP
-            then CodePage := CP_ACP
-            else CodePage := zCP_UTF8
-          else CodePage := GetColumnCodePage(I)
-        else CodePage := CP_ACP;
-        if (SQLType in [stBoolean..stBinaryStream]) and not FDisableZFields
-        then FieldDef := TZFieldDef.Create(FieldDefs, FName, FieldType, SQLType, Size, False, I, CodePage)
-        else FieldDef := TFieldDef.Create(FieldDefs, FName, FieldType, Size, False, I, CodePage);
-        {$ELSE}
-        if (SQLType in [stBoolean..stBinaryStream]) and not FDisableZFields
-        then FieldDef := TZFieldDef.Create(FieldDefs, FName, FieldType, SQLType, Size, False, I)
-        else FieldDef := TFieldDef.Create(FieldDefs, FName, FieldType, Size, False, I);
-        {$ENDIF}
-        with FieldDef do begin
-          if not (ReadOnly or IsUniDirectional) then begin
-            {$IFNDEF OLDFPC}
-            Required := IsWritable(I) and (IsNullable(I) = ntNoNulls);
-            {$ENDIF}
-            if IsReadOnly(I) then Attributes := Attributes + [faReadonly];
-          end else
-            Attributes := Attributes + [faReadonly];
-          Precision := Prec;
-          DisplayName := FName;
-          if GetOrgColumnLabel(i) <> GetColumnLabel(i) then
-             Attributes := Attributes + [faUnNamed];
-          //EH: hmm do we miss that or was there a good reason? For me its not relevant..
-          //if (SQLType in [stString, stUnicodeString]) and (GetScale(i) = GetPrecision(I)) then
-            //Attributes := Attributes + [faFixed];
-        end;
-      end;
     end;
     {$IFNDEF WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD}
     FCurrentFieldRefIndex := 0;

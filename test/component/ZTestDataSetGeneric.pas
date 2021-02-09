@@ -184,6 +184,8 @@ type
   TZTestMemTableWithoutConnection = class(TZAbstractTestMemTable)
   protected
     class function GetWithConnection: Boolean; override;
+  published
+    procedure Test_miab3_1;
   end;
 
 implementation
@@ -3473,6 +3475,32 @@ end;
 class function TZTestMemTableWithoutConnection.GetWithConnection: Boolean;
 begin
   Result := False;
+end;
+
+procedure TZTestMemTableWithoutConnection.Test_miab3_1;
+var Table: TZMemTable;
+begin
+  Table := CreateTable;
+  Check(Table <> nil);
+  try
+    Table.FieldDefs.Add('Lp', ftinteger);
+    Table.FieldDefs.Add('Naz',ftString,20);
+    Table.Open;   //<============
+    CheckEquals(2, Table.Fields.Count, 'The field count');
+    Table.Close;
+    Table.FieldDefs.Add('Lp1', ftinteger);
+    Table.FieldDefs.Add('Naz1',ftString,20);
+    Table.Open;  //<=================
+    CheckEquals(4, Table.Fields.Count, 'The field count');
+    Table.Close;
+    Table.FieldDefs.Clear;
+    Table.FieldDefs.Add('Lp2', ftinteger);
+    Table.FieldDefs.Add('Naz2',ftString,20);
+    Table.Open;
+    CheckEquals(2, Table.Fields.Count, 'The field count');
+  finally
+    FreeAndNil(Table);
+  end;
 end;
 
 initialization

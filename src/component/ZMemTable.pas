@@ -79,6 +79,7 @@ type
     procedure CheckConnected; override;
     procedure InternalRefresh; override;
     procedure InternalPrepare; override;
+    procedure InternalInitFieldDefs; override;
     /// <summary>Sets database connection object.</summary>
     /// <param>"Value" a database connection object.</param>
     procedure SetConnection(Value: TZAbstractConnection); override;
@@ -183,24 +184,33 @@ var Rows: TZSortedList;
     I, ColumnIndex, Idx, SkipCount: Integer;
     RS: IZResultSet;
     CS: IZCachedResultSet;
+    Metadata: IZResultSetMetadata;
 begin
   if (Source = nil) or (not Source.Active) then Exit;
   if Active then Close;
   if not TZProtectedAbstractRODataset(Source).IsUniDirectional and TZProtectedAbstractRODataset(Source).LastRowFetched
   then Rows := TZProtectedAbstractRODataset(Source).CurrentRows
   else Rows := nil;
+  Metadata := TZProtectedAbstractRODataset(Source).ResultSetMetadata;
   { we can't judge if a user did change the field order, thus create a new lookup}
   FieldPairs := TZIndexPairList.Create;
   try
     FieldPairs.Capacity := Source.Fields.Count;
     SkipCount := 0;
-    for i := 0 to Source.Fields.Count -1 do begin
-      Field := Source.Fields[i];
-      if Field.Visible and (Field.FieldKind = fkData) then begin
-        IDX := Field.Index;
-        ColumnIndex := DefineFieldIndex(TZProtectedAbstractRODataset(Source).FieldsLookupTable, Field);
-        FieldPairs.Add(ColumnIndex, (Idx-SkipCount){$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-      end else Inc(SkipCount);
+    FieldDefs.BeginUpdate;
+    try
+      FieldDefs.Clear;
+      for i := 0 to Source.Fields.Count -1 do begin
+        Field := Source.Fields[i];
+        if Field.Visible and (Field.FieldKind = fkData) then begin
+          IDX := Field.Index;
+          ColumnIndex := DefineFieldIndex(TZProtectedAbstractRODataset(Source).FieldsLookupTable, Field);
+          FieldPairs.Add(ColumnIndex, (Idx-SkipCount){$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+          AddFieldDefFromMetadata(ColumnIndex, Metadata, Field.FieldName);
+        end else Inc(SkipCount);
+      end;
+    finally
+      FieldDefs.EndUpdate;
     end;
     FLocalConSettings.ClientCodePage := @FCharacterSet;
     FConSettings := @FLocalConSettings;
@@ -256,6 +266,8 @@ function TZAbstractMemTable.CreateResultSet(const SQL: string;
   MaxRows: Integer): IZResultSet;
 var RS: IZCachedResultSet;
 begin
+  if (FColumnsInfo = nil) or (FColumnsInfo.Count = 0) then
+    Statement := CreateStatement(SQL, Properties);
   if (FConnection <> nil)
   then FControlsCodePage := Connection.ControlsCodePage
   else FControlsCodePage := cDynamic;
@@ -305,6 +317,13 @@ begin
   CheckActive;
   CachedResultSet.ResetCursor;
   EmptyDataSet;
+end;
+
+procedure TZAbstractMemTable.InternalInitFieldDefs;
+begin
+  //NOOP
+  if (FColumnsInfo <> nil) then
+    FColumnsInfo.Clear;
 end;
 
 procedure TZAbstractMemTable.InternalPrepare;
