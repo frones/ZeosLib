@@ -294,7 +294,7 @@ implementation
 
 uses ZMessages, ZDbcInterbase6Utils,
   ZFastCode, ZSelectSchema, Math, ZDbcUtils, ZPlainFirebirdInterbaseDriver,
-  ZDbcFirebirdInterbase,
+  ZDbcFirebirdInterbase, ZDbcCachedResultSet,
   {$IFNDEF ZEOS_DISABLE_FIREBIRD}ZPlainFirebird, ZDbcFirebird,{$ENDIF}
   ZDbcLogging;
 

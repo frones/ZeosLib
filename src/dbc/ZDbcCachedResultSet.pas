@@ -49,6 +49,11 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
+{ constributors:
+  EgonHugeist
+  FOS
+  Michael Seeger
+}
 unit ZDbcCachedResultSet;
 
 interface
@@ -388,6 +393,46 @@ type
     procedure AfterLast; override;
     function Last: Boolean; override;
     function MoveAbsolute(Row: Integer): Boolean; override;
+  end;
+
+  {** Represents a Virtual ResultSet interface. }
+  IZVirtualResultSet = interface(IZCachedResultSet)
+    ['{D84055AC-BCD5-40CD-B408-6F11AF000C96}']
+    procedure SetType(Value: TZResultSetType);
+    procedure SetConcurrency(Value: TZResultSetConcurrency);
+    procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
+    procedure SortRows(const ColumnIndices: TIntegerDynArray; Descending: Boolean);
+  end;
+
+  {** Implements Virtual ResultSet. }
+  TZVirtualResultSet = class(TZAbstractCachedResultSet, IZVirtualResultSet)
+  private
+    fConSettings: TZConSettings;
+    fColumnIndices, FCompareFuncs: Pointer; //ovoid RTTI finalize!
+    function ColumnSort(Item1, Item2: Pointer): Integer;
+  protected
+    procedure CalculateRowDefaults(RowAccessor: TZRowAccessor); override;
+    procedure PostRowUpdates(OldRowAccessor, NewRowAccessor: TZRowAccessor);
+      override;
+    class function GetRowAccessorClass: TZRowAccessorClass; override;
+  public
+    constructor CreateWithStatement(const SQL: string; const Statement: IZStatement;
+      ConSettings: PZConSettings);
+    constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string;
+      ConSettings: PZConSettings);
+    constructor CreateFrom(const Source: IZResultSet; Rows: TZSortedList;
+      FieldPairs: TZIndexPairList; ConSettings: PZConSettings);
+  public
+    procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
+    procedure SortRows(const ColumnIndices: TIntegerDynArray; Descending: Boolean);
+  end;
+
+  { TZVirtualResultSetRowAccessor }
+
+  TZVirtualResultSetRowAccessor = class(TZRowAccessor)
+  public
+    constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
+      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
   end;
 
 implementation
@@ -2644,6 +2689,206 @@ begin
     while (LastRowNo < Row) and Fetch do;
 
   Result := inherited MoveAbsolute(Row);
+end;
+
+{ TZVirtualResultSet }
+
+{**
+  Creates this object and assignes the main properties.
+  @param Statement an SQL statement object.
+  @param SQL an SQL query string.
+}
+constructor TZVirtualResultSet.CreateWithStatement(const SQL: string;
+   const Statement: IZStatement; ConSettings: PZConSettings);
+begin
+  fConSettings := ConSettings^;
+  inherited CreateWithStatement(SQL, Statement, @fConSettings);
+end;
+
+class function TZVirtualResultSet.GetRowAccessorClass: TZRowAccessorClass;
+begin
+  Result := TZVirtualResultSetRowAccessor;
+end;
+
+{**
+  Change Order of one Rows in Resultset
+  Note: First Row = 1, to get RowNo use IZResultSet.GetRow
+  @param CurrentRowNo the curren number of row
+  @param NewRowNo the new number of row
+}
+procedure TZVirtualResultSet.ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
+var P: Pointer;
+begin
+  CurrentRowNo := CurrentRowNo -1;
+  NewRowNo := NewRowNo -1;
+  P := RowsList[CurrentRowNo];
+  RowsList.Delete(CurrentRowNo);
+  RowsList.Insert(NewRowNo, P);
+  P := InitialRowsList[CurrentRowNo];
+  InitialRowsList.Delete(CurrentRowNo);
+  InitialRowsList.Insert(NewRowNo, P);
+end;
+
+function TZVirtualResultSet.ColumnSort(Item1, Item2: Pointer): Integer;
+begin
+  Result := RowAccessor.CompareBuffers(Item1, Item2,
+    TIntegerDynArray(FColumnIndices), TCompareFuncs(FCompareFuncs));
+end;
+
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+  {$WARN 4056 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
+constructor TZVirtualResultSet.CreateFrom(const Source: IZResultSet;
+  Rows: TZSortedList; FieldPairs: TZIndexPairList; ConSettings: PZConSettings);
+var ColumnsInfo: TObjectList;
+  I: Integer;
+  FieldPairsCreated: Boolean;
+  function CreateColumns(const Source: IZResultSet; var FieldPairs: TZIndexPairList): TObjectList;
+  var MetaData: IZResultSetMetadata;
+      C, I: Integer;
+      ColumnInfo: TZColumnInfo;
+  begin
+    MetaData := Source.GetMetadata;
+    if FieldPairs = nil then begin
+      FieldPairs := TZIndexPairList.Create;
+      FieldPairs.Capacity := MetaData.GetColumnCount;
+      for i := FirstDbcIndex to FieldPairs.Capacity {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+        FieldPairs.Add(I, I);
+    end;
+    Result := TObjectList.Create(True);
+    for i := 0 to FieldPairs.Count-1 do begin
+      C := PZIndexPair(FieldPairs[i]).SrcOrDestIndex;
+      ColumnInfo := TZColumnInfo.Create;
+      ColumnInfo.Currency := Metadata.IsCurrency(C);
+      ColumnInfo.Signed := Metadata.IsSigned(C);
+      ColumnInfo.ColumnLabel := Metadata.GetOrgColumnLabel(C);
+      ColumnInfo.Precision := Metadata.GetPrecision(C);
+      ColumnInfo.ColumnType := Metadata.GetColumnType(C);
+      ColumnInfo.ColumnCodePage := Metadata.GetColumnCodePage(C);
+      ColumnInfo.Scale := Metadata.GetScale(C);
+      Result.Add(ColumnInfo);
+    end;
+  end;
+  procedure CopyRow(RowAccessor: TZRowAccessor; Source: IZResultSet; FieldPairs: TZIndexPairList);
+  var Succeeded: Boolean;
+  begin
+    Succeeded := False;
+    try
+      RowAccessor.Alloc;
+      RowAccessor.RowBuffer.Index := GetNextRowIndex;
+      RowAccessor.RowBuffer.UpdateType := utUnmodified;
+      RowAccessor.FillFromFromResultSet(Source, FieldPairs);
+      RowsList.Add(RowAccessor.RowBuffer);
+      LastRowNo := RowsList.Count;
+      Succeeded := True;
+    finally
+      if not Succeeded {Out of mem?} then
+        RowAccessor.Dispose;
+    end;
+  end;
+begin
+  FieldPairsCreated := FieldPairs = nil;
+  ColumnsInfo := CreateColumns(Source, FieldPairs);
+  CreateWithColumns(ColumnsInfo, '', ConSettings);
+  try
+    if Rows = nil then begin
+      if Source.GetType <> rtForwardOnly then
+        Source.First
+      else if Source.IsBeforeFirst then
+        Source.Next;
+      while not Source.IsAfterLast do begin
+        CopyRow(RowAccessor, Source, FieldPairs);
+        Source.Next;
+      end;
+    end else for I := 0 to Rows.Count -1 do begin
+      Source.MoveAbsolute(NativeInt(Rows[i]));
+      CopyRow(RowAccessor, Source, FieldPairs);
+    end;
+  finally
+    FreeAndNil(ColumnsInfo);
+    if FieldPairsCreated then
+      FreeAndNil(FieldPairs);
+  end;
+  BeforeFirst;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{**
+  Creates this object and assignes the main properties.
+  @param ColumnsInfo a columns info for cached rows.
+  @param SQL an SQL query string.
+}
+constructor TZVirtualResultSet.CreateWithColumns(ColumnsInfo: TObjectList;
+  const SQL: string; ConSettings: PZConSettings);
+begin
+  fConSettings := ConSettings^;
+  inherited CreateWithColumns(ColumnsInfo, SQL, @fConSettings);
+end;
+
+{**
+  Calculates column default values..
+  @param RowAccessor a row accessor which contains new column values.
+}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "NewRowAccessor" not used} {$ENDIF} // empty function - parameter not used intentionally
+procedure TZVirtualResultSet.CalculateRowDefaults(RowAccessor: TZRowAccessor);
+begin
+end;
+{$IFDEF FPC} {$POP} {$ENDIF} // empty function - parameter not used intentionally
+
+{**
+  Post changes to database server.
+  @param OldRowAccessor a row accessor which contains old column values.
+  @param NewRowAccessor a row accessor which contains new or updated
+    column values.
+}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "OldRowAccessor,NewRowAccessor" not used} {$ENDIF} // empty function - parameter not used intentionally
+procedure TZVirtualResultSet.PostRowUpdates(OldRowAccessor,
+  NewRowAccessor: TZRowAccessor);
+begin
+end;
+{$IFDEF FPC} {$POP} {$ENDIF} // empty function - parameter not used intentionally
+
+procedure TZVirtualResultSet.SortRows(const ColumnIndices: TIntegerDynArray;
+  Descending: Boolean);
+var I: Integer;
+    ComparisonKind: TComparisonKind;
+begin
+  SetLength(TCompareFuncs(FCompareFuncs), Length(ColumnIndices));
+  if Descending
+  then ComparisonKind := ckDescending
+  else ComparisonKind := ckAscending;
+  for i := low(ColumnIndices) to high(ColumnIndices) do
+    TCompareFuncs(FCompareFuncs)[i] := RowAccessor.GetCompareFunc(ColumnIndices[I], ComparisonKind);
+  fColumnIndices := Pointer(ColumnIndices);
+  RowsList.Sort(ColumnSort);
+  SetLength(TCompareFuncs(FCompareFuncs), 0);
+end;
+
+{ TZVirtualResultSetRowAccessor }
+
+constructor TZVirtualResultSetRowAccessor.Create(ColumnsInfo: TObjectList;
+  ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
+  CachedLobs: WordBool);
+var TempColumns: TObjectList;
+  I: Integer;
+  Current: TZColumnInfo;
+begin
+  {EH: usually this code is NOT nessecary if we would handle the types as the
+  providers are able to. But in current state we just copy all the incompatibilities
+  from the DataSets into dbc... grumble.}
+  TempColumns := TObjectList.Create(True);
+  TempColumns.Capacity := ColumnsInfo.Count;
+  CopyColumnsInfo(ColumnsInfo, TempColumns);
+  for I := 0 to TempColumns.Count -1 do begin
+    Current := TZColumnInfo(TempColumns[i]);
+    if Current.ColumnType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
+      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-3); // no streams 4 sqlite
+      Current.Precision := -1;
+    end;
+  end;
+  inherited Create(TempColumns, ConSettings, OpenLobStreams, False);
+  TempColumns.Free;
 end;
 
 end.

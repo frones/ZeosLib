@@ -176,7 +176,7 @@ uses
   Variants, Math, {$IFNDEF FPC}Windows{inline},{$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
   ZEncoding, ZDbcLogging, ZDbcResultSet, ZFastCode, ZPlainOleDBDriver,
-  ZDbcMetadata, ZDbcResultSetMetadata, ZDbcAdoResultSet,
+  ZDbcCachedResultSet, ZDbcResultSetMetadata, ZDbcAdoResultSet,
   ZMessages, ZDbcProperties;
 
 var DefaultPreparableTokens: TPreparablePrefixTokens;

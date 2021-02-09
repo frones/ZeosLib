@@ -3433,6 +3433,12 @@ begin
     CheckEquals(Query.RecordCount, Table.RecordCount, 'The recordCount');
     CheckEquals(2, Table.FieldByName('eq_id').AsInteger, 'field eq_id');
     CheckEquals(Query.Fields.Count-1, Table.FieldByName('eq_id').Index, 'field eq_id');
+    Table.Empty;
+    CheckEquals(0, Table.RecordCount, 'the recordcount after empty call');
+    CheckEquals(Query.FieldCount, Table.FieldCount, 'fieldcount after empty call');
+    Table.Clear;
+    CheckEquals(0, Table.FieldCount, 'fieldcount after clear');
+    CheckEquals(0, Table.FieldDefs.Count, 'fielddefs count after clear');
   finally
     FreeAndNil(Table);
     FreeAndNil(Query);
@@ -3452,6 +3458,10 @@ begin
     Table.CloneDataFrom(Query);
     CheckEquals(Query.Fields.Count, Table.Fields.Count, 'The fieldcount');
     CheckEquals(Query.RecordCount, Table.RecordCount, 'The recordCount');
+    Table.Close;
+    Table.Open;
+    CheckEquals(Query.Fields.Count, Table.Fields.Count, 'The fieldcount');
+    CheckEquals(0, Table.RecordCount, 'The recordCount');
   finally
     FreeAndNil(Table);
     FreeAndNil(Query);
