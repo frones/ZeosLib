@@ -90,6 +90,24 @@ type
     procedure ResetCursor; override;
   end;
 
+  PZKeyAndResultSetPair = ^TZKeyAndResultSetPair;
+  TZKeyAndResultSetPair = record
+    Key: String;
+    ResultSet: IZResultSet;
+  end;
+
+  TZKeyAndResultSetPairList = Class(TZCustomElementList)
+  protected
+    /// <summary>Notify about an action which will or was performed.
+    ///  if ElementNeedsFinalize is False the method will never be called.
+    ///  Otherwise you may finalize managed types beeing part of each element,
+    ///  such as Strings, Objects etc.</summary>
+    /// <param>"Ptr" the address of the element an action happens for.</param>
+    /// <param>"Index" the index of the element.</param>
+    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
+    procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+  End;
+
   {** Implements Abstract Database Metadata. }
 
   { TZAbstractDatabaseMetadata }
@@ -97,7 +115,7 @@ type
   private
     FConnection: Pointer;
     FUrl: TZURL;
-    FCachedResultSets: IZHashMap;
+    FCachedResultSets: TZKeyAndResultSetPairList;
     FDatabaseInfo: IZDatabaseInfo;
     function GetInfo: TStrings;
     function GetURLString: String;
@@ -111,6 +129,15 @@ type
     procedure ClearBuf; {$IFDEF WITH_INLINE}inline;{$ENDIF}
     procedure FlushBuf(var Value: String); {$IFDEF WITH_INLINE}inline;{$ENDIF}
     procedure ToBuf(C: Char; var Value: String); {$IFDEF WITH_INLINE}inline;{$ENDIF}
+  protected //EH: normalize the qualifier names before testing against the cache
+    procedure NormalizeCatalogName(var Value: String); virtual;
+    procedure NormalizeSchemaName(var Value: String; IsPattern: Boolean); virtual;
+    procedure NormalizeTableName(var Value: String; IsPattern: Boolean); virtual;
+    procedure NormalizeProcedureName(var Value: String; IsPattern: Boolean); virtual;
+    procedure NormalizeColumnNamePattern(var Value: String); virtual;
+    procedure NormalizeParameterNamePattern(var Value: String); virtual;
+    procedure NormalizeSequenceNamePattern(var Value: String); virtual;
+    procedure NormalizeTriggerNamePattern(var Value: String); virtual;
   protected
     FDatabase: String;
     WildcardsArray: {$IFDEF TSYSCHARSET_IS_DEPRECATED}TZWildcardsSet{$ELSE}array of char{$ENDIF}; //Added by Cipto
@@ -137,8 +164,7 @@ type
     function NormalizePatternCase(const Pattern: String): string;
     property Url: string read GetURLString;
     property Info: TStrings read GetInfo;
-    property CachedResultSets: IZHashMap read FCachedResultSets
-      write FCachedResultSets;
+    property CachedResultSets: TZKeyAndResultSetPairList read FCachedResultSets;
     property IC: IZIdentifierConverter read FIC;
   protected
     /// <summary>Gets a description of tables available in a catalog.
@@ -217,6 +243,34 @@ type
     /// see GetSearchStringEscape</remarks>
     function UncachedGetColumns(const {%H-}Catalog: string; const {%H-}SchemaPattern: string;
       const {%H-}TableNamePattern: string; const {%H-}ColumnNamePattern: string): IZResultSet; virtual;
+    /// <summary>Gets a description of the access rights for each table
+    ///  available in a catalog. Note that a table privilege applies to one or
+    ///  more columns in the table. It would be wrong to assume that
+    ///  this priviledge applies to all columns (this may be true for
+    ///  some systems but is not true for all.)
+    ///
+    ///  Only privileges matching the schema and table name
+    ///  criteria are returned. They are ordered by TABLE_SCHEM,
+    ///  TABLE_NAME, and PRIVILEGE.
+    ///
+    ///  Each privilige description has the following columns:
+    ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+    ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+    ///  <c>TABLE_NAME</c> String => table name
+    ///  <c>GRANTOR</c> => grantor of access (may be null)
+    ///  <c>GRANTEE</c> String => grantee of access
+    ///  <c>PRIVILEGE</c> String => name of access (SELECT,
+    ///      INSERT, UPDATE, REFRENCES, ...)
+    ///  <c>IS_GRANTABLE</c> String => "YES" if grantee is permitted
+    ///   to grant to others; "NO" if not; null if unknown</summary>
+    ///
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop schema from
+    ///  the selection criteria</param>
+    /// <param>"TableNamePattern" a table name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a table privilege description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function UncachedGetTablePrivileges(const {%H-}Catalog: string; const {%H-}SchemaPattern: string;
       const {%H-}TableNamePattern: string): IZResultSet; virtual;
     /// <summary>Gets a description of the access rights for a table's columns.
@@ -463,38 +517,34 @@ type
     /// see GetSearchStringEscape</remarks>
     function GetColumns(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet;
-{**
-  Gets a description of the access rights for each table available
-  in a catalog. Note that a table privilege applies to one or
-  more columns in the table. It would be wrong to assume that
-  this priviledge applies to all columns (this may be true for
-  some systems but is not true for all.)
-
-  <P>Only privileges matching the schema and table name
-  criteria are returned.  They are ordered by TABLE_SCHEM,
-  TABLE_NAME, and PRIVILEGE.
-
-  <P>Each privilige description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>GRANTOR</B> => grantor of access (may be null)
- 	<LI><B>GRANTEE</B> String => grantee of access
- 	<LI><B>PRIVILEGE</B> String => name of access (SELECT,
-       INSERT, UPDATE, REFRENCES, ...)
- 	<LI><B>IS_GRANTABLE</B> String => "YES" if grantee is permitted
-       to grant to others; "NO" if not; null if unknown
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param tableNamePattern a table name pattern
-  @return <code>ResultSet</code> - each row is a table privilege description
-  @see #getSearchStringEscape
-}
+    /// <summary>Gets a description of the access rights for each table
+    ///  available in a catalog from a cache. Note that a table privilege
+    ///  applies to one or more columns in the table. It would be wrong to
+    ///  assume that this priviledge applies to all columns (this may be true
+    ///  for some systems but is not true for all.)
+    ///
+    ///  Only privileges matching the schema and table name
+    ///  criteria are returned. They are ordered by TABLE_SCHEM,
+    ///  TABLE_NAME, and PRIVILEGE.
+    ///
+    ///  Each privilige description has the following columns:
+    ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+    ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+    ///  <c>TABLE_NAME</c> String => table name
+    ///  <c>GRANTOR</c> => grantor of access (may be null)
+    ///  <c>GRANTEE</c> String => grantee of access
+    ///  <c>PRIVILEGE</c> String => name of access (SELECT,
+    ///      INSERT, UPDATE, REFRENCES, ...)
+    ///  <c>IS_GRANTABLE</c> String => "YES" if grantee is permitted
+    ///   to grant to others; "NO" if not; null if unknown</summary>
+    ///
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop schema from
+    ///  the selection criteria</param>
+    /// <param>"TableNamePattern" a table name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a table privilege description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function GetTablePrivileges(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string): IZResultSet;
     /// <summary>Gets a description of the access rights for a table's columns
@@ -1212,7 +1262,7 @@ var
 
 implementation
 
-uses ZFastCode, ZVariant, ZCollections, ZMessages, ZEncoding,
+uses ZFastCode, ZVariant, ZMessages, ZEncoding,
   ZDbcProperties, ZDbcUtils;
 
 { TZAbstractDatabaseInfo }
@@ -2483,7 +2533,7 @@ begin
   FIC := Self.GetIdentifierConverter;
   FConnection := Pointer(Connection as IZConnection);
   FUrl := Url;
-  FCachedResultSets := TZHashMap.Create;
+  FCachedResultSets := TZKeyAndResultSetPairList.Create(SizeOf(TZKeyAndResultSetPair), True);
   FDatabaseInfo := nil;
   FDatabase := Url.Database;
   FConSettings := IZConnection(FConnection).GetConSettings;
@@ -2551,10 +2601,17 @@ begin
 end;
 
 function TZAbstractDatabaseMetadata.HasKey(const Key: String): Boolean;
-var  TempKey: IZAnyValue;
+var I: Integer;
+  KeyAndResultSetPair: PZKeyAndResultSetPair;
 begin
-  TempKey := TZAnyValue.CreateWithString(Key);
-  Result := FCachedResultSets.Get(TempKey) <> nil;
+  for i := 0 to FCachedResultSets.Count -1 do begin
+    KeyAndResultSetPair := FCachedResultSets.Get(i);
+    if KeyAndResultSetPair.Key = Key then begin
+      Result := True;
+      Exit;
+    end;
+  end;
+  Result := False;
 end;
 
 {**
@@ -2630,8 +2687,7 @@ destructor TZAbstractDatabaseMetadata.Destroy;
 begin
   FIC := nil;
   FUrl := nil;
-  FCachedResultSets.Clear;
-  FCachedResultSets := nil;
+  FreeAndNil(FCachedResultSets);
   FDatabaseInfo := nil;
 
   inherited Destroy;
@@ -2725,11 +2781,16 @@ begin
 end;
 
 procedure TZAbstractDatabaseMetadata.ClearCache(const Key: string);
-var
-  TempKey: IZAnyValue;
+var I: Integer;
+  KeyAndResultSetPair: PZKeyAndResultSetPair;
 begin
-  TempKey := TZAnyValue.CreateWithString(Key);
-  FCachedResultSets.Remove(TempKey);
+  for i := FCachedResultSets.Count -1 downto 0 do begin
+    KeyAndResultSetPair := FCachedResultSets.Get(i);
+    if KeyAndResultSetPair.Key = Key then begin
+      FCachedResultSets.Delete(I);
+      Break;
+    end;
+  end;
 end;
 
 {**
@@ -2739,15 +2800,14 @@ end;
 }
 procedure TZAbstractDatabaseMetadata.AddResultSetToCache(const Key: string;
   const ResultSet: IZResultSet);
-var
-  TempKey: IZAnyValue;
+var I: NativeInt;
+  KeyAndResultSetPair: PZKeyAndResultSetPair;
 begin
-  TempKey := TZAnyValue.CreateWithString(Key);
+  KeyAndResultSetPair := FCachedResultSets.Add(i);
+  KeyAndResultSetPair.Key := Key;
+  KeyAndResultSetPair.ResultSet := ResultSet;
   if ResultSet <> nil then
     ResultSet.BeforeFirst;
-  FCachedResultSets.Put(TempKey, ResultSet);
-  //EH: see my comment below
-  //FCachedResultSets.Put(TempKey, CloneCachedResultSet(ResultSet));
 end;
 
 {**
@@ -2757,20 +2817,17 @@ end;
 }
 function TZAbstractDatabaseMetadata.GetResultSetFromCache(
   const Key: string): IZResultSet;
-var
-  TempKey: IZAnyValue;
+var I: Integer;
+  KeyAndResultSetPair: PZKeyAndResultSetPair;
 begin
-  TempKey := TZAnyValue.CreateWithString(Key);
-  Result := FCachedResultSets.Get(TempKey) as IZResultSet;
-  //EH: this propably has been made because of thread-safety but this is wrong too
-  //worst case:
-  //while a thread moves the cursor anotherone could move the cursor of template RS as well
-  //count of copied rows may be randomly
-  //here we need a different way using the MainThreadID+CurrentThreadID,
-  //a Lock with a CriticalSection, Copy if Required
-  //and put back in a threadpooled list
-  //if Result <> nil then
-    //Result := CloneCachedResultSet(Result);
+  Result := nil;
+  for i := FCachedResultSets.Count -1 downto 0 do begin
+    KeyAndResultSetPair := FCachedResultSets.Get(i);
+    if KeyAndResultSetPair.Key = Key then begin
+      Result := KeyAndResultSetPair.ResultSet;
+      Break;
+    end;
+  end;
   if Result <> nil then
     Result.BeforeFirst;
 end;
@@ -3365,38 +3422,6 @@ begin
   end;
 end;
 
-{**
-  Gets a description of the access rights for each table available
-  in a catalog. Note that a table privilege applies to one or
-  more columns in the table. It would be wrong to assume that
-  this priviledge applies to all columns (this may be true for
-  some systems but is not true for all.)
-
-  <P>Only privileges matching the schema and table name
-  criteria are returned.  They are ordered by TABLE_SCHEM,
-  TABLE_NAME, and PRIVILEGE.
-
-  <P>Each privilige description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>GRANTOR</B> => grantor of access (may be null)
- 	<LI><B>GRANTEE</B> String => grantee of access
- 	<LI><B>PRIVILEGE</B> String => name of access (SELECT,
-       INSERT, UPDATE, REFRENCES, ...)
- 	<LI><B>IS_GRANTABLE</B> String => "YES" if grantee is permitted
-       to grant to others; "NO" if not; null if unknown
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param tableNamePattern a table name pattern
-  @return <code>ResultSet</code> - each row is a table privilege description
-  @see #getSearchStringEscape
-}
 function TZAbstractDatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 begin
@@ -4649,6 +4674,24 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Value" not used} {$ENDIF}
+procedure TZAbstractDatabaseMetadata.NormalizeCatalogName(var Value: String);
+begin
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Value" not used} {$ENDIF}
+procedure TZAbstractDatabaseMetadata.NormalizeColumnNamePattern(var Value: String);
+begin
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Value" not used} {$ENDIF}
+procedure TZAbstractDatabaseMetadata.NormalizeParameterNamePattern(var Value: String);
+begin
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
 function TZAbstractDatabaseMetadata.NormalizePatternCase(const Pattern: String): string;
 begin
   with FIC do
@@ -4669,6 +4712,39 @@ begin
     end else
       Result := ExtractQuote(Pattern);
 end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Value" not used} {$ENDIF}
+procedure TZAbstractDatabaseMetadata.NormalizeProcedureName(var Value: String;
+  IsPattern: Boolean);
+begin
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Value" not used} {$ENDIF}
+procedure TZAbstractDatabaseMetadata.NormalizeSchemaName(var Value: String;
+  IsPattern: Boolean);
+begin
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Value" not used} {$ENDIF}
+procedure TZAbstractDatabaseMetadata.NormalizeSequenceNamePattern(var Value: String);
+begin
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Value" not used} {$ENDIF}
+procedure TZAbstractDatabaseMetadata.NormalizeTableName(var Value: String;
+  IsPattern: Boolean);
+begin
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Value" not used} {$ENDIF}
+procedure TZAbstractDatabaseMetadata.NormalizeTriggerNamePattern(var Value: String);
+begin
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Get the Wildscards in set of char type
@@ -4972,13 +5048,14 @@ end;
   @param List a string list to fill out
 }
 procedure TZAbstractDatabaseMetadata.GetCacheKeys(List: TStrings);
-var
-  I: Integer;
+var I: Integer;
+  KeyAndResultSetPair: PZKeyAndResultSetPair;
 begin
   List.Clear;
-  with CachedResultSets.Keys do
-    for I := 0 to Count-1 do
-      List.Add((Items[I] as IZAnyValue).GetString);
+  for i := FCachedResultSets.Count -1 downto 0 do begin
+    KeyAndResultSetPair := FCachedResultSets.Get(i);
+    List.Add(KeyAndResultSetPair.Key)
+  end;
 end;
 
 // End of metadata cache key retrieval API (technobot 2008-06-14)
@@ -5156,6 +5233,17 @@ procedure TZUnCloseableResultSet.ResetCursor;
 begin
   if not fDoClose then
     BeforeFirst;
+end;
+
+{ TZKeyAndResultSetPairList }
+
+procedure TZKeyAndResultSetPairList.Notify(Ptr: Pointer;
+  Action: TListNotification);
+begin
+  if Action = lnDeleted then begin
+    PZKeyAndResultSetPair(Ptr).Key := '';
+    PZKeyAndResultSetPair(Ptr).ResultSet := nil;
+  end;
 end;
 
 {**
