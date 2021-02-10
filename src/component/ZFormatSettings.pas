@@ -360,10 +360,6 @@ type
     ///  integral date; alias zero.</summary>
     property TimePartOnlyIfPascalIntegralDate: Boolean read GetTimePartOnlyIfPascalIntegralDate write SetTimePartOnlyIfPascalIntegralDate;
   public
-    /// <summary>Creates this object and assigns main properties.</summary>
-    /// <param>"AOwner" the Owner of this object.</param>
-    constructor Create(AOwner: TComponent);
-  public
     /// <summary>Attempt to convert the date and time values into a string</summary>
     /// <param>"Year" the year value.</param>
     /// <param>"Month" the month value.</param>
@@ -998,13 +994,6 @@ begin
   inherited Assign(Source);
 end;
 
-constructor TZAbstractTimestampFormatSettings.Create(AOwner: TComponent);
-begin
-  inherited Create(AOwner);
-  FDatePartOnlyIfZeroTime := True;
-  FTimePartOnlyIfPascalIntegralDate := True;
-end;
-
 function TZAbstractTimestampFormatSettings.GetDateFormat: String;
 var Sep, Delim: Char;
 begin
@@ -1211,9 +1200,9 @@ begin
   DateIsPascalIntegralDate := (Year = 1899) and (Month = 12) and (Day = 30) and not IsNegative;
   TimeIsZero := (Hour = 0) and (Minute = 0) and (Second = 0) and (NanoFractions = 0);
   if (FFormat = nil) then
-    if TimeIsZero and FDatePartOnlyIfZeroTime then
+    if TimeIsZero and GetDatePartOnlyIfZeroTime then
       Frmt := GetDateFormat
-    else if DateIsPascalIntegralDate and FTimePartOnlyIfPascalIntegralDate then begin
+    else if DateIsPascalIntegralDate and GetTimePartOnlyIfPascalIntegralDate then begin
       Frmt := GetTimeFormat;
       goto jmpEsc;
     end else begin
@@ -1255,6 +1244,8 @@ constructor TZEditTimestampFormatSettings.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FSecondFractionOption := foSetByFormat;
+  FDatePartOnlyIfZeroTime := False;
+  FTimePartOnlyIfPascalIntegralDate := False;
 end;
 
 procedure TZEditTimestampFormatSettings.SetParent(Value: TZEditTimestampFormatSettings);
