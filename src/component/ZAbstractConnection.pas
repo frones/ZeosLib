@@ -1344,7 +1344,7 @@ var
   I: Integer;
   AComp: TComponent;
 begin
-  for i := 0 to FLinkedComponents.Count -1 do begin
+  for i := FLinkedComponents.Count - 1 downto 0 do begin
     AComp := TComponent(FLinkedComponents[i]);
     if AComp.InheritsFrom(TZAbstractRODataset) then
       TZProtectedAbstractRODataset(AComp).Connection := nil
