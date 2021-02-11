@@ -1117,10 +1117,12 @@ begin
   DriverManager.RemoveLoggingListener(Self);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Config" not used} {$ENDIF}
 function TZAbstractSQLTestCase.SupportsConfig(Config: TZConnectionConfig): Boolean;
 begin
   Result := true;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 
 {$IFNDEF FPC}
@@ -1359,16 +1361,19 @@ end;
 {**
   Handles exceptions in SQL script processing and raise them.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$" not used} {$ENDIF}
 procedure TZSupplementarySQLTestCase.RaiseError(Processor: TZSQLProcessor;
   StatementIndex: Integer; E: Exception;
   var ErrorHandleAction: TZErrorHandleAction);
 begin
   ErrorHandleAction := eaFail;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Handles exceptions in SQL script processing and suppress them.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "IsNegative" not used} {$ENDIF}
 procedure TZSupplementarySQLTestCase.SuppressError(
   Processor: TZSQLProcessor; StatementIndex: Integer; E: Exception;
   var ErrorHandleAction: TZErrorHandleAction);
@@ -1376,6 +1381,7 @@ begin
   System.WriteLn('Database Rebuild Error: ' + E.Message);
   ErrorHandleAction := eaSkip;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Executes a list of SQL scripts.
@@ -1534,7 +1540,7 @@ begin
   end else {$ENDIF}begin
     Check(Actual.InheritsFrom(TMemoField), 'Should be a MemoField');
     if TMemoField(Actual).Transliterate or (ConSettings.ClientCodePage.Encoding = ceUTF16)
-    then SetAnsiStream(ZUnicodeToRaw(OrgStr, GetTransliterateCodePage(TZAbstractRODataset(Actual.DataSet).Connection.ControlsCodePage)))
+    then SetAnsiStream(ZUnicodeToRaw(OrgStr, GetTransliterateCodePage(THackDataSet(Actual.DataSet).Connection.ControlsCodePage)))
     else SetAnsiStream(ZUnicodeToRaw(OrgStr, ConSettings.ClientCodePage.CP))
   end;
   try

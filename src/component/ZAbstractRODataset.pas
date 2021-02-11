@@ -1064,6 +1064,7 @@ type
   private
     FFieldIndex: Integer;
     FBound: Boolean;
+    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
     function FilledValueWasNull(var Value: TBCD): Boolean;
     function IsRowDataAvailable: Boolean;
   protected
@@ -1075,7 +1076,9 @@ type
     function GetAsString: string; override;
     function GetAsVariant: Variant; override;
     procedure GetText(var Text: string; DisplayText: Boolean); override;
+    procedure SetAsBCD(const Value: TBcd); override;
     procedure SetAsCurrency(Value: Currency); override;
+    procedure SetAsLargeInt(Value: LargeInt); {$IFDEF TFIELD_HAS_ASLARGEINT}override;{$ENDIF}
     procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
   public
     procedure Clear; override;
@@ -8720,11 +8723,60 @@ begin
     end else Result := False;
 end;
 
+procedure TZFMTBCDField.SetAsBCD(const Value: TBcd);
+var AValue: TBcd;
+    pNibble, pLastNibble: PAnsiChar;
+    Precision, Scale: Word;
+    ValueIsOdd: Boolean;
+  procedure DoValidate(var Value: TBCD);
+  {$IFNDEF WITH_TVALUEBUFFER}
+  var P: Pointer;
+  {$ENDIF}
+  begin
+    {$IFDEF WITH_TVALUEBUFFER}
+    if FValidateBuffer = nil then
+      SetLength(FValidateBuffer, SizeOf(TBcd));
+    PBCD(FValidateBuffer)^ := Value;
+    {$ELSE WITH_TVALUEBUFFER}
+    P := @Value.Precision;
+    {$ENDIF WITH_TVALUEBUFFER}
+    {$IFDEF WITH_TVALUEBUFFER}
+    Validate(FValidateBuffer);
+    Value := PBCD(FValidateBuffer)^;
+    {$ELSE WITH_TVALUEBUFFER}
+    Validate(P);
+    {$ENDIF WITH_TVALUEBUFFER}
+  end;
+begin
+  if not FBound then
+    raise CreateUnBoundError(Self);
+  AValue := Value;
+  if Assigned(OnValidate) then
+    DoValidate(AValue);
+  with TZAbstractRODataset(DataSet) do begin
+    Prepare4DataManipulation(Self);
+    if ZSysUtils.GetPacketBCDOffSets(AValue, pNibble, pLastNibble, Precision, Scale, ValueIsOdd) then
+      ZPackBCDToLeft(AValue, pNibble, pLastNibble, Precision, Scale, ValueIsOdd);
+    FResultSet.UpdateBigDecimal(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, AValue);
+    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+      DataEvent(deFieldChange, NativeInt(Self));
+  end;
+end;
+
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF} //rolling eyes
 procedure TZFMTBCDField.SetAsCurrency(Value: Currency);
 var BCD: TBCD;
 begin
   Currency2Bcd(Value, BCD);
+  SetAsBCD(BCD);
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF} //rolling eyes
+procedure TZFMTBCDField.SetAsLargeInt(Value: LargeInt);
+var BCD: TBCD;
+begin
+  ScaledOrdinal2Bcd(Value, 0, BCD);
   SetAsBCD(BCD);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
