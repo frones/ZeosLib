@@ -125,8 +125,8 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
-    procedure LoadFromStream(Stream: TStream);
-    procedure LoadFromFile(const FileName: string);
+    procedure LoadFromStream(Stream: TStream{$IFDEF WITH_TSTRINGS_TENCODING_LOADFROM}; Encoding: TEncoding = nil{$ENDIF});
+    procedure LoadFromFile(const FileName: string{$IFDEF WITH_TSTRINGS_TENCODING_LOADFROM}; Encoding: TEncoding = nil{$ENDIF});
 
     procedure Execute;
     procedure Parse;
@@ -343,18 +343,20 @@ end;
   Loads a SQL Processor from the local file.
   @param FileName a name of the file.
 }
-procedure TZSQLProcessor.LoadFromFile(const FileName: string);
+procedure TZSQLProcessor.LoadFromFile(const FileName: string
+  {$IFDEF WITH_TSTRINGS_TENCODING_LOADFROM}; Encoding: TEncoding = nil{$ENDIF});
 begin
-  FScript.LoadFromFile(FileName);
+  FScript.LoadFromFile(FileName{$IFDEF WITH_TSTRINGS_TENCODING_LOADFROM}, Encoding{$ENDIF});
 end;
 
 {**
   Loads a SQL Processor from the stream.
   @param Stream a stream object.
 }
-procedure TZSQLProcessor.LoadFromStream(Stream: TStream);
+procedure TZSQLProcessor.LoadFromStream(Stream: TStream
+  {$IFDEF WITH_TSTRINGS_TENCODING_LOADFROM}; Encoding: TEncoding = nil{$ENDIF});
 begin
-  FScript.LoadFromStream(Stream);
+  FScript.LoadFromStream(Stream{$IFDEF WITH_TSTRINGS_TENCODING_LOADFROM}, Encoding{$ENDIF});
 end;
 
 {**

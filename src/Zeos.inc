@@ -184,6 +184,7 @@
 
           {$IF CompilerVersion >= 18.5} //Delphi 2007+
             {$UNDEF VER150BELOW}      //found in ZTestBugCompPostgreSql.pas
+            {$DEFINE WITH_TCOLLECTION_CAPACITY}         //TCollection supports the capacity property
             {$IF CompilerVersion >= 20} //Delphi 2009+
               {$DEFINE TBLOBDATA_IS_TBYTES}             //TBlobdata is an alias for TBytes (FPC uses an AnsiString)
               {$DEFINE WITH_CLASS_CONST}                //compiler supports contants in class type declarations 
@@ -197,6 +198,7 @@
               {$UNDEF USE_FAST_CHARPOS}                 // Since Unicode this function is useless
               {$DEFINE HAVE_UNICODESTRING}
               {$DEFINE WITH_TBOOKMARK}                  // Have TBookmark
+              {$DEFINE WITH_TSTRINGS_TENCODING_LOADFROM}// TStrings.LoadFromFile/LoadFromStream have TEncoding
               {$DEFINE WITH_STSTRINGUNICODE}            // stString is unicodestring.
               {$DEFINE WITH_NEWTOBJECT}                 // allows new methods in TObject (D2009+/FPC 2.4.4)
               {$DEFINE WITH_CHARINSET}                  // D2009's poor substitute for character specific "xx in yy"
