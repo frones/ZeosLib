@@ -157,7 +157,7 @@ type
     function GetName: string;
     /// <summary>Executes this function.</summary>
     /// <param>"Stack" the TZExecutionStack object.</param>
-    //  <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
     /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
       const VariantManager: IZVariantManager): TZVariant;

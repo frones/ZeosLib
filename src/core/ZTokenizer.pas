@@ -104,15 +104,32 @@ type
     /// <param>"Value" an TZToken record to be added.</param>
     /// <returns>the position of the added object.</returns>
     function Add({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZToken): NativeInt;
+    /// <summary>Inserts a token value into specified position.</summary>
+    /// <param>"Index" a position index.</param>
+    /// <param>"Value" an token to be inserted.</param>
     procedure Insert(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZToken);
-
+    /// <summary>Puts a token value to specified position.</summary>
+    /// <param>"Index" a position index.</param>
+    /// <param>"Value" an token to be inserted.</param>
     procedure Put(Index: NativeInt; const Value: TZToken);
+    /// <summary>Gets a token element from the specified position.</summary>
+    /// <param>"Index" a position index of the element.</param>
+    /// <return>a requested token element.</returns>
     function Get(Index: NativeInt): TZToken;
 
     function GetToken(Index: NativeInt): PZToken;
 
+    /// <summary>compose all Tokens to a string</summary>
+    /// <returns>composed string from tokens.</summary>
     function AsString: String; overload;
+    /// <summary>convert a Token to a string</summary>
+    /// <param>"Index" the index of the token element.</param>
+    /// <returns>composed string from a token.</summary>
     function AsString(Index: NativeInt): String; overload;
+    /// <summary>convert a range of token elements to a string</summary>
+    /// <param>"iStart" the index of the first token element.</param>
+    /// <param>"iEnd" the index of the last token element.</param>
+    /// <returns>composed string from token(s).</summary>
     function AsString(iStart, iEnd: NativeInt): String; overload;
     function AsFloat(Index: NativeInt): Extended;
     function AsInt64(Index: NativeInt): Int64;
@@ -149,7 +166,7 @@ type
   end;
 
   /// <summary>Implements a TZNumberState object.</summary>
-  /// <remarks>A NumberState object returns a number from a reader. This state's
+  /// <remarks>A NumberState object returns a number from a character buffer. This state's
   ///  idea of a number allows an optional, initial minus sign, followed by one
   ///  or more digits. A decimal point and another string of digits may follow
   ///  these digits.</remarks>
@@ -163,7 +180,7 @@ type
   end;
 
   /// <summary>Implements a TZQuoteState object.</summary>
-  /// <remarks>A quoteState returns a quoted string token from a reader. This
+  /// <remarks>A quoteState returns a quoted string token from a character buffer. This
   ///  state will collect characters until it sees a match to the character
   ///  that the tokenizer used to switch to this state. For example, if a
   ///  tokenizer uses a double-quote character to enter this state, then
@@ -179,7 +196,7 @@ type
   end;
 
   {**
-    A CommentState object returns a comment from a reader.
+    A CommentState object returns a comment from a character buffer.
   }
   TZCommentState = class (TZTokenizerState)
   public
@@ -349,7 +366,7 @@ type
   end;
 
   {**
-    A wordState returns a word from a reader. Like other
+    A wordState returns a word from a character buffer. Like other
     states, a tokenizer transfers the job of reading to this
     state, depending on an initial character. Thus, the
     tokenizer decides which characters may begin a word, and
@@ -507,8 +524,8 @@ end;
 { TZNumberState }
 
 {**
-  Return a number token from a reader.
-  @return a number token from a reader
+  Return a number token from a character buffer.
+  @return a number token from a character buffer
 }
 function TZNumberState.ReadDecDigits(var SPos: PChar; const NTerm: PChar): Boolean;
 begin
@@ -571,11 +588,11 @@ end;
 { TZQuoteState }
 
 {**
-  Return a quoted string token from a reader. This method
+  Return a quoted string token from a character buffer. This method
   will collect characters until it sees a match to the
   character that the tokenizer used to switch to this state.
 
-  @return a quoted string token from a reader
+  @return a quoted string token from a character buffer
 }
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Tokenizer" not used} {$ENDIF}
 function TZQuoteState.NextToken(var SPos: PChar; const NTerm: PChar;
@@ -952,12 +969,12 @@ begin
 end;
 
 {**
-  Return a symbol string from a reader.
+  Return a symbol string from a character buffer.
 
-  @param Stream a reader to read from
+  @param Stream a character buffer to read from
   @param FirstChar the first character of this symbol, already
     read from the reader
-  @return a symbol string from a reader
+  @return a symbol string from a character buffer
 }
 function TZSymbolRootNode.NextSymbol(var SPos: PChar; const NTerm: PChar): PChar;
 var
@@ -999,8 +1016,8 @@ begin
 end;
 
 {**
-  Return a symbol token from a reader.
-  @return a symbol token from a reader
+  Return a symbol token from a character buffer.
+  @return a symbol token from a character buffer
 }
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Tokenizer" not used} {$ENDIF}
 function TZSymbolState.NextToken(var SPos: PChar; const NTerm: PChar;
@@ -1078,8 +1095,8 @@ begin
 end;
 
 {**
-  Return a word token from a reader.
-  @return a word token from a reader
+  Return a word token from a character buffer.
+  @return a word token from a character buffer
 }
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Tokenizer" not used} {$ENDIF}
 function TZWordState.NextToken(var SPos: PChar; const NTerm: PChar;
@@ -1453,11 +1470,6 @@ begin
   Result := (Token^.L = 1) and (Token^.P^ = Value);
 end;
 
-{**
-  Gets a collection element from the specified position.
-  @param Index a position index of the element.
-  @return a requested element.
-}
 function TZTokenList.Get(Index: NativeInt): TZToken;
 begin
   Result := GetToken(Index)^;
@@ -1473,11 +1485,6 @@ begin
   Result := inherited Get(Index);
 end;
 
-{**
-  Inserts an object into specified position.
-  @param Index a position index.
-  @param Item an object to be inserted.
-}
 procedure TZTokenList.Insert(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZToken);
 var P: PZToken;
 begin
@@ -1551,11 +1558,6 @@ begin
   Result := StrToInt64(AsString(Index));
 end;
 
-{**
-  convert a Token to a string
-  @param Index of element.
-  @param TokenCase the result case of the token.
-}
 function TZTokenList.AsString(Index: NativeInt): String;
 var
   Token: PZToken;
@@ -1565,10 +1567,6 @@ begin
   SetString(Result, Token.P, Token.L);
 end;
 
-{**
-  compose all Tokens to a string
-  @result composed string from tokens.
-}
 function TZTokenList.AsString: String;
 var
   i: Integer;

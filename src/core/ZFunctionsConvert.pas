@@ -63,31 +63,47 @@ uses
 type
 
 {**  Str <> Float}
-  {** Implements a VAL function. }
+  /// <summary>Implements a VAL function.</summary>
   TZValFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
       const VariantManager: IZVariantManager): TZVariant;
   end;
 
 {**  Str <> Date}
-  {** Implements a CTOD function. }
+  /// <summary>Implements a CTOD function.</summary>
   TZCtodFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
       const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a DTOS function. }
+  /// <summary>Implements a DTOS function.</summary>
   TZDtosFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
       const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a DTOS function. }
+  /// <summary>Implements a FormatDateTime function.</summary>
   TZFormatDateTimeFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
       const VariantManager: IZVariantManager): TZVariant;
   end;
