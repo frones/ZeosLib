@@ -212,7 +212,6 @@ type
     FCachedLobs: WordBool;
     FSortType : TSortType;
     FHasOutParams: Boolean;
-    FLastRowFetched: Boolean;
     FSortedFields: string;
     FSortedFieldRefs: TZFieldsLookUpDynArray;
     FSortedFieldIndices: TIntegerDynArray;
@@ -299,6 +298,7 @@ type
     FConnection: TZAbstractConnection;
     FTransaction: TZAbstractTransaction;
     FConSettings: PZConSettings;
+    FLastRowFetched: Boolean;
     /// <summary>Sets database connection object.</summary>
     /// <param>"Value" a database connection object.</param>
     procedure SetConnection(Value: TZAbstractConnection); virtual;
@@ -1479,7 +1479,6 @@ type
     property ChildDefs: TFieldDefs read GetChildDefs write SetChildDefs stored HasChildDefs;
   {$ENDIF}
   End;
-
   {$IFNDEF WITH_OBJECTFIELDTYPES}
 const
   ObjectFieldTypes = [ftADT, ftArray, ftReference, ftDataSet];
@@ -5263,7 +5262,7 @@ var
     try
       for i := low(FFieldsLookupTable) to high(FFieldsLookupTable) do begin
         if FFieldsLookupTable[i].DataSource = dltAccessor
-        then CP := GetTransliterateCodePage(Connection.ControlsCodePage)
+        then CP := GetTransliterateCodePage(FControlsCodePage)
         else CP := FResultSetMetadata.GetColumnCodePage(FFieldsLookupTable[i].Index);
         ColumnList.Add(ConvertFieldToColumnInfo(TField(FFieldsLookupTable[i].Field), CP))
       end;
@@ -8966,7 +8965,7 @@ begin
       else FColumnCP := FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
       Transliterate := Transliterate or (FColumnCP = zCP_UTF16) or ((TZAbstractRODataset(DataSet).Connection <> nil) and
         TZAbstractRODataset(DataSet).Connection.RawCharacterTransliterateOptions.Fields and
-        (FColumnCP <>  GetTransliterateCodePage(Connection.ControlsCodePage)));
+        (FColumnCP <>  GetTransliterateCodePage(FControlsCodePage)));
       if (FColumnCP = zCP_UTF8)
       then FBufferSize := Size shl 2
       else FBufferSize := Size * ZOSCodePageMaxCharSize;
@@ -9030,7 +9029,7 @@ label jmpSet1, jmpSetL;
 begin
   Result := nil;
   if IsRowDataAvailable then with TZAbstractRODataset(DataSet) do begin
-    TransliterateCP := GetTransliterateCodePage(Connection.ControlsCodePage);
+    TransliterateCP := GetTransliterateCodePage(FControlsCodePage);
     if (FColumnCP = zCP_UTF16) then begin
       P := FResultSet.GetPWideChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, L);
       if L > 0 then begin
@@ -9064,7 +9063,7 @@ var TransliterateCP: Word;
     L:  NativeUint;
 begin
   if IsRowDataAvailable then with TZAbstractRODataset(DataSet) do begin
-    TransliterateCP := GetTransliterateCodePage(Connection.ControlsCodePage);
+    TransliterateCP := GetTransliterateCodePage(FControlsCodePage);
     if (FColumnCP = zCP_UTF16) then begin
       P := FResultSet.GetPWideChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, L);
       Result := PUnicodeToRaw(P, L, TransliterateCP)
@@ -9201,7 +9200,7 @@ var P: PAnsiChar;
       then CP := FResultSet.GetConSettings.ClientCodePage.CP
       else CP := FColumnCP;
       if CP = zCP_UTF16 then
-        CP := GetTransliterateCodePage(Connection.ControlsCodePage);
+        CP := GetTransliterateCodePage(FControlsCodePage);
       W := ZRawToUnicode(Value, CP);
       L := Length(W);
       if L = 0
@@ -9283,7 +9282,7 @@ begin
     then L := 0
     else L := ZFastCode.StrLen(P);  //the Delphi/FPC guys did decide to allow no zero byte in middle of a string propably because of Validate(Buffer)
     if Transliterate then begin
-      FUniTemp := PRawToUnicode(P, L, GetTransliterateCodePage(Connection.ControlsCodePage));
+      FUniTemp := PRawToUnicode(P, L, GetTransliterateCodePage(FControlsCodePage));
       SetAsUnicodeString(FUniTemp);
     end else SetAsRawByteString(Value);
   end;
@@ -9339,7 +9338,7 @@ begin
   with TZAbstractRODataset(DataSet) do begin
     if Assigned(OnValidate) then begin
       if (FColumnCP = zCP_UTF16)
-      then RawCP := GetTransliterateCodePage(Connection.ControlsCodePage)
+      then RawCP := GetTransliterateCodePage(FControlsCodePage)
       else RawCP := FColumnCP;
       SetAsRawByteString(PUnicodeToRaw(P, Len, RawCP))
     end else with TZAbstractRODataset(DataSet) do begin
@@ -9422,7 +9421,7 @@ var TransliterateCP: Word;
     L:  NativeUint;
 begin
   if IsRowDataAvailable then with TZAbstractRODataset(DataSet) do begin
-    TransliterateCP := GetTransliterateCodePage(Connection.ControlsCodePage);
+    TransliterateCP := GetTransliterateCodePage(FControlsCodePage);
     if (FColumnCP = zCP_UTF16) then begin
       P := FResultSet.GetPWideChar(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, L);
       Result := PUnicodeToRaw(P, L, TransliterateCP)
@@ -9783,7 +9782,7 @@ begin
       else FColumnCP := FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
       Transliterate := Transliterate or (FColumnCP = zCP_UTF16) or ((TZAbstractRODataset(DataSet).Connection <> nil) and 
         TZAbstractRODataset(DataSet).Connection.RawCharacterTransliterateOptions.Fields and
-        (FColumnCP <>  GetTransliterateCodePage(Connection.ControlsCodePage)));
+        (FColumnCP <>  GetTransliterateCodePage(FControlsCodePage)));
     end;
   end;
   {$IFDEF WITH_VIRTUAL_TFIELD_BIND}inherited Bind(Binding);{$ENDIF WITH_VIRTUAL_TFIELD_BIND}
@@ -9899,7 +9898,7 @@ begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
       if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK) then begin
         if (FColumnCP = zCP_UTF16) or Transliterate
-        then CP := GetTransliterateCodePage(Connection.ControlsCodePage)
+        then CP := GetTransliterateCodePage(FControlsCodePage)
         else CP := FColumnCP;
         R := '';
         P := Clob.GetPAnsiChar(CP, R, L);
@@ -10272,7 +10271,7 @@ begin
     with TZAbstractRODataset(DataSet) do begin
       Lob := FResultSet.GetBlob(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
       if (Lob <> nil) and (Lob.QueryInterface(IZCLob, Clob) = S_OK) then begin
-        CP := GetTransliterateCodePage(Connection.ControlsCodePage);
+        CP := GetTransliterateCodePage(FControlsCodePage);
         R := '';
         P := Clob.GetPAnsiChar(CP, R, L);
         if (L<>0) and (P <> Pointer(R)) then begin
