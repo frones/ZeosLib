@@ -336,13 +336,12 @@ begin
       for i := 0 to FieldDefsCopy.Count -1 do begin
         Current := FieldDefsCopy[i];
         SQLType := ConvertDatasetToDbcType(Current.DataType);
-        if Current.InternalCalcField or not (SQLType in [stBoolean..stBinaryStream]) then begin
-          ADefCopy := FieldDefs.AddFieldDef;
-          ADefCopy.Assign(Current);
-        end else
-          ADefCopy := TZFieldDef.Create(FieldDefs, Current.Name, Current.DataType,
+        if Current.InternalCalcField or not (SQLType in [stBoolean..stBinaryStream])
+        then ADefCopy := FieldDefs.AddFieldDef
+        else ADefCopy := TZFieldDef.Create(FieldDefs, Current.Name, Current.DataType,
             SQLType, Current.Size, Current.Required, Current.FieldNo
             {$IFDEF WITH_CODEPAGE_AWARE_FIELD}, Current.CodePage{$ENDIF});
+        ADefCopy.Assign(Current);
       end;
     finally
       FreeAndNil(FieldDefsCopy);
