@@ -320,10 +320,34 @@ begin
 end;
 
 procedure TZAbstractMemTable.InternalInitFieldDefs;
+var FieldDefsCopy: TFieldDefs;
+    ADefCopy, Current: TFieldDef;
+    I: Integer;
+    SQLType: TZSQLType;
 begin
-  //NOOP
   if (FColumnsInfo <> nil) then
     FColumnsInfo.Clear;
+  if not DisableZFields then begin
+    FieldDefsCopy := TFieldDefs.Create(Self);
+    try
+      //FieldDefsCopy.Capacity := FieldDefs.Count;
+      FieldDefsCopy.Assign(FieldDefs);
+      FieldDefs.Clear;
+      for i := 0 to FieldDefsCopy.Count -1 do begin
+        Current := FieldDefsCopy[i];
+        SQLType := ConvertDatasetToDbcType(Current.DataType);
+        if Current.InternalCalcField or not (SQLType in [stBoolean..stBinaryStream]) then begin
+          ADefCopy := FieldDefs.AddFieldDef;
+          ADefCopy.Assign(Current);
+        end else
+          ADefCopy := TZFieldDef.Create(FieldDefs, Current.Name, Current.DataType,
+            SQLType, Current.Size, Current.Required, Current.FieldNo
+            {$IFDEF WITH_CODEPAGE_AWARE_FIELD}, Current.CodePage{$ENDIF});
+      end;
+    finally
+      FreeAndNil(FieldDefsCopy);
+    end;
+  end;
 end;
 
 procedure TZAbstractMemTable.InternalPrepare;
