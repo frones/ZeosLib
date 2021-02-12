@@ -185,6 +185,7 @@ var Rows: TZSortedList;
     RS: IZResultSet;
     CS: IZCachedResultSet;
     Metadata: IZResultSetMetadata;
+    VirtualResultSet: TZVirtualResultSet;
 begin
   if (Source = nil) or (not Source.Active) then Exit;
   if Active then Close;
@@ -215,7 +216,11 @@ begin
     FLocalConSettings.ClientCodePage := @FCharacterSet;
     FConSettings := @FLocalConSettings;
     Statement := TZMemResultSetPreparedStatement.Create(FConSettings, nil, Properties);
-    RS := TZVirtualResultSet.CreateFrom(TZProtectedAbstractRODataset(Source).ResultSet, Rows, FieldPairs, FConSettings);
+    VirtualResultSet := TZVirtualResultSet.CreateFrom(TZProtectedAbstractRODataset(Source).ResultSet, Rows, FieldPairs, FConSettings);
+    RS := VirtualResultSet;
+    if RequestLive
+    then VirtualResultSet.SetConcurrency(rcUpdatable)
+    else VirtualResultSet.SetConcurrency(rcReadOnly);
     {$IFDEF FPC}
     SetDefaultFields(True);
     {$ENDIF}
