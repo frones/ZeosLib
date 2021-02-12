@@ -3480,7 +3480,7 @@ procedure TZTestMemTableWithConnection.Test_CloneDataFrom_people_no_Connection;
 var Table: TZMemTable;
   Query: TZQuery;
 begin
-  Table := TZTable.Create(nil);
+  Table := TZMemTable.Create(nil);
   Query := CreateQuery;
   Check(Query <> nil);
   try
