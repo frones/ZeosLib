@@ -1486,7 +1486,7 @@ type
 implementation
 
 uses ZFastCode, ZSysUtils, ZMessages, ZDbcResultSet, ZCollections, ZTokenizer,
-  ZEncoding, ZDbcProperties, ZDbcMetadata, ZDbcConnection,
+  ZEncoding, ZDbcProperties, ZDbcMetadata, ZDbcConnection, ZDbcCachedResultSet,
   Math
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND};
 
@@ -6468,7 +6468,9 @@ end;
 procedure TZBeginnerPreparedStatement.SetRawByteString(ParameterIndex: Integer;
   const Value: RawByteString);
 begin
-
+  {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
+  CheckParameterIndex(ParameterIndex);
+  BindList.Put(ParameterIndex, stString, Value, FCLientCP);
 end;
 
 procedure TZBeginnerPreparedStatement.SetShort(ParameterIndex: Integer;

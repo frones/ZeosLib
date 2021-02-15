@@ -27,6 +27,7 @@ package ZComponent;
 {$IMPLICITBUILD OFF}
 
 requires
+  dbrtl,
   ZDbc;
 
 contains
@@ -39,6 +40,7 @@ contains
   ZDataset in '..\..\src\component\ZDataset.pas',
   ZDatasetParam in '..\..\src\component\ZDatasetParam.pas',
   ZDatasetUtils in '..\..\src\component\ZDatasetUtils.pas',
+  ZFormatSettings in '..\..\src\component\ZFormatSettings.pas',
   ZGroupedConnection in '..\..\src\component\ZGroupedConnection.pas',
   ZIBEventAlerter in '..\..\src\component\ZIBEventAlerter.pas',
   ZMemTable in '..\..\src\component\ZMemTable.pas',
@@ -49,6 +51,7 @@ contains
   ZSqlProcessor in '..\..\src\component\ZSqlProcessor.pas',
   ZSqlStrings in '..\..\src\component\ZSqlStrings.pas',
   ZSqlUpdate in '..\..\src\component\ZSqlUpdate.pas',
-  ZStoredProcedure in '..\..\src\component\ZStoredProcedure.pas';
+  ZStoredProcedure in '..\..\src\component\ZStoredProcedure.pas',
+  ZTransaction in '..\..\src\component\ZTransaction.pas';
 
 end.

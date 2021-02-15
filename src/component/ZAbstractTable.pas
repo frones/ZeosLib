@@ -61,10 +61,9 @@ uses
 
 type
 
-  {**
-    Abstract dataset component which works with one specified table.
-  }
-  TZAbstractTable = class(TZAbstractDataset)
+  /// <summary>Implements an abstract dataset component which works with one
+  ///  specified table.</summary>
+  TZAbstractTable = class(TZAbstractRWTxnUpdateObjDataSet)
   private
     FTableName: string;
 

@@ -56,11 +56,11 @@ interface
 {$I ZCore.inc}
 
 uses SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
-  {$IFDEF NO_UNIT_CONTNRS}ZClasses{$ELSE}Contnrs{$ENDIF},
+  ZClasses,
   ZCompatibility, ZVariant, ZTokenizer;
 
 type
-  {** Define types of expression tokens. }
+  /// <summary>Define types of expression tokens.</summary>
   TZExpressionTokenType = (
     ttUnknown, ttLeftBrace, ttRightBrace, ttLeftSquareBrace,
     ttRightSquareBrace, ttPlus, ttMinus, ttStar, ttSlash, ttProcent, ttPower,
@@ -69,57 +69,109 @@ type
     ttIsNotNull, ttComma, ttUnary, ttFunction, ttVariable, ttConstant
   );
 
-  {** Defines a parser exception. }
+  /// <author>EgonHugeist.</author>
+  /// <summary>Defines a reference of an expression token.</summary>
+  PZExpressionToken = ^TZExpressionToken;
+  /// <summary>Defines an expression token record.</summary>
+  TZExpressionToken = Record
+    TokenType: TZExpressionTokenType;
+    Value: TZVariant;
+  end;
+
+  /// <summary>Defines a parser exception.</summary>
   TZParseError = class (Exception);
 
-  {** Defines an expression token holder. }
-  TZExpressionToken = class (TObject)
-  private
-    FTokenType: TZExpressionTokenType;
-    FValue: TZVariant;
+  /// <author>EgonHugeist.</author>
+  /// <summary>Implements a list of TZExpressionTokens.</summary>
+  TZExpressionLokenList = Class(TZCustomElementList)
+  protected
+    /// <summary>Notify about an action which will or was performed.
+    ///  if ElementNeedsFinalize is False the method will never be called.
+    ///  Otherwise you may finalize managed types beeing part of each element,
+    ///  such as Strings, Objects etc.</summary>
+    /// <param>"Ptr" the address of the element an action happens for.</param>
+    /// <param>"Index" the index of the element.</param>
+    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
+    procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
-    constructor Create(TokenType: TZExpressionTokenType; const Value: TZVariant);
-
-    property TokenType: TZExpressionTokenType read FTokenType write FTokenType;
-    property Value: TZVariant read FValue write FValue;
-  end;
+    /// <summary>Adds an expression token into this list.</summary>
+    /// <param>"TokenType" the expression token type to add.</param>
+    /// <param>"Value" the expression token variable to add.</param>
+    procedure Add(TokenType: TZExpressionTokenType;
+      {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZVariant);
+  End;
 
   {** Implements an expression parser class. }
   TZExpressionParser = class (TObject)
   private
     FTokenizer: IZTokenizer;
     FExpression: string;
-    FInitialTokens: TObjectList;
+    FInitialTokens: TZExpressionLokenList;
     FTokenIndex: Integer;
-    FResultTokens: TObjectList;
+    FResultTokens: TZExpressionLokenList;
     FVariables: TStrings;
-
+    /// <author>EgonHugeist.</author>
+    /// <summary>Creates and syntax error. This moves the compiler
+    ///  finalization code from mainmethod into submethod.</summary>
+    /// <param>"Token" the expression token reference where the error happens.</param>
+    /// <returns>The TZParseError abject.</returns>
+    function CreateSyntaxErrorNear(Token: PZExpressionToken): TZParseError;
+    /// <author>EgonHugeist.</author>
+    /// <summary>Creates and unknown symbol error. This moves the compiler
+    ///  finalization code from mainmethod into submethod.</summary>
+    /// <param>"Token" then string token reference where the error happens.</param>
+    /// <returns>The TZParseError abject.</returns>
+    function CreateUnknownSymbolError(Token: PZToken): TZParseError;
+    /// <summary>Checks are there more tokens for processing.</summary>
+    /// <returns><c>TRUE</c> if some more tokens are present.</returns>
     function HasMoreTokens: Boolean;
-    function GetToken: TZExpressionToken;
-    function GetNextToken: TZExpressionToken;
+    /// <summary>Gets the current expression token reference.</summary>
+    /// <returns>the current token reference.</returns>
+    function GetToken: PZExpressionToken;
+    /// <summary>Gets the next expression token reference.</summary>
+    /// <returns>the next token reference.</returns>
+    function GetNextToken: PZExpressionToken;
+    /// <summary>Shifts the current token object.</summary>
     procedure ShiftToken;
+    /// <summary>Checks available token types with token types from the list.
+    ///  If they match it shifts the tokens.</summary>
+    /// <param>"TokenTypes" an array of token types to compare.</param>
+    /// <returns><c>True</c> if token types match.</returns>
     function CheckTokenTypes(
       const TokenTypes: array of TZExpressionTokenType): Boolean;
-
+    /// <summary>Tokenizes the given expression and prepares an initial tokens
+    ///  list.</summary>
     procedure TokenizeExpression;
-
+    /// <summary>Performs a syntax analyze at level 0.</summary>
     procedure SyntaxAnalyse;
+    /// <summary>Performs a syntax analyze at level 1.</summary>
     procedure SyntaxAnalyse1;
+    /// <summary>Performs a syntax analyze at level 2.</summary>
     procedure SyntaxAnalyse2;
+    /// <summary>Performs a syntax analyze at level 3.</summary>
     procedure SyntaxAnalyse3;
+    /// <summary>Performs a syntax analyze at level 4.</summary>
     procedure SyntaxAnalyse4;
+    /// <summary>Performs a syntax analyze at level 5.</summary>
     procedure SyntaxAnalyse5;
+    /// <summary>Performs a syntax analyze at level 6.</summary>
     procedure SyntaxAnalyse6;
   public
+    /// <summary>Creates this expression parser object.</summary>
+    /// <param>"Tokenizer" an expression tokenizer.</param>
     constructor Create(const Tokenizer: IZTokenizer);
+    /// <summary>Destroyes this object and cleanups the memory.</summary>
     destructor Destroy; override;
-
+    /// <summary>Sets a new expression string and parses it into internal byte
+    ///  code.</summary>
+    /// <param>"Expression" a new expression string.</param>
     procedure Parse(const Expression: string);
+    /// <summary>Clears parsing result.</summary>
     procedure Clear;
 
     property Tokenizer: IZTokenizer read FTokenizer write FTokenizer;
     property Expression: string read FExpression write Parse;
-    property ResultTokens: TObjectList read FResultTokens;
+    property ResultTokens: TZExpressionLokenList read FResultTokens;
     property Variables: TStrings read FVariables;
   end;
 
@@ -129,27 +181,15 @@ uses ZSysUtils, ZMessages;
 
 { TZExpressionToken }
 
-{**
-  Creates an expression token object.
-  @param TokenType a type of the token.
-  @param Value a token value.
-}
-constructor TZExpressionToken.Create(TokenType: TZExpressionTokenType;
-  const Value: TZVariant);
-begin
-  FTokenType := TokenType;
-  FValue := Value;
-end;
-
 const
-  {** Defines a list of operators. }
+  /// <summary>Defines a list of operators.</summary>
   OperatorTokens: array[0..24] of string = (
     '(', ')', '[', ']', '+', '-', '*', '/', '%', '^',
     '=', '<>', '!=', '>', '<', '>=', '<=',
     'AND', 'OR', 'XOR', 'NOT', 'IS', 'NULL', 'LIKE', ','
   );
 
-  {** Defines a list of operator codes. }
+  /// <summary>Defines a list of operator codes.</summary>
   OperatorCodes: array[0..24] of TZExpressionTokenType = (
     ttLeftBrace, ttRightBrace, ttLeftSquareBrace, ttRightSquareBrace,
     ttPlus, ttMinus, ttStar, ttSlash, ttProcent, ttPower, ttEqual, ttNotEqual,
@@ -159,23 +199,32 @@ const
 
 { TZExpressionParser }
 
-{**
-  Creates this expression parser object.
-  @param Tokenizer an expression tokenizer.
-}
 constructor TZExpressionParser.Create(const Tokenizer: IZTokenizer);
 begin
   FTokenizer := Tokenizer;
   FExpression := '';
-  FInitialTokens := TObjectList.Create;
+  FInitialTokens := TZExpressionLokenList.Create(SizeOf(TZExpressionToken), True);
   FTokenIndex := 0;
-  FResultTokens := TObjectList.Create;
+  FResultTokens := TZExpressionLokenList.Create(SizeOf(TZExpressionToken), True);
   FVariables := TStringList.Create;
 end;
 
-{**
-  Destroyes this object and cleanups the memory.
-}
+function TZExpressionParser.CreateSyntaxErrorNear(
+  Token: PZExpressionToken): TZParseError;
+begin
+  Result := TZParseError.Create(Format(SSyntaxErrorNear,
+    [SoftVarManager.GetAsString(Token.Value)]));
+end;
+
+function TZExpressionParser.CreateUnknownSymbolError(
+  Token: PZToken): TZParseError;
+var S: String;
+begin
+  S := '';
+  System.SetString(S, Token.P, Token.L);
+  Result := TZParseError.Create(Format(SUnknownSymbol, [S]));
+end;
+
 destructor TZExpressionParser.Destroy;
 begin
   FreeAndNil(FInitialTokens);
@@ -185,9 +234,6 @@ begin
   inherited Destroy;
 end;
 
-{**
-  Clears parsing result.
-}
 procedure TZExpressionParser.Clear;
 begin
   FExpression := '';
@@ -197,85 +243,52 @@ begin
   FVariables.Clear;
 end;
 
-{**
-  Sets a new expression string and parses it into internal byte code.
-  @param expression a new expression string.
-}
 procedure TZExpressionParser.Parse(const Expression: string);
 begin
   Clear;
   FExpression := Trim(Expression);
-  if FExpression <> '' then
-  begin
+  if FExpression <> '' then begin
     TokenizeExpression;
     SyntaxAnalyse;
     if HasMoreTokens then
-    begin
-      raise TZParseError.Create(
-        Format(SSyntaxErrorNear, [SoftVarManager.GetAsString(GetToken.Value)]));
-    end;
+      raise CreateSyntaxErrorNear(GetToken);
   end;
 end;
 
-{**
-  Checks are there more tokens for processing.
-  @return <code>TRUE</code> if some tokens are present.
-}
 function TZExpressionParser.HasMoreTokens: Boolean;
 begin
   Result := FTokenIndex < FInitialTokens.Count;
 end;
 
-{**
-  Gets the current token object.
-  @param tokens a collection of tokens.
-  @returns the current token object.
-}
-function TZExpressionParser.GetToken: TZExpressionToken;
+function TZExpressionParser.GetToken: PZExpressionToken;
 begin
-  if FTokenIndex < FInitialTokens.Count then
-    Result := TZExpressionToken(FInitialTokens[FTokenIndex])
-   else
-      Result := nil;
+  if FTokenIndex < FInitialTokens.Count
+  then Result := FInitialTokens[FTokenIndex]
+  else Result := nil;
 end;
 
-{**
-  Gets the next token object.
-  @param tokens a collection of tokens.
-  @returns the next token object.
-}
-function TZExpressionParser.GetNextToken: TZExpressionToken;
+function TZExpressionParser.GetNextToken: PZExpressionToken;
 begin
-  if (FTokenIndex + 1) < FInitialTokens.Count then
-    Result := TZExpressionToken(FInitialTokens[FTokenIndex + 1])
-   else
-      Result := nil;
+  if (FTokenIndex + 1) < FInitialTokens.Count
+  then Result := FInitialTokens[FTokenIndex + 1]
+  else Result := nil;
 end;
 
-{**
-  Shifts the current token object.
-}
 procedure TZExpressionParser.ShiftToken;
 begin
   Inc(FTokenIndex);
 end;
 
-{**
-  Checks available token types with token types from the list.
-  If they match it shifts the tokens.
-  @param TokenTypes a list of token types to compare.
-  @return <code>True</code> if token types match.
-}
 function TZExpressionParser.CheckTokenTypes(
   const TokenTypes: array of TZExpressionTokenType): Boolean;
 var
   I: Integer;
-  Temp: TZExpressionToken;
+  Temp: PZExpressionToken;
 begin
   Result := False;
   for I := Low(TokenTypes) to High(TokenTypes) do begin
     if (FTokenIndex + I) < FInitialTokens.Count then begin
-      Temp := TZExpressionToken(FInitialTokens[FTokenIndex + I]);
+      Temp := FInitialTokens[FTokenIndex + I];
       Result := Temp.TokenType = TokenTypes[I];
     end else
       Result := False;
@@ -287,9 +300,6 @@ begin
     Inc(FTokenIndex, Length(TokenTypes));
 end;
 
-{**
-  Tokenizes the given expression and prepares an initial tokens list.
-}
 procedure TZExpressionParser.TokenizeExpression;
 var
   I: Integer;
@@ -298,6 +308,7 @@ var
   Tokens: TZTokenList;
   TokenType: TZExpressionTokenType;
   TokenValue: TZVariant;
+  Token: PZToken;
 begin
   Tokens := FTokenizer.TokenizeBufferToList(FExpression,
     [toSkipWhitespaces, toSkipComments, toSkipEOF]);
@@ -306,244 +317,190 @@ begin
 
     while TokenIndex < Tokens.Count do begin
       TokenType := ttUnknown;
-      case Tokens[TokenIndex]^.TokenType of
+      Token := Tokens[TokenIndex];
+      case Token.TokenType of
         ttKeyword:
-          begin
-            if Tokens.IsEqual(TokenIndex, 'TRUE', tcInsensitive) then begin
+            if Tokens.IsEqual(Token, 'TRUE', tcInsensitive) then begin
               TokenType := ttConstant;
               TokenValue:= EncodeBoolean(True);
-            end else if Tokens.IsEqual(TokenIndex, 'FALSE', tcInsensitive) then begin
+            end else if Tokens.IsEqual(Token, 'FALSE', tcInsensitive) then begin
               TokenType := ttConstant;
               TokenValue:= EncodeBoolean(False);
-            end else
-              for I := Low(OperatorTokens) to High(OperatorTokens) do
-                if Tokens.IsEqual(TokenIndex, OperatorTokens[I], tcInsensitive) then begin
-                  TokenType := OperatorCodes[I];
-                  Break;
-                end;
-          end;
-        ttWord:
-          begin
+            end else for I := Low(OperatorTokens) to High(OperatorTokens) do
+              if Tokens.IsEqual(Token, OperatorTokens[I], tcInsensitive) then begin
+                TokenType := OperatorCodes[I];
+                Break;
+              end;
+        ttWord: begin
             TokenType := ttVariable;
-            Temp := Tokenizer.GetQuoteState.DecodeToken(Tokens[TokenIndex]^, Tokens[TokenIndex]^.P^);
+            Temp := Tokenizer.GetQuoteState.DecodeToken(Token^, Token.P^);
             if FVariables.IndexOf(Temp) < 0 then
               FVariables.Add(Temp);
             TokenValue:= EncodeString(Temp);
           end;
-        ttInteger:
-          begin
+        ttInteger: begin
             TokenType := ttConstant;
             TokenValue:= EncodeInteger(Tokens.AsInt64(TokenIndex));
           end;
-        ttFloat:
-          begin
+        ttFloat: begin
             TokenType := ttConstant;
             TokenValue:= EncodeDouble(Tokens.AsFloat(TokenIndex));
           end;
-        ttQuoted:
-          begin
+        ttQuoted: begin
             TokenType := ttConstant;
-            TokenValue:= EncodeString(Tokenizer.GetQuoteState.DecodeToken(Tokens[TokenIndex]^, Tokens[TokenIndex]^.P^));
+            TokenValue:= EncodeString(Tokenizer.GetQuoteState.DecodeToken(Token^, Token.P^));
           end;
         ttSymbol:
             for I := Low(OperatorTokens) to High(OperatorTokens) do
-              if Tokens.IsEqual(TokenIndex, OperatorTokens[I], tcInsensitive) then begin
+              if Tokens.IsEqual(Token, OperatorTokens[I], tcInsensitive) then begin
                 TokenType := OperatorCodes[I];
                 Break;
               end;
-        ttTime,ttDate,ttDateTime:
-          begin
+        ttTime,ttDate,ttDateTime: begin
             TokenType := ttConstant;
-            Temp := Tokenizer.GetQuoteState.DecodeToken(Tokens[TokenIndex]^, Tokens[TokenIndex]^.P^);
+            Temp := Tokenizer.GetQuoteState.DecodeToken(Token^, Token.P^);
             TokenValue:= EncodeDateTime(StrToDateTime(Temp));
             TokenValue.{$IFDEF UNICODE}VUnicodeString{$ELSE}VRawByteString{$ENDIF} := Temp; //this conversion is not 100%safe so'll keep the native value by using advantages of the ZVariant
           end;
         {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
       end;
       if TokenType = ttUnknown then
-        raise TZParseError.Create(Format(SUnknownSymbol, [Tokens[TokenIndex]]));
+        raise CreateUnknownSymbolError(Token);
 
       Inc(TokenIndex);
-      FInitialTokens.Add(TZExpressionToken.Create(TokenType, TokenValue));
+      FInitialTokens.Add(TokenType, TokenValue);
     end;
   finally
     Tokens.Free;
   end;
 end;
 
-{**
-  Performs a syntax analyze at level 0.
-}
 procedure TZExpressionParser.SyntaxAnalyse;
-var
-  Token: TZExpressionToken;
+var Token: PZExpressionToken;
 begin
   if not HasMoreTokens then
     raise TZParseError.Create(SUnexpectedExprEnd);
 
   SyntaxAnalyse1;
-  while HasMoreTokens do
-  begin
+  while HasMoreTokens do begin
     Token := GetToken;
     if not (Token.TokenType in [ttAnd, ttOr, ttXor]) then
       Break;
     ShiftToken;
     SyntaxAnalyse1;
-    FResultTokens.Add(TZExpressionToken.Create(Token.TokenType, NullVariant));
+    FResultTokens.Add(Token.TokenType, NullVariant);
   end;
 end;
 
-{**
-  Performs a syntax analyze at level 1.
-}
 procedure TZExpressionParser.SyntaxAnalyse1;
-var
-  Token: TZExpressionToken;
+var Token: PZExpressionToken;
 begin
   if not HasMoreTokens then
     raise TZParseError.Create(SUnexpectedExprEnd);
 
   Token := GetToken;
-  if Token.TokenType = ttNot then
-  begin
+  if Token.TokenType = ttNot then begin
     ShiftToken;
     SyntaxAnalyse2;
-    FResultTokens.Add(TZExpressionToken.Create(Token.TokenType, NullVariant));
-   end
-   else
+    FResultTokens.Add(Token.TokenType, NullVariant);
+   end else
     SyntaxAnalyse2;
 end;
 
-{**
-  Performs a syntax analyze at level 2.
-}
 procedure TZExpressionParser.SyntaxAnalyse2;
-var
-  Token: TZExpressionToken;
+var Token: PZExpressionToken;
 begin
   if not HasMoreTokens then
     raise TZParseError.Create(SUnexpectedExprEnd);
 
   SyntaxAnalyse3;
-  while HasMoreTokens do
-  begin
+  while HasMoreTokens do begin
     Token := GetToken;
     if not (Token.TokenType in [ttEqual, ttNotEqual, ttMore, ttLess,
       ttEqualMore, ttEqualLess]) then
       Break;
     ShiftToken;
     SyntaxAnalyse3;
-    FResultTokens.Add(TZExpressionToken.Create(Token.TokenType, NullVariant));
+    FResultTokens.Add(Token.TokenType, NullVariant);
   end;
 end;
 
-{**
-  Performs a syntax analyze at level 3.
-}
 procedure TZExpressionParser.SyntaxAnalyse3;
-var
-  Token: TZExpressionToken;
+var Token: PZExpressionToken;
 begin
   if not HasMoreTokens then
     raise TZParseError.Create(SUnexpectedExprEnd);
 
   SyntaxAnalyse4;
-  while HasMoreTokens do
-  begin
+  while HasMoreTokens do begin
     Token := GetToken;
-    if Token.TokenType in [ttPlus, ttMinus, ttLike] then
-    begin
+    if Token.TokenType in [ttPlus, ttMinus, ttLike] then begin
       ShiftToken;
       SyntaxAnalyse4;
-      FResultTokens.Add(TZExpressionToken.Create(Token.TokenType, NullVariant));
-    end
-    else if CheckTokenTypes([ttNot, ttLike]) then
-    begin
+      FResultTokens.Add(Token.TokenType, NullVariant);
+    end else if CheckTokenTypes([ttNot, ttLike]) then begin
       SyntaxAnalyse4;
-      FResultTokens.Add(TZExpressionToken.Create(ttNotLike, NullVariant));
-    end
-    else if CheckTokenTypes([ttIs, ttNull]) then
-    begin
-      FResultTokens.Add(TZExpressionToken.Create(ttIsNull, NullVariant));
-    end
+      FResultTokens.Add(ttNotLike, NullVariant);
+    end else if CheckTokenTypes([ttIs, ttNull]) then
+      FResultTokens.Add(ttIsNull, NullVariant)
     else if CheckTokenTypes([ttIs, ttNot, ttNull]) then
-    begin
-      FResultTokens.Add(TZExpressionToken.Create(ttIsNotNull, NullVariant));
-      end
-      else
+      FResultTokens.Add(ttIsNotNull, NullVariant)
+    else
       Break;
   end;
 end;
 
-{**
-  Performs a syntax analyze at level 4.
-}
 procedure TZExpressionParser.SyntaxAnalyse4;
-var
-  Token: TZExpressionToken;
+var Token: PZExpressionToken;
 begin
   if not HasMoreTokens then
     raise TZParseError.Create(SUnexpectedExprEnd);
 
   SyntaxAnalyse5;
-  while HasMoreTokens do
-  begin
+  while HasMoreTokens do begin
     Token := GetToken;
     if not (Token.TokenType in [ttStar, ttSlash, ttProcent]) then
       Break;
     ShiftToken;
     SyntaxAnalyse5;
-    FResultTokens.Add(TZExpressionToken.Create(Token.TokenType, NullVariant));
+    FResultTokens.Add(Token.TokenType, NullVariant);
   end;
 end;
 
-{**
-  Performs a syntax analyze at level 5.
-}
 procedure TZExpressionParser.SyntaxAnalyse5;
-var
-  Token: TZExpressionToken;
+var Token: PZExpressionToken;
 begin
   if not HasMoreTokens then
     raise TZParseError.Create(SUnexpectedExprEnd);
 
   SyntaxAnalyse6;
-  while HasMoreTokens do
-  begin
+  while HasMoreTokens do begin
     Token := GetToken;
     if Token.TokenType <> ttPower then
       Break;
     ShiftToken;
     SyntaxAnalyse6;
-    FResultTokens.Add(TZExpressionToken.Create(Token.TokenType, NullVariant));
+    FResultTokens.Add(Token.TokenType, NullVariant);
   end;
 end;
 
-{**
-  Performs a syntax analyze at level 6.
-}
 procedure TZExpressionParser.SyntaxAnalyse6;
-var
-  ParamsCount: Integer;
-  Unary, Token: TZExpressionToken;
-  Primitive, NextToken: TZExpressionToken;
-  Temp: TZVariant;
+var ParamsCount: Integer;
+    Unary, Token: PZExpressionToken;
+    Primitive, NextToken: PZExpressionToken;
+    Temp: TZVariant;
 begin
   if not HasMoreTokens then
     raise TZParseError.Create(SUnexpectedExprEnd);
 
   Unary := GetToken;
-  if Unary.TokenType = ttPlus then
-  begin
+  if Unary.TokenType = ttPlus then begin
     Unary := nil;
     ShiftToken;
-  end
-  else if Unary.TokenType = ttMinus then
-  begin
+  end else if Unary.TokenType = ttMinus then begin
     Unary.TokenType := ttUnary;
     ShiftToken;
-   end
-   else
+   end else
     Unary := nil;
 
   if not HasMoreTokens then
@@ -555,14 +512,10 @@ begin
     and (NextToken.TokenType = ttLeftBrace) then
     Primitive.TokenType := ttFunction;
 
-  if Primitive.TokenType in [ttConstant, ttVariable] then
-  begin
+  if Primitive.TokenType in [ttConstant, ttVariable] then begin
     ShiftToken;
-    FResultTokens.Add(TZExpressionToken.Create(
-      Primitive.TokenType, Primitive.Value));
-  end
-  else if Primitive.TokenType = ttLeftBrace then
-  begin
+    FResultTokens.Add(Primitive.TokenType, Primitive.Value);
+  end else if Primitive.TokenType = ttLeftBrace then begin
     ShiftToken;
     SyntaxAnalyse;
     if not HasMoreTokens then
@@ -571,9 +524,7 @@ begin
     if Primitive.TokenType <> ttRightBrace then
       raise TZParseError.Create(SRightBraceExpected);
     ShiftToken;
-  end
-  else if Primitive.TokenType = ttFunction then
-  begin
+  end else if Primitive.TokenType = ttFunction then begin
     ShiftToken;
     Token := GetToken;
     if Token.TokenType <> ttLeftBrace then
@@ -596,15 +547,34 @@ begin
     ShiftToken;
 
     Temp:= EncodeInteger(ParamsCount);
-    FResultTokens.Add(TZExpressionToken.Create(ttConstant, Temp));
-    FResultTokens.Add(TZExpressionToken.Create(Primitive.TokenType,
-      Primitive.Value));
-   end
-   else
+    FResultTokens.Add(ttConstant, Temp);
+    FResultTokens.Add(Primitive.TokenType, Primitive.Value);
+   end else
     raise TZParseError.Create(SSyntaxError);
 
   if Unary <> nil then
-    FResultTokens.Add(TZExpressionToken.Create(Unary.TokenType, NullVariant));
+    FResultTokens.Add(Unary.TokenType, NullVariant);
+end;
+
+{ TZExpressionLokenList }
+
+procedure TZExpressionLokenList.Add(TokenType: TZExpressionTokenType;
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZVariant);
+var ExpressionToken: PZExpressionToken;
+    Idx: NativeInt;
+begin
+  ExpressionToken := inherited Add(Idx);
+  ExpressionToken.TokenType := TokenType;
+  ExpressionToken.Value := Value;
+end;
+
+procedure TZExpressionLokenList.Notify(Ptr: Pointer; Action: TListNotification);
+begin
+  if Action = lnDeleted then begin
+    PZExpressionToken(Ptr).Value.VUnicodeString := '';
+    PZExpressionToken(Ptr).Value.VRawByteString := EmptyRaw;
+    PZExpressionToken(Ptr).Value.VInterface := nil;
+  end;
 end;
 
 end.

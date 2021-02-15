@@ -165,7 +165,6 @@
           {$UNDEF WITH_UINT64_C1118_ERROR}            //2006+ has no problems to assign code constants for UInt64
           {$UNDEF WITH_MILLISECONDOFTHEYEAR_BUG}      //D7-D005 Bug -> a Int64 Cast of SecondOfTheYear(AValue) is fixed
           {$UNDEF Use_FastCodeFillChar}               //FastCode FillChar() is included since D2006
-          {$DEFINE WITH_DEPRECATED_MESSAGE}            //Compiler supports deprecated messages
           {$DEFINE WITH_DEPRECATED_EXTRACTFIELDNAME}  //DB.pas proc ExtractFieldName String overload is deprecated}
           {$DEFINE BCC32_vtDateTime_ERROR}            //[BCC32 Error] Zvariant.hpp(81): E2019 'TZVariant:: :: :: ()' cannot be declared in an anonymous union http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=3795&start=180
           {$DEFINE WITH_WIDESTRUTILS}                 //WideStrUtils unit introduced.
@@ -184,6 +183,7 @@
 
           {$IF CompilerVersion >= 18.5} //Delphi 2007+
             {$UNDEF VER150BELOW}      //found in ZTestBugCompPostgreSql.pas
+            {$DEFINE WITH_TCOLLECTION_CAPACITY}         //TCollection supports the capacity property
             {$IF CompilerVersion >= 20} //Delphi 2009+
               {$DEFINE TBLOBDATA_IS_TBYTES}             //TBlobdata is an alias for TBytes (FPC uses an AnsiString)
               {$DEFINE WITH_CLASS_CONST}                //compiler supports contants in class type declarations 
@@ -197,6 +197,7 @@
               {$UNDEF USE_FAST_CHARPOS}                 // Since Unicode this function is useless
               {$DEFINE HAVE_UNICODESTRING}
               {$DEFINE WITH_TBOOKMARK}                  // Have TBookmark
+              {$DEFINE WITH_TSTRINGS_TENCODING_LOADFROM}// TStrings.LoadFromFile/LoadFromStream have TEncoding
               {$DEFINE WITH_STSTRINGUNICODE}            // stString is unicodestring.
               {$DEFINE WITH_NEWTOBJECT}                 // allows new methods in TObject (D2009+/FPC 2.4.4)
               {$DEFINE WITH_CHARINSET}                  // D2009's poor substitute for character specific "xx in yy"
@@ -224,6 +225,7 @@
                 {$WEAKLINKRTTI ON}                    //suppress extended RTTI
                 {.$RTTI EXPLICIT METHODS([]) PROPERTIES([]) FIELDS([])} //suppress extended RTTI for some unknown reason we've compilation issues. So enable this define manually!
                 {$DEFINE WITH_TSQLTimeStampOffset}    //The TSQLTimeStampOffset is declared in SqlTimSt.pas
+                {$DEFINE WITH_DEPRECATED_MESSAGE}     //Compiler supports deprecated messages
                 {$UNDEF WITH_INLINE_ANSICOMPARETEXT}  // AnsiCompareText is no more inline declared
                 {$UNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} //those inlineing errors are resolved 
                 {$DEFINE WITH_PWIDECHAR_STRLEN}       // SysUtils.StrLen supports PWideChar
@@ -235,7 +237,7 @@
                 {$IF CompilerVersion >= 22} //Delphi XE+
                   {$DEFINE WITH_tagVARIANT_UINT64}          // ActivX.tagVariant supports UInt64 Values
                   {$DEFINE TENCODING_HAS_CODEPAGE}          //TEncoding has property CodePage  
-                  {$DEFINE WITH_FORMATSETTINGS}
+                  {$DEFINE WITH_FORMATSETTINGS}             //Unit SysUtils have global FormatSettings
                   {$DEFINE WITH_UNICODEFROMLOCALECHARS}
                   {$DEFINE WITH_RTLCONSTS_SInvalidGuidArray}
                   {$DEFINE HAVE_BCDTOSTR_FORMATSETTINGS} //(Try)BCDToStr/StrToBCD has parameter FormatSettings

@@ -78,11 +78,10 @@ type
     property IndexFieldNames; {bangfauzan addition}
     property Options default [doPreferPrepared];
     property Transaction;
-    property Connection;
   end;
 
   {** Implements an universal SQL query for read/write data access. }
-  TZQuery = class (TZAbstractDataSet)
+  TZQuery = class (TZAbstractRWTxnUpdateObjDataSet)
   published
     property Active;
     property ReadOnly default False;
@@ -102,9 +101,9 @@ type
     property WhereMode;
     property Sequence;
     property SequenceField;
-    property Transaction;
-    property UpdateTransaction;
-    property Connection;
+    //property Transaction;
+    //property UpdateTransaction;
+    //property Connection;
   end;
 
   {** Implements an universal SQL query for single table access. }
@@ -125,10 +124,10 @@ type
     property UpdateMode;
     property WhereMode;
     property Sequence;
-    property SequenceField;
-    property Transaction;
-    property UpdateTransaction;
-    property Connection;
+    //property SequenceField;
+    //property Transaction;
+    //property UpdateTransaction;
+    //property Connection;
   end;
 
   /// <author>EgonHugeist.</author>

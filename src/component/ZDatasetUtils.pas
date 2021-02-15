@@ -296,34 +296,8 @@ const DatasetTypeToProcColDbc: array[TParamType] of TZProcedureColumnType =
 function IsSimpleDateTimeFormat(const Format: String): Boolean;
 function IsSimpleDateFormat(const Format: String): Boolean;
 function IsSimpleTimeFormat(const Format: String): Boolean;
-function ConvertAsFractionFormat(const Frmt: String; Scale: Integer;
-  ReplaceFractions: Boolean; out FractionLen: Integer): String;
-function FindFirstDateFormatDelimiter(const Format: String; out Delimiter: Char): Boolean;
-function FindFirstTimeFormatDelimiter(const Format: String; out Delimiter: Char): Boolean;
 
 const
-  MilliReplaceQuoted: array[0..9] of String = (
-    '""',
-    '"'#1'"',
-    '"'#1#2'"',
-    '"'#1#2#3'"',
-    '"'#1#2#3#4'"',
-    '"'#1#2#3#4#5'"',
-    '"'#1#2#3#4#5#6'"',
-    '"'#1#2#3#4#5#6#7'"',
-    '"'#1#2#3#4#5#6#7#8'"',
-    '"'#1#2#3#4#5#6#7#8#9'"');
-  MilliReplaceUnQuoted: array[0..9] of String = (
-    '',
-    #1,
-    #1#2,
-    #1#2#3,
-    #1#2#3#4,
-    #1#2#3#4#5,
-    #1#2#3#4#5#6,
-    #1#2#3#4#5#6#7,
-    #1#2#3#4#5#6#7#8,
-    #1#2#3#4#5#6#7#8#9);
   FractionAdjust: array[0..9] of String = (
     '',
     'f',
@@ -1925,130 +1899,6 @@ begin
 end;
 {$ENDIF DISABLE_ZPARAM}
 
-function ConvertAsFractionFormat(const Frmt: String; Scale: Integer;
-  ReplaceFractions: Boolean; out FractionLen: Integer): String;
-var P, PEnd, MSEnd, QuoteChar, MSStart, SPos, DotPos: PChar;
-  L: Integer;
-label MoveLast;
-begin
-  Result := '';
-  P := Pointer(Frmt);
-  PEnd := P +Length(Frmt);
-  MSStart:= nil;
-  MSEnd  := nil;
-  QuoteChar := nil;
-  SPos := nil;
-  DotPos := nil;
-  while P < PEnd do begin
-    if (P^ = #39) or (P^ = '"') then begin
-      if QuoteChar = nil then
-        QuoteChar := P
-      else if QuoteChar^ = P^ then
-        QuoteChar := nil;
-    end else if (QuoteChar = nil) then begin
-      case Ord(P^) or $20 of
-        Ord('f'),
-        Ord('z'): begin
-                    MSEnd := P;
-                    if MSStart = nil then
-                      MSStart := P;
-                  end;
-        Ord('.'): DotPos := P;
-        Ord('s'): Spos := P;
-      end;
-    end;
-    Inc(P);
-  end;
-  P := Pointer(Frmt);
-  if MSEnd = nil
-  then FractionLen := 0
-  else begin
-    Inc(MSEnd);
-    FractionLen := MSEnd - MSStart;
-  end;
-  L := Length(Frmt);
-  if ReplaceFractions then
-    Inc(L, 2);
-  if MSStart <> nil then begin
-    SetLength(Result, L+Scale-FractionLen);
-    DotPos := Pointer(Result);
-    L := (MSStart - P);
-    Move(P^, DotPos^, L * SizeOf(char));
-MoveLast:
-    Inc(DotPos, L);
-    L := Scale;
-    if ReplaceFractions then begin
-      Inc(L, 2);
-      P := Pointer(MilliReplaceQuoted[Scale]);
-    end else
-      P := Pointer(FractionAdjust[Scale]);
-    Move(P^, DotPos^, L * SizeOf(Char));
-    Inc(DotPos, L);
-    L := (PEnd - MSEnd);
-    if L > 0 then
-      Move(MSEnd^, DotPos^, L * SizeOf(Char));
-  end else begin
-    Result := Frmt;
-    if (DotPos <> nil) and (SPos <> nil) and (DotPos < SPos) then
-      if (SPos < PEnd) and ((SPos+1)^ = '.')
-      then DotPos := (SPos+1)
-      else DotPos := nil;
-    if (DotPos <> nil) then begin
-      MSEnd := DotPos+1;
-      SetLength(Result, L+Scale);
-      DotPos := Pointer(Result);
-      L := (MSEnd - P);
-      Move(P^, DotPos^, L * SizeOf(char));
-      goto MoveLast;
-    end else if SPos <> nil then begin
-      MSEnd := SPos+1;
-      SetLength(Result, L+1+Scale);
-      DotPos := Pointer(Result);
-      L := (SPos - P);
-      Move(P^, DotPos^, L * SizeOf(char));
-      (DotPos+L+1)^ := '.';
-      Inc(L, 2);
-      goto MoveLast;
-    end;
-  end;
-end;
-
-function FindFirstDateFormatDelimiter(const Format: String; out Delimiter: Char): Boolean;
-var P, PEnd: PChar;
-begin
-  Delimiter := #0;
-  Result := False;
-  P := Pointer(Format);
-  PEnd := P + Length(Format);
-  while P < PEnd do begin
-    if (Ord(P^) < Ord('0')) or ((Ord(P^) > Ord('9')) and
-       (((Ord(P^) or $20 < Ord('a')) or (Ord(P^) or $20 > Ord('z'))))) then begin
-      Delimiter := P^;
-      Result := True;
-      Break;
-    end;
-    Inc(P);
-  end;
-end;
-
-function FindFirstTimeFormatDelimiter(const Format: String; out Delimiter: Char): Boolean;
-var P, PEnd: PChar;
-begin
-  Delimiter := #0;
-  Result := False;
-  P := Pointer(Format);
-  PEnd := P + Length(Format);
-  while P < PEnd do begin
-    if (Ord(P^) < Ord('0')) or ((Ord(P^) > Ord('9')) and (Ord(P^) <> Ord('.')) and
-       (((Ord(P^) or $20 < Ord('a')) or (Ord(P^) or $20 > Ord('z'))))) then begin
-      Delimiter := P^;
-      Result := True;
-      Break;
-    end;
-    Inc(P);
-  end;
-end;
-
 {$IFDEF FPC}
   {$PUSH}
   {$WARN 5057 off : Locale variable "$Counters" does not seem to be initialized}
@@ -2106,7 +1956,7 @@ begin
       Ord('y'): Inc(Counters[flYear]);
       Ord('m'): Inc(Counters[flMonth]);
       Ord('d'): Inc(Counters[flDay]);
-      Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' '),Ord('t'):;
+      Ord(':'),Ord('-'),Ord('/'),Ord('\'),Ord(' '),Ord('t'),Ord('.'):;
       else Inc(OtherCount);
     end;
     Inc(P);

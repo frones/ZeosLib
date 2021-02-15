@@ -90,7 +90,7 @@ type
     {$IFDEF FPC}
     frefcount : longint;
     { implement methods of IUnknown }
-    {$IFDEF FPC2_5UP}
+    {$IFDEF WITH_NEWTOBJECT}
     function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} iid : tguid; out obj) : HResult;{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF}; virtual;
     function _AddRef : longint;{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF};
     function _Release : longint;{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF};

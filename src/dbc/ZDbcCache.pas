@@ -1284,14 +1284,21 @@ var
   Data: PPointer;
   IndexPair: PZIndexPair absolute P;
   SQLType: TZSQLType;
-  function GetAsCachedLob(const Lob: IZBlob): IZBlob;
-  var CLob: IZClob;
-    current: IZBlob;
+  procedure InternalSetLob(Dest: PIZLob; ResultSet: IZResultSet; ColumnIndex: Integer); //keep intfclr out of main mathod
+    procedure SetAsCachedLob(Lob: PIZLob);
+    var CLob: IZClob;
+      current, newlob: IZBlob;
+    begin
+      Current := Lob^; //keep recount greater than 1
+      if Current.QueryInterface(IZCLob, Clob) = S_OK
+      then newlob := TZLocalMemCLob.CreateFromClob(Clob, FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], ConSettings, FOpenLobStreams)
+      else newlob := TZLocalMemBLob.CreateFromBlob(Current, FOpenLobStreams);
+      Lob^ := newlob;
+    end;
   begin
-    Current := Lob; //keep recount greater than 1
-    if Current.QueryInterface(IZCLob, Clob) = S_OK
-    then Result := TZLocalMemCLob.CreateFromClob(Clob, FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], ConSettings, FOpenLobStreams)
-    else Result := TZLocalMemBLob.CreateFromBlob(Current, FOpenLobStreams)
+    PIZLob(Dest)^ := ResultSet.GetBlob(ResultSetIndex);
+    if FCachedLobs then
+      SetAsCachedLob(Dest);
   end;
 begin
   for i := 0 to IndexPairList.Count -1 do begin
@@ -1343,11 +1350,7 @@ begin
         stDate:     ResultSet.GetDate(ResultSetIndex, PZDate(Data)^);
         stTime:     ResultSet.GetTime(ResultSetIndex, PZTime(Data)^);
         stTimestamp:ResultSet.GetTimestamp(ResultSetIndex, PZTimeStamp(Data)^);
-        stAsciiStream, stUnicodeStream, stBinaryStream: begin
-            PIZLob(Data)^ := ResultSet.GetBlob(ResultSetIndex);
-            if FCachedLobs then
-              PIZLob(Data)^ := GetAsCachedLob(PIZLob(Data)^);
-          end;
+        stAsciiStream, stUnicodeStream, stBinaryStream: InternalSetLob(PIZLob(Data), ResultSet, ResultsetIndex);
         else ; //hide fpc warnig
       end;
       if ResultSet.WasNull then //if conversion failed?

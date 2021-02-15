@@ -225,12 +225,13 @@ type
     function isMySQL: Boolean;
     function isMariaDB: Boolean;
   end;
+
   {** Implements MySQL Database Metadata. }
   TZMySQLDatabaseMetadata = class(TZAbstractDatabaseMetadata, IZMySQLDatabaseMetadata)
   private
     FInfo: TStrings;
     FMySQL_FieldType_Bit_1_IsBoolean: Boolean;
-    FBoolCachedResultSets: IZCollection;
+    FBoolCachedResultSets: TZCustomElementList;
     Flower_case_table_names: Byte;
     FKnowServerType: Boolean;
     FIsMariaDB: Boolean;
@@ -248,6 +249,34 @@ type
     function UncachedGetTableTypes: IZResultSet; override;
     function UncachedGetColumns(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
+    /// <summary>Gets a description of the access rights for each table
+    ///  available in a catalog from a cache. Note that a table privilege
+    ///  applies to one or more columns in the table. It would be wrong to
+    ///  assume that this priviledge applies to all columns (this may be true
+    ///  for some systems but is not true for all.)
+    ///
+    ///  Only privileges matching the schema and table name
+    ///  criteria are returned. They are ordered by TABLE_SCHEM,
+    ///  TABLE_NAME, and PRIVILEGE.
+    ///
+    ///  Each privilige description has the following columns:
+    ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+    ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+    ///  <c>TABLE_NAME</c> String => table name
+    ///  <c>GRANTOR</c> => grantor of access (may be null)
+    ///  <c>GRANTEE</c> String => grantee of access
+    ///  <c>PRIVILEGE</c> String => name of access (SELECT,
+    ///      INSERT, UPDATE, REFRENCES, ...)
+    ///  <c>IS_GRANTABLE</c> String => "YES" if grantee is permitted
+    ///   to grant to others; "NO" if not; null if unknown</summary>
+    ///
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop schema from
+    ///  the selection criteria</param>
+    /// <param>"TableNamePattern" a table name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a table privilege description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function UncachedGetTablePrivileges(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string): IZResultSet; override;
     function UncachedGetColumnPrivileges(const Catalog: string; const Schema: string;
@@ -321,9 +350,23 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   {$IFDEF UNICODE}ZEncoding,{$ENDIF}
-  ZFastCode, ZMessages, ZCollections, ZMatchPattern,
+  ZFastCode, ZMessages, ZMatchPattern,
   ZDbcMySqlUtils, ZDbcUtils, ZDbcProperties, ZDbcMySql;
 
+
+type
+  PIZResultSet = ^IZResultSet;
+
+  TZResultSetList = class(TZCustomElementList)
+  protected
+    ///  if ElementNeedsFinalize is False the method will never be called.
+    ///  Otherwise you may finalize managed types beeing part of each element,
+    ///  such as Strings, Objects etc.</summary>
+    /// <param>"Ptr" the address of the element an action happens for.</param>
+    /// <param>"Index" the index of the element.</param>
+    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
+    procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+  end;
 { TZMySQLDatabaseInfo }
 
 {**
@@ -1019,7 +1062,7 @@ begin
   FInfo.Assign(Url.Properties);
 
   FInfo.Values[DSProps_UseResult] := 'True';
-  FBoolCachedResultSets := TZCollection.Create;
+  FBoolCachedResultSets := TZResultSetList.Create(SizeOF(IZResultSet), True);
 
   Flower_case_table_names := $FF;
   FIsMariaDB := false;
@@ -1033,6 +1076,7 @@ end;
 destructor TZMySQLDatabaseMetadata.Destroy;
 begin
   FreeAndNil(FInfo);
+  FreeAndNil(FBoolCachedResultSets);
   inherited Destroy;
 end;
 
@@ -1087,14 +1131,21 @@ begin
 end;
 
 procedure TZMySQLDatabaseMetadata.SetMySQL_FieldType_Bit_1_IsBoolean(Value: Boolean);
-var I, Idx: Integer;
+var I, J: Integer;
+  KeyAndResultSetPair: PZKeyAndResultSetPair;
+  ResultSet: PIZResultSet;
 begin
   if Value <> FMySQL_FieldType_Bit_1_IsBoolean then begin
     FMySQL_FieldType_Bit_1_IsBoolean := Value;
     for i := FBoolCachedResultSets.Count -1 downto 0 do begin
-      Idx := CachedResultSets.Values.IndexOf(FBoolCachedResultSets[i]);
-      if Idx > -1 then
-        CachedResultSets.Remove(CachedResultSets.Keys[idx]);
+      ResultSet := FBoolCachedResultSets[i];
+      for J := 0 to CachedResultSets.Count -1 do begin
+        KeyAndResultSetPair := CachedResultSets[j];
+        if KeyAndResultSetPair.ResultSet = ResultSet^ then begin
+          CachedResultSets.Delete(J);
+          Break;
+        end;
+      end;
       FBoolCachedResultSets.Delete(i);
     end;
   end;
@@ -1485,7 +1536,7 @@ begin
       end;
     end;
     if AddToBoolCache then
-      FBoolCachedResultSets.Add(Result);
+      PIZResultSet(TZResultSetList(FBoolCachedResultSets).Add(NativeInt(Len)))^ := Result;
   finally
     TableNameList.Free;
   end;
@@ -1596,38 +1647,6 @@ begin
   end;
 end;
 
-{**
-  Gets a description of the access rights for each table available
-  in a catalog. Note that a table privilege applies to one or
-  more columns in the table. It would be wrong to assume that
-  this priviledge applies to all columns (this may be true for
-  some systems but is not true for all.)
-
-  <P>Only privileges matching the schema and table name
-  criteria are returned.  They are ordered by TABLE_SCHEM,
-  TABLE_NAME, and PRIVILEGE.
-
-  <P>Each privilige description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>GRANTOR</B> => grantor of access (may be null)
- 	<LI><B>GRANTEE</B> String => grantee of access
- 	<LI><B>PRIVILEGE</B> String => name of access (SELECT,
-       INSERT, UPDATE, REFRENCES, ...)
- 	<LI><B>IS_GRANTABLE</B> String => "YES" if grantee is permitted
-       to grant to others; "NO" if not; null if unknown
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param tableNamePattern a table name pattern
-  @return <code>ResultSet</code> - each row is a table privilege description
-  @see #getSearchStringEscape
-}
 function TZMySQLDatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 const
@@ -3277,6 +3296,14 @@ begin
       else Result := Value
   else
     Result := inherited Quote(Value, Qualifier);
+end;
+
+{ TZResultSetList }
+
+procedure TZResultSetList.Notify(Ptr: Pointer; Action: TListNotification);
+begin
+  if Action = lnDeleted then
+    PIZResultSet(Ptr)^ := nil;
 end;
 
 initialization

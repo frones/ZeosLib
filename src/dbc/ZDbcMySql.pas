@@ -1134,7 +1134,8 @@ procedure TZMySQLConnection.HandleErrorOrWarning(
   const LogMessage: SQLString; const Sender: IImmediatelyReleasable);
 var
   FormatStr, SQLState: String;
-  ErrorCode: Integer;
+  C: Cardinal;
+  ErrorCode: Integer absolute C;
   P, S: PAnsiChar;
   L: NativeUInt;
   Error: EZSQLThrowable;
@@ -1147,17 +1148,17 @@ label jmpErr;
 begin
   S := nil;
   if Assigned(MYSQL_STMT) then begin
-    ErrorCode := FPlainDriver.mysql_stmt_errno(MYSQL_STMT);
+    C := FPlainDriver.mysql_stmt_errno(MYSQL_STMT);
     P := FPlainDriver.mysql_stmt_error(MYSQL_STMT);
     if Assigned(FPlainDriver.mysql_stmt_sqlstate) then
       S := FPlainDriver.mysql_stmt_sqlstate(MYSQL_STMT);
   end else begin
-    ErrorCode := FPlainDriver.mysql_errno(FHandle);
+    C := FPlainDriver.mysql_errno(FHandle);
     P := FPlainDriver.mysql_error(FHandle);
     if Assigned(FPlainDriver.mysql_stmt_sqlstate) then
       S := FPlainDriver.mysql_sqlstate(FHandle);
   end;
-  if (ErrorCode <> 0) then begin
+  if (ErrorCode > 0) then begin
     if (ConSettings <> nil) and (ConSettings.ClientCodePage <> nil)
     then msgCP := ConSettings.ClientCodePage.CP
     else msgCP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}

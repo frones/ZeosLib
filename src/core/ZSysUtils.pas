@@ -61,8 +61,8 @@ uses
   ZMessages, ZCompatibility, FmtBCD;
 
 type
-  /// <summary>Declares a TZFormatSettings record.</summary>
-  TZFormatSettings = Record
+  /// <summary>Declares a TZClientFormatSettings record.</summary>
+  TZClientFormatSettings = Record
     DateFormat: String;
     DateFormatLen: Byte;
     TimeFormat: String;
@@ -648,7 +648,7 @@ function ZCompareTimeStamp(const Value1, Value2: TZTimeStamp): Integer;
 /// <author>EgonHugeist</author>
 /// <summary>Trys to convert a character buffer into a TZDate-representation
 ///  We do not check if the date is valid. We just convert numbers into the
-///  Result record using the TZFormatSettings as match pattern. Valid format tokens are:
+///  Result record using the TZClientFormatSettings as match pattern. Valid format tokens are:
 ///  'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day.
 ///  The year may be negative using explicit '-' to sign as is.
 ///  Valid delimiters (if given) are ' ','-','\','/'.
@@ -656,25 +656,25 @@ function ZCompareTimeStamp(const Value1, Value2: TZTimeStamp): Integer;
 ///  ISO8601 format is made</summary>
 /// <param>"P" the pointer to a raw encoded buffer to be converted.</param>
 /// <param>"Len" the length of the buffer.</param>
-/// <param>"FormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"FormatSettings" the TZClientFormatSettings to be used as format template</param>
 /// <param>"Date" a reference to the TZDate-record we write in.</param>
 /// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
-function TryPCharToDate(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var Date: TZDate): Boolean; overload;
+function TryPCharToDate(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZClientFormatSettings; var Date: TZDate): Boolean; overload;
 
 /// <author>EgonHugeist</author>
 /// <summary>Trys to convert a character buffer into a TZDate-representation
 ///  We do not check if the date is valid. We just convert numbers into the
-///  Result record using the TZFormatSettings as match pattern. Valid format tokens are:
+///  Result record using the TZClientFormatSettings as match pattern. Valid format tokens are:
 ///  'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day.
 ///  The year may be negative using explicit '-' to sign as is.
 ///  Valid delimiters (if given) are ' ','-','\','/'. Long names are not supported.
 ///  If conversion fails, a second approach using ISO8601 format is performed</summary>
 /// <param>"P" the pointer to a UTF16 encoded buffer to be converted.</param>
 /// <param>"Len" the length in words of the buffer.</param>
-/// <param>"FormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"FormatSettings" the TZClientFormatSettings to be used as format template</param>
 /// <param>"Date" a reference to the TZDate-record we write in.</param>
 /// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
-function TryPCharToDate(P: PWideChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var Date: TZDate): Boolean; overload;
+function TryPCharToDate(P: PWideChar; Len: Cardinal; const FormatSettings: TZClientFormatSettings; var Date: TZDate): Boolean; overload;
 
 /// <author>EgonHugeist</author>
 /// <summary>convert a raw SQL Time to TZTime value.
@@ -689,7 +689,7 @@ function TryPCharToDate(P: PWideChar; Len: Cardinal; const FormatSettings: TZFor
 /// <param>"Format" a TimeFormat string used for the convertion.</param>
 /// <param>"Result" a reference to the TZTime-record we write in.</param>
 /// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise.</returns>
-function TryPCharToTime(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var Time: TZTime): Boolean; overload;
+function TryPCharToTime(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZClientFormatSettings; var Time: TZTime): Boolean; overload;
 
 /// <author>EgonHugeist</author>
 /// <summary>convert a UTF16 SQL Time to TZTime value.
@@ -704,7 +704,7 @@ function TryPCharToTime(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZFor
 /// <param>"Format" a TimeFormat string used for the convertion.</param>
 /// <param>"Result" a reference to the TZTime-record we write in.</param>
 /// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise.</returns>
-function TryPCharToTime(P: PWideChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var Time: TZTime): Boolean; overload;
+function TryPCharToTime(P: PWideChar; Len: Cardinal; const FormatSettings: TZClientFormatSettings; var Time: TZTime): Boolean; overload;
 
 /// <author>EgonHugeist</author>
 /// <summary>Try to convert a raw SQL TimeStamp to TZTimeStamp value.
@@ -720,7 +720,7 @@ function TryPCharToTime(P: PWideChar; Len: Cardinal; const FormatSettings: TZFor
 /// <param>"Format" a Timestamp-Format string used for the convertion.</param>
 /// <param>"Result" a reference to the TZTimeStamp-record we write in.</param>
 /// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
-function TryPCharToTimeStamp(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var TimeStamp: TZTimeStamp): Boolean; overload;
+function TryPCharToTimeStamp(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZClientFormatSettings; var TimeStamp: TZTimeStamp): Boolean; overload;
 
 /// <author>EgonHugeist</author>
 /// <summary>Try to convert a UTF16 SQL TimeStamp to TZTimeStamp value.
@@ -736,7 +736,7 @@ function TryPCharToTimeStamp(P: PAnsiChar; Len: Cardinal; const FormatSettings: 
 /// <param>"Format" a Timestamp-Format string used for the convertion.</param>
 /// <param>"Result" a reference to the TZTimeStamp-record we write in.</param>
 /// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
-function TryPCharToTimeStamp(P: PWideChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var TimeStamp: TZTimeStamp): Boolean; overload;
+function TryPCharToTimeStamp(P: PWideChar; Len: Cardinal; const FormatSettings: TZClientFormatSettings; var TimeStamp: TZTimeStamp): Boolean; overload;
 
 /// <author>EgonHugeist</author>
 /// <summary>Try to convert a raw SQL TimeStamp to pascal TDateTime value.
@@ -752,7 +752,7 @@ function TryPCharToTimeStamp(P: PWideChar; Len: Cardinal; const FormatSettings: 
 /// <param>"Format" a Timestamp-Format string used for the convertion.</param>
 /// <param>"Result" a reference to the TDateTime value we write in.</param>
 /// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
-function TryPCharToDateTime(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var DateTime: TDateTime): Boolean; overload;
+function TryPCharToDateTime(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZClientFormatSettings; var DateTime: TDateTime): Boolean; overload;
 
 /// <author>EgonHugeist</author>
 /// <summary>Try to convert a UTF16 SQL TimeStamp to pascal TDateTime value.
@@ -768,7 +768,7 @@ function TryPCharToDateTime(P: PAnsiChar; Len: Cardinal; const FormatSettings: T
 /// <param>"Format" a Timestamp-Format string used for the convertion.</param>
 /// <param>"Result" a reference to the TDateTime value we write in.</param>
 /// <returns><c>True</c> if the conversion was successful, <c>False</c> otherwise</returns>
-function TryPCharToDateTime(P: PWideChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var DateTime: TDateTime): Boolean; overload;
+function TryPCharToDateTime(P: PWideChar; Len: Cardinal; const FormatSettings: TZClientFormatSettings; var DateTime: TDateTime): Boolean; overload;
 
 /// <summary>convert an ISO8601 formated String into a pascal TDateTime value.</summary>
 /// <param>"Value" a UnicodeString to be converted.</param>
@@ -798,13 +798,13 @@ function AnsiSQLDateToDateTime(P: PAnsiChar; L: LengthInt): TDateTime; overload;
 ///  Valid delimiters (if given) are ' ','-','\','/'.
 ///  Long names are not supported.</summary>
 /// <param>"Value" the value to be converted.</param>
-/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"ConFormatSettings" the TZClientFormatSettings to be used as format template</param>
 /// <param>"Quoted" if the result should be quoted with a #39 char.</param>
 /// <param>"Suffix" ia suffix string which can be appendened to the result
 ///  String i.e. Postgres ::date.</param>
 /// <returns>a formated RawByteString in Date-Format pattern</returns>
 function DateTimeToRawSQLDate(const Value: TDateTime;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString; overload;
 
 /// <author>EgonHugeist</author>
@@ -814,13 +814,13 @@ function DateTimeToRawSQLDate(const Value: TDateTime;
 ///  Long names are not supported.</summary>
 /// <param>"Value" the value to be converted.</param>
 /// <param>"Buf" the raw buffer we write in.</param>
-/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"ConFormatSettings" the TZClientFormatSettings to be used as format template</param>
 /// <param>"Quoted" if the result should be quoted with a #39 char.</param>
 /// <param>"Suffix" ia suffix string which can be appendened to the result
 ///  String i.e. Postgres ::date.</param>
 /// <returns>the length in bytes of written value.</returns>
 function DateTimeToRawSQLDate(const Value: TDateTime; Buf: PAnsichar;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): Word; overload;
 
 /// <author>EgonHugeist</author>
@@ -845,13 +845,13 @@ function DateToRaw(Year, Month, Day: Word; Buf: PAnsichar;
 ///  Valid delimiters (if given) are ' ','-','\','/'.
 ///  Long names are not supported.</summary>
 /// <param>"Value" the value to be converted.</param>
-/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"ConFormatSettings" the TZClientFormatSettings to be used as format template</param>
 /// <param>"Quoted" if the result should be quoted with a #39 char.</param>
 /// <param>"Suffix" ia suffix string which can be appendened to the result
 ///  String i.e. Postgres ::date.</param>
 /// <returns>a formated UnicodeString in Date-Format pattern</returns>
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: UnicodeString = ''): UnicodeString; overload;
 
 /// <author>EgonHugeist</author>
@@ -861,13 +861,13 @@ function DateTimeToUnicodeSQLDate(const Value: TDateTime;
 ///  Long names are not supported.</summary>
 /// <param>"Value" the value to be converted.</param>
 /// <param>"Buf" the UTF16 buffer we write in.</param>
-/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"ConFormatSettings" the TZClientFormatSettings to be used as format template</param>
 /// <param>"Quoted" if the result should be quoted with a #39 char.</param>
 /// <param>"Suffix" ia suffix string which can be appendened to the result
 ///  String i.e. Postgres ::date.</param>
 /// <returns>the length in words of written value.</returns>
 function DateTimeToUnicodeSQLDate(const Value: TDateTime; Buf: PWideChar;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: UnicodeString = ''): Word; overload;
 
 /// <author>EgonHugeist</author>
@@ -892,13 +892,13 @@ function DateToUni(Year, Month, Day: Word; Buf: PWideChar;
 ///  Valid delimiters (if given) are ' ','-','\','/'.
 ///  Long names are not supported.</summary>
 /// <param>"Value" the value to be converted.</param>
-/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"ConFormatSettings" the TZClientFormatSettings to be used as format template</param>
 /// <param>"Quoted" if the result should be quoted with a #39 char.</param>
 /// <param>"Suffix" ia suffix string which can be appendened to the result
 ///  String i.e. Postgres ::date.</param>
 /// <returns>a formated String in Date-Format pattern</returns>
 function DateTimeToSQLDate(const Value: TDateTime;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: string = ''): string;
 
 /// <author>EgonHugeist</author>
@@ -907,13 +907,13 @@ function DateTimeToSQLDate(const Value: TDateTime;
 ///  '.','F','f','Z'/'z' for fractions. Valid delimiters (if given) are
 ///  ' ','-','\','/','.',':'.</summary>
 /// <param>"Value" the value to be converted.</param>
-/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"ConFormatSettings" the TZClientFormatSettings to be used as format template</param>
 /// <param>"Quoted" if the result should be quoted with a #39 char.</param>
 /// <param>"Suffix" ia suffix string which can be appendened to the result
 ///  String i.e. Postgres ::time.</param>
 /// <returns>a formated RawByteString in Time-Format pattern</returns>
 function DateTimeToRawSQLTime(const Value: TDateTime;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString; overload;
 
 /// <author>EgonHugeist</author>
@@ -922,13 +922,13 @@ function DateTimeToRawSQLTime(const Value: TDateTime;
 ///  second, '.','F','f','Z'/'z' for fractions. Valid delimiters (if given) are
 ///  ' ','-','\','/','.',':'. </summary>
 /// <param>"Value" the value to be converted.</param>
-/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"ConFormatSettings" the TZClientFormatSettings to be used as format template</param>
 /// <param>"Quoted" if the result should be quoted with a #39 char.</param>
 /// <param>"Suffix" a suffix string which can be appendened to the result
 ///  String i.e. Postgres ::time.</param>
 /// <returns>the length in bytes of written value.</returns>
 function DateTimeToRawSQLTime(const Value: TDateTime; Buffer: PAnsichar;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): Word; overload;
 
 /// <author>EgonHugeist</author>
@@ -953,13 +953,13 @@ function TimeToRaw(Hour, Minute, Second: Word; Fractions: Cardinal;
 ///  '.','F','f','Z'/'z' for fractions. Valid delimiters (if given) are
 ///  ' ','-','\','/','.',':'. </summary>
 /// <param>"Value" the value to be converted.</param>
-/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"ConFormatSettings" the TZClientFormatSettings to be used as format template</param>
 /// <param>"Quoted" if the result should be quoted with a #39 char.</param>
 /// <param>"Suffix" ia suffix string which can be appendened to the result
 ///  String i.e. Postgres ::time.</param>
 /// <returns>a formated UnicodeString in Time-Format pattern</returns>
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: UnicodeString = ''): UnicodeString; overload;
 
 /// <author>EgonHugeist</author>
@@ -968,13 +968,13 @@ function DateTimeToUnicodeSQLTime(const Value: TDateTime;
 ///  second, '.','F','f','Z'/'z' for fractions. Valid delimiters (if given) are
 ///  ' ','-','\','/','.',':'. </summary>
 /// <param>"Value" the value to be converted.</param>
-/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"ConFormatSettings" the TZClientFormatSettings to be used as format template</param>
 /// <param>"Quoted" if the result should be quoted with a #39 char.</param>
 /// <param>"Suffix" a suffix string which can be appendened to the result
 ///  String i.e. Postgres ::time.</param>
 /// <returns>the length in words of written value.</returns>
 function DateTimeToUnicodeSQLTime(const Value: TDateTime; Buf: PWideChar;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: UnicodeString = ''): Word; overload;
 
 /// <author>EgonHugeist</author>
@@ -999,13 +999,13 @@ function TimeToUni(Hour, Minute, Second: Word; Fractions: Cardinal;
 ///  second, '.','F','f','Z'/'z' for fractions. Valid delimiters (if given) are
 ///  ' ','-','\','/','.',':'. </summary>
 /// <param>"Value" the value to be converted.</param>
-/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"ConFormatSettings" the TZClientFormatSettings to be used as format template</param>
 /// <param>"Quoted" if the result should be quoted with a #39 char.</param>
 /// <param>"Suffix" a suffix string which can be appendened to the result
 ///  String i.e. Postgres ::time.</param>
 /// <returns>a formated String in Time-Format pattern</returns>
 function DateTimeToSQLTime(const Value: TDateTime;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: string = ''): string; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
 /// <author>EgonHugeist</author>
@@ -1015,13 +1015,13 @@ function DateTimeToSQLTime(const Value: TDateTime;
 ///  '.','F','f','Z'/'z' for fractions. Valid delimiters (if given) are
 ///  ' ','-','\','/','.',':'. Long names are not supported.</summary>
 /// <param>"Value" the value to be converted.</param>
-/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"ConFormatSettings" the TZClientFormatSettings to be used as format template</param>
 /// <param>"Quoted" if the result should be quoted with a #39 char.</param>
 /// <param>"Suffix" a suffix string which can be appendened to the result
 ///  String i.e. Postgres ::timestamp.</param>
 /// <returns>a formated RawByteString in DateTime-Format pattern</returns>
 function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString; overload;
 
 /// <author>EgonHugeist</author>
@@ -1032,13 +1032,13 @@ function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
 ///  ' ','-','\','/','.',':'. Long names are not supported.</summary>
 /// <param>"Value" the value to be converted.</param>
 /// <param>"Buf" the raw buffer we write in.</param>
-/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"ConFormatSettings" the TZClientFormatSettings to be used as format template</param>
 /// <param>"Quoted" if the result should be quoted with a #39 char.</param>
 /// <param>"Suffix" a suffix string which can be appendened to the result
 ///  String i.e. Postgres ::timestamp.</param>
 /// <returns>the length in bytes we wrote into the buffer</returns>
 function DateTimeToRawSQLTimeStamp(const Value: TDateTime; Buf: PAnsiChar;
-  const ConFormatSettings: TZFormatSettings; Quoted: Boolean;
+  const ConFormatSettings: TZClientFormatSettings; Quoted: Boolean;
   const Suffix: RawByteString = EmptyRaw): Word; overload;
 
 /// <author>EgonHugeist</author>
@@ -1069,13 +1069,13 @@ function DateTimeToRaw(Year, Month, Day, Hour, Minute, Second: Word;
 ///  '.','F','f','Z'/'z' for fractions. Valid delimiters (if given) are
 ///  ' ','-','\','/','.',':'. Long names are not supported.</summary>
 /// <param>"Value" the value to be converted.</param>
-/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"ConFormatSettings" the TZClientFormatSettings to be used as format template</param>
 /// <param>"Quoted" if the result should be quoted with a #39 char.</param>
 /// <param>"Suffix" a suffix string which can be appendened to the result
 ///  String i.e. Postgres ::timestamp.</param>
 /// <returns>a formated UnicodeString in DateTime-Format pattern</returns>
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: UnicodeString = ''): UnicodeString; overload;
 
 /// <author>EgonHugeist</author>
@@ -1086,13 +1086,13 @@ function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
 ///  ' ','-','\','/','.',':'. Long names are not supported.</summary>
 /// <param>"Value" the value to be converted.</param>
 /// <param>"Buf" the UTF16 buffer we write in.</param>
-/// <param>"ConFormatSettings" the TZFormatSettings to be used as format template</param>
+/// <param>"ConFormatSettings" the TZClientFormatSettings to be used as format template</param>
 /// <param>"Quoted" if the result should be quoted with a #39 char.</param>
 /// <param>"Suffix" a suffix string which can be appendened to the result
 ///  String i.e. Postgres ::timestamp.</param>
 /// <returns>the length in words we wrote into the buffer</returns>
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime; Buf: PWideChar;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: UnicodeString = ''): Word; overload;
 
 /// <author>EgonHugeist</author>
@@ -1169,7 +1169,14 @@ function DecodeCString(SrcLength: LengthInt; SrcBuffer, DestBuffer: PAnsiChar): 
 /// <param>"Target" Target a char to replace.</param>
 /// <param>"Str" a source string.</param>
 /// <returns>a string with replaced chars.</returns>
-function ReplaceChar(const Source, Target: Char; const Str: string): string;
+function ReplaceChar(const Source, Target: Char; const Str: string): string; overload;
+
+/// <author>EgonHugeist</author>
+/// <summary>Replace chars in the string.</summary>
+/// <param>"Str" a reference to the string with replaced chars.</param>
+/// <param>"Source" a char to search.</param>
+/// <param>"Target" Target a char to replace.</param>
+procedure ReplaceChar(Var Str: string; const Source, Target: Char); overload;
 
 /// <author>Fr0sT</author>
 /// <summary>Remove chars in the string. More obvious and ~35 times faster
@@ -3263,7 +3270,7 @@ begin
   L := Length(Value);
   {$IFDEF FPC} Result := nil;{$ENDIF}
   SetLength(Result, L);
-  if Value <> '' then
+  if Value <> EmptyRaw then
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Result)^, L);
 end;
 
@@ -4037,7 +4044,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : hint local variable "TS" does not seem to be intialized} {$ENDIF}
 function TryPCharToDate(P: PAnsiChar; Len: Cardinal;
-  const FormatSettings: TZFormatSettings; var Date: TZDate): Boolean;
+  const FormatSettings: TZClientFormatSettings; var Date: TZDate): Boolean;
 var TS: TZTimeStamp;
 begin
   if Len <= FormatSettings.DateFormatLen then begin
@@ -4059,7 +4066,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : hint local variable "TS" does not seem to be intialized} {$ENDIF}
 function TryPCharToDate(P: PWideChar; Len: Cardinal;
-  const FormatSettings: TZFormatSettings; var Date: TZDate): Boolean;
+  const FormatSettings: TZClientFormatSettings; var Date: TZDate): Boolean;
 var TS: TZTimeStamp;
 begin
   if Len <= FormatSettings.DateFormatLen then begin
@@ -4081,7 +4088,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : hint local variable "TS" does not seem to be intialized} {$ENDIF}
 function TryPCharToTime(P: PAnsiChar; Len: Cardinal;
-  const FormatSettings: TZFormatSettings; var Time: TZTime): Boolean;
+  const FormatSettings: TZClientFormatSettings; var Time: TZTime): Boolean;
 var TS: TZTimeStamp;
 begin
   Result := False;
@@ -4107,7 +4114,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : hint local variable "TS" does not seem to be intialized} {$ENDIF}
 function TryPCharToTime(P: PWideChar; Len: Cardinal;
-  const FormatSettings: TZFormatSettings; var Time: TZTime): Boolean;
+  const FormatSettings: TZClientFormatSettings; var Time: TZTime): Boolean;
 var TS: TZTimeStamp;
 begin
   Result := False;
@@ -4132,7 +4139,7 @@ end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 function TryPCharToTimeStamp(P: PAnsiChar; Len: Cardinal;
-  const FormatSettings: TZFormatSettings; var TimeStamp: TZTimeStamp): Boolean;
+  const FormatSettings: TZClientFormatSettings; var TimeStamp: TZTimeStamp): Boolean;
 begin
   if (Len > 2) and (P <> nil) then
     if PByte(P+2)^ = Ord(':') then begin
@@ -4159,7 +4166,7 @@ begin
 end;
 
 function TryPCharToTimeStamp(P: PWideChar; Len: Cardinal;
-  const FormatSettings: TZFormatSettings; var TimeStamp: TZTimeStamp): Boolean;
+  const FormatSettings: TZClientFormatSettings; var TimeStamp: TZTimeStamp): Boolean;
 begin
   if (Len > 2) and (P <> nil) then
     if PByte(P+2)^ = Ord(':') then begin
@@ -4185,7 +4192,7 @@ begin
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : hint local variable "TS" does not seem to be intialized} {$ENDIF}
-function TryPCharToDateTime(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var DateTime: TDateTime): Boolean;
+function TryPCharToDateTime(P: PAnsiChar; Len: Cardinal; const FormatSettings: TZClientFormatSettings; var DateTime: TDateTime): Boolean;
 var TS: TZTimeStamp;
 begin
   if TryPCharToTimeStamp(P, Len, FormatSettings, TS) then
@@ -4198,7 +4205,7 @@ end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : hint local variable "TS" does not seem to be intialized} {$ENDIF}
-function TryPCharToDateTime(P: PWideChar; Len: Cardinal; const FormatSettings: TZFormatSettings; var DateTime: TDateTime): Boolean;
+function TryPCharToDateTime(P: PWideChar; Len: Cardinal; const FormatSettings: TZClientFormatSettings; var DateTime: TDateTime): Boolean;
 var TS: TZTimeStamp;
 begin
   if TryPCharToTimeStamp(P, Len, FormatSettings, TS) then
@@ -4327,7 +4334,7 @@ begin
 end;
 
 function DateTimeToRawSQLDate(const Value: TDateTime;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
 var L, L2, Year, Month, Day: Word;
   Buffer: array[0..cMaxDateLenQuoted] of AnsiChar;
@@ -4349,7 +4356,7 @@ begin
 end;
 
 function DateTimeToRawSQLDate(const Value: TDateTime; Buf: PAnsichar;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): Word;
 var L, Year, Month, Day: Word;
 begin
@@ -4462,7 +4469,7 @@ Inc_dbl:          Inc(Buf, 2);
 end;
 
 function DateTimeToUnicodeSQLDate(const Value: TDateTime; Buf: PWideChar;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: UnicodeString = ''): word;
 var L, Year, Month, Day: Word;
 begin
@@ -4575,7 +4582,7 @@ Inc_dbl:          Inc(Buf, 2);
 end;
 
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: UnicodeString): UnicodeString;
 var L, L2, Year, Month, Day: Word;
   Buffer: array[0..cMaxDateLenQuoted] of WideChar;
@@ -4593,14 +4600,14 @@ begin
 end;
 
 function DateTimeToSQLDate(const Value: TDateTime;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: string): string;
 begin
   Result := {$IFDEF UNICODE} DateTimeToUnicodeSQLDate {$ELSE} DateTimeToRawSQLDate {$ENDIF} (Value, ConFormatSettings, Quoted, Suffix);
 end;
 
 function DateTimeToRawSQLTime(const Value: TDateTime;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
 var l, l2, Hour, Minute, Second, MSec: Word;
   Buffer: array[0..cMaxTimeLenQuoted] of AnsiChar;
@@ -4622,7 +4629,7 @@ begin
 end;
 
 function DateTimeToRawSQLTime(const Value: TDateTime; Buffer: PAnsichar;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): Word;
 var l, Hour, Minute, Second, MSec: Word;
 begin
@@ -4712,7 +4719,7 @@ Inc_dbl:          Inc(Buf, 2);
 end;
 
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: UnicodeString): UnicodeString;
 var l, l2, Hour, Minute, Second, MSec: Word;
   Buffer: array[0..cMaxTimeLenQuoted] of WideChar;
@@ -4730,7 +4737,7 @@ begin
 end;
 
 function DateTimeToUnicodeSQLTime(const Value: TDateTime; Buf: PWideChar;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: UnicodeString = ''): Word;
 var l, Hour, Minute, Second, MSec: Word;
 begin
@@ -4821,14 +4828,14 @@ Inc_dbl:          Inc(Buf, 2);
 end;
 
 function DateTimeToSQLTime(const Value: TDateTime;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: string): string;
 begin
   Result := {$IFDEF UNICODE} DateTimeToUnicodeSQLTime {$ELSE} DateTimeToRawSQLTime {$ENDIF} (Value, ConFormatSettings, Quoted, Suffix);
 end;
 
 function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
 var l, l2, Year, Month, Day, Hour, Minute, Second, MSec: Word;
   Buffer: array[0..cMaxTimeStampLenQuoted] of AnsiChar;
@@ -4850,7 +4857,7 @@ begin
 end;
 
 function DateTimeToRawSQLTimeStamp(const Value: TDateTime; Buf: PAnsiChar;
-  const ConFormatSettings: TZFormatSettings; Quoted: Boolean;
+  const ConFormatSettings: TZClientFormatSettings; Quoted: Boolean;
   const Suffix: RawByteString = EmptyRaw): Word;
 var l, Year, Month, Day, Hour, Minute, Second, MSec: Word;
 begin
@@ -5004,7 +5011,7 @@ Inc_dbl:          Inc(Buf, 2);
 end;
 
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime; Buf: PWideChar;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: UnicodeString = ''): Word;
 var l, Year, Month, Day, Hour, Minute, Second, MSec: Word;
 begin
@@ -5159,7 +5166,7 @@ Inc_dbl:          Inc(Buf, 2);
 end;
 
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
-  const ConFormatSettings: TZFormatSettings;
+  const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: UnicodeString = ''): UnicodeString;
 var l, l2, Year, Month, Day, Hour, Minute, Second, MSec: Word;
   Buffer: array[0..cMaxTimeStampLenQuoted] of WideChar;
@@ -5366,7 +5373,7 @@ end;
 
 procedure DecodeCString(SrcLength: LengthInt; SrcBuffer: PAnsiChar; out Result: RawByteString);
 begin
-  Result := '';
+  Result := EmptyRaw;
   SetLength(Result, SrcLength);
   SetLength(Result, DecodeCString(SrcLength, SrcBuffer, Pointer(Result)));
 end;
@@ -5380,7 +5387,6 @@ function DecodeCString(const Value: UnicodeString): UnicodeString;
 begin
   DecodeCString(Length(Value), Pointer(Value), Result);
 end;
-
 
 function ReplaceChar(const Source, Target: Char; const Str: string): string;
 var
@@ -5398,6 +5404,18 @@ begin
   end;
 end;
 
+procedure ReplaceChar(Var Str: string; const Source, Target: Char);
+var P, PEnd: PChar;
+begin
+  UniqueString(Str);
+  P := Pointer(Str);
+  PEnd := P + Length(Str);
+  while P < PEnd do begin
+    if P^ = Source then
+      P^ := Target;
+    Inc(P);
+  end;
+end;
 
 function RemoveChar(ToRemove: Char; const Str: string): string;
 var

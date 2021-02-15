@@ -63,45 +63,45 @@ uses
 type
 
   {** Implements a EMPTY function. }
-  TZEmptyFunction = class (TZAbstractFunction)
+  TZEmptyFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a MIN function. }
-  TZMinFunction = class (TZAbstractFunction)
+  TZMinFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a MAX function. }
-  TZMaxFunction = class (TZAbstractFunction)
+  TZMaxFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a SUM function. }
-  TZSumFunction = class (TZAbstractFunction)
+  TZSumFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a IIF function. }
-  TZIIFFunction = class (TZAbstractFunction)
+  TZIIFFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
   {** Implements a CASEF function. }
-  TZCASEFFunction = class (TZAbstractFunction)
+  TZCASEFFunction = class (TZAbstractFunction, IZFunction)
   public
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 procedure AddOtherFunctions(Functions : TZFunctionsList);

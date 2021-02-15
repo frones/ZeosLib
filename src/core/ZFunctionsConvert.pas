@@ -63,33 +63,49 @@ uses
 type
 
 {**  Str <> Float}
-  {** Implements a VAL function. }
-  TZValFunction = class (TZAbstractFunction)
+  /// <summary>Implements a VAL function.</summary>
+  TZValFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 {**  Str <> Date}
-  {** Implements a CTOD function. }
-  TZCtodFunction = class (TZAbstractFunction)
+  /// <summary>Implements a CTOD function.</summary>
+  TZCtodFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a DTOS function. }
-  TZDtosFunction = class (TZAbstractFunction)
+  /// <summary>Implements a DTOS function.</summary>
+  TZDtosFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a DTOS function. }
-  TZFormatDateTimeFunction = class (TZAbstractFunction)
+  /// <summary>Implements a FormatDateTime function.</summary>
+  TZFormatDateTimeFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 procedure AddConvertFunctions(Functions : TZFunctionsList);
@@ -98,33 +114,6 @@ implementation
 
 var
   InternalDefaultFormatSettings : TFormatSettings;
-
-{*******
-    DefaultFormatSettings : TFormatSettings = (
-    CurrencyFormat: 1;
-    NegCurrFormat: 5;
-    ThousandSeparator: ',';
-    DecimalSeparator: '.';
-    CurrencyDecimals: 2;
-    DateSeparator: '-';
-    TimeSeparator: ':';
-    ListSeparator: ',';
-    CurrencyString: '$';
-    ShortDateFormat: 'd/m/y';
-    LongDateFormat: 'dd" "mmmm" "yyyy';
-    TimeAMString: 'AM';
-    TimePMString: 'PM';
-    ShortTimeFormat: 'hh:nn';
-    LongTimeFormat: 'hh:nn:ss';
-    ShortMonthNames: ('Jan','Feb','Mar','Apr','May','Jun',
-                      'Jul','Aug','Sep','Oct','Nov','Dec');
-    LongMonthNames: ('January','February','March','April','May','June',
-                     'July','August','September','October','November','December');
-    ShortDayNames: ('Sun','Mon','Tue','Wed','Thu','Fri','Sat');
-    LongDayNames:  ('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday');
-    TwoDigitYearCenturyWindow: 50;
-  );
-******}
 
  { TZValFunction }
 
@@ -177,7 +166,6 @@ begin
 end;
 
 initialization
-//  InternalDefaultFormatSettings := DefaultFormatSettings;
   InternalDefaultFormatSettings.ThousandSeparator   := ',';
   InternalDefaultFormatSettings.DecimalSeparator    := '.';
 end.

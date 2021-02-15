@@ -57,7 +57,7 @@ interface
 uses
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
   ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility, ZVariant,
-  ZAbstractRODataset, ZMessages, ZStoredProcedure
+  ZAbstractRODataset, ZMessages, ZStoredProcedure, ZMemTable
   {$IFNDEF DISABLE_ZPARAM}{$IFNDEF FPC}, Types{$ENDIF}, ZDbcUtils{$ENDIF};
 
 type
@@ -164,6 +164,31 @@ type
     procedure TestBatchDMLArrayBindings;
   end;
   {$ENDIF DISABLE_ZPARAM}
+
+  TZAbstractTestMemTable = class(TZAbstractCompSQLTestCase)
+  protected
+    function CreateTable: TZMemTable;
+    class function GetWithConnection: Boolean; virtual; abstract;
+  published
+    procedure Test_aehimself_1;
+  end;
+
+  TZTestMemTableWithConnection = class(TZAbstractTestMemTable)
+  protected
+    class function GetWithConnection: Boolean; override;
+    procedure Test_CopyDataFrom_people_table;
+  published
+    procedure Test_CloneDataFrom_people;
+    procedure Test_CloneDataFrom_people_no_Connection;
+    procedure Test_CloneDataFrom_equipment_filtered;
+  end;
+
+  TZTestMemTableWithoutConnection = class(TZAbstractTestMemTable)
+  protected
+    class function GetWithConnection: Boolean; override;
+  published
+    procedure Test_miab3_1;
+  end;
 
 implementation
 
@@ -3356,8 +3381,193 @@ begin
 end;
 
 {$ENDIF DISABLE_ZPARAM}
+{ TZAbstractTestMemTable }
+
+function TZAbstractTestMemTable.CreateTable: TZMemTable;
+begin
+  Result := TZMemTable.Create(nil);
+  if GetWithConnection then
+    Result.Connection := Connection;
+end;
+
+procedure TZAbstractTestMemTable.Test_aehimself_1;
+var Table: TZMemTable;
+begin
+  Table := CreateTable;
+  Check(Table <> nil);
+  try
+    Table.FieldDefs.Add('MyField', ftMemo);
+    Table.FieldDefs.Add('MyFieldWithSize', ftString, 20);
+    Table.Open;
+    Table.Append;
+    Table.FieldByName('MyField').AsString := 'Hello, world!';
+    CheckEquals('Hello, world!', Table.FieldByName('MyField').AsString);
+    Table.FieldByName('MyFieldWithSize').AsString := 'Hello, world!';
+    CheckEquals('Hello, world!', Table.FieldByName('MyFieldWithSize').AsString);
+    Table.Post;
+  finally
+    FreeAndNil(Table);
+  end;
+end;
+
+{ TZTestMemTableWithConnection }
+
+class function TZTestMemTableWithConnection.GetWithConnection: Boolean;
+begin
+  Result := True;
+end;
+
+procedure TZTestMemTableWithConnection.Test_CloneDataFrom_equipment_filtered;
+var Table: TZMemTable;
+  Query: TZQuery;
+begin
+  Table := CreateTable;
+  Query := CreateQuery;
+  Check(Query <> nil);
+  try
+    Query.SQL.Text := 'SELECT * FROM equipment';
+    Query.Open;
+    Query.Filtered := True;
+    CheckEquals(4, Query.RecordCount, 'RecordCount');
+    Query.FieldByName('eq_id').Index := Query.Fields.Count-1;
+    CheckEquals(False, Query.IsEmpty, 'IsEmpty');
+    Query.Filter := 'eq_date = ''' + DateToStr(Encodedate(2001, 10, 7)) + '''';
+    CheckEquals(1, Query.RecordCount);
+    CheckEquals(2, Query.FieldByName('eq_id').AsInteger, 'field eq_id');
+    Table.CloneDataFrom(Query);
+    CheckEquals(Query.Fields.Count, Table.Fields.Count, 'The fieldcount');
+    CheckEquals(Query.RecordCount, Table.RecordCount, 'The recordCount');
+    CheckEquals(2, Table.FieldByName('eq_id').AsInteger, 'field eq_id');
+    CheckEquals(Query.Fields.Count-1, Table.FieldByName('eq_id').Index, 'field eq_id');
+    Table.Empty;
+    CheckEquals(0, Table.RecordCount, 'the recordcount after empty call');
+    CheckEquals(Query.FieldCount, Table.FieldCount, 'fieldcount after empty call');
+    Table.Clear;
+    CheckEquals(0, Table.FieldCount, 'fieldcount after clear');
+    CheckEquals(0, Table.FieldDefs.Count, 'fielddefs count after clear');
+  finally
+    FreeAndNil(Table);
+    FreeAndNil(Query);
+  end;
+end;
+
+procedure TZTestMemTableWithConnection.Test_CloneDataFrom_people;
+var Table: TZMemTable;
+  Query: TZQuery;
+begin
+  Table := CreateTable;
+  Query := CreateQuery;
+  Check(Query <> nil);
+  try
+    Query.SQL.Text := 'select * from people';
+    Query.Open;
+    Table.CloneDataFrom(Query);
+    CheckEquals(Query.Fields.Count, Table.Fields.Count, 'The fieldcount');
+    CheckEquals(Query.RecordCount, Table.RecordCount, 'The recordCount');
+    Table.Close;
+    Table.Open;
+    CheckEquals(Query.Fields.Count, Table.Fields.Count, 'The fieldcount');
+    CheckEquals(0, Table.RecordCount, 'The recordCount');
+    Table.Append;
+    Table.Post;
+  finally
+    FreeAndNil(Table);
+    FreeAndNil(Query);
+  end;
+end;
+
+procedure TZTestMemTableWithConnection.Test_CloneDataFrom_people_no_Connection;
+var Table: TZMemTable;
+  Query: TZQuery;
+begin
+  Table := TZMemTable.Create(nil);
+  Query := CreateQuery;
+  Check(Query <> nil);
+  try
+    Query.SQL.Text := 'select * from people';
+    Query.Open;
+    Table.CloneDataFrom(Query);
+    CheckEquals(Query.Fields.Count, Table.Fields.Count, 'The fieldcount');
+    CheckEquals(Query.RecordCount, Table.RecordCount, 'The recordCount');
+    Table.Close;
+    Table.Open;
+    CheckEquals(Query.Fields.Count, Table.Fields.Count, 'The fieldcount');
+    CheckEquals(0, Table.RecordCount, 'The recordCount');
+    Table.Append;
+    Table.Post;
+  finally
+    FreeAndNil(Table);
+    FreeAndNil(Query);
+  end;
+end;
+
+procedure TZTestMemTableWithConnection.Test_CopyDataFrom_people_table;
+var Table: TZMemTable;
+  Query: TZQuery;
+begin
+  Table := CreateTable;
+  Query := CreateQuery;
+  Check(Query <> nil);
+  try
+    Query.SQL.Text := 'select * from people';
+    Query.Open;
+    Table.CloneDataFrom(Query);
+    CheckEquals(Query.Fields.Count, Table.Fields.Count, 'The fieldcount');
+    CheckEquals(Query.RecordCount, Table.RecordCount, 'The recordCount');
+    Table.Close;
+    Table.FieldDefs.Add('Col1', ftTime);
+    Table.FieldDefs.Add('Col2', ftDate);
+    Table.Open;
+    CheckEquals(Query.Fields.Count+2, Table.Fields.Count, 'The fieldcount');
+    CheckEquals(0, Table.RecordCount, 'The recordCount');
+    //Table.AssignDataFrom(Query);
+    CheckEquals(Query.RecordCount, Table.RecordCount, 'The recordCount');
+    CheckEquals(Query.Fields.Count+2, Table.Fields.Count, 'The fieldcount');
+    Table.Append;
+    Table.Post;
+  finally
+    FreeAndNil(Table);
+    FreeAndNil(Query);
+  end;
+end;
+
+{ TZTestMemTableWithoutConnection }
+
+class function TZTestMemTableWithoutConnection.GetWithConnection: Boolean;
+begin
+  Result := False;
+end;
+
+procedure TZTestMemTableWithoutConnection.Test_miab3_1;
+var Table: TZMemTable;
+begin
+  Table := CreateTable;
+  Check(Table <> nil);
+  try
+    Table.FieldDefs.Add('Lp', ftinteger);
+    Table.FieldDefs.Add('Naz',ftString,20);
+    Table.Open;   //<============
+    CheckEquals(2, Table.Fields.Count, 'The field count');
+    Table.Close;
+    Table.FieldDefs.Add('Lp1', ftinteger);
+    Table.FieldDefs.Add('Naz1',ftString,20);
+    Table.Open;  //<=================
+    CheckEquals(4, Table.Fields.Count, 'The field count');
+    Table.Close;
+    Table.FieldDefs.Clear;
+    Table.FieldDefs.Add('Lp2', ftinteger);
+    Table.FieldDefs.Add('Naz2',ftString,20);
+    Table.Open;
+    CheckEquals(2, Table.Fields.Count, 'The field count');
+  finally
+    FreeAndNil(Table);
+  end;
+end;
+
 initialization
   RegisterTest('component',TZGenericTestDataSet.Suite);
+  RegisterTest('component',TZTestMemTableWithConnection.Suite);
+  RegisterTest('component',TZTestMemTableWithoutConnection.Suite);
   {$IF defined(ENABLE_INTERBASE) or defined(ENABLE_FIREBIRD)}
   RegisterTest('component',TZInterbaseTestGUIDS.Suite);
   {$IFEND}

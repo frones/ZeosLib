@@ -806,7 +806,6 @@ type
     ///  such as Strings, Objects etc.</summary>
     /// <param>"Ptr" the address of the element an action happens for.</param>
     /// <param>"Index" the index of the element.</param>
-    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
     procedure Notify(Ptr: Pointer; Action: TListNotification); virtual;
     /// <summary>Sets a capacity of elementsizes. If capacity is less than Count
     ///  and error get's thrown. Relloc memory Otherwise. If ElementNeedsFinalize

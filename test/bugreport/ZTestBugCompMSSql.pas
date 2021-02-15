@@ -582,44 +582,42 @@ procedure TZTestCompMSSqlBugReport.TestSF402;
 var
   Query: TZQuery;
   dtE, dtA: TDateTime;
-  orgShortDateFormat, orgLongTimeFormat, S: String;
-  orgdSep, orgtSep: Char;
+  S: String;
 begin
   Connection.Connect;
   Check(Connection.Connected, 'Failed to establish a connection');
   if Connection.DbcConnection.GetServerProvider <> spMSSQL then
     Exit;
   Query := CreateQuery;
-  orgdSep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator;
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator := '-';
-  orgtSep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator;
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator := '-';
-  orgShortDateFormat := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat := 'yyyy/mm/dd';
-  orgLongTimeFormat := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat := 'hh:nn:ss';
   try
     Query.Sql.Add('set dateformat mdy');
     Query.Sql.Add('select cast(''2020-01-01 08:30:45'' as datetime)');
-    Query.Sql.Add('union');
+    Query.Sql.Add('union all');
     Query.Sql.Add('select cast(''2020-01-01 00:00:00'' as datetime)');
+    Query.Sql.Add('union all');
+    Query.Sql.Add('select cast(''1899-12-30 10:00:00'' as datetime)');
+    Query.Sql.Add('order by 1 Desc');
     Query.Open;
-    //Write(Query.Fields[0].AsString, #10);//08:01:45
     dtE := EncodeDate(2020,01,01);
     dtE := dtE+EncodeTime(8,30,45,0);
     dtA := Query.Fields[0].AsDateTime;
     CheckEqualsDate(dtE, dtA, [dpYear, dpMonth, dpDay, dpHour, dpMin, dpSec], 'Should be "2020-01-01 08:30:45" ');
-    CheckEquals(DateTimeToStr(dtE{$IFDEF WITH_FORMATSETTINGS}, FormatSettings{$ENDIF}), query.Fields[0].AsString, 'Should be "2020-01-01 08:30:45" ');
+    CheckEquals(DateTimeToStr(dtE), query.Fields[0].AsString, 'Should be "2020-01-01 08:30:45" ');
     Query.Next;
     CheckFalse(Query.Eof);
     dtA := Query.Fields[0].AsDateTime;
-    DateTimeToString(S, '', dtA{$IFDEF WITH_FORMATSETTINGS}, FormatSettings{$ENDIF});
-    CheckEquals(S, query.Fields[0].AsString, 'Should be "2020-01-01" ');
+    S := DateTimeToStr(dtA);
+    CheckEquals(S, query.Fields[0].DisplayText, 'Should be "2020-01-01" ');
+    S := DateToStr(dtA);
+    CheckEquals(S, query.Fields[0].DisplayText, 'Should be "2020-01-01" ');
+    CheckNotEquals(S, query.Fields[0].AsString, 'Should be "2020-01-01 10:00:00" ');
+    Query.Next;
+    CheckFalse(Query.Eof);
+    dtA := Query.Fields[0].AsDateTime;
+    S := TimeToStr(dtA);
+    CheckEquals(S, query.Fields[0].DisplayText, 'Should be "10:00:00" ');
+    CheckNotEquals(S, query.Fields[0].AsString, 'Should be "1899-12-30 10:00:00" ');
   finally
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat := orgShortDateFormat;
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat := orgLongTimeFormat;
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator := orgdSep;
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator := orgtSep;
     FreeAndNil(Query);
   end;
 end;

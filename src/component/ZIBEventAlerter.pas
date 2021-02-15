@@ -69,7 +69,7 @@ uses
 {$IFEND}
   {$IFNDEF ZEOS_DISABLE_INTERBASE}ZDbcInterbase6, {$ENDIF}
   {$IFNDEF ZEOS_DISABLE_FIREBIRD}ZPlainFirebird, ZDbcFirebird,{$ENDIF}
-  ZDbcInterbase6Utils, ZConnection, ZDbcIntfs, ZFastCode,
+  ZDbcInterbase6Utils, ZAbstractConnection, ZDbcIntfs, ZFastCode,
   ZPlainFirebirdInterbaseDriver
   {$IFDEF TLIST_IS_DEPRECATED}, ZSysUtils, ZClasses{$ENDIF};
 
@@ -79,7 +79,7 @@ type
     var CancelAlerts: boolean) of object;
   TErrorEvent = procedure(Sender: TObject; ErrorCode: integer) of object;
 
-  TZIBEventAlerter = class(TComponent)
+  TZIBEventAlerter = class(TZAbstractConnectionLinkedComponent)
   private
     FEvents: TStrings;
     FOnEventAlert: TEventAlert;
@@ -94,13 +94,10 @@ type
     FStatus: IStatus;
     {$ENDIF}
     ThreadException: boolean;
-    FConnection: TZConnection;
     FPlainDriver: TZInterbaseFirebirdPlainDriver;
     FOnError: TErrorEvent;
     FAutoRegister: boolean;
     FRegistered: boolean;
-
-    procedure SetConnection({$IFDEF AUTOREFCOUNT}const{$ENDIF}Value: TZConnection);
     procedure SetEvents({$IFDEF AUTOREFCOUNT}const{$ENDIF}Value: TStrings);
     function GetRegistered: boolean;
     procedure SetRegistered(const Value: boolean);
@@ -109,6 +106,7 @@ type
     procedure EventChange({%H-}Sender: TObject); virtual;
     procedure ThreadEnded(Sender: TObject); virtual;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure SetConnection(Value: TZAbstractConnection); override;
   public
     { Public declarations }
     constructor Create(AOwner: TComponent); override;
@@ -121,7 +119,7 @@ type
   published
     { Published declarations }
     property AutoRegister: boolean read GetAutoRegister write SetAutoRegister;
-    property Connection: TZConnection read FConnection write SetConnection;
+    property Connection;
     property Events: TStrings read FEvents write SetEvents;
     property Registered: boolean read GetRegistered write SetRegistered;
     property OnEventAlert: TEventAlert read FOnEventAlert write FOnEventAlert;
@@ -342,7 +340,7 @@ End; // RegisterEvents
 //    Modified so that the native DB handle will now be retrieved by
 //    method RegisterEvents. Retrieving it here caused an Exception
 //    even if DB was connected.
-Procedure TZIBEventAlerter.SetConnection({$IFDEF AUTOREFCOUNT}const{$ENDIF}Value: TZConnection);
+Procedure TZIBEventAlerter.SetConnection(Value: TZAbstractConnection);
 Var
   WasRegistered: boolean;
 Begin
@@ -384,10 +382,8 @@ var
 begin
   if csDesigning in ComponentState then
     exit;
-  if (FThreads.Count > 0) then
-  begin
-    for i := (FThreads.Count - 1) downto 0 do
-    begin
+  if (FThreads.Count > 0) then begin
+    for i := (FThreads.Count - 1) downto 0 do begin
       Temp := TAbstractInterbaseFirebirdEventThread(FThreads[i]);
       FThreads.Delete(i);
 

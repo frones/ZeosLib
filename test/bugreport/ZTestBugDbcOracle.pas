@@ -75,6 +75,7 @@ type
     procedure TestTicket437;
     procedure TestConnectionLossTicket452;
     procedure TestTicket455;
+    procedure TestDuplicateParamNames;
   end;
 
 {$ENDIF ZEOS_DISABLE_ORACLE}
@@ -257,6 +258,31 @@ begin
   finally
     FreeAndnil(Stream);
     FreeAndNil(FConnLostError);
+  end;
+end;
+
+{ see https://zeoslib.sourceforge.io/viewtopic.php?f=50&t=132398}
+procedure TZTestDbcOracleBugReport.TestDuplicateParamNames;
+var Statement: IZPreparedStatement;
+  ResultSet: IZResultSet;
+begin
+  Check(Connection <> nil);
+  try
+    Statement := Connection.PrepareStatement('SELECT :SID, :SID, :SID+:AID FROM DUAL Where 1 = :SID or 2 = :SID');
+    Statement.SetInt(FirstDbcIndex, 1);
+    Statement.SetInt(FirstDbcIndex+1, 1);
+    Statement.SetInt(FirstDbcIndex+2, 1);
+    Statement.SetInt(FirstDbcIndex+3, 1);
+    Statement.SetInt(FirstDbcIndex+4, 1);
+    Statement.SetInt(FirstDbcIndex+5, 1);
+    ResultSet := Statement.ExecuteQueryPrepared;
+    Check(ResultSet.Next);
+    CheckEquals(3, ResultSet.GetColumnCount);
+    CheckFalse(ResultSet.IsNull(FirstDbcIndex));
+    CheckFalse(ResultSet.IsNull(FirstDbcIndex+1));
+    CheckFalse(ResultSet.IsNull(FirstDbcIndex+2));
+  finally
+
   end;
 end;
 

@@ -61,352 +61,548 @@ uses
 {** Date & time functions}
 
 type
-  {** Implements a DATE function. }
-  TZDateFunction = class (TZAbstractFunction)
+  /// <summary>Implements a DATE function.</summary>
+  TZDateFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a TIME function. }
-  TZTimeFunction = class (TZAbstractFunction)
+  /// <summary>Implements a TIME function.</summary>
+  TZTimeFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a NOW function. }
-  TZNowFunction = class (TZAbstractFunction)
+  /// <summary>Implements a NOW function.</summary>
+  TZNowFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a ENCODEDATE function. }
-  TZEncodeDateFunction = class (TZAbstractFunction)
+  /// <summary>Implements a ENCODEDATE function.</summary>
+  TZEncodeDateFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a ENCODETIME function. }
-  TZEncodeTimeFunction = class (TZAbstractFunction)
+  /// <summary>Implements a ENCODETIME function.</summary>
+  TZEncodeTimeFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a COMPOSEDATETIME function. }
-
-  { TZComposeDateTimeFunction }
-
-  TZComposeDateTimeFunction = class (TZAbstractFunction)
+  /// <summary>Implements a COMPOSEDATETIME function.</summary>
+  TZComposeDateTimeFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a INCDATE function. }
-  TZIncDateFunction = class (TZAbstractFunction)
+  /// <summary>Implements a INCDATE function.</summary>
+  TZIncDateFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a INCTIME function. }
-  TZIncTimeFunction = class (TZAbstractFunction)
+  /// <summary>Implements a INCTIME function.</summary>
+  TZIncTimeFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a ISLEAPYEAR function. }
-  TZIsLeapYearFunction = class (TZAbstractFunction)
+  /// <summary>Implements a ISLEAPYEAR function.</summary>
+  TZIsLeapYearFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 {-------------------- Extracting functions ----------------------------}
-  {** Implements a DATEOF function. }
-  TZDateOfFunction = class (TZAbstractFunction)
+
+  /// <summary>Implements a DATEOF function.</summary>
+  TZDateOfFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a TIMEOF function. }
-  TZTimeOfFunction = class (TZAbstractFunction)
+  /// <summary>Implements a TIMEOF function.</summary>
+  TZTimeOfFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a YEAROF function. }
-  TZYearOfFunction = class (TZAbstractFunction)
+  /// <summary>Implements a YEAROF function.</summary>
+  TZYearOfFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a MONTHOF function. }
-  TZMonthOfFunction = class (TZAbstractFunction)
+  /// <summary>Implements a MONTHOF function.</summary>
+  TZMonthOfFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a DAYOF function. }
-  TZDayOfFunction = class (TZAbstractFunction)
+  /// <summary>Implements a DAYOF function.</summary>
+  TZDayOfFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a HOUROF function. }
-  TZHourOfFunction = class (TZAbstractFunction)
+  /// <summary>Implements a HOUROF function.</summary>
+  TZHourOfFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a MINUTEOF function. }
-  TZMinuteOfFunction = class (TZAbstractFunction)
+  /// <summary>Implements a MINUTEOF function.</summary>
+  TZMinuteOfFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a SECONDOF function. }
-  TZSecondOfFunction = class (TZAbstractFunction)
+  /// <summary>Implements a SECONDOF function.</summary>
+  TZSecondOfFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a MILLISECONDOF function. }
-  TZMilliSecondOfFunction = class (TZAbstractFunction)
+  /// <summary>Implements a MILLISECONDOF function.</summary>
+  TZMilliSecondOfFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 {-------------------- *OFTHEYEAR Extracting functions ----------------------------}
-  {** Implements a WEEKOFTHEYEAR function. }
-  TZWeekOfTheYearFunction = class (TZAbstractFunction)
+
+  /// <summary>Implements a WEEKOFTHEYEAR function.</summary>
+  TZWeekOfTheYearFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a DAYOFTHEYEAR function. }
-  TZDayOfTheYearFunction = class (TZAbstractFunction)
+  /// <summary>Implements a DAYOFTHEYEAR function.</summary>
+  TZDayOfTheYearFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a HOUROFTHEYEAR function. }
-  TZHourOfTheYearFunction = class (TZAbstractFunction)
+  /// <summary>Implements a HOUROFTHEYEAR function.</summary>
+  TZHourOfTheYearFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a MINUTEOFTHEYEAR function. }
-  TZMinuteOfTheYearFunction = class (TZAbstractFunction)
+  /// <summary>Implements a MINUTEOFTHEYEAR function.</summary>
+  TZMinuteOfTheYearFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a SECONDOFTHEYEAR function. }
-  TZSecondOfTheYearFunction = class (TZAbstractFunction)
+  /// <summary>Implements a SECONDOFTHEYEAR function.</summary>
+  TZSecondOfTheYearFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a MILLISECONDOFTHEYEAR function. }
-  TZMilliSecondOfTheYearFunction = class (TZAbstractFunction)
+  /// <summary>Implements a MILLISECONDOFTHEYEAR function.</summary>
+  TZMilliSecondOfTheYearFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 {-------------------- *OFTHEMONTH Extracting functions ----------------------------}
-  {** Implements a WEEKOFTHEMONTH function. }
-  TZWeekOfTheMonthFunction = class (TZAbstractFunction)
+
+  /// <summary>Implements a WEEKOFTHEMONTH function.</summary>
+  TZWeekOfTheMonthFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a HOUROFTHEMONTH function. }
-  TZHourOfTheMonthFunction = class (TZAbstractFunction)
+  /// <summary>Implements a HOUROFTHEMONTH function.</summary>
+  TZHourOfTheMonthFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a MINUTEOFTHEMONTH function. }
-  TZMinuteOfTheMonthFunction = class (TZAbstractFunction)
+  /// <summary>Implements a MINUTEOFTHEMONTH function.</summary>
+  TZMinuteOfTheMonthFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a SECONDOFTHEMONTH function. }
-  TZSecondOfTheMonthFunction = class (TZAbstractFunction)
+  /// <summary>Implements a SECONDOFTHEMONTH function.</summary>
+  TZSecondOfTheMonthFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a MILLISECONDOFTHEMONTH function. }
-  TZMilliSecondOfTheMonthFunction = class (TZAbstractFunction)
+  /// <summary>Implements a MILLISECONDOFTHEMONTH function.</summary>
+  TZMilliSecondOfTheMonthFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 {-------------------- *OFTHEWEEK Extracting functions ----------------------------}
-  {** Implements a DAYOfTheWeek function. }
-  TZDayOfTheWeekFunction = class (TZAbstractFunction)
+
+  /// <summary>Implements a DAYOfTheWeek function.</summary>
+  TZDayOfTheWeekFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a HOUROfTheWeek function. }
-  TZHourOfTheWeekFunction = class (TZAbstractFunction)
+  /// <summary>Implements a HOUROfTheWeek function.</summary>
+  TZHourOfTheWeekFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a MINUTEOfTheWeek function. }
-  TZMinuteOfTheWeekFunction = class (TZAbstractFunction)
+  /// <summary>Implements a MINUTEOfTheWeek function.</summary>
+  TZMinuteOfTheWeekFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a SECONDOfTheWeek function. }
-  TZSecondOfTheWeekFunction = class (TZAbstractFunction)
+  /// <summary>Implements a SECONDOfTheWeek function.</summary>
+  TZSecondOfTheWeekFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a MILLISECONDOfTheWeek function. }
-  TZMilliSecondOfTheWeekFunction = class (TZAbstractFunction)
+  /// <summary>Implements a MILLISECONDOfTheWeek function.</summary>
+  TZMilliSecondOfTheWeekFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
-
 
 {---------------- *OFTHEDAY Extracting functions --------------------}
-  {** Implements a MINUTEOFTHEDAY function. }
-  TZMinuteOfTheDayFunction = class (TZAbstractFunction)
+
+  /// <summary>Implements a MINUTEOFTHEDAY function.</summary>
+  TZMinuteOfTheDayFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a SECONDOFTHEDAY function. }
-  TZSecondOfTheDayFunction = class (TZAbstractFunction)
+  /// <summary>Implements a SECONDOFTHEDAY function.</summary>
+  TZSecondOfTheDayFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a MILLISECONDOFTHEDAY function. }
-  TZMilliSecondOfTheDayFunction = class (TZAbstractFunction)
+  /// <summary>Implements a MILLISECONDOFTHEDAY function.</summary>
+  TZMilliSecondOfTheDayFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 {---------------- *OfTheHour Extracting functions --------------------}
-  {** Implements a SECONDOFTHEHOUR function. }
-  TZSecondOfTheHourFunction = class (TZAbstractFunction)
+
+  /// <summary>Implements a SECONDOFTHEHOUR function.</summary>
+  TZSecondOfTheHourFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a MILLISECONDOFTHEHOUR function. }
-  TZMilliSecondOfTheHourFunction = class (TZAbstractFunction)
+  /// <summary>Implements a MILLISECONDOFTHEHOUR function.</summary>
+  TZMilliSecondOfTheHourFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 {---------------- *OFTHEMINUTE Extracting functions --------------------}
-  {** Implements a MILLISECONDOfTheHour function. }
-  TZMilliSecondOfTheMinuteFunction = class (TZAbstractFunction)
+
+  /// <summary>Implements a MILLISECONDOfTheHour function.</summary>
+  TZMilliSecondOfTheMinuteFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 {---------------- *BETWEEN functions --------------------}
-  {** Implements a YEARSBETWEEN function. }
-  TZYearsBetweenFunction = class (TZAbstractFunction)
+
+  /// <summary>Implements a YEARSBETWEEN function.</summary>
+  TZYearsBetweenFunction = class (TZAbstractFunction, IZFunction)
   public
-    function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+     /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
+   function Execute(Stack: TZExecutionStack;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a MONTHSBETWEEN function. }
-  TZMonthsBetweenFunction = class (TZAbstractFunction)
+  /// <summary>Implements a MONTHSBETWEEN function.</summary>
+  TZMonthsBetweenFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a WEEKSBETWEEN function. }
-  TZWeeksBetweenFunction = class (TZAbstractFunction)
+  /// <summary>Implements a WEEKSBETWEEN function.</summary>
+  TZWeeksBetweenFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a DAYSBETWEEN function. }
-  TZDaysBetweenFunction = class (TZAbstractFunction)
+  /// <summary>Implements a DAYSBETWEEN function.</summary>
+  TZDaysBetweenFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a HOURSBETWEEN function. }
-  TZHoursBetweenFunction = class (TZAbstractFunction)
+  /// <summary>Implements a HOURSBETWEEN function.</summary>
+  TZHoursBetweenFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a MINUTESBETWEEN function. }
-  TZMinutesBetweenFunction = class (TZAbstractFunction)
+  /// <summary>Implements a MINUTESBETWEEN function.</summary>
+  TZMinutesBetweenFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a SECONDSBETWEEN function. }
-  TZSecondsBetweenFunction = class (TZAbstractFunction)
+  /// <summary>Implements a SECONDSBETWEEN function.</summary>
+  TZSecondsBetweenFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
-  {** Implements a MILLISECONDSBETWEEN function. }
-  TZMillisecondsBetweenFunction = class (TZAbstractFunction)
+  /// <summary>Implements a MILLISECONDSBETWEEN function.</summary>
+  TZMillisecondsBetweenFunction = class (TZAbstractFunction, IZFunction)
   public
+    /// <summary>Executes this function.</summary>
+    /// <param>"Stack" the TZExecutionStack object.</param>
+    /// <param>"VariantManager" an interface of a variant processor object.</param>
+    /// <returns>a function result variable.</returns>
     function Execute(Stack: TZExecutionStack;
-      const VariantManager: IZVariantManager): TZVariant; override;
+      const VariantManager: IZVariantManager): TZVariant;
   end;
 
 procedure AddDateTimeFunctions(Functions : TZFunctionsList);
@@ -441,12 +637,6 @@ end;
 
 { TZTimeFunction }
 
-{**
-  Executes this function.
-  @param Stack the stack object.
-  @param VariantManager a reference to variant processor object.
-  @returns a function value.
-}
 function TZTimeFunction.Execute(Stack: TZExecutionStack;
   const VariantManager: IZVariantManager): TZVariant;
 begin
