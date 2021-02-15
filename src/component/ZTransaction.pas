@@ -162,6 +162,8 @@ begin
       if IsTransactionValid(FTransaction) then ReleaseTransaction(FTransaction);
     FTransaction := nil;
   end;
+  if Connection <> nil then
+    SetConnection(nil);
   inherited BeforeDestruction;
 end;
 
