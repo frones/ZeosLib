@@ -2222,7 +2222,7 @@ begin
     FConnection := Value;
     if FConnection <> nil then begin
       FConnection.RegisterDataSet(Self);
-      if FSQL.Count > 0 then begin
+      if (FSQL.Count > 0) and PSIsSQLBased{do not rebuild all!} and (Fields.Count = 0{persistent fields?}) and  then begin
       {EH: force rebuild all of the SQLStrings ->
         in some case the generic tokenizer fails for several reasons like:
         keyword detection, identifier detection, Field::=x(ParamEsacaping to ":=" ) vs. Field::BIGINT (pg-TypeCasting)
@@ -3370,13 +3370,13 @@ begin
         {$IFDEF WITH_CODEPAGE_AWARE_FIELD}
         if FieldType in [ftWideString, ftWideMemo] then
           CodePage := zCP_UTF16
-        else if FieldType in [ftString, ftFixedChar, ftMemo] then
-          if SQLType in [stUnicodeString, stUnicodeStream] then
+        else if FieldType in [ftString, ftFixedChar, ftMemo] then begin
+          CodePage := GetColumnCodePage(I);
+          if (CodePage = zCP_UTF16) or Connection.AutoEncodeStrings then
             if Connection.ControlsCodePage = cGET_ACP
             then CodePage := CP_ACP
             else CodePage := zCP_UTF8
-          else CodePage := GetColumnCodePage(I)
-        else CodePage := CP_ACP;
+        end else CodePage := CP_ACP;
         {$ENDIF}
 
         if FUseZFields then
