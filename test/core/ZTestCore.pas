@@ -6,7 +6,7 @@ interface
 
 uses
   ZTestSysUtils, ZTestList, ZTestFramework, ZTestVariant, ZTestExprToken,
-  ZTestTokenizer, ZTestExpression, ZTestURL;
+  ZTestTokenizer, ZTestExpression;
 
 
 implementation
