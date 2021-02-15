@@ -639,6 +639,7 @@ type
     function GetEditDateFormatSettings: TZEditDateFormatSettings;
     procedure SetEditFormatSettings(const Value: TZEditDateFormatSettings);
     procedure DisplayFormatChanged;
+    procedure CreateFormatSettings;
   protected
     function GetIsNull: Boolean; override;
     function GetAsDateTime: TDateTime; override;
@@ -678,6 +679,7 @@ type
     function StoreDisplayFormat: Boolean;
     function StoreEditFormat: Boolean;
     procedure DisplayFormatChanged;
+    procedure CreateFormatSettings;
   protected
     function GetIsNull: Boolean; override;
     function FilledValueWasNull(Var Value: TZTimeStamp): Boolean;
@@ -717,6 +719,7 @@ type
     procedure SetEditFormatSettings(const Value: TZEditTimeFormatSettings);
     function IsRowDataAvailable: Boolean;
     procedure DisplayFormatChanged;
+    procedure CreateFormatSettings;
   protected
     function GetIsNull: Boolean; override;
     function GetAsDateTime: TDateTime; override;
@@ -6846,6 +6849,8 @@ end;
 procedure TZDateField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
+  if FDisplayDateFormatSettings = nil then //"old" persistent fields
+    CreateFormatSettings;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
       raise CreateUnBoundError(Self);
@@ -6878,15 +6883,22 @@ end;
 constructor TZDateField.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FDisplayDateFormatSettings := TZDisplayDateFormatSettings.Create(AOwner);
+  CreateFormatSettings;
+end;
+
+procedure TZDateField.CreateFormatSettings;
+begin
+  FDisplayDateFormatSettings := TZDisplayDateFormatSettings.Create(Self);
   FDisplayDateFormatSettings.SetOnFormatChanged(DisplayFormatChanged);
-  FEditDateFormatSettings := TZEditDateFormatSettings.Create(AOwner);
+  FEditDateFormatSettings := TZEditDateFormatSettings.Create(Self);
 end;
 
 destructor TZDateField.Destroy;
 begin
-  FreeAndNil(FDisplayDateFormatSettings);
-  FreeAndNil(FEditDateFormatSettings);
+  if FDisplayDateFormatSettings <> nil then
+    FreeAndNil(FDisplayDateFormatSettings);
+  if FEditDateFormatSettings <> nil then
+    FreeAndNil(FEditDateFormatSettings);
   inherited;
 end;
 
@@ -7046,6 +7058,8 @@ end;
 procedure TZTimeField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
+  if FDisplayTimeFormatSettings = nil then // "old" persistent fields
+    CreateFormatSettings;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
       raise CreateUnBoundError(Self);
@@ -7079,6 +7093,11 @@ end;
 constructor TZTimeField.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  CreateFormatSettings;
+end;
+
+procedure TZTimeField.CreateFormatSettings;
+begin
   FDisplayTimeFormatSettings := TZDisplayTimeFormatSettings.Create(Self);
   FDisplayTimeFormatSettings.SetOnFormatChanged(DisplayFormatChanged);
   FEditTimeFormatSettings := TZEditTimeFormatSettings.Create(Self);
@@ -7086,8 +7105,10 @@ end;
 
 destructor TZTimeField.Destroy;
 begin
-  FreeAndNil(FDisplayTimeFormatSettings);
-  FreeAndNil(FEditTimeFormatSettings);
+  if FDisplayTimeFormatSettings <> nil then
+    FreeAndNil(FDisplayTimeFormatSettings);
+  if FEditTimeFormatSettings <> nil then
+    FreeAndNil(FEditTimeFormatSettings);
   inherited;
 end;
 
@@ -7294,6 +7315,8 @@ end;
 procedure TZDateTimeField.Bind(Binding: Boolean);
 begin
   FBound := Binding;
+  if FDisplayFormatSettings = nil then //"old" persistent fields
+    CreateFormatSettings;
   if Binding then begin
     if ((DataSet = nil) or not DataSet.InheritsFrom(TZAbstractRODataset)) then
       raise CreateUnBoundError(Self);
@@ -7339,7 +7362,12 @@ end;
 
 constructor TZDateTimeField.Create(AOwner: TComponent);
 begin
-  inherited;
+  inherited Create(AOwner);
+  CreateFormatSettings;
+end;
+
+procedure TZDateTimeField.CreateFormatSettings;
+begin
   FEditFormatSettings := TZEditTimestampFormatSettings.Create(Self);
   FDisplayFormatSettings := TZDisplayTimestampFormatSettings.Create(Self);
   FDisplayFormatSettings.SetOnFormatChanged(DisplayFormatChanged);
@@ -7347,8 +7375,10 @@ end;
 
 destructor TZDateTimeField.Destroy;
 begin
-  FreeAndNil(FEditFormatSettings);
-  FreeAndNil(FDisplayFormatSettings);
+  if FEditFormatSettings <> nil then
+    FreeAndNil(FEditFormatSettings);
+  if FDisplayFormatSettings <> nil then
+    FreeAndNil(FDisplayFormatSettings);
   inherited;
 end;
 
