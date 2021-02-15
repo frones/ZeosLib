@@ -916,6 +916,26 @@ type
     //mysql_stat:                   function(mysql: PMYSQL): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_store_result:           function(mysql: PMYSQL): PMYSQL_RES; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_thread_id:              function(mysql: PMYSQL): ULong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    /// <summary>From the MySQL documentations:
+    ///  Used to initiate the retrieval of a result set from the last
+    ///  query executed using the <c>mysql_real_query()</c> function on the
+    ///  database connection. Either this or the <c>mysql_store_result()</c>
+    ///  function must be called before the results of a query can be retrieved,
+    ///  and one or the other must be called to prevent the next query on that
+    ///  database connection from failing.</summary>
+    /// <param>"mysql" a mysql stmt handle, which was previously allocated by
+    ///  <c>mysql_stmt_init()</c>.</param>
+    /// <returns>an unbuffered result set or NULL if an error occurred.</returns>
+    /// <remarks>The <c>mysql_use_result()</c> function does not transfer the
+    ///  entire result set. Hence several functions like <c>mysql_num_rows()</c>
+    ///  or <c>mysql_data_seek()</c> cannot be used. <c>mysql_use_result()</c>
+    ///  will block the current connection until all result sets are retrieved
+    ///  or result set was released by <c>mysql_free_result()</c>.This reads the
+    ///  result of a querydirectly from the server without storing it in a
+    ///  temporary table or local buffer, which is somewhat faster and uses much
+    ///  less memory than <c>mysql_store_result()</c>. The client allocates
+    ///  memory only for the current row and a communication buffer that may
+    ///  grow up to max_allowed_packet bytes.</remarks>
     mysql_use_result:             function(mysql: PMYSQL): PMYSQL_RES; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
     { Set up and bring down a thread; these function should be called for each thread in an application which
@@ -969,6 +989,31 @@ type
     mysql_stmt_free_result:       function(stmt: PMYSQL_STMT): my_bool; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_init:              function(mysql: PMYSQL): PMYSQL_STMT; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_insert_id:         function(stmt: PMYSQL_STMT): ULongLong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    /// <summary>From the MySQL documentations:
+    ///  This function is used when you use prepared CALL statements to
+    ///  execute stored procedures, which can return multiple result sets. Use a
+    ///  loop that calls <c>mysql_stmt_next_result()</c> to determine whether
+    ///  there are more results. If a procedure has OUT or INOUT parameters,
+    ///  their values will be returned as a single-row result set following any
+    ///  other result sets. The values will appear in the order in which they
+    ///  are declared in the procedure parameter list.</summary>
+    /// <returns>a status to indicate whether more results exist. <c>0</c> if
+    ///  Successful and there are more results; <c>-1</c> if Successful and
+    ///  there are no more results; Greater than <c>0</c>An error occurred. If
+    ///  <c>mysql_stmt_next_result()</c> returns an error, there are no more
+    ///  results.</returns>
+    /// <param>"mysql" a mysql stmt handle, which was previously allocated by
+    ///  <c>mysql_stmt_init()</c>.</param>
+    /// <remarks>Before each call to <c>mysql_stmt_next_result()</c>, you must
+    ///  call <c>mysql_stmt_free_result()</c> for the current result if it
+    ///  produced a result set (rather than just a result status). After calling
+    ///  <c>mysql_stmt_next_result()</c> the state of the connection is as if you
+    ///  had called <c>mysql_stmt_execute()</c>. This means that you can call
+    ///  <c>mysql_stmt_bind_result()</c>, <c>mysql_stmt_affected_rows()</c>, and
+    ///  so forth. It is also possible to test whether there are more results by
+    ///  calling <c>mysql_stms_more_results()</c>. However, this function does
+    ///  not change the connection state, so if it returns true, you must still
+    ///  call <c>mysql_stmt_next_result()</c> to advance to the next result.</remarks>
     mysql_stmt_next_result:       function(stmt: PMYSQL_STMT): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_num_rows:          function(stmt: PMYSQL_STMT): ULongLong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_param_count:       function(stmt: PMYSQL_STMT): ULong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};

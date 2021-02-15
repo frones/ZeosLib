@@ -65,7 +65,7 @@ uses
 type
   TMySQLPreparable = (myDelete, myInsert, myUpdate, mySelect, mySet, myCall);
   TOpenCursorCallback = procedure of Object;
-  TMyStmtHandleStatus = (myhsUnknown, myhsAllocated, myhsFailed, myhsExecutedPrepared, myhsExecutedOnce);
+  TMyStmtHandleStatus = (myhsUnknown, myhsAllocated, myhsPrepared, myhsExecutedPrepared, myhsExecutedOnce);
 
   /// <author>EgonHugeist</author>
   /// <summary>Defines a reference of the TZMySQLBindValue record</summary>
@@ -182,8 +182,10 @@ type
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
       ParamType: TZProcedureColumnType; const Name: String = ''; {%H-}PrecisionOrSize: LengthInt = 0;
       {%H-}Scale: LengthInt = 0); override;
-
+    /// <summary>prepares the statement on the server if minimum execution
+    ///  count have been reached</summary>
     procedure Prepare; override;
+    /// <summary>Unprepares the statement, deallocates all bindings and handles</summary>
     procedure Unprepare; override;
     /// <summary>Clears the current parameter values immediately.
     ///  In general, parameter values remain in force for repeated use of a
@@ -517,10 +519,6 @@ begin
   FChunkSize := StrToInt(DefineStatementParameter(Self, DSProps_ChunkSize, '4096'));
 end;
 
-{**
-  prepares the statement on the server if minimum execution
-  count have been reached
-}
 procedure TZAbstractMySQLPreparedStatement.Prepare;
 begin
   FlushPendingResults;
@@ -530,11 +528,8 @@ begin
     InternalRealPrepare;
 end;
 
-{**
-  unprepares the statement, deallocates all bindings and handles
-}
 procedure TZAbstractMySQLPreparedStatement.Unprepare;
-var status: Integer;
+var //status: Integer;
   ParamCount: Integer;
 begin
   if FCallResultCache <> nil then
@@ -549,18 +544,19 @@ begin
     if not FEmulatedParams and (FMYSQL_STMT <> nil) then begin
       //cancel all pending results:
       //https://mariadb.com/kb/en/library/mysql_stmt_close/
-      status := FPlainDriver.mysql_stmt_close(FMYSQL_STMT);
-      try
+      {status := EH: Commented out, this leads to some memleaks if libmariadb is vinny nilly with its own handles}
+        FPlainDriver.mysql_stmt_close(FMYSQL_STMT);
+      {try
         if status <> 0 then
           FMySQLConnection.HandleErrorOrWarning(lcUnprepStmt, FMYSQL_STMT,
             'mysql_stmt_close', IImmediatelyReleasable(FWeakImmediatRelPtr));
-      finally
+      finally}
         FMYSQL_STMT := nil;
         FMyHandleStatus := myhsUnknown;
         if ParamCount > 0 then
           ReallocBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffset,
             ParamCount*Ord(FMYSQL_aligned_BINDs<>nil), 0, 1);
-      end;
+      //end;
     end else if (ParamCount > 0) and (FMYSQL_BINDs <> nil) then //switch mode did alloc mem
       ReallocBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffset,
         ParamCount*Ord(FMYSQL_aligned_BINDs<>nil), 0, 1);
@@ -576,21 +572,6 @@ begin
   end;
 end;
 
-{**
-  Moves to a <code>Statement</code> object's next result.  It returns
-  <code>true</code> if this result is a <code>ResultSet</code> object.
-  This method also implicitly closes any current <code>ResultSet</code>
-  object obtained with the method <code>getResultSet</code>.
-
-  <P>There are no more results when the following is true:
-  <PRE>
-        <code>(!getMoreResults() && (getUpdateCount() == -1)</code>
-  </PRE>
-
- @return <code>true</code> if the next result is a <code>ResultSet</code> object;
-   <code>false</code> if it is an update count or there are no more results
- @see #execute
-}
 function TZAbstractMySQLPreparedStatement.GetMoreResults: Boolean;
 var status: Integer;
   FieldCount: UInt;
@@ -693,8 +674,7 @@ begin
       Result.BeforeFirst;
     end;
   end else begin
-    { circumvent a mysql bug: the use_result has fetch error on the outparams for the lob types }
-    if (TokenMatchIndex <> Ord(myCall)) and (FUseResult and not FLastWasOutParams)//server cursor?
+    if FUseResult //server cursor?
     then NativeResultSet := TZMySQL_Use_ResultSet.Create(Self, SQL, FMySQLConnection,
       False, @FMYSQL_STMT, MYSQL_ColumnsBinding , nil, FOpenCursorCallback)
     else NativeResultSet := TZMySQL_Store_ResultSet.Create(Self, SQL, FMySQLConnection,
@@ -756,14 +736,21 @@ begin
     SQLType := TZSQLType(Ord(SQLType)-1);
   inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name, PrecisionOrSize, Scale);
   CheckParameterIndex(ParameterIndex);
-  if OldCount <> BindList.Count then
-    if not FEmulatedParams then begin
+  if not FEmulatedParams then begin
+    if OldCount <> BindList.Count then begin
       ReallocBindBuffer(FMYSQL_BINDs, FMYSQL_aligned_BINDs, FBindOffset,
         OldCount, BindList.Count, 1);
       {$R-}
       FMYSQL_aligned_BINDs[ParameterIndex].is_null_address^ := 1;
       {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     end;
+    if ParamType = pctOut then
+      if SQLType in [stString, stUnicodestring] then
+        PrecisionOrSize := PrecisionOrSize * ConSettings.ClientCodePage.CharWidth;
+      {$R-}
+      InitBuffer(SQLType, ParameterIndex, @FMYSQL_aligned_BINDs[ParameterIndex], PrecisionOrSize);
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
+  end;
 end;
 
 procedure TZAbstractMySQLPreparedStatement.ReleaseConnection;
@@ -837,13 +824,6 @@ begin
       end;
 end;
 
-{**
-  Executes the SQL query in this <code>PreparedStatement</code> object
-  and returns the result set generated by the query.
-
-  @return a <code>ResultSet</code> object that contains the data produced by the
-    query; never <code>null</code>
-}
 function TZAbstractMySQLPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 var
   FieldCount: UInt;
@@ -888,33 +868,35 @@ begin
   RestartTimer;
   if FEmulatedParams or (FMYSQL_STMT = nil)
   then Result := ExecuteEmulated
-  else begin
-    FMyHandleStatus := myhsFailed;
-    if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
-      FMyHandleStatus := myhsExecutedPrepared;
-      FieldCount := FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT);
-      if FieldCount = 0
-      then LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
-      else LastUpdateCount := -1;
-      { Logging Execution }
-      if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcExecPrepStmt,Self);
-      if (TokenMatchIndex = Ord(myCall)) or BindList.HasOutParam or BindList.HasInOutParam then begin
-        FetchCallResults(FieldCount,LastUpdateCount);
-        Result := GetFirstResultSet;
-        if BindList.HasOutParam or BindList.HasInOutParam then
-          FOutParamResultSet := GetLastResultSet;
-      end else if FieldCount = 0 then begin
-        while GetMoreResults do
-          if FLastResultSet <> nil then begin
-            Result := FLastResultSet;
-            FLastResultSet := nil;
-            FOpenResultset := Pointer(Result);
-          end
-      end else
-        Result := CreateResultSet(SQL, 0, FieldCount);
-      FOpenResultSet := Pointer(Result);
+  else if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
+    if (FMyHandleStatus = myhsPrepared)
+    then FMyHandleStatus := myhsExecutedPrepared
+    else FMyHandleStatus := myhsExecutedOnce;
+    FieldCount := FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT);
+    if FieldCount = 0
+    then LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
+    else LastUpdateCount := -1;
+    { Logging Execution }
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecPrepStmt,Self);
+    if (TokenMatchIndex = Ord(myCall)) or BindList.HasOutParam or BindList.HasInOutParam then begin
+      FetchCallResults(FieldCount,LastUpdateCount);
+      Result := GetFirstResultSet;
+      if BindList.HasOutParam or BindList.HasInOutParam then
+        FOutParamResultSet := GetLastResultSet;
+    end else if FieldCount = 0 then begin
+      while GetMoreResults do
+        if FLastResultSet <> nil then begin
+          Result := FLastResultSet;
+          FLastResultSet := nil;
+          FOpenResultset := Pointer(Result);
+        end
     end else
+      Result := CreateResultSet(SQL, 0, FieldCount);
+    FOpenResultSet := Pointer(Result);
+  end else begin
+    Result := nil;
+    if not FMySQLConnection.IsSilentError then
       FMySQLConnection.HandleErrorOrWarning(lcExecPrepStmt, FMYSQL_STMT,
         SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
   end;
@@ -924,16 +906,6 @@ begin
     FOutParamResultSet := Result;
 end;
 
-{**
-  Executes the SQL INSERT, UPDATE or DELETE statement
-  in this <code>PreparedStatement</code> object.
-  In addition,
-  SQL statements that return nothing, such as SQL DDL statements,
-  can be executed.
-
-  @return either the row count for INSERT, UPDATE or DELETE statements;
-  or 0 for SQL statements that return nothing
-}
 function TZAbstractMySQLPreparedStatement.ExecuteUpdatePrepared: Integer;
   procedure ExecEmulated;
   var FieldCount: ULong;
@@ -967,29 +939,29 @@ begin
   RestartTimer;
   if FEmulatedParams or (FMYSQL_STMT = nil)
   then ExecEmulated
-  else begin
-    FMyHandleStatus := myhsFailed;
-    if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
-      FMyHandleStatus := myhsExecutedPrepared;
-      FieldCount := FplainDriver.mysql_stmt_field_count(FMYSQL_STMT);
-      if FieldCount = 0
-      then LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
-      else LastUpdateCount := -1;
-      { Logging Execution }
-      if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcExecPrepStmt,Self);
-      if (TokenMatchIndex = Ord(myCall)) or BindList.HasOutParam or BindList.HasInOutParam then begin
-        FetchCallResults(FieldCount,LastUpdateCount);
-        if BindList.HasOutParam or BindList.HasInOutParam then
-          FOutParamResultSet := GetLastResultSet;
-      end else if FieldCount > 0 then
-        if BindList.HasReturnParam //retrieve outparam
-        then FOutParamResultSet := CreateResultSet(SQL, 0, FieldCount)
-        else LastResultSet := CreateResultSet(SQL, 0, FieldCount);
-    end else
-      FMySQLConnection.HandleErrorOrWarning(lcExecPrepStmt, FMYSQL_STMT,
-        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
-  end;
+  else if (FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0) then begin
+    if FMyHandleStatus = myhsPrepared
+    then FMyHandleStatus := myhsExecutedPrepared
+    else FMyHandleStatus := myhsExecutedOnce;
+
+    FieldCount := FplainDriver.mysql_stmt_field_count(FMYSQL_STMT);
+    if FieldCount = 0
+    then LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
+    else LastUpdateCount := -1;
+    { Logging Execution }
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecPrepStmt,Self);
+    if (TokenMatchIndex = Ord(myCall)) or BindList.HasOutParam or BindList.HasInOutParam then begin
+      FetchCallResults(FieldCount,LastUpdateCount);
+      if BindList.HasOutParam or BindList.HasInOutParam then
+        FOutParamResultSet := GetLastResultSet;
+    end else if FieldCount > 0 then
+      if BindList.HasReturnParam //retrieve outparam
+      then FOutParamResultSet := CreateResultSet(SQL, 0, FieldCount)
+      else LastResultSet := CreateResultSet(SQL, 0, FieldCount);
+  end else
+    FMySQLConnection.HandleErrorOrWarning(lcExecPrepStmt, FMYSQL_STMT,
+      SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
   Result := LastUpdateCount;
 end;
 
@@ -1061,14 +1033,6 @@ jmpCheckErr:
     end;
 end;
 
-{**
-  Executes any kind of SQL statement.
-  Some prepared statements return multiple results; the <code>execute</code>
-  method handles these complex statements as well as the simpler
-  form of statements handled by the methods <code>executeQuery</code>
-  and <code>executeUpdate</code>.
-  @see Statement#execute
-}
 function TZAbstractMySQLPreparedStatement.ExecutePrepared: Boolean;
 var
   FieldCount: UInt;
@@ -1103,30 +1067,29 @@ begin
   RestartTimer;
   if FEmulatedParams or (FMYSQL_STMT = nil)
   then ExecuteEmulated
-  else begin
-    FMyHandleStatus := myhsFailed;
-    if FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0 then begin
-      FMyHandleStatus := myhsExecutedPrepared;
-      FieldCount := FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT);
-      if FieldCount = 0 // we can call this function if fielcount is zero only
-      then LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
-      else LastUpdateCount := -1;
-      if DriverManager.HasLoggingListener then
-        DriverManager.LogMessage(lcExecPrepStmt,Self);
-      if (TokenMatchIndex = Ord(myCall)) or BindList.HasOutParam or BindList.HasInOutParam then begin
-        FetchCallResults(FieldCount,LastUpdateCount);
-        if BindList.HasOutParam or BindList.HasInOutParam then
-          FOutParamResultSet := GetLastResultSet;
-        if FieldCount > 0
-        then LastResultSet := GetFirstResultSet
-        else LastResultSet := nil;
-      end else begin if FieldCount > 0
-        then LastResultSet := CreateResultSet(SQL, 0, FieldCount)
-        else LastResultSet := nil;
-      end;
-    end else FMySQLConnection.HandleErrorOrWarning(lcExecPrepStmt, FMYSQL_STMT,
-      SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
-  end;
+  else if FPlainDriver.mysql_stmt_execute(FMYSQL_STMT) = 0 then begin
+    if FMyHandleStatus = myhsPrepared
+    then FMyHandleStatus := myhsExecutedPrepared
+    else FMyHandleStatus := myhsExecutedOnce;
+    FieldCount := FPlainDriver.mysql_stmt_field_count(FMYSQL_STMT);
+    if FieldCount = 0 // we can call this function if fielcount is zero only
+    then LastUpdateCount := FPlainDriver.mysql_stmt_affected_rows(FMYSQL_STMT)
+    else LastUpdateCount := -1;
+    if DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcExecPrepStmt,Self);
+    if (TokenMatchIndex = Ord(myCall)) or BindList.HasOutParam or BindList.HasInOutParam then begin
+      FetchCallResults(FieldCount,LastUpdateCount);
+      if BindList.HasOutParam or BindList.HasInOutParam then
+        FOutParamResultSet := GetLastResultSet;
+      if FieldCount > 0
+      then LastResultSet := GetFirstResultSet
+      else LastResultSet := nil;
+    end else begin if FieldCount > 0
+      then LastResultSet := CreateResultSet(SQL, 0, FieldCount)
+      else LastResultSet := nil;
+    end;
+  end else FMySQLConnection.HandleErrorOrWarning(lcExecPrepStmt, FMYSQL_STMT,
+    SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
   if BindList.HasReturnParam then begin
     FOutParamResultset := Connection.GetMetadata.CloneCachedResultSet(FLastResultSet);
     if FLastResultSet.GetType = rtForwardOnly then
@@ -1135,15 +1098,6 @@ begin
   Result := Assigned(LastResultSet);
 end;
 
-{**
-  Returns the current result as an update count;
-  if the result is a <code>ResultSet</code> object or there are no more results, -1
-  is returned. This method should be called only once per result.
-
-  @return the current result as an update count; -1 if the current result is a
-    <code>ResultSet</code> object or there are no more results
-  @see #execute
-}
 function TZAbstractMySQLPreparedStatement.GetUpdateCount: Integer;
 begin
   Result := inherited GetUpdateCount;
@@ -1286,6 +1240,7 @@ begin
   if (FPlainDriver.mysql_stmt_prepare(FMYSQL_STMT, Pointer(FASQL), length(FASQL)) <> 0) then
     FMySQLConnection.HandleErrorOrWarning(lcPrepStmt, FMYSQL_STMT, SQL,
       IImmediatelyReleasable(FWeakImmediatRelPtr));
+  FMyHandleStatus := myhsPrepared;
   //see user comment: http://dev.mysql.com/doc/refman/5.0/en/mysql-stmt-fetch.html
   //"If you want work with more than one statement simultaneously, anidated select,
   //for example, you must declare CURSOR_TYPE_READ_ONLY the statement after just prepared this.!"
@@ -1295,7 +1250,6 @@ begin
       if Assigned(FPlainDriver.mysql_stmt_attr_set517UP) //we need this to be able to use more than !one! stmt -> keep cached
       then FPlainDriver.mysql_stmt_attr_set517UP(FMYSQL_STMT, STMT_ATTR_CURSOR_TYPE, @CURSOR_TYPE_READ_ONLY)
       else FPlainDriver.mysql_stmt_attr_set(FMYSQL_STMT, STMT_ATTR_CURSOR_TYPE, @CURSOR_TYPE_READ_ONLY);
-
   if (FClientVersion >= 50060) and (FPrefetchRows <> 1) and ((TokenMatchIndex = Ord(mySelect)) or (TokenMatchIndex = Ord(myCall))) then //supported since 5.0.6
     //try achieve best performnce. No idea how to calculate it
     if Assigned(FPlainDriver.mysql_stmt_attr_set517UP) and (FPrefetchRows <> 1)

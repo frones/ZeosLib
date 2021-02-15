@@ -2867,6 +2867,7 @@ end;
 
 { TZVirtualResultSetRowAccessor }
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "CachedLobs" not used} {$ENDIF}
 constructor TZVirtualResultSetRowAccessor.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
   CachedLobs: WordBool);
@@ -2883,12 +2884,13 @@ begin
   for I := 0 to TempColumns.Count -1 do begin
     Current := TZColumnInfo(TempColumns[i]);
     if Current.ColumnType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
-      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-3); // no streams 4 sqlite
+      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-3); // no streams here
       Current.Precision := -1;
     end;
   end;
   inherited Create(TempColumns, ConSettings, OpenLobStreams, False);
   TempColumns.Free;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 end.

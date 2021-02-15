@@ -132,7 +132,6 @@ type
       const Connection: IZMySQLConnection; IsOutParamResult: Boolean;
       PMYSQL_STMT: PPMYSQL_STMT; MYSQL_ColumnsBinding: PMYSQL_ColumnsBinding;
       AffectedRows: PInteger; out OpenCursorCallback: TOpenCursorCallback);
-    destructor Destroy; override;
     procedure BeforeClose; override;
     procedure AfterClose; override;
     /// <summary>Releases all driver handles and set the object in a closed
@@ -181,7 +180,6 @@ type
   TZMySQL_Store_ResultSet = class(TZAbstractMySQLResultSet)
   public
     function MoveAbsolute(Row: Integer): Boolean; override;
-    procedure ResetCursor; override;
     procedure OpenCursor; override;
   end;
 
@@ -777,12 +775,6 @@ begin
         [TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnLabel, IntToStr(Ord(DataType))]));
 end;
 
-destructor TZAbstractMySQLResultSet.Destroy;
-begin
-  //ReallocBindBuffer(FColBuffer, FMYSQL_aligned_BINDs, FBindOffsets, FFieldCount, 0, Ord(fBindBufferAllocated));
-  inherited Destroy;
-end;
-
 procedure TZAbstractMySQLResultSet.BeforeClose;
 begin
   FClosing := True;
@@ -802,7 +794,7 @@ var
   MySQL_FieldType_Bit_1_IsBoolean: Boolean;
 begin
   FieldOffsets := GetFieldOffsets(FPlainDriver.mysql_get_client_version);
-  MySQL_FieldType_Bit_1_IsBoolean := (GetStatement.GetConnection as IZMySQLConnection).MySQL_FieldType_Bit_1_IsBoolean;
+  MySQL_FieldType_Bit_1_IsBoolean := FMySQLConnection.MySQL_FieldType_Bit_1_IsBoolean;
   if FPMYSQL_STMT^ = nil then begin
     OpenCursor;
     QueryHandle := FQueryHandle;
@@ -886,13 +878,19 @@ begin
     if fBindBufferAllocated then begin
       Handle := FMYSQL_STMT;
       FMYSQL_STMT := nil;
+      if Handle <> nil then
+        if FPlainDriver.mysql_stmt_free_result(Handle) <> 0 then
+          FMySQLConnection.HandleErrorOrWarning(lcFetchDone, Handle,
+            'mysql_stmt_free_result', IImmediatelyReleasable(FWeakImmediatRelPtr));
       //test if more results are pendding
-      if (Handle <> nil) and not FClosing and (FIsOutParamResult or ({not FPlainDriver.IsMariaDBDriver and} (Assigned(FPlainDriver.mysql_stmt_more_results) and (FPlainDriver.mysql_stmt_more_results(FPMYSQL_STMT^) = 1))))
+      if (Handle <> nil) and not FClosing and (Assigned(FPlainDriver.mysql_stmt_more_results) and (FPlainDriver.mysql_stmt_more_results(FPMYSQL_STMT^) = 1))
       then Close
       else inherited ResetCursor;
     end else begin
       Handle := FQueryHandle;
       FQueryHandle := nil;
+      if Handle <> nil then
+        FPlainDriver.mysql_free_result(Handle);
       if (Handle <> nil) and not FClosing and (FPlainDriver.mysql_more_results(FPMYSQL^) = 1)
       then Close
       else inherited ResetCursor;
@@ -975,7 +973,11 @@ begin
       Result := True
     else if FFetchStatus = STMT_FETCH_ERROR then
       FMySQLConnection.HandleErrorOrWarning(lcFetch, FMYSQL_STMT,
-        'mysql_stmt_fetch', IImmediatelyReleasable(FWeakImmediatRelPtr));
+        'mysql_stmt_fetch', IImmediatelyReleasable(FWeakImmediatRelPtr))
+    else if fServerCursor then begin
+      FPlainDriver.mysql_stmt_free_result(FMYSQL_STMT);
+      FMYSQL_STMT := nil;
+    end;
   end else begin
     if (FQueryHandle = nil) then begin
       FQueryHandle := FPlainDriver.mysql_store_result(FPMYSQL^);
@@ -986,8 +988,13 @@ begin
     if FRowHandle <> nil then begin
       Result := True;
       FLengthArray := FPlainDriver.mysql_fetch_lengths(FQueryHandle);
-    end else
+    end else begin
+      if fServerCursor then begin
+        FPlainDriver.mysql_free_result(FQueryHandle);
+        FQueryHandle := nil;
+      end;
       FLengthArray := nil;
+    end;
   end;
   if Result then begin
     RowNo := RowNo + 1;
@@ -2639,22 +2646,6 @@ begin
 jmpLog:
     if not LastRowFetchLogged and DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcFetchDone, Self);
-  end;
-end;
-
-procedure TZMySQL_Store_ResultSet.ResetCursor;
-begin
-  if not Closed then begin
-    if fBindBufferAllocated then begin
-      if Assigned(FMYSQL_STMT) then
-        if FPlainDriver.mysql_stmt_free_result(FMYSQL_STMT) <> 0 then
-          FMySQLConnection.HandleErrorOrWarning(lcFetch, FMYSQL_STMT,
-            'mysql_stmt_free_result', IImmediatelyReleasable(FWeakImmediatRelPtr))
-    end else if FQueryHandle <> nil then begin
-      FPlainDriver.mysql_free_result(FQueryHandle);
-      FQueryHandle := nil;
-    end;
-    inherited ResetCursor;
   end;
 end;
 
