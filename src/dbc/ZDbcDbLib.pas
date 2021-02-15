@@ -371,16 +371,6 @@ var
     RawTemp := URL.Properties.Values[PropName]
   {$ENDIF}
   end;
-  procedure SetRawFromString(const Value: String);
-  begin
-  {$IFDEF UNICODE}
-    if Value <> ''
-    then RawTemp := ZUnicodeToRaw(Value, ZOSCodePage)
-    else RawTemp := '';
-  {$ELSE}
-    RawTemp := Value;
-  {$ENDIF}
-  end;
 begin
   FLogMessage := 'CONNECT TO "'+HostName+'"';
   LoginRec := FPlainDriver.dbLogin;
@@ -443,9 +433,6 @@ begin
 
     if Info.Values[ConnProps_Timeout] <> '' then
       FPlainDriver.dbSetLoginTime(StrToIntDef(Info.Values[ConnProps_Timeout], 60));
-
-    SetRawFromString(URL.Database);
-    FPlainDriver.dbSetLName(Loginrec, @RawTemp, TDSDBSETDBNAME);
 
     if (FPlainDriver.DBLibraryVendorType = lvtFreeTDS) then begin
       if StrToBoolEx(Info.Values[ConnProps_Log]) or StrToBoolEx(Info.Values[ConnProps_Logging]) or
@@ -773,15 +760,13 @@ begin
       Exit;
 
   InternalLogin;
+  FLogMessage := 'USE '+ URL.Database;
   {$IFDEF UNICODE}
   Tmp := ZUnicodeToRaw(URL.Database, ConSettings.ClientCodePage.CP);
   {$ENDIF}
-  if String(FPlainDriver.dbname(FHandle)) <> URL.Database then begin
-    FLogMessage := 'USE '+ URL.Database;
-    if FPlainDriver.dbUse(FHandle, Pointer({$IFDEF UNICODE}Tmp{$ELSE}URL.Database{$ENDIF})) <> DBSUCCEED then
-      CheckDBLibError(lcConnect, FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
-    DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
-  end;
+  if FPlainDriver.dbUse(FHandle, Pointer({$IFDEF UNICODE}Tmp{$ELSE}URL.Database{$ENDIF})) <> DBSUCCEED then
+    CheckDBLibError(lcConnect, FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
+  DriverManager.LogMessage(lcConnect, URL.Protocol, FLogMessage);
 
   FLogMessage := 'set textlimit=2147483647';
   if FPlainDriver.dbsetopt(FHandle, FPlainDriver.GetDBOption(dboptTEXTLIMIT),Pointer(textlimit), -1) <> DBSUCCEED then
