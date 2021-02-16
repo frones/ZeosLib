@@ -60,7 +60,7 @@ uses
   {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   ZCompatibility, ZClasses,
-  ZDbcIntfs,
+  ZDbcIntfs, ZDbcResultSetMetadata,
   ZAbstractDataset, ZAbstractRODataset, ZAbstractConnection, ZDatasetUtils;
 
 type
@@ -68,6 +68,10 @@ type
   private
     FColumnsInfo: TObjectList;
     procedure ConvertFiedDefsToColumnsInfo(const Source: TFieldDefs);
+    function ConvertFiedDefToColumnsInfo(const Source: TFieldDef): TZColumnInfo;
+    function StoreControlsCodepage: Boolean;
+    function GetControlsCodePage: TZControlsCodePage;
+    procedure SetControlsCodePage(const Value: TZControlsCodePage);
   protected
     FLocalConSettings: TZConSettings;
     FCharacterSet: TZCodePage;
@@ -84,17 +88,29 @@ type
     /// <param>"Value" a database connection object.</param>
     procedure SetConnection(Value: TZAbstractConnection); override;
   public
+    constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
   public
+    /// <summary>Clones data structure and copies the data from a source zeos dataset</summary>
+    /// <param>"Source" a TZAbstractRODataset or descendant we clone from</param>
     procedure CloneDataFrom(Source: TZAbstractRODataset);
+    /// <summary>Assigns the data from a source zeos dataset. The
+    ///  FieldDefs are used to find matching fields by it's name. All matches
+    ///  get a copy as given by Source.</summary>
+    /// <param>"Source" a TZAbstractRODataset or descendant we clone from</param>
+    procedure AssignDataFrom(Source: TZAbstractRODataset);
     procedure Clear;
     procedure Empty;
+  published
+    /// <summary>represents the codpage the character fieldtypes are mapped to.
+    ///  The value is ignored if a connection is assigned</summary>
+    property ControlsCodePage: TZControlsCodePage read GetControlsCodePage write SetControlsCodePage stored StoreControlsCodepage;
   end;
 
 implementation
 
 uses ZMessages, ZEncoding,
-  ZDbcStatement, ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZDbcCache,
+  ZDbcStatement, ZDbcMetadata, ZDbcUtils, ZDbcCache,
   ZDbcCachedResultSet;
 
 type
@@ -154,7 +170,98 @@ begin
   Result := 0;
 end;
 
+type
+  TZProtectedAbstractRODataset = Class(TZAbstractRODataset);
+
 { TZAbstractMemTable }
+
+procedure TZAbstractMemTable.AssignDataFrom(Source: TZAbstractRODataset);
+var Rows: TZSortedList;
+    FieldPairs: TZIndexPairList;
+    Current: TFieldDef;
+    I, ColumnIndex, Idx, SkipCount: Integer;
+    RS: IZResultSet;
+    CS: IZCachedResultSet;
+    Metadata: IZResultSetMetadata;
+    VirtualResultSet: TZVirtualResultSet;
+    ColumnInfo: TZColumnInfo;
+    ColumnsInfo: TObjectList;
+    ReInitFieldDefs: Boolean;
+    SourceCodePage, DestCodePage: Word;
+begin
+  if (Source = nil) or (not Source.Active) then Exit;
+  if FieldDefs.Count = 0 then begin
+    CloneDataFrom(Source);
+    Exit;
+  end;
+  if Active then Close;
+  if not TZProtectedAbstractRODataset(Source).IsUniDirectional and TZProtectedAbstractRODataset(Source).LastRowFetched
+  then Rows := TZProtectedAbstractRODataset(Source).CurrentRows
+  else Rows := nil;
+  Metadata := TZProtectedAbstractRODataset(Source).ResultSetMetadata;
+  { we can't judge if a user did change the field order, thus create a new lookup}
+  FieldPairs := TZIndexPairList.Create;
+  ColumnsInfo := TObjectList.Create(True);
+  ReInitFieldDefs := False;
+  try
+    FieldPairs.Capacity := FieldDefs.Count;
+    SkipCount := 0;
+    Idx := FirstDbcIndex;
+    for i := 0 to FieldDefs.Count -1 do begin
+      Current := FieldDefs[i];
+      ColumnIndex := MetaData.FindColumn(Current.Name);
+      if (not Current.InternalCalcField) then begin
+        if (ColumnIndex <> InvalidDbcIndex) then begin
+          FieldPairs.Add(ColumnIndex, (Idx-SkipCount){$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+          ColumnInfo := TZColumnInfo.Create;
+          ColumnInfo.Currency := Metadata.IsCurrency(ColumnIndex);
+          ColumnInfo.Signed := Metadata.IsSigned(ColumnIndex);
+          ColumnInfo.ColumnLabel := Metadata.GetOrgColumnLabel(ColumnIndex);
+          ColumnInfo.ColumnType := Metadata.GetColumnType(ColumnIndex);
+          ReInitFieldDefs := ReInitFieldDefs or not Current.InheritsFrom(TZFieldDef);
+          ColumnInfo.Precision := Metadata.GetPrecision(ColumnIndex);
+          if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then begin
+            SourceCodePage := Metadata.GetColumnCodePage(ColumnIndex);
+            DestCodePage := GetTransliterateCodePage(FControlsCodePage);
+            if (ColumnInfo.ColumnType in [stString, stAsciiStream]) and
+               ((SourceCodePage <> DestCodePage) or
+                (Current.DataType in [{$IFDEF WITH_FTWIDEMEMO}ftWideMemo, {$ENDIF}
+                ftWideString{$IFDEF WITH_FTFIXEDWIDECHAR}, ftFixedWideChar{$ENDIF}])) then begin
+              ColumnInfo.ColumnType := TZSQLType(Byte(ColumnInfo.ColumnType)+1);
+              ColumnInfo.ColumnCodePage := zCP_UTF16;
+            end else ColumnInfo.ColumnCodePage := SourceCodePage;
+          end;
+          ColumnInfo.Scale := Metadata.GetScale(ColumnIndex);
+          Inc(Idx);
+        end else
+          ColumnInfo := ConvertFiedDefToColumnsInfo(Current);
+        ColumnsInfo.Add(ColumnInfo);
+      end else Inc(SkipCount);
+    end;
+    FLocalConSettings.ClientCodePage := @FCharacterSet;
+    FConSettings := @FLocalConSettings;
+    Statement := TZMemResultSetPreparedStatement.Create(FConSettings, ColumnsInfo, Properties);
+    VirtualResultSet := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '', FConSettings);
+    VirtualResultSet.CopyFrom(TZProtectedAbstractRODataset(Source).ResultSet, Rows, FieldPairs);
+    RS := VirtualResultSet;
+    if RequestLive
+    then VirtualResultSet.SetConcurrency(rcUpdatable)
+    else VirtualResultSet.SetConcurrency(rcReadOnly);
+    {$IFDEF FPC}
+    SetDefaultFields(True);
+    {$ENDIF}
+    SetAnotherResultset(RS);
+    RS.QueryInterface(IZCachedResultSet, CS);
+    CachedResultSet := CS;
+  finally
+    FreeAndNil(FieldPairs);
+    if FColumnsInfo <> nil then
+      FreeAndNil(FColumnsInfo);
+    if ReInitFieldDefs then
+      InternalInitFieldDefs;
+    FColumnsInfo := ColumnsInfo;
+  end;
+end;
 
 procedure TZAbstractMemTable.CheckConnected;
 begin
@@ -166,9 +273,6 @@ begin
   if FieldDefs.Count = 0 then
     raise EZDataBaseError.Create(SQueryIsEmpty);
 end;
-
-type
-  TZProtectedAbstractRODataset = Class(TZAbstractRODataset);
 
 procedure TZAbstractMemTable.Clear;
 begin
@@ -244,26 +348,43 @@ begin
   for I := 0 to Source.Count - 1 do begin
     Current := Source[I];
     if not Current.InternalCalcField then begin
-      ColumnInfo := TZColumnInfo.Create;
-      ColumnInfo.ColumnType := ConvertDatasetToDbcType(Current.DataType);
-      ColumnInfo.ColumnName := Current.Name;
-      ColumnInfo.Precision := Current.Size;
-      ColumnInfo.Writable := RequestLive;
-      ColumnInfo.ReadOnly := not RequestLive;
-      if Current.DataType in [ftBCD, ftFmtBCD, ftTime, ftDateTime] then
-        ColumnInfo.Scale := Current.Size
-      else if ColumnInfo.ColumnType in [stUnicodeString, stUnicodeStream] then
-        ColumnInfo.ColumnCodePage := zCP_UTF16
-      else if ColumnInfo.ColumnType in [stString, stAsciiStream] then
-        {$IFDEF FPC}
-        ColumnInfo.ColumnCodePage := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}zCP_UTF8{$ENDIF};
-        {$ELSE}
-        ColumnInfo.ColumnCodePage := {$IFDEF UNICODE}zCP_UTF8{$ELSE}ZOSCodePage{$ENDIF};
-        {$ENDIF}
-      ColumnInfo.ColumnLabel := Current.DisplayName;
+      ColumnInfo := ConvertFiedDefToColumnsInfo(Current);
       FColumnsInfo.Add(ColumnInfo);
     end;
   end;
+end;
+
+function TZAbstractMemTable.ConvertFiedDefToColumnsInfo(
+  const Source: TFieldDef): TZColumnInfo;
+begin
+  Result := TZColumnInfo.Create;
+  Result.ColumnType := ConvertDatasetToDbcType(Source.DataType);
+  if Result.ColumnType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
+    Result.Precision := 0;
+    Result.ColumnType := TZSQLType(Byte(Result.ColumnType)-3);
+  end else
+    Result.Precision := Source.Size;
+  Result.ColumnName := Source.Name;
+  Result.Writable := RequestLive;
+  Result.ReadOnly := not RequestLive;
+  if Source.DataType in [ftBCD, ftFmtBCD, ftTime, ftDateTime] then begin
+    Result.Scale := Source.Size;
+    Result.Precision := Source.Precision;
+  end else if Result.ColumnType = stUnicodeString then
+    Result.ColumnCodePage := zCP_UTF16
+  else if Result.ColumnType = stString then
+    {$IFDEF FPC}
+    Result.ColumnCodePage := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}zCP_UTF8{$ENDIF};
+    {$ELSE}
+    Result.ColumnCodePage := {$IFDEF UNICODE}zCP_UTF8{$ELSE}ZOSCodePage{$ENDIF};
+    {$ENDIF}
+  Result.ColumnLabel := Source.DisplayName;
+end;
+
+constructor TZAbstractMemTable.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FControlsCodePage := cDynamic;
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "SQL" not used} {$ENDIF}
@@ -273,9 +394,8 @@ var RS: IZCachedResultSet;
 begin
   if (FColumnsInfo = nil) or (FColumnsInfo.Count = 0) then
     Statement := CreateStatement(SQL, Properties);
-  if (FConnection <> nil)
-  then FControlsCodePage := Connection.ControlsCodePage
-  else FControlsCodePage := cDynamic;
+  if (FConnection <> nil) then
+    FControlsCodePage := Connection.ControlsCodePage;
   FCharacterSet.Encoding := {$IFDEF UNICODE}ceUTF16{$ELSE}{$IFDEF FPC}ceUTF8{$ELSE}ceAnsi{$ENDIF}{$ENDIF};
   {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
   FCharacterSet.CP := {$IFDEF UNICODE}zCP_UTF8{$ELSE}DefaultSystemCodePage{$ENDIF};
@@ -283,10 +403,9 @@ begin
   FCharacterSet.CP := {$IFDEF FPC}zCP_UTF8{$ELSE}ZOSCodePage{$ENDIF};
   {$ENDIF}
   Statement := CreateStatement('', Properties);
-  if RequestLive then
-    Statement.SetResultSetConcurrency(rcUpdatable)
-  else
-    Statement.SetResultSetConcurrency(rcReadOnly);
+  if RequestLive
+  then Statement.SetResultSetConcurrency(rcUpdatable)
+  else Statement.SetResultSetConcurrency(rcReadOnly);
   Statement.SetFetchDirection(fdForward);
   Statement.SetResultSetType(rtScrollInsensitive);
   if MaxRows > 0 then
@@ -320,8 +439,14 @@ end;
 procedure TZAbstractMemTable.Empty;
 begin
   CheckActive;
-  CachedResultSet.ResetCursor;
   EmptyDataSet;
+end;
+
+function TZAbstractMemTable.GetControlsCodePage: TZControlsCodePage;
+begin
+  if FConnection = nil
+  then Result := FControlsCodePage
+  else Result := FConnection.ControlsCodePage;
 end;
 
 procedure TZAbstractMemTable.InternalInitFieldDefs;
@@ -376,6 +501,20 @@ begin
     end;
     FConnection := Value;
   end;
+end;
+
+procedure TZAbstractMemTable.SetControlsCodePage(
+  const Value: TZControlsCodePage);
+begin
+  if (Value <> FControlsCodePage) then begin
+    if Active then Close;
+    FControlsCodePage := Value;
+  end;
+end;
+
+function TZAbstractMemTable.StoreControlsCodepage: Boolean;
+begin
+  Result := FConnection = nil;
 end;
 
 end.

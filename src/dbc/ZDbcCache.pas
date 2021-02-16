@@ -2335,8 +2335,8 @@ SetEmpty:           Len := 0;
                     Result := PEmptyAnsiString;
                   end else begin
                     CP := GetW2A2WConversionCodePage(ConSettings);
-                    FRawTemp := PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc,
-                      PCardinal(PPointer(Data)^)^ shr 1, CP);
+                    PUnicodeToRaw(ZPPWideChar(Data)^+PWideInc,
+                      PCardinal(PPointer(Data)^)^ shr 1, CP, FRawTemp);
                     Len := Length(FRawTemp);
                     if Len > 0
                     then Result := Pointer(FRawTemp)
@@ -2520,8 +2520,8 @@ begin
                           if FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] = zCP_UTF8
                           then ZSetString(PAnsiChar(P), L, Result)
                           else begin
-                            FUniTemp := PRawToUnicode(P, L, fClientCP);
-                            Result := PUnicodeToRaw(Pointer(FUniTemp), Length(fUniTemp), zCP_UTF8);
+                            PRawToUnicode(P, L, fClientCP, FUniTemp);
+                            PUnicodeToRaw(Pointer(FUniTemp), Length(fUniTemp), zCP_UTF8, RawByteString(Result));
                           end;
                       end;
     stUnicodeString, stUnicodeStream:  begin
@@ -2635,8 +2635,8 @@ Set_Results:        Len := Result - PWideChar(@TinyBuffer[0]);
       stString:   if (Data^ = nil)
                   then goto SetEmpty
                   else begin
-                    FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc,
-                      PCardinal(PPointer(Data)^)^, FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]);
+                    PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc,
+                      PCardinal(PPointer(Data)^)^, FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], FUniTemp);
 Set_From_Temp:      Len := Length(FUniTemp);
                     if Len = 0 then begin
 SetEmpty:             Result := PEmptyUnicodeString;
@@ -2651,7 +2651,7 @@ SetEmpty:             Result := PEmptyUnicodeString;
                     Len := PCardinal(Data^)^ shr 1;
                   end;
       stBytes:    if Data^ <> nil then begin
-                    fUniTemp := Ascii7ToUnicodeString(PPAnsiChar(Data)^+PAnsiInc, PCardinal(PPointer(Data)^)^);
+                    Ascii7ToUnicodeString(PPAnsiChar(Data)^+PAnsiInc, PCardinal(PPointer(Data)^)^, fUniTemp);
                     goto Set_From_Temp;
                   end else
                     goto SetEmpty;

@@ -475,7 +475,7 @@ begin
     Check(RS.Next, 'No row retrieved');
     Check(not RS.IsNull(FirstDbcIndex), 'No data retrieved');
     I := RS.GetInt(FirstDbcIndex);
-
+    RS.Close;
     PStmt := Connection.PrepareStatement('insert into TestTicket365 (int_value) values (?); SELECT last_insert_id() as id;');
 
     for I:= I to 10 do begin

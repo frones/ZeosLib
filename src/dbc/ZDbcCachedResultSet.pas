@@ -425,6 +425,8 @@ type
   public
     procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
     procedure SortRows(const ColumnIndices: TIntegerDynArray; Descending: Boolean);
+    procedure CopyFrom(const Source: IZResultSet; Rows: TZSortedList;
+      FieldPairs: TZIndexPairList);
   end;
 
   { TZVirtualResultSetRowAccessor }
@@ -2739,10 +2741,47 @@ end;
   {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
   {$WARN 4056 off : Conversion between ordinals and pointers is not portable}
 {$ENDIF}
+procedure TZVirtualResultSet.CopyFrom(const Source: IZResultSet;
+  Rows: TZSortedList; FieldPairs: TZIndexPairList);
+  procedure CopyRow(RowAccessor: TZRowAccessor; Source: IZResultSet; FieldPairs: TZIndexPairList);
+  var Succeeded: Boolean;
+  begin
+    Succeeded := False;
+    try
+      RowAccessor.Alloc;
+      RowAccessor.RowBuffer.Index := GetNextRowIndex;
+      RowAccessor.RowBuffer.UpdateType := utUnmodified;
+      RowAccessor.FillFromFromResultSet(Source, FieldPairs);
+      RowsList.Add(RowAccessor.RowBuffer);
+      LastRowNo := RowsList.Count;
+      Succeeded := True;
+    finally
+      if not Succeeded {Out of mem?} then
+        RowAccessor.Dispose;
+    end;
+  end;
+var I: Integer;
+begin
+  if Rows = nil then begin
+    if Source.GetType <> rtForwardOnly then
+      Source.First
+    else if Source.IsBeforeFirst then
+      Source.Next;
+    while not Source.IsAfterLast do begin
+      CopyRow(RowAccessor, Source, FieldPairs);
+      Source.Next;
+    end;
+  end else for I := 0 to Rows.Count -1 do begin
+    Source.MoveAbsolute(NativeInt(Rows[i]));
+    CopyRow(RowAccessor, Source, FieldPairs);
+  end;
+  BeforeFirst;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
 constructor TZVirtualResultSet.CreateFrom(const Source: IZResultSet;
   Rows: TZSortedList; FieldPairs: TZIndexPairList; ConSettings: PZConSettings);
 var ColumnsInfo: TObjectList;
-  I: Integer;
   FieldPairsCreated: Boolean;
   function CreateColumns(const Source: IZResultSet; var FieldPairs: TZIndexPairList): TObjectList;
   var MetaData: IZResultSetMetadata;
@@ -2770,41 +2809,12 @@ var ColumnsInfo: TObjectList;
       Result.Add(ColumnInfo);
     end;
   end;
-  procedure CopyRow(RowAccessor: TZRowAccessor; Source: IZResultSet; FieldPairs: TZIndexPairList);
-  var Succeeded: Boolean;
-  begin
-    Succeeded := False;
-    try
-      RowAccessor.Alloc;
-      RowAccessor.RowBuffer.Index := GetNextRowIndex;
-      RowAccessor.RowBuffer.UpdateType := utUnmodified;
-      RowAccessor.FillFromFromResultSet(Source, FieldPairs);
-      RowsList.Add(RowAccessor.RowBuffer);
-      LastRowNo := RowsList.Count;
-      Succeeded := True;
-    finally
-      if not Succeeded {Out of mem?} then
-        RowAccessor.Dispose;
-    end;
-  end;
 begin
   FieldPairsCreated := FieldPairs = nil;
   ColumnsInfo := CreateColumns(Source, FieldPairs);
   CreateWithColumns(ColumnsInfo, '', ConSettings);
   try
-    if Rows = nil then begin
-      if Source.GetType <> rtForwardOnly then
-        Source.First
-      else if Source.IsBeforeFirst then
-        Source.Next;
-      while not Source.IsAfterLast do begin
-        CopyRow(RowAccessor, Source, FieldPairs);
-        Source.Next;
-      end;
-    end else for I := 0 to Rows.Count -1 do begin
-      Source.MoveAbsolute(NativeInt(Rows[i]));
-      CopyRow(RowAccessor, Source, FieldPairs);
-    end;
+    CopyFrom(Source, Rows, FieldPairs);
   finally
     FreeAndNil(ColumnsInfo);
     if FieldPairsCreated then
@@ -2812,7 +2822,6 @@ begin
   end;
   BeforeFirst;
 end;
-{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Creates this object and assignes the main properties.

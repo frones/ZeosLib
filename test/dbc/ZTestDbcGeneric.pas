@@ -2257,6 +2257,7 @@ begin
       begin
         Next;
         CheckEquals(81, GetInt(FirstDbcIndex), 'Blokinsertiation Count');
+        Close;
       end;
     end;
   end else

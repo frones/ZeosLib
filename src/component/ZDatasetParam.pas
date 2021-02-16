@@ -2852,7 +2852,9 @@ var SQLType: TZSQLType;
       R := '';
       Stream.Position := 0;
       L := 0;
+      {$IFDEF WITH_RAWBYTESTRING}
       P := nil;
+      {$ENDIF WITH_RAWBYTESTRING}
       while True do begin
         B := Stream.Read(Buf[0], MaxBufSize);
         if B = 0 then Break;
