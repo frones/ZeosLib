@@ -923,14 +923,7 @@ var
   Username, Password: string;
 begin
   if FConnection = nil then begin
-// Fixes Zeos Bug 00056
-//    try
-      DoBeforeConnect;
-//    except
-//This is here to support aborting the Connection in BeforeConnect event without fatal errors
-//      on E: EAbort do
-//        Exit;
-//    end;
+    DoBeforeConnect;
 
     UserName := FURL.UserName;
     Password := FURL.Password;
@@ -1046,24 +1039,24 @@ end;
   Reconnect, doesn't destroy DataSets if successful.
 }
 procedure TZAbstractConnection.Reconnect;
+var Succeeded: Boolean;
 begin
-  if FConnection <> nil then
-  begin
+  if FConnection <> nil then begin
     DoBeforeReconnect;
-
     ShowSqlHourGlass;
+    Succeeded := False;
     try
       try
         FConnection.Close;
         FConnection.Open;
-      except
-        CloseAllLinkedComponents;
-        raise;
+        Succeeded := True;
+      finally
+        if not Succeeded then
+          CloseAllLinkedComponents;
       end;
     finally
       HideSqlHourGlass;
     end;
-
     DoAfterReconnect;
   end;
 end;
@@ -1234,33 +1227,26 @@ end;
 
 Function TZAbstractConnection.PingServer: Boolean;
 var
-  LastState : boolean;
+  LastState, Succeeded: boolean;
 begin
   Result := false;
   // Check connection status
   LastState := GetConnected;
-  If FConnection <> Nil Then
-    Begin
-      Try
-        Result := (FConnection.PingServer=0);
-        // Connection now is false but was true
-        If (Not Result) And (LastState) Then
-          // Generate OnDisconnect event
-          SetConnected(Result);
-      Except
-        On E:Exception Do
-        Begin
-         If LastState Then
-           // Generate OnDisconnect event
-           SetConnected(False);
-         Raise;
-       End
-      End;
-    End
-  Else
+  Succeeded := False;
+  If FConnection <> Nil Then try
+    Result := (FConnection.PingServer=0);
     // Connection now is false but was true
-    If LastState Then
-      SetConnected(false);
+    If (Not Result) And (LastState) Then
+      // Generate OnDisconnect event
+      SetConnected(Result);
+    Succeeded := True;
+  finally
+    if not Succeeded then
+      If LastState Then
+        // Generate OnDisconnect event
+        SetConnected(False);
+  end else If LastState Then // Connection now is false but was true
+    SetConnected(false);
 end;
 
 procedure TZAbstractConnection.PrepareTransaction(const transactionid: string);
@@ -1270,20 +1256,18 @@ begin
   CheckConnected;
   CheckNonAutoCommitMode;
   if FExplicitTransactionCounter <> 1 then
-  begin
     raise EZDatabaseError.Create(SInvalidOpPrepare);
-  end;
-    ShowSQLHourGlass;
+  ShowSQLHourGlass;
+  try
     try
-      try
-        FConnection.PrepareTransaction(transactionid);
-      finally
-        FExplicitTransactionCounter := 0;
-        AutoCommit := True;
-      end;
+      FConnection.PrepareTransaction(transactionid);
     finally
-      HideSQLHourGlass;
+      FExplicitTransactionCounter := 0;
+      AutoCommit := True;
     end;
+  finally
+    HideSQLHourGlass;
+  end;
 end;
 
 
@@ -1297,7 +1281,7 @@ var
   I: Integer;
   AComp: TComponent;
 begin
-  for i := 0 to FLinkedComponents.Count -1 do begin
+  for i := FLinkedComponents.Count -1 downto 0 do begin
     AComp := TComponent(FLinkedComponents[i]);
     if AComp.InheritsFrom(TZAbstractMemTable) then
       continue
@@ -1310,6 +1294,10 @@ begin
       except end else if AComp.InheritsFrom(TZAbstractTransaction) then try
         if TZAbstractTransaction(AComp).Active then
           TZProtectedMethodTransaction(AComp).GetIZTransaction.Close;
+      except end;
+      if AComp.InheritsFrom(TAbstractActiveConnectionLinkedComponent) then try
+        if TAbstractActiveConnectionLinkedComponent(AComp).Active then
+          TAbstractActiveConnectionLinkedComponent(AComp).SetActive(False);
       except end;
     end;
   end;

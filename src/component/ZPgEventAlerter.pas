@@ -79,9 +79,8 @@ type
 
   { TZPgEventAlerter }
 
-  TZPgEventAlerter = class (TZAbstractConnectionLinkedComponent)
+  TZPgEventAlerter = class (TAbstractActiveConnectionLinkedComponent)
   private
-    FActive      : Boolean;
     FEvents      : TStrings;
 
     FTimer       : TZThreadTimer;
@@ -92,7 +91,7 @@ type
     FChildAlerters :{$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}; //list of TZPgEventAlerter that have our component attached as processor
     FChildEvents : TStrings; //list of actual events to be handled - gathered from events of all childe
   protected
-    procedure SetActive     (Value: Boolean);
+    procedure SetActive     (Value: Boolean); override;
     function  GetInterval   : Cardinal;
     procedure SetInterval   (Value: Cardinal);
     procedure SetEvents     (Value: TStrings);
@@ -113,7 +112,7 @@ type
     destructor  Destroy; override;
   published
     property Connection;
-    property Active:     Boolean          read FActive       write SetActive;
+    property Active;
     property Events:     TStrings         read FEvents       write SetEvents;
     property Interval:   Cardinal         read GetInterval   write SetInterval    default 250;
     property OnNotify:   TZPgNotifyEvent  read FNotifyFired  write FNotifyFired;
@@ -240,8 +239,10 @@ begin
     Exit;
   if ((csLoading in ComponentState) or (csDesigning in ComponentState)) then
     Exit;
-  if not FConnection.Connected then
+  if not FConnection.Connected then begin
+    FActive := False;
     Exit;
+  end;
   ICon     := (FConnection.DbcConnection as IZPostgreSQLConnection);
   Handle   := ICon.GetPGconnAddress^;
   PlainDRV := ICon.GetPlainDriver;
@@ -278,6 +279,7 @@ begin
     Exit;
   FActive        := False;
   FTimer.Enabled := False;
+  if not FConnection.Connected then Exit;
   ICon           := (FConnection.DbcConnection as IZPostgreSQLConnection);
   Handle         := ICon.GetPGconnAddress^;
   PlainDRV       := ICon.GetPlainDriver;

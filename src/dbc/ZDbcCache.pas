@@ -1607,8 +1607,8 @@ begin
                                 JSONWriter.AddJSONEscape(PPAnsiChar(Data)^+PAnsiInc,
                                   PCardinal(PPointer(Data)^)^)
                               else begin
-                                FUniTemp := PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc,
-                                  PCardinal(PPointer(Data)^)^, FClientCP);
+                                PRawToUnicode(PPAnsiChar(Data)^+PAnsiInc,
+                                  PCardinal(PPointer(Data)^)^, FClientCP, FUniTemp);
                                 JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
                               end;
                             end;
@@ -2468,7 +2468,7 @@ begin
                           if FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] = zOSCodePage
                           then System.SetString(Result, PAnsiChar(P), L)
                           else begin
-                            FUniTemp := PRawToUnicode(P, L, fClientCP);
+                            PRawToUnicode(P, L, fClientCP, FUniTemp);
                             Result := PUnicodeToRaw(Pointer(FUniTemp), Length(fUniTemp), zOSCodePage);
                           end
                         else Result := '';
@@ -2527,7 +2527,7 @@ begin
     stUnicodeString, stUnicodeStream:  begin
                         P := GetPWideChar(ColumnIndex, IsNull, L);
                         if L > 0 then
-                           Result := PUnicodeToRaw(P, L, zCP_UTF8);
+                           PUnicodeToRaw(P, L, zCP_UTF8, RawByteString(Result));
                       end;
     else begin
       P := GetPAnsiChar(ColumnIndex, IsNull, L);
@@ -3395,7 +3395,7 @@ begin
           then Result := BufferToBytes( (PPAnsiChar(Data)^+PAnsiInc), PCardinal(PPointer(Data)^)^ )
           else Result := nil;
       stUnicodeString: if Data^ <> nil then begin
-            FRawTemp := UnicodeStringToASCII7(ZPPWideChar(Data)^+PWideInc, PCardinal(PPointer(Data)^)^ shr 1);
+            UnicodeStringToASCII7(ZPPWideChar(Data)^+PWideInc, PCardinal(PPointer(Data)^)^ shr 1, FRawTemp);
             Result := BufferToBytes( Pointer(FRawTemp), Length(FRawTemp) );
         end else
           Result := nil;
@@ -4436,7 +4436,7 @@ begin
     stString: InternalSetPAnsiChar(Data, Value, Len);
     stUnicodeString: begin
         CP := GetW2A2WConversionCodePage(ConSettings);
-        fUniTemp := PRawToUnicode(Value, Len, CP); //localize because of WideString overrun
+        PRawToUnicode(Value, Len, CP, fUniTemp); //localize because of WideString overrun
         InternalSetPWideChar(Data, Pointer(fUniTemp), Length(fUniTemp));
       end;
     stBytes: InternalSetVarLenBytes(Data, Value, Len);
@@ -4565,7 +4565,7 @@ begin
     Len := Length(Value);
     SetPAnsiChar(ColumnIndex, Pointer(Value), Len)
   end else begin
-    fUniTemp := ZRawToUnicode(Value, ZOSCodePage); //localize Value becuse of WideString overrun
+    PRawToUnicode(Pointer(Value), Length(Value), ZOSCodePage, fUniTemp); //localize Value becuse of WideString overrun
     Len := Length(fUniTemp);
     SetPWideChar(ColumnIndex, Pointer(fUniTemp), Len);
   end;
@@ -4591,7 +4591,7 @@ begin
     Len := Length(Value);
     SetPAnsiChar(ColumnIndex, Pointer(Value), Len)
   end else begin
-    fUniTemp := ZRawToUnicode(Value, zCP_UTF8); //localize Value becuse of WideString overrun
+    PRawToUnicode(Pointer(Value), Length(Value), zCP_UTF8, fUniTemp); //localize Value becuse of WideString overrun
     Len := Length(fUniTemp);
     SetPWideChar(ColumnIndex, Pointer(fUniTemp), Len);
   end;
