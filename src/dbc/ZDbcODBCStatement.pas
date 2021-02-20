@@ -170,17 +170,17 @@ type
     procedure SetFloat(Index: Integer; Value: Single);
     procedure SetDouble(Index: Integer; const Value: Double);
     procedure SetCurrency(Index: Integer; const Value: Currency);
-    procedure SetBigDecimal(Index: Integer; const Value: TBCD);
-    procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
-    procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
-    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
+    procedure SetBigDecimal(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
+    procedure SetDate(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); reintroduce; overload;
+    procedure SetTime(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); reintroduce; overload;
     procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce; overload;
     procedure SetBytes(Index: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
-    procedure SetGUID(Index: Integer; const Value: TGUID); reintroduce;
+    procedure SetGUID(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID); reintroduce;
 
     procedure SetString(Index: Integer; const Value: String); reintroduce;
     procedure SetUnicodeString(Index: Integer; const Value: UnicodeString); reintroduce;
-    procedure SetCharRec(Index: Integer; const Value: TZCharRec); reintroduce;
+    procedure SetCharRec(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec); reintroduce;
     {$IFNDEF NO_ANSISTRING}
     procedure SetAnsiString(Index: Integer; const Value: AnsiString); reintroduce;
     {$ENDIF}
@@ -2053,7 +2053,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractODBCPreparedStatement.SetBigDecimal(Index: Integer;
-  const Value: TBCD);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 var BindValue: PZBindValue;
     Bind: PZODBCBindValue absolute BindValue;
 begin
@@ -2248,7 +2248,7 @@ begin
 end;
 
 procedure TZAbstractODBCPreparedStatement.SetCharRec(Index: Integer;
-  const Value: TZCharRec);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
 begin
   {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
   CheckParameterIndex(Index);
@@ -2314,7 +2314,7 @@ begin
 end;
 
 procedure TZAbstractODBCPreparedStatement.SetDate(Index: Integer;
-  const Value: TZDate);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 var BindValue: PZBindValue;
     Bind: PZODBCBindValue absolute BindValue;
     DT: TDateTime;
@@ -2416,7 +2416,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractODBCPreparedStatement.SetGUID(Index: Integer;
-  const Value: TGUID);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID);
 var BindValue: PZBindValue;
     Bind: PZODBCBindValue absolute BindValue;
 begin
@@ -2761,7 +2761,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractODBCPreparedStatement.SetTime(Index: Integer;
-  const Value: TZTime);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 var BindValue: PZBindValue;
     Bind: PZODBCBindValue absolute BindValue;
   DT: TDateTime;
@@ -2842,7 +2842,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractODBCPreparedStatement.SetTimestamp(Index: Integer;
-  const Value: TZTimeStamp);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 var BindValue: PZBindValue;
     Bind: PZODBCBindValue absolute BindValue;
   DT: TDateTime;

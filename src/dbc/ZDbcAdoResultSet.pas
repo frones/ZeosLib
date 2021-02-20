@@ -107,6 +107,23 @@ type
     procedure AfterClose; override;
     procedure ResetCursor; override;
     function Next: Boolean; override;
+    /// <summary>Moves the cursor to the given row number in
+    ///  this <c>ResultSet</c> object. If the row number is positive, the cursor
+    ///  moves to the given row number with respect to the beginning of the
+    ///  result set. The first row is row 1, the second is row 2, and so on.
+    ///  If the given row number is negative, the cursor moves to
+    ///  an absolute row position with respect to the end of the result set.
+    ///  For example, calling the method <c>absolute(-1)</c> positions the
+    ///  cursor on the last row; calling the method <c>absolute(-2)</c>
+    ///  moves the cursor to the next-to-last row, and so on. An attempt to
+    ///  position the cursor beyond the first/last row in the result set leaves
+    ///  the cursor before the first row or after the last row.
+    ///  <B>Note:</B> Calling <c>absolute(1)</c> is the same
+    ///  as calling <c>first()</c>. Calling <c>absolute(-1)</c>
+    ///  is the same as calling <c>last()</c>.</summary>
+    /// <param>"Row" the absolute position to be moved.</param>
+    /// <returns><c>true</c> if the cursor is on the result set;<c>false</c>
+    ///  otherwise</returns>
     function MoveAbsolute(Row: Integer): Boolean; override;
     function GetRow: NativeInt; override;
     function IsNull(ColumnIndex: Integer): Boolean;
@@ -157,9 +174,9 @@ type
   { TZADORowAccessor }
 
   TZADORowAccessor = class(TZRowAccessor)
-  public
-    constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
+  protected
+    class function MetadataToAccessorType(ColumnInfo: TZColumnInfo;
+      ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_ADO}
@@ -488,33 +505,6 @@ begin
     DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
 end;
 
-{**
-  Moves the cursor to the given row number in
-  this <code>ResultSet</code> object.
-
-  <p>If the row number is positive, the cursor moves to
-  the given row number with respect to the
-  beginning of the result set.  The first row is row 1, the second
-  is row 2, and so on.
-
-  <p>If the given row number is negative, the cursor moves to
-  an absolute row position with respect to
-  the end of the result set.  For example, calling the method
-  <code>absolute(-1)</code> positions the
-  cursor on the last row; calling the method <code>absolute(-2)</code>
-  moves the cursor to the next-to-last row, and so on.
-
-  <p>An attempt to position the cursor beyond the first/last row in
-  the result set leaves the cursor before the first row or after
-  the last row.
-
-  <p><B>Note:</B> Calling <code>absolute(1)</code> is the same
-  as calling <code>first()</code>. Calling <code>absolute(-1)</code>
-  is the same as calling <code>last()</code>.
-
-  @return <code>true</code> if the cursor is on the result set;
-    <code>false</code> otherwise
-}
 function TZAdoResultSet.MoveAbsolute(Row: Integer): Boolean;
 begin
   FField20 := nil;
@@ -1492,33 +1482,25 @@ end;
 
 { TZADORowAccessor }
 
-constructor TZADORowAccessor.Create(ColumnsInfo: TObjectList;
-  ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
-  CachedLobs: WordBool);
-var TempColumns: TObjectList;
-  I: Integer;
-  Current: TZColumnInfo;
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "ConSettings" not used} {$ENDIF}
+class function TZADORowAccessor.MetadataToAccessorType(
+  ColumnInfo: TZColumnInfo; ConSettings: PZConSettings;
+  Var ColumnCodePage: Word): TZSQLType;
 begin
   {EH: usually this code is NOT nessecary if we would handle the types as the
   providers are able to. But in current state we just copy all the incompatibilities
   from the DataSets into dbc... grumble.}
-  TempColumns := TObjectList.Create(True);
-  CopyColumnsInfo(ColumnsInfo, TempColumns);
-  for I := 0 to TempColumns.Count -1 do begin
-    Current := TZColumnInfo(TempColumns[i]);
-    if Current.ColumnType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
-      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-3); // no streams available using ADO
-      Current.Precision := -1;
-    end;
-    if Current.ColumnType = stString then begin
-      Current.ColumnType := stUnicodeString; // no raw chars in ADO
-      Current.ColumnCodePage := zCP_UTF16;
-    end else if Current.ColumnType = stBytes then
-      Current.ColumnCodePage := zCP_Binary;
+  Result := ColumnInfo.ColumnType;
+  if Result in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
+    Result := TZSQLType(Byte(Result)-3); // no streams available using ADO
+    ColumnInfo.Precision := 0;
   end;
-  inherited Create(TempColumns, ConSettings, OpenLobStreams, CachedLobs);
-  TempColumns.Free;
+  if Result = stString then begin
+    Result := stUnicodeString; // no raw chars in ADO
+    ColumnCodePage := zCP_UTF16;
+  end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {$ENDIF ZEOS_DISABLE_ADO}
 end.

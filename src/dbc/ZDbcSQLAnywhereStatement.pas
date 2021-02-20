@@ -135,13 +135,13 @@ type
     procedure SetFloat(Index: Integer; Value: Single);
     procedure SetDouble(Index: Integer; const Value: Double);
     procedure SetCurrency(Index: Integer; const Value: Currency);
-    procedure SetBigDecimal(Index: Integer; const Value: TBCD);
+    procedure SetBigDecimal(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
     procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce; overload;
     procedure SetBytes(Index: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
-    procedure SetGuid(Index: Integer; const Value: TGUID); reintroduce;
-    procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
-    procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
-    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
+    procedure SetGuid(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID); reintroduce;
+    procedure SetDate(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); reintroduce; overload;
+    procedure SetTime(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); reintroduce; overload;
   end;
 
   TZSQLAnywhereCallableStatement = class(TZAbstractCallableStatement_A, IZCallableStatement)
@@ -181,7 +181,7 @@ begin
 
   FSQLAnyConnection := Connection as IZSQLAnywhereConnection;
   FPlainDriver := FSQLAnyConnection.GetPlainDriver;
-  ResultSetType := rtScrollSensitive;
+  ResultSetType := rtScrollInsensitive;
   Fapi_version := FSQLAnyConnection.Get_api_version;
 end;
 
@@ -647,7 +647,7 @@ end;
   @param x the parameter value
 }
 procedure TZSQLAnywherePreparedStatement.SetBigDecimal(Index: Integer;
-  const Value: TBCD);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
@@ -808,7 +808,7 @@ end;
   @param x the parameter value
 }
 procedure TZSQLAnywherePreparedStatement.SetDate(Index: Integer;
-  const Value: TZDate);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
@@ -862,7 +862,7 @@ end;
   @param x the parameter value
 }
 procedure TZSQLAnywherePreparedStatement.SetGuid(Index: Integer;
-  const Value: TGUID);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID);
 var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
@@ -1022,7 +1022,7 @@ end;
   @param x the parameter value
 }
 procedure TZSQLAnywherePreparedStatement.SetTime(Index: Integer;
-  const Value: TZTime);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}
@@ -1045,7 +1045,7 @@ end;
   @param x the parameter value
 }
 procedure TZSQLAnywherePreparedStatement.SetTimestamp(Index: Integer;
-  const Value: TZTimeStamp);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 var data_value: Pa_sqlany_data_value;
 begin
   {$IFNDEF GENERIC_INDEX}

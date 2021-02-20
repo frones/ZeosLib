@@ -236,11 +236,11 @@ type
     procedure SetFloat(Index: Integer; Value: Single);
     procedure SetDouble(Index: Integer; const Value: Double);
     procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
-    procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
+    procedure SetBigDecimal(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD); reintroduce;
 
-    procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
-    procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
-    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
+    procedure SetDate(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); reintroduce; overload;
+    procedure SetTime(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); reintroduce; overload;
 
     procedure SetBytes(Index: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
 
@@ -2342,7 +2342,7 @@ end;
   @param x the parameter value
 }
 procedure TZPostgreSQLPreparedStatementV3.SetBigDecimal(Index: Integer;
-  const Value: TBCD);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 var Idx: Integer;
     SQLType: TZSQLType;
 procedure SetAsRaw; begin BindRawStr(Idx, BcdToSQLRaw(Value)); end;
@@ -2493,7 +2493,7 @@ end;
   @param x the parameter value
 }
 procedure TZPostgreSQLPreparedStatementV3.SetDate(Index: Integer;
-  const Value: TZDate);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 var PGSQLType: TZSQLType;
   InParamIdx: Integer;
   TS: TZTimeStamp;
@@ -2749,7 +2749,7 @@ end;
   @param x the parameter value
 }
 procedure TZPostgreSQLPreparedStatementV3.SetTime(Index: Integer;
-  const Value: TZTime);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 var PGSQLType: TZSQLType;
   InParamIdx: Integer;
   TS: TZTimeStamp;
@@ -2798,7 +2798,7 @@ end;
   @param x the parameter value
 }
 procedure TZPostgreSQLPreparedStatementV3.SetTimestamp(Index: Integer;
-  const Value: TZTimeStamp);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 var PGSQLType: TZSQLType;
   InParamIdx: Integer;
   DT: TDateTime;

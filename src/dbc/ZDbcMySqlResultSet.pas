@@ -179,6 +179,23 @@ type
 
   TZMySQL_Store_ResultSet = class(TZAbstractMySQLResultSet)
   public
+    /// <summary>Moves the cursor to the given row number in
+    ///  this <c>ResultSet</c> object. If the row number is positive, the cursor
+    ///  moves to the given row number with respect to the beginning of the
+    ///  result set. The first row is row 1, the second is row 2, and so on.
+    ///  If the given row number is negative, the cursor moves to
+    ///  an absolute row position with respect to the end of the result set.
+    ///  For example, calling the method <c>absolute(-1)</c> positions the
+    ///  cursor on the last row; calling the method <c>absolute(-2)</c>
+    ///  moves the cursor to the next-to-last row, and so on. An attempt to
+    ///  position the cursor beyond the first/last row in the result set leaves
+    ///  the cursor before the first row or after the last row.
+    ///  <B>Note:</B> Calling <c>absolute(1)</c> is the same
+    ///  as calling <c>first()</c>. Calling <c>absolute(-1)</c>
+    ///  is the same as calling <c>last()</c>.</summary>
+    /// <param>"Row" the absolute position to be moved.</param>
+    /// <returns><c>true</c> if the cursor is on the result set;<c>false</c>
+    ///  otherwise</returns>
     function MoveAbsolute(Row: Integer): Boolean; override;
     procedure OpenCursor; override;
   end;
@@ -292,9 +309,9 @@ type
   { TZMySQLUseResultRowAccessor }
 
   TZMySQLUseResultRowAccessor = class(TZRowAccessor)
-  public
-    constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
+  protected
+    class function MetadataToAccessorType(ColumnInfo: TZColumnInfo;
+      ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; override;
   end;
 
   { TZMySQLPreparedUseResultRowAccessor }
@@ -763,6 +780,8 @@ begin
 {  ClientVersion := FPlainDriver.mysql_get_client_version;
   FBindOffsets := GetBindOffsets(FPlainDriver.IsMariaDBDriver, Max(40101, ClientVersion));}
   FIsOutParamResult := IsOutParamResult;
+  if FIsOutParamResult then
+    LastRowNo := 1;
   Open;
   if Assigned(AffectedRows) then
     AffectedRows^ := LastRowNo;
@@ -1259,8 +1278,8 @@ set_Results:Len := Result - PWideChar(FByteBuffer);
         FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY, MYSQL_TYPE_JSON:
             if ColBind.buffer <> nil then begin
               if ColBind^.binary
-              then FUniTemp := Ascii7ToUnicodeString(ColBind^.buffer, ColBind^.length[0])
-              else FUniTemp := PRawToUnicode(ColBind^.buffer, ColBind^.length[0], FClientCP);
+              then Ascii7ToUnicodeString(ColBind^.buffer, ColBind^.length[0], FUniTemp)
+              else PRawToUnicode(ColBind^.buffer, ColBind^.length[0], FClientCP, FUniTemp);
               goto set_from_tmp;
             end else if ColBind^.Length[0] < SizeOf(TByteBuffer) then begin
               ColBind^.buffer_address^ := PAnsiChar(FByteBuffer);
@@ -1275,8 +1294,8 @@ set_Results:Len := Result - PWideChar(FByteBuffer);
                 else FMySQLConnection.HandleErrorOrWarning(lcFetch, FMYSQL_STMT,
                   'mysql_stmt_fetch_column', IImmediatelyReleasable(FWeakImmediatRelPtr));
               if ColBind^.binary
-              then FUniTemp := Ascii7ToUnicodeString(PAnsiChar(FByteBuffer), ColBind^.length[0])
-              else FUniTemp := PRawToUnicode(PAnsiChar(FByteBuffer), ColBind^.length[0], FClientCP);
+              then Ascii7ToUnicodeString(PAnsiChar(FByteBuffer), ColBind^.length[0], FUniTemp)
+              else PRawToUnicode(PAnsiChar(FByteBuffer), ColBind^.length[0], FClientCP, FUniTemp);
               goto set_from_tmp;
             end else begin
               FTempBlob := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
@@ -1302,8 +1321,8 @@ set_Results:Len := Result - PWideChar(FByteBuffer);
       if (ColBind^.buffer_type_address^ in [ FIELD_TYPE_ENUM, FIELD_TYPE_SET,
           FIELD_TYPE_STRING, FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
           FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB, MYSQL_TYPE_JSON]) and not ColBind^.binary
-      then FUniTemp := PRawToUnicode(PMYSQL_ROW(FRowHandle)[ColumnIndex], FLengthArray^[ColumnIndex], FClientCP)
-      else FUniTemp := Ascii7ToUnicodeString(PMYSQL_ROW(FRowHandle)[ColumnIndex], FLengthArray^[ColumnIndex]);
+      then PRawToUnicode(PMYSQL_ROW(FRowHandle)[ColumnIndex], FLengthArray^[ColumnIndex], FClientCP, FUniTemp)
+      else Ascii7ToUnicodeString(PMYSQL_ROW(FRowHandle)[ColumnIndex], FLengthArray^[ColumnIndex], FUniTemp);
 set_from_tmp:
       Len := Length(FUniTemp);
       if Len <> 0
@@ -2536,33 +2555,6 @@ end;
 
 { TZMySQL_Store_ResultSet }
 
-{**
-  Moves the cursor to the given row number in
-  this <code>ResultSet</code> object.
-
-  <p>If the row number is positive, the cursor moves to
-  the given row number with respect to the
-  beginning of the result set.  The first row is row 1, the second
-  is row 2, and so on.
-
-  <p>If the given row number is negative, the cursor moves to
-  an absolute row position with respect to
-  the end of the result set.  For example, calling the method
-  <code>absolute(-1)</code> positions the
-  cursor on the last row; calling the method <code>absolute(-2)</code>
-  moves the cursor to the next-to-last row, and so on.
-
-  <p>An attempt to position the cursor beyond the first/last row in
-  the result set leaves the cursor before the first row or after
-  the last row.
-
-  <p><B>Note:</B> Calling <code>absolute(1)</code> is the same
-  as calling <code>first()</code>. Calling <code>absolute(-1)</code>
-  is the same as calling <code>last()</code>.
-
-  @return <code>true</code> if the cursor is on the result set;
-    <code>false</code> otherwise
-}
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZMySQL_Store_ResultSet.MoveAbsolute(Row: Integer): Boolean;
   function Seek(const RowIndex: ULongLong): Boolean;
@@ -2607,12 +2599,16 @@ begin
       then Result := Seek(0) //seek back to first position
       else Result := True;   //we're on first pos already
       FFirstRowFetched := RowNo > 0; //indicate the FirstRow is obtained already
+      if (Row = 0) then
       RowNo := 0; //set BeforeFirst state
     end else begin
       RowNo := Row;
-      if (Row >= 1) and (Row <= LastRowNo) then
+      if ((Row >= 1) and (Row <= LastRowNo)) then
         Result := Seek(RowNo - 1)
-      else begin
+      else if ((Row = 1) and FIsOutParamResult and not FFirstRowFetched) then begin
+        Result := Seek(RowNo - 1);
+        LastRowNo := 1;
+      end else begin
         if not fBindBufferAllocated then begin
           FRowHandle := nil;
           FLengthArray := nil;
@@ -2937,33 +2933,18 @@ end;
 
 { TZMySQLUseResultRowAccessor }
 
-constructor TZMySQLUseResultRowAccessor.Create(ColumnsInfo: TObjectList;
-  ConSettings: PZConSettings; const OpenLobStreams: TZSortedList; CachedLobs: WordBool);
-var TempColumns: TObjectList;
-  I: Integer;
-  Current: TZColumnInfo;
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "ConSettings, ColumnCodepage" not used} {$ENDIF}
+class function TZMySQLUseResultRowAccessor.MetadataToAccessorType(
+  ColumnInfo: TZColumnInfo; ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType;
 begin
-  TempColumns := TObjectList.Create(True);
-  CopyColumnsInfo(ColumnsInfo, TempColumns);
-  for I := 0 to TempColumns.Count -1 do begin
-    Current := TZColumnInfo(TempColumns[i]);
-    //EH: MySQL supports streamed data only in realprepared mode
-    //we need cached memory only if we use a server cursor i.e. forward only
-    //in that case we don't need any lob objects
-    if Current.ColumnType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
-      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-3);
-      Current.Precision := -1;
-    end;
-    if Current.ColumnType = stUnicodeString then
-      Current.ColumnType := stString; // no national chars supported
-    if Current.ColumnType = stString then
-      Current.ColumnCodePage := TZColumnInfo(ColumnsInfo[I]).ColumnCodePage
-    else if Current.ColumnType = stBytes then
-      Current.ColumnCodePage := zCP_Binary;
-  end;
-  inherited Create(TempColumns, ConSettings, OpenLobStreams, CachedLobs);
-  TempColumns.Free;
+  Result := ColumnInfo.ColumnType;
+  //EH: MySQL supports streamed data only in realprepared mode
+  //we need cached memory only if we use a server cursor i.e. forward only
+  //in that case we don't need any lob objects, it's dead slow..
+  if Result in [stAsciiStream, stUnicodeStream, stBinaryStream] then
+    Result := TZSQLType(Byte(Result)-3);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZMySQLPreparedUseResultsCachedResultSet }
 

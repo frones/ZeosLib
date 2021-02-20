@@ -513,7 +513,7 @@ var RS: IZResultSet;
     SelStmt.SetResultSetType(ResultSetType);
     for I := 0 to 4 do begin  //force realprepared to test as well
       RS := SelStmt.ExecuteQueryPrepared;
-      if ResultSetType = rtScrollSensitive then
+      if ResultSetType = rtScrollInsensitive then
         RS.GetMetadata.IsWritable(FirstDbcIndex); //force meta loading
       try
         Check(RS.Next, 'No row retrieved from bcd_values');
@@ -535,7 +535,7 @@ var RS: IZResultSet;
 begin
   SelStmt := Connection.PrepareStatement('select * from bcd_values');
   TestColTypes(rtForwardOnly);
-  TestColTypes(rtScrollSensitive);
+  TestColTypes(rtScrollInsensitive);
   SelStmt.SetResultSetConcurrency(rcUpdatable);
   RS := SelStmt.ExecuteQueryPrepared;
   try
@@ -1844,7 +1844,7 @@ begin
       'select c_id, c_dep_id from cargo where c_id >= '+ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
     CheckNotNull(Statement);
     Statement.SetResultSetConcurrency(rcUpdatable);
-    Statement.SetResultSetType(rtScrollSensitive);
+    Statement.SetResultSetType(rtScrollInsensitive);
     ResultSet := Statement.ExecuteQueryPrepared;
     ResultSet.MoveToInsertRow;
     ResultSet.UpdateInt(c_id_Index, TEST_ROW_ID);
@@ -1892,7 +1892,7 @@ begin
       'select c_id, c_dep_id from cargo where c_id >= '+ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
     CheckNotNull(Statement);
     Statement.SetResultSetConcurrency(rcUpdatable);
-    Statement.SetResultSetType(rtScrollSensitive);
+    Statement.SetResultSetType(rtScrollInsensitive);
     ResultSet := Statement.ExecuteQueryPrepared;
     Check(ResultSet.QueryInterface(IZCachedResultSet, CachedRS) = S_OK);
     Resolver := CachedRs.GetNativeResolver;

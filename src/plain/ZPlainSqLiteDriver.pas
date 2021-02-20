@@ -58,7 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_SQLITE}
 
 uses SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
-  {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZCompatibility, ZPlainDriver;
+  ZCompatibility, ZPlainDriver;
 
 const
   WINDOWS_DLL_LOCATION = 'sqlite.dll';

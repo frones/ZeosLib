@@ -69,7 +69,7 @@ implementation
 
 {$IF DEFINED(ENABLE_PROXY) AND DEFINED(ZEOS_PROXY_USE_INTERNAL_PROXY)}
 
-uses SysUtils, {$IFNDEF NO_SAFECALL}ActiveX, ComObj,{$ENDIF} SOAPHTTPClient, SyncObjs, Contnrs;
+uses SysUtils, {$IFNDEF NO_SAFECALL}ActiveX, ComObj,{$ENDIF} SOAPHTTPClient;
 
 type
   TZDbcProxy = class(TInterfacedObject, IZDbcProxy{$IFNDEF NO_SAFECALL}, ISupportErrorInfo{$ENDIF})
@@ -119,8 +119,6 @@ type
 
 var
   LastErrorStr: UnicodeString;
-  ConnectionList: TStringList;
-  ConnListSection: TCriticalSection;
 
 function GetLastErrorStr: WideString; stdcall;
 begin
@@ -165,10 +163,8 @@ begin
 end;
 
 destructor TZDbcProxy.Destroy;
-var
-  X: Integer;
 begin
-  FService := nil;
+ FService := nil;
 end;
 
 procedure TZDbcProxy.Connect(const UserName, Password, ServiceEndpoint, DbName: WideString; var Properties: WideString; out DbInfo: WideString); {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
@@ -186,13 +182,6 @@ begin
   if Assigned(FService) then begin
     MyInProperties := Properties;
     FConnectionID := FService.Connect(UserName, Password, DbName, MyInProperties, MyOutProperties, MyDbInfo);
-    ConnListSection.Enter;
-    try
-      ConnectionList.Values[FConnectionID] := URL;
-//      Writeln(FConnectionID + ' -> Opened');
-    finally
-      ConnListSection.Leave;
-    end;
     Properties := MyOutProperties;
     DbInfo := MyDbInfo;
   end else begin
@@ -201,24 +190,13 @@ begin
 end;
 
 procedure TZDbcProxy.Disconnect; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
-var
-  x: Integer;
 begin
-  CheckConnected;
-  try
-    FService.Disconnect(FConnectionID);
-    ConnListSection.Enter;
-    try
-      x := ConnectionList.IndexOfName(FConnectionID);
-      if x >= 0 then
-        ConnectionList.Delete(x);
-    finally
-      ConnListSection.Leave;
-    end;
-//    Writeln(FConnectionID + ' -> Closed');
-  finally
-    FConnectionID := '';
-  end;
+ CheckConnected;
+ try
+   FService.Disconnect(FConnectionID);
+ finally
+   FConnectionID := '';
+ end;
 end;
 
 procedure TZDbcProxy.SetAutoCommit(const Value: LongBool); {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
@@ -353,41 +331,8 @@ begin
  Result := FService.GetCharacterSets(FConnectionID);
 end;
 
-procedure FreeAllConnections;
-var
-  FRIO: THTTPRIO;
-  URL: String;
-  FService: IZeosProxy;
-  ConnectionID: String;
-begin
-
-  while ConnectionList.Count > 0 do begin
-    try
-      ConnectionID := ConnectionList.Names[0];
-      Url := ConnectionList.Values[ConnectionID];
-      ConnectionList.Delete(0);
-//      Writeln(ConnectionID);
-      FRIO := THTTPRIO.Create(nil);
-      FRIO.HTTPWebNode.InvokeOptions := [];
-      FService := GetIZeosProxy(false, Url, FRIO);
-      FService.Disconnect(ConnectionID);
-//      Writeln('Disconnected ' + ConnectionID);
-    except
-      // do nothing
-    end;
-  end;
-
-end;
-
 initialization
-  LastErrorStr := 'No Error happened yet!';
-  ConnectionList := TStringList.Create;
-  ConnListSection := TCriticalSection.Create;
-
-finalization
-//  Writeln('Finalizing...');
- if ConnectionList.Count > 0 then
-    FreeAllConnections;
+  LastErrorStr := 'No Error happened yet!'
 
 {$IFEND}
 

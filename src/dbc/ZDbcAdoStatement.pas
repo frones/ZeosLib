@@ -132,12 +132,12 @@ type
     procedure SetFloat(Index: Integer; AValue: Single); reintroduce;
     procedure SetDouble(Index: Integer; const AValue: Double); reintroduce;
     procedure SetCurrency(Index: Integer; const AValue: Currency); reintroduce;
-    procedure SetBigDecimal(Index: Integer; const AValue: TBCD); reintroduce;
+    procedure SetBigDecimal(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TBCD); reintroduce;
 
     procedure SetPWideChar(Index: Word; Value: PWideChar; Len: Cardinal);
     procedure SetPBytes(Index: Word; AValue: PByte; Len: Cardinal);
 
-    procedure SetCharRec(Index: Integer; const AValue: TZCharRec); reintroduce;
+    procedure SetCharRec(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TZCharRec); reintroduce;
     procedure SetString(Index: Integer; const AValue: String); reintroduce;
     {$IFNDEF NO_UTF8STRING}
     procedure SetUTF8String(Index: Integer; const AValue: UTF8String); reintroduce;
@@ -148,13 +148,13 @@ type
     procedure SetRawByteString(Index: Integer; const AValue: RawByteString); reintroduce;
     procedure SetUnicodeString(Index: Integer; const AValue: UnicodeString); reintroduce;
 
-    procedure SetDate(Index: Integer; const AValue: TZDate); overload;
-    procedure SetTime(Index: Integer; const AValue: TZTime); overload;
-    procedure SetTimestamp(Index: Integer; const AValue: TZTimeStamp); overload;
+    procedure SetDate(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TZDate); overload;
+    procedure SetTime(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TZTime); overload;
+    procedure SetTimestamp(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TZTimeStamp); overload;
 
     procedure SetBytes(Index: Integer; const AValue: TBytes); reintroduce; overload;
     procedure SetBytes(ParameterIndex: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
-    procedure SetGUID(Index: Integer; const AValue: TGUID); reintroduce;
+    procedure SetGUID(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TGUID); reintroduce;
     procedure SetBlob(Index: Integer; SQLType: TZSQLType; const AValue: IZBlob); override{keep it virtual because of (set)ascii/uniocde/binary streams};
   end;
 
@@ -638,7 +638,7 @@ begin
 end;
 
 procedure TZAdoPreparedStatement.SetBigDecimal(Index: Integer;
-  const AValue: TBCD);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TBCD);
 var V: OleVariant;
 label set_var;
 begin
@@ -789,7 +789,7 @@ begin
 end;
 
 procedure TZAdoPreparedStatement.SetCharRec(Index: Integer;
-  const AValue: TZCharRec);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TZCharRec);
 begin
   if AValue.CP = zCP_UTF16 then
     SetPWidechar(Index, AValue.P, AValue.Len)
@@ -859,7 +859,7 @@ set_var:          FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]
 end;
 
 procedure TZAdoPreparedStatement.SetDate(Index: Integer;
-  const AValue: TZDate);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TZDate);
 var V: OleVariant;
 label jmp_assign;
 begin
@@ -981,7 +981,7 @@ set_var:          FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]
 end;
 
 procedure TZAdoPreparedStatement.SetGUID(Index: Integer;
-  const AValue: TGUID);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TGUID);
 begin
   GUIDToBuffer(@AValue.D1, PWideChar(fByteBuffer), [guidWithBrackets, guidSet0Term]);
   SetPWideChar(Index, PWideChar(fByteBuffer), 38); //ad GUID is a BSTR?
@@ -1282,7 +1282,7 @@ begin
 end;
 
 procedure TZAdoPreparedStatement.SetTime(Index: Integer;
-  const AValue: TZTime);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TZTime);
 var V: OleVariant;
 label jmp_assign;
 begin
@@ -1311,7 +1311,7 @@ jmp_assign:       V := null;
 end;
 
 procedure TZAdoPreparedStatement.SetTimestamp(Index: Integer;
-  const AValue: TZTimeStamp);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} AValue: TZTimeStamp);
 var V: OleVariant;
 label jmp_Assign;
 begin

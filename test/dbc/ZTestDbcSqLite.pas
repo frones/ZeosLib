@@ -440,7 +440,7 @@ begin
   PreparedStatement := Connection.PrepareStatement(
     'SELECT * FROM PEOPLE WHERE p_id > ?');
   PreparedStatement.SetResultSetConcurrency(rcUpdatable);
-  PreparedStatement.SetResultSetType(rtScrollSensitive);
+  PreparedStatement.SetResultSetType(rtScrollInsensitive);
   try
     PreparedStatement.SetInt(p_id_index, 0); //expecting 5 rows
     ResultSet := PreparedStatement.ExecuteQueryPrepared;

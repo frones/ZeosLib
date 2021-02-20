@@ -64,7 +64,7 @@ interface
 {$ENDIF}
 
 uses Types,
-  {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZCompatibility, ZPlainDriver, ZPlainLoader;
+  ZCompatibility, ZPlainDriver, ZPlainLoader;
 
 const
   IBLocalBufferLength = 512;

@@ -596,9 +596,9 @@ type
   { TZPostgreSQLRowAccessor }
 
   TZPostgreSQLRowAccessor = class(TZRowAccessor)
-  public
-    constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
+  protected
+    class function MetadataToAccessorType(ColumnInfo: TZColumnInfo;
+      ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
@@ -926,7 +926,7 @@ begin
   FSingleRowMode := SingleRowMode;
   if FSingleRowMode
   then SetType(rtForwardOnly)
-  else SetType(rtScrollSensitive);
+  else SetType(rtScrollInsensitive);
   Open;
 end;
 
@@ -2759,35 +2759,24 @@ end;
 
 { TZPostgreSQLRowAccessor }
 
-constructor TZPostgreSQLRowAccessor.Create(ColumnsInfo: TObjectList;
-  ConSettings: PZConSettings; const OpenLobStreams: TZSortedList; CachedLobs: WordBool);
-var RAColumns: TObjectList;
-  I: Integer;
-  PGCurrent: TZPGColumnInfo;
-  RACurrent: TZColumnInfo;
+class function TZPostgreSQLRowAccessor.MetadataToAccessorType(
+  ColumnInfo: TZColumnInfo; ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType;
 begin
   {EH: usuall this code is NOT nessecary if we would handle the types as the
   providers are able to. But in current state we just copy all the incompatibilities
   from the DataSets into dbc... grumble. the only streamed data pg supports are
   oid-lobs. Those we leave as streams, doesn't matter if cached or not, just
   identify purpose}
-  RAColumns := TObjectList.Create(True);
-  CopyColumnsInfo(ColumnsInfo, RAColumns);
-  for I := 0 to RAColumns.Count -1 do begin
-    PGCurrent := TZPGColumnInfo(ColumnsInfo[i]);
-    RACurrent := TZColumnInfo(RAColumns[i]);
-    if RACurrent.ColumnType in [stUnicodeString, stUnicodeStream] then
-      RACurrent.ColumnType := TZSQLType(Byte(RACurrent.ColumnType)-1);// no national chars 4 PG
-    if (RACurrent.ColumnType = stAsciiStream) or ((RACurrent.ColumnType = stBinaryStream) and (PGCurrent.TypeOID <> OIDOID)) then begin
-      RACurrent.ColumnType := TZSQLType(Byte(RACurrent.ColumnType)-3); // no lob streams 4 posgres except OID-BLobs
-      RACurrent.Precision := -1;
-    end;
-    if RACurrent.ColumnType in [stBytes, stBinaryStream] then
-      RACurrent.ColumnCodePage := zCP_Binary;
+  Result := ColumnInfo.ColumnType;
+  if Result in [stUnicodeString, stUnicodeStream] then begin
+    Result := TZSQLType(Byte(Result)-1); // no national chars 4
   end;
-  inherited Create(RAColumns, ConSettings, OpenLobStreams, CachedLobs);
-  RAColumns.Free;
+  if (Result = stAsciiStream) or ((Result = stBinaryStream) and (TZPGColumnInfo(ColumnInfo).TypeOID <> OIDOID)) then
+    Result := TZSQLType(Byte(Result)-3); // no lob streams 4 posgres except OID-BLobs
+  if Result = stString then
+    ColumnCodePage := ConSettings.ClientCodePage.CP;
 end;
+
 
 { TZPostgreSQLOidBlobStream }
 

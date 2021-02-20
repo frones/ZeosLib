@@ -152,7 +152,7 @@ type
 
   TAbstractColumnODBCResultSet = class(TAbstractODBCResultSet, IZResultSet)
   protected
-    function ColStrAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT; const Buf: TByteDynArray): String; virtual; abstract;
+    procedure ColStrAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT; const Buf: TByteDynArray; var Result: String); virtual; abstract;
     function ColNumAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT): SQLLEN; virtual; abstract;
     procedure DescribeColumn(ColumnNumber: SQLUSMALLINT; const Buf: TByteDynArray; var ColumnInfo: TZODBCColumnInfo); virtual; abstract;
     procedure Open; override;
@@ -171,7 +171,7 @@ type
   private
     fPlainW: TODBC3UnicodePlainDriver;
   protected
-    function ColStrAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT; const Buf: TByteDynArray): String; override;
+    procedure ColStrAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT; const Buf: TByteDynArray; var Result: String); override;
     function ColNumAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT): SQLLEN; override;
     procedure DescribeColumn(ColumnNumber: SQLUSMALLINT; const Buf: TByteDynArray; var ColumnInfo: TZODBCColumnInfo); override;
   public
@@ -184,7 +184,7 @@ type
   private
     fPlainA: TODBC3RawPlainDriver;
   protected
-    function ColStrAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT; const Buf: TByteDynArray): String; override;
+    procedure ColStrAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT; const Buf: TByteDynArray; var Result: String); override;
     function ColNumAttribute(ColumnNumber, FieldIdentifier: SQLUSMALLINT): SQLLEN; override;
     procedure DescribeColumn(ColumnNumber: SQLUSMALLINT; const Buf: TByteDynArray; var ColumnInfo: TZODBCColumnInfo); override;
   public
@@ -222,6 +222,9 @@ type
   { TZODBCRowAccessorW }
 
   TZODBCRowAccessorW = class(TZRowAccessor)
+  protected
+    class function MetadataToAccessorType(ColumnInfo: TZColumnInfo;
+      ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; override;
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
       const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
@@ -235,6 +238,9 @@ type
   { TZODBCRowAccessorW }
 
   TZODBCRowAccessorA = class(TZRowAccessor)
+  protected
+    class function MetadataToAccessorType(ColumnInfo: TZColumnInfo;
+      ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; override;
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
       const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
@@ -249,7 +255,34 @@ type
   public
     constructor Create(const Statement: IZStatement; const SQL: String;
        BindList: TZBindList);
+    /// <summary>Moves the cursor down one row from its current position. A
+    ///  <c>ResultSet</c> cursor is initially positioned before the first row;
+    ///  the first call to the method <c>next</c> makes the first row the
+    ///  current row; the second call makes the second row the current row, and
+    ///  so on. If an input stream is open for the current row, a call to the
+    ///  method <c>next</c> will implicitly close it. A <c>ResultSet</c>
+    ///  object's warning chain is cleared when a new row is read.
+    /// <returns><c>true</c> if the new current row is valid; <c>false</c> if
+    ///  there are no more rows</returns>
     function Next: Boolean; reintroduce;
+    /// <summary>Moves the cursor to the given row number in
+    ///  this <c>ResultSet</c> object. If the row number is positive, the cursor
+    ///  moves to the given row number with respect to the beginning of the
+    ///  result set. The first row is row 1, the second is row 2, and so on.
+    ///  If the given row number is negative, the cursor moves to
+    ///  an absolute row position with respect to the end of the result set.
+    ///  For example, calling the method <c>absolute(-1)</c> positions the
+    ///  cursor on the last row; calling the method <c>absolute(-2)</c>
+    ///  moves the cursor to the next-to-last row, and so on. An attempt to
+    ///  position the cursor beyond the first/last row in the result set leaves
+    ///  the cursor before the first row or after the last row.
+    ///  <B>Note:</B> Calling <c>absolute(1)</c> is the same
+    ///  as calling <c>first()</c>. Calling <c>absolute(-1)</c>
+    ///  is the same as calling <c>last()</c>.</summary>
+    /// <param>"Row" the absolute position to be moved.</param>
+    /// <returns><c>true</c> if the cursor is on the result set;<c>false</c>
+    ///  otherwise</returns>
+    function MoveAbsolute(Row: Integer): Boolean; override;
   end;
 
 const
@@ -395,8 +428,9 @@ begin
               if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
                 JSONWriter.AddJSONEscape(fColDataPtr, fStrLen_or_Ind)
               else begin
-                FUniTemp := PRawToUnicode(fColDataPtr, fStrLen_or_Ind, ConSettings^.ClientCodePage^.CP);
+                PRawToUnicode(fColDataPtr, fStrLen_or_Ind, ConSettings^.ClientCodePage^.CP, FUniTemp);
                 JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
+                FUniTemp := '';
               end;
             end;
             JSONWriter.Add('"');
@@ -462,7 +496,7 @@ begin
                           if FClientCP = zOSCodePage then
                             System.SetString(Result, PAnsiChar(fColDataPtr), L)
                           else begin
-                            FUniTemp := PRawToUnicode(fColDataPtr, l, FClientCP);
+                            PRawToUnicode(fColDataPtr, l, FClientCP, FUniTemp);
                             Result := PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), zOSCodePage);
                           end;
                         end;
@@ -1203,7 +1237,7 @@ Set_Results:          Len := Result - PWideChar(FByteBuffer);
                         Len := fStrLen_or_Ind;
                         if FixedWidth then
                           Len := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), Len);
-                        fUniTemp := PRawToUnicode(fColDataPtr, Len, FClientCP);
+                        PRawToUnicode(fColDataPtr, Len, FClientCP, FUniTemp);
                         goto Set_From_Temp;
                       end;
                     end;
@@ -1576,7 +1610,7 @@ begin
                           if FClientCP = zCP_UTF8 then
                             System.SetString(Result, PAnsiChar(fColDataPtr), L)
                           else begin
-                            FUniTemp := PRawToUnicode(fColDataPtr, l, FClientCP);
+                            PRawToUnicode(fColDataPtr, l, FClientCP, FUniTemp);
                             Result := PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), zCP_UTF8);
                           end;
                         end;
@@ -1813,8 +1847,11 @@ var
       end;
   end;
   function IsMoney: Boolean;
+  var TypeName: String;
   begin
-    Result := (ZFastCode.Pos('MONEY', UpperCase(ColStrAttribute(ColumnNumber, SQL_DESC_TYPE_NAME, StrBuf))) > 0); //handle smallmoney oslt too
+    TypeName := '';
+    ColStrAttribute(ColumnNumber, SQL_DESC_TYPE_NAME, StrBuf, TypeName);
+    Result := (ZFastCode.Pos('MONEY', UpperCase(TypeName)) > 0); //handle smallmoney oslt too
   end;
 begin
   if Closed and Assigned(fPHSTMT^) then begin
@@ -1853,17 +1890,17 @@ begin
           Writable := bufSQLLEN <> SQL_ATTR_READONLY;
           DefinitelyWritable := bufSQLLEN = SQL_ATTR_WRITE;
 
-          ColumnLabel := ColStrAttribute(ColumnNumber, SQL_DESC_LABEL, StrBuf);
-          ColumnName := ColStrAttribute(ColumnNumber, SQL_DESC_BASE_COLUMN_NAME, StrBuf);
+          ColStrAttribute(ColumnNumber, SQL_DESC_LABEL, StrBuf, ColumnLabel);
+          ColStrAttribute(ColumnNumber, SQL_DESC_BASE_COLUMN_NAME, StrBuf, ColumnName);
           if ColumnName = '' then
-            ColumnName := ColStrAttribute(ColumnNumber, SQL_DESC_NAME, StrBuf);
+            ColStrAttribute(ColumnNumber, SQL_DESC_NAME, StrBuf, ColumnName);
           if ColumnName <> '' then begin//aggregates like SUM() don't have a columname -> skip processing
-            TableName := ColStrAttribute(ColumnNumber, SQL_DESC_BASE_TABLE_NAME, StrBuf);
+            ColStrAttribute(ColumnNumber, SQL_DESC_BASE_TABLE_NAME, StrBuf, TableName);
             if TableName = '' then
-              TableName := ColStrAttribute(ColumnNumber, SQL_DESC_TABLE_NAME, StrBuf);
+              ColStrAttribute(ColumnNumber, SQL_DESC_TABLE_NAME, StrBuf, TableName);
             if TableName <> '' then begin //no table? -> no schema or catalog !
-              SchemaName := ColStrAttribute(ColumnNumber, SQL_DESC_SCHEMA_NAME, StrBuf);
-              CatalogName := ColStrAttribute(ColumnNumber, SQL_DESC_CATALOG_NAME, StrBuf);
+              ColStrAttribute(ColumnNumber, SQL_DESC_SCHEMA_NAME, StrBuf, SchemaName);
+              ColStrAttribute(ColumnNumber, SQL_DESC_CATALOG_NAME, StrBuf, CatalogName);
             end;
           end;
           //DefaultValue -> not implemented
@@ -1999,8 +2036,8 @@ begin
       nil, 0, nil, @Result));
 end;
 
-function TODBCResultSetW.ColStrAttribute(ColumnNumber,
-  FieldIdentifier: SQLUSMALLINT; const Buf: TByteDynArray): String;
+procedure TODBCResultSetW.ColStrAttribute(ColumnNumber,
+  FieldIdentifier: SQLUSMALLINT; const Buf: TByteDynArray; var Result: String);
 var
   StringLength: SQLSMALLINT;
 begin
@@ -2011,7 +2048,7 @@ begin
     {$IFDEF UNICODE}
     System.SetString(Result, PWideChar(Pointer(Buf)), StringLength shr 1)
     {$ELSE}
-    Result := PUnicodeToRaw(PWideChar(Pointer(Buf)), StringLength shr 1, zCP_UTF8)
+    PUnicodeToRaw(PWideChar(Pointer(Buf)), StringLength shr 1, zCP_UTF8, RawByteString(Result))
     {$ENDIF}
   else Result := '';
 end;
@@ -2071,8 +2108,8 @@ begin
       nil, 0, nil, @Result));
 end;
 
-function TODBCResultSetA.ColStrAttribute(ColumnNumber,
-  FieldIdentifier: SQLUSMALLINT; const Buf: TByteDynArray): String;
+procedure TODBCResultSetA.ColStrAttribute(ColumnNumber,
+  FieldIdentifier: SQLUSMALLINT; const Buf: TByteDynArray; var Result: String);
 var
   StringLength: SQLSMALLINT;
 begin
@@ -2081,7 +2118,7 @@ begin
        Pointer(Buf), Length(Buf), @StringLength, nil));
   if StringLength > 0 then
     {$IFDEF UNICODE}
-    Result := PRawToUnicode(PAnsiChar(Pointer(Buf)), StringLength, FClientCP)
+    PRawToUnicode(PAnsiChar(Pointer(Buf)), StringLength, FClientCP, Result)
     {$ELSE}
     System.SetString(Result, PAnsiChar(Pointer(Buf)), StringLength)
     {$ENDIF}
@@ -2111,7 +2148,7 @@ begin
     @NameLength, @DataType, @ColumnSize, @DecimalDigits, @Nullable));
   if NameLength > 0 then begin
     {$IFDEF UNICODE}
-    ColumnInfo.ColumnName := PRawToUnicode(Pointer(Buf), NameLength, FClientCP);
+    PRawToUnicode(Pointer(Buf), NameLength, FClientCP, ColumnInfo.ColumnName);
     {$ELSE}
     SetString(ColumnName, PAnsiChar(Pointer(Buf)), NameLength);
     ColumnInfo.ColumnName := ColumnName;
@@ -2324,15 +2361,24 @@ begin
     end;
   end;
   SetType(rtForwardOnly);
+  LastRowNo := 1;
+  Inherited Open;
+end;
+
+function TZParamODBCResultSet.MoveAbsolute(Row: Integer): Boolean;
+begin
+  Result := not Closed and ((Row = 1) or (Row = 0));
+  if (Row >= 0) and (Row <= 2) then
+    RowNo := Row;
 end;
 
 function TZParamODBCResultSet.Next: Boolean;
 begin
-  Result := False;
-  if (RowNo = 1) then
-    Exit;
-  RowNo := 1;
-  Result := True;
+  Result := not Closed and (RowNo = 0);
+  if RowNo = 0 then
+    RowNo := 1
+  else if RowNo = 1 then
+    RowNo := 2; //set AfterLast
   FCurrentBufRowNo := 1;
 end;
 
@@ -2349,23 +2395,20 @@ end;
 constructor TZODBCRowAccessorW.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
   CachedLobs: WordBool);
-var TempColumns: TObjectList;
-  I: Integer;
-  Current: TZColumnInfo;
 begin
-  TempColumns := TObjectList.Create(True);
-  CopyColumnsInfo(ColumnsInfo, TempColumns);
-  for I := 0 to TempColumns.Count -1 do begin
-    Current := TZColumnInfo(TempColumns[i]);
-    if Current.ColumnType in [stString, stAsciiStream] then
-      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)+1); // no raw chars in 4 odbc_w
-    if Current.ColumnType in [stUnicodeString, stUnicodeStream] then
-      Current.ColumnCodePage := zCP_UTF16
-    else if Current.ColumnType in [stBytes, stBinaryStream] then
-      Current.ColumnCodePage := zCP_Binary;
-  end;
-  inherited Create(TempColumns, ConSettings, OpenLobStreams, True); //we can not use uncached lobs with ODBC
-  TempColumns.Free;
+  inherited Create(ColumnsInfo, ConSettings, OpenLobStreams, True); //we can not use uncached lobs with ODBC
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "ConSettings" not used} {$ENDIF}
+class function TZODBCRowAccessorW.MetadataToAccessorType(
+  ColumnInfo: TZColumnInfo; ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType;
+begin
+  Result := ColumnInfo.ColumnType;
+  if Result in [stString, stAsciiStream] then
+    Result := TZSQLType(Byte(Result)+1); // no raw chars in 4 odbc_w
+  if Result in [stUnicodeString, stUnicodeStream] then
+    ColumnCodePage := zCP_UTF16
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -2375,23 +2418,8 @@ end;
 constructor TZODBCRowAccessorA.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
   CachedLobs: WordBool);
-var TempColumns: TObjectList;
-  I: Integer;
-  Current: TZColumnInfo;
 begin
-  TempColumns := TObjectList.Create(True);
-  CopyColumnsInfo(ColumnsInfo, TempColumns);
-  for I := 0 to TempColumns.Count -1 do begin
-    Current := TZColumnInfo(TempColumns[i]);
-    if Current.ColumnType in [stUnicodeString, stUnicodeStream] then
-      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-1); // no national chars in 4 odbc_w
-    if Current.ColumnType in [stString, stAsciiStream] then
-      Current.ColumnCodePage := Consettings.ClientCodePage.CP
-    else if Current.ColumnType in [stBytes, stBinaryStream] then
-      Current.ColumnCodePage := zCP_Binary;
-  end;
-  inherited Create(TempColumns, ConSettings, OpenLobStreams, True); //we can not use uncached lobs with OleDB
-  TempColumns.Free;
+  inherited Create(ColumnsInfo, ConSettings, OpenLobStreams, True); //we can not use uncached lobs with ODBC
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -2400,6 +2428,16 @@ end;
 class function TZODBCachedResultSetA.GetRowAccessorClass: TZRowAccessorClass;
 begin
   Result := TZODBCRowAccessorA;
+end;
+
+class function TZODBCRowAccessorA.MetadataToAccessorType(
+  ColumnInfo: TZColumnInfo; ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType;
+begin
+  Result := ColumnInfo.ColumnType;
+  if Result in [stUnicodeString, stUnicodeStream] then
+    Result := TZSQLType(Byte(Result)-1); // no national chars in 4 odbc_a
+  if Result in [stString, stAsciiStream] then
+    ColumnCodePage := Consettings.ClientCodePage.CP
 end;
 
 initialization

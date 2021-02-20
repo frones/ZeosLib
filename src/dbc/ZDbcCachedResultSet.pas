@@ -272,6 +272,23 @@ type
     // Traversal/Positioning
     //---------------------------------------------------------------------
 
+    /// <summary>Moves the cursor to the given row number in
+    ///  this <c>ResultSet</c> object. If the row number is positive, the cursor
+    ///  moves to the given row number with respect to the beginning of the
+    ///  result set. The first row is row 1, the second is row 2, and so on.
+    ///  If the given row number is negative, the cursor moves to
+    ///  an absolute row position with respect to the end of the result set.
+    ///  For example, calling the method <c>absolute(-1)</c> positions the
+    ///  cursor on the last row; calling the method <c>absolute(-2)</c>
+    ///  moves the cursor to the next-to-last row, and so on. An attempt to
+    ///  position the cursor beyond the first/last row in the result set leaves
+    ///  the cursor before the first row or after the last row.
+    ///  <B>Note:</B> Calling <c>absolute(1)</c> is the same
+    ///  as calling <c>first()</c>. Calling <c>absolute(-1)</c>
+    ///  is the same as calling <c>last()</c>.</summary>
+    /// <param>"Row" the absolute position to be moved.</param>
+    /// <returns><c>true</c> if the cursor is on the result set;<c>false</c>
+    ///  otherwise</returns>
     function MoveAbsolute(Row: Integer): Boolean; override;
 
     //---------------------------------------------------------------------
@@ -367,9 +384,6 @@ type
   TZCachedResultSet = class(TZAbstractCachedResultSet)
   private
     FResultSet: IZResultSet;
-    FStringFieldAssignFromResultSet: TZStringFieldAssignFromResultSet;
-    procedure ZStringFieldAssignFromResultSet_AnsiRec(ColumnIndex: Integer);
-    procedure ZStringFieldAssignFromResultSet_Unicode(ColumnIndex: Integer);
   protected
     procedure FillColumnsInfo(const ColumnsInfo: TObjectList); virtual;
     procedure Open; override;
@@ -388,7 +402,6 @@ type
     procedure ResetCursor; override;
     function GetMetaData: IZResultSetMetaData; override;
 
-    function IsAfterLast: Boolean; override;
     function IsLast: Boolean; override;
     procedure AfterLast; override;
     function Last: Boolean; override;
@@ -402,6 +415,8 @@ type
     procedure SetConcurrency(Value: TZResultSetConcurrency);
     procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
     procedure SortRows(const ColumnIndices: TIntegerDynArray; Descending: Boolean);
+    procedure CopyFrom(const Source: IZResultSet; Rows: TZSortedList;
+      FieldPairs: TZIndexPairList);
   end;
 
   {** Implements Virtual ResultSet. }
@@ -422,6 +437,7 @@ type
       ConSettings: PZConSettings);
     constructor CreateFrom(const Source: IZResultSet; Rows: TZSortedList;
       FieldPairs: TZIndexPairList; ConSettings: PZConSettings);
+    constructor CreateCloneFrom(const Source: IZResultSet);
   public
     procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
     procedure SortRows(const ColumnIndices: TIntegerDynArray; Descending: Boolean);
@@ -432,6 +448,9 @@ type
   { TZVirtualResultSetRowAccessor }
 
   TZVirtualResultSetRowAccessor = class(TZRowAccessor)
+  protected
+    class function MetadataToAccessorType(ColumnInfo: TZColumnInfo;
+      ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; override;
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
       const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
@@ -494,9 +513,9 @@ constructor TZAbstractCachedResultSet.CreateWithColumns(
   ConSettings: PZConSettings);
 begin
   inherited Create(Statement, SQL, nil, ConSettings);
-
   CopyColumnsInfo(ColumnsInfo, Self.ColumnsInfo);
   FCachedUpdates := False;
+  FResultSetCursorType := Statement.GetCursorType;
   Open;
 end;
 
@@ -510,6 +529,7 @@ constructor TZAbstractCachedResultSet.CreateWithStatement(const SQL: string;
 begin
   inherited Create(Statement, SQL, nil, ConSettings);
   FCachedUpdates := False;
+  FResultSetCursorType := Statement.GetCursorType;
 end;
 
 {**
@@ -521,9 +541,9 @@ constructor TZAbstractCachedResultSet.CreateWithColumns(
   ColumnsInfo: TObjectList; const SQL: string; ConSettings: PZConSettings);
 begin
   inherited Create(nil, SQL, nil, ConSettings);
-
   CopyColumnsInfo(ColumnsInfo, Self.ColumnsInfo);
   FCachedUpdates := False;
+  FResultSetCursorType := rctLocalMemory;
   Open;
 end;
 
@@ -2418,23 +2438,7 @@ begin
   {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   FNativeResolver := Resolver;
   {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
-  if (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) and
-    ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-    then FStringFieldAssignFromResultSet := ZStringFieldAssignFromResultSet_AnsiRec
-    else FStringFieldAssignFromResultSet := ZStringFieldAssignFromResultSet_Unicode;
   Open;
-end;
-
-procedure TZCachedResultSet.ZStringFieldAssignFromResultSet_AnsiRec(ColumnIndex: Integer);
-var Len: NativeUInt;
-begin
-  RowAccessor.SetPAnsiChar(ColumnIndex, ResultSet.GetPAnsiChar(ColumnIndex, Len), Len);
-end;
-
-procedure TZCachedResultSet.ZStringFieldAssignFromResultSet_Unicode(ColumnIndex: Integer);
-var Len: NativeUInt;
-begin
-  RowAccessor.SetPWideChar(ColumnIndex, ResultSet.GetPWideChar(ColumnIndex, Len), Len);
 end;
 
 {**
@@ -2508,10 +2512,9 @@ var
   Statement: IZStatement;
 begin
   Statement := ResultSet.GetStatement;
+  FCachedLobs := FResultSetCursorType = rctLocalMemory;
   if Assigned(Statement) then
-    FCachedLobs := StrToBoolEx(DefineStatementParameter(Statement, DSProps_CachedLobs, 'false'))
-  else
-    FCachedLobs := False;
+    FCachedLobs := FCachedLobs or StrToBoolEx(DefineStatementParameter(Statement, DSProps_CachedLobs, 'false'));
   ColumnsInfo.Clear;
   FillColumnsInfo(ColumnsInfo);
   inherited Open;
@@ -2549,11 +2552,6 @@ begin
   {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   FNativeResolver := Resolver;
   {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
-  if (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) and
-    ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-      FStringFieldAssignFromResultSet := ZStringFieldAssignFromResultSet_AnsiRec
-    else
-      FStringFieldAssignFromResultSet := ZStringFieldAssignFromResultSet_Unicode;
   ZDbcUtils.CopyColumnsInfo(ColumnsInfo, Self.ColumnsInfo);
   inherited Open;
 end;
@@ -2589,20 +2587,6 @@ begin
     Result := ResultSet.GetMetadata
   else
     Result := nil;
-end;
-
-{**
-  Indicates whether the cursor is after the last row in
-  this <code>ResultSet</code> object.
-
-  @return <code>true</code> if the cursor is after the last row;
-    <code>false</code> if the cursor is at any other position or the
-    result set contains no rows
-}
-function TZCachedResultSet.IsAfterLast: Boolean;
-begin
-  FetchAll;
-  Result := inherited IsAfterLast;
 end;
 
 {**
@@ -2761,7 +2745,9 @@ procedure TZVirtualResultSet.CopyFrom(const Source: IZResultSet;
     end;
   end;
 var I: Integer;
+  Row: NativeInt;
 begin
+  Row := Source.GetRow;
   if Rows = nil then begin
     if Source.GetType <> rtForwardOnly then
       Source.First
@@ -2775,9 +2761,35 @@ begin
     Source.MoveAbsolute(NativeInt(Rows[i]));
     CopyRow(RowAccessor, Source, FieldPairs);
   end;
+  if Source.GetType <> rtForwardOnly then
+    Source.MoveAbsolute(Row);
   BeforeFirst;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
+
+constructor TZVirtualResultSet.CreateCloneFrom(const Source: IZResultSet);
+var MetaData: IZResultSetMetadata;
+    ColumnsInfo: TObjectList;
+    ColumnInfo: TZColumnInfo;
+    I: Integer;
+begin
+  MetaData := Source.GetMetadata;
+  ColumnsInfo := TObjectList.Create(True);
+  ColumnsInfo.Capacity := MetaData.GetcolumnCount;
+  for i := FirstDbcindex to ColumnsInfo.Capacity{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
+    ColumnInfo := TZColumnInfo.Create;
+    ColumnInfo.Currency := Metadata.IsCurrency(I);
+    ColumnInfo.Signed := Metadata.IsSigned(I);
+    ColumnInfo.ColumnLabel := Metadata.GetOrgColumnLabel(I);
+    ColumnInfo.Precision := Metadata.GetPrecision(I);
+    ColumnInfo.ColumnType := Metadata.GetColumnType(I);
+    ColumnInfo.ColumnCodePage := Metadata.GetColumnCodePage(I);
+    ColumnInfo.Scale := Metadata.GetScale(I);
+    ColumnsInfo.Add(ColumnInfo);
+  end;
+  CreateWithColumns(ColumnsInfo, '', Source.GetConSettings);
+  FreeAndNil(ColumnsInfo);
+end;
 
 constructor TZVirtualResultSet.CreateFrom(const Source: IZResultSet;
   Rows: TZSortedList; FieldPairs: TZIndexPairList; ConSettings: PZConSettings);
@@ -2880,25 +2892,18 @@ end;
 constructor TZVirtualResultSetRowAccessor.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
   CachedLobs: WordBool);
-var TempColumns: TObjectList;
-  I: Integer;
-  Current: TZColumnInfo;
 begin
-  {EH: usually this code is NOT nessecary if we would handle the types as the
-  providers are able to. But in current state we just copy all the incompatibilities
-  from the DataSets into dbc... grumble.}
-  TempColumns := TObjectList.Create(True);
-  TempColumns.Capacity := ColumnsInfo.Count;
-  CopyColumnsInfo(ColumnsInfo, TempColumns);
-  for I := 0 to TempColumns.Count -1 do begin
-    Current := TZColumnInfo(TempColumns[i]);
-    if Current.ColumnType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
-      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-3); // no streams here
-      Current.Precision := -1;
-    end;
-  end;
-  inherited Create(TempColumns, ConSettings, OpenLobStreams, False);
-  TempColumns.Free;
+  inherited Create(ColumnsInfo, ConSettings, OpenLobStreams, False); //we need no lobs here
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "ConSettings, ColumnCodePage" not used} {$ENDIF}
+class function TZVirtualResultSetRowAccessor.MetadataToAccessorType(
+  ColumnInfo: TZColumnInfo; ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType;
+begin
+  Result := ColumnInfo.ColumnType;
+  if Result in [stAsciiStream, stUnicodeStream, stBinaryStream] then
+    Result := TZSQLType(Byte(Result)-3); // no streams here
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 

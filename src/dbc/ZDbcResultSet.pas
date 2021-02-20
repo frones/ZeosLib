@@ -93,6 +93,7 @@ type
     FUniTemp: UnicodeString;
     LastWasNull: Boolean;
     FOpenLobStreams: TZSortedList;
+    FResultSetCursorType: TZResultSetCursorType;
 
     function CreateForwardOnlyException: EZSQLException;
     procedure CheckClosed;
@@ -975,6 +976,10 @@ type
 
     function GetType: TZResultSetType; virtual;
     function GetConcurrency: TZResultSetConcurrency; virtual;
+    /// <author>EgonHugeist</author>
+    /// <summary>Get the cursor type of this resultset</summary>
+    /// <returns>the cursortype of this resultset</returns>
+    function GetCursorType: TZResultSetCursorType;
 
     function GetPostUpdates: TZPostUpdatesMode;
     function GetLocateUpdates: TZLocateUpdatesMode;
@@ -2446,6 +2451,11 @@ end;
 function TZAbstractResultSet.GetCursorName: String;
 begin
   Result := '';
+end;
+
+function TZAbstractResultSet.GetCursorType: TZResultSetCursorType;
+begin
+  Result := FResultSetCursorType;
 end;
 
 function TZAbstractResultSet.GetMetaData: IZResultSetMetaData;

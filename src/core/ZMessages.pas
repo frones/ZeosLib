@@ -278,7 +278,6 @@ const
   function SFieldReadOnly: String;
   function SInvalidUpdateCount: String;
 
-  function SRowBufferWidthExceeded: String;
   function SBackgroundOperationStillRunning: String;
 {$ELSE}
 procedure loadmessages();
@@ -453,7 +452,6 @@ var
   SFieldReadOnly: String;
   SInvalidUpdateCount: String;
 
-  SRowBufferWidthExceeded: String;
   SBackgroundOperationStillRunning: String;
 {$IFEND}
 
@@ -632,7 +630,6 @@ resourcestring
   cSFieldReadOnly        = ' A un champ en lecture seule on ne peut assigner une valeur : %s';
   cSInvalidUpdateCount     = '%d enregistrement(s) mis à jour. Un seul urait du l''être.';
 
-  cSRowBufferWidthExceeded ='La taille du buffer de lignes a été dépassée. Essayez d''utiliser moins ou de plus longues colonnes dans la requête SQL.';
   cSPreviousResultStillOpen = 'L''ensemble de données résultat précédent de cette instruction est encore ouvert';
 //--- end added by Serge Girard ------------------------------------
   cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
@@ -796,7 +793,6 @@ resourcestring
   cSFieldReadOnly        = 'O campo %d é somente leitura e não pôde receber dados';
   cSInvalidUpdateCount   = '%d registro(s) atualizados. Apenas um registro deveria ter sido atualizado.';
 
-  cSRowBufferWidthExceeded ='O tamanho do buffer para linhas (Rows) foi excedido. Tente usar menos ou mais colunas na query SQL';
   cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
 {$ELSE}
 
@@ -959,7 +955,6 @@ resourcestring
   cSFieldReadOnly        = 'Readonly veld kan geen waarde toegewezen krijgen: %d';
   cSInvalidUpdateCount     = '%d record(s) gewijzigd. Slechts 1 record had gewijzigd mogen zijn.';
 
-  cSRowBufferWidthExceeded ='Rij buffer grootte overschreden. Probeer minder kolommen te gebruiken in je SQL query.';
   cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
 {$ELSE}
 // <- ms, 09/05/2005
@@ -1124,7 +1119,6 @@ resourcestring
   cSFieldReadOnly          = 'Einem "Nur-Lesen" Feld kann kein Wert zugewiesen werden: %d';
   cSInvalidUpdateCount     = '%d Datensätze geändert. Exakt ein Datensatz sollte geändert werden.';
 
-  cSRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
   cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
 {$ELSE}
   // -> fduenas, 28/06/2005
@@ -1288,7 +1282,6 @@ resourcestring
   cSFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
   cSInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.';
 
-  cSRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
   cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
 {$ELSE}
 
@@ -1450,7 +1443,6 @@ resourcestring
 
   cSUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
 
-  cSRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
   // <-- added by tohenk
   cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
   {$ELSE}
@@ -1613,7 +1605,6 @@ resourcestring
   cSFieldReadOnly          = 'Field readonly tidak dapat diberikan nilai: %d';
   cSInvalidUpdateCount     = '%d rekord terupdate. Seharusnya hanya satu rekord yang terupdate.';
 
-  cSRowBufferWidthExceeded = 'Lebar buffer baris terlampaui. Coba kurangi atau gunakan kolom yang lebih panjang dalam query SQL.';
   // <--- end added by tohenk
   //--- begin added by ORMADA --------------------------------------------------
   cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
@@ -1778,7 +1769,6 @@ resourcestring
   cSFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
   cSInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.';
 
-  cSRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
   cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
 {$ELSE}
 
@@ -1943,7 +1933,6 @@ resourcestring
   cSFieldReadOnly        = 'Sloupec pouze pro ètení nemùže být pøiøazen k hodnotì: %d';
   cSInvalidUpdateCount     = '%d záznam(ù) aktualizováno. Pouze jeden záznam byl zmìnìn.';
 
-  cSRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
 //--- end added by Petr Stasiak - pestasoft.com ------------------------------------
 
   cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
@@ -2110,7 +2099,6 @@ resourcestring
   cSFieldReadOnly        = 'Nie mo¿na przypisaæ do pola tylko do odczytu wartoœci: %d';
   cSInvalidUpdateCount     = 'Liczba zaktualizowanych rekordów: %d. tylko jeden rekord powinien byæ zaktualizowany.';
 
-  cSRowBufferWidthExceeded ='Przekroczono rozmiar bufora. Spróbuj u¿yæ mniejszej liczby kolumn lub d³u¿szych kolumn w zapytaniu SQL.';
   cSBackgroundOperationStillRunning = 'Translate: A background operation is still running!';
 
 {$ELSE} // default: ENGLISH
@@ -2274,7 +2262,6 @@ resourcestring
   cSFieldReadOnly        = 'Readonly field can''t be assigned a value: %s';
   cSInvalidUpdateCount     = '%d record(s) updated. Only one record should have been updated.';
 
-  cSRowBufferWidthExceeded ='Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
   cSBackgroundOperationStillRunning = 'A background operation is still running!';
 
 {$ENDIF} // POLISH
@@ -3029,11 +3016,6 @@ begin
   Result := ConvertZMessageToRaw(cSInvalidUpdateCount);
 end;
 
-function SRowBufferWidthExceeded: String;
-begin
-  Result := ConvertZMessageToRaw(cSRowBufferWidthExceeded);
-end;
-
 function SBackgroundOperationStillRunning: String;
 begin
   Result := ConvertZMessageToRaw(cSBackgroundOperationStillRunning);
@@ -3210,7 +3192,6 @@ begin
   SFieldReadOnly := cSFieldReadOnly;
   SInvalidUpdateCount := cSInvalidUpdateCount;
 
-  SRowBufferWidthExceeded := cSRowBufferWidthExceeded;
   SBackgroundOperationStillRunning := cSBackgroundOperationStillRunning;
 end;
 

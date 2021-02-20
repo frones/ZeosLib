@@ -68,7 +68,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZPlainSqLiteDriver,
   ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver,
-  ZDbcSQLite, ZSelectSchema, ZClasses;
+  ZDbcSQLite, ZSelectSchema;
 
 type
   {** Implements SQLite ResultSet Metadata. }
@@ -180,9 +180,9 @@ type
   { TZSQLiteRowAccessor }
 
   TZSQLiteRowAccessor = class(TZRowAccessor)
-  public
-    constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
+  protected
+    class function MetadataToAccessorType(ColumnInfo: TZColumnInfo;
+      ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
@@ -204,33 +204,19 @@ end;
 
 { TZSQLiteRowAccessor }
 
-constructor TZSQLiteRowAccessor.Create(ColumnsInfo: TObjectList;
-  ConSettings: PZConSettings; const OpenLobStreams: TZSortedList; CachedLobs: WordBool);
-var TempColumns: TObjectList;
-  I: Integer;
-  Current: TZColumnInfo;
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "ConSettings" not used} {$ENDIF}
+class function TZSQLiteRowAccessor.MetadataToAccessorType(
+  ColumnInfo: TZColumnInfo; ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType;
 begin
-  {EH: usually this code is NOT nessecary if we would handle the types as the
-  providers are able to. But in current state we just copy all the incompatibilities
-  from the DataSets into dbc... grumble.}
-  TempColumns := TObjectList.Create(True);
-  CopyColumnsInfo(ColumnsInfo, TempColumns);
-  for I := 0 to TempColumns.Count -1 do begin
-    Current := TZColumnInfo(TempColumns[i]);
-    if Current.ColumnType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
-      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-3); // no streams 4 sqlite
-      Current.Precision := -1;
-    end;
-    if Current.ColumnType = stUnicodeString then
-      Current.ColumnType := stString; // no national chars in sqlite
-    if Current.ColumnType = stString then
-      Current.ColumnCodePage := zCP_UTF8;
-    if Current.ColumnType = stBytes then
-      Current.ColumnCodePage := zCP_Binary;
+  Result := ColumnInfo.ColumnType;
+  if Result in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
+    Result := TZSQLType(Byte(Result)-3); // no streams 4 sqlite
+    ColumnInfo.Precision := 0;
   end;
-  inherited Create(TempColumns, ConSettings, OpenLobStreams, CachedLobs);
-  TempColumns.Free;
+  if Result = stUnicodeString then
+    Result := stString; // no national chars in sqlite
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Clears specified column information.

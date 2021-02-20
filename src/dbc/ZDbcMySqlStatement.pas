@@ -76,7 +76,7 @@ type
   TZMySQLBindValue = record
     /// <summary>the TZQMarkPosBindValue record</summary>
     BindValue:  TZQMarkPosBindValue;
-    /// <summary>Is the parameter tagged as NationalChar?</summary>
+    /// <summary>Represents the value as a raw string</summary>
     EmulatedValue: RawByteString;
   end;
 
@@ -272,11 +272,11 @@ type
     procedure SetFloat(Index: Integer; Value: Single);
     procedure SetDouble(Index: Integer; const Value: Double);
     procedure SetCurrency(Index: Integer; const Value: Currency);
-    procedure SetBigDecimal(Index: Integer; const Value: TBCD);
+    procedure SetBigDecimal(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 
-    procedure SetDate(Index: Integer; const Value: TZDate); overload;
-    procedure SetTime(Index: Integer; const Value: TZTime); overload;
-    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); overload;
+    procedure SetDate(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); overload;
+    procedure SetTime(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); overload;
+    procedure SetTimestamp(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); overload;
     procedure SetBytes(Index: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
 
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
@@ -1743,7 +1743,7 @@ end;
   @param x the parameter value
 }
 procedure TZMySQLPreparedStatement.SetBigDecimal(Index: Integer;
-  const Value: TBCD);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 var
   Bind: PMYSQL_aligned_BIND;
   { move the string conversions into a own proc -> no (U/L)StrClear}
@@ -2287,7 +2287,7 @@ end;
   @param x the parameter value
 }
 procedure TZMySQLPreparedStatement.SetDate(Index: Integer;
-  const Value: TZDate);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 var
   Bind: PMYSQL_aligned_BIND;
   P: PMYSQL_TIME;
@@ -2628,7 +2628,7 @@ end;
   @param x the parameter value
 }
 procedure TZMySQLPreparedStatement.SetTime(Index: Integer;
-  const Value: TZTime);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 var
   Bind: PMYSQL_aligned_BIND;
   P: PMYSQL_TIME;
@@ -2666,7 +2666,7 @@ end;
   @param x the parameter value
 }
 procedure TZMySQLPreparedStatement.SetTimestamp(Index: Integer;
-  const Value: TZTimeStamp);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 var
   Bind: PMYSQL_aligned_BIND;
   P: PMYSQL_TIME;

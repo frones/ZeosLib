@@ -99,6 +99,7 @@ type
     FClientCP: Word;
     FWeakIZStatementPtr: Pointer; //weak reference to IZStatement intf of Self
     FWeakIZLoggingObjectPtr: Pointer; //weak reference to IZLoggingObject intf of Self
+    FResultSetCursorType: TZResultSetCursorType;
     procedure PrepareOpenResultSetForReUse; virtual;
     procedure PrepareLastResultSetForReUse; virtual;
     procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
@@ -276,8 +277,12 @@ type
     procedure AddBatchRequest(const SQL: string); virtual;
     procedure ClearBatch; virtual;
     function ExecuteBatch: TIntegerDynArray; virtual;
-
+    /// <summary>Returns the <c>Connection</c> object that produced this
+    ///  <c>Statement</c> object.</summary>
+    /// <returns>the connection that produced this statement</returns>
     function GetConnection: IZConnection;
+    /// <summary>Gets statement parameters.</summary>
+    /// <returns>a list with statement parameters.</returns>
     function GetParameters: TStrings;
     function GetChunkSize: Integer;
 
@@ -286,6 +291,14 @@ type
 
     function CreateLogEvent(const Category: TZLoggingCategory): TZLoggingEvent; virtual;
     function GetStatementId: NativeUInt;
+    /// <author>EgonHugeist</author>
+    /// <summary>Set the cursor type of the resultset to be genarated if any.</summary>
+    /// <param>"Value" the cursortype</param>
+    procedure SetCursorType(Value: TZResultSetCursorType);
+    /// <author>EgonHugeist</author>
+    /// <summary>Get the cursor type of this resultset</summary>
+    /// <returns>the cursortype of this resultset</returns>
+    function GetCursorType: TZResultSetCursorType;
   end;
 
   TZBindType = (zbtNull, zbt8Byte, zbt4Byte,
@@ -377,16 +390,16 @@ type
     procedure Put(Index: NativeInt; Value: Boolean); overload;
     procedure Put(Index: NativeInt; SQLType: TZSQLType; _8Byte: P8Bytes); overload;
     procedure Put(Index: NativeInt; SQLType: TZSQLType; _4Byte: P4Bytes); overload;
-    procedure Put(Index: NativeInt; const Value: TBCD); overload;
-    procedure Put(Index: NativeInt; const Value: TZTime); overload;
-    procedure Put(Index: NativeInt; const Value: TZDate); overload;
-    procedure Put(Index: NativeInt; const Value: TZTimeStamp); overload;
+    procedure Put(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD); overload;
+    procedure Put(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); overload;
+    procedure Put(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); overload;
+    procedure Put(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); overload;
     procedure Put(Index: NativeInt; SQLType: TZSQLType; const Value: TBytes); overload;
     procedure Put(Index: NativeInt; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt); overload;
     procedure Put(Index: NativeInt; SQLType: TZSQLType; const Value: RawByteString; CP: Word); overload;
     procedure Put(Index: NativeInt; SQLType: TZSQLType; Buf: Pointer; Len: LengthInt; CP: Word); overload;
     procedure Put(Index: NativeInt; SQLType: TZSQLType; const Value: UnicodeString); overload;
-    procedure Put(Index: NativeInt; const Value: TZArray; AddArrayRef: Boolean); overload;
+    procedure Put(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZArray; AddArrayRef: Boolean); overload;
     procedure Put(Index: NativeInt; SQLType: TZSQLType; const Value: IZBLob); overload;
     procedure Put(Index: NativeInt; Value: PZBindValue); overload;
     procedure Put(Index: NativeInt; const Value: TGUID); overload;
@@ -887,7 +900,7 @@ type
       var AError: EZSQLConnectionLost); override;
 
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); virtual;
-    procedure SetGUID(ParameterIndex: Integer; const Value: TGUID); virtual;
+    procedure SetGUID(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID); virtual;
     procedure SetDate(ParameterIndex: Integer; const Value: TDateTime); overload; virtual;
     procedure SetTime(ParameterIndex: Integer; const Value: TDateTime); overload; virtual;
     procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime); overload;
@@ -911,7 +924,7 @@ type
     ///  the second is 1. This will change in future to a zero based index.
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter blob wrapper object to be set.</param>
-    procedure SetValue(ParameterIndex: Integer; const Value: TZVariant);
+    procedure SetValue(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZVariant);
     /// <summary>Sets the designated parameter to a null array value. A null
     ///  array can not be bound if not data array has been bound before. So
     ///  SetDataArray() needs to be called first.</summary>
@@ -967,7 +980,7 @@ type
     procedure BindRawStr(Index: Integer; Buf: PAnsiChar; Len: LengthInt); overload; virtual;
     procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
   public
-    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
+    procedure SetCharRec(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
     procedure SetString(ParameterIndex: Integer; const Value: String);
     {$IFNDEF NO_ANSISTRING}
     /// <summary>Sets the designated parameter to a <c>AnsiString</c> value.
@@ -1033,7 +1046,7 @@ type
     procedure BindUniStr(Index: Integer; const Value: UnicodeString); overload; virtual;
     procedure BindUniStr(Index: Integer; Buf: PWideChar; CodePoints: LengthInt); overload; virtual;
   public
-    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
+    procedure SetCharRec(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
     procedure SetString(ParameterIndex: Integer; const Value: String);
     {$IFNDEF NO_ANSISTRING}
     /// <summary>Sets the designated parameter to a <c>AnsiString</c> value.
@@ -1175,7 +1188,7 @@ type
     ///  the second is 1. This will change in future to a zero based index.
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter value</param>
-    procedure SetBigDecimal(ParameterIndex: Integer; const Value: TBCD);
+    procedure SetBigDecimal(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
     /// <summary>Sets the designated parameter to a <c>TZCharRec</c> value.
     ///  The references need to be valid until the statement is executed.</summary>
     /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
@@ -1183,7 +1196,7 @@ type
     ///  the second is 1. This will change in future to a zero based index.
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter value</param>
-    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
+    procedure SetCharRec(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
     /// <summary>Sets the designated parameter to a <c>String</c> value.
     ///  This method equals to SetUnicodeString on Unicode-Compilers. For
     ///  Raw-String compilers the encoding is defined by W2A2WEncodingSource of
@@ -1250,21 +1263,21 @@ type
     ///  the second is 1. This will change in future to a zero based index.
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter value</param>
-    procedure SetDate(ParameterIndex: Integer; const Value: TZDate); overload;
+    procedure SetDate(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); overload;
     /// <summary>Sets the designated parameter to a <c>TZTime</c> value.</summary>
     /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
     ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
     ///  the second is 1. This will change in future to a zero based index.
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter value</param>
-    procedure SetTime(ParameterIndex: Integer; const Value: TZTime); overload;
+    procedure SetTime(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); overload;
     /// <summary>Sets the designated parameter to a <c>TZTimestamp</c> value.</summary>
     /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
     ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
     ///  the second is 1. This will change in future to a zero based index.
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter value</param>
-    procedure SetTimestamp(ParameterIndex: Integer; const Value: TZTimeStamp); overload;
+    procedure SetTimestamp(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); overload;
   End;
 
   TZUTF16ParamCountPreparedStatement = class(TZUTF16PreparedStatement)
@@ -1328,10 +1341,10 @@ type
     procedure SetFloat(ParameterIndex: Integer; Value: Single);
     procedure SetDouble(ParameterIndex: Integer; const Value: Double);
     procedure SetCurrency(ParameterIndex: Integer; const Value: Currency);
-    procedure SetBigDecimal(ParameterIndex: Integer; const Value: TBCD);
-    procedure SetDate(ParameterIndex: Integer; const Value: TZDate); reintroduce; overload;
-    procedure SetTime(ParameterIndex: Integer; const Value: TZTime); reintroduce; overload;
-    procedure SetTimestamp(ParameterIndex: Integer; const Value: TZTimeStamp); reintroduce; overload;
+    procedure SetBigDecimal(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
+    procedure SetDate(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); reintroduce; overload;
+    procedure SetTime(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); reintroduce; overload;
     procedure SetBytes(ParameterIndex: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
   public
     function GetResultSet: IZResultSet; override;
@@ -1388,7 +1401,7 @@ type
   public
     procedure AfterConstruction; override;
   public //setters
-    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
+    procedure SetCharRec(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
     procedure SetString(ParameterIndex: Integer; const Value: String);
     {$IFNDEF NO_ANSISTRING}
     /// <summary>Sets the designated parameter to a <c>AnsiString</c> value.
@@ -1438,7 +1451,7 @@ type
     procedure AfterConstruction; override;
     procedure FillAndBindCharRec(Index: Integer; out Len: LengthInt);
   public //setters
-    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); reintroduce;
+    procedure SetCharRec(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec); reintroduce;
     procedure SetString(ParameterIndex: Integer; const Value: String); reintroduce;
     {$IFNDEF NO_ANSISTRING}
     /// <summary>Sets the designated parameter to a <c>AnsiString</c> value.
@@ -1955,29 +1968,11 @@ begin
   FCursorName := Value;
 end;
 
-{**
-  Executes an SQL statement that may return multiple results.
-  Under some (uncommon) situations a single SQL statement may return
-  multiple result sets and/or update counts.  Normally you can ignore
-  this unless you are (1) executing a stored procedure that you know may
-  return multiple results or (2) you are dynamically executing an
-  unknown SQL string.  The  methods <code>execute</code>,
-  <code>getMoreResults</code>, <code>getResultSet</code>,
-  and <code>getUpdateCount</code> let you navigate through multiple results.
+procedure TZAbstractStatement.SetCursorType(Value: TZResultSetCursorType);
+begin
+  FResultSetCursorType := Value;
+end;
 
-  The <code>execute</code> method executes an SQL statement and indicates the
-  form of the first result.  You can then use the methods
-  <code>getResultSet</code> or <code>getUpdateCount</code>
-  to retrieve the result, and <code>getMoreResults</code> to
-  move to any subsequent result(s).
-
-  @param sql any SQL statement
-  @return <code>true</code> if the next result is a <code>ResultSet</code> object;
-  <code>false</code> if it is an update count or there are no more results
-  @see #getResultSet
-  @see #getUpdateCount
-  @see #getMoreResults
-}
 function TZAbstractStatement.Execute(const SQL: UnicodeString): Boolean;
 begin
   WSQL := SQL;
@@ -2319,20 +2314,16 @@ begin
   ClearBatch;
 end;
 
-{**
-  Returns the <code>Connection</code> object
-  that produced this <code>Statement</code> object.
-  @return the connection that produced this statement
-}
 function TZAbstractStatement.GetConnection: IZConnection;
 begin
   Result := FConnection;
 end;
 
-{**
-  Gets statement parameters.
-  @returns a list with statement parameters.
-}
+function TZAbstractStatement.GetCursorType: TZResultSetCursorType;
+begin
+  Result := FResultSetCursorType
+end;
+
 function TZAbstractStatement.GetParameters: TStrings;
 begin
   Result := FInfo;
@@ -2688,7 +2679,7 @@ begin
   UnicodeString(AquireBuffer(Index, SQLType, zbtUniString).Value) := Value;
 end;
 
-procedure TZBindList.Put(Index: NativeInt; const Value: TZArray; AddArrayRef: Boolean);
+procedure TZBindList.Put(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZArray; AddArrayRef: Boolean);
 var BindValue: PZBindValue;
   SQLType: TZSQLType;
 begin
@@ -2728,7 +2719,7 @@ begin
   IZBLob(AquireBuffer(Index, SQLType, zbtLob).Value) := Value;
 end;
 
-procedure TZBindList.Put(Index: NativeInt; const Value: TZTimeStamp);
+procedure TZBindList.Put(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 var BindValue: PZBindValue;
 begin
   BindValue := AquireBuffer(Index, stTimeStamp, zbtTimeStamp);
@@ -2737,7 +2728,7 @@ begin
   PZTimeStamp(BindValue.Value)^ := Value;
 end;
 
-procedure TZBindList.Put(Index: NativeInt; const Value: TBCD);
+procedure TZBindList.Put(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 var BindValue: PZBindValue;
 begin
   BindValue := AquireBuffer(Index, stBigDecimal, zbtBCD);
@@ -2854,7 +2845,7 @@ begin
   PGUID(BindValue.Value)^ := Value;
 end;
 
-procedure TZBindList.Put(Index: NativeInt; const Value: TZDate);
+procedure TZBindList.Put(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 var BindValue: PZBindValue;
 begin
   BindValue := AquireBuffer(Index, stDate, zbtDate);
@@ -2863,7 +2854,7 @@ begin
   PZDate(BindValue.Value)^ := Value;
 end;
 
-procedure TZBindList.Put(Index: NativeInt; const Value: TZTime);
+procedure TZBindList.Put(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 var BindValue: PZBindValue;
 begin
   BindValue := AquireBuffer(Index, stTime, zbtTime);
@@ -3944,7 +3935,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetGUID(ParameterIndex: Integer;
-  const Value: TGUID);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID);
 begin
   BindBinary(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stGUID, @Value.D1,
     SizeOf(TGUID));
@@ -4166,7 +4157,7 @@ begin
 end;
 
 procedure TZAbstractPreparedStatement.SetValue(ParameterIndex: Integer;
-  const Value: TZVariant);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZVariant);
 var TempBlob: IZBlob;
 begin
   case Value.VType of
@@ -4336,7 +4327,7 @@ end;
   @param x the parameter value
 }
 procedure TZRawPreparedStatement.SetCharRec(ParameterIndex: Integer;
-  const Value: TZCharRec);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
 var UniTemp: UnicodeString;
 begin
   if (Value.CP = FClientCP) then
@@ -4446,7 +4437,7 @@ end;
   @param x the parameter value
 }
 procedure TZUTF16PreparedStatement.SetCharRec(ParameterIndex: Integer;
-  const Value: TZCharRec);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
 begin
   if (Value.CP = zCP_UTF16) then
     BindUniStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value.P, Value.Len)
@@ -5504,7 +5495,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractCallableStatement.SetBigDecimal(ParameterIndex: Integer;
-  const Value: TBCD);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 var Bind: PZBindValue;
     C: Currency;
 begin
@@ -5616,7 +5607,7 @@ begin
 end;
 
 procedure TZAbstractCallableStatement.SetDate(ParameterIndex: Integer;
-  const Value: TZDate);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 var Bind: PZBindValue;
     DT: TDateTime;
     procedure SetAsRaw;
@@ -5788,7 +5779,7 @@ begin
 end;
 
 procedure TZAbstractCallableStatement.SetTime(ParameterIndex: Integer;
-  const Value: TZTime);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 var Bind: PZBindValue;
     DT: TDateTime;
     procedure SetAsRaw;
@@ -5834,7 +5825,7 @@ jmpStr: if ConSettings.ClientCodePage.Encoding = ceUTF16
 end;
 
 procedure TZAbstractCallableStatement.SetTimestamp(ParameterIndex: Integer;
-  const Value: TZTimeStamp);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 var Bind: PZBindValue;
     DT: TDateTime;
     procedure SetAsRaw;
@@ -6144,7 +6135,7 @@ end;
 {$ENDIF}
 
 procedure TZAbstractCallableStatement_A.SetCharRec(ParameterIndex: Integer;
-  const Value: TZCharRec);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
 begin
   if (Value.CP = ConSettings^.ClientCodePage.CP) then
     BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Value.P, Value.Len)
@@ -6282,7 +6273,7 @@ end;
 {$ENDIF NO_ANSISTRING}
 
 procedure TZAbstractCallableStatement_W.SetCharRec(ParameterIndex: Integer;
-  const Value: TZCharRec);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex -1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
@@ -6369,7 +6360,7 @@ end;
 {$ENDIF NO_ANSISTRING}
 
 procedure TZBeginnerPreparedStatement.SetBigDecimal(ParameterIndex: Integer;
-  const Value: TBCD);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
@@ -6399,7 +6390,7 @@ begin
 end;
 
 procedure TZBeginnerPreparedStatement.SetCharRec(ParameterIndex: Integer;
-  const Value: TZCharRec);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
@@ -6417,7 +6408,7 @@ begin
 end;
 
 procedure TZBeginnerPreparedStatement.SetDate(ParameterIndex: Integer;
-  const Value: TZDate);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
@@ -6498,7 +6489,7 @@ begin
 end;
 
 procedure TZBeginnerPreparedStatement.SetTime(ParameterIndex: Integer;
-  const Value: TZTime);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);
@@ -6506,7 +6497,7 @@ begin
 end;
 
 procedure TZBeginnerPreparedStatement.SetTimestamp(ParameterIndex: Integer;
-  const Value: TZTimeStamp);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 begin
   {$IFNDEF GENERIC_INDEX}ParameterIndex := ParameterIndex-1;{$ENDIF}
   CheckParameterIndex(ParameterIndex);

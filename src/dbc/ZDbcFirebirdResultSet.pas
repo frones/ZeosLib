@@ -310,9 +310,9 @@ type
   End;
 
   TZFirebirdRowAccessor = class(TZRowAccessor)
-  public
-    constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
+  protected
+    class function MetadataToAccessorType(ColumnInfo: TZColumnInfo;
+      ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; override;
   end;
 
   IZFirebirdLob = interface(IZLob)
@@ -412,7 +412,7 @@ begin
       P := MessageMetadata.getRelation(FStatus, I);
       Len := ZFastCode.StrLen(P);
       {$IFDEF UNICODE}
-      TableName := PRawToUnicode(P, Len, CP_ID);
+      PRawToUnicode(P, Len, CP_ID, TableName);
       {$ELSE}
       System.SetString(TableName, P, Len);
       {$ENDIF}
@@ -421,7 +421,7 @@ begin
         P := MessageMetadata.getField(FStatus, I);
         Len := ZFastCode.StrLen(P);
         {$IFDEF UNICODE}
-        ColumnName := PRawToUnicode(P, Len, CP_ID);
+        PRawToUnicode(P, Len, CP_ID, ColumnName);
         {$ELSE}
         System.SetString(ColumnName, P, Len);
         {$ENDIF}
@@ -429,7 +429,7 @@ begin
       P := MessageMetadata.getAlias(FStatus, I);
       Len := ZFastCode.StrLen(P);
       {$IFDEF UNICODE}
-      ColumnLabel := PRawToUnicode(P, Len, CP_ID);
+      PRawToUnicode(P, Len, CP_ID, ColumnLabel);
       {$ELSE}
       System.SetString(ColumnLabel, P, Len);
       {$ENDIF}
@@ -1178,28 +1178,15 @@ end;
 
 { TZFirebirdRowAccessor }
 
-constructor TZFirebirdRowAccessor.Create(ColumnsInfo: TObjectList;
-  ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
-  CachedLobs: WordBool);
-var TempColumns: TObjectList;
-  I: Integer;
-  Current: TZColumnInfo;
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "ConSettings, ColumnCodePage" not used} {$ENDIF}
+class function TZFirebirdRowAccessor.MetadataToAccessorType(
+  ColumnInfo: TZColumnInfo; ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType;
 begin
-  {EH: usually this code is NOT nessecary if we would handle the types as the
-  providers are able to. But in current state we just copy all the incompatibilities
-  from the DataSets into dbc... grumble.}
-  TempColumns := TObjectList.Create(True);
-  CopyColumnsInfo(ColumnsInfo, TempColumns);
-  for I := 0 to TempColumns.Count -1 do begin
-    Current := TZColumnInfo(TempColumns[i]);
-    if Current.ColumnType in [stUnicodeString, stUnicodeStream] then
-      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-1); // no National streams 4 IB/FB
-    if Current.ColumnType in [stBytes, stBinaryStream] then
-      Current.ColumnCodePage := zCP_Binary;
-  end;
-  inherited Create(TempColumns, ConSettings, OpenLobStreams, CachedLobs);
-  TempColumns.Free;
+  Result := ColumnInfo.ColumnType;
+  if Result in [stUnicodeString, stUnicodeStream] then
+    Result := TZSQLType(Byte(Result)-1); // no national chars 4 IB/FB
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZFirebirdClob }
 

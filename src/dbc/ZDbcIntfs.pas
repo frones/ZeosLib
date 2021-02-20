@@ -76,7 +76,7 @@ const
   /// <summary>generic constant for an invalid column/parameter index.</summary>
   /// <remarks>Since zeos 8.0up we use zero based index. Means the
   ///  <c>GENERIC_INDEX</c> will be removed in future releases.</remarks>
-  InvalidDbcIndex = {$IFDEF GENERIC_INDEX}-1{$ELSE}0{$ENDIF};
+  InvalidDbcIndex = FirstDbcIndex-1;
 const
   { Constants from JDBC DatabaseMetadata }
   TypeSearchable            = 3;
@@ -317,7 +317,50 @@ type
   TZFetchDirection = (fdForward, fdReverse, fdUnknown);
 
   /// <summary>Defines a type of result set.</summary>
-  TZResultSetType = (rtForwardOnly, rtScrollInsensitive, rtScrollSensitive);
+  TZResultSetType = (
+    /// <summary>The result set cannot be scrolled; its cursor moves forward
+    ///  only, from first row to last row. The rows contained in the result set
+    ///  depend on how the underlying database generates the results. That is,
+    ///  it contains the rows that satisfy the query at either the time the
+    ///  query is executed or as the rows are retrieved.</summary>
+    rtForwardOnly,
+    /// <summary>The result can be scrolled; its cursor can move both forward
+    ///  and backward relative to the current position, and it can move to an
+    ///  absolute position. The result set is insensitive to changes made to the
+    ///  underlying data source while it is open. It contains the rows that
+    ///  satisfy the query at either the time the query is executed or as the
+    ///  rows are retrieved.</summary>
+    rtScrollInsensitive,
+    /// <summary>Deprecated not implemented enymore. Yet it's the same as
+    ///  <c>rtScrollInsensitive</c>. Purpose: The result set reflects changes
+    ///  made to the underlying data source while the result set remains open.</summary>
+    /// <remarks>Use the IZResultSet RefreshCurrentRow method instead.</remarks>
+    rtScrollSensitive);
+
+  /// <author>EgonHugeist</author>
+  /// <remarks>please fix the documentation, i just reflect the purpose of the
+  ///  enums</remarks>
+  /// <summary>Defines a cursor type of result set.</summary>
+  TZResultSetCursorType = (
+    /// <summary>The results are copied into a client buffer handled by provider.
+    ///  This mode is default for <c>libpq</c> or libmariadb/libmysql. see
+    ///  <c>mysql_store_result;mysql_stmt_store_result</c>. This usually is done
+    ///  to break the tabular streamed lock of the protocol. That than means the
+    ///  server can process the next query. If the library doesn't support it
+    ///  a server cursor will be used instead. It's drivers implementation task
+    ///  to dicide if a fetchall needs to be performed.</summary>
+    rctClientLib,
+    /// <summary>Use a server cursor. This usually is the fastest mode to read
+    ///  the data streams. Drivers having no multiple active resultset support
+    ///  usually require read data to end or discard the results to query
+    ///  another request.</summar>
+    rctServerCursor,
+    /// <summary>Fetch all data into programs local memory. An immediat full
+    ///  load is done only for tabular streamed protocols. All lob's are copied
+    ///  to local memory. So be carefull using this mode, it leads to "out of
+    ///  memory" exceptions but the resultset will not be released if a
+    ///  connection loss happens(if full loaded of course)
+    rctLocalMemory);
 
   /// <summary>Defines a result set concurrency type.</summary>
   TZResultSetConcurrency = (rcReadOnly, rcUpdatable);
@@ -1298,9 +1341,81 @@ type
       const Table: string; Scope: Integer; Nullable: Boolean): IZResultSet;
     function GetVersionColumns(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet;
-
+    /// <summary>Gets a description of a table's primary key columns from a
+    ///  cache. They are ordered by COLUMN_NAME.
+    ///  Each primary key column description has the following columns:
+    ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+    ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+    ///  <c>TABLE_NAME</c> String => table name
+    ///  <c>COLUMN_NAME</c> String => column name
+    ///  <c>KEY_SEQ</c> short => sequence number within primary key
+    ///  <c>PK_NAME</c> String => primary key name (may be null)</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <returns><c>ResultSet</c> - each row is a primary key column description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function GetPrimaryKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet;
+    /// <summary>Gets a description of the primary key columns that are
+    ///  referenced by a table's foreign key columns (the primary keys
+    ///  imported by a table) from a cache.  They are ordered by PKTABLE_CAT,
+    ///  PKTABLE_SCHEM, PKTABLE_NAME, and KEY_SEQ.
+    ///  Each primary key column description has the following columns:
+    ///  <c>PKTABLE_CAT</c> String => primary key table catalog
+    ///       being imported (may be null)
+    ///  <c>PKTABLE_SCHEM</c> String => primary key table schema
+    ///       being imported (may be null)
+    ///  <c>PKTABLE_NAME</c> String => primary key table name
+    ///       being imported
+    ///  <c>PKCOLUMN_NAME</c> String => primary key column name
+    ///       being imported
+    ///  <c>FKTABLE_CAT</c> String => foreign key table catalog (may be null)
+    ///  <c>FKTABLE_SCHEM</c> String => foreign key table schema (may be null)
+    ///  <c>FKTABLE_NAME</c> String => foreign key table name
+    ///  <c>FKCOLUMN_NAME</c> String => foreign key column name
+    ///  <c>KEY_SEQ</c> short => sequence number within foreign key
+    ///  <c>UPDATE_RULE</c> short => What happens to
+    ///        foreign key when primary is updated:
+    ///        importedNoAction - do not allow update of primary
+    ///                key if it has been imported
+    ///        importedKeyCascade - change imported key to agree
+    ///                with primary key update
+    ///        importedKeySetNull - change imported key to NULL if
+    ///                its primary key has been updated
+    ///        importedKeySetDefault - change imported key to default values
+    ///                if its primary key has been updated
+    ///        importedKeyRestrict - same as importedKeyNoAction
+    ///                                  (for ODBC 2.x compatibility)
+    ///  <c>DELETE_RULE</c> short => What happens to
+    ///       the foreign key when primary is deleted.
+    ///        importedKeyNoAction - do not allow delete of primary
+    ///                key if it has been imported
+    ///        importedKeyCascade - delete rows that import a deleted key
+    ///       importedKeySetNull - change imported key to NULL if
+    ///                its primary key has been deleted
+    ///        importedKeyRestrict - same as importedKeyNoAction
+    ///                                  (for ODBC 2.x compatibility)
+    ///        importedKeySetDefault - change imported key to default if
+    ///                its primary key has been deleted
+    ///  <c>FK_NAME</c> String => foreign key name (may be null)
+    ///  <c>PK_NAME</c> String => primary key name (may be null)
+    ///  <c>DEFERRABILITY</c> short => can the evaluation of foreign key
+    ///       constraints be deferred until commit
+    ///        importedKeyInitiallyDeferred - see SQL92 for definition
+    ///        importedKeyInitiallyImmediate - see SQL92 for definition
+    ///        importedKeyNotDeferrable - see SQL92 for definition</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <returns><c>ResultSet</c> - each row is imported key column description</returns>
+    /// <remarks>see GetSearchStringEscape;GetExportedKeys</remarks>
     function GetImportedKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet;
     function GetExportedKeys(const Catalog: string; const Schema: string;
@@ -1401,6 +1516,9 @@ type
     /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
       Boolean;
+    /// <summary>Are table correlation names supported?
+    /// A Zeos Compliant <c>TM</c> driver always returns true.</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function SupportsTableCorrelationNames: Boolean;
     function SupportsDifferentTableCorrelationNames: Boolean;
     function SupportsExpressionsInOrderBy: Boolean;
@@ -1767,6 +1885,14 @@ type
     ///  Sets a new value for post updates.</summary>
     /// <param>"Value" a new value for post updates.</param>
     procedure SetPostUpdates(Value: TZPostUpdatesMode);
+    /// <author>EgonHugeist</author>
+    /// <summary>Set the cursor type of the resultset to be genarated if any.</summary>
+    /// <param>"Value" the cursortype</param>
+    procedure SetCursorType(Value: TZResultSetCursorType);
+    /// <author>EgonHugeist</author>
+    /// <summary>Get the cursor type of this resultset</summary>
+    /// <returns>the cursortype of this resultset</returns>
+    function GetCursorType: TZResultSetCursorType;
     /// <summary>Note yet implemented. Propably omitted in future.
     ///  Gets the current value for post updates.</summary>
     /// <returns>the current value for post updates.</returns>
@@ -1830,10 +1956,7 @@ type
     function ExecuteBatch: TIntegerDynArray;
     /// <summary>Returns the <c>Connection</c> object that produced this
     ///  <c>Statement</c> object.</summary>
-    /// <returns>
-    /// <see cref="IZConnection"></see>
-    ///  the connection that produced this statement
-    /// </returns>
+    /// <returns>the connection that produced this statement</returns>
     function GetConnection: IZConnection;
     /// <summary>Gets statement parameters.</summary>
     /// <returns>a list with statement parameters.</returns>
@@ -1994,7 +2117,7 @@ type
     ///  the second is 1. This will change in future to a zero based index.
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter value</param>
-    procedure SetBigDecimal(ParameterIndex: Integer; const Value: TBCD);
+    procedure SetBigDecimal(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
     /// <summary>Sets the designated parameter to a <c>TZCharRec</c> value.
     ///  The references need to be valid until the statement is executed.</summary>
     /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
@@ -2002,7 +2125,7 @@ type
     ///  the second is 1. This will change in future to a zero based index.
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter value</param>
-    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
+    procedure SetCharRec(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
     /// <summary>Sets the designated parameter to a <c>String</c> value.
     ///  This method equals to SetUnicodeString on Unicode-Compilers. For
     ///  Raw-String compilers the encoding is defined by W2A2WEncodingSource of
@@ -2044,7 +2167,7 @@ type
     ///  the second is 1. This will change in future to a zero based index.
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter value</param>
-    procedure SetGuid(ParameterIndex: Integer; const Value: TGUID);
+    procedure SetGuid(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID);
     {$IFNDEF NO_ANSISTRING}
     /// <summary>Sets the designated parameter to a <c>AnsiString</c> value.
     ///  The string must be GET_ACP encoded. The driver will convert the value
@@ -2093,7 +2216,7 @@ type
     ///  the second is 1. This will change in future to a zero based index.
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter value</param>
-    procedure SetDate(ParameterIndex: Integer; const Value: TZDate); overload;
+    procedure SetDate(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); overload;
     /// <summary>Sets the designated parameter to a <c>Time(TDateTime)</c> value.
     ///  This method is obsolate and left for compatibility. The method always
     ///  decodes the value and calls the <c>SetTime(Index: Integer; Value: TZtime)</c>
@@ -2110,7 +2233,7 @@ type
     ///  the second is 1. This will change in future to a zero based index.
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter value</param>
-    procedure SetTime(ParameterIndex: Integer; const Value: TZTime); overload;
+    procedure SetTime(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); overload;
     /// <summary>Sets the designated parameter to a <c>TDateTime</c> value.
     ///  This method is obsolate and left for compatibility. The method always
     ///  decodes the value and calls the
@@ -2127,7 +2250,7 @@ type
     ///  the second is 1. This will change in future to a zero based index.
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter value</param>
-    procedure SetTimestamp(ParameterIndex: Integer; const Value: TZTimeStamp); overload;
+    procedure SetTimestamp(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); overload;
     /// <summary>Sets the designated parameter to a raw character stream value.
     ///  The stream must be DB-CodePage encoded. If the driver uses an UTF16
     ///  encoding, the driver will convert the value using the conversion rules
@@ -2179,7 +2302,7 @@ type
     ///  the second is 1. This will change in future to a zero based index.
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter blob wrapper object to be set.</param>
-    procedure SetValue(ParameterIndex: Integer; const Value: TZVariant);
+    procedure SetValue(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZVariant);
     /// <summary>Sets the designated parameter to a null array value. A null
     ///  array can not be bound if not data array has been bound before. So
     ///  SetDataArray() needs to be called first.</summary>
@@ -3745,6 +3868,10 @@ type
 
     procedure SetFetchSize(Value: Integer);
     function GetFetchSize: Integer;
+    /// <author>EgonHugeist</author>
+    /// <summary>Get the cursor type of this resultset</summary>
+    /// <returns>the cursortype of this resultset</returns>
+    function GetCursorType: TZResultSetCursorType;
 
     function GetType: TZResultSetType;
     function GetConcurrency: TZResultSetConcurrency;

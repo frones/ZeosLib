@@ -163,15 +163,15 @@ type
     procedure SetFloat(Index: Integer; Value: Single); reintroduce;
     procedure SetDouble(Index: Integer; const Value: Double); reintroduce;
     procedure SetCurrency(Index: Integer; const Value: Currency); reintroduce;
-    procedure SetBigDecimal(Index: Integer; const Value: TBCD); reintroduce;
+    procedure SetBigDecimal(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD); reintroduce;
     procedure SetBytes(Index: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
 
-    procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
-    procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
-    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
+    procedure SetDate(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); reintroduce; overload;
+    procedure SetTime(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); reintroduce; overload;
 
     {string bindings }
-    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
+    procedure SetCharRec(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: UnicodeString);
     procedure SetString(ParameterIndex: Integer; const Value: String);
     {$IFNDEF NO_ANSISTRING}
@@ -1186,7 +1186,7 @@ end;
 {$ENDIF NO_ANSISTRING}
 
 procedure TZAbstractOraclePreparedStatement.SetBigDecimal(Index: Integer;
-  const Value: TBCD);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 var
   BindValue: PZBindValue;
   OCIBindValue: PZOCIBindValue absolute BindValue;
@@ -1333,7 +1333,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractOraclePreparedStatement.SetCharRec(ParameterIndex: Integer;
-  const Value: TZCharRec);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
 begin
   if Value.CP = zCP_UTF16 then
     SetPWideChar(ParameterIndex, Value.P, Value.Len)
@@ -1799,7 +1799,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5036 off : Local variable DT does not seem to be initialized} {$ENDIF}
 procedure TZAbstractOraclePreparedStatement.SetDate(Index: Integer;
-  const Value: TZDate);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 var
   BindValue: PZBindValue;
   OCIBindValue: PZOCIBindValue absolute BindValue;
@@ -2252,7 +2252,7 @@ end;
 }
 {$IFDEF FPC} {$PUSH} {$WARN 5036 off : Local variable DT does not seem to be initialized} {$ENDIF}
 procedure TZAbstractOraclePreparedStatement.SetTime(Index: Integer;
-  const Value: TZTime);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 var
   BindValue: PZBindValue;
   OCIBindValue: PZOCIBindValue absolute BindValue;
@@ -2315,7 +2315,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractOraclePreparedStatement.SetTimestamp(Index: Integer;
-  const Value: TZTimeStamp);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 var
   BindValue: PZBindValue;
   OCIBindValue: PZOCIBindValue absolute BindValue;

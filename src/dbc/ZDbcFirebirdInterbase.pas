@@ -701,9 +701,9 @@ type
     procedure SetFloat(Index: Integer; Value: Single);
     procedure SetDouble(Index: Integer; const Value: Double);
     procedure SetCurrency(Index: Integer; const Value: Currency);
-    procedure SetBigDecimal(Index: Integer; const Value: TBCD);
+    procedure SetBigDecimal(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 
-    procedure SetCharRec(Index: Integer; const Value: TZCharRec); reintroduce;
+    procedure SetCharRec(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec); reintroduce;
     procedure SetString(Index: Integer; const Value: String); reintroduce;
     {$IFNDEF NO_UTF8STRING}
     procedure SetUTF8String(Index: Integer; const Value: UTF8String); reintroduce;
@@ -714,13 +714,13 @@ type
     procedure SetRawByteString(Index: Integer; const Value: RawByteString); reintroduce;
     procedure SetUnicodeString(Index: Integer; const Value: UnicodeString); reintroduce;
 
-    procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
-    procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
-    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
+    procedure SetDate(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); reintroduce; overload;
+    procedure SetTime(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); reintroduce; overload;
 
     procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce; overload;
     procedure SetBytes(Index: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
-    procedure SetGUID(Index: Integer; const Value: TGUID); reintroduce;
+    procedure SetGUID(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID); reintroduce;
     procedure SetBlob(Index: Integer; ASQLType: TZSQLType; const Value: IZBlob); override{keep it virtual because of (set)ascii/uniocde/binary streams};
   end;
 
@@ -4225,7 +4225,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetBigDecimal(Index: Integer;
-  const Value: TBCD);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 var L: Cardinal;
 begin
   {$IFNDEF GENERIC_INDEX}Dec(Index);{$ENDIF}
@@ -4411,7 +4411,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetCharRec(Index: Integer;
-  const Value: TZCharRec);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -4502,7 +4502,7 @@ end;
 }
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "DT" does not seem to be initialized} {$ENDIF}
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetDate(Index: Integer;
-  const Value: TZDate);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 var L: LengthInt;
   DT: TDateTime;
 begin
@@ -4611,7 +4611,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetGUID(Index: Integer;
-  const Value: TGUID);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID);
 var P: PAnsiChar;
   L: Cardinal;
 begin
@@ -5054,7 +5054,7 @@ end;
 }
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF}
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetTime(Index: Integer;
-  const Value: TZTime);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 var L: LengthInt;
   DT: TDateTime;
 begin
@@ -5100,7 +5100,7 @@ end;
 }
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF}
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetTimestamp(Index: Integer;
-  const Value: TZTimeStamp);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 var L: LengthInt;
   DT: TDateTime;
 begin

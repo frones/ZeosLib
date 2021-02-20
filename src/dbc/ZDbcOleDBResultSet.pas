@@ -277,6 +277,9 @@ type
   { TZOleDBRowAccessor }
 
   TZOleDbRowAccessor = class(TZRowAccessor)
+  protected
+    class function MetadataToAccessorType(ColumnInfo: TZColumnInfo;
+      ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; override;
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
       const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
@@ -2194,6 +2197,7 @@ begin
       Inc(J);
     end;
   Open;
+  LastRowNo := 1;
 end;
 
 function TZOleDBParamResultSet.MoveAbsolute(Row: Integer): Boolean;
@@ -2479,31 +2483,20 @@ end;
 constructor TZOleDbRowAccessor.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
   CachedLobs: WordBool);
-var TempColumns: TObjectList;
-  I: Integer;
-  Current: TZColumnInfo;
 begin
-  {EH: usually this code is NOT nessecary if we would handle the types as the
-  providers are able to. But in current state we just copy all the incompatibilities
-  from the DataSets into dbc... grumble.}
-  TempColumns := TObjectList.Create(True);
-  CopyColumnsInfo(ColumnsInfo, TempColumns);
-  for I := 0 to TempColumns.Count -1 do begin
-    Current := TZColumnInfo(TempColumns[i]);
-    {if Current.ColumnType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
-      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-3); // no streams available using OleDB ?
-      Current.Precision := -1;
-    end;}
-    if Current.ColumnType in [stString, stAsciiStream] then begin
-      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)+1); // no raw chars in 4 OleDB
-      Current.ColumnCodePage := zCP_UTF16;
-    end else if Current.ColumnType in [stUnicodeString, stUnicodeStream] then
-      Current.ColumnCodePage := zCP_UTF16
-    else if Current.ColumnType = stBytes then
-      Current.ColumnCodePage := zCP_Binary;
-  end;
-  inherited Create(TempColumns, ConSettings, OpenLobStreams, True); //we can not use uncached lobs with OleDB
-  TempColumns.Free;
+  inherited Create(ColumnsInfo, ConSettings, OpenLobStreams, True); //we can not use uncached lobs with OleDB
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "ConSettings" not used} {$ENDIF}
+class function TZOleDbRowAccessor.MetadataToAccessorType(
+  ColumnInfo: TZColumnInfo; ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType;
+begin
+  Result := ColumnInfo.ColumnType;
+  if Result in [stString, stAsciiStream] then
+    Result := TZSQLType(Byte(Result)+1);  // no raw chars in 4 OleDB
+  if Result in [stUnicodeString, stUnicodeStream] then
+    ColumnCodePage := zCP_UTF16;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 

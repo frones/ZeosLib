@@ -61,7 +61,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_ADO}
 
-uses {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZPlainDriver;
+uses ZPlainDriver;
 
 type
   TZAdoPlainDriver = class (TZAbstractPlainDriver, IZPlainDriver)

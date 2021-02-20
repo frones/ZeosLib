@@ -417,6 +417,10 @@ var
   var
     Left, Right: string;
   begin
+    {$IFDEF WITH_VAR_INIT_WARNING}
+    Left := '';
+    Right := '';
+    {$ENDIF}
     BreakString(Str, Delim, Left, Right);
     CheckEquals(ExpLeft, Left);
     CheckEquals(ExpRight, Right);
@@ -436,6 +440,9 @@ begin
   CheckBreakString('aa'+Delim+'bb', 'aa', 'bb');
 
   S := 'aa'+Delim+'bb';
+  {$IFDEF WITH_VAR_INIT_WARNING}
+  S1 := '';
+  {$ENDIF}
   BreakString(S, Delim, S1, S);
   CheckEquals('aa', S1);
   CheckEquals('bb', S);

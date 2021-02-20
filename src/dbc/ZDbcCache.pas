@@ -147,12 +147,14 @@ type
     FHighVarLenCols, FHighArrayCols, FHighResultSetCols: Integer;
     FVarLenCols, FArrayCols, FLobCols, FResultSetCols: array of Integer;
     FConSettings: PZConSettings;
-    function GetColumnSize(ColumnInfo: TZColumnInfo): Integer;
+    function GetColumnSize(SQLType: TZSQLType): Integer;
     procedure InternalSetInt(ColumnIndex: Integer; Value: Integer); {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetULong(ColumnIndex: Integer; const Value: UInt64); {$IFDEF WITHINLINE} inline; {$ENDIF}
   protected
     procedure CheckColumnIndex(ColumnIndex: Integer);
     procedure CheckColumnConvertion(ColumnIndex: Integer; ResultType: TZSQLType);
+    class function MetadataToAccessorType(ColumnInfo: TZColumnInfo;
+      ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; virtual;
   public
     TinyBuffer: array[Byte] of Byte;
     FRawTemp: RawByteString;
@@ -262,8 +264,8 @@ type
     procedure SetFloat(ColumnIndex: Integer; Value: Single);
     procedure SetDouble(ColumnIndex: Integer; const Value: Double);
     procedure SetCurrency(ColumnIndex: Integer; const Value: Currency);
-    procedure SetBigDecimal(ColumnIndex: Integer; const Value: TBCD);
-    procedure SetGUID(ColumnIndex: Integer; const Value: TGUID);
+    procedure SetBigDecimal(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
+    procedure SetGUID(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID);
     procedure SetString(ColumnIndex: Integer; const Value: String);
     procedure SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUInt);
     procedure SetPWideChar(ColumnIndex: Integer; Value: PWideChar; var Len: NativeUInt);
@@ -277,9 +279,9 @@ type
     procedure SetUnicodeString(ColumnIndex: Integer; const Value: UnicodeString); virtual;
     procedure SetBytes(ColumnIndex: Integer; const Value: TBytes); overload; virtual;
     procedure SetBytes(ColumnIndex: Integer; Buf: Pointer; var Len: NativeUint); overload; virtual;
-    procedure SetDate(ColumnIndex: Integer; const Value: TZDate); virtual;
-    procedure SetTime(ColumnIndex: Integer; const Value: TZTime); virtual;
-    procedure SetTimestamp(ColumnIndex: Integer; const Value: TZTimeStamp); virtual;
+    procedure SetDate(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); virtual;
+    procedure SetTime(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); virtual;
+    procedure SetTimestamp(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); virtual;
     procedure SetAsciiStream(ColumnIndex: Integer; const Value: TStream);
     procedure SetUnicodeStream(ColumnIndex: Integer; const Value: TStream);
     procedure SetBinaryStream(ColumnIndex: Integer; const Value: TStream);
@@ -300,6 +302,11 @@ type
     procedure FillStatement(const Statement: IZPreparedStatement;
       {$IFDEF AUTOREFCOUNT}const {$ENDIF}IndexPairList: TZIndexPairList;
       const MetaData: IZResultSetMetaData);
+    /// <summary>Fills the current row buffer with the data of the current
+    ///  resultset row.</summary>
+    /// <param>"ResultSet" a resultset object we read from</param>
+    /// <param>"IndexPairList" a List of pairs to copy from. If the List is nil
+    ///  we assume the columnIndices are equal.</param>
     procedure FillFromFromResultSet(const ResultSet: IZResultSet;
         {$IFDEF AUTOREFCOUNT}const {$ENDIF}IndexPairList: TZIndexPairList); virtual;
     procedure FetchLongData(AsStreamedType: TZSQLType; const ResultSet: IZResultSet;
@@ -963,6 +970,7 @@ constructor TZRowAccessor.Create(ColumnsInfo: TObjectList; ConSettings: PZConSet
 var
   I: Integer;
   Current: TZColumnInfo;
+  SQLType: TZSQLType;
 begin
   FConSettings := ConSettings;
   FClientCP := ConSettings^.ClientCodePage^.CP;
@@ -983,37 +991,32 @@ begin
   SetLength(FColumnDefaultExpressions, FColumnCount);
   SetLength(FColumnCodePages, FColumnCount);
 
-  for I := 0 to FColumnCount - 1 do
-  begin
+  for I := 0 to FColumnCount - 1 do begin
     Current := TZColumnInfo(ColumnsInfo[I]);
     FColumnNames[I] := Current.ColumnName;
     FColumnCases[I] := Current.CaseSensitive;
     FColumnTypes[I] := Current.ColumnType;
-    FColumnLengths[I] := GetColumnSize(Current);
     FColumnOffsets[I] := FColumnsSize;
     FColumnDefaultExpressions[I] := Current.DefaultExpression;
     FColumnCodePages[I] := Current.ColumnCodePage;
+    SQLType := MetadataToAccessorType(Current, ConSettings, FColumnCodePages[I]);
+    FColumnTypes[I] := SQLType;
+    FColumnLengths[I] := GetColumnSize(SQLType);
     Inc(FColumnsSize, FColumnLengths[I] + 1);
     {$ifdef FPC_REQUIRES_PROPER_ALIGNMENT}
     FColumnsSize := align(FColumnsSize+1,sizeof(pointer))-1;
     {$endif}
-    if Current.ColumnType in [stBytes, stString, stUnicodeString] then
-    begin
+    if SQLType in [stBytes, stString, stUnicodeString] then begin
       FColumnLengths[I] := Current.Precision;
       SetLength(FVarLenCols, Length(FVarLenCols)+1);
       FVarLenCols[High(FVarLenCols)] := I;
-    end
-    else if Current.ColumnType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
+    end else if SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream] then begin
       SetLength(FLobCols, Length(FLobCols)+1);
       FLobCols[High(FLobCols)] := I;
-    end
-    else if Current.ColumnType = stArray then
-    begin
+    end else if SQLType = stArray then begin
       SetLength(FArrayCols, Length(FArrayCols)+1);
       FArrayCols[High(FArrayCols)] := I;
-    end
-    else if Current.ColumnType = stResultSet then
-    begin
+    end else if SQLType = stResultSet then begin
       SetLength(FResultSetCols, Length(FResultSetCols)+1);
       FResultSetCols[High(FResultSetCols)] := I;
     end;
@@ -1079,9 +1082,9 @@ end;
   @param ColumnInfo a column information struct.
   @return a size for the column with the specified type.
 }
-function TZRowAccessor.GetColumnSize(ColumnInfo: TZColumnInfo): Integer;
+function TZRowAccessor.GetColumnSize(SQLType: TZSQLType): Integer;
 begin
-  case ColumnInfo.ColumnType of
+  case SQLType of
     stBoolean:    Result := SizeOf(WordBool);
     stByte:       Result := SizeOf(Byte);
     stShort:      Result := SizeOf(ShortInt);
@@ -1301,13 +1304,22 @@ var
       SetAsCachedLob(Dest);
   end;
 begin
-  for i := 0 to IndexPairList.Count -1 do begin
-    IndexPair := IndexPairList[i];
-    ColumnIndex := IndexPair.ColumnIndex;
-    ResultSetIndex := IndexPair.SrcOrDestIndex;
-    SQLType := FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  if IndexPairList = nil then begin
+    I := ResultSet.GetColumnCount;
+    ResultSetIndex := InvalidDbcIndex;
+  end else I := IndexPairList.Count;
+  for i := 0 to I -1 do begin
+    if IndexPairList = nil then begin
+      Inc(ResultSetIndex);
+      ColumnIndex := I;
+    end else begin
+      IndexPair := IndexPairList[i];
+      ColumnIndex := IndexPair.ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF};
+      ResultSetIndex := IndexPair.SrcOrDestIndex;
+    end;
+    SQLType := FColumnTypes[ColumnIndex];
     {$R-}
-    P := @FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]];
+    P := @FBuffer.Columns[FColumnOffsets[ColumnIndex]];
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     Data := Pointer(PAnsiChar(P)+1);
     if ResultSet.IsNull(ResultSetIndex) then
@@ -1328,19 +1340,19 @@ begin
         stCurrency: PCurrency(Data)^ := ResultSet.GetCurrency(ResultSetIndex);
         stDouble:   PDouble(Data)^ := ResultSet.GetDouble(ResultSetIndex);
         stBigDecimal: ResultSet.GetBigDecimal(ResultSetIndex, PBCD(Data)^);
-        stUnicodeString: if FColumnLengths[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] <= 0 then
+        stUnicodeString: if FColumnLengths[ColumnIndex] <= 0 then
              FetchLongData(stUnicodeStream, ResultSet, ResultSetIndex, PPZVarLenData(Data))
           else begin
             P := ResultSet.GetPWideChar(ResultSetIndex, Len);
             InternalSetPWideChar(Data, P, Len);
           end;
-        stString: if FColumnLengths[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] <= 0 then
+        stString: if FColumnLengths[ColumnIndex] <= 0 then
             FetchLongData(stAsciiStream, ResultSet, ResultSetIndex, PPZVarLenData(Data))
           else begin
             P := ResultSet.GetPAnsiChar(ResultSetIndex, Len);
             InternalSetPAnsiChar(Data, P, Len);
           end;
-        stBytes: if FColumnLengths[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] <= 0 then
+        stBytes: if FColumnLengths[ColumnIndex] <= 0 then
             FetchLongData(stBinaryStream, ResultSet, ResultSetIndex, PPZVarLenData(Data))
           else begin
             P := ResultSet.GetBytes(ResultSetIndex, Len);
@@ -1533,6 +1545,15 @@ begin
     FillChar(Buffer^.Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
   end;
 end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "ConSettings" not used} {$ENDIF}
+class function TZRowAccessor.MetadataToAccessorType(
+  ColumnInfo: TZColumnInfo; ConSettings: PZConSettings;
+  Var ColumnCodePage: Word): TZSQLType;
+begin
+  Result := ColumnInfo.ColumnType;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Moves the row buffer from source to destination row.
@@ -4188,7 +4209,7 @@ begin
   end;
 end;
 
-procedure TZRowAccessor.SetGUID(ColumnIndex: Integer; const Value: TGUID);
+procedure TZRowAccessor.SetGUID(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID);
 var Data: PPointer;
   L: NativeUInt;
 begin
@@ -4316,7 +4337,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetBigDecimal(ColumnIndex: Integer; const Value: TBCD);
+procedure TZRowAccessor.SetBigDecimal(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 var Data: PPointer;
   L: NativeUInt;
 begin
@@ -4697,7 +4718,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetDate(ColumnIndex: Integer; const Value: TZDate);
+procedure TZRowAccessor.SetDate(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 var Data: PPointer;
   Len: NativeUInt;
   DT: TDateTime;
@@ -4741,7 +4762,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetTime(ColumnIndex: Integer; const Value: TZTime);
+procedure TZRowAccessor.SetTime(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 var Data: PPointer;
   Len: NativeUInt;
   DT: TDateTime;
@@ -4785,7 +4806,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetTimestamp(ColumnIndex: Integer; const Value: TZTimeStamp);
+procedure TZRowAccessor.SetTimestamp(ColumnIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 var Data: PPointer;
   Len: NativeUInt;
   DT: TDateTime;

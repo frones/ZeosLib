@@ -98,6 +98,10 @@ type
 //    function SupportsConvert: Boolean; override; -> Not implemented
 //    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
 //      Boolean; override; -> Not implemented
+
+    /// <summary>Are table correlation names supported?
+    /// A Zeos Compliant <c>TM</c> driver always returns true.</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function SupportsTableCorrelationNames: Boolean; override;
     function SupportsDifferentTableCorrelationNames: Boolean; override;
     function SupportsExpressionsInOrderBy: Boolean; override;
@@ -239,6 +243,62 @@ type
     procedure IntializeProceduresProcedureColumnsColMap(const RS: IZResultSet);
   protected
     function UncachedGetTableTypes: IZResultSet; override;
+    /// <summary>Gets a description of the primary key columns that are
+    ///  referenced by a table's foreign key columns (the primary keys
+    ///  imported by a table).  They are ordered by PKTABLE_CAT,
+    ///  PKTABLE_SCHEM, PKTABLE_NAME, and KEY_SEQ.
+    ///  Each primary key column description has the following columns:
+    ///  <c>PKTABLE_CAT</c> String => primary key table catalog
+    ///       being imported (may be null)
+    ///  <c>PKTABLE_SCHEM</c> String => primary key table schema
+    ///       being imported (may be null)
+    ///  <c>PKTABLE_NAME</c> String => primary key table name
+    ///       being imported
+    ///  <c>PKCOLUMN_NAME</c> String => primary key column name
+    ///       being imported
+    ///  <c>FKTABLE_CAT</c> String => foreign key table catalog (may be null)
+    ///  <c>FKTABLE_SCHEM</c> String => foreign key table schema (may be null)
+    ///  <c>FKTABLE_NAME</c> String => foreign key table name
+    ///  <c>FKCOLUMN_NAME</c> String => foreign key column name
+    ///  <c>KEY_SEQ</c> short => sequence number within foreign key
+    ///  <c>UPDATE_RULE</c> short => What happens to
+    ///        foreign key when primary is updated:
+    ///        importedNoAction - do not allow update of primary
+    ///                key if it has been imported
+    ///        importedKeyCascade - change imported key to agree
+    ///                with primary key update
+    ///        importedKeySetNull - change imported key to NULL if
+    ///                its primary key has been updated
+    ///        importedKeySetDefault - change imported key to default values
+    ///                if its primary key has been updated
+    ///        importedKeyRestrict - same as importedKeyNoAction
+    ///                                  (for ODBC 2.x compatibility)
+    ///  <c>DELETE_RULE</c> short => What happens to
+    ///       the foreign key when primary is deleted.
+    ///        importedKeyNoAction - do not allow delete of primary
+    ///                key if it has been imported
+    ///        importedKeyCascade - delete rows that import a deleted key
+    ///       importedKeySetNull - change imported key to NULL if
+    ///                its primary key has been deleted
+    ///        importedKeyRestrict - same as importedKeyNoAction
+    ///                                  (for ODBC 2.x compatibility)
+    ///        importedKeySetDefault - change imported key to default if
+    ///                its primary key has been deleted
+    ///  <c>FK_NAME</c> String => foreign key name (may be null)
+    ///  <c>PK_NAME</c> String => primary key name (may be null)
+    ///  <c>DEFERRABILITY</c> short => can the evaluation of foreign key
+    ///       constraints be deferred until commit
+    ///        importedKeyInitiallyDeferred - see SQL92 for definition
+    ///        importedKeyInitiallyImmediate - see SQL92 for definition
+    ///        importedKeyNotDeferrable - see SQL92 for definition</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <returns><c>ResultSet</c> - each row is imported key column description</returns>
+    /// <remarks>see GetSearchStringEscape;GetExportedKeys</remarks>
     function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
     function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
@@ -289,8 +349,50 @@ type
     /// <remarks>see GetSearchStringEscape</remarks>
     function UncachedGetTablePrivileges(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string): IZResultSet; override;
+    /// <summary>Gets a description of the access rights for a table's columns.
+    ///
+    ///  Only privileges matching the column name criteria are
+    ///  returned. They are ordered by COLUMN_NAME and PRIVILEGE.
+    ///
+    ///  Each privilige description has the following columns:
+ 	  ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+ 	  ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+ 	  ///  <c>TABLE_NAME</c> String => table name
+ 	  ///  <c>COLUMN_NAME</c> String => column name
+ 	  ///  <c>GRANTOR</c> => grantor of access (may be null)
+ 	  ///  <c>GRANTEE</c> String => grantee of access
+ 	  ///  <c>PRIVILEGE</c> String => name of access (SELECT,
+    ///     INSERT, UPDATE, REFRENCES, ...)
+ 	  ///  <c>IS_GRANTABLE</c> String => "YES" if grantee is permitted
+    ///   to grant to others; "NO" if not; null if unknown</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <param>"ColumnNamePattern" a column name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a privilege description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function UncachedGetColumnPrivileges(const Catalog: string; const Schema: string;
       const Table: string; const ColumnNamePattern: string): IZResultSet; override;
+    /// <summary>Gets a description of a table's primary key columns. They
+    ///  are ordered by COLUMN_NAME.
+    ///  Each primary key column description has the following columns:
+ 	  ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+ 	  ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+ 	  ///  <c>TABLE_NAME</c> String => table name
+ 	  ///  <c>COLUMN_NAME</c> String => column name
+ 	  ///  <c>KEY_SEQ</c> short => sequence number within primary key
+ 	  ///  <c>PK_NAME</c> String => primary key name (may be null)</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <returns><c>ResultSet</c> - each row is a primary key column description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function UncachedGetPrimaryKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
     function UncachedGetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
@@ -298,6 +400,30 @@ type
       const ForeignTable: string): IZResultSet; override;
     function UncachedGetIndexInfo(const Catalog: string; const Schema: string;
       const Table: string; Unique: Boolean; Approximate: Boolean): IZResultSet; override;
+    /// <summary>Gets a description of the stored procedures available in a
+    ///  catalog. This method needs to be implemented per driver.
+    ///  Only procedure descriptions matching the schema and procedure name
+    ///  criteria are returned. They are ordered by
+    ///  PROCEDURE_SCHEM, and PROCEDURE_NAME.
+    ///  Each procedure description has the the following columns:
+    ///  <c>PROCEDURE_CAT</c> String => procedure catalog (may be null)
+    ///  <c>PROCEDURE_SCHEM</c> String => procedure schema (may be null)
+    ///  <c>PROCEDURE_NAME</c> String => procedure name
+    ///  <c>PROCEDURE_OVERLOAD</c> => a overload indicator (may be null)
+    ///  <c>RESERVED1</c> => for future use
+    ///  <c>RESERVED2</c> => for future use
+    ///  <c>REMARKS</c> String => explanatory comment on the procedure
+    ///  <c>PROCEDURE_TYPE</c> short => kind of procedure:
+    ///   procedureResultUnknown - May return a result
+    ///   procedureNoResult - Does not return a result
+    ///   procedureReturnsResult - Returns a result</summary>
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop schema
+    ///  pattern from the selection criteria</param>
+    /// <param>"ProcedureNamePattern" a procedure name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a procedure description.</returns>
+    /// <remarks>see getSearchStringEscape</remarks>
     function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet; override;
     function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
@@ -349,8 +475,50 @@ type
     /// <remarks>see GetSearchStringEscape</remarks>
     function UncachedGetTablePrivileges(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string): IZResultSet; override;
+    /// <summary>Gets a description of the access rights for a table's columns.
+    ///
+    ///  Only privileges matching the column name criteria are
+    ///  returned. They are ordered by COLUMN_NAME and PRIVILEGE.
+    ///
+    ///  Each privilige description has the following columns:
+ 	  ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+ 	  ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+ 	  ///  <c>TABLE_NAME</c> String => table name
+ 	  ///  <c>COLUMN_NAME</c> String => column name
+ 	  ///  <c>GRANTOR</c> => grantor of access (may be null)
+ 	  ///  <c>GRANTEE</c> String => grantee of access
+ 	  ///  <c>PRIVILEGE</c> String => name of access (SELECT,
+    ///     INSERT, UPDATE, REFRENCES, ...)
+ 	  ///  <c>IS_GRANTABLE</c> String => "YES" if grantee is permitted
+    ///   to grant to others; "NO" if not; null if unknown</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <param>"ColumnNamePattern" a column name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a privilege description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function UncachedGetColumnPrivileges(const Catalog: string; const Schema: string;
       const Table: string; const ColumnNamePattern: string): IZResultSet; override;
+    /// <summary>Gets a description of a table's primary key columns. They
+    ///  are ordered by COLUMN_NAME.
+    ///  Each primary key column description has the following columns:
+ 	  ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+ 	  ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+ 	  ///  <c>TABLE_NAME</c> String => table name
+ 	  ///  <c>COLUMN_NAME</c> String => column name
+ 	  ///  <c>KEY_SEQ</c> short => sequence number within primary key
+ 	  ///  <c>PK_NAME</c> String => primary key name (may be null)</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <returns><c>ResultSet</c> - each row is a primary key column description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function UncachedGetPrimaryKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
     function UncachedGetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
@@ -358,6 +526,30 @@ type
       const ForeignTable: string): IZResultSet; override;
     function UncachedGetIndexInfo(const Catalog: string; const Schema: string;
       const Table: string; Unique: Boolean; Approximate: Boolean): IZResultSet; override;
+    /// <summary>Gets a description of the stored procedures available in a
+    ///  catalog. This method needs to be implemented per driver.
+    ///  Only procedure descriptions matching the schema and procedure name
+    ///  criteria are returned. They are ordered by
+    ///  PROCEDURE_SCHEM, and PROCEDURE_NAME.
+    ///  Each procedure description has the the following columns:
+    ///  <c>PROCEDURE_CAT</c> String => procedure catalog (may be null)
+    ///  <c>PROCEDURE_SCHEM</c> String => procedure schema (may be null)
+    ///  <c>PROCEDURE_NAME</c> String => procedure name
+    ///  <c>PROCEDURE_OVERLOAD</c> => a overload indicator (may be null)
+    ///  <c>RESERVED1</c> => for future use
+    ///  <c>RESERVED2</c> => for future use
+    ///  <c>REMARKS</c> String => explanatory comment on the procedure
+    ///  <c>PROCEDURE_TYPE</c> short => kind of procedure:
+    ///   procedureResultUnknown - May return a result
+    ///   procedureNoResult - Does not return a result
+    ///   procedureReturnsResult - Returns a result</summary>
+    /// <param>"Catalog" a catalog name; "" means drop catalog name from the
+    ///  selection criteria</param>
+    /// <param>"SchemaPattern" a schema name pattern; "" means drop schema
+    ///  pattern from the selection criteria</param>
+    /// <param>"ProcedureNamePattern" a procedure name pattern</param>
+    /// <returns><c>ResultSet</c> - each row is a procedure description.</returns>
+    /// <remarks>see getSearchStringEscape</remarks>
     function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet; override;
     function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
@@ -1449,11 +1641,6 @@ begin
   Result := GetUSmallDbcInfo(SQL_TXN_CAPABLE) and SQL_TC_NONE <> SQL_TC_NONE;
 end;
 
-{**
-  Are table correlation names supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
 function TZAbstractODBCDatabaseInfo.SupportsTableCorrelationNames: Boolean;
 begin
   Result := GetUSmallDbcInfo(SQL_CORRELATION_NAME) and SQL_CN_NONE <> SQL_CN_NONE;
@@ -1679,39 +1866,7 @@ begin
     Result := ZRawToUnicode(S, CP);
     {$ENDIF}
 end;
-{**
-  Gets a description of the stored procedures available in a
-  catalog.
 
-  <P>Only procedure descriptions matching the schema and
-  procedure name criteria are returned.  They are ordered by
-  PROCEDURE_SCHEM, and PROCEDURE_NAME.
-
-  <P>Each procedure description has the the following columns:
-   <OL>
- 	<LI><B>PROCEDURE_CAT</B> String => procedure catalog (may be null)
- 	<LI><B>PROCEDURE_SCHEM</B> String => procedure schema (may be null)
- 	<LI><B>PROCEDURE_NAME</B> String => procedure name
-   <LI> reserved for future use
-   <LI> reserved for future use
-   <LI> reserved for future use
- 	<LI><B>REMARKS</B> String => explanatory comment on the procedure
- 	<LI><B>PROCEDURE_TYPE</B> short => kind of procedure:
-       <UL>
-       <LI> procedureResultUnknown - May return a result
-       <LI> procedureNoResult - Does not return a result
-       <LI> procedureReturnsResult - Returns a result
-       </UL>
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param procedureNamePattern a procedure name pattern
-  @return <code>ResultSet</code> - each row is a procedure description
-  @see #getSearchStringEscape
-}
 function TODBCDatabaseMetadataW.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 var
@@ -2078,34 +2233,6 @@ begin
   end;
 end;
 
-{**
-  Gets a description of the access rights for a table's columns.
-
-  <P>Only privileges matching the column name criteria are
-  returned.  They are ordered by COLUMN_NAME and PRIVILEGE.
-
-  <P>Each privilige description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>COLUMN_NAME</B> String => column name
- 	<LI><B>GRANTOR</B> => grantor of access (may be null)
- 	<LI><B>GRANTEE</B> String => grantee of access
- 	<LI><B>PRIVILEGE</B> String => name of access (SELECT,
-       INSERT, UPDATE, REFRENCES, ...)
- 	<LI><B>IS_GRANTABLE</B> String => "YES" if grantee is permitted
-       to grant to others; "NO" if not; null if unknown
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those without a schema
-  @param table a table name
-  @param columnNamePattern a column name pattern
-  @return <code>ResultSet</code> - each row is a column privilege description
-  @see #getSearchStringEscape
-}
 function TODBCDatabaseMetadataW.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 var
@@ -2189,28 +2316,6 @@ begin
     end;
 end;
 
-{**
-  Gets a description of a table's primary key columns.  They
-  are ordered by COLUMN_NAME.
-
-  <P>Each primary key column description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>COLUMN_NAME</B> String => column name
- 	<LI><B>KEY_SEQ</B> short => sequence number within primary key
- 	<LI><B>PK_NAME</B> String => primary key name (may be null)
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those
-  without a schema
-  @param table a table name
-  @return <code>ResultSet</code> - each row is a primary key column description
-  @exception SQLException if a database access error occurs
-}
 function TODBCDatabaseMetadataW.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
@@ -2604,39 +2709,7 @@ begin
     else Result := S;
   {$ENDIF}
 end;
-{**
-  Gets a description of the stored procedures available in a
-  catalog.
 
-  <P>Only procedure descriptions matching the schema and
-  procedure name criteria are returned.  They are ordered by
-  PROCEDURE_SCHEM, and PROCEDURE_NAME.
-
-  <P>Each procedure description has the the following columns:
-   <OL>
- 	<LI><B>PROCEDURE_CAT</B> String => procedure catalog (may be null)
- 	<LI><B>PROCEDURE_SCHEM</B> String => procedure schema (may be null)
- 	<LI><B>PROCEDURE_NAME</B> String => procedure name
-   <LI> reserved for future use
-   <LI> reserved for future use
-   <LI> reserved for future use
- 	<LI><B>REMARKS</B> String => explanatory comment on the procedure
- 	<LI><B>PROCEDURE_TYPE</B> short => kind of procedure:
-       <UL>
-       <LI> procedureResultUnknown - May return a result
-       <LI> procedureNoResult - Does not return a result
-       <LI> procedureReturnsResult - Returns a result
-       </UL>
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schemaPattern a schema name pattern; "" retrieves those
-  without a schema
-  @param procedureNamePattern a procedure name pattern
-  @return <code>ResultSet</code> - each row is a procedure description
-  @see #getSearchStringEscape
-}
 function TODBCDatabaseMetadataA.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 var
@@ -3003,34 +3076,6 @@ begin
   end;
 end;
 
-{**
-  Gets a description of the access rights for a table's columns.
-
-  <P>Only privileges matching the column name criteria are
-  returned.  They are ordered by COLUMN_NAME and PRIVILEGE.
-
-  <P>Each privilige description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>COLUMN_NAME</B> String => column name
- 	<LI><B>GRANTOR</B> => grantor of access (may be null)
- 	<LI><B>GRANTEE</B> String => grantee of access
- 	<LI><B>PRIVILEGE</B> String => name of access (SELECT,
-       INSERT, UPDATE, REFRENCES, ...)
- 	<LI><B>IS_GRANTABLE</B> String => "YES" if grantee is permitted
-       to grant to others; "NO" if not; null if unknown
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those without a schema
-  @param table a table name
-  @param columnNamePattern a column name pattern
-  @return <code>ResultSet</code> - each row is a column privilege description
-  @see #getSearchStringEscape
-}
 function TODBCDatabaseMetadataA.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 var
@@ -3115,28 +3160,6 @@ begin
     end;
 end;
 
-{**
-  Gets a description of a table's primary key columns.  They
-  are ordered by COLUMN_NAME.
-
-  <P>Each primary key column description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>COLUMN_NAME</B> String => column name
- 	<LI><B>KEY_SEQ</B> short => sequence number within primary key
- 	<LI><B>PK_NAME</B> String => primary key name (may be null)
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those
-  without a schema
-  @param table a table name
-  @return <code>ResultSet</code> - each row is a primary key column description
-  @exception SQLException if a database access error occurs
-}
 function TODBCDatabaseMetadataA.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
@@ -3637,73 +3660,6 @@ begin
   Result := UncachedGetCrossReference(Catalog, Schema, Table, '', '', '');
 end;
 
-{**
-  Gets a description of the primary key columns that are
-  referenced by a table's foreign key columns (the primary keys
-  imported by a table).  They are ordered by PKTABLE_CAT,
-  PKTABLE_SCHEM, PKTABLE_NAME, and KEY_SEQ.
-
-  <P>Each primary key column description has the following columns:
-   <OL>
- 	<LI><B>PKTABLE_CAT</B> String => primary key table catalog
-       being imported (may be null)
- 	<LI><B>PKTABLE_SCHEM</B> String => primary key table schema
-       being imported (may be null)
- 	<LI><B>PKTABLE_NAME</B> String => primary key table name
-       being imported
- 	<LI><B>PKCOLUMN_NAME</B> String => primary key column name
-       being imported
- 	<LI><B>FKTABLE_CAT</B> String => foreign key table catalog (may be null)
- 	<LI><B>FKTABLE_SCHEM</B> String => foreign key table schema (may be null)
- 	<LI><B>FKTABLE_NAME</B> String => foreign key table name
- 	<LI><B>FKCOLUMN_NAME</B> String => foreign key column name
- 	<LI><B>KEY_SEQ</B> short => sequence number within foreign key
- 	<LI><B>UPDATE_RULE</B> short => What happens to
-        foreign key when primary is updated:
-       <UL>
-       <LI> importedNoAction - do not allow update of primary
-                key if it has been imported
-       <LI> importedKeyCascade - change imported key to agree
-                with primary key update
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been updated
-       <LI> importedKeySetDefault - change imported key to default values
-                if its primary key has been updated
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       </UL>
- 	<LI><B>DELETE_RULE</B> short => What happens to
-       the foreign key when primary is deleted.
-       <UL>
-       <LI> importedKeyNoAction - do not allow delete of primary
-                key if it has been imported
-       <LI> importedKeyCascade - delete rows that import a deleted key
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been deleted
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       <LI> importedKeySetDefault - change imported key to default if
-                its primary key has been deleted
-       </UL>
- 	<LI><B>FK_NAME</B> String => foreign key name (may be null)
- 	<LI><B>PK_NAME</B> String => primary key name (may be null)
- 	<LI><B>DEFERRABILITY</B> short => can the evaluation of foreign key
-       constraints be deferred until commit
-       <UL>
-       <LI> importedKeyInitiallyDeferred - see SQL92 for definition
-       <LI> importedKeyInitiallyImmediate - see SQL92 for definition
-       <LI> importedKeyNotDeferrable - see SQL92 for definition
-       </UL>
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those
-  without a schema
-  @param table a table name
-  @return <code>ResultSet</code> - each row is a primary key column description
-  @see #getExportedKeys
-}
 function TAbstractODBCDatabaseMetadata.UncachedGetImportedKeys(const Catalog,
   Schema, Table: string): IZResultSet;
 begin

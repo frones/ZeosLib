@@ -139,13 +139,13 @@ type
     procedure SetFloat(Index: Integer; Value: Single);
     procedure SetDouble(Index: Integer; const Value: Double);
     procedure SetCurrency(Index: Integer; const Value: Currency);
-    procedure SetBigDecimal(Index: Integer; const Value: TBCD);
+    procedure SetBigDecimal(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
     procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce; overload;
     procedure SetBytes(ParameterIndex: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
-    procedure SetGuid(Index: Integer; const Value: TGUID); reintroduce;
-    procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
-    procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
-    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
+    procedure SetGuid(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID); reintroduce;
+    procedure SetDate(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); reintroduce; overload;
+    procedure SetTime(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); reintroduce; overload;
   end;
 
   TZASACallableStatement = class(TZAbstractCallableStatement_A, IZCallableStatement)
@@ -176,7 +176,7 @@ begin
   FASAConnection := Connection as IZASAConnection;
   FPlainDriver := TZASAPlainDriver(FASAConnection.GetIZPlainDriver.GetInstance);
   FetchSize := BlockSize;
-  ResultSetType := rtScrollSensitive;
+  ResultSetType := rtScrollInsensitive;
   with ZClasses.TZRawSQLStringWriter.Create(40) do begin
     AddOrd(Pointer(FASAConnection.GetDBHandle), FCursorName);
     AddChar(AnsiChar('_'), FCursorName);
@@ -633,7 +633,7 @@ begin
 end;
 
 procedure TZASAPreparedStatement.SetBigDecimal(Index: Integer;
-  const Value: TBCD);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 begin
   SetRawByteString(Index, BCDToSQLRaw(Value));
 end;
@@ -743,7 +743,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZASAPreparedStatement.SetDate(Index: Integer;
-  const Value: TZDate);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 var TS: TZASASQLDateTime;
 begin
   FillChar(TS, SizeOf(TZASASQLDateTime), #0);
@@ -787,7 +787,7 @@ begin
 end;
 
 procedure TZASAPreparedStatement.SetGuid(Index: Integer;
-  const Value: TGUID);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID);
 var SQLVAR: PZASASQLVAR;
 begin
   {$IFNDEF GENERIC_INDEX}
@@ -817,7 +817,7 @@ begin
     DT_FLOAT            : SQLWriter.AddFloat(PSingle(SQLVAR.sqldata)^, Result);
     DT_DOUBLE           : SQLWriter.AddFloat(PDouble(SQLVAR.sqldata)^, Result);
     DT_VARCHAR          : {$IFDEF UNICODE} begin
-                            FUniTemp := PRawToUnicode(PAnsiChar(@PZASASQLSTRING(SQLVAR.sqldata).data[0]), PZASASQLSTRING(SQLVAR.sqldata).length, FClientCP);
+                            PRawToUnicode(PAnsiChar(@PZASASQLSTRING(SQLVAR.sqldata).data[0]), PZASASQLSTRING(SQLVAR.sqldata).length, FClientCP, FUniTemp);
                             SQLWriter.AddTextQuoted(FUniTemp, #39, Result);
                           end;
                           {$ELSE}
@@ -857,7 +857,7 @@ begin
                           then SQLWriter.AddText('(FALSE)', Result)
                           else SQLWriter.AddText('(TRUE)', Result);
     DT_NVARCHAR         : {$IFDEF UNICODE} begin
-                            FUniTemp := PRawToUnicode(PAnsiChar(@PZASASQLSTRING(SQLVAR.sqldata).data[0]), PZASASQLSTRING(SQLVAR.sqldata).length, zCP_UTF8);
+                            PRawToUnicode(PAnsiChar(@PZASASQLSTRING(SQLVAR.sqldata).data[0]), PZASASQLSTRING(SQLVAR.sqldata).length, zCP_UTF8, FUniTemp);
                             SQLWriter.AddTextQuoted(FUniTemp, #39, Result);
                             FUniTemp := '';
                           end;
@@ -935,7 +935,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZASAPreparedStatement.SetTime(Index: Integer;
-  const Value: TZTime);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 var TS: TZASASQLDateTime;
 begin
   FillChar(TS, SizeOf(TZASASQLDateTime), #0);
@@ -949,7 +949,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZASAPreparedStatement.SetTimestamp(Index: Integer;
-  const Value: TZTimeStamp);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 var TS: TZASASQLDateTime;
 begin
   FillChar(TS, SizeOf(TZASASQLDateTime), #0);
