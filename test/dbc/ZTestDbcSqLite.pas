@@ -170,7 +170,7 @@ begin
   CheckNotNull(ResultSet);
   PrintResultSet(ResultSet, True);
   ResultSet.Close;
-
+  TableTypes := nil;
   SetLength(TableTypes, 2);
   TableTypes[0] := 'TABLE';
   TableTypes[1] := 'VIEW';
@@ -429,6 +429,7 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 procedure TZTestDbcSQLiteCase.TestReuseResultsetCached;
 const
   p_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
@@ -479,8 +480,10 @@ begin
     PreparedStatement.Close;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {test if table, we are working on, is blocked}
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 procedure TZTestDbcSQLiteCase.TestUpdateOpenedTable;
 const
   p_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
@@ -524,6 +527,7 @@ begin
     PreparedStatement.Close;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 initialization
   RegisterTest('dbc',TZTestDbcSQLiteCase.Suite);

@@ -489,6 +489,7 @@ var RS: IZResultSet;
   SelStmt: IZPreparedStatement;
   I: Integer;
   C: Currency;
+  {$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BCD_E" does not seem to be initialized}{$ENDIF}
   procedure CheckField(ColumnIndex, Precision, Scale: Integer; SQLType: TZSQLType; const Value: String);
   var S: String;
     BCD_A, BCD_E: TBCD;
@@ -507,6 +508,7 @@ var RS: IZResultSet;
     CheckEquals(Scale, Ord(RS.GetMetadata.GetScale(ColumnIndex)), Protocol+': Scale mismatch, for column "'+S+'"');
     CheckEquals(0, BcdCompare(BCD_A, BCD_E), Protocol+': BCD compare mismatch, for column "'+S+'", Expected: ' + Value + ' got: ' + BcdToStr(BCD_A));
   end;
+  {$IFDEF FPC}{$POP}{$ENDIF}
   procedure TestColTypes(ResultSetType: TZResultSetType);
   var i: Integer;
   begin
@@ -1551,6 +1553,7 @@ begin
         CheckEquals(RawByteString(SNames[name]), ResultSet.GetRawByteString(p_name_Index));
         CheckEquals(UnicodeString(SNames[name]), ResultSet.GetUnicodeString(p_name_Index));
         P := ResultSet.GetPAnsiChar(p_name_Index, Len);
+        R := '';
         ZSetString(PAnsiChar(P), Len, R);
         CheckEquals(RawByteString(SNames[name]), R);
         P := ResultSet.GetPWideChar(p_name_Index, Len);

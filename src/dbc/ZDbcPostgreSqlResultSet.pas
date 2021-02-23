@@ -779,9 +779,10 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                               JSONWriter.Add('"');
                             end;
             stAsciiStream,
-            stUnicodeStream:if (TypeOID = JSONOID) or (TypeOID = JSONBOID) then
+            stUnicodeStream:if (TypeOID = JSONOID) or (TypeOID = JSONBOID) then begin
+                              if (TypeOID = JSONBOID) then Inc(P);//skip the leading #1 byte of the binary result
                               JSONWriter.AddNoJSONEscape(P{, SynCommons.StrLen(P)})
-                            else begin
+                            end else begin
                               JSONWriter.Add('"');
                               JSONWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
                               JSONWriter.Add('"');
@@ -1310,7 +1311,13 @@ jmpTS:                Result := PAnsiChar(fByteBuffer);
                       else goto jmpTime;
                     end else goto jmpStr;
         stAsciiStream,
-        stUnicodeStream:Len := ZFastCode.StrLen(Result);
+        stUnicodeStream:begin
+                          Len := ZFastCode.StrLen(Result);
+                          if TypeOID = JSONBOID then begin //ship the leading #1 byte
+                            Dec(Len);
+                            Inc(Result);
+                          end;
+                        end;
         stBytes:        Len := FPlainDriver.PQgetlength(Fres, ROW_IDX, ColumnIndex);
         stBinaryStream: if TypeOID = OIDOID
                         then Result := FromOIDLob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Len)
@@ -1504,7 +1511,10 @@ jmpTS:                Result := PWideChar(fByteBuffer);
                       else goto jmpTime;
                     end else goto jmpStr;
         stUnicodeStream,
-        stAsciiStream: goto JmpTxt;
+        stAsciiStream:  begin
+                          if (TypeOID = JSONBOID) then Inc(P); //skip the leading #1 byte
+                          goto JmpTxt;
+                        end;
         stBytes:        begin
 jmpBin:                   Len := FPlainDriver.PQgetlength(Fres, ROW_IDX, ColumnIndex);
                           goto jmpRaw;
@@ -2366,6 +2376,7 @@ begin
       stUnicodeString,
       stAsciiStream,
       stUnicodeStream:  begin
+          if (TypeOID = JSONBOID) then Inc(P); //skip the leading #1 byte
           Len := ZFastCode.StrLen(P);
           Result := TZAbstractCLob.CreateWithData(P, Len, FClientCP, ConSettings);
         end;

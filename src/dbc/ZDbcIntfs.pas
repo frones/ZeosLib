@@ -343,24 +343,37 @@ type
   /// <summary>Defines a cursor type of result set.</summary>
   TZResultSetCursorType = (
     /// <summary>The results are copied into a client buffer handled by provider.
-    ///  This mode is default for <c>libpq</c> or libmariadb/libmysql. see
+    ///  This mode is default for <c>libpq</c> or <c>libmariadb/libmysql</c>. see
     ///  <c>mysql_store_result;mysql_stmt_store_result</c>. This usually is done
     ///  to break the tabular streamed lock of the protocol. That than means the
     ///  server can process the next query. If the library doesn't support it
     ///  a server cursor will be used instead. It's drivers implementation task
-    ///  to dicide if a fetchall needs to be performed.</summary>
+    ///  to dicide if a fetchall needs to be performed. This mode is valid
+    ///  for ResultSets having a ReadOnly ResultSetConcurrency. If the
+    ///  ResultSetConcurrency is set to rcUpdatable a CachedResultSet will be
+    ///  created. If a driver supports a ServerCursor the underlaying native
+    ///  resultset uses a ServerCursor. Drivers having a lob-descriptor in any
+    ///  kind do not load the lobs to local memory.</summary>
     rctClientLib,
-    /// <summary>Use a server cursor. This usually is the fastest mode to read
-    ///  the data streams. Drivers having no multiple active resultset support
-    ///  usually require read data to end or discard the results to query
-    ///  another request.</summar>
-    rctServerCursor,
+    /// <summary>Use a forward only server cursor. This usually is the fastest
+    ///  way to read the data from a server. Drivers having no multiple active
+    ///  resultset support usually require read data to end or discard the
+    ///  results to query another request. This mode is available
+    ///  only for ResultSets having a ReadOnly ResultSetConcurrency. If the
+    ///  ResultSetConcurrency is set to rcUpdatable a or the ResultSetType is
+    ///  not ForwardOnly a CachedResultSet will be created consumes the input
+    ///  from the underlaying native resultset having a server cursor. Drivers
+    ///  having a lob-descriptor in any kind do not load the lobs to local
+    ///  memory.</summary>
+    rctServer,
     /// <summary>Fetch all data into programs local memory. An immediat full
     ///  load is done only for tabular streamed protocols. All lob's are copied
     ///  to local memory. So be carefull using this mode, it leads to "out of
     ///  memory" exceptions but the resultset will not be released if a
-    ///  connection loss happens(if full loaded of course)
-    rctLocalMemory);
+    ///  connection loss happens(if full loaded of course). This CursorType
+    ///  creates a CachedResultSet and the driver decides if the underlaying
+    ///  readonly restulset we fetch frome uses a Client- or a ServerCursor.</summary>
+    rctClient);
 
   /// <summary>Defines a result set concurrency type.</summary>
   TZResultSetConcurrency = (rcReadOnly, rcUpdatable);
@@ -1887,7 +1900,8 @@ type
     procedure SetPostUpdates(Value: TZPostUpdatesMode);
     /// <author>EgonHugeist</author>
     /// <summary>Set the cursor type of the resultset to be genarated if any.</summary>
-    /// <param>"Value" the cursortype</param>
+    /// <param>"Value" one of <c>rctClient</c>, <c>rctServer</c>,
+    ///  or <c>rctLocalMemory</c></param>
     procedure SetCursorType(Value: TZResultSetCursorType);
     /// <author>EgonHugeist</author>
     /// <summary>Get the cursor type of this resultset</summary>

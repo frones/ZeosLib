@@ -444,7 +444,8 @@ procedure ScaledOrdinal2Unicode(const Value: UInt64; Buf: PWideChar; PEnd: ZPPWi
 procedure ScaledOrdinal2Unicode(Value: Integer; Buf: PWideChar; PEnd: ZPPWideChar; Scale: Byte); overload;
 procedure ScaledOrdinal2Unicode(Value: Cardinal; Buf: PWideChar; PEnd: ZPPWideChar; Scale: Byte); overload;
 
-procedure BCD2ScaledOrdinal(const Value: TBCD; Dest: Pointer; DestSize, Scale: Byte);
+procedure BCD2ScaledOrdinal({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD;
+  Dest: Pointer; DestSize, Scale: Byte);
 
 function XSQLDA_LENGTH(Value: LongInt): LongInt;
 function XSQLDA_LENGTH_V2(Value: LongInt): LongInt;
@@ -1511,7 +1512,8 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-procedure BCD2ScaledOrdinal(const Value: TBCD; Dest: Pointer; DestSize, Scale: Byte);
+procedure BCD2ScaledOrdinal({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD;
+  Dest: Pointer; DestSize, Scale: Byte);
 var
   LastNibbleByteIDX, BCDScale, P, I, F: Byte;
   i64: Int64;

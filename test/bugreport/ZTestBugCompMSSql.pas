@@ -744,7 +744,9 @@ begin
     Query.Fields[2].AsDateTime := Now;
     GUID1 := StringToGUID(sGUID1);
     GUID2 := StringToGUID(sGUID2);
+    Bts1 := nil;
     System.SetLength(Bts1, 16);
+    Bts2 := nil;
     System.SetLength(Bts2, 16);
     System.Move(Pointer(@GUID1)^, Pointer(Bts1)^, 16);
     System.Move(Pointer(@GUID2)^, Pointer(Bts2)^, 16);

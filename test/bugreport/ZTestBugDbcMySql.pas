@@ -208,6 +208,7 @@ end;
 
   unsigned int field problem.
 }
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BCD" does not seem to be initialized}{$ENDIF}
 procedure TZTestDbcMySQLBugReport.Test768163;
 const
   fld1_Index = FirstDbcIndex;
@@ -245,6 +246,7 @@ begin
   end;
     ResultSet := nil;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 {**
   Test the bug report #816925.

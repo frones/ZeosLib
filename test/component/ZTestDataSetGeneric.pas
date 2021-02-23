@@ -436,6 +436,7 @@ begin
       if ( Connection.ControlsCodePage = cCP_UTF16 ) then
       begin
         StrStream.position := 0;
+        Ansi := '';
         SetLength(Ansi,StrStream.Size);
         StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
         WS := {$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(Ansi);
@@ -849,6 +850,7 @@ begin
       //a WiteString-Stream. So this test must be modified...
       if ( Connection.ControlsCodePage = cCP_UTF16 ) then
       begin
+        Ansi := '';
         SetLength(Ansi,StrStream.Size);
         StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
         WS := {$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(Ansi);
@@ -2210,6 +2212,7 @@ begin
         TextStreamA.Position := 0;
         if ( Connection.ControlsCodePage = cCP_UTF16 ) then
         begin
+          TempU := '';
           SetLength(TempU, Length(TestString));
           TextStreamA.Read(PWideChar(TempU)^, Length(teststring)*2);
           CheckEquals(TempU, UnicodeString(TestString));
@@ -2217,6 +2220,7 @@ begin
         else
         {$ENDIF}
         begin
+          TempA := '';
           SetLength(TempA, Length(TestString));
           TextStreamA.Read(PAnsiChar(TempA)^, Length(teststring));
           CheckEquals(TempA, TestString);

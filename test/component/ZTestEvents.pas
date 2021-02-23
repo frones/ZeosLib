@@ -66,7 +66,7 @@ interface
 uses
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, Classes,
   {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}ZIBEventAlerter,{$ENDIF}
-  {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}ZPgEventAlerter,{$ENDIF}
+  //{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}ZPgEventAlerter,{$ENDIF}
   ZSysUtils, ZSqlTestCase;
 
 type
@@ -111,6 +111,7 @@ begin
   Result := (Config.Transport = traNative) and (Config.Provider = spIB_FB);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Sender" not used} {$ENDIF}
 procedure TZTestInterbaseEventAlert.ZIBEventAlerterEventAlert(Sender: TObject; EventName: string;
   EventCount: Integer; var CancelAlerts: Boolean);
 begin
@@ -118,6 +119,7 @@ begin
   Events[High(Events)].EventName := EventName;
   Events[High(Events)].EventCount := EventCount;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZTestInterbaseEventAlert.TestIBAllerter;
 
@@ -136,6 +138,7 @@ procedure TZTestInterbaseEventAlert.TestIBAllerter;
   function JoinArr(const Arr: array of string): string; overload;
   var i: Integer;
   begin
+    Result := '';
     for i := Low(Arr) to High(Arr) do
       AppendSepString(Result, Arr[i], ';');
   end;
@@ -143,10 +146,12 @@ procedure TZTestInterbaseEventAlert.TestIBAllerter;
   function JoinArr(const Arr: array of Integer): string; overload;
   var i: Integer;
   begin
+    Result := '';
     for i := Low(Arr) to High(Arr) do
       AppendSepString(Result, IntToStr(Arr[i]), ';');
   end;
 
+  {$IFDEF FPC} {$PUSH} {$WARN 5026 off : Value Parameter "EventCountsExpected" is assigned but never used} {$ENDIF}
   procedure TestEvents(
     const EventsToSend: array of string;
     const EventNamesExpect: array of string;
@@ -176,6 +181,7 @@ procedure TZTestInterbaseEventAlert.TestIBAllerter;
       CheckEquals(EventCountsExpect[i], Events[i].EventCount, Descr + ' differs event #'+IntToStr(i));
     end;
   end;
+  {$IFDEF FPC} {$POP} {$ENDIF}
 
 var
   IBEvents: TZIBEventAlerter;

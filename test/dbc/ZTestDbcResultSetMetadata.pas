@@ -86,6 +86,7 @@ uses ZSysUtils;
 {**
   Checks metadata for one single resultset column.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "IsAutoIncrement" not used} {$ENDIF}
 procedure TZTestResultSetMetadataCase.CheckColumnMetadata(
   const Metadata: IZResultSetMetadata; ColumnIndex: Integer; ColumnLabel,
   ColumnName, ColumnTable: string; IsAutoIncrement, IsWritable: Boolean);
@@ -97,6 +98,7 @@ begin
   CheckEquals(IsWritable, Metadata.IsWritable(ColumnIndex), 'IsWritable does not match');
   CheckEquals(IsWritable, Metadata.IsDefinitelyWritable(ColumnIndex), 'IsDefinitelyWritable does not match');
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Runs a test for resultset metadata.
@@ -274,6 +276,7 @@ var
       Result := LowerCase(Value)
     else Result := Value;
   end;
+  {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Info" not used} {$ENDIF}
   function GetColumnLabeName(ColIndex: Integer; const Value: String): String;
   begin
     if ProtocolType = protPostgre then //unquoted alias is also lowercase pffff...
@@ -281,6 +284,7 @@ var
     else
       Result := Value;
   end;
+  {$IFDEF FPC} {$POP} {$ENDIF}
   procedure TestAll;
   begin
     CheckEquals(4, Metadata.GetColumnCount);
@@ -330,10 +334,10 @@ const
   Field2 = FirstDbcIndex +1;
   Field3 = FirstDbcIndex +2;
   Field4 = FirstDbcIndex +3;
-  Field5 = FirstDbcIndex +4;
-  Field6 = FirstDbcIndex +5;
-  Field7 = FirstDbcIndex +6;
-  Field8 = FirstDbcIndex +7;
+  //Field5 = FirstDbcIndex +4;
+  //Field6 = FirstDbcIndex +5;
+  //Field7 = FirstDbcIndex +6;
+  //Field8 = FirstDbcIndex +7;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -374,10 +378,10 @@ const
   Field2 = FirstDbcIndex +1;
   Field3 = FirstDbcIndex +2;
   Field4 = FirstDbcIndex +3;
-  Field5 = FirstDbcIndex +4;
-  Field6 = FirstDbcIndex +5;
-  Field7 = FirstDbcIndex +6;
-  Field8 = FirstDbcIndex +7;
+  //Field5 = FirstDbcIndex +4;
+  //Field6 = FirstDbcIndex +5;
+  //Field7 = FirstDbcIndex +6;
+  //Field8 = FirstDbcIndex +7;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;

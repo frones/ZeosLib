@@ -543,7 +543,7 @@ begin
   inherited Create(nil, SQL, nil, ConSettings);
   CopyColumnsInfo(ColumnsInfo, Self.ColumnsInfo);
   FCachedUpdates := False;
-  FResultSetCursorType := rctLocalMemory;
+  FResultSetCursorType := rctClient;
   Open;
 end;
 
@@ -2512,7 +2512,7 @@ var
   Statement: IZStatement;
 begin
   Statement := ResultSet.GetStatement;
-  FCachedLobs := FResultSetCursorType = rctLocalMemory;
+  FCachedLobs := FResultSetCursorType = rctClient;
   if Assigned(Statement) then
     FCachedLobs := FCachedLobs or StrToBoolEx(DefineStatementParameter(Statement, DSProps_CachedLobs, 'false'));
   ColumnsInfo.Clear;

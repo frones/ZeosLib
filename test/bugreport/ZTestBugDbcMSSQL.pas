@@ -258,6 +258,7 @@ begin
   end;
 end;
 
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "eBCD, aBCD" does not seem to be initialized}{$ENDIF}
 procedure ZTestDbcMSSQLBugReport.TestTicket441;
 var
   Stmt: IZStatement;
@@ -299,6 +300,7 @@ begin
     Stmt := nil
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 initialization
   RegisterTest('bugreport',ZTestDbcMSSQLBugReport.Suite);
