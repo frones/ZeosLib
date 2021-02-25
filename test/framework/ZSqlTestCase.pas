@@ -1752,7 +1752,7 @@ end;
 
 function TZAbstractCompSQLTestCase.CreateQuery: TZQuery;
 begin
-  Result := TZQuery.Create(nil);
+  Result := TZQuery.Create(FConnection);
   Result.Connection := FConnection;
   { do not check for Include_RealPrepared, because it's allways true if set! }
   if StrToBoolEx(FConnection.Properties.Values[DSProps_PreferPrepared]) then
@@ -1761,7 +1761,7 @@ end;
 
 function TZAbstractCompSQLTestCase.CreateReadOnlyQuery: TZReadOnlyQuery;
 begin
-  Result := TZReadOnlyQuery.Create(nil);
+  Result := TZReadOnlyQuery.Create(FConnection);
   Result.Connection := FConnection;
   { do not check for Include_RealPrepared, because it's allways true if set! }
   if StrToBoolEx(FConnection.Properties.Values[DSProps_PreferPrepared]) then
@@ -1770,7 +1770,7 @@ end;
 
 function TZAbstractCompSQLTestCase.CreateTable: TZTable;
 begin
-  Result := TZTable.Create(nil);
+  Result := TZTable.Create(FConnection);
   Result.Connection := FConnection;
   { do not check for Include_RealPrepared, because it's allways true if set! }
   if StrToBoolEx(FConnection.Properties.Values[DSProps_PreferPrepared]) then

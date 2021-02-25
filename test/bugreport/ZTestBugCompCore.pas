@@ -131,6 +131,7 @@ type
     procedure TestSF310_JoinedUpdate_SetReadOnly;
     procedure TestSF310_JoinedUpdate_ProviderFlags;
     procedure TestSF469;
+    procedure TestSF493;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -1977,6 +1978,26 @@ begin
   finally
     Query.Free;
   end;
+end;
+
+(* see https://sourceforge.net/p/zeoslib/tickets/493/
+FPC/Lazarus
+
+this code generate AV on FreeAndNil(FConnection1);
+
+procedure TForm1.Button1Click(Sender: TObject);
+var
+FConnection1: TZConnection;
+begin
+FConnection1:=TZConnection.Create(Self);
+FreeAndNil(FConnection1);
+end;
+*)
+procedure ZTestCompCoreBugReport.TestSF493;
+var FConnection1: TZConnection;
+begin
+  FConnection1 := TZConnection.Create(Connection);  //need an owner for this test
+  FreeAndNil(FConnection1);
 end;
 
 procedure ZTestCompCoreBugReport.TestSF418_IndexFieldNames;

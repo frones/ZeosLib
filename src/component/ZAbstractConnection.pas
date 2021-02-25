@@ -467,12 +467,12 @@ destructor TZAbstractConnection.Destroy;
 begin
   Disconnect;
   UnregisterAllComponents;
+  inherited Destroy; //calls Notification(self,opRemove)
   FURL.Free;
   FreeAndNil(FLinkedComponents);
   FreeAndNil(FTransactions);
   FreeAndNil(FRawCharacterTransliterateOptions);
   FreeAndNil(FFormatSettings);
-  inherited Destroy;
 end;
 
 function TZAbstractConnection.GetHostName: string;

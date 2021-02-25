@@ -3781,7 +3781,7 @@ begin
           else {$ENDIF}{$IFDEF WITH_TSQLTimeStampOffset}
           if vt = VarSQLTimeStampOffset then
             AsTimeStampOffset(Value)
-          else {$ENDIF}raise EVariantError.Create('Unkown Variant type');
+          else {$ENDIF}raise EVariantError.Create(SUnsupportedVariantType);
   end;
  // WriteLn('SQLType <> FSQLType');
   if SQLType <> FSQLType then //mimic the TParam behavior

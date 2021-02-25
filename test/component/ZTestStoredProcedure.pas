@@ -165,7 +165,7 @@ uses Classes, ZSysUtils, ZDbcIntfs, ZDbcPostgreSQL, ZDatasetUtils,
 procedure TZTestStoredProcedure.SetUp;
 begin
   inherited SetUp;
-  StoredProc := TZStoredProc.Create(nil);
+  StoredProc := TZStoredProc.Create(Connection);
   StoredProc.Connection := Connection;
   StoredProc.ParamCheck := True;
 end;

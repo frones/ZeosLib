@@ -252,11 +252,13 @@ begin
     BlankCheck;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Sender" not used} {$ENDIF}
 procedure TZTestConnectionCase.ConnLogin(Sender: TObject; var Username:string ; var Password: string);
 begin
    UserName := gloUserName;
    Password := gloPassword;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZTestConnectionCase.TestIdentifierQuotes;
 begin
