@@ -178,6 +178,8 @@ type
   end;
 
   TZMySQL_Store_ResultSet = class(TZAbstractMySQLResultSet)
+  protected
+    procedure Open; override;
   public
     /// <summary>Moves the cursor to the given row number in
     ///  this <c>ResultSet</c> object. If the row number is positive, the cursor
@@ -201,6 +203,8 @@ type
   end;
 
   TZMySQL_Use_ResultSet = class(TZAbstractMySQLResultSet)
+  protected
+    procedure Open; override;
   public
     procedure ResetCursor; override;
     procedure OpenCursor; override;
@@ -2620,6 +2624,12 @@ begin
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
 
+procedure TZMySQL_Store_ResultSet.Open;
+begin
+  inherited Open;
+  FCursorLocation := rctClient;
+end;
+
 procedure TZMySQL_Store_ResultSet.OpenCursor;
 label jmpLog;
 begin
@@ -2831,6 +2841,12 @@ procedure TZMySQL_Use_ResultSet.AfterConstruction;
 begin
   inherited;
   SetType(rtForwardOnly);
+end;
+
+procedure TZMySQL_Use_ResultSet.Open;
+begin
+  inherited Open;
+  FCursorLocation := rctServer;
 end;
 
 procedure TZMySQL_Use_ResultSet.OpenCursor;

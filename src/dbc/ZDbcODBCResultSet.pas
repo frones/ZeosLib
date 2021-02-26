@@ -2013,6 +2013,7 @@ begin
     end;
     inherited Open;
   end;
+  FCursorLocation := rctServer;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -2363,6 +2364,7 @@ begin
   SetType(rtForwardOnly);
   LastRowNo := 1;
   Inherited Open;
+  FCursorLocation := rctClient;
 end;
 
 function TZParamODBCResultSet.MoveAbsolute(Row: Integer): Boolean;

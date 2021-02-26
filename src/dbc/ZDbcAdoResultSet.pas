@@ -440,7 +440,8 @@ begin
   if Assigned(ppStringsBuffer) then ZAdoMalloc.Free(ppStringsBuffer);
   if Assigned(OriginalprgInfo) then ZAdoMalloc.Free(OriginalprgInfo);
   FFirstFetch := True;
-  inherited;
+  inherited Open;
+  FCursorLocation := rctServer;
 end;
 
 {**

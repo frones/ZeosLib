@@ -125,6 +125,8 @@ type
   end;
 
   TZASAParamererResultSet = Class(TZASAAbstractResultSet)
+  protected
+    procedure Open; override;
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
       var StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SqlData: IZASASQLDA;
@@ -1391,6 +1393,7 @@ begin
     ColumnsInfo.Add(ColumnInfo);
   end;
   FSqlData.InitFields; //EH: init fields AFTER retrieving col infos!
+  FCursorLocation := rctServer;
   inherited Open;
 end;
 
@@ -1455,6 +1458,12 @@ begin
     RowNo := 1
   else if RowNo = 1 then
     RowNo := 2; //set AfterLast
+end;
+
+procedure TZASAParamererResultSet.Open;
+begin
+  inherited Open;
+  FCursorLocation := rctClient;
 end;
 
 { TZASANativeResultSet }

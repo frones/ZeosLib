@@ -157,9 +157,18 @@ type
     function GetNativeResolver: IZCachedResolver;
    {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
 
+    /// <summary>Checks if the resultset has late fetched fields linked to
+    ///  the server. Such as LOBS or Statements or ResultSets. If this is true
+    ///  the resultset is not full memory cached.</summary>
+    /// <returns><c>True</ce> if the resultset has server linked fields.</returns>
+    function HasServerLinkedColumns: Boolean;
     function IsCachedUpdates: Boolean;
-    procedure SetCachedUpdates(Value: Boolean);
+    /// <summary>Checks is the last row was fetched to cache.</summary>
+    /// <returns><c>True</ce> if the last row was fetched.</returns>
+    function IsLastRowFetched: Boolean;
     function IsPendingUpdates: Boolean;
+
+    procedure SetCachedUpdates(Value: Boolean);
 
     procedure PostUpdates;
     procedure CancelUpdates;
@@ -191,6 +200,9 @@ type
     FNativeResolver: IZCachedResolver;
     {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   protected
+    FLastRowFetched: Boolean;
+    FLocalConSettings: TZConSettings;
+    FLocalCharSet: TZCodePage;
     class function GetRowAccessorClass: TZRowAccessorClass; virtual;
     procedure CheckAvailable;
     procedure CheckUpdatable;
@@ -315,6 +327,17 @@ type
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: TBCD);
     procedure UpdateGUID(ColumnIndex: Integer; const Value: TGUID);
     procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUint); overload;
+    /// <summary>Updates the designated column with a <c>PWideChar</c> buffer
+    ///  value. The <c>updateXXX</c> methods are used to update column values in
+    ///  the current row or the insert row.  The <c>updateXXX</c> methods do not
+    ///  update the underlying database; instead the <c>updateRow</c> or
+    ///  <c>insertRow</c> methods are called to update the database.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" an address of the value buffer</param>
+    /// <param>"Len" a reference of the buffer Length variable in words.</param>
     procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar; var Len: NativeUint); overload;
     procedure UpdateString(ColumnIndex: Integer; const Value: String);
     {$IFNDEF NO_ANSISTRING}
@@ -341,7 +364,6 @@ type
     procedure CancelRowUpdates; override;
     procedure RefreshRow; override;// FOS+ 071106
 
-
     function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
       const CompareFuncs: TCompareFuncs): Integer; override;
     function GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
@@ -357,9 +379,28 @@ type
     function GetNativeResolver: IZCachedResolver;
     {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
     function IsCachedUpdates: Boolean;
+    /// <summary>Checks is the last row was fetched to cache.</summary>
+    /// <returns><c>True</ce> if the last row was fetched.</returns>
+    function IsLastRowFetched: Boolean;
+    /// <summary>Checks if the resultset has late fetched fields linked to
+    ///  the server. Such as LOBS or Statements or ResultSets. If this is true
+    ///  the resultset is not full memory cached.</summary>
+    /// <returns><c>True</ce> if the resultset has server linked fields.</returns>
+    function HasServerLinkedColumns: Boolean;
     procedure SetCachedUpdates(Value: Boolean);
     function IsPendingUpdates: Boolean; virtual;
-
+    /// <summary>Moves the cursor to the insert row.  The current cursor
+    ///  position is remembered while the cursor is positioned on the insert
+    ///  row.
+    ///  The insert row is a special row associated with an updatable result
+    ///  set. It is essentially a buffer where a new row may be constructed by
+    ///  calling the <c>updateXXX</c> methods prior to inserting the row into
+    ///  the result set.
+    ///  Only the <c>updateXXX</c>, <c>getXXX</c> and <c>insertRow</c>
+    ///  methods may be called when the cursor is on the insert row. All of the
+    ///  columns in a result set must be given a value each time this method is
+    ///  called before calling <c>insertRow</c>. An <c>updateXXX</c> method must
+    ///  be called before a <c>getXXX</c> method can be called on a column value.</summary>
     procedure MoveToInsertRow; override;
     procedure MoveToCurrentRow; override;
     procedure PostUpdates; virtual;
@@ -374,8 +415,6 @@ type
 
     function CreateLob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode): IZBlob; virtual;
   end;
-
-  TZStringFieldAssignFromResultSet = procedure(ColumnIndex: Integer) of object;
 
   {**
     Implements Abstract cached ResultSet. This class should be extended
@@ -422,7 +461,6 @@ type
   {** Implements Virtual ResultSet. }
   TZVirtualResultSet = class(TZAbstractCachedResultSet, IZVirtualResultSet)
   private
-    fConSettings: TZConSettings;
     fColumnIndices, FCompareFuncs: Pointer; //ovoid RTTI finalize!
     function ColumnSort(Item1, Item2: Pointer): Integer;
   protected
@@ -515,7 +553,6 @@ begin
   inherited Create(Statement, SQL, nil, ConSettings);
   CopyColumnsInfo(ColumnsInfo, Self.ColumnsInfo);
   FCachedUpdates := False;
-  FResultSetCursorType := Statement.GetCursorType;
   Open;
 end;
 
@@ -529,7 +566,6 @@ constructor TZAbstractCachedResultSet.CreateWithStatement(const SQL: string;
 begin
   inherited Create(Statement, SQL, nil, ConSettings);
   FCachedUpdates := False;
-  FResultSetCursorType := Statement.GetCursorType;
 end;
 
 {**
@@ -543,7 +579,6 @@ begin
   inherited Create(nil, SQL, nil, ConSettings);
   CopyColumnsInfo(ColumnsInfo, Self.ColumnsInfo);
   FCachedUpdates := False;
-  FResultSetCursorType := rctClient;
   Open;
 end;
 
@@ -711,6 +746,11 @@ end;
 function TZAbstractCachedResultSet.IsCachedUpdates: Boolean;
 begin
   Result := FCachedUpdates;
+end;
+
+function TZAbstractCachedResultSet.IsLastRowFetched: Boolean;
+begin
+  Result := FLastRowFetched;
 end;
 
 {**
@@ -939,6 +979,13 @@ var I: Integer;
 begin
   if not Closed then
     raise EZSQLException.Create(SResultsetIsAlreadyOpened);
+  //EH: make the ConSetting ptr disconnect imune
+  if ConSettings <> @FLocalConSettings then begin
+    FLocalConSettings := ConSettings^;
+    FLocalCharSet := ConSettings^.ClientCodePage^;
+    FLocalConSettings.ClientCodePage := @FLocalCharSet;
+    Self.ConSettings := @FLocalConSettings;
+  end;
 
   FRowsList := TZSortedList.Create;
   FInitialRowsList := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
@@ -964,6 +1011,7 @@ begin
   FIndexPairList.Capacity := ColumnsInfo.Count;
   for I := FirstDbcIndex to ColumnsInfo.Count{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
     FIndexPairList.Add(I, I);
+  FCursorLocation := rctClient;
 end;
 
 {**
@@ -1774,7 +1822,9 @@ begin
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
-  FRowAccessor.SetPAnsiChar(ColumnIndex, Value, Len);
+  if Value = nil
+  then FRowAccessor.SetNull(ColumnIndex)
+  else FRowAccessor.SetPAnsiChar(ColumnIndex, Value, Len);
 end;
 
 {**
@@ -1795,7 +1845,9 @@ begin
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
-  FRowAccessor.SetPWideChar(ColumnIndex, Value, Len);
+  if Value = nil
+  then FRowAccessor.SetNull(ColumnIndex)
+  else FRowAccessor.SetPWideChar(ColumnIndex, Value, Len);
 end;
 
 
@@ -2347,23 +2399,6 @@ begin
   MoveAbsolute(RowNo);
 end;
 
-{**
-  Moves the cursor to the insert row.  The current cursor position is
-  remembered while the cursor is positioned on the insert row.
-
-  The insert row is a special row associated with an updatable
-  result set.  It is essentially a buffer where a new row may
-  be constructed by calling the <code>updateXXX</code> methods prior to
-  inserting the row into the result set.
-
-  Only the <code>updateXXX</code>, <code>getXXX</code>,
-  and <code>insertRow</code> methods may be
-  called when the cursor is on the insert row.  All of the columns in
-  a result set must be given a value each time this method is
-  called before calling <code>insertRow</code>.
-  An <code>updateXXX</code> method must be called before a
-  <code>getXXX</code> method can be called on a column value.
-}
 procedure TZAbstractCachedResultSet.MoveToInsertRow;
 begin
   CheckClosed;
@@ -2416,6 +2451,11 @@ begin
     ColumnIndices, CompareFuncs);
 end;
 
+function TZAbstractCachedResultSet.HasServerLinkedColumns: Boolean;
+begin
+  Result := FRowAccessor.HasServerLinkedColumns;
+end;
+
 function TZAbstractCachedResultSet.GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
   const CompareKinds: TComparisonKindArray): TCompareFuncs;
 begin
@@ -2450,11 +2490,15 @@ function TZCachedResultSet.Fetch: Boolean;
 var TempRow: PZRowBuffer;
     Succeeded: Boolean;
 begin
-  if Assigned(FResultSet)
+  if Assigned(FResultSet) and not FLastRowFetched
   then Result := FResultSet.Next
   else Result := False;
-  if not Result or ((MaxRows > 0) and (LastRowNo >= MaxRows)) then
+  if not Result or ((MaxRows > 0) and (LastRowNo >= MaxRows)) then begin
+    if (FResultSet <> nil) and not FLastRowFetched then
+      FResultSet.ResetCursor; //EH: clear library mem or release servercursor
+    FLastRowFetched := True;
     Exit;
+  end;
 
   TempRow := RowAccessor.RowBuffer;
   Succeeded := False;
@@ -2512,11 +2556,12 @@ var
   Statement: IZStatement;
 begin
   Statement := ResultSet.GetStatement;
-  FCachedLobs := FResultSetCursorType = rctClient;
-  if Assigned(Statement) then
-    FCachedLobs := FCachedLobs or StrToBoolEx(DefineStatementParameter(Statement, DSProps_CachedLobs, 'false'));
+  if Assigned(Statement)
+  then FCachedLobs := FCachedLobs or StrToBoolEx(DefineStatementParameter(Statement, DSProps_CachedLobs, 'false'))
+  else FCachedLobs := False;
   ColumnsInfo.Clear;
   FillColumnsInfo(ColumnsInfo);
+  FLastRowFetched := False;
   inherited Open;
 end;
 
@@ -2562,15 +2607,16 @@ var
 begin
   if not Closed then begin
     If Assigned(FResultset) then begin
-      FResultset.ResetCursor;
+      if not FLastRowFetched then
+        FResultset.ResetCursor;
       Statement := ResultSet.GetStatement;
-      if Assigned(Statement) then
-        FCachedLobs := StrToBoolEx(DefineStatementParameter(Statement, DSProps_CachedLobs, 'false'))
-      else
-        FCachedLobs := false;
+      if Assigned(Statement)
+      then FCachedLobs := StrToBoolEx(DefineStatementParameter(Statement, DSProps_CachedLobs, 'false'))
+      else FCachedLobs := True;
       FRowAccessor.CachedLobs := FCachedLobs;
       FOldRowAccessor.CachedLobs := FCachedLobs;
       FNewRowAccessor.CachedLobs := FCachedLobs;
+      FLastRowFetched := False;
     end;
     inherited ResetCursor;
   end;
@@ -2687,8 +2733,8 @@ end;
 constructor TZVirtualResultSet.CreateWithStatement(const SQL: string;
    const Statement: IZStatement; ConSettings: PZConSettings);
 begin
-  fConSettings := ConSettings^;
-  inherited CreateWithStatement(SQL, Statement, @fConSettings);
+  inherited CreateWithStatement(SQL, Statement, ConSettings);
+  FLastRowFetched := True;
 end;
 
 class function TZVirtualResultSet.GetRowAccessorClass: TZRowAccessorClass;
@@ -2843,8 +2889,8 @@ end;
 constructor TZVirtualResultSet.CreateWithColumns(ColumnsInfo: TObjectList;
   const SQL: string; ConSettings: PZConSettings);
 begin
-  fConSettings := ConSettings^;
-  inherited CreateWithColumns(ColumnsInfo, SQL, @fConSettings);
+  inherited CreateWithColumns(ColumnsInfo, SQL, ConSettings);
+  FLastRowFetched := True;
 end;
 
 {**

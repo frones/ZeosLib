@@ -347,6 +347,10 @@ jmpLen:         Precision := XSQLVAR.sqllen;
     end;
   end;
   Open;
+  if FStmtType = stExecProc
+  then FCursorLocation := rctClient
+  else FCursorLocation := rctServer;
+
 end;
 
 {**

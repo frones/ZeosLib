@@ -189,7 +189,7 @@ type
 implementation
 {$IFNDEF ZEOS_DISABLE_SQLITE} //if set we have an empty unit
 
-uses
+uses {$IFDEF USE_SYNCOMMONS}Math, {$ENDIF}
   ZMessages, ZTokenizer, ZVariant, ZEncoding, ZFastCode,
   ZGenericSqlAnalyser,
   ZDbcSQLiteUtils, ZDbcLogging, ZDbcUtils, ZDbcMetadata
@@ -363,7 +363,6 @@ var
   P: PAnsiChar;
   i64: Int64;
   D: Double absolute i64;
-label ProcBts;
 begin
   if JSONWriter.Expand then
     JSONWriter.Add('{');
@@ -589,6 +588,7 @@ begin
       if P = nil then begin
         tmp := NativeSQLite3Types[FUndefinedVarcharAsStringLength = 0][FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, i)]
       end else begin
+        tmp := '';
         ZSetString(P, ZFastCode.StrLen(P), tmp);
       end;
       ColumnType := ConvertSQLiteTypeToSQLType(tmp, FUndefinedVarcharAsStringLength,
@@ -613,7 +613,7 @@ begin
   end;
 
   inherited Open;
-
+  FCursorLocation := rctServer;
 end;
 
 {**
@@ -1487,9 +1487,7 @@ begin
 
   if (FAutoColumnIndex {$IFDEF GENERIC_INDEX}>={$ELSE}>{$ENDIF} 0) and
      (OldRowAccessor.IsNull(FAutoColumnIndex) or (OldRowAccessor.GetValue(FAutoColumnIndex).VInteger = 0)) then
-  begin
     NewRowAccessor.SetLong(FAutoColumnIndex, FPlainDriver.sqlite3_last_insert_rowid(FHandle));
-  end;
 end;
 
 {$ENDIF ZEOS_DISABLE_SQLITE} //if set we have an empty unit

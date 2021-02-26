@@ -80,7 +80,6 @@ type
     function GetInternalBufferSize: Integer;
     function GetMoreResultsIndicator: TZMoreResultsIndicator;
     procedure SetMoreResultsIndicator(Value: TZMoreResultsIndicator);
-    function GetNewRowSet(var RowSet: IRowSet): Boolean;
   End;
 
   {** Implements Prepared ADO Statement. }
@@ -88,6 +87,7 @@ type
     IZOleDBPreparedStatement)
   private
     FMultipleResults: IMultipleResults;
+    FRowSet: IRowSet;
     FZBufferSize, fStmtTimeOut: Integer;
     FCommand: ICommandText;
     FRowSize: NativeUInt;
@@ -169,11 +169,11 @@ type
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
       var AError: EZSQLConnectionLost); override;
   protected //interface based!
-    function CreateResultSet(const RowSet: IRowSet): IZResultSet; virtual;
+    function CreateResultSet: IZResultSet;
+    function CreateOutParamResultSet: IZResultSet; virtual;
     function GetInternalBufferSize: Integer;
     function GetMoreResultsIndicator: TZMoreResultsIndicator;
     procedure SetMoreResultsIndicator(Value: TZMoreResultsIndicator);
-    function GetNewRowSet(var RowSet: IRowSet): Boolean;
   end;
 
   EZOleDBConvertError = class(EZSQLException);
@@ -213,9 +213,9 @@ type
     procedure SetBindCapacity(Capacity: Integer); override;
     function CreateOleDBConvertErrror(Index: Integer; WType: Word; SQLType: TZSQLType): EZOleDBConvertError;
     procedure RaiseExceeded(Index: Integer);
-    function CreateResultSet(const RowSet: IRowSet): IZResultSet; override;
     procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
+    function CreateOutParamResultSet: IZResultSet; override;
   public
     constructor Create(const Connection: IZConnection; const SQL: string;
       const Info: TStrings);
@@ -389,15 +389,20 @@ begin
   DatabaseInfo := nil;
 end;
 
-function TZAbstractOleDBStatement.CreateResultSet(const RowSet: IRowSet): IZResultSet;
+function TZAbstractOleDBStatement.CreateOutParamResultSet: IZResultSet;
+begin
+  Result := nil;
+end;
+
+function TZAbstractOleDBStatement.CreateResultSet: IZResultSet;
 var
   CachedResolver: IZCachedResolver;
   NativeResultSet: TZOleDBResultSet;
   CachedResultSet: TZCachedResultSet;
 begin
   Result := nil;
-  if Assigned(RowSet) then begin
-    NativeResultSet := TZOleDBResultSet.Create(Self, SQL, RowSet, FZBufferSize);
+  if Assigned(FRowSet) then begin
+    NativeResultSet := TZOleDBResultSet.Create(Self, SQL, @FRowSet, FZBufferSize);
     if (ResultSetConcurrency = rcUpdatable) or (ResultSetType <> rtForwardOnly) then begin
       if (Connection.GetServerProvider = spMSSQL) and (Self.GetResultSetConcurrency = rcUpdatable)
       then CachedResolver := TZOleDBMSSQLCachedResolver.Create(Self, NativeResultSet.GetMetaData)
@@ -507,59 +512,55 @@ begin
 end;
 
 function TZAbstractOleDBStatement.ExecuteQueryPrepared: IZResultSet;
-var
-  FRowSet: IRowSet;
-  Status: HResult;
+var Status: HResult;
 begin
   PrepareOpenedResultSetsForReusing;
   Prepare;
   BindInParameters;
   RestartTimer;
-  try
-    FRowsAffected := DB_COUNTUNAVAILABLE;
-    FRowSet := nil;
-    if Assigned(FOpenResultSet) then
-      Result := IZResultSet(FOpenResultSet)
-    else begin
-      if FSupportsMultipleResultSets then begin
-        Status := FCommand.Execute(nil, IID_IMultipleResults, FDBParams,
-          @FRowsAffected,@FMultipleResults);
+  if Assigned(FOpenResultSet) then begin
+    Result := IZResultSet(FOpenResultSet);
+    Status := FCommand.Execute(nil, IID_IRowset, FDBParams, @FRowsAffected, @FRowSet);
+    if Failed(Status) then
+      FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
+  end else begin
+    if FSupportsMultipleResultSets then begin
+      Status := FCommand.Execute(nil, IID_IMultipleResults, FDBParams,
+        @FRowsAffected,@FMultipleResults);
+      if Failed(Status) then
+        FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+          SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+      if Assigned(FMultipleResults) then begin
+        //don't use DBRESULTFLAG_ROWSET see: https://zeoslib.sourceforge.io/viewtopic.php?f=50&t=129214
+        Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
+          IID_IRowset, @FRowsAffected, @FRowSet);
         if Failed(Status) then
           FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-            SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
-        if Assigned(FMultipleResults) then begin
-          //don't use DBRESULTFLAG_ROWSET see: https://zeoslib.sourceforge.io/viewtopic.php?f=50&t=129214
-          Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
-            IID_IRowset, @FRowsAffected, @FRowSet);
-          if Failed(Status) then
-            FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-              SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
-        end;
-      end else begin
-        Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@FRowSet);
-        if Failed(Status) then
-          FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-            SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+            SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
       end;
-      if DriverManager.HasLoggingListener then
-         DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
-      if BindList.HasOutOrInOutOrResultParam then begin
-        FetchCallResults(FRowSet);
-        Result := GetFirstResultSet;
-      end else if FRowSet <> nil
-        then Result := CreateResultSet(FRowSet)
-        else Result := nil;
-      LastUpdateCount := FRowsAffected;
-      if not Assigned(Result) then
-        while GetMoreResults do
-          if (LastResultSet <> nil) then begin
-            Result := LastResultSet;
-            FLastResultSet := nil;
-            Break;
-          end;
+    end else begin
+      Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@FRowSet);
+      if Failed(Status) then
+        FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+          SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
     end;
-  finally
-    FRowSet := nil;
+    if DriverManager.HasLoggingListener then
+       DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
+    if BindList.HasOutOrInOutOrResultParam then begin
+      FetchCallResults(FRowSet);
+      Result := GetFirstResultSet;
+    end else if FRowSet <> nil
+      then Result := CreateResultSet
+      else Result := nil;
+    LastUpdateCount := FRowsAffected;
+    if not Assigned(Result) then
+      while GetMoreResults do
+        if (LastResultSet <> nil) then begin
+          Result := LastResultSet;
+          FLastResultSet := nil;
+          Break;
+        end;
   end;
 end;
 
@@ -593,7 +594,7 @@ begin
   if DriverManager.HasLoggingListener then
      DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
   if BindList.HasOutOrInOutOrResultParam then
-    FOutParamResultSet := CreateResultSet(nil);
+    FOutParamResultSet := CreateOutParamResultSet;
   LastUpdateCount := FRowsAffected;
   Result := LastUpdateCount;
 end;
@@ -603,10 +604,10 @@ var CallResultCache: TZCollection;
 begin
   Result := RowSet <> nil;
   if (FOutParameterAvailibility = DBPROPVAL_OA_ATEXECUTE) then
-    FOutParamResultSet := CreateResultSet(nil);
+    FOutParamResultSet := CreateOutParamResultSet;
   CallResultCache := TZCollection.Create;
   if RowSet <> nil then begin
-    FLastResultSet := CreateResultSet(RowSet);
+    FLastResultSet := CreateResultSet;
     CallResultCache.Add(Connection.GetMetadata.CloneCachedResultSet(FlastResultSet));
     FLastResultSet.Close;
     RowSet := nil;
@@ -620,63 +621,55 @@ begin
     end else
       CallResultCache.Add(TZAnyValue.CreateWithInteger(LastUpdateCount));
   if (FOutParameterAvailibility = DBPROPVAL_OA_ATROWRELEASE) then
-    FOutParamResultSet := CreateResultSet(nil);
+    FOutParamResultSet := CreateOutParamResultSet;
   FCallResultCache := CallResultCache;
 end;
 
 function TZAbstractOleDBStatement.ExecutePrepared: Boolean;
-var FRowSet: IRowSet;
-    Status: HResult;
+var Status: HResult;
 begin
   PrepareOpenedResultSetsForReusing;
   LastUpdateCount := -1;
   Prepare;
   RestartTimer;
   FRowsAffected := DB_COUNTUNAVAILABLE;
-  try
-    FRowSet := nil;
-    if FSupportsMultipleResultSets then begin
-      Status := FCommand.Execute(nil, IID_IMultipleResults,
-        FDBParams,@FRowsAffected,@FMultipleResults);
+  if FSupportsMultipleResultSets then begin
+    Status := FCommand.Execute(nil, IID_IMultipleResults,
+      FDBParams,@FRowsAffected,@FMultipleResults);
+    if Failed(Status) then
+      FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
+    if Assigned(FMultipleResults) then begin
+      Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
+        IID_IRowset, @FRowsAffected, @FRowSet);
       if Failed(Status) then
-        FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-          SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
-      if Assigned(FMultipleResults) then begin
-        Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
-          IID_IRowset, @FRowsAffected, @FRowSet);
-        if Failed(Status) then
-          FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
-            {$IFDEF DEBUG}'IMultipleResults.GetResult'{$ELSE}''{$ENDIF},
-            IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
-      end
-    end else begin
-      Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@FRowSet);
-      if Failed(Status) then
-        FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-          SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
-    end;
-    if DriverManager.HasLoggingListener then
-       DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
-    if BindList.HasOutOrInOutOrResultParam then
-      if FetchCallResults(FRowSet)
-      then LastResultSet := GetFirstResultSet
-      else LastResultSet := nil
-    else if FRowSet <> nil
-      then LastResultSet := CreateResultSet(FRowSet)
-      else LastResultSet := nil;
-    LastUpdateCount := FRowsAffected;
-    Result := Assigned(LastResultSet);
-  finally
-    FRowSet := nil;
+        FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
+          {$IFDEF DEBUG}'IMultipleResults.GetResult'{$ELSE}''{$ENDIF},
+          IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
+    end
+  end else begin
+    Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@FRowSet);
+    if Failed(Status) then
+      FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
+        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), fDBBINDSTATUSArray);
   end;
+  if DriverManager.HasLoggingListener then
+     DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
+  if BindList.HasOutOrInOutOrResultParam then
+    if FetchCallResults(FRowSet)
+    then LastResultSet := GetFirstResultSet
+    else LastResultSet := nil
+  else if FRowSet <> nil
+    then LastResultSet := CreateResultSet
+    else LastResultSet := nil;
+  LastUpdateCount := FRowsAffected;
+  Result := Assigned(LastResultSet);
 end;
 
 function TZAbstractOleDBStatement.GetMoreResults: Boolean;
-var
-  FRowSet: IRowSet;
-  Status: HResult;
-  RS: IZResultSet;
-  AnyValue: IZAnyValue;
+var Status: HResult;
+    RS: IZResultSet;
+    AnyValue: IZAnyValue;
 begin
   if (FOpenResultSet <> nil) and (FOpenResultSet <> Pointer(FOutParamResultSet))
   then IZResultSet(FOpenResultSet).Close;
@@ -703,7 +696,7 @@ begin
       Result := Status = S_OK;
       if Result then begin
         if Assigned(FRowSet)
-        then LastResultSet := CreateResultSet(FRowSet)
+        then LastResultSet := CreateResultSet
         else LastUpdateCount := FRowsAffected;
       end {else if Status <> DB_S_NORESULT then
         CheckError(Status, lcOther)};
@@ -716,57 +709,42 @@ begin
   Result := fMoreResultsIndicator;
 end;
 
-function TZAbstractOleDBStatement.GetNewRowSet(var RowSet: IRowSet): Boolean;
-var Status: HResult;
-begin
-  RowSet := nil;
-  if Prepared then begin
-    Status := FCommand.Execute(nil, IID_IRowset, FDBParams,@FRowsAffected,@RowSet);
-    if Failed(Status) then
-      FOleDBConnection.HandleErrorOrWarning(Status, LogExecType[fDEFERPREPARE],
-        SQL, IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
-    Result := Assigned(RowSet);
-    if DriverManager.HasLoggingListener then
-       DriverManager.LogMessage(LogExecType[fDEFERPREPARE],Self);
-  end else Result := False;
-end;
-
 procedure TZAbstractOleDBStatement.Unprepare;
 var
   Status: HRESULT;
   FRowSet: IRowSet;
   CommandPrepare: ICommandPrepare;
 begin
-  if Prepared then
-    try
-      inherited Unprepare;
-      if FCallResultCache <> nil then
-        ClearCallResultCache;
-      if FMultipleResults <> nil then begin
-        repeat
-          FRowSet := nil;
-          Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
-            IID_IRowset, @FRowsAffected, @FRowSet);
-        until Failed(Status) or (Status = DB_S_NORESULT);
-        FMultipleResults := nil;
-      end;
-      if (FCommand.QueryInterface(ICommandPrepare, CommandPrepare) = S_OK) and
-         not fDEFERPREPARE then begin
-        try
-          Status := CommandPrepare.UnPrepare;
-          if Failed(Status) then
-            FOleDBConnection.HandleErrorOrWarning(Status, lcUnprepStmt, SQL,
-              IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
-          if DriverManager.HasLoggingListener then
-            LogPrepStmtMessage(lcUnprepStmt);
-        finally
-          CommandPrepare := nil;
-        end;
-      end;
-    finally
-      FCommand := nil;
+  if Prepared then try
+    inherited Unprepare;
+    FRowSet := nil;
+    if FCallResultCache <> nil then
+      ClearCallResultCache;
+    if FMultipleResults <> nil then begin
+      repeat
+        FRowSet := nil;
+        Status := FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_DEFAULT),
+          IID_IRowset, @FRowsAffected, @FRowSet);
+      until Failed(Status) or (Status = DB_S_NORESULT);
       FMultipleResults := nil;
     end;
+    if (FCommand.QueryInterface(ICommandPrepare, CommandPrepare) = S_OK) and
+       not fDEFERPREPARE then begin
+      try
+        Status := CommandPrepare.UnPrepare;
+        if Failed(Status) then
+          FOleDBConnection.HandleErrorOrWarning(Status, lcUnprepStmt, SQL,
+            IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
+        if DriverManager.HasLoggingListener then
+          LogPrepStmtMessage(lcUnprepStmt);
+      finally
+        CommandPrepare := nil;
+      end;
+    end;
+  finally
+    FCommand := nil;
+    FMultipleResults := nil;
+  end;
 end;
 
 procedure TZAbstractOleDBStatement.SetMoreResultsIndicator(
@@ -1210,25 +1188,19 @@ begin
     LineEnding+SUnsupportedParameterType+LineEnding+ 'Stmt: '+GetSQL);
 end;
 
-function TZOleDBPreparedStatement.CreateResultSet(
-  const RowSet: IRowSet): IZResultSet;
-var
-  NativeResultSet: TZOleDBParamResultSet;
-  CachedResultSet: TZCachedResultSet;
+function TZOleDBPreparedStatement.CreateOutParamResultSet: IZResultSet;
+var NativeResultSet: TZOleDBParamResultSet;
+    CachedResultSet: TZCachedResultSet;
 begin
-  Result := nil;
-  if (RowSet = nil) and BindList.HasOutOrInOutOrResultParam then begin
-    NativeResultSet := TZOleDBParamResultSet.Create(Self, FParamsBuffer,
-      FDBBindingArray, FParamNamesArray);
-    if (ResultSetConcurrency = rcUpdatable) or (ResultSetType <> rtForwardOnly) then begin
-      CachedResultSet := TZOleDBCachedResultSet.Create(NativeResultSet, SQL,
-        TZGenerateSQLCachedResolver.Create(Self, NativeResultSet.GetMetaData), ConSettings);
-      CachedResultSet.SetConcurrency(ResultSetConcurrency);
-      Result := CachedResultSet;
-    end else
-      Result := NativeResultSet;
+  NativeResultSet := TZOleDBParamResultSet.Create(Self, FParamsBuffer,
+    FDBBindingArray, FParamNamesArray);
+  if (ResultSetConcurrency = rcUpdatable) or (ResultSetType <> rtForwardOnly) then begin
+    CachedResultSet := TZOleDBCachedResultSet.Create(NativeResultSet, SQL,
+      TZGenerateSQLCachedResolver.Create(Self, NativeResultSet.GetMetaData), ConSettings);
+    CachedResultSet.SetConcurrency(ResultSetConcurrency);
+    Result := CachedResultSet;
   end else
-    Result := inherited CreateResultSet(RowSet);
+    Result := NativeResultSet;
   FOpenResultSet := Pointer(Result);
 end;
 
@@ -1595,6 +1567,7 @@ jmpRecreate:
   end else begin
     if FCallResultCache <> nil then
       ClearCallResultCache;
+    FRowSet := nil; //release this interface! else we can't free the command in some tests
     FMultipleResults := nil; //release this interface! else we can't free the command in some tests
     if Assigned(FParameterAccessor) and ((BatchDMLArrayCount > 0) and
        (FDBParams.cParamSets = 0)) or //new arrays have been set

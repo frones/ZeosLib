@@ -2578,8 +2578,8 @@ begin
         FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
           'OCIDefineObject', Self);
   end;
-
   inherited Open;
+  FCursorLocation := rctServer;
 end;
 
 procedure TZOracleResultSet_A.ResetCursor;
@@ -2790,8 +2790,8 @@ begin
     end;
     ColumnsInfo.Add(ColumnInfo);
   end;
-
   inherited Open;
+  FCursorLocation := rctClient;
 end;
 
 { TZAbstracOracleLobStream }

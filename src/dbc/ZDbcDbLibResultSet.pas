@@ -344,7 +344,7 @@ begin
   FSQL := SQL;
   FCheckDBDead := FPlainDriver.GetProtocol = 'mssql';
   //FDataProvider := TZPlainDblibDataProvider.Create(Statement.GetConnection as IZDbLibConnection , FCheckDBDead);
-  FDataProvider := TZCachedDblibDataProvider.Create(Statement.GetConnection as IZDbLibConnection);
+  FDataProvider := TZCachedDblibDataProvider.Create(FDBLibConnection);
   FClientCP := ConSettings.ClientCodePage.CP;
   Open;
 end;
@@ -467,9 +467,11 @@ AssignGeneric:  {this is the old way we did determine the ColumnInformations}
 
   if FDataProvider is TZCachedDblibDataProvider then begin
     (FDataProvider as TZCachedDblibDataProvider).LoadData;
+    FCursorLocation := rctClient;
     if NeedsLoading then
       (GetMetaData as IZDblibResultSetMetadata).LoadColumns;
-  end;
+  end else
+    FCursorLocation := rctServer;
 
   inherited Open;
 end;
@@ -514,11 +516,13 @@ begin
 end;
 
 {$IFDEF USE_SYNCOMMONS}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "XYZ" not used} {$ENDIF}
 procedure TZDBLibResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 begin
   raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 {$ENDIF}
 
 {**

@@ -200,6 +200,7 @@ type
     function GetColumnLength(ColumnIndex: Integer): Integer;
     function GetColumnOffSet(ColumnIndex: Integer): Integer;
     function GetColumnDefaultExpression(ColumnIndex: Integer): string;
+    function HasServerLinkedColumns: Boolean;
     procedure SetColumnDefaultExpression(ColumnIndex: Integer; const Value: string);
     procedure SetColumnCodePage(ColumnIndex: Integer; const Value: Word);
 
@@ -2837,6 +2838,12 @@ begin
 {$ENDIF}
   Result := Word(GetUInt(ColumnIndex, IsNull));
 end;
+
+function TZRowAccessor.HasServerLinkedColumns: Boolean;
+begin
+  Result := ((FLobCols <> nil) and not FCachedLobs) or (FResultSetCols <> nil)
+end;
+
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as

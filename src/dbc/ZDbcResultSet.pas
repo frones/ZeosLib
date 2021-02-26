@@ -93,7 +93,7 @@ type
     FUniTemp: UnicodeString;
     LastWasNull: Boolean;
     FOpenLobStreams: TZSortedList;
-    FResultSetCursorType: TZResultSetCursorType;
+    FCursorLocation: TZCursorLocation;
 
     function CreateForwardOnlyException: EZSQLException;
     procedure CheckClosed;
@@ -979,7 +979,7 @@ type
     /// <author>EgonHugeist</author>
     /// <summary>Get the cursor type of this resultset</summary>
     /// <returns>the cursortype of this resultset</returns>
-    function GetCursorType: TZResultSetCursorType;
+    function GetCursorLocation: TZCursorLocation;
 
     function GetPostUpdates: TZPostUpdatesMode;
     function GetLocateUpdates: TZLocateUpdatesMode;
@@ -1083,7 +1083,29 @@ type
     procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency);
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: TBCD);
     procedure UpdateGUID(ColumnIndex: Integer; const Value: TGUID);
+    /// <summary>Updates the designated column with a <c>PAnsiChar</c> buffer
+    ///  value. The <c>updateXXX</c> methods are used to update column values in
+    ///  the current row or the insert row.  The <c>updateXXX</c> methods do not
+    ///  update the underlying database; instead the <c>updateRow</c> or
+    ///  <c>insertRow</c> methods are called to update the database.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" an address of the value buffer</param>
+    /// <param>"Len" a reference of the buffer Length variable in bytes.</param>
     procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUInt); overload;
+    /// <summary>Updates the designated column with a <c>PWideChar</c> buffer
+    ///  value. The <c>updateXXX</c> methods are used to update column values in
+    ///  the current row or the insert row.  The <c>updateXXX</c> methods do not
+    ///  update the underlying database; instead the <c>updateRow</c> or
+    ///  <c>insertRow</c> methods are called to update the database.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" an address of the value buffer</param>
+    /// <param>"Len" a reference of the buffer Length variable in words.</param>
     procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar; var Len: NativeUInt); overload;
     procedure UpdateString(ColumnIndex: Integer; const Value: String);
     {$IFNDEF NO_ANSISTRING}
@@ -2453,9 +2475,9 @@ begin
   Result := '';
 end;
 
-function TZAbstractResultSet.GetCursorType: TZResultSetCursorType;
+function TZAbstractResultSet.GetCursorLocation: TZCursorLocation;
 begin
-  Result := FResultSetCursorType;
+  Result := FCursorLocation;
 end;
 
 function TZAbstractResultSet.GetMetaData: IZResultSetMetaData;
@@ -3988,34 +4010,12 @@ begin
   raise CreateReadOnlyException;;
 end;
 
-{**
-  Updates the designated column with a <code>PAnsiChar</code> value.
-  The <code>updateXXX</code> methods are used to update column values in the
-  current row or the insert row.  The <code>updateXXX</code> methods do not
-  update the underlying database; instead the <code>updateRow</code> or
-  <code>insertRow</code> methods are called to update the database.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param value the new column value
-  @param len the length in bytes of the value
-}
 procedure TZAbstractReadOnlyResultSet.UpdatePAnsiChar(ColumnIndex: Integer;
   Value: PAnsiChar; var Len: NativeUInt);
 begin
   raise CreateReadOnlyException;;
 end;
 
-{**
-  Updates the designated column with a <code>PAnsiChar</code> value.
-  The <code>updateXXX</code> methods are used to update column values in the
-  current row or the insert row.  The <code>updateXXX</code> methods do not
-  update the underlying database; instead the <code>updateRow</code> or
-  <code>insertRow</code> methods are called to update the database.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param x the new column value
-  @param Len the length of the value in codepointe
-}
 procedure TZAbstractReadOnlyResultSet.UpdatePWideChar(ColumnIndex: Integer;
   Value: PWideChar; var Len: NativeUInt);
 begin

@@ -585,6 +585,7 @@ begin
   inherited Create(Statement, SQL, MessageMetadata, OrgTypeList, Status, DataBuffer);
   FResultset := ResultSet^;
   FResultSetAddr := ResultSet;
+  FCursorLocation := rctServer;
 end;
 
 function TZFirebirdResultSet.First: Boolean;
@@ -869,6 +870,7 @@ constructor TZFirebirdOutParamResultSet.Create(const Statement: IZStatement;
 begin
   inherited Create(Statement, SQL, MessageMetadata, OrgTypeList, Status, DataBuffer);
   LastRowNo := 1;
+  FCursorLocation := rctClient;
 end;
 
 function TZFirebirdOutParamResultSet.MoveAbsolute(Row: Integer): Boolean;

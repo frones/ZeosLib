@@ -2337,7 +2337,7 @@ var L, H, I: Integer;
       Clob := nil;
     end;
   end;
-  procedure ReadAsWCLob(Index: Integer; ColumnCodePage: Word);
+  procedure ReadAsWCLob(Index: Integer);
   var Clob: IZCLob;
     Blob: IZBlob;
     PW: Pointer;
@@ -2459,7 +2459,7 @@ begin
                               JSONWriter.Add('"');
                               if ColumnCodePage = zCP_UTF8
                               then ReadUTF8CLob(C)
-                              else ReadAsWCLob(C, ColumnCodePage);
+                              else ReadAsWCLob(C);
                               JSONWriter.Add('"');
                             end else ReadBlob(C);
                           end;
@@ -3893,7 +3893,10 @@ begin
   Result := TZInterbaseFirebirdBindList;
 end;
 
-{$IFDEF FPC}{$PUSH}{$WARN 4056 off : Conversion between ordinals and pointers is not portable}{$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4056 off : Conversion between ordinals and pointers is not portable}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
 function TZAbstractFirebirdInterbasePreparedStatement.GetExecuteBlockString(
   RemainingArrayRows: Integer; XSQLDAMaxSize: Cardinal; var PreparedRowsOfArray,
   MaxRowsPerBatch: Integer; PlainDriver: TZInterbaseFirebirdPlainDriver): RawByteString;

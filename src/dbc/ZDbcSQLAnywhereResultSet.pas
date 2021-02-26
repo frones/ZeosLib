@@ -1494,6 +1494,7 @@ begin
   end;
   FColumnData := P;
   inherited Open;
+  FCursorLocation := rctServer;
 end;
 
 { TZSQLAnywhereCachedResultSet }
@@ -1779,6 +1780,7 @@ begin
     end;
   end;
   LastRowNo := 1;
+  FCursorLocation := rctClient;
 end;
 
 function TZSQLAynwhereOutParamResultSet.MoveAbsolute(Row: Integer): Boolean;

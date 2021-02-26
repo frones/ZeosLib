@@ -623,8 +623,9 @@ var
   P, pgBuff: PAnsiChar;
   RNo, H, I: Integer;
   TS: TZTimeStamp;
-  Months, Days: Integer absolute TS;
-label ProcBts, jmpTime, jmpTS, jmpOIDBLob;
+  Months: Integer absolute TS;
+  Days: Integer absolute TS;
+label jmpTime, jmpTS, jmpOIDBLob;
 begin
   RNo := PGRowNo;
   if JSONWriter.Expand then
@@ -925,9 +926,13 @@ begin
   FBinaryValues := FResultFormat^ = ParamFormatBin;
   FClientCP := ConSettings.ClientCodePage.CP;
   FSingleRowMode := SingleRowMode;
-  if FSingleRowMode
-  then SetType(rtForwardOnly)
-  else SetType(rtScrollInsensitive);
+  if FSingleRowMode then begin
+    SetType(rtForwardOnly);
+    FCursorLocation := rctServer;
+  end else begin
+    SetType(rtScrollInsensitive);
+    FCursorLocation := rctClient;
+  end;
   Open;
 end;
 

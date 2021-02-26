@@ -99,7 +99,7 @@ type
     FClientCP: Word;
     FWeakIZStatementPtr: Pointer; //weak reference to IZStatement intf of Self
     FWeakIZLoggingObjectPtr: Pointer; //weak reference to IZLoggingObject intf of Self
-    FResultSetCursorType: TZResultSetCursorType;
+    FCursorLocation: TZCursorLocation;
     procedure PrepareOpenResultSetForReUse; virtual;
     procedure PrepareLastResultSetForReUse; virtual;
     procedure FreeOpenResultSetReference(const ResultSet: IZResultSet);
@@ -297,12 +297,12 @@ type
     function GetStatementId: NativeUInt;
     /// <author>EgonHugeist</author>
     /// <summary>Set the cursor type of the resultset to be genarated if any.</summary>
-    /// <param>"Value" the cursortype</param>
-    procedure SetCursorType(Value: TZResultSetCursorType);
+    /// <param>"Value" the CursorLocation</param>
+    procedure SetCursorLocation(Value: TZCursorLocation); virtual;
     /// <author>EgonHugeist</author>
     /// <summary>Get the cursor type of this resultset</summary>
-    /// <returns>the cursortype of this resultset</returns>
-    function GetCursorType: TZResultSetCursorType;
+    /// <returns>the CursorLocation of this resultset</returns>
+    function GetCursorLocation: TZCursorLocation;
   end;
 
   TZBindType = (zbtNull, zbt8Byte, zbt4Byte,
@@ -1996,9 +1996,9 @@ begin
   FCursorName := Value;
 end;
 
-procedure TZAbstractStatement.SetCursorType(Value: TZResultSetCursorType);
+procedure TZAbstractStatement.SetCursorLocation(Value: TZCursorLocation);
 begin
-  FResultSetCursorType := Value;
+  FCursorLocation := Value;
 end;
 
 function TZAbstractStatement.Execute(const SQL: UnicodeString): Boolean;
@@ -2339,9 +2339,9 @@ begin
   Result := FConnection;
 end;
 
-function TZAbstractStatement.GetCursorType: TZResultSetCursorType;
+function TZAbstractStatement.GetCursorLocation: TZCursorLocation;
 begin
-  Result := FResultSetCursorType
+  Result := FCursorLocation
 end;
 
 function TZAbstractStatement.GetParameters: TStrings;

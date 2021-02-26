@@ -67,10 +67,12 @@ uses
   ZCompatibility, ZClasses, ZDbcOleDB;
 
 type
+  PRowSet = ^IRowSet;
+
   {** Implements Ado ResultSet. }
   TZAbstractOleDBResultSet = class(TZAbstractReadOnlyResultSet, IZResultSet)
   private
-    FRowSet: IRowSet;
+    FRowSetAddr: PRowSet;
     FZBufferSize: Integer;
     FDBBindingArray: TDBBindingDynArray;
     FDBBINDSTATUSArray: TDBBINDSTATUSDynArray;
@@ -133,7 +135,7 @@ type
     procedure Open; override;
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
-      const RowSet: IRowSet; ZBufferSize: Integer;
+      const RowSet: PRowSet; ZBufferSize: Integer;
       const {%H-}EnhancedColInfo: Boolean = True);
     /// <summary>Resets the Cursor position to beforeFirst, releases server and
     ///  client resources.</summary>
@@ -149,6 +151,14 @@ type
     ///  there are no more rows</returns>
     function Next: Boolean; override;
   end;
+
+  TZOleDBMetadataResultSet = Class(TZOleDBResultSet)
+  private
+    FRowSet: IRowSet;
+  public
+    constructor Create(const Statement: IZStatement; const RowSet: IRowSet;
+      ZBufferSize: Integer; const {%H-}EnhancedColInfo: Boolean = True);
+  End;
 
   TZOleDBParamResultSet = class(TZAbstractOleDBResultSet, IZResultSet)
   public
@@ -609,7 +619,7 @@ end;
 procedure TZAbstractOleDBResultSet.CreateAccessors;
 var Status: HResult;
 begin
-  Status := (FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA,
+  Status := (FRowSetAddr^ as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA,
     fpcColumns, Pointer(FDBBindingArray), FRowSize, @FAccessor,
     Pointer(FDBBINDSTATUSArray));
   if Status <> S_OK then
@@ -627,7 +637,7 @@ procedure TZAbstractOleDBResultSet.ReleaseFetchedRows;
 var Status: HResult;
 begin
   if (FRowsObtained > 0) then begin
-    Status := fRowSet.ReleaseRows(FRowsObtained,FHROWS,nil,nil,Pointer(FRowStates));
+    Status := fRowSetAddr.ReleaseRows(FRowsObtained,FHROWS,nil,nil,Pointer(FRowStates));
     if Status <> S_OK then
       FOleDBConnection.HandleErrorOrWarning(Status, lcOther, 'IRowSet.ReleaseRows', Self);
     FOleDBConnection.GetMalloc.Free(FHROWS);
@@ -1790,20 +1800,20 @@ begin
         Result := TZLocalMemBLob.CreateWithData(Pointer(FData), 16, FOpenLobStreams);
       DBTYPE_BYTES:
         if FColBind.cbMaxLen = 0 then
-          Result := TZOleDBBLOB.Create(FRowSet, ColumnIndex, DBTYPE_BYTES,
+          Result := TZOleDBBLOB.Create(FRowSetAddr^, ColumnIndex, DBTYPE_BYTES,
             FHROWS^[FCurrentBufRowNo], FOleDBConnection, FLength, FOpenLobStreams)
         else
           Result := TZLocalMemBLob.CreateWithData(Pointer(FData), FLength, FOpenLobStreams);
       DBTYPE_STR:
         if FColBind.cbMaxLen = 0 then
-          Result := TZOleDBCLOB.Create(FRowSet, ColumnIndex, DBTYPE_STR,
+          Result := TZOleDBCLOB.Create(FRowSetAddr^, ColumnIndex, DBTYPE_STR,
             FHROWS^[FCurrentBufRowNo], FOleDBConnection, FLength, FOpenLobStreams)
         else
           Result := TZLocalMemCLob.CreateWithData(PAnsiChar(FData),
             FLength, FClientCP, ConSettings, FOpenLobStreams);
       DBTYPE_WSTR, DBTYPE_XML:
         if FColBind.cbMaxLen = 0 then
-          Result := TZOleDBCLOB.Create(FRowSet, ColumnIndex, FwType,
+          Result := TZOleDBCLOB.Create(FRowSetAddr^, ColumnIndex, FwType,
             FHROWS^[FCurrentBufRowNo], FOleDBConnection, FLength, FOpenLobStreams)
         else
           Result := TZLocalMemCLob.CreateWithData(PWideChar(FData), FLength shr 1, ConSettings, FOpenLobStreams);
@@ -1893,19 +1903,19 @@ var
   begin
     case wType of
       DBTYPE_BYTES: begin
-          OleDBBLob := TZOleDBBLOB.Create(FResultSet.FRowSet,
+          OleDBBLob := TZOleDBBLOB.Create(FResultSet.FRowSetAddr^,
             I, DBTYPE_BYTES, FResultSet.FHROWS^[FResultSet.FCurrentBufRowNo],
             FResultSet.FOleDBConnection, Flength^, FOpenLobStreams);
           LocalLob := TZLocalMemBLob.CreateFromBlob(OleDBBLob, FOpenLobStreams);
         end;
       DBTYPE_STR: begin
-          OleDBCLob := TZOleDBCLOB.Create(FResultSet.FRowSet,
+          OleDBCLob := TZOleDBCLOB.Create(FResultSet.FRowSetAddr^,
             I, DBTYPE_STR, FResultSet.FHROWS^[FResultSet.FCurrentBufRowNo],
             FResultSet.FOleDBConnection, Flength^, FOpenLobStreams);
           LocalLob := TZLocalMemCLob.CreateFromClob(OleDBCLob, ConSettings.ClientCodePage.CP, ConSettings, FOpenLobStreams);
         end;
       else begin
-          OleDBCLob := TZOleDBCLOB.Create(FResultSet.FRowSet,
+          OleDBCLob := TZOleDBCLOB.Create(FResultSet.FRowSetAddr^,
             I, DBTYPE_WSTR, FResultSet.FHROWS^[FResultSet.FCurrentBufRowNo],
             FResultSet.FOleDBConnection, Flength^, FOpenLobStreams);
           LocalLob := TZLocalMemCLob.CreateFromClob(OleDBCLob, zCP_UTF16, ConSettings, FOpenLobStreams);
@@ -1917,8 +1927,12 @@ begin
   if Assigned(FResultSet)
   then Result := FResultSet.Next
   else Result := False;
-  if not Result or ((MaxRows > 0) and (LastRowNo >= MaxRows)) then
+  if not Result or ((MaxRows > 0) and (LastRowNo >= MaxRows)) then begin
+    //if (FResultSet <> nil) and not FLastRowFetched then
+      //FResultSet.ResetCursor; //EH: clear library mem or release servercursor
+    FLastRowFetched := True;
     Exit;
+  end;
 
   TempRow := RowAccessor.RowBuffer;
   FData := @FResultSet.FData;
@@ -2198,6 +2212,7 @@ begin
     end;
   Open;
   LastRowNo := 1;
+  FCursorLocation := rctClient;
 end;
 
 function TZOleDBParamResultSet.MoveAbsolute(Row: Integer): Boolean;
@@ -2225,22 +2240,14 @@ end;
   @param AdoRecordSet a ADO recordset object, the source of the ResultSet.
 }
 constructor TZOleDBResultSet.Create(const Statement: IZStatement;
-  const SQL: string; const RowSet: IRowSet; ZBufferSize: Integer;
+  const SQL: string; const RowSet: PRowSet; ZBufferSize: Integer;
   const EnhancedColInfo: Boolean);
 begin
   FOleDBConnection := Statement.GetConnection as IZOleDBConnection;
-  {if (Statement <> nil) and (Statement.GetConnection.GetServerProvider = spMSSQL)
-  then inherited Create(Statement, SQL, TZOleDBMSSQLResultSetMetadata.Create(
-    Statement.GetConnection.GetMetadata, SQL, Self), Statement.GetConnection.GetConSettings)
-  else}
   FByteBuffer := FOleDBConnection.GetByteBufferAddress;
+  FRowSetAddr := RowSet;
   inherited Create(Statement, SQL, nil, FOleDBConnection.GetConSettings);
-  FRowSet := RowSet;
   FZBufferSize := ZBufferSize;
-  FAccessor := 0;
-  FCurrentBufRowNo := 0;
-  FRowsObtained := 0;
-  FHROWS := nil;
   fClientCP := ConSettings.ClientCodePage.CP;
   Open;
 end;
@@ -2248,17 +2255,18 @@ end;
 function TZOleDBResultSet.Next: Boolean;
 var
   I: NativeInt;
-  stmt: IZOleDBPreparedStatement;
+  //stmt: IZOleDBPreparedStatement;
   Status: HResult;
 label NoSuccess;  //ugly but faster and no double code
 begin
   { Checks for maximum row. }
   Result := False;
-  stmt := nil;
-  if (RowNo > LastRowNo) or Closed or
+  //stmt := nil;
+  if (RowNo > LastRowNo) or Closed or (FRowSetAddr^ = nil) or
     ((RowNo = LastRowNo) and (FGetNextRowsStatus = DB_S_ENDOFROWSET)) or
-    ((MaxRows > 0) and (RowNo >= MaxRows)) or
-    ((not Closed) and (FRowSet = nil) and (not (Supports(Statement, IZOleDBPreparedStatement, Stmt) and Stmt.GetNewRowSet(FRowSet)))) then
+    ((MaxRows > 0) and (RowNo >= MaxRows)) //or
+    //((not Closed) and (not (Supports(Statement, IZOleDBPreparedStatement, Stmt) and Stmt.GetNewRowSet(FRowSet))))
+    then
     goto NoSuccess;
 
   if (FRowsObtained > 0) and (FCurrentBufRowNo < DBROWCOUNT(FRowsObtained)-1)
@@ -2269,7 +2277,7 @@ begin
     then CreateAccessors
     else ReleaseFetchedRows;
 
-    FGetNextRowsStatus := fRowSet.GetNextRows(DB_NULL_HCHAPTER,0,FRowCount, FRowsObtained, FHROWS);
+    FGetNextRowsStatus := fRowSetAddr^.GetNextRows(DB_NULL_HCHAPTER,0,FRowCount, FRowsObtained, FHROWS);
     if Failed(FGetNextRowsStatus) then
       FOleDBConnection.HandleErrorOrWarning(FGetNextRowsStatus, lcOther, 'IRowSet.GetNextRows', Self);
     if (RowNo = 0) then begin
@@ -2289,7 +2297,7 @@ begin
     if FRowsObtained > 0 then begin
       {fetch data into the buffer}
       for i := 0 to FRowsObtained -1 do begin
-        Status := fRowSet.GetData(FHROWS[i], FAccessor, @FColBuffer[I*FRowSize]);
+        Status := fRowSetAddr^.GetData(FHROWS[i], FAccessor, @FColBuffer[I*FRowSize]);
         if Status <> S_OK then
           FOleDBConnection.HandleErrorOrWarning(Status, lcOther, 'IRowSet.GetData', Self);
       end;
@@ -2324,8 +2332,8 @@ var
   ColumnInfo: TZColumnInfo;
 label jmpFixedAndSize;
 begin
-  if not Assigned(FRowSet) or
-     Failed(FRowSet.QueryInterface(IID_IColumnsInfo, OleDBColumnsInfo)) then
+  if not Assigned(FRowSetAddr^) or
+     Failed(FRowSetAddr^.QueryInterface(IID_IColumnsInfo, OleDBColumnsInfo)) then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
   OleDBColumnsInfo.GetColumnInfo(fpcColumns{%H-}, prgInfo, ppStringsBuffer);
   OriginalprgInfo := prgInfo; //save pointer for Malloc.Free
@@ -2409,6 +2417,7 @@ jmpFixedAndSize:          ColumnInfo.Precision := FieldSize;
     if Assigned(OriginalprgInfo) then (Statement.GetConnection as IZOleDBConnection).GetMalloc.Free(OriginalprgInfo);
   end;
   inherited Open;
+  FCursorLocation := rctServer;
 end;
 
 procedure TZOleDBResultSet.ResetCursor;
@@ -2421,19 +2430,19 @@ begin
       fTempBlob := nil;
       ReleaseFetchedRows;
       if FAccessor > 0 then begin
-        Status := (fRowSet As IAccessor).ReleaseAccessor(FAccessor, @FAccessorRefCount);
+        Status := (fRowSetAddr^ As IAccessor).ReleaseAccessor(FAccessor, @FAccessorRefCount);
         if Status <> S_OK then
           FOleDBConnection.HandleErrorOrWarning(Status, lcOther, 'IAccessor.ReleaseAccessor', Self);
       end;
     finally
-      FRowSet := nil;
+      FRowSetAddr^ := nil;
       FAccessor := 0;
       RowNo := 0;
       FCurrentBufRowNo := 0;
       FRowsObtained := 0;
       FGetNextRowsStatus := S_OK;
     end;
-    FRowSet := nil;//handle 'Object is in use Exception'
+    FRowSetAddr^ := nil;//handle 'Object is in use Exception'
     inherited ResetCursor;
   end;
 end;
@@ -2499,6 +2508,15 @@ begin
     ColumnCodePage := zCP_UTF16;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
+
+{ TZOleDBMetadataResultSet }
+
+constructor TZOleDBMetadataResultSet.Create(const Statement: IZStatement;
+  const RowSet: IRowSet; ZBufferSize: Integer; const EnhancedColInfo: Boolean);
+begin
+  FRowSet := RowSet;
+  inherited Create(Statement, '', @FRowSet, ZBufferSize, EnhancedColInfo);
+end;
 
 initialization
   {init some reusable records (: }

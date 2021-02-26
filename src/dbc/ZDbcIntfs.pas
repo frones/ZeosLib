@@ -340,8 +340,11 @@ type
   /// <author>EgonHugeist</author>
   /// <remarks>please fix the documentation, i just reflect the purpose of the
   ///  enums</remarks>
-  /// <summary>Defines a cursor type of result set.</summary>
-  TZResultSetCursorType = (
+  /// <summary>Defines a cursor type of result set. it's one of:
+  ///   <c>rctDriver</c>,<c>rctClient</c>,<c>rctServer</c></summary>
+  TZCursorLocation = (
+    /// <summary>The driver dicides if a Client or a Server cursor is used.</summary>
+    rctDefault,
     /// <summary>The results are copied into a client buffer handled by provider.
     ///  This mode is default for <c>libpq</c> or <c>libmariadb/libmysql</c>. see
     ///  <c>mysql_store_result;mysql_stmt_store_result</c>. This usually is done
@@ -354,7 +357,7 @@ type
     ///  created. If a driver supports a ServerCursor the underlaying native
     ///  resultset uses a ServerCursor. Drivers having a lob-descriptor in any
     ///  kind do not load the lobs to local memory.</summary>
-    rctClientLib,
+    rctClient,
     /// <summary>Use a forward only server cursor. This usually is the fastest
     ///  way to read the data from a server. Drivers having no multiple active
     ///  resultset support usually require read data to end or discard the
@@ -365,15 +368,7 @@ type
     ///  from the underlaying native resultset having a server cursor. Drivers
     ///  having a lob-descriptor in any kind do not load the lobs to local
     ///  memory.</summary>
-    rctServer,
-    /// <summary>Fetch all data into programs local memory. An immediat full
-    ///  load is done only for tabular streamed protocols. All lob's are copied
-    ///  to local memory. So be carefull using this mode, it leads to "out of
-    ///  memory" exceptions but the resultset will not be released if a
-    ///  connection loss happens(if full loaded of course). This CursorType
-    ///  creates a CachedResultSet and the driver decides if the underlaying
-    ///  readonly restulset we fetch frome uses a Client- or a ServerCursor.</summary>
-    rctClient);
+    rctServer);
 
   /// <summary>Defines a result set concurrency type.</summary>
   TZResultSetConcurrency = (rcReadOnly, rcUpdatable);
@@ -1357,12 +1352,12 @@ type
     /// <summary>Gets a description of a table's primary key columns from a
     ///  cache. They are ordered by COLUMN_NAME.
     ///  Each primary key column description has the following columns:
-    ///  <c>TABLE_CAT</c> String => table catalog (may be null)
-    ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
-    ///  <c>TABLE_NAME</c> String => table name
-    ///  <c>COLUMN_NAME</c> String => column name
-    ///  <c>KEY_SEQ</c> short => sequence number within primary key
-    ///  <c>PK_NAME</c> String => primary key name (may be null)</summary>
+ 	  ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+ 	  ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+ 	  ///  <c>TABLE_NAME</c> String => table name
+ 	  ///  <c>COLUMN_NAME</c> String => column name
+ 	  ///  <c>KEY_SEQ</c> short => sequence number within primary key
+ 	  ///  <c>PK_NAME</c> String => primary key name (may be null)</summary>
     /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
     ///  name from the selection criteria</param>
     /// <param>"schema" a schema name; An empty schema means drop schema
@@ -1902,11 +1897,11 @@ type
     /// <summary>Set the cursor type of the resultset to be genarated if any.</summary>
     /// <param>"Value" one of <c>rctClient</c>, <c>rctServer</c>,
     ///  or <c>rctLocalMemory</c></param>
-    procedure SetCursorType(Value: TZResultSetCursorType);
+    procedure SetCursorLocation(Value: TZCursorLocation);
     /// <author>EgonHugeist</author>
     /// <summary>Get the cursor type of this resultset</summary>
-    /// <returns>the cursortype of this resultset</returns>
-    function GetCursorType: TZResultSetCursorType;
+    /// <returns>the CursorLocation of this resultset</returns>
+    function GetCursorLocation: TZCursorLocation;
     /// <summary>Note yet implemented. Propably omitted in future.
     ///  Gets the current value for post updates.</summary>
     /// <returns>the current value for post updates.</returns>
@@ -3884,8 +3879,8 @@ type
     function GetFetchSize: Integer;
     /// <author>EgonHugeist</author>
     /// <summary>Get the cursor type of this resultset</summary>
-    /// <returns>the cursortype of this resultset</returns>
-    function GetCursorType: TZResultSetCursorType;
+    /// <returns>the CursorLocation of this resultset</returns>
+    function GetCursorLocation: TZCursorLocation;
 
     function GetType: TZResultSetType;
     function GetConcurrency: TZResultSetConcurrency;
@@ -3916,7 +3911,29 @@ type
     procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency);
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: TBCD);
     procedure UpdateGUID(ColumnIndex: Integer; const Value: TGUID);
+    /// <summary>Updates the designated column with a <c>PAnsiChar</c> buffer
+    ///  value. The <c>updateXXX</c> methods are used to update column values in
+    ///  the current row or the insert row.  The <c>updateXXX</c> methods do not
+    ///  update the underlying database; instead the <c>updateRow</c> or
+    ///  <c>insertRow</c> methods are called to update the database.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" an address of the value buffer</param>
+    /// <param>"Len" a reference of the buffer Length variable in bytes.</param>
     procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; var Len: NativeUInt);
+    /// <summary>Updates the designated column with a <c>PWideChar</c> buffer
+    ///  value. The <c>updateXXX</c> methods are used to update column values in
+    ///  the current row or the insert row.  The <c>updateXXX</c> methods do not
+    ///  update the underlying database; instead the <c>updateRow</c> or
+    ///  <c>insertRow</c> methods are called to update the database.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" an address of the value buffer</param>
+    /// <param>"Len" a reference of the buffer Length variable in words.</param>
     procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar; var Len: NativeUInt);
     procedure UpdateString(ColumnIndex: Integer; const Value: String);
     {$IFNDEF NO_ANSISTRING}
@@ -3989,6 +4006,18 @@ type
     procedure DeleteRow;
     procedure RefreshRow;
     procedure CancelRowUpdates;
+    /// <summary>Moves the cursor to the insert row.  The current cursor
+    ///  position is remembered while the cursor is positioned on the insert
+    ///  row.
+    ///  The insert row is a special row associated with an updatable result
+    ///  set. It is essentially a buffer where a new row may be constructed by
+    ///  calling the <c>updateXXX</c> methods prior to inserting the row into
+    ///  the result set.
+    ///  Only the <c>updateXXX</c>, <c>getXXX</c> and <c>insertRow</c>
+    ///  methods may be called when the cursor is on the insert row. All of the
+    ///  columns in a result set must be given a value each time this method is
+    ///  called before calling <c>insertRow</c>. An <c>updateXXX</c> method must
+    ///  be called before a <c>getXXX</c> method can be called on a column value.</summary>
     procedure MoveToInsertRow;
     procedure MoveToCurrentRow;
 
