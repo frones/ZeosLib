@@ -1870,7 +1870,7 @@ function StringReplaceAll_CS_GToEQ(const Source, OldPattern, NewPattern: Unicode
 ///  result is allways the shortes representation.</summary>
 /// <param>"Value" the value to be converted.</param>
 /// <returns>a converted RawByteString.</returns>
-function BcdToSQLRaw(const Value: TBCD): RawByteString; overload;
+function BcdToSQLRaw({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD): RawByteString; overload;
 
 /// <author>EgonHugeist</author>
 /// <summary>Decodes a TBCD value into a string. Trailing and leading zeroes
@@ -1879,7 +1879,7 @@ function BcdToSQLRaw(const Value: TBCD): RawByteString; overload;
 /// <param>"Buf" a raw buffer we write in. Buffer must have reserve enough space.</param>
 /// <param>"DecimalSep" the Decimal-seperator to be used.</param>
 /// <returns>the count of bytes we wrote into the buffer.</returns>
-function BcdToRaw(const Bcd: TBcd; Buf: PAnsiChar; DecimalSep: Char): LengthInt; overload;
+function BcdToRaw({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Bcd: TBcd; Buf: PAnsiChar; DecimalSep: Char): LengthInt; overload;
 
 /// <author>EgonHugeist</author>
 /// <summary>Encodes a TBCD value from raw buffer. Trailing and leading zeroes
@@ -1906,7 +1906,7 @@ function RawToBCD(const Value: RawByteString): TBCD; overload;
 ///  result is allways the shortes representation.</summary>
 /// <param>"Value" the value to be converted.</param>
 /// <returns>a converted UnicodeString.</returns>
-function BcdToSQLUni(const Value: TBCD): UnicodeString;
+function BcdToSQLUni({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD): UnicodeString;
 
 /// <author>EgonHugeist</author>
 /// <summary>Decodes a TBCD value into a string. Trailing and leading zeroes
@@ -1915,7 +1915,7 @@ function BcdToSQLUni(const Value: TBCD): UnicodeString;
 /// <param>"Buf" a UTF16 buffer we write in. Buffer must have reserve enough space.</param>
 /// <param>"DecimalSep" the Decimal-seperator to be used.</param>
 /// <returns>the count of words we wrote into the buffer.</returns>
-function BcdToUni(const Bcd: TBcd; Buf: PWideChar; DecimalSep: Char): LengthInt;
+function BcdToUni({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Bcd: TBcd; Buf: PWideChar; DecimalSep: Char): LengthInt;
 
 /// <author>EgonHugeist</author>
 /// <summary>Encodes a TBCD value from UTF16 buffer. Trailing and leading zeroes
@@ -1941,27 +1941,27 @@ function UniToBCD(const Value: UnicodeString): TBCD; overload;
 ///  get's raised.</summary>
 /// <param>"Value" the value to be decoded.</param>
 /// <param>"Result" the Int64 decoded.</param>
-procedure BCD2Int64(const Value: TBCD; out Result: Int64); overload;
+procedure BCD2Int64({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD; out Result: Int64); overload;
 
 /// <author>EgonHugeist</author>
 /// <summary>Decodes a BCD to a Int64. If conversion fails a EBcdException
 ///  get's raised.</summary>
 /// <param>"Value" the value to be decoded.</param>
 /// <returns>the Int64 decoded.</returns>
-function BCD2Int64(const Value: TBCD): Int64; overload;
+function BCD2Int64({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD): Int64; overload;
 
 /// <author>EgonHugeist</author>
 /// <summary>Decodes a BCD to a UInt64</summary>
 /// <param>"Value" the value to be decoded.</param>
 /// <param>"Result" the UInt64 decoded.</param>
-procedure BCD2UInt64(const Value: TBCD; out Result: UInt64); overload;
+procedure BCD2UInt64({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD; out Result: UInt64); overload;
 
 /// <author>EgonHugeist</author>
 /// <summary>Decodes a BCD to a UInt64. If conversion fails a EBcdException
 ///  get's raised.</summary>
 /// <param>"Value" the value to be decoded.</param>
 /// <returns>the UInt64 decoded.</returns>
-function BCD2UInt64(const Value: TBCD): UInt64; overload;
+function BCD2UInt64({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD): UInt64; overload;
 
 /// <author>EgonHugeist</author>
 /// <summary>Trys to encode a BCD from a String.</summary>
@@ -7315,7 +7315,7 @@ begin
   raise EConvertError.CreateResFmt(@SInvalidInteger, [S])
 end;
 
-procedure BCD2Int64(const Value: TBCD; out Result: Int64);
+procedure BCD2Int64({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD; out Result: Int64);
 var Buf: array[0..MaxFMTBcdFractionSize+2] of Char;
  P, PEnd, PFail: PChar;
 begin
@@ -7327,17 +7327,17 @@ begin
     RaiseBcd2OrdException(P, PEnd);
 end;
 
-function BCD2Int64(const Value: TBCD): Int64;
+function BCD2Int64({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD): Int64;
 begin
   BCD2Int64(Value, Result);
 end;
 
-procedure BCD2UInt64(const Value: TBCD; out Result: UInt64);
+procedure BCD2UInt64({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD; out Result: UInt64);
 begin
   Result := {$IFDEF UNICODE}UnicodeToUInt64Def{$ELSE}RawToUInt64Def{$ENDIF}(BcdToStr(Value), Uint64(0));
 end;
 
-function BCD2UInt64(const Value: TBCD): UInt64;
+function BCD2UInt64({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD): UInt64;
 var Buf: array[0..MaxFMTBcdFractionSize+2] of Char;
  P, PEnd, PFail: PChar;
 begin
@@ -7754,14 +7754,15 @@ begin
   end;
 end;
 
-function BcdToSQLRaw(const Value: TBCD): RawByteString;
+function BcdToSQLRaw({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD): RawByteString;
 var Digits: array[0..MaxFMTBcdFractionSize-1+1{sign}+1{dot}] of AnsiChar;
 begin
   {$IFDEF FPC}Result := '';{$ENDIF}
   ZSetString(PAnsiChar(@Digits[0]), BcdToRaw(Value, @Digits[0], '.'),Result)
 end;
 
-function BcdToRaw(const Bcd: TBcd; Buf: PAnsiChar; DecimalSep: Char): LengthInt;
+function BcdToRaw({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Bcd: TBcd;
+  Buf: PAnsiChar; DecimalSep: Char): LengthInt;
 var
   PBuf, pCN{current nibble}, pDN{decimal nibble}, pLN{last bibble}, pFN{firts nibble}: PAnsiChar;
   Scale, Precision, i: Integer;
@@ -7826,7 +7827,7 @@ zero: Result := 1;
   Result := (Buf-PBuf);
 end;
 
-function BcdToUni(const Bcd: TBcd; Buf: PWideChar; DecimalSep: Char): LengthInt;
+function BcdToUni({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Bcd: TBcd; Buf: PWideChar; DecimalSep: Char): LengthInt;
 var
   pCN{current nibble}, pDN{decimal nibble}, pLN{last bibble}, pFN{firts nibble}: PAnsiChar;
   PBuf: PWideChar;
@@ -7903,7 +7904,7 @@ begin
   Result := RawToBCD(Pointer(Value), Length(Value));
 end;
 
-function BcdToSQLUni(const Value: TBCD): UnicodeString;
+function BcdToSQLUni({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD): UnicodeString;
 var Digits: array[0..MaxFMTBcdFractionSize-1+1{sign}+1{dot}] of WideChar;
 begin
   {$IFDEF FPC}Result := '';{$ENDIF}

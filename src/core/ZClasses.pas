@@ -511,7 +511,7 @@ type
     ///  current sequence of bytes</summary>
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Result" the reference to the raw string we finally write in.</param>
-    procedure AddDecimal(const Value: TBCD; var Result: RawByteString); overload;
+    procedure AddDecimal({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD; var Result: RawByteString); overload;
     /// <summary>adds a TDateTime value as sql date representation to the
     ///  current sequence of bytes</summary>
     /// <param>"Value" the value to be converted.</param>
@@ -523,7 +523,7 @@ type
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Format" the format pattern.</param>
     /// <param>"Result" the reference to the raw string we finally write in.</param>
-    procedure AddDate(const Value: TZDate; const Format: String; var Result: RawByteString); overload;
+    procedure AddDate({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate; const Format: String; var Result: RawByteString); overload;
     /// <summary>adds a TDateTime value as sql time representation to the
     ///  current sequence of bytes</summary>
     /// <param>"Value" the value to be converted.</param>
@@ -535,7 +535,7 @@ type
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Format" the format pattern.</param>
     /// <param>"Result" the reference to the raw string we finally write in.</param>
-    procedure AddTime(const Value: TZTime; const Format: String; var Result: RawByteString); overload;
+    procedure AddTime({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime; const Format: String; var Result: RawByteString); overload;
     /// <summary>adds a TDateTime value as sql timestamp representation to the
     ///  current sequence of bytes</summary>
     /// <param>"Value" the value to be converted.</param>
@@ -547,13 +547,13 @@ type
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Format" the format pattern.</param>
     /// <param>"Result" the reference to the raw string we finally write in.</param>
-    procedure AddTimeStamp(const Value: TZTimeStamp; const Format: String; var Result: RawByteString);
+    procedure AddTimeStamp({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp; const Format: String; var Result: RawByteString);
     /// <summary>adds a GUID value as sql representation to the
     ///  current sequence of bytes</summary>
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Options" the conversion options.</param>
     /// <param>"Result" the reference to the raw string we finally write in.</param>
-    procedure AddGUID(const Value: TGUID; Options: TGUIDConvOptions; var Result: RawByteString);
+    procedure AddGUID({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID; Options: TGUIDConvOptions; var Result: RawByteString);
     /// <summary>finalize the Result, flush the buffer into the string</summary>
     /// <param>"Result" the reference to the raw string we finally write in.</param>
     procedure Finalize(var Result: RawByteString);
@@ -715,7 +715,7 @@ type
     ///  current sequence of words</summary>
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
-    procedure AddDecimal(const Value: TBCD; var Result: UnicodeString); overload;
+    procedure AddDecimal({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD; var Result: UnicodeString); overload;
     /// <summary>adds a TDateTime value as sql date representation to the
     ///  current sequence of words</summary>
     /// <param>"Value" the value to be converted.</param>
@@ -725,7 +725,7 @@ type
     ///  current sequence of words</summary>
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
-    procedure AddDate(const Value: TZDate; const Format: String; var Result: UnicodeString); overload;
+    procedure AddDate({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate; const Format: String; var Result: UnicodeString); overload;
     /// <summary>adds a TDateTime value as sql time representation to the
     ///  current sequence of words</summary>
     /// <param>"Value" the value to be converted.</param>
@@ -735,7 +735,7 @@ type
     ///  current sequence of words</summary>
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
-    procedure AddTime(const Value: TZTime; const Format: String; var Result: UnicodeString); overload;
+    procedure AddTime({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime; const Format: String; var Result: UnicodeString); overload;
     /// <summary>adds a TDateTime value as sql timestamp representation to the
     ///  current sequence of words</summary>
     /// <param>"Value" the value to be converted.</param>
@@ -745,13 +745,13 @@ type
     ///  current sequence of words</summary>
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
-    procedure AddTimeStamp(const Value: TZTimeStamp; const Format: String; var Result: UnicodeString);
+    procedure AddTimeStamp({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp; const Format: String; var Result: UnicodeString);
     /// <summary>adds a GUID value as sql representation to the
     ///  current sequence of words</summary>
     /// <param>"Value" the value to be converted.</param>
     /// <param>"Options" the conversion options.</param>
     /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
-    procedure AddGUID(const Value: TGUID; Options: TGUIDConvOptions; var Result: UnicodeString);
+    procedure AddGUID({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID; Options: TGUIDConvOptions; var Result: UnicodeString);
     /// <summary>finalize the Result, flush the buffer into the string</summary>
     /// <param>"Result" the reference to the UTF16 string we finally write in.</param>
     procedure Finalize(var Result: UnicodeString);
@@ -1475,7 +1475,7 @@ begin
   AddTextQuoted(Pointer(Value), Length(Value){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, QuoteChar, Result);
 end;
 
-procedure TZRawSQLStringWriter.AddTime(const Value: TZTime;
+procedure TZRawSQLStringWriter.AddTime({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime;
   const Format: String; var Result: RawByteString);
 var L: LengthInt;
   P: PAnsiChar;
@@ -1491,7 +1491,7 @@ begin
   else AddText(P, L, Result);
 end;
 
-procedure TZRawSQLStringWriter.AddTimeStamp(const Value: TZTimeStamp;
+procedure TZRawSQLStringWriter.AddTimeStamp({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp;
   const Format: String; var Result: RawByteString);
 var L: LengthInt;
   P: PAnsiChar;
@@ -1656,7 +1656,7 @@ begin
   else AddText(P, L, Result);
 end;
 
-procedure TZRawSQLStringWriter.AddDate(const Value: TZDate; const Format: String;
+procedure TZRawSQLStringWriter.AddDate({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate; const Format: String;
   var Result: RawByteString);
 var
   L: LengthInt;
@@ -1691,7 +1691,7 @@ begin
   else AddText(P, L, Result);
 end;
 
-procedure TZRawSQLStringWriter.AddDecimal(const Value: TBCD;
+procedure TZRawSQLStringWriter.AddDecimal({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD;
   var Result: RawByteString);
 var L: LengthInt;
   P: PAnsiChar;
@@ -1720,7 +1720,7 @@ begin
   else AddText(P, L, Result);
 end;
 
-procedure TZRawSQLStringWriter.AddGUID(const Value: TGUID;
+procedure TZRawSQLStringWriter.AddGUID({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID;
   Options: TGUIDConvOptions; var Result: RawByteString);
 var
   L: LengthInt;
@@ -1801,7 +1801,7 @@ begin
   else AddText(P, L, Result);
 end;
 
-procedure TZUnicodeSQLStringWriter.AddDate(const Value: TZDate;
+procedure TZUnicodeSQLStringWriter.AddDate({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate;
   const Format: String; var Result: UnicodeString);
 var
   L: LengthInt;
@@ -1835,7 +1835,7 @@ begin
   else AddText(P, L, Result);
 end;
 
-procedure TZUnicodeSQLStringWriter.AddDecimal(const Value: TBCD;
+procedure TZUnicodeSQLStringWriter.AddDecimal({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD;
   var Result: UnicodeString);
 var L: LengthInt;
   P: PWideChar;
@@ -1889,7 +1889,7 @@ begin
   else AddText(P, L, Result);
 end;
 
-procedure TZUnicodeSQLStringWriter.AddGUID(const Value: TGUID;
+procedure TZUnicodeSQLStringWriter.AddGUID({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID;
   Options: TGUIDConvOptions; var Result: UnicodeString);
 var
   L: LengthInt;
@@ -2161,7 +2161,7 @@ begin
   AddTextQuoted(Pointer(Value), Length(Value), QuoteChar, Result);
 end;
 
-procedure TZUnicodeSQLStringWriter.AddTime(const Value: TZTime;
+procedure TZUnicodeSQLStringWriter.AddTime({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime;
   const Format: String; var Result: UnicodeString);
 var L: LengthInt;
   P: PWideChar;
@@ -2177,7 +2177,7 @@ begin
   else AddText(P, L, Result);
 end;
 
-procedure TZUnicodeSQLStringWriter.AddTimeStamp(const Value: TZTimeStamp;
+procedure TZUnicodeSQLStringWriter.AddTimeStamp({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp;
   const Format: String; var Result: UnicodeString);
 var L: LengthInt;
   P: PWideChar;

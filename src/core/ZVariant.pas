@@ -182,7 +182,7 @@ type
     procedure SetAsUInteger(out Value: TZVariant; const Data: UInt64);
     procedure SetAsDouble(out Value: TZVariant; const Data: Double);
     procedure SetAsCurrency(out Value: TZVariant; const Data: Currency);
-    procedure SetAsBigDecimal(out Value: TZVariant; const Data: TBCD);
+    procedure SetAsBigDecimal(out Value: TZVariant; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Data: TBCD);
     procedure SetAsString(out Value: TZVariant; const Data: String);
     {$IFNDEF NO_ANSISTRING}
     procedure SetAsAnsiString(out Value: TZVariant; const Data: AnsiString);
@@ -300,7 +300,7 @@ type
     procedure SetAsUInteger(out Value: TZVariant; const Data: UInt64);
     procedure SetAsDouble(out Value: TZVariant; const Data: Double);
     procedure SetAsCurrency(out Value: TZVariant; const Data: Currency);
-    procedure SetAsBigDecimal(out Value: TZVariant; const Data: TBCD);
+    procedure SetAsBigDecimal(out Value: TZVariant; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Data: TBCD);
     procedure SetAsGUID(out Value: TZVariant; const Data: TGUID);
     procedure SetAsString(out Value: TZVariant; const Data: String);
     {$IFNDEF NO_ANSISTRING}
@@ -1435,7 +1435,7 @@ end;
   @param Data a value to be assigned.
 }
 procedure TZSoftVariantManager.SetAsBigDecimal(out Value: TZVariant;
-  const Data: TBCD);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Data: TBCD);
 begin
   Value := EncodeBigDecimal(Data);
 end;
