@@ -1790,27 +1790,25 @@ var
   wlen: LengthInt;
   wBuf: array[0..dsMaxWStringSize] of WideChar;
 begin
-  if (SourceBytes = 0) or (Source = nil) then
-    Result := ''
-  else begin
+  Result := '';
+  if (SourceBytes > 0) and (Source <> nil) then begin
     //test multibyte encodings:
     if IsMBCSCodePage(cp) then begin
       if SourceBytes <= dsMaxWStringSize then begin //can we use a static buf? -> avoid memrealloc for the Result String
         wlen := PRaw2PUnicodeBuf(Source, @wBuf[0], sourceBytes, CP);
-        ZSetString(nil, wlen, Result);
-        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(wBuf[0], Pointer(Result)^, wlen shl 1);
+        System.SetString(Result, PWideChar(@wBuf[0]), wLen);
       end else if CP = zCP_UTF8 then begin
         wlen := UTF8AsUTF16Words(Source, sourceBytes); //return exactlen
-        ZSetString(nil, wlen, Result);
+        System.SetString(Result, nil, wLen);
         UTF8ToWideChar(Source, SourceBytes, Pointer(Result));
       end else begin //nope Buf to small
-        ZSetString(nil, SourceBytes, Result);
+        System.SetString(Result, nil, SourceBytes);
         wlen := PRaw2PUnicodeBuf(Source, Pointer(Result), sourceBytes, CP);
         if wlen <> Length(Result) then
           SetLength(Result, wlen);
       end;
     end else begin //single byte encoding -> encode into result directly
-      ZSetString(nil, SourceBytes, Result);
+      System.SetString(Result, nil, SourceBytes);
       PRaw2PUnicodeBuf(Source, Pointer(Result), sourceBytes, CP);
     end;
   end;
@@ -1823,27 +1821,24 @@ var
 begin
   if (SourceBytes = 0) or (Source = nil) then
     Result := ''
-  else begin
-    //test multibyte encodings:
-    if IsMBCSCodePage(cp) then begin
-      if SourceBytes <= dsMaxWStringSize then begin //can we use a static buf? -> avoid memrealloc for the Result String
-        wlen := PRaw2PUnicodeBuf(Source, @wBuf[0], sourceBytes, CP);
-        ZSetString(nil, wlen, Result);
-        {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(wBuf[0], Pointer(Result)^, wlen shl 1);
-      end else if CP = zCP_UTF8 then begin
-        wlen := UTF8AsUTF16Words(Source, sourceBytes); //return exactlen
-        ZSetString(nil, wlen, Result);
-        UTF8ToWideChar(Source, SourceBytes, Pointer(Result));
-      end else begin //nope Buf to small
-        ZSetString(nil, SourceBytes, Result);
-        wlen := PRaw2PUnicodeBuf(Source, Pointer(Result), sourceBytes, CP);
-        if wlen <> Length(Result) then
-          SetLength(Result, wlen);
-      end;
-    end else begin //single byte encoding -> encode into result directly
+  else if IsMBCSCodePage(cp) then begin
+    if SourceBytes <= dsMaxWStringSize then begin //can we use a static buf? -> avoid memrealloc for the Result String
+      wlen := PRaw2PUnicodeBuf(Source, @wBuf[0], sourceBytes, CP);
+      ZSetString(nil, wlen, Result);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(wBuf[0], Pointer(Result)^, wlen shl 1);
+    end else if CP = zCP_UTF8 then begin
+      wlen := UTF8AsUTF16Words(Source, sourceBytes); //return exactlen
+      ZSetString(nil, wlen, Result);
+      UTF8ToWideChar(Source, SourceBytes, Pointer(Result));
+    end else begin //nope Buf to small
       ZSetString(nil, SourceBytes, Result);
-      PRaw2PUnicodeBuf(Source, Pointer(Result), sourceBytes, CP);
+      wlen := PRaw2PUnicodeBuf(Source, Pointer(Result), sourceBytes, CP);
+      if wlen <> Length(Result) then
+        SetLength(Result, wlen);
     end;
+  end else begin //single byte encoding -> encode into result directly
+    ZSetString(nil, SourceBytes, Result);
+    PRaw2PUnicodeBuf(Source, Pointer(Result), sourceBytes, CP);
   end;
 end;
 {**
@@ -1992,6 +1987,7 @@ begin
           DestWords := MultiByteToWideChar(CP, 0, Source, wlen, Dest, wlen); //Convert Ansi to Wide with supported Chars
           {$ELSE}
             {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
+            W := '';
             WidestringManager.Ansi2UnicodeMoveProc(Source, CP, W, wlen);
             {$ELSE}
             ZSetString(Source, wlen, S);
@@ -2095,9 +2091,8 @@ var
   US: UnicodeString;
 {$IFEND}
 begin
-  if SrcWords = 0 then
-    Result := EmptyRaw
-  else begin
+  Result := EmptyRaw;
+  if (SrcWords > 0) and (Source <> nil) then begin
     if (CP = zCP_NONE) or (CP = zCP_UTF16) then
       CP := ZOSCodePage; //random success
     ULen := Min(SrcWords shl 2, High(Integer)-1);
@@ -2222,6 +2217,7 @@ begin
         Result := UnicodeToUtf8(Dest, MaxDestBytes, Source, SrcWords)
       else }begin //no other build in function to encode into a buffer available yet ): i'm forced to localize the values
         {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
+        S := '';
         WidestringManager.Unicode2AnsiMoveProc(Source, S, CP, SrcWords);
         {$ELSE}
           SetString(W, Source, SrcWords);
@@ -2397,5 +2393,3 @@ end;
 initialization
   SetZOSCodePage;
 end.
-
-
