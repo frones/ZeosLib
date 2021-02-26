@@ -2966,9 +2966,6 @@ type
     IZInterbasePlainDriver)
   protected
     FPreLoader : TZNativeLibraryLoader;
-    {$IFDEF ENABLE_INTERBASE_CRYPT}
-    procedure Initialize(const Location: String = ''); Override;
-    {$ENDIF}
   public
     constructor Create;
     {$IFDEF ENABLE_INTERBASE_CRYPT}
@@ -2977,6 +2974,9 @@ type
   protected
     function Clone: IZPlainDriver; override;
   public
+    {$IFDEF ENABLE_INTERBASE_CRYPT}
+    procedure Initialize(const Location: String = ''); Override;
+    {$ENDIF}
     function GetProtocol: string; override;
     function GetDescription: string; override;
   end;
@@ -3129,9 +3129,9 @@ begin
   AddCodePage('OCTETS', CS_BINARY, ceAnsi, zCP_Binary); {Binary character}
   AddCodePage('SJIS_0208', CS_SJIS_0208, ceAnsi, zCP_SHIFTJS, '', 2); {Japanese} //fixed: https://sourceforge.net/p/zeoslib/tickets/115/
   AddCodePage('UNICODE_FSS', CS_UNICODE_FSS, ceUTF8, zCP_UTF8, '', 3); {UNICODE}
-  AddCodePage('WIN1250', CS_WIN1250, ceAnsi, zCP_WIN1250); {ANSI — Central European}
-  AddCodePage('WIN1251', CS_WIN1251, ceAnsi, zCP_WIN1251); {ANSI — Cyrillic}
-  AddCodePage('WIN1252', CS_WIN1252, ceAnsi, zCP_WIN1252); {ANSI — Latin I}
+  AddCodePage('WIN1250', CS_WIN1250, ceAnsi, zCP_WIN1250); {ANSI - Central European}
+  AddCodePage('WIN1251', CS_WIN1251, ceAnsi, zCP_WIN1251); {ANSI - Cyrillic}
+  AddCodePage('WIN1252', CS_WIN1252, ceAnsi, zCP_WIN1252); {ANSI - Latin I}
   AddCodePage('WIN1253', CS_WIN1253, ceAnsi, zCP_WIN1253); {ANSI Greek}
   AddCodePage('WIN1254', CS_WIN1254, ceAnsi, zCP_WIN1254); {ANSI Turkish}
   //FB 1.5
@@ -3142,15 +3142,15 @@ begin
   AddCodePage('DOS864', CS_DOS864, ceAnsi, zCP_DOS864); {Arabic}
   AddCodePage('DOS866', CS_DOS866, ceAnsi, zCP_DOS866); {Russian}
   AddCodePage('DOS869', CS_DOS869, ceAnsi, zCP_DOS869); {Modern Greek}
-  AddCodePage('ISO8859_2', CS_ISO8859_2, ceAnsi, zCP_L2_ISO_8859_2); {Latin 2 —  Latin3 — Southern European (Maltese, Esperanto)}
+  AddCodePage('ISO8859_2', CS_ISO8859_2, ceAnsi, zCP_L2_ISO_8859_2); {Latin 2 - Latin3 - Southern European (Maltese, Esperanto)}
   AddCodePage('ISO8859_3', CS_ISO8859_3, ceAnsi, zCP_L3_ISO_8859_3); {Latin 1}
-  AddCodePage('ISO8859_4', CS_ISO8859_4, ceAnsi, zCP_L4_ISO_8859_4); {Latin 4 — Northern European (Estonian, Latvian, Lithuanian, Greenlandic, Lappish)}
+  AddCodePage('ISO8859_4', CS_ISO8859_4, ceAnsi, zCP_L4_ISO_8859_4); {Latin 4 - Northern European (Estonian, Latvian, Lithuanian, Greenlandic, Lappish)}
   AddCodePage('ISO8859_5', CS_ISO8859_5, ceAnsi, zCP_L5_ISO_8859_5); {Cyrillic (Russian)}
   AddCodePage('ISO8859_6', CS_ISO8859_6, ceAnsi, zCP_L6_ISO_8859_6); {Arabic}
   AddCodePage('ISO8859_7', CS_ISO8859_7, ceAnsi, zCP_L7_ISO_8859_7); {Greek}
   AddCodePage('ISO8859_8', CS_ISO8859_8, ceAnsi, zCP_L8_ISO_8859_8); {Hebrew}
   AddCodePage('ISO8859_9', CS_ISO8859_9, ceAnsi, zCP_L5_ISO_8859_9); {Latin 5}
-  AddCodePage('ISO8859_13', CS_ISO8859_13, ceAnsi, zCP_L7_ISO_8859_13); {Latin 7 — Baltic Rim}
+  AddCodePage('ISO8859_13', CS_ISO8859_13, ceAnsi, zCP_L7_ISO_8859_13); {Latin 7 - Baltic Rim}
   AddCodePage('WIN1255', CS_WIN1255, ceAnsi, zCP_WIN1255); {ANSI Hebrew}
   AddCodePage('WIN1256', CS_WIN1256, ceAnsi, zCP_WIN1256); {ANSI Arabic}
   AddCodePage('WIN1257', CS_WIN1257, ceAnsi, zCP_WIN1257); {ANSI Baltic}
