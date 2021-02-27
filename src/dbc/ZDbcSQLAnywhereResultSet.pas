@@ -794,15 +794,16 @@ begin
 end;
 
 {$IFDEF WITH_COLUMNS_TO_JSON}
-TZAbstractSQLAnywhereResultSet.procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
+procedure TZAbstractSQLAnywhereResultSet.ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
 var L: NativeUInt;
     P: Pointer;
     C, H, I: SmallInt;
+    native_type: Ta_sqlany_native_type;
     procedure AddClob(ColumnCodePage: Word);
     var Clob: IZCLob;
     begin
       JSONWriter.Add('"');
-      Clob := TZASAClob.Create(FASAConnection, FSQLDA, FCursorName,
+      Clob := TZSQLAnyCLob.Create(FSQLAnyConnection, Fdata_info, Fa_sqlany_stmt^,
         C, lsmRead, ColumnCodePage, FOpenLobStreams, @FRowNo);
       P := Clob.GetPAnsiChar(zCP_UTF8, FRawTemp, L);
       JSONWriter.AddJSONEscape(P, L);
@@ -813,8 +814,8 @@ var L: NativeUInt;
     var Blob: IZBLob;
     begin
       JSONWriter.Add('"');
-      Blob := TZASABlob.Create(FASAConnection, FSQLDA, FCursorName,
-        C, lsmRead, zCP_Binary, FOpenLobStreams, @FRowNo);
+      Blob := TZSQLAnyBLob.Create(FSQLAnyConnection,
+        Fdata_info, Fa_sqlany_stmt^, C, lsmRead, zCP_Binary, FOpenLobStreams, @FRowNo);
       P := Blob.GetBuffer(FRawTemp, L);
       JSONWriter.WrBase64(P, L, True);
       JSONWriter.Add('"');
@@ -832,85 +833,83 @@ begin
       C := I else
       C := JSONWriter.Fields[i];
     {$R-}
-    with FSQLDA.sqlvar[C], TZColumnInfo(ColumnsInfo[C]) do
-      if (sqlind <> nil) and (sqlind^ < 0) then
-        if JSONWriter.Expand then begin
-          if not (jcsSkipNulls in JSONComposeOptions) then begin
-            JSONWriter.AddString(JSONWriter.ColNames[I]);
-            JSONWriter.AddShort('null,')
-          end;
-        end else
-          JSONWriter.AddShort('null,')
-      else begin
-        if JSONWriter.Expand then
-          JSONWriter.AddString(JSONWriter.ColNames[I]);
-        case sqlType and $FFFE of
-          DT_NOTYPE           : JSONWriter.AddShort('""');
-          DT_SMALLINT         : JSONWriter.Add(PSmallint(sqldata)^);
-          DT_INT              : JSONWriter.Add(PInteger(sqldata)^);
-          //DT_DECIMAL bound to double
-          DT_FLOAT            : JSONWriter.AddSingle(PSingle(sqldata)^);
-          DT_DOUBLE           : JSONWriter.AddDouble(PDouble(sqldata)^);
-          //DT_DATE bound to TIMESTAMP_STRUCT
-          DT_STRING,
-          DT_NSTRING,
-          DT_FIXCHAR,
-          DT_NFIXCHAR,
-          DT_VARCHAR,
-          DT_NVARCHAR         : begin
-                                  JSONWriter.Add('"');
-                                  if ColumnCodePage = zCP_UTF8 then
-                                    JSONWriter.AddJSONEscape(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length)
-                                  else begin
-                                    PRawToUnicode(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length, ConSettings^.ClientCodePage^.CP, FUniTemp);
-                                    JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
-                                  end;
-                                  JSONWriter.Add('"');
+    if FillData(C, native_type) then with TZSQLAnywhereColumnInfo(ColumnsInfo[C]) do begin
+      if JSONWriter.Expand then
+        JSONWriter.AddString(JSONWriter.ColNames[I]);
+      case native_type of
+        DT_NOTYPE           : JSONWriter.AddShort('""');
+        DT_SMALLINT         : JSONWriter.Add(PSmallint(FData)^);
+        DT_INT              : JSONWriter.Add(PInteger(FData)^);
+        //DT_DECIMAL bound to double
+        DT_FLOAT            : JSONWriter.AddSingle(PSingle(FData)^);
+        DT_DOUBLE           : JSONWriter.AddDouble(PDouble(FData)^);
+        //DT_DATE bound to TIMESTAMP_STRUCT
+        DT_STRING,
+        DT_NSTRING,
+        DT_FIXCHAR,
+        DT_NFIXCHAR,
+        DT_VARCHAR,
+        DT_NVARCHAR         : begin
+                                JSONWriter.Add('"');
+                                if ColumnCodePage = zCP_UTF8 then
+                                  JSONWriter.AddJSONEscape(FData, FDataLen)
+                                else begin
+                                  PRawToUnicode(FData, FDataLen, ColumnCodePage, FUniTemp);
+                                  JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
                                 end;
-          DT_LONGNVARCHAR,
-          DT_LONGVARCHAR      : AddClob(ColumnCodePage);
-          DT_TIME,
-          DT_TIMESTAMP,
-          DT_TIMESTAMP_STRUCT : begin
-                                  if jcoMongoISODate in JSONComposeOptions then
-                                    JSONWriter.AddShort('ISODate("')
-                                  else if jcoDATETIME_MAGIC in JSONComposeOptions then
-                                    JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
-                                  else
-                                    JSONWriter.Add('"');
-                                  if PZASASQLDateTime(sqlData).Year < 0 then
-                                    JSONWriter.Add('-');
-                                  if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stTime) then begin
-                                    DateToIso8601PChar(PUTF8Char(fByteBuffer), True, Abs(PZASASQLDateTime(sqlData).Year),
-                                    PZASASQLDateTime(sqlData).Month + 1, PZASASQLDateTime(sqlData).Day);
-                                    JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),10);
-                                  end else if jcoMongoISODate in JSONComposeOptions then
-                                    JSONWriter.AddShort('0000-00-00');
-                                  if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stDate) then begin
-                                    TimeToIso8601PChar(PUTF8Char(fByteBuffer), True, PZASASQLDateTime(sqlData).Hour,
-                                    PZASASQLDateTime(sqlData).Minute, PZASASQLDateTime(sqlData).Second,
-                                    PZASASQLDateTime(sqlData).MicroSecond div 1000, 'T', jcoMilliseconds in JSONComposeOptions);
-                                    JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),9 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
-                                  end;
-                                  if jcoMongoISODate in JSONComposeOptions
-                                  then JSONWriter.AddShort('Z)"')
-                                  else JSONWriter.Add('"');
+                                JSONWriter.Add('"');
+                              end;
+        DT_LONGNVARCHAR,
+        DT_LONGVARCHAR      : AddClob(ColumnCodePage);
+        DT_TIME,
+        DT_TIMESTAMP,
+        DT_TIMESTAMP_STRUCT : begin
+                                if jcoMongoISODate in JSONComposeOptions then
+                                  JSONWriter.AddShort('ISODate("')
+                                else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                  {$IFDEF MORMOT2}
+                                  JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                  {$ELSE}
+                                  JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                  {$ENDIF}
+                                else
+                                  JSONWriter.Add('"');
+                                if PZSQLAnyDateTime(FData).Year < 0 then
+                                  JSONWriter.Add('-');
+                                if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stTime) then begin
+                                  DateToIso8601PChar(Pointer(fByteBuffer), True, Abs(PZSQLAnyDateTime(FData).Year),
+                                  PZSQLAnyDateTime(FData).Month + 1, PZSQLAnyDateTime(FData).Day);
+                                  JSONWriter.AddNoJSONEscape(Pointer(fByteBuffer),10);
+                                end else if jcoMongoISODate in JSONComposeOptions then
+                                  JSONWriter.AddShort('0000-00-00');
+                                if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stDate) then begin
+                                  TimeToIso8601PChar(Pointer(fByteBuffer), True, PZSQLAnyDateTime(FData).Hour,
+                                  PZSQLAnyDateTime(FData).Minute, PZSQLAnyDateTime(FData).Second,
+                                  PZSQLAnyDateTime(FData).MicroSecond div 1000, 'T', jcoMilliseconds in JSONComposeOptions);
+                                  JSONWriter.AddNoJSONEscape(Pointer(fByteBuffer),9 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
                                 end;
-          DT_BINARY           : JSONWriter.WrBase64(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length, True);
-          DT_LONGBINARY       : AddBlob;
-          //DT_VARIABLE: ?
-          DT_TINYINT          : JSONWriter.Add(PByte(sqldata)^);
-          DT_BIGINT           : JSONWriter.Add(PInt64(sqldata)^);
-          DT_UNSINT           : JSONWriter.AddU(PCardinal(sqldata)^);
-          DT_UNSSMALLINT      : JSONWriter.AddU(PWord(sqldata)^);
-          DT_UNSBIGINT        : JSONWriter.AddQ(PUInt64(sqldata)^);
-          DT_BIT              : JSONWriter.AddShort(JSONBool[PByte(sqldata)^ <> 0]);
-          else
-            raise FSqlData.CreateException(Format(SErrorConvertionField,
-              [ FSqlData.GetFieldName(C), ConvertASATypeToString(sqlType)]));
-        end;
-        JSONWriter.Add(',');
+                                if jcoMongoISODate in JSONComposeOptions
+                                then JSONWriter.AddShort('Z)"')
+                                else JSONWriter.Add('"');
+                              end;
+        DT_BINARY           : JSONWriter.WrBase64(FData, FDataLen, True);
+        DT_LONGBINARY       : AddBlob;
+        //DT_VARIABLE: ?
+        DT_TINYINT          : JSONWriter.Add(PByte(FData)^);
+        DT_BIGINT           : JSONWriter.Add(PInt64(FData)^);
+        DT_UNSINT           : JSONWriter.AddU(PCardinal(FData)^);
+        DT_UNSSMALLINT      : JSONWriter.AddU(PWord(FData)^);
+        DT_UNSBIGINT        : JSONWriter.AddQ(PUInt64(FData)^);
+        DT_BIT              : JSONWriter.AddShort(JSONBool[PByte(FData)^ <> 0]);
+        else raise CreateConversionError(C);
       end;
+        JSONWriter.Add(',');
+    end else if JSONWriter.Expand then begin
+      if not (jcsSkipNulls in JSONComposeOptions) then begin
+        JSONWriter.AddString(JSONWriter.ColNames[I]);
+        JSONWriter.AddShort('null,')
+      end;
+    end else JSONWriter.AddShort('null,')
   end;
   if jcoEndJSONObject in JSONComposeOptions then begin
     JSONWriter.CancelLastComma; // cancel last ','

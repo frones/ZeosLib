@@ -1622,7 +1622,7 @@ begin
         stLong          : JSONWriter.Add(PInt64(Data)^);
         stFloat         : JSONWriter.AddSingle(PSingle(Data)^);
         stDouble        : JSONWriter.AddDouble(PDouble(Data)^);
-        stCurrency      : JSONWriter.AddCurr64(PCurrency(Data)^);
+        stCurrency      : JSONWriter.AddCurr64({$IFDEF MORMOT2}PInt64(Data){$ELSE}PCurrency(Data)^{$ENDIF});
         stBigDecimal    : JSONWriter.AddNoJSONEscape(@TinyBuffer[0], BCDToRaw(PBCD(Data)^, @TinyBuffer[0], '.'));
         stString        : begin
                             JSONWriter.Add('"');
@@ -1648,15 +1648,23 @@ begin
         stBytes         : JSONWriter.WrBase64(PPAnsiChar(Data)^+PAnsiInc,
                                   PCardinal(PPointer(Data)^)^, True);
         stGUID          : begin
+                            {$IFDEF MORMOT2}
+                            JSONWriter.Add(PGUID(Data), '"');
+                            {$ELSE !MORMOT2}
                             JSONWriter.Add('"');
                             JSONWriter.Add(PGUID(Data)^);
                             JSONWriter.Add('"');
+                            {$ENDIF !MORMOT2}
                           end;
         stTime          : begin
                             if jcoMongoISODate in JSONComposeOptions then
                               JSONWriter.AddShort('ISODate("0000-00-00')
                             else if jcoDATETIME_MAGIC in JSONComposeOptions then begin
+                              {$IFDEF MORMOT2}
+                              JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              {$ELSE}
                               JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$ENDIF}
                             end else
                               JSONWriter.Add('"');
                             TimeToIso8601PChar(@TinyBuffer[0], True, PZTime(Data)^.hour,
@@ -1671,7 +1679,11 @@ begin
                             if jcoMongoISODate in JSONComposeOptions then
                               JSONWriter.AddShort('ISODate("')
                             else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                              {$IFDEF MORMOT2}
+                              JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              {$ELSE}
                               JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$ENDIF}
                             else
                               JSONWriter.Add('"');
                             if PZDate(Data)^.IsNegative then
@@ -1687,7 +1699,11 @@ begin
                             if jcoMongoISODate in JSONComposeOptions then
                               JSONWriter.AddShort('ISODate("')
                             else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                              {$IFDEF MORMOT2}
+                              JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              {$ELSE}
                               JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$ENDIF}
                             else
                               JSONWriter.Add('"');
                             if PZTimeStamp(Data)^.IsNegative then

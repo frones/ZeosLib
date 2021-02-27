@@ -231,13 +231,13 @@ begin
         VT_HRESULT:     JSONWriter.Add(PHResult(FValueAddr)^);
         VT_UI8:         JSONWriter.AddQ(PUInt64(FValueAddr)^);
         VT_I8:          JSONWriter.Add(PInt64(FValueAddr)^);
-        VT_CY:          JSONWriter.AddCurr64(PCurrency(FValueAddr)^);
+        VT_CY:          JSONWriter.AddCurr64({$IFDEF MORMOT2}PInt64(FValueAddr){$ELSE}PCurrency(FValueAddr)^{$ENDIF});
         VT_DECIMAL:     begin
                           P := @FColValue;
                           if PDecimal(P).scale > 0 then begin
                             ScaledOrdinal2Bcd(UInt64(PDecimal(P).Lo64), PDecimal(P).scale, BCD, PDecimal(P).sign > 0);
                             Len := ZSysUtils.BcdToRaw(BCd, PAnsiChar(FByteBuffer), '.');
-                            JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer), Len);
+                            JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer), Len);
                           end else if PDecimal(P).sign > 0 then
                             JSONWriter.Add(Int64(-UInt64(PDecimal(P).Lo64)))
                           else
@@ -257,7 +257,11 @@ begin
                                 JSONWriter.AddShort('Z")');
                               end else begin
                                 if jcoDATETIME_MAGIC in JSONComposeOptions
+                                {$IFDEF MORMOT2}
+                                then JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                {$ELSE}
                                 then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                {$ENDIF}
                                 else JSONWriter.Add('"');
                                 JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
                                 JSONWriter.Add('"');
@@ -270,7 +274,11 @@ begin
                                 JSONWriter.AddShort('Z")');
                               end else begin
                                 if jcoDATETIME_MAGIC in JSONComposeOptions
+                                {$IFDEF MORMOT2}
+                                then JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                {$ELSE}
                                 then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                {$ENDIF}
                                 else JSONWriter.Add('"');
                                 JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
                                 JSONWriter.Add('"');

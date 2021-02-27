@@ -368,22 +368,26 @@ begin
                                   if jcoMongoISODate in JSONComposeOptions then
                                     JSONWriter.AddShort('ISODate("')
                                   else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                    {$IFDEF MORMOT2}
+                                    JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                    {$ELSE}
                                     JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                    {$ENDIF}
                                   else
                                     JSONWriter.Add('"');
                                   if PZASASQLDateTime(sqlData).Year < 0 then
                                     JSONWriter.Add('-');
                                   if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stTime) then begin
-                                    DateToIso8601PChar(PUTF8Char(fByteBuffer), True, Abs(PZASASQLDateTime(sqlData).Year),
+                                    DateToIso8601PChar(Pointer(fByteBuffer), True, Abs(PZASASQLDateTime(sqlData).Year),
                                     PZASASQLDateTime(sqlData).Month + 1, PZASASQLDateTime(sqlData).Day);
-                                    JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),10);
+                                    JSONWriter.AddNoJSONEscape(Pointer(fByteBuffer),10);
                                   end else if jcoMongoISODate in JSONComposeOptions then
                                     JSONWriter.AddShort('0000-00-00');
                                   if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stDate) then begin
-                                    TimeToIso8601PChar(PUTF8Char(fByteBuffer), True, PZASASQLDateTime(sqlData).Hour,
+                                    TimeToIso8601PChar(Pointer(fByteBuffer), True, PZASASQLDateTime(sqlData).Hour,
                                     PZASASQLDateTime(sqlData).Minute, PZASASQLDateTime(sqlData).Second,
                                     PZASASQLDateTime(sqlData).MicroSecond div 1000, 'T', jcoMilliseconds in JSONComposeOptions);
-                                    JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),9 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                                    JSONWriter.AddNoJSONEscape(Pointer(fByteBuffer),9 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
                                   end;
                                   if jcoMongoISODate in JSONComposeOptions
                                   then JSONWriter.AddShort('Z)"')

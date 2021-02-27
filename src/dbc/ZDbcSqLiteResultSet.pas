@@ -394,7 +394,7 @@ begin
                         I64 := FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, C);
                         case ColumnType of
                           stBoolean: JSONWriter.AddShort(JSONBool[I64 <> 0]);
-                          stCurrency: JSONWriter.AddCurr64(i64);
+                          stCurrency: JSONWriter.AddCurr64({$IFDEF MORMOT2}@{$ENDIF}i64);
                           {stTime, stDate, stTimeStamp:
                             todo: add implementation for unix timestamp
                             JSONWriter.Add(FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, C));}
@@ -409,7 +409,11 @@ begin
                                 if jcoMongoISODate in JSONComposeOptions then
                                   JSONWriter.AddShort('ISODate("0000-00-00')
                                 else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                  {$IFDEF MORMOT2}
+                                  JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                  {$ELSE}
                                   JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                  {$ENDIF}
                                 else
                                   JSONWriter.Add('"');
                                 d := Frac(D+JulianEpoch);
@@ -420,7 +424,11 @@ begin
                                 if jcoMongoISODate in JSONComposeOptions then
                                   JSONWriter.AddShort('ISODate("')
                                 else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                  {$IFDEF MORMOT2}
+                                  JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                  {$ELSE}
                                   JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                  {$ENDIF}
                                 else
                                   JSONWriter.Add('"');
                                 D := Int(D+JulianEpoch);
@@ -431,7 +439,11 @@ begin
                                 if jcoMongoISODate in JSONComposeOptions then
                                   JSONWriter.AddShort('ISODate("')
                                 else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                  {$IFDEF MORMOT2}
+                                  JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                  {$ELSE}
                                   JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                  {$ENDIF}
                                 else
                                   JSONWriter.Add('"');
                                 D := D+JulianEpoch;
@@ -450,7 +462,11 @@ begin
                   if jcoMongoISODate in JSONComposeOptions then
                     JSONWriter.AddShort('ISODate("0000-00-00')
                   else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                    {$IFDEF MORMOT2}
+                    JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                    {$ELSE}
                     JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                    {$ENDIF}
                   else
                     JSONWriter.Add('"');
                   JSONWriter.AddNoJSONEscape(P, Min(StrLen(P), 8+(4*Ord(jcoMilliseconds in JSONComposeOptions))));
@@ -462,7 +478,11 @@ begin
                   if jcoMongoISODate in JSONComposeOptions then
                     JSONWriter.AddShort('ISODate("')
                   else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                    {$IFDEF MORMOT2}
+                    JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                    {$ELSE}
                     JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                    {$ENDIF}
                   else
                     JSONWriter.Add('"');
                   JSONWriter.AddNoJSONEscape(P, Min(StrLen(P), 10));
@@ -474,7 +494,11 @@ begin
                   if jcoMongoISODate in JSONComposeOptions then
                     JSONWriter.AddShort('ISODate("')
                   else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                    {$IFDEF MORMOT2}
+                    JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                    {$ELSE}
                     JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                    {$ENDIF}
                   else
                     JSONWriter.Add('"');
                   JSONWriter.AddNoJSONEscape(P, Min(StrLen(P), 19+(4*Ord(jcoMilliseconds in JSONComposeOptions))));

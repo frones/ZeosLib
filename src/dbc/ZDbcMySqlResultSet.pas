@@ -538,42 +538,54 @@ begin
           FIELD_TYPE_TIMESTAMP,
           FIELD_TYPE_DATETIME   : begin
                                     if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                      {$IFDEF MORMOT2}
+                                      JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                      {$ELSE}
                                       JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                      {$ENDIF}
                                     else if jcoMongoISODate in JSONComposeOptions then
                                       JSONWriter.AddShort('ISODate("')
                                     else JSONWriter.Add('"');
-                                    DateToIso8601PChar(PUTF8Char(FByteBuffer), True, PMYSQL_TIME(Bind^.Buffer)^.Year,
+                                    DateToIso8601PChar(Pointer(FByteBuffer), True, PMYSQL_TIME(Bind^.Buffer)^.Year,
                                       PMYSQL_TIME(Bind^.Buffer)^.Month, PMYSQL_TIME(Bind^.Buffer)^.Day);
                                     MS := ((PMYSQL_TIME(Bind^.Buffer)^.second_part) * Byte(ord(jcoMilliseconds in JSONComposeOptions)) div 1000000);
-                                    TimeToIso8601PChar(PUTF8Char(FByteBuffer)+10, True, PMYSQL_TIME(Bind^.Buffer)^.Hour,
+                                    TimeToIso8601PChar(Pointer(PAnsiChar(FByteBuffer)+10), True, PMYSQL_TIME(Bind^.Buffer)^.Hour,
                                       PMYSQL_TIME(Bind^.Buffer)^.Minute, PMYSQL_TIME(Bind^.Buffer)^.Second, MS, 'T', jcoMilliseconds in JSONComposeOptions);
                                     if (jcoMilliseconds in JSONComposeOptions)
-                                    then JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),23)
-                                    else JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),19);
+                                    then JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer),23)
+                                    else JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer),19);
                                     goto FinalizeDT;
                                   end;
           FIELD_TYPE_DATE,
           FIELD_TYPE_NEWDATE    : begin
                                     if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                      {$IFDEF MORMOT2}
+                                      JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                      {$ELSE}
                                       JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                      {$ENDIF}
                                     else if jcoMongoISODate in JSONComposeOptions then
                                       JSONWriter.AddShort('ISODate("')
                                     else JSONWriter.Add('"');
-                                    DateToIso8601PChar(PUTF8Char(FByteBuffer), True, PMYSQL_TIME(Bind^.Buffer)^.Year,
+                                    DateToIso8601PChar(Pointer(FByteBuffer), True, PMYSQL_TIME(Bind^.Buffer)^.Year,
                                       PMYSQL_TIME(Bind^.Buffer)^.Month, PMYSQL_TIME(Bind^.Buffer)^.Day);
-                                    JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),10);
+                                    JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer),10);
                                     goto FinalizeDT;
                                   end;
           FIELD_TYPE_TIME       : begin
                                     if jcoMongoISODate in JSONComposeOptions then
                                       JSONWriter.AddShort('ISODate("0000-00-00')
                                     else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                      {$IFDEF MORMOT2}
+                                      JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                      {$ELSE}
                                       JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                      {$ENDIF}
                                     else JSONWriter.AddShort('"');
                                     MS := (PMYSQL_TIME(Bind^.Buffer)^.second_part) div 1000000;
-                                    TimeToIso8601PChar(PUTF8Char(FByteBuffer), True, PMYSQL_TIME(Bind^.Buffer)^.Hour,
+                                    TimeToIso8601PChar(Pointer(FByteBuffer), True, PMYSQL_TIME(Bind^.Buffer)^.Hour,
                                       PMYSQL_TIME(Bind^.Buffer)^.Minute, PMYSQL_TIME(Bind^.Buffer)^.Second, MS, 'T', jcoMilliseconds in JSONComposeOptions);
-                                    JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),9+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                                    JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer),9+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                                     goto FinalizeDT;
                                   end;
           FIELD_TYPE_BIT        : if Bind^.Length[0] = 1
@@ -676,7 +688,11 @@ begin
           FIELD_TYPE_TIMESTAMP,
           FIELD_TYPE_DATETIME   : begin
                                     if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                      {$IFDEF MORMOT2}
+                                      JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                      {$ELSE}
                                       JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                      {$ENDIF}
                                     else if jcoMongoISODate in JSONComposeOptions then
                                       JSONWriter.AddShort('ISODate("')
                                     else JSONWriter.Add('"');
@@ -686,7 +702,11 @@ begin
           FIELD_TYPE_DATE,
           FIELD_TYPE_NEWDATE    : begin
                                     if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                      {$IFDEF MORMOT2}
+                                      JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                      {$ELSE}
                                       JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                      {$ENDIF}
                                     else if jcoMongoISODate in JSONComposeOptions then
                                       JSONWriter.AddShort('ISODate("')
                                     else JSONWriter.Add('"');
@@ -697,7 +717,11 @@ begin
                                     if jcoMongoISODate in JSONComposeOptions then
                                       JSONWriter.AddShort('ISODate("0000-00-00T')
                                     else if jcoDATETIME_MAGIC in JSONComposeOptions then begin
+                                      {$IFDEF MORMOT2}
+                                      JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR);
+                                      {$ELSE}
                                       JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4);
+                                      {$ENDIF}
                                       JSONWriter.Add('T');
                                     end else JSONWriter.AddShort('"T');
                                     JSONWriter.AddNoJSONEscape(P, FLengthArray^[C]);
