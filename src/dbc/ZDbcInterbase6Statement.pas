@@ -369,7 +369,7 @@ begin
         if (FBatchStmts[False].PreparedRowsOfArray <> ArrayCount) then
           PrepareFinalChunk(ArrayCount) //full block of batch
       end else
-        if (ArrayCount <> FMaxRowsPerBatch) and (FBatchStmts[False].PreparedRowsOfArray <> (ArrayCount mod FMaxRowsPerBatch)) then
+        if (ArrayCount <> FMaxRowsPerBatch) and (ArrayCount mod FMaxRowsPerBatch > 0) and (FBatchStmts[False].PreparedRowsOfArray <> (ArrayCount mod FMaxRowsPerBatch)) then
           PrepareFinalChunk(ArrayCount mod FMaxRowsPerBatch); //final block of batch
     end else if (FBatchStmts[False].PreparedRowsOfArray <> ArrayCount) then
       PrepareArrayStmt(FBatchStmts[False]); //full block of batch
