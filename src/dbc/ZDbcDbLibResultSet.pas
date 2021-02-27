@@ -60,9 +60,11 @@ uses
 {$IFNDEF FPC}
   DateUtils,
 {$ENDIF}
-{$IFDEF USE_SYNCOMMONS}
+  {$IFDEF MORMOT2}
+  mormot.db.core, mormot.core.datetime,
+  {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
-{$ENDIF USE_SYNCOMMONS}
+  {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types{$IFNDEF NO_UNIT_CONTNRS},Contnrs{$ENDIF}{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
@@ -177,7 +179,7 @@ type
     procedure GetTimestamp(ColumnIndex: Integer; Var Result: TZTimeStamp); overload;
     function GetBlob(ColumnIndex: Integer;
       LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
-    {$IFDEF USE_SYNCOMMONS}
+    {$IFDEF WITH_COLUMNS_TO_JSON}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); overload; virtual;
     {$ENDIF}
     function Next: Boolean; override;
@@ -515,7 +517,7 @@ begin
       Format(SColumnIsNotAccessable, [ColumnIndex]));
 end;
 
-{$IFDEF USE_SYNCOMMONS}
+{$IFDEF WITH_COLUMNS_TO_JSON}
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "XYZ" not used} {$ENDIF}
 procedure TZDBLibResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);

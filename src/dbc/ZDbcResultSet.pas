@@ -56,9 +56,6 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFDEF USE_SYNCOMMONS}
-  SynCommons, SynTable,
-{$ENDIF USE_SYNCOMMONS}
 {$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}

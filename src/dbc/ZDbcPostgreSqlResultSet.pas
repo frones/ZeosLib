@@ -57,9 +57,11 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 uses
-{$IFDEF USE_SYNCOMMONS}
+  {$IFDEF MORMOT2}
+  mormot.db.core, mormot.core.datetime,
+  {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
-{$ENDIF USE_SYNCOMMONS}
+  {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types{$ELSE}Types{$ENDIF},
   FmtBCD, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -439,10 +441,10 @@ type
     /// <returns><c>true</c> if the new current row is valid; <c>false</c> if
     ///  there are no more rows</returns>
     function Next: Boolean; reintroduce;
-    {$IFDEF USE_SYNCOMMONS}
+    {$IFDEF WITH_COLUMNS_TO_JSON}
   public
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]);
-    {$ENDIF USE_SYNCOMMONS}
+    {$ENDIF WITH_COLUMNS_TO_JSON}
   end;
 
   /// <summary>Defines a Postgres OID Blob interface</summary>
@@ -614,7 +616,7 @@ uses
 
 { TZPostgreSQLResultSet }
 
-{$IFDEF USE_SYNCOMMONS}
+{$IFDEF WITH_COLUMNS_TO_JSON}
 procedure TZPostgreSQLResultSet.ColumnsToJSON(
   JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
 var
@@ -898,7 +900,7 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
       JSONWriter.Add('}');
   end;
 end;
-{$ENDIF USE_SYNCOMMONS}
+{$ENDIF WITH_COLUMNS_TO_JSON}
 
 constructor TZPostgreSQLResultSet.Create(const Statement: IZStatement;
   const SQL: string; const Connection: IZPostgreSQLConnection; resAddress: PPGresult;
@@ -1914,7 +1916,7 @@ begin
         {skip trailing /x}
         Len := (ZFastCode.StrLen(Buffer)-2) shr 1;
         if Len = SizeOf(TGUID)
-        then {$IFDEF USE_SYNCOMMONS}SynCommons.{$ENDIF}HexToBin(Buffer+2, @Result.D1, SizeOf(TGUID))
+        then {$IFDEF WITH_COLUMNS_TO_JSON}SynCommons.{$ENDIF}HexToBin(Buffer+2, @Result.D1, SizeOf(TGUID))
         else goto Fail;
       end else if Assigned(FPlainDriver.PQUnescapeBytea) then begin
         pgBuff := FPlainDriver.PQUnescapeBytea(Buffer, @Len);
@@ -2620,7 +2622,7 @@ begin
   BinSize := ZFastCode.StrLen(Data) shr 1;
   if BinSize > 0 then begin
     SetCapacity(BinSize);
-    HexToBin(Data, {$IFDEF USE_SYNCOMMONS}PAnsiChar{$ENDIF}(@FDataRefAddress.VarLenData.Data), BinSize);
+    HexToBin(Data, {$IFDEF WITH_COLUMNS_TO_JSON}PAnsiChar{$ENDIF}(@FDataRefAddress.VarLenData.Data), BinSize);
     FDataRefAddress.IsNotNull := 1;
     FDataRefAddress.VarLenData.Len := BinSize;
   end;

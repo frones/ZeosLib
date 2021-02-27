@@ -57,9 +57,11 @@ interface
 {$Z-}
 
 uses
-  {$IFDEF USE_SYNCOMMONS}
+  {$IFDEF MORMOT2}
+  mormot.db.core, mormot.core.datetime,
+  {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
-  {$ENDIF USE_SYNCOMMONS}
+  {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
   {$IFNDEF DO_NOT_DERIVE_FROM_EDATABASEERROR}DB, {$ENDIF}
   FmtBcd, Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}SysUtils,
   {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
@@ -2692,7 +2694,7 @@ type
   /// <summary>Defines an array of compaison kinds.</summary>
   TComparisonKindArray = Array of TComparisonKind;
 
-  {$IFDEF USE_SYNCOMMONS}
+  {$IFDEF WITH_COLUMNS_TO_JSON}
   /// <summary>Defines json compose options.</summary>
   TZJSONComposeOption = (jcoEndJSONObject, jcoDATETIME_MAGIC, jcoMongoISODate,
     jcoMilliseconds, jcsSkipNulls);
@@ -2708,7 +2710,7 @@ type
   ///  - if jcsSkipNulls is included each SQL <c>NULL</c> null field will be
   ///   skipped. This keeps the JSON tiny.</summary>
   TZJSONComposeOptions = set of TZJSONComposeOption;
-  {$ENDIF USE_SYNCOMMONS}
+  {$ENDIF WITH_COLUMNS_TO_JSON}
 
   /// <summary>
   ///   Rows returned by SQL query.
@@ -4028,9 +4030,9 @@ type
 
     function GetStatement: IZStatement;
 
-    {$IFDEF USE_SYNCOMMONS}
+    {$IFDEF WITH_COLUMNS_TO_JSON}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
-    {$ENDIF USE_SYNCOMMONS}
+    {$ENDIF WITH_COLUMNS_TO_JSON}
   end;
 
   /// <summary>Defines the ResultSet metadata interface.</summary>

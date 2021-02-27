@@ -56,9 +56,11 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFDEF USE_SYNCOMMONS}
+  {$IFDEF MORMOT2}
+  mormot.db.core, mormot.core.datetime,
+  {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
-{$ENDIF USE_SYNCOMMONS}
+  {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
 {$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
@@ -290,9 +292,9 @@ type
     procedure SetResultSet(ColumnIndex: Integer; const Value: IZResultSet);
     procedure SetValue(ColumnIndex: Integer; const Value: TZVariant);
 
-    {$IFDEF USE_SYNCOMMONS}
+    {$IFDEF WITH_COLUMNS_TO_JSON}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
-    {$ENDIF USE_SYNCOMMONS}
+    {$ENDIF WITH_COLUMNS_TO_JSON}
 
     property ColumnsSize: Integer read FColumnsSize;
     property RowSize: Integer read FRowSize;
@@ -1578,7 +1580,7 @@ begin
   CopyBuffer(SrcBuffer, DestBuffer, True);
 end;
 
-{$IFDEF USE_SYNCOMMONS}
+{$IFDEF WITH_COLUMNS_TO_JSON}
 procedure TZRowAccessor.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 var Data: PPointer;
@@ -1730,7 +1732,7 @@ begin
       JSONWriter.Add('}');
   end;
 end;
-{$ENDIF USE_SYNCOMMONS}
+{$ENDIF WITH_COLUMNS_TO_JSON}
 
 {**
   Compares fields from two row buffers.

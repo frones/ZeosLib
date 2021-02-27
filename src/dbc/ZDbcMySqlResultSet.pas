@@ -60,9 +60,11 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 uses
-{$IFDEF USE_SYNCOMMONS}
+  {$IFDEF MORMOT2}
+  mormot.db.core, mormot.core.datetime,
+  {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
-{$ENDIF USE_SYNCOMMONS}
+  {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
   FmtBCD, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} ZClasses,
   ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZCompatibility, ZDbcCache,
@@ -167,9 +169,9 @@ type
     procedure GetTimeStamp(ColumnIndex: Integer; var Result: TZTimeStamp); reintroduce; overload;
     function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 
-    {$IFDEF USE_SYNCOMMONS}
+    {$IFDEF WITH_COLUMNS_TO_JSON}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]);
-    {$ENDIF USE_SYNCOMMONS}
+    {$ENDIF WITH_COLUMNS_TO_JSON}
     //EH: keep that override 4 all descendants: seek_data is dead slow in a forward only mode
     function Next: Boolean; reintroduce;
 
@@ -477,7 +479,7 @@ end;
 
 { TZAbstractMySQLResultSet }
 
-{$IFDEF USE_SYNCOMMONS}
+{$IFDEF WITH_COLUMNS_TO_JSON}
 procedure TZAbstractMySQLResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 var
@@ -745,7 +747,7 @@ FinalizeDT:                         if jcoMongoISODate in JSONComposeOptions
   end;
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
-{$ENDIF USE_SYNCOMMONS}
+{$ENDIF WITH_COLUMNS_TO_JSON}
 
 {**
   Constructs this object, assignes main properties and

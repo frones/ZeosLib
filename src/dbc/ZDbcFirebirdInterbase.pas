@@ -58,9 +58,11 @@ interface
 {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 
 uses
-{$IFDEF USE_SYNCOMMONS}
+  {$IFDEF MORMOT2}
+  mormot.db.core, mormot.core.datetime,
+  {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
-{$ENDIF USE_SYNCOMMONS}
+  {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD, Math, Types,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
@@ -585,9 +587,9 @@ type
     {$IFNDEF NO_UTF8STRING}
     function GetUTF8String(ColumnIndex: Integer): UTF8String;
     {$ENDIF}
-    {$IFDEF USE_SYNCOMMONS}
+    {$IFDEF WITH_COLUMNS_TO_JSON}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
-    {$ENDIF USE_SYNCOMMONS}
+    {$ENDIF WITH_COLUMNS_TO_JSON}
   end;
 
   TZAbstractFirebirdInterbasePreparedStatement = class;
@@ -2291,7 +2293,7 @@ begin
   inherited AfterClose;
 end;
 
-{$IFDEF USE_SYNCOMMONS}
+{$IFDEF WITH_COLUMNS_TO_JSON}
 procedure TZAbstractInterbaseFirebirdResultSet.ColumnsToJSON(
   JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
 var L, H, I: Integer;
@@ -2508,7 +2510,7 @@ begin
       JSONWriter.Add('}');
   end;
 end;
-{$ENDIF USE_SYNCOMMONS}
+{$ENDIF WITH_COLUMNS_TO_JSON}
 
 constructor TZAbstractInterbaseFirebirdResultSet.Create(
   const Statement: IZStatement; const SQL: string);

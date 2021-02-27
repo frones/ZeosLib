@@ -61,9 +61,11 @@ interface
 {$I ZDbc.inc}
 
 uses
-{$IFDEF USE_SYNCOMMONS}
+  {$IFDEF MORMOT2}
+  mormot.db.core, mormot.core.datetime,
+  {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
-{$ENDIF USE_SYNCOMMONS}
+  {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}FmtBCD,
   ZDbcResultSetMetadata, ZClasses, ZDbcIntfs, ZDbcResultSet, ZDbcCache,
@@ -409,9 +411,9 @@ type
     procedure MoveToInitialRow; virtual;
     procedure PostUpdatesCached; virtual;
     procedure DisposeCachedUpdates; virtual;
-    {$IFDEF USE_SYNCOMMONS}
+    {$IFDEF WITH_COLUMNS_TO_JSON}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject, jcoDATETIME_MAGIC]);
-    {$ENDIF USE_SYNCOMMONS}
+    {$ENDIF WITH_COLUMNS_TO_JSON}
 
     function CreateLob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode): IZBlob; virtual;
   end;
@@ -2421,13 +2423,13 @@ begin
   else FRowAccessor.RowBuffer := nil;
 end;
 
-{$IFDEF USE_SYNCOMMONS}
+{$IFDEF WITH_COLUMNS_TO_JSON}
 procedure TZAbstractCachedResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 begin
   FRowAccessor.ColumnsToJSON(JSONWriter, JSONComposeOptions)
 end;
-{$ENDIF USE_SYNCOMMONS}
+{$ENDIF WITH_COLUMNS_TO_JSON}
 
 {**
   Compares fields from two row buffers.

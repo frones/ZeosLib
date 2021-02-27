@@ -57,9 +57,11 @@ interface
 {$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
-{$IFDEF USE_SYNCOMMONS}
+  {$IFDEF MORMOT2}
+  mormot.db.core, mormot.core.datetime,
+  {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
-{$ENDIF USE_SYNCOMMONS}
+  {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
@@ -130,9 +132,9 @@ type
     procedure GetTimestamp(ColumnIndex: Integer; var Result: TZTimeStamp); overload;
     function GetResultSet(ColumnIndex: Integer): IZResultSet; override;
     function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
-    {$IFDEF USE_SYNCOMMONS}
+    {$IFDEF WITH_COLUMNS_TO_JSON}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); reintroduce;
-    {$ENDIF USE_SYNCOMMONS}
+    {$ENDIF WITH_COLUMNS_TO_JSON}
   public //implement IZOracleResultSet
     procedure AssignColumnsInfo(const Dest: TObjectList);
   public
@@ -425,7 +427,7 @@ uses
 
 { TZOracleAbstractResultSet_A }
 
-{$IFDEF USE_SYNCOMMONS}
+{$IFDEF WITH_COLUMNS_TO_JSON}
 procedure TZOracleAbstractResultSet_A.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 var P: PAnsiChar;
@@ -619,7 +621,7 @@ begin
       JSONWriter.Add('}');
   end;
 end;
-{$ENDIF USE_SYNCOMMONS}
+{$ENDIF WITH_COLUMNS_TO_JSON}
 
 {**
   Constructs this object, assignes main properties and
