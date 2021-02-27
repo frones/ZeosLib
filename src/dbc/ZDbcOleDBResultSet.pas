@@ -57,9 +57,11 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 uses
-{$IFDEF USE_SYNCOMMONS}
+  {$IFDEF MORMOT2}
+  mormot.db.core, mormot.core.datetime,
+  {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
-  {$ENDIF}
+  {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types, System.Contnrs{$ELSE}Contnrs, Types{$ENDIF},
   Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX, FmtBCD,
   ZSysUtils, ZDbcIntfs, ZDbcGenericResolver, ZPlainOleDBDriver, ZDbcOleDBUtils,
@@ -125,9 +127,9 @@ type
     procedure GetTimeStamp(ColumnIndex: Integer; var Result: TZTimeStamp); reintroduce; overload;
     function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 
-    {$IFDEF USE_SYNCOMMONS}
+    {$IFDEF WITH_COLUMNS_TO_JSON}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
-    {$ENDIF USE_SYNCOMMONS}
+    {$ENDIF WITH_COLUMNS_TO_JSON}
   end;
 
   TZOleDBResultSet = class(TZAbstractOleDBResultSet, IZResultSet)
@@ -444,7 +446,7 @@ begin
   Inc(FPosition, Result)
 end;
 
-{$IFDEF USE_SYNCOMMONS}
+{$IFDEF WITH_COLUMNS_TO_JSON}
 procedure TZAbstractOleDBResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 var I, C, H: Integer;
@@ -484,7 +486,7 @@ begin
         DBTYPE_ERROR:     JSONWriter.Add(PInteger(FData)^);
         DBTYPE_R4:        JSONWriter.AddSingle(PSingle(FData)^);
         DBTYPE_R8:        JSONWriter.AddDouble(PDouble(FData)^);
-        DBTYPE_CY:        JSONWriter.AddCurr64(PInt64(FData)^);
+        DBTYPE_CY:        JSONWriter.AddCurr64(PInt64(FData){$IFNDEF MORMOT2}^{$ENDIF});
         DBTYPE_DATE:      JSONWriter.AddDateTime(PDateTime(FData), 'T', '"');
         DBTYPE_BOOL:      JSONWriter.AddShort(JSONBool[PWord(FData)^ <> 0]);
         DBTYPE_VARIANT: begin
@@ -501,13 +503,17 @@ begin
         DBTYPE_I8:        JSONWriter.Add(PInt64(FData)^);
         DBTYPE_UI8:       JSONWriter.AddQ(PUInt64(FData)^);
         DBTYPE_GUID:      begin
+                            {$IFNDEF MORMOT2}
                             JSONWriter.Add('"');
                             JSONWriter.Add(PGUID(FData)^);
                             JSONWriter.Add('"');
+                            {$ELSE}
+                            JSONWriter.Add(PGUID(FData),'"');
+                            {$ENDIF}
                           end;
         DBTYPE_BYTES:
           if FColBind.cbMaxLen = 0 then begin //streamed
-            fTempBlob := TZOleDBBLOB.Create(FRowSet, C{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
+            fTempBlob := TZOleDBBLOB.Create(FRowSetAddr^, C{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
               DBTYPE_BYTES, FHROWS^[FCurrentBufRowNo], FOleDBConnection, FLength, FOpenLobStreams);
             P := fTempBlob.GetBuffer(fRawTemp, L);
             JSONWriter.WrBase64(P, L, true); // withMagic=true
@@ -529,7 +535,7 @@ begin
         DBTYPE_WSTR, DBTYPE_XML: begin
             JSONWriter.Add('"');
             if FColBind.cbMaxLen = 0 then begin
-jmpCLob:      fTempBlob := TZOleDBCLOB.Create(FRowSet, C{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
+jmpCLob:      fTempBlob := TZOleDBCLOB.Create(FRowSetAddr^, C{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
                 FwType, FHROWS^[FCurrentBufRowNo], FOleDBConnection, FLength, FOpenLobStreams);
               P := Pointer(fTempBlob.GetPWideChar(FUniTemp, L));
               JSONWriter.AddJSONEscapeW(Pointer(P), L);
@@ -552,14 +558,18 @@ jmpCLob:      fTempBlob := TZOleDBCLOB.Create(FRowSet, C{$IFNDEF GENERIC_INDEX}+
                             if jcoMongoISODate in JSONComposeOptions then
                               JSONWriter.AddShort('ISODate("')
                             else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                              {$IFDEF MORMOT2}
+                              JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              {$ELSE}
                               JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$ENDIF}
                             else
                               JSONWriter.Add('"');
                             if PDBDate(FData)^.year < 0 then
                               JSONWriter.Add('-');
-                            DateToIso8601PChar(PUTF8Char(FByteBuffer), True, Abs(PDBDate(FData)^.year),
+                            DateToIso8601PChar(Pointer(FByteBuffer), True, Abs(PDBDate(FData)^.year),
                               PDBDate(FData)^.month, PDBDate(FData)^.day);
-                            JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),10);
+                            JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer),10);
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('T00:00:00Z")')
                             else JSONWriter.Add('"');
@@ -568,12 +578,16 @@ jmpCLob:      fTempBlob := TZOleDBCLOB.Create(FRowSet, C{$IFNDEF GENERIC_INDEX}+
                             if jcoMongoISODate in JSONComposeOptions then
                               JSONWriter.AddShort('ISODate("0000-00-00')
                             else if jcoDATETIME_MAGIC in JSONComposeOptions then begin
+                              {$IFDEF MORMOT2}
+                              JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              {$ELSE}
                               JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$ENDIF}
                             end else
                               JSONWriter.Add('"');
-                            TimeToIso8601PChar(PUTF8Char(FByteBuffer), True, PDBTime(FData)^.hour,
+                            TimeToIso8601PChar(Pointer(FByteBuffer), True, PDBTime(FData)^.hour,
                               PDBTime(FData)^.minute, PDBTime(FData)^.second, 0, 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),9+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer),9+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z)"')
                             else JSONWriter.Add('"');
@@ -582,17 +596,21 @@ jmpCLob:      fTempBlob := TZOleDBCLOB.Create(FRowSet, C{$IFNDEF GENERIC_INDEX}+
                             if jcoMongoISODate in JSONComposeOptions then
                               JSONWriter.AddShort('ISODate("')
                             else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                              {$IFDEF MORMOT2}
+                              JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              {$ELSE}
                               JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$ENDIF}
                             else
                               JSONWriter.Add('"');
                             if PDBTimeStamp(FData)^.year < 0 then
                               JSONWriter.Add('-');
-                            DateToIso8601PChar(PUTF8Char(FByteBuffer), True, Abs(PDBTimeStamp(FData)^.Year),
+                            DateToIso8601PChar(Pointer(FByteBuffer), True, Abs(PDBTimeStamp(FData)^.Year),
                                PDBTimeStamp(FData)^.Month, PDBTimeStamp(FData)^.Day);
                             MS := (PDBTimeStamp(FData)^.fraction * Byte(ord(jcoMilliseconds in JSONComposeOptions))) div 1000000;
-                            TimeToIso8601PChar(PUTF8Char(FByteBuffer)+10, True, PDBTimeStamp(FData)^.Hour,
+                            TimeToIso8601PChar(Pointer(PAnsiChar(FByteBuffer)+10), True, PDBTimeStamp(FData)^.Hour,
                               PDBTimeStamp(FData)^.Minute, PDBTimeStamp(FData)^.Second, MS, 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer),19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z")')
                             else JSONWriter.Add('"');
@@ -602,7 +620,7 @@ jmpCLob:      fTempBlob := TZOleDBCLOB.Create(FRowSet, C{$IFNDEF GENERIC_INDEX}+
         //DBTYPE_PROPVARIANT = 138;
         DBTYPE_VARNUMERIC: begin
                             SQLNumeric2Raw(FData, PAnsiChar(FByteBuffer), FLength);
-                            JSONWriter.AddJSONEscape(PUTF8Char(FByteBuffer), FLength);
+                            JSONWriter.AddJSONEscape(Pointer(FByteBuffer), FLength);
                           end;
       end;
       JSONWriter.Add(',');
@@ -614,7 +632,7 @@ jmpCLob:      fTempBlob := TZOleDBCLOB.Create(FRowSet, C{$IFNDEF GENERIC_INDEX}+
       JSONWriter.Add('}');
   end;
 end;
-{$ENDIF USE_SYNCOMMONS}
+{$ENDIF WITH_COLUMNS_TO_JSON}
 
 procedure TZAbstractOleDBResultSet.CreateAccessors;
 var Status: HResult;
@@ -1928,8 +1946,8 @@ begin
   then Result := FResultSet.Next
   else Result := False;
   if not Result or ((MaxRows > 0) and (LastRowNo >= MaxRows)) then begin
-    //if (FResultSet <> nil) and not FLastRowFetched then
-      //FResultSet.ResetCursor; //EH: clear library mem or release servercursor
+    if (FResultSet <> nil) and not FLastRowFetched then
+      FResultSet.ResetCursor; //EH: clear library mem or release servercursor
     FLastRowFetched := True;
     Exit;
   end;
@@ -2253,10 +2271,8 @@ begin
 end;
 
 function TZOleDBResultSet.Next: Boolean;
-var
-  I: NativeInt;
-  //stmt: IZOleDBPreparedStatement;
-  Status: HResult;
+var I: NativeInt;
+    Status: HResult;
 label NoSuccess;  //ugly but faster and no double code
 begin
   { Checks for maximum row. }
@@ -2264,9 +2280,7 @@ begin
   //stmt := nil;
   if (RowNo > LastRowNo) or Closed or (FRowSetAddr^ = nil) or
     ((RowNo = LastRowNo) and (FGetNextRowsStatus = DB_S_ENDOFROWSET)) or
-    ((MaxRows > 0) and (RowNo >= MaxRows)) //or
-    //((not Closed) and (not (Supports(Statement, IZOleDBPreparedStatement, Stmt) and Stmt.GetNewRowSet(FRowSet))))
-    then
+    ((MaxRows > 0) and (RowNo >= MaxRows)) then
     goto NoSuccess;
 
   if (FRowsObtained > 0) and (FCurrentBufRowNo < DBROWCOUNT(FRowsObtained)-1)

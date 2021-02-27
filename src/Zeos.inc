@@ -67,7 +67,8 @@
 {.$DEFINE ZEOS_DISABLE_PROXY}
 {.$DEFINE ZEOS_PROXY_USE_INTERNAL_PROXY}
 
-{.$DEFINE USE_SYNCOMMONS} //enable JSON content support by using SynCommons.pas from Synopse project 
+{.$DEFINE USE_SYNCOMMONS} //enable JSON content support by using SynCommons.pas from Synopse project v1.18
+{.$DEFINE MORMOT2} //enable JSON content support by using mormot.db.core.pas from Synopse project v2+
 
 {.$DEFINE DO_NOT_DERIVE_FROM_EDATABASEERROR} //don't derive Zeos Exceptions from EDatabaseError
 
@@ -604,6 +605,7 @@
 //run ZSysUtils benchmarks
 {.$DEFINE BENCHMARK}
 
-//stop incrementing column/param index -> always start on [0]
-{.$DEFINE GENERIC_INDEX}
+{$IF defined(USE_SYNCOMMONS) or defined(MORMOT2)}
+  {$DEFINE WITH_COLUMNS_TO_JSON} //enable JSON content support serialization used by mORMot
+{$IFEND}
 
