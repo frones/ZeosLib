@@ -605,6 +605,10 @@
 //run ZSysUtils benchmarks
 {.$DEFINE BENCHMARK}
 
+{$IF defined(USE_SYNCOMMONS) and defined(MORMOT2)}
+  {$UNDEF USE_SYNCOMMONS}
+{$IFEND}
+
 {$IF defined(USE_SYNCOMMONS) or defined(MORMOT2)}
   {$DEFINE WITH_COLUMNS_TO_JSON} //enable JSON content support serialization used by mORMot
 {$IFEND}
