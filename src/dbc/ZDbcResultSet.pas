@@ -1451,10 +1451,10 @@ type
   TZMemoryReferencedCLob = class(TZMemoryReferencedLob, IZBlob, IZClob);
 
 
-{$IFDEF USE_SYNCOMMONS}
+{$IF defined(USE_SYNCOMMONS) or defined(MORMOT2)}
 const
   JSONBool: array[Boolean] of ShortString = ('false', 'true');
-{$ENDIF USE_SYNCOMMONS}
+{$IFEND}
 
 implementation
 

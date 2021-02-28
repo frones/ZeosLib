@@ -62,7 +62,8 @@ interface
 {$IFNDEF ZEOS_DISABLE_ADO}
 uses
   {$IFDEF MORMOT2}
-  mormot.db.core, mormot.core.datetime,
+  mormot.db.core, mormot.core.datetime, {$IFDEF WITH_INLINE}mormot.core.text,
+  mormot.core.base,{$ENDIF}
   {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
   {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}

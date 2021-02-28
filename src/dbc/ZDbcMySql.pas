@@ -543,13 +543,19 @@ label setuint;
 begin
   if not Closed then
     Exit;
-
   FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);;
-  GlobalCriticalSection.Enter;
-  try
-    FHandle := FPlainDriver.mysql_init(FHandle); //is not threadsave!
-  finally
-    GlobalCriticalSection.Leave;
+  if (FHandle <> nil) then begin
+    if (PingServer = 0) then begin
+      inherited Open;
+      Exit;
+    end;
+  end else begin
+    GlobalCriticalSection.Enter;
+    try
+      FHandle := FPlainDriver.mysql_init(FHandle); //is not threadsave!
+    finally
+      GlobalCriticalSection.Leave;
+    end;
   end;
   {EgonHugeist: get current characterset first }
   if Assigned(FPlainDriver.mysql_character_set_name) then begin

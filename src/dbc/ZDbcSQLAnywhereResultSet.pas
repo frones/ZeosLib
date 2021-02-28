@@ -59,7 +59,8 @@ interface
 
 uses
   {$IFDEF MORMOT2}
-  mormot.db.core, mormot.core.datetime,
+  mormot.db.core, mormot.core.datetime, {$IFDEF WITH_INLINE}mormot.core.text,
+  mormot.core.base,{$ENDIF}
   {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
   {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
@@ -861,6 +862,7 @@ begin
                               end;
         DT_LONGNVARCHAR,
         DT_LONGVARCHAR      : AddClob(ColumnCodePage);
+        DT_DATE,
         DT_TIME,
         DT_TIMESTAMP,
         DT_TIMESTAMP_STRUCT : begin
@@ -874,20 +876,23 @@ begin
                                   {$ENDIF}
                                 else
                                   JSONWriter.Add('"');
-                                if PZSQLAnyDateTime(FData).Year < 0 then
-                                  JSONWriter.Add('-');
-                                if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stTime) then begin
-                                  DateToIso8601PChar(Pointer(fByteBuffer), True, Abs(PZSQLAnyDateTime(FData).Year),
-                                  PZSQLAnyDateTime(FData).Month + 1, PZSQLAnyDateTime(FData).Day);
-                                  JSONWriter.AddNoJSONEscape(Pointer(fByteBuffer),10);
-                                end else if jcoMongoISODate in JSONComposeOptions then
-                                  JSONWriter.AddShort('0000-00-00');
-                                if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stDate) then begin
-                                  TimeToIso8601PChar(Pointer(fByteBuffer), True, PZSQLAnyDateTime(FData).Hour,
-                                  PZSQLAnyDateTime(FData).Minute, PZSQLAnyDateTime(FData).Second,
-                                  PZSQLAnyDateTime(FData).MicroSecond div 1000, 'T', jcoMilliseconds in JSONComposeOptions);
-                                  JSONWriter.AddNoJSONEscape(Pointer(fByteBuffer),9 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
-                                end;
+                                if native_type = DT_TIMESTAMP_STRUCT then begin
+                                  if PZSQLAnyDateTime(FData).Year < 0 then
+                                    JSONWriter.Add('-');
+                                  if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stTime) then begin
+                                    DateToIso8601PChar(Pointer(fByteBuffer), True, Abs(PZSQLAnyDateTime(FData).Year),
+                                    PZSQLAnyDateTime(FData).Month + 1, PZSQLAnyDateTime(FData).Day);
+                                    JSONWriter.AddNoJSONEscape(Pointer(fByteBuffer),10);
+                                  end else if jcoMongoISODate in JSONComposeOptions then
+                                    JSONWriter.AddShort('0000-00-00');
+                                  if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stDate) then begin
+                                    TimeToIso8601PChar(Pointer(fByteBuffer), True, PZSQLAnyDateTime(FData).Hour,
+                                    PZSQLAnyDateTime(FData).Minute, PZSQLAnyDateTime(FData).Second,
+                                    PZSQLAnyDateTime(FData).MicroSecond div 1000, 'T', jcoMilliseconds in JSONComposeOptions);
+                                    JSONWriter.AddNoJSONEscape(Pointer(fByteBuffer),9 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                                  end;
+                                end else
+                                  JSONWriter.AddNoJSONEscape(FData, FDataLen);
                                 if jcoMongoISODate in JSONComposeOptions
                                 then JSONWriter.AddShort('Z)"')
                                 else JSONWriter.Add('"');
