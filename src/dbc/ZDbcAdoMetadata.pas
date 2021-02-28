@@ -352,14 +352,12 @@ var
   Len: NativeUInt;
 begin
   Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   AdoRecordSet := AdoOpenSchema(adSchemaProcedures,
     [Catalog, SchemaPattern, ProcedureNamePattern, '']);
   if AdoRecordSet <> nil then
-    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do
-    begin
-      while Next do
-      begin
+    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do begin
+      while Next do begin
         Result.MoveToInsertRow;
         Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('PROCEDURE_CATALOG', Len), Len);
         Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('PROCEDURE_SCHEMA', Len), Len);
@@ -439,13 +437,12 @@ var
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   AdoRecordSet := AdoOpenSchema(adSchemaProcedureParameters,
     [Catalog, SchemaPattern, ProcedureNamePattern]);
   if AdoRecordSet <> nil then
-    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do
-    begin
-      while Next do
-      begin
+    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do begin
+      while Next do begin
         Result.MoveToInsertRow;
         Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('PROCEDURE_CATALOG', Len), Len);
         Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('PROCEDURE_SCHEMA', Len), Len);
@@ -528,20 +525,17 @@ begin
   Result:=inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
 
   TableTypes := '';
-  for I := Low(Types) to High(Types) do
-  begin
+  for I := Low(Types) to High(Types) do begin
     if Length(TableTypes) > 0 then
       TableTypes := TableTypes + ',';
     TableTypes := TableTypes + Types[I];
   end;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   AdoRecordSet := AdoOpenSchema(adSchemaTables,
     [Catalog, SchemaPattern, TableNamePattern, TableTypes]);
   if Assigned(AdoRecordSet) then
-    with TZAdoResultSet.Create(GetStatement, '', AdoRecordset) do
-    begin
-      while Next do
-      begin
+    with TZAdoResultSet.Create(GetStatement, '', AdoRecordset) do begin
+      while Next do begin
         Result.MoveToInsertRow;
         Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), Len);
         Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), Len);
@@ -573,13 +567,11 @@ var
   Len: NativeUInt;
 begin
   Result := inherited UncachedGetSchemas;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   AdoRecordSet := AdoOpenSchema(adSchemaSchemata, []);
   if AdoRecordSet <> nil then
-    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do
-    begin
-      while Next do
-      begin
+    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do begin
+      while Next do begin
         Result.MoveToInsertRow;
         Result.UpdatePWideChar(SchemaColumnsTableSchemaIndex,
           GetPWideCharByName('SCHEMA_NAME', Len), Len);
@@ -608,13 +600,11 @@ var
   Len: NativeUInt;
 begin
   Result:=inherited UncachedGetCatalogs;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   AdoRecordSet := AdoOpenSchema(adSchemaCatalogs, []);
   if Assigned(AdoRecordSet) then
-    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do
-    begin
-      while Next do
-      begin
+    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do begin
+      while Next do begin
         Result.MoveToInsertRow;
         Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('CATALOG_NAME', Len), Len);
         Result.InsertRow;
@@ -723,7 +713,7 @@ begin
   P := Pointer(TableNamePattern);
   if (P <> nil) and (P^ = '#') and (GetConnection.GetServerProvider in [spMSSQL, spASE]) then //test against temporary table -> not resolvable
     Exit;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   AdoRecordSet := AdoOpenSchema(adSchemaColumns,
     [DecomposeObjectString(Catalog), DecomposeObjectString(SchemaPattern),
     DecomposeObjectString(TableNamePattern), DecomposeObjectString(ColumnNamePattern)]);
@@ -791,15 +781,12 @@ var
   Len: NativeUInt;
 begin
   Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   AdoRecordSet := AdoOpenSchema(adSchemaColumnPrivileges,
     [Catalog, Schema, Table, ColumnNamePattern]);
   if Assigned(AdoRecordSet) then
-  begin
-    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do
-    begin
-      while Next do
-      begin
+    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do begin
+      while Next do begin
         Result.MoveToInsertRow;
         Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), Len);
         Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), Len);
@@ -817,7 +804,6 @@ begin
       Close;
       Free;
     end;
-  end;
 end;
 
 function TZAdoDatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
@@ -827,15 +813,12 @@ var
   Len: NativeUInt;
 begin
   Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   AdoRecordSet := AdoOpenSchema(adSchemaTablePrivileges,
     [Catalog, SchemaPattern, TableNamePattern]);
   if Assigned(AdoRecordSet) then
-  begin
-    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do
-    begin
-      while Next do
-      begin
+    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do begin
+      while Next do begin
         Result.MoveToInsertRow;
         Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), Len);
         Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), Len);
@@ -851,7 +834,6 @@ begin
       end;
       Close;
       Free;
-    end;
     end;
 end;
 
@@ -894,14 +876,11 @@ var
   Len: NativeUInt;
 begin
   Result:=inherited UncachedGetVersionColumns(Catalog, Schema, Table);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   AdoRecordSet := AdoOpenSchema(adSchemaColumns, [Catalog, Schema, Table]);
   if Assigned(AdoRecordSet) then
-  begin
-    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do
-    begin
-      while Next do
-      begin
+    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do begin
+      while Next do begin
         if (GetIntByName('COLUMN_FLAGS')
           and DBCOLUMNFLAGS_ISROWVER) = 0 then
           Continue;
@@ -921,7 +900,6 @@ begin
       Close;
       Free;
     end;
-  end;
 end;
 
 function TZAdoDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
@@ -931,15 +909,12 @@ var
   Len: NativeUInt;
 begin
   Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   AdoRecordSet := AdoOpenSchema(adSchemaPrimaryKeys,
     [Catalog, Schema, Table]);
   if AdoRecordSet <> nil then
-  begin
-    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do
-    begin
-      while Next do
-      begin
+    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do begin
+      while Next do begin
         Result.MoveToInsertRow;
         Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), Len);
         Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), Len);
@@ -953,7 +928,6 @@ begin
       Close;
       Free;
     end;
-  end;
 end;
 
 function TZAdoDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
@@ -1135,14 +1109,12 @@ var
 begin
   Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
                                               ForeignCatalog, ForeignSchema, ForeignTable);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   AdoRecordSet := AdoOpenSchema(adSchemaForeignKeys, [PrimaryCatalog,
     PrimarySchema, PrimaryTable, ForeignCatalog, ForeignSchema, ForeignTable]);
   if AdoRecordSet <> nil then
-    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do
-    begin
-      while Next do
-      begin
+    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do begin
+      while Next do begin
         Result.MoveToInsertRow;
         Result.UpdatePWideChar(CrossRefKeyColPKTableCatalogIndex, GetPWideCharByName('PK_TABLE_CATALOG', Len), Len);
         Result.UpdatePWideChar(CrossRefKeyColPKTableSchemaIndex, GetPWideCharByName('PK_TABLE_SCHEMA', Len), Len);
@@ -1216,14 +1188,11 @@ var
   Len: NativeUInt;
 begin
   Result:=inherited UncachedGetTypeInfo;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   AdoRecordSet := AdoOpenSchema(adSchemaProviderTypes, []);
   if AdoRecordSet <> nil then
-  begin
-    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do
-    begin
-      while Next do
-      begin
+    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do begin
+      while Next do begin
         Result.MoveToInsertRow;
         Result.UpdatePWideChar(TypeInfoTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), Len);
         Result.UpdateSmall(TypeInfoDataTypeIndex, Ord(ConvertAdoToSqlType(
@@ -1253,7 +1222,6 @@ begin
       Close;
       Free;
     end;
-  end;
 end;
 
 {**
@@ -1315,14 +1283,12 @@ var
   Len: NativeUInt;
 begin
   Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   AdoRecordSet := AdoOpenSchema(adSchemaIndexes,
     [Catalog, Schema, '', '', Table]);
   if AdoRecordSet <> nil then
-    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do
-    begin
-      while Next do
-      begin
+    with TZAdoResultSet.Create(GetStatement, '', AdoRecordSet) do begin
+      while Next do begin
         Result.MoveToInsertRow;
         Result.UpdatePWideChar(CatalogNameIndex, GetPWideCharByName('TABLE_CATALOG', Len), Len);
         Result.UpdatePWideChar(SchemaNameIndex, GetPWideCharByName('TABLE_SCHEMA', Len), Len);

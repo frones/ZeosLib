@@ -1412,13 +1412,11 @@ function TZASADatabaseMetadata.UncachedGetProcedures(const Catalog: string;
 var Len: NativeUInt;
 begin
   Result := inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_stored_procedures %s, %s, %s',
-    [ComposeObjectString(Catalog), ComposeObjectString(SchemaPattern), ComposeObjectString(ProcedureNamePattern)])) do
-  begin
-    while Next do
-    begin
+    [ComposeObjectString(Catalog), ComposeObjectString(SchemaPattern), ComposeObjectString(ProcedureNamePattern)])) do begin
+    while Next do begin
       Result.MoveToInsertRow;
       Result.UpdateNull(CatalogNameIndex);
       Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('PROCEDURE_SCHEM', Len), Len);
@@ -1503,15 +1501,12 @@ begin
 
   Result := inherited UncachedGetProcedureColumns(Catalog, SchemaPattern,
     ProcedureNamePattern, ColumnNamePattern);
-
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_getprocedurecolumns %s, %s, %s, %s',
     [ComposeObjectString(Catalog), ComposeObjectString(SchemaPattern),
-      ComposeObjectString(ProcedureNamePattern), ComposeObjectString(ColumnNamePattern)])) do
-  begin
-    while Next do
-    begin
+      ComposeObjectString(ProcedureNamePattern), ComposeObjectString(ColumnNamePattern)])) do begin
+    while Next do begin
       Result.MoveToInsertRow;
       Result.UpdateNull(CatalogNameIndex);
       Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('PROCEDURE_SCHEM', Len), Len);
@@ -1582,7 +1577,7 @@ var
   TableTypes: string;
 begin
   Result:=inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   TableTypes := '';
   for I := 0 to Length(Types) - 1 do
     AppendSepString(TableTypes, SQLQuotedStr(Types[I], ''''), ',');
@@ -1590,10 +1585,8 @@ begin
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_tables %s, %s, %s, %s',
       [ComposeObjectString(TableNamePattern), ComposeObjectString(SchemaPattern), ComposeObjectString(Catalog),
-       ComposeObjectString(TableTypes, 'null', '"')])) do
-  begin
-    while Next do
-    begin
+       ComposeObjectString(TableTypes, 'null', '"')])) do begin
+    while Next do begin
       Result.MoveToInsertRow;
       Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), Len);
       Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiCharByName('TABLE_NAME', Len), Len);
@@ -1621,12 +1614,10 @@ function TZASADatabaseMetadata.UncachedGetSchemas: IZResultSet;
 var Len: NativeUInt;
 begin
   Result:=inherited UncachedGetSchemas;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetStatement.ExecuteQuery('select TABLE_SCHEM=name  from sysusers where suid >= -2 order by name'
-{'exec sp_jdbc_getschemas'}) do
-  begin
-    while Next do
-    begin
+{'exec sp_jdbc_getschemas'}) do begin
+    while Next do begin
       Result.MoveToInsertRow;
       Result.UpdatePAnsiChar(SchemaColumnsTableSchemaIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), Len);
       Result.InsertRow;
@@ -1731,14 +1722,12 @@ var Len: NativeUInt;
   end;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_columns %s, %s, %s, %s',
     [ComposeObjectString(TableNamePattern), ComposeObjectString(SchemaPattern), ComposeObjectString(Catalog),
-     ComposeObjectString(ColumnNamePattern)])) do
-  begin
-    while Next do
-    begin
+     ComposeObjectString(ColumnNamePattern)])) do begin
+    while Next do begin
       Result.MoveToInsertRow;
       Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), Len);
       Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiCharByName('TABLE_NAME', Len), Len);
@@ -1803,13 +1792,12 @@ function TZASADatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string
 var Len: NativeUInt;
 begin
   Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_getcolumnprivileges %s, %s, %s, %s',
     [ComposeObjectString(Catalog), ComposeObjectString(Schema), ComposeObjectString(Table), ComposeObjectString(ColumnNamePattern)])) do
   begin
-    while Next do
-    begin
+    while Next do begin
       Result.MoveToInsertRow;
       //Result.UpdateNull(CatalogNameIndex);
       Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), Len);
@@ -1830,14 +1818,13 @@ function TZASADatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
 var Len: NativeUInt;
 begin
   Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_gettableprivileges %s, %s, %s',
     [ComposeObjectString(Catalog), ComposeObjectString(SchemaPattern),
     ComposeObjectString(TableNamePattern)])) do
   begin
-    while Next do
-    begin
+    while Next do begin
       Result.MoveToInsertRow;
       Result.UpdateNull(CatalogNameIndex);
       Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), Len);
@@ -1887,13 +1874,12 @@ function TZASADatabaseMetadata.UncachedGetVersionColumns(const Catalog: string;
 var Len: NativeUInt;
 begin
   Result:=inherited UncachedGetVersionColumns(Catalog, Schema, Table);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_getversioncolumns %s, %s, %s',
     [ComposeObjectString(Catalog), ComposeObjectString(Schema), ComposeObjectString(Table)])) do
   begin
-    while Next do
-    begin
+    while Next do begin
       Result.MoveToInsertRow;
       Result.UpdateSmall(TableColVerScopeIndex, GetSmallByName('SCOPE'));
       Result.UpdatePAnsiChar(TableColVerColNameIndex, GetPAnsiCharByName('COLUMN_NAME', Len), Len);
@@ -1915,13 +1901,12 @@ function TZASADatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
 var Len: NativeUInt;
 begin
   Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_primarykey %s, %s, %s',
     [ComposeObjectString(Catalog), ComposeObjectString(Schema), ComposeObjectString(Table)])) do
   begin
-    while Next do
-    begin
+    while Next do begin
       Result.MoveToInsertRow;
       Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TABLE_SCHEM', Len), Len);
       Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiCharByName('TABLE_NAME', Len), Len);
@@ -1939,7 +1924,7 @@ function TZASADatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
 var Len: NativeUInt;
 begin
   Result:=inherited UncachedGetImportedKeys(Catalog, Schema, Table);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_importkey %s, %s, %s',
     [ComposeObjectString(Catalog), ComposeObjectString(Schema), ComposeObjectString(Table)])) do
@@ -2037,7 +2022,7 @@ function TZASADatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
 var Len: NativeUInt;
 begin
   Result:=inherited UncachedGetExportedKeys(Catalog, Schema, Table);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_exportkey %s, %s, %s',
     [ComposeObjectString(Catalog), ComposeObjectString(Schema), ComposeObjectString(Table)])) do
@@ -2145,7 +2130,7 @@ var Len: NativeUInt;
 begin
   Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
                                               ForeignCatalog, ForeignSchema, ForeignTable);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_getcrossreferences %s, %s, %s, %s, %s, %s',
     [ComposeObjectString(PrimaryCatalog), ComposeObjectString(PrimarySchema), ComposeObjectString(PrimaryTable),
@@ -2222,7 +2207,7 @@ function TZASADatabaseMetadata.UncachedGetTypeInfo: IZResultSet;
 var Len: NativeUInt;
 begin
   Result:=inherited UncachedGetTypeInfo;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetStatement.ExecuteQuery('exec sp_jdbc_datatype_info') do
   begin
     while Next do
@@ -2315,7 +2300,7 @@ begin
 
   Is_Unique := SQLQuotedStr(BoolStrInts[Unique], '''');
   Accuracy := SQLQuotedStr(BoolStrInts[Approximate], '''');
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_getindexinfo %s, %s, %s, %s, %s',
     [ComposeObjectString(Catalog), ComposeObjectString(Schema), ComposeObjectString(Table), Is_Unique, Accuracy])) do
@@ -2389,7 +2374,7 @@ begin
   UDTypes := '';
   for I := 0 to Length(Types) - 1 do
     AppendSepString(UDTypes, SQLQuotedStr(ZFastCode.IntToStr(Types[I]), ''''), ',');
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_getudts %s, %s, %s, %s',
     [ComposeObjectString(Catalog), ComposeObjectString(SchemaPattern, '''%'''),

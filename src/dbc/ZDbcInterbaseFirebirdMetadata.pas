@@ -453,6 +453,7 @@ var
   PA: PAnsiChar absolute P;
   L: NativeUInt;
 begin
+  {$IFDEF WITH_VAR_INIT_WARNING}L := 0;{$ENDIF}
   if FServerVersion = '' then begin
     Connection := Metadata.GetConnection;
     isc_info := isc_info_version;
@@ -1665,7 +1666,7 @@ begin
     + ' PP.RDB$PARAMETER_TYPE, PP.RDB$PARAMETER_NUMBER';
 
   GUIDProps := (GetConnection as IZInterbaseFirebirdConnection).GetGUIDProps;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with CreateStatement.ExecuteQuery(SQL) do
   begin
     while Next do
@@ -1794,7 +1795,7 @@ end;
 }
 function TZInterbase6DatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
-  TablesTypes: array [0..2] of String = ('TABLE', 'VIEW', 'SYSTEM TABLE');
+  TablesTypes: array [0..2] of RawByteString = ('TABLE', 'VIEW', 'SYSTEM TABLE');
 var
   I: Integer;
 begin
@@ -1803,7 +1804,7 @@ begin
   for I := Low(TablesTypes) to High(TablesTypes) do
   begin
     Result.MoveToInsertRow;
-    Result.UpdateString(TableTypeColumnTableTypeIndex, TablesTypes[I]);
+    Result.UpdateRawByteString(TableTypeColumnTableTypeIndex, TablesTypes[I]);
     Result.InsertRow;
   end;
 end;
@@ -1901,7 +1902,7 @@ var
 label GUID_Size, Str_Size;
 begin
   Result := inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}L := 0;{$ENDIF}
   LTableNamePattern := ConstructNameCondition(TableNamePattern,
     'RF.RDB$RELATION_NAME');
   LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
@@ -2449,7 +2450,7 @@ var
   Len: NativeUInt;
 begin
   Result := inherited UncachedGetTypeInfo;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   SQL := 'SELECT RDB$TYPE, RDB$TYPE_NAME FROM RDB$TYPES' +
     ' WHERE RDB$FIELD_NAME = ''RDB$FIELD_TYPE''';
   with CreateStatement.ExecuteQuery(SQL) do
@@ -2558,7 +2559,7 @@ begin
     + ' I.RDB$INDEX_NAME, I.RDB$RELATION_NAME, I.RDB$UNIQUE_FLAG,'
     + ' ISGMT.RDB$FIELD_POSITION, ISGMT.RDB$FIELD_NAME, I.RDB$INDEX_TYPE,'
     + ' I.RDB$SEGMENT_COUNT ORDER BY 1,2,3,4';
-
+  {$IFDEF WITH_VAR_INIT_WARNING}L := 0;{$ENDIF}
   with CreateStatement.ExecuteQuery(SQL) do
   begin
     while Next do
@@ -2650,7 +2651,7 @@ begin
   LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,'R.RDB$FIELD_NAME');
 
   Result := inherited UncachedGetCollationAndCharSet(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   if (TableNamePattern <> '') or (ColumnNamePattern <> '') then begin
     SQL := 'SELECT R.RDB$RELATION_NAME, R.RDB$FIELD_NAME, C.RDB$CHARACTER_SET_NAME,'
       + ' C.RDB$DEFAULT_COLLATE_NAME, C.RDB$CHARACTER_SET_ID, C.RDB$BYTES_PER_CHARACTER'

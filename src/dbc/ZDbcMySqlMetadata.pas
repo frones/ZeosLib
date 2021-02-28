@@ -1300,6 +1300,7 @@ begin
   Result := inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
   List := TStringList.Create;
   MySQLCon := GetConnection as IZMySQLConnection;
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   try
     GetCatalogAndNamePattern(Catalog, SchemaPattern, TableNamePattern,
       iqTable, LCatalog, LTableNamePattern);
@@ -1328,7 +1329,7 @@ begin
           Result.MoveToInsertRow;
           Result.UpdateString(CatalogNameIndex, LCatalog);
           Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(FirstDbcIndex, Len), Len);
-          Result.UpdateString(TableColumnsSQLType, 'TABLE');
+          Result.UpdateRawByteString(TableColumnsSQLType, 'TABLE');
           Result.InsertRow;
         end;
         Close;
@@ -1481,6 +1482,7 @@ begin
 
   TableNameList := TStringList.Create;
   AddToBoolCache := False;
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   try
     with GetTables(Catalog, SchemaPattern, TableNamePattern, nil) do begin
       while Next do
@@ -1743,7 +1745,7 @@ begin
   else
     SchemaCondition := ConstructNameCondition(Catalog,'db');
   TableNameCondition := ConstructNameCondition(TableNamePattern,'table_name');
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   PrivilegesList := TStringList.Create;
   try
     with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
@@ -1801,7 +1803,7 @@ begin
 
   GetCatalogAndNamePattern(Catalog, Schema, Table,
     iqTable, LCatalog, LTable);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}L := 0;{$ENDIF}
   with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
     Format('SHOW KEYS FROM %s.%s',
     [IC.Quote(LCatalog, iqCatalog),
@@ -1987,7 +1989,7 @@ begin
 
   GetCatalogAndNamePattern(Catalog, Schema, Table,
     iqTable, LCatalog, LTable);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   KeyList := TStringList.Create;
   CommentList := TStringList.Create;
   try
@@ -2379,6 +2381,7 @@ var
     Len: NativeUInt;
     ColumnIndexes : Array[1..7] of integer;
   begin
+    {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
     with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
       'SHOW INDEX FROM '+IC.Quote(Catalog)+'.'+IC.Quote(Table)) do begin
       ColumnIndexes[1] := FindColumn('Table');
@@ -2713,7 +2716,7 @@ begin
     ZFastCode.IntToStr(Ord(ProcedureReturnsResult))+' AS PROCEDURE_TYPE, p.returns AS RETURN_VALUES '+
     ' from mysql.proc p where 1=1'+ AppendCondition(SchemaCondition) + AppendCondition(ProcedureNameCondition)+
     ' ORDER BY p.db, p.name';
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   try
     with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(SQL) do
     begin
@@ -2963,7 +2966,7 @@ begin
   ProcedureNameCondition := ConstructNameCondition(ProcedureNamePattern, 'P.SPECIFIC_NAME');
 
   Result := inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   SQL := '(select '
        + '  SPECIFIC_CATALOG as PROCEDURE_CAT, '
        + '  SPECIFIC_SCHEMA as PROCEDURE_SCHEM, '
@@ -2997,7 +3000,7 @@ begin
         Result.UpdatePAnsiChar(ProcColProcedureNameIndex, GetPAnsiChar(myProcColProcedureNameIndex, Len), Len);
       //ProcColColumnNameIndex
       if not IsNull(myProcColColumnNameIndex) then
-        Result.UpdateString(ProcColColumnNameIndex, GetString(myProcColColumnNameIndex));
+        Result.UpdatePAnsiChar(ProcColColumnNameIndex, GetPAnsiChar(myProcColColumnNameIndex, Len), Len);
       //ProcColColumnTypeIndex
       Result.UpdateShort(ProcColColumnTypeIndex, GetShort(myProcColColumnTypeIndex));
       //ProcColDataTypeIndex
