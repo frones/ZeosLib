@@ -58,8 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 uses
   {$IFDEF MORMOT2}
-  mormot.db.core, mormot.core.datetime, {$IFDEF WITH_INLINE}mormot.core.text,
-  mormot.core.base,{$ENDIF}
+  mormot.db.core, mormot.core.datetime, mormot.core.text, mormot.core.base,
   {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
   {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}

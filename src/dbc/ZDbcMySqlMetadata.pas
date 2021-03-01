@@ -3122,7 +3122,7 @@ begin
   ColumnNameCondition := ConstructNameCondition(ColumnNamePattern,'COLUMN_NAME');
 
   Result:=inherited UncachedGetCollationAndCharSet(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   if SchemaCondition <> '' then
   begin
     if TableNamePattern <> '' then
