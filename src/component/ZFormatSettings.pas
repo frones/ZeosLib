@@ -577,7 +577,7 @@ function TZAbstractDateTimeFormatSettings.GetFormat: String;
 begin
   if (FFormat <> nil) then
     Result := FFormat^
-  else if (csDesigning in FOwner.ComponentState) then
+  else if (FOwner <> nil ) and (csDesigning in FOwner.ComponentState) then
     Result := ''
   else if FParent <> nil
     then Result := FParent.GetFormat
@@ -593,7 +593,7 @@ end;
 
 function TZAbstractDateTimeFormatSettings.GetInvalidValueText: String;
 begin
-  if (FFormat <> nil) or (csDesigning in FOwner.ComponentState) then
+  if (FFormat <> nil) or ((FOwner <> nil ) and (csDesigning in FOwner.ComponentState)) then
     Result := FInvalidValueText
   else if FParent <> nil then
     Result := FParent.GetInvalidValueText
@@ -1038,7 +1038,7 @@ var Sep, Delim: Char;
 begin
   if (FDateFormat <> nil)
   then Result := FDateFormat^
-  else if (csDesigning in FOwner.ComponentState) then
+  else if (FOwner <> nil ) and (csDesigning in FOwner.ComponentState) then
     Result := ''
   else if FParent <> nil
     then Result := TZAbstractTimestampFormatSettings(FParent).GetDateFormat
@@ -1062,7 +1062,7 @@ var Sep, Delim: Char;
 begin
   if (FTimeFormat <> nil)
   then Result := FTimeFormat^
-  else if (csDesigning in FOwner.ComponentState) then
+  else if (FOwner <> nil ) and (csDesigning in FOwner.ComponentState) then
     Result := ''
   else if FParent <> nil
     then Result := TZAbstractTimestampFormatSettings(FParent).GetTimeFormat
