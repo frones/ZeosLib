@@ -464,7 +464,8 @@ const
   isc_action_svc_drop_mapping = byte(28);
   isc_action_svc_display_user_adm = byte(29);
   isc_action_svc_validate = byte(30);
-  isc_action_svc_last = byte(31);
+  isc_action_svc_nfix = byte(31);
+  isc_action_svc_last = byte(32);
   { Service information items}
   isc_info_svc_svr_db_info = byte(50);
   isc_info_svc_get_license = byte(51);
@@ -1670,6 +1671,10 @@ const
   isc_truncate_warn                    = 335545266;
   isc_truncate_monitor                 = 335545267;
   isc_truncate_context                 = 335545268;
+  isc_merge_dup_update                 = 335545269;
+  isc_wrong_page                       = 335545270;
+  isc_repl_error                       = 335545271;
+  isc_ses_reset_failed                 = 335545272;
   isc_gfix_db_name                     = 335740929;
   isc_gfix_invalid_sw                  = 335740930;
   isc_gfix_incmp_sw                    = 335740932;
@@ -2149,6 +2154,7 @@ const
   isc_nbackup_user_stop                = 337117257;
   isc_nbackup_deco_parse               = 337117259;
   isc_nbackup_lostrec_guid_db          = 337117261;
+	isc_nbackup_seq_misuse               = 337117265;
   isc_trace_conflict_acts              = 337182750;
   isc_trace_act_notfound               = 337182751;
   isc_trace_switch_once                = 337182752;
