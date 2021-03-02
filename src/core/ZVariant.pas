@@ -2737,7 +2737,10 @@ end;
   Gets a stored value converted to time.
   @return a stored value converted to time.
 }
-{$IFDEF FPC} {$PUSH} {$WARN 5060 off : Function result variable does not seem to be initialized} {$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5060 off : Function result variable does not seem to be initialized}
+  {$WARN 5058 off : Variable $result does not seem to be initialized}
+{$ENDIF}
 function TZAnyValue.GetTime: TZTime;
 begin
   SoftVarManager.GetAsTime(FValue, Result);
@@ -2748,7 +2751,10 @@ end;
   Gets a stored value converted to timestamp.
   @return a stored value converted to timestamp.
 }
-{$IFDEF FPC} {$PUSH} {$WARN 5060 off : Function result variable does not seem to be initialized} {$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5060 off : Function result variable does not seem to be initialized}
+  {$WARN 5058 off : Variable $result does not seem to be initialized}
+{$ENDIF}
 function TZAnyValue.GetTimeStamp: TZTimeStamp;
 begin
   SoftVarManager.GetAsTimeStamp(FValue, Result);
@@ -2808,9 +2814,9 @@ end;
   Gets a stored value converted to date.
   @return a stored value converted to date.
 }
-{$IFDEF FPC} // parameters not used intentionally
-  {$PUSH}
+{$IFDEF FPC} {$PUSH}
   {$WARN 5060 off : Function result variable does not seem to be initialized}
+  {$WARN 5057 off : Variable $result does not seem to be initialized}
 {$ENDIF}
 function TZAnyValue.GetDate: TZDate;
 begin
@@ -2866,7 +2872,10 @@ begin
           {$ENDIF}
     vtDouble: Result := Value.VDouble;
     vtCurrency: Result := Value.VCurrency;
-    vtBigDecimal: VarFMTBcdCreate(Result, Value.VBigDecimal);
+    vtBigDecimal: begin
+        {$IFDEF WITH_VAR_INIT_WARNING}Result := null;{$ENDIF}
+        VarFMTBcdCreate(Result, Value.VBigDecimal);
+      end;
     vtString: Result := {$IFDEF UNICODE}Value.VUnicodeString{$ELSE}String(Value.VRawByteString){$ENDIF};
     {$IFNDEF NO_ANSISTRING}
     vtAnsiString: Result := AnsiString(Value.VRawByteString);

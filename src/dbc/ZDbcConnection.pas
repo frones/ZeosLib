@@ -1859,15 +1859,13 @@ procedure TZClientVariantManager.ProcessAnsiString(const Value: TZVariant;
   out Result: TZVariant);
 var ResTmp: RawByteString;
 begin
+  ResTmp := '';
   Result.VType := vtAnsiString;
   case Value.VType of
     {$IFNDEF UNICODE}
     vtString: if FStringCP = ZOSCodePage
               then ResTmp := Value.VRawByteString
-              else begin
-                ResTmp := '';
-                PRawToRawConvert(Pointer(Value.VRawByteString), Length(Value.VRawByteString), FStringCP, ZOSCodePage, ResTmp);
-              end;
+              else PRawToRawConvert(Pointer(Value.VRawByteString), Length(Value.VRawByteString), FStringCP, ZOSCodePage, ResTmp);
     {$ENDIF}
     vtAnsiString: ResTmp := Value.VRawByteString;
     vtUTF8String: if ZOSCodePage = zCP_UTF8
@@ -1881,7 +1879,7 @@ begin
       ResTmp := ZUnicodeToRaw(Value.VUnicodeString, ZOSCodePage);
     vtCharRec:
       if (Value.VCharRec.CP = zCP_UTF16) then
-        ResTmp := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, ZOSCodePage)
+        PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, ZOSCodePage, ResTmp)
       else if (ZOSCodePage = Value.VCharRec.CP) then
         ZSetString(PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len, ResTmp{$IFDEF WITH_RAWBYTESTRING}, ZOSCodePage{$ENDIF})
       else PRawCPConvert(Value.VCharRec.P, Value.VCharRec.Len, ResTmp, Value.VCharRec.CP, ZOSCodePage);
@@ -1972,6 +1970,7 @@ procedure TZClientVariantManager.ProcessRawByteString(const Value: TZVariant;
 var ResTmp: RawByteString;
 begin
   Result.VType := vtRawByteString;
+  ResTmp := '';
   case Value.VType of
     {$IFNDEF UNICODE}
     vtString: if FStringCP = FClientCP
@@ -1990,11 +1989,10 @@ begin
     {$ENDIF}
     vtRawByteString: ResTmp := Value.VRawByteString;
     {$IFDEF UNICODE}vtString,{$ENDIF}
-    vtUnicodeString:
-      ResTmp := ZUnicodeToRaw(Value.VUnicodeString, FClientCP);
+    vtUnicodeString: PUnicodeToRaw(Pointer(Value.VUnicodeString), Length(Value.VUnicodeString), FClientCP, ResTmp);
     vtCharRec:
       if (Value.VCharRec.CP = zCP_UTF16) then
-        ResTmp := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, FClientCP)
+        PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, FClientCP, ResTmp)
       else if (FClientCP = Value.VCharRec.CP) then
         ZSetString(PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len, ResTmp{$IFDEF WITH_RAWBYTESTRING}, FClientCP{$ENDIF})
       else PRawCPConvert(Value.VCharRec.P, Value.VCharRec.Len, ResTmp, Value.VCharRec.CP, FClientCP);
@@ -2070,24 +2068,25 @@ procedure TZClientVariantManager.ProcessUnicodeString(const Value: TZVariant;
   out Result: TZVariant);
 var ResTmp: UnicodeString;
 begin
+  ResTmp := '';
   Result.VType := vtUnicodeString;
   case Value.VType of
     {$IFNDEF UNICODE}
-    vtString: ResTmp := ZRawToUnicode(Value.VRawByteString, FStringCP);
+    vtString: PRawToUnicode(Pointer(Value.VRawByteString), Length(Value.VRawByteString), FStringCP, ResTmp);
     {$ENDIF}
     {$IFNDEF NO_ANSISTRING}
-    vtAnsiString: ResTmp := ZRawToUnicode(Value.VRawByteString, ZOSCodePage);
+    vtAnsiString: PRawToUnicode(Pointer(Value.VRawByteString), Length(Value.VRawByteString), ZOSCodePage, ResTmp);
     {$ENDIF}
     {$IFNDEF NO_UTF8STRING}
-    vtUTF8String: ResTmp := ZRawToUnicode(Value.VRawByteString, zCP_UTF8);
+    vtUTF8String: PRawToUnicode(Pointer(Value.VRawByteString), Length(Value.VRawByteString), zCP_UTF8, ResTmp);
     {$ENDIF}
-    vtRawByteString: ResTmp := ZRawToUnicode(Value.VRawByteString, FClientCP);
+    vtRawByteString: PRawToUnicode(Pointer(Value.VRawByteString), Length(Value.VRawByteString), FClientCP, ResTmp);
     {$IFDEF UNICODE}vtString,{$ENDIF}
     vtUnicodeString: ResTmp := Value.VUnicodeString;
     vtDateTime:      ResTmp := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(Value.VDateTime, FFormatSettings, False);
     vtCharRec: if (Value.VCharRec.CP = zCP_UTF16)
         then SetString(ResTmp, PWideChar(Value.VCharRec.P), Value.VCharRec.Len)
-        else ResTmp := PRawToUnicode(Value.VCharRec.P, Value.VCharRec.Len, Value.VCharRec.CP);
+        else PRawToUnicode(Value.VCharRec.P, Value.VCharRec.Len, Value.VCharRec.CP, ResTmp);
     else ConvertFixedTypesToUnicode(Value, ResTmp);
   end;
   Result.VUnicodeString := ResTmp;
@@ -2099,6 +2098,7 @@ procedure TZClientVariantManager.ProcessUTF8String(const Value: TZVariant;
 var ResTmp: RawByteString;
 begin
   Result.VType := vtUTF8String;
+  ResTmp := '';
   case Value.VType of
     {$IFNDEF UNICODE}
     vtString:     if FStringCP = zCP_UTF8
@@ -2116,10 +2116,10 @@ begin
                      else RawCPConvert(Value.VRawByteString, ResTmp, FClientCP, zCP_UTF8);
     {$IFDEF UNICODE}vtString,{$ENDIF}
     vtUnicodeString:
-      ResTmp := ZUnicodeToRaw(Value.VUnicodeString, zCP_UTF8);
+      PUnicodeToRaw(Pointer(Value.VUnicodeString), Length(Value.VUnicodeString), zCP_UTF8, ResTmp);
     vtCharRec:
       if (Value.VCharRec.CP = zCP_UTF16) then
-        ResTmp := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, zCP_UTF8)
+        PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, zCP_UTF8, ResTmp)
       else if (zCP_UTF8 = Value.VCharRec.CP) then
         ZSetString(PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len, ResTmp{$IFDEF WITH_RAWBYTESTRING}, zCP_UTF8{$ENDIF})
       else PRawCPConvert(Value.VCharRec.P, Value.VCharRec.Len, ResTmp, Value.VCharRec.CP, zCP_UTF8);

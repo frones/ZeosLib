@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{           ODBC Database Connectivity Classes           }
+{           ODBC Database Connectivity Classes            }
 {                                                         }
 {            Originally written by EgonHugeist            }
 {                                                         }
@@ -74,13 +74,17 @@ uses
   ZPlainODBCDriver, ZDbcODBCCon, ZDbcODBCUtils, ZDbcStatement;
 
 type
-  { eh: improve missing meta informations of SQLColumns}
+  /// <author>EgonHugeist</author>
+  /// <summary>implements a ODBC specific resultset metadata object</summary>
   TZODBCResultSetMetadata = class(TZAbstractResultSetMetadata)
   protected
     /// <summary>Clears specified column information.</summary>
     /// <param>"ColumnInfo" a column information object.</param>
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
   end;
+
+  /// <author>EgonHugeist</author>
+  /// <summary>implements a ODBC specific columninfo object</summary>
   TZODBCColumnInfo = class(TZColumnInfo)
   private
     fODBC_CType: SQLSMALLINT;
@@ -97,7 +101,6 @@ type
   end;
 
   { Interbase Error Class}
-  EZODBCConvertError = class(EZSQLException);
 
   TAbstractODBCResultSet = Class(TZAbstractReadOnlyResultSet)
   private
@@ -118,7 +121,7 @@ type
     FTempLob: IZBlob;
     FByteBuffer: PByteBuffer;
     procedure LoadUnBoundColumns;
-    function CreateODBCConvertError(ColumnIndex: Integer; DataType: Word): EZODBCConvertError;
+    function CreateODBCConvertError(ColumnIndex: Integer; DataType: TZSQLType): EZSQLException;
   protected
     procedure CheckStmtError(RETCODE: SQLRETURN);
   public
@@ -296,7 +299,7 @@ implementation
 
 uses Math,
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
-  ZMessages, ZEncoding, ZDbcProperties,
+  ZMessages, ZEncoding, ZDbcProperties, TypInfo,
   ZDbcUtils, ZDbcLogging;
 
 { TAbstractODBCResultSet }
@@ -482,11 +485,11 @@ end;
 {$ENDIF WITH_COLUMNS_TO_JSON}
 
 function TAbstractODBCResultSet.CreateODBCConvertError(ColumnIndex: Integer;
-  DataType: Word): EZODBCConvertError;
+  DataType: TZSQLType): EZSQLException;
 begin
-  Result := EZODBCConvertError.Create(Format(SErrorConvertionField,
+  Result := EZSQLException.Create(Format(SErrorConvertionField,
         [TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnLabel,
-        IntToStr(DataType)]));
+        TypInfo.GetEnumName(TypeInfo(TZSQLType), Ord(DataType))]));
 end;
 
 {$IFNDEF NO_ANSISTRING}
@@ -494,6 +497,7 @@ function TAbstractODBCResultSet.GetAnsiString(ColumnIndex: Integer): AnsiString;
 var P: Pointer;
   L: NativeUInt;
 begin
+  Result := '';
   with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     if (Ord(ColumnType) < Ord(stString)) or (ColumnType in [stBytes, stBinaryStream]) then begin
       PAnsiChar(P) := GetPAnsiChar(ColumnIndex, L);
@@ -502,32 +506,31 @@ begin
       Result := ''
     else case ColumnType of
       stString, stUnicodeString: begin
-                        if fIsUnicodeDriver then begin
-                          L := fStrLen_or_Ind shr 1;
-                          if FixedWidth then
-                            L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
-                          Result := PUnicodeToRaw(fColDataPtr, L, zOSCodePage);
-                        end else begin
-                          L := fStrLen_or_Ind;
-                          if FixedWidth then
-                            L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
-                          if FClientCP = zOSCodePage then
-                            System.SetString(Result, PAnsiChar(fColDataPtr), L)
-                          else begin
-                            PRawToUnicode(fColDataPtr, l, FClientCP, FUniTemp);
-                            Result := PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), zOSCodePage);
-                          end;
-                        end;
+          if fIsUnicodeDriver then begin
+            L := fStrLen_or_Ind shr 1;
+            if FixedWidth then
+              L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
+            PUnicodeToRaw(fColDataPtr, L, zOSCodePage, RawByteString(Result));
+          end else begin
+            L := fStrLen_or_Ind;
+            if FixedWidth then
+              L := GetAbsorbedTrailingSpacesLen(PAnsiChar(fColDataPtr), L);
+            if FClientCP = zOSCodePage then
+              System.SetString(Result, PAnsiChar(fColDataPtr), L)
+            else begin
+              PRawToUnicode(fColDataPtr, l, FClientCP, FUniTemp);
+              PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), zOSCodePage, RawByteString(Result));
+            end;
+          end;
         end;
       stAsciiStream, stUnicodeStream: begin
           FTempLob := GetBlob(ColumnIndex);
           if FTempLob <> nil then begin
             Result := FTempLob.GetAnsiString;
             FTempLob := nil;
-          end else
-            Result := '';
+          end;
         end;
-      else Result := '';
+      else raise CreateODBCConvertError(ColumnIndex, stString);
     end;
   end;
 end;
@@ -892,7 +895,7 @@ begin
                   else goto fail;
                 end;
       else
-fail:          raise CreateODBCConvertError(ColumnIndex, Ord(ColumnType));
+fail:          raise CreateODBCConvertError(ColumnIndex, stGUID);
     end;
   end else
     FillChar(Result, SizeOf(TGUID), #0);
@@ -1608,19 +1611,18 @@ function TAbstractODBCResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var P: Pointer;
   L: NativeUInt;
 begin
-  with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
+  Result := '';
+  if not IsNull(ColumnIndex) then with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
     if (Ord(ColumnType) < Ord(stString)) or (ColumnType in [stBytes, stBinaryStream]) then begin
       P := GetPAnsiChar(ColumnIndex, L);
       System.SetString(Result, PAnsiChar(P), L);
-    end else if IsNull(ColumnIndex) then  //Sets LastWasNull, fColDataPtr, fStrLen_or_Ind!!
-      Result := ''
-    else case ColumnType of
+    end else case ColumnType of
       stString, stUnicodeString: begin
                         if fIsUnicodeDriver then begin
                           L := fStrLen_or_Ind shr 1;
                           if FixedWidth then
                             L := GetAbsorbedTrailingSpacesLen(PWideChar(fColDataPtr), L);
-                          Result := PUnicodeToRaw(fColDataPtr, L, zCP_UTF8);
+                          PUnicodeToRaw(fColDataPtr, L, zCP_UTF8, RawByteString(Result));
                         end else begin
                           L := fStrLen_or_Ind;
                           if FixedWidth then
@@ -1629,7 +1631,7 @@ begin
                             System.SetString(Result, PAnsiChar(fColDataPtr), L)
                           else begin
                             PRawToUnicode(fColDataPtr, l, FClientCP, FUniTemp);
-                            Result := PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), zCP_UTF8);
+                            PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), zCP_UTF8, RawByteString(Result));
                           end;
                         end;
         end;
@@ -1639,10 +1641,9 @@ begin
           if FTempLob <> nil then begin
             Result := FTempLob.GetUTF8String;
             FTempLob := nil;
-          end else
-            Result := '';
+          end;
         end;
-      else Result := '';
+      else raise CreateODBCConvertError(ColumnIndex, stString);
     end;
   end;
 end;

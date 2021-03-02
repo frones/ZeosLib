@@ -5649,7 +5649,7 @@ function FloatToSqlRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF})
 var
   Buffer: array[0..63] of AnsiChar;
 begin
-  {$IFDEF FPC}Result := '';{$ENDIF}
+  Result := '';
   ZSetString(PAnsiChar(@Buffer[0]), FloatToSqlRaw(Value, @Buffer[0]), Result);
 end;
 

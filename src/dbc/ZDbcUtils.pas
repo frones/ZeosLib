@@ -1756,6 +1756,7 @@ begin
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$result" does not seem to be initialized} {$ENDIF}
 function ArrayValueToCurrency(ZArray: PZArray; Index: Integer): Currency;
 var P: Pointer;
 begin
@@ -1802,7 +1803,9 @@ begin
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$result" does not seem to be initialized} {$ENDIF}
 function ArrayValueToDouble(ZArray: PZArray; Index: Integer): Double;
 var P: Pointer;
 begin
@@ -1852,6 +1855,7 @@ begin
   end;
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function ArrayValueToBoolean(ZArray: PZArray; Index: Integer): Boolean;
 begin

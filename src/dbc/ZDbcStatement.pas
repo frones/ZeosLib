@@ -2501,15 +2501,21 @@ begin
   FConSettings := ConSettings;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 function TZBindList.Get(Index: NativeInt): PZBindValue;
 begin
-  Result := inherited Get(Index);
+  {$IFNDEF DISABLE_CHECKING}
+  if NativeUInt(Index) > FCount then
+    Error(SListIndexError, Index);
+  {$ENDIF DISABLE_CHECKING}
+  Result := Pointer(NativeUInt(FElements)+(NativeUInt(Index)*ElementSize));
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function TZBindList.Get4Byte(Index: NativeInt): P4Bytes;
 var BindValue: PZBindValue;
 begin
-  BindValue := inherited Get(Index);
+  BindValue := Get(Index);
   if BindValue.BindType = zbt4Byte
   then Result := @BindValue.Value
   else raise EZSQLException.Create(SUnsupportedDataType);
@@ -2518,7 +2524,7 @@ end;
 function TZBindList.Get8Byte(Index: NativeInt): P8Bytes;
 var BindValue: PZBindValue;
 begin
-  BindValue := inherited Get(Index);
+  BindValue := Get(Index);
   if BindValue.BindType = zbt8Byte
   then Result := {$IFDEF CPU64}@{$ENDIF}BindValue.Value
   else raise EZSQLException.Create(SUnsupportedDataType);
@@ -2527,7 +2533,7 @@ end;
 function TZBindList.GetArray(Index: NativeInt): PZArray;
 var BindValue: PZBindValue;
 begin
-  BindValue := inherited Get(Index);
+  BindValue := Get(Index);
   if BindValue.BindType = zbtArray
   then Result := BindValue.Value
   else raise EZSQLException.Create(SUnsupportedDataType);
@@ -2536,7 +2542,7 @@ end;
 function TZBindList.GetBindType(Index: NativeInt): TZBindType;
 var BindValue: PZBindValue;
 begin
-  BindValue := inherited Get(Index);
+  BindValue := Get(Index);
   Result := BindValue.BindType
 end;
 
@@ -2548,21 +2554,21 @@ end;
 function TZBindList.GetSQLType(Index: NativeInt): TZSQLType;
 var BindValue: PZBindValue;
 begin
-  BindValue := inherited Get(Index);
+  BindValue := Get(Index);
   Result := BindValue.SQLType
 end;
 
 function TZBindList.GetType(Index: NativeInt): TZProcedureColumnType;
 var BindValue: PZBindValue;
 begin
-  BindValue := inherited Get(Index);
+  BindValue := Get(Index);
   Result := BindValue.ParamType
 end;
 
 function TZBindList.GetVariant(Index: NativeInt): TZVariant;
 var BindValue: PZBindValue;
 begin
-  BindValue := inherited Get(Index);
+  BindValue := Get(Index);
   if (BindValue.Value = nil) then
     Result := NullVariant
   else case BindValue.BindType of
@@ -5594,6 +5600,7 @@ begin
   end else FBindList.Put(ParameterIndex, stCurrency, P8Bytes(@Value));
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "DT" does not seem to be initialized} {$ENDIF}
 procedure TZAbstractCallableStatement.SetDate(ParameterIndex: Integer;
   {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 var Bind: PZBindValue;
@@ -5639,6 +5646,7 @@ jmpStr: if ConSettings.ClientCodePage.Encoding = ceUTF16
     end;
   end else FBindList.Put(ParameterIndex, Value);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZAbstractCallableStatement.SetDouble(ParameterIndex: Integer;
   const Value: Double);
@@ -5766,6 +5774,7 @@ begin
   BindSignedOrdinal(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stSmall, Value);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "DT" does not seem to be initialized} {$ENDIF}
 procedure TZAbstractCallableStatement.SetTime(ParameterIndex: Integer;
   {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 var Bind: PZBindValue;
@@ -5811,7 +5820,9 @@ jmpStr: if ConSettings.ClientCodePage.Encoding = ceUTF16
     end;
   end else FBindList.Put(ParameterIndex, Value);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "DT" does not seem to be initialized} {$ENDIF}
 procedure TZAbstractCallableStatement.SetTimestamp(ParameterIndex: Integer;
   {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 var Bind: PZBindValue;
@@ -5857,6 +5868,7 @@ jmpStr: if ConSettings.ClientCodePage.Encoding = ceUTF16
     end;
   end else FBindList.Put(ParameterIndex, Value);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Sets the designated parameter to a Java <code>usigned 32bit int</code> value.

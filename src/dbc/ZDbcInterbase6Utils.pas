@@ -116,7 +116,7 @@ type
   { Interbase SQL Error Class}
   EZIBSQLException = class(EZSQLException)
   public
-    constructor Create(const Msg: string; const StatusVector: TZIBStatusVector; const SQL: string);
+    constructor Create(const Msg: string; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} StatusVector: TZIBStatusVector; const SQL: string);
   end;
 
   TZIbParamValueType = (
@@ -430,7 +430,7 @@ function ReadInterbase6NumberWithInc(const PlainDriver: TZInterbaseFirebirdPlain
   @param Buffer - a buffer returned by driver
   @return - a number read
 }
-function ReadInterbase6Number(const PlainDriver: TZInterbasePlainDriver; const Buffer): Integer; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+function ReadInterbase6Number(const PlainDriver: TZInterbasePlainDriver; pBuf: PByte): Integer; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 
 //procedure ScaledOrdinal2Raw(const Value: Int128; Buf: PAnsiChar; PEnd: PPAnsiChar; Scale: Byte); overload;
 //procedure ScaledOrdinal2Raw(const Value: UInt128; Buf: PAnsiChar; PEnd: PPAnsiChar; Scale: Byte); overload;
@@ -695,12 +695,11 @@ end;
   @param Buffer - a buffer returned by driver
   @return - a number read
 }
-function ReadInterbase6Number(const PlainDriver: TZInterbasePlainDriver; const Buffer): Integer; {$IFDEF WITH_INLINE} inline;{$ENDIF}
-var
-  pBuf: PAnsiChar;
+function ReadInterbase6Number(const PlainDriver: TZInterbasePlainDriver; pBuf: PByte): Integer; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+var Len: Integer;
 begin
-  pBuf := @Buffer;
-  Result := ReadInterbase6NumberWithInc(PlainDriver, pBuf);
+  Len := PlainDriver.isc_vax_integer(PAnsiChar(pBuf), 2);
+  Result := PlainDriver.isc_vax_integer(PAnsiChar(pBuf)+2, Len);
 end;
 
 procedure ScaledOrdinal2Raw(const Value: Int64; Buf: PAnsiChar; PEnd: PPAnsiChar;
@@ -1117,12 +1116,12 @@ end;
 
 { EZIBSQLException }
 
-constructor EZIBSQLException.Create(const Msg: string; const StatusVector: TZIBStatusVector; const SQL: string);
+constructor EZIBSQLException.Create(const Msg: string; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} StatusVector: TZIBStatusVector; const SQL: string);
 var
   i, SQLErrCode, IBErrorCode: Integer;
   IBStatusCode: String;
 begin
-  SQLErrCode := 0; IBErrorCode := 0;
+  SQLErrCode := 0; IBErrorCode := 0; IBStatusCode := '';
   // find main IB code
   for i := Low(StatusVector) to High(StatusVector) do
     if StatusVector[i].IBDataType = isc_arg_gds then

@@ -2093,6 +2093,7 @@ begin
   Result := FPGConnection;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$result" does not seem to be initialized} {$ENDIF}
 function TZPostgreSQLResultSet.GetCurrency(
   ColumnIndex: Integer): Currency;
 var P: PAnsiChar;
@@ -2135,6 +2136,7 @@ begin
     else SQLStrToFloatDef(P, 0, FDecimalSeps[TypeOID = CASHOID], Result);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZPostgreSQLResultSet.GetDate(ColumnIndex: Integer;
   var Result: TZDate);

@@ -437,7 +437,7 @@ begin
       3..N  - number
       N+1   - #1 }
   if FByteBuffer[0] = isc_info
-  then Result := ReadInterbase6Number(FPlainDriver, FByteBuffer[1])
+  then Result := ReadInterbase6Number(FPlainDriver, @FByteBuffer[1])
   else Result := -1;
 end;
 

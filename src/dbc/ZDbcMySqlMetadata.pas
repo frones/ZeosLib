@@ -1803,7 +1803,7 @@ begin
 
   GetCatalogAndNamePattern(Catalog, Schema, Table,
     iqTable, LCatalog, LTable);
-  {$IFDEF WITH_VAR_INIT_WARNING}L := 0;{$ENDIF}
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
     Format('SHOW KEYS FROM %s.%s',
     [IC.Quote(LCatalog, iqCatalog),
