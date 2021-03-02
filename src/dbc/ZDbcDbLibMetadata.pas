@@ -1728,9 +1728,9 @@ begin
       Result.UpdateSmall(ProcColRadixIndex, GetSmallByName('RADIX'));
       Result.UpdateSmall(ProcColNullableIndex, 2);
       P := GetPAnsiCharByName('IS_NULLABLE', Len);
-      if (P <> nil) and (Len = 2) and (P^ = AnsiChar('N')) and ((P+1)^ = AnsiChar('O')) then //'NO'?
+      if (P <> nil) and (Len = 2) and (PByte(P)^ = Byte('N')) and (PByte(P+1)^ = Byte('O')) then //'NO'?
         Result.UpdateSmall(ProcColNullableIndex, Ord(ntNoNulls))
-      else if (P <> nil) and (Len = 3) and (P^ = AnsiChar('Y')) and ((P+1)^ = AnsiChar('E')) and ((P+2)^ = AnsiChar('S')) then //'YES'?
+      else if (P <> nil) and (Len = 3) and (PByte(P)^ = Byte('Y')) and (PByte(P+1)^ = Byte('E')) and (PByte(P+2)^ = Byte('S')) then //'YES'?
         Result.UpdateSmall(ProcColNullableIndex, Ord(ntNullable))
       else
         Result.UpdateSmall(ProcColNullableIndex, Ord(ntNullableUnknown));
@@ -1991,9 +1991,9 @@ begin
       Result.UpdateSmall(TableColColumnNumPrecRadixIndex, GetSmallByName('RADIX'));
       P := GetPAnsiCharByName('IS_NULLABLE', Len);
       Result.UpdatePAnsiChar(TableColColumnIsNullableIndex, P, Len);
-      if (P <> nil) and (Len = 2) and (P^ = AnsiChar('N')) and ((P+1)^ = AnsiChar('O')) then //'NO'?
+      if (P <> nil) and (Len = 2) and (PByte(P)^ = Byte('N')) and (PByte(P+1)^ = Byte('O')) then //'NO'?
         Result.UpdateSmall(TableColColumnNullableIndex, Ord(ntNoNulls))
-      else if (P <> nil) and (Len = 3) and (P^ = AnsiChar('Y')) and ((P+1)^ = AnsiChar('E')) and ((P+2)^ = AnsiChar('S')) then //'YES'?
+      else if (P <> nil) and (Len = 3) and (PByte(P)^ = Byte('Y')) and (PByte(P+1)^ = Byte('E')) and (PByte(P+2)^ = Byte('S')) then //'YES'?
         Result.UpdateSmall(TableColColumnNullableIndex, Ord(ntNullable))
       else
         Result.UpdateSmall(TableColColumnNullableIndex, Ord(ntNullableUnknown));
