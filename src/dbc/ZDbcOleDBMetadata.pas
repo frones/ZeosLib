@@ -1723,7 +1723,7 @@ var
   Len: NativeUInt;
 begin
   Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   RS := OleDBOpenSchema(DBSCHEMA_PROCEDURES,
     [DecomposeObjectString(Catalog), DecomposeObjectString(SchemaPattern), DecomposeObjectString(ProcedureNamePattern), '']);
   if RS <> nil then
@@ -1817,7 +1817,7 @@ var
   SQLType: TZSQLType;
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   RS := OleDBOpenSchema(DBSCHEMA_PROCEDURE_PARAMETERS, [DecomposeObjectString(Catalog),
     DecomposeObjectString(SchemaPattern), DecomposeObjectString(ProcedureNamePattern)]);
   if RS <> nil then
@@ -1919,7 +1919,7 @@ begin
       TableTypes := TableTypes + ',';
     TableTypes := TableTypes + Types[I];
   end;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   RS := OleDBOpenSchema(DBSCHEMA_TABLES,
     [DecomposeObjectString(Catalog), DecomposeObjectString(SchemaPattern),
       DecomposeObjectString(TableNamePattern), TableTypes]);
@@ -1959,7 +1959,7 @@ var
   Len: NativeUInt;
 begin
   Result := inherited UncachedGetSchemas;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   RS := OleDBOpenSchema(DBSCHEMA_SCHEMATA, []);
   if RS <> nil then
     with RS do
@@ -1992,7 +1992,7 @@ var
   Len: NativeUInt;
 begin
   Result:=inherited UncachedGetCatalogs;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   RS := OleDBOpenSchema(DBSCHEMA_CATALOGS, []);
   if Assigned(RS) then
     with RS do
@@ -2156,6 +2156,7 @@ begin
     [DecomposeObjectString(Catalog), DecomposeObjectString(SchemaPattern),
     DecomposeObjectString(TableNamePattern), DecomposeObjectString(ColumnNamePattern)]);
   NameBuf := Pointer(FByteBuffer);
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   if Assigned(RS) then begin
     SupportsMaxVarTypes := SupportsMaxVariableTypes;
     with RS do begin
@@ -2263,7 +2264,7 @@ var
   Len: NativeUInt;
 begin
   Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   RS := OleDBOpenSchema(DBSCHEMA_COLUMN_PRIVILEGES,
     [Catalog, Schema, Table, ColumnNamePattern]);
   if Assigned(RS) then
@@ -2304,7 +2305,7 @@ var
   Len: NativeUInt;
 begin
   Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   RS := OleDBOpenSchema(DBSCHEMA_TABLE_PRIVILEGES,
     [DecomposeObjectString(Catalog), DecomposeObjectString(SchemaPattern), DecomposeObjectString(TableNamePattern)]);
   if Assigned(RS) then
@@ -2373,7 +2374,7 @@ var
   Flags: DWORD;
 begin
   Result:=inherited UncachedGetVersionColumns(Catalog, Schema, Table);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   RS := OleDBOpenSchema(DBSCHEMA_COLUMNS, [DecomposeObjectString(Catalog),
     DecomposeObjectString(Schema), DecomposeObjectString(Table)]);
   if Assigned(RS) then
@@ -2410,7 +2411,7 @@ var
   Len: NativeUInt;
 begin
   Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   RS := OleDBOpenSchema(DBSCHEMA_PRIMARY_KEYS, [DecomposeObjectString(Catalog),
     DecomposeObjectString(Schema), DecomposeObjectString(Table)]);
   if RS <> nil then
@@ -2610,7 +2611,7 @@ var
 begin
   Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
                                               ForeignCatalog, ForeignSchema, ForeignTable);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   RS := OleDBOpenSchema(DBSCHEMA_FOREIGN_KEYS, [DecomposeObjectString(PrimaryCatalog),
     DecomposeObjectString(PrimarySchema), DecomposeObjectString(PrimaryTable),
     DecomposeObjectString(ForeignCatalog), DecomposeObjectString(ForeignSchema), DecomposeObjectString(ForeignTable)]);
@@ -2738,7 +2739,7 @@ begin
   Fill(I, 'IS_FIXEDLENGTH', stBoolean, SizeOf(WordBool), IS_FIXEDLENGTH_Index);
 
   Result := ConstructVirtualResultSet(TypeInfoColumns);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   RS := OleDBOpenSchema(DBSCHEMA_PROVIDER_TYPES, []);
   if RS <> nil then
     with RS do begin
@@ -2850,7 +2851,7 @@ var
   Len: NativeUInt;
 begin
   Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   RS := OleDBOpenSchema(DBSCHEMA_INDEXES,[DecomposeObjectString(Catalog), DecomposeObjectString(Schema), '', '', Table]);
   if RS <> nil then
     with RS do

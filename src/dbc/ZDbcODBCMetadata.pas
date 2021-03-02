@@ -1881,7 +1881,7 @@ begin
   Cat := DecomposeObjectString(Catalog);
   Schem := DecomposeObjectString(SchemaPattern);
   Proc := DecomposeObjectString(ProcedureNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -1980,7 +1980,7 @@ begin
   Schem := DecomposeObjectString(SchemaPattern);
   Proc := DecomposeObjectString(ProcedureNamePattern);
   Col := DecomposeObjectString(ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -2074,7 +2074,7 @@ begin
   Cat := DecomposeObjectString(Catalog);
   Schem := DecomposeObjectString(SchemaPattern);
   Table := DecomposeObjectString(TableNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   TableTypes := '';
   for I := Low(Types) to High(Types) do begin
     if Length(TableTypes) > 0 then
@@ -2174,7 +2174,7 @@ begin
   Schem := DecomposeObjectString(SchemaPattern);
   Table := DecomposeObjectString(TableNamePattern);
   Column := DecomposeObjectString(ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -2248,7 +2248,7 @@ begin
   Schem := DecomposeObjectString(Schema);
   Tabl := DecomposeObjectString(Table);
   Col := DecomposeObjectString(ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -2289,7 +2289,7 @@ begin
   Cat := DecomposeObjectString(Catalog);
   Schem := DecomposeObjectString(SchemaPattern);
   Table := DecomposeObjectString(TableNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -2330,7 +2330,7 @@ begin
   Cat := DecomposeObjectString(Catalog);
   Schem := DecomposeObjectString(Schema);
   Tabl := DecomposeObjectString(Table);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -2449,7 +2449,7 @@ begin
   FKCat := DecomposeObjectString(ForeignCatalog);
   FKSchem := DecomposeObjectString(ForeignSchema);
   FKTabl := DecomposeObjectString(ForeignTable);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -2551,7 +2551,7 @@ begin
   Cat := DecomposeObjectString(Catalog);
   Schem := DecomposeObjectString(Schema);
   Tabl := DecomposeObjectString(Table);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -2636,7 +2636,7 @@ var
   ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetTypeInfo;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -2724,7 +2724,7 @@ begin
   Cat := DecomposeObjectString(Catalog);
   Schem := DecomposeObjectString(SchemaPattern);
   Proc := DecomposeObjectString(ProcedureNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -2823,7 +2823,7 @@ begin
   Schem := DecomposeObjectString(SchemaPattern);
   Proc := DecomposeObjectString(ProcedureNamePattern);
   Col := DecomposeObjectString(ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -2929,7 +2929,7 @@ begin
     TableTypes := TableTypes + Types[I];
     {$ENDIF}
   end;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -3019,7 +3019,7 @@ begin
   Schem := DecomposeObjectString(SchemaPattern);
   Tabl := DecomposeObjectString(TableNamePattern);
   Col := DecomposeObjectString(ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -3091,7 +3091,7 @@ begin
   Schem := DecomposeObjectString(Schema);
   Tabl := DecomposeObjectString(Table);
   Col := DecomposeObjectString(ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -3133,7 +3133,7 @@ begin
   Cat := DecomposeObjectString(Catalog);
   Schem := DecomposeObjectString(SchemaPattern);
   Tabl := DecomposeObjectString(TableNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -3174,7 +3174,7 @@ begin
   Cat := DecomposeObjectString(Catalog);
   Schem := DecomposeObjectString(Schema);
   Tabl := DecomposeObjectString(Table);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -3293,7 +3293,7 @@ begin
   FKCat := DecomposeObjectString(ForeignCatalog);
   FKSchem := DecomposeObjectString(ForeignSchema);
   FKTabl := DecomposeObjectString(ForeignTable);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -3395,7 +3395,7 @@ begin
   Cat := DecomposeObjectString(Catalog);
   Schem := DecomposeObjectString(Schema);
   Tabl := DecomposeObjectString(Table);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;
@@ -3480,7 +3480,7 @@ var
   ODBCConnection: IZODBCConnection;
 begin
   Result:=inherited UncachedGetTypeInfo;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   //skope of FPC !const! Connection: IZODBCConnection in methods is different to Delphi
   //we need to localize the connection
   ODBCConnection := GetConnection as IZODBCConnection;

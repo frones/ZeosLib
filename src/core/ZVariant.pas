@@ -702,6 +702,7 @@ end;
   @param Value2 the second variant value.
   @return <0 if Value1 < Value 2, =0 if Value1 = Value2, >0 if Value1 > Value2
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "ABCD" does not seem to be initialized} {$ENDIF}
 function TZSoftVariantManager.Compare(const Value1,
   Value2: TZVariant): Integer;
 var
@@ -811,6 +812,7 @@ DoWideCompare:
       Result := 0;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Checks is the specified value NULL.
@@ -1085,6 +1087,7 @@ end;
   @param Value a variant to be converted.
   @param a result value.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$result" does not seem to be initialized} {$ENDIF}
 function TZSoftVariantManager.GetAsCurrency(
   const Value: TZVariant): Currency;
 begin
@@ -1107,6 +1110,7 @@ begin
     else Result := GetAsDouble(Value);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets a variant to currency value.
@@ -1596,6 +1600,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "ABCD" does not seem to be initialized} {$ENDIF}
 function TZSoftVariantManager.OpAdd(const Value1,
   Value2: TZVariant): TZVariant;
 var BCD: TBCD;
@@ -1649,6 +1654,7 @@ begin
     else RaiseUnsupportedOperation;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Performs '&' operation.
@@ -1676,6 +1682,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "BCD" does not seem to be initialized} {$ENDIF}
 function TZSoftVariantManager.OpDiv(const Value1,
   Value2: TZVariant): TZVariant;
 var
@@ -1714,6 +1721,7 @@ begin
     else RaiseUnsupportedOperation;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Performs '=' operation.
@@ -1800,6 +1808,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "BCD" does not seem to be initialized} {$ENDIF}
 function TZSoftVariantManager.OpMul(const Value1,
   Value2: TZVariant): TZVariant;
 var BCD: TBCD;
@@ -1836,6 +1845,7 @@ begin
     else RaiseUnsupportedOperation;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Performs unary '-' operation.
@@ -1946,6 +1956,7 @@ end;
   @param Value2 the second variant argument.
   @returns an operation result.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "BCD" does not seem to be initialized} {$ENDIF}
 function TZSoftVariantManager.OpSub(const Value1,
   Value2: TZVariant): TZVariant;
 var BCD: TBCD;
@@ -1982,6 +1993,7 @@ begin
     else RaiseUnsupportedOperation;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Performs '^' operation.
@@ -2039,6 +2051,7 @@ procedure TZSoftVariantManager.ProcessAnsiString(const Value: TZVariant;
 label FromW;
 var ResTmp: RawByteString;
 begin
+  ResTmp := '';
   Result.VType := vtAnsiString;
   case Value.VType of
     {$IFNDEF UNICODE}vtString,{$ENDIF}
@@ -2153,6 +2166,7 @@ procedure TZSoftVariantManager.ProcessString(const Value: TZVariant;
   out Result: TZVariant);
 var Tmp: {$IFDEF UNICODE}UnicodeString{$ELSE}RawByteString{$ENDIF};
 begin
+  Tmp := '';
   Result.VType := vtString;
   case Value.VType of
     {$IFNDEF UNICODE}
@@ -2218,6 +2232,7 @@ procedure TZSoftVariantManager.ProcessUnicodeString(const Value: TZVariant;
   out Result: TZVariant);
 var ResTmp: UnicodeString;
 begin
+  ResTmp := '';
   Result.VType := vtUnicodeString;
   case Value.VType of
     {$IFNDEF UNICODE}
@@ -2245,6 +2260,7 @@ procedure TZSoftVariantManager.ProcessUTF8String(const Value: TZVariant;
 var ResTmp: RawByteString;
 begin
   Result.VType := vtUTF8String;
+  ResTmp := '';
   case Value.VType of
     {$IFNDEF UNICODE}
     vtString: if ZOSCodePage= zCP_UTF8
@@ -2721,19 +2737,18 @@ end;
   Gets a stored value converted to time.
   @return a stored value converted to time.
 }
-{$IFDEF FPC}
-  {$PUSH}
-  {$WARN 5060 off : Function result variable does not seem to be initialized}
-{$ENDIF}
+{$IFDEF FPC} {$PUSH} {$WARN 5060 off : Function result variable does not seem to be initialized} {$ENDIF}
 function TZAnyValue.GetTime: TZTime;
 begin
   SoftVarManager.GetAsTime(FValue, Result);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets a stored value converted to timestamp.
   @return a stored value converted to timestamp.
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5060 off : Function result variable does not seem to be initialized} {$ENDIF}
 function TZAnyValue.GetTimeStamp: TZTimeStamp;
 begin
   SoftVarManager.GetAsTimeStamp(FValue, Result);

@@ -1376,6 +1376,7 @@ var
       CompareEquals := False;
       ColPatTemp := EmptyRaw;
     end;
+    {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
     if RS <> nil then with RS do begin
       while Next do begin
         P := GetPAnsiChar(name_index, Len);
@@ -1510,7 +1511,7 @@ begin
     Temp_scheme := '' // OR  'main.'
   else
     Temp_scheme := Schema +'.';
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   RS := GetConnection.CreateStatement.ExecuteQuery(
     Format('PRAGMA %s table_info(''%s'')', [Temp_scheme,Self.NormalizePatternCase(Table)]));
   if RS <> nil then with RS do begin
@@ -1605,33 +1606,33 @@ const
 var
   I: Integer;
 begin
-    Result:=inherited UncachedGetTypeInfo;
+  Result:=inherited UncachedGetTypeInfo;
 
-    for I := 1 to MaxTypeCount do
+  for I := 1 to MaxTypeCount do
+  begin
+    Result.MoveToInsertRow;
+
+    Result.UpdateUTF8String(TypeInfoTypeNameIndex, TypeNames[I]);
+    Result.UpdateInt(TypeInfoDataTypeIndex, Ord(TypeCodes[I]));
+    if TypePrecision[I] >= 0 then
+      Result.UpdateInt(TypeInfoPecisionIndex, TypePrecision[I]);
+    //else Result.UpdateNull(TypeInfoPecisionIndex);
+    if TypeCodes[I] in [stString, stBytes, stDate, stTime,
+      stTimeStamp, stBinaryStream, stAsciiStream, stUnicodeString] then
     begin
-      Result.MoveToInsertRow;
-
-      Result.UpdateUTF8String(TypeInfoTypeNameIndex, TypeNames[I]);
-      Result.UpdateInt(TypeInfoDataTypeIndex, Ord(TypeCodes[I]));
-      if TypePrecision[I] >= 0 then
-        Result.UpdateInt(TypeInfoPecisionIndex, TypePrecision[I]);
-      //else Result.UpdateNull(TypeInfoPecisionIndex);
-      if TypeCodes[I] in [stString, stBytes, stDate, stTime,
-        stTimeStamp, stBinaryStream, stAsciiStream, stUnicodeString] then
-      begin
-        Result.UpdateString(TypeInfoLiteralPrefixIndex, '''');
-        Result.UpdateString(TypeInfoLiteralSuffixIndex, '''');
-      end;
-      Result.UpdateInt(TypeInfoNullAbleIndex, Ord(ntNullable));
-      Result.UpdateBoolean(TypeInfoCaseSensitiveIndex, False);
-      Result.UpdateBoolean(TypeInfoSearchableIndex, False);
-      Result.UpdateBoolean(TypeInfoUnsignedAttributeIndex, False);
-      Result.UpdateBoolean(TypeInfoFixedPrecScaleIndex, False);
-      Result.UpdateBoolean(TypeInfoAutoIncrementIndex, TypeNames[I] = 'INTEGER');
-      Result.UpdateInt(TypeInfoNumPrecRadix, 10);
-
-      Result.InsertRow;
+      Result.UpdateString(TypeInfoLiteralPrefixIndex, '''');
+      Result.UpdateString(TypeInfoLiteralSuffixIndex, '''');
     end;
+    Result.UpdateInt(TypeInfoNullAbleIndex, Ord(ntNullable));
+    Result.UpdateBoolean(TypeInfoCaseSensitiveIndex, False);
+    Result.UpdateBoolean(TypeInfoSearchableIndex, False);
+    Result.UpdateBoolean(TypeInfoUnsignedAttributeIndex, False);
+    Result.UpdateBoolean(TypeInfoFixedPrecScaleIndex, False);
+    Result.UpdateBoolean(TypeInfoAutoIncrementIndex, TypeNames[I] = 'INTEGER');
+    Result.UpdateInt(TypeInfoNumPrecRadix, 10);
+
+    Result.InsertRow;
+  end;
 end;
 
 {**
@@ -1701,44 +1702,44 @@ var
   MainResultSet, ResultSet: IZResultSet;
   Temp_scheme: string;
 begin
-    Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
+  Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
-    if Schema = '' then
-      Temp_scheme := '' // OR  'main.'
-    else
-      Temp_scheme := Schema +'.';
-
-    MainResultSet := GetConnection.CreateStatement.ExecuteQuery(
-      Format('PRAGMA %s index_list(''%s'')', [Temp_scheme, Table]));
-    if MainResultSet<>nil then
+  if Schema = '' then
+    Temp_scheme := '' // OR  'main.'
+  else
+    Temp_scheme := Schema +'.';
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
+  MainResultSet := GetConnection.CreateStatement.ExecuteQuery(
+    Format('PRAGMA %s index_list(''%s'')', [Temp_scheme, Table]));
+  if MainResultSet<>nil then
+  begin
+    while MainResultSet.Next do
     begin
-      while MainResultSet.Next do
+      if (ZFastCode.Pos({$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF}(' autoindex '), MainResultSet.GetRawByteString(main_name_field_index)) = 0)
+        and ((Unique = False) or (MainResultSet.GetInt(main_unique_field_index) = 0)) then
       begin
-        if (ZFastCode.Pos({$IFDEF NO_ANSISTRING}RawByteString{$ELSE}AnsiString{$ENDIF}(' autoindex '), MainResultSet.GetRawByteString(main_name_field_index)) = 0)
-          and ((Unique = False) or (MainResultSet.GetInt(main_unique_field_index) = 0)) then
+        ResultSet := GetConnection.CreateStatement.ExecuteQuery(
+          Format('PRAGMA %s index_info(''%s'')', [Temp_scheme,MainResultSet.GetString(main_name_field_index)]));
+        while ResultSet.Next do
         begin
-          ResultSet := GetConnection.CreateStatement.ExecuteQuery(
-            Format('PRAGMA %s index_info(''%s'')', [Temp_scheme,MainResultSet.GetString(main_name_field_index)]));
-          while ResultSet.Next do
-          begin
-            Result.MoveToInsertRow;
-            if Schema <> '' then
-              Result.UpdateString(CatalogNameIndex, Schema);
-            Result.UpdateString(TableNameIndex, Table);
-            Result.UpdateBoolean(IndexInfoColNonUniqueIndex, MainResultSet.GetInt(main_unique_field_index) = 0);
-            Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, MainResultSet.GetPAnsiChar(main_name_field_index, Len), Len);
-            Result.UpdateInt(IndexInfoColOrdPositionIndex, ResultSet.GetInt(sub_seqno_field_index)+FirstDbcIndex);
-            Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, ResultSet.GetPAnsiChar(sub_name_field_index, Len), Len);
-            Result.UpdateRawByteString(IndexInfoColAscOrDescIndex, 'A');
-            Result.UpdateInt(IndexInfoColCardinalityIndex, 0);
-            Result.UpdateInt(IndexInfoColPagesIndex, 0);
-            Result.InsertRow;
-          end;
-          ResultSet.Close;
+          Result.MoveToInsertRow;
+          if Schema <> '' then
+            Result.UpdateString(CatalogNameIndex, Schema);
+          Result.UpdateString(TableNameIndex, Table);
+          Result.UpdateBoolean(IndexInfoColNonUniqueIndex, MainResultSet.GetInt(main_unique_field_index) = 0);
+          Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, MainResultSet.GetPAnsiChar(main_name_field_index, Len), Len);
+          Result.UpdateInt(IndexInfoColOrdPositionIndex, ResultSet.GetInt(sub_seqno_field_index)+FirstDbcIndex);
+          Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, ResultSet.GetPAnsiChar(sub_name_field_index, Len), Len);
+          Result.UpdateRawByteString(IndexInfoColAscOrDescIndex, 'A');
+          Result.UpdateInt(IndexInfoColCardinalityIndex, 0);
+          Result.UpdateInt(IndexInfoColPagesIndex, 0);
+          Result.InsertRow;
         end;
+        ResultSet.Close;
       end;
-      MainResultSet.Close;
     end;
+    MainResultSet.Close;
+  end;
 end;
 
 {**

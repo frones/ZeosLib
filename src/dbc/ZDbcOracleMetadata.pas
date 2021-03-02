@@ -1727,7 +1727,7 @@ begin
 
   LProcedureNamePattern := ConstructNameCondition(ProcedureNamePattern,'decode(procedure_name,null,object_name,object_name||''.''||procedure_name)');
   LSchemaNamePattern := ConstructNameCondition(SchemaPattern,'owner');
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   SQL := 'select NULL AS PROCEDURE_CAT, OWNER AS PROCEDURE_SCHEM, '+
     'OBJECT_NAME, PROCEDURE_NAME AS PROCEDURE_NAME, '+
     'OVERLOAD AS PROCEDURE_OVERLOAD, OBJECT_TYPE AS PROCEDURE_TYPE FROM '+
@@ -1745,9 +1745,14 @@ begin
         sName :=  sName+'.'+IC.Quote(GetString(PROCEDURE_NAME_Index), iqStoredProcedure);
       Result.MoveToInsertRow;
       //Result.UpdateNull(CatalogNameIndex);
-      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(PROCEDURE_SCHEM_Index, Len), Len);
+      if FConSettings.ClientCodePage.Encoding = ceUTF16 then begin
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(PROCEDURE_SCHEM_Index, Len), Len);
+        Result.UpdatePWideChar(ProcedureOverloadIndex, GetPWideChar(PROCEDURE_OVERLOAD_Index, Len), Len);
+      end else begin
+        Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(PROCEDURE_SCHEM_Index, Len), Len);
+        Result.UpdatePAnsiChar(ProcedureOverloadIndex, GetPAnsiChar(PROCEDURE_OVERLOAD_Index, Len), Len);
+      end;
       Result.UpdateString(ProcedureNameIndex, sName);
-      Result.UpdatePAnsiChar(ProcedureOverloadIndex, GetPAnsiChar(PROCEDURE_OVERLOAD_Index, Len), Len);
       if GetString(PROCEDURE_TYPE_Index) = 'FUNCTION' then
         Result.UpdateByte(ProcedureTypeIndex, Ord(prtReturnsResult))
       else if GetString(PROCEDURE_TYPE_Index) = 'PROCDEURE' then
@@ -1918,21 +1923,32 @@ begin
          'ALL_TAB_COLUMNS.COLUMN_ID, ALL_COL_COMMENTS.COMMENTS FROM ALL_TAB_COLUMNS JOIN ALL_COL_COMMENTS '+
          'ON ALL_COL_COMMENTS.TABLE_NAME = ALL_TAB_COLUMNS.TABLE_NAME AND ALL_COL_COMMENTS.COLUMN_NAME = '+
          'ALL_TAB_COLUMNS.COLUMN_NAME AND ALL_COL_COMMENTS.OWNER = ALL_TAB_COLUMNS.OWNER ' + CreateWhere + ' ORDER BY ALL_TAB_COLUMNS.COLUMN_ID';
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetConnection.CreateStatement.ExecuteQuery(SQL) do
   begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(OWNER_Index, Len), Len);
-      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(TABLE_NAME_Index, Len), Len);
-      Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(COLUMN_NAME_Index, Len), Len);
+      if FConSettings.ClientCodePage.Encoding = ceUTF16 then begin
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(OWNER_Index, Len), Len);
+        Result.UpdatePWideChar(TableNameIndex, GetPWideChar(TABLE_NAME_Index, Len), Len);
+        Result.UpdatePWideChar(ColumnNameIndex, GetPWideChar(COLUMN_NAME_Index, Len), Len);
+        Result.UpdatePWideChar(TableColColumnTypeNameIndex, GetPWideChar(DATA_TYPE_Index, Len), Len);
+        Result.UpdatePWideChar(TableColColumnRemarksIndex, GetPWideChar(REMARKS_Index, Len), Len);
+        Result.UpdatePWideChar(TableColColumnColDefIndex, GetPWideChar(DATA_DEFAULT_Index, Len), Len);
+      end else begin
+        Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(OWNER_Index, Len), Len);
+        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(TABLE_NAME_Index, Len), Len);
+        Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(COLUMN_NAME_Index, Len), Len);
+        Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(DATA_TYPE_Index, Len), Len);
+        Result.UpdatePAnsiChar(TableColColumnRemarksIndex, GetPAnsiChar(REMARKS_Index, Len), Len);
+        Result.UpdatePAnsiChar(TableColColumnColDefIndex, GetPAnsiChar(DATA_DEFAULT_Index, Len), Len);
+      end;
       oDataType := GetString(DATA_TYPE_Index);
       Precision := GetInt(DATA_PRECISION_Index);
       SQLType := ConvertOracleTypeToSQLType(oDataType,
         Precision, GetInt(DATA_SCALE_Index));
       Result.UpdateByte(TableColColumnTypeIndex, Ord(SQLType));
-      Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(DATA_TYPE_Index, Len), Len);
       FieldSize := GetInt(DATA_LENGTH_Index);
       if SQLType = stString then begin
         Result.UpdateInt(TableColColumnBufLengthIndex, FieldSize * ConSettings^.ClientCodePage^.CharWidth +1);
@@ -1962,9 +1978,6 @@ begin
         Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
         Result.UpdateString(TableColColumnIsNullableIndex, 'YES');
       end;
-
-      Result.UpdatePAnsiChar(TableColColumnRemarksIndex, GetPAnsiChar(REMARKS_Index, Len), Len);
-      Result.UpdatePAnsiChar(TableColColumnColDefIndex, GetPAnsiChar(DATA_DEFAULT_Index, Len), Len);
       Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(COLUMN_ID_Index));
 
       Result.UpdateBoolean(TableColColumnCaseSensitiveIndex,
@@ -2422,21 +2435,28 @@ begin
   if Unique then
     SQL := SQL + ' AND A.UNIQUENESS=''UNIQUE''';
   SQL := SQL + ' ORDER BY A.UNIQUENESS DESC, A.INDEX_NAME, B.COLUMN_POSITION';
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with GetConnection.CreateStatement.ExecuteQuery(SQL) do
   begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(OWNER_Index, Len), Len);
-      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(TABLE_NAME_Index, Len), Len);
+      if FConSettings.ClientCodePage.Encoding = ceUTF16 then begin
+        Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(OWNER_Index, Len), Len);
+        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(TABLE_NAME_Index, Len), Len);
+        Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, GetPAnsiChar(INDEX_NAME_Index, Len), Len);
+        Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, GetPAnsiChar(COLUMN_NAME_Index, Len), Len);
+      end else begin
+        Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(OWNER_Index, Len), Len);
+        Result.UpdatePWideChar(TableNameIndex, GetPWideChar(TABLE_NAME_Index, Len), Len);
+        Result.UpdatePWideChar(IndexInfoColIndexNameIndex, GetPWideChar(INDEX_NAME_Index, Len), Len);
+        Result.UpdatePWideChar(IndexInfoColColumnNameIndex, GetPWideChar(COLUMN_NAME_Index, Len), Len);
+      end;
       Result.UpdateBoolean(IndexInfoColNonUniqueIndex,
         UpperCase(GetString(UNIQUENESS_Index)) <> 'UNIQUE');
       //Result.UpdateNull(IndexInfoColIndexQualifierIndex);
-      Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, GetPAnsiChar(INDEX_NAME_Index, Len), Len);
       Result.UpdateInt(IndexInfoColTypeIndex, 3);
       Result.UpdateInt(IndexInfoColOrdPositionIndex, GetInt(COLUMN_POSITION_Index));
-      Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, GetPAnsiChar(COLUMN_NAME_Index, Len), Len);
       if GetString(DESCEND_Index) = 'ASC' then
         Result.UpdateString(IndexInfoColAscOrDescIndex, 'A')
       else Result.UpdateString(IndexInfoColAscOrDescIndex, 'D');

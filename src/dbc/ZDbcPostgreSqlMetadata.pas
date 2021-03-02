@@ -2415,6 +2415,7 @@ begin
   CatalogCondition := ConstructNameCondition(Catalog,'kcu.table_catalog');
   SchemaCondition := ConstructNameCondition(Schema,'kcu.constraint_schema');
   TableNameCondition := ConstructNameCondition(Table,'kcu.table_name');
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 4) then
   begin
     Result:=inherited UncachedGetImportedKeys(Catalog, Schema, Table);
@@ -2568,6 +2569,7 @@ begin
   CatalogCondition := ConstructNameCondition(Catalog,'tc.constraint_catalog');
   SchemaCondition := ConstructNameCondition(Schema,'tc.constraint_schema');
   TableNameCondition := ConstructNameCondition(Table,'ccu.table_name');
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 4) then
   begin
     Result:=inherited UncachedGetExportedKeys(Catalog, Schema, Table);
@@ -2749,7 +2751,7 @@ var
 begin
   Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
                                               ForeignCatalog, ForeignSchema, ForeignTable);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 4) then
   begin
     SQL := 'SELECT '+
@@ -3029,7 +3031,7 @@ begin
     if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
       SQL := ' SELECT typname FROM pg_catalog.pg_type '
     else SQL := ' SELECT typname FROM pg_type ';
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
     with GetConnection.CreateStatement.ExecuteQuery(SQL) do
     begin
       while Next do
@@ -3236,7 +3238,7 @@ begin
     ColumnNameCondition := ConstructNameCondition(ColumnNamePattern,'a.attname');
   end;
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with (GetDatabaseInfo as IZPostgreDBInfo) do begin
     if HasMinimumServerVersion(7, 3) then begin
       SQL := 'SELECT n.nspname,' {nspname_index}
@@ -3590,7 +3592,7 @@ begin
   Self.GetConnection.CreateStatement.ExecuteQuery('select get_encodings();').Close;
 
   Result:=inherited UncachedGetCharacterSets;
-
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
   with Self.GetConnection.CreateStatement.ExecuteQuery(
    'select * from encodings;') do
   begin
