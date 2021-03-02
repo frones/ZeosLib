@@ -66,9 +66,22 @@ const
   ZEOS_MINOR_VERSION = 0;
   ZEOS_SUB_VERSION = 0;
   ZEOS_STATUS = 'beta';
-  ZEOS_VERSION = Char(48+ZEOS_MAJOR_VERSION)+'.'+
+  ZEOS_VERSION = {$IF ZEOS_MAJOR_VERSION > 9}
+                 Char(48+ZEOS_MAJOR_VERSION div 10)+Char(48+ZEOS_MAJOR_VERSION mod 10)+'.'+
+                 {$ELSE}
+                 Char(48+ZEOS_MAJOR_VERSION)+'.'+
+                 {$IFEND}
+                 {$IF ZEOS_MINOR_VERSION > 9}
+                 Char(48+ZEOS_MINOR_VERSION div 10)+Char(48+ZEOS_MINOR_VERSION mod 10)+'.'+
+                 {$ELSE}
                  Char(48+ZEOS_MINOR_VERSION)+'.'+
-                 Char(48+ZEOS_SUB_VERSION)+'-'+ZEOS_STATUS;
+                 {$IFEND}
+                 {$IF ZEOS_SUB_VERSION > 9}
+                 Char(48+ZEOS_SUB_VERSION div 10)+Char(48+ZEOS_SUB_VERSION mod 10)+'-'+
+                 {$ELSE}
+                 Char(48+ZEOS_SUB_VERSION)+'-'+
+                 {$IFEND}
+                 ZEOS_STATUS;
 
 type
   {$IFDEF OLDFPC}
