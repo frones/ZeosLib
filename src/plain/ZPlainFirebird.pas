@@ -3960,8 +3960,9 @@ type
   end;
 
   IReplicatedField = class(IVersioned)
+    {$IFDEF WITH_CLASS_CONST}
     const VERSION = 2;
-
+    {$ENDIF WITH_CLASS_CONST}
     function getName(): PAnsiChar;
     function getType(): Cardinal;
     function getSubType(): Integer;
