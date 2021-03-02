@@ -54,8 +54,8 @@ interface
 {$I ZComponent.inc}
 
 uses
-  SysUtils, {Messages, }Classes, ZDbcIntfs, DB, {Forms,}
-  ZCompatibility, ZAbstractConnection, ZSequence, //Dialogs,
+  SysUtils, {Messages, }Classes, ZDbcIntfs, {Forms,}
+  ZCompatibility, ZAbstractConnection, //Dialogs,
   ZConnectionGroup ;
 (*
 {$IFNDEF FPC}

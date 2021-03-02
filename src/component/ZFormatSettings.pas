@@ -47,6 +47,10 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
+{ constributor(s):
+  Mark Ford
+}
+
 unit ZFormatSettings;
 
 interface
@@ -129,6 +133,13 @@ type
     /// <summary>Set a TZOnFormatChanged event handler.</summary>
     /// <param>"Value" the event to be set.</param>
     procedure SetOnFormatChanged(Value: TZOnFormatChanged);
+    /// <author>EgonHugeist</author>
+    /// <summary>Replace chars in the string. Respecting the " escapes.</summary>
+    /// <param>"Source" a char to search.</param>
+    /// <param>"Target" Target a char to replace.</param>
+    /// <param>"Str" a source string.</param>
+    /// <returns>a string with replaced chars.</returns>
+    class procedure ReplaceFormatChar(Var Str: string; const Source, Target: Char);
   public
     /// <summary>Represents the TFormatSettings of this object.</summary>
     property FormatSettings: TFormatSettings read FFormatSettings write SetFormatSettings;
@@ -594,6 +605,32 @@ begin
   Result := FFormat <> nil;
 end;
 
+class procedure TZAbstractDateTimeFormatSettings.ReplaceFormatChar(
+  Var Str: string; const Source, Target: Char);
+var
+  P, PEnd: PChar;
+  QuoteCount, DoubleQuoteCount: Cardinal;
+begin
+  UniqueString(Str);
+  P := Pointer(Str);
+  PEnd := P + Length(Str);
+  QuoteCount := 0;
+  DoubleQuoteCount := 0;
+  while P < PEnd do begin
+    if (P^ = Source) and (QuoteCount = 0) and (DoubleQuoteCount = 0) then
+      P^ := Target
+    else if (P^ = '"') then
+      if Odd(DoubleQuoteCount)
+      then Dec(DoubleQuoteCount)
+      else Inc(DoubleQuoteCount)
+    else if (P^ = #39) then
+      if Odd(QuoteCount)
+      then Dec(QuoteCount)
+      else Inc(QuoteCount);
+    Inc(P);
+  end;
+end;
+
 procedure TZAbstractDateTimeFormatSettings.SetFormatSettings(
   const Value: TFormatSettings);
 var I: Integer;
@@ -649,7 +686,7 @@ procedure TZAbstractSecondFractionFormatSettings.EscapeFractionFormat(
   NanoFractions, Scale: Cardinal; IsNegative: Boolean; var Format: String);
 var P, PEnd, PFractionSep, PSecond, PFractionStart, PFractionEnd, NewP, PYear, PHour: PChar;
   c: {$IFDEF UNICODE}Word{$ELSE}Byte{$ENDIF};
-  EscapeCount, L, FractionDigitsInFormat: Cardinal;
+  EscapeCount, L, FractionDigitsInFormat, DigitsLeft: Cardinal;
   FormatSettings: PFormatSettings;
 begin
   P := Pointer(Format);
@@ -668,8 +705,8 @@ begin
     fraction seperator and (if not given one of both) the last second pos }
   while P < PEnd do begin //overflow save (min last address if the zero char)
     C := {$IFDEF UNICODE}PWord(P)^ or $0020{$ELSE}PByte(P)^ or $20{$ENDIF};
-    if P^ = Char('"') then
-      if Odd(EscapeCount)// and ((P+1)^ <> '"') //each half quote gets an escape quote, nope compiler does it different
+    if (P^ = Char('"')) or (P^ = #39) then
+      if Odd(EscapeCount)
       then Dec(EscapeCount)
       else Inc(EscapeCount);
     if (EscapeCount = 0) then
@@ -693,20 +730,22 @@ begin
   if (PSecond = nil) and (PFractionStart = nil) and (PHour = nil) and (PYear = nil) then
     Exit;
   { determine amount of fraction digits -> fix scale ? }
-  if FSecondFractionOption = foRightZerosTrimmed then begin
+  if SecondFractionOption = foRightZerosTrimmed then begin
+    DigitsLeft := 9;
     while (NanoFractions > 0) do begin
       Scale := NanoFractions mod 10;
       if Scale <> 0
       then Break
       else NanoFractions := NanoFractions div 10;
+      Dec(DigitsLeft);
     end;
     if NanoFractions = 0
     then Scale := 0
-    else Scale := GetOrdinalDigits(NanoFractions);
+    else Scale := DigitsLeft;
   end else begin
-    if FSecondFractionOption = foSetByFormat then
+    if SecondFractionOption = foSetByFormat then
       Scale := FractionDigitsInFormat;
-    if (Scale > 0) and (NanoFractions <> Scale) then begin
+    if (Scale > 0) and (GetOrdinalDigits(NanoFractions) <> Scale) then begin
       NanoFractions := RoundNanoFractionTo(NanoFractions, Scale);
       NanoFractions := NanoFractions div FractionLength2NanoSecondMulTable[Scale];
     end;
@@ -741,11 +780,11 @@ begin
     PFractionEnd := PSecond+1;
     SetLength(Format, L+3+Scale);
     PFractionSep := Pointer(Format);
-    Inc(PFractionSep, L);
+    Inc(PFractionSep, (PFractionEnd - P));
     EscapeCount := (NativeUInt(PEnd) - NativeUInt(PFractionEnd));
     if EscapeCount > 0 then begin
-      P := PFractionSep + (PEnd - PFractionEnd);
-      Move(P^, PFractionSep^, EscapeCount); //forward move
+      P := PFractionSep + (3 + Scale);
+      Move(PFractionSep^, P^, EscapeCount); //forward move
     end;
     (PFractionSep)^ := '"';
     (PFractionSep+1)^ := FormatSettings.DecimalSeparator;
@@ -797,7 +836,7 @@ begin
   Result := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
   Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator;
   if FindFirstFormatDelimiter(Result, Delim) and (Delim <> Sep) then
-    ReplaceChar(Result, Delim, Sep);
+    ReplaceFormatChar(Result, Delim, Sep);
 end;
 
 function TZAbstractTimeFormatSettings.InternalGetInvalidValueText: String;
@@ -924,7 +963,7 @@ begin
   Result := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
   Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator;
   if FindFirstFormatDelimiter(Result, Delim) and (Delim <> Sep) then
-    Result := ZSysUtils.ReplaceChar(Delim, Sep, Result);
+    ReplaceFormatChar(Result, Delim, Sep);
 end;
 
 function TZAbstractDateFormatSettings.InternalGetInvalidValueText: String;
@@ -1007,7 +1046,7 @@ begin
       Result := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
       Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator;
       if FindFirstFormatDelimiter(Result, Delim) and (Delim <> Sep) then
-        ReplaceChar(Result, Delim, Sep);
+        ReplaceFormatChar(Result, Delim, Sep);
     end;
 end;
 
@@ -1031,7 +1070,7 @@ begin
       Result := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
       Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator;
       if FindFirstFormatDelimiter(Result, Delim) and (Delim <> Sep) then
-        ReplaceChar(Result, Delim, Sep);
+        ReplaceFormatChar(Result, Delim, Sep);
     end;
 end;
 
@@ -1044,25 +1083,16 @@ end;
 
 function TZAbstractTimestampFormatSettings.InternalGetFromFormatSettings: String;
 var tmp: String;
-  P, PEnd: PChar;
   Sep, Delim: Char;
 begin
   tmp := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
   Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator;
-  if FindFirstFormatDelimiter(tmp, Delim) and (Delim <> Sep)
-  then ReplaceChar(tmp, Delim, Sep)
-  else UniqueString(tmp);
-  P := Pointer(tmp);
-  PEnd := P + Length(tmp);
-  while P < PEnd do begin
-    if (P^ = 'M') or (P^ = 'm') then
-      P^ := 'n';
-    Inc(P);
-  end;
+  if FindFirstFormatDelimiter(tmp, Delim) and (Delim <> Sep) then
+    ReplaceFormatChar(tmp, Delim, Sep);
   Result := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat;
   Sep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DateSeparator;
   if FindFirstFormatDelimiter(Result, Delim) and (Delim <> Sep) then
-    ReplaceChar(Result, Delim, Sep);
+    ReplaceFormatChar(Result, Delim, Sep);
   Result := Result+' '+tmp;
 end;
 
