@@ -55,7 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
-{$IFNDEF ZEOS_DISABLE_ASA}
+{$IFNDEF ZEOS_DISABLE_SQLANY}
 
 uses
   {$IFDEF MORMOT2}
@@ -296,9 +296,9 @@ type
   End;
 
 
-{$ENDIF ZEOS_DISABLE_ASA}
+{$ENDIF ZEOS_DISABLE_SQLANY}
 implementation
-{$IFNDEF ZEOS_DISABLE_ASA}
+{$IFNDEF ZEOS_DISABLE_SQLANY}
 
 uses SysUtils, TypInfo,
   ZFastCode, ZSysUtils, ZEncoding,  ZMessages, ZDbcLogging, ZDbcUtils,
@@ -1961,5 +1961,5 @@ begin
 end;
 
 initialization
-{$ENDIF ZEOS_DISABLE_ASA}
+{$ENDIF ZEOS_DISABLE_SQLANY}
 end.

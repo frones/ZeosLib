@@ -55,7 +55,7 @@ unit ZDbcSQLAnywhereStatement;
 
 interface
 
-{$IFNDEF ZEOS_DISABLE_ASA}
+{$IFNDEF ZEOS_DISABLE_SQLANY}
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   ZDbcIntfs, ZDbcStatement, ZCompatibility, ZDbcLogging, ZVariant, ZClasses,
   ZDbcSQLAnywhere, ZPlainSQLAnywhere, ZCollections;
@@ -177,9 +177,9 @@ type
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
-{$ENDIF ZEOS_DISABLE_ASA}
+{$ENDIF ZEOS_DISABLE_SQLANY}
 implementation
-{$IFNDEF ZEOS_DISABLE_ASA}
+{$IFNDEF ZEOS_DISABLE_SQLANY}
 
 uses ZSysUtils, ZDbcUtils, ZMessages, ZDbcSQLAnywhereResultSet,
   ZDbcGenericResolver, ZEncoding, ZFastCode;
@@ -1188,5 +1188,5 @@ begin
 end;
 
 initialization
-{$ENDIF ZEOS_DISABLE_ASA}
+{$ENDIF ZEOS_DISABLE_SQLANY}
 end.

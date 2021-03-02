@@ -55,7 +55,7 @@ unit ZDbcSQLAnywhereUtils;
 
 interface
 
-{$IFNDEF ZEOS_DISABLE_ASA}
+{$IFNDEF ZEOS_DISABLE_SQLANY}
 uses ZPlainSQLAnywhere, ZDbcIntfs;
 
 {**
@@ -65,9 +65,9 @@ uses ZPlainSQLAnywhere, ZDbcIntfs;
 }
 
 function ConvertSQLAnyTypeToSQLType(native_type: Ta_sqlany_native_type): TZSQLType;
-{$ENDIF ZEOS_DISABLE_ASA}
+{$ENDIF ZEOS_DISABLE_SQLANY}
 implementation
-{$IFNDEF ZEOS_DISABLE_ASA}
+{$IFNDEF ZEOS_DISABLE_SQLANY}
 
 {**
   Converts a Sybase SQLAnywhere native types into ZDBC SQL types.
@@ -103,5 +103,5 @@ begin
   end;
 end;
 initialization
-{$ENDIF ZEOS_DISABLE_ASA}
+{$ENDIF ZEOS_DISABLE_SQLANY}
 end.

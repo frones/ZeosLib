@@ -55,7 +55,7 @@ interface
 
 {$I ZPlain.inc}
 
-{$IFNDEF ZEOS_DISABLE_ASA}
+{$IFNDEF ZEOS_DISABLE_SQLANY}
 
 uses Classes, ZCompatibility, ZPlainDriver;
 
@@ -2094,9 +2094,9 @@ type
     function GetDescription: string; override;
   end;
 
-{$ENDIF ZEOS_DISABLE_ASA}
+{$ENDIF ZEOS_DISABLE_SQLANY}
 implementation
-{$IFNDEF ZEOS_DISABLE_ASA}
+{$IFNDEF ZEOS_DISABLE_SQLANY}
 
 uses ZPlainLoader, ZEncoding;
 
@@ -2213,5 +2213,5 @@ begin
 end;
 
 initialization
-{$ENDIF ZEOS_DISABLE_ASA}
+{$ENDIF ZEOS_DISABLE_SQLANY}
 end.

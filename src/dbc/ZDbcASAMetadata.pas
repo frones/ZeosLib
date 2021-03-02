@@ -55,7 +55,11 @@ interface
 
 {$I ZDbc.inc}
 
-{$IFNDEF ZEOS_DISABLE_ASA}
+{$IF defined(ZEOS_DISABLE_ASA) and defined(ZEOS_DISABLE_SQLANY)}
+  {$DEFINE DISABLE_ASA_METADATA}
+{$IFEND}
+
+{$IFNDEF DISABLE_ASA_METADATA}
 uses
   Types, Classes, SysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
   ZDbcConnection;
@@ -378,9 +382,9 @@ type
     constructor Create(Connection: TZAbstractDbcConnection; const Url: TZURL); override;
   end;
 
-{$ENDIF ZEOS_DISABLE_ASA}
+{$ENDIF DISABLE_ASA_METADATA}
 implementation
-{$IFNDEF ZEOS_DISABLE_ASA}
+{$IFNDEF DISABLE_ASA_METADATA}
 
 uses ZFastCode, ZDbcASAUtils, ZSysUtils, ZSelectSchema;
 
@@ -2396,5 +2400,5 @@ begin
     Close;
   end;
 end;
-{$ENDIF ZEOS_DISABLE_ASA}
+{$ENDIF DISABLE_ASA_METADATA}
 end.
