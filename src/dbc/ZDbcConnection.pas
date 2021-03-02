@@ -1142,7 +1142,7 @@ procedure TZAbstractDbcConnection.SetOnConnectionLostErrorHandler(
 begin
   if Assigned(FOnConnectionLostError) then
     FOnConnectionLostError := Handler
-  else if Assigned(FOnConnectionLostError) then
+  else if Assigned(FOnConnectionLostError) and Assigned(Handler) then
     raise EZSQLException.Create('Error handler registered already!')
   else FOnConnectionLostError := Handler;
 end;
