@@ -60,9 +60,6 @@
 {$DEFINE WITH_PUREPASCAL_INTPOWER}
 {$DEFINE TFIELD_ASWIDESTRING_IS_WIDESTRING}
 {$DEFINE HAVE_CS_TRYENTER} //TCriticalSection has method TryEnter
-{$IFDEF SYSTEMINLINE} //global FPC define
-  {$DEFINE WITH_INLINE}           // compiler supports inline methodes
-{$ENDIF}
 {$DEFINE WITH_REGISTER_CLASSES_BUG}// FPC is not able to handle non visual component classes(supported since D5) except using RegisterNoIcon method
 {$DEFINE HAVE_INSERT_BOOKMARK_BUG} //FPC does set bfEOF on Append but on Insert a row the Bookmark-Flag is bfCurrent while it should be bfInsert min v3.1
 {$DEFINE WITH_UNIDIRECTIONALBUG} //still buggy with IsUnidirectional prop of TDataSet FPC still moves the recordBuffer-> visit TestReadOnlyQueryUniDirectional and TZAbstractRODataset.GetRecord
@@ -93,6 +90,7 @@
     {$DEFINE WITH_PWIDECHAR_TOWIDESTRING}
     {$DEFINE WITH_CLASS_VARS}
     {$IF FPC_FULLVERSION>=20600}  // assumes 2.5.1 pretty close to 2.6.0. Summer 2011 or newer
+      {$DEFINE WITH_INLINE}           // compiler supports inline methodes
       {$DEFINE WITH_FUNIDIRECTIONAL} // FPC has references a field instead of a setter here.  (at least in 2.6.0)
       {$DEFINE WITH_CLASS_CONST} //compiler supports contants in class type declarations 
       {$DEFINE WITH_INC_PBYTE_SUPPORT}  // Compiler supports incrementing PByte-Pointer
