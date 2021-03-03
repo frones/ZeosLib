@@ -2278,7 +2278,7 @@ begin
   { Checks for maximum row. }
   Result := False;
   //stmt := nil;
-  if (RowNo > LastRowNo) or Closed or (FRowSetAddr^ = nil) or
+  if Closed or (FRowSetAddr^ = nil) or
     ((RowNo = LastRowNo) and (FGetNextRowsStatus = DB_S_ENDOFROWSET)) or
     ((MaxRows > 0) and (RowNo >= MaxRows)) then
     goto NoSuccess;
@@ -2287,9 +2287,10 @@ begin
   then Inc(FCurrentBufRowNo)
   else begin
     {release old rows}
-    if (RowNo = 0)
-    then CreateAccessors
-    else ReleaseFetchedRows;
+    if (FAccessor =  0) then begin
+      CreateAccessors;
+      RowNo := 0;
+    end else ReleaseFetchedRows;
 
     FGetNextRowsStatus := fRowSetAddr^.GetNextRows(DB_NULL_HCHAPTER,0,FRowCount, FRowsObtained, FHROWS);
     if Failed(FGetNextRowsStatus) then
@@ -2451,13 +2452,11 @@ begin
     finally
       FRowSetAddr^ := nil;
       FAccessor := 0;
-      RowNo := 0;
       FCurrentBufRowNo := 0;
       FRowsObtained := 0;
       FGetNextRowsStatus := S_OK;
+      inherited ResetCursor;
     end;
-    FRowSetAddr^ := nil;//handle 'Object is in use Exception'
-    inherited ResetCursor;
   end;
 end;
 
