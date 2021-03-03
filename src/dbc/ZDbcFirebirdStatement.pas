@@ -227,7 +227,7 @@ begin
       if CachedLob
       then CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings)
       else CachedResultSet := TZFirebirdCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
-      CachedResultSet.SetConcurrency(rcUpdatable);
+      CachedResultSet.SetConcurrency(GetResultSetConcurrency);
       Result := CachedResultSet;
     end else
       Result := NativeResultSet;

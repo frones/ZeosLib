@@ -176,11 +176,11 @@ type
   TZTestMemTableWithConnection = class(TZAbstractTestMemTable)
   protected
     class function GetWithConnection: Boolean; override;
-    procedure Test_CopyDataFrom_people_table;
   published
     procedure Test_CloneDataFrom_people;
     procedure Test_CloneDataFrom_people_no_Connection;
     procedure Test_CloneDataFrom_equipment_filtered;
+    procedure Test_AssignDataFrom_people_table;
   end;
 
   TZTestMemTableWithoutConnection = class(TZAbstractTestMemTable)
@@ -436,6 +436,7 @@ begin
       if ( Connection.ControlsCodePage = cCP_UTF16 ) then
       begin
         StrStream.position := 0;
+        Ansi := '';
         SetLength(Ansi,StrStream.Size);
         StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
         WS := {$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(Ansi);
@@ -849,6 +850,7 @@ begin
       //a WiteString-Stream. So this test must be modified...
       if ( Connection.ControlsCodePage = cCP_UTF16 ) then
       begin
+        Ansi := '';
         SetLength(Ansi,StrStream.Size);
         StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
         WS := {$IFDEF FPC}UTF8Decode{$ELSE}UTF8ToString{$ENDIF}(Ansi);
@@ -2210,6 +2212,7 @@ begin
         TextStreamA.Position := 0;
         if ( Connection.ControlsCodePage = cCP_UTF16 ) then
         begin
+          TempU := '';
           SetLength(TempU, Length(TestString));
           TextStreamA.Read(PWideChar(TempU)^, Length(teststring)*2);
           CheckEquals(TempU, UnicodeString(TestString));
@@ -2217,6 +2220,7 @@ begin
         else
         {$ENDIF}
         begin
+          TempA := '';
           SetLength(TempA, Length(TestString));
           TextStreamA.Read(PAnsiChar(TempA)^, Length(teststring));
           CheckEquals(TempA, TestString);
@@ -3501,9 +3505,11 @@ begin
   end;
 end;
 
-procedure TZTestMemTableWithConnection.Test_CopyDataFrom_people_table;
+procedure TZTestMemTableWithConnection.Test_AssignDataFrom_people_table;
 var Table: TZMemTable;
   Query: TZQuery;
+  FieldDef: TFieldDef;
+  I: Integer;
 begin
   Table := CreateTable;
   Query := CreateQuery;
@@ -3520,11 +3526,28 @@ begin
     Table.Open;
     CheckEquals(Query.Fields.Count+2, Table.Fields.Count, 'The fieldcount');
     CheckEquals(0, Table.RecordCount, 'The recordCount');
-    //Table.AssignDataFrom(Query);
+    Table.AssignDataFrom(Query);
     CheckEquals(Query.RecordCount, Table.RecordCount, 'The recordCount');
     CheckEquals(Query.Fields.Count+2, Table.Fields.Count, 'The fieldcount');
     Table.Append;
     Table.Post;
+    Table.Clear;
+    { test reverse logic }
+    for I := Query.FieldDefs.Count -1 downto 0 do begin
+      FieldDef := Table.FieldDefs.AddFieldDef;
+      FieldDef.Assign(Query.FieldDefs[i]);
+      if I = 2 then begin //add a calculated field
+        FieldDef := Table.FieldDefs.AddFieldDef;
+        FieldDef.DataType := ftInteger;
+        FieldDef.DisplayName := 'TestCalc';
+        FieldDef.InternalCalcField := True;
+      end;
+    end;
+    Table.Open;
+    Table.AssignDataFrom(Query);
+    CheckEquals(Query.RecordCount, Table.RecordCount, 'The recordCount');
+    CheckEquals(Query.Fields.Count+1, Table.Fields.Count, 'The fieldcount');
+
   finally
     FreeAndNil(Table);
     FreeAndNil(Query);

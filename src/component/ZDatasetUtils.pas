@@ -1640,7 +1640,7 @@ begin
     {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
     else Result := DefaultSystemCodePage
     {$ELSE}
-      {$IFDEF LCL}
+      {$IFDEF FPC}
       else Result := zCP_UTF8
       {$ELSE}
       else Result := ZOSCodePage;

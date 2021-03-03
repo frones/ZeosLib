@@ -1285,6 +1285,7 @@ begin
           {$IFDEF UNICODE}
           TypeName := ZSysUtils.ASCII7ToUnicodeString(P, ZFastCode.StrLen(P));
           {$ELSE}
+          TypeName := '';
           ZSetString(P, ZFastCode.StrLen(P), TypeName);
           {$ENDIF}
         end;
@@ -1639,11 +1640,11 @@ var
       (P+escapedLen)^ := #39;
   end;
 begin
-  if (Buf = nil) or (Len = 0) then
-    if Quoted
-    then Result := ''''''
-    else Result := ''
-  else if Assigned(Fconn) and Assigned(FPlainDriver.PQescapeByteaConn) then
+  Result := '';
+  if (Buf = nil) or (Len = 0) then begin
+    if Quoted then
+       Result := ''''''
+  end else if Assigned(Fconn) and Assigned(FPlainDriver.PQescapeByteaConn) then
     SetResult(FPlainDriver.PQescapeByteaConn(Fconn, Buf, Len, @escapedLen), Result)
   else if Assigned(FPlainDriver.PQescapeBytea) then
     SetResult(FPlainDriver.PQescapeBytea(Buf,Len,@escapedLen), Result)

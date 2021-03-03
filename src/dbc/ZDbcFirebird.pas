@@ -620,7 +620,7 @@ begin
     if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
       HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.getInfo', Self);
     if FByteBuffer[1] = isc_info_db_SQL_Dialect
-    then FDialect := ReadInterbase6Number(FPlainDriver, FByteBuffer[2])
+    then FDialect := ReadInterbase6Number(FPlainDriver, @FByteBuffer[2])
     else FDialect := SQL_DIALECT_V5;
     inherited SetAutoCommit(AutoCommit or (Info.IndexOf(TxnProps_isc_tpb_autocommit) <> -1));
     FRestartTransaction := not AutoCommit;

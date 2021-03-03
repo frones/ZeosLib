@@ -57,7 +57,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
-  {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
+  {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS) and not defined(FPC)}Windows, {$IFEND}//FPC does not inline the methods
   ZDbcIntfs, ZDbcStatement, ZDbcInterbase6, ZDbcInterbase6Utils,
   ZPlainFirebirdInterbaseDriver, ZCompatibility,
   ZDbcFirebirdInterbase,
@@ -428,7 +428,7 @@ begin
         FIBConnection.HandleErrorOrWarning(lcPrepStmt, @FStatusVector, SQL, Self);
 
       if Buffer[0] = AnsiChar(isc_info_sql_stmt_type)
-      then FStatementType := TZIbSqlStatementType(ReadInterbase6Number(FPlainDriver, Buffer[1]))
+      then FStatementType := TZIbSqlStatementType(ReadInterbase6Number(FPlainDriver, @Buffer[1]))
       else FStatementType := stUnknown;
 
       if FStatementType in [stUnknown, stGetSegment, stPutSegment, stStartTrans, stCommit, stRollback] then begin
@@ -510,6 +510,8 @@ begin
     //exceute block query
     if (not FQuerySplitted) then
       SplitQueryIntoPieces;
+
+    {$IFDEF WITH_VAR_INIT_WARNING}PreparedRowsOfArray := 0;{$ENDIF}
     if FMaxRowsPerBatch = 0 then begin //init to find out max rows per batch
 jmpEB:eBlock := GetExecuteBlockString(BatchDMLArrayCount, FIBConnection.GetXSQLDAMaxSize,
       PreparedRowsOfArray, FMaxRowsPerBatch, FPlainDriver);

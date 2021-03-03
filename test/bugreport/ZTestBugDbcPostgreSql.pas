@@ -85,6 +85,7 @@ type
     procedure Test_TrailingSpaces;
     procedure Test_ForeignKeyViolation;
     procedure TestTicket472;
+    procedure TestTicket491;
   end;
 
   TZTestDbcPostgreSQLBugReportMBCs = class(TZAbstractDbcSQLTestCaseMBCs)
@@ -601,6 +602,7 @@ PostgreSQL calculates an interval of 30 minutes, it gets shown as "1899-12-30 23
 I am not 100% sure but I assume that in earlier versions of zeos, we used a
 TTimeField because there an interval of 30 minutes was displayed as "00:30:00".
 }
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized}{$ENDIF}
 procedure TZTestDbcPostgreSQLBugReport.TestTicket472;
 var Statement: IZStatement;
   RS: IZResultSet;
@@ -639,6 +641,42 @@ begin
   S := Rs.GetString(FirstDbcIndex);
   Check(S <> '');
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
+
+(* see: https://sourceforge.net/p/zeoslib/tickets/491/
+I'm working with Postgresql 9.6 and when reading data from JSONB field a new
+character is being added to the beginning of the field ... This is new to 8.0 as
+7.2.6 works as expected . (see the attached image) *)
+procedure TZTestDbcPostgreSQLBugReport.TestTicket491;
+var Stmt: IZStatement;
+    RS: IZResultSet;
+    P: PAnsiChar;
+    L: NativeUInt;
+begin
+  Check(Connection <> nil);
+  RS := nil;
+  Stmt := Connection.CreateStatement;
+  CheckFalse(Connection.IsClosed);
+  if Connection.GetHostVersion >= ZSysUtils.EncodeSQLVersioning(9,4,0) then try
+    Stmt.ExecuteUpdate('create table if not exists table_ticket491(id SERIAL,metadata JSONB)');
+    Stmt.ExecuteUpdate('INSERT INTO table_ticket491 (metadata) VALUES (''{"a":1, "b":2}'')');
+    Stmt.ExecuteUpdate('INSERT INTO table_ticket491 (metadata) VALUES (''{"longer_key":234234321, "key_with_text": "a text for key"}'')');
+    Stmt.ExecuteUpdate('INSERT INTO table_ticket491 (metadata) VALUES (''{"last_row":"This is the last row", "key_with_text": "a never ending row of test that should end eventually"}'')');
+    RS := Stmt.ExecuteQuery('select metadata from table_ticket491');
+    Check(RS <> nil);
+    while RS.Next do begin
+      P := RS.GetPAnsiChar(FirstDbcIndex, L);
+      Check(P <> nil);
+      Check(P^ = '{');
+    end;
+  finally
+    if RS <> nil then
+      RS.Close;
+
+    Stmt.ExecuteUpdate('drop table if exists table_ticket491');
+  end;
+end;
+
 
 {**
   Test the bug report #1014416

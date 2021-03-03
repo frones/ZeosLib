@@ -509,6 +509,7 @@ begin
     if (Connection.GetMetadata.GetDatabaseInfo.GetDatabaseProductName <> 'Firebird') or (Connection.GetHostVersion < EncodeSQLVersioning(4, 0, 0)) then
       Exit;
     ResultSet := nil;
+    TableType := nil;
     SetLength(TableType, 1);
     TableType[0] := 'TABLE';
     try
@@ -564,6 +565,7 @@ begin
     if (Connection.GetMetadata.GetDatabaseInfo.GetDatabaseProductName <> 'Firebird') or (Connection.GetHostVersion < EncodeSQLVersioning(4, 0, 0)) then
       Exit;
     ResultSet := nil;
+    TableType := nil;
     SetLength(TableType, 1);
     TableType[0] := 'TABLE';
     try
@@ -616,6 +618,7 @@ begin
     if (Connection.GetMetadata.GetDatabaseInfo.GetDatabaseProductName <> 'Firebird') or (Connection.GetHostVersion < EncodeSQLVersioning(3, 0, 6)) then
       Exit;
     ResultSet := nil;
+    TableType := nil;
     SetLength(TableType, 1);
     TableType[0] := 'TABLE';
     try
@@ -669,6 +672,7 @@ begin
     if (Connection.GetMetadata.GetDatabaseInfo.GetDatabaseProductName <> 'Firebird') or (Connection.GetHostVersion < EncodeSQLVersioning(4, 0, 0)) then
       Exit;
     ResultSet := nil;
+    TableType := nil;
     SetLength(TableType, 1);
     TableType[0] := 'TABLE';
     try

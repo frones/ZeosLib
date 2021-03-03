@@ -1476,7 +1476,7 @@ procedure TZAbstractDbcSQLTestCase.CheckNotEquals(Expected, Actual: TZSQLType;
 var E, A: String;
 begin
   E := TypInfo.GetEnumName(TypeInfo(TZSQLType), Ord(Expected));
-  A := TypInfo.GetEnumName(TypeInfo(TZSQLType), Ord(Expected));
+  A := TypInfo.GetEnumName(TypeInfo(TZSQLType), Ord(Actual));
   inherited CheckNotEquals(E, A, Msg);
 end;
 
@@ -1499,7 +1499,7 @@ procedure TZAbstractDbcSQLTestCase.CheckEquals(Expected, Actual: TZSQLType;
 var E, A: String;
 begin
   E := TypInfo.GetEnumName(TypeInfo(TZSQLType), Ord(Expected));
-  A := TypInfo.GetEnumName(TypeInfo(TZSQLType), Ord(Expected));
+  A := TypInfo.GetEnumName(TypeInfo(TZSQLType), Ord(Actual));
   inherited CheckEquals(E, A, Msg);
 end;
 
@@ -1557,6 +1557,7 @@ end;
    @param Actual the second stream for compare
    @param ConSettings the Connection given settings
 }
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Msg" not used} {$ENDIF}
 procedure TZAbstractCompSQLTestCase.CheckEquals(const OrgStr: UnicodeString;
   Actual: TField; const Msg: string = '');
 var ATemp, ATemp2: RawByteString;
@@ -1672,13 +1673,14 @@ begin
   end else
     Check(False, Protocol+': wrong overload called');
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZAbstractCompSQLTestCase.CheckNotEquals(Expected, Actual: TFieldType;
   const Msg: string);
 var E, A: String;
 begin
   E := TypInfo.GetEnumName(TypeInfo(TFieldType), Ord(Expected));
-  A := TypInfo.GetEnumName(TypeInfo(TFieldType), Ord(Expected));
+  A := TypInfo.GetEnumName(TypeInfo(TFieldType), Ord(Actual));
   inherited CheckNotEquals(E, A, Msg);
 end;
 
@@ -1750,7 +1752,7 @@ end;
 
 function TZAbstractCompSQLTestCase.CreateQuery: TZQuery;
 begin
-  Result := TZQuery.Create(nil);
+  Result := TZQuery.Create(FConnection);
   Result.Connection := FConnection;
   { do not check for Include_RealPrepared, because it's allways true if set! }
   if StrToBoolEx(FConnection.Properties.Values[DSProps_PreferPrepared]) then
@@ -1759,7 +1761,7 @@ end;
 
 function TZAbstractCompSQLTestCase.CreateReadOnlyQuery: TZReadOnlyQuery;
 begin
-  Result := TZReadOnlyQuery.Create(nil);
+  Result := TZReadOnlyQuery.Create(FConnection);
   Result.Connection := FConnection;
   { do not check for Include_RealPrepared, because it's allways true if set! }
   if StrToBoolEx(FConnection.Properties.Values[DSProps_PreferPrepared]) then
@@ -1768,7 +1770,7 @@ end;
 
 function TZAbstractCompSQLTestCase.CreateTable: TZTable;
 begin
-  Result := TZTable.Create(nil);
+  Result := TZTable.Create(FConnection);
   Result.Connection := FConnection;
   { do not check for Include_RealPrepared, because it's allways true if set! }
   if StrToBoolEx(FConnection.Properties.Values[DSProps_PreferPrepared]) then

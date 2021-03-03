@@ -489,6 +489,7 @@ var RS: IZResultSet;
   SelStmt: IZPreparedStatement;
   I: Integer;
   C: Currency;
+  {$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BCD_E" does not seem to be initialized}{$ENDIF}
   procedure CheckField(ColumnIndex, Precision, Scale: Integer; SQLType: TZSQLType; const Value: String);
   var S: String;
     BCD_A, BCD_E: TBCD;
@@ -507,13 +508,14 @@ var RS: IZResultSet;
     CheckEquals(Scale, Ord(RS.GetMetadata.GetScale(ColumnIndex)), Protocol+': Scale mismatch, for column "'+S+'"');
     CheckEquals(0, BcdCompare(BCD_A, BCD_E), Protocol+': BCD compare mismatch, for column "'+S+'", Expected: ' + Value + ' got: ' + BcdToStr(BCD_A));
   end;
+  {$IFDEF FPC}{$POP}{$ENDIF}
   procedure TestColTypes(ResultSetType: TZResultSetType);
   var i: Integer;
   begin
     SelStmt.SetResultSetType(ResultSetType);
     for I := 0 to 4 do begin  //force realprepared to test as well
       RS := SelStmt.ExecuteQueryPrepared;
-      if ResultSetType = rtScrollSensitive then
+      if ResultSetType = rtScrollInsensitive then
         RS.GetMetadata.IsWritable(FirstDbcIndex); //force meta loading
       try
         Check(RS.Next, 'No row retrieved from bcd_values');
@@ -535,7 +537,7 @@ var RS: IZResultSet;
 begin
   SelStmt := Connection.PrepareStatement('select * from bcd_values');
   TestColTypes(rtForwardOnly);
-  TestColTypes(rtScrollSensitive);
+  TestColTypes(rtScrollInsensitive);
   SelStmt.SetResultSetConcurrency(rcUpdatable);
   RS := SelStmt.ExecuteQueryPrepared;
   try
@@ -1551,6 +1553,7 @@ begin
         CheckEquals(RawByteString(SNames[name]), ResultSet.GetRawByteString(p_name_Index));
         CheckEquals(UnicodeString(SNames[name]), ResultSet.GetUnicodeString(p_name_Index));
         P := ResultSet.GetPAnsiChar(p_name_Index, Len);
+        R := '';
         ZSetString(PAnsiChar(P), Len, R);
         CheckEquals(RawByteString(SNames[name]), R);
         P := ResultSet.GetPWideChar(p_name_Index, Len);
@@ -1844,7 +1847,7 @@ begin
       'select c_id, c_dep_id from cargo where c_id >= '+ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
     CheckNotNull(Statement);
     Statement.SetResultSetConcurrency(rcUpdatable);
-    Statement.SetResultSetType(rtScrollSensitive);
+    Statement.SetResultSetType(rtScrollInsensitive);
     ResultSet := Statement.ExecuteQueryPrepared;
     ResultSet.MoveToInsertRow;
     ResultSet.UpdateInt(c_id_Index, TEST_ROW_ID);
@@ -1892,7 +1895,7 @@ begin
       'select c_id, c_dep_id from cargo where c_id >= '+ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
     CheckNotNull(Statement);
     Statement.SetResultSetConcurrency(rcUpdatable);
-    Statement.SetResultSetType(rtScrollSensitive);
+    Statement.SetResultSetType(rtScrollInsensitive);
     ResultSet := Statement.ExecuteQueryPrepared;
     Check(ResultSet.QueryInterface(IZCachedResultSet, CachedRS) = S_OK);
     Resolver := CachedRs.GetNativeResolver;
@@ -2257,6 +2260,7 @@ begin
       begin
         Next;
         CheckEquals(81, GetInt(FirstDbcIndex), 'Blokinsertiation Count');
+        Close;
       end;
     end;
   end else

@@ -55,16 +55,16 @@ interface
 
 {$I ZParseSql.inc}
 
-{$IFNDEF ZEOS_DISABLE_DBLIB}
-uses Classes, ZGenericSqlAnalyser;
+{$IF defined(ZEOS_DISABLE_DBLIB) and defined(ZEOS_DISABLE_ASA) and defined(ZEOS_DISABLE_SQLANY)}
+  {$DEFINE ZEOS_DISABLE_SYBASE}
+{$IFEND}
 
+{$IFNDEF DEFINE ZEOS_DISABLE_SYBASE}
+uses ZGenericSqlAnalyser;
 type
-
-  {** Implements an Sybase statements analyser. }
-  TZSybaseStatementAnalyser = class (TZGenericStatementAnalyser)
-  end;
-
-{$ENDIF ZEOS_DISABLE_DBLIB}
+  /// <summary>Implements an Sybase statements analyser.</summary>
+  TZSybaseStatementAnalyser = class(TZGenericStatementAnalyser);
+  {$ENDIF ZEOS_DISABLE_SYBASE}
 implementation
 
 end.

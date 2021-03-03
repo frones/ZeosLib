@@ -76,7 +76,7 @@ type
   TZMySQLBindValue = record
     /// <summary>the TZQMarkPosBindValue record</summary>
     BindValue:  TZQMarkPosBindValue;
-    /// <summary>Is the parameter tagged as NationalChar?</summary>
+    /// <summary>Represents the value as a raw string</summary>
     EmulatedValue: RawByteString;
   end;
 
@@ -180,8 +180,8 @@ type
     ///  Length for strings or bytes. The value is ignored for all other types.</param>
     /// <param>"Scale" the numeric or second-fraction scale of the parameter.</param>
     procedure RegisterParameter(ParameterIndex: Integer; SQLType: TZSQLType;
-      ParamType: TZProcedureColumnType; const Name: String = ''; {%H-}PrecisionOrSize: LengthInt = 0;
-      {%H-}Scale: LengthInt = 0); override;
+      ParamType: TZProcedureColumnType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
+      Scale: LengthInt = 0); override;
     /// <summary>prepares the statement on the server if minimum execution
     ///  count have been reached</summary>
     procedure Prepare; override;
@@ -251,6 +251,15 @@ type
   public
     //a performance thing: direct dispatched methods for the interfaces :
     //https://stackoverflow.com/questions/36137977/are-interface-methods-always-virtual
+  public
+    /// <summary>Sets the designated parameter to a <c>boolean</c> value.
+    ///  The driver converts this to a SQL <c>Ordinal</c> value when it sends it
+    ///  to the database.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetBoolean(Index: Integer; Value: Boolean);
     /// <summary>Sets the designated parameter to SQL <c>NULL</c>.
     ///  <B>Note:</B> You must specify the parameter's SQL type. </summary>
@@ -260,8 +269,22 @@ type
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"SQLType" the SQL type code defined in <c>ZDbcIntfs.pas</c></param>
     procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
+    /// <summary>Sets the designated parameter to a <c>Byte</c> value.
+    ///  If not supported by provider, the driver converts this to a SQL
+    ///  <c>Ordinal</c> value when it sends it to the database.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetByte(ParameterIndex: Integer; Value: Byte);
     procedure SetShort(ParameterIndex: Integer; Value: ShortInt);
+    /// <summary>Sets the designated parameter to a <c>Word</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetWord(ParameterIndex: Integer; Value: Word);
     procedure SetSmall(ParameterIndex: Integer; Value: SmallInt);
     procedure SetUInt(ParameterIndex: Integer; Value: Cardinal);
@@ -272,11 +295,17 @@ type
     procedure SetFloat(Index: Integer; Value: Single);
     procedure SetDouble(Index: Integer; const Value: Double);
     procedure SetCurrency(Index: Integer; const Value: Currency);
-    procedure SetBigDecimal(Index: Integer; const Value: TBCD);
+    /// <summary>Sets the designated parameter to a <c>BigDecimal(TBCD)</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
+    procedure SetBigDecimal(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 
-    procedure SetDate(Index: Integer; const Value: TZDate); overload;
-    procedure SetTime(Index: Integer; const Value: TZTime); overload;
-    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); overload;
+    procedure SetDate(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); overload;
+    procedure SetTime(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); overload;
+    procedure SetTimestamp(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); overload;
     procedure SetBytes(Index: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
 
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
@@ -1734,16 +1763,8 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-{**
-  Sets the designated parameter to a <code>java.math.BigDecimal</code> value.
-  The driver converts this to an SQL <code>NUMERIC</code> value when
-  it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
 procedure TZMySQLPreparedStatement.SetBigDecimal(Index: Integer;
-  const Value: TBCD);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 var
   Bind: PMYSQL_aligned_BIND;
   { move the string conversions into a own proc -> no (U/L)StrClear}
@@ -1773,14 +1794,6 @@ begin
   end;
 end;
 
-{**
-  Sets the designated parameter to a Java <code>boolean</code> value.
-  The driver converts this
-  to an SQL <code>BIT</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
 procedure TZMySQLPreparedStatement.SetBoolean(Index: Integer;
   Value: Boolean);
 begin
@@ -1789,14 +1802,6 @@ begin
   else SetRawByteString(Index, EnumBool[Value]);
 end;
 
-{**
-  Sets the designated parameter to a Java <code>unsigned 8Bit int</code> value.
-  The driver converts this
-  to an SQL <code>BYTE</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
 procedure TZMySQLPreparedStatement.SetByte(ParameterIndex: Integer;
   Value: Byte);
 begin
@@ -2287,7 +2292,7 @@ end;
   @param x the parameter value
 }
 procedure TZMySQLPreparedStatement.SetDate(Index: Integer;
-  const Value: TZDate);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 var
   Bind: PMYSQL_aligned_BIND;
   P: PMYSQL_TIME;
@@ -2628,7 +2633,7 @@ end;
   @param x the parameter value
 }
 procedure TZMySQLPreparedStatement.SetTime(Index: Integer;
-  const Value: TZTime);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 var
   Bind: PMYSQL_aligned_BIND;
   P: PMYSQL_TIME;
@@ -2666,7 +2671,7 @@ end;
   @param x the parameter value
 }
 procedure TZMySQLPreparedStatement.SetTimestamp(Index: Integer;
-  const Value: TZTimeStamp);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 var
   Bind: PMYSQL_aligned_BIND;
   P: PMYSQL_TIME;
@@ -2769,14 +2774,6 @@ begin
 {$ENDIF}
 end;
 
-{**
-  Sets the designated parameter to a Java <code>unsigned 16bit int</code> value.
-  The driver converts this
-  to an SQL <code>WORD</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
 procedure TZMySQLPreparedStatement.SetWord(ParameterIndex: Integer;
   Value: Word);
 begin

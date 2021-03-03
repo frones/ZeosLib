@@ -57,9 +57,11 @@ interface
 {$IFNDEF ZEOS_DISABLE_ASA}
 
 uses
-{$IFDEF USE_SYNCOMMONS}
+  {$IFDEF MORMOT2}
+  mormot.db.core, mormot.core.datetime, mormot.core.text, mormot.core.base,
+  {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
-{$ENDIF USE_SYNCOMMONS}
+  {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}
   System.Types{$IFNDEF NO_UNIT_CONTNRS},Contnrs{$ENDIF}
   {$ELSE}
@@ -119,22 +121,68 @@ type
     function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 
     property SQLData: IZASASQLDA read FSQLData;
-    {$IFDEF USE_SYNCOMMONS}
+    {$IFDEF WITH_COLUMNS_TO_JSON}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
-    {$ENDIF USE_SYNCOMMONS}
+    {$ENDIF WITH_COLUMNS_TO_JSON}
   end;
 
   TZASAParamererResultSet = Class(TZASAAbstractResultSet)
+  protected
+    procedure Open; override;
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
       var StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SqlData: IZASASQLDA;
       CachedBlob: boolean);
+    /// <summary>Moves the cursor down one row from its current position. A
+    ///  <c>ResultSet</c> cursor is initially positioned before the first row;
+    ///  the first call to the method <c>next</c> makes the first row the
+    ///  current row; the second call makes the second row the current row, and
+    ///  so on. If an input stream is open for the current row, a call to the
+    ///  method <c>next</c> will implicitly close it. A <c>ResultSet</c>
+    ///  object's warning chain is cleared when a new row is read.
+    /// <returns><c>true</c> if the new current row is valid; <c>false</c> if
+    ///  there are no more rows</returns>
     function Next: Boolean; override;
+    /// <summary>Moves the cursor to the given row number in
+    ///  this <c>ResultSet</c> object. If the row number is positive, the cursor
+    ///  moves to the given row number with respect to the beginning of the
+    ///  result set. The first row is row 1, the second is row 2, and so on.
+    ///  If the given row number is negative, the cursor moves to
+    ///  an absolute row position with respect to the end of the result set.
+    ///  For example, calling the method <c>absolute(-1)</c> positions the
+    ///  cursor on the last row; calling the method <c>absolute(-2)</c>
+    ///  moves the cursor to the next-to-last row, and so on. An attempt to
+    ///  position the cursor beyond the first/last row in the result set leaves
+    ///  the cursor before the first row or after the last row.
+    ///  <B>Note:</B> Calling <c>absolute(1)</c> is the same
+    ///  as calling <c>first()</c>. Calling <c>absolute(-1)</c>
+    ///  is the same as calling <c>last()</c>.</summary>
+    /// <param>"Row" the absolute position to be moved.</param>
+    /// <returns><c>true</c> if the cursor is on the result set;<c>false</c>
+    ///  otherwise</returns>
+    function MoveAbsolute(Row: Integer): Boolean; override;
   end;
 
   TZASANativeResultSet = Class(TZASAAbstractResultSet)
   public
     function Last: Boolean; override;
+    /// <summary>Moves the cursor to the given row number in
+    ///  this <c>ResultSet</c> object. If the row number is positive, the cursor
+    ///  moves to the given row number with respect to the beginning of the
+    ///  result set. The first row is row 1, the second is row 2, and so on.
+    ///  If the given row number is negative, the cursor moves to
+    ///  an absolute row position with respect to the end of the result set.
+    ///  For example, calling the method <c>absolute(-1)</c> positions the
+    ///  cursor on the last row; calling the method <c>absolute(-2)</c>
+    ///  moves the cursor to the next-to-last row, and so on. An attempt to
+    ///  position the cursor beyond the first/last row in the result set leaves
+    ///  the cursor before the first row or after the last row.
+    ///  <B>Note:</B> Calling <c>absolute(1)</c> is the same
+    ///  as calling <c>first()</c>. Calling <c>absolute(-1)</c>
+    ///  is the same as calling <c>last()</c>.</summary>
+    /// <param>"Row" the absolute position to be moved.</param>
+    /// <returns><c>true</c> if the cursor is on the result set;<c>false</c>
+    ///  otherwise</returns>
     function MoveAbsolute(Row: Integer): Boolean; override;
     function MoveRelative(Rows: Integer): Boolean; override;
     function Previous: Boolean; override;
@@ -237,7 +285,7 @@ uses
 
 { TZASAResultSet }
 
-{$IFDEF USE_SYNCOMMONS}
+{$IFDEF WITH_COLUMNS_TO_JSON}
 procedure TZASAAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 var L: NativeUInt;
@@ -307,7 +355,7 @@ begin
                                   if ColumnCodePage = zCP_UTF8 then
                                     JSONWriter.AddJSONEscape(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length)
                                   else begin
-                                    FUniTemp := PRawToUnicode(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length, ConSettings^.ClientCodePage^.CP);
+                                    PRawToUnicode(@PZASASQLSTRING(sqlData).data[0], PZASASQLSTRING(sqlData).length, ConSettings^.ClientCodePage^.CP, FUniTemp);
                                     JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
                                   end;
                                   JSONWriter.Add('"');
@@ -320,22 +368,26 @@ begin
                                   if jcoMongoISODate in JSONComposeOptions then
                                     JSONWriter.AddShort('ISODate("')
                                   else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                    {$IFDEF MORMOT2}
+                                    JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                    {$ELSE}
                                     JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                    {$ENDIF}
                                   else
                                     JSONWriter.Add('"');
                                   if PZASASQLDateTime(sqlData).Year < 0 then
                                     JSONWriter.Add('-');
                                   if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stTime) then begin
-                                    DateToIso8601PChar(PUTF8Char(fByteBuffer), True, Abs(PZASASQLDateTime(sqlData).Year),
+                                    DateToIso8601PChar(Pointer(fByteBuffer), True, Abs(PZASASQLDateTime(sqlData).Year),
                                     PZASASQLDateTime(sqlData).Month + 1, PZASASQLDateTime(sqlData).Day);
-                                    JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),10);
+                                    JSONWriter.AddNoJSONEscape(Pointer(fByteBuffer),10);
                                   end else if jcoMongoISODate in JSONComposeOptions then
                                     JSONWriter.AddShort('0000-00-00');
                                   if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stDate) then begin
-                                    TimeToIso8601PChar(PUTF8Char(fByteBuffer), True, PZASASQLDateTime(sqlData).Hour,
+                                    TimeToIso8601PChar(Pointer(fByteBuffer), True, PZASASQLDateTime(sqlData).Hour,
                                     PZASASQLDateTime(sqlData).Minute, PZASASQLDateTime(sqlData).Second,
                                     PZASASQLDateTime(sqlData).MicroSecond div 1000, 'T', jcoMilliseconds in JSONComposeOptions);
-                                    JSONWriter.AddNoJSONEscape(PUTF8Char(fByteBuffer),9 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                                    JSONWriter.AddNoJSONEscape(Pointer(fByteBuffer),9 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
                                   end;
                                   if jcoMongoISODate in JSONComposeOptions
                                   then JSONWriter.AddShort('Z)"')
@@ -363,7 +415,7 @@ begin
       JSONWriter.Add('}');
   end;
 end;
-{$ENDIF USE_SYNCOMMONS}
+{$ENDIF WITH_COLUMNS_TO_JSON}
 
 {**
   Constructs this object, assignes main properties and
@@ -389,7 +441,7 @@ begin
   FByteBuffer := FASAConnection.GetByteBufferAddress;
   FPlainDriver := TZASAPlainDriver(FASAConnection.GetIZPlainDriver.GetInstance);
   FStmtNum := StmtNum;
-  ResultSetType := rtScrollSensitive;
+  ResultSetType := rtScrollInsensitive;
   ResultSetConcurrency := rcReadOnly;
   Open;
 end;
@@ -1198,8 +1250,8 @@ set_Results:            Len := Result - PWideChar(fByteBuffer);
                       end;
       DT_NVARCHAR,
       DT_VARCHAR    : begin
-                        fUniTemp := PRawToUnicode(@PZASASQLSTRING(sqlData).data[0],
-                          PZASASQLSTRING(sqlData).length, ColumnCodePage);
+                        PRawToUnicode(@PZASASQLSTRING(sqlData).data[0],
+                          PZASASQLSTRING(sqlData).length, ColumnCodePage, fUniTemp);
                         goto set_from_uni;
                       end;
       DT_BINARY     : begin
@@ -1347,6 +1399,7 @@ begin
     ColumnsInfo.Add(ColumnInfo);
   end;
   FSqlData.InitFields; //EH: init fields AFTER retrieving col infos!
+  FCursorLocation := rctServer;
   inherited Open;
 end;
 
@@ -1394,27 +1447,29 @@ constructor TZASAParamererResultSet.Create(const Statement: IZStatement;
 begin
   inherited Create(Statement, SQL, StmtNum, CursorName, SqlData, CachedBlob);
   SetType(rtForwardOnly);
+  LastRowNo := 1;
 end;
 
-{**
-  Moves the cursor down one row from its current position.
-  A <code>ResultSet</code> cursor is initially positioned
-  before the first row; the first call to the method
-  <code>next</code> makes the first row the current row; the
-  second call makes the second row the current row, and so on.
+function TZASAParamererResultSet.MoveAbsolute(Row: Integer): Boolean;
+begin
+  Result := not Closed and ((Row = 1) or (Row = 0));
+  if (Row >= 0) and (Row <= 2) then
+    RowNo := Row;
+end;
 
-  <P>If an input stream is open for the current row, a call
-  to the method <code>next</code> will
-  implicitly close it. A <code>ResultSet</code> object's
-  warning chain is cleared when a new row is read.
-
-  @return <code>true</code> if the new current row is valid;
-    <code>false</code> if there are no more rows
-}
 function TZASAParamererResultSet.Next: Boolean;
 begin
-  Result := (not Closed) and (RowNo = 0);
-  if Result then RowNo := 1;
+  Result := not Closed and (RowNo = 0);
+  if RowNo = 0 then
+    RowNo := 1
+  else if RowNo = 1 then
+    RowNo := 2; //set AfterLast
+end;
+
+procedure TZASAParamererResultSet.Open;
+begin
+  inherited Open;
+  FCursorLocation := rctClient;
 end;
 
 { TZASANativeResultSet }

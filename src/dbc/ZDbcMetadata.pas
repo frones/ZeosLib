@@ -298,13 +298,85 @@ type
     /// <param>"ColumnNamePattern" a column name pattern</param>
     /// <returns><c>ResultSet</c> - each row is a privilege description</returns>
     /// <remarks>see GetSearchStringEscape</remarks>
-    function UncachedGetColumnPrivileges(const {%H-}Catalog: string; const {%H-}Schema: string;
-      const {%H-}Table: string; const {%H-}ColumnNamePattern: string): IZResultSet; virtual;
-
-    function UncachedGetPrimaryKeys(const {%H-}Catalog: string; const {%H-}Schema: string;
-      const {%H-}Table: string): IZResultSet; virtual;
-    function UncachedGetImportedKeys(const {%H-}Catalog: string; const {%H-}Schema: string;
-      const {%H-}Table: string): IZResultSet; virtual;
+    function UncachedGetColumnPrivileges(const Catalog: string; const Schema: string;
+      const Table: string; const ColumnNamePattern: string): IZResultSet; virtual;
+    /// <summary>Gets a description of a table's primary key columns. They
+    ///  are ordered by COLUMN_NAME.
+    ///  Each primary key column description has the following columns:
+    ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+    ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+    ///  <c>TABLE_NAME</c> String => table name
+    ///  <c>COLUMN_NAME</c> String => column name
+    ///  <c>KEY_SEQ</c> short => sequence number within primary key
+    ///  <c>PK_NAME</c> String => primary key name (may be null)</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <returns><c>ResultSet</c> - each row is a primary key column description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
+    function UncachedGetPrimaryKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; virtual;
+    /// <summary>Gets a description of the primary key columns that are
+    ///  referenced by a table's foreign key columns (the primary keys
+    ///  imported by a table).  They are ordered by PKTABLE_CAT,
+    ///  PKTABLE_SCHEM, PKTABLE_NAME, and KEY_SEQ.
+    ///  Each primary key column description has the following columns:
+    ///  <c>PKTABLE_CAT</c> String => primary key table catalog
+    ///       being imported (may be null)
+    ///  <c>PKTABLE_SCHEM</c> String => primary key table schema
+    ///       being imported (may be null)
+    ///  <c>PKTABLE_NAME</c> String => primary key table name
+    ///       being imported
+    ///  <c>PKCOLUMN_NAME</c> String => primary key column name
+    ///       being imported
+    ///  <c>FKTABLE_CAT</c> String => foreign key table catalog (may be null)
+    ///  <c>FKTABLE_SCHEM</c> String => foreign key table schema (may be null)
+    ///  <c>FKTABLE_NAME</c> String => foreign key table name
+    ///  <c>FKCOLUMN_NAME</c> String => foreign key column name
+    ///  <c>KEY_SEQ</c> short => sequence number within foreign key
+    ///  <c>UPDATE_RULE</c> short => What happens to
+    ///        foreign key when primary is updated:
+    ///        importedNoAction - do not allow update of primary
+    ///                key if it has been imported
+    ///        importedKeyCascade - change imported key to agree
+    ///                with primary key update
+    ///        importedKeySetNull - change imported key to NULL if
+    ///                its primary key has been updated
+    ///        importedKeySetDefault - change imported key to default values
+    ///                if its primary key has been updated
+    ///        importedKeyRestrict - same as importedKeyNoAction
+    ///                                  (for ODBC 2.x compatibility)
+    ///  <c>DELETE_RULE</c> short => What happens to
+    ///       the foreign key when primary is deleted.
+    ///        importedKeyNoAction - do not allow delete of primary
+    ///                key if it has been imported
+    ///        importedKeyCascade - delete rows that import a deleted key
+    ///       importedKeySetNull - change imported key to NULL if
+    ///                its primary key has been deleted
+    ///        importedKeyRestrict - same as importedKeyNoAction
+    ///                                  (for ODBC 2.x compatibility)
+    ///        importedKeySetDefault - change imported key to default if
+    ///                its primary key has been deleted
+    ///  <c>FK_NAME</c> String => foreign key name (may be null)
+    ///  <c>PK_NAME</c> String => primary key name (may be null)
+    ///  <c>DEFERRABILITY</c> short => can the evaluation of foreign key
+    ///       constraints be deferred until commit
+    ///        importedKeyInitiallyDeferred - see SQL92 for definition
+    ///        importedKeyInitiallyImmediate - see SQL92 for definition
+    ///        importedKeyNotDeferrable - see SQL92 for definition</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <returns><c>ResultSet</c> - each row is imported key column description</returns>
+    /// <remarks>see GetSearchStringEscape;GetExportedKeys</remarks>
+    function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
+      const Table: string): IZResultSet; virtual;
     function UncachedGetExportedKeys(const {%H-}Catalog: string; const {%H-}Schema: string;
       const {%H-}Table: string): IZResultSet; virtual;
     function UncachedGetCrossReference(const {%H-}PrimaryCatalog: string; const {%H-}PrimarySchema: string;
@@ -553,15 +625,15 @@ type
     ///  returned. They are ordered by COLUMN_NAME and PRIVILEGE.
     ///
     ///  Each privilige description has the following columns:
- 	  ///  <c>TABLE_CAT</c> String => table catalog (may be null)
- 	  ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
- 	  ///  <c>TABLE_NAME</c> String => table name
- 	  ///  <c>COLUMN_NAME</c> String => column name
- 	  ///  <c>GRANTOR</c> => grantor of access (may be null)
- 	  ///  <c>GRANTEE</c> String => grantee of access
- 	  ///  <c>PRIVILEGE</c> String => name of access (SELECT,
+    ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+    ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+    ///  <c>TABLE_NAME</c> String => table name
+    ///  <c>COLUMN_NAME</c> String => column name
+    ///  <c>GRANTOR</c> => grantor of access (may be null)
+    ///  <c>GRANTEE</c> String => grantee of access
+    ///  <c>PRIVILEGE</c> String => name of access (SELECT,
     ///     INSERT, UPDATE, REFRENCES, ...)
- 	  ///  <c>IS_GRANTABLE</c> String => "YES" if grantee is permitted
+    ///  <c>IS_GRANTABLE</c> String => "YES" if grantee is permitted
     ///   to grant to others; "NO" if not; null if unknown</summary>
     /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
     ///  name from the selection criteria</param>
@@ -574,8 +646,81 @@ type
     /// <remarks>see GetSearchStringEscape</remarks>
     function GetColumnPrivileges(const Catalog: string; const Schema: string;
       const Table: string; const ColumnNamePattern: string): IZResultSet;
+    /// <summary>Gets a description of a table's primary key columns from a
+    ///  cache. They are ordered by COLUMN_NAME.
+    ///  Each primary key column description has the following columns:
+    ///  <c>TABLE_CAT</c> String => table catalog (may be null)
+    ///  <c>TABLE_SCHEM</c> String => table schema (may be null)
+    ///  <c>TABLE_NAME</c> String => table name
+    ///  <c>COLUMN_NAME</c> String => column name
+    ///  <c>KEY_SEQ</c> short => sequence number within primary key
+    ///  <c>PK_NAME</c> String => primary key name (may be null)</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <returns><c>ResultSet</c> - each row is a primary key column description</returns>
+    /// <remarks>see GetSearchStringEscape</remarks>
     function GetPrimaryKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet;
+    /// <summary>Gets a description of the primary key columns that are
+    ///  referenced by a table's foreign key columns (the primary keys
+    ///  imported by a table) from a cache.  They are ordered by PKTABLE_CAT,
+    ///  PKTABLE_SCHEM, PKTABLE_NAME, and KEY_SEQ.
+    ///  Each primary key column description has the following columns:
+    ///  <c>PKTABLE_CAT</c> String => primary key table catalog
+    ///       being imported (may be null)
+    ///  <c>PKTABLE_SCHEM</c> String => primary key table schema
+    ///       being imported (may be null)
+    ///  <c>PKTABLE_NAME</c> String => primary key table name
+    ///       being imported
+    ///  <c>PKCOLUMN_NAME</c> String => primary key column name
+    ///       being imported
+    ///  <c>FKTABLE_CAT</c> String => foreign key table catalog (may be null)
+    ///  <c>FKTABLE_SCHEM</c> String => foreign key table schema (may be null)
+    ///  <c>FKTABLE_NAME</c> String => foreign key table name
+    ///  <c>FKCOLUMN_NAME</c> String => foreign key column name
+    ///  <c>KEY_SEQ</c> short => sequence number within foreign key
+    ///  <c>UPDATE_RULE</c> short => What happens to
+    ///        foreign key when primary is updated:
+    ///        importedNoAction - do not allow update of primary
+    ///                key if it has been imported
+    ///        importedKeyCascade - change imported key to agree
+    ///                with primary key update
+    ///        importedKeySetNull - change imported key to NULL if
+    ///                its primary key has been updated
+    ///        importedKeySetDefault - change imported key to default values
+    ///                if its primary key has been updated
+    ///        importedKeyRestrict - same as importedKeyNoAction
+    ///                                  (for ODBC 2.x compatibility)
+    ///  <c>DELETE_RULE</c> short => What happens to
+    ///       the foreign key when primary is deleted.
+    ///        importedKeyNoAction - do not allow delete of primary
+    ///                key if it has been imported
+    ///        importedKeyCascade - delete rows that import a deleted key
+    ///       importedKeySetNull - change imported key to NULL if
+    ///                its primary key has been deleted
+    ///        importedKeyRestrict - same as importedKeyNoAction
+    ///                                  (for ODBC 2.x compatibility)
+    ///        importedKeySetDefault - change imported key to default if
+    ///                its primary key has been deleted
+    ///  <c>FK_NAME</c> String => foreign key name (may be null)
+    ///  <c>PK_NAME</c> String => primary key name (may be null)
+    ///  <c>DEFERRABILITY</c> short => can the evaluation of foreign key
+    ///       constraints be deferred until commit
+    ///        importedKeyInitiallyDeferred - see SQL92 for definition
+    ///        importedKeyInitiallyImmediate - see SQL92 for definition
+    ///        importedKeyNotDeferrable - see SQL92 for definition</summary>
+    /// <param>"Catalog" a catalog name; An empty catalog means drop catalog
+    ///  name from the selection criteria</param>
+    /// <param>"schema" a schema name; An empty schema means drop schema
+    ///  name from the selection criteria</param>
+    /// <param>"table" a table name; An empty table means drop table
+    ///  name from the selection criteria</param>
+    /// <returns><c>ResultSet</c> - each row is imported key column description</returns>
+    /// <remarks>see GetSearchStringEscape;GetExportedKeys</remarks>
     function GetImportedKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet;
     function GetExportedKeys(const Catalog: string; const Schema: string;
@@ -630,11 +775,11 @@ type
     ///  order. The column descriptions follow in column number order.
     ///  Each row in the <c>ResultSet</c> is a parameter description or
     ///  column description with the following fields:
- 	  ///  <c>PROCEDURE_CAT</c> String => procedure catalog (may be null)
- 	  ///  <c>PROCEDURE_SCHEM</c> String => procedure schema (may be null)
- 	  ///  <c>PROCEDURE_NAME</c> String => procedure name
- 	  ///  <c>COLUMN_NAME</c> String => column/parameter name
- 	  ///  <c>COLUMN_TYPE</c> Short => kind of column/parameter:
+    ///  <c>PROCEDURE_CAT</c> String => procedure catalog (may be null)
+    ///  <c>PROCEDURE_SCHEM</c> String => procedure schema (may be null)
+    ///  <c>PROCEDURE_NAME</c> String => procedure name
+    ///  <c>COLUMN_NAME</c> String => column/parameter name
+    ///  <c>COLUMN_TYPE</c> Short => kind of column/parameter:
     ///      Ord(pctUnknown) - nobody knows
     ///      Ord(pctIn) - IN parameter
     ///      Ord(pctInOut) - INOUT parameter
@@ -642,13 +787,13 @@ type
     ///      Ord(pctReturn) - procedure return value
     ///      Ord(pctResultSet) - result column in <c>ResultSet</c>
     ///  <c>DATA_TYPE</c> short => ZDBC SQL type
- 	  ///  <c>TYPE_NAME</c> String => SQL type name, for a UDT type the
+    ///  <c>TYPE_NAME</c> String => SQL type name, for a UDT type the
     ///   type name is fully qualified
- 	  ///  <c>PRECISION</c> int => precision
- 	  ///  <c>LENGTH</c> int => length in bytes of data
- 	  ///  <c>SCALE</c> short => scale, second fractions
- 	  ///  <c>RADIX</c> short => radix
- 	  ///  <c>NULLABLE</c> short => can it contain NULL?
+    ///  <c>PRECISION</c> int => precision
+    ///  <c>LENGTH</c> int => length in bytes of data
+    ///  <c>SCALE</c> short => scale, second fractions
+    ///  <c>RADIX</c> short => radix
+    ///  <c>NULLABLE</c> short => can it contain NULL?
     ///     Ord(ntNoNulls) - does not allow NULL values
     ///     Ord(ntNullable) - allows NULL values
     ///     Ord(ntNullableUnknown) - nullability unknown
@@ -808,6 +953,9 @@ type
     /// <returns><c>true</c> if so; <c>false</c> otherwise.</returns>
     function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
       Boolean; virtual;
+    /// <summary>Are table correlation names supported?
+    /// A Zeos Compliant <c>TM</c> driver always returns true.</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function SupportsTableCorrelationNames: Boolean; virtual;
     function SupportsDifferentTableCorrelationNames: Boolean; virtual;
     function SupportsExpressionsInOrderBy: Boolean; virtual;
@@ -1660,11 +1808,6 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-{**
-  Are table correlation names supported?
-  A JDBC Compliant<sup><font size=-2>TM</font></sup> driver always returns true.
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
 function TZAbstractDatabaseInfo.SupportsTableCorrelationNames: Boolean;
 begin
   Result := True;
@@ -2841,75 +2984,13 @@ end;
 function TZAbstractDatabaseMetadata.CopyToVirtualResultSet(
   const SrcResultSet: IZResultSet; const DestResultSet: IZVirtualResultSet):
   IZVirtualResultSet;
-var
-  I: Integer;
-  Metadata: IZResultSetMetadata;
-  Len: NativeUInt;
-  Buff: array[Byte] of Byte;
-  IsUTF16: Boolean;
-  SQLType: TZSQLType;
 begin
   DestResultSet.SetType(rtScrollInsensitive);
   DestResultSet.SetConcurrency(rcUpdatable);
-
-  Metadata := SrcResultSet.GetMetadata;
-  IsUTF16 := (ConSettings^.ClientCodePage^.Encoding = ceUTF16);
-
-  while SrcResultSet.Next do
-  begin
-    DestResultSet.MoveToInsertRow;
-    for I := FirstDbcIndex to Metadata.GetColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}do
-    if not SrcResultSet.IsNull(I) then begin
-      SQLType := Metadata.GetColumnType(I);
-      case SQLType of
-        stBoolean:
-          DestResultSet.UpdateBoolean(I, SrcResultSet.GetBoolean(I));
-        stByte:
-          DestResultSet.UpdateByte(I, SrcResultSet.GetByte(I));
-        stShort:
-          DestResultSet.UpdateShort(I, SrcResultSet.GetShort(I));
-        stWord:
-          DestResultSet.UpdateWord(I, SrcResultSet.GetWord(I));
-        stSmall:
-          DestResultSet.UpdateSmall(I, SrcResultSet.GetSmall(I));
-        stLongWord:
-          DestResultSet.UpdateUInt(I, SrcResultSet.GetUInt(I));
-        stInteger:
-          DestResultSet.UpdateInt(I, SrcResultSet.GetInt(I));
-        stULong:
-          DestResultSet.UpdateULong(I, SrcResultSet.GetULong(I));
-        stLong:
-          DestResultSet.UpdateLong(I, SrcResultSet.GetLong(I));
-        stFloat:
-          DestResultSet.UpdateFloat(I, SrcResultSet.GetFloat(I));
-        stDouble:
-          DestResultSet.UpdateDouble(I, SrcResultSet.GetDouble(I));
-        stCurrency:
-          DestResultSet.UpdateCurrency(I, SrcResultSet.GetCurrency(I));
-        stBigDecimal: begin
-            SrcResultSet.GetBigDecimal(I, PBCD(@Buff[0])^);
-            DestResultSet.UpdateBigDecimal(I, PBCD(@Buff[0])^);
-          end;
-        stString, stUnicodeString, stAsciiStream, stUnicodeStream: if IsUTF16
-          then DestResultSet.UpdatePWideChar(I, SrcResultSet.GetPWideChar(I, Len), Len)
-          else DestResultSet.UpdatePAnsiChar(I, SrcResultSet.GetPAnsiChar(I, Len), Len);
-        stGUID, stBytes, stBinaryStream:
-          DestResultSet.UpdateBytes(I, SrcResultSet.GetBytes(I));
-        stDate:
-          DestResultSet.UpdateDate(I, SrcResultSet.GetDate(I));
-        stTime:
-          DestResultSet.UpdateTime(I, SrcResultSet.GetTime(I));
-        stTimestamp:
-          DestResultSet.UpdateTimestamp(I, SrcResultSet.GetTimestamp(I));
-        else raise ZDbcUtils.CreateConversionError(I, SQLType, SQLType)
-      end;
-      if SrcResultSet.WasNull then
-        DestResultSet.UpdateNull(I);
-    end;
-    DestResultSet.InsertRow;
-  end;
-
-  DestResultSet.BeforeFirst;
+  if SrcResultSet.GetColumnCount <> DestResultSet.GetColumnCount then
+    raise EZSQLException.Create('Column count missmatch.'+LineEnding+
+      'Wrong method for copy to virtual resultset.');
+  DestResultset.CopyFrom(SrcResultSet, nil, nil);
   DestResultSet.SetConcurrency(rcReadOnly);
   Result := DestResultSet;
 end;
@@ -2921,43 +3002,10 @@ end;
 }
 function TZAbstractDatabaseMetadata.CloneCachedResultSet(
   const ResultSet: IZResultSet): IZResultSet;
-var
-  I: Integer;
-  Metadata: IZResultSetMetadata;
-  ColumnInfo: TZColumnInfo;
-  ColumnsInfo: TObjectList;
-  ConSettings: PZConSettings;
+var RS: TZVirtualResultSet;
 begin
-  Result := nil;
-  Metadata := ResultSet.GetMetadata;
-  ColumnsInfo := TObjectList.Create(True);
-  ConSettings := IZConnection(FConnection).GetConSettings;
-  try
-    for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-    begin
-      ColumnInfo := TZColumnInfo.Create;
-      with ColumnInfo do
-      begin
-        //EH 10.07.2019 comment all getters who force LoadColumns of the NativeResultset-Metadata
-        Currency := Metadata.IsCurrency(i);
-        Signed := Metadata.IsSigned(i);
-        ColumnLabel := Metadata.GetOrgColumnLabel(i);
-        Precision := Metadata.GetPrecision(i);
-        ColumnType := Metadata.GetColumnType(i);
-        ColumnCodePage := Metadata.GetColumnCodePage(i);
-      end;
-      ColumnsInfo.Add(ColumnInfo);
-    end;
-
-    if not ResultSet.IsBeforeFirst and  (ResultSet.GetType <> rtForwardOnly) then
-      ResultSet.BeforeFirst;
-    Result := CopyToVirtualResultSet(ResultSet,
-      TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '', ConSettings));
-    if ResultSet.GetType <> rtForwardOnly then
-      ResultSet.BeforeFirst;
-  finally
-    ColumnsInfo.Free;
-  end;
+  RS := TZVirtualResultSet.CreateCloneFrom(ResultSet);
+  Result := CopyToVirtualResultSet(ResultSet, RS);
 end;
 
 {**
@@ -3395,11 +3443,13 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Catalog/Schema/Table/ColumnNamePattern" not used} {$ENDIF}
 function TZAbstractDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
+  Result := ConstructVirtualResultSet(TableColPrivColumnsDynArray);
 end;
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Catalog/Schema" not used} {$ENDIF}
 
 function TZAbstractDatabaseMetadata.GetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
@@ -3666,28 +3716,6 @@ begin
     Result := ConstructVirtualResultSet(TableColVerColumnsDynArray);
 end;
 
-{**
-  Gets a description of a table's primary key columns.  They
-  are ordered by COLUMN_NAME.
-
-  <P>Each primary key column description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>COLUMN_NAME</B> String => column name
- 	<LI><B>KEY_SEQ</B> short => sequence number within primary key
- 	<LI><B>PK_NAME</B> String => primary key name (may be null)
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those
-  without a schema
-  @param table a table name
-  @return <code>ResultSet</code> - each row is a primary key column description
-  @exception SQLException if a database access error occurs
-}
 function TZAbstractDatabaseMetadata.GetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
@@ -3708,101 +3736,14 @@ begin
   end;
 end;
 
-{**
-  Gets a description of a table's primary key columns.  They
-  are ordered by COLUMN_NAME.
-
-  <P>Each primary key column description has the following columns:
-   <OL>
- 	<LI><B>TABLE_CAT</B> String => table catalog (may be null)
- 	<LI><B>TABLE_SCHEM</B> String => table schema (may be null)
- 	<LI><B>TABLE_NAME</B> String => table name
- 	<LI><B>COLUMN_NAME</B> String => column name
- 	<LI><B>KEY_SEQ</B> short => sequence number within primary key
- 	<LI><B>PK_NAME</B> String => primary key name (may be null)
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those
-  without a schema
-  @param table a table name
-  @return <code>ResultSet</code> - each row is a primary key column description
-  @exception SQLException if a database access error occurs
-}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Catalog/Schema/Table" not used} {$ENDIF}
 function TZAbstractDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(PrimaryKeyColumnsDynArray);
+  Result := ConstructVirtualResultSet(PrimaryKeyColumnsDynArray);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
-{**
-  Gets a description of the primary key columns that are
-  referenced by a table's foreign key columns (the primary keys
-  imported by a table).  They are ordered by PKTABLE_CAT,
-  PKTABLE_SCHEM, PKTABLE_NAME, and KEY_SEQ.
-
-  <P>Each primary key column description has the following columns:
-   <OL>
- 	<LI><B>PKTABLE_CAT</B> String => primary key table catalog
-       being imported (may be null)
- 	<LI><B>PKTABLE_SCHEM</B> String => primary key table schema
-       being imported (may be null)
- 	<LI><B>PKTABLE_NAME</B> String => primary key table name
-       being imported
- 	<LI><B>PKCOLUMN_NAME</B> String => primary key column name
-       being imported
- 	<LI><B>FKTABLE_CAT</B> String => foreign key table catalog (may be null)
- 	<LI><B>FKTABLE_SCHEM</B> String => foreign key table schema (may be null)
- 	<LI><B>FKTABLE_NAME</B> String => foreign key table name
- 	<LI><B>FKCOLUMN_NAME</B> String => foreign key column name
- 	<LI><B>KEY_SEQ</B> short => sequence number within foreign key
- 	<LI><B>UPDATE_RULE</B> short => What happens to
-        foreign key when primary is updated:
-       <UL>
-       <LI> importedNoAction - do not allow update of primary
-                key if it has been imported
-       <LI> importedKeyCascade - change imported key to agree
-                with primary key update
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been updated
-       <LI> importedKeySetDefault - change imported key to default values
-                if its primary key has been updated
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       </UL>
- 	<LI><B>DELETE_RULE</B> short => What happens to
-       the foreign key when primary is deleted.
-       <UL>
-       <LI> importedKeyNoAction - do not allow delete of primary
-                key if it has been imported
-       <LI> importedKeyCascade - delete rows that import a deleted key
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been deleted
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       <LI> importedKeySetDefault - change imported key to default if
-                its primary key has been deleted
-       </UL>
- 	<LI><B>FK_NAME</B> String => foreign key name (may be null)
- 	<LI><B>PK_NAME</B> String => primary key name (may be null)
- 	<LI><B>DEFERRABILITY</B> short => can the evaluation of foreign key
-       constraints be deferred until commit
-       <UL>
-       <LI> importedKeyInitiallyDeferred - see SQL92 for definition
-       <LI> importedKeyInitiallyImmediate - see SQL92 for definition
-       <LI> importedKeyNotDeferrable - see SQL92 for definition
-       </UL>
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those
-  without a schema
-  @param table a table name
-  @return <code>ResultSet</code> - each row is a primary key column description
-  @see #getExportedKeys
-}
 function TZAbstractDatabaseMetadata.GetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
@@ -3823,78 +3764,13 @@ begin
   end;
 end;
 
-{**
-  Gets a description of the primary key columns that are
-  referenced by a table's foreign key columns (the primary keys
-  imported by a table).  They are ordered by PKTABLE_CAT,
-  PKTABLE_SCHEM, PKTABLE_NAME, and KEY_SEQ.
-
-  <P>Each primary key column description has the following columns:
-   <OL>
- 	<LI><B>PKTABLE_CAT</B> String => primary key table catalog
-       being imported (may be null)
- 	<LI><B>PKTABLE_SCHEM</B> String => primary key table schema
-       being imported (may be null)
- 	<LI><B>PKTABLE_NAME</B> String => primary key table name
-       being imported
- 	<LI><B>PKCOLUMN_NAME</B> String => primary key column name
-       being imported
- 	<LI><B>FKTABLE_CAT</B> String => foreign key table catalog (may be null)
- 	<LI><B>FKTABLE_SCHEM</B> String => foreign key table schema (may be null)
- 	<LI><B>FKTABLE_NAME</B> String => foreign key table name
- 	<LI><B>FKCOLUMN_NAME</B> String => foreign key column name
- 	<LI><B>KEY_SEQ</B> short => sequence number within foreign key
- 	<LI><B>UPDATE_RULE</B> short => What happens to
-        foreign key when primary is updated:
-       <UL>
-       <LI> importedNoAction - do not allow update of primary
-                key if it has been imported
-       <LI> importedKeyCascade - change imported key to agree
-                with primary key update
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been updated
-       <LI> importedKeySetDefault - change imported key to default values
-                if its primary key has been updated
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       </UL>
- 	<LI><B>DELETE_RULE</B> short => What happens to
-       the foreign key when primary is deleted.
-       <UL>
-       <LI> importedKeyNoAction - do not allow delete of primary
-                key if it has been imported
-       <LI> importedKeyCascade - delete rows that import a deleted key
-       <LI> importedKeySetNull - change imported key to NULL if
-                its primary key has been deleted
-       <LI> importedKeyRestrict - same as importedKeyNoAction
-                                  (for ODBC 2.x compatibility)
-       <LI> importedKeySetDefault - change imported key to default if
-                its primary key has been deleted
-       </UL>
- 	<LI><B>FK_NAME</B> String => foreign key name (may be null)
- 	<LI><B>PK_NAME</B> String => primary key name (may be null)
- 	<LI><B>DEFERRABILITY</B> short => can the evaluation of foreign key
-       constraints be deferred until commit
-       <UL>
-       <LI> importedKeyInitiallyDeferred - see SQL92 for definition
-       <LI> importedKeyInitiallyImmediate - see SQL92 for definition
-       <LI> importedKeyNotDeferrable - see SQL92 for definition
-       </UL>
-   </OL>
-
-  @param catalog a catalog name; "" retrieves those without a
-  catalog; null means drop catalog name from the selection criteria
-  @param schema a schema name; "" retrieves those
-  without a schema
-  @param table a table name
-  @return <code>ResultSet</code> - each row is a primary key column description
-  @see #getExportedKeys
-}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Catalog/Schema/Table" not used} {$ENDIF}
 function TZAbstractDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
   Result := ConstructVirtualResultSet(ImportedKeyColumnsDynArray);
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {**
   Gets a description of the foreign key columns that reference a

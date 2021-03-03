@@ -57,9 +57,11 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 uses
-{$IFDEF USE_SYNCOMMONS}
+  {$IFDEF MORMOT2}
+  mormot.db.core, mormot.core.datetime, mormot.core.text, mormot.core.base,
+  {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
-{$ENDIF USE_SYNCOMMONS}
+  {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types{$ELSE}Types{$ENDIF},
   FmtBCD, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -439,10 +441,10 @@ type
     /// <returns><c>true</c> if the new current row is valid; <c>false</c> if
     ///  there are no more rows</returns>
     function Next: Boolean; reintroduce;
-    {$IFDEF USE_SYNCOMMONS}
+    {$IFDEF WITH_COLUMNS_TO_JSON}
   public
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]);
-    {$ENDIF USE_SYNCOMMONS}
+    {$ENDIF WITH_COLUMNS_TO_JSON}
   end;
 
   /// <summary>Defines a Postgres OID Blob interface</summary>
@@ -596,9 +598,9 @@ type
   { TZPostgreSQLRowAccessor }
 
   TZPostgreSQLRowAccessor = class(TZRowAccessor)
-  public
-    constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
+  protected
+    class function MetadataToAccessorType(ColumnInfo: TZColumnInfo;
+      ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; override;
   end;
 
 {$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
@@ -614,7 +616,7 @@ uses
 
 { TZPostgreSQLResultSet }
 
-{$IFDEF USE_SYNCOMMONS}
+{$IFDEF WITH_COLUMNS_TO_JSON}
 procedure TZPostgreSQLResultSet.ColumnsToJSON(
   JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
 var
@@ -623,8 +625,9 @@ var
   P, pgBuff: PAnsiChar;
   RNo, H, I: Integer;
   TS: TZTimeStamp;
-  Months, Days: Integer absolute TS;
-label ProcBts, jmpTime, jmpTS, jmpOIDBLob;
+  Months: Integer absolute TS;
+  Days: Integer absolute TS;
+label jmpTime, jmpTS, jmpOIDBLob;
 begin
   RNo := PGRowNo;
   if JSONWriter.Expand then
@@ -657,8 +660,13 @@ begin
             stInteger     : JSONWriter.Add(PG2Integer(P));
             stLong        : JSONWriter.Add(PG2Int64(P));
             stCurrency    : if TypeOID = CASHOID
+                            {$IFDEF MORMOT2}
+                            then JSONWriter.AddCurr(PGCash2Currency(P))
+                            else JSONWriter.AddCurr(PGNumeric2Currency(P));
+                            {$ELSE !MOMROT2}
                             then JSONWriter.AddCurr64(PGCash2Currency(P))
                             else JSONWriter.AddCurr64(PGNumeric2Currency(P));
+                            {$ENDIF !MOMOT2}
             stFloat       : JSONWriter.AddSingle(PG2Single(P));
             stDouble      : JSONWriter.AddDouble(PG2Double(P));
             stBigDecimal  : begin
@@ -680,29 +688,33 @@ jmpOIDBLob:                   PIZlob(FByteBuffer)^ := TZPostgreSQLOidBlob.Create
                               fRawTemp := '';
                             end;
             stGUID        : begin
-                              JSONWriter.Add('"');
+                              {$IFNDEF MORMOT2}JSONWriter.Add('"');{$ENDIF}
                               {$IFNDEF ENDIAN_BIG} {$Q-} {$R-}
                               PGUID(fByteBuffer)^.D1 := PG2Cardinal(@PGUID(P).D1); //what a *beep* swapped digits! but only on reading
                               PGUID(fByteBuffer)^.D2 := (PGUID(P).D2 and $00FF shl 8) or (PGUID(P).D2 and $FF00 shr 8);
                               PGUID(fByteBuffer)^.D3 := (PGUID(P).D3 and $00FF shl 8) or (PGUID(P).D3 and $FF00 shr 8);
                               PInt64(@PGUID(fByteBuffer)^.D4)^ := PInt64(@PGUID(P).D4)^;
-                              JSONWriter.Add(PGUID(fByteBuffer)^);
+                              JSONWriter.Add(PGUID(fByteBuffer){$IFNDEF MORMOT2}^{$ELSE},'"'{$ENDIF});
                               {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
                               {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
                               {$ELSE}
-                              JSONWriter.Add(PGUID(P)^);
+                              JSONWriter.Add(PGUID(P){$IFNDEF MORMOT2}^{$ELSE},'"'{$ENDIF});
                               {$ENDIF}
-                              JSONWriter.Add('"');
+                              {$IFNDEF MORMOT2}JSONWriter.Add('"');{$ENDIF}
                             end;
             stDate        : begin
                               if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('ISODate("')
                               else if jcoDATETIME_MAGIC in JSONComposeOptions
+                                {$IFDEF MORMOT2}
+                                then JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                {$ELSE}
                                 then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                {$ENDIF}
                                 else JSONWriter.Add('"');
                               PG2Date(PInteger(P)^, TS.Year, TS.Month, TS.Day);
-                              DateToIso8601PChar(PUTF8Char(FByteBuffer), True, TS.Year, TS.Month, TS.Day);
-                              JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer), 10);
+                              DateToIso8601PChar(Pointer(FByteBuffer), True, TS.Year, TS.Month, TS.Day);
+                              JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer), 10);
                               if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('Z)"')
                               else JSONWriter.Add('"');
@@ -714,10 +726,14 @@ jmpOIDBLob:                   PIZlob(FByteBuffer)^ := TZPostgreSQLOidBlob.Create
 jmpTime:                      if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('ISODate("0000-00-00')
                               else if jcoDATETIME_MAGIC in JSONComposeOptions
+                                {$IFDEF MORMOT2}
+                                then JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                {$ELSE}
                                 then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                {$ENDIF}
                                 else JSONWriter.Add('"');
-                              TimeToIso8601PChar(PUTF8Char(FByteBuffer), True, TS.Hour, TS.Minute, TS.Second, TS.Fractions div NanoSecsPerMSec, 'T', jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer), 9+4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions)));
+                              TimeToIso8601PChar(Pointer(FByteBuffer), True, TS.Hour, TS.Minute, TS.Second, TS.Fractions div NanoSecsPerMSec, 'T', jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer), 9+4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions)));
                               if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('Z)"')
                               else JSONWriter.Add('"');
@@ -729,11 +745,15 @@ jmpTime:                      if jcoMongoISODate in JSONComposeOptions
 jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('ISODate("')
                               else if jcoDATETIME_MAGIC in JSONComposeOptions
+                                {$IFDEF MORMOT2}
+                                then JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                {$ELSE}
                                 then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                {$ENDIF}
                                 else JSONWriter.Add('"');
-                              DateToIso8601PChar(PUTF8Char(FByteBuffer), True, TS.Year, TS.Month, TS.Day);
-                              TimeToIso8601PChar(PUTF8Char(FByteBuffer)+10, True, TS.Hour, TS.Minute, TS.Second, TS.Fractions div NanoSecsPerMSec, 'T', jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),19+(4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions))));
+                              DateToIso8601PChar(Pointer(FByteBuffer), True, TS.Year, TS.Month, TS.Day);
+                              TimeToIso8601PChar(Pointer(PAnsiChar(FByteBuffer)+10), True, TS.Hour, TS.Minute, TS.Second, TS.Fractions div NanoSecsPerMSec, 'T', jcoMilliseconds in JSONComposeOptions);
+                              JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer),19+(4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions))));
                               if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('Z)"')
                               else JSONWriter.Add('"');
@@ -741,11 +761,11 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
             stString,
             stUnicodeString:if (TypeOID = MACADDROID) then begin
                               JSONWriter.Add('"');
-                              JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer), PGMacAddr2Raw(P, PAnsiChar(FByteBuffer)));
+                              JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer), PGMacAddr2Raw(P, PAnsiChar(FByteBuffer)));
                               JSONWriter.Add('"');
                             end else if (TypeOID = INETOID) or (TypeOID = CIDROID) then begin
                               JSONWriter.Add('"');
-                              JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer), PGInetAddr2Raw(P, PAnsiChar(FByteBuffer)));
+                              JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer), PGInetAddr2Raw(P, PAnsiChar(FByteBuffer)));
                               JSONWriter.Add('"');
                             end else if TypeOID = INTERVALOID then begin
                               if Finteger_datetimes
@@ -774,14 +794,15 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                             end else begin
                               JSONWriter.Add('"');
                               if (TypeOID = CHAROID) or (TypeOID = BPCHAROID)
-                              then JSONWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, SynCommons.StrLen(P)))
+                              then JSONWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, {$IFDEF MORMOT2}mormot.core.base{$ELSE}SynCommons{$ENDIF}.StrLen(P)))
                               else JSONWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
                               JSONWriter.Add('"');
                             end;
             stAsciiStream,
-            stUnicodeStream:if (TypeOID = JSONOID) or (TypeOID = JSONBOID) then
+            stUnicodeStream:if (TypeOID = JSONOID) or (TypeOID = JSONBOID) then begin
+                              if (TypeOID = JSONBOID) then Inc(P);//skip the leading #1 byte of the binary result
                               JSONWriter.AddNoJSONEscape(P{, SynCommons.StrLen(P)})
-                            else begin
+                            end else begin
                               JSONWriter.Add('"');
                               JSONWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
                               JSONWriter.Add('"');
@@ -831,7 +852,11 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                               JSONWriter.AddShort('Z)"');
                             end else begin
                               if jcoDATETIME_MAGIC in JSONComposeOptions
+                              {$IFDEF MORMOT2}
+                              then JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              {$ELSE}
                               then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$ENDIF}
                               else JSONWriter.Add('"');
                               JSONWriter.AddNoJSONEscape(P, 10);
                               JSONWriter.Add('"');
@@ -842,7 +867,11 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                               JSONWriter.AddShort('Z)"');
                             end else begin
                               if jcoDATETIME_MAGIC in JSONComposeOptions
+                              {$IFDEF MORMOT2}
+                              then JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              {$ELSE}
                               then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$ENDIF}
                               else JSONWriter.Add('"');
                               JSONWriter.Add('T');
                               if ((P+8)^ <> '.') or not (jcoMilliseconds in JSONComposeOptions) //time zone ?
@@ -858,7 +887,11 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                               JSONWriter.AddShort('Z)"');
                             end else begin
                               if jcoDATETIME_MAGIC in JSONComposeOptions
+                              {$IFDEF MORMOT2}
+                              then JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              {$ELSE}
                               then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$ENDIF}
                               else JSONWriter.Add('"');
                               (P+10)^ := 'T';
                               {JSONWriter.AddNoJSONEscape(P, 10);
@@ -872,7 +905,7 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
             stUnicodeString:begin
                               JSONWriter.Add('"');
                               if (TypeOID = CHAROID) or (TypeOID = BPCHAROID)
-                              then JSONWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, SynCommons.StrLen(P)))
+                              then JSONWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, {$IFDEF MORMOT2}mormot.core.base{$ELSE}SynCommons{$ENDIF}.StrLen(P)))
                               else JSONWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
                               JSONWriter.Add('"');
                             end;
@@ -896,7 +929,7 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
       JSONWriter.Add('}');
   end;
 end;
-{$ENDIF USE_SYNCOMMONS}
+{$ENDIF WITH_COLUMNS_TO_JSON}
 
 constructor TZPostgreSQLResultSet.Create(const Statement: IZStatement;
   const SQL: string; const Connection: IZPostgreSQLConnection; resAddress: PPGresult;
@@ -924,9 +957,13 @@ begin
   FBinaryValues := FResultFormat^ = ParamFormatBin;
   FClientCP := ConSettings.ClientCodePage.CP;
   FSingleRowMode := SingleRowMode;
-  if FSingleRowMode
-  then SetType(rtForwardOnly)
-  else SetType(rtScrollSensitive);
+  if FSingleRowMode then begin
+    SetType(rtForwardOnly);
+    FCursorLocation := rctServer;
+  end else begin
+    SetType(rtScrollInsensitive);
+    FCursorLocation := rctClient;
+  end;
   Open;
 end;
 
@@ -1310,7 +1347,13 @@ jmpTS:                Result := PAnsiChar(fByteBuffer);
                       else goto jmpTime;
                     end else goto jmpStr;
         stAsciiStream,
-        stUnicodeStream:Len := ZFastCode.StrLen(Result);
+        stUnicodeStream:begin
+                          Len := ZFastCode.StrLen(Result);
+                          if TypeOID = JSONBOID then begin //ship the leading #1 byte
+                            Dec(Len);
+                            Inc(Result);
+                          end;
+                        end;
         stBytes:        Len := FPlainDriver.PQgetlength(Fres, ROW_IDX, ColumnIndex);
         stBinaryStream: if TypeOID = OIDOID
                         then Result := FromOIDLob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Len)
@@ -1504,7 +1547,10 @@ jmpTS:                Result := PWideChar(fByteBuffer);
                       else goto jmpTime;
                     end else goto jmpStr;
         stUnicodeStream,
-        stAsciiStream: goto JmpTxt;
+        stAsciiStream:  begin
+                          if (TypeOID = JSONBOID) then Inc(P); //skip the leading #1 byte
+                          goto JmpTxt;
+                        end;
         stBytes:        begin
 jmpBin:                   Len := FPlainDriver.PQgetlength(Fres, ROW_IDX, ColumnIndex);
                           goto jmpRaw;
@@ -1899,7 +1945,7 @@ begin
         {skip trailing /x}
         Len := (ZFastCode.StrLen(Buffer)-2) shr 1;
         if Len = SizeOf(TGUID)
-        then {$IFDEF USE_SYNCOMMONS}SynCommons.{$ENDIF}HexToBin(Buffer+2, @Result.D1, SizeOf(TGUID))
+        then {$IFDEF WITH_COLUMNS_TO_JSON}{$IFDEF MORMOT2}mormot.core.text{$ELSE}SynCommons{$ENDIF}.{$ENDIF}HexToBin(Buffer+2, @Result.D1, SizeOf(TGUID))
         else goto Fail;
       end else if Assigned(FPlainDriver.PQUnescapeBytea) then begin
         pgBuff := FPlainDriver.PQUnescapeBytea(Buffer, @Len);
@@ -2047,6 +2093,7 @@ begin
   Result := FPGConnection;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$result" does not seem to be initialized} {$ENDIF}
 function TZPostgreSQLResultSet.GetCurrency(
   ColumnIndex: Integer): Currency;
 var P: PAnsiChar;
@@ -2089,6 +2136,7 @@ begin
     else SQLStrToFloatDef(P, 0, FDecimalSeps[TypeOID = CASHOID], Result);
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZPostgreSQLResultSet.GetDate(ColumnIndex: Integer;
   var Result: TZDate);
@@ -2366,6 +2414,7 @@ begin
       stUnicodeString,
       stAsciiStream,
       stUnicodeStream:  begin
+          if (TypeOID = JSONBOID) then Inc(P); //skip the leading #1 byte
           Len := ZFastCode.StrLen(P);
           Result := TZAbstractCLob.CreateWithData(P, Len, FClientCP, ConSettings);
         end;
@@ -2604,7 +2653,7 @@ begin
   BinSize := ZFastCode.StrLen(Data) shr 1;
   if BinSize > 0 then begin
     SetCapacity(BinSize);
-    HexToBin(Data, {$IFDEF USE_SYNCOMMONS}PAnsiChar{$ENDIF}(@FDataRefAddress.VarLenData.Data), BinSize);
+    HexToBin(Data, {$IFDEF WITH_COLUMNS_TO_JSON}PAnsiChar{$ENDIF}(@FDataRefAddress.VarLenData.Data), BinSize);
     FDataRefAddress.IsNotNull := 1;
     FDataRefAddress.VarLenData.Len := BinSize;
   end;
@@ -2759,35 +2808,24 @@ end;
 
 { TZPostgreSQLRowAccessor }
 
-constructor TZPostgreSQLRowAccessor.Create(ColumnsInfo: TObjectList;
-  ConSettings: PZConSettings; const OpenLobStreams: TZSortedList; CachedLobs: WordBool);
-var RAColumns: TObjectList;
-  I: Integer;
-  PGCurrent: TZPGColumnInfo;
-  RACurrent: TZColumnInfo;
+class function TZPostgreSQLRowAccessor.MetadataToAccessorType(
+  ColumnInfo: TZColumnInfo; ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType;
 begin
   {EH: usuall this code is NOT nessecary if we would handle the types as the
   providers are able to. But in current state we just copy all the incompatibilities
   from the DataSets into dbc... grumble. the only streamed data pg supports are
   oid-lobs. Those we leave as streams, doesn't matter if cached or not, just
   identify purpose}
-  RAColumns := TObjectList.Create(True);
-  CopyColumnsInfo(ColumnsInfo, RAColumns);
-  for I := 0 to RAColumns.Count -1 do begin
-    PGCurrent := TZPGColumnInfo(ColumnsInfo[i]);
-    RACurrent := TZColumnInfo(RAColumns[i]);
-    if RACurrent.ColumnType in [stUnicodeString, stUnicodeStream] then
-      RACurrent.ColumnType := TZSQLType(Byte(RACurrent.ColumnType)-1);// no national chars 4 PG
-    if (RACurrent.ColumnType = stAsciiStream) or ((RACurrent.ColumnType = stBinaryStream) and (PGCurrent.TypeOID <> OIDOID)) then begin
-      RACurrent.ColumnType := TZSQLType(Byte(RACurrent.ColumnType)-3); // no lob streams 4 posgres except OID-BLobs
-      RACurrent.Precision := -1;
-    end;
-    if RACurrent.ColumnType in [stBytes, stBinaryStream] then
-      RACurrent.ColumnCodePage := zCP_Binary;
+  Result := ColumnInfo.ColumnType;
+  if Result in [stUnicodeString, stUnicodeStream] then begin
+    Result := TZSQLType(Byte(Result)-1); // no national chars 4
   end;
-  inherited Create(RAColumns, ConSettings, OpenLobStreams, CachedLobs);
-  RAColumns.Free;
+  if (Result = stAsciiStream) or ((Result = stBinaryStream) and (TZPGColumnInfo(ColumnInfo).TypeOID <> OIDOID)) then
+    Result := TZSQLType(Byte(Result)-3); // no lob streams 4 posgres except OID-BLobs
+  if Result = stString then
+    ColumnCodePage := ConSettings.ClientCodePage.CP;
 end;
+
 
 { TZPostgreSQLOidBlobStream }
 

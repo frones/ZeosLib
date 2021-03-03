@@ -2852,7 +2852,9 @@ var SQLType: TZSQLType;
       R := '';
       Stream.Position := 0;
       L := 0;
+      {$IFDEF WITH_RAWBYTESTRING}
       P := nil;
+      {$ENDIF WITH_RAWBYTESTRING}
       while True do begin
         B := Stream.Read(Buf[0], MaxBufSize);
         if B = 0 then Break;
@@ -3779,7 +3781,7 @@ begin
           else {$ENDIF}{$IFDEF WITH_TSQLTimeStampOffset}
           if vt = VarSQLTimeStampOffset then
             AsTimeStampOffset(Value)
-          else {$ENDIF}raise EVariantError.Create('Unkown Variant type');
+          else {$ENDIF}raise EVariantError.Create(SUnsupportedVariantType);
   end;
  // WriteLn('SQLType <> FSQLType');
   if SQLType <> FSQLType then //mimic the TParam behavior

@@ -58,9 +58,11 @@ interface
 {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
 
 uses
-{$IFDEF USE_SYNCOMMONS}
+  {$IFDEF MORMOT2}
+  mormot.db.core, mormot.core.datetime, mormot.core.text, mormot.core.base,
+  {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
   SynCommons, SynTable,
-{$ENDIF USE_SYNCOMMONS}
+  {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD, Math, Types,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
@@ -585,9 +587,9 @@ type
     {$IFNDEF NO_UTF8STRING}
     function GetUTF8String(ColumnIndex: Integer): UTF8String;
     {$ENDIF}
-    {$IFDEF USE_SYNCOMMONS}
+    {$IFDEF WITH_COLUMNS_TO_JSON}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
-    {$ENDIF USE_SYNCOMMONS}
+    {$ENDIF WITH_COLUMNS_TO_JSON}
   end;
 
   TZAbstractFirebirdInterbasePreparedStatement = class;
@@ -689,9 +691,31 @@ type
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"SQLType" the SQL type code defined in <c>ZDbcIntfs.pas</c></param>
     procedure SetNull(Index: Integer; SQLType: TZSQLType);
+    /// <summary>Sets the designated parameter to a <c>boolean</c> value.
+    ///  The driver converts this to a SQL <c>Ordinal</c> value when it sends it
+    ///  to the database.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetBoolean(Index: Integer; Value: Boolean);
+    /// <summary>Sets the designated parameter to a <c>Byte</c> value.
+    ///  If not supported by provider, the driver converts this to a SQL
+    ///  <c>Ordinal</c> value when it sends it to the database.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetByte(Index: Integer; Value: Byte);
     procedure SetShort(Index: Integer; Value: ShortInt);
+    /// <summary>Sets the designated parameter to a <c>Word</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetWord(Index: Integer; Value: Word);
     procedure SetSmall(Index: Integer; Value: SmallInt);
     procedure SetUInt(Index: Integer; Value: Cardinal);
@@ -701,9 +725,15 @@ type
     procedure SetFloat(Index: Integer; Value: Single);
     procedure SetDouble(Index: Integer; const Value: Double);
     procedure SetCurrency(Index: Integer; const Value: Currency);
-    procedure SetBigDecimal(Index: Integer; const Value: TBCD);
+    /// <summary>Sets the designated parameter to a <c>BigDecimal(TBCD)</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
+    procedure SetBigDecimal(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 
-    procedure SetCharRec(Index: Integer; const Value: TZCharRec); reintroduce;
+    procedure SetCharRec(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec); reintroduce;
     procedure SetString(Index: Integer; const Value: String); reintroduce;
     {$IFNDEF NO_UTF8STRING}
     procedure SetUTF8String(Index: Integer; const Value: UTF8String); reintroduce;
@@ -714,13 +744,13 @@ type
     procedure SetRawByteString(Index: Integer; const Value: RawByteString); reintroduce;
     procedure SetUnicodeString(Index: Integer; const Value: UnicodeString); reintroduce;
 
-    procedure SetDate(Index: Integer; const Value: TZDate); reintroduce; overload;
-    procedure SetTime(Index: Integer; const Value: TZTime); reintroduce; overload;
-    procedure SetTimestamp(Index: Integer; const Value: TZTimeStamp); reintroduce; overload;
+    procedure SetDate(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); reintroduce; overload;
+    procedure SetTime(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); reintroduce; overload;
+    procedure SetTimestamp(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); reintroduce; overload;
 
     procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce; overload;
     procedure SetBytes(Index: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
-    procedure SetGUID(Index: Integer; const Value: TGUID); reintroduce;
+    procedure SetGUID(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID); reintroduce;
     procedure SetBlob(Index: Integer; ASQLType: TZSQLType; const Value: IZBlob); override{keep it virtual because of (set)ascii/uniocde/binary streams};
   end;
 
@@ -2263,7 +2293,7 @@ begin
   inherited AfterClose;
 end;
 
-{$IFDEF USE_SYNCOMMONS}
+{$IFDEF WITH_COLUMNS_TO_JSON}
 procedure TZAbstractInterbaseFirebirdResultSet.ColumnsToJSON(
   JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
 var L, H, I: Integer;
@@ -2309,7 +2339,7 @@ var L, H, I: Integer;
       Clob := nil;
     end;
   end;
-  procedure ReadAsWCLob(Index: Integer; ColumnCodePage: Word);
+  procedure ReadAsWCLob(Index: Integer);
   var Clob: IZCLob;
     Blob: IZBlob;
     PW: Pointer;
@@ -2401,7 +2431,7 @@ begin
           SQL_INT64     : if (sqlscale = 0) then
                             JSONWriter.Add(PISC_INT64(sqldata)^)
                           else if sqlScale = -4 then
-                            JSONWriter.AddCurr64(PISC_INT64(sqldata)^)
+                            JSONWriter.AddCurr64({$IFDEF MORMOT2}PInt64(sqldata){$ELSE}PISC_INT64(sqldata)^{$ENDIF})
                           else begin
                             ScaledOrdinal2Raw(PISC_INT64(sqldata)^, PAnsiChar(FByteBuffer), @P, -sqlscale);
                             JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), PAnsiChar(P)-PAnsiChar(FByteBuffer));
@@ -2410,15 +2440,19 @@ begin
                             if jcoMongoISODate in JSONComposeOptions then
                               JSONWriter.AddShort('ISODate("')
                             else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                              {$IFDEF MORMOT2}
+                              JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              {$ELSE}
                               JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$ENDIF}
                             else
                               JSONWriter.Add('"');
                             isc_decode_date(PISC_TIMESTAMP(sqldata).timestamp_date,
                               TempDate.Year, TempDate.Month, Tempdate.Day);
-                            DateToIso8601PChar(PUTF8Char(FByteBuffer), True, TempDate.Year, TempDate.Month, TempDate.Day);
+                            DateToIso8601PChar(Pointer(FByteBuffer), True, TempDate.Year, TempDate.Month, TempDate.Day);
                             isc_decode_time(PISC_TIMESTAMP(sqldata).timestamp_time,
                               TempDate.Hour, TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                            TimeToIso8601PChar(PUTF8Char(FByteBuffer)+10, True, TempDate.Hour, TempDate.Minute,
+                            TimeToIso8601PChar(Pointer(PAnsiChar(FByteBuffer)+10), True, TempDate.Hour, TempDate.Minute,
                               TempDate.Second, TempDate.Fractions div 10, 'T', jcoMilliseconds in JSONComposeOptions);
                             JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer),19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
@@ -2431,7 +2465,7 @@ begin
                               JSONWriter.Add('"');
                               if ColumnCodePage = zCP_UTF8
                               then ReadUTF8CLob(C)
-                              else ReadAsWCLob(C, ColumnCodePage);
+                              else ReadAsWCLob(C);
                               JSONWriter.Add('"');
                             end else ReadBlob(C);
                           end;
@@ -2440,12 +2474,16 @@ begin
                             if jcoMongoISODate in JSONComposeOptions then
                               JSONWriter.AddShort('ISODate("0000-00-00')
                             else if jcoDATETIME_MAGIC in JSONComposeOptions then begin
+                              {$IFDEF MORMOT2}
+                              JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              {$ELSE}
                               JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$ENDIF}
                             end else
                               JSONWriter.Add('"');
                             isc_decode_time(PISC_TIME(sqldata)^, TempDate.Hour,
                               TempDate.Minute, Tempdate.Second, Tempdate.Fractions);
-                            TimeToIso8601PChar(PUTF8Char(FByteBuffer), True, TempDate.Hour, TempDate.Minute,
+                            TimeToIso8601PChar(Pointer(FByteBuffer), True, TempDate.Hour, TempDate.Minute,
                               TempDate.Second,  TempDate.Fractions div 10, 'T', jcoMilliseconds in JSONComposeOptions);
                             JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer),9+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
@@ -2456,12 +2494,16 @@ begin
                             if jcoMongoISODate in JSONComposeOptions then
                               JSONWriter.AddShort('ISODate("')
                             else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                              {$IFDEF MORMOT2}
+                              JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              {$ELSE}
                               JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              {$ENDIF}
                             else
                               JSONWriter.Add('"');
                             isc_decode_date(PISC_DATE(sqldata)^, TempDate.Year, TempDate.Month, Tempdate.Day);
-                            DateToIso8601PChar(PUTF8Char(FByteBuffer), True, TempDate.Year, TempDate.Month, Tempdate.Day);
-                            JSONWriter.AddNoJSONEscape(PUTF8Char(FByteBuffer),10);
+                            DateToIso8601PChar(Pointer(FByteBuffer), True, TempDate.Year, TempDate.Month, Tempdate.Day);
+                            JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer),10);
                             if jcoMongoISODate in JSONComposeOptions
                             then JSONWriter.AddShort('Z")')
                             else JSONWriter.Add('"');
@@ -2480,7 +2522,7 @@ begin
       JSONWriter.Add('}');
   end;
 end;
-{$ENDIF USE_SYNCOMMONS}
+{$ENDIF WITH_COLUMNS_TO_JSON}
 
 constructor TZAbstractInterbaseFirebirdResultSet.Create(
   const Statement: IZStatement; const SQL: string);
@@ -3865,7 +3907,10 @@ begin
   Result := TZInterbaseFirebirdBindList;
 end;
 
-{$IFDEF FPC}{$PUSH}{$WARN 4056 off : Conversion between ordinals and pointers is not portable}{$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 4056 off : Conversion between ordinals and pointers is not portable}
+  {$WARN 4055 off : Conversion between ordinals and pointers is not portable}
+{$ENDIF}
 function TZAbstractFirebirdInterbasePreparedStatement.GetExecuteBlockString(
   RemainingArrayRows: Integer; XSQLDAMaxSize: Cardinal; var PreparedRowsOfArray,
   MaxRowsPerBatch: Integer; PlainDriver: TZInterbaseFirebirdPlainDriver): RawByteString;
@@ -4216,16 +4261,8 @@ jmpWriteLob:            WriteLobBuffer(Index, P, Len);
 end;
 {$ENDIF NO_ANSISTRING}
 
-{**
-  Sets the designated parameter to a <code>BigDecimal</code> value.
-  The driver converts this to an SQL <code>NUMERIC</code> value when
-  it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetBigDecimal(Index: Integer;
-  const Value: TBCD);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 var L: Cardinal;
 begin
   {$IFNDEF GENERIC_INDEX}Dec(Index);{$ENDIF}
@@ -4300,14 +4337,6 @@ begin
   end;
 end;
 
-{**
-  Sets the designated parameter to <code>boolean</code> value.
-  The driver converts this
-  to an SQL <code>BIT</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetBoolean(Index: Integer;
   Value: Boolean);
 begin
@@ -4342,14 +4371,6 @@ begin
   end;
 end;
 
-{**
-  Sets the designated parameter to a <code>unsigned 8Bit integer</code> value.
-  The driver converts this
-  to an SQL <code>Byte</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetByte(Index: Integer; Value: Byte);
 begin
   SetSmall(Index, Value);
@@ -4411,7 +4432,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetCharRec(Index: Integer;
-  const Value: TZCharRec);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
 begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
@@ -4502,7 +4523,7 @@ end;
 }
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "DT" does not seem to be initialized} {$ENDIF}
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetDate(Index: Integer;
-  const Value: TZDate);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 var L: LengthInt;
   DT: TDateTime;
 begin
@@ -4611,7 +4632,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetGUID(Index: Integer;
-  const Value: TGUID);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID);
 var P: PAnsiChar;
   L: Cardinal;
 begin
@@ -5054,7 +5075,7 @@ end;
 }
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF}
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetTime(Index: Integer;
-  const Value: TZTime);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 var L: LengthInt;
   DT: TDateTime;
 begin
@@ -5100,7 +5121,7 @@ end;
 }
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF}
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetTimestamp(Index: Integer;
-  const Value: TZTimeStamp);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 var L: LengthInt;
   DT: TDateTime;
 begin

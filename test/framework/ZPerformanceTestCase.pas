@@ -566,9 +566,13 @@ begin
   Query := CreateQuery;
   Query.SQL.Text := 'select * from '+PerformanceTable;
   Query.Open;
+  DataSetTypes := nil;
   SetLength(DataSetTypes, Query.Fields.Count);
+  ResultSetTypes := nil;
   SetLength(ResultSetTypes, Query.Fields.Count);
+  FieldSizes := nil;
   SetLength(FieldSizes, Query.Fields.Count);
+  FieldNames := nil;
   SetLength(FieldNames, Query.Fields.Count);
   for i := 0 to Query.Fields.Count -1 do
   begin

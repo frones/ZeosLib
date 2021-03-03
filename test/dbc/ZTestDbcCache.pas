@@ -499,6 +499,7 @@ end;
 {**
   Test for BigDecimal field
 }
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BCD" does not seem to be initialized}{$ENDIF}
 procedure TZTestRowAccessorCase.TestRowAccessorBigDecimal;
 var
   WasNull: Boolean;
@@ -514,10 +515,13 @@ begin
     CheckEquals(BCDToStr(FBigDecimal), GetString(stBigDecimalIndex, WasNull), 'GetString');
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
+
 
 {**
   Test for BinaryStream field
 }
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "Buffer" does not seem to be initialized}{$ENDIF}
 procedure TZTestRowAccessorCase.TestRowAccessorBinaryStream;
 var
   Stream: TStream;
@@ -541,10 +545,13 @@ begin
     end;
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
+
 
 {**
   Test for Boolean field
 }
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BCD" does not seem to be initialized}{$ENDIF}
 procedure TZTestRowAccessorCase.TestRowAccessorBoolean;
 var
   WasNull: Boolean;
@@ -565,10 +572,12 @@ begin
     CheckEquals('True', GetString(stBooleanIndex, WasNull), 'GetString');
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 {**
   Test for Byte field
 }
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BCD" does not seem to be initialized}{$ENDIF}
 procedure TZTestRowAccessorCase.TestRowAccessorByte;
 var
   WasNull: Boolean;
@@ -589,6 +598,7 @@ begin
     CheckEquals(IntToStr(FByte), GetString(stByteIndex, WasNull), 'GetString');
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 {**
   Test for Bytes field
@@ -621,6 +631,7 @@ end;
 {**
   Test for Date field
 }
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "DT,D,TS" does not seem to be initialized}{$ENDIF}
 procedure TZTestRowAccessorCase.TestRowAccessorDate;
 var
   WasNull: Boolean;
@@ -640,10 +651,12 @@ begin
     Check(ZCompareDate(FDate, D)= 0, 'GetTimestamp');
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 {**
   Test for Double field
 }
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BCD, BCD2" does not seem to be initialized}{$ENDIF}
 procedure TZTestRowAccessorCase.TestRowAccessorDouble;
 var
   WasNull: Boolean;
@@ -665,6 +678,7 @@ begin
     CheckEquals(FloatToSQLStr(FDouble), GetString(stDoubleIndex, WasNull), 'GetString');
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 {**
   Test for fill all fileds by their values
@@ -682,6 +696,7 @@ end;
 {**
   Test for Float field
 }
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BCD, BCD2" does not seem to be initialized}{$ENDIF}
 procedure TZTestRowAccessorCase.TestRowAccessorFloat;
 var
   BCD, BCD2: TBCD;
@@ -703,10 +718,12 @@ begin
     CheckEquals(FloatToSQLStr(FFloat), GetString(stFloatIndex, WasNull), 'GetString');
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 {**
   Test for Integer field
 }
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BCD" does not seem to be initialized}{$ENDIF}
 procedure TZTestRowAccessorCase.TestRowAccessorInteger;
 var
   WasNull: Boolean;
@@ -727,10 +744,12 @@ begin
     CheckEquals(IntToStr(FInt), GetString(stIntegerIndex, WasNull), 'GetString');
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 {**
   Test for Long field
 }
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BCD" does not seem to be initialized}{$ENDIF}
 procedure TZTestRowAccessorCase.TestRowAccessorLong;
 var
   WasNull: Boolean;
@@ -751,6 +770,7 @@ begin
     CheckEquals(IntToStr(FLong), GetString(stLongIndex, WasNull), 'GetString');
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 // Fr0sT: this method exists from the beginning but does some magic.
 // Just added blank check here to remove "no checks" warning
@@ -776,6 +796,7 @@ end;
 {**
   Test for Short field
 }
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BCD" does not seem to be initialized}{$ENDIF}
 procedure TZTestRowAccessorCase.TestRowAccessorShort;
 var
   WasNull: Boolean;
@@ -796,7 +817,9 @@ begin
     CheckEquals(IntToStr(FShort), GetString(stShortIndex, WasNull), 'GetString');
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BCD" does not seem to be initialized}{$ENDIF}
 procedure TZTestRowAccessorCase.TestRowAccessorSmall;
 var
   WasNull: Boolean;
@@ -817,10 +840,12 @@ begin
     CheckEquals(IntToStr(FSmall), GetString(stSmallIndex, WasNull), 'GetString');
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 {**
   Test for String field
 }
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BCD" does not seem to be initialized}{$ENDIF}
 procedure TZTestRowAccessorCase.TestRowAccessorString;
 var
   WasNull: Boolean;
@@ -861,16 +886,17 @@ begin
     SetString(stStringIndex, FString);
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 {**
   Test for Time field
 }
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BCD" does not seem to be initialized}{$ENDIF}
 procedure TZTestRowAccessorCase.TestRowAccessorTime;
 var
   WasNull: Boolean;
   TS: TZTimeStamp;
   T: TZTime absolute TS;
-  D: TZDate absolute TS;
   DT, DT2: TDateTime;
 begin
   with RowAccessor do
@@ -886,10 +912,12 @@ begin
     CheckEqualsDate(DT, DT2, [], 'GetTimestamp');
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 {**
   Test for Timestamp field
 }
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BCD" does not seem to be initialized}{$ENDIF}
 procedure TZTestRowAccessorCase.TestRowAccessorTimestamp;
 var
   WasNull: Boolean;
@@ -914,16 +942,18 @@ begin
     CheckEqualsDate(DT, DT2, [], 'GetTimestamp');
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 {**
   Test for UnicodeStream field
 }
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "BufferWideChar" does not seem to be initialized}{$ENDIF}
 procedure TZTestRowAccessorCase.TestRowAccessorUnicodeStream;
 var
   Stream: TStream;
   ReadNum: Integer;
   BufferWideChar: array[0..100] of Char;
-  ResultString: string;
+  ResultString: UnicodeString;
   WasNull: Boolean;
 begin
   with RowAccessor do
@@ -942,6 +972,7 @@ begin
     end;
   end;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 {**
   Fill fields by it values

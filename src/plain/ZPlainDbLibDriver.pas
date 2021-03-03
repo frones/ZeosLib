@@ -1693,8 +1693,10 @@ var
   OldFreeTDSMessageHandle: TDBMSGHANDLE_PROC_cdecl = nil;
   OldSybaseErrorHandle: {$IFDEF MSWINDOWS}TDBERRHANDLE_PROC_stdcall{$ELSE}TDBERRHANDLE_PROC_cdecl{$ENDIF} = nil;
   OldSybaseMessageHandle: {$IFDEF MSWINDOWS}TDBMSGHANDLE_PROC_stdcall{$ELSE}TDBMSGHANDLE_PROC_cdecl{$ENDIF} = nil;
+  {$IFDEF MSWINDOWS}
   OldMsSQLErrorHandle: TDBERRHANDLE_PROC_cdecl = nil;
   OldMsSQLMessageHandle: TDBMSGHANDLE_PROC_cdecl = nil;
+  {$ENDIF MSWINDOWS}
   ErrorCS: TCriticalSection;
   SQLErrors: TZDBLibErrorList;
   SQLMessages: TZDBLibMessageList;
@@ -2654,7 +2656,7 @@ begin
 end;
 {$ENDIF MSWINDOWS}
 
-{** Set the TDS packet size in an application’s LOGINREC structure. *}
+{** Set the TDS packet size in an application's LOGINREC structure. *}
 function TZDBLIBPLainDriver.dbSetLPacket(Login: PLOGINREC;
   packet_size: Word): RETCODE;
 begin
@@ -2672,7 +2674,7 @@ begin
   Result := dbsetLName(login, Password, DBSETPWD);
 end;
 
-{** Set the TDS packet size in an application’s LOGINREC structure. *}
+{** Set the TDS packet size in an application's LOGINREC structure. *}
 function TZDBLIBPLainDriver.dbSetLSecure(Login: PLOGINREC): RETCODE;
 begin
   if FDBLibraryVendorType = lvtMS
@@ -2761,7 +2763,7 @@ begin
   else Result := FdbUse_stdcall(dbProc, dbName);
 end;
 
-{** Determine whether the specified regular result column’s data can vary in length. *}
+{** Determine whether the specified regular result column's data can vary in length. *}
 function TZDBLIBPLainDriver.dbVaryLen(dbProc: PDBPROCESS;
   Column: Integer): DBBOOL;
 begin
@@ -3148,8 +3150,8 @@ begin
         OldFreeTDSErrorHandle := dberrhandle(FreeTDSErrorHandle);
         OldFreeTDSMessageHandle := dbmsghandle(FreeTDSMessageHandle);
       end else begin
-        OldMsSQLErrorHandle := dberrhandle(DbLibErrorHandle);
-        OldMsSQLMessageHandle := dbmsghandle(DbLibMessageHandle);
+        {$IFDEF MSWINDOWS}OldMsSQLErrorHandle{$ELSE}OldSybaseErrorHandle{$ENDIF}  := dberrhandle(DbLibErrorHandle);
+        {$IFDEF MSWINDOWS}OldMsSQLMessageHandle{$ELSE}OldSybaseMessageHandle{$ENDIF} := dbmsghandle(DbLibMessageHandle);
       end;
       Assert(dbintit = SUCCEED, 'dbinit failed');
     end;

@@ -58,7 +58,7 @@ interface
 {$IFDEF ENABLE_PROXY}
 
 uses SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
-  {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZCompatibility, ZPlainDriver,
+  ZCompatibility, ZPlainDriver,
   {$IFDEF ZEOS_PROXY_USE_INTERNAL_PROXY}ZPlainProxyDriverInternalProxy, {$ENDIF}
   ZPlainProxyDriverIntf;
 

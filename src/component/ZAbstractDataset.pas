@@ -944,6 +944,7 @@ begin
     Self.CancelUpdates;
     Self.CurrentRows.Clear;
     Self.CurrentRow:=0;
+    CachedResultSet.ResetCursor;
     Resync([]);
     InitRecord(ActiveBuffer);
   end;

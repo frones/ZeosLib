@@ -57,7 +57,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 
-uses {$IFDEF OLDFPC}ZClasses, {$ENDIF}ZCompatibility, ZPlainDriver;
+uses ZCompatibility, ZPlainDriver;
 
 const
   WINDOWS_DLL_LOCATION   = 'libpq.dll';

@@ -1338,11 +1338,13 @@ begin
   end;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Sender,..." not used} {$ENDIF}
 procedure TZTestCompPostgreSQLBugReport.TestSF274_OnNotify(Sender: TObject; Event: string;
         ProcessID: Integer; Payload: string);
 begin
   TestSF274_GotNotified := true;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZTestCompPostgreSQLBugReport.TestMarsupilami1;
 var

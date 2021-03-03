@@ -55,9 +55,15 @@ interface
 
 {$I ZDbc.inc}
 
-{$IFNDEF ZEOS_DISABLE_ASA}
+{$IFNDEF ZEOS_DISABLE_SQLANY}
 
-uses FmtBCD, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+uses
+  {$IFDEF MORMOT2}
+  mormot.db.core, mormot.core.datetime, mormot.core.text, mormot.core.base,
+  {$ELSE MORMOT2} {$IFDEF USE_SYNCOMMONS}
+  SynCommons, SynTable,
+  {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
+  FmtBCD, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}
   System.Types{$IFNDEF NO_UNIT_CONTNRS},Contnrs{$ENDIF}
@@ -123,9 +129,9 @@ type
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); reintroduce; overload;
     procedure GetTimestamp(ColumnIndex: Integer; var Result: TZTimeStamp); reintroduce; overload;
     function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
-    {$IFDEF USE_SYNCOMMONS}
+    {$IFDEF WITH_COLUMNS_TO_JSON}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
-    {$ENDIF USE_SYNCOMMONS}
+    {$ENDIF WITH_COLUMNS_TO_JSON}
   end;
 
   { TZSQLAnywhereResultSet }
@@ -135,6 +141,23 @@ type
     procedure Open; override;
   public
     function Next: Boolean; override;
+    /// <summary>Moves the cursor to the given row number in
+    ///  this <c>ResultSet</c> object. If the row number is positive, the cursor
+    ///  moves to the given row number with respect to the beginning of the
+    ///  result set. The first row is row 1, the second is row 2, and so on.
+    ///  If the given row number is negative, the cursor moves to
+    ///  an absolute row position with respect to the end of the result set.
+    ///  For example, calling the method <c>absolute(-1)</c> positions the
+    ///  cursor on the last row; calling the method <c>absolute(-2)</c>
+    ///  moves the cursor to the next-to-last row, and so on. An attempt to
+    ///  position the cursor beyond the first/last row in the result set leaves
+    ///  the cursor before the first row or after the last row.
+    ///  <B>Note:</B> Calling <c>absolute(1)</c> is the same
+    ///  as calling <c>first()</c>. Calling <c>absolute(-1)</c>
+    ///  is the same as calling <c>last()</c>.</summary>
+    /// <param>"Row" the absolute position to be moved.</param>
+    /// <returns><c>true</c> if the cursor is on the result set;<c>false</c>
+    ///  otherwise</returns>
     function MoveAbsolute(Row: Integer): Boolean; override;
   end;
 
@@ -146,7 +169,33 @@ type
       a_sqlany_stmt: PPa_sqlany_stmt; a_sqlany_bind_paramArray: Pa_sqlany_bind_paramArray;
       BindList: TZBindList);
   public
+    /// <summary>Moves the cursor down one row from its current position. A
+    ///  <c>ResultSet</c> cursor is initially positioned before the first row;
+    ///  the first call to the method <c>next</c> makes the first row the
+    ///  current row; the second call makes the second row the current row, and
+    ///  so on. If an input stream is open for the current row, a call to the
+    ///  method <c>next</c> will implicitly close it. A <c>ResultSet</c>
+    ///  object's warning chain is cleared when a new row is read.
+    /// <returns><c>true</c> if the new current row is valid; <c>false</c> if
+    ///  there are no more rows</returns>
     function Next: Boolean; override;
+    /// <summary>Moves the cursor to the given row number in
+    ///  this <c>ResultSet</c> object. If the row number is positive, the cursor
+    ///  moves to the given row number with respect to the beginning of the
+    ///  result set. The first row is row 1, the second is row 2, and so on.
+    ///  If the given row number is negative, the cursor moves to
+    ///  an absolute row position with respect to the end of the result set.
+    ///  For example, calling the method <c>absolute(-1)</c> positions the
+    ///  cursor on the last row; calling the method <c>absolute(-2)</c>
+    ///  moves the cursor to the next-to-last row, and so on. An attempt to
+    ///  position the cursor beyond the first/last row in the result set leaves
+    ///  the cursor before the first row or after the last row.
+    ///  <B>Note:</B> Calling <c>absolute(1)</c> is the same
+    ///  as calling <c>first()</c>. Calling <c>absolute(-1)</c>
+    ///  is the same as calling <c>last()</c>.</summary>
+    /// <param>"Row" the absolute position to be moved.</param>
+    /// <returns><c>true</c> if the cursor is on the result set;<c>false</c>
+    ///  otherwise</returns>
     function MoveAbsolute(Row: Integer): Boolean; override;
   end;
 
@@ -160,6 +209,9 @@ type
   { TZSQLAnywhereRowAccessor }
 
   TZSQLAnywhereRowAccessor = class(TZRowAccessor)
+  protected
+    class function MetadataToAccessorType(ColumnInfo: TZColumnInfo;
+      ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; override;
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
       const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
@@ -244,9 +296,9 @@ type
   End;
 
 
-{$ENDIF ZEOS_DISABLE_ASA}
+{$ENDIF ZEOS_DISABLE_SQLANY}
 implementation
-{$IFNDEF ZEOS_DISABLE_ASA}
+{$IFNDEF ZEOS_DISABLE_SQLANY}
 
 uses SysUtils, TypInfo,
   ZFastCode, ZSysUtils, ZEncoding,  ZMessages, ZDbcLogging, ZDbcUtils,
@@ -741,6 +793,136 @@ begin
     Result := 0;
 end;
 
+{$IFDEF WITH_COLUMNS_TO_JSON}
+procedure TZAbstractSQLAnywhereResultSet.ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
+var L: NativeUInt;
+    P: Pointer;
+    C, H, I: SmallInt;
+    native_type: Ta_sqlany_native_type;
+    procedure AddClob(ColumnCodePage: Word);
+    var Clob: IZCLob;
+    begin
+      JSONWriter.Add('"');
+      Clob := TZSQLAnyCLob.Create(FSQLAnyConnection, Fdata_info, Fa_sqlany_stmt^,
+        C, lsmRead, ColumnCodePage, FOpenLobStreams, @FRowNo);
+      P := Clob.GetPAnsiChar(zCP_UTF8, FRawTemp, L);
+      JSONWriter.AddJSONEscape(P, L);
+      JSONWriter.Add('"');
+      Clob := nil;
+    end;
+    procedure AddBlob;
+    var Blob: IZBLob;
+    begin
+      JSONWriter.Add('"');
+      Blob := TZSQLAnyBLob.Create(FSQLAnyConnection,
+        Fdata_info, Fa_sqlany_stmt^, C, lsmRead, zCP_Binary, FOpenLobStreams, @FRowNo);
+      P := Blob.GetBuffer(FRawTemp, L);
+      JSONWriter.WrBase64(P, L, True);
+      JSONWriter.Add('"');
+      Blob := nil;
+    end;
+begin
+  //init
+  if JSONWriter.Expand then
+    JSONWriter.Add('{');
+  if Assigned(JSONWriter.Fields) then
+    H := High(JSONWriter.Fields) else
+    H := High(JSONWriter.ColNames);
+  for I := 0 to H do begin
+    if Pointer(JSONWriter.Fields) = nil then
+      C := I else
+      C := JSONWriter.Fields[i];
+    {$R-}
+    if FillData(C, native_type) then with TZSQLAnywhereColumnInfo(ColumnsInfo[C]) do begin
+      if JSONWriter.Expand then
+        JSONWriter.AddString(JSONWriter.ColNames[I]);
+      case native_type of
+        DT_NOTYPE           : JSONWriter.AddShort('""');
+        DT_SMALLINT         : JSONWriter.Add(PSmallint(FData)^);
+        DT_INT              : JSONWriter.Add(PInteger(FData)^);
+        //DT_DECIMAL bound to double
+        DT_FLOAT            : JSONWriter.AddSingle(PSingle(FData)^);
+        DT_DOUBLE           : JSONWriter.AddDouble(PDouble(FData)^);
+        //DT_DATE bound to TIMESTAMP_STRUCT
+        DT_STRING,
+        DT_NSTRING,
+        DT_FIXCHAR,
+        DT_NFIXCHAR,
+        DT_VARCHAR,
+        DT_NVARCHAR         : begin
+                                JSONWriter.Add('"');
+                                if ColumnCodePage = zCP_UTF8 then
+                                  JSONWriter.AddJSONEscape(FData, FDataLen)
+                                else begin
+                                  PRawToUnicode(FData, FDataLen, ColumnCodePage, FUniTemp);
+                                  JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
+                                end;
+                                JSONWriter.Add('"');
+                              end;
+        DT_LONGNVARCHAR,
+        DT_LONGVARCHAR      : AddClob(ColumnCodePage);
+        DT_DATE,
+        DT_TIME,
+        DT_TIMESTAMP,
+        DT_TIMESTAMP_STRUCT : begin
+                                if jcoMongoISODate in JSONComposeOptions then
+                                  JSONWriter.AddShort('ISODate("')
+                                else if jcoDATETIME_MAGIC in JSONComposeOptions then
+                                  {$IFDEF MORMOT2}
+                                  JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                  {$ELSE}
+                                  JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                  {$ENDIF}
+                                else
+                                  JSONWriter.Add('"');
+                                if native_type = DT_TIMESTAMP_STRUCT then begin
+                                  if PZSQLAnyDateTime(FData).Year < 0 then
+                                    JSONWriter.Add('-');
+                                  if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stTime) then begin
+                                    DateToIso8601PChar(Pointer(fByteBuffer), True, Abs(PZSQLAnyDateTime(FData).Year),
+                                    PZSQLAnyDateTime(FData).Month + 1, PZSQLAnyDateTime(FData).Day);
+                                    JSONWriter.AddNoJSONEscape(Pointer(fByteBuffer),10);
+                                  end else if jcoMongoISODate in JSONComposeOptions then
+                                    JSONWriter.AddShort('0000-00-00');
+                                  if (TZColumnInfo(ColumnsInfo[C]).ColumnType <> stDate) then begin
+                                    TimeToIso8601PChar(Pointer(fByteBuffer), True, PZSQLAnyDateTime(FData).Hour,
+                                    PZSQLAnyDateTime(FData).Minute, PZSQLAnyDateTime(FData).Second,
+                                    PZSQLAnyDateTime(FData).MicroSecond div 1000, 'T', jcoMilliseconds in JSONComposeOptions);
+                                    JSONWriter.AddNoJSONEscape(Pointer(fByteBuffer),9 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                                  end;
+                                end else
+                                  JSONWriter.AddNoJSONEscape(FData, FDataLen);
+                                if jcoMongoISODate in JSONComposeOptions
+                                then JSONWriter.AddShort('Z)"')
+                                else JSONWriter.Add('"');
+                              end;
+        DT_BINARY           : JSONWriter.WrBase64(FData, FDataLen, True);
+        DT_LONGBINARY       : AddBlob;
+        //DT_VARIABLE: ?
+        DT_TINYINT          : JSONWriter.Add(PByte(FData)^);
+        DT_BIGINT           : JSONWriter.Add(PInt64(FData)^);
+        DT_UNSINT           : JSONWriter.AddU(PCardinal(FData)^);
+        DT_UNSSMALLINT      : JSONWriter.AddU(PWord(FData)^);
+        DT_UNSBIGINT        : JSONWriter.AddQ(PUInt64(FData)^);
+        DT_BIT              : JSONWriter.AddShort(JSONBool[PByte(FData)^ <> 0]);
+        else raise CreateConversionError(C);
+      end;
+        JSONWriter.Add(',');
+    end else if JSONWriter.Expand then begin
+      if not (jcsSkipNulls in JSONComposeOptions) then begin
+        JSONWriter.AddString(JSONWriter.ColNames[I]);
+        JSONWriter.AddShort('null,')
+      end;
+    end else JSONWriter.AddShort('null,')
+  end;
+  if jcoEndJSONObject in JSONComposeOptions then begin
+    JSONWriter.CancelLastComma; // cancel last ','
+    if JSONWriter.Expand then
+      JSONWriter.Add('}');
+  end;
+end;
+{$ENDIF WITH_COLUMNS_TO_JSON}
+
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -1218,33 +1400,6 @@ end;
 
 { TZSQLAnywhereResultSet }
 
-{**
-  Moves the cursor to the given row number in
-  this <code>ResultSet</code> object.
-
-  <p>If the row number is positive, the cursor moves to
-  the given row number with respect to the
-  beginning of the result set.  The first row is row 1, the second
-  is row 2, and so on.
-
-  <p>If the given row number is negative, the cursor moves to
-  an absolute row position with respect to
-  the end of the result set.  For example, calling the method
-  <code>absolute(-1)</code> positions the
-  cursor on the last row; calling the method <code>absolute(-2)</code>
-  moves the cursor to the next-to-last row, and so on.
-
-  <p>An attempt to position the cursor beyond the first/last row in
-  the result set leaves the cursor before the first row or after
-  the last row.
-
-  <p><B>Note:</B> Calling <code>absolute(1)</code> is the same
-  as calling <code>first()</code>. Calling <code>absolute(-1)</code>
-  is the same as calling <code>last()</code>.
-
-  @return <code>true</code> if the cursor is on the result set;
-    <code>false</code> otherwise
-}
 function TZSQLAnywhereResultSet.MoveAbsolute(Row: Integer): Boolean;
 var fetched_rows: Tsacapi_i32;
 label jmpErr;
@@ -1475,6 +1630,7 @@ begin
   end;
   FColumnData := P;
   inherited Open;
+  FCursorLocation := rctServer;
 end;
 
 { TZSQLAnywhereCachedResultSet }
@@ -1490,23 +1646,8 @@ end;
 constructor TZSQLAnywhereRowAccessor.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
   CachedLobs: WordBool);
-var TempColumns: TObjectList;
-  I: Integer;
-  Current: TZColumnInfo;
 begin
-  TempColumns := TObjectList.Create(True);
-  CopyColumnsInfo(ColumnsInfo, TempColumns);
-  for I := 0 to TempColumns.Count -1 do begin
-    Current := TZColumnInfo(TempColumns[i]);
-    if Current.ColumnType in [stUnicodeString, stUnicodeStream] then
-      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-1); // no national chars in 4 SQLAny
-    { eh: we can stream the data with SQLAny, but we need always to fetch the
-      current row and we have no descriptor so we cache the data }
-    if Current.ColumnType in [stAsciiStream, stBinaryStream] then
-      Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-3);
-  end;
-  inherited Create(TempColumns, ConSettings, OpenLobStreams, False);
-  TempColumns.Free;
+  inherited Create(ColumnsInfo, ConSettings, OpenLobStreams, False);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -1545,6 +1686,21 @@ begin
     Stream.Free;
     Lob := nil;
   end;
+end;
+
+class function TZSQLAnywhereRowAccessor.MetadataToAccessorType(
+  ColumnInfo: TZColumnInfo; ConSettings: PZConSettings;
+  Var ColumnCodePage: Word): TZSQLType;
+begin
+  Result := ColumnInfo.ColumnType;
+  if Result in [stUnicodeString, stUnicodeStream] then
+    Result := TZSQLType(Byte(Result)-1); // no national chars 4 SQLAny
+  { eh: we can stream the data with SQLAny, but we need always to fetch the
+    current row and we have no descriptor so we cache the data }
+  if (Result in [stAsciiStream, stBinaryStream]) then
+    Result := TZSQLType(Byte(Result)-3);
+  if Result = stString then
+    ColumnCodePage := ConSettings.ClientCodePage.CP;
 end;
 
 { TZSQLAnyStream }
@@ -1759,62 +1915,24 @@ begin
       ColumnInfo.IsBound := True;
     end;
   end;
+  LastRowNo := 1;
+  FCursorLocation := rctClient;
 end;
 
-{**
-  Moves the cursor to the given row number in
-  this <code>ResultSet</code> object.
-
-  <p>If the row number is positive, the cursor moves to
-  the given row number with respect to the
-  beginning of the result set.  The first row is row 1, the second
-  is row 2, and so on.
-
-  <p>If the given row number is negative, the cursor moves to
-  an absolute row position with respect to
-  the end of the result set.  For example, calling the method
-  <code>absolute(-1)</code> positions the
-  cursor on the last row; calling the method <code>absolute(-2)</code>
-  moves the cursor to the next-to-last row, and so on.
-
-  <p>An attempt to position the cursor beyond the first/last row in
-  the result set leaves the cursor before the first row or after
-  the last row.
-
-  <p><B>Note:</B> Calling <code>absolute(1)</code> is the same
-  as calling <code>first()</code>. Calling <code>absolute(-1)</code>
-  is the same as calling <code>last()</code>.
-
-  @return <code>true</code> if the cursor is on the result set;
-    <code>false</code> otherwise
-}
 function TZSQLAynwhereOutParamResultSet.MoveAbsolute(Row: Integer): Boolean;
 begin
-  { Checks for maximum row. }
-  Result := (Row >=0) and (Row <= 1);
-  RowNo := Row;
+  Result := not Closed and ((Row = 1) or (Row = 0));
+  if (Row >= 0) and (Row <= 2) then
+    RowNo := Row;
 end;
 
-{**
-  Moves the cursor down one row from its current position.
-  A <code>ResultSet</code> cursor is initially positioned
-  before the first row; the first call to the method
-  <code>next</code> makes the first row the current row; the
-  second call makes the second row the current row, and so on.
-
-  <P>If an input stream is open for the current row, a call
-  to the method <code>next</code> will
-  implicitly close it. A <code>ResultSet</code> object's
-  warning chain is cleared when a new row is read.
-
-  @return <code>true</code> if the new current row is valid;
-    <code>false</code> if there are no more rows
-}
 function TZSQLAynwhereOutParamResultSet.Next: Boolean;
 begin
-  Result := RowNo = 0;
-  if Result then
-    RowNo := 1;
+  Result := not Closed and (RowNo = 0);
+  if RowNo = 0 then
+    RowNo := 1
+  else if RowNo = 1 then
+    RowNo := 2; //set AfterLast
 end;
 
 { TZSQLAnyWhereResultSetMetadataV4Up }
@@ -1843,5 +1961,5 @@ begin
 end;
 
 initialization
-{$ENDIF ZEOS_DISABLE_ASA}
+{$ENDIF ZEOS_DISABLE_SQLANY}
 end.
