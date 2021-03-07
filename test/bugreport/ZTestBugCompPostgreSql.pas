@@ -1540,7 +1540,7 @@ var
   Separator: String;
 begin
   {$IFDEF WITH_FORMATSETTINGS}
-  Separator: FormatSettings.DecimalSeparator;
+  Separator := FormatSettings.DecimalSeparator;
   {$ELSE}
   Separator := DecimalSeparator;
   {$ENDIF}
