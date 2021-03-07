@@ -119,6 +119,7 @@ type
     procedure TestSF394;
     procedure TestSF460_A;
     procedure TestSF460_B;
+    procedure TestSF478;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -136,7 +137,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 
 uses ZSysUtils, ZTestCase, ZPgEventAlerter, DateUtils, ZEncoding,
-  ZDbcPostgreSqlMetadata, ZPlainPostgreSqlDriver, ZDatasetUtils,
+  ZDbcPostgreSqlMetadata, ZPlainPostgreSqlDriver, ZDatasetUtils, ZFormatSettings,
   (*{$IFDEF WITH_VCL_PREFIX}Vcl.Forms{$ELSE}Forms{$ENDIF}*)ZTestConfig
   {$IFDEF WITH_TDATASETPROVIDER},Provider, DBClient{$ENDIF};
 
@@ -1529,6 +1530,44 @@ begin
     Query.Close;
   finally
     FreeAndNil(Query);
+  end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestSF478;
+var
+  Query: TZQuery;
+  Temp: String;
+  Separator: String;
+begin
+  {$IFDEF WITH_FORMATSETTINGS}
+  Separator: FormatSettings.DecimalSeparator;
+  {$ELSE}
+  Separator := DecimalSeparator;
+  {$ENDIF}
+
+  try
+    Connection.FormatSettings.DisplayTimeFormatSettings.Format := 'hh:nn:ss.zzz';
+    Connection.FormatSettings.EditTimeFormatSettings.Format := 'hh:nn:ss.zzz';
+    Connection.FormatSettings.DisplayTimeFormatSettings.SecondFractionOption := foRightZerosTrimmed;
+    Connection.Connect;
+    Connection.ExecuteDirect('insert into date_values (d_id, d_time) values (20210307, ''2021-03-07 14:00:00'')');
+    Query := CreateQuery;
+    Query.SQL.Text := 'select d_id, d_time from date_values where d_id = 20210307';
+    Query.Open;
+    Temp := Query.FieldByName('d_time').DisplayText;
+    CheckEquals(Length(Temp), 8, 'No decimal separator is expected since there are no fractions to display. Result is >' + Temp + '<.');
+    Query.Edit;
+    Query.FieldByName('d_time').AsDateTime := EncodeTime(14, 0, 0, 123);
+    Query.Post;
+    Temp := Query.FieldByName('d_time').DisplayText;
+    CheckNotEquals(Pos(Separator , Temp), 0, 'Decimal separator expected in Result but no >' + Separator + '< found in >' + Temp + '<.');
+  finally
+    if Assigned(Query) then
+      FreeAndNil(Query);
+    if Connection.Connected then
+      Connection.ExecuteDirect('delete from date_values where d_id = 20210307');
+    Connection.FormatSettings.DisplayTimeFormatSettings.Format := '';
+    Connection.FormatSettings.EditTimeFormatSettings.Format := '';
   end;
 end;
 
