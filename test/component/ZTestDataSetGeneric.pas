@@ -114,6 +114,7 @@ type
     procedure TestVeryLargeBlobs;
     procedure TestKeyWordParams;
     procedure TestOldValue;
+    procedure TestCloseOnDisconnect;
   end;
 
   {$IF not declared(TTestMethod)}
@@ -2089,6 +2090,116 @@ begin
     finally
       Query.Free;
     end;
+  end;
+end;
+
+procedure TZGenericTestDataSet.TestCloseOnDisconnect;
+var Query: TZQuery;
+   NewConnection: TZConnection;
+begin
+  Query := CreateQuery;
+  NewConnection := CreateDatasetConnection;
+  try
+    Query.SQL.Text := 'select * from people';
+    Query.AsClientDataset := True;
+    Query.Open;
+    Query.FetchAll;
+    Query.Connection := nil;
+    Check(Query.Active, 'Query should be active');
+    Query.First;
+    Query.Last;
+    Check(Query.LastRowFetched);
+    Query.Close;
+    Check(Query.AsClientDataset);
+    CheckFalse(Query.Active, 'Query should be inactive');
+    try
+      Query.Open;
+    Except
+      on E:Exception do
+        CheckNotTestFailure(E, 'Connection is not assigned');
+    end;
+    CheckFalse(Query.Active);
+    Query.Connection := Connection;
+    Check(Query.AsClientDataset);
+    Query.Open;
+    //{$IFDEF WITH_DATASET_DefaultBufferCount}Check{$ELSE}CheckFalse{$ENDIF}(Query.AsClientDataset); //FPC loads 10 rows on internal open once but we have 8 rows only
+    Query.FetchAll;
+    Check(Query.AsClientDataset);
+    Query.CachedUpdates := True;
+    Query.Connection := nil;
+    Check(Query.Active);
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID-1;
+    Query.Post;
+    Check(Query.Active);
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID;
+    Query.Post;
+    Check(Query.Active);
+    try
+      Query.ApplyUpdates;
+    Except
+      on E:Exception do
+        CheckNotTestFailure(E, 'Connection is not assigned');
+    end;
+    Check(Query.Active);
+    Query.CommitUpdates;
+    CheckFalse(Query.UpdatesPending);
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID-1;
+    Query.Post;
+    Check(Query.Active);
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID;
+    Query.Post;
+    Check(Query.Active);
+    Query.Connection := Connection;
+    Connection.StartTransaction;
+    try
+      Query.ApplyUpdates;
+    finally
+      Connection.Rollback;
+    end;
+    Query.Connection := nil;
+    Query.Close;
+    Query.Unprepare;
+    { now test interchange the connection }
+    Query.Connection := Connection;
+    Query.Open;
+    Check(Query.Active, 'Query should be active');
+    Query.FetchAll;
+    Query.CachedUpdates := False;
+    Query.Connection := nil;
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID-1;
+    try
+      Query.Post;
+    except
+      on E:Exception do
+        CheckNotTestFailure(E, 'Connection is not assigned');
+    end;
+    Query.Connection := Connection;
+    Query.Post;
+    Query.Delete;
+    Connection.Connected := False;
+    Check(Query.Active);
+    Query.Connection := nil;
+    Check(Query.Active);
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID-1;
+    try
+      Query.Post;
+    except
+      on E:Exception do
+        CheckNotTestFailure(E, 'Connection is not assigned');
+    end;
+    Connection.Disconnect;
+    Query.Connection := NewConnection;
+    Query.Post;
+    Query.Delete;
+  finally
+    FreeAndNil(Query);
+    FreeAndNil(NewConnection);
   end;
 end;
 
