@@ -2101,7 +2101,7 @@ begin
   NewConnection := CreateDatasetConnection;
   try
     Query.SQL.Text := 'select * from people';
-    Query.AsClientDataset := True;
+    Query.TryKeepDataOnDisconnect := True;
     Query.Open;
     Query.FetchAll;
     Query.Connection := nil;
@@ -2110,7 +2110,7 @@ begin
     Query.Last;
     Check(Query.LastRowFetched);
     Query.Close;
-    Check(Query.AsClientDataset);
+    Check(Query.TryKeepDataOnDisconnect);
     CheckFalse(Query.Active, 'Query should be inactive');
     try
       Query.Open;
@@ -2120,11 +2120,11 @@ begin
     end;
     CheckFalse(Query.Active);
     Query.Connection := Connection;
-    Check(Query.AsClientDataset);
+    Check(Query.TryKeepDataOnDisconnect);
     Query.Open;
-    //{$IFDEF WITH_DATASET_DefaultBufferCount}Check{$ELSE}CheckFalse{$ENDIF}(Query.AsClientDataset); //FPC loads 10 rows on internal open once but we have 8 rows only
+    //{$IFDEF WITH_DATASET_DefaultBufferCount}Check{$ELSE}CheckFalse{$ENDIF}(Query.TryKeepDataOnDisconnect); //FPC loads 10 rows on internal open once but we have 8 rows only
     Query.FetchAll;
-    Check(Query.AsClientDataset);
+    Check(Query.TryKeepDataOnDisconnect);
     Query.CachedUpdates := True;
     Query.Connection := nil;
     Check(Query.Active);

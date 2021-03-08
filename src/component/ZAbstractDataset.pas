@@ -103,7 +103,7 @@ type
     procedure SetWhereMode(Value: TZWhereMode);
     procedure SetUpdateMode(Value: TZUpdateMode);
   protected
-    function GetAsClientDataset: Boolean; override;
+    function GetTryKeepDataOnDisconnect: Boolean; override;
   protected
     property CachedResultSet: IZCachedResultSet read FCachedResultSet
       write FCachedResultSet;
@@ -742,13 +742,13 @@ begin
     Resync([]);
 end;
 
-function TZAbstractRWDataSet.GetAsClientDataset: Boolean;
+function TZAbstractRWDataSet.GetTryKeepDataOnDisconnect: Boolean;
 begin
   if Active then
-    Result := FAsClientDataset and (FCachedResultSet <> nil) and
+    Result := FTryKeepDataOnDisconnect and (FCachedResultSet <> nil) and
       FCachedResultSet.IsLastRowFetched and not FCachedResultSet.HasServerLinkedColumns and
       ((ResultSetMetadata <> nil) and ResultSetMetadata.IsMetadataLoaded)
-  else Result := FAsClientDataset
+  else Result := FTryKeepDataOnDisconnect
 end;
 
 {**

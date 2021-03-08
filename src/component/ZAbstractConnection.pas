@@ -1292,7 +1292,7 @@ begin
       continue
     else begin
       if AComp.InheritsFrom(TZAbstractRODataset) then begin
-        if not TZProtectedAbstractRODataset(AComp).AsClientDataset then try
+        if not TZProtectedAbstractRODataset(AComp).TryKeepDataOnDisconnect then try
           TZAbstractRODataset(AComp).Close;
           TZAbstractRODataset(AComp).UnPrepare;
         except {Ignore.} end else if AComp.InheritsFrom(TZAbstractRWDataSet) then

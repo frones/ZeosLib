@@ -298,7 +298,7 @@ type
     FTransaction: TZAbstractTransaction;
     FConSettings: PZConSettings;
     FLastRowFetched: Boolean;
-    FAsClientDataset: Boolean;
+    FTryKeepDataOnDisconnect: Boolean;
     FCursorLocation: TZCursorLocation;
     procedure CheckOpened;
     procedure CheckConnected; virtual;
@@ -323,8 +323,8 @@ type
     procedure SetTransaction(Value: TZAbstractTransaction); virtual;
     procedure AddFieldDefFromMetadata(ColumnIndex: Integer;
       const ResultSetMetaData: IZResultSetMetadata; const FieldName: String);
-    function GetAsClientDataset: Boolean; virtual;
-    procedure SetAsClientDataset(Value: Boolean);
+    function GetTryKeepDataOnDisconnect: Boolean; virtual;
+    procedure SetTryKeepDataOnDisconnect(Value: Boolean);
     procedure SetCursorLocation(Value: TZCursorLocation);
     /// <summary>Sets database connection object.</summary>
     /// <param>"Value" a database connection object.</param>
@@ -356,7 +356,7 @@ type
     property FieldsLookupTable: TZFieldsLookUpDynArray read FFieldsLookupTable
       write FFieldsLookupTable;
     /// <author>EgonHugeist</author>
-    property AsClientDataset: Boolean read GetAsClientDataset write SetAsClientDataset;
+    property TryKeepDataOnDisconnect: Boolean read GetTryKeepDataOnDisconnect write SetTryKeepDataOnDisconnect;
     /// <author>EgonHugeist</author>
     property CursorLocation: TZCursorLocation read FCursorLocation write SetCursorLocation;
     property FilterEnabled: Boolean read FFilterEnabled write FFilterEnabled;
@@ -1669,13 +1669,13 @@ begin
   inherited Destroy;
 end;
 
-procedure TZAbstractRODataset.SetAsClientDataset(Value: Boolean);
+procedure TZAbstractRODataset.SetTryKeepDataOnDisconnect(Value: Boolean);
 begin
-  if Value <> FAsClientDataset then begin
+  if Value <> FTryKeepDataOnDisconnect then begin
     if Active then
        Close;
-    FAsClientDataset := Value;
-    FCachedLobs := FAsClientDataset or (doCachedLobs in FOptions);
+    FTryKeepDataOnDisconnect := Value;
+    FCachedLobs := FTryKeepDataOnDisconnect or (doCachedLobs in FOptions);
   end;
 end;
 
@@ -1683,9 +1683,9 @@ procedure TZAbstractRODataset.SetConnection(Value: TZAbstractConnection);
 begin
   if FConnection <> Value then begin
     if Active then
-      if not GetAsClientDataset then
+      if not GetTryKeepDataOnDisconnect then
         Close; //EH: todo if the new connection was reconnected flush the statement interface
-    if Prepared and not GetAsClientDataset then
+    if Prepared and not GetTryKeepDataOnDisconnect then
       Unprepare;
     if Value = nil then begin
       FConnection.UnregisterComponent(Self);
@@ -3939,9 +3939,9 @@ begin
   Result := RequestLive;
 end;
 
-function TZAbstractRODataset.GetAsClientDataset: Boolean;
+function TZAbstractRODataset.GetTryKeepDataOnDisconnect: Boolean;
 begin
-  Result := FAsClientDataset;
+  Result := FTryKeepDataOnDisconnect;
 end;
 
 {**
@@ -4162,7 +4162,7 @@ procedure TZAbstractRODataset.SetOptions(Value: TZDatasetOptions);
 begin
   if FOptions <> Value then begin
     FOptions := Value;
-    FCachedLobs := FAsClientDataset or (doCachedLobs in FOptions);
+    FCachedLobs := FTryKeepDataOnDisconnect or (doCachedLobs in FOptions);
   end;
 end;
 

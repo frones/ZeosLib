@@ -87,7 +87,7 @@ type
     /// <summary>Sets database connection object.</summary>
     /// <param>"Value" a database connection object.</param>
     procedure SetConnection(Value: TZAbstractConnection); override;
-    function GetAsClientDataset: Boolean; override;
+    function GetTryKeepDataOnDisconnect: Boolean; override;
     function PSIsSQLBased: Boolean; override;
   public
     constructor Create(AOwner: TComponent); override;
@@ -446,7 +446,7 @@ begin
   EmptyDataSet;
 end;
 
-function TZAbstractMemTable.GetAsClientDataset: Boolean;
+function TZAbstractMemTable.GetTryKeepDataOnDisconnect: Boolean;
 begin
   Result := True;
 end;

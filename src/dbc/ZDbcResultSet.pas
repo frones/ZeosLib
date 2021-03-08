@@ -2568,7 +2568,7 @@ begin
 end;
 
 {$IFDEF FPC} {$PUSH}
-  {$WARN 5024 off : Parameter "$1" not used}
+  {$WARN 5024 off : Parameter "Row" not used}
   {$WARN 5033 off : Function result does not seem to be set}
 {$ENDIF}
 function TZAbstractResultSet.MoveAbsolute(Row: Integer): Boolean;

@@ -4119,6 +4119,8 @@ begin
       FDataType := Value;
       FSQLType := NewSQLType;
     end;
+    FDynamicParamType := Value <> ftUnknown;
+
   end;
 end;
 
