@@ -443,7 +443,18 @@ type
     constructor CreateWithColumns(const ColumnsInfo: TObjectList;
       const ResultSet: IZResultSet; const SQL: string;
       const Resolver: IZCachedResolver; ConSettings: PZConSettings);
-
+    /// <summary>Releases all driver handles and set the object in a closed
+    ///  Zombi mode waiting for destruction. Each known supplementary object,
+    ///  supporting this interface, gets called too. This may be a recursive
+    ///  call from parant to childs or vice vera. So finally all resources
+    ///  to the servers are released. This method is triggered by a connecton
+    ///  loss. Don't use it by hand except you know what you are doing.</summary>
+    /// <param>"Sender" the object that did notice the connection lost.</param>
+    /// <param>"AError" a reference to an EZSQLConnectionLost error.
+    ///  You may free and nil the error object so no Error is thrown by the
+    ///  generating method. So we start from the premisse you have your own
+    ///  error handling in any kind.</param>
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
     procedure AfterClose; override;
     procedure ResetCursor; override;
     function GetMetaData: IZResultSetMetaData; override;
@@ -2630,6 +2641,37 @@ begin
   {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   ZDbcUtils.CopyColumnsInfo(ColumnsInfo, Self.ColumnsInfo);
   inherited Open;
+end;
+
+procedure TZCachedResultSet.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+var ImmediatelyReleasable: IImmediatelyReleasable;
+    GenDMLResolver: IZGenerateSQLCachedResolver;
+begin
+  if FLastRowFetched and not HasServerLinkedColumns and GetMetadata.IsMetadataLoaded then begin
+    if FResultSet <> nil then begin
+      FResultSet.GetMetadata.AssignColumnInfosTo(ColumnsInfo);
+      TZAbstractResultSetMetadata(Metadata).SetMetadataLoaded(True);
+      if Supports(FResultSet, IImmediatelyReleasable, ImmediatelyReleasable) and
+         (ImmediatelyReleasable <> Sender) then
+        ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+      FResultSet := nil;
+    end;
+    if Statement <> nil then begin
+      Statement.FreeOpenResultSetReference(IZResultSet(FWeakIZResultSetPtr));
+      if Supports(Statement, IImmediatelyReleasable, ImmediatelyReleasable) and
+         (ImmediatelyReleasable <> Sender) then
+        ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+      IZStatement(PPointer(@Statement)^) := nil;
+    end;
+    if (FResolver <> nil) then begin
+      if FResolver.QueryInterface(IZGenerateSQLCachedResolver, GenDMLResolver) = S_OK then begin
+        GenDMLResolver.SetMetadata(TZAbstractResultSetMetadata(Metadata));
+        GenDMLResolver.SetConnection(nil);
+      end;
+      FResolver.SetTransaction(nil);
+    end;
+  end else inherited ReleaseImmediat(Sender, AError);
 end;
 
 procedure TZCachedResultSet.ResetCursor;
