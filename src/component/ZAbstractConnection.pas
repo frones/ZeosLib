@@ -1273,7 +1273,10 @@ begin
 end;
 
 
-type TZProtectedMethodTransaction = Class(TZAbstractTransaction);
+type
+  TZProtectedMethodTransaction = Class(TZAbstractTransaction);
+  TZProtectedAbstractRODataset = class(TZAbstractRODataset);
+  TZProtectedAbstractRWDataSet = Class(TZAbstractRWDataSet);
 
 {**
   Closes all registered datasets.
@@ -1288,16 +1291,18 @@ begin
     if AComp.InheritsFrom(TZAbstractMemTable) then
       continue
     else begin
-      if AComp.InheritsFrom(TZAbstractRODataset) then try
-        TZAbstractRODataset(AComp).Close;
-        TZAbstractRODataset(AComp).UnPrepare;
-      except {Ignore.} end else if AComp.InheritsFrom(TZSequence) then try
+      if AComp.InheritsFrom(TZAbstractRODataset) then begin
+        if not TZProtectedAbstractRODataset(AComp).AsClientDataset then try
+          TZAbstractRODataset(AComp).Close;
+          TZAbstractRODataset(AComp).UnPrepare;
+        except {Ignore.} end else if AComp.InheritsFrom(TZAbstractRWDataSet) then
+          TZProtectedAbstractRWDataSet(AComp).CachedResultSet.ClearStatementLink;
+      end else if AComp.InheritsFrom(TZSequence) then try
         TZSequence(AComp).CloseSequence
       except end else if AComp.InheritsFrom(TZAbstractTransaction) then try
         if TZAbstractTransaction(AComp).Active then
           TZProtectedMethodTransaction(AComp).GetIZTransaction.Close;
-      except end;
-      if AComp.InheritsFrom(TAbstractActiveConnectionLinkedComponent) then try
+      except end else if AComp.InheritsFrom(TAbstractActiveConnectionLinkedComponent) then try
         if TAbstractActiveConnectionLinkedComponent(AComp).Active then
           TAbstractActiveConnectionLinkedComponent(AComp).SetActive(False);
       except end;
@@ -1328,8 +1333,6 @@ begin
   FLinkedComponents.Remove(Value);
 end;
 
-type
-  TZProtectedAbstractRODataset = class(TZAbstractRODataset);
 procedure TZAbstractConnection.UnregisterAllComponents;
 var
   I: Integer;

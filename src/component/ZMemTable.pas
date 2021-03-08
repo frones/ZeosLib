@@ -87,6 +87,8 @@ type
     /// <summary>Sets database connection object.</summary>
     /// <param>"Value" a database connection object.</param>
     procedure SetConnection(Value: TZAbstractConnection); override;
+    function GetAsClientDataset: Boolean; override;
+    function PSIsSQLBased: Boolean; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -297,6 +299,8 @@ begin
   then Rows := TZProtectedAbstractRODataset(Source).CurrentRows
   else Rows := nil;
   Metadata := TZProtectedAbstractRODataset(Source).ResultSetMetadata;
+  if Metadata = nil then CheckActive;
+
   { we can't judge if a user did change the field order, thus create a new lookup}
   FieldPairs := TZIndexPairList.Create;
   try
@@ -442,6 +446,11 @@ begin
   EmptyDataSet;
 end;
 
+function TZAbstractMemTable.GetAsClientDataset: Boolean;
+begin
+  Result := True;
+end;
+
 function TZAbstractMemTable.GetControlsCodePage: TZControlsCodePage;
 begin
   if FConnection = nil
@@ -487,6 +496,11 @@ end;
 procedure TZAbstractMemTable.InternalRefresh;
 begin
   //NOOP
+end;
+
+function TZAbstractMemTable.PSIsSQLBased: Boolean;
+begin
+  Result := False;
 end;
 
 procedure TZAbstractMemTable.SetConnection(Value: TZAbstractConnection);

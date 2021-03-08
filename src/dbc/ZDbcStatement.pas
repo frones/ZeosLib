@@ -436,6 +436,25 @@ type
     property ConSettings: PZConSettings read FConSettings;
   end;
 
+  TZQueryResultsList = Class(TZCustomElementList)
+  protected
+    /// <summary>Notify about an action which will or was performed.
+    ///  if ElementNeedsFinalize is False the method will never be called.
+    ///  Otherwise you may finalize managed types beeing part of each element,
+    ///  such as Strings, Objects etc.</summary>
+    /// <param>"Ptr" the address of the element an action happens for.</param>
+    /// <param>"Index" the index of the element.</param>
+    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
+    procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+  public
+    Constructor Create;
+    procedure Add(const Resultset: IZResultSet); overload;
+    procedure Add(AffectedRows: Integer); overload;
+    function IsResultSet(Index: NativeInt): Boolean;
+    function GetResultSet(Index: NativeInt): IZResultSet;
+    function GetAffectedRows(Index: NativeInt): Integer;
+  End;
+
   TZBindListClass = class of TZBindList;
 
   /// <summary>Implements Abstract Prepared SQL Statement.</summary>
@@ -6536,6 +6555,73 @@ procedure TZBeginnerPreparedStatement.SetWord(ParameterIndex: Integer;
   Value: Word);
 begin
   InternalBindUInt(ParameterIndex, stWord, Value);
+end;
+
+type
+  PZQueryResult = ^TZQueryResult;
+  TZQueryResult = record
+    IsResultSet: Boolean;
+    case Boolean of
+      False: (AffectedRows: Integer);
+      True:  (ResultSet: Pointer);
+    end;
+
+{ TZQueryResultsList }
+
+procedure TZQueryResultsList.Add(AffectedRows: Integer);
+var Index: NativeInt;
+    QueryResult: PZQueryResult;
+begin
+  QueryResult := inherited Add(Index);
+  QueryResult.IsResultSet := False;
+  QueryResult.AffectedRows := AffectedRows;
+end;
+
+constructor TZQueryResultsList.Create;
+begin
+  inherited Create(SizeOf(TZQueryResult), True);
+end;
+
+function TZQueryResultsList.GetAffectedRows(Index: NativeInt): Integer;
+var QueryResult: PZQueryResult;
+begin
+  QueryResult := inherited Get(Index);
+  if QueryResult.IsResultSet
+  then Result := -1
+  else Result := QueryResult.AffectedRows;
+end;
+
+function TZQueryResultsList.GetResultSet(Index: NativeInt): IZResultSet;
+var QueryResult: PZQueryResult;
+begin
+  QueryResult := inherited Get(Index);
+  if QueryResult.IsResultSet
+  then Result := IZResultSet(QueryResult.ResultSet)
+  else Result := nil;
+end;
+
+function TZQueryResultsList.IsResultSet(Index: NativeInt): Boolean;
+begin
+  Result := PZQueryResult(inherited Get(Index)).IsResultSet;
+end;
+
+procedure TZQueryResultsList.Add(const Resultset: IZResultSet);
+var Index: NativeInt;
+    QueryResult: PZQueryResult;
+begin
+  QueryResult := inherited Add(Index);
+  QueryResult.IsResultSet := True;
+  IZResultSet(QueryResult.ResultSet) := ResultSet;
+end;
+
+procedure TZQueryResultsList.Notify(Ptr: Pointer; Action: TListNotification);
+begin
+  if (Action = lnDeleted) then begin
+    if PZQueryResult(Ptr).IsResultSet
+    then IZResultSet(PZQueryResult(Ptr).ResultSet) := nil
+    else PZQueryResult(Ptr).ResultSet := nil; //avoid gpf
+  end else if (Action = lnAdded) then
+    PZQueryResult(Ptr).ResultSet := nil; //avoid gpf
 end;
 
 end.

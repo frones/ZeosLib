@@ -101,9 +101,7 @@ type
     property WhereMode;
     property Sequence;
     property SequenceField;
-    //property Transaction;
-    //property UpdateTransaction;
-    //property Connection;
+    property AsClientDataset default False;
   end;
 
   {** Implements an universal SQL query for single table access. }
@@ -124,10 +122,7 @@ type
     property UpdateMode;
     property WhereMode;
     property Sequence;
-    //property SequenceField;
-    //property Transaction;
-    //property UpdateTransaction;
-    //property Connection;
+    property AsClientDataset default False;
   end;
 
   /// <author>EgonHugeist.</author>

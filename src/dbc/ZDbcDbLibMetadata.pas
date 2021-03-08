@@ -1971,14 +1971,15 @@ begin
       tmp := UpperCase(GetStringByName('TYPE_NAME'));
       if SQLType = stUnknown then
         Result.UpdateNull(TableColColumnTypeIndex)
-      else if ( SQLType = stBytes) and (tmp = 'UNIQUEIDENTIFIER') then
-        Result.UpdateSmall(TableColColumnTypeIndex, Ord(stGUID))
-      else if ( SQLType = stDouble) and StartsWith(tmp, 'MONEY') then
-        Result.UpdateSmall(TableColColumnTypeIndex, Ord(stCurrency))
-      else if (SQLType = stString) and (tmp = 'DATE') then
-        Result.UpdateSmall(TableColColumnTypeIndex, Ord(stDate))
-      else
+      else begin
+        if (SQLType = stBytes) and (tmp = 'UNIQUEIDENTIFIER') then
+          SQLType := stGUID
+        else if (SQLType = stBigDecimal) and EndsWith(tmp, 'MONEY') then
+          SQLType := stCurrency
+        else if (SQLType = stString) and (tmp = 'DATE') then
+          SQLType := stDate;
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
+      end;
       Result.UpdateString(TableColColumnTypeNameIndex, tmp);
       if SQLType in [stCurrency, stBigDecimal]
       then Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('PRECISION'))

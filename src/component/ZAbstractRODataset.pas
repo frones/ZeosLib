@@ -170,7 +170,6 @@ type
 
     FRequestLive: Boolean;
     FFetchRow: integer;
-
     FSQL: TZSQLStrings;
     FParams: {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF};
     {$IFNDEF DISABLE_ZPARAM}FCompilerParams: TParams;{$ENDIF} //required for IProvider
@@ -299,9 +298,8 @@ type
     FTransaction: TZAbstractTransaction;
     FConSettings: PZConSettings;
     FLastRowFetched: Boolean;
-    /// <summary>Sets database connection object.</summary>
-    /// <param>"Value" a database connection object.</param>
-    procedure SetConnection(Value: TZAbstractConnection); virtual;
+    FAsClientDataset: Boolean;
+    FCursorLocation: TZCursorLocation;
     procedure CheckOpened;
     procedure CheckConnected; virtual;
     procedure CheckBiDirectional;
@@ -325,6 +323,12 @@ type
     procedure SetTransaction(Value: TZAbstractTransaction); virtual;
     procedure AddFieldDefFromMetadata(ColumnIndex: Integer;
       const ResultSetMetaData: IZResultSetMetadata; const FieldName: String);
+    function GetAsClientDataset: Boolean; virtual;
+    procedure SetAsClientDataset(Value: Boolean);
+    procedure SetCursorLocation(Value: TZCursorLocation);
+    /// <summary>Sets database connection object.</summary>
+    /// <param>"Value" a database connection object.</param>
+    procedure SetConnection(Value: TZAbstractConnection); virtual;
   protected { Internal protected properties. }
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; virtual;
@@ -351,7 +355,10 @@ type
     property FetchCount: Integer read FFetchCount write FFetchCount;
     property FieldsLookupTable: TZFieldsLookUpDynArray read FFieldsLookupTable
       write FFieldsLookupTable;
-
+    /// <author>EgonHugeist</author>
+    property AsClientDataset: Boolean read GetAsClientDataset write SetAsClientDataset;
+    /// <author>EgonHugeist</author>
+    property CursorLocation: TZCursorLocation read FCursorLocation write SetCursorLocation;
     property FilterEnabled: Boolean read FFilterEnabled write FFilterEnabled;
     property FilterExpression: IZExpression read FFilterExpression
       write FFilterExpression;
@@ -1625,6 +1632,7 @@ begin
   FUseZFields := True;
   {$IFEND}
   FFormatSettings := TZFormatSettings.Create(Self);
+  FCursorLocation := rctDefault;
 end;
 
 {**
@@ -1661,20 +1669,30 @@ begin
   inherited Destroy;
 end;
 
+procedure TZAbstractRODataset.SetAsClientDataset(Value: Boolean);
+begin
+  if Value <> FAsClientDataset then begin
+    if Active then
+       Close;
+    FAsClientDataset := Value;
+    FCachedLobs := FAsClientDataset or (doCachedLobs in FOptions);
+  end;
+end;
+
 procedure TZAbstractRODataset.SetConnection(Value: TZAbstractConnection);
 begin
   if FConnection <> Value then begin
     if Active then
-       Close;
-    Unprepare;
-    if FConnection <> nil then
+      if not GetAsClientDataset then
+        Close; //EH: todo if the new connection was reconnected flush the statement interface
+    if Prepared and not GetAsClientDataset then
+      Unprepare;
+    if Value = nil then begin
       FConnection.UnregisterComponent(Self);
-    FConnection := Value;
-    if FConnection = nil then
-      FFormatSettings.SetParent(nil)
-    else begin
-      FConnection.RegisterComponent(Self);
-      FFormatSettings.SetParent(FConnection.FormatSettings);
+      FormatSettings.SetParent(nil);
+    end else begin
+      FormatSettings.SetParent(Value.FormatSettings);
+      Value.RegisterComponent(Self);
       if (FSQL.Count > 0) and PSIsSQLBased{do not rebuild all!} and (Fields.Count = 0) then begin
       {EH: force rebuild all of the SQLStrings ->
         in some case the generic tokenizer fails for several reasons like:
@@ -1686,6 +1704,16 @@ begin
         FSQL.EndUpdate;
       end;
     end;
+    FConnection := Value;
+  end;
+end;
+
+procedure TZAbstractRODataset.SetCursorLocation(Value: TZCursorLocation);
+begin
+  if Value <> FCursorLocation then begin
+    if Active then
+      Close;
+    FCursorLocation := Value;
   end;
 end;
 
@@ -3565,6 +3593,8 @@ begin
     {$IF declared(DSProps_PreferPrepared)}
     Temp.Values[DSProps_PreferPrepared] := BoolStrs[doPreferPrepared in FOptions];
     {$IFEND}
+    if FCachedLobs then
+      Temp.Values[DSProps_CachedLobs] := 'true';
     if FTransaction <> nil
     then Txn := THackTransaction(FTransaction).GetIZTransaction
     else Txn := FConnection.DbcConnection.GetConnectionTransaction;
@@ -3597,6 +3627,7 @@ end;
 function TZAbstractRODataset.CreateResultSet(const SQL: string;
   MaxRows: Integer): IZResultSet;
 begin
+  CheckConnected;
   Connection.ShowSQLHourGlass;
   try
     SetStatementParams(Statement, FSQL.Statements[0].ParamNamesArray,
@@ -3610,6 +3641,7 @@ begin
       Statement.SetResultSetType(rtForwardOnly)
     else
       Statement.SetResultSetType(rtScrollInsensitive);
+    Statement.SetCursorLocation(FCursorLocation);
     if MaxRows > 0 then
       Statement.SetMaxRows(MaxRows);
 
@@ -3782,9 +3814,11 @@ begin
   {$IFNDEF WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD}
   FCurrentFieldRefIndex := 0;
   {$ENDIF}
-  CurrentRows.Clear;
+  if CurrentRows <> nil then
+    CurrentRows.Clear;
   {$IFNDEF DISABLE_ZPARAM}
-  FParams.FlushParameterConSettings;
+  if FParams <> nil then
+    FParams.FlushParameterConSettings;
   {$ENDIF}
 end;
 
@@ -3903,6 +3937,11 @@ end;
 function TZAbstractRODataset.GetCanModify: Boolean;
 begin
   Result := RequestLive;
+end;
+
+function TZAbstractRODataset.GetAsClientDataset: Boolean;
+begin
+  Result := FAsClientDataset;
 end;
 
 {**
@@ -4123,7 +4162,7 @@ procedure TZAbstractRODataset.SetOptions(Value: TZDatasetOptions);
 begin
   if FOptions <> Value then begin
     FOptions := Value;
-    FCachedLobs := doCachedLobs in FOptions
+    FCachedLobs := FAsClientDataset or (doCachedLobs in FOptions);
   end;
 end;
 

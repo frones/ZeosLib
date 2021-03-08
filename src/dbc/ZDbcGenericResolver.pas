@@ -293,6 +293,10 @@ type
     ///  for updates.</summary>
     /// <param>"Value" the UpdateAll mode should be used.</param>
     procedure SetUpdateAll(Value: Boolean);
+    /// <summary>Set a new connection.</summary>
+    /// <param>"Value" the IZTransaction object.</param>
+    procedure SetConnection(const Value: IZConnection);
+    procedure SetMetadata(const Value: IZResultSetMetadata);
   end;
   /// <summary>definines an alias for compatibility</summary>
   TZGenericCachedResolver = TZGenerateSQLCachedResolver;
@@ -943,6 +947,27 @@ end;
 procedure TZGenerateSQLCachedResolver.SetCalcDefaults(Value: Boolean);
 begin
   FCalcDefaults := Value;
+end;
+
+procedure TZGenerateSQLCachedResolver.SetConnection(const Value: IZConnection);
+begin
+  if Connection <> Value then begin
+    Connection := Value;
+    if Value <> nil then begin
+      FDatabaseMetadata := Connection.GetMetadata;
+      FIdentifierConverter := FDatabaseMetadata.GetIdentifierConverter;
+    end else begin
+      FDatabaseMetadata := nil;
+      FIdentifierConverter := nil;
+    end;
+  end;
+end;
+
+procedure TZGenerateSQLCachedResolver.SetMetadata(
+  const Value: IZResultSetMetadata);
+begin
+  if Metadata <> Value then
+    Metadata := Value;
 end;
 
 procedure TZGenerateSQLCachedResolver.SetUpdateAll(Value: Boolean);

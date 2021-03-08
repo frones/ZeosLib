@@ -351,6 +351,7 @@ end;
 {**
   Login procedure can be overriden for special settings.
 }
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "dbsetluser...." marked as inline is not inlined}{$ENDIF}
 procedure TZDBLibConnection.InternalLogin;
 var
   Loginrec: PLOGINREC;
@@ -516,6 +517,7 @@ begin
     FPlainDriver.dbLoginFree(LoginRec);
   end;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 function TZDBLibConnection.GetConnectionHandle: PDBPROCESS;
 begin
@@ -774,7 +776,6 @@ begin
   if FPlainDriver.dbsetopt(FHandle, FPlainDriver.GetDBOption(dboptTEXTSIZE),Pointer(textlimit), -1) <> DBSUCCEED then
     CheckDBLibError(lcConnect, FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
   ExecuteImmediat(RawByteString('set quoted_identifier on'), lcOther);
-
   inherited Open;
 
   if TransactIsolationLevel = tiNone then
