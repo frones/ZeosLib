@@ -5594,7 +5594,7 @@ begin
     {$ENDIF}
 {$R-}
     for i := 0 to len-1 do
-      BArr[i] := WArr[i]; //0..255 equals to widechars
+      BArr[i] := WArr[i]; //0..127 equals to widechars
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
@@ -5615,18 +5615,20 @@ begin
     {$ENDIF}
 {$R-}
     for i := 0 to len-1 do
-      BArr[i] := WArr[i]; //0..255 equals to widechars
+      BArr[i] := WArr[i]; //0..127 equals to widechars
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "FloatToRaw" marked as inline is not inlined}{$ENDIF}
 function FloatToRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): RawByteString;
 var
   Buffer: array[0..63] of AnsiChar;
 begin
-  {$IFDEF FPC}Result := '';{$ENDIF}
-  ZSetString(PAnsiChar(@Buffer[0]), FloatToRaw(Value, @Buffer[0]), Result);
+  Result := '';
+  System.SetString(Result, PAnsiChar(@Buffer[0]), FloatToRaw(Value, @Buffer[0]));
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 function FloatToRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}; Buf: PAnsiChar): LengthInt;
 {$IFDEF NEXTGEN}
@@ -5645,13 +5647,15 @@ begin
   {$ENDIF}
 end;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "FloatToSqlRaw" marked as inline is not inlined}{$ENDIF}
 function FloatToSqlRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): RawByteString;
 var
   Buffer: array[0..63] of AnsiChar;
 begin
   Result := '';
-  ZSetString(PAnsiChar(@Buffer[0]), FloatToSqlRaw(Value, @Buffer[0]), Result);
+  System.SetString(Result, PAnsiChar(@Buffer[0]), FloatToSqlRaw(Value, @Buffer[0]));
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 function FloatToSqlRaw(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}; Buf: PAnsiChar): LengthInt;
 {$IFDEF NEXTGEN}
@@ -5670,12 +5674,15 @@ begin
   {$ENDIF}
 end;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "FloatToUnicode" marked as inline is not inlined}{$ENDIF}
 function FloatToUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): UnicodeString;
 var
   Buffer: array[0..63] of WideChar;
 begin
+  Result := '';
   System.SetString(Result, PWideChar(@Buffer[0]), FloatToUnicode(Value, @Buffer[0]));
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 function FloatToUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}; Buf: PWideChar): LengthInt;
 {$IFNDEF UNICODE}
@@ -5693,12 +5700,15 @@ begin
   {$ENDIF}
 end;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "FloatToSqlUnicode" marked as inline is not inlined}{$ENDIF}
 function FloatToSqlUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}): UnicodeString;
 var
   Buffer: array[0..63] of WideChar;
 begin
+  Result := '';
   System.SetString(Result, PWideChar(@Buffer[0]), FloatToSqlUnicode(Value, @Buffer[0]));
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 function FloatToSqlUnicode(const Value: {$IFDEF CPU64}Double{$ELSE}Extended{$ENDIF}; Buf: PWideChar): LengthInt;
 {$IFNDEF UNICODE}
@@ -5980,6 +5990,7 @@ begin
   GUIDToBuffer(Buffer, P, Options);
 end;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "GUIDToBuffer" marked as inline is not inlined}{$ENDIF}
 function GUIDToRaw(const Bts: TBytes; WithBrackets: Boolean): RawByteString;
 var Options: TGUIDConvOptions;
   P: PAnsiChar;
@@ -5988,10 +5999,12 @@ begin
     raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
   Options := [];
   if WithBrackets then include(Options, guidWithBrackets);
-  ZSetString(nil, 36+(Ord(WithBrackets) shl 1), Result{%H-});
+  Result := '';
+  SetLength(Result, 36+(Ord(WithBrackets) shl 1));
   P := Pointer(Result);
   GUIDToBuffer(Pointer(Bts), P, Options);
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 function GUIDToUnicode(const GUID: TGUID; const Options: TGUIDConvOptions): UnicodeString;
 var P: PWideChar;
@@ -6004,7 +6017,8 @@ end;
 procedure GUIDToUnicode(Value: PGUID; const Options: TGUIDConvOptions; var Result: UnicodeString);
 var P: PWideChar;
 begin
-  ZSetString(nil, 36+((Ord(guidWithBrackets in Options)+Ord(guidQuoted in Options)) shl 1), Result{%H-});
+  Result := '';
+  SetLength(Result, 36+((Ord(guidWithBrackets in Options)+Ord(guidQuoted in Options)) shl 1));
   P := Pointer(Result);
   GUIDToBuffer(Value, P, Options);
 end;
@@ -6015,11 +6029,13 @@ var Options: TGUIDConvOptions;
 begin
   Options := [];
   if WithBrackets then include(Options, guidWithBrackets);
-  ZSetString(nil, 36+(Ord(WithBrackets) shl 1), Result{%H-});
+  Result := '';
+  SetLength(Result, 36+(Ord(WithBrackets) shl 1));
   P := Pointer(Result);
   GUIDToBuffer(@GUID.D1, P, Options);
 end;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "GUIDToBuffer" marked as inline is not inlined}{$ENDIF}
 function GUIDToUnicode(const Bts: TBytes; WithBrackets: Boolean): UnicodeString;
 var Options: TGUIDConvOptions;
   P: PWideChar;
@@ -6028,10 +6044,12 @@ begin
     raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
   Options := [];
   if WithBrackets then include(Options, guidWithBrackets);
-  ZSetString(nil, 36+(Ord(WithBrackets) shl 1), Result{%H-});
+  Result := '';
+  SetLength(Result, 36+(Ord(WithBrackets) shl 1));
   P := Pointer(Result);
   GUIDToBuffer(Pointer(Bts), P, Options);
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 function GUIDToUnicode(Buffer: Pointer; Len: Byte; WithBrackets: Boolean = True): UnicodeString; overload;
 var Options: TGUIDConvOptions;
@@ -6041,7 +6059,8 @@ begin
     raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
   Options := [];
   if WithBrackets then include(Options, guidWithBrackets);
-  ZSetString(nil, 36+(Ord(WithBrackets) shl 1), Result{%H-});
+  Result := '';
+  SetLength(Result, 36+(Ord(WithBrackets) shl 1));
   P := Pointer(Result);
   GUIDToBuffer(Buffer, P, Options);
 end;
