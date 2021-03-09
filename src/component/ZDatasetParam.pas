@@ -3749,7 +3749,7 @@ begin
     varLongWord:  SetAsCardinal(TVarData(Value).VLongWord);
     {$IFEND}
     varInt64:     SetAsInt64(TVarData(Value).VInt64);
-    {$IF Declared(VUInt64)}
+    {$IF Declared(varUInt64)}
     varUInt64:    SetAsUInt64(TVarData(Value).VUInt64);
     {$IFEND}
     {$IF Declared(varQWord)}

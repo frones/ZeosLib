@@ -973,7 +973,7 @@ begin
           {$ENDIF}
         end;
       finally
-        if FConnection.IsClosed then
+        if Assigned(FConnection) And FConnection.IsClosed then
           FConnection := nil;
       end;
     finally
@@ -983,7 +983,7 @@ begin
     FExplicitTransactionCounter := FTxnLevel;
     if not FAutoCommit then
       DoStartTransaction;
-    if not FConnection.IsClosed then
+    if Assigned(FConnection) And not FConnection.IsClosed then
       DoAfterConnect;
   end;
 end;
