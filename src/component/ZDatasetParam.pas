@@ -3749,10 +3749,10 @@ begin
     varLongWord:  SetAsCardinal(TVarData(Value).VLongWord);
     {$IFEND}
     varInt64:     SetAsInt64(TVarData(Value).VInt64);
-    {$IF Declared(varUInt64)}
+    {$IF Declared(varUInt64) and not DEFINED(FPC)}
     varUInt64:    SetAsUInt64(TVarData(Value).VUInt64);
     {$IFEND}
-    {$IF Declared(varQWord)}
+    {$IF Declared(varQWord) and DEFINED(FPC)}
     varQWord:    SetAsUInt64(TVarData(Value).vqword);
     {$IFEND}
   //varRecord   = $0024; { VT_RECORD      36 }
