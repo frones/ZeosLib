@@ -425,6 +425,7 @@ end;
    @param sender the calling object
    @return ISC_INFO Integer
 }
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "ReadInterbase6Number" marked as inline is not inlined}{$ENDIF}
 function TZInterbase6Connection.GetDBIntegerInfo(isc_info: Byte;
   const Sender: IImmediatelyReleasable): Integer;
 begin
@@ -440,6 +441,7 @@ begin
   then Result := ReadInterbase6Number(FPlainDriver, @FByteBuffer[1])
   else Result := -1;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 {**
    Return interbase server string

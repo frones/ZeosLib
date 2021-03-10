@@ -147,13 +147,13 @@ procedure Time2PG(const Hour, Min, Sec: Word; NanoFraction: Cardinal; out Result
 procedure Time2PG(const Value: TDateTime; out Result: Double); overload;
 procedure Time2PG(const Hour, Min, Sec: Word; NanoFraction: Cardinal; out Result: Double); overload;
 
-function PG2DateTime(Value: Double): TDateTime; overload;
-procedure PG2DateTime(Value: Double; out Year, Month, Day, Hour, Min, Sec: Word;
-  out NanoFractions: Cardinal); overload;
+function PG2DateTime(Value: Double; const TimeZoneOffset: Int64): TDateTime; overload;
+procedure PG2DateTime(Value: Double; const TimeZoneOffset: Int64;
+  out Year, Month, Day, Hour, Min, Sec: Word; out NanoFractions: Cardinal); overload;
 
-function PG2DateTime(Value: Int64): TDateTime; overload;
-procedure PG2DateTime(Value: Int64; out Year, Month, Day, Hour, Min, Sec: Word;
-  out NanoFractions: Cardinal); overload;
+function PG2DateTime(Value: Int64; const TimeZoneOffset: Int64): TDateTime; overload;
+procedure PG2DateTime(Value: Int64; const TimeZoneOffset: Int64;
+  out Year, Month, Day, Hour, Min, Sec: Word; out NanoFractions: Cardinal); overload;
 
 function PG2Time(Value: Double): TDateTime; overload;
 procedure PG2Time(Value: Double; Out Hour, Min, Sec: Word; out NanoFractions: Cardinal); overload;
@@ -916,12 +916,12 @@ begin
   {$ENDIF}
 end;
 
-function PG2DateTime(Value: Double): TDateTime;
+function PG2DateTime(Value: Double; const TimeZoneOffset: Int64): TDateTime;
 var date: TDateTime;
   Year, Month, Day, Hour, Min, Sec: Word;
   fsec: Cardinal;
 begin
-  PG2DateTime(Value, Year, Month, Day, Hour, Min, Sec, fsec);
+  PG2DateTime(Value, TimeZoneOffset, Year, Month, Day, Hour, Min, Sec, fsec);
   TryEncodeDate(Year, Month, Day, date);
   dt2time(Value, Hour, Min, Sec, fsec);
   TryEncodeTime(Hour, Min, Sec, fsec, Result);
@@ -955,8 +955,8 @@ begin
   {$ENDIF}
 end;
 
-procedure PG2DateTime(value: Double; out Year, Month, Day, Hour, Min, Sec: Word;
-  out NanoFractions: Cardinal);
+procedure PG2DateTime(value: Double; const TimeZoneOffset: Int64;
+  out Year, Month, Day, Hour, Min, Sec: Word; out NanoFractions: Cardinal);
 var
   date: Double;
   time: Double;
@@ -964,7 +964,7 @@ begin
   {$IFNDEF ENDIAN_BIG}
   Reverse8Bytes(@Value);
   {$ENDIF}
-  time := value;
+  time := value + TimeZoneOffset;
   if Time < 0
   then date := Ceil(time / SecsPerDay)
   else date := Floor(time / SecsPerDay);
@@ -980,7 +980,7 @@ begin
   NanoFractions := NanoFractions * 1000;
 end;
 
-function PG2DateTime(Value: Int64): TDateTime;
+function PG2DateTime(Value: Int64; const TimeZoneOffset: Int64): TDateTime;
 var d: TDateTime;
   date: Int64;
   Year, Month, Day, Hour, Min, Sec: Word;
@@ -989,6 +989,8 @@ begin
   {$IFNDEF ENDIAN_BIG}
   Reverse8Bytes(@Value);
   {$ENDIF}
+  if TimeZoneOffset <> 0 then
+    Value := Value + TimeZoneOffset;
   date := Value div USECS_PER_DAY;
   Value := Value mod USECS_PER_DAY;
   if Value < 0 then begin
@@ -1007,13 +1009,15 @@ begin
   else Result := d + Result;
 end;
 
-procedure PG2DateTime(Value: Int64; out Year, Month, Day, Hour, Min, Sec: Word;
-  out NanoFractions: Cardinal);
+procedure PG2DateTime(Value: Int64; const TimeZoneOffset: Int64;
+  out Year, Month, Day, Hour, Min, Sec: Word; out NanoFractions: Cardinal);
 var date: Int64;
 begin
   {$IFNDEF ENDIAN_BIG}
   Reverse8Bytes(@Value);
   {$ENDIF}
+  if TimeZoneOffset <> 0 then
+    Value := Value + TimeZoneOffset;
   date := Value div USECS_PER_DAY;
   Value := Value - (date * USECS_PER_DAY);
   if Value < 0 then begin

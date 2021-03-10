@@ -1210,6 +1210,7 @@ var L: LongWord;
   PEnd: PAnsiChar;
   BCD: TBCD;
   TS: TZTimeStamp absolute BCD;
+  TimeZoneOffset: Int64;
   {$IFNDEF ENDIAN_BIG}UUID: TGUID absolute BCD;{$ENDIF}
   ROW_IDX: Integer;
   Days: Integer absolute ROW_IDX;
@@ -1290,9 +1291,12 @@ jmpTime:              Result := PAnsiChar(fByteBuffer);
                         Result, ConSettings.ReadFormatSettings.TimeFormat, False, False);
                     end;
         stTimestamp:begin
+                      if TypeOID = TIMESTAMPTZOID
+                      then TimeZoneOffset := FPGConnection.GetTimeZoneOffset
+                      else TimeZoneOffset := 0;
                       if Finteger_datetimes
-                      then PG2DateTime(PInt64(Result)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
-                      else PG2DateTime(PDouble(Result)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
+                      then PG2DateTime(PInt64(Result)^, TimeZoneOffset, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
+                      else PG2DateTime(PDouble(Result)^, TimeZoneOffset, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTS:                Result := PAnsiChar(fByteBuffer);
                       Len := ZSysUtils.DateTimeToRaw(TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
                         TS.Second, TS.Fractions, Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
@@ -1405,6 +1409,7 @@ function TZPostgreSQLResultSet.GetPWideChar(ColumnIndex: Integer;
   out Len: NativeUInt): PWideChar;
 var P: PAnsiChar;
   PEnd: PWideChar;
+  TimeZoneOffset: Int64;
   BCD: TBCD;
   TS: TZTimeStamp absolute BCD;
   UUID: TGUID absolute BCD;
@@ -1490,9 +1495,12 @@ jmpTime:              Result := PWideChar(fByteBuffer);
                         Result, ConSettings.ReadFormatSettings.TimeFormat, False, tS.IsNegative);
                     end;
         stTimestamp:begin
+                      if TypeOID = TIMESTAMPTZOID
+                      then TimeZoneOffset := FPGConnection.GetTimeZoneOffset
+                      else TimeZoneOffset := 0;
                       if Finteger_datetimes
-                      then PG2DateTime(PInt64(P)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
-                      else PG2DateTime(PDouble(P)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
+                      then PG2DateTime(PInt64(P)^, TimeZoneOffset, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
+                      else PG2DateTime(PDouble(P)^, TimeZoneOffset, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTS:                Result := PWideChar(fByteBuffer);
                       Len := ZSysUtils.DateTimeToUni(TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute,
                         TS.Second, TS.Fractions, Result, ConSettings.ReadFormatSettings.DateTimeFormat, False, False);
@@ -1870,6 +1878,7 @@ end;
 function TZPostgreSQLResultSet.GetFloat(ColumnIndex: Integer): Single;
 var P: PAnsiChar;
     ROW_IDX: Integer;
+    TimeZoneOffset: Int64;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
@@ -1900,9 +1909,14 @@ begin
         stTime:                       if Finteger_datetimes
                                       then Result := PG2Time(PInt64(P)^)
                                       else Result := PG2Time(PDouble(P)^);
-         stTimestamp:                 if Finteger_datetimes
-                                      then Result := PG2DateTime(PInt64(P)^)
-                                      else Result := PG2DateTime(PDouble(P)^);
+         stTimestamp:                 begin
+                                        if TypeOID = TIMESTAMPTZOID
+                                        then TimeZoneOffset := FPGConnection.GetTimeZoneOffset
+                                        else TimeZoneOffset := 0;
+                                        if Finteger_datetimes
+                                        then Result := PG2DateTime(PInt64(P)^, TimeZoneOffset)
+                                        else Result := PG2DateTime(PDouble(P)^, TimeZoneOffset);
+                                      end;
         //stGUID: ;
         stAsciiStream, stUnicodeStream,
         stString, stUnicodeString:    SQLStrToFloatDef(P, Result, 0);
@@ -2002,6 +2016,7 @@ end;
 function TZPostgreSQLResultSet.GetDouble(ColumnIndex: Integer): Double;
 var P: PAnsiChar;
     ROW_IDX: Integer;
+    TimeZoneOffset: Int64;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
@@ -2033,9 +2048,14 @@ begin
         stTime:                       if Finteger_datetimes
                                       then Result := PG2Time(PInt64(P)^)
                                       else Result := PG2Time(PDouble(P)^);
-        stTimestamp:                  if Finteger_datetimes
-                                      then Result := PG2DateTime(PInt64(P)^)
-                                      else Result := PG2DateTime(PDouble(P)^);
+        stTimestamp:                  begin
+                                        if TypeOID = TIMESTAMPTZOID
+                                        then TimeZoneOffset := FPGConnection.GetTimeZoneOffset
+                                        else TimeZoneOffset := 0;
+                                        if Finteger_datetimes
+                                        then Result := PG2DateTime(PInt64(P)^, TimeZoneOffset)
+                                        else Result := PG2DateTime(PDouble(P)^, TimeZoneOffset);
+                                      end;
         //stGUID: ;
         stAsciiStream, stUnicodeStream,
         stString, stUnicodeString:    SQLStrToFloatDef(P, Result, 0);
@@ -2145,6 +2165,7 @@ var Len: NativeUInt;
     ROW_IDX: Integer;
     Months: Integer absolute ROW_IDX;
     Days: Integer absolute ROW_IDX;
+    TimeZoneOffset: Int64;
 label from_str, jmpZero;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2172,13 +2193,18 @@ from_str:             Len := ZFastCode.StrLen(P);
       stTime:       goto jmpZero;
       stTimestamp:  if FBinaryValues then begin
                       Result.IsNegative := False;
+                      if TypeOID = TIMESTAMPTZOID
+                      then TimeZoneOffset := FPGConnection.GetTimeZoneOffset
+                      else TimeZoneOffset := 0;
                       if Finteger_datetimes
-                      then PG2DateTime(PInt64(P)^, Result.Year, Result.Month, Result.Day,
-                        PZTime(fByteBuffer)^.Hour, PZTime(fByteBuffer)^.Minute,
-                        PZTime(fByteBuffer)^.Second, PZTime(fByteBuffer)^.Fractions)
-                      else PG2DateTime(PDouble(P)^, Result.Year, Result.Month, Result.Day,
-                        PZTime(fByteBuffer)^.Hour, PZTime(fByteBuffer)^.Minute,
-                        PZTime(fByteBuffer)^.Second, PZTime(fByteBuffer)^.Fractions);
+                      then PG2DateTime(PInt64(P)^, TimeZoneOffset, Result.Year,
+                        Result.Month, Result.Day, PZTime(fByteBuffer)^.Hour,
+                        PZTime(fByteBuffer)^.Minute, PZTime(fByteBuffer)^.Second,
+                        PZTime(fByteBuffer)^.Fractions)
+                      else PG2DateTime(PDouble(P)^, TimeZoneOffset, Result.Year,
+                        Result.Month, Result.Day, PZTime(fByteBuffer)^.Hour,
+                        PZTime(fByteBuffer)^.Minute, PZTime(fByteBuffer)^.Second,
+                        PZTime(fByteBuffer)^.Fractions);
                     end else begin
                       Len := ZFastCode.StrLen(P);
                       LastWasNull := not TryPCharToTimeStamp(P, Len, ConSettings^.ReadFormatSettings,
@@ -2224,6 +2250,7 @@ procedure TZPostgreSQLResultSet.GetTime(ColumnIndex: Integer;
 var Len: NativeUInt;
     P: PAnsiChar;
     ROW_IDX: Integer;
+    TimeZoneOffset: Int64;
 label from_str, jmpZero;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2252,11 +2279,14 @@ from_str:           Len := StrLen(P);
                   end;
       stTimestamp:if FBinaryValues then begin
                     Result.IsNegative := False;
+                    if TypeOID = TIMESTAMPTZOID
+                    then TimeZoneOffset := FPGConnection.GetTimeZoneOffset
+                    else TimeZoneOffset := 0;
                     if Finteger_datetimes
-                    then PG2DateTime(PInt64(P)^, PZDate(fByteBuffer)^.Year,
+                    then PG2DateTime(PInt64(P)^, TimeZoneOffset, PZDate(fByteBuffer)^.Year,
                       PZDate(fByteBuffer)^.Month, PZDate(fByteBuffer)^.Day,
                       Result.Hour, Result.Minute, Result.Second, Result.Fractions)
-                    else PG2DateTime(PDouble(P)^, PZDate(fByteBuffer)^.Year,
+                    else PG2DateTime(PDouble(P)^, TimeZoneOffset, PZDate(fByteBuffer)^.Year,
                       PZDate(fByteBuffer)^.Month, PZDate(fByteBuffer)^.Day,
                       Result.Hour, Result.Minute, Result.Second, Result.Fractions);
                   end else begin
@@ -2293,6 +2323,7 @@ var Len: NativeUInt;
     ROW_IDX: Integer;
     Months: Integer absolute ROW_IDX;
     Days: Integer absolute ROW_IDX;
+    TimeZoneOffset: Int64;
 label from_str, jmpZero;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -2336,11 +2367,14 @@ begin
                   end;
       stTimestamp:begin
                   if FBinaryValues then begin
+                    if TypeOID = TIMESTAMPTZOID
+                    then TimeZoneOffset := FPGConnection.GetTimeZoneOffset
+                    else TimeZoneOffset := 0;
                     if Finteger_datetimes
-                    then PG2DateTime(PInt64(P)^, Result.Year,
+                    then PG2DateTime(PInt64(P)^, TimeZoneOffset, Result.Year,
                       Result.Month, Result.Day, Result.Hour, Result.Minute,
                       Result.Second, Result.Fractions)
-                    else PG2DateTime(PDouble(P)^, Result.Year,
+                    else PG2DateTime(PDouble(P)^, TimeZoneOffset, Result.Year,
                       Result.Month, Result.Day, Result.Hour, Result.Minute,
                       Result.Second, Result.Fractions);
                     PCardinal(@Result.TimeZoneHour)^ := 0;

@@ -66,6 +66,7 @@ uses
   ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant, ZDbcAdoUtils,
   ZDbcOleDBStatement, ZDbcUtils;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$WARN 6058 off : Call to subroutine "operator:=(const source:OleVariant):AnsiString" marked as inline is not inlined}{$ENDIF}
 type
   {** Implements Prepared ADO Statement. }
   TZAbstractAdoStatement = Class(TZUTF16ParamCountPreparedStatement)

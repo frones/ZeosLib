@@ -68,6 +68,7 @@ uses
   ZDbcCache, ZDbcCachedResultSet, ZDbcResultSet, ZDbcResultsetMetadata,
   ZCompatibility, ZClasses, ZDbcOleDB;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$WARN 6058 off : Call to subroutine "operator:=(const sourc:OleVariant):" marked as inline is not inlined}{$ENDIF}
 type
   PRowSet = ^IRowSet;
 

@@ -100,6 +100,7 @@ type
     procedure AddDomain2BaseTypeIfNotExists(DomainOID, BaseTypeOID: OID);
     function FindDomainBaseType(DomainOID: OID; out BaseTypeOID: OID): Boolean;
     procedure FillUnknownDomainOIDs;
+    function GetTimeZoneOffset: Int64;
 
     procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: RawByteString);
     procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString);
@@ -146,6 +147,7 @@ type
     FServerMajorVersion: Integer;
     FServerMinorVersion: Integer;
     FServerSubVersion: Integer;
+    FTimeZoneOffset: Int64;
     FNoticeProcessor: TPQnoticeProcessor;
     FNoticeReceiver: TPQnoticeReceiver;
     //a collection of statement handles that are not used anymore. These can be
@@ -174,6 +176,7 @@ type
     procedure InternalClose; override;
     function GetServerSetting(const AName: RawByteString): string;
     procedure SetServerSetting(const AName, AValue: RawbyteString);
+    procedure UpdateTimestampOffset;
   public
     procedure AfterConstruction; override;
     destructor Destroy; override;
@@ -329,6 +332,7 @@ type
     function GetServerMinorVersion: Integer;
     function GetServerSubVersion: Integer;
     function StoredProcedureIsSelectable(const ProcName: String): Boolean;
+    function GetTimeZoneOffset: Int64;
   public
     function PingServer: Integer; override;
 
@@ -949,6 +953,7 @@ begin
     {$ENDIF}
     Finteger_datetimes := StrToBoolEx(GetServerSetting(#39+ConnProps_integer_datetimes+#39));
     FIs_bytea_output_hex := UpperCase(GetServerSetting('''bytea_output''')) = 'HEX';
+    UpdateTimestampOffset;
   finally
     if self.IsClosed and (Self.Fconn <> nil) then
     begin
@@ -1205,6 +1210,77 @@ begin
   else Result := FProcedureTypesCache.Objects[I] <> nil;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
+procedure TZPostgreSQLConnection.UpdateTimestampOffset;
+var ANow: TDateTime;
+    SQL: RawByteString;
+    L: LengthInt;
+    QueryHandle: TPGresult;
+    Status: TZPostgreSQLExecStatusType;
+    TS: TZTimestamp;
+    P: Pointer;
+    i64, i64Tz: Int64;
+    Dbl, dblTz: Double;
+  function DateTimeToMilliseconds(const ADateTime: TDateTime): Int64;
+  var
+    LTimeStamp: TTimeStamp;
+  begin
+    LTimeStamp := DateTimeToTimeStamp(ADateTime);
+    Result := LTimeStamp.Date;
+    Result := (Result * MSecsPerDay) + LTimeStamp.Time;
+  end;
+begin
+  if Closed then
+    Exit;
+  if not Assigned(FPlainDriver.PQexecParams) then begin
+    FTimeZoneOffset := 0;
+    Exit;
+  end;
+  ANow := Now;
+  DecodeDateTimeToTimeStamp(ANow, TS);
+  TS.Second := 0;
+  TS.Fractions := 0;
+  L := ZSysUtils.DateTimeToRaw(TS.Year, TS.Month, TS.Day, TS.Hour,
+    TS.Minute, 0, 0, @fByteBuffer[0], DefDateTimeFormatYMD, True, False);
+  SQL := '';
+  System.SetString(SQL, PAnsiChar(@fByteBuffer[0]), L);
+
+  SQL := 'SELECT '+SQL+'::TIMESTAMPTZ';
+  {$IFDEF UNICODE}
+  Ascii7ToUnicodeString(Pointer(SQL), Length(SQL), FLogMessage);
+  {$ENDIF}
+  QueryHandle := FPlainDriver.PQexecParams(Fconn, Pointer(SQL), 0,
+    nil, nil, nil, nil, ParamFormatBin);
+  try
+    Status := FPlainDriver.PQresultStatus(QueryHandle);
+    if Status = PGRES_TUPLES_OK then begin
+      if DriverManager.HasLoggingListener then
+        DriverManager.LogMessage(lcExecute, URL.Protocol, {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF});
+      P := FPlainDriver.PQgetvalue(QueryHandle, 0, 0);
+      if Finteger_datetimes then begin
+        TimeStamp2PG(TS, i64);
+        {$IFNDEF ENDIAN_BIG}
+        Reverse8Bytes(@i64);
+        {$ENDIF}
+        i64tz := PG2Int64(P);
+        FTimeZoneOffSet := i64-i64tz;
+      end else begin
+        TimeStamp2PG(TS, dbl);
+        {$IFNDEF ENDIAN_BIG}
+        Reverse8Bytes(@dbl);
+        {$ENDIF}
+        dblTz := PG2Double(P);
+        FTimeZoneOffSet := Trunc(dbl-dblTz);
+      end;
+    end else
+      HandleErrorOrWarning(PGRES_FATAL_ERROR, lcExecute, {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF}, Self, QueryHandle);
+  finally
+    if QueryHandle <> nil then
+      FPlainDriver.PQclear(QueryHandle);
+  end;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
 procedure TZPostgreSQLConnection.GetBinaryEscapeString(Buf: Pointer;
   Len: LengthInt; out Result: RawByteString);
 begin
@@ -1233,6 +1309,11 @@ end;
 function TZPostgreSQLConnection.GetPlainDriver: TZPostgreSQLPlainDriver;
 begin
   Result := FPlainDriver;
+end;
+
+function TZPostgreSQLConnection.GetTimeZoneOffset: Int64;
+begin
+  Result := FTimeZoneOffset;
 end;
 
 {**

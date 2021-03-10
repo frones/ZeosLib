@@ -3274,6 +3274,7 @@ begin
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Value)^, Pointer(Result)^, L);
 end;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operant..." marked as inline is not inlined}{$ENDIF}
 function BytesToVar(const Value: TBytes): Variant;
 var
   I: Integer;
@@ -3282,6 +3283,7 @@ begin
   for I := 0 to Length(Value) - 1 do
     Result[I] := Value[I];
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
 function BytesToVar(const Value: RawByteString): Variant;
@@ -3298,6 +3300,7 @@ begin
 end;
 {$ENDIF WITH_TBYTES_AS_RAWBYTESTRING}
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operant..." marked as inline is not inlined}{$ENDIF}
 function VarToBytes(const Value: Variant): TBytes;
 var
   I: Integer;
@@ -3311,6 +3314,7 @@ begin
   for I := 0 to VarArrayHighBound(Value, 1) do
     Result[I] := Value[I];
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 function TryRawToDate(Value: PAnsiChar; Len: Cardinal;
   const Format: String; var Date: TZDate): Boolean;

@@ -350,6 +350,7 @@ const
      ISOLATIONLEVEL_REPEATABLEREAD,
      ISOLATIONLEVEL_SERIALIZABLE);
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operator:=(const sourc:Longword):OleVariant" marked as inline is not inlined}{$ENDIF}
 procedure TZOleDBConnection.InternalSetTIL(Level: TZTransactIsolationLevel);
 var
   rgDBPROPSET_DBPROPSET_SESSION: TDBProp;
@@ -372,6 +373,7 @@ begin
     FAutoCommitTIL := TIL[Level];
   end;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 {**
   Destroys this object and cleanups the memory.
@@ -478,6 +480,7 @@ var
   PropertySets: array[0..2] of TDBPROPSET;
   cPropertySets: ULONG;
   Status: HResult;
+  {$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operator:=(const source:smallInt):OleVariant" marked as inline is not inlined}{$ENDIF}
   procedure SetProp(var PropSet: TDBPROPSET; PropertyID: DBPROPID; Value: SmallInt);
   begin
     //initialize common property options
@@ -489,6 +492,7 @@ var
     PropSet.rgProperties^[PropSet.cProperties].vValue       := Value;
     Inc(PropSet.cProperties);
   end;
+  {$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 begin
 //some examples: https://blogs.msdn.microsoft.com/sqlnativeclient/2009/05/06/sql-server-native-client-connection-strings-and-ole-db/
   DBProps := nil; //init
@@ -568,6 +572,7 @@ end;
 
 // returns property value(-s) from Data Source Information group as string,
 //where values are delimited using space
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operator:=(const source:OleVariant):AnsiString" marked as inline is not inlined}{$ENDIF}
 function TZOleDBConnection.OleDbGetDBPropValue(const APropIDs: array of DBPROPID): string;
 var
   DBProperties: IDBProperties;
@@ -612,6 +617,7 @@ begin
     DBProperties := nil;
   end;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 {**
   Returns the Connection's current catalog name.
@@ -1002,6 +1008,7 @@ begin
   end;
 end;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operator:=(const source:OleVariant):LongInt" marked as inline is not inlined}{$ENDIF}
 function TZOleDBConnection.OleDbGetDBPropValue(APropID: DBPROPID): Integer;
 var
   DBProperties: IDBProperties;
@@ -1038,6 +1045,7 @@ begin
     DBProperties := nil;
   end;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 {**
   Opens a connection to database server with specified parameters.
