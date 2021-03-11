@@ -623,7 +623,9 @@ var
   C: Cardinal;
   L: NativeUInt;
   P, pgBuff: PAnsiChar;
-  RNo, H, I: Integer;
+  TimeZoneOffset: Int64;
+  RNo: Integer absolute TimeZoneOffset;
+  H, I: Integer;
   TS: TZTimeStamp;
   Months: Integer absolute TS;
   Days: Integer absolute TS;
@@ -739,9 +741,12 @@ jmpTime:                      if jcoMongoISODate in JSONComposeOptions
                               else JSONWriter.Add('"');
                             end;
             stTimestamp   : begin
+                              if TypeOID = TIMESTAMPTZOID
+                              then TimeZoneOffset := FPGConnection.GetTimeZoneOffset
+                              else TimeZoneOffset := 0;
                               if Finteger_datetimes
-                              then PG2DateTime(PInt64(P)^, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions)
-                              else PG2DateTime(PDouble(P)^, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions);
+                              then PG2DateTime(PInt64(P)^, TimeZoneOffset, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions)
+                              else PG2DateTime(PDouble(P)^, TimeZoneOffset, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                               then JSONWriter.AddShort('ISODate("')
                               else if jcoDATETIME_MAGIC in JSONComposeOptions
@@ -1042,7 +1047,10 @@ begin
     CIDROID: ColumnInfo.Precision := 100; { cidr }
     INETOID: ColumnInfo.Precision := 100{39}; { inet }
     MACADDROID: ColumnInfo.Precision := 17; { macaddr }
-    INTERVALOID: ColumnInfo.Precision := 32; { interval }
+    INTERVALOID: begin
+        ColumnInfo.Precision := 32; { interval }
+        goto asignTScaleAndPrec;
+      end;
     REGPROCOID: ColumnInfo.Precision := 64; { regproc } // M.A. was 10
     BYTEAOID: begin{ bytea }
         if TypeModifier >= VARHDRSZ then begin

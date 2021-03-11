@@ -149,13 +149,13 @@ begin
 
   ResultSet := Statement.ExecuteQuery('select * from table_ticket437 order by id');
   with ResultSet do try
-    with GetMetadata do
+    {with GetMetadata do
     begin
       CheckEquals(stInteger, GetColumnType(col_id_Index), 'id column type');
       CheckEquals(stString, GetColumnType(col_text_Index), 'text column type');
       CheckEquals(stAsciiStream, GetColumnType(col_clobek_index), 'clobek column type');
       CheckEquals(stAsciiStream, GetColumnType(col_longek_index), 'longek column type');
-    end;
+    end;}
     Check(Next, 'ResultSet.Next');
     CheckEquals('ASD', GetString(col_text_Index), 'the value of text varchar2(4000) field');
     CheckEquals('ASD', GetString(col_clobek_index), 'the value of clobek clob field');
