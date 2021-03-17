@@ -151,6 +151,9 @@ type
     ///  for updates.</summary>
     /// <param>"Value" the UpdateAll mode should be used.</param>
     procedure SetUpdateAll(Value: Boolean);
+    /// <summary>Set's a list of parameter properties to this resolver object.</summary>
+    /// <param>"Value" the List of parameter.</param>
+    procedure SetResolverParameters(Value: TStrings);
     /// <summary>Set a new resultset metadata object</summary>
     /// <param>"Value" the new resultset metadata object to be set.</param>
     procedure SetMetadata(const Value: IZResultSetMetadata);

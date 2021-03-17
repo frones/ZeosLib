@@ -127,7 +127,7 @@ type
     FCalcDefaults: Boolean;
     FWhereAll: Boolean;
     FUpdateAll: Boolean;
-
+    FParameters: TStrings;
   protected
     FUpdateStatements: TZKeyAndPreparedStatementPairList;
     FDeleteStatements: TZKeyAndPreparedStatementPairList;
@@ -173,6 +173,9 @@ type
     /// <param>"ColumnIndex" an index of the column.</param>
     /// <returns><c>true</c> if column can be included into where clause.</returns>
     function CheckKeyColumn(ColumnIndex: Integer): Boolean; virtual;
+    /// <summary>Get a parameter value by it's name</summary>
+    /// <returns>The found value or an empty string.</returns>
+    function GetResolverParameterValue(const ParameterName: String): String;
   protected
     /// <summary>Represents the DatabaseMetadata object</summary>
     property DatabaseMetadata: IZDatabaseMetadata read FDatabaseMetadata
@@ -293,6 +296,9 @@ type
     ///  for updates.</summary>
     /// <param>"Value" the UpdateAll mode should be used.</param>
     procedure SetUpdateAll(Value: Boolean);
+    /// <summary>Set's a list of property parameters the to Resolver object.</summary>
+    /// <param>"Value" the List of parameter.</param>
+    procedure SetResolverParameters(Value: TStrings);
     /// <summary>Set a new connection.</summary>
     /// <param>"Value" the IZTransaction object.</param>
     procedure SetConnection(const Value: IZConnection);
@@ -332,6 +338,9 @@ begin
   FUpdateStatements := TZKeyAndPreparedStatementPairList.Create;
   FDeleteStatements := TZKeyAndPreparedStatementPairList.Create;
   FInsertStatements := TZKeyAndPreparedStatementPairList.Create;
+
+  FParameters := TStringList.Create;
+  FParameters.Assign(Statement.GetParameters);
 end;
 
 destructor TZGenerateSQLCachedResolver.Destroy;
@@ -346,6 +355,7 @@ begin
   FreeAndNil(FUpdateStatements);
   FreeAndNil(FDeleteStatements);
   FreeAndNil(FInsertStatements);
+  FreeAndNil(FParameters);
   inherited Destroy;
 end;
 
@@ -480,7 +490,7 @@ begin
 
   { Tryes to define primary keys. }
   if not WhereAll then begin
-    KeyFields := FStatement.GetParameters.Values[DSProps_KeyFields];
+    KeyFields := GetResolverParameterValue(DSProps_KeyFields);
     { Let user define key fields }
     if KeyFields <> '' then begin
       Fields := ExtractFields(KeyFields, [',', ';']);
@@ -597,6 +607,14 @@ begin
   end;
 end;
 
+function TZGenerateSQLCachedResolver.GetResolverParameterValue(
+  const ParameterName: String): String;
+begin
+  {if Statement <> nil
+  then Result := Statement.GetParameters.Values[ParameterName]
+  else } Result := FParameters.Values[ParameterName];
+end;
+
 function TZGenerateSQLCachedResolver.HasAutoCommitTransaction: Boolean;
 begin
   if FTransaction <> nil
@@ -648,19 +666,17 @@ begin
     SQLWriter.ReplaceOrAddLastChar(',', ')', Result);
 
     {$IF DECLARED(DSProps_InsertReturningFields)}
-    if FStatement <> nil then begin
-      Tmp := FStatement.GetParameters.Values[DSProps_InsertReturningFields];
-      if Tmp <> '' then begin
-        SQLWriter.AddText(' RETURNING ', Result);
-        Fields := ExtractFields(Tmp, [',', ';']);
-        for I := 0 to Fields.Count - 1 do begin
-          if I > 0 then
-            SQLWriter.AddChar(',', Result);
-          Tmp := IdentifierConverter.Quote(Fields[I], iqColumn);
-          SQLWriter.AddText(Tmp, Result);
-        end;
-        Fields.Free;
+    Tmp := GetResolverParameterValue(DSProps_InsertReturningFields);
+    if Tmp <> '' then begin
+      SQLWriter.AddText(' RETURNING ', Result);
+      Fields := ExtractFields(Tmp, [',', ';']);
+      for I := 0 to Fields.Count - 1 do begin
+        if I > 0 then
+          SQLWriter.AddChar(',', Result);
+        Tmp := IdentifierConverter.Quote(Fields[I], iqColumn);
+        SQLWriter.AddText(Tmp, Result);
       end;
+      Fields.Free;
     end;
     {$IFEND}
     SQLWriter.Finalize(Result);
@@ -994,11 +1010,17 @@ begin
   end;
 end;
 
+procedure TZGenerateSQLCachedResolver.SetResolverParameters(Value: TStrings);
+begin
+  FParameters.Assign(Value);
+end;
+
 procedure TZGenerateSQLCachedResolver.SetResolverStatementParamters(
   const Statement: IZStatement; {$IFDEF AUTOREFCOUNT}const {$ENDIF} Params: TStrings);
 begin
-  if Statement <> nil then
-    Params.Assign(Statement.GetParameters);
+  {if Statement <> nil
+  then Params.Assign(Statement.GetParameters)
+  else }Params.Assign(FParameters)
 end;
 
 procedure TZGenerateSQLCachedResolver.SetSearchable(ColumnIndex: Integer;

@@ -352,6 +352,8 @@ begin
       FGenDMLResolver.SetUpdateAll(FUpdateMode = umUpdateAll);
       FGenDMLResolver.SetWhereAll(FWhereMode = wmWhereAll);
       FGenDMLResolver.SetCalcDefaults(doCalcDefaults in Options);
+      if FWhereMode <> wmWhereAll then
+        FGenDMLResolver.setResolverParameters(Properties);
     end;
   end;
 end;
