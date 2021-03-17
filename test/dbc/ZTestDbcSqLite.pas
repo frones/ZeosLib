@@ -204,10 +204,10 @@ end;
 }
 procedure TZTestDbcSQLiteCase.TestPreparedStatement;
 const
-  department_dep_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  department_dep_name_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  department_dep_shname_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  department_dep_address_index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  department_dep_id_index = FirstDbcIndex;
+  department_dep_name_index = department_dep_id_index+1;
+  department_dep_shname_index = department_dep_name_index +1;
+  department_dep_address_index = department_dep_shname_index +1;
 var
   Statement: IZPreparedStatement;
   Stream: TStream;
@@ -279,13 +279,13 @@ end;
 }
 procedure TZTestDbcSQLiteCase.TestDefaultValues;
 const
-  D_ID = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  D_FLD1 = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  D_FLD2 = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  D_FLD3 = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  D_FLD4 = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  D_FLD5 = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  D_FLD6 = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  D_ID = FirstDbcIndex;
+  D_FLD1 = D_ID+1;
+  D_FLD2 = D_FLD1+1;
+  D_FLD3 = D_FLD2+1;
+  D_FLD4 = D_FLD3+1;
+  D_FLD5 = D_FLD4+1;
+  D_FLD6 = D_FLD5+1;
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -324,9 +324,9 @@ end;
 }
 procedure TZTestDbcSQLiteCase.TestEmptyTypes;
 const
-  et_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  data1_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
-  data2_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  et_id_index = FirstDbcIndex;
+  data1_index = et_id_index +1;
+  data2_index = data1_index +1;
 var
   PreparedStatement: IZPreparedStatement;
   Statement: IZStatement;
@@ -381,7 +381,7 @@ end;
 
 procedure TZTestDbcSQLiteCase.TestReuseResultsetNative;
 const
-  p_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  p_id_index = FirstDbcIndex;
 var
   PreparedStatement: IZPreparedStatement;
   ResultSet: IZResultSet;
