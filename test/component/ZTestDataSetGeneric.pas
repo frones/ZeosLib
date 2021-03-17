@@ -2225,7 +2225,7 @@ begin
     Check(Query.Active);
     Query.Delete;
   finally
-    Connection.ExecuteDirect('delete from people where p_id >= '+IntToStr(TEST_ROW_ID-1));
+    Connection.ExecuteDirect('delete from people where p_id >= '+SysUtils.IntToStr(TEST_ROW_ID-1));
     FreeAndNil(Query);
     FreeAndNil(NewConnection);
     FreeAndNil(UpdateSQL);
