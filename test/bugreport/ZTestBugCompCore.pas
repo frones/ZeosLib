@@ -132,6 +132,7 @@ type
     procedure TestSF310_JoinedUpdate_ProviderFlags;
     procedure TestSF469;
     procedure TestSF493;
+    procedure TestSF495;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -1998,6 +1999,38 @@ var FConnection1: TZConnection;
 begin
   FConnection1 := TZConnection.Create(Connection);  //need an owner for this test
   FreeAndNil(FConnection1);
+end;
+
+procedure ZTestCompCoreBugReport.TestSF495;
+const TestRowID = 255;
+var Query: TZQuery;
+
+begin
+  Query := CreateQuery;
+  try
+    Check(Query <> nil);
+    Query.SQL.Text := 'select * from people';
+    Query.TryKeepDataOnDisconnect := True;
+    Query.CachedUpdates := True;
+    Query.Open;
+    Query.FetchAll;
+    Check(Query.TryKeepDataOnDisconnect);
+    Query.Connection.Disconnect;
+    Query.Append;
+    Query.Fields[0].AsInteger := TestRowID;
+    Query.Post;
+    if Query.UpdatesPending then begin
+      if not Connection.Connected then
+        Connection.Connect;
+      Query.ApplyUpdates;
+      Query.CommitUpdates;
+      Query.Refresh;
+    end;
+  finally
+    Query.Free;
+    Connection.Connect;
+    Connection.ExecuteDirect('delete from people where p_id ='+IntToStr(TestRowID));
+  end;
 end;
 
 procedure ZTestCompCoreBugReport.TestSF418_IndexFieldNames;

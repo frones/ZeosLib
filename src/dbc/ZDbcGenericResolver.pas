@@ -82,7 +82,7 @@ type
 
   /// <author>EgonHugeist<author>
   /// <summary>Implements a list of TZKeyAndPreparedStatmentPairs.</summary>
-  ZKeyAndPreparedStatementPairList = class(TZCustomElementList)
+  TZKeyAndPreparedStatementPairList = class(TZCustomElementList)
   protected
     /// <summary>Notify about an action which will or was performed.
     ///  if ElementNeedsFinalize is False the method will never be called.
@@ -115,7 +115,7 @@ type
   TZGenerateSQLCachedResolver = class (TZAbstractCachedResolver, IZCachedResolver,
     IZGenerateSQLCachedResolver)
   private
-    FStatement : IZStatement;
+    FStatement: IZStatement;
     FTransaction: IZTransaction;
     FDatabaseMetadata: IZDatabaseMetadata;
     FIdentifierConverter: IZIdentifierConverter;
@@ -129,10 +129,10 @@ type
     FUpdateAll: Boolean;
 
   protected
-    FUpdateStatements: ZKeyAndPreparedStatementPairList;
-    FDeleteStatements: ZKeyAndPreparedStatementPairList;
+    FUpdateStatements: TZKeyAndPreparedStatementPairList;
+    FDeleteStatements: TZKeyAndPreparedStatementPairList;
     FInsertColumns: TZIndexPairList;
-    FInsertStatements: ZKeyAndPreparedStatementPairList;
+    FInsertStatements: TZKeyAndPreparedStatementPairList;
     InsertStatement: IZPreparedStatement;
     /// <summary>Composes a fully quilified table name.</summary>
     /// <param>"Catalog" a table catalog name.</param>
@@ -296,7 +296,12 @@ type
     /// <summary>Set a new connection.</summary>
     /// <param>"Value" the IZTransaction object.</param>
     procedure SetConnection(const Value: IZConnection);
+    /// <summary>Set a new resultset metadata object</summary>
+    /// <param>"Value" the new resultset metadata object to be set.</param>
     procedure SetMetadata(const Value: IZResultSetMetadata);
+    /// <author>EgonHugeist</author>
+    /// <summary>Flush all cached statements</summary>
+    procedure FlushStatementCache;
   end;
   /// <summary>definines an alias for compatibility</summary>
   TZGenericCachedResolver = TZGenerateSQLCachedResolver;
@@ -324,16 +329,15 @@ begin
   FCurrentWhereColumns := TZIndexPairList.Create;
 
   FCalcDefaults := True;
-  FUpdateStatements := ZKeyAndPreparedStatementPairList.Create;
-  FDeleteStatements := ZKeyAndPreparedStatementPairList.Create;
-  FInsertStatements := ZKeyAndPreparedStatementPairList.Create;
+  FUpdateStatements := TZKeyAndPreparedStatementPairList.Create;
+  FDeleteStatements := TZKeyAndPreparedStatementPairList.Create;
+  FInsertStatements := TZKeyAndPreparedStatementPairList.Create;
 end;
 
 destructor TZGenerateSQLCachedResolver.Destroy;
 begin
   Metadata := nil;
   FDatabaseMetadata := nil;
-
   FreeAndNil(FInsertColumns);
   FreeAndNil(FUpdateColumns);
   FreeAndNil(FWhereColumns);
@@ -342,15 +346,6 @@ begin
   FreeAndNil(FUpdateStatements);
   FreeAndNil(FDeleteStatements);
   FreeAndNil(FInsertStatements);
-
-  if InsertStatement <> nil then begin
-    InsertStatement.Close;
-    InsertStatement := nil;
-  end;
-  if RefreshResultSet <> nil then begin
-    RefreshResultSet.Close;
-    RefreshResultSet := nil;
-  end;
   inherited Destroy;
 end;
 
@@ -521,6 +516,24 @@ CopyParams:
   end;
 end;
 
+procedure TZGenerateSQLCachedResolver.FlushStatementCache;
+begin
+  if InsertStatement <> nil then begin
+    InsertStatement.Close;
+    InsertStatement := nil;
+  end;
+  if RefreshResultSet <> nil then begin
+    RefreshResultSet.Close;
+    RefreshResultSet := nil;
+  end;
+  if FUpdateStatements <> nil then
+    FUpdateStatements.SetCount(0);
+  if FDeleteStatements <> nil then
+    FDeleteStatements.SetCount(0);
+  if FInsertStatements <> nil then
+    FInsertStatements.SetCount(0);
+end;
+
 procedure TZGenerateSQLCachedResolver.FillWhereAllColumns(
   IncrementDestIndexBy: Integer; IgnoreKeyColumn: Boolean = False);
 var
@@ -635,17 +648,19 @@ begin
     SQLWriter.ReplaceOrAddLastChar(',', ')', Result);
 
     {$IF DECLARED(DSProps_InsertReturningFields)}
-    Tmp := FStatement.GetParameters.Values[DSProps_InsertReturningFields];
-    if Tmp <> '' then begin
-      SQLWriter.AddText(' RETURNING ', Result);
-      Fields := ExtractFields(Tmp, [',', ';']);
-      for I := 0 to Fields.Count - 1 do begin
-        if I > 0 then
-          SQLWriter.AddChar(',', Result);
-        Tmp := IdentifierConverter.Quote(Fields[I], iqColumn);
-        SQLWriter.AddText(Tmp, Result);
+    if FStatement <> nil then begin
+      Tmp := FStatement.GetParameters.Values[DSProps_InsertReturningFields];
+      if Tmp <> '' then begin
+        SQLWriter.AddText(' RETURNING ', Result);
+        Fields := ExtractFields(Tmp, [',', ';']);
+        for I := 0 to Fields.Count - 1 do begin
+          if I > 0 then
+            SQLWriter.AddChar(',', Result);
+          Tmp := IdentifierConverter.Quote(Fields[I], iqColumn);
+          SQLWriter.AddText(Tmp, Result);
+        end;
+        Fields.Free;
       end;
-      Fields.Free;
     end;
     {$IFEND}
     SQLWriter.Finalize(Result);
@@ -918,29 +933,10 @@ end;
 
 procedure TZGenerateSQLCachedResolver.SetTransaction(
   const Value: IZTransaction);
-var Stmt: IZStatement;
 begin
   if FTransaction <> Value then begin
+    FlushStatementCache;
     FTransaction := Value;
-    if InsertStatement <> nil
-    then Stmt := InsertStatement
-    else begin
-      if (FUpdateStatements.Count > 0) then
-        Stmt := PZKeyAndPreparedStatmentPair(FUpdateStatements[0]).Statement
-      else if (FDeleteStatements.Count > 0) then
-        Stmt := PZKeyAndPreparedStatmentPair(FDeleteStatements[0]).Statement
-      else if (FInsertStatements.Count > 0) then
-        Stmt := PZKeyAndPreparedStatmentPair(FInsertStatements[0]).Statement
-      else Stmt := nil;
-    end;
-    { test if statement is part of session -> FB always all others will fail}
-    if (Stmt <> nil) and ((Value = nil) or (Stmt.GetConnection <> Value.GetConnection)) then begin
-      Stmt.Close;
-      InsertStatement := nil;
-      FInsertStatements.Count := 0;
-      FUpdateStatements.Count := 0;
-      FDeleteStatements.Count := 0;
-    end;
   end;
 end;
 
@@ -952,13 +948,19 @@ end;
 procedure TZGenerateSQLCachedResolver.SetConnection(const Value: IZConnection);
 begin
   if Connection <> Value then begin
+    FlushStatementCache;
     Connection := Value;
+    if FStatement <> nil then begin
+      FStatement.Close;
+      FStatement := nil;
+    end;
     if Value <> nil then begin
       FDatabaseMetadata := Connection.GetMetadata;
       FIdentifierConverter := FDatabaseMetadata.GetIdentifierConverter;
     end else begin
       FDatabaseMetadata := nil;
       FIdentifierConverter := nil;
+      SetTransaction(nil);
     end;
   end;
 end;
@@ -977,15 +979,13 @@ end;
 
 procedure TZGenerateSQLCachedResolver.SetWhereAll(Value: Boolean);
 begin
-  if FWhereAll <> Value then begin
-    FWhereAll := Value;
-  end;
+  FWhereAll := Value;
 end;
 
 procedure TZGenerateSQLCachedResolver.SetReadOnly(ColumnIndex: Integer;
   Value: Boolean);
 begin
-  if Metadata.IsReadOnly(ColumnIndex) <> Value then begin
+  if (Metadata <> nil) and (Metadata.IsReadOnly(ColumnIndex) <> Value) then begin
     Metadata.SetReadOnly(ColumnIndex, Value);
     if Metadata.IsReadOnly(ColumnIndex) = Value then begin
       FInsertColumns.Clear;
@@ -997,13 +997,14 @@ end;
 procedure TZGenerateSQLCachedResolver.SetResolverStatementParamters(
   const Statement: IZStatement; {$IFDEF AUTOREFCOUNT}const {$ENDIF} Params: TStrings);
 begin
-  Params.Assign(Statement.GetParameters);
+  if Statement <> nil then
+    Params.Assign(Statement.GetParameters);
 end;
 
 procedure TZGenerateSQLCachedResolver.SetSearchable(ColumnIndex: Integer;
   Value: Boolean);
 begin
-  if Metadata.IsSearchable(ColumnIndex) <> Value then begin
+  if (Metadata <> nil) and (Metadata.IsSearchable(ColumnIndex) <> Value) then begin
     Metadata.SetSearchable(ColumnIndex, Value);
     if Metadata.IsSearchable(ColumnIndex) = Value then
       FWhereColumns.Clear;
@@ -1063,9 +1064,9 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-{ ZKeyAndPreparedStatementPairList }
+{ TZKeyAndPreparedStatementPairList }
 
-procedure ZKeyAndPreparedStatementPairList.Add(Hash: NativeUInt;
+procedure TZKeyAndPreparedStatementPairList.Add(Hash: NativeUInt;
   const Statement: IZPreparedStatement);
 var Index: NativeInt;
   KeyAndPreparedStatmentPair: PZKeyAndPreparedStatmentPair;
@@ -1075,12 +1076,12 @@ begin
   KeyAndPreparedStatmentPair.Statement := Statement;
 end;
 
-constructor ZKeyAndPreparedStatementPairList.Create;
+constructor TZKeyAndPreparedStatementPairList.Create;
 begin
   inherited Create(SizeOf(TZKeyAndPreparedStatmentPair), True);
 end;
 
-function ZKeyAndPreparedStatementPairList.Get(
+function TZKeyAndPreparedStatementPairList.Get(
   Hash: NativeUInt): PZKeyAndPreparedStatmentPair;
 var I: NativeInt;
 begin
@@ -1093,7 +1094,7 @@ begin
 
 end;
 
-procedure ZKeyAndPreparedStatementPairList.Notify(Ptr: Pointer;
+procedure TZKeyAndPreparedStatementPairList.Notify(Ptr: Pointer;
   Action: TListNotification);
 begin
   if (Action = lnDeleted) and (PZKeyAndPreparedStatmentPair(Ptr).Statement <> nil) then begin
@@ -1102,7 +1103,7 @@ begin
   end;
 end;
 
-procedure ZKeyAndPreparedStatementPairList.Remove(Hash: NativeUInt);
+procedure TZKeyAndPreparedStatementPairList.Remove(Hash: NativeUInt);
 var I: NativeInt;
     Pair: PZKeyAndPreparedStatmentPair;
 begin

@@ -181,7 +181,6 @@ type
     FResultSetMetadata: IZResultSetMetadata;
     FOpenLobStreams: TZSortedList;
     FFormatSettings: TZFormatSettings;
-    FRefreshInProgress: Boolean;
     //for the Date/Time/DateTimeFields: circumvent duplicate conversions
     //TBCDField:
     //circumvent a TClientDataSet BCDField bug.
@@ -293,6 +292,7 @@ type
     function  GetUniDirectional: boolean;
     procedure SetProperties(const Value: TStrings); virtual;
   protected
+    FRefreshInProgress: Boolean;
     FControlsCodePage: TZControlsCodePage;
     FConnection: TZAbstractConnection;
     FTransaction: TZAbstractTransaction;
@@ -370,7 +370,7 @@ type
 
     property Statement: IZPreparedStatement read FStatement write FStatement;
     property ResultSet: IZResultSet read FResultSet write FResultSet;
-    property ResultSetMetadata: IZResultSetMetadata read FResultSetMetadata;
+    property ResultSetMetadata: IZResultSetMetadata read FResultSetMetadata write FResultSetMetadata;
     property ResultSetWalking: Boolean read FResultSetWalking;
   protected { External protected properties. }
     property DataLink: TDataLink read FDataLink;
@@ -2077,6 +2077,19 @@ var
   SavedRow: Integer;
   SavedRows: TZSortedList;
   SavedState: TDatasetState;
+
+  function InternalFilterRow: Boolean;
+  begin
+    if not InitFilterFields then begin
+      FilterFieldRefs := DefineFilterFields(Self, FilterExpression, FFieldsLookupTable);
+      InitFilterFields := True;
+    end;
+    CopyDataFieldsToVars(FilterFieldRefs, ResultSet,
+      FilterExpression.DefaultVariables);
+    Result := FilterExpression.VariantManager.GetAsBoolean(
+      FilterExpression.Evaluate4(FilterExpression.DefaultVariables,
+      FilterExpression.DefaultFunctions, FilterStack));
+  end;
 begin
   Result := True;
 
@@ -2145,19 +2158,8 @@ begin
      Exit;
 
   { Check the record by filter expression. }
-  if FilterEnabled and (FilterExpression.Expression <> '') then begin
-    if not InitFilterFields then begin
-      FilterFieldRefs := DefineFilterFields(Self, FilterExpression, FFieldsLookupTable);
-      InitFilterFields := True;
-    end;
-    CopyDataFieldsToVars(FilterFieldRefs, ResultSet,
-      FilterExpression.DefaultVariables);
-    Result := FilterExpression.VariantManager.GetAsBoolean(
-      FilterExpression.Evaluate4(FilterExpression.DefaultVariables,
-      FilterExpression.DefaultFunctions, FilterStack));
-  end;
-  if not Result then
-     Exit;
+  if FilterEnabled and (FilterExpression.Expression <> '') then
+    Result := InternalFilterRow;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -3759,6 +3761,8 @@ begin
   finally
     if Connection <> nil then
       Connection.HideSQLHourGlass;
+    if (OldRS <> ResultSet) and (OldRS <> nil) and not (OldRS.IsClosed) then
+      OldRS.Close;
     OldRS := nil;
   end;
   if FHasOutParams then
@@ -3941,7 +3945,7 @@ end;
 
 function TZAbstractRODataset.GetTryKeepDataOnDisconnect: Boolean;
 begin
-  Result := FTryKeepDataOnDisconnect;
+  Result := FTryKeepDataOnDisconnect and not (csDestroying in ComponentState);
 end;
 
 {**
@@ -3968,14 +3972,12 @@ end;
 procedure TZAbstractRODataset.SetPrepared(Value: Boolean);
 begin
   FResultSetWalking := False;
-  If Value <> FPrepared then
-    begin
-      If Value then
-        InternalPrepare
-      else
-        InternalUnprepare;
-      FPrepared := Value;
-    end;
+  If Value <> FPrepared then begin
+    If Value
+    then InternalPrepare
+    else InternalUnprepare;
+    FPrepared := Value;
+  end;
 end;
 
 {**
@@ -4226,12 +4228,13 @@ var I, Cnt: Integer;
   DoFindParam: Boolean;
 begin
   CheckSQLQuery;
-  CheckInactive;  //AVZ - Need to check this
+  if not FRefreshInProgress {and (Statement <> nil)} then
+    CheckInactive;  //AVZ - Need to check this
   CheckConnected;
 
   Connection.ShowSQLHourGlass;
   try
-    if (FSQL.StatementCount > 0) and((Statement = nil) or (Statement.GetConnection.IsClosed)) then begin
+    if (FSQL.StatementCount > 0) and((Statement = nil) or (Statement.IsClosed)) then begin
       Statement := CreateStatement(FSQL.Statements[0].SQL, Properties);
       FHasOutParams := False;
       ParamNamesArray := FSQL.Statements[0].ParamNamesArray;
@@ -4597,10 +4600,8 @@ var
 begin
   OnlyDataFields := False;
   FieldRefs := nil;
-  if Active then
-  begin
-    if CurrentRow > 0 then
-    begin
+  if Active then begin
+    if CurrentRow > 0 then begin
       RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
       if ResultSet.GetRow <> RowNo then
         ResultSet.MoveAbsolute(RowNo);
@@ -4629,7 +4630,9 @@ begin
     try
       try
         FRefreshInProgress := True;
-        InternalClose;
+        if (Statement = nil)
+        then InternalPrepare
+        else InternalClose;
         InternalOpen;
       finally
         FRefreshInProgress := False;

@@ -83,6 +83,7 @@ type
   TZUpdateSQL = class(TComponent, IZCachedResolver)
   private
     FTransaction: IZTransaction;
+    FConnection: IZConnection;
     FDataSet: TDataSet;
 
     FDeleteSQL: TZSQLStrings;
@@ -140,6 +141,9 @@ type
     procedure DefineProperties(Filer: TFiler); override;
 
     procedure SetTransaction(const Value: IZTransaction);
+    /// <summary>Set a new connection.</summary>
+    /// <param>"Value" the IZTransaction object.</param>
+    procedure SetConnection(const Value: IZConnection);
     function HasAutoCommitTransaction: Boolean;
     procedure CalculateDefaults(const Sender: IZCachedResultSet;
       const RowAccessor: TZRowAccessor);
@@ -149,6 +153,9 @@ type
       Const OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver);
 
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
+    /// <author>EgonHugeist</author>
+    /// <summary>Flush all cached statements</summary>
+    procedure FlushStatementCache;
 
     procedure Rebuild(SQLStrings: TZSQLStrings);
     procedure RebuildAll;
@@ -279,6 +286,14 @@ end;
 {**
   Store the related dataset object for update sql editor
 }
+procedure TZUpdateSQL.SetConnection(const Value: IZConnection);
+begin
+  if FConnection <> Value then begin
+    FlushStatementCache;
+    FConnection := Value;
+  end;
+end;
+
 procedure TZUpdateSQL.SetDataset(Value: TDataset);
 begin
   FDataSet := Value;
@@ -555,19 +570,19 @@ begin
 end;
 
 procedure TZUpdateSQL.RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
-var
-    Config: TZSQLStrings;
+var Config: TZSQLStrings;
     Statement: IZPreparedStatement;
     RefreshResultSet: IZResultSet;
 begin
- Config:=FRefreshSQL;
- if CONFIG.StatementCount=1 then
- begin
-  Statement := Sender.GetStatement.GetConnection.PrepareStatement(Config.Statements[0].SQL);
-  FillStatement(Sender, Statement, Config.Statements[0],RowAccessor, RowAccessor);
-  RefreshResultSet:=Statement.ExecuteQueryPrepared;
-  Apply_RefreshResultSet(Sender,RefreshResultSet,RowAccessor);
- end;
+  Config:=FRefreshSQL;
+  if CONFIG.StatementCount=1 then begin
+    if (RefreshResultSet = nil) or (RefreshResultSet.IsClosed)
+    then Statement := Sender.GetStatement.GetConnection.PrepareStatement(Config.Statements[0].SQL)
+    else RefreshResultSet.GetStatement.QueryInterface(IZPreparedStatement, Statement);
+    FillStatement(Sender, Statement, Config.Statements[0],RowAccessor, RowAccessor);
+    RefreshResultSet := Statement.ExecuteQueryPrepared;
+    Apply_RefreshResultSet(Sender,RefreshResultSet,RowAccessor);
+  end;
 end;
 
 {**
@@ -705,6 +720,18 @@ begin
     else
       SetStatementParam(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Statement, ParamValue);
   end;
+end;
+
+procedure TZUpdateSQL.FlushStatementCache;
+var RowUpdateType: TZRowUpdateType;
+begin
+  if FRefreshRS <> nil then begin
+    FRefreshRS.Close;
+    FRefreshRS := nil;
+  end;
+  for RowUpdateType := utModified to utDeleted do
+    if (FStmts[RowUpdateType] <> nil) then
+      FStmts[RowUpdateType].Clear;
 end;
 
 {**
@@ -889,8 +916,16 @@ begin
   CalcDefaultValues := doCalcDefaults in ADataSet.Options;
   try
     OrigStmt := Sender.GetStatement;
-    if not Assigned(OrigStmt) then
+    if not Assigned(OrigStmt) then begin
       OrigStmt := ADataSet.DbcStatement;
+      if (OrigStmt = nil) and ADataSet.Active and TZProtectedAbstractRWTxnUpdateObjDataSet(ADataSet).TryKeepDataOnDisconnect then try
+        TZProtectedAbstractRWTxnUpdateObjDataSet(ADataSet).FRefreshInProgress := True;
+        TZProtectedAbstractRWTxnUpdateObjDataSet(ADataSet).InternalPrepare;
+        OrigStmt := ADataSet.DbcStatement;
+      finally
+        TZProtectedAbstractRWTxnUpdateObjDataSet(ADataSet).FRefreshInProgress := False;
+      end;
+    end;
     if not Assigned(OrigStmt) then
       raise Exception.Create('Could not determine a valid statement!');
     for I := 0 to Config.StatementCount - 1 do begin

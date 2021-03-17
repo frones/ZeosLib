@@ -196,10 +196,10 @@ implementation
 uses
 {$IFNDEF VER130BELOW}
   Variants,
-{$ENDIF} FmtBCD,
+{$ENDIF} FmtBCD, DateUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF},
   ZEncoding, ZFastCode,
-  DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties,
-  ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF},
+  ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties,
+  ZDatasetUtils, ZSqlUpdate,
   TypInfo, ZDbcInterbaseFirebirdMetadata, ZSelectSchema;
 
 { TZGenericTestDataSet }
@@ -2096,9 +2096,11 @@ end;
 procedure TZGenericTestDataSet.TestCloseOnDisconnect;
 var Query: TZQuery;
    NewConnection: TZConnection;
+   UpdateSQL: TZUpdateSQL;
 begin
   Query := CreateQuery;
   NewConnection := CreateDatasetConnection;
+  UpdateSQL := TZUpdateSQL.Create(Connection);
   try
     Query.SQL.Text := 'select * from people';
     Query.TryKeepDataOnDisconnect := True;
@@ -2197,9 +2199,36 @@ begin
     Query.Connection := NewConnection;
     Query.Post;
     Query.Delete;
+    Query.Close;
+    Query.Connection := Connection;
+    UpdateSQL.DeleteSQL.Text := 'delete from people where p_id = :p_id';
+    UpdateSQL.InsertSQL.Text := 'insert into people(p_id) values (:p_id)';
+    Query.UpdateObject := UpdateSQL;
+    Query.Open;
+    Query.FetchAll;
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID;
+    Query.Post;
+    Check(Query.Active);
+    Query.Delete;
+    Query.Connection := NewConnection;
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID;
+    Query.Post;
+    Check(Query.Active);
+    Query.Delete;
+    NewConnection.Disconnect;
+    Query.Connection := Connection;
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID;
+    Query.Post;
+    Check(Query.Active);
+    Query.Delete;
   finally
+    Connection.ExecuteDirect('delete from people where p_id >= '+IntToStr(TEST_ROW_ID-1));
     FreeAndNil(Query);
     FreeAndNil(NewConnection);
+    FreeAndNil(UpdateSQL);
   end;
 end;
 

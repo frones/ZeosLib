@@ -1295,8 +1295,17 @@ begin
         if not TZProtectedAbstractRODataset(AComp).TryKeepDataOnDisconnect then try
           TZAbstractRODataset(AComp).Close;
           TZAbstractRODataset(AComp).UnPrepare;
-        except {Ignore.} end else if AComp.InheritsFrom(TZAbstractRWDataSet) then
+        except {Ignore.} end else if AComp.InheritsFrom(TZAbstractRWDataSet) then begin
           TZProtectedAbstractRWDataSet(AComp).CachedResultSet.ClearStatementLink;
+          TZProtectedAbstractRWDataSet(AComp).ResultSetMetadata := TZProtectedAbstractRWDataSet(AComp).CachedResultSet.GetMetadata;
+          if TZProtectedAbstractRWDataSet(AComp).Statement <> nil then begin
+            TZProtectedAbstractRWDataSet(AComp).Statement.Close;
+            TZProtectedAbstractRWDataSet(AComp).Statement := nil;
+          end;
+          TZProtectedAbstractRWDataSet(AComp).ResultSetMetadata.SetMetadata(nil);
+          if TZProtectedAbstractRWDataSet(AComp).CachedResolver <> nil then
+            TZProtectedAbstractRWDataSet(AComp).CachedResolver.SetConnection(nil);
+        end;
       end else if AComp.InheritsFrom(TZSequence) then try
         TZSequence(AComp).CloseSequence
       except end else if AComp.InheritsFrom(TZAbstractTransaction) then try

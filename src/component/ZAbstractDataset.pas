@@ -346,7 +346,6 @@ begin
     Exit;
 
   if Result.QueryInterface(IZCachedResultSet, FCachedResultSet) = 0 then begin
-    FCachedResultSet := Result as IZCachedResultSet;
     FCachedResolver := CachedResultSet.GetResolver;
     FCachedResultSet.SetCachedUpdates(CachedUpdates);
     if (FCachedResolver <> nil) and (FCachedResolver.QueryInterface(IZGenerateSQLCachedResolver, FGenDMLResolver) = S_OK) then begin
@@ -372,8 +371,14 @@ begin
   inherited InternalClose;
 
   if not ResultSetWalking then begin
-    FCachedResolver := nil;
-    FGenDMLResolver := nil;
+    if FCachedResolver <> nil then begin
+      FCachedResolver.FlushStatementCache;
+      FCachedResolver := nil;
+    end;
+    if FGenDMLResolver <> nil then begin
+      FGenDMLResolver.FlushStatementCache;
+      FGenDMLResolver := nil;
+    end;
   end;
 end;
 
@@ -417,6 +422,7 @@ begin
   if Assigned(CachedResultSet) then begin
     CachedResultSet.Close;
     CachedResultSet := nil;
+    ResultSet := nil;
   end;
   inherited InternalUnPrepare;
 
@@ -640,6 +646,8 @@ begin
        Post;
 
     DoBeforeApplyUpdates; {bangfauzan addition}
+    if FCachedResolver <> nil then
+      FCachedResolver.SetConnection(Connection.DbcConnection);
     if FGenDMLResolver <> nil then
       FGenDMLResolver.SetConnection(Connection.DbcConnection);
     if CachedResultSet <> nil then
@@ -747,7 +755,8 @@ begin
   if Active then
     Result := FTryKeepDataOnDisconnect and (FCachedResultSet <> nil) and
       FCachedResultSet.IsLastRowFetched and not FCachedResultSet.HasServerLinkedColumns and
-      ((ResultSetMetadata <> nil) and ResultSetMetadata.IsMetadataLoaded)
+      ((ResultSetMetadata <> nil) and ResultSetMetadata.IsMetadataLoaded) and
+      not (csDestroying in ComponentState)
   else Result := FTryKeepDataOnDisconnect
 end;
 
@@ -1105,13 +1114,14 @@ begin
       FUpdateObject.FreeNotification(Self);
       FUpdateObject.DataSet := Self;
     end;
+    if FUpdateObject <> nil then
+      FGenDMLResolver := nil;
     if Active and (CachedResultSet <> nil) then
       if FUpdateObject <> nil then begin
         { get a local interface of the component }
         FUpdateObject.GetInterface(IZCachedResolver, TempResolver);
         CachedResultSet.SetResolver(TempResolver);
         SetTxns2Resolver(TempResolver);
-        FGenDMLResolver := nil;
       end else begin
         {EH: now test if the old FUpdateObject intf equals with current cached resolver }
         if FCachedResolver = TempResolver then

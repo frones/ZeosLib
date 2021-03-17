@@ -80,6 +80,7 @@ type
   {** Resolver to post updates. }
   IZCachedResolver = interface (IZInterface)
     ['{546ED716-BB88-468C-8CCE-D7111CF5E1EF}']
+    /// <author>Michael Seeger</author>
     /// <summary>Calculate default values for the fields.</summary>
     /// <param>"Sender" a cached result set object.</param>
     /// <param>"RowAccessor" an accessor object to column values.</param>
@@ -104,13 +105,21 @@ type
     /// <param>"Sender" a cached result set inteface.</param>
     /// <param>"RowAccessor" an accessor object to current column values.</param>
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
+    /// <author>EgonHugeist</author>
     /// <summary>Set a transaction object used for the crud-operations.</summary>
     /// <param>"Value" the IZTransaction object.</param>
     procedure SetTransaction(const Value: IZTransaction);
+    /// <author>EgonHugeist</author>
     /// <summary>Test if the resolver-transaction is a autocommit txn.</summary>
     /// <returns><c>True</c> if the transaction object is in autocommit mode;
     ///  <c>False</c> otherwise.</returns>
     function HasAutoCommitTransaction: Boolean;
+    /// <author>EgonHugeist</author>
+    /// <summary>Flush all cached statements</summary>
+    procedure FlushStatementCache;
+    /// <summary>Set a new connection.</summary>
+    /// <param>"Value" the IZTransaction object.</param>
+    procedure SetConnection(const Value: IZConnection);
   end;
 
   IZGenerateSQLCachedResolver = interface(IZCachedResolver)
@@ -142,9 +151,8 @@ type
     ///  for updates.</summary>
     /// <param>"Value" the UpdateAll mode should be used.</param>
     procedure SetUpdateAll(Value: Boolean);
-    /// <summary>Set a new connection.</summary>
-    /// <param>"Value" the IZTransaction object.</param>
-    procedure SetConnection(const Value: IZConnection);
+    /// <summary>Set a new resultset metadata object</summary>
+    /// <param>"Value" the new resultset metadata object to be set.</param>
     procedure SetMetadata(const Value: IZResultSetMetadata);
   end;
 
