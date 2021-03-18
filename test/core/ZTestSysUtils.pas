@@ -220,6 +220,12 @@ begin
     CheckEquals(3, SL.Count, 'split count 3');
     for I := 0 to SL.Count -1 do
       CheckEquals('gg', SL[i], '2. Splitted String');
+    SourceStr := 'abcd,efghi';
+    DelimiterStr := ',';
+    PutSplitStringEx(SL, SourceStr, DelimiterStr);
+    CheckEquals(2, SL.Count, 'split count 3');
+    CheckEquals('abcd', SL[0], '1. Splitted String');
+    CheckEquals('efghi', SL[1], '2. Splitted String');
   finally
     SL.Free;
   end;

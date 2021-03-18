@@ -3211,7 +3211,7 @@ begin
     if OffSet = 1
     then List.Add(Str)
     else begin
-      SetString(temp, (P+OffSet-1), (L-(OffSet-LD))-1);
+      SetString(temp, (P+OffSet-1), (L-OffSet+1));
       List.Add(temp);
     end;
 end;
@@ -3286,6 +3286,7 @@ end;
 {$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operator := (const Source: Byte): Variant;" marked as inline is not inlined}{$ENDIF}
 function BytesToVar(const Value: RawByteString): Variant;
 var
   I: Integer;
@@ -3298,6 +3299,7 @@ begin
     Inc(P);
   end;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 {$ENDIF WITH_TBYTES_AS_RAWBYTESTRING}
 
 {$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operant..." marked as inline is not inlined}{$ENDIF}
