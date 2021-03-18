@@ -165,3 +165,13 @@ insert into TableSFTicket331(id,val1, val2) values (1,0.5214, 52.14);
 insert into TableSFTicket331(id,val1, val2) values (2,0.8358, 83.58);
 insert into TableSFTicket331(id,val1, val2) values (3,900, 0.08);
 insert into TableSFTicket331(id,val1, val2) values (4,9000, 0.23);
+
+create table TableTestMichlsBCDs(
+  id integer not null,
+  val1 numeric(15,6));
+  
+insert into TableTestMichlsBCDs(id,val1) values (2,0.14);
+insert into TableTestMichlsBCDs(id,val1) values (3,0.014);
+insert into TableTestMichlsBCDs(id,val1) values (4,0.0014);
+insert into TableTestMichlsBCDs(id,val1) values (5,0.00014);
+insert into TableTestMichlsBCDs(id,val1) values (6,0.000014);

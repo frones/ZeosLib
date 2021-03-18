@@ -1624,35 +1624,36 @@ ZeroBCD:
   NBASEDigit := {$IFNDEF ENDIAN_BIG}(PWord(Src)^ and $00FF shl 8) or (PWord(Src)^ and $FF00 shr 8){$ELSE}PWord(Src)^{$ENDIF}; //each digit is a base 10000 digit -> 0..9999
   FirstNibbleDigit := NBASEDigit div 100;
   HalfNibbles := False;
-  if FirstNibbleDigit > 0 then begin
-    if NBASEDigit > 999 then begin
-      I := 0;
-      goto FourNibbles
+  if Weight > 0 then begin
+    if FirstNibbleDigit > 0 then begin
+      if NBASEDigit > 999 then begin
+        I := 0;
+        goto FourNibbles
+      end else begin
+        HalfNibbles := True;
+        NBASEDigit := ZBase100Byte2BcdNibbleLookup[NBASEDigit - (FirstNibbleDigit * 100)]; //mod 100
+        FirstNibbleDigit := ZBase100Byte2BcdNibbleLookup[FirstNibbleDigit];
+        if I <= NBASEDigitsCount then
+          Inc(pNibble);
+        PByte(pNibble  )^ := Byte(FirstNibbleDigit shl 4) or Byte(NBASEDigit shr 4);
+        PByte(pNibble+1)^ := Byte(NBASEDigit) shl 4;
+        Inc(pNibble);
+Final3: Digits := 3;
+      end;
+    end else if NBASEDigit > 9 then begin
+      PByte(pNibble)^   := ZBase100Byte2BcdNibbleLookup[NBASEDigit];
+Final2: Digits := 2;
     end else begin
       HalfNibbles := True;
-      NBASEDigit := ZBase100Byte2BcdNibbleLookup[NBASEDigit - (FirstNibbleDigit * 100)]; //mod 100
-      FirstNibbleDigit := ZBase100Byte2BcdNibbleLookup[FirstNibbleDigit];
-      PByte(pNibble  )^ := Byte(FirstNibbleDigit shl 4) or Byte(NBASEDigit shr 4);
-      PByte(pNibble+1)^ := Byte(NBASEDigit) shl 4;
-      Inc(pNibble);
-Final3: Digits := 3;
+      PByte(pNibble)^ := Byte(NBASEDigit) shl 4;
+      Digits := 1;
     end;
-  end else if NBASEDigit > 9 then begin
-    PByte(pNibble)^   := ZBase100Byte2BcdNibbleLookup[NBASEDigit];
-Final2: Digits := 2;
-  end else if (Weight = -1) and (NBASEDigitsCount = 1) then begin
-    PByte(pNibble+1)^ := Byte(NBASEDigit);
-    goto jmpScale;
-  end else begin
-    HalfNibbles := True;
-    PByte(pNibble)^ := Byte(NBASEDigit) shl 4;
-    Digits := 1;
-  end;
-  Dec(Precision, BASE1000Digits-Digits);
-  if (NBASEDigitsCount = 1) or (pNibble = pLastNibble)
-  then goto done;
-  if not HalfNibbles then Inc(pNibble);
-  I := 1;
+    Dec(Precision, BASE1000Digits-Digits);
+    if (NBASEDigitsCount = 1) or (pNibble = pLastNibble)
+    then goto done;
+    if not HalfNibbles then Inc(pNibble);
+    I := 1;
+  end else I := 0;
 Loop:
   NBASEDigit := PWord(Src+(i shl 1))^;  //each digit is a base 10000 digit -> 0..9999
   {$IFNDEF ENDIAN_BIG}NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8){$ENDIF};
