@@ -337,7 +337,7 @@ end;
 }
 function TZSQLiteDatabaseInfo.StoresLowerCaseIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := False;
 end;
 
 {**
