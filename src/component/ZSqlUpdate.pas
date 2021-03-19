@@ -572,16 +572,15 @@ end;
 procedure TZUpdateSQL.RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
 var Config: TZSQLStrings;
     Statement: IZPreparedStatement;
-    RefreshResultSet: IZResultSet;
 begin
   Config:=FRefreshSQL;
   if CONFIG.StatementCount=1 then begin
-    if (RefreshResultSet = nil) or (RefreshResultSet.IsClosed)
+    if (FRefreshRS = nil) or (FRefreshRS.IsClosed)
     then Statement := Sender.GetStatement.GetConnection.PrepareStatement(Config.Statements[0].SQL)
-    else RefreshResultSet.GetStatement.QueryInterface(IZPreparedStatement, Statement);
+    else FRefreshRS.GetStatement.QueryInterface(IZPreparedStatement, Statement);
     FillStatement(Sender, Statement, Config.Statements[0],RowAccessor, RowAccessor);
-    RefreshResultSet := Statement.ExecuteQueryPrepared;
-    Apply_RefreshResultSet(Sender,RefreshResultSet,RowAccessor);
+    FRefreshRS := Statement.ExecuteQueryPrepared;
+    Apply_RefreshResultSet(Sender, FRefreshRS, RowAccessor);
   end;
 end;
 
@@ -991,14 +990,7 @@ begin
                     Config.Text := StringReplace(UpperCase(Config.Text),
                       ':OLD_'+UpperCase(TZProtectedAbstractRWTxnUpdateObjDataSet(DataSet).SequenceField),
                       TZProtectedAbstractRWTxnUpdateObjDataSet(DataSet).Sequence.GetCurrentValueSQL,[rfReplaceAll]);
-            if CONFIG.StatementCount = 1 then begin
-              if (FRefreshStmt = nil) or FRefreshStmt.IsClosed
-              then Statement := Sender.GetStatement.GetConnection.PrepareStatement(Config.Statements[0].SQL)
-              else Statement := FRefreshStmt;
-              FillStatement(Sender, Statement, Config.Statements[0],OldRowAccessor, NewRowAccessor);
-              FRefreshRS := Statement.ExecuteQueryPrepared;
-              Apply_RefreshResultSet(Sender,FRefreshRS,NewRowAccessor);
-            end;
+            RefreshCurrentRow(Sender, NewRowAccessor);
           finally
             FRefreshSQL.Text:=Tmp;
           end;
