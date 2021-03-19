@@ -2278,7 +2278,6 @@ label NoSuccess;  //ugly but faster and no double code
 begin
   { Checks for maximum row. }
   Result := False;
-  //stmt := nil;
   if Closed or (FRowSetAddr^ = nil) or
     ((RowNo = LastRowNo) and (FGetNextRowsStatus = DB_S_ENDOFROWSET)) or
     ((MaxRows > 0) and (RowNo >= MaxRows)) then
@@ -2294,8 +2293,11 @@ begin
     end else ReleaseFetchedRows;
 
     FGetNextRowsStatus := fRowSetAddr^.GetNextRows(DB_NULL_HCHAPTER,0,FRowCount, FRowsObtained, FHROWS);
-    if Failed(FGetNextRowsStatus) then
+    if Failed(FGetNextRowsStatus) then try
       FOleDBConnection.HandleErrorOrWarning(FGetNextRowsStatus, lcOther, 'IRowSet.GetNextRows', Self);
+    finally
+      ResetCursor;
+    end;
     if (RowNo = 0) then begin
       if (FGetNextRowsStatus = DB_S_ROWLIMITEXCEEDED) or (FGetNextRowsStatus = DB_S_STOPLIMITREACHED) then begin
         FRowCount := FRowsObtained;
@@ -2357,8 +2359,7 @@ begin
     { Fills the column info }
     ColumnsInfo.Clear;
     if Assigned(prgInfo) then
-      if prgInfo.iOrdinal = 0 then // skip possible bookmark column
-      begin
+      if prgInfo.iOrdinal = 0 then begin// skip possible bookmark column
         Inc({%H-}NativeUInt(prgInfo), SizeOf(TDBColumnInfo));
         Dec(fpcColumns);
       end;
