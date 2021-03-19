@@ -134,6 +134,7 @@ type
     procedure TestSF493;
     procedure TestSF495;
     procedure TestSF498;
+    procedure TestSF499;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -2054,6 +2055,34 @@ begin
         Connection.Disconnect;
     end;
 
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF499;
+var Query: TZQuery;
+begin
+  Query := CreateQuery;
+  Query.SQL.Text := 'select * from people';
+  try
+    if Query.Active then
+      Query.Close;
+
+    if not Connection.Connected then
+      Connection.Connect;
+
+    Query.CachedUpdates := true;
+    Query.TryKeepDataOnDisconnect := true;
+
+    Query.Open;
+    //Query.FetchAll;
+
+    if Query.Active then
+      Query.Close;
+
+    if Connection.Connected then
+      Connection.Disconnect;
   finally
     Query.Free;
   end;
