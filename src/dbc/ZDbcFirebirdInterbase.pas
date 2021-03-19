@@ -4734,6 +4734,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "GetOrdinalDigits" marked as inline is not inlined}{$ENDIF}
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetLong(Index: Integer;
   const Value: Int64);
 var U: UInt64;
@@ -4781,6 +4782,7 @@ begin
     sqlind^ := ISC_NOTNULL;
   end;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "SQLType" not used} {$ENDIF}
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetNull(Index: Integer;

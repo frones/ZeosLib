@@ -101,6 +101,7 @@ type
     function FindDomainBaseType(DomainOID: OID; out BaseTypeOID: OID): Boolean;
     procedure FillUnknownDomainOIDs;
     function GetTimeZoneOffset: Int64;
+    procedure UpdateTimestampOffset;
 
     procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: RawByteString);
     procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString);

@@ -684,6 +684,7 @@ end;
   @param num the pointer to the oci-number
 }
 {$R-} {$Q-}
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "GetOrdinalDigits" marked as inline is not inlined}{$ENDIF}
 procedure Curr2Vnu(const Value: Currency; num: POCINumber);
 var I64, IDiv100, IMul100: UInt64;
   x{$IFNDEF CPUX64}, c32, cDiv100, cMul100{$ENDIF}: Cardinal;
@@ -739,6 +740,7 @@ begin
 end;
 {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 {**  EH:
   writes a negative unscaled oracle oci number into a buffer

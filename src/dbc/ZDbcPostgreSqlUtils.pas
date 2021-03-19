@@ -200,12 +200,12 @@ procedure Currency2PGNumeric(const Value: Currency; Buf: Pointer; out Size: Inte
 }
 procedure BCD2PGNumeric(const Src: TBCD; Dst: PAnsiChar; out Size: Integer);
 
-{** written by EgonHugeist
-  converts a postgres numeric value into a bigdecimal value
-  the buffer must have a minimum of 4*SizeOf(Word) and maximum size of 9*SizeOf(Word) bytes
-  @param Src the pointer to a postgres numeric value
-  @param Dst the result value to be converted
-}
+/// <author>EgonHugeist</author>
+/// <summary>converts a postgres numeric value into a formated bcd value</summary>
+/// <param>"Src" the address of the postgres binary numeric value. the buffer
+///  must have a minimum size of 4*SizeOf(Word) and maximum size of
+///  9*SizeOf(Word) bytes</param>
+/// <param>"Dst" a reference of the result value to be converted</param>
 procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
 
 function PGCash2Currency(P: Pointer): Currency; {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
@@ -1560,12 +1560,6 @@ end;
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-{** written by EgonHugeist
-  converts a postgres numeric value into a bigdecimal value
-  the buffer must have a minimum of 4*SizeOf(Word) and maximum size of 9*SizeOf(Word) bytes
-  @param Src the pointer to a postgres numeric value
-  @param Dst the result value to be converted
-}
 {$Q-} {$R-} //else my shift fail
 {$IFDEF WITH_PG_WEIGHT_OPT_BUG}{$O-}{$ENDIF}
 procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
@@ -1633,8 +1627,6 @@ ZeroBCD:
         HalfNibbles := True;
         NBASEDigit := ZBase100Byte2BcdNibbleLookup[NBASEDigit - (FirstNibbleDigit * 100)]; //mod 100
         FirstNibbleDigit := ZBase100Byte2BcdNibbleLookup[FirstNibbleDigit];
-        if I <= NBASEDigitsCount then
-          Inc(pNibble);
         PByte(pNibble  )^ := Byte(FirstNibbleDigit shl 4) or Byte(NBASEDigit shr 4);
         PByte(pNibble+1)^ := Byte(NBASEDigit) shl 4;
         Inc(pNibble);
