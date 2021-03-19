@@ -990,18 +990,32 @@ end;
 
 procedure TZAbstractConnection.ConnectionLost(var AError: EZSQLConnectionLost);
 var Err: EZSQLConnectionLost;
+    EventErrorRaised: Boolean;
+    ADatBaseError: EZDataBaseError;
 begin
   Err := AError;
   AError := nil;
   try
     CloseAllLinkedComponents;
   except end;
+  EventErrorRaised := True;
   try
     if Assigned(FOnLost) then
       FOnLost(Self);
+    EventErrorRaised := False;
   finally
-    if Err <> nil then
-      raise Err;
+    if EventErrorRaised then begin
+      if (Err <> nil) then
+        FreeAndNil(Err);
+    end else begin
+      if Err = nil //should not happen
+      then ADatBaseError := EZDataBaseError.Create('Connection lost.')
+      else begin
+        ADatBaseError := EZDataBaseError.CreateFromException(Err);
+        FreeAndNil(Err);
+      end;
+      raise ADatBaseError;
+    end;
   end;
 end;
 
