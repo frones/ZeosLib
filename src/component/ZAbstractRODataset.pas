@@ -1687,10 +1687,11 @@ begin
         Close; //EH: todo if the new connection was reconnected flush the statement interface
     if Prepared and not GetTryKeepDataOnDisconnect then
       Unprepare;
-    if Value = nil then begin
+    if FConnection <> nil then
       FConnection.UnregisterComponent(Self);
-      FormatSettings.SetParent(nil);
-    end else begin
+    if Value = nil
+    then FormatSettings.SetParent(nil)
+    else begin
       FormatSettings.SetParent(Value.FormatSettings);
       Value.RegisterComponent(Self);
       if (FSQL.Count > 0) and PSIsSQLBased{do not rebuild all!} and (Fields.Count = 0) then begin
@@ -3678,8 +3679,11 @@ begin
   FetchCount := 0;
   CurrentRows.Clear;
   FLastRowFetched := False;
-  if Connection <> nil then
+  if Connection <> nil then begin
     Connection.ShowSQLHourGlass;
+    if (Statement = nil) and FTryKeepDataOnDisconnect then
+      InternalPrepare;
+  end;
   OldRS := FResultSet;
   try
     { Creates an SQL statement and resultsets }
@@ -4630,9 +4634,8 @@ begin
     try
       try
         FRefreshInProgress := True;
-        if (Statement = nil)
-        then InternalPrepare
-        else InternalClose;
+        if (Statement <> nil) then
+          InternalClose;
         InternalOpen;
       finally
         FRefreshInProgress := False;

@@ -133,6 +133,7 @@ type
     procedure TestSF469;
     procedure TestSF493;
     procedure TestSF495;
+    procedure TestSF498;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -2004,7 +2005,6 @@ end;
 procedure ZTestCompCoreBugReport.TestSF495;
 const TestRowID = 255;
 var Query: TZQuery;
-
 begin
   Query := CreateQuery;
   try
@@ -2030,6 +2030,32 @@ begin
     Query.Free;
     Connection.Connect;
     Connection.ExecuteDirect('delete from people where p_id ='+IntToStr(TestRowID));
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF498;
+var B: Boolean;
+    Query: TZQuery;
+begin
+  Query := CreateQuery;
+  Query.SQL.Text := 'select * from people';
+  try
+    Check(Query <> nil);
+    for B := True downto False do begin
+      if not Connection.Connected then
+        Connection.Connect;
+      if Query.Active then
+        Query.Close;
+      Query.TryKeepDataOnDisconnect := True;
+      Query.CachedUpdates := True;
+      Query.Open;
+      Query.FetchAll;
+      if B then
+        Connection.Disconnect;
+    end;
+
+  finally
+    Query.Free;
   end;
 end;
 
