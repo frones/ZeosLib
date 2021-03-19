@@ -1015,6 +1015,7 @@ begin
   FParameters.Assign(Value);
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Statemnt" not used} {$ENDIF}
 procedure TZGenerateSQLCachedResolver.SetResolverStatementParamters(
   const Statement: IZStatement; {$IFDEF AUTOREFCOUNT}const {$ENDIF} Params: TStrings);
 begin
@@ -1022,6 +1023,7 @@ begin
   then Params.Assign(Statement.GetParameters)
   else }Params.Assign(FParameters)
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZGenerateSQLCachedResolver.SetSearchable(ColumnIndex: Integer;
   Value: Boolean);
