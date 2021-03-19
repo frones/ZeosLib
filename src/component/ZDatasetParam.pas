@@ -2202,8 +2202,10 @@ end;
 {$IFDEF FPC} {$PUSH}
   {$WARN 5093 off : Function result variable does not seem to be initialized}
   {$WARN 5094 off : Function result variable does not seem to be initialized}
+  {$IFDEF WITH_NOT_INLINED_WARNING}{$WARN 6058 off : Call to subroutine "operator:=(const source:UnicodeString):Variant" marked as inline is not inlined}{$ENDIF}
 {$ENDIF}
 function TZParam.GetAsVariant: Variant;
+  {$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operator:=(const source:UTF8String):Variant" marked as inline is not inlined}{$ENDIF}
   procedure SetAsRawString(var Result: Variant);
   begin
     {$IF defined(LCL) or defined(NO_ANSISTRING)}
@@ -2219,10 +2221,13 @@ function TZParam.GetAsVariant: Variant;
       Result := GetAsAnsiString;
     {$IFEND}
   end;
+  {$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
+  {$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operator:=(const source:UnicodeString):Variant" marked as inline is not inlined}{$ENDIF}
   procedure SetAsUniStringFromClob(var Result: Variant);
   begin
     Result := GetAsUnicodeString;
   end;
+  {$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
   procedure SetAsBytes(var Result: Variant);
   begin
     Result := BytesToVar(GetAsBytes)
@@ -3265,6 +3270,7 @@ begin
   SetAsFmtBCDs(Cardinal(-1), Value);
 end;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "function __GetNull:<recordtype>;" marked as inline is not inlined}{$ENDIF}
 procedure TZParam.SetAsFmtBCDs(Index: Cardinal; const Value: TBCD);
 var DataAddr: PPointer;
     IsNullAddr: PBoolean;
@@ -3310,6 +3316,7 @@ begin
   IsNullAddr^ := False;
   FBound := True;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 procedure TZParam.SetAsGUID(const Value: TGUID);
 begin
