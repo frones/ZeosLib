@@ -147,13 +147,13 @@ procedure Time2PG(const Hour, Min, Sec: Word; NanoFraction: Cardinal; out Result
 procedure Time2PG(const Value: TDateTime; out Result: Double); overload;
 procedure Time2PG(const Hour, Min, Sec: Word; NanoFraction: Cardinal; out Result: Double); overload;
 
-function PG2DateTime(Value: Double): TDateTime; overload;
-procedure PG2DateTime(Value: Double; out Year, Month, Day, Hour, Min, Sec: Word;
-  out NanoFractions: Cardinal); overload;
+function PG2DateTime(Value: Double; const TimeZoneOffset: Int64): TDateTime; overload;
+procedure PG2DateTime(Value: Double; const TimeZoneOffset: Int64;
+  out Year, Month, Day, Hour, Min, Sec: Word; out NanoFractions: Cardinal); overload;
 
-function PG2DateTime(Value: Int64): TDateTime; overload;
-procedure PG2DateTime(Value: Int64; out Year, Month, Day, Hour, Min, Sec: Word;
-  out NanoFractions: Cardinal); overload;
+function PG2DateTime(Value: Int64; const TimeZoneOffset: Int64): TDateTime; overload;
+procedure PG2DateTime(Value: Int64; const TimeZoneOffset: Int64;
+  out Year, Month, Day, Hour, Min, Sec: Word; out NanoFractions: Cardinal); overload;
 
 function PG2Time(Value: Double): TDateTime; overload;
 procedure PG2Time(Value: Double; Out Hour, Min, Sec: Word; out NanoFractions: Cardinal); overload;
@@ -200,12 +200,12 @@ procedure Currency2PGNumeric(const Value: Currency; Buf: Pointer; out Size: Inte
 }
 procedure BCD2PGNumeric(const Src: TBCD; Dst: PAnsiChar; out Size: Integer);
 
-{** written by EgonHugeist
-  converts a postgres numeric value into a bigdecimal value
-  the buffer must have a minimum of 4*SizeOf(Word) and maximum size of 9*SizeOf(Word) bytes
-  @param Src the pointer to a postgres numeric value
-  @param Dst the result value to be converted
-}
+/// <author>EgonHugeist</author>
+/// <summary>converts a postgres numeric value into a formated bcd value</summary>
+/// <param>"Src" the address of the postgres binary numeric value. the buffer
+///  must have a minimum size of 4*SizeOf(Word) and maximum size of
+///  9*SizeOf(Word) bytes</param>
+/// <param>"Dst" a reference of the result value to be converted</param>
 procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
 
 function PGCash2Currency(P: Pointer): Currency; {$IFNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
@@ -916,12 +916,12 @@ begin
   {$ENDIF}
 end;
 
-function PG2DateTime(Value: Double): TDateTime;
+function PG2DateTime(Value: Double; const TimeZoneOffset: Int64): TDateTime;
 var date: TDateTime;
   Year, Month, Day, Hour, Min, Sec: Word;
   fsec: Cardinal;
 begin
-  PG2DateTime(Value, Year, Month, Day, Hour, Min, Sec, fsec);
+  PG2DateTime(Value, TimeZoneOffset, Year, Month, Day, Hour, Min, Sec, fsec);
   TryEncodeDate(Year, Month, Day, date);
   dt2time(Value, Hour, Min, Sec, fsec);
   TryEncodeTime(Hour, Min, Sec, fsec, Result);
@@ -955,8 +955,8 @@ begin
   {$ENDIF}
 end;
 
-procedure PG2DateTime(value: Double; out Year, Month, Day, Hour, Min, Sec: Word;
-  out NanoFractions: Cardinal);
+procedure PG2DateTime(value: Double; const TimeZoneOffset: Int64;
+  out Year, Month, Day, Hour, Min, Sec: Word; out NanoFractions: Cardinal);
 var
   date: Double;
   time: Double;
@@ -964,7 +964,7 @@ begin
   {$IFNDEF ENDIAN_BIG}
   Reverse8Bytes(@Value);
   {$ENDIF}
-  time := value;
+  time := value + TimeZoneOffset;
   if Time < 0
   then date := Ceil(time / SecsPerDay)
   else date := Floor(time / SecsPerDay);
@@ -980,7 +980,7 @@ begin
   NanoFractions := NanoFractions * 1000;
 end;
 
-function PG2DateTime(Value: Int64): TDateTime;
+function PG2DateTime(Value: Int64; const TimeZoneOffset: Int64): TDateTime;
 var d: TDateTime;
   date: Int64;
   Year, Month, Day, Hour, Min, Sec: Word;
@@ -989,6 +989,8 @@ begin
   {$IFNDEF ENDIAN_BIG}
   Reverse8Bytes(@Value);
   {$ENDIF}
+  if TimeZoneOffset <> 0 then
+    Value := Value + TimeZoneOffset;
   date := Value div USECS_PER_DAY;
   Value := Value mod USECS_PER_DAY;
   if Value < 0 then begin
@@ -1007,13 +1009,15 @@ begin
   else Result := d + Result;
 end;
 
-procedure PG2DateTime(Value: Int64; out Year, Month, Day, Hour, Min, Sec: Word;
-  out NanoFractions: Cardinal);
+procedure PG2DateTime(Value: Int64; const TimeZoneOffset: Int64;
+  out Year, Month, Day, Hour, Min, Sec: Word; out NanoFractions: Cardinal);
 var date: Int64;
 begin
   {$IFNDEF ENDIAN_BIG}
   Reverse8Bytes(@Value);
   {$ENDIF}
+  if TimeZoneOffset <> 0 then
+    Value := Value + TimeZoneOffset;
   date := Value div USECS_PER_DAY;
   Value := Value - (date * USECS_PER_DAY);
   if Value < 0 then begin
@@ -1556,12 +1560,6 @@ end;
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-{** written by EgonHugeist
-  converts a postgres numeric value into a bigdecimal value
-  the buffer must have a minimum of 4*SizeOf(Word) and maximum size of 9*SizeOf(Word) bytes
-  @param Src the pointer to a postgres numeric value
-  @param Dst the result value to be converted
-}
 {$Q-} {$R-} //else my shift fail
 {$IFDEF WITH_PG_WEIGHT_OPT_BUG}{$O-}{$ENDIF}
 procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
@@ -1620,35 +1618,34 @@ ZeroBCD:
   NBASEDigit := {$IFNDEF ENDIAN_BIG}(PWord(Src)^ and $00FF shl 8) or (PWord(Src)^ and $FF00 shr 8){$ELSE}PWord(Src)^{$ENDIF}; //each digit is a base 10000 digit -> 0..9999
   FirstNibbleDigit := NBASEDigit div 100;
   HalfNibbles := False;
-  if FirstNibbleDigit > 0 then begin
-    if NBASEDigit > 999 then begin
-      I := 0;
-      goto FourNibbles
+  if Weight > 0 then begin
+    if FirstNibbleDigit > 0 then begin
+      if NBASEDigit > 999 then begin
+        I := 0;
+        goto FourNibbles
+      end else begin
+        HalfNibbles := True;
+        NBASEDigit := ZBase100Byte2BcdNibbleLookup[NBASEDigit - (FirstNibbleDigit * 100)]; //mod 100
+        FirstNibbleDigit := ZBase100Byte2BcdNibbleLookup[FirstNibbleDigit];
+        PByte(pNibble  )^ := Byte(FirstNibbleDigit shl 4) or Byte(NBASEDigit shr 4);
+        PByte(pNibble+1)^ := Byte(NBASEDigit) shl 4;
+        Inc(pNibble);
+Final3: Digits := 3;
+      end;
+    end else if NBASEDigit > 9 then begin
+      PByte(pNibble)^   := ZBase100Byte2BcdNibbleLookup[NBASEDigit];
+Final2: Digits := 2;
     end else begin
       HalfNibbles := True;
-      NBASEDigit := ZBase100Byte2BcdNibbleLookup[NBASEDigit - (FirstNibbleDigit * 100)]; //mod 100
-      FirstNibbleDigit := ZBase100Byte2BcdNibbleLookup[FirstNibbleDigit];
-      PByte(pNibble  )^ := Byte(FirstNibbleDigit shl 4) or Byte(NBASEDigit shr 4);
-      PByte(pNibble+1)^ := Byte(NBASEDigit) shl 4;
-      Inc(pNibble);
-Final3: Digits := 3;
+      PByte(pNibble)^ := Byte(NBASEDigit) shl 4;
+      Digits := 1;
     end;
-  end else if NBASEDigit > 9 then begin
-    PByte(pNibble)^   := ZBase100Byte2BcdNibbleLookup[NBASEDigit];
-Final2: Digits := 2;
-  end else if (Weight = -1) and (NBASEDigitsCount = 1) then begin
-    PByte(pNibble+1)^ := Byte(NBASEDigit);
-    goto jmpScale;
-  end else begin
-    HalfNibbles := True;
-    PByte(pNibble)^ := Byte(NBASEDigit) shl 4;
-    Digits := 1;
-  end;
-  Dec(Precision, BASE1000Digits-Digits);
-  if (NBASEDigitsCount = 1) or (pNibble = pLastNibble)
-  then goto done;
-  if not HalfNibbles then Inc(pNibble);
-  I := 1;
+    Dec(Precision, BASE1000Digits-Digits);
+    if (NBASEDigitsCount = 1) or (pNibble = pLastNibble)
+    then goto done;
+    if not HalfNibbles then Inc(pNibble);
+    I := 1;
+  end else I := 0;
 Loop:
   NBASEDigit := PWord(Src+(i shl 1))^;  //each digit is a base 10000 digit -> 0..9999
   {$IFNDEF ENDIAN_BIG}NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8){$ENDIF};

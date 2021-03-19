@@ -1231,6 +1231,7 @@ end;
   my fast Byte to Word shift with a lookup table
   eg. all single byte encodings
 }
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "AnsiSBCSToUTF16" marked as inline is not inlined}{$ENDIF}
 procedure AnsiSBCSToUTF16(Source: PAnsichar; SourceBytes: LengthInt;
   var Dest: UnicodeString; SBCS_MAP: PSBCS_MAP);
 begin
@@ -1247,6 +1248,7 @@ begin
   end;
   AnsiSBCSToUTF16(Pointer(Source), Pointer(Dest), SBCS_MAP, SourceBytes);
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 {**
   EgonHugeist:
@@ -1541,6 +1543,7 @@ By1:  c := byte(Source^);
     until false;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF} // uses pointer maths
 function UTF8ToWideChar(source: PAnsiChar; dest: PWideChar; sourceBytes, DestWords: LengthInt): NativeUInt;
 // faster than System.UTF8Decode()
 var c: cardinal;
@@ -1573,7 +1576,7 @@ By1:  c := byte(Source^);
       if c and $80=0 then begin
         PWord(dest)^ := c; // much faster than dest^ := WideChar(c) for FPC
         inc(dest);
-        if ({%H-}NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
+        if (NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
         if (Source<endSource) and (dest<endDest) then continue else break;
       end;
       extra := UTF8_EXTRABYTES[c];
@@ -1592,22 +1595,23 @@ By1:  c := byte(Source^);
       if c<=$ffff then begin
         PWord(dest)^ := c;
         inc(dest);
-        if ({%H-}NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
+        if (NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
         if (Source<endSource) and (dest<endDest) then continue else break;
       end;
       dec(c,$10000); // store as UTF-16 surrogates
       PWordArray(dest)[0] := c shr 10  +UTF16_HISURROGATE_MIN;
       PWordArray(dest)[1] := c and $3FF+UTF16_LOSURROGATE_MIN;
       inc(dest,2);
-      if ({%H-}NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
+      if (NativeUInt(Source) and 3=0) and (Source<=EndSourceBy4) then goto By4;
       if (source>=endsource) or (dest>=endDest) then break;
     until false;
 Quit:
-  result := ({%H-}NativeUInt(dest)-{%H-}NativeUInt(begd)) shr 1; // dest-begd return codepoint length
+  result := (NativeUInt(dest)-NativeUInt(begd)) shr 1; // dest-begd return codepoint length
   if Result < NativeUint(DestWords) then
     PWord(Dest)^ := 0;
 
 end;
+{$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
 
 {**
   RawUnicodeToUtf8 and its's used constant original written by Arnaud Bouchez
@@ -1753,10 +1757,12 @@ begin
     end;
 end;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "IsMBCSCodePage" marked as inline is not inlined}{$ENDIF}
 procedure PRawToRawConvert(Source: PAnsiChar; SourceBytes: LengthInt;
   SrcCP, DestCP: Word; var Result: RawByteString);
 var L, NL: LengthInt;
   Dest: PAnsiChar;
+  sIsMBCSCodePage, dIsMBCSCodePage: Boolean;
 label Jmp;
 begin
   if (Source = nil) or (SourceBytes = 0) then
@@ -1764,11 +1770,13 @@ begin
   else if SrcCP = DestCP then
     ZSetString(Source, SourceBytes, Result {$IFDEF WITH_RAWBYTESTRING},DestCP{$ENDIF})
   else begin
-    if IsMBCSCodePage(SrcCP) and not IsMBCSCodePage(DestCP) then
+    sIsMBCSCodePage := IsMBCSCodePage(SrcCP);
+    dIsMBCSCodePage := IsMBCSCodePage(DestCP);
+    if sIsMBCSCodePage and not dIsMBCSCodePage then
       NL := SourceBytes
-    else if not IsMBCSCodePage(SrcCP) and IsMBCSCodePage(DestCP) then
+    else if not sIsMBCSCodePage and dIsMBCSCodePage then
       NL := SourceBytes shl 2
-    else if not IsMBCSCodePage(SrcCP) and not IsMBCSCodePage(DestCP) then
+    else if not sIsMBCSCodePage and not dIsMBCSCodePage then
       NL := SourceBytes
     else
       NL := SourceBytes shl 1;
@@ -1783,7 +1791,9 @@ Jmp:ZSetString(nil, NL, Result {$IFDEF WITH_RAWBYTESTRING},DestCP{$ENDIF});
     end;
   end;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "IsMBCSCodePage" marked as inline is not inlined}{$ENDIF}
 function PRawToUnicode(Source: PAnsiChar; SourceBytes: LengthInt;
   CP: Word): UnicodeString;
 var
@@ -1813,7 +1823,9 @@ begin
     end;
   end;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "IsMBCSCodePage" marked as inline is not inlined}{$ENDIF}
 procedure PRawToUnicode(Source: PAnsiChar; SourceBytes: LengthInt; CP: Word; var Result: UnicodeString);
 var
   wlen: LengthInt;
@@ -1841,6 +1853,8 @@ begin
     PRaw2PUnicodeBuf(Source, Pointer(Result), sourceBytes, CP);
   end;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
+
 {**
   convert a raw encoded string into a uniocde buffer
   Dest reserved space must be minimum SourceBytes + trailing #0 in codepoints
@@ -2248,7 +2262,7 @@ end;
 {$ENDIF}
 
 {$IFDEF FPC}
-  {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
+  {$PUSH} {$WARN 5057 off : Local variable "lpcCPInfo" does not seem to be initialized}
 {$ENDIF}
 procedure SetZOSCodePage;
 {$IFDEF MSWINDOWS}

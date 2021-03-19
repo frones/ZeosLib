@@ -55,7 +55,8 @@ interface
 {$I ZComponent.inc}
 
 uses
-  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZSqlTestCase;
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZSqlTestCase,
+  ZFormatSettings, ZTestCase;
 
 type
 
@@ -74,6 +75,15 @@ type
     procedure TestIdentifierQuotes;
     procedure TestTransactionBehavior;
    end;
+
+  TZTestFormatSettings = class(TZAbstractTestCase)
+  protected
+    FormatSettings: TZFormatSettings;
+    procedure SetUp; override;
+    procedure TearDown; override;
+  published
+    procedure Test_AMPM_WithFractions;
+  end;
 
 implementation
 
@@ -282,6 +292,34 @@ begin
   end;
 end;
 
+{ TZTestFormatSettings }
+
+procedure TZTestFormatSettings.SetUp;
+begin
+  inherited;
+  FormatSettings := TZFormatSettings.Create(nil);
+end;
+
+procedure TZTestFormatSettings.TearDown;
+begin
+  FreeAndNil(FormatSettings);
+  inherited;
+
+end;
+
+procedure TZTestFormatSettings.Test_AMPM_WithFractions;
+var Dest: String;
+begin
+  FormatSettings.DisplayTimeFormatSettings.Format := 'hh:mm:ss am/pm';
+  FormatSettings.DisplayTimeFormatSettings.SecondFractionSeperator := ',';
+  Dest := '';
+  FormatSettings.DisplayTimeFormatSettings.TryTimeToString(Dest, 11, 12, 13, 123456789, 9, False);
+  CheckEquals('11:12:13,123456789 am', Dest);
+  FormatSettings.DisplayTimeFormatSettings.TryTimeToString(Dest, 23, 12, 13, 123456789, 9, False);
+  CheckEquals('11:12:13,123456789 pm', Dest);
+end;
+
 initialization
   RegisterTest('component',TZTestConnectionCase.Suite);
+  RegisterTest('component',TZTestFormatSettings.Suite);
 end.

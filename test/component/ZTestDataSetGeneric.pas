@@ -114,6 +114,7 @@ type
     procedure TestVeryLargeBlobs;
     procedure TestKeyWordParams;
     procedure TestOldValue;
+    procedure TestCloseOnDisconnect;
   end;
 
   {$IF not declared(TTestMethod)}
@@ -195,10 +196,10 @@ implementation
 uses
 {$IFNDEF VER130BELOW}
   Variants,
-{$ENDIF} FmtBCD,
+{$ENDIF} FmtBCD, DateUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF},
   ZEncoding, ZFastCode,
-  DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties,
-  ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF},
+  ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties,
+  ZDatasetUtils, ZSqlUpdate,
   TypInfo, ZDbcInterbaseFirebirdMetadata, ZSelectSchema;
 
 { TZGenericTestDataSet }
@@ -2089,6 +2090,145 @@ begin
     finally
       Query.Free;
     end;
+  end;
+end;
+
+procedure TZGenericTestDataSet.TestCloseOnDisconnect;
+var Query: TZQuery;
+   NewConnection: TZConnection;
+   UpdateSQL: TZUpdateSQL;
+begin
+  Query := CreateQuery;
+  NewConnection := CreateDatasetConnection;
+  UpdateSQL := TZUpdateSQL.Create(Connection);
+  try
+    Query.SQL.Text := 'select * from people';
+    Query.TryKeepDataOnDisconnect := True;
+    Query.Open;
+    Query.FetchAll;
+    Query.Connection := nil;
+    Check(Query.Active, 'Query should be active');
+    Query.First;
+    Query.Last;
+    Check(Query.LastRowFetched);
+    Query.Close;
+    Check(Query.TryKeepDataOnDisconnect);
+    CheckFalse(Query.Active, 'Query should be inactive');
+    try
+      Query.Open;
+    Except
+      on E:Exception do
+        CheckNotTestFailure(E, 'Connection is not assigned');
+    end;
+    CheckFalse(Query.Active);
+    Query.Connection := Connection;
+    Check(Query.TryKeepDataOnDisconnect);
+    Query.Open;
+    //{$IFDEF WITH_DATASET_DefaultBufferCount}Check{$ELSE}CheckFalse{$ENDIF}(Query.TryKeepDataOnDisconnect); //FPC loads 10 rows on internal open once but we have 8 rows only
+    Query.FetchAll;
+    Check(Query.TryKeepDataOnDisconnect);
+    Query.CachedUpdates := True;
+    Query.Connection := nil;
+    Check(Query.Active);
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID-1;
+    Query.Post;
+    Check(Query.Active);
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID;
+    Query.Post;
+    Check(Query.Active);
+    try
+      Query.ApplyUpdates;
+    Except
+      on E:Exception do
+        CheckNotTestFailure(E, 'Connection is not assigned');
+    end;
+    Check(Query.Active);
+    Query.CommitUpdates;
+    CheckFalse(Query.UpdatesPending);
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID-1;
+    Query.Post;
+    Check(Query.Active);
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID;
+    Query.Post;
+    Check(Query.Active);
+    Query.Connection := Connection;
+    Connection.StartTransaction;
+    try
+      Query.ApplyUpdates;
+    finally
+      Connection.Rollback;
+    end;
+    Query.Connection := nil;
+    Query.Close;
+    Query.Unprepare;
+    { now test interchange the connection }
+    Query.Connection := Connection;
+    Query.Open;
+    Check(Query.Active, 'Query should be active');
+    Query.FetchAll;
+    Query.CachedUpdates := False;
+    Query.Connection := nil;
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID-1;
+    try
+      Query.Post;
+    except
+      on E:Exception do
+        CheckNotTestFailure(E, 'Connection is not assigned');
+    end;
+    Query.Connection := Connection;
+    Query.Post;
+    Query.Delete;
+    Connection.Connected := False;
+    Check(Query.Active);
+    Query.Connection := nil;
+    Check(Query.Active);
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID-1;
+    try
+      Query.Post;
+    except
+      on E:Exception do
+        CheckNotTestFailure(E, 'Connection is not assigned');
+    end;
+    Connection.Disconnect;
+    Query.Connection := NewConnection;
+    Query.Post;
+    Query.Delete;
+    Query.Close;
+    Query.Connection := Connection;
+    UpdateSQL.DeleteSQL.Text := 'delete from people where p_id = :p_id';
+    UpdateSQL.InsertSQL.Text := 'insert into people(p_id) values (:p_id)';
+    Query.UpdateObject := UpdateSQL;
+    Query.Open;
+    Query.FetchAll;
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID;
+    Query.Post;
+    Check(Query.Active);
+    Query.Delete;
+    Query.Connection := NewConnection;
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID;
+    Query.Post;
+    Check(Query.Active);
+    Query.Delete;
+    NewConnection.Disconnect;
+    Query.Connection := Connection;
+    Query.Append;
+    Query.Fields[0].AsInteger := TEST_ROW_ID;
+    Query.Post;
+    Check(Query.Active);
+    Query.Delete;
+  finally
+    Connection.ExecuteDirect('delete from people where p_id >= '+SysUtils.IntToStr(TEST_ROW_ID-1));
+    FreeAndNil(Query);
+    FreeAndNil(NewConnection);
+    FreeAndNil(UpdateSQL);
   end;
 end;
 

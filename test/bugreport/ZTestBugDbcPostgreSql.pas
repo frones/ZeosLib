@@ -84,8 +84,7 @@ type
     procedure Test_Mantis0000229;
     procedure Test_TrailingSpaces;
     procedure Test_ForeignKeyViolation;
-    procedure TestTicket472;
-    procedure TestTicket491;
+    procedure TestMichlsBCDs_A;
   end;
 
   TZTestDbcPostgreSQLBugReportMBCs = class(TZAbstractDbcSQLTestCaseMBCs)
@@ -99,7 +98,8 @@ type
 implementation
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 
-uses SysUtils, ZSysUtils, ZTestCase, ZDbcPostgreSqlUtils, ZEncoding;
+uses SysUtils, FmtBCD,
+  ZSysUtils, ZTestCase, ZDbcPostgreSqlUtils, ZEncoding;
 
 { TZTestDbcPostgreSQLBugReport }
 
@@ -596,87 +596,27 @@ begin
   Statement.ExecuteQuery('select * from people where p_id=1');
 end;
 
-{
-Zeos maps PostgreSQL interval fields to TZUnicodeStringField now: When
-PostgreSQL calculates an interval of 30 minutes, it gets shown as "1899-12-30 23:30:00.000".
-I am not 100% sure but I assume that in earlier versions of zeos, we used a
-TTimeField because there an interval of 30 minutes was displayed as "00:30:00".
-}
-{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized}{$ENDIF}
-procedure TZTestDbcPostgreSQLBugReport.TestTicket472;
-var Statement: IZStatement;
-  RS: IZResultSet;
-  TS: TZTimeStamp;
-  S: String;
+{$IFDEF FPC}{$PUSH} {$WARN 5057 off : Local variable "ABCD" does not seem to be initialized}{$ENDIF}
+procedure TZTestDbcPostgreSQLBugReport.TestMichlsBCDs_A;
+var ResultSet: IZResultSet;
+    Statement: IZStatement;
+    ABCD: TBCD;
+    AID: Integer;
 begin
-  Check(Connection <> nil);
-  if SkipForReason(srClosedBug) then Exit;
-  Connection.SetAutoCommit(True);
-  Connection.SetTransactionIsolation(tiReadCommitted);
+  //if SkipForReason(srClosedBug) then Exit;
+
   Statement := Connection.CreateStatement;
-  RS := Statement.ExecuteQuery('select ''P1Y2M3DT4H5M6.789012S''::Interval');
-  Check(Rs.Next);
-  Rs.GetTimestamp(FirstDbcIndex, TS);
-  CheckEquals(1, Ts.Year, 'The duration year');
-  CheckEquals(2, Ts.Month, 'The duration month');
-  CheckEquals(3, Ts.Day, 'The duration day');
-  CheckEquals(4, Ts.Hour, 'The duration hour');
-  CheckEquals(5, Ts.Minute, 'The duration minute');
-  CheckEquals(6, Ts.Second, 'The duration second');
-  CheckEquals(789012000, Ts.Fractions, 'The duration nano-seconds');
-  CheckFalse(Ts.IsNegative, 'The duration is not negative');
-  S := Rs.GetString(FirstDbcIndex);
-  Check(S <> '');
-  RS := Statement.ExecuteQuery('select ''P-1Y2M3DT4H5M6.789012S''::Interval');
-  Check(Rs.Next);
-  Rs.GetTimestamp(FirstDbcIndex, TS);
-  CheckEquals(0, Ts.Year, 'The duration year');
-  CheckEquals(10, Ts.Month, 'The duration month');
-  CheckEquals(3, Ts.Day, 'The duration day');
-  CheckEquals(4, Ts.Hour, 'The duration hour');
-  CheckEquals(5, Ts.Minute, 'The duration minute');
-  CheckEquals(6, Ts.Second, 'The duration second');
-  CheckEquals(789012000, Ts.Fractions, 'The duration nano-seconds');
-  Check(Ts.IsNegative, 'The duration is negative');
-  S := Rs.GetString(FirstDbcIndex);
-  Check(S <> '');
+  ResultSet := Statement.ExecuteQuery('select id, val1 from TableTestMichlsBCDs order by id');
+  Check(ResultSet <> nil); //dummy check for fpc
+  while ResultSet.Next do begin
+    AID := ResultSet.GetInt(FirstDbcIndex);
+    ResultSet.GetbigDecimal(FirstDbcIndex+1, ABCD);
+    Check(ABCD.Precision >= ABCD.SignSpecialPlaces,'BCD Precsion must be gte SignSpecialPlaces');
+    CheckEquals(AID, Integer(ABCD.Precision), 'the BCD Precsion is not left packet');
+  end;
+  Statement.Close;
 end;
 {$IFDEF FPC}{$POP}{$ENDIF}
-
-(* see: https://sourceforge.net/p/zeoslib/tickets/491/
-I'm working with Postgresql 9.6 and when reading data from JSONB field a new
-character is being added to the beginning of the field ... This is new to 8.0 as
-7.2.6 works as expected . (see the attached image) *)
-procedure TZTestDbcPostgreSQLBugReport.TestTicket491;
-var Stmt: IZStatement;
-    RS: IZResultSet;
-    P: PAnsiChar;
-    L: NativeUInt;
-begin
-  Check(Connection <> nil);
-  RS := nil;
-  Stmt := Connection.CreateStatement;
-  CheckFalse(Connection.IsClosed);
-  if Connection.GetHostVersion >= ZSysUtils.EncodeSQLVersioning(9,4,0) then try
-    Stmt.ExecuteUpdate('create table if not exists table_ticket491(id SERIAL,metadata JSONB)');
-    Stmt.ExecuteUpdate('INSERT INTO table_ticket491 (metadata) VALUES (''{"a":1, "b":2}'')');
-    Stmt.ExecuteUpdate('INSERT INTO table_ticket491 (metadata) VALUES (''{"longer_key":234234321, "key_with_text": "a text for key"}'')');
-    Stmt.ExecuteUpdate('INSERT INTO table_ticket491 (metadata) VALUES (''{"last_row":"This is the last row", "key_with_text": "a never ending row of test that should end eventually"}'')');
-    RS := Stmt.ExecuteQuery('select metadata from table_ticket491');
-    Check(RS <> nil);
-    while RS.Next do begin
-      P := RS.GetPAnsiChar(FirstDbcIndex, L);
-      Check(P <> nil);
-      Check(P^ = '{');
-    end;
-  finally
-    if RS <> nil then
-      RS.Close;
-
-    Stmt.ExecuteUpdate('drop table if exists table_ticket491');
-  end;
-end;
-
 
 {**
   Test the bug report #1014416

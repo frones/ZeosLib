@@ -95,8 +95,13 @@ CREATE TABLE Mantis54 (
     F float NULL)
 
 EgonHugeist:
+  For old NTWDBLIB:
   The resultset-Metadata returning SYBFLT8, which is probably a floating type.
   Reminder for ?missing? metadata processing.
+  For old FreeTDS 1up:
+  FreeTDS returns tdsNumeric with precision of 19 and scale 0 using the bigint
+  Imo the test should pass with stLong if any scrollable type is used oth the
+  test should should test the stBigDecimal type!
 }
 procedure ZTestDbcDbLibBugReport.Mantis54Dbc;
 const

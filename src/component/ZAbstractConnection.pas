@@ -973,7 +973,7 @@ begin
           {$ENDIF}
         end;
       finally
-        if FConnection.IsClosed then
+        if Assigned(FConnection) And FConnection.IsClosed then
           FConnection := nil;
       end;
     finally
@@ -983,25 +983,39 @@ begin
     FExplicitTransactionCounter := FTxnLevel;
     if not FAutoCommit then
       DoStartTransaction;
-    if not FConnection.IsClosed then
+    if Assigned(FConnection) And not FConnection.IsClosed then
       DoAfterConnect;
   end;
 end;
 
 procedure TZAbstractConnection.ConnectionLost(var AError: EZSQLConnectionLost);
 var Err: EZSQLConnectionLost;
+    EventErrorRaised: Boolean;
+    ADatBaseError: EZDataBaseError;
 begin
   Err := AError;
   AError := nil;
   try
     CloseAllLinkedComponents;
   except end;
+  EventErrorRaised := True;
   try
     if Assigned(FOnLost) then
       FOnLost(Self);
+    EventErrorRaised := False;
   finally
-    if Err <> nil then
-      raise Err;
+    if EventErrorRaised then begin
+      if (Err <> nil) then
+        FreeAndNil(Err);
+    end else begin
+      if Err = nil //should not happen
+      then ADatBaseError := EZDataBaseError.Create('Connection lost.')
+      else begin
+        ADatBaseError := EZDataBaseError.CreateFromException(Err);
+        FreeAndNil(Err);
+      end;
+      raise ADatBaseError;
+    end;
   end;
 end;
 
@@ -1273,7 +1287,10 @@ begin
 end;
 
 
-type TZProtectedMethodTransaction = Class(TZAbstractTransaction);
+type
+  TZProtectedMethodTransaction = Class(TZAbstractTransaction);
+  TZProtectedAbstractRODataset = class(TZAbstractRODataset);
+  TZProtectedAbstractRWDataSet = Class(TZAbstractRWDataSet);
 
 {**
   Closes all registered datasets.
@@ -1288,16 +1305,27 @@ begin
     if AComp.InheritsFrom(TZAbstractMemTable) then
       continue
     else begin
-      if AComp.InheritsFrom(TZAbstractRODataset) then try
-        TZAbstractRODataset(AComp).Close;
-        TZAbstractRODataset(AComp).UnPrepare;
-      except {Ignore.} end else if AComp.InheritsFrom(TZSequence) then try
+      if AComp.InheritsFrom(TZAbstractRODataset) then begin
+        if not TZProtectedAbstractRODataset(AComp).TryKeepDataOnDisconnect then try
+          TZAbstractRODataset(AComp).Close;
+          TZAbstractRODataset(AComp).UnPrepare;
+        except {Ignore.} end else if AComp.InheritsFrom(TZAbstractRWDataSet) then begin
+          TZProtectedAbstractRWDataSet(AComp).CachedResultSet.ClearStatementLink;
+          TZProtectedAbstractRWDataSet(AComp).ResultSetMetadata := TZProtectedAbstractRWDataSet(AComp).CachedResultSet.GetMetadata;
+          if TZProtectedAbstractRWDataSet(AComp).Statement <> nil then begin
+            TZProtectedAbstractRWDataSet(AComp).Statement.Close;
+            TZProtectedAbstractRWDataSet(AComp).Statement := nil;
+          end;
+          TZProtectedAbstractRWDataSet(AComp).ResultSetMetadata.SetMetadata(nil);
+          if TZProtectedAbstractRWDataSet(AComp).CachedResolver <> nil then
+            TZProtectedAbstractRWDataSet(AComp).CachedResolver.SetConnection(nil);
+        end;
+      end else if AComp.InheritsFrom(TZSequence) then try
         TZSequence(AComp).CloseSequence
       except end else if AComp.InheritsFrom(TZAbstractTransaction) then try
         if TZAbstractTransaction(AComp).Active then
           TZProtectedMethodTransaction(AComp).GetIZTransaction.Close;
-      except end;
-      if AComp.InheritsFrom(TAbstractActiveConnectionLinkedComponent) then try
+      except end else if AComp.InheritsFrom(TAbstractActiveConnectionLinkedComponent) then try
         if TAbstractActiveConnectionLinkedComponent(AComp).Active then
           TAbstractActiveConnectionLinkedComponent(AComp).SetActive(False);
       except end;
@@ -1328,8 +1356,6 @@ begin
   FLinkedComponents.Remove(Value);
 end;
 
-type
-  TZProtectedAbstractRODataset = class(TZAbstractRODataset);
 procedure TZAbstractConnection.UnregisterAllComponents;
 var
   I: Integer;

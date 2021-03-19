@@ -1578,6 +1578,7 @@ begin
 end;
 
 {$IFNDEF WITH_USC2_ANSICOMPARESTR_ONLY}
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "ReadInterbase6Number" marked as inline is not inlined}{$ENDIF}
 function CompareRawByteString_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
   if Null1 and Null2 then Result := 0
@@ -1586,6 +1587,7 @@ begin
   else Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
     AnsiStrComp(PAnsiChar(TZVariant(V1).VRawByteString), PAnsiChar(TZVariant(V2).VRawByteString));
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 function CompareRawByteString_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
@@ -2568,7 +2570,7 @@ begin
 end;
 
 {$IFDEF FPC} {$PUSH}
-  {$WARN 5024 off : Parameter "$1" not used}
+  {$WARN 5024 off : Parameter "Row" not used}
   {$WARN 5033 off : Function result does not seem to be set}
 {$ENDIF}
 function TZAbstractResultSet.MoveAbsolute(Row: Integer): Boolean;

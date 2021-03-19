@@ -80,6 +80,7 @@ type
   {** Resolver to post updates. }
   IZCachedResolver = interface (IZInterface)
     ['{546ED716-BB88-468C-8CCE-D7111CF5E1EF}']
+    /// <author>Michael Seeger</author>
     /// <summary>Calculate default values for the fields.</summary>
     /// <param>"Sender" a cached result set object.</param>
     /// <param>"RowAccessor" an accessor object to column values.</param>
@@ -104,13 +105,21 @@ type
     /// <param>"Sender" a cached result set inteface.</param>
     /// <param>"RowAccessor" an accessor object to current column values.</param>
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor); //FOS+ 07112006
+    /// <author>EgonHugeist</author>
     /// <summary>Set a transaction object used for the crud-operations.</summary>
     /// <param>"Value" the IZTransaction object.</param>
     procedure SetTransaction(const Value: IZTransaction);
+    /// <author>EgonHugeist</author>
     /// <summary>Test if the resolver-transaction is a autocommit txn.</summary>
     /// <returns><c>True</c> if the transaction object is in autocommit mode;
     ///  <c>False</c> otherwise.</returns>
     function HasAutoCommitTransaction: Boolean;
+    /// <author>EgonHugeist</author>
+    /// <summary>Flush all cached statements</summary>
+    procedure FlushStatementCache;
+    /// <summary>Set a new connection.</summary>
+    /// <param>"Value" the IZTransaction object.</param>
+    procedure SetConnection(const Value: IZConnection);
   end;
 
   IZGenerateSQLCachedResolver = interface(IZCachedResolver)
@@ -142,6 +151,12 @@ type
     ///  for updates.</summary>
     /// <param>"Value" the UpdateAll mode should be used.</param>
     procedure SetUpdateAll(Value: Boolean);
+    /// <summary>Set's a list of parameter properties to this resolver object.</summary>
+    /// <param>"Value" the List of parameter.</param>
+    procedure SetResolverParameters(Value: TStrings);
+    /// <summary>Set a new resultset metadata object</summary>
+    /// <param>"Value" the new resultset metadata object to be set.</param>
+    procedure SetMetadata(const Value: IZResultSetMetadata);
   end;
 
   {** Represents a cached result set. }
@@ -169,8 +184,8 @@ type
     /// <returns><c>True</ce> if the last row was fetched.</returns>
     function IsLastRowFetched: Boolean;
     function IsPendingUpdates: Boolean;
-
     procedure SetCachedUpdates(Value: Boolean);
+    procedure ClearStatementLink;
 
     procedure PostUpdates;
     procedure CancelUpdates;
@@ -411,6 +426,7 @@ type
     procedure MoveToInitialRow; virtual;
     procedure PostUpdatesCached; virtual;
     procedure DisposeCachedUpdates; virtual;
+    procedure ClearStatementLink; virtual;
     {$IFDEF WITH_COLUMNS_TO_JSON}
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject, jcoDATETIME_MAGIC]);
     {$ENDIF WITH_COLUMNS_TO_JSON}
@@ -438,10 +454,22 @@ type
     constructor CreateWithColumns(const ColumnsInfo: TObjectList;
       const ResultSet: IZResultSet; const SQL: string;
       const Resolver: IZCachedResolver; ConSettings: PZConSettings);
-
+    /// <summary>Releases all driver handles and set the object in a closed
+    ///  Zombi mode waiting for destruction. Each known supplementary object,
+    ///  supporting this interface, gets called too. This may be a recursive
+    ///  call from parant to childs or vice vera. So finally all resources
+    ///  to the servers are released. This method is triggered by a connecton
+    ///  loss. Don't use it by hand except you know what you are doing.</summary>
+    /// <param>"Sender" the object that did notice the connection lost.</param>
+    /// <param>"AError" a reference to an EZSQLConnectionLost error.
+    ///  You may free and nil the error object so no Error is thrown by the
+    ///  generating method. So we start from the premisse you have your own
+    ///  error handling in any kind.</param>
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
     procedure AfterClose; override;
     procedure ResetCursor; override;
     function GetMetaData: IZResultSetMetaData; override;
+    procedure ClearStatementLink; override;
 
     function IsLast: Boolean; override;
     procedure AfterLast; override;
@@ -615,6 +643,11 @@ begin
   CheckAvailable;
   if ResultSetConcurrency <> rcUpdatable then
     raise CreateReadOnlyException;;
+end;
+
+procedure TZAbstractCachedResultSet.ClearStatementLink;
+begin
+  //noop
 end;
 
 {**
@@ -2466,6 +2499,24 @@ end;
 
 { TZCachedResultSet }
 
+procedure TZCachedResultSet.ClearStatementLink;
+var GenDMLResolver: IZGenerateSQLCachedResolver;
+begin
+  if Statement <> nil then
+    if not FRowAccessor.HasServerLinkedColumns and IsLastRowFetched and GetMetadata.IsMetadataLoaded then begin
+      Statement.FreeOpenResultSetReference(IZResultSet(FWeakIZResultSetPtr));
+      if FResultSet <> nil then begin
+        FResultSet.GetMetadata.AssignColumnInfosTo(ColumnsInfo);
+        TZAbstractResultSetMetadata(Metadata).SetMetadataLoaded(True);
+        FResultSet.Close;
+        FResultSet := nil;
+      end;
+      if FResolver.QueryInterface(IZGenerateSQLCachedResolver, GenDMLResolver) = S_OK then
+        GenDMLResolver.SetMetadata(TZAbstractResultSetMetadata(Metadata));
+      IZStatement(PPointer(@Statement)^) := nil;
+    end else raise EZSQLException.Create('Resultset is not loaded or has server linked columns. Can''t unlink from statement');
+end;
+
 {**
   Creates this object and assignes the main properties.
   @param ResultSet a wrapped resultset object.
@@ -2603,6 +2654,37 @@ begin
   inherited Open;
 end;
 
+procedure TZCachedResultSet.ReleaseImmediat(
+  const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+var ImmediatelyReleasable: IImmediatelyReleasable;
+    GenDMLResolver: IZGenerateSQLCachedResolver;
+begin
+  if FLastRowFetched and not HasServerLinkedColumns and GetMetadata.IsMetadataLoaded then begin
+    if FResultSet <> nil then begin
+      FResultSet.GetMetadata.AssignColumnInfosTo(ColumnsInfo);
+      TZAbstractResultSetMetadata(Metadata).SetMetadataLoaded(True);
+      if Supports(FResultSet, IImmediatelyReleasable, ImmediatelyReleasable) and
+         (ImmediatelyReleasable <> Sender) then
+        ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+      FResultSet := nil;
+    end;
+    if Statement <> nil then begin
+      Statement.FreeOpenResultSetReference(IZResultSet(FWeakIZResultSetPtr));
+      if Supports(Statement, IImmediatelyReleasable, ImmediatelyReleasable) and
+         (ImmediatelyReleasable <> Sender) then
+        ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+      IZStatement(PPointer(@Statement)^) := nil;
+    end;
+    if (FResolver <> nil) then begin
+      if FResolver.QueryInterface(IZGenerateSQLCachedResolver, GenDMLResolver) = S_OK then begin
+        GenDMLResolver.SetMetadata(TZAbstractResultSetMetadata(Metadata));
+        GenDMLResolver.SetConnection(nil);
+      end;
+      FResolver.SetTransaction(nil);
+    end;
+  end else inherited ReleaseImmediat(Sender, AError);
+end;
+
 procedure TZCachedResultSet.ResetCursor;
 var
   Statement: IZStatement;
@@ -2631,10 +2713,9 @@ end;
 }
 function TZCachedResultSet.GetMetadata: IZResultSetMetadata;
 begin
-  If Assigned(FResultset) then
-    Result := ResultSet.GetMetadata
-  else
-    Result := nil;
+  If Assigned(FResultset)
+  then Result := ResultSet.GetMetadata
+  else Result := inherited GetMetadata;
 end;
 
 {**
@@ -2817,70 +2898,44 @@ end;
 
 constructor TZVirtualResultSet.CreateCloneFrom(const Source: IZResultSet);
 var MetaData: IZResultSetMetadata;
-    ColumnsInfo: TObjectList;
-    ColumnInfo: TZColumnInfo;
-    I: Integer;
 begin
   MetaData := Source.GetMetadata;
-  ColumnsInfo := TObjectList.Create(True);
-  ColumnsInfo.Capacity := MetaData.GetcolumnCount;
-  for i := FirstDbcindex to ColumnsInfo.Capacity{$IFDEF GENERIC_INDEX}-1{$ENDIF} do begin
-    ColumnInfo := TZColumnInfo.Create;
-    ColumnInfo.Currency := Metadata.IsCurrency(I);
-    ColumnInfo.Signed := Metadata.IsSigned(I);
-    ColumnInfo.ColumnLabel := Metadata.GetOrgColumnLabel(I);
-    ColumnInfo.Precision := Metadata.GetPrecision(I);
-    ColumnInfo.ColumnType := Metadata.GetColumnType(I);
-    ColumnInfo.ColumnCodePage := Metadata.GetColumnCodePage(I);
-    ColumnInfo.Scale := Metadata.GetScale(I);
-    ColumnsInfo.Add(ColumnInfo);
-  end;
-  CreateWithColumns(ColumnsInfo, '', Source.GetConSettings);
-  FreeAndNil(ColumnsInfo);
+  inherited Create(nil, '', nil, Source.GetConSettings);
+  Metadata.AssignColumnInfosTo(ColumnsInfo);
+  FCachedUpdates := False;
+  FLastRowFetched := True;
+  Open;
 end;
 
 constructor TZVirtualResultSet.CreateFrom(const Source: IZResultSet;
   Rows: TZSortedList; FieldPairs: TZIndexPairList; ConSettings: PZConSettings);
-var ColumnsInfo: TObjectList;
-  FieldPairsCreated: Boolean;
-  function CreateColumns(const Source: IZResultSet; var FieldPairs: TZIndexPairList): TObjectList;
-  var MetaData: IZResultSetMetadata;
-      C, I: Integer;
-      ColumnInfo: TZColumnInfo;
-  begin
-    MetaData := Source.GetMetadata;
-    if FieldPairs = nil then begin
-      FieldPairs := TZIndexPairList.Create;
-      FieldPairs.Capacity := MetaData.GetColumnCount;
-      for i := FirstDbcIndex to FieldPairs.Capacity {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-        FieldPairs.Add(I, I);
-    end;
-    Result := TObjectList.Create(True);
-    for i := 0 to FieldPairs.Count-1 do begin
-      C := PZIndexPair(FieldPairs[i]).SrcOrDestIndex;
-      ColumnInfo := TZColumnInfo.Create;
-      ColumnInfo.Currency := Metadata.IsCurrency(C);
-      ColumnInfo.Signed := Metadata.IsSigned(C);
-      ColumnInfo.ColumnLabel := Metadata.GetOrgColumnLabel(C);
-      ColumnInfo.Precision := Metadata.GetPrecision(C);
-      ColumnInfo.ColumnType := Metadata.GetColumnType(C);
-      ColumnInfo.ColumnCodePage := Metadata.GetColumnCodePage(C);
-      ColumnInfo.Scale := Metadata.GetScale(C);
-      Result.Add(ColumnInfo);
-    end;
-  end;
+var MetaData: IZResultSetMetadata;
+    ColumnInfo: TZColumnInfo;
+    C, I: Integer;
 begin
-  FieldPairsCreated := FieldPairs = nil;
-  ColumnsInfo := CreateColumns(Source, FieldPairs);
-  CreateWithColumns(ColumnsInfo, '', ConSettings);
-  try
-    CopyFrom(Source, Rows, FieldPairs);
-  finally
-    FreeAndNil(ColumnsInfo);
-    if FieldPairsCreated then
-      FreeAndNil(FieldPairs);
+  inherited Create(nil, '', nil, ConSettings);
+  Metadata := Source.GetMetadata;
+  if FieldPairs <> nil
+  then ColumnsInfo.Capacity := FieldPairs.Count
+  else ColumnsInfo.Capacity := Metadata.GetColumnCount;
+  if FieldPairs = nil
+  then Metadata.AssignColumnInfosTo(ColumnsInfo)
+  else for i := 0 to FieldPairs.Count-1 do begin
+    C := PZIndexPair(FieldPairs[i]).SrcOrDestIndex;
+    ColumnInfo := TZColumnInfo.Create;
+    ColumnInfo.Currency := Metadata.IsCurrency(C);
+    ColumnInfo.Signed := Metadata.IsSigned(C);
+    ColumnInfo.ColumnLabel := Metadata.GetOrgColumnLabel(C);
+    ColumnInfo.Precision := Metadata.GetPrecision(C);
+    ColumnInfo.ColumnType := Metadata.GetColumnType(C);
+    ColumnInfo.ColumnCodePage := Metadata.GetColumnCodePage(C);
+    ColumnInfo.Scale := Metadata.GetScale(C);
+    ColumnsInfo.Add(ColumnInfo);
   end;
-  BeforeFirst;
+  FCachedUpdates := False;
+  FLastRowFetched := True;
+  Open;
+  CopyFrom(Source, Rows, FieldPairs);
 end;
 
 {**
@@ -2892,6 +2947,7 @@ constructor TZVirtualResultSet.CreateWithColumns(ColumnsInfo: TObjectList;
   const SQL: string; ConSettings: PZConSettings);
 begin
   inherited CreateWithColumns(ColumnsInfo, SQL, ConSettings);
+  FCachedUpdates := False;
   FLastRowFetched := True;
 end;
 

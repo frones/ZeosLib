@@ -2175,7 +2175,7 @@ begin
     {$IFNDEF NO_ANSISTRING}
     vtAnsiString:
       {$IFDEF UNICODE}
-      Tmp := PRawToUnicode(Pointer(Value.VRawByteString), Length(Value.VRawByteString), ZOSCodePage);
+      PRawToUnicode(Pointer(Value.VRawByteString), Length(Value.VRawByteString), ZOSCodePage, Tmp);
       {$ELSE}
       Tmp := Value.VRawByteString;
       {$ENDIF}
@@ -2183,7 +2183,7 @@ begin
     {$IFNDEF NO_UTF8STRING}
     vtUTF8String:
       {$IFDEF UNICODE}
-      Tmp := PRawToUnicode(Pointer(Value.VRawByteString), Length(Value.VRawByteString), zCP_UTF8);
+      PRawToUnicode(Pointer(Value.VRawByteString), Length(Value.VRawByteString), zCP_UTF8, Tmp);
       {$ELSE}
       if (ZOSCodePage = zCP_UTF8)
       then Tmp := Value.VRawByteString
@@ -2202,7 +2202,7 @@ begin
         {$IFDEF UNICODE}
         SetString(Tmp, PChar(Value.VCharRec.P), Value.VCharRec.Len)
         {$ELSE}
-        Tmp := PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, ZOSCodePage)
+        PUnicodeToRaw(Value.VCharRec.P, Value.VCharRec.Len, ZOSCodePage, Tmp)
         {$ENDIF}
       else
       {$IFNDEF UNICODE}
@@ -2216,7 +2216,7 @@ begin
         Tmp := String(Result.VUnicodeString);
         Result.VUnicodeString := '';
         {$ELSE}
-        Tmp := PRawToUnicode(Value.VCharRec.P, Value.VCharRec.Len, Value.VCharRec.CP);
+        PRawToUnicode(Value.VCharRec.P, Value.VCharRec.Len, Value.VCharRec.CP, Tmp);
         {$ENDIF}
       end;
     else {$IFDEF UNICODE}ConvertFixedTypesToUnicode{$ELSE}ConvertFixedTypesToRaw{$ENDIF}(Value, Tmp{$IF defined(WITH_RAWBYTESTRING) and not defined(UNICODE)}, ZOSCodePage{$IFEND});
@@ -3003,9 +3003,14 @@ end;
   @param Value a value to be assigned.
 }
 function EncodeBytes(const Value: TBytes): TZVariant;
+var L: LengthInt;
 begin
   Result.VType := vtBytes;
-  ZSetString(Pointer(Value), Length(Value), Result.VRawByteString);
+  L := Length(Value);
+  if L > 0 then begin
+    SetLength(Result.VRawByteString, L);
+    Move(Pointer(Value)^, Pointer(Result.VRawByteString)^, L);
+  end;
 end;
 
 {**

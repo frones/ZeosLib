@@ -689,6 +689,7 @@ var P, PEnd, PFractionSep, PSecond, PFractionStart, PFractionEnd, NewP, PYear, P
   EscapeCount, L, FractionDigitsInFormat, DigitsLeft: Cardinal;
   FormatSettings: PFormatSettings;
 begin
+  UniqueString(Format);
   P := Pointer(Format);
   L := Length(Format);
   PEnd := P+L;
@@ -729,6 +730,13 @@ begin
   end;
   if (PSecond = nil) and (PFractionStart = nil) and (PHour = nil) and (PYear = nil) then
     Exit;
+  if (PFractionSep = nil) and (PSecond <> nil) and (PFractionStart <> nil) and (PFractionStart = PSecond+2) then begin
+    //try handle wrong formats where decimal-sep <> sep of given formatsettings
+    //i.e. 'hh:mm:ss.zzz' but decimalsep in formatsettings is a comma f.e.
+    PFractionSep := PSecond +1;
+    PFractionSep^ := FormatSettings.DecimalSeparator;
+  end;
+
   { determine amount of fraction digits -> fix scale ? }
   if SecondFractionOption = foRightZerosTrimmed then begin
     DigitsLeft := 9;

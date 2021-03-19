@@ -677,8 +677,8 @@ type
     PQoptions       : function(conn: TPGconn): PAnsiChar; cdecl;
     PQstatus        : function(conn: TPGconn): TZPostgreSQLConnectStatusType; cdecl;
   //TBD  PGTransactionStatusType PQtransactionStatus(const TPGconn *conn);
-  //15022006 FirmOS: omitting const char *PQparameterStatus(const TPGconn *conn, const char *paramName);
-  //15022006 FirmOS: omitting  PQprotocolVersion
+    PQparameterStatus: function(conn: TPGconn; paramName: PAnsiChar): PAnsiChar; cdecl;
+    PQprotocolVersion: function(conn: TPGconn): Integer; cdecl;
     PQserverVersion : function(conn: TPGconn): Integer; cdecl;
     PQerrorMessage  : function(conn: TPGconn): PAnsiChar; cdecl;
     PQsocket        : function(conn: TPGconn): Integer; cdecl;
@@ -905,6 +905,8 @@ begin
     @PQtty          := GetAddress('PQtty');
     @PQoptions      := GetAddress('PQoptions');
     @PQstatus       := GetAddress('PQstatus');
+    @PQparameterStatus := GetAddress('PQparameterStatus');
+    @PQprotocolVersion := GetAddress('PQprotocolVersion');
     @PQserverVersion:= GetAddress('PQserverVersion');
     @PQerrorMessage := GetAddress('PQerrorMessage');
     @PQsocket       := GetAddress('PQsocket');

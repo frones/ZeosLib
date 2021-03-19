@@ -64,7 +64,7 @@ uses
   {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
   {$IFNDEF DO_NOT_DERIVE_FROM_EDATABASEERROR}DB, {$ENDIF}
   FmtBcd, Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}SysUtils,
-  {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
+  {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF}, {$IFNDEF NO_UNIT_CONTNRS}Contnrs, {$ENDIF}
   ZClasses, ZCollections, ZCompatibility, ZTokenizer, ZSelectSchema, ZSysUtils,
   ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver;
 
@@ -4038,6 +4038,15 @@ type
   /// <summary>Defines the ResultSet metadata interface.</summary>
   IZResultSetMetadata = interface(IZInterface)
     ['{47CA2144-2EA7-42C4-8444-F5154369B2D7}']
+    /// <author>EgonHugeist</author>
+    procedure AssignColumnInfosTo(ColumnsInfo: TObjectList);
+    /// <summary>Sets the databasemetadata to this object.</summary>
+    /// <param>"Value" a new IZDatabaseMetadata interface</param>
+    procedure SetMetadata(const Value: IZDatabaseMetadata);
+    /// <author>EgonHugeist</author>
+    /// <summary>Indicates whether the metainformations are loaded.</summary>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
+    function IsMetadataLoaded: Boolean;
     /// <summary>Maps the given <c>Metadata</c> column name to its
     ///  <c>Metadata</c> column index. First searches with case-sensivity then,
     ///  if nothing matches, a case.insensitive search is performed.

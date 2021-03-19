@@ -351,6 +351,7 @@ end;
 {**
   Login procedure can be overriden for special settings.
 }
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "dbsetluser...." marked as inline is not inlined}{$ENDIF}
 procedure TZDBLibConnection.InternalLogin;
 var
   Loginrec: PLOGINREC;
@@ -516,6 +517,7 @@ begin
     FPlainDriver.dbLoginFree(LoginRec);
   end;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 function TZDBLibConnection.GetConnectionHandle: PDBPROCESS;
 begin
@@ -751,6 +753,7 @@ end;
   Opens a connection to database server with specified parameters.
 }
 const textlimit: PAnsichar = '2147483647';
+  {$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "dbUse" marked as inline is not inlined}{$ENDIF}
 procedure TZDBLibConnection.Open;
 {$IFDEF UNICODE}
 var Tmp: RawByteString;
@@ -774,7 +777,6 @@ begin
   if FPlainDriver.dbsetopt(FHandle, FPlainDriver.GetDBOption(dboptTEXTSIZE),Pointer(textlimit), -1) <> DBSUCCEED then
     CheckDBLibError(lcConnect, FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
   ExecuteImmediat(RawByteString('set quoted_identifier on'), lcOther);
-
   inherited Open;
 
   if TransactIsolationLevel = tiNone then
@@ -814,6 +816,7 @@ begin
     end;
   //ExecuteImmediat(RawByteString('SET NO_BROWSETABLE ON'), lcOther)
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 function TZDBLibConnection.PrepareCallWithParams(const Name: String;
   Params: TStrings): IZCallableStatement;
@@ -965,6 +968,7 @@ begin
   end;
 end;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "dbCmd" marked as inline is not inlined}{$ENDIF}
 procedure TZDBLibConnection.DetermineMSDateFormat;
 {$IFDEF UNICODE}
 var
@@ -993,7 +997,9 @@ begin
     ConSettings^.ReadFormatSettings.DateFormat := 'YYYY/MM/DD';
   ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' HH:NN:SS:ZZZ';
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "dbcmd" marked as inline is not inlined}{$ENDIF}
 function TZDBLibConnection.DetermineMSServerCollation: String;
 {$IFDEF UNICODE}
 var
@@ -1019,10 +1025,12 @@ begin
     {$ENDIF}
   FPlainDriver.dbCancel(FHandle);
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 {**
   Executes simple statements immediatally.
 }
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "dbcmd" marked as inline is not inlined}{$ENDIF}
 procedure TZDBLibConnection.ExecuteImmediat(const SQL: RawByteString;
   LoggingCategory: TZLoggingCategory);
 begin
@@ -1045,6 +1053,7 @@ begin
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(LoggingCategory, URL.Protocol, FLogMessage);
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 function TZDBLibConnection.GetServerCollation: String;
 begin
@@ -1205,6 +1214,7 @@ begin
     raise EZSQLException.Create(SUnsupportedOperation);
 end;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "ReadInterbase6Number" marked as inline is not inlined}{$ENDIF}
 procedure TZDBLibConnection.SetCatalog(const Value: string);
 var
   RawCat: RawByteString;
@@ -1222,6 +1232,7 @@ begin
     DriverManager.LogMessage(lcOther, URL.Protocol, FLogMessage);
   end;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 {**
   Returns the Connection's current catalog name.

@@ -170,7 +170,6 @@ type
 
     FRequestLive: Boolean;
     FFetchRow: integer;
-
     FSQL: TZSQLStrings;
     FParams: {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF};
     {$IFNDEF DISABLE_ZPARAM}FCompilerParams: TParams;{$ENDIF} //required for IProvider
@@ -182,7 +181,6 @@ type
     FResultSetMetadata: IZResultSetMetadata;
     FOpenLobStreams: TZSortedList;
     FFormatSettings: TZFormatSettings;
-    FRefreshInProgress: Boolean;
     //for the Date/Time/DateTimeFields: circumvent duplicate conversions
     //TBCDField:
     //circumvent a TClientDataSet BCDField bug.
@@ -294,14 +292,14 @@ type
     function  GetUniDirectional: boolean;
     procedure SetProperties(const Value: TStrings); virtual;
   protected
+    FRefreshInProgress: Boolean;
     FControlsCodePage: TZControlsCodePage;
     FConnection: TZAbstractConnection;
     FTransaction: TZAbstractTransaction;
     FConSettings: PZConSettings;
     FLastRowFetched: Boolean;
-    /// <summary>Sets database connection object.</summary>
-    /// <param>"Value" a database connection object.</param>
-    procedure SetConnection(Value: TZAbstractConnection); virtual;
+    FTryKeepDataOnDisconnect: Boolean;
+    FCursorLocation: TZCursorLocation;
     procedure CheckOpened;
     procedure CheckConnected; virtual;
     procedure CheckBiDirectional;
@@ -325,6 +323,12 @@ type
     procedure SetTransaction(Value: TZAbstractTransaction); virtual;
     procedure AddFieldDefFromMetadata(ColumnIndex: Integer;
       const ResultSetMetaData: IZResultSetMetadata; const FieldName: String);
+    function GetTryKeepDataOnDisconnect: Boolean; virtual;
+    procedure SetTryKeepDataOnDisconnect(Value: Boolean);
+    procedure SetCursorLocation(Value: TZCursorLocation);
+    /// <summary>Sets database connection object.</summary>
+    /// <param>"Value" a database connection object.</param>
+    procedure SetConnection(Value: TZAbstractConnection); virtual;
   protected { Internal protected properties. }
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; virtual;
@@ -351,7 +355,10 @@ type
     property FetchCount: Integer read FFetchCount write FFetchCount;
     property FieldsLookupTable: TZFieldsLookUpDynArray read FFieldsLookupTable
       write FFieldsLookupTable;
-
+    /// <author>EgonHugeist</author>
+    property TryKeepDataOnDisconnect: Boolean read GetTryKeepDataOnDisconnect write SetTryKeepDataOnDisconnect;
+    /// <author>EgonHugeist</author>
+    property CursorLocation: TZCursorLocation read FCursorLocation write SetCursorLocation;
     property FilterEnabled: Boolean read FFilterEnabled write FFilterEnabled;
     property FilterExpression: IZExpression read FFilterExpression
       write FFilterExpression;
@@ -363,7 +370,7 @@ type
 
     property Statement: IZPreparedStatement read FStatement write FStatement;
     property ResultSet: IZResultSet read FResultSet write FResultSet;
-    property ResultSetMetadata: IZResultSetMetadata read FResultSetMetadata;
+    property ResultSetMetadata: IZResultSetMetadata read FResultSetMetadata write FResultSetMetadata;
     property ResultSetWalking: Boolean read FResultSetWalking;
   protected { External protected properties. }
     property DataLink: TDataLink read FDataLink;
@@ -1625,6 +1632,7 @@ begin
   FUseZFields := True;
   {$IFEND}
   FFormatSettings := TZFormatSettings.Create(Self);
+  FCursorLocation := rctDefault;
 end;
 
 {**
@@ -1661,20 +1669,31 @@ begin
   inherited Destroy;
 end;
 
+procedure TZAbstractRODataset.SetTryKeepDataOnDisconnect(Value: Boolean);
+begin
+  if Value <> FTryKeepDataOnDisconnect then begin
+    if Active then
+       Close;
+    FTryKeepDataOnDisconnect := Value;
+    FCachedLobs := FTryKeepDataOnDisconnect or (doCachedLobs in FOptions);
+  end;
+end;
+
 procedure TZAbstractRODataset.SetConnection(Value: TZAbstractConnection);
 begin
   if FConnection <> Value then begin
     if Active then
-       Close;
-    Unprepare;
+      if not GetTryKeepDataOnDisconnect then
+        Close; //EH: todo if the new connection was reconnected flush the statement interface
+    if Prepared and not GetTryKeepDataOnDisconnect then
+      Unprepare;
     if FConnection <> nil then
       FConnection.UnregisterComponent(Self);
-    FConnection := Value;
-    if FConnection = nil then
-      FFormatSettings.SetParent(nil)
+    if Value = nil
+    then FormatSettings.SetParent(nil)
     else begin
-      FConnection.RegisterComponent(Self);
-      FFormatSettings.SetParent(FConnection.FormatSettings);
+      FormatSettings.SetParent(Value.FormatSettings);
+      Value.RegisterComponent(Self);
       if (FSQL.Count > 0) and PSIsSQLBased{do not rebuild all!} and (Fields.Count = 0) then begin
       {EH: force rebuild all of the SQLStrings ->
         in some case the generic tokenizer fails for several reasons like:
@@ -1686,6 +1705,16 @@ begin
         FSQL.EndUpdate;
       end;
     end;
+    FConnection := Value;
+  end;
+end;
+
+procedure TZAbstractRODataset.SetCursorLocation(Value: TZCursorLocation);
+begin
+  if Value <> FCursorLocation then begin
+    if Active then
+      Close;
+    FCursorLocation := Value;
   end;
 end;
 
@@ -2049,6 +2078,19 @@ var
   SavedRow: Integer;
   SavedRows: TZSortedList;
   SavedState: TDatasetState;
+
+  function InternalFilterRow: Boolean;
+  begin
+    if not InitFilterFields then begin
+      FilterFieldRefs := DefineFilterFields(Self, FilterExpression, FFieldsLookupTable);
+      InitFilterFields := True;
+    end;
+    CopyDataFieldsToVars(FilterFieldRefs, ResultSet,
+      FilterExpression.DefaultVariables);
+    Result := FilterExpression.VariantManager.GetAsBoolean(
+      FilterExpression.Evaluate4(FilterExpression.DefaultVariables,
+      FilterExpression.DefaultFunctions, FilterStack));
+  end;
 begin
   Result := True;
 
@@ -2117,19 +2159,8 @@ begin
      Exit;
 
   { Check the record by filter expression. }
-  if FilterEnabled and (FilterExpression.Expression <> '') then begin
-    if not InitFilterFields then begin
-      FilterFieldRefs := DefineFilterFields(Self, FilterExpression, FFieldsLookupTable);
-      InitFilterFields := True;
-    end;
-    CopyDataFieldsToVars(FilterFieldRefs, ResultSet,
-      FilterExpression.DefaultVariables);
-    Result := FilterExpression.VariantManager.GetAsBoolean(
-      FilterExpression.Evaluate4(FilterExpression.DefaultVariables,
-      FilterExpression.DefaultFunctions, FilterStack));
-  end;
-  if not Result then
-     Exit;
+  if FilterEnabled and (FilterExpression.Expression <> '') then
+    Result := InternalFilterRow;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -3565,6 +3596,8 @@ begin
     {$IF declared(DSProps_PreferPrepared)}
     Temp.Values[DSProps_PreferPrepared] := BoolStrs[doPreferPrepared in FOptions];
     {$IFEND}
+    if FCachedLobs then
+      Temp.Values[DSProps_CachedLobs] := 'true';
     if FTransaction <> nil
     then Txn := THackTransaction(FTransaction).GetIZTransaction
     else Txn := FConnection.DbcConnection.GetConnectionTransaction;
@@ -3597,6 +3630,7 @@ end;
 function TZAbstractRODataset.CreateResultSet(const SQL: string;
   MaxRows: Integer): IZResultSet;
 begin
+  CheckConnected;
   Connection.ShowSQLHourGlass;
   try
     SetStatementParams(Statement, FSQL.Statements[0].ParamNamesArray,
@@ -3610,6 +3644,7 @@ begin
       Statement.SetResultSetType(rtForwardOnly)
     else
       Statement.SetResultSetType(rtScrollInsensitive);
+    Statement.SetCursorLocation(FCursorLocation);
     if MaxRows > 0 then
       Statement.SetMaxRows(MaxRows);
 
@@ -3644,8 +3679,11 @@ begin
   FetchCount := 0;
   CurrentRows.Clear;
   FLastRowFetched := False;
-  if Connection <> nil then
+  if Connection <> nil then begin
     Connection.ShowSQLHourGlass;
+    if (Statement = nil) and FTryKeepDataOnDisconnect then
+      InternalPrepare;
+  end;
   OldRS := FResultSet;
   try
     { Creates an SQL statement and resultsets }
@@ -3727,6 +3765,8 @@ begin
   finally
     if Connection <> nil then
       Connection.HideSQLHourGlass;
+    if (OldRS <> ResultSet) and (OldRS <> nil) and not (OldRS.IsClosed) then
+      OldRS.Close;
     OldRS := nil;
   end;
   if FHasOutParams then
@@ -3782,9 +3822,11 @@ begin
   {$IFNDEF WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD}
   FCurrentFieldRefIndex := 0;
   {$ENDIF}
-  CurrentRows.Clear;
+  if CurrentRows <> nil then
+    CurrentRows.Clear;
   {$IFNDEF DISABLE_ZPARAM}
-  FParams.FlushParameterConSettings;
+  if FParams <> nil then
+    FParams.FlushParameterConSettings;
   {$ENDIF}
 end;
 
@@ -3905,6 +3947,11 @@ begin
   Result := RequestLive;
 end;
 
+function TZAbstractRODataset.GetTryKeepDataOnDisconnect: Boolean;
+begin
+  Result := FTryKeepDataOnDisconnect and not (csDestroying in ComponentState);
+end;
+
 {**
   Gets a linked datasource.
   @returns a linked datasource.
@@ -3929,14 +3976,12 @@ end;
 procedure TZAbstractRODataset.SetPrepared(Value: Boolean);
 begin
   FResultSetWalking := False;
-  If Value <> FPrepared then
-    begin
-      If Value then
-        InternalPrepare
-      else
-        InternalUnprepare;
-      FPrepared := Value;
-    end;
+  If Value <> FPrepared then begin
+    If Value
+    then InternalPrepare
+    else InternalUnprepare;
+    FPrepared := Value;
+  end;
 end;
 
 {**
@@ -4123,7 +4168,7 @@ procedure TZAbstractRODataset.SetOptions(Value: TZDatasetOptions);
 begin
   if FOptions <> Value then begin
     FOptions := Value;
-    FCachedLobs := doCachedLobs in FOptions
+    FCachedLobs := FTryKeepDataOnDisconnect or (doCachedLobs in FOptions);
   end;
 end;
 
@@ -4187,12 +4232,13 @@ var I, Cnt: Integer;
   DoFindParam: Boolean;
 begin
   CheckSQLQuery;
-  CheckInactive;  //AVZ - Need to check this
+  if not FRefreshInProgress {and (Statement <> nil)} then
+    CheckInactive;  //AVZ - Need to check this
   CheckConnected;
 
   Connection.ShowSQLHourGlass;
   try
-    if (FSQL.StatementCount > 0) and((Statement = nil) or (Statement.GetConnection.IsClosed)) then begin
+    if (FSQL.StatementCount > 0) and((Statement = nil) or (Statement.IsClosed)) then begin
       Statement := CreateStatement(FSQL.Statements[0].SQL, Properties);
       FHasOutParams := False;
       ParamNamesArray := FSQL.Statements[0].ParamNamesArray;
@@ -4558,10 +4604,8 @@ var
 begin
   OnlyDataFields := False;
   FieldRefs := nil;
-  if Active then
-  begin
-    if CurrentRow > 0 then
-    begin
+  if Active then begin
+    if CurrentRow > 0 then begin
       RowNo := NativeInt(CurrentRows[CurrentRow - 1]);
       if ResultSet.GetRow <> RowNo then
         ResultSet.MoveAbsolute(RowNo);
@@ -4590,7 +4634,8 @@ begin
     try
       try
         FRefreshInProgress := True;
-        InternalClose;
+        if (Statement <> nil) then
+          InternalClose;
         InternalOpen;
       finally
         FRefreshInProgress := False;

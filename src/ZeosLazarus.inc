@@ -72,7 +72,7 @@
   
 {$INTERFACES COM}
 {$IFDEF FPC_FULLVERSION}  // FPC_FULLVERSION was added in FPC 2.2.4
-
+  {$DEFINE WITH_DATASET_DefaultBufferCount} //the fpc aquires min DefaultBufferCount of rows on internalopen/resync, etc. See dataset.inc
   {$DEFINE WITH_PARAM_ASLARGEINT} //supportet since FPC 2.0.4 -> see http://zeoslib.sourceforge.net/viewtopic.php?p=68484#p68484
   {$DEFINE WITH_FTWIDESTRING}  // Supported from somewhere between 2.2 and 2.4
   {$DEFINE WITH_PARAM_ASWIDESTRING}
@@ -135,6 +135,7 @@
             {$DEFINE WITH_VIRTUAL_TFIELD_BIND} //TField has procedure Bind(Binding: Boolean);
             {$IF FPC_FULLVERSION>=30100}
               {$UNDEF MISS_RBS_SETSTRING_OVERLOAD} //SetString overload for RawByteString is available now
+              {$DEFINE WITH_NOT_INLINED_WARNING} //handle marked as inline is not inlined warnings
               {$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined} //suppress warning that marks all Variant operators f.ex.
               {$DEFINE WITH_ASANSISTRING} // TField.AsAnsiString is supported
               {$DEFINE WITH_VIRTUAL_TFIELD_ASUTF8STRING} // //TField has virtual getter+Setter for the UTF8Strings

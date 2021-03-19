@@ -119,8 +119,10 @@ type
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure RefreshCurrentRow(const Sender: IZCachedResultSet;RowAccessor: TZRowAccessor);
 
+    procedure SetConnection(const Value: IZConnection);
     procedure SetTransaction(const Value: IZTransaction);
     function HasAutoCommitTransaction: Boolean;
+    procedure FlushStatementCache;
   end;
 
 implementation
@@ -1005,6 +1007,11 @@ procedure TZEmptyResolver.CalculateDefaults(const Sender: IZCachedResultSet;
 begin
 end;
 
+procedure TZEmptyResolver.FlushStatementCache;
+begin
+  //noop
+end;
+
 {**
   Posts cached updates.
   @param Sender a sender CachedResultSet object.
@@ -1035,6 +1042,11 @@ procedure TZEmptyResolver.RefreshCurrentRow(const Sender: IZCachedResultSet;RowA
 begin
 end;
 
+
+procedure TZEmptyResolver.SetConnection(const Value: IZConnection);
+begin
+
+end;
 
 procedure TZEmptyResolver.SetTransaction(const Value: IZTransaction);
 begin

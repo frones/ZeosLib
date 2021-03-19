@@ -21,3 +21,4 @@ drop table if exists test894367a;
 
 drop table if exists sf354;
 drop table if exists TableSFTicket331;
+drop table if exists TableTestMichlsBCDs;

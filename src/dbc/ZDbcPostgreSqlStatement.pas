@@ -1309,8 +1309,8 @@ var
                           end;
                   TIMESTAMPOID: begin
                             if Finteger_datetimes
-                            then PG2DateTime(PInt64(Data)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
-                            else PG2DateTime(PDouble(Data)^, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
+                            then PG2DateTime(PInt64(Data)^, 0, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
+                            else PG2DateTime(PDouble(Data)^, 0, TS.Year, TS.Month, TS.Day, TS.Hour, TS.Minute, TS.Second, TS.Fractions);
                             TS.IsNegative := False;
                             SQLWriter.AddTimeStamp(TS, ConSettings^.WriteFormatSettings.DateTimeFormat, TmpSQL);
                             SQLWriter.AddText('::timestamp', TmpSQL);
@@ -2274,9 +2274,9 @@ var
                     end;
         stTimeStamp:begin
                       if Finteger_datetimes
-                      then PG2DateTime(PInt64(FPQparamValues[i])^, TS.Year, TS.Month, TS.Day,
+                      then PG2DateTime(PInt64(FPQparamValues[i])^, 0, TS.Year, TS.Month, TS.Day,
                           TS.Hour, Ts.Minute, Ts.Second, Ts.Fractions)
-                      else PG2DateTime(PDouble(FPQparamValues[i])^, TS.Year, TS.Month, TS.Day,
+                      else PG2DateTime(PDouble(FPQparamValues[i])^, 0, TS.Year, TS.Month, TS.Day,
                         TS.Hour, Ts.Minute, Ts.Second, Ts.Fractions);
                       TS.IsNegative := False;
                       SetTimeStamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},TS);
@@ -2294,6 +2294,8 @@ begin
         BindList.Count := FplainDriver.PQnparams(res)+FOutParamCount;
         for i := 0 to BindList.Count-FOutParamCount-1 do begin
           pgOID := FplainDriver.PQparamtype(res, i);
+          if (pgOID = TIMESTAMPTZOID) and (FPostgreSQLConnection.GetTimeZoneOffset <> 0) then
+            pgOID := TIMESTAMPOID;
           NewSQLType := PostgreSQLToSQLType(fOIDAsBlob, pgOID, -1);
           if NewSQLType = stUnknown then //EH: domain types are unknonw for us..
             //pg does not return the underlaying OID grumble...
@@ -2608,8 +2610,8 @@ begin
                     then SQLWriter.AddTime(PG2Time(PInt64(P)^), ConSettings^.WriteFormatSettings.TimeFormat, Result)
                     else SQLWriter.AddTime(PG2Time(PDouble(P)^), ConSettings^.WriteFormatSettings.TimeFormat, Result);
           TIMESTAMPOID: if Finteger_datetimes
-                    then SQLWriter.AddDateTime(PG2DateTime(PInt64(P)^), ConSettings^.WriteFormatSettings.DateTimeFormat, Result)
-                    else SQLWriter.AddDateTime(PG2DateTime(PDouble(P)^), ConSettings^.WriteFormatSettings.DateTimeFormat, Result);
+                    then SQLWriter.AddDateTime(PG2DateTime(PInt64(P)^, 0), ConSettings^.WriteFormatSettings.DateTimeFormat, Result)
+                    else SQLWriter.AddDateTime(PG2DateTime(PDouble(P)^, 0), ConSettings^.WriteFormatSettings.DateTimeFormat, Result);
         end;
       end;
     {$IFDEF UNICODE}
