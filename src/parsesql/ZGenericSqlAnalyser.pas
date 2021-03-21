@@ -60,41 +60,64 @@ uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   ZClasses, ZTokenizer, ZSelectSchema;
 
 type
-
-  {** Implements a section of the parsed SQL statement. }
+  /// <summary>Implements a section of the parsed SQL statement.</summary>
   TZStatementSection = class (TObject)
   private
     FName: string;
     FTokens: TZTokenList;
   public
+    /// <summary>Create SQL statement section object.</summary>
+    /// <param>"Tokens" a list of tokens.</param>
     constructor Create(const Name: string; {$IFDEF AUTOREFCOUNT}const{$ENDIF}
       Tokens: TZTokenList);
+    /// <summary>Destroys this object and cleanups the memory.</summary>
     destructor Destroy; override;
 
+    /// <summary>Clones an object instance.</summary>
+    /// <returns>a clonned object instance.<returns>
     function Clone: TZStatementSection;
-
+  public
     property Name: string read FName write FName;
     property Tokens: TZTokenList read FTokens;
   end;
 
-  {** Implements a publicly available interface to statement analyser. }
+  /// <summary>Defines a publicly available interface to statement analyser.</summary>
   IZStatementAnalyser = interface(IZInterface)
     ['{967635B6-411B-4DEF-990C-9C6C01F3DC0A}']
-
+    /// <summary>Tokenizes a given SQL query into a list of tokens with tokenizer.</summary>
+    /// <param>"Tokenizer" a tokenizer object.</param>
+    /// <param>"SQL" a SQL query to be tokenized.</param>
+    /// <returns>a list with tokens.</returns>
     function TokenizeQuery(const Tokenizer: IZTokenizer; const SQL: string;
       Cleanup: Boolean): TZTokenList;
+    /// <summary>Splits a given list of tokens into the list named sections.</summary>
+    /// <param>"Tokens" a list of tokens.</param>
+    /// <returns>a list of section names where object property contains a list
+    ///  of tokens in the section. It initial list is not started with a section
+    ///  name the first section is unnamed ('').</returns>
     function SplitSections({$IFDEF AUTOREFCOUNT}const{$ENDIF}Tokens: TZTokenList): TObjectList;
-
+    /// <summary>Composes a string from the list of tokens.</summary>
+    /// <param>"Tokens" a list of tokens.</param>
+    /// <returns>a composes string.</returns>
     function ComposeTokens({$IFDEF AUTOREFCOUNT}const{$ENDIF}Tokens: TZTokenList): string;
+    /// <summary>Composes a string from the list of statement sections.</summary>
+    /// <param>"Tokens" a list of statement sections.</param>
+    /// <returns>a composes string.</returns>
     function ComposeSections({$IFDEF AUTOREFCOUNT}const{$ENDIF}Sections: TObjectList): string;
-
+    /// <summary>Extracts a select schema from the specified parsed select statement.</summary>
+    /// <param>"Sections" a list of sections.</param>
+    /// <returns>a select statement schema.</returns>
     function DefineSelectSchemaFromSections({$IFDEF AUTOREFCOUNT}const{$ENDIF}
       Sections: TObjectList): IZSelectSchema;
+    /// <summary>Defines a select schema from the specified SQL query.</summary>
+    /// <param>"Tokenizer" a tokenizer object.</param>
+    /// <param>"SQL" a SQL query.</param>
+    /// <returns>a select statement schema.</returns>
     function DefineSelectSchemaFromQuery(const Tokenizer: IZTokenizer;
       const SQL: string): IZSelectSchema;
   end;
 
-  {** Implements an SQL statements analyser. }
+  /// <summary>Implements an SQL statements analyser.</summary>
   TZGenericStatementAnalyser = class (TZAbstractObject, IZStatementAnalyser)
   private
     FSectionNames: TStrings;
@@ -102,36 +125,86 @@ type
     FFromJoins: TStrings;
     FFromClauses: TStrings;
   protected
+    /// <summary>Converts an array of strings into TStrings object.</summary>
+    /// <param>"Value" an array of strings to be converted.</param>
+    /// <returns>a TStrings object with specified strings.</returns>
     function ArrayToStrings(const Value: array of string): TStrings;
+    /// <summary>Checks for keyword with one, two or three consisted words in
+    ///  the list</summary>
+    /// <param>"Tokens" a list or tokens</param>
+    /// <param>"TokenIndex" an index of the current token</param>
+    /// <param>"Keywords" a list of keywords (in uppers case delimited with '*')</param>
+    /// <param>"Keyword" an out parameter with found keyword.</param>
+    /// <param>"WordCount" a count of words in the found keyword.</param>
+    /// <returns><c>True</c> if the check was successfull</returns>
     function CheckForKeyword({$IFDEF AUTOREFCOUNT}const{$ENDIF}Tokens: TZTokenList;
       TokenIndex: Integer; {$IFDEF AUTOREFCOUNT}const{$ENDIF}Keywords: TStrings;
       out Keyword: string; out WordCount: Integer): Boolean;
+    /// <summary>Finds a section by it's name.</summary>
+    /// <param>"Sections" a list of sections.</param>
+    /// <param>"Name" a name of the section to be found.</param>
+    /// <returns>a list of section tokens or <c>null</c> if section is was not
+    ///  found.</returns>
     function FindSectionTokens(Sections: TObjectList; const Name: string): TZTokenList;
-
+    /// <summary>Fills select schema with field references.</summary>
+    /// <param>"SelectSchema" a select schema object.</param>
+    /// <param>"SelectTokens" a list of tokens in select section.</param>
     procedure FillFieldRefs(const SelectSchema: IZSelectSchema; SelectTokens: TZTokenList);
+    /// <summary>Fills select schema with table references.</summary>
+    /// <param>"SelectSchema" a select schema object.</param>
+    /// <param>"FromTokens" a list of tokens in from section.</param>
     procedure FillTableRefs(const SelectSchema: IZSelectSchema; FromTokens: TZTokenList);
-
+    /// <summary>Skips option tokens specified in the string list.</summary>
+    /// <param>"Tokens" a list of tokens to scan.</param>
+    /// <param>"TokenIndex" the index of the current token.</param>
+    /// <param>"Options" a list of option keyword strings in the upper case.</param>
+    /// <returns><c>true</c> if some tokens were skipped.</returns>
     function SkipOptionTokens(Tokens: TZTokenList; var TokenIndex: Integer;
       Options: TStrings): Boolean;
+    /// <summary>Skips tokens inside brackets.</summary>
+    /// <param>"Tokens" a list of tokens to scan.</param>
+    /// <param>"TokenIndex" the index of the current token.</param>
+    /// <returns><c>true</c> if some tokens were skipped.</returns>
     function SkipBracketTokens(Tokens: TZTokenList; var TokenIndex: Integer): Boolean;
-
+  protected
     property SectionNames: TStrings read FSectionNames write FSectionNames;
     property SelectOptions: TStrings read FSelectOptions write FSelectOptions;
     property FromJoins: TStrings read FFromJoins write FFromJoins;
     property FromClauses: TStrings read FFromClauses write FFromClauses;
   public
+    /// <summary>Creates the object and assignes the main properties.</summary>
     constructor Create;
+    /// <summary>Destroys this object and cleanups the memory.</summary>
     destructor Destroy; override;
-
+    /// <summary>Tokenizes a given SQL query into a list of tokens with tokenizer.</summary>
+    /// <param>"Tokenizer" a tokenizer object.</param>
+    /// <param>"SQL" a SQL query to be tokenized.</param>
+    /// <returns>a list with tokens.</returns>
     function TokenizeQuery(const Tokenizer: IZTokenizer; const SQL: string;
       Cleanup: Boolean): TZTokenList;
+    /// <summary>Splits a given list of tokens into the list named sections.</summary>
+    /// <param>"Tokens" a list of tokens.</param>
+    /// <returns>a list of section names where object property contains a list
+    ///  of tokens in the section. It initial list is not started with a section
+    ///  name the first section is unnamed ('').</returns>
     function SplitSections({$IFDEF AUTOREFCOUNT}const{$ENDIF}Tokens: TZTokenList): TObjectList;
-
+    /// <summary>Composes a string from the list of tokens.</summary>
+    /// <param>"Tokens" a list of tokens.</param>
+    /// <returns>a composes string.</returns>
     function ComposeTokens({$IFDEF AUTOREFCOUNT}const{$ENDIF}Tokens: TZTokenList): string;
+    /// <summary>Composes a string from the list of statement sections.</summary>
+    /// <param>"Tokens" a list of statement sections.</param>
+    /// <returns>a composes string.</returns>
     function ComposeSections({$IFDEF AUTOREFCOUNT}const{$ENDIF}Sections: TObjectList): string;
-
+    /// <summary>Extracts a select schema from the specified parsed select statement.</summary>
+    /// <param>"Sections" a list of sections.</param>
+    /// <returns>a select statement schema.</returns>
     function DefineSelectSchemaFromSections({$IFDEF AUTOREFCOUNT}const{$ENDIF}
       Sections: TObjectList): IZSelectSchema;
+    /// <summary>Defines a select schema from the specified SQL query.</summary>
+    /// <param>"Tokenizer" a tokenizer object.</param>
+    /// <param>"SQL" a SQL query.</param>
+    /// <returns>a select statement schema.</returns>
     function DefineSelectSchemaFromQuery(const Tokenizer: IZTokenizer;
       const SQL: string): IZSelectSchema;
   end;
@@ -142,9 +215,6 @@ uses SysUtils, ZSysUtils;
 
 { TZStatementSection }
 
-{**
-  Create SQL statement section object.
-}
 constructor TZStatementSection.Create(const Name: string;
   {$IFDEF AUTOREFCOUNT}const{$ENDIF}Tokens: TZTokenList);
 begin
@@ -152,19 +222,12 @@ begin
   FTokens := Tokens;
 end;
 
-{**
-  Destroys this object and cleanups the memory.
-}
 destructor TZStatementSection.Destroy;
 begin
   FreeAndNil(FTokens);
   inherited Destroy;
 end;
 
-{**
-  Clones an object instance.
-  @return a clonned object instance.
-}
 function TZStatementSection.Clone: TZStatementSection;
 var
   Temp: TZTokenList;
@@ -193,9 +256,6 @@ const
 
 { TZGenericStatementAnalyser }
 
-{**
-  Creates the object and assignes the main properties.
-}
 constructor TZGenericStatementAnalyser.Create;
 begin
   FSectionNames := ArrayToStrings(GenericSectionNames);
@@ -204,9 +264,6 @@ begin
   FFromClauses := ArrayToStrings(GenericFromClauses);
 end;
 
-{**
-  Destroys this object and cleanups the memory.
-}
 destructor TZGenericStatementAnalyser.Destroy;
 begin
   FreeAndNil(FSectionNames);
@@ -216,29 +273,17 @@ begin
   inherited Destroy;
 end;
 
-{**
-  Converts an array of strings into TStrings object.
-  @param Value an array of strings to be converted.
-  @return a TStrings object with specified strings.
-}
 function TZGenericStatementAnalyser.ArrayToStrings(
   const Value: array of string): TStrings;
 var
   I: Integer;
 begin
   Result := TStringList.Create;
+  Result.Capacity := Length(Value);
   for I := Low(Value) to High(Value) do
     Result.Add(Value[I]);
 end;
 
-{**
-  Checks for keyword with one, two or three consisted words in the list
-  @param Tokens a list or tokens
-  @param TokenIndex an index of the current token
-  @param Keywords a list of keywords (in uppers case delimited with '*')
-  @param Keyword an out parameter with found keyword.
-  @param WordCount a count of words in the found keyword.
-}
 function TZGenericStatementAnalyser.CheckForKeyword({$IFDEF AUTOREFCOUNT}const{$ENDIF}Tokens: TZTokenList;
   TokenIndex: Integer; {$IFDEF AUTOREFCOUNT}const{$ENDIF}Keywords: TStrings;
   out Keyword: string; out WordCount: Integer): Boolean;
@@ -278,13 +323,6 @@ begin
   end;
 end;
 
-{**
-  Finds a section by it's name.
-  @param Sections a list of sections.
-  @param Name a name of the section to be found.
-  @return a list of section tokens or <code>null</code>
-    if section is was not found.
-}
 function TZGenericStatementAnalyser.FindSectionTokens(
   Sections: TObjectList; const Name: string): TZTokenList;
 var
@@ -301,12 +339,6 @@ begin
   end;
 end;
 
-{**
-  Tokenizes a given SQL query into a list of tokens with tokenizer.
-  @param Tokenizer a tokenizer object.
-  @param SQL a SQL query to be tokenized.
-  @return a list with tokens.
-}
 function TZGenericStatementAnalyser.TokenizeQuery(
   const Tokenizer: IZTokenizer; const SQL: string; Cleanup: Boolean): TZTokenList;
 begin
@@ -316,13 +348,6 @@ begin
   else Result := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
 end;
 
-{**
-  Splits a given list of tokens into the list named sections.
-  @param Tokens a list of tokens.
-  @return a list of section names where object property contains
-    a list of tokens in the section. It initial list is not started
-    with a section name the first section is unnamed ('').
-}
 function TZGenericStatementAnalyser.SplitSections({$IFDEF AUTOREFCOUNT}const{$ENDIF}
   Tokens: TZTokenList): TObjectList;
 var
@@ -365,22 +390,12 @@ begin
   end;
 end;
 
-{**
-  Composes a string from the list of tokens.
-  @param Tokens a list of tokens.
-  @returns a composes string.
-}
 function TZGenericStatementAnalyser.ComposeTokens({$IFDEF AUTOREFCOUNT}const{$ENDIF}
   Tokens: TZTokenList): string;
 begin
   Result := Tokens.AsString;
 end;
 
-{**
-  Composes a string from the list of statement sections.
-  @param Tokens a list of statement sections.
-  @returns a composes string.
-}
 function TZGenericStatementAnalyser.ComposeSections({$IFDEF AUTOREFCOUNT}const{$ENDIF}
   Sections: TObjectList): string;
 var
@@ -391,12 +406,6 @@ begin
     Result := Result + ComposeTokens(TZStatementSection(Sections[I]).Tokens);
 end;
 
-{**
-  Skips tokens inside brackets.
-  @param Tokens a list of tokens to scan.
-  @param TokenIndex the index of the current token.
-  @return <code>true</code> if some tokens were skipped.
-}
 function TZGenericStatementAnalyser.SkipBracketTokens(Tokens: TZTokenList;
   var TokenIndex: Integer): Boolean;
 var
@@ -421,13 +430,6 @@ begin
   end;
 end;
 
-{**
-  Skips option tokens specified in the string list.
-  @param Tokens a list of tokens to scan.
-  @param TokenIndex the index of the current token.
-  @param Options a list of option keyword strings in the upper case.
-  @return <code>true</code> if some tokens were skipped.
-}
 function TZGenericStatementAnalyser.SkipOptionTokens(Tokens: TZTokenList;
   var TokenIndex: Integer; Options: TStrings): Boolean;
 begin
@@ -441,11 +443,6 @@ begin
   end;
 end;
 
-{**
-  Fills select schema with field references.
-  @param SelectSchema a select schema object.
-  @param SelectTokens a list of tokens in select section.
-}
 procedure TZGenericStatementAnalyser.FillFieldRefs(
   const SelectSchema: IZSelectSchema; SelectTokens: TZTokenList);
 var
@@ -609,11 +606,6 @@ begin
   end;
 end;
 
-{**
-  Fills select schema with table references.
-  @param SelectSchema a select schema object.
-  @param FromTokens a list of tokens in from section.
-}
 procedure TZGenericStatementAnalyser.FillTableRefs(
   const SelectSchema: IZSelectSchema; FromTokens: TZTokenList);
 var
@@ -640,8 +632,7 @@ begin
   TokenIndex := 1;
 
   ClearElements;
-  while TokenIndex < FromTokens.Count do
-  begin
+  while TokenIndex < FromTokens.Count do begin
     CurrentValue := FromTokens.AsString(TokenIndex);
     CurrentUpper := AnsiUpperCase(CurrentValue);
     CurrentType := FromTokens[TokenIndex]^.TokenType;
@@ -658,9 +649,8 @@ begin
       Inc(TokenIndex);
       CurrentValue := FromTokens.AsString(TokenIndex);
       CurrentUpper := AnsiUpperCase(CurrentValue);
-      while (TokenIndex < FromTokens.Count)
-        and (FromJoins.IndexOf(CurrentUpper) < 0) and (CurrentUpper <> ',') do
-      begin
+      while (TokenIndex < FromTokens.Count) and
+            (FromJoins.IndexOf(CurrentUpper) < 0) and (CurrentUpper <> ',') do begin
         if CurrentUpper = '('
         then SkipBracketTokens(FromTokens, TokenIndex)
         else Inc(TokenIndex);
@@ -713,11 +703,6 @@ begin
     SelectSchema.AddTable(TZTableRef.Create(Catalog, Schema, Table, Alias));
 end;
 
-{**
-  Extracts a select schema from the specified parsed select statement.
-  @param Sections a list of sections.
-  @return a select statement schema.
-}
 function TZGenericStatementAnalyser.DefineSelectSchemaFromSections(
   {$IFDEF AUTOREFCOUNT}const{$ENDIF}Sections: TObjectList): IZSelectSchema;
 var
@@ -744,12 +729,6 @@ begin
   FillTableRefs(Result, FromTokens);
 end;
 
-{**
-  Defines a select schema from the specified SQL query.
-  @param Tokenizer a tokenizer object.
-  @param SQL a SQL query.
-  @return a select statement schema.
-}
 function TZGenericStatementAnalyser.DefineSelectSchemaFromQuery(
   const Tokenizer: IZTokenizer; const SQL: string): IZSelectSchema;
 var

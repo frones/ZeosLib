@@ -119,6 +119,7 @@ type
     FRawPlanName: RawByteString; //a name we use to prepare (oddly PG still has no handle instead)
     FOidAsBlob: Boolean; //are blob's threaded as oid-lobs?
     FBindDoubleAsString: Boolean; //compatibility for users who use doubles for the BCD fields
+    FDoUpdateTimestampOffet: Boolean;
     Findeterminate_datatype, //did PG Fail to determine the datatypes? (mostly just because of bad queries)
     fAsyncQueries, //get the GetMoreResults logic with multiple results or SingleRowMode running
     fServerCursor, //PQsingleRowMode? is implizit the Async api
@@ -1461,6 +1462,8 @@ begin
     Result := False;
     LastUpdateCount := RawToIntDef(FPlainDriver.PQcmdTuples(Fres), 0);
     FPlainDriver.PQclear(Fres);
+    if FDoUpdateTimestampOffet then
+      FPostgreSQLConnection.UpdateTimestampOffset;
   end;
   { Logging Execution }
   if DriverManager.HasLoggingListener then
@@ -1533,6 +1536,8 @@ begin
   { Logging Execution }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(cLoggingType[Findeterminate_datatype or (FRawPlanName = '')],Self);
+  if FDoUpdateTimestampOffet then
+    FPostgreSQLConnection.UpdateTimestampOffset;
 end;
 
 procedure TZAbstractPostgreSQLPreparedStatementV3.FlushPendingResults;
@@ -1559,13 +1564,18 @@ begin
 end;
 
 const cFrom: PChar = 'FROM';
+  cSET: PChar = 'SET';
+  cSESSION: PChar = 'SESSION';
+  cLOCAL: PChar = 'LOCAL';
+  cTime: PChar = 'TIME';
+  cZone: PChar = 'ZONE';
 function TZAbstractPostgreSQLPreparedStatementV3.GetRawEncodedSQL(
   const SQL: SQLString): RawByteString;
 var
   I, C, J: Integer;
   ParamsCnt: Cardinal;
   Tokens: TZTokenList;
-  Token: PZToken;
+  Token, NextToken: PZToken;
   BindValue: PZQMarkPosBindValue;
   PQBindValue: PZPostgreSQLBindValue absolute BindValue;
   L: Cardinal;
@@ -1587,6 +1597,7 @@ var
       end;
     end;
   end;
+label jmpScanCommentOrWhiteSpace;
 begin
   Result := '';
   Tokenizer := Connection.GetDriver.GetTokenizer;
@@ -1609,14 +1620,14 @@ begin
               Findeterminate_datatype := True; //set this to avoid prepares for selects like "select ? as a, ? as b"
               L := 0;
               for J := i+1 to Tokens.Count -1 do begin
-                Token := Tokens[J];
-                if (Token.L = 1) then begin
-                  if (Token.P^ = '(') then
+                NextToken := Tokens[J];
+                if (NextToken.L = 1) then begin
+                  if (NextToken.P^ = '(') then
                     Inc(L)
-                  else if (Token.P^ = ')') then
+                  else if (NextToken.P^ = ')') then
                     Dec(L);
-                end else if (L = 0) and (Token.TokenType = ttWord)
-                  and (Token.L = 4) and SameText(Token.P, cFrom, 4) then begin
+                end else if (L = 0) and (NextToken.TokenType = ttWord)
+                  and (NextToken.L = 4) and SameText(NextToken.P, cFrom, 4) then begin
                   Findeterminate_datatype := False;
                   FTokenMatchIndex := 0;
                   Break;
@@ -1628,6 +1639,32 @@ begin
             Break;
           end;
         ComparePrefixTokens := nil; //stop compare sequence
+        if (FTokenMatchIndex = -1) and (FPQResultFormat = ParamFormatBin) then
+          //scan for "SET TIME ZONE ...." see https://zeoslib.sourceforge.io/viewtopic.php?f=50&t=135039
+          if (Token.L = 3) and SameText(Token.P, cSET, 3) and (Tokens.Count > I+1) then begin
+            J := I+1;
+            NextToken := Tokens[j];
+jmpScanCommentOrWhiteSpace:
+            while (NextToken.TokenType in [ttWhitespace, ttComment]) and (Tokens.Count > J+1) do begin
+              Inc(J);
+              NextToken := Tokens[J];
+            end;
+            if (NextToken.TokenType = ttWord) and (Tokens.Count > J+1) then //skip SESSION/LOCAL keywords
+              if ((NextToken.L = 5) and SameText(NextToken.P, cLOCAL, 5)) or ((NextToken.L = 7) and SameText(NextToken.P, cSESSION, 7)) then begin
+                Inc(J);
+                NextToken := Tokens[J];
+                goto jmpScanCommentOrWhiteSpace;
+              end;
+            if (NextToken.TokenType = ttWord) and (NextToken.L = 4) and SameText(NextToken.P, cTime, 4) and (Tokens.Count > J+1) then begin
+              Inc(J);
+              NextToken := Tokens[J];
+              while (NextToken.TokenType in [ttWhitespace, ttComment]) and (Tokens.Count > J+1) do begin
+                Inc(J);
+                NextToken := Tokens[J];
+              end;
+              FDoUpdateTimestampOffet := (NextToken.TokenType = ttWord) and (NextToken.L = 4) and SameText(NextToken.P, cZone, 4);
+            end;
+          end;
       end;
       if (Token.L = 1) and ((Token.P^ = '?') or ((Token.P^ = '$') and (Tokens.Count > i+1) and (Tokens[I+1].TokenType = ttInteger))) then begin
         if BindList.Capacity <= NativeInt(ParamsCnt) then
@@ -1957,6 +1994,7 @@ begin
     FPGArrayDMLStmts[ArrayDMLType].Obj := nil;
     FPGArrayDMLStmts[ArrayDMLType].Intf := nil;
   end;
+  FDoUpdateTimestampOffet := False;
 end;
 
 { TZPostgreSQLStatement }

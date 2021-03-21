@@ -82,6 +82,7 @@ type
     procedure Test_GENERATED_BY_DEFAULT_64;
     procedure Test_BatchDelete_equal_operator;
     procedure Test_BatchDelete_in_operator;
+    procedure Test_TimezoneOffset;
   end;
 
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL}
@@ -89,7 +90,8 @@ implementation
 {$ENDIF ZEOS_DISABLE_POSTGRESQL}
 
 uses Types,
-  SysUtils, ZTestConsts, ZSysUtils, ZVariant;
+  SysUtils, ZTestConsts, ZSysUtils, ZVariant,
+  ZDbcUtils;
 
 { TZTestDbcPostgreSQLCase }
 
@@ -291,6 +293,57 @@ begin
   finally
     Connection.Close;
   end;
+end;
+
+procedure TZTestDbcPostgreSQLCase.Test_TimezoneOffset;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+  PGConn: IZPostgreSQLConnection;
+  MyTimeZoneOffset: Double;
+  Offset: Int64;
+begin
+  CheckEquals(S_OK, Connection.QueryInterface(IZPostgreSQLConnection, PGCOnn));
+
+  Statement := PGCOnn.CreateStatement;
+  CheckNotNull(Statement);
+  if not Assigned(PGConn.GetPlainDriver.PQexecParams) or not StrToBoolEx(DefineStatementParameter(Statement, DSProps_BinaryWireResultMode, 'TRUE')) then
+    Exit;
+  Statement.ExecuteUpdate('SET TIME ZONE ''Europe/Rome''');
+  ResultSet := Statement.ExecuteQuery('select extract(timezone from current_timestamp)');
+  Check(ResultSet.Next);
+  MyTimeZoneOffset := ResultSet.GetDouble(FirstDbcIndex);
+  ResultSet.Close;
+  Offset := Trunc(MyTimeZoneOffset);
+  if PGCOnn.integer_datetimes
+  then Offset := OffSet * 1000000
+  else Offset := OffSet * 1000;
+  CheckEquals(OffSet, PGConn.GetTimeZoneOffset);
+
+  Statement.ExecuteUpdate('SET SESSION TIME ZONE ''America/New_York''');
+  ResultSet := Statement.ExecuteQuery('select extract(timezone from current_timestamp)');
+  Check(ResultSet.Next);
+  MyTimeZoneOffset := ResultSet.GetDouble(FirstDbcIndex);
+  ResultSet.Close;
+  Offset := Trunc(MyTimeZoneOffset);
+  if PGCOnn.integer_datetimes
+  then Offset := OffSet * 1000000
+  else Offset := OffSet * 1000;
+
+  Statement.ExecuteUpdate('SET TIME ZONE ''Asia/Tokyo''');
+  ResultSet := Statement.ExecuteQuery('select extract(timezone from current_timestamp)');
+  Check(ResultSet.Next);
+  MyTimeZoneOffset := ResultSet.GetDouble(FirstDbcIndex);
+  ResultSet.Close;
+  Offset := Trunc(MyTimeZoneOffset);
+  if PGCOnn.integer_datetimes
+  then Offset := OffSet * 1000000
+  else Offset := OffSet * 1000;
+  CheckEquals(OffSet, PGConn.GetTimeZoneOffset);
+
+  CheckEquals(OffSet, PGConn.GetTimeZoneOffset);
+  Statement.Close;
+  Connection.Close;
 end;
 
 procedure TZTestDbcPostgreSQLCase.TestRegularResultSet;
