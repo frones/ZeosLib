@@ -5483,14 +5483,14 @@ procedure DecodeSQLVersioning(const FullVersion: Integer;
  out SubVersion: Integer);
 begin
  MajorVersion := FullVersion div 1000000;
- MinorVersion := (FullVersion - (MajorVersion * 1000000)) div 1000;
- SubVersion   := FullVersion-(MajorVersion*1000000)-(MinorVersion*1000);
+ MinorVersion := (FullVersion - (MajorVersion * 1000000)) div 10000;
+ SubVersion   := FullVersion-(MajorVersion*1000000)-(MinorVersion*10000);
 end;
 
 function EncodeSQLVersioning(const MajorVersion: Integer;
  const MinorVersion: Integer; const SubVersion: Integer): Integer;
 begin
-  Result := (MajorVersion * 1000000) + (MinorVersion * 1000) + SubVersion;
+  Result := (MajorVersion * 1000000) + (MinorVersion * 10000) + SubVersion;
 end;
 
 function FormatSQLVersion(const SQLVersion: Integer): string;
