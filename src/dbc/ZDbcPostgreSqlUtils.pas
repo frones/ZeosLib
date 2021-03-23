@@ -1618,7 +1618,7 @@ ZeroBCD:
   NBASEDigit := {$IFNDEF ENDIAN_BIG}(PWord(Src)^ and $00FF shl 8) or (PWord(Src)^ and $FF00 shr 8){$ELSE}PWord(Src)^{$ENDIF}; //each digit is a base 10000 digit -> 0..9999
   FirstNibbleDigit := NBASEDigit div 100;
   HalfNibbles := False;
-  if Weight > 0 then begin
+  if Weight > -1 then begin
     if FirstNibbleDigit > 0 then begin
       if NBASEDigit > 999 then begin
         I := 0;
