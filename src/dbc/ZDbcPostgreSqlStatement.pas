@@ -987,10 +987,10 @@ constructor TZAbstractPostgreSQLPreparedStatementV3.Create(
   const Connection: IZPostgreSQLConnection; const SQL: string; Info: TStrings);
 begin
   FByteBuffer := Connection.GetByteBufferAddress;
+  FPlainDriver := Connection.GetPlainDriver;
   inherited Create(Connection, SQL, Info);
   FPostgreSQLConnection := Connection;
   FOidAsBlob := StrToBoolEx(Self.Info.Values[DSProps_OidAsBlob]) or Connection.IsOidAsBlob;
-  FPlainDriver := Connection.GetPlainDriver;
   //ResultSetType := rtScrollInsensitive;
   FconnAddress := Connection.GetPGconnAddress;
   FUndefinedVarcharAsStringLength := StrToInt(ZDbcUtils.DefineStatementParameter(Self, DSProps_UndefVarcharAsStringLength, '0'));
@@ -1569,6 +1569,7 @@ const cFrom: PChar = 'FROM';
   cLOCAL: PChar = 'LOCAL';
   cTime: PChar = 'TIME';
   cZone: PChar = 'ZONE';
+  cTimeZone: PChar = 'TIMEZONE';
 function TZAbstractPostgreSQLPreparedStatementV3.GetRawEncodedSQL(
   const SQL: SQLString): RawByteString;
 var
@@ -1639,7 +1640,7 @@ begin
             Break;
           end;
         ComparePrefixTokens := nil; //stop compare sequence
-        if (FTokenMatchIndex = -1) and (FPQResultFormat = ParamFormatBin) then
+        if (FTokenMatchIndex = -1) and Assigned(FPlainDriver.PQexecParams) then
           //scan for "SET TIME ZONE ...." see https://zeoslib.sourceforge.io/viewtopic.php?f=50&t=135039
           if (Token.L = 3) and SameText(Token.P, cSET, 3) and (Tokens.Count > I+1) then begin
             J := I+1;
@@ -1655,15 +1656,18 @@ jmpScanCommentOrWhiteSpace:
                 NextToken := Tokens[J];
                 goto jmpScanCommentOrWhiteSpace;
               end;
-            if (NextToken.TokenType = ttWord) and (NextToken.L = 4) and SameText(NextToken.P, cTime, 4) and (Tokens.Count > J+1) then begin
-              Inc(J);
-              NextToken := Tokens[J];
-              while (NextToken.TokenType in [ttWhitespace, ttComment]) and (Tokens.Count > J+1) do begin
+            if (NextToken.TokenType = ttWord) then
+              if (NextToken.L = 8) and SameText(NextToken.P, cTimeZone, 8) then
+                FDoUpdateTimestampOffet := True
+              else if (NextToken.L = 4) and SameText(NextToken.P, cTime, 4) and (Tokens.Count > J+1) then begin
                 Inc(J);
                 NextToken := Tokens[J];
+                while (NextToken.TokenType in [ttWhitespace, ttComment]) and (Tokens.Count > J+1) do begin
+                  Inc(J);
+                  NextToken := Tokens[J];
+                end;
+                FDoUpdateTimestampOffet := (NextToken.TokenType = ttWord) and (NextToken.L = 4) and SameText(NextToken.P, cZone, 4);
               end;
-              FDoUpdateTimestampOffet := (NextToken.TokenType = ttWord) and (NextToken.L = 4) and SameText(NextToken.P, cZone, 4);
-            end;
           end;
       end;
       if (Token.L = 1) and ((Token.P^ = '?') or ((Token.P^ = '$') and (Tokens.Count > i+1) and (Tokens[I+1].TokenType = ttInteger))) then begin

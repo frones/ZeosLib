@@ -329,8 +329,20 @@ begin
   if PGCOnn.integer_datetimes
   then Offset := OffSet * 1000000
   else Offset := OffSet * 1000;
+  CheckEquals(OffSet, PGConn.GetTimeZoneOffset);
 
   Statement.ExecuteUpdate('SET TIME ZONE ''Asia/Tokyo''');
+  ResultSet := Statement.ExecuteQuery('select extract(timezone from current_timestamp)');
+  Check(ResultSet.Next);
+  MyTimeZoneOffset := ResultSet.GetDouble(FirstDbcIndex);
+  ResultSet.Close;
+  Offset := Trunc(MyTimeZoneOffset);
+  if PGCOnn.integer_datetimes
+  then Offset := OffSet * 1000000
+  else Offset := OffSet * 1000;
+  CheckEquals(OffSet, PGConn.GetTimeZoneOffset);
+
+  Statement.ExecuteUpdate('SET TIMEZONE=''GMT''');
   ResultSet := Statement.ExecuteQuery('select extract(timezone from current_timestamp)');
   Check(ResultSet.Next);
   MyTimeZoneOffset := ResultSet.GetDouble(FirstDbcIndex);
