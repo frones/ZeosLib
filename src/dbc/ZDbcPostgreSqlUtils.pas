@@ -214,7 +214,7 @@ procedure Currency2PGCash(const Value: Currency; Buf: Pointer); {$IFNDEF WITH_C5
 function PG2Single(P: Pointer): Single; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Single2PG(Value: Single; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
-function PG2Double(P: Pointer): Double; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function PG2Double(P: Pointer): Double; {$IFDEF defined(WITH_INLINE) and not defined(WITH_PG2DOUBLE_INLINE_BUG)}inline;{$IFEND}
 procedure Double2PG(const Value: Double; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 function PGMacAddr2Raw(Src, Dest: PAnsiChar): LengthInt;

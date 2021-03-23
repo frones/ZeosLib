@@ -141,7 +141,10 @@
               {$DEFINE WITH_VIRTUAL_TFIELD_ASUTF8STRING} // //TField has virtual getter+Setter for the UTF8Strings
               {$DEFINE WITH_VIRTUAL_TFIELD_ASUNICODESTRING} //TField has virtual getter+Setter for the UnicodeStrings
               {$IF FPC_FULLVERSION>=30200}
-                {$UNDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD} 
+                {$UNDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}
+                {$IF defined(CPU64) and not defined(ENDIAN_BIG)} //windows only???
+                  {$DEFINE WITH_PG2DOUBLE_INLINE_BUG} //wrong inlining results to wrong double values on PG binary wire
+                {$IFEND}  
                 {$DEFINE WITH_VAR_INIT_WARNING}
                 {$DEFINE WITH_CASE_WARNING} //Since FPC 3.2 we've some weird warnigns on using case X of
                 {$DEFINE WITH_CODEPAGE_AWARE_FIELD}
