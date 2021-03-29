@@ -1243,25 +1243,28 @@ end;
 
 Function TZAbstractConnection.PingServer: Boolean;
 var
-  LastState, Succeeded: boolean;
+  LastState: boolean;
 begin
   Result := false;
   // Check connection status
   LastState := GetConnected;
-  Succeeded := False;
-  If FConnection <> Nil Then try
+  If FConnection <> Nil Then
+  try
     Result := (FConnection.PingServer=0);
     // Connection now is false but was true
     If (Not Result) And (LastState) Then
       // Generate OnDisconnect event
       SetConnected(Result);
-    Succeeded := True;
-  finally
-    if not Succeeded then
-      If LastState Then
+  except
+    on E:Exception do
+    begin
+      if not (E is EZUnsupportedException) and LastState then
         // Generate OnDisconnect event
         SetConnected(False);
-  end else If LastState Then // Connection now is false but was true
+      Raise;
+    End;
+  end
+  else If LastState Then // Connection now is false but was true
     SetConnected(false);
 end;
 
@@ -1306,7 +1309,7 @@ begin
       continue
     else begin
       if AComp.InheritsFrom(TZAbstractRODataset) then begin
-        if not TZProtectedAbstractRODataset(AComp).TryKeepDataOnDisconnect then try
+        if not TZProtectedAbstractRODataset(AComp).Active or not TZProtectedAbstractRODataset(AComp).TryKeepDataOnDisconnect then try
           TZAbstractRODataset(AComp).Close;
           TZAbstractRODataset(AComp).UnPrepare;
         except {Ignore.} end else if AComp.InheritsFrom(TZAbstractRWDataSet) then begin

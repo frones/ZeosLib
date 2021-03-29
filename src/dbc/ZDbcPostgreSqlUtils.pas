@@ -214,7 +214,7 @@ procedure Currency2PGCash(const Value: Currency; Buf: Pointer); {$IFNDEF WITH_C5
 function PG2Single(P: Pointer): Single; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Single2PG(Value: Single; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
-function PG2Double(P: Pointer): Double; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function PG2Double(P: Pointer): Double; {$IF defined(WITH_INLINE) and not defined(WITH_PG2DOUBLE_INLINE_BUG)}inline;{$IFEND}
 procedure Double2PG(const Value: Double; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 function PGMacAddr2Raw(Src, Dest: PAnsiChar): LengthInt;
@@ -1618,7 +1618,7 @@ ZeroBCD:
   NBASEDigit := {$IFNDEF ENDIAN_BIG}(PWord(Src)^ and $00FF shl 8) or (PWord(Src)^ and $FF00 shr 8){$ELSE}PWord(Src)^{$ENDIF}; //each digit is a base 10000 digit -> 0..9999
   FirstNibbleDigit := NBASEDigit div 100;
   HalfNibbles := False;
-  if Weight > 0 then begin
+  if Weight > -1 then begin
     if FirstNibbleDigit > 0 then begin
       if NBASEDigit > 999 then begin
         I := 0;

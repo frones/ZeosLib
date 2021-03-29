@@ -1184,7 +1184,7 @@ begin
         SubVersion := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(P, PDot, 0);
       end;
     end;
-    Result := MajorVersion*1000000 + MiniorVersion * 100{0} + SubVersion;
+    Result := EncodeSQLVersioning(Majorversion, MiniorVersion, SubVersion);
   end else
     Result := 0;
 end;
