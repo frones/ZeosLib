@@ -8475,7 +8475,7 @@ begin
     DoValidate;
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
-    FResultSet.UpdateFloat(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+    FResultSet.UpdateDouble(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
     if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
       DataEvent(deFieldChange, NativeInt(Self));
   end;
