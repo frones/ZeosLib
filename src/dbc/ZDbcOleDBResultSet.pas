@@ -885,7 +885,7 @@ set_from_buf:           Len := Result - PAnsiChar(fByteBuffer);
                       if FColBind.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0
                       then Len := GetAbsorbedTrailingSpacesLen(PWideChar(Result), FLength)
                       else Len := FLength;
-                      FRawTemp := PUnicodeToRaw(PWideChar(Result), Len, GetW2A2WConversionCodePage(ConSettings));
+                      PUnicodeToRaw(PWideChar(Result), Len, GetW2A2WConversionCodePage(ConSettings), FRawTemp);
 set_from_tmp:         Len := Length(FRawTemp);
                       if Len = 0
                       then Result := PEmptyAnsiString

@@ -101,7 +101,7 @@ type
       {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZVariant);
   End;
 
-  {** Implements an expression parser class. }
+  /// <summary>Implements an expression parser class.</summary>
   TZExpressionParser = class (TObject)
   private
     FTokenizer: IZTokenizer;
