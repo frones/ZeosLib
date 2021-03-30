@@ -142,7 +142,7 @@
               {$DEFINE WITH_VIRTUAL_TFIELD_ASUNICODESTRING} //TField has virtual getter+Setter for the UnicodeStrings
               {$IF FPC_FULLVERSION>=30200}
                 {$UNDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}
-                {$IF not defined(CPU32) and not defined(ENDIAN_BIG)} 
+                {$IF (defined(CPU64) or defined(CPUARM)) and not defined(ENDIAN_BIG)} 
                   {$DEFINE WITH_PG2DOUBLE_INLINE_BUG} //wrong inlining results to wrong double values on PG binary wire
                 {$IFEND}  
                 {$DEFINE WITH_VAR_INIT_WARNING}

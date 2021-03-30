@@ -501,8 +501,7 @@ var
             LAllowWord:= True; // alias
           LHadWhiteSpace:= True;
         end;
-      end else
-      if LAllowWord and (CurrentType in [ttWord, ttQuotedIdentifier]) then
+      end else if LAllowWord and (CurrentType in [ttWord, ttQuotedIdentifier]) then
         LAllowWord:= False
       else
         break;
@@ -552,16 +551,12 @@ begin
     else if not ReadField and (CurrentType in [ttWord, ttQuotedIdentifier]) then
       Alias := CurrentValue
     { Ends field reading. }
-    else if CurrentValue = ',' then
-    begin
+    else if CurrentValue = ',' then begin
       if Field <> '' then
         SelectSchema.AddField(TZFieldRef.Create(True, Catalog, Schema, Table,
           Field, Alias, nil));
       ClearElements;
-    end
-    { Skips till the next field. }
-    else
-    begin
+    end else begin { Skips till the next field. }
       ClearElements;
       HadWhitespace := False;
       while (TokenIndex < SelectTokens.Count) and (CurrentValue <> ',') do
@@ -577,19 +572,17 @@ begin
               Break
             else
               Alias := CurrentValue
-          else if not (CurrentType in [ttWhitespace, ttComment])
-            and (CurrentValue <> ',') then begin
-              Alias := '';
-              if CurrentType = ttSymbol then
-                LastWasSymbol:= True;
-            end
-          else if CurrentType = ttWhitespace then
-              HadWhitespace := true;
+          else if not (CurrentType in [ttWhitespace, ttComment]) and
+              (CurrentValue <> ',') then begin
+            Alias := '';
+            if CurrentType = ttSymbol then
+              LastWasSymbol:= True;
+          end else if CurrentType = ttWhitespace then
+            HadWhitespace := true;
           Inc(TokenIndex);
         end;
       end;
-      if Alias <> '' then
-      begin
+      if Alias <> '' then begin
         SelectSchema.AddField(TZFieldRef.Create(False, '', '', '', '', Alias, nil));
         ClearElements;
       end;
@@ -600,10 +593,8 @@ begin
 
   { Creates a reference to the last processed field. }
   if Field <> '' then
-  begin
     SelectSchema.AddField(TZFieldRef.Create(True, Catalog, Schema, Table,
       Field, Alias, nil));
-  end;
 end;
 
 procedure TZGenericStatementAnalyser.FillTableRefs(

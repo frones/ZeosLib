@@ -80,6 +80,7 @@ type
     procedure TestLargeBlob;
     procedure TestDateWithTime;
     procedure TestFKError;
+    procedure TestRowID;
 (*
     procedure TestDefaultValues;
 *)
@@ -233,6 +234,22 @@ begin
 
   Statement.Close;
   Connection.Close;
+end;
+
+procedure TZTestDbcOracleCase.TestRowID;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+begin
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+  try
+    ResultSet := Statement.ExecuteQuery('select CARGO.*, ROWID from CARGO');
+    while ResultSet.Next do ;
+  finally
+    Statement.Close;
+    Connection.Close;
+  end;
 end;
 
 {**

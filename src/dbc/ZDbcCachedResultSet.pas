@@ -2225,16 +2225,14 @@ begin
         FSelectedRow := FUpdatedRow
       else if (FSelectedRow.UpdateType = utInserted) and FCachedUpdates then begin
         Row := LocateRow(FCurrentRowsList, FSelectedRow.Index);
-        if (Row >= 0) then begin
+        if (Row >= 0) then
           FSelectedRow := FCurrentRowsList[Row];
-          RowAccessor.RowBuffer := FSelectedRow;
-        end else RowAccessor.RowBuffer := FSelectedRow;
-      end else RowAccessor.RowBuffer := FSelectedRow;
+      end;
     end else begin
       Result := False;
       FSelectedRow := nil;
-      RowAccessor.RowBuffer := FSelectedRow;
     end;
+    RowAccessor.RowBuffer := FSelectedRow;
   end else
     Result := False;
 end;

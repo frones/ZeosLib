@@ -176,7 +176,7 @@ type
     property Items[Index: Integer]: IZInterface read Get write Put; default;
   end;
 
-  {** Implements an unmodifiable collection of interfaces. }
+  /// <summary>Implements an unmodifiable collection of interfaces.</summary>
   TZUnmodifiableCollection = class(TZAbstractObject, IZCollection, IZClonnable)
   private
     FCollection: IZCollection;
