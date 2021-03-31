@@ -55,8 +55,11 @@ interface
 
 {$I ZParseSql.inc}
 
-{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
+{$IF defined(ZEOS_DISABLE_POSTGRESQL) and defined (ZEOS_DISABLE_OLEDB) and defined (ZEOS_DISABLE_ADO) and defined(ZEOS_DISABLE_ODBC)}
+  {$DEFINE EMPTY_ZPostgreSqlAnalyser}
+{$IFEND}
 
+{$IFNDEF EMPTY_ZPostgreSqlAnalyser}
 uses Classes, ZGenericSqlAnalyser;
 
 type
@@ -67,9 +70,9 @@ type
     constructor Create;
   end;
 
-{$ENDIF ZEOS_DISABLE_POSTGRESQL}
+{$ENDIF EMPTY_ZPostgreSqlAnalyser}
 implementation
-{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
+{$IFNDEF EMPTY_ZPostgreSqlAnalyser}
 
 const
   {** The generic constants.}
@@ -102,5 +105,5 @@ begin
   FromClauses := ArrayToStrings(PostgreSQLFromClauses);
 end;
 
-{$ENDIF ZEOS_DISABLE_POSTGRESQL}
+{$ENDIF EMPTY_ZPostgreSqlAnalyser}
 end.

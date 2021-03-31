@@ -909,6 +909,17 @@ type
     /// <param>"R" an address of an element.</param>
     /// <param>"Compare" an object comparision function.</param>
     procedure QuickSortSha_0AA(L, R: PAnsiChar; Compare: TZListSortCompare); overload;
+
+    /// <summary>Performs quick sort algorithm for the element list.<summary>
+    /// <param>"L" an address of an element.</param>
+    /// <param>"R" an address of an element.</param>
+    /// <param>"Compare" a global comparision function.</param>
+    procedure QuickSort(L, R: Integer; Compare: TZSortCompare); overload;
+    /// <summary>Performs quick sort algorithm for the element list.<summary>
+    /// <param>"L" an address of an element.</param>
+    /// <param>"R" an address of an element.</param>
+    /// <param>"Compare" an object comparision function.</param>
+    procedure QuickSort(L, R: Integer; Compare: TZListSortCompare); overload;
   public
     /// <author>Aleksandr Sharahov see http://guildalfa.ru/alsha/</author>
     /// <summary>Performs hybrid sort algorithm for the element list.<summary>
@@ -1173,7 +1184,7 @@ begin
                     FActive := not FActive;
                     FSignal.ResetEvent;
                   end;
-      else        Break;
+      else        Terminate;
     end;
 end;
 
@@ -2943,6 +2954,67 @@ end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 {$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+procedure TZSortableCustomElementList.QuickSort(L, R: Integer;
+  Compare: TZListSortCompare);
+var
+  I, J: Integer;
+  P, T, E: Pointer;
+begin;
+  repeat
+    I := L;
+    J := R;
+    P := PAnsiChar(FElements) + (((L + R) shr 1) * NativeInt(FElementSize));
+    repeat;
+      while Compare(PAnsiChar(FElements) + (I * NativeInt(FElementSize)), P)<0 do
+        Inc(I);
+      while Compare(PAnsiChar(FElements) + (J * NativeInt(FElementSize)), P)>0 do
+        Dec(J);
+      if I<=J then begin
+        T := PAnsiChar(FElements) + (I * NativeInt(FElementSize));
+        E := PAnsiChar(FElements) + (J * NativeInt(FElementSize));
+        InternalExchange(T, E);
+        Inc(I);
+        Dec(J);
+      end;
+    until I>J;
+    if L<J then
+      QuickSort(L, J, Compare);
+    L := I;
+  until I >= R;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+procedure TZSortableCustomElementList.QuickSort(L, R: Integer;
+  Compare: TZSortCompare);
+var
+  I, J: Integer;
+  P, T, E: Pointer;
+begin;
+  repeat
+    I := L;
+    J := R;
+    P := PAnsiChar(FElements) + (((L + R) shr 1) * NativeInt(FElementSize));
+    repeat;
+      while Compare(PAnsiChar(FElements) + (I * NativeInt(FElementSize)), P)<0 do
+        Inc(I);
+      while Compare(PAnsiChar(FElements) + (J * NativeInt(FElementSize)), P)>0 do
+        Dec(J);
+      if I<=J then begin
+        T := PAnsiChar(FElements) + (I * NativeInt(FElementSize));
+        E := PAnsiChar(FElements) + (J * NativeInt(FElementSize));
+        InternalExchange(T, E);
+        Inc(I);
+        Dec(J);
+      end;
+    until I>J;
+    if L<J then
+      QuickSort(L, J, Compare);
+    L := I;
+  until I >= R;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
 procedure TZSortableCustomElementList.QuickSortSha_0AA(L, R: PAnsiChar;
   Compare: TZListSortCompare);
 var
@@ -2996,7 +3068,7 @@ end;
 
 
 procedure TZSortableCustomElementList.Sort(Compare: TZSortCompare);
-var
+(*var
   I, J, L, R: PAnsiChar;
 begin;
   if (FCount>1) then begin
@@ -3029,11 +3101,13 @@ begin;
       until not (Compare(L,I) < 0);
       Move(FElementBuffer^, (I + FElementSize)^, FElementSize);
     end;
-  end;
+  end;*)
+begin
+  QuickSort(0, Count-1, Compare);
 end;
 
 procedure TZSortableCustomElementList.Sort(Compare: TZListSortCompare);
-var
+(*var
   I, J, L, R: PAnsiChar;
 begin;
   if (FCount>1) then begin
@@ -3066,7 +3140,9 @@ begin;
       until not (Compare(L,I) < 0);
       Move(FElementBuffer^, (I + FElementSize)^, FElementSize);
     end;
-  end;
+  end;*)
+begin
+  QuickSort(0, Count-1, Compare);
 end;
 
 end.

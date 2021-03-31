@@ -186,7 +186,7 @@ type
     function IsPendingUpdates: Boolean;
     procedure SetCachedUpdates(Value: Boolean);
     procedure ClearStatementLink;
-
+    /// <summary>Posts all saved updates to the server.</summary>
     procedure PostUpdates;
     procedure CancelUpdates;
     procedure PostUpdatesCached;
@@ -419,7 +419,11 @@ type
     ///  called before calling <c>insertRow</c>. An <c>updateXXX</c> method must
     ///  be called before a <c>getXXX</c> method can be called on a column value.</summary>
     procedure MoveToInsertRow; override;
+    /// <summary>Moves the cursor to the remembered cursor position, usually the
+    ///  current row. This method has no effect if the cursor is not on the
+    ///  insert row.</summary>
     procedure MoveToCurrentRow; override;
+    /// <summary>Posts all saved updates to the server.</summary>
     procedure PostUpdates; virtual;
     procedure CancelUpdates; virtual;
     procedure RevertRecord; virtual;
@@ -839,9 +843,6 @@ begin
     FRowAccessor.RowBuffer := nil;
 end;
 
-{**
-  Posts all saved updates to the server.
-}
 procedure TZAbstractCachedResultSet.PostUpdates;
 begin
   CheckClosed;
@@ -2438,11 +2439,6 @@ begin
   FRowAccessor.RowBuffer := FInsertedRow;
 end;
 
-{**
-  Moves the cursor to the remembered cursor position, usually the
-  current row.  This method has no effect if the cursor is not on
-  the insert row.
-}
 procedure TZAbstractCachedResultSet.MoveToCurrentRow;
 begin
   CheckClosed;

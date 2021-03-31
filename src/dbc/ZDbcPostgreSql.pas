@@ -152,10 +152,7 @@ type
     property UnkownCount: Integer read fUnkownCount;
   end;
 
-  {** Implements PostgreSQL Database Connection. }
-
-  { TZPostgreSQLConnection }
-
+  /// <summary>Implements PostgreSQL Database Connection.</summary>
   TZPostgreSQLConnection = class(TZAbstractSingleTxnConnection,
     IZConnection, IZPostgreSQLConnection, IZTransaction)
   private

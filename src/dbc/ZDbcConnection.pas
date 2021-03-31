@@ -202,6 +202,10 @@ type
     FTestMode: Byte;
     {$ENDIF}
     FLogMessage: SQLString;
+    /// <summary>Releases a Connection's database and resources immediately
+    ///  instead of waiting for them to be automatically released.</summary>
+    ///  Note: A Connection is automatically closed when it is garbage
+    ///  collected. Certain fatal errors also result in a closed Connection.</summary>
     procedure InternalClose; virtual; abstract;
     /// <summary>Immediately execute a query and do nothing with the results.</summary>
     /// <remarks>A new driver needs to implement one of the overloads.</remarks>

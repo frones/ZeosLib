@@ -55,7 +55,11 @@ interface
 
 {$I ZParseSql.inc}
 
-{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
+{$IF defined(ZEOS_DISABLE_POSTGRESQL) and defined (ZEOS_DISABLE_OLEDB) and defined (ZEOS_DISABLE_ADO) and defined(ZEOS_DISABLE_ODBC)}
+  {$DEFINE EMPTY_ZPostgreSqlToken}
+{$IFEND}
+
+{$IFNDEF EMPTY_ZPostgreSqlToken}
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -106,11 +110,11 @@ type
       out IngoreParam: Boolean): String; override;
   end;
 
-{$ENDIF ZEOS_DISABLE_POSTGRESQL}
+{$ENDIF EMPTY_ZPostgreSqlToken}
 
 implementation
 
-{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
+{$IFNDEF EMPTY_ZPostgreSqlToken}
 
 uses ZCompatibility, ZFastCode;
 
@@ -347,7 +351,7 @@ begin
   end;
 end;
 
-{$ENDIF ZEOS_DISABLE_POSTGRESQL}
+{$ENDIF EMPTY_ZPostgreSqlToken}
 
 end.
 

@@ -4021,6 +4021,9 @@ type
     ///  called before calling <c>insertRow</c>. An <c>updateXXX</c> method must
     ///  be called before a <c>getXXX</c> method can be called on a column value.</summary>
     procedure MoveToInsertRow;
+    /// <summary>Moves the cursor to the remembered cursor position, usually the
+    ///  current row. This method has no effect if the cursor is not on the
+    ///  insert row.</summary>
     procedure MoveToCurrentRow;
 
     function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
@@ -4337,6 +4340,7 @@ type
     procedure SetUpdated(Value: Boolean);
     function Length: Integer; //deprecated;
     procedure Open(LobStreamMode: TZLobStreamMode);
+    /// <summary>Clear/NULL the lob content</summary>
     procedure Clear;
     procedure SetOnUpdateHandler(Handler: TOnLobUpdate; AField: NativeInt);  //this is for the datasets only
   end;

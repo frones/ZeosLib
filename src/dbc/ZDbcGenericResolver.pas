@@ -201,7 +201,7 @@ type
     property UpdateAll: Boolean read FUpdateAll write FUpdateAll;
   public
     /// <summary>Creates a cached resolver and assignes the main properties.</summary>
-    /// <param>"Statement" the related ResultSet object.</param>
+    /// <param>"Statement" the related Statement object.</param>
     /// <param>"Metadata" the related ResultSet metadata object.</param>
     constructor Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
     /// <summary>Destroys this object and cleanups the memory.</summary>

@@ -1119,6 +1119,16 @@ type
     procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TZTimeStamp); overload;
     procedure UpdateAsciiStream(ColumnIndex: Integer; const Value: TStream);
     procedure UpdateUnicodeStream(ColumnIndex: Integer; const Value: TStream);
+    /// <summary>Updates the designated column with a binary stream value.
+    ///  The <c>updateXXX</c> methods are used to update column values in the
+    ///  current row or the insert row. The <c>updateXXX</c> methods do not
+    ///  update the underlying database; instead the <c>updateRow</c> or
+    ///  <c>insertRow</c> methods are called to update the database. </summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the new column value</param>
     procedure UpdateBinaryStream(ColumnIndex: Integer; const Value: TStream);
     procedure UpdateLob(ColumnIndex: Integer; const Value: IZBlob);
     procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant);
@@ -1177,6 +1187,11 @@ type
     //FRawTemp: RawByteString; //place holder for PAnsiChar
     //FUniTemp: UnicodeString; //place holder for PWideChar
     function CreateBinaryException: EZSQLException;
+    /// <summary>Creates a lob stream</summary>
+    /// <param>"CodePage" the lob codepage. 0 means it's a binary stream</param>
+    /// <param>"LobStreamMode" the stream mode on open the lob. It's one of
+    ///  <c>lsmRead, lsmWrite, lsmReadWrite</c></param>
+    /// <returns>a TStream object</returns>
     function CreateLobStream(CodePage: Word; LobStreamMode: TZLobStreamMode): TStream; virtual; abstract;
   public //the string implementation
     function GetRawByteString(CodePage: Word): RawByteString;
@@ -3797,17 +3812,6 @@ begin
   raise CreateReadOnlyException;;
 end;
 
-{**
-  Updates the designated column with a binary stream value.
-  The <code>updateXXX</code> methods are used to update column values in the
-  current row or the insert row.  The <code>updateXXX</code> methods do not
-  update the underlying database; instead the <code>updateRow</code> or
-  <code>insertRow</code> methods are called to update the database.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param x the new column value
-  @param length the length of the stream
-}
 procedure TZAbstractReadOnlyResultSet.UpdateBinaryStream(ColumnIndex: Integer;
   const Value: TStream);
 begin

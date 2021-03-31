@@ -70,9 +70,10 @@ uses
 
 {$IFDEF WITH_NOT_INLINED_WARNING}{$WARN 6058 off : Call to subroutine "operator:=(const sourc:OleVariant):" marked as inline is not inlined}{$ENDIF}
 type
+  /// <summary>Defines a IRowSet reference</summary>
   PRowSet = ^IRowSet;
 
-  {** Implements Ado ResultSet. }
+  /// <summary> Implements an abstract OleDB ResultSet.</summary>
   TZAbstractOleDBResultSet = class(TZAbstractReadOnlyResultSet, IZResultSet)
   private
     FRowSetAddr: PRowSet;
@@ -98,34 +99,300 @@ type
     FLength: DBLENGTH;
     FwType: DBTYPE;
     FColBind: PDBBINDING;
+    /// <summary>Release the fetched rows of the IAccessor object</summary>
     procedure ReleaseFetchedRows;
-    procedure CreateAccessors;
+    /// <summary>Creates the Accessor object</summary>
+    procedure CreateAccessor;
+    /// <summary>Creates a conversion error.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"SQLType" the expected SQLType</param>
+    /// <returns>an conversion error EZSQLException.</returns>
     function CreateOleDbConvertError(ColumnIndex: Integer; SQLType: TZSQLType): EZSQLException;
   public
-    //reintroduce is a performance thing (self tested and confirmed for OLE the access is pushed x2!):
-    //direct dispatched methods for the interfaces makes each call as fast as using a native object!
-    //https://stackoverflow.com/questions/36137977/are-interface-methods-always-virtual
-    //BUT!!! all GetXXXByName methods don't reach the code here any more
-    //This needs to be done by IZResultSet(Self).GetXXXByName
+    //======================================================================
+    // Methods for accessing results by column index
+    //======================================================================
+
+    /// <summary>Indicates if the value of the designated column in the current
+    ///  row of this <c>ResultSet</c> object is Null.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>true</c>. <c>false</c> otherwise.</returns>
     function IsNull(ColumnIndex: Integer): Boolean;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>AnsiString</c>. The driver will
+    ///  try to convert the value if it's not a raw value in operating system
+    ///  encoding.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The value otherwise.</returns>
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>UTF8String</c>. The driver will
+    ///  try to convert the value if it's not a raw value in UTF8 encoding.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The value otherwise.</returns>
     function GetUTF8String(ColumnIndex: Integer): UTF8String;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>PAnsiChar</c> text reference in
+    ///  the pascal programming language. Live time is per call. It's not
+    ///  guaranteed the address is valid after the row position changed,
+    ///  or another column of same row has been accessed. It is an error to
+    ///  write into the buffer. The driver try convert the value if it's not a
+    ///  raw text value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Len" returns the length of the buffer value in bytes.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The buffer address otherwise.</returns>
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>PWideChar</c> text reference in
+    ///  the pascal programming language. Live time is per call. It's not
+    ///  guaranteed the address is valid after the row position changed,
+    ///  or another column of same row has been accessed. It is an error to
+    ///  write into the buffer. The driver will try to convert the value if it's
+    ///  not a UTF16 text value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Len" returns the length of the buffer value in words.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The buffer address otherwise.</returns>
     function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Boolean</c> value.The driver will
+    ///  try to convert the value if it's not a Boolean value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>False</c>. The value otherwise.</returns>
     function GetBoolean(ColumnIndex: Integer): Boolean;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Integer</c> value.The driver will
+    ///  try to convert the value if it's not a Integer value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetInt(ColumnIndex: Integer): Integer;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Cardinal</c> value.The driver will
+    ///  try to convert the value if it's not a Cardinal value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetUInt(ColumnIndex: Integer): Cardinal;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Int64</c> value.The driver will
+    ///  try to convert the value if it's not a Int64 value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetLong(ColumnIndex: Integer): Int64;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>UInt64</c> value.The driver will
+    ///  try to convert the value if it's not a UInt64 value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetULong(ColumnIndex: Integer): UInt64;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Single</c> value.The driver will
+    ///  try to convert the value if it's not a Single value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetFloat(ColumnIndex: Integer): Single;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Double</c> value.The driver will
+    ///  try to convert the value if it's not a Double value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetDouble(ColumnIndex: Integer): Double;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>Currency</c> value.The driver will
+    ///  try to convert the value if it's not a Currency value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>0</c>. The value otherwise.</returns>
     function GetCurrency(ColumnIndex: Integer): Currency;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TBCD</c> value.The driver will
+    ///  try to convert the value if it's not a TBCD value. The value will be
+    ///  filled with the minimum of digits and precision.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-BCD</c>. The value otherwise.</param>
     procedure GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TGUID</c> value.The driver will
+    ///  try to convert the value if it's not a ShortInt value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-UID</c>. The value otherwise.</param>
     procedure GetGUID(ColumnIndex: Integer; var Result: TGUID);
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>PByte</c> binary reference.
+    ///  Live time is per call. It's not guaranteed the address is valid after
+    ///  the row position changed, or another column of same row has been
+    ///  accessed. It is an error to write into the buffer. The driver will try
+    ///  to convert the value if it's not a binary value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Len" returns the length of the buffer value in bytes.</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. The buffer address otherwise.</returns>
     function GetBytes(ColumnIndex: Integer; out Len: NativeUInt): PByte; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TZDate</c> value. The driver will
+    ///  try to convert the value if it's not a Date value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-TZDATE</c>. The value otherwise.</param>
     procedure GetDate(ColumnIndex: Integer; var Result: TZDate); reintroduce; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TZTime</c> value. The driver will
+    ///  try to convert the value if it's not a Time value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-TZTime</c>. The value otherwise.</returns>
     procedure GetTime(ColumnIndex: Integer; var Result: TZTime); reintroduce; overload;
+    /// <summary>Gets the value of the designated column in the current row of
+    ///  this <c>ResultSet</c> object as a <c>TZTimestamp</c> value. The driver
+    ///  will try to convert the value if it's not a Timestamp value.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"Result" if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NULL-TZTimestamp</c>. The value otherwise.</param>
     procedure GetTimeStamp(ColumnIndex: Integer; var Result: TZTimeStamp); reintroduce; overload;
+    /// <summary>Returns the value of the designated column in the current row
+    ///  of this <c>ResultSet</c> object as a <c>IZBlob</c> object.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>if the value is SQL <c>NULL</c>, the value returned is
+    ///  <c>NIL</c>. A <c>Blob</c> object representing the SQL <c>BLOB</c> value in
+    ///  the specified column otherwise</returns>
     function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 
     {$IFDEF WITH_COLUMNS_TO_JSON}
@@ -133,13 +400,14 @@ type
     {$ENDIF WITH_COLUMNS_TO_JSON}
   end;
 
+  /// <summary>Implements an OleDB readonly ResultSet.</summary>
   TZOleDBResultSet = class(TZAbstractOleDBResultSet, IZResultSet)
   protected
+    /// <summary>Opens this recordset and initializes the Column information.</summary>
     procedure Open; override;
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
-      const RowSet: PRowSet; ZBufferSize: Integer;
-      const {%H-}EnhancedColInfo: Boolean = True);
+      const RowSet: PRowSet; ZBufferSize: Integer);
     /// <summary>Resets the Cursor position to beforeFirst, releases server and
     ///  client resources.</summary>
     procedure ResetCursor; override;
@@ -155,16 +423,27 @@ type
     function Next: Boolean; override;
   end;
 
+  /// <summary>Implements an OleDB metadata ResultSet.</summary>
   TZOleDBMetadataResultSet = Class(TZOleDBResultSet)
   private
     FRowSet: IRowSet;
   public
+    /// <summary>Creates a this object and assignes the main properties.</summary>
+    /// <param>"Statement" the related Statement object.</param>
+    /// <param>"RowSet" the related IRowSet interface we read from.</param>
+    /// <param>"ZBufferSize" the allowed block read buffersize.</param>
     constructor Create(const Statement: IZStatement; const RowSet: IRowSet;
-      ZBufferSize: Integer; const {%H-}EnhancedColInfo: Boolean = True);
+      ZBufferSize: Integer);
   End;
 
+  /// <summary>Implements an OleDB parameter ResultSet.</summary>
   TZOleDBParamResultSet = class(TZAbstractOleDBResultSet, IZResultSet)
   public
+    /// <summary>Creates a this object and assignes the main properties.</summary>
+    /// <param>"Statement" the related Statement object.</param>
+    /// <param>"ParamBuffer" the Statement parameter buffer containing the data.</param>
+    /// <param>"ParamBindings" the Parameter bindings containing addresses and offsets.</param>
+    /// <param>"ParamNameArray" an array of parameter names.</param>
     constructor Create(const Statement: IZStatement; const ParamBuffer: TByteDynArray;
       const ParamBindings: TDBBindingDynArray; const ParamNameArray: TStringDynArray);
     /// <summary>Moves the cursor down one row from its current position. A
@@ -197,37 +476,101 @@ type
     function MoveAbsolute(Row: Integer): Boolean; override;
   end;
 
+  /// <summary>Implements an OleDB resultset metadate object.</summary>
   TZOleDBMSSQLResultSetMetadata = class(TZAbstractResultSetMetadata)
   protected
     /// <summary>Clears specified column information.</summary>
     /// <param>"ColumnInfo" a column information object.</param>
     procedure ClearColumn(ColumnInfo: TZColumnInfo); override;
+    /// <summary>Initializes columns with additional data.</summary>
     procedure LoadColumns; override;
   public
+    /// <summary>Gets the designated column's catalog name.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>catalog name or "" if not applicable.</returns>
     function GetCatalogName(ColumnIndex: Integer): string; override;
+    /// <summary>Get the designated column's name.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>return column name or "" if not applicable</returns>
     function GetColumnName(ColumnIndex: Integer): string; override;
+    /// <summary>Retrieves the designated column's SQL type.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>the ZDBC SQL type</returns>
     function GetColumnType(ColumnIndex: Integer): TZSQLType; override;
+    /// <summary>Get the designated column's table's schema.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>schema name or "" if not applicable</returns>
     function GetSchemaName(ColumnIndex: Integer): string; override;
+    /// <summary>Gets the designated column's table name.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns>table name or "" if not applicable.</returns>
     function GetTableName(ColumnIndex: Integer): string; override;
+    /// <summary>Indicates whether the designated column is automatically
+    ///  numbered, thus read-only.</summary>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <returns><c>true</c> if so; <c>false</c> otherwise</returns>
     function IsAutoIncrement(ColumnIndex: Integer): Boolean; override;
   end;
 
-  {** Implements a cached resolver with MSSQL specific functionality. }
+  /// <summary>Implements a cached resolver with MSSQL specific functionality.</summary>
   TZOleDBMSSQLCachedResolver = class (TZGenerateSQLCachedResolver, IZCachedResolver)
   private
     FAutoColumnIndex: Integer;
     FResultSet: IZResultSet;
     fStmt: IZPreparedStatement;
   public
+    /// <summary>Creates a cached resolver and assignes the main properties.</summary>
+    /// <param>"Statement" the related Statement object.</param>
+    /// <param>"Metadata" the related ResultSet metadata object.</param>
     constructor Create(const Statement: IZStatement; const Metadata: IZResultSetMetadata);
+    /// <summary>Destroys this object.</summary>
     destructor Destroy; override;
-
+    /// <summary>Posts updates to database.</summary>
+    /// <param>"Sender" a cached result set inteface.</param>
+    /// <param>"UpdateType" a type of updates.</param>
+    /// <param>"OldRowAccessor" an accessor object to old column values.</param>
+    /// <param>"NewRowAccessor" an accessor object to new column values.</param>
     procedure PostUpdates(const Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       const OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
   end;
 
-  { TZOleDBLob }
-
+  /// <summary>Implements an OleDB specific LOB descriptor object.</summary>
   TZOleDBLob = Class(TZAbstractStreamedLob, IZLob)
   private
     FRowSet: IRowSet;
@@ -237,20 +580,43 @@ type
     FLength: DBLENGTH;
     FOleConnection: IZOleDBConnection;
   protected
+    /// <summary>Creates a lob stream</summary>
+    /// <param>"CodePage" the lob codepage. 0 means it's a binary stream</param>
+    /// <param>"LobStreamMode" the stream mode on open the lob. It's one of
+    ///  <c>lsmRead, lsmWrite, lsmReadWrite</c></param>
+    /// <returns>a TStream object</returns>
     function CreateLobStream(CodePage: Word; LobStreamMode: TZLobStreamMode): TStream; override;
   public
+    /// <summary>Creates this object and assigns main properties.</summary>
+    /// <param>"RowSet" the OleDB IRowSet interface we read from.</param>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex. <c>Note</c> the cursor must
+    ///  be on a valid position and the Index must be valid. Otherwise the
+    ///  results may be unexpected. See traversal/positioning method's like
+    ///  <c>IsBeforeFirst</c>,<c>Next()</c>,<c>IsAfterLast</c>...</param>
+    /// <param>"wType" the OleDB type of the column.</param>
+    /// <param>"CurrentRow" the OleDB row number.</param>
+    /// <param>"Connection" the OleDB specific connection.</param>
+    /// <param>"ALength" the Length of the lob.</param>
+    /// <param>"OpenLobStreams" a list we register the streams if they are open.</param>
     constructor Create(const RowSet: IRowSet; ColumnIndex: Integer; wType: DBTYPE;
       CurrentRow: HROW; const Connection: IZOleDBConnection;
       ALength: DBLENGTH; const OpenLobStreams: TZSortedList);
+    /// <summary>Destroys this object.</summary>
     destructor Destroy; override;
   public
+    /// <summary>Get the length of the lob content</summary>
+    /// <returns>the length of the lob content.</returns>
     function Length: Integer; override;
+    /// <summary>Clear/NULL the lob content</summary>
     function IsEmpty: Boolean; override;
+    /// <summary>Clears or NULLs the lob content</summary>
     procedure Clear; override;
   end;
 
-  { TZOleLobStream }
-
+  /// <summary>Implements an OleDB specific Lob-stream.</summary>
   TZOleLobStream = class(TZImmediatelyReleasableLobStream)
   private
     FSequentialStream: ISequentialStream;
@@ -298,7 +664,7 @@ type
       const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
   end;
 
-  {$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
+{$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 implementation
 {$IFNDEF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
 
@@ -635,7 +1001,7 @@ jmpCLob:      fTempBlob := TZOleDBCLOB.Create(FRowSetAddr^, C{$IFNDEF GENERIC_IN
 end;
 {$ENDIF WITH_COLUMNS_TO_JSON}
 
-procedure TZAbstractOleDBResultSet.CreateAccessors;
+procedure TZAbstractOleDBResultSet.CreateAccessor;
 var Status: HResult;
 begin
   Status := (FRowSetAddr^ as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA,
@@ -665,14 +1031,6 @@ begin
   end;
 end;
 
-{**
-  Indicates if the value of the designated column in the current row
-  of this <code>ResultSet</code> object is Null.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return if the value is SQL <code>NULL</code>, the
-    value returned is <code>true</code>. <code>false</code> otherwise.
-}
 function TZAbstractOleDBResultSet.IsNull(ColumnIndex: Integer): Boolean;
 begin
   {.$R-}
@@ -701,25 +1059,17 @@ begin
   //{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>AnsiString</code> in operating system encoding.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 function TZAbstractOleDBResultSet.GetAnsiString(ColumnIndex: Integer): AnsiString;
 var P: Pointer;
   L: NativeUInt;
 begin
+  Result := '';
   case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
     DBTYPE_VARIANT,
     DBTYPE_STR, DBTYPE_STR or DBTYPE_BYREF,
     DBTYPE_WSTR, DBTYPE_WSTR or DBTYPE_BYREF: begin
         P := GetPWideChar(ColumnIndex, L);
-        Result := PUnicodeToRaw(P, L, zOSCodePage);
+        PUnicodeToRaw(P, L, zOSCodePage, RawByteString(Result));
       end
     else begin
         P := GetPAnsiChar(ColumnIndex, L);
@@ -728,25 +1078,17 @@ begin
   end;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>UTF8String</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 function TZAbstractOleDBResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var P: Pointer;
   L: NativeUInt;
 begin
+  Result := '';
   case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
     DBTYPE_VARIANT,
     DBTYPE_STR, DBTYPE_STR or DBTYPE_BYREF,
     DBTYPE_WSTR, DBTYPE_WSTR or DBTYPE_BYREF: begin
         P := GetPWideChar(ColumnIndex, L);
-        Result := PUnicodeToRaw(P, L, zCP_UTF8);
+        PUnicodeToRaw(P, L, zCP_UTF8, RawByteString(Result));
       end
     else begin
         P := GetPAnsiChar(ColumnIndex, L);
@@ -755,16 +1097,6 @@ begin
   end;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param Len the length of the value in codepoints
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 function TZAbstractOleDBResultSet.GetPAnsiChar(ColumnIndex: Integer;
   out Len: NativeUInt): PAnsiChar;
 label set_from_tmp, set_from_buf, set_from_num;
@@ -907,16 +1239,6 @@ set_from_num:         Result := PAnsiChar(fByteBuffer);
   end;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PWideChar</code> in the Delphi programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param Len the length of the value in codepoints
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 function TZAbstractOleDBResultSet.GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
 label set_from_tmp, set_from_buf, set_from_clob, set_from_num;
 begin
@@ -1055,15 +1377,6 @@ set_from_num:         Result := PWideChar(fByteBuffer);
   end;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>boolean</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>false</code>
-}
 function TZAbstractOleDBResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 var PA: PAnsiChar;
     PW: PWideChar absolute PA;
@@ -1111,17 +1424,6 @@ begin
     end;
 end;
 
-{**
-  Gets the address of value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> array in the Java programming language.
-  The bytes represent the raw values returned by the driver.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param Len return the length of the addressed buffer
-  @return the adressed column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 function TZAbstractOleDBResultSet.GetBytes(ColumnIndex: Integer;
   out Len: NativeUInt): PByte;
 begin
@@ -1145,15 +1447,6 @@ begin
     end;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  an <code>int</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractOleDBResultSet.GetInt(ColumnIndex: Integer): Integer;
 var PA: PAnsiChar;
     PW: PWideChar absolute PA;
@@ -1207,15 +1500,6 @@ begin
   else Result := 0;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>long</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractOleDBResultSet.GetLong(ColumnIndex: Integer): Int64;
 var PA: PAnsiChar;
     PW: PWideChar absolute PA;
@@ -1269,15 +1553,6 @@ begin
   else Result := 0;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>long</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
 function TZAbstractOleDBResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
 var PA: PAnsiChar;
@@ -1386,15 +1661,6 @@ begin
   else Result := 0;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>float</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractOleDBResultSet.GetFloat(ColumnIndex: Integer): Single;
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
@@ -1432,15 +1698,6 @@ begin
   else Result := 0;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>UUID</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>Zero-UUID</code>
-}
 procedure TZAbstractOleDBResultSet.GetGUID(ColumnIndex: Integer;
   var Result: TGUID);
 label Fail;
@@ -1469,15 +1726,6 @@ Fail:        raise CreateOleDbConvertError(ColumnIndex, stGUID);
   else FillChar(Result, SizeOf(TGUID), #0);
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.Date</code> object in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 procedure TZAbstractOleDBResultSet.GetDate(ColumnIndex: Integer;
   var Result: TZDate);
 label Fill;
@@ -1512,15 +1760,6 @@ begin
 Fill: PInt64(@Result.Year)^ := 0;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>double</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractOleDBResultSet.GetDouble(ColumnIndex: Integer): Double;
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
@@ -1557,16 +1796,6 @@ begin
   else Result := 0;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.BigDecimal</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @param scale the number of digits to the right of the decimal point
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 procedure TZAbstractOleDBResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
 var P: Pointer;
   L: NativeUInt;
@@ -1616,15 +1845,6 @@ Fail:    raise CreateOleDbConvertError(ColumnIndex, stBigDecimal);
     FillChar(Result, SizeOf(TBCD), #0)
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>currency</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
 function TZAbstractOleDBResultSet.GetCurrency(ColumnIndex: Integer): Currency;
 label jmpFail;
 begin
@@ -1665,15 +1885,6 @@ jmpFail:raise CreateOleDbConvertError(ColumnIndex, stCurrency);
   else Result := 0;
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.Time</code> object in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 procedure TZAbstractOleDBResultSet.GetTime(ColumnIndex: Integer;
   var Result: TZTime);
 label Fill;
@@ -1711,16 +1922,6 @@ begin
 Fill: FillChar(Result, SizeOf(TZTimeStamp), #0);
 end;
 
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>java.sql.Timestamp</code> object in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-  value returned is <code>null</code>
-  @exception SQLException if a database access error occurs
-}
 {$IFDEF FPC} {$PUSH} {$WARN 6018 off : Warning unreachable code} {$ENDIF}
 procedure TZAbstractOleDBResultSet.GetTimestamp(ColumnIndex: Integer;
   var Result: TZTimeStamp);
@@ -1798,15 +1999,6 @@ Fill: FillChar(Result, SizeOf(TZTimeStamp), #0);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-{**
-  Returns the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a <code>Blob</code> object
-  in the Java programming language.
-
-  @param ColumnIndex the first column is 1, the second is 2, ...
-  @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
-    the specified column
-}
 function TZAbstractOleDBResultSet.GetBlob(ColumnIndex: Integer;
   LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 begin
@@ -1843,9 +2035,6 @@ end;
 
 { TZOleDBMSSQLCachedResolver }
 
-{**
-  Creates a OleDB specific cached resolver object.
-}
 constructor TZOleDBMSSQLCachedResolver.Create(const Statement: IZStatement;
   const Metadata: IZResultSetMetadata);
 var
@@ -1871,21 +2060,14 @@ begin
     fStmt.Close;
   inherited Destroy;
 end;
-{**
-  Posts updates to database.
-  @param Sender a cached result set object.
-  @param UpdateType a type of updates.
-  @param OldRowAccessor an accessor object to old column values.
-  @param NewRowAccessor an accessor object to new column values.
-}
+
 procedure TZOleDBMSSQLCachedResolver.PostUpdates(const Sender: IZCachedResultSet;
   UpdateType: TZRowUpdateType; const OldRowAccessor, NewRowAccessor: TZRowAccessor);
 begin
   inherited PostUpdates(Sender, UpdateType, OldRowAccessor, NewRowAccessor);
 
-  if (UpdateType = utInserted) and (FAutoColumnIndex > InvalidDbcIndex)
-    and OldRowAccessor.IsNull(FAutoColumnIndex) then
-  begin
+  if (UpdateType = utInserted) and (FAutoColumnIndex > InvalidDbcIndex) and
+      OldRowAccessor.IsNull(FAutoColumnIndex) then begin
     FResultSet := fStmt.ExecuteQueryPrepared;
     if Assigned(FResultSet) and FResultSet.Next then
       NewRowAccessor.SetLong(FAutoColumnIndex, FResultSet.GetLong(FAutoColumnIndex));
@@ -2252,15 +2434,8 @@ end;
 
 { TZOleDBResultSet }
 
-{**
-  Creates this object and assignes the main properties.
-  @param Statement an SQL statement object.
-  @param SQL an SQL query string.
-  @param AdoRecordSet a ADO recordset object, the source of the ResultSet.
-}
 constructor TZOleDBResultSet.Create(const Statement: IZStatement;
-  const SQL: string; const RowSet: PRowSet; ZBufferSize: Integer;
-  const EnhancedColInfo: Boolean);
+  const SQL: string; const RowSet: PRowSet; ZBufferSize: Integer);
 begin
   FOleDBConnection := Statement.GetConnection as IZOleDBConnection;
   FByteBuffer := FOleDBConnection.GetByteBufferAddress;
@@ -2288,7 +2463,7 @@ begin
   else begin
     {release old rows}
     if (FAccessor =  0) then begin
-      CreateAccessors;
+      CreateAccessor;
       RowNo := 0;
     end else ReleaseFetchedRows;
 
@@ -2337,9 +2512,6 @@ NoSuccess:
     RowNo := LastRowNo + 1;
 end;
 
-{**
-  Opens this recordset and initializes the Column information.
-}
 procedure TZOleDBResultSet.Open;
 var
   OleDBColumnsInfo: IColumnsInfo;
@@ -2527,10 +2699,10 @@ end;
 { TZOleDBMetadataResultSet }
 
 constructor TZOleDBMetadataResultSet.Create(const Statement: IZStatement;
-  const RowSet: IRowSet; ZBufferSize: Integer; const EnhancedColInfo: Boolean);
+  const RowSet: IRowSet; ZBufferSize: Integer);
 begin
   FRowSet := RowSet;
-  inherited Create(Statement, '', @FRowSet, ZBufferSize, EnhancedColInfo);
+  inherited Create(Statement, '', @FRowSet, ZBufferSize);
 end;
 
 initialization
