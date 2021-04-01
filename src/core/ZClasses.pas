@@ -3015,6 +3015,7 @@ begin;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 procedure TZSortableCustomElementList.QuickSortSha_0AA(L, R: PAnsiChar;
   Compare: TZListSortCompare);
 var
