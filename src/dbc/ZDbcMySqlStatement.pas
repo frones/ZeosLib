@@ -697,13 +697,13 @@ begin
   if (not FHasMoreResults) and (FOpenResultSet <> nil) then begin
     Result := IZResultSet(FOpenResultSet);
     FOpenCursorCallback;
-    if fUseResult and ((GetResultSetConcurrency = rcUpdatable) or
+    if (fUseResult or (FCursorLocation = rctServer)) and ((GetResultSetConcurrency = rcUpdatable) or
        (GetResultSetType = rtScrollInsensitive)) then begin
       Result.Last; //invoke fetch all -> note this is done on msql_strore_result too
       Result.BeforeFirst;
     end;
   end else begin
-    if FUseResult //server cursor?
+    if FUseResult or (FCursorLocation = rctServer)//server cursor?
     then NativeResultSet := TZMySQL_Use_ResultSet.Create(Self, SQL, FMySQLConnection,
       False, @FMYSQL_STMT, MYSQL_ColumnsBinding , nil, FOpenCursorCallback)
     else NativeResultSet := TZMySQL_Store_ResultSet.Create(Self, SQL, FMySQLConnection,

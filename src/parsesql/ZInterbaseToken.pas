@@ -55,7 +55,12 @@ interface
 
 {$I ZParseSql.inc}
 
-{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
+{$IF defined(DISABLE_INTERBASE_AND_FIREBIRD) and defined(ZEOS_DISABLE_ADO) and
+     defined(ZEOS_DISABLE_OLEDB) and defined(ZEOS_DISABLE_ODBC) and defined(ZEOS_DISABLE_PROXY)}
+  {$DEFINE EMPTY_ZInterbaseToken}
+{$IFEND}
+
+{$IFNDEF EMPTY_ZInterbaseToken}
 uses
   Classes, ZTokenizer, ZGenericSqlToken;
 
@@ -95,11 +100,11 @@ type
     procedure CreateTokenStates; override;
   end;
 
-{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
+{$ENDIF EMPTY_ZInterbaseToken}
 
 implementation
 
-{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
+{$IFNDEF EMPTY_ZInterbaseToken}
 
 { TZInterbaseSymbolState }
 
@@ -181,6 +186,6 @@ begin
     Result.TokenType := ttQuotedIdentifier;
 end;
 
-{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
+{$ENDIF EMPTY_ZInterbaseToken}
 end.
 

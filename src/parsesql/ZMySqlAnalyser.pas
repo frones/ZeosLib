@@ -55,23 +55,28 @@ interface
 
 {$I ZParseSql.inc}
 
-{$IFNDEF ZEOS_DISABLE_MYSQL}
+{$IF defined(ZEOS_DISABLE_MYSQL) and defined(ZEOS_DISABLE_ADO) and
+     defined(ZEOS_DISABLE_OLEDB) and defined(ZEOS_DISABLE_ODBC) and defined(ZEOS_DISABLE_PROXY)}
+  {$DEFINE EMPTY_ZMySqlAnalyser}
+{$IFEND}
+
+{$IFNDEF EMPTY_ZMySqlAnalyser}
 
 uses Classes, ZGenericSqlAnalyser;
 
 type
-
-  {** Implements an MySQL statements analyser. }
+  /// <summary>Implements an MySQL statements analyser.</summary>
   TZMySQLStatementAnalyser = class (TZGenericStatementAnalyser)
   public
+    /// <summary>Creates the object and assignes the main properties.</summary>
     constructor Create;
   end;
 
-{$ENDIF ZEOS_DISABLE_MYSQL}
+{$ENDIF EMPTY_ZMySqlAnalyser}
 
 implementation
 
-{$IFNDEF ZEOS_DISABLE_MYSQL}
+{$IFNDEF EMPTY_ZMySqlAnalyser}
 
 const
   {** The generic constants.}
@@ -95,9 +100,6 @@ const
 
 { TZMySQLStatementAnalyser }
 
-{**
-  Creates the object and assignes the main properties.
-}
 constructor TZMySQLStatementAnalyser.Create;
 begin
   SectionNames := ArrayToStrings(MySQLSectionNames);
@@ -106,7 +108,7 @@ begin
   FromClauses := ArrayToStrings(MySQLFromClauses);
 end;
 
-{$ENDIF ZEOS_DISABLE_MYSQL}
+{$ENDIF EMPTY_ZMySqlAnalyser}
 
 end.
 

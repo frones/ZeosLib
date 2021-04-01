@@ -2521,7 +2521,7 @@ var
 begin
   FOldCapacity := BindList.Capacity;
   Result := '';
-  Tokenizer := Connection.GetDriver.GetTokenizer;
+  Tokenizer := Connection.GetTokenizer;
   Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
   C := Length(SQL);
   SQLWriter := TZRawSQLStringWriter.Create(C);
@@ -2655,7 +2655,7 @@ var
 begin
   FOldCapacity := BindList.Capacity;
   Result := '';
-  Tokenizer := Connection.GetDriver.GetTokenizer;
+  Tokenizer := Connection.GetTokenizer;
   Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
   C := Length(SQL);
   SQLWriter := TZUnicodeSQLStringWriter.Create(C);

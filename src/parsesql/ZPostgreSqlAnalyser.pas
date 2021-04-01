@@ -55,7 +55,8 @@ interface
 
 {$I ZParseSql.inc}
 
-{$IF defined(ZEOS_DISABLE_POSTGRESQL) and defined (ZEOS_DISABLE_OLEDB) and defined (ZEOS_DISABLE_ADO) and defined(ZEOS_DISABLE_ODBC)}
+{$IF defined(ZEOS_DISABLE_POSTGRESQL) and defined (ZEOS_DISABLE_OLEDB) and
+  defined (ZEOS_DISABLE_ADO) and defined(ZEOS_DISABLE_ODBC) and defined(ZEOS_DISABLE_PROXY)}
   {$DEFINE EMPTY_ZPostgreSqlAnalyser}
 {$IFEND}
 

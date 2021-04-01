@@ -220,6 +220,12 @@ type
     /// <summary>Returns the ServicerProvider for this connection.</summary>
     /// <returns>the ServerProvider</returns>
     function GetServerProvider: TZServerProvider; override;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
   end;
 
 {$ENDIF ZEOS_DISABLE_SQLANY}
@@ -550,6 +556,16 @@ end;
 function TZSQLAnywhereConnection.GetServerProvider: TZServerProvider;
 begin
   Result := spASA;
+end;
+
+function TZSQLAnywhereConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  Result := TZSybaseStatementAnalyser.Create;
+end;
+
+function TZSQLAnywhereConnection.GetTokenizer: IZTokenizer;
+begin
+  Result := TZSybaseTokenizer.Create;
 end;
 
 function TZSQLAnywhereConnection.Get_api_version: Tsacapi_u32;

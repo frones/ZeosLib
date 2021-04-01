@@ -55,6 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
+{$DEFINE ENABLE_PROXY}
 {$IFDEF ENABLE_PROXY} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -216,7 +217,12 @@ type
     function GetConnectionInterface: IZDbcProxy;
 
     function GetServerProvider: TZServerProvider; override;
-
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
     function GetDbInfoStr: ZWideString;
 
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); override;
@@ -233,6 +239,9 @@ implementation
 uses
   ZSysUtils, ZFastCode, ZEncoding,
   ZDbcProxyMetadata, ZDbcStatement, ZDbcProxyStatement, ZDbcProperties,
+  ZPostgreSqlAnalyser, ZPostgreSqlToken, ZSybaseAnalyser, ZSybaseToken,
+  ZInterbaseAnalyser, ZInterbaseToken, ZMySqlAnalyser, ZMySqlToken,
+  ZOracleAnalyser, ZOracleToken, ZGenericSqlToken,
   ZMessages, Typinfo
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -698,6 +707,36 @@ end;
 function TZDbcProxyConnection.GetServerProvider: TZServerProvider;
 begin
   Result := FServerProvider;
+end;
+
+function TZDbcProxyConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  case FServerProvider of
+    //spUnknown, spMSSQL, spMSJet,
+    spOracle: Result := TZOracleStatementAnalyser.Create;
+    spMSSQL, spASE, spASA: Result := TZSybaseStatementAnalyser.Create;
+    spPostgreSQL: Result := TZPostgreSQLStatementAnalyser.Create;
+    spIB_FB: Result := TZInterbaseStatementAnalyser.Create;
+    spMySQL: Result := TZMySQLStatementAnalyser.Create;
+    //spNexusDB, spSQLite, spDB2, spAS400,
+    //spInformix, spCUBRID, spFoxPro
+    else Result := TZGenericStatementAnalyser.Create;
+  end;
+end;
+
+function TZDbcProxyConnection.GetTokenizer: IZTokenizer;
+begin
+  case FServerProvider of
+    //spUnknown, spMSJet,
+    spOracle: Result := TZOracleTokenizer.Create;
+    spMSSQL, spASE, spASA: Result := TZSybaseTokenizer.Create;
+    spPostgreSQL: Result := TZPostgreSQLTokenizer.Create;
+    spIB_FB: Result := TZInterbaseTokenizer.Create;
+    spMySQL: Result := TZMySQLTokenizer.Create;
+    //spNexusDB, spSQLite, spDB2, spAS400,
+    //spInformix, spCUBRID, spFoxPro
+    else Result := TZGenericSQLTokenizer.Create;
+  end;
 end;
 
 function TZDbcProxyConnection.GetDbInfoStr: ZWideString;

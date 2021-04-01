@@ -4580,7 +4580,7 @@ begin
   BindList.SetCount(0);
   ComparePrefixTokens := GetCompareFirstKeywordStrings;
   if ParamFound or Assigned(ComparePrefixTokens) then begin
-    Tokenizer := Connection.GetDriver.GetTokenizer;
+    Tokenizer := Connection.GetTokenizer;
     Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
     {$IFDEF UNICODE}
     ResultWriter := TZRawSQLStringWriter.Create(Length(SQL) shl 1);
@@ -4689,7 +4689,7 @@ begin
   {$ENDIF}
   ComparePrefixTokens := GetCompareFirstKeywordStrings;
   if (N > 0) or Assigned(ComparePrefixTokens) then begin
-    Tokenizer := Connection.GetDriver.GetTokenizer;
+    Tokenizer := Connection.GetTokenizer;
     Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
     try
       N := -1;

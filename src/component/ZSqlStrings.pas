@@ -241,23 +241,18 @@ end;
 type TZProtectedAbstractRODataset = class(TZAbstractRODataset);
 
 function TZSQLStrings.GetTokenizer: IZTokenizer;
-var
-  Driver: IZDriver;
+
 begin
   { Defines a SQL specific tokenizer object. }
   Result := nil;
-  if FDataset is TZAbstractRODataset then begin
-    if Assigned(TZProtectedAbstractRODataset(FDataset).Connection) then begin
-      Driver := TZProtectedAbstractRODataset(FDataset).Connection.DbcDriver;
-      if Assigned(Driver) then
-        Result := Driver.GetTokenizer;
-    end;
-  end else if FDataset is TZSQLProcessor then
-    if Assigned(TZSQLProcessor(FDataset).Connection) then begin
-      Driver := TZSQLProcessor(FDataset).Connection.DbcDriver;
-      if Assigned(Driver) then
-        Result := Driver.GetTokenizer;
-    end;
+  if (FDataset is TZAbstractRODataset) and Assigned(TZProtectedAbstractRODataset(FDataset).Connection) then begin
+    if TZProtectedAbstractRODataset(FDataset).Connection.Connected
+    then Result := TZProtectedAbstractRODataset(FDataset).Connection.DbcConnection.GetTokenizer
+    else Result := TZProtectedAbstractRODataset(FDataset).Connection.DbcDriver.GetTokenizer;
+  end else if (FDataset is TZSQLProcessor) and Assigned(TZSQLProcessor(FDataset).Connection) then
+    if TZSQLProcessor(FDataset).Connection.Connected
+    then Result := TZSQLProcessor(FDataset).Connection.DbcConnection.GetTokenizer
+    else Result := TZSQLProcessor(FDataset).Connection.DbcDriver.GetTokenizer;
   if Result = nil then
     Result := TZGenericSQLTokenizer.Create; { thread save! Allways return a new Tokenizer! }
 end;

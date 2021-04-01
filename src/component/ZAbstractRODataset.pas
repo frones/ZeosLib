@@ -4615,7 +4615,7 @@ begin
       else
         KeyFields := DefineKeyFields(Fields, Connection.DbcConnection.GetMetadata.GetIdentifierConverter);
       FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields,
-        Connection.DbcConnection.GetDriver.GetTokenizer);
+        Connection.DbcConnection.GetTokenizer);
       {$IFDEF WITH_VAR_INIT_WARNING}Temp := nil;{$ENDIF}
       SetLength(Temp, Length(FieldRefs));
       RetrieveDataFieldsFromResultSet(FieldRefs, ResultSet, Temp);
@@ -4887,7 +4887,7 @@ begin
   CaseInsensitive := loCaseInsensitive in Options;
 
   FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields,
-    Connection.DbcConnection.GetDriver.GetTokenizer);
+    Connection.DbcConnection.GetTokenizer);
   FieldIndices := nil;
   if FieldRefs = nil then
      Exit;
@@ -5031,7 +5031,7 @@ begin
 
   { Fill result array }
   FieldRefs := DefineFields(Self, ResultFields, OnlyDataFields,
-    Connection.DbcConnection.GetDriver.GetTokenizer);
+    Connection.DbcConnection.GetTokenizer);
   FieldIndices := DefineFieldIndices(FieldsLookupTable, FieldRefs);
   {$IFDEF WITH_VAR_INIT_WARNING}ResultValues := nil;{$ENDIF}
   SetLength(ResultValues, Length(FieldRefs));
@@ -5665,17 +5665,14 @@ function TZAbstractRODataset.PSGetTableNameW: WideString;
 function TZAbstractRODataset.PSGetTableName: string;
 {$ENDIF}
 var
-  Driver: IZDriver;
   Tokenizer: IZTokenizer;
   StatementAnalyser: IZStatementAnalyser;
   SelectSchema: IZSelectSchema;
 begin
   Result := '';
-  if FConnection <> nil then
-  begin
-    Driver := FConnection.DbcDriver;
-    Tokenizer := Driver.GetTokenizer;
-    StatementAnalyser := Driver.GetStatementAnalyser;
+  if (FConnection <> nil) and FConnection.Connected then begin
+    Tokenizer := FConnection.DbcConnection.GetTokenizer;
+    StatementAnalyser := FConnection.DbcConnection.GetStatementAnalyser;
     SelectSchema := StatementAnalyser.DefineSelectSchemaFromQuery(
       Tokenizer, SQL.Text);
     if Assigned(SelectSchema) and (SelectSchema.TableCount = 1) then

@@ -372,6 +372,11 @@ type
     ///  memory.</summary>
     rctServer);
 
+  /// <author>EgonHugeist</author>
+  /// <summary>Defines a batch array dml statement type</summary>
+  TZBatchArrayDMLStatementType = (
+    bastUnknown, bastDelete, bastInsert, bastUpdate);
+
   /// <summary>Defines a result set concurrency type.</summary>
   TZResultSetConcurrency = (rcReadOnly, rcUpdatable);
 
@@ -622,10 +627,10 @@ type
     function GetSubVersion: Integer;
     /// <summary>Creates a generic tokenizer interface.</summary>
     /// <returns>a created generic tokenizer object.</returns>
-    function GetTokenizer: IZTokenizer;
+    function GetTokenizer: IZTokenizer; deprecated {$IFDEF WITH_DEPRECATED_MESSAGE}'Use IZConnection.GetTokenizer instead'{$ENDIF};
     /// <summary>Creates a generic statement analyser object.</summary>
     /// <returns>a created generic tokenizer object as interface.</returns>
-    function GetStatementAnalyser: IZStatementAnalyser;
+    function GetStatementAnalyser: IZStatementAnalyser; deprecated {$IFDEF WITH_DEPRECATED_MESSAGE}'Use IZConnection.GetStatementAnalyser instead'{$ENDIF};
   end;
 
   /// <author>EgonHugeist</author>
@@ -1101,6 +1106,12 @@ type
     ///  drivers the connection mist be opened to determine the provider.</summary>
     /// <returns>the ServerProvider or spUnknown if not known.</returns>
     function GetServerProvider: TZServerProvider;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
   end;
 
   /// <summary>Defines the database metadata interface.</summary>

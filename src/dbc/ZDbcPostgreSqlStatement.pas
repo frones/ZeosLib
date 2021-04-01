@@ -1601,7 +1601,7 @@ var
 label jmpScanCommentOrWhiteSpace;
 begin
   Result := '';
-  Tokenizer := Connection.GetDriver.GetTokenizer;
+  Tokenizer := Connection.GetTokenizer;
   Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
   C := Length(SQL);
   SQLWriter := TZRawSQLStringWriter.Create(C);

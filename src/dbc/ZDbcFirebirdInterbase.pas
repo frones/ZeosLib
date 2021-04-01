@@ -322,6 +322,12 @@ type
     /// <summary>Returns the ServicerProvider for this connection.</summary>
     /// <returns>the ServerProvider</returns>
     function GetServerProvider: TZServerProvider; override;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
     function GetBinaryEscapeString(const Value: TBytes): String; override;
     /// <author>fduenas</author>
     /// <summary>Gets the host's full version number. Initially this should be 0.
@@ -1345,6 +1351,11 @@ begin
   Result := spIB_FB;
 end;
 
+function TZInterbaseFirebirdConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  Result := TZInterbaseStatementAnalyser.Create;
+end;
+
 function TZInterbaseFirebirdConnection.GetSubTypeTextCharSetID(const TableName,
   ColumnName: String): Integer;
 var S: String;
@@ -1373,6 +1384,11 @@ begin
     FSubTypeTestCharIDCache.AddObject(S, TObject(Result));
   end else
     Result := Integer(FSubTypeTestCharIDCache.Objects[Result]);
+end;
+
+function TZInterbaseFirebirdConnection.GetTokenizer: IZTokenizer;
+begin
+  Result := TZInterbaseTokenizer.Create;
 end;
 
 function TZInterbaseFirebirdConnection.GetConnectionTransaction: IZTransaction;
@@ -1991,9 +2007,8 @@ var
   Tokenizer: IZTokenizer;
 begin
   Connection := Metadata.GetConnection;
-  Driver := Connection.GetDriver;
-  Analyser := Driver.GetStatementAnalyser;
-  Tokenizer := Driver.GetTokenizer;
+  Analyser := Connection.GetStatementAnalyser;
+  Tokenizer := Connection.GetTokenizer;
   IdentifierConverter := Metadata.GetIdentifierConverter;
   try
     if Analyser.DefineSelectSchemaFromQuery(Tokenizer, SQL) <> nil then
@@ -5291,7 +5306,7 @@ var
 begin
   Result := '';
   if SQL = '' then Exit;
-  Tokenizer := Connection.GetDriver.GetTokenizer;
+  Tokenizer := Connection.GetTokenizer;
   Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
   {$IFDEF UNICODE}
   ResultWriter := TZRawSQLStringWriter.Create(Length(SQL) shl 1);

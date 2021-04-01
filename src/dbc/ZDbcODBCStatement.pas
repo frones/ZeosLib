@@ -787,7 +787,7 @@ begin
   Result := {$IFNDEF UNICODE}''{$ELSE}SQL{$ENDIF};
   if SQL = '' then Exit;
   ComparePrefixTokens := GetCompareFirstKeywordStrings;
-  Tokenizer := Connection.GetDriver.GetTokenizer;
+  Tokenizer := Connection.GetTokenizer;
   Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
   {$IFNDEF UNICODE}
   PRawToUnicode(Pointer(SQL), Length(SQL), GetW2A2WConversionCodePage(ConSettings), Result);
@@ -877,7 +877,7 @@ begin
   Result := {$IFDEF UNICODE}''{$ELSE}SQL{$ENDIF};
   if SQL = '' then Exit;
   ComparePrefixTokens := GetCompareFirstKeywordStrings;
-  Tokenizer := Connection.GetDriver.GetTokenizer;
+  Tokenizer := Connection.GetTokenizer;
   Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
   {$IFDEF UNICODE}
   PUnicodeToRaw(Pointer(SQL), Length(SQL), FClientCP, Result);

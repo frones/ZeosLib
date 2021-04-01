@@ -72,7 +72,7 @@ type
     function GetStatementAnalyser: IZStatementAnalyser; override;
   end;
 
-  {** Represents a Oracle specific connection interface. }
+  /// <summary>Defines an Oracle specific connection interface.</summary>
   IZOracleConnection = interface (IZConnection)
     ['{C7F36FDF-8A64-477B-A0EB-3E8AB7C09F8D}']
 
@@ -96,10 +96,7 @@ type
     function GetTrHandle: POCITrans;
   end;
 
-  /// <summary>
-  ///  implements an oracle OCI connection.
-  /// </summary>
-  {** Implements Oracle Database Connection. }
+  /// <summary>implements an oracle OCI connection.</summary>
   TZOracleConnection = class(TZAbstractSingleTxnConnection, IZConnection,
     IZOracleConnection, IZTransaction)
   private
@@ -296,7 +293,13 @@ type
     /// <summary>Returns the ServicerProvider for this connection.</summary>
     /// <returns>the ServerProvider</returns>
     function GetServerProvider: TZServerProvider; override;
-  end;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
+ end;
 
   {** Implements a specialized cached resolver for Oracle. }
   TZOracleCachedResolver = class(TZGenerateSQLCachedResolver)
@@ -1261,6 +1264,16 @@ end;
 function TZOracleConnection.GetSessionHandle: POCISession;
 begin
   Result := FSessionHandle;
+end;
+
+function TZOracleConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  Result := TZOracleStatementAnalyser.Create;
+end;
+
+function TZOracleConnection.GetTokenizer: IZTokenizer;
+begin
+  Result := TZOracleTokenizer.Create;
 end;
 
 {**

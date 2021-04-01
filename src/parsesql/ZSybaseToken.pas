@@ -55,11 +55,13 @@ interface
 
 {$I ZParseSql.inc}
 
-{$IF defined(ZEOS_DISABLE_DBLIB) and defined(ZEOS_DISABLE_ASA) and defined(ZEOS_DISABLE_SQLANY)}
-  {$DEFINE ZEOS_DISABLE_SYBASE}
+{$IF defined(ZEOS_DISABLE_DBLIB) and defined(ZEOS_DISABLE_ASA) and
+     defined(ZEOS_DISABLE_SQLANY) and defined(ZEOS_DISABLE_ADO) and
+     defined(ZEOS_DISABLE_OLEDB) and defined(ZEOS_DISABLE_ODBC) and defined(ZEOS_DISABLE_PROXY)}
+  {$DEFINE EMPTY_ZSybaseToken}
 {$IFEND}
 
-{$IFNDEF DEFINE ZEOS_DISABLE_SYBASE}
+{$IFNDEF DEFINE EMPTY_ZSybaseToken}
 
 uses ZTokenizer, ZGenericSqlToken;
 
@@ -95,9 +97,9 @@ type
     procedure CreateTokenStates; override;
   end;
 
-{$ENDIF DEFINE ZEOS_DISABLE_SYBASE}
+{$ENDIF EMPTY_ZSybaseToken}
 implementation
-{$IFNDEF DEFINE ZEOS_DISABLE_SYBASE}
+{$IFNDEF EMPTY_ZSybaseToken}
 
 { TZSybaseSymbolState }
 
@@ -162,5 +164,5 @@ begin
   SetCharacterState('-', '-', CommentState);
 end;
 
-{$ENDIF DEFINE ZEOS_DISABLE_SYBASE}
+{$ENDIF EMPTY_ZSybaseToken}
 end.

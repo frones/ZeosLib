@@ -809,7 +809,7 @@ var
     else
       KeyFields := DefineKeyFields(Fields, Connection.DbcConnection.GetMetadata.GetIdentifierConverter);
     FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields,
-      Connection.DbcConnection.GetDriver.GetTokenizer);
+      Connection.DbcConnection.GetTokenizer);
     Temp := VarArrayCreate([0, Length(FieldRefs) - 1], varVariant);
 
     for I := 0 to Length(FieldRefs) - 1 do

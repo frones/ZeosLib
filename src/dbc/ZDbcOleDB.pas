@@ -356,7 +356,9 @@ implementation
 
 uses TypInfo,
   ZSysUtils, ZDbcUtils, ZEncoding, ZMessages, ZFastCode, ZClasses,
-  ZPostgreSqlAnalyser, ZPostgreSqlToken,
+  ZPostgreSqlAnalyser, ZPostgreSqlToken, ZSybaseAnalyser, ZSybaseToken,
+  ZInterbaseAnalyser, ZInterbaseToken, ZMySqlAnalyser, ZMySqlToken,
+  ZOracleAnalyser, ZOracleToken,
   ZDbcOleDBMetadata, ZDbcOleDBStatement, ZDbcProperties;
 
 { TZOleDBDriver }
@@ -689,9 +691,13 @@ end;
 function TZOleDBConnection.GetStatementAnalyser: IZStatementAnalyser;
 begin
   case FServerProvider of
-    //spUnknown, spMSSQL, spMSJet, spOracle, spASE, spASA,
+    //spUnknown, spMSSQL, spMSJet,
+    spOracle: Result := TZOracleStatementAnalyser.Create;
+    spMSSQL, spASE, spASA: Result := TZSybaseStatementAnalyser.Create;
     spPostgreSQL: Result := TZPostgreSQLStatementAnalyser.Create;
-    //spIB_FB, spMySQL, spNexusDB, spSQLite, spDB2, spAS400,
+    spIB_FB: Result := TZInterbaseStatementAnalyser.Create;
+    spMySQL: Result := TZMySQLStatementAnalyser.Create;
+    //spNexusDB, spSQLite, spDB2, spAS400,
     //spInformix, spCUBRID, spFoxPro
     else Result := TZGenericStatementAnalyser.Create;
   end;
@@ -700,9 +706,13 @@ end;
 function TZOleDBConnection.GetTokenizer: IZTokenizer;
 begin
   case FServerProvider of
-    //spUnknown, spMSSQL, spMSJet, spOracle, spASE, spASA,
+    //spUnknown, spMSJet,
+    spOracle: Result := TZOracleTokenizer.Create;
+    spMSSQL, spASE, spASA: Result := TZSybaseTokenizer.Create;
     spPostgreSQL: Result := TZPostgreSQLTokenizer.Create;
-    //spIB_FB, spMySQL, spNexusDB, spSQLite, spDB2, spAS400,
+    spIB_FB: Result := TZInterbaseTokenizer.Create;
+    spMySQL: Result := TZMySQLTokenizer.Create;
+    //spNexusDB, spSQLite, spDB2, spAS400,
     //spInformix, spCUBRID, spFoxPro
     else Result := TZOleDBTokenizer.Create;
   end;

@@ -56,8 +56,9 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SyncObjs,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF}, DateUtils, SysUtils,
-  ZCompatibility, ZDbcConnection, ZDbcIntfs, ZPlainDriver,
-  ZMessages, ZVariant, ZDbcLogging;
+  ZCompatibility, ZTokenizer, ZMessages, ZVariant,
+  ZGenericSqlAnalyser, ZPlainDriver,
+  ZDbcConnection, ZDbcIntfs, ZDbcLogging;
 
 type
   TConnectionPool = class;
@@ -310,6 +311,12 @@ type
     procedure SetTestMode(Mode: Byte);
     {$ENDIF}
     function GetServerProvider: TZServerProvider;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
   end;
 
   TZDbcPooledConnectionDriver = class(TZAbstractDriver)
@@ -710,9 +717,19 @@ begin
   Result := GetConnection.GetServerProvider;
 end;
 
+function TZDbcPooledConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  Result := GetConnection.GetStatementAnalyser;
+end;
+
 function TZDbcPooledConnection.GetConnectionTransaction: IZTransaction;
 begin
   Result := GetConnection.GetConnectionTransaction;
+end;
+
+function TZDbcPooledConnection.GetTokenizer: IZTokenizer;
+begin
+  Result := GetConnection.GetTokenizer;
 end;
 
 function TZDbcPooledConnection.GetTransactionIsolation: TZTransactIsolationLevel;

@@ -2738,9 +2738,8 @@ var
   PGMetaData: IZPGDatabaseMetadata;
 begin
   Connection := Metadata.GetConnection;
-  Driver := Connection.GetDriver;
-  Analyser := Driver.GetStatementAnalyser;
-  Tokenizer := Driver.GetTokenizer;
+  Analyser := Connection.GetStatementAnalyser;
+  Tokenizer := Connection.GetTokenizer;
   PGMetaData := MetaData as IZPGDatabaseMetadata;
   try
     if Analyser.DefineSelectSchemaFromQuery(Tokenizer, SQL) <> nil then

@@ -86,12 +86,11 @@ type
 
   TZVariantTypes = set of TZVariantType;
 
-{**
-  Resolves a connection protocol and raises an exception with protocol
-  is not supported.
-  @param Url an initial database URL.
-  @param SuupportedProtocols a driver's supported subprotocols.
-}
+/// <summary>Resolves a connection protocol and raises an exception with
+///  protocol is not supported.</summary>
+/// <param>"Url" an initial database URL.</param>
+/// <param>"SupportedProtocols" a driver's supported subprotocols.</param>
+/// <returns>the protocol of the url</returns>
 function ResolveConnectionProtocol(const Url: string;
   const SupportedProtocols: TStringDynArray): string;
 
@@ -270,11 +269,11 @@ function CharRecArray2UnicodeStrArray(const Value: TZCharRecDynArray): TUnicodeS
 function CreateCanNotAccessBlobRecordException(ColumnIndex: Integer; SQLType: TZSQLType): EZSQLException;
 function CreateWriteOnlyException: EZSQLException;
 
-{**
-  creates an "operation is not allowed in READ ONLY mode" exception.
-}
+/// <summary>creates an "operation is not allowed in READ ONLY mode" exception.</summary>
 function CreateReadOnlyException: EZSQLException;
+/// <summary>creates an "Operation is not allowed in BINARY mode" exception.</summary>
 function CreateBinaryException: EZSQLException;
+/// <summary>creates an "Operation is not allowed in NON BINARY mode" exception.</summary>
 function CreateNonBinaryException: EZSQLException;
 function CreateConversionError(ColumnIndex: Integer; Actual, Expected: TZSQLType): EZSQLException;
 function CreateBindVarOutOfRangeError(Index: Integer): EZSQLException;
@@ -2149,9 +2148,6 @@ begin
   Result := EZSQLException.Create(Format(SOperationIsNotAllowed3, ['WRITE ONLY']));
 end;
 
-{**
-  Raises operation is not allowed in READ ONLY mode exception.
-}
 function CreateReadOnlyException: EZSQLException;
 begin
   Result := EZSQLException.Create(Format(SOperationIsNotAllowed3, ['READ ONLY']));

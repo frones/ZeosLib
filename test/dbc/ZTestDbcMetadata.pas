@@ -108,7 +108,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZDbcMetadata;
+uses ZSysUtils, ZDbcMetadata, ZTokenizer, ZGenericSqlAnalyser;
 
 { TZGenericTestDbcMetadata }
 
@@ -531,6 +531,12 @@ type
     function GetConnectionTransaction: IZTransaction;
     procedure Commit;
     procedure Rollback;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
     function CreateStatementWithParams(Info: TStrings): IZStatement;
     function PrepareStatementWithParams(const SQL: string; Info: TStrings):
       IZPreparedStatement;
@@ -592,6 +598,16 @@ end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 function TDummyDbcConnection.GetConnectionTransaction: IZTransaction;
+begin
+  Result := nil;
+end;
+
+function TDummyDbcConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  Result := nil;
+end;
+
+function TDummyDbcConnection.GetTokenizer: IZTokenizer;
 begin
   Result := nil;
 end;

@@ -1254,7 +1254,7 @@ set_from_buf:           Len := Result - PAnsiChar(fByteBuffer);
                       end;
     DBTYPE_VARIANT:   begin
                         FUniTemp := POleVariant(FData)^;
-                        FRawTemp := ZUnicodeToRaw(FuniTemp, fClientCP);
+                        PUnicodeToRaw(Pointer(FUniTemp), Length(FUniTemp), GetW2A2WConversionCodePage(ConSettings), FRawTemp);
                         goto set_from_tmp;
                       end;
     DBTYPE_GUID:      begin
@@ -2394,15 +2394,13 @@ var
   I: Integer;
   TableColumns: IZResultSet;
   Connection: IZConnection;
-  Driver: IZDriver;
   IdentifierConverter: IZIdentifierConverter;
   Analyser: IZStatementAnalyser;
   Tokenizer: IZTokenizer;
 begin
   Connection := Metadata.GetConnection;
-  Driver := Connection.GetDriver;
-  Analyser := Driver.GetStatementAnalyser;
-  Tokenizer := Driver.GetTokenizer;
+  Analyser := Connection.GetStatementAnalyser;
+  Tokenizer := Connection.GetTokenizer;
   IdentifierConverter := Metadata.GetIdentifierConverter;
   try
     if Analyser.DefineSelectSchemaFromQuery(Tokenizer, SQL) <> nil then
@@ -2422,7 +2420,6 @@ begin
         end;
       end;
   finally
-    Driver := nil;
     Connection := nil;
     Analyser := nil;
     Tokenizer := nil;
