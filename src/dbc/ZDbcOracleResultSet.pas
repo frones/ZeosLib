@@ -49,6 +49,13 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
+{ constributor(s)
+  EgonHugeist
+  Mark Daems
+  Mark Ford
+  and many others..
+}
+
 unit ZDbcOracleResultSet;
 
 interface
@@ -3898,9 +3905,9 @@ var
       IsNull: Boolean;
   begin
     Lob := GetBlob(ColumnIndex, IsNull);
-    if not Lob.IsCached then
-      if (Lob <> nil) and (Lob.QueryInterface(IZOracleLob, OCILob) = S_OK) then
-        OCILob.CopyLocator;
+    // @Mark: an "uncached" lob doesn't support IZOracleLob interface entry
+    if (Lob <> nil) and (Lob.QueryInterface(IZOracleLob, OCILob) = S_OK) then
+      OCILob.CopyLocator;
   end;
 begin
   inherited FillFromFromResultSet(ResultSet, IndexPairList);
