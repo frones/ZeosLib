@@ -1325,6 +1325,8 @@ JmpConcat:
             else begin
               FirstErrorCode := ErrorCode;
               if (FirstErrorCode = ORA_03113_end_of_file_on_communication_channel) or
+                 (FirstErrorCode = ORA_03135_connection_lost_contact) Or
+                 (FirstErrorCode = ORA_01089_immediate_shutdown_or_close_in_progress) Or
                  (FirstErrorCode = ORA_03114_not_connected_to_ORACLE) and (LogCategory <> lcConnect) then //disconnect
                 AExceptionClass := EZSQLConnectionLost;
             end;
@@ -1357,6 +1359,7 @@ JmpConcat:
               FirstErrorCode := ErrorCode;
               if (FirstErrorCode = ORA_03113_end_of_file_on_communication_channel) or
                  (FirstErrorCode = ORA_03135_connection_lost_contact) Or
+                 (FirstErrorCode = ORA_01089_immediate_shutdown_or_close_in_progress) Or
                  ((FirstErrorCode = ORA_03114_not_connected_to_ORACLE) and (LogCategory <> lcConnect)) then //disconnect
                 AExceptionClass := EZSQLConnectionLost;
             end;
