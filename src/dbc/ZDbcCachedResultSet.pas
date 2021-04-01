@@ -446,6 +446,10 @@ type
   private
     FResultSet: IZResultSet;
   protected
+    /// <summary>Cycle through the entire result set and cache any uncached
+    ///  lobs as Disconnected '[Disc]'. Needed for the TryKeepDataOnDisconnect
+    ///  feature and lcmOnAccess lob caching.</summary>
+    procedure CacheAllLobs;
     procedure FillColumnsInfo(const ColumnsInfo: TObjectList); virtual;
     procedure Open; override;
     /// <summary>Fetches one row from the wrapped result set object.</summary>
@@ -1502,6 +1506,10 @@ end;
 }
 function TZAbstractCachedResultSet.GetBlob(ColumnIndex: Integer;
   LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
+var
+  Current: IZBlob;
+  CLob: IZClob;
+  Newlob: IZBlob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
@@ -1509,6 +1517,15 @@ begin
   if LobStreamMode <> lsmRead then
     PrepareRowForUpdates;
   Result := FRowAccessor.GetBlob(ColumnIndex, LastWasNull);
+  if ((FRowAccessor.LobCacheMode = lcmOnAccess) and (Result <> nil) and not Result.IsCached) then
+  begin
+    Current := Result;
+    if Current.QueryInterface(IZCLob, Clob) = S_OK
+    then Newlob := TZLocalMemCLob.CreateFromClob(Clob, FRowAccessor.GetColumnCodePage(ColumnIndex), ConSettings, FOpenLobStreams)
+    else Newlob := TZLocalMemBLob.CreateFromBlob(Current, FOpenLobStreams);
+    Result := Newlob;
+    FRowAccessor.SetBlob(ColumnIndex, Result);
+  end;
   if (Result = nil) and (LobStreamMode <> lsmRead) then
     Result := CreateLob(ColumnIndex, LobStreamMode);
 end;
@@ -2496,9 +2513,41 @@ end;
 
 { TZCachedResultSet }
 
+procedure TZCachedResultSet.CacheAllLobs;
+var
+  ColumnIndex: Integer;
+  SQLType: TZSQLType;
+  Current: IZBlob;
+  Newlob: IZBlob;
+  LastNull: Boolean;
+begin
+  if ((FRowAccessor.LobCacheMode <> lcmOnLoad) and First) then
+  begin
+    repeat
+      for ColumnIndex := 0 to GetColumnCount - 1 do
+      begin
+        SQLType := FRowAccessor.GetColumnType(ColumnIndex);
+        if SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream] then
+        begin
+          Current := FRowAccessor.GetBlob(ColumnIndex, LastNull);
+          if not Current.IsCached then
+          begin
+            Newlob := TZLocalMemCLob.CreateWithData('[Disc]', 6, ConSettings, FOpenLobStreams);
+            FRowAccessor.SetBlob(ColumnIndex, NewLob);
+          end;
+        end;
+      end;
+    until not Next;
+  end;
+end;
+
 procedure TZCachedResultSet.ClearStatementLink;
 var GenDMLResolver: IZGenerateSQLCachedResolver;
 begin
+  if ((FRowAccessor.LobCacheMode = lcmOnAccess)) then
+    CacheAllLobs;
+//  if FRowAccessor.HasServerLinkedColumns then
+//    raise Exception.Create('Testing');
   if Statement <> nil then
     if not FRowAccessor.HasServerLinkedColumns and IsLastRowFetched and GetMetadata.IsMetadataLoaded then begin
       Statement.FreeOpenResultSetReference(IZResultSet(FWeakIZResultSetPtr));

@@ -4360,6 +4360,7 @@ type
   IZBlob = interface(IZLob)
     ['{47D209F1-D065-49DD-A156-EFD1E523F6BF}']
     function IsClob: Boolean;
+    function IsCached: Boolean;
 
     function GetString: RawByteString;
     procedure SetString(const Value: RawByteString);

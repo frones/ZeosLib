@@ -119,10 +119,12 @@ type
 
   { TZRowAccessor }
 
+  TLobCacheMode = (lcmNone, lcmOnLoad, lcmOnAccess);
   TZRowAccessor = class(TObject)
   protected
     FRowSize: Integer;
     FCachedLobs: WordBool;
+    FLobCacheMode:  TLobCacheMode;
     FColumnsSize: Integer;
     FColumnCount: Integer;
     FHighLobCols: Integer;
@@ -301,6 +303,7 @@ type
     property RowBuffer: PZRowBuffer read FBuffer write FBuffer;
     property ConSettings: PZConSettings read FConSettings;
     property CachedLobs: WordBool read FCachedLobs write FCachedLobs;
+    property LobCacheMode: TLobCacheMode read FLobCacheMode;
 
     procedure FillStatement(const Statement: IZPreparedStatement;
       {$IFDEF AUTOREFCOUNT}const {$ENDIF}IndexPairList: TZIndexPairList;
@@ -982,6 +985,13 @@ begin
   FColumnCount := ColumnsInfo.Count;
   FColumnsSize := 0;
   FCachedLobs := CachedLobs;
+  // mjf: Set FLobCacheMode here for testing.  Should replace FCachedLobs once tested and approved.
+  // Currently the options are:
+  //   lcmNone:      Use FCachedLobs setting for caching.
+  //   lcmOnLoad:    Lobs are cached on record load, matches "FCachedLobs = True" behavior.
+  //   lcmOnAccess:  Lobs are cached only if they are accessed.  If TryKeepDataOnDisconnect
+  //                 is True then uncached lobs are cached as Clobs containing '[Disc]' on disconnect.
+  FLobCacheMode := lcmNone;
 
   {$ifdef FPC_REQUIRES_PROPER_ALIGNMENT}
   FColumnsSize:=align(FColumnsSize+1,sizeof(pointer))-1;
@@ -1303,7 +1313,7 @@ var
     end;
   begin
     PIZLob(Dest)^ := ResultSet.GetBlob(ResultSetIndex);
-    if FCachedLobs then
+    if (FCachedLobs and (FLobCacheMode = lcmNone)) or (FLobCacheMode = lcmOnLoad) then
       SetAsCachedLob(Dest);
   end;
 begin
@@ -2859,7 +2869,9 @@ end;
 
 function TZRowAccessor.HasServerLinkedColumns: Boolean;
 begin
-  Result := ((FLobCols <> nil) and not FCachedLobs) or (FResultSetCols <> nil)
+  Result := ((FLobCols <> nil) and
+            (not FCachedLobs and (FLobCacheMode = lcmNone))) or
+            (FResultSetCols <> nil);
 end;
 
 {**

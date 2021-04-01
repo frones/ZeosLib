@@ -1227,6 +1227,7 @@ type
     procedure AfterConstruction; override;
   public //might be obsolete in future
     function IsClob: Boolean;
+    function IsCached:  Boolean;   // mjf:
     function Length: Integer; virtual; abstract;
   public
     function IsEmpty: Boolean; virtual; abstract;
@@ -4769,6 +4770,11 @@ begin
   Result := GetRawByteString(zCP_UTF8);
 end;
 {$ENDIF NO_UTF8STRING}
+
+function TZAbstractLob.IsCached: Boolean;
+begin
+  Result := (Self is TZVarLenDataRefLob);  // True if cached.
+end;
 
 function TZAbstractLob.IsClob: Boolean;
 begin
