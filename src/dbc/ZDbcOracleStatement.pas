@@ -424,7 +424,7 @@ var
 begin
   if FOpenResultSet = nil then begin
     if FStatementType = OCI_STMT_SELECT
-    then NativeResultSet := TZOracleResultSet_A.Create(Self, SQL, FOCIStmt, FOCIError, FZBufferSize)
+    then NativeResultSet := TZOracleResultSet.Create(Self, SQL, FOCIStmt, FOCIError, FZBufferSize)
     else NativeResultSet := TZOracleCallableResultSet.Create(Self, SQL, FOCIStmt, FOCIError, BindList);
     if (GetResultSetConcurrency = rcUpdatable) or (GetResultSetType <> rtForwardOnly) then
     begin

@@ -94,7 +94,7 @@ type
   end;
 
   {** Implements Oracle ResultSet. }
-  TZOracleAbstractResultSet_A = class(TZAbstractReadOnlyResultSet_A, IZOracleResultSet)
+  TZOracleAbstractResultSet = class(TZAbstractReadOnlyResultSet_A, IZOracleResultSet)
   private
     FStmtHandle: POCIStmt;
     FOCIError: POCIError;
@@ -159,7 +159,7 @@ type
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
   end;
 
-  TZOracleResultSet_A = class(TZOracleAbstractResultSet_A, IZResultSet)
+  TZOracleResultSet = class(TZOracleAbstractResultSet, IZResultSet)
   private
     FMaxBufIndex: Integer;
   protected
@@ -170,7 +170,7 @@ type
     function Next: Boolean; reintroduce;
   end;
 
-  TZOracleCallableResultSet = Class(TZOracleAbstractResultSet_A, IZResultSet)
+  TZOracleCallableResultSet = Class(TZOracleAbstractResultSet, IZResultSet)
   private
     FFieldNames: TStringDynArray;
   public
@@ -432,10 +432,10 @@ uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} SysConst,
   ZFastCode, ZMessages, ZEncoding, ZDbcUtils, ZDbcOracleStatement;
 
-{ TZOracleAbstractResultSet_A }
+{ TZOracleAbstractResultSet }
 
 {$IFDEF WITH_COLUMNS_TO_JSON}
-procedure TZOracleAbstractResultSet_A.ColumnsToJSON(JSONWriter: TJSONWriter;
+procedure TZOracleAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
   JSONComposeOptions: TZJSONComposeOptions);
 var P: PAnsiChar;
   C, H, I: SmallInt;
@@ -651,7 +651,7 @@ end;
   @param SQL a SQL statement.
   @param Handle a Oracle specific query handle.
 }
-procedure TZOracleAbstractResultSet_A.AssignColumnsInfo(
+procedure TZOracleAbstractResultSet.AssignColumnsInfo(
   const Dest: TObjectList);
 var
   I: Integer;
@@ -707,13 +707,13 @@ begin
   end;
 end;
 
-procedure TZOracleAbstractResultSet_A.BeforeClose;
+procedure TZOracleAbstractResultSet.BeforeClose;
 begin
   FreeOracleSQLVars;
   inherited BeforeClose;
 end;
 
-constructor TZOracleAbstractResultSet_A.Create(
+constructor TZOracleAbstractResultSet.Create(
   const Statement: IZStatement; const SQL: string; StmtHandle: POCIStmt;
   ErrorHandle: POCIError; const ZBufferSize: Integer);
 begin
@@ -734,7 +734,7 @@ begin
   Open;
 end;
 
-function TZOracleAbstractResultSet_A.CreateOCIConvertError(ColumnIndex: Integer;
+function TZOracleAbstractResultSet.CreateOCIConvertError(ColumnIndex: Integer;
   DataType: ub2): EZOCIConvertError;
 begin
   Result := EZOCIConvertError.Create(Format(SErrorConvertionField,
@@ -742,7 +742,7 @@ begin
         IntToStr(DataType)]));
 end;
 
-procedure TZOracleAbstractResultSet_A.FreeOracleSQLVars;
+procedure TZOracleAbstractResultSet.FreeOracleSQLVars;
 var
   I: Integer;
   J: NativeUInt;
@@ -813,7 +813,7 @@ end;
   @return if the value is SQL <code>NULL</code>, the
     value returned is <code>true</code>. <code>false</code> otherwise.
 }
-function TZOracleAbstractResultSet_A.IsNull(ColumnIndex: Integer): Boolean;
+function TZOracleAbstractResultSet.IsNull(ColumnIndex: Integer): Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
@@ -829,7 +829,7 @@ begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
-procedure TZOracleAbstractResultSet_A.ReleaseImmediat(
+procedure TZOracleAbstractResultSet.ReleaseImmediat(
   const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
 begin
   inherited ReleaseImmediat(Sender, AError);
@@ -849,7 +849,7 @@ end;
 }
 const rInfinity: RawbyteString = 'Infinity';
 const rNegInfinity: RawbyteString = '-Infinity';
-function TZOracleAbstractResultSet_A.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUint): PAnsiChar;
+function TZOracleAbstractResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUint): PAnsiChar;
 var TS: TZTimeStamp;
   SQLVarHolder: PZSQLVar absolute TS;
 label dbl, sin, set_Result, jmpW2A, jmpTestN;
@@ -1022,7 +1022,7 @@ const
   wNegInfinity: UnicodeString = '-Infinity';
   wInfinity: UnicodeString = 'Infinity';
 
-function TZOracleAbstractResultSet_A.GetPWideChar(ColumnIndex: Integer;
+function TZOracleAbstractResultSet.GetPWideChar(ColumnIndex: Integer;
   out Len: NativeUInt): PWideChar;
 var TS: TZTimeStamp;
   SQLVarHolder: PZSQLVar absolute TS;
@@ -1201,7 +1201,7 @@ end;
   @param obj the parent-object
   @return the Object which contains the final object descriptor
 }
-function TZOracleAbstractResultSet_A.GetFinalObject(Obj: POCIObject): POCIObject;
+function TZOracleAbstractResultSet.GetFinalObject(Obj: POCIObject): POCIObject;
 begin
   if Obj.is_final_type = 1 then
     Result := Obj
@@ -1218,7 +1218,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>false</code>
 }
-function TZOracleAbstractResultSet_A.GetBoolean(ColumnIndex: Integer): Boolean;
+function TZOracleAbstractResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 var
   SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
@@ -1293,7 +1293,7 @@ end;
   @return the adressed column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOracleAbstractResultSet_A.GetBytes(ColumnIndex: Integer;
+function TZOracleAbstractResultSet.GetBytes(ColumnIndex: Integer;
   out Len: NativeUInt): PByte;
 var
   SQLVarHolder: PZSQLVar;
@@ -1348,7 +1348,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZOracleAbstractResultSet_A.GetInt(ColumnIndex: Integer): Integer;
+function TZOracleAbstractResultSet.GetInt(ColumnIndex: Integer): Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
@@ -1365,7 +1365,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZOracleAbstractResultSet_A.GetLong(ColumnIndex: Integer): Int64;
+function TZOracleAbstractResultSet.GetLong(ColumnIndex: Integer): Int64;
 var
   SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
@@ -1460,7 +1460,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZOracleAbstractResultSet_A.GetUInt(ColumnIndex: Integer): Cardinal;
+function TZOracleAbstractResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
 begin
   Result := GetLong(ColumnIndex);
 end;
@@ -1475,7 +1475,7 @@ end;
     value returned is <code>0</code>
 }
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
-function TZOracleAbstractResultSet_A.GetULong(ColumnIndex: Integer): UInt64;
+function TZOracleAbstractResultSet.GetULong(ColumnIndex: Integer): UInt64;
 var
   SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
@@ -1572,12 +1572,12 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZOracleAbstractResultSet_A.GetFloat(ColumnIndex: Integer): Single;
+function TZOracleAbstractResultSet.GetFloat(ColumnIndex: Integer): Single;
 begin
   Result := GetDouble(ColumnIndex);
 end;
 
-procedure TZOracleAbstractResultSet_A.GetGUID(ColumnIndex: Integer;
+procedure TZOracleAbstractResultSet.GetGUID(ColumnIndex: Integer;
   var Result: TGUID);
 var SQLVarHolder: PZSQLVar;
   L: NativeUint;
@@ -1631,7 +1631,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZOracleAbstractResultSet_A.GetDouble(ColumnIndex: Integer): Double;
+function TZOracleAbstractResultSet.GetDouble(ColumnIndex: Integer): Double;
 var
   SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
@@ -1718,7 +1718,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-procedure TZOracleAbstractResultSet_A.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
+procedure TZOracleAbstractResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
 var
   SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
@@ -1790,7 +1790,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZOracleAbstractResultSet_A.GetCurrency(ColumnIndex: Integer): Currency;
+function TZOracleAbstractResultSet.GetCurrency(ColumnIndex: Integer): Currency;
 var
   SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
@@ -1887,7 +1887,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-procedure TZOracleAbstractResultSet_A.GetDate(ColumnIndex: Integer;
+procedure TZOracleAbstractResultSet.GetDate(ColumnIndex: Integer;
   var Result: TZDate);
 var
   SQLVarHolder: PZSQLVar;
@@ -1983,7 +1983,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-procedure TZOracleAbstractResultSet_A.GetTime(ColumnIndex: Integer; Var Result: TZTime);
+procedure TZOracleAbstractResultSet.GetTime(ColumnIndex: Integer; Var Result: TZTime);
 var
   SQLVarHolder: PZSQLVar;
   DT: TDateTime;
@@ -2079,7 +2079,7 @@ end;
   value returned is <code>null</code>
   @exception SQLException if a database access error occurs
 }
-procedure TZOracleAbstractResultSet_A.GetTimestamp(ColumnIndex: Integer;
+procedure TZOracleAbstractResultSet.GetTimestamp(ColumnIndex: Integer;
   var Result: TZTimeStamp);
 var
   SQLVarHolder: PZSQLVar;
@@ -2207,7 +2207,7 @@ end;
   @return a <code>IZResultSet</code> object representing the SQL
     <code>IZResultSet</code> value in the specified column
 }
-function TZOracleAbstractResultSet_A.GetResultSet(ColumnIndex: Integer): IZResultSet;
+function TZOracleAbstractResultSet.GetResultSet(ColumnIndex: Integer): IZResultSet;
 var
   SQLVarHolder: PZSQLVar;
   type_Ref: POCIRef;
@@ -2289,7 +2289,7 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
-function TZOracleAbstractResultSet_A.GetBlob(ColumnIndex: Integer;
+function TZOracleAbstractResultSet.GetBlob(ColumnIndex: Integer;
   LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 var
   SQLVarHolder: PZSQLVar;
@@ -2337,12 +2337,12 @@ begin
   end;
 end;
 
-{ TZOracleResultSet_A }
+{ TZOracleResultSet }
 
 {**
   Opens this recordset.
 }
-procedure TZOracleResultSet_A.Open;
+procedure TZOracleResultSet.Open;
 var
 //  char_semantics: ub1;
   I, J: Integer;
@@ -2604,7 +2604,7 @@ begin
   FCursorLocation := rctServer;
 end;
 
-procedure TZOracleResultSet_A.ResetCursor;
+procedure TZOracleResultSet.ResetCursor;
 begin
   FCurrentRowBufIndex := 0;
   fTempLob := nil;
@@ -2625,7 +2625,7 @@ end;
   sequence of multiple results. A <code>ResultSet</code> object
   is also automatically closed when it is garbage collected.
 }
-procedure TZOracleResultSet_A.BeforeClose;
+procedure TZOracleResultSet.BeforeClose;
 begin
   inherited BeforeClose;
   SetLength(Self.FRowsBuffer, 0);
@@ -2648,7 +2648,7 @@ end;
   @return <code>true</code> if the new current row is valid;
     <code>false</code> if there are no more rows
 }
-function TZOracleResultSet_A.Next: Boolean;
+function TZOracleResultSet.Next: Boolean;
 var
   Status: Integer;
   FetchedRows: LongWord;
