@@ -884,7 +884,23 @@ function DateTimeToUnicodeSQLDate(const Value: TDateTime; Buf: PWideChar;
 /// <param>"Neagtive" if the year is negative.</param>
 /// <returns>the length in words of written value.</returns>
 function DateToUni(Year, Month, Day: Word; Buf: PWideChar;
-  const Format: String; Quoted, Negative: Boolean): Byte;
+  const Format: String; Quoted, Negative: Boolean): Byte; overload;
+
+/// <author>EgonHugeist</author>
+/// <summary>Convert a Year, Month, Day values into a string buffer. Valid format
+///  tokens are: 'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day.
+///  Valid delimiters (if given) are ' ','-','\','/'.
+///  Long names are not supported.</summary>
+/// <param>"Year" the year of the date string.</param>
+/// <param>"Month" the month of the date string.</param>
+/// <param>"Day" the day of the date string.</param>
+/// <param>"Format" the format template</param>
+/// <param>"Suffix" ia suffix string which can be appendened to the result
+/// <param>"Quoted" if the result should be quoted with a #39 char.</param>
+/// <param>"Neagtive" if the year is negative.</param>
+/// <returns>a converted string.</returns>
+function DateToUni(Year, Month, Day: Word; const Format, Suffix: String;
+  Quoted, Negative: Boolean): UnicodeString; overload;
 
 /// <author>EgonHugeist</author>
 /// <summary>Convert a pascal TDateTime value into a string. Valid format tokens
@@ -4585,6 +4601,22 @@ Inc_dbl:          Inc(Buf, 2);
     Result := Buf-PStart+1;
   end else
     Result := Buf-PStart;
+end;
+
+function DateToUni(Year, Month, Day: Word; const Format, Suffix: String;
+  Quoted, Negative: Boolean): UnicodeString; overload;
+var L, L2: Word;
+  Buffer: array[0..cMaxDateLenQuoted] of WideChar;
+  P: PWideChar;
+begin
+  L := DateToUni(Year, Month, Day, @Buffer[0], Format, Quoted, False);
+  l2 := Length(Suffix);
+  Result := '';
+  System.SetLength(Result, L+L2);
+  P := Pointer(Result);
+  Move(Buffer[0], P^, L shl 1);
+  if L2 > 0 then
+    Move(Pointer(Suffix)^, (P+L)^, L2 shl 1);
 end;
 
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
