@@ -333,7 +333,7 @@ type
     ///  satisfy the query at either the time the query is executed or as the
     ///  rows are retrieved.</summary>
     rtScrollInsensitive,
-    /// <summary>Deprecated not implemented enymore. Yet it's the same as
+    /// <summary>Deprecated not implemented anymore. Yet it's the same as
     ///  <c>rtScrollInsensitive</c>. Purpose: The result set reflects changes
     ///  made to the underlying data source while the result set remains open.</summary>
     /// <remarks>Use the IZResultSet RefreshCurrentRow method instead.</remarks>
@@ -2644,6 +2644,15 @@ type
     /// <param>"Result" a reference to the TZTimeStamp record. If the value is SQL
     ///  <c>NULL</c> or the conversion fails, the value get's zero filled.</param>
     procedure GetTimeStamp(Index: Integer; var Result: TZTimeStamp); overload;
+    /// <summary>Gets the value of the designated parameter as a variable value</summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <param>"Result" an variable value.</param>
     function GetValue(ParameterIndex: Integer): TZVariant;
 
     function GetString(ParameterIndex: Integer): String;

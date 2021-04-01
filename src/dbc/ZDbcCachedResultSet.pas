@@ -448,6 +448,9 @@ type
   protected
     procedure FillColumnsInfo(const ColumnsInfo: TObjectList); virtual;
     procedure Open; override;
+    /// <summary>Fetches one row from the wrapped result set object.</summary>
+    /// <returns><c>True</c> if row was successfuly fetched or <c>False</c>
+    ///  otherwise.</returns>
     function Fetch: Boolean; virtual;
     procedure FetchAll; virtual;
 
@@ -2528,11 +2531,6 @@ begin
   Open;
 end;
 
-{**
-  Fetches one row from the wrapped result set object.
-  @return <code>True</code> if row was successfuly fetched
-    or <code>False</code> otherwise.
-}
 function TZCachedResultSet.Fetch: Boolean;
 var TempRow: PZRowBuffer;
     Succeeded: Boolean;

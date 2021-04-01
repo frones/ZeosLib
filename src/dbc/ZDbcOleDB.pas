@@ -70,7 +70,7 @@ uses
   ZPlainOleDBDriver, ZOleDBToken;
 
 type
-  {** Implements OleDB Database Driver. }
+  /// <summary>Implements an OleDB Database Driver.</summary>
   TZOleDBDriver = class(TZAbstractDriver)
   public
     /// <summary>Constructs this object with default properties.</summary>
@@ -93,7 +93,7 @@ type
     function GetTokenizer: IZTokenizer; override;
   end;
 
-  {** Defines a PostgreSQL specific connection. }
+  /// <summary>Defines an OleDB specific connection interface</summary>
   IZOleDBConnection = interface(IZConnection)
     ['{35A72582-F758-48B8-BBF7-3267EEBC9750}']
     /// <summary>Get the current session interface as IUnknown.</summary>
@@ -105,14 +105,30 @@ type
     /// <summary>Get the current MAlloc interface as IMalloc.</summary>
     /// <returns>the Malloc interface.</returns>
     function GetMalloc: IMalloc;
+    /// <summary>Check if multiple active resultsets are supported</summary>
+    /// <returns><c>true</c> if MARS is supported.</returns>
     function SupportsMARSConnection: Boolean;
+    /// <summary>Get the address of the static connecetion TByteBuffer</summary>
+    /// <returns>the address of the connection buffer</returns>
     function GetByteBufferAddress: PByteBuffer;
+    /// <summary>Handle an error or a warning. Note: this method should be
+    ///  called only if the status is in error or warning range.</summary>
+    /// <param>"Status" the current status received by a call of any OleDB
+    ///  interface method</param>
+    /// <param>"LoggingCategory" the logging category used to log the error or
+    ///  warning if a listenter is registered on the driver manager</param>
+    /// <param>"LogMessage" the logging message used to log the error or
+    ///  warning if a listenter is registered on the driver manager</param>
+    /// <param>"Sender" the calling interface which may release the resources if
+    ///  a connection loss happens</param>
+    /// <param>"aStatus" a binding status array used for extended binding
+    /// failures or nil.</param>
     procedure HandleErrorOrWarning(Status: HRESULT; LoggingCategory: TZLoggingCategory;
       const LogMessage: SQLString; const Sender: IImmediatelyReleasable;
       const aStatus: TDBBINDSTATUSDynArray = nil);
   end;
 
-  {** Implements a generic OleDB Connection. }
+  /// <summary>Implements an OleDB specific connection object.</summary>
   TZOleDBConnection = class(TZAbstractSingleTxnConnection, IZConnection,
     IZOleDBConnection, IZTransaction)
   private
@@ -134,6 +150,10 @@ type
     function OleDbGetDBPropValue(const APropIDs: array of DBPROPID): string; overload;
     function OleDbGetDBPropValue(APropID: DBPROPID): Integer; overload;
     procedure InternalSetTIL(Level: TZTransactIsolationLevel);
+    /// <summary>Immediately execute a query and do nothing with the results.</summary>
+    /// <remarks>A new driver needs to implement one of the overloads.</remarks>
+    /// <param>"SQL" a UTF16 encoded query to be executed.</param>
+    /// <param>"LoggingCategory" the LoggingCategory for the Logging listeners.</param>
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload; override;
     /// <summary>Releases a Connection's database and resources immediately
     ///  instead of waiting for them to be automatically released.</summary>
@@ -297,7 +317,7 @@ type
     /// <summary>Creates a generic statement analyser object.</summary>
     /// <returns>a created generic tokenizer object as interface.</returns>
     function GetStatementAnalyser: IZStatementAnalyser;
-  public { IZOleDBConnection }
+  public { implement IZOleDBConnection }
     /// <summary>Get the current session interface as IUnknown.</summary>
     /// <returns>the session interface or nil if not connected.</returns>
     function GetSession: IUnknown;
@@ -307,6 +327,8 @@ type
     /// <summary>Get the current MAlloc interface as IMalloc.</summary>
     /// <returns>the Malloc interface.</returns>
     function GetMalloc: IMalloc;
+    /// <summary>Check if multiple active resultsets are supported</summary>
+    /// <returns><c>true</c> if MARS is supported.</returns>
     function SupportsMARSConnection: Boolean;
     /// <summary>Handle an error or a warning. Note: this method should be
     ///  called only if the status is in error or warning range.</summary>
@@ -350,10 +372,6 @@ begin
   Result := TZOleDBConnection.Create(Url);
 end;
 
-{**
-  Gets a SQL syntax tokenizer.
-  @returns a SQL syntax tokenizer object.
-}
 function TZOleDBDriver.GetTokenizer: IZTokenizer;
 begin
   Result := TZOleDBTokenizer.Create;

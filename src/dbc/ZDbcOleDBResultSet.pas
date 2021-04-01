@@ -396,6 +396,9 @@ type
     function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
 
     {$IFDEF WITH_COLUMNS_TO_JSON}
+    /// <summary>Fill the JSONWriter with column data</summary>
+    /// <param>"JSONComposeOptions" the TZJSONComposeOptions used for composing
+    ///  the JSON contents</param>
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
     {$ENDIF WITH_COLUMNS_TO_JSON}
   end;
@@ -623,43 +626,105 @@ type
     FDescriptor: TZOleDBLob;
     FPosition: Int64;
   protected
+    /// <summary>Get the size of the stream</summary>
+    /// <returns>the size of the stream</returns>
     function GetSize: Int64; override;
   public
+    /// <summary>Create this object.</summary>
+    /// <param>"Descriptor" the owner descriptor object which constructs this object.</param>
+    /// <param>"OpenLobStreams" the List to register the streams if they are
+    ///  open and unregister if the stream is closing.</param>
     constructor Create(const Descriptor: TZOleDBLob; const OpenLobStreams: TZSortedList);
-  public
+  public // TStream overrides
+    /// <summary>Attempts to read Count bytes from the stream to Buffer,
+    ///  starting at the current position.</summary>
+    /// <remarks>The method advances the current position in the stream by the
+    ///  number of bytes actually transferred.</remarks>
+    /// <param>"Buffer" a reference to a buffer the stream writes into.</param>
+    /// <param>"Count" the number of bytes the steam should read from.</param>
+    /// <returns>the number of bytes actually read, which may be less than Count.</returns>
     function Read(var Buffer; Count: Longint): Longint; overload; override;
+    /// <summary>Attempts to write Count bytes from buffer to the stream,
+    ///  starting at the current position.</summary>
+    /// <remarks>The method advances the current position in the stream by the
+    ///  number of bytes actually transferred.</remarks>
+    /// <param>"Buffer" a reference to a buffer the stream reads from.</param>
+    /// <param>"Count" the number of bytes the steam should write from.</param>
+    /// <returns>the number of bytes actually written, which may be less than Count.</returns>
     function Write(const Buffer; Count: Longint): Longint; overload; override;
+    /// <summary>Seek sets the position of the stream to Offset bytes from Origin.</summary>
+    /// <param>"Offset" should be negative when the origin is soFromEnd. It
+    ///  should be positive for soFromBeginning and can have both signs for
+    ///  soFromCurrent origin.</param>
+    /// <param>"Origin" is one of:
+    ///  <c>soFromBeginning</c> Set the position relative to the start of the stream.
+    ///  <c>soFromCurrent</c> Set the position relative to the current position in the stream.
+    ///  <c>soFromEnd</c> Set the position relative to the end of the stream.</param>
     function Seek(Offset: Longint; Origin: Word): Longint; overload; override;
   end;
 
+  /// <summary>Implements an OleDb BLOB object</summary>
   TZOleDBBLob = Class(TZOleDBLob, IZBlob)
   public
+    /// <summary>Clones the Blob</summary>
+    /// <param>"LobStreamMode" the open mode of the lob. Default mode is lsmRead.</param>
+    /// <returns>a memory cached Blob describtor object.</returns>
     function Clone(LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
   End;
 
+  /// <summary>Implements an OleDb CLOB object</summary>
   TZOleDBCLob = Class(TZOleDBLob, IZBlob, IZCLob)
   public
+    /// <summary>Clones the Clob</summary>
+    /// <param>"LobStreamMode" the open mode of the lob. Default mode is lsmRead.</param>
+    /// <returns>a memory cached Clob describtor object.</returns>
     function Clone(LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
   End;
 
+  /// <summary>Implements an OleDb specific cached resultset</summary>
   TZOleDBCachedResultSet = class(TZCachedResultSet)
   private
     FResultSet: TZAbstractOleDBResultSet;
   protected
+    /// <summary>Fetches one row from the wrapped result set object.</summary>
+    /// <returns><c>True</c> if row was successfuly fetched or <c>False</c>
+    ///  otherwise.</returns>
     function Fetch: Boolean; override;
+    /// <summary>Get a provider specififc class of a TZRowAccesssor</summary>
+    /// <returns>the rowaccessor class</returns>
     class function GetRowAccessorClass: TZRowAccessorClass; override;
   public
+    /// <summary>Create this object.</summary>
+    /// <param>"ResultSet" the underlaying resultset the cached resultset
+    ///  clones from.</param>
+    /// <param>"SQL" the query that did produce this resultset</param>
+    /// <param>"Resolver" the CachedResolver object used to execute DML's or
+    ///  refresh current row.</param>
+    /// <param>"ConSettings" a reference to the connection settings.</param>
     constructor Create(ResultSet: TZAbstractOleDBResultSet; const SQL: string;
       const Resolver: IZCachedResolver; ConSettings: PZConSettings);
   end;
 
-  { TZOleDBRowAccessor }
-
+  /// <summary>Implements an OleDb specific RowAccessor object.</summary>
   TZOleDbRowAccessor = class(TZRowAccessor)
   protected
+    /// <summary>convert the metadata retrieved type to a rowaccessors stored
+    ///  type</summary>
+    /// <param>"ColumnInfo" a columninfo object containing the metadata column
+    ///  informations</param>
+    /// <param>"ConSettings" a reference to the connection settings.</param>
+    /// <param>"ColumnCodePage" a reference to columncodepage.</param>
+    /// <returns>the RowAccessor used SQLType</returns>
     class function MetadataToAccessorType(ColumnInfo: TZColumnInfo;
       ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; override;
   public
+    /// <summary>Create this object.</summary>
+    /// <param>"ColumnsInfo" a list of TZColumnInfo objects.</param>
+    /// <param>"ConSettings" a reference to the connection settings.</param>
+    /// <param>"OpenLobStreams" the List to register the streams if they are
+    ///  open and unregister if the stream is closing.</param>
+    /// <param>"CachedLobs" indicates if the Lobs retrieved from the native
+    ///  resultset should be memory cached.</param>
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
       const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
   end;
@@ -1581,7 +1646,7 @@ begin
         if FColBind.cbMaxLen = 0 then begin
           FTempBlob := GetBlob(ColumnIndex); //localize
           PA := FTempBlob.GetPAnsiChar(FClientCP, FRawTemp, Len);
-          Result := RawToUInt64Def(PA, PA+Len, 0);
+          Result := RawToUInt32Def(PA, PA+Len, 0);
           FTempBlob := nil;
         end else
           Result := RawToUInt64Def(PAnsiChar(FData),0);
@@ -1589,7 +1654,7 @@ begin
         if FColBind.cbMaxLen = 0 then begin
           FTempBlob := GetBlob(ColumnIndex); //localize
           PW := FTempBlob.GetPWideChar(FUniTemp, Len);
-          Result := UnicodeToUInt64Def(PW, PW+Len, 0);
+          Result := UnicodeToUInt32Def(PW, PW+Len, 0);
           FTempBlob := nil;
         end else
           Result := UnicodeToUInt64Def(PWideChar(FData),0);
@@ -2083,9 +2148,7 @@ begin
   FResultSet := ResultSet;
 end;
 
-{$IFDEF FPC}
-  {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
-{$ENDIF}
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "BCD" does not seem to be initialized} {$ENDIF}
 function TZOleDBCachedResultSet.Fetch: Boolean;
 var
   I: Integer;
@@ -2280,7 +2343,6 @@ begin
   Result := TZOleDbRowAccessor;
 end;
 
-
 { TZOleDBMSSQLResultSetMetadata }
 
 procedure TZOleDBMSSQLResultSetMetadata.ClearColumn(ColumnInfo: TZColumnInfo);
@@ -2371,9 +2433,6 @@ end;
 
 { TZOleDBParamResultSet }
 
-{**
-  Creates this object and assignes the main properties.
-}
 constructor TZOleDBParamResultSet.Create(const Statement: IZStatement;
   const ParamBuffer: TByteDynArray; const ParamBindings: TDBBindingDynArray;
   const ParamNameArray: TStringDynArray);
