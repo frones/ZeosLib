@@ -1113,9 +1113,9 @@ procedure TZAbstractTimestampFormatSettings.SetDateFormat(const Value: String);
 begin
   if ((FDateFormat = nil) and (Value <> '')) or ((FDateFormat <> nil) and (Value = '')) or ((FDateFormat <> nil) and (FDateFormat^ <> Value)) then begin
     if Value <> '' then begin
-      FFormat := @FFormatSettings.ShortDateFormat;
-      FFormat^ := Value;
-    end else FFormat := nil;
+      FDateFormat := @FFormatSettings.ShortDateFormat;
+      FDateFormat^ := Value;
+    end else FDateFormat := nil;
     if Assigned(FOnFormatChanged) then
       FOnFormatChanged;
   end;
@@ -1147,9 +1147,9 @@ procedure TZAbstractTimestampFormatSettings.SetTimeFormat(const Value: String);
 begin
   if ((FTimeFormat = nil) and (Value <> '')) or ((FTimeFormat <> nil) and (Value = '')) or ((FTimeFormat <> nil) and (FTimeFormat^ <> Value)) then begin
     if Value <> '' then begin
-      FFormat := @FFormatSettings.ShortTimeFormat;
-      FFormat^ := Value;
-    end else FFormat := nil;
+      FTimeFormat := @FFormatSettings.ShortTimeFormat;
+      FTimeFormat^ := Value;
+    end else FTimeFormat := nil;
     if Assigned(FOnFormatChanged) then
       FOnFormatChanged;
   end;
