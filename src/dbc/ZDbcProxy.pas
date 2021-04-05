@@ -55,7 +55,6 @@ interface
 
 {$I ZDbc.inc}
 
-{$DEFINE ENABLE_PROXY}
 {$IFDEF ENABLE_PROXY} //if set we have an empty unit
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
