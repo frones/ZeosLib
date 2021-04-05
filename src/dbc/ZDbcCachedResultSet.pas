@@ -2514,6 +2514,8 @@ end;
 { TZCachedResultSet }
 
 procedure TZCachedResultSet.CacheAllLobs;
+const
+  Disc: ZWideString = '[Disc]';
 var
   ColumnIndex: Integer;
   SQLType: TZSQLType;
@@ -2532,7 +2534,7 @@ begin
           Current := FRowAccessor.GetBlob(ColumnIndex, LastNull);
           if not Current.IsCached then
           begin
-            Newlob := TZLocalMemCLob.CreateWithData('[Disc]', 6, ConSettings, FOpenLobStreams);
+            Newlob := TZLocalMemCLob.CreateWithData(PWideChar(Disc), 6, ConSettings, FOpenLobStreams);
             FRowAccessor.SetBlob(ColumnIndex, NewLob);
           end;
         end;
