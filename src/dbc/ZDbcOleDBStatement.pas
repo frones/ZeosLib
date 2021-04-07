@@ -1541,21 +1541,21 @@ TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
           end;
       (DBTYPE_WSTR or DBTYPE_BYREF): case SQLType of
             stFloat, stDouble: begin
-                PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 128);
+                PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 128);
                 PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := FloatToUnicode(Value, ZPPWideChar(Data)^) shl 1;
               end;
             stDate: begin
-                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 24);
+                      PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 24);
                       Data := PPointer(Data)^;
                       goto DWConv;
                     end;
             stTime: begin
-                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 26);
+                      PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 26);
                       Data := PPointer(Data)^;
                       goto TWConv;
                     end;
             stTimeStamp: begin
-                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 48);
+                      PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 48);
                       Data := PPointer(Data)^;
                       goto TSWConv;
                     end;
@@ -1608,7 +1608,7 @@ begin
       DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF): begin
           L := GetOrdinalDigits(Value, C, Negative);
           if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then begin
-            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 24);
+            PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 24);
             Data := PPointer(Data)^;
           end else if (Bind.cbMaxLen <= (L +Byte(Ord(Negative))) shl 1) then
             RaiseExceeded(Index);
@@ -1663,7 +1663,7 @@ begin
       DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF): begin
           L := GetOrdinalDigits(Value);
           if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then begin
-            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 24);
+            PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 24);
             Data := PPointer(Data)^;
           end else if (L shl 1 >= Bind.cbMaxLen) then
             RaiseExceeded(Index);
@@ -1931,7 +1931,7 @@ begin
                     PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := BcdToUni(Value, PWideChar(Data), '.') shl 1;
                   end;
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-                   PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 68); //8Byte align
+                   PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 68); //8Byte align
                    PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := BcdToUni(Value, ZPPWideChar(Data)^, '.') shl 1;;
                  end;
       //DBTYPE_VARNUMERIC:;
@@ -2205,7 +2205,7 @@ begin
                     PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := PEnd-Data;
                   end;
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-                   PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 48); //8Byte align
+                   PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 48); //8Byte align
                    CurrToUnicode(Value, '.', ZPPWideChar(Data)^, @PEnd);
                    PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := PEnd-PPAnsiChar(Data)^;
                  end;
@@ -2341,7 +2341,7 @@ DWConv:               PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
                           False, Value.IsNegative) shl 1
                     else RaiseExceeded(Index);
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 24);
+                      PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 24);
                       Data := PPointer(Data)^;
                       goto DWConv;
                     end;
@@ -2421,7 +2421,7 @@ set_uid_len:            PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 
                     goto set_raw_len;
                   end;
       (DBTYPE_STR or DBTYPE_BYREF): begin
-                    PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 37);
+                    PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 37);
                     GUIDToBuffer(@Value.D1, PPAnsiChar(Data)^, [guidSet0Term]);
 set_raw_len:        PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 36;
                   end; *)
@@ -2432,7 +2432,7 @@ set_raw_len:        PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 36;
                     goto set_uni_len;
                   end;
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-                    PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 74);
+                    PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 74);
                     GUIDToBuffer(@Value.D1, ZPPWideChar(Data)^, [guidSet0Term]);
 set_uni_len:        PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 72;
                   end;
@@ -2611,7 +2611,7 @@ begin
       DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF): begin
           L := GetOrdinalDigits(Value, u64, Negative);
           if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then begin
-            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 24); //8Byte align
+            PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 24); //8Byte align
             Data := PPointer(Data)^; //-9.223.372.036.854.775.808
           end else if (Bind.cbMaxLen <= (L +Byte(Ord(Negative))) shl 1) then
             RaiseExceeded(Index);
@@ -3108,7 +3108,7 @@ TWConv:               PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
                         PWideChar(Data), ConSettings.WriteFormatSettings.TimeFormat, False, Value.IsNegative) shl 1
                       else RaiseExceeded(Index);
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 24);
+                      PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 24);
                       Data := PPointer(Data)^;
                       goto TWConv;
                     end;
@@ -3200,7 +3200,7 @@ TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
                           ConSettings.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative) shl 1
                     else RaiseExceeded(Index);
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 24);
+                      PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 24);
                       Data := PPointer(Data)^;
                       goto TSWConv;
                     end;
@@ -3273,7 +3273,7 @@ begin
       DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF): begin
           L := GetOrdinalDigits(Value);
           if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then begin
-            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 48); //8Byte align
+            PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 48); //8Byte align
             Data := PPointer(Data)^; //18.446.744.073.709.551.615
           end else if (Bind.cbMaxLen <= L shl 1) then
             RaiseExceeded(Index);

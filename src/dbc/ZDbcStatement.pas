@@ -363,7 +363,7 @@ type
   TZBindList = class(TZCustomElementList)
   private
     FConSettings: PZConSettings;
-    function AquireBuffer(Index: NativeInt; SQLType: TZSQLType; BindType: TZBindType): PZBindValue; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
+    function AcquireBuffer(Index: NativeInt; SQLType: TZSQLType; BindType: TZBindType): PZBindValue; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
     function Get(Index: NativeInt): PZBindValue; {$IFDEF WITH_INLINE}inline;{$ENDIF}
     function GetBindType(Index: NativeInt): TZBindType; {$IFDEF WITH_INLINE}inline;{$ENDIF}
     function GetSQLType(Index: NativeInt): TZSQLType; {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -407,8 +407,8 @@ type
     procedure Put(Index: NativeInt; SQLType: TZSQLType; const Value: IZBLob); overload;
     procedure Put(Index: NativeInt; Value: PZBindValue); overload;
     procedure Put(Index: NativeInt; const Value: TGUID); overload;
-    function AquireCustomValue(Index: NativeInt; SQLType: TZSQLType; Len: LengthInt): Pointer;
-    function AquireMinCustomValue(Index: NativeInt; SQLType: TZSQLType; Len: LengthInt): Pointer;
+    function AcquireCustomValue(Index: NativeInt; SQLType: TZSQLType; Len: LengthInt): Pointer;
+    function AcquireMinCustomValue(Index: NativeInt; SQLType: TZSQLType; Len: LengthInt): Pointer;
 
     /// <summary>Sets the designated parameter value to SQL <c>NULL</c>.
     ///  <B>Note:</B> You must specify the parameter's SQL type. </summary>
@@ -2379,11 +2379,11 @@ end;
 
 { TZBindList }
 
-function TZBindList.AquireCustomValue(Index: NativeInt; SQLType: TZSQLType;
+function TZBindList.AcquireCustomValue(Index: NativeInt; SQLType: TZSQLType;
   Len: LengthInt): Pointer;
 var BindValue: PZBindValue;
 begin
-  BindValue := AquireBuffer(Index, SQLType, zbtCustom);
+  BindValue := AcquireBuffer(Index, SQLType, zbtCustom);
   if (BindValue.Value <> nil) and (PLengthInt(BindValue.Value)^ <> Len) then begin
     FreeMem(BindValue.Value, PLengthInt(BindValue.Value)^+SizeOf(LengthInt));
     BindValue.Value := nil;
@@ -2395,11 +2395,11 @@ begin
   Result := PAnsiChar(BindValue.Value)+SizeOf(LengthInt);
 end;
 
-function TZBindList.AquireMinCustomValue(Index: NativeInt; SQLType: TZSQLType;
+function TZBindList.AcquireMinCustomValue(Index: NativeInt; SQLType: TZSQLType;
   Len: LengthInt): Pointer;
 var BindValue: PZBindValue;
 begin
-  BindValue := AquireBuffer(Index, SQLType, zbtCustom);
+  BindValue := AcquireBuffer(Index, SQLType, zbtCustom);
   if (BindValue.Value <> nil) and (PLengthInt(BindValue.Value)^ < Len) then begin
     FreeMem(BindValue.Value, PLengthInt(BindValue.Value)^+SizeOf(LengthInt));
     BindValue.Value := nil;
@@ -2683,7 +2683,7 @@ begin
   end;
 end;
 
-function TZBindList.AquireBuffer(Index: NativeInt; SQLType: TZSQLType;
+function TZBindList.AcquireBuffer(Index: NativeInt; SQLType: TZSQLType;
   BindType: TZBindType): PZBindValue;
 begin
   if Index+1 > Count then begin
@@ -2705,12 +2705,12 @@ begin
   if Buf = nil then
     raise EZSQLException.Create(SBindingFailure);
   if (SQLType = stGUID) then begin
-    BindValue := AquireBuffer(Index, SQLType, zbtGUID);
+    BindValue := AcquireBuffer(Index, SQLType, zbtGUID);
     if BindValue.Value = nil then
       GetMem(BindValue.Value, SizeOf(TGUID));
     PGUID(BindValue.Value)^ := PGUID(Buf)^;
   end else begin
-    BindValue := AquireBuffer(Index, SQLType, zbtBinByRef);
+    BindValue := AcquireBuffer(Index, SQLType, zbtBinByRef);
     if BindValue.Value = nil then
       GetMem(BindValue.Value, SizeOf(TZBufRec));
     PZBufRec(BindValue.Value).Buf := Buf;
@@ -2721,7 +2721,7 @@ end;
 procedure TZBindList.Put(Index: NativeInt; SQLType: TZSQLType;
   const Value: UnicodeString);
 begin
-  UnicodeString(AquireBuffer(Index, SQLType, zbtUniString).Value) := Value;
+  UnicodeString(AcquireBuffer(Index, SQLType, zbtUniString).Value) := Value;
 end;
 
 procedure TZBindList.Put(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZArray; AddArrayRef: Boolean);
@@ -2733,7 +2733,7 @@ begin
   then SQLType := TZSQLType(Value.VArrayType)
   else SQLType := BindValue.SQLType; //keep possible datatype alive
   if AddArrayRef then begin
-    BindValue := AquireBuffer(Index, SQLType, zbtRefArray);
+    BindValue := AcquireBuffer(Index, SQLType, zbtRefArray);
     if (BindValue.Value <> nil) then begin
       if (Value.VArray <> nil) and (PZArray(BindValue.Value)^.VArray <> nil) then
         DeReferenceArray(PZArray(BindValue.Value)^.VArray, TZSQLType(PZArray(BindValue.Value)^.VArrayType), PZArray(BindValue.Value)^.VArrayVariantType);
@@ -2741,7 +2741,7 @@ begin
         DeReferenceArray(PZArray(BindValue.Value)^.VIsNullArray, TZSQLType(PZArray(BindValue.Value)^.VIsNullArrayType), PZArray(BindValue.Value)^.VIsNullArrayVariantType);
     end;
   end else
-    BindValue := AquireBuffer(Index, SQLType, zbtArray);
+    BindValue := AcquireBuffer(Index, SQLType, zbtArray);
   if BindValue.Value = nil then begin
     GetMem(BindValue.Value, SizeOf(TZArray));
     PZArray(BindValue.Value)^.VArray := nil;
@@ -2761,13 +2761,13 @@ end;
 procedure TZBindList.Put(Index: NativeInt; SQLType: TZSQLType;
   const Value: IZBLob);
 begin
-  IZBLob(AquireBuffer(Index, SQLType, zbtLob).Value) := Value;
+  IZBLob(AcquireBuffer(Index, SQLType, zbtLob).Value) := Value;
 end;
 
 procedure TZBindList.Put(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 var BindValue: PZBindValue;
 begin
-  BindValue := AquireBuffer(Index, stTimeStamp, zbtTimeStamp);
+  BindValue := AcquireBuffer(Index, stTimeStamp, zbtTimeStamp);
   if BindValue.Value = nil then
     GetMem(BindValue.Value, SizeOf(TZTimeStamp));
   PZTimeStamp(BindValue.Value)^ := Value;
@@ -2776,7 +2776,7 @@ end;
 procedure TZBindList.Put(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 var BindValue: PZBindValue;
 begin
-  BindValue := AquireBuffer(Index, stBigDecimal, zbtBCD);
+  BindValue := AcquireBuffer(Index, stBigDecimal, zbtBCD);
   if BindValue.Value = nil then
     GetMem(BindValue.Value, SizeOf(TBCD));
   PBCD(BindValue.Value)^ := Value;
@@ -2788,13 +2788,13 @@ var BindValue: PZBindValue;
 begin
   {$IFNDEF NO_UTF8STRING}
   if CP = zCP_UTF8 then
-    BindValue := AquireBuffer(Index, SQLType, zbtUTF8String)
+    BindValue := AcquireBuffer(Index, SQLType, zbtUTF8String)
   else {$IFNDEF NO_ANSISTRING}if CP = FConSettings.ClientCodePage^.CP then{$ENDIF}
   {$ENDIF}
-    BindValue := AquireBuffer(Index, SQLType, zbtRawString)
+    BindValue := AcquireBuffer(Index, SQLType, zbtRawString)
   {$IFNDEF NO_ANSISTRING}
   else
-    BindValue := AquireBuffer(Index, SQLType, zbtAnsiString);
+    BindValue := AcquireBuffer(Index, SQLType, zbtAnsiString);
   {$ELSE}
   ;
   {$ENDIF}
@@ -2809,20 +2809,20 @@ procedure TZBindList.Put(Index: NativeInt; SQLType: TZSQLType; const Value: TByt
 begin
   if Pointer(Value) = nil then
     raise EZSQLException.Create(SBindingFailure);
-  TBytes(AquireBuffer(Index, SQLType, zbtBytes).Value) := Value; //inc refcount
+  TBytes(AcquireBuffer(Index, SQLType, zbtBytes).Value) := Value; //inc refcount
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 4056 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 procedure TZBindList.Put(Index: NativeInt; Value: Boolean);
 begin
-  AquireBuffer(Index, stBoolean, zbtPointer).Value := Pointer(Byte(Value));
+  AcquireBuffer(Index, stBoolean, zbtPointer).Value := Pointer(Byte(Value));
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZBindList.Put(Index: NativeInt; SQLType: TZSQLType; _8Byte: P8Bytes);
 var BindValue: PZBindValue;
 begin
-  BindValue := AquireBuffer(Index, SQLType, zbt8Byte);
+  BindValue := AcquireBuffer(Index, SQLType, zbt8Byte);
   {$IFDEF CPU64}
   PInt64(@BindValue.Value)^ := _8Byte^;
   {$ELSE}
@@ -2836,7 +2836,7 @@ procedure TZBindList.Put(Index: NativeInt; SQLType: TZSQLType; Buf: Pointer;
   Len: LengthInt; CP: Word);
 var BindValue: PZBindValue;
 begin
-  BindValue := AquireBuffer(Index, SQLType, zbtCharByRef);
+  BindValue := AcquireBuffer(Index, SQLType, zbtCharByRef);
   if BindValue.Value = nil then
     GetMem(BindValue.Value, SizeOf(TZCharRec));
   if Buf <> nil
@@ -2867,7 +2867,7 @@ begin
     zbtArray:     Put(Index, PZArray(Value.Value)^, False);
     zbtRefArray:  Put(Index, PZArray(Value.Value)^, True);
     zbtLob:       Put(Index, Value.SQLType, IZBLob(Value.Value));
-    zbtPointer:   AquireBuffer(Index, Value.SQLType, Value.BindType).Value := Value.Value;
+    zbtPointer:   AcquireBuffer(Index, Value.SQLType, Value.BindType).Value := Value.Value;
     zbtBCD:       Put(Index, PBCD(Value.Value)^);
     zbtTimeStamp: Put(Index, PZTimeStamp(Value.Value)^)
     else raise ZDbcUtils.CreateUnsupportedParameterTypeException(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stUnknown);
@@ -2877,14 +2877,14 @@ end;
 procedure TZBindList.Put(Index: NativeInt; SQLType: TZSQLType; _4Byte: P4Bytes);
 var BindValue: PZBindValue;
 begin
-  BindValue := AquireBuffer(Index, SQLType, zbt4Byte);
+  BindValue := AcquireBuffer(Index, SQLType, zbt4Byte);
   P4Bytes(@BindValue.Value)^ := _4Byte^;
 end;
 
 procedure TZBindList.Put(Index: NativeInt; const Value: TGUID);
 var BindValue: PZBindValue;
 begin
-  BindValue := AquireBuffer(Index, stGUID, zbtGUID);
+  BindValue := AcquireBuffer(Index, stGUID, zbtGUID);
   if BindValue.Value = nil then
     GetMem(BindValue.Value, SizeOf(TGUID));
   PGUID(BindValue.Value)^ := Value;
@@ -2893,7 +2893,7 @@ end;
 procedure TZBindList.Put(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 var BindValue: PZBindValue;
 begin
-  BindValue := AquireBuffer(Index, stDate, zbtDate);
+  BindValue := AcquireBuffer(Index, stDate, zbtDate);
   if BindValue.Value = nil then
     GetMem(BindValue.Value, SizeOf(TZDate));
   PZDate(BindValue.Value)^ := Value;
@@ -2902,7 +2902,7 @@ end;
 procedure TZBindList.Put(Index: NativeInt; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 var BindValue: PZBindValue;
 begin
-  BindValue := AquireBuffer(Index, stTime, zbtTime);
+  BindValue := AcquireBuffer(Index, stTime, zbtTime);
   if BindValue.Value = nil then
     GetMem(BindValue.Value, SizeOf(TZTime));
   PZTime(BindValue.Value)^ := Value;
@@ -2910,7 +2910,7 @@ end;
 
 procedure TZBindList.SetNull(Index: NativeInt; SQLType: TZSQLType);
 begin
-  AquireBuffer(Index, SQLType, zbtNull);
+  AcquireBuffer(Index, SQLType, zbtNull);
 end;
 
 procedure TZBindList.SetParamTypes(Index: NativeInt; SQLType: TZSQLType;
@@ -5218,7 +5218,7 @@ end;
   @param Buf return a Pointer to a character value,
   @param Len return the length of the value. If CodePage is UTF16 it's
     then count of words, otherwise it's the count of bytes
-  @param CodePage, the aquired codepage of a charater value
+  @param CodePage, the requested codepage of a charater value
 }
 procedure TZAbstractCallableStatement.GetPChar(Index: Integer;
   out Buf: Pointer; out Len: LengthInt; CodePage: Word);

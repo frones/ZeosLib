@@ -336,7 +336,7 @@ var
   begin
     BuffSize := ARR_OVERHEAD_NONULLS(1)+TotalSize;
     //alloc mem for the varlena array struct ->
-    A := Stmt.BindList.AquireMinCustomValue(Index, SQLType, BuffSize);
+    A := Stmt.BindList.AcquireMinCustomValue(Index, SQLType, BuffSize);
     SQLTypeToPostgreSQL(SQLType, FOidAsBlob, aOID);
     //write dimension(s)
     Integer2PG(1, ARR_NDIM(A));
@@ -2244,7 +2244,7 @@ begin
         BindList.Put(Index, PGSQLType, P8Bytes({$IFNDEF CPU64}fByteBuffer{$ELSE}@Value{$ENDIF}));
         LinkBinParam2PG(InParamIdx, BindList._8Bytes[Index], 8);
       end else
-        LinkBinParam2PG(InParamIdx, BindList.AquireCustomValue(Index, PGSQLType,
+        LinkBinParam2PG(InParamIdx, BindList.AcquireCustomValue(Index, PGSQLType,
           ZSQLType2PGBindSizes[PGSQLType]), ZSQLType2PGBindSizes[PGSQLType]);
     P := FPQparamValues[InParamIdx];
     case PGSQLType of
@@ -2419,7 +2419,7 @@ begin
   SQLType := OIDToSQLType(Idx, stBigDecimal);
   if (FPQParamOIDs[Idx] = NUMERICOID) then begin
     if (FPQparamValues[Idx] = nil) or (BindList.SQLTypes[Idx] <> SQLType) then begin
-      FPQparamValues[Idx] := BindList.AquireCustomValue(Idx, SQLType, MaxBCD2NumSize);
+      FPQparamValues[Idx] := BindList.AcquireCustomValue(Idx, SQLType, MaxBCD2NumSize);
       FPQparamFormats[Idx] := ParamFormatBin;
     end;
     BCD2PGNumeric(Value, FPQparamValues[Idx], FPQparamLengths[Idx]);
@@ -2507,7 +2507,7 @@ begin
   SQLType := OIDToSQLType(Idx, stCurrency);
   if (FPQParamOIDs[Idx] = NUMERICOID) then begin
     if (FPQparamValues[Idx] = nil) or (BindList.SQLTypes[Idx] <> SQLType) then begin
-      FPQparamValues[Idx] := BindList.AquireCustomValue(Idx, SQLType, MaxCurr2NumSize);
+      FPQparamValues[Idx] := BindList.AcquireCustomValue(Idx, SQLType, MaxCurr2NumSize);
       FPQparamFormats[Idx] := ParamFormatBin;
     end;
     Currency2PGNumeric(Value, FPQparamValues[Idx], FPQparamLengths[Idx]);
@@ -2735,7 +2735,7 @@ begin
         BindList.Put(Idx, PGSQLType, P8Bytes(@Value));
         LinkBinParam2PG(Idx, BindList._8Bytes[Idx], 8);
       end else
-        LinkBinParam2PG(Idx, BindList.AquireCustomValue(Idx, PGSQLType,
+        LinkBinParam2PG(Idx, BindList.AcquireCustomValue(Idx, PGSQLType,
           ZSQLType2PGBindSizes[PGSQLType]), ZSQLType2PGBindSizes[PGSQLType]);
     case PGSQLtype of
       stLong:     Int642PG(Value, FPQparamValues[Idx]);
