@@ -314,7 +314,6 @@ var
   I: Integer;
   TableColumns: IZResultSet;
   Connection: IZConnection;
-  Driver: IZDriver;
   IdentifierConverter: IZIdentifierConverter;
   Analyser: IZStatementAnalyser;
   Tokenizer: IZTokenizer;
@@ -344,7 +343,6 @@ begin
           end;
         end;
     finally
-      Driver := nil;
       Connection := nil;
       Analyser := nil;
       Tokenizer := nil;

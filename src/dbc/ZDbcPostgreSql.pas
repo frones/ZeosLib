@@ -431,14 +431,14 @@ type
     /// <summary>Adds an event to be listened immediately.</summary>
     /// <param>"Name" the the name of the event.</param>
     /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
-    procedure AddEvent(const Name: SQLString; Handler: TZOnEventHandler);
+    procedure AddEvent(const Name: String; Handler: TZOnEventHandler);
     /// <summary>Adds an event to be listened immediately.</summary>
     /// <param>"Name" the the name of the event.</param>
     /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
     procedure AddEvents(const Names: TStrings; Handler: TZOnEventHandler);
     /// <summary>Removes the event from the Listener.</summary>
     /// <param>"Name" the name of the event to be removed.</param>
-    procedure RemoveEvent(const Name: SQLString);
+    procedure RemoveEvent(const Name: String);
     /// <summary>Sets a interval to check the events.</summary>
     /// <param>"Milliseconds" the interval in milli seconds to be checked.</param>
     procedure SetEventInterval(Milliseconds: Cardinal);
@@ -1001,7 +1001,7 @@ begin
   inherited ReleaseImmediat(Sender, AError);
 end;
 
-procedure TZPostgreSQLConnection.RemoveEvent(const Name: SQLString);
+procedure TZPostgreSQLConnection.RemoveEvent(const Name: String);
 var RawTemp: RawByteString;
 begin
   if FEventList = nil then
@@ -1849,7 +1849,7 @@ begin
     {$IFDEF UNICODE}
     PRawToUnicode(P, ZFastCode.StrLen(P), ConSettings^.ClientCodePage^.CP, Result);
     {$ELSE}
-    ZSetString(P, ZFastCode.StrLen(P), Result{$IFDEF WITH_RAWBYTESTRING},ConSettings^.ClientCodePage^.CP{$ENDIF});
+    ZSetString(P, ZFastCode.StrLen(P), RawByteString(Result){$IFDEF WITH_RAWBYTESTRING},ConSettings^.ClientCodePage^.CP{$ENDIF});
     {$ENDIF}
     FPlainDriver.PQclear(QueryHandle);
   end else
