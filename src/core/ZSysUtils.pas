@@ -899,7 +899,7 @@ function DateToUni(Year, Month, Day: Word; Buf: PWideChar;
 /// <param>"Quoted" if the result should be quoted with a #39 char.</param>
 /// <param>"Neagtive" if the year is negative.</param>
 /// <returns>a converted string.</returns>
-function DateToUni(Year, Month, Day: Word; const Format, Suffix: String;
+function DateToUni(Year, Month, Day: Word; const Format: String; const Suffix: UnicodeString;
   Quoted, Negative: Boolean): UnicodeString; overload;
 
 /// <author>EgonHugeist</author>
@@ -4603,13 +4603,13 @@ Inc_dbl:          Inc(Buf, 2);
     Result := Buf-PStart;
 end;
 
-function DateToUni(Year, Month, Day: Word; const Format, Suffix: String;
+function DateToUni(Year, Month, Day: Word; const Format: String; const Suffix: UnicodeString;
   Quoted, Negative: Boolean): UnicodeString; overload;
 var L, L2: Word;
   Buffer: array[0..cMaxDateLenQuoted] of WideChar;
   P: PWideChar;
 begin
-  L := DateToUni(Year, Month, Day, @Buffer[0], Format, Quoted, False);
+  L := DateToUni(Year, Month, Day, @Buffer[0], Format, Quoted, Negative);
   l2 := Length(Suffix);
   Result := '';
   System.SetLength(Result, L+L2);

@@ -61,6 +61,8 @@
 
 { constributor(s):
   EgonHugeist
+  Ivan Rog - 2010 (author)
+  Silvio Clecio - http://silvioprog.com.br
 }
 unit ZPgEventAlerter;
 

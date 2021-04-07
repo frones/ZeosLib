@@ -317,6 +317,17 @@ type
     /// <summary>Creates a generic statement analyser object.</summary>
     /// <returns>a created generic tokenizer object as interface.</returns>
     function GetStatementAnalyser: IZStatementAnalyser;
+    /// <summary>Get a generic event alerter object.</summary>
+    /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
+    /// <param>"CloneConnection" if <c>True</c> a new connection will be spawned.</param>
+    /// <returns>a the generic event alerter object as interface or nil.</returns>
+    function GetEventAlerter(Handler: TZOnEventHandler; CloneConnection: Boolean): IZEventAlerter; virtual;
+    /// <summary>Check if the connection supports an event Alerter.</summary>
+    /// <returns><c>true</c> if the connection supports an event Alerter;
+    /// <c>false</c> otherwise.</returns>
+    function SupportsEventAlerter: Boolean;
+    /// <summary>Closes the event alerter.</summary>
+    procedure CloseEventAlerter;
   end;
 
   TZDbcPooledConnectionDriver = class(TZAbstractDriver)
@@ -605,6 +616,11 @@ begin
   Result := GetConnection.StartTransaction;
 end;
 
+function TZDbcPooledConnection.SupportsEventAlerter: Boolean;
+begin
+  Result := False;
+end;
+
 {**
   get current connection URL from TZURL. Nice to clone the connection by using
   the IZDriverManager
@@ -622,6 +638,11 @@ begin
     FConnectionPool.ReturnToPool(FConnection);
     FConnection := nil;
   end;
+end;
+
+procedure TZDbcPooledConnection.CloseEventAlerter;
+begin
+
 end;
 
 procedure TZDbcPooledConnection.Commit;
@@ -890,6 +911,12 @@ end;
 function TZDbcPooledConnection.GetEscapeString(const Value: RawByteString): RawByteString;
 begin
   Result := GetConnection.GetEscapeString(Value);
+end;
+
+function TZDbcPooledConnection.GetEventAlerter(Handler: TZOnEventHandler;
+  CloneConnection: Boolean): IZEventAlerter;
+begin
+  Result := nil;
 end;
 
 function TZDbcPooledConnection.GetEncoding: TZCharEncoding;
