@@ -81,6 +81,7 @@ type
     procedure Test_GENERATED_ALWAYS_64;
     procedure Test_GENERATED_BY_DEFAULT_64;
     procedure Test_BatchDelete_equal_operator;
+    procedure Test_BatchInsert_returning;
     procedure Test_BatchDelete_in_operator;
     procedure Test_TimezoneOffset;
   end;
@@ -192,6 +193,40 @@ begin
     CheckNotNull(Statement);
     Statement.SetDataArray(FirstDbcIndex, IntArray, stInteger);
     Statement.ExecuteUpdatePrepared;
+  finally
+    Connection.Rollback;
+    Connection.Close;
+  end;
+end;
+
+procedure TZTestDbcPostgreSQLCase.Test_BatchInsert_returning;
+var
+  Statement: IZPreparedStatement;
+  BoolArray: TBooleanDynArray;
+  RS: IZResultSet;
+  I: Cardinal;
+begin
+  BoolArray := nil;
+  RS := nil;
+  Statement := Connection.PrepareStatement('insert into high_load(stBoolean) VALUES (?) returning hl_id');
+  CheckEquals(1, Connection.StartTransaction);
+  try
+    if Connection.GetHostVersion < ZSysUtils.EncodeSQLVersioning(8, 0, 0) then
+      Exit;
+    SetLength(BoolArray, 4);
+    BoolArray[0] := True;
+    BoolArray[1] := False;
+    BoolArray[2] := True;
+    BoolArray[3] := False;
+    CheckNotNull(Statement);
+    Statement.SetDataArray(FirstDbcIndex, BoolArray, stBoolean);
+    I := 0;
+    RS := Statement.ExecuteQueryPrepared;
+    while RS.Next do begin
+      CheckFalse(Rs.IsNull(FirstDbcIndex));
+      Inc(I);
+    end;
+    Check(I = 4);
   finally
     Connection.Rollback;
     Connection.Close;

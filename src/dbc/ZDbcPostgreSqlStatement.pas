@@ -1446,9 +1446,11 @@ begin
   LastUpdatecount := -1;
   Prepare;
   PrepareLastResultSetForReUse;
-  if Findeterminate_datatype or (FRawPlanName = '')
-  then Fres := PGExecute
-  else Fres := PGExecutePrepared;
+  if BatchDMLArrayCount > 0
+  then FRes := ExecuteDMLBatchWithUnnestVarlenaArrays
+  else if Findeterminate_datatype or (FRawPlanName = '')
+    then Fres := PGExecute
+    else Fres := PGExecutePrepared;
 
   { Process queries with result sets }
   Status := FPlainDriver.PQresultStatus(Fres);
@@ -1483,9 +1485,11 @@ begin
   LastUpdateCount := -1;
   PrepareOpenResultSetForReUse;
   Prepare;
-  if Findeterminate_datatype or (FRawPlanName = '')
-  then Fres := PGExecute
-  else Fres := PGExecutePrepared;
+  if BatchDMLArrayCount > 0
+  then FRes := ExecuteDMLBatchWithUnnestVarlenaArrays
+  else if Findeterminate_datatype or (FRawPlanName = '')
+    then Fres := PGExecute
+    else Fres := PGExecutePrepared;
   Status := FPlainDriver.PQresultStatus(Fres);
   if (Fres <> nil) and ((Status = PGRES_TUPLES_OK) or (Status = PGRES_SINGLE_TUPLE)) then begin
     if Assigned(FOpenResultSet)
