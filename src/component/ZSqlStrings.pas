@@ -240,8 +240,8 @@ end;
 
 type TZProtectedAbstractRODataset = class(TZAbstractRODataset);
 
+{$WARN SYMBOL_DEPRECATED OFF}
 function TZSQLStrings.GetTokenizer: IZTokenizer;
-
 begin
   { Defines a SQL specific tokenizer object. }
   Result := nil;
@@ -256,6 +256,7 @@ begin
   if Result = nil then
     Result := TZGenericSQLTokenizer.Create; { thread save! Allways return a new Tokenizer! }
 end;
+{$WARN SYMBOL_DEPRECATED ON}
 
 {**
   Gets a SQL statement by it's index.
