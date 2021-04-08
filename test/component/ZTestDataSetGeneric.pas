@@ -71,7 +71,7 @@ type
     FFieldList: string;
     procedure RunDefineFields;
     procedure RunDefineSortedFields;
-    procedure TestReadCachedLobs(const BinLob: String; aOptions: TZDataSetOptions;
+    procedure TestReadLobCacheMode(const BinLob: String; aOptions: TZDataSetOptions;
       BinStreamE: TMemoryStream; Query: TZAbstractRODataset);
   protected
     procedure TestQueryGeneric(Query: TDataset);
@@ -105,7 +105,7 @@ type
     procedure TestClobEmptyString;
     procedure TestLobModes;
     procedure TestSpaced_Names;
-    procedure Test_doCachedLobs;
+    procedure Test_LobCacheMode;
     procedure TestDefineFields;
     procedure TestDefineSortedFields;
     procedure TestEmptyMemoAfterFullMemo;
@@ -657,7 +657,7 @@ type
   TZAbstractRODatasetHack = class(TZAbstractRODataset)
   end;
 
-procedure TZGenericTestDataSet.TestReadCachedLobs(const BinLob: String;
+procedure TZGenericTestDataSet.TestReadLobCacheMode(const BinLob: String;
   aOptions: TZDataSetOptions; BinStreamE: TMemoryStream; Query: TZAbstractRODataset);
 var
   BinStreamA: TMemoryStream;
@@ -1738,7 +1738,7 @@ begin
   end;
 end;
 
-procedure TZGenericTestDataSet.Test_doCachedLobs;
+procedure TZGenericTestDataSet.Test_LobCacheMode;
 var
   Query: TZQuery;
   ROQuery: TZReadOnlyQuery;
@@ -1799,11 +1799,17 @@ begin
       ExecSQL;
       CheckEquals(1, RowsAffected);
     end;
-    TestReadCachedLobs(BinLob, aOptions, BinStreamE, Query);
-    TestReadCachedLobs(BinLob, aOptions, BinStreamE, ROQuery);
-    Include(aOptions, doCachedLobs);
-    TestReadCachedLobs(BinLob, aOptions, BinStreamE, Query);
-    TestReadCachedLobs(BinLob, aOptions, BinStreamE, ROQuery);
+    TestReadLobCacheMode(BinLob, aOptions, BinStreamE, Query);
+    TestReadLobCacheMode(BinLob, aOptions, BinStreamE, ROQuery);
+    Query.Properties.Values[DSProps_LobCacheMode] := LcmOnLoadStr;
+    ROQuery.Properties.Values[DSProps_LobCacheMode] := LcmOnLoadStr;
+    TestReadLobCacheMode(BinLob, aOptions, BinStreamE, Query);
+    TestReadLobCacheMode(BinLob, aOptions, BinStreamE, ROQuery);
+    Query.Properties.Values[DSProps_LobCacheMode] := LcmOnAccessStr;
+    ROQuery.Properties.Values[DSProps_LobCacheMode] := LcmOnAccessStr;
+    TestReadLobCacheMode(BinLob, aOptions, BinStreamE, Query);
+    TestReadLobCacheMode(BinLob, aOptions, BinStreamE, ROQuery);
+
   finally
     FreeAndNil(BinStreamE);
     Query.SQL.Text := 'DELETE FROM blob_values where b_id >= '+ SysUtils.IntToStr(TEST_ROW_ID-1);
