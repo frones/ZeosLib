@@ -68,7 +68,7 @@ type
   TZTestDbcPostgreSQLCase = class(TZAbstractDbcSQLTestCase)
   private
     FEventName: String;
-    procedure OnEvent(var Event: TZEventOrNotification; var StopListen: Boolean);
+    procedure OnEvent(var Event: TZEventOrNotification);
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -239,23 +239,31 @@ end;
 procedure TZTestDbcPostgreSQLCase.Test_EventAlerter;
 var Alerter: IZEventAlerter;
     EndTime: TDateTime;
+    Events: TStrings;
 begin
-  Alerter := Connection.GetEventAlerter(OnEvent, False);
-  Check(Alerter <> nil);
-  FEventName := '';
-  CheckFalse(Alerter.IsListening);
-  Alerter.AddEvent('zeostest', nil);
-  Check(Alerter.IsListening);
-  EndTime := IncSecond(Now, 2);
-  Connection.ExecuteImmediat('NOTIFY zeostest', lcExecute);
-  while (FEventName = '') and (EndTime > Now) do begin
-    //Application.ProcessMessages;
-    Sleep(0);
+  Events := TStringList.Create;
+  Alerter := Connection.GetEventAlerter(OnEvent, False, Events);
+  try
+    Check(Alerter <> nil);
+    FEventName := '';
+    CheckFalse(Alerter.IsListening);
+    Events.Add('zeostest');
+    Alerter.Listen(Events, OnEvent);
+    Check(Alerter.IsListening);
+    EndTime := IncSecond(Now, 2);
+    Connection.ExecuteImmediat('NOTIFY zeostest', lcExecute);
+    while (FEventName = '') and (EndTime > Now) do begin
+      //Application.ProcessMessages;
+      Sleep(0);
+    end;
+    Check(FEventName = 'zeostest', 'Didn''t get PostgreSQL notification.');
+    Alerter.Unlisten;
+    CheckFalse(Alerter.IsListening);
+    Connection.CloseEventAlerter(Alerter);
+    CheckFalse(Connection.IsClosed);
+  finally
+    FreeAndNil(Events);
   end;
-  Check(FEventName = 'zeostest', 'Didn''t get PostgreSQL notification.');
-  Alerter.ClearEvents;
-  CheckFalse(Alerter.IsListening);
-  Connection.CloseEventAlerter;
 end;
 
 procedure TZTestDbcPostgreSQLCase.Test_GENERATED_ALWAYS_64;
@@ -442,8 +450,7 @@ begin
   Connection.Close;
 end;
 
-procedure TZTestDbcPostgreSQLCase.OnEvent(var Event: TZEventOrNotification;
-  var StopListen: Boolean);
+procedure TZTestDbcPostgreSQLCase.OnEvent(var Event: TZEventOrNotification);
 begin
   FEventName := Event.Name;
 end;
@@ -689,3 +696,4 @@ initialization
   RegisterTest('dbc',TZTestDbcPostgreSQLCase.Suite);
 {$ENDIF ZEOS_DISABLE_POSTGRESQL}
 end.
+

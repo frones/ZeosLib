@@ -466,7 +466,6 @@ type
   IZResultSetMetadata = interface;
   IZBlob = interface;
   IZClob = interface;
-  IZNotification = interface;
   IZSequence = interface;
   IZEventAlerter = interface;
 
@@ -802,7 +801,7 @@ type
     property CreationTime: TDateTime read fCreationTime;
   end;
 
-  TZOnEventHandler = procedure(var Event: TZEventOrNotification; var StopListen: Boolean) of object;
+  TZOnEventHandler = procedure(var Event: TZEventOrNotification) of object;
 
   /// <summary>Defines the Database Connection interface.</summary>
   IZConnection = interface(IImmediatelyReleasable)
@@ -932,12 +931,6 @@ type
     ///  pre-compiled SQL statement </returns>
     function PrepareCallWithParams(const Name: string; Params: TStrings):
       IZCallableStatement;
-    /// <summary>Creates an object to send/recieve notifications from SQL
-    ///  server. An unsupported operation exception will be raised if the driver
-    ///  doesn't support it, </summary>
-    /// <param>"Event" an event name.</param>
-    /// <returns>a created notification object.</returns>
-    function CreateNotification(const Event: string): IZNotification;
     /// <summary>Creates a sequence generator object.</summary>
     /// <param>"Sequence" a name of the sequence generator.</param>
     /// <param>"BlockSize" a number of unique keys requested in one trip to SQL
@@ -1148,14 +1141,16 @@ type
     /// <summary>Get a generic event alerter object.</summary>
     /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
     /// <param>"CloneConnection" if <c>True</c> a new connection will be spawned.</param>
+    /// <param>"Options" a list of options, to setup the event alerter.</param>
     /// <returns>a the generic event alerter object as interface or nil.</returns>
-    function GetEventAlerter(Handler: TZOnEventHandler; CloneConnection: Boolean): IZEventAlerter;
+    function GetEventAlerter(Handler: TZOnEventHandler; CloneConnection: Boolean; Options: TStrings): IZEventAlerter;
     /// <summary>Check if the connection supports an event Alerter.</summary>
     /// <returns><c>true</c> if the connection supports an event Alerter;
     /// <c>false</c> otherwise.</returns>
     function SupportsEventAlerter: Boolean;
     /// <summary>Closes the event alerter.</summary>
-    procedure CloseEventAlerter;
+    /// <param>"Value" a reference to the previously created alerter to be released.</param>
+    procedure CloseEventAlerter(var Value: IZEventAlerter);
   end;
 
   /// <summary>Defines the database metadata interface.</summary>
@@ -4474,54 +4469,23 @@ type
   PICLob = ^IZClob;
   IZCLobDynArray = array of IZCLob;
 
-  /// <summary>Defines the Database notification interface.</summary>
-  IZNotification = interface(IZInterface)
-    ['{BF785C71-EBE9-4145-8DAE-40674E45EF6F}']
-    /// <summary>Gets the event name.</summary>
-    /// <returns>the event name for this notification.</returns>
-    function GetEvent: string;
-    /// <summary>Sets a listener to the specified event.</summary>
-    procedure Listen;
-    /// <summary>Removes a listener to the specified event.</summary>
-    procedure Unlisten;
-    /// <summary>Sends a notification string.</summary>
-    procedure DoNotify;
-    /// <summary>Checks for any pending events.</summary>
-    /// <returns>a string with incoming events??</summary>
-    function CheckEvents: string;
-    /// <summary>Returns the <c>Connection</c> object
-    ///  that produced this <c>Notification</c> object.</summary>
-    /// <returns>the connection that produced this Notification.</returns>
-    function GetConnection: IZConnection;
-  end;
-
   /// <author>EgonHugeist</author>
-  /// <summary>Defines a generic event Alerter interface</summary>
+  /// <summary>Defines a generic event alerter interface</summary>
   IZEventAlerter = interface (IZInterface)
     ['{9E6DDBD2-86C9-4E5D-9625-FB1456F4545F}']
     /// <summary>Returns the <c>Connection</c> object
     ///  that produced this <c>Notification</c> object.</summary>
-    /// <returns>the connection that produced this EventAllererter.</returns>
+    /// <returns>the connection that produced this EventAlerter.</returns>
     function GetConnection: IZConnection;
-    /// <summary>Adds an event to be listened immediately.</summary>
-    /// <param>"Name" the the name of the event.</param>
-    /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
-    procedure AddEvent(const Name: String; Handler: TZOnEventHandler);
-    /// <summary>Adds an event to be listened immediately.</summary>
-    /// <param>"Name" the the name of the event.</param>
-    /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
-    procedure AddEvents(const Names: TStrings; Handler: TZOnEventHandler);
-    /// <summary>Removes the event from the Listener.</summary>
-    /// <param>"Name" the name of the event to be removed.</param>
-    procedure RemoveEvent(const Name: String);
-    /// <summary>Sets a interval to check the events.</summary>
-    /// <param>"Milliseconds" the interval in milli seconds to be checked.</param>
-    procedure SetEventInterval(Milliseconds: Cardinal);
-    /// <summary>Removes all envents from the listener queue</summary>
-    procedure ClearEvents;
     /// <summary>Test if the <c>EventAlerter is listening to events</c></summary>
     /// <returns><c>true</c> if the EventAlerter is active.</returns>
     function IsListening: Boolean;
+    /// <summary>Starts listening the events.</summary>
+    /// <param>"EventNames" a list of event name to be listened.</param>
+    /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
+    procedure Listen(const EventNames: TStrings; Handler: TZOnEventHandler);
+    /// <summary>Stop listening the events and cleares the registered events.</summary>
+    procedure Unlisten;
   end;
 
   /// <summary>Defines the Database sequence generator interface.</summary>

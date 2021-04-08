@@ -198,7 +198,6 @@ type
     /// <returns> a new IZCallableStatement interface containing the
     ///  pre-compiled SQL statement </returns>
     function PrepareCallWithParams(const Name: string; Params: TStrings): IZCallableStatement;
-    function CreateNotification(const Event: string): IZNotification;
     function CreateSequence(const Sequence: string; BlockSize: Integer): IZSequence;
     function NativeSQL(const SQL: string): string;
     /// <summary>Sets this connection's auto-commit mode. If a connection is in
@@ -320,14 +319,16 @@ type
     /// <summary>Get a generic event alerter object.</summary>
     /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
     /// <param>"CloneConnection" if <c>True</c> a new connection will be spawned.</param>
+    /// <param>"Options" a list of options, to setup the event alerter.</param>
     /// <returns>a the generic event alerter object as interface or nil.</returns>
-    function GetEventAlerter(Handler: TZOnEventHandler; CloneConnection: Boolean): IZEventAlerter; virtual;
+    function GetEventAlerter(Handler: TZOnEventHandler; CloneConnection: Boolean; Options: TStrings): IZEventAlerter;
     /// <summary>Check if the connection supports an event Alerter.</summary>
     /// <returns><c>true</c> if the connection supports an event Alerter;
     /// <c>false</c> otherwise.</returns>
     function SupportsEventAlerter: Boolean;
     /// <summary>Closes the event alerter.</summary>
-    procedure CloseEventAlerter;
+    /// <param>"Value" a reference to the previously created alerter to be released.</param>
+    procedure CloseEventAlerter(var Value: IZEventAlerter);
   end;
 
   TZDbcPooledConnectionDriver = class(TZAbstractDriver)
@@ -640,9 +641,9 @@ begin
   end;
 end;
 
-procedure TZDbcPooledConnection.CloseEventAlerter;
+procedure TZDbcPooledConnection.CloseEventAlerter(var Value: IZEventAlerter);
 begin
-
+  Value := nil;
 end;
 
 procedure TZDbcPooledConnection.Commit;
@@ -653,11 +654,6 @@ end;
 procedure TZDbcPooledConnection.CommitPrepared(const transactionid: string);
 begin
   GetConnection.CommitPrepared(transactionid);
-end;
-
-function TZDbcPooledConnection.CreateNotification(const Event: string): IZNotification;
-begin
-  Result := GetConnection.CreateNotification(Event);
 end;
 
 function TZDbcPooledConnection.CreateSequence(const Sequence: string; BlockSize: Integer): IZSequence;
@@ -913,11 +909,13 @@ begin
   Result := GetConnection.GetEscapeString(Value);
 end;
 
+{$IFDEF FPC}{$PUSH}{$WARN 5024 off : Parameter "Handler, Options" not used} {$ENDIF}
 function TZDbcPooledConnection.GetEventAlerter(Handler: TZOnEventHandler;
-  CloneConnection: Boolean): IZEventAlerter;
+  CloneConnection: Boolean; Options: TStrings): IZEventAlerter;
 begin
   Result := nil;
 end;
+{$IFDEF FPC}{$POP}{$ENDIF}
 
 function TZDbcPooledConnection.GetEncoding: TZCharEncoding;
 begin

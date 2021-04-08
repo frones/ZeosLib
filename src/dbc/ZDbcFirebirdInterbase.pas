@@ -152,6 +152,8 @@ type
       const Sender: IImmediatelyReleasable);
   end;
 
+  TZInterbaseFirebirdEventBlockList = class;
+
   /// <author>EgonHugeist</author>
   /// <summary>Implemnentss a TZInterbaseFirebirdConnection connection object.</summary>
   TZInterbaseFirebirdConnection = Class(TZAbstractDbcConnection)
@@ -172,6 +174,8 @@ type
     FXSQLDAMaxSize: Cardinal;
     FInterbaseFirebirdPlainDriver: TZInterbaseFirebirdPlainDriver;
     FLastWarning: EZSQLWarning;
+    FEventList: TZEventList;
+    FEventBlockList: TZInterbaseFirebirdEventBlockList;
     procedure DetermineClientTypeAndVersion;
     procedure AssignISC_Parameters;
     procedure TransactionParameterPufferChanged;
@@ -353,9 +357,19 @@ type
     /// <returns>returns a created sequence object.</returns>
     function CreateSequence(const Sequence: string; BlockSize: Integer):
       IZSequence; override;
-  End;
+    /// <summary>Get a generic event alerter object.</summary>
+    /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
+    /// <param>"CloneConnection" if <c>True</c> a new connection will be spawned.</param>
+    /// <param>"Options" a list of options, to setup the event alerter.</param>
+    /// <returns>a the generic event alerter object as interface or nil.</returns>
+    function GetEventAlerter(Handler: TZOnEventHandler; CloneConnection: Boolean; Options: TStrings): IZEventAlerter; override;
+  public { implement IZEventAlerter}
+    /// <returns><c>true</c> if the EventAlerter is active.</returns>
+    function IsListening: Boolean;
+  end;
 
-  {** EH: implements a IB/FB transaction }
+  /// <author>EgonHugeist</author>
+  /// <summary>Implements a generic IB/FB transaction</summary>
   TZInterbaseFirebirdTransaction = class(TZImmediatelyReleasableObject,
     IImmediatelyReleasable)
   protected
@@ -453,7 +467,7 @@ type
     procedure AfterConstruction; override;
   end;
 
-  {** Implements a Interbase6/Firebird sequence. }
+  /// <summary>Implements a Interbase6/Firebird sequence.</summary>
   TZInterbaseFirebirdSequence = class(TZIdentifierSequence)
   public
     /// <summary>Returns the SQL to be get the current value.</summary>
@@ -467,7 +481,8 @@ type
     procedure SetBlockSize(const Value: Integer); override;
   end;
 
-  {** Implements Interbase ResultSetMetadata object. }
+  /// <author>EgonHugeist</author>
+  /// <summary>Implements a generic Interbase ResultSetMetadata object.</summary>
   TZInterbaseFirebirdResultSetMetadata = Class(TZAbstractResultSetMetadata)
   protected
     /// <summary>Clears specified column information.</summary>
@@ -486,12 +501,14 @@ type
     function IsAutoIncrement(ColumnIndex: Integer): Boolean; override;
   End;
 
+  /// <summary>Implements a generic Firebird 3+ ResultSetMetadata object.</summary>
   TZFirebird3upResultSetMetadata = Class(TZInterbaseFirebirdResultSetMetadata)
   public
     function IsAutoIncrement(ColumnIndex: Integer): Boolean; override;
   End;
 
-  {** Implements a specialized cached resolver for Interbase/Firebird. }
+  /// <author>EgonHugeist</author>
+  /// <summary>Implements a specialized cached resolver for Interbase/Firebird.</summary>
   TZInterbaseFirebirdCachedResolver = class(TZGenerateSQLCachedResolver)
   private
     FInsertReturningFields: TStrings;
@@ -518,7 +535,8 @@ type
       const OldRowAccessor, NewRowAccessor: TZRowAccessor; const Resolver: IZCachedResolver); override;
   end;
 
-  {** Implements a specialized cached resolver for Firebird version 2.0 and up. }
+  /// <author>EgonHugeist</author>
+  /// <summary>Implements a specialized cached resolver for Firebird 2+.</summary>
   TZFirebird2upCachedResolver = class(TZInterbaseFirebirdCachedResolver)
   public
     /// <summary>Forms a where clause for UPDATE or DELETE DML statements.</summary>
@@ -528,11 +546,6 @@ type
     ///  for the buffered writes.</param>
     procedure FormWhereClause(const SQLWriter: TZSQLStringWriter;
       const OldRowAccessor: TZRowAccessor; var Result: SQLString); override;
-  end;
-
-  IZInterbaseFirebirdSavePoint = interface
-    ['{96D74A82-A1ED-4190-9CF1-A969BF73A1E9}']
-    function GetOwnerTransaction: IZInterbaseFirebirdTransaction;
   end;
 
   IZInterbaseFirebirdLob = Interface(IZLob)
@@ -605,6 +618,7 @@ type
     Obj: TZAbstractFirebirdInterbasePreparedStatement;
     PreparedRowsOfArray: Integer;
   end;
+
   /// <summary>Implements a List for IB and FB containing original sqltype,
   ///  sqlscale and nullable infos</summary>
   TZIBFBOrgSqlTypeAndScaleList = class(TZCustomElementList)
@@ -715,6 +729,12 @@ type
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter value</param>
     procedure SetByte(Index: Integer; Value: Byte);
+    /// <summary>Sets the designated parameter to a <c>ShortInt</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetShort(Index: Integer; Value: ShortInt);
     /// <summary>Sets the designated parameter to a <c>Word</c> value.</summary>
     /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
@@ -723,13 +743,61 @@ type
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter value</param>
     procedure SetWord(Index: Integer; Value: Word);
+    /// <summary>Sets the designated parameter to a <c>SmallInt</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetSmall(Index: Integer; Value: SmallInt);
+    /// <summary>Sets the designated parameter to a <c>Cardinal</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetUInt(Index: Integer; Value: Cardinal);
+    /// <summary>Sets the designated parameter to a <c>Integer</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetInt(Index: Integer; Value: Integer);
+    /// <summary>Sets the designated parameter to a <c>UInt64</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetULong(Index: Integer; const Value: UInt64);
+    /// <summary>Sets the designated parameter to a <c>Int64</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetLong(Index: Integer; const Value: Int64);
+    /// <summary>Sets the designated parameter to a <c>Single</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetFloat(Index: Integer; Value: Single);
+    /// <summary>Sets the designated parameter to a <c>Double</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetDouble(Index: Integer; const Value: Double);
+    /// <summary>Sets the designated parameter to a <c>Currency</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetCurrency(Index: Integer; const Value: Currency);
     /// <summary>Sets the designated parameter to a <c>BigDecimal(TBCD)</c> value.</summary>
     /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
@@ -738,25 +806,118 @@ type
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter value</param>
     procedure SetBigDecimal(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
-
+    /// <summary>Sets the designated parameter to a <c>TZCharRec</c> value.
+    ///  The references need to be valid until the statement is executed.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetCharRec(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec); reintroduce;
+    /// <summary>Sets the designated parameter to a <c>String</c> value.
+    ///  This method equals to SetUnicodeString on Unicode-Compilers. For
+    ///  Raw-String compilers the encoding is defined by W2A2WEncodingSource of
+    ///  the ConnectionSettings record. The driver will convert the string to
+    ///  the Client-Characterset.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetString(Index: Integer; const Value: String); reintroduce;
     {$IFNDEF NO_UTF8STRING}
+    /// <summary>Sets the designated parameter to a <c>RawByteString</c> value.
+    ///  The string must be UTF8 encoded. The driver will convert the value
+    ///  if the driver uses an different encoding.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetUTF8String(Index: Integer; const Value: UTF8String); reintroduce;
     {$ENDIF}
     {$IFNDEF NO_ANSISTRING}
+    /// <summary>Sets the designated parameter to a <c>AnsiString</c> value.
+    ///  The string must be GET_ACP encoded. The driver will convert the value
+    ///  if the driver uses an different encoding.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetAnsiString(Index: Integer; const Value: AnsiString); reintroduce;
     {$ENDIF}
+    /// <summary>Sets the designated parameter to a <c>AnsiString</c> value.
+    ///  The string must be DB-CodePage encoded. If the driver uses an UTF16
+    ///  encoding, the driver will convert the value using the conversion rules
+    ///  given by W2A2WEncodingSource of the ConnectionSettings record.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetRawByteString(Index: Integer; const Value: RawByteString); reintroduce;
+    /// <summary>Sets the designated parameter to a <c>UnicodeString</c> value.
+    ///  The references need to be valid until the statement is executed.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetUnicodeString(Index: Integer; const Value: UnicodeString); reintroduce;
-
+    /// <summary>Sets the designated parameter to a <c>TZDate</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetDate(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); reintroduce; overload;
+    /// <summary>Sets the designated parameter to a <c>TZTime</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetTime(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); reintroduce; overload;
+    /// <summary>Sets the designated parameter to a <c>TZTimestamp</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetTimestamp(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); reintroduce; overload;
-
+    /// <summary>Sets the designated parameter to a <c>byte array</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce; overload;
+    /// <summary>Sets the designated parameter to a <c>ByteArray reference</c> value.
+    ///  The references need to be valid until the statement is executed.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value reference.</param>
+    /// <param>"Len" the Length of the bytes buffer.</param>
     procedure SetBytes(Index: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
+    /// <summary>Sets the designated parameter to a <c>TGUID</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetGUID(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID); reintroduce;
+    /// <summary>Sets the designated parameter to the given blob wrapper object.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" defines the lob constent. Valid values are:
+    ///  stAsciiStream(raw encoded text), stUnicodeStream(UTF16 encoded text)
+    ///  and stBinaryStream(binary data), stJSON, stXML</param>
+    /// <param>"Value" the parameter blob wrapper object to be set.</param>
     procedure SetBlob(Index: Integer; ASQLType: TZSQLType; const Value: IZBlob); override{keep it virtual because of (set)ascii/uniocde/binary streams};
   end;
 
@@ -784,7 +945,6 @@ type
   TGUIDDetectFlags = set of TGUIDDetectFlag;
 
   {** Implements GUID detection options/properties }
-
   TZInterbaseFirebirdAbstractGUIDProps = class //constributed by Fr0st
   private
     FDetectFlags: TGUIDDetectFlags;
@@ -830,6 +990,7 @@ type
     BindValue: TZBindValue;
     TypeToken: RawByteString;
   end;
+
   TZInterbaseFirebirdBindList = class(TZBindList)
   protected
     /// <summary>Get the size of the custom element of this class.</summary>
@@ -843,6 +1004,35 @@ type
     /// <param>"Index" the index of the element.</param>
     /// <returns>The address or raises an EListError if the Index is invalid.</returns>
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+  end;
+
+  /// <summary>Defines a reference of an event block for firebird and interbase.</summary>
+  PZInterbaseFirebirdEventBlock = ^TZInterbaseFirebirdEventBlock;
+  /// <summary>Defines an event block slice for firebird and interbase.
+  ///  A slice is a chunk of max 15 events to be registered on fbclient.</summary>
+  TZInterbaseFirebirdEventBlock = record
+    /// <summary>Address of a raw character pointer; isc_event_block allocates
+    ///  and initializes an event parameter buffer and stores its address into
+    ///  the character pointer. Up to 15 null-terminated strings registered with
+    ///  isc_event_block that each name an event</summary>
+    event_buffer: PPAnsiChar;
+    /// <summary>Address of a raw character pointer; isc_event_block allocates
+    ///  an event parameter buffer, and stores its address into the character
+    ///  pointer. Up to 15 null-terminated strings that each name an event
+    ///  addressed in the buffer</summary>
+    result_buffer: PPAnsiChar;
+    /// <summary>Number of event identifier strings that get registered per slice.</summary>
+    id_count: ISC_USHORT;
+    EventBufferLength: ISC_LONG;
+    EventsID: ISC_LONG;
+    FirstTime: Boolean;
+    StatusVestor: TARRAY_ISC_STATUS;
+  end;
+
+  /// <summary>Implpements a list of TZInterbaseFirebirdEventBlocks.</summary>
+  TZInterbaseFirebirdEventBlockList = class(TZCustomElementList)
+  public
+    constructor Create;
   end;
 
 procedure BindSQLDAInParameters(BindList: TZBindList;
@@ -1119,6 +1309,10 @@ begin
   FreeAndNil(FProcedureTypesCache);
   FreeAndNil(FGUIDProps);
   FreeAndNil(FSubTypeTestCharIDCache);
+  if FEventList <> nil then
+    FreeAndNil(FEventList);
+  if FEventBlockList <> nil then
+    FreeAndNil(FEventBlockList);
   inherited Destroy;
 end;
 
@@ -1331,6 +1525,15 @@ begin
   Result := FDialect;
 end;
 
+function TZInterbaseFirebirdConnection.GetEventAlerter(
+  Handler: TZOnEventHandler; CloneConnection: Boolean;
+  Options: TStrings): IZEventAlerter;
+begin
+  Result := inherited GetEventAlerter(Handler, CloneConnection, Options);
+  FEventList := TZEventList.Create(Handler);
+  FEventBlockList := TZInterbaseFirebirdEventBlockList.Create;
+end;
+
 function TZInterbaseFirebirdConnection.GetGUIDProps: TZInterbaseFirebirdConnectionGUIDProps;
 begin
   Result := FGUIDProps;
@@ -1481,6 +1684,11 @@ begin
   FLogMessage := '';
   if Error <> nil then
     raise Error;
+end;
+
+function TZInterbaseFirebirdConnection.IsListening: Boolean;
+begin
+  Result := not IsClosed and (FCreatedWeakEventAlerterPtr <> nil) and (FEventBlockList <> nil) and (FEventBlockList.Count > 0);
 end;
 
 function TZInterbaseFirebirdConnection.IsTransactionValid(
@@ -1644,15 +1852,10 @@ end;
 procedure TZInterbaseFirebirdConnection.SetActiveTransaction(
   const Value: IZTransaction);
 var Transaction: IZInterbaseFirebirdTransaction;
-  SavePoint: IZInterbaseFirebirdSavePoint;
 begin
-  SavePoint := nil;
   Transaction := nil;
-  if (Value = nil) or (Value.QueryInterface(IZInterbaseFirebirdTransaction, Transaction) <> S_OK)
-    and (Value.QueryInterface(IZInterbaseFirebirdSavePoint, SavePoint) <> S_OK) then
+  if (Value = nil) or (Value.QueryInterface(IZInterbaseFirebirdTransaction, Transaction) <> S_OK) then
     raise EZSQLException.Create('invalid IB/FB transaction');
-  if (SavePoint <> nil) then
-    SavePoint.GetOwnerTransaction.QueryInterface(IZInterbaseFirebirdTransaction, Transaction);
   fActiveTransaction := Transaction;
 end;
 
@@ -4963,27 +5166,11 @@ begin
   else SetPAnsiChar(Index, PEmptyAnsiString, 0)
 end;
 
-{**
-  Sets the designated parameter to a <code>signed 8bit integer</code> value.
-  The driver converts this
-  to an SQL <code>ShortInt</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetShort(Index: Integer; Value: ShortInt);
 begin
   SetSmall(Index, Value);
 end;
 
-{**
-  Sets the designated parameter to a <code>signed 16bit integer</code> value.
-  The driver converts this
-  to an SQL <code>ShortInt</code> value when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetSmall(Index: Integer; Value: SmallInt);
 var P: PAnsiChar;
     W: Word;
@@ -5602,6 +5789,13 @@ begin
   if Action = lnDeleted then
     PZIB_FBBindValue(Ptr).TypeToken := '';
   inherited Notify(Ptr, Action);
+end;
+
+{ TZInterbaseFirebirdEventBlockList }
+
+constructor TZInterbaseFirebirdEventBlockList.Create;
+begin
+  inherited Create(SizeOf(TZInterbaseFirebirdEventBlock), False);
 end;
 
 initialization

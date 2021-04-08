@@ -332,12 +332,6 @@ type
     /// <returns> a new IZCallableStatement interface containing the
     ///  pre-compiled SQL statement </returns>
     function PrepareCall(const Name: string): IZCallableStatement;
-    /// <summary>Creates an object to send/recieve notifications from SQL
-    ///  server. An unsupported operation exception will be raised if the driver
-    ///  doesn't support it, </summary>
-    /// <param>"Event" an event name.</param>
-    /// <returns>a created notification object.</returns>
-    function CreateNotification(const Event: string): IZNotification; virtual;
     /// <summary>Creates a sequence generator object.</summary>
     /// <param>"Sequence" a name of the sequence generator.</param>
     /// <param>"BlockSize" a number of unique keys requested in one trip to SQL
@@ -521,13 +515,15 @@ type
     /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
     /// <param>"CloneConnection" if <c>True</c> a new connection will be spawned.</param>
     /// <returns>a the generic event alerter object as interface or nil.</returns>
-    function GetEventAlerter(Handler: TZOnEventHandler; CloneConnection: Boolean): IZEventAlerter; virtual;
+    function GetEventAlerter(Handler: TZOnEventHandler; CloneConnection: Boolean;
+      Options: TStrings): IZEventAlerter; virtual;
     /// <summary>Check if the connection supports an event Alerter.</summary>
     /// <returns><c>true</c> if the connection supports an event Alerter;
     /// <c>false</c> otherwise.</returns>
     function SupportsEventAlerter: Boolean;
     /// <summary>Closes the event alerter.</summary>
-    procedure CloseEventAlerter;
+    /// <param>"Value" a reference to the previously created alerter to be released.</param>
+    procedure CloseEventAlerter(var Value: IZEventAlerter);
   protected
     /// <summary>Get the refrence to a fixed TByteBuffer.</summary>
     /// <returns>the address of the TByteBuffer</returns>
@@ -598,38 +594,6 @@ type
   public
     procedure AfterConstruction; override;
     destructor Destroy; override;
-  end;
-
-  /// <summary>Implements an abstract Database notification.</summary>
-  TZAbstractNotification = class(TInterfacedObject, IZNotification)
-  private
-    FEventName: string;
-    FConnection: IZConnection;
-  protected
-    property EventName: string read FEventName write FEventName;
-    property Connection: IZConnection read FConnection write FConnection;
-  public
-    /// <summary>Creates this object and assignes the main properties.</summary>
-    /// <param>"Connection" the parent connection object which creates this
-    ///  object.</param>
-    /// <param>"EventName" the name of the SQL event.</param>
-    constructor Create(const Connection: IZConnection; const EventName: string);
-    /// <summary>Gets the event name.</summary>
-    /// <returns>the event name for this notification.</returns>
-    function GetEvent: string;
-    /// <summary>Sets a listener to the specified event.</summary>
-    procedure Listen; virtual;
-    /// <summary>Removes a listener to the specified event.</summary>
-    procedure Unlisten; virtual;
-    /// <summary>Sends a notification string.</summary>
-    procedure DoNotify; virtual;
-    /// <summary>Checks for any pending events.</summary>
-    /// <returns>a string with incoming events??</summary>
-    function CheckEvents: string; virtual;
-    /// <summary>Get's the owner connection that produced that object instance.
-    /// </summary>
-    /// <returns>the connection object interface.</returns>
-    function GetConnection: IZConnection; virtual;
   end;
 
   ///<summary>Implements an Abstract Sequence generator.</summary>
@@ -801,7 +765,6 @@ type
   TZEventList = class(TZCustomElementList)
   private
     FHandler: TZOnEventHandler;
-    FTimer: TZThreadTimer;
   protected
     class function GetElementSize: Cardinal; virtual;
     /// <summary>Notify about an action which will or was performed.
@@ -812,13 +775,12 @@ type
     /// <param>"Index" the index of the element.</param>
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   public
-    constructor Create(Handler: TZOnEventHandler; TimerTick: TThreadMethod);
-    destructor Destroy; override;
+    constructor Create(Handler: TZOnEventHandler);
     procedure Add(const Name: String; Handler: TZOnEventHandler);
     procedure Remove(const Name: String);
     function Get(const Index: NativeInt): PZEvent;
+    function GetByName(const Name: String): PZEvent;
     property Handler: TZOnEventHandler read FHandler;
-    property Timer: TZThreadTimer read FTimer;
   end;
 
 type
@@ -1385,17 +1347,6 @@ begin
   Result := IZConnection(fWeakReferenceOfSelfInterface).PrepareCallWithParams(Name, nil);
 end;
 
-{$IFDEF FPC} {$PUSH}
-  {$WARN 5033 off : Function result does not seem to be set}
-  {$WARN 5024 off : Parameter "Event" not used}
-{$ENDIF}
-function TZAbstractDbcConnection.CreateNotification(
-  const Event: string): IZNotification;
-begin
-  Raise EZUnsupportedException.Create(SUnsupportedOperation);
-end;
-{$IFDEF FPC} {$POP} {$ENDIF}
-
 function TZAbstractDbcConnection.CreateSequence(const Sequence: string;
   BlockSize: Integer): IZSequence;
 begin
@@ -1496,11 +1447,16 @@ begin
   end;
 end;
 
-procedure TZAbstractDbcConnection.CloseEventAlerter;
+procedure TZAbstractDbcConnection.CloseEventAlerter(var Value: IZEventAlerter);
+var con: IZConnection;
 begin
-  if FCreatedWeakEventAlerterPtr = nil then
-    raise EZSQLException.Create('no active alerter found');
-  FCreatedWeakEventAlerterPtr := nil;
+  if FCreatedWeakEventAlerterPtr <> Pointer(Value) then begin
+    Con := Value.GetConnection;
+    Con.CloseEventAlerter(Value);
+    Con := nil;
+  end else
+    FCreatedWeakEventAlerterPtr := nil;
+  Value := nil;
 end;
 
 procedure TZAbstractDbcConnection.CloseRegisteredStatements;
@@ -1671,7 +1627,8 @@ begin
   else Result := SQLQuotedStr(P, L, AnsiChar(#39));
 end;
 
-function TZAbstractDbcConnection.GetEventAlerter(Handler: TZOnEventHandler; CloneConnection: Boolean): IZEventAlerter;
+function TZAbstractDbcConnection.GetEventAlerter(Handler: TZOnEventHandler;
+  CloneConnection: Boolean; Options: TStrings): IZEventAlerter;
 var Con: IZConnection;
 begin
   Result := nil;
@@ -1681,11 +1638,12 @@ begin
     raise EZSQLException.Create('Alerter alredy retrieved');
   if CloneConnection then begin
     Con := FDriverManager.GetConnection(FURL.URL);
-    Result := Con.GetEventAlerter(Handler, False);
+    Result := Con.GetEventAlerter(Handler, False, Options);
     Con := nil;
-  end else
+  end else begin
     Result := IZEventAlerter(FWeakEventAlerterSelfPtr);
-  FCreatedWeakEventAlerterPtr := Pointer(Result);
+    FCreatedWeakEventAlerterPtr := Pointer(Result);
+  end;
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Sender" not used} {$ENDIF}
@@ -1694,42 +1652,6 @@ begin
   // do nothing in base class
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
-
-{ TZAbstractNotification }
-
-constructor TZAbstractNotification.Create(const Connection: IZConnection;
-  const EventName: string);
-begin
-  FConnection := Connection;
-  FEventName := EventName;
-end;
-
-function TZAbstractNotification.GetEvent: string;
-begin
-  Result := FEventName;
-end;
-
-procedure TZAbstractNotification.Listen;
-begin
-end;
-
-procedure TZAbstractNotification.Unlisten;
-begin
-end;
-
-function TZAbstractNotification.CheckEvents: string;
-begin
-  Result := '';
-end;
-
-procedure TZAbstractNotification.DoNotify;
-begin
-end;
-
-function TZAbstractNotification.GetConnection: IZConnection;
-begin
-  Result := FConnection;
-end;
 
 { TZAbstractSequence }
 
@@ -2340,28 +2262,34 @@ begin
     Handler := FHandler;
   if (Name = '') or not Assigned(Handler) then
     raise EZSQLException.Create('Name or Handler not set');
+  Event := GetByName(Name);
+  if Event <> nil then
+    raise EZSQLException.Create('Event registered already');
   Event := inherited Add(Index);
   Event.Name := Name;
   Event.Handler := Handler;
 end;
 
-constructor TZEventList.Create(Handler: TZOnEventHandler; TimerTick: TThreadMethod);
+constructor TZEventList.Create(Handler: TZOnEventHandler);
 begin
   inherited Create(GetElementSize, True);
   FHandler := Handler;
-  FTimer := TZThreadTimer.Create;
-  FTimer.OnTimer := TimerTick;
-end;
-
-destructor TZEventList.Destroy;
-begin
-  FTimer.Free;
-  inherited;
 end;
 
 function TZEventList.Get(const Index: NativeInt): PZEvent;
 begin
   Result := inherited Get(Index);
+end;
+
+function TZEventList.GetByName(const Name: String): PZEvent;
+var I: NativeInt;
+begin
+  for i := 0 to Count -1 do begin
+    Result := inherited Get(I);
+    if Result.Name = Name then
+      Exit;
+  end;
+  Result := nil;
 end;
 
 class function TZEventList.GetElementSize: Cardinal;

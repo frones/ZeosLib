@@ -172,6 +172,15 @@ type
     property UnkownCount: Integer read fUnkownCount;
   end;
 
+  TZPostgresEventList = class(TZEventList)
+  private
+    FTimer: TZThreadTimer;
+  public
+    constructor Create(Handler: TZOnEventHandler; TimerTick: TThreadMethod);
+    destructor Destroy; override;
+    property Timer: TZThreadTimer read FTimer;
+  end;
+
   /// <summary>Implements PostgreSQL Database Connection.</summary>
   TZPostgreSQLConnection = class(TZAbstractSingleTxnConnection,
     IZConnection, IZPostgreSQLConnection, IZTransaction, IZEventAlerter)
@@ -197,7 +206,7 @@ type
     FCheckFieldVisibility: Boolean;
     fPlainDriver: TZPostgreSQLPlainDriver;
     FLastWarning: EZSQLWarning;
-    FEventList: TZEventList;
+    FEventList: TZPostgresEventList;
     FEventTimerInterval: Cardinal;
     //FCreatedEventAllerterPtr: Pointer; //weak ref to self ptr
     function HasMinimumServerVersion(MajorVersion, MinorVersion, SubVersion: Integer): Boolean;
@@ -213,6 +222,7 @@ type
     ///  or rolling back a transaction and before staring the next transaction
     ///  block.<summary>
     procedure DeallocatePreparedStatements;
+    /// <summary>Loads a server major and minor version numbers.</summary>
     procedure LoadServerVersion;
     function EncodeBinary(const Value: RawByteString; Quoted: Boolean): RawByteString; overload;
     function EncodeBinary(const Value: TBytes; Quoted: Boolean): RawByteString; overload;
@@ -426,32 +436,23 @@ type
     /// <summary>Get a generic event alerter object.</summary>
     /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
     /// <param>"CloneConnection" if <c>True</c> a new connection will be spawned.</param>
+    /// <param>"Options" a list of options, to setup the event alerter.</param>
     /// <returns>a the generic event alerter object as interface or nil.</returns>
-    function GetEventAlerter(Handler: TZOnEventHandler; CloneConnection: Boolean): IZEventAlerter; override;
-  public { implement IZEventListener }
+    function GetEventAlerter(Handler: TZOnEventHandler; CloneConnection: Boolean; Options: TStrings): IZEventAlerter; override;
+  public { implement IZEventAlerter }
     /// <summary>Returns the <c>Connection</c> object
     ///  that produced this <c>Notification</c> object.</summary>
-    /// <returns>the connection that produced this EventAllererter.</returns>
+    /// <returns>the connection that produced this EventAlerter.</returns>
     function GetConnection: IZConnection;
-    /// <summary>Adds an event to be listened immediately.</summary>
-    /// <param>"Name" the the name of the event.</param>
-    /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
-    procedure AddEvent(const Name: String; Handler: TZOnEventHandler);
-    /// <summary>Adds an event to be listened immediately.</summary>
-    /// <param>"Name" the the name of the event.</param>
-    /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
-    procedure AddEvents(const Names: TStrings; Handler: TZOnEventHandler);
-    /// <summary>Removes the event from the Listener.</summary>
-    /// <param>"Name" the name of the event to be removed.</param>
-    procedure RemoveEvent(const Name: String);
-    /// <summary>Sets a interval to check the events.</summary>
-    /// <param>"Milliseconds" the interval in milli seconds to be checked.</param>
-    procedure SetEventInterval(Milliseconds: Cardinal);
-    /// <summary>Removes all envents from the listener queue</summary>
-    procedure ClearEvents;
     /// <summary>Test if the <c>EventAllerter</c> is active</summary>
     /// <returns><c>true</c> if the EventAllerter is active.</returns>
     function IsListening: Boolean;
+    /// <summary>Starts listening the events.</summary>
+    /// <param>"EventNames" a list of event name to be listened.</param>
+    /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
+    procedure Listen(const EventNames: TStrings; Handler: TZOnEventHandler);
+    /// <summary>Stop listening the events and cleares the registered events.</summary>
+    procedure Unlisten;
   end;
 
   TZPostgresEventOrNotification = class(TZEventOrNotification)
@@ -463,12 +464,6 @@ type
     property ProcessID: Integer read FProcessID;
   end;
 
-  TZPostgresNoticeOrWarning = class(TZEventOrNotification)
-  private
-    fState: String;
-  public
-    property State: String read fState;
-  end;
 var
   {** The common driver manager object. }
   PostgreSQLDriver: IZDriver;
@@ -724,37 +719,6 @@ begin
   FDomain2BaseTypMap.AddIfNotExists(DomainOID, BaseTypeOID);
 end;
 
-procedure TZPostgreSQLConnection.AddEvent(const Name: String;
-  Handler: TZOnEventHandler);
-var RawTemp: RawByteString;
-begin
-  if FEventList = nil then
-    raise EZSQLException.Create('No listener acquired');
-  if Name = '' then
-    raise EZSQLException.Create('no event name specified');
-  if Closed then
-    Open;
-  FEventList.Add(Name, Handler);
-  {$IFDEF UNICODE}
-  RawTemp := 'listen '+ZUnicodeToRaw(Name, ConSettings.ClientCodePage.CP);
-  {$ELSE}
-  RawTemp := 'listen '+Name;
-  {$ENDIF}
-  ExecuteImmediat(RawTemp, lcExecute);
-  if not FEventList.Timer.Enabled then begin
-    FEventList.Timer.Interval := FEventTimerInterval;
-    FEventList.Timer.Enabled := True;
-  end;
-end;
-
-procedure TZPostgreSQLConnection.AddEvents(const Names: TStrings;
-  Handler: TZOnEventHandler);
-var I: Integer;
-begin
-  for i := 0 to Names.Count -1 do
-    AddEvent(Names[i], Handler);
-end;
-
 procedure TZPostgreSQLConnection.AfterConstruction;
 begin
   FMetaData := TZPostgreSQLDatabaseMetadata.Create(Self, Url);
@@ -845,7 +809,7 @@ end;
 
 function TZPostgreSQLConnection.IsListening: Boolean;
 begin
-  Result := not IsClosed and (FCreatedWeakEventAlerterPtr <> nil) and (FEventList <> nil) and (FEventList.Count > 0);
+  Result := not IsClosed and (FCreatedWeakEventAlerterPtr <> nil) and (FEventList.Count > 0) and FEventList.Timer.Enabled;
 end;
 
 function TZPostgreSQLConnection.IsOidAsBlob: Boolean;
@@ -864,7 +828,6 @@ var Notify: PZPostgreSQLNotify;
     ListenEvent: PZEvent;
     AEvent: TZPostgresEventOrNotification;
     Handler: TZOnEventHandler;
-    StopListen: Boolean;
     {$IF defined(UNICODE) or defined(WITH_RAWBYTESTRING)}
     CP: Word;
     {$IFEND}
@@ -897,7 +860,6 @@ begin
           AEvent.FProcessID := Notify.be_pid;
           AEvent.fEventState := esSignaled;
           Handler := nil;
-          ListenEvent := nil;
           if FEventList <> nil then begin
             Handler := nil;
             for I := 0 to FEventList.Count -1 do begin
@@ -909,10 +871,7 @@ begin
             end;
             if not Assigned(Handler) then
               Handler := FEventList.Handler;
-            StopListen := False;
-            Handler(TZEventOrNotification(AEvent), StopListen);
-            if StopListen and (ListenEvent <> nil) then
-              RemoveEvent(ListenEvent.Name);
+            Handler(TZEventOrNotification(AEvent));
           end;
         finally
           if AEvent <> nil then
@@ -973,23 +932,6 @@ begin
   inherited ReleaseImmediat(Sender, AError);
 end;
 
-procedure TZPostgreSQLConnection.RemoveEvent(const Name: String);
-var RawTemp: RawByteString;
-begin
-  if FEventList = nil then
-    raise EZSQLException.Create('No events in listener queue');
-  FEventList.Remove(Name);
-  if FEventList.Count = 0 then
-    FEventList.Timer.Enabled := False;
-  {$IFDEF UNICODE}
-  RawTemp := 'unlisten '+ZUnicodeToRaw(Name, ConSettings.ClientCodePage.CP);
-  {$ELSE}
-  RawTemp := 'unlisten '+Name;
-  {$ENDIF}
-  ExecuteImmediat(RawTemp, lcExecute);
-
-end;
-
 procedure TZPostgreSQLConnection.ResumeListener;
 begin
   if (FEventList <> nil) and not FEventList.Timer.Enabled then
@@ -1000,14 +942,6 @@ procedure TZPostgreSQLConnection.RegisterTrashPreparedStmtName(const value: Stri
 begin
   if FPreparedStatementTrashBin.IndexOf(Value) = -1 then
     FPreparedStatementTrashBin.Add(Value);
-end;
-
-procedure TZPostgreSQLConnection.ClearEvents;
-var I: Integer;
-begin
-  if FEventList <> nil then
-    for i := FEventList.Count-1 downto 0 do
-      RemoveEvent(PZEvent(FEventList[i]).Name);
 end;
 
 procedure TZPostgreSQLConnection.ClearWarnings;
@@ -1147,11 +1081,6 @@ begin
     end else
       StartTransaction;
   end;
-end;
-
-procedure TZPostgreSQLConnection.SetEventInterval(Milliseconds: Cardinal);
-begin
-
 end;
 
 procedure TZPostgreSQLConnection.Commit;
@@ -1352,6 +1281,27 @@ begin
   else Result := FProcedureTypesCache.Objects[I] <> nil;
 end;
 
+procedure TZPostgreSQLConnection.Unlisten;
+var I: NativeInt;
+    RawTemp: RawByteString;
+    Event: PZEvent;
+begin
+  if (FEventList <> nil) and (FEventList.Count > 0) then begin
+    for i := FEventList.Count -1 downto 0 do begin
+      Event := FEventList[I];
+      {$IFDEF UNICODE}
+      RawTemp := 'unlisten '+ZUnicodeToRaw(Event.Name, ConSettings.ClientCodePage.CP);
+      {$ELSE}
+      RawTemp := 'unlisten '+Event.Name;
+      {$ENDIF}
+      ExecuteImmediat(RawTemp, lcExecute);
+      FEventList.Delete(I);
+    end;
+    FEventList.Timer.Enabled := False;
+  end else
+    raise EZSQLException.Create('no events registered');
+end;
+
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZPostgreSQLConnection.UpdateTimestampOffset;
 var ANow: TDateTime;
@@ -1363,14 +1313,6 @@ var ANow: TDateTime;
     P: Pointer;
     i64, i64Tz: Int64;
     Dbl, dblTz: Double;
-  function DateTimeToMilliseconds(const ADateTime: TDateTime): Int64;
-  var
-    LTimeStamp: TTimeStamp;
-  begin
-    LTimeStamp := DateTimeToTimeStamp(ADateTime);
-    Result := LTimeStamp.Date;
-    Result := (Result * MSecsPerDay) + LTimeStamp.Time;
-  end;
 begin
   if Closed then
     Exit;
@@ -1602,9 +1544,29 @@ begin
   Result := TZPostgreSQLStatementAnalyser.Create;
 end;
 
-{**
-  Loads a server major and minor version numbers.
-}
+procedure TZPostgreSQLConnection.Listen(const EventNames: TStrings;
+  Handler: TZOnEventHandler);
+var I: Integer;
+    RawTemp: RawByteString;
+begin
+  if (FEventList <> nil) then begin
+    if (FEventList.Count > 0) then
+      Unlisten;
+    for i := 0 to EventNames.Count -1 do begin
+      FEventList.Add(EventNames[i], Handler);
+      {$IFDEF UNICODE}
+      RawTemp := 'listen '+ZUnicodeToRaw(EventNames[i], ConSettings.ClientCodePage.CP);
+      {$ELSE}
+      RawTemp := 'listen '+EventNames[i];
+      {$ENDIF}
+      ExecuteImmediat(RawTemp, lcExecute);
+    end;
+    if FEventList.Count > 0 then
+      FEventList.Timer.Enabled := True;
+  end else
+    raise EZSQLException.Create('no events registered');
+end;
+
 procedure TZPostgreSQLConnection.LoadServerVersion;
 var
   Temp: string;
@@ -1717,6 +1679,8 @@ procedure TZPostgreSQLConnection.ExecuteImmediat(const SQL: RawByteString;
 var QueryHandle: TPGresult;
     Status: TZPostgreSQLExecStatusType;
 begin
+  if Closed then
+    Open;
   QueryHandle := FPlainDriver.PQexec(Fconn, Pointer(SQL));
   Status := FPlainDriver.PQresultStatus(QueryHandle);
   {$IFDEF UNICODE}
@@ -1794,10 +1758,10 @@ begin
 end;
 
 function TZPostgreSQLConnection.GetEventAlerter(Handler: TZOnEventHandler;
-  CloneConnection: Boolean): IZEventAlerter;
+  CloneConnection: Boolean; Options: TStrings): IZEventAlerter;
 begin
-  Result := inherited GetEventAlerter(Handler, CloneConnection);
-  FEventList := TZEventList.Create(Handler, CheckEvents);
+  Result := inherited GetEventAlerter(Handler, CloneConnection, Options);
+  FEventList := TZPostgresEventList.Create(Handler, CheckEvents);
   if FEventTimerInterval = 0 then
     FEventTimerInterval := 250;
   FEventList.Timer.Interval := FEventTimerInterval;
@@ -1987,6 +1951,22 @@ function TZOID2OIDMapList.SortCompare(Item1, Item2: Pointer): Integer;
 begin
   Result := Ord(PZPGDomain2BaseTypeMap(Item1)^.DomainOID > PZPGDomain2BaseTypeMap(Item2)^.DomainOID)-
             Ord(PZPGDomain2BaseTypeMap(Item1)^.DomainOID < PZPGDomain2BaseTypeMap(Item2)^.DomainOID);
+end;
+
+{ TZPostgresEventList }
+
+constructor TZPostgresEventList.Create(Handler: TZOnEventHandler;
+  TimerTick: TThreadMethod);
+begin
+  inherited Create(Handler);
+  FTimer := TZThreadTimer.Create;
+  FTimer.OnTimer := TimerTick;
+end;
+
+destructor TZPostgresEventList.Destroy;
+begin
+  FTimer.Free;
+  inherited Destroy;
 end;
 
 initialization
