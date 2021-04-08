@@ -1685,6 +1685,7 @@ begin
     Con := nil;
   end else
     Result := IZEventAlerter(FWeakEventAlerterSelfPtr);
+  FCreatedWeakEventAlerterPtr := Pointer(Result);
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Sender" not used} {$ENDIF}

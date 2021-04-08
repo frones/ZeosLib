@@ -67,6 +67,8 @@ type
   {** Implements a test case for class TZAbstractDriver and Utilities. }
   TZTestDbcPostgreSQLCase = class(TZAbstractDbcSQLTestCase)
   private
+    FEventName: String;
+    procedure OnEvent(var Event: TZEventOrNotification; var StopListen: Boolean);
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -84,15 +86,16 @@ type
     procedure Test_BatchInsert_returning;
     procedure Test_BatchDelete_in_operator;
     procedure Test_TimezoneOffset;
+    procedure Test_EventAlerter;
   end;
 
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 implementation
 {$ENDIF ZEOS_DISABLE_POSTGRESQL}
 
-uses Types,
+uses Types, DateUtils,
   SysUtils, ZTestConsts, ZSysUtils, ZVariant,
-  ZDbcUtils;
+  ZDbcUtils, ZDbcLogging;
 
 { TZTestDbcPostgreSQLCase }
 
@@ -231,6 +234,28 @@ begin
     Connection.Rollback;
     Connection.Close;
   end;
+end;
+
+procedure TZTestDbcPostgreSQLCase.Test_EventAlerter;
+var Alerter: IZEventAlerter;
+    EndTime: TDateTime;
+begin
+  Alerter := Connection.GetEventAlerter(OnEvent, False);
+  Check(Alerter <> nil);
+  FEventName := '';
+  CheckFalse(Alerter.IsListening);
+  Alerter.AddEvent('zeostest', nil);
+  Check(Alerter.IsListening);
+  EndTime := IncSecond(Now, 2);
+  Connection.ExecuteImmediat('NOTIFY zeostest', lcExecute);
+  while (FEventName = '') and (EndTime > Now) do begin
+    //Application.ProcessMessages;
+    Sleep(0);
+  end;
+  Check(FEventName = 'zeostest', 'Didn''t get PostgreSQL notification.');
+  Alerter.ClearEvents;
+  CheckFalse(Alerter.IsListening);
+  Connection.CloseEventAlerter;
 end;
 
 procedure TZTestDbcPostgreSQLCase.Test_GENERATED_ALWAYS_64;
@@ -415,6 +440,12 @@ begin
 
   Statement.Close;
   Connection.Close;
+end;
+
+procedure TZTestDbcPostgreSQLCase.OnEvent(var Event: TZEventOrNotification;
+  var StopListen: Boolean);
+begin
+  FEventName := Event.Name;
 end;
 
 procedure TZTestDbcPostgreSQLCase.TestBlobs;

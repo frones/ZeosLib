@@ -423,6 +423,11 @@ type
     /// <summary>Returns the ServicerProvider for this connection.</summary>
     /// <returns>the ServerProvider</returns>
     function GetServerProvider: TZServerProvider; override;
+    /// <summary>Get a generic event alerter object.</summary>
+    /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
+    /// <param>"CloneConnection" if <c>True</c> a new connection will be spawned.</param>
+    /// <returns>a the generic event alerter object as interface or nil.</returns>
+    function GetEventAlerter(Handler: TZOnEventHandler; CloneConnection: Boolean): IZEventAlerter; override;
   public { implement IZEventListener }
     /// <summary>Returns the <c>Connection</c> object
     ///  that produced this <c>Notification</c> object.</summary>
@@ -485,8 +490,6 @@ const
 procedure NoticeProcessorDispatcher(arg: Pointer; message: PAnsiChar); cdecl;
 var L: NativeUInt;
     Msg: SQLString;
-    Notice: TZPostgresEventOrNotification;
-    StopListen: Boolean;
 begin
   if message = nil then
     Exit;
@@ -499,44 +502,13 @@ begin
   {$ENDIF}
   TZPostgreSQLConnection(Arg).HandleErrorOrWarning(PGRES_NONFATAL_ERROR,
     lcOther, Msg, nil, nil);
-  if (TZPostgreSQLConnection(Arg).FEventList <> nil) then begin
-    Notice := TZPostgresEventOrNotification.Create;
-    Notice.fKind := 'Notice or warning message';
-    Notice.fEventState := esSignaled;
-    Notice.fName := Msg;
-    Notice.fProcessID := TZPostgreSQLConnection(Arg).fPlainDriver.PQbackendPID(TZPostgreSQLConnection(Arg).Fconn);
-    StopListen := False;
-    try
-      TZPostgreSQLConnection(Arg).FEventList.Handler(TZEventOrNotification(Notice), StopListen);
-    finally
-      if Notice <> nil then
-        FreeAndNil(Notice);
-    end;
-  end;
 end;
 
 procedure NoticeReceiverDispatcher(arg: Pointer; res: TPGResult); cdecl;
-var Notice: TZPostgresEventOrNotification;
-    StopListen: Boolean;
 begin
   TZPostgreSQLConnection(Arg).HandleErrorOrWarning(PGRES_NONFATAL_ERROR,
     lcOther, 'Postgres Notice or warning', nil, res);
   TZPostgreSQLConnection(Arg).FPlainDriver.PQclear(res);
-  if (TZPostgreSQLConnection(Arg).FEventList <> nil) and (TZPostgreSQLConnection(Arg).FLastWarning <> nil) then begin
-    Notice := TZPostgresEventOrNotification.Create;
-    Notice.fKind := 'Notice or warning message';
-    Notice.fEventState := esSignaled;
-    Notice.fName := TZPostgreSQLConnection(Arg).FLastWarning.Message;
-    Notice.fProcessID := TZPostgreSQLConnection(Arg).fPlainDriver.PQbackendPID(TZPostgreSQLConnection(Arg).Fconn);
-    StopListen := False;
-    try
-      TZPostgreSQLConnection(Arg).FEventList.Handler(TZEventOrNotification(Notice), StopListen);
-    finally
-      if Notice <> nil then
-        FreeAndNil(Notice);
-    end;
-  end;
-
 end;
 
 { TZPostgreSQLDriver }
@@ -757,7 +729,7 @@ procedure TZPostgreSQLConnection.AddEvent(const Name: String;
 var RawTemp: RawByteString;
 begin
   if FEventList = nil then
-    raise EZSQLException.Create('No listener aquired');
+    raise EZSQLException.Create('No listener acquired');
   if Name = '' then
     raise EZSQLException.Create('no event name specified');
   if Closed then
@@ -873,7 +845,7 @@ end;
 
 function TZPostgreSQLConnection.IsListening: Boolean;
 begin
-  Result := not IsClosed and (FCreatedWeakEventAlerterPtr <> nil) and (FEventList <> nil);
+  Result := not IsClosed and (FCreatedWeakEventAlerterPtr <> nil) and (FEventList <> nil) and (FEventList.Count > 0);
 end;
 
 function TZPostgreSQLConnection.IsOidAsBlob: Boolean;
@@ -1008,7 +980,7 @@ begin
     raise EZSQLException.Create('No events in listener queue');
   FEventList.Remove(Name);
   if FEventList.Count = 0 then
-    FreeAndNil(FEventList);
+    FEventList.Timer.Enabled := False;
   {$IFDEF UNICODE}
   RawTemp := 'unlisten '+ZUnicodeToRaw(Name, ConSettings.ClientCodePage.CP);
   {$ELSE}
@@ -1819,6 +1791,16 @@ end;
 function TZPostgreSQLConnection.GetEscapeString(const Value: RawByteString): RawByteString;
 begin
   Result := EscapeString(Value);
+end;
+
+function TZPostgreSQLConnection.GetEventAlerter(Handler: TZOnEventHandler;
+  CloneConnection: Boolean): IZEventAlerter;
+begin
+  Result := inherited GetEventAlerter(Handler, CloneConnection);
+  FEventList := TZEventList.Create(Handler, CheckEvents);
+  if FEventTimerInterval = 0 then
+    FEventTimerInterval := 250;
+  FEventList.Timer.Interval := FEventTimerInterval;
 end;
 
 {**
