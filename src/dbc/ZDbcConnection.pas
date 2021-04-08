@@ -1806,7 +1806,7 @@ procedure TZAbstractSequence.SetName(const Value: string);
 begin
   if FName <> Value then begin
     FlushResults;
-    FName := FName;
+    FName := Value;
   end;
 end;
 
