@@ -1364,7 +1364,7 @@ JmpConcat:
           while true do begin
             NewStatus := FPlainDriver.OCIErrorGet(ErrorHandle, I, nil, ErrorCode,
               @FByteBuffer[0], SizeOf(TByteBuffer)-1, OCI_HTYPE_ERROR);
-            if NewStatus = OCI_NO_DATA  then
+            if NewStatus = OCI_NO_DATA then
               Break;
             if (i > 1)
             then WriterA.AddLineFeedIfNotEmpty({$IFNDEF UNICODE}ErrorMessage{$ELSE}ErrorMessageA{$ENDIF})
@@ -1377,6 +1377,13 @@ JmpConcat:
                 AExceptionClass := EZSQLConnectionLost;
             end;
             L := StrLen(PAnsiChar(@fByteBuffer[0]));
+
+            If (NewStatus = OCI_ERROR) And (L = 0) Then
+            Begin
+              WriterA.AddText(@AnsiString(Logmessage)[1], Length(Logmessage), {$IFNDEF UNICODE}ErrorMessage{$ELSE}ErrorMessageA{$ENDIF});
+              Break;
+            End;
+
             WriterA.AddText(@FByteBuffer[0], L, {$IFNDEF UNICODE}ErrorMessage{$ELSE}ErrorMessageA{$ENDIF});
             Inc(I);
           end;
