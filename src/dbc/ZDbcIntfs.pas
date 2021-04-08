@@ -4569,11 +4569,11 @@ uses ZMessages, ZEncoding, ZDbcProperties, ZFastCode;
 // Utility function, maybe belongs elsewhere.
 function GetLobCacheModeFromString(const lcmString: string; const DefaultMode: TLobCacheMode = lcmNone): TLobCacheMode;
 begin
-  if SameText(lcmString, LcmNoneStr) then
+  if SysUtils.SameText(lcmString, LcmNoneStr) then
     Result := lcmNone
-  else if SameText(lcmString, LcmOnLoadStr) then
+  else if SysUtils.SameText(lcmString, LcmOnLoadStr) then
     Result := lcmOnLoad
-  else if SameText(lcmString, LcmOnAccessStr) then
+  else if SysUtils.SameText(lcmString, LcmOnAccessStr) then
     Result := lcmOnAccess
   else
     Result := DefaultMode;
