@@ -86,7 +86,7 @@ type
     FConnection: IZConnection;
     FInfo: TStrings;
     FClosed: Boolean;
-    FCachedLob: Boolean;
+    FLobCacheMode: TLobCacheMode;
     FStartTime: TDateTime;
     procedure SetLastResultSet(const ResultSet: IZResultSet); virtual;
   protected
@@ -133,7 +133,7 @@ type
     property SQL: String read {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF};
     property WSQL: UnicodeString read FWSQL write SetWSQL;
     property ASQL: RawByteString read FaSQL write SetASQL;
-    property CachedLob: Boolean read FCachedLob;
+    property LobCacheMode: TLobCacheMode read FLobCacheMode;
     property ClientCP: word read FClientCP;
     function CreateStmtLogEvent(Category: TZLoggingCategory;
       const Msg: SQLString = ''): TZLoggingEvent;
@@ -1564,6 +1564,8 @@ var
 }
 constructor TZAbstractStatement.Create(const Connection: IZConnection;
   {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
+var
+  LcmString: String;
 begin
   { Sets the default properties. }
   inherited Create;
@@ -1577,7 +1579,10 @@ begin
   FInfo := TStringList.Create;
   if Info <> nil then
     FInfo.AddStrings(Info);
-  FCachedLob := StrToBoolEx(DefineStatementParameter(Self, DSProps_CachedLobs, 'false'));
+
+  LcmString := DefineStatementParameter(Self, DSProps_LobCacheMode, LcmNoneStr);
+  FLobCacheMode := GetLobCacheModeFromString(lcmString, lcmNone);
+
   FStatementId := Self.GetNextStatementId;
 end;
 

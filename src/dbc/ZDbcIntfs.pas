@@ -437,6 +437,19 @@ type
   /// <summary>Defines a static TWordBuffer.</summary>
   TWordBuffer = array[0..511] of Word; //1 kb
 
+  /// <summary>LobCacheModes</summary>
+  //   lcmNone:      Lobs are not cached.
+  //   lcmOnLoad:    Lobs are cached on record fetch.
+  //   lcmOnAccess:  Lobs are cached only if they are accessed.  If TryKeepDataOnDisconnect
+  //                 is True then uncached lobs are cached as Clobs containing '[Disc]' on disconnect.
+  const
+    LcmNoneStr = 'None';
+    LcmOnLoadStr = 'OnLoad';
+    LcmOnAccessStr = 'OnAccess';
+  type
+  TLobCacheMode = (lcmNone, lcmOnLoad, lcmOnAccess);
+  /// <summary>Converts the LobCacheMode property string to a TLobCacheMode.</summary>
+  function GetLobCacheModeFromString(const lcmString: string; const DefaultMode: TLobCacheMode = lcmNone): TLobCacheMode;
 
 // Interfaces
 type
@@ -4552,6 +4565,19 @@ var
 implementation
 
 uses ZMessages, ZEncoding, ZDbcProperties, ZFastCode;
+
+// Utility function, maybe belongs elsewhere.
+function GetLobCacheModeFromString(const lcmString: string; const DefaultMode: TLobCacheMode = lcmNone): TLobCacheMode;
+begin
+  if SameText(lcmString, LcmNoneStr) then
+    Result := lcmNone
+  else if SameText(lcmString, LcmOnLoadStr) then
+    Result := lcmOnLoad
+  else if SameText(lcmString, LcmOnAccessStr) then
+    Result := lcmOnAccess
+  else
+    Result := DefaultMode;
+end;
 
 type
 

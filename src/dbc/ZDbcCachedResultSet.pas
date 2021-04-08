@@ -199,7 +199,7 @@ type
   TZAbstractCachedResultSet = class (TZAbstractResultSet, IZResultSet, IZCachedResultSet)
   private
     FCachedUpdates: Boolean;
-    FCachedLobs: WordBool;
+    FLobCacheMode: TLobCacheMode;
     FRowsList: TZSortedList;
     FInitialRowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     FCurrentRowsList: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
@@ -532,7 +532,7 @@ type
       ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; override;
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
+      const OpenLobStreams: TZSortedList; LobCacheMode: TLobCacheMode); override;
   end;
 
 implementation
@@ -1034,9 +1034,9 @@ begin
   FInitialRowsList := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
   FCurrentRowsList := {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF}.Create;
 
-  FRowAccessor := GetRowAccessorClass.Create(ColumnsInfo, ConSettings, FOpenLobStreams, FCachedLobs);
-  FOldRowAccessor := GetRowAccessorClass.Create(ColumnsInfo, ConSettings, FOpenLobStreams, FCachedLobs);
-  FNewRowAccessor := GetRowAccessorClass.Create(ColumnsInfo, ConSettings, FOpenLobStreams, FCachedLobs);
+  FRowAccessor := GetRowAccessorClass.Create(ColumnsInfo, ConSettings, FOpenLobStreams, FLobCacheMode);
+  FOldRowAccessor := GetRowAccessorClass.Create(ColumnsInfo, ConSettings, FOpenLobStreams, FLobCacheMode);
+  FNewRowAccessor := GetRowAccessorClass.Create(ColumnsInfo, ConSettings, FOpenLobStreams, FLobCacheMode);
 
   FUpdatedRow := FRowAccessor.AllocBuffer;
   FInsertedRow := FRowAccessor.AllocBuffer;
@@ -1517,7 +1517,7 @@ begin
   if LobStreamMode <> lsmRead then
     PrepareRowForUpdates;
   Result := FRowAccessor.GetBlob(ColumnIndex, LastWasNull);
-  if ((FRowAccessor.LobCacheMode = lcmOnAccess) and (Result <> nil) and not Result.IsCached) then
+  if (FRowAccessor.LobCacheMode = lcmOnAccess) and (Result <> nil) and not Result.IsCached then
   begin
     Current := Result;
     if Current.QueryInterface(IZCLob, Clob) = S_OK
@@ -2532,7 +2532,7 @@ begin
         if SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream] then
         begin
           Current := FRowAccessor.GetBlob(ColumnIndex, LastNull);
-          if not Current.IsCached then
+          if (Current <> nil) and not Current.IsCached then
           begin
             Newlob := TZLocalMemCLob.CreateWithData(PWideChar(Disc), 6, ConSettings, FOpenLobStreams);
             FRowAccessor.SetBlob(ColumnIndex, NewLob);
@@ -2548,8 +2548,6 @@ var GenDMLResolver: IZGenerateSQLCachedResolver;
 begin
   if ((FRowAccessor.LobCacheMode = lcmOnAccess)) then
     CacheAllLobs;
-//  if FRowAccessor.HasServerLinkedColumns then
-//    raise Exception.Create('Testing');
   if Statement <> nil then
     if not FRowAccessor.HasServerLinkedColumns and IsLastRowFetched and GetMetadata.IsMetadataLoaded then begin
       Statement.FreeOpenResultSetReference(IZResultSet(FWeakIZResultSetPtr));
@@ -2650,11 +2648,16 @@ end;
 procedure TZCachedResultSet.Open;
 var
   Statement: IZStatement;
+  lcmString: String;
 begin
   Statement := ResultSet.GetStatement;
-  if Assigned(Statement)
-  then FCachedLobs := FCachedLobs or StrToBoolEx(DefineStatementParameter(Statement, DSProps_CachedLobs, 'false'))
-  else FCachedLobs := False;
+  if Assigned(Statement) then
+  begin
+    lcmString := DefineStatementParameter(Statement, DSProps_LobCacheMode, LcmNoneStr);
+    FLobCacheMode := GetLobCacheModeFromString(lcmString, FLobCacheMode);
+  end
+  else
+    FLobCacheMode := lcmNone;
   ColumnsInfo.Clear;
   FillColumnsInfo(ColumnsInfo);
   FLastRowFetched := False;
@@ -2729,6 +2732,20 @@ begin
 end;
 
 procedure TZCachedResultSet.ResetCursor;
+begin
+  // Mark: The original version reset the LobCacheMode here which seems incorrect.  I've left the code below in case
+  //       it turns out I'm wrong on this.
+  if not Closed then begin
+    If Assigned(FResultset) then begin
+      if not FLastRowFetched then
+        FResultset.ResetCursor;
+      FLastRowFetched := False;
+    end;
+    inherited ResetCursor;
+  end;
+end;
+(*  // Original version.
+procedure TZCachedResultSet.ResetCursor;
 var
   Statement: IZStatement;
 begin
@@ -2748,6 +2765,7 @@ begin
     inherited ResetCursor;
   end;
 end;
+*)
 
 {**
   Retrieves the  number, types and properties of
@@ -3035,12 +3053,12 @@ end;
 
 { TZVirtualResultSetRowAccessor }
 
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "CachedLobs" not used} {$ENDIF}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "LobCacheMode" not used} {$ENDIF}
 constructor TZVirtualResultSetRowAccessor.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
-  CachedLobs: WordBool);
+  LobCacheMode: TLobCacheMode);
 begin
-  inherited Create(ColumnsInfo, ConSettings, OpenLobStreams, False); //we need no lobs here
+  inherited Create(ColumnsInfo, ConSettings, OpenLobStreams, lcmNone); //we need no lobs here
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 

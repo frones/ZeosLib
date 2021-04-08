@@ -428,7 +428,7 @@ begin
     else NativeResultSet := TZOracleCallableResultSet.Create(Self, SQL, FOCIStmt, FOCIError, BindList);
     if (GetResultSetConcurrency = rcUpdatable) or (GetResultSetType <> rtForwardOnly) then
     begin
-      if CachedLob
+      if (LobCacheMode = lcmOnLoad)
       then CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings)
       else CachedResultSet := TZOracleCachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings);
       if (GetResultSetConcurrency = rcUpdatable) and (FStatementType = OCI_STMT_SELECT) then

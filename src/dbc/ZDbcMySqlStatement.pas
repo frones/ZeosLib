@@ -726,7 +726,7 @@ begin
           NativeResultSet.ColumnsInfo, NativeResultSet, SQL, CachedResolver, ConSettings)
         else CachedResultSet := TZMySQLPreparedUseResultsCachedResultSet.CreateWithColumns(
           NativeResultSet.ColumnsInfo, NativeResultSet, SQL, CachedResolver, ConSettings)
-      else if CachedLob and not FEmulatedParams
+      else if (LobCacheMode = lcmOnLoad) and not FEmulatedParams
         then CachedResultSet := TZMySQLPreparedStoreResultsCachedLobsResultSet.CreateWithColumns(
           NativeResultSet.ColumnsInfo, NativeResultSet, SQL, CachedResolver, ConSettings)
         else CachedResultSet := TZMySQLUseResultsCachedResultSet.CreateWithColumns(

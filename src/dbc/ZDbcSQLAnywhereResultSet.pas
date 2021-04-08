@@ -214,7 +214,7 @@ type
       ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; override;
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
+      const OpenLobStreams: TZSortedList; LobCacheMode: TLobCacheMode); override;
     procedure FetchLongData(AsStreamedType: TZSQLType; const ResultSet: IZResultSet;
       ColumnIndex: Integer; Data: PPZVarLenData); override;
   end;
@@ -1642,12 +1642,12 @@ end;
 
 { TZSQLAnywhereRowAccessor }
 
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "CachedLobs" not used} {$ENDIF}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "LobCacheMode" not used} {$ENDIF}
 constructor TZSQLAnywhereRowAccessor.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
-  CachedLobs: WordBool);
+  LobCacheMode: TLobCacheMode);
 begin
-  inherited Create(ColumnsInfo, ConSettings, OpenLobStreams, False);
+  inherited Create(ColumnsInfo, ConSettings, OpenLobStreams, lcmNone);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 

@@ -723,10 +723,10 @@ type
     /// <param>"ConSettings" a reference to the connection settings.</param>
     /// <param>"OpenLobStreams" the List to register the streams if they are
     ///  open and unregister if the stream is closing.</param>
-    /// <param>"CachedLobs" indicates if the Lobs retrieved from the native
+    /// <param>"LobCacheMode" indicates how the Lobs retrieved from the native
     ///  resultset should be memory cached.</param>
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
+      const OpenLobStreams: TZSortedList; LobCacheMode: TLobCacheMode); override;
   end;
 
 {$ENDIF ZEOS_DISABLE_OLEDB} //if set we have an empty unit
@@ -2731,12 +2731,12 @@ end;
 
 { TZOleDbRowAccessor }
 
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "CachedLobs" not used} {$ENDIF}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "LobCacheMode" not used} {$ENDIF}
 constructor TZOleDbRowAccessor.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
-  CachedLobs: WordBool);
+  LobCacheMode: TLobCacheMode);
 begin
-  inherited Create(ColumnsInfo, ConSettings, OpenLobStreams, True); //we can not use uncached lobs with OleDB
+  inherited Create(ColumnsInfo, ConSettings, OpenLobStreams, lcmOnLoad); //we can not use uncached lobs with OleDB
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 

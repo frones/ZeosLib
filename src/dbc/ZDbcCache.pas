@@ -119,11 +119,9 @@ type
 
   { TZRowAccessor }
 
-  TLobCacheMode = (lcmNone, lcmOnLoad, lcmOnAccess);
   TZRowAccessor = class(TObject)
   protected
     FRowSize: Integer;
-    FCachedLobs: WordBool;
     FLobCacheMode:  TLobCacheMode;
     FColumnsSize: Integer;
     FColumnCount: Integer;
@@ -165,7 +163,7 @@ type
     FUniTemp: UnicodeString;
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); virtual;
+      const OpenLobStreams: TZSortedList; LobCacheMode: TLobCacheMode); virtual;
 
     function AllocBuffer: PZRowBuffer;
     procedure InitBuffer(Buffer: PZRowBuffer);
@@ -302,8 +300,7 @@ type
     property RowSize: Integer read FRowSize;
     property RowBuffer: PZRowBuffer read FBuffer write FBuffer;
     property ConSettings: PZConSettings read FConSettings;
-    property CachedLobs: WordBool read FCachedLobs write FCachedLobs;
-    property LobCacheMode: TLobCacheMode read FLobCacheMode;
+    property LobCacheMode: TLobCacheMode read FLobCacheMode{ write FLobCacheMode};
 
     procedure FillStatement(const Statement: IZPreparedStatement;
       {$IFDEF AUTOREFCOUNT}const {$ENDIF}IndexPairList: TZIndexPairList;
@@ -972,7 +969,7 @@ end;
   @param ColumnsInfo a collection with column information.
 }
 constructor TZRowAccessor.Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-  const OpenLobStreams: TZSortedList; CachedLobs: WordBool);
+  const OpenLobStreams: TZSortedList; LobCacheMode: TLobCacheMode);
 var
   I: Integer;
   Current: TZColumnInfo;
@@ -984,14 +981,7 @@ begin
   FBuffer := nil;
   FColumnCount := ColumnsInfo.Count;
   FColumnsSize := 0;
-  FCachedLobs := CachedLobs;
-  // mjf: Set FLobCacheMode here for testing.  Should replace FCachedLobs once tested and approved.
-  // Currently the options are:
-  //   lcmNone:      Use FCachedLobs setting for caching.
-  //   lcmOnLoad:    Lobs are cached on record load, matches "FCachedLobs = True" behavior.
-  //   lcmOnAccess:  Lobs are cached only if they are accessed.  If TryKeepDataOnDisconnect
-  //                 is True then uncached lobs are cached as Clobs containing '[Disc]' on disconnect.
-  FLobCacheMode := lcmNone;
+  FLobCacheMode := LobCacheMode;
 
   {$ifdef FPC_REQUIRES_PROPER_ALIGNMENT}
   FColumnsSize:=align(FColumnsSize+1,sizeof(pointer))-1;
@@ -1313,7 +1303,7 @@ var
     end;
   begin
     PIZLob(Dest)^ := ResultSet.GetBlob(ResultSetIndex);
-    if (FCachedLobs and (FLobCacheMode = lcmNone)) or (FLobCacheMode = lcmOnLoad) then
+    if FLobCacheMode = lcmOnLoad then
       SetAsCachedLob(Dest);
   end;
 begin
@@ -2869,8 +2859,7 @@ end;
 
 function TZRowAccessor.HasServerLinkedColumns: Boolean;
 begin
-  Result := ((FLobCols <> nil) and
-            (not FCachedLobs and (FLobCacheMode = lcmNone))) or
+  Result := ((FLobCols <> nil) and (FLobCacheMode = lcmNone)) or
             (FResultSetCols <> nil);
 end;
 

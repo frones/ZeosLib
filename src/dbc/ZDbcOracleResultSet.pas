@@ -3905,13 +3905,12 @@ var
       IsNull: Boolean;
   begin
     Lob := GetBlob(ColumnIndex, IsNull);
-    // @Mark: an "uncached" lob doesn't support IZOracleLob interface entry
     if (Lob <> nil) and (Lob.QueryInterface(IZOracleLob, OCILob) = S_OK) then
       OCILob.CopyLocator;
   end;
 begin
   inherited FillFromFromResultSet(ResultSet, IndexPairList);
-  if (FHighLobCols > -1) and not ((FCachedLobs and (FLobCacheMode = lcmNone)) or (FLobCacheMode = lcmOnLoad)) then
+  if (FHighLobCols > -1) and (FLobCacheMode <> lcmOnLoad) then
     for i := 0 to IndexPairList.Count -1 do begin
       IndexPair := IndexPairList[i];
       ColumnIndex := IndexPair.ColumnIndex;

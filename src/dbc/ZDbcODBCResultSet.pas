@@ -232,7 +232,7 @@ type
       ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; override;
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
+      const OpenLobStreams: TZSortedList; LobCacheMode: TLobCacheMode); override;
   end;
 
   TZODBCachedResultSetA = class(TZCachedResultSet)
@@ -248,7 +248,7 @@ type
       ConSettings: PZConSettings; Var ColumnCodePage: Word): TZSQLType; override;
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
+      const OpenLobStreams: TZSortedList; LobCacheMode: TLobCacheMode); override;
   end;
 
   TZODBCOutParamColumnInfo = class(TZODBCColumnInfo)
@@ -2412,12 +2412,12 @@ end;
 
 { TZODBCRowAccessorW }
 
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "CachedLobs" not used} {$ENDIF}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "LobCacheMode" not used} {$ENDIF}
 constructor TZODBCRowAccessorW.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
-  CachedLobs: WordBool);
+  LobCacheMode: TLobCacheMode);
 begin
-  inherited Create(ColumnsInfo, ConSettings, OpenLobStreams, True); //we can not use uncached lobs with ODBC
+  inherited Create(ColumnsInfo, ConSettings, OpenLobStreams, lcmOnLoad); //we can not use uncached lobs with ODBC
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -2435,12 +2435,12 @@ end;
 
 { TZODBCRowAccessorA }
 
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "CachedLobs" not used} {$ENDIF}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "LobCacheMode" not used} {$ENDIF}
 constructor TZODBCRowAccessorA.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
-  CachedLobs: WordBool);
+  LobCacheMode: TLobCacheMode);
 begin
-  inherited Create(ColumnsInfo, ConSettings, OpenLobStreams, True); //we can not use uncached lobs with ODBC
+  inherited Create(ColumnsInfo, ConSettings, OpenLobStreams, lcmOnLoad); //we can not use uncached lobs with ODBC
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 

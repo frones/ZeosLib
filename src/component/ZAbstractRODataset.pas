@@ -101,7 +101,7 @@ type
   {** Options for dataset. }
   TZDatasetOption = ({$IFNDEF NO_TDATASET_TRANSLATE}doOemTranslate, {$ENDIF}
     doCalcDefaults, doAlwaysDetailResync, doSmartOpen, doPreferPrepared,
-    doDontSortOnPost, doUpdateMasterFirst, doCachedLobs);
+    doDontSortOnPost, doUpdateMasterFirst);
 
   {** Set of dataset options. }
   TZDatasetOptions = set of TZDatasetOption;
@@ -207,7 +207,7 @@ type
     FCharEncoding: TZCharEncoding;
 
     FIndexFields: {$IFDEF WITH_GENERIC_TLISTTFIELD}TList<TField>{$ELSE}TList{$ENDIF};
-    FCachedLobs: WordBool;
+    FLobCacheMode: TLobCacheMode;
     FSortType : TSortType;
     FHasOutParams: Boolean;
     FSortedFields: string;
@@ -1675,7 +1675,6 @@ begin
     if Active then
        Close;
     FTryKeepDataOnDisconnect := Value;
-    FCachedLobs := FTryKeepDataOnDisconnect or (doCachedLobs in FOptions);
   end;
 end;
 
@@ -3596,8 +3595,7 @@ begin
     {$IF declared(DSProps_PreferPrepared)}
     Temp.Values[DSProps_PreferPrepared] := BoolStrs[doPreferPrepared in FOptions];
     {$IFEND}
-    if FCachedLobs then
-      Temp.Values[DSProps_CachedLobs] := 'true';
+
     if FTransaction <> nil
     then Txn := THackTransaction(FTransaction).GetIZTransaction
     else Txn := FConnection.DbcConnection.GetConnectionTransaction;
@@ -3668,12 +3666,23 @@ var
   OldRS: IZResultSet;
   ConSettings: PZConSettings;
   StringFieldCodePage: Word;
+  LcmString: String;
 begin
   {$IFNDEF FPC}
   If (csDestroying in Componentstate) then
     raise Exception.Create(SCanNotOpenDataSetWhenDestroying);
   {$ENDIF}
   if not FResultSetWalking then Prepare;
+
+  LcmString := Properties.Values[DSProps_LobCacheMode];
+  if (LcmString = '') and Assigned(Connection) then
+    LcmString := Connection.Properties.Values[DSProps_LobCacheMode];
+  FLobCacheMode := GetLobCacheModeFromString(LcmString, FLobCacheMode);
+  if FTryKeepDataOnDisconnect and (FLobCacheMode = lcmNone) then
+  begin
+    FLobCacheMode := lcmOnLoad;
+    Properties.Values[DSProps_LobCacheMode] := LcmOnLoadStr;
+  end;
 
   CurrentRow := 0;
   FetchCount := 0;
@@ -3737,7 +3746,7 @@ begin
       Cnt := ColumnList.Count;
       try
         //the RowAccessor wideneds the fieldbuffers for calculated field
-        FRowAccessor := TZRowAccessor.Create(ColumnList, ConSettings, FOpenLobStreams, FCachedLobs)
+        FRowAccessor := TZRowAccessor.Create(ColumnList, ConSettings, FOpenLobStreams, FLobCacheMode)
       finally
         ColumnList.Free;
       end;
@@ -4166,10 +4175,8 @@ end;
 }
 procedure TZAbstractRODataset.SetOptions(Value: TZDatasetOptions);
 begin
-  if FOptions <> Value then begin
+  if FOptions <> Value then
     FOptions := Value;
-    FCachedLobs := FTryKeepDataOnDisconnect or (doCachedLobs in FOptions);
-  end;
 end;
 
 {**
@@ -5317,7 +5324,7 @@ var
         else CP := FResultSetMetadata.GetColumnCodePage(FFieldsLookupTable[i].Index);
         ColumnList.Add(ConvertFieldToColumnInfo(TField(FFieldsLookupTable[i].Field), CP))
       end;
-      Result := TZRowAccessor.Create(ColumnList, ResultSet.GetConSettings, FOpenLobStreams, FCachedLobs)
+      Result := TZRowAccessor.Create(ColumnList, ResultSet.GetConSettings, FOpenLobStreams, FLobCacheMode)
     finally
       ColumnList.Free;
     end;

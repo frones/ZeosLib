@@ -1036,7 +1036,7 @@ begin
     else if ((ServerMajorVersion = 7) and (FPostgreSQLConnection.GetServerMinorVersion >= 4))
     then Resolver := TZPostgreSQLCachedResolverV74up.Create(Self, Metadata)
     else Resolver := TZPostgreSQLCachedResolver.Create(Self, Metadata);
-    if CachedLob
+    if (LobCacheMode = lcmOnLoad)
     then CachedResultSet := TZCachedResultSet.Create(NativeResultSet, Self.SQL, Resolver, ConSettings)
     else CachedResultSet := TZPostgresCachedResultSet.Create(NativeResultSet, Self.SQL, Resolver, ConSettings);
     if (GetResultSetConcurrency = rcUpdatable) then begin

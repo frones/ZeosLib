@@ -953,16 +953,16 @@ const
     Protocols: (Count: 0; Items: nil);
   );
 {$IFEND}
-{$IF declared(DSProps_CachedLobs)}
+{$IF declared(DSProps_LobCacheMode)}
   const All_Oracle_IB_FB_Postgre: array[0..3] of String = ('oracle', 'firebird', 'interbase', 'postrgres');
-  ZProp_CachedLobs : TZProperty = (
-    Name: DSProps_CachedLobs;
-    Purpose: 'Cache the Lob-Streams? Used for Oracle-Lobs, All IB/FB-lob''s, '+
+  ZProp_LobCacheMode : TZProperty = (
+    Name: DSProps_LobCacheMode;
+    Purpose: 'Cache the Lob-Streams? OnLoad caches lobs on fetch.  OnAccess caches lobs when accessed. Used for Oracle-Lobs, All IB/FB-lob''s, '+
       'Postgre-OID-lob''s only. All other providers do not support a good '+
       'locator API. Servers like MySQL(real prepared), ASE do support late-fetching methods '+
       'but we need to refetch the whole row first if the cursor postion changes';
     ValueType: pvtEnum; LevelTypes: [pltConnection, pltStatement];
-    Values: cBoolEnum; Default: cBoolFalse; Alias: '';
+    Values: 'None|OnLoad|OnAccess'; Default: 'None'; Alias: '';
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 4; Items: @All_Oracle_IB_FB_Postgre);
   );
@@ -4058,8 +4058,8 @@ initialization
   RegisterZProperties([@ZProp_ServerCachedStmts,@ZProp_BlobPrefetchSize,
     @ZProp_StatementCache,@ZProp_row_prefetch_size,@ZProp_OCIAuthenticateMode,@ZProp_MultiThreaded]);
 {$ENDIF}
-{$IF declared(ZProp_CachedLobs)}
-  RegisterZProperty(@ZProp_CachedLobs);
+{$IF declared(ZProp_LobCacheMode)}
+  RegisterZProperty(@ZProp_LobCacheMode);
 {$IFEND}
 {$IF declared(ZProp_UndefVarcharAsStringLength)}
   RegisterZProperty(@ZProp_UndefVarcharAsStringLength);

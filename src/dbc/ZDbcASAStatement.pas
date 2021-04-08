@@ -242,7 +242,7 @@ begin
   With FASAConnection do begin
     FSQLData := TZASASQLDA.Create(FASAConnection, Pointer(FCursorName));
     DescribeCursor;
-    NativeResultSet := TZASANativeResultSet.Create(Self, SQL, FStmtNum, FCursorName, FSQLData, CachedLob);
+    NativeResultSet := TZASANativeResultSet.Create(Self, SQL, FStmtNum, FCursorName, FSQLData, LobCacheMode);
     if ResultSetConcurrency = rcUpdatable then begin
       CachedResultSet := TZASACachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings);
       CachedResultSet.SetResolver(TZASACachedResolver.Create(Self, NativeResultSet.GetMetadata));
@@ -501,7 +501,7 @@ begin
     if Assigned(FOpenResultSet)
     then Result := IZResultSet(FOpenResultSet)
     else begin
-      Result := TZASAParamererResultSet.Create(Self, SQL, FStmtNum, FCursorName, FSQLData, True);
+      Result := TZASAParamererResultSet.Create(Self, SQL, FStmtNum, FCursorName, FSQLData, lcmOnLoad);
       FOpenResultSet := Pointer(Result);
     end;
     //now fill the outparam SQLDA-Variables
@@ -534,7 +534,7 @@ begin
   RestartTimer;
   if FHasOutParams and (FOpenResultSet = nil) then begin
     //first create the ResultSet -> exact types are described
-    FOutParamResultSet := TZASAParamererResultSet.Create(Self, SQL, FStmtNum, FCursorName, FSQLData, True);
+    FOutParamResultSet := TZASAParamererResultSet.Create(Self, SQL, FStmtNum, FCursorName, FSQLData, lcmOnLoad);
     FOpenResultSet := Pointer(FOutParamResultSet);
   end;
   DBHandle := FASAConnection.GetDBHandle;
