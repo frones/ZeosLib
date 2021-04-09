@@ -1314,6 +1314,9 @@ begin
   AException := nil;
   AExceptionClass := EZSQLException;
   ErrorMessage := '';
+  if ConSettings.ClientCodePage <> nil
+  then CP := ConSettings.ClientCodePage.CP
+  else CP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
   case Status of
     OCI_SUCCESS_WITH_INFO: begin
         AExceptionClass := EZSQLWarning;
@@ -1344,6 +1347,15 @@ JmpConcat:
                 AExceptionClass := EZSQLConnectionLost;
             end;
             L := {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(PWideChar(@fByteBuffer[0]));
+            If (NewStatus = OCI_ERROR) And (L = 0) and (Logmessage <> '') Then
+            Begin
+              {$IFDEF UNICODE}
+              WriterW.AddText(Logmessage, ErrorMessage);
+              {$ELSE !UNICODE}
+              WriterW.AddText(ZRawToUnicode(Logmessage, CP), ErrorMessageW);
+              {$ENDIF !UNICODE}
+              Break;
+            End;
             WriterW.AddText(@FByteBuffer[0], L, {$IFDEF UNICODE}ErrorMessage{$ELSE}ErrorMessageW{$ENDIF});
             Inc(I);
           end;
@@ -1378,12 +1390,15 @@ JmpConcat:
             end;
             L := StrLen(PAnsiChar(@fByteBuffer[0]));
 
-            If (NewStatus = OCI_ERROR) And (L = 0) Then
+            If (NewStatus = OCI_ERROR) And (L = 0) and (Logmessage <> '') Then
             Begin
-              WriterA.AddText(@AnsiString(Logmessage)[1], Length(Logmessage), {$IFNDEF UNICODE}ErrorMessage{$ELSE}ErrorMessageA{$ENDIF});
+              {$IFDEF UNICODE}
+              WriterA.AddText(ZUnicodeToRaw(Logmessage, CP), ErrorMessageA);
+              {$ELSE !UNICODE}
+              WriterA.AddText(Logmessage, ErrorMessage);
+              {$ENDIF !UNICODE}
               Break;
             End;
-
             WriterA.AddText(@FByteBuffer[0], L, {$IFNDEF UNICODE}ErrorMessage{$ELSE}ErrorMessageA{$ENDIF});
             Inc(I);
           end;
@@ -1392,9 +1407,6 @@ JmpConcat:
           FreeAndNil(WriterA);
         end;
         {$IFDEF UNICODE}
-        if ConSettings.ClientCodePage <> nil
-        then CP := ConSettings.ClientCodePage.CP
-        else CP := ZOSCodePage;
         ErrorMessage := ZRawToUnicode(ErrorMessageA, CP);
         ErrorMessageA := EmptyRaw;
         {$ENDIF}
