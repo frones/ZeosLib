@@ -1642,7 +1642,7 @@ begin
   ErrorString := '';
   for i := Low(InterbaseStatusVector) to High(InterbaseStatusVector) do begin
     AppendSepString(ErrorString, InterbaseStatusVector[i].IBMessage, '; ');
-    if AddLogMsgToExceptionOrWarningMsg and (InterbaseStatusVector[i].IBMessage = '') then
+    if AddLogMsgToExceptionOrWarningMsg and (InterbaseStatusVector[i].IBMessage <> '') then
       AppendSepString(ErrorString, InterbaseStatusVector[i].SQLMessage, '; ');
   end;
 
