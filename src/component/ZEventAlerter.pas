@@ -58,7 +58,7 @@ uses ZAbstractConnection, Classes, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
   ZDbcIntfs;
 
 type
-  TZOnEventAlert = procedure(Sender: TObject; Data: TZEventOrNotification) of object;
+  TZOnEventAlert = procedure(Sender: TObject; Data: TZEventData) of object;
 
   TZEventAlerter = Class(TAbstractActiveConnectionLinkedComponent)
   private
@@ -71,10 +71,9 @@ type
     FEventName: TStrings;
     FLockedList: TStrings;
     FOnEventAlert: TZOnEventAlert;
-    FEventDisplayFormat: String;
     procedure SetEventNames(const Value: TStrings);
     procedure SetCloneConnection(const Value: Boolean);
-    procedure HandleEvents(var Event: TZEventOrNotification);
+    procedure HandleEvents(var Event: TZEventData);
     function GetReceivedEvents: TStrings; //make threadsave copies of the received events
   protected
     procedure SetActive(Value: Boolean); override;
@@ -131,7 +130,7 @@ begin
   Result := FReceivedEvents;
 end;
 
-procedure TZEventAlerter.HandleEvents(var Event: TZEventOrNotification);
+procedure TZEventAlerter.HandleEvents(var Event: TZEventData);
 begin
   FCS.Enter;
   try
