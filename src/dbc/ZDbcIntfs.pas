@@ -5286,7 +5286,11 @@ begin
   if fEventState = esSignaled
   then S := ', received at'
   else S := ', timed out at';
-  Result := Kind+': '+QuotedStr(FName)+S+FormatDateTime(FormatSettings.LongDateFormat+'.ZZZ', fCreationTime, FormatSettings);
+  {$IFDEF WITH_FORMATSETTINGS}
+  Result := Kind+': '+QuotedStr(FName)+S+FormatDateTime(FormatSettings.LongDateFormat+'.ZZZ', fCreationTime);
+  {$ELSE}
+  Result := Kind+': '+QuotedStr(FName)+S+FormatDateTime(               LongDateFormat+'.ZZZ', fCreationTime);
+  {$ENDIF}
 end;
 
 initialization

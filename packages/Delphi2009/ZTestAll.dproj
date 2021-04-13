@@ -6,7 +6,7 @@
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>
-		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
+		<PropertyGroup Condition="'$(Config)'=='Basis' or '$(Base)'!=''">
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_1)'!=''">
@@ -22,7 +22,7 @@
 		<PropertyGroup Condition="'$(Base)'!=''">
 			<DCC_RangeChecking>true</DCC_RangeChecking>
 			<DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
-			<DCC_UnitSearchPath>build;..\..\test\framework;..\..\test\core;..\..\test\parsesql;..\..\test\dbc;..\..\test\component;..\..\test\bugreport;..\..\test\external;..\..\test\performance;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>build;..\..\test\framework;..\..\test\core;..\..\test\parsesql;..\..\test\dbc;..\..\test\component;..\..\test\bugreport;..\..\test\external;..\..\test\performance;..\..\src\core;..\..\src\plain;..\..\src\parsesql;..\..\src\dbc;..\..\src\component;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_ExeOutput>build</DCC_ExeOutput>
 			<DCC_DcuOutput>build</DCC_DcuOutput>
 			<DCC_DcpOutput>build</DCC_DcpOutput>
@@ -117,7 +117,7 @@
 			<DCCReference Include="..\..\test\bugreport\ZTestBugDbcOracle.pas"/>
 			<DCCReference Include="..\..\test\bugreport\ZTestBugDbcPostgreSql.pas"/>
 			<DCCReference Include="..\..\test\performance\ZTestPerformance.pas"/>
-			<BuildConfiguration Include="Base">
+			<BuildConfiguration Include="Basis">
 				<Key>Base</Key>
 			</BuildConfiguration>
 			<BuildConfiguration Include="Debug">
