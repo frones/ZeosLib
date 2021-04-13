@@ -5991,7 +5991,7 @@ end;
 
 function TZFirebirdInterbaseEventData.ToString: string;
 begin
-  Result := inherited + '; Count: '+IntToStr(FCountForEvent);
+  Result := inherited ToString + '; Count: '+IntToStr(FCountForEvent);
 end;
 
 initialization
