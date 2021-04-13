@@ -71,6 +71,9 @@ const
   IBBigLocalBufferLength = IBLocalBufferLength * 2;
   IBHugeLocalBufferLength = IBBigLocalBufferLength * 20;
 
+  IB_MAX_EVENT_BLOCK = 15;   // maximum events handled per block by InterBase
+  IB_MAX_EVENT_LENGTH = 64;  // maximum event name length
+
   ISC_NULL = -1;
   ISC_NOTNULL = 0;
 
