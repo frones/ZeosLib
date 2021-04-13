@@ -457,10 +457,12 @@ type
     procedure Unlisten;
   end;
 
-  TZPostgresEvent = class(TZEventOrNotification)
+  TZPostgresEventData = class(TZEventData)
   private
     fPayload: SQLString;
     FProcessID: Integer;
+  public
+    function ToString: string; override;
   public
     property Payload: String read fPayLoad;
     property ProcessID: Integer read FProcessID;
@@ -828,7 +830,7 @@ procedure TZPostgreSQLConnection.CheckEvents;
 var Notify: PZPostgreSQLNotify;
     i: NativeInt;
     ListenEvent: PZEvent;
-    AEvent: TZPostgresEvent;
+    AEvent: TZPostgresEventData;
     Handler: TZOnEventHandler;
     {$IF defined(UNICODE) or defined(WITH_RAWBYTESTRING)}
     CP: Word;
@@ -846,7 +848,7 @@ begin
         if Notify = nil then
           Break;
         try
-          AEvent := TZPostgresEvent.Create;
+          AEvent := TZPostgresEventData.Create;
           if Notify.relname <> nil then
             {$IFDEF UNICODE}
             PRawToUnicode(Notify.relname, StrLen(Notify.relname), CP, AEvent.fName);
@@ -873,7 +875,7 @@ begin
             end;
             if not Assigned(Handler) then
               Handler := FEventList.Handler;
-            Handler(TZEventOrNotification(AEvent));
+            Handler(TZEventData(AEvent));
           end;
         finally
           if AEvent <> nil then
@@ -1980,6 +1982,15 @@ destructor TZPostgresEventList.Destroy;
 begin
   FTimer.Free;
   inherited Destroy;
+end;
+
+{ TZPostgresEventData }
+
+function TZPostgresEventData.ToString: string;
+begin
+  Result := inherited ToString +'; ProcessID: '+ZFastCode.IntToStr(FProcessID);
+  if fPayload <> '' then
+    Result := Result +'; Payload: '+fPayload;
 end;
 
 initialization

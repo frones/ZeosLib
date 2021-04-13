@@ -962,10 +962,6 @@ end;
 procedure TZFirebirdEventThread.AsyncQueEvents(
   EventBlock: PZInterbaseFirebirdEventBlock);
 begin
-  {if EventBlock.FBEventsCallback <> nil then begin
-    TZFBEventCallback(EventBlock.FBEventsCallback).release;
-    EventBlock.FBEventsCallback := nil;
-  end;}
   if EventBlock.FBEventsCallback = nil then
     EventBlock.FBEventsCallback := TZFBEventCallback.Create(Self, EventBlock);
   if EventBlock.FBEvent <> nil then begin
@@ -986,6 +982,7 @@ begin
     try
       if EventBlock.FBEvent <> nil then with TZFirebirdConnection(FEventList.Connection) do begin
         IEvents(EventBlock.FBEvent).Cancel(FStatus);
+        EventBlock.FirstTime := True;
         if ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
           HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.queEvents', IImmediatelyReleasable(FWeakImmediatRelPtr));
       end;
@@ -1017,16 +1014,19 @@ end;
 constructor TZFBEventCallback.Create(aOwner: TZFirebirdEventThread;
   AEventBlock: PZInterbaseFirebirdEventBlock);
 begin
+  inherited Create;
   FEventBlock := AEventBlock;
   FOwner := aOwner;
+  FRefCnt := 1;
 end;
 
 procedure TZFBEventCallback.eventCallbackFunction(length: Cardinal;
   events: PByte);
 begin
   {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(events^, FEventBlock.result_buffer^, length);
-  FEventBlock.Received := True;
-  FEventBlock.FirstTime := False;
+  if FEventBlock.FirstTime
+  then FEventBlock.FirstTime := False
+  else FEventBlock.Received := True;
   FEventBlock.Signal.SetEvent;
 end;
 

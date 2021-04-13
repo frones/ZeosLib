@@ -68,7 +68,7 @@ type
   TZTestDbcPostgreSQLCase = class(TZAbstractDbcSQLTestCase)
   private
     FEventName: String;
-    procedure OnEvent(var Event: TZEventOrNotification);
+    procedure OnEvent(var Event: TZEventData);
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -86,7 +86,7 @@ type
     procedure Test_BatchInsert_returning;
     procedure Test_BatchDelete_in_operator;
     procedure Test_TimezoneOffset;
-    procedure Test_EventAlerter;
+    procedure Test_Ddbc_PG_EventAlerter;
   end;
 
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL}
@@ -236,7 +236,7 @@ begin
   end;
 end;
 
-procedure TZTestDbcPostgreSQLCase.Test_EventAlerter;
+procedure TZTestDbcPostgreSQLCase.Test_Ddbc_PG_EventAlerter;
 var Alerter: IZEventAlerter;
     EndTime: TDateTime;
     Events: TStrings;
@@ -252,10 +252,13 @@ begin
     Check(Alerter.IsListening);
     EndTime := IncSecond(Now, 2);
     Connection.ExecuteImmediat('NOTIFY zeostest', lcExecute);
-    while (FEventName = '') and (EndTime > Now) do begin
-      //Application.ProcessMessages;
+    while (FEventName = '') and (EndTime > Now) do
       Sleep(0);
-    end;
+    Check(FEventName = 'zeostest', 'Didn''t get PostgreSQL notification.');
+    EndTime := IncSecond(Now, 2);
+    Alerter.TriggerEvent('zeostest');
+    while (FEventName = '') and (EndTime > Now) do
+      Sleep(0);
     Check(FEventName = 'zeostest', 'Didn''t get PostgreSQL notification.');
     Alerter.Unlisten;
     CheckFalse(Alerter.IsListening);
@@ -450,7 +453,7 @@ begin
   Connection.Close;
 end;
 
-procedure TZTestDbcPostgreSQLCase.OnEvent(var Event: TZEventOrNotification);
+procedure TZTestDbcPostgreSQLCase.OnEvent(var Event: TZEventData);
 begin
   FEventName := Event.Name;
 end;

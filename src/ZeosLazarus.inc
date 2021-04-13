@@ -90,6 +90,7 @@
     {$DEFINE WITH_PWIDECHAR_TOWIDESTRING}
     {$DEFINE WITH_CLASS_VARS}
     {$IF FPC_FULLVERSION>=20600}  // assumes 2.5.1 pretty close to 2.6.0. Summer 2011 or newer
+      {$DEFINE TOBJECT_HAS_TOSTRING}            // TObject has a virtual ToString method
       {$DEFINE WITH_INLINE}           // compiler supports inline methodes
       {$DEFINE WITH_FUNIDIRECTIONAL} // FPC has references a field instead of a setter here.  (at least in 2.6.0)
       {$DEFINE WITH_CLASS_CONST} //compiler supports contants in class type declarations 

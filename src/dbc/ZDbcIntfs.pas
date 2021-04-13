@@ -786,7 +786,7 @@ type
 
   TZEventState = (esSignaled, esTimeout);
 
-  TZEventOrNotification = class(TObject)
+  TZEventData = class(TObject)
   protected
     fEventState: TZEventState;
     fCreationTime: TDateTime;
@@ -794,7 +794,7 @@ type
   public
     procedure AfterConstruction; override;
   public
-    function ToString: string; {$IFDEF TOBJECT_HAS_TOSTRING}override;{$ENDIF}
+    function ToString: string; {$IFDEF TOBJECT_HAS_TOSTRING}override;{$ELSE}virtual;{$ENDIF}
   public
     property Name: SQLString read fName;
     /// <summary>represents the kind of the received event i.e. Notfication,Event etc.</summary>
@@ -803,7 +803,7 @@ type
     property CreationTime: TDateTime read fCreationTime;
   end;
 
-  TZOnEventHandler = procedure(var Event: TZEventOrNotification) of object;
+  TZOnEventHandler = procedure(var Event: TZEventData) of object;
 
   /// <summary>Defines the Database Connection interface.</summary>
   IZConnection = interface(IImmediatelyReleasable)
@@ -5272,15 +5272,15 @@ end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 
-{ TZEventOrNotification }
+{ TZEventData }
 
-procedure TZEventOrNotification.AfterConstruction;
+procedure TZEventData.AfterConstruction;
 begin
   inherited;
   fCreationTime := now;
 end;
 
-function TZEventOrNotification.ToString: string;
+function TZEventData.ToString: string;
 var S: String;
 begin
   if fEventState = esSignaled

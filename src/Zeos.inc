@@ -223,7 +223,7 @@
               {$DEFINE WITH_VARIANT_UNICODESTRING}      // System.TVariant supports UnicodeString Values
               {$DEFINE WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD} // TDataSet has the GetFieldClass(TFieldDef) overload
               {$DEFINE WITH_VIRTUAL_BINDFIELDS} //TDataSet has virtual protected method BindFields
-			  {$DEFINE TOBJECT_HAS_TOSTRING}            // TObject has a ToString method
+              {$DEFINE TOBJECT_HAS_TOSTRING}            // TObject has a virtual ToString method
               {$IF CompilerVersion >= 21} //Delphi 2010+
                 {$WEAKLINKRTTI ON}                    //suppress extended RTTI
                 {.$RTTI EXPLICIT METHODS([]) PROPERTIES([]) FIELDS([])} //suppress extended RTTI for some unknown reason we've compilation issues. So enable this define manually!

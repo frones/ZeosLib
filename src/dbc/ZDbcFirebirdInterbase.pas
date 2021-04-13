@@ -65,6 +65,7 @@ uses
   {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD, Math, Types,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} SyncObjs,
+  {$IF not declared(INFINITE)}Windows,{$IFEND}//old delphi <= 2010 declared const INFINITE in windows unit
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   ZCollections, ZClasses, ZCompatibility,
   ZPlainFirebirdInterbaseDriver, ZDbcInterbase6Utils, ZDbcLogging,
@@ -1077,9 +1078,11 @@ type
     destructor Destroy; override;
   end;
 
-  TZFirebirdInterbaseEvent = class(TZEventOrNotification)
+  TZFirebirdInterbaseEventData = class(TZEventData)
   private
     FCountForEvent: ISC_ULONG;
+  public
+    function ToString: string; override;
   public
     property CountForEvent: ISC_ULONG read FCountForEvent;
   end;
@@ -2004,7 +2007,7 @@ begin
   {$IFDEF UNICODE}
   RawTemp := 'EXECUTE BLOCK AS BEGIN POST_EVENT '+SQLQuotedStr(ZUnicodeToRaw(Name, ConSettings.ClientCodePage.CP), AnsiChar(#39))+'; END';
   {$ELSE}
-  RawTemp := 'POST_EVENT '+SQLQuotedStr(Name, AnsiChar(#39));
+  RawTemp := 'POST_EVENT '+SQLQuotedStr(Name, AnsiChar(#39))+'; END';
   {$ENDIF}
   ExecuteImmediat(RawTemp, lcExecute);
 end;
@@ -5874,6 +5877,7 @@ end;
 
 { TZInterbaseFirebirdEventThread }
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "EPBRawArray,EPB" does not seem to be initialized} {$ENDIF}
 constructor TZInterbaseFirebirdEventThread.Create(Owner: TZFirebirdInterbaseEventList);
 var
   EPBRawArray: array[0..IB_MAX_EVENT_BLOCK-1] of RawByteString;
@@ -5918,6 +5922,7 @@ begin
   inherited Create(False);
   FSignal.SetEvent;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 destructor TZInterbaseFirebirdEventThread.Destroy;
 begin
@@ -5952,19 +5957,21 @@ end;
 procedure TZInterbaseFirebirdEventThread.ProcessEvents(EventBlock: PZInterbaseFirebirdEventBlock);
 var i: integer;
     EventCounts: TARRAY_ISC_EVENTCOUNTS;
-    Event: TZFirebirdInterbaseEvent;
+    Event: TZFirebirdInterbaseEventData;
 begin
   FEventList.FConnection.FInterbaseFirebirdPlainDriver.isc_event_counts(@EventCounts,
     EventBlock.EventBufferLength, EventBlock.event_buffer, EventBlock.result_buffer);
   if not EventBlock.FirstTime and EventBlock.Received then begin
     for i := 0 to (EventBlock.id_count - 1) do
       if (EventCounts[i] <> 0) then begin
-        Event := TZFirebirdInterbaseEvent.Create;
+        Event := TZFirebirdInterbaseEventData.Create;
         Event.fName := PZEvent(FEventList[EventBlock.NamesOffSet+I]).Name;
         Event.fKind := 'Event';
         Event.fEventState := esSignaled;
         Event.FCountForEvent := EventCounts[i];
-        FEventList.Handler(TZEventOrNotification(Event));
+        FEventList.Handler(TZEventData(Event));
+        if Event <> nil then
+          FreeAndNil(Event);
       end;
   end;
   EventBlock.FirstTime := False;
@@ -5978,6 +5985,13 @@ constructor TZFirebirdInterbaseEventList.Create(Handler: TZOnEventHandler;
 begin
   inherited Create(Handler);
   FConnection := AConnection;
+end;
+
+{ TZFirebirdInterbaseEventData }
+
+function TZFirebirdInterbaseEventData.ToString: string;
+begin
+  Result := inherited + '; Count: '+IntToStr(FCountForEvent);
 end;
 
 initialization
