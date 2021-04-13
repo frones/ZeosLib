@@ -451,11 +451,13 @@ type
     /// <param>"EventNames" a list of event name to be listened.</param>
     /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
     procedure Listen(const EventNames: TStrings; Handler: TZOnEventHandler);
+    /// <summary>Triggers an event.</summary>
+    procedure TriggerEvent(const Name: String);
     /// <summary>Stop listening the events and cleares the registered events.</summary>
     procedure Unlisten;
   end;
 
-  TZPostgresEventOrNotification = class(TZEventOrNotification)
+  TZPostgresEvent = class(TZEventOrNotification)
   private
     fPayload: SQLString;
     FProcessID: Integer;
@@ -826,7 +828,7 @@ procedure TZPostgreSQLConnection.CheckEvents;
 var Notify: PZPostgreSQLNotify;
     i: NativeInt;
     ListenEvent: PZEvent;
-    AEvent: TZPostgresEventOrNotification;
+    AEvent: TZPostgresEvent;
     Handler: TZOnEventHandler;
     {$IF defined(UNICODE) or defined(WITH_RAWBYTESTRING)}
     CP: Word;
@@ -844,7 +846,7 @@ begin
         if Notify = nil then
           Break;
         try
-          AEvent := TZPostgresEventOrNotification.Create;
+          AEvent := TZPostgresEvent.Create;
           if Notify.relname <> nil then
             {$IFDEF UNICODE}
             PRawToUnicode(Notify.relname, StrLen(Notify.relname), CP, AEvent.fName);
@@ -1279,6 +1281,17 @@ begin
   if I = -1
   then Result := AddToCache(ProcName)
   else Result := FProcedureTypesCache.Objects[I] <> nil;
+end;
+
+procedure TZPostgreSQLConnection.TriggerEvent(const Name: String);
+var RawTemp: RawByteString;
+begin
+  {$IFDEF UNICODE}
+  RawTemp := 'notify '+ZUnicodeToRaw(Name, ConSettings.ClientCodePage.CP);
+  {$ELSE}
+  RawTemp := 'notify '+Name;
+  {$ENDIF}
+  ExecuteImmediat(RawTemp, lcExecute);
 end;
 
 procedure TZPostgreSQLConnection.Unlisten;

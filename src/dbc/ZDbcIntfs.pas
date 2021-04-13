@@ -794,6 +794,8 @@ type
   public
     procedure AfterConstruction; override;
   public
+    function ToString: string; override;
+  public
     property Name: SQLString read fName;
     /// <summary>represents the kind of the received event i.e. Notfication,Event etc.</summary>
     property Kind: String read fKind;
@@ -4482,8 +4484,10 @@ type
     function IsListening: Boolean;
     /// <summary>Starts listening the events.</summary>
     /// <param>"EventNames" a list of event name to be listened.</param>
-    /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
-    procedure Listen(const EventNames: TStrings; Handler: TZOnEventHandler);
+    /// <param>"ThreadSafeHandler" an event handler which gets triggered if the event is received.</param>
+    procedure Listen(const EventNames: TStrings; ThreadSafeHandler: TZOnEventHandler);
+    /// <summary>Triggers an event.</summary>
+    procedure TriggerEvent(const Name: String);
     /// <summary>Stop listening the events and cleares the registered events.</summary>
     procedure Unlisten;
   end;
@@ -5274,6 +5278,15 @@ procedure TZEventOrNotification.AfterConstruction;
 begin
   inherited;
   fCreationTime := now;
+end;
+
+function TZEventOrNotification.ToString: string;
+var S: String;
+begin
+  if fEventState = esSignaled
+  then S := ', received at'
+  else S := ', timed out at';
+  Result := Kind+': '+QuotedStr(FName)+S+FormatDateTime(FormatSettings.LongDateFormat+'.ZZZ', fCreationTime, FormatSettings);
 end;
 
 initialization

@@ -2732,7 +2732,6 @@ var
   I: Integer;
   TableColumns: IZResultSet;
   Connection: IZConnection;
-  Driver: IZDriver;
   Analyser: IZStatementAnalyser;
   Tokenizer: IZTokenizer;
   PGMetaData: IZPGDatabaseMetadata;
@@ -2758,7 +2757,6 @@ begin
         end;
       end;
   finally
-    Driver := nil;
     Connection := nil;
     Analyser := nil;
     Tokenizer := nil;

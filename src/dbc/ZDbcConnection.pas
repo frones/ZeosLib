@@ -1450,6 +1450,9 @@ end;
 procedure TZAbstractDbcConnection.CloseEventAlerter(var Value: IZEventAlerter);
 var con: IZConnection;
 begin
+  if (FCreatedWeakEventAlerterPtr <> nil) and IZEventAlerter(FCreatedWeakEventAlerterPtr).IsListening then
+    IZEventAlerter(FCreatedWeakEventAlerterPtr).UnListen;
+
   if FCreatedWeakEventAlerterPtr <> Pointer(Value) then begin
     Con := Value.GetConnection;
     Con.CloseEventAlerter(Value);

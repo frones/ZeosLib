@@ -200,7 +200,8 @@ type
 
   /// <summary>Implements a special Firebird Connection object.</summary>
   TZFirebirdConnection = class(TZInterbaseFirebirdConnection, IZConnection,
-    IZTransactionManager, IZFirebirdConnection, IZInterbaseFirebirdConnection)
+    IZTransactionManager, IZFirebirdConnection, IZInterbaseFirebirdConnection,
+    IZEventAlerter)
   private
     FMaster: IMaster;
     FProvider: IProvider;
@@ -299,6 +300,12 @@ type
     ///  pre-compiled SQL statement </returns>
     function PrepareCallWithParams(const Name: string; Params: TStrings):
       IZCallableStatement;
+    /// <author>aehimself</author>
+    /// <summary>Immediately abort any kind of queries.</summary>
+    /// <returns>0 if the operation is aborted; Non zero otherwise.</returns>
+    function AbortOperation: Integer; override;
+    /// <summary>Opens a connection to database server with specified parameters.</summary>
+    procedure Open; override;
   public { implement IZInterbaseFirebirdConnection }
     /// <summary>Determine if the Client lib-module is a Firebird lib</summary>
     /// <returns><c>True</c>If it's a firebird client lib; <c>False</c>
@@ -308,14 +315,31 @@ type
     /// <returns><c>True</c>If it's a Interbase client lib; <c>False</c>
     ///  otherwise</returns>
     function IsInterbaseLib: Boolean; override;
-  public
-    /// <author>aehimself</author>
-    /// <summary>Immediately abort any kind of queries.</summary>
-    /// <returns>0 if the operation is aborted; Non zero otherwise.</returns>
-    function AbortOperation: Integer; override;
-    /// <summary>Opens a connection to database server with specified parameters.</summary>
-    procedure Open; override;
+  public { implement IZEventAlerter}
+    /// <summary>Starts listening the events.</summary>
+    /// <param>"EventNames" a list of event name to be listened.</param>
+    /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
+    procedure Listen(const EventNames: TStrings; Handler: TZOnEventHandler);
   end;
+
+  TZFirebirdEventThread = Class(TZInterbaseFirebirdEventThread)
+  public
+    procedure AsyncQueEvents(EventBlock: PZInterbaseFirebirdEventBlock); override;
+    procedure UnRegisterEvents; override;
+  End;
+
+  TZFBEventCallback = class(IEventCallbackImpl)
+  private
+    FEventBlock: PZInterbaseFirebirdEventBlock;
+    FOwner: TZFirebirdEventThread;
+    FRefCnt: integer; //for refcounting
+  public
+    constructor Create(aOwner: TZFirebirdEventThread; AEventBlock: PZInterbaseFirebirdEventBlock);
+    procedure addRef;  override;
+    function release: Integer; override;
+    procedure eventCallbackFunction(length: Cardinal; events: PByte); override;
+    procedure CancelEvent;
+ end;
 
 {$ENDIF ZEOS_DISABLE_FIREBIRD} //if set we have an empty unit
 implementation
@@ -523,6 +547,22 @@ end;
 function TZFirebirdConnection.IsInterbaseLib: Boolean;
 begin
   Result := False;
+end;
+
+procedure TZFirebirdConnection.Listen(const EventNames: TStrings;
+  Handler: TZOnEventHandler);
+var I: Integer;
+begin
+  if (FEventList <> nil) then begin
+    if (FEventList.Count > 0) then
+      Unlisten;
+    if IsClosed then
+      Open;
+    for i := 0 to EventNames.Count -1 do
+      FEventList.Add(EventNames[I], Handler);
+    FEventList.WaitThread := TZFirebirdEventThread.Create(FEventList);
+  end else
+    raise EZSQLException.Create('no events registered');
 end;
 
 procedure TZFirebirdConnection.Open;
@@ -915,6 +955,91 @@ end;
 function TZFirebirdTransaction.TxnIsStarted: Boolean;
 begin
   Result := FTransaction <> nil;
+end;
+
+{ TZFirebirdEventThread }
+
+procedure TZFirebirdEventThread.AsyncQueEvents(
+  EventBlock: PZInterbaseFirebirdEventBlock);
+begin
+  {if EventBlock.FBEventsCallback <> nil then begin
+    TZFBEventCallback(EventBlock.FBEventsCallback).release;
+    EventBlock.FBEventsCallback := nil;
+  end;}
+  if EventBlock.FBEventsCallback = nil then
+    EventBlock.FBEventsCallback := TZFBEventCallback.Create(Self, EventBlock);
+  if EventBlock.FBEvent <> nil then begin
+    IEvents(EventBlock.FBEvent).Release;
+    EventBlock.FBEvent := nil;
+  end;
+  with TZFirebirdConnection(FEventList.Connection) do
+  EventBlock.FBEvent := FAttachment.queEvents(FStatus, TZFBEventCallback(EventBlock.FBEventsCallback),
+    EventBlock.EventBufferLength, PByte(EventBlock.event_buffer));
+end;
+
+procedure TZFirebirdEventThread.UnRegisterEvents;
+var EventBlockIdx: NativeInt;
+    EventBlock: PZInterbaseFirebirdEventBlock;
+begin
+  for EventBlockIdx := 0 to High(FEventBlocks) do begin
+    EventBlock := @FEventBlocks[EventBlockIdx];
+    try
+      if EventBlock.FBEvent <> nil then with TZFirebirdConnection(FEventList.Connection) do begin
+        IEvents(EventBlock.FBEvent).Cancel(FStatus);
+        if ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+          HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.queEvents', IImmediatelyReleasable(FWeakImmediatRelPtr));
+      end;
+    finally
+      if EventBlock.FBEvent <> nil then begin
+        IEvents(EventBlock.FBEvent).Release;
+        EventBlock.FBEvent := nil;
+      end;
+      if EventBlock.FBEventsCallback <> nil then begin
+        TZFBEventCallback(EventBlock.FBEventsCallback).release;
+        EventBlock.FBEventsCallback := nil;
+      end;
+    end;
+  end;
+end;
+
+{ TZFBEventCallback }
+
+procedure TZFBEventCallback.addRef;
+begin
+  Inc(FRefCnt);
+end;
+
+procedure TZFBEventCallback.CancelEvent;
+begin
+  FEventBlock.Signal.SetEvent;
+end;
+
+constructor TZFBEventCallback.Create(aOwner: TZFirebirdEventThread;
+  AEventBlock: PZInterbaseFirebirdEventBlock);
+begin
+  FEventBlock := AEventBlock;
+  FOwner := aOwner;
+end;
+
+procedure TZFBEventCallback.eventCallbackFunction(length: Cardinal;
+  events: PByte);
+begin
+  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(events^, FEventBlock.result_buffer^, length);
+  FEventBlock.Received := True;
+  FEventBlock.FirstTime := False;
+  FEventBlock.Signal.SetEvent;
+end;
+
+function TZFBEventCallback.release: Integer;
+begin
+  Dec(FRefCnt);
+  Result := FRefCnt;
+  if FRefCnt = 0 then
+    {$IFDEF AUTOREFCOUNT}
+    Destroy;
+    {$ELSE}
+    Free;
+    {$ENDIF}
 end;
 
 initialization
