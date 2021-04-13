@@ -794,7 +794,7 @@ type
   public
     procedure AfterConstruction; override;
   public
-    function ToString: string; override;
+    function ToString: string; {$IFDEF TOBJECT_HAS_TOSTRING}override;{$ENDIF}
   public
     property Name: SQLString read fName;
     /// <summary>represents the kind of the received event i.e. Notfication,Event etc.</summary>
