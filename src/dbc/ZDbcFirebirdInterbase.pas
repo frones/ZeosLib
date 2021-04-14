@@ -65,7 +65,7 @@ uses
   {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD, Math, Types,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} SyncObjs,
-  {$IF not declared(INFINITE)}Windows,{$IFEND}//old delphi <= 2010 declared const INFINITE in windows unit
+  {$IFDEF WITH_INFINATE_DECLARED_IN_UNIT_WINDOWS}Windows,{$ENDIF}//old delphi <= 2010 declared const INFINITE in windows unit
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   ZCollections, ZClasses, ZCompatibility,
   ZPlainFirebirdInterbaseDriver, ZDbcInterbase6Utils, ZDbcLogging,
@@ -5877,7 +5877,10 @@ end;
 
 { TZInterbaseFirebirdEventThread }
 
-{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "EPBRawArray,EPB" does not seem to be initialized} {$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5057 off : Local variable "EPB" does not seem to be initialized}
+  {$WARN 5057 off : Local variable "EPBRawArray" of manged type does not seem to be initialized}
+{$ENDIF}
 constructor TZInterbaseFirebirdEventThread.Create(Owner: TZFirebirdInterbaseEventList);
 var
   EPBRawArray: array[0..IB_MAX_EVENT_BLOCK-1] of RawByteString;

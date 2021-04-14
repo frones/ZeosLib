@@ -144,6 +144,7 @@
   {$DEFINE WITH_TDATASETPROVIDER}         //just for the tests by now: DataSnap.Provider.TDataSetProvider exists
   {$DEFINE WITH_PARAM_ASBCD}              //TParam.AsBCD is supported
   {$DEFINE WITH_VIRTUAL_TFIELD_BIND}      //TField.Bind(Binding) is supported
+  {$DEFINE WITH_INFINATE_DECLARED_IN_UNIT_WINDOWS} //old delphi <= 2010 declared const INFINITE in windows unit
   //now compiler related (un)defines do follow up here
   {$IF CompilerVersion < 15}
      "Delphi versions below Delphi 7 aren't supported anymore"
@@ -245,7 +246,7 @@
                   {$DEFINE WITH_RTLCONSTS_SInvalidGuidArray}
                   {$DEFINE HAVE_BCDTOSTR_FORMATSETTINGS} //(Try)BCDToStr/StrToBCD has parameter FormatSettings
                   {$DEFINE WITH_TOBJECTLIST_REQUIRES_CLASSES}       //TObjectList.Remove, add ... are inlined need unit classes
-
+                  {$UNDEF WITH_INFINATE_DECLARED_IN_UNIT_WINDOWS} // the INFINATE constant is now declared in System.pas
                   {$IF CompilerVersion >= 23} //Delphi XE2+
                     {$DEFINE WITH_ReturnAddress} //Exports ReturnAddress for error addressing
                     {$IFNDEF MSWINDOWS}
