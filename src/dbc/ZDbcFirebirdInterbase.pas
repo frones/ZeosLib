@@ -361,13 +361,13 @@ type
     /// <param>"CloneConnection" if <c>True</c> a new connection will be spawned.</param>
     /// <param>"Options" a list of options, to setup the event alerter.</param>
     /// <returns>a the generic event alerter object as interface or nil.</returns>
-    function GetEventAlerter(Handler: TZOnEventHandler; CloneConnection: Boolean; Options: TStrings): IZEventAlerter; override;
-  public { implement IZEventAlerter}
+    function GetEventListener(Handler: TZOnEventHandler; CloneConnection: Boolean; Options: TStrings): IZEventListener; override;
+  public { implement IZEventListener}
     /// <summary>Returns the <c>Connection</c> interface
     ///  that produced this <c>Sequence</c> object.</summary>
     /// <returns>the connection that produced this sequence.</returns>
     function GetConnection: IZConnection;
-    /// <returns><c>true</c> if the EventAlerter is active.</returns>
+    /// <returns><c>true</c> if the EventListener is active.</returns>
     function IsListening: Boolean;
     /// <summary>Stop listening the events and cleares the registered events.</summary>
     procedure Unlisten;
@@ -1034,15 +1034,15 @@ type
     id_count: ISC_USHORT;
     EventBufferLength: ISC_LONG;
     EventBlockID: ISC_LONG;
-    /// <summary>register and unregister an event triggers an received event.
-    ///  But we want to listen to real events only</summary>
-    FirstTime: Boolean;
     /// <summary>Was an event received</summary>
     Received: Boolean;
     /// <summary>The starting offset in the Names list</summary>
     NamesOffSet: Integer;
     /// <summary>The Signal we use to notify a received event</summary>
     {$IFDEF AUTOREFCOUNT}[WEAK]{$ENDIF}Signal: TSimpleEvent;
+    /// <summary>an array of event counters we use to compare which event has
+    ///  posted and which not</summary;
+    EventCounts: TARRAY_ISC_EVENTCOUNTS;
     /// <summary>Weak reference of the IEvents interface</summary>
     FBEvent: Pointer;
     /// <summary>Weak reference of the IEventsCallback interface</summary>
@@ -1066,7 +1066,6 @@ type
     // Local use variables
     FSignal: TSimpleEvent;
     FEventBlocks: array of TZInterbaseFirebirdEventBlock;
-    FEventCounts: TARRAY_ISC_EVENTCOUNTS;
     {$IFDEF AUTOREFCOUNT}[WEAK]{$ENDIF}FEventList: TZFirebirdInterbaseEventList;
   protected
     procedure Execute; override;
@@ -1575,11 +1574,11 @@ begin
   Result := FDialect;
 end;
 
-function TZInterbaseFirebirdConnection.GetEventAlerter(
+function TZInterbaseFirebirdConnection.GetEventListener(
   Handler: TZOnEventHandler; CloneConnection: Boolean;
-  Options: TStrings): IZEventAlerter;
+  Options: TStrings): IZEventListener;
 begin
-  Result := inherited GetEventAlerter(Handler, CloneConnection, Options);
+  Result := inherited GetEventListener(Handler, CloneConnection, Options);
   FEventList := TZFirebirdInterbaseEventList.Create(Handler, Self);
 end;
 
@@ -1742,7 +1741,7 @@ end;
 
 function TZInterbaseFirebirdConnection.IsListening: Boolean;
 begin
-  Result := not IsClosed and (FCreatedWeakEventAlerterPtr <> nil) and (FEventList <> nil) and (FEventList.FWaitThread <> nil);
+  Result := not IsClosed and (FCreatedWeakEventListenerPtr <> nil) and (FEventList <> nil) and (FEventList.FWaitThread <> nil);
 end;
 
 function TZInterbaseFirebirdConnection.IsTransactionValid(
@@ -4095,65 +4094,62 @@ procedure BindSQLDAInParameters(BindList: TZBindList;
   Stmt: TZAbstractFirebirdInterbasePreparedStatement; ArrayOffSet, ArrayItersCount: Integer);
 var
   I, J, ParamIndex: Integer;
-  IsNull: Boolean;
   { array DML bindings }
   ZData: Pointer; //array entry
+  ZArray: PZArray;
 begin
   ParamIndex := FirstDbcIndex;
   for J := ArrayOffSet to ArrayOffSet+ArrayItersCount-1 do
-    for i := 0 to BindList.Count -1 do
-    begin
-      IsNull := IsNullFromArray(BindList[i].Value, J);
-      ZData := PZArray(BindList[i].Value).VArray;
-      if (ZData = nil) or (IsNull) then
+    for i := 0 to BindList.Count -1 do begin
+      ZArray := BindList[i].Value;
+      ZData := ZArray.VArray;
+      if (ZData = nil) or IsNullFromArray(ZArray, J) then
         Stmt.SetNull(ParamIndex, ZDbcIntfs.stUnknown)
-      else
-        case TZSQLType(PZArray(BindList[i].Value).VArrayType) of
-          stBoolean: Stmt.SetBoolean(ParamIndex, TBooleanDynArray(ZData)[J]);
-          stByte: Stmt.SetSmall(ParamIndex, TByteDynArray(ZData)[J]);
-          stShort: Stmt.SetSmall(ParamIndex, TShortIntDynArray(ZData)[J]);
-          stWord: Stmt.SetInt(ParamIndex, TWordDynArray(ZData)[J]);
-          stSmall: Stmt.SetSmall(ParamIndex, TSmallIntDynArray(ZData)[J]);
-          stLongWord: Stmt.SetLong(ParamIndex, TLongWordDynArray(ZData)[J]);
-          stInteger: Stmt.SetInt(ParamIndex, TIntegerDynArray(ZData)[J]);
-          stLong: Stmt.SetLong(ParamIndex, TInt64DynArray(ZData)[J]);
-          stULong: Stmt.SetLong(ParamIndex, TUInt64DynArray(ZData)[J]);
-          stFloat: Stmt.SetFloat(ParamIndex, TSingleDynArray(ZData)[J]);
-          stDouble: Stmt.SetDouble(ParamIndex, TDoubleDynArray(ZData)[J]);
-          stCurrency: Stmt.SetCurrency(ParamIndex, TCurrencyDynArray(ZData)[J]);
-          stBigDecimal: Stmt.SetBigDecimal(ParamIndex, TBCDDynArray(ZData)[J]);
-          stGUID: Stmt.SetGUID(ParamIndex, TGUIDDynArray(ZData)[j]);
-          stString, stUnicodeString:
-                case PZArray(BindList[i].Value).VArrayVariantType of
-                  vtString: Stmt.SetString(ParamIndex, TStringDynArray(ZData)[j]);
-                  {$IFNDEF NO_ANSISTRING}
-                  vtAnsiString: Stmt.SetAnsiString(ParamIndex, TAnsiStringDynArray(ZData)[j]);
-                  {$ENDIF}
-                  {$IFNDEF NO_UTF8STRING}
-                  vtUTF8String: Stmt.SetUTF8String(ParamIndex, TUTF8StringDynArray(ZData)[j]);
-                  {$ENDIF}
-                  vtRawByteString: Stmt.SetRawByteString(ParamIndex, TRawByteStringDynArray(ZData)[j]);
-                  vtUnicodeString: Stmt.SetUnicodeString(ParamIndex, TUnicodeStringDynArray(ZData)[j]);
-                  vtCharRec: Stmt.SetCharRec(ParamIndex, TZCharRecDynArray(ZData)[j]);
-                  else
-                    raise Exception.Create('Unsupported String Variant');
-                end;
-          stBytes:      Stmt.SetBytes(ParamIndex, TBytesDynArray(ZData)[j]);
-          stDate:       if PZArray(BindList[i].Value).VArrayVariantType = vtDate
-                        then Stmt.SetDate(ParamIndex, TZDateDynArray(ZData)[j])
-                        else Stmt.SetDate(ParamIndex, TDateTimeDynArray(ZData)[j]);
-          stTime:       if PZArray(BindList[i].Value).VArrayVariantType = vtTime
-                        then Stmt.SetTime(ParamIndex, TZTimeDynArray(ZData)[j])
-                        else Stmt.SetTime(ParamIndex, TDateTimeDynArray(ZData)[j]);
-          stTimestamp:  if PZArray(BindList[i].Value).VArrayVariantType = vtTimeStamp
-                        then Stmt.SetTimestamp(ParamIndex, TZTimeStampDynArray(ZData)[j])
-                        else Stmt.SetTimestamp(ParamIndex, TDateTimeDynArray(ZData)[j]);
-          stAsciiStream,
-          stUnicodeStream,
-          stBinaryStream: Stmt.SetBlob(ParamIndex, TZSQLType(PZArray(BindList[i].Value).VArrayType), TInterfaceDynArray(ZData)[j] as IZBlob);
-          else
-            raise EZIBConvertError.Create(SUnsupportedParameterType);
-        end;
+      else case TZSQLType(ZArray.VArrayType) of
+        stBoolean: Stmt.SetBoolean(ParamIndex, TBooleanDynArray(ZData)[J]);
+        stByte: Stmt.SetSmall(ParamIndex, TByteDynArray(ZData)[J]);
+        stShort: Stmt.SetSmall(ParamIndex, TShortIntDynArray(ZData)[J]);
+        stWord: Stmt.SetInt(ParamIndex, TWordDynArray(ZData)[J]);
+        stSmall: Stmt.SetSmall(ParamIndex, TSmallIntDynArray(ZData)[J]);
+        stLongWord: Stmt.SetLong(ParamIndex, TLongWordDynArray(ZData)[J]);
+        stInteger: Stmt.SetInt(ParamIndex, TIntegerDynArray(ZData)[J]);
+        stLong: Stmt.SetLong(ParamIndex, TInt64DynArray(ZData)[J]);
+        stULong: Stmt.SetLong(ParamIndex, TUInt64DynArray(ZData)[J]);
+        stFloat: Stmt.SetFloat(ParamIndex, TSingleDynArray(ZData)[J]);
+        stDouble: Stmt.SetDouble(ParamIndex, TDoubleDynArray(ZData)[J]);
+        stCurrency: Stmt.SetCurrency(ParamIndex, TCurrencyDynArray(ZData)[J]);
+        stBigDecimal: Stmt.SetBigDecimal(ParamIndex, TBCDDynArray(ZData)[J]);
+        stGUID: Stmt.SetGUID(ParamIndex, TGUIDDynArray(ZData)[j]);
+        stString, stUnicodeString:
+              case ZArray.VArrayVariantType of
+                vtString: Stmt.SetString(ParamIndex, TStringDynArray(ZData)[j]);
+                {$IFNDEF NO_ANSISTRING}
+                vtAnsiString: Stmt.SetAnsiString(ParamIndex, TAnsiStringDynArray(ZData)[j]);
+                {$ENDIF}
+                {$IFNDEF NO_UTF8STRING}
+                vtUTF8String: Stmt.SetUTF8String(ParamIndex, TUTF8StringDynArray(ZData)[j]);
+                {$ENDIF}
+                vtRawByteString: Stmt.SetRawByteString(ParamIndex, TRawByteStringDynArray(ZData)[j]);
+                vtUnicodeString: Stmt.SetUnicodeString(ParamIndex, TUnicodeStringDynArray(ZData)[j]);
+                vtCharRec: Stmt.SetCharRec(ParamIndex, TZCharRecDynArray(ZData)[j]);
+                else
+                  raise Exception.Create('Unsupported String Variant');
+              end;
+        stBytes:      Stmt.SetBytes(ParamIndex, TBytesDynArray(ZData)[j]);
+        stDate:       if ZArray.VArrayVariantType = vtDate
+                      then Stmt.SetDate(ParamIndex, TZDateDynArray(ZData)[j])
+                      else Stmt.SetDate(ParamIndex, TDateTimeDynArray(ZData)[j]);
+        stTime:       if ZArray.VArrayVariantType = vtTime
+                      then Stmt.SetTime(ParamIndex, TZTimeDynArray(ZData)[j])
+                      else Stmt.SetTime(ParamIndex, TDateTimeDynArray(ZData)[j]);
+        stTimestamp:  if ZArray.VArrayVariantType = vtTimeStamp
+                      then Stmt.SetTimestamp(ParamIndex, TZTimeStampDynArray(ZData)[j])
+                      else Stmt.SetTimestamp(ParamIndex, TDateTimeDynArray(ZData)[j]);
+        stAsciiStream,
+        stUnicodeStream,
+        stBinaryStream: Stmt.SetBlob(ParamIndex, TZSQLType(ZArray.VArrayType), TInterfaceDynArray(ZData)[j] as IZBlob);
+        else raise EZIBConvertError.Create(SUnsupportedParameterType);
+      end;
       Inc(ParamIndex);
     end;
 end;
@@ -5903,7 +5899,6 @@ begin
     if (EventCount > IB_MAX_EVENT_BLOCK) then
       EventCount := IB_MAX_EVENT_BLOCK;
     EB.id_count := EventCount;
-    EB.FirstTime := True;
     EB.NamesOffSet := OffSet;
     EB.Signal := FSignal;
     for i := 0 to EventCount -1 do begin
@@ -5964,21 +5959,20 @@ var i: integer;
 begin
   FEventList.FConnection.FInterbaseFirebirdPlainDriver.isc_event_counts(@EventCounts,
     EventBlock.EventBufferLength, EventBlock.event_buffer, EventBlock.result_buffer);
-  if not EventBlock.FirstTime and EventBlock.Received then begin
+  if EventBlock.Received then
     for i := 0 to (EventBlock.id_count - 1) do
-      if (EventCounts[i] <> 0) then begin
+      if (EventCounts[i] > EventBlock.EventCounts[i]) then begin
         Event := TZFirebirdInterbaseEventData.Create;
         Event.fName := PZEvent(FEventList[EventBlock.NamesOffSet+I]).Name;
         Event.fKind := 'Event';
         Event.fEventState := esSignaled;
-        Event.FCountForEvent := EventCounts[i];
+        Event.FCountForEvent := EventCounts[i] - EventBlock.EventCounts[i];
         FEventList.Handler(TZEventData(Event));
         if Event <> nil then
           FreeAndNil(Event);
       end;
-  end;
-  EventBlock.FirstTime := False;
   EventBlock.Received := false;
+  Move(EventCounts, EventBlock.EventCounts, SizeOf(TARRAY_ISC_EVENTCOUNTS));
 end;
 
 { TZFirebirdInterbaseEventList }

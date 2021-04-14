@@ -194,7 +194,7 @@ type
   protected
     FByteBuffer: TByteBuffer; //have a static buffer for any conversion oslt
     fWeakReferenceOfSelfInterface: Pointer;
-    FWeakEventAlerterSelfPtr, FCreatedWeakEventAlerterPtr: Pointer;
+    FWeakEventListenerSelfPtr, FCreatedWeakEventListenerPtr: Pointer;
     FRestartTransaction: Boolean;
     FDisposeCodePage: Boolean;
     FClientCodePage: String;
@@ -515,15 +515,15 @@ type
     /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
     /// <param>"CloneConnection" if <c>True</c> a new connection will be spawned.</param>
     /// <returns>a the generic event alerter object as interface or nil.</returns>
-    function GetEventAlerter(Handler: TZOnEventHandler; CloneConnection: Boolean;
-      Options: TStrings): IZEventAlerter; virtual;
-    /// <summary>Check if the connection supports an event Alerter.</summary>
-    /// <returns><c>true</c> if the connection supports an event Alerter;
+    function GetEventListener(Handler: TZOnEventHandler; CloneConnection: Boolean;
+      Options: TStrings): IZEventListener; virtual;
+    /// <summary>Check if the connection supports an event Listener.</summary>
+    /// <returns><c>true</c> if the connection supports an event Listener;
     /// <c>false</c> otherwise.</returns>
-    function SupportsEventAlerter: Boolean;
+    function SupportsEventListener: Boolean;
     /// <summary>Closes the event alerter.</summary>
     /// <param>"Value" a reference to the previously created alerter to be released.</param>
-    procedure CloseEventAlerter(var Value: IZEventAlerter);
+    procedure CloseEventListener(var Value: IZEventListener);
   protected
     /// <summary>Get the refrence to a fixed TByteBuffer.</summary>
     /// <returns>the address of the TByteBuffer</returns>
@@ -1079,9 +1079,9 @@ begin
   FURL.UserName := Value;
 end;
 
-function TZAbstractDbcConnection.SupportsEventAlerter: Boolean;
+function TZAbstractDbcConnection.SupportsEventListener: Boolean;
 begin
-  Result := FWeakEventAlerterSelfPtr <> nil;
+  Result := FWeakEventListenerSelfPtr <> nil;
 end;
 
 function TZAbstractDbcConnection.GetPassword: string;
@@ -1235,15 +1235,15 @@ end;
 
 procedure TZAbstractDbcConnection.AfterConstruction;
 var iCon: IZConnection;
-    iAlerter: IZEventAlerter;
+    iListener: IZEventListener;
 begin
   if QueryInterface(IZConnection, ICon) = S_OK then begin
     fWeakReferenceOfSelfInterface := Pointer(iCon);
     iCon := nil;
   end;
-  if QueryInterface(IZEventAlerter, iAlerter) = S_OK then begin
-    FWeakEventAlerterSelfPtr := Pointer(iAlerter);
-    iAlerter := nil;
+  if QueryInterface(IZEventListener, iListener) = S_OK then begin
+    FWeakEventListenerSelfPtr := Pointer(iListener);
+    iListener := nil;
   end;
   inherited AfterConstruction;
   FURL.OnPropertiesChange := OnPropertiesChange;
@@ -1447,18 +1447,18 @@ begin
   end;
 end;
 
-procedure TZAbstractDbcConnection.CloseEventAlerter(var Value: IZEventAlerter);
+procedure TZAbstractDbcConnection.CloseEventListener(var Value: IZEventListener);
 var con: IZConnection;
 begin
-  if (FCreatedWeakEventAlerterPtr <> nil) and IZEventAlerter(FCreatedWeakEventAlerterPtr).IsListening then
-    IZEventAlerter(FCreatedWeakEventAlerterPtr).UnListen;
+  if (FCreatedWeakEventListenerPtr <> nil) and IZEventListener(FCreatedWeakEventListenerPtr).IsListening then
+    IZEventListener(FCreatedWeakEventListenerPtr).UnListen;
 
-  if FCreatedWeakEventAlerterPtr <> Pointer(Value) then begin
+  if FCreatedWeakEventListenerPtr <> Pointer(Value) then begin
     Con := Value.GetConnection;
-    Con.CloseEventAlerter(Value);
+    Con.CloseEventListener(Value);
     Con := nil;
   end else
-    FCreatedWeakEventAlerterPtr := nil;
+    FCreatedWeakEventListenerPtr := nil;
   Value := nil;
 end;
 
@@ -1630,22 +1630,22 @@ begin
   else Result := SQLQuotedStr(P, L, AnsiChar(#39));
 end;
 
-function TZAbstractDbcConnection.GetEventAlerter(Handler: TZOnEventHandler;
-  CloneConnection: Boolean; Options: TStrings): IZEventAlerter;
+function TZAbstractDbcConnection.GetEventListener(Handler: TZOnEventHandler;
+  CloneConnection: Boolean; Options: TStrings): IZEventListener;
 var Con: IZConnection;
 begin
   Result := nil;
-  if (FWeakEventAlerterSelfPtr = nil) then
-    raise EZSQLException.Create('Alerter is not supported');
-  if (FCreatedWeakEventAlerterPtr <> nil) and not CloneConnection then
-    raise EZSQLException.Create('Alerter alredy retrieved');
+  if (FWeakEventListenerSelfPtr = nil) then
+    raise EZSQLException.Create('Listener is not supported');
+  if (FCreatedWeakEventListenerPtr <> nil) and not CloneConnection then
+    raise EZSQLException.Create('Listener alredy retrieved');
   if CloneConnection then begin
     Con := FDriverManager.GetConnection(FURL.URL);
-    Result := Con.GetEventAlerter(Handler, False, Options);
+    Result := Con.GetEventListener(Handler, False, Options);
     Con := nil;
   end else begin
-    Result := IZEventAlerter(FWeakEventAlerterSelfPtr);
-    FCreatedWeakEventAlerterPtr := Pointer(Result);
+    Result := IZEventListener(FWeakEventListenerSelfPtr);
+    FCreatedWeakEventListenerPtr := Pointer(Result);
   end;
 end;
 

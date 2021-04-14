@@ -98,7 +98,7 @@ type
     procedure Test_GENERATED_BY_DEFAULT_64;
     procedure Test_DECFIXED;
     procedure Test_TIMEZONE;
-    procedure Test_IBFBEventAlerter;
+    procedure Test_IBFBEventListener;
   end;
 
 {$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
@@ -563,8 +563,9 @@ begin
   end;
 end;
 
-procedure TZTestDbcInterbaseCase.Test_IBFBEventAlerter;
-var Alerter: IZEventAlerter;
+procedure TZTestDbcInterbaseCase.Test_IBFBEventListener;
+const EventCount = 50;
+var Listener: IZEventListener;
     EndTime: TDateTime;
     Events: TStrings;
     I: Integer;
@@ -577,48 +578,32 @@ begin
       not InterbaseFirebirdConnection.IsFirebirdLib then //Interbase until v2020 does not support EXECUTE BLOCK syntax
     Exit;
 
-  Alerter := Connection.GetEventAlerter(OnEvent, False, nil);
+  Listener := Connection.GetEventListener(OnEvent, False, nil);
   Events := TStringList.Create;
   FEventsReceived := TStringList.Create;
   try
-    Check(Alerter <> nil);
-    CheckFalse(Alerter.IsListening);
-    Events.Add('zeostest1');
-    Events.Add('zeostest2');
-    Events.Add('zeostest3');
-    Events.Add('zeostest4');
-    Events.Add('zeostest5');
-    Events.Add('zeostest6');
-    Events.Add('zeostest7');
-    Events.Add('zeostest8');
-    Events.Add('zeostest9');
-    Events.Add('zeostest10');
-    Events.Add('zeostest11');
-    Events.Add('zeostest12');
-    Events.Add('zeostest13');
-    Events.Add('zeostest14');
-    Events.Add('zeostest15');
-    Events.Add('zeostest16');
-    Events.Add('zeostest17');
-    Events.Add('zeostest18');
-    Alerter.Listen(Events, OnEvent);
-    Check(Alerter.IsListening);
+    Check(Listener <> nil);
+    CheckFalse(Listener.IsListening);
+    for i := 1 to EventCount do
+      Events.Add('zeostest'+IntToStr(I));;
+    Listener.Listen(Events, OnEvent);
+    Check(Listener.IsListening);
     S := 'EXECUTE BLOCK AS BEGIN POST_EVENT '+QuotedStr(Events[0]);
     for i := 1 to Events.Count -1 do
       S := S +'; POST_EVENT '+QuotedStr(Events[i]);
     S := S+'; END';
     Connection.ExecuteImmediat(S, lcExecute);
     Sleep(10);
-    EndTime := IncSecond(Now, 3);
+    EndTime := IncSecond(Now, 2);
     while (FEventsReceived.Count < Events.Count) and (EndTime > Now) do
       Sleep(0);
     CheckEquals(Events.Count, FEventsReceived.Count, 'Didn''t get all interbase events.');
-    Alerter.Unlisten;
-    CheckFalse(Alerter.IsListening);
+    Listener.Unlisten;
+    CheckFalse(Listener.IsListening);
     CheckFalse(Connection.IsClosed);
   finally
-    if Alerter <> nil then
-      Connection.CloseEventAlerter(Alerter);
+    if Listener <> nil then
+      Connection.CloseEventListener(Listener);
     FreeAndNil(Events);
     FreeAndNil(FEventsReceived);
   end;

@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{                TZEventAlerter Classes                   }
+{                TZEventListener Classes                  }
 {                                                         }
 {                Written by EgonHugeist                   }
 {                                                         }
@@ -48,7 +48,7 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZEventAlerter;
+unit ZEventListner;
 
 interface
 
@@ -60,12 +60,12 @@ uses ZAbstractConnection, Classes, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
 type
   TZOnEventAlert = procedure(Sender: TObject; Data: TZEventData) of object;
 
-  TZEventAlerter = Class(TAbstractActiveConnectionLinkedComponent)
+  TZEventListener = Class(TAbstractActiveConnectionLinkedComponent)
   private
     FEventNames: TStrings;
     FReceivedEvents: TStrings;
     FProperties: TStrings;
-    FAlerter: IZEventAlerter;
+    FListener: IZEventListener;
     FCS: TCriticalSection;
     FCloneConnection: Boolean;
     FEventName: TStrings;
@@ -92,9 +92,9 @@ implementation
 uses SysUtils,
   ZMessages;
 
-{ TZEventAlerter }
+{ TZEventListener }
 
-constructor TZEventAlerter.Create(AOwner: TComponent);
+constructor TZEventListener.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FCloneConnection := True;
@@ -105,7 +105,7 @@ begin
   FCS := TCriticalSection.Create;
 end;
 
-destructor TZEventAlerter.Destroy;
+destructor TZEventListener.Destroy;
 begin
   if Active then
     SetActive(False);
@@ -115,7 +115,7 @@ begin
   inherited;
 end;
 
-function TZEventAlerter.GetReceivedEvents: TStrings;
+function TZEventListener.GetReceivedEvents: TStrings;
 var I: Integer;
 begin
   FCS.Enter;
@@ -130,7 +130,7 @@ begin
   Result := FReceivedEvents;
 end;
 
-procedure TZEventAlerter.HandleEvents(var Event: TZEventData);
+procedure TZEventListener.HandleEvents(var Event: TZEventData);
 begin
   FCS.Enter;
   try
@@ -144,19 +144,19 @@ begin
   end;
 end;
 
-procedure TZEventAlerter.SetActive(Value: Boolean);
+procedure TZEventListener.SetActive(Value: Boolean);
 begin
   if FActive <> Value then try
-    if FAlerter = nil then begin
-      FAlerter := FConnection.DbcConnection.GetEventAlerter(HandleEvents, FCloneConnection, FProperties);
-      FAlerter.Listen(FEventNames, HandleEvents);
-    end else FAlerter.GetConnection.CloseEventAlerter(FAlerter);
+    if FListener = nil then begin
+      FListener := FConnection.DbcConnection.GetEventListener(HandleEvents, FCloneConnection, FProperties);
+      FListener.Listen(FEventNames, HandleEvents);
+    end else FListener.GetConnection.CloseEventListener(FListener);
   finally
     FActive := Value;
   end;
 end;
 
-procedure TZEventAlerter.SetCloneConnection(const Value: Boolean);
+procedure TZEventListener.SetCloneConnection(const Value: Boolean);
 begin
   if FCloneConnection <> Value then begin
     if FActive then
@@ -165,13 +165,13 @@ begin
   end;
 end;
 
-procedure TZEventAlerter.SetEventNames(const Value: TStrings);
+procedure TZEventListener.SetEventNames(const Value: TStrings);
 begin
   if FActive then
-    FAlerter.Unlisten;
+    FListener.Unlisten;
   FEventNames.Assign(Value);
   if FActive then
-    FAlerter.Listen(FEventName, HandleEvents);
+    FListener.Listen(FEventName, HandleEvents);
 end;
 
 end.

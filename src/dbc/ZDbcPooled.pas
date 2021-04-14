@@ -321,14 +321,14 @@ type
     /// <param>"CloneConnection" if <c>True</c> a new connection will be spawned.</param>
     /// <param>"Options" a list of options, to setup the event alerter.</param>
     /// <returns>a the generic event alerter object as interface or nil.</returns>
-    function GetEventAlerter(Handler: TZOnEventHandler; CloneConnection: Boolean; Options: TStrings): IZEventAlerter;
-    /// <summary>Check if the connection supports an event Alerter.</summary>
-    /// <returns><c>true</c> if the connection supports an event Alerter;
+    function GetEventListener(Handler: TZOnEventHandler; CloneConnection: Boolean; Options: TStrings): IZEventListener;
+    /// <summary>Check if the connection supports an event Listener.</summary>
+    /// <returns><c>true</c> if the connection supports an event Listener;
     /// <c>false</c> otherwise.</returns>
-    function SupportsEventAlerter: Boolean;
+    function SupportsEventListener: Boolean;
     /// <summary>Closes the event alerter.</summary>
     /// <param>"Value" a reference to the previously created alerter to be released.</param>
-    procedure CloseEventAlerter(var Value: IZEventAlerter);
+    procedure CloseEventListener(var Value: IZEventListener);
   end;
 
   TZDbcPooledConnectionDriver = class(TZAbstractDriver)
@@ -617,7 +617,7 @@ begin
   Result := GetConnection.StartTransaction;
 end;
 
-function TZDbcPooledConnection.SupportsEventAlerter: Boolean;
+function TZDbcPooledConnection.SupportsEventListener: Boolean;
 begin
   Result := False;
 end;
@@ -641,7 +641,7 @@ begin
   end;
 end;
 
-procedure TZDbcPooledConnection.CloseEventAlerter(var Value: IZEventAlerter);
+procedure TZDbcPooledConnection.CloseEventListener(var Value: IZEventListener);
 begin
   Value := nil;
 end;
@@ -910,8 +910,8 @@ begin
 end;
 
 {$IFDEF FPC}{$PUSH}{$WARN 5024 off : Parameter "Handler, Options" not used} {$ENDIF}
-function TZDbcPooledConnection.GetEventAlerter(Handler: TZOnEventHandler;
-  CloneConnection: Boolean; Options: TStrings): IZEventAlerter;
+function TZDbcPooledConnection.GetEventListener(Handler: TZOnEventHandler;
+  CloneConnection: Boolean; Options: TStrings): IZEventListener;
 begin
   Result := nil;
 end;

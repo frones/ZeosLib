@@ -201,7 +201,7 @@ type
   /// <summary>Implements a special Firebird Connection object.</summary>
   TZFirebirdConnection = class(TZInterbaseFirebirdConnection, IZConnection,
     IZTransactionManager, IZFirebirdConnection, IZInterbaseFirebirdConnection,
-    IZEventAlerter)
+    IZEventListener)
   private
     FMaster: IMaster;
     FProvider: IProvider;
@@ -315,7 +315,7 @@ type
     /// <returns><c>True</c>If it's a Interbase client lib; <c>False</c>
     ///  otherwise</returns>
     function IsInterbaseLib: Boolean; override;
-  public { implement IZEventAlerter}
+  public { implement IZEventListener}
     /// <summary>Starts listening the events.</summary>
     /// <param>"EventNames" a list of event name to be listened.</param>
     /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
@@ -982,7 +982,6 @@ begin
     try
       if EventBlock.FBEvent <> nil then with TZFirebirdConnection(FEventList.Connection) do begin
         IEvents(EventBlock.FBEvent).Cancel(FStatus);
-        EventBlock.FirstTime := True;
         if ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
           HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.queEvents', IImmediatelyReleasable(FWeakImmediatRelPtr));
       end;
@@ -1024,9 +1023,7 @@ procedure TZFBEventCallback.eventCallbackFunction(length: Cardinal;
   events: PByte);
 begin
   {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(events^, FEventBlock.result_buffer^, length);
-  if FEventBlock.FirstTime
-  then FEventBlock.FirstTime := False
-  else FEventBlock.Received := True;
+  FEventBlock.Received := True;
   FEventBlock.Signal.SetEvent;
 end;
 

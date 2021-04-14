@@ -120,7 +120,7 @@ type
   /// <summary>Implements Interbase6 Database Connection object</summary>
   TZInterbase6Connection = class(TZInterbaseFirebirdConnection, IZConnection,
     IZInterbase6Connection, IZTransactionManager, IZInterbaseFirebirdConnection,
-    IZEventAlerter)
+    IZEventListener)
   private
     FHandle: TISC_DB_HANDLE;
     FStatusVector: TARRAY_ISC_STATUS;
@@ -247,7 +247,7 @@ type
     ///  error handling in any kind.</param>
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
       var AError: EZSQLConnectionLost); override;
-  public { implement IZEventAlerter}
+  public { implement IZEventListener}
     /// <summary>Starts listening the events.</summary>
     /// <param>"EventNames" a list of event name to be listened.</param>
     /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
@@ -979,9 +979,7 @@ procedure EventCallback(UserData: PVoid; Length: ISC_USHORT; Updated: PISC_UCHAR
 begin
   if (Assigned(UserData) and Assigned(Updated) and (Length > 0)) then begin
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Updated^, PZInterbaseFirebirdEventBlock(UserData).result_buffer^, Length);
-    if PZInterbaseFirebirdEventBlock(UserData).FirstTime
-    then PZInterbaseFirebirdEventBlock(UserData).FirstTime := False
-    else PZInterbaseFirebirdEventBlock(UserData).Received := True;
+    PZInterbaseFirebirdEventBlock(UserData).Received := True;
     PZInterbaseFirebirdEventBlock(UserData).Signal.SetEvent;
   end;
 end;
@@ -1006,7 +1004,6 @@ begin
   with TZInterbase6Connection(FEventList.Connection) do
   for EventBlockIdx := 0 to High(FEventBlocks) do begin
     EventBlock := @FEventBlocks[EventBlockIdx];
-    //EventBlock.FirstTime := True;
     Status := FPlainDriver.isc_cancel_events(@FStatusVector, @FHandle, @EventBlock.EventBlockID);
     FPlainDriver.isc_free(EventBlock.event_buffer);
     FPlainDriver.isc_free(EventBlock.result_buffer);

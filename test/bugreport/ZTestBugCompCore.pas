@@ -159,7 +159,7 @@ uses
 {$ENDIF}
   SysUtils,
   ZSysUtils, ZEncoding,
-  ZDbcMetadata,
+  ZDbcMetadata, ZDbcProperties,
   ZDatasetUtils, ZAbstractDataset, ZTestConsts, ZTestCase;
 
 { ZTestCompCoreBugReport }
@@ -2010,6 +2010,7 @@ begin
   Query := CreateQuery;
   try
     Check(Query <> nil);
+    Query.Properties.Values[DSProps_LobCacheMode] := LcmOnLoadStr;
     Query.SQL.Text := 'select * from people';
     Query.TryKeepDataOnDisconnect := True;
     Query.CachedUpdates := True;

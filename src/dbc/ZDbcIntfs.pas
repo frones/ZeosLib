@@ -467,7 +467,7 @@ type
   IZBlob = interface;
   IZClob = interface;
   IZSequence = interface;
-  IZEventAlerter = interface;
+  IZEventListener = interface;
 
   /// <summary>Defines the Driver Manager interface.</summary>
   IZDriverManager = interface(IZInterface)
@@ -1145,14 +1145,14 @@ type
     /// <param>"CloneConnection" if <c>True</c> a new connection will be spawned.</param>
     /// <param>"Options" a list of options, to setup the event alerter.</param>
     /// <returns>a the generic event alerter object as interface or nil.</returns>
-    function GetEventAlerter(Handler: TZOnEventHandler; CloneConnection: Boolean; Options: TStrings): IZEventAlerter;
-    /// <summary>Check if the connection supports an event Alerter.</summary>
-    /// <returns><c>true</c> if the connection supports an event Alerter;
+    function GetEventListener(Handler: TZOnEventHandler; CloneConnection: Boolean; Options: TStrings): IZEventListener;
+    /// <summary>Check if the connection supports an event Listener.</summary>
+    /// <returns><c>true</c> if the connection supports an event Listener;
     /// <c>false</c> otherwise.</returns>
-    function SupportsEventAlerter: Boolean;
+    function SupportsEventListener: Boolean;
     /// <summary>Closes the event alerter.</summary>
     /// <param>"Value" a reference to the previously created alerter to be released.</param>
-    procedure CloseEventAlerter(var Value: IZEventAlerter);
+    procedure CloseEventListener(var Value: IZEventListener);
   end;
 
   /// <summary>Defines the database metadata interface.</summary>
@@ -4473,14 +4473,14 @@ type
 
   /// <author>EgonHugeist</author>
   /// <summary>Defines a generic event alerter interface</summary>
-  IZEventAlerter = interface (IZInterface)
+  IZEventListener = interface (IZInterface)
     ['{9E6DDBD2-86C9-4E5D-9625-FB1456F4545F}']
     /// <summary>Returns the <c>Connection</c> object
     ///  that produced this <c>Notification</c> object.</summary>
-    /// <returns>the connection that produced this EventAlerter.</returns>
+    /// <returns>the connection that produced this EventListener.</returns>
     function GetConnection: IZConnection;
-    /// <summary>Test if the <c>EventAlerter is listening to events</c></summary>
-    /// <returns><c>true</c> if the EventAlerter is active.</returns>
+    /// <summary>Test if the <c>EventListener is listening to events</c></summary>
+    /// <returns><c>true</c> if the EventListener is active.</returns>
     function IsListening: Boolean;
     /// <summary>Starts listening the events.</summary>
     /// <param>"EventNames" a list of event name to be listened.</param>

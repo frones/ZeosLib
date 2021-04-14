@@ -2108,6 +2108,7 @@ begin
   NewConnection := CreateDatasetConnection;
   UpdateSQL := TZUpdateSQL.Create(Connection);
   try
+    Query.Properties.Values[DSProps_LobCacheMode] := LcmOnLoadStr;
     Query.SQL.Text := 'select * from people';
     Query.TryKeepDataOnDisconnect := True;
     Query.Open;

@@ -183,7 +183,7 @@ type
 
   /// <summary>Implements PostgreSQL Database Connection.</summary>
   TZPostgreSQLConnection = class(TZAbstractSingleTxnConnection,
-    IZConnection, IZPostgreSQLConnection, IZTransaction, IZEventAlerter)
+    IZConnection, IZPostgreSQLConnection, IZTransaction, IZEventListener)
   private
     FUndefinedVarcharAsStringLength: Integer;
     Fconn: TPGconn;
@@ -438,11 +438,11 @@ type
     /// <param>"CloneConnection" if <c>True</c> a new connection will be spawned.</param>
     /// <param>"Options" a list of options, to setup the event alerter.</param>
     /// <returns>a the generic event alerter object as interface or nil.</returns>
-    function GetEventAlerter(Handler: TZOnEventHandler; CloneConnection: Boolean; Options: TStrings): IZEventAlerter; override;
-  public { implement IZEventAlerter }
+    function GetEventListener(Handler: TZOnEventHandler; CloneConnection: Boolean; Options: TStrings): IZEventListener; override;
+  public { implement IZEventListener }
     /// <summary>Returns the <c>Connection</c> object
     ///  that produced this <c>Notification</c> object.</summary>
-    /// <returns>the connection that produced this EventAlerter.</returns>
+    /// <returns>the connection that produced this EventListener.</returns>
     function GetConnection: IZConnection;
     /// <summary>Test if the <c>EventAllerter</c> is active</summary>
     /// <returns><c>true</c> if the EventAllerter is active.</returns>
@@ -813,7 +813,7 @@ end;
 
 function TZPostgreSQLConnection.IsListening: Boolean;
 begin
-  Result := not IsClosed and (FCreatedWeakEventAlerterPtr <> nil) and (FEventList.Count > 0) and FEventList.Timer.Enabled;
+  Result := not IsClosed and (FCreatedWeakEventListenerPtr <> nil) and (FEventList.Count > 0) and FEventList.Timer.Enabled;
 end;
 
 function TZPostgreSQLConnection.IsOidAsBlob: Boolean;
@@ -836,7 +836,7 @@ var Notify: PZPostgreSQLNotify;
     CP: Word;
     {$IFEND}
 begin
-  if not IsClosed and (FCreatedWeakEventAlerterPtr <> nil) then begin
+  if not IsClosed and (FCreatedWeakEventListenerPtr <> nil) then begin
     {$IF defined(UNICODE) or defined(WITH_RAWBYTESTRING)}
     CP := Consettings.ClientCodePage.CP;
     {$IFEND}
@@ -1772,10 +1772,10 @@ begin
   Result := EscapeString(Value);
 end;
 
-function TZPostgreSQLConnection.GetEventAlerter(Handler: TZOnEventHandler;
-  CloneConnection: Boolean; Options: TStrings): IZEventAlerter;
+function TZPostgreSQLConnection.GetEventListener(Handler: TZOnEventHandler;
+  CloneConnection: Boolean; Options: TStrings): IZEventListener;
 begin
-  Result := inherited GetEventAlerter(Handler, CloneConnection, Options);
+  Result := inherited GetEventListener(Handler, CloneConnection, Options);
   FEventList := TZPostgresEventList.Create(Handler, CheckEvents);
   if FEventTimerInterval = 0 then
     FEventTimerInterval := 250;
