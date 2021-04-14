@@ -506,11 +506,6 @@ const
   CodePageDummy: TZCodepage =
     (Name: ''; ID: 0; CharWidth: 1; Encoding: ceAnsi; CP: $ffff; ZAlias: ''; IsStringFieldCPConsistent: False);
 
-{$IF NOT DECLARED(INFINITE)}
-const
-  INFINITE = Cardinal($FFFFFFFF);
-{$IFEND}
-
 var
   ZOSCodePage: Word;
   ZOSCodePageMaxCharSize: Word;
