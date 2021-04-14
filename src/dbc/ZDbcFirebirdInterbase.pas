@@ -5879,7 +5879,7 @@ end;
 
 {$IFDEF FPC} {$PUSH}
   {$WARN 5057 off : Local variable "EPB" does not seem to be initialized}
-  {$WARN 5057 off : Local variable "EPBRawArray" of manged type does not seem to be initialized}
+  {$WARN 5091 off : Local variable "EPBRawArray" of manged type does not seem to be initialized}
 {$ENDIF}
 constructor TZInterbaseFirebirdEventThread.Create(Owner: TZFirebirdInterbaseEventList);
 var

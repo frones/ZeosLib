@@ -1907,7 +1907,12 @@ begin
   end;
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5057 off : Local variable "TS" does not seem to be initialized}
+  {$IFDEF WITH_NOT_INLINED_WARNING}
+    {$WARN 6058 off : Call to subroutine "procedure GUIDToBuffer(const Source:Pointer;Dest:PChar;const Options:TGUIDConvOptions);" marked as inline is not inlined}
+  {$ENDIF}
+{$ENDIF}
 procedure TZMySQLPreparedStatement.SetDataArray(ParameterIndex: Integer;
   const Value; const SQLType: TZSQLType; const VariantType: TZVariantType);
 var
