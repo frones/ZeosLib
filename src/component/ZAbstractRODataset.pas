@@ -3703,7 +3703,10 @@ begin
       if not Assigned(ResultSet) then
         if not (doSmartOpen in FOptions)
         then raise EZDatabaseError.Create(SCanNotOpenResultSet)
-        else Exit;
+        else begin // Set the updatecount see: https://sourceforge.net/p/zeoslib/tickets/501/
+          FRowsAffected := Statement.GetUpdateCount;
+          Exit;
+        end;
     if Connection <> nil then
       FControlsCodePage := Connection.ControlsCodePage;
     ConSettings := ResultSet.GetConSettings;

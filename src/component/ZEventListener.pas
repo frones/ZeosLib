@@ -48,7 +48,7 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZEventListner;
+unit ZEventListener;
 
 interface
 
@@ -90,7 +90,8 @@ type
 implementation
 
 uses SysUtils,
-  ZMessages;
+  ZMessages,
+  ZAbstractRODataset;
 
 { TZEventListener }
 
@@ -146,8 +147,13 @@ end;
 
 procedure TZEventListener.SetActive(Value: Boolean);
 begin
+  if Value and (FConnection = nil) then
+    raise EZDatabaseError.Create(SConnectionIsNotAssigned);
   if FActive <> Value then try
     if FListener = nil then begin
+      if not FConnection.Connected then //may be oversized (yet) but the
+        //conenction "may" create and login dialog... OTH it would be easy to create a cloned connection
+        FConnection.Connect;
       FListener := FConnection.DbcConnection.GetEventListener(HandleEvents, FCloneConnection, FProperties);
       FListener.Listen(FEventNames, HandleEvents);
     end else FListener.GetConnection.CloseEventListener(FListener);
@@ -160,7 +166,7 @@ procedure TZEventListener.SetCloneConnection(const Value: Boolean);
 begin
   if FCloneConnection <> Value then begin
     if FActive then
-      raise EZSQLException.Create(Format(SOperationIsNotAllowed3, ['Active']));
+      raise EZDatabaseError.Create(Format(SOperationIsNotAllowed3, ['Active']));
     FCloneConnection := Value;
   end;
 end;
