@@ -63,7 +63,7 @@ uses
 
 type
   TZPropertyLevelTypes = set of (pltConnection, pltTransaction, pltStatement,
-    pltResolver);
+    pltResolver, pltEventListener);
 
   { TfrmPropertyEditor }
 
@@ -198,7 +198,8 @@ implementation
 
 uses TypInfo, Types,
   ZSysUtils, ZCompatibility,
-  ZAbstractRODataset, ZAbstractDataset, ZAbstractConnection, ZTransaction
+  ZAbstractRODataset, ZAbstractDataset, ZAbstractConnection, ZTransaction,
+  ZEventListener
   {$IFDEF ENABLE_MYSQL},ZPlainMySqlDriver{$ENDIF};
 
 {$IFNDEF FPC}
@@ -343,6 +344,12 @@ jmpProtocol:
       FZPropertyLevelTypes := [pltStatement];
       if TZProtectedAbstractRODataSet(Component).Connection <> nil then begin
         Component := TZProtectedAbstractRODataSet(Component).Connection;
+        goto jmpProtocol;
+      end;
+    end else if Component.InheritsFrom(TZEventListener) then begin
+      FZPropertyLevelTypes := [pltEventListener];
+      if TZEventListener(Component).Connection <> nil then begin
+        Component := TZEventListener(Component).Connection;
         goto jmpProtocol;
       end;
     end else Exit;
@@ -601,6 +608,7 @@ begin
       Current := ZPropertyArray[i];
       if ((pltConnection in FZPropertyLevelTypes) and (pltConnection in Current.LevelTypes)) or
          ((pltTransaction in FZPropertyLevelTypes) and (pltTransaction in Current.LevelTypes)) or
+         ((pltEventListener in FZPropertyLevelTypes) and (pltEventListener in Current.LevelTypes)) or
          ((pltResolver in FZPropertyLevelTypes) and (pltResolver in Current.LevelTypes)) or
          ((pltStatement in FZPropertyLevelTypes) and (pltStatement in Current.LevelTypes) and not
            ((pltConnection in FZPropertyLevelTypes) and not (pltConnection in Current.LevelTypes))) then begin
@@ -4019,6 +4027,20 @@ const
     Protocols: (Count: 2; Items: @cODBCProtocols);
   );
 {$ENDIF}
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
+  PostgreOnly: array[0..0] of String = ('postrgres');
+{$ENDIF}
+
+{$IF declared(ELProps_ListernerInterval)}
+  ZProp_ListernerInterval : TZProperty = (
+    Name: ELProps_ListernerInterval;
+    Purpose: 'Sets Listener interval in milliseconds.';
+    ValueType: pvtNumber; LevelTypes: [pltEventListener];
+    Values: ''; Default: '250'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 1; Items: @PostgreOnly);
+  );
+{$IFEND}
 
 initialization
   prEditValuesPageIndex := 0;
@@ -4167,4 +4189,7 @@ initialization
   RegisterZProperties([@ZProp_Server, @ZProp_CharacterSet, @ZProp_DRIVER]);
 {$ENDIF}
 
+{$IF declared(ELProps_ListernerInterval )}
+  RegisterZProperties([@ZProp_ListernerInterval]);
+{$IFEND}
 end.

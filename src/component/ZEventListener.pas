@@ -58,33 +58,48 @@ uses ZAbstractConnection, Classes, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
   ZDbcIntfs;
 
 type
-  TZOnEventAlert = procedure(Sender: TObject; Data: TZEventData) of object;
+  TZOnEventAlert = procedure(Sender: TObject; Data: TZEventData;
+    Var AddReceivedEvent: Boolean) of object;
 
-  TZEventListener = Class(TAbstractActiveConnectionLinkedComponent)
-  private
+  TZAbstractEventListener = Class(TAbstractActiveConnectionLinkedComponent)
+  protected
+    FCS: TCriticalSection;
     FEventNames: TStrings;
     FReceivedEvents: TStrings;
     FProperties: TStrings;
     FListener: IZEventListener;
-    FCS: TCriticalSection;
     FCloneConnection: Boolean;
-    FEventName: TStrings;
     FLockedList: TStrings;
     FOnEventAlert: TZOnEventAlert;
     procedure SetEventNames(const Value: TStrings);
     procedure SetCloneConnection(const Value: Boolean);
     procedure HandleEvents(var Event: TZEventData);
     function GetReceivedEvents: TStrings; //make threadsave copies of the received events
-  protected
     procedure SetActive(Value: Boolean); override;
+    procedure SetConnection(Value: TZAbstractConnection); override;
+    procedure SetProperties(const Value: TStrings); virtual;
+  protected
+    property EventNames: TStrings read FEventNames write SetEventNames;
+    property CloneConnection: Boolean read FCloneConnection write SetCloneConnection;
+    property ReceivedEvents: TStrings read GetReceivedEvents;
+    property OnEventAlert: TZOnEventAlert read FOnEventAlert write FOnEventAlert;
+    property Properties: TStrings read FProperties write SetProperties;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+  public
+    property CriticalSection: TCriticalSection read FCS;
+  End;
+
+  TZEventListener = Class(TZAbstractEventListener)
+  public
+    property ReceivedEvents;
   published
-    property EventNames: TStrings read GetReceivedEvents write SetEventNames;
-    property CloneConnection: Boolean read FCloneConnection write SetCloneConnection;
-    property ReceivedEvents: TStrings read FReceivedEvents;
-    property OnEventAlert: TZOnEventAlert read FOnEventAlert write FOnEventAlert;
+    property EventNames;
+    property CloneConnection;
+    property OnEventAlert;
+    property Connection;
+    property Properties;
   End;
 
 implementation
@@ -93,30 +108,33 @@ uses SysUtils,
   ZMessages,
   ZAbstractRODataset;
 
-{ TZEventListener }
+{ TZAbstractEventListener }
 
-constructor TZEventListener.Create(AOwner: TComponent);
+constructor TZAbstractEventListener.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FCloneConnection := True;
-  FEventNames := TStringList.Create(True);
-  TStringList(FEventNames).Sorted := True;
-  TStringList(FEventNames).Duplicates := dupIgnore;
+  FEventNames := TStringList.Create;
+  TStringList(FEventNames).Sorted := True; // dupIgnore only works when the TStringList is sorted
+  TStringList(FEventNames).Duplicates := dupIgnore; // don't allow duplicate events
   FReceivedEvents := TStringList.Create;
+  FProperties := TStringList.Create;
   FCS := TCriticalSection.Create;
 end;
 
-destructor TZEventListener.Destroy;
+destructor TZAbstractEventListener.Destroy;
 begin
-  if Active then
+  if Active then try
     SetActive(False);
+  except end;
   FreeAndNil(FEventNames);
   FreeAndNil(FReceivedEvents);
   FreeAndNil(FCS);
+  FreeAndNil(FProperties);
   inherited;
 end;
 
-function TZEventListener.GetReceivedEvents: TStrings;
+function TZAbstractEventListener.GetReceivedEvents: TStrings;
 var I: Integer;
 begin
   FCS.Enter;
@@ -131,21 +149,25 @@ begin
   Result := FReceivedEvents;
 end;
 
-procedure TZEventListener.HandleEvents(var Event: TZEventData);
+procedure TZAbstractEventListener.HandleEvents(var Event: TZEventData);
+var AddReceivedEvent: Boolean;
 begin
   FCS.Enter;
   try
+    AddReceivedEvent := True;
     if Assigned(OnEventAlert) then
-      OnEventAlert(Self, Event);
+      OnEventAlert(Self, Event, AddReceivedEvent);
     if (Event <> nil) then
-      FLockedList.AddObject(Event.ToString, Event);
-    Event := nil;
+      if AddReceivedEvent then begin
+        FLockedList.AddObject(Event.ToString, Event);
+        Event := nil;
+      end else FreeAndNil(Event);
   finally
     FCS.Leave;
   end;
 end;
 
-procedure TZEventListener.SetActive(Value: Boolean);
+procedure TZAbstractEventListener.SetActive(Value: Boolean);
 begin
   if Value and (FConnection = nil) then
     raise EZDatabaseError.Create(SConnectionIsNotAssigned);
@@ -162,7 +184,7 @@ begin
   end;
 end;
 
-procedure TZEventListener.SetCloneConnection(const Value: Boolean);
+procedure TZAbstractEventListener.SetCloneConnection(const Value: Boolean);
 begin
   if FCloneConnection <> Value then begin
     if FActive then
@@ -171,13 +193,35 @@ begin
   end;
 end;
 
-procedure TZEventListener.SetEventNames(const Value: TStrings);
+procedure TZAbstractEventListener.SetConnection(Value: TZAbstractConnection);
+Var WasListening: boolean;
+Begin
+  If (Value <> FConnection) Then Begin
+    If (csDesigning in ComponentState) Then
+      FConnection := Value
+    Else Begin
+      WasListening := FActive;
+      If FActive Then
+        SetActive(False);
+      FConnection := Value;
+      If WasListening and (Value <> nil) Then
+        SetActive(True);
+    End;
+  End;
+end;
+
+procedure TZAbstractEventListener.SetEventNames(const Value: TStrings);
 begin
   if FActive then
     FListener.Unlisten;
   FEventNames.Assign(Value);
   if FActive then
-    FListener.Listen(FEventName, HandleEvents);
+    FListener.Listen(FEventNames, HandleEvents);
+end;
+
+procedure TZAbstractEventListener.SetProperties(const Value: TStrings);
+begin
+  FProperties.Assign(Value);
 end;
 
 end.

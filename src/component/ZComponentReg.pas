@@ -85,7 +85,7 @@ uses
 {$ENDIF}
   ZPropertiesEditor,
   Classes, ZConnection, ZAbstractConnection, ZDataset, ZSqlUpdate, ZSqlProcessor,
-  ZStoredProcedure, ZGroupedConnection, ZConnectionGroup,
+  ZStoredProcedure, ZGroupedConnection, ZConnectionGroup, ZEventListener,
   ZSqlMonitor, ZSqlMetadata, ZSequence, ZAbstractRODataset
   {$IFDEF ENABLE_INTERBASE}, ZIBEventAlerter {$ENDIF}
   {$IFDEF ENABLE_POSTGRESQL}, ZPgEventAlerter {$ENDIF};
@@ -103,7 +103,7 @@ var                                             //
 begin
   RegisterComponents(ZEOS_DB_PALETTE, [TZConnection,
     TZTransaction, TZReadOnlyQuery, TZQuery, TZTable, TZMemTable, TZUpdateSQL,
-    TZConnectionGroup, TZGroupedConnection,
+    TZConnectionGroup, TZGroupedConnection, TZEventListener,
     TZStoredProc, TZSQLMetadata, TZSQLProcessor, TZSQLMonitor, TZSequence
     {$IFDEF ENABLE_INTERBASE}, TZIBEventAlerter {$ENDIF}
     {$IFDEF ENABLE_POSTGRESQL}, TZPgEventAlerter{$ENDIF}]) ;
@@ -162,6 +162,8 @@ begin
   RegisterPropertyEditor(TypeInfo(string), TZSequence, 'SequenceName', TZSequenceNamePropertyEditor);
 
   RegisterPropertyEditor(TypeInfo(TStrings), TZTransaction, 'Properties', TZProperitesEditor);
+
+  RegisterPropertyEditor(TypeInfo(TStrings), TZEventListener, 'Properties', TZProperitesEditor);
 {$IFDEF USE_METADATA}
   RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'Catalog', TZCatalogProperty);
   RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'ColumnName', TZColumnNamePropertyEditor);
