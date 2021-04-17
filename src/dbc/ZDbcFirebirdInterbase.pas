@@ -64,7 +64,7 @@ uses
   SynCommons, SynTable,
   {$ENDIF USE_SYNCOMMONS} {$ENDIF MORMOT2}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD, Math, Types,
-  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} SyncObjs,
+  {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   {$IFDEF WITH_INFINATE_DECLARED_IN_UNIT_WINDOWS}Windows,{$ENDIF}//old delphi <= 2010 declared const INFINITE in windows unit
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} //need for inlined FloatToRaw
   ZCollections, ZClasses, ZCompatibility,
@@ -155,8 +155,13 @@ type
 
   TZFirebirdInterbaseEventList = class;
 
+  TZFirebirdInterbaseEventListClass = class of TZFirebirdInterbaseEventList;
+
+  TZFirebirdInterbaseEventAlert = procedure(Sender: TObject; EventName: string;
+    EventCount: longint; var CancelAlerts: boolean) of object;
+
   /// <author>EgonHugeist</author>
-  /// <summary>Implemnentss a TZInterbaseFirebirdConnection connection object.</summary>
+  /// <summary>Implements a TZInterbaseFirebirdConnection connection object.</summary>
   TZInterbaseFirebirdConnection = Class(TZAbstractDbcConnection)
   private
     FWeakTransactionManagerPtr: Pointer;
@@ -182,6 +187,7 @@ type
     function GetActiveTransaction: IZInterbaseFirebirdTransaction;
     procedure OnPropertiesChange(Sender: TObject); override;
     function ConstructConnectionString: SQLString;
+    class function GetEventListClass: TZFirebirdInterbaseEventListClass; virtual; abstract;
   protected
     procedure InternalClose; override;
   public
@@ -373,6 +379,8 @@ type
     procedure Unlisten;
     /// <summary>Triggers an event.</summary>
     procedure TriggerEvent(const Name: String);
+  public { implement IZFirebirdInterbaseEventAlerter}
+    procedure SetOnEventAlert(Value: TZFirebirdInterbaseEventAlert);
   end;
 
   /// <author>EgonHugeist</author>
@@ -1013,10 +1021,12 @@ type
     procedure Notify(Ptr: Pointer; Action: TListNotification); override;
   end;
 
-  TZInterbaseFirebirdEventThread = class;
-
   /// <summary>Defines a reference of an event block for firebird and interbase.</summary>
   PZInterbaseFirebirdEventBlock = ^TZInterbaseFirebirdEventBlock;
+
+  TZProcessEvents = procedure (EventBlock: PZInterbaseFirebirdEventBlock) of Object;
+  TZAsyncQueEvents = procedure (EventBlock: PZInterbaseFirebirdEventBlock) of Object;
+
   /// <summary>Defines an event block slice for firebird and interbase.
   ///  A slice is a chunk of max 15 events to be registered on fbclient.</summary>
   TZInterbaseFirebirdEventBlock = record
@@ -1030,52 +1040,50 @@ type
     ///  pointer. Up to 15 null-terminated strings that each name an event
     ///  addressed in the buffer</summary>
     result_buffer: PAnsiChar;
-    /// <summary>Number of event identifier strings that get registered per slice.</summary>
-    id_count: ISC_USHORT;
-    EventBufferLength: ISC_LONG;
-    EventBlockID: ISC_LONG;
-    /// <summary>Was an event received</summary>
-    Received: Boolean;
-    /// <summary>The starting offset in the Names list</summary>
+    /// <summary>the evenbuffer length</summary>
+    buffer_length: ISC_LONG;
+    /// <summary>Number of event identifier strings that get registered per eventblock.</summary>
+    EventCount: ISC_USHORT;
+    /// <summary>Caller to process the events</summary>
+    ProcessEvents: TZProcessEvents;
+    /// <summary>Caller to que the events</summary>
+    AsyncQueEvents: TZAsyncQueEvents;
+    /// <summary>register and unregister an event triggers an received event.
+    ///  But we want to listen to real events only</summary>
+    FirstTime: Boolean;
+    /// <summary>The offset in the envent names list we listen</summary>
     NamesOffSet: Integer;
-    /// <summary>The Signal we use to notify a received event</summary>
-    {$IFDEF AUTOREFCOUNT}[WEAK]{$ENDIF}Signal: TSimpleEvent;
-    /// <summary>an array of event counters we use to compare which event has
-    ///  posted and which not</summary;
-    EventCounts: TARRAY_ISC_EVENTCOUNTS;
+    /// <summary>The returned id after register the event block</summary>
+    event_id: PISC_LONG;
     /// <summary>Weak reference of the IEvents interface</summary>
     FBEvent: Pointer;
     /// <summary>Weak reference of the IEventsCallback interface</summary>
     FBEventsCallback: Pointer;
   end;
 
+  IZFirebirdInterbaseEventAlerter = interface(IZEventListener)
+    ['{57556AD1-F8D3-4AF9-B25C-89835DB4E4B1}']
+    procedure SetOnEventAlert(Value: TZFirebirdInterbaseEventAlert);
+  end;
+
+  TZEventBlocks = array of TZInterbaseFirebirdEventBlock;
   /// <summary>Implements Firebird/Interbase EventList</summary>
   TZFirebirdInterbaseEventList = Class(TZEventList)
   private
-    FWaitThread: TZInterbaseFirebirdEventThread;
     {$IFDEF AUTOREFCOUNT}[WEAK]{$ENDIF}FConnection: TZInterbaseFirebirdConnection;
+  protected
+    FEventBlocks: TZEventBlocks;
+    FOnEventAlert: TZFirebirdInterbaseEventAlert;
   public
     constructor Create(Handler: TZOnEventHandler; AConnection: TZInterbaseFirebirdConnection);
   public
-    property WaitThread: TZInterbaseFirebirdEventThread read FWaitThread write FWaitThread; //"Wait" because we wait until a signal is received
+    procedure AsyncQueEvents(EventBlock: PZInterbaseFirebirdEventBlock); virtual; abstract;
+    procedure ProcessEvents(EventBlock: PZInterbaseFirebirdEventBlock);
+    procedure RegisterEvents;
+    procedure UnregisterEvents; virtual; abstract;
+  public
     property Connection: TZInterbaseFirebirdConnection read FConnection;
   End;
-
-  /// <summary>Implements a generic Firebird/Interbase Event wait thread</summary>
-  TZInterbaseFirebirdEventThread = class(TThread)
-    // Local use variables
-    FSignal: TSimpleEvent;
-    FEventBlocks: array of TZInterbaseFirebirdEventBlock;
-    {$IFDEF AUTOREFCOUNT}[WEAK]{$ENDIF}FEventList: TZFirebirdInterbaseEventList;
-  protected
-    procedure Execute; override;
-    procedure UnRegisterEvents; virtual; abstract;
-    procedure AsyncQueEvents(EventBlock: PZInterbaseFirebirdEventBlock); virtual; abstract;
-    procedure ProcessEvents(EventBlock: PZInterbaseFirebirdEventBlock); virtual;
-  public
-    constructor Create(Owner: TZFirebirdInterbaseEventList);
-    destructor Destroy; override;
-  end;
 
   TZFirebirdInterbaseEventData = class(TZEventData)
   private
@@ -1579,7 +1587,7 @@ function TZInterbaseFirebirdConnection.GetEventListener(
   Options: TStrings): IZEventListener;
 begin
   Result := inherited GetEventListener(Handler, CloneConnection, Options);
-  FEventList := TZFirebirdInterbaseEventList.Create(Handler, Self);
+  FEventList := GetEventListClass.Create(Handler, Self);
 end;
 
 function TZInterbaseFirebirdConnection.GetGUIDProps: TZInterbaseFirebirdConnectionGUIDProps;
@@ -1741,7 +1749,7 @@ end;
 
 function TZInterbaseFirebirdConnection.IsListening: Boolean;
 begin
-  Result := not IsClosed and (FCreatedWeakEventListenerPtr <> nil) and (FEventList <> nil) and (FEventList.FWaitThread <> nil);
+  Result := not IsClosed and (FCreatedWeakEventListenerPtr <> nil) and (FEventList <> nil) and (FEventList.FEventBlocks <> nil);
 end;
 
 function TZInterbaseFirebirdConnection.IsTransactionValid(
@@ -1763,7 +1771,7 @@ begin
     fActiveTransaction := nil;
   end;
   if FEventList <> nil then begin
-    if FEventList.FWaitThread <> nil then
+    if FEventList.FEventBlocks <> nil then
       UnListen;
     FreeAndNil(FEventList);
   end;
@@ -1927,6 +1935,14 @@ begin
   end;
 end;
 
+procedure TZInterbaseFirebirdConnection.SetOnEventAlert(
+  Value: TZFirebirdInterbaseEventAlert);
+begin
+  if FEventList <> nil then
+    FEventList.FOnEventAlert := Value
+  else raise EZSQLException.Create('No active listener acquired');
+end;
+
 procedure TZInterbaseFirebirdConnection.SetReadOnly(Value: Boolean);
 begin
   if (ReadOnly <> Value) then begin
@@ -2014,12 +2030,8 @@ end;
 procedure TZInterbaseFirebirdConnection.Unlisten;
 begin
   if (FEventList <> nil) and (FEventList.Count > 0) then begin
-    if FEventList.FWaitThread <> nil then begin
-      FEventList.FWaitThread.Terminate;
-      FEventList.FWaitThread.FSignal.SetEvent;
-      FEventList.FWaitThread.WaitFor;
-      FreeAndNil(FEventList.FWaitThread);
-    end;
+    if FEventList.FEventBlocks <> nil then
+      FEventList.UnregisterEvents;
     FEventList.Clear;
   end else
     raise EZSQLException.Create('no events registered');
@@ -5871,110 +5883,6 @@ begin
   inherited Notify(Ptr, Action);
 end;
 
-{ TZInterbaseFirebirdEventThread }
-
-{$IFDEF FPC} {$PUSH}
-  {$WARN 5057 off : Local variable "EPB" does not seem to be initialized}
-  {$WARN 5091 off : Local variable "EPBRawArray" of manged type does not seem to be initialized}
-{$ENDIF}
-constructor TZInterbaseFirebirdEventThread.Create(Owner: TZFirebirdInterbaseEventList);
-var
-  EPBRawArray: array[0..IB_MAX_EVENT_BLOCK-1] of RawByteString;
-  EPB: array[0..IB_MAX_EVENT_BLOCK-1] of PAnsiChar;
-  Blocks, EventCount, OffSet, EventGroup, i: Integer;
-  EB: PZInterbaseFirebirdEventBlock;
-begin
-  FEventList := Owner;
-  FSignal := TSimpleEvent.Create;
-  FillChar(EPBRawArray, SizeOf(EPBRawArray), #0);
-  EventCount := Owner.Count;
-  Blocks := (EventCount + (IB_MAX_EVENT_BLOCK-1)) div IB_MAX_EVENT_BLOCK;
-  SetLength(FEventBlocks, Blocks);
-  OffSet := 0;
-
-  for EventGroup := 0 to Blocks -1 do begin
-    FillChar(EPB, SizeOf(EPB), #0);
-    EB := @FEventBlocks[EventGroup];
-    EventCount := (Owner.Count - OffSet);
-    if (EventCount > IB_MAX_EVENT_BLOCK) then
-      EventCount := IB_MAX_EVENT_BLOCK;
-    EB.id_count := EventCount;
-    EB.NamesOffSet := OffSet;
-    EB.Signal := FSignal;
-    for i := 0 to EventCount -1 do begin
-      {$IFDEF UNICODE}
-      EPBRawArray[I] := ZUnicodeToRaw(PZEvent(Owner[Offset+i]).Name, Owner.FConnection.ConSettings.ClientCodePage.CP);
-      {$ELSE}
-      EPBRawArray[I] := PZEvent(Owner[Offset+i]).Name;
-      {$ENDIF}
-      EPB[I] := Pointer(EPBRawArray[I]);
-    end;
-    EB.EventBufferLength := Owner.FConnection.FInterbaseFirebirdPlainDriver.isc_event_block(
-      @EB.event_buffer, @EB.result_buffer, EventCount, EPB[0],
-      EPB[1], EPB[2], EPB[3],  EPB[4],  EPB[5],  EPB[6],  EPB[7],
-      EPB[8], EPB[9], EPB[10], EPB[11], EPB[12], EPB[13], EPB[14]);
-    Inc(OffSet, IB_MAX_EVENT_BLOCK);
-  end;
-  for I := 0 to IB_MAX_EVENT_BLOCK-1 do
-    EPBRawArray[i] := '';
-  inherited Create(False);
-  FSignal.SetEvent;
-end;
-{$IFDEF FPC} {$POP} {$ENDIF}
-
-destructor TZInterbaseFirebirdEventThread.Destroy;
-begin
-  inherited;
-  FreeAndNil(FSignal);
-end;
-
-procedure TZInterbaseFirebirdEventThread.Execute;
-var EPB: PZInterbaseFirebirdEventBlock;
-    EventBlockIdx: Integer;
-begin
-  try
-    repeat
-      FSignal.WaitFor(INFINITE);
-      if not Terminated and not FEventList.FConnection.IsClosed then
-        for EventBlockIdx := 0 to High(FEventBlocks) do begin
-          EPB := @FEventBlocks[EventBlockIdx];
-          if EPB.Received then
-            ProcessEvents(EPB);
-          AsyncQueEvents(EPB);
-        end;
-      FSignal.ResetEvent;
-    until Terminated or FEventList.FConnection.IsClosed;
-    ReturnValue := 0;
-  except
-    ReturnValue := 1;
-  end;
-  if not FEventList.FConnection.IsClosed then
-    UnRegisterEvents;
-end;
-
-procedure TZInterbaseFirebirdEventThread.ProcessEvents(EventBlock: PZInterbaseFirebirdEventBlock);
-var i: integer;
-    EventCounts: TARRAY_ISC_EVENTCOUNTS;
-    Event: TZFirebirdInterbaseEventData;
-begin
-  FEventList.FConnection.FInterbaseFirebirdPlainDriver.isc_event_counts(@EventCounts,
-    EventBlock.EventBufferLength, EventBlock.event_buffer, EventBlock.result_buffer);
-  if EventBlock.Received then
-    for i := 0 to (EventBlock.id_count - 1) do
-      if (EventCounts[i] > EventBlock.EventCounts[i]) then begin
-        Event := TZFirebirdInterbaseEventData.Create;
-        Event.fName := PZEvent(FEventList[EventBlock.NamesOffSet+I]).Name;
-        Event.fKind := 'Event';
-        Event.fEventState := esSignaled;
-        Event.FCountForEvent := EventCounts[i] - EventBlock.EventCounts[i];
-        FEventList.Handler(TZEventData(Event));
-        if Event <> nil then
-          FreeAndNil(Event);
-      end;
-  EventBlock.Received := false;
-  Move(EventCounts, EventBlock.EventCounts, SizeOf(TARRAY_ISC_EVENTCOUNTS));
-end;
-
 { TZFirebirdInterbaseEventList }
 
 constructor TZFirebirdInterbaseEventList.Create(Handler: TZOnEventHandler;
@@ -5983,6 +5891,91 @@ begin
   inherited Create(Handler);
   FConnection := AConnection;
 end;
+
+procedure TZFirebirdInterbaseEventList.ProcessEvents(
+  EventBlock: PZInterbaseFirebirdEventBlock);
+var i: integer;
+    EventCounts: TARRAY_ISC_EVENTCOUNTS;
+    Event: TZFirebirdInterbaseEventData;
+    CancelAlerts: Boolean;
+begin
+  FConnection.FInterbaseFirebirdPlainDriver.isc_event_counts(@EventCounts,
+    EventBlock.buffer_length, EventBlock.event_buffer, EventBlock.result_buffer);
+
+  if not EventBlock.FirstTime then begin
+    CancelAlerts := False;
+    for i := 0 to (EventBlock.EventCount - 1) do
+      if (EventCounts[i] > 0) then
+        if Assigned(FOnEventAlert) then begin
+          FOnEventAlert(Self, PZEvent(Get(EventBlock.NamesOffSet+I)).Name, EventCounts[i], CancelAlerts);
+          if CancelAlerts then
+            Break;
+        end else begin
+          Event := TZFirebirdInterbaseEventData.Create;
+          Event.fName := PZEvent(Get(EventBlock.NamesOffSet+I)).Name;
+          Event.fKind := 'Event';
+          Event.fEventState := esSignaled;
+          Event.FCountForEvent := EventCounts[i];
+          Handler(TZEventData(Event));
+          if Event <> nil then
+            FreeAndNil(Event);
+        end;
+    if CancelAlerts then
+      UnregisterEvents;
+  end;
+end;
+
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5057 off : Local variable "EPB" does not seem to be initialized}
+  {$WARN 5091 off : Local variable "EPBRawArray" of manged type does not seem to be initialized}
+{$ENDIF}
+procedure TZFirebirdInterbaseEventList.RegisterEvents;
+var
+  EPBRawArray: array[0..IB_MAX_EVENT_BLOCK-1] of RawByteString;
+  EPB: array[0..IB_MAX_EVENT_BLOCK-1] of PAnsiChar;
+  Blocks, EventCount, OffSet, EventGroup, i: Integer;
+  EB: PZInterbaseFirebirdEventBlock;
+  Event: PZEvent;
+begin
+  if FEventBlocks <> nil then
+    raise EZSQLException.Create('Listener active already');
+  FillChar(EPBRawArray, SizeOf(EPBRawArray), #0);
+  EventCount := Count;
+  Blocks := (EventCount + (IB_MAX_EVENT_BLOCK-1)) div IB_MAX_EVENT_BLOCK;
+  SetLength(FEventBlocks, Blocks);
+  OffSet := 0;
+
+  for EventGroup := 0 to Blocks -1 do begin
+    FillChar(EPB, SizeOf(EPB), #0);
+    EB := @FEventBlocks[EventGroup];
+    EventCount := (Count - OffSet);
+    if (EventCount > IB_MAX_EVENT_BLOCK) then
+      EventCount := IB_MAX_EVENT_BLOCK;
+    EB.EventCount := EventCount;
+    EB.FirstTime := True;
+    EB.NamesOffSet := OffSet;
+    EB.ProcessEvents := ProcessEvents;
+    EB.AsyncQueEvents := AsyncQueEvents;
+    for i := 0 to EventCount -1 do begin
+      Event := Get(Offset+i);
+      {$IFDEF UNICODE}
+      EPBRawArray[I] := ZUnicodeToRaw(Event.Name, FConnection.ConSettings.ClientCodePage.CP);
+      {$ELSE}
+      EPBRawArray[I] := Event.Name;
+      {$ENDIF}
+      EPB[I] := Pointer(EPBRawArray[I]);
+    end;
+    EB.buffer_length := FConnection.FInterbaseFirebirdPlainDriver.isc_event_block(
+      @EB.event_buffer, @EB.result_buffer, EventCount, EPB[0],
+      EPB[1], EPB[2], EPB[3],  EPB[4],  EPB[5],  EPB[6],  EPB[7],
+      EPB[8], EPB[9], EPB[10], EPB[11], EPB[12], EPB[13], EPB[14]);
+    AsyncQueEvents(EB);
+    Inc(OffSet, IB_MAX_EVENT_BLOCK);
+  end;
+  for I := 0 to IB_MAX_EVENT_BLOCK-1 do
+    EPBRawArray[i] := '';
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 { TZFirebirdInterbaseEventData }
 

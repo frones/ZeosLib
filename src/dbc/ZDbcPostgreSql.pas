@@ -144,13 +144,6 @@ type
     procedure HandleErrorOrWarning(Status: TZPostgreSQLExecStatusType;
       LogCategory: TZLoggingCategory; const LogMessage: SQLString;
       const Sender: IImmediatelyReleasable; ResultHandle: TPGresult);
-    /// <summary>Test if the <c>EventAllerter is active</c></summary>
-    /// <returns><c>true</c> if the EventAllerter is active.</returns>
-    function IsListening: Boolean;
-    /// <summary>Checks for any pending events.</summary>
-    procedure CheckEvents;
-    procedure PauseListener;
-    procedure ResumeListener;
   end;
 
   PZPGDomain2BaseTypeMap = ^TZPGDomain2BaseTypeMap;
@@ -172,9 +165,18 @@ type
     property UnkownCount: Integer read fUnkownCount;
   end;
 
+  TZPgNotifyEvent = procedure(Sender: TObject; Event: string;
+    ProcessID: Integer; Payload: string) of object;
+
+  IZPostgresEventListener = Interface(IZEventListener)
+    ['{FBB89249-7C7B-4777-B64C-AFCDAAB50F66}']
+    procedure SetOnPgNotifyEvent(const Value: TZPgNotifyEvent);
+  End;
+
   TZPostgresEventList = class(TZEventList)
   private
     FTimer: TZThreadTimer;
+    FPgNotifyEvent: TZPgNotifyEvent;
   public
     constructor Create(Handler: TZOnEventHandler; TimerTick: TThreadMethod);
     destructor Destroy; override;
@@ -183,7 +185,8 @@ type
 
   /// <summary>Implements PostgreSQL Database Connection.</summary>
   TZPostgreSQLConnection = class(TZAbstractSingleTxnConnection,
-    IZConnection, IZPostgreSQLConnection, IZTransaction, IZEventListener)
+    IZConnection, IZPostgreSQLConnection, IZTransaction, IZEventListener,
+    IZPostgresEventListener)
   private
     FUndefinedVarcharAsStringLength: Integer;
     Fconn: TPGconn;
@@ -236,8 +239,6 @@ type
     procedure SetServerSetting(const AName, AValue: RawbyteString);
     procedure UpdateTimestampOffset;
     procedure CheckEvents;
-    procedure PauseListener;
-    procedure ResumeListener;
   public
     procedure AfterConstruction; override;
     /// <summary>Destroys this object and cleanups the memory.</summary>
@@ -455,6 +456,8 @@ type
     procedure TriggerEvent(const Name: String);
     /// <summary>Stop listening the events and cleares the registered events.</summary>
     procedure Unlisten;
+  public { implement IZPostgresEventListener}
+    procedure SetOnPgNotifyEvent(const Value: TZPgNotifyEvent);
   end;
 
   TZPostgresEventData = class(TZEventData)
@@ -835,11 +838,16 @@ var Notify: PZPostgreSQLNotify;
     {$IF defined(UNICODE) or defined(WITH_RAWBYTESTRING)}
     CP: Word;
     {$IFEND}
+    PayLoad: String;
+    relname: String;
+    ProcessID: Integer;
 begin
   if not IsClosed and (FCreatedWeakEventListenerPtr <> nil) then begin
     {$IF defined(UNICODE) or defined(WITH_RAWBYTESTRING)}
     CP := Consettings.ClientCodePage.CP;
     {$IFEND}
+    PayLoad := '';
+    relname := '';
     while FPlainDriver.PQisBusy(Fconn) = 1 do //see: https://sourceforge.net/p/zeoslib/tickets/475/
       Sleep(1);
     if FPlainDriver.PQconsumeInput(Fconn)=1 then
@@ -848,40 +856,51 @@ begin
         if Notify = nil then
           Break;
         try
-          AEvent := TZPostgresEventData.Create;
           if Notify.relname <> nil then
             {$IFDEF UNICODE}
-            PRawToUnicode(Notify.relname, StrLen(Notify.relname), CP, AEvent.fName);
+            PRawToUnicode(Notify.relname, StrLen(Notify.relname), CP, relname)
             {$ELSE}
-            ZSetString(Notify.relname, StrLen(Notify.relname), AEvent.fName{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF});
+            ZSetString(Notify.relname, StrLen(Notify.relname), RawByteString(relname){$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF})
             {$ENDIF}
+          else relname := '';
           if Notify.Payload <> nil then
             {$IFDEF UNICODE}
-            PRawToUnicode(Notify.payload, StrLen(Notify.payload), CP, AEvent.fPayload);
+            PRawToUnicode(Notify.payload, StrLen(Notify.payload), CP, Payload)
             {$ELSE}
-            ZSetString(Notify.payload, StrLen(Notify.payload), AEvent.fPayload{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF});
+            ZSetString(Notify.payload, StrLen(Notify.payload), RawByteString(Payload){$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF})
             {$ENDIF}
-          AEvent.FProcessID := Notify.be_pid;
-          AEvent.fEventState := esSignaled;
-          Handler := nil;
-          if FEventList <> nil then begin
-            Handler := nil;
-            for I := 0 to FEventList.Count -1 do begin
-              ListenEvent := FEventList[i];
-              if ListenEvent.Name = AEvent.fName then begin
-                Handler := ListenEvent.Handler;
-                Break;
-              end;
-            end;
-            if not Assigned(Handler) then
-              Handler := FEventList.Handler;
-            Handler(TZEventData(AEvent));
-          end;
+          else payload := '';
+          ProcessID := Notify.be_pid;
         finally
-          if AEvent <> nil then
-            FreeAndNil(AEvent);
           FPlainDriver.PQFreemem(Notify);
         end;
+        if (FEventList <> nil) then
+          if Assigned(FEventList.FPgNotifyEvent) then
+            FEventList.FPgNotifyEvent(Self, relname, ProcessID, Payload)
+          else try
+            AEvent := TZPostgresEventData.Create;
+            AEvent.FProcessID := ProcessID;
+            AEvent.fName := relname;
+            AEvent.fPayload := Payload;
+            AEvent.fEventState := esSignaled;
+            Handler := nil;
+            if FEventList <> nil then begin
+              Handler := nil;
+              for I := 0 to FEventList.Count -1 do begin
+                ListenEvent := FEventList[i];
+                if ListenEvent.Name = AEvent.fName then begin
+                  Handler := ListenEvent.Handler;
+                  Break;
+                end;
+              end;
+              if not Assigned(Handler) then
+                Handler := FEventList.Handler;
+              Handler(TZEventData(AEvent));
+            end;
+          finally
+            if AEvent <> nil then
+              FreeAndNil(AEvent);
+          end;
       end;
   end;
 end;
@@ -934,12 +953,6 @@ begin
     FPreparedStatementTrashBin.Clear;
   Fconn := nil;
   inherited ReleaseImmediat(Sender, AError);
-end;
-
-procedure TZPostgreSQLConnection.ResumeListener;
-begin
-  if (FEventList <> nil) and not FEventList.Timer.Enabled then
-    FEventList.Timer.Enabled := True;
 end;
 
 procedure TZPostgreSQLConnection.RegisterTrashPreparedStmtName(const value: String);
@@ -1085,6 +1098,14 @@ begin
     end else
       StartTransaction;
   end;
+end;
+
+procedure TZPostgreSQLConnection.SetOnPgNotifyEvent(
+  const Value: TZPgNotifyEvent);
+begin
+  if FEventList <> nil then
+    FEventList.FPgNotifyEvent := Value
+  else raise EZSQLException.Create('No active listener acquired');
 end;
 
 procedure TZPostgreSQLConnection.Commit;
@@ -1631,12 +1652,6 @@ begin
     end;
   end else
     HandleErrorOrWarning(PGRES_FATAL_ERROR, lcExecute, 'SELECT version()', Self, QueryHandle);
-end;
-
-procedure TZPostgreSQLConnection.PauseListener;
-begin
-  if (FEventList <> nil) and FEventList.Timer.Enabled then
-    FEventList.Timer.Enabled := False;
 end;
 
 {**

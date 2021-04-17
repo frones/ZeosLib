@@ -564,7 +564,7 @@ begin
 end;
 
 procedure TZTestDbcInterbaseCase.Test_IBFBEventListener;
-const EventCount = 50;
+const EventCount = 15;
 var Listener: IZEventListener;
     EndTime: TDateTime;
     Events: TStrings;
@@ -578,7 +578,7 @@ begin
       not InterbaseFirebirdConnection.IsFirebirdLib then //Interbase until v2020 does not support EXECUTE BLOCK syntax
     Exit;
 
-  Listener := Connection.GetEventListener(OnEvent, False, nil);
+  Listener := Connection.GetEventListener(OnEvent, True, nil);
   Events := TStringList.Create;
   FEventsReceived := TStringList.Create;
   try
@@ -588,6 +588,8 @@ begin
       Events.Add('zeostest'+IntToStr(I));;
     Listener.Listen(Events, OnEvent);
     Check(Listener.IsListening);
+    Sleep(100);
+//    CheckEquals(0, FEventsReceived.Count, 'There should no event beeing  posted.');
     S := 'EXECUTE BLOCK AS BEGIN POST_EVENT '+QuotedStr(Events[0]);
     for i := 1 to Events.Count -1 do
       S := S +'; POST_EVENT '+QuotedStr(Events[i]);
@@ -598,6 +600,15 @@ begin
     while (FEventsReceived.Count < Events.Count) and (EndTime > Now) do
       Sleep(0);
     CheckEquals(Events.Count, FEventsReceived.Count, 'Didn''t get all interbase events.');
+    S := 'EXECUTE BLOCK AS BEGIN POST_EVENT '+QuotedStr(Events[1]);
+    for i := 2 to Events.Count -2 do
+      S := S +'; POST_EVENT '+QuotedStr(Events[i]);
+    S := S+'; END';
+    Connection.ExecuteImmediat(S, lcExecute);
+    Sleep(10);
+    EndTime := IncSecond(Now, 2);
+    while (FEventsReceived.Count < (EventCount + EventCount-2)) and (EndTime > Now) do
+      Sleep(0);
     Listener.Unlisten;
     CheckFalse(Listener.IsListening);
     CheckFalse(Connection.IsClosed);

@@ -82,6 +82,7 @@
 			<DCCReference Include="..\..\src\component\ZDataset.pas"/>
 			<DCCReference Include="..\..\src\component\ZDatasetParam.pas"/>
 			<DCCReference Include="..\..\src\component\ZDatasetUtils.pas"/>
+			<DCCReference Include="..\..\src\component\ZEventListener.pas"/>
 			<DCCReference Include="..\..\src\component\ZFormatSettings.pas"/>
 			<DCCReference Include="..\..\src\component\ZGroupedConnection.pas"/>
 			<DCCReference Include="..\..\src\component\ZIBEventAlerter.pas"/>

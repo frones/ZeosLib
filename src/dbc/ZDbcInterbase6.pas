@@ -120,7 +120,7 @@ type
   /// <summary>Implements Interbase6 Database Connection object</summary>
   TZInterbase6Connection = class(TZInterbaseFirebirdConnection, IZConnection,
     IZInterbase6Connection, IZTransactionManager, IZInterbaseFirebirdConnection,
-    IZEventListener)
+    IZEventListener, IZFirebirdInterbaseEventAlerter)
   private
     FHandle: TISC_DB_HANDLE;
     FStatusVector: TARRAY_ISC_STATUS;
@@ -131,6 +131,7 @@ type
     ///  Note: A Connection is automatically closed when it is garbage
     ///  collected. Certain fatal errors also result in a closed Connection.</summary>
     procedure InternalClose; override;
+    class function GetEventListClass: TZFirebirdInterbaseEventListClass; override;
   public
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
     procedure ExecuteImmediat(const SQL: RawByteString; ISC_TR_HANDLE: PISC_TR_HANDLE; LoggingCategory: TZLoggingCategory); overload;
@@ -329,11 +330,12 @@ type
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
   end;
 
-  TZIBEventThread = class(TZInterbaseFirebirdEventThread)
+  TZIBLegacyEventList = class(TZFirebirdInterbaseEventList)
   public
     procedure AsyncQueEvents(EventBlock: PZInterbaseFirebirdEventBlock); override;
-    procedure UnRegisterEvents; override;
+    procedure UnregisterEvents; override;
   end;
+
 var
   {** The common driver manager object. }
   Interbase6Driver: IZDriver;
@@ -450,7 +452,7 @@ begin
       Open;
     for i := 0 to EventNames.Count -1 do
       FEventList.Add(EventNames[I], Handler);
-    FEventList.WaitThread := TZIBEventThread.Create(FEventList);
+    FEventList.RegisterEvents;
   end else
     raise EZSQLException.Create('no events registered');
 end;
@@ -496,6 +498,11 @@ begin
   then Result := ConvertConnRawToString({$IFDEF UNICODE}
     ConSettings, {$ENDIF}@FByteBuffer[5], Integer(FByteBuffer[4]))
   else Result := '';
+end;
+
+class function TZInterbase6Connection.GetEventListClass: TZFirebirdInterbaseEventListClass;
+begin
+  Result := TZIBLegacyEventList;
 end;
 
 function TZInterbase6Connection.GetTrHandle: PISC_TR_HANDLE;
@@ -976,39 +983,45 @@ end;
 { TZInterbaseFirebirdLegacyEventBlockList }
 
 procedure EventCallback(UserData: PVoid; Length: ISC_USHORT; Updated: PISC_UCHAR); cdecl;
+var EventBlock: PZInterbaseFirebirdEventBlock absolute UserData;
 begin
   if (Assigned(UserData) and Assigned(Updated) and (Length > 0)) then begin
-    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Updated^, PZInterbaseFirebirdEventBlock(UserData).result_buffer^, Length);
-    PZInterbaseFirebirdEventBlock(UserData).Received := True;
-    PZInterbaseFirebirdEventBlock(UserData).Signal.SetEvent;
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Updated^, EventBlock.result_buffer^, Length);
+    EventBlock.ProcessEvents(EventBlock);
+    EventBlock.AsyncQueEvents(EventBlock);
+    EventBlock.FirstTime := False
   end;
 end;
 
-{ TZIBEventThread }
+{ TZIBLegacyEventList }
 
-procedure TZIBEventThread.AsyncQueEvents(EventBlock: PZInterbaseFirebirdEventBlock);
+procedure TZIBLegacyEventList.AsyncQueEvents(
+  EventBlock: PZInterbaseFirebirdEventBlock);
 begin
-  EventBlock.Received := False;
-  with TZInterbase6Connection(FEventList.Connection) do
+  with TZInterbase6Connection(Connection) do
     if FPlainDriver.isc_que_events(@FStatusVector,
-      @FHandle, @EventBlock.EventBlockID, EventBlock.EventBufferLength,
+      @FHandle, @EventBlock.event_id, EventBlock.buffer_length,
       EventBlock.event_buffer, TISC_CALLBACK(@EventCallback), PVoid(EventBlock)) <> 0 then
         HandleErrorOrWarning(lcOther, @FStatusVector, 'isc_que_events', IImmediatelyReleasable(FWeakImmediatRelPtr));
 end;
 
-procedure TZIBEventThread.UnRegisterEvents;
+procedure TZIBLegacyEventList.UnregisterEvents;
 var EventBlockIdx: NativeInt;
     EventBlock: PZInterbaseFirebirdEventBlock;
     Status: ISC_STATUS;
 begin
-  with TZInterbase6Connection(FEventList.Connection) do
-  for EventBlockIdx := 0 to High(FEventBlocks) do begin
-    EventBlock := @FEventBlocks[EventBlockIdx];
-    Status := FPlainDriver.isc_cancel_events(@FStatusVector, @FHandle, @EventBlock.EventBlockID);
-    FPlainDriver.isc_free(EventBlock.event_buffer);
-    FPlainDriver.isc_free(EventBlock.result_buffer);
-    if Status <> 0 then
-      HandleErrorOrWarning(lcOther, @FStatusVector, 'isc_que_events', IImmediatelyReleasable(FWeakImmediatRelPtr));
+  with TZInterbase6Connection(Connection) do try
+    for EventBlockIdx := 0 to High(FEventBlocks) do begin
+      EventBlock := @FEventBlocks[EventBlockIdx];
+      EventBlock.FirstTime := True;
+      Status := FPlainDriver.isc_cancel_events(@FStatusVector, @FHandle, @EventBlock.event_id);
+      FPlainDriver.isc_free(EventBlock.event_buffer);
+      FPlainDriver.isc_free(EventBlock.result_buffer);
+      if Status <> 0 then
+        HandleErrorOrWarning(lcOther, @FStatusVector, 'isc_que_events', IImmediatelyReleasable(FWeakImmediatRelPtr));
+    end;
+  finally
+    SetLength(FEventBlocks, 0);
   end;
 end;
 

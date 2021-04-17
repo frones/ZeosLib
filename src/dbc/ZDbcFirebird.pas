@@ -201,7 +201,7 @@ type
   /// <summary>Implements a special Firebird Connection object.</summary>
   TZFirebirdConnection = class(TZInterbaseFirebirdConnection, IZConnection,
     IZTransactionManager, IZFirebirdConnection, IZInterbaseFirebirdConnection,
-    IZEventListener)
+    IZEventListener, IZFirebirdInterbaseEventAlerter)
   private
     FMaster: IMaster;
     FProvider: IProvider;
@@ -217,6 +217,7 @@ type
     /// <param>"SQL" a raw encoded query to be executed.</param>
     /// <param>"LoggingCategory" the LoggingCategory for the Logging listeners.</param>
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
+    class function GetEventListClass: TZFirebirdInterbaseEventListClass; override;
   public
     procedure AfterConstruction; override;
     Destructor Destroy; override;
@@ -322,23 +323,22 @@ type
     procedure Listen(const EventNames: TStrings; Handler: TZOnEventHandler);
   end;
 
-  TZFirebirdEventThread = Class(TZInterbaseFirebirdEventThread)
+  TZFirebirdEventList = class(TZFirebirdInterbaseEventList)
   public
     procedure AsyncQueEvents(EventBlock: PZInterbaseFirebirdEventBlock); override;
-    procedure UnRegisterEvents; override;
-  End;
+    procedure UnregisterEvents; override;
+  end;
 
   TZFBEventCallback = class(IEventCallbackImpl)
   private
     FEventBlock: PZInterbaseFirebirdEventBlock;
-    FOwner: TZFirebirdEventThread;
+    FOwner: TZFirebirdEventList;
     FRefCnt: integer; //for refcounting
   public
-    constructor Create(aOwner: TZFirebirdEventThread; AEventBlock: PZInterbaseFirebirdEventBlock);
+    constructor Create(aOwner: TZFirebirdEventList; AEventBlock: PZInterbaseFirebirdEventBlock);
     procedure addRef;  override;
     function release: Integer; override;
     procedure eventCallbackFunction(length: Cardinal; events: PByte); override;
-    procedure CancelEvent;
  end;
 
 {$ENDIF ZEOS_DISABLE_FIREBIRD} //if set we have an empty unit
@@ -510,6 +510,11 @@ begin
   Result := FAttachment;
 end;
 
+class function TZFirebirdConnection.GetEventListClass: TZFirebirdInterbaseEventListClass;
+begin
+  Result := TZFirebirdEventList;
+end;
+
 function TZFirebirdConnection.GetPlainDriver: TZFirebirdPlainDriver;
 begin
   Result := FPlainDriver;
@@ -560,7 +565,7 @@ begin
       Open;
     for i := 0 to EventNames.Count -1 do
       FEventList.Add(EventNames[I], Handler);
-    FEventList.WaitThread := TZFirebirdEventThread.Create(FEventList);
+    FEventList.RegisterEvents;
   end else
     raise EZSQLException.Create('no events registered');
 end;
@@ -957,47 +962,6 @@ begin
   Result := FTransaction <> nil;
 end;
 
-{ TZFirebirdEventThread }
-
-procedure TZFirebirdEventThread.AsyncQueEvents(
-  EventBlock: PZInterbaseFirebirdEventBlock);
-begin
-  if EventBlock.FBEventsCallback = nil then
-    EventBlock.FBEventsCallback := TZFBEventCallback.Create(Self, EventBlock);
-  if EventBlock.FBEvent <> nil then begin
-    IEvents(EventBlock.FBEvent).Release;
-    EventBlock.FBEvent := nil;
-  end;
-  with TZFirebirdConnection(FEventList.Connection) do
-  EventBlock.FBEvent := FAttachment.queEvents(FStatus, TZFBEventCallback(EventBlock.FBEventsCallback),
-    EventBlock.EventBufferLength, PByte(EventBlock.event_buffer));
-end;
-
-procedure TZFirebirdEventThread.UnRegisterEvents;
-var EventBlockIdx: NativeInt;
-    EventBlock: PZInterbaseFirebirdEventBlock;
-begin
-  for EventBlockIdx := 0 to High(FEventBlocks) do begin
-    EventBlock := @FEventBlocks[EventBlockIdx];
-    try
-      if EventBlock.FBEvent <> nil then with TZFirebirdConnection(FEventList.Connection) do begin
-        IEvents(EventBlock.FBEvent).Cancel(FStatus);
-        if ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
-          HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.queEvents', IImmediatelyReleasable(FWeakImmediatRelPtr));
-      end;
-    finally
-      if EventBlock.FBEvent <> nil then begin
-        IEvents(EventBlock.FBEvent).Release;
-        EventBlock.FBEvent := nil;
-      end;
-      if EventBlock.FBEventsCallback <> nil then begin
-        TZFBEventCallback(EventBlock.FBEventsCallback).release;
-        EventBlock.FBEventsCallback := nil;
-      end;
-    end;
-  end;
-end;
-
 { TZFBEventCallback }
 
 procedure TZFBEventCallback.addRef;
@@ -1005,12 +969,7 @@ begin
   Inc(FRefCnt);
 end;
 
-procedure TZFBEventCallback.CancelEvent;
-begin
-  FEventBlock.Signal.SetEvent;
-end;
-
-constructor TZFBEventCallback.Create(aOwner: TZFirebirdEventThread;
+constructor TZFBEventCallback.Create(aOwner: TZFirebirdEventList;
   AEventBlock: PZInterbaseFirebirdEventBlock);
 begin
   inherited Create;
@@ -1022,9 +981,12 @@ end;
 procedure TZFBEventCallback.eventCallbackFunction(length: Cardinal;
   events: PByte);
 begin
-  {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(events^, FEventBlock.result_buffer^, length);
-  FEventBlock.Received := True;
-  FEventBlock.Signal.SetEvent;
+  if (events <> nil) and (Length > 0) then begin
+    {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(events^, FEventBlock.result_buffer^, length);
+    FEventBlock.ProcessEvents(FEventBlock);
+    FEventBlock.AsyncQueEvents(FEventBlock);
+    FEventBlock.FirstTime := False
+  end;
 end;
 
 function TZFBEventCallback.release: Integer;
@@ -1037,6 +999,52 @@ begin
     {$ELSE}
     Free;
     {$ENDIF}
+end;
+
+{ TZFirebirdEventList }
+
+procedure TZFirebirdEventList.AsyncQueEvents(
+  EventBlock: PZInterbaseFirebirdEventBlock);
+begin
+  if EventBlock.FBEventsCallback = nil then
+    EventBlock.FBEventsCallback := TZFBEventCallback.Create(Self, EventBlock);
+  if EventBlock.FBEvent <> nil then begin
+    IEvents(EventBlock.FBEvent).Release;
+    EventBlock.FBEvent := nil;
+  end;
+  with TZFirebirdConnection(Connection) do
+  EventBlock.FBEvent := FAttachment.queEvents(FStatus, TZFBEventCallback(EventBlock.FBEventsCallback),
+    EventBlock.buffer_length, PByte(EventBlock.event_buffer));
+end;
+
+procedure TZFirebirdEventList.UnregisterEvents;
+var EventBlockIdx: NativeInt;
+    EventBlock: PZInterbaseFirebirdEventBlock;
+begin
+  try
+    for EventBlockIdx := 0 to High(FEventBlocks) do begin
+      EventBlock := @FEventBlocks[EventBlockIdx];
+      EventBlock.FirstTime := True;
+      try
+        if EventBlock.FBEvent <> nil then with TZFirebirdConnection(Connection) do begin
+          IEvents(EventBlock.FBEvent).Cancel(FStatus);
+          if ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+            HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.queEvents', IImmediatelyReleasable(FWeakImmediatRelPtr));
+        end;
+      finally
+        if EventBlock.FBEvent <> nil then begin
+          IEvents(EventBlock.FBEvent).Release;
+          EventBlock.FBEvent := nil;
+        end;
+        if EventBlock.FBEventsCallback <> nil then begin
+          TZFBEventCallback(EventBlock.FBEventsCallback).release;
+          EventBlock.FBEventsCallback := nil;
+        end;
+      end;
+    end;
+  finally
+    SetLength(FEventBlocks, 0)
+  end;
 end;
 
 initialization

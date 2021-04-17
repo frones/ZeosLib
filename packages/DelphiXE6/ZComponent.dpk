@@ -42,6 +42,7 @@ contains
   ZConnectionGroup in '..\..\src\component\ZConnectionGroup.pas',
   ZDataset in '..\..\src\component\ZDataset.pas',
   ZDatasetUtils in '..\..\src\component\ZDatasetUtils.pas',
+  ZEventListener in '..\..\src\component\ZEventListener.pas',
   ZFormatSettings in '..\..\src\component\ZFormatSettings.pas',
   ZGroupedConnection in '..\..\src\component\ZGroupedConnection.pas',
   ZIBEventAlerter in '..\..\src\component\ZIBEventAlerter.pas',
