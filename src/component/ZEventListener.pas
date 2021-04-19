@@ -100,6 +100,7 @@ type
     property OnEventAlert;
     property Connection;
     property Properties;
+    property Active;
   End;
 
 implementation
