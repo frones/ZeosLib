@@ -301,6 +301,11 @@ type
     ///  pre-compiled SQL statement </returns>
     function PrepareCallWithParams(const Name: string; Params: TStrings):
       IZCallableStatement;
+    /// <author>firmos (initially for MySQL 27032006)</author>
+    /// <summary>Ping Current Connection's server, if client was disconnected,
+    ///  the connection is resumed.</summary>
+    /// <returns>0 if succesfull or error code if any error occurs</returns>
+    function PingServer: Integer; override;
     /// <author>aehimself</author>
     /// <summary>Immediately abort any kind of queries.</summary>
     /// <returns>0 if the operation is aborted; Non zero otherwise.</returns>
@@ -777,6 +782,15 @@ begin
       ti := nil;
     end;
   end;
+end;
+
+function TZFirebirdConnection.PingServer: Integer;
+begin
+  if (FAttachment <> nil) and (FStatus <> nil) then begin
+    FAttachment.Ping(FStatus);
+    Result := -Ord((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_OK{$ELSE}IStatus_RESULT_OK{$ENDIF}) <> 0);
+    FStatus.init;
+  end else Result := -1;
 end;
 
 function TZFirebirdConnection.PrepareCallWithParams(const Name: string;

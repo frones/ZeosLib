@@ -99,6 +99,7 @@ type
     procedure Test_DECFIXED;
     procedure Test_TIMEZONE;
     procedure Test_IBFBEventListener;
+    procedure Test_Ping;
   end;
 
 {$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
@@ -618,6 +619,13 @@ begin
     FreeAndNil(Events);
     FreeAndNil(FEventsReceived);
   end;
+end;
+
+procedure TZTestDbcInterbaseCase.Test_Ping;
+begin
+  Connection.Open;
+  CheckFalse(Connection.IsClosed);
+  Check(Connection.PingServer <> 0);
 end;
 
 procedure TZTestDbcInterbaseCase.Test_GENERATED_ALWAYS_64;
