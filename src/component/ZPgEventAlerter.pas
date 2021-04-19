@@ -88,9 +88,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
   published
-    property Connection;
     property CloneConnection default True;
-    property Active;
     property Interval: Cardinal read FInterval write SetInterval default 250;
     property OnNotify: TZPgNotifyEvent read FNotifyFired write FNotifyFired;
     property Events;

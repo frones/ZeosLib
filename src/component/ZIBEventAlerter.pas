@@ -92,9 +92,6 @@ type
   published
     { Published declarations }
     property AutoRegister: boolean read FAutoRegister write SetAutoRegister;
-    property CloneConnection;
-    property Connection;
-    property Active;
     property Events;
     property Registered: boolean read FActive write SetActive;
     property OnEventAlert: TEventAlert read FOnEventAlert write FOnEventAlert;

@@ -83,7 +83,6 @@ type
     property Events: TStrings read FEventNames write SetEventNames;
     {$IFEND}
     property EventNames: TStrings read FEventNames write SetEventNames;
-    property CloneConnection: Boolean read FCloneConnection write SetCloneConnection;
     property OnEventAlert: TZOnEventAlert read FOnEventAlert write FOnEventAlert;
     property Properties: TStrings read FProperties write SetProperties;
   public
@@ -91,16 +90,17 @@ type
     destructor Destroy; override;
   public
     property CriticalSection: TCriticalSection read FCS;
+    property Active;
+  published
+    property Connection;
+    property CloneConnection: Boolean read FCloneConnection write SetCloneConnection;
   End;
 
   TZEventListener = Class(TZAbstractEventListener)
   published
     property EventNames;
-    property CloneConnection;
     property OnEventAlert;
-    property Connection;
     property Properties;
-    property Active;
   End;
 
 implementation
