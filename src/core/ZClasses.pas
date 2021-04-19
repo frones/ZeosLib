@@ -1113,8 +1113,10 @@ end;
 destructor TZThreadTimer.Destroy;
 begin
   FThread.Terminate;
-  FSignal.SetEvent; //signal to break the waittime
-  FThread.WaitFor;
+  if not TZIntervalThread(FThread).Suspended then begin
+    FSignal.SetEvent; //signal to break the waittime
+    FThread.WaitFor;
+  end;
   FreeAndNil(FThread);
   FreeAndNil(FSignal);
   inherited;

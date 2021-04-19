@@ -64,9 +64,6 @@ interface
 {$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD} //if set we have an empty unit
 uses
   SysUtils, Classes,
-{$IF defined(MSWINDOWS)and not defined(FPC)}
-  Windows,
-{$IFEND}
   ZDbcFirebirdInterbase, ZEventListener, ZAbstractConnection;
 
 type
@@ -80,13 +77,12 @@ type
     FOnError: TErrorEvent;
     FAutoRegister: boolean;
     FAlerter: IZFirebirdInterbaseEventAlerter;
-    procedure SetEventNames(const Value: TStrings);
   protected
     { Protected declarations }
     procedure EventChange(Sender: TObject); virtual;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
 
-    procedure SetActive(Value: Boolean); override;
+    procedure AfterListenerAssigned; override;
   public
     { Public declarations }
     constructor Create(AOwner: TComponent); override;
@@ -99,8 +95,7 @@ type
     property CloneConnection;
     property Connection;
     property Active;
-    property Events: TStrings read FEventNames write SetEventNames;
-    property ReceivedEvents;
+    property Events;
     property Registered: boolean read FActive write SetActive;
     property OnEventAlert: TEventAlert read FOnEventAlert write FOnEventAlert;
     property OnError: TErrorEvent read FOnError write FOnError;
@@ -113,6 +108,13 @@ implementation
 uses ZPlainFirebirdInterbaseDriver;
 
 { TZIBEventAlerter }
+
+procedure TZIBEventAlerter.AfterListenerAssigned;
+begin
+  FAlerter := FListener as IZFirebirdInterbaseEventAlerter;
+  if Assigned(FOnEventAlert) then
+    FAlerter.SetOnEventAlert(FOnEventAlert);
+end;
 
 constructor TZIBEventAlerter.Create(AOwner: TComponent);
 begin
@@ -166,19 +168,6 @@ Begin
 End;
 
 
-procedure TZIBEventAlerter.SetActive(Value: Boolean);
-begin
-  if FActive <> Value then
-    inherited SetActive(Value);
-    if Value then begin
-      if (not (csDesigning in ComponentState)) then begin
-        FAlerter := FListener as IZFirebirdInterbaseEventAlerter;
-        if Assigned(FOnEventAlert) then
-          FAlerter.SetOnEventAlert(FOnEventAlert);
-      end;
-    end else FAlerter := nil;
-end;
-
 procedure TZIBEventAlerter.SetAutoRegister(const Value: boolean);
 begin
   if FAutoRegister <> Value then begin
@@ -188,12 +177,6 @@ begin
       SetActive(True)
   end;
 end;
-
-procedure TZIBEventAlerter.SetEventNames(const Value: TStrings);
-begin
-  FEventNames := Value;
-end;
-
 
 procedure TZIBEventAlerter.UnregisterEvents;
 begin

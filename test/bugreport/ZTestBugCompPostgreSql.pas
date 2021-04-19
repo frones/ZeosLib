@@ -78,7 +78,7 @@ type
     TestSF274_GotNotified: Boolean;
     procedure InternalTestSF224(Query: TZAbstractRODataset);
     procedure TestSF274_OnNotify(Sender: TObject; Event: string;
-        ProcessID: Integer; Payload: string);
+        ProcessID: Integer; Payload: string; var CancelEvents: Boolean);
   published
     procedure Test707339;
     procedure Test707337;
@@ -1341,7 +1341,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Sender,..." not used} {$ENDIF}
 procedure TZTestCompPostgreSQLBugReport.TestSF274_OnNotify(Sender: TObject; Event: string;
-        ProcessID: Integer; Payload: string);
+        ProcessID: Integer; Payload: string; var CancelEvents: Boolean);
 begin
   TestSF274_GotNotified := true;
 end;

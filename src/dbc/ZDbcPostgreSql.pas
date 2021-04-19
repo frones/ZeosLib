@@ -165,18 +165,25 @@ type
     property UnkownCount: Integer read fUnkownCount;
   end;
 
-  TZPgNotifyEvent = procedure(Sender: TObject; Event: string;
+  TZPgNotificationEvent = procedure(const Event: string;
     ProcessID: Integer; Payload: string) of object;
 
+  /// <summary>Defines a prostgres specific evnt listener</summary>
   IZPostgresEventListener = Interface(IZEventListener)
     ['{FBB89249-7C7B-4777-B64C-AFCDAAB50F66}']
-    procedure SetOnPgNotifyEvent(const Value: TZPgNotifyEvent);
+    /// <summary>Set a on Notify event</summary>
+    /// <param>"Value" the event to be used</param>
+    procedure SetOnPgNotifyEvent(const Value: TZPgNotificationEvent);
+    /// <summary>Set a timer interval to check the notifications in milli
+    ///  seconds</summary>
+    /// <param>"Value" the interval to be used</param>
+    procedure SetListenerInterval(const Value: Cardinal);
   End;
 
   TZPostgresEventList = class(TZEventList)
   private
     FTimer: TZThreadTimer;
-    FPgNotifyEvent: TZPgNotifyEvent;
+    FPgNotifyEvent: TZPgNotificationEvent;
   public
     constructor Create(Handler: TZOnEventHandler; TimerTick: TThreadMethod);
     destructor Destroy; override;
@@ -210,7 +217,6 @@ type
     fPlainDriver: TZPostgreSQLPlainDriver;
     FLastWarning: EZSQLWarning;
     FEventList: TZPostgresEventList;
-    FEventTimerInterval: Cardinal;
     //FCreatedEventAllerterPtr: Pointer; //weak ref to self ptr
     function HasMinimumServerVersion(MajorVersion, MinorVersion, SubVersion: Integer): Boolean;
   protected { implement IZPostgreSQLConnection }
@@ -439,7 +445,8 @@ type
     /// <param>"CloneConnection" if <c>True</c> a new connection will be spawned.</param>
     /// <param>"Options" a list of options, to setup the event alerter.</param>
     /// <returns>a the generic event alerter object as interface or nil.</returns>
-    function GetEventListener(Handler: TZOnEventHandler; CloneConnection: Boolean; Options: TStrings): IZEventListener; override;
+    function GetEventListener(Handler: TZOnEventHandler; CloneConnection: Boolean;
+      Options: TStrings): IZEventListener; override;
   public { implement IZEventListener }
     /// <summary>Returns the <c>Connection</c> object
     ///  that produced this <c>Notification</c> object.</summary>
@@ -457,7 +464,13 @@ type
     /// <summary>Stop listening the events and cleares the registered events.</summary>
     procedure Unlisten;
   public { implement IZPostgresEventListener}
-    procedure SetOnPgNotifyEvent(const Value: TZPgNotifyEvent);
+    /// <summary>Set a on Notify event</summary>
+    /// <param>"Value" the event to be used</param>
+    procedure SetOnPgNotifyEvent(const Value: TZPgNotificationEvent);
+    /// <summary>Set a timer interval to check the notifications in milli
+    ///  seconds</summary>
+    /// <param>"Value" the interval to be used</param>
+    procedure SetListenerInterval(const Value: Cardinal);
   end;
 
   TZPostgresEventData = class(TZEventData)
@@ -875,8 +888,8 @@ begin
           FPlainDriver.PQFreemem(Notify);
         end;
         if (FEventList <> nil) then
-          if Assigned(FEventList.FPgNotifyEvent) then
-            FEventList.FPgNotifyEvent(Self, relname, ProcessID, Payload)
+          if Assigned(FEventList.FPgNotifyEvent)
+          then FEventList.FPgNotifyEvent(relname, ProcessID, Payload)
           else try
             AEvent := TZPostgresEventData.Create;
             AEvent.FProcessID := ProcessID;
@@ -1100,8 +1113,15 @@ begin
   end;
 end;
 
+procedure TZPostgreSQLConnection.SetListenerInterval(const Value: Cardinal);
+begin
+  if FEventList <> nil then
+    FEventList.FTimer.Interval := Value
+  else raise EZSQLException.Create('No active listener acquired');
+end;
+
 procedure TZPostgreSQLConnection.SetOnPgNotifyEvent(
-  const Value: TZPgNotifyEvent);
+  const Value: TZPgNotificationEvent);
 begin
   if FEventList <> nil then
     FEventList.FPgNotifyEvent := Value
@@ -1792,9 +1812,9 @@ function TZPostgreSQLConnection.GetEventListener(Handler: TZOnEventHandler;
 begin
   Result := inherited GetEventListener(Handler, CloneConnection, Options);
   FEventList := TZPostgresEventList.Create(Handler, CheckEvents);
-  if FEventTimerInterval = 0 then
-    FEventTimerInterval := 250;
-  FEventList.Timer.Interval := FEventTimerInterval;
+  if Options <> nil
+  then FEventList.Timer.Interval := StrToIntDef(Options.Values[ELProps_ListernerInterval], 250)
+  else FEventList.Timer.Interval := 250;
 end;
 
 {**

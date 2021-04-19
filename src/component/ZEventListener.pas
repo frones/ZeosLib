@@ -54,18 +54,17 @@ interface
 
 {$I ZComponent.inc}
 
-uses ZAbstractConnection, Classes, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
-  ZDbcIntfs;
+uses Classes, {$IFDEF FPC}syncobjs{$ELSE}SyncObjs{$ENDIF},
+  ZAbstractConnection, ZDbcIntfs;
 
 type
   TZOnEventAlert = procedure(Sender: TObject; Data: TZEventData;
-    Var AddReceivedEvent: Boolean) of object;
+    Var CancelListening: Boolean) of object;
 
   TZAbstractEventListener = Class(TAbstractActiveConnectionLinkedComponent)
   protected
     FCS: TCriticalSection;
     FEventNames: TStrings;
-    FReceivedEvents: TStrings;
     FProperties: TStrings;
     FListener: IZEventListener;
     FCloneConnection: Boolean;
@@ -74,14 +73,17 @@ type
     procedure SetEventNames(const Value: TStrings);
     procedure SetCloneConnection(const Value: Boolean);
     procedure HandleEvents(var Event: TZEventData);
-    function GetReceivedEvents: TStrings; //make threadsave copies of the received events
     procedure SetActive(Value: Boolean); override;
+    procedure AfterListenerAssigned; virtual;
     procedure SetConnection(Value: TZAbstractConnection); override;
     procedure SetProperties(const Value: TStrings); virtual;
+    function GetClonedDbcConnection: IZConnection;
   protected
+    {$IF defined(ENABLE_INTERBASE) or defined(ENABLE_FIREBIRD) or defined(ENABLE_POSTGRESQL)}
+    property Events: TStrings read FEventNames write SetEventNames;
+    {$IFEND}
     property EventNames: TStrings read FEventNames write SetEventNames;
     property CloneConnection: Boolean read FCloneConnection write SetCloneConnection;
-    property ReceivedEvents: TStrings read GetReceivedEvents;
     property OnEventAlert: TZOnEventAlert read FOnEventAlert write FOnEventAlert;
     property Properties: TStrings read FProperties write SetProperties;
   public
@@ -92,8 +94,6 @@ type
   End;
 
   TZEventListener = Class(TZAbstractEventListener)
-  public
-    property ReceivedEvents;
   published
     property EventNames;
     property CloneConnection;
@@ -110,16 +110,27 @@ uses SysUtils,
 
 { TZAbstractEventListener }
 
+procedure TZAbstractEventListener.AfterListenerAssigned;
+begin
+  //just a dummy for descendants
+end;
+
 constructor TZAbstractEventListener.Create(AOwner: TComponent);
+var I: Integer;
 begin
   inherited Create(AOwner);
   FCloneConnection := True;
   FEventNames := TStringList.Create;
   TStringList(FEventNames).Sorted := True; // dupIgnore only works when the TStringList is sorted
   TStringList(FEventNames).Duplicates := dupIgnore; // don't allow duplicate events
-  FReceivedEvents := TStringList.Create;
   FProperties := TStringList.Create;
   FCS := TCriticalSection.Create;
+  if (csDesigning in ComponentState) and Assigned(AOwner) then
+    for I := AOwner.ComponentCount - 1 downto 0 do
+      if AOwner.Components[I] is TZAbstractConnection then begin
+        FConnection := AOwner.Components[I] as TZAbstractConnection;
+        Break;
+      end;
 end;
 
 destructor TZAbstractEventListener.Destroy;
@@ -128,59 +139,77 @@ begin
     SetActive(False);
   except end;
   FreeAndNil(FEventNames);
-  FreeAndNil(FReceivedEvents);
   FreeAndNil(FCS);
   FreeAndNil(FProperties);
   inherited;
 end;
 
-function TZAbstractEventListener.GetReceivedEvents: TStrings;
-var I: Integer;
+type TZProtectedConenction = Class(TZAbstractConnection);
+function TZAbstractEventListener.GetClonedDbcConnection: IZConnection;
 begin
-  FCS.Enter;
+  //EH: Set the attachment charsset, AuotEncode, and ControlsCP again
+  //if the user did clear the properties then this info is lost
+  //See https://sourceforge.net/p/zeoslib/tickets/329/
+  Result := DriverManager.GetConnection(TZProtectedConenction(FConnection).ConstructURL(FConnection.User, FConnection.Password));
+  FConnection.ShowSqlHourGlass;
   try
-    for i := FLockedList.Count -1 downto 0 do begin
-      FReceivedEvents.AddObject(FlockedList[i], FlockedList.Objects[i]);
-      FlockedList.Delete(I);
+    with Result do begin
+      SetReadOnly(True);
+      SetCatalog(FConnection.Catalog);
+      SetUseMetadata(False);
+      SetAddLogMsgToExceptionOrWarningMsg(FConnection.AddLogMsgToExceptionOrWarningMsg);
+      SetRaiseWarnings(FConnection.RaiseWarningMessages);
+      Open;
     end;
   finally
-    FCS.Leave;
+    if Assigned(Result) And Result.IsClosed then
+      Result := nil;
+    FConnection.HideSQLHourGlass;
   end;
-  Result := FReceivedEvents;
 end;
 
 procedure TZAbstractEventListener.HandleEvents(var Event: TZEventData);
-var AddReceivedEvent: Boolean;
+var CancelListening: Boolean;
 begin
   FCS.Enter;
   try
-    AddReceivedEvent := True;
+    CancelListening := False;
     if Assigned(OnEventAlert) then
-      OnEventAlert(Self, Event, AddReceivedEvent);
-    if (Event <> nil) then
-      if AddReceivedEvent then begin
-        FLockedList.AddObject(Event.ToString, Event);
-        Event := nil;
-      end else FreeAndNil(Event);
+      OnEventAlert(Self, Event, CancelListening);
+    FreeAndNil(Event);
+    if CancelListening then
+      SetActive(False);
   finally
     FCS.Leave;
   end;
 end;
 
 procedure TZAbstractEventListener.SetActive(Value: Boolean);
+var Con: IZConnection;
 begin
   if Value and (FConnection = nil) then
     raise EZDatabaseError.Create(SConnectionIsNotAssigned);
+  Con := nil;
   if FActive <> Value then try
     if FListener = nil then begin
-      if not FConnection.Connected then //may be oversized (yet) but the
-        //conenction "may" create and login dialog... OTH it would be easy to create a cloned connection
-        FConnection.Connect;
-      FListener := FConnection.DbcConnection.GetEventListener(HandleEvents, FCloneConnection, FProperties);
+      if FCloneConnection
+      then Con := GetClonedDbcConnection
+      else begin
+        if not FConnection.Connected then
+          FConnection.Connected;
+        Con := FConnection.DbcConnection;
+      end;
+      if Con.IsClosed then
+        Con.open;
+      FListener := Con.GetEventListener(HandleEvents, False, FProperties);
+      AfterListenerAssigned;
       FListener.Listen(FEventNames, HandleEvents);
-    end else FListener.GetConnection.CloseEventListener(FListener);
+    end else begin
+      Con := FListener.GetConnection;
+      Con.CloseEventListener(FListener);
+    end;
   finally
-    FActive := Value;
+    Con := nil;
   end;
 end;
 
@@ -188,7 +217,7 @@ procedure TZAbstractEventListener.SetCloneConnection(const Value: Boolean);
 begin
   if FCloneConnection <> Value then begin
     if FActive then
-      raise EZDatabaseError.Create(Format(SOperationIsNotAllowed3, ['Active']));
+      raise EZDatabaseError.Create(SConnectionIsOpened);
     FCloneConnection := Value;
   end;
 end;
@@ -196,25 +225,28 @@ end;
 procedure TZAbstractEventListener.SetConnection(Value: TZAbstractConnection);
 Var WasListening: boolean;
 Begin
-  If (Value <> FConnection) Then Begin
+  If (Value <> FConnection) then begin
     If (csDesigning in ComponentState) Then
       FConnection := Value
-    Else Begin
+    else begin
       WasListening := FActive;
-      If FActive Then
+      if FActive then
         SetActive(False);
       FConnection := Value;
-      If WasListening and (Value <> nil) Then
+      if WasListening and (Value <> nil) then
         SetActive(True);
-    End;
-  End;
+    end;
+  end;
 end;
 
 procedure TZAbstractEventListener.SetEventNames(const Value: TStrings);
+var I: Integer;
 begin
   if FActive then
     FListener.Unlisten;
-  FEventNames.Assign(Value);
+  FEventNames.Clear;
+  for i := 0 to Value.Count-1 do
+    FEventNames.AddObject(Trim(Value[i]), Value.Objects[i]);
   if FActive then
     FListener.Listen(FEventNames, HandleEvents);
 end;

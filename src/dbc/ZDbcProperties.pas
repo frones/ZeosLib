@@ -556,6 +556,10 @@ const
   // force binary results to be retrieved from server. supported since Protocol
   // V3 except libs like pgbouncer which have no pqexecparams/pqexecprepared
   DSProps_BinaryWireResultMode = 'BinaryWireResultMode';
+  /// <type>Integer</type>
+  /// <summary>Sets Listener interval in milliseconds.</summary>
+  /// <default>250</default>
+  ELProps_ListernerInterval = 'ListernerInterval';
 {$ENDIF}
 
 {$IF defined(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}
