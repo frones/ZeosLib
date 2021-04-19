@@ -93,7 +93,6 @@ type
     procedure CheckStmtError(RETCODE: SQLRETURN);
     procedure HandleError(RETCODE: SQLRETURN; Handle: SQLHANDLE);
     function InternalCreateResultSet: IZResultSet;
-    procedure InternalBeforePrepare;
     function GetCurrentResultSet: IZResultSet;
     /// <summary>Removes the current connection reference from this object.</summary>
     /// <remarks>This method will be called only if the object is garbage.</remarks>
@@ -594,25 +593,6 @@ procedure TZAbstractODBCStatement.HandleError(RETCODE: SQLRETURN;
 begin
   FODBCConnection.HandleErrorOrWarning(RETCODE, Handle, SQL_HANDLE_STMT,
     SQL, lcOther, Self);
-end;
-
-procedure TZAbstractODBCStatement.InternalBeforePrepare;
-var Ret: SQLRETURN;
-begin
-  if FCallResultCache <> nil then
-    ClearCallResultCache;
-  if not Assigned(fHSTMT) then begin
-    Ret := fPlainDriver.SQLAllocHandle(SQL_HANDLE_STMT, fPHDBC^, fHSTMT);
-    if Ret <> SQL_SUCCESS then
-      FODBCConnection.HandleErrorOrWarning(Ret, fPHDBC^, SQL_HANDLE_DBC,
-        'SQLAllocHandle(Stmt)', lcOther, Self);
-    Ret := fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_QUERY_TIMEOUT, {%H-}SQLPOINTER(fStmtTimeOut), 0);
-    if Ret <> SQL_SUCCESS then
-      FODBCConnection.HandleErrorOrWarning(Ret, fHSTMT, SQL_HANDLE_STMT,
-        'SQLSetStmtAttr(Timeout)', lcOther, Self);
-    fMoreResultsIndicator := mriUnknown;
-    FHandleState := hsAllocated;
-  end;
 end;
 
 function TZAbstractODBCStatement.InternalCreateResultSet: IZResultSet;
