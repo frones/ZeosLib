@@ -95,7 +95,7 @@
 				<BuildOrder>132</BuildOrder>
 			</PackageImport>
 			<DelphiCompile Include="..\..\src\component\ZSqlProcessor.pas">
-				<BuildOrder>24</BuildOrder>
+				<BuildOrder>25</BuildOrder>
 			</DelphiCompile>
 			<PackageImport Include="rtl.bpi">
 				<BuildOrder>110</BuildOrder>
@@ -127,7 +127,7 @@
 				<BuildOrder>10</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\component\ZSqlMonitor.pas">
-				<BuildOrder>23</BuildOrder>
+				<BuildOrder>24</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\component\ZGroupedConnection.pas">
 				<BuildOrder>17</BuildOrder>
@@ -138,35 +138,38 @@
 			<DelphiCompile Include="..\..\src\component\ZDatasetUtils.pas">
 				<BuildOrder>15</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\component\ZIBEventAlerter.pas">
+			<DelphiCompile Include="..\..\src\component\ZEventListener.pas">
 				<BuildOrder>18</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\component\ZMemTable.pas">
+			<DelphiCompile Include="..\..\src\component\ZIBEventAlerter.pas">
 				<BuildOrder>19</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\component\ZPgEventAlerter.pas">
+			<DelphiCompile Include="..\..\src\component\ZMemTable.pas">
 				<BuildOrder>20</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\component\ZPgEventAlerter.pas">
+				<BuildOrder>21</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\component\ZFormatSettings.pas">
 				<BuildOrder>16</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\component\ZTransaction.pas">
-				<BuildOrder>28</BuildOrder>
+				<BuildOrder>29</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\component\ZSqlStrings.pas">
-				<BuildOrder>25</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\component\ZSqlMetadata.pas">
-				<BuildOrder>22</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\component\ZSequence.pas">
-				<BuildOrder>21</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\component\ZSqlUpdate.pas">
 				<BuildOrder>26</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\component\ZStoredProcedure.pas">
+			<DelphiCompile Include="..\..\src\component\ZSqlMetadata.pas">
+				<BuildOrder>23</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\component\ZSequence.pas">
+				<BuildOrder>22</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\component\ZSqlUpdate.pas">
 				<BuildOrder>27</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\component\ZStoredProcedure.pas">
+				<BuildOrder>28</BuildOrder>
 			</DelphiCompile>
 			<BuildConfiguration Include="Basis">
 				<Key>Base</Key>

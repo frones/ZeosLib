@@ -585,7 +585,7 @@ begin
   if FBindLater or FHasLoggingListener then
     BindList.Put(ParameterIndex, Value);
   if not FBindLater then begin
-    P := BindList.AquireCustomValue(ParameterIndex, stBigDecimal, MaxFmtBCDFractionSize+3{#0});
+    P := BindList.AcquireCustomValue(ParameterIndex, stBigDecimal, MaxFmtBCDFractionSize+3{#0});
     L := BCDToRaw(Value, P, '.');
     ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, ParameterIndex+1, P, l, nil);
     if ErrorCode <> SQLITE_OK then

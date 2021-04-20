@@ -333,7 +333,7 @@ type
     ///  satisfy the query at either the time the query is executed or as the
     ///  rows are retrieved.</summary>
     rtScrollInsensitive,
-    /// <summary>Deprecated not implemented enymore. Yet it's the same as
+    /// <summary>Deprecated not implemented anymore. Yet it's the same as
     ///  <c>rtScrollInsensitive</c>. Purpose: The result set reflects changes
     ///  made to the underlying data source while the result set remains open.</summary>
     /// <remarks>Use the IZResultSet RefreshCurrentRow method instead.</remarks>
@@ -371,6 +371,11 @@ type
     ///  having a lob-descriptor in any kind do not load the lobs to local
     ///  memory.</summary>
     rctServer);
+
+  /// <author>EgonHugeist</author>
+  /// <summary>Defines a batch array dml statement type</summary>
+  TZBatchArrayDMLStatementType = (
+    bastUnknown, bastDelete, bastInsert, bastUpdate);
 
   /// <summary>Defines a result set concurrency type.</summary>
   TZResultSetConcurrency = (rcReadOnly, rcUpdatable);
@@ -432,6 +437,19 @@ type
   /// <summary>Defines a static TWordBuffer.</summary>
   TWordBuffer = array[0..511] of Word; //1 kb
 
+  /// <summary>LobCacheModes</summary>
+  //   lcmNone:      Lobs are not cached.
+  //   lcmOnLoad:    Lobs are cached on record fetch.
+  //   lcmOnAccess:  Lobs are cached only if they are accessed.  If TryKeepDataOnDisconnect
+  //                 is True then uncached lobs are cached as Clobs containing '[Disc]' on disconnect.
+  const
+    LcmNoneStr = 'None';
+    LcmOnLoadStr = 'OnLoad';
+    LcmOnAccessStr = 'OnAccess';
+  type
+  TLobCacheMode = (lcmNone, lcmOnLoad, lcmOnAccess);
+  /// <summary>Converts the LobCacheMode property string to a TLobCacheMode.</summary>
+  function GetLobCacheModeFromString(const lcmString: string; const DefaultMode: TLobCacheMode = lcmNone): TLobCacheMode;
 
 // Interfaces
 type
@@ -448,8 +466,8 @@ type
   IZResultSetMetadata = interface;
   IZBlob = interface;
   IZClob = interface;
-  IZNotification = interface;
   IZSequence = interface;
+  IZEventListener = interface;
 
   /// <summary>Defines the Driver Manager interface.</summary>
   IZDriverManager = interface(IZInterface)
@@ -622,10 +640,10 @@ type
     function GetSubVersion: Integer;
     /// <summary>Creates a generic tokenizer interface.</summary>
     /// <returns>a created generic tokenizer object.</returns>
-    function GetTokenizer: IZTokenizer;
+    function GetTokenizer: IZTokenizer; deprecated {$IFDEF WITH_DEPRECATED_MESSAGE}'Use IZConnection.GetTokenizer instead'{$ENDIF};
     /// <summary>Creates a generic statement analyser object.</summary>
     /// <returns>a created generic tokenizer object as interface.</returns>
-    function GetStatementAnalyser: IZStatementAnalyser;
+    function GetStatementAnalyser: IZStatementAnalyser; deprecated {$IFDEF WITH_DEPRECATED_MESSAGE}'Use IZConnection.GetStatementAnalyser instead'{$ENDIF};
   end;
 
   /// <author>EgonHugeist</author>
@@ -766,6 +784,27 @@ type
     function UseWComparsions: Boolean;
   End;
 
+  TZEventState = (esSignaled, esTimeout);
+
+  TZEventData = class(TObject)
+  protected
+    fEventState: TZEventState;
+    fCreationTime: TDateTime;
+    fName, fKind: SQLString;
+  public
+    procedure AfterConstruction; override;
+  public
+    function ToString: string; {$IFDEF TOBJECT_HAS_TOSTRING}override;{$ELSE}virtual;{$ENDIF}
+  public
+    property Name: SQLString read fName;
+    /// <summary>represents the kind of the received event i.e. Notfication,Event etc.</summary>
+    property Kind: String read fKind;
+    property EventState: TZEventState read fEventState;
+    property CreationTime: TDateTime read fCreationTime;
+  end;
+
+  TZOnEventHandler = procedure(var Event: TZEventData) of object;
+
   /// <summary>Defines the Database Connection interface.</summary>
   IZConnection = interface(IImmediatelyReleasable)
     ['{8EEBBD1A-56D1-4EC0-B3BD-42B60591457F}']
@@ -894,12 +933,6 @@ type
     ///  pre-compiled SQL statement </returns>
     function PrepareCallWithParams(const Name: string; Params: TStrings):
       IZCallableStatement;
-    /// <summary>Creates an object to send/recieve notifications from SQL
-    ///  server. An unsupported operation exception will be raised if the driver
-    ///  doesn't support it, </summary>
-    /// <param>"Event" an event name.</param>
-    /// <returns>a created notification object.</returns>
-    function CreateNotification(const Event: string): IZNotification;
     /// <summary>Creates a sequence generator object.</summary>
     /// <param>"Sequence" a name of the sequence generator.</param>
     /// <param>"BlockSize" a number of unique keys requested in one trip to SQL
@@ -1101,15 +1134,30 @@ type
     ///  drivers the connection mist be opened to determine the provider.</summary>
     /// <returns>the ServerProvider or spUnknown if not known.</returns>
     function GetServerProvider: TZServerProvider;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
+    /// <summary>Get a generic event alerter object.</summary>
+    /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
+    /// <param>"CloneConnection" if <c>True</c> a new connection will be spawned.</param>
+    /// <param>"Options" a list of options, to setup the event alerter.</param>
+    /// <returns>a the generic event alerter object as interface or nil.</returns>
+    function GetEventListener(Handler: TZOnEventHandler; CloneConnection: Boolean; Options: TStrings): IZEventListener;
+    /// <summary>Check if the connection supports an event Listener.</summary>
+    /// <returns><c>true</c> if the connection supports an event Listener;
+    /// <c>false</c> otherwise.</returns>
+    function SupportsEventListener: Boolean;
+    /// <summary>Closes the event alerter.</summary>
+    /// <param>"Value" a reference to the previously created alerter to be released.</param>
+    procedure CloseEventListener(var Value: IZEventListener);
   end;
 
   /// <summary>Defines the database metadata interface.</summary>
   IZDatabaseMetadata = interface(IZInterface)
     ['{FE331C2D-0664-464E-A981-B4F65B85D1A8}']
-
-    //function GetURL: string;
-    //function GetUserName: string;
-
     /// <author>technobot</author>
     /// <summary>Returns general information about the database (version,
     ///  capabilities,  policies, etc).</summary>
@@ -1450,8 +1498,10 @@ type
     function GetConnection: IZConnection;
     function GetIdentifierConvertor: IZIdentifierConvertor; deprecated;
     function GetIdentifierConverter: IZIdentifierConverter; //typo fixed
-
+    /// <summary>Clears all cached metadata.</summary>
     procedure ClearCache; overload;
+    /// <summary>Clears specific cached metadata by a key.</summary>
+    /// <param>"Key" a resultset unique key value.</summary>
     procedure ClearCache(const Key: string); overload;
 
     function AddEscapeCharToWildcards(const Pattern: string): string;
@@ -2644,6 +2694,15 @@ type
     /// <param>"Result" a reference to the TZTimeStamp record. If the value is SQL
     ///  <c>NULL</c> or the conversion fails, the value get's zero filled.</param>
     procedure GetTimeStamp(Index: Integer; var Result: TZTimeStamp); overload;
+    /// <summary>Gets the value of the designated parameter as a variable value</summary>
+    /// <param>"ParameterIndex" the first Parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first Parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index. It's
+    ///  recommented to use an incrementation of FirstDbcIndex. <c>Note</c> only
+    ///  as InOut,Out,Result registered parameters can be accessed after the
+    ///  statement has been executed and the out params are available.
+    ///  Otherwise an EZSQLException is thrown.</param>
+    /// <param>"Result" an variable value.</param>
     function GetValue(ParameterIndex: Integer): TZVariant;
 
     function GetString(ParameterIndex: Integer): String;
@@ -4021,6 +4080,9 @@ type
     ///  called before calling <c>insertRow</c>. An <c>updateXXX</c> method must
     ///  be called before a <c>getXXX</c> method can be called on a column value.</summary>
     procedure MoveToInsertRow;
+    /// <summary>Moves the cursor to the remembered cursor position, usually the
+    ///  current row. This method has no effect if the cursor is not on the
+    ///  insert row.</summary>
     procedure MoveToCurrentRow;
 
     function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
@@ -4337,6 +4399,7 @@ type
     procedure SetUpdated(Value: Boolean);
     function Length: Integer; //deprecated;
     procedure Open(LobStreamMode: TZLobStreamMode);
+    /// <summary>Clear/NULL the lob content</summary>
     procedure Clear;
     procedure SetOnUpdateHandler(Handler: TOnLobUpdate; AField: NativeInt);  //this is for the datasets only
   end;
@@ -4347,6 +4410,7 @@ type
   IZBlob = interface(IZLob)
     ['{47D209F1-D065-49DD-A156-EFD1E523F6BF}']
     function IsClob: Boolean;
+    function IsCached: Boolean;
 
     function GetString: RawByteString;
     procedure SetString(const Value: RawByteString);
@@ -4407,25 +4471,25 @@ type
   PICLob = ^IZClob;
   IZCLobDynArray = array of IZCLob;
 
-  /// <summary>Defines the Database notification interface.</summary>
-  IZNotification = interface(IZInterface)
-    ['{BF785C71-EBE9-4145-8DAE-40674E45EF6F}']
-    /// <summary>Gets the event name.</summary>
-    /// <returns>the event name for this notification.</returns>
-    function GetEvent: string;
-    /// <summary>Sets a listener to the specified event.</summary>
-    procedure Listen;
-    /// <summary>Removes a listener to the specified event.</summary>
-    procedure Unlisten;
-    /// <summary>Sends a notification string.</summary>
-    procedure DoNotify;
-    /// <summary>Checks for any pending events.</summary>
-    /// <returns>a string with incoming events??</summary>
-    function CheckEvents: string;
-    /// <summary>Returns the <c>Connection</c> interface
+  /// <author>EgonHugeist</author>
+  /// <summary>Defines a generic event alerter interface</summary>
+  IZEventListener = interface (IZInterface)
+    ['{9E6DDBD2-86C9-4E5D-9625-FB1456F4545F}']
+    /// <summary>Returns the <c>Connection</c> object
     ///  that produced this <c>Notification</c> object.</summary>
-    /// <returns>the connection that produced this Notification.</returns>
+    /// <returns>the connection that produced this EventListener.</returns>
     function GetConnection: IZConnection;
+    /// <summary>Test if the <c>EventListener is listening to events</c></summary>
+    /// <returns><c>true</c> if the EventListener is active.</returns>
+    function IsListening: Boolean;
+    /// <summary>Starts listening the events.</summary>
+    /// <param>"EventNames" a list of event name to be listened.</param>
+    /// <param>"ThreadSafeHandler" an event handler which gets triggered if the event is received.</param>
+    procedure Listen(const EventNames: TStrings; ThreadSafeHandler: TZOnEventHandler);
+    /// <summary>Triggers an event.</summary>
+    procedure TriggerEvent(const Name: String);
+    /// <summary>Stop listening the events and cleares the registered events.</summary>
+    procedure Unlisten;
   end;
 
   /// <summary>Defines the Database sequence generator interface.</summary>
@@ -4469,6 +4533,19 @@ var
 implementation
 
 uses ZMessages, ZEncoding, ZDbcProperties, ZFastCode;
+
+// Utility function, maybe belongs elsewhere.
+function GetLobCacheModeFromString(const lcmString: string; const DefaultMode: TLobCacheMode = lcmNone): TLobCacheMode;
+begin
+  if SysUtils.SameText(lcmString, LcmNoneStr) then
+    Result := lcmNone
+  else if SysUtils.SameText(lcmString, LcmOnLoadStr) then
+    Result := lcmOnLoad
+  else if SysUtils.SameText(lcmString, LcmOnAccessStr) then
+    Result := lcmOnAccess
+  else
+    Result := DefaultMode;
+end;
 
 type
 
@@ -5194,6 +5271,27 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
+
+{ TZEventData }
+
+procedure TZEventData.AfterConstruction;
+begin
+  inherited;
+  fCreationTime := now;
+end;
+
+function TZEventData.ToString: string;
+var S: String;
+begin
+  if fEventState = esSignaled
+  then S := ', received at'
+  else S := ', timed out at';
+  {$IFDEF WITH_FORMATSETTINGS}
+  Result := Kind+': '+QuotedStr(FName)+S+FormatDateTime(FormatSettings.LongDateFormat+'.ZZZ', fCreationTime);
+  {$ELSE}
+  Result := Kind+': '+QuotedStr(FName)+S+FormatDateTime(               LongDateFormat+'.ZZZ', fCreationTime);
+  {$ENDIF}
+end;
 
 initialization
   DriverManager := TZDriverManager.Create;

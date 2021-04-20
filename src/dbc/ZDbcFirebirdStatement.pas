@@ -224,7 +224,7 @@ begin
     if ((GetResultSetType <> rtForwardOnly) or (GetResultSetConcurrency = rcUpdatable)) and (FResultSet <> nil) then begin
       NativeResultSet.SetType(rtForwardOnly);
       CachedResolver := TZFirebird2upCachedResolver.Create(Self, NativeResultSet.GetMetadata);
-      if CachedLob
+      if (LobCacheMode = lcmOnLoad)
       then CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings)
       else CachedResultSet := TZFirebirdCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
       CachedResultSet.SetConcurrency(GetResultSetConcurrency);

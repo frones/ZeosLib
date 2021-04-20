@@ -228,6 +228,12 @@ type
     /// <summary>Returns the ServicerProvider for this connection.</summary>
     /// <returns>the ServerProvider</returns>
     function GetServerProvider: TZServerProvider; override;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
     function GetHostVersion: Integer; override;
   end;
 
@@ -504,6 +510,16 @@ end;
 function TZASAConnection.GetServerProvider: TZServerProvider;
 begin
   Result := spASA;
+end;
+
+function TZASAConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  Result := TZSybaseStatementAnalyser.Create;
+end;
+
+function TZASAConnection.GetTokenizer: IZTokenizer;
+begin
+  Result := TZSybaseTokenizer.Create;
 end;
 
 {**

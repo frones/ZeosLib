@@ -320,7 +320,7 @@ begin
       if FIBConnection.IsFirebirdLib and (FIBConnection.GetHostVersion >= 2000000) //is the SQL2003 st. IS DISTINCT FROM supported?
       then CachedResolver  := TZFirebird2upCachedResolver.Create(Self, NativeResultSet.GetMetadata)
       else CachedResolver  := TZInterbaseFirebirdCachedResolver.Create(Self, NativeResultSet.GetMetadata);
-      if CachedLob
+      if (LobCacheMode = lcmOnLoad)
       then CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings)
       else CachedResultSet := TZInterbaseCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
       CachedResultSet.SetConcurrency(GetResultSetConcurrency);

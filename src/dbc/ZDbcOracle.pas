@@ -72,7 +72,7 @@ type
     function GetStatementAnalyser: IZStatementAnalyser; override;
   end;
 
-  {** Represents a Oracle specific connection interface. }
+  /// <summary>Defines an Oracle specific connection interface.</summary>
   IZOracleConnection = interface (IZConnection)
     ['{C7F36FDF-8A64-477B-A0EB-3E8AB7C09F8D}']
 
@@ -96,10 +96,7 @@ type
     function GetTrHandle: POCITrans;
   end;
 
-  /// <summary>
-  ///  implements an oracle OCI connection.
-  /// </summary>
-  {** Implements Oracle Database Connection. }
+  /// <summary>implements an oracle OCI connection.</summary>
   TZOracleConnection = class(TZAbstractSingleTxnConnection, IZConnection,
     IZOracleConnection, IZTransaction)
   private
@@ -296,7 +293,13 @@ type
     /// <summary>Returns the ServicerProvider for this connection.</summary>
     /// <returns>the ServerProvider</returns>
     function GetServerProvider: TZServerProvider; override;
-  end;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
+ end;
 
   {** Implements a specialized cached resolver for Oracle. }
   TZOracleCachedResolver = class(TZGenerateSQLCachedResolver)
@@ -1263,6 +1266,16 @@ begin
   Result := FSessionHandle;
 end;
 
+function TZOracleConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  Result := TZOracleStatementAnalyser.Create;
+end;
+
+function TZOracleConnection.GetTokenizer: IZTokenizer;
+begin
+  Result := TZOracleTokenizer.Create;
+end;
+
 {**
   Gets a reference to Oracle transaction handle.
   @return a reference to Oracle transacton handle.
@@ -1301,6 +1314,9 @@ begin
   AException := nil;
   AExceptionClass := EZSQLException;
   ErrorMessage := '';
+  if ConSettings.ClientCodePage <> nil
+  then CP := ConSettings.ClientCodePage.CP
+  else CP := {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}DefaultSystemCodePage{$ELSE}{$IFDEF LCL}zCP_UTF8{$ELSE}zOSCodePage{$ENDIF}{$ENDIF};
   case Status of
     OCI_SUCCESS_WITH_INFO: begin
         AExceptionClass := EZSQLWarning;
@@ -1325,10 +1341,21 @@ JmpConcat:
             else begin
               FirstErrorCode := ErrorCode;
               if (FirstErrorCode = ORA_03113_end_of_file_on_communication_channel) or
+                 (FirstErrorCode = ORA_03135_connection_lost_contact) Or
+                 (FirstErrorCode = ORA_01089_immediate_shutdown_or_close_in_progress) Or
                  (FirstErrorCode = ORA_03114_not_connected_to_ORACLE) and (LogCategory <> lcConnect) then //disconnect
                 AExceptionClass := EZSQLConnectionLost;
             end;
             L := {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(PWideChar(@fByteBuffer[0]));
+            If (NewStatus = OCI_ERROR) And (L = 0) and (Logmessage <> '') Then
+            Begin
+              {$IFDEF UNICODE}
+              WriterW.AddText(Logmessage, ErrorMessage);
+              {$ELSE !UNICODE}
+              WriterW.AddText(ZRawToUnicode(Logmessage, CP), ErrorMessageW);
+              {$ENDIF !UNICODE}
+              Break;
+            End;
             WriterW.AddText(@FByteBuffer[0], L, {$IFDEF UNICODE}ErrorMessage{$ELSE}ErrorMessageW{$ENDIF});
             Inc(I);
           end;
@@ -1357,17 +1384,21 @@ JmpConcat:
               FirstErrorCode := ErrorCode;
               if (FirstErrorCode = ORA_03113_end_of_file_on_communication_channel) or
                  (FirstErrorCode = ORA_03135_connection_lost_contact) Or
+                 (FirstErrorCode = ORA_01089_immediate_shutdown_or_close_in_progress) Or
                  ((FirstErrorCode = ORA_03114_not_connected_to_ORACLE) and (LogCategory <> lcConnect)) then //disconnect
                 AExceptionClass := EZSQLConnectionLost;
             end;
             L := StrLen(PAnsiChar(@fByteBuffer[0]));
 
-            If (NewStatus = OCI_ERROR) And (L = 0) Then
+            If (NewStatus = OCI_ERROR) And (L = 0) and (Logmessage <> '') Then
             Begin
-              WriterA.AddText(@AnsiString(Logmessage)[1], Length(Logmessage), {$IFNDEF UNICODE}ErrorMessage{$ELSE}ErrorMessageA{$ENDIF});
+              {$IFDEF UNICODE}
+              WriterA.AddText(ZUnicodeToRaw(Logmessage, CP), ErrorMessageA);
+              {$ELSE !UNICODE}
+              WriterA.AddText(Logmessage, ErrorMessage);
+              {$ENDIF !UNICODE}
               Break;
             End;
-
             WriterA.AddText(@FByteBuffer[0], L, {$IFNDEF UNICODE}ErrorMessage{$ELSE}ErrorMessageA{$ENDIF});
             Inc(I);
           end;
@@ -1376,9 +1407,6 @@ JmpConcat:
           FreeAndNil(WriterA);
         end;
         {$IFDEF UNICODE}
-        if ConSettings.ClientCodePage <> nil
-        then CP := ConSettings.ClientCodePage.CP
-        else CP := ZOSCodePage;
         ErrorMessage := ZRawToUnicode(ErrorMessageA, CP);
         ErrorMessageA := EmptyRaw;
         {$ENDIF}

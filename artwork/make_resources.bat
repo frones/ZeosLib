@@ -22,7 +22,8 @@ bmptoxpm TZIBEventAlerter.bmp
 bmptoxpm TZConnectionGroup.bmp
 bmptoxpm TZGroupedConnection.bmp
 bmptoxpm TZPgEventAlerter.bmp
-lazres ../src/component/ZComponentReg.lrs TZConnection.xpm TZTransaction.xpm TZReadOnlyQuery.xpm TZConnectionGroup.xpm TZPgEventAlerter.xpm TZGroupedConnection.xpm TZQuery.xpm TZUpdateSql.xpm TZSqlProcessor.xpm TZTable.xpm TZStoredProc.xpm TZSqlMonitor.xpm TZSqlMetaData.xpm TZSequence.xpm TZIBEventAlerter.xpm TZMemTable.xpm
+bmptoxpm TZEventListener.bmp
+lazres ../src/component/ZComponentReg.lrs TZConnection.xpm TZTransaction.xpm TZReadOnlyQuery.xpm TZConnectionGroup.xpm TZPgEventAlerter.xpm TZGroupedConnection.xpm TZQuery.xpm TZUpdateSql.xpm TZSqlProcessor.xpm TZTable.xpm TZStoredProc.xpm TZSqlMonitor.xpm TZSqlMetaData.xpm TZSequence.xpm TZIBEventAlerter.xpm TZMemTable.xpm TZEventListener.xpm
 echo ----------------------
 echo Remove temporary files
 echo ----------------------

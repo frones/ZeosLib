@@ -2975,7 +2975,7 @@ begin
         'IDBSchemaRowset.GetRowset', OleDBConnection);
     if Assigned(RowSet) then begin
       Stmt := GetStatement;
-      Result := TZOleDBMetadataResultSet.Create(Stmt, RowSet, (Stmt as IZOleDBPreparedStatement).GetInternalBufferSize, True);
+      Result := TZOleDBMetadataResultSet.Create(Stmt, RowSet, (Stmt as IZOleDBPreparedStatement).GetInternalBufferSize);
     end;
   finally
     SchemaRS := nil;

@@ -71,6 +71,9 @@ const
   IBBigLocalBufferLength = IBLocalBufferLength * 2;
   IBHugeLocalBufferLength = IBBigLocalBufferLength * 20;
 
+  IB_MAX_EVENT_BLOCK = 15;   // maximum events handled per block by InterBase
+  IB_MAX_EVENT_LENGTH = 64;  // maximum event name length
+
   ISC_NULL = -1;
   ISC_NOTNULL = 0;
 
@@ -2619,7 +2622,7 @@ type
 
   { Interbase event counts array }
   PARRAY_ISC_EVENTCOUNTS = ^TARRAY_ISC_EVENTCOUNTS;
-  TARRAY_ISC_EVENTCOUNTS = array[0..ISC_STATUS_LENGTH-1] of ISC_ULONG;
+  TARRAY_ISC_EVENTCOUNTS = array[0..IB_MAX_EVENT_BLOCK-1] of ISC_ULONG;
 
 const
   WINDOWSIB6_DLL_LOCATION   = 'gds32.dll';

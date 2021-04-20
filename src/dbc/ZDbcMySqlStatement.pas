@@ -697,13 +697,13 @@ begin
   if (not FHasMoreResults) and (FOpenResultSet <> nil) then begin
     Result := IZResultSet(FOpenResultSet);
     FOpenCursorCallback;
-    if fUseResult and ((GetResultSetConcurrency = rcUpdatable) or
+    if (fUseResult or (FCursorLocation = rctServer)) and ((GetResultSetConcurrency = rcUpdatable) or
        (GetResultSetType = rtScrollInsensitive)) then begin
       Result.Last; //invoke fetch all -> note this is done on msql_strore_result too
       Result.BeforeFirst;
     end;
   end else begin
-    if FUseResult //server cursor?
+    if FUseResult or (FCursorLocation = rctServer)//server cursor?
     then NativeResultSet := TZMySQL_Use_ResultSet.Create(Self, SQL, FMySQLConnection,
       False, @FMYSQL_STMT, MYSQL_ColumnsBinding , nil, FOpenCursorCallback)
     else NativeResultSet := TZMySQL_Store_ResultSet.Create(Self, SQL, FMySQLConnection,
@@ -726,7 +726,7 @@ begin
           NativeResultSet.ColumnsInfo, NativeResultSet, SQL, CachedResolver, ConSettings)
         else CachedResultSet := TZMySQLPreparedUseResultsCachedResultSet.CreateWithColumns(
           NativeResultSet.ColumnsInfo, NativeResultSet, SQL, CachedResolver, ConSettings)
-      else if CachedLob and not FEmulatedParams
+      else if (LobCacheMode = lcmOnLoad) and not FEmulatedParams
         then CachedResultSet := TZMySQLPreparedStoreResultsCachedLobsResultSet.CreateWithColumns(
           NativeResultSet.ColumnsInfo, NativeResultSet, SQL, CachedResolver, ConSettings)
         else CachedResultSet := TZMySQLUseResultsCachedResultSet.CreateWithColumns(
@@ -1907,7 +1907,12 @@ begin
   end;
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
+{$IFDEF FPC} {$PUSH}
+  {$WARN 5057 off : Local variable "TS" does not seem to be initialized}
+  {$IFDEF WITH_NOT_INLINED_WARNING}
+    {$WARN 6058 off : Call to subroutine "procedure GUIDToBuffer(const Source:Pointer;Dest:PChar;const Options:TGUIDConvOptions);" marked as inline is not inlined}
+  {$ENDIF}
+{$ENDIF}
 procedure TZMySQLPreparedStatement.SetDataArray(ParameterIndex: Integer;
   const Value; const SQLType: TZSQLType; const VariantType: TZVariantType);
 var

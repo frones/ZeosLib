@@ -63,7 +63,7 @@ uses
 
 type
   TZPropertyLevelTypes = set of (pltConnection, pltTransaction, pltStatement,
-    pltResolver);
+    pltResolver, pltEventListener);
 
   { TfrmPropertyEditor }
 
@@ -198,7 +198,8 @@ implementation
 
 uses TypInfo, Types,
   ZSysUtils, ZCompatibility,
-  ZAbstractRODataset, ZAbstractDataset, ZAbstractConnection, ZTransaction
+  ZAbstractRODataset, ZAbstractDataset, ZAbstractConnection, ZTransaction,
+  ZEventListener
   {$IFDEF ENABLE_MYSQL},ZPlainMySqlDriver{$ENDIF};
 
 {$IFNDEF FPC}
@@ -343,6 +344,12 @@ jmpProtocol:
       FZPropertyLevelTypes := [pltStatement];
       if TZProtectedAbstractRODataSet(Component).Connection <> nil then begin
         Component := TZProtectedAbstractRODataSet(Component).Connection;
+        goto jmpProtocol;
+      end;
+    end else if Component.InheritsFrom(TZEventListener) then begin
+      FZPropertyLevelTypes := [pltEventListener];
+      if TZEventListener(Component).Connection <> nil then begin
+        Component := TZEventListener(Component).Connection;
         goto jmpProtocol;
       end;
     end else Exit;
@@ -601,6 +608,7 @@ begin
       Current := ZPropertyArray[i];
       if ((pltConnection in FZPropertyLevelTypes) and (pltConnection in Current.LevelTypes)) or
          ((pltTransaction in FZPropertyLevelTypes) and (pltTransaction in Current.LevelTypes)) or
+         ((pltEventListener in FZPropertyLevelTypes) and (pltEventListener in Current.LevelTypes)) or
          ((pltResolver in FZPropertyLevelTypes) and (pltResolver in Current.LevelTypes)) or
          ((pltStatement in FZPropertyLevelTypes) and (pltStatement in Current.LevelTypes) and not
            ((pltConnection in FZPropertyLevelTypes) and not (pltConnection in Current.LevelTypes))) then begin
@@ -953,16 +961,16 @@ const
     Protocols: (Count: 0; Items: nil);
   );
 {$IFEND}
-{$IF declared(DSProps_CachedLobs)}
+{$IF declared(DSProps_LobCacheMode)}
   const All_Oracle_IB_FB_Postgre: array[0..3] of String = ('oracle', 'firebird', 'interbase', 'postrgres');
-  ZProp_CachedLobs : TZProperty = (
-    Name: DSProps_CachedLobs;
-    Purpose: 'Cache the Lob-Streams? Used for Oracle-Lobs, All IB/FB-lob''s, '+
+  ZProp_LobCacheMode : TZProperty = (
+    Name: DSProps_LobCacheMode;
+    Purpose: 'Cache the Lob-Streams? OnLoad caches lobs on fetch.  OnAccess caches lobs when accessed. Used for Oracle-Lobs, All IB/FB-lob''s, '+
       'Postgre-OID-lob''s only. All other providers do not support a good '+
       'locator API. Servers like MySQL(real prepared), ASE do support late-fetching methods '+
       'but we need to refetch the whole row first if the cursor postion changes';
     ValueType: pvtEnum; LevelTypes: [pltConnection, pltStatement];
-    Values: cBoolEnum; Default: cBoolFalse; Alias: '';
+    Values: 'None|OnLoad|OnAccess'; Default: 'None'; Alias: '';
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 4; Items: @All_Oracle_IB_FB_Postgre);
   );
@@ -4019,6 +4027,20 @@ const
     Protocols: (Count: 2; Items: @cODBCProtocols);
   );
 {$ENDIF}
+{$IFNDEF ZEOS_DISABLE_POSTGRESQL}
+  PostgreOnly: array[0..0] of String = ('postrgres');
+{$ENDIF}
+
+{$IF declared(ELProps_ListernerInterval)}
+  ZProp_ListernerInterval : TZProperty = (
+    Name: ELProps_ListernerInterval;
+    Purpose: 'Sets Listener interval in milliseconds.';
+    ValueType: pvtNumber; LevelTypes: [pltEventListener];
+    Values: ''; Default: '250'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 1; Items: @PostgreOnly);
+  );
+{$IFEND}
 
 initialization
   prEditValuesPageIndex := 0;
@@ -4058,8 +4080,8 @@ initialization
   RegisterZProperties([@ZProp_ServerCachedStmts,@ZProp_BlobPrefetchSize,
     @ZProp_StatementCache,@ZProp_row_prefetch_size,@ZProp_OCIAuthenticateMode,@ZProp_MultiThreaded]);
 {$ENDIF}
-{$IF declared(ZProp_CachedLobs)}
-  RegisterZProperty(@ZProp_CachedLobs);
+{$IF declared(ZProp_LobCacheMode)}
+  RegisterZProperty(@ZProp_LobCacheMode);
 {$IFEND}
 {$IF declared(ZProp_UndefVarcharAsStringLength)}
   RegisterZProperty(@ZProp_UndefVarcharAsStringLength);
@@ -4167,4 +4189,7 @@ initialization
   RegisterZProperties([@ZProp_Server, @ZProp_CharacterSet, @ZProp_DRIVER]);
 {$ENDIF}
 
+{$IF declared(ELProps_ListernerInterval )}
+  RegisterZProperties([@ZProp_ListernerInterval]);
+{$IFEND}
 end.

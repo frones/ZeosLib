@@ -515,6 +515,9 @@ end;
 
 { TZAbstracDBLibSQLStatement }
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}
+{$WARN 6058 off : Call to subroutine "function TZDBLIBPLainDriver.dbcmd(dbproc:Pointer;Cmd:PChar):LongInt;" marked as inline is not inlined}
+{$ENDIF}
 procedure TZAbstracDBLibSQLStatement.InternalExecute;
 var Raw: RawByteString;
 begin
@@ -544,6 +547,7 @@ begin
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecute, Self);
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 { TZDBLibPreparedStatementEmulated }
 
@@ -985,6 +989,11 @@ end;
 {**
   Binds the input parameters
 }
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}
+{$WARN 6058 off : Call to subroutine "
+function TZDBLIBPLainDriver.dbRpcInit(dbProc:Pointer;RpcName:PChar;Options:SmallInt):LongInt;,
+function TZDBLIBPLainDriver.dbRpcParam(dbProc:Pointer;ParamName:PChar;Status:Byte;Type_:LongInt;MaxLen:LongInt;DataLen:LongInt;Value:Pointer):LongInt;" marked as inline is not inlined" marked as inline is not inlined}
+{$ENDIF}
 procedure TZDBLIBPreparedRPCStatement.BindInParameters;
 var I: Integer;
   Bind: PZBindValue;
@@ -1012,6 +1021,7 @@ begin
     end;
   end;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 constructor TZDBLIBPreparedRPCStatement.Create(const Connection: IZConnection;
   const RemoteProcedureName: String; const Info: TStrings);

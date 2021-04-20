@@ -825,8 +825,11 @@ type
 
     function GetIdentifierConvertor: IZIdentifierConverter; //EH: left for compatibility
     function GetIdentifierConverter: IZIdentifierConverter; virtual;
+    /// <summary>Clears all cached metadata.</summary>
     procedure ClearCache; overload;virtual;
-    procedure ClearCache(const Key: string);overload;virtual;
+    /// <summary>Clears specific cached metadata by a key.</summary>
+    /// <param>"Key" a resultset unique key value.</summary>
+    procedure ClearCache(const Key: string); overload; virtual;
 
     // --> technobot 2008-06-14:  metadata cache key retrieval API:
     function GetTablesCacheKey(const Catalog: string; const SchemaPattern: string;
@@ -2907,17 +2910,11 @@ begin
   end;
 end;
 
-{**
-  Clears all cached metadata.
-}
 procedure TZAbstractDatabaseMetadata.ClearCache;
 begin
   FCachedResultSets.Clear;
 end;
 
-{**
-  Clears specific cached metadata.
-}
 procedure TZAbstractDatabaseMetadata.ClearBuf;
 begin
   fCurrentBufIndex := 0;

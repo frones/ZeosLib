@@ -70,8 +70,11 @@ type
     function Connect(const Url: TZURL): IZConnection; override;
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
-
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
     function GetTokenizer: IZTokenizer; override;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
     function GetStatementAnalyser: IZStatementAnalyser; override;
   end;
 
@@ -245,6 +248,12 @@ type
     /// <summary>Returns the ServicerProvider for this connection.</summary>
     /// <returns>the ServerProvider</returns>
     function GetServerProvider: TZServerProvider; override;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
   end;
 
 var
@@ -936,6 +945,16 @@ end;
 function TZSQLiteConnection.GetSQLiteIntAffinity: Boolean;
 begin
   Result := FSQLiteIntAffinity;
+end;
+
+function TZSQLiteConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  Result := TZSQLiteStatementAnalyser.Create;
+end;
+
+function TZSQLiteConnection.GetTokenizer: IZTokenizer;
+begin
+  Result := TZSQLiteTokenizer.Create;
 end;
 
 function TZSQLiteConnection.GetHostVersion: Integer;

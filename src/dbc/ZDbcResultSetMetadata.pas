@@ -1209,16 +1209,16 @@ end;
 procedure TZAbstractResultSetMetadata.LoadColumns;
 var
   I, j: Integer;
-  Driver: IZDriver;
+  Connection: IZConnection;
   Tokenizer: IZTokenizer;
   StatementAnalyser: IZStatementAnalyser;
   SelectSchema: IZSelectSchema;
   FillByIndices: Boolean;
 begin
   { Parses the Select statement and retrieves a schema object. }
-  Driver := Metadata.GetConnection.GetDriver;
-  Tokenizer := Driver.GetTokenizer;
-  StatementAnalyser := Driver.GetStatementAnalyser;
+  Connection := Metadata.GetConnection;
+  Tokenizer := Connection.GetTokenizer;
+  StatementAnalyser := Connection.GetStatementAnalyser;
   SelectSchema := StatementAnalyser.DefineSelectSchemaFromQuery(Tokenizer, SQL);
   if Assigned(SelectSchema) then begin
     SelectSchema.LinkReferences(IdentifierConverter);

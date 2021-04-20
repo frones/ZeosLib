@@ -76,8 +76,11 @@ type
     function Connect(const Url: TZURL): IZConnection; override;
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
-
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
     function GetTokenizer: IZTokenizer; override;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
     function GetStatementAnalyser: IZStatementAnalyser; override;
     function GetClientVersion(const Url: string): Integer; override;
   end;
@@ -276,6 +279,12 @@ type
       const Sender: IImmediatelyReleasable);
     procedure SetSilentError(Value: Boolean);
     function IsSilentError: Boolean;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
   end;
 
 var
@@ -1266,6 +1275,16 @@ end;
 function TZMySQLConnection.GetServerProvider: TZServerProvider;
 begin
   Result := spMySQL;
+end;
+
+function TZMySQLConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  Result := TZMySQLStatementAnalyser.Create;
+end;
+
+function TZMySQLConnection.GetTokenizer: IZTokenizer;
+begin
+  Result := TZMySQLTokenizer.Create;
 end;
 
 function TZMySQLConnection.GetDatabaseName: String;

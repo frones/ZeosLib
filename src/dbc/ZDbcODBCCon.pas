@@ -197,6 +197,12 @@ type
     ///  the provider is tested against the driver names</summary>
     /// <returns>the ServerProvider or spUnknown if not known.</returns>
     function GetServerProvider: TZServerProvider; override;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
   end;
 
   TZODBCConnectionW = class(TZAbstractODBCConnection, IZODBCConnection,
@@ -349,10 +355,13 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 
 uses
-  {$IFDEF MSWINDOWS}Windows,{$ENDIF}
-  ZODBCToken, ZDbcODBCMetadata, ZDbcODBCStatement, ZDbcUtils,
-  ZPlainDriver, ZSysUtils, ZEncoding, ZFastCode, ZDbcProperties,
-  ZMessages {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
+  {$IFDEF MSWINDOWS}Windows,{$ENDIF}{$IFDEF NO_INLINE_SIZE_CHECK}Math,{$ENDIF}
+  ZSysUtils, ZEncoding, ZFastCode, ZMessages,
+  ZPlainDriver, ZODBCToken,
+  ZPostgreSqlAnalyser, ZPostgreSqlToken, ZSybaseAnalyser, ZSybaseToken,
+  ZInterbaseAnalyser, ZInterbaseToken, ZMySqlAnalyser, ZMySqlToken,
+  ZOracleAnalyser, ZOracleToken,
+  ZDbcODBCMetadata, ZDbcODBCStatement, ZDbcUtils, ZDbcProperties;
 
 { TZODBCDriver }
 
@@ -582,6 +591,36 @@ end;
 function TZAbstractODBCConnection.GetServerProvider: TZServerProvider;
 begin
   Result := fServerProvider;
+end;
+
+function TZAbstractODBCConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  case FServerProvider of
+    //spUnknown, spMSSQL, spMSJet,
+    spOracle: Result := TZOracleStatementAnalyser.Create;
+    spMSSQL, spASE, spASA: Result := TZSybaseStatementAnalyser.Create;
+    spPostgreSQL: Result := TZPostgreSQLStatementAnalyser.Create;
+    spIB_FB: Result := TZInterbaseStatementAnalyser.Create;
+    spMySQL: Result := TZMySQLStatementAnalyser.Create;
+    //spNexusDB, spSQLite, spDB2, spAS400,
+    //spInformix, spCUBRID, spFoxPro
+    else Result := TZGenericStatementAnalyser.Create;
+  end;
+end;
+
+function TZAbstractODBCConnection.GetTokenizer: IZTokenizer;
+begin
+  case FServerProvider of
+    //spUnknown, spMSJet,
+    spOracle: Result := TZOracleTokenizer.Create;
+    spMSSQL, spASE, spASA: Result := TZSybaseTokenizer.Create;
+    spPostgreSQL: Result := TZPostgreSQLTokenizer.Create;
+    spIB_FB: Result := TZInterbaseTokenizer.Create;
+    spMySQL: Result := TZMySQLTokenizer.Create;
+    //spNexusDB, spSQLite, spDB2, spAS400,
+    //spInformix, spCUBRID, spFoxPro
+    else Result := TZODBCTokenizer.Create;
+  end;
 end;
 
 {**

@@ -55,16 +55,19 @@ interface
 
 {$I ZParseSql.inc}
 
-{$IFNDEF DISABLE_INTERBASE_AND_FIREBIRD}
+{$IF defined(DISABLE_INTERBASE_AND_FIREBIRD) and defined(ZEOS_DISABLE_ADO) and
+  defined(ZEOS_DISABLE_OLEDB) and defined(ZEOS_DISABLE_ODBC) and defined(ZEOS_DISABLE_PROXY)}
+  {$DEFINE EMPTY_ZInterbaseAnalyser}
+{$IFEND}
+
+{$IFNDEF EMPTY_ZInterbaseAnalyser}
 uses Classes, ZGenericSqlAnalyser;
 
 type
+  /// <summary>Implements an Interbase statements analyser.</summary>
+  TZInterbaseStatementAnalyser = class (TZGenericStatementAnalyser);
 
-  {** Implements an Interbase statements analyser. }
-  TZInterbaseStatementAnalyser = class (TZGenericStatementAnalyser)
-  end;
-
-{$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
+{$ENDIF EMPTY_ZInterbaseAnalyser}
 
 implementation
 

@@ -55,21 +55,27 @@ interface
 
 {$I ZParseSql.inc}
 
-{$IFNDEF ZEOS_DISABLE_ORACLE}
+{$IF defined(ZEOS_DISABLE_ORACLE) and defined(ZEOS_DISABLE_ADO) and
+     defined(ZEOS_DISABLE_OLEDB) and defined(ZEOS_DISABLE_ODBC) and defined(ZEOS_DISABLE_PROXY)}
+  {$DEFINE EMPTY_ZOracleAnalyser}
+{$IFEND}
+
+{$IFNDEF EMPTY_ZOracleAnalyser}
 
 uses Classes, ZGenericSqlAnalyser;
 
 type
 
-  {** Implements an Oracle statements analyser. }
+  /// <summary>Implements an Oracle statements analyser.</summary>
   TZOracleStatementAnalyser = class (TZGenericStatementAnalyser)
   public
+    /// <summary>Creates the object and assignes the main properties.</summary>
     constructor Create;
   end;
 
-{$ENDIF ZEOS_DISABLE_ORACLE}
+{$ENDIF EMPTY_ZOracleAnalyser}
 implementation
-{$IFNDEF ZEOS_DISABLE_ORACLE}
+{$IFNDEF EMPTY_ZOracleAnalyser}
 
 const
   {** The generic constants.}
@@ -90,9 +96,6 @@ const
 
 { TZOracleStatementAnalyser }
 
-{**
-  Creates the object and assignes the main properties.
-}
 constructor TZOracleStatementAnalyser.Create;
 begin
   SectionNames := ArrayToStrings(OracleSectionNames);
@@ -101,6 +104,6 @@ begin
   FromClauses := ArrayToStrings(OracleFromClauses);
 end;
 
-{$ENDIF ZEOS_DISABLE_ORACLE}
+{$ENDIF EMPTY_ZOracleAnalyser}
 
 end.

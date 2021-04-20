@@ -904,34 +904,28 @@ var
   SelectSchema: IZSelectSchema;
 begin
   QuoteChar := '""';
-  if Assigned(DataSet) and Assigned(DataSet.Connection)
-    and Assigned(DataSet.Connection.DbcConnection)then
-  begin
+  if Assigned(DataSet) and Assigned(DataSet.Connection) and DataSet.Connection.Connected then begin
     QuoteChar := DataSet.Connection.DbcConnection.GetMetadata.GetDatabaseInfo.
       GetIdentifierQuoteString;
     if Length(QuoteChar) = 1 then
       QuoteChar := QuoteChar + QuoteChar;
     { Parses the Select statement and retrieves a schema object. }
-    Tokenizer := DataSet.Connection.DbcDriver.GetTokenizer;
-    StatementAnalyser := DataSet.Connection.DbcDriver.GetStatementAnalyser;
+    Tokenizer := DataSet.Connection.DbcConnection.GetTokenizer;
+    StatementAnalyser := DataSet.Connection.DbcConnection.GetStatementAnalyser;
     SelectSchema := StatementAnalyser.DefineSelectSchemaFromQuery(Tokenizer,
       THackDataSet(DataSet).SQL.Text);
-    if Assigned(SelectSchema) then
-    begin
+    if Assigned(SelectSchema) then begin
       UpdateTableName.Clear;
       for I := 0 to SelectSchema.TableCount - 1 do
         UpdateTableName.Items.Add(SelectSchema.Tables[I].Table);//!!!Schema support
     end;
-  end
-  else
-    if Assigned(Dataset) then
-    begin
-      TableName := '';
-      if SQLText[ukModify].Count > 0 then
-        ParseUpdateSql(SQLText[ukModify].Text, QuoteChar, TableName, nil, nil);
-      if TableName <> '' then
-        UpdateTableName.Items.Add(TableName);
-    end;
+  end else if Assigned(Dataset) then begin
+    TableName := '';
+    if SQLText[ukModify].Count > 0 then
+      ParseUpdateSql(SQLText[ukModify].Text, QuoteChar, TableName, nil, nil);
+    if TableName <> '' then
+      UpdateTableName.Items.Add(TableName);
+  end;
   if UpdateTableName.Items.Count > 0 then
      UpdateTableName.ItemIndex := 0;
 end;

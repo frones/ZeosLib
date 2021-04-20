@@ -67,6 +67,8 @@ type
   {** Implements a test case for class TZAbstractDriver and Utilities. }
   TZTestDbcPostgreSQLCase = class(TZAbstractDbcSQLTestCase)
   private
+    FEventName: String;
+    procedure OnEvent(var Event: TZEventData);
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -81,17 +83,19 @@ type
     procedure Test_GENERATED_ALWAYS_64;
     procedure Test_GENERATED_BY_DEFAULT_64;
     procedure Test_BatchDelete_equal_operator;
+    procedure Test_BatchInsert_returning;
     procedure Test_BatchDelete_in_operator;
     procedure Test_TimezoneOffset;
+    procedure Test_Ddbc_PG_EventListener;
   end;
 
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL}
 implementation
 {$ENDIF ZEOS_DISABLE_POSTGRESQL}
 
-uses Types,
+uses Types, DateUtils,
   SysUtils, ZTestConsts, ZSysUtils, ZVariant,
-  ZDbcUtils;
+  ZDbcUtils, ZDbcLogging;
 
 { TZTestDbcPostgreSQLCase }
 
@@ -195,6 +199,74 @@ begin
   finally
     Connection.Rollback;
     Connection.Close;
+  end;
+end;
+
+procedure TZTestDbcPostgreSQLCase.Test_BatchInsert_returning;
+var
+  Statement: IZPreparedStatement;
+  BoolArray: TBooleanDynArray;
+  RS: IZResultSet;
+  I: Cardinal;
+begin
+  BoolArray := nil;
+  RS := nil;
+  Statement := Connection.PrepareStatement('insert into high_load(stBoolean) VALUES (?) returning hl_id');
+  CheckEquals(1, Connection.StartTransaction);
+  try
+    if Connection.GetHostVersion < ZSysUtils.EncodeSQLVersioning(8, 0, 0) then
+      Exit;
+    SetLength(BoolArray, 4);
+    BoolArray[0] := True;
+    BoolArray[1] := False;
+    BoolArray[2] := True;
+    BoolArray[3] := False;
+    CheckNotNull(Statement);
+    Statement.SetDataArray(FirstDbcIndex, BoolArray, stBoolean);
+    I := 0;
+    RS := Statement.ExecuteQueryPrepared;
+    while RS.Next do begin
+      CheckFalse(Rs.IsNull(FirstDbcIndex));
+      Inc(I);
+    end;
+    Check(I = 4);
+  finally
+    Connection.Rollback;
+    Connection.CreateStatement.ExecuteUpdate('delete from high_load where 1=1');
+    Connection.Close;
+  end;
+end;
+
+procedure TZTestDbcPostgreSQLCase.Test_Ddbc_PG_EventListener;
+var Listener: IZEventListener;
+    EndTime: TDateTime;
+    Events: TStrings;
+begin
+  Events := TStringList.Create;
+  Listener := Connection.GetEventListener(OnEvent, False, Events);
+  try
+    Check(Listener <> nil);
+    FEventName := '';
+    CheckFalse(Listener.IsListening);
+    Events.Add('zeostest');
+    Listener.Listen(Events, OnEvent);
+    Check(Listener.IsListening);
+    EndTime := IncSecond(Now, 2);
+    Connection.ExecuteImmediat('NOTIFY zeostest', lcExecute);
+    while (FEventName = '') and (EndTime > Now) do
+      Sleep(0);
+    Check(FEventName = 'zeostest', 'Didn''t get PostgreSQL notification.');
+    EndTime := IncSecond(Now, 2);
+    Listener.TriggerEvent('zeostest');
+    while (FEventName = '') and (EndTime > Now) do
+      Sleep(0);
+    Check(FEventName = 'zeostest', 'Didn''t get PostgreSQL notification.');
+    Listener.Unlisten;
+    CheckFalse(Listener.IsListening);
+    Connection.CloseEventListener(Listener);
+    CheckFalse(Connection.IsClosed);
+  finally
+    FreeAndNil(Events);
   end;
 end;
 
@@ -380,6 +452,11 @@ begin
 
   Statement.Close;
   Connection.Close;
+end;
+
+procedure TZTestDbcPostgreSQLCase.OnEvent(var Event: TZEventData);
+begin
+  FEventName := Event.Name;
 end;
 
 procedure TZTestDbcPostgreSQLCase.TestBlobs;
@@ -623,3 +700,4 @@ initialization
   RegisterTest('dbc',TZTestDbcPostgreSQLCase.Suite);
 {$ENDIF ZEOS_DISABLE_POSTGRESQL}
 end.
+

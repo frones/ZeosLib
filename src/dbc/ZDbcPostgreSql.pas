@@ -116,6 +116,8 @@ type
     procedure RegisterTrashPreparedStmtName(const value: String);
     function ClientSettingsChanged: Boolean;
     function GetUndefinedVarcharAsStringLength: Integer;
+    /// <summary>Checks if DataBaseMetaData should check FieldVisibility too.</summary>
+    /// <returns><c>True</c> if user did set it.</returns>
     function CheckFieldVisibility: Boolean;
     function StoredProcedureIsSelectable(const ProcName: String): Boolean;
     procedure AddDomain2BaseTypeIfNotExists(DomainOID, BaseTypeOID: OID);
@@ -127,7 +129,18 @@ type
     procedure GetBinaryEscapeString(Buf: Pointer; Len: LengthInt; out Result: RawByteString);
     procedure GetEscapeString(Buf: PAnsichar; Len: LengthInt; out Result: RawByteString);
     function GetByteBufferAddress: PByteBuffer;
-
+    /// <summary>Handle an error, a warning or a notice. Note: this method
+    ///  should be called only if the status is in error or warning range.</summary>
+    /// <param>"Status" the current status received by a call of any pq
+    ///  interface method</param>
+    /// <param>"LoggingCategory" the logging category used to log the error or
+    ///  warning if a listenter is registered on the driver manager</param>
+    /// <param>"LogMessage" the logging message used to log the error or
+    ///  warning if a listenter is registered on the driver manager</param>
+    /// <param>"Sender" the calling interface which may release the resources if
+    ///  a connection loss happens</param>
+    /// <param>"ResultHandle" a postgres result handle to optiain the error
+    ///  informations and free the allocated memory before raising the exception.</param>
     procedure HandleErrorOrWarning(Status: TZPostgreSQLExecStatusType;
       LogCategory: TZLoggingCategory; const LogMessage: SQLString;
       const Sender: IImmediatelyReleasable; ResultHandle: TPGresult);
@@ -152,12 +165,35 @@ type
     property UnkownCount: Integer read fUnkownCount;
   end;
 
-  {** Implements PostgreSQL Database Connection. }
+  TZPgNotificationEvent = procedure(const Event: string;
+    ProcessID: Integer; Payload: string) of object;
 
-  { TZPostgreSQLConnection }
+  /// <summary>Defines a prostgres specific evnt listener</summary>
+  IZPostgresEventListener = Interface(IZEventListener)
+    ['{FBB89249-7C7B-4777-B64C-AFCDAAB50F66}']
+    /// <summary>Set a on Notify event</summary>
+    /// <param>"Value" the event to be used</param>
+    procedure SetOnPgNotifyEvent(const Value: TZPgNotificationEvent);
+    /// <summary>Set a timer interval to check the notifications in milli
+    ///  seconds</summary>
+    /// <param>"Value" the interval to be used</param>
+    procedure SetListenerInterval(const Value: Cardinal);
+  End;
 
+  TZPostgresEventList = class(TZEventList)
+  private
+    FTimer: TZThreadTimer;
+    FPgNotifyEvent: TZPgNotificationEvent;
+  public
+    constructor Create(Handler: TZOnEventHandler; TimerTick: TThreadMethod);
+    destructor Destroy; override;
+    property Timer: TZThreadTimer read FTimer;
+  end;
+
+  /// <summary>Implements PostgreSQL Database Connection.</summary>
   TZPostgreSQLConnection = class(TZAbstractSingleTxnConnection,
-    IZConnection, IZPostgreSQLConnection, IZTransaction)
+    IZConnection, IZPostgreSQLConnection, IZTransaction, IZEventListener,
+    IZPostgresEventListener)
   private
     FUndefinedVarcharAsStringLength: Integer;
     Fconn: TPGconn;
@@ -180,11 +216,22 @@ type
     FCheckFieldVisibility: Boolean;
     fPlainDriver: TZPostgreSQLPlainDriver;
     FLastWarning: EZSQLWarning;
+    FEventList: TZPostgresEventList;
+    //FCreatedEventAllerterPtr: Pointer; //weak ref to self ptr
     function HasMinimumServerVersion(MajorVersion, MinorVersion, SubVersion: Integer): Boolean;
-  protected
+  protected { implement IZPostgreSQLConnection }
     function GetUndefinedVarcharAsStringLength: Integer;
+    /// <summary>Builds a connection string for PostgreSQL.</summary>
+    /// <returns>a built connection string.</returns>
     function BuildConnectStr: RawByteString;
+    /// <summary>Deallocates pending prepared statements. This procedure is
+    ///  intended for driver internal use only and should normally only be
+    ///  called when in auto-commit mode. This either happens when unregistering
+    ///  a prepared statement and being in auto-commit mode or when committing
+    ///  or rolling back a transaction and before staring the next transaction
+    ///  block.<summary>
     procedure DeallocatePreparedStatements;
+    /// <summary>Loads a server major and minor version numbers.</summary>
     procedure LoadServerVersion;
     function EncodeBinary(const Value: RawByteString; Quoted: Boolean): RawByteString; overload;
     function EncodeBinary(const Value: TBytes; Quoted: Boolean): RawByteString; overload;
@@ -197,8 +244,10 @@ type
     function GetServerSetting(const AName: RawByteString): string;
     procedure SetServerSetting(const AName, AValue: RawbyteString);
     procedure UpdateTimestampOffset;
+    procedure CheckEvents;
   public
     procedure AfterConstruction; override;
+    /// <summary>Destroys this object and cleanups the memory.</summary>
     destructor Destroy; override;
   public
     /// <summary>Creates a <c>Statement</c> interface for sending SQL statements
@@ -251,7 +300,9 @@ type
     ///  optional pre-compiled statement</returns>
     function PrepareStatementWithParams(const SQL: string; Info: TStrings):
       IZPreparedStatement;
-
+    /// <author>aehimself</author>
+    /// <summary>Immediately abort any kind of operations on the server.</summary>
+    /// <returns>0 if the operation is aborted; Non zero otherwise.</returns>
     function AbortOperation: Integer; override;
     /// <summary>If the current transaction is saved the current savepoint get's
     ///  released. Otherwise makes all changes made since the previous commit/
@@ -315,7 +366,7 @@ type
     procedure PrepareTransaction(const transactionid: string);override;
     procedure CommitPrepared(const transactionid:string);override;
     procedure RollbackPrepared(const transactionid:string);override;
-
+    /// <summary>Opens a connection to database server with specified parameters.</summary>
     procedure Open; override;
     /// <summary>Creates a generic tokenizer interface.</summary>
     /// <returns>a created generic tokenizer object.</returns>
@@ -345,6 +396,8 @@ type
     /// <returns><c>True</c> if hex is set.</returns>
     function Is_bytea_output_hex: Boolean;
     function integer_datetimes: Boolean;
+    /// <summary>Checks if DataBaseMetaData should check FieldVisibility too.</summary>
+    /// <returns><c>True</c> if user did set it.</returns>
     function CheckFieldVisibility: Boolean;
 
     procedure AddDomain2BaseTypeIfNotExists(DomainOID, BaseTypeOID: OID);
@@ -376,12 +429,59 @@ type
     {$IFDEF ZEOS_TEST_ONLY}
     constructor Create(const ZUrl: TZURL);
     {$ENDIF}
-
+    /// <summary>Returns the first warning reported by calls on this Connection.</summary>
+    /// <remarks>Subsequent warnings will be chained to this EZSQLWarning.</remarks>
+    /// <returns>the first SQLWarning or nil.</returns>
     function GetWarnings: EZSQLWarning; override;
+    /// <summary>Clears all warnings reported for this <c>Connection</c> object.
+    ///  After a call to this method, the method <c>getWarnings</c> returns nil
+    ///  until a new warning is reported for this Connection.</summary>
     procedure ClearWarnings; override;
     /// <summary>Returns the ServicerProvider for this connection.</summary>
     /// <returns>the ServerProvider</returns>
     function GetServerProvider: TZServerProvider; override;
+    /// <summary>Get a generic event alerter object.</summary>
+    /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
+    /// <param>"CloneConnection" if <c>True</c> a new connection will be spawned.</param>
+    /// <param>"Options" a list of options, to setup the event alerter.</param>
+    /// <returns>a the generic event alerter object as interface or nil.</returns>
+    function GetEventListener(Handler: TZOnEventHandler; CloneConnection: Boolean;
+      Options: TStrings): IZEventListener; override;
+  public { implement IZEventListener }
+    /// <summary>Returns the <c>Connection</c> object
+    ///  that produced this <c>Notification</c> object.</summary>
+    /// <returns>the connection that produced this EventListener.</returns>
+    function GetConnection: IZConnection;
+    /// <summary>Test if the <c>EventAllerter</c> is active</summary>
+    /// <returns><c>true</c> if the EventAllerter is active.</returns>
+    function IsListening: Boolean;
+    /// <summary>Starts listening the events.</summary>
+    /// <param>"EventNames" a list of event name to be listened.</param>
+    /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
+    procedure Listen(const EventNames: TStrings; Handler: TZOnEventHandler);
+    /// <summary>Triggers an event.</summary>
+    procedure TriggerEvent(const Name: String);
+    /// <summary>Stop listening the events and cleares the registered events.</summary>
+    procedure Unlisten;
+  public { implement IZPostgresEventListener}
+    /// <summary>Set a on Notify event</summary>
+    /// <param>"Value" the event to be used</param>
+    procedure SetOnPgNotifyEvent(const Value: TZPgNotificationEvent);
+    /// <summary>Set a timer interval to check the notifications in milli
+    ///  seconds</summary>
+    /// <param>"Value" the interval to be used</param>
+    procedure SetListenerInterval(const Value: Cardinal);
+  end;
+
+  TZPostgresEventData = class(TZEventData)
+  private
+    fPayload: SQLString;
+    FProcessID: Integer;
+  public
+    function ToString: string; override;
+  public
+    property Payload: String read fPayLoad;
+    property ProcessID: Integer read FProcessID;
   end;
 
 var
@@ -404,9 +504,7 @@ const
 
 procedure NoticeProcessorDispatcher(arg: Pointer; message: PAnsiChar); cdecl;
 var L: NativeUInt;
-  Msg: SQLString;
-{$IFDEF UNICODE}
-{$ENDIF}
+    Msg: SQLString;
 begin
   if message = nil then
     Exit;
@@ -424,7 +522,7 @@ end;
 procedure NoticeReceiverDispatcher(arg: Pointer; res: TPGResult); cdecl;
 begin
   TZPostgreSQLConnection(Arg).HandleErrorOrWarning(PGRES_NONFATAL_ERROR,
-    lcOther, 'Postgres NOTICE', nil, res);
+    lcOther, 'Postgres Notice or warning', nil, res);
   TZPostgreSQLConnection(Arg).FPlainDriver.PQclear(res);
 end;
 
@@ -463,12 +561,6 @@ begin
   Result := FUndefinedVarcharAsStringLength;
 end;
 
-{**
-  Returns the first warning reported by calls on this Connection.
-  <P><B>Note:</B> Subsequent warnings will be chained to this
-  SQLWarning.
-  @return the first SQLWarning or null
-}
 function TZPostgreSQLConnection.GetWarnings: EZSQLWarning;
 begin
   Result := FLastWarning;
@@ -593,24 +685,18 @@ begin
   Result := Finteger_datetimes;
 end;
 
-{**
-  Destroys this object and cleanups the memory.
-}
 destructor TZPostgreSQLConnection.Destroy;
 begin
   if FTypeList <> nil then
     FreeAndNil(FTypeList);
+  if FEventList <> nil then
+    FreeAndNil(FEventList);
   inherited Destroy;
   FreeAndNil(FPreparedStatementTrashBin);
   FreeAndNil(FProcedureTypesCache);
   FreeAndNil(FDomain2BaseTypMap);
 end;
 
-{**
-  Attempts to kill a long-running operation on the database server
-  side
-}
-{$IFDEF FPC} {$PUSH} {$WARN 5091 off : Local variable "ErrRaw" of managed type does not seem to be initialized} {$ENDIF}
 function TZPostgreSQLConnection.AbortOperation: Integer;
 var
   pCancel: PGCancel;
@@ -635,7 +721,7 @@ begin
       then Result := 0
       else begin
         {$IFDEF UNICODE}
-        FLogMessage := PRawToUnicode(P,L,ConSettings.ClientCodePage.CP);
+        PRawToUnicode(P,L,ConSettings.ClientCodePage.CP, FLogMessage);
         {$ELSE}
         ZSetString(P, L, FLogMessage);
         {$ENDIF}
@@ -646,7 +732,6 @@ begin
     FPlainDriver.PQfreeCancel(pcancel);
   end;
 end;
-{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZPostgreSQLConnection.AddDomain2BaseTypeIfNotExists(DomainOID,
   BaseTypeOID: OID);
@@ -676,10 +761,6 @@ begin
   FNoticeReceiver  := NoticeReceiverDispatcher;
 end;
 
-{**
-  Builds a connection string for PostgreSQL.
-  @return a built connection string.
-}
 function TZPostgreSQLConnection.BuildConnectStr: RawByteString;
 var
   ConnectTimeout, Cnt: Integer;
@@ -746,6 +827,11 @@ begin
   FreeAndNil(SQLWriter);
 end;
 
+function TZPostgreSQLConnection.IsListening: Boolean;
+begin
+  Result := not IsClosed and (FCreatedWeakEventListenerPtr <> nil) and (FEventList.Count > 0) and FEventList.Timer.Enabled;
+end;
+
 function TZPostgreSQLConnection.IsOidAsBlob: Boolean;
 begin
   Result := FOidAsBlob;
@@ -756,23 +842,87 @@ begin
   Result := FIs_bytea_output_hex;
 end;
 
-{**
-  Checks if DataBaseMetaData should check FieldVisibility too.
-  @return <code>True</code> if user did set it.
-}
+procedure TZPostgreSQLConnection.CheckEvents;
+var Notify: PZPostgreSQLNotify;
+    i: NativeInt;
+    ListenEvent: PZEvent;
+    AEvent: TZPostgresEventData;
+    Handler: TZOnEventHandler;
+    {$IF defined(UNICODE) or defined(WITH_RAWBYTESTRING)}
+    CP: Word;
+    {$IFEND}
+    PayLoad: String;
+    relname: String;
+    ProcessID: Integer;
+begin
+  if not IsClosed and (FCreatedWeakEventListenerPtr <> nil) then begin
+    {$IF defined(UNICODE) or defined(WITH_RAWBYTESTRING)}
+    CP := Consettings.ClientCodePage.CP;
+    {$IFEND}
+    PayLoad := '';
+    relname := '';
+    while FPlainDriver.PQisBusy(Fconn) = 1 do //see: https://sourceforge.net/p/zeoslib/tickets/475/
+      Sleep(1);
+    if FPlainDriver.PQconsumeInput(Fconn)=1 then
+      while True do begin
+        Notify := PZPostgreSQLNotify(FPlainDriver.PQnotifies(Fconn));
+        if Notify = nil then
+          Break;
+        try
+          if Notify.relname <> nil then
+            {$IFDEF UNICODE}
+            PRawToUnicode(Notify.relname, StrLen(Notify.relname), CP, relname)
+            {$ELSE}
+            ZSetString(Notify.relname, StrLen(Notify.relname), RawByteString(relname){$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF})
+            {$ENDIF}
+          else relname := '';
+          if Notify.Payload <> nil then
+            {$IFDEF UNICODE}
+            PRawToUnicode(Notify.payload, StrLen(Notify.payload), CP, Payload)
+            {$ELSE}
+            ZSetString(Notify.payload, StrLen(Notify.payload), RawByteString(Payload){$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF})
+            {$ENDIF}
+          else payload := '';
+          ProcessID := Notify.be_pid;
+        finally
+          FPlainDriver.PQFreemem(Notify);
+        end;
+        if (FEventList <> nil) then
+          if Assigned(FEventList.FPgNotifyEvent)
+          then FEventList.FPgNotifyEvent(relname, ProcessID, Payload)
+          else try
+            AEvent := TZPostgresEventData.Create;
+            AEvent.FProcessID := ProcessID;
+            AEvent.fName := relname;
+            AEvent.fPayload := Payload;
+            AEvent.fEventState := esSignaled;
+            Handler := nil;
+            if FEventList <> nil then begin
+              Handler := nil;
+              for I := 0 to FEventList.Count -1 do begin
+                ListenEvent := FEventList[i];
+                if ListenEvent.Name = AEvent.fName then begin
+                  Handler := ListenEvent.Handler;
+                  Break;
+                end;
+              end;
+              if not Assigned(Handler) then
+                Handler := FEventList.Handler;
+              Handler(TZEventData(AEvent));
+            end;
+          finally
+            if AEvent <> nil then
+              FreeAndNil(AEvent);
+          end;
+      end;
+  end;
+end;
+
 function TZPostgreSQLConnection.CheckFieldVisibility: Boolean;
 begin
   Result := FCheckFieldVisibility;
 end;
 
-{**
-  Deallocates prepared statements. This procedure is intended for driver internal
-  use only and should normally only be called when in auto-commit mode. This
-  either happens when unregistering a prepared statement and being in auto-commit
-  mode or when committing or rolling back a transaction and before staring the
-  next transaction block.
-  @return <code>True</code> if user did set it.
-}
 procedure TZPostgreSQLConnection.DeallocatePreparedStatements;
 var
   SQL: RawByteString;
@@ -824,11 +974,6 @@ begin
     FPreparedStatementTrashBin.Add(Value);
 end;
 
-{**
-  Clears all warnings reported for this <code>Connection</code> object.
-  After a call to this method, the method <code>getWarnings</code>
-    returns null until a new warning is reported for this Connection.
-}
 procedure TZPostgreSQLConnection.ClearWarnings;
 begin
   FreeAndNil(FLastWarning);
@@ -838,9 +983,7 @@ function TZPostgreSQLConnection.ClientSettingsChanged: Boolean;
 begin
   Result := FClientSettingsChanged;
 end;
-{**
-  Opens a connection to database server with specified parameters.
-}
+
 procedure TZPostgreSQLConnection.Open;
 
 var
@@ -850,21 +993,9 @@ begin
   if not Closed then
     Exit;
 
-  (*if Assigned(FPlainDriver.PQsetdbLogin) then begin
-    if Port <> 0
-    then aport := IntToRaw(Port)
-    else aport := '';
-    apwd := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(URL.Password);
-    ahost := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(URL.HostName);
-    adb := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(URL.Database);
-    aUser := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(URL.UserName);
-    Fconn := FPlainDriver.PQsetdbLogin(Pointer(ahost), Pointer(aport), nil, nil,
-      Pointer(adb), Pointer(aUser), Pointer(apwd));
-  end else *)begin
-    { Connect to PostgreSQL database. }
-    adb := BuildConnectStr;
-    Fconn := FPlainDriver.PQconnectdb(Pointer(adb));
-  end;
+  { Connect to PostgreSQL database. }
+  adb := BuildConnectStr;
+  Fconn := FPlainDriver.PQconnectdb(Pointer(adb));
   FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);
   try
     if FPlainDriver.PQstatus(Fconn) = CONNECTION_BAD then
@@ -982,6 +1113,21 @@ begin
   end;
 end;
 
+procedure TZPostgreSQLConnection.SetListenerInterval(const Value: Cardinal);
+begin
+  if FEventList <> nil then
+    FEventList.FTimer.Interval := Value
+  else raise EZSQLException.Create('No active listener acquired');
+end;
+
+procedure TZPostgreSQLConnection.SetOnPgNotifyEvent(
+  const Value: TZPgNotificationEvent);
+begin
+  if FEventList <> nil then
+    FEventList.FPgNotifyEvent := Value
+  else raise EZSQLException.Create('No active listener acquired');
+end;
+
 procedure TZPostgreSQLConnection.Commit;
 var S: RawByteString;
 begin
@@ -1075,6 +1221,9 @@ begin
     Exit;
   //see https://sourceforge.net/p/zeoslib/tickets/246/
   FSavePoints.Clear;
+  if FEventList <> nil then
+    FreeAndNil(FEventList);
+
   try
     if not AutoCommit then begin //try to rollback
       AutoCommit := not FRestartTransaction;
@@ -1177,6 +1326,38 @@ begin
   else Result := FProcedureTypesCache.Objects[I] <> nil;
 end;
 
+procedure TZPostgreSQLConnection.TriggerEvent(const Name: String);
+var RawTemp: RawByteString;
+begin
+  {$IFDEF UNICODE}
+  RawTemp := 'notify '+ZUnicodeToRaw(Name, ConSettings.ClientCodePage.CP);
+  {$ELSE}
+  RawTemp := 'notify '+Name;
+  {$ENDIF}
+  ExecuteImmediat(RawTemp, lcExecute);
+end;
+
+procedure TZPostgreSQLConnection.Unlisten;
+var I: NativeInt;
+    RawTemp: RawByteString;
+    Event: PZEvent;
+begin
+  if (FEventList <> nil) and (FEventList.Count > 0) then begin
+    for i := FEventList.Count -1 downto 0 do begin
+      Event := FEventList[I];
+      {$IFDEF UNICODE}
+      RawTemp := 'unlisten '+ZUnicodeToRaw(Event.Name, ConSettings.ClientCodePage.CP);
+      {$ELSE}
+      RawTemp := 'unlisten '+Event.Name;
+      {$ENDIF}
+      ExecuteImmediat(RawTemp, lcExecute);
+      FEventList.Delete(I);
+    end;
+    FEventList.Timer.Enabled := False;
+  end else
+    raise EZSQLException.Create('no events registered');
+end;
+
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZPostgreSQLConnection.UpdateTimestampOffset;
 var ANow: TDateTime;
@@ -1188,14 +1369,6 @@ var ANow: TDateTime;
     P: Pointer;
     i64, i64Tz: Int64;
     Dbl, dblTz: Double;
-  function DateTimeToMilliseconds(const ADateTime: TDateTime): Int64;
-  var
-    LTimeStamp: TTimeStamp;
-  begin
-    LTimeStamp := DateTimeToTimeStamp(ADateTime);
-    Result := LTimeStamp.Date;
-    Result := (Result * MSecsPerDay) + LTimeStamp.Time;
-  end;
 begin
   if Closed then
     Exit;
@@ -1252,6 +1425,11 @@ procedure TZPostgreSQLConnection.GetBinaryEscapeString(Buf: Pointer;
   Len: LengthInt; out Result: RawByteString);
 begin
   Result := EncodeBinary(Buf, Len, True)
+end;
+
+function TZPostgreSQLConnection.GetConnection: IZConnection;
+begin
+  Result := Self;
 end;
 
 {**
@@ -1422,9 +1600,29 @@ begin
   Result := TZPostgreSQLStatementAnalyser.Create;
 end;
 
-{**
-  Loads a server major and minor version numbers.
-}
+procedure TZPostgreSQLConnection.Listen(const EventNames: TStrings;
+  Handler: TZOnEventHandler);
+var I: Integer;
+    RawTemp: RawByteString;
+begin
+  if (FEventList <> nil) then begin
+    if (FEventList.Count > 0) then
+      Unlisten;
+    for i := 0 to EventNames.Count -1 do begin
+      FEventList.Add(EventNames[i], Handler);
+      {$IFDEF UNICODE}
+      RawTemp := 'listen '+ZUnicodeToRaw(EventNames[i], ConSettings.ClientCodePage.CP);
+      {$ELSE}
+      RawTemp := 'listen '+EventNames[i];
+      {$ENDIF}
+      ExecuteImmediat(RawTemp, lcExecute);
+    end;
+    if FEventList.Count > 0 then
+      FEventList.Timer.Enabled := True;
+  end else
+    raise EZSQLException.Create('no events registered');
+end;
+
 procedure TZPostgreSQLConnection.LoadServerVersion;
 var
   Temp: string;
@@ -1531,6 +1729,8 @@ procedure TZPostgreSQLConnection.ExecuteImmediat(const SQL: RawByteString;
 var QueryHandle: TPGresult;
     Status: TZPostgreSQLExecStatusType;
 begin
+  if Closed then
+    Open;
   QueryHandle := FPlainDriver.PQexec(Fconn, Pointer(SQL));
   Status := FPlainDriver.PQresultStatus(QueryHandle);
   {$IFDEF UNICODE}
@@ -1607,6 +1807,16 @@ begin
   Result := EscapeString(Value);
 end;
 
+function TZPostgreSQLConnection.GetEventListener(Handler: TZOnEventHandler;
+  CloneConnection: Boolean; Options: TStrings): IZEventListener;
+begin
+  Result := inherited GetEventListener(Handler, CloneConnection, Options);
+  FEventList := TZPostgresEventList.Create(Handler, CheckEvents);
+  if Options <> nil
+  then FEventList.Timer.Interval := StrToIntDef(Options.Values[ELProps_ListernerInterval], 250)
+  else FEventList.Timer.Interval := 250;
+end;
+
 {**
   Gets a current setting of run-time parameter.
   @param AName a parameter name.
@@ -1619,6 +1829,7 @@ var
   P: PAnsichar;
   Status: TZPostgreSQLExecStatusType;
 begin
+  Result := '';
   SQL := 'select setting from pg_settings where name = '+AName;
   QueryHandle := FPlainDriver.PQExec(Fconn, Pointer(SQL));
   Status := FPlainDriver.PQresultStatus(QueryHandle);
@@ -1632,10 +1843,9 @@ begin
       DriverManager.LogMessage(lcExecute, URL.Protocol, {$IFDEF UNICODE}FLogMessage{$ELSE}SQL{$ENDIF});
     P := FPlainDriver.PQgetvalue(QueryHandle, 0, 0);
     {$IFDEF UNICODE}
-    Result := PRawToUnicode(P, ZFastCode.StrLen(P), ConSettings^.ClientCodePage^.CP);
+    PRawToUnicode(P, ZFastCode.StrLen(P), ConSettings^.ClientCodePage^.CP, Result);
     {$ELSE}
-    Result := '';
-    ZSetString(P, ZFastCode.StrLen(P), Result);
+    ZSetString(P, ZFastCode.StrLen(P), RawByteString(Result){$IFDEF WITH_RAWBYTESTRING},ConSettings^.ClientCodePage^.CP{$ENDIF});
     {$ENDIF}
     FPlainDriver.PQclear(QueryHandle);
   end else
@@ -1791,6 +2001,31 @@ function TZOID2OIDMapList.SortCompare(Item1, Item2: Pointer): Integer;
 begin
   Result := Ord(PZPGDomain2BaseTypeMap(Item1)^.DomainOID > PZPGDomain2BaseTypeMap(Item2)^.DomainOID)-
             Ord(PZPGDomain2BaseTypeMap(Item1)^.DomainOID < PZPGDomain2BaseTypeMap(Item2)^.DomainOID);
+end;
+
+{ TZPostgresEventList }
+
+constructor TZPostgresEventList.Create(Handler: TZOnEventHandler;
+  TimerTick: TThreadMethod);
+begin
+  inherited Create(Handler);
+  FTimer := TZThreadTimer.Create;
+  FTimer.OnTimer := TimerTick;
+end;
+
+destructor TZPostgresEventList.Destroy;
+begin
+  FTimer.Free;
+  inherited Destroy;
+end;
+
+{ TZPostgresEventData }
+
+function TZPostgresEventData.ToString: string;
+begin
+  Result := inherited ToString +'; ProcessID: '+ZFastCode.IntToStr(FProcessID);
+  if fPayload <> '' then
+    Result := Result +'; Payload: '+fPayload;
 end;
 
 initialization

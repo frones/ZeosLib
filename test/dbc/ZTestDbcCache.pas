@@ -246,7 +246,7 @@ var
 begin
   ColumnsInfo := GetColumnsInfoCollection;
   try
-    Result := TZRowAccessor.Create(ColumnsInfo, @FConSettings, FOpenLobStreams, False);  //dummy cp: Stringfield cp is inconsistent
+    Result := TZRowAccessor.Create(ColumnsInfo, @FConSettings, FOpenLobStreams, lcmNone);  //dummy cp: Stringfield cp is inconsistent
     Result.Alloc;
   finally
     ColumnsInfo.Free;
@@ -781,7 +781,7 @@ var
 begin
   Collection := GetColumnsInfoCollection;
   try
-    RowAccessor := TZRowAccessor.Create(Collection, @ConSettingsDummy, FOpenLobStreams, False); //dummy cp: Stringfield cp is inconsistent
+    RowAccessor := TZRowAccessor.Create(Collection, @ConSettingsDummy, FOpenLobStreams, lcmNone); //dummy cp: Stringfield cp is inconsistent
     try
       RowAccessor.Dispose;
     finally

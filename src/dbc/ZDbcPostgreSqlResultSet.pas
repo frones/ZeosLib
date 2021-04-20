@@ -2732,15 +2732,13 @@ var
   I: Integer;
   TableColumns: IZResultSet;
   Connection: IZConnection;
-  Driver: IZDriver;
   Analyser: IZStatementAnalyser;
   Tokenizer: IZTokenizer;
   PGMetaData: IZPGDatabaseMetadata;
 begin
   Connection := Metadata.GetConnection;
-  Driver := Connection.GetDriver;
-  Analyser := Driver.GetStatementAnalyser;
-  Tokenizer := Driver.GetTokenizer;
+  Analyser := Connection.GetStatementAnalyser;
+  Tokenizer := Connection.GetTokenizer;
   PGMetaData := MetaData as IZPGDatabaseMetadata;
   try
     if Analyser.DefineSelectSchemaFromQuery(Tokenizer, SQL) <> nil then
@@ -2759,7 +2757,6 @@ begin
         end;
       end;
   finally
-    Driver := nil;
     Connection := nil;
     Analyser := nil;
     Tokenizer := nil;

@@ -75,6 +75,7 @@ uses
   ZDbcOleDB, ZDbcOleDBUtils;
 
 type
+  /// <summary>Defines an OleDB specific statement interface</summary>
   IZOleDBPreparedStatement = Interface(IZStatement)
     ['{42A4A633-C63D-4EFA-A8BC-CF755237D0AD}']
     function GetInternalBufferSize: Integer;
@@ -168,9 +169,10 @@ type
     ///  error handling in any kind.</param>
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
       var AError: EZSQLConnectionLost); override;
-  protected //interface based!
+  protected
     function CreateResultSet: IZResultSet;
     function CreateOutParamResultSet: IZResultSet; virtual;
+  public { implement IZOleDBPreparedStatement }
     function GetInternalBufferSize: Integer;
     function GetMoreResultsIndicator: TZMoreResultsIndicator;
     procedure SetMoreResultsIndicator(Value: TZMoreResultsIndicator);
@@ -265,6 +267,12 @@ type
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter value</param>
     procedure SetByte(Index: Integer; Value: Byte);
+    /// <summary>Sets the designated parameter to a <c>ShortInt</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetShort(Index: Integer; Value: ShortInt);
     /// <summary>Sets the designated parameter to a <c>Word</c> value.</summary>
     /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
@@ -273,13 +281,61 @@ type
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter value</param>
     procedure SetWord(Index: Integer; Value: Word);
+    /// <summary>Sets the designated parameter to a <c>SmallInt</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetSmall(Index: Integer; Value: SmallInt);
+    /// <summary>Sets the designated parameter to a <c>Cardinal</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetUInt(Index: Integer; Value: Cardinal);
+    /// <summary>Sets the designated parameter to a <c>Integer</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetInt(Index: Integer; Value: Integer);
+    /// <summary>Sets the designated parameter to a <c>UInt64</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetULong(Index: Integer; const Value: UInt64);
+    /// <summary>Sets the designated parameter to a <c>Int64</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetLong(Index: Integer; const Value: Int64);
+    /// <summary>Sets the designated parameter to a <c>Single</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetFloat(Index: Integer; Value: Single);
+    /// <summary>Sets the designated parameter to a <c>Double</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetDouble(Index: Integer; const Value: Double);
+    /// <summary>Sets the designated parameter to a <c>Currency</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetCurrency(Index: Integer; const Value: Currency);
     /// <summary>Sets the designated parameter to a <c>BigDecimal(TBCD)</c> value.</summary>
     /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
@@ -288,29 +344,144 @@ type
     ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" the parameter value</param>
     procedure SetBigDecimal(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
+    /// <summary>Sets the designated parameter to a <c>TZCharRec</c> value.
+    ///  The references need to be valid until the statement is executed.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetCharRec(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec); reintroduce;
+    /// <summary>Sets the designated parameter to a <c>String</c> value.
+    ///  This method equals to SetUnicodeString on Unicode-Compilers. For
+    ///  Raw-String compilers the encoding is defined by W2A2WEncodingSource of
+    ///  the ConnectionSettings record. The driver will convert the string to
+    ///  the Client-Characterset.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetString(Index: Integer; const Value: String); reintroduce;
     {$IFNDEF NO_UTF8STRING}
+    /// <summary>Sets the designated parameter to a <c>RawByteString</c> value.
+    ///  The string must be UTF8 encoded. The driver will convert the value
+    ///  if the driver uses an different encoding.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetUTF8String(Index: Integer; const Value: UTF8String); reintroduce;
     {$ENDIF}
     {$IFNDEF NO_ANSISTRING}
+    /// <summary>Sets the designated parameter to a <c>AnsiString</c> value.
+    ///  The string must be GET_ACP encoded. The driver will convert the value
+    ///  if the driver uses an different encoding.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetAnsiString(Index: Integer; const Value: AnsiString); reintroduce;
     {$ENDIF}
     procedure SetRawByteString(Index: Integer; const Value: RawByteString); reintroduce;
+    /// <summary>Sets the designated parameter to a <c>UnicodeString</c> value.
+    ///  The references need to be valid until the statement is executed.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetUnicodeString(Index: Integer; const Value: UnicodeString); reintroduce;
-
+    /// <summary>Sets the designated parameter to a <c>TZDate</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetDate(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); reintroduce; overload;
+    /// <summary>Sets the designated parameter to a <c>Time(TDateTime)</c> value.
+    ///  This method is obsolate and left for compatibility. The method always
+    ///  decodes the value and calls the <c>SetTime(Index: Integer; Value: TZtime)</c>
+    ///  overload.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetTime(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); reintroduce; overload;
+    /// <summary>Sets the designated parameter to a <c>TDateTime</c> value.
+    ///  This method is obsolate and left for compatibility. The method always
+    ///  decodes the value and calls the
+    ///  <c>SetTimestamp(Index: Integer; Value: TZTimestamp)</c>overload.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetTimestamp(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); reintroduce; overload;
-
+    /// <summary>Sets the designated parameter to a <c>byte array</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetBytes(Index: Integer; const Value: TBytes); reintroduce; overload;
+    /// <summary>Sets the designated parameter to a <c>ByteArray reference</c> value.
+    ///  The references need to be valid until the statement is executed.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value reference.</param>
+    /// <param>"Len" the Length of the bytes buffer.</param>
     procedure SetBytes(Index: Integer; Value: PByte; Len: NativeUInt); reintroduce; overload;
+    /// <summary>Sets the designated parameter to a <c>TGUID</c> value.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter value</param>
     procedure SetGUID(Index: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID); reintroduce;
+    /// <summary>Sets the designated parameter to the given blob wrapper object.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" defines the lob constent. Valid values are:
+    ///  stAsciiStream(raw encoded text), stUnicodeStream(UTF16 encoded text)
+    ///  and stBinaryStream(binary data), stJSON, stXML</param>
+    /// <param>"Value" the parameter blob wrapper object to be set.</param>
     procedure SetBlob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override{keep it virtual because of (set)ascii/uniocde/binary streams};
-
+    /// <summary>Sets the designated parameter to a data array value. This
+    ///  method usually initializes the BatchArray DML mode unless the parameter
+    ///  was registered as a PLSQLTable ( in (?) )before.</summary>
+    /// <param>"ParameterIndex" the first parameter is 1, the second is 2, ...
+    ///  unless <c>GENERIC_INDEX</c> is defined. Then the first parameter is 0,
+    ///  the second is 1. This will change in future to a zero based index.
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"Value" the parameter array value to be set. Note we just
+    ///  reference the array address. We do not increment the Array-Refcount.
+    ///  Means you need to keep the arrays alive until the statement has been
+    ///  excuted.</param>
+    /// <param>"SQLType" the SQLType of the array</param>
+    /// <param>"VariantType" the VariantType of the array. It is used as a
+    ///  subtype like:
+    ///  (SQLType = stString, VariantType = vtUTF8String) or
+    ///  (SQLType = stDate, VariantType = vtDate or vtDateTime) </param>
     procedure SetDataArray(ParameterIndex: Integer; const Value;
       const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
-
+    /// <summary>Register the parameter properties. This method is required for
+    ///  all InOut, Out or Result parameters to access them afterwards. It's not
+    ///  requiered to register In params.</summary>
+    /// <param>"ParameterIndex" the first parameter is 0, the second is 1, ...
+    ///  It's recommented to use an incrementation of FirstDbcIndex.</param>
+    /// <param>"SQLType" the parameters SQLType.</param>
+    /// <param>"ParamType" the TZProcedureColumnType of the parameter.</param>
+    /// <param>"PrecisionOrSize" either the Precision for Numeric types or the
+    ///  Length for strings or bytes. The value is ignored for all other types.</param>
+    /// <param>"Scale" the numeric or second-fraction scale of the parameter.</param>
     procedure RegisterParameter(Index: Integer; SQLType: TZSQLType;
       ParamType: TZProcedureColumnType; const Name: String = ''; PrecisionOrSize: LengthInt = 0;
       Scale: LengthInt = 0); override;
@@ -1370,21 +1541,21 @@ TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
           end;
       (DBTYPE_WSTR or DBTYPE_BYREF): case SQLType of
             stFloat, stDouble: begin
-                PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 128);
+                PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 128);
                 PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := FloatToUnicode(Value, ZPPWideChar(Data)^) shl 1;
               end;
             stDate: begin
-                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 24);
+                      PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 24);
                       Data := PPointer(Data)^;
                       goto DWConv;
                     end;
             stTime: begin
-                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 26);
+                      PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 26);
                       Data := PPointer(Data)^;
                       goto TWConv;
                     end;
             stTimeStamp: begin
-                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 48);
+                      PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 48);
                       Data := PPointer(Data)^;
                       goto TSWConv;
                     end;
@@ -1437,7 +1608,7 @@ begin
       DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF): begin
           L := GetOrdinalDigits(Value, C, Negative);
           if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then begin
-            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 24);
+            PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 24);
             Data := PPointer(Data)^;
           end else if (Bind.cbMaxLen <= (L +Byte(Ord(Negative))) shl 1) then
             RaiseExceeded(Index);
@@ -1492,7 +1663,7 @@ begin
       DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF): begin
           L := GetOrdinalDigits(Value);
           if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then begin
-            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 24);
+            PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 24);
             Data := PPointer(Data)^;
           end else if (L shl 1 >= Bind.cbMaxLen) then
             RaiseExceeded(Index);
@@ -1760,7 +1931,7 @@ begin
                     PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := BcdToUni(Value, PWideChar(Data), '.') shl 1;
                   end;
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-                   PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 68); //8Byte align
+                   PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 68); //8Byte align
                    PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := BcdToUni(Value, ZPPWideChar(Data)^, '.') shl 1;;
                  end;
       //DBTYPE_VARNUMERIC:;
@@ -2034,7 +2205,7 @@ begin
                     PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := PEnd-Data;
                   end;
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-                   PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 48); //8Byte align
+                   PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 48); //8Byte align
                    CurrToUnicode(Value, '.', ZPPWideChar(Data)^, @PEnd);
                    PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := PEnd-PPAnsiChar(Data)^;
                  end;
@@ -2170,7 +2341,7 @@ DWConv:               PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
                           False, Value.IsNegative) shl 1
                     else RaiseExceeded(Index);
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 24);
+                      PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 24);
                       Data := PPointer(Data)^;
                       goto DWConv;
                     end;
@@ -2250,7 +2421,7 @@ set_uid_len:            PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 
                     goto set_raw_len;
                   end;
       (DBTYPE_STR or DBTYPE_BYREF): begin
-                    PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 37);
+                    PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 37);
                     GUIDToBuffer(@Value.D1, PPAnsiChar(Data)^, [guidSet0Term]);
 set_raw_len:        PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 36;
                   end; *)
@@ -2261,7 +2432,7 @@ set_raw_len:        PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 36;
                     goto set_uni_len;
                   end;
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-                    PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 74);
+                    PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 74);
                     GUIDToBuffer(@Value.D1, ZPPWideChar(Data)^, [guidSet0Term]);
 set_uni_len:        PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := 72;
                   end;
@@ -2440,7 +2611,7 @@ begin
       DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF): begin
           L := GetOrdinalDigits(Value, u64, Negative);
           if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then begin
-            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 24); //8Byte align
+            PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 24); //8Byte align
             Data := PPointer(Data)^; //-9.223.372.036.854.775.808
           end else if (Bind.cbMaxLen <= (L +Byte(Ord(Negative))) shl 1) then
             RaiseExceeded(Index);
@@ -2937,7 +3108,7 @@ TWConv:               PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
                         PWideChar(Data), ConSettings.WriteFormatSettings.TimeFormat, False, Value.IsNegative) shl 1
                       else RaiseExceeded(Index);
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 24);
+                      PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 24);
                       Data := PPointer(Data)^;
                       goto TWConv;
                     end;
@@ -3029,7 +3200,7 @@ TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
                           ConSettings.WriteFormatSettings.DateTimeFormat, False, Value.IsNegative) shl 1
                     else RaiseExceeded(Index);
       (DBTYPE_WSTR or DBTYPE_BYREF): begin
-                      PPointer(Data)^ := BindList.AquireCustomValue(Index, stUnicodeString, 24);
+                      PPointer(Data)^ := BindList.AcquireCustomValue(Index, stUnicodeString, 24);
                       Data := PPointer(Data)^;
                       goto TSWConv;
                     end;
@@ -3102,7 +3273,7 @@ begin
       DBTYPE_WSTR, (DBTYPE_WSTR or DBTYPE_BYREF): begin
           L := GetOrdinalDigits(Value);
           if Bind.wType = (DBTYPE_WSTR or DBTYPE_BYREF) then begin
-            PPointer(Data)^ := BindList.AquireCustomValue(Index, stString, 48); //8Byte align
+            PPointer(Data)^ := BindList.AcquireCustomValue(Index, stString, 48); //8Byte align
             Data := PPointer(Data)^; //18.446.744.073.709.551.615
           end else if (Bind.cbMaxLen <= L shl 1) then
             RaiseExceeded(Index);

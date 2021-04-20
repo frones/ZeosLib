@@ -314,7 +314,6 @@ var
   I: Integer;
   TableColumns: IZResultSet;
   Connection: IZConnection;
-  Driver: IZDriver;
   IdentifierConverter: IZIdentifierConverter;
   Analyser: IZStatementAnalyser;
   Tokenizer: IZTokenizer;
@@ -323,9 +322,8 @@ begin
   then inherited LoadColumns
   else begin
     Connection := Metadata.GetConnection;
-    Driver := Connection.GetDriver;
-    Analyser := Driver.GetStatementAnalyser;
-    Tokenizer := Driver.GetTokenizer;
+    Analyser := Connection.GetStatementAnalyser;
+    Tokenizer := Connection.GetTokenizer;
     IdentifierConverter := Metadata.GetIdentifierConverter;
     try
       if Analyser.DefineSelectSchemaFromQuery(Tokenizer, SQL) <> nil then
@@ -345,7 +343,6 @@ begin
           end;
         end;
     finally
-      Driver := nil;
       Connection := nil;
       Analyser := nil;
       Tokenizer := nil;

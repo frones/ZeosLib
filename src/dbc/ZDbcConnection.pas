@@ -194,6 +194,7 @@ type
   protected
     FByteBuffer: TByteBuffer; //have a static buffer for any conversion oslt
     fWeakReferenceOfSelfInterface: Pointer;
+    FWeakEventListenerSelfPtr, FCreatedWeakEventListenerPtr: Pointer;
     FRestartTransaction: Boolean;
     FDisposeCodePage: Boolean;
     FClientCodePage: String;
@@ -202,6 +203,10 @@ type
     FTestMode: Byte;
     {$ENDIF}
     FLogMessage: SQLString;
+    /// <summary>Releases a Connection's database and resources immediately
+    ///  instead of waiting for them to be automatically released.</summary>
+    ///  Note: A Connection is automatically closed when it is garbage
+    ///  collected. Certain fatal errors also result in a closed Connection.</summary>
     procedure InternalClose; virtual; abstract;
     /// <summary>Immediately execute a query and do nothing with the results.</summary>
     /// <remarks>A new driver needs to implement one of the overloads.</remarks>
@@ -327,12 +332,6 @@ type
     /// <returns> a new IZCallableStatement interface containing the
     ///  pre-compiled SQL statement </returns>
     function PrepareCall(const Name: string): IZCallableStatement;
-    /// <summary>Creates an object to send/recieve notifications from SQL
-    ///  server. An unsupported operation exception will be raised if the driver
-    ///  doesn't support it, </summary>
-    /// <param>"Event" an event name.</param>
-    /// <returns>a created notification object.</returns>
-    function CreateNotification(const Event: string): IZNotification; virtual;
     /// <summary>Creates a sequence generator object.</summary>
     /// <param>"Sequence" a name of the sequence generator.</param>
     /// <param>"BlockSize" a number of unique keys requested in one trip to SQL
@@ -512,6 +511,19 @@ type
     ///  drivers the connection must be opened to determine the provider.</summary>
     /// <returns>the ServerProvider or spUnknown if not known.</returns>
     function GetServerProvider: TZServerProvider; virtual;
+    /// <summary>Get a generic event alerter object.</summary>
+    /// <param>"Handler" an event handler which gets triggered if the event is received.</param>
+    /// <param>"CloneConnection" if <c>True</c> a new connection will be spawned.</param>
+    /// <returns>a the generic event alerter object as interface or nil.</returns>
+    function GetEventListener(Handler: TZOnEventHandler; CloneConnection: Boolean;
+      Options: TStrings): IZEventListener; virtual;
+    /// <summary>Check if the connection supports an event Listener.</summary>
+    /// <returns><c>true</c> if the connection supports an event Listener;
+    /// <c>false</c> otherwise.</returns>
+    function SupportsEventListener: Boolean;
+    /// <summary>Closes the event alerter.</summary>
+    /// <param>"Value" a reference to the previously created alerter to be released.</param>
+    procedure CloseEventListener(var Value: IZEventListener);
   protected
     /// <summary>Get the refrence to a fixed TByteBuffer.</summary>
     /// <returns>the address of the TByteBuffer</returns>
@@ -582,38 +594,6 @@ type
   public
     procedure AfterConstruction; override;
     destructor Destroy; override;
-  end;
-
-  /// <summary>Implements an abstract Database notification.</summary>
-  TZAbstractNotification = class(TInterfacedObject, IZNotification)
-  private
-    FEventName: string;
-    FConnection: IZConnection;
-  protected
-    property EventName: string read FEventName write FEventName;
-    property Connection: IZConnection read FConnection write FConnection;
-  public
-    /// <summary>Creates this object and assignes the main properties.</summary>
-    /// <param>"Connection" the parent connection object which creates this
-    ///  object.</param>
-    /// <param>"EventName" the name of the SQL event.</param>
-    constructor Create(const Connection: IZConnection; const EventName: string);
-    /// <summary>Gets the event name.</summary>
-    /// <returns>the event name for this notification.</returns>
-    function GetEvent: string;
-    /// <summary>Sets a listener to the specified event.</summary>
-    procedure Listen; virtual;
-    /// <summary>Removes a listener to the specified event.</summary>
-    procedure Unlisten; virtual;
-    /// <summary>Sends a notification string.</summary>
-    procedure DoNotify; virtual;
-    /// <summary>Checks for any pending events.</summary>
-    /// <returns>a string with incoming events??</summary>
-    function CheckEvents: string; virtual;
-    /// <summary>Get's the owner connection that produced that object instance.
-    /// </summary>
-    /// <returns>the connection object interface.</returns>
-    function GetConnection: IZConnection; virtual;
   end;
 
   ///<summary>Implements an Abstract Sequence generator.</summary>
@@ -774,6 +754,33 @@ type
     constructor Create(const ConSettings: PZConSettings);
     function UseWComparsions: Boolean;
     function GetAsDateTime(const Value: TZVariant): TDateTime; reintroduce;
+  end;
+
+  PZEvent = ^TZEvent;
+  TZEvent = record
+    Name: SQLString;
+    Handler: TZOnEventHandler;
+  end;
+
+  TZEventList = class(TZCustomElementList)
+  private
+    FHandler: TZOnEventHandler;
+  protected
+    class function GetElementSize: Cardinal; virtual;
+    /// <summary>Notify about an action which will or was performed.
+    ///  if ElementNeedsFinalize is False the method will never be called.
+    ///  Otherwise you may finalize managed types beeing part of each element,
+    ///  such as Strings, Objects etc.</summary>
+    /// <param>"Ptr" the address of the element an action happens for.</param>
+    /// <param>"Index" the index of the element.</param>
+    procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+  public
+    constructor Create(Handler: TZOnEventHandler);
+    procedure Add(const Name: String; Handler: TZOnEventHandler);
+    procedure Remove(const Name: String);
+    function Get(const Index: NativeInt): PZEvent;
+    function GetByName(const Name: String): PZEvent;
+    property Handler: TZOnEventHandler read FHandler;
   end;
 
 type
@@ -1072,6 +1079,11 @@ begin
   FURL.UserName := Value;
 end;
 
+function TZAbstractDbcConnection.SupportsEventListener: Boolean;
+begin
+  Result := FWeakEventListenerSelfPtr <> nil;
+end;
+
 function TZAbstractDbcConnection.GetPassword: string;
 begin
   Result := FURL.Password;
@@ -1223,10 +1235,15 @@ end;
 
 procedure TZAbstractDbcConnection.AfterConstruction;
 var iCon: IZConnection;
+    iListener: IZEventListener;
 begin
   if QueryInterface(IZConnection, ICon) = S_OK then begin
     fWeakReferenceOfSelfInterface := Pointer(iCon);
     iCon := nil;
+  end;
+  if QueryInterface(IZEventListener, iListener) = S_OK then begin
+    FWeakEventListenerSelfPtr := Pointer(iListener);
+    iListener := nil;
   end;
   inherited AfterConstruction;
   FURL.OnPropertiesChange := OnPropertiesChange;
@@ -1330,17 +1347,6 @@ begin
   Result := IZConnection(fWeakReferenceOfSelfInterface).PrepareCallWithParams(Name, nil);
 end;
 
-{$IFDEF FPC} {$PUSH}
-  {$WARN 5033 off : Function result does not seem to be set}
-  {$WARN 5024 off : Parameter "Event" not used}
-{$ENDIF}
-function TZAbstractDbcConnection.CreateNotification(
-  const Event: string): IZNotification;
-begin
-  Raise EZUnsupportedException.Create(SUnsupportedOperation);
-end;
-{$IFDEF FPC} {$POP} {$ENDIF}
-
 function TZAbstractDbcConnection.CreateSequence(const Sequence: string;
   BlockSize: Integer): IZSequence;
 begin
@@ -1439,6 +1445,21 @@ begin
     if RefCountAdded then
       _Release; //destructor will call close again
   end;
+end;
+
+procedure TZAbstractDbcConnection.CloseEventListener(var Value: IZEventListener);
+var con: IZConnection;
+begin
+  if (FCreatedWeakEventListenerPtr <> nil) and IZEventListener(FCreatedWeakEventListenerPtr).IsListening then
+    IZEventListener(FCreatedWeakEventListenerPtr).UnListen;
+
+  if FCreatedWeakEventListenerPtr <> Pointer(Value) then begin
+    Con := Value.GetConnection;
+    Con.CloseEventListener(Value);
+    Con := nil;
+  end else
+    FCreatedWeakEventListenerPtr := nil;
+  Value := nil;
 end;
 
 procedure TZAbstractDbcConnection.CloseRegisteredStatements;
@@ -1609,48 +1630,31 @@ begin
   else Result := SQLQuotedStr(P, L, AnsiChar(#39));
 end;
 
+function TZAbstractDbcConnection.GetEventListener(Handler: TZOnEventHandler;
+  CloneConnection: Boolean; Options: TStrings): IZEventListener;
+var Con: IZConnection;
+begin
+  Result := nil;
+  if (FWeakEventListenerSelfPtr = nil) then
+    raise EZSQLException.Create('Listener is not supported');
+  if (FCreatedWeakEventListenerPtr <> nil) and not CloneConnection then
+    raise EZSQLException.Create('Listener alredy retrieved');
+  if CloneConnection then begin
+    Con := FDriverManager.GetConnection(FURL.URL);
+    Result := Con.GetEventListener(Handler, False, Options);
+    Con := nil;
+  end else begin
+    Result := IZEventListener(FWeakEventListenerSelfPtr);
+    FCreatedWeakEventListenerPtr := Pointer(Result);
+  end;
+end;
+
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Sender" not used} {$ENDIF}
 procedure TZAbstractDbcConnection.OnPropertiesChange(Sender: TObject);
 begin
   // do nothing in base class
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
-
-{ TZAbstractNotification }
-
-constructor TZAbstractNotification.Create(const Connection: IZConnection;
-  const EventName: string);
-begin
-  FConnection := Connection;
-  FEventName := EventName;
-end;
-
-function TZAbstractNotification.GetEvent: string;
-begin
-  Result := FEventName;
-end;
-
-procedure TZAbstractNotification.Listen;
-begin
-end;
-
-procedure TZAbstractNotification.Unlisten;
-begin
-end;
-
-function TZAbstractNotification.CheckEvents: string;
-begin
-  Result := '';
-end;
-
-procedure TZAbstractNotification.DoNotify;
-begin
-end;
-
-function TZAbstractNotification.GetConnection: IZConnection;
-begin
-  Result := FConnection;
-end;
 
 { TZAbstractSequence }
 
@@ -2249,6 +2253,72 @@ begin
   if Pointer(Value) = fWeakTxnPtr
   then raise EZSQLException.Create(SUnsupportedOperation)
   else fTransactions.Delete(fTransactions.IndexOf(Value));
+end;
+
+{ TZEventList }
+
+procedure TZEventList.Add(const Name: String; Handler: TZOnEventHandler);
+var Index: NativeInt;
+    Event: PZEvent;
+begin
+  if not Assigned(Handler) then
+    Handler := FHandler;
+  if (Name = '') or not Assigned(Handler) then
+    raise EZSQLException.Create('Name or Handler not set');
+  Event := GetByName(Name);
+  if Event <> nil then
+    raise EZSQLException.Create('Event registered already');
+  Event := inherited Add(Index);
+  Event.Name := Name;
+  Event.Handler := Handler;
+end;
+
+constructor TZEventList.Create(Handler: TZOnEventHandler);
+begin
+  inherited Create(GetElementSize, True);
+  FHandler := Handler;
+end;
+
+function TZEventList.Get(const Index: NativeInt): PZEvent;
+begin
+  Result := inherited Get(Index);
+end;
+
+function TZEventList.GetByName(const Name: String): PZEvent;
+var I: NativeInt;
+begin
+  for i := 0 to Count -1 do begin
+    Result := inherited Get(I);
+    if Result.Name = Name then
+      Exit;
+  end;
+  Result := nil;
+end;
+
+class function TZEventList.GetElementSize: Cardinal;
+begin
+  Result := SizeOf(TZEvent)
+end;
+
+procedure TZEventList.Notify(Ptr: Pointer; Action: TListNotification);
+begin
+  if (Action = lnDeleted) then
+    PZEvent(Ptr).Name := '';
+  inherited Notify(Ptr, Action);
+end;
+
+procedure TZEventList.Remove(const Name: String);
+var I: NativeInt;
+  Event: PZEvent;
+begin
+  for i := 0 to Count -1 do begin
+    Event := inherited Get(I);
+    if Event.Name = Name then begin
+      Delete(I);
+      Exit;
+    end;
+  end;
+  raise EZSQLException.Create('Event is not registered');
 end;
 
 end.

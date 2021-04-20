@@ -820,6 +820,20 @@ begin
   AURL := TZURL.Create;
   Result := '';
   try
+    //EH: Set the attachment charsset, AuotEncode, and ControlsCP again
+    //if the user did clear the properties then this info is lost
+    //See https://sourceforge.net/p/zeoslib/tickets/329/
+    if (FURL.Properties.Values[ConnProps_CodePage] = '') and (FClientCodePage <> '') then
+      FURL.Properties.Values[ConnProps_CodePage] := FClientCodePage;
+    {$IFDEF UNICODE}
+    FURL.Properties.Values[ConnProps_RawStringEncoding] := 'DB_CP';
+    {$ELSE}
+    case FRawCharacterTransliterateOptions.FEncoding of //automated check..
+      encDB_CP: FURL.Properties.Values[ConnProps_RawStringEncoding] := 'DB_CP';
+      encUTF8: FURL.Properties.Values[ConnProps_RawStringEncoding] := 'CP_UTF8';
+      encDefaultSystemCodePage: FURL.Properties.Values[ConnProps_RawStringEncoding] := 'GET_ACP';
+    end;
+    {$ENDIF}
     AURL.Protocol := FURL.Protocol;
     AURL.HostName := FURL.HostName;
     AURL.Database := FURL.Database;
@@ -937,24 +951,10 @@ begin
         if not LoginDialogProc(FURL.Database, UserName, Password) then
           Exit;
       end else
-        raise Exception.Create(SLoginPromptFailure);
+        raise EZDatabaseError.Create(SLoginPromptFailure);
 
     ShowSqlHourGlass;
     try
-      //EH: Set the attachment charsset, AuotEncode, and ControlsCP again
-      //if the user did clear the properties then this info is lost
-      //See https://sourceforge.net/p/zeoslib/tickets/329/
-      if (FURL.Properties.Values[ConnProps_CodePage] = '') and (FClientCodePage <> '') then
-        FURL.Properties.Values[ConnProps_CodePage] := FClientCodePage;
-      {$IFDEF UNICODE}
-      FURL.Properties.Values[ConnProps_RawStringEncoding] := 'DB_CP';
-      {$ELSE}
-      case FRawCharacterTransliterateOptions.FEncoding of //automated check..
-        encDB_CP: FURL.Properties.Values[ConnProps_RawStringEncoding] := 'DB_CP';
-        encUTF8: FURL.Properties.Values[ConnProps_RawStringEncoding] := 'CP_UTF8';
-        encDefaultSystemCodePage: FURL.Properties.Values[ConnProps_RawStringEncoding] := 'GET_ACP';
-      end;
-      {$ENDIF}
       FConnection := DriverManager.GetConnectionWithParams(
         ConstructURL(UserName, Password), FURL.Properties);
       try

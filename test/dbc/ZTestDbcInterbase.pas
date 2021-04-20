@@ -66,9 +66,13 @@ type
 
   {** Implements a test case for class TZAbstractDriver and Utilities. }
   TZTestDbcInterbaseCase = class(TZAbstractDbcSQLTestCase)
+  private
+    FEventsReceived: TStrings;
+    procedure OnEvent(var Event: TZEventData);
   protected
 //    function GetSupportedProtocols: string; override;
     function SupportsConfig(Config: TZConnectionConfig): Boolean; override;
+
   published
     procedure TestConnection;
     procedure TestStatement;
@@ -94,6 +98,8 @@ type
     procedure Test_GENERATED_BY_DEFAULT_64;
     procedure Test_DECFIXED;
     procedure Test_TIMEZONE;
+    procedure Test_IBFBEventListener;
+    procedure Test_Ping;
   end;
 
 {$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
@@ -102,7 +108,7 @@ implementation
 
 uses SysUtils, Types,
   ZTestConsts, ZTestCase, ZVariant, ZMessages, ZSysUtils,
-  ZDbcInterbaseFirebirdMetadata, ZDbcFirebirdInterbase;
+  ZDbcInterbaseFirebirdMetadata, ZDbcFirebirdInterbase, ZDbcLogging;
 
 { TZTestDbcInterbaseCase }
 
@@ -206,6 +212,11 @@ begin
       Stmt := nil;
     end;
   end;
+end;
+
+procedure TZTestDbcInterbaseCase.OnEvent(var Event: TZEventData);
+begin
+  FEventsReceived.Add(Event.Name)
 end;
 
 {**
@@ -551,6 +562,70 @@ begin
   finally
     Connection.Close;
   end;
+end;
+
+procedure TZTestDbcInterbaseCase.Test_IBFBEventListener;
+const EventCount = 15;
+var Listener: IZEventListener;
+    EndTime: TDateTime;
+    Events: TStrings;
+    I: Integer;
+    S: String;
+    InterbaseFirebirdConnection: IZInterbaseFirebirdConnection;
+begin
+  Check(Connection <> nil);
+  Connection.Open;
+  if (Connection.GetServerProvider <> spIB_FB) or (Connection.QueryInterface(IZInterbaseFirebirdConnection, InterbaseFirebirdConnection) <> S_OK) or
+      not InterbaseFirebirdConnection.IsFirebirdLib then //Interbase until v2020 does not support EXECUTE BLOCK syntax
+    Exit;
+
+  Listener := Connection.GetEventListener(OnEvent, True, nil);
+  Events := TStringList.Create;
+  FEventsReceived := TStringList.Create;
+  try
+    Check(Listener <> nil);
+    CheckFalse(Listener.IsListening);
+    for i := 1 to EventCount do
+      Events.Add('zeostest'+IntToStr(I));;
+    Listener.Listen(Events, OnEvent);
+    Check(Listener.IsListening);
+    Sleep(100);
+//    CheckEquals(0, FEventsReceived.Count, 'There should no event beeing  posted.');
+    S := 'EXECUTE BLOCK AS BEGIN POST_EVENT '+QuotedStr(Events[0]);
+    for i := 1 to Events.Count -1 do
+      S := S +'; POST_EVENT '+QuotedStr(Events[i]);
+    S := S+'; END';
+    Connection.ExecuteImmediat(S, lcExecute);
+    Sleep(10);
+    EndTime := IncSecond(Now, 2);
+    while (FEventsReceived.Count < Events.Count) and (EndTime > Now) do
+      Sleep(0);
+    CheckEquals(Events.Count, FEventsReceived.Count, 'Didn''t get all interbase events.');
+    S := 'EXECUTE BLOCK AS BEGIN POST_EVENT '+QuotedStr(Events[1]);
+    for i := 2 to Events.Count -2 do
+      S := S +'; POST_EVENT '+QuotedStr(Events[i]);
+    S := S+'; END';
+    Connection.ExecuteImmediat(S, lcExecute);
+    Sleep(10);
+    EndTime := IncSecond(Now, 2);
+    while (FEventsReceived.Count < (EventCount + EventCount-2)) and (EndTime > Now) do
+      Sleep(0);
+    Listener.Unlisten;
+    CheckFalse(Listener.IsListening);
+    CheckFalse(Connection.IsClosed);
+  finally
+    if Listener <> nil then
+      Connection.CloseEventListener(Listener);
+    FreeAndNil(Events);
+    FreeAndNil(FEventsReceived);
+  end;
+end;
+
+procedure TZTestDbcInterbaseCase.Test_Ping;
+begin
+  Connection.Open;
+  CheckFalse(Connection.IsClosed);
+  Check(Connection.PingServer <> 0);
 end;
 
 procedure TZTestDbcInterbaseCase.Test_GENERATED_ALWAYS_64;

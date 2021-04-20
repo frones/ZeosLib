@@ -424,11 +424,11 @@ var
 begin
   if FOpenResultSet = nil then begin
     if FStatementType = OCI_STMT_SELECT
-    then NativeResultSet := TZOracleResultSet_A.Create(Self, SQL, FOCIStmt, FOCIError, FZBufferSize)
+    then NativeResultSet := TZOracleResultSet.Create(Self, SQL, FOCIStmt, FOCIError, FZBufferSize)
     else NativeResultSet := TZOracleCallableResultSet.Create(Self, SQL, FOCIStmt, FOCIError, BindList);
     if (GetResultSetConcurrency = rcUpdatable) or (GetResultSetType <> rtForwardOnly) then
     begin
-      if CachedLob
+      if (LobCacheMode = lcmOnLoad)
       then CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings)
       else CachedResultSet := TZOracleCachedResultSet.Create(NativeResultSet, SQL, nil, ConSettings);
       if (GetResultSetConcurrency = rcUpdatable) and (FStatementType = OCI_STMT_SELECT) then
@@ -2521,7 +2521,7 @@ var
 begin
   FOldCapacity := BindList.Capacity;
   Result := '';
-  Tokenizer := Connection.GetDriver.GetTokenizer;
+  Tokenizer := Connection.GetTokenizer;
   Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
   C := Length(SQL);
   SQLWriter := TZRawSQLStringWriter.Create(C);
@@ -2655,7 +2655,7 @@ var
 begin
   FOldCapacity := BindList.Capacity;
   Result := '';
-  Tokenizer := Connection.GetDriver.GetTokenizer;
+  Tokenizer := Connection.GetTokenizer;
   Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
   C := Length(SQL);
   SQLWriter := TZUnicodeSQLStringWriter.Create(C);

@@ -257,6 +257,12 @@ type
     /// <summary>Returns the ServicerProvider for this connection.</summary>
     /// <returns>the ServerProvider or spUnknown if not known.</returns>
     function GetServerProvider: TZServerProvider; override;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
+    function GetTokenizer: IZTokenizer;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
+    function GetStatementAnalyser: IZStatementAnalyser;
   end;
 
 var
@@ -1253,6 +1259,16 @@ function TZDBLibConnection.GetServerProvider: TZServerProvider;
 const DBLib2ServerProv: Array[TDBLIBProvider] of TZServerProvider = (spMSSQL, spASE);
 begin
   Result := DBLib2ServerProv[FProvider];
+end;
+
+function TZDBLibConnection.GetStatementAnalyser: IZStatementAnalyser;
+begin
+  Result := TZSybaseStatementAnalyser.Create;
+end;
+
+function TZDBLibConnection.GetTokenizer: IZTokenizer;
+begin
+  Result := TZSybaseTokenizer.Create;
 end;
 
 {**

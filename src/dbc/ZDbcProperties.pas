@@ -280,10 +280,12 @@ const
 {$IFEND}
 
 {$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD) OR DEFINED(ENABLE_POSTGRES)}
-  // Type: BOOLEAN
-  // Same as TZDatasetOptions.doCachedLobs in Dataset.Options property
-  DSProps_CachedLobs = 'CachedLob';
-  // Type: INT
+  /// <type>Enumerator</type>
+  /// <Values>None|OnLoad|OnAccess</Values>
+  /// <usage>Connection,DataSet</usage>
+  /// <syntax>Properties.Values[DSProps_LobCacheMode]={value}</syntax>
+  /// <summary>How to cache lob types. OnLoad caches lobs on record fetch. OnAccess caches lobs only when accessed.</summary>
+  DSProps_LobCacheMode = 'LobCacheMode';
 {$IFEND}
 
 {$IF DEFINED(ENABLE_SQLITE) OR DEFINED(ENABLE_POSTGRESQL)}
@@ -554,6 +556,10 @@ const
   // force binary results to be retrieved from server. supported since Protocol
   // V3 except libs like pgbouncer which have no pqexecparams/pqexecprepared
   DSProps_BinaryWireResultMode = 'BinaryWireResultMode';
+  /// <type>Integer</type>
+  /// <summary>Sets Listener interval in milliseconds.</summary>
+  /// <default>250</default>
+  ELProps_ListernerInterval = 'ListernerInterval';
 {$ENDIF}
 
 {$IF defined(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD)}

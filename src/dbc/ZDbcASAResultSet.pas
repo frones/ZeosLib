@@ -79,7 +79,7 @@ type
   TZASAAbstractResultSet = class(TZAbstractReadOnlyResultSet_A, IZResultSet)
   private
     FSQLDA: PASASQLDA;
-    FCachedBlob: boolean;
+    FLobCacheMode: TLobCacheMode;
     FFetchStat: Integer;
     FCursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF};
     FStmtNum: SmallInt;
@@ -95,7 +95,7 @@ type
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
       StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF};
-      const SqlData: IZASASQLDA; CachedBlob: boolean);
+      const SqlData: IZASASQLDA; LobCacheMode: TLobCacheMode);
 
     procedure BeforeClose; override;
     procedure AfterClose; override;
@@ -132,7 +132,7 @@ type
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
       var StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}; const SqlData: IZASASQLDA;
-      CachedBlob: boolean);
+      LobCacheMode: TLobCacheMode);
     /// <summary>Moves the cursor down one row from its current position. A
     ///  <c>ResultSet</c> cursor is initially positioned before the first row;
     ///  the first call to the method <c>next</c> makes the first row the
@@ -199,7 +199,7 @@ type
   TZASARowAccessor = class(TZRowAccessor)
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); override;
+      const OpenLobStreams: TZSortedList; LobCacheMode: TLobCacheMode); override;
     procedure FetchLongData(AsStreamedType: TZSQLType; const ResultSet: IZResultSet;
       ColumnIndex: Integer; Data: PPZVarLenData); override;
   end;
@@ -428,7 +428,7 @@ end;
 }
 constructor TZASAAbstractResultSet.Create(const Statement: IZStatement;
   const SQL: string; StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF};
-  const SqlData: IZASASQLDA; CachedBlob: boolean);
+  const SqlData: IZASASQLDA; LobCacheMode: TLobCacheMode);
 begin
   inherited Create(Statement, SQL, nil,Statement.GetConnection.GetConSettings);
 
@@ -436,7 +436,7 @@ begin
   FSqlData := SqlData;
   Self.FSQLDA := FSqlData.GetData;
   FCursorName := CursorName;
-  FCachedBlob := CachedBlob;
+  FLobCacheMode := LobCacheMode;
   FASAConnection := Statement.GetConnection as IZASAConnection;
   FByteBuffer := FASAConnection.GetByteBufferAddress;
   FPlainDriver := TZASAPlainDriver(FASAConnection.GetIZPlainDriver.GetInstance);
@@ -1443,9 +1443,9 @@ end;
 
 constructor TZASAParamererResultSet.Create(const Statement: IZStatement;
   const SQL: string; var StmtNum: SmallInt; const CursorName: {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF};
-  const SqlData: IZASASQLDA; CachedBlob: boolean);
+  const SqlData: IZASASQLDA; LobCacheMode: TLobCacheMode);
 begin
-  inherited Create(Statement, SQL, StmtNum, CursorName, SqlData, CachedBlob);
+  inherited Create(Statement, SQL, StmtNum, CursorName, SqlData, LobCacheMode);
   SetType(rtForwardOnly);
   LastRowNo := 1;
 end;
@@ -1634,10 +1634,10 @@ end;
 
 { TZASARowAccessor }
 
-{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "CachedLobs" not used} {$ENDIF}
+{$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "LobCacheMode" not used} {$ENDIF}
 constructor TZASARowAccessor.Create(ColumnsInfo: TObjectList;
   ConSettings: PZConSettings; const OpenLobStreams: TZSortedList;
-  CachedLobs: WordBool);
+  LobCacheMode: TLobCacheMode);
 var TempColumns: TObjectList;
   I: Integer;
   Current: TZColumnInfo;
@@ -1653,7 +1653,7 @@ begin
    if Current.ColumnType in [stAsciiStream, stBinaryStream] then
       Current.ColumnType := TZSQLType(Byte(Current.ColumnType)-3);
   end;
-  inherited Create(TempColumns, ConSettings, OpenLobStreams, False);
+  inherited Create(TempColumns, ConSettings, OpenLobStreams, lcmNone);
   TempColumns.Free;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}

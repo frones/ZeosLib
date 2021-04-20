@@ -336,7 +336,7 @@ var
   begin
     BuffSize := ARR_OVERHEAD_NONULLS(1)+TotalSize;
     //alloc mem for the varlena array struct ->
-    A := Stmt.BindList.AquireMinCustomValue(Index, SQLType, BuffSize);
+    A := Stmt.BindList.AcquireMinCustomValue(Index, SQLType, BuffSize);
     SQLTypeToPostgreSQL(SQLType, FOidAsBlob, aOID);
     //write dimension(s)
     Integer2PG(1, ARR_NDIM(A));
@@ -1036,7 +1036,7 @@ begin
     else if ((ServerMajorVersion = 7) and (FPostgreSQLConnection.GetServerMinorVersion >= 4))
     then Resolver := TZPostgreSQLCachedResolverV74up.Create(Self, Metadata)
     else Resolver := TZPostgreSQLCachedResolver.Create(Self, Metadata);
-    if CachedLob
+    if (LobCacheMode = lcmOnLoad)
     then CachedResultSet := TZCachedResultSet.Create(NativeResultSet, Self.SQL, Resolver, ConSettings)
     else CachedResultSet := TZPostgresCachedResultSet.Create(NativeResultSet, Self.SQL, Resolver, ConSettings);
     if (GetResultSetConcurrency = rcUpdatable) then begin
@@ -1446,9 +1446,11 @@ begin
   LastUpdatecount := -1;
   Prepare;
   PrepareLastResultSetForReUse;
-  if Findeterminate_datatype or (FRawPlanName = '')
-  then Fres := PGExecute
-  else Fres := PGExecutePrepared;
+  if BatchDMLArrayCount > 0
+  then FRes := ExecuteDMLBatchWithUnnestVarlenaArrays
+  else if Findeterminate_datatype or (FRawPlanName = '')
+    then Fres := PGExecute
+    else Fres := PGExecutePrepared;
 
   { Process queries with result sets }
   Status := FPlainDriver.PQresultStatus(Fres);
@@ -1483,9 +1485,11 @@ begin
   LastUpdateCount := -1;
   PrepareOpenResultSetForReUse;
   Prepare;
-  if Findeterminate_datatype or (FRawPlanName = '')
-  then Fres := PGExecute
-  else Fres := PGExecutePrepared;
+  if BatchDMLArrayCount > 0
+  then FRes := ExecuteDMLBatchWithUnnestVarlenaArrays
+  else if Findeterminate_datatype or (FRawPlanName = '')
+    then Fres := PGExecute
+    else Fres := PGExecutePrepared;
   Status := FPlainDriver.PQresultStatus(Fres);
   if (Fres <> nil) and ((Status = PGRES_TUPLES_OK) or (Status = PGRES_SINGLE_TUPLE)) then begin
     if Assigned(FOpenResultSet)
@@ -1601,7 +1605,7 @@ var
 label jmpScanCommentOrWhiteSpace;
 begin
   Result := '';
-  Tokenizer := Connection.GetDriver.GetTokenizer;
+  Tokenizer := Connection.GetTokenizer;
   Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
   C := Length(SQL);
   SQLWriter := TZRawSQLStringWriter.Create(C);
@@ -2240,7 +2244,7 @@ begin
         BindList.Put(Index, PGSQLType, P8Bytes({$IFNDEF CPU64}fByteBuffer{$ELSE}@Value{$ENDIF}));
         LinkBinParam2PG(InParamIdx, BindList._8Bytes[Index], 8);
       end else
-        LinkBinParam2PG(InParamIdx, BindList.AquireCustomValue(Index, PGSQLType,
+        LinkBinParam2PG(InParamIdx, BindList.AcquireCustomValue(Index, PGSQLType,
           ZSQLType2PGBindSizes[PGSQLType]), ZSQLType2PGBindSizes[PGSQLType]);
     P := FPQparamValues[InParamIdx];
     case PGSQLType of
@@ -2415,7 +2419,7 @@ begin
   SQLType := OIDToSQLType(Idx, stBigDecimal);
   if (FPQParamOIDs[Idx] = NUMERICOID) then begin
     if (FPQparamValues[Idx] = nil) or (BindList.SQLTypes[Idx] <> SQLType) then begin
-      FPQparamValues[Idx] := BindList.AquireCustomValue(Idx, SQLType, MaxBCD2NumSize);
+      FPQparamValues[Idx] := BindList.AcquireCustomValue(Idx, SQLType, MaxBCD2NumSize);
       FPQparamFormats[Idx] := ParamFormatBin;
     end;
     BCD2PGNumeric(Value, FPQparamValues[Idx], FPQparamLengths[Idx]);
@@ -2503,7 +2507,7 @@ begin
   SQLType := OIDToSQLType(Idx, stCurrency);
   if (FPQParamOIDs[Idx] = NUMERICOID) then begin
     if (FPQparamValues[Idx] = nil) or (BindList.SQLTypes[Idx] <> SQLType) then begin
-      FPQparamValues[Idx] := BindList.AquireCustomValue(Idx, SQLType, MaxCurr2NumSize);
+      FPQparamValues[Idx] := BindList.AcquireCustomValue(Idx, SQLType, MaxCurr2NumSize);
       FPQparamFormats[Idx] := ParamFormatBin;
     end;
     Currency2PGNumeric(Value, FPQparamValues[Idx], FPQparamLengths[Idx]);
@@ -2731,7 +2735,7 @@ begin
         BindList.Put(Idx, PGSQLType, P8Bytes(@Value));
         LinkBinParam2PG(Idx, BindList._8Bytes[Idx], 8);
       end else
-        LinkBinParam2PG(Idx, BindList.AquireCustomValue(Idx, PGSQLType,
+        LinkBinParam2PG(Idx, BindList.AcquireCustomValue(Idx, PGSQLType,
           ZSQLType2PGBindSizes[PGSQLType]), ZSQLType2PGBindSizes[PGSQLType]);
     case PGSQLtype of
       stLong:     Int642PG(Value, FPQparamValues[Idx]);

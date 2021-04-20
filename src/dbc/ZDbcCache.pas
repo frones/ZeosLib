@@ -122,7 +122,7 @@ type
   TZRowAccessor = class(TObject)
   protected
     FRowSize: Integer;
-    FCachedLobs: WordBool;
+    FLobCacheMode:  TLobCacheMode;
     FColumnsSize: Integer;
     FColumnCount: Integer;
     FHighLobCols: Integer;
@@ -163,7 +163,7 @@ type
     FUniTemp: UnicodeString;
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-      const OpenLobStreams: TZSortedList; CachedLobs: WordBool); virtual;
+      const OpenLobStreams: TZSortedList; LobCacheMode: TLobCacheMode); virtual;
 
     function AllocBuffer: PZRowBuffer;
     procedure InitBuffer(Buffer: PZRowBuffer);
@@ -300,7 +300,7 @@ type
     property RowSize: Integer read FRowSize;
     property RowBuffer: PZRowBuffer read FBuffer write FBuffer;
     property ConSettings: PZConSettings read FConSettings;
-    property CachedLobs: WordBool read FCachedLobs write FCachedLobs;
+    property LobCacheMode: TLobCacheMode read FLobCacheMode{ write FLobCacheMode};
 
     procedure FillStatement(const Statement: IZPreparedStatement;
       {$IFDEF AUTOREFCOUNT}const {$ENDIF}IndexPairList: TZIndexPairList;
@@ -969,7 +969,7 @@ end;
   @param ColumnsInfo a collection with column information.
 }
 constructor TZRowAccessor.Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings;
-  const OpenLobStreams: TZSortedList; CachedLobs: WordBool);
+  const OpenLobStreams: TZSortedList; LobCacheMode: TLobCacheMode);
 var
   I: Integer;
   Current: TZColumnInfo;
@@ -981,7 +981,7 @@ begin
   FBuffer := nil;
   FColumnCount := ColumnsInfo.Count;
   FColumnsSize := 0;
-  FCachedLobs := CachedLobs;
+  FLobCacheMode := LobCacheMode;
 
   {$ifdef FPC_REQUIRES_PROPER_ALIGNMENT}
   FColumnsSize:=align(FColumnsSize+1,sizeof(pointer))-1;
@@ -1303,7 +1303,7 @@ var
     end;
   begin
     PIZLob(Dest)^ := ResultSet.GetBlob(ResultSetIndex);
-    if FCachedLobs then
+    if FLobCacheMode = lcmOnLoad then
       SetAsCachedLob(Dest);
   end;
 begin
@@ -2859,7 +2859,8 @@ end;
 
 function TZRowAccessor.HasServerLinkedColumns: Boolean;
 begin
-  Result := ((FLobCols <> nil) and not FCachedLobs) or (FResultSetCols <> nil)
+  Result := ((FLobCols <> nil) and (FLobCacheMode = lcmNone)) or
+            (FResultSetCols <> nil);
 end;
 
 {**
