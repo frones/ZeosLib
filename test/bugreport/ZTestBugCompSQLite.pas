@@ -335,9 +335,9 @@ begin
     CheckFalse(Query.Eof);
     with Connection.DbcConnection.GetMetadata.GetCatalogs do try
       Check(Next);
-      CheckEquals('main', GetString(FirstDbcIndex));
-      Check(Next);
       CheckEquals('attached_db', GetString(FirstDbcIndex));
+      Check(Next);
+      CheckEquals('main', GetString(FirstDbcIndex));
       CheckFalse(Next);
     finally
       Close;

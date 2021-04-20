@@ -219,7 +219,6 @@ type
     /// <returns><c>ResultSet</c> - each row has a single String column that is
     ///  a catalog name</returns>
     function UncachedGetCatalogs: IZResultSet; override;
-
     /// <summary>Gets the table types available in this database. The results
     ///  are ordered by table type.
     ///  The table type is:
@@ -278,7 +277,7 @@ implementation
 
 uses
   ZDbcUtils, ZDbcSqLite, ZFastCode, ZSelectSchema, ZMatchPattern,
-  ZEncoding;
+  ZEncoding, ZDbcCachedResultSet;
 
 { TZSQLiteDatabaseInfo }
 
@@ -1757,6 +1756,16 @@ end;
 function TZSQLiteDatabaseMetadata.UncachedGetCatalogs: IZResultSet;
 var RS: IZResultSet;
     Len: NativeUInt;
+  procedure DoSort(const RS: IZResultSet);
+    var VR: IZVirtualResultSet;
+      SortedColums: TIntegerDynArray;
+  begin
+    SortedColums := nil;
+    SetLength(SortedColums, 1);
+    SortedColums[0] := FirstDbcIndex;
+    VR := RS as IZVirtualResultSet;
+    VR.SortRows(SortedColums, False);
+  end;
 begin
   Result := inherited UncachedGetCatalogs;
   RS := GetConnection.CreateStatement.ExecuteQuery(
@@ -1770,6 +1779,8 @@ begin
     end;
     Close;
   end;
+  if Result.GetRow > 1 then
+    DoSort(Result);
 end;
 
 {**
