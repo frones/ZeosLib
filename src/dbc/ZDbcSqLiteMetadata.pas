@@ -212,7 +212,22 @@ type
     function UncachedGetTables(const Catalog: string; const {%H-}SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
 //    function UncachedGetSchemas: IZResultSet; override;  -> not implemented
-//    function UncachedGetCatalogs: IZResultSet; override;  -> not implemented
+    /// <summary>Gets the catalog names available in this database. The results
+    ///  are ordered by catalog name.
+    ///  The catalog column is:
+    ///  <C>TABLE_CAT</C> String => catalog name</summary>
+    /// <returns><c>ResultSet</c> - each row has a single String column that is
+    ///  a catalog name</returns>
+    function UncachedGetCatalogs: IZResultSet; override;
+
+    /// <summary>Gets the table types available in this database. The results
+    ///  are ordered by table type.
+    ///  The table type is:
+    ///  <c>TABLE_TYPE</c> String => table type. Typical types are "TABLE",
+    ///  "VIEW", "SYSTEM TABLE", "GLOBAL TEMPORARY","LOCAL TEMPORARY", "ALIAS",
+    ///  "SYNONYM".</summary>
+    /// <returns><c>ResultSet</c> - each row has a single String column that is
+    ///  a table type</returns>
     function UncachedGetTableTypes: IZResultSet; override;
     function UncachedGetColumns(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
@@ -1175,7 +1190,7 @@ function TZSQLiteDatabaseMetadata.UncachedGetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const Types: TStringDynArray): IZResultSet;
 var
-  WhereClause, SQL: string;
+  WhereClause, SQL, Tmp_Catalog: string;
   function IncludedType(const TypeName: string): Boolean;
   var I: Integer;
   begin
@@ -1194,17 +1209,13 @@ begin
     then WhereClause := '(' + WhereClause + ' OR TYPE=''view'')'
     else WhereClause := 'TYPE=''view''';
 
-  SQL := 'SELECT ';
   if Catalog <> ''
-  then SQL := SQL + ''''+Catalog+''''
-  else SQL := SQL + 'null';
+  then Tmp_Catalog := Catalog
+  else Tmp_Catalog := 'main';// 'null';
 
-  SQL := SQL +' AS TABLE_CAT, NULL AS TABLE_SCHEM,'
+  SQL := 'SELECT '''+Tmp_Catalog +''' AS TABLE_CAT, NULL AS TABLE_SCHEM,'
     + ' TBL_NAME AS TABLE_NAME, UPPER(TYPE) AS TABLE_TYPE, NULL AS REMARKS'
-    + ' FROM ';
-  if Catalog <> '' then
-    SQL := SQL + Catalog + '.';
-  SQL := SQL + 'SQLITE_MASTER WHERE ' + WhereClause+ ' AND TBL_NAME ';
+    + ' FROM '+ Tmp_Catalog + '.SQLITE_MASTER WHERE ' + WhereClause+ ' AND TBL_NAME ';
   if (TableNamePattern <> '') and HasNoWildcards(TableNamePattern)
   then SQL := SQL + '= '''+ StripEscape(TableNamePattern)
   else SQL := SQL + 'LIKE ''' + ToLikeString(TableNamePattern);
@@ -1214,20 +1225,6 @@ begin
     ConstructVirtualResultSet(TableColumnsDynArray));
 end;
 
-{**
-  Gets the table types available in this database.  The results
-  are ordered by table type.
-
-  <P>The table type is:
-   <OL>
- 	<LI><B>TABLE_TYPE</B> String => table type.  Typical types are "TABLE",
- 			"VIEW",	"SYSTEM TABLE", "GLOBAL TEMPORARY",
- 			"LOCAL TEMPORARY", "ALIAS", "SYNONYM".
-   </OL>
-
-  @return <code>ResultSet</code> - each row has a single String column that is a
-  table type
-}
 function TZSQLiteDatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
   TableTypeCount = 2;
@@ -1323,14 +1320,14 @@ var
     P: PAnsiChar;
     CompareColLike, CompareEquals: Boolean;
     S: String;
-    function IsAutoIncrement(const TableName: String; ColumnName: String): Boolean;
+    function IsAutoIncrement(const SchemaName, TableName: RawByteString; ColumnName: String): Boolean;
     var
       CreateSQL, CreateSQLUp: String;
       colIdx, aiIdx: Integer;
       SL: TStrings;
     begin
       Result := False;
-      with GetStatement.ExecuteQuery('select sql from sqlite_master where name = '''+TableName+'''') do begin
+      with GetStatement.ExecuteQuery('select sql from '+SchemaName+'.sqlite_master where name = '''+TableName+'''') do begin
         if Next
         then CreateSQL := GetString(FirstDbcIndex)
         else CreateSQL := '';
@@ -1432,7 +1429,7 @@ var
         S := GetString(name_index);
         if (GetInt(pk_index) = 1) then begin
           Result.UpdateBoolean(TableColColumnAutoIncIndex, True); //the rowid is not automatically a AUTOINCREMENT attribute
-          Result.UpdateBoolean(TableColColumnReadonlyIndex, (TypeTmp = 'INTEGER') and IsAutoIncrement(Result.GetString(TableNameIndex), S));
+          Result.UpdateBoolean(TableColColumnReadonlyIndex, (TypeTmp = 'INTEGER') and IsAutoIncrement(SchemaName, Result.GetUTF8String(TableNameIndex), S));
         end else begin
           Result.UpdateBoolean(TableColColumnAutoIncIndex, False);
           Result.UpdateBoolean(TableColColumnReadonlyIndex, False);
@@ -1467,12 +1464,16 @@ begin
       {$ENDIF}
 
       Temp_scheme := StripEscape(SchemaPattern);
+      if Temp_scheme = '' then
+        Temp_scheme := Catalog;
+      if Temp_scheme = '' then
+        Temp_scheme := 'main';
       {$IFDEF UNICODE}
       SchemaTmp := ZUnicodeToRaw(Temp_scheme, zCP_UTF8);
       {$ELSE}
       SchemaTmp := Temp_scheme;
       {$ENDIF}
-      ResSet := GetStatement.ExecuteQuery('PRAGMA '+SchemaTmp+'table_info('''+TblTmp+''')');
+      ResSet := GetStatement.ExecuteQuery('PRAGMA '+SchemaTmp+'.table_info('''+TblTmp+''')');
       FillResult(ResSet, UndefinedVarcharAsStringLength, ColumnNamePattern, SchemaTmp, TblTmp, SQLiteIntAffinity);
     end else begin
       {$IFDEF WITH_VAR_INIT_WARNING}TableTypes := nil;{$ENDIF}
@@ -1481,10 +1482,8 @@ begin
       TblRS := GetTables(Catalog, SchemaPattern, TableNamePattern, TableTypes);
       while TblRS.Next do begin
         SchemaTmp := TblRS.GetRawByteString(CatalogNameIndex);
-        if SchemaTmp <> SchemaTmp then
-          SchemaTmp := SchemaTmp + '.';
         TblTmp := TblRS.GetRawByteString(TableNameIndex);
-        ResSet := GetStatement.ExecuteQuery('PRAGMA '+SchemaTmp+'table_info('''+TblTmp+''')');
+        ResSet := GetStatement.ExecuteQuery('PRAGMA '+SchemaTmp+'.table_info('''+TblTmp+''')');
         FillResult(ResSet, UndefinedVarcharAsStringLength, ColumnNamePattern, SchemaTmp, TblTmp, SQLiteIntAffinity);
       end;
     end;
@@ -1502,28 +1501,35 @@ const
   pk_index = dflt_value_index+1;
 var
   Len: NativeUInt;
-  Temp_scheme: string;
+  Temp_scheme, Temp_Table: string;
   RS: IZResultSet;
+  {$IFDEF UNICODE}
+  Raw_Schema, Raw_Table: RawByteString;
+  {$ENDIF}
 begin
   Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
 
   if Schema = '' then
-    Temp_scheme := '' // OR  'main.'
-  else
-    Temp_scheme := Schema +'.';
+    if Catalog <> ''
+    then Temp_scheme := Catalog
+    else Temp_scheme := 'main'
+  else Temp_scheme := Schema;
+  Temp_Table := NormalizePatternCase(Table);
   {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
+  {$IFDEF UNICODE}
+  Raw_Schema := ZUnicodeToRaw(Temp_scheme, zCP_UTF8);
+  Raw_Table := ZUnicodeToRaw(Temp_Table, zCP_UTF8);
+  {$ENDIF}
   RS := GetConnection.CreateStatement.ExecuteQuery(
-    Format('PRAGMA %s table_info(''%s'')', [Temp_scheme,Self.NormalizePatternCase(Table)]));
+    'PRAGMA '+{$IFDEF UNICODE}Raw_Schema{$ELSE}Temp_scheme{$ENDIF}+'.table_info('''+{$IFDEF UNICODE}Raw_Table{$ELSE}Temp_Table{$ENDIF}+''')');
   if RS <> nil then with RS do begin
     while Next do
     begin
       if GetInt(pk_index) = 0 then
         Continue;
-
       Result.MoveToInsertRow;
-      if Schema <> '' then
-        Result.UpdateString(CatalogNameIndex, Schema);
-      Result.UpdateString(TableNameIndex, Table);
+      Result.UpdateRawByteString(CatalogNameIndex, {$IFDEF UNICODE}Raw_Schema{$ELSE}Temp_scheme{$ENDIF});
+      Result.UpdateRawByteString(TableNameIndex, {$IFDEF UNICODE}Raw_Table{$ELSE}Temp_Table{$ENDIF});
       Result.UpdatePAnsiChar(PrimaryKeyColumnNameIndex, GetPAnsiChar(name_index, Len), Len);
       Result.UpdateInt(PrimaryKeyKeySeqIndex, GetInt(cid_index)+1);
       Result.InsertRow;
@@ -1532,9 +1538,8 @@ begin
   end;
   if Result.IsBeforeFirst then begin
     Result.MoveToInsertRow;
-    if Schema <> '' then
-      Result.UpdateString(CatalogNameIndex, Schema);
-    Result.UpdateString(TableNameIndex, Table);
+    Result.UpdateRawByteString(CatalogNameIndex, {$IFDEF UNICODE}Raw_Schema{$ELSE}Temp_scheme{$ENDIF});
+    Result.UpdateRawByteString(TableNameIndex, {$IFDEF UNICODE}Raw_Table{$ELSE}Temp_Table{$ENDIF});
     Result.UpdateRawByteString(PrimaryKeyColumnNameIndex, 'rowid');
     Result.UpdateInt(PrimaryKeyKeySeqIndex, 0);
     Result.InsertRow;
@@ -1701,16 +1706,24 @@ var
   Len: NativeUInt;
   MainResultSet, ResultSet: IZResultSet;
   Temp_scheme: string;
+  {$IFDEF UNICODE}
+  Raw_Schema, Raw_Table: RawByteString;
+  {$ENDIF}
 begin
   Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
   if Schema = '' then
-    Temp_scheme := '' // OR  'main.'
-  else
-    Temp_scheme := Schema +'.';
+    if Catalog <> ''
+    then Temp_scheme := Catalog
+    else Temp_scheme := 'main'
+  else Temp_scheme := Schema;
   {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
+  {$IFDEF UNICODE}
+  Raw_Schema := ZUnicodeToRaw(Temp_scheme, zCP_UTF8);
+  Raw_Table := ZUnicodeToRaw(Table, zCP_UTF8);
+  {$ENDIF}
   MainResultSet := GetConnection.CreateStatement.ExecuteQuery(
-    Format('PRAGMA %s index_list(''%s'')', [Temp_scheme, Table]));
+    'PRAGMA '+{$IFDEF UNICODE}Raw_Schema{$ELSE}Temp_scheme{$ENDIF}+'.index_list('''+{$IFDEF UNICODE}Raw_Table{$ELSE}Table{$ENDIF}+''')');
   if MainResultSet<>nil then
   begin
     while MainResultSet.Next do
@@ -1719,13 +1732,12 @@ begin
         and ((Unique = False) or (MainResultSet.GetInt(main_unique_field_index) = 0)) then
       begin
         ResultSet := GetConnection.CreateStatement.ExecuteQuery(
-          Format('PRAGMA %s index_info(''%s'')', [Temp_scheme,MainResultSet.GetString(main_name_field_index)]));
+          'PRAGMA '+{$IFDEF UNICODE}Raw_Schema{$ELSE}Temp_scheme{$ENDIF}+'.index_info('''+MainResultSet.GetRawByteString(main_name_field_index)+''')');
         while ResultSet.Next do
         begin
           Result.MoveToInsertRow;
-          if Schema <> '' then
-            Result.UpdateString(CatalogNameIndex, Schema);
-          Result.UpdateString(TableNameIndex, Table);
+          Result.UpdateRawByteString(CatalogNameIndex, {$IFDEF UNICODE}Raw_Schema{$ELSE}Temp_scheme{$ENDIF});
+          Result.UpdateRawByteString(TableNameIndex, {$IFDEF UNICODE}Raw_Table{$ELSE}Table{$ENDIF});
           Result.UpdateBoolean(IndexInfoColNonUniqueIndex, MainResultSet.GetInt(main_unique_field_index) = 0);
           Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, MainResultSet.GetPAnsiChar(main_name_field_index, Len), Len);
           Result.UpdateInt(IndexInfoColOrdPositionIndex, ResultSet.GetInt(sub_seqno_field_index)+FirstDbcIndex);
@@ -1739,6 +1751,24 @@ begin
       end;
     end;
     MainResultSet.Close;
+  end;
+end;
+
+function TZSQLiteDatabaseMetadata.UncachedGetCatalogs: IZResultSet;
+var RS: IZResultSet;
+    Len: NativeUInt;
+begin
+  Result := inherited UncachedGetCatalogs;
+  RS := GetConnection.CreateStatement.ExecuteQuery(
+    RawByteString('PRAGMA database_list'));
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
+  with RS do begin
+    while Next do begin
+      Result.MoveToInsertRow;
+      Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(FirstDbcIndex+1, Len), Len);
+      Result.InsertRow;
+    end;
+    Close;
   end;
 end;
 
