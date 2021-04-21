@@ -53,6 +53,7 @@
   EgonHugeist
   FOS
   Michael Seeger
+  Mark Ford
 }
 unit ZDbcCachedResultSet;
 
