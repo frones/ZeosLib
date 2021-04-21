@@ -837,7 +837,24 @@ function DateTimeToRawSQLDate(const Value: TDateTime; Buf: PAnsichar;
 /// <param>"Neagtive" if the year is negative.</param>
 /// <returns>the length in bytes of written value.</returns>
 function DateToRaw(Year, Month, Day: Word; Buf: PAnsichar;
-  const Format: String; Quoted, Negative: Boolean): Byte;
+  const Format: String; Quoted, Negative: Boolean): Byte; overload;
+
+/// <author>EgonHugeist</author>
+/// <summary>Convert a Year, Month, Day values into a string buffer. Valid format
+///  tokens are: 'Y'/'y' for year,'M'/'m' for month,'D'/'d' for day.
+///  Valid delimiters (if given) are ' ','-','\','/'.
+///  Long names are not supported.</summary>
+/// <param>"Year" the year of the date string.</param>
+/// <param>"Month" the month of the date string.</param>
+/// <param>"Day" the day of the date string.</param>
+/// <param>"Format" the format template</param>
+/// <param>"Suffix" ia suffix string which can be appendened to the result
+/// <param>"Quoted" if the result should be quoted with a #39 char.</param>
+/// <param>"Neagtive" if the year is negative.</param>
+/// <param>"CodePage" the codepage of the output string.</param>
+/// <returns>a converted string.</returns>
+function DateToRaw(Year, Month, Day: Word; const Format: String; const Suffix: RawByteString;
+  Quoted, Negative: Boolean{$IFDEF WITH_RAWBYTESTRING}; CodePage: Word = $FFFF{$ENDIF}): RawByteString; overload;
 
 /// <author>EgonHugeist</author>
 /// <summary>Convert a pascal TDateTime value into a string. Valid format tokens
@@ -4358,23 +4375,11 @@ end;
 function DateTimeToRawSQLDate(const Value: TDateTime;
   const ConFormatSettings: TZClientFormatSettings;
   const Quoted: Boolean; const Suffix: RawByteString = EmptyRaw): RawByteString;
-var L, L2, Year, Month, Day: Word;
-  Buffer: array[0..cMaxDateLenQuoted] of AnsiChar;
-  P: PAnsiChar;
+var Year, Month, Day: Word;
 begin
   DecodeDate(Value, Year, Month, Day);
-  L := DateToRaw(Year, Month, Day, @Buffer[0],
-    ConFormatSettings.DateFormat, Quoted, False);
-  l2 := Length(Suffix);
-  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-  ZSetString(nil, l+l2, Result);
-  {$ELSE}
-  System.SetString(Result, nil , L+L2);
-  {$ENDIF}
-  P := Pointer(Result);
-  Move(Buffer[0], P^, L);
-  if L2 > 0 then
-    Move(Pointer(Suffix)^, (P+L)^, L2);
+  Result := DateToRaw(Year, Month, Day,
+    ConFormatSettings.DateFormat, Suffix, Quoted, False);
 end;
 
 function DateTimeToRawSQLDate(const Value: TDateTime; Buf: PAnsichar;
@@ -4488,6 +4493,26 @@ Inc_dbl:          Inc(Buf, 2);
     Result := Buf-PStart+1;
   end else
     Result := Buf-PStart;
+end;
+
+function DateToRaw(Year, Month, Day: Word; const Format: String; const Suffix: RawByteString;
+  Quoted, Negative: Boolean{$IFDEF WITH_RAWBYTESTRING}; CodePage: Word = $FFFF{$ENDIF}): RawByteString;
+var L, L2: Word;
+  Buffer: array[0..cMaxDateLenQuoted] of AnsiChar;
+  P: PWideChar;
+begin
+  L := DateToRaw(Year, Month, Day, @Buffer[0], Format, Quoted, Negative);
+  l2 := Length(Suffix);
+  Result := '';
+  {$IF defined(WITH_RAWBYTESTRING) or defined(WITH_TBYTES_AS_RAWBYTESTRING)}
+  ZSetString(nil, l+l2, Result{$IFDEF WITH_RAWBYTESTRING}, CodePage{$ENDIF});
+  {$ELSE}
+  System.SetString(Result, nil , L+L2);
+  {$IFEND}
+  P := Pointer(Result);
+  Move(Buffer[0], P^, L shl 1);
+  if L2 > 0 then
+    Move(Pointer(Suffix)^, (P+L)^, L2);
 end;
 
 function DateTimeToUnicodeSQLDate(const Value: TDateTime; Buf: PWideChar;
