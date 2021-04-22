@@ -269,7 +269,8 @@ type
     procedure GetTableNames(const Pattern: string; List: TStrings);overload;
     procedure GetTableNames(const schemaPattern, tablePattern: string; List: TStrings);overload;
     procedure GetTableNames(const schemaPattern, tablePattern: string; const Types: TStringDynArray; List: TStrings);overload;
-    procedure GetColumnNames(const TablePattern, ColumnPattern: string; List: TStrings);
+    procedure GetColumnNames(const schemaPattern, TablePattern, ColumnPattern: string; List: TStrings); overload;
+    procedure GetColumnNames(const TablePattern, ColumnPattern: string; List: TStrings); overload;
 
     procedure GetStoredProcNames(const Pattern: string; List: TStrings);
     procedure GetTriggerNames(const TablePattern, SchemaPattern: string; List: TStrings);
@@ -1521,11 +1522,12 @@ end;
 
 {**
   Fills string list with column names.
+  @param schemaPattern a pattern for schema names.
   @param TablePattern a pattern for table names.
   @param ColumnPattern a pattern for column names.
   @param List a string list to fill out.
 }
-procedure TZAbstractConnection.GetColumnNames(const TablePattern, ColumnPattern: string; List: TStrings);
+procedure TZAbstractConnection.GetColumnNames(const SchemaPattern, TablePattern, ColumnPattern: string; List: TStrings);
 var
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
@@ -1533,9 +1535,20 @@ begin
   CheckConnected;
   List.Clear;
   Metadata := DbcConnection.GetMetadata;
-  ResultSet := Metadata.GetColumns('', '', TablePattern, ColumnPattern);
+  ResultSet := Metadata.GetColumns('', SchemaPattern, TablePattern, ColumnPattern);
   while ResultSet.Next do
     List.Add(ResultSet.GetStringByName('COLUMN_NAME'));
+end;
+
+{**
+  Fills string list with column names.
+  @param TablePattern a pattern for table names.
+  @param ColumnPattern a pattern for column names.
+  @param List a string list to fill out.
+}
+procedure TZAbstractConnection.GetColumnNames(const TablePattern, ColumnPattern: string; List: TStrings);
+begin
+ GetColumnNames('', TablePattern, ColumnPattern, List);
 end;
 
 {**
