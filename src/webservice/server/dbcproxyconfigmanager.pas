@@ -78,11 +78,11 @@ type
     ConfigList: TDbcProxyConnConfigList;
     FListeningPort: Word;
     FIPAddress: String;
-    FConnectionIdleTime: Cardinal;
+    FConnectionIdleTimeOut: Cardinal;
   public
     property ListeningPort: Word read FListeningPort;
     property IPAddress: String read FIPAddress;
-    property ConnectionIdleTime: Cardinal read FConnectionIdleTime;
+    property ConnectionIdleTimeout: Cardinal read FConnectionIdleTimeout;
     function ConstructUrl(ConfigName, UserName, Password: String): String;
     procedure LoadConfigInfo(SourceFile: String);
     constructor Create;
@@ -122,7 +122,7 @@ begin
     SecPrefix := IniFile.ReadString('general', 'Security Prefix', 'sec.');
     FListeningPort := IniFile.ReadInteger('general', 'Listening Port', 8000);
     FIPAddress := IniFile.ReadString('general', 'IP Address', '127.0.0.1');
-    FConnectionIdleTime := IniFile.ReadInteger('general', 'Connection Idle Time', 86400); {Default to one day}
+    FConnectionIdleTimeout := IniFile.ReadInteger('general', 'Connection Idle Timeout', 86400); {Default to one day}
     Sections := TStringList.Create;
     try
       IniFile.ReadSections(Sections);
