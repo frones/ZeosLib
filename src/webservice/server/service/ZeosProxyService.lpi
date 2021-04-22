@@ -38,7 +38,7 @@
         <PackageName Value="LazDaemon"/>
       </Item4>
     </RequiredPackages>
-    <Units Count="3">
+    <Units Count="11">
       <Unit0>
         <Filename Value="ZeosProxyService.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -57,6 +57,40 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="DataModule"/>
       </Unit2>
+      <Unit3>
+        <Filename Value="..\dbcproxyutils.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="DbcProxyUtils"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="..\zdbcproxymanagement.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZDbcProxyManagement"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="..\dbcproxycleanupthread.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="..\dbcproxyconfigmanager.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="..\dbcproxyconnectionmanager.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="..\dbcproxysecuritymodule.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit8>
+      <Unit9>
+        <Filename Value="..\yubiotp.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="..\zeosproxy_imp.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit10>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

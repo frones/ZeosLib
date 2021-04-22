@@ -58,7 +58,10 @@ interface
 uses
   Classes, SysUtils, DaemonApp, server_listener,
   // for including the Zeos drivers:
-  ZDbcPostgreSql, ZDbcFirebird, ZDbcInterbase6;
+  ZDbcPostgreSql, ZDbcFirebird, ZDbcInterbase6,
+  //
+  dbcproxycleanupthread
+  ;
 
 type
 
@@ -69,6 +72,7 @@ type
     procedure DataModuleStop(Sender: TCustomDaemon; var OK: Boolean);
   private
     AppObject: TwstListener;
+    CleanupThread: TDbcProxyCleanupThread;
   public
 
   end;
@@ -117,14 +121,20 @@ begin
   AppObject := TwstFPHttpListener.Create(ConfigManager.IPAddress, ConfigManager.ListeningPort);
   (AppObject as  TwstFPHttpListener).Options := [loExecuteInThread];
   AppObject.Start();
+  CleanupThread := TDbcProxyCleanupThread.Create(ConnectionManager, ConfigManager);
+  CleanupThread.Start;
   OK := True;
 end;
 
 procedure TZeosProxyDaemon.DataModuleStop(Sender: TCustomDaemon; var OK: Boolean
   );
 begin
+  CleanupThread.Terminate;
+  CleanupThread.WaitFor;
   AppObject.Stop();
   FreeAndNil(AppObject);
+  FreeAndNil(ConnectionManager);
+  FreeAndNil(ConfigManager);
   OK := True;
 end;
 
