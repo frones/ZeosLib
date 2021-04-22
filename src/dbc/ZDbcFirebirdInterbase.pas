@@ -2057,10 +2057,14 @@ begin
     if fDoCommit
     then IZTransaction(FWeakIZTransactionPtr).Commit
     else IZTransaction(FWeakIZTransactionPtr).RollBack;
-  FreeAndNil(fSavepoints);
-  FreeAndNil(FOpenCursors);
-  FreeAndNil(FOpenUncachedLobs);
-  FreeAndNil(FProperties);
+  if Assigned(fSavepoints) then
+    FreeAndNil(fSavepoints);
+  if Assigned(FOpenCursors) then
+    FreeAndNil(FOpenCursors);
+  if Assigned(FOpenUncachedLobs) then
+    FreeAndNil(FOpenUncachedLobs);
+  if Assigned(FProperties) then
+    FreeAndNil(FProperties);
   inherited BeforeDestruction;
 end;
 
