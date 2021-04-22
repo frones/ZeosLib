@@ -95,6 +95,7 @@ var
   ErrorMsg: String;
   AppObject : TwstListener;
   configFile: String;
+  CleanupThread: TDbcProxyCleanupThread;
 begin
   {$IFDEF LINUX}
   configFile := '/etc/zeosproxy.ini';
@@ -122,6 +123,8 @@ begin
   ConnectionManager := TDbcProxyConnectionManager.Create;
   ConfigManager := TDbcProxyConfigManager.Create;
   ConfigManager.LoadConfigInfo(configFile);
+  CleanupThread := TDbcProxyCleanupThread.Create(ConnectionManager, ConfigManager);
+  CleanupThread.Start;
 
   //Server_service_RegisterBinaryFormat();
   Server_service_RegisterSoapFormat();
@@ -131,7 +134,7 @@ begin
   Server_service_RegisterZeosProxyService();
   AppObject := TwstFPHttpListener.Create(ConfigManager.IPAddress, ConfigManager.ListeningPort);
   try
-    WriteLn('"Web Service Toolkit" HTTP Server sample listening at:');
+    WriteLn('"Zeos Proxy Server listening at:');
     WriteLn('');
     WriteLn('http://' + ConfigManager.IPAddress+ ':'+ IntToStr(ConfigManager.ListeningPort)+ '/');
     WriteLn('');
@@ -145,6 +148,12 @@ begin
     FreeAndNil(AppObject);
   end;
 
+  if Assigned(CleanupThread) then begin
+    CleanupThread.Terminate;
+    CleanupThread.WaitFor;
+  end;
+  if Assigned(ConfigManager) then
+    FreeAndNil(ConfigManager);
   if Assigned(ConnectionManager) then
     FreeAndNil(ConnectionManager);
 

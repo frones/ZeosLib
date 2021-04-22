@@ -56,17 +56,17 @@ unit dbcproxycleanupthread;
 interface
 
 uses
-  Classes, SysUtils, DbcProxyConnectionManager;
+  Classes, SysUtils, DbcProxyConnectionManager, DbcProxyConfigManager;
 
 type
   TDbcProxyCleanupThread = class(TThread)
     private
-      FShouldExit: Boolean;
       FConnManager: TDbcProxyConnectionManager;
+      FIdleTime: Integer;
     protected
       procedure Execute; override;
     public
-      constructor Create(ConnManager: TDbcProxyConnectionManager);
+      constructor Create(ConnManager: TDbcProxyConnectionManager; ConfigManager: TDbcProxyConfigManager);
   end;
 
 implementation
@@ -74,11 +74,11 @@ implementation
 uses
   DateUtils, ZDbcProxyManagement;
 
-constructor TDbcProxyCleanupThread.Create(ConnManager: TDbcProxyConnectionManager);
+constructor TDbcProxyCleanupThread.Create(ConnManager: TDbcProxyConnectionManager; ConfigManager: TDbcProxyConfigManager);
 begin
   inherited Create(True);
-  FShouldExit := false;
   FConnManager := ConnManager;
+  FIdleTime := ConfigManager.ConnectionIdleTime;
 end;
 
 procedure TDbcProxyCleanupThread.Execute;
@@ -88,12 +88,16 @@ var
   Conn: TDbcProxyConnection;
   ConnID: String;
   y: Integer;
+  ActionTime: Integer;
 begin
   y := 0;
-  while not FShouldExit do begin
-    y := y mod 60;
+  ActionTime := FIdleTime div 2;
+  If ActionTime = 0 then
+    ActionTime := 1;
+  while not Terminated do begin
+    y := y mod ActionTime;
     if y = 0 then begin
-      MaxTime := IncMinute(Now, 24 * 60);
+      MaxTime := IncSecond(Now, FIdleTime * (-1));
       for X := FConnManager.GetConnectionCount - 1 downto 0 do begin
         Conn := FConnManager.LockConnection(x);
         try
