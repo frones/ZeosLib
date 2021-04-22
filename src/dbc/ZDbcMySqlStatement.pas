@@ -1554,7 +1554,9 @@ begin
   if not FEmulatedParams and FChunkedData then
     // Send large data chunked
     for I := 0 to BindList.Count - 1 do begin
+      {$R-}
       Bind := @FMYSQL_aligned_BINDs[I];
+      {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
       if (Bind^.is_null_address^ = 0) and (Bind^.buffer = nil) and (BindList[i].BindType = zbtLob) then begin
         P := IZBlob(BindList[I].Value).GetBuffer(FRawTemp, Len);
         OffSet := 0;
