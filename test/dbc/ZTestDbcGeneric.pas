@@ -1823,6 +1823,7 @@ begin
       Txn[False].Rollback;
       Stmt := Connection.CreateStatement;
       Stmt.ExecuteUpdate('delete from people where p_id > 9');
+      Rs.Close;
     end;
   end;
 end;
