@@ -62,7 +62,7 @@ type
   TDbcProxyCleanupThread = class(TThread)
     private
       FConnManager: TDbcProxyConnectionManager;
-      FIdleTime: Integer;
+      FIdleTimeout: Integer;
     protected
       procedure Execute; override;
     public
@@ -78,7 +78,7 @@ constructor TDbcProxyCleanupThread.Create(ConnManager: TDbcProxyConnectionManage
 begin
   inherited Create(True);
   FConnManager := ConnManager;
-  FIdleTime := ConfigManager.ConnectionIdleTime;
+  FIdleTimeout := ConfigManager.ConnectionIdleTimeout;
 end;
 
 procedure TDbcProxyCleanupThread.Execute;
@@ -91,13 +91,13 @@ var
   ActionTime: Integer;
 begin
   y := 0;
-  ActionTime := FIdleTime div 2;
+  ActionTime := FIdleTimeout div 2;
   If ActionTime = 0 then
     ActionTime := 1;
   while not Terminated do begin
     y := y mod ActionTime;
     if y = 0 then begin
-      MaxTime := IncSecond(Now, FIdleTime * (-1));
+      MaxTime := IncSecond(Now, FIdleTimeout * (-1));
       for X := FConnManager.GetConnectionCount - 1 downto 0 do begin
         Conn := FConnManager.LockConnection(x);
         try
