@@ -682,10 +682,12 @@ begin
     if Ret <> SQL_SUCCESS then
       FODBCConnection.HandleErrorOrWarning(Ret, fPHDBC^, SQL_HANDLE_DBC,
         'SQLAllocHandle (SQL_HANDLE_STMT)', lcOther, Self);
-    Ret := fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_QUERY_TIMEOUT, {%H-}SQLPOINTER(fStmtTimeOut), 0);
-    if Ret <> SQL_SUCCESS then
-      FODBCConnection.HandleErrorOrWarning(Ret, fHSTMT, SQL_HANDLE_STMT,
-        'SQLSetStmtAttr (SQL_ATTR_QUERY_TIMEOUT)', lcOther, Self);
+    if fStmtTimeOut <> SQL_QUERY_TIMEOUT_DEFAULT then begin
+      Ret := fPlainDriver.SQLSetStmtAttr(fHSTMT, SQL_ATTR_QUERY_TIMEOUT, {%H-}SQLPOINTER(fStmtTimeOut), 0);
+      if Ret <> SQL_SUCCESS then
+        FODBCConnection.HandleErrorOrWarning(Ret, fHSTMT, SQL_HANDLE_STMT,
+          'SQLSetStmtAttr (SQL_ATTR_QUERY_TIMEOUT)', lcOther, Self);
+    end;
     fMoreResultsIndicator := mriUnknown;
     FHandleState := hsAllocated;
   end;
