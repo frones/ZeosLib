@@ -99,19 +99,23 @@ begin
     if y = 0 then begin
       MaxTime := IncSecond(Now, FIdleTimeout * (-1));
       for X := FConnManager.GetConnectionCount - 1 downto 0 do begin
-        Conn := FConnManager.LockConnection(x);
-        try
+        Conn := FConnManager.GetConnection(x);
+        if Assigned(Conn) then begin
           if Conn.LastAccessTime <= MaxTime then begin
-            ConnID := Conn.ID;
-            Conn.ZeosConnection.Close;
+            Conn.Lock;
+            try
+              ConnID := Conn.ID;
+              Conn.ZeosConnection.Close;
+            finally
+              Conn.Unlock;
+            end;
           end else begin
             ConnID := '';
           end;
-        finally
-          Conn.Unlock;
+          if ConnID <> '' then begin
+            FConnManager.RemoveConnection(ConnID);
+          end;
         end;
-        if ConnID <> '' then
-          FConnManager.RemoveConnection(ConnID);
       end;
     end;
     inc(y);
