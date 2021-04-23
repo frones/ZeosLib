@@ -77,7 +77,7 @@ const
   /// <author>EgonHugeist</author>
   /// <summary>generic constant for an invalid column/parameter index.</summary>
   /// <remarks>Since zeos 8.0up we use zero based index. Means the
-  ///  <c>GENERIC_INDEX</c> will be removed in future releases.</remarks>
+  ///  <c>GENERIC_INDEX</c> define will be removed in future releases.</remarks>
   InvalidDbcIndex = FirstDbcIndex-1;
 const
   { Constants from JDBC DatabaseMetadata }
@@ -374,8 +374,8 @@ type
 
   /// <author>EgonHugeist</author>
   /// <summary>Defines a batch array dml statement type</summary>
-  TZBatchArrayDMLStatementType = (
-    bastUnknown, bastDelete, bastInsert, bastUpdate);
+  TZArrayDMLStatementType = (
+    astUnknown, astDelete, astInsert, astUpdate, astOther);
 
   /// <summary>Defines a result set concurrency type.</summary>
   TZResultSetConcurrency = (rcReadOnly, rcUpdatable);
@@ -1282,8 +1282,8 @@ type
     /// <returns><c>ResultSet</c> - each row has a single String column that is
     ///  a catalog name</returns>
     function GetCatalogs: IZResultSet;
-    /// <summary>Gets the table types available in this database. The results
-    ///  are ordered by table type.
+    /// <summary>Gets the table types available in this database from a cache.
+    ///  The results are ordered by table type.
     ///  The table type is:
     ///  <c>TABLE_TYPE</c> String => table type. Typical types are "TABLE",
     ///  "VIEW", "SYSTEM TABLE", "GLOBAL TEMPORARY","LOCAL TEMPORARY", "ALIAS",
@@ -1481,7 +1481,6 @@ type
     function GetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
       const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
       const ForeignTable: string): IZResultSet;
-
     function GetTypeInfo: IZResultSet;
 
     function GetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
@@ -1844,10 +1843,12 @@ type
     ///  connection</param>
     procedure SetCursorName(const Value: String);
     /// <summary>Returns the current result as a <c>ResultSet</c> object.
-    ///  This method should be called only once per result.</summary>
+    ///  This method should be called only once per result. The last obtained
+    ///  resultset get's flushed. So this method can be called only once
+    ///  per result.</summary>
     /// <returns>the current result as a <c>ResultSet</c> object; <c>nil</c> if
-    ///  the result is an update count or there are no more results.</returns>
-    /// <seealso cref="Execute">Execute</seealso>
+    ///  the result is an update count or there are no more results</returns>
+    /// <remarks>see execute</remarks>
     function GetResultSet: IZResultSet;
     /// <summary>Returns the current result as an update count;
     ///  if the result is a <c>ResultSet</c> object or there are no more results, -1
