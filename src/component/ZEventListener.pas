@@ -209,6 +209,7 @@ begin
       Con := FListener.GetConnection;
       Con.CloseEventListener(FListener);
     end;
+    FActive := Value;
   finally
     Con := nil;
   end;
