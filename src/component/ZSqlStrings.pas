@@ -49,6 +49,11 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
+{ constributor(s)
+  Alexs
+  EgonHugeist
+  Mark Deams
+}
 unit ZSqlStrings;
 
 interface
@@ -61,20 +66,31 @@ uses
   ZDbcIntfs, ZTokenizer, ZGenericSqlToken, ZCompatibility;
 
 type
-  {** Represents a SQL statement description object. }
+  /// <summary>Implements a SQL statement description object.</summary>
   TZSQLStatement = class (TObject)
   private
     FSQL: string;
     FParamIndices: TIntegerDynArray;
     FParams: TStrings;
     FParamNamesArray: TStringDynArray;
-
+    /// <summary>Gets a parameters count for this statement.</summary>
+    /// <returns>a parameters count.</returns>
     function GetParamCount: Integer;
+    /// <summary>Gets a parameter name by it's index inside the statement.</summary>
+    /// <param>"Index" the parameter index.
+    /// <returns>a parameter name.</returns>
     function GetParamName(Index: Integer): string;
+    /// <summary>Gets an array of parameter names.</summary>
+    /// <returns>an array of parameter names.</returns>
     function GetParamNamesArray: TStringDynArray;
   public
+    /// <summary>Creates a SQL statement object and assignes the main properties.
+    /// <param>"SQL" a SQL statement.</param>
+    /// <param>"ParamIndices" an array of parameter indices.</param>
+    /// <param>"Params" a list with all parameter names.</param>
     constructor Create(const SQL: string; const ParamIndices: TIntegerDynArray;
       Params: TStrings);
+  public
     property SQL: string read FSQL;
     property ParamCount: Integer read GetParamCount;
     property ParamNames[Index: Integer]: string read GetParamName;
@@ -82,10 +98,7 @@ type
     property ParamNamesArray: TStringDynArray read FParamNamesArray;
   end;
 
-  {** Imlements a string list with SQL statements. }
-
-  { TZSQLStrings }
-
+  /// <summary>Implements a string list with SQL statements.</summary>
   TZSQLStrings = class (TStringList)
   private
     {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FDataset: TComponent;
@@ -95,23 +108,51 @@ type
     FMultiStatements: Boolean;
     FParamChar: Char;
     FDoNotRebuildAll: Boolean;
-
+    /// <summary>Gets the parameter count.</summary>
+    /// <returns>a count of SQL parameters.</returns>
     function GetParamCount: Integer;
+    /// <summary>Gets parameter name by it's index.</summary>
+    /// <param>"Index" a parameter index.</param>
+    /// <returns>a parameter name.</returns>
     function GetParamName(Index: Integer): string;
+    /// <summary>Gets a SQL statement by it's index.</summary>
+    /// <param>"Index" a SQL statement index.</param>
+    /// <returns>a SQL statement object.</returns>
     function GetStatement(Index: Integer): TZSQLStatement;
+    /// <summary>Gets a SQL statements count.</summary>
+    /// <returns>a SQL statements count.</returns>
     function GetStatementCount: Integer;
+    /// <summary>Gets a Tokenizer object from owners connection or an generic
+    ///  tokenizer if not connected.</summary>
+    /// <returns>a Tokenizer object.</returns>
     function GetTokenizer: IZTokenizer;
+    /// <summary>Sets a new correspondent dataset or Processor component.</summary>
+    /// <param>"Value" a new dataset object.</param>
     procedure SetDataset(Value: TComponent);
+    /// <summary>Sets a new ParamCheck value.</summary>
+    /// <param>"Value" a new ParamCheck value.</param>
     procedure SetParamCheck(Value: Boolean);
+    /// <summary>Sets a new ParamChar value.</summary>
+    /// <param>"Value" a new ParamCheck value.</param>
     procedure SetParamChar(Value: Char);
+    /// <summary>Sets a new MultiStatements value.</summary>
+    /// <param>"Value" a new MultiStatements value.</param>
     procedure SetMultiStatements(Value: Boolean);
   protected
+    /// <summary>Performs action when the content of this string list is
+    ///  changed.</summary>
     procedure Changed; override;
+    /// <summary>Finds a parameter by it's name.</summary>
+    /// <param>"ParamName" a parameter name.</param>
+    /// <returns>an index of found parameters or -1 if nothing was found.</returns>
     function FindParam(const ParamName: string): Integer;
+    /// <summary>Rebuilds all SQL statements.</summary>
     procedure RebuildAll;
     procedure SetTextStr(const Value: string); override;
   public
+    /// <summary>Creates a SQL strings object and assigns the main properties.</summary>
     constructor Create;
+    /// <summary>Destroys this object and cleanups the memory.</summary>
     destructor Destroy; override;
   public
     procedure Assign(Source: TPersistent); override;
@@ -133,12 +174,6 @@ uses ZMessages, ZAbstractRODataset, ZSqlProcessor;
 
 { TZSQLStatement }
 
-{**
-  Creates a SQL statement object and assignes the main properties.
-  @param SQL a SQL statement.
-  @param ParamIndices a parameter indices.
-  @param Params a list with all parameter names.
-}
 constructor TZSQLStatement.Create(const SQL: string;
   const ParamIndices: TIntegerDynArray; Params: TStrings);
 begin
@@ -148,10 +183,6 @@ begin
   FParamNamesArray := GetParamNamesArray;
 end;
 
-{**
-  Gets a parameters count for this statement.
-  @return a parameters count.
-}
 function TZSQLStatement.GetParamCount: Integer;
 begin
   if Assigned(FParamIndices) then
@@ -159,21 +190,13 @@ begin
   else Result := 0;
 end;
 
-{**
-  Gets a parameter name by it's index inside the statement.
-  @return a parameter name.
-}
 function TZSQLStatement.GetParamName(Index: Integer): string;
 begin
-  if Assigned(FParamIndices) then
-    Result := FParams[FParamIndices[Index + Low(FParamIndices)]]
+  if Assigned(FParamIndices)
+  then Result := FParams[FParamIndices[Index + Low(FParamIndices)]]
   else Result := '';
 end;
 
-{**
-  Gets an array of parameter names.
-  @return an array of parameter names.
-}
 function TZSQLStatement.GetParamNamesArray: TStringDynArray;
 var
   I: Integer;
@@ -186,9 +209,6 @@ end;
 
 { TZSQLStrings }
 
-{**
-  Creates a SQL strings object and assigns the main properties.
-}
 constructor TZSQLStrings.Create;
 begin
   inherited Create; { -> needed to run the TestSuite else Inheritance(Self).Methods fails}
@@ -199,9 +219,6 @@ begin
   FParamChar :=':';
 end;
 
-{**
-  Destroys this object and cleanups the memory.
-}
 destructor TZSQLStrings.Destroy;
 begin
   FreeAndNil(FParams);
@@ -210,29 +227,16 @@ begin
   inherited Destroy;
 end;
 
-{**
-  Gets a parameter count.
-  @return a count of SQL parameters.
-}
 function TZSQLStrings.GetParamCount: Integer;
 begin
   Result := FParams.Count;
 end;
 
-{**
-  Gets parameter name by it's index.
-  @param Index a parameter index.
-  @return a parameter name.
-}
 function TZSQLStrings.GetParamName(Index: Integer): string;
 begin
   Result := FParams[Index];
 end;
 
-{**
-  Gets a SQL statements count.
-  @return a SQL statements count.
-}
 function TZSQLStrings.GetStatementCount: Integer;
 begin
   Result := FStatements.Count;
@@ -258,24 +262,14 @@ begin
 end;
 {$WARN SYMBOL_DEPRECATED ON}
 
-{**
-  Gets a SQL statement by it's index.
-  @param Index a SQL statement index.
-  @return a SQL statement object.
-}
 function TZSQLStrings.GetStatement(Index: Integer): TZSQLStatement;
 begin
   Result := TZSQLStatement(FStatements[Index]);
 end;
 
-{**
-  Sets a new ParamCheck value.
-  @param Value a new ParamCheck value.
-}
 procedure TZSQLStrings.SetParamCheck(Value: Boolean);
 begin
-  if FParamCheck <> Value then
-  begin
+  if FParamCheck <> Value then begin
     FParamCheck := Value;
     RebuildAll;
   end;
@@ -283,18 +277,13 @@ end;
 
 procedure TZSQLStrings.SetTextStr(const Value: string);
 begin
-  if Trim(Value) <> Trim(Text) then //prevent rebuildall if nothing changed see:
+  if Trim(Value) <> Trim(Text) then //prevent rebuildall if nothing changed
     inherited SetTextStr(Value);
 end;
 
-{**
-  Sets a new ParamChar value.
-  @param Value a new ParamCheck value.
-}
 procedure TZSQLStrings.SetParamChar(Value: Char);
 begin
-  if FParamChar <> Value then
-  begin
+  if FParamChar <> Value then begin
     If not(GetTokenizer.GetCharacterState(Value) is TZSymbolstate) Then
       raise EZDatabaseError.Create(SIncorrectParamChar+' : '+Value);
     FParamChar := Value;
@@ -302,23 +291,14 @@ begin
   end;
 end;
 
-{**
-  Sets a new MultiStatements value.
-  @param Value a new MultiStatements value.
-}
 procedure TZSQLStrings.SetMultiStatements(Value: Boolean);
 begin
-  if FMultiStatements <> Value then
-  begin
+  if FMultiStatements <> Value then begin
     FMultiStatements := Value;
     RebuildAll;
   end;
 end;
 
-{**
-  Sets a new correspondent dataset object.
-  @param Value a new dataset object.
-}
 procedure TZSQLStrings.SetDataset(Value: TComponent);
 begin
   if FDataset <> Value then begin
@@ -327,11 +307,6 @@ begin
   end;
 end;
 
-{**
-  Finds a parameter by it's name.
-  @param ParamName a parameter name.
-  @return an index of found parameters or -1 if nothing was found.
-}
 function TZSQLStrings.FindParam(const ParamName: string): Integer;
 begin
   FParams.CaseSensitive := False;
@@ -342,9 +317,7 @@ const
   cAssignLeft: array[0..1] of Char = (':','=');
 var //endian save
   uAssignLeft: {$IFDEF UNICODE}Cardinal{$ELSE}Word{$ENDIF} absolute cAssignLeft;
-{**
-  Rebuilds all SQL statements.
-}
+
 procedure TZSQLStrings.RebuildAll;
 var
   Tokens: TZTokenList;
@@ -364,9 +337,7 @@ var
     Inc(TokenIndex);
   end;
 begin
-  if Assigned(FDataset) and (csLoading in FDataset.ComponentState) then
-    Exit;
-  if FDoNotRebuildAll then begin
+  if FDoNotRebuildAll or (Assigned(FDataset) and (csLoading in FDataset.ComponentState)) then begin
     FDoNotRebuildAll := False;
     Exit;
   end;
@@ -454,9 +425,6 @@ begin
   inherited Assign(Source);
 end;
 
-{**
-  Performs action when the content of this string list is changed.
-}
 procedure TZSQLStrings.Changed;
 begin
   if UpdateCount = 0 then
