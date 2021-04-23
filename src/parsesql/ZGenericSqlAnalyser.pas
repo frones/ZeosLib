@@ -522,8 +522,18 @@ var
 begin
   TokenIndex := 1;
   SkipOptionTokens(SelectTokens, TokenIndex, Self.SelectOptions);
-
+  {$IFDEF WITH_VAR_INIT_WARNING}
+  Catalog := '';
+  Schema := '';
+  Table := '';
+  Field := '';
+  Alias := '';
+  ReadField := True;
+  LastWasBracketSection := False;
+  LastWasSymbol:= False;
+  {$ELSE}
   ClearElements;
+  {$ENDIF}
   while TokenIndex < SelectTokens.Count do
   begin
     CurrentValue := SelectTokens.AsString(TokenIndex);
@@ -622,7 +632,15 @@ var
 begin
   TokenIndex := 1;
 
+  {$IFDEF WITH_VAR_INIT_WARNING}
+  Catalog := '';
+  Schema := '';
+  Table := '';
+  Alias := '';
+  ReadTable := True;
+  {$ELSE}
   ClearElements;
+  {$ENDIF}
   while TokenIndex < FromTokens.Count do begin
     CurrentValue := FromTokens.AsString(TokenIndex);
     CurrentUpper := AnsiUpperCase(CurrentValue);

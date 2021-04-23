@@ -4256,6 +4256,7 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : hint local variable "Hour, Min, Sec, MSec" does not seem to be intialized} {$ENDIF}
 function AnsiSQLDateToDateTime(P: PWideChar; L: LengthInt): TDateTime;
 var
   Year, Month, Day, Hour, Min, Sec, MSec: Word;
@@ -4304,6 +4305,7 @@ begin
       else Result := Result - Tmp
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function AnsiSQLDateToDateTime(const Value: UnicodeString): TDateTime;
 var P: PWideChar;
@@ -4314,6 +4316,7 @@ begin
   else Result := AnsiSQLDateToDateTime(P, Length(Value));
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : hint local variable "Hour, Min, Sec, MSec" does not seem to be intialized} {$ENDIF}
 function AnsiSQLDateToDateTime(P: PAnsiChar; L: LengthInt): TDateTime;
 var
   Year, Month, Day, Hour, Min, Sec, MSec: Word;
@@ -4362,6 +4365,7 @@ begin
       else Result := Result - Tmp
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 function AnsiSQLDateToDateTime(const Value: RawByteString): TDateTime;
 var P: PAnsiChar;
