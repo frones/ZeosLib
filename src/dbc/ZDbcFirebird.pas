@@ -1007,12 +1007,14 @@ function TZFBEventCallback.release: Integer;
 begin
   Dec(FRefCnt);
   Result := FRefCnt;
-  if FRefCnt = 0 then
+  if FRefCnt = 0 then begin
+    FEventBlock.FBEventsCallback := nil;
     {$IFDEF AUTOREFCOUNT}
     Destroy;
     {$ELSE}
     Free;
     {$ENDIF}
+  end;
 end;
 
 { TZFirebirdEventList }

@@ -1076,6 +1076,7 @@ type
     FOnEventAlert: TZFirebirdInterbaseEventAlert;
   public
     constructor Create(Handler: TZOnEventHandler; AConnection: TZInterbaseFirebirdConnection);
+    destructor Destroy; override;
   public
     procedure AsyncQueEvents(EventBlock: PZInterbaseFirebirdEventBlock); virtual; abstract;
     procedure ProcessEvents(EventBlock: PZInterbaseFirebirdEventBlock);
@@ -1683,7 +1684,7 @@ procedure TZInterbaseFirebirdConnection.HandleErrorOrWarning(
   const LogMessage: SQLString; const Sender: IImmediatelyReleasable);
 var
   FormatStr, ErrorString: string;
-  ErrorCode: Integer;
+  isc_sqlcode, error_code: Integer;
   StatusArg, WarningArg: ISC_STATUS;
   i: Integer;
   InterbaseStatusVector: TZIBStatusVector;
@@ -1699,7 +1700,8 @@ begin
   end;
   OrgStatusVector := StatusVector;
   InterbaseStatusVector := InterpretInterbaseStatus(StatusVector);
-  ErrorCode := InterbaseStatusVector[0].SQLCode;
+  isc_sqlcode := InterbaseStatusVector[0].SQLCode;
+  error_code := InterbaseStatusVector[0].IBDataInt;
   ErrorString := '';
   for i := Low(InterbaseStatusVector) to High(InterbaseStatusVector) do begin
     AppendSepString(ErrorString, InterbaseStatusVector[i].IBMessage, '; ');
@@ -1708,16 +1710,18 @@ begin
   end;
 
   if DriverManager.HasLoggingListener then
-    LogError(LogCategory, ErrorCode, Sender, LogMessage, ErrorString);
+    LogError(LogCategory, isc_sqlcode, Sender, LogMessage, ErrorString);
   { in case second isc_status is zero(no error) and third is tagged as a warning it's a /are multiple warning(s)
     otoh it's an error with a possible warning(s)}
   if (WarningArg = isc_arg_warning)
   then ExeptionClass := EZSQLWarning
-  else if (ErrorCode = {isc_network_error..isc_net_write_err,} isc_lost_db_connection) or
-      (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_idle) or
-      (ErrorCode = isc_att_shut_db_down) or (ErrorCode = isc_att_shut_engine)
-    then ExeptionClass := EZSQLConnectionLost
-    else ExeptionClass := EZIBSQLException;
+  else if LogCategory = lcConnect
+    then ExeptionClass := EZIBSQLException
+    else case error_code of
+      isc_network_error..isc_net_write_err, isc_lost_db_connection, isc_att_shut_idle,
+      isc_att_shut_db_down, isc_att_shut_engine: ExeptionClass := EZSQLConnectionLost
+      else ExeptionClass := EZIBSQLException;
+    end;
   //used for clearing the current status vector, OTH, we permanently need a new IStatus, or IStatus.Init.
   FillChar(Pointer(OrgStatusVector)^, (PAnsiChar(StatusVector) - PAnsiChar(OrgStatusVector))+SizeOf(ISC_STATUS), #0);//init the vector again for FB3+
   if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '') then
@@ -1726,12 +1730,12 @@ begin
     else FormatStr := SSQLError4
   else FormatStr := SSQLError2;//changed by Fr0st SSQLError2;
   if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '')
-  then FLogMessage := Format(FormatStr, [ErrorString, ErrorCode, LogMessage])
-  else FLogMessage := Format(FormatStr, [ErrorString, ErrorCode]);
+  then FLogMessage := Format(FormatStr, [ErrorString, isc_sqlcode, LogMessage])
+  else FLogMessage := Format(FormatStr, [ErrorString, isc_sqlcode]);
   if ExeptionClass = EZIBSQLException //added by Fr0st
   then Error := EZIBSQLException.Create(FLogMessage, InterbaseStatusVector, LogMessage)
   else begin
-    Error := ExeptionClass.CreateWithCode(ErrorCode, FlogMessage);
+    Error := ExeptionClass.CreateWithCode(isc_sqlcode, FlogMessage);
     if ExeptionClass = EZSQLWarning then begin
       ClearWarnings;
       if not RaiseWarnings then begin
@@ -5890,6 +5894,13 @@ constructor TZFirebirdInterbaseEventList.Create(Handler: TZOnEventHandler;
 begin
   inherited Create(Handler);
   FConnection := AConnection;
+end;
+
+destructor TZFirebirdInterbaseEventList.Destroy;
+begin
+  inherited;
+  if FEventBlocks <> nil then try
+    UnregisterEvents except end;
 end;
 
 procedure TZFirebirdInterbaseEventList.ProcessEvents(
