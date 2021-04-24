@@ -337,22 +337,20 @@ var
     Inc(TokenIndex);
   end;
 begin
-  if FDoNotRebuildAll or (Assigned(FDataset) and (csLoading in FDataset.ComponentState)) then begin
+  { Optimization for empty query. }
+  S := Text;
+  If (Trim(S) = '') or FDoNotRebuildAll then begin
     FDoNotRebuildAll := False;
     Exit;
   end;
-
-  FParams.Clear;
+  if not (Assigned(FDataset) and (csLoading in FDataset.ComponentState)) then
+    FParams.Clear;
   FStatements.Clear;
   SQL := '';
   ParamIndexCount := 0;
   {$IFDEF WITH_VAR_INIT_WARNING}ParamIndices := nil;{$ENDIF}
   SetLength(ParamIndices, ParamIndexCount);
 
-  { Optimization for empty query. }
-  S := Text;
-  If Length(Trim(S)) = 0 then
-    Exit;
   { Optimization for single query without parameters. }
   if (not FParamCheck or (Pos(FParamChar, S) = 0))
     and (not FMultiStatements or (Pos(';', S) = 0)) then
