@@ -134,7 +134,7 @@ begin
   Server_service_RegisterZeosProxyService();
   AppObject := TwstFPHttpListener.Create(ConfigManager.IPAddress, ConfigManager.ListeningPort);
   try
-    WriteLn('"Zeos Proxy Server listening at:');
+    WriteLn('Zeos Proxy Server listening at:');
     WriteLn('');
     WriteLn('http://' + ConfigManager.IPAddress+ ':'+ IntToStr(ConfigManager.ListeningPort)+ '/');
     WriteLn('');
