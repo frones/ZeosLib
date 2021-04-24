@@ -338,13 +338,18 @@ var
   end;
 begin
   { Optimization for empty query. }
-  S := Text;
-  If (Trim(S) = '') or FDoNotRebuildAll then begin
+  If FDoNotRebuildAll then begin
     FDoNotRebuildAll := False;
     Exit;
   end;
-  if not (Assigned(FDataset) and (csLoading in FDataset.ComponentState)) then
+  if (FDataset = nil) or not (csLoading in FDataset.ComponentState) then
     FParams.Clear;
+  S := Text;
+  NormalizedParam := Trim(S);
+  if NormalizedParam = '' then
+    Exit;
+
+
   FStatements.Clear;
   SQL := '';
   ParamIndexCount := 0;
