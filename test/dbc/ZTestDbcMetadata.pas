@@ -723,7 +723,7 @@ begin
     Exit;
   end;
 
-  ResultSet := MD.GetTriggers(Catalog, Schema, '', 'INSERT_RETURNING_BI');
+  ResultSet := MD.GetTriggers(Catalog, Schema, '', MD.GetConnection.GetMetadata.AddEscapeCharToWildcards('INSERT_RETURNING_BI'));
   PrintResultSet(ResultSet, False);
   Check(ResultSet.Next, 'There should be a trigger "INSERT_RETURNING_BI"');
 
