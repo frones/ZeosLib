@@ -88,7 +88,7 @@ type
 
   TZSQLStrings = class (TStringList)
   private
-    FDataset: TObject;
+    {$IFDEF AUTOREFCOUNT}[weak]{$ENDIF}FDataset: TComponent;
     FParamCheck: Boolean;
     FStatements: TObjectList;
     FParams: TStringList;
@@ -100,7 +100,7 @@ type
     function GetStatement(Index: Integer): TZSQLStatement;
     function GetStatementCount: Integer;
     function GetTokenizer: IZTokenizer;
-    procedure SetDataset(Value: TObject);
+    procedure SetDataset(Value: TComponent);
     procedure SetParamCheck(Value: Boolean);
     procedure SetParamChar(Value: Char);
     procedure SetMultiStatements(Value: Boolean);
@@ -113,7 +113,7 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    property Dataset: TObject read FDataset write SetDataset;
+    property Dataset: TComponent read FDataset write SetDataset;
     property ParamCheck: Boolean read FParamCheck write SetParamCheck;
     property ParamCount: Integer read GetParamCount;
     property ParamChar: Char read FParamChar write SetParamChar;
@@ -321,10 +321,9 @@ end;
   Sets a new correspondent dataset object.
   @param Value a new dataset object.
 }
-procedure TZSQLStrings.SetDataset(Value: TObject);
+procedure TZSQLStrings.SetDataset(Value: TComponent);
 begin
-  if FDataset <> Value then
-  begin
+  if FDataset <> Value then begin
     FDataset := Value;
     RebuildAll;
   end;
@@ -365,17 +364,20 @@ var
   end;
 
 begin
-  if not (Assigned(FParams) and Assigned(FStatements)) then exit; //Alexs
+  if (FDataset = nil) or not (csLoading in FDataset.ComponentState) then
+    FParams.Clear;
+  SQL := Text;
+  ParamName := Trim(SQL);
+  { Optimization for empty query. }
+  if ParamName = '' then
+    Exit;
 
-  FParams.Clear;
+
   FStatements.Clear;
   SQL := '';
   ParamIndexCount := 0;
   SetLength(ParamIndices, ParamIndexCount);
   
-  { Optimization for empty query. }
-  If Length(Trim(Text)) = 0 then
-    Exit;
 
   { Optimization for single query without parameters. }
   if (not FParamCheck or (Pos(FParamChar, Text) = 0))
