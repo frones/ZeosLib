@@ -1733,7 +1733,7 @@ begin
   then FLogMessage := Format(FormatStr, [ErrorString, isc_sqlcode, LogMessage])
   else FLogMessage := Format(FormatStr, [ErrorString, isc_sqlcode]);
   if error_code <> 0 then
-    AppendSepString(FLogMessage, ' GDS Code: ' + SysUtils.IntToStr(error_code), ';');
+    FLogMessage := FLogMessage +  '; GDS Code: ' + SysUtils.IntToStr(error_code);
   if ExeptionClass = EZIBSQLException //added by Fr0st
   then Error := EZIBSQLException.Create(FLogMessage, InterbaseStatusVector, LogMessage)
   else begin
