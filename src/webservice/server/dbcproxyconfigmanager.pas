@@ -79,11 +79,15 @@ type
     FListeningPort: Word;
     FIPAddress: String;
     FConnectionIdleTimeOut: Cardinal;
+    FDbPrefix: String;
+    FSecurityPrefix: String;
   public
     property ListeningPort: Word read FListeningPort;
     property IPAddress: String read FIPAddress;
     property ConnectionIdleTimeout: Cardinal read FConnectionIdleTimeout;
-    function ConstructUrl(ConfigName, UserName, Password: String): String;
+    property DbPrefix: String read FDbPrefix;
+    property SecurityPrefix: String read FSecurityPrefix;
+    function ConstructUrl(ConfigName, UserName, Password: String; CheckSecurity: Boolean = True): String;
     procedure LoadConfigInfo(SourceFile: String);
     constructor Create;
     destructor Destroy; override;
@@ -100,9 +104,18 @@ begin
 end;
 
 destructor TDbcProxyConfigManager.Destroy;
+var
+  x: Integer;
 begin
-  if Assigned(ConfigList) then
+  if Assigned(ConfigList) then begin
+    for x := 0 to ConfigList.Count - 1 do
+      if Assigned(ConfigList.Items[x].SecurityModule) then begin
+        ConfigList.Items[x].SecurityModule.Free;
+        //doesn't work, so don't even try:
+        //ConfigList.Items[x].SecurityModule := nil;
+      end;
     FreeAndNil(ConfigList);
+  end;
   inherited;
 end;
 
@@ -112,14 +125,12 @@ var
   IniFile: TIniFile;
   Sections: TStringList;
   Section: String;
-  DbPrefix: String;
-  SecPrefix: String;
   ModuleType: String;
 begin
   IniFile := TIniFile.Create(SourceFile, TEncoding.UTF8);
   try
-    DbPrefix := IniFile.ReadString('general', 'Database Prefix', 'db.');
-    SecPrefix := IniFile.ReadString('general', 'Security Prefix', 'sec.');
+    FDbPrefix := IniFile.ReadString('general', 'Database Prefix', 'db.');
+    FSecurityPrefix := IniFile.ReadString('general', 'Security Prefix', 'sec.');
     FListeningPort := IniFile.ReadInteger('general', 'Listening Port', 8000);
     FIPAddress := IniFile.ReadString('general', 'IP Address', '127.0.0.1');
     FConnectionIdleTimeout := IniFile.ReadInteger('general', 'Connection Idle Timeout', 86400); {Default to one day}
@@ -140,14 +151,10 @@ begin
 
           Section := IniFile.ReadString(Section, 'Security Module', '');
           if Section <> '' then begin
-            Section := SecPrefix + Section;
-            ModuleType := LowerCase(IniFile.ReadString(Section, 'Type', ''));
-            if ModuleType = 'yubiotp' then begin
-              ConfigInfo.SecurityModule := TZYubiOtpSecurityModule.Create;
-              ConfigInfo.SecurityModule.LoadConfig(IniFile, Section);
-            end else begin
-              raise Exception.Create('Security module of type ' + ModuleType + ' is unknown.');
-            end;
+            Section := SecurityPrefix + Section;
+            ModuleType := IniFile.ReadString(Section, 'Type', '');
+            ConfigInfo.SecurityModule := GetSecurityModule(ModuleType);
+            ConfigInfo.SecurityModule.LoadConfig(IniFile, Section);
           end else begin
             ConfigInfo.SecurityModule := nil;
           end;
@@ -164,7 +171,7 @@ begin
   end;
 end;
 
-function TDbcProxyConfigManager.ConstructUrl(ConfigName, UserName, Password: String): String;
+function TDbcProxyConfigManager.ConstructUrl(ConfigName, UserName, Password: String; CheckSecurity: Boolean = True): String;
 var
   x: Integer;
   found: Boolean;
@@ -182,7 +189,7 @@ begin
 
   if not found then raise Exception.Create('No config named ' + ConfigName + ' was found.');
 
-  if Assigned(Cfg.SecurityModule)
+  if CheckSecurity and Assigned(Cfg.SecurityModule)
     then Cfg.SecurityModule.CheckPassword(UserName, Password, ConfigName);
 
   Result := DriverManager.ConstructURL(Cfg.Protocol, Cfg.HostName, Cfg.Database, UserName, Password, Cfg.Port, nil, Cfg.LibraryLocation);

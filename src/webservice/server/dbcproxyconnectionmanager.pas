@@ -118,7 +118,7 @@ begin
   Result := Nil;
   Synchronizer.Beginread;
   try
-    if List.Count >= Index then
+    if Index >= List.Count then
       Result := Nil
     else
       Result := List.Items[Index];

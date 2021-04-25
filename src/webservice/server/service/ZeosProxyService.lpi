@@ -74,6 +74,7 @@
       <Unit6>
         <Filename Value="..\dbcproxyconfigmanager.pas"/>
         <IsPartOfProject Value="True"/>
+        <UnitName Value="DbcProxyConfigManager"/>
       </Unit6>
       <Unit7>
         <Filename Value="..\dbcproxyconnectionmanager.pas"/>
@@ -82,6 +83,7 @@
       <Unit8>
         <Filename Value="..\dbcproxysecuritymodule.pas"/>
         <IsPartOfProject Value="True"/>
+        <UnitName Value="DbcProxySecurityModule"/>
       </Unit8>
       <Unit9>
         <Filename Value="..\yubiotp.pas"/>
@@ -101,7 +103,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\core;..\..\..\parsesql;..\..\..\plain;..\..\..\dbc"/>
+      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\core;..\..\..\parsesql;..\..\..\plain;..\..\..\dbc;..\DelphiOTP"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Other>

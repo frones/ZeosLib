@@ -84,7 +84,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\..\src\core;..\..\..\..\src\parsesql;..\..\..\..\src\plain;..\..\..\..\src\dbc"/>
+      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\..\src\core;..\..\..\..\src\parsesql;..\..\..\..\src\plain;..\..\..\..\src\dbc;..\DelphiOTP"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>
