@@ -1705,7 +1705,7 @@ begin
   ErrorString := '';
   for i := Low(InterbaseStatusVector) to High(InterbaseStatusVector) do begin
     AppendSepString(ErrorString, InterbaseStatusVector[i].IBMessage, '; ');
-    if AddLogMsgToExceptionOrWarningMsg and (InterbaseStatusVector[i].IBMessage <> '') then
+    if AddLogMsgToExceptionOrWarningMsg {and (InterbaseStatusVector[i].IBMessage <> '')} then // Why do we do that?
       AppendSepString(ErrorString, InterbaseStatusVector[i].SQLMessage, '; ');
   end;
 
@@ -1732,6 +1732,8 @@ begin
   if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '')
   then FLogMessage := Format(FormatStr, [ErrorString, isc_sqlcode, LogMessage])
   else FLogMessage := Format(FormatStr, [ErrorString, isc_sqlcode]);
+  if error_code <> 0 then
+    AppendSepString(FLogMessage, ' GDS Code: ' + SysUtils.IntToStr(error_code), ';');
   if ExeptionClass = EZIBSQLException //added by Fr0st
   then Error := EZIBSQLException.Create(FLogMessage, InterbaseStatusVector, LogMessage)
   else begin

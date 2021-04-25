@@ -409,12 +409,12 @@ end
 /* Stored procedure: ABTEST_BIGINT                              */
 /*==============================================================*/
 
-create or alter procedure abtest_bigint (
-    P1 bigint,
-    P2 bigint,
+create /*or alter*/ procedure abtest_bigint (
+    P1 NUMERIC(18,0),
+    P2 NUMERIC(18,0),
     P3 varchar(10))
 returns (
-    P4 bigint,
+    P4 NUMERIC(18,0),
     P5 varchar(30))
 as
 begin
