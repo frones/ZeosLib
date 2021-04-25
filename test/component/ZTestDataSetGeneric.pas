@@ -2232,10 +2232,19 @@ begin
     Check(Query.Active);
     Query.Delete;
   finally
-    Connection.ExecuteDirect('delete from people where p_id >= '+SysUtils.IntToStr(TEST_ROW_ID-1));
-    FreeAndNil(Query);
-    FreeAndNil(NewConnection);
-    FreeAndNil(UpdateSQL);
+    if Assigned(NewConnection) then begin
+      NewConnection.Disconnect;
+      FreeAndNil(NewConnection);
+    end;
+    if Assigned(Query) then
+      FreeAndNil(Query);
+    if Assigned(UpdateSQL) then
+      FreeAndNil(UpdateSQL);
+    try
+      Connection.ExecuteDirect('delete from people where p_id >= '+SysUtils.IntToStr(TEST_ROW_ID-1));
+    finally
+      Connection.Disconnect;
+    end;
   end;
 end;
 
