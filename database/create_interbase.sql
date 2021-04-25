@@ -409,8 +409,8 @@ end
 /* Stored procedure: ABTEST_BIGINT                              */
 /*==============================================================*/
 
-create /*or alter*/ procedure abtest_bigint (
-    P1 NUMERIC(18,0),
+create /*or alter*/ procedure abtest_bigint ( /* Interbase doesn't know about the or alter part*/
+    P1 NUMERIC(18,0), /* Interbase doesn't know bigint. That is why we use numeric(18,0), which gets mapped to bigint internally... */
     P2 NUMERIC(18,0),
     P3 varchar(10))
 returns (
