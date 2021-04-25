@@ -253,7 +253,13 @@ type
     procedure SetQueryTimeout(Value: Integer); virtual;
     procedure Cancel; virtual;
     procedure SetCursorName(const Value: String); virtual;
-
+    /// <summary>Returns the current result as a <c>ResultSet</c> object.
+    ///  This method should be called only once per result. The last obtained
+    ///  resultset get's flushed. So this method can be called only once
+    ///  per result.</summary>
+    /// <returns>the current result as a <c>ResultSet</c> object; <c>nil</c>
+    ///  if the result is an update count or there are no more results</returns>
+    /// <remarks>see execute</remarks>
     function GetResultSet: IZResultSet; virtual;
     function GetUpdateCount: Integer; virtual;
     function GetMoreResults: Boolean; virtual;
@@ -479,6 +485,7 @@ type
     procedure CheckParameterIndex(var Value: Integer); virtual;
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
+    /// <summary>Removes eventual structures for binding input parameters.</summary>
     procedure UnPrepareInParameters; virtual;
     procedure PrepareOpenResultSetForReUse; override;
     procedure PrepareLastResultSetForReUse; override;
@@ -1063,6 +1070,7 @@ type
   ///  question marks in the bindlist</summary>
   TZRawParamDetectPreparedStatement = class(TZRawPreparedStatement)
   protected
+    FBracketClosePos, FBracketOpenPos, FFirstQuestionMark: PChar;
     class function GetBindListClass: TZBindListClass; override;
   public
     function GetRawEncodedSQL(const SQL: SQLString): RawByteString; override;
@@ -2050,14 +2058,6 @@ begin
   Result := FStatementId;
 end;
 
-{**
-  Returns the current result as a <code>ResultSet</code> object.
-  This method should be called only once per result.
-
-  @return the current result as a <code>ResultSet</code> object;
-  <code>null</code> if the result is an update count or there are no more results
-  @see #execute
-}
 function TZAbstractStatement.GetResultSet: IZResultSet;
 begin
   Result := FLastResultSet;
@@ -4277,9 +4277,6 @@ begin
   end;
 end;
 
-{**
-  Removes eventual structures for binding input parameters.
-}
 procedure TZAbstractPreparedStatement.UnPrepareInParameters;
 begin
   SetParamCount(0);
@@ -4565,7 +4562,7 @@ end;
 
 function TZRawParamDetectPreparedStatement.GetRawEncodedSQL(const SQL: SQLString): RawByteString;
 var
-  I, InParamCount, N, C: Integer;
+  I, InParamCount, N, C, BracketCount: Integer;
   Tokens: TZTokenList;
   Token: PZToken;
   Tokenizer: IZTokenizer;
@@ -4579,6 +4576,10 @@ var
   {$ENDIF}
   ComparePrefixTokens: PPreparablePrefixTokens;
 begin
+  FBracketClosePos := nil;
+  FBracketOpenPos := nil;
+  FFirstQuestionMark := nil;
+  BracketCount := 0;
   Result := {$IFDEF UNICODE}''{$ELSE}SQL{$ENDIF};
   if SQL = '' then Exit;
   ParamFound := (ZFastCode.{$IFDEF USE_FAST_CHARPOS}CharPos{$ELSE}Pos{$ENDIF}('?', SQL) > 0);
@@ -4623,29 +4624,48 @@ begin
               end;
             ComparePrefixTokens := nil; //stop compare sequence
           end;
-        if (Token.L = 1) and (Token.P^ = Char('?')) then begin
-          if BindList.Capacity <= InParamCount then
-            TZQuestionMarkBindList(BindList).Grow;
-          {$IFDEF UNICODE}
-          if (FirstComposeToken <> nil) then begin
-            Token := Tokens[I-1];
-            L := (Token.P-FirstComposeToken.P)+ Token.L;
-            if (L = 1) and (Ord(FirstComposeToken.P^) <= 127) //micro optimization if previous token is just a ',' f.e.
-            then ResultWriter.AddChar(AnsiChar(FirstComposeToken.P^), Result)
-            else begin
-              PUnicodeToRaw(FirstComposeToken.P, L, FClientCP, FRawTemp);
-              ResultWriter.AddText(FRawTemp, Result);
+        if (Token.L = 1) then begin
+          if (Token.P^ = '(') then begin
+            if (FFirstQuestionMark = nil) and (FBracketOpenPos = nil) then begin
+              FBracketOpenPos := Token.P;
+              BracketCount := 0;
+              FBracketClosePos := nil;
             end;
-            if I < Tokens.Count-1
-            then FirstComposeToken := Tokens[I+1]
-            else FirstComposeToken := nil;
+            Inc(BracketCount);
+          end else if (Token.P^ = ')') and (FBracketOpenPos <> nil) then begin
+            if (FFirstQuestionMark = nil)
+            then FBracketOpenPos := nil
+            else begin
+              Dec(BracketCount);
+              if BracketCount = 0 then
+                FBracketClosePos := Token.P;
+            end;
+          end else if (Token.P^ = Char('?')) then begin
+            if BindList.Capacity <= InParamCount then
+              TZQuestionMarkBindList(BindList).Grow;
+            if (FFirstQuestionMark = nil) then
+              FFirstQuestionMark := Token.P;
+            {$IFDEF UNICODE}
+            if (FirstComposeToken <> nil) then begin
+              Token := Tokens[I-1];
+              L := (Token.P-FirstComposeToken.P)+ Token.L;
+              if (L = 1) and (Ord(FirstComposeToken.P^) <= 127) //micro optimization if previous token is just a ',' f.e.
+              then ResultWriter.AddChar(AnsiChar(FirstComposeToken.P^), Result)
+              else begin
+                PUnicodeToRaw(FirstComposeToken.P, L, FClientCP, FRawTemp);
+                ResultWriter.AddText(FRawTemp, Result);
+              end;
+              if I < Tokens.Count-1
+              then FirstComposeToken := Tokens[I+1]
+              else FirstComposeToken := nil;
+            end;
+            TZQuestionMarkBindList(BindList)[InParamCount].QMarkPosition := ResultWriter.GetCurrentLength(Result);
+            ResultWriter.AddChar(AnsiChar('?'), Result);
+            {$ELSE}
+            TZQuestionMarkBindList(BindList)[InParamCount].QMarkPosition := (Token.P-P);
+            {$ENDIF}
+            Inc(InParamCount);
           end;
-          TZQuestionMarkBindList(BindList)[InParamCount].QMarkPosition := ResultWriter.GetCurrentLength(Result);
-          ResultWriter.AddChar(AnsiChar('?'), Result);
-          {$ELSE}
-          TZQuestionMarkBindList(BindList)[InParamCount].QMarkPosition := (Token.P-P);
-          {$ENDIF}
-          Inc(InParamCount);
         end;
       end;
      {$IFDEF UNICODE}

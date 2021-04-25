@@ -195,6 +195,14 @@ type
       const {%H-}TableNamePattern: string; const {%H-}Types: TStringDynArray): IZResultSet; virtual;
     function UncachedGetSchemas: IZResultSet; virtual;
     function UncachedGetCatalogs: IZResultSet; virtual;
+    /// <summary>Gets the table types available in this database. The results
+    ///  are ordered by table type.
+    ///  The table type is:
+    ///  <c>TABLE_TYPE</c> String => table type. Typical types are "TABLE",
+    ///  "VIEW", "SYSTEM TABLE", "GLOBAL TEMPORARY","LOCAL TEMPORARY", "ALIAS",
+    ///  "SYNONYM".</summary>
+    /// <returns><c>ResultSet</c> - each row has a single String column that is
+    ///  a table type</returns>
     function UncachedGetTableTypes: IZResultSet; virtual;
     /// <summary>Gets a description of table columns available in
     ///  the specified catalog.

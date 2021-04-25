@@ -589,8 +589,8 @@ begin
       Events.Add('zeostest'+IntToStr(I));;
     Listener.Listen(Events, OnEvent);
     Check(Listener.IsListening);
-    Sleep(100);
-//    CheckEquals(0, FEventsReceived.Count, 'There should no event beeing  posted.');
+    Sleep(10);
+    CheckEquals(0, FEventsReceived.Count, 'There should no event beeing  posted.');
     S := 'EXECUTE BLOCK AS BEGIN POST_EVENT '+QuotedStr(Events[0]);
     for i := 1 to Events.Count -1 do
       S := S +'; POST_EVENT '+QuotedStr(Events[i]);
@@ -625,7 +625,7 @@ procedure TZTestDbcInterbaseCase.Test_Ping;
 begin
   Connection.Open;
   CheckFalse(Connection.IsClosed);
-  Check(Connection.PingServer <> 0);
+  Check(Connection.PingServer = 0);
 end;
 
 procedure TZTestDbcInterbaseCase.Test_GENERATED_ALWAYS_64;

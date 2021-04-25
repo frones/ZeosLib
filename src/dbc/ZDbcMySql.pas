@@ -117,6 +117,7 @@ type
     FPlainDriver: TZMySQLPlainDriver;
     FLastWarning: EZSQLWarning;
     FSilentError: Boolean;
+    FHostVersion: Integer;
   protected
     procedure InternalClose; override;
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); override;
@@ -828,7 +829,10 @@ function TZMySQLConnection.PrepareStatementWithParams(const SQL: string;
 begin
   if IsClosed then
      Open;
-  Result := TZMySQLPreparedStatement.Create(Self, SQL, Info)
+  if FPlainDriver.IsMariaDBDriver and (FPlainDriver.mysql_get_client_version >= 100207) and
+     (GetHostVersion >= EncodeSQLVersioning(10,3,0))
+  then Result := TZMariaDBBatchDMLPreparedStatement.Create(Self, SQL, Info)
+  else Result := TZMySQLEmulatedBatchPreparedStatement.Create(Self, SQL, Info);
 end;
 
 function TZMySQLConnection.CreateStatementWithParams(
@@ -967,6 +971,7 @@ begin
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcDisconnect, URL.Protocol,
         'DISCONNECT FROM "'+URL.Database+'"');
+    FHostVersion := 0;
   end;
 end;
 
@@ -1136,7 +1141,9 @@ end;
 }
 function TZMySQLConnection.GetHostVersion: Integer;
 begin
-  Result := ConvertMySQLVersionToSQLVersion( FPlainDriver.mysql_get_server_version(FHandle) );
+  if FHostVersion = 0
+  then Result := ConvertMySQLVersionToSQLVersion(FPlainDriver.mysql_get_server_version(FHandle) )
+  else Result := FHostVersion;
 end;
 
 function TZMySQLConnection.GetPlainDriver: TZMySQLPlainDriver;

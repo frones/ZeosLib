@@ -63,27 +63,61 @@ uses
 
 type
 
-  {** Implements Oracle Database Driver. }
+  /// <summary>Implements Oracle Database Driver.</summary>
   TZOracleDriver = class(TZAbstractDriver)
   public
+    /// <summary>Constructs this object with default properties.</summary>
     constructor Create; override;
+    /// <summary>Attempts to create a database connection to the given URL.
+    ///  The driver should return "null" if it realizes it is the wrong kind
+    ///  of driver to connect to the given URL. This will be common, as when
+    ///  the zeos driver manager is asked to connect to a given URL it passes
+    ///  the URL to each loaded driver in turn.
+    ///  The driver should raise a EZSQLException if it is the right
+    ///  driver to connect to the given URL, but has trouble loading the
+    ///  library.</summary>
+    /// <param>"url" the TZURL Object used to find the Driver, it's library and
+    ///  assigns the connection properties.</param>
+    /// <returns>a <c>IZConnection</c> interface that represents a
+    ///  connection to the URL</returns>
     function Connect(const Url: TZURL): IZConnection; override;
+    /// <summary>Creates a generic tokenizer interface.</summary>
+    /// <returns>a created generic tokenizer object.</returns>
     function GetTokenizer: IZTokenizer; override;
+    /// <summary>Creates a generic statement analyser object.</summary>
+    /// <returns>a created generic tokenizer object as interface.</returns>
     function GetStatementAnalyser: IZStatementAnalyser; override;
   end;
 
   /// <summary>Defines an Oracle specific connection interface.</summary>
   IZOracleConnection = interface (IZConnection)
     ['{C7F36FDF-8A64-477B-A0EB-3E8AB7C09F8D}']
-
+    /// <summary>Gets a reference to Oracle connection handle.</summary>
+    /// <returns>a reference to Oracle connection handle.</returns>
     function GetConnectionHandle: POCIEnv;
+    /// <summary>Gets a reference to Oracle context handle.</summary>
+    /// <returns>a reference to Oracle context handle.</returns>
     function GetServiceContextHandle: POCISvcCtx;
+    /// <summary>Gets a reference to Oracle error handle.</summary>
+    /// <returns>a reference to Oracle error handle.</returns>
     function GetErrorHandle: POCIError;
+    /// <summary>Gets a reference to Oracle server handle.</summary>
+    /// <returns>a reference to Oracle server handle.</returns>
     function GetServerHandle: POCIServer;
+    /// <summary>Gets a reference to Oracle session handle.</summary>
+    /// <returns>a reference to Oracle session handle.</returns>
     function GetSessionHandle: POCISession;
+    /// <summary>Gets a reference to Oracle transaction handle.</summary>
+    /// <returns>a reference to Oracle transacton handle.</returns>
     function GetTransactionHandle: POCITrans;
+    /// <summary>Gets a reference to Oracle describe handle.</summary>
+    /// <returns>a reference to Oracle describe handle.</returns>
     function GetDescribeHandle: POCIDescribe;
+    /// <summary>Gets the oracle specific plaindriver object.</summary>
+    /// <returns>the plaindriver object.</returns>
     function GetPlainDriver: TZOraclePlainDriver;
+    /// <summary>Get the refrence to a fixed TByteBuffer.</summary>
+    /// <returns>the address of the TByteBuffer</returns>
     function GetByteBufferAddress: PByteBuffer;
 
     procedure HandleErrorOrWarning(ErrorHandle: POCIError; Status: sword;
@@ -121,8 +155,20 @@ type
     procedure InternalSetCatalog(const Catalog: String);
     procedure FreeAllocatedHandles;
   protected
+    /// <summary>Releases a Connection's database and resources immediately
+    ///  instead of waiting for them to be automatically released.</summary>
+    ///  Note: A Connection is automatically closed when it is garbage
+    ///  collected. Certain fatal errors also result in a closed Connection.</summary>
     procedure InternalClose; override;
+    /// <summary>Immediately execute a query and do nothing with the results.</summary>
+    /// <remarks>A new driver needs to implement one of the overloads.</remarks>
+    /// <param>"SQL" a raw encoded query to be executed.</param>
+    /// <param>"LoggingCategory" the LoggingCategory for the Logging listeners.</param>
     procedure ExecuteImmediat(const SQL: RawByteString; LoggingCategory: TZLoggingCategory); overload; override;
+    /// <summary>Immediately execute a query and do nothing with the results.</summary>
+    /// <remarks>A new driver needs to implement one of the overloads.</remarks>
+    /// <param>"SQL" a UTF16 encoded query to be executed.</param>
+    /// <param>"LoggingCategory" the LoggingCategory for the Logging listeners.</param>
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); overload; override;
   public
     procedure AfterConstruction; override;
@@ -187,7 +233,11 @@ type
     ///  optional pre-compiled statement</returns>
     function PrepareStatementWithParams(const SQL: string; Info: TStrings):
       IZPreparedStatement;
-
+    /// <summary>Creates a sequence generator object.</summary>
+    /// <param>"Sequence" a name of the sequence generator.</param>
+    /// <param>"BlockSize" a number of unique keys requested in one trip to SQL
+    ///  server.</param>
+    /// <returns>returns a created sequence object.</returns>
     function CreateSequence(const Sequence: string; BlockSize: Integer): IZSequence; override;
   public { txn support }
     /// <summary>If the current transaction is saved the current savepoint get's
@@ -261,33 +311,71 @@ type
     ///  error handling in any kind.</param>
     procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
   public
+    /// <summary>Ping Current Connection's server, if client was disconnected,
+    ///  the connection is resumed.</summary>
+    /// <returns>0 if succesfull or error code if any error occurs</returns>
     function PingServer: Integer; override;
+    /// <author>aehimself</author>
+    /// <summary>Immediately abort any kind of queries.</summary>
+    /// <returns>0 if the operation is aborted; Non zero otherwise.</returns>
     function AbortOperation: Integer; override;
-
+    /// <summary>Opens a connection to database server with specified parameters.</summary>
     procedure Open; override;
     /// <summary>Sets a catalog name in order to select a subspace of this
     ///  Connection's database in which to work. If the driver does not support
     ///  catalogs, it will silently ignore this request.</summary>
     /// <param>"value" new catalog name to be used.</param>
     procedure SetCatalog(const Value: string); override;
+    /// <summary>Returns the Connection's current catalog name.</summary>
+    /// <returns>the current catalog name or an empty string.</returns>
     function GetCatalog: string; override;
-
+    /// <summary>Clears all warnings reported for this <c>Connection</c> object.
+    ///  After a call to this method, the method <c>getWarnings</c> returns nil
+    ///  until a new warning is reported for this Connection.</summary>
     procedure ClearWarnings; override;
   public { IZOracleConnection }
+    /// <summary>Gets a reference to Oracle connection handle.</summary>
+    /// <returns>a reference to Oracle connection handle.</returns>
     function GetConnectionHandle: POCIEnv;
+    /// <summary>Gets a reference to Oracle context handle.</summary>
+    /// <returns>a reference to Oracle context handle.</returns>
     function GetServiceContextHandle: POCISvcCtx;
+    /// <summary>Gets a reference to Oracle error handle.</summary>
+    /// <returns>a reference to Oracle error handle.</returns>
     function GetErrorHandle: POCIError;
+    /// <summary>Gets a reference to Oracle server handle.</summary>
+    /// <returns>a reference to Oracle server handle.</returns>
     function GetServerHandle: POCIServer;
+    /// <summary>Gets a reference to Oracle session handle.</summary>
+    /// <returns>a reference to Oracle session handle.</returns>
     function GetSessionHandle: POCISession;
+    /// <summary>Gets a reference to Oracle transaction handle.</summary>
+    /// <returns>a reference to Oracle transacton handle.</returns>
     function GetTransactionHandle: POCITrans;
+    /// <summary>Gets a reference to Oracle describe handle.</summary>
+    /// <returns>a reference to Oracle describe handle.</returns>
     function GetDescribeHandle: POCIDescribe;
+    /// <summary>Gets the oracle specific plaindriver object.</summary>
+    /// <returns>the plaindriver object.</returns>
     function GetPlainDriver: TZOraclePlainDriver;
 
     procedure HandleErrorOrWarning(ErrorHandle: POCIError; Status: sword;
       LogCategory: TZLoggingCategory; const LogMessage: SQLString;
       const Sender: IImmediatelyReleasable);
   public
+    /// <summary>Gets the client's full version number. Initially this should be 0.
+    ///  The format of the version returned must be XYYYZZZ where
+    ///  X   = Major version
+    ///  YYY = Minor version
+    ///  ZZZ = Sub version</summary>
+    /// <returns>this clients's full version number</returns>
     function GetClientVersion: Integer; override;
+    /// <summary>Gets the host's full version number. Initially this should be 0.
+    ///  The format of the version returned must be XYYYZZZ where
+    ///  X   = Major version
+    ///  YYY = Minor version
+    ///  ZZZ = Sub version</summary>
+    /// <returns>this server's full version number</returns>
     function GetHostVersion: Integer; override;
     function GetBinaryEscapeString(const Value: TBytes): String; override;
     /// <summary>Returns the ServicerProvider for this connection.</summary>
@@ -328,7 +416,8 @@ type
   /// </summary>
   TZOCITxnCoupleMode = (cmTightly, cmLoosely);
 
-  {** EH: implements an oracle transaction }
+  /// <author>EgonHugeist</author>
+  /// <summary>implements an oracle transaction object</summary>
   TZOracleTransaction = class(TZCodePagedObject, IImmediatelyReleasable,
     IZTransaction, IZOracleTransaction)
   private
@@ -442,62 +531,28 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses {$IFNDEF UNICODE}ZDbcUtils,{$ENDIF}
-  ZMessages, ZGenericSqlToken, ZDbcOracleStatement, ZSysUtils, ZFastCode,
-  ZDbcOracleUtils, ZDbcOracleMetadata, ZOracleToken, ZOracleAnalyser, ZDbcProperties,
-  ZCollections, ZEncoding;
+  ZMessages, ZCollections, ZEncoding, ZSysUtils, ZFastCode,
+  ZGenericSqlToken, ZOracleToken, ZOracleAnalyser,
+  ZDbcOracleStatement, ZDbcOracleUtils, ZDbcOracleMetadata, ZDbcProperties;
 
 { TZOracleDriver }
 
-{**
-  Constructs this object with default properties.
-}
 constructor TZOracleDriver.Create;
 begin
   inherited Create;
   AddSupportedProtocol(AddPlainDriverToCache(TZOraclePlainDriver.Create));
 end;
 
-{**
-  Attempts to make a database connection to the given URL.
-  The driver should return "null" if it realizes it is the wrong kind
-  of driver to connect to the given URL.  This will be common, as when
-  the JDBC driver manager is asked to connect to a given URL it passes
-  the URL to each loaded driver in turn.
-
-  <P>The driver should raise a SQLException if it is the right
-  driver to connect to the given URL, but has trouble connecting to
-  the database.
-
-  <P>The java.util.Properties argument can be used to passed arbitrary
-  string tag/value pairs as connection arguments.
-  Normally at least "user" and "password" properties should be
-  included in the Properties.
-
-  @param url the URL of the database to which to connect
-  @param info a list of arbitrary string tag/value pairs as
-    connection arguments. Normally at least a "user" and
-    "password" property should be included.
-  @return a <code>Connection</code> object that represents a
-    connection to the URL
-}
 function TZOracleDriver.Connect(const Url: TZURL): IZConnection;
 begin
   Result := TZOracleConnection.Create(Url);
 end;
 
-{**
-  Gets a SQL syntax tokenizer.
-  @returns a SQL syntax tokenizer object.
-}
 function TZOracleDriver.GetTokenizer: IZTokenizer;
 begin
   Result := TZOracleTokenizer.Create; { thread save! Allways return a new Tokenizer! }
 end;
 
-{**
-  Creates a statement analyser object.
-  @returns a statement analyser object.
-}
 function TZOracleDriver.GetStatementAnalyser: IZStatementAnalyser;
 begin
   Result := TZOracleStatementAnalyser.Create; { thread save! Allways return a new Analyser! }
@@ -567,9 +622,6 @@ begin
   end;
 end;
 
-{**
-  Opens a connection to database server with specified parameters.
-}
 procedure TZOracleConnection.Open;
 var
   Status: Integer;
@@ -753,9 +805,6 @@ begin
     GetRawCharacterSet;
 end;
 
-{**
-  Starts a transaction support.
-}
 function TZOracleConnection.StartTransaction: Integer;
 begin
   if Closed then
@@ -764,10 +813,6 @@ begin
   AutoCommit := False;
 end;
 
-{**
-  Attempts to kill a long-running operation on the database server
-  side
-}
 Function TZOracleConnection.AbortOperation: Integer;
 Begin
   // https://docs.oracle.com/cd/B10501_01/appdev.920/a96584/oci16m96.htm
@@ -777,11 +822,6 @@ Begin
   Result := 0; //only possible if CheckOracleError dosn't raise an exception
 End;
 
-{**
-  Clears all warnings reported for this <code>Connection</code> object.
-  After a call to this method, the method <code>getWarnings</code>
-    returns null until a new warning is reported for this Connection.
-}
 procedure TZOracleConnection.AfterConstruction;
 begin
   FPlainDriver := PlainDriver.GetInstance as TZOraclePlainDriver;
@@ -909,17 +949,11 @@ begin
   end;
 end;
 
-{**
-  Ping Current Connection's server, if client was disconnected,
-  the connection is resumed.
-  @return 0 if succesfull or error code if any error occurs
-}
 function TZOracleConnection.PingServer: Integer;
 begin
   if Closed or (FContextHandle = nil) Or (FErrorHandle = nil)
     then Result := -1
-  else
-  begin
+  else begin
     Result := FPlainDriver.OCIPing(FContextHandle, FErrorHandle, OCI_DEFAULT);
     if Result <> OCI_SUCCESS then
       HandleErrorOrWarning(FErrorHandle, Result, lcOther, 'PingServer', Self);
@@ -927,32 +961,6 @@ begin
   end;
 end;
 
-{**
-  Creates a <code>CallableStatement</code> object for calling
-  database stored procedures.
-  The <code>CallableStatement</code> object provides
-  methods for setting up its IN and OUT parameters, and
-  methods for executing the call to a stored procedure.
-
-  <P><B>Note:</B> This method is optimized for handling stored
-  procedure call statements. Some drivers may send the call
-  statement to the database when the method <code>prepareCall</code>
-  is done; others
-  may wait until the <code>CallableStatement</code> object
-  is executed. This has no
-  direct effect on users; however, it does affect which method
-  throws certain SQLExceptions.
-
-  Result sets created using the returned CallableStatement will have
-  forward-only type and read-only concurrency, by default.
-
-  @param Name a procedure or function identifier
-    parameter placeholders. Typically this  statement is a JDBC
-    function call escape string.
-  @param Info a statement parameters.
-  @return a new CallableStatement object containing the
-    pre-compiled SQL statement
-}
 function TZOracleConnection.PrepareCallWithParams(const Name: String;
   Params: TStrings): IZCallableStatement;
 begin
@@ -973,15 +981,6 @@ begin
   else Result := TZOraclePreparedStatement_A.Create(Self, SQL, Info);
 end;
 
-{**
-  Releases a Connection's database and JDBC resources
-  immediately instead of waiting for
-  them to be automatically released.
-
-  <P><B>Note:</B> A Connection is automatically closed when it is
-  garbage collected. Certain fatal errors also result in a closed
-  Connection.
-}
 procedure TZOracleConnection.InternalClose;
 var
   LogMessage: String;
@@ -1019,10 +1018,6 @@ begin
   end;
 end;
 
-{**
-  Gets a selected catalog name.
-  @return a selected catalog name.
-}
 function TZOracleConnection.GetCatalog: string;
 begin
   if not Closed and (FCatalog = '') then
@@ -1053,26 +1048,6 @@ begin
   fAttachedTransaction := OCITA;
 end;
 
-{**
-  Sets this connection's auto-commit mode.
-  If a connection is in auto-commit mode, then all its SQL
-  statements will be executed and committed as individual
-  transactions.  Otherwise, its SQL statements are grouped into
-  transactions that are terminated by a call to either
-  the method <code>commit</code> or the method <code>rollback</code>.
-  By default, new connections are in auto-commit mode.
-
-  The commit occurs when the statement completes or the next
-  execute occurs, whichever comes first. In the case of
-  statements returning a ResultSet, the statement completes when
-  the last row of the ResultSet has been retrieved or the
-  ResultSet has been closed. In advanced cases, a single
-  statement may return multiple results as well as output
-  parameter values. In these cases the commit occurs when all results and
-  output parameter values have been retrieved.
-
-  @param autoCommit true enables auto-commit; false disables auto-commit.
-}
 procedure TZOracleConnection.SetAutoCommit(Value: Boolean);
 begin
   AutoCommit := Value;
@@ -1112,12 +1087,6 @@ begin
   end;
 end;
 
-{**
-  Creates a sequence generator object.
-  @param Sequence a name of the sequence generator.
-  @param BlockSize a number of unique keys requested in one trip to SQL server.
-  @returns a created sequence object.
-}
 function TZOracleConnection.CreateSequence(const Sequence: string; BlockSize: Integer): IZSequence;
 begin
   Result := TZOracleSequence.Create(Self, Sequence, BlockSize);
@@ -1216,37 +1185,21 @@ begin
   end;
 end;
 
-{**
-  Gets a reference to Oracle connection handle.
-  @return a reference to Oracle connection handle.
-}
 function TZOracleConnection.GetConnectionHandle: POCIEnv;
 begin
   Result := FOCIEnv;
 end;
 
-{**
-  Gets a reference to Oracle context handle.
-  @return a reference to Oracle context handle.
-}
 function TZOracleConnection.GetServiceContextHandle: POCISvcCtx;
 begin
   Result := FContextHandle;
 end;
 
-{**
-  Gets a reference to Oracle error handle.
-  @return a reference to Oracle error handle.
-}
 function TZOracleConnection.GetErrorHandle: POCIError;
 begin
   Result := FErrorHandle;
 end;
 
-{**
-  Gets a reference to Oracle server handle.
-  @return a reference to Oracle server handle.
-}
 function TZOracleConnection.GetServerHandle: POCIServer;
 begin
   Result := FServerHandle;
@@ -1257,10 +1210,6 @@ begin
   Result := spOracle;
 end;
 
-{**
-  Gets a reference to Oracle session handle.
-  @return a reference to Oracle session handle.
-}
 function TZOracleConnection.GetSessionHandle: POCISession;
 begin
   Result := FSessionHandle;
@@ -1276,10 +1225,6 @@ begin
   Result := TZOracleTokenizer.Create;
 end;
 
-{**
-  Gets a reference to Oracle transaction handle.
-  @return a reference to Oracle transacton handle.
-}
 function TZOracleConnection.GetTransactionHandle: POCITrans;
 begin
   Result := fAttachedTransaction.GetTrHandle;
@@ -1442,10 +1387,6 @@ JmpConcat:
     raise AException;
 end;
 
-{**
-  Gets a reference to Oracle describe handle.
-  @return a reference to Oracle describe handle.
-}
 function TZOracleConnection.GetDescribeHandle: POCIDescribe;
 begin
   Result := FDescibeHandle;

@@ -281,6 +281,11 @@ function CreateColumnWasNotFoundException(const ColumnName: String): EZSQLExcept
 
 function GetW2A2WConversionCodePage(ConSettings: PZConSettings): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
+procedure BindDataArrayAsParameters(ZArray: PZArray;
+  Stmt: IZPreparedStatement; ParamIndex, ParameterCount, ArrayItersCount: Integer);
+procedure BindNullArrayAsParameters(ZArray: PZArray;
+  Stmt: IZPreparedStatement; ParamIndex, ParameterCount, ArrayItersCount: Integer);
+
 const
   i4SpaceRaw: Integer = Ord(#32)+Ord(#32) shl 8 + Ord(#32) shl 16 +Ord(#32) shl 24;  //integer representation of the four space chars
   sAlignCurrencyScale2Precision: array[0..4] of Integer = (
@@ -2189,6 +2194,76 @@ begin
       then Result := zCP_UTF8
       else Result := ConSettings.ClientCodePage.CP
     else Result := zCP_UTF8;
+end;
+
+procedure BindDataArrayAsParameters(ZArray: PZArray;
+  Stmt: IZPreparedStatement; ParamIndex, ParameterCount, ArrayItersCount: Integer);
+var J: Integer;
+    ZData: Pointer;
+begin
+  for J := 0 to ArrayItersCount-1 do begin
+    ZData := ZArray.VArray;
+    if (ZData = nil) then
+      Stmt.SetNull(ParamIndex, ZDbcIntfs.stUnknown)
+    else case TZSQLType(ZArray.VArrayType) of
+        stBoolean: Stmt.SetBoolean(ParamIndex, TBooleanDynArray(ZData)[J]);
+        stByte: Stmt.SetSmall(ParamIndex, TByteDynArray(ZData)[J]);
+        stShort: Stmt.SetSmall(ParamIndex, TShortIntDynArray(ZData)[J]);
+        stWord: Stmt.SetInt(ParamIndex, TWordDynArray(ZData)[J]);
+        stSmall: Stmt.SetSmall(ParamIndex, TSmallIntDynArray(ZData)[J]);
+        stLongWord: Stmt.SetLong(ParamIndex, TLongWordDynArray(ZData)[J]);
+        stInteger: Stmt.SetInt(ParamIndex, TIntegerDynArray(ZData)[J]);
+        stLong: Stmt.SetLong(ParamIndex, TInt64DynArray(ZData)[J]);
+        stULong: Stmt.SetLong(ParamIndex, TUInt64DynArray(ZData)[J]);
+        stFloat: Stmt.SetFloat(ParamIndex, TSingleDynArray(ZData)[J]);
+        stDouble: Stmt.SetDouble(ParamIndex, TDoubleDynArray(ZData)[J]);
+        stCurrency: Stmt.SetCurrency(ParamIndex, TCurrencyDynArray(ZData)[J]);
+        stBigDecimal: Stmt.SetBigDecimal(ParamIndex, TBCDDynArray(ZData)[J]);
+        stGUID: Stmt.SetGUID(ParamIndex, TGUIDDynArray(ZData)[j]);
+        stString, stUnicodeString:
+              case ZArray.VArrayVariantType of
+                vtString: Stmt.SetString(ParamIndex, TStringDynArray(ZData)[j]);
+                {$IFNDEF NO_ANSISTRING}
+                vtAnsiString: Stmt.SetAnsiString(ParamIndex, TAnsiStringDynArray(ZData)[j]);
+                {$ENDIF}
+                {$IFNDEF NO_UTF8STRING}
+                vtUTF8String: Stmt.SetUTF8String(ParamIndex, TUTF8StringDynArray(ZData)[j]);
+                {$ENDIF}
+                vtRawByteString: Stmt.SetRawByteString(ParamIndex, TRawByteStringDynArray(ZData)[j]);
+                vtUnicodeString: Stmt.SetUnicodeString(ParamIndex, TUnicodeStringDynArray(ZData)[j]);
+                vtCharRec: Stmt.SetCharRec(ParamIndex, TZCharRecDynArray(ZData)[j]);
+                else raise Exception.Create('Unsupported String Variant');
+              end;
+        stBytes:      Stmt.SetBytes(ParamIndex, TBytesDynArray(ZData)[j]);
+        stDate:       if ZArray.VArrayVariantType = vtDate
+                      then Stmt.SetDate(ParamIndex, TZDateDynArray(ZData)[j])
+                      else Stmt.SetDate(ParamIndex, TDateTimeDynArray(ZData)[j]);
+        stTime:       if ZArray.VArrayVariantType = vtTime
+                      then Stmt.SetTime(ParamIndex, TZTimeDynArray(ZData)[j])
+                      else Stmt.SetTime(ParamIndex, TDateTimeDynArray(ZData)[j]);
+        stTimestamp:  if ZArray.VArrayVariantType = vtTimeStamp
+                      then Stmt.SetTimestamp(ParamIndex, TZTimeStampDynArray(ZData)[j])
+                      else Stmt.SetTimestamp(ParamIndex, TDateTimeDynArray(ZData)[j]);
+        stAsciiStream,
+        stUnicodeStream,
+        stBinaryStream: Stmt.SetBlob(ParamIndex, TZSQLType(ZArray.VArrayType), TInterfaceDynArray(ZData)[j] as IZBlob);
+        else EZSQLException.Create(SUnsupportedParameterType);
+      end;
+    Inc(ParamIndex, ParameterCount);
+  end;
+end;
+
+procedure BindNullArrayAsParameters(ZArray: PZArray;
+  Stmt: IZPreparedStatement; ParamIndex, ParameterCount, ArrayItersCount: Integer);
+var J: Integer;
+    ZData: Pointer;
+begin
+  for J := 0 to ArrayItersCount-1 do begin
+    ZData := ZArray.VArray;
+    if (ZData = nil) or IsNullFromArray(ZArray, J) then
+      Stmt.SetNull(ParamIndex, TZSQLType(ZArray.VArrayType));
+    Inc(ParamIndex, ParameterCount);
+  end;
 end;
 
 {$IF DEFINED(ENABLE_DBLIB) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}

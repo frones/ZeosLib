@@ -145,6 +145,7 @@ type
     FRestartTransaction: Boolean;
     FLastWarning: EZSQLWarning;
     FHostVersion: Integer;
+    /// <summary>Sets provider properties</summary>
     procedure SetProviderProps(DBinit: Boolean);
   protected
     function OleDbGetDBPropValue(const APropIDs: array of DBPROPID): string; overload;
