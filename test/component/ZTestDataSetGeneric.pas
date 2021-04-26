@@ -57,7 +57,7 @@ interface
 uses
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
   ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility, ZVariant,
-  ZAbstractRODataset, ZMessages, ZStoredProcedure, ZMemTable
+  ZAbstractRODataset, ZMessages, ZStoredProcedure, ZMemTable, ZSqlMonitor
   {$IFNDEF DISABLE_ZPARAM}{$IFNDEF FPC}, Types{$ENDIF}, ZDbcUtils{$ENDIF};
 
 type
@@ -69,6 +69,9 @@ type
   private
     FQuery: TZQuery;
     FFieldList: string;
+    FLogMessage: String;
+    procedure OnTraceEvent_lcBindPrepStmt(Sender: TObject; Event: TZLoggingEvent;
+      var LogTrace: Boolean);
     procedure RunDefineFields;
     procedure RunDefineSortedFields;
     procedure TestReadLobCacheMode(const BinLob: String; aOptions: TZDataSetOptions;
@@ -115,6 +118,7 @@ type
     procedure TestKeyWordParams;
     procedure TestOldValue;
     procedure TestCloseOnDisconnect;
+    procedure TestClearParametersAndLoggedValues;
   end;
 
   {$IF not declared(TTestMethod)}
@@ -198,8 +202,8 @@ uses
   Variants,
 {$ENDIF} FmtBCD, DateUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF},
   ZEncoding, ZFastCode,
-  ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties,
-  ZDatasetUtils, ZSqlUpdate,
+  ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties, ZDbcLogging,
+  ZDatasetUtils, ZSqlUpdate, {$IFNDEF DISABLE_ZPARAM}ZDatasetParam,{$ENDIF}
   TypInfo, ZDbcInterbaseFirebirdMetadata, ZSelectSchema;
 
 { TZGenericTestDataSet }
@@ -2030,6 +2034,61 @@ begin
   end;
 end;
 
+(*
+See: https://zeoslib.sourceforge.io/viewtopic.php?f=50&p=171617#p171617
+*)
+procedure TZGenericTestDataSet.TestClearParametersAndLoggedValues;
+var Query: TZQuery;
+    Monitor: TZSQLMonitor;
+    Param: {$IFNDEF DISABLE_ZPARAM}TZParam{$ELSE}TParam{$ENDIF};
+const
+  si_id: Integer = TEST_ROW_ID;
+  stSearch: String = '549';
+  siSearch: Integer = 549;
+begin
+  Query := CreateQuery;
+  Check(Query <> nil);
+  Monitor := TZSQLMonitor.Create(nil);
+  try
+    Connection.Connect;
+    Check(Connection.Connected);
+    Query.SQL.Text := 'insert into cargo(c_id, c_name, c_width, c_height) values (:c_id, :c_name, :c_width, :c_height)';
+    CheckEquals(4, Query.params.Count, 'The parameter count doesn''t match');
+    Query.Params.Clear;
+    CheckEquals(0, Query.params.Count, 'The parameter count doesn''t match');
+    Param := Query.Params.CreateParam(ftInteger, 'c_id', ptInput); //integer field
+    Check(Param <> nil);
+    Param.Value := si_id;
+    Param := Query.Params.CreateParam(ftString, 'c_name', ptInput); //char/varchar field
+    Check(Param <> nil);
+    Param.Value := stSearch;
+    Param := Query.Params.CreateParam(ftString{keep it! see below}, 'c_width', ptInput); //integer field
+    Check(Param <> nil);
+    Param.Value := siSearch;
+    Param := Query.Params.CreateParam(ftInteger, 'c_height', ptInput); //integer field
+    Check(Param <> nil);
+    Param.Value := siSearch;
+    Monitor.OnTrace := OnTraceEvent_lcBindPrepStmt;
+    Try
+      Monitor.Active := True;
+      FLogMessage := '';
+      Query.ExecSQL;
+    Finally
+      Connection.ExecuteDirect('delete from cargo where c_id = '+ZFastCode.IntToStr(si_id));
+      Monitor.Active := False;
+    End;
+    Check(FLogMessage <> '');
+    FLogMessage := Copy(FLogMessage, ZFastCode.Pos(':', FLogMessage)+1, Length(FLogMessage));
+    FLogMessage := Trim(FLogMessage);
+    if Connection.DbcConnection.GetServerProvider in [spMySQL, spOracle] //they use locket types if registered -> implicit conversion to registered datatype
+    then CheckEquals('32767,'''+stSearch+''','''+stSearch+''','+stSearch, FLogMessage)
+    else CheckEquals('32767,'''+stSearch+''','+stSearch+','+stSearch, FLogMessage);
+  finally
+    FreeAndNil(Monitor);
+    FreeAndNil(Query);
+  end;
+end;
+
 procedure TZGenericTestDataSet.TestClobEmptyString;
 var
   Query: TZQuery;
@@ -2554,6 +2613,14 @@ begin
     Query.ExecSQL;
     Query.Free;
   end;
+end;
+
+procedure TZGenericTestDataSet.OnTraceEvent_lcBindPrepStmt(Sender: TObject;
+  Event: TZLoggingEvent; var LogTrace: Boolean);
+begin
+  LogTrace := False;
+  if Event.Category = lcBindPrepStmt then
+    FLogMessage := Event.Message;
 end;
 
 procedure TZGenericTestDataSet.RunDefineFields;
