@@ -242,24 +242,24 @@ end;
 procedure TZChainedSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
 var
   Modules: String;
-  TypeList: TStringDynArray;
+  ModuleList: TStringDynArray;
   x: Integer;
   SectionName: String;
 begin
   Modules := IniFile.ReadString(Section, 'Module List', '');
-  TypeList := SplitString(Modules, ',');
-  for x := Length(TypeList) - 1 downto 0 do
-    TypeList[x] := Trim(TypeList[x]);
-  for x := Length(TypeList) - 1 downto 0 do
-    if TypeList[x] = '' then
-      Delete(TypeList, x, 1);
-  if Length(TypeList) = 0 then
+  ModuleList := SplitString(Modules, ',');
+  for x := Length(ModuleList) - 1 downto 0 do
+    ModuleList[x] := Trim(ModuleList[x]);
+  for x := Length(ModuleList) - 1 downto 0 do
+    if ModuleList[x] = '' then
+      Delete(ModuleList, x, 1);
+  if Length(ModuleList) = 0 then
     raise Exception.Create('A chained security module may not have an empty Module List');
 
-  SetLength(FModuleChain, Length(TypeList));
+  SetLength(FModuleChain, Length(ModuleList));
   for x := 0 to Length(TypeList) - 1 do begin
     SectionName := ConfigManager.SecurityPrefix + TypeList[x];
-    FModuleChain[x] := GetSecurityModule(TypeList[x]);
+    FModuleChain[x] := GetSecurityModule(IniFile.ReadString(SectionName, 'type', ''));
     FModuleChain[x].LoadConfig(IniFile, SectionName);
   end;
 end;
