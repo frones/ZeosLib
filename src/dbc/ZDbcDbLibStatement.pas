@@ -802,8 +802,8 @@ begin
         if (FClientCP = zCP_UTF8) or DBLibBindValue.IsNCharIndex
         then CP := zCP_UTF8
         else CP := FClientCP;
-        fUniTemp := ZRawToUnicode(RawByteString(Bind.Value), CP);
-        SQLWriter.AddTextQuoted(fUniTemp, #39, Result);
+        PRawToUnicode(Bind.Value, Length(RawByteString(Bind.Value)), CP, fUniTemp);
+        SQLWriter.AddText(fUniTemp, Result);
         fUniTemp := '';
       end;
     else            SQLWriter.AddAscii7Text(Pointer(RawByteString(Bind.Value)), Length(RawByteString(Bind.Value)), Result);

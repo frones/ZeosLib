@@ -103,6 +103,7 @@ type
     FRefreshParamsFailed, FEmulatedParams: Boolean;
   protected
     function CheckParameterIndex(Index: Integer; SQLType: TZSQLType): TDataTypeEnum; reintroduce;
+    /// <summary>Prepares eventual structures for binding input parameters.</summary>
     procedure PrepareInParameters; override;
     function CreateResultSet: IZResultSet; override;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
@@ -578,27 +579,6 @@ begin
 end;
 
 procedure TZAdoPreparedStatement.PrepareInParameters;
-(*var i: Integer;
-begin
-  { test if we can access the parameter collection }
-  if fDEFERPREPARE then
-    FRefreshParamsFailed := True
-  else try
-    if BindList.Count <> FAdoCommand.Parameters.Count then //this could cause an AV
-      BindList.Count := FAdoCommand.Parameters.Count;
-    FRefreshParamsFailed := False;
-    for I := 0 to BindList.Count -1 do
-      with FAdoCommand.Parameters[i] do
-        BindList.SetParamTypes(I, ConvertAdoToSqlType(Get_Type_, Get_Precision,
-          Get_NumericScale), AdoType2ZProcedureColumnType[Get_Direction]);
-  except { do not handle the exception
-      tag ADO did fail to compute the paramter info's instead!
-      an example: Insert into Foo Values (?,?),(?,?),(?,?) crash with ado but native oledb succeeds !
-      So we add a parameter}
-    FAdoCommand.Parameters.Append(FAdoCommand.CreateParameter('DummyParam', adVariant, adParamInput, SizeOf(OleVariant), null));
-    FAdoCommand.Parameters.Delete('DummyParam');
-    FRefreshParamsFailed := True;
-  end;*)
 var
   I: Integer;
   ParamCount: NativeUInt;

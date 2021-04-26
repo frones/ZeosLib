@@ -483,6 +483,7 @@ type
     FSupportsBidirectionalParamIO: Boolean;
     property TokenMatchIndex: Integer read FTokenMatchIndex;
     procedure CheckParameterIndex(var Value: Integer); virtual;
+    /// <summary>Prepares eventual structures for binding input parameters.</summary>
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
     /// <summary>Removes eventual structures for binding input parameters.</summary>
@@ -3768,9 +3769,6 @@ begin
   FClosed := False;
 end;
 
-{**
-  Prepares eventual structures for binding input parameters.
-}
 procedure TZAbstractPreparedStatement.PrepareInParameters;
 begin
 end;

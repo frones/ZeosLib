@@ -205,6 +205,7 @@ type
     procedure InternalBindDouble(Index: Integer; SQLType: TZSQLType; const Value: Double);
     procedure InternalBindInt(Index: Integer; SQLType: TZSQLType; Value: {$IFNDEF CPU64}Integer{$ELSE}Int64{$ENDIF});
   protected
+    /// <summary>Prepares eventual structures for binding input parameters.</summary>
     procedure PrepareInParameters; override;
     procedure UnPrepareInParameters; override;
     procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
@@ -2266,9 +2267,6 @@ begin
   end else SetAsRaw;
 end;
 
-{**
-  Prepares eventual structures for binding input parameters.
-}
 procedure TZPostgreSQLPreparedStatementV3.PrepareInParameters;
 var
   res: TPGresult;

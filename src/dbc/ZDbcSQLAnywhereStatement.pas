@@ -106,6 +106,7 @@ type
     procedure BindLob(Index: Integer; SQLType: TZSQLType; const Value: IZBlob); override;
     function InitDataValue(Index: Integer; SQLType: TZSQLType; Length: Tsize_t): Pa_sqlany_data_value;
   protected
+    /// <summary>Prepares eventual structures for binding input parameters.</summary>
     procedure PrepareInParameters; override;
     procedure UnPrepareInParameters; override;
     procedure BindInParameters; override;
@@ -637,9 +638,6 @@ jmpVarLen:
   FBindAgain := FBindAgain or (ActType <> Result._type);
 end;
 
-{**
-  Prepares eventual structures for binding input parameters.
-}
 procedure TZSQLAnywherePreparedStatement.PrepareInParameters;
 var num_params, I: Tsacapi_i32;
   Bind: Pa_sqlany_bind_param;
