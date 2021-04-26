@@ -138,6 +138,7 @@ type
     procedure BindArrayColumnWise(Index: Integer);
   protected
     procedure CheckParameterIndex(var Value: Integer); override;
+    /// <summary>Prepares eventual structures for binding input parameters.</summary>
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
@@ -2018,6 +2019,8 @@ procedure TZAbstractODBCPreparedStatement.RegisterParameter(
 var BindValue: PZBindValue;
     Bind: PZODBCBindValue absolute BindValue;
 begin
+  if not Prepared then
+    Prepare;
   inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name, PrecisionOrSize, Scale);
   BindValue := BindList[ParameterIndex];
   Bind.InputOutputType := ODBCInputOutputType[SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]][ParamType] ;
