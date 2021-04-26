@@ -257,8 +257,8 @@ begin
     raise Exception.Create('A chained security module may not have an empty Module List');
 
   SetLength(FModuleChain, Length(ModuleList));
-  for x := 0 to Length(TypeList) - 1 do begin
-    SectionName := ConfigManager.SecurityPrefix + TypeList[x];
+  for x := 0 to Length(ModuleList) - 1 do begin
+    SectionName := ConfigManager.SecurityPrefix + ModuleList[x];
     FModuleChain[x] := GetSecurityModule(IniFile.ReadString(SectionName, 'type', ''));
     FModuleChain[x].LoadConfig(IniFile, SectionName);
   end;
