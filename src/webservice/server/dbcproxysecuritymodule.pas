@@ -142,7 +142,7 @@ begin
     SecretsUser := UserName;
     if FAddDatabase then
       SecretsUser := SecretsUser + FDatabaseSeparator + ConnectionName;
-    Secret := Secrets.Values[UserName];
+    Secret := UpperCase(Trim(Secrets.Values[SecretsUser]));
     Result := Secret <> '';
   finally
     FreeAndNil(Secrets);
@@ -150,19 +150,24 @@ begin
 
   if Result then begin
     OTP := Copy(Password, Length(Password) - 6 + 1, 6);
-    RemainingPassword := Copy(Password, 1, Length(Password) - 6);
-    Password := RemainingPassword;
     Result := GoogleOTP.ValidateTOPT(Secret, StrToIntDef(OTP, 0));
-  end;
+  end else
+    raise Exception.Create('Could not find secret for user ' + SecretsUser);
+
+  if not Result then
+    raise Exception.Create('Could not validate username / OTP: ' + SecretsUser + ' / ' + OTP);
 
   if not Result then
     raise Exception.Create('Could not validate username / password.');
+
+  RemainingPassword := Copy(Password, 1, Length(Password) - 6);
+  Password := RemainingPassword;
 end;
 
 procedure TZTotpSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
 begin
   FSecretsName := IniFile.ReadString(Section, 'Secrets File', '');
-  FAddDatabase := IniFile.ReadBool(Section, 'Add Database To Username', false);
+  FAddDatabase := StrToBool(IniFile.ReadString(Section, 'Add Database To Username', 'false'));
   FDatabaseSeparator := IniFile.ReadString(Section, 'Database Separator', '@');
 end;
 
@@ -195,11 +200,14 @@ begin
   if Stmt.ExecutePrepared then begin
     RS := Stmt.GetResultSet;
     if Assigned(RS) and RS.IsBeforeFirst then begin
-      RS.Next;
-      try
-        CryptPwdDB := RS.GetUTF8String(FirstDbcIndex);
-      finally
-        RS.Close;
+      if RS.Next then begin
+        try
+          CryptPwdDB := RS.GetUTF8String(FirstDbcIndex);
+        finally
+          RS.Close;
+        end;
+      end else begin
+        raise Exception.Create('No record for user ' + UserName + ' found.');
       end;
     end;
   end;
@@ -211,8 +219,10 @@ begin
   CryptPwdUser := crypt_md5(Password, CryptPwdDB);
   Result := CryptPwdDB = CryptPwdUser;
 
-  if not Result then
+  if not Result then begin
+    raise Exception.Create('Could not validate password for user / password ' + UserName + ' / ' + Password + '. Expected hash ' + CryptPwdDB + ' but got ' + CryptPwdUser + '.');
     raise Exception.Create('Could not validate username / password.');
+  end;
   if FReplacementUser <> '' then begin
     UserName := FReplacementUser;
     Password := FReplacementPassword;
