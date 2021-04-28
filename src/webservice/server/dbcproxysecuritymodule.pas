@@ -98,11 +98,13 @@ begin
     YubikeysUser := UserName;
     if FAddDatabase then
       YubikeysUser := YubikeysUser + FDatabaseSeparator + ConnectionName;
-    AllowedKeys := ':' + Yubikeys.Values[UserName] + ':';
+    AllowedKeys := ':' + Yubikeys.Values[YubikeysUser] + ':';
+    if AllowedKeys = '::' then
+      raise Exception.Create('No yubikeys found for user ' + YubikeysUser);
     PublicIdentity := GetYubikeyIdentity(Password);
     Result := Pos(':' + PublicIdentity + ':', AllowedKeys) > 0;
     if not Result then
-      raise Exception.Create('This yubikey cannot be used for this user.');
+      raise Exception.Create('The yubikey ' + PublicIdentity + ' cannot be used for the user ' + YubikeysUser + '.');
   finally
     FreeAndNil(Yubikeys);
   end;
@@ -118,7 +120,7 @@ end;
 procedure TZYubiOtpSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
 begin
   FYubikeysName := IniFile.ReadString(Section, 'Yubikeys File', '');
-  FAddDatabase := IniFile.ReadBool(Section, 'Add Database To Username', false);
+  FAddDatabase := StrToBool(IniFile.ReadString(Section, 'Add Database To Username', 'false'));
   FDatabaseSeparator := IniFile.ReadString(Section, 'Database Separator', '@');
   FBaseURL := IniFile.ReadString(Section, 'Base URL', 'https://api.yubico.com/wsapi/2.0/verify');
   FClientID := IniFile.ReadInteger(Section, 'Client ID', 0);
