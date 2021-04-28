@@ -61,7 +61,8 @@ interface
 {$IFNDEF ZEOS_DISABLE_ADO}
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX, FmtBCD,
-  {$IFNDEF FPC}ZClasses,{$ENDIF} //inlined Get method of TZCustomElementList
+  Windows,
+  ZClasses, //inlined Get method of TZCustomElementList
   ZCompatibility, ZSysUtils,
   ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant, ZDbcAdoUtils,
   ZDbcOleDBStatement, ZDbcUtils;
