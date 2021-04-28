@@ -119,6 +119,7 @@ type
     procedure TestOldValue;
     procedure TestCloseOnDisconnect;
     procedure TestClearParametersAndLoggedValues;
+    procedure TestAssignDBRTLParams;
   end;
 
   {$IF not declared(TTestMethod)}
@@ -2035,6 +2036,97 @@ begin
 end;
 
 (*
+Some third party components using TParam. Let's test assign to TZParams.
+  Miab3 did report exeptions if doing that.
+*)
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "ABCD" does not seem to be initialized} {$ENDIF}
+procedure TZGenericTestDataSet.TestAssignDBRTLParams;
+var Params: TParams;
+    Query: TZQuery;
+    Param: TParam;
+    ABCD: TBCD;
+    Bts: TBytes;
+    ANow: TDateTime;
+begin
+  Query := CreateQuery;
+  Params := nil;
+  Check(Query <> nil);
+  Bts := nil;
+  try
+    Connection.Connect;
+    Connection.ExecuteDirect('delete from high_load where 1=1');
+    Query.SQL.Text := 'insert into high_load (hl_id, stBoolean, stByte, stShort,'+
+      'stInteger, stLong, stFloat, stDouble, stBigDecimal, stString, stUnicodeString, '+
+      'stBytes, stDate, stTime, stTimestamp, stGUID, stAsciiStream, stUnicodeStream, stBinaryStream)' +
+      ' VALUES (:hl_id, :stBoolean, :stByte, :stShort,'+
+      ':stInteger, :stLong, :stFloat, :stDouble, :stBigDecimal, :stString, :stUnicodeString, '+
+      ':stBytes, :stDate, :stTime, :stTimestamp, :stGUID, :stAsciiStream, :stUnicodeStream, :stBinaryStream)';
+    Params := TParams.Create(nil);
+    Param := Params.CreateParam(ftInteger, 'hl_id', ptInput);
+    Param.AsInteger := 100;
+    Param := Params.CreateParam(ftBoolean, 'stBoolean', ptInput);
+    Param.AsBoolean := True;
+    Param := Params.CreateParam({$IFDEF WITH_FTBYTE}ftByte{$ELSE}ftWord{$ENDIF}, 'stByte', ptInput);
+    Param.{$IFDEF WITH_FTBYTE}AsByte{$ELSE}AsWord{$ENDIF} := 1;
+    Param := Params.CreateParam({$IFDEF WITH_FTSHORTINT}ftShortInt{$ELSE}ftSmallInt{$ENDIF}, 'stShort', ptInput);
+    Param.{$IFDEF WITH_FTSHORTINT}AsShortInt{$ELSE}AsSmallInt{$ENDIF} := 1;
+    Param := Params.CreateParam(ftInteger, 'stInteger', ptInput);
+    Param.AsInteger := 1;
+    Param := Params.CreateParam(ftLargeInt, 'stLong', ptInput);
+    Param.{$IFDEF WITH_PARAM_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF} := Int64(1);
+    Param := Params.CreateParam({$IFDEF WITH_FTSINGLE}DB.ftSingle{$ELSE}ftFloat{$ENDIF}, 'stLong', ptInput);
+    Param.{$IFDEF WITH_FTSINGLE}AsSingle{$ELSE}AsFloat{$ENDIF} := 1;
+    Param := Params.CreateParam(ftFloat, 'stDouble', ptInput);
+    Param.AsFloat := 1;
+    Param := Params.CreateParam(ftFMTBcd, 'stBigDecimal', ptInput);
+    FillChar(ABCD, SizeOf(ABCD), #0);
+    ABCD.Precision := 1;
+    ABCD.Fraction[0] := 1 shl 4;
+    Param.AsFMTBCD := ABCD;
+    Param := Params.CreateParam(ftString, 'stString', ptInput);
+    Param.AsString := 'ABCDEFG';
+    Param := Params.CreateParam(ftWideString, 'stUnicodeString', ptInput);
+    Param.AsString := 'ABCDEFG';
+    Param := Params.CreateParam(ftBytes, 'stBytes', ptInput);
+    SetLength(Bts, 100);
+    {$IFDEF TPARAM_HAS_ASBYTES}
+    Param.AsBytes := Bts;
+    {$ELSE}
+    Param.Value := ZSysUtils.BytesToVar(Bts);
+    {$ENDIF}
+    Param := Params.CreateParam(ftTime, 'stDate', ptInput);
+    ANow := EncodeDate(2021,4,28)+EncodeTime(4,4,4,0);
+    Param.AsDate := ANow;
+    Param := Params.CreateParam(ftDate, 'stTime', ptInput);
+    Param.AsTime := ANow;
+    Param := Params.CreateParam(ftDateTime, 'stTimestamp', ptInput);
+    Param.AsDateTime := ANow;
+    Param := Params.CreateParam(ftGUID, 'stGUID', ptInput);
+    Param.AsString := '{BC89E8C9-264E-4A8E-A19B-C38DAE5B5463}';
+    Param := Params.CreateParam(ftMemo, 'stAsciiStream', ptInput);
+    Param.AsString := 'XYZ';
+    Param := Params.CreateParam({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftMemo{$ENDIF}, 'stUnicodeStream', ptInput);
+    Param.AsString := 'XYZ';
+    Param := Params.CreateParam(ftBlob, 'stBinaryStream', ptInput);
+    {$IFDEF TPARAM_HAS_ASBYTES}
+    Param.AsBytes := Bts;
+    {$ELSE}
+    Param.Value := ZSysUtils.BytesToVar(Bts);
+    {$ENDIF}
+    Query.Params.Assign(Params);
+    CheckEquals(19, Query.Params.Count);
+    Query.ExecSQL;
+    CheckEquals(1, Query.RowsAffected, 'The update count');
+  finally
+    FreeAndNil(Query);
+    if Params <> nil then
+      FreeAndNil(Params);
+    Connection.ExecuteDirect('delete from high_load where 1=1');
+  end;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+(*
 See: https://zeoslib.sourceforge.io/viewtopic.php?f=50&p=171617#p171617
 *)
 procedure TZGenericTestDataSet.TestClearParametersAndLoggedValues;
@@ -2080,9 +2172,9 @@ begin
     Check(FLogMessage <> '');
     FLogMessage := Copy(FLogMessage, ZFastCode.Pos(':', FLogMessage)+1, Length(FLogMessage));
     FLogMessage := Trim(FLogMessage);
-    if Connection.DbcConnection.GetServerProvider in [spMySQL, spOracle] //they use locket types if registered -> implicit conversion to registered datatype
+    {if Connection.DbcConnection.GetServerProvider in [spMySQL, spOracle] //they use locket types if registered -> implicit conversion to registered datatype
     then CheckEquals('32767,'''+stSearch+''','''+stSearch+''','+stSearch, FLogMessage)
-    else CheckEquals('32767,'''+stSearch+''','+stSearch+','+stSearch, FLogMessage);
+    else} CheckEquals('32767,'''+stSearch+''','+stSearch+','+stSearch, FLogMessage);
   finally
     FreeAndNil(Monitor);
     FreeAndNil(Query);
