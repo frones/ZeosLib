@@ -142,6 +142,10 @@ type
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
+    /// <summary>Adds the parameter value to the SQLStringWriter as a log value</summary>
+    /// <param>"Index" The index of the parameter. First index is 0, second is 1..</param>
+    /// <param>"SQLWriter" the buffered writer which composes the log string.</param>
+    /// <param>"Result" a reference to the result string the SQLWriter flushes the buffer.</param>
     procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
     class function GetBindListClass: TZBindListClass; override;
@@ -244,6 +248,10 @@ type
   private
     fPHDBC: PSQLHDBC;
   protected
+    /// <summary>creates an exceution Statement. Which wraps the call.</summary>
+    /// <param>"StoredProcName" the name of the stored procedure or function to
+    ///  be called.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   public
     constructor Create(const Connection: IZConnection;
@@ -275,6 +283,10 @@ type
       var ConnectionHandle: SQLHDBC; const StoredProcOrFuncIdentifier: string;
       {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
   protected
+    /// <summary>creates an exceution Statement. Which wraps the call.</summary>
+    /// <param>"StoredProcName" the name of the stored procedure or function to
+    ///  be called.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
@@ -2590,6 +2602,7 @@ begin
                       PByte(PAnsiChar(Bind.ParameterValuePtr)+Blen)^ := 0;
                       Exit;
                     end;
+      SQL_C_GUID:   ZSysUtils.ValidGUIDToBinary(Value, PAnsiChar(Bind.ParameterValuePtr));
       else raise CreateUnsupportedParamType(Index, Bind.ValueType, stUnicodeString);
     end;
     PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
@@ -2674,6 +2687,7 @@ begin
                       PByte(PAnsiChar(Bind.ParameterValuePtr)+PSQLLEN(Bind.StrLen_or_IndPtr)^)^ := Ord(#0);
                       Exit;
                     end;
+      SQL_C_GUID:   ZSysUtils.ValidGUIDToBinary(Value, PAnsiChar(Bind.ParameterValuePtr));
       else raise CreateUnsupportedParamType(Index, Bind.ValueType, stUnicodeString);
     end;
     PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
