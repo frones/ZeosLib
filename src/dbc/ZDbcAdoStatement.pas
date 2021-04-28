@@ -272,7 +272,11 @@ begin
       VT_R4:          SQLWriter.AddFloat(PSingle(ValueAddr)^, Result);
       VT_R8:          SQLWriter.AddFloat(PDouble(ValueAddr)^, Result);
     else case Type_ of {ADO uses its own DataType-mapping different to System tagVariant type mapping}
-        adGUID:       SQLWriter.AddTextQuoted(PWideChar(ValueAddr), 38, #39, Result);
+        adGUID:      begin
+                       SQLWriter.AddChar(#39, Result);
+                       SQLWriter.{$IFNDEF UNICODE}AddAscii7UTF16Text{$ELSE}AddText{$ENDIF}(PWideChar(ValueAddr), 38, Result);
+                       SQLWriter.AddChar(#39, Result);
+                     end;
         adDBTime,
         adDate,
         adDBDate,
@@ -280,7 +284,15 @@ begin
         adChar,
         adWChar,
         adVarChar,
-        adVarWChar: SQLWriter.AddTextQuoted(PWideChar(ValueAddr), Length(WideString(ValueAddr)), #39, Result);
+        adVarWChar:     begin
+                          {$IFNDEF UNICODE}
+                          PUnicodeToRaw(PWideChar(ValueAddr), Length(WideString(ValueAddr)), zCP_UTF8, fRawTemp);
+                          SQLWriter.AddTextQuoted(fRawTemp, #39, Result);
+                          fRawTemp := '';
+                          {$ELSE}
+                          SQLWriter.AddTextQuoted(PWideChar(ValueAddr), Length(WideString(ValueAddr)), #39, Result);
+                          {$ENDIF}
+                        end;
         adLongVarChar:  SQLWriter.AddText('(CLOB)', Result);
         adLongVarWChar: SQLWriter.AddText('(NCLOB)', Result);
         adLongVarBinary:SQLWriter.AddText('(BLOB)', Result);
