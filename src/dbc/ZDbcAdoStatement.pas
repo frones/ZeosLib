@@ -207,7 +207,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ADO}
 
 uses
-  Variants, Math, {$IFNDEF FPC}Windows{inline},{$ENDIF}
+  Variants, Math,
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
   ZEncoding, ZDbcLogging, ZDbcResultSet, ZFastCode, ZPlainOleDBDriver,
   ZDbcCachedResultSet, ZDbcResultSetMetadata, ZDbcAdoResultSet,
