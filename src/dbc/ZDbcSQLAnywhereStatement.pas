@@ -175,6 +175,10 @@ type
 
   TZSQLAnywhereCallableStatement = class(TZAbstractCallableStatement_A, IZCallableStatement)
   protected
+    /// <summary>creates an exceution Statement. Which wraps the call.</summary>
+    /// <param>"StoredProcName" the name of the stored procedure or function to
+    ///  be called.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 

@@ -140,6 +140,9 @@ type
     function GetResultSet(ColumnIndex: Integer): IZResultSet; override;
     function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
     {$IFDEF WITH_COLUMNS_TO_JSON}
+    /// <summary>Fill the JSONWriter with column data</summary>
+    /// <param>"JSONComposeOptions" the TZJSONComposeOptions used for composing
+    ///  the JSON contents</param>
     procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); reintroduce;
     {$ENDIF WITH_COLUMNS_TO_JSON}
   public //implement IZOracleResultSet

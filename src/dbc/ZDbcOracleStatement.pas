@@ -263,6 +263,10 @@ type
   private
     FProcDescriptor: TZOraProcDescriptor_A;
   protected
+    /// <summary>creates an exceution Statement. Which wraps the call.</summary>
+    /// <param>"StoredProcName" the name of the stored procedure or function to
+    ///  be called.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
     /// <summary>Prepares eventual structures for binding input parameters.</summary>
     procedure PrepareInParameters; override;
@@ -274,6 +278,10 @@ type
   private
     FProcDescriptor: TZOraProcDescriptor_W;
   protected
+    /// <summary>creates an exceution Statement. Which wraps the call.</summary>
+    /// <param>"StoredProcName" the name of the stored procedure or function to
+    ///  be called.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
     /// <summary>Prepares eventual structures for binding input parameters.</summary>
     procedure PrepareInParameters; override;
@@ -2676,7 +2684,8 @@ begin
       else if SQLType = stUnicodeString then
         PrecisionOrSize := PrecisionOrSize shl 1;
       InitBuffer(SQLType, OCIBindValue, ParameterIndex, 1, PrecisionOrSize);
-      FillChar(OCIBindValue.valuep^, OCIBindValue.Value_sz, #0);
+      if OCIBindValue.DescriptorType = 0 then
+        FillChar(OCIBindValue.valuep^, OCIBindValue.Value_sz, #0);
     end;
     OCIBindValue.indp[0] := -1;
   end;
@@ -2811,7 +2820,8 @@ begin
       else if SQLType = stUnicodeString then
         PrecisionOrSize := PrecisionOrSize shl 1;
       InitBuffer(SQLType, OCIBindValue, ParameterIndex, 1, PrecisionOrSize);
-      FillChar(OCIBindValue.valuep^, OCIBindValue.Value_sz, #0);
+      if OCIBindValue.DescriptorType = 0 then
+        FillChar(OCIBindValue.valuep^, OCIBindValue.Value_sz, #0);
     end;
     OCIBindValue.indp[0] := -1;
   end;

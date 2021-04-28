@@ -4414,7 +4414,7 @@ end;
 procedure TZRawPreparedStatement.SetUnicodeString(
   ParameterIndex: Integer; const Value: UnicodeString);
 begin
-  FRawTemp := ZUnicodeToRaw(Value, FClientCP);
+  PUnicodeToRaw(Pointer(Value), Length(Value), FClientCP, FRawTemp);
   BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FRawTemp);
 end;
 

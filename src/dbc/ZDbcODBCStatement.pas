@@ -2031,13 +2031,14 @@ procedure TZAbstractODBCPreparedStatement.RegisterParameter(
 var BindValue: PZBindValue;
     Bind: PZODBCBindValue absolute BindValue;
 begin
-  if not Prepared then
-    Prepare;
-  inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name, PrecisionOrSize, Scale);
+  CheckParameterIndex(ParameterIndex);
   BindValue := BindList[ParameterIndex];
+  if fBindImmediat then
+    SQLType := BindValue.SQLType;
+  inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name, PrecisionOrSize, Scale);
+  BindValue.ParamType := ParamType;
   Bind.InputOutputType := ODBCInputOutputType[SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]][ParamType] ;
   if not Bind.Described then begin
-    Bind.Described := True;
     BindValue.SQLType := SQLType;
     if (SQLtype in [stAsciiStream, stUnicodeStream, stBinaryStream])
     then Bind.BufferLength := SizeOf(Pointer) //range check issue on CalcBufSize
@@ -2643,7 +2644,7 @@ begin
     BindValue := BindList[Index];
     if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and (Bind.BufferLength <= WLen shl 1)) then
       InitBind(Index, 1, stUnicodeString, WLen);
-    if BindValue.SQLType in [stAsciiStream, stUnicodeStream] then begin
+    if (BindValue.SQLType in [stAsciiStream, stUnicodeStream]) {or ((BindValue.SQLType in [stString, stUnicodeString]) and (Bind.ColumnSize = 0)} then begin
       if Value = nil then Value := PEmptyUnicodeString;
       PIZlob(Bind.ParameterValuePtr)^ := TZLocalMemCLob.CreateWithData(Value, WLen, ConSettings);
       Bind.StrLen_or_IndPtr^ := SQL_DATA_AT_EXEC;
