@@ -1336,6 +1336,10 @@ type
     FResults: IZCollection;
     FActiveResultIndex: Integer;
     FExecStatement: TZAbstractPreparedStatement;
+    /// <summary>creates an exceution Statement. Which wraps the call.</summary>
+    /// <param>"StoredProcName" the name of the stored procedure or function to
+    ///  be called.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; virtual; abstract;
     function IsFunction: Boolean;
     procedure BindInParameters; override;

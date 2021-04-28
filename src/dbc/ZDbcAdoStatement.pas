@@ -84,6 +84,11 @@ type
     /// <summary>Removes the current connection reference from this object.</summary>
     /// <remarks>This method will be called only if the object is garbage.</remarks>
     procedure ReleaseConnection; override;
+    /// <summary>Adds the parameter value to the SQLStringWriter as a log value</summary>
+    /// <param>"Index" The index of the parameter. First index is 0, second is 1..</param>
+    /// <param>"SQLWriter" the buffered writer which composes the log string.</param>
+    /// <param>"Result" a reference to the result string the SQLWriter flushes the buffer.</param>
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
   public
     constructor CreateWithCommandType(const Connection: IZConnection; const SQL: string;
       const Info: TStrings; CommandType: CommandTypeEnum);
@@ -189,6 +194,10 @@ type
 
   TZAdoCallableStatement2 = class(TZAbstractCallableStatement_W, IZCallableStatement)
   protected
+    /// <summary>creates an exceution Statement. Which wraps the call.</summary>
+    /// <param>"StoredProcName" the name of the stored procedure or function to
+    ///  be called.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
@@ -215,6 +224,73 @@ const cParamIOs: array[TZProcedureColumnType] of ParameterDirectionEnum = (
   );
 
 { TZAbstractAdoStatement }
+
+procedure TZAbstractAdoStatement.AddParamLogValue(ParamIndex: Integer;
+  SQLWriter: TZSQLStringWriter; var Result: SQLString);
+var V: OleVariant;
+  vt: Word;
+  ValueAddr: Pointer;
+begin
+  with FAdoCommand.Parameters.Item[ParamIndex] do begin
+    V := Get_Value;
+    vt := tagVariant(V).vt;
+    if vt and VT_BYREF = VT_BYREF then begin
+      vt := vt xor VT_BYREF;
+      ValueAddr := tagVariant(V).unkVal;
+    end else if vt = VT_DECIMAL
+      then ValueAddr := @V
+      else if (vt = VT_BSTR)
+        then ValueAddr := tagVariant(V).bstrVal
+        else ValueAddr := @tagVariant(V).bVal;
+    case vt of
+      VT_NULL, VT_EMPTY: SQLWriter.AddText('(NULL)', Result);
+      VT_BOOL:          if PWordBool(ValueAddr)^
+                        then SQLWriter.AddText('(TRUE)', Result)
+                        else SQLWriter.AddText('(FALSE)', Result);
+      VT_UI1:           SQLWriter.AddOrd(PByte(ValueAddr)^, Result);
+      VT_UI2:           SQLWriter.AddOrd(PWord(ValueAddr)^, Result);
+      VT_UI4:           SQLWriter.AddOrd(PCardinal(ValueAddr)^, Result);
+      VT_UINT:          SQLWriter.AddOrd(PLongWord(ValueAddr)^, Result);
+      VT_I1:            SQLWriter.AddOrd(PShortInt(ValueAddr)^, Result);
+      VT_I2:            SQLWriter.AddOrd(PSmallInt(ValueAddr)^, Result);
+      VT_ERROR,
+      VT_I4:            SQLWriter.AddOrd(PInteger(ValueAddr)^, Result);
+      VT_INT:           SQLWriter.AddOrd(PLongInt(ValueAddr)^, Result);
+      VT_HRESULT:       SQLWriter.AddOrd(PHResult(ValueAddr)^, Result);
+      VT_UI8:           SQLWriter.AddOrd(PUInt64(ValueAddr)^, Result);
+      VT_I8:            SQLWriter.AddOrd(PInt64(ValueAddr)^, Result);
+      VT_CY:            SQLWriter.AddDecimal(PCurrency(ValueAddr)^, Result);
+      VT_DECIMAL:     begin
+                        if PDecimal(ValueAddr).scale > 0 then begin
+                          ScaledOrdinal2Bcd(UInt64(PDecimal(ValueAddr).Lo64), PDecimal(ValueAddr).scale, PBCD(FByteBuffer)^, PDecimal(ValueAddr).sign > 0);
+                          SQLWriter.AddDecimal(PBCD(FByteBuffer)^, Result);
+                        end else if PDecimal(ValueAddr).sign > 0 then
+                          SQLWriter.AddOrd(Int64(-UInt64(PDecimal(ValueAddr).Lo64)), Result)
+                        else
+                          SQLWriter.AddOrd(UInt64(PDecimal(ValueAddr).Lo64), Result);
+                      end;
+      VT_R4:          SQLWriter.AddFloat(PSingle(ValueAddr)^, Result);
+      VT_R8:          SQLWriter.AddFloat(PDouble(ValueAddr)^, Result);
+    else case Type_ of {ADO uses its own DataType-mapping different to System tagVariant type mapping}
+        adGUID:       SQLWriter.AddTextQuoted(PWideChar(ValueAddr), 38, #39, Result);
+        adDBTime,
+        adDate,
+        adDBDate,
+        adDBTimeStamp: SQLWriter.AddDateTime(PDateTime(ValueAddr)^, ConSettings.WriteFormatSettings.DateTimeFormat, Result);
+        adChar,
+        adWChar,
+        adVarChar,
+        adVarWChar: SQLWriter.AddTextQuoted(PWideChar(ValueAddr), Length(WideString(ValueAddr)), #39, Result);
+        adLongVarChar:  SQLWriter.AddText('(CLOB)', Result);
+        adLongVarWChar: SQLWriter.AddText('(NCLOB)', Result);
+        adLongVarBinary:SQLWriter.AddText('(BLOB)', Result);
+        adBinary,
+        adVarBinary:    SQLWriter.AddHexBinary(tagVariant(V).parray.pvData, tagVariant(V).parray.cbElements, True,  Result);
+        else            SQLWriter.AddText('(UNKNOWN)', Result);
+      end;
+    end;
+  end;
+end;
 
 function TZAbstractAdoStatement.CreateResultSet: IZResultSet;
 var NativeResultSet: IZResultSet;
