@@ -2172,9 +2172,12 @@ begin
     Check(FLogMessage <> '');
     FLogMessage := Copy(FLogMessage, ZFastCode.Pos(':', FLogMessage)+1, Length(FLogMessage));
     FLogMessage := Trim(FLogMessage);
-    {if Connection.DbcConnection.GetServerProvider in [spMySQL, spOracle] //they use locket types if registered -> implicit conversion to registered datatype
+    if (Connection.DbcConnection.GetServerProvider in [spPostgreSQL{does not describe the params by default},
+      { those can't describe params except MSSQL <> FreeTDS}
+      spSQLite, spMySQL, spOracle, spASE, spMSSQL, spASA]) and (System.Pos('ado', Protocol) = 0) and
+      (System.Pos('odbc', Protocol) = 0) and (System.Pos('OleDB', Protocol) = 0)
     then CheckEquals('32767,'''+stSearch+''','''+stSearch+''','+stSearch, FLogMessage)
-    else} CheckEquals('32767,'''+stSearch+''','+stSearch+','+stSearch, FLogMessage);
+    else CheckEquals('32767,'''+stSearch+''','+stSearch+','+stSearch, FLogMessage);
   finally
     FreeAndNil(Monitor);
     FreeAndNil(Query);
