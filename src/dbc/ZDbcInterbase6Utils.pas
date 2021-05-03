@@ -1531,7 +1531,10 @@ begin
     F := Value.Fraction[i];
     if F = 0
     then Inc(P)
-    else begin
+    else if (P = LastNibbleByteIDX) and Odd(Value.Precision) then begin
+      i64 := Value.Fraction[LastNibbleByteIDX] shr 4;
+      goto finalize
+    end else begin
       i64 := ZBcdNibble2Base100ByteLookup[F];
       if P = LastNibbleByteIDX
       then goto finalize
