@@ -3753,7 +3753,7 @@ begin
                     end;
       varCurrency:  begin {if first assign was zero}
                       FDynamicParamType := FDynamicParamType or ((Byte(FSQLType) >= Byte(stByte)) and (Byte(FSQLType) <= Byte(stWord)));
-                      SetAsCurrency(TVarData(Value).VDouble);
+                      SetAsCurrency(TVarData(Value).VCurrency);
                     end;
       varDate:      begin {if first assign was zero}
                       FDynamicParamType := FDynamicParamType or ((Byte(FSQLType) >= Byte(stByte)) and (Byte(FSQLType) <= Byte(stWord)));
