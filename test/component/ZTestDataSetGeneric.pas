@@ -2133,13 +2133,17 @@ begin
       CheckEquals(1, Query2.Fields[2].AsInteger, 'the Value of stByte field');
       CheckEquals(1, Query2.Fields[3].AsInteger, 'the Value of stShort field');
       CheckEquals(1, Query2.Fields[4].AsInteger, 'the Value of stInteger field');
-      CheckEquals(1, Query2.Fields[5].AsLargeInt, 'the Value of stLong field');
-      CheckEquals(1, Query2.Fields[6].AsSingle, 'the Value of stSingle field');
+      CheckEquals(1, Query2.Fields[5].{$IFDEF TFIELD_HAS_ASLARGEINT}AsLargeInt{$ELSE}AsInteger{$ENDIF}, 'the Value of stLong field');
+      CheckEquals(1, Query2.Fields[6].{$IFDEF WITH_FTSINGLE}AsSingle{$ELSE}AsFloat{$ENDIF}, 'the Value of stSingle field');
       CheckEquals(1, Query2.Fields[7].AsFloat, 'the Value of stDouble field');
-      CheckEquals(1, Query2.Fields[8].AsLargeInt, 'the Value of stBigDecimal field');
+      CheckEquals(1, Query2.Fields[8].{$IFDEF TFIELD_HAS_ASLARGEINT}AsLargeInt{$ELSE}AsInteger{$ENDIF}, 'the Value of stBigDecimal field');
       CheckEquals('ABCDEFG', Query2.Fields[9].AsString, 'the Value of stString field');
       CheckEquals('ABCDEFG', Query2.Fields[10].AsString, 'the Value of stUnicodeString field');
+      {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}
       Bts2 := Query2.Fields[11].AsBytes;
+      {$ELSE}
+      Bts2 := VarToBytes(Query2.Fields[11].Value);
+      {$ENDIF}
       CheckEquals(Bts, Bts2, 'the Value of stBytes field');
       CheckEqualsDate(Int(ANow), Query2.Fields[12].AsDateTime, [], 'the Value of sDate field');
       CheckEqualsDate(Frac(ANow), Query2.Fields[13].AsDateTime, [], 'the Value of sTime field');
@@ -2147,7 +2151,11 @@ begin
       CheckEquals('{BC89E8C9-264E-4A8E-A19B-C38DAE5B5463}', Query2.Fields[15].AsString, 'the Value of stGUID field');
       CheckEquals('XYZ', Query2.Fields[16].AsString, 'the Value of stAsciiStream field');
       CheckEquals('XYZ', Query2.Fields[17].AsString, 'the Value of stUnicodeStream field');
+      {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}
       Bts2 := Query2.Fields[18].AsBytes;
+      {$ELSE}
+      Bts2 := VarToBytes(Query2.Fields[18].Value);
+      {$ENDIF}
       CheckEquals(Bts, Bts2, 'the Value of stBinaryStream field');
       CheckFalse(Query2.Eof);
       Query.Params[0].Value := Integer(101);
