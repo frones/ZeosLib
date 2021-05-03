@@ -2042,16 +2042,20 @@ Some third party components using TParam. Let's test assign to TZParams.
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "ABCD" does not seem to be initialized} {$ENDIF}
 procedure TZGenericTestDataSet.TestAssignDBRTLParams;
 var Params: TParams;
-    Query: TZQuery;
+    Query, Query2: TZQuery;
     Param: TParam;
     ABCD: TBCD;
-    Bts: TBytes;
+    Bts, Bts2: TBytes;
     ANow: TDateTime;
+    I: Integer;
+    B: Boolean;
 begin
   Query := CreateQuery;
   Params := nil;
   Check(Query <> nil);
   Bts := nil;
+  Bts2 := nil;
+  Query2 := nil;
   try
     Connection.Connect;
     Connection.ExecuteDirect('delete from high_load where 1=1');
@@ -2074,7 +2078,7 @@ begin
     Param.AsInteger := 1;
     Param := Params.CreateParam(ftLargeInt, 'stLong', ptInput);
     Param.{$IFDEF WITH_PARAM_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF} := Int64(1);
-    Param := Params.CreateParam({$IFDEF WITH_FTSINGLE}DB.ftSingle{$ELSE}ftFloat{$ENDIF}, 'stLong', ptInput);
+    Param := Params.CreateParam({$IFDEF WITH_FTSINGLE}DB.ftSingle{$ELSE}ftFloat{$ENDIF}, 'stFloat', ptInput);
     Param.{$IFDEF WITH_FTSINGLE}AsSingle{$ELSE}AsFloat{$ENDIF} := 1;
     Param := Params.CreateParam(ftFloat, 'stDouble', ptInput);
     Param.AsFloat := 1;
@@ -2096,9 +2100,9 @@ begin
     {$ENDIF}
     Param := Params.CreateParam(ftTime, 'stDate', ptInput);
     ANow := EncodeDate(2021,4,28)+EncodeTime(4,4,4,0);
-    Param.AsDate := ANow;
+    Param.AsDate := Int(ANow);
     Param := Params.CreateParam(ftDate, 'stTime', ptInput);
-    Param.AsTime := ANow;
+    Param.AsTime := Frac(ANow);
     Param := Params.CreateParam(ftDateTime, 'stTimestamp', ptInput);
     Param.AsDateTime := ANow;
     Param := Params.CreateParam(ftGUID, 'stGUID', ptInput);
@@ -2117,10 +2121,51 @@ begin
     CheckEquals(19, Query.Params.Count);
     Query.ExecSQL;
     CheckEquals(1, Query.RowsAffected, 'The update count');
+    Query2 := CreateQuery;
+    Query2.SQL.Text := 'select * from high_load where hl_id = :hl_id';
+    for B := false to true do begin
+      Query2.Params[0].AsInteger := 100 + Ord(B);
+      Query2.Open;
+      CheckEquals(100 + Ord(B), Query2.Fields[0].AsInteger, 'the Value of hl_id field');
+      if Query2.Fields[1].DataType = ftBoolean
+      then Check(Query2.Fields[1].AsBoolean, 'the Value of stBoolean field')
+      else CheckEquals(1, Query2.Fields[2].AsInteger, 'the Value of stBoolean field');
+      CheckEquals(1, Query2.Fields[2].AsInteger, 'the Value of stByte field');
+      CheckEquals(1, Query2.Fields[3].AsInteger, 'the Value of stShort field');
+      CheckEquals(1, Query2.Fields[4].AsInteger, 'the Value of stInteger field');
+      CheckEquals(1, Query2.Fields[5].AsLargeInt, 'the Value of stLong field');
+      CheckEquals(1, Query2.Fields[6].AsSingle, 'the Value of stSingle field');
+      CheckEquals(1, Query2.Fields[7].AsFloat, 'the Value of stDouble field');
+      CheckEquals(1, Query2.Fields[8].AsLargeInt, 'the Value of stBigDecimal field');
+      CheckEquals('ABCDEFG', Query2.Fields[9].AsString, 'the Value of stString field');
+      CheckEquals('ABCDEFG', Query2.Fields[10].AsString, 'the Value of stUnicodeString field');
+      Bts2 := Query2.Fields[11].AsBytes;
+      CheckEquals(Bts, Bts2, 'the Value of stBytes field');
+      CheckEqualsDate(Int(ANow), Query2.Fields[12].AsDateTime, [], 'the Value of sDate field');
+      CheckEqualsDate(Frac(ANow), Query2.Fields[13].AsDateTime, [], 'the Value of sTime field');
+      CheckEqualsDate(ANow, Query2.Fields[14].AsDateTime, [], 'the Value of sTimestamp field');
+      CheckEquals('{BC89E8C9-264E-4A8E-A19B-C38DAE5B5463}', Query2.Fields[15].AsString, 'the Value of stGUID field');
+      CheckEquals('XYZ', Query2.Fields[16].AsString, 'the Value of stAsciiStream field');
+      CheckEquals('XYZ', Query2.Fields[17].AsString, 'the Value of stUnicodeStream field');
+      Bts2 := Query2.Fields[18].AsBytes;
+      CheckEquals(Bts, Bts2, 'the Value of stBinaryStream field');
+      CheckFalse(Query2.Eof);
+      Query.Params[0].Value := Integer(101);
+      if not B then begin
+        for i := 1 to 18 do
+          Query.Params[I].Value := Query2.Fields[i].Value;
+        Query.ExecSQL;
+        CheckEquals(1, Query.RowsAffected, 'The update count');
+      end;
+      Query2.Close;
+    end;
   finally
     FreeAndNil(Query);
     if Params <> nil then
       FreeAndNil(Params);
+    if Query2 <> nil then
+      FreeAndNil(Query2);
+
     Connection.ExecuteDirect('delete from high_load where 1=1');
   end;
 end;
