@@ -3212,46 +3212,44 @@ begin
 end;
 
 function TZMySQLEmulatedBatchPreparedStatement.CreateEmulatedArrayDMLStatement: TZMySQLPreparedStatement;
-var PStart, PEnd, AfterBracketClosePos: PChar;
+var PStart: PChar;
   SQLWriter: TZSQLStringWriter;
-  I, L, BracketDiff: NativeUInt;
+  I, L, BracketDiff, AfterBracketClosePos, BracketOpenPos: NativeUInt;
 begin
   if FEmulatedArrayDMLStatement <> nil then
     FlushEmulatedArrayDMLStatement;
   if (FTokenMatchIndex >= Ord(myDelete)) and (FTokenMatchIndex <= Ord(myUpdate)) then begin
-    if ((FTokenMatchIndex = Ord(myInsert)) and (FBracketClosePos <> nil)) or
+    if ((FTokenMatchIndex = Ord(myInsert)) and (FBracketClosePos > 0)) or
        ((FTokenMatchIndex = Ord(myDelete)) and (BindList.Capacity = 1)) then begin
       PStart := Pointer({$IFDEF UNICODE}fWSQL{$ELSE}fASQL{$ENDIF});
       L := Length({$IFDEF UNICODE}fWSQL{$ELSE}fASQL{$ENDIF});
-      PEnd := PStart+L;
-      if FBracketClosePos <> nil then begin
-        if FBracketClosePos = nil then begin//delete whithout "in (?)"
-          BracketDiff := 1;
-          AfterBracketClosePos := FFirstQuestionMark +1;
-        end else begin
-          AfterBracketClosePos := FBracketClosePos +1;
-          BracketDiff := AfterBracketClosePos-FBracketOpenPos;
+      if FBracketClosePos = 0 then begin//delete whithout "in (?)"
+        BracketDiff := 1;
+        AfterBracketClosePos := FFirstQuestionMark +1;
+        BracketOpenPos := FFirstQuestionMark;
+      end else begin
+        AfterBracketClosePos := FBracketClosePos +1;
+        BracketDiff := AfterBracketClosePos-FBracketOpenPos;
+        BracketOpenPos := FBracketOpenPos;
+      end;
+      SQLWriter := TZSQLStringWriter.Create(L+(BracketDiff*(Cardinal(BatchDMLArrayCount-1)){cloned questionmarks with brackets})+Cardinal(BatchDMLArrayCount){commas});
+      try
+        if FBracketClosePos = 0 then begin
+          SQLWriter.AddText(PStart, FFirstQuestionMark-1, {$IFDEF UNICODE}FUniTemp{$ELSE}fRawTemp{$ENDIF});
+          SQLWriter.AddText(' in (?', {$IFDEF UNICODE}FUniTemp{$ELSE}fRawTemp{$ENDIF});
+        end else SQLWriter.AddText(PStart, AfterBracketClosePos, {$IFDEF UNICODE}FUniTemp{$ELSE}fRawTemp{$ENDIF});
+        for I := 2 to BatchDMLArrayCount do begin
+          SQLWriter.AddChar(',', {$IFDEF UNICODE}FUniTemp{$ELSE}fRawTemp{$ENDIF});
+          SQLWriter.AddText(PStart+BracketOpenPos, BracketDiff, {$IFDEF UNICODE}FUniTemp{$ELSE}fRawTemp{$ENDIF});
         end;
-        SQLWriter := TZSQLStringWriter.Create(L+(BracketDiff*(Cardinal(BatchDMLArrayCount-1)){cloned questionmarks with brackets})+Cardinal(BatchDMLArrayCount){commas});
-        try
-          if FBracketClosePos = nil then begin
-            SQLWriter.AddText(PStart, (FFirstQuestionMark-1)-PStart, {$IFDEF UNICODE}FUniTemp{$ELSE}fRawTemp{$ENDIF});
-            SQLWriter.AddText(' in (?', {$IFDEF UNICODE}FUniTemp{$ELSE}fRawTemp{$ENDIF});
-          end else SQLWriter.AddText(PStart, AfterBracketClosePos-PStart, {$IFDEF UNICODE}FUniTemp{$ELSE}fRawTemp{$ENDIF});
-          for I := 2 to BatchDMLArrayCount do begin
-            SQLWriter.AddChar(',', {$IFDEF UNICODE}FUniTemp{$ELSE}fRawTemp{$ENDIF});
-            SQLWriter.AddText(FBracketOpenPos, BracketDiff, {$IFDEF UNICODE}FUniTemp{$ELSE}fRawTemp{$ENDIF});
-          end;
-          if FBracketClosePos = nil then
-            SQLWriter.AddChar(')', {$IFDEF UNICODE}FUniTemp{$ELSE}fRawTemp{$ENDIF});
-          if (PEnd > AfterBracketClosePos) then
-            SQLWriter.AddText(AfterBracketClosePos, (PEnd-AfterBracketClosePos), {$IFDEF UNICODE}FUniTemp{$ELSE}fRawTemp{$ENDIF});
-          SQLWriter.Finalize({$IFDEF UNICODE}FUniTemp{$ELSE}fRawTemp{$ENDIF});
-        finally
-          FreeAndNil(SQLWriter);
-        end;
-      end else
-        {$IFDEF UNICODE}FUniTemp{$ELSE}fRawTemp{$ENDIF} := {$IFDEF UNICODE}fWSQL{$ELSE}fASQL{$ENDIF};
+        if FBracketClosePos = 0 then
+          SQLWriter.AddChar(')', {$IFDEF UNICODE}FUniTemp{$ELSE}fRawTemp{$ENDIF});
+        if (L > AfterBracketClosePos) then
+          SQLWriter.AddText(PStart+AfterBracketClosePos, (L -AfterBracketClosePos), {$IFDEF UNICODE}FUniTemp{$ELSE}fRawTemp{$ENDIF});
+        SQLWriter.Finalize({$IFDEF UNICODE}FUniTemp{$ELSE}fRawTemp{$ENDIF});
+      finally
+        FreeAndNil(SQLWriter);
+      end;
       if (FTokenMatchIndex <> Ord(myInsert)) then begin//we can use emulated values only var an in (?) statement
         Result := TZMySQLPreparedStatement.Create(FMySQLConnection, {$IFDEF UNICODE}FUniTemp{$ELSE}fRawTemp{$ENDIF}, Info);
         if (FTokenMatchIndex = Ord(myUpdate))
@@ -3274,6 +3272,7 @@ begin
       Result := TZMySQLPreparedStatement.Create(FMySQLConnection, {$IFDEF UNICODE}fWSQL{$ELSE}fASQL{$ENDIF}, Info);
       FBindSingleRowBatches := True;
     end;
+    Result._AddRef;
   end else
     raise EZSQLException.Create('No valid statement found for ArrayDML bindings.');
 end;
@@ -3287,7 +3286,7 @@ begin
   inherited SetDataArray(ParameterIndex, Value, SQLType, VariantType);
   if ((FEmulatedArrayDMLStatement = nil) or ((OldBatchCount <> BatchDMLArrayCount) and (FTokenMatchIndex <> Ord(myUpdate)))) and (BatchDMLArrayCount > 0) then
     FEmulatedArrayDMLStatement := CreateEmulatedArrayDMLStatement;
-  if (FTokenMatchIndex <> Ord(myUpdate)) then
+  if (not FBindSingleRowBatches) then
     BindDataArrayAsParameters(BindList[ParameterIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value, FEmulatedArrayDMLStatement,
       ParameterIndex, BindList.Capacity, BatchDMLArrayCount);
 end;
