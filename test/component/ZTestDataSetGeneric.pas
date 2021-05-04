@@ -2049,6 +2049,9 @@ var Params: TParams;
     ANow: TDateTime;
     I: Integer;
     B: Boolean;
+    {$IFNDEF TBLOBDATA_IS_TBYTES}
+    BlobData: TBlobData;
+    {$ENDIF}
 begin
   Query := CreateQuery;
   Params := nil;
@@ -2142,7 +2145,12 @@ begin
       {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}
       Bts2 := Query2.Fields[11].AsBytes;
       {$ELSE}
-      Bts2 := VarToBytes(Query2.Fields[11].Value);
+        {$IFDEF TBLOBDATA_IS_TBYTES}
+        Bts2 := VarToBytes(Query2.Fields[11].Value);
+        {$ELSE}
+        BlobData := Query2.Fields[11].AsString;
+        BufferToBytes(Pointer(BlobData), Length(BlobData));
+        {$ENDIF}
       {$ENDIF}
       CheckEquals(Bts, Bts2, 'the Value of stBytes field');
       CheckEqualsDate(Int(ANow), Query2.Fields[12].AsDateTime, [], 'the Value of sDate field');
@@ -2154,7 +2162,12 @@ begin
       {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}
       Bts2 := Query2.Fields[18].AsBytes;
       {$ELSE}
-      Bts2 := VarToBytes(Query2.Fields[18].Value);
+        {$IFDEF TBLOBDATA_IS_TBYTES}
+        Bts2 := VarToBytes(Query2.Fields[18].Value);
+        {$ELSE}
+        BlobData := Query2.Fields[18].AsString;
+        BufferToBytes(Pointer(BlobData), Length(BlobData));
+        {$ENDIF}
       {$ENDIF}
       CheckEquals(Bts, Bts2, 'the Value of stBinaryStream field');
       CheckFalse(Query2.Eof);
