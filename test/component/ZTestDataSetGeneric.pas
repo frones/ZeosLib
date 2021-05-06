@@ -2072,7 +2072,7 @@ begin
     Param := Params.CreateParam(ftInteger, 'hl_id', ptInput);
     Param.AsInteger := 100;
     Param := Params.CreateParam(ftBoolean, 'stBoolean', ptInput);
-    Param.AsBoolean := True;
+    Param.AsBoolean := False;
     Param := Params.CreateParam({$IFDEF WITH_FTBYTE}ftByte{$ELSE}ftWord{$ENDIF}, 'stByte', ptInput);
     Param.{$IFDEF WITH_FTBYTE}AsByte{$ELSE}AsWord{$ENDIF} := 1;
     Param := Params.CreateParam({$IFDEF WITH_FTSHORTINT}ftShortInt{$ELSE}ftSmallInt{$ENDIF}, 'stShort', ptInput);
@@ -2131,8 +2131,8 @@ begin
       Query2.Open;
       CheckEquals(100 + Ord(B), Query2.Fields[0].AsInteger, 'the Value of hl_id field');
       if Query2.Fields[1].DataType = ftBoolean
-      then Check(Query2.Fields[1].AsBoolean, 'the Value of stBoolean field')
-      else CheckEquals(1, Query2.Fields[2].AsInteger, 'the Value of stBoolean field');
+      then CheckEquals(Ord(B), Integer(Query2.Fields[1].AsBoolean), 'the Value of stBoolean field')
+      else CheckEquals(Ord(B), Query2.Fields[1].AsInteger, 'the Value of stBoolean field');
       CheckEquals(1, Query2.Fields[2].AsInteger, 'the Value of stByte field');
       CheckEquals(1, Query2.Fields[3].AsInteger, 'the Value of stShort field');
       CheckEquals(1, Query2.Fields[4].AsInteger, 'the Value of stInteger field');
@@ -2142,15 +2142,19 @@ begin
       CheckEquals(1, Query2.Fields[8].{$IFDEF TFIELD_HAS_ASLARGEINT}AsLargeInt{$ELSE}AsInteger{$ENDIF}, 'the Value of stBigDecimal field');
       CheckEquals('ABCDEFG', Query2.Fields[9].AsString, 'the Value of stString field');
       CheckEquals('ABCDEFG', Query2.Fields[10].AsString, 'the Value of stUnicodeString field');
-      {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}
+      if Connection.DbcConnection.GetServerProvider = spPostgreSQL //postgres simply has not varbinary field just the <=1GB beatea type
+      then CheckEquals(ftBlob, Query2.Fields[11].DataType, 'the DataType of stBytes field')
+      else CheckEquals(ftVarBytes, Query2.Fields[11].DataType, 'the DataType of stBytes field');
+      {$IFDEF TFIELD_HAS_ASBYTES}
       Bts2 := Query2.Fields[11].AsBytes;
       {$ELSE}
-        {$IFDEF TBLOBDATA_IS_TBYTES}
-        Bts2 := VarToBytes(Query2.Fields[11].Value);
-        {$ELSE}
+        {$IFNDEF TBLOBDATA_IS_TBYTES}
+      if Connection.DbcConnection.GetServerProvider = spPostgreSQL then begin
         BlobData := Query2.Fields[11].AsString;
-        BufferToBytes(Pointer(BlobData), Length(BlobData));
+        Bts2 := BufferToBytes(Pointer(BlobData), Length(BlobData));
+      end else
         {$ENDIF}
+        Bts2 := VarToBytes(Query2.Fields[11].Value);
       {$ENDIF}
       CheckEquals(Bts, Bts2, 'the Value of stBytes field');
       CheckEqualsDate(Int(ANow), Query2.Fields[12].AsDateTime, [], 'the Value of sDate field');
@@ -2166,14 +2170,15 @@ begin
         Bts2 := VarToBytes(Query2.Fields[18].Value);
         {$ELSE}
         BlobData := Query2.Fields[18].AsString;
-        BufferToBytes(Pointer(BlobData), Length(BlobData));
+        Bts2 := BufferToBytes(Pointer(BlobData), Length(BlobData));
         {$ENDIF}
       {$ENDIF}
       CheckEquals(Bts, Bts2, 'the Value of stBinaryStream field');
       CheckFalse(Query2.Eof);
-      Query.Params[0].Value := Integer(101);
       if not B then begin
-        for i := 1 to 18 do
+        Query.Params[0].Value := Integer(101);
+        Query.Params[1].Value := True;
+        for i := 2 to 18 do
           Query.Params[I].Value := Query2.Fields[i].Value;
         Query.ExecSQL;
         CheckEquals(1, Query.RowsAffected, 'The update count');
