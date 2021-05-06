@@ -1509,7 +1509,7 @@ begin
     Result := TZSQLType(Byte(Result)-3); // no streams available using ADO
     ColumnInfo.Precision := 0;
   end;
-  if Result = stString then begin
+  if Result in [stString, stUnicodeString] then begin
     Result := stUnicodeString; // no raw chars in ADO
     ColumnCodePage := zCP_UTF16;
   end;

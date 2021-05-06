@@ -1239,6 +1239,7 @@ begin
         V := VarArrayCreate([0, Len - 1], varByte);
         Move(AValue^, TVarData(V).VArray.Data^, Len);
         FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value := V;
+        FAdoCommand.Parameters[Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Size := Len;
       end;
     else raise CreateConversionError(Index, stBytes, stUnknown)
   end;
