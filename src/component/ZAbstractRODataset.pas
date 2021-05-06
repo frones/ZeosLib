@@ -7847,13 +7847,12 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-function TZIntegerField.GetAsInteger: Longint;
+function TZIntegerField.GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF};
 begin
   Result := GetAsInt;
 end;
 
-
-{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF} //rolling eyes
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "I" does not seem to be initialized} {$ENDIF} //rolling eyes
 function TZIntegerField.GetAsString: String;
 var I: Integer;
 begin
