@@ -337,18 +337,19 @@ var
     Inc(TokenIndex);
   end;
 begin
-  { Optimization for empty query. }
-  If FDoNotRebuildAll then begin
+  if not (Assigned(FParams) and Assigned(FStatements)) then //see creation order
+    exit; //Alexs
+  if FDoNotRebuildAll then begin
     FDoNotRebuildAll := False;
     Exit;
   end;
   if (FDataset = nil) or not (csLoading in FDataset.ComponentState) then
     FParams.Clear;
+  { Optimization for empty query. }
   S := Text;
   NormalizedParam := Trim(S);
   if NormalizedParam = '' then
     Exit;
-
 
   FStatements.Clear;
   SQL := '';

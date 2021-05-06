@@ -251,13 +251,17 @@ begin
 
   FDeleteSQL := TZSQLStrings.Create;
   FDeleteSQL.OnChange := UpdateParams;
+  FDeleteSQL.Dataset := Self;
   FInsertSQL := TZSQLStrings.Create;
   FInsertSQL.OnChange := UpdateParams;
+  FInsertSQL.Dataset := Self;
   FModifySQL := TZSQLStrings.Create;
   FModifySQL.OnChange := UpdateParams;
+  FModifySQL.Dataset := Self;
 
   FRefreshSQL := TZSQLStrings.Create;
   FRefreshSQL.OnChange:= UpdateParams;
+  FRefreshSQL.Dataset := Self;
 
   FParams := {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF}.Create(Self);
   FParamCheck := True;
@@ -271,11 +275,11 @@ end;
 }
 destructor TZUpdateSQL.Destroy;
 begin
-  FParams.Free;
-  FDeleteSQL.Free;
-  FInsertSQL.Free;
-  FModifySQL.Free;
-  FRefreshSQL.Free;
+  FreeAndNil(FParams);
+  FreeAndNil(FDeleteSQL);
+  FreeAndNil(FInsertSQL);
+  FreeAndNil(FModifySQL);
+  FreeAndNil(FRefreshSQL);
   {keep track we notify a possible opened DataSet.CachedResultSet about destruction
    else IntfAssign of FPC fails to clear the cached resolver of the CachedResultSet}
   if Assigned(FDataSet) and (FDataSet is TZAbstractRWTxnUpdateObjDataSet) then
