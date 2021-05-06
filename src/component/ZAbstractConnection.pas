@@ -1010,9 +1010,9 @@ begin
         FreeAndNil(Err);
     end else begin
       if Err = nil //should not happen
-      then ADatBaseError := EZDataBaseError.Create('Connection lost.')
+      then ADatBaseError := EZDatabaseConnectionLostError.Create('Connection lost.')
       else begin
-        ADatBaseError := EZDataBaseError.CreateFromException(Err);
+        ADatBaseError := EZDatabaseConnectionLostError.CreateFromException(Err);
         FreeAndNil(Err);
       end;
       raise ADatBaseError;

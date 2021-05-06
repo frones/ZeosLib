@@ -126,6 +126,8 @@ type
     property SpecificData: TZExceptionSpecificData read FSpecificData;
   end;
 
+  EZDatabaseConnectionLostError = Class(EZDatabaseError);
+
   {** Dataset Linker class. }
   TZDataLink = class(TMasterDataLink)
   private
@@ -8584,6 +8586,8 @@ procedure TZBCDField.SetAsCurrency(Value: Currency);
 begin
   if not FBound then
     raise CreateUnBoundError(Self);
+  if (Size < 4) then
+    Value := RoundCurrTo(Value, Size);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     if Assigned(OnValidate) then try
@@ -8746,24 +8750,21 @@ end;
 
 procedure TZFMTBCDField.SetAsBCD(const Value: TBcd);
 var AValue: TBcd;
-    pNibble, pLastNibble: PAnsiChar;
-    Precision, Scale: Word;
-    ValueIsOdd: Boolean;
+    Precision: Word;
 begin
   if not FBound then
     raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
     AValue := Value;
-    if ZSysUtils.GetPacketBCDOffSets(AValue, pNibble, pLastNibble, Precision, Scale, ValueIsOdd) then
-      ZPackBCDToLeft(AValue, pNibble, pLastNibble, Precision, Scale, ValueIsOdd);
+    ZRoundBCD(AValue, Size, Precision);
     if Assigned(OnValidate) then try
       FIsValidating := True;
-      inherited SetAsBCD(Value);
+      inherited SetAsBCD(AValue);
     finally
       FIsValidating := False;
     end else begin
-      FResultSet.UpdateBigDecimal(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+      FResultSet.UpdateBigDecimal(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, AValue);
       if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
         DataEvent(deFieldChange, NativeInt(Self));
     end;
