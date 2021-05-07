@@ -2554,6 +2554,12 @@ var P: PAnsiChar;
     then IZBlob(DataAddr^) := lob
     else IInterface(DataAddr^) := lob
   end;
+  {$IFDEF UNICODE}
+  procedure SetAsUni;
+  begin
+    InternalSetAsUnicodeString(DataAddr, IsNullAddr, PRawToUnicode(P, L, CodePage));
+  end;
+  {$ENDIF}
 label jmpFail;
 begin
   P := Pointer(Value);
@@ -2585,13 +2591,18 @@ begin
     stFloat: RawToFloat(P, AnsiChar(FDecimalSeperator), PSingle(DataAddr)^);
     stDouble: RawToFloat(P, AnsiChar(FDecimalSeperator), PDouble(DataAddr)^);
     stCurrency: RawToFloat(P, AnsiChar(FDecimalSeperator), PCurrency(DataAddr)^);
-    stBigDecimal: PBCD(DataAddr)^ := RawToBCD(P, L);
-    stDate: if not ZSysUtils.TryRawToDate(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.ShortDateFormat, PZDate(DataAddr)^) then
-              goto jmpFail;
-    stTime: if not ZSysUtils.TryRawToTime(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongTimeFormat, PZTime(DataAddr)^) then
-              goto jmpFail;
-    stTimeStamp: if not ZSysUtils.TryRawToTimestamp(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongDateFormat, PZTimestamp(DataAddr)^) then
-              goto jmpFail;
+    stBigDecimal: if not TryRawToBcd(P, L, PBCD(DataAddr)^, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.DecimalSeparator) then
+      goto jmpFail;
+    {$IFNDEF UNICODE}
+    stDate: if (FDataSet = nil) or not TZAbstractRODataset(FDataSet).FormatSettings.EditDateFormatSettings.TryStrToDate(PZDate(DataAddr)^, Value) then
+              if not TryRawToDate(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.ShortDateFormat, PZDate(DataAddr)^) then goto jmpFail;
+    stTime: if (FDataSet = nil) or not TZAbstractRODataset(FDataSet).FormatSettings.EditTimeFormatSettings.TryStringToTime(PZTime(DataAddr)^, Value, 9) then
+              if not TryRawToTime(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongTimeFormat, PZTime(DataAddr)^) then goto jmpFail;
+    stTimestamp: if (FDataSet = nil) or not TZAbstractRODataset(FDataSet).FormatSettings.EditTimestampFormatSettings.TryStrToTimestamp(PZTimestamp(DataAddr)^, Value, 9) then
+              if not TryRawToTimestamp(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongDateFormat, PZTimeStamp(DataAddr)^) then goto jmpFail;
+    {$ELSE !UNICODE}
+    stDate, stTime, stTimeStamp: SetAsUni;
+    {$ENDIF UNICODE}
     stGUID: if (L = 36) or (L = 38) then
               ZSysUtils.ValidGUIDToBinary(P, @PGUID(DataAddr)^.D1)
             else goto jmpFail;
@@ -2661,11 +2672,20 @@ begin
     stFloat: UnicodeToFloat(P, WideChar(FDecimalSeperator), PSingle(DataAddr)^);
     stDouble: UnicodeToFloat(P, WideChar(FDecimalSeperator), PDouble(DataAddr)^);
     stCurrency: UnicodeToFloat(P, WideChar(FDecimalSeperator), PCurrency(DataAddr)^);
-    stBigDecimal: if not TryUniToBCD(P, L, PBCD(DataAddr)^, '.') then goto jmpErr;
-    stDate: if not TryUniToDate(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.ShortDateFormat, PZDate(DataAddr)^) then goto jmpErr;
-    stTime: if not TryUniToTime(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongTimeFormat, PZTime(DataAddr)^) then goto jmpErr;
-    stTimestamp: if not TryUniToTimeStamp(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongDateFormat, PZTimeStamp(DataAddr)^) then goto jmpErr;
-    stGUID: ZSysUtils.ValidGUIDToBinary(P, @TGUIDDynArray(FData.pvDynArray.VArray)[Index].D1);
+    stBigDecimal: if not TryUniToBCD(P, L, PBCD(DataAddr)^, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.DecimalSeparator) then goto jmpErr;
+    {$IFDEF UNICODE}
+    stDate: if (FDataSet = nil) or not TZAbstractRODataset(FDataSet).FormatSettings.EditDateFormatSettings.TryStrToDate(PZDate(DataAddr)^, Value) then
+              if not TryUniToDate(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.ShortDateFormat, PZDate(DataAddr)^) then goto jmpErr;
+    stTime: if (FDataSet = nil) or not TZAbstractRODataset(FDataSet).FormatSettings.EditTimeFormatSettings.TryStringToTime(PZTime(DataAddr)^, Value, 9) then
+              if not TryUniToTime(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongTimeFormat, PZTime(DataAddr)^) then goto jmpErr;
+    stTimestamp: if (FDataSet = nil) or not TZAbstractRODataset(FDataSet).FormatSettings.EditTimestampFormatSettings.TryStrToTimestamp(PZTimestamp(DataAddr)^, Value, 9) then
+              if not TryUniToTimeStamp(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongDateFormat, PZTimeStamp(DataAddr)^) then goto jmpErr;
+    {$ELSE !UNICODE}
+    stDate, stTime, stTimeStamp: SetAsRaw;
+    {$ENDIF UNICODE}
+    stGUID: if (L = 36) or (L = 38) then
+              ZSysUtils.ValidGUIDToBinary(P, @PGUID(DataAddr)^.D1)
+            else goto jmpErr;
     stString: SetAsRaw;
     stUnicodeString: UnicodeString(DataAddr^) := Value;
     stBytes: TBytes(DataAddr^) := BufferToBytes(P, L shl 1);
@@ -3804,21 +3824,30 @@ begin
       //varObject   = $0049; {                 73 }
       //varUStrArg  = $004A; {                 74 }
       {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
-      varString:    if DefaultSystemCodePage = zCP_UTF8
+      varString:  begin
+                    FDynamicParamType := FSQLType = stUnknown;
+                    if DefaultSystemCodePage = zCP_UTF8
                     then SetAsUTF8String(UTF8String(TVarData(Value).VString))
                     else SetAsAnsiString(AnsiString(TVarData(Value).VString));
+                  end;
       {$ELSE}
         {$IFNDEF NO_ANSISTRING}
-      varString:  {$IFDEF FPC}
-                  SetAsUTF8String(UTF8String(TVarData(Value).VString))
-                  {$ELSE}
-                  SetAsAnsiString(AnsiString(TVarData(Value).VString));
-                  {$ENDIF}
+      varString:  begin
+                    FDynamicParamType := FSQLType = stUnknown;
+                    {$IFDEF FPC}
+                    SetAsUTF8String(UTF8String(TVarData(Value).VString))
+                    {$ELSE}
+                    SetAsAnsiString(AnsiString(TVarData(Value).VString));
+                    {$ENDIF}
+                  end;
         {$ENDIF NO_ANSISTRING}
       {$IFEND}
       //varAny      = $0101; { Corba any      257 } {not OLE compatible }
       {$IF declared(varUString)}
-      varUString: SetAsUnicodeString(UnicodeString(TVarData(Value).VAny));
+      varUString: begin
+                    FDynamicParamType := FSQLType = stUnknown;
+                    SetAsUnicodeString(UnicodeString(TVarData(Value).VAny));
+                  end;
       {$IFEND}
       (varArray or varByte): SetAsBytes(VarToBytes(Value));
       // custom types range from $110 (272) to $7FF (2047)
