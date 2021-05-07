@@ -2163,7 +2163,7 @@ begin
       CheckEquals('{BC89E8C9-264E-4A8E-A19B-C38DAE5B5463}', Query2.Fields[15].AsString, 'the Value of stGUID field');
       CheckEquals('XYZ', Query2.Fields[16].AsString, 'the Value of stAsciiStream field');
       CheckEquals('XYZ', Query2.Fields[17].AsString, 'the Value of stUnicodeStream field');
-      {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}
+      {$IFDEF TFIELD_HAS_ASBYTES}
       Bts2 := Query2.Fields[18].AsBytes;
       {$ELSE}
         {$IFDEF TBLOBDATA_IS_TBYTES}
