@@ -4492,19 +4492,19 @@ begin
         then ValidGUIDToBinary(Value, PAnsiChar(Data))
         else SetNull(ColumnIndex);
     stDate: if not ZSysUtils.TryRawToDate(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, PZDate(Data)^) then
-              if ZSysUtils.TryRawToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, TS{%H-}) then begin
+              if ZSysUtils.TryRawToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateTimeFormat, TS{%H-}) then begin
                 PZDate(Data)^.Year := TS.Year;
                 PZDate(Data)^.Month := TS.Month;
                 PZDate(Data)^.Day := TS.Day;
                 PZDate(Data)^.IsNegative := TS.IsNegative;
               end else
                 PInt64(Data)^ := 0;
-    stTime: if not ZSysUtils.TryRawToTime(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, PZTime(Data)^) then
-              if ZSysUtils.TryRawToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, TS) then begin
+    stTime: if not ZSysUtils.TryRawToTime(Value, Len, ConSettings^.ReadFormatSettings.TimeFormat, PZTime(Data)^) then
+              if ZSysUtils.TryRawToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateTimeFormat, TS) then begin
                 PZTime(Data)^ := PZTime(@TS.Hour)^;
                 PZTime(Data)^.IsNegative := False;
               end;
-    stTimestamp: ZSysUtils.TryRawToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, PZTimeStamp(Data)^);
+    stTimestamp: ZSysUtils.TryRawToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateTimeFormat, PZTimeStamp(Data)^);
     stUnicodeStream, stAsciiStream:
       if (Data^ = nil) then begin
         CP := FColumnCodePages[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
@@ -4576,18 +4576,18 @@ begin
         then ValidGUIDToBinary(Value, PAnsiChar(Data))
         else SetNull(ColumnIndex);
     stDate: if not ZSysUtils.TryUniToDate(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, PZDate(Data)^) then
-              if ZSysUtils.TryUniToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, TS{%H-}) then begin
+              if ZSysUtils.TryUniToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateTimeFormat, TS{%H-}) then begin
                 PZDate(Data)^.Year := TS.Year;
                 PZDate(Data)^.Month := TS.Month;
                 PZDate(Data)^.Day := TS.Day;
                 PZDate(Data)^.IsNegative := TS.IsNegative;
               end;
-    stTime: if not ZSysUtils.TryUniToTime(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, PZTime(Data)^) then
-              if ZSysUtils.TryUniToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, TS) then begin
+    stTime: if not ZSysUtils.TryUniToTime(Value, Len, ConSettings^.ReadFormatSettings.TimeFormat, PZTime(Data)^) then
+              if ZSysUtils.TryUniToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateTimeFormat, TS) then begin
                 PZTime(Data)^ := PZTime(@TS.Hour)^;
                 PZTime(Data)^.IsNegative := False;
               end;
-    stTimestamp: ZSysUtils.TryUniToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateFormat, PZTimeStamp(Data)^);
+    stTimestamp: ZSysUtils.TryUniToTimeStamp(Value, Len, ConSettings^.ReadFormatSettings.DateTimeFormat, PZTimeStamp(Data)^);
     else
       raise EZSQLException.Create(SConvertionIsNotPossible);
   end;
