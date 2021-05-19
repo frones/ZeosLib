@@ -56,21 +56,30 @@ interface
 {$I ZDbc.inc}
 
 {$IFDEF ENABLE_PROXY} //if set we have an empty unit
+
 uses
   {$IFDEF WITH_TOBJECTLIST_REQUIRES_SYSTEM_TYPES}System.Types{$IFNDEF NO_UNIT_CONTNRS}, Contnrs{$ENDIF}{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, System.NetEncoding,
   ZPlainProxyDriverIntf, ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcLogging,{$IFDEF ZEOS73UP}FmtBCD, ZVariant, {$ENDIF}
-  ZDbcResultSetMetadata, ZCompatibility, XmlDoc, XmlIntf;
+  ZDbcResultSetMetadata, ZCompatibility {$IFNDEF FPC},XmlDoc, XmlIntf{$ELSE}, Dom{$ENDIF};
 
 type
+  {$IFDEF FPC}
+  TZXmlDocument = TXmlDocument;
+  TZXmlNode = TDOMNode;
+  {$ELSE}
+  TZXmlDocument = IXmlDocument;
+  TZXmlNode = IXmlNode;
+  {$ENDIF}
+
   {** Implements DBC Layer Proxy ResultSet. }
   TZDbcProxyResultSet = class({$IFDEF ZEOS73UP}TZAbstractReadOnlyResultSet, IZResultSet{$ELSE}TZAbstractResultSet{$ENDIF})
   private
-    FXmlDocument: IXMLDocument;
-    FCurrentRowNode: IXMLNode;
-    FResultSetNode: IXMLNode;
-    FMetadataNode: IXmlNode;
-    FRowsNode: IXMLNode;
+    FXmlDocument: TZXMLDocument;
+    FCurrentRowNode: TZXmlNode;
+    FResultSetNode: TZXmlNode;
+    FMetadataNode: TZXmlNode;
+    FRowsNode: TZXmlNode;
     FFormatSettings: TFormatSettings;
   protected
     {$IFNDEF NEXTGEN}
@@ -323,6 +332,12 @@ type
       ParentResultSet: TZAbstractResultSet);
   End;
 
+  {$IFDEF FPC}
+  TZTDOMNodeListHelper = class helper for TDOMNodeList
+     function Get(Index: Integer): TDOMNode;
+   end;
+  {$ENDIF}
+
 {$ENDIF ENABLE_PROXY} //if set we have an empty unit
 implementation
 {$IFDEF ENABLE_PROXY} //if set we have an empty unit
@@ -330,7 +345,7 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} Math,
   ZMessages, ZEncoding, ZFastCode, ZDbcMetadata, ZClasses,
-  TypInfo, Variants, xmldom, {$IFDEF WITH_OMNIXML}Xml.omnixmldom,{$ENDIF} EncdDecd;
+  TypInfo, Variants {$IFNDEF FPC}, xmldom, EncdDecd{$ELSE}, xmlread{$ENDIF}{$IFDEF WITH_OMNIXML}, Xml.omnixmldom{$ENDIF};
 
 const
   ValueAttr = 'value';
@@ -339,6 +354,13 @@ function BoolToInt(Value: Boolean): Integer;
 begin
   if Value then Result := 1 else Result := 0;
 end;
+
+{$IFDEF FPC}
+function TZTDOMNodeListHelper.Get(Index: Integer): TDOMNode;
+begin
+  Result := Self.Item[Index]
+end;
+{$ENDIF}
 
 constructor TZDbcProxyResultSetMetadata.Create(const Metadata: IZDatabaseMetadata; const SQL: string;
       ParentResultSet: TZAbstractResultSet);
@@ -357,7 +379,9 @@ var
   x: String;
   xmldoc: TXMLDocument;
 
+  {$IFNDEF FPC}
   DomVendor: TDOMVendor;
+  {$ENDIF}
 begin
   ConSettings := Connection.GetConSettings;
   Metadata := Connection.GetMetadata;
@@ -365,14 +389,17 @@ begin
   inherited Create(Statement, SQL,
     TZDbcProxyResultSetMetadata.Create(Metadata, SQL, Self), ConSettings);
 
-  xmldoc := TXMLDocument.Create(nil);
+  xmldoc := TXMLDocument.Create({$IFNDEF FPC}nil{$ENDIF});
   // OmiXml preserves the Carriage Return in Strings -> This solves a problem
   // where CRLF gets converted to LF wit MSXML
+  {$IFNDEF FPC}
   DomVendor := DOMVendors.Find('Omni XML');
   if Assigned(DomVendor) then
     xmldoc.DOMImplementation := DomVendor.DOMImplementation;
-  FXmlDocument := xmldoc as IXMLDocument;
+  {$ENDIF}
+  FXmlDocument := xmldoc as TZXMLDocument;
 
+  {$IFNDEF FPC}
   Stream := TMemoryStream.Create;
   try
     x := #$FEFF;
@@ -383,6 +410,14 @@ begin
   finally
     FreeAndNil(Stream);
   end;
+  {$ELSE}
+  Stream := TStringStream.Create(ResultStr);
+  try
+    ReadXMLFile(FXmlDocument, Stream);
+  finally
+    FreeAndNil(Stream);
+  end;
+  {$ENDIF}
 
   FFormatSettings.DateSeparator := '-';
   FFormatSettings.LongDateFormat := 'YYYY/MM/DD';
@@ -403,7 +438,7 @@ var
   I: Integer;
   ColumnInfo: TZColumnInfo;
   FieldCount: Integer;
-  ColumnNode: IXMLNode;
+  ColumnNode: TZXMLNode;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
