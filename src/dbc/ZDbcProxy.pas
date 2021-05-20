@@ -237,7 +237,7 @@ implementation
 
 uses
   ZSysUtils, ZFastCode, ZEncoding,
-  ZDbcProxyMetadata, ZDbcStatement, ZDbcProxyStatement, ZDbcProperties,
+  ZDbcProxyMetadata, ZDbcProxyStatement, ZDbcProperties,
   ZPostgreSqlAnalyser, ZPostgreSqlToken, ZSybaseAnalyser, ZSybaseToken,
   ZInterbaseAnalyser, ZInterbaseToken, ZMySqlAnalyser, ZMySqlToken,
   ZOracleAnalyser, ZOracleToken, ZGenericSqlToken,
@@ -476,6 +476,9 @@ end;
 {$IFDEF ZEOS73UP}
 function TZDbcProxyConnection.PrepareCallWithParams(const SQL: string; Info: TStrings): IZCallableStatement;
 begin
+  {$IFDEF FPC}
+  Result := nil;
+  {$ENDIF}
   raise Exception.Create('PrepareCallWithParams is not supported!');
 end;
 {$ENDIF}
