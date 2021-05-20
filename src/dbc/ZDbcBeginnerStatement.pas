@@ -140,9 +140,9 @@ type
     procedure SetLong(ParameterIndex: Integer; const Value: Int64); virtual;
     procedure SetFloat(ParameterIndex: Integer; Value: Single); virtual;
     procedure SetDouble(ParameterIndex: Integer; const Value: Double); virtual;
-    procedure SetCurrency(ParameterIndex: Integer; const Value: Currency); virtual;
-    procedure SetBigDecimal(ParameterIndex: Integer; const Value: TBCD); virtual;
-    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); virtual;
+    procedure SetCurrency(ParameterIndex: LongInt; const Value: Currency); virtual;
+    procedure SetBigDecimal(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD); virtual;
+    procedure SetCharRec(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec); virtual;
     procedure SetString(ParameterIndex: Integer; const Value: String); virtual;
     {$IFNDEF NO_ANSISTRING}
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); virtual;
@@ -154,18 +154,18 @@ type
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString);  virtual; //AVZ
     procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); overload; virtual;
     procedure SetBytes(ParameterIndex: Integer; Value: PByte; Len: NativeUInt); overload; virtual;
-    procedure SetGUID(ParameterIndex: Integer; const Value: TGUID); virtual;
+    procedure SetGUID(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID); virtual;
     procedure SetDate(ParameterIndex: Integer; const Value: TDateTime); overload; virtual;
-    procedure SetDate(ParameterIndex: Integer; const Value: TZDate); overload; virtual;
+    procedure SetDate(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate); overload; virtual;
     procedure SetTime(ParameterIndex: Integer; const Value: TDateTime); overload; virtual;
-    procedure SetTime(ParameterIndex: Integer; const Value: TZTime); overload; virtual;
+    procedure SetTime(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime); overload; virtual;
     procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime); overload; virtual;
-    procedure SetTimestamp(ParameterIndex: Integer; const Value: TZTimeStamp); overload; virtual;
+    procedure SetTimestamp(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp); overload; virtual;
     procedure SetAsciiStream(ParameterIndex: Integer; const Value: TStream); virtual;
     procedure SetUnicodeStream(ParameterIndex: Integer; const Value: TStream); virtual;
     procedure SetBinaryStream(ParameterIndex: Integer; const Value: TStream); virtual;
     procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType; const Value: IZBlob); virtual;
-    procedure SetValue(ParameterIndex: Integer; const Value: TZVariant); virtual;
+    procedure SetValue(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZVariant); virtual;
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); virtual;
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); virtual;
 
@@ -743,7 +743,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractBeginnerPreparedStatement.SetBigDecimal(
-  ParameterIndex: Integer; const Value: TBCD);
+  ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD);
 begin
   SetInParam(ParameterIndex, stBigDecimal, EncodeBigDecimal(Value));
 end;
@@ -760,7 +760,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractBeginnerPreparedStatement.SetCharRec(ParameterIndex: Integer;
-  const Value: TZCharRec);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec);
 begin
   SetInParam(ParameterIndex, stString, EncodeCharRec(Value));
 end;
@@ -920,7 +920,7 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-procedure TZAbstractBeginnerPreparedStatement.SetGUID(ParameterIndex: Integer; const Value: TGUID);
+procedure TZAbstractBeginnerPreparedStatement.SetGUID(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TGUID);
 begin
   SetInParam(ParameterIndex, stGUID, EncodeGUID(Value));
 end;
@@ -939,7 +939,7 @@ begin
   SetInParam(ParameterIndex, stDate, EncodeDateTime(Value));
 end;
 
-procedure TZAbstractBeginnerPreparedStatement.SetDate(ParameterIndex: Integer; const Value: TZDate);
+procedure TZAbstractBeginnerPreparedStatement.SetDate(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZDate);
 begin
   SetInParam(ParameterIndex, stDate, EncodeZDate(Value));
 end;
@@ -958,7 +958,7 @@ begin
   SetInParam(ParameterIndex, stTime, EncodeDateTime(Value));
 end;
 
-procedure TZAbstractBeginnerPreparedStatement.SetTime(ParameterIndex: Integer; const Value: TZTime);
+procedure TZAbstractBeginnerPreparedStatement.SetTime(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTime);
 begin
   SetInParam(ParameterIndex, stTime, EncodeZTime(Value));
 end;
@@ -977,7 +977,7 @@ begin
   SetInParam(ParameterIndex, stTimestamp, EncodeDateTime(Value));
 end;
 
-procedure TZAbstractBeginnerPreparedStatement.SetTimestamp(ParameterIndex: Integer; const Value: TZTimeStamp);
+procedure TZAbstractBeginnerPreparedStatement.SetTimestamp(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZTimeStamp);
 begin
   SetInParam(ParameterIndex, stTimestamp, EncodeZTimeStamp(Value));
 end;
@@ -1100,7 +1100,7 @@ end;
   @param Value the variant value.
 }
 procedure TZAbstractBeginnerPreparedStatement.SetValue(ParameterIndex: Integer;
-  const Value: TZVariant);
+  {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZVariant);
 var
   SQLType: TZSQLType;
   TempBlob: IZBlob;
