@@ -114,6 +114,7 @@
         </DelphiCompile>
 	<DCCReference Include="rtl.dcp"/>
 	<DCCReference Include="dbrtl.dcp"/>
+	<DCCReference Include="..\..\src\core\ZBase64.pas"/>
 	<DCCReference Include="..\..\src\core\ZClasses.pas"/>
 	<DCCReference Include="..\..\src\core\ZCollections.pas"/>
 	<DCCReference Include="..\..\src\core\ZCompatibility.pas"/>

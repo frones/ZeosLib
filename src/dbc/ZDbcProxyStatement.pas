@@ -136,7 +136,7 @@ uses
   ZEncoding, ZTokenizer, ZClasses,
   // For the resolvers:
   ZDbcInterbase6, ZDbcASA,ZDbcDbLibResultSet, ZDbcOracle, ZdbcPostgreSqlStatement,
-  TypInfo, Variants, NetEncoding{$IFDEF ZEOS73UP}, FmtBcd{$ENDIF}
+  TypInfo, Variants, ZBase64{$IFDEF ZEOS73UP}, FmtBcd{$ENDIF}
   {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
   {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
@@ -292,7 +292,7 @@ begin
             end;
           stBinaryStream:
             if (InParamValues[x].VType = vtInterface) and Supports(InParamValues[x].VInterface, IZBlob, TempBlob) then begin
-              Line := StrParamToStr(TNetEncoding.Base64.EncodeBytesToString(TempBlob.GetBytes));
+              Line := StrParamToStr(EncodeBase64(TempBlob.GetBytes));
             end else begin
               raise Exception.Create('Conversion of parameter of type ' + TypeName + ' to stBinaryStream is not supported (yet).');
             end;

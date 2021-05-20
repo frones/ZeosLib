@@ -26,7 +26,8 @@ uses
   ZDbcProperties, ZDbcResultSet, ZDbcResultSetMetadata, ZDbcSQLAnywhere, 
   ZDbcSQLAnywhereResultSet, ZDbcSQLAnywhereStatement, ZDbcSQLAnywhereUtils, 
   ZDbcSqLite, ZDbcSqLiteMetadata, ZDbcSqLiteResultSet, ZDbcSqLiteStatement, 
-  ZDbcSqLiteUtils, ZDbcStatement, ZDbcUtils;
+  ZDbcSqLiteUtils, ZDbcStatement, ZDbcUtils, ZDbcProxy, ZDbcProxyMetadata, 
+  ZDbcProxyResultSet, ZDbcProxyStatement, ZDbcProxyUtils;
 
 implementation
 
