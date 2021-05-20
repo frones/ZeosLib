@@ -28,8 +28,8 @@
       </Other>
     </CompilerOptions>
     <Description Value="Zeos Core Classes and Interfaces"/>
-    <Version Major="8" Minor="0"/>
-    <Files Count="15">
+    <Version Major="8"/>
+    <Files Count="17">
       <Item1>
         <Filename Value="../../src/core/ZClasses.pas"/>
         <UnitName Value="ZClasses"/>
@@ -90,6 +90,14 @@
         <Filename Value="../../src/core/ZVariant.pas"/>
         <UnitName Value="ZVariant"/>
       </Item15>
+      <Item16>
+        <Filename Value="../../src/core/ZBase64.pas"/>
+        <UnitName Value="ZBase64"/>
+      </Item16>
+      <Item17>
+        <Filename Value="../../src/core/ZXmlCompat.pas"/>
+        <UnitName Value="ZXmlCompat"/>
+      </Item17>
     </Files>
     <RequiredPkgs Count="1">
       <Item1>
