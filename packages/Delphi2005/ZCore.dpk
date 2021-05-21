@@ -1,5 +1,6 @@
 package ZCore;
 {$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
 {$ALIGN 8}
 {$ASSERTIONS ON}
 {$BOOLEVAL OFF}
@@ -10,7 +11,7 @@ package ZCore;
 {$LOCALSYMBOLS ON}
 {$LONGSTRINGS ON}
 {$OPENSTRINGS ON}
-{$OPTIMIZATION ON}
+{$OPTIMIZATION OFF}
 {$OVERFLOWCHECKS ON}
 {$RANGECHECKS OFF}
 {$REFERENCEINFO ON}
@@ -21,6 +22,8 @@ package ZCore;
 {$WRITEABLECONST OFF}
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'Zeos Core Classes and Interfaces'}
 {$LIBSUFFIX '100'}
 {$RUNONLY}
@@ -31,6 +34,7 @@ requires
   dbrtl;
 
 contains
+  ZBase64 in '..\..\src\core\ZBase64.pas',
   ZClasses in '..\..\src\core\ZClasses.pas',
   ZCollections in '..\..\src\core\ZCollections.pas',
   ZCompatibility in '..\..\src\core\ZCompatibility.pas',
