@@ -211,7 +211,7 @@ end;
 {$ELSE}
 function BcdParamToString(const Value: TBCD): String;
 begin
-  Result := BcdToStr(Value, ProxyFormatSettings);
+  Result := BcdToSQLUni(Value);
 end;
 {$ENDIF}
 
@@ -292,7 +292,7 @@ begin
             end;
           stBinaryStream:
             if (InParamValues[x].VType = vtInterface) and Supports(InParamValues[x].VInterface, IZBlob, TempBlob) then begin
-              Line := StrParamToStr(EncodeBase64(TempBlob.GetBytes));
+              Line := StrParamToStr(ZEncodeBase64(TempBlob.GetBytes));
             end else begin
               raise Exception.Create('Conversion of parameter of type ' + TypeName + ' to stBinaryStream is not supported (yet).');
             end;
