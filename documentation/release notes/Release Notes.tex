@@ -12,6 +12,13 @@
 \usepackage{hyperref}
 \usepackage{placeins}
 
+% One can use the package listings for formatting source code.
+% It provides commands for having code inside the paragraph as
+% well as for having code between paragraphs.
+% \usepackage{listings}
+% Setting pascal as the language to use is commented out right
+% after \begin{document}
+
 \setlength{\parskip}{0.2cm}
 
 \hypersetup{
@@ -30,6 +37,7 @@
 \date{\today}
 %\overfullrule=2mm
 \begin{document}
+%\lstset{language=Pascal}
 \maketitle
 
 \section{Zeos 8.0}
@@ -38,14 +46,14 @@ This is the newest stable version of Zeos.
 It deprecates Zeos 7.2 and all prior versions of Zeos.
 Zeos 8.0 has seen tons of bug fixes and improvements.
 We urge all people still using older versions of Zeos to upgrade.
-If you have any problems with Zeos 8.0, please get in contact with us on the forums (\url{http://zeoslib.sourceforge.net}) or on the bugtracker (\url{https://sourceforge.net/p/zeoslib/tickets/}).
+If you have any problems with Zeos 8.0, please get in contact with us on the forums (\url{http://zeoslib.sourceforge.io}) or on the bugtracker (\url{https://sourceforge.net/p/zeoslib/tickets/}).
 
 \section{General Changes}
 \label{sec:GeneralChanges}
 \subsection{Supported compilers}
 \label{sec:GeneralChanges_SupportedCompilers}
 Zeos 8.0 supports Delphi versions from Delphi 7 to XE 10.4 Seattle.
-Besides the x86 and x86\_64 compilers, Zeos now also supports the Nextgen compilers and so supports all available platforms on Delphi.
+Besides the x86 and x86\_64 compilers, Zeos now also supports the Nextgen compilers (starting from Delphi XE2), and so supports all available platforms on Delphi.
 So on Delphi Windows, macOS / Mac OS X, iOS and Android are supported now.
 The Free Pascal compiler is supported from version 3.0 to version 3.2.
 Older versions might work but don't get official support by us anymore.
@@ -68,7 +76,7 @@ So protocol names like "firebird-3.0" will not work anymore.
 Please use protocol names without version numbers instead, like "firebird".
 
 \subsection{Property Documentation}
-Zeos drivers support a multitude of parameters. via the "`Properties"' property.
+Zeos drivers support a multitude of parameters. via the "`Properties"' property of our components.
 These parameters are now collected in the new file ZDbcProperties.pas and also in ZPropertiesEditor.pas.
 Based on the latter file, we will release a more detailed documentation for Zeos driver properties.
 
@@ -85,34 +93,6 @@ Preparing these statements would be a waste of resources in that case.
 This behavior can be influenced by the user.
 
 \textbf{Jan:} Ask Egonhugeist how this is influenced and which drivers work this way.
-
-\subsection{tokens don't have local string variables anymore}
-Tokens don't have local string variables anymore.
-They are only a PChar and a Length.
-This reducees memory impact and keeps the memory manager out of things.
-Tokens are kept in a TZTokenList.
-This List should be used as an interface by users.
-It will copy strings as needed.
-One shouldn't modify anything in the PChars because this will lead to a change in the SQL statement of the user.
-
-\subsection{Discontinued support for character agnostic connection character sets}
-It is hard work and a big impact on Zeos to have support for connection agnostic character sets.
-In the past Zeos tried to read the metadata of the database and to convert the incoming characters accordingly to the current application character set.
-Since database systems do exactly the same if they know the correct character set, we effectively try to double efforts where databases already are good.
-With Zeos 8.0 we will cancel these efforts.
-This greatly simplifies Zeos and leaves room for Zeos developers to work on other things.
-Starting with Zeos 8.0 we raise exceptions if someone tries to use the following character sets on the specified databases as a connection character set:
-
-\begin{itemize}
-  \item 
-    PostgreSQL: SQL\_ASCII
-  \item
-		MySQL: BINARY
-	\item
-    Firebird: none, octetts
-\end{itemize}
-
-\textbf{Jan:} How true is this? I am pretty sure, it is not correct anymore!
 
 \subsection{DBC layer: changed GetPWideChar / GetPAnsiChar Len parameter}
 The Len parameter of the GetPWideChar and GetPAnsiChar method is no longer a pointer.
@@ -139,6 +119,7 @@ For more information see the documentation on this parameter.
 
 \subsection{Ordinal position of return value for stored procedures}
 For database systems, where a return value is defined, like MS SQL Server, the return value has moved to ordinal position 0.
+This change affects dblib based drivers (MS SQL Server / Sybase Adaptive Server Enterprise) as well Oracle, MySQL / MariaDB, OLEDB, ODBC and ADO.
 Please check your applications.
 
 \subsection{support for aborting long running operations}
@@ -207,14 +188,6 @@ By optimizing access in TDataset descandants, Zeos is able to save on memory now
 
 \textbf{Jan:}Is this correct? Regarding dependency on TZFields?
 
-\subsection{Binding technique for parameters has changed}
-
-Binding technic of parameters (ZDBC) has been changed to "Immediate" (Jan: Early?) bindings.
-Late bindings are supported in case the paramaters can't be described once or if the driver (SQLite) doesn't allow to read values back i.e. Logging mechanism.
-Those precaching of the values have been changed away from the slow TZVariants and using a memory optimised TZBindList instead.
-
-\textbf{Jan:}What is the impact on the end user?
-
 \subsection{New field types for older compilers}
 New fields added.
 Some compilers still do not support all field types ZDBC is able to distinguish.
@@ -269,8 +242,8 @@ The old assumption that an enum('Y','N') is a boolean field is disabled if this 
 If this parameter is enabled, enum('Y','N') will be a string field.
 Other enums behave as before, they will be mapped to a sting filed in any case.
 
-\subsection{Support for batch import API}
-The batch import API introduced in Zeos 7.2 is now supported for MariaDB.
+\subsection{Support for batch DML on MariaDB}
+Zeos now supports Batch DML with INSERT and DELETE on MariaDB.
 
 \subsection{Changed parameter names}
 Some parameter names changed.
@@ -278,19 +251,21 @@ See [\#395] and \url{https://sourceforge.net/p/zeoslib/tickets/395/#14a4}
 
 \section{PostgreSQL}
 
-\subsection{Support for batch import API}
-The new batch import API introduced in Zeos 7.2 is now supported for PostgreSQL.
+\subsection{Support for batch DML}
+Zeos now supports BATCH DML on PostgreSQL. 
+Supported statements are INSERT and DELETE statements.
 
 \subsection{usage of binary protocol}
 The PostgreSQL driver now uses the binary protocol for talking to the database.
 This allows faster fetches for the dataset.
 We also prevent rounding errors for TFloatField and escape the "`parsing hell"' for date and time values.
+This can lead to behavior changes between Zeos 7.2 and Zeos 8.0.
 
 \subsection{compatibility option BindDoubleAsString}
-[r5963] by egonhugeist: add compatibility option BindDoubleAsString.
-Loads users use the Double types for the NUMERIC fields.
-PG does not allow this if we send the params with the FLOAT8OID even if Precision <= 15 (no precision loss).
-So i cirumvent the issue by sending textformat and INVALIDOID to the Server - see [\#282] for the underlying use case.
+A lot of our users use the AsFloatMethod to set parameter values.
+Unfortunately PostgreSQL will generate an error if we send Float values for usage in NUMERIC fields.
+Using this option will send Float (Double) values as Strings to the database and circumvent this behavior.
+For more information on the use case see \url{https://sourceforge.net/p/zeoslib/tickets/282/}.
 
 \section{SQLite}
 
@@ -298,15 +273,15 @@ So i cirumvent the issue by sending textformat and INVALIDOID to the Server - se
 The SQLite tokenizer now correctly recognizes backticks as quotes.
 Even though not standard SQL, backticks are supported by SQLite for compatibility.
 See \url(https://www.sqlite.org/lang\_keywords.html).
-This should make using backticks in SQL safe with SQLite on Zeoslib. [\#235]
+This should make using backticks in SQL safe with SQLite on Zeoslib.
 
 \subsection{better error descriptions}
 The SQLite driver now supports the proper use of sqlite3\_errstr which leads to better error descriptions.
 If you use the Error message of exceptions, you should check your code if it needs to be updated. (Ticket \#260)
 
-\textbf:{Note:}
-In Zeos 7.2 we introduced the new parameter "`ExtendedErrorMessage"' for enabling this new behavior.
-In Zeos 7.3 the "`ExtendedErrorMessage"' is removed and the new behavior cannot be disabled.
+\textbf{Note:}
+In Zeos 7.2 we introduced the new parameter "ExtendedErrorMessage" for enabling this new behavior.
+In Zeos 7.3 the "ExtendedErrorMessage" is removed and the new behavior cannot be disabled.
 
 \subsection{support for GUID fields}
 The sqlite driver now supports GUID fields.
@@ -323,12 +298,14 @@ This might lead to problems on older servers.
 
 \subsection{discontinued support for ntwdblib.dll}
 We discontinued the support for ntwdblib.dll.
-If you try to use nrtwdblib.dll, Zeos will raise an error.
+If you try to use ntwdblib.dll, Zeos will raise an error.
 Please use freetds instead.
 
 \subsection{new parameter TDSVersion}
-The new parameter TDSVersion can be used in conjunction with Sybase / freetds.
-
+FreeTDS allows to select the proper TDS protocol version for your server.
+See \url{https://www.freetds.org/userguide/ChoosingTdsProtocol.html}
+The new parameter TDSProtocolVersion reflects this possibility.
+Possible values are "4.2", "5.0", "7.0", "7.1", "7.2", "7.3" and "7.4".
 
 \section{OLEDB}
 New driver - needs extensive description.
