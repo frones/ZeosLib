@@ -9,8 +9,8 @@ interface
 uses
   Classes, SysUtils;
 
-function ZDecodeBase64(const InStr: AnsiString): TBytes;
-function ZEncodeBase64(const InValue: TBytes): AnsiString;
+function ZDecodeBase64(const InStr: {$IFDEF NEXTGEN}String{$ELSE}AnsiString{$ENDIF}): TBytes;
+function ZEncodeBase64(const InValue: TBytes): {$IFDEF NEXTGEN}String{$ELSE}AnsiString{$ENDIF};
 
 {$IFEND}
 
@@ -28,7 +28,7 @@ uses {$IFDEF WITH_NETENCODING}
        {$ENDIF}
      {$ENDIF};
 
-function ZDecodeBase64(const InStr: AnsiString): TBytes;
+function ZDecodeBase64(const InStr: {$IFDEF NEXTGEN}String{$ELSE}AnsiString{$ENDIF}): TBytes;
 {$IFNDEF WITH_NETENCODING}
 var
   {$IFDEF FPC}
@@ -81,7 +81,7 @@ begin
   {$ENDIF}
 end;
 
-function ZEncodeBase64(const InValue: TBytes): AnsiString;
+function ZEncodeBase64(const InValue: TBytes): {$IFDEF NEXTGEN}String{$ELSE}AnsiString{$ENDIF};
 {$IFNDEF WITH_NETENCODING}
 var
   {$IFDEF FPC}
