@@ -84,6 +84,7 @@
 			<DCCReference Include="..\..\src\core\ZSysUtils.pas"/>
 			<DCCReference Include="..\..\src\core\ZTokenizer.pas"/>
 			<DCCReference Include="..\..\src\core\ZVariables.pas"/>
+			<DCCReference Include="..\..\src\core\ZBase64.pas"/>
 			<DCCReference Include="..\..\src\core\ZClasses.pas"/>
 			<DCCReference Include="..\..\src\core\ZMessages.pas"/>
 			<DCCReference Include="..\..\src\core\ZFunctions.pas"/>

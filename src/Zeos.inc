@@ -185,6 +185,7 @@
           {$DEFINE WITH_VIRTUAL_TFIELD_ASWIDESTRING}  //TField supports the AsWideString property
 
           {$IF CompilerVersion >= 18.5} //Delphi 2007+
+            {$DEFINE WITH_TBYTES}
             {$UNDEF VER150BELOW}      //found in ZTestBugCompPostgreSql.pas
             {$DEFINE WITH_TCOLLECTION_CAPACITY}         //TCollection supports the capacity property
 			{$DEFINE WITH_TBYTES}
@@ -558,7 +559,7 @@
 
 // Enables Webservice connection support
 {$IFNDEF ZEOS_DISABLE_PROXY}
-  {$IF DEFINED(WITH_NETENCODING) AND ((NOT DEFINED(FPC)) OR (DEFINED(WINDOWS)))}
+  {$IF DEFINED(HAVE_UNICODESTRING) AND ((NOT DEFINED(FPC)) OR (DEFINED(WINDOWS)))}
     {$DEFINE ENABLE_PROXY}
   {$IFEND}
 {$ENDIF}

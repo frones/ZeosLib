@@ -341,7 +341,7 @@ begin
   FMetadata := TZProxyDatabaseMetadata.Create(Self, Url);
   FConnIntf := GetPlainDriver.GetLibraryInterface;
   if not assigned(FConnIntf) then
-    raise Exception.Create(GetPlainDriver.GetLastErrorStr);
+    raise Exception.Create(String(GetPlainDriver.GetLastErrorStr));
   inherited AfterConstruction;
 end;
 
@@ -372,13 +372,13 @@ begin
 
   LogMessage := 'CONNECT TO "'+ URL.Database + '" AS USER "' + URL.UserName + '"';
 
-  PropList := encodeProperties('autocommit', BoolToStr(GetAutoCommit, True));
-  FConnIntf.Connect(User, Password, WsUrl, Database, PropList, MyDbInfo);
+  PropList := WideString(encodeProperties('autocommit', BoolToStr(GetAutoCommit, True)));
+  FConnIntf.Connect(WideString(User), WideString(Password), WideString(WsUrl), WideString(Database), PropList, MyDbInfo);
 
   DriverManager.LogMessage(lcConnect, URL.Protocol , LogMessage);
   FDbInfo := MyDbInfo;
   inherited Open;
-  applyProperties(PropList);
+  applyProperties(String(PropList));
   New(ConSettings.ClientCodePage);
   ConSettings.ClientCodePage.Name := 'UTF16';
   ConSettings.ClientCodePage.Encoding := ceUTF16;
@@ -671,13 +671,13 @@ end;
 
 procedure TZDbcProxyConnection.transferProperties(PropName, PropValue: String);
 var
-  PropList: String;
+  PropList: ZWideString;
 begin
   if not Closed then begin
-    PropList := encodeProperties(PropName, PropValue);
+    PropList := ZWideString(encodeProperties(PropName, PropValue));
     PropList := FConnIntf.SetProperties(PropList);
   end;
-  applyProperties(PropList);
+  applyProperties(String(PropList));
 end;
 
 procedure TZDbcProxyConnection.SetCatalog(const Catalog: string);
@@ -753,6 +753,7 @@ begin
   Statement := CreateStatementWithParams(nil);
   Statement.Execute(SQL);
   Statement.Close;
+
 end;
 
 initialization

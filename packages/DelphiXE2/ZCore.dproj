@@ -143,12 +143,13 @@
 		<ItemGroup>
 			<DelphiCompile Include="$(MainSource)">
 				<MainSource>MainSource</MainSource>
-			</DelphiCompile>
-			<DCCReference Include="rtl.dcp"/>
-			<DCCReference Include="dbrtl.dcp"/>
-			<DCCReference Include="..\..\src\core\ZClasses.pas"/>
-			<DCCReference Include="..\..\src\core\ZCollections.pas"/>
-			<DCCReference Include="..\..\src\core\ZCompatibility.pas"/>
+        </DelphiCompile>
+	<DCCReference Include="rtl.dcp"/>
+	<DCCReference Include="dbrtl.dcp"/>
+	<DCCReference Include="..\..\src\core\ZBase64.pas"/>
+	<DCCReference Include="..\..\src\core\ZClasses.pas"/>
+	<DCCReference Include="..\..\src\core\ZCollections.pas"/>
+	<DCCReference Include="..\..\src\core\ZCompatibility.pas"/>
 			<DCCReference Include="..\..\src\core\ZEncoding.pas"/>
 			<DCCReference Include="..\..\src\core\ZExpression.pas"/>
 			<DCCReference Include="..\..\src\core\ZExprParser.pas"/>
