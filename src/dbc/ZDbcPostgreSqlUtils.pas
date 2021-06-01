@@ -1479,7 +1479,7 @@ procedure BCD2PGNumeric(const Src: TBCD; Dst: PAnsiChar; out Size: Integer);
 var
   pNibble, PLastNibble, pWords: PAnsichar;
   FactorIndexOrScale, x, y: Integer;
-  Precision, Scale, NBASEDigit: Word;
+  Precision, Scale, NBASEDigit, NumBasedDigits: Word;
   Weight: SmallInt;
   GetFirstBCDHalfByte: Boolean;
 begin
@@ -1529,7 +1529,8 @@ begin
   {$ENDIF !ENDIAN_BIG}
   if (Weight >= 0) or (Integer(Scale) - Y = 1) then
     Dec(Weight);
-  NBASEDigit := (PWords - Dst - 8) shr 1; //calc count of nbase digits
+  NBASEDigit := Max((PWords - Dst - 8), 1); //calc count of nbase digits
+  NumBasedDigits := NBASEDigit;
   {$IFNDEF ENDIAN_BIG}
   NBASEDigit := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);
   {$ENDIF ENDIAN_BIG}
@@ -1554,7 +1555,7 @@ begin
   Scale := (Scale and $00FF shl 8) or (Scale and $FF00 shr 8);
   {$ENDIF ENDIAN_BIG}
   PWord(Dst+6)^ := Scale; //dscale
-  Size := (pWords - Dst); //return size in bytes
+  Size := (4 + NumBasedDigits) * SizeOf(Word); // Size in bytes.
 end;
 {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
