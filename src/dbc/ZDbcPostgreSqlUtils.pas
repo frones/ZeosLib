@@ -1525,6 +1525,7 @@ begin
   if (FactorIndexOrScale <> 0) then begin
     NBASEDigit := PWord(pWords)^;
     PWord(pWords)^ := (NBASEDigit and $00FF shl 8) or (NBASEDigit and $FF00 shr 8);
+	Inc(PWords, SizeOf(Word));
   end;
   {$ENDIF !ENDIAN_BIG}
   if (Weight >= 0) or (Integer(Scale) - Y = 1) then
