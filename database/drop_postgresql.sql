@@ -23,6 +23,7 @@ drop table if exists "Spaced Names";
 drop table if exists case_sensitive;
 drop table if exists high_load;
 drop table if exists bcd_values;
+drop table if exists sf_jan;
 
 drop function if exists procedure1(INT4);
 drop function if exists procedure2();

@@ -384,3 +384,9 @@ DELIMITER ;
 /* Grant privileges to table                                    */
 /*==============================================================*/
 --grant select on people to postgres;
+
+create table SF_JAN (
+  id integer not null,
+  price numeric(18,3),
+  constraint pk_sf_jan primary key (id)
+)
