@@ -1580,8 +1580,8 @@ var
   procedure enableCurrency(Field: TField);
   begin
     if Field is TFloatField then (Field as TFloatField).Currency := true
-    {$IFNDEF FPC}else if Field is TSingleField then (Field as TSingleField).currency := true{$ENDIF}
-    {$IFNDEF FPC}else if Field is TExtendedField then (Field as TExtendedField).currency := true{$ENDIF}
+    {$IF DECLARED(TSingleField)}else if Field is TSingleField then (Field as TSingleField).currency := true{$IFEND}
+    {$IF DECLARED(TExtendedField)}else if Field is TExtendedField then (Field as TExtendedField).currency := true{$IFEND}
     else if Field is TFMTBCDField then (Field as TFMTBCDField).currency := true
     else if Field is TBCDField then (Field as TBCDField).currency := true;
   end;
