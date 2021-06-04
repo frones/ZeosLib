@@ -87,6 +87,9 @@
 // ENGLISH, GERMAN, PORTUGUESE, DUTCH, SPANISH, ROMANA, INDONESIAN, RUSSIAN, CZECH, POLISH, FRENCH
 {$DEFINE ENGLISH} //see \core\ZMessages.pas
 
+// enables a fake AutoEncodeStrings property for backwards compatibility with Zeos 7.2
+{.$DEFINE WITH_FAKE_AUTOENCODESTRINGS}
+
 {$DEFINE MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD} //Compiler can't determine overload for NativeUInt(64-Bit)
  // Compilation directives for Lazarus/FPC
 {$IFDEF FPC}

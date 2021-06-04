@@ -143,6 +143,11 @@ type
     procedure SetUseMetadata(AValue: Boolean);
     procedure SetCharacterFieldType(const Value: TZControlsCodePage);
   protected
+    // just a fake for compatibility to Zeos 7.2:
+    {$IFDEF WITH_FAKE_AUTOENCODESTRINGS}
+    FAutoEncodeStrings: Boolean;
+    {$ENDIF}
+
     FURL: TZURL;
     FCatalog: string;
     FAutoCommit: Boolean;
@@ -346,6 +351,10 @@ type
     property OnLost: TNotifyEvent read FOnLost write FOnLost;
     {$IFDEF ZEOS_TEST_ONLY}
     property TestMode : Byte read FTestMode write FTestMode;
+    {$ENDIF}
+
+    {$IFDEF WITH_FAKE_AUTOENCODESTRINGS}
+    property AutoEncodeStrings: Boolean read FAutoEncodeStrings write FAutoEncodeStrings;
     {$ENDIF}
   end;
 
@@ -938,6 +947,7 @@ var
 //Local variables declared in order to preserve the original property value
 //and to avoid the storage of password
   Username, Password: string;
+  URL: String;
 begin
   if FConnection = nil then begin
     DoBeforeConnect;
@@ -956,8 +966,9 @@ begin
 
     ShowSqlHourGlass;
     try
+      URL := ConstructURL(UserName, Password);
       FConnection := DriverManager.GetConnectionWithParams(
-        ConstructURL(UserName, Password), FURL.Properties);
+        URL, FURL.Properties);
       try
         with FConnection do begin
           SetOnConnectionLostErrorHandler(ConnectionLost);

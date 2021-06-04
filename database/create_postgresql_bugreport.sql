@@ -175,3 +175,9 @@ insert into TableTestMichlsBCDs(id,val1) values (3,0.014);
 insert into TableTestMichlsBCDs(id,val1) values (4,0.0014);
 insert into TableTestMichlsBCDs(id,val1) values (5,0.00014);
 insert into TableTestMichlsBCDs(id,val1) values (6,0.000014);
+
+create table PgTruncScale (
+  id integer not null,
+  price numeric(18,3),
+  constraint pk_PgTruncScale primary key (id)
+)

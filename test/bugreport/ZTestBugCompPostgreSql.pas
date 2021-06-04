@@ -120,6 +120,7 @@ type
     procedure TestSF460_A;
     procedure TestSF460_B;
     procedure TestSF478;
+    procedure TestPgTruncScale;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1568,6 +1569,42 @@ begin
       Connection.ExecuteDirect('delete from date_values where d_id = 20210307');
     Connection.FormatSettings.DisplayTimeFormatSettings.Format := '';
     Connection.FormatSettings.EditTimeFormatSettings.Format := '';
+  end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestPgTruncScale;
+var
+  Query: TZQuery;
+  Expected: String;
+
+  procedure enableCurrency(Field: TField);
+  begin
+    if Field is TFloatField then (Field as TFloatField).Currency := true
+    {$IF DECLARED(TSingleField)}else if Field is TSingleField then (Field as TSingleField).currency := true{$IFEND}
+    {$IF DECLARED(TExtendedField)}else if Field is TExtendedField then (Field as TExtendedField).currency := true{$IFEND}
+    else if Field is TFMTBCDField then (Field as TFMTBCDField).currency := true
+    else if Field is TBCDField then (Field as TBCDField).currency := true;
+  end;
+
+begin
+  Expected := FormatFloat('#,##0.00', 12.34);
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from SF_PgTruncScale';
+    Query.Open;
+
+    enableCurrency(Query.FieldByName('price'));
+    Query.Append;
+    Query.FieldByName('id').AsInteger := 1;
+    Query.FieldByName('price').Text := Expected;
+    Query.Post;
+    Query.Close;
+    Query.Open;
+    CheckEquals(1, Query.FieldByName('id').AsInteger, 'Checking ID = 1');
+    CheckEquals(Expected, Query.FieldByName('price').Text, 'Checking price = ' + Expected);
+    Query.Close;
+  finally
+    FreeAndNil(Query);
   end;
 end;
 
