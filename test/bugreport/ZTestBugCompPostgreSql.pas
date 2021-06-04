@@ -120,7 +120,7 @@ type
     procedure TestSF460_A;
     procedure TestSF460_B;
     procedure TestSF478;
-    procedure TestSF_JAN;
+    procedure TestPgTruncScale;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1572,7 +1572,7 @@ begin
   end;
 end;
 
-procedure TZTestCompPostgreSQLBugReport.TestSF_JAN;
+procedure TZTestCompPostgreSQLBugReport.TestPgTruncScale;
 var
   Query: TZQuery;
   Expected: String;
@@ -1590,7 +1590,7 @@ begin
   Expected := FormatFloat('#,##0.00', 12.34);
   Query := CreateQuery;
   try
-    Query.SQL.Text := 'select * from SF_JAN';
+    Query.SQL.Text := 'select * from SF_PgTruncScale';
     Query.Open;
 
     enableCurrency(Query.FieldByName('price'));
