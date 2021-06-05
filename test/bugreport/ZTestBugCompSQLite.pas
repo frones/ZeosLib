@@ -82,6 +82,8 @@ type
     procedure TestTicket405_Memory;
     procedure TestTicket458;
     procedure TestTicket503;
+    procedure TestTicket520_1;
+    procedure TestTicket520_2;
   end;
 
   {** Implements a MBC bug report test case for SQLite components. }
@@ -350,6 +352,48 @@ begin
     FreeAndNil(Query);
   end;
 
+end;
+
+procedure ZTestCompSQLiteBugReport.TestTicket520_1;
+var
+  Query: TZQuery;
+  Error: Boolean;
+begin
+  Error := false;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'delete from "nonexistingtable"';
+    try
+      Query.ExecSQL;
+    except
+      Error := True;
+    end;
+    Check(Error, 'Checking wether an exception was raised for trying to insert into a nonexisting table.');
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
+procedure ZTestCompSQLiteBugReport.TestTicket520_2;
+var
+  Query: TZQuery;
+  Error: Boolean;
+begin
+  Error := false;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'insert into date_values (d_id) values (null)';
+    try
+      Query.ExecSQL;
+    except
+      Error := True;
+    end;
+    Check(Error, 'Checking wether an exception was raised, for inserting null into a not null column.');
+  finally
+    FreeAndNil(Query);
+  end;
 end;
 
 procedure ZTestCompSQLiteBugReport.TestUndefined_Varchar_AsString_Length;

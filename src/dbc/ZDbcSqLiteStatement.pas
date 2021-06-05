@@ -397,7 +397,7 @@ begin
     ErrorCode := FPlainDriver.sqlite3_finalize(FStmtHandle);
     FStmtHandle := nil; //Keep track we do not try to finalize the handle again on destroy or so
     if ErrorCode <> SQLITE_OK then
-      FSQLiteConnection.HandleErrorOrWarning(lcUnprepStmt, FErrorCode, 'sqlite3_finalize',
+      FSQLiteConnection.HandleErrorOrWarning(lcUnprepStmt, ErrorCode, 'sqlite3_finalize',
         IImmediatelyReleasable(FWeakImmediatRelPtr));
   end;
 end;
@@ -414,7 +414,7 @@ begin
       Buf := PEmptyAnsiString;
     ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, Index +1, Buf, Len, nil);
     if ErrorCode <> SQLITE_OK then
-      FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, FErrorCode, 'sqlite3_bind_text',
+      FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, ErrorCode, 'sqlite3_bind_text',
         IImmediatelyReleasable(FWeakImmediatRelPtr));
   end else
     FLateBound := True;
@@ -432,7 +432,7 @@ begin
     P := PEmptyAnsiString;
     ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, Index +1, P, Length(Value), nil);
     if ErrorCode <> SQLITE_OK then
-      FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, FErrorCode, 'sqlite3_bind_text',
+      FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, ErrorCode, 'sqlite3_bind_text',
         IImmediatelyReleasable(FWeakImmediatRelPtr));
   end else
     FLateBound := True;
@@ -510,11 +510,11 @@ begin
       DriverManager.LogMessage(lcExecPrepStmt,Self);
     ErrorCode := FPlainDriver.sqlite3_reset(FStmtHandle);
     if ErrorCode <> SQLITE_OK then
-      FSQLiteConnection.HandleErrorOrWarning(lcOther, FErrorCode, SQL,
+      FSQLiteConnection.HandleErrorOrWarning(lcOther, ErrorCode, SQL,
         IImmediatelyReleasable(FWeakImmediatRelPtr));
     FHasLoggingListener := DriverManager.HasLoggingListener;
   end else try
-    FSQLiteConnection.HandleErrorOrWarning(lcExecPrepStmt, FErrorCode, SQL,
+    FSQLiteConnection.HandleErrorOrWarning(lcExecPrepStmt, ErrorCode, SQL,
       IImmediatelyReleasable(FWeakImmediatRelPtr));
   finally
     FPlainDriver.sqlite3_reset(FStmtHandle); //reset handle allways without check else -> leaking mem
@@ -590,7 +590,7 @@ begin
     L := BCDToRaw(Value, P, '.');
     ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, ParameterIndex+1, P, l, nil);
     if ErrorCode <> SQLITE_OK then
-      FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, FErrorCode, 'sqlite3_bind_text',
+      FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, ErrorCode, 'sqlite3_bind_text',
         IImmediatelyReleasable(FWeakImmediatRelPtr));
   end else
     FLateBound := True;
@@ -632,7 +632,7 @@ begin
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_blob(FStmtHandle, Index +1, Value, Len, nil);
     if ErrorCode <> SQLITE_OK then
-      FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, FErrorCode, 'sqlite3_bind_blob',
+      FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, ErrorCode, 'sqlite3_bind_blob',
         IImmediatelyReleasable(FWeakImmediatRelPtr));
   end else
     FLateBound := True;
@@ -658,7 +658,7 @@ begin
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_int64(FStmtHandle, ParameterIndex+1, i64);
     if ErrorCode <> SQLITE_OK then
-      FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, FErrorCode, 'sqlite3_bind_int64',
+      FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, ErrorCode, 'sqlite3_bind_int64',
         IImmediatelyReleasable(FWeakImmediatRelPtr));
   end else
     FLateBound := True;
@@ -681,7 +681,7 @@ begin
     if not FBindLater then begin
       ErrorCode := FPlainDriver.sqlite3_bind_double(FStmtHandle, Index+1, DT-JulianEpoch);
       if ErrorCode <> SQLITE_OK then
-        FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, FErrorCode, 'sqlite3_bind_double',
+        FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, ErrorCode, 'sqlite3_bind_double',
           IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
   end else begin
@@ -692,7 +692,7 @@ begin
     if not FBindLater then begin
       ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, Index +1, Pointer(fRawTemp), Len, nil);
       if ErrorCode <> SQLITE_OK then
-        FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, FErrorCode, 'sqlite3_bind_text',
+        FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, ErrorCode, 'sqlite3_bind_text',
           IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
   end;
@@ -719,7 +719,7 @@ begin
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_double(FStmtHandle, ParameterIndex+1, Value);
     if ErrorCode <> SQLITE_OK then
-      FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, FErrorCode, 'sqlite3_bind_double',
+      FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, ErrorCode, 'sqlite3_bind_double',
         IImmediatelyReleasable(FWeakImmediatRelPtr));
   end else
     FLateBound := True;
@@ -757,7 +757,7 @@ begin
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_int(FStmtHandle, ParameterIndex+1, Value);
     if ErrorCode <> SQLITE_OK then
-      FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, FErrorCode, 'sqlite3_bind_int',
+      FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, ErrorCode, 'sqlite3_bind_int',
         IImmediatelyReleasable(FWeakImmediatRelPtr));
   end else
     FLateBound := True;
@@ -782,7 +782,7 @@ begin
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_int64(FStmtHandle, ParameterIndex+1, Value);
     if ErrorCode <> SQLITE_OK then
-      FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, FErrorCode, 'sqlite3_bind_int64',
+      FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, ErrorCode, 'sqlite3_bind_int64',
         IImmediatelyReleasable(FWeakImmediatRelPtr));
   end else
     FLateBound := True;
@@ -799,7 +799,7 @@ begin
   if not FBindLater then begin
     ErrorCode := FPlainDriver.sqlite3_bind_null(FStmtHandle, ParameterIndex +1);
     if ErrorCode <> SQLITE_OK then
-      FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, FErrorCode, 'sqlite3_bind_null',
+      FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, ErrorCode, 'sqlite3_bind_null',
         IImmediatelyReleasable(FWeakImmediatRelPtr));
   end else
     FLateBound := True;
@@ -850,7 +850,7 @@ begin
     if not FBindLater then begin
       ErrorCode := FPlainDriver.sqlite3_bind_double(FStmtHandle, Index+1, DT-JulianEpoch);
       if ErrorCode <> SQLITE_OK then
-        FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, FErrorCode, 'sqlite3_bind_double',
+        FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, ErrorCode, 'sqlite3_bind_double',
           IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
   end else begin
@@ -861,7 +861,7 @@ begin
     if not FBindLater then begin
       ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, Index +1, Pointer(fRawTemp), Len, nil);
       if ErrorCode <> SQLITE_OK then
-        FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, FErrorCode, 'sqlite3_bind_text',
+        FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, ErrorCode, 'sqlite3_bind_text',
           IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
   end;
@@ -886,7 +886,7 @@ begin
     if not FBindLater then begin
       ErrorCode := FPlainDriver.sqlite3_bind_double(FStmtHandle, Index+1, DT-JulianEpoch);
       if ErrorCode <> SQLITE_OK then
-        FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, FErrorCode, 'sqlite3_bind_double',
+        FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, ErrorCode, 'sqlite3_bind_double',
           IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
   end else begin
@@ -898,7 +898,7 @@ begin
     if not FBindLater then begin
       ErrorCode := FPlainDriver.sqlite3_bind_text(FStmtHandle, Index +1, Pointer(fRawTemp), Len, nil);
       if ErrorCode <> SQLITE_OK then
-        FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, FErrorCode, 'sqlite3_bind_text',
+        FSQLiteConnection.HandleErrorOrWarning(lcBindPrepStmt, ErrorCode, 'sqlite3_bind_text',
           IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
   end;
