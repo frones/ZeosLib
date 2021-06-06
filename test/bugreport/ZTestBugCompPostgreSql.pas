@@ -1590,7 +1590,7 @@ begin
   Expected := FormatFloat('#,##0.00', 12.34);
   Query := CreateQuery;
   try
-    Query.SQL.Text := 'select * from SF_PgTruncScale';
+    Query.SQL.Text := 'select * from PgTruncScale';
     Query.Open;
 
     enableCurrency(Query.FieldByName('price'));
