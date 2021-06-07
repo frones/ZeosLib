@@ -931,19 +931,22 @@ var Stmt: IZPreparedStatement;
     end;
   end;
 begin
-  if (RefreshResultSet = nil) or (RefreshResultSet.GetStatement = nil) or RefreshResultSet.GetStatement.IsClosed
+  if (RefreshResultSet = nil) or (RefreshResultSet.GetStatement = nil) or RefreshResultSet.GetStatement.IsClosed or WhereAll
   then InitStmt(Stmt)
   else RefreshResultSet.GetStatement.QueryInterface(IZPreparedStatement, Stmt);
   if Stmt = nil then
     raise EZSQLException.Create(SUpdateSQLNoResult)
   else begin
-    RowAccessor.FillStatement(Stmt, FWhereColumns, Metadata);
+    if WhereAll then
+      RowAccessor.FillStatement(Stmt, FCurrentWhereColumns, Metadata)
+    else
+      RowAccessor.FillStatement(Stmt, FWhereColumns, Metadata);
     RefreshResultSet := Stmt.ExecuteQueryPrepared;
     if (RefreshResultSet = nil) or not RefreshResultSet.Next then
       raise EZSQLException.Create(SUpdateSQLNoResult);
     RowAccessor.FillFromFromResultSet(RefreshResultSet, FInsertColumns);
     RefreshResultSet.ResetCursor; //unlock handles
-  end;
+  end;  
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
