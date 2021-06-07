@@ -939,8 +939,8 @@ begin
   //find out if first halfbyte need to be multiplied by 10(padd left)
   if (NumDigit and 1 = 1) then //in case of odd precisons we usually add the values
     if not GetFirstBCDHalfByte and (
-        ((PByte(pLastNibble)^ and $0F) = 0) {in case of last byte is zero: }or
-        ((bcd.SignSpecialPlaces and 63) and 1 = 0)) {in case of odd scale: }
+        ((PByte(pLastNibble)^ and $0F) = 0) {in case of last byte is zero: } or
+        ((bcd.SignSpecialPlaces and 63) and 1 = 1)) {in case of odd scale: }
     then NotMultiplyBy10 := False //we padd the values a half byte to left
     else begin
       NotMultiplyBy10 := True;
@@ -958,7 +958,7 @@ NextDigitOrNum: //main loop without any condition
   end;
   if NotMultiplyBy10 then begin
     if Negative
-    then NumDigit := 101 - PByte(pNum)^ + NumDigit
+    then NumDigit := 101 - (PByte(pNum)^ + NumDigit)
     else NumDigit := PByte(pNum)^ + NumDigit + 1;
     PByte(pNum)^ := Byte(NumDigit);
     if (pNum < pLastNum) then
