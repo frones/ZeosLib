@@ -5,7 +5,7 @@
     </ProjectExtensions>
     <PropertyGroup>
         <DeviceId Condition="'$(Platform)'=='Android'"/>
-        <DeviceId Condition="'$(Platform)'=='Android64'">28cdf17e35027ece</DeviceId>
+        <DeviceId Condition="'$(Platform)'=='Android64'">RF8N11XQJ7R</DeviceId>
     </PropertyGroup>
     <ItemGroup Condition="'$(Platform)'=='Win32'">
         <DeployFile Include="Win32\Debug\Project1.exe" Condition="'$(Config)'=='Debug'">
@@ -85,15 +85,6 @@
             <RemoteCommand/>
             <Overwrite>True</Overwrite>
         </DeployFile>
-        <DeployFile Include="firebird\lib\libicui18n.so.63" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>Project1\assets\internal\firebird\lib\</RemoteDir>
-            <RemoteName>libicui18n.so.63</RemoteName>
-            <DeployClass>File</DeployClass>
-            <Operation>0</Operation>
-            <LocalCommand/>
-            <RemoteCommand/>
-            <Overwrite>True</Overwrite>
-        </DeployFile>
         <DeployFile Include="$(BDS)\lib\android\debug\armeabi\libnative-activity.so" Condition="'$(Config)'=='Debug'">
             <RemoteDir>Project1\library\lib\armeabi\</RemoteDir>
             <RemoteName>libProject1.so</RemoteName>
@@ -124,15 +115,6 @@
         <DeployFile Include="firebird\replication.conf" Condition="'$(Config)'=='Debug'">
             <RemoteDir>Project1\assets\internal\firebird\</RemoteDir>
             <RemoteName>replication.conf</RemoteName>
-            <DeployClass>File</DeployClass>
-            <Operation>0</Operation>
-            <LocalCommand/>
-            <RemoteCommand/>
-            <Overwrite>True</Overwrite>
-        </DeployFile>
-        <DeployFile Include="firebird\lib\icudt63l.dat" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>Project1\assets\internal\firebird\lib\</RemoteDir>
-            <RemoteName>icudt63l.dat</RemoteName>
             <DeployClass>File</DeployClass>
             <Operation>0</Operation>
             <LocalCommand/>
@@ -229,15 +211,6 @@
             <RemoteCommand/>
             <Overwrite>True</Overwrite>
             <Required>True</Required>
-        </DeployFile>
-        <DeployFile Include="firebird\lib\libicudata.so.63" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>Project1\assets\internal\firebird\lib\</RemoteDir>
-            <RemoteName>libicudata.so.63</RemoteName>
-            <DeployClass>File</DeployClass>
-            <Operation>0</Operation>
-            <LocalCommand/>
-            <RemoteCommand/>
-            <Overwrite>True</Overwrite>
         </DeployFile>
         <DeployFile Include="$(BDS)\bin\Artwork\Android\FM_SplashImage_960x720.png" Condition="'$(Config)'=='Debug'">
             <RemoteDir>Project1\res\drawable-xlarge\</RemoteDir>
@@ -401,11 +374,11 @@
             <RemoteCommand/>
             <Overwrite>True</Overwrite>
         </DeployFile>
-        <DeployFile Include="firebird\lib\libicuuc.so.63" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>Project1\assets\internal\firebird\lib\</RemoteDir>
-            <RemoteName>libicuuc.so.63</RemoteName>
-            <DeployClass>File</DeployClass>
-            <Operation>0</Operation>
+        <DeployFile Include="$(BDS)\bin\Artwork\Android\FM_LauncherIcon_192x192.png" Condition="'$(Config)'=='Debug'">
+            <RemoteDir>Project1\res\drawable-xxxhdpi\</RemoteDir>
+            <RemoteName>ic_launcher.png</RemoteName>
+            <DeployClass>Android_LauncherIcon192</DeployClass>
+            <Operation>1</Operation>
             <LocalCommand/>
             <RemoteCommand/>
             <Overwrite>True</Overwrite>
