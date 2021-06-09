@@ -42,7 +42,7 @@ var
 {$ENDIF}
 begin
   {$IFDEF WITH_NETENCODING}
-  Result := TNetEncoding.Base64.DecodeStringToBytes(InStr);
+  Result := TNetEncoding.Base64.DecodeStringToBytes(String(InStr));
   {$ELSE}
     {$IFDEF FPC}
     try
@@ -95,7 +95,7 @@ var
 {$ENDIF}
 begin
   {$IFDEF WITH_NETENCODING}
-  Result := String(TNetEncoding.Base64.EncodeBytesToString(InValue));
+  Result := {$IFNDEF NEXTGEN}AnsiString{$ENDIF}(TNetEncoding.Base64.EncodeBytesToString(InValue));
   {$ELSE}
     {$IFDEF FPC}
     try

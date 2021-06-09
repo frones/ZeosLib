@@ -140,7 +140,7 @@ type
     procedure SetLong(ParameterIndex: Integer; const Value: Int64); virtual;
     procedure SetFloat(ParameterIndex: Integer; Value: Single); virtual;
     procedure SetDouble(ParameterIndex: Integer; const Value: Double); virtual;
-    procedure SetCurrency(ParameterIndex: LongInt; const Value: Currency); virtual;
+    procedure SetCurrency(ParameterIndex: Integer; const Value: Currency); virtual;
     procedure SetBigDecimal(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TBCD); virtual;
     procedure SetCharRec(ParameterIndex: Integer; {$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} Value: TZCharRec); virtual;
     procedure SetString(ParameterIndex: Integer; const Value: String); virtual;

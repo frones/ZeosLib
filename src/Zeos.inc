@@ -95,11 +95,11 @@
 {$IFDEF FPC}
   {$I ZeosLazarus.inc}
 {$ELSE}
-  {$IF not defined(CPU64) and (defined(CPUX64) or defined(CPU64BITS) or defined(CPUARM64) or defined(CPU64BITS))}
-    {$DEFINE CPU64}
-  {$IFEND}
   {$IF CompilerVersion >= 25}
     {$LEGACYIFEND ON}
+  {$IFEND}
+  {$IF not defined(CPU64) and (defined(CPUX64) or defined(CPU64BITS) or defined(CPUARM64) or defined(CPU64BITS))}
+    {$DEFINE CPU64}
   {$IFEND}
   {$DEFINE DELPHI}
   // Defines that go for ALL still supported Delphi's   (usually means they were under ifndef fpc)
