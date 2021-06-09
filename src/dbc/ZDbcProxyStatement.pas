@@ -292,7 +292,7 @@ begin
             end;
           stBinaryStream:
             if (InParamValues[x].VType = vtInterface) and Supports(InParamValues[x].VInterface, IZBlob, TempBlob) then begin
-              Line := StrParamToStr(ZEncodeBase64(TempBlob.GetBytes));
+              Line := StrParamToStr(String(ZEncodeBase64(TempBlob.GetBytes)));
             end else begin
               raise Exception.Create('Conversion of parameter of type ' + TypeName + ' to stBinaryStream is not supported (yet).');
             end;
