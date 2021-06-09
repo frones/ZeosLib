@@ -572,12 +572,21 @@ end;
 procedure TZUpdateSQL.RefreshCurrentRow(const Sender: IZCachedResultSet; RowAccessor: TZRowAccessor);
 var Config: TZSQLStrings;
     Statement: IZPreparedStatement;
+    OrigStmt: IZStatement;
 begin
   Config:=FRefreshSQL;
   if CONFIG.StatementCount=1 then begin
-    if (FRefreshRS = nil) or (FRefreshRS.IsClosed)
-    then Statement := Sender.GetStatement.GetConnection.PrepareStatement(Config.Statements[0].SQL)
-    else FRefreshRS.GetStatement.QueryInterface(IZPreparedStatement, Statement);
+    if assigned(FRefreshRS) and (not FRefreshRS.IsClosed) then
+      FRefreshRS.GetStatement.QueryInterface(IZPreparedStatement, Statement)
+    else begin
+      OrigStmt := Sender.GetStatement;
+      if not Assigned(OrigStmt) then
+        if DataSet is TZAbstractDataset then
+          OrigStmt := (DataSet as TZAbstractDataset).DbcStatement;
+      if not Assigned(OrigStmt) then
+        raise Exception.Create('Could not determine a valid statement!');
+      Statement := OrigStmt.GetConnection.PrepareStatement(Config.Statements[0].SQL)
+    end;
     FillStatement(Sender, Statement, Config.Statements[0],RowAccessor, RowAccessor);
     FRefreshRS := Statement.ExecuteQueryPrepared;
     Apply_RefreshResultSet(Sender, FRefreshRS, RowAccessor);
