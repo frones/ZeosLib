@@ -878,9 +878,9 @@ var
     Result := False;
     J := 0;
     for I := 0 to DataSet.Fields.Count -1 do
-      if DataSet.Fields[0].FieldKind = fkData then begin
+      if DataSet.Fields[I].FieldKind = fkData then begin
         if OldRowAccessor.CompareBuffer(OldRowAccessor.RowBuffer,
-           NewRowAccessor.RowBuffer, I+FirstDbcIndex, NewRowAccessor.GetCompareFunc(J+FirstDbcIndex, ckEquals))  <> 0 then begin
+           NewRowAccessor.RowBuffer, J+FirstDbcIndex, NewRowAccessor.GetCompareFunc(J+FirstDbcIndex, ckEquals))  <> 0 then begin
           Result := True;
           Break;
         end;
