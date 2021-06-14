@@ -4017,7 +4017,7 @@ var DT: TDateTime;
   begin
     L := DateTimeToRaw(Value.Year, Value.Month, Value.Day, Value.Hour, Value.Minute,
       Value.Second, Value.Fractions, @Buf[0],
-      {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongTimeFormat, False, Value.IsNegative);
+      {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongDateFormat, False, Value.IsNegative);
     R := '';
     CP := GetDefaultRawCP;
     ZSetString(PAnsiChar(@Buf[0]), L, R{$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF});
@@ -4030,7 +4030,7 @@ var DT: TDateTime;
   begin
     L := DateTimeToUni(Value.Year, Value.Month, Value.Day, Value.Hour, Value.Minute,
       Value.Second, Value.Fractions, @Buf[0],
-      {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongTimeFormat, False, Value.IsNegative);
+      {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongDateFormat, False, Value.IsNegative);
     U := '';
     System.SetString(U, PWideChar(@Buf[0]), L);
     InternalSetAsUnicodeString(DataAddr, IsNullAddr, U);
