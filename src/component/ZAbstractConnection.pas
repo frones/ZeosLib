@@ -1164,6 +1164,7 @@ begin
 
   ShowSQLHourGlass;
   try
+    (*
     for i := 0 to FLinkedComponents.Count -1 do begin
       AComp := TComponent(FLinkedComponents[i]);
       if Assigned(AComp) And (AComp is TZAbstractRWDataSet) and
@@ -1171,15 +1172,18 @@ begin
          TZAbstractRWDataSet(AComp).UpdatesPending then
           TZAbstractRWDataSet(AComp).ApplyUpdates;
     end;
+	*)
     FConnection.Commit;
 { TODO -oEgonHugeist : Change this code sequence on 7.3! My automation idea simply is wrong! A commit vs. commitupdate(clear the cache) shouldn't be same! }
     //See: http://zeoslib.sourceforge.net/viewtopic.php?f=38&t=19800
+	(*
     for i := 0 to FLinkedComponents.Count -1 do begin
       AComp := TComponent(FLinkedComponents[i]);
       if Assigned(AComp) And (AComp is TZAbstractRWDataSet) and
          TZAbstractRWDataSet(AComp).UpdatesPending then
           THack_ZAbstractDataset(AComp).DisposeCachedUpdates;
     end;
+	*)
   finally
     Dec(FExplicitTransactionCounter);
     HideSQLHourGlass;

@@ -1346,6 +1346,9 @@ type
     {$ENDIF NO_UTF8STRING}
     function GetAsRawByteString: RawByteString;
     procedure SetAsRawByteString(const Value: RawByteString);
+    {$IFDEF WITH_TWIDEMEMOFIELD_GETASVARIANT_varNULL_BUG}
+    function GetAsVariant: Variant; override;
+    {$ENDIF WITH_TWIDEMEMOFIELD_GETASVARIANT_varNULL_BUG}
   protected
     procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
   public
@@ -1375,6 +1378,9 @@ type
     function GetIsNull: Boolean; override;
     procedure GetText(var Text: string; DisplayText: Boolean); override;
     procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
+    {$IFDEF WITH_TBLOBFIELD_GETASVARIANT_varNULL_BUG}
+    function GetAsVariant: Variant; override;
+    {$ENDIF WITH_TBLOBFIELD_GETASVARIANT_varNULL_BUG}
   public
     procedure Clear; override;
   end;
@@ -10096,13 +10102,11 @@ end;
 
 function TZRawCLobField.GetAsVariant: Variant;
 begin
-  if IsRowDataAvailable
+  if not IsNull
   then with TZAbstractRODataset(DataSet) do begin
     if (FColumnCP = GetTransliterateCodePage(TZAbstractRODataset(DataSet).FControlsCodePage))
     then Result := FResultSet.GetString(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
     else Result := FResultSet.GetUnicodeString(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-    if FResultSet.WasNull then
-      Result := null;
   end else Result := null;
 end;
 
@@ -10387,7 +10391,6 @@ begin
   else Result := '';
 end;
 
-
 function TZUnicodeCLobField.GetAsString: String;
 {$IFNDEF UNICODE}
 var Clob: IZClob;
@@ -10482,6 +10485,15 @@ begin
   else Text := '';
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF WITH_TWIDEMEMOFIELD_GETASVARIANT_varNULL_BUG}
+function TZUnicodeCLobField.GetAsVariant: Variant;
+begin
+  if not GetIsNull
+  then Result := {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}GetAsWideString{$ELSE}GetAsUnicodeString{$ENDIF}
+  else Result := null;
+end;
+{$ENDIF WITH_TWIDEMEMOFIELD_GETASVARIANT_varNULL_BUG}
 
 {$IF defined(FIELD_ASWIDESTRING_IS_UNICODESTRING) or defined(WITH_VIRTUAL_TFIELD_ASWIDESTRING)}
 procedure TZUnicodeCLobField.SetAsWideString(const Value: {$IFDEF FIELD_ASWIDESTRING_IS_UNICODESTRING}UnicodeString{$ELSE}WideString{$ENDIF});
@@ -10697,6 +10709,15 @@ begin
   else Text := '';
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFDEF WITH_TBLOBFIELD_GETASVARIANT_varNULL_BUG}
+function TZBlobField.GetAsVariant: Variant;
+begin
+  if GetIsNull
+  then Result := null
+  else Result := inherited GetAsVariant;
+end;
+{$ENDIF WITH_TBLOBFIELD_GETASVARIANT_varNULL_BUG}
 
 function TZBLobField.IsRowDataAvailable: Boolean;
 var RowBuffer: PZRowBuffer;

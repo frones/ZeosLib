@@ -148,6 +148,8 @@
   {$DEFINE WITH_PARAM_ASBCD}              //TParam.AsBCD is supported
   {$DEFINE WITH_VIRTUAL_TFIELD_BIND}      //TField.Bind(Binding) is supported
   {$DEFINE WITH_INFINATE_DECLARED_IN_UNIT_WINDOWS} //old delphi <= 2010 declared const INFINITE in windows unit
+  {$DEFINE WITH_TBLOBFIELD_GETASVARIANT_varNULL_BUG} //The TBlobFields do not test IsNull state for the GetAsVariant getter.
+  {$DEFINE WITH_TMEMOFIELD_GETASVARIANT_varNULL_BUG} //The TMemoFields do not test IsNull state for the GetAsVariant getter.
   //now compiler related (un)defines do follow up here
   {$IF CompilerVersion < 15}
      "Delphi versions below Delphi 7 aren't supported anymore"
@@ -181,6 +183,7 @@
           {$DEFINE WITH_IPROVIDERWIDE}                //IProvider -W widestring using interface
           {$DEFINE WITH_ASLARGEINT}                   // tlargeint aslargeint. Fixed 2.6.0+ or 2.6.2+ probably
           {$DEFINE WITH_WIDEMEMO}                     //Have ftWideMemo
+          {$DEFINE WITH_TWIDEMEMOFIELD_GETASVARIANT_varNULL_BUG} //The TWideMemoFields do not test IsNull state for the GetAsVariant getter.
           {$DEFINE WITH_PARAM_ASWIDESTRING}           //TParam support the AsWideString property 
           {$DEFINE WITH_FTFIXEDWIDECHAR}              //Have ftFixedWideChar
           {$DEFINE WITH_CLASS_VARS}                   //Class variables/methods are supported
@@ -237,6 +240,7 @@
                 {$DEFINE WITH_DEPRECATED_MESSAGE}     //Compiler supports deprecated messages
                 {$UNDEF WITH_INLINE_ANSICOMPARETEXT}  // AnsiCompareText is no more inline declared
                 {$UNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} //those inlineing errors are resolved 
+                {$UNDEF WITH_TBLOBFIELD_GETASVARIANT_varNULL_BUG} //the compiler now tests against empty strings and assumes NULL if Stream.Size is zero. Is that correct? 
                 {$DEFINE WITH_PWIDECHAR_STRLEN}       // SysUtils.StrLen supports PWideChar
                 {$DEFINE WITH_FTTIMESTAMPOFFSET}      // ftTimeStampOffset is supported
                 {$DEFINE WITH_FTSINGLE}               // ftSingle is supported
@@ -373,7 +377,9 @@
                                             {$DEFINE NO_WIDESTRING} // no WideString type
                                             {$DEFINE NO_SAFECALL} // no safecall calling convention
                                           {$IFEND}
-                                        {$IFEND CompilerVersion >= 34}
+                                          {$UNDEF WITH_TWIDEMEMOFIELD_GETASVARIANT_varNULL_BUG} //The bug is resolved.
+                                          {$UNDEF WITH_TMEMOFIELD_GETASVARIANT_varNULL_BUG} //The bug is resolved.
+                                       {$IFEND CompilerVersion >= 34}
                                       {$IFEND CompilerVersion >= 33}
                                     {$ELSE !CompilerVersion >= 32} //Delphi Berlin+
                                     {$IFEND CompilerVersion >= 32}
