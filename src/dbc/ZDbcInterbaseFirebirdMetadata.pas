@@ -600,7 +600,7 @@ end;
 }
 function TZInterbase6DatabaseInfo.SupportsMixedCaseIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := False;
 end;
 
 {**
