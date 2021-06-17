@@ -471,7 +471,7 @@ end;
 }
 function TZInterbase6DatabaseInfo.SupportsMixedCaseQuotedIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := False;
 end;
 
 {**
