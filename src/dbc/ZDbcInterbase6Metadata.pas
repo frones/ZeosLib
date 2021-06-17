@@ -303,7 +303,7 @@ end;
 }
 function TZInterbase6DatabaseMetadata.SupportsMixedCaseIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := False;
 end;
 
 {**
