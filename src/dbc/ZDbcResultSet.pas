@@ -1575,6 +1575,32 @@ begin
   Result := -CompareDateTime_Asc(Null1, Null2, V1, V2);
 end;
 
+function CompareDate_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  if Null1 and Null2 then Result := 0
+  else if Null1 then Result := -1
+  else if Null2 then Result := 1
+  else Result := ZCompareDate(TZVariant(V1).VDate, TZVariant(V2).VDate);
+end;
+
+function CompareDate_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := -CompareDate_Asc(Null1, Null2, V1, V2);
+end;
+
+function CompareTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  if Null1 and Null2 then Result := 0
+  else if Null1 then Result := -1
+  else if Null2 then Result := 1
+  else Result := ZCompareTime(TZVariant(V1).VTime, TZVariant(V2).VTime);
+end;
+
+function CompareTime_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := -CompareDateTime_Asc(Null1, Null2, V1, V2);
+end;
+
 function CompareBytes_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
   if Null1 and Null2 then Result := 0
@@ -3564,7 +3590,11 @@ begin
             Result[i] := CompareCurrency_Asc;
           stBigDecimal:
             Result[i] := CompareBigDecimal_Asc;
-          stDate, stTime, stTimestamp:
+          stDate:
+            Result[i] := CompareDate_Asc;
+          stTime:
+            Result[i] := CompareTime_Asc;
+          stTimestamp:
             Result[i] := CompareDateTime_Asc;
           stBytes, stBinaryStream, stGUID:
             Result[i] := CompareBytes_Asc;
@@ -3595,7 +3625,11 @@ begin
             Result[i] := CompareCurrency_Desc;
           stBigDecimal:
             Result[i] := CompareBigDecimal_Desc;
-          stDate, stTime, stTimestamp:
+          stDate:
+            Result[i] := CompareDate_Desc;
+          stTime:
+            Result[i] := CompareTime_Desc;
+          stTimestamp:
             Result[i] := CompareDateTime_Desc;
           stBytes, stBinaryStream, stGUID:
             Result[i] := CompareBytes_Desc;
