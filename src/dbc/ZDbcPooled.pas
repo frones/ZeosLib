@@ -122,6 +122,7 @@ type
     FConnection: IZConnection;
     FConnectionPool: TConnectionPool;
     FUseMetadata: Boolean;
+    FConnectionLossHandler: TOnConnectionLostError;
     /// <summary>Get's the owner connection that produced that object instance.
     /// </summary>
     /// <returns>the connection object interface.</returns>
@@ -581,6 +582,7 @@ destructor TZDbcPooledConnection.Destroy;
 begin
   if FConnection <> nil then
   begin
+    FConnection.SetOnConnectionLostErrorHandler(nil);
     FConnectionPool.ReturnToPool(FConnection);
     FConnection := nil;
   end;
@@ -592,8 +594,10 @@ end;
 
 function TZDbcPooledConnection.GetConnection: IZConnection;
 begin
-  if FConnection = nil then
+  if FConnection = nil then begin
     FConnection := FConnectionPool.Acquire;
+    FConnection.SetOnConnectionLostErrorHandler(FConnectionLossHandler);
+  end;
   Result := FConnection;
 end;
 
@@ -636,6 +640,7 @@ procedure TZDbcPooledConnection.Close;
 begin
   if FConnection <> nil then
   begin
+    FConnection.SetOnConnectionLostErrorHandler(nil);
     FConnectionPool.ReturnToPool(FConnection);
     FConnection := nil;
   end;
@@ -813,7 +818,9 @@ end;
 procedure TZDbcPooledConnection.SetOnConnectionLostErrorHandler(
   Handler: TOnConnectionLostError);
 begin
-  GetConnection.SetOnConnectionLostErrorHandler(Handler);
+  if Assigned(FConnection) then
+    FConnection.SetOnConnectionLostErrorHandler(Handler);
+  FConnectionLossHandler := Handler;
 end;
 
 procedure TZDbcPooledConnection.RegisterStatement(const Value: IZStatement);
