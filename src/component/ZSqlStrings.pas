@@ -252,11 +252,11 @@ begin
   if (FDataset is TZAbstractRODataset) and Assigned(TZProtectedAbstractRODataset(FDataset).Connection) then begin
     if TZProtectedAbstractRODataset(FDataset).Connection.Connected
     then Result := TZProtectedAbstractRODataset(FDataset).Connection.DbcConnection.GetTokenizer
-    else Result := TZProtectedAbstractRODataset(FDataset).Connection.DbcDriver.GetTokenizer;
+    else if Assigned(TZProtectedAbstractRODataset(FDataset).Connection.DbcDriver) then Result := TZProtectedAbstractRODataset(FDataset).Connection.DbcDriver.GetTokenizer;
   end else if (FDataset is TZSQLProcessor) and Assigned(TZSQLProcessor(FDataset).Connection) then
     if TZSQLProcessor(FDataset).Connection.Connected
     then Result := TZSQLProcessor(FDataset).Connection.DbcConnection.GetTokenizer
-    else Result := TZSQLProcessor(FDataset).Connection.DbcDriver.GetTokenizer;
+    else if Assigned(TZSQLProcessor(FDataset).Connection.DbcDriver) then Result := TZSQLProcessor(FDataset).Connection.DbcDriver.GetTokenizer;
   if Result = nil then
     Result := TZGenericSQLTokenizer.Create; { thread save! Allways return a new Tokenizer! }
 end;
