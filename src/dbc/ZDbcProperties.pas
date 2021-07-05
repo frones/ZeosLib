@@ -333,10 +333,10 @@ const
 
 {$IF defined (ENABLE_MYSQL) or defined (ENABLE_POSTGRESQL)}
   // Type: INT
-  // how many executions must be done to realy prepare the statement?
+  // how many executions must be done to really prepare the statement?
   // JDBC does prepare on after 4 executions.
   // A negative value means never prepare.
-  // actually default is 2 executions before prepare the stmt on the server
+  // Current default is 2 executions before preparing the statement on the server
   DSProps_MinExecCntBeforePrepare = 'MinExecCountBeforePrepare';
   // Type: BOOLEAN
   // http://zeoslib.sourceforge.net/viewtopic.php?f=20&t=10695&p=30151#p30151
