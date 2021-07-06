@@ -1990,7 +1990,7 @@ var I: Integer;
     Result := False;
     Supports(GetMetadata.GetDatabaseInfo, IZInterbaseDatabaseInfo, DbInfo);
 
-    if Assigned(DbInfo) and DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 1005000) then begin
+    if Assigned(DbInfo) and DbInfo.HostIsFireBird and (DbInfo.GetHostVersion >= 2001000) then begin
       Stmt := IZConnection(fWeakReferenceOfSelfInterface).CreateStatementWithParams(Info);
       RS := Stmt.ExecuteQuery('SELECT RDB$PROCEDURE_TYPE FROM RDB$PROCEDURES WHERE RDB$PROCEDURE_NAME = '+QuotedStr(ProcName));
       if RS <> nil then try
