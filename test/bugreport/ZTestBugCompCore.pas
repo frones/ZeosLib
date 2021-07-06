@@ -135,6 +135,7 @@ type
     procedure TestSF495;
     procedure TestSF498;
     procedure TestSF499;
+    procedure TestSF525;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -2084,6 +2085,28 @@ begin
       Connection.Disconnect;
   finally
     Query.Free;
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF525;
+var
+  Table: TZMemTable;
+  I: Integer;
+begin
+  Table := TZMemTable.Create(nil);
+  try
+    Table.FieldDefs.Clear;
+    Table.FieldDefs.Add('ID',ftInteger);
+    Table.Open;
+    For I := 1 To 9 Do Begin
+      Table.Append;
+      Table.FieldByName('ID').Value := I;
+    End;
+    Table.Post;
+
+    Table.Locate('ID', 8, []);
+  finally
+    FreeAndNil(Table);
   end;
 end;
 
