@@ -819,6 +819,8 @@ begin
               FInsertStatements.Remove(TempKey);
             InsertStatement := CreateResolverStatement(SQL);
             FInsertStatements.Add(TempKey, InsertStatement);
+          end else begin
+            InsertStatement := Val.Statement;
           end;
         end;
         Statement := InsertStatement;
