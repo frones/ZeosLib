@@ -157,7 +157,7 @@ function ReverseLongWordBytes(Src: Pointer; Len: Byte): LongWord;
 function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
 
 function GetBindOffsets(IsMariaDB: Boolean; Version: Integer): TMYSQL_BINDOFFSETS;
-function GetFieldOffsets(Version: Integer): PMYSQL_FIELDOFFSETS;
+function GetFieldOffsets(IsMariaDB: Boolean; Version: Integer): PMYSQL_FIELDOFFSETS;
 
 {$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
 implementation
@@ -858,9 +858,9 @@ begin
     result.buffer_type:=0;
 end;
 
-function GetFieldOffsets(Version: Integer): PMYSQL_FIELDOFFSETS;
+function GetFieldOffsets(IsMariaDB: Boolean; Version: Integer): PMYSQL_FIELDOFFSETS;
 begin
-  if (Version >= 50100) then
+  if (Version >= 50100) or IsMariaDB then
     result := @MYSQL_FIELD51_Offset
   else if (Version >= 40100) then
     Result := @MYSQL_FIELD41_Offset

@@ -462,7 +462,7 @@ var
   FieldOffsets: PMYSQL_FIELDOFFSETS;
   MySQL_FieldType_Bit_1_IsBoolean: Boolean;
 begin
-  FieldOffsets := GetFieldOffsets(FPlainDriver.GetClientVersion);
+  FieldOffsets := GetFieldOffsets(FPlainDriver.IsMariaDBDriver, FPlainDriver.GetClientVersion);
   if fServerCursor
   then FQueryHandle := FPlainDriver.use_result(FHandle)
   else begin
@@ -1114,7 +1114,7 @@ begin
 
   { Initialize Bind Array and Column Array }
   FBindBuffer := TZMySqlResultSetBindBuffer.Create(FPlainDriver,FieldCount,FColumnArray);
-  FIELDOFFSETS := GetFieldOffsets(FPlainDriver.GetClientVersion);
+  FIELDOFFSETS := GetFieldOffsets(FPlainDriver.IsMariaDBDriver, FPlainDriver.GetClientVersion);
   { EH: no we skip that! We use the refetch logic of
   https://bugs.mysql.com/file.php?id=12361&bug_id=33086
 
