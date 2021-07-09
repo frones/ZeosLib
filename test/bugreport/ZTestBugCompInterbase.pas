@@ -97,6 +97,7 @@ type
     procedure TestTicket376;
     procedure TestSF427;
     procedure TestSF_Internal7;
+    procedure TestSF524;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1207,6 +1208,32 @@ begin
     SL.free;
     FreeAndNil(StrStream1);
     Query.Free;
+  end;
+end;
+
+procedure ZTestCompInterbaseBugReport.TestSF524;
+var
+  Query: TZQuery;
+begin
+  Connection.Connect;
+  if Connection.ServerVersion >= 3000000 then begin
+    Query := CreateQuery;
+    with Query do try
+      Connection.ExecuteDirect('delete from SF524');
+      SQL.Text := 'select * from SF524';
+      Connection.Connect;
+      Open;
+      Append;
+      FieldByName('description').AsString := 'test ' + IntToStr(Random(100000));
+      FieldByName('price').AsCurrency := Random(1000);
+      Post;
+      Append;
+      FieldByName('description').AsString := 'test ' + IntToStr(Random(100000));
+      FieldByName('price').AsCurrency := Random(1000);
+      Post;
+    finally
+      FreeAndNil(Query);
+    end;
   end;
 end;
 
