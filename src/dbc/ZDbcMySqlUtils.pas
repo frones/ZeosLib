@@ -201,7 +201,7 @@ procedure ReAllocMySQLColumnBuffer(OldRSCount, NewRSCount: Integer;
   var ColumnsBindingArray: PMYSQL_ColumnsBindingArray; BindOffset: PMYSQL_BINDOFFSETS);
 
 function GetBindOffsets(IsMariaDB: Boolean; Version: Integer): PMYSQL_BINDOFFSETS;
-function GetFieldOffsets(Version: Integer): PMYSQL_FIELDOFFSETS;
+function GetFieldOffsets(IsMariaDB: Boolean; Version: Integer): PMYSQL_FIELDOFFSETS;
 function GetServerStatusOffset(Version: Integer): NativeUInt;
 
 {$ENDIF ZEOS_DISABLE_MYSQL} //if set we have an empty unit
@@ -737,9 +737,9 @@ begin
   else Result := nil
 end;
 
-function GetFieldOffsets(Version: Integer): PMYSQL_FIELDOFFSETS;
+function GetFieldOffsets(IsMariaDB: Boolean; Version: Integer): PMYSQL_FIELDOFFSETS;
 begin
-  if (Version >= 50100) then
+  if (Version >= 50100) or (IsMariaDB) then
     result := @MYSQL_FIELD51_Offset
   else if (Version >= 40100) then
     Result := @MYSQL_FIELD41_Offset

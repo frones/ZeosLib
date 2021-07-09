@@ -839,7 +839,7 @@ var
   FieldOffsets: PMYSQL_FIELDOFFSETS;
   MySQL_FieldType_Bit_1_IsBoolean: Boolean;
 begin
-  FieldOffsets := GetFieldOffsets(FPlainDriver.mysql_get_client_version);
+  FieldOffsets := GetFieldOffsets(FPlainDriver.IsMariaDBDriver, FPlainDriver.mysql_get_client_version);
   MySQL_FieldType_Bit_1_IsBoolean := FMySQLConnection.MySQL_FieldType_Bit_1_IsBoolean;
   if FPMYSQL_STMT^ = nil then begin
     OpenCursor;
