@@ -35,7 +35,7 @@
 
 \pagestyle{plain}
 
-\title{Zeos 7.2.8 Release Notes}
+\title{Zeos 7.2.10 Release Notes}
 \author{Jan Baumgarten}
 \date{\today}
 %\overfullrule=2mm
@@ -46,12 +46,52 @@
 \tableofcontents
 
 \section*{Zeos 7.2}
-The Zeos Team is proud to announce the availability of Zeos 7.2.8 as a stable release.
+The Zeos Team is proud to announce the availability of Zeos 7.2.12 as a stable release.
 This is the newest stable version of Zeos.
 It deprecates Zeos 7.1, and all prior versions of Zeos 7.2 which will not be supported anymore.
 Zeos 7.2 has seen tons of bug fixes and improvements.
 We urge all people still using older versions of Zeos to upgrade.
 If you have any problems with Zeos 7.2, please get in contact with us on the forums (\url{http://zeoslib.sourceforge.net}) or on the bugtracker (\url{https://sourceforge.net/p/zeoslib/tickets/}).
+
+\chapter{Zeos 7.2.12 Release Notes}
+
+\section{General}
+\subsection{ZConnection.Commit doesn't call ApplyUpdates}
+In versions starting with Zeos 7.2.8 TZConnection.Commit called ApplyUpdates of all connected datasets.
+This behavior prevented use cases where cached changes in different datasets were to be committed in different transactions.
+ZConnection.Commit doesn't interfere with cached updates anymore.
+If you want caches updates to be applied before a transaction gets committed, call the ApplyUpdates method of the respective datasets before.
+
+\subsection{Sorting of strings}
+Previous versions of Zeos didn't sort strings correctly under some circumstances.
+This was fixed.
+
+\section{MariaDB}
+
+\subsection{Support for MariaDB Connector/C 3.2+ / MariaDB 10.6}
+Starting with MariaDB Connector/C version 3.2.2 MariaDB changed the version number returned by mysql\_get\_client\_version to be the version number of the client library and not the version number of the server it was distributed with.
+This lead Zeos to think, it talks to an old client library and made it read data structures for field type definitions wrongly.
+Zeos 7.2.12 fixes this and so supports MariaDB Connector/C 3.2.
+MariaDB Connector/C 3.2 is distributed alongside MariaDB 10.6.
+
+\section{Firebird}
+
+\subsection{detection of selectable sored procedures}
+Previous versions Zeos tried to detect selectable stored procedures starting with Firebird 1.5.
+This lead to problems because the required metadata fields were only added in Firebird 2.1.
+This has been fixed.
+
+\section{SQLite}
+\subsection{metadata of attached databases}
+In previous versions Zeos didn't read metadata information of attached databases correctly.
+This could lead to all sorts of problems where Zeos relies on metadata information to function correctly.
+This has been fixed.
+
+\section{ADO}
+\subsection{character set conversion issue on FPC 3.2}
+Zeos 7.2.8 introduced support for the new codepage aware string field in FPC 3.2.
+Unfortunately we didn't assign the correct character set when using ADO.
+This has been fixed for Zeos 7.2.12.
 
 \chapter{Zeos 7.2.10 Release Notes}
 
@@ -784,9 +824,12 @@ In previous versions of Zeos this wasn't guaranteed, leading to undefined behavi
 	This only affects users of the DBC layer.
 \end{itemize}
 
-\section{Known Problems}
+\chapter{Known Problems}
 \label{sec:Rev4_KnownProblems}
 \begin{itemize}
+\item
+  Zeos doesn't support autoincrement fields in Firebird.
+	This has been changed in the Zeos 8.0 version.
 \item 
   Zeos currently doesn't support the BCD type columns of Delphi.
 	NUMERIC and DECIMAL columns still get mapped to floating point types.
