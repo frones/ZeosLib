@@ -65,7 +65,7 @@
         <IncludePath>..\..\src\dbc\;$(IncludePath)</IncludePath>
         <BCC_OutputDir>$(ZEOSDBO)\$(Platform)\$(Config)\Lib</BCC_OutputDir>
         <DCC_BpiOutput>$(ZEOSDBO)\$(Platform)\$(Config)\Lib</DCC_BpiOutput>
-        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.12.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.12.0;Comments=;Last Compile=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.13.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.13.0;Comments=;Last Compile=</VerInfo_Keys>
         <DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_Locale>1033</VerInfo_Locale>
@@ -111,7 +111,7 @@
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
         <IncludePath>$(BDSINCLUDE)\windows\vcl;$(IncludePath)</IncludePath>
         <Icon_MainIcon>ZDbc_Icon.ico</Icon_MainIcon>
-        <VerInfo_Keys>CompanyName=;FileVersion=7.2.12.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductVersion=7.2.12.0;Comments=;ProgramID=com.embarcadero.$(MSBuildProjectName);FileDescription=$(MSBuildProjectName);ProductName=$(MSBuildProjectName)</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=;FileVersion=7.2.13.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductVersion=7.2.13.0;Comments=;ProgramID=com.embarcadero.$(MSBuildProjectName);FileDescription=$(MSBuildProjectName);ProductName=$(MSBuildProjectName)</VerInfo_Keys>
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
         <BRCC_Defines>USEPACKAGES;$(BRCC_Defines)</BRCC_Defines>
         <TASM_Defines>USEPACKAGES;$(TASM_Defines)</TASM_Defines>
@@ -126,7 +126,7 @@
         <TASM_Defines>USEPACKAGES;$(TASM_Defines)</TASM_Defines>
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;$(DCC_Namespace)</DCC_Namespace>
         <BT_BuildType>Debug</BT_BuildType>
-        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=7.2.12.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=7.2.12.0;Comments=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=7.2.13.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=7.2.13.0;Comments=</VerInfo_Keys>
         <ILINK_LibraryPath>C:\Users\macic\BCBCompNew\ZeosLib\packages\CBuilderXE10.2\Win64\Release\Lib\;$(ILINK_LibraryPath)</ILINK_LibraryPath>
         <VerInfo_MajorVer>1</VerInfo_MajorVer>
         <VerInfo_MinorVer>0</VerInfo_MinorVer>
@@ -143,10 +143,10 @@
         <VerInfo_MinorVer>0</VerInfo_MinorVer>
         <VerInfo_Release>0</VerInfo_Release>
         <VerInfo_Build>0</VerInfo_Build>
-        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.12.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.12.0;Comments=;Last Compile=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.13.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.13.0;Comments=;Last Compile=</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
-        <VerInfo_Keys>CompanyName=;FileVersion=7.2.12.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductVersion=7.2.12.0;Comments=;ProgramID=com.embarcadero.$(MSBuildProjectName);FileDescription=$(MSBuildProjectName);ProductName=$(MSBuildProjectName)</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=;FileVersion=7.2.13.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductVersion=7.2.13.0;Comments=;ProgramID=com.embarcadero.$(MSBuildProjectName);FileDescription=$(MSBuildProjectName);ProductName=$(MSBuildProjectName)</VerInfo_Keys>
         <BCC_Defines>_DEBUG;$(BCC_Defines);$(BCC_Defines)</BCC_Defines>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
@@ -161,16 +161,16 @@
         <VerInfo_MinorVer>0</VerInfo_MinorVer>
         <VerInfo_Release>0</VerInfo_Release>
         <VerInfo_Build>0</VerInfo_Build>
-        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.12.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.12.0;Comments=;Last Compile=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.13.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.13.0;Comments=;Last Compile=</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
-        <VerInfo_Keys>CompanyName=;FileVersion=7.2.12.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductVersion=7.2.12.0;Comments=;ProgramID=com.embarcadero.$(MSBuildProjectName);FileDescription=$(MSBuildProjectName);ProductName=$(MSBuildProjectName)</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=;FileVersion=7.2.13.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductVersion=7.2.13.0;Comments=;ProgramID=com.embarcadero.$(MSBuildProjectName);FileDescription=$(MSBuildProjectName);ProductName=$(MSBuildProjectName)</VerInfo_Keys>
         <BCC_Defines>NDEBUG;$(BCC_Defines);$(BCC_Defines)</BCC_Defines>
         <LinkPackageStatics>rtl.lib</LinkPackageStatics>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
         <BCC_Defines>NDEBUG;$(BCC_Defines);$(BCC_Defines)</BCC_Defines>
-        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=7.2.12.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=7.2.12.0;Comments=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=7.2.13.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=7.2.13.0;Comments=</VerInfo_Keys>
         <LinkPackageImports>rtl.bpi</LinkPackageImports>
     </PropertyGroup>
     <ItemGroup>
@@ -438,7 +438,7 @@
                     <VersionInfo Name="AutoIncBuild">False</VersionInfo>
                     <VersionInfo Name="MajorVer">7</VersionInfo>
                     <VersionInfo Name="MinorVer">2</VersionInfo>
-                    <VersionInfo Name="Release">12</VersionInfo>
+                    <VersionInfo Name="Release">13</VersionInfo>
                     <VersionInfo Name="Build">0</VersionInfo>
                     <VersionInfo Name="Debug">False</VersionInfo>
                     <VersionInfo Name="PreRelease">False</VersionInfo>
@@ -451,13 +451,13 @@
                 <VersionInfoKeys>
                     <VersionInfoKeys Name="CompanyName"/>
                     <VersionInfoKeys Name="FileDescription"/>
-                    <VersionInfoKeys Name="FileVersion">7.2.12.0</VersionInfoKeys>
+                    <VersionInfoKeys Name="FileVersion">7.2.13.0</VersionInfoKeys>
                     <VersionInfoKeys Name="InternalName"/>
                     <VersionInfoKeys Name="LegalCopyright"/>
                     <VersionInfoKeys Name="LegalTrademarks"/>
                     <VersionInfoKeys Name="OriginalFilename"/>
                     <VersionInfoKeys Name="ProductName"/>
-                    <VersionInfoKeys Name="ProductVersion">7.2.12.0</VersionInfoKeys>
+                    <VersionInfoKeys Name="ProductVersion">7.2.13.0</VersionInfoKeys>
                     <VersionInfoKeys Name="Comments"/>
                     <VersionInfoKeys Name="Last Compile">2015-01-24 10:56</VersionInfoKeys>
                 </VersionInfoKeys>

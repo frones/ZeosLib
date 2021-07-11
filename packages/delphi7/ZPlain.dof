@@ -120,7 +120,7 @@ IncludeVerInfo=1
 AutoIncBuild=0
 MajorVer=7
 MinorVer=2
-Release=12
+Release=13
 Build=0
 Debug=0
 PreRelease=0
@@ -133,13 +133,13 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=
 FileDescription=
-FileVersion=7.2.12.0
+FileVersion=7.2.13.0
 InternalName=
 LegalCopyright=
 LegalTrademarks=
 OriginalFilename=
 ProductName=
-ProductVersion=7.2.12.0
+ProductVersion=7.2.13.0
 Comments=
 
 [HistoryLists\hlDebugSourcePath]
