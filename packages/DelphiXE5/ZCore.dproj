@@ -66,7 +66,7 @@
         <VerInfo_Locale>1031</VerInfo_Locale>
         <DllSuffix>190</DllSuffix>
         <GenDll>true</GenDll>
-        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.12.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.12.0;Comments=</VerInfo_Keys>
         <DCC_Description>Zeos Core Classes and Interfaces</DCC_Description>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
         <DCC_LegacyIFEND>true</DCC_LegacyIFEND>
@@ -103,7 +103,7 @@
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
         <VerInfo_Locale>1033</VerInfo_Locale>
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
-        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.12.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.12.0;Comments=</VerInfo_Keys>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win64)'!=''">
@@ -180,7 +180,7 @@
                     <VersionInfo Name="AutoIncBuild">False</VersionInfo>
                     <VersionInfo Name="MajorVer">7</VersionInfo>
                     <VersionInfo Name="MinorVer">2</VersionInfo>
-                    <VersionInfo Name="Release">8</VersionInfo>
+                    <VersionInfo Name="Release">12</VersionInfo>
                     <VersionInfo Name="Build">0</VersionInfo>
                     <VersionInfo Name="Debug">False</VersionInfo>
                     <VersionInfo Name="PreRelease">False</VersionInfo>
@@ -193,13 +193,13 @@
                 <VersionInfoKeys>
                     <VersionInfoKeys Name="CompanyName"/>
                     <VersionInfoKeys Name="FileDescription"/>
-                    <VersionInfoKeys Name="FileVersion">7.2.8.0</VersionInfoKeys>
+                    <VersionInfoKeys Name="FileVersion">7.2.12.0</VersionInfoKeys>
                     <VersionInfoKeys Name="InternalName"/>
                     <VersionInfoKeys Name="LegalCopyright"/>
                     <VersionInfoKeys Name="LegalTrademarks"/>
                     <VersionInfoKeys Name="OriginalFilename"/>
                     <VersionInfoKeys Name="ProductName"/>
-                    <VersionInfoKeys Name="ProductVersion">7.2.8.0</VersionInfoKeys>
+                    <VersionInfoKeys Name="ProductVersion">7.2.12.0</VersionInfoKeys>
                     <VersionInfoKeys Name="Comments"/>
                     <VersionInfoKeys Name="CFBundleName"/>
                     <VersionInfoKeys Name="CFBundleDisplayName"/>

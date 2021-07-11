@@ -1,5 +1,6 @@
 [FileVersion]
 Version=7.0
+
 [Compiler]
 A=8
 B=0
@@ -79,6 +80,7 @@ PrivatePropAccessor=1
 UnsafeType=0
 UnsafeCode=0
 UnsafeCast=0
+
 [Linker]
 MapFile=0
 OutputObjs=0
@@ -89,6 +91,7 @@ MinStackSize=16384
 MaxStackSize=1048576
 ImageBase=4194304
 ExeDescription=
+
 [Directories]
 OutputDir=build
 UnitOutputDir=build
@@ -99,22 +102,25 @@ Packages=vcl;rtl;dbrtl;adortl;vcldb;vclx;bdertl;vcldbx;ibxpress;dsnap;cds;bdecds
 Conditionals=
 DebugSourceDirs=build
 UsePackages=0
+
 [Parameters]
 RunParams=
 HostApplication=
 Launcher=
 UseLauncher=0
 DebugCWD=
+
 [Language]
 ActiveLang=
 ProjectLang=$00000409
 RootDir=
+
 [Version Info]
 IncludeVerInfo=0
 AutoIncBuild=0
-MajorVer=1
-MinorVer=0
-Release=0
+MajorVer=7
+MinorVer=2
+Release=12
 Build=0
 Debug=0
 PreRelease=0
@@ -123,14 +129,15 @@ Private=0
 DLL=0
 Locale=1033
 CodePage=1252
+
 [Version Info Keys]
 CompanyName=
 FileDescription=
-FileVersion=1.0.0.0
+FileVersion=7.2.12.0
 InternalName=
 LegalCopyright=
 LegalTrademarks=
 OriginalFilename=
 ProductName=
-ProductVersion=1.0.0.0
+ProductVersion=7.2.12.0
 Comments=
