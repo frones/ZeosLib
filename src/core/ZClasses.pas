@@ -63,7 +63,7 @@ uses
 const
   ZEOS_MAJOR_VERSION = 7;
   ZEOS_MINOR_VERSION = 2;
-  ZEOS_SUB_VERSION = 13;
+  ZEOS_SUB_VERSION = 14;
   ZEOS_STATUS = 'release';
   ZEOS_VERSION = Char(48+ZEOS_MAJOR_VERSION)+'.'+
                  {$IF ZEOS_MINOR_VERSION > 9}

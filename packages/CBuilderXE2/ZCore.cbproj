@@ -55,7 +55,7 @@
 			<DCC_BpiOutput>$(ZEOSDBO)\$(Platform)\$(Config)\Lib</DCC_BpiOutput>
 			<VerInfo_Locale>1033</VerInfo_Locale>
 			<DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
-			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.13.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.13.0;Comments=;Last Compile=</VerInfo_Keys>
+			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.14.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.14.0;Comments=;Last Compile=</VerInfo_Keys>
 			<VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
 			<IntermediateOutputDir>$(ZEOSDBO)\$(Platform)\$(Config)\Tmp</IntermediateOutputDir>
 			<BPILibOutputDir>$(ZEOSDBO)\$(Platform)\$(Config)\Lib</BPILibOutputDir>
@@ -104,7 +104,7 @@
 			<VerInfo_Release>0</VerInfo_Release>
 			<IncludePath>$(BDSINCLUDE)\windows\vcl;$(IncludePath)</IncludePath>
 			<Icon_MainIcon>ZCore_Icon.ico</Icon_MainIcon>
-			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.13.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.13.0;Comments=</VerInfo_Keys>
+			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.14.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.14.0;Comments=</VerInfo_Keys>
 			<DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1)'!=''">
@@ -112,7 +112,7 @@
 			<VerInfo_MajorVer>1</VerInfo_MajorVer>
 			<VerInfo_MinorVer>0</VerInfo_MinorVer>
 			<VerInfo_Release>0</VerInfo_Release>
-			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.13.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.13.0;Comments=;Last Compile=</VerInfo_Keys>
+			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.14.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.14.0;Comments=;Last Compile=</VerInfo_Keys>
 			<BCC_Defines>_DEBUG;$(BCC_Defines);$(BCC_Defines)</BCC_Defines>
 			<DCC_Define>DEBUG;$(DCC_Define);$(DCC_Define)</DCC_Define>
 			<DCC_AdditionalSwitches> -M -V</DCC_AdditionalSwitches>
@@ -122,12 +122,12 @@
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
 			<LinkPackageStatics>rtl.lib</LinkPackageStatics>
-			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.13.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.13.0;Comments=</VerInfo_Keys>
+			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.14.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.14.0;Comments=</VerInfo_Keys>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
 			<VerInfo_Build>0</VerInfo_Build>
 			<VerInfo_MinorVer>0</VerInfo_MinorVer>
-			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.13.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.13.0;Comments=;Last Compile=</VerInfo_Keys>
+			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.14.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.14.0;Comments=;Last Compile=</VerInfo_Keys>
 			<VerInfo_MajorVer>1</VerInfo_MajorVer>
 			<VerInfo_Release>0</VerInfo_Release>
 			<BCC_Defines>NDEBUG;$(BCC_Defines);$(BCC_Defines)</BCC_Defines>
@@ -138,7 +138,7 @@
 			<BCC_InlineFunctionExpansion>true</BCC_InlineFunctionExpansion>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
-			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.13.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.13.0;Comments=</VerInfo_Keys>
+			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.14.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.14.0;Comments=</VerInfo_Keys>
 			<LinkPackageStatics>rtl.lib</LinkPackageStatics>
 		</PropertyGroup>
 		<ItemGroup>
@@ -265,7 +265,7 @@
 						<VersionInfo Name="AutoIncBuild">False</VersionInfo>
 						<VersionInfo Name="MajorVer">7</VersionInfo>
 						<VersionInfo Name="MinorVer">2</VersionInfo>
-						<VersionInfo Name="Release">13</VersionInfo>
+						<VersionInfo Name="Release">14</VersionInfo>
 						<VersionInfo Name="Build">0</VersionInfo>
 						<VersionInfo Name="Debug">False</VersionInfo>
 						<VersionInfo Name="PreRelease">False</VersionInfo>
@@ -278,13 +278,13 @@
 					<VersionInfoKeys>
 						<VersionInfoKeys Name="CompanyName"/>
 						<VersionInfoKeys Name="FileDescription"/>
-						<VersionInfoKeys Name="FileVersion">7.2.13.0</VersionInfoKeys>
+						<VersionInfoKeys Name="FileVersion">7.2.14.0</VersionInfoKeys>
 						<VersionInfoKeys Name="InternalName"/>
 						<VersionInfoKeys Name="LegalCopyright"/>
 						<VersionInfoKeys Name="LegalTrademarks"/>
 						<VersionInfoKeys Name="OriginalFilename"/>
 						<VersionInfoKeys Name="ProductName"/>
-						<VersionInfoKeys Name="ProductVersion">7.2.13.0</VersionInfoKeys>
+						<VersionInfoKeys Name="ProductVersion">7.2.14.0</VersionInfoKeys>
 						<VersionInfoKeys Name="Comments"/>
 						<VersionInfoKeys Name="Last Compile">2015-01-24 10:55</VersionInfoKeys>
 					</VersionInfoKeys>

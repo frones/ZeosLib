@@ -64,7 +64,7 @@
 			<DCC_RangeChecking>true</DCC_RangeChecking>
 			<DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
 			<DCC_ExeOutput>build</DCC_ExeOutput>
-			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.13.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.13.0;Comments=</VerInfo_Keys>
+			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=7.2.14.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=7.2.14.0;Comments=</VerInfo_Keys>
 			<DCC_Namespace>System.Win;WinAPI;System;Xml;Data;Datasnap;Web;Soap;VCL;$(DCC_Namespace)</DCC_Namespace>
 			<DCC_UnitSearchPath>build;..\..\test\external;..\..\test\framework;..\..\test\core;..\..\test\parsesql;..\..\test\dbc;..\..\test\component;..\..\test\bugreport;..\..\test\performance;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DcuOutput>build</DCC_DcuOutput>
@@ -126,7 +126,7 @@
 						<VersionInfo Name="AutoIncBuild">False</VersionInfo>
 						<VersionInfo Name="MajorVer">7</VersionInfo>
 						<VersionInfo Name="MinorVer">2</VersionInfo>
-						<VersionInfo Name="Release">13</VersionInfo>
+						<VersionInfo Name="Release">14</VersionInfo>
 						<VersionInfo Name="Build">0</VersionInfo>
 						<VersionInfo Name="Debug">False</VersionInfo>
 						<VersionInfo Name="PreRelease">False</VersionInfo>
@@ -139,13 +139,13 @@
 					<VersionInfoKeys>
 						<VersionInfoKeys Name="CompanyName"/>
 						<VersionInfoKeys Name="FileDescription"/>
-						<VersionInfoKeys Name="FileVersion">7.2.13.0</VersionInfoKeys>
+						<VersionInfoKeys Name="FileVersion">7.2.14.0</VersionInfoKeys>
 						<VersionInfoKeys Name="InternalName"/>
 						<VersionInfoKeys Name="LegalCopyright"/>
 						<VersionInfoKeys Name="LegalTrademarks"/>
 						<VersionInfoKeys Name="OriginalFilename"/>
 						<VersionInfoKeys Name="ProductName"/>
-						<VersionInfoKeys Name="ProductVersion">7.2.13.0</VersionInfoKeys>
+						<VersionInfoKeys Name="ProductVersion">7.2.14.0</VersionInfoKeys>
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
 					<Source>
