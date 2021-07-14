@@ -4407,7 +4407,7 @@ end;
 procedure TZRowAccessor.SetDataSet(ColumnIndex: Integer; const Value: IZDataSet);
 var
   Ptr: PPointer;
-  NullPtr: {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF};
+  NullPtr: PByte;
 begin
 {$R-}
 {$IFNDEF DISABLE_CHECKING}
@@ -4420,14 +4420,10 @@ begin
 {$ENDIF}
 
   Ptr := PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1]);
-  NullPtr := {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF}(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]]);
+  NullPtr := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]]);
   {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
 
-  {$IFNDEF FPC}
-  if NullPtr^ = {$IFDEF WIN64}false{$ELSE}0{$ENDIF} then  //M.A. if NullPtr^ = 0 then
-  {$ELSE}
   if NullPtr^ = 0 then
-  {$ENDIF}
     IZDataSet(Ptr^) := nil
   else
     Ptr^ := nil;
@@ -4435,15 +4431,9 @@ begin
   IZDataSet(Ptr^) := Value;
 
   if Value <> nil then
-  {$IFNDEF FPC}
-    NullPtr^ := {$IFDEF WIN64}false{$ELSE}0{$ENDIF}  //M.A. NullPtr^ := 0
-  else
-    NullPtr^ := {$IFDEF WIN64}true{$ELSE}1{$ENDIF};  //M.A. NullPtr^ := 1;
-  {$ELSE}
     NullPtr^ := 0
   else
     NullPtr^ := 1;
-  {$ENDIF}
 end;
 {**
   Sets the designated column with a <code>Variant</code> value.
