@@ -994,7 +994,7 @@ const
     ('OleDB','ADO');
   ZProp_OleDBProvider : TZProperty = (
     Name: ConnProps_Provider;
-    Purpose: 'The OleDB-Provider if not spezified in the DataBase-String.';
+    Purpose: 'The OleDB-Provider if not specified in the connection string.';
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: '';
     Providers: (Count: 0; Items: nil);
@@ -1032,11 +1032,11 @@ const
     ('odbc','OleDB');
   ZProp_DeferPrepare : TZProperty = (
     Name: DSProps_DeferPrepare;
-    Purpose: 'Defer prepare? If not set we''ll try to prepere the [update|delete'+
+    Purpose: 'Defer prepare? If not set Zeos tries to prepare the [update|delete'+
       '|insert|select] statements immediately.'+LineEnding+
-      'The more we try determine the parameter types, alloc the param-buffer '+
-      'once and do not use parameter late-bindings. Thus it''s faster if NO '+
-      'defer prepare is used'+LineEnding+
+      'Also Zeos tries to determine the parameter types, allocates the parameter buffers '+
+      'once only and does not use late binding of parameters. Thus it is faster if NO '+
+      'defer prepare is used and the statement gets used more than once.'+LineEnding+
       'Some servers might fail to prepare the statments(MS-products are master '+
       'of fails including unknown exceptions) -> turn it off on DataSet/Statement '+
       'level if you run into that issue';
