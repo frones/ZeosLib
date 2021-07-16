@@ -11,6 +11,7 @@
 \usepackage{float}
 \usepackage{hyperref}
 \usepackage{placeins}
+\usepackage{tabularx}
 
 % One can use the package listings for formatting source code.
 % It provides commands for having code inside the paragraph as
@@ -166,11 +167,12 @@ Default is false.
 
 On the DBC layer this option is reflected by the SetRaiseWarningMessages method of the IZConnection Interface.
 
-\subsection{updates on more / joined queries}
+\subsection{Zeos now respects TField.ProviderFlags}
 Until Zeos 7.2 Zeos could update queries only if they queried a single table and all fields were writable.
-Starting with Zeos 8.0 Zeos uses information from ProviderFlags and TField.ReadOnly.
+Starting with Zeos 8.0 Zeos uses information from TField.ProviderFlags and TField.ReadOnly.
 This allows us to have more queries be updateable automatically.
-See [\#310] and [r6882].
+
+Note: pfInWhere only makes sense in wmWhereKeyOnly.
 
 \textbf{Jan:}We need more information on how these things work for the information to be more useful.
 
@@ -245,9 +247,20 @@ Other enums behave as before, they will be mapped to a sting filed in any case.
 \subsection{Support for batch DML on MariaDB}
 Zeos now supports Batch DML with INSERT and DELETE on MariaDB.
 
-\subsection{Changed parameter names}
-Some parameter names changed.
-See [\#395] and \url{https://sourceforge.net/p/zeoslib/tickets/395/#14a4}
+\subsection{changed parameter names}
+Some parameter names have changed to make them comply with the MySQL manual.
+See \url{https://dev.mysql.com/doc/refman/8.0/en/mysql-options.html}
+
+\begin{tabular}{ll}
+	old name & new name \\ \hline
+  MYSQL\_SSL\_KEY & MYSQL\_OPT\_SSL\_KEY\\
+	MYSQL\_SSL\_CERT & MYSQL\_OPT\_SSL\_CERT \\
+	MYSQL\_SSL\_CA & MYSQL\_OPT\_SSL\_CA \\
+	MYSQL\_SSL\_CAPATH & MYSQL\_OPT\_SSL\_CAPATH \\
+	MYSQL\_SSL\_CYPHER & MYSQL\_OPT\_SSL\_CIPHER \\
+\end{tabular}
+
+In general it makes sense to check if your parameters match the MySQL / MariaDB documentation now.
 
 \section{PostgreSQL}
 
@@ -259,6 +272,7 @@ Supported statements are INSERT and DELETE statements.
 The PostgreSQL driver now uses the binary protocol for talking to the database.
 This allows faster fetches for the dataset.
 We also prevent rounding errors for TFloatField and escape the "`parsing hell"' for date and time values.
+The parameters DateReadFormat, DateWriteFormat, TimeReadFormat, TimeWriteFormat, DateTimeReadFormat and DateTimeWriteFormat don't get used anymore.
 This can lead to behavior changes between Zeos 7.2 and Zeos 8.0.
 
 \subsection{compatibility option BindDoubleAsString}
@@ -285,7 +299,12 @@ In Zeos 7.3 the "ExtendedErrorMessage" is removed and the new behavior cannot be
 
 \subsection{support for GUID fields}
 The sqlite driver now supports GUID fields.
-Fields that have GUID in their type description will be treated as TGuidField. [r7060]
+Fields that have GUID in their type description will be treated as TGuidField.
+Fields that are not 16 bytes wide will be treated as being null.
+Zeos supports reading GUIDs that are in a string representation with and without curly brackets.
+
+\subsection{support for TBCDFields}
+Any Field with a fielddef of *INT*(18,4) will be treated as a TBCDField.
 
 \section{Oracle}
 
@@ -307,18 +326,106 @@ See \url{https://www.freetds.org/userguide/ChoosingTdsProtocol.html}
 The new parameter TDSProtocolVersion reflects this possibility.
 Possible values are "4.2", "5.0", "7.0", "7.1", "7.2", "7.3" and "7.4".
 
-\section{OLEDB}
-New driver - needs extensive description.
+\section{OleDB}
+Zeos now supports OleDB for Delphi as well as for Free Pascal.
+It is meant to replace the ADO driver and is faster than ADO as well.
+To use this driver, insert the OLE DB Connection string into the Database property of TZConnection.
+The host name property doesn't work with this driver.
+This driver was mostly tested with Microsoft SQL Servers during development.
 
-Should replace ADO bridge.
+\subsection{paramaters}
 
-Don't forget to add "`MarsConn=True"' parameter to the connection string, except UseMetadata is turned off -> for MS SQL Server -> \url(https://sourceforge.net/p/zeoslib/tickets/434/\#9e48)
+\begin{tabularx}{\textwidth}{lX}
+    paramater name & description \\ \hline
+		internal\_buffer\_size & 
+		  Drivers like ODBC, OleDB, Oracle, ASE(SACAPI) do allow block-fetches to reduce roundtrips.
+      Define memory in bytes for the block buffer.
+			Default is 128Kb
+      Zeos will do a minimum allocation for one row. \\
+		Provider &
+		  The OleDB Provider if not specified in the connection string. \\
+		Trusted\_Connection &
+		  Use trusted connection? \\
+		DeferPrepare &
+      Defer prepare? If not set Zeos tries to prepare update, delete, insert and select statements immediately.
+      Also Zeos tries to determine the parameter types, allocates the parameter buffers once only and does not use late binding of parameters.
+			Thus it is faster if NO defer prepare is used and the statement gets used more than once.
+      Some servers might fail to prepare the statments (MS products are masters at failing including unknown exceptions).
+			Turn it off on the DataSet or Statement level if you run into that issue. \\
+		StatementTimeOut &
+		  Execution timeout of a statement in seconds. \\
+		tds\_packed\_size &
+		  ???? \\
+		MarsConn &
+		  Enables MARS (Multiple Active Rsult Sets) on Microsoft SQL Server drivers. \\
+		User Id &
+		  ???? The user name? Why would we do that? \\
+		Initial Catalog &
+		  The initial catalog to use for the connection.
+\end{tabularx}
+
+\subsection{Note for users of Microsoft SQL Server}
+Don't forget to add the "`MarsConn=True"' parameter to the connection string unless UseMetadata is turned off.
+Otherwise Zeos will not be able to get metadata from the server while it reads a result set.
+For more information see \url(https://sourceforge.net/p/zeoslib/tickets/434/\#9e48).
 
 \section{ADO}
 ADO is deprecated. Use OleDB instead.
 
 \section{ODBC}
-New driver - needs extensive description.
+Zeos now supports ODBC for Delphi as well as for Free Pascal.
+The driver registers two drivers, namely odbc\_a and odbc\_w.
+This allows to use Wide Char drivers as well as ANSI drivers.
+To use this driver, insert the ODBC Connection string into the Database property of TZConnection.
+The host name property doesn't work with this driver.
+This driver was mostly tested with Microsoft SQL Servers during development.
+Using ODBC data source names is not supported yet.
+
+\subsection{paramaters}
+
+\begin{tabularx}{\textwidth}{lX}
+    paramater name & description \\ \hline
+		internal\_buffer\_size & 
+		  Drivers like ODBC, OleDB, Oracle, ASE(SACAPI) do allow block-fetches to reduce roundtrips.
+      Define memory in bytes for the block buffer.
+			Default is 128Kb
+      Zeos will do a minimum allocation for one row. \\
+		Trusted\_Connection &
+		  Use trusted connection? \\
+		DeferPrepare &
+      Defer prepare? If not set Zeos tries to prepare update, delete, insert and select statements immediately.
+      Also Zeos tries to determine the parameter types, allocates the parameter buffers once only and does not use late binding of parameters.
+			Thus it is faster if NO defer prepare is used and the statement gets used more than once.
+      Some servers might fail to prepare the statments (MS products are masters at failing including unknown exceptions).
+			Turn it off on the DataSet or Statement level if you run into that issue. \\
+		StatementTimeOut &
+		  Execution timeout of a statement in seconds. \\
+    DriverCompletion &
+		  <SQL\_DRIVER\_COMPLETE | SQL\_DRIVER\_PROMPT | SQL\_DRIVER\_COMPLETE\_REQUIRED>
+      Refer to ODBC manual for details. \\
+		Server &
+		  The Server to connect to. \\
+		CharacterSet &
+		  Specifies the character set used to interact with driver.
+      If you are accessing a CharacterSet "`NONE"' Firebird / Interbase database you should always use the character set "`NONE"' as the connection character set.
+			In addition it is recommended to specify which character set the "NONE" represents by adding the Charset\_NONE\_Alias parameter.
+      Example: Properties.Values['Charset\_NONE\_Alias'] := 'WIN1251'.
+      For odbc\_a and ole\_db(raw longvarchar only) it is implemented as:
+      Set a custom characterset to notify Zeos about conversion routines.
+      Note for odbc\_a: This CodePage must be equal for all fields(ODBC).
+      Otherwise use the odbc\_w driver.
+			Here it is defined as:
+			<Character Set Alias>:<Codepage>/<MaxBytes> where "`Character Set Alias"' is the character set alias, "`Codepage"' is the Windows code page number to be used and "`MaxBytes"' is the maximum number of bytes in the character set.
+			Example: CharacterSet=latin1:1252/1 or CharacterSet=utf8:65001/4 \\
+		DRIVER &
+		  Specifies the ODBC driver to be used on this connection. \\
+\end{tabularx}
+
+\subsection{Note for users of Microsoft SQL Server}
+Don't forget to add the "`MarsConn=True"' parameter to the connection string unless UseMetadata is turned off.
+Otherwise Zeos will not be able to get metadata from the server while it reads a result set.
+For more information see \url(https://sourceforge.net/p/zeoslib/tickets/434/\#9e48).
+
 
 \section{Webservice Proxy}
 New driver - needs extensive description.
