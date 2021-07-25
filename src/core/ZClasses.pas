@@ -56,7 +56,7 @@ interface
 {$I ZCore.inc}
 
 uses
-  SysUtils, Classes, SyncObjs
+  SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SyncObjs
   {$IF defined(MSWINDOWS) and not defined(FPC)}, Windows{$IFEND} //some old comp. -> INFINITE
   {$IFDEF NO_UNIT_CONTNRS},System.Generics.Collections{$ENDIF};
 

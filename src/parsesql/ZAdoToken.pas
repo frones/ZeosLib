@@ -62,7 +62,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_ADO}
 
 uses
-  Classes, SysUtils, ZTokenizer, ZGenericSqlToken, ZCompatibility;
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ZTokenizer, ZGenericSqlToken, ZCompatibility;
 
 type
   {** Implements a quote string state object. }

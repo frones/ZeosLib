@@ -63,6 +63,9 @@ type
     procedure SetURLText(const Value: string);
   public
     property URLText: String read GetURLText write SetURLText;
+    {$IFDEF MSEgui}
+    procedure AddStrings(Strings: TStrings); override;
+    {$ENDIF}
   end;
 
   TZURL = class
@@ -148,6 +151,19 @@ procedure TZURLStringList.SetURLText(const Value: string);
 begin
   Text := UnEscape(Value);
 end;
+
+{$IFDEF MSEgui}
+// simplistic implementatation because for some **** reason this doesn't exist on
+// MSEGui
+procedure TZURLStringList.AddStrings(Strings: TStrings);
+var
+  X: Cardinal;
+begin
+  if Assigned(Strings)then
+    for x := 0 to Strings.Count - 1 do
+      Add(Strings.Strings[x]);
+end;
+{$ENDIF}
 
 { TZURL }
 

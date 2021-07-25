@@ -57,7 +57,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 uses
-  Types, Classes, SysUtils, StrUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, StrUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
   ZDbcInterbase6;
 
 type

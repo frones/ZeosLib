@@ -662,8 +662,8 @@ type
     //function GetAsByteArray: Variant; virtual;
     { time values }
     function GetAsDateTime: TDateTime; override;
-    function GetAsDate: TDateTime;
-    function GetAsTime: TDateTime;
+    function GetAsDate: TDateTime; {$IFDEF MSEGui}override;{$ENDIF}
+    function GetAsTime: TDateTime; {$IFDEF MSEGui}override;{$ENDIF}
     //function GetAsSQLTimeStamp: TSQLTimeStamp; virtual;
     //function GetAsSQLTimeStampOffset: TSQLTimeStampOffset; virtual;
 
@@ -686,15 +686,15 @@ type
     { string values }
     function GetAsString: string; override;
     function GetAsWideString: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF}; {$IFDEF WITH_FTWIDESTRING}override;{$ENDIF}
-    {$IFNDEF NO_ANSISTRING}
+    {$IF NOT DEFINED(NO_ANSISTRING) AND NOT DEFINED(MSEGui)}
     function GetAsAnsiString: AnsiString; {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
-    {$ENDIF}
-    {$IFNDEF NO_UTF8STRING}
+    {$IFEND}
+    {$IF NOT DEFINED(NO_UTF8STRING) AND NOT DEFINED(MSEGui)}
     function GetAsUTF8String: UTF8String; {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
     {$ENDIF}
     function GetAsRawByteString: RawByteString;
     { record/array types }
-    function GetAsGuid: TGUID; {$IFDEF WITH_VIRTUAL_TFIELD_GETASGUID} override; {$ENDIF}
+    function GetAsGuid: TGUID; {$IF DEFINED(WITH_VIRTUAL_TFIELD_GETASGUID) OR DEFINED(MSEGui)} override; {$IFEND}
     function GetAsBytes: TBytes; {$IFDEF TFIELD_HAS_ASBYTES}override;{$ENDIF}
     function GetAsVariant: Variant; override;
     //function GetCanModify: Boolean; virtual;
@@ -728,10 +728,10 @@ type
     { string values }
     procedure SetAsString(const Value: string); override;
     procedure SetAsWideString(const Value: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_FTWIDESTRING}override;{$ENDIF}
-    {$IFNDEF NO_ANSISTRING}
+    {$IF NOT DEFINED(NO_ANSISTRING) AND NOT DEFINED(MSEGui)}
     procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
-    {$ENDIF}
-    {$IFNDEF NO_UTF8STRING}
+    {$IFEND}
+    {$IF NOT DEFINED(NO_UTF8STRING) AND NOT DEFINED(MSEGui)}
     procedure SetAsUTF8String(const Value: UTF8String); {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
     {$ENDIF}
     procedure SetAsRawByteString(const Value: RawByteString);
@@ -770,10 +770,10 @@ type
     property AsUInt64: UInt64 read GetAsUInt64 write SetAsUInt64;
     property AsString;
     property AsWideString{$IFNDEF WITH_FTWIDESTRING}: WideString read GetAsWideString write SetAsWideString{$ENDIF};
-    {$IFNDEF NO_ANSISTRING}
+    {$IF NOT DEFINED(NO_ANSISTRING) AND NOT DEFINED(MSEGui)}
     property AsAnsiString{$IFNDEF WITH_ASANSISTRING}: AnsiString read GetAsAnsiString write SetAsAnsiString{$ENDIF};
-    {$ENDIF}
-    {$IFNDEF NO_UTF8STRING}
+    {$IFEND}
+    {$IF NOT DEFINED(NO_UTF8STRING) AND NOT DEFINED(MSEGui)}
     property AsUTF8String: UTF8String read GetAsUTF8String write SetAsUTF8String;
     {$ENDIF}
     property AsBytes{$IFNDEF WITH_ASBYTES}: TBytes read GetAsBytes write SetAsBytes{$ENDIF};
@@ -822,9 +822,9 @@ type
     property Transliterate: Boolean read FTransliterate write FTransliterate default False;//we try to prevent this case!
   public
     constructor Create(AOwner: TComponent); override;
-    {$IFNDEF NO_ANSISTRING}
+    {$IF NOT DEFINED(NO_ANSISTRING) AND NOT DEFINED(MSEGui)}
     property Value: AnsiString read GetAsAnsiString write SetAsAnsiString;
-    {$ENDIF}
+    {$IFEND}
   published
     property EditMask;
     property FixedChar: Boolean read FFixedChar write FFixedChar default False;
@@ -874,10 +874,10 @@ type
     { string values }
     procedure SetAsString(const Value: string); override;
     procedure SetAsWideString(const Value: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_FTWIDESTRING}override;{$ENDIF}
-    {$IFNDEF NO_ANSISTRING}
+    {$IF NOT DEFINED(NO_ANSISTRING) AND NOT DEFINED(MSEGui)}
     procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
     {$ENDIF}
-    {$IFNDEF NO_UTF8STRING}
+    {$IF NOT DEFINED(NO_UTF8STRING) AND NOT DEFINED(MSEGui)}
     procedure SetAsUTF8String(const Value: UTF8String); {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
     {$ENDIF}
     procedure SetAsRawByteString(const Value: RawByteString);
@@ -1591,7 +1591,7 @@ type
 
   TArrayField = class(TObjectField)
   protected
-    procedure Bind(Binding: Boolean); override;
+    {$IFNDEF MSEGui}procedure Bind(Binding: Boolean); override;{$ENDIF}
   public
     constructor Create(AOwner: TComponent); override;
     property Size default 10;
@@ -1609,7 +1609,7 @@ type
     procedure AssignNestedDataSet(Value: TDataSet);
     procedure SetIncludeObjectField(Value: Boolean);
   protected
-    procedure Bind(Binding: Boolean); override;
+    {$IFNDEF MSEGui}procedure Bind(Binding: Boolean); override;{$ENDIF}
     function GetCanModify: Boolean; override;
     function GetFields: TFields; override;
   public
@@ -3391,7 +3391,7 @@ begin
             Precision := GetPrecision(I);
             DisplayName := FName;
           end
-        else with TFieldDef.Create(FieldDefs, FName, FieldType, Size, False, I{$IFDEF WITH_CODEPAGE_AWARE_FIELD}, CodePage{$ENDIF}) do begin
+        else with TFieldDef.Create(FieldDefs, FName, FieldType, Size, False, I{$IF DEFINED(WITH_CODEPAGE_AWARE_FIELD) AND NOT DEFINED(MSEGui)}, CodePage{$ENDIF}) do begin
           if not (ReadOnly or IsUniDirectional) then begin
             {$IFNDEF OLDFPC}
             Required := IsWritable(I) and (IsNullable(I) = ntNoNulls);
@@ -5794,7 +5794,7 @@ begin
     Result := '';
 end;
 
-{$IFNDEF NO_ANSISTRING}
+{$IF NOT DEFINED(NO_ANSISTRING) AND NOT DEFINED(MSEGui)}
 function TZField.GetAsAnsiString: AnsiString;
 var IsNull: Boolean;
 begin
@@ -5803,9 +5803,9 @@ begin
   else
     Result := '';
 end;
-{$ENDIF}
+{$IFEND}
 
-{$IFNDEF NO_UTF8STRING}
+{$IF NOT DEFINED(NO_UTF8STRING) AND NOT DEFINED(MSEGui)}
 function TZField.GetAsUTF8String: UTF8String;
 var IsNull: Boolean;
 begin
@@ -5814,7 +5814,7 @@ begin
   else
     Result := '';
 end;
-{$ENDIF}
+{$IFEND}
 
 function TZField.GetAsRawByteString: RawByteString;
 var IsNull: Boolean;
@@ -5851,7 +5851,7 @@ function TZField.GetAsVariant: Variant;
 begin
   case  Self.DataType of
     ftUnknown: Result := Null;
-    ftString: Result := {$IFNDEF NO_ANSISTRING}GetAsAnsiString{$ELSE}GetAsRawByteString{$ENDIF};
+    ftString: Result := {$IF NOT DEFINED(NO_ANSISTRING) AND NOT DEFINED(MSEGui)}GetAsAnsiString{$ELSE}GetAsRawByteString{$IFEND};
     ftSmallint: Result := GetAsSmallInt;
     ftInteger: Result := GetAsInteger;
     ftWord: Result := GetAsWord;
@@ -5866,14 +5866,14 @@ begin
     ftVarBytes: Result := GetAsBytes;
     ftAutoInc: Result := GetAsInteger;
     ftBlob: Result := GetAsBytes;
-    ftMemo: Result := {$IFNDEF NO_ANSISTRING}GetAsAnsiString{$ELSE}GetAsRawByteString{$ENDIF};
+    ftMemo: Result := {$IF NOT DEFINED(NO_ANSISTRING) AND NOT DEFINED(MSEGui)}GetAsAnsiString{$ELSE}GetAsRawByteString{$IFEND};
     //ftGraphic: ;
     //ftFmtMemo: ;
     //ftParadoxOle: ;
     //ftDBaseOle: ;
     //ftTypedBinary: ;
     ftCursor: ;
-    ftFixedChar: Result := {$IFNDEF NO_ANSISTRING}GetAsAnsiString{$ELSE}GetAsRawByteString{$ENDIF};
+    ftFixedChar: Result := {$IF NOT DEFINED(NO_ANSISTRING) AND NOT DEFINED(MSEGui)}GetAsAnsiString{$ELSE}GetAsRawByteString{$IFEND};
     ftWideString: Result := GetAsWideString;
     ftLargeint: Result := GetAsLargeInt;
     ftADT: ;
@@ -6100,7 +6100,7 @@ begin
   end;
 end;
 
-{$IFNDEF NO_ANSISTRING}
+{$IF NOT DEFINED(NO_ANSISTRING) AND NOT DEFINED(MSEGui)}
 procedure TZField.SetAsAnsiString(const Value: AnsiString);
 begin
   if IsFieldEditable then
@@ -6109,9 +6109,9 @@ begin
     (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
-{$ENDIF}
+{$IFEND}
 
-{$IFNDEF NO_UTF8STRING}
+{$IF NOT DEFINED(NO_UTF8STRING) AND NOT DEFINED(MSEGui)}
 procedure TZField.SetAsUTF8String(const Value: UTF8String);
 begin
   if IsFieldEditable then
@@ -6120,7 +6120,7 @@ begin
     (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, NativeInt(Self));
   end;
 end;
-{$ENDIF}
+{$IFEND}
 
 procedure TZField.SetAsRawByteString(const Value: RawByteString);
 begin
@@ -6410,7 +6410,7 @@ begin
     inherited SetAsWideString(Value);
 end;
 
-{$IFNDEF NO_ANSISTRING}
+{$IF NOT DEFINED(NO_ANSISTRING) AND NOT DEFINED(MSEGui)}
 procedure TZNumericField.SetAsAnsiString(const Value: AnsiString);
 begin
   if FRangeCheck then
@@ -6418,9 +6418,9 @@ begin
   else
     inherited SetAsAnsiString(Value);
 end;
-{$ENDIF}
+{$IFEND}
 
-{$IFNDEF NO_UTF8STRING}
+{$IF NOT DEFINED(NO_UTF8STRING) AND NOT DEFINED(MSEGui)}
 procedure TZNumericField.SetAsUTF8String(const Value: UTF8String);
 begin
   if FRangeCheck then
@@ -6428,7 +6428,7 @@ begin
   else
     inherited SetAsUTF8String(Value);
 end;
-{$ENDIF}
+{$IFEND}
 
 procedure TZNumericField.SetAsRawByteString(const Value: RawByteString);
 begin
@@ -7157,7 +7157,7 @@ constructor TZFieldDef.Create(Owner: TFieldDefs; const Name: string;
   {$IFDEF WITH_CODEPAGE_AWARE_FIELD}; ACodePage: TSystemCodePage = CP_ACP{$ENDIF});
 begin
   inherited Create(Owner, Name, FieldType, Size, Required, FieldNo
-    {$IFDEF WITH_CODEPAGE_AWARE_FIELD}, ACodePage{$ENDIF});
+    {$IF DEFINED(WITH_CODEPAGE_AWARE_FIELD) AND NOT DEFINED(MSEGui)}, ACodePage{$IFEND});
   FSQLType := SQLType;
 end;
 
@@ -7458,6 +7458,7 @@ begin
   Size := 10;
 end;
 
+{$IFNDEF MSEGui}
 procedure TArrayField.Bind(Binding: Boolean);
 begin
   inherited Bind(Binding);
@@ -7465,6 +7466,7 @@ begin
   {if TZAbstractRODataset(DataSet).SparseArrays then
     FFields.SparseFields := Size;}
 end;
+{$ENDIF}
 
 {$ENDIF !WITH_TARRAYFIELD}
 
@@ -7491,6 +7493,7 @@ begin
   FIncludeObjectField := Value;
 end;
 
+{$IFNDEF MSEGui}
 procedure TDataSetField.Bind(Binding: Boolean);
 begin
   inherited Bind(Binding);
@@ -7504,6 +7507,7 @@ begin
       FNestedDataSet.Close;
   end;
 end;
+{$ENDIF}
 
 function TDataSetField.GetFields: TFields;
 begin
