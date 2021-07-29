@@ -379,6 +379,7 @@ var
     StringStream: TStringStream;
     DecodingStream: TBase64DecodingStream;
   begin
+    Result := [];
     StringStream := TStringStream.Create(Base64Str);
     try
       DecodingStream := TBase64DecodingStream.Create(StringStream);

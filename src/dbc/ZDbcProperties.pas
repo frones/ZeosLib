@@ -993,7 +993,7 @@ const
 
 {$IFNDEF ZEOS_DISABLE_PROXY}
   /// <summary>
-  ///   Type: http | https
+  ///   Type: &lt;http | https&gt;
   ///   Defines which protocol the Webservicde Proxy driver uses for connecting to the server.
   ///   If empty, https will be used.
   ///   Behavior is undefined if an undefined value is set.
