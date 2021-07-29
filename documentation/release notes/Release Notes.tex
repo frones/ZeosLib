@@ -17,7 +17,7 @@
 % One can use the package listings for formatting source code.
 % It provides commands for having code inside the paragraph as
 % well as for having code between paragraphs.
-% \usepackage{listings}
+\usepackage{listings}
 % Setting pascal as the language to use is commented out right
 % after \begin{document}
 
@@ -39,7 +39,7 @@
 \date{\today}
 %\overfullrule=2mm
 \begin{document}
-%\lstset{language=Pascal}
+\lstset{language=Pascal}
 \maketitle
 
 \section{Zeos 8.0}
@@ -84,17 +84,37 @@ Based on the latter file, we will release a more detailed documentation for Zeos
 
 \subsection{Support for connection loss}
 Zeos 8.0 now supports the programmer in reacting to a connection loss.
+If Zeos detects a connecton loss, it will
+\begin{itemize}
+	\item close all handles
+	\item close all results and datasets
+	\item fire the OnLost event of TZConnection
+\end{itemize}
 
-\textbf{Jan:} How does this work and which drivers are supported Egonhugeist?
+\textbf{Jan:} Which drivers are supported Egonhugeist?
 
 \subsection{New prepare logic}
+\label{subsec:NewPrepareLogic}
 Some drivers don't prepare statements on first execution automatically.
 Instead they prepare statements after some executions now.
 This is for cases where statements get used once only.
 Preparing these statements would be a waste of resources in that case.
-This behavior can be influenced by the user.
+This behavior is controlled by the MinExecCountBeforePrepare parameter.
+Setting this parameter to a value greater than zero, means that the statement will only be prepared after that many executions.
+Setting the parameter to zero means that the statement will be prepared before the first execution.
+Setting this parameter to a negative value will turn off preparing completely.
 
-\textbf{Jan:} Ask Egonhugeist how this is influenced and which drivers work this way.
+Currently the following drivers support this parameter:
+\begin{itemize}
+  \item PostgreSQL
+	\item MySQL / MariaDB
+\end{itemize}
+
+For ODBC, OLEDB and ADO there is the DeferPrepare property.
+\textbf{Jan:} @Egonhugeist: What exactly does DeferPrepare do?
+
+Finally there is PreferPrepared.
+PreferPrepared gets mapped to DeferPrepared for OleDB, ODBC and ADO.
 
 \subsection{DBC layer: changed GetPWideChar / GetPAnsiChar Len parameter}
 The Len parameter of the GetPWideChar and GetPAnsiChar method is no longer a pointer.
@@ -114,10 +134,8 @@ So Zeos will round 1.065 to 1.07 and then send 1.07 to the database.
 
 \subsection{doPreferPrepared defaults to on now}
 The option doPreferPrepared defaults to on now.
-This leads to Zeos preparing all statements automatically if it sees fit to do so.
-For more information see the documentation on this parameter.
-
-\textbf{Jan:}@Egonhugeist: Is this correct?
+If this option is enabled, the MinExecutionCountBeforePrepare parameter gets set to 0.
+For more information see \ref{subsec:NewPrepareLogic} \nameref{subsec:NewPrepareLogic}, page \pageref{subsec:NewPrepareLogic}.
 
 \subsection{Ordinal position of return value for stored procedures}
 For database systems, where a return value is defined, like MS SQL Server, the return value has moved to ordinal position 0.
@@ -147,9 +165,11 @@ They now are used for describing decimal and numeric field types.
 Zeos introduced its own field classes.
 They derive from the original Fields, so can be used almost seamlessly.
 The Zeos field classes can work directly on Zeos internal structures and by this way are way faster then normal TField descandants.
-Also Zeos implements some field classes to support features of databases, that are not supported by the Delphi / Free Pascal TField implementations.
+Also Zeos implements some field classes to support features of databases, that are not supported by the Delphi / Free Pascal TField implementations or to enable the use of database features on older Delphi versions where the RTL does not provide some field types.
+Examples are the TZUInt64Field and Fields that support MySQLs dates with the day or month being set to 0.
 
-\textbf{Jan:}Option to disable this behavior?
+The new Zeos fields can be disabled, if necessary by setting the DisableZFields property of a Zeos Dataset to True.
+In this case Zeos will not generate TZFieldDefs and will subsequently not generate the new Zeos fields.
 
 \subsection{New parameters for handling of exceptions and warnings}
 Zeos 8.0 introduces two new parameters for the handling of exceptions and warnings:
@@ -187,18 +207,7 @@ To get out-params running the parameter IO needs to be set explicit and for some
 \textbf{Jan:}We need more information on how these things work for the information to be more useful.
 
 \subsection{smaller memory footprint}
-By optimizing access in TDataset descandants, Zeos is able to save on memory now if TZFields are used, which is the default for Zeos 7.3.
-
-\textbf{Jan:}Is this correct? Regarding dependency on TZFields?
-
-\subsection{New field types for older compilers}
-New fields added.
-Some compilers still do not support all field types ZDBC is able to distinguish.
-That has been improved now.
-The more we've noticed an enormous performance problem of the generic fields caused by GetFieldData / SetFieldData moves.
-The new fields a loads faster now.
-
-\textbf{Jan:}This should be incorporated into one single chapter about TZFields.
+By optimizing access in TDataset descandants, Zeos is able to save on memory now if TZFields are used, which is the default for Zeos 8.0.
 
 \subsection{TZParam}
 
@@ -207,9 +216,24 @@ Not yet commited.
 
 \textbf{Jan:}I assume this is important for explaining how batch bindings work on Zeos?
 
-\subsection{TZTransaction}
+\subsection{new component TZTransaction}
 
-\textbf{Jan:}Needs documentation. Has to be derived from \url{https://zeoslib.sourceforge.io/viewtopic.php?f=50&p=159710#p159710}
+Zeos 8.0 introduces a new TZTransaction object.
+This enables Zeos datasets to fetch data from one transaction and write changed data to another transaction.
+Also it allows Zeos to have more than one transaction per connection - if the underlying driver supports it.
+To support these new possibilities, TZReadOnlyQuery introduces the new Transaction property.
+Using this property one can tell TZReadOnlyQuery which connection to use for fetching its data.
+TZQuery and TZTable introduce an UpdateTranscation property, which can be used if changed data should be written on a separate transaction.
+
+When using TZTransaction, it makes sense to avoid using the StartTransaction, Commit and Rollback methods and to use the according methods from TZTransaction instead.
+
+On Firebird and Interbase Zeos can use their support for having multiple concurrent transactions per connection.
+On all other database systems Zeos will create a separate connection per transaction.
+This can lead to problems if your license restricts the connection count or if one uses one time passwords to secure databases.
+
+A simple example how to use the new TZTransaction can be seen in the test case TZGenericTransactionTestCase.TestQueryTransaction.
+
+%\textbf{Jan:}Needs documentation. Has to be derived from \url{https://zeoslib.sourceforge.io/viewtopic.php?f=50&p=159710#p159710}
 
 \section{Firebird}
 
@@ -314,6 +338,27 @@ The character set UTF8 is now aliased to AL32UTF8 because the Oracle UTF8 is bro
 It is CESU-8 in reality which Zeos can't convert reliably.
 This might lead to problems on older servers.
 
+\subsection{New parameter OCIAuthenticateMode}
+\FloatBarrier
+We introduced a new parameter OCIAuthenticateMode for Oracle authentication.
+This parameter maps to the mode parameter of the OCISessionBegin function (\url{https://docs.oracle.com/cd/B10501_01/appdev.920/a96584/oci15r13.htm}).
+OCIAuthenticateMode needs to be set as an integer because the flags it represents can be combined in some cases.
+Possible values can be seen in table \ref{tbl:OCIAuthenticateModeValues}.
+
+\begin{table}
+    \begin{tabular}{ ll }
+	  Mode & Value \\ \hline
+    OCI\_DEFAULT & 0 \\
+    OCI\_MIGRATE & 1 \\
+    OCI\_SYSDBA & 2 \\
+    OCI\_SYSOPER & 4 \\
+    OCI\_PRELIM\_AUTH & 8 \\
+	  \end{tabular}
+    \caption{Values for OCIAuthenticateMode}
+    \label{tbl:OCIAuthenticateModeValues}
+\end{table}
+
+\FloatBarrier
 \section{dblib (MS SQL Server with freetds / SAP Adaptive Server Enterprise)}
 
 \subsection{discontinued support for ntwdblib.dll}
