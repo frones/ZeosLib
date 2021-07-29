@@ -96,6 +96,7 @@ function md5salt: AnsiString;
 var
   lauf: Integer;
 begin
+  Result := '';
   Randomize;
   for lauf := 1 to 8 do Result := Result + a64[trunc(Random(64))]
 end;
