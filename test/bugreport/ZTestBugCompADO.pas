@@ -123,6 +123,7 @@ begin
     Query.Open;
     CheckEquals(TestString, Query.Fields[2].AsString);
   finally
+    Query.Close;
     Query.SQL.Text := 'delete from people where p_id = '+IntToStr(RowID);
     Query.ExecSQL;
     Query.Free;
@@ -197,5 +198,3 @@ initialization
   RegisterTest('bugreport',ZTestCompADOBugReport.Suite);
 {$ENDIF ZEOS_DISABLE_MSSQL_SYBASE}
 end.
-
-

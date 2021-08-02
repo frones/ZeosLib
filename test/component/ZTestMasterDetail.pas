@@ -260,6 +260,7 @@ begin
 
     CheckEquals(CommitCount{fix it 1}, CommitCount, 'CommitCount');
   finally
+    MasterQuery.Close;
     MasterQuery.SQL.Text := 'delete from default_values where d_id = '+IntToStr(TestRowID);
     MasterQuery.ExecSQL;
     MasterQuery.SQL.Text := 'delete from date_values where d_id = '+IntToStr(TestRowID);
@@ -448,6 +449,7 @@ begin
           Inc(CommitCount);
     CheckEquals(1, CommitCount, 'CommitCount'); }
   finally
+    MasterQuery.Close;
     MasterQuery.SQL.Text := 'delete from people where p_id = '+IntToStr(TestRowID);
     MasterQuery.ExecSQL;
     MasterQuery.SQL.Text := 'delete from department where dep_id = '+IntToStr(TestRowID);

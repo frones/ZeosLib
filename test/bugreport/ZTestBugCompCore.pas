@@ -541,6 +541,7 @@ begin
     end;
 
     { Remove newly created record }
+    Query.Close;
     Query.SQL.Text := 'DELETE FROM people WHERE p_id>=:id';
     Query.ParamByName('id').AsInteger := TEST_ROW_ID - 1;
     Query.ExecSQL;
@@ -957,7 +958,7 @@ begin
     finally
       Query.Free;
     end;
-  end;  
+  end;
 end;
 
 {**
@@ -1731,6 +1732,7 @@ begin
     CheckEquals('ab\''cd\''ef', Query.FieldByName('eq_name').AsString);
 
     { Remove newly created record }
+    Query.Close;
     Query.SQL.Text := 'DELETE FROM equipment WHERE eq_id>=:id';
     Query.ParamByName('id').AsInteger := TEST_ROW_ID - 2;
     Query.ExecSQL;
@@ -1783,6 +1785,7 @@ begin
     CheckEquals('ab\''cd\''ef', Query.FieldByName('eq_name').AsString);
 
     { Remove newly created record }
+    Query.Close;
     Query.SQL.Text := 'DELETE FROM equipment WHERE eq_id>=:id';
     Query.ParamByName('id').AsInteger := TEST_ROW_ID - 2;
     Query.ExecSQL;
@@ -1868,6 +1871,7 @@ begin
     CheckEquals(0, Query.RecordCount, 'the record count after rollback');
     Query.Close;
   finally
+    Query.Close;
     Query.SQL.Text := 'delete from people where p_id > '+IntToStr(TEST_ROW_ID);
     Query.ExecSQL;
     Query.Free;
@@ -2510,6 +2514,7 @@ begin
         CheckEquals(Str3, FieldByName('P_NAME'));
         {$ENDIF}
       finally
+        Close;
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
         CheckEquals(1, Params.Count);
         Params[0].DataType := ftInteger;
@@ -2601,24 +2606,30 @@ begin
     Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
     Query.Open;
     CheckEquals(True, Query.RecordCount = 5);
+    Query.Close;
     if ProtocolType in [protASA, protASACAPI] then //ASA has a limitation of 125chars for like statements
       Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str2, ttSQL, 125),'%'''])
     else
       Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str2, ttSQL),'%''']);
     Query.Open;
     CheckEquals(1, Query.RecordCount, 'RowCount of Str2 '+Protocol);
+    Query.Close;
     Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str3, ttSQL),'%''']);
     Query.Open;
     CheckEquals(2, Query.RecordCount, 'RowCount of Str3  '+Protocol);
+    Query.Close;
     Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str4, ttSQL),'%''']);
     Query.Open;
     CheckEquals(2, Query.RecordCount, 'RowCount of Str4 '+Protocol);
+    Query.Close;
     Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str5, ttSQL),'%''']);
     Query.Open;
     CheckEquals(2, Query.RecordCount, 'RowCount of Str5 '+Protocol);
+    Query.Close;
     Query.SQL.Text := ConcatSQL(['select * from string_values where s_varchar like ''%',GetDBTestString(Str6, ttSQL),'%''']);
     Query.Open;
   finally
+    Query.Close;
     for i := TestRowID to TestRowID+RowCounter do
     begin
       Query.SQL.Text := 'delete from string_values where s_id = '+IntToStr(i);
