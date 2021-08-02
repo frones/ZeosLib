@@ -39,7 +39,16 @@
 \date{\today}
 %\overfullrule=2mm
 \begin{document}
-\lstset{language=Pascal}
+\lstset{% general command to set parameter(s)
+  language=Pascal,
+  basicstyle=\small, % print whole listing small
+  %keywordstyle=\color{black}\bfseries\underbar,
+  % underlined bold black keywords
+  %identifierstyle=, % nothing happens
+  %commentstyle=\color{white}, % white comments
+  %stringstyle=\ttfamily, % typewriter type for strings
+  showstringspaces=false} % no special string spaces
+
 \maketitle
 
 \section{Zeos 8.0}
@@ -477,11 +486,60 @@ For more information see \url(https://sourceforge.net/p/zeoslib/tickets/434/\#9e
 New driver - needs extensive description.
 
 \section{new unit - ZMethodInThread}
-This unit allows the execution of a database component operation in a background thread, leaving the VCL thread responsive.
-Background operations can be gracefully terminated (where supported) with TZConnection.AbortOperation.
+TZMethodInThread was the first CONCEPT of a runtime component which allows the users to force long-lasting SQL operations to the background, like a simulated synchronous mode.
+It is useful when used together with TZConnection.AbortOperation.
+However TZMethodInThread works, it is only a concept and we highly encourage users to implement their own worker threads of their flavor.
 
-\textbf{Jan:}
-Needs more documentation.
-I assume it is not allowed to do things on the GUI in the Events of the Component as this would be run as part of the background thread?
+Each TZMethodinThread instance can run one operation at a time, but more instances can be created if necessary.
 
+Usage:
+
+\begin{lstlisting}
+Procedure TDummy.OnError(Sender: TObject; Error: Exception);
+Begin
+  //Make sure you do proper synchronization here,
+  //as this method is run from within the context
+  //of the thread!
+  WriteLn(Error.Message);
+End;
+
+Procedure TDummy.OnFinish(Sender: TObject);
+Begin
+  //Make sure you do proper synchronization here,
+  //as this method is run from within the context
+  //of the thread!
+  WriteLn('Finished!');
+End;
+
+Procedure OpenInBackground;
+Begin
+  methodthread := TZMethodInThread.Create;
+  methodthread.OnError := TDummy.OnError;
+  methodthread.OnFinish := TDummy.OnFinish;
+  myquery.SQL.Text := 'SELECT * FROM VeryHugeTable';
+  methodthread.Open(myquery);
+End;
+\end{lstlisting}
+
+If you are using data-aware components, make sure to unassign any datasources before (or call .DisableControls), as the VCL thread is not blocked and data events will be attempted to be processed at inconsistent states.
+This will most probably result in access violations or other unwanted behavior.
+Proper synchronization is also needed at event handlers (like TZQuery.BeforeOpen, .AfterOpen, .AfterScroll, TZConnection.AfterConnect, etc.) as if specific actions are called from a worker thread, these event handlers will also run in the worker's context!
+
+A long running operation can be cancelled in two ways:
+\begin{itemize}
+  \item 
+	  Graceful: call ZConnection.AbortOperation.
+    This is not implemented for all drivers; and implemented, but untested at some.
+		If it's not supported, a EZUnsupportedException will be raised.
+		Only use this method to keep data consistency.
+  \item
+	  Ungraceful: call ZMethodInThread.Kill(True).
+    With no further questions, this will terminate the background thread leaving the query and the connection in an unknown state.
+		Expect memory leaks, permanent loss of connection to the database, crash of the application or data corruption in the database.
+		Use only at your own risk... or never.
+\end{itemize}
+
+Disclaimer:
+Please keep in mind that TZMethodInThread (and pushing specific actions to background threads) were not tested in every scenario and might cause issues in unique cases.
+It is still a viable alternate until Zeos implements proper asynchronous functionality.
 \end{document}
