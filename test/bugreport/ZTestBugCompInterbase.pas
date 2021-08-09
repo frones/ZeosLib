@@ -1183,6 +1183,7 @@ begin
     Table.Edit;
     Table.Fields[2].AsString := 'PLU__';
     Table.Post;
+    Table.Close;
 
     Table.TableName := 'PLUSA';
     Table.Open;
@@ -1313,8 +1314,7 @@ begin
     CheckEquals(DateStr2, DateTimeToStr(Query.FieldByName('d_timestamp').AsDateTime, FormatSettings), 'Checking, if the second timestamp field has the expected value.');
   finally
     try
-      Query.SQL.Text := 'delete from date_values where d_id in (1001, 1002)';
-      Query.ExecSQL;
+      Query.Connection.ExecuteDirect('delete from date_values where d_id in (1001, 1002)');
     finally
       Query.Close;
       Query.Free;

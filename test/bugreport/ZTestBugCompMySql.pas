@@ -1293,8 +1293,6 @@ begin
   try
     UpdateSql := TZUpdateSQL.Create(nil);
     try
-      // Query.RequestLive := True;
-
       Query.SQL.Text := 'delete from `Table 938705`';
       Query.ExecSQL;
 
@@ -1332,13 +1330,11 @@ begin
 
       Query.Open;
       CheckEquals(True, Query.IsEmpty);
-
-      Query.SQL.Text := 'delete from `Table 938705`';
-      Query.ExecSQL;
     finally
       UpdateSql.Free;
     end;
   finally
+    Query.Connection.ExecuteDirect('delete from `Table 938705`');
     Query.Free;
   end;
 end;
@@ -1741,6 +1737,7 @@ begin
     Query.Open;
     CheckEquals(TEST_ROW_ID, Query.FieldByName('b_id').AsInteger);
     CheckEquals('c:\test.jpg', Query.FieldByName('b_text').AsString);
+    Query.Close;
 
     { Remove newly created record }
     Query.SQL.Text := 'DELETE FROM blob_values WHERE b_id=:id';
@@ -2044,7 +2041,7 @@ begin
     except
     end;
   finally
-    qy.SQL.Text := 'delete from TableTicket304';
+    qy.Connection.ExecuteDirect('delete from TableTicket304');
     qy.ExecSQL;
     qy.Free;
   end;
@@ -2079,7 +2076,7 @@ begin
     qy.FieldByName('infofield').value := 'test';
     qy.Post;
   finally
-    qy.SQL.Text := 'delete from TableMS56OBER9357';
+    qy.Connection.ExecuteDirect('delete from TableMS56OBER9357');
     qy.ExecSQL;
     qy.Free;
   end;

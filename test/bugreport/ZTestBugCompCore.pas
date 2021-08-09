@@ -1808,7 +1808,7 @@ begin
       Connection.StartTransaction;
     Query.Open;
     //Connection.Commit; //<- this crash with FB/IB and MSSQL(oledb,odbc,ado) only
-    Check(Query.RecordCount = 5);
+    CheckEquals(5, Query.RecordCount);
     Query.Close;
   finally
     Query.Free;
@@ -2167,7 +2167,7 @@ begin
   try
     Query.SQL.Text := 'SELECT * from people';
     Query.Open;
-    CheckEquals(5, Query.RecordCount, 'Expected to get exactly fife records from the people table.');
+    CheckEquals(5, Query.RecordCount, 'Expected to get exactly five records from the people table.');
     PersonName := Query.FieldByName('p_name').AsString;
     Query.Edit;
     Query.FieldByName('p_name').AsString := '';
@@ -2203,7 +2203,7 @@ begin
     UpdateSQL.ModifySQL.Text := 'update people set p_id = :new_p_id, p_name = :new_p_name where p_id = :old_p_id';
     Query.SQL.Text := 'SELECT p_id, p_name from people';
     Query.Open;
-    CheckEquals(5, Query.RecordCount, 'Expected to get exactly fife records from the people table.');
+    CheckEquals(5, Query.RecordCount, 'Expected to get exactly five records from the people table.');
     PersonName := Query.FieldByName('p_name').AsString;
     Query.Edit;
     Query.FieldByName('p_name').AsString := '';
