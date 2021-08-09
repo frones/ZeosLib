@@ -500,6 +500,7 @@ begin
     Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
     Query.Open;
     CheckEquals(True, Query.RecordCount = 5);
+    Query.Close;
     {$IFDEF UNICODE}
     Query.SQL.Text := 'select * from string_values where s_char like ''%'+Str2+'%''';
     {$ELSE}
@@ -509,6 +510,7 @@ begin
     CheckEquals(True, Query.RecordCount = 1);
     CheckColumnValues(Str2);
 
+    Query.Close;
     {$IFDEF UNICODE}
     Query.SQL.Text := 'select * from string_values where s_char like ''%'+Str3+'%''';
     {$ELSE}
@@ -520,6 +522,7 @@ begin
     Query.Next;
     CheckColumnValues(Str3);
 
+    Query.Close;
     {$IFDEF UNICODE}
     Query.SQL.Text := 'select * from string_values where s_char like ''%'+Str4+'%''';
     {$ELSE}
@@ -531,6 +534,7 @@ begin
     Query.Next;
     CheckColumnValues(Str4);
 
+    Query.Close;
     {$IFDEF UNICODE}
     Query.SQL.Text := 'select * from string_values where s_char like ''%'+Str5+'%''';
     {$ELSE}
@@ -542,6 +546,7 @@ begin
     Query.Next;
     CheckColumnValues(Str5);
 
+    Query.Close;
     {$IFDEF UNICODE}
     Query.SQL.Text := 'select * from string_values where s_char like ''%'+Str6+'%''';
     {$ELSE}
@@ -552,8 +557,8 @@ begin
     CheckColumnValues(Str2);
     Query.Next;
     CheckColumnValues(Str6);
-
   finally
+    If Query.Active Then Query.Close;
     for i := TestRowID to TestRowID+RowCounter do
     begin
       Query.SQL.Text := 'delete from string_values where s_id = '+IntToStr(i);

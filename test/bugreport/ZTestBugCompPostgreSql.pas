@@ -651,6 +651,7 @@ begin
     CheckEquals('abcdef', Query.Fields[0].AsString);
     CheckEquals(123456, Query.Fields[1].AsInteger);
 
+    Query.Close;
     Query.SQL.Text := 'delete from "insert"';
     Query.ExecSQL;
   finally
