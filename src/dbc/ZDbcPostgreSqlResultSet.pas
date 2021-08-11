@@ -624,7 +624,7 @@ var
   L: NativeUInt;
   P, pgBuff: PAnsiChar;
   TimeZoneOffset: Int64;
-  RNo: Integer absolute TimeZoneOffset;
+  RNo: Integer;
   H, I: Integer;
   TS: TZTimeStamp;
   Months: Integer absolute TS;
