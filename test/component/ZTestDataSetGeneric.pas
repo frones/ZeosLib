@@ -833,6 +833,7 @@ begin
       }
     with Query do
     begin
+      Close;
       Sql_ := 'DELETE FROM people where p_id = ' + SysUtils.IntToStr(TEST_ROW_ID);
       SQL.Text := Sql_;
       ExecSQL;
@@ -1429,22 +1430,22 @@ end;
 procedure TZGenericTestDataSet.TestQueryLocate;
 var
   Query: TZReadOnlyQuery;
-  ResData : boolean; 
+  ResData : boolean;
 begin
   Query := CreateReadOnlyQuery;
   try
     Query.SQL.Add('select * from cargo');
-    Query.ExecSQL; 
-    Query.Open; 
-    Check(Query.RecordCount > 0, 'Query return no records'); 
-    ResData := Query.Locate('C_DEP_ID;C_WIDTH;C_SEAL',VarArrayOf(['1','10','2']),[loCaseInsensitive]); 
-    CheckEquals(true,ResData); 
-    ResData := Query.Locate('C_DEP_ID,C_WIDTH,C_SEAL',VarArrayOf(['2',Null,'1']),[loCaseInsensitive]); 
-    CheckEquals(true,ResData); 
-  finally 
-    Query.Free; 
-  end; 
-end; 
+    Query.ExecSQL;
+    Query.Open;
+    Check(Query.RecordCount > 0, 'Query return no records');
+    ResData := Query.Locate('C_DEP_ID;C_WIDTH;C_SEAL',VarArrayOf(['1','10','2']),[loCaseInsensitive]);
+    CheckEquals(true,ResData);
+    ResData := Query.Locate('C_DEP_ID,C_WIDTH,C_SEAL',VarArrayOf(['2',Null,'1']),[loCaseInsensitive]);
+    CheckEquals(true,ResData);
+  finally
+    Query.Free;
+  end;
+end;
 
 {**
   Test for filtering recods in TZReadOnlyQuery
@@ -1699,18 +1700,18 @@ begin
     CheckEquals(Date_came, Query.FieldByName('c_date_came').AsDateTime);
     CheckEquals(Date_out, Query.FieldByName('c_date_out').AsDateTime);
     Query.Close;
-    Date_came := EncodeDateTime(2002,12,21,14,30,0,0); 
-    Date_out := EncodeDateTime(2002,12,25,2,0,0,0); 
-    Query.Filter := '(c_date_came < "'+DateTimeToStr(Date_came)+ '") AND (c_date_out > "'+DateTimeToStr(Date_out)+'")'; 
-    Query.Open; 
-    CheckEquals(1, Query.RecordCount); 
-    Query.First; 
-    Date_came := EncodeDateTime(2002,12,21,10,20,0,0); 
-    Date_out := EncodeDateTime(2002,12,26,0,0,0,0); 
-    CheckEquals(Date_came, Query.FieldByName('c_date_came').AsDateTime); 
-    CheckEquals(Date_out, Query.FieldByName('c_date_out').AsDateTime); 
+    Date_came := EncodeDateTime(2002,12,21,14,30,0,0);
+    Date_out := EncodeDateTime(2002,12,25,2,0,0,0);
+    Query.Filter := '(c_date_came < "'+DateTimeToStr(Date_came)+ '") AND (c_date_out > "'+DateTimeToStr(Date_out)+'")';
+    Query.Open;
+    CheckEquals(1, Query.RecordCount);
+    Query.First;
+    Date_came := EncodeDateTime(2002,12,21,10,20,0,0);
+    Date_out := EncodeDateTime(2002,12,26,0,0,0,0);
+    CheckEquals(Date_came, Query.FieldByName('c_date_came').AsDateTime);
+    CheckEquals(Date_out, Query.FieldByName('c_date_out').AsDateTime);
     Query.Close;
-   finally 
+   finally
     Query.Free;
   end;
 end;
@@ -2345,6 +2346,7 @@ begin
       }
       TBlobField(Query.FieldByName(BinLob)).LoadFromFile(TestFilePath('images/horse.jpg'));
       Post;
+      Close;
       SQL.Text := 'SELECT * FROM blob_values where b_id = '+ SysUtils.IntToStr(TEST_ROW_ID-1);
       Open;
       TextStreamA := Query.CreateBlobStream(Query.FieldByName(TextLob), bmRead);
@@ -2444,6 +2446,7 @@ begin
     FreeAndNil(BinStreamE);
     FreeAndNil(TextStreamA);
     FreeAndNil(TextStreamE);
+    Query.Close;
     Query.SQL.Text := 'DELETE FROM blob_values where b_id = '+ SysUtils.IntToStr(TEST_ROW_ID-1);
     try
       Query.ExecSQL;
@@ -2495,6 +2498,7 @@ begin
     Query.FieldByName('cS data3').AsInteger := TEST_ROW_ID+3;
     Query.Post;
     { test alias names without spaces and quoting rules }
+    Query.Close;
     Query.SQL.Text := 'select cs_id, '+
       IC.Quote('Cs Data1', iqColumn)+' as CsData1, '+
       IC.Quote('cs data2', iqColumn)+' as csdata2, '+
@@ -2511,6 +2515,7 @@ begin
     Query.FieldByName(GetNonQuotedAlias('cSdata3')).AsInteger := TEST_ROW_ID+3;
     Query.Post;
     { test alias names without spaces but with quoting rules }
+    Query.Close;
     Query.SQL.Text := 'select cs_id, '+
       IC.Quote('Cs Data1', iqColumn)+' as '+
         IC.Quote('CsData1', iqColumn)+', '+
@@ -2530,6 +2535,7 @@ begin
     Query.FieldByName('cSdata3').AsInteger := TEST_ROW_ID+3;
     Query.Post;
     { test alias names with spaces and quoting rules }
+    Query.Close;
     Query.SQL.Text := 'select cs_id, '+
       IC.Quote('Cs Data1', iqColumn)+' as '+
         IC.Quote('Cs  Data1', iqColumn)+', '+
@@ -2549,6 +2555,7 @@ begin
     Query.FieldByName('cS  data3').AsInteger := TEST_ROW_ID+3;
     Query.Post;
   finally
+    Query.Close;
     Query.SQL.Text := 'delete from '+IC.Quote('Spaced Names')+
       ' where cs_id > '+SysUtils.IntToStr(TEST_ROW_ID-1);
     Query.ExecSQL;
@@ -2875,6 +2882,7 @@ begin
       Fail(Msg + ' raised exception ' + E.Message);
     end;
   finally
+    Query.Close;
     Query.SQL.Text := 'delete from high_load';
     try
       Query.ExecSQL;

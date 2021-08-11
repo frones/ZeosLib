@@ -1307,16 +1307,20 @@ begin
   CheckEquals('P5', StoredProc.Params[4].Name);
   StoredProc.Open;
 
-  CheckEquals(2, ord(StoredProc.Fields.Count));
-  CheckEquals(ftFmtBCD, StoredProc.Params[0].DataType);
-  CheckEquals(ftFmtBCD, StoredProc.Params[1].DataType);
-  CheckStringParamType(StoredProc.Params[2], Connection.ControlsCodePage);
-  CheckEquals(ftFmtBCD, StoredProc.Params[3].DataType);
-  CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
-  CheckEquals(ftFmtBCD, StoredProc.Fields[0].DataType);
-  CheckStringFieldType(StoredProc.Fields[1], Connection.ControlsCodePage);
-  CheckEquals(600, StoredProc.FieldByName('P4').AsInteger);
-  CheckEquals('aa', StoredProc.FieldByName('P5').AsString);
+  Try
+    CheckEquals(2, ord(StoredProc.Fields.Count));
+    CheckEquals(ftFmtBCD, StoredProc.Params[0].DataType);
+    CheckEquals(ftFmtBCD, StoredProc.Params[1].DataType);
+    CheckStringParamType(StoredProc.Params[2], Connection.ControlsCodePage);
+    CheckEquals(ftFmtBCD, StoredProc.Params[3].DataType);
+    CheckStringParamType(StoredProc.Params[4], Connection.ControlsCodePage);
+    CheckEquals(ftFmtBCD, StoredProc.Fields[0].DataType);
+    CheckStringFieldType(StoredProc.Fields[1], Connection.ControlsCodePage);
+    CheckEquals(600, StoredProc.FieldByName('P4').AsInteger);
+    CheckEquals('aa', StoredProc.FieldByName('P5').AsString);
+  Finally
+    StoredProc.Close;
+  End;
 end;
 
 procedure TZTestOracleStoredProcedure.myfuncInOutReturn(prefix: string);
@@ -1341,14 +1345,18 @@ begin
   CheckEquals(2, StoredProc.Params.Count);
 
   StoredProc.Open;
-  CheckEquals(2, StoredProc.Fields.Count);
-  CheckStringFieldType(StoredProc.Fields[1], Connection.ControlsCodePage);
-  CheckEquals('X', StoredProc.Fields[1].DisplayName);
-  CheckStringFieldType(StoredProc.Fields[0], Connection.ControlsCodePage);
-  CheckEquals('ReturnValue', StoredProc.Fields[0].DisplayName);
+  Try
+    CheckEquals(2, StoredProc.Fields.Count);
+    CheckStringFieldType(StoredProc.Fields[1], Connection.ControlsCodePage);
+    CheckEquals('X', StoredProc.Fields[1].DisplayName);
+    CheckStringFieldType(StoredProc.Fields[0], Connection.ControlsCodePage);
+    CheckEquals('ReturnValue', StoredProc.Fields[0].DisplayName);
 
-  CheckEquals('aoutvalueoutvalue', StoredProc.ParamByName('X').AsString);
-  CheckEquals('returned string', StoredProc.ParamByName('ReturnValue').AsString);
+    CheckEquals('aoutvalueoutvalue', StoredProc.ParamByName('X').AsString);
+    CheckEquals('returned string', StoredProc.ParamByName('ReturnValue').AsString);
+  Finally
+    StoredProc.Close;
+  End;
 end;
 
 procedure TZTestOracleStoredProcedure.simple_func(prefix: string);

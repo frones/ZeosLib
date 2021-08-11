@@ -123,7 +123,7 @@ implementation
 uses
 {$IFNDEF VER130BELOW}
   Variants,
-{$ENDIF} 
+{$ENDIF}
   ZTestCase, ZTestConsts, ZSqlUpdate, ZEncoding, ZDbcInterbaseFirebirdMetadata;
 
 { ZTestCompInterbaseBugReport }
@@ -1183,6 +1183,7 @@ begin
     Table.Edit;
     Table.Fields[2].AsString := 'PLU__';
     Table.Post;
+    Table.Close;
 
     Table.TableName := 'PLUSA';
     Table.Open;
@@ -1313,8 +1314,7 @@ begin
     CheckEquals(DateStr2, DateTimeToStr(Query.FieldByName('d_timestamp').AsDateTime, FormatSettings), 'Checking, if the second timestamp field has the expected value.');
   finally
     try
-      Query.SQL.Text := 'delete from date_values where d_id in (1001, 1002)';
-      Query.ExecSQL;
+      Query.Connection.ExecuteDirect('delete from date_values where d_id in (1001, 1002)');
     finally
       Query.Close;
       Query.Free;
@@ -1566,6 +1566,7 @@ begin
    /// Check(Query.Active); //that's a FPC bug. Delphi datasets are closed and is related to the DBGRIDS only
     Check(Query.Eof);
     {$ENDIF}
+    Query.Close;
     Query.SQL.Text := 'select * from date_values';
     for B := false to true do begin
       Query.Active := False;
@@ -1711,6 +1712,7 @@ begin
         Open;
 
         CheckEquals(str2+LineEnding, FieldByName('P_RESUME'), 'Param().LoadFromStream(StringStream, ftMemo)');
+        Close;
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
         CheckEquals(1, Params.Count);
         Params[0].DataType := ftInteger;
@@ -1851,6 +1853,7 @@ begin
       end;
     end;
   finally
+    iqry.Close;
     iqry.SQL.Text := 'delete from string_values where s_id > 213 and s_id < 217';
     iqry.ExecSQL;
     iqry.Free;

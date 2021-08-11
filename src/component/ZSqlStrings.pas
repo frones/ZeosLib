@@ -139,6 +139,9 @@ type
     /// <param>"Value" a new MultiStatements value.</param>
     procedure SetMultiStatements(Value: Boolean);
   protected
+    /// <summary>Performs verifications before the content of this string list is
+    ///  changed.</summary>
+    procedure Changing; Override;
     /// <summary>Performs action when the content of this string list is
     ///  changed.</summary>
     procedure Changed; override;
@@ -433,6 +436,14 @@ begin
   if UpdateCount = 0 then
     RebuildAll;
   inherited Changed;
+end;
+
+procedure TZSQLStrings.Changing;
+begin
+  If Assigned(FDataSet) And (FDataSet Is TZAbstractRODataset) And (FDataSet As TZAbstractRODataset).Active Then
+    Raise EZSQLException.Create(SResultsetIsAlreadyOpened);
+
+  inherited;
 end;
 
 end.

@@ -302,6 +302,7 @@ begin
         Query.Sql.Text := 'select * from  #t';
         Query.Open;
         Check(False, 'ado-behavior changed, change the test!');
+        Query.Close;
       except
         Exit;
       end;
@@ -353,6 +354,7 @@ begin
       CheckEquals(0, BcdCompare(eBCD, aBCD), Protocol+': BCD compare mismatch, for value: 321.12');
     finally
       if Protocol <> 'ado' then begin
+        Query.Close;
         Query.Sql.Text := 'drop table #t';
         Query.ExecSQL;
       end;
