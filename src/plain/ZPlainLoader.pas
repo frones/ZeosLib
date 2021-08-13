@@ -183,10 +183,14 @@ begin
 {$IF not declared(LoadLibraryEx)}
   temp := ''; //init for FPC
   try
+    {$IFDEF WINDOWS}
+    //change path to library path so dependencies can be loaded.
+    //only makes sense on Windows
     if newpath <> '' then begin
       temp := GetCurrentDir;
       SetCurrentDir(newpath);
     end;
+    {$ENDIF}
 {$IFEND}
   // AB modif END
 
@@ -216,8 +220,10 @@ begin
 {$IF not declared(LoadLibraryEx)}
   // AB modif BEGIN
   finally
+    {$IFDEF WINDOWS}
     if temp<>'' then
       SetCurrentDir(temp);
+    {$ENDIF}
   end;
 {$IFEND !LoadLibraryEx}
   // AB modif END
