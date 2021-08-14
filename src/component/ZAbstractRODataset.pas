@@ -210,6 +210,7 @@ type
 
     FIndexFields: {$IFDEF WITH_GENERIC_TLISTTFIELD}TList<TField>{$ELSE}TList{$ENDIF};
     FLobCacheMode: TLobCacheMode;
+    FActiveChangeException: Boolean;
     FSortType : TSortType;
     FHasOutParams: Boolean;
     FSortedFields: string;
@@ -283,6 +284,7 @@ type
     function GetSortType : TSortType;
     Procedure SetSortType(Value : TSortType);
 
+    procedure UpdatingSQLStrings(Sender: TObject);
     procedure UpdateSQLStrings(Sender: TObject);
     procedure ReadParamData(Reader: TReader);
     procedure WriteParamData(Writer: TWriter);
@@ -1594,6 +1596,7 @@ begin
   FSQL := TZSQLStrings.Create;
   TZSQLStrings(FSQL).Dataset := Self;
   TZSQLStrings(FSQL).MultiStatements := False;
+  FSQL.OnChanging := UpdatingSQLStrings;
   FSQL.OnChange := UpdateSQLStrings;
   {$IFNDEF DISABLE_ZPARAM}
   FParams := TZParams.Create(Self);
@@ -3688,6 +3691,11 @@ begin
     Properties.Values[DSProps_LobCacheMode] := LcmOnLoadStr;
   end;
 
+  LcmString := Properties.Values[DSProps_ActiveChangeException];
+  if (LcmString = '') and Assigned(Connection) then
+    LcmString := Connection.Properties.Values[DSProps_ActiveChangeException];
+  FActiveChangeException := StrToBoolEx(LcmString);
+
   CurrentRow := 0;
   FetchCount := 0;
   CurrentRows.Clear;
@@ -5102,6 +5110,12 @@ begin
       Result := usDeleted;
   end;
 end;
+Procedure TZAbstractRODataset.UpdatingSQLStrings(Sender: TObject);
+Begin
+ If Self.Active And FActiveChangeException Then
+   Raise EZSQLException.Create(SResultsetIsAlreadyOpened);
+End;
+
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 {**

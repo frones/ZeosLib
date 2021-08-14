@@ -949,6 +949,15 @@ const
     Protocols: (Count: 0; Items: nil);
   );
 
+  ZProp_ActiveChangeException : TZProperty = (
+    Name: DSProps_ActiveChangeException;
+    Purpose: 'If true, the TZAbstractRODataSet descendant raises an exception instead of closing if the .SQL property is changed while the dataset is Active.';
+    ValueType: pvtEnum; LevelTypes: [pltConnection, pltStatement];
+    Values: cBoolEnum; Default: cBoolFalse; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 0; Items: nil);
+  );
+
 {$IF declared(DSProps_InternalBufSize)}
   ZProp_InternalBufSize : TZProperty = (
     Name: DSProps_InternalBufSize;
@@ -4062,7 +4071,7 @@ initialization
     @ZProp_ControlsCP, @ZProp_Timeout,
     @ZProp_DateReadFormat, @ZProp_DateWriteFormat, @ZProp_TimeReadFormat,
     @ZProp_TimeWriteFormat, @ZProp_DateTimeReadFormat, @ZProp_DateTimeWriteFormat,
-    @ZProp_IdentifierQuotes, @ZProp_KeyFields, @ZProp_AffectedRows]);
+    @ZProp_IdentifierQuotes, @ZProp_KeyFields, @ZProp_AffectedRows, @ZProp_ActiveChangeException]);
 {$IF declared(DSProps_PreferPrepared)}
   RegisterZProperty(@ZProp_PreferPrepared);
 {$IFEND}
