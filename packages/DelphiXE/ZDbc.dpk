@@ -42,6 +42,7 @@ contains
   ZDbcASAStatement in '..\..\src\dbc\ZDbcASAStatement.pas',
   ZDbcASAUtils in '..\..\src\dbc\ZDbcASAUtils.pas',
   ZDbcCache in '..\..\src\dbc\ZDbcCache.pas',
+  ZDbcBeginnerStatement in '..\..\src\dbc\ZDbcBeginnerStatement.pas',
   ZDbcCachedResultSet in '..\..\src\dbc\ZDbcCachedResultSet.pas',
   ZDbcConnection in '..\..\src\dbc\ZDbcConnection.pas',
   ZDbcDbLib in '..\..\src\dbc\ZDbcDbLib.pas',
