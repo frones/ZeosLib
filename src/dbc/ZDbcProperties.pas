@@ -268,6 +268,12 @@ const
   // Check number of rows affected after executing a statement
   DSProps_ValidateUpdateCount = 'ValidateUpdateCount';
 
+  /// <type>BOOLEAN</type>
+  /// <usage>Connection,DataSet</usage>
+  /// <syntax>Properties.Values[DSProps_ActiveChangException]={value}</syntax>
+  /// <summary>If true, the TZAbstractRODataSet descendant raises an exception instead of closing if the .SQL property is changed while the dataset is Active. Default: False</summary>
+  DSProps_ActiveChangeException = 'ActiveChangeException';
+
   { Parameters common for several drivers }
 
 {$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}
