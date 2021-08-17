@@ -416,57 +416,61 @@ begin
       FOutMessageMetadata := nil;
     end else begin
       MetadataBuilder := FOutMessageMetadata.getBuilder(FStatus);
-      for flags := 0 to FOutMessageCount -1 do begin
-        sqltype := FOutMessageMetadata.getType(FStatus, flags);
-        FOrgTypeList.Add(sqltype, FOutMessageMetadata.getScale(FStatus, flags),
-          FOutMessageMetadata.isNullable(FStatus, flags));
-        if (SQLType = SQL_TIMESTAMP_TZ) or (SQLType = SQL_TIMESTAMP_TZ_EX) then begin
-          sqltype := SQL_TIMESTAMP;
-          MetadataBuilder.setType(FStatus, flags, sqltype);
-          sqltype := SizeOf(TISC_TIMESTAMP);
-          MetadataBuilder.setLength(FStatus, flags, sqltype);
-        end else if (sqltype = SQL_TIME_TZ) or (sqltype = SQL_TIME_TZ_EX) then begin
-          sqltype := SQL_TYPE_TIME;
-          MetadataBuilder.setType(FStatus, flags, sqltype);
-          sqltype := SizeOf(TISC_TIME);
-          MetadataBuilder.setLength(FStatus, flags, sqltype);
-        end else if (sqltype = SQL_DEC16) or (sqltype = SQL_DEC34) then begin
-          sqltype := SQL_DOUBLE;
-          MetadataBuilder.setType(FStatus, flags, sqltype);
-          sqltype := SizeOf(Double);
-          MetadataBuilder.setLength(FStatus, flags, sqltype);
-        end (*else if (sqltype = SQL_DEC34) then begin
-          sqltype := SQL_VARYING;
-          MetadataBuilder.setType(FStatus, flags, sqltype);
-          sqltype := CS_NONE; //use charset none
-          MetadataBuilder.setCharSet(FStatus, flags, sqltype);
-          sqltype := {$IFDEF WITH_CLASS_CONST}IDecFloat34.STRING_SIZE{$ELSE}IDecFloat34_STRING_SIZE{$ENDIF};
-          MetadataBuilder.setLength(FStatus, flags, sqltype);
-        end *)else if (sqltype = SQL_INT128) or (sqltype = SQL_DEC_FIXED) then begin
-          sqltype := SQL_VARYING;
-          MetadataBuilder.setType(FStatus, flags, sqltype);
-          sqltype := CS_NONE;
-          MetadataBuilder.setCharSet(FStatus, flags, sqltype);
-          sqltype := {$IFDEF WITH_CLASS_CONST}IInt128.STRING_SIZE{$ELSE}IInt128_STRING_SIZE{$ENDIF};
-          MetadataBuilder.setLength(FStatus, flags, sqltype);
-        end else begin
-          MetadataBuilder.setType(FStatus, flags, sqltype);
-          sqltype := FOutMessageMetadata.getSubType(FStatus, flags);
-          MetadataBuilder.setSubType(FStatus, flags, sqltype);
-          sqltype := FOutMessageMetadata.getLength(FStatus, flags);
-          MetadataBuilder.setLength(FStatus, flags, sqltype);
-          FinalChunkSize := FOutMessageMetadata.getScale(FStatus, flags);
-          MetadataBuilder.setScale(FStatus, flags, FinalChunkSize);
-          sqltype := FOutMessageMetadata.getCharSet(FStatus, flags);
-          MetadataBuilder.setCharSet(FStatus, flags, sqltype);
+      try
+        for flags := 0 to FOutMessageCount -1 do begin
+          sqltype := FOutMessageMetadata.getType(FStatus, flags);
+          FOrgTypeList.Add(sqltype, FOutMessageMetadata.getScale(FStatus, flags),
+            FOutMessageMetadata.isNullable(FStatus, flags));
+          if (SQLType = SQL_TIMESTAMP_TZ) or (SQLType = SQL_TIMESTAMP_TZ_EX) then begin
+            sqltype := SQL_TIMESTAMP;
+            MetadataBuilder.setType(FStatus, flags, sqltype);
+            sqltype := SizeOf(TISC_TIMESTAMP);
+            MetadataBuilder.setLength(FStatus, flags, sqltype);
+          end else if (sqltype = SQL_TIME_TZ) or (sqltype = SQL_TIME_TZ_EX) then begin
+            sqltype := SQL_TYPE_TIME;
+            MetadataBuilder.setType(FStatus, flags, sqltype);
+            sqltype := SizeOf(TISC_TIME);
+            MetadataBuilder.setLength(FStatus, flags, sqltype);
+          end else if (sqltype = SQL_DEC16) or (sqltype = SQL_DEC34) then begin
+            sqltype := SQL_DOUBLE;
+            MetadataBuilder.setType(FStatus, flags, sqltype);
+            sqltype := SizeOf(Double);
+            MetadataBuilder.setLength(FStatus, flags, sqltype);
+          end (*else if (sqltype = SQL_DEC34) then begin
+            sqltype := SQL_VARYING;
+            MetadataBuilder.setType(FStatus, flags, sqltype);
+            sqltype := CS_NONE; //use charset none
+            MetadataBuilder.setCharSet(FStatus, flags, sqltype);
+            sqltype := {$IFDEF WITH_CLASS_CONST}IDecFloat34.STRING_SIZE{$ELSE}IDecFloat34_STRING_SIZE{$ENDIF};
+            MetadataBuilder.setLength(FStatus, flags, sqltype);
+          end *)else if (sqltype = SQL_INT128) or (sqltype = SQL_DEC_FIXED) then begin
+            sqltype := SQL_VARYING;
+            MetadataBuilder.setType(FStatus, flags, sqltype);
+            sqltype := CS_NONE;
+            MetadataBuilder.setCharSet(FStatus, flags, sqltype);
+            sqltype := {$IFDEF WITH_CLASS_CONST}IInt128.STRING_SIZE{$ELSE}IInt128_STRING_SIZE{$ENDIF};
+            MetadataBuilder.setLength(FStatus, flags, sqltype);
+          end else begin
+            MetadataBuilder.setType(FStatus, flags, sqltype);
+            sqltype := FOutMessageMetadata.getSubType(FStatus, flags);
+            MetadataBuilder.setSubType(FStatus, flags, sqltype);
+            sqltype := FOutMessageMetadata.getLength(FStatus, flags);
+            MetadataBuilder.setLength(FStatus, flags, sqltype);
+            FinalChunkSize := FOutMessageMetadata.getScale(FStatus, flags);
+            MetadataBuilder.setScale(FStatus, flags, FinalChunkSize);
+            sqltype := FOutMessageMetadata.getCharSet(FStatus, flags);
+            MetadataBuilder.setCharSet(FStatus, flags, sqltype);
+          end;
         end;
+        FOutMessageMetadata.release;
+        FOutMessageMetadata := MetadataBuilder.getMetadata(FStatus);
+        FMemPerRow := FOutMessageMetadata.getMessageLength(FStatus);
+        if FMemPerRow = 0 then //see TestTicket426 (even if not reproducable with FB3 client)
+          FMemPerRow := SizeOf(Cardinal);
+        GetMem(FOutData, FMemPerRow);
+      finally
+        MetadataBuilder.release;
       end;
-      FOutMessageMetadata.release;
-      FOutMessageMetadata := MetadataBuilder.getMetadata(FStatus);
-      FMemPerRow := FOutMessageMetadata.getMessageLength(FStatus);
-      if FMemPerRow = 0 then //see TestTicket426 (even if not reproducable with FB3 client)
-        FMemPerRow := SizeOf(Cardinal);
-      GetMem(FOutData, FMemPerRow);
     end;
     inherited Prepare;
   end;
