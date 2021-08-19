@@ -246,58 +246,15 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="firebird\databases.conf" Configuration="Debug" Class="File">
-                    <Platform Name="Android64">
-                        <RemoteDir>.\assets\internal\firebird\</RemoteDir>
-                        <RemoteName>databases.conf</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
                 <DeployFile LocalName="$(BDS)\bin\Artwork\Android\FM_NotificationIcon_96x96.png" Configuration="Debug" Class="Android_NotificationIcon96">
                     <Platform Name="Android64">
                         <RemoteName>ic_notification.png</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="firebird\plugins\libfbtrace.so" Configuration="Debug" Class="File">
-                    <Platform Name="Android64">
-                        <RemoteDir>.\assets\internal\firebird\plugins\</RemoteDir>
-                        <RemoteName>libfbtrace.so</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName="firebird\plugins.conf" Configuration="Debug" Class="File">
-                    <Platform Name="Android64">
-                        <RemoteDir>.\assets\internal\firebird\</RemoteDir>
-                        <RemoteName>plugins.conf</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName="firebird\plugins\libLegacy_UserManager.so" Configuration="Debug" Class="File">
-                    <Platform Name="Android64">
-                        <RemoteDir>.\assets\internal\firebird\plugins\</RemoteDir>
-                        <RemoteName>libLegacy_UserManager.so</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
                 <DeployFile LocalName="Win32\Debug\Project1.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>Project1.exe</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName="firebird\plugins\libudr_engine.so" Configuration="Debug" Class="File">
-                    <Platform Name="Android64">
-                        <RemoteDir>.\assets\internal\firebird\plugins\</RemoteDir>
-                        <RemoteName>libudr_engine.so</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName="firebird\lib\libicui18n.so.63" Configuration="Debug" Class="File">
-                    <Platform Name="Android64">
-                        <RemoteDir>.\assets\internal\firebird\lib\</RemoteDir>
-                        <Enabled>false</Enabled>
-                        <RemoteName>libicui18n.so.63</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
@@ -320,31 +277,16 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="firebird\replication.conf" Configuration="Debug" Class="File">
+                <DeployFile LocalName="firebird\plugins\libEngine13.so" Configuration="Debug" Class="File">
                     <Platform Name="Android64">
-                        <RemoteDir>.\assets\internal\firebird\</RemoteDir>
-                        <RemoteName>replication.conf</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName="firebird\lib\icudt63l.dat" Configuration="Debug" Class="File">
-                    <Platform Name="Android64">
-                        <RemoteDir>.\assets\internal\firebird\lib\</RemoteDir>
-                        <Enabled>false</Enabled>
-                        <RemoteName>icudt63l.dat</RemoteName>
+                        <RemoteDir>.\assets\internal\firebird\plugins\</RemoteDir>
+                        <RemoteName>libEngine13.so</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
                 <DeployFile LocalName="$(BDS)\bin\Artwork\Android\FM_LauncherIcon_144x144.png" Configuration="Debug" Class="Android_LauncherIcon144">
                     <Platform Name="Android64">
                         <RemoteName>ic_launcher.png</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName="firebird\plugins\libEngine13.so" Configuration="Debug" Class="File">
-                    <Platform Name="Android64">
-                        <RemoteDir>.\assets\internal\firebird\plugins\</RemoteDir>
-                        <RemoteName>libEngine13.so</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
@@ -388,13 +330,6 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="firebird\fbtrace.conf" Configuration="Debug" Class="File">
-                    <Platform Name="Android64">
-                        <RemoteDir>.\assets\internal\firebird\</RemoteDir>
-                        <RemoteName>fbtrace.conf</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
                 <DeployFile LocalName="firebird\intl\fbintl.conf" Configuration="Debug" Class="File">
                     <Platform Name="Android64">
                         <RemoteDir>.\assets\internal\firebird\intl\</RemoteDir>
@@ -405,14 +340,6 @@
                 <DeployFile LocalName="Android64\Debug\libProject1.so" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Android64">
                         <RemoteName>libProject1.so</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName="firebird\lib\libicudata.so.63" Configuration="Debug" Class="File">
-                    <Platform Name="Android64">
-                        <RemoteDir>.\assets\internal\firebird\lib\</RemoteDir>
-                        <Enabled>false</Enabled>
-                        <RemoteName>libicudata.so.63</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
@@ -478,13 +405,6 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="firebird\plugins\udr\libudf_compat.so" Configuration="Debug" Class="File">
-                    <Platform Name="Android64">
-                        <RemoteDir>.\assets\internal\firebird\plugins\udr</RemoteDir>
-                        <RemoteName>libudf_compat.so</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
                 <DeployFile LocalName="firebird\lib\libib_util.so" Configuration="Debug" Class="File">
                     <Platform Name="Android64">
                         <RemoteDir>.\assets\internal\firebird\lib\</RemoteDir>
@@ -520,23 +440,8 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="firebird\plugins\udr_engine.conf" Configuration="Debug" Class="File">
-                    <Platform Name="Android64">
-                        <RemoteDir>.\assets\internal\firebird\plugins\</RemoteDir>
-                        <RemoteName>udr_engine.conf</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
                 <DeployFile LocalName="$(BDS)\Redist\iossimulator\libpcre.dylib" Class="DependencyModule">
                     <Platform Name="iOSSimulator">
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName="firebird\lib\libicuuc.so.63" Configuration="Debug" Class="File">
-                    <Platform Name="Android64">
-                        <RemoteDir>.\assets\internal\firebird\lib\</RemoteDir>
-                        <Enabled>false</Enabled>
-                        <RemoteName>libicuuc.so.63</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

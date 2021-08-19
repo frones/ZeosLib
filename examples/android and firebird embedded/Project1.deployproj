@@ -5,7 +5,7 @@
     </ProjectExtensions>
     <PropertyGroup>
         <DeviceId Condition="'$(Platform)'=='Android'"/>
-        <DeviceId Condition="'$(Platform)'=='Android64'">RF8N11XQJ7R</DeviceId>
+        <DeviceId Condition="'$(Platform)'=='Android64'">28cdf17e35027ece</DeviceId>
     </PropertyGroup>
     <ItemGroup Condition="'$(Platform)'=='Win32'">
         <DeployFile Include="Win32\Debug\Project1.exe" Condition="'$(Config)'=='Debug'">
@@ -31,56 +31,11 @@
             <RemoteCommand/>
             <Overwrite>True</Overwrite>
         </DeployFile>
-        <DeployFile Include="firebird\databases.conf" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>Project1\assets\internal\firebird\</RemoteDir>
-            <RemoteName>databases.conf</RemoteName>
-            <DeployClass>File</DeployClass>
-            <Operation>0</Operation>
-            <LocalCommand/>
-            <RemoteCommand/>
-            <Overwrite>True</Overwrite>
-        </DeployFile>
         <DeployFile Include="$(BDS)\bin\Artwork\Android\FM_NotificationIcon_96x96.png" Condition="'$(Config)'=='Debug'">
             <RemoteDir>Project1\res\drawable-xxxhdpi\</RemoteDir>
             <RemoteName>ic_notification.png</RemoteName>
             <DeployClass>Android_NotificationIcon96</DeployClass>
             <Operation>1</Operation>
-            <LocalCommand/>
-            <RemoteCommand/>
-            <Overwrite>True</Overwrite>
-        </DeployFile>
-        <DeployFile Include="firebird\plugins\libfbtrace.so" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>Project1\assets\internal\firebird\plugins\</RemoteDir>
-            <RemoteName>libfbtrace.so</RemoteName>
-            <DeployClass>File</DeployClass>
-            <Operation>0</Operation>
-            <LocalCommand/>
-            <RemoteCommand/>
-            <Overwrite>True</Overwrite>
-        </DeployFile>
-        <DeployFile Include="firebird\plugins.conf" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>Project1\assets\internal\firebird\</RemoteDir>
-            <RemoteName>plugins.conf</RemoteName>
-            <DeployClass>File</DeployClass>
-            <Operation>0</Operation>
-            <LocalCommand/>
-            <RemoteCommand/>
-            <Overwrite>True</Overwrite>
-        </DeployFile>
-        <DeployFile Include="firebird\plugins\libLegacy_UserManager.so" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>Project1\assets\internal\firebird\plugins\</RemoteDir>
-            <RemoteName>libLegacy_UserManager.so</RemoteName>
-            <DeployClass>File</DeployClass>
-            <Operation>0</Operation>
-            <LocalCommand/>
-            <RemoteCommand/>
-            <Overwrite>True</Overwrite>
-        </DeployFile>
-        <DeployFile Include="firebird\plugins\libudr_engine.so" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>Project1\assets\internal\firebird\plugins\</RemoteDir>
-            <RemoteName>libudr_engine.so</RemoteName>
-            <DeployClass>File</DeployClass>
-            <Operation>0</Operation>
             <LocalCommand/>
             <RemoteCommand/>
             <Overwrite>True</Overwrite>
@@ -112,9 +67,9 @@
             <RemoteCommand/>
             <Overwrite>True</Overwrite>
         </DeployFile>
-        <DeployFile Include="firebird\replication.conf" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>Project1\assets\internal\firebird\</RemoteDir>
-            <RemoteName>replication.conf</RemoteName>
+        <DeployFile Include="firebird\plugins\libEngine13.so" Condition="'$(Config)'=='Debug'">
+            <RemoteDir>Project1\assets\internal\firebird\plugins\</RemoteDir>
+            <RemoteName>libEngine13.so</RemoteName>
             <DeployClass>File</DeployClass>
             <Operation>0</Operation>
             <LocalCommand/>
@@ -126,15 +81,6 @@
             <RemoteName>ic_launcher.png</RemoteName>
             <DeployClass>Android_LauncherIcon144</DeployClass>
             <Operation>1</Operation>
-            <LocalCommand/>
-            <RemoteCommand/>
-            <Overwrite>True</Overwrite>
-        </DeployFile>
-        <DeployFile Include="firebird\plugins\libEngine13.so" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>Project1\assets\internal\firebird\plugins\</RemoteDir>
-            <RemoteName>libEngine13.so</RemoteName>
-            <DeployClass>File</DeployClass>
-            <Operation>0</Operation>
             <LocalCommand/>
             <RemoteCommand/>
             <Overwrite>True</Overwrite>
@@ -178,15 +124,6 @@
         <DeployFile Include="firebird\firebird.msg" Condition="'$(Config)'=='Debug'">
             <RemoteDir>Project1\assets\internal\firebird\</RemoteDir>
             <RemoteName>firebird.msg</RemoteName>
-            <DeployClass>File</DeployClass>
-            <Operation>0</Operation>
-            <LocalCommand/>
-            <RemoteCommand/>
-            <Overwrite>True</Overwrite>
-        </DeployFile>
-        <DeployFile Include="firebird\fbtrace.conf" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>Project1\assets\internal\firebird\</RemoteDir>
-            <RemoteName>fbtrace.conf</RemoteName>
             <DeployClass>File</DeployClass>
             <Operation>0</Operation>
             <LocalCommand/>
@@ -302,15 +239,6 @@
             <RemoteCommand/>
             <Overwrite>True</Overwrite>
         </DeployFile>
-        <DeployFile Include="firebird\plugins\udr\libudf_compat.so" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>Project1\assets\internal\firebird\plugins\udr\</RemoteDir>
-            <RemoteName>libudf_compat.so</RemoteName>
-            <DeployClass>File</DeployClass>
-            <Operation>0</Operation>
-            <LocalCommand/>
-            <RemoteCommand/>
-            <Overwrite>True</Overwrite>
-        </DeployFile>
         <DeployFile Include="firebird\lib\libib_util.so" Condition="'$(Config)'=='Debug'">
             <RemoteDir>Project1\assets\internal\firebird\lib\</RemoteDir>
             <RemoteName>libib_util.so</RemoteName>
@@ -361,15 +289,6 @@
             <RemoteName>ic_launcher.png</RemoteName>
             <DeployClass>Android_LauncherIcon48</DeployClass>
             <Operation>1</Operation>
-            <LocalCommand/>
-            <RemoteCommand/>
-            <Overwrite>True</Overwrite>
-        </DeployFile>
-        <DeployFile Include="firebird\plugins\udr_engine.conf" Condition="'$(Config)'=='Debug'">
-            <RemoteDir>Project1\assets\internal\firebird\plugins\</RemoteDir>
-            <RemoteName>udr_engine.conf</RemoteName>
-            <DeployClass>File</DeployClass>
-            <Operation>0</Operation>
             <LocalCommand/>
             <RemoteCommand/>
             <Overwrite>True</Overwrite>

@@ -141,7 +141,6 @@ object Form1: TForm1
       'codepage=UTF8'
       'RawStringEncoding=DB_CP')
     TransactIsolationLevel = tiReadCommitted
-    AutoEncodeStrings = False
     HostName = 'localhost'
     Port = 0
     Database = 'd:\projekte\let\KSV.FDB'
