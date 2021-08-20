@@ -1855,6 +1855,7 @@ var
   LobsInResult: Boolean;
   StrBuf: TByteDynArray;
   Desc: SQLHDESC;
+  TempInt: NativeInt;
   function NoStreamedColFollows: Boolean;
   var I: Integer;
   begin
@@ -1895,7 +1896,6 @@ begin
           //ColumnInfo.CharOctedLength := ColNumAttribute(ColumnNumber, SQL_DESC_OCTET_LENGTH);
           AutoIncrement := ColNumAttribute(ColumnNumber, SQL_DESC_AUTO_UNIQUE_VALUE) = SQL_TRUE;
           CaseSensitive := ColNumAttribute(ColumnNumber, SQL_DESC_CASE_SENSITIVE) = SQL_TRUE;
-          Precision := ColNumAttribute(ColumnNumber, SQL_DESC_DISPLAY_SIZE);
           DESC_NULLABLE := ColNumAttribute(ColumnNumber, SQL_DESC_NULLABLE);
           if DESC_NULLABLE = SQL_NULLABLE then
             Nullable := ntNullable
@@ -1911,6 +1911,11 @@ begin
 
           ColStrAttribute(ColumnNumber, SQL_DESC_LABEL, StrBuf, ColumnLabel);
           ColStrAttribute(ColumnNumber, SQL_DESC_BASE_COLUMN_NAME, StrBuf, ColumnName);
+          TempInt := ColNumAttribute(ColumnNumber, SQL_DESC_DISPLAY_SIZE);
+          if TempInt <= High(Integer) then
+            Precision := TempInt
+          else
+            Precision := High(Integer);
           if ColumnName = '' then
             ColStrAttribute(ColumnNumber, SQL_DESC_NAME, StrBuf, ColumnName);
           if ColumnName <> '' then begin//aggregates like SUM() don't have a columname -> skip processing
