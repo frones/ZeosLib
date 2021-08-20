@@ -2323,7 +2323,8 @@ begin
       end;
       SetCapacity(FDataRefAddress.VarLenData.Len - MaxBufSize + NativeUInt(StrLen_or_IndPtr^));
     end;
-    PWord(PAnsiChar(@FDataRefAddress.VarLenData.Data)+FDataRefAddress.VarLenData.Len)^ := 0;
+    if Assigned(FDataRefAddress.VarLenData) then
+      PWord(PAnsiChar(@FDataRefAddress.VarLenData.Data)+FDataRefAddress.VarLenData.Len)^ := 0
   end;
 end;
 
