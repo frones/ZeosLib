@@ -77,7 +77,7 @@ uses
   {$IFDEF WITH_GENERIC_TLISTTFIELD}Generics.Collections,{$ENDIF}
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   ZSysUtils, ZCompatibility, ZExpression, ZClasses,
-  ZDbcIntfs, ZDbcCache, ZDbcCachedResultSet,
+  ZDbcIntfs, ZDbcCache, ZDbcCachedResultSet, ZTokenizer,
   ZAbstractConnection, ZDatasetUtils, ZSqlStrings, ZFormatSettings, ZTransaction
   {$IFNDEF DISABLE_ZPARAM},ZDatasetParam{$ENDIF};
 
@@ -333,6 +333,8 @@ type
     /// <summary>Sets database connection object.</summary>
     /// <param>"Value" a database connection object.</param>
     procedure SetConnection(Value: TZAbstractConnection); virtual;
+    function GetTokenizer: IZTokenizer; virtual;
+    function GetClientVariantManager: IZClientVariantManager; virtual;
   protected { Internal protected properties. }
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; virtual;
@@ -1500,7 +1502,7 @@ const
 implementation
 
 uses ZFastCode, Math, ZVariant, ZMessages,
-  ZSelectSchema, ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZEncoding,
+  ZSelectSchema, ZGenericSqlToken, ZGenericSqlAnalyser, ZEncoding,
   ZDbcProperties, ZDbcResultSet
   {$IFNDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES}, ZAbstractDataset{$ENDIF} //see comment of Updatable property
   {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
@@ -4610,6 +4612,11 @@ begin
   RowAccessor.ClearBuffer(PZRowBuffer(Buffer));
 end;
 
+function TZAbstractRODataset.GetTokenizer: IZTokenizer;
+begin
+  Result := Connection.DbcConnection.GetTokenizer;
+end;
+
 {**
   Performs an internal refreshing.
 }
@@ -4636,8 +4643,7 @@ begin
         KeyFields := Properties.Values[DSProps_KeyFields]
       else
         KeyFields := DefineKeyFields(Fields, Connection.DbcConnection.GetMetadata.GetIdentifierConverter);
-      FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields,
-        Connection.DbcConnection.GetTokenizer);
+      FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields, GetTokenizer);
       {$IFDEF WITH_VAR_INIT_WARNING}Temp := nil;{$ENDIF}
       SetLength(Temp, Length(FieldRefs));
       RetrieveDataFieldsFromResultSet(FieldRefs, ResultSet, Temp);
@@ -4877,6 +4883,11 @@ begin
   DataEvent(deFieldChange, AField);
 end;
 
+function TZAbstractRODataset.GetClientVariantManager: IZClientVariantManager;
+begin
+  Result := Connection.DbcConnection.GetClientVariantManager;
+end;
+
 {**
   Performs an internal record search.
   @param KeyFields a list of field names.
@@ -4908,8 +4919,7 @@ begin
   PartialKey := loPartialKey in Options;
   CaseInsensitive := loCaseInsensitive in Options;
 
-  FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields,
-    Connection.DbcConnection.GetTokenizer);
+  FieldRefs := DefineFields(Self, KeyFields, OnlyDataFields, GetTokenizer);
   FieldIndices := nil;
   if FieldRefs = nil then
      Exit;
@@ -4921,7 +4931,7 @@ begin
   {$IFDEF WITH_VAR_INIT_WARNING}RowValues := nil;{$ENDIF}
   SetLength(RowValues, Length(DecodedKeyValues));
 
-  VariantManager := Connection.DbcConnection.GetClientVariantManager;
+  VariantManager := GetClientVariantManager;
 
   if not OnlyDataFields then begin
     { Processes fields if come calculated or lookup fields are involved. }
@@ -5052,8 +5062,7 @@ begin
      Exit;
 
   { Fill result array }
-  FieldRefs := DefineFields(Self, ResultFields, OnlyDataFields,
-    Connection.DbcConnection.GetTokenizer);
+  FieldRefs := DefineFields(Self, ResultFields, OnlyDataFields, GetTokenizer);
   FieldIndices := DefineFieldIndices(FieldsLookupTable, FieldRefs);
   {$IFDEF WITH_VAR_INIT_WARNING}ResultValues := nil;{$ENDIF}
   SetLength(ResultValues, Length(FieldRefs));
@@ -5693,16 +5702,14 @@ function TZAbstractRODataset.PSGetTableNameW: WideString;
 function TZAbstractRODataset.PSGetTableName: string;
 {$ENDIF}
 var
-  Tokenizer: IZTokenizer;
   StatementAnalyser: IZStatementAnalyser;
   SelectSchema: IZSelectSchema;
 begin
   Result := '';
   if (FConnection <> nil) and FConnection.Connected then begin
-    Tokenizer := FConnection.DbcConnection.GetTokenizer;
     StatementAnalyser := FConnection.DbcConnection.GetStatementAnalyser;
     SelectSchema := StatementAnalyser.DefineSelectSchemaFromQuery(
-      Tokenizer, SQL.Text);
+      GetTokenizer, SQL.Text);
     if Assigned(SelectSchema) and (SelectSchema.TableCount = 1) then
       Result := SelectSchema.Tables[0].FullName;
   end;
