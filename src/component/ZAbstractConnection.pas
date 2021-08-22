@@ -1156,8 +1156,8 @@ end;
 type //To get protected methodes
   THack_ZAbstractDataset = Class(TZAbstractRWDataSet);
 procedure TZAbstractConnection.Commit;
-var i: Integer;
-    AComp: TComponent;
+//var i: Integer;
+//    AComp: TComponent;
 begin
   CheckConnected;
   CheckNonAutoCommitMode;

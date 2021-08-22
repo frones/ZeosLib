@@ -1912,10 +1912,12 @@ begin
           ColStrAttribute(ColumnNumber, SQL_DESC_LABEL, StrBuf, ColumnLabel);
           ColStrAttribute(ColumnNumber, SQL_DESC_BASE_COLUMN_NAME, StrBuf, ColumnName);
           TempInt := ColNumAttribute(ColumnNumber, SQL_DESC_DISPLAY_SIZE);
-          if TempInt <= High(Integer) then
-            Precision := TempInt
+          {$IF HIGH(Integer) < HIGH(NativeInt)}
+          if TempInt > High(Integer) then
+            Precision := High(Integer)
           else
-            Precision := High(Integer);
+          {$IFEND}
+            Precision := TempInt;
           if ColumnName = '' then
             ColStrAttribute(ColumnNumber, SQL_DESC_NAME, StrBuf, ColumnName);
           if ColumnName <> '' then begin//aggregates like SUM() don't have a columname -> skip processing
