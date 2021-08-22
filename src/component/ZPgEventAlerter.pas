@@ -99,7 +99,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 
 
-uses ZMessages, ZAbstractRODataset;
+uses ZMessages, ZAbstractRODataset{$IFDEF USE_SYNCOBJS_FOR_INLINING}, SyncObjs{$ENDIF};
 
 { TZPgEventAlerter }
 
