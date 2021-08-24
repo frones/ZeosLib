@@ -90,6 +90,9 @@
 // enables a fake AutoEncodeStrings property for backwards compatibility with Zeos 7.2
 {.$DEFINE WITH_FAKE_AUTOENCODESTRINGS}
 
+// If defined, changing the .SQL property of an active TZAbstractRODataSet descendant will raise an exception instead of silently closing it
+{.$DEFINE ACTIVE_DATASET_SQL_CHANGE_EXCEPTION}
+
 {$DEFINE MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD} //Compiler can't determine overload for NativeUInt(64-Bit)
  // Compilation directives for Lazarus/FPC
 {$IFDEF FPC}
@@ -184,7 +187,7 @@
           {$DEFINE WITH_ASLARGEINT}                   // tlargeint aslargeint. Fixed 2.6.0+ or 2.6.2+ probably
           {$DEFINE WITH_WIDEMEMO}                     //Have ftWideMemo
           {$DEFINE WITH_TWIDEMEMOFIELD_GETASVARIANT_varNULL_BUG} //The TWideMemoFields do not test IsNull state for the GetAsVariant getter.
-          {$DEFINE WITH_PARAM_ASWIDESTRING}           //TParam support the AsWideString property 
+          {$DEFINE WITH_PARAM_ASWIDESTRING}           //TParam support the AsWideString property
           {$DEFINE WITH_FTFIXEDWIDECHAR}              //Have ftFixedWideChar
           {$DEFINE WITH_CLASS_VARS}                   //Class variables/methods are supported
           {$DEFINE WITH_UNIT_WIDESTRINGS}             //unit WideStrings introduced
@@ -197,7 +200,7 @@
 			{$DEFINE WITH_TBYTES}
             {$IF CompilerVersion >= 20} //Delphi 2009+
               {$DEFINE TBLOBDATA_IS_TBYTES}             //TBlobdata is an alias for TBytes (FPC uses an AnsiString)
-              {$DEFINE WITH_CLASS_CONST}                //compiler supports contants in class type declarations 
+              {$DEFINE WITH_CLASS_CONST}                //compiler supports contants in class type declarations
               {$DEFINE FIELD_ASWIDESTRING_IS_UNICODESTRING} //TField.AsWideString is type UnicodeString not WideString
               {$DEFINE WITH_varUString}                 //Variant now supports refcounted UnicodeStrings
               {$DEFINE HAVE_CS_TRYENTER} //TCriticalSection has method TryEnter
@@ -239,8 +242,8 @@
                 {$DEFINE WITH_TSQLTimeStampOffset}    //The TSQLTimeStampOffset is declared in SqlTimSt.pas
                 {$DEFINE WITH_DEPRECATED_MESSAGE}     //Compiler supports deprecated messages
                 {$UNDEF WITH_INLINE_ANSICOMPARETEXT}  // AnsiCompareText is no more inline declared
-                {$UNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} //those inlineing errors are resolved 
-                {$UNDEF WITH_TBLOBFIELD_GETASVARIANT_varNULL_BUG} //the compiler now tests against empty strings and assumes NULL if Stream.Size is zero. Is that correct? 
+                {$UNDEF WITH_C5242_OR_C4963_INTERNAL_ERROR} //those inlineing errors are resolved
+                {$UNDEF WITH_TBLOBFIELD_GETASVARIANT_varNULL_BUG} //the compiler now tests against empty strings and assumes NULL if Stream.Size is zero. Is that correct?
                 {$DEFINE WITH_PWIDECHAR_STRLEN}       // SysUtils.StrLen supports PWideChar
                 {$DEFINE WITH_FTTIMESTAMPOFFSET}      // ftTimeStampOffset is supported
                 {$DEFINE WITH_FTSINGLE}               // ftSingle is supported
@@ -249,7 +252,7 @@
                 {$DEFINE WITH_FTTIMESTAMP_OFFSET}     // TSQLTimeStampOffset record and field exists
                 {$IF CompilerVersion >= 22} //Delphi XE+
                   {$DEFINE WITH_tagVARIANT_UINT64}          // ActivX.tagVariant supports UInt64 Values
-                  {$DEFINE TENCODING_HAS_CODEPAGE}          //TEncoding has property CodePage  
+                  {$DEFINE TENCODING_HAS_CODEPAGE}          //TEncoding has property CodePage
                   {$DEFINE WITH_FORMATSETTINGS}             //Unit SysUtils have global FormatSettings
                   {$DEFINE WITH_UNICODEFROMLOCALECHARS}
                   {$DEFINE WITH_RTLCONSTS_SInvalidGuidArray}
@@ -259,7 +262,7 @@
                   {$IF CompilerVersion >= 23} //Delphi XE2+
                     {$DEFINE WITH_ReturnAddress} //Exports ReturnAddress for error addressing
                     {$IFNDEF MSWINDOWS}
-                      {$DEFINE HAVE_GetProcAddressW} //GetProcAddress uses a PWideChar 
+                      {$DEFINE HAVE_GetProcAddressW} //GetProcAddress uses a PWideChar
                     {$ENDIF}
                     {$IFNDEF WIN32}
                       {$UNDEF WITH_DBTABLES} //BDE unit DBTables (TestSuites) isn't supported on CPU64
@@ -345,28 +348,28 @@
                           {$DEFINE TFIELD_HAS_ASLONGWORD}       //TField has supports virtual AsLongWord Gettet & Setter
                           {$IFDEF NEXTGEN}
                             {$DEFINE WITH_TSYSCHARSET_DEPRECATED}
-                            {$IFDEF CPUARM} 
+                            {$IFDEF CPUARM}
                               {$DEFINE FPC_REQUIRES_PROPER_ALIGNMENT} //see https://sourceforge.net/p/zeoslib/tickets/337/
                             {$ENDIF}
-                          {$ENDIF}  
+                          {$ENDIF}
                           {$IF CompilerVersion >= 27} //Delphi XE6+
                             {$IF CompilerVersion >= 28} //Delphi XE7+
 							  {$DEFINE WITH_NETENCODING}
                               {$DEFINE WITH_OMNIXML}
                               {$UNDEF WITH_DBTABLES} //M.A. In Delphi XE7 no BDE
-                              {$DEFINE WITH_LIFECYCLES} //TDataSet.DefaultFields is deprecated use LifeCycles instead							  
+                              {$DEFINE WITH_LIFECYCLES} //TDataSet.DefaultFields is deprecated use LifeCycles instead
                               {$IF CompilerVersion >= 29} //Delphi XE8+
                                 {$IF CompilerVersion >= 30} //Delphi XE10 Seattle+
                                   {$IF CompilerVersion >= 31} //Delphi XE10.1 Berlin+
                                     {$IF CompilerVersion >= 32} //Delphi XE10.2 Tokyo+
                                       {$DEFINE WITH_TRYFINALLY_RESULT_EXCEPTION_CHECK} //the compiler is able to see through try finally block, which have nothing todo initializing the result
-                                      {$DEFINE WITH_VIRTUAL_TFIELD_GETASGUID} //TField has now a virtual GetAsGUID function 
+                                      {$DEFINE WITH_VIRTUAL_TFIELD_GETASGUID} //TField has now a virtual GetAsGUID function
                                       {$DEFINE WITH_IProviderSupportNG}   //TDataset now supports IProviderSupportNG
                                       {$DEFINE WITH_InternalGotoBookmark_TBookmark}
                                       {$DEFINE HAVE_TFIELD_32BIT_ASINTEGER} //TField.AsInteger setter and getter use 32Bit integer
                                       {$DEFINE HAVE_TFIELD_32BIT_ASLONGWORD} //TField.AsLongWord setter and getter use 32Bit unsigned integer
                                       {$DEFINE WITH_VIRTUAL_ASGUID} //TGUIDfield AsGUID has virtual setter and getter
-                                      {$IFDEF WITH_PG_WEIGHT_OPT_BUG} 
+                                      {$IFDEF WITH_PG_WEIGHT_OPT_BUG}
                                         {$UNDEF WITH_PG_WEIGHT_OPT_BUG} //Resolved minimum since XE10.3 or earlier?
                                       {$ENDIF}
                                       {$IF CompilerVersion >= 33} //Delphi XE10.3 Rio+
@@ -633,4 +636,3 @@
 {$IF defined(USE_SYNCOMMONS) or defined(MORMOT2)}
   {$DEFINE WITH_COLUMNS_TO_JSON} //enable JSON content support serialization used by mORMot
 {$IFEND}
-

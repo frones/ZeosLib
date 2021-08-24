@@ -60,7 +60,7 @@ uses
   {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   ZCompatibility, ZClasses,
-  ZDbcIntfs, ZDbcResultSetMetadata,
+  ZDbcIntfs, ZDbcResultSetMetadata, ZTokenizer,
   ZAbstractDataset, ZAbstractRODataset, ZAbstractConnection, ZDatasetUtils;
 
 type
@@ -75,6 +75,7 @@ type
   protected
     FLocalConSettings: TZConSettings;
     FCharacterSet: TZCodePage;
+    FClientVariantManager: IZClientVariantManager;
     function CreateResultSet(const SQL: string; MaxRows: Integer):
       IZResultSet; override;
     function CreateStatement(const SQL: string; Properties: TStrings):
@@ -89,6 +90,8 @@ type
     procedure SetConnection(Value: TZAbstractConnection); override;
     function GetTryKeepDataOnDisconnect: Boolean; override;
     function PSIsSQLBased: Boolean; override;
+    function GetTokenizer: IZTokenizer; override;
+    function GetClientVariantManager: IZClientVariantManager; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -112,8 +115,8 @@ type
 implementation
 
 uses ZMessages, ZEncoding,
-  ZDbcStatement, ZDbcMetadata, ZDbcUtils, ZDbcCache,
-  ZDbcCachedResultSet;
+  ZDbcStatement, ZDbcMetadata, ZDbcUtils, ZDbcCache, ZDbcConnection,
+  ZDbcCachedResultSet, ZGenericSqlToken;
 
 type
   TZMemResultSetPreparedStatement = Class(TZBeginnerPreparedStatement,
@@ -501,6 +504,19 @@ end;
 function TZAbstractMemTable.PSIsSQLBased: Boolean;
 begin
   Result := False;
+end;
+
+function TZAbstractMemTable.GetTokenizer: IZTokenizer;
+begin
+  Result := TZGenericSQLTokenizer.Create as IZTokenizer;
+end;
+
+function TZAbstractMemTable.GetClientVariantManager: IZClientVariantManager;
+begin
+  if not assigned (FClientVariantManager) then
+    FClientVariantManager := TZClientVariantManager.Create(@FLocalConSettings) as IZClientVariantManager;
+
+  Result := FClientVariantManager;
 end;
 
 procedure TZAbstractMemTable.SetConnection(Value: TZAbstractConnection);
