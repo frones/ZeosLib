@@ -210,7 +210,6 @@ type
 
     FIndexFields: {$IFDEF WITH_GENERIC_TLISTTFIELD}TList<TField>{$ELSE}TList{$ENDIF};
     FLobCacheMode: TLobCacheMode;
-    FActiveChangeException: Boolean;
     FSortType : TSortType;
     FHasOutParams: Boolean;
     FSortedFields: string;
@@ -284,7 +283,9 @@ type
     function GetSortType : TSortType;
     Procedure SetSortType(Value : TSortType);
 
+    {$IFDEF ACTIVE_DATASET_SQL_CHANGE_EXCEPTION}
     procedure UpdatingSQLStrings(Sender: TObject);
+    {$ENDIF}
     procedure UpdateSQLStrings(Sender: TObject);
     procedure ReadParamData(Reader: TReader);
     procedure WriteParamData(Writer: TWriter);
@@ -1598,7 +1599,9 @@ begin
   FSQL := TZSQLStrings.Create;
   TZSQLStrings(FSQL).Dataset := Self;
   TZSQLStrings(FSQL).MultiStatements := False;
+  {$IFDEF ACTIVE_DATASET_SQL_CHANGE_EXCEPTION}
   FSQL.OnChanging := UpdatingSQLStrings;
+  {$ENDIF}
   FSQL.OnChange := UpdateSQLStrings;
   {$IFNDEF DISABLE_ZPARAM}
   FParams := TZParams.Create(Self);
@@ -3693,11 +3696,6 @@ begin
     Properties.Values[DSProps_LobCacheMode] := LcmOnLoadStr;
   end;
 
-  LcmString := Properties.Values[DSProps_ActiveChangeException];
-  if (LcmString = '') and Assigned(Connection) then
-    LcmString := Connection.Properties.Values[DSProps_ActiveChangeException];
-  FActiveChangeException := StrToBoolEx(LcmString);
-
   CurrentRow := 0;
   FetchCount := 0;
   CurrentRows.Clear;
@@ -5119,11 +5117,14 @@ begin
       Result := usDeleted;
   end;
 end;
+
+{$IFDEF ACTIVE_DATASET_SQL_CHANGE_EXCEPTION}
 Procedure TZAbstractRODataset.UpdatingSQLStrings(Sender: TObject);
 Begin
- If Self.Active And FActiveChangeException Then
+ If Self.Active Then
    Raise EZSQLException.Create(SResultsetIsAlreadyOpened);
 End;
+{$ENDIF}
 
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -9862,7 +9863,7 @@ begin
       if FCharEncoding = ceUTF16
       then FColumnCP := zCP_UTF16
       else FColumnCP := FResultSetMetadata.GetColumnCodePage(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-      Transliterate := Transliterate or (FColumnCP = zCP_UTF16) or ((TZAbstractRODataset(DataSet).Connection <> nil) and 
+      Transliterate := Transliterate or (FColumnCP = zCP_UTF16) or ((TZAbstractRODataset(DataSet).Connection <> nil) and
         TZAbstractRODataset(DataSet).Connection.RawCharacterTransliterateOptions.Fields and
         (FColumnCP <>  GetTransliterateCodePage(FControlsCodePage)));
     end;
