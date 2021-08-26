@@ -648,7 +648,9 @@ begin
     if Protocol = 'ado' then
       Exit;
     q.Sql.Add('create table #t (b varbinary(128));');
-    q.Sql.Add('insert into #t values (0x6170706c65), (0x62616e616e61), (0x636865727279);');
+    q.Sql.Add('insert into #t values (0x6170706c65);');
+    q.Sql.Add('insert into #t values (0x62616e616e61);');
+    q.Sql.Add('insert into #t values (0x636865727279);');
     q.ExecSql;
     q.Sql.Clear;
     q.Sql.Add('select * from #t');
