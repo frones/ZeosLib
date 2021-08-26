@@ -2467,6 +2467,7 @@ begin
     if Assigned(UpdateSQL) then
       FreeAndNil(UpdateSQL);
     try
+      Connection.Connect;
       Connection.ExecuteDirect('delete from people where p_id >= '+SysUtils.IntToStr(TEST_ROW_ID-1));
     finally
       Connection.Disconnect;
