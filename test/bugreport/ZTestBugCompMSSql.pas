@@ -547,6 +547,9 @@ begin
   Check(Connection.Connected, 'Failed to establish a connection');
   if Connection.DbcConnection.GetServerProvider <> spMSSQL then
     Exit;
+  // This test doesn't work on MS SQL 2000
+  if Connection.ServerVersion < 9000000 then
+    Exit;
   Check(Connection.UseMetadata, 'UseMetadata should be true for this test.');
   Query := CreateQuery;
   try
