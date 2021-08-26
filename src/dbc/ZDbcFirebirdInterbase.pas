@@ -1101,6 +1101,7 @@ procedure BindSQLDAInParameters(BindList: TZBindList;
 const
   sCS_NONE = 'NONE';
   DS_Props_IsMetadataResultSet = 'IsMetadataResultSet';
+  sGetTxn = RawByteString('GET NEW TRANSACTION');
   sStartTxn = RawByteString('TRANSACTION STARTED.');
   sCommitMsg = RawByteString('TRANSACTION COMMIT');
   sRollbackMsg = RawByteString('TRANSACTION ROLLBACK');

@@ -941,6 +941,9 @@ begin
         FTPB := FOwner.GenerateTPB(FAutoCommit, FReadOnly, FTransactionIsolation, FProperties);
       FTransaction := FAttachment.startTransaction(FStatus,
         Length(FTPB){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, Pointer(FTPB));
+      if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+        HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(FStatus.getErrors),
+          sGetTxn, IImmediatelyReleasable(FWeakImmediatRelPtr));
       FTransaction.AddRef;
       Result := Ord(not Self.FAutoCommit);
       if DriverManager.HasLoggingListener then
