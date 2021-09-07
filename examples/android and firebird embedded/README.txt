@@ -1,8 +1,9 @@
 This is a sample project demonstrating how to use Firebird 4.0 with Zeos on Android 64 Bits.
 
 Getting started:
-- Unpack the Firebird files into the firebird folder.
-- Grab a firebird.msg from a Windows zip kit - it isn't deployed with Firebird for Android ARM and put it into the firebird folder.
+- Unpack the Firebird ARM64 files into the firebird folder.
+- Grab icudt63l.dat, libicudata.so.63, libicui18n.so.63, libicuuc.so.63 from the Firebird 4.0 RC1 release and put them in the correct locations.
+- Grab a firebird.msg file from another distribution because it isn't generated automatically.
 
 The project was tested with Firebird 4.0. For other versions you might have to do some changes.
 
