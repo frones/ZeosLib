@@ -85,12 +85,21 @@ type
   EZIBConvertError = class(Exception);
 
   { Full info about single Interbase status entry}
+  /// <summary>Represents a "cluster" of interbase error information.
+  ///  This can be an error code or an error message. Also has members for
+  ///  derived information.</summary>
   TZIBStatus = record
+    /// <summary>Error code type if this is an error code.</summary>
     IBDataType: Integer; // one of isc_arg_* constants
+    /// <summary>Error Code if this is an error code cluster.</summary>
     IBDataInt: Integer;  // int data (error code)
+    /// <summary>additional Strings for OS errors.</summary>
     IBDataStr: string;   // string data
-    IBMessage: string;   // result of isc_interpret
+    /// <summary>result of isc_interprete or fb_interpret</summary>
+    IBMessage: string;   // result of isc_interprete
+    /// <summary>result of isc_sqlcode</summary>
     SQLCode: Integer;    // result of isc_sqlcode
+    /// <summary>result of isc_sql_interprete</summary>
     SQLMessage: string;  // result of isc_sql_interprete
   end;
   PZIBStatus = ^TZIBStatus;
@@ -1531,10 +1540,7 @@ begin
     F := Value.Fraction[i];
     if F = 0
     then Inc(P)
-    else if (P = LastNibbleByteIDX) and Odd(Value.Precision) then begin
-      i64 := Value.Fraction[LastNibbleByteIDX] shr 4;
-      goto finalize
-    end else begin
+    else begin
       i64 := ZBcdNibble2Base100ByteLookup[F];
       if P = LastNibbleByteIDX
       then goto finalize

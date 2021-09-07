@@ -246,7 +246,8 @@ type
       StatusVector: PARRAY_ISC_STATUS; const LogMessage: SQLString;
       const Sender: IImmediatelyReleasable);
     /// <summary>Processes Interbase or Firebird status vector and returns array
-    ///  of status data.</summary>
+    ///  of status data. Basically this function converts the interbase status
+    ///  vector into a more Delphi compatible Structure.</summary>
     /// <param>"StatusVector" a TARRAY_ISC_STATUS vector reference. It contains
     ///  information about an error or warnings.</param>
     /// <returns>an array of TZIBStatusVector records</returns>
@@ -1940,20 +1941,26 @@ var
   OrgStatusVector: PARRAY_ISC_STATUS; //remainder for initialization
 begin
   { usually first isc_status is gds_arg_gds .. }
+  // exit if there is no error
   StatusArg := StatusVector[1];
   WarningArg := StatusVector[2];
   if (StatusArg = isc_arg_end) and (WarningArg = isc_arg_end) then begin
     Exit; //neither Warning nor an Error
   end;
+
+  // save the original pointer - some functions modify it
   OrgStatusVector := StatusVector;
   InterbaseStatusVector := InterpretInterbaseStatus(StatusVector);
   isc_sqlcode := InterbaseStatusVector[0].SQLCode;
   error_code := InterbaseStatusVector[0].IBDataInt;
   ErrorString := '';
   for i := Low(InterbaseStatusVector) to High(InterbaseStatusVector) do begin
-    AppendSepString(ErrorString, InterbaseStatusVector[i].IBMessage, '; ');
-    if AddLogMsgToExceptionOrWarningMsg {and (InterbaseStatusVector[i].IBMessage <> '')} then // Why do we do that?
+    if InterbaseStatusVector[i].IBDataType = isc_arg_gds then begin
+      AppendSepString(ErrorString, InterbaseStatusVector[i].IBMessage, '; ');
+      AppendSepString(ErrorString, 'GDS Code: ' + ZFastCode.IntToStr(InterbaseStatusVector[i].IBDataInt), '; ');
       AppendSepString(ErrorString, InterbaseStatusVector[i].SQLMessage, '; ');
+    end else if InterbaseStatusVector[i].IBDataType = isc_arg_sql_state then
+      AppendSepString(ErrorString, 'SQL State: ' + InterbaseStatusVector[i].IBDataStr, '; ');
   end;
 
   if DriverManager.HasLoggingListener then
@@ -1979,8 +1986,6 @@ begin
   if AddLogMsgToExceptionOrWarningMsg and (LogMessage <> '')
   then FLogMessage := Format(FormatStr, [ErrorString, isc_sqlcode, LogMessage])
   else FLogMessage := Format(FormatStr, [ErrorString, isc_sqlcode]);
-  if error_code <> 0 then
-    FLogMessage := FLogMessage +  '; GDS Code: ' + SysUtils.IntToStr(error_code);
   if ExeptionClass = EZIBSQLException //added by Fr0st
   then Error := EZIBSQLException.Create(FLogMessage, InterbaseStatusVector, LogMessage)
   else begin
@@ -2031,6 +2036,10 @@ begin
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
+{ This function translates the Interbase Status Vector into a more or less suitable
+Delphi representation and extends it with more information. For information about
+the Interbase Status vector see "Parsing the Status Vector" in the Interbase documentation:
+https://docwiki.embarcadero.com/InterBase/2020/en/Parsing_the_Status_Vector }
 function TZInterbaseFirebirdConnection.InterpretInterbaseStatus(
   var StatusVector: PARRAY_ISC_STATUS): TZIBStatusVector;
 var //StatusIdx: Integer; EH: that leads to ugly rangecheck issues, since FP_Interpret is incrementing the ptr -> dead memory
@@ -2039,6 +2048,7 @@ var //StatusIdx: Integer; EH: that leads to ugly rangecheck issues, since FP_Int
     CP: Word;
     {$IFEND}
     NextStatusVector{EH: that should mimic Fr0st's vector array, but does not overrun the memory}: PARRAY_ISC_STATUS;
+    interpreteResult: NativeInt;
 begin
   Result := nil;
   //StatusIdx := 0;
@@ -2050,73 +2060,83 @@ begin
   repeat
     SetLength(Result, Length(Result) + 1);
     pCurrStatus := @Result[High(Result)]; // save pointer to avoid multiple High() calls
-    // SQL code and status
-    pCurrStatus.SQLCode := FInterbaseFirebirdPlainDriver.isc_sqlcode(PISC_STATUS(StatusVector));
-    FInterbaseFirebirdPlainDriver.isc_sql_interprete(pCurrStatus.SQLCode, @FByteBuffer[0], SizeOf(TByteBuffer)-1);
-    if FByteBuffer[0] <> 0 then
-      {$IFDEF UNICODE}
-      pCurrStatus.SQLMessage := PRawToUnicode(PAnsiChar(@FByteBuffer[0]), ZFastCode.StrLen(@FByteBuffer[0]), CP);
-      {$ELSE}
-      ZSetString(PAnsiChar(@FByteBuffer[0]), ZFastCode.StrLen(@FByteBuffer[0]), RawByteString(pCurrStatus.SQLMessage){$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF});
-      {$ENDIF}
+
+    pCurrStatus.SQLCode := 0;
+    pCurrStatus.SQLMessage := '';
     //older compile would gangle about possibly unassigned, newers gangle about assigned but never used
     //so let's use the variable in next cast line and all are happy
     NextStatusVector := StatusVector;
     // IB data
-    pCurrStatus.IBDataType := PISC_STATUS(NextStatusVector)^;//StatusVector[StatusIdx];
+    pCurrStatus.IBDataType := PISC_STATUS(NextStatusVector)^;
     case PISC_STATUS(StatusVector)^ {StatusVector[StatusIdx]} of
-      isc_arg_end:  // end of argument list
+      // end of argument list -> stop processing.
+      isc_arg_end:
         Break;
-      isc_arg_gds,  // Long int code
-      isc_arg_number,
-      isc_arg_vms,
-      isc_arg_unix,
-      isc_arg_domain,
-      isc_arg_dos,
-      isc_arg_mpexl,
-      isc_arg_mpexl_ipc,
-      isc_arg_next_mach,
-      isc_arg_netware,
-      isc_arg_win32:
+      // Error codes. Store the error codes for later use.
+      isc_arg_gds,  {1} // Long int code
+      isc_arg_number, {4}
+      isc_arg_vms,    {6}
+      isc_arg_unix,   {7}
+      isc_arg_domain, {8}
+      isc_arg_dos,    {9}
+      isc_arg_mpexl,  {10}
+      isc_arg_mpexl_ipc, {11}
+      isc_arg_next_mach, {15}
+      isc_arg_netware,   {16}
+      isc_arg_win32:     {17}
         begin
           pCurrStatus.IBDataInt := StatusVector[{StatusIdx + }1];
           NextStatusVector := @StatusVector[2];
           //Inc(StatusIdx, 2);
         end;
-      isc_arg_string,  // pointer to string
-      isc_arg_interpreted,
-      isc_arg_sql_state:
+      isc_arg_string,  {2}// pointer to string
+      isc_arg_interpreted, {5}
+      isc_arg_sql_state:   {19}
         begin
           pCurrStatus.IBDataStr := ConvertConnRawToString({$IFDEF UNICODE}
             ConSettings,{$ENDIF}Pointer(StatusVector[{StatusIdx + }1]));
           NextStatusVector := @StatusVector[2];
           //Inc(StatusIdx, 2);
         end;
-      isc_arg_cstring: // length and pointer to string
+      isc_arg_cstring: {3}// length and pointer to string
         begin
           pCurrStatus.IBDataStr := ConvertConnRawToString({$IFDEF UNICODE}
             ConSettings,{$ENDIF}Pointer(StatusVector[{StatusIdx + }2]), StatusVector[{StatusIdx + }1]);
           NextStatusVector := @StatusVector[3];
           //Inc(StatusIdx, 3);
         end;
-      isc_arg_warning: begin// must not happen for error vector
+      isc_arg_warning: {18} begin// must not happen for error vector
         Break; //how to handle a warning? I just need an example
       end
       else
         Break;
     end; // case
-    if Assigned(FInterbaseFirebirdPlainDriver.fb_interpret) then begin
-      if FInterbaseFirebirdPlainDriver.fb_interpret(@FByteBuffer[0], SizeOf(TByteBuffer)-1, @StatusVector) = 0 then
-        Break;
-    end else if FInterbaseFirebirdPlainDriver.isc_interprete(@FByteBuffer[0], @StatusVector) = 0 then
-      Break;
+
+    // process only if the current Cluster is a GDS Code.
+    if pCurrStatus.IBDataType = isc_arg_gds then begin
+      // get the matching SQL Code and SQL Code Message.
+      pCurrStatus.SQLCode := FInterbaseFirebirdPlainDriver.isc_sqlcode(PISC_STATUS(StatusVector));
+      FInterbaseFirebirdPlainDriver.isc_sql_interprete(pCurrStatus.SQLCode, @FByteBuffer[0], SizeOf(TByteBuffer)-1);
+      if FByteBuffer[0] <> 0 then
+        {$IFDEF UNICODE}
+        pCurrStatus.SQLMessage := PRawToUnicode(PAnsiChar(@FByteBuffer[0]), ZFastCode.StrLen(@FByteBuffer[0]), CP);
+        {$ELSE}
+        ZSetString(PAnsiChar(@FByteBuffer[0]), ZFastCode.StrLen(@FByteBuffer[0]), RawByteString(pCurrStatus.SQLMessage){$IFDEF WITH_RAWBYTESTRING}, CP{$ENDIF});
+        {$ENDIF}
+
+      // get the real Error Message.
+      if Assigned(FInterbaseFirebirdPlainDriver.fb_interpret) then
+        interpreteResult := FInterbaseFirebirdPlainDriver.fb_interpret(@FByteBuffer[0], SizeOf(TByteBuffer)-1, @StatusVector)
+      else
+        interpreteResult := FInterbaseFirebirdPlainDriver.isc_interprete(@FByteBuffer[0], @StatusVector);
+      pCurrStatus.IBMessage := ConvertConnRawToString({$IFDEF UNICODE}ConSettings,{$ENDIF}@FByteBuffer[0]);
+    end;
+
     if PAnsiChar(StatusVector) < PAnsiChar(NextStatusVector) then
       StatusVector := NextStatusVector;
     if PISC_Status(StatusVector)^ = isc_arg_end then //EH: otoh in some
       //cirumstances we add a empty status see test TestDbcTransaction
       Break;
-    pCurrStatus.IBMessage := ConvertConnRawToString({$IFDEF UNICODE}
-            ConSettings,{$ENDIF}@FByteBuffer[0]);
   until False;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
