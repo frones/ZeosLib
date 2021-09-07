@@ -50,6 +50,7 @@ type
     procedure Button2Click(Sender: TObject);
   private
     { Private-Deklarationen }
+    procedure prepareFirebird(FirebirdBase: String);
     procedure createDatabase;
     procedure openDatabase;
   public
@@ -69,6 +70,22 @@ const
   FirebirdBase = PathDelim + 'firebird';
   ClientLib =    PathDelim + 'firebird' + PathDelim + 'lib' + PathDelim + 'libfbclient.so.4.0.0';
   LogFile =      PathDelim + 'firebird' + PathDelim + 'firebird.log';
+
+procedure CreateSymlinkIfNecessary(Const SymLink, Target: String);
+begin
+  if not FileExists(SymLink) then
+    if not TFile.CreateSymLink(SymLink, Target) then
+      raise Exception.Create('Could not create Symlink to ' + Target + ' from ' + SymLink);
+end;
+
+procedure TForm1.prepareFirebird(FirebirdBase: String);
+begin
+  CreateSymlinkIfNecessary(FirebirdBase + PathDelim + 'lib' + PathDelim + 'libfbclient.so.2', FirebirdBase + PathDelim + 'lib' + PathDelim + 'libfbclient.so.4.0.0');
+  CreateSymlinkIfNecessary(FirebirdBase + PathDelim + 'lib' + PathDelim + 'libfbclient.so',   FirebirdBase + PathDelim + 'lib' + PathDelim + 'libfbclient.so.2');
+  CreateSymlinkIfNecessary(FirebirdBase + PathDelim + 'lib' + PathDelim + 'libicudata.so',    FirebirdBase + PathDelim + 'lib' + PathDelim + 'libicudata.so.63');
+  CreateSymlinkIfNecessary(FirebirdBase + PathDelim + 'lib' + PathDelim + 'libicui18n.so',    FirebirdBase + PathDelim + 'lib' + PathDelim + 'libicui18n.so.63');
+  CreateSymlinkIfNecessary(FirebirdBase + PathDelim + 'lib' + PathDelim + 'libicuuc.so',      FirebirdBase + PathDelim + 'lib' + PathDelim + 'libicuuc.so.63');
+end;
 
 procedure TForm1.Button2Click(Sender: TObject);
 begin
@@ -94,6 +111,7 @@ var
   TmpPath: String;
 begin
   HomePath := TPath.GetHomePath;
+  PrepareFirebird(HomePath + FirebirdBase);
   TmpPath := HomePath + PathDelim + 'tmp';
   if not DirectoryExists(TmpPath) then
     if not ForceDirectories(TmpPath) then
