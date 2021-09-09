@@ -167,6 +167,7 @@
         </DelphiCompile>
 	<DCCReference Include="ZParseSql.dcp"/>
 	<DCCReference Include="ZPlain.dcp"/>
+	<DCCReference Include="xmlrtl.dcp"/>
 	<DCCReference Include="..\..\src\dbc\ZDbcAdo.pas"/>
 	<DCCReference Include="..\..\src\dbc\ZDbcAdoMetadata.pas"/>
 	<DCCReference Include="..\..\src\dbc\ZDbcAdoResultSet.pas"/>
