@@ -86,7 +86,7 @@
         <DCC_Description>Zeos SQL Parsing Classes and Interfaces</DCC_Description>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
         <DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
-        <DllSuffix>270</DllSuffix>
+        <DllSuffix>280</DllSuffix>
         <SanitizedProjectName>ZParseSql</SanitizedProjectName>
         <DCC_LegacyIFEND>true</DCC_LegacyIFEND>
     </PropertyGroup>

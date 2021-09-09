@@ -27,7 +27,7 @@ package ZComponentDesign;
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'Zeos Database Components'}
-{$LIBSUFFIX '270'}
+{$LIBSUFFIX '280'}
 {$DESIGNONLY}
 {$IMPLICITBUILD OFF}
 

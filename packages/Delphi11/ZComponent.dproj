@@ -85,7 +85,7 @@
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=8.0.0.0;Comments=</VerInfo_Keys>
         <DCC_Description>Zeos Database Components</DCC_Description>
         <DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
-        <DllSuffix>270</DllSuffix>
+        <DllSuffix>280</DllSuffix>
         <DCC_LegacyIFEND>true</DCC_LegacyIFEND>
         <SanitizedProjectName>ZComponent</SanitizedProjectName>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
