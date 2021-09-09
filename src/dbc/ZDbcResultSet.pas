@@ -1376,7 +1376,7 @@ type
     FInConstructionState: Boolean;
     FOpenLobStreams: TZSortedList;
   protected
-    function Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}Longint{$ENDIF}): Pointer; override;
+    function Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}{$IFDEF MEMORYSTREAM_REALLOC_NATIVEINT}NativeInt{$ELSE}Longint{$ENDIF}{$ENDIF}): Pointer; override;
   protected
     procedure FlushMemToStream(Buf: Pointer; Len: NativeUInt; Stream: TStream); virtual;
     procedure ReadStreamToMem(var Buf: Pointer; var Len: NativeUint; Stream: TStream); virtual;
@@ -1390,7 +1390,7 @@ type
   {** EH: implements a codepage conversion stream helper to read data only}
   TZCodePageConversionROStream = class(TZCodePageConversionStream)
   protected
-    function Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}Longint{$ENDIF}): Pointer; override;
+    function Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}{$IFDEF MEMORYSTREAM_REALLOC_NATIVEINT}NativeInt{$ELSE}Longint{$ENDIF}{$ENDIF}): Pointer; override;
   end;
 
   TZVarVarLenDataRefStream = class(TMemoryStream)
@@ -1402,7 +1402,7 @@ type
     FOwner: IZLob; //this keeps data alive while the stream is underway
     FOpenLobStreams: TZSortedList;
   protected
-    function Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}Longint{$ENDIF}): Pointer; override;
+    function Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}{$IFDEF MEMORYSTREAM_REALLOC_NATIVEINT}NativeInt{$ELSE}Longint{$ENDIF}{$ENDIF}): Pointer; override;
   public
     Constructor Create(const Owner: IZLob; CodePage: Word;
       VarLenDataRef: PZVarLenDataRef; LobStreamMode: TZLobStreamMode;
@@ -4618,7 +4618,7 @@ begin
   Stream.Read(Buf^, Len); //Move data
 end;
 
-function TZCodePageConversionStream.Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}Longint{$ENDIF}): Pointer;
+function TZCodePageConversionStream.Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}{$IFDEF MEMORYSTREAM_REALLOC_NATIVEINT}NativeInt{$ELSE}Longint{$ENDIF}{$ENDIF}): Pointer;
 begin
   Result := Memory;
   if FInConstructionState then begin
@@ -5346,7 +5346,7 @@ begin
   FOwner := nil;
 end;
 
-function TZVarVarLenDataRefStream.Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}Longint{$ENDIF}): Pointer;
+function TZVarVarLenDataRefStream.Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}{$IFDEF MEMORYSTREAM_REALLOC_NATIVEINT}NativeInt{$ELSE}Longint{$ENDIF}{$ENDIF}): Pointer;
 begin
   if (NewCapacity = 0) then begin
     if (FVarLenDataRef.VarLenData <> nil) then begin
@@ -5466,8 +5466,7 @@ end;
 
 { TZCodePageConversionROStream }
 
-function TZCodePageConversionROStream.Realloc(
-  var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}Longint{$ENDIF}): Pointer;
+function TZCodePageConversionROStream.Realloc(var NewCapacity: {$IFDEF FPC}PtrInt{$ELSE}{$IFDEF MEMORYSTREAM_REALLOC_NATIVEINT}NativeInt{$ELSE}Longint{$ENDIF}{$ENDIF}): Pointer;
 begin
   if FInConstructionState
   then Result := inherited Realloc(NewCapacity)

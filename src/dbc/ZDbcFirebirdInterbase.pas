@@ -1802,7 +1802,7 @@ var //StatusIdx: Integer; EH: that leads to ugly rangecheck issues, since FP_Int
     CP: Word;
     {$IFEND}
     NextStatusVector{EH: that should mimic Fr0st's vector array, but does not overrun the memory}: PARRAY_ISC_STATUS;
-    interpreteResult: NativeInt;
+    TempStatusVector: PARRAY_ISC_STATUS; // Needed because some function modify the pointer to the Status Vector
 begin
   Result := nil;
   //StatusIdx := 0;
@@ -1879,10 +1879,11 @@ begin
         {$ENDIF}
 
       // get the real Error Message.
+      TempStatusVector := StatusVector;
       if Assigned(FInterbaseFirebirdPlainDriver.fb_interpret) then
-        interpreteResult := FInterbaseFirebirdPlainDriver.fb_interpret(@FByteBuffer[0], SizeOf(TByteBuffer)-1, @StatusVector)
+        FInterbaseFirebirdPlainDriver.fb_interpret(@FByteBuffer[0], SizeOf(TByteBuffer)-1, @TempStatusVector)
       else
-        interpreteResult := FInterbaseFirebirdPlainDriver.isc_interprete(@FByteBuffer[0], @StatusVector);
+        FInterbaseFirebirdPlainDriver.isc_interprete(@FByteBuffer[0], @TempStatusVector);
       pCurrStatus.IBMessage := ConvertConnRawToString({$IFDEF UNICODE}ConSettings,{$ENDIF}@FByteBuffer[0]);
     end;
 
