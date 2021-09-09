@@ -691,7 +691,7 @@ type
     {$IFEND}
     {$IF NOT DEFINED(NO_UTF8STRING) AND NOT DEFINED(MSEGui)}
     function GetAsUTF8String: UTF8String; {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
-    {$ENDIF}
+    {$IFEND}
     function GetAsRawByteString: RawByteString;
     { record/array types }
     function GetAsGuid: TGUID; {$IF DEFINED(WITH_VIRTUAL_TFIELD_GETASGUID) OR DEFINED(MSEGui)} override; {$IFEND}
@@ -733,7 +733,7 @@ type
     {$IFEND}
     {$IF NOT DEFINED(NO_UTF8STRING) AND NOT DEFINED(MSEGui)}
     procedure SetAsUTF8String(const Value: UTF8String); {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
-    {$ENDIF}
+    {$IFEND}
     procedure SetAsRawByteString(const Value: RawByteString);
 
     procedure SetAsBytes(const Value: TBytes); {$IFDEF TFIELD_HAS_ASBYTES}override;{$ENDIF}
@@ -775,7 +775,7 @@ type
     {$IFEND}
     {$IF NOT DEFINED(NO_UTF8STRING) AND NOT DEFINED(MSEGui)}
     property AsUTF8String: UTF8String read GetAsUTF8String write SetAsUTF8String;
-    {$ENDIF}
+    {$IFEND}
     property AsBytes{$IFNDEF WITH_ASBYTES}: TBytes read GetAsBytes write SetAsBytes{$ENDIF};
     property AsVariant;
     property AttributeSet;
@@ -876,10 +876,10 @@ type
     procedure SetAsWideString(const Value: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_FTWIDESTRING}override;{$ENDIF}
     {$IF NOT DEFINED(NO_ANSISTRING) AND NOT DEFINED(MSEGui)}
     procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
-    {$ENDIF}
+    {$IFEND}
     {$IF NOT DEFINED(NO_UTF8STRING) AND NOT DEFINED(MSEGui)}
     procedure SetAsUTF8String(const Value: UTF8String); {$IFDEF WITH_VIRTUAL_TFIELD_ASUTF8STRING}override;{$ENDIF}
-    {$ENDIF}
+    {$IFEND}
     procedure SetAsRawByteString(const Value: RawByteString);
   protected
     procedure RangeError(Value, Min, Max: Extended);
@@ -3391,7 +3391,7 @@ begin
             Precision := GetPrecision(I);
             DisplayName := FName;
           end
-        else with TFieldDef.Create(FieldDefs, FName, FieldType, Size, False, I{$IF DEFINED(WITH_CODEPAGE_AWARE_FIELD) AND NOT DEFINED(MSEGui)}, CodePage{$ENDIF}) do begin
+        else with TFieldDef.Create(FieldDefs, FName, FieldType, Size, False, I{$IF DEFINED(WITH_CODEPAGE_AWARE_FIELD) AND NOT DEFINED(MSEGui)}, CodePage{$IFEND}) do begin
           if not (ReadOnly or IsUniDirectional) then begin
             {$IFNDEF OLDFPC}
             Required := IsWritable(I) and (IsNullable(I) = ntNoNulls);
