@@ -1614,12 +1614,17 @@ end;
 }
 function TZMsSqlDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
-var Len: NativeUInt;
+var
+  Len: NativeUInt;
+  tmp: String;
 begin
   Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
   {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
-  with GetStatement.ExecuteQuery('exec '+Catalog+'.'+SchemaPattern+'.'+'sp_stored_procedures '+
-    ComposeObjectString(ProcedureNamePattern)+', '+ComposeObjectString(SchemaPattern)+', '+ComposeObjectString(Catalog)) do
+  if GetConnection.GetHostVersion < EncodeSQLVersioning(9, 0, 0)
+  then tmp := ' sp_stored_procedures '
+  else tmp := ' sys.sp_stored_procedures  ';
+  with GetStatement.ExecuteQuery('exec' + tmp +
+    ComposeObjectString(ProcedureNamePattern) + ', ' + ComposeObjectString(SchemaPattern) + ', ' + ComposeObjectString(Catalog)) do
   begin
     while Next do begin
       Result.MoveToInsertRow;
@@ -1693,16 +1698,22 @@ end;
 function TZMsSqlDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
-var Len: NativeUint;
-    P: PAnsiChar;
+var
+  Len: NativeUint;
+  P: PAnsiChar;
+  tmp: String;
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern,
     ProcedureNamePattern, ColumnNamePattern);
   {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
-  with GetStatement.ExecuteQuery('exec '+Catalog+'.'+SchemaPattern+'.'+
-    'sp_sproc_columns '+ComposeObjectString(ProcedureNamePattern)+', '+
-    ComposeObjectString(SchemaPattern)+', '+ComposeObjectString(Catalog)+', '+
-    ComposeObjectString(ColumnNamePattern)) do begin
+  if GetConnection.GetHostVersion < EncodeSQLVersioning(9, 0, 0) then
+    tmp := ' sp_sproc_columns '
+  else
+    tmp := ' sys.sp_sproc_columns ';
+  with GetStatement.ExecuteQuery('exec ' + tmp +ComposeObjectString(ProcedureNamePattern) + ', ' +
+    ComposeObjectString(SchemaPattern) + ', ' + ComposeObjectString(Catalog) + ', ' +
+    ComposeObjectString(ColumnNamePattern))
+  do begin
     while Next do begin
       Result.MoveToInsertRow;
       Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiCharByName('PROCEDURE_QUALIFIER', Len), Len);
