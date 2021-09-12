@@ -381,6 +381,12 @@ See \url{https://www.freetds.org/userguide/ChoosingTdsProtocol.html}
 The new parameter TDSProtocolVersion reflects this possibility.
 Possible values are "4.2", "5.0", "7.0", "7.1", "7.2", "7.3" and "7.4".
 
+\subsection{changed behavior for empty Strings and TZStoredProc}
+The dblib API doesn't allow to send empty strings to stored procedures.
+This is a limitation of the dbRpcParam function of the API.
+Zeos now exhibits this behavior when TZStoredProc gets used.
+Previous versions of Zeos inserted the NUL (\#0) character instead.
+
 \section{OleDB}
 Zeos now supports OleDB for Delphi as well as for Free Pascal.
 It is meant to replace the ADO driver and is faster than ADO as well.
