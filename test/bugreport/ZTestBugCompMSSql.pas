@@ -201,13 +201,11 @@ var
   Query: TZQuery;
   StoredProc: TZStoredProc;
   DblibConn: IZDBLibConnection;
+  FIsDblib: Boolean;
 begin
   if SkipForReason(srClosedBug) then Exit;
   Connection.Connect;
-  if Supports(Connection.DbcConnection, IZDBLibConnection, DblibConn) then begin
-    if (DblibConn.GetHostVersion < 9000000) and (DblibConn.GetServerProvider = spMSSQL) then
-      Fail('This test cannot succeed for MS SQL 2000 with DBLib. The dblib API (dbrpcparam) doesn''t allow to distinguish between empty strings and null.');
-  end;
+  FIsDblib := Supports(Connection.DbcConnection, IZDBLibConnection, DblibConn);
 
   {perfectly resolveable with ODBC, OleDB, ADO}
   StoredProc := TZStoredProc.Create(nil);
@@ -223,12 +221,18 @@ begin
     CheckEquals('xyz', Query.FieldByName('fld1').AsString);
     Query.Close;
 
-    StoredProc.ParamByName('@p').AsString := '';
-    StoredProc.ExecProc;
-    Query.Open;
-    CheckEquals('', Query.FieldByName('fld1').AsString);
-    CheckEquals(False, Query.FieldByName('fld1').IsNull);
-    Query.Close;
+    // The dblib API (dbrpcparam) doesn''t allow to send empty strings. See:
+    // - https://github.com/pymssql/pymssql/issues/243
+    // - https://marc.info/?l=freetds&m=127356206326275
+    // That is why we skip it.
+    if not FIsDblib then begin
+      StoredProc.ParamByName('@p').AsString := '';
+      StoredProc.ExecProc;
+      Query.Open;
+      CheckEquals('', Query.FieldByName('fld1').AsString);
+      CheckEquals(False, Query.FieldByName('fld1').IsNull);
+      Query.Close;
+    end;
 
     StoredProc.ParamByName('@p').Value := Null;
     StoredProc.ExecProc;
