@@ -1542,9 +1542,12 @@ begin
     then Inc(P)
     else begin
       i64 := ZBcdNibble2Base100ByteLookup[F];
-      if P = LastNibbleByteIDX
-      then goto finalize
-      else Break;
+      if P = LastNibbleByteIDX then begin
+        if LastByteIsHalfByte then
+          i64 := i64 div 10;
+        goto finalize
+      end else
+        Break;
     end;
   end;
   { initialize the Result }
