@@ -1532,7 +1532,7 @@ begin
   F := Value.SignSpecialPlaces;
   BCDScale := (F and 63);
   Negative := (F and $80) = $80;
-  LastByteIsHalfByte := (Value.Precision and 1 = 1) or ((BCDScale and 1 = 1) and (Value.Fraction[LastNibbleByteIDX] and $0F = 0));
+  LastByteIsHalfByte := (Value.Precision and 1 = 1);// or ((BCDScale and 1 = 1) and (Value.Fraction[LastNibbleByteIDX] and $0F = 0));
   P := 0;
   i64 := 0;
   { scan for leading zeroes to skip them }
@@ -1542,9 +1542,12 @@ begin
     then Inc(P)
     else begin
       i64 := ZBcdNibble2Base100ByteLookup[F];
-      if P = LastNibbleByteIDX
-      then goto finalize
-      else Break;
+      if P = LastNibbleByteIDX then begin
+        if LastByteIsHalfByte then
+          i64 := i64 div 10;
+        goto finalize
+      end else
+        Break;
     end;
   end;
   { initialize the Result }
