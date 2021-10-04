@@ -1532,7 +1532,7 @@ begin
   F := Value.SignSpecialPlaces;
   BCDScale := (F and 63);
   Negative := (F and $80) = $80;
-  LastByteIsHalfByte := (Value.Precision and 1 = 1) or ((BCDScale and 1 = 1) and (Value.Fraction[LastNibbleByteIDX] and $0F = 0));
+  LastByteIsHalfByte := (Value.Precision and 1 = 1);// or ((BCDScale and 1 = 1) and (Value.Fraction[LastNibbleByteIDX] and $0F = 0));
   P := 0;
   i64 := 0;
   { scan for leading zeroes to skip them }
