@@ -5316,7 +5316,7 @@ const
     , ftWideString{ftFixedWideChar}, ftWideMemo // 38..39
     {$IF FPC_FULLVERSION>=30203}
     , ftDateTime{ftOraTimeStamp}, ftDateTime{ftOraInterval}, ftLongWord, ftShortint, ftByte, ftExtended
-    {$ENDIF FPC_FULLVERSION>=30203}
+    {$IFEND FPC_FULLVERSION>=30203}
 {$ELSE !FPC}
 {$IF CompilerVersion >= 18} //additional Types since D2006 and D2007
     , ftWideString{ftFixedWideChar}, ftWideMemo, ftDateTime{ftOraTimeStamp}, ftDateTime{ftOraInterval} // 38..41
