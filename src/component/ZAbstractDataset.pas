@@ -592,7 +592,8 @@ var
   RowBuffer: PZRowBuffer;
 begin
   if (CachedResultSet <> nil) and GetActiveBuffer(RowBuffer) then begin
-    Connection.ShowSqlHourGlass;
+    If Assigned(Connection) Then
+      Connection.ShowSqlHourGlass;
     try
       RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
       CachedResultSet.MoveAbsolute(RowNo);
@@ -611,7 +612,8 @@ begin
           CurrentRow := Min(CurrentRows.Count, CurrentRow);
       end;
     finally
-      Connection.HideSQLHourGlass;
+      If Assigned(Connection) Then
+        Connection.HideSQLHourGlass;
     end;
   end;
 end;
