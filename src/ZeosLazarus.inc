@@ -153,7 +153,7 @@
                 {$DEFINE TBLOBDATA_IS_TBYTES} //TBlobData is an alias for TBytes instead of AnsiString
                 {$DEFINE WITH_TSTRINGS_TENCODING_LOADFROM}           // TStrings.LoadFromFile/LoadFromStream have TEncoding
 		{$DEFINE WITH_NETENCODING}
-                {$IF FPC_FULLVERSION>=30300}
+                {$IF FPC_FULLVERSION>=30203}
                   {$DEFINE WITH_FTLONGWORD}                 // ftLongWord is supported
                   {$DEFINE WITH_FTSHORTINT}                 // ftShortInt is supported
                   {$DEFINE WITH_FTBYTE}                     // ftByte is supported
