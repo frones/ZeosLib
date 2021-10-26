@@ -2658,6 +2658,7 @@ var
     Statement.QueryInterface(IZLoggingObject, iLO);
     DriverManager.LogMessage(lcExecPrepStmt,iLO);
   end;
+label LogSuccess;  //ugly but faster and no double code
 label Success;  //ugly but faster and no double code
 begin
   { Checks for maximum row. }
@@ -2668,12 +2669,15 @@ begin
   if RowNo = 0 then begin//fetch Iteration count of rows
     Status := FPlainDriver.OCIStmtExecute(FOCISvcCtx, FStmtHandle,
       FOCIError, FIteration, 0, nil, nil, OCI_DEFAULT);
-    if Status = OCI_SUCCESS then begin
+    if Status in [OCI_SUCCESS, OCI_SUCCESS_WITH_INFO] then begin
       FMaxBufIndex := FIteration -1; //FFetchedRows is an index [0...?] / FIteration is Count 1...?
       { Logging Execution }
       if DriverManager.HasLoggingListener then
         LogExecution;
-      goto success; //skip next if's
+      if Status = OCI_SUCCESS Then
+        goto success //skip next if's
+      Else
+        goto LogSuccess;
     end;
   end else if Integer(FCurrentRowBufIndex) < FMaxBufIndex then begin
     Inc(FCurrentRowBufIndex);
@@ -2685,9 +2689,12 @@ begin
     Status := FPlainDriver.OCIStmtFetch2(FStmtHandle, FOCIError,
       FIteration, OCI_FETCH_NEXT, 0, OCI_DEFAULT);
     FCurrentRowBufIndex := 0; //reset
-    if Status = OCI_SUCCESS then begin
+    if Status in [OCI_SUCCESS, OCI_SUCCESS_WITH_INFO] then begin
       FMaxBufIndex := FIteration -1;
-      goto success;
+      if Status = OCI_SUCCESS Then
+        goto success //skip next if's
+      Else
+        goto LogSuccess;
     end;
   end;
 
@@ -2703,6 +2710,8 @@ begin
       DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
     Exit;
   end;
+
+LogSuccess:
   FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcFetch,
     'FETCH ROW', Self);
 
