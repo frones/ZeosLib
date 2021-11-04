@@ -753,7 +753,7 @@ Begin
    Self.GotoBookmark(bm);
  End;
 End;
-{$ENDIF}
+{$ENDIF ZMEMTABLE_ENABLE_STREAM_EXPORT_IMPORT}
 
 procedure TZAbstractMemTable.SetConnection(Value: TZAbstractConnection);
 begin
