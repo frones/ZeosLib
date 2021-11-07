@@ -509,41 +509,19 @@ end;
 Procedure TZAbstractMemTable.LoadFromStream(AStream: TStream);
 
  Function ReadBool: Boolean;
- {$IFDEF FPC}
- Type
-  PBoolean = ^Boolean;
- {$ENDIF}
- Var
-  tb: Array Of Byte;
  Begin
-  SetLength(tb, SizeOf(Boolean));
-  AStream.Read(tb[0], Length(tb));
-
-  Result := PBoolean(@tb[0])^;
+  AStream.Read(Result, SizeOf(Boolean));
  End;
 
  Function ReadInt: Integer;
- Var
-  tb: Array Of Byte;
  Begin
-  SetLength(tb, SizeOf(Integer));
-  AStream.Read(tb[0], Length(tb));
-
-  Result := PInteger(@tb[0])^;
+  AStream.Read(Result, SizeOf(Integer));
  End;
 
  Function ReadString: String;
- Var
-  a: Integer;
-  c: Char;
  Begin
   SetLength(Result, ReadInt);
-
-  For a := 1 To Length(Result) Do
-  Begin
-    AStream.ReadData(c);
-    Result[a] := c;
-  End;
+  AStream.Read(Pointer(Result)^, Length(Result) * SizeOf(Char));
  End;
 
 Var
@@ -600,7 +578,7 @@ Begin
          fsize := ReadInt;
          GetMem(buf, fsize);
          Try
-           AStream.Read(buf, fsize);
+           AStream.Read(buf^, fsize);
            Self.Fields[b].SetData(buf);
          Finally
            FreeMem(buf);
@@ -733,42 +711,24 @@ end;
 Procedure TZAbstractMemTable.SaveToStream(AStream: TStream);
 
  Procedure WriteBool(Const ABoolean: Boolean);
- {$IFDEF FPC}
- Type
-  PBoolean = ^Boolean;
- {$ENDIF}
- Var
-  tb: Array Of Byte;
  Begin
-  SetLength(tb, SizeOf(Boolean));
-  PBoolean(@tb[0])^ := ABoolean;
-
-  AStream.Write(tb[0], Length(tb));
+  AStream.Write(ABoolean, SizeOf(Boolean));
  End;
 
  Procedure WriteInt(Const ANumber: Integer);
- Var
-  tb: Array Of Byte;
  Begin
-  SetLength(tb, SizeOf(Integer));
-  PInteger(@tb[0])^ := ANumber;
-
-  AStream.Write(tb[0], Length(tb));
+  AStream.Write(ANumber, SizeOf(Integer));
  End;
 
  Procedure WriteString(Const AText: String);
- Var
-  a: Integer;
  Begin
   WriteInt(Length(AText));
-
-  For a := 1 To Length(AText) Do
-   AStream.WriteData(AText[a]);
+  AStream.Write(Pointer(AText)^, Length(AText) * SizeOf(Char));
  End;
 
 Var
  bm: TBookMark;
- a{$IFDEF WITH_TVALUEBUFFER}, b{$ENDIF}: Integer;
+ a: Integer;
  buf: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
  ms: TMemoryStream;
 Begin
@@ -804,7 +764,7 @@ Begin
              (Self.Fields[a] As TBlobField).SaveToStream(ms);
              ms.Position := 0;
              WriteInt(ms.Size);
-             AStream.CopyFrom(ms);
+             AStream.CopyFrom(ms, ms.Size);
            Finally
              FreeAndNil(ms);
            End;
@@ -828,7 +788,7 @@ Begin
            Try
              Self.Fields[a].GetData(buf);
              WriteInt(Self.Fields[a].DataSize);
-             AStream.Write(buf, Length(buf));
+             AStream.Write(buf^, Self.Fields[a].DataSize);
            Finally
              FreeMem(buf);
            End;
