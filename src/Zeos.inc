@@ -93,6 +93,9 @@
 // If defined, changing the .SQL property of an active TZAbstractRODataSet descendant will raise an exception instead of silently closing it
 {.$DEFINE ACTIVE_DATASET_SQL_CHANGE_EXCEPTION}
 
+// If defined the ZMemTable component allows importing and exporting it's layout and data to a TStream descendant. Only tested with D10.3+ !!!
+{.$DEFINE ZMEMTABLE_ENABLE_STREAM_EXPORT_IMPORT}
+
 {$DEFINE MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD} //Compiler can't determine overload for NativeUInt(64-Bit)
  // Compilation directives for Lazarus/FPC
 {$IFDEF FPC}

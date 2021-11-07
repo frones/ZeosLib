@@ -110,6 +110,10 @@ type
     /// <summary>represents the codpage the character fieldtypes are mapped to.
     ///  The value is ignored if a connection is assigned</summary>
     property ControlsCodePage: TZControlsCodePage read GetControlsCodePage write SetControlsCodePage stored StoreControlsCodepage;
+    {$IFDEF ZMEMTABLE_ENABLE_STREAM_EXPORT_IMPORT}
+    Procedure SaveToStream(AStream: TStream);
+    Procedure LoadFromStream(AStream: TStream);
+    {$ENDIF}
   end;
 
 implementation
@@ -501,6 +505,212 @@ begin
   //NOOP
 end;
 
+{$IFDEF ZMEMTABLE_ENABLE_STREAM_EXPORT_IMPORT}
+Procedure TZAbstractMemTable.LoadFromStream(AStream: TStream);
+
+ Function ReadBool: Boolean;
+ {$IFDEF FPC}
+ Type
+  PBoolean = ^Boolean;
+ {$ENDIF}
+ Var
+  tb: Array Of Byte;
+ Begin
+  SetLength(tb, SizeOf(Boolean));
+  AStream.Read(tb[0], Length(tb));
+
+  Result := PBoolean(@tb[0])^;
+ End;
+
+ Function ReadInt: Integer;
+ Var
+  tb: Array Of Byte;
+ Begin
+  SetLength(tb, SizeOf(Integer));
+  AStream.Read(tb[0], Length(tb));
+
+  Result := PInteger(@tb[0])^;
+ End;
+
+ Function ReadString: String;
+ Var
+  a: Integer;
+  c: Char;
+ Begin
+  SetLength(Result, ReadInt);
+
+  For a := 1 To Length(Result) Do
+  Begin
+    AStream.ReadData(c);
+    Result[a] := c;
+  End;
+ End;
+
+Var
+ a, b, len, ftype, fsize: Integer;
+ fname: String;
+ buf: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
+ ms: TMemoryStream;
+Begin
+ Self.CheckInactive;
+
+ Self.FieldDefs.Clear;
+
+ Self.DisableControls;
+ Try
+   // Recreate FieldDefs
+   len := ReadInt;
+   For a := 0 To len - 1 Do
+   Begin
+     fname := ReadString;
+     ftype := ReadInt;
+     fsize := ReadInt;
+     Self.FieldDefs.Add(fname, TFieldType(ftype), fsize, ReadBool);
+   End;
+
+   // Activate the MemTable so we can write the data back
+   Self.Open;
+
+   // Now read each field of each record, one by one
+   len := ReadInt;
+   For a := 0 To len - 1 Do
+   Begin
+     Self.Append;
+
+     For b := 0 To Self.FieldCount - 1 Do
+     Begin
+       If Self.Fields[b] Is TBlobField Then
+       Begin
+         ms := TMemoryStream.Create;
+         Try
+           ms.CopyFrom(AStream, ReadInt);
+           ms.Position := 0;
+           (Self.Fields[b] As TBlobField).LoadFromStream(ms);
+         Finally
+           FreeAndNil(ms);
+         End;
+       End
+       Else
+       Begin
+         {$IFDEF WITH_TVALUEBUFFER}
+         SetLength(buf, ReadInt);
+         AStream.Read(buf[0], Length(buf));
+         Self.Fields[b].SetData(buf);
+         {$ELSE}
+         fsize := ReadInt;
+         GetMem(buf, fsize);
+         Try
+           AStream.Read(buf, fsize);
+           Self.Fields[b].SetData(buf);
+         Finally
+           FreeMem(buf);
+         End;
+         {$ENDIF}
+       End;
+     End;
+
+     Self.Post;
+   End;
+
+   Self.First;
+ Finally
+   Self.EnableControls;
+ End;
+End;
+{$ENDIF}
+
+{$IFDEF ZMEMTABLE_ENABLE_STREAM_EXPORT_IMPORT}
+Procedure TZAbstractMemTable.LoadFromStream(AStream: TStream);
+
+ Function ReadBool: Boolean;
+ Begin
+  AStream.Read(Result, SizeOf(Boolean));
+ End;
+
+ Function ReadInt: Integer;
+ Begin
+  AStream.Read(Result, SizeOf(Integer));
+ End;
+
+ Function ReadString: String;
+ Begin
+  SetLength(Result, ReadInt);
+  AStream.Read(Pointer(Result)^, Length(Result) * SizeOf(Char));
+ End;
+
+Var
+ a, b, len, ftype, fsize: Integer;
+ fname: String;
+ buf: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
+ ms: TMemoryStream;
+Begin
+ Self.CheckInactive;
+
+ Self.FieldDefs.Clear;
+
+ Self.DisableControls;
+ Try
+   // Recreate FieldDefs
+   len := ReadInt;
+   For a := 0 To len - 1 Do
+   Begin
+     fname := ReadString;
+     ftype := ReadInt;
+     fsize := ReadInt;
+     Self.FieldDefs.Add(fname, TFieldType(ftype), fsize, ReadBool);
+   End;
+
+   // Activate the MemTable so we can write the data back
+   Self.Open;
+
+   // Now read each field of each record, one by one
+   len := ReadInt;
+   For a := 0 To len - 1 Do
+   Begin
+     Self.Append;
+
+     For b := 0 To Self.FieldCount - 1 Do
+     Begin
+       If Self.Fields[b] Is TBlobField Then
+       Begin
+         ms := TMemoryStream.Create;
+         Try
+           ms.CopyFrom(AStream, ReadInt);
+           ms.Position := 0;
+           (Self.Fields[b] As TBlobField).LoadFromStream(ms);
+         Finally
+           FreeAndNil(ms);
+         End;
+       End
+       Else
+       Begin
+         {$IFDEF WITH_TVALUEBUFFER}
+         SetLength(buf, ReadInt);
+         AStream.Read(buf[0], Length(buf));
+         Self.Fields[b].SetData(buf);
+         {$ELSE}
+         fsize := ReadInt;
+         GetMem(buf, fsize);
+         Try
+           AStream.Read(buf^, fsize);
+           Self.Fields[b].SetData(buf);
+         Finally
+           FreeMem(buf);
+         End;
+         {$ENDIF}
+       End;
+     End;
+
+     Self.Post;
+   End;
+
+   Self.First;
+ Finally
+   Self.EnableControls;
+ End;
+End;
+{$ENDIF}
+
 function TZAbstractMemTable.PSIsSQLBased: Boolean;
 begin
   Result := False;
@@ -518,6 +728,224 @@ begin
 
   Result := FClientVariantManager;
 end;
+
+{$IFDEF ZMEMTABLE_ENABLE_STREAM_EXPORT_IMPORT}
+Procedure TZAbstractMemTable.SaveToStream(AStream: TStream);
+
+ Procedure WriteBool(Const ABoolean: Boolean);
+ {$IFDEF FPC}
+ Type
+  PBoolean = ^Boolean;
+ {$ENDIF}
+ Var
+  tb: Array Of Byte;
+ Begin
+  SetLength(tb, SizeOf(Boolean));
+  PBoolean(@tb[0])^ := ABoolean;
+
+  AStream.Write(tb[0], Length(tb));
+ End;
+
+ Procedure WriteInt(Const ANumber: Integer);
+ Var
+  tb: Array Of Byte;
+ Begin
+  SetLength(tb, SizeOf(Integer));
+  PInteger(@tb[0])^ := ANumber;
+
+  AStream.Write(tb[0], Length(tb));
+ End;
+
+ Procedure WriteString(Const AText: String);
+ Var
+  a: Integer;
+ Begin
+  WriteInt(Length(AText));
+
+  For a := 1 To Length(AText) Do
+   AStream.WriteData(AText[a]);
+ End;
+
+Var
+ bm: TBookMark;
+ a{$IFDEF WITH_TVALUEBUFFER}, b{$ENDIF}: Integer;
+ buf: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
+ ms: TMemoryStream;
+Begin
+ Self.CheckActive;
+
+ bm := Self.GetBookmark;
+ Try
+   Self.DisableControls;
+   Try
+     // Write all FieldDefs
+     WriteInt(Self.FieldDefs.Count);
+     For a := 0 To Self.FieldDefs.Count - 1 Do
+     Begin
+       WriteString(Self.FieldDefs[a].Name);
+       WriteInt(Integer(Self.FieldDefs[a].DataType));
+       WriteInt(Self.FieldDefs[a].Size);
+       WriteBool(Self.FieldDefs[a].Required);
+     End;
+
+     // Write the number of records the MemTable holds
+     WriteInt(Self.RecordCount);
+
+     // Write each field of each record, one by one
+     Self.First;
+     While Not Self.Eof Do
+     Begin
+       For a := 0 To Self.FieldCount - 1 Do
+       Begin
+         If Self.Fields[a] Is TBlobField Then
+         Begin
+           ms := TMemoryStream.Create;
+           Try
+             (Self.Fields[a] As TBlobField).SaveToStream(ms);
+             ms.Position := 0;
+             WriteInt(ms.Size);
+             AStream.CopyFrom(ms);
+           Finally
+             FreeAndNil(ms);
+           End;
+         End
+         Else
+         Begin
+           {$IFDEF WITH_TVALUEBUFFER}
+           SetLength(buf, Self.Fields[a].DataSize);
+           Self.Fields[a].GetData(buf);
+//           If buf[High(buf)] = 0 Then
+//             For b := High(buf) - 1 DownTo Low(buf) Do
+//               If buf[b] <> 0 Then
+//               Begin
+//                 SetLength(buf, b + 1);
+//                 Break;
+//               End;
+           WriteInt(Length(buf));
+           AStream.Write(buf, Length(buf));
+           {$ELSE}
+           GetMem(buf, Self.Fields[a].DataSize);
+           Try
+             Self.Fields[a].GetData(buf);
+             WriteInt(Self.Fields[a].DataSize);
+             AStream.Write(buf, Length(buf));
+           Finally
+             FreeMem(buf);
+           End;
+           {$ENDIF}
+         End;
+       End;
+
+       Self.Next;
+     End;
+   Finally
+     Self.EnableControls;
+   End;
+ Finally
+   Self.GotoBookmark(bm);
+ End;
+End;
+{$ENDIF ZMEMTABLE_ENABLE_STREAM_EXPORT_IMPORT}
+
+{$IFDEF ZMEMTABLE_ENABLE_STREAM_EXPORT_IMPORT}
+Procedure TZAbstractMemTable.SaveToStream(AStream: TStream);
+
+ Procedure WriteBool(Const ABoolean: Boolean);
+ Begin
+  AStream.Write(ABoolean, SizeOf(Boolean));
+ End;
+
+ Procedure WriteInt(Const ANumber: Integer);
+ Begin
+  AStream.Write(ANumber, SizeOf(Integer));
+ End;
+
+ Procedure WriteString(Const AText: String);
+ Begin
+  WriteInt(Length(AText));
+  AStream.Write(Pointer(AText)^, Length(AText) * SizeOf(Char));
+ End;
+
+Var
+ bm: TBookMark;
+ a: Integer;
+ buf: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
+ ms: TMemoryStream;
+Begin
+ Self.CheckActive;
+
+ bm := Self.GetBookmark;
+ Try
+   Self.DisableControls;
+   Try
+     // Write all FieldDefs
+     WriteInt(Self.FieldDefs.Count);
+     For a := 0 To Self.FieldDefs.Count - 1 Do
+     Begin
+       WriteString(Self.FieldDefs[a].Name);
+       WriteInt(Integer(Self.FieldDefs[a].DataType));
+       WriteInt(Self.FieldDefs[a].Size);
+       WriteBool(Self.FieldDefs[a].Required);
+     End;
+
+     // Write the number of records the MemTable holds
+     WriteInt(Self.RecordCount);
+
+     // Write each field of each record, one by one
+     Self.First;
+     While Not Self.Eof Do
+     Begin
+       For a := 0 To Self.FieldCount - 1 Do
+       Begin
+         If Self.Fields[a] Is TBlobField Then
+         Begin
+           ms := TMemoryStream.Create;
+           Try
+             (Self.Fields[a] As TBlobField).SaveToStream(ms);
+             ms.Position := 0;
+             WriteInt(ms.Size);
+             AStream.CopyFrom(ms, ms.Size);
+           Finally
+             FreeAndNil(ms);
+           End;
+         End
+         Else
+         Begin
+           {$IFDEF WITH_TVALUEBUFFER}
+           SetLength(buf, Self.Fields[a].DataSize);
+           Self.Fields[a].GetData(buf);
+//           If buf[High(buf)] = 0 Then
+//             For b := High(buf) - 1 DownTo Low(buf) Do
+//               If buf[b] <> 0 Then
+//               Begin
+//                 SetLength(buf, b + 1);
+//                 Break;
+//               End;
+           WriteInt(Length(buf));
+           AStream.Write(buf, Length(buf));
+           {$ELSE}
+           GetMem(buf, Self.Fields[a].DataSize);
+           Try
+             Self.Fields[a].GetData(buf);
+             WriteInt(Self.Fields[a].DataSize);
+             AStream.Write(buf^, Self.Fields[a].DataSize);
+           Finally
+             FreeMem(buf);
+           End;
+           {$ENDIF}
+         End;
+       End;
+
+       Self.Next;
+     End;
+   Finally
+     Self.EnableControls;
+   End;
+ Finally
+   Self.GotoBookmark(bm);
+ End;
+End;
+{$ENDIF}
 
 procedure TZAbstractMemTable.SetConnection(Value: TZAbstractConnection);
 begin

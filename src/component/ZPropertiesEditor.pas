@@ -3874,7 +3874,7 @@ const
     Protocols: (Count: 2; Items: @cASAProtocols);
   );
   ZProp_Idle : TZProperty = (
-    Name: ConnProps_Host;
+    Name: ConnProps_Idle;
     Purpose: 'Specifies a connection''s idle timeout period.'+LineEnding+
       'Idle=timeout-value'+LineEnding+
       'The connection''s idle timeout period, in minutes. The minimum value '+
