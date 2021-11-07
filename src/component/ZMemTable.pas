@@ -768,7 +768,7 @@ Procedure TZAbstractMemTable.SaveToStream(AStream: TStream);
 
 Var
  bm: TBookMark;
- a{{$IFDEF WITH_TVALUEBUFFER}{, b{$ENDIF}: Integer;
+ a{$IFDEF WITH_TVALUEBUFFER}, b{$ENDIF}: Integer;
  buf: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
  ms: TMemoryStream;
 Begin
