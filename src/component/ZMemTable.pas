@@ -561,7 +561,11 @@ Begin
        Begin
          ms := TMemoryStream.Create;
          Try
-           ms.CopyFrom(AStream, ReadInt);
+           fsize := ReadInt;
+
+           If fsize = 0 Then Continue;
+
+           ms.CopyFrom(AStream, fsize);
            ms.Position := 0;
            (Self.Fields[b] As TBlobField).LoadFromStream(ms);
          Finally
@@ -571,11 +575,18 @@ Begin
        Else
        Begin
          {$IFDEF WITH_TVALUEBUFFER}
-         SetLength(buf, ReadInt);
-         AStream.Read(buf[0], Length(buf));
+         fsize := ReadInt;
+
+         If fsize = 0 Then Continue;
+
+         SetLength(buf, fsize);
+         AStream.Read(buf[0], fsize);
          Self.Fields[b].SetData(buf);
          {$ELSE}
          fsize := ReadInt;
+
+         If fsize = 0 Then Continue;
+
          GetMem(buf, fsize);
          Try
            AStream.Read(buf^, fsize);
