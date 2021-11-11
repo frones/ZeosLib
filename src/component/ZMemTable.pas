@@ -581,6 +581,10 @@ Begin
 
          SetLength(buf, fsize);
          AStream.Read(buf[0], fsize);
+
+         If fsize <> Self.Fields[b].DataSize Then
+           SetLength(buf, Self.Fields[b].DataSize);
+
          Self.Fields[b].SetData(buf);
          {$ELSE}
          fsize := ReadInt;
@@ -647,7 +651,7 @@ Procedure TZAbstractMemTable.SaveToStream(AStream: TStream);
 
 Var
  bm: TBookMark;
- a: Integer;
+ a, b: Integer;
  buf: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
  ms: TMemoryStream;
 Begin
@@ -693,13 +697,15 @@ Begin
            {$IFDEF WITH_TVALUEBUFFER}
            SetLength(buf, Self.Fields[a].DataSize);
            Self.Fields[a].GetData(buf);
-//           If buf[High(buf)] = 0 Then
-//             For b := High(buf) - 1 DownTo Low(buf) Do
-//               If buf[b] <> 0 Then
-//               Begin
-//                 SetLength(buf, b + 1);
-//                 Break;
-//               End;
+
+           If buf[High(buf)] = 0 Then
+             For b := High(buf) - 1 DownTo Low(buf) Do
+               If buf[b] <> 0 Then
+               Begin
+                 SetLength(buf, b + 1);
+                 Break;
+               End;
+
            WriteInt(Length(buf));
            AStream.Write(buf, Length(buf));
            {$ELSE}
