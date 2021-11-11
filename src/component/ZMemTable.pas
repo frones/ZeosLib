@@ -540,6 +540,7 @@ Begin
    len := ReadInt;
    For a := 0 To len - 1 Do
    Begin
+     // These local variables are needed to make sure that data is read out from the stream in proper order
      fname := ReadString;
      ftype := ReadInt;
      fsize := ReadInt;
@@ -557,14 +558,17 @@ Begin
 
      For b := 0 To Self.FieldCount - 1 Do
      Begin
+       fsize := ReadInt;
+
+       // Size is zero if the field was null. Even with full null values, SetData will actually set .IsNull to false.
+       // To preserve .IsNull, don't touch the field at all!
+       If fsize = 0 Then Continue
+         Else
+       // Unfortunately TBlobFields require separate saving / loading as GetData / SetData doesn't seem to be supported by Zeos.
        If Self.Fields[b] Is TBlobField Then
        Begin
          ms := TMemoryStream.Create;
          Try
-           fsize := ReadInt;
-
-           If fsize = 0 Then Continue;
-
            ms.CopyFrom(AStream, fsize);
            ms.Position := 0;
            (Self.Fields[b] As TBlobField).LoadFromStream(ms);
@@ -575,25 +579,29 @@ Begin
        Else
        Begin
          {$IFDEF WITH_TVALUEBUFFER}
-         fsize := ReadInt;
+         // Due to "compression" the data written to the stream might be less than it should be. If this is the case,
+         // initialize the buffer to our final data size to spare a slow SetLength operation.
 
-         If fsize = 0 Then Continue;
+         // ToDo: In theory data written in the stream must never be larger than the field's DataSize. As this shows
+         // a clear sign of corruption, throwing an exception might be a good idea...?
+         If fsize < Self.Fields[b].DataSize Then
+           SetLength(buf, Self.Fields[b].DataSize)
+         Else
+           SetLength(buf, fsize);
+         AStream.Read(buf, fsize);
 
-         SetLength(buf, fsize);
-         AStream.Read(buf[0], fsize);
-
-         If fsize <> Self.Fields[b].DataSize Then
-           SetLength(buf, Self.Fields[b].DataSize);
+         // If less data was read from the stream we must make sure to zero out the rest to avoid value corruption!
+         If fsize < Self.Fields[b].DataSize Then
+           FillChar(buf[fsize], Length(buf) - fsize, #0);
 
          Self.Fields[b].SetData(buf);
          {$ELSE}
-         fsize := ReadInt;
-
-         If fsize = 0 Then Continue;
-
          GetMem(buf, fsize);
          Try
            AStream.Read(buf^, fsize);
+
+           // ToDo: Someone with some pointer magic knowledge to implement "decompression" for older Delphis
+
            Self.Fields[b].SetData(buf);
          Finally
            FreeMem(buf);
@@ -651,7 +659,7 @@ Procedure TZAbstractMemTable.SaveToStream(AStream: TStream);
 
 Var
  bm: TBookMark;
- a, b: Integer;
+ a, b, fsize: Integer;
  buf: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
  ms: TMemoryStream;
 Begin
@@ -680,6 +688,12 @@ Begin
      Begin
        For a := 0 To Self.FieldCount - 1 Do
        Begin
+         // If the field is null, save no data to the stream, only the zero length. As loading skips setting the data of zero-length
+         // data, Field.IsNull will be properly preserved.
+         If Self.Fields[a].IsNull Then
+           WriteInt(0)
+         Else
+         // Unfortunately TBlobFields require separate saving / loading as GetData / SetData doesn't seem to be supported by Zeos.
          If Self.Fields[a] Is TBlobField Then
          Begin
            ms := TMemoryStream.Create;
@@ -698,20 +712,34 @@ Begin
            SetLength(buf, Self.Fields[a].DataSize);
            Self.Fields[a].GetData(buf);
 
+           fsize := Length(buf);
+
+           // Attempt compression - simply cut down all trailing zeroes to make the output stream smaller
            If buf[High(buf)] = 0 Then
+           Begin
              For b := High(buf) - 1 DownTo Low(buf) Do
                If buf[b] <> 0 Then
                Begin
-                 SetLength(buf, b + 1);
+                 fsize := b + 1;
                  Break;
                End;
 
-           WriteInt(Length(buf));
-           AStream.Write(buf, Length(buf));
+             // The field is NOT NULL, leave 1 null-byte as data so the loading will actually
+             // modify the field value. This is needed to properly preserve Field.IsNull
+             // property!
+             If b = -1 Then
+               fsize := 1;
+           End;
+
+           WriteInt(fsize);
+           AStream.Write(buf, fsize);
            {$ELSE}
            GetMem(buf, Self.Fields[a].DataSize);
            Try
              Self.Fields[a].GetData(buf);
+
+             // ToDo: Someone with some pointer magic knowledge to implement "compression" for older Delphis
+
              WriteInt(Self.Fields[a].DataSize);
              AStream.Write(buf^, Self.Fields[a].DataSize);
            Finally
