@@ -529,6 +529,7 @@ Var
  fname: String;
  buf: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
  ms: TMemoryStream;
+ field: TField;
 Begin
  Self.CheckInactive;
 
@@ -558,6 +559,9 @@ Begin
 
      For b := 0 To Self.FieldCount - 1 Do
      Begin
+       // Use a local variable to spare the getter calls
+       field := Self.Fields[b];
+
        fsize := ReadInt;
 
        // Size is zero if the field was null. Even with full null values, SetData will actually set .IsNull to false.
@@ -565,13 +569,13 @@ Begin
        If fsize = 0 Then Continue
          Else
        // Unfortunately TBlobFields require separate saving / loading as GetData / SetData doesn't seem to be supported by Zeos.
-       If Self.Fields[b] Is TBlobField Then
+       If field Is TBlobField Then
        Begin
          ms := TMemoryStream.Create;
          Try
            ms.CopyFrom(AStream, fsize);
            ms.Position := 0;
-           (Self.Fields[b] As TBlobField).LoadFromStream(ms);
+           (field As TBlobField).LoadFromStream(ms);
          Finally
            FreeAndNil(ms);
          End;
@@ -584,17 +588,17 @@ Begin
 
          // ToDo: In theory data written in the stream must never be larger than the field's DataSize. As this shows
          // a clear sign of corruption, throwing an exception might be a good idea...?
-         If fsize < Self.Fields[b].DataSize Then
-           SetLength(buf, Self.Fields[b].DataSize)
+         If fsize < field.DataSize Then
+           SetLength(buf, field.DataSize)
          Else
            SetLength(buf, fsize);
          AStream.Read(buf, fsize);
 
          // If less data was read from the stream we must make sure to zero out the rest to avoid value corruption!
-         If fsize < Self.Fields[b].DataSize Then
+         If fsize < field.DataSize Then
            FillChar(buf[fsize], Length(buf) - fsize, #0);
 
-         Self.Fields[b].SetData(buf);
+         field.SetData(buf);
          {$ELSE}
          GetMem(buf, fsize);
          Try
@@ -602,7 +606,7 @@ Begin
 
            // ToDo: Someone with some pointer magic knowledge to implement "decompression" for older Delphis
 
-           Self.Fields[b].SetData(buf);
+           field.SetData(buf);
          Finally
            FreeMem(buf);
          End;
@@ -662,6 +666,8 @@ Var
  a, b, fsize: Integer;
  buf: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
  ms: TMemoryStream;
+ fdef: TFieldDef;
+ field: TField;
 Begin
  Self.CheckActive;
 
@@ -673,10 +679,13 @@ Begin
      WriteInt(Self.FieldDefs.Count);
      For a := 0 To Self.FieldDefs.Count - 1 Do
      Begin
-       WriteString(Self.FieldDefs[a].Name);
-       WriteInt(Integer(Self.FieldDefs[a].DataType));
-       WriteInt(Self.FieldDefs[a].Size);
-       WriteBool(Self.FieldDefs[a].Required);
+       // Use a local variable to spare the getter calls
+       fdef := Self.FieldDefs[a];
+
+       WriteString(fdef.Name);
+       WriteInt(Integer(fdef.DataType));
+       WriteInt(fdef.Size);
+       WriteBool(fdef.Required);
      End;
 
      // Write the number of records the MemTable holds
@@ -688,17 +697,20 @@ Begin
      Begin
        For a := 0 To Self.FieldCount - 1 Do
        Begin
+         // Use a local variable to spare the getter calls
+         field := Self.Fields[a];
+
          // If the field is null, save no data to the stream, only the zero length. As loading skips setting the data of zero-length
          // data, Field.IsNull will be properly preserved.
-         If Self.Fields[a].IsNull Then
+         If field.IsNull Then
            WriteInt(0)
          Else
          // Unfortunately TBlobFields require separate saving / loading as GetData / SetData doesn't seem to be supported by Zeos.
-         If Self.Fields[a] Is TBlobField Then
+         If field Is TBlobField Then
          Begin
            ms := TMemoryStream.Create;
            Try
-             (Self.Fields[a] As TBlobField).SaveToStream(ms);
+             (field As TBlobField).SaveToStream(ms);
              ms.Position := 0;
              WriteInt(ms.Size);
              AStream.CopyFrom(ms, ms.Size);
@@ -709,8 +721,8 @@ Begin
          Else
          Begin
            {$IFDEF WITH_TVALUEBUFFER}
-           SetLength(buf, Self.Fields[a].DataSize);
-           Self.Fields[a].GetData(buf);
+           SetLength(buf, field.DataSize);
+           field.GetData(buf);
 
            fsize := Length(buf);
 
@@ -734,14 +746,14 @@ Begin
            WriteInt(fsize);
            AStream.Write(buf, fsize);
            {$ELSE}
-           GetMem(buf, Self.Fields[a].DataSize);
+           GetMem(buf, field.DataSize);
            Try
-             Self.Fields[a].GetData(buf);
+             field.GetData(buf);
 
              // ToDo: Someone with some pointer magic knowledge to implement "compression" for older Delphis
 
-             WriteInt(Self.Fields[a].DataSize);
-             AStream.Write(buf^, Self.Fields[a].DataSize);
+             WriteInt(field.DataSize);
+             AStream.Write(buf^, field.DataSize);
            Finally
              FreeMem(buf);
            End;
