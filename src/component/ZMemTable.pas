@@ -518,17 +518,21 @@ Procedure TZAbstractMemTable.LoadFromStream(AStream: TStream);
   AStream.Read(Result, SizeOf(Integer));
  End;
 
- Function ReadString: String;
+ Function ReadString(Const inSize: Integer = -1): String;
  Begin
-  SetLength(Result, ReadInt);
+  If inSize = -1 Then
+    SetLength(Result, ReadInt)
+  Else
+    SetLength(Result, inSize);
   AStream.Read(Pointer(Result)^, Length(Result) * SizeOf(Char));
  End;
 
 Var
- a, b, len, ftype, fsize: Integer;
+ a, b, len, ftype, fsize{$IFDEF WITH_TVALUEBUFFER}, desiredlen{$ENDIF}: Integer;
  fname: String;
  buf: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
  ms: TMemoryStream;
+ field: TField;
 Begin
  Self.CheckInactive;
 
@@ -558,55 +562,67 @@ Begin
 
      For b := 0 To Self.FieldCount - 1 Do
      Begin
+       // Use a local variable to spare the getter calls
+       field := Self.Fields[b];
+
        fsize := ReadInt;
 
        // Size is zero if the field was null. Even with full null values, SetData will actually set .IsNull to false.
        // To preserve .IsNull, don't touch the field at all!
        If fsize = 0 Then Continue
          Else
-       // Unfortunately TBlobFields require separate saving / loading as GetData / SetData doesn't seem to be supported by Zeos.
-       If Self.Fields[b] Is TBlobField Then
-       Begin
-         ms := TMemoryStream.Create;
-         Try
-           ms.CopyFrom(AStream, fsize);
-           ms.Position := 0;
-           (Self.Fields[b] As TBlobField).LoadFromStream(ms);
-         Finally
-           FreeAndNil(ms);
-         End;
-       End
-       Else
-       Begin
-         {$IFDEF WITH_TVALUEBUFFER}
-         // Due to "compression" the data written to the stream might be less than it should be. If this is the case,
-         // initialize the buffer to our final data size to spare a slow SetLength operation.
-
-         // ToDo: In theory data written in the stream must never be larger than the field's DataSize. As this shows
-         // a clear sign of corruption, throwing an exception might be a good idea...?
-         If fsize < Self.Fields[b].DataSize Then
-           SetLength(buf, Self.Fields[b].DataSize)
+       Case field.DataType Of
+         ftMemo{$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}: field.AsString := ReadString(fsize);
+         ftBlob:
+           Begin
+             ms := TMemoryStream.Create;
+             Try
+               ms.CopyFrom(AStream, fsize);
+               ms.Position := 0;
+               (field As TBlobField).LoadFromStream(ms);
+             Finally
+               FreeAndNil(ms);
+             End;
+           End;
          Else
-           SetLength(buf, fsize);
-         AStream.Read(buf, fsize);
+           Begin
+             {$IFDEF WITH_TVALUEBUFFER}
+             // Due to "compression" the data written to the stream might be less than it should be. If this is the case,
+             // initialize the buffer to our final data size to spare a slow SetLength operation.
 
-         // If less data was read from the stream we must make sure to zero out the rest to avoid value corruption!
-         If fsize < Self.Fields[b].DataSize Then
-           FillChar(buf[fsize], Length(buf) - fsize, #0);
+             // Bugfix: TZAbstractRODataSet.GetData handles buffer as PDateTime in most of the cases. As SizeOf(Double) = 8 and
+             // SizeOf(Integer) = 4, it's better to reserve more to avoid memory and / or data corruption
+             If (field Is TDateField) Or (field Is TTimeField) Then
+               desiredlen := SizeOf(TDateTime)
+             Else
+               desiredlen := field.DataSize;
 
-         Self.Fields[b].SetData(buf);
-         {$ELSE}
-         GetMem(buf, fsize);
-         Try
-           AStream.Read(buf^, fsize);
+             // ToDo: In theory data written in the stream must never be larger than the field's DataSize. As this shows
+             // a clear sign of corruption, throwing an exception might be a good idea...?
+             If fsize < desiredlen Then
+               SetLength(buf, desiredlen)
+             Else
+               SetLength(buf, fsize);
+             AStream.Read(buf, Length(buf));
 
-           // ToDo: Someone with some pointer magic knowledge to implement "decompression" for older Delphis
+             // If less data was read from the stream we must make sure to zero out the rest to avoid value corruption!
+             If fsize < desiredlen Then
+               FillChar(buf[fsize], Length(buf) - fsize, #0);
 
-           Self.Fields[b].SetData(buf);
-         Finally
-           FreeMem(buf);
-         End;
-         {$ENDIF}
+             field.SetData(buf);
+             {$ELSE}
+             GetMem(buf, fsize);
+             Try
+               AStream.Read(buf^, fsize);
+
+               // ToDo: Someone with some pointer magic knowledge to implement "decompression" for older Delphis
+
+               field.SetData(buf);
+             Finally
+               FreeMem(buf);
+             End;
+             {$ENDIF}
+           End;
        End;
      End;
 
@@ -659,9 +675,11 @@ Procedure TZAbstractMemTable.SaveToStream(AStream: TStream);
 
 Var
  bm: TBookMark;
- a, b, fsize: Integer;
+ a{$IFDEF WITH_TVALUEBUFFER}, b{$ENDIF}, fsize: Integer;
  buf: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
  ms: TMemoryStream;
+ fdef: TFieldDef;
+ field: TField;
 Begin
  Self.CheckActive;
 
@@ -673,10 +691,13 @@ Begin
      WriteInt(Self.FieldDefs.Count);
      For a := 0 To Self.FieldDefs.Count - 1 Do
      Begin
-       WriteString(Self.FieldDefs[a].Name);
-       WriteInt(Integer(Self.FieldDefs[a].DataType));
-       WriteInt(Self.FieldDefs[a].Size);
-       WriteBool(Self.FieldDefs[a].Required);
+       // Use a local variable to spare the getter calls
+       fdef := Self.FieldDefs[a];
+
+       WriteString(fdef.Name);
+       WriteInt(Integer(fdef.DataType));
+       WriteInt(fdef.Size);
+       WriteBool(fdef.Required);
      End;
 
      // Write the number of records the MemTable holds
@@ -688,64 +709,82 @@ Begin
      Begin
        For a := 0 To Self.FieldCount - 1 Do
        Begin
+         // Use a local variable to spare the getter calls
+         field := Self.Fields[a];
+
          // If the field is null, save no data to the stream, only the zero length. As loading skips setting the data of zero-length
          // data, Field.IsNull will be properly preserved.
-         If Self.Fields[a].IsNull Then
+         If field.IsNull Then
            WriteInt(0)
          Else
-         // Unfortunately TBlobFields require separate saving / loading as GetData / SetData doesn't seem to be supported by Zeos.
-         If Self.Fields[a] Is TBlobField Then
-         Begin
-           ms := TMemoryStream.Create;
-           Try
-             (Self.Fields[a] As TBlobField).SaveToStream(ms);
-             ms.Position := 0;
-             WriteInt(ms.Size);
-             AStream.CopyFrom(ms, ms.Size);
-           Finally
-             FreeAndNil(ms);
-           End;
-         End
-         Else
-         Begin
-           {$IFDEF WITH_TVALUEBUFFER}
-           SetLength(buf, Self.Fields[a].DataSize);
-           Self.Fields[a].GetData(buf);
+         Case field.DataType Of
+           ftMemo {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}: WriteString(field.AsString);
+           ftBlob:
+             Begin
+               ms := TMemoryStream.Create;
+               Try
+                (field As TBlobField).SaveToStream(ms);
+                ms.Position := 0;
+                WriteInt(ms.Size);
+                AStream.CopyFrom(ms, ms.Size);
+              Finally
+                FreeAndNil(ms);
+              End;
+             End;
+           Else
+             Begin
+               {$IFDEF WITH_TVALUEBUFFER}
+               // Bugfix: TZAbstractRODataSet.GetData handles buffer as PDateTime in most of the cases. As SizeOf(Double) = 8 and
+               // SizeOf(Integer) = 4, it's better to reserve more to avoid memory and / or data corruption
+               If (field Is TDateField) Or (field Is TTimeField) Then
+                 SetLength(buf, SizeOf(TDateTime))
+               Else
+                 SetLength(buf, field.DataSize);
 
-           fsize := Length(buf);
+               field.GetData(buf);
 
-           // Attempt compression - simply cut down all trailing zeroes to make the output stream smaller
-           If buf[High(buf)] = 0 Then
-           Begin
-             For b := High(buf) - 1 DownTo Low(buf) Do
-               If buf[b] <> 0 Then
+               fsize := Length(buf);
+
+               // Attempt compression - simply cut down all trailing zeroes to make the output stream smaller
+               If buf[High(buf)] = 0 Then
                Begin
-                 fsize := b + 1;
-                 Break;
+                 For b := High(buf) - 1 DownTo Low(buf) Do
+                   If buf[b] <> 0 Then
+                   Begin
+                     fsize := b + 1;
+                     Break;
+                   End;
+
+                 // The field is NOT NULL, leave 1 null-byte as data so the loading will actually
+                 // modify the field value. This is needed to properly preserve Field.IsNull
+                 // property!
+                 If b = -1 Then
+                   fsize := 1;
                End;
 
-             // The field is NOT NULL, leave 1 null-byte as data so the loading will actually
-             // modify the field value. This is needed to properly preserve Field.IsNull
-             // property!
-             If b = -1 Then
-               fsize := 1;
-           End;
+               WriteInt(fsize);
+               AStream.Write(buf, fsize);
+               {$ELSE}
+               // Bugfix: TZAbstractRODataSet.GetData handles buffer as PDateTime in most of the cases. As SizeOf(Double) = 8 and
+               // SizeOf(Integer) = 4, it's better to reserve more to avoid memory and / or data corruption
+               If (field Is TDateField) Or (field Is TTimeField) Then
+                 fsize := SizeOf(TDateTime)
+               Else
+                 fsize := field.DataSize;
 
-           WriteInt(fsize);
-           AStream.Write(buf, fsize);
-           {$ELSE}
-           GetMem(buf, Self.Fields[a].DataSize);
-           Try
-             Self.Fields[a].GetData(buf);
+               GetMem(buf, fsize);
+               Try
+                 field.GetData(buf);
 
-             // ToDo: Someone with some pointer magic knowledge to implement "compression" for older Delphis
+                 // ToDo: Someone with some pointer magic knowledge to implement "compression" for older Delphis
 
-             WriteInt(Self.Fields[a].DataSize);
-             AStream.Write(buf^, Self.Fields[a].DataSize);
-           Finally
-             FreeMem(buf);
-           End;
-           {$ENDIF}
+                 WriteInt(fsize);
+                 AStream.Write(buf^, fsize);
+               Finally
+                 FreeMem(buf);
+               End;
+               {$ENDIF}
+             End;
          End;
        End;
 
