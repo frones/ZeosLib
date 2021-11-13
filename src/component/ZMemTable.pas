@@ -528,7 +528,7 @@ Procedure TZAbstractMemTable.LoadFromStream(AStream: TStream);
  End;
 
 Var
- a, b, len, ftype, fsize: Integer;
+ a, b, len, ftype, fsize{$IFDEF WITH_TVALUEBUFFER}, desiredlen{$ENDIF}: Integer;
  fname: String;
  buf: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
  ms: TMemoryStream;
@@ -590,16 +590,23 @@ Begin
              // Due to "compression" the data written to the stream might be less than it should be. If this is the case,
              // initialize the buffer to our final data size to spare a slow SetLength operation.
 
+             // Bugfix: TZAbstractRODataSet.GetData handles buffer as PDateTime in most of the cases. As SizeOf(Double) = 8 and
+             // SizeOf(Integer) = 4, it's better to reserve more to avoid memory and / or data corruption
+             If (field Is TDateField) Or (field Is TTimeField) Then
+               desiredlen := SizeOf(TDateTime)
+             Else
+               desiredlen := field.DataSize;
+
              // ToDo: In theory data written in the stream must never be larger than the field's DataSize. As this shows
              // a clear sign of corruption, throwing an exception might be a good idea...?
-             If fsize < field.DataSize Then
-               SetLength(buf, field.DataSize)
+             If fsize < desiredlen Then
+               SetLength(buf, desiredlen)
              Else
                SetLength(buf, fsize);
-             AStream.Read(buf, fsize);
+             AStream.Read(buf, Length(buf));
 
              // If less data was read from the stream we must make sure to zero out the rest to avoid value corruption!
-             If fsize < field.DataSize Then
+             If fsize < desiredlen Then
                FillChar(buf[fsize], Length(buf) - fsize, #0);
 
              field.SetData(buf);
