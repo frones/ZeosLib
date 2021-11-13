@@ -463,7 +463,7 @@ type
     Provider: TZServerProvider;
   end;
 const
-  KnownDriverName2TypeMap: array[0..12] of TDriverNameAndServerProvider = (
+  KnownDriverName2TypeMap: array[0..13] of TDriverNameAndServerProvider = (
     (ProviderNamePrefix: 'ORAOLEDB';      Provider: spOracle),
     (ProviderNamePrefix: 'MSDAORA';       Provider: spOracle),
     (ProviderNamePrefix: 'SQLNCLI';       Provider: spMSSQL),
@@ -477,7 +477,8 @@ const
     (ProviderNamePrefix: 'MICROSOFT.ACE'; Provider: spMSJet),
     (ProviderNamePrefix: 'IB';            Provider: spIB_FB),
     (ProviderNamePrefix: 'POSTGRESSQL';   Provider: spPostgreSQL),
-    (ProviderNamePrefix: 'CUBRID';        Provider: spCUBRID)
+    (ProviderNamePrefix: 'CUBRID';        Provider: spCUBRID),
+    (ProviderNamePrefix: 'MSOLEDBSQL';    Provider: spMSSQL)
     );
 var
   I: Integer;
