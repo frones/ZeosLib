@@ -653,6 +653,7 @@ type
     procedure DisplayFormatChanged;
     procedure CreateFormatSettings;
   protected
+    Function GetDataSize: Integer; Override;
     function GetIsNull: Boolean; override;
     function GetAsDateTime: TDateTime; override;
     function FilledValueWasNull(var Value: TZDate): Boolean;
@@ -731,6 +732,7 @@ type
     procedure DisplayFormatChanged;
     procedure CreateFormatSettings;
   protected
+    Function GetDataSize: Integer; Override;
     function GetIsNull: Boolean; override;
     function GetAsDateTime: TDateTime; override;
     function FilledValueWasNull(var Value: TZTime): Boolean;
@@ -7007,6 +7009,15 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
+function TZDateField.GetDataSize: Integer;
+begin
+ // This is a bit messed up. Native GetData buffer is returned as PDateTime, not native is
+ // PInteger. To make sure we avoid any possible memory corruption, always return the bigger
+ // buffer size.
+
+ Result := SizeOf(TDateTime);
+end;
+
 function TZDateField.GetDisplayFormatSettings: TZDisplayDateFormatSettings;
 begin
   if FDisplayDateFormatSettings = nil then
@@ -7218,6 +7229,15 @@ begin
   end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
+
+function TZTimeField.GetDataSize: Integer;
+begin
+ // This is a bit messed up. Native GetData buffer is returned as PDateTime, not native is
+ // PInteger. To make sure we avoid any possible memory corruption, always return the bigger
+ // buffer size.
+
+ Result := SizeOf(TDateTime);
+end;
 
 function TZTimeField.GetDisplayFormatSettings: TZDisplayTimeFormatSettings;
 begin
