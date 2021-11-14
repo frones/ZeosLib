@@ -603,7 +603,7 @@ Begin
                SetLength(buf, desiredlen)
              Else
                SetLength(buf, fsize);
-             AStream.Read(buf, Length(buf));
+             AStream.Read(buf, fsize);
 
              // If less data was read from the stream we must make sure to zero out the rest to avoid value corruption!
              If fsize < desiredlen Then
