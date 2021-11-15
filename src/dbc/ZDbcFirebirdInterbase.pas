@@ -5048,6 +5048,7 @@ begin
                       else PISC_INT64(sqldata)^ := Value*IBScaleDivisor[sqlscale];
       SQL_TEXT,
       SQL_VARYING   : begin
+                        (*
                         Digits := GetOrdinalDigits(Value, C, IsNegative);
                         if (Digits+Byte(IsNegative)) > sqllen then begin
                           PISC_VARYING(sqldata).strlen := sqllen;
@@ -5059,6 +5060,9 @@ begin
                           Inc(P);
                         end;
                         IntToRaw(C, P, Digits);
+                        *)
+                        // Changing this fixes an error. See SF##541
+                        SetString(Index, ZFastCode.IntToStr(Value));
                       end;
       else raise CreateConversionError(Index, stInteger);
     end;
@@ -5105,6 +5109,7 @@ begin
                       else PISC_INT64(sqldata)^ := Value*IBScaleDivisor[sqlscale];
       SQL_TEXT,
       SQL_VARYING   : begin
+                        (*
                         Digits := GetOrdinalDigits(Value, U, IsNegative);
                         if (Digits+Byte(IsNegative)) > sqllen then begin
                           PISC_VARYING(sqldata).strlen := sqllen;
@@ -5116,6 +5121,9 @@ begin
                           Inc(P);
                         end;
                         IntToRaw(U, P, Digits);
+                        *)
+                        // Changing this fixes an error. See SF##541
+                        SetString(Index, ZFastCode.IntToStr(Value));
                       end;
       else raise CreateConversionError(Index, stLong);
     end;
@@ -5324,6 +5332,7 @@ begin
                       else PISC_INT64(sqldata)^ := Value*IBScaleDivisor[sqlscale];
       SQL_TEXT,
       SQL_VARYING   : begin
+                        (*
                         Digits := GetOrdinalDigits(Value, W, IsNegative);
                         if (Digits+Byte(IsNegative)) > sqllen then begin
                           PISC_VARYING(sqldata).strlen := sqllen;
@@ -5335,6 +5344,9 @@ begin
                           Inc(P);
                         end;
                         IntToRaw(W, P, Digits);
+                        *)
+                        // Changing this fixes an error. See SF##541
+                        SetString(Index, ZFastCode.IntToStr(Value));
                       end;
       else raise CreateConversionError(Index, stSmall);
     end;
