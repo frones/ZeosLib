@@ -5183,14 +5183,14 @@ end;
 {$ENDIF}
 function TZRowAccessorLob.Clone(LobStreamMode: TZLobStreamMode): IZBlob;
 begin
-  raise EZSQLException.Create(SUnsupportedOperation);
+  raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZRowAccessorLob.SetCodePageTo(Value: Word);
 begin
   if FColumnCodePage <> Value then
-     raise EZSQLException.Create(SUnsupportedOperation);
+     raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 constructor TZRowAccessorLob.CreateWithDataAddess(DataAddress: Pointer;

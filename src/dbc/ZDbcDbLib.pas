@@ -1217,7 +1217,7 @@ begin
   //sql server and sybase do not support RO-Transaction or Sessions
   //all we have is a readonly database ...
   if Value then
-    raise EZSQLException.Create(SUnsupportedOperation);
+    raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "ReadInterbase6Number" marked as inline is not inlined}{$ENDIF}

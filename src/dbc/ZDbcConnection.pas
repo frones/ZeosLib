@@ -2206,7 +2206,7 @@ function TZAbstractSingleTxnConnection.GetConnectionTransaction: IZTransaction;
 begin
   {$IFDEF DEBUG}
   if fWeakTxnPtr = nil then
-    raise EZSQLException.Create(SUnsupportedOperation);
+    raise EZUnsupportedException.Create(SUnsupportedOperation);
   {$ENDIF}
   Result := IZTransaction(fWeakTxnPtr);
 end;
@@ -2251,7 +2251,7 @@ procedure TZAbstractSingleTxnConnection.ReleaseTransaction(
   const Value: IZTransaction);
 begin
   if Pointer(Value) = fWeakTxnPtr
-  then raise EZSQLException.Create(SUnsupportedOperation)
+  then raise EZUnsupportedException.Create(SUnsupportedOperation)
   else fTransactions.Delete(fTransactions.IndexOf(Value));
 end;
 

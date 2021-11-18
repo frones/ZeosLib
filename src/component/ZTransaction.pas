@@ -255,7 +255,7 @@ function TZAbstractTransaction.GetTransactionManager: IZTransactionManager;
 begin
   CheckConnected;
   if FConnection.DbcConnection.QueryInterface(IZTransactionManager, Result) <> S_OK then
-    raise EZDatabaseError.Create(SUnsupportedOperation);
+    raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 procedure TZAbstractTransaction.RegisterComponent(Value: TComponent);

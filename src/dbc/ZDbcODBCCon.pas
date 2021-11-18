@@ -1213,7 +1213,7 @@ var S: UnicodeString;
 begin
   S := cSavePointSyntaxW[fServerProvider][spqtSavePoint];
   if S = '' then
-    raise EZSQLException.Create(SUnsupportedOperation);
+    raise EZUnsupportedException.Create(SUnsupportedOperation);
   S := S+{$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(AName);
   ExecuteImmediat(S, lcTransaction);
   Result := FSavePoints.Add(AName)+2;
@@ -1466,7 +1466,7 @@ var S: RawByteString;
 begin
   S := cSavePointSyntaxA[fServerProvider][spqtSavePoint];
   if S = '' then
-    raise EZSQLException.Create(SUnsupportedOperation);
+    raise EZUnsupportedException.Create(SUnsupportedOperation);
   S := S+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(AName);
   ExecuteImmediat(S, lcTransaction);
   Result := FSavePoints.Add(AName)+2;

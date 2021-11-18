@@ -512,7 +512,7 @@ end;
 {$IFNDEF ZEOS73UP}
 function TZDbcProxyResultSet.InternalGetString(ColumnIndex: Integer): RawByteString;
 begin
-  RaiseUnsupportedException;
+  raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 {$ENDIF}
 
@@ -1396,11 +1396,6 @@ end;
 
 
 {$IFDEF ZEOS73UP}
-procedure RaiseUnsupportedException;
-begin
-  raise EZSQLException.Create(SUnsupportedOperation);
-end;
-
 function TZDbcProxyResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
 var
   ColType: TZSQLType;
@@ -1473,7 +1468,7 @@ begin
     stGUID:
       Result := StringToGUID(Val);
     else
-      RaiseUnsupportedException;
+      raise EZUnsupportedException.Create(SUnsupportedOperation);
   end;
 end;
 
@@ -1582,4 +1577,3 @@ end;
 
 {$ENDIF ENABLE_PROXY} //if set we have an empty unit
 end.
-

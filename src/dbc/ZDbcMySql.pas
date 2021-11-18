@@ -1026,7 +1026,7 @@ begin
   if Value <> ReadOnly then begin
     if not Closed then begin
       if not FSupportsReadOnly then
-        raise EZSQLException.Create(SUnsupportedOperation);
+        raise EZUnsupportedException.Create(SUnsupportedOperation);
       ExecuteImmediat(MySQLSessionTransactionReadOnly[ReadOnly], lcTransaction);
     end;
     ReadOnly := Value;
