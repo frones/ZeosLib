@@ -3287,7 +3287,7 @@ begin
                   AbstractOracleBlob := TZOracleClob.Create(FOracleConnection, FLobLocator, Fcharsetform, fcsid, FOpenLobStreams);
                   Result := TZOracleClob(AbstractOracleBlob);
                 end;
-    else raise EZSQLException.Create(SUnsupportedOperation);
+    else raise EZUnsupportedException.Create(SUnsupportedOperation);
   end;
   AbstractOracleBlob.CopyLocator;
   AbstractOracleBlob.FLobStreamMode := LobStreamMode;
@@ -3361,7 +3361,7 @@ begin
 
                   end;
 
-      else raise EZSQLException.Create(SUnsupportedOperation);
+      else raise EZUnsupportedException.Create(SUnsupportedOperation);
     end;
   Result := FlobStream;
 end;

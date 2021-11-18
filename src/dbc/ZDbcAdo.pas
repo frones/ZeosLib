@@ -480,7 +480,7 @@ begin
     end;
   end else begin
     if cSavePointSyntaxW[fServerProvider][spqtSavePoint] = '' then
-      raise EZSQLException.Create(SUnsupportedOperation);
+      raise EZUnsupportedException.Create(SUnsupportedOperation);
     S := 'SP'+{$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(NativeUint(Self))+'_'+{$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(FSavePoints.Count);
     {$IFDEF UNICODE}FLogMessage{$ELSE}LogMessage{$ENDIF} :=
       cSavePointSyntaxW[fServerProvider][spqtSavePoint]+{$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(S);

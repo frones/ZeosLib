@@ -599,7 +599,7 @@ begin
   end else begin
     S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count);
     if cSavePointSyntaxW[fServerProvider][spqtSavePoint] = '' then
-      raise EZSQLException.Create(SUnsupportedOperation);
+      raise EZUnsupportedException.Create(SUnsupportedOperation);
     ExecuteImmediat(cSavePointSyntaxW[fServerProvider][spqtSavePoint]+ {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(S), lcTransaction);
     Result := FSavePoints.Add(S)+2;
   end;

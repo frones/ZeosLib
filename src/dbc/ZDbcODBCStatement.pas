@@ -1263,7 +1263,7 @@ var ArrayLen, MaxL, I: Integer;
                                 then TmpLob.SetCodePageTo(zCP_UTF16)
                                 else TmpLob.SetCodePageTo(FClientCP)
                               else
-                                raise EZSQLException.Create(SUnsupportedOperation);
+                                raise EZUnsupportedException.Create(SUnsupportedOperation);
                             end;
                             ParamDataLobs[I] := TmpLob;
                           end else
@@ -3180,5 +3180,3 @@ DefaultPreparableTokens[5].MatchingGroup := 'SET';
 
 {$ENDIF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 end.
-
-
