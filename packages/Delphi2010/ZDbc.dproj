@@ -70,6 +70,7 @@
 			</DelphiCompile>
 			<DCCReference Include="ZParseSql.dcp"/>
 			<DCCReference Include="ZPlain.dcp"/>
+			<DCCReference Include="xmlrtl.dcp"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcAdo.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcAdoMetadata.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcAdoResultSet.pas"/>
@@ -80,6 +81,7 @@
 			<DCCReference Include="..\..\src\dbc\ZDbcASAResultSet.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcASAStatement.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcASAUtils.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcBeginnerStatement.pas"/>	
 			<DCCReference Include="..\..\src\dbc\ZDbcCache.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcCachedResultSet.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcConnection.pas"/>
