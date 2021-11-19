@@ -71,7 +71,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   ZSysUtils, ZDbcIntfs, ZClasses, ZDbcCachedResultSet, ZDbcCache,
   ZCompatibility, ZDbcResultSet, ZFastCode, ZDbcResultsetMetadata,
-  ZPlainODBCDriver, ZDbcODBCCon, ZDbcODBCUtils, ZDbcStatement;
+  ZPlainODBCDriver, ZDbcODBCCon, ZDbcODBCUtils, ZDbcStatement, ZExceptions;
 
 type
   /// <author>EgonHugeist</author>

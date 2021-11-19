@@ -58,7 +58,7 @@ uses
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF}, DateUtils, SysUtils,
   ZCompatibility, ZTokenizer, ZMessages, ZVariant,
   ZGenericSqlAnalyser, ZPlainDriver,
-  ZDbcConnection, ZDbcIntfs, ZDbcLogging;
+  ZDbcConnection, ZDbcIntfs, ZDbcLogging, ZExceptions;
 
 type
   TConnectionPool = class;
@@ -483,8 +483,8 @@ begin
     if FWait then
       Sleep(100)
     else
-      raise Exception.Create(ClassName + '.Acquire'+LineEnding+'Connection pool reached the maximum limit');
-            //2013-10-13 mse: please replace non ASCII characters (>127) by the 
+      raise EZSQLException.Create(ClassName + '.Acquire'+LineEnding+'Connection pool reached the maximum limit');
+            //2013-10-13 mse: please replace non ASCII characters (>127) by the
             //#nnn notation in order to have encoding independent sources
   until False;
 
@@ -518,7 +518,7 @@ begin
           FConnections[I] := nil;
         finally
           FCriticalSection.Leave;
-          raise Exception.Create(ClassName + '.Acquire'+LineEnding+'Error while trying to acquire a new connection'+LineEnding+LineEnding+E.Message);
+          raise EZSQLException.Create(ClassName + '.Acquire'+LineEnding+'Error while trying to acquire a new connection'+LineEnding+LineEnding+E.Message);
         end;
       end;
     end;
@@ -1053,7 +1053,7 @@ begin
   if Copy(URL, 1, 5 + Length(PooledPrefix)) = 'zdbc:' + PooledPrefix then
     Result := 'zdbc:' + Copy(URL, 5 + Length(PooledPrefix) + 1, Length(URL))
   else
-    raise Exception.Create('TZDbcPooledConnectionDriver.GetRealURL - URL must start with ''zdbc:' + PooledPrefix+ '''');
+    raise EZSQLException.Create('TZDbcPooledConnectionDriver.GetRealURL - URL must start with ''zdbc:' + PooledPrefix+ '''');
 end;
 
 var
@@ -1103,4 +1103,3 @@ finalization
 
 {$ENDIF ZEOS_DISABLE_POOLED} //if set we have an empty unit
 end.
-

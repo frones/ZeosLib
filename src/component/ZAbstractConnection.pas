@@ -117,7 +117,7 @@ uses
   SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
   ZClasses, ZCompatibility, ZSysUtils,
   ZDbcIntfs,
-  ZDatasetUtils, ZFormatSettings;
+  ZDatasetUtils, ZFormatSettings, ZExceptions;
 
 type
   /// <author>HA</author>
@@ -680,7 +680,7 @@ procedure TZAbstractConnection.SetAutoCommit(Value: Boolean);
 begin
   if FAutoCommit <> Value then begin
     if FExplicitTransactionCounter > 0 then
-      raise Exception.Create(SInvalidOperationInTrans);
+      raise EZSQLException.Create(SInvalidOperationInTrans);
     FAutoCommit := Value;
     if Value then
       FExplicitTransactionCounter := 0;
@@ -712,7 +712,7 @@ procedure TZAbstractConnection.SetReadOnly(Value: Boolean);
 begin
   if FReadOnly <> Value then begin
     if FExplicitTransactionCounter > 0 then
-      raise Exception.Create(SInvalidOperationInTrans);
+      raise EZSQLException.Create(SInvalidOperationInTrans);
     FReadOnly := Value;
     if FConnection <> nil then begin
       if not FConnection.IsClosed then ShowSQLHourGlass;
@@ -1771,4 +1771,3 @@ end;
 initialization
   SqlHourGlassLock := 0;
 end.
-

@@ -990,7 +990,7 @@ procedure HybridSortSha_0AA(List: PPointerList; Count: integer; Compare: TZListS
 procedure QuickSort(List: PPointerList; L, R: integer; Compare: TZListSortCompare);
 implementation
 
-uses ZMessages, ZFastCode
+uses ZMessages, ZFastCode, ZExceptions
   {$IFDEF WITH_UNITANSISTRINGS},AnsiStrings{$ENDIF}; //need for inlined FloatToText;
 
 {$IFDEF oldFPC}
@@ -1062,7 +1062,7 @@ end;
 
 function TZAbstractObject.Clone: IZInterface;
 begin
-  raise Exception.Create(SClonningIsNotSupported);
+  raise EZSQLException.Create(SClonningIsNotSupported);
   result := nil;
 end;
 

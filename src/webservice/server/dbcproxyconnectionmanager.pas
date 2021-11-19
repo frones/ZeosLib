@@ -79,6 +79,9 @@ type
 
 implementation
 
+uses
+  ZExceptions,
+
 constructor TDbcProxyConnectionManager.Create;
 begin
   inherited;
@@ -130,13 +133,13 @@ end;
 function TDbcProxyConnectionManager.LockConnection(ID: String): TDbcProxyConnection;
 begin
   Result := FindConnection(ID);
-  if Assigned(Result) then Result.Lock else raise Exception.Create('No connection with ID ' + ID + ' was found!');
+  if Assigned(Result) then Result.Lock else raise EZSQLException.Create('No connection with ID ' + ID + ' was found!');
 end;
 
 function TDbcProxyConnectionManager.LockConnection(Index: SizeInt): TDbcProxyConnection;
 begin
   Result := GetConnection(Index);
-  if Assigned(Result) then Result.Lock else raise Exception.Create('No connection with Index ' + IntToStr(Index) + ' was found!');
+  if Assigned(Result) then Result.Lock else raise EZSQLException.Create('No connection with Index ' + IntToStr(Index) + ' was found!');
 end;
 
 function TDbcProxyConnectionManager.AddConnection(Connection: IZConnection): String;
@@ -186,4 +189,3 @@ begin
 end;
 
 end.
-

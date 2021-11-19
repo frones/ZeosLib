@@ -184,7 +184,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ASA}
 
 uses ZSysUtils, ZDbcUtils, ZMessages, ZDbcASAResultSet, ZDbcCachedResultSet,
-  ZEncoding, ZFastCode;
+  ZEncoding, ZFastCode, ZExceptions;
 
 { TZAbstractASAStatement }
 

@@ -70,9 +70,9 @@ type
   public
     function IsQuoted(const Value: string): Boolean; override;
     function Quote(const Value: string; Qualifier: TZIdentifierQualifier = iqUnspecified): string; override;
-    function ExtractQuote(const Value: string): string; override; 
-  end; 
- 
+    function ExtractQuote(const Value: string): string; override;
+  end;
+
   {**
     Database information interface for PostgreSQL. Adds some PostgreSQL-specific
      methods to IZDatabaseInfo.
@@ -460,7 +460,7 @@ implementation
 
 uses
   //Math,
-  ZFastCode, ZMessages, ZSysUtils, ZDbcPostgreSql;
+  ZFastCode, ZMessages, ZSysUtils, ZDbcPostgreSql, ZExceptions;
 
 { TZPostgreSQLDatabaseInfo }
 
@@ -1428,7 +1428,7 @@ begin
   with Metadata.GetConnection.CreateStatement.ExecuteQuery(SQL) do
   begin
     if not Next then
-      raise Exception.Create(SUnknownError); //CHANGE IT!
+      raise EZSQLException.Create(SUnknownError); //CHANGE IT!
     Result := GetInt(FirstDbcIndex);
     Close;
   end;
@@ -1449,7 +1449,7 @@ begin
   with Metadata.GetConnection.CreateStatement.ExecuteQuery(SQL) do
   begin
     if not Next then
-      raise Exception.Create(SUnknownError); //CHANGE IT!
+      raise EZSQLException.Create(SUnknownError); //CHANGE IT!
     Result := GetIntByName('typlen');
     Close;
   end;

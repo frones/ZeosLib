@@ -63,7 +63,7 @@ uses
   {$IFDEF TLIST_IS_DEPRECATED}ZSysUtils,{$ENDIF}
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZClasses, ZDbcIntfs, ZTokenizer, ZCompatibility, ZGenericSqlToken, ZVariant,
-  ZGenericSqlAnalyser, ZPlainDriver, ZCollections, ZDbcLogging;
+  ZGenericSqlAnalyser, ZPlainDriver, ZCollections, ZDbcLogging, ZExceptions;
 
 type
 

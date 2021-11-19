@@ -75,7 +75,7 @@ uses
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZSysUtils, ZDbcIntfs, ZDbcOracle, ZDbcResultSet, ZPlainOracleDriver, ZDbcCache,
   ZDbcResultSetMetadata, ZDbcLogging, ZCompatibility, ZDbcOracleUtils, ZClasses,
-  ZPlainDriver, ZDbcStatement, ZDbcCachedResultSet;
+  ZPlainDriver, ZDbcStatement, ZDbcCachedResultSet, ZExceptions;
 
 type
   { Oracle Error Class}
@@ -632,7 +632,7 @@ begin
                             JSONWriter.Add('"');
                           end;
         else
-          raise Exception.Create('Missing OCI Type: '+IntToStr(dty));
+          raise EZSQLException.Create('Missing OCI Type: '+IntToStr(dty));
       end;
       JSONWriter.Add(',');
     end;

@@ -226,7 +226,7 @@ implementation
 
 {$IFDEF WITH_PROPERTY_EDITOR}
 
-uses SysUtils, Forms, Dialogs, Controls, DB, TypInfo,
+uses SysUtils, Forms, Dialogs, Controls, DB, TypInfo, ZExceptions,
   {$IFDEF WITH_LCONVENCODING}ZEncoding,{$ENDIF}
   ZSysUtils, ZSelectSchema, ZDatasetUtils, ZPlainDriver, ZMessages
 {$IFDEF USE_METADATA}
@@ -677,7 +677,7 @@ begin
       try
         Driver := DriverManager.GetDriver(Url.URL);
         if Driver = nil then
-          raise Exception.Create(SDriverWasNotFound);
+          raise EZSQLException.Create(SDriverWasNotFound);
         PlainDriver := Driver.GetPlainDriver(URL, False);
         if PlainDriver = nil then begin
           List.Append('No PlainDriver found');
@@ -1263,5 +1263,3 @@ end;
 {$ENDIF}
 
 end.
-
-

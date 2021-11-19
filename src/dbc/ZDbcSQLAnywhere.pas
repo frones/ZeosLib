@@ -60,7 +60,7 @@ uses
   ZCompatibility, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   SysUtils,
   ZDbcIntfs, ZDbcConnection, ZPlainSQLAnywhere, ZTokenizer,
-  ZGenericSqlAnalyser, ZDbcLogging;
+  ZGenericSqlAnalyser, ZDbcLogging, ZExceptions;
 
 type
   {** Implements a ASA Database Driver. }

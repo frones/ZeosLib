@@ -64,7 +64,7 @@ uses
   ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6,
   ZPlainFirebirdInterbaseDriver, ZCompatibility, ZDbcResultSetMetadata, ZMessages,
   ZPlainDriver, ZDbcInterbase6Utils, ZDbcUtils, ZClasses,
-  ZDbcCache, ZDbcCachedResultSet, ZDbcFirebirdInterbase;
+  ZDbcCache, ZDbcCachedResultSet, ZDbcFirebirdInterbase, ZExceptions;
 
 type
   IZInterbaseResultSet = Interface(IZResultSet)

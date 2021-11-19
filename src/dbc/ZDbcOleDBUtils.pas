@@ -123,7 +123,7 @@ uses
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ActiveX, Windows, Math, TypInfo,
   ZEncoding, ZDbcLogging, ZDbcUtils, ZDbcResultSet, ZFastCode, ZSysUtils, ZMessages,
-  ZClasses;
+  ZClasses, ZExceptions;
 
 function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM; IsLong: Boolean;
   Scale, Precision: Integer): TZSQLType;
@@ -332,7 +332,7 @@ var
       { now let's decide if we can use direct references or need space in buffer
         and a reference or if we need a external object for lob's}
       if (ParamInfoArray^[Index].dwFlags and DBPARAMFLAGS_ISOUTPUT <> 0) then
-        raise Exception.Create('RESULT/OUT/INOUT Parameter for LOB''s are currently not supported!');
+        raise EZSQLException.Create('RESULT/OUT/INOUT Parameter for LOB''s are currently not supported!');
       DBBindingArray[Index].obValue := DBBindingArray[Index].obLength + SizeOf(DBLENGTH);
       DBBindingArray[Index].wType   := DBBindingArray[Index].wType or DBTYPE_BYREF; //indicate we address a buffer
       DBBindingArray[Index].dwPart  := DBPART_VALUE or DBPART_LENGTH or DBPART_STATUS; //we need a length indicator for vary data only

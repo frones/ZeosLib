@@ -60,7 +60,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZPlainFirebirdInterbaseDriver, ZCompatibility, ZDbcUtils, ZDbcIntfs, ZDbcConnection,
   ZSysUtils, ZDbcLogging, ZDbcInterbase6Utils,
-  ZClasses, ZDbcFirebirdInterbase;
+  ZClasses, ZDbcFirebirdInterbase, ZExceptions;
 
 type
 

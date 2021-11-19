@@ -236,7 +236,7 @@ implementation
 uses FmtBCD,
   ZGenericSqlToken, ZDatasetUtils, ZAbstractRODataset, ZAbstractDataset,
   ZSysUtils, ZDbcUtils, ZMessages, ZCompatibility, ZDbcProperties, ZCollections,
-  ZEncoding;
+  ZEncoding, ZExceptions;
 
 { TZUpdateSQL }
 
@@ -588,7 +588,7 @@ begin
         if DataSet is TZAbstractDataset then
           OrigStmt := (DataSet as TZAbstractDataset).DbcStatement;
       if not Assigned(OrigStmt) then
-        raise Exception.Create('Could not determine a valid statement!');
+        raise EZSQLException.Create('Could not determine a valid statement!');
       Statement := OrigStmt.GetConnection.PrepareStatement(Config.Statements[0].SQL)
     end;
     FillStatement(Sender, Statement, Config.Statements[0],RowAccessor, RowAccessor);
@@ -939,7 +939,7 @@ begin
       end;
     end;
     if not Assigned(OrigStmt) then
-      raise Exception.Create('Could not determine a valid statement!');
+      raise EZSQLException.Create('Could not determine a valid statement!');
     for I := 0 to Config.StatementCount - 1 do begin
       if (FStmts[UpdateType].Count <= i) or not (FStmts[UpdateType][i].QueryInterface(IZPreparedStatement, Statement) = S_OK) or
          Statement.IsClosed or (OrigStmt.GetParameters.Text <> Statement.GetParameters.Text) then begin

@@ -200,7 +200,7 @@ implementation
 {$ENDIF}
 
 uses Dialogs, {$IFNDEF FPC}LibHelp, {$ENDIF}TypInfo, ZCompatibility, ZSqlMetadata,
-  ZDbcIntfs, ZTokenizer, ZGenericSqlAnalyser, ZSelectSchema, ZDbcMetadata;
+  ZDbcIntfs, ZTokenizer, ZGenericSqlAnalyser, ZSelectSchema, ZDbcMetadata, ZExceptions;
 
 { TZUpdateSqlEditor }
 
@@ -735,7 +735,7 @@ var
   TableName: string;
 begin
   if (KeyFieldList.SelCount = 0) or (UpdateFieldList.SelCount = 0) then
-    raise Exception.Create(SSQLGenSelect);
+    raise EZSQLException.Create(SSQLGenSelect);
   KeyFields := TStringList.Create;
   try
     GetSelectedItems(KeyFieldList, KeyFields);
@@ -894,7 +894,7 @@ end;
 
 type
   THackDataSet = class(TZAbstractRWDataSet);
-  
+
 procedure TZUpdateSQLEditForm.InitUpdateTableNames;
 var
   I: Integer;

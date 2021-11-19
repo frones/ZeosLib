@@ -314,7 +314,7 @@ type
 
 implementation
 
-uses ZMessages, ZDbcMetadata, ZDbcUtils, ZDbcProperties
+uses ZMessages, ZDbcMetadata, ZDbcUtils, ZDbcProperties, ZExceptions
   {$IFDEF FAST_MOVE}, ZFastCode{$ENDIF};
 
 { TZGenerateSQLCachedResolver }

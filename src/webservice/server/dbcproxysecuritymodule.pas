@@ -65,7 +65,7 @@ function GetSecurityModule(TypeName: String): TZAbstractSecurityModule;
 
 implementation
 
-uses DbcProxyConfigManager, zeosproxy_imp, StrUtils, Types;
+uses DbcProxyConfigManager, zeosproxy_imp, StrUtils, Types, ZExceptions;
 
 function GetSecurityModule(TypeName: String): TZAbstractSecurityModule;
 begin
@@ -79,7 +79,7 @@ begin
   else if TypeName = 'chained' then
     Result := TZChainedSecurityModule.Create
   else
-    raise Exception.Create('Security module of type ' + TypeName + ' is unknown.');
+    raise EZSQLException.Create('Security module of type ' + TypeName + ' is unknown.');
 end;
 
 function TZYubiOtpSecurityModule.CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean;
@@ -102,7 +102,7 @@ begin
     PublicIdentity := GetYubikeyIdentity(Password);
     Result := Pos(':' + PublicIdentity + ':', AllowedKeys) > 0;
     if not Result then
-      raise Exception.Create('This yubikey cannot be used for this user.');
+      raise EZSQLException.Create('This yubikey cannot be used for this user.');
   finally
     FreeAndNil(Yubikeys);
   end;
@@ -156,7 +156,7 @@ begin
   end;
 
   if not Result then
-    raise Exception.Create('Could not validate username / password.');
+    raise EZSQLException.Create('Could not validate username / password.');
 end;
 
 procedure TZTotpSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
@@ -212,7 +212,7 @@ begin
   Result := CryptPwdDB = CryptPwdUser;
 
   if not Result then
-    raise Exception.Create('Could not validate username / password.');
+    raise EZSQLException.Create('Could not validate username / password.');
   if FReplacementUser <> '' then begin
     UserName := FReplacementUser;
     Password := FReplacementPassword;
@@ -254,7 +254,7 @@ begin
     if TypeList[x] = '' then
       Delete(TypeList, x, 1);
   if Length(TypeList) = 0 then
-    raise Exception.Create('A chained security module may not have an empty Module List');
+    raise EZSQLException.Create('A chained security module may not have an empty Module List');
 
   SetLength(FModuleChain, Length(TypeList));
   for x := 0 to Length(TypeList) - 1 do begin
@@ -275,4 +275,3 @@ begin
 end;
 
 end.
-

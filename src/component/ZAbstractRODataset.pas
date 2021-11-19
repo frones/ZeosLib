@@ -78,7 +78,7 @@ uses
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   ZSysUtils, ZCompatibility, ZExpression, ZClasses,
   ZDbcIntfs, ZDbcCache, ZDbcCachedResultSet, ZTokenizer,
-  ZAbstractConnection, ZDatasetUtils, ZSqlStrings, ZFormatSettings, ZTransaction
+  ZAbstractConnection, ZDatasetUtils, ZSqlStrings, ZFormatSettings, ZTransaction, ZExceptions
   {$IFNDEF DISABLE_ZPARAM},ZDatasetParam{$ENDIF};
 
 type
@@ -3549,7 +3549,7 @@ begin
       FResultSetMetadata := ResultSet.GetMetadata;
     end;
     if not Assigned(ResultSet) then
-      raise Exception.Create(SCanNotOpenResultSet);
+      raise EZSQLException.Create(SCanNotOpenResultSet);
 
     { Reads metadata from resultset. }
 
@@ -3684,7 +3684,7 @@ var
 begin
   {$IFNDEF FPC}
   If (csDestroying in Componentstate) then
-    raise Exception.Create(SCanNotOpenDataSetWhenDestroying);
+    raise EZSQLException.Create(SCanNotOpenDataSetWhenDestroying);
   {$ENDIF}
   if not FResultSetWalking then Prepare;
 

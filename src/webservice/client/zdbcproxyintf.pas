@@ -130,12 +130,12 @@ uses
 implementation
 
 uses ComObj,
-     fpc_http_protocol, soap_formatter, zeosproxy_proxy;
+     fpc_http_protocol, soap_formatter, zeosproxy_proxy, ZExceptions;
 
 procedure TZDbcProxy.CheckConnected;
 begin
   if not Assigned(FService) then
-    raise Exception.Create('No connection has been established yet!');
+    raise EZSQLException.Create('No connection has been established yet!');
 end;
 
 function TZDbcProxy.InterfaceSupportsErrorInfo(const iid: TIID): HResult; stdcall;
@@ -175,7 +175,7 @@ begin
   Transport := UpperCase(Copy(Transport, 1, ProtocolEnd - 1));
 
   if (Transport <> 'HTTP') and (Transport <> 'HTTPS') then
-    raise Exception.Create('Protocols other than http and https are not supported. Given: ' + LowerCase(Transport));
+    raise EZSQLException.Create('Protocols other than http and https are not supported. Given: ' + LowerCase(Transport));
 
   if Transport = 'HTTPS' then
     Transport := 'HTTP';
@@ -336,4 +336,3 @@ initialization
   FPC_RegisterHTTP_Transport();
 
 end.
-

@@ -124,7 +124,7 @@ function GetYubikeyIdentity(Password: String): String;
 implementation
 
 uses
-  fphttpclient, opensslsockets, base64;
+  fphttpclient, opensslsockets, base64, ZExceptions;
 
 const
   DefaultOtpLen = 44; // a Yubikey OTP usually is 44 characters long
@@ -169,16 +169,16 @@ end;
 procedure RaiseYubiOtpError(Status: TYubiOtpStatus);
 begin
   case Status of
-    yosUnknown: raise Exception.Create('The server returned an unknown or empty status value.');
-    yosBadOtp: raise Exception.Create('The OTP is invalid format.');
-    yosReplayedOtp: raise Exception.Create('The OTP has already been seen by the service.');
-    yosBadSignature: raise Exception.Create('The HMAC signature verification failed.');
-    yosMissingParameter: raise Exception.Create('The request lacks a parameter.');
-    yosNoSuchClient: raise Exception.Create('The request id does not exist.');
-    yosOperationNotAllowed: raise Exception.Create('The request id is not allowed to verify OTPs.');
-    yosBackendError: raise Exception.Create('Unexpected error in our server. Please contact us if you see this error.');
-    yosNotEnoughAnswers: raise Exception.Create('Server could not get requested number of syncs during before timeout');
-    yosReplayedRequest: raise Exception.Create('Server has seen the OTP/Nonce combination before');
+    yosUnknown: raise EZSQLException.Create('The server returned an unknown or empty status value.');
+    yosBadOtp: raise EZSQLException.Create('The OTP is invalid format.');
+    yosReplayedOtp: raise EZSQLException.Create('The OTP has already been seen by the service.');
+    yosBadSignature: raise EZSQLException.Create('The HMAC signature verification failed.');
+    yosMissingParameter: raise EZSQLException.Create('The request lacks a parameter.');
+    yosNoSuchClient: raise EZSQLException.Create('The request id does not exist.');
+    yosOperationNotAllowed: raise EZSQLException.Create('The request id is not allowed to verify OTPs.');
+    yosBackendError: raise EZSQLException.Create('Unexpected error in our server. Please contact us if you see this error.');
+    yosNotEnoughAnswers: raise EZSQLException.Create('Server could not get requested number of syncs during before timeout');
+    yosReplayedRequest: raise EZSQLException.Create('Server has seen the OTP/Nonce combination before');
   end;
 end;
 
@@ -199,7 +199,7 @@ var
 begin
   // get the real OTP, return the remaining string, if any
   OtpLen := Length(OTP);
-  if OtpLen < DefaultOtpLen then raise Exception.Create('The OTP needs to have a minimum of 44 characters') else begin
+  if OtpLen < DefaultOtpLen then raise EZSQLException.Create('The OTP needs to have a minimum of 44 characters') else begin
     if OtpLen > DefaultOtpLen then begin
       RemainingPassword := Copy(OTP, 1, OtpLen - DefaultOtpLen);
       Delete(OTP, 1, OtpLen - DefaultOtpLen);
@@ -232,7 +232,7 @@ begin
     // check OTP and extract STATUS
     Status := Lines.Values['otp'];
     if Status <> OTP then
-      raise Exception.Create('The OTP in the reply doesn''t match the otp that was given to the service.');
+      raise EZSQLException.Create('The OTP in the reply doesn''t match the otp that was given to the service.');
     Status := Lines.Values['status'];
     Result := StringToYubiOtpStatus(Status);
 
@@ -256,7 +256,7 @@ begin
       Signature2 := EncodeHmacSha1DigestBase64(digest);
 
       if Signature1 <> Signature2 then
-        raise Exception.Create('The signature of the service reply is invalid.');
+        raise EZSQLException.Create('The signature of the service reply is invalid.');
     end;
   finally
     FreeAndNil(Lines);
@@ -277,4 +277,3 @@ initialization
   Randomize;
 
 end.
-

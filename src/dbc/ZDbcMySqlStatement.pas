@@ -60,7 +60,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, FmtBCD,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZClasses, ZDbcIntfs, ZDbcStatement, ZDbcMySql, ZVariant, ZPlainMySqlDriver,
-  ZCompatibility, ZDbcLogging, ZDbcUtils, ZDbcMySqlUtils, ZCollections;
+  ZCompatibility, ZDbcLogging, ZDbcUtils, ZDbcMySqlUtils, ZCollections, ZExceptions;
 
 type
   TMySQLPreparable = (myDelete, myInsert, myUpdate, mySelect, mySet, myCall);

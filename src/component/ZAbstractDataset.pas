@@ -255,7 +255,7 @@ type
 
 implementation
 
-uses Math, ZMessages, ZDatasetUtils, ZDbcProperties;
+uses Math, ZMessages, ZDatasetUtils, ZDbcProperties, ZExceptions;
 
 { TZAbstractRWDataSet }
 
@@ -442,7 +442,7 @@ begin
     except on E: Exception do
       if E is EZSQLThrowable
       then raise EZDatabaseError.CreateFromException(E as EZSQLThrowable)
-      else raise Exception.Create(E.Message);
+      else raise EZSQLException.Create(E.Message);
     end;
 
     { Filters the row }
@@ -602,7 +602,7 @@ begin
       except on E: Exception do
         if E is EZSQLThrowable
         then raise EZDatabaseError.CreateFromException(E as EZSQLThrowable)
-        else raise Exception.Create(E.Message);
+        else raise EZSQLException.Create(E.Message);
       end;
 
       { Filters the row }
@@ -1142,4 +1142,3 @@ begin
 end;
 
 end.
-

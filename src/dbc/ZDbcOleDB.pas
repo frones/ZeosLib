@@ -67,7 +67,7 @@ uses
   {$IFDEF WITH_UNIT_NAMESPACES}System.Win.ComObj{$ELSE}ComObj{$ENDIF},
   ZDbcIntfs, ZDbcConnection, ZDbcLogging, ZTokenizer,
   ZGenericSqlAnalyser, ZCompatibility, ZDbcOleDBUtils,
-  ZPlainOleDBDriver, ZOleDBToken;
+  ZPlainOleDBDriver, ZOleDBToken, ZExceptions;
 
 type
   /// <summary>Implements an OleDB Database Driver.</summary>

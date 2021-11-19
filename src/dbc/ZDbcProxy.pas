@@ -241,7 +241,7 @@ uses
   ZPostgreSqlAnalyser, ZPostgreSqlToken, ZSybaseAnalyser, ZSybaseToken,
   ZInterbaseAnalyser, ZInterbaseToken, ZMySqlAnalyser, ZMySqlToken,
   ZOracleAnalyser, ZOracleToken, ZGenericSqlToken,
-  ZMessages, Typinfo
+  ZMessages, Typinfo, ZExceptions
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 const
@@ -341,7 +341,7 @@ begin
   FMetadata := TZProxyDatabaseMetadata.Create(Self, Url);
   FConnIntf := GetPlainDriver.GetLibraryInterface;
   if not assigned(FConnIntf) then
-    raise Exception.Create(String(GetPlainDriver.GetLastErrorStr));
+    raise EZSQLException.Create(String(GetPlainDriver.GetLastErrorStr));
   inherited AfterConstruction;
 end;
 
@@ -479,7 +479,7 @@ begin
   {$IFDEF FPC}
   Result := nil;
   {$ENDIF}
-  raise Exception.Create('PrepareCallWithParams is not supported!');
+  raise EZSQLException.Create('PrepareCallWithParams is not supported!');
 end;
 {$ENDIF}
 
@@ -495,7 +495,7 @@ begin
       end;
       {$ENDIF}
     end else
-      raise Exception.Create(SInvalidOpInAutoCommit);
+      raise EZSQLException.Create(SInvalidOpInAutoCommit);
 end;
 
 procedure TZDbcProxyConnection.Rollback;
@@ -510,7 +510,7 @@ begin
       end;
       {$ENDIF}
     end else
-      raise Exception.Create(SInvalidOpInAutoCommit);
+      raise EZSQLException.Create(SInvalidOpInAutoCommit);
 end;
 
 {$IFDEF ZEOS73UP}
@@ -528,7 +528,7 @@ end;
 (*
 function TZDbcProxyConnection.GetConnectionTransaction: IZTransaction;
 begin
-  raise Exception.Create('Unsupported');
+  raise EZSQLException.Create('Unsupported');
 end;
 *)
 {$ENDIF}

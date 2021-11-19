@@ -61,7 +61,7 @@ uses
   ZCompatibility, ZDbcUtils, ZDbcIntfs, ZDbcConnection,
   ZPlainFirebirdInterbaseDriver, ZSysUtils, ZDbcLogging, ZDbcInterbase6Utils,
   ZGenericSqlAnalyser, ZClasses, ZDbcFirebirdInterbase,
-  ZPlainFirebird;
+  ZPlainFirebird, ZExceptions;
 
 type
   /// <summary>Implements Firebird Database Driver.</summary>

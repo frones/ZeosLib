@@ -69,7 +69,7 @@ uses
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF} ZClasses,
   ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZCompatibility, ZDbcCache,
   ZDbcCachedResultSet, ZDbcGenericResolver, ZDbcMySqlStatement, ZDbcMySqlUtils,
-  ZPlainMySqlDriver, ZSelectSchema, ZVariant, ZdbcMySql;
+  ZPlainMySqlDriver, ZSelectSchema, ZVariant, ZdbcMySql, ZExceptions;
 
 type
   {** Implements MySQL ResultSet Metadata. }

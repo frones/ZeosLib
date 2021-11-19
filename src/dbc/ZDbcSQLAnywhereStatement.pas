@@ -187,7 +187,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_SQLANY}
 
 uses ZSysUtils, ZDbcUtils, ZMessages, ZDbcSQLAnywhereResultSet,
-  ZDbcGenericResolver, ZEncoding, ZFastCode;
+  ZDbcGenericResolver, ZEncoding, ZFastCode, ZExceptions;
 
 { TZAbstractSQLAnywhereStatement }
 

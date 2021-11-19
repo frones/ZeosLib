@@ -226,7 +226,7 @@ type
 implementation
 
 uses ZMessages, ZFastCode, ZSysUtils, ZEncoding,
-  ZDbcResultSet;
+  ZDbcResultSet, ZExceptions;
 {------------------------------------------------------------------------------}
 
 { TZAbstractBeginnerPreparedStatement }

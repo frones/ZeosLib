@@ -59,7 +59,7 @@ interface
 uses Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZCompatibility, ZClasses, ZVariant, ZCollections, ZDbcIntfs, ZDbcStatement,
-  ZDbcProperties, ZDbcUtils, ZDbcODBCCon, ZPlainODBCDriver, ZDbcODBCUtils;
+  ZDbcProperties, ZDbcUtils, ZDbcODBCCon, ZPlainODBCDriver, ZDbcODBCUtils, ZExceptions;
 
 type
   PSQLHDBC = ^SQLHDBC;

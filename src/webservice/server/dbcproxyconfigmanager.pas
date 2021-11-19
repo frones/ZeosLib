@@ -96,7 +96,7 @@ type
 implementation
 
 uses
-  IniFiles;
+  IniFiles, ZExceptions;
 
 constructor TDbcProxyConfigManager.Create;
 begin
@@ -187,7 +187,7 @@ begin
     end;
   end;
 
-  if not found then raise Exception.Create('No config named ' + ConfigName + ' was found.');
+  if not found then raise EZSQLException.Create('No config named ' + ConfigName + ' was found.');
 
   if CheckSecurity and Assigned(Cfg.SecurityModule)
     then Cfg.SecurityModule.CheckPassword(UserName, Password, ConfigName);
@@ -196,4 +196,3 @@ begin
 end;
 
 end.
-
