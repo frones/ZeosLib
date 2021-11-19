@@ -1,4 +1,6 @@
-﻿unit ZExceptions;
+unit ZExceptions;
+
+{$I ZCore.inc}
 
 interface
 
