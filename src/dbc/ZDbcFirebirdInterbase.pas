@@ -71,7 +71,7 @@ uses
   ZPlainFirebirdInterbaseDriver, ZDbcInterbase6Utils, ZDbcLogging,
   ZDbcIntfs, ZDbcConnection, ZTokenizer, ZGenericSqlAnalyser, ZDbcCache,
   ZDbcGenericResolver, ZDbcResultSetMetadata, ZDbcCachedResultSet, ZDbcUtils,
-  ZDbcResultSet, ZDbcStatement;
+  ZDbcResultSet, ZDbcStatement, ZExceptions;
 
 type
   /// <summary>Implements Interbase or Firebird Database Driver</summary>
@@ -4177,7 +4177,7 @@ begin
                 vtUnicodeString: Stmt.SetUnicodeString(ParamIndex, TUnicodeStringDynArray(ZData)[j]);
                 vtCharRec: Stmt.SetCharRec(ParamIndex, TZCharRecDynArray(ZData)[j]);
                 else
-                  raise Exception.Create('Unsupported String Variant');
+                  raise EZSQLException.Create('Unsupported String Variant');
               end;
         stBytes:      Stmt.SetBytes(ParamIndex, TBytesDynArray(ZData)[j]);
         stDate:       if ZArray.VArrayVariantType = vtDate

@@ -64,7 +64,7 @@ uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZDbcIntfs, ZCompatibility, ZVariant, ZDbcLogging, ZClasses,
-  ZDbcUtils;
+  ZDbcUtils, ZExceptions;
 
 type
   /// <summary> Implements Abstract SQL Statement object.</summary>
@@ -4097,13 +4097,13 @@ var BindValue: PZBindValue;
 begin
   if FSupportsDMLBatchArrays then begin
     if (FBindList.Count < ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}) then
-      raise Exception.Create('Set Array-Value first');
+      raise EZSQLException.Create('Set Array-Value first');
     {$IFNDEF GENERIC_INDEX}
     ParameterIndex := ParameterIndex -1;
     {$ENDIF}
     BindValue := FBindList.Get(PArameterIndex);
     if (BindValue.BindType <> zbtArray) and (BindValue.BindType <> zbtRefArray) then
-      raise Exception.Create('No Array bound before!');
+      raise EZSQLException.Create('No Array bound before!');
     ValidateArraySizeAndType(Pointer(Value), SQLType, VariantType, ParameterIndex);
     if BindValue.BindType = zbtRefArray then begin
       if PZArray(BindValue.Value).VIsNullArray <> nil then
@@ -4290,15 +4290,15 @@ var Len: ArrayLenInt;
 begin
   if Value = nil then Exit;
   case SQLType of
-    stUnknown: raise Exception.Create('Invalid SQLType for Array binding!');
+    stUnknown: raise EZSQLException.Create('Invalid SQLType for Array binding!');
     stString: if not (VariantType in [vtString,
       {$IFNDEF NO_ANSISTRING}vtAnsiString, {$ENDIF}
       {$IFNDEF NO_UTF8STRING}vtUTF8String, {$ENDIF}
       {$IF declared(vtSynRawUTF8Array)}vtSynRawUTF8Array,{$IFEND}
       vtRawByteString, vtCharRec]) then
-          raise Exception.Create('Invalid Variant-Type for String-Array binding!');
+          raise EZSQLException.Create('Invalid Variant-Type for String-Array binding!');
     stUnicodeString: if not (VariantType in [vtUnicodeString, vtCharRec]) then
-          raise Exception.Create('Invalid Variant-Type for String-Array binding!');
+          raise EZSQLException.Create('Invalid Variant-Type for String-Array binding!');
     stArray, stResultSet:
           raise EZUnsupportedException.Create(sUnsupportedOperation);
     {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
@@ -4308,7 +4308,7 @@ begin
     if (ParamIndex = 0) then
       FBatchDMLArrayCount := Len
     else if (FBatchDMLArrayCount <> 0) and (Len <> FBatchDMLArrayCount) then
-      raise Exception.Create('Array count does not equal with initial count!')
+      raise EZSQLException.Create('Array count does not equal with initial count!')
 end;
 
 { TZRawPreparedStatement }
@@ -6650,4 +6650,3 @@ begin
 end;
 
 end.
-

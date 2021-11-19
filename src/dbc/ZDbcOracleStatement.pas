@@ -61,7 +61,8 @@ uses
   {$IFDEF MSWINDOWS}{%H-}Windows,{$ENDIF}
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
   ZSysUtils, ZClasses, ZCompatibility, ZVariant, ZPlainOracleDriver,
-  ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZDbcOracleUtils, ZDbcUtils, ZDbcOracle;
+  ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZDbcOracleUtils, ZDbcUtils, ZDbcOracle,
+  ZExceptions;
 
 type
 
@@ -1790,7 +1791,7 @@ bind_direct:
         vtUnicodeString: if FCharSetID  = OCI_UTF16ID
           then MoveUnicodeStrings
           else BindRawFromUnicodeStrings;
-        else raise Exception.Create('Unsupported String Variant');
+        else raise EZSQLException.Create('Unsupported String Variant');
       end;
     stAsciiStream, stUnicodeStream, stBinaryStream: begin
         SetLobs;

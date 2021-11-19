@@ -61,7 +61,7 @@ uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
   ZDbcIntfs, ZDbcStatement, ZDbcInterbase6, ZDbcInterbase6Utils,
   ZPlainFirebirdInterbaseDriver, ZCompatibility,
   ZDbcFirebirdInterbase,
-  ZDbcLogging, ZVariant, ZMessages, ZDbcCachedResultSet, ZDbcUtils;
+  ZDbcLogging, ZVariant, ZMessages, ZDbcCachedResultSet, ZDbcUtils, ZExceptions;
 
 type
   /// <summary>Implements a abstract prepared SQL Statement for Interbase or
@@ -404,7 +404,7 @@ begin
           raise EZSQLException.Create('Statements longer than 64KB may not contain the #0 character.');
         MaxLen := GetConnection.GetMetadata.GetDatabaseInfo.GetMaxStatementLength;
         if L > MaxLen then
-          raise Exception.Create('Statements longer than ' + ZFastCode.IntToStr(MaxLen) + ' bytes are not supported by your database.');
+          raise EZSQLException.Create('Statements longer than ' + ZFastCode.IntToStr(MaxLen) + ' bytes are not supported by your database.');
         L := 0; //fall back to C-String behavior
       end;
       Status := FPlainDriver.isc_dsql_prepare(@FStatusVector, GetTrHandle, @FStmtHandle,
@@ -780,4 +780,3 @@ end;
 
 {$ENDIF ZEOS_DISABLE_INTERBASE} //if set we have an empty unit
 end.
-

@@ -65,7 +65,7 @@ function GetSecurityModule(TypeName: String): TZAbstractSecurityModule;
 
 implementation
 
-uses DbcProxyConfigManager, zeosproxy_imp, StrUtils, Types;
+uses DbcProxyConfigManager, zeosproxy_imp, StrUtils, Types, ZExceptions;
 
 function GetSecurityModule(TypeName: String): TZAbstractSecurityModule;
 begin
@@ -79,7 +79,7 @@ begin
   else if TypeName = 'chained' then
     Result := TZChainedSecurityModule.Create
   else
-    raise Exception.Create('Security module of type ' + TypeName + ' is unknown.');
+    raise EZSQLException.Create('Security module of type ' + TypeName + ' is unknown.');
 end;
 
 function TZYubiOtpSecurityModule.CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean;
@@ -160,7 +160,7 @@ begin
     raise Exception.Create('Could not validate username / OTP: ' + SecretsUser + ' / ' + OTP);
 
   if not Result then
-    raise Exception.Create('Could not validate username / password.');
+    raise EZSQLException.Create('Could not validate username / password.');
 
   RemainingPassword := Copy(Password, 1, Length(Password) - 6);
   Password := RemainingPassword;
@@ -222,8 +222,6 @@ begin
   Result := CryptPwdDB = CryptPwdUser;
 
   if not Result then begin
-    raise Exception.Create('Could not validate password for user / password ' + UserName + ' / ' + Password + '. Expected hash ' + CryptPwdDB + ' but got ' + CryptPwdUser + '.');
-    raise Exception.Create('Could not validate username / password.');
   end;
   if FReplacementUser <> '' then begin
     UserName := FReplacementUser;
@@ -266,7 +264,7 @@ begin
     if ModuleList[x] = '' then
       Delete(ModuleList, x, 1);
   if Length(ModuleList) = 0 then
-    raise Exception.Create('A chained security module may not have an empty Module List');
+    raise EZSQLException.Create('A chained security module may not have an empty Module List');
 
   SetLength(FModuleChain, Length(ModuleList));
   for x := 0 to Length(ModuleList) - 1 do begin
@@ -287,4 +285,3 @@ begin
 end;
 
 end.
-

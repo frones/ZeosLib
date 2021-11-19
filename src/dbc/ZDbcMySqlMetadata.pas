@@ -448,7 +448,7 @@ uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   {$IFDEF UNICODE}ZEncoding,{$ENDIF}
   ZFastCode, ZMessages, ZMatchPattern,
-  ZDbcMySqlUtils, ZDbcUtils, ZDbcProperties, ZDbcMySql;
+  ZDbcMySqlUtils, ZDbcUtils, ZDbcProperties, ZDbcMySql, ZExceptions;
 
 
 type
@@ -1797,7 +1797,7 @@ var
   ColumnIndexes : Array[1..3] of integer;
 begin
   if Table = '' then
-    raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
+    raise EZSQLException.Create(STableIsNotSpecified); //CHANGE IT!
 
   Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
 
@@ -1841,7 +1841,7 @@ var
   ColumnIndexes : Array[1..2] of integer;
 begin
   if Table = '' then
-    raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
+    raise EZSQLException.Create(STableIsNotSpecified); //CHANGE IT!
 
   Result := inherited UncachedGetImportedKeys(Catalog, Schema, Table);
 
@@ -1983,7 +1983,7 @@ var
   ColumnIndexes : Array[1..3] of integer;
 begin
   if Table = '' then
-    raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
+    raise EZSQLException.Create(STableIsNotSpecified); //CHANGE IT!
 
   Result:=inherited UncachedGetExportedKeys(Catalog, Schema, Table);
 
@@ -2129,7 +2129,7 @@ var
   ColumnIndexes : Array[1..3] of integer;
 begin
   if PrimaryTable = '' then
-    raise Exception.Create(STableIsNotSpecified); //CHANGE IT!
+    raise EZSQLException.Create(STableIsNotSpecified); //CHANGE IT!
 
   Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
                                               ForeignCatalog, ForeignSchema, ForeignTable);

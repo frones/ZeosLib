@@ -72,7 +72,7 @@ uses
   {$ENDIF},
   ZPlainSQLAnywhere, ZCompatibility, ZDbcCache, ZClasses, ZDbcStatement,
   ZDbcIntfs, ZDbcResultSet, ZDbcCachedResultSet, ZDbcResultSetMetadata,
-  ZDbcSQLAnywhere;
+  ZDbcSQLAnywhere, ZExceptions;
 
 type
   TZSQLAnywhereColumnInfo = class(TZColumnInfo)

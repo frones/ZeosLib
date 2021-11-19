@@ -135,7 +135,7 @@ type
 
 implementation
 
-uses ZMessages;
+uses ZMessages, ZExceptions;
 
 { TZVariablesList }
 
@@ -172,7 +172,7 @@ var Idx: NativeInt;
     NameAndVariablePair: PZNameAndVariablePair;
 begin
   if FindByName(Name) >= 0 then
-    raise Exception.Create(Format(SVariableAlreadyExists, [Name]));
+    raise EZSQLException.Create(Format(SVariableAlreadyExists, [Name]));
   NameAndVariablePair := FVariables.Add(Idx);
   NameAndVariablePair.Name := UpperCase(Name);
   NameAndVariablePair.Value := Value;
@@ -256,4 +256,3 @@ begin
 end;
 
 end.
-

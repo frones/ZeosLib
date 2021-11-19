@@ -63,7 +63,7 @@ uses
   {$IFEND}
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}ZClasses, ZSysUtils, ZVariant,
   ZCompatibility, ZPlainOracleDriver,
-  ZDbcIntfs, ZDbcUtils, ZSelectSchema, ZDbcLogging, ZDbcOracle, ZDbcStatement;
+  ZDbcIntfs, ZDbcUtils, ZSelectSchema, ZDbcLogging, ZDbcOracle, ZDbcStatement, ZExceptions;
 
 const
   MAX_SQLVAR_LIMIT = 1024;
@@ -1511,7 +1511,7 @@ VCS:            CharacterSizeToByteSize(DataSize, Precision);
         DataType := SQLT_UIN;
         DataSize := SizeOf(Word);
       end
-    //ELSE raise Exception.Create('Unknown datatype: '+ZFastCode.IntToStr(DataType));
+    //ELSE raise EZSQLException.Create('Unknown datatype: '+ZFastCode.IntToStr(DataType));
   end;
 end;
 (*

@@ -75,7 +75,7 @@ procedure CreateSymlinkIfNecessary(Const SymLink, Target: String);
 begin
   if not FileExists(SymLink) then
     if not TFile.CreateSymLink(SymLink, Target) then
-      raise Exception.Create('Could not create Symlink to ' + Target + ' from ' + SymLink);
+      raise EZSQLException.Create('Could not create Symlink to ' + Target + ' from ' + SymLink);
 end;
 
 procedure TForm1.prepareFirebird(FirebirdBase: String);
@@ -115,7 +115,7 @@ begin
   TmpPath := HomePath + PathDelim + 'tmp';
   if not DirectoryExists(TmpPath) then
     if not ForceDirectories(TmpPath) then
-      raise Exception.Create('Could not create tmp dir.');
+      raise EZSQLException.Create('Could not create tmp dir.');
   FDSetEnv('FIREBIRD_LOCK', TmpPath);
 
   LocalConn.LibraryLocation := HomePath + ClientLib;

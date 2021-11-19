@@ -133,7 +133,7 @@ type
 
 implementation
 
-uses ZAbstractDataset, ZAbstractRODataset, ZSqlProcessor, ZMessages;
+uses ZAbstractDataset, ZAbstractRODataset, ZSqlProcessor, ZMessages, ZExceptions;
 type
   TZProtectedAbstractRWTxnSeqDataSet = Class(TZAbstractRWTxnSeqDataSet);
   TZProtectedAbstractRODataset = Class(TZAbstractRODataset);

@@ -60,7 +60,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZClasses, ZCompatibility, ZTokenizer,
   ZPlainODBCDriver,
-  ZDbcIntfs, ZDbcConnection, ZGenericSqlAnalyser, ZDbcLogging;
+  ZDbcIntfs, ZDbcConnection, ZGenericSqlAnalyser, ZDbcLogging, ZExceptions;
 
 
 type

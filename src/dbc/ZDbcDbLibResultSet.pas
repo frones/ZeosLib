@@ -201,7 +201,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 
 uses ZMessages, ZDbcLogging, ZDbcDBLibUtils, ZEncoding, ZSysUtils, ZFastCode,
-  ZDbcUtils, ZDbcMetadata
+  ZDbcUtils, ZDbcMetadata, ZExceptions
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 constructor TZAbstractDblibDataProvider.Create(Connection: IZDBLibConnection);

@@ -421,7 +421,7 @@ uses ZMessages, ZDbcInterbase6Utils,
   ZFastCode, ZSelectSchema, Math, ZDbcUtils, ZPlainFirebirdInterbaseDriver,
   ZDbcFirebirdInterbase, ZDbcCachedResultSet,
   {$IFNDEF ZEOS_DISABLE_FIREBIRD}ZPlainFirebird, ZDbcFirebird,{$ENDIF}
-  ZDbcLogging;
+  ZDbcLogging, ZExceptions;
 
 const
   DBProvider: array[Boolean] of String = ('Interbase', 'Firebird');

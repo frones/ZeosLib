@@ -194,7 +194,7 @@ implementation
 uses {$IFDEF WITH_COLUMNS_TO_JSON}Math, {$ENDIF}
   ZMessages, ZTokenizer, ZVariant, ZEncoding, ZFastCode,
   ZGenericSqlAnalyser,
-  ZDbcSQLiteUtils, ZDbcLogging, ZDbcUtils, ZDbcMetadata
+  ZDbcSQLiteUtils, ZDbcLogging, ZDbcUtils, ZDbcMetadata, ZExceptions
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZSQLiteCachedResultSet }

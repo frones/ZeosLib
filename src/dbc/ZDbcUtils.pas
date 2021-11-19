@@ -58,7 +58,7 @@ uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs{$ELSE}ZClasses{$ENDIF}, TypInfo, FmtBcd,
   ZCompatibility, ZDbcIntfs, ZTokenizer, ZVariant, ZSysUtils,
-  ZDbcResultSetMetadata;
+  ZDbcResultSetMetadata, ZExceptions;
 
 const SQL_MAX_NUMERIC_LEN = 16;
 type
@@ -2232,7 +2232,7 @@ begin
                 vtRawByteString: Stmt.SetRawByteString(ParamIndex, TRawByteStringDynArray(ZData)[j]);
                 vtUnicodeString: Stmt.SetUnicodeString(ParamIndex, TUnicodeStringDynArray(ZData)[j]);
                 vtCharRec: Stmt.SetCharRec(ParamIndex, TZCharRecDynArray(ZData)[j]);
-                else raise Exception.Create('Unsupported String Variant');
+                else raise EZSQLException.Create('Unsupported String Variant');
               end;
         stBytes:      Stmt.SetBytes(ParamIndex, TBytesDynArray(ZData)[j]);
         stDate:       if ZArray.VArrayVariantType = vtDate

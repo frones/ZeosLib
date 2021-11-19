@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZCompatibility, ZDbcIntfs, ZDbcConnection, ZPlainMySqlDriver, ZPlainDriver,
-  ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser;
+  ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser, ZExceptions;
 type
 
   {** Implements MySQL Database Driver. }
@@ -426,7 +426,7 @@ begin
         then ErrorNo := PlainDriver.mysql_library_init(i, Pointer(FServerArgs), @SERVER_GROUPS) //<<<-- Isn't threadsafe
         else ErrorNo := PlainDriver.mysql_server_init(I, Pointer(FServerArgs), @SERVER_GROUPS); //<<<-- Isn't threadsafe
         if ErrorNo <> 0 then
-          raise Exception.Create('Could not initialize the MySQL / MariaDB client library. Error No: ' + ZFastCode.IntToStr(ErrorNo));  // The manual says nothing else can be called until this call succeeds. So lets just throw the error number...
+          raise EZSQLException.Create('Could not initialize the MySQL / MariaDB client library. Error No: ' + ZFastCode.IntToStr(ErrorNo));  // The manual says nothing else can be called until this call succeeds. So lets just throw the error number...
         PlainDriver.IsInitialized := True;
       finally
         FreeAndNil(TmpList);
@@ -435,7 +435,7 @@ begin
     end;
   end
   else
-    raise Exception.Create('Can''t receive Plaindriver!');
+    raise EZSQLException.Create('Can''t receive Plaindriver!');
 end;
 
 {**

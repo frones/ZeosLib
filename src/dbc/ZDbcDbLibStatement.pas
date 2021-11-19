@@ -328,7 +328,7 @@ uses
   {$ENDIF}{$IFDEF WITH_UNITANSISTRINGS} AnsiStrings, {$ENDIF}
   ZDbcLogging, ZDbcCachedResultSet, ZDbcDbLibUtils, ZDbcDbLibResultSet,
   ZVariant, ZDbcUtils, ZEncoding, ZDbcResultSet,
-  ZFastCode, ZMessages, ZDbcResultSetMetadata, ZDbcMetadata;
+  ZFastCode, ZMessages, ZDbcResultSetMetadata, ZDbcMetadata, ZExceptions;
 
 { TZAbstractDBLibStatement }
 

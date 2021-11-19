@@ -76,7 +76,7 @@ function XMLEncode(Input: String): String;
 implementation
 
 uses
-  typinfo, dom, XMLRead, Base64{$IFDEF ZEOS73UP}, FMTBCD{$ENDIF};
+  typinfo, dom, XMLRead, Base64, ZExceptions{$IFDEF ZEOS73UP}, FMTBCD{$ENDIF};
 
 var
   ProxyFormatSettings: TFormatSettings;
@@ -325,7 +325,7 @@ begin
         stAsciiStream, stUnicodeStream: CF[Idx - FirstDbcIndex] := ConvertString;
         stBinaryStream: CF[Idx - FirstDbcIndex] := ConvertBinaryStream;
         stBytes: CF[Idx-FirstDbcIndex] := ConvertBytes;
-        else raise Exception.Create('Conversion of type ' + MD.GetColumnTypeName(Idx) + ' is not supported (yet).');
+        else raise EZSQLException.Create('Conversion of type ' + MD.GetColumnTypeName(Idx) + ' is not supported (yet).');
       end;
     end;
 
@@ -452,7 +452,7 @@ begin
             stBinaryStream, stBytes:
               Statement.SetBytes(ParamIdx, BinaryToBytes(ParamValue));
             else
-              raise Exception.Create('Conversion of parameter of type ' + ParamTypeStr + ' is not supported (yet).');
+              raise EZSQLException.Create('Conversion of parameter of type ' + ParamTypeStr + ' is not supported (yet).');
           end;
         end;
       end;
@@ -723,4 +723,3 @@ initialization
   ProxyFormatSettings.ThousandSeparator := ',';
 
 end.
-

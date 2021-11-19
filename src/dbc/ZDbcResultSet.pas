@@ -61,7 +61,7 @@ uses
 {$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBcd,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}
-  ZDbcIntfs, ZDbcLogging, ZSysUtils, ZCompatibility, ZVariant, ZClasses;
+  ZDbcIntfs, ZDbcLogging, ZSysUtils, ZCompatibility, ZVariant, ZClasses, ZExceptions;
 
 type
   {** Implements Abstract ResultSet. }

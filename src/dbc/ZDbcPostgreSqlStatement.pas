@@ -61,7 +61,7 @@ uses
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZPlainPostgreSqlDriver,
   ZCompatibility, ZVariant, ZDbcGenericResolver,
-  ZDbcPostgreSql, ZDbcUtils, ZClasses;
+  ZDbcPostgreSql, ZDbcUtils, ZClasses, ZExceptions;
 
 type
   /// <author>EgonHugeist</author>
@@ -952,7 +952,7 @@ begin
                         end;
                       end;
           else
-            raise Exception.Create('Unsupported String Variant');
+            raise EZSQLException.Create('Unsupported String Variant');
         end;
       end;
     stAsciiStream, stUnicodeStream, stBinaryStream: BindLobs;
@@ -1107,7 +1107,7 @@ var
         break;
     end;
     if J <> BatchDMLArrayCount+1 then
-       raise Exception.Create('Fehlermeldung');
+       raise EZSQLException.Create('Fehlermeldung');
     if FplainDriver.PQisInBatchMode(FconnAddress^) = Ord(PGRES_COMMAND_OK) then
       FplainDriver.PQEndBatchMode(FconnAddress^);
 *) //->>>>> trash, worth in vain
@@ -2965,4 +2965,3 @@ PGPreparableTokens[4].MatchingGroup := 'VALUES';
 
 {$ENDIF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 end.
-

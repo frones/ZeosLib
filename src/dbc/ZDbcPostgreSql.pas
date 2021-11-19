@@ -60,7 +60,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined(DELPHI) and defined(MSWINDOWS)}Windows,{$IFEND}
   ZDbcIntfs, ZDbcConnection, ZPlainPostgreSqlDriver, ZDbcLogging, ZTokenizer,
-  ZGenericSqlAnalyser, ZCompatibility, ZClasses, ZSysUtils;
+  ZGenericSqlAnalyser, ZCompatibility, ZClasses, ZSysUtils, ZExceptions;
 
 type
 
@@ -1942,7 +1942,7 @@ begin
     then EscapedLen := FPlainDriver.PQescapeStringConn(Fconn, P+Ord(Quoted), FromChar, Len, @iError)
     else EscapedLen := FPlainDriver.PQescapeString(P+Ord(Quoted), FromChar, Len);
     if iError <> 0 then
-      raise Exception.Create('Wrong string escape behavior!');
+      raise EZSQLException.Create('Wrong string escape behavior!');
     if Quoted then
       (P+EscapedLen+(Byte(Ord(Quoted))))^ := #39;
     if P = @Buf[0]

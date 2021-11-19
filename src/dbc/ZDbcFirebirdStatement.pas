@@ -65,7 +65,7 @@ interface
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} FmtBCD, SysUtils,
   ZCompatibility, ZPlainFirebird, ZPlainFirebirdInterbaseDriver,
   ZDbcIntfs, ZDbcStatement, ZDbcFirebirdInterbase, ZDbcFirebird,
-  ZDbcInterbase6Utils;
+  ZDbcInterbase6Utils, ZExceptions;
 
 type
   /// <summary>Implements an abstract Statement for Firebird.</summary>

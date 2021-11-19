@@ -210,7 +210,7 @@ implementation
 
 uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   Math, TypInfo,
-  ZMessages, ZDbcUtils, ZFastCode, ZEncoding;
+  ZMessages, ZDbcUtils, ZFastCode, ZEncoding, ZExceptions;
 
 {**
   Converts a MySQL native types into ZDBC SQL types.
@@ -329,7 +329,7 @@ begin
       // Todo: Would be nice to show as WKT.
       Result := stBinaryStream;
    else
-      raise Exception.Create('Unknown MySQL data type!');
+      raise EZSQLException.Create('Unknown MySQL data type!');
    end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}

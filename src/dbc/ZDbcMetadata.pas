@@ -1422,7 +1422,7 @@ var
 implementation
 
 uses ZFastCode, ZVariant, ZMessages, ZEncoding,
-  ZDbcProperties, ZDbcUtils;
+  ZDbcProperties, ZDbcUtils, ZExceptions;
 
 { TZAbstractDatabaseInfo }
 

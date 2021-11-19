@@ -67,7 +67,7 @@ uses
   FmtBCD, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZPlainPostgreSqlDriver, ZDbcLogging,
   ZDbcResultSetMetadata, ZCompatibility, ZDbcCache, ZDbcGenericResolver,
-  ZClasses, ZDbcCachedResultSet, ZDbcPostgreSql;
+  ZClasses, ZDbcCachedResultSet, ZDbcPostgreSql, ZExceptions;
 
 type
   /// <summary>Implements Postgres column information object.</summary>

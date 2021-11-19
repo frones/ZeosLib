@@ -116,7 +116,7 @@ type
 implementation
 
 uses
-  ZMessages, ZDatasetUtils, ZDbcMetadata
+  ZMessages, ZDatasetUtils, ZDbcMetadata, ZExceptions
   {$IFDEF WITH_ASBYTES}, ZSysUtils{$ENDIF} ,FmtBCD
   {$IFDEF WITH_INLINE_ANSICOMPARETEXT}, Windows{$ENDIF};
 
@@ -304,7 +304,7 @@ procedure TZStoredProc.SetResultSet(const Index: Integer);
 begin
   if Assigned(Statement) then
     if ( Index < 0 ) or ( Index > (Statement as IZCallableStatement).GetResultSetCount -1 ) then
-      raise Exception.Create(Format(SListIndexError, [Index]))
+      raise EZSQLException.Create(Format(SListIndexError, [Index]))
     else
       SetAnotherResultset((Statement as IZCallableStatement).GetResultSetByIndex(Index));
 end;
@@ -391,4 +391,3 @@ end;
 {$ENDIF}
 
 end.
-

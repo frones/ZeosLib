@@ -31,7 +31,8 @@ package ZDbc;
 
 requires
   ZParseSql,
-  ZPlain;
+  ZPlain,
+  xmlrtl;
 
 contains
   ZDbcAdo in '..\..\src\dbc\ZDbcAdo.pas',

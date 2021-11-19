@@ -66,7 +66,8 @@ uses
 {$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF NO_UNIT_CONTNRS}Contnrs,{$ENDIF}FmtBcd, ZClasses, ZDbcIntfs,
-  ZDbcResultSet, ZDbcResultSetMetadata, ZVariant, ZCompatibility, ZSysUtils;
+  ZDbcResultSet, ZDbcResultSetMetadata, ZVariant, ZCompatibility, ZSysUtils,
+  ZExceptions;
 
 type
   PZIndexPair = ^TZIndexPair;

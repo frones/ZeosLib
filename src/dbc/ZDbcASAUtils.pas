@@ -60,7 +60,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, FmtBCD,
   ZSysUtils, ZVariant, ZCompatibility,
-  ZPlainASADriver, ZDbcIntfs, ZDbcLogging, ZDbcASA;
+  ZPlainASADriver, ZDbcIntfs, ZDbcLogging, ZDbcASA, ZExceptions;
 
 const
   StdVars = 20;

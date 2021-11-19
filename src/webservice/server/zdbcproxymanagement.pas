@@ -79,9 +79,12 @@ procedure RaiseNotImplemented(FunctionName: String);
 
 implementation
 
+uses
+  ZExceptions;
+
 procedure RaiseNotImplemented(FunctionName: String);
 begin
-  raise Exception.Create('Function ' + FunctionName + ' is not implemented yet!');
+  raise EZSQLException.Create('Function ' + FunctionName + ' is not implemented yet!');
 end;
 
 constructor TDbcProxyConnection.Create(AConnection: IZConnection);
@@ -115,4 +118,3 @@ begin
 end;
 
 end.
-

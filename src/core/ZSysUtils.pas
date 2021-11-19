@@ -2209,7 +2209,7 @@ uses DateUtils, Math,
   {$IF defined(WITH_RTLCONSTS_SInvalidGuidArray) or defined(TLIST_IS_DEPRECATED)}RTLConsts,{$IFEND}
   SysConst,{keep it after RTLConst -> deprecated warning}
   {$IFDEF WITH_DBCONSTS}DBConsts,{$ENDIF}
-  ZFastCode;
+  ZFastCode, ZExceptions;
 
 const
   u4Zeros: UnicodeString = '0000';
@@ -3343,7 +3343,7 @@ begin
   {$IFDEF FPC}Result := nil;{$ENDIF}
   if not (VarIsArray(Value) and (VarArrayDimCount(Value) = 1) and
      ((VarType(Value) and VarTypeMask) = varByte)) then
-    raise Exception.Create(SInvalidVarByteArray);
+    raise EZSQLException.Create(SInvalidVarByteArray);
 
   SetLength(Result, VarArrayHighBound(Value, 1) + 1);
   for I := 0 to VarArrayHighBound(Value, 1) do
