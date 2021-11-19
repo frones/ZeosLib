@@ -127,7 +127,7 @@ type
 
 implementation
 
-uses ZEncoding;
+uses ZEncoding, ZExceptions;
 
 const
   stBooleanIndex        = FirstDbcIndex + 0;

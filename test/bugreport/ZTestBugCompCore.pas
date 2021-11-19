@@ -159,7 +159,7 @@ uses
   Variants,
 {$ENDIF}
   SysUtils,
-  ZSysUtils, ZEncoding,
+  ZSysUtils, ZEncoding, ZExceptions,
   ZDbcMetadata, ZDbcProperties,
   ZDatasetUtils, ZAbstractDataset, ZTestConsts, ZTestCase;
 
