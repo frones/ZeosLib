@@ -58,7 +58,7 @@ interface
 {$IFNDEF ZEOS_DISABLE_ORACLE}
 uses
   Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZCompatibility,
-  ZDbcOracle, ZSqlTestCase;
+  ZDbcOracle, ZSqlTestCase, ZExceptions;
 
 type
 
