@@ -2890,11 +2890,16 @@ var SQLType: TZSQLType;
       end;
       {$IFDEF WITH_RAWBYTESTRING}
       if P <> nil then
-        {$IFDEF FPC}
-        PAnsiRec(P-AnsiFirstOff)^.CodePage := CodePage;
-        {$ELSE}
-        PWord(P - CodePageOffSet)^ := CodePage;
-        {$ENDIF}
+        //2021-11-24:
+        //Removed because we should not rely on implementation details. They are
+        //bound to change sooner or later. See https://sourceforge.net/p/zeoslib/tickets/538/
+        //SetCodePage should do the same.
+        //{$IFDEF FPC}
+        //PAnsiRec(P-AnsiFirstOff)^.CodePage := CodePage;
+        SetCodePage(R, CodePage, false);
+        //{$ELSE}
+        //PWord(P - CodePageOffSet)^ := CodePage;
+        //{$ENDIF}
       {$ENDIF WITH_RAWBYTESTRING}
       InternalSetAsRawByteString(DataAddr, IsNullAddr, R, CodePage);
     end;
