@@ -155,19 +155,23 @@ type
   PInt64Rec = ^Int64Rec;
   {$IFEND}
 {$IFDEF FPC}
-{$IFDEF WITH_RAWBYTESTRING}
-  PAnsiRec = ^TAnsiRec;
-  TAnsiRec = Record
-    CodePage    : TSystemCodePage;
-    ElementSize : Word;
-{$ifdef CPU64}
-    { align fields  }
-    Dummy       : DWord;
-{$endif CPU64}
-    Ref         : SizeInt;
-    Len         : SizeInt;
-  end;
-  {$ENDIF}
+
+//2021-11-24:
+//Removed because we should not rely on implementation details. They are
+//bound to change sooner or later. See https://sourceforge.net/p/zeoslib/tickets/538/
+//{$IFDEF WITH_RAWBYTESTRING}
+//  PAnsiRec = ^TAnsiRec;
+//  TAnsiRec = Record
+//    CodePage    : TSystemCodePage;
+//    ElementSize : Word;
+//{$ifdef CPU64}
+//    { align fields  }
+//    Dummy       : DWord;
+//{$endif CPU64}
+//    Ref         : SizeInt;
+//    Len         : SizeInt;
+//  end;
+//{$ENDIF}
   {@-16 : Code page indicator.
   @-12 : Character size (2 bytes)
   @-8  : SizeInt for reference count;
@@ -179,7 +183,10 @@ const
   StringLenOffSet             = SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Len};
   StringRefCntOffSet          = SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Ref}+SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Len};
   {$IFDEF WITH_RAWBYTESTRING}
-  AnsiFirstOff                = SizeOf(TAnsiRec);
+  //2021-11-24:
+  //Removed because we should not rely on implementation details. They are
+  //bound to change sooner or later. See https://sourceforge.net/p/zeoslib/tickets/538/
+  //AnsiFirstOff                = SizeOf(TAnsiRec);
   {$ENDIF}
   {$ELSE} //system.pas
 const
@@ -808,12 +815,16 @@ begin
       SetLength(Dest, Len);
       if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
     end;
-    {$IFDEF FPC}
-    PAnsiRec(pointer(Dest)-AnsiFirstOff)^.CodePage := CP;
-    {$ELSE}
+    //Removed because we should not rely on implementation details. They are
+    //bound to change sooner or later. See https://sourceforge.net/p/zeoslib/tickets/538/
+    //SetCodePage should do the same.
+    //{$IFDEF FPC}
+    //PAnsiRec(pointer(Dest)-AnsiFirstOff)^.CodePage := CP;
+    SetCodePage(Dest, CP, False);
+    //{$ELSE}
     //System.SetCodePage(Dest, CP, False); is not inlined on FPC and the code inside is alreade executed her
-    {%H-}PWord(NativeUInt(Dest) - CodePageOffSet)^ := CP;
-    {$ENDIF}
+    //{%H-}PWord(NativeUInt(Dest) - CodePageOffSet)^ := CP;
+    //{$ENDIF}
   end;
 end;
 {$ENDIF}
