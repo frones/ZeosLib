@@ -326,7 +326,7 @@ begin
             FRawTemp := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(SQLVarHolder),
               ConSettings^.ReadFormatSettings, False);
             Result := Pointer(FRawTemp);
-            Len := NativeUInt({%H-}PLengthInt(NativeUInt(FRawTemp) - StringLenOffSet)^);
+            Len := System.Length(FRawTemp);
           end;
         SQLT_BLOB, SQLT_CLOB:
           begin

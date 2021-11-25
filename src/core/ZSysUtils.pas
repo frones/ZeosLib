@@ -4991,7 +4991,7 @@ begin
     Exit;
   end;
   Source := Pointer(Src);
-  I := {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^;
+  I := Length(Src);
   System.SetString(Result, nil, i);
   Dest := Pointer(Result);
   PEnd := PAnsiChar(Source)+i-8;
@@ -5028,14 +5028,9 @@ begin
   if L = 0 then
     Result := EmptyRaw
   else begin
-    if (Pointer(Result) = nil) or //empty ?
-      ({%H-}PRefCntInt(NativeUInt(Result) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-      (LengthInt(l) <> {%H-}PLengthInt(NativeUInt(Result) - StringLenOffSet)^) then { length as expected ? }
     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-    begin
-      Result := EmptyRaw; //speeds up SetLength x2
-      SetLength(Result, l);
-    end;
+    Result := EmptyRaw; //speeds up SetLength x2
+    SetLength(Result, l);
     {$ELSE}
     System.SetString(Result,nil, l);
     {$ENDIF}
@@ -5053,14 +5048,9 @@ begin
     Result := EmptyRaw
   else
   begin
-    if (Pointer(Result) = nil) or //empty ?
-      ({%H-}PRefCntInt(NativeUInt(Result) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-      (LengthInt(len) <> {%H-}PLengthInt(NativeUInt(Result) - StringLenOffSet)^) then { length as expected ? }
     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-    begin
-      Result := EmptyRaw; //speeds up SetLength x2
-      SetLength(Result, len);
-    end;
+    Result := EmptyRaw; //speeds up SetLength x2
+    SetLength(Result, len);
     {$ELSE}
     System.SetString(Result,nil, Len);
     {$ENDIF}

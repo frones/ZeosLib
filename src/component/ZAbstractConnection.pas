@@ -445,7 +445,7 @@ begin
 end;
 
 {**
-  This methode is required to support proper component initialization.
+  This method is required to support proper component initialization.
   Without it, the connection can start connecting before every property is loaded!
 }
 procedure TZAbstractConnection.Loaded;

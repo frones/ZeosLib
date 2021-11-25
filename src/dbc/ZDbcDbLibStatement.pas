@@ -668,7 +668,7 @@ begin
                   else
                   begin
                     Params[I].CharRec.P := Pointer(Params[I].AsString);
-                    Params[I].CharRec.Len := {%H-}PLengthInt(NativeUInt(Params[I].AsString) - StringLenOffSet)^;
+                    Params[I].CharRec.Len := Length(Params[I].AsString);
                   end;
                 end;
                 FPlainDriver.dbRpcParam(FHandle, nil, RetParam, Ord(tdsText),
@@ -693,7 +693,7 @@ begin
                   else
                   begin
                     Params[I].CharRec.P := Pointer(Params[I].AsString);
-                    Params[I].CharRec.Len := {%H-}PLengthInt(NativeUInt(Params[I].AsString) - StringLenOffSet)^;;
+                    Params[I].CharRec.Len := Length(Params[I].AsString);
                   end;
                 end;
                 FPlainDriver.dbRpcParam(FHandle, nil, RetParam, Ord(tdsText),

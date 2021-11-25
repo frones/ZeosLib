@@ -1210,7 +1210,7 @@ begin
   if Pointer(S) = nil then
     Result := ''
   else
-    Result := PRawToUnicode(Pointer(S), {%H-}PLengthInt(NativeUInt(S) - StringLenOffSet)^, CP);
+    Result := PRawToUnicode(Pointer(S), Length(S), CP);
 end;
 
 {**
@@ -1254,11 +1254,7 @@ end;
 procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: LengthInt;
   var Dest: ZWideString; SBCS_MAP: PSBCS_MAP);
 begin
-  {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
-  if (Pointer(Dest) = nil) or//empty
-     ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-     (SourceBytes <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
-  {$ELSE}
+  {$IFNDEF PWIDECHAR_IS_PUNICODECHAR}
   if Length(Dest) <> LengthInt(SourceBytes) then //WideString isn't ref counted
   {$ENDIF}
   begin
@@ -1307,11 +1303,7 @@ end;
 procedure AnsiSBCSToUCS2(Source: PAnsichar; SourceBytes: LengthInt;
   const MapProc: TSBCSMapProc; var Dest: ZWideString);
 begin
-  {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
-  if (Pointer(Dest) = nil) or//empty
-     ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-     (SourceBytes <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
-  {$ELSE}
+  {$IFNDEF PWIDECHAR_IS_PUNICODECHAR}
   if Length(Dest) <> SourceBytes then //WideString isn't ref counted
   {$ENDIF}
   begin
@@ -1328,11 +1320,7 @@ var
   NewLen: LengthInt;
 begin
   if SourceBytes > dsMaxWStringSize then begin
-    {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
-    if (Pointer(Dest) = nil) or//empty
-       ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-       (SourceBytes <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
-    {$ELSE}
+    {$IFNDEF PWIDECHAR_IS_PUNICODECHAR}
     if Length(Dest) <> SourceBytes then //WideString isn't ref counted
     {$ENDIF}
     begin
@@ -2675,7 +2663,7 @@ begin
     Result := ''
   else
   begin
-    US := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, ZOSCodePage);
+    US := PRawToUnicode(Pointer(Src), Length(Src), ZOSCodePage);
     Result := ZUnicodeToRaw(US, RawCP);
   end;
 end;
@@ -2699,7 +2687,7 @@ begin
     Result := ''
   else
   begin
-    US := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, ZOSCodePage);
+    US := PRawToUnicode(Pointer(Src), Length(Src), ZOSCodePage);
     Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(US);
   end;
 end;
@@ -2869,7 +2857,7 @@ begin
     Result := ZUnicodeToRaw(Src, RawCP);
     {$ELSE}
     begin
-      US := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, StringCP);
+      US := PRawToUnicode(Pointer(Src), Length(Src), StringCP);
       Result := ZUnicodeToRaw(US, RawCP);
     end;
     {$ENDIF}
@@ -2888,7 +2876,7 @@ begin
   {$IFDEF UNICODE}
   Result := ZUnicodeToRaw(Src, RawCP);
   {$ELSE !UNICODE}
-  case ZDetectUTF8Encoding(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^) of
+  case ZDetectUTF8Encoding(Pointer(Src), Length(Src)) of
     etUSASCII:
       {$IFDEF WITH_RAWBYTESTRING_CONVERSION_BUG}
       ZSetString(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^ , Result);
@@ -2901,7 +2889,7 @@ begin
           if ZCompatibleCodePages(ZOSCodePage, zCP_UTF8) then
             WS := ZWideString(Src)
           else
-            WS := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, ZOSCodePage);
+            WS := PRawToUnicode(Pointer(Src), Length(Src), ZOSCodePage);
           Result := ZUnicodeToRaw(WS, RawCP) //Random success unknown String CP
         end else
           Result := ZConvertStringToRaw(Src, StringCP, RawCP)
@@ -2939,7 +2927,7 @@ begin
     Result := String(Src);
     {$ELSE}
     begin
-      US := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, zCP_UTF8);
+      US := PRawToUnicode(Pointer(Src), Length(Src), zCP_UTF8);
       Result := ZUnicodeToString(US, StringCP);
     end;
     {$ENDIF}
@@ -2977,9 +2965,9 @@ begin
   {$IFDEF UNICODE}
     Result := UTF8String(Src);
  {$ELSE}
-    If ZDetectUTF8Encoding(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^) in [etUSASCII, etUTF8] then
+    If ZDetectUTF8Encoding(Pointer(Src), Length(Src)) in [etUSASCII, etUTF8] then
       {$IFDEF WITH_RAWBYTESTRING}
-      ZSetString(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, Result)
+      ZSetString(Pointer(Src), Length(Src), Result)
       {$ELSE}
       Result := Src
       {$ENDIF}
@@ -2991,7 +2979,7 @@ begin
           Tmp := ZRawToUnicode(Src, ZOSCodePage)
       else
         Tmp := PRawToUnicode(Pointer(Src),
-          {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, StringCP);
+          Length(Src), StringCP);
       Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(Tmp);
     end;
   {$ENDIF}
@@ -3011,7 +2999,7 @@ begin
     {$IFDEF UNICODE}
     Result := AnsiString(Src);
     {$ELSE}
-    Tmp := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, StringCP);
+    Tmp := PRawToUnicode(Pointer(Src), Length(Src), StringCP);
     Result := PUnicodeToRaw(Pointer(Tmp), Length(Tmp), ZOSCodePage);
     {$ENDIF}
 end;
@@ -3028,7 +3016,7 @@ begin
     {$IFDEF UNICODE}
     Result := AnsiString(Src);
     {$ELSE}
-    case ZDetectUTF8Encoding(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^) of
+    case ZDetectUTF8Encoding(Pointer(Src), Length(Src)) of
       etUSASCII: Result := Src;
       etAnsi:
         if ZOSCodePage = zCP_UTF8 then
@@ -3042,7 +3030,7 @@ begin
           Result := Src
         else begin
           Tmp := PRawToUnicode(Pointer(Src),
-            {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, zCP_UTF8);
+            Length(Src), zCP_UTF8);
           Result := ZUnicodeToRaw(Tmp, ZOSCodePage);
         end;
     end;
@@ -3063,7 +3051,7 @@ begin
     Result := String(Src);
     {$ELSE}
     begin
-      UniTmp := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, ZOSCodePage);
+      UniTmp := PRawToUnicode(Pointer(Src), Length(Src), ZOSCodePage);
       Result := ZUnicodeToString(UniTmp, StringCP);
     end;
     {$ENDIF}
@@ -3100,7 +3088,7 @@ begin
     Result := ''
   else
   begin
-    Result := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^, StringCP);
+    Result := PRawToUnicode(Pointer(Src), Length(src), StringCP);
   end;
   {$ENDIF}
 end;
@@ -3115,7 +3103,7 @@ begin
     Result := ''
   else
     Result := PRawToUnicode(Pointer(Src),
-      {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^, zCP_UTF8);
+      Length(src), zCP_UTF8);
   {$ENDIF}
 end;
 
@@ -3130,19 +3118,19 @@ begin
     Result := ''
   else
   begin
-    case ZDetectUTF8Encoding(Pointer(Src), {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^) of
+    case ZDetectUTF8Encoding(Pointer(Src), Length(src)) of
       etUSASCII: Result := USASCII7ToUnicodeString(Pointer(Src),
-        {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^);
+        Length(src));
       etUTF8: Result := PRawToUnicode(Pointer(Src),
-        {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^, zCP_UTF8);
+        Length(src), zCP_UTF8);
       else
         if ZCompatibleCodePages(StringCP, zCP_UTF8)  then
           if ZCompatibleCodePages(StringCP, ZOSCodePage) then
              Result := ZWideString(Src)
           else
-            Result := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^, ZOSCodePage)
+            Result := PRawToUnicode(Pointer(Src), Length(src), ZOSCodePage)
         else
-          Result := PRawToUnicode(Pointer(Src), {%H-}PLengthInt(NativeUInt(src) - StringLenOffSet)^, StringCP);
+          Result := PRawToUnicode(Pointer(Src), Length(src), StringCP);
     end;
   end;
   {$ENDIF}
@@ -3717,7 +3705,7 @@ begin
   {$ENDIF WITH_RAWBYTESTRING}
   else
     Result := ZUnicodeToRaw(PRawToUnicode(Pointer(AMessage),
-      {%H-}PLengthInt(NativeUInt(AMessage) - StringLenOffSet)^, MsgCP), RawCP);
+      Length(AMessage), MsgCP), RawCP);
 end;
 
 function ConvertEMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF}RawCP: Word): RawByteString;
@@ -3736,7 +3724,7 @@ begin
   {$ENDIF WITH_RAWBYTESTRING}
   else
     Result := ZUnicodeToRaw(PRawToUnicode(Pointer(AMessage),
-      {%H-}PLengthInt(NativeUInt(AMessage) - StringLenOffSet)^, ZOSCodePage), RawCP);
+      Length(AMessage), ZOSCodePage), RawCP);
 end;
 {$ENDIF UNICODE}
 

@@ -1370,7 +1370,7 @@ begin
       end;
     end;
     Result := Pointer(FRawTemp);
-    Len := NativeUInt({%H-}PLengthInt(NativeUInt(FRawTemp) - StringLenOffSet)^);
+    Len := Length(FRawTemp);
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
 end;

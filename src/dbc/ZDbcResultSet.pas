@@ -992,7 +992,7 @@ begin
     Result := PEmptyAnsiString;
   end else begin
     {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
-    Len := NativeUInt({%H-}PLengthInt(NativeUInt(FRawTemp) - StringLenOffSet)^);
+    Len := Length(FRawTemp);
     {$ELSE}
     Len := Length(FRawTemp)-1;
     {$ENDIF}

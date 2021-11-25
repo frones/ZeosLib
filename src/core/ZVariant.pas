@@ -2086,7 +2086,7 @@ AsVCharRecFromVString:
           end
           else
           begin
-            Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VString) - StringLenOffSet)^; //fast Length() helper
+            Result.VCharRec.Len := Length(Result.VString); //fast Length() helper
             Result.VCharRec.P := Pointer(Result.VString); //avoid RTL call of PChar conversion
           end;
         end;
@@ -2099,7 +2099,7 @@ AsVCharRecFromVString:
             Result.VCharRec.Len := 0;
             Result.VCharRec.P := PEmptyAnsiString;
           end else begin
-            Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VAnsiString) - StringLenOffSet)^; //fast Length() helper
+            Result.VCharRec.Len := Length(Result.VAnsiString); //fast Length() helper
             Result.VCharRec.P := Pointer(Result.VAnsiString); //avoid RTL call of PAnsiChar conversion
           end;
         end;
@@ -2113,7 +2113,7 @@ AsVCharRecFromVString:
             Result.VCharRec.Len := 0;
             Result.VCharRec.P := PEmptyAnsiString;
           end else begin
-            Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VUTF8String) - StringLenOffSet)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
+            Result.VCharRec.Len := Length(Result.VUTF8String); //fast Length() helper for D7..D9 where Length() isn't inlined;
             Result.VCharRec.P := Pointer(Result.VUTF8String); //avoid RTL call of PAnsiChar conversion
           end;
         end;
@@ -2636,7 +2636,7 @@ function TZClientVariantManager.Convert(const Value: TZVariant;
             end
             else
             begin
-              Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VRawByteString) - StringLenOffSet)^; //fast Length() helper
+              Result.VCharRec.Len := Length(Result.VRawByteString); //fast Length() helper
               Result.VCharRec.P := Pointer(Result.VRawByteString); //avoid RTL conversion to PAnsiChar
             end;
           end
@@ -2662,7 +2662,7 @@ function TZClientVariantManager.Convert(const Value: TZVariant;
           end
           else
           begin
-            Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VString) - StringLenOffSet)^; //fast Length() helper
+            Result.VCharRec.Len := Length(Result.VString); //fast Length() helper
             Result.VCharRec.P := Pointer(Result.VString); //avoid RTL conversion to PAnsiChar
           end;
         end;
@@ -2678,7 +2678,7 @@ function TZClientVariantManager.Convert(const Value: TZVariant;
           end
           else
           begin
-            Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VAnsiString) - StringLenOffSet)^; //fast Length() helper
+            Result.VCharRec.Len := Length(Result.VAnsiString); //fast Length() helper
             Result.VCharRec.P := Pointer(Result.VAnsiString); //avoid RTL conversion to PAnsiChar
           end;
         end;
@@ -2692,7 +2692,7 @@ function TZClientVariantManager.Convert(const Value: TZVariant;
             Result.VCharRec.Len := 0;
             Result.VCharRec.P := PEmptyAnsiString; //avoid nil result
           end else begin
-            Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VUTF8String) - StringLenOffSet)^; //fast Length() helper
+            Result.VCharRec.Len := Length(Result.VUTF8String); //fast Length() helper
             Result.VCharRec.P := Pointer(Result.VUTF8String); //avoid RTL conversion to PAnsiChar
           end;
         end;
@@ -2960,7 +2960,7 @@ begin
         end
         else
         begin
-          Result.Len := {%H-}PLengthInt(NativeUInt(Value.VUTF8String) - StringLenOffSet)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
+          Result.Len := Length(Value.VUTF8String); //fast Length() helper for D7..D9 where Length() isn't inlined;
           Result.P := Pointer(Value.VUTF8String); //avoid RTL conversion to PAnsiChar
         end;
       end
@@ -3043,7 +3043,7 @@ AsRBS:
         end
         else
         begin
-          Result.Len := {%H-}PLengthInt(NativeUInt(Value.VRawByteString) - StringLenOffSet)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
+          Result.Len := Length(Value.VRawByteString); //fast Length() helper for D7..D9 where Length() isn't inlined;
           Result.P := Pointer(Value.VRawByteString); //avoid RTL conversion to PAnsiChar
         end;
       end;

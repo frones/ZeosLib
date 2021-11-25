@@ -2119,7 +2119,7 @@ begin
       {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
       Length(Str)-1
       {$ELSE}
-      {%H-}PLengthInt(NativeUInt(Str) - StringLenOffSet)^
+      Length(Str)
       {$ENDIF});
 end;
 
@@ -2885,8 +2885,8 @@ var
   begin
     for I := low(Args) to high(Args) do //Move data
     begin
-      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Args[i])^, Dest^, {%H-}PLengthInt(NativeUInt(Args[i]) - StringLenOffSet)^);
-      Inc(Dest, {%H-}PLengthInt(NativeUInt(Args[i]) - StringLenOffSet)^);
+      {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Pointer(Args[i])^, Dest^, Length(Args[i]));
+      Inc(Dest, Length(Args[i]));
     end;
   end;
   procedure AddParam(const Args: array of RawByteString; var Dest: RawByteString);
@@ -3005,12 +3005,12 @@ begin
       if IsParamIndexArray[i] then begin //calc Parameters size
         ParamNameLen := {P}1+GetIntDigits(ParamIndex)+1{_}+GetIntDigits(j);
         {inc header}
-        Inc(HeaderLen, ParamNameLen+ {%H-}PLengthInt(NativeUInt(TypeTokens[ParamIndex]) - StringLenOffSet)^+Ord(not ((ParamIndex = 0) and (J=0))){,});
+        Inc(HeaderLen, ParamNameLen+ Length(TypeTokens[ParamIndex])+Ord(not ((ParamIndex = 0) and (J=0))){,});
         {inc stmt}
         Inc(SingleStmtLength, 1+{:}ParamNameLen);
         Inc(ParamIndex);
       end else begin
-        Inc(SingleStmtLength, {%H-}PLengthInt(NativeUInt(CurrentSQLTokens[i]) - StringLenOffSet)^);
+        Inc(SingleStmtLength, Length(CurrentSQLTokens[i]));
         P := Pointer(CurrentSQLTokens[i]);
         if not ReturningFound and (Ord(P^) in [Ord('R'), Ord('r')]) and (Length(CurrentSQLTokens[i]) = Length(cRETURNING)) then begin
           ReturningFound := ZSysUtils.SameText(P, Pointer(cReturning), Length(cRETURNING));

@@ -7687,13 +7687,13 @@ begin;
   len := Length(Str)-1;
   lenSub := Length(SubStr)-1;
   {$else}
-  len:=PLengthInt(p-StringLenOffSet)^;
-  lenSub:=PLengthInt(pSub-StringLenOffSet)^;
+  len:=Length(Str);
+  lenSub:=Length(SubStr);
   {$ENDIF}
   if (len<lenSub) or (lenSub<=0) then begin;
     Result:=0;
     exit;
-    end;
+  end;
 
   lenSub:=lenSub-1;
   pStop:=p+len;
