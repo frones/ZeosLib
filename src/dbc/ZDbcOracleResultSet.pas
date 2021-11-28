@@ -1570,6 +1570,7 @@ function TZOracleResultSet.Next: Boolean;
 var
   Status: Integer;
   FetchedRows: LongWord;
+label LogSuccess;  //ugly but faster and no double code
 label Success;  //ugly but faster and no double code
 begin
   { Checks for maximum row. }
@@ -1580,9 +1581,12 @@ begin
   if RowNo = 0 then begin//fetch Iteration count of rows
     Status := FPlainDriver.StmtExecute(FContextHandle, FStmtHandle,
       FErrorHandle, FIteration, 0, nil, nil, OCI_DEFAULT);
-    if Status = OCI_SUCCESS then begin
+    if Status in [OCI_SUCCESS, OCI_SUCCESS_WITH_INFO] then begin
       FMaxBufIndex := FIteration -1; //FFetchedRows is an index [0...?] / FIteration is Count 1...?
-      goto success; //skip next if's
+      if Status = OCI_SUCCESS Then
+        goto success //skip next if's
+      Else
+        goto LogSuccess;
     end;
   end else if Integer(FCurrentRowBufIndex) < FMaxBufIndex then begin
     Inc(FCurrentRowBufIndex);
@@ -1594,9 +1598,12 @@ begin
     Status := FPlainDriver.StmtFetch2(FStmtHandle, FErrorHandle,
       FIteration, OCI_FETCH_NEXT, 0, OCI_DEFAULT);
     FCurrentRowBufIndex := 0; //reset
-    if Status = OCI_SUCCESS then begin
+    if Status in [OCI_SUCCESS, OCI_SUCCESS_WITH_INFO] then begin
       FMaxBufIndex := FIteration -1;
-      goto success;
+      if Status = OCI_SUCCESS Then
+        goto success //skip next if's
+      Else
+        goto LogSuccess;
     end;
   end;
 
@@ -1611,6 +1618,7 @@ begin
     Exit;
   end;
 
+LogSuccess:
   CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'FETCH ROW', ConSettings);
 
   if Status in [OCI_SUCCESS, OCI_SUCCESS_WITH_INFO] then begin
