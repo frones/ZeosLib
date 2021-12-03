@@ -1189,7 +1189,7 @@ function ZRawToUnicode(const S: RawByteString; const CP: Word): UnicodeString;
 begin
   if Pointer(S) = nil
   then Result := ''
-  else Result := PRawToUnicode(Pointer(S), PLengthInt(NativeUInt(S) - StringLenOffSet)^{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, CP);
+  else Result := PRawToUnicode(Pointer(S), Length(S){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, CP);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -1235,11 +1235,7 @@ end;
 procedure AnsiSBCSToUTF16(Source: PAnsichar; SourceBytes: LengthInt;
   var Dest: UnicodeString; SBCS_MAP: PSBCS_MAP);
 begin
-  {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
-  if (Pointer(Dest) = nil) or//empty
-     ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-     (SourceBytes <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
-  {$ELSE}
+  {$IFNDEF PWIDECHAR_IS_PUNICODECHAR}
   if Length(Dest) <> LengthInt(SourceBytes) then //WideString isn't ref counted
   {$ENDIF}
   begin
@@ -1286,11 +1282,7 @@ end;
 procedure AnsiSBCSToUTF16(Source: PAnsichar; SourceBytes: LengthInt;
   const MapProc: TSBCSMapProc; var Dest: UnicodeString);
 begin
-  {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
-  if (Pointer(Dest) = nil) or//empty
-     ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-     (SourceBytes <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
-  {$ELSE}
+  {$IFNDEF PWIDECHAR_IS_PUNICODECHAR}
   if Length(Dest) <> SourceBytes then //WideString isn't ref counted
   {$ENDIF}
   begin
@@ -1307,11 +1299,7 @@ var
   NewLen: LengthInt;
 begin
   if SourceBytes > dsMaxWStringSize then begin
-    {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
-    if (Pointer(Dest) = nil) or//empty
-       ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-       (SourceBytes <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
-    {$ELSE}
+    {$IFNDEF PWIDECHAR_IS_PUNICODECHAR}
     if Length(Dest) <> SourceBytes then //WideString isn't ref counted
     {$ENDIF}
     begin

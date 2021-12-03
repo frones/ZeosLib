@@ -4483,6 +4483,8 @@ end;
 function TZAbstractFirebirdInterbasePreparedStatement.GetExecuteBlockString(
   RemainingArrayRows: Integer; XSQLDAMaxSize: Cardinal; var PreparedRowsOfArray,
   MaxRowsPerBatch: Integer; PlainDriver: TZInterbaseFirebirdPlainDriver): RawByteString;
+type
+  PStringDynArray = ^TStringDynArray;
 var
   Digits: Byte;
   Row, ParamIndex, LastPos, InitialStmtLen, ParamNameLen, SingleStmtLength,
@@ -4560,7 +4562,7 @@ var
           else raise ZDbcUtils.CreateUnsupportedParameterTypeException(ParamIndex, stUnknown);
         end;
         SQLWriter.Finalize(TypeToken^);
-        FTypeTokensLen := FTypeTokensLen + Cardinal(PLengthInt(NativeUInt(TypeToken^) - StringLenOffSet)^);
+        FTypeTokensLen := FTypeTokensLen + getArrayLengthFromPointer(TypeToken);
       end;
     Finally
       FreeAndNil(SQLWriter);
@@ -4665,11 +4667,11 @@ begin
       Inc(PResult, Digits);
       IntToRaw(Cardinal(Row), PStmts, Digits);
       Inc(PStmts, Digits);
-      LastStmLen := Cardinal(PLengthInt(NativeUInt(TypeToken^) - StringLenOffSet)^);
+      LastStmLen := Cardinal(getArrayLengthFromPointer(TypeToken));
       Move(Pointer(TypeToken^)^, PResult^, LastStmLen);
       Inc(PResult, LastStmLen);
     end;
-    InitialStmtLen := Cardinal(PLengthInt(NativeUInt(fASQL) - StringLenOffSet)^) - LastPos;
+    InitialStmtLen := Cardinal(Length(fASQL)) - LastPos;
     Move(P^, PStmts^, Integer(InitialStmtLen));
     Inc(PStmts, InitialStmtLen);
     PByte(PStmts)^ := Byte(';');

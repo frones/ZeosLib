@@ -1500,7 +1500,7 @@ label bind_direct;
         {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
         BufferSize := Max(BufferSize, Length(ClientStrings[I]) -1);
         {$ELSE}
-        BufferSize := Max(BufferSize, {%H-}PLengthInt(NativeUInt(ClientStrings[I]) - StringLenOffSet)^);
+        BufferSize := Max(BufferSize, Length(ClientStrings[I]));
         {$ENDIF}
     if (OCIBindValue.dty <> SQLT_LVC) or (OCIBindValue.value_sz < BufferSize+SizeOf(Integer)) or (OCIBindValue.curelen <> ArrayLen) then
       InitBuffer(SQLType, OCIBindValue, ParameterIndex, ArrayLen, BufferSize);
@@ -1512,7 +1512,7 @@ label bind_direct;
         {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
         POCILong(P).Len := Length(ClientStrings[I]) -1;
         {$ELSE}
-        POCILong(P).Len := {%H-}PLengthInt(NativeUInt(ClientStrings[I]) - StringLenOffSet)^;
+        POCILong(P).Len := Length(ClientStrings[I]);
         {$ENDIF}
         Move(Pointer(ClientStrings[i])^,POCILong(P).data[0], POCILong(P).Len);
       end;
@@ -1600,7 +1600,7 @@ label bind_direct;
         {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
         BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]) -1);
         {$ELSE}
-        BufferSize := Max(BufferSize, {%H-}PLengthInt(NativeUInt(TRawByteStringDynArray(Value)[I]) - StringLenOffSet)^);
+        BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]));
         {$ENDIF}
     BufferSize := BufferSize shl 1; //oversized
     if (OCIBindValue.dty <> SQLT_LVC) or (OCIBindValue.value_sz < BufferSize+SizeOf(Integer)) or (OCIBindValue.curelen <> ArrayLen) then
@@ -1622,7 +1622,7 @@ label bind_direct;
         {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
         BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]) -1);
         {$ELSE}
-        BufferSize := Max(BufferSize, {%H-}PLengthInt(NativeUInt(TRawByteStringDynArray(Value)[I]) - StringLenOffSet)^);
+        BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]));
         {$ENDIF}
     BufferSize := BufferSize shl 1; //oversized
     if (OCIBindValue.dty <> SQLT_LVC) or (OCIBindValue.value_sz < BufferSize+SizeOf(Integer)) or (OCIBindValue.curelen <> ArrayLen) then
@@ -1647,7 +1647,7 @@ label bind_direct;
         {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
         BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]) -1);
         {$ELSE}
-        BufferSize := Max(BufferSize, {%H-}PLengthInt(NativeUInt(TRawByteStringDynArray(Value)[I]) - StringLenOffSet)^);
+        BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]));
         {$ENDIF}
     BufferSize := BufferSize shl 1; //oversized
     if (OCIBindValue.dty <> SQLT_LVC) or (OCIBindValue.value_sz < BufferSize+SizeOf(Integer)) or (OCIBindValue.curelen <> ArrayLen) then
@@ -1669,7 +1669,7 @@ begin
   {$ENDIF}
   BindValue := BindList[ParameterIndex];
   ClientCP := ConSettings^.ClientCodePage.CP;
-  ArrayLen := {%H-}PArrayLenInt({%H-}NativeUInt(Value) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}; //FPC returns High() for this pointer location
+  ArrayLen := getArrayLengthFromPointer(@Value);
   case SQLType of
     stBoolean, stByte, stShort, stWord, stSmall, stLongWord, stInteger, stFloat, stDouble: begin
 bind_direct:
@@ -2139,7 +2139,7 @@ begin
   {$R-}
   BindValue := BindList[ParameterIndex];
   P := BindList[ParameterIndex].Value;
-  for i := 0 to {%H-}PArrayLenInt({%H-}NativeUInt(Value) - ArrayLenOffSet)^{$IFNDEF FPC}-1{$ENDIF} do
+  for i := 0 to getArrayLengthFromPointer(@Value) - 1 do
     if OCIBindValue.dty in [SQLT_CLOB, SQLT_BLOB]
     then OCIBindValue.indp[I] := -Ord((PPOCIDescriptor(PAnsiChar(OCIBindValue.valuep)+SizeOf(Pointer)*I)^ = nil) or ZDbcUtils.IsNullFromArray(P, i))
     else OCIBindValue.indp[I] := -Ord(ZDbcUtils.IsNullFromArray(P, i));

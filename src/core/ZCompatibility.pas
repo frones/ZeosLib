@@ -155,48 +155,14 @@ type
   PInt64Rec = ^Int64Rec;
   {$IFEND}
 {$IFDEF FPC}
-
-//2021-11-24:
-//Removed because we should not rely on implementation details. They are
-//bound to change sooner or later. See https://sourceforge.net/p/zeoslib/tickets/538/
-//{$IFDEF WITH_RAWBYTESTRING}
-//  PAnsiRec = ^TAnsiRec;
-//  TAnsiRec = Record
-//    CodePage    : TSystemCodePage;
-//    ElementSize : Word;
-//{$ifdef CPU64}
-//    { align fields  }
-//    Dummy       : DWord;
-//{$endif CPU64}
-//    Ref         : SizeInt;
-//    Len         : SizeInt;
-//  end;
-//{$ENDIF}
-  {@-16 : Code page indicator.
-  @-12 : Character size (2 bytes)
-  @-8  : SizeInt for reference count;
-  @-4  : SizeInt for size;
-  @    : String + Terminating #0;
-  Pchar(Ansistring) is a valid typecast.
-  So AS[i] is converted to the address @AS+i-1.}
 const
-  StringLenOffSet             = SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Len};
-  StringRefCntOffSet          = SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Ref}+SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Len};
-  {$IFDEF WITH_RAWBYTESTRING}
-  //2021-11-24:
-  //Removed because we should not rely on implementation details. They are
-  //bound to change sooner or later. See https://sourceforge.net/p/zeoslib/tickets/538/
-  //AnsiFirstOff                = SizeOf(TAnsiRec);
-  {$ENDIF}
-  {$ELSE} //system.pas
+{$ELSE} //system.pas
 const
   StringLenOffSet             = SizeOf(Integer); {PStrRec.Len}
   StringRefCntOffSet          = SizeOf(Integer){PStrRec.RefCnt}+SizeOf(Integer){PStrRec.Len};
   CodePageOffSet              = SizeOf(Integer){PAnsiRec/PUnicodeRec.Ref}+SizeOf(Integer){PAnsiRec/PUnicodeRec.Len}+
                                   SizeOf(Word){elementsize}+SizeOf(Word){codePage};  //=12
-  {$ENDIF}
-  ArrayLenOffSet              = SizeOf(ArrayLenInt);
-
+{$ENDIF}
   {$IF NOT DECLARED(SecsPerHour)}
   SecsPerHour = SecsPerMin * MinsPerHour;
   {$IFEND}
@@ -505,6 +471,13 @@ function ReturnAddress: Pointer;
 function align(addr: NativeUInt; alignment: NativeUInt) : NativeUInt; inline;
 {$IFEND}
 
+/// <summary>
+///  Function that assumes P is a pointer to the first item of a dynamic array.
+///  Determines the Length of the array. Introduced as a fix for places where we
+///  used assumptions about compiler internals.
+/// </summary>
+function getArrayLengthFromPointer(const P: Pointer): LengthInt; inline;
+
 const
   PEmptyUnicodeString: PWideChar = '';
   PEmptyAnsiString: PAnsiChar = '';
@@ -581,7 +554,7 @@ begin
     Result := $ffffffff
   else
   begin
-    Len := {%Result-}PLengthInt(P - StringLenOffSet)^;
+    Len := Length(S);
     // Initialize the hash to a 'random' value
     Result := $9747b28c xor len;
 
@@ -690,11 +663,6 @@ begin
   if ( Len = 0 ) then
     Dest := ''
   else
-    if (Pointer(Dest) <> nil) and //Empty?
-       ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
-       ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then begin
-      if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len)
-    end else
     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
     begin
       Dest := '';
@@ -702,7 +670,7 @@ begin
       if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
     end;
     {$ELSE}
-      SetString(Dest, Src, Len);
+    SetString(Dest, Src, Len);
     {$ENDIF}
 end;
 {$ENDIF}
@@ -713,22 +681,15 @@ begin
   if ( Len = 0 ) then
     Dest := ''
   else
-    if (Pointer(Dest) <> nil) and //Empty?
-       ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
-       ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
+    {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
     begin
+      Dest := '';
+      SetLength(Dest, Len);
       if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
-    end
-    else
-      {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-      begin
-        Dest := '';
-        SetLength(Dest, Len);
-        if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
-      end;
-      {$ELSE}
-      SetString(Dest, Src, Len);
-      {$ENDIF}
+    end;
+    {$ELSE}
+    SetString(Dest, Src, Len);
+    {$ENDIF}
 end;
 {$ENDIF}
 
@@ -742,11 +703,7 @@ begin
     Dest := ''
   else
   begin
-    {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
-    if (Pointer(Dest) = nil) or//empty
-       ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-       (Len <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
-    {$ELSE}
+    {$IFNDEF PWIDECHAR_IS_PUNICODECHAR}
     if Length(Dest) <> Len then //WideString isn't ref counted
     {$ENDIF}
     SetLength(Dest, Len);
@@ -780,23 +737,16 @@ begin
   if ( Len = 0 ) then
     Dest := EmptyRaw
   else
-    {$IFNDEF WITH_TBYTES_AS_RAWBYTESTRING}
-    if (Pointer(Dest) <> nil) and //Empty?
-       ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
-       ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then begin
-      if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len)
-    end else
+    {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+    begin
+      Dest := EmptyRaw;
+      SetLength(Dest, Len{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
+      {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}(PByte(Dest)+Len)^ := Ord(#0);{$ENDIF}
+      if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
+    end;
+    {$ELSE}
+    SetString(Dest, Src, Len);
     {$ENDIF}
-      {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-      begin
-        Dest := EmptyRaw;
-        SetLength(Dest, Len{$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}+1{$ENDIF});
-        {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}(PByte(Dest)+Len)^ := Ord(#0);{$ENDIF}
-        if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
-      end;
-      {$ELSE}
-      SetString(Dest, Src, Len);
-      {$ENDIF}
 end;
 {$IFEND}
 
@@ -806,25 +756,10 @@ begin
   if ( Len = 0 ) then
     Dest := EmptyRaw
   else begin
-    if (Pointer(Dest) <> nil) and //Empty?
-       ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
-       ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then begin
-      if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
-    end else begin
-      Dest := EmptyRaw;
-      SetLength(Dest, Len);
-      if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
-    end;
-    //Removed because we should not rely on implementation details. They are
-    //bound to change sooner or later. See https://sourceforge.net/p/zeoslib/tickets/538/
-    //SetCodePage should do the same.
-    //{$IFDEF FPC}
-    //PAnsiRec(pointer(Dest)-AnsiFirstOff)^.CodePage := CP;
+    Dest := EmptyRaw;
+    SetLength(Dest, Len);
+    if Src <> nil then {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Src^, Pointer(Dest)^, Len);
     SetCodePage(Dest, CP, False);
-    //{$ELSE}
-    //System.SetCodePage(Dest, CP, False); is not inlined on FPC and the code inside is alreade executed her
-    //{%H-}PWord(NativeUInt(Dest) - CodePageOffSet)^ := CP;
-    //{$ENDIF}
   end;
 end;
 {$ENDIF}
@@ -891,5 +826,15 @@ function ReturnAddress: Pointer;
   end;
 {$ENDIF}
 {$ENDIF ZReturnAddress}
+
+// typecasts P to a PStringDynArray. The actual array data type doesn't matter
+// all we want to read is the length information of the array. This is stored
+// the same way for all arrays.
+function getArrayLengthFromPointer(const P: Pointer): LengthInt;
+type
+  PStringDynArray = ^TStringDynArray;
+begin
+  Result := Length(PStringDynArray(P)^);
+end;
 
 end.

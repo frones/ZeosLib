@@ -1930,7 +1930,7 @@ SetRaw: if Pointer(Result.VRawByteString) = nil then begin
           Result.VCharRec.Len := 0;
           Result.VCharRec.P := PEmptyAnsiString; //avoid nil result
         end else begin
-          Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VRawByteString) - StringLenOffSet)^; //fast Length() helper
+          Result.VCharRec.Len := Length(Result.VRawByteString);
           Result.VCharRec.P := Pointer(Result.VRawByteString); //avoid RTL conversion to PAnsiChar
         end;
       end;
@@ -1954,7 +1954,7 @@ SetRaw: if Pointer(Result.VRawByteString) = nil then begin
             Result.VCharRec.Len := 0;
             Result.VCharRec.P := PEmptyAnsiString; //avoid nil result
           end else begin
-            Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VRawByteString) - StringLenOffSet)^; //fast Length() helper
+            Result.VCharRec.Len := Length(Result.VRawByteString);
             Result.VCharRec.P := Pointer(Result.VRawByteString); //avoid RTL conversion to PAnsiChar
           end;
         end else begin

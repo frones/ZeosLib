@@ -2257,7 +2257,7 @@ begin
       stUnicodeString: begin
          P := PZArray(BindList[ParameterIndex].Value).VArray;
          L := 0;
-         for I := 0 to {%H-}PArrayLenInt({%H-}NativeUInt(Value) - ArrayLenOffSet)^{$IFNDEF FPC}-1{$ENDIF} do
+         for I := 0 to Length(TStringDynArray(Value))-1 do // Typecast to TZArray just for determining the length
            case PZArray(BindList[ParameterIndex].Value).VArrayVariantType of
               {$IFNDEF UNICODE}vtString,{$ENDIF}
               vtAnsiString, vtUTF8String, VtRawByteString:  L := Max(L, Length(TRawByteStringDynArray(P)[I]));
