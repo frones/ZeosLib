@@ -471,12 +471,15 @@ function ReturnAddress: Pointer;
 function align(addr: NativeUInt; alignment: NativeUInt) : NativeUInt; inline;
 {$IFEND}
 
+type
+  PStringDynArray = ^TStringDynArray;
+
 /// <summary>
 ///  Function that assumes P is a pointer to the first item of a dynamic array.
 ///  Determines the Length of the array. Introduced as a fix for places where we
 ///  used assumptions about compiler internals.
 /// </summary>
-function getArrayLengthFromPointer(const P: Pointer): LengthInt; inline;
+function getArrayLengthFromPointer(const P: Pointer): LengthInt; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 
 const
   PEmptyUnicodeString: PWideChar = '';
@@ -831,8 +834,6 @@ function ReturnAddress: Pointer;
 // all we want to read is the length information of the array. This is stored
 // the same way for all arrays.
 function getArrayLengthFromPointer(const P: Pointer): LengthInt;
-type
-  PStringDynArray = ^TStringDynArray;
 begin
   Result := Length(PStringDynArray(P)^);
 end;
