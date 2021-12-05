@@ -2133,7 +2133,7 @@ AsVCharRecFromRaw:
           Result.VCharRec.Len := 0;
           Result.VCharRec.P := PEmptyAnsiString;
         end else begin
-          Result.VCharRec.Len := Length(Result.VRawByteString);
+          Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VRawByteString) - StringLenOffSet)^; //fast Length() helper
           Result.VCharRec.P := Pointer(Result.VRawByteString); //avoid RTL call of PChar conversion
         end;
       end;

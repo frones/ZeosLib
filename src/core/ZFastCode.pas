@@ -3952,7 +3952,7 @@ begin
   if Pointer(S) = nil then
     goto jmpFail;
   Buf := Pointer(S);
-  PEnd := Buf + Length(Buf) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+  PEnd := Buf + PLengthInt(NativeUInt(Buf) - StringLenOffSet)^ {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
   P := PEnd;
   Result := ValRawUInt32(Buf, PEnd);
   if (PEnd <> P) and (PByte(PEnd)^ <> Byte(' ')) then
@@ -4067,7 +4067,7 @@ begin
   if Pointer(S) = nil then
     goto jmpFail;
   Buf := Pointer(S);
-  PEnd := Buf + Length(Buf);
+  PEnd := Buf + PLengthInt(NativeUInt(Buf) - StringLenOffSet)^;
   P := PEnd;
   Result := ValUnicodeUInt32(Buf, PEnd);
   if (PEnd <> P) and (PWord(PEnd)^ <> Word(' ')) then
@@ -4326,7 +4326,7 @@ begin
   then Result := Default
   else begin
     Buf := Pointer(S);
-    PEnd := Buf + Length(Buf) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+    PEnd := Buf + PLengthInt(NativeUInt(Buf) - StringLenOffSet)^ {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
     P := PEnd;
     Result := ValRawUInt32(Buf, PEnd);
     if (PEnd <> P) and (PByte(PEnd)^ <> Byte(' ')) then
@@ -4466,7 +4466,7 @@ begin
   then Result := Default
   else begin
     Buf := Pointer(S);
-    PEnd := Buf + Length(Buf) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+    PEnd := Buf + PLengthInt(NativeUInt(Buf) - StringLenOffSet)^ {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
     P := PEnd;
     Result := ValUnicodeUInt32(Buf, PEnd);
     if (PEnd <> P) and (PByte(PEnd)^ <> Byte(' ')) then
@@ -8044,8 +8044,8 @@ begin;
   len := Length(Str)-1;
   lenSub := Length(SubStr)-1;
   {$else}
-  len:=Length(Str);
-  lenSub:=Length(SubStr);
+  len:=PLengthInt(p-StringLenOffSet)^;
+  lenSub:=PLengthInt(pSub-StringLenOffSet)^;
   {$ENDIF}
   if (len<lenSub) or (lenSub<=0) then begin;
     Result:=0;

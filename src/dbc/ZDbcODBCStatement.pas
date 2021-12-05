@@ -1278,7 +1278,7 @@ begin
   BindValue := BindList[Index];
   Arr := BindValue.Value;
   DA := Arr.VArray;
-  ArrayLen := getArrayLengthFromPointer(DA);
+  ArrayLen := {%H-}PArrayLenInt({%H-}NativeUInt(DA) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}; //FPC returns High() for this pointer location
   SQLType := TZSQLType(Arr.VArrayType);
   if not Bind.Described  then
     if (Ord(SQLType) < Ord(stString)) then begin

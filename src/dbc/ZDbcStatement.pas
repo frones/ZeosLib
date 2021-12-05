@@ -4288,8 +4288,6 @@ end;
 procedure TZAbstractPreparedStatement.ValidateArraySizeAndType(
   const Value: Pointer; SQLType: TZSQLType; VariantType: TZVariantType;
   ParamIndex: Integer);
-type
-  PStringDynArray = ^TStringDynArray;
 var Len: ArrayLenInt;
 begin
   if Value = nil then Exit;
@@ -4307,8 +4305,7 @@ begin
           raise EZUnsupportedException.Create(sUnsupportedOperation);
     {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
   end;
-  //Len := {%H-}PArrayLenInt({%H-}NativeUInt(Value) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}; //FPC returns High() for this pointer location
-  Len := Length(PStringDynArray(Value)^);
+  Len := {%H-}PArrayLenInt({%H-}NativeUInt(Value) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}; //FPC returns High() for this pointer location
   if (BindList.ParamTypes[ParamIndex] <> pctResultSet) then
     if (ParamIndex = 0) then
       FBatchDMLArrayCount := Len
