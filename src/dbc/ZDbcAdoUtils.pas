@@ -854,7 +854,8 @@ procedure RefreshParameters(const AdoCommand: ZPlainAdo.Command;
               end;
               Parameter.Precision := bPrecision;
               Parameter.NumericScale := ParamInfo[I].bScale;
-              Parameter.Attributes := dwFlags and $FFFFFFF0; { Mask out Input/Output flags }
+              if (dwFlags and $FFFFFFF0) <= (adParamSigned or adParamNullable or adParamLong) then
+                Parameter.Attributes := dwFlags and $FFFFFFF0; { Mask out Input/Output flags }
             end;
       finally
         if Assigned(CommandPrepare) then CommandPrepare.Unprepare;
