@@ -5249,10 +5249,10 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetInt(Index, Value: Integer);
-var P: PAnsiChar;
-    Digits: Byte;
-    IsNegative: Boolean;
-    C: Cardinal;
+//var P: PAnsiChar;
+//    Digits: Byte;
+//    IsNegative: Boolean;
+//    C: Cardinal;
 begin
   {$IFNDEF GENERIC_INDEX}Dec(Index);{$ENDIF}
   CheckParameterIndex(Index);
@@ -5310,10 +5310,10 @@ end;
 {$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "GetOrdinalDigits" marked as inline is not inlined}{$ENDIF}
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetLong(Index: Integer;
   const Value: Int64);
-var U: UInt64;
-  P: PAnsiChar;
-  Digits: Byte;
-  IsNegative: Boolean;
+//var U: UInt64;
+//  P: PAnsiChar;
+//  Digits: Byte;
+//  IsNegative: Boolean;
 begin
   {$IFNDEF GENERIC_INDEX}Dec(Index);{$ENDIF}
   CheckParameterIndex(Index);
@@ -5533,10 +5533,10 @@ begin
 end;
 
 procedure TZAbstractFirebirdInterbasePreparedStatement.SetSmall(Index: Integer; Value: SmallInt);
-var P: PAnsiChar;
-    W: Word;
-    Digits: Byte;
-    IsNegative: Boolean;
+//var P: PAnsiChar;
+//    W: Word;
+//    Digits: Byte;
+//    IsNegative: Boolean;
 begin
   {$IFNDEF GENERIC_INDEX}Dec(Index);{$ENDIF}
   CheckParameterIndex(Index);
