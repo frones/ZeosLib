@@ -31,6 +31,7 @@ requires
   dbrtl;
 
 contains
+  ZExceptions in '..\..\src\core\ZExceptions.pas',
   ZVariant in '..\..\src\core\ZVariant.pas',
   ZCollections in '..\..\src\core\ZCollections.pas',
   ZCompatibility in '..\..\src\core\ZCompatibility.pas',

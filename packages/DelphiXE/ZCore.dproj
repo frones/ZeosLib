@@ -72,6 +72,7 @@
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
 			<DCCReference Include="rtl.dcp"/>
+			<DCCReference Include="..\..\src\core\ZExceptions.pas"/>
 			<DCCReference Include="..\..\src\core\ZVariant.pas"/>
 			<DCCReference Include="..\..\src\core\ZCollections.pas"/>
 			<DCCReference Include="..\..\src\core\ZCompatibility.pas"/>

@@ -98,6 +98,10 @@
         <Filename Value="../../src/core/ZXmlCompat.pas"/>
         <UnitName Value="ZXmlCompat"/>
       </Item17>
+      <Item18>
+        <Filename Value="../../src/core/ZExceptions.pas"/>
+        <UnitName Value="ZExceptions"/>
+      </Item18>
     </Files>
     <RequiredPkgs Count="1">
       <Item1>

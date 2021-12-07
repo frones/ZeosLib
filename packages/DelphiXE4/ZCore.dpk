@@ -54,6 +54,7 @@ contains
   ZSysUtils in '..\..\src\core\ZSysUtils.pas',
   ZTokenizer in '..\..\src\core\ZTokenizer.pas',
   ZVariables in '..\..\src\core\ZVariables.pas',
-  ZVariant in '..\..\src\core\ZVariant.pas';
+  ZVariant in '..\..\src\core\ZVariant.pas',
+  ZExceptions in '..\..\src\core\ZExceptions.pas';
 
 end.
