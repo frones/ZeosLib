@@ -84,76 +84,79 @@
 		</PropertyGroup>
 		<ItemGroup>
 			<DelphiCompile Include="..\..\src\core\ZFunctionsOther.pas">
-				<BuildOrder>17</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\core\ZFunctionsStrings.pas">
 				<BuildOrder>18</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\core\ZFunctionsMath.pas">
-				<BuildOrder>16</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\core\ZFunctionsConvert.pas">
-				<BuildOrder>14</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\core\ZFunctionsDateTime.pas">
-				<BuildOrder>15</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\core\ZMatchPattern.pas">
+			<DelphiCompile Include="..\..\src\core\ZFunctionsStrings.pas">
 				<BuildOrder>19</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\core\ZVariables.pas">
-				<BuildOrder>23</BuildOrder>
+			<DelphiCompile Include="..\..\src\core\ZFunctionsMath.pas">
+				<BuildOrder>17</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\core\ZVariant.pas">
-				<BuildOrder>24</BuildOrder>
+			<DelphiCompile Include="..\..\src\core\ZFunctionsConvert.pas">
+				<BuildOrder>15</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\core\ZTokenizer.pas">
-				<BuildOrder>22</BuildOrder>
+			<DelphiCompile Include="..\..\src\core\ZFunctionsDateTime.pas">
+				<BuildOrder>16</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\core\ZMessages.pas">
+			<DelphiCompile Include="..\..\src\core\ZMatchPattern.pas">
 				<BuildOrder>20</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\core\ZSysUtils.pas">
+			<DelphiCompile Include="..\..\src\core\ZVariables.pas">
+				<BuildOrder>24</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\core\ZVariant.pas">
+				<BuildOrder>25</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\core\ZExceptions.pas">
+				<BuildOrder>1</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\core\ZTokenizer.pas">
+				<BuildOrder>23</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\core\ZMessages.pas">
 				<BuildOrder>21</BuildOrder>
 			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\core\ZSysUtils.pas">
+				<BuildOrder>22</BuildOrder>
+			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\core\ZFunctions.pas">
-				<BuildOrder>13</BuildOrder>
+				<BuildOrder>14</BuildOrder>
 			</DelphiCompile>
 			<DelphiCompile Include="..\..\src\core\ZClasses.pas">
-				<BuildOrder>5</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\core\ZCollections.pas">
 				<BuildOrder>6</BuildOrder>
 			</DelphiCompile>
-			<CppCompile Include="ZCore.cpp">
-				<BuildOrder>2</BuildOrder>
-				<BuildOrder>11</BuildOrder>
-			</CppCompile>
-			<ResFiles Include="ZCore.res">
-				<BuildOrder>5</BuildOrder>
-				<BuildOrder>12</BuildOrder>
-			</ResFiles>
-			<PackageImport Include="rtl.bpi">
-				<BuildOrder>11</BuildOrder>
-				<BuildOrder>10</BuildOrder>
-			</PackageImport>
-			<DelphiCompile Include="..\..\src\core\ZCompatibility.pas">
+			<DelphiCompile Include="..\..\src\core\ZCollections.pas">
 				<BuildOrder>7</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\core\ZExprToken.pas">
-				<BuildOrder>11</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\core\ZFastCode.pas">
+			<CppCompile Include="ZCore.cpp">
+				<BuildOrder>3</BuildOrder>
 				<BuildOrder>12</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\core\ZExprParser.pas">
-				<BuildOrder>10</BuildOrder>
-			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\core\ZEncoding.pas">
+			</CppCompile>
+			<ResFiles Include="ZCore.res">
+				<BuildOrder>6</BuildOrder>
+				<BuildOrder>13</BuildOrder>
+			</ResFiles>
+			<PackageImport Include="rtl.bpi">
+				<BuildOrder>12</BuildOrder>
+				<BuildOrder>11</BuildOrder>
+			</PackageImport>
+			<DelphiCompile Include="..\..\src\core\ZCompatibility.pas">
 				<BuildOrder>8</BuildOrder>
 			</DelphiCompile>
-			<DelphiCompile Include="..\..\src\core\ZExpression.pas">
+			<DelphiCompile Include="..\..\src\core\ZExprToken.pas">
+				<BuildOrder>12</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\core\ZFastCode.pas">
+				<BuildOrder>13</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\core\ZExprParser.pas">
+				<BuildOrder>11</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\core\ZEncoding.pas">
 				<BuildOrder>9</BuildOrder>
+			</DelphiCompile>
+			<DelphiCompile Include="..\..\src\core\ZExpression.pas">
+				<BuildOrder>10</BuildOrder>
 			</DelphiCompile>
 			<BuildConfiguration Include="Basis">
 				<Key>Base</Key>
