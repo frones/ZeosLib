@@ -710,7 +710,8 @@ begin
             Parameter := FAdoCommand.CreateParameter(Name, wType, Direction, ulParamSize, EmptyParam);
             Parameter.Precision := bPrecision;
             Parameter.NumericScale := ParamInfo[I].bScale;
-            Parameter.Attributes := dwFlags and $FFFFFFF0; { Mask out Input/Output flags }
+            if (dwFlags and $FFFFFFF0) <= (adParamSigned or adParamNullable or adParamLong) then
+              Parameter.Attributes := dwFlags and $FFFFFFF0; { Mask out Input/Output flags }
           end;
         FRefreshParamsFailed := False;
       end else FRefreshParamsFailed := True;
