@@ -206,7 +206,7 @@ type
     /// <param>"SQL" a SQL query.</param>
     /// <returns>a select statement schema.</returns>
     function DefineSelectSchemaFromQuery(const Tokenizer: IZTokenizer;
-      const SQL: string): IZSelectSchema;
+      const SQL: string): IZSelectSchema; virtual;
   end;
 
 implementation

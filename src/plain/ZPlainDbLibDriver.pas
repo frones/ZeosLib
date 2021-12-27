@@ -988,25 +988,28 @@ type
 type
   //EH: We need a size of 122 Bytes!
   {$IFDEF FPC}
-    {$PACKRECORDS 2}
+    {$PACKRECORDS 1}
   {$ELSE}
-    {$A2}
+    {$A1} //JBau: Does this really make sense? I didn't find documentation for anything besides $A+ and $A- about this.
   {$ENDIF}
   PZDBCOL = ^ZDBCOL;
-  ZDBCOL = record
+  ZDBCOL = packed record
    	Typ:            DBSHORT;
    	UserType:       DBINT;
    	MaxLength:      DBINT;
    	Precision:      BYTE;
    	Scale:          BYTE;
+        PAD1:           BYTE;     // JBau: These pads are necessary because otherwise we cannot get the sams memory layout as C uses :o(
+        PAD2:           BYTE;     // JBau: These pads are necessary because otherwise we cannot get the sams memory layout as C uses :o(
    	VarLength:      LongBool; { TRUE, FALSE }
    	Null:           BYTE;     { TRUE, FALSE or DBUNKNOWN }
    	CaseSensitive:  BYTE;     { TRUE, FALSE or DBUNKNOWN }
    	Updatable:      BYTE;     { TRUE, FALSE or DBUNKNOWN }
+        PAD3:           BYTE;     // JBau: These pads are necessary because otherwise we cannot get the sams memory layout as C uses :o(
    	Identity:       LongBool; { TRUE, FALSE or DBUNKNOWN }
   end;
   PDBCOL = ^DBCOL;
-  DBCOL = record
+  DBCOL = packed record
    	SizeOfStruct:   DBINT;
    	Name:           array[0..MAXCOLNAMELEN] of DBCHAR;
    	ActualName:     array[0..MAXCOLNAMELEN] of DBCHAR;
@@ -1025,7 +1028,7 @@ type
   end;
 
   PTDSDBCOL = ^TTDSDBCOL;
-  TTDSDBCOL = record
+  TTDSDBCOL = packed record
     SizeOfStruct:   DBINT;
     Name:           array[0..TDSMAXCOLNAMELEN+1] of DBCHAR;
     ActualName:     array[0..TDSMAXCOLNAMELEN+1] of DBCHAR;
@@ -1043,7 +1046,7 @@ type
     Identity:       LongBool;{ TRUE, FALSE }*)
   end;
   PTDSDBCOL2 = ^TTDSDBCOL;
-  TTDSDBCOL2 = record
+  TTDSDBCOL2 = packed record
     SizeOfStruct:   DBINT;
     Name:           array[0..TDSMAXCOLNAMELEN+1] of DBCHAR;
     ActualName:     array[0..TDSMAXCOLNAMELEN+1] of DBCHAR;
@@ -1435,6 +1438,7 @@ type
     function dbcmdrow(dbproc: PDBPROCESS): RETCODE;{$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbcolbrowse(dbproc: PDBPROCESS; Column: Integer): DBBOOL; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     public dbcolinfo: function(pdbhandle: PDBHANDLE; _Type: Integer; Column: DBINT; ComputeId: DBINT; lpdbcol: PDBCOL): RETCODE; cdecl;//no SYB but FreeTDS
+    public dbtablecolinfo: function(pdbhandle: PDBHANDLE; Column: DBINT; lpdbcol: PDBCOL): RETCODE; cdecl;//FreeTDS only!
     function dbcollen(dbproc: PDBPROCESS; Column: Integer): DBINT; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbcolname(dbproc: PDBPROCESS; Column: Integer): PAnsiChar; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbcolsource(dbproc: PDBPROCESS; Column: Integer): PAnsiChar; {$IFDEF WITH_INLINE}inline; {$ENDIF}
@@ -1522,6 +1526,7 @@ type
     dbcmdrow: function(dbproc: PDBPROCESS): RETCODE;cdecl;
     dbcolbrowse: function(dbproc: PDBPROCESS; Column: Integer): DBBOOL; cdecl;
     dbcolinfo: function(pdbhandle: PDBHANDLE; _Type: Integer; Column: DBINT; ComputeId: DBINT; lpdbcol: PDBCOL): RETCODE; cdecl;//no SYB but FreeTDS
+    dbtablecolinfo: function(pdbhandle: PDBHANDLE; Column: DBINT; lpdbcol: PDBCOL): RETCODE; cdecl;//FreeTDS only!!!
     dbcollen: function(dbproc: PDBPROCESS; Column: Integer): DBINT; cdecl;
     dbcolname: function(dbproc: PDBPROCESS; Column: Integer): PAnsiChar; cdecl;
     dbcolsource: function(dbproc: PDBPROCESS; Column: Integer): PAnsiChar; cdecl;
@@ -3120,6 +3125,7 @@ begin
       @{$IFDEF MSWINDOWS}Fdbcmd{$ELSE}dbcmd{$ENDIF} := GetAddress('dbcmd');
       @{$IFDEF MSWINDOWS}Fdbcollen{$ELSE}dbcollen{$ENDIF} := GetAddress('dbcollen');
       @dbcolinfo := GetAddress('dbcolinfo'); //no sybase but freeTDS and MS
+      @dbtablecolinfo := GetAddress('dbtablecolinfo'); //FreeTDS only!!!
       @{$IFDEF MSWINDOWS}Fdbcolname{$ELSE}dbcolname{$ENDIF} := GetAddress('dbcolname');
       @{$IFDEF MSWINDOWS}Fdbcolsource{$ELSE}dbcolsource{$ENDIF} := GetAddress('dbcolsource'); //no FreeTDS?
       @{$IFDEF MSWINDOWS}Fdbcoltype{$ELSE}dbcoltype{$ENDIF} := GetAddress('dbcoltype');
