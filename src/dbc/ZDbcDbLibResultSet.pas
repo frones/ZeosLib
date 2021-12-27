@@ -368,6 +368,7 @@ var
   ColInfo: DBCOL;
   tdsColInfo: TTDSDBCOL;
   NeedsLoading: Boolean;
+  RetVal: RETCODE;
 label AssignGeneric;
   procedure AssignGenericColumnInfoFromZDBCOL(ColumnInfo: TZDBLIBColumnInfo; ColInfo: ZDBCOL);
   begin
@@ -425,8 +426,16 @@ begin
     if FPlainDriver.DBLibraryVendorType = lvtFreeTDS then begin
       tdsColInfo.SizeOfStruct := SizeOf(TTDSDBCOL);
       FillChar(tdsColInfo.Name[0], tdsColInfo.SizeOfStruct- SizeOf(DBInt), #0);
-      if FPlainDriver.dbcolinfo(FHandle, CI_REGULAR, I, 0, @tdsColInfo) <> DBSUCCEED then //might be possible for computed or cursor columns
-        goto AssignGeneric;
+      RetVal := DBFAIL;
+      if Assigned(FPlainDriver.dbtablecolinfo) then begin
+        RetVal := FPlainDriver.dbtablecolinfo(FHandle, I, @tdsColInfo);
+        if RetVal <> DBSUCCEED then
+          FDBLibConnection.CheckDBLibError(lcFetch, 'dbtablecolinfo', IImmediatelyReleasable(FWeakImmediatRelPtr));
+      end;
+      if RetVal <> DBSUCCEED then
+        RetVal := FPlainDriver.dbcolinfo(FHandle, CI_REGULAR, I, 0, @tdsColInfo); //might be possible for computed or cursor columns
+      if RetVal <> DBSUCCEED then
+          goto AssignGeneric;
       ValueToString(@tdsColInfo.Name[0], ColumnInfo.ColumnName );
       if Byte(tdsColInfo.ActualName[0]) = Ord(#0)
       then ColumnInfo.ColumnLabel := ColumnInfo.ColumnName
