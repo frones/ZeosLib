@@ -62,12 +62,39 @@ interface
 {$IFEND}
 
 {$IFNDEF EMPTY_ZSybaseAnalyser}
-uses ZGenericSqlAnalyser;
+uses ZGenericSqlAnalyser, ZTokenizer, ZSelectSchema;
+
 type
   /// <summary>Implements an Sybase statements analyser.</summary>
-  TZSybaseStatementAnalyser = class(TZGenericStatementAnalyser);
+  TZSybaseStatementAnalyser = class(TZGenericStatementAnalyser)
+    public
+      function DefineSelectSchemaFromQuery(const Tokenizer: IZTokenizer;
+        const SQL: string): IZSelectSchema; override;
+  end;
+
 {$ENDIF EMPTY_ZSybaseAnalyser}
+
 implementation
+
+{$IFNDEF EMPTY_ZSybaseAnalyser}
+uses ZSysUtils;
+
+function TZSybaseStatementAnalyser.DefineSelectSchemaFromQuery(const Tokenizer: IZTokenizer;
+  const SQL: string): IZSelectSchema;
+var
+  TableNo: Integer;
+  TableRef: TZTableRef;
+begin
+  Result := inherited DefineSelectSchemaFromQuery(Tokenizer, SQL);
+  // change the Catalog of all temporary tables...
+  for TableNo := 0 to Result.TableCount - 1 do begin
+    TableRef := Result.GetTable(TableNo);
+    if StartsWith(TableRef.Table, '#') then
+      TableRef.Catalog := 'tempdb';
+  end;
+end;
+
+{$ENDIF EMPTY_ZSybaseAnalyser}
 
 end.
  
