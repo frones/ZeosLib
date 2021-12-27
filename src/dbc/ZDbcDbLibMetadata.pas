@@ -1956,22 +1956,70 @@ var SQLType: TZSQLType;
     ODBCType: SmallInt;
     Len: NativeUInt;
     P: PAnsiChar;
+    isTempTable: Boolean;
+    SQL: String;
+
+    function SanitizeTempTableName(inValue: String): String;
+    var
+      Pos: Integer;
+      Found: Boolean;
+    begin
+      Pos := Length(inValue);
+
+      // remove hex numbers from the end
+      repeat
+        case InValue[Pos] of
+          '0'..'9', 'A'..'F': begin
+              Found := True;
+              Dec(Pos);
+            end;
+          else
+            Found := False;
+        end;
+      until not Found;
+
+      // remove Underscors from the end
+      repeat
+        if InValue[Pos] = '_' then begin
+          Found := True;
+          Dec(Pos);
+        end else
+          Found := False;
+      until not Found;
+
+      Result := Copy(inValue, 1, Pos);
+    end;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
+  isTempTable := StartsWith(TableNamePattern, '#');
   Connection := GetConnection;
   Statement := Connection.CreateStatement;
-  if Connection.GetHostVersion < EncodeSQLVersioning(9, 0, 0)
-  then tmp := ' sp_columns '
-  else tmp := ' sys.sp_columns ';
-  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
-  with Statement.ExecuteQuery('exec' + tmp +
+  if isTempTable then begin
+    SQL := 'exec tempdb.sys.sp_columns ' +
       ComposeObjectString(TableNamePattern)+', '+ComposeObjectString(SchemaPattern)+', '+
-      ComposeObjectString(Catalog)+', '+ComposeObjectString(ColumnNamePattern)) do begin
+      ComposeObjectString('tempdb')+', '+ComposeObjectString(ColumnNamePattern);
+  end else begin
+    if Connection.GetHostVersion < EncodeSQLVersioning(9, 0, 0) then
+      tmp := ' sp_columns '
+    else
+      tmp := ' sys.sp_columns ';
+    SQL := 'exec' + tmp +
+          ComposeObjectString(TableNamePattern)+', '+ComposeObjectString(SchemaPattern)+', '+
+          ComposeObjectString(Catalog)+', '+ComposeObjectString(ColumnNamePattern)
+  end;
+
+  {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
+  with Statement.ExecuteQuery(SQL) do begin
     while Next do begin
       Result.MoveToInsertRow;
       Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiCharByName('TABLE_QUALIFIER', Len), Len);
       Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiCharByName('TABLE_OWNER', Len), Len);
-      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiCharByName('TABLE_NAME', Len), Len);
+      if isTempTable then begin
+        tmp := SanitizeTempTableName(GetStringByName('TABLE_NAME'));
+        Result.UpdateString(TableNameIndex, tmp);
+      end else begin
+        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiCharByName('TABLE_NAME', Len), Len);
+      end;
       tmp := GetStringByName('COLUMN_NAME');
       Result.UpdateString(ColumnNameIndex, tmp);
       Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.IsCaseSensitive(tmp));
@@ -2025,52 +2073,72 @@ begin
       if Connection.GetServerProvider = spMsSQL then
         Result.UpdateBoolean(TableColColumnSearchableIndex,
           not (GetSmallByName('SS_DATA_TYPE') in [34, 35]));
+
+      if isTempTable then begin
+        // I have no time to figure this part out now. Let somebody else deal with it.
+        // I will initialize everything to something that should work in most cases.
+        Result.UpdateBoolean(TableColColumnAutoIncIndex, False);
+        Result.UpdateBoolean(TableColColumnSearchableIndex, True);
+        Result.UpdateBoolean(TableColColumnWritableIndex, True);
+        Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);
+        Result.UpdateBoolean(TableColColumnReadonlyIndex, False);
+      end;
       Result.InsertRow;
     end;
     Close;
   end;
 
-  if not Result.IsBeforeFirst then begin
-    // hint by Jan: I am not sure wether this statement still works with SQL Server 2000 or before.
+  if isTempTable then begin
     Result.BeforeFirst;
-    if Connection.GetHostVersion < EncodeSQLVersioning(9, 0, 0) then
-      Tmp :=  'select c.colid, c.name, c.type, c.prec, '+
-        'c.scale, c.colstat, c.status, c.iscomputed from syscolumns c '+
-        'inner join sysobjects o on (o.id = c.id) where o.name like '+
-      DeComposeObjectString(TableNamePattern)+' escape ''' + GetDataBaseInfo.GetSearchStringEscape + ''' and c.number=0 order by colid'
-    else Tmp := Format('select c.colid, c.name, c.type, c.prec, c.scale, c.colstat, c.status, c.iscomputed '
-      + ' from syscolumns c '
-      + '   inner join sys.sysobjects o on (o.id = c.id) '
-      + '   inner join sys.schemas s on (o.uid = s.schema_id) '
-      + ' where c.number=0 '
-      + '   and (o.name like %0:s escape ''%2:s'' or (%0:s is null)) '
-      + '   and (s.name like %1:s escape ''%2:s'' or (%1:s is null)) '
-      + ' order by colid ',
-      [DeComposeObjectString(TableNamePattern), DeComposeObjectString(SchemaPattern), GetDataBaseInfo.GetSearchStringEscape]);
-    with Statement.ExecuteQuery(Tmp) do begin
-      // hint http://blog.sqlauthority.com/2007/04/30/case-sensitive-sql-query-search/ for the collation setting to get a case sensitive behavior
-      while Next do begin
-        Result.Next;
-        Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetSmallByName('status') and $80) <> 0);
-        Result.UpdateBoolean(TableColColumnSearchableIndex,
-          Result.GetBoolean(TableColColumnSearchableIndex) and (GetIntByName('iscomputed') = 0));
-        Result.UpdateBoolean(TableColColumnWritableIndex,
-          ((GetSmallByName('status') and $80) = 0)
-          (*and (GetSmallByName('type') <> 37)*)   // <<<< *DEBUG WARUM?
-          and (GetIntByName('iscomputed') = 0));
-        Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex,
-          Result.GetBoolean(TableColColumnWritableIndex));
-        Result.UpdateBoolean(TableColColumnReadonlyIndex,
-          not Result.GetBoolean(TableColColumnWritableIndex));
-        if Result.GetBoolean(TableColColumnAutoIncIndex) then begin
-          Result.UpdateSmall(TableColColumnNullableIndex, 1);
-          Result.UpdateString(TableColColumnIsNullableIndex, 'YES');
+    { Note: I am sure that this part can be rewritten to cover temporary tables as well.
+      I am just not sure how to do this. But in principle tempdb.sys.sysobjects and the like
+      can  be queried for temporary tables.
+      BEWARE: They will see all temporary tables from all sessions. So some way has to be found
+      to only look at ionformation that concerns the current session. Otherwise we will read
+      information from other sessions and might confuse us!}
+  end else begin // only do this for regular tables.
+    if not Result.IsBeforeFirst then begin
+      // hint by Jan: I am not sure wether this statement still works with SQL Server 2000 or before.
+      Result.BeforeFirst;
+      if Connection.GetHostVersion < EncodeSQLVersioning(9, 0, 0) then
+        Tmp :=  'select c.colid, c.name, c.type, c.prec, '+
+          'c.scale, c.colstat, c.status, c.iscomputed from syscolumns c '+
+          'inner join sysobjects o on (o.id = c.id) where o.name like '+
+        DeComposeObjectString(TableNamePattern)+' escape ''' + GetDataBaseInfo.GetSearchStringEscape + ''' and c.number=0 order by colid'
+      else Tmp := Format('select c.colid, c.name, c.type, c.prec, c.scale, c.colstat, c.status, c.iscomputed '
+        + ' from syscolumns c '
+        + '   inner join sys.sysobjects o on (o.id = c.id) '
+        + '   inner join sys.schemas s on (o.uid = s.schema_id) '
+        + ' where c.number=0 '
+        + '   and (o.name like %0:s escape ''%2:s'' or (%0:s is null)) '
+        + '   and (s.name like %1:s escape ''%2:s'' or (%1:s is null)) '
+        + ' order by colid ',
+        [DeComposeObjectString(TableNamePattern), DeComposeObjectString(SchemaPattern), GetDataBaseInfo.GetSearchStringEscape]);
+      with Statement.ExecuteQuery(Tmp) do begin
+        // hint http://blog.sqlauthority.com/2007/04/30/case-sensitive-sql-query-search/ for the collation setting to get a case sensitive behavior
+        while Next do begin
+          Result.Next;
+          Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetSmallByName('status') and $80) <> 0);
+          Result.UpdateBoolean(TableColColumnSearchableIndex,
+            Result.GetBoolean(TableColColumnSearchableIndex) and (GetIntByName('iscomputed') = 0));
+          Result.UpdateBoolean(TableColColumnWritableIndex,
+            ((GetSmallByName('status') and $80) = 0)
+            (*and (GetSmallByName('type') <> 37)*)   // <<<< *DEBUG WARUM?
+            and (GetIntByName('iscomputed') = 0));
+          Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex,
+            Result.GetBoolean(TableColColumnWritableIndex));
+          Result.UpdateBoolean(TableColColumnReadonlyIndex,
+            not Result.GetBoolean(TableColColumnWritableIndex));
+          if Result.GetBoolean(TableColColumnAutoIncIndex) then begin
+            Result.UpdateSmall(TableColColumnNullableIndex, 1);
+            Result.UpdateString(TableColColumnIsNullableIndex, 'YES');
+          end;
+          Result.UpdateRow;
         end;
-        Result.UpdateRow;
+        Close;
       end;
-      Close;
+      Result.BeforeFirst;
     end;
-    Result.BeforeFirst;
   end;
 end;
 
