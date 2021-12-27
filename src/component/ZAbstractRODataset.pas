@@ -3430,7 +3430,8 @@ begin
         {$IFNDEF OLDFPC}
         Required := IsWritable(ColumnIndex) and (IsNullable(ColumnIndex) = ntNoNulls);
         {$ENDIF}
-        if IsReadOnly(ColumnIndex) then Attributes := Attributes + [faReadonly];
+        if IsReadOnly(ColumnIndex) then
+          Attributes := Attributes + [faReadonly];
       end else
         Attributes := Attributes + [faReadonly];
       Precision := Prec;
@@ -3582,7 +3583,7 @@ begin
       end;
       UnPrepare;
     end;
-    {FFieldDefsInitialized := True;}  // commented out because this caises SF#286
+    {FFieldDefsInitialized := True;}  // commented out because this causes SF#286
   end;
 end;
 
