@@ -87,10 +87,12 @@ var
 begin
   Result := inherited DefineSelectSchemaFromQuery(Tokenizer, SQL);
   // change the Catalog of all temporary tables...
-  for TableNo := 0 to Result.TableCount - 1 do begin
-    TableRef := Result.GetTable(TableNo);
-    if StartsWith(TableRef.Table, '#') then
-      TableRef.Catalog := 'tempdb';
+  if Assigned(Result) then begin
+    for TableNo := 0 to Result.TableCount - 1 do begin
+      TableRef := Result.GetTable(TableNo);
+      if StartsWith(TableRef.Table, '#') then
+        TableRef.Catalog := 'tempdb';
+    end;
   end;
 end;
 
