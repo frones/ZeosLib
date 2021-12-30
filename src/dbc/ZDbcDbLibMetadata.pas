@@ -1995,7 +1995,12 @@ begin
   Connection := GetConnection;
   Statement := Connection.CreateStatement;
   if isTempTable then begin
-    SQL := 'exec tempdb.sys.sp_columns ' +
+    if Connection.GetHostVersion < EncodeSQLVersioning(9, 0, 0) then
+      tmp := ' tempdb.dbo.sp_columns '
+    else
+      tmp := ' tempdb.sys.sp_columns ';
+
+    SQL := 'exec ' + tmp + ' ' +
       ComposeObjectString(TableNamePattern)+', '+ComposeObjectString(SchemaPattern)+', '+
       ComposeObjectString('tempdb')+', '+ComposeObjectString(ColumnNamePattern);
   end else begin
