@@ -141,7 +141,12 @@ begin
       Result := stBinaryStream;
     tdsIntN:
       Result := stInteger;
-    tdsChar, tdsVarchar, tdsBigChar, tdsBigVarChar: Result := stString;
+    tdsVarChar:
+      if Precision <= 8000 then
+        Result := stString
+      else
+        Result := stAsciiStream;
+    tdsChar, tdsBigChar, tdsBigVarChar: Result := stString;
     tdsBigNChar, tdsNVarChar, tdsBigNVarChar: Result := stUnicodeString;
     tdsInt1:
       Result := stByte;
