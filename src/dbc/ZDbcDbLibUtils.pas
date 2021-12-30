@@ -142,7 +142,7 @@ begin
     tdsIntN:
       Result := stInteger;
     tdsVarChar:
-      if Precision <= 8000 then
+      if Precision <= 16384 then // 16384 because SAP ASE can have varchars of that length.
         Result := stString
       else
         Result := stAsciiStream;

@@ -2329,7 +2329,7 @@ begin
     c := Byte(Source^);
     case c of
       $00..$7F:  //Ascii7
-        if (EndPtr - Source > SizeOf(PCardinal)) and (PCardinal(Source)^ and $80808080 = 0) //Check quad block ASCII again
+        if (EndPtr - Source > SizeOf(Cardinal)) and (PCardinal(Source)^ and $80808080 = 0) //Check quad block ASCII again
         then inc(Source, SizeOf(PCardinal))
         else Inc(Source);
       $C2..$DF:  // non-overlong 2-byte
