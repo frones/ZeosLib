@@ -2330,7 +2330,7 @@ begin
     case c of
       $00..$7F:  //Ascii7
         if (EndPtr - Source > SizeOf(Cardinal)) and (PCardinal(Source)^ and $80808080 = 0) //Check quad block ASCII again
-        then inc(Source, SizeOf(PCardinal))
+        then inc(Source, SizeOf(Cardinal))
         else Inc(Source);
       $C2..$DF:  // non-overlong 2-byte
         if (Source+1 < EndPtr) and (Byte((Source+1)^) in [$80..$BF])
