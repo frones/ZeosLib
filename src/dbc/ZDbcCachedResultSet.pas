@@ -992,7 +992,7 @@ begin
       InitialRow := PZRowBuffer(FInitialRowsList[Index]);
       CurrentRow := PZRowBuffer(FRowsList[RowNo - 1]);
 
-      if CurrentRow.UpdateType = utInserted then
+      if (CurrentRow.UpdateType = utInserted) and not FCachedUpdates then
         InitialRow.UpdateType := utDeleted;
       FRowAccessor.CopyBuffer(InitialRow, CurrentRow);
       if (FSelectedRow = FUpdatedRow) then begin
