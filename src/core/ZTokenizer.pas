@@ -575,7 +575,9 @@ begin
   { Gets a token result. }
   if not GotAdigit then begin
     SPos := Result.P;
-    if Tokenizer.SymbolState <> nil then
+    if Tokenizer.CommentState <> nil then
+      Result := Tokenizer.CommentState.NextToken(SPos, NTerm, Tokenizer)
+    else if Tokenizer.SymbolState <> nil then
       Result := Tokenizer.SymbolState.NextToken(SPos, NTerm, Tokenizer);
   end else begin
     if AbsorbedDot
