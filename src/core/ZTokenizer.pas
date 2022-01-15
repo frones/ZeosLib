@@ -575,7 +575,9 @@ begin
   { Gets a token result. }
   if not GotAdigit then begin
     SPos := Result.P;
-    if Tokenizer.SymbolState <> nil then
+    if (SPos^ = '-') And (Tokenizer.CommentState <> nil) then
+      Result := Tokenizer.CommentState.NextToken(SPos, NTerm, Tokenizer)
+    else if Tokenizer.SymbolState <> nil then
       Result := Tokenizer.SymbolState.NextToken(SPos, NTerm, Tokenizer);
   end else begin
     if AbsorbedDot
@@ -715,6 +717,8 @@ end;
 }
 function TZCppCommentState.NextToken(var SPos: PChar; const NTerm: PChar;
   Tokenizer: TZTokenizer): TZToken;
+Var
+ len: Integer;
 begin
   Result.TokenType := ttUnknown;
   Result.P := SPos;
@@ -734,6 +738,10 @@ begin
           Result.TokenType := ttComment;
           GetSingleLineComment(SPos, NTerm);
           Result.L := SPos-Result.P+1;
+
+          len := Length(Result.P);
+          If Result.L > len Then
+            Result.L := len;
           Exit;
         end;
       else
