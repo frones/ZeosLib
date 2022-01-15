@@ -249,10 +249,10 @@ end;
 procedure TZTestTokenizer.TestNumber;
 const
   TokenString1: string = '123 12.34.--12';
-  TokenTypes1: array[0..5] of TZTokenType = (
-    ttInteger, ttWhitespace, ttFloat, ttSymbol, ttSymbol, ttInteger);
-  TokenValues1: array[0..5] of string = (
-    '123', ' ', '12.34', '.', '-', '-12');
+  TokenTypes1: array[0..4] of TZTokenType = (
+    ttInteger, ttWhitespace, ttFloat, ttSymbol, ttComment);
+  TokenValues1: array[0..4] of string = (
+    '123', ' ', '12.34', '.', '--12');
 begin
   CheckTokens(Tokenizer.TokenizeBuffer(TokenString1, [toSkipEOF]),
     TokenTypes1, TokenValues1);
@@ -298,5 +298,3 @@ end;
 initialization
   RegisterTest('core',TZTestTokenizer.Suite);
 end.
-
-
