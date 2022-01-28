@@ -2045,9 +2045,7 @@ begin
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
       end;
       Result.UpdateString(TableColColumnTypeNameIndex, tmp);
-      if SQLType in [stCurrency, stBigDecimal]
-      then Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('PRECISION'))
-      else Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('LENGTH'));
+      Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('PRECISION'));
       Result.UpdateInt(TableColColumnBufLengthIndex, GetIntByName('LENGTH'));
       case ODBCType of
         1{char}, -8{nchar}, -2{binary}: Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetIntByName('PRECISION'));
