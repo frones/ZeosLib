@@ -1885,12 +1885,13 @@ const
   DATA_DEFAULT_Index   = FirstDbcIndex + 8;
   COLUMN_ID_Index      = FirstDbcIndex + 9;
   REMARKS_Index        = FirstDbcIndex + 10;
+  CHAR_LENGTH_Index    = FirstDbcIndex + 11;
 var
   Len: NativeUInt;
   SQL, oDataType: string;
   SQLType: TZSQLType;
   OwnerCondition,TableCondition,ColumnCondition: String;
-  FieldSize, Precision: Integer;
+  FieldSize, Precision, CharLength: Integer;
   B: Boolean;
   function CreateWhere: String;
   begin
@@ -1920,7 +1921,8 @@ begin
   SQL := 'SELECT ALL_TAB_COLUMNS.OWNER, ALL_TAB_COLUMNS.TABLE_NAME, ALL_TAB_COLUMNS.COLUMN_NAME, ' +
          'ALL_TAB_COLUMNS.DATA_TYPE, ALL_TAB_COLUMNS.DATA_LENGTH, ALL_TAB_COLUMNS.DATA_PRECISION, ' +
          'ALL_TAB_COLUMNS.DATA_SCALE, ALL_TAB_COLUMNS.NULLABLE, ALL_TAB_COLUMNS.DATA_DEFAULT, '+
-         'ALL_TAB_COLUMNS.COLUMN_ID, ALL_COL_COMMENTS.COMMENTS FROM ALL_TAB_COLUMNS JOIN ALL_COL_COMMENTS '+
+         'ALL_TAB_COLUMNS.COLUMN_ID, ALL_COL_COMMENTS.COMMENTS, ALL_TAB_COLUMNS.CHAR_LENGTH ' +
+         'FROM ALL_TAB_COLUMNS JOIN ALL_COL_COMMENTS '+
          'ON ALL_COL_COMMENTS.TABLE_NAME = ALL_TAB_COLUMNS.TABLE_NAME AND ALL_COL_COMMENTS.COLUMN_NAME = '+
          'ALL_TAB_COLUMNS.COLUMN_NAME AND ALL_COL_COMMENTS.OWNER = ALL_TAB_COLUMNS.OWNER ' + CreateWhere + ' ORDER BY ALL_TAB_COLUMNS.COLUMN_ID';
   {$IFDEF WITH_VAR_INIT_WARNING}Len := 0;{$ENDIF}
@@ -1950,14 +1952,15 @@ begin
         Precision, GetInt(DATA_SCALE_Index));
       Result.UpdateByte(TableColColumnTypeIndex, Ord(SQLType));
       FieldSize := GetInt(DATA_LENGTH_Index);
+      CharLength := GetInt(CHAR_LENGTH_Index);
       if SQLType = stString then begin
-        Result.UpdateInt(TableColColumnBufLengthIndex, FieldSize * ConSettings^.ClientCodePage^.CharWidth +1);
-        Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldSize * ConSettings^.ClientCodePage^.CharWidth);
-        Result.UpdateInt(TableColColumnSizeIndex, FieldSize);
+        Result.UpdateInt(TableColColumnBufLengthIndex, CharLength * ConSettings^.ClientCodePage^.CharWidth +1);
+        Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldSize);
+        Result.UpdateInt(TableColColumnSizeIndex, CharLength);
       end else if SQLType = stUnicodeString then begin
-        Result.UpdateInt(TableColColumnBufLengthIndex, (FieldSize+1) shl 1);
-        Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldSize shl 1);
-        Result.UpdateInt(TableColColumnSizeIndex, FieldSize);
+        Result.UpdateInt(TableColColumnBufLengthIndex, (FieldSize+2));
+        Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldSize);
+        Result.UpdateInt(TableColColumnSizeIndex, CharLength);
       end else if SQLType = stBytes then begin
         Result.UpdateInt(TableColColumnBufLengthIndex, FieldSize);
         Result.UpdateInt(TableColColumnSizeIndex, FieldSize);
