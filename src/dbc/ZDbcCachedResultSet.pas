@@ -433,7 +433,7 @@ type
     procedure DisposeCachedUpdates; virtual;
     procedure ClearStatementLink; virtual;
     {$IFDEF WITH_COLUMNS_TO_JSON}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject, jcoDATETIME_MAGIC]);
+    procedure ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF}; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject, jcoDATETIME_MAGIC]);
     {$ENDIF WITH_COLUMNS_TO_JSON}
 
     function CreateLob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode): IZBlob; virtual;
@@ -2472,10 +2472,10 @@ begin
 end;
 
 {$IFDEF WITH_COLUMNS_TO_JSON}
-procedure TZAbstractCachedResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+procedure TZAbstractCachedResultSet.ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF};
   JSONComposeOptions: TZJSONComposeOptions);
 begin
-  FRowAccessor.ColumnsToJSON(JSONWriter, JSONComposeOptions)
+  FRowAccessor.ColumnsToJSON(ResultsWriter, JSONComposeOptions)
 end;
 {$ENDIF WITH_COLUMNS_TO_JSON}
 

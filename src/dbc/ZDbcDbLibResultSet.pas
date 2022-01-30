@@ -180,7 +180,7 @@ type
     function GetBlob(ColumnIndex: Integer;
       LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
     {$IFDEF WITH_COLUMNS_TO_JSON}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); overload; virtual;
+    procedure ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF}; JSONComposeOptions: TZJSONComposeOptions); overload; virtual;
     {$ENDIF}
     function Next: Boolean; override;
   end;
@@ -528,7 +528,7 @@ end;
 
 {$IFDEF WITH_COLUMNS_TO_JSON}
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "XYZ" not used} {$ENDIF}
-procedure TZDBLibResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+procedure TZDBLibResultSet.ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF};
   JSONComposeOptions: TZJSONComposeOptions);
 begin
   raise EZUnsupportedException.Create(SUnsupportedOperation);

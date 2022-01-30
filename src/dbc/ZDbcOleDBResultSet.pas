@@ -399,7 +399,7 @@ type
     /// <summary>Fill the JSONWriter with column data</summary>
     /// <param>"JSONComposeOptions" the TZJSONComposeOptions used for composing
     ///  the JSON contents</param>
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
+    procedure ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF}; JSONComposeOptions: TZJSONComposeOptions);
     {$ENDIF WITH_COLUMNS_TO_JSON}
   end;
 
@@ -879,7 +879,7 @@ begin
 end;
 
 {$IFDEF WITH_COLUMNS_TO_JSON}
-procedure TZAbstractOleDBResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+procedure TZAbstractOleDBResultSet.ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF};
   JSONComposeOptions: TZJSONComposeOptions);
 var I, C, H: Integer;
     P: PAnsiChar;

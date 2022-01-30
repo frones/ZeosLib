@@ -143,7 +143,7 @@ type
     /// <summary>Fill the JSONWriter with column data</summary>
     /// <param>"JSONComposeOptions" the TZJSONComposeOptions used for composing
     ///  the JSON contents</param>
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions); reintroduce;
+    procedure ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF}; JSONComposeOptions: TZJSONComposeOptions); reintroduce;
     {$ENDIF WITH_COLUMNS_TO_JSON}
   public //implement IZOracleResultSet
     procedure AssignColumnsInfo(const Dest: TObjectList);
@@ -438,7 +438,7 @@ uses
 { TZOracleAbstractResultSet }
 
 {$IFDEF WITH_COLUMNS_TO_JSON}
-procedure TZOracleAbstractResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+procedure TZOracleAbstractResultSet.ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF};
   JSONComposeOptions: TZJSONComposeOptions);
 var P: PAnsiChar;
   C, H, I: SmallInt;
@@ -450,82 +450,82 @@ var P: PAnsiChar;
   Status: SWord;
   procedure AddJSONEscapeA(P: PAnsichar; Len: LengthInt);
   begin
-    JSONWriter.Add('"');
+    ResultsWriter.Add('"');
     if FClientCP = zCP_UTF8 then
-      JSONWriter.AddJSONEscape(P, Len)
+      ResultsWriter.AddJSONEscape(P, Len)
     else begin
       FUniTemp := PRawToUnicode(P, Len, FClientCP);
-      JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), System.Length(FUniTemp));
+      ResultsWriter.AddJSONEscapeW(Pointer(FUniTemp), System.Length(FUniTemp));
     end;
-    JSONWriter.Add('"');
+    ResultsWriter.Add('"');
   end;
   procedure AddJSONEscapeW(P: PWideChar; Len: LengthInt);
   begin
-    JSONWriter.Add('"');
-    JSONWriter.AddJSONEscapeW(Pointer(P), Len);
-    JSONWriter.Add('"');
+    ResultsWriter.Add('"');
+    ResultsWriter.AddJSONEscapeW(Pointer(P), Len);
+    ResultsWriter.Add('"');
   end;
 begin
   //init
-  if JSONWriter.Expand then
-    JSONWriter.Add('{');
-  if Assigned(JSONWriter.Fields) then
-    H := High(JSONWriter.Fields) else
-    H := High(JSONWriter.ColNames);
+  if ResultsWriter.Expand then
+    ResultsWriter.Add('{');
+  if Assigned(ResultsWriter.Fields) then
+    H := High(ResultsWriter.Fields) else
+    H := High(ResultsWriter.ColNames);
   for I := 0 to H do begin
-    if Pointer(JSONWriter.Fields) = nil then
+    if Pointer(ResultsWriter.Fields) = nil then
       C := I else
-      C := JSONWriter.Fields[i];
+      C := ResultsWriter.Fields[i];
     {$R-}
     with FColumns^.Variables[C] do
     if (valuep = nil) or (indp^[FCurrentRowBufIndex] < 0) then begin
       if not (jcsSkipNulls in JSONComposeOptions) then begin
-        if JSONWriter.Expand then
-          JSONWriter.AddString(JSONWriter.ColNames[I]);
-        JSONWriter.AddShort('null,')
+        if ResultsWriter.Expand then
+          ResultsWriter.AddString(ResultsWriter.ColNames[I]);
+        ResultsWriter.AddShort('null,')
       end;
     end else begin
-      if JSONWriter.Expand then
-        JSONWriter.AddString(JSONWriter.ColNames[I]);
+      if ResultsWriter.Expand then
+        ResultsWriter.AddString(ResultsWriter.ColNames[I]);
       P := valuep+(FCurrentRowBufIndex*value_sz);
       case dty of
         { the ordinals we support }
         SQLT_INT        : case value_sz of
-                            SizeOf(Int64): JSONWriter.Add(PInt64(P)^);
-                            SizeOf(Integer): JSONWriter.Add(PInteger(P)^);
-                            SizeOf(SmallInt): JSONWriter.Add(PSmallInt(P)^);
-                            else JSONWriter.Add(PShortInt(P)^);
+                            SizeOf(Int64): ResultsWriter.Add(PInt64(P)^);
+                            SizeOf(Integer): ResultsWriter.Add(PInteger(P)^);
+                            SizeOf(SmallInt): ResultsWriter.Add(PSmallInt(P)^);
+                            else ResultsWriter.Add(PShortInt(P)^);
                           end;
         SQLT_UIN        : case value_sz of
-                            SizeOf(UInt64): JSONWriter.Add(PUInt64(P)^);
-                            SizeOf(Cardinal): JSONWriter.Add(PCardinal(P)^);
-                            SizeOf(Word): JSONWriter.Add(PWord(P)^);
-                            else JSONWriter.Add(PByte(P)^);
+                            SizeOf(UInt64): ResultsWriter.Add(PUInt64(P)^);
+                            SizeOf(Cardinal): ResultsWriter.Add(PCardinal(P)^);
+                            SizeOf(Word): ResultsWriter.Add(PWord(P)^);
+                            else ResultsWriter.Add(PByte(P)^);
                           end;
         { the FPU floting values we support }
         SQLT_FLT        : if value_sz = SizeOf(Double)
-                          then JSONWriter.AddDouble(PDouble(P)^)
-                          else JSONWriter.AddSingle(PSingle(P)^);
-        SQLT_BDOUBLE    : JSONWriter.AddDouble(PDouble(P)^);
-        SQLT_BFLOAT     : JSONWriter.AddSingle(PSingle(P)^);
+                          then ResultsWriter.AddDouble(PDouble(P)^)
+                          else ResultsWriter.AddSingle(PSingle(P)^);
+        SQLT_BDOUBLE    : ResultsWriter.AddDouble(PDouble(P)^);
+        SQLT_BFLOAT     : ResultsWriter.AddSingle(PSingle(P)^);
         { the oracle soft decimal }
         SQLT_VNU        : case ZDbcOracleUtils.nvuKind(POCINumber(P), FvnuInfo) of
-                            nvu0: JSONWriter.Add('0');
-                            vnuNegInt: JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), NegOrdNVU2Raw(POCINumber(P), FvnuInfo, PAnsiChar(FByteBuffer)));
-                            vnuPosInt: JSONWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), PosOrdNVU2Raw(POCINumber(P), FvnuInfo, PAnsiChar(FByteBuffer)));
+                            nvu0: ResultsWriter.Add('0');
+                            vnuNegInt: ResultsWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), NegOrdNVU2Raw(POCINumber(P), FvnuInfo, PAnsiChar(FByteBuffer)));
+                            vnuPosInt: ResultsWriter.AddNoJSONEscape(PAnsiChar(FByteBuffer), PosOrdNVU2Raw(POCINumber(P), FvnuInfo, PAnsiChar(FByteBuffer)));
                             {$IFDEF MORMOT2}
-                            vnuPosCurr: JSONWriter.AddCurr(PosNvu2Curr(POCINumber(P), FvnuInfo));
-                            vnuNegCurr: JSONWriter.AddCurr(NegNvu2Curr(POCINumber(P), FvnuInfo));
+                            vnuPosCurr: ResultsWriter.AddCurr(PosNvu2Curr(POCINumber(P), FvnuInfo));
+                            vnuNegCurr: ResultsWriter.AddCurr(NegNvu2Curr(POCINumber(P), FvnuInfo));
                             {$ELSE !MORMOT2}
-                            vnuPosCurr: JSONWriter.AddCurr64(PosNvu2Curr(POCINumber(P), FvnuInfo));
-                            vnuNegCurr: JSONWriter.AddCurr64(NegNvu2Curr(POCINumber(P), FvnuInfo));
+                            vnuPosCurr: ResultsWriter.AddCurr64(PosNvu2Curr(POCINumber(P), FvnuInfo));
+                            vnuNegCurr: ResultsWriter.AddCurr64(NegNvu2Curr(POCINumber(P), FvnuInfo));
                             {$ENDIF}
-                            nvuNegInf: JSONWriter.AddShort('"-Infinity"');
-                            nvuPosInf: JSONWriter.AddShort('"Infinity"');
+                            nvuNegInf: ResultsWriter.AddShort('"-Infinity"');
+                            nvuPosInf: ResultsWriter.AddShort('"Infinity"');
                             else begin
                               Status:= FPlainDriver.OCINumberToReal(FOCIError, POCINumber(P), SizeOf(Double), Pointer(FByteBuffer));
                               if Status = OCI_Success
-                              then JSONWriter.AddDouble(PDouble(FByteBuffer)^)
+                              then ResultsWriter.AddDouble(PDouble(FByteBuffer)^)
                               else Self.FOracleConnection.HandleErrorOrWarning(FOCIError,
                                 Status, lcOther, 'OCINumberToReal', Self);
                             end;
@@ -545,49 +545,49 @@ begin
                           then AddJSONEscapeW(PWideChar(P), GetAbsorbedTrailingSpacesLen(PWideChar(P), Value_sz))
                           else AddJSONEscapeA(P, GetAbsorbedTrailingSpacesLen(P, Value_sz));
         { the binary raw we support }
-        SQLT_LVB        : JSONWriter.WrBase64(@POCILong(P).data[0], POCILong(P).Len, True);
-        SQLT_BIN        : JSONWriter.WrBase64(P, value_sz, True);
-        SQLT_VBI        : JSONWriter.WrBase64(@POCIVary(P).data[0], POCIVary(P).Len, True);
+        SQLT_LVB        : ResultsWriter.WrBase64(@POCILong(P).data[0], POCILong(P).Len, True);
+        SQLT_BIN        : ResultsWriter.WrBase64(P, value_sz, True);
+        SQLT_VBI        : ResultsWriter.WrBase64(@POCIVary(P).data[0], POCIVary(P).Len, True);
         { date /+ time we do support }
         SQLT_DAT        : begin
                             if jcoMongoISODate in JSONComposeOptions then
-                              JSONWriter.AddShort('ISODate("')
+                              ResultsWriter.AddShort('ISODate("')
                             else if jcoDATETIME_MAGIC in JSONComposeOptions then
                               {$IFDEF MORMOT2}
-                              JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                               {$ELSE}
-                              JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                               {$ENDIF}
                             else
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
                             if POraDate(P)^.Cent < 100 then
-                              JSONWriter.Add('-');
+                              ResultsWriter.Add('-');
                             if ColType <> stTime then begin
                               DateToIso8601PChar(Pointer(fByteBuffer), True, (POraDate(P)^.Cent-100)*100+POraDate(P)^.Year-100,
                                 POraDate(P)^.month, POraDate(P)^.day);
-                              JSONWriter.AddNoJSONEscape(Pointer(fByteBuffer),10);
+                              ResultsWriter.AddNoJSONEscape(Pointer(fByteBuffer),10);
                             end else if jcoMongoISODate in JSONComposeOptions then
-                              JSONWriter.AddShort('0000-00-00');
+                              ResultsWriter.AddShort('0000-00-00');
                             if (ColType <> stDate) then begin
                               TimeToIso8601PChar(Pointer(fByteBuffer), True, POraDate(P)^.Hour-1,
                                 POraDate(P)^.Min-1,POraDate(P)^.Sec-1, 0, 'T', False);
-                              JSONWriter.AddNoJSONEscape(Pointer(fByteBuffer),9);
+                              ResultsWriter.AddNoJSONEscape(Pointer(fByteBuffer),9);
                             end;
                             if jcoMongoISODate in JSONComposeOptions
-                            then JSONWriter.AddShort('Z)"')
-                            else JSONWriter.Add('"');
+                            then ResultsWriter.AddShort('Z)"')
+                            else ResultsWriter.Add('"');
                           end;
         SQLT_TIMESTAMP: begin
                           if jcoMongoISODate in JSONComposeOptions then
-                            JSONWriter.AddShort('ISODate("')
+                            ResultsWriter.AddShort('ISODate("')
                           else if jcoDATETIME_MAGIC in JSONComposeOptions then
                             {$IFDEF MORMOT2}
-                            JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                            ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                             {$ELSE}
-                            JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                            ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                             {$ENDIF}
                           else
-                            JSONWriter.Add('"');
+                            ResultsWriter.Add('"');
                           if (ColType <> stTime) and (FPlainDriver.OCIDateTimeGetDate(FOCIEnv,
                              FOCIError, PPOCIDescriptor(P)^, Year{%H-}, Month{%H-}, Day{%H-}) = OCI_SUCCESS) and
                              (not ((Year=1) and (Month=1) and (Day=1))) then begin
@@ -595,24 +595,24 @@ begin
                           // reason : oracle doesn't have a pure time datatype so all time comparisons compare
                           //          TDateTime values on 30 Dec 1899 against oracle timestamps on 01 januari 0001 (negative TDateTime)
                             DateToIso8601PChar(Pointer(fByteBuffer), True, Abs(Year), Month, Day);
-                            JSONWriter.AddNoJSONEscape(Pointer(fByteBuffer),10);
+                            ResultsWriter.AddNoJSONEscape(Pointer(fByteBuffer),10);
                           end else if jcoMongoISODate in JSONComposeOptions then
-                            JSONWriter.AddShort('0000-00-00');
+                            ResultsWriter.AddShort('0000-00-00');
                           if (ColType <> stDate) and (FPlainDriver.OCIDateTimeGetTime(FOCIEnv,
                              FOCIError, {%H-}PPOCIDescriptor(P)^, Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-}) = OCI_SUCCESS) then begin
                             TimeToIso8601PChar(Pointer(fByteBuffer), True, Hour, Minute, Second,
                               Millis div 1000000, 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(Pointer(fByteBuffer),9 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            ResultsWriter.AddNoJSONEscape(Pointer(fByteBuffer),9 + (4*Ord(jcoMilliseconds in JSONComposeOptions)));
                           end;
                           if jcoMongoISODate in JSONComposeOptions
-                          then JSONWriter.AddShort('Z)"')
-                          else JSONWriter.Add('"');
+                          then ResultsWriter.AddShort('Z)"')
+                          else ResultsWriter.Add('"');
                         end;
         SQLT_INTERVAL_DS,
         SQLT_INTERVAL_YM: begin
-                            JSONWriter.Add('"');
-                            JSONWriter.AddDateTime(GetTimeStamp(C{$IFNDEF GENERIC_INDEX}+1{$ENDIF}));
-                            JSONWriter.Add('"');
+                            ResultsWriter.Add('"');
+                            ResultsWriter.AddDateTime(GetTimeStamp(C{$IFNDEF GENERIC_INDEX}+1{$ENDIF}));
+                            ResultsWriter.Add('"');
                           end;
         { large object support }
         SQLT_BLOB,
@@ -620,28 +620,28 @@ begin
         SQLT_CFILEE     : begin
                             FTempLob := GetBlob(C{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
                             P := FTempLob.GetBuffer(fRawTemp, L);
-                            JSONWriter.WrBase64(P, L, True);
+                            ResultsWriter.WrBase64(P, L, True);
                             FTempLob := nil;
                           end;
         SQLT_CLOB       : begin
-                            JSONWriter.Add('"');
+                            ResultsWriter.Add('"');
                             FTempLob := GetBlob(C{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
                             P := FTempLob.GetPAnsiChar(zCP_UTF8, fRawTemp, L);
-                            JSONWriter.AddJSONEscape(P, L);
+                            ResultsWriter.AddJSONEscape(P, L);
                             FTempLob := nil;
-                            JSONWriter.Add('"');
+                            ResultsWriter.Add('"');
                           end;
         else
           raise EZSQLException.Create('Missing OCI Type: '+IntToStr(dty));
       end;
-      JSONWriter.Add(',');
+      ResultsWriter.Add(',');
     end;
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
   end;
   if jcoEndJSONObject in JSONComposeOptions then begin
-    JSONWriter.CancelLastComma; // cancel last ','
-    if JSONWriter.Expand then
-      JSONWriter.Add('}');
+    ResultsWriter.CancelLastComma; // cancel last ','
+    if ResultsWriter.Expand then
+      ResultsWriter.Add('}');
   end;
 end;
 {$ENDIF WITH_COLUMNS_TO_JSON}
