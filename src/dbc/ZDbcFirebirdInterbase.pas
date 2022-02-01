@@ -1696,8 +1696,8 @@ var
 begin
   { usually first isc_status is gds_arg_gds .. }
   // exit if there is no error
-  StatusArg := StatusVector[1];
-  WarningArg := StatusVector[2];
+  StatusArg := StatusVector^[1];
+  WarningArg := StatusVector^[2];
   if (StatusArg = isc_arg_end) and (WarningArg = isc_arg_end) then begin
     Exit; //neither Warning nor an Error
   end;
@@ -4646,11 +4646,11 @@ begin
       BindList.SetNull(Index, ASQLType);
       P := nil;
       L := 0;//satisfy compiler
-    end else if Supports(Value, IZInterbaseFirebirdLob, IBLob) and ((sqltype = SQL_QUAD) or (sqltype = SQL_BLOB)) then begin
-      //sqldata := GetMemory(SizeOf(TISC_QUAD)); EH@Jan what's that? we have one big buffer as described by FB/IB.
-	  //Jan@EH: See commit message for Rev. 6595 + Ticket 429
+    (*end else if Supports(Value, IZInterbaseFirebirdLob, IBLob) and ((sqltype = SQL_QUAD) or (sqltype = SQL_BLOB)) then begin
+      Value.GetStream.Free;
+      IBLob.Open(lsmRead);
       PISC_QUAD(sqldata)^ := IBLob.GetBlobId;
-      goto jmpNotNull;
+      goto jmpNotNull; *)
     end else if (Value <> nil) and (codepage <> zCP_Binary) then
       if Value.IsClob then begin
         Value.SetCodePageTo(codepage);

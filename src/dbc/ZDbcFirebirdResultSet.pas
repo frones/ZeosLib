@@ -1329,9 +1329,13 @@ begin
     if not FBlobInfoFilled then begin
       Stream := CreateLobStream(FColumnCodePage, lsmRead);
       if Stream <> nil then
-        FLobStream.FillBlobInfo;
+      try
+        FLobStream.OpenLob;
+      finally
+        FreeAndNil(Stream);
+      end;
     end;
-    Result := FBlobInfo.TotalSize
+    Result := FBlobInfo.TotalSize;
   end;
 end;
 

@@ -585,6 +585,8 @@ var
   Item, ItemVal: Integer;
   StatusVector: TARRAY_ISC_STATUS;
 begin
+  //if FBlobHandle = 0 then
+    //OpenLob;
   Items[0] := isc_info_blob_num_segments;
   Items[1] := isc_info_blob_max_segment;
   Items[2] := isc_info_blob_total_length;
@@ -592,7 +594,7 @@ begin
 
   if FPlainDriver.isc_blob_info(@StatusVector, @FBlobHandle, 4, @items[0],
       SizeOf(Results), @Results[0]) <> 0 then
-    FOwnerLob.FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, 'get lob info', Self);
+    FOwnerLob.FIBConnection.HandleErrorOrWarning(lcOther, @StatusVector, 'get lob info', Self);
   pBufStart := @Results[0];
   pBuf := pBufStart;
   while pBuf - pBufStart <= SizeOf(Results) do
@@ -903,7 +905,11 @@ begin
     if not FBlobInfoFilled then begin
       Stream := CreateLobStream(FColumnCodePage, lsmRead);
       if Stream <> nil then
-        FLobStream.FillBlobInfo;
+      try
+        FLobStream.OpenLob;
+      finally
+        FreeAndNil(Stream);
+      end;
     end;
     Result := FBlobInfo.TotalSize
   end;
