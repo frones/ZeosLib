@@ -70,6 +70,7 @@ type
   IZFirebirdResultSet = Interface(IZResultSet)
     ['{44E775F4-4E7D-4F92-9B97-5C5E504019F9}']
     function GetConnection: IZFirebirdConnection;
+    function GetTransaction: IZFirebirdTransaction;
   End;
 
   PIResultSet = ^IResultSet;
@@ -86,6 +87,7 @@ type
     procedure DeRegisterCursor;
   public //implement IZFirebirdResultSet
     function GetConnection: IZFirebirdConnection;
+    function GetTransaction: IZFirebirdTransaction;
   public
     procedure RegisterCursor;
   public
@@ -280,7 +282,7 @@ type
   public
     constructor Create(const Connection: IZFirebirdConnection; const BlobId: TISC_QUAD;
       LobStreamMode: TZLobStreamMode; ColumnCodePage: Word;
-      const OpenLobStreams: TZSortedList);
+      const OpenLobStreams: TZSortedList; const FBTransaction: IZFirebirdTransaction);
     procedure AfterConstruction; override;
     procedure BeforeDestruction; override;
   End;
@@ -289,13 +291,15 @@ type
   public
     constructor Create(const Connection: IZFirebirdConnection;
       BlobId: TISC_QUAD; LobStreamMode: TZLobStreamMode;
-      ColumnCodePage: Word; const OpenLobStreams: TZSortedList);
+      ColumnCodePage: Word; const OpenLobStreams: TZSortedList;
+      const FBTransaction: IZFirebirdTransaction);
   End;
 
   TZFirebirdBLob = Class(TZFirebirdLob)
   public
     constructor Create(const Connection: IZFirebirdConnection; BlobId: TISC_QUAD;
-      LobStreamMode: TZLobStreamMode; const OpenLobStreams: TZSortedList);
+      LobStreamMode: TZLobStreamMode; const OpenLobStreams: TZSortedList;
+      const FBTransaction: IZFirebirdTransaction);
   End;
 
   {**
@@ -549,9 +553,9 @@ begin
       BlobId := PISC_QUAD(sqldata)^;
       if ColumnType = stBinaryStream
       then Result := TZFirebirdBLob.Create(FFBConnection, BlobId,
-        lsmRead, FOpenLobStreams)
+        lsmRead, FOpenLobStreams, FFBTransaction)
       else Result := TZFirebirdClob.Create(FFBConnection, BlobId,
-        lsmRead, ColumnCodePage, FOpenLobStreams);
+        lsmRead, ColumnCodePage, FOpenLobStreams, FFBTransaction);
     end else raise CreateCanNotAccessBlobRecordException(ColumnIndex, ColumnType);
   end;
   LastWasNull := Result = nil;
@@ -560,6 +564,11 @@ end;
 function TZAbstractFirebirdResultSet.GetConnection: IZFirebirdConnection;
 begin
   Result := FFBConnection;
+end;
+
+function TZAbstractFirebirdResultSet.GetTransaction: IZFirebirdTransaction;
+begin
+  Result := FFBTransaction;
 end;
 
 procedure TZAbstractFirebirdResultSet.RegisterCursor;
@@ -932,7 +941,7 @@ begin
   FOwnerLob := OwnerLob;
   BlobId := OwnerLob.FBlobId;
   FPlainDriver := OwnerLob.FPlainDriver;
-  FFBTransaction := OwnerLob.FFBConnection.GetActiveTransaction.GetTransaction;
+  FFBTransaction := OwnerLob.FFBTransaction.GetTransaction;
   FFBTransaction.AddRef;
   BlobInfo :=  @FOwnerLob.FBlobInfo;
   FStatus := OwnerLob.FFBConnection.GetStatus;
@@ -1151,6 +1160,8 @@ function TZFirebirdCachedResultSet.CreateLob(ColumnIndex: Integer;
 var SQLType: TZSQLType;
   FirebirdResultSet: IZFirebirdResultSet;
   FBConnection: IZFirebirdConnection;
+  FBTransaction: IZFirebirdTransaction;
+  Txn: IZTransaction;
   BlobID: TISC_Quad;
   i64: Int64 absolute BlobID;
 begin
@@ -1162,11 +1173,15 @@ begin
     SQLType := TZInterbaseFirebirdColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType;
     if (Byte(SQLType) >= Byte(stAsciiStream)) and (Byte(SQLType) <= Byte(stBinaryStream)) then begin
       FBConnection := FirebirdResultSet.GetConnection;
+      Txn := Resolver.GetTransaction;
+      if Txn.QueryInterface(IZFirebirdTransaction, FBTransaction) <> S_OK then
+        raise EZSQLException.Create('Transaction is not a Firebird / Interbase Transaction.');
+      FBTransaction := FBConnection.GetActiveTransaction;
       i64 := 0;
       if (SQLType = stBinaryStream)
-      then Result := TZFirebirdBlob.Create(FBConnection, BlobID, LobStreamMode, fOpenLobStreams)
+      then Result := TZFirebirdBlob.Create(FBConnection, BlobID, LobStreamMode, fOpenLobStreams, FBTransaction)
       else Result := TZFirebirdClob.Create(FBConnection, BlobID, LobStreamMode,
-        TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage, FOpenLobStreams);
+        TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage, FOpenLobStreams, FBTransaction);
       UpdateLob(ColumnIndex{$IFNDEF GENERIC_INDEX} + 1{$ENDIF}, Result);
     end else raise CreateCanNotAccessBlobRecordException(ColumnIndex{$IFNDEF GENERIC_INDEX} + 1{$ENDIF}, SQLType);
   end else
@@ -1194,9 +1209,9 @@ end;
 
 constructor TZFirebirdClob.Create(const Connection: IZFirebirdConnection;
   BlobId: TISC_QUAD; LobStreamMode: TZLobStreamMode; ColumnCodePage: Word;
-  const OpenLobStreams: TZSortedList);
+  const OpenLobStreams: TZSortedList; const FBTransaction: IZFirebirdTransaction);
 begin
-  inherited Create(Connection, BlobId, LobStreamMode, ColumnCodePage, OpenLobStreams);
+  inherited Create(Connection, BlobId, LobStreamMode, ColumnCodePage, OpenLobStreams, FBTransaction);
   FConSettings := Connection.GetConSettings;
 end;
 
@@ -1204,16 +1219,15 @@ end;
 
 constructor TZFirebirdBLob.Create(const Connection: IZFirebirdConnection;
   BlobId: TISC_QUAD; LobStreamMode: TZLobStreamMode;
-  const OpenLobStreams: TZSortedList);
+  const OpenLobStreams: TZSortedList; const FBTransaction: IZFirebirdTransaction);
 begin
-  inherited Create(Connection, BlobId, LobStreamMode, zCP_Binary, OpenLobStreams);
+  inherited Create(Connection, BlobId, LobStreamMode, zCP_Binary, OpenLobStreams, FBTransaction);
 end;
 
 { TZFirebirdLob }
 
 procedure TZFirebirdLob.AfterConstruction;
 begin
-  FFBTransaction := FFBConnection.GetActiveTransaction;
   FFBTransaction.RegisterOpenUnCachedLob(Self);
   inherited;
 end;
@@ -1251,8 +1265,8 @@ var Lob: TZFirebirdLob;
 begin
   PInt64(@ALobID)^ := 0;
   if FColumnCodePage = zCP_Binary
-  then Lob := TZFirebirdBLob.Create(FFBConnection, ALobID, lsmWrite, FOpenLobStreams)
-  else Lob := TZFirebirdClob.Create(FFBConnection, ALobID, lsmWrite, FColumnCodePage, FOpenLobStreams);
+  then Lob := TZFirebirdBLob.Create(FFBConnection, ALobID, lsmWrite, FOpenLobStreams, FFBTransaction)
+  else Lob := TZFirebirdClob.Create(FFBConnection, ALobID, lsmWrite, FColumnCodePage, FOpenLobStreams, FFBTransaction);
   Result := Lob;
   if LobStreamMode <> lsmWrite then begin
     ReadStream := CreateLobStream(FColumnCodePage, lsmRead);
@@ -1283,13 +1297,14 @@ end;
 
 constructor TZFirebirdLob.Create(const Connection: IZFirebirdConnection;
   const BlobId: TISC_QUAD; LobStreamMode: TZLobStreamMode; ColumnCodePage: Word;
-  const OpenLobStreams: TZSortedList);
+  const OpenLobStreams: TZSortedList; const FBTransaction: IZFirebirdTransaction);
 begin
   inherited Create(ColumnCodePage, OpenLobStreams);
   Assert(LobStreamMode <> lsmReadWrite);
   FLobStreamMode := LobStreamMode;
   FPlainDriver := Connection.GetPlainDriver;
   FFBConnection := Connection;
+  FFBTransaction := FBTransaction;
   FBlobId := BlobId;
 end;
 

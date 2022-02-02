@@ -236,6 +236,12 @@ type
       const ColumnsLookup: TZIndexPairList): SQLString; virtual;
   public //implement IZCachedResolver
     /// <author>Egonhugeist</author>
+    /// <summary>Gets the correct transaction to use for new objects from this Resolver.
+    ///  That is either an explicitly assigned transaction or the currently active transaction
+    ///  from the connection.</summary>
+    /// <returns>A valid transaction.</returns>
+    function GetTransaction: IZTransaction;
+    /// <author>Egonhugeist</author>
     /// <summary>Sets the appropriate transaction to this resolver object.</summary>
     /// <param>"Value" the transaction to be used.</param>
     procedure SetTransaction(const Value: IZTransaction); virtual;
@@ -959,6 +965,19 @@ begin
     FlushStatementCache;
     FTransaction := Value;
   end;
+end;
+
+function TZGenerateSQLCachedResolver.GetTransaction: IZTransaction;
+  function GetConnectionTransaction: IZTransaction;
+  var Connection: IZConnection;
+  begin
+    Connection := FDatabaseMetadata.GetConnection;
+    Result := Connection.GetConnectionTransaction
+  end;
+begin
+  Result := FTransaction;
+  if Result = nil then
+    Result := GetConnectionTransaction;
 end;
 
 procedure TZGenerateSQLCachedResolver.SetCalcDefaults(Value: Boolean);

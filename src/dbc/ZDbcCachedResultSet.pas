@@ -121,6 +121,12 @@ type
     /// <summary>Set a new connection.</summary>
     /// <param>"Value" the IZTransaction object.</param>
     procedure SetConnection(const Value: IZConnection);
+    /// <author>Egonhugeist</author>
+    /// <summary>Gets the correct transaction to use for new objects from this Resolver.
+    ///  That is either an explicitly assigned transaction or the currently active transaction
+    ///  from the connection.</summary>
+    /// <returns>A valid transaction.</returns>
+    function GetTransaction: IZTransaction;
   end;
 
   IZGenerateSQLCachedResolver = interface(IZCachedResolver)
