@@ -121,6 +121,7 @@ type
 
     procedure SetConnection(const Value: IZConnection);
     procedure SetTransaction(const Value: IZTransaction);
+    function GetTransaction: IZTransaction;
     function HasAutoCommitTransaction: Boolean;
     procedure FlushStatementCache;
   end;
@@ -1051,6 +1052,11 @@ end;
 procedure TZEmptyResolver.SetTransaction(const Value: IZTransaction);
 begin
 
+end;
+
+function TZEmptyResolver.GetTransaction: IZTransaction;
+begin
+  raise EZSQLException.Create('This method should never be called.');
 end;
 
 {$IFDEF FPC} {$POP} {$ENDIF}
