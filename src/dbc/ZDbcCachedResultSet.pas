@@ -2638,6 +2638,10 @@ begin
       Scale := Metadata.GetScale(I);
       ColumnType := Metadata.GetColumnType(I);
       ColumnCodePage := MetaData.GetColumnCodePage(I);
+
+      If ColumnType In [stString, stUnicodeString] Then
+        If ColumnCodePage = zCP_UTF16 Then ColumnType := stUnicodeString
+          Else ColumnType := stString;
     end;
     ColumnsInfo.Add(ColumnInfo);
   end;
