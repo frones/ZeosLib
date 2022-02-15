@@ -148,7 +148,7 @@ type
 
     function Next: Boolean; reintroduce;
     {$IFDEF WITH_COLUMNS_TO_JSON}
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
+    procedure ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF}; JSONComposeOptions: TZJSONComposeOptions);
     {$ENDIF WITH_COLUMNS_TO_JSON}
   end;
 
@@ -355,7 +355,7 @@ end;
 { TZSQLiteResultSet }
 
 {$IFDEF WITH_COLUMNS_TO_JSON}
-procedure TZSQLiteResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+procedure TZSQLiteResultSet.ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF};
   JSONComposeOptions: TZJSONComposeOptions);
 var
   C, H, I, ColType: Integer;
@@ -363,161 +363,161 @@ var
   i64: Int64;
   D: Double absolute i64;
 begin
-  if JSONWriter.Expand then
-    JSONWriter.Add('{');
-  if Assigned(JSONWriter.Fields) then
-    H := High(JSONWriter.Fields) else
-    H := High(JSONWriter.ColNames);
+  if ResultsWriter.Expand then
+    ResultsWriter.Add('{');
+  if Assigned(ResultsWriter.Fields) then
+    H := High(ResultsWriter.Fields) else
+    H := High(ResultsWriter.ColNames);
   for I := 0 to H do begin
-    if Pointer(JSONWriter.Fields) = nil then
+    if Pointer(ResultsWriter.Fields) = nil then
       C := I else
-      C := JSONWriter.Fields[i];
+      C := ResultsWriter.Fields[i];
     ColType := FPlainDriver.sqlite3_column_type(Fsqlite3_stmt, C);
     if ColType = SQLITE_NULL then
-      if JSONWriter.Expand then begin
+      if ResultsWriter.Expand then begin
         if not (jcsSkipNulls in JSONComposeOptions) then begin
-          JSONWriter.AddString(JSONWriter.ColNames[I]);
-          JSONWriter.AddShort('null,')
+          ResultsWriter.AddString(ResultsWriter.ColNames[I]);
+          ResultsWriter.AddShort('null,')
         end;
       end else
-        JSONWriter.AddShort('null,')
+        ResultsWriter.AddShort('null,')
     else with TZColumnInfo(ColumnsInfo[c]) do begin
-      if JSONWriter.Expand then
-        JSONWriter.AddString(JSONWriter.ColNames[i]);
+      if ResultsWriter.Expand then
+        ResultsWriter.AddString(ResultsWriter.ColNames[i]);
       case ColType of
-        SQLITE_BLOB: JSONWriter.WrBase64(FPlainDriver.sqlite3_column_blob(Fsqlite3_stmt,C),
+        SQLITE_BLOB: ResultsWriter.WrBase64(FPlainDriver.sqlite3_column_blob(Fsqlite3_stmt,C),
                         FPlainDriver.sqlite3_column_bytes(Fsqlite3_stmt, C), True);
         SQLITE_INTEGER: begin
                         I64 := FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, C);
                         case ColumnType of
-                          stBoolean: JSONWriter.AddShort(JSONBool[I64 <> 0]);
-                          stCurrency: JSONWriter.AddCurr64({$IFDEF MORMOT2}@{$ENDIF}i64);
+                          stBoolean: ResultsWriter.AddShort(JSONBool[I64 <> 0]);
+                          stCurrency: ResultsWriter.AddCurr64({$IFDEF MORMOT2}@{$ENDIF}i64);
                           {stTime, stDate, stTimeStamp:
                             todo: add implementation for unix timestamp
-                            JSONWriter.Add(FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, C));}
-                          else JSONWriter.Add(i64);
+                            ResultsWriter.Add(FPlainDriver.sqlite3_column_int64(Fsqlite3_stmt, C));}
+                          else ResultsWriter.Add(i64);
                         end;
                       end;
         SQLITE_FLOAT:   begin
                           D := FPlainDriver.sqlite3_column_double(Fsqlite3_stmt, C);
                           case ColumnType of
-                            stBoolean: JSONWriter.AddShort(JSONBool[D <> 0]);
+                            stBoolean: ResultsWriter.AddShort(JSONBool[D <> 0]);
                             stTime: begin
                                 if jcoMongoISODate in JSONComposeOptions then
-                                  JSONWriter.AddShort('ISODate("0000-00-00')
+                                  ResultsWriter.AddShort('ISODate("0000-00-00')
                                 else if jcoDATETIME_MAGIC in JSONComposeOptions then
                                   {$IFDEF MORMOT2}
-                                  JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                  ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                                   {$ELSE}
-                                  JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                  ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                                   {$ENDIF}
                                 else
-                                  JSONWriter.Add('"');
+                                  ResultsWriter.Add('"');
                                 d := Frac(D+JulianEpoch);
-                                JSONWriter.AddDateTime(D, jcoMilliseconds in JSONComposeOptions);
-                                JSONWriter.Add('"');
+                                ResultsWriter.AddDateTime(D, jcoMilliseconds in JSONComposeOptions);
+                                ResultsWriter.Add('"');
                               end;
                             stDate: begin
                                 if jcoMongoISODate in JSONComposeOptions then
-                                  JSONWriter.AddShort('ISODate("')
+                                  ResultsWriter.AddShort('ISODate("')
                                 else if jcoDATETIME_MAGIC in JSONComposeOptions then
                                   {$IFDEF MORMOT2}
-                                  JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                  ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                                   {$ELSE}
-                                  JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                  ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                                   {$ENDIF}
                                 else
-                                  JSONWriter.Add('"');
+                                  ResultsWriter.Add('"');
                                 D := Int(D+JulianEpoch);
-                                JSONWriter.AddDateTime(D);
-                                JSONWriter.Add('"');
+                                ResultsWriter.AddDateTime(D);
+                                ResultsWriter.Add('"');
                               end;
                             stTimeStamp: begin
                                 if jcoMongoISODate in JSONComposeOptions then
-                                  JSONWriter.AddShort('ISODate("')
+                                  ResultsWriter.AddShort('ISODate("')
                                 else if jcoDATETIME_MAGIC in JSONComposeOptions then
                                   {$IFDEF MORMOT2}
-                                  JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                  ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                                   {$ELSE}
-                                  JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                  ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                                   {$ENDIF}
                                 else
-                                  JSONWriter.Add('"');
+                                  ResultsWriter.Add('"');
                                 D := D+JulianEpoch;
-                                JSONWriter.AddDateTime(D, jcoMilliseconds in JSONComposeOptions);
-                                JSONWriter.Add('"');
+                                ResultsWriter.AddDateTime(D, jcoMilliseconds in JSONComposeOptions);
+                                ResultsWriter.Add('"');
                               end;
                             else
-                              JSONWriter.AddDouble(D);
+                              ResultsWriter.AddDouble(D);
                           end;
                         end;
         SQLITE3_TEXT: begin
             P := FPlainDriver.sqlite3_column_text(Fsqlite3_stmt, C);
             case ColumnType of
-              stBoolean: JSONWriter.AddShort(JSONBool[StrToBoolEx(P)]);
+              stBoolean: ResultsWriter.AddShort(JSONBool[StrToBoolEx(P)]);
               stTime: begin
                   if jcoMongoISODate in JSONComposeOptions then
-                    JSONWriter.AddShort('ISODate("0000-00-00')
+                    ResultsWriter.AddShort('ISODate("0000-00-00')
                   else if jcoDATETIME_MAGIC in JSONComposeOptions then
                     {$IFDEF MORMOT2}
-                    JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                    ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                     {$ELSE}
-                    JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                    ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                     {$ENDIF}
                   else
-                    JSONWriter.Add('"');
-                  JSONWriter.AddNoJSONEscape(P, Min(StrLen(P), 8+(4*Ord(jcoMilliseconds in JSONComposeOptions))));
+                    ResultsWriter.Add('"');
+                  ResultsWriter.AddNoJSONEscape(P, Min(StrLen(P), 8+(4*Ord(jcoMilliseconds in JSONComposeOptions))));
                   if jcoMongoISODate in JSONComposeOptions
-                  then JSONWriter.AddShort('Z)"')
-                  else JSONWriter.Add('"');
+                  then ResultsWriter.AddShort('Z)"')
+                  else ResultsWriter.Add('"');
                 end;
               stDate: begin
                   if jcoMongoISODate in JSONComposeOptions then
-                    JSONWriter.AddShort('ISODate("')
+                    ResultsWriter.AddShort('ISODate("')
                   else if jcoDATETIME_MAGIC in JSONComposeOptions then
                     {$IFDEF MORMOT2}
-                    JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                    ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                     {$ELSE}
-                    JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                    ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                     {$ENDIF}
                   else
-                    JSONWriter.Add('"');
-                  JSONWriter.AddNoJSONEscape(P, Min(StrLen(P), 10));
+                    ResultsWriter.Add('"');
+                  ResultsWriter.AddNoJSONEscape(P, Min(StrLen(P), 10));
                   if jcoMongoISODate in JSONComposeOptions
-                  then JSONWriter.AddShort('Z)"')
-                  else JSONWriter.Add('"');
+                  then ResultsWriter.AddShort('Z)"')
+                  else ResultsWriter.Add('"');
                 end;
               stTimeStamp: begin
                   if jcoMongoISODate in JSONComposeOptions then
-                    JSONWriter.AddShort('ISODate("')
+                    ResultsWriter.AddShort('ISODate("')
                   else if jcoDATETIME_MAGIC in JSONComposeOptions then
                     {$IFDEF MORMOT2}
-                    JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                    ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                     {$ELSE}
-                    JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                    ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                     {$ENDIF}
                   else
-                    JSONWriter.Add('"');
-                  JSONWriter.AddNoJSONEscape(P, Min(StrLen(P), 19+(4*Ord(jcoMilliseconds in JSONComposeOptions))));
+                    ResultsWriter.Add('"');
+                  ResultsWriter.AddNoJSONEscape(P, Min(StrLen(P), 19+(4*Ord(jcoMilliseconds in JSONComposeOptions))));
                   if jcoMongoISODate in JSONComposeOptions
-                  then JSONWriter.AddShort('Z)"')
-                  else JSONWriter.Add('"');
+                  then ResultsWriter.AddShort('Z)"')
+                  else ResultsWriter.Add('"');
                 end;
               else begin
-                JSONWriter.Add('"');
-                JSONWriter.AddJSONEscape(P);
-                JSONWriter.Add('"');
+                ResultsWriter.Add('"');
+                ResultsWriter.AddJSONEscape(P);
+                ResultsWriter.Add('"');
               end;
             end;
           end;
         end;
-      JSONWriter.Add(',');
+      ResultsWriter.Add(',');
     end;
   end;
   if jcoEndJSONObject in JSONComposeOptions then begin
-    JSONWriter.CancelLastComma; // cancel last ','
-    if JSONWriter.Expand then
-      JSONWriter.Add('}');
+    ResultsWriter.CancelLastComma; // cancel last ','
+    if ResultsWriter.Expand then
+      ResultsWriter.Add('}');
   end;
 end;
 {$ENDIF WITH_COLUMNS_TO_JSON}

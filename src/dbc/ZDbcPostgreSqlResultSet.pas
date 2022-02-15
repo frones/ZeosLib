@@ -443,7 +443,7 @@ type
     function Next: Boolean; reintroduce;
     {$IFDEF WITH_COLUMNS_TO_JSON}
   public
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]);
+    procedure ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF}; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]);
     {$ENDIF WITH_COLUMNS_TO_JSON}
   end;
 
@@ -617,8 +617,8 @@ uses
 { TZPostgreSQLResultSet }
 
 {$IFDEF WITH_COLUMNS_TO_JSON}
-procedure TZPostgreSQLResultSet.ColumnsToJSON(
-  JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions);
+procedure TZPostgreSQLResultSet.ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF};
+  JSONComposeOptions: TZJSONComposeOptions);
 var
   C: Cardinal;
   L: NativeUInt;
@@ -632,113 +632,113 @@ var
 label jmpTime, jmpTS, jmpOIDBLob;
 begin
   RNo := PGRowNo;
-  if JSONWriter.Expand then
-    JSONWriter.Add('{');
-  if Assigned(JSONWriter.Fields) then
-    H := High(JSONWriter.Fields) else
-    H := High(JSONWriter.ColNames);
+  if ResultsWriter.Expand then
+    ResultsWriter.Add('{');
+  if Assigned(ResultsWriter.Fields) then
+    H := High(ResultsWriter.Fields) else
+    H := High(ResultsWriter.ColNames);
   for I := 0 to H do begin
-    if Pointer(JSONWriter.Fields) = nil then
+    if Pointer(ResultsWriter.Fields) = nil then
       C := I else
-      C := JSONWriter.Fields[i];
+      C := ResultsWriter.Fields[i];
     if FPlainDriver.PQgetisnull(Fres, RNo, C) <> 0 then
-      if JSONWriter.Expand then begin
+      if ResultsWriter.Expand then begin
         if not (jcsSkipNulls in JSONComposeOptions) then begin
-          JSONWriter.AddString(JSONWriter.ColNames[I]);
-          JSONWriter.AddShort('null,')
+          ResultsWriter.AddString(ResultsWriter.ColNames[I]);
+          ResultsWriter.AddShort('null,')
         end;
       end else
-        JSONWriter.AddShort('null,')
+        ResultsWriter.AddShort('null,')
     else begin
-      if JSONWriter.Expand then
-        JSONWriter.AddString(JSONWriter.ColNames[i]);
+      if ResultsWriter.Expand then
+        ResultsWriter.AddString(ResultsWriter.ColNames[i]);
       P := FPlainDriver.PQgetvalue(Fres, RNo, C);
       with TZPGColumnInfo(ColumnsInfo[C]) do begin
         if FBinaryValues then
           case ColumnType of
-            stUnknown     : JSONWriter.AddShort('null');
-            stBoolean     : JSONWriter.AddShort(JSONBool[PByte(P)^<>0]);
-            stSmall       : JSONWriter.Add(PG2SmallInt(P));
-            stInteger     : JSONWriter.Add(PG2Integer(P));
-            stLong        : JSONWriter.Add(PG2Int64(P));
+            stUnknown     : ResultsWriter.AddShort('null');
+            stBoolean     : ResultsWriter.AddShort(JSONBool[PByte(P)^<>0]);
+            stSmall       : ResultsWriter.Add(PG2SmallInt(P));
+            stInteger     : ResultsWriter.Add(PG2Integer(P));
+            stLong        : ResultsWriter.Add(PG2Int64(P));
             stCurrency    : if TypeOID = CASHOID
                             {$IFDEF MORMOT2}
-                            then JSONWriter.AddCurr(PGCash2Currency(P))
-                            else JSONWriter.AddCurr(PGNumeric2Currency(P));
+                            then ResultsWriter.AddCurr(PGCash2Currency(P))
+                            else ResultsWriter.AddCurr(PGNumeric2Currency(P));
                             {$ELSE !MOMROT2}
-                            then JSONWriter.AddCurr64(PGCash2Currency(P))
-                            else JSONWriter.AddCurr64(PGNumeric2Currency(P));
+                            then ResultsWriter.AddCurr64(PGCash2Currency(P))
+                            else ResultsWriter.AddCurr64(PGNumeric2Currency(P));
                             {$ENDIF !MOMOT2}
-            stFloat       : JSONWriter.AddSingle(PG2Single(P));
-            stDouble      : JSONWriter.AddDouble(PG2Double(P));
+            stFloat       : ResultsWriter.AddSingle(PG2Single(P));
+            stDouble      : ResultsWriter.AddDouble(PG2Double(P));
             stBigDecimal  : begin
                               pgBuff := PAnsiChar(FByteBuffer)+SizeOf(TBCD);
                               PGNumeric2BCD(P, PBCD(FByteBuffer)^);
-                              JSONWriter.AddNoJSONEscape(pgBuff,
+                              ResultsWriter.AddNoJSONEscape(pgBuff,
                                 BCDToRaw(PBCD(FByteBuffer)^, pgBuff, '.'));
                             end;
             stBytes,
             stBinaryStream: if TypeOID = BYTEAOID then
-                              JSONWriter.WrBase64(P, FPlainDriver.PQgetlength(Fres, RNo, C), True)
+                              ResultsWriter.WrBase64(P, FPlainDriver.PQgetlength(Fres, RNo, C), True)
                             else begin
                               PPointer(FByteBuffer)^ := nil; //init avoid gpf
                               L := PG2Cardinal(P);
 jmpOIDBLob:                   PIZlob(FByteBuffer)^ := TZPostgreSQLOidBlob.Create(FPGConnection, L , lsmRead, FOpenLobStreams);
                               P := PIZlob(FByteBuffer)^.GetBuffer(fRawTemp, L);
-                              JSONWriter.WrBase64(P, L, True);
+                              ResultsWriter.WrBase64(P, L, True);
                               PIZlob(FByteBuffer)^ := nil;
                               fRawTemp := '';
                             end;
             stGUID        : begin
-                              {$IFNDEF MORMOT2}JSONWriter.Add('"');{$ENDIF}
+                              {$IFNDEF MORMOT2}ResultsWriter.Add('"');{$ENDIF}
                               {$IFNDEF ENDIAN_BIG} {$Q-} {$R-}
                               PGUID(fByteBuffer)^.D1 := PG2Cardinal(@PGUID(P).D1); //what a *beep* swapped digits! but only on reading
                               PGUID(fByteBuffer)^.D2 := (PGUID(P).D2 and $00FF shl 8) or (PGUID(P).D2 and $FF00 shr 8);
                               PGUID(fByteBuffer)^.D3 := (PGUID(P).D3 and $00FF shl 8) or (PGUID(P).D3 and $FF00 shr 8);
                               PInt64(@PGUID(fByteBuffer)^.D4)^ := PInt64(@PGUID(P).D4)^;
-                              JSONWriter.Add(PGUID(fByteBuffer){$IFNDEF MORMOT2}^{$ELSE},'"'{$ENDIF});
+                              ResultsWriter.Add(PGUID(fByteBuffer){$IFNDEF MORMOT2}^{$ELSE},'"'{$ENDIF});
                               {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
                               {$IFDEF OverFlowCheckEnabled} {$Q+} {$ENDIF}
                               {$ELSE}
-                              JSONWriter.Add(PGUID(P){$IFNDEF MORMOT2}^{$ELSE},'"'{$ENDIF});
+                              ResultsWriter.Add(PGUID(P){$IFNDEF MORMOT2}^{$ELSE},'"'{$ENDIF});
                               {$ENDIF}
-                              {$IFNDEF MORMOT2}JSONWriter.Add('"');{$ENDIF}
+                              {$IFNDEF MORMOT2}ResultsWriter.Add('"');{$ENDIF}
                             end;
             stDate        : begin
                               if jcoMongoISODate in JSONComposeOptions
-                              then JSONWriter.AddShort('ISODate("')
+                              then ResultsWriter.AddShort('ISODate("')
                               else if jcoDATETIME_MAGIC in JSONComposeOptions
                                 {$IFDEF MORMOT2}
-                                then JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                then ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                                 {$ELSE}
-                                then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                then ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                                 {$ENDIF}
-                                else JSONWriter.Add('"');
+                                else ResultsWriter.Add('"');
                               PG2Date(PInteger(P)^, TS.Year, TS.Month, TS.Day);
                               DateToIso8601PChar(Pointer(FByteBuffer), True, TS.Year, TS.Month, TS.Day);
-                              JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer), 10);
+                              ResultsWriter.AddNoJSONEscape(Pointer(FByteBuffer), 10);
                               if jcoMongoISODate in JSONComposeOptions
-                              then JSONWriter.AddShort('Z)"')
-                              else JSONWriter.Add('"');
+                              then ResultsWriter.AddShort('Z)"')
+                              else ResultsWriter.Add('"');
                             end;
             stTime        : begin
                               if Finteger_datetimes
                               then dt2Time(PG2Int64(P), TS.Hour, TS.Minute, TS.Second, Ts.Fractions)
                               else dt2Time(PG2Double(P), TS.Hour, TS.Minute, TS.Second, Ts.Fractions);
 jmpTime:                      if jcoMongoISODate in JSONComposeOptions
-                              then JSONWriter.AddShort('ISODate("0000-00-00')
+                              then ResultsWriter.AddShort('ISODate("0000-00-00')
                               else if jcoDATETIME_MAGIC in JSONComposeOptions
                                 {$IFDEF MORMOT2}
-                                then JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                then ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                                 {$ELSE}
-                                then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                then ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                                 {$ENDIF}
-                                else JSONWriter.Add('"');
+                                else ResultsWriter.Add('"');
                               TimeToIso8601PChar(Pointer(FByteBuffer), True, TS.Hour, TS.Minute, TS.Second, TS.Fractions div NanoSecsPerMSec, 'T', jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer), 9+4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions)));
+                              ResultsWriter.AddNoJSONEscape(Pointer(FByteBuffer), 9+4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions)));
                               if jcoMongoISODate in JSONComposeOptions
-                              then JSONWriter.AddShort('Z)"')
-                              else JSONWriter.Add('"');
+                              then ResultsWriter.AddShort('Z)"')
+                              else ResultsWriter.Add('"');
                             end;
             stTimestamp   : begin
                               if TypeOID = TIMESTAMPTZOID
@@ -748,30 +748,30 @@ jmpTime:                      if jcoMongoISODate in JSONComposeOptions
                               then PG2DateTime(PInt64(P)^, TimeZoneOffset, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions)
                               else PG2DateTime(PDouble(P)^, TimeZoneOffset, TS.Year, TS.Month, TS.Day, Ts.Hour, TS.Minute, TS.Second, TS.Fractions);
 jmpTS:                        if jcoMongoISODate in JSONComposeOptions
-                              then JSONWriter.AddShort('ISODate("')
+                              then ResultsWriter.AddShort('ISODate("')
                               else if jcoDATETIME_MAGIC in JSONComposeOptions
                                 {$IFDEF MORMOT2}
-                                then JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                then ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                                 {$ELSE}
-                                then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                then ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                                 {$ENDIF}
-                                else JSONWriter.Add('"');
+                                else ResultsWriter.Add('"');
                               DateToIso8601PChar(Pointer(FByteBuffer), True, TS.Year, TS.Month, TS.Day);
                               TimeToIso8601PChar(Pointer(PAnsiChar(FByteBuffer)+10), True, TS.Hour, TS.Minute, TS.Second, TS.Fractions div NanoSecsPerMSec, 'T', jcoMilliseconds in JSONComposeOptions);
-                              JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer),19+(4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions))));
+                              ResultsWriter.AddNoJSONEscape(Pointer(FByteBuffer),19+(4*Ord(not (jcoMongoISODate in JSONComposeOptions) and (jcoMilliseconds in JSONComposeOptions))));
                               if jcoMongoISODate in JSONComposeOptions
-                              then JSONWriter.AddShort('Z)"')
-                              else JSONWriter.Add('"');
+                              then ResultsWriter.AddShort('Z)"')
+                              else ResultsWriter.Add('"');
                             end;
             stString,
             stUnicodeString:if (TypeOID = MACADDROID) then begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer), PGMacAddr2Raw(P, PAnsiChar(FByteBuffer)));
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
+                              ResultsWriter.AddNoJSONEscape(Pointer(FByteBuffer), PGMacAddr2Raw(P, PAnsiChar(FByteBuffer)));
+                              ResultsWriter.Add('"');
                             end else if (TypeOID = INETOID) or (TypeOID = CIDROID) then begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer), PGInetAddr2Raw(P, PAnsiChar(FByteBuffer)));
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
+                              ResultsWriter.AddNoJSONEscape(Pointer(FByteBuffer), PGInetAddr2Raw(P, PAnsiChar(FByteBuffer)));
+                              ResultsWriter.Add('"');
                             end else if TypeOID = INTERVALOID then begin
                               if Finteger_datetimes
                               then PG2Time(PInt64(P)^, TS.Hour, TS.Minute, TS.Second, TS.Fractions)
@@ -797,29 +797,29 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                               then goto jmpTS
                               else goto jmpTime;
                             end else begin
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
                               if (TypeOID = CHAROID) or (TypeOID = BPCHAROID)
-                              then JSONWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, {$IFDEF MORMOT2}mormot.core.base{$ELSE}SynCommons{$ENDIF}.StrLen(P)))
-                              else JSONWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
-                              JSONWriter.Add('"');
+                              then ResultsWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, {$IFDEF MORMOT2}mormot.core.base{$ELSE}SynCommons{$ENDIF}.StrLen(P)))
+                              else ResultsWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
+                              ResultsWriter.Add('"');
                             end;
             stAsciiStream,
             stUnicodeStream:if (TypeOID = JSONOID) or (TypeOID = JSONBOID) then begin
                               if (TypeOID = JSONBOID) then Inc(P);//skip the leading #1 byte of the binary result
-                              JSONWriter.AddNoJSONEscape(P{, SynCommons.StrLen(P)})
+                              ResultsWriter.AddNoJSONEscape(P{, SynCommons.StrLen(P)})
                             end else begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
+                              ResultsWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
+                              ResultsWriter.Add('"');
                             end;
             //stArray, stDataSet,
           end
         else
           case ColumnType of
-            stUnknown     : JSONWriter.AddShort('null');
-            stBoolean     : JSONWriter.AddShort(JSONBool[StrToBoolEx(P, True, (TypeOID = CHAROID) or (TypeOID = BPCHAROID))]);
-            stByte..stDouble, stBigDecimal  : JSONWriter.AddNoJSONEscape(P, ZFastCode.StrLen(P));
-            stCurrency    : JSONWriter.AddDouble(ZSysUtils.SQLStrToFloatDef(P, 0, ZFastCode.StrLen(P)));
+            stUnknown     : ResultsWriter.AddShort('null');
+            stBoolean     : ResultsWriter.AddShort(JSONBool[StrToBoolEx(P, True, (TypeOID = CHAROID) or (TypeOID = BPCHAROID))]);
+            stByte..stDouble, stBigDecimal  : ResultsWriter.AddNoJSONEscape(P, ZFastCode.StrLen(P));
+            stCurrency    : ResultsWriter.AddDouble(ZSysUtils.SQLStrToFloatDef(P, 0, ZFastCode.StrLen(P)));
             stBytes,
             stBinaryStream: if TypeOID = BYTEAOID then begin
                               pgBuff := nil;
@@ -829,109 +829,109 @@ jmpTS:                        if jcoMongoISODate in JSONComposeOptions
                                 try
                                   GetMem(pgBuff, L);
                                   HexToBin(P+2, pgBuff, L);
-                                  JSONWriter.WrBase64(pgBuff, L, True);
+                                  ResultsWriter.WrBase64(pgBuff, L, True);
                                 finally
                                   FreeMem(pgBuff);
                                 end;
                               end else if Assigned(FPlainDriver.PQUnescapeBytea) then
                                 try
                                   pgBuff := FPlainDriver.PQUnescapeBytea(P, @L);
-                                  JSONWriter.WrBase64(pgBuff, L, True);
+                                  ResultsWriter.WrBase64(pgBuff, L, True);
                                 finally
                                   FPlainDriver.PQFreemem(pgBuff);
                                 end
                               else
-                                JSONWriter.WrBase64(P, FPlainDriver.PQgetlength(Fres, RNo, C), True);
+                                ResultsWriter.WrBase64(P, FPlainDriver.PQgetlength(Fres, RNo, C), True);
                             end else begin
                               L := RawToUint64(P);
                               goto jmpOIDBLob;
                             end;
             stGUID        : begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddNoJSONEscape(P);//
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
+                              ResultsWriter.AddNoJSONEscape(P);//
+                              ResultsWriter.Add('"');
                             end;
             stDate        : if jcoMongoISODate in JSONComposeOptions then begin
-                              JSONWriter.AddShort('ISODate("');
-                              JSONWriter.AddNoJSONEscape(P, 10);
-                              JSONWriter.AddShort('Z)"');
+                              ResultsWriter.AddShort('ISODate("');
+                              ResultsWriter.AddNoJSONEscape(P, 10);
+                              ResultsWriter.AddShort('Z)"');
                             end else begin
                               if jcoDATETIME_MAGIC in JSONComposeOptions
                               {$IFDEF MORMOT2}
-                              then JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              then ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                               {$ELSE}
-                              then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              then ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                               {$ENDIF}
-                              else JSONWriter.Add('"');
-                              JSONWriter.AddNoJSONEscape(P, 10);
-                              JSONWriter.Add('"');
+                              else ResultsWriter.Add('"');
+                              ResultsWriter.AddNoJSONEscape(P, 10);
+                              ResultsWriter.Add('"');
                             end;
             stTime        : if jcoMongoISODate in JSONComposeOptions then begin
-                              JSONWriter.AddShort('ISODate("0000-00-00T');
-                              JSONWriter.AddNoJSONEscape(P, 8); //mongo has no milliseconds
-                              JSONWriter.AddShort('Z)"');
+                              ResultsWriter.AddShort('ISODate("0000-00-00T');
+                              ResultsWriter.AddNoJSONEscape(P, 8); //mongo has no milliseconds
+                              ResultsWriter.AddShort('Z)"');
                             end else begin
                               if jcoDATETIME_MAGIC in JSONComposeOptions
                               {$IFDEF MORMOT2}
-                              then JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              then ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                               {$ELSE}
-                              then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              then ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                               {$ENDIF}
-                              else JSONWriter.Add('"');
-                              JSONWriter.Add('T');
+                              else ResultsWriter.Add('"');
+                              ResultsWriter.Add('T');
                               if ((P+8)^ <> '.') or not (jcoMilliseconds in JSONComposeOptions) //time zone ?
-                              then JSONWriter.AddNoJSONEscape(P, 8)
-                              else JSONWriter.AddNoJSONEscape(P, 12);
-                              JSONWriter.Add('"');
+                              then ResultsWriter.AddNoJSONEscape(P, 8)
+                              else ResultsWriter.AddNoJSONEscape(P, 12);
+                              ResultsWriter.Add('"');
                             end;
             stTimestamp   : if jcoMongoISODate in JSONComposeOptions then begin
-                              JSONWriter.AddShort('ISODate("');
-                              JSONWriter.AddNoJSONEscape(P, 10);
-                              JSONWriter.Add('T');
-                              JSONWriter.AddNoJSONEscape(P+11, 8);//mongo has no milliseconds
-                              JSONWriter.AddShort('Z)"');
+                              ResultsWriter.AddShort('ISODate("');
+                              ResultsWriter.AddNoJSONEscape(P, 10);
+                              ResultsWriter.Add('T');
+                              ResultsWriter.AddNoJSONEscape(P+11, 8);//mongo has no milliseconds
+                              ResultsWriter.AddShort('Z)"');
                             end else begin
                               if jcoDATETIME_MAGIC in JSONComposeOptions
                               {$IFDEF MORMOT2}
-                              then JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              then ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                               {$ELSE}
-                              then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              then ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                               {$ENDIF}
-                              else JSONWriter.Add('"');
+                              else ResultsWriter.Add('"');
                               (P+10)^ := 'T';
-                              {JSONWriter.AddNoJSONEscape(P, 10);
-                              JSONWriter.Add('T');
+                              {ResultsWriter.AddNoJSONEscape(P, 10);
+                              ResultsWriter.Add('T');
                               if ((P+19)^ <> '.') or not (jcoMilliseconds in JSONComposeOptions)
-                              then JSONWriter.AddNoJSONEscape(P+11, 8)
-                              else} JSONWriter.AddNoJSONEscape(P{+11, 12});
-                              JSONWriter.Add('"');
+                              then ResultsWriter.AddNoJSONEscape(P+11, 8)
+                              else} ResultsWriter.AddNoJSONEscape(P{+11, 12});
+                              ResultsWriter.Add('"');
                             end;
             stString,
             stUnicodeString:begin
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
                               if (TypeOID = CHAROID) or (TypeOID = BPCHAROID)
-                              then JSONWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, {$IFDEF MORMOT2}mormot.core.base{$ELSE}SynCommons{$ENDIF}.StrLen(P)))
-                              else JSONWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
-                              JSONWriter.Add('"');
+                              then ResultsWriter.AddJSONEscape(P, ZDbcUtils.GetAbsorbedTrailingSpacesLen(P, {$IFDEF MORMOT2}mormot.core.base{$ELSE}SynCommons{$ENDIF}.StrLen(P)))
+                              else ResultsWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
+                              ResultsWriter.Add('"');
                             end;
             stAsciiStream,
             stUnicodeStream:if (TypeOID = JSONOID) or (TypeOID = JSONBOID) then
-                              JSONWriter.AddNoJSONEscape(P{, SynCommons.StrLen(P)})
+                              ResultsWriter.AddNoJSONEscape(P{, SynCommons.StrLen(P)})
                             else begin
-                              JSONWriter.Add('"');
-                              JSONWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
+                              ResultsWriter.AddJSONEscape(P{, SynCommons.StrLen(P)});
+                              ResultsWriter.Add('"');
                             end;
             //stArray, stDataSet,
           end;
       end;
-      JSONWriter.Add(',');
+      ResultsWriter.Add(',');
     end;
   end;
   if jcoEndJSONObject in JSONComposeOptions then begin
-    JSONWriter.CancelLastComma; // cancel last ','
-    if JSONWriter.Expand then
-      JSONWriter.Add('}');
+    ResultsWriter.CancelLastComma; // cancel last ','
+    if ResultsWriter.Expand then
+      ResultsWriter.Add('}');
   end;
 end;
 {$ENDIF WITH_COLUMNS_TO_JSON}
