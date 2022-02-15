@@ -133,7 +133,6 @@ type
     procedure ReadParamData(Reader: TReader);
     procedure WriteParamData(Writer: TWriter);
 
-
   protected
     procedure Apply_RefreshResultSet(const Sender: IZCachedResultSet;
       const RefreshResultSet: IZResultSet; const RefreshRowAccessor: TZRowAccessor);
@@ -141,6 +140,7 @@ type
     procedure DefineProperties(Filer: TFiler); override;
 
     procedure SetTransaction(const Value: IZTransaction);
+    function GetTransaction: IZTransaction;
     /// <summary>Set a new connection.</summary>
     /// <param>"Value" the IZTransaction object.</param>
     procedure SetConnection(const Value: IZConnection);
@@ -414,6 +414,14 @@ begin
       for ut := utModified to utDeleted do
         FStmts[ut].Clear;
   end;
+end;
+
+function TZUpdateSQL.GetTransaction: IZTransaction;
+begin
+  if Assigned(FTransaction) then
+    Result := FTransaction
+  else
+    Result := FConnection.GetConnectionTransaction;
 end;
 
 procedure TZUpdateSQL.SetRefreshSQL(Value: TStrings);
