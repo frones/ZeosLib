@@ -67,7 +67,10 @@ uses
   {synapse}
   {local}zeosproxy, zeosproxy_binder, zeosproxy_imp, DbcProxyUtils,
   DbcProxyConnectionManager, DbcProxyConfigManager, ZDbcProxyManagement,
-  ZDbcInterbase6, ZDbcPostgreSql, dbcproxycleanupthread, dbcproxysecuritymodule;
+  dbcproxycleanupthread, dbcproxysecuritymodule,
+  //Zeos drivers:
+  ZDbcAdo, ZDbcASA, ZDbcDbLib, ZDbcFirebird, ZDbcInterbase6, ZDbcMySql, ZDbcODBCCon,
+  ZDbcOleDB, ZDbcOracle, ZDbcPostgreSql, ZDbcSQLAnywhere, ZDbcSqLite;
 
 type
 

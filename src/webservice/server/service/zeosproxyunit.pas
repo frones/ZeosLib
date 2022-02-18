@@ -58,7 +58,8 @@ interface
 uses
   Classes, SysUtils, DaemonApp, server_listener,
   // for including the Zeos drivers:
-  ZDbcPostgreSql, ZDbcFirebird, ZDbcInterbase6,
+  ZDbcAdo, ZDbcASA, ZDbcDbLib, ZDbcFirebird, ZDbcInterbase6, ZDbcMySql, ZDbcODBCCon,
+  ZDbcOleDB, ZDbcOracle, ZDbcPostgreSql, ZDbcSQLAnywhere, ZDbcSqLite,
   //
   dbcproxycleanupthread
   ;
