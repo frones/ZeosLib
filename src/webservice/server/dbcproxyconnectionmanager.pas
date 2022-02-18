@@ -80,7 +80,7 @@ type
 implementation
 
 uses
-  ZExceptions,
+  ZExceptions;
 
 constructor TDbcProxyConnectionManager.Create;
 begin
