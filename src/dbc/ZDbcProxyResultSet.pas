@@ -354,7 +354,7 @@ var
   Stream: TStream;
   ConSettings: PZConSettings;
   Metadata: IZDatabaseMetadata;
-  x: String;
+  x: AnsiString;
   xmldoc: {$IFDEF FPC}TZXMLDocument{$ELSE}TXMLDocument{$ENDIF};
 
   {$IFNDEF FPC}DomVendor: TDOMVendor;{$ENDIF}
@@ -378,10 +378,10 @@ begin
 
   Stream := TMemoryStream.Create;
   try
-    x := #$FEFF;
+    x :=  #$FF#$FE;// '  ';//#$FEFF;
     Stream.Write(x[1], 2);
     Stream.Write(ResultStr[1], Length(ResultStr) * 2);
-    Stream.Position := 0;
+    Stream.Seek(0, soFromBeginning);
     FXmlDocument.LoadFromStream(Stream);
   finally
     FreeAndNil(Stream);

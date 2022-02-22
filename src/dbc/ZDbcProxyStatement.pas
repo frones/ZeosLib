@@ -324,11 +324,13 @@ function TZDbcProxyPreparedStatement.ExecutePrepared: Boolean;
 var
   Params: String;
   ResultStr: String;
+  xSQL: WideString;
 const
   ResultSetStart = '<resultset ';
 begin
   Params := EncodeParams;
-  ResultStr := (Connection as IZDbcProxyConnection).GetConnectionInterface.ExecuteStatement(SQL, Params, GetMaxRows);
+  xSQL := {$IFDEF UNICODE}FWSQL{$ELSE}UTF8Decode(FASQL){$ENDIF};
+  ResultStr := (Connection as IZDbcProxyConnection).GetConnectionInterface.ExecuteStatement(xSQL, Params, GetMaxRows);
 
   if copy(ResultStr, 1, length(ResultSetStart)) = ResultSetStart  then begin
     Result := True;
