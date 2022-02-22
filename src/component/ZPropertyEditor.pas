@@ -417,7 +417,7 @@ begin
       try
         // Look for the Tables of the defined Catalog and Schema
         ResultSet := Metadata.GetTables(Catalog, Metadata.AddEscapeCharToWildcards(Schema), '', nil);
-        while ResultSet.Next do
+        while ResultSet.Next do begin
           if IsTZSqlMetadata then
             List.Add(IdentifierConverter.Quote(ResultSet.GetStringByName('TABLE_NAME'), iqTable))
           else begin
@@ -433,8 +433,9 @@ begin
               TableName := IdentifierConverter.Quote(Schema, iqSchema) + '.' + TableName;
             List.Add(TableName);
           end;
+        end;
       finally
-        ResultSet.Close;
+        //ResultSet.Close;
       end;
     end;
   end;
