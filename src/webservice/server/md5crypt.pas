@@ -7,7 +7,7 @@ unit md5crypt;
 interface
 
 // Note: The md5a unit is the MD5 unit as released by Assarbad.
-uses math, {$IFNDEF FPC}md5A{$ELSE}md5{$IFEND};
+uses {$IFNDEF FPC}md5A{$ELSE}md5{$IFEND};
 
 function crypt_md5(pw: RawByteString; salt: ANSIString): AnsiString;
 

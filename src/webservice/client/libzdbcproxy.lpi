@@ -46,7 +46,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..\wsdl;..\..\..\..\wst;..\..\..\..\synapse-trunk"/>
+      <OtherUnitFiles Value="..\wsdl;..\..\..\..\wst;..\..\core"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <CodeGeneration>
