@@ -122,7 +122,8 @@ begin
     FTableName := Value;
     if Value <> '' then
       SQL.Text := Format('SELECT * FROM %s', [FTableName])
-    else SQL.Text := '';
+    else
+      SQL.Text := '';
   end;
 end;
 
