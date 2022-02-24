@@ -219,7 +219,6 @@
               {$DEFINE WITH_NEWTOBJECT}                 // allows new methods in TObject (D2009+/FPC 2.4.4)
               {$DEFINE WITH_CHARINSET}                  // D2009's poor substitute for character specific "xx in yy"
               {$DEFINE WITH_FTSHORTINT}                 // ftShortInt is supported
-			  {$DEFINE WITH_PARAM_ASSHORTINT}           // not only is ftShortInt supported but wa also have a TParam.AsShortInt
               {$DEFINE WITH_FTBYTE}                     // ftByte is supported
               {$DEFINE WITH_FTEXTENDED}                 // ftExtended is supported
               {$DEFINE WITH_FTLONGWORD}                 // ftLongWord is supported
