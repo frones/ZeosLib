@@ -324,7 +324,7 @@ function TZDbcProxyPreparedStatement.ExecutePrepared: Boolean;
 var
   Params: String;
   ResultStr: String;
-  xSQL: WideString;
+  xSQL: ZWideString;
 const
   ResultSetStart = '<resultset ';
 begin
