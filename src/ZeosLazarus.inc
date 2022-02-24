@@ -158,6 +158,7 @@
                   {$DEFINE WITH_FTSHORTINT}                 // ftShortInt is supported
                   {$DEFINE WITH_FTBYTE}                     // ftByte is supported
                   {$DEFINE WITH_FTEXTENDED}                 // ftExtended is supported
+				  {$DEFINE WITH_FTSINGLE}                   // ftSingle is supported
                 {$IFEND} 
               {$IFEND} 
             {$IFEND}
