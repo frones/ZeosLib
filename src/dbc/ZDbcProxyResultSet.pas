@@ -354,10 +354,21 @@ var
   Stream: TStream;
   ConSettings: PZConSettings;
   Metadata: IZDatabaseMetadata;
-  x: AnsiString;
   xmldoc: {$IFDEF FPC}TZXMLDocument{$ELSE}TXMLDocument{$ENDIF};
 
   {$IFNDEF FPC}DomVendor: TDOMVendor;{$ENDIF}
+
+  procedure addBomToSTream;
+  const
+    {$IFDEF FPC}
+    BOM: AnsiString = #$FF#$FE;
+    {$ELSE}
+    BOM: WideString = #$FEFF;
+    {$ENDIF}
+  begin
+    Stream.Write(BOM[1], 2);
+  end;
+
 begin
   ConSettings := Connection.GetConSettings;
   Metadata := Connection.GetMetadata;
@@ -378,8 +389,7 @@ begin
 
   Stream := TMemoryStream.Create;
   try
-    x :=  #$FF#$FE;// '  ';//#$FEFF;
-    Stream.Write(x[1], 2);
+    addBomToSTream; // so the XML stuff knows that it is UTF16 encoded.
     Stream.Write(ResultStr[1], Length(ResultStr) * 2);
     Stream.Seek(0, soFromBeginning);
     FXmlDocument.LoadFromStream(Stream);
