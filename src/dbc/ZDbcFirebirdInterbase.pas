@@ -4633,7 +4633,7 @@ procedure TZAbstractFirebirdInterbasePreparedStatement.SetBlob(Index: Integer;
   ASQLType: TZSQLType; const Value: IZBlob);
 var P: PAnsiChar;
   L: NativeUInt;
-  IBLob: IZInterbaseFirebirdLob;
+  (*IBLob: IZInterbaseFirebirdLob;*)
 label jmpNotNull;
 begin
   {$IFNDEF GENERIC_INDEX}Dec(Index);{$ENDIF}
@@ -4646,6 +4646,7 @@ begin
       BindList.SetNull(Index, ASQLType);
       P := nil;
       L := 0;//satisfy compiler
+    // Deactivated because it can lead to errors when BLOBs are loaded from different connections or different transactions:
     (*end else if Supports(Value, IZInterbaseFirebirdLob, IBLob) and ((sqltype = SQL_QUAD) or (sqltype = SQL_BLOB)) then begin
       Value.GetStream.Free;
       IBLob.Open(lsmRead);

@@ -391,7 +391,7 @@ begin
   try
     addBomToSTream; // so the XML stuff knows that it is UTF16 encoded.
     Stream.Write(ResultStr[1], Length(ResultStr) * 2);
-    Stream.Seek(0, soFromBeginning);
+    Stream.Position := 0;
     FXmlDocument.LoadFromStream(Stream);
   finally
     FreeAndNil(Stream);
