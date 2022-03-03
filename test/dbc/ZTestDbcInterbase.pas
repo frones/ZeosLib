@@ -78,6 +78,7 @@ type
     procedure TestStatement;
     procedure TestRegularResultSet;
     procedure TestBlobs;
+    procedure TestBytes;
     procedure TestUpdateBlobs;
     procedure TestCaseSensitive;
     procedure TestDefaultValues;
@@ -373,6 +374,68 @@ begin
     TempStream.Free;
     TempStream := ResultSet.GetBinaryStreamByName('B_IMAGE');
     CheckEquals(ImageStream, TempStream);
+  finally
+    FreeAndNil(TempStream);
+    ResultSet.Close;
+
+    TextStream.Free;
+    ImageStream.Free;
+
+    Statement.Close;
+  end;
+end;
+
+procedure TZTestDbcInterbaseCase.TestBytes;
+const
+  B_ID_Index = FirstDbcIndex;
+  B_TEXT_Index = FirstDbcIndex+1;
+  B_IMAGE_Index = FirstDbcIndex+2;
+var
+  Connection: IZConnection;
+  PreparedStatement: IZPreparedStatement;
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+  TextStream: TStream;
+  ImageStream: TMemoryStream;
+  TempStream: TStream;
+  ImageBytes: TBytes;
+  TempBytes: TBytes;
+begin
+  Connection := CreateDbcConnection;
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+  Statement.SetResultSetType(rtScrollInsensitive);
+  Statement.SetResultSetConcurrency(rcReadOnly);
+
+  Statement.ExecuteUpdate('DELETE FROM BLOB_VALUES WHERE B_ID='
+    + IntToStr(TEST_ROW_ID));
+
+  TempStream := nil;
+  TextStream := TStringStream.Create('ABCDEFG');
+  ImageStream := TMemoryStream.Create;
+  ImageStream.LoadFromFile(TestFilePath('images/zapotec.bmp'));
+  try
+    PreparedStatement := Connection.PrepareStatement(
+      'INSERT INTO BLOB_VALUES (B_ID, B_TEXT, B_IMAGE) VALUES(?,?,?)');
+    PreparedStatement.SetInt(B_ID_Index, TEST_ROW_ID);
+    PreparedStatement.SetAsciiStream(B_TEXT_Index, TextStream);
+    // prepare TBytes
+    SetLength(ImageBytes, ImageStream.Size);
+    ImageStream.Read(ImageBytes[0], ImageStream.Size);
+    ImageStream.Position := 0;
+    PreparedStatement.SetBytes(B_IMAGE_Index, ImageBytes);
+    CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
+
+    ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES'
+      + ' WHERE b_id=' + IntToStr(TEST_ROW_ID));
+    CheckNotNull(ResultSet);
+    Check(ResultSet.Next);
+    CheckEquals(TEST_ROW_ID, ResultSet.GetIntByName('B_ID'));
+    TempStream := ResultSet.GetAsciiStreamByName('B_TEXT');
+    CheckEquals(TextStream, TempStream);
+    //TempStream := ResultSet.GetBinaryStreamByName('B_IMAGE');
+    TempBytes := ResultSet.GetBytesByName('B_IMAGE');
+    CheckEquals(ImageBytes, TempBytes);
   finally
     FreeAndNil(TempStream);
     ResultSet.Close;

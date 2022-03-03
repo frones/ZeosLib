@@ -296,7 +296,10 @@ begin
             end else begin
               raise EZSQLException.Create('Conversion of parameter of type ' + TypeName + ' to stBinaryStream is not supported (yet).');
             end;
-          else raise EZSQLException.Create('Conversion of parameter of type ' + TypeName + ' is not supported (yet).');
+          stBytes:
+              line := StrParamToStr(String(ZEncodeBase64(StrToBytes(InParamValues[x].VRawByteString))));
+          else
+            raise EZSQLException.Create('Conversion of parameter of type ' + TypeName + ' is not supported (yet).');
         end;
         Line := 'value="' + Line + '"';
       end;

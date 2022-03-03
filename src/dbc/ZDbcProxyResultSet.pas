@@ -1084,16 +1084,33 @@ end;
     value returned is <code>null</code>
 }
 function TZDbcProxyResultSet.GetBytes(ColumnIndex: Integer): TBytes;
+var
+  ColType: TZSQLType;
+  Idx: Integer;
+  Val: String;
+  AnsiVal: AnsiString;
+  Bytes: TBytes;
+  ColInfo: TZColumnInfo;
 begin
   LastWasNull := IsNull(ColumnIndex);
 
-//  if LastWasNull then begin
-//    Result := 0;
-//    exit;
-//  end;
+  if LastWasNull then begin
+    //Result := '';
+    exit;
+  end;
 
-  // todo: Implement GetBytes
-  raise EZSQLException.Create('GetBytes is not supported (yet)');
+  Idx := ColumnIndex - FirstDbcIndex;
+  Val := FCurrentRowNode.ChildNodes.Get(Idx).Attributes[ValueAttr];
+  ColInfo := TZColumnInfo(ColumnsInfo.Items[Idx]);
+  ColType := ColInfo.ColumnType;
+
+  case ColType of
+    stBytes, stBinaryStream:
+      Result := ZDecodeBase64(AnsiString(Val));
+    else begin
+      raise EZSQLException.Create('GetBytes is not supported for ' + ColInfo.GetColumnTypeName + ' (yet). Column: ' + ColInfo.ColumnLabel);
+    end;
+  end;
 end;
 
 function TZDbcProxyResultSet.GetCurrency(
@@ -1334,7 +1351,7 @@ begin
   ColInfo := TZColumnInfo(ColumnsInfo.Items[Idx]);
   ColType := ColInfo.ColumnType;
   case ColType of
-    stBinaryStream: begin
+    stBinaryStream, stBytes: begin
       Bytes := DecodeBase64(AnsiString(Val));
       Result := TZAbstractBlob.CreateWithData(@Bytes[0], Length(Bytes)) as IZBlob;
     end;
