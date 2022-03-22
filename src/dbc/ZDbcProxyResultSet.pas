@@ -1088,8 +1088,6 @@ var
   ColType: TZSQLType;
   Idx: Integer;
   Val: String;
-  AnsiVal: AnsiString;
-  Bytes: TBytes;
   ColInfo: TZColumnInfo;
 begin
   LastWasNull := IsNull(ColumnIndex);
@@ -1106,7 +1104,7 @@ begin
 
   case ColType of
     stBytes, stBinaryStream:
-      Result := ZDecodeBase64(AnsiString(Val));
+      Result := ZDecodeBase64(Val);
     else begin
       raise EZSQLException.Create('GetBytes is not supported for ' + ColInfo.GetColumnTypeName + ' (yet). Column: ' + ColInfo.ColumnLabel);
     end;
