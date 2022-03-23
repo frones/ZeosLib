@@ -665,10 +665,10 @@ begin
                             {$IFDEF MORMOT2}
                             then ResultsWriter.AddCurr(PGCash2Currency(P))
                             else ResultsWriter.AddCurr(PGNumeric2Currency(P));
-                            {$ELSE !MOMROT2}
+                            {$ELSE !MORMOT2}
                             then ResultsWriter.AddCurr64(PGCash2Currency(P))
                             else ResultsWriter.AddCurr64(PGNumeric2Currency(P));
-                            {$ENDIF !MOMOT2}
+                            {$ENDIF MORMOT2}
             stFloat       : ResultsWriter.AddSingle(PG2Single(P));
             stDouble      : ResultsWriter.AddDouble(PG2Double(P));
             stBigDecimal  : begin
