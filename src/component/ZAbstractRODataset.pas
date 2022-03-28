@@ -5821,7 +5821,10 @@ const
     , ftWideString{ftFixedWideChar}, ftWideMemo // 38..39
     {$IFDEF WITH_FTLONGWORD}
     , ftTimeStamp{ftOraTimeStamp}, ftDateTime{ftOraInterval} //40..41
-    , ftLongWord, ftShortint, ftByte, ftExtended, ftSingle//42..45
+    , ftLongWord, ftShortint, ftByte, ftExtended //42..45
+      {$IFDEF WITH_FTSINGLE}
+        , ftSingle
+      {$ENDIF}
     {$ENDIF}
 {$ELSE !FPC}
 {$IF CompilerVersion >= 18} //additional Types since D2006 and D2007
