@@ -551,7 +551,7 @@ begin
     {$IFDEF UNICODE}
     if (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then begin
       FWSQL := GetUnicodeEncodedSQL(Value);
-      {$IFDEF DEBUG}FASQL := ZUnicodeToRaw(FWSQL, ConSettings^.CTRL_CP);{$ENDIF}
+      {$IFDEF ZEOSDEBUG}FASQL := ZUnicodeToRaw(FWSQL, ConSettings^.CTRL_CP);{$ENDIF}
     end else begin
       FASQL := GetRawEncodedSQL(Value);
       FWSQL := Value;
@@ -634,7 +634,7 @@ begin
       FASQL := ZUnicodeToRaw(FWSQL, ConSettings^.CTRL_CP);
     end else begin
       FASQL := GetRawEncodedSQL(Value);
-      {$IFDEF DEBUG}FWSQL := ZRawToUnicode(FASQL, FClientCP);{$ENDIF}
+      {$IFDEF ZEOSDEBUG}FWSQL := ZRawToUnicode(FASQL, FClientCP);{$ENDIF}
     end;
     {$ENDIF UNICODE}
   end;

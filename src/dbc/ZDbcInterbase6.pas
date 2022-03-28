@@ -1371,7 +1371,7 @@ procedure TZIBTransactionManager.RemoveTransactionFromList(
 var I: Integer;
 begin
   I := FTransactions.IndexOf(Transaction);
-  {$IFDEF DEBUG}Assert(i > -1, 'Wrong remove transaction behavior');{$ENDIF}
+  {$IFDEF ZEOSDEBUG}Assert(i > -1, 'Wrong remove transaction behavior');{$ENDIF}
   FTransactions.Delete(I);
 end;
 
@@ -1434,18 +1434,18 @@ end;
 procedure TZIBTransaction.DeRegisterOpencursor(const CursorRS: IZResultSet);
 var I: Integer;
 begin
-  {$IFDEF DEBUG}Assert(FOpenCursors <> nil, 'Wrong DeRegisterOpenCursor beahvior'); {$ENDIF DEBUG}
+  {$IFDEF ZEOSDEBUG}Assert(FOpenCursors <> nil, 'Wrong DeRegisterOpenCursor beahvior'); {$ENDIF ZEOSDEBUG}
   I := FOpenCursors.IndexOf(Pointer(CursorRS));
-  {$IFDEF DEBUG}Assert(I > -1, 'Wrong DeRegisterOpenCursor beahvior'); {$ENDIF DEBUG}
+  {$IFDEF ZEOSDEBUG}Assert(I > -1, 'Wrong DeRegisterOpenCursor beahvior'); {$ENDIF ZEOSDEBUG}
   FOpenCursors.Delete(I);
 end;
 
 procedure TZIBTransaction.DeRegisterOpenUnCachedLob(const Lob: IZBlob);
 var I: Integer;
 begin
-  {$IFDEF DEBUG}Assert(FOpenUncachedLobs <> nil, 'Wrong DeRegisterOpenUnCachedLob beahvior'); {$ENDIF DEBUG}
+  {$IFDEF ZEOSDEBUG}Assert(FOpenUncachedLobs <> nil, 'Wrong DeRegisterOpenUnCachedLob beahvior'); {$ENDIF ZEOSDEBUG}
   I := FOpenUncachedLobs.IndexOf(Pointer(Lob));
-  {$IFDEF DEBUG}Assert(I > -1, 'Wrong DeRegisterOpenUnCachedLob beahvior'); {$ENDIF DEBUG}
+  {$IFDEF ZEOSDEBUG}Assert(I > -1, 'Wrong DeRegisterOpenUnCachedLob beahvior'); {$ENDIF ZEOSDEBUG}
   FOpenUncachedLobs.Delete(I);
 end;
 
@@ -1501,7 +1501,7 @@ end;
 
 function TZIBTransaction.StartTransaction: Integer;
 begin
-//  {$IFDEF DEBUG}Assert(FTrHandle = 0, 'Wrong transaction behavior');{$ENDIF}
+//  {$IFDEF ZEOSDEBUG}Assert(FTrHandle = 0, 'Wrong transaction behavior');{$ENDIF}
   Result := 1;
   if FTrHandle = 0 then
     with fOwner.FOwner do begin
