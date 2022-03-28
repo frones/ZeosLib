@@ -2204,7 +2204,7 @@ end;
 
 function TZAbstractSingleTxnConnection.GetConnectionTransaction: IZTransaction;
 begin
-  {$IFDEF DEBUG}
+  {$IFDEF ZEOSDEBUG}
   if fWeakTxnPtr = nil then
     raise EZUnsupportedException.Create(SUnsupportedOperation);
   {$ENDIF}

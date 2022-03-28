@@ -362,7 +362,7 @@ begin
   {$IFNDEF GENERIC_INDEX}
   Index := Index -1;
   {$ENDIF}
-  {$IFDEF DEBUG}
+  {$IFDEF ZEOSDEBUG}
   Assert((Index >= 0) and (Index < Fnum_cols), 'Out of Range.');
   {$ENDIF}
   if Fa_sqlany_stmt^ = nil then

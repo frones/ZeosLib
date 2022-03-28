@@ -846,7 +846,7 @@ begin
       ((FOpenUncachedLobs.Count = 0) and TestCachedResultsAndForceFetchAll)
     then begin
       FTransaction.commit(FStatus);
-      {$IFDEF DEBUG}Assert({$ENDIF}FTransaction.Release{$IFDEF DEBUG} = 0){$ENDIF};
+      {$IFDEF ZEOSDEBUG}Assert({$ENDIF}FTransaction.Release{$IFDEF ZEOSDEBUG} = 0){$ENDIF};
       FTransaction := nil;
     end else begin
       fDoCommit := True;
@@ -914,7 +914,7 @@ begin
       ((FOpenUncachedLobs.Count = 0) and TestCachedResultsAndForceFetchAll)
     then begin
       FTransaction.rollback(FStatus);
-      {$IFDEF DEBUG}Assert({$ENDIF}FTransaction.Release{$IFDEF DEBUG} = 0){$ENDIF};
+      {$IFDEF ZEOSDEBUG}Assert({$ENDIF}FTransaction.Release{$IFDEF ZEOSDEBUG} = 0){$ENDIF};
       FTransaction := nil;
     end else begin
       fDoCommit := True;

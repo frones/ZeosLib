@@ -304,7 +304,7 @@ begin
       FPlainDriver.dbpp_describe(DBHandle, nil, nil, @FStmtNum,
         FInParamSQLDA, SQL_DESCRIBE_INPUT);
       if DBHandle.sqlCode <> SQLE_NOERROR then
-        FASAConnection.HandleErrorOrWarning(lcBindPrepStmt, {$IFDEF DEBUG}'dbpp_describe'{$ELSE}''{$ENDIF}, Self);
+        FASAConnection.HandleErrorOrWarning(lcBindPrepStmt, {$IFDEF ZEOSDEBUG}'dbpp_describe'{$ELSE}''{$ENDIF}, Self);
     end;
     FMoreResults := DBHandle.sqlerrd[2] = 0; //we need to know if more ResultSets can be retrieved
     if not FMoreResults then begin
@@ -312,13 +312,13 @@ begin
       FResultSQLDA := FSQLData.GetData;
       FPLainDriver.dbpp_describe(DBHandle, nil, nil, @FStmtNum, FResultSQLDA, SQL_DESCRIBE_OUTPUT);
       if DBHandle.sqlCode <> SQLE_NOERROR then
-        FASAConnection.HandleErrorOrWarning(lcOther, {$IFDEF DEBUG}'dbpp_describe'{$ELSE}''{$ENDIF}, Self);
+        FASAConnection.HandleErrorOrWarning(lcOther, {$IFDEF ZEOSDEBUG}'dbpp_describe'{$ELSE}''{$ENDIF}, Self);
       if FResultSQLDA.sqld <> FResultSQLDA.sqln then begin
         FSQLData.AllocateSQLDA(FResultSQLDA.sqld);
         FResultSQLDA := FSQLData.GetData;
         FPLainDriver.dbpp_describe(DBHandle, nil, nil, @FStmtNum, FResultSQLDA, SQL_DESCRIBE_OUTPUT);
         if DBHandle.sqlCode <> SQLE_NOERROR then
-          FASAConnection.HandleErrorOrWarning(lcOther, {$IFDEF DEBUG}'dbpp_describe'{$ELSE}''{$ENDIF}, Self);
+          FASAConnection.HandleErrorOrWarning(lcOther, {$IFDEF ZEOSDEBUG}'dbpp_describe'{$ELSE}''{$ENDIF}, Self);
         { test if Outparams are available: }
         FHasOutParams := FResultSQLDA.sqlVar[0].sqlInd^ and DT_PROCEDURE_OUT = DT_PROCEDURE_OUT;
       end;

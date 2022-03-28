@@ -602,7 +602,7 @@ begin
     aErrorStatus := '';
     if Assigned(ResultHandle) then begin
       if Assigned(FPlainDriver.PQresultErrorField) then //since 7.3
-        for i := low(TZPostgreSQLFieldCode) to {$IFDEF DEBUG}high(TZPostgreSQLFieldCode){$ELSE}pgdiagCONTEXT{$ENDIF} do begin
+        for i := low(TZPostgreSQLFieldCode) to {$IFDEF ZEOSDEBUG}high(TZPostgreSQLFieldCode){$ELSE}pgdiagCONTEXT{$ENDIF} do begin
           P := FPlainDriver.PQresultErrorField(ResultHandle,TPG_DIAG_ErrorFieldCodes[i]);
           if P <> nil then begin
             L := ZFastCode.StrLen(P);

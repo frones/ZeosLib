@@ -3742,7 +3742,7 @@ begin
         FOwnerLob.FOracleConnection.HandleErrorOrWarning(FOCIError, Status, lcOther, 'OCILobTrim2', Self);
       if FPosition > NewSize then
         FPosition := NewSize;
-      {$IFDEF DEBUG}
+      {$IFDEF ZEOSDEBUG}
       Assert(GetSize = NewSize);
       {$ENDIF}
     end else if NewSize > ASize then
