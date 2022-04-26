@@ -309,6 +309,9 @@ We also prevent rounding errors for TFloatField and escape the "`parsing hell"' 
 The parameters DateReadFormat, DateWriteFormat, TimeReadFormat, TimeWriteFormat, DateTimeReadFormat and DateTimeWriteFormat don't get used anymore.
 This can lead to behavior changes between Zeos 7.2 and Zeos 8.0.
 
+Note: Zeos still supports using text format result sets.
+Setting BinaryWireResultMode to false will revert to using text results and should allow one to use the more unusual data types of PostgreSQL.
+
 \subsection{compatibility option BindDoubleAsString}
 A lot of our users use the AsFloatMethod to set parameter values.
 Unfortunately PostgreSQL will generate an error if we send Float values for usage in NUMERIC fields.
