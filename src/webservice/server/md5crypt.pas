@@ -10,6 +10,7 @@ interface
 uses {$IFNDEF FPC}md5A{$ELSE}md5{$IFEND};
 
 function crypt_md5(pw: RawByteString; salt: ANSIString): AnsiString;
+function crypt_md5pg(pw: UTF8String; UserName: UTF8String): AnsiString;
 
 function md5salt: ANSIString;
 
@@ -99,6 +100,14 @@ begin
   Result := '';
   Randomize;
   for lauf := 1 to 8 do Result := Result + a64[trunc(Random(64))]
+end;
+
+function crypt_md5pg(pw: UTF8String; UserName: UTF8String): AnsiString;
+var
+  Digest: TMD5Digest;
+begin
+  Digest := MD5String(pw+UserName);
+  Result := 'md5' + MD5Print(Digest);
 end;
 
 end.
