@@ -151,6 +151,8 @@ type
     procedure HandleErrorOrWarning(LogCategory: TZLoggingCategory;
       StatusVector: PARRAY_ISC_STATUS; const LogMessage: SQLString;
       const Sender: IImmediatelyReleasable);
+    /// <summary>Returns true if a connection was lost and is not closed yet.</summary>
+    function GetConnectionLost: Boolean;
   end;
 
   TZFirebirdInterbaseEventList = class;
@@ -181,6 +183,7 @@ type
     FInterbaseFirebirdPlainDriver: TZInterbaseFirebirdPlainDriver;
     FLastWarning: EZSQLWarning;
     FEventList: TZFirebirdInterbaseEventList;
+    FConnectionLost: Boolean;
     procedure DetermineClientTypeAndVersion;
     procedure AssignISC_Parameters;
     procedure TransactionParameterPufferChanged;
@@ -380,6 +383,8 @@ type
     procedure Unlisten;
     /// <summary>Triggers an event.</summary>
     procedure TriggerEvent(const Name: String);
+    /// <summary>Returns true if a connection was lost and is not closed yet.</summary>
+    function GetConnectionLost: Boolean;
   public { implement IZFirebirdInterbaseEventAlerter}
     procedure SetOnEventAlert(Value: TZFirebirdInterbaseEventAlert);
   end;
@@ -1727,8 +1732,12 @@ begin
     then ExeptionClass := EZIBSQLException
     else case error_code of
       isc_network_error..isc_net_write_err, isc_lost_db_connection, isc_att_shut_idle,
-      isc_att_shut_db_down, isc_att_shut_engine: ExeptionClass := EZSQLConnectionLost
-      else ExeptionClass := EZIBSQLException;
+      isc_att_shut_db_down, isc_att_shut_engine, isc_att_shutdown: begin
+        ExeptionClass := EZSQLConnectionLost;
+        FConnectionLost := True;
+      end
+      else
+        ExeptionClass := EZIBSQLException;
     end;
   //used for clearing the current status vector, OTH, we permanently need a new IStatus, or IStatus.Init.
   FillChar(Pointer(OrgStatusVector)^, (PAnsiChar(StatusVector) - PAnsiChar(OrgStatusVector))+SizeOf(ISC_STATUS), #0);//init the vector again for FB3+
@@ -1774,6 +1783,7 @@ procedure TZInterbaseFirebirdConnection.InternalClose;
 var I: Integer;
   Txn: IZTransaction;
 begin
+  FConnectionLost := False;
   AutoCommit := not FRestartTransaction;
   if fTransactions <> nil then begin
     for I := fTransactions.Count -1 downto 0 do
@@ -2063,6 +2073,11 @@ begin
     FEventList.Clear;
   end else
     raise EZSQLException.Create('no events registered');
+end;
+
+function TZInterbaseFirebirdConnection.GetConnectionLost: Boolean;
+begin
+  Result := FConnectionLost;
 end;
 
 { TZInterbaseFirebirdTransaction }

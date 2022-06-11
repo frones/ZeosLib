@@ -644,9 +644,13 @@ begin
   FResultXSQLDA := nil;
   FParamSQLData := nil;
   inherited Unprepare;
-  if (FStmtHandle <> 0) then //check if prepare did fail. otherwise we unprepare the handle
-    if FPlainDriver.isc_dsql_free_statement(@fStatusVector, @FStmtHandle, DSQL_UNPREPARE) <> 0 then
-      FIBConnection.HandleErrorOrWarning(lcUnprepStmt, @FStatusVector, SQL, Self);
+  if not (GetConnection as IZInterbaseFirebirdConnection).GetConnectionLost then begin
+    if (FStmtHandle <> 0) then //check if prepare did fail. otherwise we unprepare the handle
+      if FPlainDriver.isc_dsql_free_statement(@fStatusVector, @FStmtHandle, DSQL_UNPREPARE) <> 0 then
+        FIBConnection.HandleErrorOrWarning(lcUnprepStmt, @FStatusVector, SQL, Self);
+  end else begin
+    FStmtHandle := 0;
+  end;
   { Logging Execution }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcUnprepStmt,Self);
