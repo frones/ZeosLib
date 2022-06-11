@@ -408,7 +408,7 @@ begin
         then TmpList.Add(EMBEDDED_DEFAULT_DATA_DIR)
         else TmpList.Add('--datadir=' + Url.Properties.Values[ConnProps_Datadir]);
         for i := 0 to Url.Properties.Count -1 do
-          if StartsWith(SERVER_ARGUMENTS_KEY_PREFIX, Url.Properties[i]) and
+          if StartsWith(Url.Properties[i], SERVER_ARGUMENTS_KEY_PREFIX) and
             (Length(Url.Properties[i])>Length(SERVER_ARGUMENTS_KEY_PREFIX)+1) then
             TmpList.Add(Url.Properties.ValueFromIndex[i]);
         SetLength(FServerArgs, TmpList.Count);
