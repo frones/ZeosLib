@@ -55,7 +55,7 @@ interface
 
 {$I ZPlain.inc}
 
-{$IF DEFINED(ENABLE_PROXY) AND DEFINED(ZEOS_PROXY_USE_INTERNAL_PROXY)}
+{$IF DEFINED(ENABLE_PROXY) AND DEFINED(ENABLE_INTERNAL_PROXY)}
 
 uses
   Classes, ZPlainProxyDriverIntf, ZPlainProxyDriverSoapProxy;
@@ -67,7 +67,7 @@ function GetInterface: IZDbcProxy; stdcall;
 
 implementation
 
-{$IF DEFINED(ENABLE_PROXY) AND DEFINED(ZEOS_PROXY_USE_INTERNAL_PROXY)}
+{$IF DEFINED(ENABLE_PROXY) AND DEFINED(ENABLE_INTERNAL_PROXY)}
 
 uses SysUtils, {$IFNDEF NO_SAFECALL}ActiveX, ComObj,{$ENDIF} SOAPHTTPClient, ZExceptions;
 

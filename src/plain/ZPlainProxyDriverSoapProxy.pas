@@ -66,7 +66,7 @@ interface
 
 {$I ZPlain.inc}
 
-{$IF DEFINED(ENABLE_PROXY) AND DEFINED(ZEOS_PROXY_USE_INTERNAL_PROXY)}
+{$IF DEFINED(ENABLE_PROXY) AND DEFINED(ENABLE_INTERNAL_PROXY)}
 
 uses Soap.InvokeRegistry, Soap.SOAPHTTPClient, System.Types, Soap.XSBuiltIns;
 
@@ -223,7 +223,7 @@ function GetIZeosProxy(UseWSDL: Boolean=System.False; Addr: string=''; HTTPRIO: 
 
 {$IFEND}
 implementation
-{$IF DEFINED(ENABLE_PROXY) AND DEFINED(ZEOS_PROXY_USE_INTERNAL_PROXY)}
+{$IF DEFINED(ENABLE_PROXY) AND DEFINED(ENABLE_INTERNAL_PROXY)}
 
 uses System.SysUtils;
 
