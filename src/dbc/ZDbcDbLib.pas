@@ -435,7 +435,7 @@ begin
     if Pointer(RawTemp) <> nil then
       FPlainDriver.dbSetLApp(LoginRec, Pointer(RawTemp));
 
-    SetRawFromProperties(ConnProps_AppName);
+    SetRawFromProperties(ConnProps_Language);
     if Pointer(RawTemp) <> nil then
       FPlainDriver.dbSetLNatLang(LoginRec, Pointer(RawTemp));
 
