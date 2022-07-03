@@ -105,6 +105,7 @@ type
     procedure TestSF443;
     procedure TestSF_Internal7;
     procedure TestSF524;
+    procedure TestDisconnect;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -124,7 +125,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  ZTestCase, ZTestConsts, ZSqlUpdate, ZEncoding, ZDbcInterbaseFirebirdMetadata;
+  ZTestCase, ZTestConsts, ZSqlUpdate, ZEncoding, ZDbcInterbaseFirebirdMetadata, ZConnection, ZAbstractRODataset;
 
 { ZTestCompInterbaseBugReport }
 
@@ -1603,6 +1604,90 @@ begin
     end;
   end;
 end;
+
+procedure ZTestCompInterbaseBugReport.TestDisconnect;
+var
+  Query: TZQuery;
+  SecondConn: TZConnection;
+  ConnectionID: Integer;
+  HadException: Boolean;
+
+  function CloneConnection(Original: TZConnection): TZConnection;
+  begin
+    Result := TZConnection.Create(nil);
+    Result.Protocol := Original.Protocol;
+    Result.HostName := Original.HostName;
+    Result.Port := Original.Port;
+    Result.Database := Original.Database;
+    Result.User := Original.User;
+    Result.Password := Original.Password;
+    Result.Catalog := Original.Catalog;
+    Result.LibraryLocation := Original.LibraryLocation;
+    Result.Properties.Assign(Original.Properties);
+    Result.AutoCommit := Connection.AutoCommit;
+    Result.TransactIsolationLevel := Original.TransactIsolationLevel;
+    Result.ControlsCodePage := Original.ControlsCodePage;
+    Result.ClientCodepage := Original.ClientCodepage;
+  end;
+
+
+  procedure dropConnection;
+  var
+    MyConnection: TZConnection;
+  begin
+    MyConnection := CloneConnection(Connection);
+    try
+      MyConnection.Connect;
+      MyConnection.ExecuteDirect('delete from MON$ATTACHMENTS where MON$ATTACHMENT_ID = ' + IntToStr(ConnectionID));
+      MyConnection.Disconnect;
+    finally
+      FreeAndNil(MyConnection);
+    end;
+  end;
+begin
+  HadException := False;
+  if (Connection.Protocol <> 'firebird') and (Connection.Protocol <> 'interbase') then
+    exit;
+
+  Query := TZQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+
+    Connection.Connect;
+
+    Connection.StartTransaction;
+    Query.SQL.Text := 'select CURRENT_CONNECTION from RDB$DATABASE';
+    Query.Open;
+    ConnectionID := Query.Fields[0].AsInteger;
+    Query.Close;
+    Connection.Commit;
+
+    dropConnection;
+
+    try
+      Connection.StartTransaction;
+      Query.Open;
+      Connection.Commit;
+    except
+      on E: Exception do begin
+        HadException := True;
+        Check(E is EZDatabaseConnectionLostError, 'Exception isn''t of type EZDatabaseConnectionLostError. Type is: ' +E.ClassName + ' Message: '  + E.Message);
+      end;
+    end;
+
+    Check(HadException, 'Exception expected but no exceptiuon was raised.');
+
+    Connection.Reconnect;
+
+    Connection.StartTransaction;
+    Query.Open;
+    Query.Close;
+    Connection.Commit;
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
 
 procedure ZTestCompInterbaseBugReport.TestSF_Internal7;
 //const DescAsc: Array[boolean] of String = (' DESC',' ASC');
