@@ -229,8 +229,6 @@ begin
     CryptPwdUser := '$$$$$$$$$$'; // $-Signs shouldn't make up a valid crypted password.
   Result := CryptPwdDB = CryptPwdUser;
 
-  if not Result then begin
-  end;
   if FReplacementUser <> '' then begin
     UserName := FReplacementUser;
     Password := FReplacementPassword;

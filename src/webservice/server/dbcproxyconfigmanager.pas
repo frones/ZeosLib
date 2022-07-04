@@ -190,7 +190,8 @@ begin
   if not found then raise EZSQLException.Create('No config named ' + ConfigName + ' was found.');
 
   if CheckSecurity and Assigned(Cfg.SecurityModule)
-    then Cfg.SecurityModule.CheckPassword(UserName, Password, ConfigName);
+    then if not Cfg.SecurityModule.CheckPassword(UserName, Password, ConfigName) then
+      raise Exception.Create('Could not validate username / password.');
 
   Result := DriverManager.ConstructURL(Cfg.Protocol, Cfg.HostName, Cfg.Database, UserName, Password, Cfg.Port, nil, Cfg.LibraryLocation);
 end;
