@@ -212,6 +212,7 @@ begin
   BoolArray := nil;
   RS := nil;
   Statement := Connection.PrepareStatement('insert into high_load(stBoolean) VALUES (?) returning hl_id');
+  Connection.ExecuteImmediat('delete from high_load where 1=1', lcExecute);
   CheckEquals(1, Connection.StartTransaction);
   try
     if Connection.GetHostVersion < ZSysUtils.EncodeSQLVersioning(8, 0, 0) then
@@ -232,7 +233,7 @@ begin
     Check(I = 4);
   finally
     Connection.Rollback;
-    Connection.CreateStatement.ExecuteUpdate('delete from high_load where 1=1');
+    Connection.ExecuteImmediat('delete from high_load where 1=1', lcExecute);
     Connection.Close;
   end;
 end;

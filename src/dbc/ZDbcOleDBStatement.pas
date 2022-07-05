@@ -207,6 +207,7 @@ type
     procedure InternalBindDbl(Index: Integer; SQLType: TZSQLType; const Value: Double);
     procedure SetBindOffsets;
   protected
+    /// <summary>Prepares eventual structures for binding input parameters.</summary>
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
@@ -495,6 +496,10 @@ type
   TZOleDBCallableStatementMSSQL = class(TZAbstractCallableStatement_W,
     IZCallableStatement)
   protected
+    /// <summary>creates an exceution Statement. Which wraps the call.</summary>
+    /// <param>"StoredProcName" the name of the stored procedure or function to
+    ///  be called.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
@@ -1747,9 +1752,6 @@ jmpRecreate:
   end;
 end;
 
-{**
-  Prepares eventual structures for binding input parameters.
-}
 procedure TZOleDBPreparedStatement.PrepareInParameters;
 var
   FNamesBuffer: PPOleStr; //we don't need this here except as param!

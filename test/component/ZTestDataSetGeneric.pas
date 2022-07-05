@@ -57,7 +57,7 @@ interface
 uses
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
   ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility, ZVariant,
-  ZAbstractRODataset, ZMessages, ZStoredProcedure, ZMemTable
+  ZAbstractRODataset, ZMessages, ZStoredProcedure, ZMemTable, ZSqlMonitor
   {$IFNDEF DISABLE_ZPARAM}{$IFNDEF FPC}, Types{$ENDIF}, ZDbcUtils{$ENDIF};
 
 type
@@ -69,6 +69,9 @@ type
   private
     FQuery: TZQuery;
     FFieldList: string;
+    FLogMessage: String;
+    procedure OnTraceEvent_lcBindPrepStmt(Sender: TObject; Event: TZLoggingEvent;
+      var LogTrace: Boolean);
     procedure RunDefineFields;
     procedure RunDefineSortedFields;
     procedure TestReadLobCacheMode(const BinLob: String; aOptions: TZDataSetOptions;
@@ -115,6 +118,8 @@ type
     procedure TestKeyWordParams;
     procedure TestOldValue;
     procedure TestCloseOnDisconnect;
+    procedure TestClearParametersAndLoggedValues;
+    procedure TestAssignDBRTLParams;
   end;
 
   {$IF not declared(TTestMethod)}
@@ -198,8 +203,8 @@ uses
   Variants,
 {$ENDIF} FmtBCD, DateUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF},
   ZEncoding, ZFastCode,
-  ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties,
-  ZDatasetUtils, ZSqlUpdate,
+  ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties, ZDbcLogging,
+  ZDatasetUtils, ZSqlUpdate, {$IFNDEF DISABLE_ZPARAM}ZDatasetParam,{$ENDIF}
   TypInfo, ZDbcInterbaseFirebirdMetadata, ZSelectSchema;
 
 { TZGenericTestDataSet }
@@ -2031,6 +2036,152 @@ begin
   end;
 end;
 
+(*
+Some third party components using TParam. Let's test assign to TZParams.
+  Miab3 did report exeptions if doing that.
+*)
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "ABCD" does not seem to be initialized} {$ENDIF}
+procedure TZGenericTestDataSet.TestAssignDBRTLParams;
+var Params: TParams;
+    Query: TZQuery;
+    Param: TParam;
+    ABCD: TBCD;
+    Bts: TBytes;
+    ANow: TDateTime;
+begin
+  Query := CreateQuery;
+  Params := nil;
+  Check(Query <> nil);
+  Bts := nil;
+  try
+    Connection.Connect;
+    Connection.ExecuteDirect('delete from high_load where 1=1');
+    Query.SQL.Text := 'insert into high_load (hl_id, stBoolean, stByte, stShort,'+
+      'stInteger, stLong, stFloat, stDouble, stBigDecimal, stString, stUnicodeString, '+
+      'stBytes, stDate, stTime, stTimestamp, stGUID, stAsciiStream, stUnicodeStream, stBinaryStream)' +
+      ' VALUES (:hl_id, :stBoolean, :stByte, :stShort,'+
+      ':stInteger, :stLong, :stFloat, :stDouble, :stBigDecimal, :stString, :stUnicodeString, '+
+      ':stBytes, :stDate, :stTime, :stTimestamp, :stGUID, :stAsciiStream, :stUnicodeStream, :stBinaryStream)';
+    Params := TParams.Create(nil);
+    Param := Params.CreateParam(ftInteger, 'hl_id', ptInput);
+    Param.AsInteger := 100;
+    Param := Params.CreateParam(ftBoolean, 'stBoolean', ptInput);
+    Param.AsBoolean := True;
+    Param := Params.CreateParam({$IFDEF WITH_FTBYTE}ftByte{$ELSE}ftWord{$ENDIF}, 'stByte', ptInput);
+    Param.{$IFDEF WITH_FTBYTE}AsByte{$ELSE}AsWord{$ENDIF} := 1;
+    Param := Params.CreateParam({$IFDEF WITH_FTSHORTINT}ftShortInt{$ELSE}ftSmallInt{$ENDIF}, 'stShort', ptInput);
+    Param.{$IFDEF WITH_FTSHORTINT}AsShortInt{$ELSE}AsSmallInt{$ENDIF} := 1;
+    Param := Params.CreateParam(ftInteger, 'stInteger', ptInput);
+    Param.AsInteger := 1;
+    Param := Params.CreateParam(ftLargeInt, 'stLong', ptInput);
+    Param.{$IFDEF WITH_PARAM_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF} := Int64(1);
+    Param := Params.CreateParam({$IFDEF WITH_FTSINGLE}DB.ftSingle{$ELSE}ftFloat{$ENDIF}, 'stLong', ptInput);
+    Param.{$IFDEF WITH_FTSINGLE}AsSingle{$ELSE}AsFloat{$ENDIF} := 1;
+    Param := Params.CreateParam(ftFloat, 'stDouble', ptInput);
+    Param.AsFloat := 1;
+    Param := Params.CreateParam(ftFMTBcd, 'stBigDecimal', ptInput);
+    FillChar(ABCD, SizeOf(ABCD), #0);
+    ABCD.Precision := 1;
+    ABCD.Fraction[0] := 1 shl 4;
+    Param.AsFMTBCD := ABCD;
+    Param := Params.CreateParam(ftString, 'stString', ptInput);
+    Param.AsString := 'ABCDEFG';
+    Param := Params.CreateParam(ftWideString, 'stUnicodeString', ptInput);
+    Param.AsString := 'ABCDEFG';
+    Param := Params.CreateParam(ftBytes, 'stBytes', ptInput);
+    SetLength(Bts, 100);
+    {$IFDEF TPARAM_HAS_ASBYTES}
+    Param.AsBytes := Bts;
+    {$ELSE}
+    Param.Value := ZSysUtils.BytesToVar(Bts);
+    {$ENDIF}
+    Param := Params.CreateParam(ftTime, 'stDate', ptInput);
+    ANow := EncodeDate(2021,4,28)+EncodeTime(4,4,4,0);
+    Param.AsDate := ANow;
+    Param := Params.CreateParam(ftDate, 'stTime', ptInput);
+    Param.AsTime := ANow;
+    Param := Params.CreateParam(ftDateTime, 'stTimestamp', ptInput);
+    Param.AsDateTime := ANow;
+    Param := Params.CreateParam(ftGUID, 'stGUID', ptInput);
+    Param.AsString := '{BC89E8C9-264E-4A8E-A19B-C38DAE5B5463}';
+    Param := Params.CreateParam(ftMemo, 'stAsciiStream', ptInput);
+    Param.AsString := 'XYZ';
+    Param := Params.CreateParam({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftMemo{$ENDIF}, 'stUnicodeStream', ptInput);
+    Param.AsString := 'XYZ';
+    Param := Params.CreateParam(ftBlob, 'stBinaryStream', ptInput);
+    {$IFDEF TPARAM_HAS_ASBYTES}
+    Param.AsBytes := Bts;
+    {$ELSE}
+    Param.Value := ZSysUtils.BytesToVar(Bts);
+    {$ENDIF}
+    Query.Params.Assign(Params);
+    CheckEquals(19, Query.Params.Count);
+    Query.ExecSQL;
+    CheckEquals(1, Query.RowsAffected, 'The update count');
+  finally
+    FreeAndNil(Query);
+    if Params <> nil then
+      FreeAndNil(Params);
+    Connection.ExecuteDirect('delete from high_load where 1=1');
+  end;
+end;
+{$IFDEF FPC} {$POP} {$ENDIF}
+
+(*
+See: https://zeoslib.sourceforge.io/viewtopic.php?f=50&p=171617#p171617
+*)
+procedure TZGenericTestDataSet.TestClearParametersAndLoggedValues;
+var Query: TZQuery;
+    Monitor: TZSQLMonitor;
+    Param: {$IFNDEF DISABLE_ZPARAM}TZParam{$ELSE}TParam{$ENDIF};
+const
+  si_id: Integer = TEST_ROW_ID;
+  stSearch: String = '549';
+  siSearch: Integer = 549;
+begin
+  Query := CreateQuery;
+  Check(Query <> nil);
+  Monitor := TZSQLMonitor.Create(nil);
+  try
+    Connection.Connect;
+    Check(Connection.Connected);
+    Query.SQL.Text := 'insert into cargo(c_id, c_name, c_width, c_height) values (:c_id, :c_name, :c_width, :c_height)';
+    CheckEquals(4, Query.params.Count, 'The parameter count doesn''t match');
+    Query.Params.Clear;
+    CheckEquals(0, Query.params.Count, 'The parameter count doesn''t match');
+    Param := Query.Params.CreateParam(ftInteger, 'c_id', ptInput); //integer field
+    Check(Param <> nil);
+    Param.Value := si_id;
+    Param := Query.Params.CreateParam(ftString, 'c_name', ptInput); //char/varchar field
+    Check(Param <> nil);
+    Param.Value := stSearch;
+    Param := Query.Params.CreateParam(ftString{keep it! see below}, 'c_width', ptInput); //integer field
+    Check(Param <> nil);
+    Param.Value := siSearch;
+    Param := Query.Params.CreateParam(ftInteger, 'c_height', ptInput); //integer field
+    Check(Param <> nil);
+    Param.Value := siSearch;
+    Monitor.OnTrace := OnTraceEvent_lcBindPrepStmt;
+    Try
+      Monitor.Active := True;
+      FLogMessage := '';
+      Query.ExecSQL;
+    Finally
+      Connection.ExecuteDirect('delete from cargo where c_id = '+ZFastCode.IntToStr(si_id));
+      Monitor.Active := False;
+    End;
+    Check(FLogMessage <> '');
+    FLogMessage := Copy(FLogMessage, ZFastCode.Pos(':', FLogMessage)+1, Length(FLogMessage));
+    FLogMessage := Trim(FLogMessage);
+    {if Connection.DbcConnection.GetServerProvider in [spMySQL, spOracle] //they use locket types if registered -> implicit conversion to registered datatype
+    then CheckEquals('32767,'''+stSearch+''','''+stSearch+''','+stSearch, FLogMessage)
+    else} CheckEquals('32767,'''+stSearch+''','+stSearch+','+stSearch, FLogMessage);
+  finally
+    FreeAndNil(Monitor);
+    FreeAndNil(Query);
+  end;
+end;
+
 procedure TZGenericTestDataSet.TestClobEmptyString;
 var
   Query: TZQuery;
@@ -2561,6 +2712,14 @@ begin
     Query.ExecSQL;
     Query.Free;
   end;
+end;
+
+procedure TZGenericTestDataSet.OnTraceEvent_lcBindPrepStmt(Sender: TObject;
+  Event: TZLoggingEvent; var LogTrace: Boolean);
+begin
+  LogTrace := False;
+  if Event.Category = lcBindPrepStmt then
+    FLogMessage := Event.Message;
 end;
 
 procedure TZGenericTestDataSet.RunDefineFields;

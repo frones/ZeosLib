@@ -483,6 +483,7 @@ type
     FSupportsBidirectionalParamIO: Boolean;
     property TokenMatchIndex: Integer read FTokenMatchIndex;
     procedure CheckParameterIndex(var Value: Integer); virtual;
+    /// <summary>Prepares eventual structures for binding input parameters.</summary>
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
     /// <summary>Removes eventual structures for binding input parameters.</summary>
@@ -1335,6 +1336,10 @@ type
     FResults: IZCollection;
     FActiveResultIndex: Integer;
     FExecStatement: TZAbstractPreparedStatement;
+    /// <summary>creates an exceution Statement. Which wraps the call.</summary>
+    /// <param>"StoredProcName" the name of the stored procedure or function to
+    ///  be called.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; virtual; abstract;
     function IsFunction: Boolean;
     procedure BindInParameters; override;
@@ -3768,9 +3773,6 @@ begin
   FClosed := False;
 end;
 
-{**
-  Prepares eventual structures for binding input parameters.
-}
 procedure TZAbstractPreparedStatement.PrepareInParameters;
 begin
 end;
@@ -4412,7 +4414,7 @@ end;
 procedure TZRawPreparedStatement.SetUnicodeString(
   ParameterIndex: Integer; const Value: UnicodeString);
 begin
-  FRawTemp := ZUnicodeToRaw(Value, FClientCP);
+  PUnicodeToRaw(Pointer(Value), Length(Value), FClientCP, FRawTemp);
   BindRawStr(ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FRawTemp);
 end;
 

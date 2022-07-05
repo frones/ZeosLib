@@ -264,7 +264,12 @@ type
   private
     FProcDescriptor: TZOraProcDescriptor_A;
   protected
+    /// <summary>creates an exceution Statement. Which wraps the call.</summary>
+    /// <param>"StoredProcName" the name of the stored procedure or function to
+    ///  be called.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
+    /// <summary>Prepares eventual structures for binding input parameters.</summary>
     procedure PrepareInParameters; override;
   public
     procedure Unprepare; override;
@@ -274,7 +279,12 @@ type
   private
     FProcDescriptor: TZOraProcDescriptor_W;
   protected
+    /// <summary>creates an exceution Statement. Which wraps the call.</summary>
+    /// <param>"StoredProcName" the name of the stored procedure or function to
+    ///  be called.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
+    /// <summary>Prepares eventual structures for binding input parameters.</summary>
     procedure PrepareInParameters; override;
   public
     procedure Unprepare; override;
@@ -286,9 +296,8 @@ implementation
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
-  ZFastCode, ZDbcOracleResultSet, ZTokenizer,
-  ZEncoding, ZDbcProperties, ZMessages, ZDbcResultSet, ZDbcCachedResultSet,
-  ZSelectSchema;
+  ZFastCode, ZEncoding, ZTokenizer, ZSelectSchema,
+  ZDbcProperties, ZMessages, ZDbcResultSet, ZDbcCachedResultSet, ZDbcOracleResultSet;
 
 const
   StrGUIDLen = 36;
@@ -1059,11 +1068,18 @@ begin
     SQLT_BFLOAT,
     SQLT_BDOUBLE,
     SQLT_DAT,
-    SQLT_TIMESTAMP: InternalBindDouble(Index, SQLtype, Value);
+    SQLT_TIMESTAMP: InternalBindDouble(Index, SQLType, Value);
     SQLT_LVC: begin
-                IntToRaw(Value, PAnsiChar(@POCIVary(OCIBindValue.valuep).data[0]), @P);
-                POCIVary(OCIBindValue.valuep).Len := P-@POCIVary(OCIBindValue.valuep).data[0];
-              end
+                if SQLType = stUnicodeString then begin
+                  IntToUnicode(Value, PWideChar(FByteBuffer), @P);
+                  SetPWideChar(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PWideChar(FByteBuffer), PWideChar(P) - PWideChar(FByteBuffer));
+                end else begin
+                  IntToRaw(Value, PAnsiChar(FByteBuffer), @P);
+                  BindRawStr(Index, PAnsiChar(FByteBuffer), P - PAnsiChar(FByteBuffer));
+                end;
+                Exit;
+              end;
+    else InternalBindDouble(Index, SQLType, Value);
   end;
   OCIBindValue.indp[0] := 0;
 end;
@@ -1085,31 +1101,38 @@ begin
     SQLType := BindValue.SQLType;
   if (BindValue.SQLType <> SQLType) or (OCIBindValue.valuep = nil) or (OCIBindValue.curelen <> 1) then
     InitBuffer(SQLType, OCIBindValue, Index, 1);
-  if OCIBindValue.dty = SQLT_VNU then begin
-    Status := FPlainDriver.OCINumberFromInt(FOCIError, @Value, SizeOf(NativeUInt), OCI_NUMBER_UNSIGNED, POCINumber(OCIBindValue.valuep));
-    if Status <> OCI_SUCCESS then
-      FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcBindPrepStmt, 'OCINumberFromInt', Self);
-  end else if OCIBindValue.dty = SQLT_INT then
-    if OCIBindValue.value_sz = SizeOf(Int64) then
-      PInt64(OCIBindValue.valuep)^ := Value
-    else if OCIBindValue.value_sz = SizeOf(Integer) then
-      PInteger(OCIBindValue.valuep)^ := Value
-    else if OCIBindValue.value_sz = SizeOf(SmallInt) then
-      PSmallInt(OCIBindValue.valuep)^ := Value
-    else
-      PShortInt(OCIBindValue.valuep)^ := Value
-  else if OCIBindValue.dty = SQLT_UIN then
-    if OCIBindValue.value_sz = SizeOf(UInt64) then
-      PUInt64(OCIBindValue.valuep)^ := Value
-    else if OCIBindValue.value_sz = SizeOf(Cardinal) then
-      PCardinal(OCIBindValue.valuep)^ := Value
-    else if OCIBindValue.value_sz = SizeOf(Word) then
-      PWord(OCIBindValue.valuep)^ := Value
-    else
-      PByte(OCIBindValue.valuep)^ := Value
-  else begin
-    IntToRaw(Value, PAnsiChar(@POCIVary(OCIBindValue.valuep).data[0]), @P);
-    POCIVary(OCIBindValue.valuep).Len := P-@POCIVary(OCIBindValue.valuep).data[0];
+  case OCIBindValue.dty of
+    SQLT_VNU:  begin
+        Status := FPlainDriver.OCINumberFromInt(FOCIError, @Value, SizeOf(NativeUInt), OCI_NUMBER_UNSIGNED, POCINumber(OCIBindValue.valuep));
+        if Status <> OCI_SUCCESS then
+          FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcBindPrepStmt, 'OCINumberFromInt', Self);
+      end;
+    SQLT_INT: if OCIBindValue.value_sz = SizeOf(Int64) then
+                PInt64(OCIBindValue.valuep)^ := Value
+              else if OCIBindValue.value_sz = SizeOf(Integer) then
+                PInteger(OCIBindValue.valuep)^ := Value
+              else if OCIBindValue.value_sz = SizeOf(SmallInt) then
+                PSmallInt(OCIBindValue.valuep)^ := Value
+              else
+                PShortInt(OCIBindValue.valuep)^ := Value;
+    SQLT_UIN: if OCIBindValue.value_sz = SizeOf(UInt64) then
+                PUInt64(OCIBindValue.valuep)^ := Value
+              else if OCIBindValue.value_sz = SizeOf(Cardinal) then
+                PCardinal(OCIBindValue.valuep)^ := Value
+              else if OCIBindValue.value_sz = SizeOf(Word) then
+                PWord(OCIBindValue.valuep)^ := Value
+              else
+                PByte(OCIBindValue.valuep)^ := Value;
+    SQLT_LVC: begin
+        if SQLType = stUnicodeString then begin
+          IntToUnicode(Value, PWideChar(FByteBuffer), @P);
+          SetPWideChar(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PWideChar(FByteBuffer), PWideChar(P) - PWideChar(FByteBuffer));
+        end else begin
+          IntToRaw(Value, PAnsiChar(FByteBuffer), @P);
+          BindRawStr(Index, PAnsiChar(FByteBuffer), P - PAnsiChar(FByteBuffer));
+        end;
+        Exit;
+    end else InternalBindDouble(Index, SQLType, Value);
   end;
   OCIBindValue.indp[0] := 0;
 end;
@@ -1125,30 +1148,19 @@ procedure TZAbstractOraclePreparedStatement.InternalBindDouble(Index: Integer;
 var
   BindValue: PZBindValue;
   OCIBindValue: PZOCIBindValue absolute BindValue;
+  OraSQLType: TZSQLType;
   status: sword;
   TS: TZTimeStamp;
-  procedure SetRaw;
-  begin
-    case SQLType of
-      stBoolean:    fRawTemp := BoolStrIntsRaw[Value <> 0];
-      stSmall,
-      stInteger,
-      stLong:       fRawTemp := IntToRaw(Trunc(Value));
-      stDate:       fRawTemp := DateTimeToRawSQLDate(Value, ConSettings^.WriteFormatSettings, False);
-      stTime:       fRawTemp := DateTimeToRawSQLTime(Value, ConSettings^.WriteFormatSettings, False);
-      stTimeStamp:  fRawTemp := DateTimeToRawSQLTimeStamp(Value, ConSettings^.WriteFormatSettings, False);
-      else          fRawTemp := FloatToSqlRaw(Value);
-    end;
-    SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, fRawTemp)
-  end;
+  L: LengthInt absolute TS;
 begin
   CheckParameterIndex(Index);
   BindValue := BindList[Index];
   if Boolean(BindValue.ParamType) and Boolean(BindValue.SQLType) and
-     (SQLType <> BindValue.SQLType) then
-    SQLType := BindValue.SQLType;
-  if (BindValue.SQLType <> SQLType) or (OCIBindValue.valuep = nil) or (OCIBindValue.curelen <> 1) then
-    InitBuffer(SQLType, OCIBindValue, Index, 1);
+     (SQLType <> BindValue.SQLType)
+  then OraSQLType := BindValue.SQLType
+  else OraSQLType := SQLType;
+  if (BindValue.SQLType <> OraSQLType) or (OCIBindValue.valuep = nil) or (OCIBindValue.curelen <> 1) then
+    InitBuffer(OraSQLType, OCIBindValue, Index, 1);
   case OCIBindValue.dty of
     SQLT_VNU:   begin
                   status := FPlainDriver.OCINumberFromReal(FOracleConnection.GetErrorHandle, @Value, SizeOf(Double), POCINumber(OCIBindValue.valuep));
@@ -1181,7 +1193,17 @@ begin
                 {$ELSE}
                 SetLong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Trunc(Value));
                 {$ENDIF}
-    else SetRaw;
+    SQLT_LVC: begin
+                if SQLType = stUnicodeString then begin
+                  L := FloatToSqlUnicode(Value, PWideChar(FByteBuffer));
+                  SetPWideChar(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PWideChar(FByteBuffer), L);
+                end else begin
+                  L := FloatToSqlRaw(Value, PAnsiChar(FByteBuffer));
+                  BindRawStr(Index, PAnsiChar(FByteBuffer), L);
+                end;
+                Exit;
+              end;
+    else raise CreateConversionError(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, SQLType, OraSQLType);
   end;
   OCIBindValue.indp[0] := 0;
 end;
@@ -1220,10 +1242,7 @@ var
   I64: Int64;
   U64: UInt64 absolute I64;
   Dbl: Double absolute i64;
-  procedure SetRaw;
-  begin
-    SetRawByteString(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(BCDToStr(Value)))
-  end;
+  L: LengthInt absolute i64;
 begin
   {$IFNDEF GENERIC_INDEX}Index := Index-1;{$ENDIF}
   CheckParameterIndex(Index);
@@ -1278,7 +1297,17 @@ begin
                   SetULong(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, U64);
                   {$ENDIF}
                 end;
-    else        SetRaw;
+    SQLT_LVC: begin
+      if SQLType = stUnicodeString then begin
+        L := BcdToUni(Value, PWideChar(FByteBuffer), '.');
+        SetPWideChar(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PWideChar(FByteBuffer), L);
+      end else begin
+        L := BcdToRaw(Value, PAnsiChar(FByteBuffer), '.');
+        BindRawStr(Index, PAnsiChar(FByteBuffer), L);
+      end;
+      Exit;
+    end else
+      raise CreateConversionError(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stCurrency, SQLType);
   end;
   OCIBindValue.indp[0] := 0;
 end;
@@ -1382,10 +1411,17 @@ begin
     Curr2vnu(Value, POCINumber(OCIBindValue.valuep))
   else if OCIBindValue.dty = SQLT_BDOUBLE then
     PDouble(OCIBindValue.valuep)^ := Value
-  else begin
-    CurrToRaw(Value, '.', PAnsiChar(@POCIVary(OCIBindValue.valuep).data[0]), @P);
-    POCIVary(OCIBindValue.valuep).Len := P-@POCIVary(OCIBindValue.valuep).data[0];
-  end;
+  else if OCIBindValue.dty = SQLT_LVC then begin
+    if SQLType = stUnicodeString then begin
+      CurrToUnicode(Value, '.', PWideChar(FByteBuffer), @P);
+      SetPWideChar(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PWideChar(FByteBuffer), PWidechar(P) - PWideChar(FByteBuffer));
+    end else begin
+      CurrToRaw(Value, '.', PAnsiChar(FByteBuffer), @P);
+      BindRawStr(Index, PAnsiChar(FByteBuffer), P - PAnsiChar(FByteBuffer));
+    end;
+    Exit;
+  end else
+    raise CreateConversionError(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stCurrency, SQLType);
   OCIBindValue.indp[0] := 0;
 end;
 
@@ -1841,9 +1877,15 @@ begin
                 end;
     SQLT_CLOB,
     SQLT_LVC: begin
-                Len := DateToRaw(Value.Year, Value.Month, Value.Day, PAnsiChar(FByteBuffer),
-                  ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
-                BindRawStr(Index, PAnsiChar(FByteBuffer), Len);
+                if OraType = stUnicodeString then begin
+                  Len := DateToUni(Value.Year, Value.Month, Value.Day, PWideChar(FByteBuffer),
+                    ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
+                  SetPWideChar(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PWideChar(FByteBuffer), Len);
+                end else begin
+                  Len := DateToRaw(Value.Year, Value.Month, Value.Day, PAnsiChar(FByteBuffer),
+                    ConSettings^.WriteFormatSettings.DateFormat, False, Value.IsNegative);
+                  BindRawStr(Index, PAnsiChar(FByteBuffer), Len);
+                end;
                 Exit;
               end;
     else      begin
@@ -2053,8 +2095,10 @@ begin
     SQLT_DAT,
     SQLT_TIMESTAMP: InternalBindDouble(Index, SQLtype, Value);
     SQLT_LVC: begin
-                IntToRaw(Value, PAnsiChar(@POCIVary(OCIBindValue.valuep).data[0]), @P);
-                POCIVary(OCIBindValue.valuep).Len := P-@POCIVary(OCIBindValue.valuep).data[0];
+                if SQLType = stUnicodeString
+                then IntToUnicode(Value, PWideChar(@POCILong(OCIBindValue.valuep).data[0]), @P)
+                else IntToRaw(Value, PAnsiChar(@POCILong(OCIBindValue.valuep).data[0]), @P);
+                POCILong(OCIBindValue.valuep).Len := P-@POCILong(OCIBindValue.valuep).data[0];
               end
   end;
   OCIBindValue.indp[0] := 0;
@@ -2297,9 +2341,15 @@ begin
                 end;
     SQLT_CLOB,
     SQLT_LVC: begin
-                Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
-                  PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
-                BindRawStr(Index, PAnsiChar(FByteBuffer), Len);
+                if OraType = stUnicodeString then begin
+                  Len := TimeToUni(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+                    PWideChar(FByteBuffer), ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
+                  SetPWideChar(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PWideChar(FByteBuffer), Len);
+                end else begin
+                  Len := TimeToRaw(Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+                    PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
+                  BindRawStr(Index, PAnsiChar(FByteBuffer), Len);
+                end;
                 Exit;
               end;
     else      begin
@@ -2359,10 +2409,17 @@ begin
                 end;
     SQLT_CLOB,
     SQLT_LVC: begin
-                Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
-                  Value.Hour, Value.Minute, Value.Second, Value.Fractions,
-                  PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
-                BindRawStr(Index, PAnsiChar(FByteBuffer), Len);
+                if OraType = stUnicodeString then begin
+                  Len := DateTimeToUni(Value.Year, Value.Month, Value.Day,
+                    Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+                    PWideChar(FByteBuffer), ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
+                  SetPWideChar(Index{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, PWideChar(FByteBuffer), Len);
+                end else begin
+                  Len := DateTimeToRaw(Value.Year, Value.Month, Value.Day,
+                    Value.Hour, Value.Minute, Value.Second, Value.Fractions,
+                    PAnsiChar(FByteBuffer), ConSettings^.WriteFormatSettings.DateFormat, True, Value.IsNegative);
+                  BindRawStr(Index, PAnsiChar(FByteBuffer), Len);
+                end;
                 Exit;
               end;
     else      begin
@@ -2445,8 +2502,10 @@ begin
     SQLT_DAT,
     SQLT_TIMESTAMP: InternalBindDouble(Index, SQLtype, Value);
     SQLT_LVC: begin
-                IntToRaw(Value, PAnsiChar(@POCIVary(OCIBindValue.valuep).data[0]), @P);
-                POCIVary(OCIBindValue.valuep).Len := P-@POCIVary(OCIBindValue.valuep).data[0];
+                if SQLType = stUnicodeString
+                then IntToUnicode(Value, PWideChar(@POCILong(OCIBindValue.valuep).data[0]), @P)
+                else IntToRaw(Value, PAnsiChar(@POCILong(OCIBindValue.valuep).data[0]), @P);
+                POCILong(OCIBindValue.valuep).Len := P-@POCILong(OCIBindValue.valuep).data[0];
               end
   end;
   OCIBindValue.indp[0] := 0;
@@ -2626,7 +2685,8 @@ begin
       else if SQLType = stUnicodeString then
         PrecisionOrSize := PrecisionOrSize shl 1;
       InitBuffer(SQLType, OCIBindValue, ParameterIndex, 1, PrecisionOrSize);
-      FillChar(OCIBindValue.valuep^, OCIBindValue.Value_sz, #0);
+      if OCIBindValue.DescriptorType = 0 then
+        FillChar(OCIBindValue.valuep^, OCIBindValue.Value_sz, #0);
     end;
     OCIBindValue.indp[0] := -1;
   end;
@@ -2755,13 +2815,14 @@ begin
   if ParamType <> pctUnknown then begin
     if (Scale > 0) and (SQLType in [stBoolean..stBigDecimal]) then
       SQLType := stBigDecimal;
-    if (BindList[ParameterIndex].SQLType <> SQLType) or (OCIBindValue.valuep = nil) or (OCIBindValue.curelen <> 1) then begin
+    if (BindValue.SQLType <> SQLType) or (OCIBindValue.valuep = nil) or (OCIBindValue.curelen <> 1) then begin
       if SQLType = stString then
         PrecisionOrSize := PrecisionOrSize * ConSettings.ClientCodePage.CharWidth
       else if SQLType = stUnicodeString then
         PrecisionOrSize := PrecisionOrSize shl 1;
       InitBuffer(SQLType, OCIBindValue, ParameterIndex, 1, PrecisionOrSize);
-      FillChar(OCIBindValue.valuep^, OCIBindValue.Value_sz, #0);
+      if OCIBindValue.DescriptorType = 0 then
+        FillChar(OCIBindValue.valuep^, OCIBindValue.Value_sz, #0);
     end;
     OCIBindValue.indp[0] := -1;
   end;

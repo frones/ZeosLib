@@ -528,9 +528,6 @@ jmpEB:eBlock := GetExecuteBlockString(BatchDMLArrayCount, FIBConnection.GetXSQLD
   end;
 end;
 
-{**
-  Prepares eventual structures for binding input parameters.
-}
 procedure TZAbstractInterbase6PreparedStatement.PrepareInParameters;
 var
   StatusVector: TARRAY_ISC_STATUS;

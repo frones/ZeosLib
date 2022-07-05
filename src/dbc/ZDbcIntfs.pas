@@ -4028,7 +4028,9 @@ type
     function GetStatement: IZStatement;
 
     {$IFDEF WITH_COLUMNS_TO_JSON}
-    procedure ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF}; JSONComposeOptions: TZJSONComposeOptions);
+    /// <summary>Fill the JSONWriter with column data</summary>
+    /// <param>"JSONComposeOptions" the TZJSONComposeOptions used for composing
+    ///  the JSON contents</param>
     {$ENDIF WITH_COLUMNS_TO_JSON}
   end;
 

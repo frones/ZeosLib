@@ -3797,7 +3797,7 @@ begin
   end;
  // WriteLn('SQLType <> FSQLType');
   if SQLType <> FSQLType then //mimic the TParam behavior
-    SetSQLType(SQLType);
+    SetSQLType(FSQLType);
 end;
 
 procedure TZParam.SetAsWideMemo(const Value: UnicodeString);

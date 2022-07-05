@@ -61,7 +61,8 @@ interface
 {$IFNDEF ZEOS_DISABLE_ADO}
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX, FmtBCD,
-  {$IFNDEF FPC}ZClasses,{$ENDIF} //inlined Get method of TZCustomElementList
+  Windows,
+  ZClasses, //inlined Get method of TZCustomElementList
   ZCompatibility, ZSysUtils,
   ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant, ZDbcAdoUtils,
   ZDbcOleDBStatement, ZDbcUtils;
@@ -84,6 +85,11 @@ type
     /// <summary>Removes the current connection reference from this object.</summary>
     /// <remarks>This method will be called only if the object is garbage.</remarks>
     procedure ReleaseConnection; override;
+    /// <summary>Adds the parameter value to the SQLStringWriter as a log value</summary>
+    /// <param>"Index" The index of the parameter. First index is 0, second is 1..</param>
+    /// <param>"SQLWriter" the buffered writer which composes the log string.</param>
+    /// <param>"Result" a reference to the result string the SQLWriter flushes the buffer.</param>
+    procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
   public
     constructor CreateWithCommandType(const Connection: IZConnection; const SQL: string;
       const Info: TStrings; CommandType: CommandTypeEnum);
@@ -103,6 +109,7 @@ type
     FRefreshParamsFailed, FEmulatedParams: Boolean;
   protected
     function CheckParameterIndex(Index: Integer; SQLType: TZSQLType): TDataTypeEnum; reintroduce;
+    /// <summary>Prepares eventual structures for binding input parameters.</summary>
     procedure PrepareInParameters; override;
     function CreateResultSet: IZResultSet; override;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
@@ -188,6 +195,10 @@ type
 
   TZAdoCallableStatement2 = class(TZAbstractCallableStatement_W, IZCallableStatement)
   protected
+    /// <summary>creates an exceution Statement. Which wraps the call.</summary>
+    /// <param>"StoredProcName" the name of the stored procedure or function to
+    ///  be called.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
@@ -196,7 +207,7 @@ implementation
 {$IFNDEF ZEOS_DISABLE_ADO}
 
 uses
-  Variants, Math, {$IFNDEF FPC}Windows{inline},{$ENDIF}
+  Variants, Math,
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
   ZEncoding, ZDbcLogging, ZDbcResultSet, ZFastCode, ZPlainOleDBDriver,
   ZDbcCachedResultSet, ZDbcResultSetMetadata, ZDbcAdoResultSet,
@@ -214,6 +225,85 @@ const cParamIOs: array[TZProcedureColumnType] of ParameterDirectionEnum = (
   );
 
 { TZAbstractAdoStatement }
+
+procedure TZAbstractAdoStatement.AddParamLogValue(ParamIndex: Integer;
+  SQLWriter: TZSQLStringWriter; var Result: SQLString);
+var V: OleVariant;
+  vt: Word;
+  ValueAddr: Pointer;
+begin
+  with FAdoCommand.Parameters.Item[ParamIndex] do begin
+    V := Get_Value;
+    vt := tagVariant(V).vt;
+    if vt and VT_BYREF = VT_BYREF then begin
+      vt := vt xor VT_BYREF;
+      ValueAddr := tagVariant(V).unkVal;
+    end else if vt = VT_DECIMAL
+      then ValueAddr := @V
+      else if (vt = VT_BSTR)
+        then ValueAddr := tagVariant(V).bstrVal
+        else ValueAddr := @tagVariant(V).bVal;
+    case vt of
+      VT_NULL, VT_EMPTY: SQLWriter.AddText('(NULL)', Result);
+      VT_BOOL:          if PWordBool(ValueAddr)^
+                        then SQLWriter.AddText('(TRUE)', Result)
+                        else SQLWriter.AddText('(FALSE)', Result);
+      VT_UI1:           SQLWriter.AddOrd(PByte(ValueAddr)^, Result);
+      VT_UI2:           SQLWriter.AddOrd(PWord(ValueAddr)^, Result);
+      VT_UI4:           SQLWriter.AddOrd(PCardinal(ValueAddr)^, Result);
+      VT_UINT:          SQLWriter.AddOrd(PLongWord(ValueAddr)^, Result);
+      VT_I1:            SQLWriter.AddOrd(PShortInt(ValueAddr)^, Result);
+      VT_I2:            SQLWriter.AddOrd(PSmallInt(ValueAddr)^, Result);
+      VT_ERROR,
+      VT_I4:            SQLWriter.AddOrd(PInteger(ValueAddr)^, Result);
+      VT_INT:           SQLWriter.AddOrd(PLongInt(ValueAddr)^, Result);
+      VT_HRESULT:       SQLWriter.AddOrd(PHResult(ValueAddr)^, Result);
+      VT_UI8:           SQLWriter.AddOrd(PUInt64(ValueAddr)^, Result);
+      VT_I8:            SQLWriter.AddOrd(PInt64(ValueAddr)^, Result);
+      VT_CY:            SQLWriter.AddDecimal(PCurrency(ValueAddr)^, Result);
+      VT_DECIMAL:     begin
+                        if PDecimal(ValueAddr).scale > 0 then begin
+                          ScaledOrdinal2Bcd(UInt64(PDecimal(ValueAddr).Lo64), PDecimal(ValueAddr).scale, PBCD(FByteBuffer)^, PDecimal(ValueAddr).sign > 0);
+                          SQLWriter.AddDecimal(PBCD(FByteBuffer)^, Result);
+                        end else if PDecimal(ValueAddr).sign > 0 then
+                          SQLWriter.AddOrd(Int64(-UInt64(PDecimal(ValueAddr).Lo64)), Result)
+                        else
+                          SQLWriter.AddOrd(UInt64(PDecimal(ValueAddr).Lo64), Result);
+                      end;
+      VT_R4:          SQLWriter.AddFloat(PSingle(ValueAddr)^, Result);
+      VT_R8:          SQLWriter.AddFloat(PDouble(ValueAddr)^, Result);
+    else case Type_ of {ADO uses its own DataType-mapping different to System tagVariant type mapping}
+        adGUID:      begin
+                       SQLWriter.AddChar(#39, Result);
+                       SQLWriter.{$IFNDEF UNICODE}AddAscii7UTF16Text{$ELSE}AddText{$ENDIF}(PWideChar(ValueAddr), 38, Result);
+                       SQLWriter.AddChar(#39, Result);
+                     end;
+        adDBTime,
+        adDate,
+        adDBDate,
+        adDBTimeStamp: SQLWriter.AddDateTime(PDateTime(ValueAddr)^, ConSettings.WriteFormatSettings.DateTimeFormat, Result);
+        adChar,
+        adWChar,
+        adVarChar,
+        adVarWChar:     begin
+                          {$IFNDEF UNICODE}
+                          PUnicodeToRaw(PWideChar(ValueAddr), Length(WideString(ValueAddr)), zCP_UTF8, fRawTemp);
+                          SQLWriter.AddTextQuoted(fRawTemp, #39, Result);
+                          fRawTemp := '';
+                          {$ELSE}
+                          SQLWriter.AddTextQuoted(PWideChar(ValueAddr), Length(WideString(ValueAddr)), #39, Result);
+                          {$ENDIF}
+                        end;
+        adLongVarChar:  SQLWriter.AddText('(CLOB)', Result);
+        adLongVarWChar: SQLWriter.AddText('(NCLOB)', Result);
+        adLongVarBinary:SQLWriter.AddText('(BLOB)', Result);
+        adBinary,
+        adVarBinary:    SQLWriter.AddHexBinary(tagVariant(V).parray.pvData, tagVariant(V).parray.cbElements, True,  Result);
+        else            SQLWriter.AddText('(UNKNOWN)', Result);
+      end;
+    end;
+  end;
+end;
 
 function TZAbstractAdoStatement.CreateResultSet: IZResultSet;
 var NativeResultSet: IZResultSet;
@@ -578,27 +668,6 @@ begin
 end;
 
 procedure TZAdoPreparedStatement.PrepareInParameters;
-(*var i: Integer;
-begin
-  { test if we can access the parameter collection }
-  if fDEFERPREPARE then
-    FRefreshParamsFailed := True
-  else try
-    if BindList.Count <> FAdoCommand.Parameters.Count then //this could cause an AV
-      BindList.Count := FAdoCommand.Parameters.Count;
-    FRefreshParamsFailed := False;
-    for I := 0 to BindList.Count -1 do
-      with FAdoCommand.Parameters[i] do
-        BindList.SetParamTypes(I, ConvertAdoToSqlType(Get_Type_, Get_Precision,
-          Get_NumericScale), AdoType2ZProcedureColumnType[Get_Direction]);
-  except { do not handle the exception
-      tag ADO did fail to compute the paramter info's instead!
-      an example: Insert into Foo Values (?,?),(?,?),(?,?) crash with ado but native oledb succeeds !
-      So we add a parameter}
-    FAdoCommand.Parameters.Append(FAdoCommand.CreateParameter('DummyParam', adVariant, adParamInput, SizeOf(OleVariant), null));
-    FAdoCommand.Parameters.Delete('DummyParam');
-    FRefreshParamsFailed := True;
-  end;*)
 var
   I: Integer;
   ParamCount: NativeUInt;

@@ -138,9 +138,14 @@ type
     procedure BindArrayColumnWise(Index: Integer);
   protected
     procedure CheckParameterIndex(var Value: Integer); override;
+    /// <summary>Prepares eventual structures for binding input parameters.</summary>
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
+    /// <summary>Adds the parameter value to the SQLStringWriter as a log value</summary>
+    /// <param>"Index" The index of the parameter. First index is 0, second is 1..</param>
+    /// <param>"SQLWriter" the buffered writer which composes the log string.</param>
+    /// <param>"Result" a reference to the result string the SQLWriter flushes the buffer.</param>
     procedure AddParamLogValue(ParamIndex: Integer; SQLWriter: TZSQLStringWriter; Var Result: SQLString); override;
     function GetCompareFirstKeywordStrings: PPreparablePrefixTokens; override;
     class function GetBindListClass: TZBindListClass; override;
@@ -243,6 +248,10 @@ type
   private
     fPHDBC: PSQLHDBC;
   protected
+    /// <summary>creates an exceution Statement. Which wraps the call.</summary>
+    /// <param>"StoredProcName" the name of the stored procedure or function to
+    ///  be called.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   public
     constructor Create(const Connection: IZConnection;
@@ -274,6 +283,10 @@ type
       var ConnectionHandle: SQLHDBC; const StoredProcOrFuncIdentifier: string;
       {$IFDEF AUTOREFCOUNT}const{$ENDIF}Info: TStrings);
   protected
+    /// <summary>creates an exceution Statement. Which wraps the call.</summary>
+    /// <param>"StoredProcName" the name of the stored procedure or function to
+    ///  be called.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
@@ -2018,11 +2031,14 @@ procedure TZAbstractODBCPreparedStatement.RegisterParameter(
 var BindValue: PZBindValue;
     Bind: PZODBCBindValue absolute BindValue;
 begin
-  inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name, PrecisionOrSize, Scale);
+  CheckParameterIndex(ParameterIndex);
   BindValue := BindList[ParameterIndex];
+  if fBindImmediat then
+    SQLType := BindValue.SQLType;
+  inherited RegisterParameter(ParameterIndex, SQLType, ParamType, Name, PrecisionOrSize, Scale);
+  BindValue.ParamType := ParamType;
   Bind.InputOutputType := ODBCInputOutputType[SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]][ParamType] ;
   if not Bind.Described then begin
-    Bind.Described := True;
     BindValue.SQLType := SQLType;
     if (SQLtype in [stAsciiStream, stUnicodeStream, stBinaryStream])
     then Bind.BufferLength := SizeOf(Pointer) //range check issue on CalcBufSize
@@ -2587,6 +2603,7 @@ begin
                       PByte(PAnsiChar(Bind.ParameterValuePtr)+Blen)^ := 0;
                       Exit;
                     end;
+      SQL_C_GUID:   ZSysUtils.ValidGUIDToBinary(Value, PAnsiChar(Bind.ParameterValuePtr));
       else raise CreateUnsupportedParamType(Index, Bind.ValueType, stUnicodeString);
     end;
     PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
@@ -2627,7 +2644,7 @@ begin
     BindValue := BindList[Index];
     if (Bind.ParameterValuePtr = nil) or (Bind.ValueCount > 1) or (not Bind.Described and (Bind.BufferLength <= WLen shl 1)) then
       InitBind(Index, 1, stUnicodeString, WLen);
-    if BindValue.SQLType in [stAsciiStream, stUnicodeStream] then begin
+    if (BindValue.SQLType in [stAsciiStream, stUnicodeStream]) {or ((BindValue.SQLType in [stString, stUnicodeString]) and (Bind.ColumnSize = 0)} then begin
       if Value = nil then Value := PEmptyUnicodeString;
       PIZlob(Bind.ParameterValuePtr)^ := TZLocalMemCLob.CreateWithData(Value, WLen, ConSettings);
       Bind.StrLen_or_IndPtr^ := SQL_DATA_AT_EXEC;
@@ -2671,6 +2688,7 @@ begin
                       PByte(PAnsiChar(Bind.ParameterValuePtr)+PSQLLEN(Bind.StrLen_or_IndPtr)^)^ := Ord(#0);
                       Exit;
                     end;
+      SQL_C_GUID:   ZSysUtils.ValidGUIDToBinary(Value, PAnsiChar(Bind.ParameterValuePtr));
       else raise CreateUnsupportedParamType(Index, Bind.ValueType, stUnicodeString);
     end;
     PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;

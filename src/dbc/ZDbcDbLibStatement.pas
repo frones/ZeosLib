@@ -302,6 +302,10 @@ type
 
   TZDBLibCallableStatement = class(TZAbstractCallableStatement_A, IZCallableStatement)
   protected
+    /// <summary>creates an exceution Statement. Which wraps the call.</summary>
+    /// <param>"StoredProcName" the name of the stored procedure or function to
+    ///  be called.</param>
+    /// <returns>a TZAbstractPreparedStatement object.</returns>
     function CreateExecutionStatement(const StoredProcName: String): TZAbstractPreparedStatement; override;
   end;
 
@@ -802,8 +806,8 @@ begin
         if (FClientCP = zCP_UTF8) or DBLibBindValue.IsNCharIndex
         then CP := zCP_UTF8
         else CP := FClientCP;
-        fUniTemp := ZRawToUnicode(RawByteString(Bind.Value), CP);
-        SQLWriter.AddTextQuoted(fUniTemp, #39, Result);
+        PRawToUnicode(Bind.Value, Length(RawByteString(Bind.Value)), CP, fUniTemp);
+        SQLWriter.AddText(fUniTemp, Result);
         fUniTemp := '';
       end;
     else            SQLWriter.AddAscii7Text(Pointer(RawByteString(Bind.Value)), Length(RawByteString(Bind.Value)), Result);
