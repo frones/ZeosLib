@@ -236,6 +236,61 @@ const
       {MYSQL_OPT_ZSTD_COMPRESSION_LEVEL}        60111
     );
 
+const
+  TMariaDBOptionMinimumVersion: array[TMySqlOption] of Integer =
+    (
+      {MYSQL_OPT_CONNECT_TIMEOUT}               0,
+      {MYSQL_OPT_COMPRESS}                      0,
+      {MYSQL_OPT_NAMED_PIPE}                    0,
+      {MYSQL_INIT_COMMAND}                      0,
+      {MYSQL_READ_DEFAULT_FILE}                 0,
+      {MYSQL_READ_DEFAULT_GROUP}                0,
+      {MYSQL_SET_CHARSET_DIR}                   0,
+      {MYSQL_SET_CHARSET_NAME}                  0,
+      {MYSQL_OPT_LOCAL_INFILE}                  0,
+      {MYSQL_OPT_PROTOCOL}                      0,
+      {MYSQL_SHARED_MEMORY_BASE_NAME}           0,
+      {MYSQL_OPT_READ_TIMEOUT}                  0,
+      {MYSQL_OPT_WRITE_TIMEOUT}                 0,
+      {MYSQL_OPT_USE_RESULT}                    0,
+      {MYSQL_OPT_USE_REMOTE_CONNECTION}         0,
+      {MYSQL_OPT_USE_EMBEDDED_CONNECTION}       0,
+      {MYSQL_OPT_GUESS_CONNECTION}              0,
+      {MYSQL_SET_CLIENT_IP}                     0,
+      {MYSQL_SECURE_AUTH}                       0,
+      {MYSQL_REPORT_DATA_TRUNCATION}            0,
+      {MYSQL_OPT_RECONNECT}                     0,
+      {MYSQL_OPT_SSL_VERIFY_SERVER_CERT}        0,
+      {MYSQL_PLUGIN_DIR}                        0,
+      {MYSQL_DEFAULT_AUTH}                      0,
+      {MYSQL_OPT_BIND}                          0,
+      {MYSQL_OPT_SSL_KEY}                       0,
+      {MYSQL_OPT_SSL_CERT}                      0,
+      {MYSQL_OPT_SSL_CA}                        0,
+      {MYSQL_OPT_SSL_CAPATH}                    0,
+      {MYSQL_OPT_SSL_CIPHER}                    0,
+      {MYSQL_OPT_SSL_CRL}                       0,
+      {MYSQL_OPT_SSL_CRLPATH}                   0,
+      {MYSQL_OPT_CONNECT_ATTR_RESET}            0,
+      {MYSQL_OPT_CONNECT_ATTR_ADD}              0,
+      {MYSQL_OPT_CONNECT_ATTR_DELETE}           0,
+      {MYSQL_SERVER_PUBLIC_KEY}                 0,
+      {MYSQL_ENABLE_CLEARTEXT_PLUGIN}           0,
+      {MYSQL_OPT_CAN_HANDLE_EXPIRED_PASSWORDS}  30002,
+      {MYSQL_OPT_SSL_ENFORCE}                   30002,
+      {MYSQL_OPT_MAX_ALLOWED_PACKET}            30002,
+      {MYSQL_OPT_NET_BUFFER_LENGTH}             30002,
+      {MYSQL_OPT_SSL_MODE}                      999999, // not supported
+      {MYSQL_OPT_TLS_VERSION}                   30301,
+      {MYSQL_OPT_GET_SERVER_PUBLIC_KEY}         999999, // not supported
+      {MYSQL_OPT_RETRY_COUNT}                   999999, // not supported
+      {MYSQL_OPT_OPTIONAL_RESULTSET_METADATA}   999999,
+      {MYSQL_OPT_SSL_FIPS_MODE}                 999999,
+      {MYSQL_OPT_TLS_CIPHERSUITES}              999999,
+      {MYSQL_OPT_COMPRESSION_ALGORITHMS}        999999,
+      {MYSQL_OPT_ZSTD_COMPRESSION_LEVEL}        999999
+    );
+
   STMT_INDICATOR_NTS=-1;      //String is null terminated
   STMT_INDICATOR_NONE=0;      //No semantics
   STMT_INDICATOR_NULL=1;      //NULL value
