@@ -511,7 +511,7 @@ var
   sMyOpt: string;
   my_client_Opt:TMYSQL_CLIENT_OPTIONS;
   sMy_client_Opt, sMy_client_Char_Set:String;
-  ClientVersion: Integer;
+  ClientVersion, OptionRequiredVersion: Integer;
   SQL: RawByteString;
   P: PAnsiChar;
   S: String;
@@ -599,7 +599,12 @@ begin
     for myopt := low(TMySQLOption) to high(TMySQLOption) do
     begin
       sMyOpt:= GetMySQLOptionValue(myOpt);
-      if ClientVersion >= TMySqlOptionMinimumVersion[myopt] then //version checked (:
+      if FPLainDriver.IsMariaDBDriver then
+        OptionRequiredVersion := TMariaDBOptionMinimumVersion[myopt]
+      else
+        OptionRequiredVersion := TMySqlOptionMinimumVersion[myopt];
+
+      if ClientVersion >= OptionRequiredVersion then //version checked (:
         case myopt of
           {unsigned int options ...}
           MYSQL_OPT_CONNECT_TIMEOUT,
