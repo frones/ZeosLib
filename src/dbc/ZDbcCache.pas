@@ -3778,11 +3778,12 @@ begin
     stAsciiStream,
     stBinaryStream: if (TempBlob^ <> nil) then
                       Result := TempBlob^;
-    stString, stUnicodeString: if FColumnLengths[ColumnIndex] <= 0 then begin
+    stUnicodeString: if FColumnLengths[ColumnIndex] <= 0 then begin
+        Result := TZRowAccessorUnicodeStringLob.CreateWithDataAddess(PZVarLenDataRef(TempBlob), zCP_UTF16, ConSettings, FOpenLobStreams)
+      end else goto Fail;
+    stString: if FColumnLengths[ColumnIndex] <= 0 then begin
         CP := FColumnCodePages[ColumnIndex];
-        if CP = zCP_UTF16
-        then Result := TZRowAccessorUnicodeStringLob.CreateWithDataAddess(PZVarLenDataRef(TempBlob), CP, ConSettings, FOpenLobStreams)
-        else Result := TZRowAccessorRawByteStringLob.CreateWithDataAddess(PZVarLenDataRef(TempBlob), CP, ConSettings, FOpenLobStreams);
+        Result := TZRowAccessorRawByteStringLob.CreateWithDataAddess(PZVarLenDataRef(TempBlob), CP, ConSettings, FOpenLobStreams);
       end else goto Fail;
     stBytes: if FColumnLengths[ColumnIndex] <= 0
       then Result := TZRowAccessorBytesLob.CreateWithDataAddess(PZVarLenDataRef(TempBlob), zCP_Binary, ConSettings, FOpenLobStreams)

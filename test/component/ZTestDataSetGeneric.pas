@@ -2043,16 +2043,23 @@ Some third party components using TParam. Let's test assign to TZParams.
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "ABCD" does not seem to be initialized} {$ENDIF}
 procedure TZGenericTestDataSet.TestAssignDBRTLParams;
 var Params: TParams;
-    Query: TZQuery;
+    Query, Query2: TZQuery;
     Param: TParam;
     ABCD: TBCD;
-    Bts: TBytes;
+    Bts, Bts2: TBytes;
     ANow: TDateTime;
+    I: Integer;
+    B: Boolean;
+    {$IFNDEF TBLOBDATA_IS_TBYTES}
+    BlobData: TBlobData;
+    {$ENDIF}
 begin
   Query := CreateQuery;
   Params := nil;
   Check(Query <> nil);
   Bts := nil;
+  Bts2 := nil;
+  Query2 := nil;
   try
     Connection.Connect;
     Connection.ExecuteDirect('delete from high_load where 1=1');
@@ -2066,7 +2073,7 @@ begin
     Param := Params.CreateParam(ftInteger, 'hl_id', ptInput);
     Param.AsInteger := 100;
     Param := Params.CreateParam(ftBoolean, 'stBoolean', ptInput);
-    Param.AsBoolean := True;
+    Param.AsBoolean := False;
     Param := Params.CreateParam({$IFDEF WITH_FTBYTE}ftByte{$ELSE}ftWord{$ENDIF}, 'stByte', ptInput);
     Param.{$IFDEF WITH_FTBYTE}AsByte{$ELSE}AsWord{$ENDIF} := 1;
     Param := Params.CreateParam({$IFDEF WITH_FTSHORTINT}ftShortInt{$ELSE}ftSmallInt{$ENDIF}, 'stShort', ptInput);
@@ -2075,7 +2082,7 @@ begin
     Param.AsInteger := 1;
     Param := Params.CreateParam(ftLargeInt, 'stLong', ptInput);
     Param.{$IFDEF WITH_PARAM_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF} := Int64(1);
-    Param := Params.CreateParam({$IFDEF WITH_FTSINGLE}DB.ftSingle{$ELSE}ftFloat{$ENDIF}, 'stLong', ptInput);
+    Param := Params.CreateParam({$IFDEF WITH_FTSINGLE}DB.ftSingle{$ELSE}ftFloat{$ENDIF}, 'stFloat', ptInput);
     Param.{$IFDEF WITH_FTSINGLE}AsSingle{$ELSE}AsFloat{$ENDIF} := 1;
     Param := Params.CreateParam(ftFloat, 'stDouble', ptInput);
     Param.AsFloat := 1;
@@ -2097,9 +2104,9 @@ begin
     {$ENDIF}
     Param := Params.CreateParam(ftTime, 'stDate', ptInput);
     ANow := EncodeDate(2021,4,28)+EncodeTime(4,4,4,0);
-    Param.AsDate := ANow;
+    Param.AsDate := Int(ANow);
     Param := Params.CreateParam(ftDate, 'stTime', ptInput);
-    Param.AsTime := ANow;
+    Param.AsTime := Frac(ANow);
     Param := Params.CreateParam(ftDateTime, 'stTimestamp', ptInput);
     Param.AsDateTime := ANow;
     Param := Params.CreateParam(ftGUID, 'stGUID', ptInput);
@@ -2118,10 +2125,74 @@ begin
     CheckEquals(19, Query.Params.Count);
     Query.ExecSQL;
     CheckEquals(1, Query.RowsAffected, 'The update count');
+    Query2 := CreateQuery;
+    Query2.SQL.Text := 'select * from high_load where hl_id = :hl_id';
+    for B := false to true do begin
+      Query2.Params[0].AsInteger := 100 + Ord(B);
+      Query2.Open;
+      CheckEquals(100 + Ord(B), Query2.Fields[0].AsInteger, 'the Value of hl_id field');
+      if Query2.Fields[1].DataType = ftBoolean
+      then CheckEquals(Ord(B), Integer(Query2.Fields[1].AsBoolean), 'the Value of stBoolean field')
+      else CheckEquals(Ord(B), Query2.Fields[1].AsInteger, 'the Value of stBoolean field');
+      CheckEquals(1, Query2.Fields[2].AsInteger, 'the Value of stByte field');
+      CheckEquals(1, Query2.Fields[3].AsInteger, 'the Value of stShort field');
+      CheckEquals(1, Query2.Fields[4].AsInteger, 'the Value of stInteger field');
+      CheckEquals(1, Query2.Fields[5].{$IFDEF TFIELD_HAS_ASLARGEINT}AsLargeInt{$ELSE}AsInteger{$ENDIF}, 'the Value of stLong field');
+      CheckEquals(1, Query2.Fields[6].{$IFDEF WITH_FTSINGLE}AsSingle{$ELSE}AsFloat{$ENDIF}, 'the Value of stSingle field');
+      CheckEquals(1, Query2.Fields[7].AsFloat, 'the Value of stDouble field');
+      CheckEquals(1, Query2.Fields[8].{$IFDEF TFIELD_HAS_ASLARGEINT}AsLargeInt{$ELSE}AsInteger{$ENDIF}, 'the Value of stBigDecimal field');
+      CheckEquals('ABCDEFG', Query2.Fields[9].AsString, 'the Value of stString field');
+      CheckEquals('ABCDEFG', Query2.Fields[10].AsString, 'the Value of stUnicodeString field');
+      if Connection.DbcConnection.GetServerProvider = spPostgreSQL //postgres simply has not varbinary field just the <=1GB beatea type
+      then CheckEquals(ftBlob, Query2.Fields[11].DataType, 'the DataType of stBytes field')
+      else CheckEquals(ftVarBytes, Query2.Fields[11].DataType, 'the DataType of stBytes field');
+      {$IFDEF TFIELD_HAS_ASBYTES}
+      Bts2 := Query2.Fields[11].AsBytes;
+      {$ELSE}
+        {$IFNDEF TBLOBDATA_IS_TBYTES}
+      if Connection.DbcConnection.GetServerProvider = spPostgreSQL then begin
+        BlobData := Query2.Fields[11].AsString;
+        Bts2 := BufferToBytes(Pointer(BlobData), Length(BlobData));
+      end else
+        {$ENDIF}
+        Bts2 := VarToBytes(Query2.Fields[11].Value);
+      {$ENDIF}
+      CheckEquals(Bts, Bts2, 'the Value of stBytes field');
+      CheckEqualsDate(Int(ANow), Query2.Fields[12].AsDateTime, [], 'the Value of sDate field');
+      CheckEqualsDate(Frac(ANow), Query2.Fields[13].AsDateTime, [], 'the Value of sTime field');
+      CheckEqualsDate(ANow, Query2.Fields[14].AsDateTime, [], 'the Value of sTimestamp field');
+      CheckEquals('{BC89E8C9-264E-4A8E-A19B-C38DAE5B5463}', Query2.Fields[15].AsString, 'the Value of stGUID field');
+      CheckEquals('XYZ', Query2.Fields[16].AsString, 'the Value of stAsciiStream field');
+      CheckEquals('XYZ', Query2.Fields[17].AsString, 'the Value of stUnicodeStream field');
+      {$IFDEF TFIELD_HAS_ASBYTES}
+      Bts2 := Query2.Fields[18].AsBytes;
+      {$ELSE}
+        {$IFDEF TBLOBDATA_IS_TBYTES}
+        Bts2 := VarToBytes(Query2.Fields[18].Value);
+        {$ELSE}
+        BlobData := Query2.Fields[18].AsString;
+        Bts2 := BufferToBytes(Pointer(BlobData), Length(BlobData));
+        {$ENDIF}
+      {$ENDIF}
+      CheckEquals(Bts, Bts2, 'the Value of stBinaryStream field');
+      CheckFalse(Query2.Eof);
+      if not B then begin
+        Query.Params[0].Value := Integer(101);
+        Query.Params[1].Value := True;
+        for i := 2 to 18 do
+          Query.Params[I].Value := Query2.Fields[i].Value;
+        Query.ExecSQL;
+        CheckEquals(1, Query.RowsAffected, 'The update count');
+      end;
+      Query2.Close;
+    end;
   finally
     FreeAndNil(Query);
     if Params <> nil then
       FreeAndNil(Params);
+    if Query2 <> nil then
+      FreeAndNil(Query2);
+
     Connection.ExecuteDirect('delete from high_load where 1=1');
   end;
 end;
@@ -2173,9 +2244,12 @@ begin
     Check(FLogMessage <> '');
     FLogMessage := Copy(FLogMessage, ZFastCode.Pos(':', FLogMessage)+1, Length(FLogMessage));
     FLogMessage := Trim(FLogMessage);
-    {if Connection.DbcConnection.GetServerProvider in [spMySQL, spOracle] //they use locket types if registered -> implicit conversion to registered datatype
+    if (Connection.DbcConnection.GetServerProvider in [spPostgreSQL{does not describe the params by default},
+      { those can't describe params except MSSQL <> FreeTDS}
+      spSQLite, spMySQL, spOracle, spASE, spMSSQL, spASA]) and (System.Pos('ado', Protocol) = 0) and
+      (System.Pos('odbc', Protocol) = 0) and (System.Pos('OleDB', Protocol) = 0)
     then CheckEquals('32767,'''+stSearch+''','''+stSearch+''','+stSearch, FLogMessage)
-    else} CheckEquals('32767,'''+stSearch+''','+stSearch+','+stSearch, FLogMessage);
+    else CheckEquals('32767,'''+stSearch+''','+stSearch+','+stSearch, FLogMessage);
   finally
     FreeAndNil(Monitor);
     FreeAndNil(Query);
@@ -2393,6 +2467,7 @@ begin
     if Assigned(UpdateSQL) then
       FreeAndNil(UpdateSQL);
     try
+      Connection.Connect;
       Connection.ExecuteDirect('delete from people where p_id >= '+SysUtils.IntToStr(TEST_ROW_ID-1));
     finally
       Connection.Disconnect;

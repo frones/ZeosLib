@@ -517,12 +517,16 @@ begin
   try
     Query.ParamCheck := false;
     Query.Options := [doCalcDefaults];
-    Query.Sql.Text := 'select * from (values (''apple''), (''banana''), (''cherry'')) as x(fruit)';
+    //This is not compatible with SQL Server 2000
+    //Query.Sql.Text := 'select * from (values (''apple''), (''banana''), (''cherry'')) as x(fruit)';
+    Query.SQL.Text := 'select ''apple'' as fruit union all select ''banana'' union all select ''cherry''';
     Query.Open;
     Query.Locate('fruit', 'cherry', [loPartialKey]);
     CheckEquals(3, Query.RecNo, 'Wrong record number located');
     Query.Close;
-    Query.Sql.Text := 'select * from (values (''apple''), (''''), (''banana''), (''cherry'')) as x(fruit)';
+    //This is not compatible with SQL Server 2000
+    //Query.Sql.Text := 'select * from (values (''apple''), (''''), (''banana''), (''cherry'')) as x(fruit)';
+    Query.SQL.Text := 'select ''apple'' as fruit union all select '''' union all select ''banana'' union all select ''cherry''';
     Query.Open;
     Query.Locate('fruit', 'che', [loPartialKey]);
     CheckEquals(4, Query.RecNo, 'Wrong record number located');
@@ -546,6 +550,9 @@ begin
   Connection.Connect;
   Check(Connection.Connected, 'Failed to establish a connection');
   if Connection.DbcConnection.GetServerProvider <> spMSSQL then
+    Exit;
+  // This test doesn't work on MS SQL 2000
+  if Connection.ServerVersion < 9000000 then
     Exit;
   Check(Connection.UseMetadata, 'UseMetadata should be true for this test.');
   Query := CreateQuery;

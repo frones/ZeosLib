@@ -85,6 +85,7 @@ type
     procedure TestForum_Topic_128125;
     procedure TestForum_Topic_128125_b;
     procedure TestConnectionLossTicket452_Comp;
+    procedure TestSF513;
   end;
 
 {$ENDIF ZEOS_DISABLE_ORACLE}
@@ -96,7 +97,7 @@ uses
   Variants,
 {$ENDIF}
   {$IFNDEF DISABLE_ZPARAM}ZDatasetParam,{$ENDIF}
-  ZTestCase, ZSysUtils, ZEncoding, ZConnection;
+  ZTestCase, ZSysUtils, ZEncoding, ZConnection, DateUtils;
 
 { ZTestCompOracleBugReport }
 
@@ -235,6 +236,30 @@ begin
     FreeAndNil(LossCon);
   end;
 end;
+
+procedure ZTestCompOracleBugReport.TestSF513;
+var
+  Query: TZQuery;
+begin
+  Query := TZQuery.Create(nil);
+  try
+    Query.Connection := Connection;
+    Query.ParamCheck := True;
+    Query.SQL.Text := 'BEGIN :DT ::= CURRENT_DATE + 10; END;';
+
+    Query.Params[0].ParamType := ptOutput;
+    Query.Params[0].DataType := ftDateTime;
+
+    Query.ExecSQL;
+
+    CheckEquals(Query.Params[0].AsDate, IncDay(Date, 10), 'The query should return a date 10 days into the future.');
+
+    Query.Close;
+  finally
+    FreeAndNil(Query); // An exception is expected here. This is the main error.
+  end;
+end;
+
 
 (*
 see: https://zeoslib.sourceforge.io/viewtopic.php?f=50&p=150356#p150356

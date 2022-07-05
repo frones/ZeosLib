@@ -126,6 +126,8 @@ type
     property SpecificData: TZExceptionSpecificData read FSpecificData;
   end;
 
+  EZDatabaseConnectionLostError = Class(EZDatabaseError);
+
   {** Dataset Linker class. }
   TZDataLink = class(TMasterDataLink)
   private
@@ -447,7 +449,6 @@ type
     procedure CloseBlob(Field: TField); override;
 
     procedure CheckFieldCompatibility(Field: TField; AFieldDef: TFieldDef); {$IFDEF WITH_CHECKFIELDCOMPATIBILITY} override;{$ENDIF}
-    //procedure CreateFields; override;
 
     procedure ClearCalcFields(Buffer: TRecordBuffer); override;
     {$IFDEF WITH_GETFIELDCLASS_TFIELDDEF_OVERLOAD}
@@ -641,10 +642,9 @@ type
   TZDateField = Class(TDateField) //keep that inherited class to keep InheritsFrom(TDateField) alive
   private
     FFieldIndex: Integer;
-    FBound: Boolean;
+    FBound, FIsValidating: Boolean;
     FDisplayDateFormatSettings: TZDisplayDateFormatSettings;
     FEditDateFormatSettings: TZEditDateFormatSettings;
-    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
     function IsRowDataAvailable: Boolean;
     function GetDisplayFormatSettings: TZDisplayDateFormatSettings;
     procedure SetDisplayFormatSettings(const Value: TZDisplayDateFormatSettings);
@@ -680,10 +680,9 @@ type
   TZDateTimeField = Class(TDateTimeField) //keep that inherited class to keep InheritsFrom(TDateTimeField) alive
   private
     FFieldIndex, FScale: Integer;
-    FBound: Boolean;
+    FBound, FIsValidating: Boolean;
     FEditFormatSettings: TZEditTimestampFormatSettings;
     FDisplayFormatSettings: TZDisplayTimestampFormatSettings;
-    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
     function GetDisplayFormatSettings: TZDisplayTimestampFormatSettings;
     procedure SetDisplayFormatSettings(const Value: TZDisplayTimestampFormatSettings);
     function GetEditFormatSettings: TZEditTimestampFormatSettings;
@@ -722,10 +721,9 @@ type
   TZTimeField = Class(TTimeField) //keep that inherited class to keep InheritsFrom(TTimeField) alive
   private
     FFieldIndex, fScale: Integer;
-    FBound: Boolean;
+    FBound, FIsValidating: Boolean;
     FDisplayTimeFormatSettings: TZDisplayTimeFormatSettings;
     FEditTimeFormatSettings: TZEditTimeFormatSettings;
-    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
     function GetDisplayFormatSettings: TZDisplayTimeFormatSettings;
     procedure SetDisplayFormatSettings(const Value: TZDisplayTimeFormatSettings);
     function GetEditFormatSettings: TZEditTimeFormatSettings;
@@ -759,8 +757,7 @@ type
   TZBooleanField = class(TBooleanField)
   private
     FFieldIndex: Integer;
-    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
-    FBound: Boolean;
+    FBound, FIsValidating: Boolean;
     function FilledValueWasNull(var Value: Boolean): Boolean;
     function IsRowDataAvailable: Boolean;
   protected
@@ -778,8 +775,7 @@ type
   TZSmallIntField = class(TSmallIntField)
   private
     FFieldIndex: Integer;
-    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
-    FBound: Boolean;
+    FBound, FIsValidating: Boolean;
     function GetAsSmallInt: SmallInt;
     procedure SetAsSmallInt(Value: SmallInt);
     function IsRowDataAvailable: Boolean;
@@ -795,9 +791,10 @@ type
 
   TZShortIntField = class({$IF defined(WITH_FTSHORTINT) and declared(TShortIntField)}TShortIntField{$ELSE}TZSmallIntField{$IFEND})
   private
-    {$IFDEF WITH_FTSHORTINT}FFieldIndex: Integer;{$ENDIF}
-    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
-    {$IFDEF WITH_FTBYTE}FBound: Boolean;{$ENDIF}
+    {$IFDEF WITH_FTSHORTINT}
+    FFieldIndex: Integer;
+    FBound, FIsValidating: Boolean;
+    {$ENDIF}
     function GetAsShortInt: ShortInt;
     procedure SetAsShortInt(Value: ShortInt);
   {$IFDEF WITH_FTSHORTINT}
@@ -819,8 +816,7 @@ type
   TZWordField = class(TWordField)
   private
     FFieldIndex: Integer;
-    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
-    FBound: Boolean;
+    FBound, FIsValidating: Boolean;
     function GetAsWord: Word;
     procedure SetAsWord(Value: Word);
     function IsRowDataAvailable: Boolean;
@@ -839,9 +835,10 @@ type
 { TZByteField }
   TZByteField = class({$IF defined(WITH_FTBYTE) and declared(TByteField)}TByteField{$ELSE}TZWordField{$IFEND})
   private
-    {$IFDEF WITH_FTBYTE}FFieldIndex: Integer;{$ENDIF}
-    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
-    {$IFDEF WITH_FTBYTE}FBound: Boolean;{$ENDIF}
+    {$IFDEF WITH_FTBYTE}
+    FFieldIndex: Integer;
+    FBound, FIsValidating: Boolean;
+    {$ENDIF}
     function GetAsByte: Byte;
     procedure SetAsByte(Value: Byte);
   {$IFDEF WITH_FTBYTE}
@@ -856,17 +853,20 @@ type
     function GetIsNull: Boolean; override;
   {$ENDIF}
   public
-    {$IFDEF WITH_FTBYTE}procedure Clear; override;{$ENDIF}
+    {$IFDEF WITH_FTBYTE}
+    procedure Clear; override;
+    {$ELSE}
+    property AsByte: Byte read GetAsByte write SetAsByte;
+    {$ENDIF}
     property Value: Byte read GetAsByte write SetAsByte;
   end;
 
   { implement a signed 32 bit version ->
-    Delphi LongInt on Android/unnix seems to have 8Bytes) }
+    Delphi LongInt on Android/unix seems to have 8Bytes) }
   TZIntegerField = class(TIntegerField) //keep that inherited class to keep InheritsFrom(TIntegerField) alive
   private
     FFieldIndex: Integer;
-    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
-    FBound: Boolean;
+    FBound, FIsValidating: Boolean;
     function GetAsInt: Integer;
     procedure SetAsInt(Value: Integer);
     function IsRowDataAvailable: Boolean;
@@ -877,9 +877,10 @@ type
     function GetAsString: string; override;
     function GetAsVariant: Variant; override;
 
+    function GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF}; override;
     procedure SetAsInteger(Value: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF}); override;
     procedure SetAsString(const Value: string); override;
-    procedure SetVarValue(const Value: Variant); override; //delphi hardly try to convert then variant even if null
+    procedure SetVarValue(const Value: Variant); override; //delphi hardly try to convert the variant even if null
   public
     property Value: Integer read GetAsInt write SetAsInt;
   public
@@ -890,8 +891,7 @@ type
   TZInt64Field = class(TLargeintField) //keep that inherited class to keep InheritsFrom(TLargIntField) alive
   private
     FFieldIndex: Integer;
-    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
-    FBound: Boolean;
+    FBound, FIsValidating: Boolean;
     function IsRowDataAvailable: Boolean;
     function FilledValueWasNull(var Value: Largeint): Boolean;
   protected
@@ -916,10 +916,9 @@ type
 
   TZCardinalField = class({$IF defined(WITH_FTLONGWORD) and declared(TLongWordField)}TLongWordField{$ELSE}TZInt64Field{$IFEND}) //keep that inherited class to keep InheritsFrom(TLongWordField) alive
   private
-    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
     {$IF defined(WITH_FTLONGWORD) and declared(TLongWordField)}
     FFieldIndex: Integer;
-    FBound: Boolean;
+    FBound, FIsValidating: Boolean;
     function IsRowDataAvailable: Boolean;
     {$IFEND}
   protected
@@ -959,7 +958,6 @@ type
   private
     FMinValue: UInt64;
     FMaxValue: UInt64;
-    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
     function GetAsUInt64: UInt64;
     procedure SetAsUInt64(Value: UInt64);
     function FilledValueWasNull(var Value: UInt64): Boolean;
@@ -1003,8 +1001,7 @@ type
   TZDoubleField = Class(TFloatField)
   private
     FFieldIndex: Integer;
-    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
-    FBound: Boolean;
+    FBound, FIsValidating: Boolean;
     function IsRowDataAvailable: Boolean;
     function FilledValueWasNull(var Value: Double): Boolean;
   protected
@@ -1022,10 +1019,11 @@ type
 
   TZSingleField = Class({$IFDEF WITH_FTSINGLE}TSingleField{$ELSE}TZDoubleField{$ENDIF})
   private
-    {$IFDEF WITH_FTSINGLE}FFieldIndex: Integer;{$ENDIF}
-    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
-    {$IFDEF WITH_FTSINGLE}FBound: Boolean;{$ENDIF}
-    {$IFDEF WITH_FTSINGLE}function IsRowDataAvailable: Boolean;{$ENDIF}
+    {$IFDEF WITH_FTSINGLE}
+    FFieldIndex: Integer;
+    FBound, FIsValidating: Boolean;
+    function IsRowDataAvailable: Boolean;
+    {$ENDIF}
     function FilledValueWasNull(var Value: Single): Boolean;
   protected
   {$IFDEF WITH_FTSINGLE}
@@ -1054,8 +1052,7 @@ type
   TZBCDField = class(TBCDField)
   private
     FFieldIndex: Integer;
-    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
-    FBound: Boolean;
+    FBound, FIsValidating: Boolean;
     function IsRowDataAvailable: Boolean;
     function FilledValueWasNull(var Value: Currency): Boolean;
     {$IFNDEF TFIELD_HAS_ASLARGEINT}procedure SetAsLargeInt(const Value: LargeInt); {$ENDIF}
@@ -1080,8 +1077,7 @@ type
   TZFMTBCDField = class(TFMTBCDField)
   private
     FFieldIndex: Integer;
-    FBound: Boolean;
-    {$IFDEF WITH_TVALUEBUFFER}FValidateBuffer: TValueBuffer; {$ENDIF}
+    FBound, FIsValidating: Boolean;
     function FilledValueWasNull(var Value: TBCD): Boolean;
     function IsRowDataAvailable: Boolean;
   protected
@@ -1484,8 +1480,6 @@ type
     function GetChildDefs: TFieldDefs;
     procedure SetChildDefs(Value: TFieldDefs);
     {$ENDIF}
-    (*function CreateFieldComponent(Owner: TComponent;
-      ParentField: TObjectField = nil; FieldName: string = ''): TField;*)
     {$IFNDEF TFIELDDEF_HAS_CHILDEFS}
     function GetChildDefsClass: TFieldDefsClass; virtual;
     {$ENDIF}
@@ -1497,8 +1491,6 @@ type
     destructor Destroy; override;
     function HasChildDefs: Boolean;
     {$ENDIF}
-    (*function CreateField(Owner: TComponent; ParentField: TObjectField = nil;
-      const FieldName: string = ''; CreateChildren: Boolean = True): TField;*)
     procedure Assign(Source: TPersistent); override;
   {$IFNDEF TFIELDDEF_HAS_CHILDEFS}
   published
@@ -3057,6 +3049,7 @@ var
   PA: PAnsiChar absolute TS;
   PW: PWideChar absolute TS;
   L: NativeUInt;
+  FormatOverloadCalled: Boolean absolute TS;
 begin
   if not Active then
     raise EZDatabaseError.Create(SOperationIsNotAllowed4);
@@ -3073,12 +3066,17 @@ begin
 
   if GetActiveBuffer(RowBuffer) then
   begin
-
     ColumnIndex := DefineFieldIndex(FieldsLookupTable, Field);
     RowAccessor.RowBuffer := RowBuffer;
 
-    if State in [dsEdit, dsInsert] then
+    if (State in [dsEdit, dsInsert]) and Assigned(Field.OnValidate) then begin
+      //if the users onvalidate accesses the field the setter or getter
+      // resets FNativeFormatOverloadCalled so we use it as temporary storage here
+      FormatOverloadCalled := (Field.DataType in [ftBCD..ftDateTime]) and FNativeFormatOverloadCalled[Field.DataType];
       Field.Validate(Buffer);
+      if (Field.DataType in [ftBCD..ftDateTime]) then
+        FNativeFormatOverloadCalled[Field.DataType] := FormatOverloadCalled;
+    end;
 
     if Field.FieldKind <> fkData then //left over for calculated fields etc
       if Assigned(Buffer) then
@@ -5970,9 +5968,11 @@ end;
 
 function TZInt64Field.GetAsLargeInt: LargeInt;
 begin
-  if IsRowDataAvailable
-  then Result := TZAbstractRODataset(DataSet).FResultSet.GetLong(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
-  else Result := 0;
+  if FIsValidating
+  then Result := inherited GetAsLargeInt
+  else if IsRowDataAvailable
+    then Result := TZAbstractRODataset(DataSet).FResultSet.GetLong(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+    else Result := 0;
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF} //rolling eyes
@@ -6017,7 +6017,9 @@ end;
 function TZInt64Field.FilledValueWasNull(var Value: Largeint): Boolean;
 begin
   if IsRowDataAvailable then begin
-    Value := TZAbstractRODataset(DataSet).FResultSet.GetLong(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    if FIsValidating
+    then Value := inherited GetAsLargeInt
+    else Value := TZAbstractRODataset(DataSet).FResultSet.GetLong(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     Result := TZAbstractRODataset(DataSet).FResultSet.WasNull;
   end else Result := True;
 end;
@@ -6065,30 +6067,23 @@ begin
 end;
 
 procedure TZInt64Field.SetAsLargeInt(Value: LargeInt);
-  procedure DoValidate;
-  begin
-    {$IFDEF WITH_TVALUEBUFFER}
-    if FValidateBuffer = nil then
-      SetLength(FValidateBuffer, SizeOf(LargeInt));
-    PInt64(FValidateBuffer)^ := Value;
-    Validate(FValidateBuffer);
-    Value := PInt64(FValidateBuffer)^;
-    {$ELSE WITH_TVALUEBUFFER}
-    Validate(@Value);
-    {$ENDIF WITH_TVALUEBUFFER}
-  end;
 begin
   if not FBound then
     raise CreateUnBoundError(Self);
-  if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
-    RangeError(Value, MinValue, MaxValue);
-  if Assigned(OnValidate) then
-    DoValidate;
   with TZAbstractRODataset(DataSet) do begin
-    Prepare4DataManipulation(Self);
-    FResultSet.UpdateLong(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
+    if Assigned(OnValidate) then try
+      FIsValidating := True;
+      inherited SetAsLargeInt(Value)
+    finally
+      FIsValidating := False;
+    end else begin
+      if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
+        RangeError(Value, MinValue, MaxValue);
+      Prepare4DataManipulation(Self);
+      FResultSet.UpdateLong(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+      if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+        DataEvent(deFieldChange, NativeInt(Self));
+    end;
   end;
 end;
 
@@ -6127,11 +6122,15 @@ end;
 
 procedure TZUInt64Field.SetAsInteger(Value: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF});
 begin
+  if (Value < 0) then
+    RangeError(Value, 0, MaxValue);
   SetAsUInt64(UInt64(Value));
 end;
 
 procedure TZUInt64Field.SetAsLargeInt(Value: Largeint);
 begin
+  if (Value < 0) then
+    RangeError(Value, 0, MaxValue);
   SetAsUInt64(UInt64(Value));
 end;
 
@@ -6150,30 +6149,23 @@ begin
 end;
 
 procedure TZUInt64Field.SetAsUInt64(Value: UInt64);
-  procedure DoValidate;
-  begin
-    {$IFDEF WITH_TVALUEBUFFER}
-    if FValidateBuffer = nil then
-      SetLength(FValidateBuffer, SizeOf(UInt64));
-    PUInt64(FValidateBuffer)^ := Value;
-    Validate(FValidateBuffer);
-    Value := PUInt64(FValidateBuffer)^;
-    {$ELSE WITH_TVALUEBUFFER}
-    Validate(@Value);
-    {$ENDIF WITH_TVALUEBUFFER}
-  end;
 begin
   if not FBound then
     raise CreateUnBoundError(Self);
-  if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
-    RangeError(Value, MinValue, MaxValue);
-  if Assigned(OnValidate) then
-    DoValidate;
   with TZAbstractRODataset(DataSet) do begin
-    Prepare4DataManipulation(Self);
-    FResultSet.UpdateULong(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
+    if Assigned(OnValidate) then try
+      FIsValidating := True;
+      inherited SetAsLargeInt(LargeInt(Value))
+    finally
+      FIsValidating := False;
+    end else begin
+      Prepare4DataManipulation(Self);
+    if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
+      RangeError(Value, MinValue, MaxValue);
+      FResultSet.UpdateULong(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+      if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+        DataEvent(deFieldChange, NativeInt(Self));
+    end;
   end;
 end;
 
@@ -6269,7 +6261,9 @@ end;
 function TZUInt64Field.FilledValueWasNull(var Value: UInt64): Boolean;
 begin
   if IsRowDataAvailable then begin
-    Value := TZAbstractRODataset(DataSet).FResultSet.GetULong(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    if FIsValidating
+    then Value := UInt64(inherited GetAsLargeInt)
+    else Value := TZAbstractRODataset(DataSet).FResultSet.GetULong(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     Result := TZAbstractRODataset(DataSet).FResultSet.WasNull;
   end else Result := True;
 end;
@@ -6298,9 +6292,11 @@ end;
 
 function TZByteField.GetAsByte: Byte;
 begin
-  if IsRowDataAvailable
-  then Result := TZAbstractRODataset(DataSet).FResultSet.GetByte(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
-  else Result := 0;
+  if FIsValidating
+  then Result := inherited GetAsInteger
+  else if IsRowDataAvailable
+    then Result := TZAbstractRODataset(DataSet).FResultSet.GetByte(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+    else Result := 0;
 end;
 
 function TZByteField.GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF};
@@ -6332,38 +6328,31 @@ end;
 {$ENDIF WITH_FTBYTE}
 
 procedure TZByteField.SetAsByte(Value: Byte);
-  procedure DoValidate;
-  begin
-    {$IFDEF WITH_TVALUEBUFFER}
-    if FValidateBuffer = nil then
-      SetLength(FValidateBuffer, SizeOf(Byte));
-    PByte(FValidateBuffer)^ := Value;
-    Validate(FValidateBuffer);
-    Value := PByte(FValidateBuffer)^;
-    {$ELSE WITH_TVALUEBUFFER}
-    Validate(@Value);
-    {$ENDIF WITH_TVALUEBUFFER}
-  end;
 begin
-  if not FBound then
-    raise CreateUnBoundError(Self);
-  if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
-    RangeError(Value, MinValue, MaxValue);
-  if Assigned(OnValidate) then
-    DoValidate;
-  with TZAbstractRODataset(DataSet) do begin
-    Prepare4DataManipulation(Self);
-    FResultSet.UpdateUInt(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
-  end;
+  SetAsInteger(Value);
 end;
 
 procedure TZByteField.SetAsInteger(Value: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF});
 begin
-  if (Value < Low(Byte)) or (Value > High(Byte)) then
-    RangeError(Value, Low(Byte), High(Byte));
-  SetAsByte(Byte(Value));
+  if not FBound then
+    raise CreateUnBoundError(Self);
+  with TZAbstractRODataset(DataSet) do begin
+    Prepare4DataManipulation(Self);
+    if Assigned(OnValidate) then try
+      FIsValidating := True;
+      inherited SetAsInteger(Value)
+    finally
+      FIsValidating := False;
+    end else begin
+      Prepare4DataManipulation(Self);
+      if (Value < Low(Byte)) or (Value > High(Byte)) or
+         (((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue))) then
+        RangeError(Value, MinValue, MaxValue);
+      FResultSet.UpdateInt(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+      if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+        DataEvent(deFieldChange, NativeInt(Self));
+    end;
+  end;
 end;
 
 {$IFDEF WITH_FTBYTE}
@@ -6403,49 +6392,44 @@ procedure TZShortIntField.SetAsInteger(Value: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGE
 begin
   if not FBound then
     raise CreateUnBoundError(Self);
-  if (Value < Low(ShortInt)) or (Value > High(ShortInt)) then
-    RangeError(Value, Low(ShortInt), High(ShortInt));
-  SetAsShortInt(ShortInt(Value));
+  with TZAbstractRODataset(DataSet) do begin
+    Prepare4DataManipulation(Self);
+    if Assigned(OnValidate) then try
+      FIsValidating := True;
+      inherited SetAsInteger(Value)
+    finally
+      FIsValidating := False;
+    end else begin
+      Prepare4DataManipulation(Self);
+      if (Value < Low(ShortInt)) or (Value > High(ShortInt)) or
+         (((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue))) then
+        RangeError(Value, MinValue, MaxValue);
+      FResultSet.UpdateInt(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+      if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+        DataEvent(deFieldChange, NativeInt(Self));
+    end;
+  end;
 end;
 
 procedure TZShortIntField.SetAsShortInt(Value: ShortInt);
-  procedure DoValidate;
-  begin
-    {$IFDEF WITH_TVALUEBUFFER}
-    if FValidateBuffer = nil then
-      SetLength(FValidateBuffer, SizeOf(ShortInt));
-    PShortInt(FValidateBuffer)^ := Value;
-    Validate(FValidateBuffer);
-    Value := PShortInt(FValidateBuffer)^;
-    {$ELSE WITH_TVALUEBUFFER}
-    Validate(@Value);
-    {$ENDIF WITH_TVALUEBUFFER}
-  end;
 begin
-  if not FBound then
-    raise CreateUnBoundError(Self);
-  if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
-    RangeError(Value, MinValue, MaxValue);
-  if Assigned(OnValidate) then
-    DoValidate;
-  with TZAbstractRODataset(DataSet) do begin
-    Prepare4DataManipulation(Self);
-    FResultSet.UpdateShort(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
-  end;
+  SetAsInteger(Value);
 end;
 
 function TZShortIntField.GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF};
 begin
-  Result := GetAsShortInt;
+  if FIsValidating
+  then Result := inherited GetAsInteger
+  else Result := GetAsShortInt;
 end;
 
 function TZShortIntField.GetAsShortInt: ShortInt;
 begin
-  if IsRowDataAvailable
-  then Result := TZAbstractRODataset(DataSet).FResultSet.GetShort(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
-  else Result := 0;
+  if FIsValidating
+  then Result := inherited GetAsInteger
+  else if IsRowDataAvailable
+    then Result := TZAbstractRODataset(DataSet).FResultSet.GetShort(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+    else Result := 0;
 end;
 
 {$IFDEF WITH_FTSHORTINT}
@@ -6994,9 +6978,13 @@ begin
 end;
 
 function TZDateField.FilledValueWasNull(var Value: TZDate): Boolean;
+var DT: TDateTime;
 begin
   if IsRowDataAvailable then with TZAbstractRODataset(DataSet) do begin
-    FResultSet.GetDate(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+    if FIsValidating then begin
+      DT := inherited GetAsDateTime;
+      DecodeDateTimeToDate(DT, Value)
+    end else FResultSet.GetDate(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
     Result := FResultSet.WasNull;
   end else Result := True;
 end;
@@ -7014,13 +7002,13 @@ end;
 
 {$IFDEF FPC}
   {$PUSH}
-  {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
+  {$WARN 5057 off : Local variable "D" does not seem to be initialized}
   {$WARN 5060 off : Function Result does not seem to be initialized} //FPC....
 {$ENDIF}
 function TZDateField.GetAsDateTime: TDateTime;
 var D: TZDate;
 begin
-  if FilledValueWasNull(D) or not ZSysUtils.TryDateToDateTime(D, Result) then
+  if FilledValueWasNull(D) or not TryDateToDateTime(D, Result) then
     Result := 0;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
@@ -7072,7 +7060,7 @@ begin
 end;
 {$ENDIF WITH_TSQLTIMESTAMP_RECORD}
 
-{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF} //ill FPC
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "D" does not seem to be initialized} {$ENDIF} //ill FPC
 procedure TZDateField.GetText(var Text: string; DisplayText: Boolean);
 var D: TZDate;
     ATimeFormatSettings: TZAbstractDateFormatSettings;
@@ -7102,36 +7090,33 @@ begin
     end else Result := False;;
 end;
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "DT" does not seem to be initialized} {$ENDIF}
 procedure TZDateField.SetAsDate(const Value: TZDate);
+var DT: TDateTime;
 begin
   if not FBound then
     raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
-    FResultSet.UpdateDate(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
+    if Assigned(OnValidate) then try
+      TryDateToDateTime(Value, DT);
+      FIsValidating := True;
+      inherited SetAsDateTime(DT)
+    finally
+      FIsValidating := False;
+    end else begin
+      FResultSet.UpdateDate(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+      if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+        DataEvent(deFieldChange, NativeInt(Self));
+    end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "D" does not seem to be initialized} {$ENDIF} //ill FPC
 procedure TZDateField.SetAsDateTime(Value: TDateTime);
-  procedure DoValidate;
-  begin
-    {$IFDEF WITH_TVALUEBUFFER}
-    if FValidateBuffer = nil then
-      SetLength(FValidateBuffer, SizeOf(TDateTime));
-    PDateTime(FValidateBuffer)^ := Value;
-    Validate(FValidateBuffer);
-    Value := PDateTime(FValidateBuffer)^;
-    {$ELSE WITH_TVALUEBUFFER}
-    Validate(@Value);
-    {$ENDIF WITH_TVALUEBUFFER}
-  end;
 var D: TZDate;
 begin
-  if Assigned(OnValidate) then
-    DoValidate;
   DecodeDateTimeToDate(Value, D);
   SetAsDate(D);
 end;
@@ -7213,11 +7198,15 @@ begin
 end;
 
 function TZTimeField.FilledValueWasNull(var Value: TZTime): Boolean;
+var DT: TDateTime;
 begin
   if IsRowDataAvailable then with TZAbstractRODataset(DataSet) do begin
-    FResultSet.GetTime(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+    if FIsValidating then begin
+      DT := inherited GetAsDateTime;
+      DecodeDateTimeToTime(DT, Value)
+    end else FResultSet.GetTime(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
     Result := FResultSet.WasNull;
-  end else Result := True
+  end else Result := True;
 end;
 
 {$IFDEF FPC} {$PUSH}
@@ -7308,33 +7297,10 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "T" does not seem to be initialized} {$ENDIF} //rolling eyes
 procedure TZTimeField.SetAsDateTime(Value: TDateTime);
-  procedure DoValidate;
-  begin
-    {$IFDEF WITH_TVALUEBUFFER}
-    if FValidateBuffer = nil then
-      SetLength(FValidateBuffer, SizeOf(TDateTime));
-    PDateTime(FValidateBuffer)^ := Value;
-    Validate(FValidateBuffer);
-    Value := PDateTime(FValidateBuffer)^;
-    {$ELSE WITH_TVALUEBUFFER}
-    Validate(@Value);
-    {$ENDIF WITH_TVALUEBUFFER}
-  end;
 var T: TZTime;
 begin
-  if not FBound then
-    raise CreateUnBoundError(Self);
-  with TZAbstractRODataset(DataSet) do begin
-    Prepare4DataManipulation(Self);
-    if Assigned(OnValidate) then
-      DoValidate;
-    DecodeDateTimeToTime(Value, T);
-    if (T.Fractions > 0) then
-      T.Fractions := ZSysUtils.RoundNanoFractionTo(T.Fractions, fScale);
-    FResultSet.UpdateTime(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, T);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
-  end;
+  DecodeDateTimeToTime(Value, T);
+  SetAsTime(T);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF} //rolling eyes
 
@@ -7387,21 +7353,32 @@ end;
 {$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
 
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "T" does not seem to be initialized} {$ENDIF}
 procedure TZTimeField.SetAsTime(const Value: TZTime);
 var T: TZTime;
+    DT: TDateTime absolute T;
 begin
   if not FBound then
     raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
-    T := Value;
-    if (T.Fractions > 0) then
-      T.Fractions := ZSysUtils.RoundNanoFractionTo(T.Fractions, fScale);
-    FResultSet.UpdateTime(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, T);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
+    if Assigned(OnValidate) then try
+      TryTimeToDateTime(Value, DT);
+      FIsValidating := True;
+      inherited SetAsDateTime(DT)
+    finally
+      FIsValidating := False;
+    end else begin
+      T := Value; //make a copy might be a non writable const
+      if (T.Fractions > 0) then
+        T.Fractions := ZSysUtils.RoundNanoFractionTo(T.Fractions, fScale);
+      FResultSet.UpdateTime(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, T);
+      if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+        DataEvent(deFieldChange, NativeInt(Self));
+    end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZTimeField.SetDisplayFormatSettings(
   const Value: TZDisplayTimeFormatSettings);
@@ -7492,9 +7469,13 @@ begin
 end;
 
 function TZDateTimeField.FilledValueWasNull(var Value: TZTimeStamp): Boolean;
+var DT: TDateTime;
 begin
   if IsRowDataAvailable then with TZAbstractRODataset(DataSet) do begin
-    FResultSet.GetTimestamp(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+    if FIsValidating then begin
+      DT := inherited GetAsDateTime;
+      DecodeDateTimeToTimeStamp(DT, Value)
+    end else FResultSet.GetTimestamp(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
     Result := FResultSet.WasNull;
   end else Result := True;
 end;
@@ -7581,33 +7562,10 @@ end;
   {$WARN 5057 off : Local variable "$1" does not seem to be initialized}
 {$ENDIF} //rolling eyes
 procedure TZDateTimeField.SetAsDateTime(Value: TDateTime);
-  procedure DoValidate;
-  begin
-    {$IFDEF WITH_TVALUEBUFFER}
-    if FValidateBuffer = nil then
-      SetLength(FValidateBuffer, SizeOf(TDateTime));
-    PDateTime(FValidateBuffer)^ := Value;
-    Validate(FValidateBuffer);
-    Value := PDateTime(FValidateBuffer)^;
-    {$ELSE WITH_TVALUEBUFFER}
-    Validate(@Value);
-    {$ENDIF WITH_TVALUEBUFFER}
-  end;
 var TS: TZTimeStamp;
 begin
-  if not FBound then
-    raise CreateUnBoundError(Self);
-  with TZAbstractRODataset(DataSet) do begin
-    Prepare4DataManipulation(Self);
-    if Assigned(OnValidate) then
-      DoValidate;
-    DecodeDateTimeToTimeStamp(Value, TS);
-    if (TS.Fractions > 0) then
-      TS.Fractions := ZSysUtils.RoundNanoFractionTo(TS.Fractions, fScale);
-    FResultSet.UpdateTimeStamp(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, TS);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
-  end;
+  DecodeDateTimeToTimeStamp(Value, TS);
+  SetAsTimeStamp(TS);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -7666,21 +7624,32 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF} // uses pointer maths
 
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "TS" does not seem to be initialized} {$ENDIF}
 procedure TZDateTimeField.SetAsTimeStamp(const Value: TZTimeStamp);
 var TS: TZTimeStamp;
+    DT: TDateTime absolute TS;
 begin
   if not FBound then
     raise CreateUnBoundError(Self);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
-    TS := Value; //make a copy might be a non writable const
-    if (TS.Fractions > 0) then
-      TS.Fractions := ZSysUtils.RoundNanoFractionTo(TS.Fractions, fScale);
-    FResultSet.UpdateTimestamp(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, TS);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
+    if Assigned(OnValidate) then try
+      TryTimeStampToDateTime(Value, DT);
+      FIsValidating := True;
+      inherited SetAsDateTime(DT)
+    finally
+      FIsValidating := False;
+    end else begin
+      TS := Value; //make a copy might be a non writable const
+      if (TS.Fractions > 0) then
+        TS.Fractions := ZSysUtils.RoundNanoFractionTo(TS.Fractions, fScale);
+      FResultSet.UpdateTimestamp(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, TS);
+      if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+        DataEvent(deFieldChange, NativeInt(Self));
+    end;
   end;
 end;
+{$IFDEF FPC} {$POP} {$ENDIF}
 
 procedure TZDateTimeField.SetDisplayFormatSettings(
   const Value: TZDisplayTimestampFormatSettings);
@@ -7735,14 +7704,18 @@ end;
 
 function TZSmallIntField.GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF};
 begin
-  Result := GetAsSmallInt;
+  if FIsValidating
+  then Result := inherited GetAsInteger
+  else Result := GetAsSmallInt;
 end;
 
 function TZSmallIntField.GetAsSmallInt: SmallInt;
 begin
-  if IsRowDataAvailable
-  then Result := TZAbstractRODataset(DataSet).FResultSet.GetSmall(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
-  else Result := 0;
+  if FIsValidating
+  then Result := inherited GetAsInteger
+  else if IsRowDataAvailable
+    then Result := TZAbstractRODataset(DataSet).FResultSet.GetSmall(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+    else Result := 0;
 end;
 
 function TZSmallIntField.GetIsNull: Boolean;
@@ -7766,37 +7739,30 @@ end;
 
 procedure TZSmallIntField.SetAsInteger(Value: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF});
 begin
-  if (Value < Low(SmallInt)) or (Value > High(SmallInt)) then
-    RangeError(Value, Low(SmallInt), High(SmallInt));
-  SetAsSmallInt(SmallInt(Value));
+  if not FBound then
+    raise CreateUnBoundError(Self);
+  with TZAbstractRODataset(DataSet) do begin
+    Prepare4DataManipulation(Self);
+    if Assigned(OnValidate) then try
+      FIsValidating := True;
+      inherited SetAsInteger(Value)
+    finally
+      FIsValidating := False;
+    end else begin
+      Prepare4DataManipulation(Self);
+      if (Value < Low(SmallInt)) or (Value > High(SmallInt)) or
+         (((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue))) then
+        RangeError(Value, MinValue, MaxValue);
+      FResultSet.UpdateInt(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+      if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+        DataEvent(deFieldChange, NativeInt(Self));
+    end;
+  end;
 end;
 
 procedure TZSmallIntField.SetAsSmallInt(Value: SmallInt);
-  procedure DoValidate;
-  begin
-    {$IFDEF WITH_TVALUEBUFFER}
-    if FValidateBuffer = nil then
-      SetLength(FValidateBuffer, SizeOf(SmallInt));
-    PSmallInt(FValidateBuffer)^ := Value;
-    Validate(FValidateBuffer);
-    Value := PSmallInt(FValidateBuffer)^;
-    {$ELSE WITH_TVALUEBUFFER}
-    Validate(@Value);
-    {$ENDIF WITH_TVALUEBUFFER}
-  end;
 begin
-  if not FBound then
-    raise CreateUnBoundError(Self);
-  if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
-    RangeError(Value, MinValue, MaxValue);
-  if Assigned(OnValidate) then
-    DoValidate;
-  with TZAbstractRODataset(DataSet) do begin
-    Prepare4DataManipulation(Self);
-    FResultSet.UpdateSmall(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
-  end;
+  SetAsInteger(Value)
 end;
 
 { TZWordField }
@@ -7835,9 +7801,11 @@ end;
 
 function TZWordField.GetAsWord: Word;
 begin
-  if IsRowDataAvailable
-  then Result := TZAbstractRODataset(DataSet).FResultSet.GetWord(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
-  else Result := 0;
+  if FIsValidating
+  then Result := inherited GetAsInteger
+  else if IsRowDataAvailable
+    then Result := TZAbstractRODataset(DataSet).FResultSet.GetWord(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+    else Result := 0;
 end;
 
 function TZWordField.GetIsNull: Boolean;
@@ -7861,37 +7829,30 @@ end;
 
 procedure TZWordField.SetAsInteger(Value: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF});
 begin
-  if (Value < Low(Word)) or (Value > High(Word)) then
-    RangeError(Value, Low(Word), High(Word));
-  SetAsWord(Word(Value));
+  if not FBound then
+    raise CreateUnBoundError(Self);
+  with TZAbstractRODataset(DataSet) do begin
+    Prepare4DataManipulation(Self);
+    if Assigned(OnValidate) then try
+      FIsValidating := True;
+      inherited SetAsInteger(Value)
+    finally
+      FIsValidating := False;
+    end else begin
+      Prepare4DataManipulation(Self);
+      if (Value < Low(Word)) or (Value > High(Word)) or
+         (((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue))) then
+        RangeError(Value, MinValue, MaxValue);
+      FResultSet.UpdateInt(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+      if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+        DataEvent(deFieldChange, NativeInt(Self));
+    end;
+  end;
 end;
 
 procedure TZWordField.SetAsWord(Value: Word);
-  procedure DoValidate;
-  begin
-    {$IFDEF WITH_TVALUEBUFFER}
-    if FValidateBuffer = nil then
-      SetLength(FValidateBuffer, SizeOf(Word));
-    PWord(FValidateBuffer)^ := Value;
-    Validate(FValidateBuffer);
-    Value := PWord(FValidateBuffer)^;
-    {$ELSE WITH_TVALUEBUFFER}
-    Validate(@Value);
-    {$ENDIF WITH_TVALUEBUFFER}
-  end;
 begin
-  if not FBound then
-    raise CreateUnBoundError(Self);
-  if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
-    RangeError(Value, MinValue, MaxValue);
-  if Assigned(OnValidate) then
-    DoValidate;
-  with TZAbstractRODataset(DataSet) do begin
-    Prepare4DataManipulation(Self);
-    FResultSet.UpdateWord(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
-  end;
+  SetAsInteger(Value);
 end;
 
 { TZIntegerField }
@@ -7925,7 +7886,9 @@ end;
 function TZIntegerField.FilledValueWasNull(var Value: Integer): Boolean;
 begin
   if IsRowDataAvailable then with TZAbstractRODataset(DataSet) do begin
-    Value := FResultSet.GetInt(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    if FIsValidating
+    then Value := inherited GetAsInteger
+    else Value := FResultSet.GetInt(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     Result := FResultSet.WasNull;
   end else Result := True;
 end;
@@ -7938,7 +7901,12 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "$1" does not seem to be initialized} {$ENDIF} //rolling eyes
+function TZIntegerField.GetAsInteger: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}Integer{$ELSE}Longint{$ENDIF};
+begin
+  Result := GetAsInt;
+end;
+
+{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "I" does not seem to be initialized} {$ENDIF} //rolling eyes
 function TZIntegerField.GetAsString: String;
 var I: Integer;
 begin
@@ -7978,30 +7946,23 @@ begin
 end;
 
 procedure TZIntegerField.SetAsInt(Value: Integer);
-  procedure DoValidate;
-  begin
-    {$IFDEF WITH_TVALUEBUFFER}
-    if FValidateBuffer = nil then
-      SetLength(FValidateBuffer, SizeOf(Integer));
-    PInteger(FValidateBuffer)^ := Value;
-    Validate(FValidateBuffer);
-    Value := PInteger(FValidateBuffer)^;
-    {$ELSE WITH_TVALUEBUFFER}
-    Validate(@Value);
-    {$ENDIF WITH_TVALUEBUFFER}
-  end;
 begin
   if not FBound then
     raise CreateUnBoundError(Self);
   if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
     RangeError(Value, MinValue, MaxValue);
-  if Assigned(OnValidate) then
-    DoValidate;
   with TZAbstractRODataset(DataSet) do begin
-    Prepare4DataManipulation(Self);
-    FResultSet.UpdateInt(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
+    if Assigned(OnValidate) then try
+      FIsValidating := True;
+      inherited SetAsInteger(Value)
+    finally
+      FIsValidating := False;
+    end else begin
+      Prepare4DataManipulation(Self);
+      FResultSet.UpdateInt(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+      if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+        DataEvent(deFieldChange, NativeInt(Self));
+    end;
   end;
 end;
 
@@ -8149,36 +8110,31 @@ end;
 function TZCardinalField.FilledValueWasNull(var Value: Cardinal): Boolean;
 begin
   if IsRowDataAvailable then begin
-    Value := TZAbstractRODataset(DataSet).FResultSet.GetUInt(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    if FIsValidating
+    then Value := inherited {$IF defined(WITH_FTLONGWORD) and declared(TLongWordField)}GetAsLongWord{$ELSE}GetAsLargeInt{$IFEND}
+    else Value := TZAbstractRODataset(DataSet).FResultSet.GetUInt(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     Result := TZAbstractRODataset(DataSet).FResultSet.WasNull;
   end else Result := True;
 end;
 
 procedure TZCardinalField.SetAsCardinal(Value: Cardinal);
-  procedure DoValidate;
-  begin
-    {$IFDEF WITH_TVALUEBUFFER}
-    if FValidateBuffer = nil then
-      SetLength(FValidateBuffer, SizeOf(Cardinal));
-    PCardinal(FValidateBuffer)^ := Value;
-    Validate(FValidateBuffer);
-    Value := PCardinal(FValidateBuffer)^;
-    {$ELSE WITH_TVALUEBUFFER}
-    Validate(@Value);
-    {$ENDIF WITH_TVALUEBUFFER}
-  end;
 begin
   if not FBound then
     raise CreateUnBoundError(Self);
-  if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
-    RangeError(Value, MinValue, MaxValue);
-  if Assigned(OnValidate) then
-    DoValidate;
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
-    FResultSet.UpdateUInt(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
+    if Assigned(OnValidate) then try
+      FIsValidating := True;
+      inherited {$IF defined(WITH_FTLONGWORD) and declared(TLongWordField)}SetAsLongWord{$ELSE}SetAsLargeInt{$IFEND}(Value);
+    finally
+      FIsValidating := False;
+    end else begin
+      if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
+        RangeError(Value, MinValue, MaxValue);
+      FResultSet.UpdateUInt(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+      if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+        DataEvent(deFieldChange, NativeInt(Self));
+    end;
   end;
 end;
 
@@ -8352,7 +8308,9 @@ end;
 function TZSingleField.FilledValueWasNull(var Value: Single): Boolean;
 begin
   if IsRowDataAvailable then with TZAbstractRODataset(DataSet) do begin
-    Value := FResultSet.GetFloat(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    if FIsValidating
+    then Value := inherited {$IFDEF WITH_FTSINGLE}GetAsSingle{$ELSE}GetAsFloat{$ENDIF}
+    else Value := FResultSet.GetFloat(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     Result := FResultSet.WasNull;
   end else Result := True;
 end;
@@ -8365,30 +8323,23 @@ end;
 {$ENDIF WITH_FTSINGLE}
 
 procedure TZSingleField.SetAsSingle(value: Single);
-  procedure DoValidate;
-  begin
-    {$IFDEF WITH_TVALUEBUFFER}
-    if FValidateBuffer = nil then
-      SetLength(FValidateBuffer, SizeOf(Single));
-    PSingle(FValidateBuffer)^ := Value;
-    Validate(FValidateBuffer);
-    Value := PSingle(FValidateBuffer)^;
-    {$ELSE WITH_TVALUEBUFFER}
-    Validate(@Value);
-    {$ENDIF WITH_TVALUEBUFFER}
-  end;
 begin
   if not FBound then
     raise CreateUnBoundError(Self);
-  if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
-    RangeError(Value, MinValue, MaxValue);
-  if Assigned(OnValidate) then
-    DoValidate;
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
-    FResultSet.UpdateFloat(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
+    if Assigned(OnValidate) then try
+      FIsValidating := True;
+      inherited {$IFDEF WITH_FTSINGLE}SetAsSingle{$ELSE}SetAsFloat{$ENDIF}(Value);
+    finally
+      FIsValidating := False;
+    end else begin
+      if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
+        RangeError(Value, MinValue, MaxValue);
+      FResultSet.UpdateFloat(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+      if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+        DataEvent(deFieldChange, NativeInt(Self));
+    end;
   end;
 end;
 
@@ -8507,36 +8458,31 @@ end;
 function TZDoubleField.FilledValueWasNull(var Value: Double): Boolean;
 begin
   if IsRowDataAvailable then begin
-    Value := TZAbstractRODataset(DataSet).FResultSet.GetDouble(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    if FIsValidating
+    then Value := inherited GetAsFloat
+    else Value := TZAbstractRODataset(DataSet).FResultSet.GetDouble(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     Result := TZAbstractRODataset(DataSet).FResultSet.WasNull;
   end else Result := True;
 end;
 
 procedure TZDoubleField.SetAsFloat(Value: Double);
-  procedure DoValidate;
-  begin
-    {$IFDEF WITH_TVALUEBUFFER}
-    if FValidateBuffer = nil then
-      SetLength(FValidateBuffer, SizeOf(Double));
-    PDouble(FValidateBuffer)^ := Value;
-    Validate(FValidateBuffer);
-    Value := PDouble(FValidateBuffer)^;
-    {$ELSE WITH_TVALUEBUFFER}
-    Validate(@Value);
-    {$ENDIF WITH_TVALUEBUFFER}
-  end;
 begin
   if not FBound then
     raise CreateUnBoundError(Self);
-  if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
-    RangeError(Value, MinValue, MaxValue);
-  if Assigned(OnValidate) then
-    DoValidate;
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
-    FResultSet.UpdateDouble(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
+    if Assigned(OnValidate) then try
+      FIsValidating := True;
+      inherited SetAsFloat(Value);
+    finally
+      FIsValidating := False;
+    end else begin
+      if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
+        RangeError(Value, MinValue, MaxValue);
+      FResultSet.UpdateDouble(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+      if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+        DataEvent(deFieldChange, NativeInt(Self));
+    end;
   end;
 end;
 
@@ -8577,7 +8523,9 @@ end;
 function TZBCDField.FilledValueWasNull(var Value: Currency): Boolean;
 begin
   if IsRowDataAvailable then with TZAbstractRODataset(DataSet) do begin
-    Value := FResultSet.GetCurrency(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    if FIsValidating
+    then Value := inherited GetAsCurrency
+    else Value := FResultSet.GetCurrency(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     Result := FResultSet.WasNull;
   end else Result := True;
 end;
@@ -8687,32 +8635,25 @@ begin
 end;
 
 procedure TZBCDField.SetAsCurrency(Value: Currency);
-  procedure DoValidate;
-  begin
-    {$IFDEF WITH_TVALUEBUFFER}
-    if FValidateBuffer = nil then
-      SetLength(FValidateBuffer, SizeOf(System.Currency));
-    PCurrency(FValidateBuffer)^ := Value;
-    Validate(FValidateBuffer);
-    Value := PCurrency(FValidateBuffer)^;
-    {$ELSE WITH_TVALUEBUFFER}
-    Validate(@Value);
-    {$ENDIF WITH_TVALUEBUFFER}
-  end;
 begin
   if not FBound then
     raise CreateUnBoundError(Self);
-  if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
-    RangeError(Value, MinValue, MaxValue);
   if (Size < 4) then
     Value := RoundCurrTo(Value, Size);
-  if Assigned(OnValidate) then
-    DoValidate;
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
-    FResultSet.UpdateCurrency(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
+    if Assigned(OnValidate) then try
+      FIsValidating := True;
+      inherited SetAsCurrency(Value);
+    finally
+      FIsValidating := False;
+    end else begin
+      if ((MinValue <> 0) or (MaxValue <> 0)) and ((Value < MinValue) or (Value > MaxValue)) then
+        RangeError(Value, MinValue, MaxValue);
+      FResultSet.UpdateCurrency(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+      if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+        DataEvent(deFieldChange, NativeInt(Self));
+    end;
   end;
 end;
 
@@ -8753,7 +8694,9 @@ end;
 function TZFMTBCDField.FilledValueWasNull(var Value: TBCD): Boolean;
 begin
   if IsRowDataAvailable then begin
-    TZAbstractRODataset(DataSet).FResultSet.GetBigDecimal(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+    if FIsValidating
+    then Value := inherited GetAsBCD
+    else TZAbstractRODataset(DataSet).FResultSet.GetBigDecimal(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
     Result := TZAbstractRODataset(DataSet).FResultSet.WasNull;
   end else Result := True;
 end;
@@ -8859,41 +8802,24 @@ end;
 
 procedure TZFMTBCDField.SetAsBCD(const Value: TBcd);
 var AValue: TBcd;
-    pNibble, pLastNibble: PAnsiChar;
-    Precision, Scale: Word;
-    ValueIsOdd: Boolean;
-  procedure DoValidate(var Value: TBCD);
-  {$IFNDEF WITH_TVALUEBUFFER}
-  var P: Pointer;
-  {$ENDIF}
-  begin
-    {$IFDEF WITH_TVALUEBUFFER}
-    if FValidateBuffer = nil then
-      SetLength(FValidateBuffer, SizeOf(TBcd));
-    PBCD(FValidateBuffer)^ := Value;
-    {$ELSE WITH_TVALUEBUFFER}
-    P := @Value.Precision;
-    {$ENDIF WITH_TVALUEBUFFER}
-    {$IFDEF WITH_TVALUEBUFFER}
-    Validate(FValidateBuffer);
-    Value := PBCD(FValidateBuffer)^;
-    {$ELSE WITH_TVALUEBUFFER}
-    Validate(P);
-    {$ENDIF WITH_TVALUEBUFFER}
-  end;
+    Precision: Word;
 begin
   if not FBound then
     raise CreateUnBoundError(Self);
-  AValue := Value;
-  if Assigned(OnValidate) then
-    DoValidate(AValue);
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
-    if ZSysUtils.GetPacketBCDOffSets(AValue, pNibble, pLastNibble, Precision, Scale, ValueIsOdd) then
-      ZPackBCDToLeft(AValue, pNibble, pLastNibble, Precision, Scale, ValueIsOdd);
-    FResultSet.UpdateBigDecimal(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, AValue);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
+    AValue := Value;
+    ZRoundBCD(AValue, Size, Precision);
+    if Assigned(OnValidate) then try
+      FIsValidating := True;
+      inherited SetAsBCD(AValue);
+    finally
+      FIsValidating := False;
+    end else begin
+      FResultSet.UpdateBigDecimal(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, AValue);
+      if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+        DataEvent(deFieldChange, NativeInt(Self));
+    end;
   end;
 end;
 
@@ -8945,7 +8871,9 @@ end;
 function TZBooleanField.FilledValueWasNull(var Value: Boolean): Boolean;
 begin
   if IsRowDataAvailable then with TZAbstractRODataset(DataSet) do begin
-    Value := FResultSet.GetBoolean(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+    if FIsValidating
+    then Value := inherited GetAsBoolean
+    else Value := FResultSet.GetBoolean(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
     Result := FResultSet.WasNull;
   end else Result := True;
 end;
@@ -8998,29 +8926,22 @@ begin
 end;
 
 procedure TZBooleanField.SetAsBoolean(Value: Boolean);
-  procedure DoValidate(W: Word);
-  begin
-    {$IFDEF WITH_TVALUEBUFFER}
-    if FValidateBuffer = nil then
-      SetLength(FValidateBuffer, SizeOf(WordBool));
-    PWord(FValidateBuffer)^ := W;
-    Validate(FValidateBuffer);
-    Value := PWordBool(FValidateBuffer)^;
-    {$ELSE WITH_TVALUEBUFFER}
-    Validate(@W);
-    Value := W <> 0;
-    {$ENDIF WITH_TVALUEBUFFER}
-  end;
 begin
   if not FBound then
     raise CreateUnBoundError(Self);
-  if Assigned(OnValidate) then
-    DoValidate(Ord(Value));
   with TZAbstractRODataset(DataSet) do begin
     Prepare4DataManipulation(Self);
-    FResultSet.UpdateBoolean(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
-    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
-      DataEvent(deFieldChange, NativeInt(Self));
+    if Assigned(OnValidate) then try
+      FIsValidating := True;
+      inherited SetAsBoolean(Value)
+    finally
+      FIsValidating := False;
+    end else begin
+      Prepare4DataManipulation(Self);
+      FResultSet.UpdateBoolean(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Value);
+      if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+        DataEvent(deFieldChange, NativeInt(Self));
+    end;
   end;
 end;
 

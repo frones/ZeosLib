@@ -2243,7 +2243,7 @@ begin
                         else RaiseExceeded(Index);
         else raise CreateUnsupportedParamType(Index, Bind.ValueType, stBytes);
       end;
-      PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
+      //PSQLLEN(Bind.StrLen_or_IndPtr)^ := SQL_NO_NULLS;
     end;
   end else
     BindList.Put(Index, stBytes, Value);
@@ -2647,6 +2647,8 @@ begin
     if (BindValue.SQLType in [stAsciiStream, stUnicodeStream]) {or ((BindValue.SQLType in [stString, stUnicodeString]) and (Bind.ColumnSize = 0)} then begin
       if Value = nil then Value := PEmptyUnicodeString;
       PIZlob(Bind.ParameterValuePtr)^ := TZLocalMemCLob.CreateWithData(Value, WLen, ConSettings);
+      if FClientEncoding <> ceUTF16 then
+        PIZlob(Bind.ParameterValuePtr)^.SetCodePageTo(FClientCP);
       Bind.StrLen_or_IndPtr^ := SQL_DATA_AT_EXEC;
       Exit;
     end else case Bind.ValueType of

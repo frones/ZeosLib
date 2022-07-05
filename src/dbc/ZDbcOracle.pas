@@ -584,7 +584,7 @@ begin
         Status := FPlainDriver.OCIHandleFree(Stmt, OCI_HTYPE_STMT);
         if Status <> OCI_SUCCESS then
           HandleErrorOrWarning(FErrorHandle, Status, lcOther,
-            {$IFDEF DEBUG}'OCIHandleFree'{$ELSE}''{$ENDIF}, Self);
+            {$IFDEF ZEOSDEBUG}'OCIHandleFree'{$ELSE}''{$ENDIF}, Self);
       end;
     end;
   end;

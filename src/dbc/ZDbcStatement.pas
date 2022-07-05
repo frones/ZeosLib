@@ -1071,7 +1071,7 @@ type
   ///  question marks in the bindlist</summary>
   TZRawParamDetectPreparedStatement = class(TZRawPreparedStatement)
   protected
-    FBracketClosePos, FBracketOpenPos, FFirstQuestionMark: PChar;
+    FBracketClosePos, FBracketOpenPos, FFirstQuestionMark: NativeUInt;
     class function GetBindListClass: TZBindListClass; override;
   public
     function GetRawEncodedSQL(const SQL: SQLString): RawByteString; override;
@@ -4569,8 +4569,9 @@ var
   Token: PZToken;
   Tokenizer: IZTokenizer;
   ParamFound: Boolean;
-  {$IFDEF UNICODE}
   L: Cardinal;
+  PStart: PChar;
+  {$IFDEF UNICODE}
   FirstComposeToken: PZToken;
   ResultWriter: TZRawSQLStringWriter;
   {$ELSE}
@@ -4578,9 +4579,9 @@ var
   {$ENDIF}
   ComparePrefixTokens: PPreparablePrefixTokens;
 begin
-  FBracketClosePos := nil;
-  FBracketOpenPos := nil;
-  FFirstQuestionMark := nil;
+  FBracketClosePos := 0;
+  FBracketOpenPos := 0;
+  FFirstQuestionMark := 0;
   BracketCount := 0;
   Result := {$IFDEF UNICODE}''{$ELSE}SQL{$ENDIF};
   if SQL = '' then Exit;
@@ -4589,7 +4590,9 @@ begin
   ComparePrefixTokens := GetCompareFirstKeywordStrings;
   if ParamFound or Assigned(ComparePrefixTokens) then begin
     Tokenizer := Connection.GetTokenizer;
-    Tokens := Tokenizer.TokenizeBufferToList(SQL, [toSkipEOF]);
+    PStart := Pointer(SQL);
+    L := Length(SQL);
+    Tokens := Tokenizer.TokenizeBufferToList(PStart, PStart+L, [toSkipEOF]);
     {$IFDEF UNICODE}
     ResultWriter := TZRawSQLStringWriter.Create(Length(SQL) shl 1);
     {$ELSE}
@@ -4628,25 +4631,25 @@ begin
           end;
         if (Token.L = 1) then begin
           if (Token.P^ = '(') then begin
-            if (FFirstQuestionMark = nil) and (FBracketOpenPos = nil) then begin
-              FBracketOpenPos := Token.P;
+            if (FFirstQuestionMark = 0) and (FBracketOpenPos = 0) then begin
+              FBracketOpenPos := Token.P - PStart;
               BracketCount := 0;
-              FBracketClosePos := nil;
+              FBracketClosePos := 0;
             end;
             Inc(BracketCount);
-          end else if (Token.P^ = ')') and (FBracketOpenPos <> nil) then begin
-            if (FFirstQuestionMark = nil)
-            then FBracketOpenPos := nil
+          end else if (Token.P^ = ')') and (FBracketOpenPos > 0) then begin
+            if (FFirstQuestionMark = 0)
+            then FBracketOpenPos := 0
             else begin
               Dec(BracketCount);
               if BracketCount = 0 then
-                FBracketClosePos := Token.P;
+                FBracketClosePos := Token.P - PStart;
             end;
           end else if (Token.P^ = Char('?')) then begin
             if BindList.Capacity <= InParamCount then
               TZQuestionMarkBindList(BindList).Grow;
-            if (FFirstQuestionMark = nil) then
-              FFirstQuestionMark := Token.P;
+            if (FFirstQuestionMark = 0) then
+              FFirstQuestionMark := Token.P - PStart;
             {$IFDEF UNICODE}
             if (FirstComposeToken <> nil) then begin
               Token := Tokens[I-1];

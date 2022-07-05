@@ -216,7 +216,7 @@ begin
 
       if FPlainDriver.isc_dsql_sql_info(@FStatusVector, @FStmtHandle, 1,
           @ReqInfo, SizeOf(TByteBuffer), PAnsiChar(FByteBuffer)) <> 0 then
-        FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, {$IFDEF DEBUG}'isc_dsql_sql_info'{$ELSE}''{$ENDIF}, Self);
+        FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, {$IFDEF ZEOSDEBUG}'isc_dsql_sql_info'{$ELSE}''{$ENDIF}, Self);
       if FByteBuffer[0] <> isc_info_sql_records then
         Exit;
 
@@ -439,12 +439,12 @@ begin
         { Initialise ouput param and fields }
         XSQLDA := FResultXSQLDA.GetData;
         if FPlainDriver.isc_dsql_describe(@FStatusVector, @FStmtHandle, Word(FDialect), XSQLDA) <> 0 then
-          FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, {$IFDEF DEBUG}'isc_dsql_describe'{$ELSE}''{$ENDIF}, Self);
+          FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, {$IFDEF ZEOSDEBUG}'isc_dsql_describe'{$ELSE}''{$ENDIF}, Self);
         FOrgTypeList.Clear;
         if FResultXSQLDA.GetData^.sqld <> FResultXSQLDA.GetData^.sqln then begin
           XSQLDA := FResultXSQLDA.AllocateSQLDA;
           if FPlainDriver.isc_dsql_describe(@FStatusVector, @FStmtHandle, Word(FDialect), XSQLDA) <> 0 then
-            FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, {$IFDEF DEBUG}'isc_dsql_describe'{$ELSE}''{$ENDIF}, Self);
+            FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, {$IFDEF ZEOSDEBUG}'isc_dsql_describe'{$ELSE}''{$ENDIF}, Self);
         end;
         FOutMessageCount := FResultXSQLDA.GetData.sqld;
         FOrgTypeList.Capacity := FOutMessageCount;
@@ -547,7 +547,7 @@ begin
     end;
     {check dynamic sql}
     if FPlainDriver.isc_dsql_describe_bind(@StatusVector, @FStmtHandle, Word(FDialect), FParamXSQLDA) <> 0 then
-      FIBConnection.HandleErrorOrWarning(lcBindPrepStmt, @FStatusVector, {$IFDEF DEBUG}'isc_dsql_describe_bind'{$ELSE}''{$ENDIF}, Self);
+      FIBConnection.HandleErrorOrWarning(lcBindPrepStmt, @FStatusVector, {$IFDEF ZEOSDEBUG}'isc_dsql_describe_bind'{$ELSE}''{$ENDIF}, Self);
 
     //alloc space for lobs, arrays, param-types
     if ((FStatementType = stExecProc) and (FResultXSQLDA.GetFieldCount > 0)) or
@@ -559,7 +559,7 @@ begin
     if FParamXSQLDA^.sqld <> FParamXSQLDA^.sqln then begin
       FParamXSQLDA := FParamSQLData.AllocateSQLDA;
       if FPlainDriver.isc_dsql_describe_bind(@StatusVector, @FStmtHandle, Word(FDialect),FParamXSQLDA) <> 0 then
-        FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, {$IFDEF DEBUG}'isc_dsql_describe_bind'{$ELSE}''{$ENDIF}, Self);
+        FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, {$IFDEF ZEOSDEBUG}'isc_dsql_describe_bind'{$ELSE}''{$ENDIF}, Self);
     end;
     FInMessageCount := FParamXSQLDA^.sqld;
     ReallocMem(FInParamDescripors, FInMessageCount * SizeOf(TZInterbaseFirerbirdParam));

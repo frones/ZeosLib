@@ -534,7 +534,7 @@ begin
     Status := FCommand.Cancel;
     if Failed(Status) then
       FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
-        {$IFDEF DEBUG}'ICommand.Cancel'{$ELSE}''{$ENDIF},
+        {$IFDEF ZEOSDEBUG}'ICommand.Cancel'{$ELSE}''{$ENDIF},
         IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
   end else
     inherited Cancel;
@@ -632,7 +632,7 @@ begin
     Status := FCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL));
     if Failed(Status) then
       FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
-        {$IFDEF DEBUG}'ICommand.SetCommandText'{$ELSE}''{$ENDIF},
+        {$IFDEF ZEOSDEBUG}'ICommand.SetCommandText'{$ELSE}''{$ENDIF},
         IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
   end;
   if FCallResultCache <> nil then
@@ -758,7 +758,7 @@ begin
         DB_NULLGUID, @FRowsAffected, nil);
       if Failed(Status) then
         FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
-          {$IFDEF DEBUG}'IMultipleResults.GetResult'{$ELSE}''{$ENDIF},
+          {$IFDEF ZEOSDEBUG}'IMultipleResults.GetResult'{$ELSE}''{$ENDIF},
           IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
     end;
   end else begin
@@ -820,7 +820,7 @@ begin
         IID_IRowset, @FRowsAffected, @FRowSet);
       if Failed(Status) then
         FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
-          {$IFDEF DEBUG}'IMultipleResults.GetResult'{$ELSE}''{$ENDIF},
+          {$IFDEF ZEOSDEBUG}'IMultipleResults.GetResult'{$ELSE}''{$ENDIF},
           IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
     end
   end else begin
@@ -1333,7 +1333,7 @@ begin
       Pointer(FDBBINDSTATUSArray));
     if Failed(Status) then
       FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
-        {$IFDEF DEBUG}'IParameterAccessor.CreateAccessor'{$ELSE}''{$ENDIF},
+        {$IFDEF ZEOSDEBUG}'IParameterAccessor.CreateAccessor'{$ELSE}''{$ENDIF},
         IImmediatelyReleasable(FWeakImmediatRelPtr), FDBBINDSTATUSArray);
   end;
 end;
@@ -1719,7 +1719,7 @@ jmpRecreate:
     Status := fCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL));
     if Failed(Status) then
       FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
-        {$IFDEF DEBUG}'ICommand.SetCommandText'{$ELSE}''{$ENDIF},
+        {$IFDEF ZEOSDEBUG}'ICommand.SetCommandText'{$ELSE}''{$ENDIF},
         IImmediatelyReleasable(FWeakImmediatRelPtr), nil);
     if not fDEFERPREPARE and (fCommand.QueryInterface(IID_ICommandPrepare, CommandPrepare) = S_OK) then begin
       Status := CommandPrepare.Prepare(0);
@@ -1774,7 +1774,7 @@ begin
       Exit;
     end else if Failed(Status) then
       FOleDBConnection.HandleErrorOrWarning(Status, lcOther,
-        {$IFDEF DEBUG}'ICommandWithParameters.GetParameterInfo'{$ELSE}''{$ENDIF},
+        {$IFDEF ZEOSDEBUG}'ICommandWithParameters.GetParameterInfo'{$ELSE}''{$ENDIF},
         IImmediatelyReleasable(FWeakImmediatRelPtr), FDBBINDSTATUSArray);
     try
       SetParamCount(FDBUPARAMS);

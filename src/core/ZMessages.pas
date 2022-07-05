@@ -2283,7 +2283,7 @@ resourcestring
 {$ENDIF} // PORTUGUESE
 {$ENDIF FRENCH}
 
-{$IF defined(FPC) and (defined(DEBUG) or not defined(ASCII7_MESSAGES)) and
+{$IF defined(FPC) and (defined(ZEOSDEBUG) or not defined(ASCII7_MESSAGES)) and
      (defined(WITH_DEFAULTSYSTEMCODEPAGE) or defined(LCL))}
 function ConvertZMessageToRaw(const Value: String): String;
 begin

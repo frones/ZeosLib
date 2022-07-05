@@ -1377,6 +1377,8 @@ type
     Fdbvarylen_MS: function(Proc: PDBPROCESS; Column: Integer): LongBool; cdecl;
     Fdbvarylen_SYB: function(Proc: PDBPROCESS; Column: Integer): DBBOOL; cdecl;
     Fdbvarylen_stdcall: function(Proc: PDBPROCESS; Column: Integer): DBBOOL; stdcall;
+    Fdbversion: function(): PAnsiChar; cdecl;
+    Fdbversion_stdcall: function(): PAnsiChar; stdcall;
     //Fdb12hour: function(dbproc: PDBPROCESS; Language: PAnsiChar): DBBOOL; cdecl; //no MS
     //Fdb12hour_stdcall:          function(dbproc: PDBPROCESS; Language: PAnsiChar): DBBOOL; stdcall; //no MS
     dberrhandle_stdcall: function(Handler: TDBERRHANDLE_PROC_stdcall): TDBERRHANDLE_PROC_stdcall; stdcall;
@@ -1494,6 +1496,7 @@ type
     function dbSetOpt(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar; Int_Param: Integer): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbUse(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     function dbVaryLen(dbProc: PDBPROCESS; Column: Integer): DBBOOL; {$IFDEF WITH_INLINE}inline; {$ENDIF}
+    function dbVersion(): PAnsiChar; {$IFDEF WITH_INLINE}inline; {$ENDIF}
     {$ENDIF}
   public
     {$IFNDEF MSWINDOWS}
@@ -1582,6 +1585,7 @@ type
     dbSetOpt: function(dbProc: PDBPROCESS; Option: Integer; Char_Param: PAnsiChar; Int_Param: Integer): RETCODE; cdecl;
     dbUse: function(dbProc: PDBPROCESS; dbName: PAnsiChar): RETCODE; cdecl;
     dbvarylen: function(Proc: PDBPROCESS; Column: Integer): DBBOOL; cdecl;
+    dbversion: function: PAnsiChar; cdecl;
     {$ENDIF}
   public { macros }
     function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE; {$IFDEF WITH_INLINE}inline; {$ENDIF}
@@ -2778,6 +2782,18 @@ begin
     then Result := Fdbvarylen_SYB(dbProc, Column)
     else Result := Fdbvarylen_stdcall(dbProc, Column);
 end;
+
+{** Returns the DBLIB version in use *}
+function TZDBLIBPLainDriver.dbVersion: PAnsiChar;
+begin
+  if Assigned(Fdbversion) then
+    Result := Fdbversion
+  else if Assigned(Fdbversion_stdcall) Then
+    Result := Fdbversion_stdcall
+  Else
+    Result := '';
+end;
+
 {$ENDIF MSWINDOWS}
 
 destructor TZDBLIBPLainDriver.Destroy;
@@ -3149,6 +3165,7 @@ begin
       @{$IFDEF MSWINDOWS}FdbSqlOk{$ELSE}dbSqlOk{$ENDIF} := GetAddress('dbsqlok');
       @{$IFDEF MSWINDOWS}FdbSqlSend{$ELSE}dbSqlSend{$ENDIF} := GetAddress('dbsqlsend');
       @{$IFDEF MSWINDOWS}Fdbuse{$ELSE}dbuse{$ENDIF} := GetAddress('dbuse');
+      @{$IFDEF MSWINDOWS}Fdbversion{$ELSE}dbversion{$ENDIF} := GetAddress('dbversion');
 
       @dbmsghandle := GetAddress('dbmsghandle');
       @dberrhandle := GetAddress('dberrhandle');

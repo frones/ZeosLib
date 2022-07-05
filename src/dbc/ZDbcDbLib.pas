@@ -251,6 +251,7 @@ type
     procedure ClearWarnings; override;
 
     function GetHostVersion: Integer; override;
+    function GetClientVersion: Integer; override;
   public
     function GetServerAnsiCodePage: Word;
     function GetPlainDriver: TZDBLIBPLainDriver;
@@ -1248,6 +1249,69 @@ function TZDBLibConnection.GetCatalog: string;
 begin
   Result := String(FPlainDriver.dbName(FHandle));
   CheckDBLibError(lcOther, 'GETCATALOG', IImmediatelyReleasable(FWeakImmediatRelPtr));
+end;
+
+function TZDBLibConnection.GetClientVersion: Integer;
+Const
+ MAXIMUM_VER_LEN = 4;
+Var
+ pac: PAnsiChar;
+ oldindex, index, len: Cardinal;
+ ver: String;
+
+ Function FindDot: Boolean;
+ Begin
+   Result := False;
+
+   While True Do
+   Begin
+     If index >= len Then Exit;
+
+     If pac[index] = '.' Then Break;
+
+     // Avoid memory corruption. If length would be greater than we previously set, simply
+     // stop adding characters.
+     If index - oldindex <= MAXIMUM_VER_LEN Then
+       ver[index - oldindex + 1] := Char(pac[index]);
+
+     Inc(index);
+   End;
+
+   Result := True;
+ End;
+
+begin
+ Result := 0;
+
+ pac := FPlainDriver.dbVersion;
+ len := StrLen(pac);
+ If len = 0 Then Exit;
+
+ // Result := (Major version * 1000000) + (Minor version * 10000) + (Sub version * 1)
+
+ SetLength(ver, MAXIMUM_VER_LEN);
+ If Copy(pac, 1, 9) = 'freetds v' Then
+ Begin
+   // 'freetds v1.4.dev.20211204'
+
+   oldindex := 9;
+   index := oldindex;
+
+   If Not FindDot Then
+     Exit;
+
+   // Got the major version, multiply by 1000000
+   Result := 1000000 * StrToInt(Copy(ver, 1, index - oldindex));
+
+   Inc(index);
+   oldindex := index;
+
+   If Not FindDot Then
+     Exit;
+
+   // Got the minor version, multiply by 10000
+   Result := Result + 10000 * StrToInt(Copy(ver, 1, index - oldindex));
+ End;
 end;
 
 function TZDBLibConnection.GetServerAnsiCodePage: Word;

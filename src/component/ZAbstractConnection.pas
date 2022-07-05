@@ -294,7 +294,21 @@ type
 
     property DbcDriver: IZDriver read GetDbcDriver;
     property DbcConnection: IZConnection read FConnection;
+    /// <summary>
+    ///  Gets clients's full version number.
+    ///    The format of the version resturned must be XYYYZZZ where
+    ///    X   = Major version
+    ///    YYY = Minor version
+    ///   ZZZ = Sub version
+    /// </summary>
     property ClientVersion: Integer read GetClientVersion;
+    /// <summary>
+    ///  Gets server's full version number.
+    ///    The format of the version resturned must be XYYYZZZ where
+    ///    X   = Major version
+    ///    YYY = Minor version
+    ///   ZZZ = Sub version
+    /// </summary>
     property ServerVersion: Integer read GetServerVersion;
     property ClientVersionStr: String read GetClientVersionStr;
     property ServerVersionStr: String read GetServerVersionStr;
@@ -1021,9 +1035,9 @@ begin
         FreeAndNil(Err);
     end else begin
       if Err = nil //should not happen
-      then ADatBaseError := EZDataBaseError.Create('Connection lost.')
+      then ADatBaseError := EZDatabaseConnectionLostError.Create('Connection lost.')
       else begin
-        ADatBaseError := EZDataBaseError.CreateFromException(Err);
+        ADatBaseError := EZDatabaseConnectionLostError.CreateFromException(Err);
         FreeAndNil(Err);
       end;
       raise ADatBaseError;

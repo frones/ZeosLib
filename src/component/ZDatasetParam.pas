@@ -2554,6 +2554,12 @@ var P: PAnsiChar;
     then IZBlob(DataAddr^) := lob
     else IInterface(DataAddr^) := lob
   end;
+  {$IFDEF UNICODE}
+  procedure SetAsUni;
+  begin
+    InternalSetAsUnicodeString(DataAddr, IsNullAddr, PRawToUnicode(P, L, CodePage));
+  end;
+  {$ENDIF}
 label jmpFail;
 begin
   P := Pointer(Value);
@@ -2585,13 +2591,18 @@ begin
     stFloat: RawToFloat(P, AnsiChar(FDecimalSeperator), PSingle(DataAddr)^);
     stDouble: RawToFloat(P, AnsiChar(FDecimalSeperator), PDouble(DataAddr)^);
     stCurrency: RawToFloat(P, AnsiChar(FDecimalSeperator), PCurrency(DataAddr)^);
-    stBigDecimal: PBCD(DataAddr)^ := RawToBCD(P, L);
-    stDate: if not ZSysUtils.TryRawToDate(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.ShortDateFormat, PZDate(DataAddr)^) then
-              goto jmpFail;
-    stTime: if not ZSysUtils.TryRawToTime(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongTimeFormat, PZTime(DataAddr)^) then
-              goto jmpFail;
-    stTimeStamp: if not ZSysUtils.TryRawToTimestamp(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongDateFormat, PZTimestamp(DataAddr)^) then
-              goto jmpFail;
+    stBigDecimal: if not TryRawToBcd(P, L, PBCD(DataAddr)^, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.DecimalSeparator) then
+      goto jmpFail;
+    {$IFNDEF UNICODE}
+    stDate: if (FDataSet = nil) or not TZAbstractRODataset(FDataSet).FormatSettings.EditDateFormatSettings.TryStrToDate(PZDate(DataAddr)^, Value) then
+              if not TryRawToDate(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.ShortDateFormat, PZDate(DataAddr)^) then goto jmpFail;
+    stTime: if (FDataSet = nil) or not TZAbstractRODataset(FDataSet).FormatSettings.EditTimeFormatSettings.TryStringToTime(PZTime(DataAddr)^, Value, 9) then
+              if not TryRawToTime(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongTimeFormat, PZTime(DataAddr)^) then goto jmpFail;
+    stTimestamp: if (FDataSet = nil) or not TZAbstractRODataset(FDataSet).FormatSettings.EditTimestampFormatSettings.TryStrToTimestamp(PZTimestamp(DataAddr)^, Value, 9) then
+              if not TryRawToTimestamp(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongDateFormat, PZTimeStamp(DataAddr)^) then goto jmpFail;
+    {$ELSE !UNICODE}
+    stDate, stTime, stTimeStamp: SetAsUni;
+    {$ENDIF UNICODE}
     stGUID: if (L = 36) or (L = 38) then
               ZSysUtils.ValidGUIDToBinary(P, @PGUID(DataAddr)^.D1)
             else goto jmpFail;
@@ -2661,11 +2672,20 @@ begin
     stFloat: UnicodeToFloat(P, WideChar(FDecimalSeperator), PSingle(DataAddr)^);
     stDouble: UnicodeToFloat(P, WideChar(FDecimalSeperator), PDouble(DataAddr)^);
     stCurrency: UnicodeToFloat(P, WideChar(FDecimalSeperator), PCurrency(DataAddr)^);
-    stBigDecimal: if not TryUniToBCD(P, L, PBCD(DataAddr)^, '.') then goto jmpErr;
-    stDate: if not TryUniToDate(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.ShortDateFormat, PZDate(DataAddr)^) then goto jmpErr;
-    stTime: if not TryUniToTime(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongTimeFormat, PZTime(DataAddr)^) then goto jmpErr;
-    stTimestamp: if not TryUniToTimeStamp(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongDateFormat, PZTimeStamp(DataAddr)^) then goto jmpErr;
-    stGUID: ZSysUtils.ValidGUIDToBinary(P, @TGUIDDynArray(FData.pvDynArray.VArray)[Index].D1);
+    stBigDecimal: if not TryUniToBCD(P, L, PBCD(DataAddr)^, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.DecimalSeparator) then goto jmpErr;
+    {$IFDEF UNICODE}
+    stDate: if (FDataSet = nil) or not TZAbstractRODataset(FDataSet).FormatSettings.EditDateFormatSettings.TryStrToDate(PZDate(DataAddr)^, Value) then
+              if not TryUniToDate(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.ShortDateFormat, PZDate(DataAddr)^) then goto jmpErr;
+    stTime: if (FDataSet = nil) or not TZAbstractRODataset(FDataSet).FormatSettings.EditTimeFormatSettings.TryStringToTime(PZTime(DataAddr)^, Value, 9) then
+              if not TryUniToTime(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongTimeFormat, PZTime(DataAddr)^) then goto jmpErr;
+    stTimestamp: if (FDataSet = nil) or not TZAbstractRODataset(FDataSet).FormatSettings.EditTimestampFormatSettings.TryStrToTimestamp(PZTimestamp(DataAddr)^, Value, 9) then
+              if not TryUniToTimeStamp(P, L, {$IFDEF WITH_FORMATSETTINGS}FormatSettings{$ELSE}SysUtils{$ENDIF}.LongDateFormat, PZTimeStamp(DataAddr)^) then goto jmpErr;
+    {$ELSE !UNICODE}
+    stDate, stTime, stTimeStamp: SetAsRaw;
+    {$ENDIF UNICODE}
+    stGUID: if (L = 36) or (L = 38) then
+              ZSysUtils.ValidGUIDToBinary(P, @PGUID(DataAddr)^.D1)
+            else goto jmpErr;
     stString: SetAsRaw;
     stUnicodeString: UnicodeString(DataAddr^) := Value;
     stBytes: TBytes(DataAddr^) := BufferToBytes(P, L shl 1);
@@ -3730,74 +3750,124 @@ var vt: TVarType;
     SetAsZTimestamp(zTS);
   end;
   {$ENDIF}
-var SQLType: TZSQLType;
+var OldDynamicParamType: Boolean;
 begin
   CheckDataIndex(-1);
-  SQLType := FSQLType;
   vt := TVarData(Value).VType;
-  //WriteLn('case vt of');
-  case vt of
-    varEmpty, varNull: SetIsNull(True);
-    varSmallint:  SetAsSmallInt(TVarData(Value).VSmallInt);
-    varInteger:   SetAsInteger(TVarData(Value).VInteger);
-    varSingle:    SetAsSingle(TVarData(Value).VSingle);
-    varDouble:    SetAsDouble(TVarData(Value).VDouble);
-    varCurrency:  SetAsCurrency(TVarData(Value).VDouble);
-    varDate:      SetAsDateTime(TVarData(Value).VDate);
-    varOleStr:    SetAsUnicodeString(TVarData(Value).VOleStr);
-  //varDispatch = $0009; { vt_dispatch     9 }
-  //varError    = $000A; { vt_error       10 }
-    varBoolean:   SetAsBoolean(TVarData(Value).VBoolean);
-    varVariant:   SetAsVariant(PVariant(TVarData(Value).VAny)^);
-  //varUnknown  = $000D; { vt_unknown     13 }
-  //varDecimal  = $000E; { vt_decimal     14 } {UNSUPPORTED as of v6.x code base}
-  //varUndef0F  = $000F; { undefined      15 } {UNSUPPORTED per Microsoft}
-    varShortInt:  SetAsShortInt(TVarData(Value).VShortInt);
-    varByte:      SetAsByte(TVarData(Value).VByte);
-    varWord:      SetAsWord(TVarData(Value).VWord);
-    {$IF Declared(varUInt32)}
-    varUInt32:  SetAsCardinal(TVarData(Value).VUInt32);
-    {$ELSE}
-    varLongWord:  SetAsCardinal(TVarData(Value).VLongWord);
-    {$IFEND}
-    varInt64:     SetAsInt64(TVarData(Value).VInt64);
-    {$IF Declared(varUInt64) and not DEFINED(FPC)}
-    varUInt64:    SetAsUInt64(TVarData(Value).VUInt64);
-    {$IFEND}
-    {$IF Declared(varQWord) and DEFINED(FPC)}
-    varQWord:    SetAsUInt64(TVarData(Value).vqword);
-    {$IFEND}
-  //varRecord   = $0024; { VT_RECORD      36 }
-  {  if adding new items, update Variants' varLast, BaseTypeMap and OpTypeMap }
+  OldDynamicParamType := FDynamicParamType;
+  FDynamicParamType := FSQLType = stUnknown;  //mimic the RTL TParam behavior  or if the type is widened
+  try
+    //WriteLn('case vt of');
+    case vt of
+      varEmpty, varNull: SetIsNull(True);
+      varSmallint:  begin {if first assign was zero}
+                      FDynamicParamType := FDynamicParamType or ((Byte(FSQLType) >= Byte(stByte)) and (Byte(FSQLType) <= (Byte(stWord))));
+                      SetAsSmallInt(TVarData(Value).VSmallInt);
+                    end;
+      varInteger:   begin {if first assign was zero}
+                      FDynamicParamType := FDynamicParamType or ((Byte(FSQLType) >= Byte(stByte)) and (Byte(FSQLType) <= Byte(stLongWord)));
+                      SetAsInteger(TVarData(Value).VInteger);
+                    end;
+      varSingle:    begin {if first assign was zero}
+                      FDynamicParamType := FDynamicParamType or ((Byte(FSQLType) >= Byte(stByte)) and (Byte(FSQLType) <= Byte(stWord)));
+                      SetAsSingle(TVarData(Value).VSingle);
+                    end;
+      varDouble:    begin {if first assign was zero}
+                      FDynamicParamType := FDynamicParamType or ((Byte(FSQLType) >= Byte(stByte)) and (Byte(FSQLType) <= Byte(stWord)));
+                      SetAsDouble(TVarData(Value).VDouble);
+                    end;
+      varCurrency:  begin {if first assign was zero}
+                      FDynamicParamType := FDynamicParamType or ((Byte(FSQLType) >= Byte(stByte)) and (Byte(FSQLType) <= Byte(stWord)));
+                      SetAsCurrency(TVarData(Value).VCurrency);
+                    end;
+      varDate:      begin {if first assign was zero}
+                      FDynamicParamType := FDynamicParamType or ((Byte(FSQLType) >= Byte(stByte)) and (Byte(FSQLType) <= Byte(stWord)));
+                      SetAsDateTime(TVarData(Value).VDate);
+                    end;
+      varOleStr:    SetAsUnicodeString(TVarData(Value).VOleStr);
+    //varDispatch = $0009; { vt_dispatch     9 }
+    //varError    = $000A; { vt_error       10 }
+      varBoolean:   SetAsBoolean(TVarData(Value).VBoolean);
+      varVariant:   SetAsVariant(PVariant(TVarData(Value).VAny)^);
+    //varUnknown  = $000D; { vt_unknown     13 }
+    //varDecimal  = $000E; { vt_decimal     14 } {UNSUPPORTED as of v6.x code base}
+    //varUndef0F  = $000F; { undefined      15 } {UNSUPPORTED per Microsoft}
+      varShortInt:  SetAsShortInt(TVarData(Value).VShortInt);
+      varByte:      SetAsByte(TVarData(Value).VByte);
+      varWord:      SetAsWord(TVarData(Value).VWord);
+      {$IF Declared(varUInt32)}
+      varUInt32:    begin {if first assign was zero}
+                      FDynamicParamType := FDynamicParamType or ((Byte(FSQLType) >= Byte(stByte)) and (Byte(FSQLType) <= Byte(stInteger)));
+                      SetAsCardinal(TVarData(Value).VUInt32);
+                    end;
+      {$ELSE}
+      varLongWord:  begin {if first assign was a zero}
+                      FDynamicParamType := FDynamicParamType or ((Byte(FSQLType) >= Byte(stByte)) and (Byte(FSQLType) <= Byte(stInteger)));
+                      SetAsCardinal(TVarData(Value).VLongWord);
+                    end;
+      {$IFEND}
+      varInt64:     begin {if first assign was zero}
+                      FDynamicParamType := FDynamicParamType or ((Byte(FSQLType) >= Byte(stByte)) and (Byte(FSQLType) <= Byte(stLong)));
+                      SetAsInt64(TVarData(Value).VInt64);
+                    end;
+      {$IF Declared(varUInt64) and not DEFINED(FPC)}
+      varUInt64:    begin {if first assign is zero}
+                      FDynamicParamType := FDynamicParamType or ((Byte(FSQLType) >= Byte(stByte)) and (Byte(FSQLType) <= Byte(stLong)));
+                      SetAsUInt64(TVarData(Value).VUInt64);
+                    end;
+      {$IFEND}
+      {$IF Declared(varQWord) and DEFINED(FPC)}
+      varQWord:    begin {if first assign is zero}
+                      FDynamicParamType := FDynamicParamType or ((Byte(FSQLType) >= Byte(stByte)) and (Byte(FSQLType) <= Byte(stLong)));
+                      SetAsUInt64(TVarData(Value).vqword);
+                   end;
+      {$IFEND}
+    //varRecord   = $0024; { VT_RECORD      36 }
+    {  if adding new items, update Variants' varLast, BaseTypeMap and OpTypeMap }
 
-    //varStrArg   = $0048; { vt_clsid        72 }
-    //varObject   = $0049; {                 73 }
-    //varUStrArg  = $004A; {                 74 }
-    {$IFDEF LCL}
-    varString:  SetAsUTF8String(UTF8String(TVarData(Value).VString));
-    {$ELSE}
-      {$IFNDEF NO_ANSISTRING}
-    varString:  SetAsAnsiString(AnsiString(TVarData(Value).VString));
-      {$ENDIF NO_ANSISTRING}
-    {$ENDIF}
-    //varAny      = $0101; { Corba any      257 } {not OLE compatible }
-    {$IF declared(varUString)}
-    varUString: SetAsUnicodeString(UnicodeString(TVarData(Value).VAny));
-    {$IFEND}
-    (varArray or varByte): SetAsBytes(VarToBytes(Value));
-    // custom types range from $110 (272) to $7FF (2047)
-    else  if vt = VarFMTBcd then
-            AsBCD(Value)
-          else {$IFDEF WITH_TSQLTimeStamp}if vt = VarSQLTimeStamp then
-            AsTimeStamp(Value)
-          else {$ENDIF}{$IFDEF WITH_TSQLTimeStampOffset}
-          if vt = VarSQLTimeStampOffset then
-            AsTimeStampOffset(Value)
-          else {$ENDIF}raise EVariantError.Create(SUnsupportedVariantType);
+      //varStrArg   = $0048; { vt_clsid        72 }
+      //varObject   = $0049; {                 73 }
+      //varUStrArg  = $004A; {                 74 }
+      {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
+      varString:  begin
+                    FDynamicParamType := FSQLType = stUnknown;
+                    if DefaultSystemCodePage = zCP_UTF8
+                    then SetAsUTF8String(UTF8String(TVarData(Value).VString))
+                    else SetAsAnsiString(AnsiString(TVarData(Value).VString));
+                  end;
+      {$ELSE}
+        {$IFNDEF NO_ANSISTRING}
+      varString:  begin
+                    FDynamicParamType := FSQLType = stUnknown;
+                    {$IFDEF FPC}
+                    SetAsUTF8String(UTF8String(TVarData(Value).VString))
+                    {$ELSE}
+                    SetAsAnsiString(AnsiString(TVarData(Value).VString));
+                    {$ENDIF}
+                  end;
+        {$ENDIF NO_ANSISTRING}
+      {$IFEND}
+      //varAny      = $0101; { Corba any      257 } {not OLE compatible }
+      {$IF declared(varUString)}
+      varUString: begin
+                    FDynamicParamType := FSQLType = stUnknown;
+                    SetAsUnicodeString(UnicodeString(TVarData(Value).VAny));
+                  end;
+      {$IFEND}
+      (varArray or varByte): SetAsBytes(VarToBytes(Value));
+      // custom types range from $110 (272) to $7FF (2047)
+      else  if vt = VarFMTBcd then
+              AsBCD(Value)
+            else {$IFDEF WITH_TSQLTimeStamp}if vt = VarSQLTimeStamp then
+              AsTimeStamp(Value)
+            else {$ENDIF}{$IFDEF WITH_TSQLTimeStampOffset}
+            if vt = VarSQLTimeStampOffset then
+              AsTimeStampOffset(Value)
+            else {$ENDIF}raise EVariantError.Create(SUnsupportedVariantType);
+    end;
+  finally
+    FDynamicParamType := OldDynamicParamType;
   end;
- // WriteLn('SQLType <> FSQLType');
-  if SQLType <> FSQLType then //mimic the TParam behavior
-    SetSQLType(FSQLType);
 end;
 
 procedure TZParam.SetAsWideMemo(const Value: UnicodeString);
@@ -4130,9 +4200,10 @@ begin
     if FDynamicParamType then begin
       FDataType := Value;
       FSQLType := NewSQLType;
+      if FSQLDataType = stUnknown then
+        FSQLDataType := NewSQLType;
     end;
-    FDynamicParamType := Value <> ftUnknown;
-
+    //FDynamicParamType := Value <> ftUnknown;
   end;
 end;
 
