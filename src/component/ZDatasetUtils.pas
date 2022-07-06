@@ -1914,7 +1914,7 @@ jmpDataType:
               else begin //LoadFromStream fills a varArray of Byte
                   if not (VarIsArray(V) and (VarArrayDimCount(V) = 1) and
                      ((VarType and VarTypeMask) = varByte)) then
-                    raise EZSQLException.Create(SInvalidVarByteArray);
+                    raise EZDatabaseError.Create(SInvalidVarByteArray);
                   BlobData := Param.AsBlob;
                   P := Pointer(BlobData);
                   if p = nil then
