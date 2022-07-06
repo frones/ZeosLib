@@ -1608,7 +1608,6 @@ end;
 procedure ZTestCompInterbaseBugReport.TestDisconnect;
 var
   Query: TZQuery;
-  SecondConn: TZConnection;
   ConnectionID: Integer;
   HadException: Boolean;
 
