@@ -1205,12 +1205,12 @@ end;
 procedure TZRowAccessor.InternalSetPWideChar(BuffAddr: PPointer;
   Value: PWideChar; Len: Cardinal);
 begin
+  Len := Len shl 1; //get the number of bytes -> SizeOf(PWideChar) = 2
   if (BuffAddr^ <> nil) and (Len <> PCardinal(BuffAddr^)^) then begin
     FreeMem(BuffAddr^);
     BuffAddr^ := nil;
   end;
   if (Len > 0) and (Value <> nil) then begin
-    Len := Len shl 1;
     if BuffAddr^ = nil then
       GetMem(BuffAddr^, Len+SizeOf(Cardinal)+SizeOf(WideChar)); //including #0#0 terminator
     {$IFDEF FAST_MOVE}ZFastCode{$ELSE}System{$ENDIF}.Move(Value^, (PWideChar(BuffAddr^)+PWideInc)^, Len);
@@ -1960,17 +1960,20 @@ end;
 procedure TZRowAccessor.ClearBuffer(Buffer: PZRowBuffer; const WithFillChar: Boolean = True);
 var
   I: Integer;
+  TempP: PPointer;
 begin
   Buffer^.Index := -1;
   Buffer^.UpdateType := utUnmodified;
   Buffer^.BookmarkFlag := 0;
   {$R-}
   for I := 0 to FHighVarLenCols do
-    if (Buffer^.Columns[FColumnOffsets[FVarLenCols[i]]] = bIsNotNull) then
-      if PPointer(@Buffer^.Columns[FColumnOffsets[FVarLenCols[i]] +1])^ <> nil then begin
-        System.FreeMem(PPointer(@Buffer^.Columns[FColumnOffsets[FVarLenCols[i]] +1])^);
-        PPointer(@Buffer^.Columns[FColumnOffsets[FVarLenCols[i]] +1])^ := nil;
+    if (Buffer^.Columns[FColumnOffsets[FVarLenCols[i]]] = bIsNotNull) then begin
+      TempP := PPointer(@Buffer^.Columns[FColumnOffsets[FVarLenCols[i]] +1]);
+      if TempP^ <> nil then begin
+        System.FreeMem(TempP^);
+        TempP^ := nil;
       end;
+    end;
   for I := 0 to FHighLobCols do
     if (Buffer^.Columns[FColumnOffsets[FLobCols[I]]] = bIsNotNull) then
       PIZLob(@Buffer^.Columns[FColumnOffsets[FLobCols[I]] +1])^ := nil;
@@ -3948,7 +3951,7 @@ end;
 
   @param columnIndex the first column is 1, the second is 2, ...
 }
-procedure TZRowAccessor.SetNull(ColumnIndex: Integer);
+ procedure TZRowAccessor.SetNull(ColumnIndex: Integer);
 var Data: PPointer;
 begin
 {$IFNDEF DISABLE_CHECKING}

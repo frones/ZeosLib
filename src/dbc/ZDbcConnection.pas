@@ -1151,12 +1151,19 @@ end;
 
 procedure TZAbstractDbcConnection.SetOnConnectionLostErrorHandler(
   Handler: TOnConnectionLostError);
+var
+  OldAssigned: Boolean;
+  NewAssigned: Boolean;
 begin
-  if Assigned(FOnConnectionLostError) then
+  OldAssigned := Assigned(FOnConnectionLostError);
+  NewAssigned := Assigned(Handler);
+
+  if Not NewAssigned then // if the new handler is unassigned we always assign it.
     FOnConnectionLostError := Handler
-  else if Assigned(FOnConnectionLostError) and Assigned(Handler) then
-    raise EZSQLException.Create('Error handler registered already!')
-  else FOnConnectionLostError := Handler;
+  else if OldAssigned then // new handler and old handler are assigined
+    raise EZSQLException.Create('Connection lost eError handler registered already!')
+  else //new handler is assigned and old handler is not assigned.
+    FOnConnectionLostError := Handler;
 end;
 
 procedure TZAbstractDbcConnection.RegisterStatement(

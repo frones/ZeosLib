@@ -177,6 +177,7 @@ var
   PropertiesList: TStringList;
   CryptPwdDB: UTF8String;
   CryptPwdUser: UTF8String;
+  pwdStart: String;
 begin
   Result := False;
 
@@ -208,11 +209,16 @@ begin
   Conn.Close;
   Conn := nil;
 
-  CryptPwdUser := crypt_md5(Password, CryptPwdDB);
+
+  pwdStart := Copy(CryptPwdDB, 1, 3);
+  if pwdStart = '$1$' then //cryptmd5
+    CryptPwdUser := crypt_md5(Password, CryptPwdDB)
+  else if pwdStart = 'md5' then //md5 by PpostgreSQL
+    CryptPwdUser := crypt_md5pg(Password, UserName)
+  else
+    CryptPwdUser := '$$$$$$$$$$'; // $-Signs shouldn't make up a valid crypted password.
   Result := CryptPwdDB = CryptPwdUser;
 
-  if not Result then
-    raise EZSQLException.Create('Could not validate username / password.');
   if FReplacementUser <> '' then begin
     UserName := FReplacementUser;
     Password := FReplacementPassword;
