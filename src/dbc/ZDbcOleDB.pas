@@ -891,7 +891,7 @@ begin
     if DriverManager.HasLoggingListener then
       LogError(LoggingCategory, ErrorCode, Sender, LogMessage, FLogMessage);
     if IsError(Status) then
-      if (SQLState = '08S01') and (GetServerProvider = spMSSQL)
+      if (SQLState = '08S01') {and (GetServerProvider = spMSSQL)} // do not limit this to MS SQL Server. The SqlState should be standardized. All drivers should use this code.
       then ExeptionClass := EZSQLConnectionLost
       else ExeptionClass := EZSQLException
     else ExeptionClass := EZSQLWarning;
@@ -1006,7 +1006,8 @@ procedure TZOleDBConnection.ReleaseImmediat(
 begin
   FpulTransactionLevel := 0;
   fTransaction := nil;
-  FMalloc := nil;
+  //Do not feee fMaclloc because it is a regular local OLE ressource.
+  //FMalloc := nil;
   FDBInitialize := nil;
   FDBCreateCommand := nil;
   inherited ReleaseImmediat(Sender, AError);
