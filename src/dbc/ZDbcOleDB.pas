@@ -891,7 +891,7 @@ begin
     if DriverManager.HasLoggingListener then
       LogError(LoggingCategory, ErrorCode, Sender, LogMessage, FLogMessage);
     if IsError(Status) then
-      if (SQLState = '08S01') or (SQLState = '80S02'){and (GetServerProvider = spMSSQL)} // do not limit this to MS SQL Server. The SqlState should be standardized. All drivers should use this code.
+      if (SQLState = '08S01') or (SQLState = '08S02'){and (GetServerProvider = spMSSQL)} // do not limit this to MS SQL Server. The SqlState should be standardized. All drivers should use this code.
       then ExeptionClass := EZSQLConnectionLost
       else ExeptionClass := EZSQLException
     else ExeptionClass := EZSQLWarning;
