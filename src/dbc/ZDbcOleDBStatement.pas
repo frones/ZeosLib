@@ -544,10 +544,12 @@ procedure TZAbstractOleDBStatement.ClearCallResultCache;
 var I: Integer;
   RS: IZResultSet;
 begin
-  for I := 0 to FCallResultCache.Count -1 do
-    if Supports(FCallResultCache[i], IZResultSet, RS) then
-      RS.Close;
-  FreeAndNil(FCallResultCache);
+  if Assigned(FCallResultCache) then begin
+    for I := 0 to FCallResultCache.Count -1 do
+      if Supports(FCallResultCache[i], IZResultSet, RS) then
+        RS.Close;
+    FreeAndNil(FCallResultCache);
+  end;
 end;
 
 constructor TZAbstractOleDBStatement.Create(const Connection: IZConnection;
