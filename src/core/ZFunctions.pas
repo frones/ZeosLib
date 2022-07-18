@@ -356,7 +356,7 @@ function TZKeyAndFunctionPairList.Get(Index: NativeInt): PZKeyAndFunctionPair;
 begin
   {$IFNDEF DISABLE_CHECKING}
   if NativeUInt(Index) > Capacity then
-    Error(@SListIndexError, Index);
+    Error(SListIndexError, Index);
   {$ENDIF DISABLE_CHECKING}
   Result := Pointer(NativeUInt(FElements)+(NativeUInt(Index)*ElementSize));
 end;
