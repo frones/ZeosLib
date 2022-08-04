@@ -751,7 +751,9 @@ end;
 
 procedure TZInterbase6Connection.ReleaseImmediat(
   const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
-var ImmediatelyReleasable: IImmediatelyReleasable;
+var
+  ImmediatelyReleasable: IImmediatelyReleasable;
+  OldCount: Integer;
 begin
   FHandle := 0;
   if (fActiveTransaction <> nil) and
@@ -760,8 +762,12 @@ begin
       ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
   while fTransactions.Count > 0 do begin
     fTransactions[0].QueryInterface(IImmediatelyReleasable, ImmediatelyReleasable);
-    if ImmediatelyReleasable <> Sender then
+    if ImmediatelyReleasable <> Sender then begin
+      OldCount := fTransactions.Count;
       ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+      if fTransactions.Count = OldCount then
+        fTransactions.Delete(0);
+    end;
   end;
   inherited ReleaseImmediat(Sender, AError);
 end;
