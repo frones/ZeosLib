@@ -28,7 +28,8 @@ package ZCore;
 
 requires
   rtl,
-  dbrtl;
+  dbrtl,
+  soaprtl;
 
 contains
   ZExceptions in '..\..\src\core\ZExceptions.pas',
