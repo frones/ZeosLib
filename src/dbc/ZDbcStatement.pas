@@ -2534,7 +2534,7 @@ end;
 function TZBindList.Get(Index: NativeInt): PZBindValue;
 begin
   {$IFNDEF DISABLE_CHECKING}
-  if NativeUInt(Index) > FCount then
+  if NativeUInt(Index) > Count then
     Error(SListIndexError, Index);
   {$ENDIF DISABLE_CHECKING}
   Result := Pointer(NativeUInt(FElements)+(NativeUInt(Index)*ElementSize));
@@ -6360,8 +6360,8 @@ end;
 function TZQuestionMarkBindList.Get(Index: NativeInt): PZQMarkPosBindValue;
 begin
   {$IFNDEF DISABLE_CHECKING}
-  if NativeUInt(Index) > FCapacity then
-    Error(@SListIndexError, Index);
+  if NativeUInt(Index) > Capacity then
+    Error(SListIndexError, Index);
   {$ENDIF DISABLE_CHECKING}
   Result := Pointer(NativeUInt(FElements)+(NativeUInt(Index)*ElementSize));
 end;

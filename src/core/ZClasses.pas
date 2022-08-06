@@ -2723,7 +2723,7 @@ var P, P2: Pointer;
 begin
   {$IFNDEF DISABLE_CHECKING}
   if NativeUInt(Index) >= FCount then
-    Error(@SListIndexError, Index);
+    Error(SListIndexError, Index);
   {$ENDIF DISABLE_CHECKING}
   P := Pointer(NativeUInt(FElements)+(NativeUInt(Index)*FElementSize));
   Dec(FCount);
@@ -2779,7 +2779,7 @@ function TZCustomElementList.Get(Index: NativeInt): Pointer;
 begin
   {$IFNDEF DISABLE_CHECKING}
   if NativeUInt(Index) > FCount then
-    Error(@SListIndexError, Index);
+    Error(SListIndexError, Index);
   {$ENDIF DISABLE_CHECKING}
   Result := Pointer(NativeUInt(FElements)+(NativeUInt(Index)*FElementSize));
 end;
