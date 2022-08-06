@@ -33,10 +33,6 @@ requires
   rtl,
   dbrtl;
 
-requires
-  rtl,
-  dbrtl;
-
 contains
   ZBase64 in '..\..\src\core\ZBase64.pas',
   ZClasses in '..\..\src\core\ZClasses.pas',
