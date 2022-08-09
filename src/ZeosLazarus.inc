@@ -152,7 +152,8 @@
                 {$DEFINE WITH_CODEPAGE_AWARE_FIELD}
                 {$DEFINE TBLOBDATA_IS_TBYTES} //TBlobData is an alias for TBytes instead of AnsiString
                 {$DEFINE WITH_TSTRINGS_TENCODING_LOADFROM}           // TStrings.LoadFromFile/LoadFromStream have TEncoding
-		{$DEFINE WITH_NETENCODING}
+		// {$DEFINE WITH_NETENCODING} // removed because Debian 11
+		// doesn't have the system.netencoding units
                 {$IF FPC_FULLVERSION>=30203}
                   {$DEFINE WITH_FTLONGWORD}                 // ftLongWord is supported
                   {$DEFINE WITH_FTSHORTINT}                 // ftShortInt is supported
