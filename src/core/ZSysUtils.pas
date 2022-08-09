@@ -2960,7 +2960,7 @@ begin
     Ord('t'): if Pend-Buf = 1 then
                 Result := True
               else Result := (Pend-Buf = 4) and (Ord((Buf+1)^) or $20 = Ord('r')) and
-                (Ord((Buf+1)^) or $20 = Ord('u')) and (Ord((Buf+1)^) or $20 = Ord('e'));
+                (Ord((Buf+2)^) or $20 = Ord('u')) and (Ord((Buf+3)^) or $20 = Ord('e'));
     else begin
       P := PEnd;
       Result := CheckInt and (ValRawInt(Buf, P) <> 0) and (P = PEnd);
