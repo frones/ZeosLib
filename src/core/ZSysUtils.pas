@@ -2953,7 +2953,7 @@ begin
     Ord('y'): if (Pend-Buf) = 1 then
                 Result := True
               else if (Pend-Buf) = 3 then
-                Result := (Ord((Buf+1)^) or $20 = Ord('e')) and (Ord((Buf+1)^) or $20 = Ord('s'));
+                Result := (Ord((Buf+1)^) or $20 = Ord('e')) and (Ord((Buf+2)^) or $20 = Ord('s'));
     { test lowercase "ON" }
     Ord('o'): Result := (Pend-Buf = 2) and (Ord((Buf+1)^) or $20 = Ord('n'));
     { test lowercase "TRUE" / "T"}
@@ -3036,14 +3036,14 @@ begin
     Ord('y'): if (Pend-Buf) = 1 then
                 Result := True
               else if (Pend-Buf) = 3 then
-                Result := (Ord((Buf+1)^) or $20 = Ord('e')) and (Ord((Buf+1)^) or $20 = Ord('s'));
+                Result := (Ord((Buf+1)^) or $20 = Ord('e')) and (Ord((Buf+2)^) or $20 = Ord('s'));
     { test lowercase "ON" }
     Ord('o'): Result := (Pend-Buf = 2) and (Ord((Buf+1)^) or $20 = Ord('n'));
     { test lowercase "TRUE" / "T"}
     Ord('t'): if Pend-Buf = 1 then
                 Result := True
               else Result := (Pend-Buf = 4) and (Ord((Buf+1)^) or $20 = Ord('r')) and
-                (Ord((Buf+1)^) or $20 = Ord('u')) and (Ord((Buf+1)^) or $20 = Ord('e'));
+                (Ord((Buf+2)^) or $20 = Ord('u')) and (Ord((Buf+3)^) or $20 = Ord('e'));
     else begin
       P := PEnd;
       Result := CheckInt and (ValUnicodeInt(Buf, P) <> 0) and (P = PEnd);
