@@ -63,8 +63,6 @@ function XMLEncode(Input: String): String;
 
 implementation
 
-{$I ZDbc.inc}
-
 {$IFDEF ENABLE_PROXY} //if set we have an empty unit
 
 uses SysUtils, ZExceptions;

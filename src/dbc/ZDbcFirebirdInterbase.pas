@@ -2871,8 +2871,10 @@ begin
     then Len := CharOctedLength
     else Len := ZDbcUtils.GetAbsorbedTrailingSpacesLen(Result, CharOctedLength);
   end else begin
-    Result := @PISC_VARYING(sqldata).str[0];
     Len := PISC_VARYING(sqldata).strlen;
+    if Len = 0 
+    then Result := nil // in case of empty string data contains previous value, don't return it
+    else Result := @PISC_VARYING(sqldata).str[0];
   end;
 end;
 

@@ -2396,7 +2396,7 @@ var
         Result.UpdateString(CatalogNameIndex, Catalog);
         //Result.UpdateNull(SchemaNameIndex);
         Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(ColumnIndexes[1], Len), Len);
-        Result.UpdateString(IndexInfoColNonUniqueIndex, LowerCase(BoolStrs[GetInt(ColumnIndexes[2]) = 0]));
+        Result.UpdateBoolean(IndexInfoColNonUniqueIndex, (GetInt(ColumnIndexes[2]) = 1));
         //Result.UpdateNull(IndexInfoColIndexQualifierIndex);
         Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, GetPAnsiChar(ColumnIndexes[3], Len), Len);
         Result.UpdateByte(IndexInfoColTypeIndex, Ord(tiOther));
