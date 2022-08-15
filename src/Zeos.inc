@@ -88,7 +88,7 @@
 {$DEFINE ENGLISH} //see \core\ZMessages.pas
 
 // enables a fake AutoEncodeStrings property for backwards compatibility with Zeos 7.2
-{$DEFINE WITH_FAKE_AUTOENCODESTRINGS}
+{.$DEFINE WITH_FAKE_AUTOENCODESTRINGS}
 
 // If defined, changing the .SQL property of an active TZAbstractRODataSet descendant will raise an exception instead of silently closing it
 {.$DEFINE ACTIVE_DATASET_SQL_CHANGE_EXCEPTION}
