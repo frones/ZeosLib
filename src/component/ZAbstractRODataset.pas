@@ -2530,7 +2530,7 @@ begin
   RowBuffer := nil;
   case State of
     dsBrowse,dsBlockRead:
-        if not IsEmpty {and not (GetRecordCount = 0)} then begin
+        if not IsEmpty then begin
           RowBuffer := PZRowBuffer(ActiveBuffer);
           if RowBuffer.Index <> FResultSet.GetRow then
             FResultSet.MoveAbsolute(RowBuffer.Index);
