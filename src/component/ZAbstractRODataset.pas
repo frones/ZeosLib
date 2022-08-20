@@ -2530,7 +2530,7 @@ begin
   RowBuffer := nil;
   case State of
     dsBrowse,dsBlockRead:
-        if not IsEmpty then begin
+        if not IsEmpty {and not (GetRecordCount = 0)} then begin
           RowBuffer := PZRowBuffer(ActiveBuffer);
           if RowBuffer.Index <> FResultSet.GetRow then
             FResultSet.MoveAbsolute(RowBuffer.Index);
@@ -4669,6 +4669,11 @@ begin
       finally
         FRefreshInProgress := False;
       end;
+
+      //Make sure that IsEmpty works in case we have an empty resultset.
+      //See https://zeoslib.sourceforge.io/viewtopic.php?f=50&t=166551
+      if GetRecordCount = 0 then
+        ClearBuffers;
 
       DoBeforeScroll;
       if KeyFields <> '' then
