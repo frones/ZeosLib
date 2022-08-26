@@ -1327,7 +1327,7 @@ begin
     {$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}
     Data := Pointer(PAnsiChar(P)+1);
     if ResultSet.IsNull(ResultSetIndex) then
-      SetNull(ColumnIndex) //clear old value
+      SetNull(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) //clear old value
     else begin
       PByte(P)^ := bIsNotNull;
       case SQLType of
@@ -1370,7 +1370,7 @@ begin
         else ; //hide fpc warnig
       end;
       if ResultSet.WasNull then //if conversion failed?
-        SetNull(ColumnIndex)
+        SetNull(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
     end;
   end;
 end;
