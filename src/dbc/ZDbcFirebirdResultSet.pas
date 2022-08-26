@@ -907,9 +907,16 @@ begin
     Assert(FLobIsOpen);
     try
       FBlob.cancel(FStatus);
-      if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-        FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.cancel', Self);
+      try
+        if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+          FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.cancel', Self)
+        else // cancel() releases intf on success
+          FBlob:= nil; 
       FOwnerLob.FFBConnection.GetActiveTransaction.DeRegisterOpenUnCachedLob(FOwnerLob);
+      finally
+        if Assigned(FBlob) then
+          FBlob.release;
+      end;
     finally
       FLobIsOpen := False;
       Updated := False;
@@ -927,9 +934,12 @@ begin
   FBlob.close(FStatus);
   try
     if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
-      FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.close', Self);
+      FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.close', Self)
+    else // close() releases intf on success
+      FBlob:= nil;
   finally
-    FBlob.release;
+    if Assigned(FBlob) then
+      FBlob.release;
   end;
   FLobIsOpen := False;
   FPosition := 0;

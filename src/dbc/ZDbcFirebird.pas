@@ -540,8 +540,16 @@ begin
   inherited InternalClose;
   if FAttachment <> nil then begin
     FAttachment.detach(FStatus);
-    FAttachment.release;
-    FAttachment := nil;
+    try
+      if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+        HandleErrorOrWarning(lcFetch, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.detach', Self)
+      else // detach releases intf on success
+        FAttachment:= nil;
+    finally
+      if Assigned(FAttachment) then
+        FAttachment.release;
+      FAttachment := nil;
+    end;
   end;
   if FProvider <> nil then begin
     FProvider.release;
@@ -834,6 +842,12 @@ end;
 
 procedure TZFirebirdTransaction.Commit;
 var S: RawByteString;
+  procedure _HandleErrorOrWarning(var AStatus: IStatus);
+  begin
+    if ((AStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+      FOwner.HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(AStatus.getErrors),
+        sCommitMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
+  end;
 begin
   with TZFirebirdConnection(FOwner) do
   if fSavepoints.Count > 0 then begin
@@ -846,17 +860,16 @@ begin
       ((FOpenUncachedLobs.Count = 0) and TestCachedResultsAndForceFetchAll)
     then begin
       FTransaction.commit(FStatus);
+      _HandleErrorOrWarning(FStatus);
       {$IFDEF ZEOSDEBUG}Assert({$ENDIF}FTransaction.Release{$IFDEF ZEOSDEBUG} = 0){$ENDIF};
       FTransaction := nil;
     end else begin
       fDoCommit := True;
       fDoLog := False;
       FTransaction.commitRetaining(FStatus);
+      _HandleErrorOrWarning(FStatus);
       ReleaseTransaction(IZTransaction(FWeakIZTransactionPtr));
     end;
-    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
-      HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(FStatus.getErrors),
-        sCommitMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
   finally
     if fDoLog and (ZDbcIntfs.DriverManager <> nil) and
        ZDbcIntfs.DriverManager.HasLoggingListener then //don't use the local DriverManager of ZDbcConnection

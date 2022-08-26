@@ -596,13 +596,16 @@ begin
   end;
   if FFBStatement <> nil then begin
     FFBStatement.free(FStatus);
-    if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-      FFBConnection.HandleErrorOrWarning(lcUnprepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self)
-    else // free() releases intf on success
-      FFBStatement:= nil;
-    if Assigned(FFBStatement) then
-      FFBStatement.release;
-    FFBStatement := nil;
+    try
+      if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+        FFBConnection.HandleErrorOrWarning(lcUnprepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self)
+      else // free() releases intf on success
+        FFBStatement:= nil;
+    finally
+      if Assigned(FFBStatement) then
+        FFBStatement.release;
+      FFBStatement := nil;
+    end;
   end;
 end;
 
@@ -640,9 +643,12 @@ begin
     Blob.close(FStatus);
     try
       if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-        FFBConnection.HandleErrorOrWarning(lcBindPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.close', Self);
+        FFBConnection.HandleErrorOrWarning(lcBindPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.close', Self)
+      else // close releases intf on success
+        Blob:= nil;
     finally
-      Blob.release;
+      if Assigned(Blob) then
+        Blob.release;
     end;
     sqlind^ := ISC_NOTNULL;
   end;
