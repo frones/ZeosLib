@@ -209,6 +209,7 @@ type
     FStatus: IStatus;
     FUtil: IUtil;
     FPlainDriver: TZFirebirdPlainDriver;
+    FReleasingSender: IImmediatelyReleasable;
   protected
     /// <summary>Closes the connection internaly and frees all server resources</summary>
     procedure InternalClose; override;
@@ -221,6 +222,19 @@ type
   public
     procedure AfterConstruction; override;
     Destructor Destroy; override;
+  public
+    /// <summary>Releases all driver handles and set the object in a closed
+    ///  Zombi mode waiting for destruction. Each known supplementary object,
+    ///  supporting this interface, gets called too. This may be a recursive
+    ///  call from parant to childs or vice vera. So finally all resources
+    ///  to the servers are released. This method is triggered by a connecton
+    ///  loss. Don't use it by hand except you know what you are doing.</summary>
+    /// <param>"Sender" the object that did notice the connection lost.</param>
+    /// <param>"AError" a reference to an EZSQLConnectionLost error.
+    ///  You may free and nil the error object so no Error is thrown by the
+    ///  generating method. So we start from the premisse you have your own
+    ///  error handling in any kind.</param>
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
   public { IZFirebirdConnection }
     /// <summary>Get the active IZFirebirdTransaction com interface.</summary>
     /// <returns>The IZFirebirdTransaction com interface.</returns>
@@ -817,6 +831,27 @@ begin
   {if Self.FHostVersion >= 4000000
   then Result := TZFirebird4upPreparedStatement.Create(Self, SQL, Params)
   else }Result := TZFirebirdPreparedStatement.Create(Self, SQL, Params);
+end;
+
+procedure TZFirebirdConnection.ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+var
+  LPrevReleasingSender: IImmediatelyReleasable;
+begin
+  if FReleasingSender = Sender then begin
+    // prevent recursion from registered statements
+    Exit;
+  end;
+  LPrevReleasingSender:= FReleasingSender;
+  FReleasingSender:= Sender;
+  try
+    inherited;
+  finally
+    if Assigned(FAttachment) then begin
+      FAttachment.release;
+      FAttachment:= nil;
+    end;
+    FReleasingSender:= LPrevReleasingSender;
+  end;
 end;
 
 var

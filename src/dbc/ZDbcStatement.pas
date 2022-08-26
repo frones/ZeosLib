@@ -1677,6 +1677,8 @@ begin
     if Assigned(Connection) and Supports(Connection, IImmediatelyReleasable, ImmediatelyReleasable) and
        (ImmediatelyReleasable <> Sender) then
       ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+    if FConnection <> nil then
+      FConnection.DeregisterStatement(Self);
   end;
 end;
 

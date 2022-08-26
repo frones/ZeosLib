@@ -114,6 +114,20 @@ type
     /// <summary>Destroys this object and frees allocated recources</summary>
     Destructor Destroy; override;
   public
+    /// <summary>Releases all driver handles and set the object in a closed
+    ///  Zombi mode waiting for destruction. Each known supplementary object,
+    ///  supporting this interface, gets called too. This may be a recursive
+    ///  call from parant to childs or vice vera. So finally all resources
+    ///  to the servers are released. This method is triggered by a connecton
+    ///  loss. Don't use it by hand except you know what you are doing.</summary>
+    /// <param>"Sender" the object that did notice the connection lost.</param>
+    /// <param>"AError" a reference to an EZSQLConnectionLost error.
+    ///  You may free and nil the error object so no Error is thrown by the
+    ///  generating method. So we start from the premisse you have your own
+    ///  error handling in any kind.</param>
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable;
+      var AError: EZSQLConnectionLost); override;
+  public
     /// <summary>prepares the statement on the server, allocates all bindings
     ///  and handles</summary>
     procedure Prepare; override;
@@ -240,7 +254,8 @@ end;
 destructor TZAbstractFirebirdStatement.Destroy;
 begin
   inherited Destroy;
-  FAttachment.release;
+  if Assigned(FAttachment) then
+    FAttachment.release;
 end;
 
 procedure TZAbstractFirebirdStatement.ExecuteInternal;
@@ -581,6 +596,27 @@ begin
   finally
     MessageMetadata.release;
   end;
+end;
+
+procedure TZAbstractFirebirdStatement.ReleaseImmediat(const Sender: IImmediatelyReleasable;
+  var AError: EZSQLConnectionLost);
+var
+  ImmediatelyReleasable: IImmediatelyReleasable;
+begin
+  if Assigned(FResultSet) then begin
+    FResultSet.release;
+    FResultSet:= nil;
+  end;
+  if Assigned(FFBStatement) then begin
+    FFBStatement.release;
+    FFBStatement:= nil;
+  end;
+  FFBTransaction:= nil;
+  if Assigned(FAttachment) then begin
+    FAttachment.release;
+    FAttachment:= nil;
+  end;
+  inherited;
 end;
 
 procedure TZAbstractFirebirdStatement.Unprepare;
