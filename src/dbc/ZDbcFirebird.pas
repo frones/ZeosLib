@@ -209,6 +209,7 @@ type
     FStatus: IStatus;
     FUtil: IUtil;
     FPlainDriver: TZFirebirdPlainDriver;
+    FReleasingSender: IImmediatelyReleasable;
   protected
     /// <summary>Closes the connection internaly and frees all server resources</summary>
     procedure InternalClose; override;
@@ -221,6 +222,19 @@ type
   public
     procedure AfterConstruction; override;
     Destructor Destroy; override;
+  public
+    /// <summary>Releases all driver handles and set the object in a closed
+    ///  Zombi mode waiting for destruction. Each known supplementary object,
+    ///  supporting this interface, gets called too. This may be a recursive
+    ///  call from parant to childs or vice vera. So finally all resources
+    ///  to the servers are released. This method is triggered by a connecton
+    ///  loss. Don't use it by hand except you know what you are doing.</summary>
+    /// <param>"Sender" the object that did notice the connection lost.</param>
+    /// <param>"AError" a reference to an EZSQLConnectionLost error.
+    ///  You may free and nil the error object so no Error is thrown by the
+    ///  generating method. So we start from the premisse you have your own
+    ///  error handling in any kind.</param>
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
   public { IZFirebirdConnection }
     /// <summary>Get the active IZFirebirdTransaction com interface.</summary>
     /// <returns>The IZFirebirdTransaction com interface.</returns>
@@ -540,8 +554,16 @@ begin
   inherited InternalClose;
   if FAttachment <> nil then begin
     FAttachment.detach(FStatus);
-    FAttachment.release;
-    FAttachment := nil;
+    try
+      if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+        HandleErrorOrWarning(lcFetch, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.detach', Self)
+      else // detach releases intf on success
+        FAttachment:= nil;
+    finally
+      if Assigned(FAttachment) then
+        FAttachment.release;
+      FAttachment := nil;
+    end;
   end;
   if FProvider <> nil then begin
     FProvider.release;
@@ -811,6 +833,27 @@ begin
   else }Result := TZFirebirdPreparedStatement.Create(Self, SQL, Params);
 end;
 
+procedure TZFirebirdConnection.ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+var
+  LPrevReleasingSender: IImmediatelyReleasable;
+begin
+  if FReleasingSender = Sender then begin
+    // prevent recursion from registered statements
+    Exit;
+  end;
+  LPrevReleasingSender:= FReleasingSender;
+  FReleasingSender:= Sender;
+  try
+    inherited;
+  finally
+    if Assigned(FAttachment) then begin
+      FAttachment.release;
+      FAttachment:= nil;
+    end;
+    FReleasingSender:= LPrevReleasingSender;
+  end;
+end;
+
 var
   FireBirdDriver: IZDriver;
 
@@ -834,6 +877,12 @@ end;
 
 procedure TZFirebirdTransaction.Commit;
 var S: RawByteString;
+  procedure _HandleErrorOrWarning(var AStatus: IStatus);
+  begin
+    if ((AStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+      FOwner.HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(AStatus.getErrors),
+        sCommitMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
+  end;
 begin
   with TZFirebirdConnection(FOwner) do
   if fSavepoints.Count > 0 then begin
@@ -846,17 +895,16 @@ begin
       ((FOpenUncachedLobs.Count = 0) and TestCachedResultsAndForceFetchAll)
     then begin
       FTransaction.commit(FStatus);
+      _HandleErrorOrWarning(FStatus);
       {$IFDEF ZEOSDEBUG}Assert({$ENDIF}FTransaction.Release{$IFDEF ZEOSDEBUG} = 0){$ENDIF};
       FTransaction := nil;
     end else begin
       fDoCommit := True;
       fDoLog := False;
       FTransaction.commitRetaining(FStatus);
+      _HandleErrorOrWarning(FStatus);
       ReleaseTransaction(IZTransaction(FWeakIZTransactionPtr));
     end;
-    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
-      HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(FStatus.getErrors),
-        sCommitMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
   finally
     if fDoLog and (ZDbcIntfs.DriverManager <> nil) and
        ZDbcIntfs.DriverManager.HasLoggingListener then //don't use the local DriverManager of ZDbcConnection

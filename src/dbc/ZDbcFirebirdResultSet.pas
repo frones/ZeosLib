@@ -89,6 +89,19 @@ type
     function GetConnection: IZFirebirdConnection;
     function GetTransaction: IZFirebirdTransaction;
   public
+    /// <summary>Releases all driver handles and set the object in a closed
+    ///  Zombi mode waiting for destruction. Each known supplementary object,
+    ///  supporting this interface, gets called too. This may be a recursive
+    ///  call from parant to childs or vice vera. So finally all resources
+    ///  to the servers are released. This method is triggered by a connecton
+    ///  loss. Don't use it by hand except you know what you are doing.</summary>
+    /// <param>"Sender" the object that did notice the connection lost.</param>
+    /// <param>"AError" a reference to an EZSQLConnectionLost error.
+    ///  You may free and nil the error object so no Error is thrown by the
+    ///  generating method. So we start from the premisse you have your own
+    ///  error handling in any kind.</param>
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
+  public
     procedure RegisterCursor;
   public
     Constructor Create(const Statement: IZStatement; const SQL: String;
@@ -530,6 +543,22 @@ begin
   Open;
 end;
 
+procedure TZAbstractFirebirdResultSet.ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);
+var
+  ImmediatelyReleasable: IImmediatelyReleasable;
+begin
+  try
+    inherited;
+  finally
+    if Assigned(FFBTransaction) then begin
+      if Supports(FFBTransaction, IImmediatelyReleasable, ImmediatelyReleasable) and (ImmediatelyReleasable <> Sender) then
+        ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+      DeRegisterCursor;
+      FFBTransaction:= nil;
+    end;
+  end;
+end;
+
 procedure TZAbstractFirebirdResultSet.DeRegisterCursor;
 begin
   FFBTransaction.DeRegisterOpencursor(IZResultSet(TransactionResultSet));
@@ -907,9 +936,16 @@ begin
     Assert(FLobIsOpen);
     try
       FBlob.cancel(FStatus);
-      if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
-        FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.cancel', Self);
+      try
+        if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+          FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.cancel', Self)
+        else // cancel() releases intf on success
+          FBlob:= nil; 
       FOwnerLob.FFBConnection.GetActiveTransaction.DeRegisterOpenUnCachedLob(FOwnerLob);
+      finally
+        if Assigned(FBlob) then
+          FBlob.release;
+      end;
     finally
       FLobIsOpen := False;
       Updated := False;
@@ -927,9 +963,12 @@ begin
   FBlob.close(FStatus);
   try
     if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
-      FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.close', Self);
+      FOwnerLob.FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.close', Self)
+    else // close() releases intf on success
+      FBlob:= nil;
   finally
-    FBlob.release;
+    if Assigned(FBlob) then
+      FBlob.release;
   end;
   FLobIsOpen := False;
   FPosition := 0;

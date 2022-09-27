@@ -331,6 +331,19 @@ type
     /// <returns>The transaction object</returns>
     function GetConnectionTransaction: IZTransaction;
   public
+    /// <summary>Releases all driver handles and set the object in a closed
+    ///  Zombi mode waiting for destruction. Each known supplementary object,
+    ///  supporting this interface, gets called too. This may be a recursive
+    ///  call from parant to childs or vice vera. So finally all resources
+    ///  to the servers are released. This method is triggered by a connecton
+    ///  loss. Don't use it by hand except you know what you are doing.</summary>
+    /// <param>"Sender" the object that did notice the connection lost.</param>
+    /// <param>"AError" a reference to an EZSQLConnectionLost error.
+    ///  You may free and nil the error object so no Error is thrown by the
+    ///  generating method. So we start from the premisse you have your own
+    ///  error handling in any kind.</param>
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
+  public
     /// <summary>Returns the first warning reported by calls on this Connection.</summary>
     /// <remarks>Subsequent warnings will be chained to this EZSQLWarning.</remarks>
     /// <returns>the first SQLWarning or nil.</returns>
@@ -609,6 +622,19 @@ type
     TransactionResultSet: Pointer;
     procedure AfterClose; override;
     constructor Create(const Statement: IZStatement; const SQL: string);
+  public
+    /// <summary>Releases all driver handles and set the object in a closed
+    ///  Zombi mode waiting for destruction. Each known supplementary object,
+    ///  supporting this interface, gets called too. This may be a recursive
+    ///  call from parant to childs or vice vera. So finally all resources
+    ///  to the servers are released. This method is triggered by a connecton
+    ///  loss. Don't use it by hand except you know what you are doing.</summary>
+    /// <param>"Sender" the object that did notice the connection lost.</param>
+    /// <param>"AError" a reference to an EZSQLConnectionLost error.
+    ///  You may free and nil the error object so no Error is thrown by the
+    ///  generating method. So we start from the premisse you have your own
+    ///  error handling in any kind.</param>
+    procedure ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost); override;
   public
     /// <summary>Indicates if the value of the designated column in the current
     ///  row of this <c>ResultSet</c> object is Null.</summary>
@@ -2167,6 +2193,24 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
+procedure TZInterbaseFirebirdConnection.ReleaseImmediat(const Sender: IImmediatelyReleasable;
+  var AError: EZSQLConnectionLost);
+var I: Integer;
+  ImmediatelyReleasable: IImmediatelyReleasable;
+begin
+  try
+    inherited;
+  finally
+    if (fActiveTransaction <> nil) and Supports(fActiveTransaction, IImmediatelyReleasable, ImmediatelyReleasable)
+    and (ImmediatelyReleasable <> Sender) then
+      ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+    for I:= fTransactions.Count - 1 downto 0 do
+      if Supports(IZTransaction(fTransactions[I]), IImmediatelyReleasable, ImmediatelyReleasable)
+      and (Sender <> ImmediatelyReleasable) then
+        ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+  end;
+end;
+
 procedure TZInterbaseFirebirdConnection.ReleaseTransaction(
   const Value: IZTransaction);
 var idx: Integer;
@@ -2897,6 +2941,16 @@ procedure TZAbstractInterbaseFirebirdResultSet.AfterClose;
 begin
   FreeAndNil(FGUIDProps);
   inherited AfterClose;
+end;
+
+procedure TZAbstractInterbaseFirebirdResultSet.ReleaseImmediat(const Sender: IImmediatelyReleasable; 
+  var AError: EZSQLConnectionLost);
+begin
+  try
+    inherited;
+  finally
+    FreeAndNil(FGUIDProps);
+  end;
 end;
 
 {$IFDEF WITH_COLUMNS_TO_JSON}
@@ -4377,6 +4431,19 @@ begin
   if FOrgTypeList <> nil then begin
     FOrgTypeList.Clear;
     FreeAndNil(FOrgTypeList);
+  end;
+  // cleanup memory of zombie statement
+  if FInParamDescripors <> nil then begin
+    FreeMem(FInParamDescripors);
+    FInParamDescripors := nil;
+  end;
+  if FInData <> nil then begin
+    FreeMem(FInData);
+    FInData := nil;
+  end;
+  if FOutData <> nil then begin
+    FreeMem(FOutData);
+    FOutData := nil;
   end;
 end;
 
