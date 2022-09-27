@@ -115,6 +115,12 @@ type
     /// <returns>a select statement schema.</returns>
     function DefineSelectSchemaFromQuery(const Tokenizer: IZTokenizer;
       const SQL: string): IZSelectSchema;
+    /// <summary>Defines all select schemas from the specified SQL queries.</summary>
+    /// <param>"Tokenizer" a tokenizer object.</param>
+    /// <param>"SQL" a SQL query.</param>
+    /// <returns>an array of select statement schemas.</returns>
+    function DefineAllSelectSchemasFromQuery(const Tokenizer: IZTokenizer;
+      const SQL: string): IZSelectSchemas;
   end;
 
   /// <summary>Implements an SQL statements analyser.</summary>
@@ -207,6 +213,12 @@ type
     /// <returns>a select statement schema.</returns>
     function DefineSelectSchemaFromQuery(const Tokenizer: IZTokenizer;
       const SQL: string): IZSelectSchema; virtual;
+    /// <summary>Defines all select schemas from the specified SQL queries.</summary>
+    /// <param>"Tokenizer" a tokenizer object.</param>
+    /// <param>"SQL" a SQL query.</param>
+    /// <returns>an array of select statement schemas.</returns>
+    function DefineAllSelectSchemasFromQuery(const Tokenizer: IZTokenizer;
+      const SQL: string): IZSelectSchemas;
   end;
 
 implementation
@@ -736,6 +748,45 @@ begin
   Result := TZSelectSchema.Create;
   FillFieldRefs(Result, SelectTokens);
   FillTableRefs(Result, FromTokens);
+end;
+
+function TZGenericStatementAnalyser.DefineAllSelectSchemasFromQuery(
+  const Tokenizer: IZTokenizer; const SQL: string): IZSelectSchemas;
+var
+  tokens, fromtokens: TZTokenList;
+  sections: TObjectList;
+  ss: IZSelectSchema;
+  deleted: Boolean;
+begin
+  SetLength(Result, 0);
+
+  tokens := TokenizeQuery(Tokenizer, SQL, True);
+  Try
+    sections := SplitSections(tokens);
+    Try
+      Repeat
+        ss := DefineSelectSchemaFromSections(sections);
+        If Assigned(ss) Then
+        Begin
+          SetLength(Result, Length(Result) + 1);
+          Result[High(Result)] := ss;
+
+          fromtokens := FindSectionTokens(sections, 'FROM');
+
+          deleted := False;
+          While (sections.Count > 0) And Not deleted Do
+          Begin
+            deleted := TZStatementSection(sections[0]).Tokens = fromtokens;
+            sections.Delete(0);
+          End;
+        End;
+      Until ss = nil;
+    Finally
+      sections.Free;
+    End;
+  Finally
+    tokens.Free;
+  End;
 end;
 
 function TZGenericStatementAnalyser.DefineSelectSchemaFromQuery(

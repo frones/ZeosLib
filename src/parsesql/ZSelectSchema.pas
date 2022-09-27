@@ -245,6 +245,8 @@ type
     property Tables[Index: Integer]: TZTableRef read GetTable;
   end;
 
+  IZSelectSchemas = Array Of IZSelectSchema;
+
 implementation
 
 uses SysUtils;
