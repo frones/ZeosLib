@@ -67,7 +67,7 @@ uses
   {synapse}
   {local}zeosproxy, zeosproxy_binder, zeosproxy_imp, DbcProxyUtils,
   DbcProxyConnectionManager, DbcProxyConfigManager, ZDbcProxyManagement,
-  dbcproxycleanupthread, dbcproxysecuritymodule,
+  dbcproxycleanupthread, dbcproxysecuritymodule, DbcProxyFileLogger,
   //Zeos drivers:
   ZDbcAdo, ZDbcASA, ZDbcDbLib, ZDbcFirebird, ZDbcInterbase6, ZDbcMySql, ZDbcODBCCon,
   ZDbcOleDB, ZDbcOracle, ZDbcPostgreSql, ZDbcSQLAnywhere, ZDbcSqLite;
@@ -96,7 +96,8 @@ end;
 procedure TZDbcProxyServer.DoRun;
 var
   ErrorMsg: String;
-  AppObject : TwstListener;
+  //AppObject : TwstListener;
+  AppObject : TwstFPHttpListener;
   configFile: String;
   CleanupThread: TDbcProxyCleanupThread;
 begin
@@ -123,9 +124,11 @@ begin
 
   { add your program here }
 
-  ConnectionManager := TDbcProxyConnectionManager.Create;
   ConfigManager := TDbcProxyConfigManager.Create;
   ConfigManager.LoadConfigInfo(configFile);
+  //Logger := TDbcProxyFileLogger.Create(ConfigManager.LogFile);
+  Logger := TDbcProxyConsoleLogger.Create;
+  ConnectionManager := TDbcProxyConnectionManager.Create;
   CleanupThread := TDbcProxyCleanupThread.Create(ConnectionManager, ConfigManager);
   CleanupThread.Start;
 
@@ -142,8 +145,13 @@ begin
     WriteLn('http://' + ConfigManager.IPAddress+ ':'+ IntToStr(ConfigManager.ListeningPort)+ '/');
     WriteLn('');
     WriteLn('Press enter to quit.');
-    (AppObject as  TwstFPHttpListener).Options := [loExecuteInThread];
+    AppObject.Options := AppObject.Options + [loExecuteInThread];
+    if ConfigManager.EnableThreading then begin
+      AppObject.Options := AppObject.Options + [loHandleRequestInThread];
+      Logger.Info('Threading is enabled.');
+    end;
     AppObject.Start();
+    Logger.Info('Proxy started.');
     ReadLn();
     WriteLn('Stopping the Server...');
     AppObject.Stop()

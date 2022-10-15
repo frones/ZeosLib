@@ -10,7 +10,8 @@ Interface
 
 Uses SysUtils, Classes, 
      base_service_intf, server_service_intf, zeosproxy,
-     ZDbcProxyManagement, DbcProxyConnectionManager, DbcProxyConfigManager;
+     ZDbcProxyManagement, DbcProxyConnectionManager, DbcProxyConfigManager,
+     DbcProxyFileLogger;
 
 
 type
@@ -155,6 +156,7 @@ type
 var
   ConnectionManager: TDbcProxyConnectionManager;
   ConfigManager: TDbcProxyConfigManager;
+  Logger: TDbcProxyLogger;
 
 Implementation
 
@@ -598,5 +600,9 @@ procedure RegisterZeosProxyImplementationFactory();
 Begin
   GetServiceImplementationRegistry().Register('IZeosProxy',TImplementationFactory.Create(TZeosProxy_ServiceImp,wst_GetServiceConfigText('IZeosProxy')) as IServiceImplementationFactory);
 End;
+
+finalization
+  if Assigned(Logger) then
+    FreeAndNil(Logger);
 
 End.
