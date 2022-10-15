@@ -113,10 +113,10 @@ begin
   {$ENDIF}
 
   ConfigManager := TDbcProxyConfigManager.Create;
+  ConfigManager.LoadConfigInfo(configFile);
   zeosproxy_imp.Logger := TDbcProxyFileLogger.Create(ConfigManager.LogFile);
   try
     ConnectionManager := TDbcProxyConnectionManager.Create;
-    ConfigManager.LoadConfigInfo(configFile);
 
     //Server_service_RegisterBinaryFormat();
     Server_service_RegisterSoapFormat();
@@ -128,7 +128,7 @@ begin
     AppObject.Options := [loExecuteInThread];
     if ConfigManager.EnableThreading then begin
       AppObject.Options := AppObject.Options + [loHandleRequestInThread];
-      zeosproxy_imp.Logger.Info('Handling requests in threas is enabled.');
+      zeosproxy_imp.Logger.Info('Handling requests in threads.');
     end;
     AppObject.Start();
     CleanupThread := TDbcProxyCleanupThread.Create(ConnectionManager, ConfigManager);
