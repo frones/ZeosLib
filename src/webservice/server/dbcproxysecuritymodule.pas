@@ -112,6 +112,15 @@ type
     destructor Destroy; override;
   end;
 
+  TZAlternateSecurityModule = class(TZAbstractSecurityModule)
+  protected
+    FModuleChain: Array of TZAbstractSecurityModule;
+  public
+    function CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean; override;
+    procedure LoadConfig(IniFile: TIniFile; const Section: String); override;
+    destructor Destroy; override;
+  end;
+
 function GetSecurityModule(TypeName: String): TZAbstractSecurityModule;
 
 implementation
@@ -128,6 +137,8 @@ begin
   else if TypeName = 'integrated' then
     Result := TZIntegratedSecurityModule.Create
   else if TypeName = 'chained' then
+    Result := TZChainedSecurityModule.Create
+  else if TypeName = 'alternate' then
     Result := TZChainedSecurityModule.Create
   else
     raise EZSQLException.Create('Security module of type ' + TypeName + ' is unknown.');
@@ -302,8 +313,17 @@ var
   x: Integer;
 begin
   Result := True;
-  for x := 0 to Length(FModuleChain) - 1  do
-    FModuleChain[x].CheckPassword(UserName, Password, ConnectionName);
+  for x := 0 to Length(FModuleChain) - 1  do begin
+    try
+      Result := Result and FModuleChain[x].CheckPassword(UserName, Password, ConnectionName);
+    except
+      on E: Exception do begin
+        Logger.Warning('Unexpected exception while calling an authentication module:  ' + E.Message);
+        Result := false;
+      end;
+    end;
+    if not Result then break;
+  end;
 end;
 
 procedure TZChainedSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
@@ -332,6 +352,60 @@ begin
 end;
 
 destructor TZChainedSecurityModule.Destroy;
+var
+  x: Integer;
+begin
+  for x := 0 to Length(FModuleChain) - 1 do
+    if Assigned(FModuleChain[x]) then;
+      FreeAndNil(FModuleChain[x]);
+  inherited;
+end;
+
+{------------------------------------------------------------------------------}
+
+function TZAlternateSecurityModule.CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean;
+var
+  x: Integer;
+begin
+  Result := False;
+  for x := 0 to Length(FModuleChain) - 1  do begin
+    try
+      Result := Result or FModuleChain[x].CheckPassword(UserName, Password, ConnectionName);
+    except
+      on E: Exception do begin
+        Logger.Warning('Unexpected exception while calling an authentication module:  ' + E.Message);
+      end;
+    end;
+    if Result then break;
+  end;
+end;
+
+procedure TZAlternateSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
+var
+  Modules: String;
+  ModuleList: TStringDynArray;
+  x: Integer;
+  SectionName: String;
+begin
+  Modules := IniFile.ReadString(Section, 'Module List', '');
+  ModuleList := SplitString(Modules, ',');
+  for x := Length(ModuleList) - 1 downto 0 do
+    ModuleList[x] := Trim(ModuleList[x]);
+  for x := Length(ModuleList) - 1 downto 0 do
+    if ModuleList[x] = '' then
+      Delete(ModuleList, x, 1);
+  if Length(ModuleList) = 0 then
+    raise EZSQLException.Create('An alternate security module may not have an empty Module List');
+
+  SetLength(FModuleChain, Length(ModuleList));
+  for x := 0 to Length(ModuleList) - 1 do begin
+    SectionName := ConfigManager.SecurityPrefix + ModuleList[x];
+    FModuleChain[x] := GetSecurityModule(IniFile.ReadString(SectionName, 'type', ''));
+    FModuleChain[x].LoadConfig(IniFile, SectionName);
+  end;
+end;
+
+destructor TZAlternateSecurityModule.Destroy;
 var
   x: Integer;
 begin
