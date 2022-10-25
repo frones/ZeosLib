@@ -2355,7 +2355,7 @@ end;
 function TZParam.GetAsZDates(Index: Cardinal): TZDate;
 var DataAddr: PPointer;
 begin
-  if GetIsNullsAddr(Index, DataAddr) or (FSQLDataType = stTime)
+  if GetIsNullsAddr(Integer(Index), DataAddr) or (FSQLDataType = stTime)
   then FillChar(Result, SizeOf(TZDate), #0)
   else if FSQLDataType = stDate then
     Result := PZDate(DataAddr)^
@@ -2382,7 +2382,7 @@ end;
 function TZParam.GetAsZTimes(Index: Cardinal): TZTime;
 var DataAddr: PPointer;
 begin
-  if GetIsNullsAddr(Index, DataAddr) or (FSQLDataType = stDate)
+  if GetIsNullsAddr(Integer(Index), DataAddr) or (FSQLDataType = stDate)
   then FillChar(Result, SizeOf(TZTime), #0)
   else if FSQLDataType = stTime then
     Result := PZTime(DataAddr)^
@@ -2409,7 +2409,7 @@ end;
 function TZParam.GetAsZTimestamps(Index: Cardinal): TZTimestamp;
 var DataAddr: PPointer;
 begin
-  if GetIsNullsAddr(Index, DataAddr)
+  if GetIsNullsAddr(Integer(Index), DataAddr)
   then FillChar(Result, SizeOf(TZTimestamp), #0)
   else if FSQLDataType = stTimeStamp then
     Result := PZTimestamp(DataAddr)^
