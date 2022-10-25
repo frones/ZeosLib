@@ -1169,6 +1169,7 @@ unnest(array[$1]::int8[])
       if (PEnd > P) and (PByte(PEnd)^ = Byte('=')) then begin
         SQLWriter.AddText(P, PEnd - P, SQL);
         SQLWriter.AddText(' in ', SQL);
+        Inc(LastPos);
       end else
         SQLWriter.AddText(P, LastPos, SQL);
     end else LastPos := 0;
