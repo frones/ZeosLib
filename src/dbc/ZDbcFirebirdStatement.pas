@@ -600,8 +600,6 @@ end;
 
 procedure TZAbstractFirebirdStatement.ReleaseImmediat(const Sender: IImmediatelyReleasable;
   var AError: EZSQLConnectionLost);
-var
-  ImmediatelyReleasable: IImmediatelyReleasable;
 begin
   if Assigned(FResultSet) then begin
     FResultSet.release;
