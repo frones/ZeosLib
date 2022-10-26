@@ -3363,7 +3363,7 @@ end;
 procedure TZAbstractRODataset.AddFieldDefFromMetadata(ColumnIndex: Integer;
   const ResultSetMetaData: IZResultSetMetadata; const FieldName: String);
 var
-  Prec, Scale, Size: Integer;
+  Prec, Scale, Size, FieldNo: Integer;
   FieldType: TFieldType;
   SQLType: TZSQLType;
   FieldDef: TFieldDef;
@@ -3405,6 +3405,7 @@ begin
       Size := Scale
     else
       Size := 0;
+    FieldNo := ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}; //see https://sourceforge.net/p/zeoslib/tickets/539/ FieldNo is not zero-based
     {$IFDEF WITH_CODEPAGE_AWARE_FIELD}
     if FieldType in [ftWideString, ftWideMemo] then
       CodePage := zCP_UTF16
@@ -3416,12 +3417,12 @@ begin
       else CodePage := GetColumnCodePage(ColumnIndex)
     else CodePage := CP_ACP;
     if (SQLType in [stBoolean..stBinaryStream]) and not FDisableZFields
-    then FieldDef := TZFieldDef.Create(FieldDefs, FieldName, FieldType, SQLType, Size, False, ColumnIndex, CodePage)
-    else FieldDef := TFieldDef.Create(FieldDefs, FieldName, FieldType, Size, False, ColumnIndex, CodePage);
+    then FieldDef := TZFieldDef.Create(FieldDefs, FieldName, FieldType, SQLType, Size, False, FieldNo, CodePage)
+    else FieldDef := TFieldDef.Create(FieldDefs, FieldName, FieldType, Size, False, FieldNo, CodePage);
     {$ELSE}
     if (SQLType in [stBoolean..stBinaryStream]) and not FDisableZFields
-    then FieldDef := TZFieldDef.Create(FieldDefs, FieldName, FieldType, SQLType, Size, False, ColumnIndex)
-    else FieldDef := TFieldDef.Create(FieldDefs, FieldName, FieldType, Size, False, ColumnIndex);
+    then FieldDef := TZFieldDef.Create(FieldDefs, FieldName, FieldType, SQLType, Size, False, FieldNo)
+    else FieldDef := TFieldDef.Create(FieldDefs, FieldName, FieldType, Size, False, FieldNo);
     {$ENDIF}
     with FieldDef do begin
       if not (ReadOnly or IsUniDirectional) then begin
