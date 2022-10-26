@@ -3485,7 +3485,6 @@ var ImmediatelyReleasable: IImmediatelyReleasable;
   i: Integer;
 begin
   if not FClosed and Assigned(Statement){virtual RS ! } then begin
-    FColumnsInfo.Clear;
     FClosed := True;
     FRowNo := 0;
     FLastRowNo := 0;
@@ -3498,6 +3497,7 @@ begin
     if Supports(Statement, IImmediatelyReleasable, ImmediatelyReleasable) and
        (ImmediatelyReleasable <> Sender) then
       ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+    AfterClose;
   end;
 end;
 
