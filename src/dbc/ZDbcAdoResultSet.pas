@@ -155,7 +155,8 @@ type
     /// <summary>Fill the JSONWriter with column data</summary>
     /// <param>"JSONComposeOptions" the TZJSONComposeOptions used for composing
     ///  the JSON contents</param>
-    procedure ColumnsToJSON(JSONWriter: TJSONWriter; JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]);
+    procedure ColumnsToJSON(ResultsWriter: {$IF declared(TResultsWriter)}TResultsWriter{$ELSE}TJSONWriter{$IFEND};
+      JSONComposeOptions: TZJSONComposeOptions = [jcoEndJSONObject]);
     {$ENDIF WITH_COLUMNS_TO_JSON}
   end;
 
@@ -195,7 +196,7 @@ uses
   ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode, ZDbcUtils, ZDbcLogging, ZDbcAdo;
 
 {$IFDEF WITH_COLUMNS_TO_JSON}
-procedure TZAdoResultSet.ColumnsToJSON(JSONWriter: TJSONWriter;
+procedure TZAdoResultSet.ColumnsToJSON(ResultsWriter: {$IF declared(TResultsWriter)}TResultsWriter{$ELSE}TJSONWriter{$IFEND};
   JSONComposeOptions: TZJSONComposeOptions);
 var Len, C, H, I: Integer;
     P: PWideChar;
