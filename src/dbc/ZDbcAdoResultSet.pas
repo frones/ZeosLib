@@ -201,126 +201,126 @@ var Len, C, H, I: Integer;
     P: PWideChar;
     BCD: TBCD;
 begin
-  if JSONWriter.Expand then
-    JSONWriter.Add('{');
-  if Assigned(JSONWriter.Fields) then
-    H := High(JSONWriter.Fields) else
-    H := High(JSONWriter.ColNames);
+  if ResultsWriter.Expand then
+    ResultsWriter.Add('{');
+  if Assigned(ResultsWriter.Fields) then
+    H := High(ResultsWriter.Fields) else
+    H := High(ResultsWriter.ColNames);
   for I := 0 to H do begin
-    if Pointer(JSONWriter.Fields) = nil then
+    if Pointer(ResultsWriter.Fields) = nil then
       C := I else
-      C := JSONWriter.Fields[i];
+      C := ResultsWriter.Fields[i];
     if IsNull(C{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then begin
-      if JSONWriter.Expand then begin
+      if ResultsWriter.Expand then begin
         if not (jcsSkipNulls in JSONComposeOptions) then begin
-          JSONWriter.AddString(JSONWriter.ColNames[I]);
-          JSONWriter.AddShort('null,')
+          ResultsWriter.AddString(ResultsWriter.ColNames[I]);
+          ResultsWriter.AddShort('null,')
         end;
       end else
-        JSONWriter.AddShort('null,');
+        ResultsWriter.AddShort('null,');
     end else with FField20 do begin
-      if JSONWriter.Expand then
-        JSONWriter.AddString(JSONWriter.ColNames[I]);
+      if ResultsWriter.Expand then
+        ResultsWriter.AddString(ResultsWriter.ColNames[I]);
       case FValueType of
-        VT_BOOL:        JSONWriter.AddShort(JSONBool[PWordBool(FValueAddr)^]);
-        VT_UI1:         JSONWriter.AddU(PByte(FValueAddr)^);
-        VT_UI2:         JSONWriter.AddU(PWord(FValueAddr)^);
-        VT_UI4:         JSONWriter.AddU(PCardinal(FValueAddr)^);
-        VT_UINT:        JSONWriter.AddU(PLongWord(FValueAddr)^);
-        VT_I1:          JSONWriter.Add(PShortInt(FValueAddr)^);
-        VT_I2:          JSONWriter.Add(PSmallInt(FValueAddr)^);
+        VT_BOOL:        ResultsWriter.AddShort(JSONBool[PWordBool(FValueAddr)^]);
+        VT_UI1:         ResultsWriter.AddU(PByte(FValueAddr)^);
+        VT_UI2:         ResultsWriter.AddU(PWord(FValueAddr)^);
+        VT_UI4:         ResultsWriter.AddU(PCardinal(FValueAddr)^);
+        VT_UINT:        ResultsWriter.AddU(PLongWord(FValueAddr)^);
+        VT_I1:          ResultsWriter.Add(PShortInt(FValueAddr)^);
+        VT_I2:          ResultsWriter.Add(PSmallInt(FValueAddr)^);
         VT_ERROR,
-        VT_I4:          JSONWriter.Add(PInteger(FValueAddr)^);
-        VT_INT:         JSONWriter.Add(PLongInt(FValueAddr)^);
-        VT_HRESULT:     JSONWriter.Add(PHResult(FValueAddr)^);
-        VT_UI8:         JSONWriter.AddQ(PUInt64(FValueAddr)^);
-        VT_I8:          JSONWriter.Add(PInt64(FValueAddr)^);
-        VT_CY:          JSONWriter.AddCurr64({$IFDEF MORMOT2}PInt64(FValueAddr){$ELSE}PCurrency(FValueAddr)^{$ENDIF});
+        VT_I4:          ResultsWriter.Add(PInteger(FValueAddr)^);
+        VT_INT:         ResultsWriter.Add(PLongInt(FValueAddr)^);
+        VT_HRESULT:     ResultsWriter.Add(PHResult(FValueAddr)^);
+        VT_UI8:         ResultsWriter.AddQ(PUInt64(FValueAddr)^);
+        VT_I8:          ResultsWriter.Add(PInt64(FValueAddr)^);
+        VT_CY:          ResultsWriter.AddCurr64({$IFDEF MORMOT2}PInt64(FValueAddr){$ELSE}PCurrency(FValueAddr)^{$ENDIF});
         VT_DECIMAL:     begin
                           P := @FColValue;
                           if PDecimal(P).scale > 0 then begin
                             ScaledOrdinal2Bcd(UInt64(PDecimal(P).Lo64), PDecimal(P).scale, BCD, PDecimal(P).sign > 0);
                             Len := ZSysUtils.BcdToRaw(BCd, PAnsiChar(FByteBuffer), '.');
-                            JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer), Len);
+                            ResultsWriter.AddNoJSONEscape(Pointer(FByteBuffer), Len);
                           end else if PDecimal(P).sign > 0 then
-                            JSONWriter.Add(Int64(-UInt64(PDecimal(P).Lo64)))
+                            ResultsWriter.Add(Int64(-UInt64(PDecimal(P).Lo64)))
                           else
-                            JSONWriter.AddQ(UInt64(PDecimal(P).Lo64));
+                            ResultsWriter.AddQ(UInt64(PDecimal(P).Lo64));
                         end;
-        VT_R4:          JSONWriter.AddSingle(PSingle(FValueAddr)^);
-        VT_R8:          JSONWriter.AddDouble(PDouble(FValueAddr)^);
+        VT_R4:          ResultsWriter.AddSingle(PSingle(FValueAddr)^);
+        VT_R8:          ResultsWriter.AddDouble(PDouble(FValueAddr)^);
       else case Type_ of {ADO uses its own DataType-mapping different to System tagVariant type mapping}
           adGUID:             begin
-                                JSONWriter.Add('"');
-                                JSONWriter.AddNoJSONEscapeW(Pointer(PWideChar(FValueAddr)+1), 36);
-                                JSONWriter.Add('"');
+                                ResultsWriter.Add('"');
+                                ResultsWriter.AddNoJSONEscapeW(Pointer(PWideChar(FValueAddr)+1), 36);
+                                ResultsWriter.Add('"');
                               end;
           adDBTime:           if (jcoMongoISODate in JSONComposeOptions) then begin
-                                JSONWriter.AddShort('ISODate("0000-00-00');
-                                JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
-                                JSONWriter.AddShort('Z")');
+                                ResultsWriter.AddShort('ISODate("0000-00-00');
+                                ResultsWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
+                                ResultsWriter.AddShort('Z")');
                               end else begin
                                 if jcoDATETIME_MAGIC in JSONComposeOptions
                                 {$IFDEF MORMOT2}
-                                then JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                then ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                                 {$ELSE}
-                                then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                then ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                                 {$ENDIF}
-                                else JSONWriter.Add('"');
-                                JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
-                                JSONWriter.Add('"');
+                                else ResultsWriter.Add('"');
+                                ResultsWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
+                                ResultsWriter.Add('"');
                               end;
           adDate,
           adDBDate,
           adDBTimeStamp:      if (jcoMongoISODate in JSONComposeOptions) then begin
-                                JSONWriter.AddShort('ISODate("');
-                                JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
-                                JSONWriter.AddShort('Z")');
+                                ResultsWriter.AddShort('ISODate("');
+                                ResultsWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
+                                ResultsWriter.AddShort('Z")');
                               end else begin
                                 if jcoDATETIME_MAGIC in JSONComposeOptions
                                 {$IFDEF MORMOT2}
-                                then JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                                then ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                                 {$ELSE}
-                                then JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                                then ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                                 {$ENDIF}
-                                else JSONWriter.Add('"');
-                                JSONWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
-                                JSONWriter.Add('"');
+                                else ResultsWriter.Add('"');
+                                ResultsWriter.AddDateTime(PDateTime(FValueAddr)^, jcoMilliseconds in JSONComposeOptions);
+                                ResultsWriter.Add('"');
                               end;
           adChar:             begin
-                                JSONWriter.Add('"');
-                                JSONWriter.AddJSONEscapeW(FValueAddr, ZDbcUtils.GetAbsorbedTrailingSpacesLen(PWideChar(FValueAddr), ActualSize));
-                                JSONWriter.Add('"');
+                                ResultsWriter.Add('"');
+                                ResultsWriter.AddJSONEscapeW(FValueAddr, ZDbcUtils.GetAbsorbedTrailingSpacesLen(PWideChar(FValueAddr), ActualSize));
+                                ResultsWriter.Add('"');
                               end;
           adWChar:            begin
-                                JSONWriter.Add('"');
-                                JSONWriter.AddJSONEscapeW(FValueAddr, ZDbcUtils.GetAbsorbedTrailingSpacesLen(PWideChar(FValueAddr), ActualSize shr 1));
-                                JSONWriter.Add('"');
+                                ResultsWriter.Add('"');
+                                ResultsWriter.AddJSONEscapeW(FValueAddr, ZDbcUtils.GetAbsorbedTrailingSpacesLen(PWideChar(FValueAddr), ActualSize shr 1));
+                                ResultsWriter.Add('"');
                               end;
           adVarChar,
           adLongVarChar:      begin
-                                JSONWriter.Add('"');
-                                JSONWriter.AddJSONEscapeW(FValueAddr, ActualSize);
-                                JSONWriter.Add('"');
+                                ResultsWriter.Add('"');
+                                ResultsWriter.AddJSONEscapeW(FValueAddr, ActualSize);
+                                ResultsWriter.Add('"');
                               end;
           adVarWChar,
           adLongVarWChar:     begin
-                                JSONWriter.Add('"');
-                                JSONWriter.AddJSONEscapeW(FValueAddr, ActualSize shr 1);
-                                JSONWriter.Add('"');
+                                ResultsWriter.Add('"');
+                                ResultsWriter.AddJSONEscapeW(FValueAddr, ActualSize shr 1);
+                                ResultsWriter.Add('"');
                               end;
           adBinary,
           adVarBinary,
-          adLongVarBinary:    JSONWriter.WrBase64(TVarData(Value).VArray.Data, ActualSize, True);
+          adLongVarBinary:    ResultsWriter.WrBase64(TVarData(Value).VArray.Data, ActualSize, True);
         end;
       end;
-      JSONWriter.Add(',');
+      ResultsWriter.Add(',');
     end;
   end;
   if jcoEndJSONObject in JSONComposeOptions then begin
-    JSONWriter.CancelLastComma; // cancel last ','
-    if JSONWriter.Expand then
-      JSONWriter.Add('}');
+    ResultsWriter.CancelLastComma; // cancel last ','
+    if ResultsWriter.Expand then
+      ResultsWriter.Add('}');
   end;
 end;
 {$ENDIF WITH_COLUMNS_TO_JSON}
