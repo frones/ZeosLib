@@ -2489,6 +2489,9 @@ begin
     if Supports(IZBlob(FOpenUncachedLobs[i]), IImmediatelyReleasable, ImmediatelyReleasable) and
        (Sender <> ImmediatelyReleasable) then
       ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
+  ImmediatelyReleasable := FOwner;
+  if (Sender <> ImmediatelyReleasable) then
+    ImmediatelyReleasable.ReleaseImmediat(ImmediatelyReleasable, AError);
 end;
 
 procedure TZInterbaseFirebirdTransaction.SetAutoCommit(Value: Boolean);

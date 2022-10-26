@@ -888,59 +888,59 @@ var I, C, H: Integer;
 label jmpCLob;
 begin
   //init
-  if JSONWriter.Expand then
-    JSONWriter.Add('{');
-  if Assigned(JSONWriter.Fields) then
-    H := High(JSONWriter.Fields) else
-    H := High(JSONWriter.ColNames);
+  if ResultsWriter.Expand then
+    ResultsWriter.Add('{');
+  if Assigned(ResultsWriter.Fields) then
+    H := High(ResultsWriter.Fields) else
+    H := High(ResultsWriter.ColNames);
   for I := 0 to H do begin
-    if Pointer(JSONWriter.Fields) = nil then
+    if Pointer(ResultsWriter.Fields) = nil then
       C := I else
-      C := JSONWriter.Fields[i];
+      C := ResultsWriter.Fields[i];
     if IsNull(C+FirstDbcIndex) then
-      if JSONWriter.Expand then begin
+      if ResultsWriter.Expand then begin
         if not (jcsSkipNulls in JSONComposeOptions) then begin
-          JSONWriter.AddString(JSONWriter.ColNames[I]);
-          JSONWriter.AddShort('null,')
+          ResultsWriter.AddString(ResultsWriter.ColNames[I]);
+          ResultsWriter.AddShort('null,')
         end;
       end else
-        JSONWriter.AddShort('null,')
+        ResultsWriter.AddShort('null,')
     else begin
-      if JSONWriter.Expand then
-        JSONWriter.AddString(JSONWriter.ColNames[i]);
+      if ResultsWriter.Expand then
+        ResultsWriter.AddString(ResultsWriter.ColNames[i]);
       case FwType of
         DBTYPE_EMPTY,
         DBTYPE_IDISPATCH,
-        DBTYPE_IUNKNOWN:  JSONWriter.AddShort('""');
-        DBTYPE_NULL:      JSONWriter.AddShort('null');
-        DBTYPE_I2:        JSONWriter.Add(PSmallInt(FData)^);
+        DBTYPE_IUNKNOWN:  ResultsWriter.AddShort('""');
+        DBTYPE_NULL:      ResultsWriter.AddShort('null');
+        DBTYPE_I2:        ResultsWriter.Add(PSmallInt(FData)^);
         DBTYPE_I4,
-        DBTYPE_ERROR:     JSONWriter.Add(PInteger(FData)^);
-        DBTYPE_R4:        JSONWriter.AddSingle(PSingle(FData)^);
-        DBTYPE_R8:        JSONWriter.AddDouble(PDouble(FData)^);
-        DBTYPE_CY:        JSONWriter.AddCurr64(PInt64(FData){$IFNDEF MORMOT2}^{$ENDIF});
-        DBTYPE_DATE:      JSONWriter.AddDateTime(PDateTime(FData), 'T', '"');
-        DBTYPE_BOOL:      JSONWriter.AddShort(JSONBool[PWord(FData)^ <> 0]);
+        DBTYPE_ERROR:     ResultsWriter.Add(PInteger(FData)^);
+        DBTYPE_R4:        ResultsWriter.AddSingle(PSingle(FData)^);
+        DBTYPE_R8:        ResultsWriter.AddDouble(PDouble(FData)^);
+        DBTYPE_CY:        ResultsWriter.AddCurr64(PInt64(FData){$IFNDEF MORMOT2}^{$ENDIF});
+        DBTYPE_DATE:      ResultsWriter.AddDateTime(PDateTime(FData), 'T', '"');
+        DBTYPE_BOOL:      ResultsWriter.AddShort(JSONBool[PWord(FData)^ <> 0]);
         DBTYPE_VARIANT: begin
-            JSONWriter.Add('"');
+            ResultsWriter.Add('"');
             FUniTemp := POleVariant(FData)^;
-            JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
-            JSONWriter.Add('"');
+            ResultsWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
+            ResultsWriter.Add('"');
           end;
         //DBTYPE_DECIMAL = 14;
-        DBTYPE_UI1:       JSONWriter.AddU(PByte(FData)^);
-        DBTYPE_I1:        JSONWriter.Add(PShortInt(FData)^);
-        DBTYPE_UI2:       JSONWriter.AddU(PWord(FData)^);
-        DBTYPE_UI4:       JSONWriter.AddU(PCardinal(FData)^);
-        DBTYPE_I8:        JSONWriter.Add(PInt64(FData)^);
-        DBTYPE_UI8:       JSONWriter.AddQ(PUInt64(FData)^);
+        DBTYPE_UI1:       ResultsWriter.AddU(PByte(FData)^);
+        DBTYPE_I1:        ResultsWriter.Add(PShortInt(FData)^);
+        DBTYPE_UI2:       ResultsWriter.AddU(PWord(FData)^);
+        DBTYPE_UI4:       ResultsWriter.AddU(PCardinal(FData)^);
+        DBTYPE_I8:        ResultsWriter.Add(PInt64(FData)^);
+        DBTYPE_UI8:       ResultsWriter.AddQ(PUInt64(FData)^);
         DBTYPE_GUID:      begin
                             {$IFNDEF MORMOT2}
-                            JSONWriter.Add('"');
-                            JSONWriter.Add(PGUID(FData)^);
-                            JSONWriter.Add('"');
+                            ResultsWriter.Add('"');
+                            ResultsWriter.Add(PGUID(FData)^);
+                            ResultsWriter.Add('"');
                             {$ELSE}
-                            JSONWriter.Add(PGUID(FData),'"');
+                            ResultsWriter.Add(PGUID(FData),'"');
                             {$ENDIF}
                           end;
         DBTYPE_BYTES:
@@ -948,120 +948,120 @@ begin
             fTempBlob := TZOleDBBLOB.Create(FRowSetAddr^, C{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
               DBTYPE_BYTES, FHROWS^[FCurrentBufRowNo], FOleDBConnection, FLength, FOpenLobStreams);
             P := fTempBlob.GetBuffer(fRawTemp, L);
-            JSONWriter.WrBase64(P, L, true); // withMagic=true
+            ResultsWriter.WrBase64(P, L, true); // withMagic=true
             fTempBlob := nil;
           end else
-            JSONWriter.WrBase64(FData,FLength, True);
+            ResultsWriter.WrBase64(FData,FLength, True);
         DBTYPE_STR: begin
-            JSONWriter.Add('"');
+            ResultsWriter.Add('"');
             if FColBind.cbMaxLen = 0
             then goto jmpCLob
             else begin
               if FColBind.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
                 FLength := GetAbsorbedTrailingSpacesLen(PAnsiChar(FData), FLength);
               FUniTemp := PRawToUnicode(PAnsiChar(FData), FLength, fClientCP);
-              JSONWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
+              ResultsWriter.AddJSONEscapeW(Pointer(FUniTemp), Length(FUniTemp));
             end;
-            JSONWriter.Add('"');
+            ResultsWriter.Add('"');
           end;
         DBTYPE_WSTR, DBTYPE_XML: begin
-            JSONWriter.Add('"');
+            ResultsWriter.Add('"');
             if FColBind.cbMaxLen = 0 then begin
 jmpCLob:      fTempBlob := TZOleDBCLOB.Create(FRowSetAddr^, C{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
                 FwType, FHROWS^[FCurrentBufRowNo], FOleDBConnection, FLength, FOpenLobStreams);
               P := Pointer(fTempBlob.GetPWideChar(FUniTemp, L));
-              JSONWriter.AddJSONEscapeW(Pointer(P), L);
+              ResultsWriter.AddJSONEscapeW(Pointer(P), L);
               fTempBlob := nil;
             end else begin
               FLength := FLength shr 1;
               if FColBind.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
                 FLength := GetAbsorbedTrailingSpacesLen(PWideChar(FData), FLength);
-              JSONWriter.AddJSONEscapeW(FData, FLength);
+              ResultsWriter.AddJSONEscapeW(FData, FLength);
             end;
-            JSONWriter.Add('"');
+            ResultsWriter.Add('"');
           end;
         DBTYPE_NUMERIC: begin
                           FLength := SQL_MAX_NUMERIC_LEN;
                           SQLNumeric2Raw(FData, PAnsiChar(FByteBuffer), FLength);
-                          JSONWriter.AddJSONEscape(PAnsiChar(FByteBuffer), FLength);
+                          ResultsWriter.AddJSONEscape(PAnsiChar(FByteBuffer), FLength);
                         end;
         //DBTYPE_UDT = 132;
         DBTYPE_DBDATE:    begin
                             if jcoMongoISODate in JSONComposeOptions then
-                              JSONWriter.AddShort('ISODate("')
+                              ResultsWriter.AddShort('ISODate("')
                             else if jcoDATETIME_MAGIC in JSONComposeOptions then
                               {$IFDEF MORMOT2}
-                              JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                               {$ELSE}
-                              JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                               {$ENDIF}
                             else
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
                             if PDBDate(FData)^.year < 0 then
-                              JSONWriter.Add('-');
+                              ResultsWriter.Add('-');
                             DateToIso8601PChar(Pointer(FByteBuffer), True, Abs(PDBDate(FData)^.year),
                               PDBDate(FData)^.month, PDBDate(FData)^.day);
-                            JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer),10);
+                            ResultsWriter.AddNoJSONEscape(Pointer(FByteBuffer),10);
                             if jcoMongoISODate in JSONComposeOptions
-                            then JSONWriter.AddShort('T00:00:00Z")')
-                            else JSONWriter.Add('"');
+                            then ResultsWriter.AddShort('T00:00:00Z")')
+                            else ResultsWriter.Add('"');
                           end;
         DBTYPE_DBTIME:    begin
                             if jcoMongoISODate in JSONComposeOptions then
-                              JSONWriter.AddShort('ISODate("0000-00-00')
+                              ResultsWriter.AddShort('ISODate("0000-00-00')
                             else if jcoDATETIME_MAGIC in JSONComposeOptions then begin
                               {$IFDEF MORMOT2}
-                              JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                               {$ELSE}
-                              JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                               {$ENDIF}
                             end else
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
                             TimeToIso8601PChar(Pointer(FByteBuffer), True, PDBTime(FData)^.hour,
                               PDBTime(FData)^.minute, PDBTime(FData)^.second, 0, 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer),9+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            ResultsWriter.AddNoJSONEscape(Pointer(FByteBuffer),9+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
-                            then JSONWriter.AddShort('Z)"')
-                            else JSONWriter.Add('"');
+                            then ResultsWriter.AddShort('Z)"')
+                            else ResultsWriter.Add('"');
                           end;
         DBTYPE_DBTIMESTAMP: begin
                             if jcoMongoISODate in JSONComposeOptions then
-                              JSONWriter.AddShort('ISODate("')
+                              ResultsWriter.AddShort('ISODate("')
                             else if jcoDATETIME_MAGIC in JSONComposeOptions then
                               {$IFDEF MORMOT2}
-                              JSONWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
+                              ResultsWriter.AddShorter(JSON_SQLDATE_MAGIC_QUOTE_STR)
                               {$ELSE}
-                              JSONWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
+                              ResultsWriter.AddNoJSONEscape(@JSON_SQLDATE_MAGIC_QUOTE_VAR,4)
                               {$ENDIF}
                             else
-                              JSONWriter.Add('"');
+                              ResultsWriter.Add('"');
                             if PDBTimeStamp(FData)^.year < 0 then
-                              JSONWriter.Add('-');
+                              ResultsWriter.Add('-');
                             DateToIso8601PChar(Pointer(FByteBuffer), True, Abs(PDBTimeStamp(FData)^.Year),
                                PDBTimeStamp(FData)^.Month, PDBTimeStamp(FData)^.Day);
                             MS := (PDBTimeStamp(FData)^.fraction * Byte(ord(jcoMilliseconds in JSONComposeOptions))) div 1000000;
                             TimeToIso8601PChar(Pointer(PAnsiChar(FByteBuffer)+10), True, PDBTimeStamp(FData)^.Hour,
                               PDBTimeStamp(FData)^.Minute, PDBTimeStamp(FData)^.Second, MS, 'T', jcoMilliseconds in JSONComposeOptions);
-                            JSONWriter.AddNoJSONEscape(Pointer(FByteBuffer),19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
+                            ResultsWriter.AddNoJSONEscape(Pointer(FByteBuffer),19+(4*Ord(jcoMilliseconds in JSONComposeOptions)));
                             if jcoMongoISODate in JSONComposeOptions
-                            then JSONWriter.AddShort('Z")')
-                            else JSONWriter.Add('"');
+                            then ResultsWriter.AddShort('Z")')
+                            else ResultsWriter.Add('"');
                           end;
-        DBTYPE_HCHAPTER:  JSONWriter.{$IFDEF CPU64}AddQ{$ELSE}AddU{$ENDIF}(PCHAPTER(FData)^);
+        DBTYPE_HCHAPTER:  ResultsWriter.{$IFDEF CPU64}AddQ{$ELSE}AddU{$ENDIF}(PCHAPTER(FData)^);
         //DBTYPE_FILETIME = 64;
         //DBTYPE_PROPVARIANT = 138;
         DBTYPE_VARNUMERIC: begin
                             SQLNumeric2Raw(FData, PAnsiChar(FByteBuffer), FLength);
-                            JSONWriter.AddJSONEscape(Pointer(FByteBuffer), FLength);
+                            ResultsWriter.AddJSONEscape(Pointer(FByteBuffer), FLength);
                           end;
       end;
-      JSONWriter.Add(',');
+      ResultsWriter.Add(',');
     end;
   end;
   if jcoEndJSONObject in JSONComposeOptions then begin
-    JSONWriter.CancelLastComma; // cancel last ','
-    if JSONWriter.Expand then
-      JSONWriter.Add('}');
+    ResultsWriter.CancelLastComma; // cancel last ','
+    if ResultsWriter.Expand then
+      ResultsWriter.Add('}');
   end;
 end;
 {$ENDIF WITH_COLUMNS_TO_JSON}
