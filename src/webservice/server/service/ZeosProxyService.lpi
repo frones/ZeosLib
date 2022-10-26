@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <ProjectOptions>
-    <Version Value="11"/>
+    <Version Value="12"/>
     <PathDelim Value="\"/>
     <General>
       <Flags>
         <MainUnitHasCreateFormStatements Value="False"/>
+        <CompatibilityMode Value="True"/>
       </Flags>
       <SessionStorage Value="InProjectDir"/>
-      <MainUnit Value="0"/>
       <Title Value="Zeos Web Service Proxy Server"/>
       <UseAppBundle Value="False"/>
       <ResourceType Value="res"/>
@@ -22,7 +22,6 @@
     </PublishOptions>
     <RunParams>
       <FormatVersion Value="2"/>
-      <Modes Count="0"/>
     </RunParams>
     <RequiredPackages Count="4">
       <Item1>
@@ -38,7 +37,7 @@
         <PackageName Value="LazDaemon"/>
       </Item4>
     </RequiredPackages>
-    <Units Count="11">
+    <Units Count="12">
       <Unit0>
         <Filename Value="ZeosProxyService.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -79,6 +78,7 @@
       <Unit7>
         <Filename Value="..\dbcproxyconnectionmanager.pas"/>
         <IsPartOfProject Value="True"/>
+        <UnitName Value="DbcProxyConnectionManager"/>
       </Unit7>
       <Unit8>
         <Filename Value="..\dbcproxysecuritymodule.pas"/>
@@ -93,6 +93,11 @@
         <Filename Value="..\zeosproxy_imp.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit10>
+      <Unit11>
+        <Filename Value="..\dbcproxyfilelogger.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="DbcProxyFileLogger"/>
+      </Unit11>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

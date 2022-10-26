@@ -56,7 +56,7 @@ Uses
   CThreads,
 {$ENDIF}{$ENDIF}
   DaemonApp, lazdaemonapp, wst_core, ZeosProxyMapperUnit, zeosproxyunit,
-  DbcProxyUtils, ZDbcProxyManagement
+  DbcProxyUtils, ZDbcProxyManagement, DbcProxyFileLogger
   { add your units here };
 
 begin

@@ -1722,9 +1722,10 @@ end;
 
 function PG2Double(P: Pointer): Double;
 {$IFNDEF ENDIAN_BIG}
-var i64: Int64 absolute Result;
+var i64: Int64; //circumvent bad FPC optimization
 begin
   i64 := PG2Int64(P);
+  Result:= PDouble(@i64)^;
 {$ELSE}
 begin
   Result := PDouble(P)^;

@@ -112,6 +112,7 @@ type
     FClientCP: Word;
     FvnuInfo: TZvnuInfo;
     fByteBuffer: PByteBuffer;
+    FIsParamResultSet: Boolean; //just a tag to know if Descriptors are allocated/Freed by owner stmt
     function GetFinalObject(Obj: POCIObject): POCIObject;
     function CreateOCIConvertError(ColumnIndex: Integer; DataType: ub2): EZOCIConvertError;
     procedure FreeOracleSQLVars;
@@ -790,7 +791,7 @@ begin
       if (CurrentVar^.valuep <> nil) then
         if (CurrentVar^.DescriptorType > 0) then begin
           for J := 0 to FIteration-1 do
-            if (PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer))))^ <> nil then begin
+            if ((PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer))))^ <> nil) and (not FIsParamResultSet) then begin
               Status := FPlainDriver.OCIDescriptorFree(PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer)))^,
                 CurrentVar^.DescriptorType);
               if Status <> OCI_SUCCESS then
@@ -2743,7 +2744,7 @@ begin
       Inc(N);
   AllocateOracleSQLVars(FColumns, N);
   SetLength(FFieldNames, N);
-
+  FIsParamResultSet := True; //we just reference the descriptors
   N := 0;
   for I := 0 to BindList.Count -1 do begin
     BindValue := BindList[i];
@@ -2791,8 +2792,7 @@ var
 begin
   { Fills the column info. }
   ColumnsInfo.Clear;
-  for I := 0 to FColumns.AllocNum -1 do
-  begin
+  for I := 0 to FColumns.AllocNum -1 do begin
     {$R-}
     CurrentVar := @FColumns.Variables[I];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}

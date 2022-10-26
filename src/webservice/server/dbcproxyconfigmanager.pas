@@ -81,12 +81,16 @@ type
     FConnectionIdleTimeOut: Cardinal;
     FDbPrefix: String;
     FSecurityPrefix: String;
+    FEnableThreading: Boolean;
+    FLogFile: String;
   public
     property ListeningPort: Word read FListeningPort;
     property IPAddress: String read FIPAddress;
     property ConnectionIdleTimeout: Cardinal read FConnectionIdleTimeout;
     property DbPrefix: String read FDbPrefix;
     property SecurityPrefix: String read FSecurityPrefix;
+    property EnableThreading: Boolean read FEnableThreading;
+    property LogFile: String read FLogFile;
     function ConstructUrl(ConfigName, UserName, Password: String; CheckSecurity: Boolean = True): String;
     procedure LoadConfigInfo(SourceFile: String);
     constructor Create;
@@ -127,6 +131,12 @@ var
   Section: String;
   ModuleType: String;
 begin
+  {$IFDEF LINUX}
+  FLogFile := '/var/log/zeosproxy.log';
+  {$ELSE}
+  FLogFile := ExtractFilePath(ParamStr(0)) + 'zeosproxy.log';
+  {$ENDIF}
+
   IniFile := TIniFile.Create(SourceFile, TEncoding.UTF8);
   try
     FDbPrefix := IniFile.ReadString('general', 'Database Prefix', 'db.');
@@ -134,6 +144,8 @@ begin
     FListeningPort := IniFile.ReadInteger('general', 'Listening Port', 8000);
     FIPAddress := IniFile.ReadString('general', 'IP Address', '127.0.0.1');
     FConnectionIdleTimeout := IniFile.ReadInteger('general', 'Connection Idle Timeout', 86400); {Default to one day}
+    FEnableThreading := IniFile.ReadBool('general', 'Enable Threading', false);
+    FLogFile := IniFile.ReadString('general', 'Log File', FLogFile);
     Sections := TStringList.Create;
     try
       IniFile.ReadSections(Sections);

@@ -504,6 +504,7 @@ type
     function ParamterIndex2ResultSetIndex(Value: Integer): Integer;
     function CreateBindVarOutOfRangeException(Value: Integer): EZSQLException;
     class function GetBindListClass: TZBindListClass; virtual;
+    function CreateParameterValueExceededException(Index: Integer): EZSQLException;
   protected //Properties
     property BatchDMLArrayCount: ArrayLenInt read FBatchDMLArrayCount write FBatchDMLArrayCount;
     property SupportsDMLBatchArrays: Boolean read FSupportsDMLBatchArrays;
@@ -2704,7 +2705,7 @@ begin
   end else begin
     Result := inherited Get(Index);
     if (Result.BindType <> zbtNull) and (Result.BindType <> BindType) then
-      Notify(Result, lnDeleted);
+      SetNull(Index, SQLType);
   end;
   Result.SQLType := SQLType;
   Result.BindType := BindType;
@@ -2921,8 +2922,44 @@ begin
 end;
 
 procedure TZBindList.SetNull(Index: NativeInt; SQLType: TZSQLType);
+var BindValue: PZBindValue;
 begin
-  AcquireBuffer(Index, SQLType, zbtNull);
+  if Index+1 > Count then begin
+    Count := Index+1;
+    BindValue := inherited Get(Index);
+  end else begin
+    BindValue := inherited Get(Index);
+    if (BindValue.BindType <> zbtNull) then
+    if (TZBindTypeSize[BindValue.BindType] = 0) then
+      case BindValue.BindType of
+        zbtRawString,
+        zbtUTF8String
+        {$IFNDEF NO_ANSISTRING}
+        ,zbtAnsiString{$ENDIF}: RawByteString(BindValue.Value) := EmptyRaw; //dec refcnt
+        zbtUniString: UnicodeString(BindValue.Value) := '';
+        zbtBytes:     TBytes(BindValue.Value) := nil;
+        zbtLob:       IZBlob(BindValue.Value) := nil;
+        zbtCustom:    begin
+                        FreeMem(BindValue.Value);
+                        BindValue.Value := nil;
+                      end;
+        else          BindValue.Value := nil;
+      end
+    else begin
+      if BindValue.BindType = zbtRefArray then begin
+        if PZArray(BindValue.Value).vArray <> nil then
+          ZDbcUtils.DeReferenceArray(PZArray(BindValue.Value).vArray,
+            TZSQLType(PZArray(BindValue.Value).VArrayType), PZArray(BindValue.Value).VArrayVariantType);
+        if PZArray(BindValue.Value).VIsNullArray <> nil then
+          ZDbcUtils.DeReferenceArray(PZArray(BindValue.Value)^.VIsNullArray,
+            TZSQLType(PZArray(BindValue.Value).VIsNullArrayType), PZArray(BindValue.Value).VIsNullArrayVariantType);
+      end;
+      FreeMem(BindValue.Value, TZBindTypeSize[BindValue.BindType]);
+      BindValue.Value := nil;
+    end;
+  end;
+  BindValue.BindType := zbtNull;
+  BindValue.SQLType := SQLType;
 end;
 
 procedure TZBindList.SetParamTypes(Index: NativeInt; SQLType: TZSQLType;
@@ -3162,6 +3199,13 @@ begin
       Result := CreateStmtLogEvent(Category, Logstring);
     end
   else Result := inherited CreatelogEvent(Category);
+end;
+
+function TZAbstractPreparedStatement.CreateParameterValueExceededException(
+  Index: Integer): EZSQLException;
+begin
+  {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := Format(SParamValueExceeded, [Index]);
+  Result := EZSQLException.Create({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
 end;
 
 {**
