@@ -2766,18 +2766,33 @@ begin
     ZMemTable1.FieldDefs.Add('Text', ftWideString, 100, True);
     ZMemTable1.Open;
     ZMemTable1.Append;
-    ZMemTable1.FieldByName('ID').{$IFNDEF WITH_ASLARGEINT}AsInteger{$ELSE}AsLargeInt{$ENDIF} := ZMemTable1.RecordCount + 1;
-    CheckEquals(1, ZMemTable1.FieldByName('ID').{$IFNDEF WITH_ASLARGEINT}AsInteger{$ELSE}AsLargeInt{$ENDIF}, 'Field "ID" is different');
+    {$IF DECLARED(TLargeIntField)}
+    // Note: In Delphi 2007 (and probably 2009) the AsLargeInt property only
+    // exists in the TLargeInfField class and not in TField.
+    (ZMemTable1.FieldByName('ID') as TLargeIntField).AsLargeInt := ZMemTable1.RecordCount + 1;
+    CheckEquals(1, (ZMemTable1.FieldByName('ID') as TLargeIntField).AsLargeInt, 'Field "ID" is different');
+    {$ELSE}
+    ZMemTable1.FieldByName('ID').AsInteger := ZMemTable1.RecordCount + 1;
+    CheckEquals(1, ZMemTable1.FieldByName('ID').AsInteger, 'Field "ID" is different');
+    {$IFEND}
     Succeeded := False;
     try
       ZMemTable1.Post;
       Succeeded := True;
     except end;
     Check(not Succeeded, 'The field "Text" is required and unbound. MemTable should forbit this behavior');
-    ZMemTable1.FieldByName('Text').AsString := IntToStr(ZMemTable1.FieldByName('ID').{$IFNDEF WITH_ASLARGEINT}AsInteger{$ELSE}AsLargeInt{$ENDIF});
+    {$IF DECLARED(TLargeIntField)}
+    ZMemTable1.FieldByName('Text').AsString := IntToStr((ZMemTable1.FieldByName('ID') as TLargeIntField).AsLargeInt);
+    {$ELSE}
+    ZMemTable1.FieldByName('Text').AsString := IntToStr(ZMemTable1.FieldByName('ID').AsInteger);
+    {$IFEND}
     ZMemTable1.Post;
     CheckEquals(1, ZMemTable1.RecordCount, 'There should be one row only');
-    CheckEquals(1, ZMemTable1.FieldByName('ID').{$IFNDEF WITH_ASLARGEINT}AsInteger{$ELSE}AsLargeInt{$ENDIF}, 'Field "ID" is different');
+    {$IF DECLARED(TLargeIntField)}
+    CheckEquals(1, (ZMemTable1.FieldByName('ID') as TLargeIntField).AsLargeInt, 'Field "ID" is different');
+    {$ELSE}
+    CheckEquals(1, ZMemTable1.FieldByName('ID').AsInteger, 'Field "ID" is different');
+    {$IFEND}
     CheckEquals('1', ZMemTable1.FieldByName('ID').AsString, 'Field "Text" is different');
   finally
     ZMemTable1.Free;
