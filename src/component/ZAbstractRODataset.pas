@@ -1502,6 +1502,8 @@ const
   ObjectFieldTypes = [ftADT, ftArray, ftReference, ftDataSet];
   {$ENDIF}
 
+function CreateFieldRequired(const FieldDisplayName: String): EZDatabaseError;
+
 implementation
 
 uses ZFastCode, Math, ZVariant, ZMessages,
@@ -1554,6 +1556,11 @@ end;
 function CreateUnBoundError(const Field: TField): EZDatabaseError;
 begin
   Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [Field.DisplayName]));
+end;
+
+function CreateFieldRequired(const FieldDisplayName: String): EZDatabaseError;
+begin
+  Result := EZDatabaseError.Create(Format({$IFDEF FPC}SNeedField{$ELSE}SFieldRequired{$ENDIF}, [FieldDisplayName]));
 end;
 
 { TZDataLink }
