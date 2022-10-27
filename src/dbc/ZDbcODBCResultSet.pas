@@ -1912,11 +1912,11 @@ begin
           ColStrAttribute(ColumnNumber, SQL_DESC_LABEL, StrBuf, ColumnLabel);
           ColStrAttribute(ColumnNumber, SQL_DESC_BASE_COLUMN_NAME, StrBuf, ColumnName);
           TempInt := ColNumAttribute(ColumnNumber, SQL_DESC_DISPLAY_SIZE);
-          {$IF HIGH(Integer) < HIGH(NativeInt)}
+          {$IFDEF CPU64}
           if TempInt > High(Integer) then
             Precision := High(Integer)
           else
-          {$IFEND}
+          {$ENDIF}
             Precision := TempInt;
           if ColumnName = '' then
             ColStrAttribute(ColumnNumber, SQL_DESC_NAME, StrBuf, ColumnName);
