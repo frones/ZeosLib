@@ -3871,6 +3871,7 @@ begin
     CheckEquals(Query.Fields.Count, Table.Fields.Count, 'The fieldcount');
     CheckEquals(0, Table.RecordCount, 'The recordCount');
     Table.Append;
+    Table.Fields[0].AsInteger := Low(ShortInt);
     Table.Post;
   finally
     FreeAndNil(Table);
@@ -3896,6 +3897,7 @@ begin
     CheckEquals(Query.Fields.Count, Table.Fields.Count, 'The fieldcount');
     CheckEquals(0, Table.RecordCount, 'The recordCount');
     Table.Append;
+    Table.Fields[0].AsInteger := Low(ShortInt);
     Table.Post;
   finally
     FreeAndNil(Table);

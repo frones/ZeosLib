@@ -1611,30 +1611,11 @@ var
   ConnectionID: Integer;
   HadException: Boolean;
 
-  function CloneConnection(Original: TZConnection): TZConnection;
-  begin
-    Result := TZConnection.Create(nil);
-    Result.Protocol := Original.Protocol;
-    Result.HostName := Original.HostName;
-    Result.Port := Original.Port;
-    Result.Database := Original.Database;
-    Result.User := Original.User;
-    Result.Password := Original.Password;
-    Result.Catalog := Original.Catalog;
-    Result.LibraryLocation := Original.LibraryLocation;
-    Result.Properties.Assign(Original.Properties);
-    Result.AutoCommit := Connection.AutoCommit;
-    Result.TransactIsolationLevel := Original.TransactIsolationLevel;
-    Result.ControlsCodePage := Original.ControlsCodePage;
-    Result.ClientCodepage := Original.ClientCodepage;
-  end;
-
-
   procedure dropConnection;
   var
     MyConnection: TZConnection;
   begin
-    MyConnection := CloneConnection(Connection);
+    MyConnection := CreateDatasetConnection;
     try
       MyConnection.Connect;
       MyConnection.ExecuteDirect('delete from MON$ATTACHMENTS where MON$ATTACHMENT_ID = ' + IntToStr(ConnectionID));
@@ -1648,7 +1629,7 @@ begin
   if (Connection.Protocol <> 'firebird') and (Connection.Protocol <> 'interbase') then
     exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
     Query.Connection := Connection;
 
