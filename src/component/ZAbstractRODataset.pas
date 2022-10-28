@@ -4409,31 +4409,9 @@ end;
   Performs an internal post updates.
 }
 procedure TZAbstractRODataset.InternalPost;
-  procedure Checkrequired;
-  var
-    I: longint;
-    columnindex : integer;
-  begin
-    For I:=0 to Fields.Count-1 do With Fields[i] do
-      if State = dsEdit then begin
-        if Required and not ReadOnly and (FieldKind=fkData) and IsNull then
-          raise EZDatabaseError.Create(Format(SNeedField,[DisplayName]));
-      end else if State = dsInsert then
-        if Required and not ReadOnly and (FieldKind=fkData) and IsNull then begin
-         // allow autoincrement and defaulted fields to be null;
-            columnindex := Resultset.FindColumn(Fields[i].FieldName);
-            if (Columnindex = InvalidDbcIndex) or
-               (not FResultSetMetadata.HasDefaultValue(columnIndex) and
-                not FResultSetMetadata.IsAutoIncrement(columnIndex)) then
-              raise EZDatabaseError.Create(Format(SNeedField,[DisplayName]));
-          end;
-  end;
-
 begin
   if not ({$IFDEF FPC}Updatable{$ELSE}Self is TZAbstractRWDataSet{$ENDIF}) then
     RaiseReadOnlyError;
-
-  Checkrequired;
 end;
 
 {**

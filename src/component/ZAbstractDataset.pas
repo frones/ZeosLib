@@ -96,6 +96,7 @@ type
     FDetailDataSets: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     FDetailCachedUpdates: array of Boolean;
   private
+    FCheckRequired: Boolean;
     function GetUpdatesPending: Boolean;
     /// <summary>Sets a new CachedUpdates property value.</summary>
     /// <param>"Value" a new CachedUpdates value.</param>
@@ -115,6 +116,7 @@ type
       default wmWhereKeyOnly;
 
     procedure SetTxns2Resolver(const Resolver: IZCachedResolver); virtual;
+    procedure InternalOpen; override;
     procedure InternalClose; override;
     procedure InternalEdit; override;
     procedure InternalInsert; override;
@@ -255,7 +257,7 @@ type
 
 implementation
 
-uses Math, ZMessages, ZDatasetUtils, ZDbcProperties, ZExceptions;
+uses Math, ZMessages, ZDatasetUtils, ZDbcProperties, ZExceptions, ZSysUtils;
 
 { TZAbstractRWDataSet }
 
@@ -364,6 +366,18 @@ begin
   Result := False;
 end;
 {$ENDIF}
+
+procedure TZAbstractRWDataSet.InternalOpen;
+var
+  Value:String;
+begin
+  inherited;
+  Value := trim (Properties.Values[DSProps_CheckRequired]);
+  if Value = '' then
+    FCheckRequired := True
+  else
+    FCheckRequired := ZSysUtils.StrToBoolEx(Value);
+end;
 
 {**
   Performs internal query closing.
@@ -508,9 +522,37 @@ var
   BM:TBookMarkStr{%H-};
   {$ENDIF}
   I, j: Integer;
-begin
-  inherited;  //AVZ - Firebird defaults come through when this is commented out
 
+procedure Checkrequired;
+var
+  I: longint;
+  columnindex : integer;
+begin
+  case State of
+    dsEdit: begin
+      For I:=0 to Fields.Count-1 do With Fields[I] do
+        if Required and not ReadOnly and (FieldKind=fkData) and IsNull then
+          raise EZDatabaseError.Create(Format(SNeedField,[DisplayName]));
+    end;
+    dsInsert: begin
+      For I:=0 to Fields.Count-1 do With Fields[I] do
+        if Required and not ReadOnly and (FieldKind=fkData) and IsNull then begin
+          // allow autoincrement and defaulted fields to be null;
+          columnindex := Resultset.FindColumn(Fields[I].FieldName);
+          if (Columnindex = InvalidDbcIndex) or
+            (not ResultSetMetadata.HasDefaultValue(columnIndex) and
+             not ResultSetMetadata.IsAutoIncrement(columnIndex))
+          then
+            raise EZDatabaseError.Create(Format(SNeedField,[DisplayName]));
+        end;
+    end;
+    else ;
+  end;
+end;
+begin
+  //inherited;  //AVZ - Firebird defaults come through when this is commented out
+  if FCheckRequired then
+    Checkrequired;
 
   if not GetActiveBuffer(RowBuffer) then
     raise EZDatabaseError.Create(SInternalError);
