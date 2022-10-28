@@ -97,6 +97,7 @@ type
     FDetailCachedUpdates: array of Boolean;
   private
     FCheckRequired: Boolean;
+    FInsertReturningFields: TStrings;
     function GetUpdatesPending: Boolean;
     /// <summary>Sets a new CachedUpdates property value.</summary>
     /// <param>"Value" a new CachedUpdates value.</param>
@@ -257,7 +258,7 @@ type
 
 implementation
 
-uses Math, ZMessages, ZDatasetUtils, ZDbcProperties, ZExceptions, ZSysUtils;
+uses Math, ZMessages, ZDatasetUtils, ZDbcProperties, ZExceptions, ZSysUtils, ZDbcUtils;
 
 { TZAbstractRWDataSet }
 
@@ -377,6 +378,13 @@ begin
     FCheckRequired := True
   else
     FCheckRequired := ZSysUtils.StrToBoolEx(Value);
+
+  if FCheckRequired then begin
+    // more or less a copy from TZInterbaseFirebirdCachedResolver.Create
+    Value := Statement.GetParameters.Values[DSProps_InsertReturningFields];
+    if Value <> '' then
+      FInsertReturningFields := ExtractFields(Value, [';', ',']);
+  end;
 end;
 
 {**
@@ -385,6 +393,9 @@ end;
 procedure TZAbstractRWDataSet.InternalClose;
 begin
   inherited InternalClose;
+
+  if Assigned(FInsertReturningFields) then
+    FreeAndNil(FInsertReturningFields);
 
   if not ResultSetWalking then begin
     if FCachedResolver <> nil then begin
@@ -532,19 +543,21 @@ begin
     dsEdit: begin
       For I:=0 to Fields.Count-1 do With Fields[I] do
         if Required and not ReadOnly and (FieldKind=fkData) and IsNull then
-          raise EZDatabaseError.Create(Format(SNeedField,[DisplayName]));
+          if not Assigned(FInsertReturningFields) or (FInsertReturningFields.IndexOf(FieldName) < 0) then
+            raise EZDatabaseError.Create(Format(SNeedField,[DisplayName]));
     end;
     dsInsert: begin
       For I:=0 to Fields.Count-1 do With Fields[I] do
-        if Required and not ReadOnly and (FieldKind=fkData) and IsNull then begin
-          // allow autoincrement and defaulted fields to be null;
-          columnindex := Resultset.FindColumn(Fields[I].FieldName);
-          if (Columnindex = InvalidDbcIndex) or
-            (not ResultSetMetadata.HasDefaultValue(columnIndex) and
-             not ResultSetMetadata.IsAutoIncrement(columnIndex))
-          then
-            raise EZDatabaseError.Create(Format(SNeedField,[DisplayName]));
-        end;
+        if Required and not ReadOnly and (FieldKind=fkData) and IsNull then
+          if not Assigned(FInsertReturningFields) or (FInsertReturningFields.IndexOf(FieldName) < 0) then begin
+            // allow autoincrement and defaulted fields to be null;
+            columnindex := Resultset.FindColumn(Fields[I].FieldName);
+            if (Columnindex = InvalidDbcIndex) or
+              (not ResultSetMetadata.HasDefaultValue(columnIndex) and
+               not ResultSetMetadata.IsAutoIncrement(columnIndex))
+            then
+              raise EZDatabaseError.Create(Format(SNeedField,[DisplayName]));
+          end;
     end;
     else ;
   end;
