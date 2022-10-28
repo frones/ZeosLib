@@ -509,7 +509,7 @@ var
   {$ENDIF}
   I, j: Integer;
 begin
-  //inherited;  //AVZ - Firebird defaults come through when this is commented out
+  inherited;  //AVZ - Firebird defaults come through when this is commented out
 
 
   if not GetActiveBuffer(RowBuffer) then
