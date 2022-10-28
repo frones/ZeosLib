@@ -3871,6 +3871,7 @@ begin
     CheckEquals(Query.Fields.Count, Table.Fields.Count, 'The fieldcount');
     CheckEquals(0, Table.RecordCount, 'The recordCount');
     Table.Append;
+    Table.FieldByName('P_ID').AsInteger := 9999;
     Table.Post;
   finally
     FreeAndNil(Table);
@@ -3896,6 +3897,7 @@ begin
     CheckEquals(Query.Fields.Count, Table.Fields.Count, 'The fieldcount');
     CheckEquals(0, Table.RecordCount, 'The recordCount');
     Table.Append;
+    Table.FieldByName('P_ID').AsInteger := 9999;
     Table.Post;
   finally
     FreeAndNil(Table);
@@ -3928,6 +3930,7 @@ begin
     CheckEquals(Query.RecordCount, Table.RecordCount, 'The recordCount');
     CheckEquals(Query.Fields.Count+2, Table.Fields.Count, 'The fieldcount');
     Table.Append;
+    Table.FieldByName('P_ID').AsInteger := 9999;
     Table.Post;
     Table.Clear;
     { test reverse logic }
