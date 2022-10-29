@@ -381,7 +381,7 @@ begin
 
   if FCheckRequired then begin
     // more or less a copy from TZInterbaseFirebirdCachedResolver.Create
-    Value := Statement.GetParameters.Values[DSProps_InsertReturningFields];
+    Value := Properties.Values[DSProps_InsertReturningFields];
     if Value <> '' then
       FInsertReturningFields := ExtractFields(Value, [';', ',']);
   end;
