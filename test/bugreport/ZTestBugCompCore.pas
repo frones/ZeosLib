@@ -1517,7 +1517,7 @@ begin
 
     Query.Append;
     Check(Query.UpdateStatus = usUnmodified);
-
+    Query.FieldByName('P_ID').AsInteger := 9998;
     Query.Post;
     Check(Query.UpdateStatus = usInserted);
 
