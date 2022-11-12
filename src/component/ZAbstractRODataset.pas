@@ -2848,7 +2848,7 @@ jmpMoveA:   if Result then begin
             end;
             Exit;
           end;
-        ftSmallint: RowAccessor.GetSmall(ColumnIndex, Result);
+        ftSmallint: PSmallInt(Buffer)^ := RowAccessor.GetSmall(ColumnIndex, Result);
         ftInteger, ftAutoInc: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}PInteger{$ELSE}PLongInt{$ENDIF}(Buffer)^ := RowAccessor.GetInt(ColumnIndex, Result);
         ftBoolean: PWordBool(Buffer)^ := RowAccessor.GetBoolean(ColumnIndex, Result);
         ftWord: PWord(Buffer)^ := RowAccessor.GetWord(ColumnIndex, Result);

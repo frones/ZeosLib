@@ -106,6 +106,7 @@ type
     procedure TestSF_Internal7;
     procedure TestSF524;
     procedure TestDisconnect;
+    procedure Test_SF_Ticket512;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1322,6 +1323,90 @@ begin
     end;
   end;
 end;
+
+(*
+Hello,
+I have a table that need lookup two smallint field into another table.
+
+If i create TSmallintField on ZQuery1I can't lookup Smallint in ZQuery4, fails.
+
+If i create TShortIntField on ZQuery1 I can lookup the same SmallIntFields in ZQuery4, Works.
+
+Smallint to Smallint Fails.
+
+ShortInt to SmallInt Works.
+
+Thanks.
+
+EH: Resolve in R7899*)
+procedure ZTestCompInterbaseBugReport.Test_SF_Ticket512;
+var
+  Query_Cargo: TZQuery;
+  Query_Department: TZQuery;
+  FieldDef: TFieldDef;
+  Field_Lookup: TField;
+  idx: Integer;
+begin
+  Query_Cargo := CreateQuery;
+  Query_Department := CreateQuery;
+  try
+    Check(Query_Cargo <> nil);
+    Query_Cargo.SQL.Text := 'select * from cargo order by 1';
+    Query_Department.SQL.Text := 'select * from department';
+    Query_Department.Open;
+    Query_Cargo.FieldDefs.Clear;
+    Query_Cargo.Fields.Clear;
+    Query_Cargo.FieldDefs.Update;
+    FieldDef := Query_Cargo.FieldDefs.AddFieldDef;
+    FieldDef.DataType := ftString;
+    FieldDef.Size := 20;
+    FieldDef.Name := 'DEP_NAME';
+    for idx := 0 to Query_Cargo.FieldDefs.Count - 1 do
+      Query_Cargo.FieldDefs.Items[idx].CreateField(Query_Cargo);
+    Field_Lookup := Query_Cargo.FieldByName('DEP_NAME');
+    Field_Lookup.FieldKind := fkLookup;
+    Field_Lookup.LookupDataSet := Query_Department;
+    Field_Lookup.LookupKeyFields := 'DEP_ID';
+    Field_Lookup.LookupResultField := 'DEP_NAME';
+    Field_Lookup.KeyFields := 'C_DEP_ID';
+    Query_Cargo.Open;
+    CheckEquals('Container agency', Field_Lookup.AsString, 'lookup resultfield value mismatch');
+    Query_Cargo.Next;
+    CheckEquals('Line agency', Field_Lookup.AsString, 'lookup resultfield value mismatch');
+    Query_Cargo.Next;
+    CheckEquals('Line agency', Field_Lookup.AsString, 'lookup resultfield value mismatch');
+    Query_Cargo.Next;
+    CheckEquals('Container agency', Field_Lookup.AsString, 'lookup resultfield value mismatch');
+    Query_Cargo.Close;
+    Query_Cargo.FieldDefs.Clear;
+    Query_Cargo.Fields.Clear;
+    Query_Cargo.FieldDefs.Update;
+    FieldDef := Query_Cargo.FieldDefs.AddFieldDef;
+    FieldDef.DataType := ftSmallint;
+    //FieldDef.Size := SizeOf(SmallInt);
+    FieldDef.Name := 'DEP_ID_LOOKUP';
+    for idx := 0 to Query_Cargo.FieldDefs.Count - 1 do
+      Query_Cargo.FieldDefs.Items[idx].CreateField(Query_Cargo);
+    Field_Lookup := Query_Cargo.FieldByName('DEP_ID_LOOKUP');
+    Field_Lookup.FieldKind := fkLookup;
+    Field_Lookup.LookupDataSet := Query_Department;
+    Field_Lookup.LookupKeyFields := 'DEP_ID';
+    Field_Lookup.LookupResultField := 'DEP_ID';
+    Field_Lookup.KeyFields := 'C_DEP_ID';
+    Query_Cargo.Open;
+    CheckEquals(2, Field_Lookup.AsInteger, 'lookup resultfield value mismatch');
+    Query_Cargo.Next;
+    CheckEquals(1, Field_Lookup.AsInteger, 'lookup resultfield value mismatch');
+    Query_Cargo.Next;
+    CheckEquals(1, Field_Lookup.AsInteger, 'lookup resultfield value mismatch');
+    Query_Cargo.Next;
+    CheckEquals(2, Field_Lookup.AsInteger, 'lookup resultfield value mismatch');
+  finally
+    FreeAndNil(Query_Cargo);
+    FreeAndNil(Query_Department);
+  end;
+end;
+
 type
   THackField = class(TField);
 procedure ZTestCompInterbaseBugReport.TestSF418_ASC;
