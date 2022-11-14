@@ -2340,7 +2340,7 @@ begin
   { Creates a new row. }
   TempRow := FRowAccessor.RowBuffer;
   FRowAccessor.Alloc;
-  FRowAccessor.MoveFrom(FInsertedRow);
+  FRowAccessor.CopyFrom(FInsertedRow);
   FRowAccessor.RowBuffer^.UpdateType := utInserted;
   FRowAccessor.RowBuffer^.Index := GetNextRowIndex;
 
@@ -3002,6 +3002,7 @@ begin
     ColumnInfo.ColumnType := Metadata.GetColumnType(C);
     ColumnInfo.ColumnCodePage := Metadata.GetColumnCodePage(C);
     ColumnInfo.Scale := Metadata.GetScale(C);
+    ColumnInfo.Nullable := Metadata.IsNullable(C);
     ColumnsInfo.Add(ColumnInfo);
   end;
   FCachedUpdates := False;
@@ -3043,6 +3044,7 @@ end;
 procedure TZVirtualResultSet.PostRowUpdates(OldRowAccessor,
   NewRowAccessor: TZRowAccessor);
 begin
+  //NewRowAccessor.GetColumnDefaultExpression(FirstDbcIndex) //EH commented what's purpose of the line? There is no testcase!
 end;
 {$IFDEF FPC} {$POP} {$ENDIF} // empty function - parameter not used intentionally
 

@@ -152,6 +152,25 @@ type
     procedure TestUnicodeChars;
   end;
 
+  TZTestCompMemTableBugReport = class(TZAbstractCompSQLTestCase)
+  protected
+    function CreateTable: TZMemTable;
+    class function GetWithConnection: Boolean; virtual; abstract;
+  published
+    procedure Test_Ticket550;
+  end;
+
+  TZTestCompMemTableBugReportWithConnnection = class(TZTestCompMemTableBugReport)
+  protected
+    class function GetWithConnection: Boolean; override;
+  end;
+
+  TZTestCompMemTableBugReportWithoutConnnection = class(TZTestCompMemTableBugReport)
+  protected
+    class function GetWithConnection: Boolean; override;
+  end;
+
+
 implementation
 
 uses
@@ -2725,7 +2744,61 @@ begin
   end;
 end;
 
+{ TZTestCompMemTableBugReport }
+
+function TZTestCompMemTableBugReport.CreateTable: TZMemTable;
+begin
+  Result := TZMemTable.Create(nil);
+  if GetWithConnection then
+    Result.Connection := Connection;
+end;
+
+procedure TZTestCompMemTableBugReport.Test_Ticket550;
+var ZMemTable1: TZMemTable;
+    Succeeded: Boolean;
+begin
+  ZMemTable1 := CreateTable;
+  try
+    Check(ZMemTable1 <> nil, 'Component should be assigned');
+    ZMemTable1.FieldDefs.Add('ID', ftLargeInt, 0, True);
+    ZMemTable1.FieldDefs.Add('Text', ftWideString, 100, True);
+    ZMemTable1.Open;
+    ZMemTable1.Append;
+    ZMemTable1.FieldByName('ID').{$IFNDEF WITH_ASLARGEINT}AsInteger{$ELSE}AsLargeInt{$ENDIF} := ZMemTable1.RecordCount + 1;
+    CheckEquals(1, ZMemTable1.FieldByName('ID').{$IFNDEF WITH_ASLARGEINT}AsInteger{$ELSE}AsLargeInt{$ENDIF}, 'Field "ID" is different');
+    Succeeded := False;
+    try
+      ZMemTable1.Post;
+      Succeeded := True;
+    except end;
+    Check(not Succeeded, 'The field "Text" is required and unbound. MemTable should forbit this behavior');
+    ZMemTable1.FieldByName('Text').AsString := IntToStr(ZMemTable1.FieldByName('ID').{$IFNDEF WITH_ASLARGEINT}AsInteger{$ELSE}AsLargeInt{$ENDIF});
+    ZMemTable1.Post;
+    CheckEquals(1, ZMemTable1.RecordCount, 'There should be one row only');
+    CheckEquals(1, ZMemTable1.FieldByName('ID').{$IFNDEF WITH_ASLARGEINT}AsInteger{$ELSE}AsLargeInt{$ENDIF}, 'Field "ID" is different');
+    CheckEquals('1', ZMemTable1.FieldByName('ID').AsString, 'Field "Text" is different');
+  finally
+    ZMemTable1.Free;
+  end;
+end;
+
+{ TZTestCompMemTableBugReportWithConnnection }
+
+class function TZTestCompMemTableBugReportWithConnnection.GetWithConnection: Boolean;
+begin
+  Result := True;
+end;
+
+{ TZTestCompMemTableBugReportWithoutConnnection }
+
+class function TZTestCompMemTableBugReportWithoutConnnection.GetWithConnection: Boolean;
+begin
+  Result := False;
+end;
+
 initialization
   RegisterTest('bugreport',ZTestCompCoreBugReport.Suite);
   RegisterTest('bugreport',ZTestCompCoreBugReportMBCs.Suite);
+  RegisterTest('bugreport',TZTestCompMemTableBugReportWithConnnection.Suite);
+  RegisterTest('bugreport',TZTestCompMemTableBugReportWithoutConnnection.Suite);
 end.
