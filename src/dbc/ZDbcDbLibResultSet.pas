@@ -389,10 +389,10 @@ label AssignGeneric;
         else Scale := 0;
       end;
       ColumnType := ConvertTDSTypeToSqlType(TDSType, Precision, Scale);
-	    if (ColumnType = stBytes) and (Precision = 2147483647) then begin
-	      Precision := 0;
-		    Scale := 0;
-	    end;
+      if (ColumnType = stBytes) and (Precision = 2147483647) then begin
+        Precision := 0;
+        Scale := 0;
+      end;
       if ColumnType = stUnknown
       then NeedsLoading := true;
       if (TDSType = tdsNumeric) and (Scale = 0) and (Precision = 19)

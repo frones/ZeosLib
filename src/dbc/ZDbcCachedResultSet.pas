@@ -556,6 +556,7 @@ var SQLType: TZSQLType;
   DataAddress: Pointer;
   IsNull: Boolean;
   CP: Word;
+  CL: Integer;
 label Fail;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -565,11 +566,12 @@ begin
     DataAddress := RowAccessor.GetColumnData(ColumnIndex, IsNull);
     SQLType := RowAccessor.GetColumnType(ColumnIndex);
     CP := RowAccessor.GetColumnCodePage(ColumnIndex);
+    CL := RowAccessor.GetColumnLength( ColumnIndex);
     case SQLType of
-      stBytes: if RowAccessor.GetColumnLength( ColumnIndex) <= 0
+      stBytes: if (CL <= 0) or (CL = MaxInt)
           then Result := TZRowAccessorBytesLob.CreateWithDataAddess(DataAddress, zCP_Binary, ConSettings, FOpenLobStreams)
           else goto Fail;
-      stString, stUnicodeString: if RowAccessor.GetColumnLength( ColumnIndex) <= 0 then
+      stString, stUnicodeString: if (CL <= 0) or (CL = MaxInt) then
           if CP = zCP_UTF16
           then Result := TZRowAccessorUnicodeStringLob.CreateWithDataAddess(DataAddress, CP, ConSettings, FOpenLobStreams)
           else Result := TZRowAccessorRawByteStringLob.CreateWithDataAddess(DataAddress, CP, ConSettings, FOpenLobStreams)
@@ -2336,7 +2338,6 @@ var TempRow: PZRowBuffer;
   Succeeded: Boolean;
 begin
   CheckUpdatable;
-
   { Creates a new row. }
   TempRow := FRowAccessor.RowBuffer;
   FRowAccessor.Alloc;
@@ -2365,6 +2366,7 @@ begin
   end;
   FRowsList.Add(FRowAccessor.RowBuffer);
   FRowAccessor.ClearBuffer(FInsertedRow, True);
+
   LastRowNo := FRowsList.Count;
   MoveAbsolute(LastRowNo);
 end;
