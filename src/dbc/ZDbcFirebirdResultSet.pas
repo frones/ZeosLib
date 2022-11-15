@@ -292,6 +292,7 @@ type
     procedure Clear; override;
   public //obsolate
     function Length: Integer; override;
+    function LobIsPartOfTxn(const IBTransaction: IZInterbaseFirebirdTransaction): Boolean;
   public
     constructor Create(const Connection: IZFirebirdConnection; const BlobId: TISC_QUAD;
       LobStreamMode: TZLobStreamMode; ColumnCodePage: Word;
@@ -1391,6 +1392,15 @@ begin
     end;
     Result := FBlobInfo.TotalSize;
   end;
+end;
+
+function TZFirebirdLob.LobIsPartOfTxn(
+  const IBTransaction: IZInterbaseFirebirdTransaction): Boolean;
+var MyIBFTransaction: IZInterbaseFirebirdTransaction;
+begin
+  Result := (FFBTransaction <> nil) and
+            (FFBTransaction.QueryInterface(IZInterbaseFirebirdTransaction, MyIBFTransaction) = S_OK) and
+            (MyIBFTransaction = IBTransaction);
 end;
 
 procedure TZFirebirdLob.ReleaseImmediat(const Sender: IImmediatelyReleasable;

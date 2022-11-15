@@ -166,6 +166,7 @@ type
     function GetConSettings: PZConSettings;
   public
     function GetBlobId: TISC_QUAD; //Part of the current txn
+    function LobIsPartOfTxn(const IBTransaction: IZInterbaseFirebirdTransaction): Boolean;
   public
     function Clone(LobStreamMode: TZLobStreamMode): IZBlob;
     function IsEmpty: Boolean; override;
@@ -926,6 +927,15 @@ begin
     end;
     Result := FBlobInfo.TotalSize
   end;
+end;
+
+function TZInterbase6Lob.LobIsPartOfTxn(
+  const IBTransaction: IZInterbaseFirebirdTransaction): Boolean;
+var MyIBFTransaction: IZInterbaseFirebirdTransaction;
+begin
+  Result := (FIBTransaction <> nil) and
+            (FIBTransaction.QueryInterface(IZInterbaseFirebirdTransaction, MyIBFTransaction) = S_OK) and
+            (MyIBFTransaction = IBTransaction);
 end;
 
 procedure TZInterbase6Lob.ReleaseImmediat(
