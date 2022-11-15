@@ -2764,18 +2764,18 @@ begin
     ZMemTable1.FieldDefs.Add('Text', ftWideString, 100, True);
     ZMemTable1.Open;
     ZMemTable1.Append;
-    ZMemTable1.FieldByName('ID').{$IFNDEF WITH_ASLARGEINT}AsInteger{$ELSE}AsLargeInt{$ENDIF} := ZMemTable1.RecordCount + 1;
-    CheckEquals(1, ZMemTable1.FieldByName('ID').{$IFNDEF WITH_ASLARGEINT}AsInteger{$ELSE}AsLargeInt{$ENDIF}, 'Field "ID" is different');
+    (ZMemTable1.FieldByName('ID') as TLargeintField).AsLargeInt := ZMemTable1.RecordCount + 1;
+    CheckEquals(1, (ZMemTable1.FieldByName('ID') as TLargeintField).AsLargeInt, 'Field "ID" is different');
     Succeeded := False;
     try
       ZMemTable1.Post;
       Succeeded := True;
     except end;
     Check(not Succeeded, 'The field "Text" is required and unbound. MemTable should forbit this behavior');
-    ZMemTable1.FieldByName('Text').AsString := IntToStr(ZMemTable1.FieldByName('ID').{$IFNDEF WITH_ASLARGEINT}AsInteger{$ELSE}AsLargeInt{$ENDIF});
+    ZMemTable1.FieldByName('Text').AsString := IntToStr((ZMemTable1.FieldByName('ID') as TLargeintField).AsLargeInt);
     ZMemTable1.Post;
     CheckEquals(1, ZMemTable1.RecordCount, 'There should be one row only');
-    CheckEquals(1, ZMemTable1.FieldByName('ID').{$IFNDEF WITH_ASLARGEINT}AsInteger{$ELSE}AsLargeInt{$ENDIF}, 'Field "ID" is different');
+    CheckEquals(1, (ZMemTable1.FieldByName('ID') as TLargeintField).AsLargeInt, 'Field "ID" is different');
     CheckEquals('1', ZMemTable1.FieldByName('ID').AsString, 'Field "Text" is different');
   finally
     ZMemTable1.Free;
