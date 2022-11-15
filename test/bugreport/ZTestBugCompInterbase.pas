@@ -107,6 +107,7 @@ type
     procedure TestSF524;
     procedure TestDisconnect;
     procedure Test_SF_Ticket512;
+    procedure TestTransactionMonitoring;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1094,6 +1095,58 @@ begin
     end;
   finally
     Query.Free;
+  end;
+end;
+
+procedure ZTestCompInterbaseBugReport.TestTransactionMonitoring;
+var
+  Query: TZQuery;
+  ConnectionID, MON_OLDEST_ACTIVE, MON_TOP_TRANSACTION: Integer;
+
+begin
+  if (Connection.Protocol <> 'firebird') and (Connection.Protocol <> 'interbase') then
+    exit;
+
+  Query := CreateQuery;
+  try
+    Connection.Connect;
+
+    Connection.StartTransaction;
+    Query.SQL.Text := 'select CURRENT_CONNECTION from RDB$DATABASE';
+    Query.Open;
+    ConnectionID := Query.Fields[0].AsInteger;
+    Query.Close;
+
+    Query.SQL.Text := 'select MON$OLDEST_ACTIVE, MON$TOP_TRANSACTION from MON$TRANSACTIONS WHERE MON$ATTACHMENT_ID=:ATTACHMENT_ID';
+    Query.Params[0].AsInteger := ConnectionID;
+    Query.Open;
+    MON_OLDEST_ACTIVE := Query.Fields[0].AsInteger;
+    MON_TOP_TRANSACTION := Query.Fields[1].AsInteger;
+    Query.Close;
+    Connection.Commit;
+    Check(Connection.AutoCommit, 'No autocommit mode');
+    Query.Open;
+    while not Query.Eof do begin
+      CheckEquals(MON_OLDEST_ACTIVE+1, Query.Fields[0].AsInteger);
+      CheckEquals(MON_TOP_TRANSACTION+1, Query.Fields[1].AsInteger);
+      Query.Next;
+    end;
+    Query.Close;
+    Connection.StartTransaction; //txn
+    Connection.StartTransaction; //savepoint
+    Connection.StartTransaction; //savepoint
+    Query.Open;
+    while not Query.Eof do begin
+      CheckEquals(MON_OLDEST_ACTIVE+2, Query.Fields[0].AsInteger);
+      CheckEquals(MON_TOP_TRANSACTION+2, Query.Fields[1].AsInteger);
+      Query.Next;
+    end;
+    Query.Close;
+    Connection.Commit; //savepoint
+    Connection.Commit; //savepoint
+    Connection.Rollback; //savepoint
+  finally
+    FreeAndNil(Query);
   end;
 end;
 
