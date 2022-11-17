@@ -133,13 +133,19 @@ type
     ['{D2694EF6-F6B6-4A11-BB46-456ED63DCC18}']
     /// <summary>Set the readonly state of a field. The value will be ignored
     ///  if the field is not writable.</summary>
-    /// <param>"ColumnIndex" the columnnumber of the field.</param>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" if <c>true</c> then the field will be ignored on
     ///  generating the dml's.</param>
     procedure SetReadOnly(ColumnIndex: Integer; Value: Boolean);
     /// <summary>Set the searchable state of a field. The value will be ignored
     ///  if the field is not searchable at all e.g. LOB's.</summary>
-    /// <param>"ColumnIndex" the columnnumber of the field.</param>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" if <c>true</c> then the field will be ignored on
     ///  generating the where clause of the dml's.</param>
     procedure SetSearchable(ColumnIndex: Integer; Value: Boolean);

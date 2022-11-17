@@ -203,6 +203,7 @@ type
     function GetColumnLength(ColumnIndex: Integer): Integer;
     function GetColumnOffSet(ColumnIndex: Integer): Integer;
     function GetColumnDefaultExpression(ColumnIndex: Integer): string;
+    function HasColumnDefaultExpression(ColumnIndex: Integer): Boolean;
     function HasServerLinkedColumns: Boolean;
     procedure SetColumnDefaultExpression(ColumnIndex: Integer; const Value: string);
     procedure SetColumnCodePage(ColumnIndex: Integer; const Value: Word);
@@ -2859,6 +2860,11 @@ begin
   CheckColumnConvertion(ColumnIndex, stWord);
 {$ENDIF}
   Result := Word(GetUInt(ColumnIndex, IsNull));
+end;
+
+function TZRowAccessor.HasColumnDefaultExpression(ColumnIndex: Integer): Boolean;
+begin
+  Result := FColumnDefaultExpressions[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] <> '';
 end;
 
 function TZRowAccessor.HasServerLinkedColumns: Boolean;

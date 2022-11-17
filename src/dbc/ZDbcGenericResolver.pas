@@ -1077,7 +1077,7 @@ begin
     DefaultColumnsLookup.Capacity := Metadata.GetColumnCount;
     for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
       if RowAccessor.IsNull(I) and (Metadata.GetTableName(I) <> '')
-        and ((Metadata.GetDefaultValue(I) <> '') or (RowAccessor.GetColumnDefaultExpression(I) <> '')) then begin
+        and (Metadata.HasDefaultValue(I) or RowAccessor.HasColumnDefaultExpression(I)) then begin
           DefaultColumnsLookup.Add(J, I);
           Inc(J);
         end;
