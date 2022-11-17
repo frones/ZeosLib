@@ -341,10 +341,6 @@ type
       IZPreparedStatement; virtual;
     function CreateResultSet(const {%H-}SQL: string; MaxRows: Integer):
       IZResultSet; virtual;
-    {$IFDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES} //EH: there is something weired with cirtcular references + FPC and implementation uses! So i added this virtual function to get a IsUpdatable state
-    function GetUpdatable: Boolean; virtual;
-    property Updatable: Boolean read GetUpdatable;
-    {$ENDIF}
     {Notes by EH:
      since 7.3 the Accessor is just widening the fields for userdefined fields
      Also is the Rowbuffer used for the bookmarks
@@ -1508,8 +1504,7 @@ implementation
 
 uses ZFastCode, Math, ZVariant, ZMessages,
   ZSelectSchema, ZGenericSqlToken, ZGenericSqlAnalyser, ZEncoding,
-  ZDbcProperties, ZDbcResultSet
-  {$IFNDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES}, ZAbstractDataset{$ENDIF} //see comment of Updatable property
+  ZDbcProperties, ZDbcResultSet, ZAbstractDataset
   {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -3432,13 +3427,14 @@ begin
     else FieldDef := TFieldDef.Create(FieldDefs, FieldName, FieldType, Size, False, FieldNo);
     {$ENDIF}
     with FieldDef do begin
-      if not (ReadOnly or IsUniDirectional) then begin
+      if Self.InheritsFrom(TZAbstractRWTxnUpdateObjDataSet) then begin
         {$IFNDEF OLDFPC}
-        Required := IsWritable(ColumnIndex) and (IsNullable(ColumnIndex) = ntNoNulls);
+        // EH: This will lead to load metainformations, just to get the IsRequired prop done as documented
+        Required := IsWritable(ColumnIndex) and (IsNullable(ColumnIndex) = ntNoNulls) and not ResultSetMetaData.HasDefaultValue(ColumnIndex);
         {$ENDIF}
         if IsReadOnly(ColumnIndex) then
           Attributes := Attributes + [faReadonly];
-      end else
+      end else if not Self.InheritsFrom(TZAbstractRWDataSet) then
         Attributes := Attributes + [faReadonly];
       Precision := Prec;
       DisplayName := FieldName;
@@ -4225,7 +4221,7 @@ begin
     end;
     FSortedFields := aValue;
     if Active then
-      if not ({$IFDEF FPC}Updatable{$ELSE}Self is TZAbstractRWDataSet{$ENDIF}) then
+      if not (Self is TZAbstractRWDataSet) then
         InternalSort //enables clearsort which prevents rereading data
       else if (FSortedFields = '') then
         InternalRefresh
@@ -4438,7 +4434,7 @@ procedure TZAbstractRODataset.InternalPost;
   end;
 
 begin
-  if not ({$IFDEF FPC}Updatable{$ELSE}Self is TZAbstractRWDataSet{$ENDIF}) then
+  if not (Self is TZAbstractRWDataSet) then
     RaiseReadOnlyError;
 
   Checkrequired;

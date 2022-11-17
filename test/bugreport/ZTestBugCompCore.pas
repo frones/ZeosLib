@@ -912,12 +912,13 @@ begin
   if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
-  Query.SQL.Text := 'select p_id, p_name, p_resume from people'
-    + ' where p_id < 4 order by p_id';
+  try
+    Query.Connection.Connect;
+    Query.SQL.Text := 'select p_id, p_name, p_resume from people'
+      + ' where p_id < 4 order by p_id';
 
-  if ConnectionConfig.Provider in [spIB_FB, spOracle] then
-  begin
-    try
+    if ConnectionConfig.Provider in [spIB_FB, spOracle] then
+    begin
       Query.Open;
       CheckEquals('P_ID', Query.Fields[0].FieldName);
       CheckEquals('P_NAME', Query.Fields[1].FieldName);
@@ -943,11 +944,7 @@ begin
       CheckEquals(3, Query.FieldByName('p_id').AsInteger);
 
       Query.Close;
-    finally
-      Query.Free;
-    end
-  end else begin
-    try
+    end else begin
       Query.Open;
       CheckEquals('p_id', Query.Fields[0].FieldName);
       CheckEquals('p_name', Query.Fields[1].FieldName);
@@ -974,9 +971,10 @@ begin
       CheckEquals(3, Query.FieldByName('p_id').AsInteger);
 
       Query.Close;
-    finally
-      Query.Free;
     end;
+  finally
+    Query.Connection.Disconnect;
+    FreeAndNil(Query);
   end;
 end;
 

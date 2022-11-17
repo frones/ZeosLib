@@ -138,9 +138,6 @@ type
     /// <returns>a created DBC resultset.</returns>
     function CreateResultSet(const SQL: string; MaxRows: Integer):
       IZResultSet; override;
-    {$IFDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES}
-    function GetUpdatable: Boolean; override;
-    {$ENDIF}
   {$IFDEF WITH_IPROVIDER}
     function PSUpdateRecord(UpdateKind: TUpdateKind;
       Delta: TDataSet): Boolean; override;
@@ -358,13 +355,6 @@ begin
   end;
 end;
 
-{$IFDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES}
-function TZAbstractRWDataSet.GetUpdatable: Boolean;
-begin
-  Result := False;
-end;
-{$ENDIF}
-
 {**
   Performs internal query closing.
 }
@@ -508,6 +498,7 @@ var
   BM:TBookMarkStr{%H-};
   {$ENDIF}
   I, j: Integer;
+  Field: TField;
 begin
   //inherited;  //AVZ - Firebird defaults come through when this is commented out
 
@@ -532,13 +523,18 @@ begin
         end;
 
     if FGenDMLResolver <> nil then
-      for i := 0 to Fields.Count -1 do
-        if not (pfInUpdate in Fields[i].ProviderFlags) or not (pfInWhere in Fields[i].ProviderFlags) then
-          for j := 0 to high(FieldsLookupTable) do
-            if (FieldsLookupTable[j].Field = Fields[i]) and (FieldsLookupTable[j].DataSource = dltResultSet) then begin
-              FGenDMLResolver.SetReadOnly(FieldsLookupTable[j].Index, Fields[i].ReadOnly or not (pfInUpdate in Fields[i].ProviderFlags));
-              FGenDMLResolver.SetSearchable(FieldsLookupTable[j].Index, (pfInWhere in Fields[i].ProviderFlags));
+      for i := 0 to Fields.Count -1 do begin
+        Field := Fields[i];
+        for j := 0 to high(FieldsLookupTable) do
+          if (FieldsLookupTable[j].Field = Field) and (FieldsLookupTable[j].DataSource = dltResultSet) then begin
+            if not (pfInUpdate in Field.ProviderFlags) or not (pfInWhere in Field.ProviderFlags) then begin
+              FGenDMLResolver.SetReadOnly(FieldsLookupTable[j].Index, Field.ReadOnly or not (pfInUpdate in Field.ProviderFlags));
+              FGenDMLResolver.SetSearchable(FieldsLookupTable[j].Index, (pfInWhere in Field.ProviderFlags));
             end;
+            ResultSet.UpdateDefaultExpression(FieldsLookupTable[j].Index, Field.DefaultExpression);
+            Break;
+          end;
+      end;
     if State = dsInsert then
       {$IFNDEF WITH_InternalAddRecord_TRecBuf}
       InternalAddRecord(RowBuffer, False)
