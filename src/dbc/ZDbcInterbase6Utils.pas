@@ -67,8 +67,8 @@ type
     stDDL, stGetSegment, stPutSegment, stExecProc, stStartTrans, stCommit,
     stRollback, stSelectForUpdate, stSetGenerator, stDisconnect);
 
-  PZInterbaseFirerbirdParam = ^TZInterbaseFirerbirdParam;
-  TZInterbaseFirerbirdParam = record
+  PZInterbaseFirebirdParam = ^TZInterbaseFirebirdParam;
+  TZInterbaseFirebirdParam = record
     sqltype:            Cardinal;      { datatype of field (normalized) }
     sqlsubtype:         Cardinal;      { subtype of field (normalized) }
     sqlscale:           Integer;       { scale factor }
@@ -78,8 +78,8 @@ type
     sqlind:             PISC_SHORT;    { address of indicator }
     QMarkPosition:      Cardinal;      { the position if the Question Mark in the raw SQL string}
   end;
-  PZInterbaseFirerbirdParamArray = ^TZInterbaseFirerbirdParamArray;
-  TZInterbaseFirerbirdParamArray = array[byte] of TZInterbaseFirerbirdParam;
+  PZInterbaseFirebirdParamArray = ^TZInterbaseFirebirdParamArray;
+  TZInterbaseFirebirdParamArray = array[byte] of TZInterbaseFirebirdParam;
 
   { Interbase Error Class}
   EZIBConvertError = class(Exception);

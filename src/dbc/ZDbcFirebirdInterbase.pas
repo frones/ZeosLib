@@ -935,7 +935,7 @@ type
     procedure SetPAnsiChar(Index: Cardinal; Value: PAnsiChar; Len: LengthInt);
     procedure SetPWideChar(Index: Cardinal; Value: PWideChar; Len: LengthInt);
   protected
-    FInParamDescripors: PZInterbaseFirerbirdParamArray;
+    FInParamDescripors: PZInterbaseFirebirdParamArray;
     FBatchStmts: array[Boolean] of TZIB_FBStmt;
     FDB_CP_ID: Word;
     FStatementType: TZIbSqlStatementType;
@@ -5971,7 +5971,7 @@ begin
       Token := Tokens[I];
       if (Token.L = 1) and (Token.P^ = Char('?')) then begin
         if DoRealloc then
-          ReallocMem(FInParamDescripors, SizeOf(TZInterbaseFirerbirdParam)*(InParamCount+1));
+          ReallocMem(FInParamDescripors, SizeOf(TZInterbaseFirebirdParam)*(InParamCount+1));
         {$IFDEF UNICODE}
         if (FirstComposeToken <> nil) then begin
           Token := Tokens[I-1];

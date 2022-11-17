@@ -541,7 +541,7 @@ begin
     then BindList.Count := FInMessageCount + FOutMessageCount
     else BindList.Count := FInMessageCount;
     if FInMessageCount > 0 then begin
-      ReallocMem(FInParamDescripors, FInMessageCount * SizeOf(TZInterbaseFirerbirdParam));
+      ReallocMem(FInParamDescripors, FInMessageCount * SizeOf(TZInterbaseFirebirdParam));
       MetadataBuilder := MessageMetadata.getBuilder(FStatus);
       try
         {$R-}
@@ -733,7 +733,7 @@ var i: Integer;
   cstate: Cardinal absolute istate;
   sz, j: Cardinal;
   P: Pointer;
-  InterbaseFirerbirdParam: PZInterbaseFirerbirdParam absolute P; //array entry
+  InterbaseFirebirdParam: PZInterbaseFirebirdParam absolute P; //array entry
 begin
   { we've a preared statement already, our buffer is ready to use, but we
     can not rebind the values from the array with same instance, because we
@@ -767,9 +767,9 @@ begin
       BindSQLDAInParameters(BindList, BatchStatement, i, 1);
       //check if a lob needs to be registered
       for j := 0 to Bindlist.Count -1 do begin
-        InterbaseFirerbirdParam := @BatchStatement.FInParamDescripors[j];
-        if (InterbaseFirerbirdParam.sqltype = SQL_BLOB) and (InterbaseFirerbirdParam.sqlind^ = ISC_NOTNULL) then begin
-          P := InterbaseFirerbirdParam.sqldata;
+        InterbaseFirebirdParam := @BatchStatement.FInParamDescripors[j];
+        if (InterbaseFirebirdParam.sqltype = SQL_BLOB) and (InterbaseFirebirdParam.sqlind^ = ISC_NOTNULL) then begin
+          P := InterbaseFirebirdParam.sqldata;
           Batch.registerBlob(fStatus, PISC_QUAD(P), PISC_QUAD(P));
           cState := FStatus.getState;
           if ((cState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or

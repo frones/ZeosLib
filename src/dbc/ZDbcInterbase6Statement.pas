@@ -564,7 +564,7 @@ begin
         FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, {$IFDEF ZEOSDEBUG}'isc_dsql_describe_bind'{$ELSE}''{$ENDIF}, Self);
     end;
     FInMessageCount := FParamXSQLDA^.sqld;
-    ReallocMem(FInParamDescripors, FInMessageCount * SizeOf(TZInterbaseFirerbirdParam));
+    ReallocMem(FInParamDescripors, FInMessageCount * SizeOf(TZInterbaseFirebirdParam));
     if FInMessageCount > 0 then begin
       FMemPerRow := 0;
       {$R-}
