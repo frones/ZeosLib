@@ -120,6 +120,7 @@ type
     procedure TestCloseOnDisconnect;
     procedure TestClearParametersAndLoggedValues;
     procedure TestAssignDBRTLParams;
+    procedure Test_TField_DefaultExpression;
   end;
 
   {$IF not declared(TTestMethod)}
@@ -1641,6 +1642,52 @@ begin
   end;
 end;
 
+
+{**
+Runs a test for time filter expressions.
+}
+procedure TZGenericTestDataSet.Test_TField_DefaultExpression;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'delete from high_load where 1=1';
+    Query.ExecSQL;
+    Query.SQL.Text := 'SELECT * FROM high_load';
+    Query.Open;
+    Query.FieldByName('stString').DefaultExpression := '''abc''';
+    Query.FieldByName('stBigDecimal').DefaultExpression := '123';
+    CheckEquals(0, Query.RecordCount);
+    Query.Append;
+    Query.Fields[0].AsInteger := 1;
+    Query.Post;
+    CheckEquals('abc', Query.FieldByName('stString').AsString, 'The defaultexpression of field stString');
+    CheckEquals(123, Query.FieldByName('stBigDecimal').AsCurrency, 'The defaultexpression of field stBigDecimal');
+    Query.Close;
+    Query.Open;
+    CheckEquals(1, Query.RecordCount);
+    Query.FieldByName('stString').DefaultExpression := '''cba''';
+    Query.FieldByName('stBigDecimal').DefaultExpression := '321';
+    Query.Append;
+    Query.Fields[0].AsInteger := 2;
+    Query.Post;
+    CheckEquals('cba', Query.FieldByName('stString').AsString, 'The defaultexpression of field stString');
+    CheckEquals(321, Query.FieldByName('stBigDecimal').AsCurrency, 'The defaultexpression of field stBigDecimal');
+    Query.Close;
+    Query.Open;
+    CheckEquals(2, Query.RecordCount);
+    CheckEquals('abc', Query.FieldByName('stString').AsString, 'The defaultexpression of field stString');
+    CheckEquals(123, Query.FieldByName('stBigDecimal').AsCurrency, 'The defaultexpression of field stBigDecimal');
+    Query.Next;
+    CheckEquals('cba', Query.FieldByName('stString').AsString, 'The defaultexpression of field stString');
+    CheckEquals(321, Query.FieldByName('stBigDecimal').AsCurrency, 'The defaultexpression of field stBigDecimal');
+    Query.Close;
+  finally
+    Query.Connection.ExecuteDirect('delete from high_load where 1=1');
+    Query.Free;
+  end;
+end;
 
 {**
 Runs a test for time filter expressions.
