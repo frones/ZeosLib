@@ -419,7 +419,7 @@ go
 /*==============================================================*/
 create table high_load (
 hl_id		      INTEGER NOT NULL,
-stBoolean             BIT,
+stBoolean             BIT null,
 stByte                TINYINT null,
 stShort               SMALLINT null,
 stInteger             INTEGER null,
