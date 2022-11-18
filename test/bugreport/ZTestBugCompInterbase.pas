@@ -1422,6 +1422,9 @@ begin
     Field_Lookup.LookupKeyFields := 'DEP_ID';
     Field_Lookup.LookupResultField := 'DEP_NAME';
     Field_Lookup.KeyFields := 'C_DEP_ID';
+    {$IFDEF FPC}
+    Query_Cargo.FieldDefs.Updated := False;  //otherwise the fields in next test with smallint are not recreated
+    {$ENDIF}
     Query_Cargo.Open;
     CheckEquals('Container agency', Field_Lookup.AsString, 'lookup resultfield value mismatch');
     Query_Cargo.Next;
