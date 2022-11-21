@@ -1777,15 +1777,15 @@ begin
   if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := 0
   else case FSQLDataType of
-    stBoolean: Result := Ord(FData.pvBool);
-    stByte: Result := FData.pvByte;
-    stShort: Result := FData.pvShortInt;
-    stWord: Result := FData.pvWord;
-    stSmall: Result := FData.pvSmallInt;
-    stLongWord: Result := FData.pvCardinal;
-    stInteger: Result := FData.pvInteger;
-    stString: Result := ZFastCode.RawToInt(RawByteString(FData.pvPointer));
-    stUnicodeString: Result := ZFastCode.UnicodeToInt(UnicodeString(FData.pvPointer));
+    stBoolean: Result := Ord(PBoolean(DataAddr)^);
+    stByte: Result := PByte(DataAddr)^;
+    stShort: Result := PShortInt(DataAddr)^;
+    stWord: Result := PWord(DataAddr)^;
+    stSmall: Result := PSmallInt(DataAddr)^;
+    stLongWord: Result := PCardinal(DataAddr)^;
+    stInteger: Result := PInteger(DataAddr)^;
+    stString: Result := ZFastCode.RawToInt(PAnsiChar(DataAddr)^);
+    stUnicodeString: Result := ZFastCode.UnicodeToInt(PWideChar(DataAddr)^);
     else Result := GetAsInt64s(Index);
   end;
 end;
@@ -2022,7 +2022,7 @@ end;
 function TZParam.GetIsNulls(Index: Cardinal): Boolean;
 begin
   if (FArraySize > 0) and (Index <= FArraySize)
-  then Result := TBooleanDynArray(FData.pvDynArray.VArray)[Index]
+  then Result := TBooleanDynArray(FData.pvDynArray.VIsNullArray)[Index]
   else if (Index > FArraySize)
     then raise CreateIndexError(Index)
     else raise CreateConversionError(FSQLDataType, stArray);

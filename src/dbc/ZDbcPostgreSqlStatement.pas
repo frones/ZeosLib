@@ -374,9 +374,11 @@ var
   Dbl: Double absolute TS;
   i64: Int64 absolute TS;
   cur: Currency absolute TS;
+  Z_GUID: PGUID absolute TS;
   PTS: PZTimeStamp;
   PD: PZDate absolute PTS;
   PT: PZTime absolute PTS;
+  PG_GUID: PGUID absolute PTS;
 
   procedure BindLobs;
   var J: Cardinal;
@@ -808,7 +810,7 @@ begin
                         end;
                         Date2PG(PD^.Year, PD^.Month, PD^.Day, PInteger(PAnsiChar(P)+SizeOf(int32))^);
                         Integer2PG(SizeOf(Integer), P);
-                        Date2PG(TDateTimeDynArray(Dyn)[j], PInteger(PAnsiChar(P)+SizeOf(int32))^);
+                        //Date2PG(TDateTimeDynArray(Dyn)[j], PInteger(PAnsiChar(P)+SizeOf(int32))^);
                         Inc(P,SizeOf(int32)+SizeOf(Integer));
                       end;
                   end;
@@ -884,8 +886,16 @@ begin
                         Dec(Stmt.FPQparamLengths[Index], SizeOf(TGUID));
                       end else begin
                         Integer2PG(SizeOf(TGUID), P);
-                        //eh: Network byteOrder?
-                        PGUID(PAnsiChar(P)+SizeOf(int32))^ := TGUIDDynArray(Dyn)[j];
+                        PG_GUID := PGUID(PAnsiChar(P)+SizeOf(int32));
+                        Z_GUID := @TGUIDDynArray(Dyn)[j];
+                        {$IFNDEF ENDIAN_BIG}
+                        Cardinal2PG(Z_GUID.D1, @PG_GUID^.D1);
+                        SmallInt2PG(SmallInt(Z_GUID.D2), @PG_GUID^.D2);
+                        SmallInt2PG(SmallInt(Z_GUID.D3), @PG_GUID^.D3);
+                        PInt64(@PG_GUID.D4)^ := Pint64(@Z_GUID.D4)^;
+                        {$ELSE}
+                        PG_GUID^ := Z_GUID^;
+                        {$ENDIF ENDIAN_BIG}
                         Inc(P,SizeOf(int32)+SizeOf(TGUID));
                       end
                   end;
