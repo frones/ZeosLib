@@ -544,6 +544,7 @@ var
   HENV: SQLHENV;
   HDBC: SQLHDBC;
   aLen: SQLSMALLINT;
+  RetCode: Smallint;
 begin
   URL := TZURL.Create;
   URL.Protocol := {$IFDEF UNICODE}'odbc_w'{$ELSE}'odbc_a'{$ENDIF};
@@ -564,9 +565,10 @@ begin
     {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}
     SetLength(Result, 1024);
     aLen := 0;
-    if ODBC3BaseDriver.SQLDriverConnect(HDBC, WindowHandle,
+    RetCode := ODBC3BaseDriver.SQLDriverConnect(HDBC, WindowHandle,
       Pointer(InConnectionString), Length(InConnectionString), Pointer(Result),
-        Length(Result), @aLen, SQL_DRIVER_PROMPT) = SQL_SUCCESS then
+        Length(Result), @aLen, SQL_DRIVER_PROMPT);
+    if (RetCode = SQL_SUCCESS) or (RetCode = SQL_SUCCESS_WITH_INFO) then
       SetLength(Result, aLen)
     else
       Result := InConnectionString;
