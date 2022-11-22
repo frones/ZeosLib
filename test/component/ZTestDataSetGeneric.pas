@@ -3915,7 +3915,7 @@ procedure TZTestBatchDML.TestBatchDMLArrayBindings;
 var
   WQuery, RQuery:  TZQuery;
   I, j: Integer;
-  SQL: String;
+  SQL: SQLString;
   WR: TZSQLStringWriter;
 begin
   Connection.Connect;
