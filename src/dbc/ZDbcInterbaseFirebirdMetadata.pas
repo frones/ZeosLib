@@ -1985,6 +1985,7 @@ GUID_Size:  Result.UpdateRawByteString(TableColColumnTypeNameIndex, 'GUID');
             Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(TYPE_NAME_Index, L), L);
 Str_Size:   Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldLength);   //CHAR_OCTET_LENGTH
             Result.UpdateInt(TableColColumnSizeIndex, GetInt(CHARACTER_LENGTH_Index));
+            Result.UpdateInt(TableColColumnDecimalDigitsIndex, Precision);
           end;
         else
           Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(TYPE_NAME_Index, L), L);

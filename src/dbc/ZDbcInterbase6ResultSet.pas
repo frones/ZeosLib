@@ -303,7 +303,8 @@ jmpLen:         Precision := XSQLVAR.sqllen;
                 CharOctedLength := XSQLVAR.sqllen;
                 Precision := XSQLVAR.sqllen div ZCodePageInfo^.CharWidth;
               end;
-              Signed := sqltype = SQL_TEXT;
+              if sqltype = SQL_TEXT then
+                Scale := Precision;
             end;
           stAsciiStream, stUnicodeStream: if ConSettings^.ClientCodePage^.ID = CS_NONE
             then if FIsMetadataResultSet
@@ -345,7 +346,6 @@ jmpLen:         Precision := XSQLVAR.sqllen;
           (ColumnName = 'RDB$DB_KEY') or (FieldSqlType = ZDbcIntfs.stUnknown);
         Writable := not ReadOnly;
         Nullable := TZColumnNullableType(Ord(FIZSQLDA.IsNullable(I)));
-        Scale := -sqlscale;
         CaseSensitive := UpperCase(ColumnName) <> ColumnName; //non quoted fiels are uppercased by default
       end;
       ColumnsInfo.Add(ColumnInfo);
