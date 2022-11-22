@@ -1784,8 +1784,8 @@ begin
     stSmall: Result := PSmallInt(DataAddr)^;
     stLongWord: Result := PCardinal(DataAddr)^;
     stInteger: Result := PInteger(DataAddr)^;
-    stString: Result := ZFastCode.RawToInt(PAnsiChar(DataAddr)^);
-    stUnicodeString: Result := ZFastCode.UnicodeToInt(PWideChar(DataAddr)^);
+    stString: Result := ZFastCode.RawToInt(RawByteString(DataAddr^));
+    stUnicodeString: Result := ZFastCode.UnicodeToInt(UnicodeString(DataAddr^));
     else Result := GetAsInt64s(Index);
   end;
 end;
