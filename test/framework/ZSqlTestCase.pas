@@ -332,6 +332,7 @@ type
     function GetDBTestString(const Value: UnicodeString; Target: TZTransliterationType; MaxLen: Integer = -1): SQLString; overload;
     procedure CheckEquals(const OrgStr: UnicodeString; ActualLobStream: TStream;
       Actual: TField; ConSettings: PZConSettings; const Msg: string = ''); overload;
+    procedure CheckEquals(const Expected, Actual: TGUID; const Msg: string = ''); overload;
     procedure CheckEquals(const OrgStr: UnicodeString; Actual: TField; const Msg: string = ''); overload;
     procedure CheckEquals(Expected, Actual: TFieldType;
       const Msg: string = ''); overload;
@@ -339,6 +340,7 @@ type
       const Msg: string = ''); overload;
     procedure CheckNotEquals(Expected, Actual: TFieldType;
       const Msg: string = ''); overload;
+    procedure CheckNotEquals(const Expected, Actual: TGUID; const Msg: string = ''); overload;
     procedure CheckStringFieldType(Actual: TField; ControlsCodePage: TZControlsCodePage);
     procedure CheckStringParamType(Actual: {$IFNDEF DISABLE_ZPARAM}TZParam{$ELSE}TParam{$ENDIF}; ControlsCodePage: TZControlsCodePage);
     procedure CheckMemoParamType(Actual: {$IFNDEF DISABLE_ZPARAM}TZParam{$ELSE}TParam{$ENDIF}; ControlsCodePage: TZControlsCodePage);
@@ -1713,6 +1715,15 @@ begin
   end;
 end;
 
+procedure TZAbstractCompSQLTestCase.CheckNotEquals(const Expected,
+  Actual: TGUID; const Msg: string);
+var E, A: String;
+begin
+  E := GUIDToStr(Expected);
+  A := GUIDToStr(Actual);
+  CheckNotEquals(E, A, Msg);
+end;
+
 procedure TZAbstractCompSQLTestCase.CheckStringParamType(Actual: {$IFNDEF DISABLE_ZPARAM}TZParam{$ELSE}TParam{$ENDIF};
   ControlsCodePage: TZControlsCodePage);
 begin
@@ -1809,6 +1820,15 @@ begin
   E := TypInfo.GetEnumName(TypeInfo(TParamType), Ord(Expected));
   A := TypInfo.GetEnumName(TypeInfo(TParamType), Ord(Actual));
   inherited CheckEquals(E, A, Msg);
+end;
+
+procedure TZAbstractCompSQLTestCase.CheckEquals(const Expected, Actual: TGUID;
+  const Msg: string);
+var E, A: String;
+begin
+  E := GUIDToStr(Expected);
+  A := GUIDToStr(Actual);
+  CheckEquals(E, A, Msg);
 end;
 
 { TZAbstractDbcSQLTestCaseMBCs }
