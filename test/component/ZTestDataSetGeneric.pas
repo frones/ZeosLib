@@ -166,7 +166,7 @@ type
   {$IFNDEF DISABLE_ZPARAM}
   TZTestBatchDML = class(TZAbstractCompSQLTestCase)
   private
-    procedure InternalTestArrayBinding(Query: TZQuery; FirstID, ArrayLen, LastFieldIndex: Integer);
+    procedure InternalTestBatchArrayDMLBinding(WQuery, RQuery: TZQuery; FirstID, ArrayLen, LastFieldIndex: Integer);
   published
     procedure TestBatchDMLArrayBindings;
   end;
@@ -203,7 +203,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF} FmtBCD, DateUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF},
-  ZEncoding, ZFastCode,
+  ZEncoding, ZFastCode, ZClasses,
   ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties, ZDbcLogging,
   ZDatasetUtils, ZSqlUpdate, {$IFNDEF DISABLE_ZPARAM}ZDatasetParam,{$ENDIF}
   TypInfo, ZDbcInterbaseFirebirdMetadata, ZSelectSchema;
@@ -3733,60 +3733,6 @@ hlTypeArray: array[hl_id_Index..hl_BinaryStream_Index] of TZSQLType = (
   stUnicodeStream,
   stBinaryStream);
 
-procedure TZTestBatchDML.InternalTestArrayBinding(Query: TZQuery;
-  FirstID, ArrayLen, LastFieldIndex: Integer);
-var
-  I, J: Integer;
-  {$IFNDEF TBLOBDATA_IS_TBYTES}
-  Bts: TBytes;
-  BlobData: TBlobData;
-  {$ENDIF}
-begin
-  CheckNotNull(Query);
-  Query.Params.BatchDMLCount := ArrayLen;
-  for i := 0 to ArrayLen-1 do begin
-    Query.Params[0].AsIntegers[i] := FirstID+I;
-    for J := 1 to LastFieldIndex do
-      case hlTypeArray[j] of
-        stBoolean:      Query.Params[J].AsBooleans[I] := Boolean(Random(1));
-        stByte:         Query.Params[J].AsByteArray[I] := Random(High(Byte));
-        stShort:        Query.Params[J].AsShortInts[I] := Random(High(Byte))+Low(ShortInt);
-        stWord:         Query.Params[J].AsWords[I] := Random(High(Word));
-        stSmall:        Query.Params[J].AsSmallInts[I] := Random(High(Word))+Low(SmallInt);
-        stInteger:      Query.Params[J].AsIntegers[I] := Random(High(Word))+Low(SmallInt);
-        stLongWord:     Query.Params[J].AsCardinals[I] := Random(High(Word));
-        stLong:         Query.Params[J].AsIntegers[I] := Random(High(Word))+Low(SmallInt);
-        stULong:        Query.Params[J].AsCardinals[I] := Random(High(Word));
-        stFloat:        Query.Params[J].AsSingles[I] := RandomFloat(-5000, 5000);
-        stDouble:       Query.Params[J].AsDoubles[I] := RandomFloat(-5000, 5000);
-        stCurrency:     Query.Params[J].AsCurrencys[I] := RandomFloat(-5000, 5000);
-        stBigDecimal:   Query.Params[J].AsFmtBCDs[I] := DoubleToBCD(RandomFloat(-5000, 5000));
-        stTime:         Query.Params[J].AsTimes[I] := Now;
-        stDate:         Query.Params[J].AsDates[I] := Now;
-        stTimeStamp:    Query.Params[J].AsDateTimes[I] := Now;
-        stGUID:         Query.Params[J].AsGUIDs[i] := RandomGUID;
-        stString:       Query.Params[J].AsStrings[i] := RandomStr(Random(99)+1);
-        stUnicodeString:Query.Params[J].AsUnicodeStrings[i] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(RandomStr(Random(99)+1));
-        stBytes:        Query.Params[J].AsBytesArray[i] := RandomBts(ArrayLen);
-        stAsciiStream:  Query.Params[J].AsMemos[i] := RandomStr(Random(99)+1);
-        stUnicodeStream:Query.Params[J].AsUnicodeMemos[i] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(RandomStr(Random(99)+1));
-        {$IFDEF TBLOBDATA_IS_TBYTES}
-        stBinaryStream: Query.Params[J].AsBlobs[i] := RandomBts(ArrayLen);
-        {$ELSE !TBLOBDATA_IS_TBYTES}
-        stBinaryStream: begin
-                          Bts := RandomBts(ArrayLen);
-                          BlobData := '';
-                          System.SetString(Blobdata, PAnsiChar(Bts), ArrayLen);
-                          Query.Params[J].AsBlobs[i] := BlobData;
-                        end;
-        {$ENDIF !TBLOBDATA_IS_TBYTES}
-        {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
-      end;
-  end;
-  Query.ExecSQL;
-  CheckEquals(ArrayLen, Query.RowsAffected);
-end;
-
 const
   LastFieldIndices: array[0..2] of Integer = (hl_Unicode_Index, hl_Date_Index, hl_BinaryStream_Index);
   HighLoadFields: array[hl_id_Index..hl_BinaryStream_Index] of String = (
@@ -3795,36 +3741,226 @@ const
       'stDate', 'stTime', 'stTimestamp', 'stGUID', 'stAsciiStream', 'stUnicodeStream',
       'stBinaryStream');
 
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+procedure TZTestBatchDML.InternalTestBatchArrayDMLBinding(WQuery, RQuery: TZQuery;
+  FirstID, ArrayLen, LastFieldIndex: Integer);
+var
+  I, J: Integer;
+  {$IFNDEF TBLOBDATA_IS_TBYTES}
+  Bts: TBytes;
+  BlobData: TBlobData;
+  {$ENDIF}
+  DisableZFields: Boolean;
+  v_msg, n_msg, tmp_a, tmp_e: String;
+begin
+  CheckNotNull(WQuery);
+  WQuery.Params.BatchDMLCount := ArrayLen;
+  for i := 0 to ArrayLen-1 do begin
+    WQuery.Params[0].AsIntegers[i] := FirstID+I;
+    for J := 1 to LastFieldIndex do
+      case hlTypeArray[j] of
+        stBoolean:      WQuery.Params[J].AsBooleans[I] := Boolean(Random(1));
+        stByte:         WQuery.Params[J].AsByteArray[I] := Random(High(Byte));
+        stShort:        WQuery.Params[J].AsShortInts[I] := Random(High(Byte))+Low(ShortInt);
+        stWord:         WQuery.Params[J].AsWords[I] := Random(High(Word));
+        stSmall:        WQuery.Params[J].AsSmallInts[I] := Random(High(Word))+Low(SmallInt);
+        stInteger:      WQuery.Params[J].AsIntegers[I] := Random(High(Word))+Low(SmallInt);
+        stLongWord:     WQuery.Params[J].AsCardinals[I] := Random(High(Word));
+        stLong:         WQuery.Params[J].AsLargeInts[I] := Random(High(Word))+Low(SmallInt);
+        stULong:        WQuery.Params[J].AsUInt64s[I] := Random(High(Word));
+        stFloat:        WQuery.Params[J].AsSingles[I] := RandomFloat(-5000, 5000);
+        stDouble:       WQuery.Params[J].AsDoubles[I] := RandomFloat(-5000, 5000);
+        stCurrency:     WQuery.Params[J].AsCurrencys[I] := RandomFloat(-5000, 5000);
+        stBigDecimal:   WQuery.Params[J].AsFmtBCDs[I] := DoubleToBCD(RandomFloat(-5000, 5000));
+        stTime:         WQuery.Params[J].AsTimes[I] := Now;
+        stDate:         WQuery.Params[J].AsDates[I] := Now;
+        stTimeStamp:    WQuery.Params[J].AsDateTimes[I] := Now;
+        stGUID:         WQuery.Params[J].AsGUIDs[i] := RandomGUID;
+        stString:       WQuery.Params[J].AsStrings[i] := RandomStr(Random(99)+1);
+        stUnicodeString:WQuery.Params[J].AsUnicodeStrings[i] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(RandomStr(Random(99)+1));
+        stBytes:        WQuery.Params[J].AsBytesArray[i] := RandomBts(ArrayLen);
+        stAsciiStream:  WQuery.Params[J].AsMemos[i] := RandomStr(Random(99)+1);
+        stUnicodeStream:WQuery.Params[J].AsUnicodeMemos[i] := {$IFNDEF UNICODE}Ascii7ToUnicodeString{$ENDIF}(RandomStr(Random(99)+1));
+        {$IFDEF TBLOBDATA_IS_TBYTES}
+        stBinaryStream: WQuery.Params[J].AsBlobs[i] := RandomBts(ArrayLen);
+        {$ELSE !TBLOBDATA_IS_TBYTES}
+        stBinaryStream: begin
+                          Bts := RandomBts(ArrayLen);
+                          BlobData := '';
+                          System.SetString(Blobdata, PAnsiChar(Bts), ArrayLen);
+                          WQuery.Params[J].AsBlobs[i] := BlobData;
+                        end;
+        {$ENDIF !TBLOBDATA_IS_TBYTES}
+        {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
+      end;
+  end;
+  WQuery.ExecSQL;
+  CheckEquals(ArrayLen, WQuery.RowsAffected);
+  for DisableZFields := false to true do begin
+    if RQuery.Active then
+      RQuery.Close;
+    RQuery.DisableZFields := DisableZFields;
+    RQuery.Params[0].AsInteger := FirstID;
+    RQuery.Open;
+    for i := 0 to ArrayLen-1 do begin
+      for J := 0 to LastFieldIndex do begin
+        v_msg := 'the value of field: '+HighLoadFields[j];
+        n_msg := 'null-state of field: '+HighLoadFields[j];
+        if WQuery.Params[J].IsNulls[i]
+        then Check(RQuery.Fields[j].IsNull, n_msg)
+        else CheckFalse(RQuery.Fields[j].IsNull, n_msg);
+        case hlTypeArray[j] of
+          stBoolean:      CheckEquals(WQuery.Params[J].AsBooleans[I], RQuery.Fields[j].AsBoolean, v_msg);
+          stByte:         CheckEquals(Integer(WQuery.Params[J].AsByteArray[I]), RQuery.Fields[j].AsInteger, v_msg);
+          stShort:        CheckEquals(WQuery.Params[J].AsShortInts[I], RQuery.Fields[j].AsInteger, v_msg);
+          stWord:         CheckEquals(Integer(WQuery.Params[J].AsWords[I]), RQuery.Fields[j].AsInteger, v_msg);
+          stSmall:        CheckEquals(Integer(WQuery.Params[J].AsSmallInts[I]), RQuery.Fields[j].AsInteger, v_msg);
+          stInteger:      CheckEquals(WQuery.Params[J].AsIntegers[I], RQuery.Fields[j].AsInteger, v_msg);
+          stLongWord:     if RQuery.Fields[j] is TLargeIntField
+                          then CheckEquals(Int64(WQuery.Params[J].AsCardinals[I]), TLargeIntField(RQuery.Fields[j]).Value, v_msg)
+                          else {$IF declared(TLongWordField)}if RQuery.Fields[j] is TLongWordField
+                            then CheckEquals(WQuery.Params[J].AsCardinals[i], TLongWordField(RQuery.Fields[j]).Value, v_msg)
+                            else {$IFEND}Check(True);
+          stLong:         if RQuery.Fields[j] is TLargeIntField
+                          then CheckEquals(WQuery.Params[J].AsLargeInts[I], TLargeIntField(RQuery.Fields[j]).Value, v_msg)
+                          else CheckEquals(Integer(WQuery.Params[J].AsLargeInts[i]), RQuery.Fields[j].AsInteger, v_msg);
+          stULong:        if RQuery.Fields[j].InheritsFrom(TZUInt64Field)
+                          then CheckEquals(WQuery.Params[J].AsUInt64s[I], TZUInt64Field(RQuery.Fields[j]).Value, v_msg)
+                          else if RQuery.Fields[j].InheritsFrom(TLargeIntField)
+                            then CheckEquals(Int64(WQuery.Params[J].AsUInt64s[I]), TLargeIntField(RQuery.Fields[j]).Value, v_msg)
+                            else Check(True);
+          stFloat:        if RQuery.Fields[j].InheritsFrom(TZSingleField)
+                          then CheckEquals(WQuery.Params[J].AsSingles[I], TZSingleField(RQuery.Fields[j]).Value, FLOAT_COMPARE_PRECISION_SINGLE, v_msg)
+                          else {$IF declared(TSingleField)}if RQuery.Fields[j].InheritsFrom(TSingleField)
+                            then CheckEquals(WQuery.Params[J].AsSingles[I], TSingleField(RQuery.Fields[j]).Value, FLOAT_COMPARE_PRECISION_SINGLE, v_msg)
+                            else {$IFEND}CheckEquals(WQuery.Params[J].AsDoubles[I], TFloatField(RQuery.Fields[j]).Value, FLOAT_COMPARE_PRECISION_SINGLE, v_msg);
+          stDouble:       if RQuery.Fields[j].InheritsFrom(TFloatField)
+                          then CheckEquals(WQuery.Params[J].AsDoubles[I], TFloatField(RQuery.Fields[j]).Value, FLOAT_COMPARE_PRECISION, v_msg)
+                          else CheckEquals(WQuery.Params[J].AsDoubles[I], RQuery.Fields[j].AsFloat, FLOAT_COMPARE_PRECISION, v_msg);
+          stCurrency:     if RQuery.Fields[j].InheritsFrom(TBCDField)
+                          then CheckEquals(WQuery.Params[J].AsCurrencys[I], TBCDField(RQuery.Fields[j]).Value, v_msg)
+                          else if RQuery.Fields[j].InheritsFrom(TFMTBCDField)
+                            then CheckEquals(WQuery.Params[J].AsCurrencys[I], TFMTBCDField(RQuery.Fields[j]).AsCurrency, v_msg)
+                            else Check(True);
+          stBigDecimal:   CheckEquals(WQuery.Params[J].AsFmtBCDs[I], RQuery.Fields[j].AsBCD, v_msg);
+          stTime:         CheckEqualsDate(WQuery.Params[J].AsTimes[I], RQuery.Fields[j].AsDateTime, [dpHour, dpMin, dpSec, dpMSec], v_msg);
+          stDate:         CheckEqualsDate(WQuery.Params[J].AsDates[I], RQuery.Fields[j].AsDateTime, [dpYear, dpMonth, dpDay], v_msg);
+          stTimeStamp:    CheckEqualsDate(WQuery.Params[J].AsDateTimes[I], RQuery.Fields[j].AsDateTime, [], v_msg);
+          stGUID:         if RQuery.Fields[j].InheritsFrom(TGuidField)
+                          then CheckEquals(WQuery.Params[J].AsGUIDs[i], TGuidField(RQuery.Fields[j]).AsGuid, v_msg)
+                          else begin
+                            tmp_e := RQuery.Fields[j].AsString;
+                            tmp_a := UpperCase(tmp_e);
+                            if Length(tmp_a) = 36
+                            then tmp_e := ZSysUTils.{$IFDEF UNICODE}GUIDToUnicode{$ELSE}GUIDToRaw{$ENDIF}(WQuery.Params[J].AsGUIDs[i], False)
+                            else tmp_e := ZSysUTils.{$IFDEF UNICODE}GUIDToUnicode{$ELSE}GUIDToRaw{$ENDIF}(WQuery.Params[J].AsGUIDs[i], True);
+                            CheckEquals(tmp_e, tmp_a, v_msg);
+                          end;
+          stString:       begin
+                            tmp_a := RQuery.Fields[j].AsString;
+                            tmp_e := WQuery.Params[J].AsStrings[i];
+                            if (RQuery.Fields[j].InheritsFrom(TStringField) and TStringField(RQuery.Fields[j]).FixedChar) then
+                              tmp_e := TrimRight(tmp_e);
+                            CheckEquals(tmp_e, tmp_a, v_msg);
+                          end;
+          stUnicodeString:{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}
+                          CheckEquals(WQuery.Params[J].AsUnicodeStrings[i], RQuery.Fields[j].AsWideString, v_msg);
+                          {$ELSE}
+                          if RQuery.Fields[j].InheritsFrom(TWideStringField)
+                          then CheckEquals(WQuery.Params[J].AsUnicodeStrings[i], TWideStringField(RQuery.Fields[j]).Value, v_msg)
+                          else CheckEquals(WQuery.Params[J].AsUnicodeStrings[i], UnicodeString(RQuery.Fields[j].AsString), v_msg);
+                          {$ENDIF}
+
+          stBytes:        {$IFDEF TFIELD_HAS_ASBYTES}
+                          CheckEquals(WQuery.Params[J].AsBytesArray[i], RQuery.Fields[j].AsBytes, v_msg);
+                          {$ELSE}
+                          if RQuery.Fields[j].InheritsFrom(TZBytesField)
+                          then CheckEquals(WQuery.Params[J].AsBytesArray[i], TZBytesField(RQuery.Fields[j]).AsBytes, v_msg)
+                          else if RQuery.Fields[j].InheritsFrom(TZVarBytesField)
+                            then CheckEquals(WQuery.Params[J].AsBytesArray[i], TZVarBytesField(RQuery.Fields[j]).AsBytes, v_msg)
+                            else CheckEquals(WQuery.Params[J].AsAnsiStrings[i], RQuery.Fields[j].AsString, v_msg);
+                          {$ENDIF}
+          stAsciiStream:  CheckEquals(WQuery.Params[J].AsMemos[i], RQuery.Fields[j].AsString, v_msg);
+          stUnicodeStream:{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}
+                          CheckEquals(WQuery.Params[J].AsUnicodeMemos[i], RQuery.Fields[j].AsWideString, v_msg);
+                          {$ELSE}
+                          if RQuery.Fields[j].InheritsFrom(TZUnicodeCLobField)
+                          then CheckEquals(WQuery.Params[J].AsUnicodeMemos[i], TZUnicodeCLobField(RQuery.Fields[j]).AsUnicodeString, v_msg)
+                          else if RQuery.Fields[j].InheritsFrom(TZRawCLobField)
+                            then CheckEquals(WQuery.Params[J].AsUnicodeMemos[i], TZRawCLobField(RQuery.Fields[j]).AsUnicodeString, v_msg)
+                            else CheckEquals(String(WQuery.Params[J].AsUnicodeMemos[i]), RQuery.Fields[j].AsString, v_msg);
+                          {$ENDIF}
+          stBinaryStream: {$IFDEF TFIELD_HAS_ASBYTES}
+                          CheckEquals(WQuery.Params[J].AsBlobs[i], TBlobField(RQuery.Fields[j]).AsBytes, v_msg);
+                          {$ELSE}
+                            {$IFDEF TBLOBDATA_IS_TBYTES}
+                          if RQuery.Fields[j].InheritsFrom(TZBlobField)
+                          then CheckEquals(WQuery.Params[J].AsBlobs[i], TZBlobField(RQuery.Fields[j]).AsBytes, v_msg)
+                          else {$ENDIF TBLOBDATA_IS_TBYTES}begin
+                            tmp_a := RQuery.Fields[j].AsString;
+                            tmp_e := WQuery.Params[J].AsAnsiString;
+                            CheckEquals(tmp_e, tmp_a, v_msg);
+                          end;
+                          {$ENDIF TFIELD_HAS_ASBYTES}
+          {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
+        end;
+      end;
+      RQuery.Next;
+    end;
+  end;
+end;
+{$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R+}{$IFEND}
+
 procedure TZTestBatchDML.TestBatchDMLArrayBindings;
 var
-  Query:  TZQuery;
+  WQuery, RQuery:  TZQuery;
   I, j: Integer;
   SQL: String;
+  WR: TZSQLStringWriter;
 begin
   Connection.Connect;
   Check(Connection.Connected);
   if Connection.DbcConnection.GetMetadata.GetDatabaseInfo.SupportsArrayBindings then begin
-    Query := CreateQuery;
+    WQuery := CreateQuery;
+    RQuery := CreateQuery;
+    WR := TZSQLStringWriter.Create(High(Byte));
     try
       for i := low(LastFieldIndices) to high(LastFieldIndices) do begin
-        Connection.ExecuteDirect('delete from high_load');
+        Connection.ExecuteDirect('delete from high_load where 1=1');
         SQL := 'insert into high_load(';
-        for j := hl_id_Index to LastFieldIndices[i] do
-          SQL := SQL+HighLoadFields[j]+',';
-        SQL[Length(SQL)] := ')';
-        SQL := SQL + ' values (';
-        for j := hl_id_Index to LastFieldIndices[i] do
-          SQL := SQL+':'+SysUtils.IntToStr(j+1)+',';
-        SQL[Length(SQL)] := ')';
-        Query.SQL.Text := SQL;
-        InternalTestArrayBinding(Query, 0, 50, LastFieldIndices[i]);
-        InternalTestArrayBinding(Query, 50, 20, LastFieldIndices[i]);
-        InternalTestArrayBinding(Query, 70, 10, LastFieldIndices[i]);
-        Query.Params.BatchDMLCount := 0;
+        for j := hl_id_Index to LastFieldIndices[i] do begin
+          WR.AddText(HighLoadFields[j], SQL);
+          WR.AddChar(',', SQL);
+        end;
+        WR.ReplaceOrAddLastChar(',', ')', SQL);
+        WR.AddText(' values (', SQL);
+        for j := hl_id_Index to LastFieldIndices[i] do begin
+          WR.AddChar(':', SQL);
+          WR.AddOrd(j+1, SQL);
+          WR.AddChar(',', SQL);
+        end;
+        WR.ReplaceOrAddLastChar(',', ')', SQL);
+        WR.Finalize(SQL);
+        WQuery.SQL.Text := SQL;
+        SQL := 'select ';
+        for j := hl_id_Index to LastFieldIndices[i] do begin
+          WR.AddText(HighLoadFields[j], SQL);
+          WR.AddChar(',', SQL);
+        end;
+        WR.ReplaceOrAddLastChar(',', ' ', SQL);
+        WR.AddText('from high_load where hl_id >= :hl_id order by hl_id', SQL);
+        WR.Finalize(SQL);
+        RQuery.SQL.Text := SQL;
+        InternalTestBatchArrayDMLBinding(WQuery, RQuery, 0, 50, LastFieldIndices[i]);
+        InternalTestBatchArrayDMLBinding(WQuery, RQuery, 50, 20, LastFieldIndices[i]);
+        InternalTestBatchArrayDMLBinding(WQuery, RQuery, 70, 10, LastFieldIndices[i]);
+        WQuery.Params.BatchDMLCount := 0;
       end;
     finally
-      FreeAndNil(Query);
-      Connection.ExecuteDirect('delete from high_load');
+      FreeAndNil(WQuery);
+      FreeAndNil(RQuery);
+      FreeAndNil(WR);
+      Connection.ExecuteDirect('delete from high_load where 1=1');
     end;
   end;
 end;
