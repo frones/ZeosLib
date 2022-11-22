@@ -3890,18 +3890,19 @@ begin
                             then CheckEquals(WQuery.Params[J].AsUnicodeMemos[i], TZRawCLobField(RQuery.Fields[j]).AsUnicodeString, v_msg)
                             else CheckEquals(String(WQuery.Params[J].AsUnicodeMemos[i]), RQuery.Fields[j].AsString, v_msg);
                           {$ENDIF}
-          stBinaryStream: {$IFDEF TFIELD_HAS_ASBYTES}
+          stBinaryStream: {$IFDEF TBLOBDATA_IS_TBYTES}
+                            {$IFDEF TFIELD_HAS_ASBYTES}
                           CheckEquals(WQuery.Params[J].AsBlobs[i], TBlobField(RQuery.Fields[j]).AsBytes, v_msg);
-                          {$ELSE}
-                            {$IFDEF TBLOBDATA_IS_TBYTES}
+                            {$ELSE}
                           if RQuery.Fields[j].InheritsFrom(TZBlobField)
                           then CheckEquals(WQuery.Params[J].AsBlobs[i], TZBlobField(RQuery.Fields[j]).AsBytes, v_msg)
-                          else {$ENDIF TBLOBDATA_IS_TBYTES}begin
+                            {$ENDIF TFIELD_HAS_ASBYTES}
+                          else begin
                             tmp_a := RQuery.Fields[j].AsString;
                             tmp_e := WQuery.Params[J].AsAnsiString;
                             CheckEquals(tmp_e, tmp_a, v_msg);
                           end;
-                          {$ENDIF TFIELD_HAS_ASBYTES}
+                          {$ENDIF TBLOBDATA_IS_TBYTES}
           {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
         end;
       end;
