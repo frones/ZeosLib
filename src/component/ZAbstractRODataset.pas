@@ -1231,10 +1231,16 @@ type
   protected
     function GetIsNull: Boolean; override;
     procedure GetText(var Text: string; DisplayText: Boolean); override;
+    function GetAsBytes: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF}; {$IFDEF TFIELD_HAS_ASBYTES}override;{$ENDIF}
+    procedure SetAsBytes(const Value: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF}); {$IFDEF TFIELD_HAS_ASBYTES}override;{$ENDIF}
   protected
     procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
   public
     procedure Clear; override;
+    {$IFNDEF TFIELD_HAS_ASBYTES}
+    property Value: TBytes read GetAsBytes write SetAsBytes;
+    property AsBytes: TBytes read GetAsBytes write SetAsBytes;
+    {$ENDIF}
   end;
 
   TZVarBytesField = class(TVarBytesField)
@@ -1380,8 +1386,16 @@ type
     {$IFDEF WITH_TBLOBFIELD_GETASVARIANT_varNULL_BUG}
     function GetAsVariant: Variant; override;
     {$ENDIF WITH_TBLOBFIELD_GETASVARIANT_varNULL_BUG}
+    {$IFNDEF TFIELD_HAS_ASBYTES}
+    function GetAsBytes: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF};
+    procedure SetAsBytes(const Value: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF});
+    {$ENDIF TFIELD_HAS_ASBYTES}
   public
     procedure Clear; override;
+    {$IFNDEF TFIELD_HAS_ASBYTES}
+    property Value: TBytes read GetAsBytes write SetAsBytes;
+    property AsBytes: TBytes read GetAsBytes write SetAsBytes;
+    {$ENDIF}
   end;
 
   {$IFNDEF WITH_TOBJECTFIELD}
@@ -3440,9 +3454,8 @@ begin
       DisplayName := FieldName;
       if GetOrgColumnLabel(ColumnIndex) <> GetColumnLabel(ColumnIndex) then
          Attributes := Attributes + [faUnNamed];
-      //EH: hmm do we miss that or was there a good reason? For me its not relevant..
-      //if (SQLType in [stString, stUnicodeString]) and (GetScale(ColumnIndex) = GetPrecision(ColumnIndex)) then
-        //Attributes := Attributes + [faFixed];
+      if (SQLType in [stString, stUnicodeString]) and (Scale = Prec) then
+        Attributes := Attributes + [faFixed];
     end;
   end;
 end;
@@ -9768,6 +9781,36 @@ begin
   end;
 end;
 
+function TZBytesField.GetAsBytes: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF};
+var P: PByte;
+    L: NativeUint;
+begin
+  Result := nil;
+  if IsRowDataAvailable then begin
+    P := TZAbstractRODataset(DataSet).FResultSet.GetBytes(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, L);
+    if L > 0 then begin
+      SetLength(Result, L);
+      Move(P^, Pointer(Result)^, L);
+    end;
+  end;
+end;
+
+procedure TZBytesField.SetAsBytes(const Value: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF});
+var L: NativeUInt;
+begin
+  if not FBound then
+    raise CreateUnBoundError(Self);
+  L := Length(Value);
+  if L = 0
+  then Clear
+  else with TZAbstractRODataset(DataSet) do begin
+    Prepare4DataManipulation(Self);
+    FResultSet.UpdateBytes(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Pointer(Value), L);
+    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+      DataEvent(deFieldChange, NativeInt(Self));
+  end;
+end;
+
 function TZBytesField.GetIsNull: Boolean;
 begin
   if IsRowDataAvailable
@@ -10669,6 +10712,38 @@ begin
   end;
 end;
 
+{$IFNDEF TFIELD_HAS_ASBYTES}
+function TZBLobField.GetAsBytes: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF};
+var P: PByte;
+    L: NativeUint;
+begin
+  Result := nil;
+  if IsRowDataAvailable then begin
+    P := TZAbstractRODataset(DataSet).FResultSet.GetBytes(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, L);
+    if L > 0 then begin
+      SetLength(Result, L);
+      Move(P^, Pointer(Result)^, L);
+    end;
+  end;
+end;
+
+procedure TZBLobField.SetAsBytes(const Value: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF});
+var L: NativeUInt;
+begin
+  if not FBound then
+    raise CreateUnBoundError(Self);
+  L := Length(Value);
+  if L = 0
+  then Clear
+  else with TZAbstractRODataset(DataSet) do begin
+    Prepare4DataManipulation(Self);
+    FResultSet.UpdateBytes(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Pointer(Value), L);
+    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+      DataEvent(deFieldChange, NativeInt(Self));
+  end;
+end;
+
+{$ENDIF TFIELD_HAS_ASBYTES}
 function TZBLobField.GetIsNull: Boolean;
 begin
   if IsRowDataAvailable
