@@ -246,6 +246,7 @@ begin
             end else ColumnInfo.ColumnCodePage := SourceCodePage;
           end;
           ColumnInfo.Scale := Metadata.GetScale(ColumnIndex);
+          ColumnInfo.Nullable := Metadata.IsNullable(ColumnIndex);
           Inc(Idx);
         end else
           ColumnInfo := ConvertFiedDefToColumnsInfo(Current);

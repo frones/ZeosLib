@@ -4102,9 +4102,14 @@ begin
     Check(doCheckRequired in Table.Options);
     Query.SQL.Text := 'select * from people';
     Query.Open;
-    Check(Query.Fields[0].Required);
+    if Connection.DbcConnection.GetServerProvider <> spPostgreSQL then
+      Check(Query.Fields[0].Required, 'the field p_id is required'); //defined as serial -> autoincrement
     Table.CloneDataFrom(Query);
-    Check(Table.Fields[0].Required);
+    if Connection.DbcConnection.GetServerProvider = spPostgreSQL then begin
+      CheckFalse(Table.Fields[0].Required, 'the field p_id is an autoincremented field');
+      Table.Fields[0].Required := True;
+    end;
+    Check(Table.Fields[0].Required, 'the field p_id is required');
     CheckEquals(Query.Fields.Count, Table.Fields.Count, 'The fieldcount');
     CheckEquals(Query.RecordCount, Table.RecordCount, 'The recordCount');
     Table.Close;
@@ -4124,7 +4129,7 @@ begin
     except on E: Exception do
       CheckNotTestFailure(E);
     end;
-    CheckFalse(Succeeded, 'the table.post');
+    CheckFalse(Succeeded, 'the table.post should fail because field hl_id is required');
     Table.FieldByName('P_ID').AsInteger := 9999;
     Table.Post;
     Table.Clear;
