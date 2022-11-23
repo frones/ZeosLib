@@ -96,7 +96,6 @@ type
     FDetailDataSets: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     FDetailCachedUpdates: array of Boolean;
   private
-    FCheckRequired: Boolean;
     FInsertReturningFields: TStrings;
     function GetUpdatesPending: Boolean;
     /// <summary>Sets a new CachedUpdates property value.</summary>
@@ -119,6 +118,7 @@ type
       default wmWhereKeyOnly;
 
     procedure SetTxns2Resolver(const Resolver: IZCachedResolver); virtual;
+    /// <summary>Performs internal query opening.</summary>
     procedure InternalOpen; override;
     procedure InternalClose; override;
     procedure InternalEdit; override;
@@ -196,7 +196,6 @@ type
     property OnEditError;
     property OnPostError;
     property OnNewRecord;
-    property Options default [doCalcDefaults, doPreferPrepared];
   end;
 
   /// <author>EgonHugeist</author>
@@ -251,7 +250,9 @@ type
       IZResultSet; override;
     function InheritsFromReadWriteTransactionUpdateObjectDataSet: Boolean; override;
   public
+    constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    property Options;
   published
     property UpdateObject: TZUpdateSQL read FUpdateObject write SetUpdateObject;
   End;
@@ -367,22 +368,14 @@ begin
 end;
 
 procedure TZAbstractRWDataSet.InternalOpen;
-var
-  Value:String;
+var Value: String;
 begin
-  Value := trim(Properties.Values[DSProps_CheckRequired]);
-  if Value = '' then
-    FCheckRequired := True
-  else
-    FCheckRequired := ZSysUtils.StrToBoolEx(Value);
-
-  if FCheckRequired then begin
-    // more or less a copy from TZInterbaseFirebirdCachedResolver.Create
+  if doCheckRequired in Options then begin
     Value := Properties.Values[DSProps_InsertReturningFields];
     if Value <> '' then
       FInsertReturningFields := ExtractFields(Value, [';', ',']);
   end;
-  inherited;
+  inherited InternalOpen;
 end;
 
 {**
@@ -529,9 +522,8 @@ var
   {$ELSE}
   BM:TBookMarkStr{%H-};
   {$ENDIF}
-  I, j: Integer;
+  I, j, ColumnIndex: Integer;
   Field: TField;
-  ColumnIndex: Integer absolute j;
 begin
   if not GetActiveBuffer(RowBuffer) then
     raise EZDatabaseError.Create(SInternalError);
@@ -552,35 +544,36 @@ begin
             TZAbstractRWDataSet(MasterLink.DataSet).CachedUpdates);
         end;
 
-    if FGenDMLResolver <> nil then
-      for i := 0 to Fields.Count -1 do begin
-        Field := Fields[i];
-        if FCheckRequired then
-          if State = dsEdit then begin
-            if Field.Required and not ReadOnly and (Field.FieldKind=fkData) and
-               Field.IsNull and (Field.DefaultExpression = '') then
-              RaiseNeedFieldError(Field);
-          end else if (State = dsInsert) then
-            if not Assigned(FInsertReturningFields) or (FInsertReturningFields.IndexOf(Field.FieldName) < 0) then
-              if Field.Required and not Field.ReadOnly and (Field.FieldKind=fkData) and
-                 Field.IsNull and (Field.DefaultExpression = '') then begin
-               // allow autoincrement and defaulted fields to be null;
-                ColumnIndex := Resultset.FindColumn(Field.FieldName);
-                if (ColumnIndex = InvalidDbcIndex) or
-                   (not ResultSetMetadata.HasDefaultValue(ColumnIndex) and
-                    not ResultSetMetadata.IsAutoIncrement(ColumnIndex)) then
-                  RaiseNeedFieldError(Field);
-              end;
-        for j := 0 to high(FieldsLookupTable) do
-          if (FieldsLookupTable[j].Field = Field) and (FieldsLookupTable[j].DataSource = dltResultSet) then begin
+    for i := 0 to Fields.Count -1 do begin
+      Field := Fields[i];
+      if (Field.FieldKind <> fkData) then
+        continue;
+      for j := 0 to high(FieldsLookupTable) do
+        if (FieldsLookupTable[j].Field = Field) and (FieldsLookupTable[j].DataSource = dltResultSet) then begin
+          ColumnIndex := FieldsLookupTable[j].Index;
+          if doCheckRequired in Options then
+            if State = dsEdit then begin
+              if Field.Required and not Field.ReadOnly and Field.IsNull and
+                 (Field.DefaultExpression = '') then
+                RaiseNeedFieldError(Field);
+            end else if (State = dsInsert) then begin
+              if not Assigned(FInsertReturningFields) or (FInsertReturningFields.IndexOf(Field.FieldName) = -1) then
+                if Field.Required and not Field.ReadOnly and Field.IsNull and
+                   ((not (doCalcDefaults in Options)) or ((Field.DefaultExpression = '') and not ResultSetMetadata.HasDefaultValue(ColumnIndex))) and
+                   // allow autoincrement and defaulted fields to be null;
+                   not ResultSetMetadata.IsAutoIncrement(ColumnIndex) then
+                    RaiseNeedFieldError(Field);
+            end;
+          if FGenDMLResolver <> nil then begin
             if not (pfInUpdate in Field.ProviderFlags) or not (pfInWhere in Field.ProviderFlags) then begin
               FGenDMLResolver.SetReadOnly(FieldsLookupTable[j].Index, Field.ReadOnly or not (pfInUpdate in Field.ProviderFlags));
               FGenDMLResolver.SetSearchable(FieldsLookupTable[j].Index, (pfInWhere in Field.ProviderFlags));
             end;
             ResultSet.UpdateDefaultExpression(FieldsLookupTable[j].Index, Field.DefaultExpression);
-            Break;
           end;
-      end;
+          Break;
+        end;
+    end;
     if State = dsInsert then
       {$IFNDEF WITH_InternalAddRecord_TRecBuf}
       InternalAddRecord(RowBuffer, False)
@@ -1112,6 +1105,12 @@ begin
 end;
 
 { TZAbstractRWTxnUpdateObjDataSet }
+
+constructor TZAbstractRWTxnUpdateObjDataSet.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  Options := [doCalcDefaults, doPreferPrepared, doCheckRequired]
+end;
 
 function TZAbstractRWTxnUpdateObjDataSet.CreateResultSet(const SQL: string;
   MaxRows: Integer): IZResultSet;

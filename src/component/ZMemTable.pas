@@ -404,6 +404,7 @@ constructor TZAbstractMemTable.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FControlsCodePage := cDynamic;
+  Options := [doCheckRequired];
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "SQL" not used} {$ENDIF}
@@ -452,6 +453,8 @@ destructor TZAbstractMemTable.Destroy;
 begin
   if FColumnsInfo <> nil then
     FreeAndNil(FColumnsInfo);
+  If Self.Active Then
+    Self.Close;
   inherited;
 end;
 

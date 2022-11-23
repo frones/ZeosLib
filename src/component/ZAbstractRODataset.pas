@@ -101,7 +101,7 @@ type
   {** Options for dataset. }
   TZDatasetOption = ({$IFNDEF NO_TDATASET_TRANSLATE}doOemTranslate, {$ENDIF}
     doCalcDefaults, doAlwaysDetailResync, doSmartOpen, doPreferPrepared,
-    doDontSortOnPost, doUpdateMasterFirst);
+    doDontSortOnPost, doUpdateMasterFirst, doCheckRequired);
 
   {** Set of dataset options. }
   TZDatasetOptions = set of TZDatasetOption;
@@ -459,6 +459,7 @@ type
     {$ENDIF}
     procedure BindFields(Binding: Boolean); {$IFDEF WITH_VIRTUAL_BINDFIELDS}override;{$ENDIF}
     procedure InternalInitFieldDefs; override;
+    /// <summary>Performs internal query opening.</summary>
     procedure InternalOpen; override;
     procedure InternalClose; override;
     procedure InternalFirst; override;
@@ -1639,7 +1640,7 @@ begin
   FShowRecordTypes := [usModified, usInserted, usUnmodified];
   FRequestLive := False;
   FFetchRow := 0;                // added by Patyi
-  FOptions := [doCalcDefaults, doPreferPrepared];
+  FOptions := [doPreferPrepared];
   FDisableZFields := False;
 
   FFilterEnabled := False;
@@ -3449,14 +3450,14 @@ begin
     else FieldDef := TFieldDef.Create(FieldDefs, FieldName, FieldType, Size, False, FieldNo);
     {$ENDIF}
     with FieldDef do begin
-      if InheritsFromReadWriteTransactionUpdateObjectDataSet then begin
+      if InheritsFromReadWriteDataSet then begin
         {$IFNDEF OLDFPC}
         // EH: This will lead to load metainformations, just to get the IsRequired prop done as documented
         Required := IsWritable(ColumnIndex) and (IsNullable(ColumnIndex) = ntNoNulls) and not ResultSetMetaData.HasDefaultValue(ColumnIndex);
         {$ENDIF}
         if IsReadOnly(ColumnIndex) then
           Attributes := Attributes + [faReadonly];
-      end else if not InheritsFromReadWriteDataSet then
+      end else
         Attributes := Attributes + [faReadonly];
       Precision := Prec;
       DisplayName := FieldName;
@@ -3696,9 +3697,6 @@ begin
   end;
 end;
 
-{**
-  Performs internal query opening.
-}
 procedure TZAbstractRODataset.InternalOpen;
 var
   ColumnList: TObjectList;
@@ -3776,8 +3774,10 @@ begin
         {$ENDIF}
         {$IFDEF WITH_TAUTOREFRESHFLAG} //that's forcing loading metainfo's
         if InheritsFromReadWriteTransactionUpdateObjectDataSet and
-           (Field.FieldKind = fkData) and FResultSetMetadata.IsAutoIncrement(FResultSetMetadata.FindColumn(Field.DisplayName)) then
+           (Field.FieldKind = fkData) and FResultSetMetadata.IsAutoIncrement(FResultSetMetadata.FindColumn(Field.DisplayName)) then begin
+          //Field.SetFieldType(ftAutoInc);
           Field.AutoGenerateValue := arAutoInc;
+        end;
         {$ENDIF !WITH_TAUTOREFRESHFLAG}
         {$IFDEF NO_TFIELDDEF_CREATEFIELD_SETFIXEDCHAR}
         if (faFixed in FieldDefs[i].Attributes) and (Field is TStringField) then

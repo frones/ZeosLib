@@ -268,8 +268,6 @@ const
   // Check number of rows affected after executing a statement
   DSProps_ValidateUpdateCount = 'ValidateUpdateCount';
 
-  DSProps_CheckRequired = 'CheckRequired';
-
   { Parameters common for several drivers }
 
 {$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_ODBC) OR DEFINED(ENABLE_OLEDB)}

@@ -3890,19 +3890,18 @@ begin
                             then CheckEquals(WQuery.Params[J].AsUnicodeMemos[i], TZRawCLobField(RQuery.Fields[j]).AsUnicodeString, v_msg)
                             else CheckEquals(String(WQuery.Params[J].AsUnicodeMemos[i]), RQuery.Fields[j].AsString, v_msg);
                           {$ENDIF}
+
           stBinaryStream: {$IFDEF TBLOBDATA_IS_TBYTES}
-                            {$IFDEF TFIELD_HAS_ASBYTES}
-                          CheckEquals(WQuery.Params[J].AsBlobs[i], TBlobField(RQuery.Fields[j]).AsBytes, v_msg);
-                            {$ELSE}
                           if RQuery.Fields[j].InheritsFrom(TZBlobField)
                           then CheckEquals(WQuery.Params[J].AsBlobs[i], TZBlobField(RQuery.Fields[j]).AsBytes, v_msg)
-                            {$ENDIF TFIELD_HAS_ASBYTES}
+                          else CheckEquals(WQuery.Params[J].AsBlobs[i], TBlobField(RQuery.Fields[j]).AsBytes, v_msg);
+                          {$ELSE}
                           else begin
                             tmp_a := RQuery.Fields[j].AsString;
                             tmp_e := WQuery.Params[J].AsAnsiString;
                             CheckEquals(tmp_e, tmp_a, v_msg);
                           end;
-                          {$ENDIF TBLOBDATA_IS_TBYTES}
+                          {$ENDIF}
           {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
         end;
       end;
@@ -4094,14 +4093,18 @@ var Table: TZMemTable;
   Query: TZQuery;
   FieldDef: TFieldDef;
   I: Integer;
+  Succeeded: Boolean;
 begin
   Table := CreateTable;
   Query := CreateQuery;
   Check(Query <> nil);
   try
+    Check(doCheckRequired in Table.Options);
     Query.SQL.Text := 'select * from people';
     Query.Open;
+    Check(Query.Fields[0].Required);
     Table.CloneDataFrom(Query);
+    Check(Table.Fields[0].Required);
     CheckEquals(Query.Fields.Count, Table.Fields.Count, 'The fieldcount');
     CheckEquals(Query.RecordCount, Table.RecordCount, 'The recordCount');
     Table.Close;
@@ -4114,6 +4117,14 @@ begin
     CheckEquals(Query.RecordCount, Table.RecordCount, 'The recordCount');
     CheckEquals(Query.Fields.Count+2, Table.Fields.Count, 'The fieldcount');
     Table.Append;
+    Succeeded := False;
+    try
+      Table.Post;
+      Succeeded := True;
+    except on E: Exception do
+      CheckNotTestFailure(E);
+    end;
+    CheckFalse(Succeeded, 'the table.post');
     Table.FieldByName('P_ID').AsInteger := 9999;
     Table.Post;
     Table.Clear;

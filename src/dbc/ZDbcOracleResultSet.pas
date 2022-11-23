@@ -2589,7 +2589,8 @@ begin
     if Status <> OCI_SUCCESS then
       FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
         'OCIDefineByPos', Self);
-    if (CurrentVar^.ColType in [stUnicodeString, stUnicodeStream]) and (ConSettings.ClientCodePage.ID <> OCI_UTF16ID) then begin
+    if ((CurrentVar^.ColType in [stUnicodeString, stUnicodeStream]) and (ConSettings.ClientCodePage.ID <> OCI_UTF16ID)) or
+       ((CurrentVar^.ColType in [stString, stAsciiStream]) and (ConSettings.ClientCodePage.Encoding =ceUTF16) and (CurrentVar.dty <> SQLT_LNG)) then begin
       acsid := OCI_UTF16ID;
       Status := FplainDriver.OCIAttrSet(defn_or_bindpp, OCI_HTYPE_DEFINE, @acsid,
            0, OCI_ATTR_CHARSET_ID, FOCIError);
