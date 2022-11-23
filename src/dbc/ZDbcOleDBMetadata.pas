@@ -2942,6 +2942,7 @@ end;
   @Args Variant array with restrictions
   @return IResultSet with the schemas; nil if the schema is not supported
 }
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operator :=(const source:AnsiString/Variant):OleVariant;" marked as inline is not inlined}{$ENDIF}
 function TOleDBDatabaseMetadata.OleDBOpenSchema(Schema: TGUID; const Args: array of String): IZResultSet;
 var
   RowSet: IRowSet;
@@ -2983,6 +2984,7 @@ begin
     OleDBConnection := nil;
   end;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 {**
   Initialize supported schemas and restrictions from the OleDB provider

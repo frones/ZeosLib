@@ -1104,8 +1104,10 @@ var
   ConnectionID, MON_OLDEST_ACTIVE, MON_TOP_TRANSACTION: Integer;
 
 begin
-  if (Connection.Protocol <> 'firebird') and (Connection.Protocol <> 'interbase') then
+  if (Connection.Protocol <> 'firebird') and (Connection.Protocol <> 'interbase') then begin
+    BlankCheck;
     exit;
+  end;
 
   Query := CreateQuery;
   try
