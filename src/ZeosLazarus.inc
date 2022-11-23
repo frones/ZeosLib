@@ -62,6 +62,7 @@
 {$DEFINE WITH_REGISTER_CLASSES_BUG}// FPC is not able to handle non visual component classes(supported since D5) except using RegisterNoIcon method
 {$DEFINE HAVE_INSERT_BOOKMARK_BUG} //FPC does set bfEOF on Append but on Insert a row the Bookmark-Flag is bfCurrent while it should be bfInsert min v3.1
 {$DEFINE WITH_UNIDIRECTIONALBUG} //still buggy with IsUnidirectional prop of TDataSet FPC still moves the recordBuffer-> visit TestReadOnlyQueryUniDirectional and TZAbstractRODataset.GetRecord
+{$DEFINE NO_TFIELDDEF_CREATEFIELD_SETFIXEDCHAR} //TFieldDef.CreateField does not set the TStringField.IsFixedChar property (min up to v3.2.0)
 {$IFNDEF CPU386}
   {$DEFINE WITH_IE200706094} //Fatal: Internal error 200706094 see: http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=11096#p34381
 {$ENDIF}
