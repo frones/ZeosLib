@@ -96,6 +96,8 @@ type
     FDetailDataSets: {$IFDEF TLIST_IS_DEPRECATED}TZSortedList{$ELSE}TList{$ENDIF};
     FDetailCachedUpdates: array of Boolean;
   private
+    FCheckRequired: Boolean;
+    FInsertReturningFields: TStrings;
     function GetUpdatesPending: Boolean;
     /// <summary>Sets a new CachedUpdates property value.</summary>
     /// <param>"Value" a new CachedUpdates value.</param>
@@ -104,6 +106,8 @@ type
     procedure SetUpdateMode(Value: TZUpdateMode);
   protected
     function GetTryKeepDataOnDisconnect: Boolean; override;
+    function InheritsFromReadWriteDataSet: Boolean; override;
+    procedure RaiseNeedFieldError(const Field: TField);
   protected
     property CachedResultSet: IZCachedResultSet read FCachedResultSet
       write FCachedResultSet;
@@ -115,15 +119,21 @@ type
       default wmWhereKeyOnly;
 
     procedure SetTxns2Resolver(const Resolver: IZCachedResolver); virtual;
+    procedure InternalOpen; override;
     procedure InternalClose; override;
     procedure InternalEdit; override;
     procedure InternalInsert; override;
     procedure InternalUnPrepare; override;
+    /// <summary>Performs an internal adding a new record.</summary>
+    /// <param>"Buffer" a buffer of the new adding record.</param>
+    /// <param>"Append" <c>True</c> if record should be added to the end of the
+    ///  result set.</param>
     {$IFNDEF WITH_InternalAddRecord_TRecBuf}
     procedure InternalAddRecord(Buffer: Pointer; Append: Boolean); override;
     {$ELSE}
     procedure InternalAddRecord(Buffer: TRecBuf; Append: Boolean); override;
     {$ENDIF}
+    /// <summary>Performs an internal post updates.</summary>
     procedure InternalPost; override;
     procedure InternalDelete; override;
     procedure InternalUpdate;
@@ -239,6 +249,7 @@ type
     /// <returns>a created DBC resultset.</returns>
     function CreateResultSet(const SQL: string; MaxRows: Integer):
       IZResultSet; override;
+    function InheritsFromReadWriteTransactionUpdateObjectDataSet: Boolean; override;
   public
     destructor Destroy; override;
   published
@@ -252,7 +263,7 @@ type
 
 implementation
 
-uses Math, ZMessages, ZDatasetUtils, ZDbcProperties, ZExceptions;
+uses Math, ZMessages, ZDatasetUtils, ZDbcProperties, ZExceptions, ZSysUtils, ZDbcUtils;
 
 { TZAbstractRWDataSet }
 
@@ -355,12 +366,34 @@ begin
   end;
 end;
 
+procedure TZAbstractRWDataSet.InternalOpen;
+var
+  Value:String;
+begin
+  Value := trim(Properties.Values[DSProps_CheckRequired]);
+  if Value = '' then
+    FCheckRequired := True
+  else
+    FCheckRequired := ZSysUtils.StrToBoolEx(Value);
+
+  if FCheckRequired then begin
+    // more or less a copy from TZInterbaseFirebirdCachedResolver.Create
+    Value := Properties.Values[DSProps_InsertReturningFields];
+    if Value <> '' then
+      FInsertReturningFields := ExtractFields(Value, [';', ',']);
+  end;
+  inherited;
+end;
+
 {**
   Performs internal query closing.
 }
 procedure TZAbstractRWDataSet.InternalClose;
 begin
   inherited InternalClose;
+
+  if Assigned(FInsertReturningFields) then
+    FreeAndNil(FInsertReturningFields);
 
   if not ResultSetWalking then begin
     if FCachedResolver <> nil then begin
@@ -443,12 +476,11 @@ begin
   end;
 end;
 
-{**
-  Performs an internal adding a new record.
-  @param Buffer a buffer of the new adding record.
-  @param Append <code>True</code> if record should be added to the end
-    of the result set.
-}
+function TZAbstractRWDataSet.InheritsFromReadWriteDataSet: Boolean;
+begin
+  Result := True;
+end;
+
 {$IFNDEF WITH_InternalAddRecord_TRecBuf}
 procedure TZAbstractRWDataSet.InternalAddRecord(Buffer: Pointer; Append: Boolean);
 {$ELSE}
@@ -499,10 +531,8 @@ var
   {$ENDIF}
   I, j: Integer;
   Field: TField;
+  ColumnIndex: Integer absolute j;
 begin
-  //inherited;  //AVZ - Firebird defaults come through when this is commented out
-
-
   if not GetActiveBuffer(RowBuffer) then
     raise EZDatabaseError.Create(SInternalError);
   if Connection <> nil then
@@ -525,6 +555,22 @@ begin
     if FGenDMLResolver <> nil then
       for i := 0 to Fields.Count -1 do begin
         Field := Fields[i];
+        if FCheckRequired then
+          if State = dsEdit then begin
+            if Field.Required and not ReadOnly and (Field.FieldKind=fkData) and
+               Field.IsNull and (Field.DefaultExpression = '') then
+              RaiseNeedFieldError(Field);
+          end else if (State = dsInsert) then
+            if not Assigned(FInsertReturningFields) or (FInsertReturningFields.IndexOf(Field.FieldName) < 0) then
+              if Field.Required and not Field.ReadOnly and (Field.FieldKind=fkData) and
+                 Field.IsNull and (Field.DefaultExpression = '') then begin
+               // allow autoincrement and defaulted fields to be null;
+                ColumnIndex := Resultset.FindColumn(Field.FieldName);
+                if (ColumnIndex = InvalidDbcIndex) or
+                   (not ResultSetMetadata.HasDefaultValue(ColumnIndex) and
+                    not ResultSetMetadata.IsAutoIncrement(ColumnIndex)) then
+                  RaiseNeedFieldError(Field);
+              end;
         for j := 0 to high(FieldsLookupTable) do
           if (FieldsLookupTable[j].Field = Field) and (FieldsLookupTable[j].DataSource = dltResultSet) then begin
             if not (pfInUpdate in Field.ProviderFlags) or not (pfInWhere in Field.ProviderFlags) then begin
@@ -698,6 +744,11 @@ begin
     CachedResultSet.CancelUpdates;
   if not (State in [dsInactive]) then
     RereadRows;
+end;
+
+procedure TZAbstractRWDataSet.RaiseNeedFieldError(const Field: TField);
+begin
+  raise EZDatabaseError.Create(Format(SNeedField,[Field.DisplayName]));
 end;
 
 {**
@@ -1083,6 +1134,11 @@ begin
     SetUpdateObject(nil);
   end;
   inherited Destroy;
+end;
+
+function TZAbstractRWTxnUpdateObjDataSet.InheritsFromReadWriteTransactionUpdateObjectDataSet: Boolean;
+begin
+  Result := True;
 end;
 
 procedure TZAbstractRWTxnUpdateObjDataSet.Notification(AComponent: TComponent;

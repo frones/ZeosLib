@@ -310,7 +310,6 @@ type
     procedure CheckBiDirectional;
     procedure CheckSQLQuery; virtual;
     procedure RaiseReadOnlyError;
-
     function FetchOneRow: Boolean;
     function FetchRows(RowCount: Integer): Boolean;
     function FilterRow(RowNo: NativeInt): Boolean;
@@ -415,12 +414,18 @@ type
     property NestedDataSetClass: TDataSetClass read FNestedDataSetClass write FNestedDataSetClass;
     {$ENDIF}
   protected { Abstracts methods }
+    /// <summary>Performs an internal adding a new record.</summary>
+    /// <param>"Buffer" a buffer of the new adding record.</param>
+    /// <param>"Append" <c>True</c> if record should be added to the end of the
+    ///  result set.</param>
     {$IFNDEF WITH_InternalAddRecord_TRecBuf}
     procedure InternalAddRecord(Buffer: Pointer; Append: Boolean); override;
     {$ELSE}
     procedure InternalAddRecord(Buffer: TRecBuf; Append: Boolean); override;
     {$ENDIF}
+    /// <summary>Performs an internal record removing.</summary>
     procedure InternalDelete; override;
+    /// <summary>Performs an internal post updates.</summary>
     procedure InternalPost; override;
     {$IFNDEF FPC}
     procedure SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
@@ -544,6 +549,9 @@ type
     function PSIsSQLBased: Boolean; {$IFDEF WITH_IPROVIDER}override;{$ELSE}virtual;{$ENDIF}
   protected
     procedure DataEvent(Event: TDataEvent; Info: {$IFDEF FPC}PtrInt{$ELSE}NativeInt{$ENDIF}); override;
+  protected //internals to identify if some options/operations are relevant or not
+    function InheritsFromReadWriteTransactionUpdateObjectDataSet: Boolean; virtual;
+    function InheritsFromReadWriteDataSet: Boolean; virtual;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -1518,7 +1526,7 @@ implementation
 
 uses ZFastCode, Math, ZVariant, ZMessages,
   ZSelectSchema, ZGenericSqlToken, ZGenericSqlAnalyser, ZEncoding,
-  ZDbcProperties, ZDbcResultSet, ZAbstractDataset
+  ZDbcProperties, ZDbcResultSet
   {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -3441,14 +3449,14 @@ begin
     else FieldDef := TFieldDef.Create(FieldDefs, FieldName, FieldType, Size, False, FieldNo);
     {$ENDIF}
     with FieldDef do begin
-      if Self.InheritsFrom(TZAbstractRWTxnUpdateObjDataSet) then begin
+      if InheritsFromReadWriteTransactionUpdateObjectDataSet then begin
         {$IFNDEF OLDFPC}
         // EH: This will lead to load metainformations, just to get the IsRequired prop done as documented
         Required := IsWritable(ColumnIndex) and (IsNullable(ColumnIndex) = ntNoNulls) and not ResultSetMetaData.HasDefaultValue(ColumnIndex);
         {$ENDIF}
         if IsReadOnly(ColumnIndex) then
           Attributes := Attributes + [faReadonly];
-      end else if not Self.InheritsFrom(TZAbstractRWDataSet) then
+      end else if not InheritsFromReadWriteDataSet then
         Attributes := Attributes + [faReadonly];
       Precision := Prec;
       DisplayName := FieldName;
@@ -3699,6 +3707,7 @@ var
   ConSettings: PZConSettings;
   StringFieldCodePage: Word;
   LcmString: String;
+  Field: TField;
 begin
   {$IFNDEF FPC}
   If (csDestroying in Componentstate) then
@@ -3759,17 +3768,21 @@ begin
     begin
       CreateFields;
       for i := 0 to Fields.Count -1 do begin
-        if Fields[i].DataType = ftString then
-          Fields[i].DisplayWidth := FResultSetMetadata.GetPrecision(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+        Field := Fields[i];
+        if Field.DataType = ftString then
+          Field.DisplayWidth := FResultSetMetadata.GetPrecision(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
         {$IFDEF WITH_FTGUID}
-        else if Fields[i].DataType = ftGUID then Fields[i].DisplayWidth := 40 //looks better in Grid
+        else if Field.DataType = ftGUID then Field.DisplayWidth := 40; //looks better in Grid
         {$ENDIF}
-        (*else if Fields[i].DataType in [ftTime, ftDateTime] then
-          Fields[i].DisplayWidth := Fields[i].DisplayWidth + MetaData.GetScale(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})*);
         {$IFDEF WITH_TAUTOREFRESHFLAG} //that's forcing loading metainfo's
-        //if FResultSetMetadata.IsAutoIncrement({$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then
-          //Fields[i].AutoGenerateValue := arAutoInc;
+        if InheritsFromReadWriteTransactionUpdateObjectDataSet and
+           (Field.FieldKind = fkData) and FResultSetMetadata.IsAutoIncrement(FResultSetMetadata.FindColumn(Field.DisplayName)) then
+          Field.AutoGenerateValue := arAutoInc;
         {$ENDIF !WITH_TAUTOREFRESHFLAG}
+        {$IFDEF NO_TFIELDDEF_CREATEFIELD_SETFIXEDCHAR}
+        if (faFixed in FieldDefs[i].Attributes) and (Field is TStringField) then
+          TStringField(Field).FixedChar := True;
+        {$ENDIF}
       end;
     end;
     BindFields(True);
@@ -4234,7 +4247,7 @@ begin
     end;
     FSortedFields := aValue;
     if Active then
-      if not (Self is TZAbstractRWDataSet) then
+      if not InheritsFromReadWriteDataSet then
         InternalSort //enables clearsort which prevents rereading data
       else if (FSortedFields = '') then
         InternalRefresh
@@ -4397,12 +4410,16 @@ begin
 end;
 {$ENDIF}
 
-{**
-  Performs an internal adding a new record.
-  @param Buffer a buffer of the new adding record.
-  @param Append <code>True</code> if record should be added to the end
-    of the result set.
-}
+function TZAbstractRODataset.InheritsFromReadWriteDataSet: Boolean;
+begin
+  Result := False;
+end;
+
+function TZAbstractRODataset.InheritsFromReadWriteTransactionUpdateObjectDataSet: Boolean;
+begin
+  Result := False;
+end;
+
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // empty function - parameter not used intentionally
 {$IFNDEF WITH_InternalAddRecord_TRecBuf}
 procedure TZAbstractRODataset.InternalAddRecord(Buffer: Pointer; Append: Boolean);
@@ -4414,43 +4431,14 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-{**
-  Performs an internal record removing.
-}
 procedure TZAbstractRODataset.InternalDelete;
 begin
   RaiseReadOnlyError;
 end;
 
-{**
-  Performs an internal post updates.
-}
 procedure TZAbstractRODataset.InternalPost;
-  procedure Checkrequired;
-  var
-    I: longint;
-    columnindex : integer;
-  begin
-    For I:=0 to Fields.Count-1 do With Fields[i] do
-      if State = dsEdit then begin
-        if Required and not ReadOnly and (FieldKind=fkData) and IsNull then
-          raise EZDatabaseError.Create(Format(SNeedField,[DisplayName]));
-      end else if State = dsInsert then
-        if Required and not ReadOnly and (FieldKind=fkData) and IsNull then begin
-         // allow autoincrement and defaulted fields to be null;
-            columnindex := Resultset.FindColumn(Fields[i].FieldName);
-            if (Columnindex = InvalidDbcIndex) or
-               (not FResultSetMetadata.HasDefaultValue(columnIndex) and
-                not FResultSetMetadata.IsAutoIncrement(columnIndex)) then
-              raise EZDatabaseError.Create(Format(SNeedField,[DisplayName]));
-          end;
-  end;
-
 begin
-  if not (Self is TZAbstractRWDataSet) then
-    RaiseReadOnlyError;
-
-  Checkrequired;
+  RaiseReadOnlyError;
 end;
 
 {**
