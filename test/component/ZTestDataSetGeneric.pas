@@ -4088,6 +4088,7 @@ begin
   end;
 end;
 
+type THack_MemTable = class(TZMemTable);
 procedure TZTestMemTableWithConnection.Test_AssignDataFrom_people_table;
 var Table: TZMemTable;
   Query: TZQuery;
@@ -4102,13 +4103,10 @@ begin
     Check(doCheckRequired in Table.Options);
     Query.SQL.Text := 'select * from people';
     Query.Open;
-    if Connection.DbcConnection.GetServerProvider <> spPostgreSQL then
-      Check(Query.Fields[0].Required, 'the field p_id is required'); //defined as serial -> autoincrement
+    if (Connection.DbcConnection.GetServerProvider in [spPostgreSQL, spSQLite,spMySQL])
+    then CheckFalse(Query.Fields[0].Required, 'the field p_id is a autoincrement field. Thus not required')
+    else Check(Query.Fields[0].Required, 'the field p_id is required');
     Table.CloneDataFrom(Query);
-    if Connection.DbcConnection.GetServerProvider = spPostgreSQL then begin
-      CheckFalse(Table.Fields[0].Required, 'the field p_id is an autoincremented field');
-      Table.Fields[0].Required := True;
-    end;
     Check(Table.Fields[0].Required, 'the field p_id is required');
     CheckEquals(Query.Fields.Count, Table.Fields.Count, 'The fieldcount');
     CheckEquals(Query.RecordCount, Table.RecordCount, 'The recordCount');
@@ -4129,8 +4127,30 @@ begin
     except on E: Exception do
       CheckNotTestFailure(E);
     end;
-    CheckFalse(Succeeded, 'the table.post should fail because field hl_id is required');
+    CheckFalse(Succeeded, 'Table.Post should fail because field hl_id is required');
     Table.FieldByName('P_ID').AsInteger := 9999;
+    Table.Post;
+    Table.Append;
+    Succeeded := False;
+    try
+      THack_MemTable(Table).Readonly := True;
+    except on E: Exception do
+      CheckNotTestFailure(E);
+    end;
+    CheckFalse(Succeeded, 'Table.Append should fail because the table is in write state');
+    Table.Cancel;
+    THack_MemTable(Table).Readonly := True;
+    Succeeded := False;
+    try
+      Table.FieldByName('P_ID').AsInteger := 9998;
+      Succeeded := True;
+    except on E: Exception do
+      CheckNotTestFailure(E);
+    end;
+    CheckFalse(Succeeded, 'Assign field p_id should fail because the table is readonly');
+    THack_MemTable(Table).ReadOnly := False;
+    Table.Append;
+    Table.FieldByName('P_ID').AsInteger := 9998;
     Table.Post;
     Table.Clear;
     { test reverse logic }

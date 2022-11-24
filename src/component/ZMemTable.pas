@@ -92,6 +92,7 @@ type
     function PSIsSQLBased: Boolean; override;
     function GetTokenizer: IZTokenizer; override;
     function GetClientVariantManager: IZClientVariantManager; override;
+    function InheritsFromMemTableDataSet: Boolean; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -475,6 +476,11 @@ begin
   if FConnection = nil
   then Result := FControlsCodePage
   else Result := FConnection.ControlsCodePage;
+end;
+
+function TZAbstractMemTable.InheritsFromMemTableDataSet: Boolean;
+begin
+  Result := True;
 end;
 
 procedure TZAbstractMemTable.InternalInitFieldDefs;

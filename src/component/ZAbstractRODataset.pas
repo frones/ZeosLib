@@ -309,7 +309,14 @@ type
     procedure CheckConnected; virtual;
     procedure CheckBiDirectional;
     procedure CheckSQLQuery; virtual;
+    /// <summary>Raises an error 'Operation is not allowed in read-only dataset.</summary>
     procedure RaiseReadOnlyError;
+    procedure RaiseNotEditingError(const Field: TField);
+    procedure RaiseFieldReadOnlyError(const Field: TField);
+    procedure RaiseLiveResultSetsAreNotSupportedError;
+    procedure RaiseWriteStateError;
+    procedure RaiseFieldTypeMismatchError(const AField: TField; AFieldDef: TFieldDef);
+    procedure RaiseFieldSizeMismatchError(const AField: TField; AFieldDef: TFieldDef);
     function FetchOneRow: Boolean;
     function FetchRows(RowCount: Integer): Boolean;
     function FilterRow(RowNo: NativeInt): Boolean;
@@ -553,6 +560,7 @@ type
   protected //internals to identify if some options/operations are relevant or not
     function InheritsFromReadWriteTransactionUpdateObjectDataSet: Boolean; virtual;
     function InheritsFromReadWriteDataSet: Boolean; virtual;
+    function InheritsFromMemTableDataSet: Boolean; virtual;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -1966,6 +1974,10 @@ end;
 }
 procedure TZAbstractRODataset.SetReadOnly(Value: Boolean);
 begin
+  if Value and not InheritsFromReadWriteDataSet then
+    RaiseLiveResultSetsAreNotSupportedError;
+  if Value and (State in dsWriteModes) then
+    RaiseWriteStateError;
   RequestLive := not Value;
 end;
 
@@ -2031,12 +2043,45 @@ begin
     raise EZDatabaseError.Create(SCanNotExecuteMoreQueries);
 end;
 
-{**
-  Raises an error 'Operation is not allowed in read-only dataset.
-}
+procedure TZAbstractRODataset.RaiseFieldReadOnlyError(const Field: TField);
+begin
+  raise EZDatabaseError.Create(Format(SFieldReadOnly, [Field.DisplayName]));
+end;
+
+procedure TZAbstractRODataset.RaiseFieldSizeMismatchError(const AField: TField;
+  AFieldDef: TFieldDef);
+begin
+  DatabaseErrorFmt(SFieldSizeMismatch, [AField.DisplayName, AField.Size,
+    AFieldDef.Size], Self);
+end;
+
+procedure TZAbstractRODataset.RaiseFieldTypeMismatchError(const AField: TField;
+  AFieldDef: TFieldDef);
+begin
+  DatabaseErrorFmt(SFieldTypeMismatch, [AField.DisplayName,
+    FieldTypeNames[AField.DataType], FieldTypeNames[AFieldDef.DataType]], Self);
+end;
+
+procedure TZAbstractRODataset.RaiseLiveResultSetsAreNotSupportedError;
+begin
+  raise EZDatabaseError.Create(SLiveResultSetsAreNotSupported);
+end;
+
+procedure TZAbstractRODataset.RaiseNotEditingError(const Field: TField);
+begin
+  if Assigned(Field.DataSet) and (Field.DataSet.Name <> '')
+  then raise EZDatabaseError.Create(Format('%s: %s', [Field.DataSet.Name, SNotEditing]))
+  else raise EZDatabaseError.Create(SNotEditing);
+end;
+
 procedure TZAbstractRODataset.RaiseReadOnlyError;
 begin
   raise EZDatabaseError.Create(SOperationIsNotAllowed2);
+end;
+
+procedure TZAbstractRODataset.RaiseWriteStateError;
+begin
+  raise EZDatabaseError.Create(Format(SOperationIsNotAllowed3, ['WRITE']));
 end;
 
 {**
@@ -3085,7 +3130,7 @@ begin
   // Didn't find a way to avoid this...
   if Field.ReadOnly and (Field.FieldKind <> fkLookup)
                     and not (State in [dsSetKey, dsCalcFields, dsFilter, dsBlockRead, dsInternalCalc, dsOpening]) then
-    DatabaseErrorFmt(SFieldReadOnly, [Field.DisplayName]);
+    RaiseFieldReadOnlyError(Field);
   if not (State in dsWriteModes) then
     DatabaseError(SNotEditing, Self);
 
@@ -3453,7 +3498,8 @@ begin
       if InheritsFromReadWriteDataSet then begin
         {$IFNDEF OLDFPC}
         // EH: This will lead to load metainformations, just to get the IsRequired prop done as documented
-        Required := IsWritable(ColumnIndex) and (IsNullable(ColumnIndex) = ntNoNulls) and not ResultSetMetaData.HasDefaultValue(ColumnIndex);
+        Required := IsWritable(ColumnIndex) and (IsNullable(ColumnIndex) = ntNoNulls) and
+          (InheritsFromMemTableDataSet or not ResultSetMetaData.HasDefaultValue(ColumnIndex));
         {$ENDIF}
         if IsReadOnly(ColumnIndex) then
           Attributes := Attributes + [faReadonly];
@@ -3697,10 +3743,12 @@ begin
   end;
 end;
 
+type TProtectedPropField = class(TField);
 procedure TZAbstractRODataset.InternalOpen;
 var
   ColumnList: TObjectList;
   I, Cnt: Integer;
+  ColumnIndex: Integer absolute Cnt;
   OldRS: IZResultSet;
   ConSettings: PZConSettings;
   StringFieldCodePage: Word;
@@ -3767,19 +3815,27 @@ begin
       CreateFields;
       for i := 0 to Fields.Count -1 do begin
         Field := Fields[i];
-        if Field.DataType = ftString then
-          Field.DisplayWidth := FResultSetMetadata.GetPrecision(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+        ColumnIndex := FResultSetMetadata.FindColumn(Field.DisplayName);
+        if (Field.DataType = ftString) and (ColumnIndex <> InvalidDbcIndex) then
+          Field.DisplayWidth := FResultSetMetadata.GetPrecision(ColumnIndex)
         {$IFDEF WITH_FTGUID}
         else if Field.DataType = ftGUID then Field.DisplayWidth := 40; //looks better in Grid
         {$ENDIF}
-        {$IFDEF WITH_TAUTOREFRESHFLAG} //that's forcing loading metainfo's
         if InheritsFromReadWriteTransactionUpdateObjectDataSet and
-           (Field.FieldKind = fkData) and FResultSetMetadata.IsAutoIncrement(FResultSetMetadata.FindColumn(Field.DisplayName)) then begin
-          //Field.SetFieldType(ftAutoInc);
+           (Field.FieldKind = fkData) and (ColumnIndex <> InvalidDbcIndex) and
+           FResultSetMetadata.IsAutoIncrement(ColumnIndex) then begin //that's forcing loading metainfo's
+          (* EH: uncomment this if ftAutoInc should be supported. Note this
+             will lead to different datasizes (not a problem whith the TZFields)
+             and would break some apps. Them more the "ID" fields may need
+             another prozessing
+          if not FDisableZFields then
+            TProtectedPropField(Field).SetDataType(ftAutoInc); *)
+          {$IFDEF WITH_TAUTOREFRESHFLAG}
           Field.AutoGenerateValue := arAutoInc;
+          {$ENDIF !WITH_TAUTOREFRESHFLAG}
+          Field.Required := False;
         end;
-        {$ENDIF !WITH_TAUTOREFRESHFLAG}
-        {$IFDEF NO_TFIELDDEF_CREATEFIELD_SETFIXEDCHAR}
+        {$IFDEF NO_TFIELDDEF_CREATEFIELD_SETFIXEDCHAR} //fpc misses setting that info
         if (faFixed in FieldDefs[i].Attributes) and (Field is TStringField) then
           TStringField(Field).FixedChar := True;
         {$ENDIF}
@@ -4409,6 +4465,11 @@ begin
   end;
 end;
 {$ENDIF}
+
+function TZAbstractRODataset.InheritsFromMemTableDataSet: Boolean;
+begin
+  Result := False;
+end;
 
 function TZAbstractRODataset.InheritsFromReadWriteDataSet: Boolean;
 begin
@@ -5186,9 +5247,11 @@ var RowBuffer: PZRowBuffer;
 begin
   if Field.ReadOnly and (Field.FieldKind <> fkLookup) and not (State in
     [dsSetKey, dsCalcFields, dsFilter, dsBlockRead, dsInternalCalc, dsOpening]) then
-      DatabaseErrorFmt(SFieldReadOnly, [Field.DisplayName]);
+      RaiseFieldReadOnlyError(Field);
+  if ReadOnly then
+    RaiseReadOnlyError;
   if not (State in dsWriteModes) then
-    DatabaseError(SNotEditing, Field.DataSet);
+    RaiseNotEditingError(Field);
   if GetActiveBuffer(RowBuffer)
   then FRowAccessor.RowBuffer := RowBuffer
   else raise EZDatabaseError.Create(SRowDataIsNotAvailable);
@@ -5848,15 +5911,20 @@ const
   );
   CheckTypeSizes = [ftBytes, ftVarBytes, ftBCD, ftReference, ftFmtBCD];
 begin
-  with Field do
-  begin
-    if (BaseFieldTypes[DataType] <> BaseFieldTypes[AFieldDef.DataType]) then
-      DatabaseErrorFmt(SFieldTypeMismatch, [DisplayName,
-        FieldTypeNames[DataType], FieldTypeNames[AFieldDef.DataType]], Self);
-    if (DataType in CheckTypeSizes) and (Size <> AFieldDef.Size) then
-        DatabaseErrorFmt(SFieldSizeMismatch, [DisplayName, Size,
-          AFieldDef.Size], Self);
-  end;
+  (* EH: uncomment this (just prepared) if ftAutoInc should be supported
+  if {$IFDEF WITH_TAUTOREFRESHFLAG}(AutoGenerateValue = arAutoInc) and {$ENDIF}
+     (Field.DataType = ftAutoInc) and (AFieldDef is TZFieldDef) then
+     if (AFieldDef.DataType [ftSmallint, ftInteger, ftWord, ftBCD,
+          ftLargeint, ftFMTBcd, ftLongWord, ftShortint, ftByte) then begin
+       if (Field.Size <> 0) then
+          RaiseFieldSizeMismatchError(Field, AFieldDef);
+     end else
+        RaiseFieldTypeMismatchError(Field, AFieldDef)
+  else *)
+  if (BaseFieldTypes[Field.DataType] <> BaseFieldTypes[AFieldDef.DataType]) then
+    RaiseFieldTypeMismatchError(Field, AFieldDef);
+  if (Field.DataType in CheckTypeSizes) and (Field.Size <> AFieldDef.Size) then
+     RaiseFieldSizeMismatchError(Field, AFieldDef);
 end;
 
 {$IFDEF WITH_IPROVIDERSUPPORT_GUID}
