@@ -167,7 +167,7 @@ function PG2SmallInt(P: Pointer): SmallInt; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure SmallInt2PG(Value: SmallInt; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 function PG2Integer(P: Pointer): Integer; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-procedure Integer2PG(Value: Integer; Buf: Pointer); {$IF defined(WITH_INLINE) and not defined(WITH_RANG_CHECK_CONSTATANT_EVALUATION_ERROR)}inline;{$ENDIF}
+procedure Integer2PG(Value: Integer; Buf: Pointer); {$IF defined(WITH_INLINE) and not defined(WITH_RANG_CHECK_CONSTATANT_EVALUATION_ERROR)}inline;{$IFEND}
 
 function PG2Cardinal(P: Pointer): Cardinal; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 procedure Cardinal2PG(Value: Cardinal; Buf: Pointer); {$IFDEF WITH_INLINE}inline;{$ENDIF}
