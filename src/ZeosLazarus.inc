@@ -90,7 +90,7 @@
     {$DEFINE WITH_PWIDECHAR_TOWIDESTRING}
     {$DEFINE WITH_CLASS_VARS}
     {$IF FPC_FULLVERSION>=20600}  // assumes 2.5.1 pretty close to 2.6.0. Summer 2011 or newer
-	  {$DEFINE WITH_TBYTES}
+      {$DEFINE WITH_TBYTES}
       {$DEFINE TOBJECT_HAS_TOSTRING}            // TObject has a virtual ToString method
       {$DEFINE WITH_INLINE}           // compiler supports inline methodes
       {$DEFINE WITH_FUNIDIRECTIONAL} // FPC has references a field instead of a setter here.  (at least in 2.6.0)
@@ -152,20 +152,22 @@
                 {$DEFINE WITH_CODEPAGE_AWARE_FIELD}
                 {$DEFINE TBLOBDATA_IS_TBYTES} //TBlobData is an alias for TBytes instead of AnsiString
                 {$DEFINE WITH_TSTRINGS_TENCODING_LOADFROM}           // TStrings.LoadFromFile/LoadFromStream have TEncoding
-		// {$DEFINE WITH_NETENCODING} // removed because Debian 11
-		// doesn't have the system.netencoding units
+                // {$DEFINE WITH_NETENCODING} // removed because Debian 11
+                // doesn't have the system.netencoding units
                 {$IF FPC_FULLVERSION>=30203}
                   {$DEFINE WITH_FTLONGWORD}                 // ftLongWord is supported
                   {$DEFINE WITH_FTBYTE}                     // ftByte is supported
                   {$DEFINE WITH_FTEXTENDED}                 // ftExtended is supported
                   {$IF FPC_FULLVERSION >= 30300}
-		    {$DEFINE WITH_FTSINGLE}                   // ftSingle is supported
+                  {$DEFINE WITH_FTSINGLE}                   // ftSingle is supported
                   {$DEFINE WITH_FTSHORTINT}                 // ftShortInt is supported
                   {$IFEND}
                 {$IFEND} 
               {$IFEND} 
             {$IFEND}
           {$IFEND}
+        {$ELSE}
+          {$DEFINE WITH_RANG_CHECK_CONSTATANT_EVALUATION_ERROR} //the compiler raises an range check error on constant evaluation error on Integer2PG()
         {$IFEND}
       {$IFEND}
     {$ELSE}
