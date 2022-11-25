@@ -3952,7 +3952,11 @@ begin
   if Pointer(S) = nil then
     goto jmpFail;
   Buf := Pointer(S);
-  PEnd := Buf + PLengthInt(NativeUInt(Buf) - StringLenOffSet)^ {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+  {$IFDEF WITH_INLINE}
+  PEnd := Buf + Length(S) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+  {$ELSE}
+  PEnd := Buf + PLengthInt(NativeUInt(Buf) - StringLenOffSet)^;
+  {$ENDIF}
   P := PEnd;
   Result := ValRawUInt32(Buf, PEnd);
   if (PEnd <> P) and (PByte(PEnd)^ <> Byte(' ')) then
@@ -4067,7 +4071,11 @@ begin
   if Pointer(S) = nil then
     goto jmpFail;
   Buf := Pointer(S);
+  {$IFDEF WITH_INLINE}
+  PEnd := Buf + Length(S) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+  {$ELSE}
   PEnd := Buf + PLengthInt(NativeUInt(Buf) - StringLenOffSet)^;
+  {$ENDIF}
   P := PEnd;
   Result := ValUnicodeUInt32(Buf, PEnd);
   if (PEnd <> P) and (PWord(PEnd)^ <> Word(' ')) then
@@ -4326,7 +4334,11 @@ begin
   then Result := Default
   else begin
     Buf := Pointer(S);
-    PEnd := Buf + PLengthInt(NativeUInt(Buf) - StringLenOffSet)^ {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+    {$IFDEF WITH_INLINE}
+    PEnd := Buf + Length(S) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+    {$ELSE}
+    PEnd := Buf + PLengthInt(NativeUInt(Buf) - StringLenOffSet)^;
+    {$ENDIF}
     P := PEnd;
     Result := ValRawUInt32(Buf, PEnd);
     if (PEnd <> P) and (PByte(PEnd)^ <> Byte(' ')) then
@@ -4466,7 +4478,11 @@ begin
   then Result := Default
   else begin
     Buf := Pointer(S);
-    PEnd := Buf + PLengthInt(NativeUInt(Buf) - StringLenOffSet)^ {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+    {$IFDEF WITH_INLINE}
+    PEnd := Buf + Length(S) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+    {$ELSE}
+    PEnd := Buf + PLengthInt(NativeUInt(Buf) - StringLenOffSet)^;
+    {$ENDIF}
     P := PEnd;
     Result := ValUnicodeUInt32(Buf, PEnd);
     if (PEnd <> P) and (PByte(PEnd)^ <> Byte(' ')) then
@@ -8040,9 +8056,9 @@ begin;
     Result:=0;
     exit;
     end;
-  {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-  len := Length(Str)-1;
-  lenSub := Length(SubStr)-1;
+  {$IFDEF WITH_INLINE}
+  len := Length(Str){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
+  lenSub := Length(SubStr){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF};
   {$else}
   len:=PLengthInt(p-StringLenOffSet)^;
   lenSub:=PLengthInt(pSub-StringLenOffSet)^;

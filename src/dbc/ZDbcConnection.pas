@@ -1937,7 +1937,11 @@ SetRaw: if Pointer(Result.VRawByteString) = nil then begin
           Result.VCharRec.Len := 0;
           Result.VCharRec.P := PEmptyAnsiString; //avoid nil result
         end else begin
+          {$IFDEF WITH_INLINE}
+          Result.VCharRec.Len := Length(Result.VRawByteString) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING} -1{$ENDIF};
+          {$ELSE}
           Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VRawByteString) - StringLenOffSet)^; //fast Length() helper
+          {$ENDIF}
           Result.VCharRec.P := Pointer(Result.VRawByteString); //avoid RTL conversion to PAnsiChar
         end;
       end;
@@ -1957,13 +1961,7 @@ SetRaw: if Pointer(Result.VRawByteString) = nil then begin
     else if (Ord(FConSettings^.ClientCodePage^.Encoding) < Ord(ceUTF16)) then begin
           Result.VRawByteString := Convert(Value, vtRawByteString).VRawByteString;
           Result.VCharRec.CP := FClientCP;
-          if Pointer(Result.VRawByteString) = nil then begin
-            Result.VCharRec.Len := 0;
-            Result.VCharRec.P := PEmptyAnsiString; //avoid nil result
-          end else begin
-            Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VRawByteString) - StringLenOffSet)^; //fast Length() helper
-            Result.VCharRec.P := Pointer(Result.VRawByteString); //avoid RTL conversion to PAnsiChar
-          end;
+          goto SetRaw;
         end else begin
           Result.VUnicodeString := Convert(Value, vtUnicodeString).VUnicodeString;
           Result.VCharRec.CP := zCP_UTF16;

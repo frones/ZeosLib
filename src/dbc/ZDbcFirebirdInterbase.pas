@@ -4655,7 +4655,11 @@ var
           else raise ZDbcUtils.CreateUnsupportedParameterTypeException(ParamIndex, stUnknown);
         end;
         SQLWriter.Finalize(TypeToken^);
+        {$IFDEF WITH_INLINE}
+        FTypeTokensLen := FTypeTokensLen + Cardinal(Length(TypeToken^));
+        {$ELSE}
         FTypeTokensLen := FTypeTokensLen + Cardinal(PLengthInt(NativeUInt(TypeToken^) - StringLenOffSet)^);
+        {$ENDIF}
       end;
     Finally
       FreeAndNil(SQLWriter);
@@ -4760,11 +4764,19 @@ begin
       Inc(PResult, Digits);
       IntToRaw(Cardinal(Row), PStmts, Digits);
       Inc(PStmts, Digits);
+      {$IFDEF WITH_INLINE}
+      LastStmLen := Cardinal(Length(TypeToken^));
+      {$ELSE}
       LastStmLen := Cardinal(PLengthInt(NativeUInt(TypeToken^) - StringLenOffSet)^);
+      {$ENDIF}
       Move(Pointer(TypeToken^)^, PResult^, LastStmLen);
       Inc(PResult, LastStmLen);
     end;
+    {$IFDEF WITH_INLINE}
+    InitialStmtLen := Cardinal(Length(fASQL)) - LastPos;
+    {$ELSE}
     InitialStmtLen := Cardinal(PLengthInt(NativeUInt(fASQL) - StringLenOffSet)^) - LastPos;
+    {$ENDIF}
     Move(P^, PStmts^, Integer(InitialStmtLen));
     Inc(PStmts, InitialStmtLen);
     PByte(PStmts)^ := Byte(';');
@@ -4958,6 +4970,7 @@ procedure TZAbstractFirebirdInterbasePreparedStatement.SetBlob(Index: Integer;
 var P: PAnsiChar;
   L: NativeUInt;
   IBLob: IZInterbaseFirebirdLob;
+  Clob: IZCLob absolute IBlob;
 label jmpNotNull;
 begin
   {$IFNDEF GENERIC_INDEX}Dec(Index);{$ENDIF}
@@ -4971,15 +4984,15 @@ begin
       P := nil;
       L := 0;//satisfy compiler
     // Deactivated because it can lead to errors when BLOBs are loaded from different connections or different transactions:
-    end else if Supports(Value, IZInterbaseFirebirdLob, IBLob) and ((sqltype = SQL_QUAD) or (sqltype = SQL_BLOB)) and LobTransactionEqualsToActiveTransaction(IBLob) then begin
+    end else if Supports(Value, IZInterbaseFirebirdLob, IBLob) and (sqltype = SQL_BLOB) and LobTransactionEqualsToActiveTransaction(IBLob) then begin
       Value.GetStream.Free;
       IBLob.Open(lsmRead);
       PISC_QUAD(sqldata)^ := IBLob.GetBlobId;
       goto jmpNotNull;
     end else if (Value <> nil) and (codepage <> zCP_Binary) then
-      if Value.IsClob then begin
-        Value.SetCodePageTo(codepage);
-        P := Value.GetPAnsiChar(codepage, FRawTemp, L)
+      if Value.QueryInterface(IZClob, Clob) = S_OK then begin
+        //Clob.SetCodePageTo(codepage);
+        P := Clob.GetPAnsiChar(codepage, FRawTemp, L)
       end else raise CreateConversionError(Index, stBinaryStream)
     else P := Value.GetBuffer(FRawTemp, L);
     if P <> nil then begin

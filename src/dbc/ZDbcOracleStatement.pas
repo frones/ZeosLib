@@ -1504,8 +1504,8 @@ label bind_direct;
     BufferSize := 0;
     for i := 0 to ArrayLen -1 do
       if Pointer(ClientStrings[i]) <> nil then
-        {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-        BufferSize := Max(BufferSize, Length(ClientStrings[I]) -1);
+        {$IFDEF WITH_INLINE}
+        BufferSize := Max(BufferSize, Length(ClientStrings[I]){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING} -1{$ENDIF});
         {$ELSE}
         BufferSize := Max(BufferSize, {%H-}PLengthInt(NativeUInt(ClientStrings[I]) - StringLenOffSet)^);
         {$ENDIF}
@@ -1516,8 +1516,8 @@ label bind_direct;
       if (Pointer(ClientStrings[I]) = nil) then
         POCILong(P).Len := 0
       else begin
-        {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-        POCILong(P).Len := Length(ClientStrings[I]) -1;
+        {$IFDEF WITH_INLINE}
+        POCILong(P).Len := Length(ClientStrings[I]) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING} -1{$ENDIF};
         {$ELSE}
         POCILong(P).Len := {%H-}PLengthInt(NativeUInt(ClientStrings[I]) - StringLenOffSet)^;
         {$ENDIF}
@@ -1604,8 +1604,8 @@ label bind_direct;
     BufferSize := 0;
     for i := 0 to ArrayLen -1 do
       if Pointer(TRawByteStringDynArray(Value)[i]) <> nil then
-        {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-        BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]) -1);
+        {$IFDEF WITH_INLINE}
+        BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING} -1{$ENDIF});
         {$ELSE}
         BufferSize := Max(BufferSize, {%H-}PLengthInt(NativeUInt(TRawByteStringDynArray(Value)[I]) - StringLenOffSet)^);
         {$ENDIF}
@@ -1626,8 +1626,8 @@ label bind_direct;
     BufferSize := 0;
     for i := 0 to ArrayLen -1 do
       if Pointer(TRawByteStringDynArray(Value)[i]) <> nil then
-        {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-        BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]) -1);
+        {$IFDEF WITH_INLINE}
+        BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING} -1{$ENDIF});
         {$ELSE}
         BufferSize := Max(BufferSize, {%H-}PLengthInt(NativeUInt(TRawByteStringDynArray(Value)[I]) - StringLenOffSet)^);
         {$ENDIF}
@@ -1651,8 +1651,8 @@ label bind_direct;
     BufferSize := 0;
     for i := 0 to ArrayLen -1 do
       if Pointer(TRawByteStringDynArray(Value)[i]) <> nil then
-        {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-        BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]) -1);
+        {$IFDEF WITH_INLINE}
+        BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING} -1{$ENDIF});
         {$ELSE}
         BufferSize := Max(BufferSize, {%H-}PLengthInt(NativeUInt(TRawByteStringDynArray(Value)[I]) - StringLenOffSet)^);
         {$ENDIF}
