@@ -588,7 +588,8 @@ begin
             Tmp := MessageMetadata.getCharSet(FStatus, Index);
             MetadataBuilder.setCharSet(FStatus, Index, Tmp);
             if ((sqltype = SQL_BLOB) and (sqlSubType = isc_blob_text)) or (sqltype = SQL_VARYING) then begin
-              sqlSubType := Tmp;
+              if (sqltype = SQL_VARYING) then
+                sqlSubType := Tmp;
               CS_ID := Word(Tmp) and 255;
               CodePage := FCodePageArray[CS_ID]
             end else CodePage := zCP_Binary
