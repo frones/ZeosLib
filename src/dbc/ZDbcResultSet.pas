@@ -4948,7 +4948,7 @@ var Stream: TStream;
 begin
   Stream := CreateLobStream(FColumnCodePage, lsmWrite);
   try
-    Stream.Write(Buffer, Len)
+    Stream.Write(Buffer^, Len)
   finally
     Stream.Free;
   end;
@@ -5168,6 +5168,7 @@ begin
   if (Buffer <> nil) and (Len >0) then begin
     SetCapacity(Len);
     Move(Buffer^, FDataRefAddress.VarLenData.Data, Len);
+    FDataRefAddress.IsNotNull := 1;
   end;
 end;
 

@@ -203,10 +203,11 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF} FmtBCD, DateUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF},
+  TypInfo, Math,
   ZEncoding, ZFastCode, ZClasses,
   ZSysUtils, ZTestConsts, ZTestCase, ZDbcProperties, ZDbcLogging,
   ZDatasetUtils, ZSqlUpdate, {$IFNDEF DISABLE_ZPARAM}ZDatasetParam,{$ENDIF}
-  TypInfo, ZDbcInterbaseFirebirdMetadata, ZSelectSchema;
+  ZDbcInterbaseFirebirdMetadata, ZSelectSchema;
 
 { TZGenericTestDataSet }
 
@@ -2097,9 +2098,9 @@ var Params: TParams;
     ANow: TDateTime;
     I: Integer;
     B: Boolean;
-    {$IFNDEF TBLOBDATA_IS_TBYTES}
+    {$IF not defined(TBLOBDATA_IS_TBYTES) and not defined(TFIELD_HAS_ASBYTES)}
     BlobData: TBlobData;
-    {$ENDIF}
+    {$IFEND}
 begin
   Query := CreateQuery;
   Params := nil;
@@ -3752,6 +3753,8 @@ var
   {$ENDIF}
   DisableZFields: Boolean;
   v_msg, n_msg, tmp_a, tmp_e: String;
+  ServerProvider: TZServerProvider;
+  eExpected, eActual: Extended;
 begin
   CheckNotNull(WQuery);
   WQuery.Params.BatchDMLCount := ArrayLen;
@@ -3796,6 +3799,7 @@ begin
   end;
   WQuery.ExecSQL;
   CheckEquals(ArrayLen, WQuery.RowsAffected);
+  ServerProvider := Connection.DbcConnection.GetServerProvider;
   for DisableZFields := false to true do begin
     if RQuery.Active then
       RQuery.Close;
@@ -3829,11 +3833,17 @@ begin
                           else if RQuery.Fields[j].InheritsFrom(TLargeIntField)
                             then CheckEquals(Int64(WQuery.Params[J].AsUInt64s[I]), TLargeIntField(RQuery.Fields[j]).Value, v_msg)
                             else Check(True);
-          stFloat:        if RQuery.Fields[j].InheritsFrom(TZSingleField)
-                          then CheckEquals(WQuery.Params[J].AsSingles[I], TZSingleField(RQuery.Fields[j]).Value, FLOAT_COMPARE_PRECISION_SINGLE, v_msg)
-                          else {$IF declared(TSingleField)}if RQuery.Fields[j].InheritsFrom(TSingleField)
-                            then CheckEquals(WQuery.Params[J].AsSingles[I], TSingleField(RQuery.Fields[j]).Value, FLOAT_COMPARE_PRECISION_SINGLE, v_msg)
-                            else {$IFEND}CheckEquals(WQuery.Params[J].AsDoubles[I], TFloatField(RQuery.Fields[j]).Value, FLOAT_COMPARE_PRECISION_SINGLE, v_msg);
+          stFloat:        begin
+                            eExpected := WQuery.Params[J].AsSingles[I];
+                            if ServerProvider = spMySQL then
+                              eExpected := RoundTo(eExpected, -2);
+                            if RQuery.Fields[j].InheritsFrom(TZSingleField)
+                            then eActual := TZSingleField(RQuery.Fields[j]).Value
+                            else {$IF declared(TSingleField)}if RQuery.Fields[j].InheritsFrom(TSingleField)
+                              then eActual := TSingleField(RQuery.Fields[j]).Value
+                              else {$IFEND}eActual := TFloatField(RQuery.Fields[j]).Value;
+                            CheckEquals(eExpected, eActual, FLOAT_COMPARE_PRECISION_SINGLE, v_msg);
+                          end;
           stDouble:       if RQuery.Fields[j].InheritsFrom(TFloatField)
                           then CheckEquals(WQuery.Params[J].AsDoubles[I], TFloatField(RQuery.Fields[j]).Value, FLOAT_COMPARE_PRECISION, v_msg)
                           else CheckEquals(WQuery.Params[J].AsDoubles[I], RQuery.Fields[j].AsFloat, FLOAT_COMPARE_PRECISION, v_msg);
@@ -3843,9 +3853,13 @@ begin
                             then CheckEquals(WQuery.Params[J].AsCurrencys[I], TFMTBCDField(RQuery.Fields[j]).AsCurrency, v_msg)
                             else Check(True);
           stBigDecimal:   CheckEquals(WQuery.Params[J].AsFmtBCDs[I], RQuery.Fields[j].AsBCD, v_msg);
-          stTime:         CheckEqualsDate(WQuery.Params[J].AsTimes[I], RQuery.Fields[j].AsDateTime, [dpHour, dpMin, dpSec, dpMSec], v_msg);
+          stTime:         if ServerProvider = spMySQL //non standart mysql -> no msec
+                          then CheckEqualsDate(WQuery.Params[J].AsTimes[I], RQuery.Fields[j].AsDateTime, [dpHour, dpMin, dpSec], v_msg)
+                          else CheckEqualsDate(WQuery.Params[J].AsTimes[I], RQuery.Fields[j].AsDateTime, [dpHour, dpMin, dpSec, dpMSec], v_msg);
           stDate:         CheckEqualsDate(WQuery.Params[J].AsDates[I], RQuery.Fields[j].AsDateTime, [dpYear, dpMonth, dpDay], v_msg);
-          stTimeStamp:    CheckEqualsDate(WQuery.Params[J].AsDateTimes[I], RQuery.Fields[j].AsDateTime, [], v_msg);
+          stTimeStamp:    if ServerProvider = spMySQL  //non standart mysql -> no msec
+                          then CheckEqualsDate(WQuery.Params[J].AsDateTimes[I], RQuery.Fields[j].AsDateTime, [dpYear..dpSec], v_msg)
+                          else CheckEqualsDate(WQuery.Params[J].AsDateTimes[I], RQuery.Fields[j].AsDateTime, [], v_msg);
           stGUID:         if RQuery.Fields[j].InheritsFrom(TGuidField)
                           then CheckEquals(WQuery.Params[J].AsGUIDs[i], TGuidField(RQuery.Fields[j]).AsGuid, v_msg)
                           else begin
@@ -3880,7 +3894,11 @@ begin
                             then CheckEquals(WQuery.Params[J].AsBytesArray[i], TZVarBytesField(RQuery.Fields[j]).AsBytes, v_msg)
                             else CheckEquals(WQuery.Params[J].AsAnsiStrings[i], RQuery.Fields[j].AsString, v_msg);
                           {$ENDIF}
-          stAsciiStream:  CheckEquals(WQuery.Params[J].AsMemos[i], RQuery.Fields[j].AsString, v_msg);
+          stAsciiStream:  begin
+                            if WQuery.Params[J].AsMemos[i] = RQuery.Fields[j].AsString
+                            then CheckEquals(WQuery.Params[J].AsMemos[i], RQuery.Fields[j].AsString, v_msg)
+                            else CheckEquals(WQuery.Params[J].AsMemos[i], RQuery.Fields[j].AsString, v_msg);
+                          end;
           stUnicodeStream:{$IFDEF WITH_VIRTUAL_TFIELD_ASWIDESTRING}
                           CheckEquals(WQuery.Params[J].AsUnicodeMemos[i], RQuery.Fields[j].AsWideString, v_msg);
                           {$ELSE}
@@ -3925,7 +3943,7 @@ begin
     RQuery := CreateQuery;
     WR := TZSQLStringWriter.Create(High(Byte));
     try
-      for i := low(LastFieldIndices) to high(LastFieldIndices) do begin
+      for i := high(LastFieldIndices) downto low(LastFieldIndices) do begin
         Connection.ExecuteDirect('delete from high_load where 1=1');
         SQL := 'insert into high_load(';
         for j := hl_id_Index to LastFieldIndices[i] do begin
