@@ -393,14 +393,14 @@ var
     CP := ConSettings^.ClientCodePage.CP;
     N := 0;
     for J := 0 to DynArrayLen -1 do
-      if (TInterfaceDynArray(Dyn)[j] <> nil) and Supports(TInterfaceDynArray(Dyn)[j], IZClob, Lob) and not Lob.IsEmpty then
+      if (TInterfaceDynArray(Dyn)[j] <> nil) and Supports(TInterfaceDynArray(Dyn)[j], IZLob, Lob) and not Lob.IsEmpty then
         if TZSQLType(Arr.VArrayType) in [stUnicodeStream, stAsciiStream] then begin
           if Lob.QueryInterface(IZClob, CLob) = S_OK
           then CLob.SetCodePageTo(FClientCP)
           else raise CreateConversionError(Index, stBinaryStream, stAsciiStream);
           Clob.GetBuffer(FRawTemp, L);
           N := N + Integer(L);
-        end else if Lob.QueryInterface(IZLob, BLob) = S_OK then begin
+        end else if Lob.QueryInterface(IZBlob, BLob) = S_OK then begin
           if FOidAsBlob then begin
             if BLob.QueryInterface(IZPostgreSQLOidBlob, WriteTempBlob) <> S_OK then begin
               WriteTempBlob := TZPostgreSQLOidBlob.CreateFromBlob(Blob, FPostgreSQLConnection, FOpenLobStreams);
@@ -411,7 +411,7 @@ var
             Blob.GetBuffer(FRawTemp, L);
             Inc(N, Integer(L));
           end;
-        end else raise CreateConversionError(Index, stBinaryStream, stBinaryStream);
+        end else raise CreateConversionError(Index, stUnknown, TZSQLType(Arr.VArrayType));
     AllocArray(Index, N+(DynArrayLen*SizeOf(int32)), A, P);
     if (BindList.SQLtypes[Index] = stBinaryStream) and FOidAsBlob then begin
       for j := 0 to DynArrayLen -1 do
@@ -427,11 +427,11 @@ var
     end else begin
       AllocArray(Index, N+(DynArrayLen*SizeOf(int32)), A, P);
       for J := 0 to DynArrayLen -1 do
-        if (TInterfaceDynArray(Dyn)[j] = nil) or not Supports(TInterfaceDynArray(Dyn)[j], IZCLob, CLob) or CLob.IsEmpty then begin
+        if (TInterfaceDynArray(Dyn)[j] = nil) or not Supports(TInterfaceDynArray(Dyn)[j], IZBLob, BLob) or BLob.IsEmpty then begin
           Integer2PG(-1, P);
           Inc(P,SizeOf(int32));
         end else begin
-          PA := CLob.GetBuffer(FRawTemp, L);
+          PA := BLob.GetBuffer(FRawTemp, L);
           N := L;
           Integer2PG(N, P);
           Move(PA^, (PAnsiChar(P)+SizeOf(int32))^, N);
