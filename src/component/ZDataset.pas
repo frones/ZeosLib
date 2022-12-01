@@ -102,6 +102,7 @@ type
     property Sequence;
     property SequenceField;
     property TryKeepDataOnDisconnect default False;
+    property Options default [doCalcDefaults, doPreferPrepared, doCheckRequired];
   end;
 
   {** Implements an universal SQL query for single table access. }
@@ -128,10 +129,9 @@ type
   /// <author>EgonHugeist.</author>
   /// <summary>Implements an InMemory Table object.</summary>
   TZMemTable = class(TZAbstractMemTable)
-  public
-    Destructor Destroy; Override;
   published
     property IndexFieldNames; {bangfauzan addition}
+    property Options default [doCheckRequired];
   end;
 
 const
@@ -140,13 +140,6 @@ const
 implementation
 
 { TZMemTable }
-
-Destructor TZMemTable.Destroy;
-Begin
-  If Self.Active Then
-    Self.Close;
-  inherited;
-End;
 
 end.
 

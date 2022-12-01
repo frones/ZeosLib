@@ -3338,15 +3338,15 @@ end;
 {$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operant..." marked as inline is not inlined}{$ENDIF}
 function VarToBytes(const Value: Variant): TBytes;
 var
-  I: Integer;
+  I, hb: Integer;
 begin
   {$IFDEF FPC}Result := nil;{$ENDIF}
   if not (VarIsArray(Value) and (VarArrayDimCount(Value) = 1) and
      ((VarType(Value) and VarTypeMask) = varByte)) then
     raise EZSQLException.Create(SInvalidVarByteArray);
-
-  SetLength(Result, VarArrayHighBound(Value, 1) + 1);
-  for I := 0 to VarArrayHighBound(Value, 1) do
+  hb := VarArrayHighBound(Value, 1);
+  SetLength(Result, hb + 1);
+  for I := 0 to hb do
     Result[I] := Value[I];
 end;
 {$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}

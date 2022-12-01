@@ -166,6 +166,7 @@ type
     function GetConSettings: PZConSettings;
   public
     function GetBlobId: TISC_QUAD; //Part of the current txn
+    function LobIsPartOfTxn(const IBTransaction: IZInterbaseFirebirdTransaction): Boolean;
   public
     function Clone(LobStreamMode: TZLobStreamMode): IZBlob;
     function IsEmpty: Boolean; override;
@@ -302,7 +303,8 @@ jmpLen:         Precision := XSQLVAR.sqllen;
                 CharOctedLength := XSQLVAR.sqllen;
                 Precision := XSQLVAR.sqllen div ZCodePageInfo^.CharWidth;
               end;
-              Signed := sqltype = SQL_TEXT;
+              if sqltype = SQL_TEXT then
+                Scale := Precision;
             end;
           stAsciiStream, stUnicodeStream: if ConSettings^.ClientCodePage^.ID = CS_NONE
             then if FIsMetadataResultSet
@@ -344,7 +346,6 @@ jmpLen:         Precision := XSQLVAR.sqllen;
           (ColumnName = 'RDB$DB_KEY') or (FieldSqlType = ZDbcIntfs.stUnknown);
         Writable := not ReadOnly;
         Nullable := TZColumnNullableType(Ord(FIZSQLDA.IsNullable(I)));
-        Scale := -sqlscale;
         CaseSensitive := UpperCase(ColumnName) <> ColumnName; //non quoted fiels are uppercased by default
       end;
       ColumnsInfo.Add(ColumnInfo);
@@ -926,6 +927,15 @@ begin
     end;
     Result := FBlobInfo.TotalSize
   end;
+end;
+
+function TZInterbase6Lob.LobIsPartOfTxn(
+  const IBTransaction: IZInterbaseFirebirdTransaction): Boolean;
+var MyIBFTransaction: IZInterbaseFirebirdTransaction;
+begin
+  Result := (FIBTransaction <> nil) and
+            (FIBTransaction.QueryInterface(IZInterbaseFirebirdTransaction, MyIBFTransaction) = S_OK) and
+            (MyIBFTransaction = IBTransaction);
 end;
 
 procedure TZInterbase6Lob.ReleaseImmediat(

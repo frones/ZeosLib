@@ -828,9 +828,9 @@ function TZFirebirdConnection.PrepareStatementWithParams(const SQL: string;
 begin
   if IsClosed then
     Open;
-  {if Self.FHostVersion >= 4000000
+  if Self.FHostVersion >= 4000000
   then Result := TZFirebird4upPreparedStatement.Create(Self, SQL, Params)
-  else }Result := TZFirebirdPreparedStatement.Create(Self, SQL, Params);
+  else Result := TZFirebirdPreparedStatement.Create(Self, SQL, Params);
 end;
 
 procedure TZFirebirdConnection.ReleaseImmediat(const Sender: IImmediatelyReleasable; var AError: EZSQLConnectionLost);

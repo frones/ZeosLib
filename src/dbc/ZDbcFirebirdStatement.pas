@@ -101,6 +101,8 @@ type
     function CreateResultSet: IZResultSet;
     /// <summary>Executes the statement internaly.</summary>
     procedure ExecuteInternal;
+
+    function LobTransactionEqualsToActiveTransaction(const Lob: IZInterbaseFirebirdLob): Boolean; override;
   protected
     /// <summary>Prepares eventual structures for binding input parameters.</summary>
     procedure PrepareInParameters; override;
@@ -357,6 +359,18 @@ begin
     DriverManager.LogMessage(lcExecPrepStmt,Self);
 end;
 
+function TZAbstractFirebirdStatement.LobTransactionEqualsToActiveTransaction(
+  const Lob: IZInterbaseFirebirdLob): Boolean;
+var FBTransaction: IZFirebirdTransaction;
+    IBFBTxn: IZInterbaseFirebirdTransaction;
+begin
+  FBTransaction := FFBConnection.GetActiveTransaction;
+  IBFBTxn := nil;
+  if (FBTransaction <> nil) and (FBTransaction.QueryInterface(IZInterbaseFirebirdTransaction, IBFBTxn) = S_OK)
+  then Result := Lob.LobIsPartOfTxn(IBFBTxn)
+  else Result := False;
+end;
+
 procedure TZAbstractFirebirdStatement.Prepare;
 var Transaction: ITransaction;
   TimeOut, flags, sqltype: Cardinal;
@@ -527,7 +541,7 @@ begin
     then BindList.Count := FInMessageCount + FOutMessageCount
     else BindList.Count := FInMessageCount;
     if FInMessageCount > 0 then begin
-      ReallocMem(FInParamDescripors, FInMessageCount * SizeOf(TZInterbaseFirerbirdParam));
+      ReallocMem(FInParamDescripors, FInMessageCount * SizeOf(TZInterbaseFirebirdParam));
       MetadataBuilder := MessageMetadata.getBuilder(FStatus);
       try
         {$R-}
@@ -574,7 +588,8 @@ begin
             Tmp := MessageMetadata.getCharSet(FStatus, Index);
             MetadataBuilder.setCharSet(FStatus, Index, Tmp);
             if ((sqltype = SQL_BLOB) and (sqlSubType = isc_blob_text)) or (sqltype = SQL_VARYING) then begin
-              sqlSubType := Tmp;
+              if (sqltype = SQL_VARYING) then
+                sqlSubType := Tmp;
               CS_ID := Word(Tmp) and 255;
               CodePage := FCodePageArray[CS_ID]
             end else CodePage := zCP_Binary
@@ -715,8 +730,11 @@ var i: Integer;
   Xpb: IXpbBuilder;
   Transaction: ITransaction;
   BatchCompletionState: IBatchCompletionState;
-  state: Integer;
+  istate: Integer;
+  cstate: Cardinal absolute istate;
   sz, j: Cardinal;
+  P: Pointer;
+  InterbaseFirebirdParam: PZInterbaseFirebirdParam absolute P; //array entry
 begin
   { we've a preared statement already, our buffer is ready to use, but we
     can not rebind the values from the array with same instance, because we
@@ -729,17 +747,18 @@ begin
   Xpb.insertInt(FStatus, {$IFDEF WITH_CLASS_CONST}IBatch.TAG_BLOB_POLICY{$ELSE}IBatch_TAG_BLOB_POLICY{$ENDIF}, {$IFDEF WITH_CLASS_CONST}IBatch.BLOB_ID_USER{$ELSE}IBatch_BLOB_ID_USER{$ENDIF});
   Batch := FFBStatement.createBatch(FStatus, FInMessageMetadata, Xpb.getBufferLength(FStatus), Xpb.getBuffer(FStatus));
   Xpb.dispose;
-  if ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-     ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
+  cstate := FStatus.getState;
+  if ((cstate and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
+     ((cstate and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
     FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IStatement.createBatch', Self);
   //save transaction or create a new one
   Connection.StartTransaction;
   Succeeded := False;
   //create the helper instance and hook all fields
-  BatchStatement := TZFirebirdPreparedStatement.Create(FFBConnection, SQL, Info);
+  BatchStatement := TZFirebirdPreparedStatement.Create(FFBConnection, '', Info);
   BatchStatement._AddRef;
   BatchStatement.FPrepared := True; //skip second prepare on binding the vals
-  BatchStatement.FInParamDescripors := FInParamDescripors; //use our offsets
+  BatchStatement.FInParamDescripors := FInParamDescripors; //use current offsets
   BatchStatement.BindList.Count := BindList.Count; //skip checkparameter
   BatchStatement.FInData := FInData; //now the helper instance scriples in memory of this instance
   try
@@ -747,31 +766,46 @@ begin
     //bind the arrays row by row
     for i := 0 to BatchDMLArrayCount -1 do begin
       BindSQLDAInParameters(BindList, BatchStatement, i, 1);
+      //check if a lob needs to be registered
+      for j := 0 to Bindlist.Count -1 do begin
+        InterbaseFirebirdParam := @BatchStatement.FInParamDescripors[j];
+        if (InterbaseFirebirdParam.sqltype = SQL_BLOB) and (InterbaseFirebirdParam.sqlind^ = ISC_NOTNULL) then begin
+          P := InterbaseFirebirdParam.sqldata;
+          Batch.registerBlob(fStatus, PISC_QUAD(P), PISC_QUAD(P));
+          cState := FStatus.getState;
+          if ((cState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
+             ((cState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
+            FFBConnection.HandleErrorOrWarning(lcBindPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBatch.registerBlob', IImmediatelyReleasable(FWeakImmediatRelPtr));
+        end;
+      end;
       Batch.add(fStatus, 1, FInData);
-      if ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-         ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
+      cState := FStatus.getState;
+      if ((cState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
+         ((cState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
         FFBConnection.HandleErrorOrWarning(lcBindPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBatch.add', IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
     // now execute the batch
     BatchCompletionState := Batch.execute(FStatus, Transaction);
-    if ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-       ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
+    cState := FStatus.getState;
+    if ((cState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
+       ((cState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
       FFBConnection.HandleErrorOrWarning(lcExecPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBatch.execute', IImmediatelyReleasable(FWeakImmediatRelPtr));
     try
       if BatchCompletionState <> nil then begin
         sz := BatchCompletionState.getSize(fStatus);
         if sz > 0 then for j := 0 to sz -1 do begin
-          state := BatchCompletionState.getState(fStatus, j);
-          case state of
+          istate := BatchCompletionState.getState(fStatus, j);
+          case istate of
             {$IFDEF WITH_CLASS_CONST}IBatchCompletionState.EXECUTE_FAILED{$ELSE}IBatchCompletionState_EXECUTE_FAILED{$ENDIF}: begin
                 BatchCompletionState.findError(FStatus, j);
                 BatchCompletionState.getStatus(FStatus, FStatus, j);
-                if ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-                   ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
+                cState := FStatus.getState;
+                if ((cState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
+                   ((cState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
                   FFBConnection.HandleErrorOrWarning(lcExecPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBatch.execute', IImmediatelyReleasable(FWeakImmediatRelPtr));
               end;
             {$IFDEF WITH_CLASS_CONST}IBatchCompletionState.SUCCESS_NO_INFO{$ELSE}IBatchCompletionState_SUCCESS_NO_INFO{$ENDIF}: begin
-                LastUpdateCount := State;
+                LastUpdateCount := istate;
                 Break;
               end;
             else {NO_MORE_ERRORS} Break;
@@ -787,6 +821,7 @@ begin
   finally
     BatchStatement.FInData := nil; //don't forget !
     BatchStatement.FInParamDescripors := nil; //don't forget !
+    BatchStatement.FPrepared := False;
     BatchStatement._Release;
     if Succeeded
     then Connection.Commit

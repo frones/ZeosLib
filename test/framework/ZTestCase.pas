@@ -143,8 +143,6 @@ type
       const Msg: string = ''); overload;
     procedure CheckNotEquals(Expected, Actual: WideString;
       const Msg: string = ''); overload;
-    procedure CheckEquals(Expected, Actual: UInt64;
-      const Msg: string = ''); overload;
     procedure CheckNotEquals(Expected, Actual: UInt64;
       const Msg: string = ''); overload;
     procedure CheckEquals(Expected, Actual: Int64;
@@ -152,6 +150,10 @@ type
     procedure CheckNotEquals(Expected, Actual: Int64;
       const Msg: string = ''); overload;
     {$ENDIF}
+    {$IF defined(WITH_UINT64_C1118_ERROR) or defined(FPC)}
+    procedure CheckEquals(Expected, Actual: UInt64;
+      const Msg: string = ''); overload;
+    {$IFEND}
     {$IFDEF WITH_OVERLOAD_BUG}
     procedure CheckEquals(Expected, Actual: Word;
       const Msg: string = ''); overload;
@@ -218,9 +220,9 @@ uses
 {$IFDEF WITH_STRLEN_DEPRECATED}
   AnsiStrings,
 {$ENDIF}
-{$IFDEF WITH_INLINE}
+{.$IFDEF WITH_INLINE}
   ZFastCode,
-{$ENDIF}
+{.$ENDIF}
   ZSysUtils, ZTestConfig, ZEncoding, ZDbcUtils;
 
 const
@@ -573,16 +575,6 @@ begin
     Check(True);
 end;
 
-procedure TZAbstractTestCase.CheckEquals(Expected, Actual: UInt64;
-  const Msg: string);
-begin
-  {$IFNDEF WITH_TESTCASE_ERROR_ADDRESS}
-  AssertTrue(ComparisonMsg(IntToStr(Expected), IntToStr(Actual)), Expected = Actual);
-  {$ELSE}
-  AssertTrue(ComparisonMsg(Msg, IntToStr(Expected), IntToStr(Actual)), Expected = Actual, CallerAddr);
-  {$ENDIF}
-end;
-
 procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: UInt64;
   const Msg: string);
 begin
@@ -607,6 +599,24 @@ begin
     Check(True);
 end;
 {$ENDIF FPC}
+
+{$IF defined(WITH_UINT64_C1118_ERROR) or defined(FPC)}
+procedure TZAbstractTestCase.CheckEquals(Expected, Actual: UInt64;
+  const Msg: string);
+begin
+  {$IFDEF WITH_UINT64_C1118_ERROR}
+  if (Expected <> Actual) then
+    Fail(NotEqualsErrorMessage(IntToStr(Expected), IntToStr(Actual), msg))
+  else Check(True);
+  {$ELSE}
+    {$IFNDEF WITH_TESTCASE_ERROR_ADDRESS}
+  AssertTrue(ComparisonMsg(IntToStr(Expected), IntToStr(Actual)), Expected = Actual);
+    {$ELSE}
+  AssertTrue(ComparisonMsg(Msg, IntToStr(Expected), IntToStr(Actual)), Expected = Actual, CallerAddr);
+    {$ENDIF}
+  {$ENDIF}
+end;
+{$IFEND}
 
 {$IFDEF WITH_OVERLOAD_BUG}
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: Word;

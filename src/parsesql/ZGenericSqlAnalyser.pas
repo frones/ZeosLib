@@ -758,7 +758,7 @@ var
   ss: IZSelectSchema;
   deleted: Boolean;
 begin
-  SetLength(Result, 0);
+  Result := nil;
 
   tokens := TokenizeQuery(Tokenizer, SQL, True);
   Try

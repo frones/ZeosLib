@@ -974,10 +974,16 @@ begin
     // Query.RequestLive := True;
     Query.Open;
     CheckEquals(0, Query.RecordCount);
+    (* EH: just prepared ->uncomment this if the fieldtype
+      ftAutoInc should be supported
+    {$IFDEF WITH_TAUTOREFRESHFLAG}
+    if (Query.Fields[0].AutoGenerateValue = arAutoInc) then
+      CheckEquals(ftAutoInc, Query.Fields[0].DataType) else
+    {$ENDIF}*)
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[0].DataType));
 
     Query.Append;
-    CheckEquals(True, Query.Fields[0].IsNull);
+    Check(Query.Fields[0].IsNull);
     Query.Post;
 
     Query.Refresh;

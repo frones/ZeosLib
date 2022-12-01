@@ -271,7 +271,7 @@ procedure SplitQualifiedObjectName(const QualifiedName: string;
   const SupportsCatalogs, SupportsSchemas: Boolean;
   out Catalog, Schema, ObjectName: string); overload;
 
-function GetTransliterateCodePage(ControlsCodePage: TZControlsCodePage): Word; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function GetTransliterateCodePage(ControlsCodePage: TZControlsCodePage): Word; {$IF defined(WITH_INLINE) and not defined(WITH_NOT_INLINED_WARNING)}inline;{$IFEND}
 {**
   Assigns a Statement value from a TParam
   @param Index the index of Statement.SetParam(Idex..);

@@ -1880,15 +1880,33 @@ const
   c_id_Index          = FirstDbcIndex + 0;
   c_dep_id_index      = FirstDbcIndex + 1;
 var
-  Sql: string;
+  Sql, Tmp: string;
   Statement: IZPreparedStatement;
   ResultSet: IZResultSet;
   CachedRS: IZCachedResultSet;
   Resolver: IZCachedResolver;
   Succeeded: Boolean;
+  Connection: IZConnection;
+  URL: TZURL;
 begin
   Sql := 'DELETE FROM cargo where c_dep_id >= ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
+  Connection := Self.Connection;
   Connection.CreateStatement.ExecuteUpdate(Sql);
+  CheckFalse(Connection.IsClosed);
+  if (Provider = spSQLite) then begin  //
+    URL := TZURL.Create;
+    Tmp := Connection.GetURL;
+    URL.URL := Tmp;
+    try
+      if not StrToBoolEx(URL.Properties.Values[ConnProps_ForeignKeys]) then begin
+        URL.Properties.Values[ConnProps_ForeignKeys] := 'True';
+        Tmp := URL.URL;
+        Connection := DriverManager.GetConnection(Tmp);
+      end;
+    finally
+      FreeAndNil(URL);
+    end;
+  end;
   Connection.StartTransaction;
   try
     { Creates prepared statement for cargo table }

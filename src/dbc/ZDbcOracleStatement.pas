@@ -1452,7 +1452,8 @@ label bind_direct;
     Blob: IZBlob;
     Clob: IZClob;
     Arr: TZArray;
-    dty: ub2;
+    dty, csid: ub2;
+    CharsetForm: ub1;
   begin
     {$IFDEF WITH_VAR_INIT_WARNING}OraLobs := nil;{$ENDIF}
     SetLength(OraLobs, ArrayLen);
@@ -1473,12 +1474,18 @@ label bind_direct;
             OciLob := TZOracleBlob.CreateFromBlob(Blob, nil, FOracleConnection, FOpenLobStreams);
         end else begin
           if Supports(Lob, IZCLob, CLob) then
-            if (ConSettings^.ClientCodePage.ID = OCI_UTF16ID)
-            then CLob.SetCodePageTo(zCP_UTF16)
-            else CLob.SetCodePageTo(ClientCP)
+            if (ConSettings^.ClientCodePage.ID = OCI_UTF16ID) then begin
+              CLob.SetCodePageTo(zCP_UTF16);
+              CharsetForm := SQLCS_NCHAR;
+              csid := OCI_UTF16ID;
+            end else begin
+              CLob.SetCodePageTo(ClientCP);
+              CharsetForm := SQLCS_IMPLICIT;
+              csid := 0;
+            end
           else raise CreateConversionError(ParameterIndex, SQLType, stUnicodeStream);
           if not Supports(Lob, IZOracleLob, OCILob) then
-            OciLob := TZOracleClob.CreateFromClob(Clob, nil, SQLCS_IMPLICIT, 0, FOracleConnection, FOpenLobStreams);
+            OciLob := TZOracleClob.CreateFromClob(Clob, nil, CharsetForm, csid, FOracleConnection, FOpenLobStreams);
         end;
         PPOCIDescriptor(PAnsiChar(OCIBindValue.valuep)+SizeOf(Pointer)*I)^ := OciLob.GetLobLocator;
         OraLobs[i] := OciLob; //destroy old interface or replace it
@@ -1497,8 +1504,8 @@ label bind_direct;
     BufferSize := 0;
     for i := 0 to ArrayLen -1 do
       if Pointer(ClientStrings[i]) <> nil then
-        {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-        BufferSize := Max(BufferSize, Length(ClientStrings[I]) -1);
+        {$IFDEF WITH_INLINE}
+        BufferSize := Max(BufferSize, Length(ClientStrings[I]){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING} -1{$ENDIF});
         {$ELSE}
         BufferSize := Max(BufferSize, {%H-}PLengthInt(NativeUInt(ClientStrings[I]) - StringLenOffSet)^);
         {$ENDIF}
@@ -1509,8 +1516,8 @@ label bind_direct;
       if (Pointer(ClientStrings[I]) = nil) then
         POCILong(P).Len := 0
       else begin
-        {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-        POCILong(P).Len := Length(ClientStrings[I]) -1;
+        {$IFDEF WITH_INLINE}
+        POCILong(P).Len := Length(ClientStrings[I]) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING} -1{$ENDIF};
         {$ELSE}
         POCILong(P).Len := {%H-}PLengthInt(NativeUInt(ClientStrings[I]) - StringLenOffSet)^;
         {$ENDIF}
@@ -1597,8 +1604,8 @@ label bind_direct;
     BufferSize := 0;
     for i := 0 to ArrayLen -1 do
       if Pointer(TRawByteStringDynArray(Value)[i]) <> nil then
-        {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-        BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]) -1);
+        {$IFDEF WITH_INLINE}
+        BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING} -1{$ENDIF});
         {$ELSE}
         BufferSize := Max(BufferSize, {%H-}PLengthInt(NativeUInt(TRawByteStringDynArray(Value)[I]) - StringLenOffSet)^);
         {$ENDIF}
@@ -1619,8 +1626,8 @@ label bind_direct;
     BufferSize := 0;
     for i := 0 to ArrayLen -1 do
       if Pointer(TRawByteStringDynArray(Value)[i]) <> nil then
-        {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-        BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]) -1);
+        {$IFDEF WITH_INLINE}
+        BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING} -1{$ENDIF});
         {$ELSE}
         BufferSize := Max(BufferSize, {%H-}PLengthInt(NativeUInt(TRawByteStringDynArray(Value)[I]) - StringLenOffSet)^);
         {$ENDIF}
@@ -1644,8 +1651,8 @@ label bind_direct;
     BufferSize := 0;
     for i := 0 to ArrayLen -1 do
       if Pointer(TRawByteStringDynArray(Value)[i]) <> nil then
-        {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}
-        BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]) -1);
+        {$IFDEF WITH_INLINE}
+        BufferSize := Max(BufferSize, Length(TRawByteStringDynArray(Value)[I]) {$IFDEF WITH_TBYTES_AS_RAWBYTESTRING} -1{$ENDIF});
         {$ELSE}
         BufferSize := Max(BufferSize, {%H-}PLengthInt(NativeUInt(TRawByteStringDynArray(Value)[I]) - StringLenOffSet)^);
         {$ENDIF}

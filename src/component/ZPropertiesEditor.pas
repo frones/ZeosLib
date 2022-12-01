@@ -63,7 +63,7 @@ uses
 
 type
   TZPropertyLevelTypes = set of (pltConnection, pltTransaction, pltStatement,
-    pltResolver, pltEventListener, pltQuery);
+    pltResolver, pltEventListener);
 
   { TfrmPropertyEditor }
 
@@ -948,16 +948,6 @@ const
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 0; Items: nil);
   );
-
-  ZProp_CheckRequired : TZProperty = (
-    Name: DSProps_CheckRequired;
-    Purpose: 'Usually Zeos checks if all Fields that have the Required property set have a value. Using this property you can disable this behavior.';
-    ValueType: pvtEnum; LevelTypes: [pltQuery];
-    Values: cBoolEnum; Default: cBoolTrue; Alias: '';
-    Providers: (Count: 0; Items: nil);
-    Protocols: (Count: 0; Items: nil);
-  );
-
 
 {$IF declared(DSProps_InternalBufSize)}
   ZProp_InternalBufSize : TZProperty = (
@@ -4072,7 +4062,7 @@ initialization
     @ZProp_ControlsCP, @ZProp_Timeout,
     @ZProp_DateReadFormat, @ZProp_DateWriteFormat, @ZProp_TimeReadFormat,
     @ZProp_TimeWriteFormat, @ZProp_DateTimeReadFormat, @ZProp_DateTimeWriteFormat,
-    @ZProp_IdentifierQuotes, @ZProp_KeyFields, @ZProp_AffectedRows, @ZProp_CheckRequired]);
+    @ZProp_IdentifierQuotes, @ZProp_KeyFields, @ZProp_AffectedRows]);
 {$IF declared(DSProps_PreferPrepared)}
   RegisterZProperty(@ZProp_PreferPrepared);
 {$IFEND}

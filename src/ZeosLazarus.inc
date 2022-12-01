@@ -53,7 +53,6 @@
 {$DEFINE WITH_TFIELD_FREEBUFFERS}     //TField has virtual FreeBuffers procedure
 {$DEFINE TFIELD_HAS_ASBYTES}          // TField.AsBytes is supported
 {$DEFINE TFIELD_HAS_ASLARGEINT}       // TField-baseclass hase AsLargeInt Property
-{$DEFINE HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES} //seems FPC behaves different to Delphi. Some weired ref issues arrive if Ancastor units using Descendants in implementation uses section??
 {$DEFINE NO_PUBLISHED_RECORDS_ALLOWED} //the compiler is not able to publish records using RTTI
 {$DEFINE HAVE_BCDTOSTR_FORMATSETTINGS} //(Try)BCDToStr/StrToBCD has parameter FormatSettings
 {$DEFINE NEED_TYPED_UINT64_CONSTANTS}
@@ -63,6 +62,7 @@
 {$DEFINE WITH_REGISTER_CLASSES_BUG}// FPC is not able to handle non visual component classes(supported since D5) except using RegisterNoIcon method
 {$DEFINE HAVE_INSERT_BOOKMARK_BUG} //FPC does set bfEOF on Append but on Insert a row the Bookmark-Flag is bfCurrent while it should be bfInsert min v3.1
 {$DEFINE WITH_UNIDIRECTIONALBUG} //still buggy with IsUnidirectional prop of TDataSet FPC still moves the recordBuffer-> visit TestReadOnlyQueryUniDirectional and TZAbstractRODataset.GetRecord
+{$DEFINE NO_TFIELDDEF_CREATEFIELD_SETFIXEDCHAR} //TFieldDef.CreateField does not set the TStringField.IsFixedChar property (min up to v3.2.0)
 {$IFNDEF CPU386}
   {$DEFINE WITH_IE200706094} //Fatal: Internal error 200706094 see: http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=11096#p34381
 {$ENDIF}
@@ -90,7 +90,7 @@
     {$DEFINE WITH_PWIDECHAR_TOWIDESTRING}
     {$DEFINE WITH_CLASS_VARS}
     {$IF FPC_FULLVERSION>=20600}  // assumes 2.5.1 pretty close to 2.6.0. Summer 2011 or newer
-	  {$DEFINE WITH_TBYTES}
+      {$DEFINE WITH_TBYTES}
       {$DEFINE TOBJECT_HAS_TOSTRING}            // TObject has a virtual ToString method
       {$DEFINE WITH_INLINE}           // compiler supports inline methodes
       {$DEFINE WITH_FUNIDIRECTIONAL} // FPC has references a field instead of a setter here.  (at least in 2.6.0)
@@ -152,20 +152,22 @@
                 {$DEFINE WITH_CODEPAGE_AWARE_FIELD}
                 {$DEFINE TBLOBDATA_IS_TBYTES} //TBlobData is an alias for TBytes instead of AnsiString
                 {$DEFINE WITH_TSTRINGS_TENCODING_LOADFROM}           // TStrings.LoadFromFile/LoadFromStream have TEncoding
-		// {$DEFINE WITH_NETENCODING} // removed because Debian 11
-		// doesn't have the system.netencoding units
+                // {$DEFINE WITH_NETENCODING} // removed because Debian 11
+                // doesn't have the system.netencoding units
                 {$IF FPC_FULLVERSION>=30203}
                   {$DEFINE WITH_FTLONGWORD}                 // ftLongWord is supported
                   {$DEFINE WITH_FTBYTE}                     // ftByte is supported
                   {$DEFINE WITH_FTEXTENDED}                 // ftExtended is supported
                   {$IF FPC_FULLVERSION >= 30300}
-		    {$DEFINE WITH_FTSINGLE}                   // ftSingle is supported
+                  {$DEFINE WITH_FTSINGLE}                   // ftSingle is supported
                   {$DEFINE WITH_FTSHORTINT}                 // ftShortInt is supported
                   {$IFEND}
                 {$IFEND} 
               {$IFEND} 
             {$IFEND}
           {$IFEND}
+        {$ELSE}
+          {$DEFINE WITH_RANG_CHECK_CONSTATANT_EVALUATION_ERROR} //the compiler raises an range check error on constant evaluation error on Integer2PG()
         {$IFEND}
       {$IFEND}
     {$ELSE}

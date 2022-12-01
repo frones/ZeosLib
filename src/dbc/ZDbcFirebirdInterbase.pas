@@ -591,6 +591,7 @@ type
   IZInterbaseFirebirdLob = Interface(IZLob)
     ['{5CD97968-D804-43FB-94CF-4794277D7198}']
     function GetBlobId: TISC_QUAD;
+    function LobIsPartOfTxn(const IBTransaction: IZInterbaseFirebirdTransaction): Boolean;
   End;
 
   TZInterbaseFirebirdColumnInfo = Class(TZColumnInfo)
@@ -906,6 +907,7 @@ type
     /// <summary>Fill the JSONWriter with column data</summary>
     /// <param>"JSONComposeOptions" the TZJSONComposeOptions used for composing
     ///  the JSON contents</param>
+    procedure ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF}; JSONComposeOptions: TZJSONComposeOptions);
     {$ENDIF WITH_COLUMNS_TO_JSON}
   end;
 
@@ -933,7 +935,7 @@ type
     procedure SetPAnsiChar(Index: Cardinal; Value: PAnsiChar; Len: LengthInt);
     procedure SetPWideChar(Index: Cardinal; Value: PWideChar; Len: LengthInt);
   protected
-    FInParamDescripors: PZInterbaseFirerbirdParamArray;
+    FInParamDescripors: PZInterbaseFirebirdParamArray;
     FBatchStmts: array[Boolean] of TZIB_FBStmt;
     FDB_CP_ID: Word;
     FStatementType: TZIbSqlStatementType;
@@ -951,6 +953,7 @@ type
       PlainDriver: TZInterbaseFirebirdPlainDriver): RawByteString;
     procedure WriteLobBuffer(Index: Cardinal; P: PAnsiChar; Len: NativeUInt); virtual; abstract;
     function CreateConversionError(Index: Cardinal; Current: TZSQLType): EZSQLException; virtual; abstract;
+    function LobTransactionEqualsToActiveTransaction(const Lob: IZInterbaseFirebirdLob): Boolean; virtual; abstract;
   protected
     procedure UnPrepareInParameters; override;
     procedure CheckParameterIndex(var Value: Integer); override;
@@ -4456,6 +4459,12 @@ var
   { array DML bindings }
   ZData: Pointer; //array entry
   ZArray: PZArray;
+  {small opt: keep the intfclr out of main code}
+  procedure SetLob(Stmt: TZAbstractFirebirdInterbasePreparedStatement;
+    ParamIndex: Integer; IntfPtr: Pointer; SQLType: TZSQLType);
+  begin
+    Stmt.SetBlob(ParamIndex, SQLType, IInterface(IntfPtr) as IZBlob);
+  end;
 begin
   ParamIndex := FirstDbcIndex;
   for J := ArrayOffSet to ArrayOffSet+ArrayItersCount-1 do
@@ -4506,7 +4515,7 @@ begin
                       else Stmt.SetTimestamp(ParamIndex, TDateTimeDynArray(ZData)[j]);
         stAsciiStream,
         stUnicodeStream,
-        stBinaryStream: Stmt.SetBlob(ParamIndex, TZSQLType(ZArray.VArrayType), TInterfaceDynArray(ZData)[j] as IZBlob);
+        stBinaryStream: SetLob(Stmt, ParamIndex, TPointerDynArray(ZData)[j], TZSQLType(ZArray.VArrayType));
         else raise EZIBConvertError.Create(SUnsupportedParameterType);
       end;
       Inc(ParamIndex);
@@ -4646,7 +4655,11 @@ var
           else raise ZDbcUtils.CreateUnsupportedParameterTypeException(ParamIndex, stUnknown);
         end;
         SQLWriter.Finalize(TypeToken^);
+        {$IFDEF WITH_INLINE}
+        FTypeTokensLen := FTypeTokensLen + Cardinal(Length(TypeToken^));
+        {$ELSE}
         FTypeTokensLen := FTypeTokensLen + Cardinal(PLengthInt(NativeUInt(TypeToken^) - StringLenOffSet)^);
+        {$ENDIF}
       end;
     Finally
       FreeAndNil(SQLWriter);
@@ -4751,11 +4764,19 @@ begin
       Inc(PResult, Digits);
       IntToRaw(Cardinal(Row), PStmts, Digits);
       Inc(PStmts, Digits);
+      {$IFDEF WITH_INLINE}
+      LastStmLen := Cardinal(Length(TypeToken^));
+      {$ELSE}
       LastStmLen := Cardinal(PLengthInt(NativeUInt(TypeToken^) - StringLenOffSet)^);
+      {$ENDIF}
       Move(Pointer(TypeToken^)^, PResult^, LastStmLen);
       Inc(PResult, LastStmLen);
     end;
+    {$IFDEF WITH_INLINE}
+    InitialStmtLen := Cardinal(Length(fASQL)) - LastPos;
+    {$ELSE}
     InitialStmtLen := Cardinal(PLengthInt(NativeUInt(fASQL) - StringLenOffSet)^) - LastPos;
+    {$ENDIF}
     Move(P^, PStmts^, Integer(InitialStmtLen));
     Inc(PStmts, InitialStmtLen);
     PByte(PStmts)^ := Byte(';');
@@ -4948,7 +4969,8 @@ procedure TZAbstractFirebirdInterbasePreparedStatement.SetBlob(Index: Integer;
   ASQLType: TZSQLType; const Value: IZBlob);
 var P: PAnsiChar;
   L: NativeUInt;
-  (*IBLob: IZInterbaseFirebirdLob;*)
+  IBLob: IZInterbaseFirebirdLob;
+  Clob: IZCLob absolute IBlob;
 label jmpNotNull;
 begin
   {$IFNDEF GENERIC_INDEX}Dec(Index);{$ENDIF}
@@ -4962,15 +4984,15 @@ begin
       P := nil;
       L := 0;//satisfy compiler
     // Deactivated because it can lead to errors when BLOBs are loaded from different connections or different transactions:
-    (*end else if Supports(Value, IZInterbaseFirebirdLob, IBLob) and ((sqltype = SQL_QUAD) or (sqltype = SQL_BLOB)) then begin
+    end else if Supports(Value, IZInterbaseFirebirdLob, IBLob) and (sqltype = SQL_BLOB) and LobTransactionEqualsToActiveTransaction(IBLob) then begin
       Value.GetStream.Free;
       IBLob.Open(lsmRead);
       PISC_QUAD(sqldata)^ := IBLob.GetBlobId;
-      goto jmpNotNull; *)
+      goto jmpNotNull;
     end else if (Value <> nil) and (codepage <> zCP_Binary) then
-      if Value.IsClob then begin
-        Value.SetCodePageTo(codepage);
-        P := Value.GetPAnsiChar(codepage, FRawTemp, L)
+      if Value.QueryInterface(IZClob, Clob) = S_OK then begin
+        //Clob.SetCodePageTo(codepage);
+        P := Clob.GetPAnsiChar(codepage, FRawTemp, L)
       end else raise CreateConversionError(Index, stBinaryStream)
     else P := Value.GetBuffer(FRawTemp, L);
     if P <> nil then begin
@@ -5962,7 +5984,7 @@ begin
       Token := Tokens[I];
       if (Token.L = 1) and (Token.P^ = Char('?')) then begin
         if DoRealloc then
-          ReallocMem(FInParamDescripors, SizeOf(TZInterbaseFirerbirdParam)*(InParamCount+1));
+          ReallocMem(FInParamDescripors, SizeOf(TZInterbaseFirebirdParam)*(InParamCount+1));
         {$IFDEF UNICODE}
         if (FirstComposeToken <> nil) then begin
           Token := Tokens[I-1];

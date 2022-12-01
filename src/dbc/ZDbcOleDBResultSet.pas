@@ -1162,6 +1162,7 @@ begin
   end;
 end;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operator :=(const source:OleVariant):UnicodeString;" marked as inline is not inlined}{$ENDIF}
 function TZAbstractOleDBResultSet.GetPAnsiChar(ColumnIndex: Integer;
   out Len: NativeUInt): PAnsiChar;
 label set_from_tmp, set_from_buf, set_from_num;
@@ -1303,7 +1304,9 @@ set_from_num:         Result := PAnsiChar(fByteBuffer);
     else raise CreateOleDbConvertError(ColumnIndex, stString);
   end;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operator :=(const source:OleVariant):UnicodeString;" marked as inline is not inlined}{$ENDIF}
 function TZAbstractOleDBResultSet.GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
 label set_from_tmp, set_from_buf, set_from_clob, set_from_num;
 begin
@@ -1441,7 +1444,9 @@ set_from_num:         Result := PWideChar(fByteBuffer);
     else raise CreateOleDbConvertError(ColumnIndex, stUnicodeString);
   end;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operator :=(const source:OleVariant):Boolean;" marked as inline is not inlined}{$ENDIF}
 function TZAbstractOleDBResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 var PA: PAnsiChar;
     PW: PWideChar absolute PA;
@@ -1488,6 +1493,7 @@ begin
       else raise CreateOleDbConvertError(ColumnIndex, stBoolean);
     end;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 function TZAbstractOleDBResultSet.GetBytes(ColumnIndex: Integer;
   out Len: NativeUInt): PByte;
@@ -1512,6 +1518,7 @@ begin
     end;
 end;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operator :=(const source:OleVariant):Longint;" marked as inline is not inlined}{$ENDIF}
 function TZAbstractOleDBResultSet.GetInt(ColumnIndex: Integer): Integer;
 var PA: PAnsiChar;
     PW: PWideChar absolute PA;
@@ -1564,7 +1571,9 @@ begin
     end
   else Result := 0;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operator :=(const source:OleVariant):Int64;" marked as inline is not inlined}{$ENDIF}
 function TZAbstractOleDBResultSet.GetLong(ColumnIndex: Integer): Int64;
 var PA: PAnsiChar;
     PW: PWideChar absolute PA;
@@ -1617,8 +1626,10 @@ begin
     end
   else Result := 0;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operator :=(const source:OleVariant):DWord;" marked as inline is not inlined}{$ENDIF}
 function TZAbstractOleDBResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
 var PA: PAnsiChar;
     PW: PWideChar absolute PA;
@@ -1672,7 +1683,9 @@ begin
   else Result := 0;
 end;
 {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operator :=(const source:OleVariant):QWord;" marked as inline is not inlined}{$ENDIF}
 function TZAbstractOleDBResultSet.GetULong(ColumnIndex: Integer): UInt64;
 var PA: PAnsiChar;
     PW: PWideChar absolute PA;
@@ -1725,7 +1738,9 @@ begin
     end
   else Result := 0;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operator :=(const source:OleVariant):Single;" marked as inline is not inlined}{$ENDIF}
 function TZAbstractOleDBResultSet.GetFloat(ColumnIndex: Integer): Single;
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
@@ -1762,6 +1777,7 @@ begin
     end
   else Result := 0;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 procedure TZAbstractOleDBResultSet.GetGUID(ColumnIndex: Integer;
   var Result: TGUID);
@@ -1825,6 +1841,7 @@ begin
 Fill: PInt64(@Result.Year)^ := 0;
 end;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operator :=(const source:OleVariant):Double;" marked as inline is not inlined}{$ENDIF}
 function TZAbstractOleDBResultSet.GetDouble(ColumnIndex: Integer): Double;
 begin
   if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
@@ -1860,6 +1877,7 @@ begin
     end
   else Result := 0;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 procedure TZAbstractOleDBResultSet.GetBigDecimal(ColumnIndex: Integer; var Result: TBCD);
 var P: Pointer;
@@ -1910,6 +1928,7 @@ Fail:    raise CreateOleDbConvertError(ColumnIndex, stBigDecimal);
     FillChar(Result, SizeOf(TBCD), #0)
 end;
 
+{$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "operator :=(const source:OleVariant):Currency;" marked as inline is not inlined}{$ENDIF}
 function TZAbstractOleDBResultSet.GetCurrency(ColumnIndex: Integer): Currency;
 label jmpFail;
 begin
@@ -1949,6 +1968,7 @@ jmpFail:raise CreateOleDbConvertError(ColumnIndex, stCurrency);
     end
   else Result := 0;
 end;
+{$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
 procedure TZAbstractOleDBResultSet.GetTime(ColumnIndex: Integer;
   var Result: TZTime);
@@ -2148,7 +2168,10 @@ begin
   FResultSet := ResultSet;
 end;
 
-{$IFDEF FPC} {$PUSH} {$WARN 5057 off : Local variable "BCD" does not seem to be initialized} {$ENDIF}
+{$IFDEF FPC} {$PUSH}
+{$WARN 5057 off : Local variable "BCD" does not seem to be initialized}
+{$IFDEF WITH_NOT_INLINED_WARNING}{$WARN 6058 off : Call to subroutine "operator :=(const source:OleVariant):X;" marked as inline is not inlined}{$ENDIF}
+{$ENDIF}
 function TZOleDBCachedResultSet.Fetch: Boolean;
 var
   I: Integer;

@@ -203,6 +203,7 @@ type
     function GetColumnLength(ColumnIndex: Integer): Integer;
     function GetColumnOffSet(ColumnIndex: Integer): Integer;
     function GetColumnDefaultExpression(ColumnIndex: Integer): string;
+    function HasColumnDefaultExpression(ColumnIndex: Integer): Boolean;
     function HasServerLinkedColumns: Boolean;
     procedure SetColumnDefaultExpression(ColumnIndex: Integer; const Value: string);
     procedure SetColumnCodePage(ColumnIndex: Integer; const Value: Word);
@@ -2861,6 +2862,11 @@ begin
   Result := Word(GetUInt(ColumnIndex, IsNull));
 end;
 
+function TZRowAccessor.HasColumnDefaultExpression(ColumnIndex: Integer): Boolean;
+begin
+  Result := FColumnDefaultExpressions[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] <> '';
+end;
+
 function TZRowAccessor.HasServerLinkedColumns: Boolean;
 begin
   Result := ((FLobCols <> nil) and (FLobCacheMode = lcmNone)) or
@@ -3778,14 +3784,14 @@ begin
     stAsciiStream,
     stBinaryStream: if (TempBlob^ <> nil) then
                       Result := TempBlob^;
-    stUnicodeString: if FColumnLengths[ColumnIndex] <= 0 then begin
+    stUnicodeString: if (FColumnLengths[ColumnIndex] <= 0) or (FColumnLengths[ColumnIndex] = MaxInt) then begin
         Result := TZRowAccessorUnicodeStringLob.CreateWithDataAddess(PZVarLenDataRef(TempBlob), zCP_UTF16, ConSettings, FOpenLobStreams)
       end else goto Fail;
-    stString: if FColumnLengths[ColumnIndex] <= 0 then begin
+    stString: if (FColumnLengths[ColumnIndex] <= 0) or (FColumnLengths[ColumnIndex] = MaxInt) then begin
         CP := FColumnCodePages[ColumnIndex];
         Result := TZRowAccessorRawByteStringLob.CreateWithDataAddess(PZVarLenDataRef(TempBlob), CP, ConSettings, FOpenLobStreams);
       end else goto Fail;
-    stBytes: if FColumnLengths[ColumnIndex] <= 0
+    stBytes: if (FColumnLengths[ColumnIndex] <= 0) or (FColumnLengths[ColumnIndex] = MaxInt)
       then Result := TZRowAccessorBytesLob.CreateWithDataAddess(PZVarLenDataRef(TempBlob), zCP_Binary, ConSettings, FOpenLobStreams)
       else goto Fail;
     else

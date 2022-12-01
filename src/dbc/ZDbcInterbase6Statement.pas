@@ -101,6 +101,8 @@ type
     /// <param>"Current" the the current SQLType which can't get converted.</param>
     /// <returns>The error object.</returns>
     function CreateConversionError(Index: Cardinal; Current: TZSQLType): EZSQLException; override;
+
+    function LobTransactionEqualsToActiveTransaction(const Lob: IZInterbaseFirebirdLob): Boolean; override;
   public
     /// <summary>Constructs this object and assignes the main properties.</summary>
     /// <param>"Connection" the IZInterbase6Connection interface which creates
@@ -562,7 +564,7 @@ begin
         FIBConnection.HandleErrorOrWarning(lcOther, @FStatusVector, {$IFDEF ZEOSDEBUG}'isc_dsql_describe_bind'{$ELSE}''{$ENDIF}, Self);
     end;
     FInMessageCount := FParamXSQLDA^.sqld;
-    ReallocMem(FInParamDescripors, FInMessageCount * SizeOf(TZInterbaseFirerbirdParam));
+    ReallocMem(FInParamDescripors, FInMessageCount * SizeOf(TZInterbaseFirebirdParam));
     if FInMessageCount > 0 then begin
       FMemPerRow := 0;
       {$R-}
@@ -760,6 +762,18 @@ begin
   { Logging Execution }
   if DriverManager.HasLoggingListener then
     DriverManager.LogMessage(lcExecPrepStmt,Self);
+end;
+
+function TZAbstractInterbase6PreparedStatement.LobTransactionEqualsToActiveTransaction(
+  const Lob: IZInterbaseFirebirdLob): Boolean;
+var IBTransaction: IZIBTransaction;
+    IBFBTxn: IZInterbaseFirebirdTransaction;
+begin
+  IBTransaction := FIBConnection.GetActiveTransaction;
+  IBFBTxn := nil;
+  if (IBTransaction <> nil) and (IBTransaction.QueryInterface(IZInterbaseFirebirdTransaction, IBFBTxn) = S_OK)
+  then Result := Lob.LobIsPartOfTxn(IBFBTxn)
+  else Result := False;
 end;
 
 { TZInterbase6Statement }

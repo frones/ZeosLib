@@ -504,6 +504,7 @@ type
     function ParamterIndex2ResultSetIndex(Value: Integer): Integer;
     function CreateBindVarOutOfRangeException(Value: Integer): EZSQLException;
     class function GetBindListClass: TZBindListClass; virtual;
+    function CreateParameterValueExceededException(Index: Integer): EZSQLException;
   protected //Properties
     property BatchDMLArrayCount: ArrayLenInt read FBatchDMLArrayCount write FBatchDMLArrayCount;
     property SupportsDMLBatchArrays: Boolean read FSupportsDMLBatchArrays;
@@ -3200,6 +3201,13 @@ begin
   else Result := inherited CreatelogEvent(Category);
 end;
 
+function TZAbstractPreparedStatement.CreateParameterValueExceededException(
+  Index: Integer): EZSQLException;
+begin
+  {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := Format(SParamValueExceeded, [Index]);
+  Result := EZSQLException.Create({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
+end;
+
 {**
   Destroys this object and cleanups the memory.
 }
@@ -4343,7 +4351,11 @@ begin
           raise EZUnsupportedException.Create(sUnsupportedOperation);
     {$IFDEF WITH_CASE_WARNING}else ;{$ENDIF}
   end;
+  {$IFDEF WITH_INLINE}
+  Len := Length(TByteDynArray(Value));
+  {$ELSE}
   Len := {%H-}PArrayLenInt({%H-}NativeUInt(Value) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}; //FPC returns High() for this pointer location
+  {$ENDIF}
   if (BindList.ParamTypes[ParamIndex] <> pctResultSet) then
     if (ParamIndex = 0) then
       FBatchDMLArrayCount := Len

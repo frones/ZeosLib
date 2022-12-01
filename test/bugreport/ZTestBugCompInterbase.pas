@@ -106,6 +106,8 @@ type
     procedure TestSF_Internal7;
     procedure TestSF524;
     procedure TestDisconnect;
+    procedure Test_SF_Ticket512;
+    procedure TestTransactionMonitoring;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1096,6 +1098,60 @@ begin
   end;
 end;
 
+procedure ZTestCompInterbaseBugReport.TestTransactionMonitoring;
+var
+  Query: TZQuery;
+  ConnectionID, MON_OLDEST_ACTIVE, MON_TOP_TRANSACTION: Integer;
+
+begin
+  if (Connection.Protocol <> 'firebird') and (Connection.Protocol <> 'interbase') then begin
+    BlankCheck;
+    exit;
+  end;
+
+  Query := CreateQuery;
+  try
+    Connection.Connect;
+
+    Connection.StartTransaction;
+    Query.SQL.Text := 'select CURRENT_CONNECTION from RDB$DATABASE';
+    Query.Open;
+    ConnectionID := Query.Fields[0].AsInteger;
+    Query.Close;
+
+    Query.SQL.Text := 'select MON$OLDEST_ACTIVE, MON$TOP_TRANSACTION from MON$TRANSACTIONS WHERE MON$ATTACHMENT_ID=:ATTACHMENT_ID';
+    Query.Params[0].AsInteger := ConnectionID;
+    Query.Open;
+    MON_OLDEST_ACTIVE := Query.Fields[0].AsInteger;
+    MON_TOP_TRANSACTION := Query.Fields[1].AsInteger;
+    Query.Close;
+    Connection.Commit;
+    Check(Connection.AutoCommit, 'No autocommit mode');
+    Query.Open;
+    while not Query.Eof do begin
+      CheckEquals(MON_OLDEST_ACTIVE+1, Query.Fields[0].AsInteger);
+      CheckEquals(MON_TOP_TRANSACTION+1, Query.Fields[1].AsInteger);
+      Query.Next;
+    end;
+    Query.Close;
+    Connection.StartTransaction; //txn
+    Connection.StartTransaction; //savepoint
+    Connection.StartTransaction; //savepoint
+    Query.Open;
+    while not Query.Eof do begin
+      CheckEquals(MON_OLDEST_ACTIVE+2, Query.Fields[0].AsInteger);
+      CheckEquals(MON_TOP_TRANSACTION+2, Query.Fields[1].AsInteger);
+      Query.Next;
+    end;
+    Query.Close;
+    Connection.Commit; //savepoint
+    Connection.Commit; //savepoint
+    Connection.Rollback; //savepoint
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
 procedure ZTestCompInterbaseBugReport.Test_Ticket228;
 var
   Query: TZQuery;
@@ -1322,6 +1378,93 @@ begin
     end;
   end;
 end;
+
+(*
+Hello,
+I have a table that need lookup two smallint field into another table.
+
+If i create TSmallintField on ZQuery1I can't lookup Smallint in ZQuery4, fails.
+
+If i create TShortIntField on ZQuery1 I can lookup the same SmallIntFields in ZQuery4, Works.
+
+Smallint to Smallint Fails.
+
+ShortInt to SmallInt Works.
+
+Thanks.
+
+EH: Resolve in R7899*)
+procedure ZTestCompInterbaseBugReport.Test_SF_Ticket512;
+var
+  Query_Cargo: TZQuery;
+  Query_Department: TZQuery;
+  FieldDef: TFieldDef;
+  Field_Lookup: TField;
+  idx: Integer;
+begin
+  Query_Cargo := CreateQuery;
+  Query_Department := CreateQuery;
+  try
+    Check(Query_Cargo <> nil);
+    Query_Cargo.SQL.Text := 'select * from cargo order by 1';
+    Query_Department.SQL.Text := 'select * from department';
+    Query_Department.Open;
+    Query_Cargo.FieldDefs.Clear;
+    Query_Cargo.Fields.Clear;
+    Query_Cargo.FieldDefs.Update;
+    FieldDef := Query_Cargo.FieldDefs.AddFieldDef;
+    FieldDef.DataType := ftString;
+    FieldDef.Size := 20;
+    FieldDef.Name := 'DEP_NAME';
+    for idx := 0 to Query_Cargo.FieldDefs.Count - 1 do
+      Query_Cargo.FieldDefs.Items[idx].CreateField(Query_Cargo);
+    Field_Lookup := Query_Cargo.FieldByName('DEP_NAME');
+    Field_Lookup.FieldKind := fkLookup;
+    Field_Lookup.LookupDataSet := Query_Department;
+    Field_Lookup.LookupKeyFields := 'DEP_ID';
+    Field_Lookup.LookupResultField := 'DEP_NAME';
+    Field_Lookup.KeyFields := 'C_DEP_ID';
+    {$IFDEF FPC}
+    Query_Cargo.FieldDefs.Updated := False;  //otherwise the fields in next test with smallint are not recreated
+    {$ENDIF}
+    Query_Cargo.Open;
+    CheckEquals('Container agency', Field_Lookup.AsString, 'lookup resultfield value mismatch');
+    Query_Cargo.Next;
+    CheckEquals('Line agency', Field_Lookup.AsString, 'lookup resultfield value mismatch');
+    Query_Cargo.Next;
+    CheckEquals('Line agency', Field_Lookup.AsString, 'lookup resultfield value mismatch');
+    Query_Cargo.Next;
+    CheckEquals('Container agency', Field_Lookup.AsString, 'lookup resultfield value mismatch');
+    Query_Cargo.Close;
+    Query_Cargo.FieldDefs.Clear;
+    Query_Cargo.Fields.Clear;
+    Query_Cargo.FieldDefs.Update;
+    FieldDef := Query_Cargo.FieldDefs.AddFieldDef;
+    FieldDef.DataType := ftSmallint;
+    //FieldDef.Size := SizeOf(SmallInt);
+    FieldDef.Name := 'DEP_ID_LOOKUP';
+    for idx := 0 to Query_Cargo.FieldDefs.Count - 1 do
+      Query_Cargo.FieldDefs.Items[idx].CreateField(Query_Cargo);
+    Field_Lookup := Query_Cargo.FieldByName('DEP_ID_LOOKUP');
+    Field_Lookup.FieldKind := fkLookup;
+    Field_Lookup.LookupDataSet := Query_Department;
+    Field_Lookup.LookupKeyFields := 'DEP_ID';
+    Field_Lookup.LookupResultField := 'DEP_ID';
+    Field_Lookup.KeyFields := 'C_DEP_ID';
+    Query_Cargo.Open;
+    CheckEquals(2, Field_Lookup.AsInteger, 'lookup resultfield value mismatch');
+    Query_Cargo.Next;
+    CheckEquals(1, Field_Lookup.AsInteger, 'lookup resultfield value mismatch');
+    Query_Cargo.Next;
+    CheckEquals(1, Field_Lookup.AsInteger, 'lookup resultfield value mismatch');
+    Query_Cargo.Next;
+    CheckEquals(2, Field_Lookup.AsInteger, 'lookup resultfield value mismatch');
+  finally
+    FreeAndNil(Query_Cargo);
+    FreeAndNil(Query_Department);
+  end;
+end;
+
 type
   THackField = class(TField);
 procedure ZTestCompInterbaseBugReport.TestSF418_ASC;
@@ -1611,30 +1754,11 @@ var
   ConnectionID: Integer;
   HadException: Boolean;
 
-  function CloneConnection(Original: TZConnection): TZConnection;
-  begin
-    Result := TZConnection.Create(nil);
-    Result.Protocol := Original.Protocol;
-    Result.HostName := Original.HostName;
-    Result.Port := Original.Port;
-    Result.Database := Original.Database;
-    Result.User := Original.User;
-    Result.Password := Original.Password;
-    Result.Catalog := Original.Catalog;
-    Result.LibraryLocation := Original.LibraryLocation;
-    Result.Properties.Assign(Original.Properties);
-    Result.AutoCommit := Connection.AutoCommit;
-    Result.TransactIsolationLevel := Original.TransactIsolationLevel;
-    Result.ControlsCodePage := Original.ControlsCodePage;
-    Result.ClientCodepage := Original.ClientCodepage;
-  end;
-
-
   procedure dropConnection;
   var
     MyConnection: TZConnection;
   begin
-    MyConnection := CloneConnection(Connection);
+    MyConnection := CreateDatasetConnection;
     try
       MyConnection.Connect;
       MyConnection.ExecuteDirect('delete from MON$ATTACHMENTS where MON$ATTACHMENT_ID = ' + IntToStr(ConnectionID));
@@ -1648,7 +1772,7 @@ begin
   if (Connection.Protocol <> 'firebird') and (Connection.Protocol <> 'interbase') then
     exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
     Query.Connection := Connection;
 

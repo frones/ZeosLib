@@ -101,7 +101,7 @@ type
   {** Options for dataset. }
   TZDatasetOption = ({$IFNDEF NO_TDATASET_TRANSLATE}doOemTranslate, {$ENDIF}
     doCalcDefaults, doAlwaysDetailResync, doSmartOpen, doPreferPrepared,
-    doDontSortOnPost, doUpdateMasterFirst);
+    doDontSortOnPost, doUpdateMasterFirst, doCheckRequired);
 
   {** Set of dataset options. }
   TZDatasetOptions = set of TZDatasetOption;
@@ -309,8 +309,14 @@ type
     procedure CheckConnected; virtual;
     procedure CheckBiDirectional;
     procedure CheckSQLQuery; virtual;
+    /// <summary>Raises an error 'Operation is not allowed in read-only dataset.</summary>
     procedure RaiseReadOnlyError;
-
+    procedure RaiseNotEditingError(const Field: TField);
+    procedure RaiseFieldReadOnlyError(const Field: TField);
+    procedure RaiseLiveResultSetsAreNotSupportedError;
+    procedure RaiseWriteStateError;
+    procedure RaiseFieldTypeMismatchError(const AField: TField; AFieldDef: TFieldDef);
+    procedure RaiseFieldSizeMismatchError(const AField: TField; AFieldDef: TFieldDef);
     function FetchOneRow: Boolean;
     function FetchRows(RowCount: Integer): Boolean;
     function FilterRow(RowNo: NativeInt): Boolean;
@@ -341,10 +347,6 @@ type
       IZPreparedStatement; virtual;
     function CreateResultSet(const {%H-}SQL: string; MaxRows: Integer):
       IZResultSet; virtual;
-    {$IFDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES} //EH: there is something weired with cirtcular references + FPC and implementation uses! So i added this virtual function to get a IsUpdatable state
-    function GetUpdatable: Boolean; virtual;
-    property Updatable: Boolean read GetUpdatable;
-    {$ENDIF}
     {Notes by EH:
      since 7.3 the Accessor is just widening the fields for userdefined fields
      Also is the Rowbuffer used for the bookmarks
@@ -419,12 +421,18 @@ type
     property NestedDataSetClass: TDataSetClass read FNestedDataSetClass write FNestedDataSetClass;
     {$ENDIF}
   protected { Abstracts methods }
+    /// <summary>Performs an internal adding a new record.</summary>
+    /// <param>"Buffer" a buffer of the new adding record.</param>
+    /// <param>"Append" <c>True</c> if record should be added to the end of the
+    ///  result set.</param>
     {$IFNDEF WITH_InternalAddRecord_TRecBuf}
     procedure InternalAddRecord(Buffer: Pointer; Append: Boolean); override;
     {$ELSE}
     procedure InternalAddRecord(Buffer: TRecBuf; Append: Boolean); override;
     {$ENDIF}
+    /// <summary>Performs an internal record removing.</summary>
     procedure InternalDelete; override;
+    /// <summary>Performs an internal post updates.</summary>
     procedure InternalPost; override;
     {$IFNDEF FPC}
     procedure SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
@@ -458,6 +466,7 @@ type
     {$ENDIF}
     procedure BindFields(Binding: Boolean); {$IFDEF WITH_VIRTUAL_BINDFIELDS}override;{$ENDIF}
     procedure InternalInitFieldDefs; override;
+    /// <summary>Performs internal query opening.</summary>
     procedure InternalOpen; override;
     procedure InternalClose; override;
     procedure InternalFirst; override;
@@ -548,6 +557,10 @@ type
     function PSIsSQLBased: Boolean; {$IFDEF WITH_IPROVIDER}override;{$ELSE}virtual;{$ENDIF}
   protected
     procedure DataEvent(Event: TDataEvent; Info: {$IFDEF FPC}PtrInt{$ELSE}NativeInt{$ENDIF}); override;
+  protected //internals to identify if some options/operations are relevant or not
+    function InheritsFromReadWriteTransactionUpdateObjectDataSet: Boolean; virtual;
+    function InheritsFromReadWriteDataSet: Boolean; virtual;
+    function InheritsFromMemTableDataSet: Boolean; virtual;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -1235,10 +1248,16 @@ type
   protected
     function GetIsNull: Boolean; override;
     procedure GetText(var Text: string; DisplayText: Boolean); override;
+    function GetAsBytes: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF}; {$IFDEF TFIELD_HAS_ASBYTES}override;{$ENDIF}
+    procedure SetAsBytes(const Value: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF}); {$IFDEF TFIELD_HAS_ASBYTES}override;{$ENDIF}
   protected
     procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
   public
     procedure Clear; override;
+    {$IFNDEF TFIELD_HAS_ASBYTES}
+    property Value: TBytes read GetAsBytes write SetAsBytes;
+    property AsBytes: TBytes read GetAsBytes write SetAsBytes;
+    {$ENDIF}
   end;
 
   TZVarBytesField = class(TVarBytesField)
@@ -1384,8 +1403,16 @@ type
     {$IFDEF WITH_TBLOBFIELD_GETASVARIANT_varNULL_BUG}
     function GetAsVariant: Variant; override;
     {$ENDIF WITH_TBLOBFIELD_GETASVARIANT_varNULL_BUG}
+    {$IFNDEF TFIELD_HAS_ASBYTES}
+    function GetAsBytes: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF};
+    procedure SetAsBytes(const Value: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF});
+    {$ENDIF TFIELD_HAS_ASBYTES}
   public
     procedure Clear; override;
+    {$IFNDEF TFIELD_HAS_ASBYTES}
+    property Value: TBytes read GetAsBytes write SetAsBytes;
+    property AsBytes: TBytes read GetAsBytes write SetAsBytes;
+    {$ENDIF}
   end;
 
   {$IFNDEF WITH_TOBJECTFIELD}
@@ -1509,7 +1536,6 @@ implementation
 uses ZFastCode, Math, ZVariant, ZMessages,
   ZSelectSchema, ZGenericSqlToken, ZGenericSqlAnalyser, ZEncoding,
   ZDbcProperties, ZDbcResultSet
-  {$IFNDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES}, ZAbstractDataset{$ENDIF} //see comment of Updatable property
   {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -1622,7 +1648,7 @@ begin
   FShowRecordTypes := [usModified, usInserted, usUnmodified];
   FRequestLive := False;
   FFetchRow := 0;                // added by Patyi
-  FOptions := [doCalcDefaults, doPreferPrepared];
+  FOptions := [doPreferPrepared];
   FDisableZFields := False;
 
   FFilterEnabled := False;
@@ -1948,6 +1974,10 @@ end;
 }
 procedure TZAbstractRODataset.SetReadOnly(Value: Boolean);
 begin
+  if Value and not InheritsFromReadWriteDataSet then
+    RaiseLiveResultSetsAreNotSupportedError;
+  if Value and (State in dsWriteModes) then
+    RaiseWriteStateError;
   RequestLive := not Value;
 end;
 
@@ -2013,12 +2043,45 @@ begin
     raise EZDatabaseError.Create(SCanNotExecuteMoreQueries);
 end;
 
-{**
-  Raises an error 'Operation is not allowed in read-only dataset.
-}
+procedure TZAbstractRODataset.RaiseFieldReadOnlyError(const Field: TField);
+begin
+  raise EZDatabaseError.Create(Format(SFieldReadOnly, [Field.DisplayName]));
+end;
+
+procedure TZAbstractRODataset.RaiseFieldSizeMismatchError(const AField: TField;
+  AFieldDef: TFieldDef);
+begin
+  DatabaseErrorFmt(SFieldSizeMismatch, [AField.DisplayName, AField.Size,
+    AFieldDef.Size], Self);
+end;
+
+procedure TZAbstractRODataset.RaiseFieldTypeMismatchError(const AField: TField;
+  AFieldDef: TFieldDef);
+begin
+  DatabaseErrorFmt(SFieldTypeMismatch, [AField.DisplayName,
+    FieldTypeNames[AField.DataType], FieldTypeNames[AFieldDef.DataType]], Self);
+end;
+
+procedure TZAbstractRODataset.RaiseLiveResultSetsAreNotSupportedError;
+begin
+  raise EZDatabaseError.Create(SLiveResultSetsAreNotSupported);
+end;
+
+procedure TZAbstractRODataset.RaiseNotEditingError(const Field: TField);
+begin
+  if Assigned(Field.DataSet) and (Field.DataSet.Name <> '')
+  then raise EZDatabaseError.Create(Format('%s: %s', [Field.DataSet.Name, SNotEditing]))
+  else raise EZDatabaseError.Create(SNotEditing);
+end;
+
 procedure TZAbstractRODataset.RaiseReadOnlyError;
 begin
   raise EZDatabaseError.Create(SOperationIsNotAllowed2);
+end;
+
+procedure TZAbstractRODataset.RaiseWriteStateError;
+begin
+  raise EZDatabaseError.Create(Format(SOperationIsNotAllowed3, ['WRITE']));
 end;
 
 {**
@@ -2848,7 +2911,7 @@ jmpMoveA:   if Result then begin
             end;
             Exit;
           end;
-        ftSmallint: RowAccessor.GetSmall(ColumnIndex, Result);
+        ftSmallint: PSmallInt(Buffer)^ := RowAccessor.GetSmall(ColumnIndex, Result);
         ftInteger, ftAutoInc: {$IFDEF HAVE_TFIELD_32BIT_ASINTEGER}PInteger{$ELSE}PLongInt{$ENDIF}(Buffer)^ := RowAccessor.GetInt(ColumnIndex, Result);
         ftBoolean: PWordBool(Buffer)^ := RowAccessor.GetBoolean(ColumnIndex, Result);
         ftWord: PWord(Buffer)^ := RowAccessor.GetWord(ColumnIndex, Result);
@@ -3067,7 +3130,7 @@ begin
   // Didn't find a way to avoid this...
   if Field.ReadOnly and (Field.FieldKind <> fkLookup)
                     and not (State in [dsSetKey, dsCalcFields, dsFilter, dsBlockRead, dsInternalCalc, dsOpening]) then
-    DatabaseErrorFmt(SFieldReadOnly, [Field.DisplayName]);
+    RaiseFieldReadOnlyError(Field);
   if not (State in dsWriteModes) then
     DatabaseError(SNotEditing, Self);
 
@@ -3432,9 +3495,11 @@ begin
     else FieldDef := TFieldDef.Create(FieldDefs, FieldName, FieldType, Size, False, FieldNo);
     {$ENDIF}
     with FieldDef do begin
-      if not (ReadOnly or IsUniDirectional) then begin
+      if InheritsFromReadWriteDataSet then begin
         {$IFNDEF OLDFPC}
-        Required := IsWritable(ColumnIndex) and (IsNullable(ColumnIndex) = ntNoNulls);
+        // EH: This will lead to load metainformations, just to get the IsRequired prop done as documented
+        Required := IsWritable(ColumnIndex) and (IsNullable(ColumnIndex) = ntNoNulls) and
+          (InheritsFromMemTableDataSet or not ResultSetMetaData.HasDefaultValue(ColumnIndex));
         {$ENDIF}
         if IsReadOnly(ColumnIndex) then
           Attributes := Attributes + [faReadonly];
@@ -3444,9 +3509,8 @@ begin
       DisplayName := FieldName;
       if GetOrgColumnLabel(ColumnIndex) <> GetColumnLabel(ColumnIndex) then
          Attributes := Attributes + [faUnNamed];
-      //EH: hmm do we miss that or was there a good reason? For me its not relevant..
-      //if (SQLType in [stString, stUnicodeString]) and (GetScale(ColumnIndex) = GetPrecision(ColumnIndex)) then
-        //Attributes := Attributes + [faFixed];
+      if (SQLType in [stString, stUnicodeString]) and (Scale = Prec) then
+        Attributes := Attributes + [faFixed];
     end;
   end;
 end;
@@ -3679,17 +3743,17 @@ begin
   end;
 end;
 
-{**
-  Performs internal query opening.
-}
+type TProtectedPropField = class(TField);
 procedure TZAbstractRODataset.InternalOpen;
 var
   ColumnList: TObjectList;
   I, Cnt: Integer;
+  ColumnIndex: Integer absolute Cnt;
   OldRS: IZResultSet;
   ConSettings: PZConSettings;
   StringFieldCodePage: Word;
   LcmString: String;
+  Field: TField;
 begin
   {$IFNDEF FPC}
   If (csDestroying in Componentstate) then
@@ -3750,17 +3814,31 @@ begin
     begin
       CreateFields;
       for i := 0 to Fields.Count -1 do begin
-        if Fields[i].DataType = ftString then
-          Fields[i].DisplayWidth := FResultSetMetadata.GetPrecision(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})
+        Field := Fields[i];
+        ColumnIndex := FResultSetMetadata.FindColumn(Field.DisplayName);
+        if (Field.DataType = ftString) and (ColumnIndex <> InvalidDbcIndex) then
+          Field.DisplayWidth := FResultSetMetadata.GetPrecision(ColumnIndex)
         {$IFDEF WITH_FTGUID}
-        else if Fields[i].DataType = ftGUID then Fields[i].DisplayWidth := 40 //looks better in Grid
+        else if Field.DataType = ftGUID then Field.DisplayWidth := 40; //looks better in Grid
         {$ENDIF}
-        (*else if Fields[i].DataType in [ftTime, ftDateTime] then
-          Fields[i].DisplayWidth := Fields[i].DisplayWidth + MetaData.GetScale(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF})*);
-        {$IFDEF WITH_TAUTOREFRESHFLAG} //that's forcing loading metainfo's
-        //if FResultSetMetadata.IsAutoIncrement({$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then
-          //Fields[i].AutoGenerateValue := arAutoInc;
-        {$ENDIF !WITH_TAUTOREFRESHFLAG}
+        if InheritsFromReadWriteTransactionUpdateObjectDataSet and
+           (Field.FieldKind = fkData) and (ColumnIndex <> InvalidDbcIndex) and
+           FResultSetMetadata.IsAutoIncrement(ColumnIndex) then begin //that's forcing loading metainfo's
+          (* EH: uncomment this if ftAutoInc should be supported. Note this
+             will lead to different datasizes (not a problem whith the TZFields)
+             and would break some apps. Them more the "ID" fields may need
+             another prozessing
+          if not FDisableZFields then
+            TProtectedPropField(Field).SetDataType(ftAutoInc); *)
+          {$IFDEF WITH_TAUTOREFRESHFLAG}
+          Field.AutoGenerateValue := arAutoInc;
+          {$ENDIF !WITH_TAUTOREFRESHFLAG}
+          Field.Required := False;
+        end;
+        {$IFDEF NO_TFIELDDEF_CREATEFIELD_SETFIXEDCHAR} //fpc misses setting that info
+        if (faFixed in FieldDefs[i].Attributes) and (Field is TStringField) then
+          TStringField(Field).FixedChar := True;
+        {$ENDIF}
       end;
     end;
     BindFields(True);
@@ -4225,7 +4303,7 @@ begin
     end;
     FSortedFields := aValue;
     if Active then
-      if not ({$IFDEF FPC}Updatable{$ELSE}Self is TZAbstractRWDataSet{$ENDIF}) then
+      if not InheritsFromReadWriteDataSet then
         InternalSort //enables clearsort which prevents rereading data
       else if (FSortedFields = '') then
         InternalRefresh
@@ -4388,12 +4466,21 @@ begin
 end;
 {$ENDIF}
 
-{**
-  Performs an internal adding a new record.
-  @param Buffer a buffer of the new adding record.
-  @param Append <code>True</code> if record should be added to the end
-    of the result set.
-}
+function TZAbstractRODataset.InheritsFromMemTableDataSet: Boolean;
+begin
+  Result := False;
+end;
+
+function TZAbstractRODataset.InheritsFromReadWriteDataSet: Boolean;
+begin
+  Result := False;
+end;
+
+function TZAbstractRODataset.InheritsFromReadWriteTransactionUpdateObjectDataSet: Boolean;
+begin
+  Result := False;
+end;
+
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // empty function - parameter not used intentionally
 {$IFNDEF WITH_InternalAddRecord_TRecBuf}
 procedure TZAbstractRODataset.InternalAddRecord(Buffer: Pointer; Append: Boolean);
@@ -4405,21 +4492,14 @@ begin
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-{**
-  Performs an internal record removing.
-}
 procedure TZAbstractRODataset.InternalDelete;
 begin
   RaiseReadOnlyError;
 end;
 
-{**
-  Performs an internal post updates.
-}
 procedure TZAbstractRODataset.InternalPost;
 begin
-  if not ({$IFDEF FPC}Updatable{$ELSE}Self is TZAbstractRWDataSet{$ENDIF}) then
-    RaiseReadOnlyError;
+  RaiseReadOnlyError;
 end;
 
 {**
@@ -5167,9 +5247,11 @@ var RowBuffer: PZRowBuffer;
 begin
   if Field.ReadOnly and (Field.FieldKind <> fkLookup) and not (State in
     [dsSetKey, dsCalcFields, dsFilter, dsBlockRead, dsInternalCalc, dsOpening]) then
-      DatabaseErrorFmt(SFieldReadOnly, [Field.DisplayName]);
+      RaiseFieldReadOnlyError(Field);
+  if ReadOnly then
+    RaiseReadOnlyError;
   if not (State in dsWriteModes) then
-    DatabaseError(SNotEditing, Field.DataSet);
+    RaiseNotEditingError(Field);
   if GetActiveBuffer(RowBuffer)
   then FRowAccessor.RowBuffer := RowBuffer
   else raise EZDatabaseError.Create(SRowDataIsNotAvailable);
@@ -5829,15 +5911,20 @@ const
   );
   CheckTypeSizes = [ftBytes, ftVarBytes, ftBCD, ftReference, ftFmtBCD];
 begin
-  with Field do
-  begin
-    if (BaseFieldTypes[DataType] <> BaseFieldTypes[AFieldDef.DataType]) then
-      DatabaseErrorFmt(SFieldTypeMismatch, [DisplayName,
-        FieldTypeNames[DataType], FieldTypeNames[AFieldDef.DataType]], Self);
-    if (DataType in CheckTypeSizes) and (Size <> AFieldDef.Size) then
-        DatabaseErrorFmt(SFieldSizeMismatch, [DisplayName, Size,
-          AFieldDef.Size], Self);
-  end;
+  (* EH: uncomment this (just prepared) if ftAutoInc should be supported
+  if {$IFDEF WITH_TAUTOREFRESHFLAG}(AutoGenerateValue = arAutoInc) and {$ENDIF}
+     (Field.DataType = ftAutoInc) and (AFieldDef is TZFieldDef) then
+     if (AFieldDef.DataType [ftSmallint, ftInteger, ftWord, ftBCD,
+          ftLargeint, ftFMTBcd, ftLongWord, ftShortint, ftByte) then begin
+       if (Field.Size <> 0) then
+          RaiseFieldSizeMismatchError(Field, AFieldDef);
+     end else
+        RaiseFieldTypeMismatchError(Field, AFieldDef)
+  else *)
+  if (BaseFieldTypes[Field.DataType] <> BaseFieldTypes[AFieldDef.DataType]) then
+    RaiseFieldTypeMismatchError(Field, AFieldDef);
+  if (Field.DataType in CheckTypeSizes) and (Field.Size <> AFieldDef.Size) then
+     RaiseFieldSizeMismatchError(Field, AFieldDef);
 end;
 
 {$IFDEF WITH_IPROVIDERSUPPORT_GUID}
@@ -9750,6 +9837,36 @@ begin
   end;
 end;
 
+function TZBytesField.GetAsBytes: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF};
+var P: PByte;
+    L: NativeUint;
+begin
+  Result := nil;
+  if IsRowDataAvailable then begin
+    P := TZAbstractRODataset(DataSet).FResultSet.GetBytes(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, L);
+    if L > 0 then begin
+      SetLength(Result, L);
+      Move(P^, Pointer(Result)^, L);
+    end;
+  end;
+end;
+
+procedure TZBytesField.SetAsBytes(const Value: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF});
+var L: NativeUInt;
+begin
+  if not FBound then
+    raise CreateUnBoundError(Self);
+  L := Length(Value);
+  if L = 0
+  then Clear
+  else with TZAbstractRODataset(DataSet) do begin
+    Prepare4DataManipulation(Self);
+    FResultSet.UpdateBytes(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Pointer(Value), L);
+    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+      DataEvent(deFieldChange, NativeInt(Self));
+  end;
+end;
+
 function TZBytesField.GetIsNull: Boolean;
 begin
   if IsRowDataAvailable
@@ -10651,6 +10768,38 @@ begin
   end;
 end;
 
+{$IFNDEF TFIELD_HAS_ASBYTES}
+function TZBLobField.GetAsBytes: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF};
+var P: PByte;
+    L: NativeUint;
+begin
+  Result := nil;
+  if IsRowDataAvailable then begin
+    P := TZAbstractRODataset(DataSet).FResultSet.GetBytes(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, L);
+    if L > 0 then begin
+      SetLength(Result, L);
+      Move(P^, Pointer(Result)^, L);
+    end;
+  end;
+end;
+
+procedure TZBLobField.SetAsBytes(const Value: {$IFDEF WITH_GENERICS_TFIELD_ASBYTES}TArray<Byte>{$ELSE}TBytes{$ENDIF});
+var L: NativeUInt;
+begin
+  if not FBound then
+    raise CreateUnBoundError(Self);
+  L := Length(Value);
+  if L = 0
+  then Clear
+  else with TZAbstractRODataset(DataSet) do begin
+    Prepare4DataManipulation(Self);
+    FResultSet.UpdateBytes(FFieldIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Pointer(Value), L);
+    if not (State in [dsCalcFields, dsFilter, dsNewValue]) then
+      DataEvent(deFieldChange, NativeInt(Self));
+  end;
+end;
+
+{$ENDIF TFIELD_HAS_ASBYTES}
 function TZBLobField.GetIsNull: Boolean;
 begin
   if IsRowDataAvailable

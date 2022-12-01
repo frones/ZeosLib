@@ -92,6 +92,7 @@ type
     function PSIsSQLBased: Boolean; override;
     function GetTokenizer: IZTokenizer; override;
     function GetClientVariantManager: IZClientVariantManager; override;
+    function InheritsFromMemTableDataSet: Boolean; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -138,6 +139,11 @@ type
     function ExecutePrepared: Boolean; override;
   End;
 
+  TZMemTableResultSet = class(TZVirtualResultSet)
+  protected
+    procedure PostRowUpdates(OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
+  end;
+
 { TZMemResultSetPreparedStatement }
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "Info" not used} {$ENDIF}
@@ -166,9 +172,9 @@ begin
 end;
 
 function TZMemResultSetPreparedStatement.ExecuteQueryPrepared: IZResultSet;
-var VirtualResultSet: TZVirtualResultSet;
+var VirtualResultSet: TZMemTableResultSet;
 begin
-  VirtualResultSet := TZVirtualResultSet.CreateWithColumns(FColumnList, '', ConSettings);
+  VirtualResultSet := TZMemTableResultSet.CreateWithColumns(FColumnList, '', ConSettings);
   Result := VirtualResultSet;
   VirtualResultSet.SetType(GetResultSetType);
   VirtualResultSet.SetConcurrency(GetResultSetConcurrency);
@@ -192,7 +198,7 @@ var Rows: TZSortedList;
     RS: IZResultSet;
     CS: IZCachedResultSet;
     Metadata: IZResultSetMetadata;
-    VirtualResultSet: TZVirtualResultSet;
+    VirtualResultSet: TZMemTableResultSet;
     ColumnInfo: TZColumnInfo;
     ColumnsInfo: TObjectList;
     ReInitFieldDefs: Boolean;
@@ -241,6 +247,7 @@ begin
             end else ColumnInfo.ColumnCodePage := SourceCodePage;
           end;
           ColumnInfo.Scale := Metadata.GetScale(ColumnIndex);
+          ColumnInfo.Nullable := Metadata.IsNullable(ColumnIndex);
           Inc(Idx);
         end else
           ColumnInfo := ConvertFiedDefToColumnsInfo(Current);
@@ -250,7 +257,7 @@ begin
     FLocalConSettings.ClientCodePage := @FCharacterSet;
     FConSettings := @FLocalConSettings;
     Statement := TZMemResultSetPreparedStatement.Create(FConSettings, ColumnsInfo, Properties);
-    VirtualResultSet := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '', FConSettings);
+    VirtualResultSet := TZMemTableResultSet.CreateWithColumns(ColumnsInfo, '', FConSettings);
     VirtualResultSet.CopyFrom(TZProtectedAbstractRODataset(Source).ResultSet, Rows, FieldPairs);
     RS := VirtualResultSet;
     if RequestLive
@@ -298,7 +305,7 @@ var Rows: TZSortedList;
     RS: IZResultSet;
     CS: IZCachedResultSet;
     Metadata: IZResultSetMetadata;
-    VirtualResultSet: TZVirtualResultSet;
+    VirtualResultSet: TZMemTableResultSet;
 begin
   if (Source = nil) or (not Source.Active) then Exit;
   if Active then Close;
@@ -331,7 +338,7 @@ begin
     FLocalConSettings.ClientCodePage := @FCharacterSet;
     FConSettings := @FLocalConSettings;
     Statement := TZMemResultSetPreparedStatement.Create(FConSettings, nil, Properties);
-    VirtualResultSet := TZVirtualResultSet.CreateFrom(TZProtectedAbstractRODataset(Source).ResultSet, Rows, FieldPairs, FConSettings);
+    VirtualResultSet := TZMemTableResultSet.CreateFrom(TZProtectedAbstractRODataset(Source).ResultSet, Rows, FieldPairs, FConSettings);
     RS := VirtualResultSet;
     if RequestLive
     then VirtualResultSet.SetConcurrency(rcUpdatable)
@@ -390,12 +397,16 @@ begin
     Result.ColumnCodePage := {$IFDEF UNICODE}zCP_UTF8{$ELSE}ZOSCodePage{$ENDIF};
     {$ENDIF}
   Result.ColumnLabel := Source.DisplayName;
+  if Source.Required
+  then Result.Nullable := ntNoNulls
+  else Result.Nullable := ntNullableUnknown;
 end;
 
 constructor TZAbstractMemTable.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FControlsCodePage := cDynamic;
+  Options := [doCheckRequired];
 end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "SQL" not used} {$ENDIF}
@@ -444,6 +455,8 @@ destructor TZAbstractMemTable.Destroy;
 begin
   if FColumnsInfo <> nil then
     FreeAndNil(FColumnsInfo);
+  If Self.Active Then
+    Self.Close;
   inherited;
 end;
 
@@ -463,6 +476,11 @@ begin
   if FConnection = nil
   then Result := FControlsCodePage
   else Result := FConnection.ControlsCodePage;
+end;
+
+function TZAbstractMemTable.InheritsFromMemTableDataSet: Boolean;
+begin
+  Result := True;
 end;
 
 procedure TZAbstractMemTable.InternalInitFieldDefs;
@@ -825,6 +843,20 @@ end;
 function TZAbstractMemTable.StoreControlsCodepage: Boolean;
 begin
   Result := FConnection = nil;
+end;
+
+{ TZMemTableResultSet }
+
+procedure TZMemTableResultSet.PostRowUpdates(OldRowAccessor,
+  NewRowAccessor: TZRowAccessor);
+var c_idx: Integer;
+    ColInfo: TZColumnInfo;
+begin
+  for c_idx := 0 to ColumnsInfo.Count -1 do begin
+    ColInfo := TZColumnInfo(ColumnsInfo[c_idx]);
+    if (ColInfo.Nullable = ntNoNulls) and NewRowAccessor.IsNull(c_idx + FirstDbcIndex) then
+      raise CreateFieldRequired(ColInfo.ColumnLabel);
+  end;
 end;
 
 end.

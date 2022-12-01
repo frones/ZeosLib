@@ -93,7 +93,9 @@ type
     function GetColumnName(ColumnIndex: Integer): string; override;
     function GetSchemaName(ColumnIndex: Integer): string; override;
     function GetTableName(ColumnIndex: Integer): string; override;
-    function IsNullable(Column: Integer): TZColumnNullableType; override;
+    // EH: 2022-11-24 commented schrammls patch. Even if a field is autoicremented,
+    // we can't hide the original nullability state.
+    //function IsNullable(ColumnIndex: Integer): TZColumnNullableType; override;
   end;
 
   TResetCallBack = procedure of Object;
@@ -253,6 +255,7 @@ end;
 }
 function TZSQLiteResultSetMetadata.GetCatalogName(ColumnIndex: Integer): string;
 begin
+  //don't load metada. There is no Catalog
   Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).CatalogName;
 end;
 
@@ -275,6 +278,7 @@ end;
 }
 function TZSQLiteResultSetMetadata.GetSchemaName(ColumnIndex: Integer): string;
 begin
+  //don't load metada. There is no Schema
   Result := TZColumnInfo(ResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).SchemaName;
 end;
 
@@ -296,14 +300,14 @@ end;
   @return the nullability status of the given column; one of <code>columnNoNulls</code>,
     <code>columnNullable</code> or <code>columnNullableUnknown</code>
 }
-function TZSQLiteResultSetMetadata.IsNullable(Column: Integer):
+(*function TZSQLiteResultSetMetadata.IsNullable(ColumnIndex: Integer):
   TZColumnNullableType;
 begin
-  if IsAutoIncrement(Column) then
+  if IsAutoIncrement(ColumnIndex) then
     Result := ntNullable
-  else
-    Result := inherited IsNullable(Column);
-end;
+  else}
+    Result := inherited IsNullable(ColumnIndex);
+end;*)
 
 {**
   Initializes columns with additional data.

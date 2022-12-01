@@ -130,6 +130,9 @@ type
     procedure GetTimestamp(ColumnIndex: Integer; var Result: TZTimeStamp); reintroduce; overload;
     function GetBlob(ColumnIndex: Integer; LobStreamMode: TZLobStreamMode = lsmRead): IZBlob;
     {$IFDEF WITH_COLUMNS_TO_JSON}
+    /// <summary>Fill the JSONWriter with column data</summary>
+    /// <param>"JSONComposeOptions" the TZJSONComposeOptions used for composing
+    ///  the JSON contents</param>
     procedure ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF}; JSONComposeOptions: TZJSONComposeOptions);
     {$ENDIF WITH_COLUMNS_TO_JSON}
   end;

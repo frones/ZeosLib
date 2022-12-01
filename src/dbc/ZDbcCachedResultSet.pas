@@ -76,8 +76,6 @@ type
   // Forward declarations.
   IZCachedResultSet = interface;
 
-  TZHasDefaultValues = ( hdvUnknownDefaults, hdvNoDefaults, hdvHasDefaults);
-
   {** Resolver to post updates. }
   IZCachedResolver = interface (IZInterface)
     ['{546ED716-BB88-468C-8CCE-D7111CF5E1EF}']
@@ -133,13 +131,19 @@ type
     ['{D2694EF6-F6B6-4A11-BB46-456ED63DCC18}']
     /// <summary>Set the readonly state of a field. The value will be ignored
     ///  if the field is not writable.</summary>
-    /// <param>"ColumnIndex" the columnnumber of the field.</param>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" if <c>true</c> then the field will be ignored on
     ///  generating the dml's.</param>
     procedure SetReadOnly(ColumnIndex: Integer; Value: Boolean);
     /// <summary>Set the searchable state of a field. The value will be ignored
     ///  if the field is not searchable at all e.g. LOB's.</summary>
-    /// <param>"ColumnIndex" the columnnumber of the field.</param>
+    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
+    ///  is 1. This will change in future to a zero based index. It's recommented
+    ///  to use an incrementation of FirstDbcIndex.</param>
     /// <param>"Value" if <c>true</c> then the field will be ignored on
     ///  generating the where clause of the dml's.</param>
     procedure SetSearchable(ColumnIndex: Integer; Value: Boolean);
@@ -556,6 +560,7 @@ var SQLType: TZSQLType;
   DataAddress: Pointer;
   IsNull: Boolean;
   CP: Word;
+  CL: Integer;
 label Fail;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -565,11 +570,12 @@ begin
     DataAddress := RowAccessor.GetColumnData(ColumnIndex, IsNull);
     SQLType := RowAccessor.GetColumnType(ColumnIndex);
     CP := RowAccessor.GetColumnCodePage(ColumnIndex);
+    CL := RowAccessor.GetColumnLength( ColumnIndex);
     case SQLType of
-      stBytes: if RowAccessor.GetColumnLength( ColumnIndex) <= 0
+      stBytes: if (CL <= 0) or (CL = MaxInt)
           then Result := TZRowAccessorBytesLob.CreateWithDataAddess(DataAddress, zCP_Binary, ConSettings, FOpenLobStreams)
           else goto Fail;
-      stString, stUnicodeString: if RowAccessor.GetColumnLength( ColumnIndex) <= 0 then
+      stString, stUnicodeString: if (CL <= 0) or (CL = MaxInt) then
           if CP = zCP_UTF16
           then Result := TZRowAccessorUnicodeStringLob.CreateWithDataAddess(DataAddress, CP, ConSettings, FOpenLobStreams)
           else Result := TZRowAccessorRawByteStringLob.CreateWithDataAddess(DataAddress, CP, ConSettings, FOpenLobStreams)
@@ -2336,7 +2342,6 @@ var TempRow: PZRowBuffer;
   Succeeded: Boolean;
 begin
   CheckUpdatable;
-
   { Creates a new row. }
   TempRow := FRowAccessor.RowBuffer;
   FRowAccessor.Alloc;
@@ -2365,6 +2370,7 @@ begin
   end;
   FRowsList.Add(FRowAccessor.RowBuffer);
   FRowAccessor.ClearBuffer(FInsertedRow, True);
+
   LastRowNo := FRowsList.Count;
   MoveAbsolute(LastRowNo);
 end;

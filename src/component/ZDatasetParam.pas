@@ -1777,15 +1777,15 @@ begin
   if GetIsNullsAddr(Integer(Index), DataAddr)
   then Result := 0
   else case FSQLDataType of
-    stBoolean: Result := Ord(FData.pvBool);
-    stByte: Result := FData.pvByte;
-    stShort: Result := FData.pvShortInt;
-    stWord: Result := FData.pvWord;
-    stSmall: Result := FData.pvSmallInt;
-    stLongWord: Result := FData.pvCardinal;
-    stInteger: Result := FData.pvInteger;
-    stString: Result := ZFastCode.RawToInt(RawByteString(FData.pvPointer));
-    stUnicodeString: Result := ZFastCode.UnicodeToInt(UnicodeString(FData.pvPointer));
+    stBoolean: Result := Ord(PBoolean(DataAddr)^);
+    stByte: Result := PByte(DataAddr)^;
+    stShort: Result := PShortInt(DataAddr)^;
+    stWord: Result := PWord(DataAddr)^;
+    stSmall: Result := PSmallInt(DataAddr)^;
+    stLongWord: Result := PCardinal(DataAddr)^;
+    stInteger: Result := PInteger(DataAddr)^;
+    stString: Result := ZFastCode.RawToInt(RawByteString(DataAddr^));
+    stUnicodeString: Result := ZFastCode.UnicodeToInt(UnicodeString(DataAddr^));
     else Result := GetAsInt64s(Index);
   end;
 end;
@@ -2022,7 +2022,7 @@ end;
 function TZParam.GetIsNulls(Index: Cardinal): Boolean;
 begin
   if (FArraySize > 0) and (Index <= FArraySize)
-  then Result := TBooleanDynArray(FData.pvDynArray.VArray)[Index]
+  then Result := TBooleanDynArray(FData.pvDynArray.VIsNullArray)[Index]
   else if (Index > FArraySize)
     then raise CreateIndexError(Index)
     else raise CreateConversionError(FSQLDataType, stArray);
@@ -3033,21 +3033,19 @@ var DataAddr: PPointer;
     IsNullAddr: PBoolean;
 begin
   CheckDataIndex(Integer(Index), stBinaryStream, vtInterface, DataAddr, IsNullAddr);
-  case FSQLDataType of
-    stBytes:  TBytes(DataAddr^) := {$IFDEF TBLOBDATA_IS_TBYTES}Value{$ELSE}BufferToBytes(Pointer(Value), Length(Value)){$ENDIF};
-    stBinaryStream: begin
-        if DataAddr^ = nil then
-          if Integer(Index) < 0
-          then IZBlob(DataAddr^) := TZLocalMemBLob.Create(nil)
-          else IInterface(DataAddr^) := TZLocalMemBLob.Create(nil);
-        if Integer(Index) < 0
-        then IZBlob(DataAddr^).SetBuffer(Pointer(Value), Length(Value))
-        else (IInterface(DataAddr^) as IZBlob).SetBuffer(Pointer(Value), Length(Value));
-      end;
-    else raise CreateConversionError(FSQLDataType, stBinaryStream);
+  if Pointer(Value) = nil
+  then SetIsNulls(Integer(Index), True)
+  else begin
+    case FSQLDataType of
+      stBytes:  TBytes(DataAddr^) := {$IFDEF TBLOBDATA_IS_TBYTES}Value{$ELSE}BufferToBytes(Pointer(Value), Length(Value)){$ENDIF};
+      stBinaryStream: if Integer(Index) < 0
+            then IZBlob(DataAddr^) := TZLocalMemBLob.Create(nil).CreateWithData(Pointer(Value), Length(Value))
+            else IInterface(DataAddr^) := TZLocalMemBLob.CreateWithData(Pointer(Value), Length(Value));
+      else raise CreateConversionError(FSQLDataType, stBinaryStream);
+    end;
+    IsNullAddr^ := False;
+    FBound := True;
   end;
-  IsNullAddr^ := False;
-  FBound := True;
 end;
 
 procedure TZParam.SetAsBoolean(Value: Boolean);
@@ -3114,15 +3112,19 @@ var DataAddr: PPointer;
   end;
 begin
   CheckDataIndex(Integer(Index), stBytes, vtNull, DataAddr, IsNullAddr);
-  case FSQLDataType of
-    stBytes: TBytes(DataAddr^) := Value;
-    stGUID: if Length(Value) = SizeOf(TGUID)
-            then PGUID(DataAddr)^ := PGUID(Value)^
-            else raise CreateConversionError(stGUID, stBytes);
-    else BytesToBlob;
+  if Value = nil
+  then SetIsNulls(Integer(Index), true)
+  else begin
+    case FSQLDataType of
+      stBytes: TBytes(DataAddr^) := Value;
+      stGUID: if Length(Value) = SizeOf(TGUID)
+              then PGUID(DataAddr)^ := PGUID(Value)^
+              else raise CreateConversionError(stGUID, stBytes);
+      else BytesToBlob;
+    end;
+    IsNullAddr^ := False;
+    FBound := True;
   end;
-  IsNullAddr^ := False;
-  FBound := True;
 end;
 
 procedure TZParam.SetAsCardinal(Value: Cardinal);

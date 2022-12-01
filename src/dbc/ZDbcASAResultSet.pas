@@ -285,7 +285,7 @@ uses
 { TZASAResultSet }
 
 {$IFDEF WITH_COLUMNS_TO_JSON}
-procedure TZASAAbstractResultSet.ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TResultsWriter{$ENDIF};
+procedure TZASAAbstractResultSet.ColumnsToJSON(ResultsWriter: {$IFDEF MORMOT2}TResultsWriter{$ELSE}TJSONWriter{$ENDIF};
   JSONComposeOptions: TZJSONComposeOptions);
 var L: NativeUInt;
     P: Pointer;

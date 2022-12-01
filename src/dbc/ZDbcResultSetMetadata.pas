@@ -813,7 +813,7 @@ begin
   if not Loaded then
      LoadColumns;
   // '' = NULL / no default value, '''''' = empty string (''), etc.
-  Result := not(TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).DefaultValue = '');
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).DefaultValue <> '';
 end;
 
 {**
