@@ -368,13 +368,19 @@ begin
 end;
 
 procedure TZAbstractRWDataSet.InternalOpen;
-var Value: String;
+{$IF DECLARED(DSProps_InsertReturningFields)}
+var
+  Value: String;
+{$IFEND}
 begin
+  {$IF DECLARED(DSProps_InsertReturningFields)}
   if doCheckRequired in Options then begin
     Value := Properties.Values[DSProps_InsertReturningFields];
     if Value <> '' then
       FInsertReturningFields := ExtractFields(Value, [';', ',']);
   end;
+  {$IFEND}
+
   inherited InternalOpen;
 end;
 
