@@ -72,7 +72,6 @@ const
   MYSQL_ERRMSG_SIZE    = 512;
   SQLSTATE_LENGTH      = 5;
 
-  MYSQL_PORT           = 3306;
   LOCAL_HOST           = 'localhost';
 
   { Field's flags }

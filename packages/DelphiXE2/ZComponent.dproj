@@ -122,9 +122,6 @@
 			<VerInfo_Locale>1033</VerInfo_Locale>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
-			<DCC_HppOutput>C:\Program Files (x86)\Embarcadero\RAD Studio\9.0\Libs\Zeos\packages\DelphiXE2\Win32\CPP\</DCC_HppOutput>
-			<DCC_BpiOutput>C:\Program Files (x86)\Embarcadero\RAD Studio\9.0\Libs\Zeos\packages\DelphiXE2\</DCC_BpiOutput>
-			<DCC_ObjOutput>C:\Program Files (x86)\Embarcadero\RAD Studio\9.0\Libs\Zeos\packages\DelphiXE2\Win32\CPP\</DCC_ObjOutput>
 			<DCC_DebugDCUs>true</DCC_DebugDCUs>
 			<VerInfo_Locale>1033</VerInfo_Locale>
 		</PropertyGroup>

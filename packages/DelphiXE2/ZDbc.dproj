@@ -122,9 +122,6 @@
 			<VerInfo_Locale>1033</VerInfo_Locale>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
-			<DCC_HppOutput>C:\Program Files (x86)\Embarcadero\RAD Studio\9.0\Libs\Zeos\packages\DelphiXE2\Win32\CPP\</DCC_HppOutput>
-			<DCC_BpiOutput>C:\Program Files (x86)\Embarcadero\RAD Studio\9.0\Libs\Zeos\packages\DelphiXE2\</DCC_BpiOutput>
-			<DCC_ObjOutput>C:\Program Files (x86)\Embarcadero\RAD Studio\9.0\Libs\Zeos\packages\DelphiXE2\Win32\CPP\</DCC_ObjOutput>
 			<DCC_DebugDCUs>true</DCC_DebugDCUs>
 			<VerInfo_Locale>1033</VerInfo_Locale>
 		</PropertyGroup>
@@ -145,7 +142,7 @@
 			<DCCReference Include="..\..\src\dbc\ZDbcASAResultSet.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcASAStatement.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcASAUtils.pas"/>
-			<DCCReference Include="..\..\src\dbc\ZDbcBeginnerStatement.pas"/>	
+			<DCCReference Include="..\..\src\dbc\ZDbcBeginnerStatement.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcCache.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcCachedResultSet.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcConnection.pas"/>
