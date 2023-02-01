@@ -1554,7 +1554,7 @@ end;
 }
 procedure TZAbstractConnection.GetColumnNames(const TablePattern, ColumnPattern: string; List: TStrings);
 begin
- GetColumnNames('', TablePattern, ColumnPattern, List);
+ GetColumnNames(FCatalog, TablePattern, ColumnPattern, List);
 end;
 
 {**

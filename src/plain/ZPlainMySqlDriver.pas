@@ -1406,6 +1406,7 @@ begin
   FLoader.AddLocation(LINUX_DLL57_LOCATION);
   FLoader.AddLocation(LINUX_DLL57_LOCATION_EMBEDDED);
   FLoader.AddLocation(LINUX_DLL58_LOCATION);
+  FLoader.AddLocation(LINUX_DLL58_LOCATION_EMBEDDED);
 {$ENDIF}
   LoadCodePages;
 end;
