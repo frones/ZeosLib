@@ -1651,7 +1651,7 @@ end;
 
 function TAbstractODBCResultSet.IsNull(ColumnIndex: Integer): Boolean;
 begin
-  Assert((ColumnIndex >= FirstDbcIndex) and (ColumnIndex{$IFDEF GENERIC_INDEX}<{$ELSE}<={$ENDIF} fColumnCount), SColumnIsNotAccessable);
+  CheckError((ColumnIndex >= FirstDbcIndex) and (ColumnIndex{$IFDEF GENERIC_INDEX}<{$ELSE}<={$ENDIF} fColumnCount), SColumnIsNotAccessable);
   with TZODBCColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
   {$R-}
   fStrLen_or_Ind := StrLen_or_IndArray[fCurrentBufRowNo-1];
@@ -2220,6 +2220,7 @@ var
   OffSetPtr: PAnsiChar;
   i: Integer;
   L: Cardinal absolute I;
+  Success: Boolean;
 begin
   inherited Create(OpenLobStreams);
   if StrLen_or_IndPtr^ = SQL_NULL_DATA then
@@ -2231,11 +2232,13 @@ begin
       SetCapacity(StrLen_or_IndPtr^);
       OffSetPtr := @FDataRefAddress.VarLenData.Data;
       for i := 1 to StrLen_or_IndPtr^ div MaxBufSize do begin
-        Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber,
-          SQL_C_BINARY, OffSetPtr, MaxBufSize, StrLen_or_IndPtr));
+        Success := SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber,
+          SQL_C_BINARY, OffSetPtr, MaxBufSize, StrLen_or_IndPtr);
+        Assert(Success);
         Inc(OffSetPtr, MaxBufSize);
       end;
-      Assert(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_BINARY, OffSetPtr, MaxBufSize, StrLen_or_IndPtr) = SQL_SUCCESS);
+      Success := PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_BINARY, OffSetPtr, MaxBufSize, StrLen_or_IndPtr) = SQL_SUCCESS;
+      Assert(Success);
     end else if StrLen_or_IndPtr^ = SQL_NO_TOTAL then begin
       SetCapacity(MaxBufSize);
       OffSetPtr := @FDataRefAddress.VarLenData.Data;
@@ -2261,6 +2264,7 @@ var
   OffSetPtr: PAnsiChar;
   i: Integer;
   L: Cardinal absolute I;
+  Success: Boolean;
 begin
   inherited Create(ConSettings^.ClientCodePage^.CP, ConSettings, OpenLobStreams);
   if StrLen_or_IndPtr^ = SQL_NULL_DATA then
@@ -2273,10 +2277,12 @@ begin
       SetCapacity(StrLen_or_IndPtr^);
       OffSetPtr := @FDataRefAddress^.VarLenData.Data;
       for i := 1 to StrLen_or_IndPtr^ div MaxBufSize do begin
-        Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr));
+        Success := SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr);
+        Assert(Success);
         Inc(OffSetPtr, (MaxBufSize-SizeOf(AnsiChar)));
       end;
-      Assert(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr) = SQL_SUCCESS);
+      Success := PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_CHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr) = SQL_SUCCESS;
+      Assert(Success);
     end else begin
       Assert(StrLen_or_IndPtr^ = SQL_NO_TOTAL);
       SetCapacity(MaxBufSize);
@@ -2303,6 +2309,7 @@ var
   OffSetPtr: PAnsiChar;
   I: Integer;
   L: Cardinal absolute I;
+  Success: Boolean;
 begin
   inherited Create(zCP_UTF16, ConSettings, OpenLobStreams);
   if StrLen_or_IndPtr^ = SQL_NULL_DATA then
@@ -2315,10 +2322,12 @@ begin
       SetCapacity(StrLen_or_IndPtr^);
       OffSetPtr := @FDataRefAddress^.VarLenData.Data;
       for i := 1 to StrLen_or_IndPtr^ div MaxBufSize do begin
-        Assert(SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr));
+        Success := SQL_SUCCESS_WITH_INFO = PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr);
+        Assert(Success);
         Inc(OffSetPtr, (MaxBufSize-SizeOf(WideChar)));
       end;
-      Assert(PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr) = SQL_SUCCESS);
+      Success := PlainDriver.SQLGetData(StmtHandle, ColumnNumber, SQL_C_WCHAR, OffSetPtr, MaxBufSize, StrLen_or_IndPtr) = SQL_SUCCESS;
+      Assert(Success);
     end else begin
       Assert(StrLen_or_IndPtr^ = SQL_NO_TOTAL);
       SetCapacity(MaxBufSize);

@@ -3381,19 +3381,27 @@ begin
 end;
 
 procedure TSybaseDBLibPLainDriver.LoadApi;
+var
+  Success: Boolean;
 begin
   inherited LoadApi;
   {$IFDEF MSWINDOWS}
   if assigned(FdbSetVersion) then begin
-    if FdbSetVersion(TDSDBVERSION_100) = DBFAIL then
-      Assert(FdbSetVersion(TDSDBVERSION_46) = DBSUCCEED, 'failed to set the TDS version')
+    if FdbSetVersion(TDSDBVERSION_100) = DBFAIL then begin
+      Success := FdbSetVersion(TDSDBVERSION_46) = DBSUCCEED;
+      Assert(Success , 'failed to set the TDS version')
+    end;
   end else begin
-    if FdbSetVersion_stdcall(TDSDBVERSION_100) = DBFAIL then
-      Assert(FdbSetVersion_stdcall(TDSDBVERSION_46) = DBSUCCEED, 'failed to set the TDS version');
+    if FdbSetVersion_stdcall(TDSDBVERSION_100) = DBFAIL then begin
+      Success := FdbSetVersion_stdcall(TDSDBVERSION_46) = DBSUCCEED;
+      Assert(Success , 'failed to set the TDS version');
+    end;
   end;
   {$ELSE}
-    if dbSetVersion(TDSDBVERSION_100) = DBFAIL then
-      Assert(dbSetVersion(TDSDBVERSION_46) = DBSUCCEED, 'failed to set the TDS version')
+    if dbSetVersion(TDSDBVERSION_100) = DBFAIL then begin
+      Success := dbSetVersion(TDSDBVERSION_46) = DBSUCCEED;
+      Assert(Success , 'failed to set the TDS version')
+    end;
   {$ENDIF}
 end;
 
