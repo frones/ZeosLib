@@ -5280,6 +5280,7 @@ var
   Blob: IZBlob;
   CLob: IZCLob;
   FieldCP, NativeCP: Word;
+  InterfaceQueryResult: longint;
 begin
   CheckActive;
 
@@ -5296,7 +5297,8 @@ begin
       case Field.DataType of
         {$IFDEF WITH_WIDEMEMO}
         ftWideMemo: begin
-            Assert(Blob.QueryInterface(IZCLob, CLob) = S_OK);
+            InterfaceQueryResult := Blob.QueryInterface(IZCLob, CLob);
+            Assert(InterfaceQueryResult = S_OK);
             Result := Clob.GetStream(zCP_UTF16);
           end;
         {$ENDIF}
@@ -5307,15 +5309,18 @@ begin
       {XE10.3 x64 bug: a ObjectCast of a descendand doesn't work -> use exact class or the "As" operator}
               ((Field as TMemoField).Transliterate and (FieldCP <> NativeCP))) then
                 FieldCP := NativeCP;
-            Assert(Blob.QueryInterface(IZCLob, CLob) = S_OK);
+            InterfaceQueryResult := Blob.QueryInterface(IZCLob, CLob);
+            Assert(InterfaceQueryResult = S_OK);
             Result := Clob.GetStream(FieldCP);
           end;
         else Result := Blob.GetStream
       end;
+
       if Mode <> bmRead then
         Blob.SetOnUpdateHandler(OnBlobUpdate, NativeInt(Field));
     end;
   end;
+
   if Result = nil then
     Result := TMemoryStream.Create;
 end;
