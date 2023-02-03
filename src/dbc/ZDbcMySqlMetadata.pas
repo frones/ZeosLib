@@ -1855,7 +1855,11 @@ begin
       Format('SHOW TABLE STATUS FROM %s LIKE ''%s''',
       [IC.Quote(LCatalog, iqCatalog), LTable])) do
     begin
-      ColumnIndexes[1] := FindColumn('Type');
+      ColumnIndexes[1] := FindColumn('Engine');
+      // MySQL versions 4.0 and before called that column 'Type', so let's look
+      // for it, if there is no 'Engine column'.
+      if ColumnIndexes[1] = InvalidDbcIndex then
+        ColumnIndexes[1] := FindColumn('Type');
       ColumnIndexes[2] := FindColumn('Comment');
       while Next do
       begin
@@ -1997,7 +2001,11 @@ begin
       Format('SHOW TABLE STATUS FROM %s',
       [IC.Quote(LCatalog, iqCatalog)])) do
     begin
-      ColumnIndexes[1] := FindColumn('Type');
+      ColumnIndexes[1] := FindColumn('Engine');
+      // MySQL versions 4.0 and before called that column 'Type', so let's look
+      // for it, if there is no 'Engine column'.
+      if ColumnIndexes[1] = InvalidDbcIndex then
+        ColumnIndexes[1] := FindColumn('Type');
       ColumnIndexes[2] := FindColumn('Comment');
       ColumnIndexes[3] := FindColumn('Name');
       while Next do
@@ -2146,7 +2154,11 @@ begin
       Format('SHOW TABLE STATUS FROM %s',
       [IC.Quote(LForeignCatalog, iqCatalog)])) do
     begin
-      ColumnIndexes[1] := FindColumn('Type');
+      ColumnIndexes[1] := FindColumn('Engine');
+      // MySQL versions 4.0 and before called that column 'Type', so let's look
+      // for it, if there is no 'Engine column'.
+      if ColumnIndexes[1] = InvalidDbcIndex then
+        ColumnIndexes[1] := FindColumn('Type');
       ColumnIndexes[2] := FindColumn('Comment');
       ColumnIndexes[3] := FindColumn('Name');
       while Next do
