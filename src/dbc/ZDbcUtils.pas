@@ -2075,7 +2075,8 @@ W_Conv: ZSysUtils.ValidGUIDToBinary(PWideChar(P), @GUID.D1);
       end;
     vtBytes: case TZSQLType(ZArray.VArrayType) of
         stGUID: begin
-                  Assert(Length(TBytesDynArray(ZArray.VArray)[Index]) = SizeOf(TGUID), 'wrong guid value');
+                  if Length(TBytesDynArray(ZArray.VArray)[Index]) <> SizeOf(TGUID) then
+                    raise EZSQLException.Create('The GUID value has an incorrect length.');
                   GUID^ := PGUID(TBytesDynArray(ZArray.VArray)[Index])^;
                 end;
         else goto DoRaise;
@@ -2093,6 +2094,7 @@ end;
 procedure ArrayValueToBCD(ZArray: PZArray; Index: Integer; var BCD: TBCD);
 var P: Pointer;
   L: Integer;
+  Success: Boolean;
 label W_Conv, A_Conv, DoRaise;
 begin
   {$R-}
@@ -2110,13 +2112,15 @@ begin
     vtRawByteString: begin
         P := Pointer(TRawByteStringDynArray(ZArray.VArray)[Index]);
         L := Length(TRawByteStringDynArray(ZArray.VArray)[Index]);
-A_Conv: Assert(ZSysUtils.TryRawToBcd(PAnsiChar(P), L, BCD, '.'), 'wrong bcd value');
+A_Conv: Success := ZSysUtils.TryRawToBcd(PAnsiChar(P), L, BCD, '.');
+        Assert(Success, 'wrong bcd value');
       end;
     {$IFDEF UNICODE}vtString,{$ENDIF}
     vtUnicodeString: begin
         P := Pointer(TUnicodeStringDynArray(ZArray.VArray)[Index]);
         L := Length(TUnicodeStringDynArray(ZArray.VArray)[Index]);
-W_Conv: Assert(ZSysUtils.TryUniToBcd(PWideChar(P), L, BCD, '.'), 'wrong bcd value');
+W_Conv: Success := ZSysUtils.TryUniToBcd(PWideChar(P), L, BCD, '.');
+        Assert(Success, 'wrong bcd value');
       end;
     vtBoolean, vtBigDecimal, vtCurrency, vtDouble, vtInteger, vtUInteger,
     vtNull: case TZSQLType(ZArray.VArrayType) of

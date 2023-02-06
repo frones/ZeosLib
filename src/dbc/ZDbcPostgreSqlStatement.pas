@@ -2290,6 +2290,7 @@ var
   NewSQLType: TZSQLType;
   AllOIDsKnown: Boolean;
   boundOIDs: array of OID;
+  Success: Boolean;
   procedure RebindIfRequired(i: Integer; NewSQLType: TZSQLType; oldoid, newoid: OID);
   var
     TS: TZTimeStamp;
@@ -2385,7 +2386,8 @@ begin
           NewSQLType := PostgreSQLToSQLType(fOIDAsBlob, pgOID, -1);
           if NewSQLType = stUnknown then begin//EH: domain types are unknonw for us..
             //pg does not return the underlaying OID grumble...
-            Assert(FPostgreSQLConnection.FindDomainBaseType(pgOID, tmpOID));
+            Success := FPostgreSQLConnection.FindDomainBaseType(pgOID, tmpOID);
+            Assert(Success);
             NewSQLType := PostgreSQLToSQLType(fOIDAsBlob, tmpOID, -1);
             FPQParamOIDs[i] := tmpOID;
             RebindIfRequired(i, NewSQLType, boundOIDs[i], tmpOID);

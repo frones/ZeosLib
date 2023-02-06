@@ -866,7 +866,7 @@ begin
     L := Length(AValue);
     case CheckParameterIndex(Index{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, stBytes) of
       adGUID: begin
-                Assert(L=SizeOf(TGUID), 'UID-Size missmatch');
+                CheckError(L=SizeOf(TGUID), 'UID-Size missmatch');
                 GUIDToBuffer(@UID.D1, PWideChar(fByteBuffer), [guidWithBrackets, guidSet0Term]);
                 SetPWideChar(Index, PWideChar(fByteBuffer), 38); //ad GUID is a BSTR?
               end;

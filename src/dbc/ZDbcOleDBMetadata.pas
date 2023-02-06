@@ -780,7 +780,8 @@ begin
     nPropertySets := 0;
     prgPropertySets := nil;
     OleCheck( DBProperties.GetProperties( 1, @PropIDSet, nPropertySets, prgPropertySets ) );
-    Assert( nPropertySets = 1 ); Assert(prgPropertySets.cProperties = PropCount);
+    Assert(nPropertySets = 1);
+    Assert(prgPropertySets.cProperties = PropCount);
     for i := 0 to prgPropertySets.cProperties-1 do begin
       PropSet := prgPropertySets^;
       if PropSet.rgProperties^[i].dwStatus <> DBPROPSTATUS(DBPROPSTATUS_OK) then

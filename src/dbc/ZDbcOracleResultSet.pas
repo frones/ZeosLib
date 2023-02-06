@@ -3454,6 +3454,7 @@ var P: Pointer;
   L: NativeUint;
   R: RawByteString;
   Stream: TZAbstracOracleLobStream;
+  Success: Boolean;
 begin
   Create(Connection, LobLocator, SQLT_BLOB, OpenLobStreams);
   R := '';
@@ -3466,8 +3467,10 @@ begin
     else Stream := TZOracleInternalLobStream32.Create(Self, FOwner, OpenLobStreams);
     try
       Stream.CreateTemporary;
-      if P <> nil then
-        Assert(Stream.Write(P^, L) = NativeInt(L));
+      if P <> nil then begin
+        Success := Stream.Write(P^, L) = NativeInt(L);
+        Assert(Success);
+      end;
     finally
       Stream.Free;
     end;
@@ -3509,6 +3512,7 @@ var P: Pointer;
   R: RawByteString;
   U: UnicodeString;
   Stream: TZAbstracOracleLobStream;
+  Success: Boolean;
 begin
   Create(Connection, LobLocator, CharsetForm, csid, OpenLobStreams);
   FLobStreamMode := lsmWrite;
@@ -3526,7 +3530,8 @@ begin
     else Stream := TZOracleInternalLobStream32.Create(Self, FOwner, OpenLobStreams);
     try
       Stream.CreateTemporary;
-      Assert(Stream.Write(P^, L) = NativeInt(L));
+      Success := Stream.Write(P^, L) = NativeInt(L);
+      Assert(Success);
     finally
       Stream.Free;
     end;

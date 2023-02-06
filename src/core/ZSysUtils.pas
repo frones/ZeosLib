@@ -2162,6 +2162,11 @@ Type
 /// <param>"Precision" the new Precision after rounding.</param>
 procedure ZRoundBCD(var Value: TBCD; Scale: TZBCDScale; Out Precision: Word);
 
+/// <summary>Raises an EZSqlException With Message ErrorMsg if Success is false.</summary>
+/// <param name="Success">The condition that is to be checked. False = failed</param>
+/// <param name="ErrorMsg">The message text for the EZSqlException</param>
+procedure CheckError(const Success: Boolean; const ErrorMsg: String);
+
 var
   /// <summary>defines a lookup table for Byte to Nibble conversions.</summary>
   ZBase100Byte2BcdNibbleLookup: array[0..99] of Byte;
@@ -8212,6 +8217,12 @@ begin
     ZBcdNibble2DwoDigitLookupW[N] := ZFastCode.TwoDigitLookupW[I];
     ZBcdNibble2DwoDigitLookupLW[N] := ZFastCode.TwoDigitLookupLW[I];
   end;
+end;
+
+procedure CheckError(const Success: Boolean; const ErrorMsg: String);
+begin
+  if not Success then
+    raise EZSQLException.Create(ErrorMsg);
 end;
 
 initialization;
