@@ -235,6 +235,10 @@ type
     FKnowServerType: Boolean;
     FIsMariaDB: Boolean;
     FIsMySQL: Boolean;
+    function OldUncachedGetExportedKeys(const Catalog, Schema, Table: string): IZResultSet;
+    function OldUncachedGetImportedKeys(const Catalog, Schema, Table: string): IZResultSet;
+    function NewUncachedGetExportedKeys(const Catalog, Schema, Table: string): IZResultSet;
+    function NewUncachedGetImportedKeys(const Catalog, Schema, Table: string): IZResultSet;
   protected
     procedure detectServerType;
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-26
@@ -1830,8 +1834,8 @@ begin
   end;
 end;
 
-function TZMySQLDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
-  const Schema: string; const Table: string): IZResultSet;
+function TZMySQLDatabaseMetadata.OldUncachedGetImportedKeys(const Catalog,
+  Schema, Table: string): IZResultSet;
 var
   I: Integer;
   KeySeq: Integer;
@@ -1840,9 +1844,6 @@ var
   CommentList, KeyList: TStrings;
   ColumnIndexes : Array[1..2] of integer;
 begin
-  if Table = '' then
-    raise EZSQLException.Create(STableIsNotSpecified); //CHANGE IT!
-
   Result := inherited UncachedGetImportedKeys(Catalog, Schema, Table);
 
   GetCatalogAndNamePattern(Catalog, Schema, Table,
@@ -1975,8 +1976,7 @@ end;
   @return <code>ResultSet</code> - each row is a foreign key column description
   @see #getImportedKeys
 }
-function TZMySQLDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
-  const Schema: string; const Table: string): IZResultSet;
+Function TZMySQLDatabaseMetadata.OldUncachedGetExportedKeys(Const Catalog, Schema, Table: String): IZResultSet;
 var
   I: Integer;
   Len: NativeUInt;
@@ -1986,9 +1986,6 @@ var
   CommentList, KeyList: TStrings;
   ColumnIndexes : Array[1..3] of integer;
 begin
-  if Table = '' then
-    raise EZSQLException.Create(STableIsNotSpecified); //CHANGE IT!
-
   Result:=inherited UncachedGetExportedKeys(Catalog, Schema, Table);
 
   GetCatalogAndNamePattern(Catalog, Schema, Table,
@@ -3253,6 +3250,103 @@ function TZMySQLDatabaseMetadata.isMySQL: Boolean;
 begin
   if not FKnowServerType then detectServerType;
   result := FIsMySQL;
+end;
+
+Function TZMySQLDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string; const Schema: string; const Table: string): IZResultSet;
+begin
+  if Table = '' then
+    raise EZSQLException.Create(STableIsNotSpecified); //CHANGE IT!
+
+  If Self.isMariaDB Or (Self.GetConnection.GetHostVersion Div 1000000 >= 5) Then
+    Result := NewUncachedGetExportedKeys(Catalog, Schema, Table)
+  Else
+    Result := OldUncachedGetExportedKeys(Catalog, Schema, Table);
+end;
+
+Function TZMySQLDatabaseMetadata.NewUncachedGetExportedKeys(Const Catalog, Schema, Table: String): IZResultSet;
+var
+  LCatalog, LTable: string;
+  query, cond: String;
+begin
+  GetCatalogAndNamePattern(Catalog, Schema, Table,
+    iqTable, LCatalog, LTable);
+
+  query := 'SELECT' + sLineBreak +
+    '  CONSTRAINT_CATALOG PKTABLE_CAT, REFERENCED_TABLE_SCHEMA PKTABLE_SCHEM, REFERENCED_TABLE_NAME PKTABLE_NAME,' + sLineBreak +
+    '  REFERENCED_COLUMN_NAME PKCOLUMN_NAME, TABLE_CATALOG FKTABLE_CAT, TABLE_SCHEMA FKTABLE_SCHEM, TABLE_NAME FKTABLE_NAME,' + sLineBreak +
+    '  COLUMN_NAME FKCOLUMN_NAME, ORDINAL_POSITION KEY_SEQ, NULL UPDATE_RULE, NULL DELETE_RULE, CONSTRAINT_NAME FK_NAME,' + sLineBreak +
+    '  NULL PK_NAME, NULL DEFERRABILITY' + sLineBreak +
+    'FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE';
+
+  cond := '';
+
+  If Table <> '' Then
+    cond := cond + sLineBreak + '  ' + ConstructNameCondition(Table, 'REFERENCED_TABLE_NAME');
+
+  If Schema <> '' Then
+  Begin
+    If cond <> '' Then
+      cond := cond + sLineBreak + '  AND ';
+
+    cond := cond + ConstructNameCondition(Schema, 'CONSTRAINT_CATALOG');
+  End;
+
+  If LCatalog <> '' Then
+  Begin
+    If cond <> '' Then
+      cond := cond + sLineBreak + '  AND ';
+
+    cond := cond + ConstructNameCondition(LCatalog, 'CONSTRAINT_SCHEMA');
+  End;
+
+  If cond <> '' Then
+    query := query + sLineBreak + 'WHERE' + cond;
+
+  Result := CopyToVirtualResultSet(GetConnection.CreateStatement.ExecuteQuery(query),
+    ConstructVirtualResultSet(ExportedKeyColumnsDynArray));
+End;
+
+Function TZMySQLDatabaseMetadata.NewUncachedGetImportedKeys(Const Catalog, Schema, Table: String): IZResultSet;
+Var
+  query, cond, LCatalog, LTable: String;
+Begin
+  GetCatalogAndNamePattern(Catalog, Schema, Table,
+    iqTable, LCatalog, LTable);
+
+  query := 'SELECT' + sLineBreak +
+    '  CONSTRAINT_CATALOG PKTABLE_CAT, REFERENCED_TABLE_SCHEMA PKTABLE_SCHEM, REFERENCED_TABLE_NAME PKTABLE_NAME,' + sLineBreak +
+    '  REFERENCED_COLUMN_NAME PKCOLUMN_NAME, TABLE_CATALOG FKTABLE_CAT, TABLE_SCHEMA FKTABLE_SCHEM, TABLE_NAME FKTABLE_NAME,' + sLineBreak +
+    '  COLUMN_NAME FKCOLUMN_NAME, ORDINAL_POSITION KEY_SEQ, NULL UPDATE_RULE, NULL DELETE_RULE, CONSTRAINT_NAME FK_NAME,' + sLineBreak +
+    '  NULL PK_NAME, NULL DEFERRABILITY' + sLineBreak +
+    'FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE';
+
+  cond := sLineBreak + '  REFERENCED_TABLE_NAME IS NOT NULL';
+
+  If Table <> '' Then
+    cond := cond + sLineBreak + '  AND ' + ConstructNameCondition(Table, 'TABLE_NAME');
+
+  If Schema <> '' Then
+    cond := cond + sLineBreak + '  AND ' + ConstructNameCondition(Schema, 'TABLE_CATALOG');
+
+  If LCatalog <> '' Then
+    cond := cond + sLineBreak + '  AND ' + ConstructNameCondition(LCatalog, 'TABLE_SCHEMA');
+
+  query := query + sLineBreak + 'WHERE' + cond;
+
+  Result := CopyToVirtualResultSet(GetConnection.CreateStatement.ExecuteQuery(query),
+    ConstructVirtualResultSet(ImportedKeyColumnsDynArray));
+End;
+
+function TZMySQLDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
+  const Schema: string; const Table: string): IZResultSet;
+begin
+  if Table = '' then
+    raise EZSQLException.Create(STableIsNotSpecified); //CHANGE IT!
+
+  If Self.isMariaDB Or (Self.GetConnection.GetHostVersion Div 1000000 >= 5) Then
+    Result := NewUncachedGetImportedKeys(Catalog, Schema, Table)
+  Else
+    Result := OldUncachedGetImportedKeys(Catalog, Schema, Table);
 end;
 
 {**
