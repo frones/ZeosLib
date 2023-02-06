@@ -309,7 +309,7 @@ end;
 }
 function TZSQLiteDatabaseMetadata.SupportsMixedCaseIdentifiers: Boolean;
 begin
-  Result := True;
+  Result := False;
 end;
 
 {**
