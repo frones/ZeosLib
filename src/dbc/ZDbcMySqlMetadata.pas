@@ -235,8 +235,10 @@ type
     FKnowServerType: Boolean;
     FIsMariaDB: Boolean;
     FIsMySQL: Boolean;
+    function OldUncachedGetCrossReference(const PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog, ForeignSchema, ForeignTable: string): IZResultSet;
     function OldUncachedGetExportedKeys(const Catalog, Schema, Table: string): IZResultSet;
     function OldUncachedGetImportedKeys(const Catalog, Schema, Table: string): IZResultSet;
+    function NewUncachedGetCrossReference(const PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog, ForeignSchema, ForeignTable: string): IZResultSet;
     function NewUncachedGetExportedKeys(const Catalog, Schema, Table: string): IZResultSet;
     function NewUncachedGetImportedKeys(const Catalog, Schema, Table: string): IZResultSet;
   protected
@@ -1976,6 +1978,32 @@ end;
   @return <code>ResultSet</code> - each row is a foreign key column description
   @see #getImportedKeys
 }
+
+function TZMySQLDatabaseMetadata.UncachedGetCrossReference(const PrimaryCatalog: string;
+  const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
+  const ForeignSchema: string; const ForeignTable: string): IZResultSet;
+Var
+  tmpPCat, tmpFcat: String;
+begin
+  if PrimaryTable = '' then
+    raise EZSQLException.Create(STableIsNotSpecified); //CHANGE IT!
+
+  if PrimaryCatalog = '' then
+    tmpPCat := FDatabase
+  else
+    tmpPCat := PrimaryCatalog;
+
+  if ForeignCatalog = '' then
+    tmpFCat := FDatabase
+  else
+    tmpFCat := ForeignCatalog;
+
+  If Self.isMariaDB Or (Self.GetConnection.GetHostVersion Div 1000000 >= 5) Then
+    Result := NewUncachedGetCrossReference(tmpPCat, PrimarySchema, PrimaryTable, tmpFCat, ForeignSchema, ForeignTable)
+  Else
+    Result := OldUncachedGetCrossReference(tmpPCat, PrimarySchema, PrimaryTable, tmpFCat, ForeignSchema, ForeignTable)
+end;
+
 Function TZMySQLDatabaseMetadata.OldUncachedGetExportedKeys(Const Catalog, Schema, Table: String): IZResultSet;
 var
   I: Integer;
@@ -2122,9 +2150,9 @@ end;
   @return <code>ResultSet</code> - each row is a foreign key column description
   @see #getImportedKeys
 }
-function TZMySQLDatabaseMetadata.UncachedGetCrossReference(const PrimaryCatalog: string;
-  const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
-  const ForeignSchema: string; const ForeignTable: string): IZResultSet;
+function TZMySQLDatabaseMetadata.OldUncachedGetCrossReference(
+  const PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog,
+  ForeignSchema, ForeignTable: string): IZResultSet;
 var
   I: Integer;
   KeySeq: Integer;
@@ -2133,9 +2161,6 @@ var
   CommentList, KeyList: TStrings;
   ColumnIndexes : Array[1..3] of integer;
 begin
-  if PrimaryTable = '' then
-    raise EZSQLException.Create(STableIsNotSpecified); //CHANGE IT!
-
   Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
                                               ForeignCatalog, ForeignSchema, ForeignTable);
 
@@ -3253,23 +3278,98 @@ begin
 end;
 
 Function TZMySQLDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string; const Schema: string; const Table: string): IZResultSet;
+Var
+  tmpcat: String;
 begin
   if Table = '' then
     raise EZSQLException.Create(STableIsNotSpecified); //CHANGE IT!
 
+  if Catalog = '' then
+    tmpcat := FDatabase
+  else
+    tmpcat := Catalog;
+
   If Self.isMariaDB Or (Self.GetConnection.GetHostVersion Div 1000000 >= 5) Then
-    Result := NewUncachedGetExportedKeys(Catalog, Schema, Table)
+    Result := NewUncachedGetExportedKeys(tmpcat, Schema, Table)
   Else
-    Result := OldUncachedGetExportedKeys(Catalog, Schema, Table);
+    Result := OldUncachedGetExportedKeys(tmpcat, Schema, Table);
+end;
+
+function TZMySQLDatabaseMetadata.NewUncachedGetCrossReference(
+  const PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog,
+  ForeignSchema, ForeignTable: string): IZResultSet;
+Var
+  query, cond, LPCatalog, LPTable, LFCatalog, LFTable: String;
+begin
+  GetCatalogAndNamePattern(PrimaryCatalog, PrimarySchema, PrimaryTable, iqTable, LPCatalog, LPTable);
+  GetCatalogAndNamePattern(ForeignCatalog, ForeignSchema, ForeignTable, iqTable, LFCatalog, LFTable);
+
+  query := 'SELECT' + sLineBreak +
+    '  CONSTRAINT_CATALOG PKTABLE_CAT, REFERENCED_TABLE_SCHEMA PKTABLE_SCHEM, REFERENCED_TABLE_NAME PKTABLE_NAME,' + sLineBreak +
+    '  REFERENCED_COLUMN_NAME PKCOLUMN_NAME, TABLE_CATALOG FKTABLE_CAT, TABLE_SCHEMA FKTABLE_SCHEM, TABLE_NAME FKTABLE_NAME,' + sLineBreak +
+    '  COLUMN_NAME FKCOLUMN_NAME, ORDINAL_POSITION KEY_SEQ, NULL UPDATE_RULE, NULL DELETE_RULE, CONSTRAINT_NAME FK_NAME,' + sLineBreak +
+    '  NULL PK_NAME, NULL DEFERRABILITY' + sLineBreak +
+    'FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE';
+
+  // Conditions for primary table
+
+  If LPTable <> '' Then
+    cond := cond + sLineBreak + '  ' + ConstructNameCondition(LPTable, 'REFERENCED_TABLE_NAME');
+
+  If PrimarySchema <> '' Then
+  Begin
+    If cond <> '' Then
+      cond := cond + sLineBreak + '  AND ';
+
+    cond := cond + ConstructNameCondition(PrimarySchema, 'CONSTRAINT_CATALOG');
+  End;
+
+  If LPCatalog <> '' Then
+  Begin
+    If cond <> '' Then
+      cond := cond + sLineBreak + '  AND ';
+
+    cond := cond + ConstructNameCondition(LPCatalog, 'CONSTRAINT_SCHEMA');
+  End;
+
+  // Conditions for foreign table
+
+  If (LFTable <> '') And (LFTable <> '%') Then
+  Begin
+    If cond <> '' Then
+      cond := cond + sLineBreak + '  AND ';
+
+    cond := cond + ConstructNameCondition(LFTable, 'TABLE_NAME');
+  End;
+
+  If ForeignSchema <> '' Then
+  Begin
+    If cond <> '' Then
+      cond := cond + sLineBreak + '  AND ';
+
+    cond := cond + ConstructNameCondition(ForeignSchema, 'TABLE_CATALOG');
+  End;
+
+  If LFCatalog <> '' Then
+  Begin
+    If cond <> '' Then
+      cond := cond + sLineBreak + '  AND ';
+
+    cond := cond + ConstructNameCondition(LPCatalog, 'TABLE_SCHEMA');
+  End;
+
+  If cond <> '' Then
+    query := query + sLineBreak + 'WHERE' + cond;
+
+  Result := CopyToVirtualResultSet(GetConnection.CreateStatement.ExecuteQuery(query),
+    ConstructVirtualResultSet(CrossRefColumnsDynArray));
 end;
 
 Function TZMySQLDatabaseMetadata.NewUncachedGetExportedKeys(Const Catalog, Schema, Table: String): IZResultSet;
 var
-  LCatalog, LTable: string;
-  query, cond: String;
+  query, cond, LCatalog, LTable: String;
 begin
-  GetCatalogAndNamePattern(Catalog, Schema, Table,
-    iqTable, LCatalog, LTable);
+  GetCatalogAndNamePattern(Catalog, Schema, Table, iqTable, LCatalog, LTable);
 
   query := 'SELECT' + sLineBreak +
     '  CONSTRAINT_CATALOG PKTABLE_CAT, REFERENCED_TABLE_SCHEMA PKTABLE_SCHEM, REFERENCED_TABLE_NAME PKTABLE_NAME,' + sLineBreak +
@@ -3280,8 +3380,8 @@ begin
 
   cond := '';
 
-  If Table <> '' Then
-    cond := cond + sLineBreak + '  ' + ConstructNameCondition(Table, 'REFERENCED_TABLE_NAME');
+  If LTable <> '' Then
+    cond := cond + sLineBreak + '  ' + ConstructNameCondition(LTable, 'REFERENCED_TABLE_NAME');
 
   If Schema <> '' Then
   Begin
@@ -3310,8 +3410,7 @@ Function TZMySQLDatabaseMetadata.NewUncachedGetImportedKeys(Const Catalog, Schem
 Var
   query, cond, LCatalog, LTable: String;
 Begin
-  GetCatalogAndNamePattern(Catalog, Schema, Table,
-    iqTable, LCatalog, LTable);
+  GetCatalogAndNamePattern(Catalog, Schema, Table, iqTable, LCatalog, LTable);
 
   query := 'SELECT' + sLineBreak +
     '  CONSTRAINT_CATALOG PKTABLE_CAT, REFERENCED_TABLE_SCHEMA PKTABLE_SCHEM, REFERENCED_TABLE_NAME PKTABLE_NAME,' + sLineBreak +
@@ -3322,8 +3421,8 @@ Begin
 
   cond := sLineBreak + '  REFERENCED_TABLE_NAME IS NOT NULL';
 
-  If Table <> '' Then
-    cond := cond + sLineBreak + '  AND ' + ConstructNameCondition(Table, 'TABLE_NAME');
+  If LTable <> '' Then
+    cond := cond + sLineBreak + '  AND ' + ConstructNameCondition(LTable, 'TABLE_NAME');
 
   If Schema <> '' Then
     cond := cond + sLineBreak + '  AND ' + ConstructNameCondition(Schema, 'TABLE_CATALOG');
@@ -3337,16 +3436,22 @@ Begin
     ConstructVirtualResultSet(ImportedKeyColumnsDynArray));
 End;
 
-function TZMySQLDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
-  const Schema: string; const Table: string): IZResultSet;
+function TZMySQLDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string; const Schema: string; const Table: string): IZResultSet;
+Var
+  tmpcat: String;
 begin
   if Table = '' then
     raise EZSQLException.Create(STableIsNotSpecified); //CHANGE IT!
 
+  if Catalog = '' then
+    tmpcat := FDatabase
+  else
+    tmpcat := Catalog;
+
   If Self.isMariaDB Or (Self.GetConnection.GetHostVersion Div 1000000 >= 5) Then
-    Result := NewUncachedGetImportedKeys(Catalog, Schema, Table)
+    Result := NewUncachedGetImportedKeys(tmpcat, Schema, Table)
   Else
-    Result := OldUncachedGetImportedKeys(Catalog, Schema, Table);
+    Result := OldUncachedGetImportedKeys(tmpcat, Schema, Table);
 end;
 
 {**
