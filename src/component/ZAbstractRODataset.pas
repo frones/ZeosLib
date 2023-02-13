@@ -3830,7 +3830,7 @@ begin
   {$IFNDEF FPC}
   if IsLinkedTo(Value) then
   {$ELSE}
-  if Value.IsLinkedTo(Self) then
+  if Assigned(Value) and Value.IsLinkedTo(Self) then
   {$ENDIF}
     raise EZDatabaseError.Create(SCircularLink);
   MasterLink.DataSource := Value;
