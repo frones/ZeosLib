@@ -98,8 +98,9 @@ type
     FPasswordSQL: String;
     FReplacementUser: String;
     FReplacementPassword: String;
+    FAddDatabaseToUserName: Boolean;
   public
-    function CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean; override;
+    function CheckPassword(var XUserName, Password: String; const ConnectionName: String): Boolean; override;
     procedure LoadConfig(IniFile: TIniFile; const Section: String); override;
   end;
 
@@ -230,7 +231,7 @@ end;
 
 {------------------------------------------------------------------------------}
 
-function TZIntegratedSecurityModule.CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean;
+function TZIntegratedSecurityModule.CheckPassword(var XUserName, Password: String; const ConnectionName: String): Boolean;
 var
   URL: String;
   Conn: IZConnection;
@@ -240,8 +241,30 @@ var
   CryptPwdDB: UTF8String;
   CryptPwdUser: UTF8String;
   pwdStart: String;
+  DBUserName: String;
+  PWUserName: String;
+  Position: Integer;
 begin
   Result := False;
+
+  if FAddDatabaseToUserName and (Length(XUserName) > 0 ) then begin
+    Position := Pos('@', XUserName);
+    if Position = 0 then begin // no @ in the user name
+      DBUserName := XUserName;
+      PWUserName := XUserName + '@' + ConnectionName;
+    end else if Position = Length(XUserName) then begin // the user name ends with an @
+      DBUserName := Copy(XUserName, 1, Length(XUserName) - 1);
+      PWUserName := DBUserName;
+    end else begin // the user name contains an @ but doesn't end with an @
+      // just copy the username
+      DBUserName := XUserName;
+      PWUserName := XUserName;
+    end;
+  end else begin
+    DBUserName := XUserName;
+    PWUserName := XUserName;
+  end;
+
 
   URL := ConfigManager.ConstructUrl(ConnectionName, FDBUser, FDBPassword, False);
   PropertiesList := TStringList.Create;
@@ -254,7 +277,7 @@ begin
   Stmt := Conn.PrepareStatement(FPasswordSQL);
   Stmt.SetResultSetConcurrency(rcReadOnly);
   Stmt.SetResultSetType(rtForwardOnly);
-  Stmt.SetString(FirstDbcIndex, UserName);
+  Stmt.SetString(FirstDbcIndex, DBUserName);
   if Stmt.ExecutePrepared then begin
     RS := Stmt.GetResultSet;
     if Assigned(RS) and RS.IsBeforeFirst then begin
@@ -276,13 +299,13 @@ begin
   if pwdStart = '$1$' then //cryptmd5
     CryptPwdUser := crypt_md5(Password, CryptPwdDB)
   else if pwdStart = 'md5' then //md5 by PpostgreSQL
-    CryptPwdUser := crypt_md5pg(Password, UserName)
+    CryptPwdUser := crypt_md5pg(Password, PWUserName)
   else
     CryptPwdUser := '$$$$$$$$$$'; // $-Signs shouldn't make up a valid crypted password.
   Result := CryptPwdDB = CryptPwdUser;
 
   if FReplacementUser <> '' then begin
-    UserName := FReplacementUser;
+    XUserName := FReplacementUser;
     Password := FReplacementPassword;
   end;
 end;
@@ -293,7 +316,8 @@ begin
   FDBPassword := IniFile.ReadString(Section, 'DB Password', '');
   FReplacementUser := IniFile.ReadString(Section, 'Replacement User', '');
   FReplacementPassword := IniFile.ReadString(Section, 'Replacement Password', '');
-  FPasswordSQL := IniFile.ReadString(Section, 'Password SQL', '');;
+  FPasswordSQL := IniFile.ReadString(Section, 'Password SQL', '');
+  FAddDatabaseToUserName := IniFile.ReadBool(Section, 'Add Database To Username', false);
 end;
 
 {------------------------------------------------------------------------------}
