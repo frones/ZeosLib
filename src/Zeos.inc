@@ -597,7 +597,7 @@
 
 // Loads libcrypt.so before Firebird client library.
 // It fixes error "Undefined symbol: crypt".
-{$DEFINE INTERBASE_CRYPT}
+{.$DEFINE INTERBASE_CRYPT}
 
 // Excludes old ZeosDBO from the performance tests
 {$DEFINE EXCLUDE_OLD_ZEOS_TEST}
