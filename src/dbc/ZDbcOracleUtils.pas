@@ -202,11 +202,8 @@ type
     ColType:   TZSQLType; //Zeos SQLType
   end;
 
-  TZSQLVars = record
-    AllocNum:  ub4;
-    Variables: array[0..MAX_SQLVAR_LIMIT] of TZSQLVar; //just a nice dubugging range
-  end;
-  PZSQLVars = ^TZSQLVars;
+  TZSQLVarDynArray = Array of TZSQLVar;
+
 
 type
   {$A-}
@@ -217,10 +214,10 @@ type
   {$A+}
 {**
   Allocates memory for Oracle SQL Variables.
-  @param Variables a pointer to array of variables.
+  @param Variables an array of variables.
   @param Count a number of SQL variables.
 }
-procedure AllocateOracleSQLVars(var Variables: PZSQLVars; Count: Integer);
+procedure AllocateOracleSQLVars(var Variables: TZSQLVarDynArray; Count: Integer);
 
 {**
   Convert string Oracle field type to SQLType
@@ -1153,20 +1150,16 @@ end;
 
 {**
   Allocates memory for Oracle SQL Variables.
-  @param Variables a pointer to array of variables.
+  @param Variables an array of variables.
   @param Count a number of SQL variables.
 }
-procedure AllocateOracleSQLVars(var Variables: PZSQLVars; Count: Integer);
+procedure AllocateOracleSQLVars(var Variables: TZSQLVarDynArray; Count: Integer);
 var
   Size: Integer;
 begin
-  if Variables <> nil then
-    FreeMem(Variables);
-
-  Size := SizeOf(ub4) + Max(1,Count) * SizeOf(TZSQLVar);
-  GetMem(Variables, Size);
-  FillChar(Variables^, Size, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
-  Variables^.AllocNum := Count;
+  Size := SizeOf(TZSQLVar) * Count;
+  SetLength(Variables, Count);
+  FillChar(Variables[0], Size, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
 end;
 
 {**

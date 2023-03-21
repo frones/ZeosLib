@@ -2207,7 +2207,7 @@ begin
     and (ImmediatelyReleasable <> Sender) then
       ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
     for I:= fTransactions.Count - 1 downto 0 do
-      if Supports(IZTransaction(fTransactions[I]), IImmediatelyReleasable, ImmediatelyReleasable)
+      if (fTransactions[I].QueryInterface(IImmediatelyReleasable, ImmediatelyReleasable) = S_OK)
       and (Sender <> ImmediatelyReleasable) then
         ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
   end;
