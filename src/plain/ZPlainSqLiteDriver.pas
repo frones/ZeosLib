@@ -190,9 +190,9 @@ type
 
   Tsqlite3_destructor_type = procedure(user: pointer); cdecl;
 
-
-  SQLITE_STATIC = procedure(User: Pointer = Nil); cdecl;
-  SQLITE_TRANSIENT = procedure(User: pointer = Pointer(-1)); cdecl;
+const
+  SQLITE_STATIC: Tsqlite3_destructor_type = nil;
+  SQLITE_TRANSIENT: Tsqlite3_destructor_type = Pointer(-1);
 
 type
 { ************** Plain API Function types definition ************* }
