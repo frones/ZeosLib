@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <ProjectOptions>
-    <Version Value="12"/>
+    <Version Value="11"/>
     <PathDelim Value="\"/>
     <General>
       <Flags>
         <MainUnitHasCreateFormStatements Value="False"/>
-        <CompatibilityMode Value="True"/>
       </Flags>
       <SessionStorage Value="InProjectDir"/>
+      <MainUnit Value="0"/>
       <Title Value="Zeos Web Service Proxy Server"/>
       <UseAppBundle Value="False"/>
       <ResourceType Value="res"/>
@@ -22,6 +22,7 @@
     </PublishOptions>
     <RunParams>
       <FormatVersion Value="2"/>
+      <Modes Count="0"/>
     </RunParams>
     <RequiredPackages Count="4">
       <Item1>
@@ -88,6 +89,7 @@
       <Unit9>
         <Filename Value="..\yubiotp.pas"/>
         <IsPartOfProject Value="True"/>
+        <UnitName Value="YubiOtp"/>
       </Unit9>
       <Unit10>
         <Filename Value="..\zeosproxy_imp.pas"/>
@@ -112,7 +114,11 @@
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Other>
-      <CustomOptions Value="-dUseCThreads"/>
+      <CustomOptions Value="-dUseCThreads
+-dZEOS_DISABLE_ADO"/>
+      <OtherDefines Count="1">
+        <Define0 Value="UseCThreads"/>
+      </OtherDefines>
     </Other>
   </CompilerOptions>
   <Debugging>

@@ -125,9 +125,11 @@ begin
   { add your program here }
 
   ConfigManager := TDbcProxyConfigManager.Create;
-  ConfigManager.LoadConfigInfo(configFile);
-  //Logger := TDbcProxyFileLogger.Create(ConfigManager.LogFile);
+  WriteLn('Loading Base Config...');
+  ConfigManager.LoadBaseConfig(configFile);
   Logger := TDbcProxyConsoleLogger.Create;
+  WriteLn('Loading Connection Config...');
+  ConfigManager.LoadConnectionConfig(configFile);
   ConnectionManager := TDbcProxyConnectionManager.Create;
   CleanupThread := TDbcProxyCleanupThread.Create(ConnectionManager, ConfigManager);
   CleanupThread.Start;

@@ -140,7 +140,7 @@ begin
   else if TypeName = 'chained' then
     Result := TZChainedSecurityModule.Create
   else if TypeName = 'alternate' then
-    Result := TZChainedSecurityModule.Create
+    Result := TZAlternateSecurityModule.Create
   else
     raise EZSQLException.Create('Security module of type ' + TypeName + ' is unknown.');
 end;
@@ -154,6 +154,7 @@ var
   YubiStatus: TYubiOtpStatus;
   RemainingPassword: String;
 begin
+  Result := false;
   Yubikeys := TStringList.Create;
   try
     Yubikeys.NameValueSeparator:=':';
@@ -162,6 +163,7 @@ begin
     if FAddDatabase then
       YubikeysUser := YubikeysUser + FDatabaseSeparator + ConnectionName;
     AllowedKeys := ':' + Yubikeys.Values[YubikeysUser] + ':';
+    Logger.Debug('yubiotp: User: ' + YubikeysUser + ' Allowed keys: ' + AllowedKeys);
     if AllowedKeys = '::' then
       raise Exception.Create('No yubikeys found for user ' + YubikeysUser);
     PublicIdentity := GetYubikeyIdentity(Password);
@@ -178,10 +180,12 @@ begin
     RaiseYubiOtpError(YubiStatus);
     Password := RemainingPassword;
   end;
+  Logger.Debug('yubiotpresult for server ' + FBaseURL + ': ' + BoolToStr(Result, true));
 end;
 
 procedure TZYubiOtpSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
 begin
+  Logger.Debug('Initializing Security module ' + Section);
   FYubikeysName := IniFile.ReadString(Section, 'Yubikeys File', '');
   FAddDatabase := StrToBool(IniFile.ReadString(Section, 'Add Database To Username', 'false'));
   FDatabaseSeparator := IniFile.ReadString(Section, 'Database Separator', '@');
@@ -231,6 +235,7 @@ end;
 
 procedure TZTotpSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
 begin
+  Logger.Debug('Initializing Security module ' + Section);
   FSecretsName := IniFile.ReadString(Section, 'Secrets File', '');
   FAddDatabase := StrToBool(IniFile.ReadString(Section, 'Add Database To Username', 'false'));
   FDatabaseSeparator := IniFile.ReadString(Section, 'Database Separator', '@');
@@ -313,6 +318,7 @@ begin
   else
     CryptPwdUser := '$$$$$$$$$$'; // $-Signs shouldn't make up a valid crypted password.
   Result := CryptPwdDB = CryptPwdUser;
+  Logger.Debug('Integrated security module: CryptPwdUser:' + CryptPwdUser + ' CryptPwdDB: ' + CryptPwdDB);
 
   if FReplacementUser <> '' then begin
     XUserName := FReplacementUser;
@@ -322,6 +328,7 @@ end;
 
 procedure TZIntegratedSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
 begin
+  Logger.Debug('Initializing Security module ' + Section);
   FDBUser := IniFile.ReadString(Section, 'DB User', '');
   FDBPassword := IniFile.ReadString(Section, 'DB Password', '');
   FReplacementUser := IniFile.ReadString(Section, 'Replacement User', '');
@@ -336,10 +343,12 @@ function TZChainedSecurityModule.CheckPassword(var UserName, Password: String; c
 var
   x: Integer;
 begin
+  Logger.Debug('Checking chained module for ' + ConnectionName);
   Result := True;
   for x := 0 to Length(FModuleChain) - 1  do begin
     try
       Result := Result and FModuleChain[x].CheckPassword(UserName, Password, ConnectionName);
+      Logger.Debug('Result for module ' + IntToStr(x + 1) + ': ' + BoolToStr(Result));
     except
       on E: Exception do begin
         Logger.Warning('Unexpected exception while calling an authentication module:  ' + E.Message);
@@ -357,6 +366,7 @@ var
   x: Integer;
   SectionName: String;
 begin
+  Logger.Debug('Initializing Security module ' + Section);
   Modules := IniFile.ReadString(Section, 'Module List', '');
   ModuleList := SplitString(Modules, ',');
   for x := Length(ModuleList) - 1 downto 0 do
@@ -410,7 +420,9 @@ var
   ModuleList: TStringDynArray;
   x: Integer;
   SectionName: String;
+  ModuleType: String;
 begin
+  Logger.Debug('Initializing Security module ' + Section);
   Modules := IniFile.ReadString(Section, 'Module List', '');
   ModuleList := SplitString(Modules, ',');
   for x := Length(ModuleList) - 1 downto 0 do
@@ -421,12 +433,17 @@ begin
   if Length(ModuleList) = 0 then
     raise EZSQLException.Create('An alternate security module may not have an empty Module List');
 
+  Logger.Debug('Initializing alternate security module...');
   SetLength(FModuleChain, Length(ModuleList));
   for x := 0 to Length(ModuleList) - 1 do begin
+
     SectionName := ConfigManager.SecurityPrefix + ModuleList[x];
-    FModuleChain[x] := GetSecurityModule(IniFile.ReadString(SectionName, 'type', ''));
+    ModuleType := IniFile.ReadString(SectionName, 'type', '');
+    Logger.Debug('Initializing submodule ' + SectionName + ' of type ' + ModuleType);
+    FModuleChain[x] := GetSecurityModule(ModuleType);
     FModuleChain[x].LoadConfig(IniFile, SectionName);
   end;
+  Logger.Debug('Initialization od alternate module finished.');
 end;
 
 destructor TZAlternateSecurityModule.Destroy;
