@@ -112,24 +112,34 @@ begin
   configFile := ExtractFilePath(ParamStr(0)) + 'zeosproxy.ini';
   {$ENDIF}
 
+  zeosproxy_imp.Logger := TDbcProxyConsoleLogger.Create;
   ConfigManager := TDbcProxyConfigManager.Create;
-  ConfigManager.LoadConfigInfo(configFile);
+  ConfigManager.LoadBaseConfig(configFile);
+  if ConfigManager.LogFile <> '' then begin
+    FreeAndNil(zeosproxy_imp.Logger);
+    zeosproxy_imp.Logger := TDbcProxyFileLogger.Create(configFile);
+  end;
+  ConfigManager.LoadConnectionConfig(configFile);
   zeosproxy_imp.Logger := TDbcProxyFileLogger.Create(ConfigManager.LogFile);
   try
+    zeosproxy_imp.Logger.Debug('Creating Connection Manager...');
     ConnectionManager := TDbcProxyConnectionManager.Create;
 
     //Server_service_RegisterBinaryFormat();
+    zeosproxy_imp.Logger.Debug('Registering SOAP');
     Server_service_RegisterSoapFormat();
     //Server_service_RegisterXmlRpcFormat();
 
     RegisterZeosProxyImplementationFactory();
     Server_service_RegisterZeosProxyService();
+    zeosproxy_imp.Logger.Debug('Creating Listener...');
     AppObject := TwstFPHttpListener.Create(ConfigManager.IPAddress, ConfigManager.ListeningPort);
     AppObject.Options := [loExecuteInThread];
     if ConfigManager.EnableThreading then begin
       AppObject.Options := AppObject.Options + [loHandleRequestInThread];
       zeosproxy_imp.Logger.Info('Handling requests in threads.');
     end;
+    zeosproxy_imp.Logger.Debug('Starting the Proxy...');
     AppObject.Start();
     CleanupThread := TDbcProxyCleanupThread.Create(ConnectionManager, ConfigManager);
     CleanupThread.Start;

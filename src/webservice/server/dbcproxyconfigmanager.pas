@@ -92,7 +92,8 @@ type
     property EnableThreading: Boolean read FEnableThreading;
     property LogFile: String read FLogFile;
     function ConstructUrl(ConfigName, UserName, Password: String; CheckSecurity: Boolean = True): String;
-    procedure LoadConfigInfo(SourceFile: String);
+    procedure LoadBaseConfig(SourceFile: String);
+    procedure LoadConnectionConfig(SourceFile: String);
     constructor Create;
     destructor Destroy; override;
   end;
@@ -100,7 +101,7 @@ type
 implementation
 
 uses
-  IniFiles, ZExceptions;
+  IniFiles, ZExceptions, zeosproxy_imp;
 
 constructor TDbcProxyConfigManager.Create;
 begin
@@ -123,13 +124,9 @@ begin
   inherited;
 end;
 
-procedure TDbcProxyConfigManager.LoadConfigInfo(SourceFile: String);
+procedure TDbcProxyConfigManager.LoadBaseConfig(SourceFile: String);
 var
-  ConfigInfo: TDbcProxyConnConfig;
   IniFile: TIniFile;
-  Sections: TStringList;
-  Section: String;
-  ModuleType: String;
 begin
   {$IFDEF LINUX}
   FLogFile := '/var/log/zeosproxy.log';
@@ -146,40 +143,57 @@ begin
     FConnectionIdleTimeout := IniFile.ReadInteger('general', 'Connection Idle Timeout', 86400); {Default to one day}
     FEnableThreading := IniFile.ReadBool('general', 'Enable Threading', false);
     FLogFile := IniFile.ReadString('general', 'Log File', FLogFile);
-    Sections := TStringList.Create;
-    try
-      IniFile.ReadSections(Sections);
-      while Sections.Count > 0 do begin
-        Section := Sections.Strings[0];
-        if LowerCase(Copy(Section, 1, Length(DbPrefix))) = DbPrefix then begin
-          ConfigInfo.ConfigName := LowerCase(Copy(Section, Length(DbPrefix) + 1, Length(Section)));
-          ConfigInfo.ClientCodepage := IniFile.ReadString(Section, 'ClientCodepage', 'UTF8');
-          ConfigInfo.Database := IniFile.ReadString(Section, 'Database', '');
-          ConfigInfo.HostName := IniFile.ReadString(Section, 'HostName', '');
-          ConfigInfo.LibraryLocation := IniFile.ReadString(Section, 'LibraryLocation', '');
-          ConfigInfo.Port := IniFile.ReadInteger(Section, 'Port', 0);
-          ConfigInfo.Protocol := IniFile.ReadString(Section, 'Protocol', '');
-          ConfigInfo.Properties := IniFile.ReadString(Section, 'Properties', '');
-
-          Section := IniFile.ReadString(Section, 'Security Module', '');
-          if Section <> '' then begin
-            Section := SecurityPrefix + Section;
-            ModuleType := IniFile.ReadString(Section, 'Type', '');
-            ConfigInfo.SecurityModule := GetSecurityModule(ModuleType);
-            ConfigInfo.SecurityModule.LoadConfig(IniFile, Section);
-          end else begin
-            ConfigInfo.SecurityModule := nil;
-          end;
-
-          ConfigList.Add(ConfigInfo);
-        end;
-        Sections.Delete(0);
-      end;
-    finally
-      FreeAndNil(Sections);
-    end;
   finally
     FreeAndNil(IniFile);
+  end;
+end;
+
+procedure TDbcProxyConfigManager.LoadConnectionConfig(SourceFile: String);
+var
+  ConfigInfo: TDbcProxyConnConfig;
+  IniFile: TIniFile;
+  Sections: TStringList;
+  Section: String;
+  ModuleType: String;
+begin
+  if not Assigned(Logger) then raise
+    Exception.Create('Logger does not exist!');
+
+  Sections := TStringList.Create;
+  try
+    IniFile := TIniFile.Create(SourceFile, TEncoding.UTF8);
+    IniFile.ReadSections(Sections);
+    while Sections.Count > 0 do begin
+      Section := Sections.Strings[0];
+      if LowerCase(Copy(Section, 1, Length(DbPrefix))) = DbPrefix then begin
+        ConfigInfo.ConfigName := LowerCase(Copy(Section, Length(DbPrefix) + 1, Length(Section)));
+        ConfigInfo.ClientCodepage := IniFile.ReadString(Section, 'ClientCodepage', 'UTF8');
+        ConfigInfo.Database := IniFile.ReadString(Section, 'Database', '');
+        ConfigInfo.HostName := IniFile.ReadString(Section, 'HostName', '');
+        ConfigInfo.LibraryLocation := IniFile.ReadString(Section, 'LibraryLocation', '');
+        ConfigInfo.Port := IniFile.ReadInteger(Section, 'Port', 0);
+        ConfigInfo.Protocol := IniFile.ReadString(Section, 'Protocol', '');
+        ConfigInfo.Properties := IniFile.ReadString(Section, 'Properties', '');
+
+        Section := IniFile.ReadString(Section, 'Security Module', '');
+        if Section <> '' then begin
+          Section := SecurityPrefix + Section;
+          ModuleType := IniFile.ReadString(Section, 'Type', '');
+          ConfigInfo.SecurityModule := GetSecurityModule(ModuleType);
+          ConfigInfo.SecurityModule.LoadConfig(IniFile, Section);
+        end else begin
+          ConfigInfo.SecurityModule := nil;
+        end;
+
+        ConfigList.Add(ConfigInfo);
+      end;
+      Sections.Delete(0);
+    end;
+  finally
+    if Assigned(Sections) then
+      FreeAndNil(Sections);
+    if assigned(IniFile) then
+      FreeAndNil(IniFile);
   end;
 end;
 
