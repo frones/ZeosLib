@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{         Oracle Database Connectivity Classes        }
+{         Oracle Database Connectivity Classes            }
 {                                                         }
 {        Originally written by Sergey Seroukhov           }
 {                                                         }
@@ -102,7 +102,7 @@ type
     FOCISvcCtx: POCISvcCtx;
     FPlainDriver: TZOraclePlainDriver;
     FOracleConnection: IZOracleConnection;
-    FColumns: PZSQLVars;
+    FColumns: TZSQLVarDynArray;
     FChunkSize: Integer;
     FIteration: Integer; //Max count of rows which fit into BufferSize <= FZBufferSize
     FCurrentRowBufIndex: Cardinal; //The current row in buffer! NOT the current row of RS
@@ -780,11 +780,11 @@ var
   end;
 
 begin
-  if FColumns <> nil then begin
+  if Length(FColumns) > 0 then begin
     { Frees allocated memory for output variables }
-    for I := 0 to Integer(FColumns.AllocNum)-1 do begin
+    for I := 0 to Length(FColumns) - 1 do begin
       {$R-}
-      CurrentVar := @FColumns.Variables[I];
+      CurrentVar := @FColumns[I];
       {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
       if Assigned(CurrentVar^._Obj) then
         DisposeObject(CurrentVar^._Obj);
@@ -804,8 +804,7 @@ begin
               FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcOther, 'OCIStringResize', Self);
           end;
       end;
-    FreeMem(FColumns);
-    FColumns := nil;
+    SetLength(FColumns, 0)
   end;
 end;
 
@@ -828,8 +827,8 @@ begin
       Format(SColumnIsNotAccessable, [ColumnIndex]));
 {$ENDIF}
   {$R-}
-  Result := (FColumns^.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].valuep = nil) or
-            (FColumns^.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].indp^[FCurrentRowBufIndex] < 0);
+  Result := (FColumns[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].valuep = nil) or
+            (FColumns[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].indp^[FCurrentRowBufIndex] < 0);
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 end;
 
@@ -867,7 +866,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
   {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  SQLVarHolder := @FColumns[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
@@ -1042,7 +1041,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
   {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  SQLVarHolder := @FColumns[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
@@ -1232,7 +1231,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
   {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  SQLVarHolder := @FColumns[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
@@ -1307,7 +1306,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
   {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  SQLVarHolder := @FColumns[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
@@ -1380,7 +1379,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
   {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  SQLVarHolder := @FColumns[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
@@ -1490,7 +1489,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stULong);
 {$ENDIF}
   {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  SQLVarHolder := @FColumns[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
 {$IF defined (RangeCheckEnabled) and not defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
     LastWasNull := True;
@@ -1592,7 +1591,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stGUID);
 {$ENDIF}
   {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  SQLVarHolder := @FColumns[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
@@ -1647,7 +1646,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
   {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  SQLVarHolder := @FColumns[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
@@ -1733,7 +1732,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
   {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  SQLVarHolder := @FColumns[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
@@ -1806,7 +1805,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stCurrency);
 {$ENDIF}
   {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  SQLVarHolder := @FColumns[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
@@ -1910,7 +1909,7 @@ begin
 {$ENDIF}
   PInt64(@Result.Year)^ := 0;
   {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  SQLVarHolder := @FColumns[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True
@@ -2006,7 +2005,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
   {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  SQLVarHolder := @FColumns[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
@@ -2107,7 +2106,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stTimeStamp);
 {$ENDIF}
   {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  SQLVarHolder := @FColumns[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
@@ -2226,7 +2225,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stCurrency);
 {$ENDIF}
   {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  SQLVarHolder := @FColumns[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
@@ -2307,7 +2306,7 @@ begin
   CheckBlobColumn(ColumnIndex);
 {$ENDIF}
   {$R-}
-  SQLVarHolder := @FColumns.Variables[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
+  SQLVarHolder := @FColumns[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   if (SQLVarHolder.valuep = nil) or (SQLVarHolder.indp[FCurrentRowBufIndex] < 0) then begin
   {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     LastWasNull := True;
@@ -2416,7 +2415,7 @@ begin
   { collect informations for result set columns }
   for I := 1 to ColumnCount do begin
     {$R-}
-    CurrentVar := @FColumns.Variables[I-1];
+    CurrentVar := @FColumns[I-1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
 
     ColumnInfo := TZOracleColumnInfo.Create;
@@ -2539,7 +2538,7 @@ begin
   {in case all cols are null we need min 1 defined col-variable to exec the stmt }
   if (RowSize = 0 ) then begin
     FIteration := 1;
-    FColumns.Variables[0].value_sz := 8;
+    FColumns[0].value_sz := 8;
     RowSize := 8 +SizeOf(sb2);
   end else if (RowSize > FZBufferSize) { now let's calc the iters we can use }
     then FIteration := 1
@@ -2553,9 +2552,9 @@ begin
   {give our Vars it's addressation in RowsBuffer}
   P := Pointer(FRowsBuffer);
   { Bind handle and Fills the column info. }
-  for I := 1 to FColumns.AllocNum do begin
+  for I := 1 to Length(FColumns) do begin
     {$R-}
-    CurrentVar := @FColumns.Variables[I-1];
+    CurrentVar := @FColumns[I-1];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     if (CurrentVar^.value_sz = 0) then
       continue;
@@ -2752,7 +2751,7 @@ begin
     if Ord(BindValue.ParamType) <= ord(pctIn) then
       Continue;
     {$R-}
-    CurrentVar := @FColumns.Variables[N];
+    CurrentVar := @FColumns[N];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     CurrentVar.valuep := OCIBindValue.valuep;
     CurrentVar.dty := OCIBindValue.dty;
@@ -2793,9 +2792,9 @@ var
 begin
   { Fills the column info. }
   ColumnsInfo.Clear;
-  for I := 0 to FColumns.AllocNum -1 do begin
+  for I := 0 to High(FColumns) do begin
     {$R-}
-    CurrentVar := @FColumns.Variables[I];
+    CurrentVar := @FColumns[I];
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     ColumnInfo := TZOracleColumnInfo.Create;
 
