@@ -421,7 +421,10 @@ begin
   if Assigned(FTransaction) then
     Result := FTransaction
   else
-    Result := FConnection.GetConnectionTransaction;
+    if Assigned(FConnection) then
+      Result := FConnection.GetConnectionTransaction
+    else
+      raise EZSQLException.Create('No transaction was found!');
 end;
 
 procedure TZUpdateSQL.SetRefreshSQL(Value: TStrings);
