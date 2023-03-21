@@ -95,7 +95,7 @@ procedure TDbcProxyFileLogger.Log(MessageStr: String);
 begin
   FFileLock.Enter;
   try
-    MessageStr := DateTimeToStr(Now, True) + ' ' +  MessageStr;
+    MessageStr := FormatDateTime('YYYY-MM-DD HH:NN:SS', Now) + ' ' +  MessageStr;
     WriteLn(FLogFile, MessageStr);
     Flush(FLogFile);
   finally

@@ -300,7 +300,7 @@ begin
           RS.Close;
         end;
       end else begin
-        raise Exception.Create('No record for user ' + UserName + ' found.');
+        raise Exception.Create('No record for user ' + XUserName + ' found.');
       end;
     end;
   end;
