@@ -250,7 +250,7 @@ type
       IZResultSet; override;
     function InheritsFromReadWriteTransactionUpdateObjectDataSet: Boolean; override;
     procedure InternalOpen; override;
-    procedure SetResolverInfo; virtual;
+    procedure FixupUpdateObject;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -1162,36 +1162,6 @@ begin
   end;
 end;
 
-procedure TZAbstractRWTxnUpdateObjDataSet.SetResolverInfo;
-var
-  TempResolver: IZCachedResolver; //need a temporay interface to compare the resolvers
-begin
-  if FUpdateObject <> nil then begin
-    { get a local interface of the component }
-    FUpdateObject.GetInterface(IZCachedResolver, TempResolver);
-    CachedResultSet.SetResolver(TempResolver);
-    SetTxns2Resolver(TempResolver);
-    TempResolver.SetConnection(FConnection.DbcConnection);
-  end else begin
-    {EH: now test if the old FUpdateObject intf equals with current cached resolver }
-    if FCachedResolver = TempResolver then
-      { do not use this interface any more. Use the native resolver of
-        the cached RS instead. Otherwise on freeing (self) the compiler
-        attaches dead memory later on (this is hidded with FastMM in our tests f.e.)
-        -> Component interfaces are not refcounted by default}
-      FCachedResolver := CachedResultSet.GetNativeResolver;
-    CachedResultSet.SetResolver(FCachedResolver);
-    FCachedResolver.QueryInterface(IZGenerateSQLCachedResolver, FGenDMLResolver);
-    SetTxns2Resolver(FCachedResolver);
-  end;
-end;
-
-procedure TZAbstractRWTxnUpdateObjDataSet.InternalOpen;
-begin
-  inherited;
-  SetResolverInfo;
-end;
-
 procedure TZAbstractRWTxnUpdateObjDataSet.SetUpdateObject(Value: TZUpdateSQL);
 var TempResolver: IZCachedResolver; //need a temporay interface to compare the resolvers
 begin
@@ -1210,8 +1180,42 @@ begin
     if FUpdateObject <> nil then
       FGenDMLResolver := nil;
     if Active and (CachedResultSet <> nil) then
-      SetResolverInfo;
+      if FUpdateObject <> nil then begin
+        FixupUpdateObject;
+      end else begin
+        {EH: now test if the old FUpdateObject intf equals with current cached resolver }
+        if FCachedResolver = TempResolver then
+          { do not use this interface any more. Use the native resolver of
+            the cached RS instead. Otherwise on freeing (self) the compiler
+            attaches dead memory later on (this is hidded with FastMM in our tests f.e.)
+            -> Component interfaces are not refcounted by default}
+          FCachedResolver := CachedResultSet.GetNativeResolver;
+        CachedResultSet.SetResolver(FCachedResolver);
+        FCachedResolver.QueryInterface(IZGenerateSQLCachedResolver, FGenDMLResolver);
+        SetTxns2Resolver(FCachedResolver);
+      end;
   end;
+end;
+
+procedure TZAbstractRWTxnUpdateObjDataSet.FixupUpdateObject;
+var TempResolver: IZCachedResolver; //need a temporay interface to compare the resolvers
+begin
+  if FUpdateObject <> nil then begin
+    { get a local interface of the component }
+    FUpdateObject.GetInterface(IZCachedResolver, TempResolver);
+    CachedResultSet.SetResolver(TempResolver);
+    SetTxns2Resolver(TempResolver);
+    if Assigned(FTransaction) then
+      TempResolver.SetTransaction(HackTZAbstractTransaction(FTransaction).GetIZTransaction)
+    else
+      TempResolver.SetConnection(FConnection.DbcConnection);
+  end;
+end;
+
+procedure TZAbstractRWTxnUpdateObjDataSet.InternalOpen;
+begin
+  inherited;
+  FixupUpdateObject;
 end;
 
 end.
