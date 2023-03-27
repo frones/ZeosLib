@@ -111,16 +111,14 @@ begin
   {$ELSE}
   configFile := ExtractFilePath(ParamStr(0)) + 'zeosproxy.ini';
   {$ENDIF}
-
   zeosproxy_imp.Logger := TDbcProxyConsoleLogger.Create;
   ConfigManager := TDbcProxyConfigManager.Create;
   ConfigManager.LoadBaseConfig(configFile);
   if ConfigManager.LogFile <> '' then begin
     FreeAndNil(zeosproxy_imp.Logger);
-    zeosproxy_imp.Logger := TDbcProxyFileLogger.Create(configFile);
+    zeosproxy_imp.Logger := TDbcProxyFileLogger.Create(ConfigManager.LogFile);
   end;
   ConfigManager.LoadConnectionConfig(configFile);
-  zeosproxy_imp.Logger := TDbcProxyFileLogger.Create(ConfigManager.LogFile);
   try
     zeosproxy_imp.Logger.Debug('Creating Connection Manager...');
     ConnectionManager := TDbcProxyConnectionManager.Create;
