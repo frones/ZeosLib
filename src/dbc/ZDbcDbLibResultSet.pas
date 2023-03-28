@@ -389,7 +389,7 @@ label AssignGeneric;
         else Scale := 0;
       end;
       ColumnType := ConvertTDSTypeToSqlType(TDSType, Precision, Scale);
-      if (ColumnType = stBytes) and (Precision = 2147483647) then begin
+      if (ColumnType = stBytes) and ((Precision = 2147483647) or (Precision = 1073741823)) then begin //handling of VARCHAR(max) and NVARCHAR(max)
         Precision := 0;
         Scale := 0;
       end;
