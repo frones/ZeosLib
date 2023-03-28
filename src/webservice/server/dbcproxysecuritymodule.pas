@@ -64,8 +64,9 @@ uses
 
 type
   TZAbstractSecurityModule = class
+    FModuleName: String;
     function CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean; virtual; abstract;
-    procedure LoadConfig(IniFile: TIniFile; const Section: String); virtual; abstract;
+    procedure LoadConfig(IniFile: TIniFile; const Section: String); virtual;
   end;
 
   TZYubiOtpSecurityModule = class(TZAbstractSecurityModule)
@@ -99,6 +100,7 @@ type
     FReplacementUser: String;
     FReplacementPassword: String;
     FAddDatabaseToUserName: Boolean;
+    FAuthDbName: String;
   public
     function CheckPassword(var XUserName, Password: String; const ConnectionName: String): Boolean; override;
     procedure LoadConfig(IniFile: TIniFile; const Section: String); override;
@@ -145,6 +147,11 @@ begin
     raise EZSQLException.Create('Security module of type ' + TypeName + ' is unknown.');
 end;
 
+procedure TZAbstractSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
+begin
+  FModuleName := Section;
+end;
+
 function TZYubiOtpSecurityModule.CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean;
 var
   Yubikeys: TStringList;
@@ -185,6 +192,7 @@ end;
 
 procedure TZYubiOtpSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
 begin
+  inherited;
   Logger.Debug('Initializing Security module ' + Section);
   FYubikeysName := IniFile.ReadString(Section, 'Yubikeys File', '');
   FAddDatabase := StrToBool(IniFile.ReadString(Section, 'Add Database To Username', 'false'));
@@ -235,6 +243,7 @@ end;
 
 procedure TZTotpSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
 begin
+  inherited;
   Logger.Debug('Initializing Security module ' + Section);
   FSecretsName := IniFile.ReadString(Section, 'Secrets File', '');
   FAddDatabase := StrToBool(IniFile.ReadString(Section, 'Add Database To Username', 'false'));
@@ -263,7 +272,10 @@ begin
     Position := Pos('@', XUserName);
     if Position = 0 then begin // no @ in the user name
       DBUserName := XUserName;
-      PWUserName := XUserName + '@' + ConnectionName;
+      if FAuthDbName = '' then
+        PWUserName := XUserName + '@' + ConnectionName
+      else
+        PWUserName := XUserName + '@' + FAuthDbName;
     end else if Position = Length(XUserName) then begin // the user name ends with an @
       DBUserName := Copy(XUserName, 1, Length(XUserName) - 1);
       PWUserName := DBUserName;
@@ -328,6 +340,7 @@ end;
 
 procedure TZIntegratedSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
 begin
+  inherited;
   Logger.Debug('Initializing Security module ' + Section);
   FDBUser := IniFile.ReadString(Section, 'DB User', '');
   FDBPassword := IniFile.ReadString(Section, 'DB Password', '');
@@ -335,6 +348,7 @@ begin
   FReplacementPassword := IniFile.ReadString(Section, 'Replacement Password', '');
   FPasswordSQL := IniFile.ReadString(Section, 'Password SQL', '');
   FAddDatabaseToUserName := IniFile.ReadBool(Section, 'Add Database To Username', false);
+  FAuthDbName := IniFile.ReadString(Section, 'Auth DB Name', '');
 end;
 
 {------------------------------------------------------------------------------}
@@ -366,6 +380,7 @@ var
   x: Integer;
   SectionName: String;
 begin
+  inherited;
   Logger.Debug('Initializing Security module ' + Section);
   Modules := IniFile.ReadString(Section, 'Module List', '');
   ModuleList := SplitString(Modules, ',');
@@ -422,6 +437,7 @@ var
   SectionName: String;
   ModuleType: String;
 begin
+  inherited;
   Logger.Debug('Initializing Security module ' + Section);
   Modules := IniFile.ReadString(Section, 'Module List', '');
   ModuleList := SplitString(Modules, ',');
