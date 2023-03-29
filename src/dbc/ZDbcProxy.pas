@@ -93,7 +93,6 @@ type
     FPlainDriver: IZProxyPlainDriver;
     FConnIntf: IZDbcProxy;
     FDbInfo: ZWideString;
-    FTransactionCounter: Integer;
 
     //shadow properties - they just mirror the values that are set on the server
     FCatalog: String;
@@ -181,6 +180,7 @@ type
     ///  was started. 2 means the transaction was saved. 3 means the previous
     ///  savepoint got saved too and so on.</returns>
     function StartTransaction: Integer;
+    function GetTransactionLevel: Integer; override;
     {$ENDIF}
 
     procedure Open; override;
@@ -335,7 +335,7 @@ end;
 }
 procedure TZDbcProxyConnection.AfterConstruction;
 begin
-  FTransactionCounter := 0;
+  FTransactionLevel := 0;
   FMetadata := TZProxyDatabaseMetadata.Create(Self, Url);
   FConnIntf := GetPlainDriver.GetLibraryInterface;
   if not assigned(FConnIntf) then
@@ -482,8 +482,8 @@ begin
   if not Closed then
     if not GetAutoCommit then begin
       FConnIntf.Commit;
-      Dec(FTransactionCounter);
-      AutoCommit := FTransactionCounter = 0;
+      Dec(FTransactionLevel);
+      AutoCommit := FTransactionLevel = 0;
     end else
       raise EZSQLException.Create(SInvalidOpInAutoCommit);
 end;
@@ -493,8 +493,8 @@ begin
   if not Closed then
     if not GetAutoCommit then begin
       FConnIntf.Rollback;
-      Dec(FTransactionCounter);
-      AutoCommit := FTransactionCounter = 0;
+      Dec(FTransactionLevel);
+      AutoCommit := FTransactionLevel = 0;
     end else
       raise EZSQLException.Create(SInvalidOpInAutoCommit);
 end;
@@ -504,8 +504,14 @@ function TZDbcProxyConnection.StartTransaction: Integer;
 begin
   Result := FConnIntf.StartTransaction;
   AutoCommit := False;
-  FTransactionCounter := Result;
+  FTransactionLevel := Result;
 end;
+
+function TZDbcProxyConnection.GetTransactionLevel: Integer;
+begin
+  Result := FTransactionLevel;
+end;
+
 {$ENDIF}
 
 {**
@@ -547,9 +553,9 @@ begin
     if not Closed then
       FConnIntf.SetAutoCommit(Value);
       if Value then
-        FTransactionCounter := 0
+        FTransactionLevel := 0
       else
-        FTransactionCounter := 1;
+        FTransactionLevel := 1;
     inherited;
   end;
 end;

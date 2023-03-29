@@ -556,7 +556,7 @@ type
     ///  transaction was started. 2 means the transaction was saved. 3 means the
     ///  previous savepoint got saved too and so on.</summary>
     /// <returns>Returns the current txn-level. </returns>
-    function GetTransactionLevel: Integer;
+    function GetTransactionLevel: Integer; virtual;
   public //implement IZTransactionManager
     function CreateTransaction(AutoCommit, ReadOnly: Boolean;
       TransactIsolationLevel: TZTransactIsolationLevel; Params: TStrings): IZTransaction;
