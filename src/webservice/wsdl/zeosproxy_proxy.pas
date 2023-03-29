@@ -2,7 +2,7 @@
 This unit has been produced by ws_helper.
   Input unit name : "zeosproxy".
   This unit name  : "zeosproxy_proxy".
-  Date            : "12.01.2020 21:27:15".
+  Date            : "29.03.2023 20:33:29".
 }
 
 Unit zeosproxy_proxy;
@@ -148,6 +148,7 @@ Type
     function GetCharacterSets(
       const  ConnectionID : UnicodeString
     ):UnicodeString;
+    function StartTransaction():integer;
   End;
 
   Function wst_CreateInstance_IZeosProxy(const AFormat : string = 'SOAP:'; const ATransport : string = 'HTTP:'; const AAddress : string = ''):IZeosProxy;
@@ -903,6 +904,29 @@ Begin
     locSerializer.BeginCallRead(locCallContext);
       locStrPrmName := 'result';
       locSerializer.Get(TypeInfo(UnicodeString), locStrPrmName, Result);
+
+  Finally
+    locSerializer.Clear();
+  End;
+End;
+
+function TZeosProxy_Proxy.StartTransaction():integer;
+Var
+  locSerializer : IFormatterClient;
+  locCallContext : ICallContext;
+  locStrPrmName : string;
+Begin
+  locCallContext := Self as ICallContext;
+  locSerializer := GetSerializer();
+  Try
+    locSerializer.BeginCall('StartTransaction', GetTarget(),locCallContext);
+    locSerializer.EndCall();
+
+    MakeCall();
+
+    locSerializer.BeginCallRead(locCallContext);
+      locStrPrmName := 'result';
+      locSerializer.Get(TypeInfo(integer), locStrPrmName, Result);
 
   Finally
     locSerializer.Clear();

@@ -2,7 +2,7 @@
 This unit has been produced by ws_helper.
   Input unit name : "zeosproxy".
   This unit name  : "zeosproxy".
-  Date            : "12.01.2020 21:27:15".
+  Date            : "29.03.2023 20:33:29".
 }
 unit zeosproxy;
 {$IFDEF FPC}
@@ -153,6 +153,7 @@ type
     function GetCharacterSets(
       const  ConnectionID : UnicodeString
     ):UnicodeString;
+    function StartTransaction():integer;
   end;
 
   procedure Register_zeosproxy_ServiceMetadata();
@@ -850,6 +851,13 @@ begin
     'GetCharacterSets',
     'FORMAT_OutputEncodingStyle',
     'literal'
+  );
+  mm.SetOperationCustomData(
+    sUNIT_NAME,
+    'IZeosProxy',
+    'StartTransaction',
+    '_E_N_',
+    'StartTransaction'
   );
 end;
 

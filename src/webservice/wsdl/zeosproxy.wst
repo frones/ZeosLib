@@ -1,5 +1,5 @@
   GetWSTResourceManager().AddResource('ZEOSPROXY',
-    #0#0#0#16'WST_METADATA_0.6'#0#0#0#9'zeosproxy'#0#1#0#0#0#10'IZeosProxy'#0#24
+    #0#0#0#16'WST_METADATA_0.6'#0#0#0#9'zeosproxy'#0#1#0#0#0#10'IZeosProxy'#0#25
     +#0#0#0#7'Connect'#7#0#0#0#8'UserName'#0#0#0#13'UnicodeString'#0#0#0#0#0#0#0#1
     +#0#0#0#8'Password'#0#0#0#13'UnicodeString'#0#0#0#0#0#0#0#1#0#0#0#6'DbName'#0
     +#0#0#13'UnicodeString'#0#0#0#0#0#0#0#1#0#0#0#12'InProperties'#0#0#0#13'Unico'
@@ -89,5 +89,6 @@
     +'rn'#0#0#0#13'UnicodeString'#0#0#0#0#0#0#0#1#0#0#0#6'Result'#0#0#0#13'Unicod'
     +'eString'#0#0#0#0#0#0#0#3#0#0#0#16'GetCharacterSets'#2#0#0#0#12'ConnectionID'
     +#0#0#0#13'UnicodeString'#0#0#0#0#0#0#0#1#0#0#0#6'Result'#0#0#0#13'UnicodeStr'
-    +'ing'#0#0#0#0#0#0#0#3''
+    +'ing'#0#0#0#0#0#0#0#3#0#0#0#16'StartTransaction'#1#0#0#0#6'result'#0#0#0#7'i'
+    +'nteger'#0#0#0#0#0#0#0#3''
   );
