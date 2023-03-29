@@ -70,6 +70,7 @@ uses
     procedure Connect(const UserName, Password, ServiceEndpoint, DbName: WideString; var Properties: WideString; out DbInfo: WideString); {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
     procedure Disconnect; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
     procedure SetAutoCommit(const Value: LongBool); {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+    function StartTransaction: Integer; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
     procedure Commit; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
     procedure Rollback; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
     function SetProperties(const Properties : WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}

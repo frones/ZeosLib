@@ -198,6 +198,12 @@
   <message name="GetCharacterSetsResponse">
     <part name="result" type="xsd:string" wst:TypeHint="UnicodeString"/>
   </message>
+  <message name="StartTransaction">
+    <part name="ConnectionID" type="xsd:string" wst:TypeHint="UnicodeString"/>
+  </message>
+  <message name="StartTransactionResponse">
+    <part name="result" type="xsd:int"/>
+  </message>
   <portType name="IZeosProxy">
     <documentation>
       <GUID value="{DD0144C6-0CD5-483C-A8D9-28A00BAD1C75}"/>
@@ -297,6 +303,10 @@
     <operation name="GetCharacterSets">
       <input message="tns:GetCharacterSets"/>
       <output message="tns:GetCharacterSetsResponse"/>
+    </operation>
+    <operation name="StartTransaction">
+      <input message="tns:StartTransaction"/>
+      <output message="tns:StartTransactionResponse"/>
     </operation>
   </portType>
   <binding name="IZeosProxyBinding" type="tns:IZeosProxy">
@@ -509,6 +519,15 @@
       </output>
     </operation>
     <operation name="GetCharacterSets">
+      <soap:operation soapAction=""/>
+      <input>
+        <soap:body use="literal" namespace="zproxy"/>
+      </input>
+      <output>
+        <soap:body use="literal" namespace="zproxy"/>
+      </output>
+    </operation>
+    <operation name="StartTransaction">
       <soap:operation soapAction=""/>
       <input>
         <soap:body use="literal" namespace="zproxy"/>

@@ -64,6 +64,7 @@ uses
     procedure Connect(const UserName, Password, ServiceEndpoint, DbName: WideString; var Properties: WideString; out DbInfo: WideString); safecall;
     procedure Disconnect; safecall;
     procedure SetAutoCommit(const Value: LongBool); safecall;
+    function StartTransaction: Integer; safecall;
     procedure Commit; safecall;
     procedure Rollback; safecall;
     function SetProperties(const Properties : WideString): WideString; safecall;
@@ -101,6 +102,7 @@ uses
       procedure Connect(const UserName, Password, ServiceEndpoint, DbName: WideString; var Properties: WideString; out DbInfo: WideString); safecall;
       procedure Disconnect; safecall;
       procedure SetAutoCommit(const Value: LongBool); safecall;
+      function StartTransaction: Integer; safecall;
       procedure Commit; safecall;
       procedure Rollback; safecall;
       function SetProperties(const Properties : WideString): WideString; safecall;
@@ -182,7 +184,7 @@ begin
   Transport := Transport + ':';
 
   //Create the webservice proxy
-  FService := wst_CreateInstance_IZeosProxy('SOAP:', Transport, ServiceEndpoint);
+  FService := wst_CreateInstance_IZeosProxy('SOAP:', Transport, UTF8Encode(ServiceEndpoint));
 
   MyInProperties := Properties;
   FConnectionID := FService.Connect(UserName, Password, DbName, MyInProperties, MyOutProperties, MyDbInfo);
@@ -204,6 +206,12 @@ procedure TZDbcProxy.SetAutoCommit(const Value: LongBool); safecall;
 begin
   CheckConnected;
   FService.SetAutoCommit(FConnectionID, Value);
+end;
+
+function TZDbcProxy.StartTransaction: Integer; safecall;
+begin
+ CheckConnected;
+ Result := FService.StartTransaction(FConnectionID);
 end;
 
 procedure TZDbcProxy.Commit; safecall;

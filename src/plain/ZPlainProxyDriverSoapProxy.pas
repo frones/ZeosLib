@@ -57,7 +57,7 @@
 //  >Import : http://localhost:8000/WSDL/zeosproxy>0
 // Codierung : utf-8
 // Version: 1.0
-// (12.01.2020 21:31:48 - - $Rev: 69934 $)
+// (29.03.2023 21:12:19 - - $Rev: 108085 $)
 // ************************************************************************ //
 
 unit ZPlainProxyDriverSoapProxy;
@@ -79,6 +79,7 @@ type
   // sind in der Regel vordefinierten/bekannten XML- oder Embarcadero-Typen zugeordnet; sie könnten aber auf 
   // ein inkorrektes WSDL-Dokument hinweisen, das einen Schematyp nicht deklariert oder importiert hat.
   // ************************************************************************ //
+  // !:int             - "http://www.w3.org/2001/XMLSchema"[Lit][]
   // !:unsignedInt     - "http://www.w3.org/2001/XMLSchema"[]
   // !:boolean         - "http://www.w3.org/2001/XMLSchema"[]
   // !:UnicodeString   - "http://www.w3.org/2001/XMLSchema"[Lit][]
@@ -93,7 +94,7 @@ type
   // Bindung   : IZeosProxyBinding
   // Service   : IZeosProxy
   // Port      : IZeosProxyPort
-  // URL       : 0.0.0.0/services/IZeosProxy
+  // URL       : 127.0.0.1/services/IZeosProxy
   // ************************************************************************ //
   IZeosProxy = interface(IInvokable)
   ['{269AF2BC-9AAB-FBA4-61C1-37129CFC7BFC}']
@@ -108,7 +109,7 @@ type
     //     - Eingabe-Part verweist auf kein Element
     procedure Disconnect(const ConnectionID: UnicodeString); stdcall;
 
-    // Entpacken nicht möglich:
+    // Entpacken nicht möglich: 
     //     - Eingabemeldung besteht aus mehreren Parts
     procedure SetAutoCommit(const ConnectionID: UnicodeString; const Value: Boolean); stdcall;
 
@@ -150,7 +151,7 @@ type
     //     - Ausgabe-Part verweist auf kein Element
     function  GetTableTypes(const ConnectionID: UnicodeString): UnicodeString; stdcall;
 
-    // Entpacken nicht möglich:
+    // Entpacken nicht möglich: 
     //     - Eingabemeldung besteht aus mehreren Parts
     //     - Ausgabe-Part verweist auf kein Element
     function  GetColumns(const ConnectionID: UnicodeString; const Catalog: UnicodeString; const SchemaPattern: UnicodeString; const TableNamePattern: UnicodeString; const ColumnNamePattern: UnicodeString): UnicodeString; stdcall;
@@ -192,7 +193,7 @@ type
     function  GetIndexInfo(const ConnectionID: UnicodeString; const Catalog: UnicodeString; const Schema: UnicodeString; const Table: UnicodeString; const Unique: Boolean; const Approximate: Boolean
                            ): UnicodeString; stdcall;
 
-    // Entpacken nicht möglich:
+    // Entpacken nicht möglich: 
     //     - Eingabemeldung besteht aus mehreren Parts
     //     - Ausgabe-Part verweist auf kein Element
     function  GetSequences(const ConnectionID: UnicodeString; const Catalog: UnicodeString; const SchemaPattern: UnicodeString; const SequenceNamePattern: UnicodeString): UnicodeString; stdcall;
@@ -216,6 +217,11 @@ type
     //     - Eingabe-Part verweist auf kein Element
     //     - Ausgabe-Part verweist auf kein Element
     function  GetCharacterSets(const ConnectionID: UnicodeString): UnicodeString; stdcall;
+
+    // Entpacken nicht möglich: 
+    //     - Eingabe-Part verweist auf kein Element
+    //     - Ausgabe-Part verweist auf kein Element
+    function  StartTransaction(const ConnectionID: UnicodeString): Integer; stdcall;
   end;
 
 function GetIZeosProxy(UseWSDL: Boolean=System.False; Addr: string=''; HTTPRIO: THTTPRIO = nil): IZeosProxy;

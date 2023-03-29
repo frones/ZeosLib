@@ -5,7 +5,7 @@ unit DbcProxyFileLogger;
 interface
 
 uses
-  Classes, SysUtils, SyncObjs;
+  {$IFDEF WINDOWS}Windows,{$ENDIF}Classes, SysUtils, SyncObjs;
 
 type
   TDbcProxyLogger = class
@@ -40,12 +40,12 @@ type
   TDbcProxyConsoleLogger = class(TDbcProxyWritelnLogger)
     protected
       FLock: TCriticalSection;
+      FConsoleAvailable: Boolean;
       procedure Log(MessageStr: String); override;
     public
       constructor Create;
       destructor Destroy; override;
   end;
-
 
 implementation
 
@@ -106,8 +106,18 @@ end;
 {------------------------------------------------------------------------------}
 
 constructor TDbcProxyConsoleLogger.Create;
+{$IFDEF WINDOWS}
+var
+  StdOutHandle: HANDLE;
+{$ENDIF}
 begin
   FLock := TCriticalSection.Create;
+  {$IFDEF WINDOWS}
+  StdOutHandle := GetStdHandle(STD_OUTPUT_HANDLE);
+  FConsoleAvailable := StdOutHandle <> INVALID_HANDLE_VALUE;
+  {$ELSE}
+  FConsoleAvailable := True;
+  {$ENDIF}
 end;
 
 destructor TDbcProxyConsoleLogger.Destroy;
@@ -118,13 +128,15 @@ end;
 
 procedure TDbcProxyConsoleLogger.Log(MessageStr: String);
 begin
-  FLock.Enter;
-  try
-    MessageStr := DateTimeToStr(Now, True) + ' ' +  MessageStr;
-    WriteLn(MessageStr);
-    Flush(StdOut);
-  finally
-    FLock.Leave;
+  if FConsoleAvailable then begin;
+    FLock.Enter;
+    try
+      MessageStr := DateTimeToStr(Now, True) + ' ' +  MessageStr;
+      WriteLn(MessageStr);
+      Flush(StdOut);
+    finally
+      FLock.Leave;
+    end;
   end;
 end;
 
