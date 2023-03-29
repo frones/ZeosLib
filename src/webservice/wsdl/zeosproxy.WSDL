@@ -198,7 +198,9 @@
   <message name="GetCharacterSetsResponse">
     <part name="result" type="xsd:string" wst:TypeHint="UnicodeString"/>
   </message>
-  <message name="StartTransaction"/>
+  <message name="StartTransaction">
+    <part name="ConnectionID" type="xsd:string" wst:TypeHint="UnicodeString"/>
+  </message>
   <message name="StartTransactionResponse">
     <part name="result" type="xsd:int"/>
   </message>

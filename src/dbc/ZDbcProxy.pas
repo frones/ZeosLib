@@ -93,14 +93,11 @@ type
     FPlainDriver: IZProxyPlainDriver;
     FConnIntf: IZDbcProxy;
     FDbInfo: ZWideString;
+    FTransactionCounter: Integer;
 
     //shadow properties - they just mirror the values that are set on the server
     FCatalog: String;
     FServerProvider: TZServerProvider;
-
-    {$IFDEF ZEOS73UP}
-    FStartTransactionUsed: Boolean;
-    {$ENDIF}
   protected
     procedure transferProperties(PropName, PropValue: String);
     procedure applyProperties(const Properties: String);
@@ -338,6 +335,7 @@ end;
 }
 procedure TZDbcProxyConnection.AfterConstruction;
 begin
+  FTransactionCounter := 0;
   FMetadata := TZProxyDatabaseMetadata.Create(Self, Url);
   FConnIntf := GetPlainDriver.GetLibraryInterface;
   if not assigned(FConnIntf) then
@@ -357,10 +355,6 @@ var
 begin
   if not Closed then
     Exit;
-
-  {$IFDEF ZEOS73UP}
-  FStartTransactionUsed := false;
-  {$ENDIF}
 
   WsUrl := URL.Properties.Values[ConnProps_ProxyProtocol];
   if WsUrl = '' then
@@ -488,12 +482,8 @@ begin
   if not Closed then
     if not GetAutoCommit then begin
       FConnIntf.Commit;
-      {$IFDEF ZEOS73UP}
-      if FStartTransactionUsed then begin
-        SetAutoCommit(True);
-        FStartTransactionUsed := false;
-      end;
-      {$ENDIF}
+      Dec(FTransactionCounter);
+      AutoCommit := FTransactionCounter = 0;
     end else
       raise EZSQLException.Create(SInvalidOpInAutoCommit);
 end;
@@ -503,34 +493,19 @@ begin
   if not Closed then
     if not GetAutoCommit then begin
       FConnIntf.Rollback;
-      {$IFDEF ZEOS73UP}
-      if FStartTransactionUsed then begin
-        SetAutoCommit(True);
-        FStartTransactionUsed := false;
-      end;
-      {$ENDIF}
+      Dec(FTransactionCounter);
+      AutoCommit := FTransactionCounter = 0;
     end else
       raise EZSQLException.Create(SInvalidOpInAutoCommit);
 end;
 
 {$IFDEF ZEOS73UP}
-// for now we don't support nested transactions.
-// Todo: Integrate changes for nested transactions support.
 function TZDbcProxyConnection.StartTransaction: Integer;
 begin
-  if FStartTransactionUsed or not GetAutoCommit then
-    raise EZSQLException.Create('The proxy driver does not support nested transactions.');
-  FStartTransactionUsed := True;
-  SetAutoCommit(False);
-  Result := 1;
+  Result := FConnIntf.StartTransaction;
+  AutoCommit := False;
+  FTransactionCounter := Result;
 end;
-
-(*
-function TZDbcProxyConnection.GetConnectionTransaction: IZTransaction;
-begin
-  raise EZSQLException.Create('Unsupported');
-end;
-*)
 {$ENDIF}
 
 {**
@@ -571,6 +546,10 @@ begin
   if Value <> GetAutoCommit then begin
     if not Closed then
       FConnIntf.SetAutoCommit(Value);
+      if Value then
+        FTransactionCounter := 0
+      else
+        FTransactionCounter := 1;
     inherited;
   end;
 end;

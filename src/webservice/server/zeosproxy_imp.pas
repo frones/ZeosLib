@@ -2,7 +2,7 @@
 This unit has been produced by ws_helper.
   Input unit name : "zeosproxy".
   This unit name  : "zeosproxy_imp".
-  Date            : "12.01.2020 21:27:15".
+  Date            : "29.03.2023 20:49:32".
 }
 Unit zeosproxy_imp;
 {$IFDEF FPC} {$mode objfpc}{$H+} {$ENDIF}
@@ -148,6 +148,9 @@ type
     function GetCharacterSets(
       const  ConnectionID : UnicodeString
     ):UnicodeString;
+    function StartTransaction(
+      const  ConnectionID : UnicodeString
+    ):integer;
   End;
 
 
@@ -595,6 +598,20 @@ Begin
     Unlock;
   end;
 End;
+
+function TZeosProxy_ServiceImp.StartTransaction(
+  const  ConnectionID : UnicodeString
+):integer;
+Begin
+  with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
+  try
+    Result := ZeosConnection.StartTransaction;
+  finally
+    Unlock;
+  end;
+End;
+
+
 
 procedure RegisterZeosProxyImplementationFactory();
 Begin

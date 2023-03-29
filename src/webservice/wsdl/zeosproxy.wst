@@ -89,6 +89,7 @@
     +'rn'#0#0#0#13'UnicodeString'#0#0#0#0#0#0#0#1#0#0#0#6'Result'#0#0#0#13'Unicod'
     +'eString'#0#0#0#0#0#0#0#3#0#0#0#16'GetCharacterSets'#2#0#0#0#12'ConnectionID'
     +#0#0#0#13'UnicodeString'#0#0#0#0#0#0#0#1#0#0#0#6'Result'#0#0#0#13'UnicodeStr'
-    +'ing'#0#0#0#0#0#0#0#3#0#0#0#16'StartTransaction'#1#0#0#0#6'result'#0#0#0#7'i'
-    +'nteger'#0#0#0#0#0#0#0#3''
+    +'ing'#0#0#0#0#0#0#0#3#0#0#0#16'StartTransaction'#2#0#0#0#12'ConnectionID'#0#0
+    +#0#13'UnicodeString'#0#0#0#0#0#0#0#1#0#0#0#6'Result'#0#0#0#7'integer'#0#0#0#0
+    +#0#0#0#3''
   );

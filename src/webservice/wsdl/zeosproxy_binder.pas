@@ -2,7 +2,7 @@
 This unit has been produced by ws_helper.
   Input unit name : "zeosproxy".
   This unit name  : "zeosproxy_binder".
-  Date            : "29.03.2023 20:33:29".
+  Date            : "29.03.2023 20:49:32".
 }
 unit zeosproxy_binder;
 {$IFDEF FPC} {$mode objfpc}{$H+} {$ENDIF}
@@ -1141,10 +1141,12 @@ var
   callCtx : ICallContext;
   locStrPrmName : string;
   procName,trgName : string;
+  ConnectionID : UnicodeString;
   returnVal : integer;
 begin
   callCtx := AContext;
   
+  locStrPrmName := 'ConnectionID';  AFormatter.Get(TypeInfo(UnicodeString),locStrPrmName,ConnectionID);
   
   tmpObj := Self.GetFactory().CreateInstance() as IZeosProxy;
   if Supports(tmpObj,ICallControl,cllCntrl) then
@@ -1153,7 +1155,7 @@ begin
   if hasObjCntrl then
     objCntrl.Activate();
   try
-    returnVal := tmpObj.StartTransaction();
+    returnVal := tmpObj.StartTransaction(ConnectionID);
     
     procName := AFormatter.GetCallProcedureName();
     trgName := AFormatter.GetCallTarget();
