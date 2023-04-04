@@ -99,7 +99,7 @@ type
   public
     /// <summary>Clones data structure and copies the data from a source zeos dataset</summary>
     /// <param>"Source" a TZAbstractRODataset or descendant we clone from</param>
-    procedure CloneDataFrom(Source: TZAbstractRODataset);
+    procedure CloneDataFrom(Source: TZAbstractRODataset; CopyData: Boolean = True);
     /// <summary>Assigns the data from a source zeos dataset. The
     ///  FieldDefs are used to find matching fields by it's name. All matches
     ///  get a copy as given by Source.</summary>
@@ -297,7 +297,7 @@ begin
   Fields.Clear;
 end;
 
-procedure TZAbstractMemTable.CloneDataFrom(Source: TZAbstractRODataset);
+procedure TZAbstractMemTable.CloneDataFrom(Source: TZAbstractRODataset; CopyData: Boolean);
 var Rows: TZSortedList;
     FieldPairs: TZIndexPairList;
     Field: TField;
@@ -338,17 +338,20 @@ begin
     FLocalConSettings.ClientCodePage := @FCharacterSet;
     FConSettings := @FLocalConSettings;
     Statement := TZMemResultSetPreparedStatement.Create(FConSettings, nil, Properties);
-    VirtualResultSet := TZMemTableResultSet.CreateFrom(TZProtectedAbstractRODataset(Source).ResultSet, Rows, FieldPairs, FConSettings);
-    RS := VirtualResultSet;
-    if RequestLive
-    then VirtualResultSet.SetConcurrency(rcUpdatable)
-    else VirtualResultSet.SetConcurrency(rcReadOnly);
-    {$IFDEF FPC}
-    SetDefaultFields(True);
-    {$ENDIF}
-    SetAnotherResultset(RS);
-    RS.QueryInterface(IZCachedResultSet, CS);
-    CachedResultSet := CS;
+    if CopyData then
+    begin
+      VirtualResultSet := TZMemTableResultSet.CreateFrom(TZProtectedAbstractRODataset(Source).ResultSet, Rows, FieldPairs, FConSettings);
+      RS := VirtualResultSet;
+      if RequestLive
+      then VirtualResultSet.SetConcurrency(rcUpdatable)
+      else VirtualResultSet.SetConcurrency(rcReadOnly);
+      {$IFDEF FPC}
+      SetDefaultFields(True);
+      {$ENDIF}
+      SetAnotherResultset(RS);
+      RS.QueryInterface(IZCachedResultSet, CS);
+      CachedResultSet := CS;
+    end;
     ConvertFiedDefsToColumnsInfo(FieldDefs);
   finally
     FreeAndNil(FieldPairs);
