@@ -3717,6 +3717,12 @@ function TZAbstractRODataset.CreateResultSet(const SQL: string;
 begin
   CheckConnected;
   Connection.ShowSQLHourGlass;
+
+  if (Statement <> nil) and Statement.IsClosed and Prepared then begin
+    Self.InternalUnPrepare;
+    Self.InternalPrepare;
+  end;
+
   try
     SetStatementParams(Statement, FSQL.Statements[0].ParamNamesArray,
       FParams, FDataLink);
@@ -3759,7 +3765,7 @@ begin
   If (csDestroying in Componentstate) then
     raise EZSQLException.Create(SCanNotOpenDataSetWhenDestroying);
   {$ENDIF}
-  if not FResultSetWalking then Prepare;
+  if (not FResultSetWalking) then Prepare;
 
   LcmString := Properties.Values[DSProps_LobCacheMode];
   if (LcmString = '') and Assigned(Connection) then
