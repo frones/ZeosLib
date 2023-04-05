@@ -765,7 +765,7 @@ var
   var I: Integer;
   begin
     Result := False;
-    for I := 0 to DataSet.Fields.Count -1 do
+    for I := 0 to TZAbstractDataset(DataSet).DbcResultSet.GetMetadata.GetColumnCount - 1 do
       if OldRowAccessor.CompareBuffer(OldRowAccessor.RowBuffer,
          NewRowAccessor.RowBuffer, I+FirstDbcIndex, NewRowAccessor.GetCompareFunc(I+FirstDbcIndex, ckEquals))  <> 0 then begin
         Result := True;
