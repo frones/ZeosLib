@@ -534,7 +534,7 @@ If you are using data-aware components, make sure to unassign any datasources be
 This will most probably result in access violations or other unwanted behavior.
 Proper synchronization is also needed at event handlers (like TZQuery.BeforeOpen, .AfterOpen, .AfterScroll, TZConnection.AfterConnect, etc.) as if specific actions are called from a worker thread, these event handlers will also run in the worker's context!
 
-A long running operation can be cancelled in two ways:
+A long running operation can be canceled in two ways:
 \begin{itemize}
   \item 
 	  Graceful: call ZConnection.AbortOperation.
@@ -551,4 +551,13 @@ A long running operation can be cancelled in two ways:
 Disclaimer:
 Please keep in mind that TZMethodInThread (and pushing specific actions to background threads) were not tested in every scenario and might cause issues in unique cases.
 It is still a viable alternate until Zeos implements proper asynchronous functionality.
+
+\section{Known Limitations}
+
+\subsection{Negative Time Intervals on PostgreSQL}
+Zeos internal structures don't allow handling negative time intervals.
+Also there is no field type we can use to display negative intervals.
+Because of these limitations negative intervals will be returned with all parts (hours, minutes, seconds, microseconds) set to 0 (zero).
+
+
 \end{document}
