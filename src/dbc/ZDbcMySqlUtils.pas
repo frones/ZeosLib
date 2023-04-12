@@ -665,6 +665,9 @@ SetLobSize:
       17..32: goto lLong;
       else goto lLongLong;
     end;
+  end else if TypeName = 'uuid' then begin
+    FieldType := stGUID;
+    ColumnSize := 16;
   end else if TypeName = 'json' then  { test it ..}
     FieldType := stAsciiStream
   else
