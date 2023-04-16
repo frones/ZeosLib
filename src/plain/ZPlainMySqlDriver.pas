@@ -1147,6 +1147,10 @@ type
     function GetDescription: string; override;
   end;
 
+  TZMariaDBPlainDriver = class(TZMySQLPlainDriver)
+  public
+    function GetProtocol: string; override;
+  end;
 {$ENDIF ZEOS_DISABLE_MYSQL}
 
 implementation
@@ -1424,6 +1428,13 @@ end;
 function TZMySQLPlainDriver.IsMariaDBDriver: Boolean;
 begin
   Result := FIsMariaDBDriver;
+end;
+
+  { TZMariaDBPlainDriver }
+
+function TZMariaDBPlainDriver.GetProtocol: string;
+begin
+  Result := 'mariadb';
 end;
 
 {$ENDIF ZEOS_DISABLE_MYSQL}
