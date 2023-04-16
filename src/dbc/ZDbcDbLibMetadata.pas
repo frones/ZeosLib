@@ -2115,8 +2115,9 @@ begin
         + ' where c.number=0 '
         + '   and (o.name like %0:s escape ''%2:s'' or (%0:s is null)) '
         + '   and (s.name like %1:s escape ''%2:s'' or (%1:s is null)) '
+        + '   and (c.name like %3:s escape ''%2:s'' or (%3:s is null)) '
         + ' order by colid ',
-        [DeComposeObjectString(TableNamePattern), DeComposeObjectString(SchemaPattern), GetDataBaseInfo.GetSearchStringEscape]);
+        [DeComposeObjectString(TableNamePattern), DeComposeObjectString(SchemaPattern), GetDataBaseInfo.GetSearchStringEscape, DecomposeObjectString(ColumnNamePattern)]);
       with Statement.ExecuteQuery(Tmp) do begin
         // hint http://blog.sqlauthority.com/2007/04/30/case-sensitive-sql-query-search/ for the collation setting to get a case sensitive behavior
         while Next do begin

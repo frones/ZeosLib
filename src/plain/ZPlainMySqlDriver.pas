@@ -420,6 +420,11 @@ type
     FIELD_TYPE_NEWDATE   = 14,
     FIELD_TYPE_VARCHAR   = 15, //<--ADDED by fduenas 20-06-2006
     FIELD_TYPE_BIT       = 16, //<--ADDED by fduenas 20-06-2006
+    (*these types are not used by the client - only for the binary log*)
+    MYSQL_TYPE_TIMESTAMP2= 17,
+    MYSQL_TYPE_DATETIME2 = 18,
+    MYSQL_TYPE_TIME2     = 19,
+    (*----------------------------------------------------------------*)
     MYSQL_TYPE_JSON      = 245,
     FIELD_TYPE_NEWDECIMAL = 246, //<--ADDED by fduenas 20-06-2006
     FIELD_TYPE_ENUM      = 247,
@@ -1147,6 +1152,10 @@ type
     function GetDescription: string; override;
   end;
 
+  TZMariaDBPlainDriver = class(TZMySQLPlainDriver)
+  public
+    function GetProtocol: string; override;
+  end;
 {$ENDIF ZEOS_DISABLE_MYSQL}
 
 implementation
@@ -1424,6 +1433,13 @@ end;
 function TZMySQLPlainDriver.IsMariaDBDriver: Boolean;
 begin
   Result := FIsMariaDBDriver;
+end;
+
+  { TZMariaDBPlainDriver }
+
+function TZMariaDBPlainDriver.GetProtocol: string;
+begin
+  Result := 'mariadb';
 end;
 
 {$ENDIF ZEOS_DISABLE_MYSQL}
