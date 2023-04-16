@@ -888,10 +888,9 @@ var
   ADataSet: TZAbstractRWTxnUpdateObjDataSet;
 
   function SomethingChanged: Boolean;
-  var I, J: Integer;
+  var J: Integer;
   begin
     Result := False;
-    J := 0;
     for J := 0 to TZAbstractRODataSet(DataSet).DbcResultSet.GetcolumnCount -1 do
       if OldRowAccessor.CompareBuffer(OldRowAccessor.RowBuffer,
         NewRowAccessor.RowBuffer, J+FirstDbcIndex, NewRowAccessor.GetCompareFunc(J+FirstDbcIndex, ckEquals))  <> 0 then begin
