@@ -1032,22 +1032,42 @@ end;
 
 procedure dt2time(jd: Int64; out Hour, Min, Sec: Word; out MicroFractions: Cardinal);
 begin
-  Hour := jd div USECS_PER_HOUR;
-  jd := jd - Int64(Hour) * Int64(USECS_PER_HOUR);
-  Min := jd div USECS_PER_MINUTE;
-  jd := jd - Int64(Min) * Int64(USECS_PER_MINUTE);
-  Sec := jd div USECS_PER_SEC;
-  MicroFractions := jd - (Int64(Sec) * Int64(USECS_PER_SEC));
+  // The original algorithm has problems with negative durations. (1:00 - 2:00 = -1:00)
+  // These will result in range check errors.
+  // So we limit ourselves to positive durations and times.
+  if jd >= 0 then begin
+    Hour := jd div USECS_PER_HOUR;
+    jd := jd - Int64(Hour) * Int64(USECS_PER_HOUR);
+    Min := jd div USECS_PER_MINUTE;
+    jd := jd - Int64(Min) * Int64(USECS_PER_MINUTE);
+    Sec := jd div USECS_PER_SEC;
+    MicroFractions := jd - (Int64(Sec) * Int64(USECS_PER_SEC));
+  end else begin
+    Hour := 0;
+    Min := 0;
+    Sec := 0;
+    MicroFractions := 0;
+  end;
 end;
 
 procedure dt2time(jd: Double; out Hour, Min, Sec: Word; out MicroFractions: Cardinal);
 begin
-  Hour := Trunc(jd / SECS_PER_HOUR);
-  jd := jd - Hour * SECS_PER_HOUR;
-  Min := Trunc(jd / SECS_PER_MINUTE);
-  jd := jd - Min * SECS_PER_MINUTE;
-  Sec := Trunc(jd);
-  MicroFractions := Trunc((jd - Sec)) * Int64(USECS_PER_SEC);
+  // The original algorithm has problems with negative durations. (1:00 - 2:00 = -1:00)
+  // These will result in range check errors.
+  // So we limit ourselves to positive durations and times.
+  if jd <= 0 then begin
+    Hour := Trunc(jd / SECS_PER_HOUR);
+    jd := jd - Hour * SECS_PER_HOUR;
+    Min := Trunc(jd / SECS_PER_MINUTE);
+    jd := jd - Min * SECS_PER_MINUTE;
+    Sec := Trunc(jd);
+    MicroFractions := Trunc((jd - Sec)) * Int64(USECS_PER_SEC);
+  end else begin
+    Hour := 0;
+    Min := 0;
+    Sec := 0;
+    MicroFractions := 0;
+  end;
 end;
 
 procedure Time2PG(const Value: TDateTime; out Result: Int64);
