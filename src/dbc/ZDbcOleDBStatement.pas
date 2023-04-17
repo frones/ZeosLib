@@ -3213,7 +3213,7 @@ TSWConv:              PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ :=
                     else InternalBindSInt(Index, stTimeStamp, 1);
     end;
   end else begin//Late binding
-    InitDateBind(Index, stTime);
+    InitDateBind(Index, stTimeStamp);
     BindList.Put(Index, Value);
   end;
 end;
