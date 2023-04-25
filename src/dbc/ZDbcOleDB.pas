@@ -481,7 +481,7 @@ begin
       while FpulTransactionLevel > 0 do begin
         Status := fTransaction.Abort(nil, FRetaining, False);
         if Status <> S_OK then
-          HandleErrorOrWarning(Status, lcTransaction, 'Rollback Transaction', Self);
+          HandleErrorOrWarning(Status, lcTransaction, 'Rollback Transaction (SetAutoCommit)', Self);
         Dec(FpulTransactionLevel);
       end;
       fTransaction := nil;
@@ -593,8 +593,11 @@ begin
     if not Assigned(fTransaction) then
       OleCheck(FDBCreateCommand.QueryInterface(IID_ITransactionLocal,fTransaction));
     Status := fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel);
-    if Status <> S_OK then
+    if Status <> S_OK then begin
+      FpulTransactionLevel := 0;
+      fTransaction := nil;
       HandleErrorOrWarning(Status, lcTransaction, 'Start Transaction', Self);
+    end;
     Result := FpulTransactionLevel;
   end else begin
     S := 'SP'+ZFastCode.IntToStr(NativeUint(Self))+'_'+ZFastCode.IntToStr(FSavePoints.Count);
@@ -920,6 +923,7 @@ begin
     FreeAndNil(Writer);
     OleCheck(SetErrorInfo(0, nil));
   end;
+
   if Error <> nil then
     raise Error;
 end;
@@ -1031,7 +1035,7 @@ begin
   end else begin
     Status := fTransaction.Abort(nil, FRetaining, False);
     if Status < S_OK then
-      HandleErrorOrWarning(Status, lcTransaction, 'Rollback Transaction', Self);
+      HandleErrorOrWarning(Status, lcTransaction, 'Rollback Transaction (Rollback)', Self);
     Dec(FpulTransactionLevel);
     if (FpulTransactionLevel = 0) and not FRetaining then begin
       fTransaction := nil;
@@ -1224,7 +1228,7 @@ begin
         Status := fTransaction.Abort(nil, False, False);
         fTransaction := nil;
         if Status < S_OK then
-          HandleErrorOrWarning(Status, lcTransaction, 'Rollback Transaction', Self);
+          HandleErrorOrWarning(Status, lcTransaction, 'Rollback Transaction (InternalClose)', Self);
       end;
     end;
     Status := fDBInitialize.Uninitialize;
