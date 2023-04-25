@@ -279,14 +279,14 @@ const
   DSProps_InternalBufSize = 'internal_buffer_size';
 {$IFEND}
 
-{$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD) OR DEFINED(ENABLE_POSTGRES) OR DEFINED(ENABLE_MYSQL)}
+//{$IF DEFINED(ENABLE_ORACLE) OR DEFINED(ENABLE_INTERBASE) OR DEFINED(ENABLE_FIREBIRD) OR DEFINED(ENABLE_POSTGRES) OR DEFINED(ENABLE_MYSQL)}
   /// <type>Enumerator</type>
   /// <Values>None|OnLoad|OnAccess</Values>
   /// <usage>Connection,DataSet</usage>
   /// <syntax>Properties.Values[DSProps_LobCacheMode]={value}</syntax>
   /// <summary>How to cache lob types. OnLoad caches lobs on record fetch. OnAccess caches lobs only when accessed.</summary>
   DSProps_LobCacheMode = 'LobCacheMode';
-{$IFEND}
+//{$IFEND}
 
 {$IF DEFINED(ENABLE_SQLITE) OR DEFINED(ENABLE_POSTGRESQL)}
   { Parameters that are for datasets and statements but could be set for connections
