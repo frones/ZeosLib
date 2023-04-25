@@ -55,7 +55,6 @@ interface
 
 {$I ZDbc.inc}
 
-{$IFNDEF ZEOS_DISABLE_ASA}
 uses
   ZCompatibility, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   SysUtils,
@@ -63,6 +62,7 @@ uses
   ZGenericSqlAnalyser, ZDbcLogging, ZExceptions;
 
 type
+  {$IFNDEF ZEOS_DISABLE_ASA}
   {** Implements a ASA Database Driver. }
   TZASADriver = class(TZAbstractDriver)
   public
@@ -237,9 +237,15 @@ type
     function GetHostVersion: Integer; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_ASA}
+
+  // Note: The TZASACachedResolver should be defind in case another driver needs it.
+
   {** Implements a specialized cached resolver for ASA. }
   TZASACachedResolver = class(TZGenerateSQLCachedResolver)
   end;
+
+{$IFNDEF ZEOS_DISABLE_ASA}
 
 var
   {** The common driver manager object. }
