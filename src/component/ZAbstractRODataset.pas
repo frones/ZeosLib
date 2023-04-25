@@ -3671,7 +3671,8 @@ var
   TxnCon: IZConnection;
   {$IFNDEF UNICODE}
   sqlCP, ClientCP: Word;
-  NewSQL: RawByteString;
+  NewSQL_A: RawByteString;
+  NewSQL_W: UnicodeString;
   ConSettings: PZConSettings;
   {$ENDIF}
 begin
@@ -3689,15 +3690,21 @@ begin
     TxnCon := Txn.GetConnection; //sets the active txn for IB/FB that is more a hack than i nice idea of me (EH) but make it work..
     {$IFNDEF UNICODE}
     ConSettings := TxnCon.GetConSettings;
-    if (Ord(FCharEncoding)  >= Ord(ceUTF8))
-    then ClientCP := zCP_UTF8
-    else ClientCP := ConSettings.ClientCodePage.CP;
-    sqlCP := Connection.RawCharacterTransliterateOptions.GetRawTransliterateCodePage(ttSQL);
-    if (clientCP <> sqlCP) then begin
-      NewSQL := '';
-      PRawToRawConvert(Pointer(SQL), Length(SQL), sqlCP, clientCP, RawByteString(NewSQL));
-    end else NewSQL := SQL;
-    Result := TxnCon.PrepareStatementWithParams(NewSQL, Temp);
+    if ConSettings.ClientCodePage.Encoding = ceUTF16 then begin
+      sqlCP := Connection.RawCharacterTransliterateOptions.GetRawTransliterateCodePage(ttSQL);
+      NewSQL_W := ZEncoding.ZRawToUnicode(SQL, sqlCP);
+      Result := TxnCon.PrepareStatementWithParams(NewSQL_W, Temp);
+    end else begin
+      if (Ord(FCharEncoding)  >= Ord(ceUTF8))
+      then ClientCP := zCP_UTF8
+      else ClientCP := ConSettings.ClientCodePage.CP;
+      sqlCP := Connection.RawCharacterTransliterateOptions.GetRawTransliterateCodePage(ttSQL);
+      if (clientCP <> sqlCP) then begin
+        NewSQL_A := '';
+        PRawToRawConvert(Pointer(SQL), Length(SQL), sqlCP, clientCP, RawByteString(NewSQL_A));
+      end else NewSQL_A := SQL;
+      Result := TxnCon.PrepareStatementWithParams(NewSQL_A, Temp);
+    end;
     {$ELSE}
     Result := TxnCon.PrepareStatementWithParams(SQL, Temp);
     {$ENDIF}
