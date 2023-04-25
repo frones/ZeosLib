@@ -54,7 +54,6 @@ unit ZDbcOracle;
 interface
 
 {$I ZDbc.inc}
-{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
@@ -63,6 +62,7 @@ uses
   ZExceptions;
 
 type
+  {$IFNDEF ZEOS_DISABLE_ORACLE}
 
   /// <summary>Implements Oracle Database Driver.</summary>
   TZOracleDriver = class(TZAbstractDriver)
@@ -390,18 +390,6 @@ type
     function GetStatementAnalyser: IZStatementAnalyser;
  end;
 
-  {** Implements a specialized cached resolver for Oracle. }
-  TZOracleCachedResolver = class(TZGenerateSQLCachedResolver)
-  public
-    /// <author>Michael Seeger</author>
-    /// <summary>Forms a SELECT statements to calculate default values.</summary>
-    /// <param>"RowAccessor" an accessor object to column values.</param>
-    /// <param>"ColumnsLookup" an TZIndexPairList which holds the NULL columns.</param>
-    /// <returns>the composed SELECT SQL.</returns>
-    function FormCalculateStatement(const RowAccessor: TZRowAccessor;
-      const ColumnsLookup: TZIndexPairList): string; override;
-  end;
-
   /// <summary>
   ///  Defines a oracle transaction mode.
   /// </summary>
@@ -520,21 +508,39 @@ type
     procedure BeforeDestruction; override;
   end;
 
+ {$ENDIF ZEOS_DISABLE_ORACLE}
+
+  {** Implements a specialized cached resolver for Oracle. }
+  TZOracleCachedResolver = class(TZGenerateSQLCachedResolver)
+  public
+    /// <author>Michael Seeger</author>
+    /// <summary>Forms a SELECT statements to calculate default values.</summary>
+    /// <param>"RowAccessor" an accessor object to column values.</param>
+    /// <param>"ColumnsLookup" an TZIndexPairList which holds the NULL columns.</param>
+    /// <returns>the composed SELECT SQL.</returns>
+    function FormCalculateStatement(const RowAccessor: TZRowAccessor;
+      const ColumnsLookup: TZIndexPairList): string; override;
+  end;
+
+{$IFNDEF ZEOS_DISABLE_ORACLE}
+
+
 const
   CommitMode: array[Boolean] of ub4 = (OCI_DEFAULT, OCI_COMMIT_ON_SUCCESS);
 
 var
   {** The common driver manager object. }
   OracleDriver: IZDriver;
-
 {$ENDIF ZEOS_DISABLE_ORACLE}
+
 implementation
-{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 uses {$IFNDEF UNICODE}ZDbcUtils,{$ENDIF}
   ZMessages, ZCollections, ZEncoding, ZSysUtils, ZFastCode,
   ZGenericSqlToken, ZOracleToken, ZOracleAnalyser,
   ZDbcOracleStatement, ZDbcOracleUtils, ZDbcOracleMetadata, ZDbcProperties;
+
+{$IFNDEF ZEOS_DISABLE_ORACLE}
 
 { TZOracleDriver }
 
@@ -1435,28 +1441,6 @@ begin
   (P+L)^ := #39;
 end;
 
-{ TZOracleCachedResolver }
-
-function TZOracleCachedResolver.FormCalculateStatement(
-  const RowAccessor: TZRowAccessor; const ColumnsLookup: TZIndexPairList): string;
-var
-   iPos: Integer;
-begin
-  Result := inherited FormCalculateStatement(RowAccessor, ColumnsLookup);
-  if Result <> '' then
-  begin
-    iPos := ZFastCode.pos('FROM', uppercase(Result));
-    if iPos > 0 then
-    begin
-      Result := copy(Result, 1, iPos+3) + ' DUAL';
-    end
-    else
-    begin
-      Result := Result + ' FROM DUAL';
-    end;
-  end;
-end;
-
 { TZOracleTransaction }
 
 procedure TZOracleTransaction.BeforeDestruction;
@@ -1667,6 +1651,32 @@ begin
   end;
 end;
 
+{$ENDIF ZEOS_DISABLE_ORACLE}
+
+{ TZOracleCachedResolver }
+
+function TZOracleCachedResolver.FormCalculateStatement(
+  const RowAccessor: TZRowAccessor; const ColumnsLookup: TZIndexPairList): string;
+var
+   iPos: Integer;
+begin
+  Result := inherited FormCalculateStatement(RowAccessor, ColumnsLookup);
+  if Result <> '' then
+  begin
+    iPos := ZFastCode.pos('FROM', uppercase(Result));
+    if iPos > 0 then
+    begin
+      Result := copy(Result, 1, iPos+3) + ' DUAL';
+    end
+    else
+    begin
+      Result := Result + ' FROM DUAL';
+    end;
+  end;
+end;
+
+{$IFNDEF ZEOS_DISABLE_ORACLE}
+
 initialization
   OracleDriver := TZOracleDriver.Create;
   DriverManager.RegisterDriver(OracleDriver);
@@ -1675,4 +1685,6 @@ finalization
     DriverManager.DeregisterDriver(OracleDriver);
   OracleDriver := nil;
 {$ENDIF ZEOS_DISABLE_ORACLE}
+
+
 end.

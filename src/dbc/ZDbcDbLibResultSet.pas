@@ -55,7 +55,6 @@ interface
 
 {$I ZDbc.inc}
 
-{$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 uses
 {$IFNDEF FPC}
   DateUtils,
@@ -76,6 +75,7 @@ uses
   ZPlainDBLibDriver;
 
 type
+  {$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
   TZAbstractDblibDataProvider = Class
     protected
       FPLainDriver: TZDBLIBPLainDriver;
@@ -185,6 +185,9 @@ type
     function Next: Boolean; override;
   end;
 
+{$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
+
+  // Note: The TZDBLibCachedResolver should always be available because it can be used by other drivers.
   {** Implements a cached resolver with mssql and sybase specific functionality. }
   TZDBLibCachedResolver = class (TZGenerateSQLCachedResolver, IZCachedResolver)
   private
@@ -196,7 +199,6 @@ type
       const OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
   end;
 
-{$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 implementation
 {$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 
@@ -1100,6 +1102,42 @@ begin
     DriverManager.LogMessage(lcFetchDone, IZLoggingObject(FWeakIZLoggingObjectPtr));
 end;
 
+{ TZDblibResultSetMetadata }
+procedure TZDblibResultSetMetadata.SetColumnCodePageFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo;
+  const TableColumns: IZResultSet);
+var ColTypeName: string;
+  P: PChar;
+begin
+  if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then begin
+    ColTypeName := TableColumns.GetString(TableColColumnTypeNameIndex);
+    P := Pointer(ColTypeName);
+    if P = nil
+    then ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP
+    else if (Length(ColTypeName) > 3) and SameText(P, PChar('UNI'), 3) //sybase only and FreeTDS does not map the type to UTF8?
+      then ColumnInfo.ColumnCodePage := zCP_UTF16{UNICHAR, UNIVARCHAR}
+      else if (Ord(P^) or $20 = Ord('n')) and not FConSettings^.ClientCodePage^.IsStringFieldCPConsistent
+        then ColumnInfo.ColumnCodePage := zCP_UTF8 {NTEXT, NVARCHAR, NCHAR}
+        else ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP; //assume server CP instead
+  end else
+    ColumnInfo.ColumnCodePage := zCP_NONE;
+end;
+
+procedure TZDblibResultSetMetadata.SetColumnPrecisionFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+begin
+  if (ColumnInfo.ColumnType = stString) or (ColumnInfo.ColumnType = stUnicodeString) then
+    ColumnInfo.Precision := TableColumns.GetInt(TableColColumnSizeIndex);
+end;
+
+procedure TZDblibResultSetMetadata.SetColumnScaleFromGetColumnsRS(
+  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
+begin
+  if (ColumnInfo.ColumnType = stBytes) then
+    ColumnInfo.Scale := TableColumns.GetInt(TableColColumnDecimalDigitsIndex);
+end;
+
+{$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 
 { TZDBLibCachedResolver }
 
@@ -1159,40 +1197,4 @@ begin
   end;
 end;
 
-{ TZDblibResultSetMetadata }
-procedure TZDblibResultSetMetadata.SetColumnCodePageFromGetColumnsRS(
-  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo;
-  const TableColumns: IZResultSet);
-var ColTypeName: string;
-  P: PChar;
-begin
-  if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then begin
-    ColTypeName := TableColumns.GetString(TableColColumnTypeNameIndex);
-    P := Pointer(ColTypeName);
-    if P = nil
-    then ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP
-    else if (Length(ColTypeName) > 3) and SameText(P, PChar('UNI'), 3) //sybase only and FreeTDS does not map the type to UTF8?
-      then ColumnInfo.ColumnCodePage := zCP_UTF16{UNICHAR, UNIVARCHAR}
-      else if (Ord(P^) or $20 = Ord('n')) and not FConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-        then ColumnInfo.ColumnCodePage := zCP_UTF8 {NTEXT, NVARCHAR, NCHAR}
-        else ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP; //assume server CP instead
-  end else
-    ColumnInfo.ColumnCodePage := zCP_NONE;
-end;
-
-procedure TZDblibResultSetMetadata.SetColumnPrecisionFromGetColumnsRS(
-  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
-begin
-  if (ColumnInfo.ColumnType = stString) or (ColumnInfo.ColumnType = stUnicodeString) then
-    ColumnInfo.Precision := TableColumns.GetInt(TableColColumnSizeIndex);
-end;
-
-procedure TZDblibResultSetMetadata.SetColumnScaleFromGetColumnsRS(
-  {$IFDEF AUTOREFCOUNT}const{$ENDIF}ColumnInfo: TZColumnInfo; const TableColumns: IZResultSet);
-begin
-  if (ColumnInfo.ColumnType = stBytes) then
-    ColumnInfo.Scale := TableColumns.GetInt(TableColColumnDecimalDigitsIndex);
-end;
-
-{$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 end.
