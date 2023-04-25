@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <ProjectOptions>
-    <Version Value="11"/>
+    <Version Value="12"/>
     <PathDelim Value="\"/>
     <General>
       <Flags>
         <MainUnitHasCreateFormStatements Value="False"/>
+        <MainUnitHasTitleStatement Value="False"/>
         <MainUnitHasScaledStatement Value="False"/>
+        <CompatibilityMode Value="True"/>
       </Flags>
       <SessionStorage Value="InProjectDir"/>
-      <MainUnit Value="0"/>
       <Title Value="Zeos DBC Proxy Server"/>
       <UseAppBundle Value="False"/>
       <ResourceType Value="res"/>
@@ -23,7 +24,6 @@
     </PublishOptions>
     <RunParams>
       <FormatVersion Value="2"/>
-      <Modes Count="0"/>
     </RunParams>
     <RequiredPackages Count="3">
       <Item1>
@@ -36,7 +36,7 @@
         <PackageName Value="sparta_generics"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="8">
+    <Units Count="9">
       <Unit0>
         <Filename Value="ZDbcProxyServer.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -74,6 +74,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="DbcProxySecurityModule"/>
       </Unit7>
+      <Unit8>
+        <Filename Value="..\dbcproxyldapsecuritymodule.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="DbcProxyLdapSecurityModule"/>
+      </Unit8>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -84,7 +89,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\..\src\core;..\..\..\..\src\parsesql;..\..\..\..\src\plain;..\..\..\..\src\dbc;..\DelphiOTP"/>
+      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\..\src\core;..\..\..\..\src\parsesql;..\..\..\..\src\plain;..\..\..\..\src\dbc;..\DelphiOTP;..\..\..\..\..\synapse-trunk"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>

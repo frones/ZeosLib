@@ -179,8 +179,6 @@ var
   Url: String;
   PropertiesList: TStringList;
 Begin
-  //Url := DriverManager.ConstructURL('firebird', 'localhost', {'C:\Program Files (x86)\TopSales\TopSales.fdb'} 'C:\Users\jan\Desktop\WINDOWSUPDATEREADER.FDB', 'sysdba',
-  //  'masterkey', 0, nil, 'c:\program files (x86)\TopSales\fb-3.0\fbclient.dll');
   Url := ConfigManager.ConstructUrl(UTF8Encode(DbName), UTF8Encode(UserName), UTF8Encode(Password));
   PropertiesList := TStringList.Create;
   try

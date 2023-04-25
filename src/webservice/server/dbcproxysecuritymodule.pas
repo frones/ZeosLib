@@ -51,7 +51,7 @@
 
 unit DbcProxySecurityModule;
 
-{$mode delphi}{$H+}
+{$I dbcproxy.inc}
 
 interface
 
@@ -64,6 +64,7 @@ uses
 
 type
   TZAbstractSecurityModule = class
+  public
     FModuleName: String;
     function CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean; virtual; abstract;
     procedure LoadConfig(IniFile: TIniFile; const Section: String); virtual;
@@ -128,7 +129,9 @@ function GetSecurityModule(TypeName: String): TZAbstractSecurityModule;
 
 implementation
 
-uses DbcProxyConfigManager, zeosproxy_imp, StrUtils, Types, ZExceptions;
+uses DbcProxyConfigManager, zeosproxy_imp, StrUtils, Types, ZExceptions
+     {$IFDEF ENABLE_LDAP_SECURITY},DbcProxyLdapSecurityModule{$ENDIF}
+     ;
 
 function GetSecurityModule(TypeName: String): TZAbstractSecurityModule;
 begin
@@ -143,6 +146,10 @@ begin
     Result := TZChainedSecurityModule.Create
   else if TypeName = 'alternate' then
     Result := TZAlternateSecurityModule.Create
+  {$IFDEF ENABLE_LDAP_SECURITY}
+  else if TypeName = 'ldap' then
+    Result := TZLdapSecurityModule.Create
+  {$ENDIF}
   else
     raise EZSQLException.Create('Security module of type ' + TypeName + ' is unknown.');
 end;
