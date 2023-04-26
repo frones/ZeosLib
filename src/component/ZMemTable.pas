@@ -114,6 +114,7 @@ type
     {$IFDEF ZMEMTABLE_ENABLE_STREAM_EXPORT_IMPORT}
     Procedure SaveToStream(AStream: TStream);
     Procedure LoadFromStream(AStream: TStream);
+    function SaveToXml: String;
     {$ENDIF}
   end;
 
@@ -121,7 +122,7 @@ implementation
 
 uses ZMessages, ZEncoding,
   ZDbcStatement, ZDbcMetadata, ZDbcUtils, ZDbcCache, ZDbcConnection,
-  ZDbcCachedResultSet, ZGenericSqlToken;
+  ZDbcCachedResultSet, ZGenericSqlToken, ZDbcXmlUtils;
 
 type
   TZMemResultSetPreparedStatement = Class(TZBeginnerPreparedStatement,
@@ -818,6 +819,12 @@ Begin
    Self.GotoBookmark(bm);
  End;
 End;
+
+function TZAbstractMemTable.SaveToXml: String;
+begin
+  Result := ZXmlEncodeResultSet(DbcResultSet);
+end;
+
 {$ENDIF}
 
 procedure TZAbstractMemTable.SetConnection(Value: TZAbstractConnection);
