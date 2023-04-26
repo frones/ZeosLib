@@ -49,20 +49,91 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-Program ZeosProxyService;
+unit DbcProxyLdapSecurityModule;
 
-Uses
-{$IFDEF UNIX}{$IFDEF UseCThreads}
-  CThreads,
-{$ENDIF}{$ENDIF}
-  DaemonApp, lazdaemonapp, wst_core, ZeosProxyMapperUnit, zeosproxyunit,
-  DbcProxyUtils, ZDbcProxyManagement, DbcProxyFileLogger,
-  DbcProxyLdapSecurityModule
-  { add your units here };
+{$I dbcproxy.inc}
 
+interface
+
+{$IFDEF ENABLE_LDAP_SECURITY}
+
+uses
+  Classes, SysUtils, DbcProxySecurityModule, IniFiles, ldapsend;
+
+type
+  TZLdapSecurityModule = class(TZAbstractSecurityModule)
+  protected
+    FHostName: String;
+    FUserNameMask: String;
+    FUserLookupExpression: String;
+    FBaseDN: String;
+    FReplacementUser: String;
+    FReplacementPassword: String;
+  public
+    function CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean; override;
+    procedure LoadConfig(IniFile: TIniFile; const Section: String); override;
+  end;
+
+{$ENDIF}
+
+implementation
+
+{$IFDEF ENABLE_LDAP_SECURITY}
+
+function TZLdapSecurityModule.CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean;
+var
+  Ldap: TLdapSend;
+  Filter: String;
+  AttributeList: TStringList;
 begin
-  SetMultiByteConversionCodePage(65001);
-  Application.Title:='Zeos Web Service Proxy Server';
-  Application.Initialize;
-  Application.Run;
+  Result := False;
+  Ldap := TLDAPSend.Create;
+  try
+    Ldap.TargetHost := FHostName;
+    Ldap.UserName := Format(FUserNameMask, [UserName]);
+    Ldap.Password := Password;
+    if Ldap.Login then begin
+      if Ldap.Bind then begin
+        if FUserLookupExpression = '' then
+          Result := True
+        else begin
+          Filter := Format(FUserLookupExpression, [UserName]);
+          AttributeList := TStringList.Create;
+          try
+            AttributeList.Add('*');
+            if Ldap.Search(FBaseDN, false, Filter, AttributeList) then
+              Result := Ldap.SearchResult.Count > 0;
+          finally
+            FreeAndNil(AttributeList);
+          end;
+        end;
+      end;
+      Ldap.Logout;
+    end;
+  finally
+    FreeAndNil(Ldap);
+  end;
+
+  if Result then begin
+    if FReplacementUser <> '' then
+      UserName := FReplacementUser;
+    if FReplacementPassword <> '' then
+      Password := FReplacementPassword;
+  end;
+end;
+
+procedure TZLdapSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
+begin
+  inherited;
+  FHostName := IniFile.ReadString(Section, 'Host Name', '');
+  FUserNameMask := IniFile.ReadString(Section, 'User Name Mask', '%s');
+  FUserLookupExpression := IniFile.ReadString(Section, 'User Lookup Expression', '(sAMAccountName=%s)');
+  FBaseDN := IniFile.ReadString(Section, 'Base DN', '');
+  FReplacementUser := IniFile.ReadString(Section, 'Replacement User', '');
+  FReplacementPassword := IniFile.ReadString(Section, 'Replacement Password', '');
+end;
+
+{$ENDIF}
+
 end.
+

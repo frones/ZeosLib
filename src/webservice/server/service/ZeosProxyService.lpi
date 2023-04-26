@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <ProjectOptions>
-    <Version Value="11"/>
+    <Version Value="12"/>
     <PathDelim Value="\"/>
     <General>
       <Flags>
         <MainUnitHasCreateFormStatements Value="False"/>
+        <MainUnitHasTitleStatement Value="False"/>
+        <MainUnitHasScaledStatement Value="False"/>
+        <CompatibilityMode Value="True"/>
       </Flags>
       <SessionStorage Value="InProjectDir"/>
-      <MainUnit Value="0"/>
       <Title Value="Zeos Web Service Proxy Server"/>
       <UseAppBundle Value="False"/>
       <ResourceType Value="res"/>
@@ -22,7 +24,6 @@
     </PublishOptions>
     <RunParams>
       <FormatVersion Value="2"/>
-      <Modes Count="0"/>
     </RunParams>
     <RequiredPackages Count="4">
       <Item1>
@@ -38,7 +39,7 @@
         <PackageName Value="LazDaemon"/>
       </Item4>
     </RequiredPackages>
-    <Units Count="12">
+    <Units Count="13">
       <Unit0>
         <Filename Value="ZeosProxyService.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -100,6 +101,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="DbcProxyFileLogger"/>
       </Unit11>
+      <Unit12>
+        <Filename Value="..\dbcproxyldapsecuritymodule.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="DbcProxyLdapSecurityModule"/>
+      </Unit12>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -110,15 +116,12 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\core;..\..\..\parsesql;..\..\..\plain;..\..\..\dbc;..\DelphiOTP"/>
+      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\core;..\..\..\parsesql;..\..\..\plain;..\..\..\dbc;..\DelphiOTP;..\..\..\..\..\synapse-trunk"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Other>
       <CustomOptions Value="-dUseCThreads
 -dZEOS_DISABLE_ADO"/>
-      <OtherDefines Count="1">
-        <Define0 Value="UseCThreads"/>
-      </OtherDefines>
     </Other>
   </CompilerOptions>
   <Debugging>
