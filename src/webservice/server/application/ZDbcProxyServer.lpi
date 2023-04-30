@@ -36,7 +36,7 @@
         <PackageName Value="sparta_generics"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="9">
+    <Units Count="11">
       <Unit0>
         <Filename Value="ZDbcProxyServer.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -79,6 +79,14 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="DbcProxyLdapSecurityModule"/>
       </Unit8>
+      <Unit9>
+        <Filename Value="..\fpc_https_server.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="..\dbcproxyconfigutils.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit10>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

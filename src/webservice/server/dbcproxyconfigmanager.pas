@@ -75,6 +75,7 @@ type
 
   TDbcProxyConfigManager = class
   protected
+    // general stuff
     ConfigList: TDbcProxyConnConfigList;
     FListeningPort: Word;
     FIPAddress: String;
@@ -83,6 +84,14 @@ type
     FSecurityPrefix: String;
     FEnableThreading: Boolean;
     FLogFile: String;
+
+    // SSL related stuff
+    FUseSSL: Boolean;
+    FHostName: String;
+    FCertificateFile: String;
+    FKeyFile: String;
+    FKeyPasswod: String;
+
   public
     property ListeningPort: Word read FListeningPort;
     property IPAddress: String read FIPAddress;
@@ -91,6 +100,11 @@ type
     property SecurityPrefix: String read FSecurityPrefix;
     property EnableThreading: Boolean read FEnableThreading;
     property LogFile: String read FLogFile;
+    property UseSSL: Boolean read FUseSSL;
+    property HostName: String read FHostName;
+    property CertificateFile: String read FCertificateFile;
+    property KeyFile: String read FKeyFile;
+    property KeyPasswod: String read FKeyPasswod;
     function ConstructUrl(ConfigName, UserName, Password: String; CheckSecurity: Boolean = True): String;
     procedure LoadBaseConfig(SourceFile: String);
     procedure LoadConnectionConfig(SourceFile: String);
@@ -162,6 +176,17 @@ begin
   Sections := TStringList.Create;
   try
     IniFile := TIniFile.Create(SourceFile, TEncoding.UTF8);
+
+    // load SSL configuration
+    FUseSSL := IniFile.ReadBool('general', 'use ssl', false);
+    if FUseSSL then begin
+      FHostName := IniFile.ReadString('general', 'host name', '');
+      FCertificateFile := IniFile.ReadString('general', 'Certificate File', '');
+      FKeyFile := IniFile.ReadString('general', 'Key File', '');
+      FKeyPasswod := IniFile.ReadString('general', 'Key Password', '');
+    end;
+
+    // load available connections
     IniFile.ReadSections(Sections);
     while Sections.Count > 0 do begin
       Section := Sections.Strings[0];
