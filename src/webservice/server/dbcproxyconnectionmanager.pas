@@ -175,7 +175,7 @@ begin
   end;
 
   if Assigned(Conn) then
-    Conn := nil;
+    FreeAndNil(Conn);
 end;
 
 function TDbcProxyConnectionManager.GetConnectionCount: SizeInt;
