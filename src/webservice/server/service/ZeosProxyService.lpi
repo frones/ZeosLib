@@ -39,7 +39,7 @@
         <PackageName Value="LazDaemon"/>
       </Item4>
     </RequiredPackages>
-    <Units Count="13">
+    <Units Count="15">
       <Unit0>
         <Filename Value="ZeosProxyService.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -106,6 +106,14 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="DbcProxyLdapSecurityModule"/>
       </Unit12>
+      <Unit13>
+        <Filename Value="..\dbcproxyconfigutils.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="..\fpc_https_server.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit14>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
