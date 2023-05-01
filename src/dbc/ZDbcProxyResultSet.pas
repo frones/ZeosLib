@@ -425,7 +425,10 @@ begin
   FMetadataNode := FResultSetNode.ChildNodes.FindNode('metadata');
   FRowsNode := FResultSetNode.ChildNodes.FindNode('rows');
 
-  LastRowNo := FRowsNode.ChildNodes.Count;
+  if Assigned(FRowsNode) then
+    LastRowNo := FRowsNode.ChildNodes.Count
+  else
+    LastRowNo := 0;
 
   { Fills the column info. }
   ColumnsInfo.Clear;
