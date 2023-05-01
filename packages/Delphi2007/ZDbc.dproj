@@ -131,5 +131,6 @@
 			<DCCReference Include="..\..\src\dbc\ZDbcSqLiteUtils.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcStatement.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcUtils.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcXmlUtils.pas"/>
   </ItemGroup>
 </Project>

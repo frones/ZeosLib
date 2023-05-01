@@ -148,7 +148,7 @@
 			<DCCReference Include="..\..\src\dbc\ZDbcSqLiteUtils.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcStatement.pas"/>
 			<DCCReference Include="..\..\src\dbc\ZDbcUtils.pas"/>
-			<DCCReference Include="..\..\src\dbc\ZDbcBeginnerStatement.pas"/>
+			<DCCReference Include="..\..\src\dbc\ZDbcXmlUtils.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>

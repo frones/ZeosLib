@@ -95,7 +95,6 @@ contains
   ZDbcSqLiteStatement in '..\..\src\dbc\ZDbcSqLiteStatement.pas',
   ZDbcSqLiteUtils in '..\..\src\dbc\ZDbcSqLiteUtils.pas',
   ZDbcStatement in '..\..\src\dbc\ZDbcStatement.pas',
-  ZDbcUtils in '..\..\src\dbc\ZDbcUtils.pas',
   ZDbcSQLAnywhere in '..\..\src\dbc\ZDbcSQLAnywhere.pas',
   ZDbcSQLAnywhereStatement in '..\..\src\dbc\ZDbcSQLAnywhereStatement.pas',
   ZDbcSQLAnywhereUtils in '..\..\src\dbc\ZDbcSQLAnywhereUtils.pas',
@@ -103,7 +102,9 @@ contains
   ZDbcFirebird in '..\..\src\dbc\ZDbcFirebird.pas',
   ZDbcFirebirdStatement in '..\..\src\dbc\ZDbcFirebirdStatement.pas',
   ZDbcFirebirdResultSet in '..\..\src\dbc\ZDbcFirebirdResultSet.pas',
-  ZDbcFirebirdInterbase in '..\..\src\dbc\ZDbcFirebirdInterbase.pas';
+  ZDbcFirebirdInterbase in '..\..\src\dbc\ZDbcFirebirdInterbase.pas',
+  ZDbcUtils in '..\..\src\dbc\ZDbcUtils.pas',
+  ZDbcXmlUtils in '..\..\src\dbc\ZDbcXmlUtils.pas';
 
 end.
 
