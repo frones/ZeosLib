@@ -254,7 +254,8 @@ var
   MD: IZResultSetMetadata;
   Rows: TStringList;
 begin
-  RS.MoveAbsolute(0);
+  if RS.GetType <> rtForwardOnly then
+    RS.MoveAbsolute(0);
   if not RS.IsAfterLast then begin
     MD := RS.GetMetadata;
     SetLength(CF, MD.GetColumnCount);
