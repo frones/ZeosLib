@@ -99,11 +99,12 @@ begin
   {$ELSE}
     {$IFDEF FPC}
     try
-      InStream := TBytesStream.Create(InValue);
-      EncodingStream := TBase64EncodingStream.Create(InStream);
       OutStream := TStringStream.Create('');
+      EncodingStream := TBase64EncodingStream.Create(OutStream);
+      InStream := TBytesStream.Create(InValue);
 
-      OutStream.CopyFrom(EncodingStream, EncodingStream.Size);
+      EncodingStream.CopyFrom(InStream, InStream.Size);
+      EncodingStream.Flush;
       Result := OutStream.DataString;
     finally
       if Assigned(OutStream) then
