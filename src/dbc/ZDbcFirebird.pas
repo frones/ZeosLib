@@ -442,12 +442,12 @@ end;
 
 destructor TZFirebirdConnection.Destroy;
 begin
+  inherited;
   if FStatus <> nil then begin
     FStatus.Dispose;
     FStatus := nil;
   end;
   //How to free IMaster?
-  inherited;
 end;
 
 procedure TZFirebirdConnection.ExecuteImmediat(const SQL: RawByteString;
