@@ -194,7 +194,7 @@ begin
     FreeAndNil(StringStream);
   end;
 *)
-  Result := ZEncodeBase64(RS.GetBytes(Idx));
+  Result := '<field value="' + ZEncodeBase64(RS.GetBytes(Idx)) + '" />';
 end;
 
 function ConvertBytes(const RS: IZResultSet; Const Idx: Integer): String;
