@@ -227,6 +227,7 @@ var
   x: Integer;
   found: Boolean;
   Cfg: TDbcProxyConnConfig;
+  Properties: TStringList;
 begin
   ConfigName := LowerCase(ConfigName);
   found := false;
@@ -244,7 +245,13 @@ begin
     then if not Cfg.SecurityModule.CheckPassword(UserName, Password, ConfigName) then
       raise Exception.Create('Could not validate username / password.');
 
-  Result := DriverManager.ConstructURL(Cfg.Protocol, Cfg.HostName, Cfg.Database, UserName, Password, Cfg.Port, nil, Cfg.LibraryLocation);
+  Properties := TStringList.Create;
+  try
+    Properties.Values['codepage'] := Cfg.ClientCodepage;
+    Result := DriverManager.ConstructURL(Cfg.Protocol, Cfg.HostName, Cfg.Database, UserName, Password, Cfg.Port, Properties, Cfg.LibraryLocation);
+  finally
+    FreeAndNil(Properties);
+  end;
 end;
 
 end.
