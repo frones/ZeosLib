@@ -105,6 +105,7 @@
       {$DEFINE PWIDECHAR_IS_PUNICODECHAR}
       {$DEFINE WITH_FTGUID} //TStringField descendant TGuidField is supported
       {$DEFINE WITH_VIRTUAL_TFIELD_ASWIDESTRING}
+	  {$DEFINE BCDTOSTR_WITH_FORMATSETTINGS} // FPC has a BcdToStr function with TFormatSettings as a parameter - guess only.
       {$IF FPC_FULLVERSION>20601}
         {$DEFINE WITH_DEPRECATED_MESSAGE}  //Compiler supports deprecated messages
         {$UNDEF WITH_FPC_FTTIME_BUG} //seems like the never FPC2.6.2 also have fixed the NativData bug for TTimeFields+TDataSet

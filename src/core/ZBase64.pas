@@ -4,7 +4,7 @@ unit ZBase64;
 
 interface
 
-{$IF DEFINED(FPC) OR DEFINED(WITH_TBYTES)}
+{$IFDEF WITH_TBYTES}
 
 uses
   Classes, SysUtils;
@@ -12,11 +12,11 @@ uses
 function ZDecodeBase64(const InStr: {$IFDEF NEXTGEN}String{$ELSE}AnsiString{$ENDIF}): TBytes;
 function ZEncodeBase64(const InValue: TBytes): {$IFDEF NEXTGEN}String{$ELSE}AnsiString{$ENDIF};
 
-{$IFEND}
+{$ENDIF}
 
 implementation
 
-{$IF DEFINED(FPC) OR DEFINED(WITH_TBYTES)}
+{$IFDEF WITH_TBYTES}
 
 uses {$IFDEF WITH_NETENCODING}
      System.NetEncoding
@@ -133,7 +133,7 @@ begin
   {$ENDIF}
 end;
 
-{$IFEND}
+{$ENDIF}
 
 end.
 
