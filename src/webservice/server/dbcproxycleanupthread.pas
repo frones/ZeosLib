@@ -95,9 +95,13 @@ begin
     ActionTime := FIdleTimeout div 2;
     If ActionTime = 0 then
       ActionTime := 1;
+    Logger.Info('Starting Cleanup Thread');
+    Logger.Info('Idle Timeout: ' + IntToStr(FIdleTimeout));
+    Logger.Info('Action Time: ' + IntToStr(ActionTime));
     while not Terminated do begin
       y := y mod ActionTime;
       if y = 0 then begin
+        Logger.Info('Inspecting Connections');
         MaxTime := IncSecond(Now, FIdleTimeout * (-1));
         for X := FConnManager.GetConnectionCount - 1 downto 0 do begin
           Conn := FConnManager.GetConnection(x);
