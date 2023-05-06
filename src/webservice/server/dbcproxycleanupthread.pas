@@ -72,7 +72,7 @@ type
 implementation
 
 uses
-  DateUtils, ZDbcProxyManagement;
+  DateUtils, ZDbcProxyManagement, zeosproxy_imp;
 
 constructor TDbcProxyCleanupThread.Create(ConnManager: TDbcProxyConnectionManager; ConfigManager: TDbcProxyConfigManager);
 begin
@@ -90,36 +90,43 @@ var
   y: Integer;
   ActionTime: Integer;
 begin
-  y := 0;
-  ActionTime := FIdleTimeout div 2;
-  If ActionTime = 0 then
-    ActionTime := 1;
-  while not Terminated do begin
-    y := y mod ActionTime;
-    if y = 0 then begin
-      MaxTime := IncSecond(Now, FIdleTimeout * (-1));
-      for X := FConnManager.GetConnectionCount - 1 downto 0 do begin
-        Conn := FConnManager.GetConnection(x);
-        if Assigned(Conn) then begin
-          if Conn.LastAccessTime <= MaxTime then begin
-            Conn.Lock;
-            try
-              ConnID := Conn.ID;
-              Conn.ZeosConnection.Close;
-            finally
-              Conn.Unlock;
+  try
+    y := 0;
+    ActionTime := FIdleTimeout div 2;
+    If ActionTime = 0 then
+      ActionTime := 1;
+    while not Terminated do begin
+      y := y mod ActionTime;
+      if y = 0 then begin
+        MaxTime := IncSecond(Now, FIdleTimeout * (-1));
+        for X := FConnManager.GetConnectionCount - 1 downto 0 do begin
+          Conn := FConnManager.GetConnection(x);
+          if Assigned(Conn) then begin
+            if Conn.LastAccessTime <= MaxTime then begin
+              Conn.Lock;
+              try
+                ConnID := Conn.ID;
+                Conn.ZeosConnection.Close;
+                Logger.Info('Closed Connection ' + ConnID + ' to ' + Conn.ZeosConnection.GetURL);
+              finally
+                Conn.Unlock;
+              end;
+            end else begin
+              ConnID := '';
             end;
-          end else begin
-            ConnID := '';
-          end;
-          if ConnID <> '' then begin
-            FConnManager.RemoveConnection(ConnID);
+            if ConnID <> '' then begin
+              FConnManager.RemoveConnection(ConnID);
+            end;
           end;
         end;
       end;
+      inc(y);
+      Sleep(1000);
     end;
-    inc(y);
-    Sleep(1000);
+  except
+    on E: Exception do begin
+      Logger.Error('Cleanup thread created exception: ' + E.Message);
+    end;
   end;
 end;
 
