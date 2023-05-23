@@ -554,6 +554,7 @@ begin
   FDB_HANDLE := OwnerLob.FIBConnection.GetDBHandle;
   FTransactionHandle :=  OwnerLob.FIBTransaction.GetTrHandle;
   BlobInfo :=  @FOwnerLob.FBlobInfo;
+  Updated := OwnerLob.FIsUpdated;
 end;
 
 procedure TZInterbaseLobStream.CreateLob;
