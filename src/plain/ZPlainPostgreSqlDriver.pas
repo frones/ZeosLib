@@ -679,6 +679,7 @@ type
   //TBD  PGTransactionStatusType PQtransactionStatus(const TPGconn *conn);
     PQparameterStatus: function(conn: TPGconn; paramName: PAnsiChar): PAnsiChar; cdecl;
     PQprotocolVersion: function(conn: TPGconn): Integer; cdecl;
+    PQlibVersion    : function: Integer; cdecl;
     PQserverVersion : function(conn: TPGconn): Integer; cdecl;
     PQerrorMessage  : function(conn: TPGconn): PAnsiChar; cdecl;
     PQsocket        : function(conn: TPGconn): Integer; cdecl;
@@ -907,6 +908,7 @@ begin
     @PQstatus       := GetAddress('PQstatus');
     @PQparameterStatus := GetAddress('PQparameterStatus');
     @PQprotocolVersion := GetAddress('PQprotocolVersion');
+    @PQlibVersion   := GetAddress('PQlibVersion');
     @PQserverVersion:= GetAddress('PQserverVersion');
     @PQerrorMessage := GetAddress('PQerrorMessage');
     @PQsocket       := GetAddress('PQsocket');
