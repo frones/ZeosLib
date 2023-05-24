@@ -8,7 +8,7 @@ uses SysUtils, Classes, ZDbcIntfs;
 
 function ZXmlEncodeResultSet(const RS: IZResultSet; const MaxRows: LongWord = 0; const UpdateCount: Integer = 0): String;
 function ZXmlEncodeResultSetMetaData(const MD: IZResultSetMetadata): String;
-function ZXmlEncodeResultSetRows(const RS: IZResultSet; const MaxRows: LongWord): String;
+function ZXmlEncodeResultSetRows(const RS: IZResultSet; const MaxRows: Integer): String;
 function XMLEncode(Input: String): String;
 
 var
@@ -16,7 +16,7 @@ var
 
 implementation
 
-uses typinfo, FMTBCD, ZBase64, ZExceptions;
+uses typinfo, FMTBCD, {$IFDEF WITH_TBYTES}ZBase64,{$ENDIF} ZExceptions, ZCompatibility;
 
 {$IFNDEF FPC}
 const
@@ -154,13 +154,17 @@ var
   BCD: TBCD;
 begin
   RS.GetBigDecimal(Idx, BCD);
+  {$IFDEF BCDTOSTR_WITH_FORMATSETTINGS}
   Result := '<field value="' + BCDToStr(BCD, ZXmlProxyFormatSettings) + '" />';
+  {$ELSE}
+  Result := ConvertDouble(RS, Idx);
+  {$ENDIF}
 end;
 {$ENDIF}
 
 function ConvertString(const RS: IZResultSet; Const Idx: Integer): String;
 var
-  Value: UnicodeString;
+  Value: ZWideString;
 begin
   Value := RS.GetUnicodeString(Idx);
   Result := '<field value="' + XMLEncode(Utf8Encode(Value)) + '" />';
@@ -194,7 +198,11 @@ begin
     FreeAndNil(StringStream);
   end;
 *)
-  Result := ZEncodeBase64(RS.GetBytes(Idx));
+  {$IFDEF WITH_TBYTES}
+  Result := '<field value="' + ZEncodeBase64(RS.GetBytes(Idx)) + '" />';
+  {$ELSE}
+  raise EZSQLException.Create('Encoding Binary is not supported with this compiler.');
+  {$ENDIF}
 end;
 
 function ConvertBytes(const RS: IZResultSet; Const Idx: Integer): String;
@@ -221,7 +229,11 @@ begin
     FreeAndNil(StringStream);
   end;
 *)
-  Result := ZEncodeBase64(RS.GetBytes(Idx));
+  {$IFDEF WITH_TBYTES}
+  Result := '<field value="' + ZEncodeBase64(RS.GetBytes(Idx)) + '" />';
+  {$ELSE}
+  raise EZSQLException.Create('Encoding Binary is not supported with this compiler.');
+  {$ENDIF}
 end;
 
 function ConvertDate(const RS: IZResultSet; Const Idx: Integer): String;
@@ -244,7 +256,7 @@ begin
   Result := '<field isnull="True" />';
 end;
 
-function ZXmlEncodeResultSetRows(const RS: IZResultSet; const MaxRows: LongWord): String;
+function ZXmlEncodeResultSetRows(const RS: IZResultSet; const MaxRows: Integer): String;
 type
   TRSConversionProc = function(const RS: IZResultSet; Const Idx: Integer): String;
 var
@@ -254,6 +266,8 @@ var
   MD: IZResultSetMetadata;
   Rows: TStringList;
 begin
+  if RS.GetType <> rtForwardOnly then
+    RS.MoveAbsolute(0);
   if not RS.IsAfterLast then begin
     MD := RS.GetMetadata;
     SetLength(CF, MD.GetColumnCount);

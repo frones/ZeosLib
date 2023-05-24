@@ -200,7 +200,6 @@
             {$DEFINE WITH_TBYTES}
             {$UNDEF VER150BELOW}      //found in ZTestBugCompPostgreSql.pas
             {$DEFINE WITH_TCOLLECTION_CAPACITY}         //TCollection supports the capacity property
-			{$DEFINE WITH_TBYTES}
             {$IF CompilerVersion >= 20} //Delphi 2009+
               {$DEFINE TBLOBDATA_IS_TBYTES}             //TBlobdata is an alias for TBytes (FPC uses an AnsiString)
               {$DEFINE WITH_CLASS_CONST}                //compiler supports contants in class type declarations
@@ -263,6 +262,7 @@
                   {$DEFINE WITH_TOBJECTLIST_REQUIRES_CLASSES}       //TObjectList.Remove, add ... are inlined need unit classes
                   {$UNDEF WITH_INFINATE_DECLARED_IN_UNIT_WINDOWS} // the INFINATE constant is now declared in System.pas
                   {$IF CompilerVersion >= 23} //Delphi XE2+
+				    {$DEFINE BCDTOSTR_WITH_FORMATSETTINGS} // Delphi has a BcdToStr function with TFormatSettings as a parameter
                     {$DEFINE WITH_ReturnAddress} //Exports ReturnAddress for error addressing
                     {$IFNDEF MSWINDOWS}
                       {$DEFINE HAVE_GetProcAddressW} //GetProcAddress uses a PWideChar

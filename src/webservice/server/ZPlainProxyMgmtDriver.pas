@@ -1,9 +1,9 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{                WebService Proxy Server                  }
+{           DBC Layer Proxy Connectivity Classes          }
 {                                                         }
-{         Originally written by Jan Baumgarten            }
+{        Originally written by Jan Baumgarten             }
 {                                                         }
 {*********************************************************}
 
@@ -39,89 +39,97 @@
 {                                                         }
 {                                                         }
 { The project web site is located on:                     }
-{   https://zeoslib.sourceforge.io/ (FORUM)               }
-{   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
-{   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
+{  http://zeoslib.sourceforge.net  (FORUM)                }
+{  http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER) }
+{  http://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
 {                                                         }
-{   http://www.sourceforge.net/projects/zeoslib.          }
+{  http://www.sourceforge.net/projects/zeoslib.           }
 {                                                         }
 {                                                         }
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit ZDbcProxyManagement;
-
-{$mode delphi}{$H+}
+unit ZPlainProxyMgmtDriver;
 
 interface
 
-uses
-  Classes, SysUtils, ZDbcIntfs, SyncObjs;
+{$I ../../Zeos.inc}
 
+uses SysUtils, Classes, ZCompatibility, ZPlainDriver;
+
+  { ************* Plain API Function variables definition ************ }
 type
-  TDbcProxyConnection = class
-  protected
-    FID: String;
-    FZeosConnection: IZConnection;
-    FLastAccessTime: TDateTime;
-    FCriticalSection: TCriticalSection;
-    FCreationTime: TDateTime;
-    FOriginalUser: String;
-    FDatabaseName: String;
-  public
-    constructor Create(AConnection: IZConnection); virtual;
-    destructor Destroy; override;
-    property ZeosConnection: IZConnection read FZeosConnection;
-    property ID: String read FID;
-    property LastAccessTime: TDateTime read FLastAccessTime;
-    property CreationTime: TDateTime read FCreationTime;
-    property OriginalUser: String read FOriginalUser write FOriginalUser;
-    property DatabaseName: String read FDatabaseName write FDatabaseName;
-    procedure Lock;
-    procedure Unlock;
+  {** Represents a generic interface to DBC Proxy Managament native API. }
+  IZProxyMgmtPlainDriver = interface (IZPlainDriver)
+    ['{72325666-A8F8-403D-BBE9-C1030E941322}']
   end;
 
-procedure RaiseNotImplemented(FunctionName: String);
+  {** Implements a base driver for DBC Proxy}
+  TZProxyMgmtBaseDriver = class (TZAbstractPlainDriver, IZPlainDriver, IZProxyMgMtPlainDriver)
+  private
+  protected
+    function GetUnicodeCodePageName: String; override;
+    procedure LoadCodePages; override;
+    function Clone: IZPlainDriver; override;
+    procedure LoadApi; override;
+  public
+    constructor Create;
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+  end;
 
 implementation
 
-uses
-  ZExceptions;
+uses ZPlainLoader, ZEncoding{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
-procedure RaiseNotImplemented(FunctionName: String);
+{ TZProxyMgmtBaseDriver }
+
+function TZProxyMgmtBaseDriver.GetUnicodeCodePageName: String;
 begin
-  raise EZSQLException.Create('Function ' + FunctionName + ' is not implemented yet!');
+  Result := 'UTF-16'
 end;
 
-constructor TDbcProxyConnection.Create(AConnection: IZConnection);
-var
-  UUID: TGuid;
+procedure TZProxyMgmtBaseDriver.LoadCodePages;  //Egonhugeist
 begin
-  FCriticalSection := TCriticalSection.Create;
-  CreateGUID(UUID);
-  FID := GUIDToString(UUID);
-  FZeosConnection := AConnection;
-  FLastAccessTime := Now;
-  FCreationTime := LastAccessTime;
+  { MultiByte }
+  AddCodePage('UTF-16', 4, ceUTF16, zCP_UTF16); //Setting this will be ignored by actual Excute of Plaindriver
 end;
 
-destructor TDbcProxyConnection.Destroy;
+constructor TZProxyMgmtBaseDriver.Create;
 begin
-  if Assigned(FCriticalSection) then
-    FreeAndNil(FCriticalSection);
-  inherited;
+  inherited create;
+  (* Not needed - we have no library to load *)
+  (*{$IFNDEF ENABLE_INTERNAL_PROXY}
+    FLoader := TZNativeLibraryLoader.Create([]);
+    {$IFDEF MSWINDOWS}
+    FLoader.AddLocation(WINDOWS_DLL_LOCATION);
+    {$ELSE}
+    FLoader.AddLocation(LINUX_DLL_LOCATION);
+    FLoader.AddLocation(LINUX_DLL_LOCATION+'.0');
+    {$ENDIF}
+  {$ENDIF ENABLE_INTERNAL_PROXY}*)
 end;
 
-procedure TDbcProxyConnection.Lock;
+procedure TZProxyMgmtBaseDriver.LoadApi;
 begin
-  FLastAccessTime := Now;
-  FCriticalSection.Enter;
+{ ************** Load adresses of API Functions ************* }
+  // No need to load anything
 end;
 
-procedure TDbcProxyConnection.Unlock;
+function TZProxyMgmtBaseDriver.GetProtocol: string;
 begin
-  FLastAccessTime := Now;
-  FCriticalSection.Leave;
+  Result := 'WebServiceProxyManagement';
+end;
+
+function TZProxyMgmtBaseDriver.GetDescription: string;
+begin
+  Result := 'Native management driver for Web Service based Proxy driver';
+end;
+
+function TZProxyMgmtBaseDriver.Clone: IZPlainDriver;
+begin
+  Result := TZProxyMgmtBaseDriver.Create;
 end;
 
 end.
+

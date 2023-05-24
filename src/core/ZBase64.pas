@@ -4,7 +4,7 @@ unit ZBase64;
 
 interface
 
-{$IF DEFINED(FPC) OR DEFINED(WITH_TBYTES)}
+{$IFDEF WITH_TBYTES}
 
 uses
   Classes, SysUtils;
@@ -12,11 +12,11 @@ uses
 function ZDecodeBase64(const InStr: {$IFDEF NEXTGEN}String{$ELSE}AnsiString{$ENDIF}): TBytes;
 function ZEncodeBase64(const InValue: TBytes): {$IFDEF NEXTGEN}String{$ELSE}AnsiString{$ENDIF};
 
-{$IFEND}
+{$ENDIF}
 
 implementation
 
-{$IF DEFINED(FPC) OR DEFINED(WITH_TBYTES)}
+{$IFDEF WITH_TBYTES}
 
 uses {$IFDEF WITH_NETENCODING}
      System.NetEncoding
@@ -99,11 +99,12 @@ begin
   {$ELSE}
     {$IFDEF FPC}
     try
-      InStream := TBytesStream.Create(InValue);
-      EncodingStream := TBase64EncodingStream.Create(InStream);
       OutStream := TStringStream.Create('');
+      EncodingStream := TBase64EncodingStream.Create(OutStream);
+      InStream := TBytesStream.Create(InValue);
 
-      OutStream.CopyFrom(EncodingStream, EncodingStream.Size);
+      EncodingStream.CopyFrom(InStream, InStream.Size);
+      EncodingStream.Flush;
       Result := OutStream.DataString;
     finally
       if Assigned(OutStream) then
@@ -132,7 +133,7 @@ begin
   {$ENDIF}
 end;
 
-{$IFEND}
+{$ENDIF}
 
 end.
 

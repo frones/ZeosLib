@@ -51,19 +51,18 @@
 
 unit zeosproxyunit;
 
-{$mode objfpc}{$H+}
-
+{$I ../dbcproxy.inc}
 interface
 
 uses
   Classes, SysUtils, DaemonApp, server_listener,
   // for including the Zeos drivers:
   ZDbcAdo, ZDbcASA, ZDbcDbLib, ZDbcFirebird, ZDbcInterbase6, ZDbcMySql, ZDbcODBCCon,
-  ZDbcOleDB, ZDbcOracle, ZDbcPostgreSql, ZDbcSQLAnywhere, ZDbcSqLite,
+  ZDbcOleDB, ZDbcOracle, ZDbcPostgreSql, ZDbcSQLAnywhere, ZDbcSqLite, ZDbcProxyMgmtDriver,
   // wst
-  fpc_http_server,
+  fpc_https_server,
   //
-  dbcproxycleanupthread
+  dbcproxycleanupthread, dbcproxyconfigutils
   ;
 
 type
@@ -74,8 +73,9 @@ type
     procedure DataModuleStart(Sender: TCustomDaemon; var OK: Boolean);
     procedure DataModuleStop(Sender: TCustomDaemon; var OK: Boolean);
   private
-    AppObject: TwstFPHttpListener;
+    AppObject: TwstFPHttpsListener;
     CleanupThread: TDbcProxyCleanupThread;
+    procedure OnMessage(Sender : TObject; const AMsg : string);
   public
 
   end;
@@ -100,6 +100,11 @@ end;
 {$R *.lfm}
 
 { TZeosProxyDaemon }
+
+procedure TZeosProxyDaemon.OnMessage(Sender : TObject; const AMsg : string);
+begin
+  zeosproxy_imp.Logger.Error(AMsg);
+end;
 
 procedure TZeosProxyDaemon.DataModuleStart(Sender: TCustomDaemon;
   var OK: Boolean);
@@ -131,7 +136,10 @@ begin
     RegisterZeosProxyImplementationFactory();
     Server_service_RegisterZeosProxyService();
     zeosproxy_imp.Logger.Debug('Creating Listener...');
-    AppObject := TwstFPHttpListener.Create(ConfigManager.IPAddress, ConfigManager.ListeningPort);
+    AppObject := TwstFPHttpsListener.Create(ConfigManager.IPAddress, ConfigManager.ListeningPort);
+    InitializeSSLLibs;
+    ConfigureSSL(AppObject);
+    AppObject.OnNotifyMessage := OnMessage;
     AppObject.Options := [loExecuteInThread];
     if ConfigManager.EnableThreading then begin
       AppObject.Options := AppObject.Options + [loHandleRequestInThread];

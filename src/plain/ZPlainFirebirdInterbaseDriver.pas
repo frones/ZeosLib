@@ -3002,7 +3002,7 @@ type
   protected
     procedure LoadApi; override;
   public
-    fb_get_master_interface: function: TObject{IMaster}; cdecl;
+    fb_get_master_interface: function: Pointer; cdecl;
   {$ENDIF ZEOS_DISABLE_FIREBIRD}
   end;
 

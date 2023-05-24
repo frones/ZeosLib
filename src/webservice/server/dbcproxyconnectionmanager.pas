@@ -61,6 +61,16 @@ uses
 type
   TDbcProxyConnectionList = TList<TDbcProxyConnection>;
 
+  TDbcProxyConnectionInfo = record
+    ID: String;
+    Database: String;
+    User: String;
+    Created: TDateTime;
+    LastAccess: TDateTime;
+  end;
+
+  TDbcProxyConnectionInfos = Array of TDbcProxyConnectionInfo;
+
   TDbcProxyConnectionManager = class
   protected
     Synchronizer: TMultiReadExclusiveWriteSynchronizer;
@@ -69,12 +79,13 @@ type
     function GetConnectionCount: SizeInt;
     function FindConnection(ID: String): TDbcProxyConnection;
     function GetConnection(Index: SizeInt): TDbcProxyConnection;
-    function AddConnection(Connection: IZConnection): String;
+    function AddConnection(Connection: IZConnection; const DatabaseName, OriginalUser: String): String;
     procedure RemoveConnection(ID: String);
     function LockConnection(ID: String): TDbcProxyConnection; overload;
     function LockConnection(Index: SizeInt): TDbcProxyConnection; overload;
     constructor Create;
     destructor Destroy; override;
+    function GetConnectionInfoList: TDbcProxyConnectionInfos;
   end;
 
 implementation
@@ -142,11 +153,13 @@ begin
   if Assigned(Result) then Result.Lock else raise EZSQLException.Create('No connection with Index ' + IntToStr(Index) + ' was found!');
 end;
 
-function TDbcProxyConnectionManager.AddConnection(Connection: IZConnection): String;
+function TDbcProxyConnectionManager.AddConnection(Connection: IZConnection; const DatabaseName, OriginalUser: String): String;
 var
   ProxyConn: TDbcProxyConnection;
 begin
   ProxyConn := TDbcProxyConnection.Create(Connection);
+  ProxyConn.DatabaseName := DatabaseName;
+  ProxyConn.OriginalUser := OriginalUser;
   Result := ProxyConn.ID;
   Synchronizer.Beginwrite;
   try
@@ -175,7 +188,7 @@ begin
   end;
 
   if Assigned(Conn) then
-    Conn := nil;
+    FreeAndNil(Conn);
 end;
 
 function TDbcProxyConnectionManager.GetConnectionCount: SizeInt;
@@ -187,5 +200,29 @@ begin
     Synchronizer.Endread;
   end;
 end;
+
+function TDbcProxyConnectionManager.GetConnectionInfoList: TDbcProxyConnectionInfos;
+var
+  Len, x: Integer;
+  Connection: TDbcProxyConnection;
+begin
+  Synchronizer.Beginread;
+  try
+    Len := List.Count;
+
+    SetLength(Result, Len);
+    for x := 0 to len - 1 do begin
+      Connection := List.Items[x];
+      Result[x].Created := Connection.CreationTime;
+      Result[x].Database := Connection.DatabaseName;
+      Result[x].ID := Connection.ID;
+      Result[x].LastAccess := Connection.LastAccessTime;
+      Result[x].User := Connection.OriginalUser;
+    end;
+  finally
+    Synchronizer.Endread;
+  end;
+end;
+
 
 end.

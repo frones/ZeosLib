@@ -410,6 +410,7 @@ type
       LogCategory: TZLoggingCategory; const LogMsg: SQLString;
       const Sender: IImmediatelyReleasable; ResultHandle: TPGresult);
 
+    function GetClientVersion: Integer; override;
     function GetHostVersion: Integer; override;
     function GetServerMajorVersion: Integer;
     function GetServerMinorVersion: Integer;
@@ -1542,6 +1543,18 @@ begin
   if I >= 0
   then Result := FTypeList[I]
   else Result := '';
+end;
+
+function TZPostgreSQLConnection.GetClientVersion: Integer;
+var
+  pqver: Integer;
+begin
+  pqver := GetPlainDriver.PQlibVersion;
+  Result := (pqver mod 100);
+  pqver := pqver div 100;
+  Result := Result + (pqver mod 100) * 1000;
+  pqver := pqver div 100;
+  Result := Result + (pqver mod 100) * 1000000;
 end;
 
 {**

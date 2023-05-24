@@ -39,7 +39,7 @@
         <PackageName Value="LazDaemon"/>
       </Item4>
     </RequiredPackages>
-    <Units Count="13">
+    <Units Count="19">
       <Unit0>
         <Filename Value="ZeosProxyService.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -106,6 +106,30 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="DbcProxyLdapSecurityModule"/>
       </Unit12>
+      <Unit13>
+        <Filename Value="..\dbcproxyconfigutils.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="..\fpc_https_server.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="..\ZDbcProxyMgmtDriver.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit15>
+      <Unit16>
+        <Filename Value="..\ZDbcProxyMgmtMetadata.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit16>
+      <Unit17>
+        <Filename Value="..\ZDbcProxyMgmtStatement.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit17>
+      <Unit18>
+        <Filename Value="..\ZPlainProxyMgmtDriver.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit18>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -116,12 +140,15 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\core;..\..\..\parsesql;..\..\..\plain;..\..\..\dbc;..\DelphiOTP;..\..\..\..\..\synapse-trunk"/>
+      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\core;..\..\..\parsesql;..\..\..\plain;..\..\..\dbc;..\DelphiOTP;..\..\..\..\..\synapse"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Other>
       <CustomOptions Value="-dUseCThreads
 -dZEOS_DISABLE_ADO"/>
+      <OtherDefines Count="1">
+        <Define0 Value="UseCThreads"/>
+      </OtherDefines>
     </Other>
   </CompilerOptions>
   <Debugging>

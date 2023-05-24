@@ -51,7 +51,7 @@
 
 program ZDbcProxyServer;
 
-{$mode delphi}{$H+}
+{$I ../dbcproxy.inc}
 
 uses
   {$IFDEF UNIX}
@@ -63,14 +63,15 @@ uses
   Classes, SysUtils, CustApp,
   { you can add units after this }
   //{fpc}lazutils,
-  {wst}server_listener, fpc_http_server, server_service_soap,
+  {wst}server_listener, fpc_https_server, server_service_soap,
   {synapse}
   {local}zeosproxy, zeosproxy_binder, zeosproxy_imp, DbcProxyUtils,
   DbcProxyConnectionManager, DbcProxyConfigManager, ZDbcProxyManagement,
   dbcproxycleanupthread, dbcproxysecuritymodule, DbcProxyFileLogger,
+  dbcproxyconfigutils,
   //Zeos drivers:
   ZDbcAdo, ZDbcASA, ZDbcDbLib, ZDbcFirebird, ZDbcInterbase6, ZDbcMySql, ZDbcODBCCon,
-  ZDbcOleDB, ZDbcOracle, ZDbcPostgreSql, ZDbcSQLAnywhere, ZDbcSqLite;
+  ZDbcOleDB, ZDbcOracle, ZDbcPostgreSql, ZDbcSQLAnywhere, ZDbcSqLite, ZDbcProxyMgmtDriver;
 
 type
 
@@ -79,6 +80,7 @@ type
   TZDbcProxyServer = class(TCustomApplication)
   protected
     procedure DoRun; override;
+    procedure OnMessage(Sender : TObject; const AMsg : string);
   public
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
@@ -93,11 +95,16 @@ begin
 
 end;
 
+procedure TZDbcProxyServer.OnMessage(Sender : TObject; const AMsg : string);
+begin
+  Logger.Error(AMsg);
+end;
+
 procedure TZDbcProxyServer.DoRun;
 var
   ErrorMsg: String;
   //AppObject : TwstListener;
-  AppObject : TwstFPHttpListener;
+  AppObject : TwstFPHttpsListener;
   configFile: String;
   CleanupThread: TDbcProxyCleanupThread;
 begin
@@ -140,11 +147,14 @@ begin
 
   RegisterZeosProxyImplementationFactory();
   Server_service_RegisterZeosProxyService();
-  AppObject := TwstFPHttpListener.Create(ConfigManager.IPAddress, ConfigManager.ListeningPort);
+  AppObject := TwstFPHttpsListener.Create(ConfigManager.IPAddress, ConfigManager.ListeningPort);
   try
+    InitializeSSLLibs;
+    ConfigureSSL(AppObject);
+    AppObject.OnNotifyMessage := OnMessage;
     WriteLn('Zeos Proxy Server listening at:');
     WriteLn('');
-    WriteLn('http://' + ConfigManager.IPAddress+ ':'+ IntToStr(ConfigManager.ListeningPort)+ '/');
+    WriteLn(ConstructServerURL);
     WriteLn('');
     WriteLn('Press enter to quit.');
     AppObject.Options := AppObject.Options + [loExecuteInThread];

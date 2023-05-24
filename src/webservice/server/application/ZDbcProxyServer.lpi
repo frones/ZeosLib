@@ -36,7 +36,7 @@
         <PackageName Value="sparta_generics"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="9">
+    <Units Count="15">
       <Unit0>
         <Filename Value="ZDbcProxyServer.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -79,6 +79,31 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="DbcProxyLdapSecurityModule"/>
       </Unit8>
+      <Unit9>
+        <Filename Value="..\fpc_https_server.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit9>
+      <Unit10>
+        <Filename Value="..\dbcproxyconfigutils.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit10>
+      <Unit11>
+        <Filename Value="..\ZPlainProxyMgmtDriver.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit11>
+      <Unit12>
+        <Filename Value="..\ZDbcProxyMgmtMetadata.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit12>
+      <Unit13>
+        <Filename Value="..\ZDbcProxyMgmtStatement.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit13>
+      <Unit14>
+        <Filename Value="..\ZDbcProxyMgmtDriver.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZDbcProxyMgmt"/>
+      </Unit14>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

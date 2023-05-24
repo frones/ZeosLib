@@ -190,7 +190,7 @@ Begin
   OutProperties := UnicodeString(encodeConnectionProperties(Connection));
   Connection.Open;
   DbInfo := UnicodeString(encodeDatabaseInfo(Connection));
-  Result := UnicodeString(ConnectionManager.AddConnection(Connection));
+  Result := UnicodeString(ConnectionManager.AddConnection(Connection, DbName, UserName));
 End;
 
 procedure TZeosProxy_ServiceImp.Disconnect(
@@ -266,6 +266,7 @@ function TZeosProxy_ServiceImp.ExecuteStatement(
 var
   Statement: IZPreparedStatement;
   ResultSet: IZResultSet;
+  ResultStr: UTF8String;
 Begin
   with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
   try
@@ -277,7 +278,8 @@ Begin
     if Statement.ExecutePrepared then begin
       ResultSet := Statement.GetResultSet;
       if Assigned(ResultSet) then begin
-        Result := UnicodeString(ZxmlEncodeResultSet(ResultSet, MaxRows, Statement.GetUpdateCount));
+        ResultStr := ZxmlEncodeResultSet(ResultSet, MaxRows, Statement.GetUpdateCount);
+        Result := UnicodeString(ResultStr);
       end else
         Result := UnicodeString(IntToStr(Statement.GetUpdateCount));
     end else

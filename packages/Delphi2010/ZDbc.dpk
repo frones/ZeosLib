@@ -109,6 +109,7 @@ contains
   ZDbcSqLiteUtils in '..\..\src\dbc\ZDbcSqLiteUtils.pas',
   ZDbcStatement in '..\..\src\dbc\ZDbcStatement.pas',
   ZDbcUtils in '..\..\src\dbc\ZDbcUtils.pas',
-  ZDbcBeginnerStatement in '..\..\src\dbc\ZDbcBeginnerStatement.pas';
+  ZDbcXmlUtils in '..\..\src\dbc\ZDbcXmlUtils.pas';
+
 
 end.

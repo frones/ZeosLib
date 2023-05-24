@@ -55,7 +55,7 @@ Uses
 {$IFDEF UNIX}{$IFDEF UseCThreads}
   CThreads,
 {$ENDIF}{$ENDIF}
-  DaemonApp, lazdaemonapp, wst_core, ZeosProxyMapperUnit, zeosproxyunit,
+  DaemonApp, lazdaemonapp, ZeosProxyMapperUnit, zeosproxyunit,
   DbcProxyUtils, ZDbcProxyManagement, DbcProxyFileLogger,
   DbcProxyLdapSecurityModule
   { add your units here };

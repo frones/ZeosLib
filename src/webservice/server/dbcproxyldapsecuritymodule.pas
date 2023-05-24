@@ -80,6 +80,8 @@ implementation
 
 {$IFDEF ENABLE_LDAP_SECURITY}
 
+uses ssl_openssl11;
+
 function TZLdapSecurityModule.CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean;
 var
   Ldap: TLdapSend;
