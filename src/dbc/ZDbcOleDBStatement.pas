@@ -1622,7 +1622,7 @@ begin
           if Negative then
             PWord(Data)^ := Ord('-');
           IntToUnicode(C, PWideChar(Data)+Ord(Negative), L);
-          PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := L shl 1 + Byte(Ord(Negative));
+          PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := (L + Byte(Ord(Negative))) shl 1;
         end;
       {$IF defined (RangeCheckEnabled) and defined(WITH_UINT64_C1118_ERROR)}{$R-}{$IFEND}
       DBTYPE_NUMERIC: begin
@@ -2622,7 +2622,7 @@ begin
           if Negative then
             PWord(PPointer(Data)^)^ := Ord('-');
           IntToUnicode(u64, PWideChar(Data)+Ord(Negative), L);
-          PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := L shl 1 + Byte(Ord(Negative));
+          PDBLENGTH(PAnsiChar(fDBParams.pData)+Bind.obLength)^ := (L + Byte(Ord(Negative))) shl 1;
         end;
       DBTYPE_NUMERIC: begin
                         PDB_NUMERIC(Data)^.precision := GetOrdinalDigits(PInt64(@Value)^, PUInt64(@PDB_NUMERIC(Data)^.val[0])^, Negative);
