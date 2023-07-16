@@ -726,7 +726,7 @@ begin
         {$ELSE}
         ZSetString(P, L, FLogMessage);
         {$ENDIF}
-        HandleErrorOrWarning(PGRES_FATAL_ERROR, lcOther, FLogMessage, nil, Self);
+        HandleErrorOrWarning(PGRES_FATAL_ERROR, lcOther, FLogMessage, Self, nil);
       end;
     end;
   finally
