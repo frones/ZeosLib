@@ -1265,14 +1265,14 @@ const
     Providers: (Count: 1; Items: @cPostgreSQLProvider);
     Protocols: (Count: 1; Items: @AllPostgreSQL);
   );
-  (*ZProp_PG_SSLPassword : TZProperty = (
+  ZProp_PG_SSLPassword : TZProperty = (
     Name: ConnProps_SSLPassword;
     Purpose: 'Used for SSL handling in PostgreSQL. Refer to PostgreSQL manual for types and acceptable values of this parameter.';
     ValueType: pvtString; LevelTypes: [pltConnection];
     Values: ''; Default: ''; Alias: '';
     Providers: (Count: 1; Items: @cPostgreSQLProvider);
     Protocols: (Count: 1; Items: @AllPostgreSQL);
-  );*)
+  );
   ZProp_PG_SSLMode : TZProperty = (
     Name: ConnProps_SSLMode;
     Purpose: 'Used for SSL handling in PostgreSQL. Refer to PostgreSQL manual for types and acceptable values of this parameter.';
