@@ -726,7 +726,7 @@ begin
         {$ELSE}
         ZSetString(P, L, FLogMessage);
         {$ENDIF}
-        HandleErrorOrWarning(PGRES_FATAL_ERROR, lcOther, FLogMessage, nil, Self);
+        HandleErrorOrWarning(PGRES_FATAL_ERROR, lcOther, FLogMessage, Self, nil);
       end;
     end;
   finally
@@ -805,6 +805,7 @@ begin
     // (possible values are: 0,1)
   then AddParamToResult(ConnProps_RequireSSL, Info.Values[ConnProps_RequireSSL]);
 
+  if Info.Values[ConnProps_SSLPassword] <> '' then AddParamToResult(ConnProps_SSLPassword, Info.Values[ConnProps_SSLPassword]);
   if Info.Values[ConnProps_SSLCompression] <> '' then AddParamToResult(ConnProps_SSLCompression, Info.Values[ConnProps_SSLCompression]);
   if Info.Values[ConnProps_SSLCert] <> '' then AddParamToResult(ConnProps_SSLCert, Info.Values[ConnProps_SSLCert]);
   if Info.Values[ConnProps_SSLKey] <> '' then AddParamToResult(ConnProps_SSLKey, Info.Values[ConnProps_SSLKey]);

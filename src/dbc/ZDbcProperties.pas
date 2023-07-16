@@ -523,6 +523,7 @@ const
     Refer to Postgre manual for types and acceptable values of these parameters }
   ConnProps_ApplicationName = 'application_name';
   ConnProps_RequireSSL = 'requiressl';
+  ConnProps_SSLPassword = 'sslpassword';
   ConnProps_SSLMode = 'sslmode';
   ConnProps_SSLCert = 'sslcert';
   ConnProps_SSLCompression = 'sslcompression';
