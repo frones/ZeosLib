@@ -1227,6 +1227,181 @@ const
     Protocols: (Count: 2; Items: @AllSybaseMSSQL);
   );
 {$ENDIF}
+{$IFDEF ENABLE_POSTGRESQL}
+  const
+    AllPostgreSQL: array[0..0] of String = ('postgres');
+  const cPostgreSQLProvider: TZPropertyProvider = (
+    Provider: spMySQL; MinimumServerVersion: 8;
+    MinimumClientVersion: 0; MinimumProtocolVersion: 0;);
+  ZProp_PG_CheckFieldVisibility : TZProperty = (
+    Name: ConnProps_CheckFieldVisibility;
+    Purpose: 'If set, metadata query will check if fields are visible (by ''AND pg_table_is_visible (c.oid)'')';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: cBoolFalse; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_StdConformingStrings : TZProperty = (
+    Name: ConnProps_StdConformingStrings;
+    Purpose: 'Value used in ''SET standard_conforming_strings = <Value>'' query on connect. Refer to PostgreSQL manual for details';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_ApplicationName : TZProperty = (
+    Name: ConnProps_ApplicationName;
+    Purpose: 'Refer to PostgreSQL manual for types and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_RequireSSL : TZProperty = (
+    Name: ConnProps_RequireSSL;
+    Purpose: 'Used for SSL handling in PostgreSQL. Refer to PostgreSQL manual for types and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  (*ZProp_PG_SSLPassword : TZProperty = (
+    Name: ConnProps_SSLPassword;
+    Purpose: 'Used for SSL handling in PostgreSQL. Refer to PostgreSQL manual for types and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );*)
+  ZProp_PG_SSLMode : TZProperty = (
+    Name: ConnProps_SSLMode;
+    Purpose: 'Used for SSL handling in PostgreSQL. Refer to PostgreSQL manual for types and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_SSLCert : TZProperty = (
+    Name: ConnProps_SSLCert;
+    Purpose: 'Used for SSL handling in PostgreSQL. Refer to PostgreSQL manual for types and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_SSLCompression : TZProperty = (
+    Name: ConnProps_SSLCompression;
+    Purpose: 'Used for SSL handling in PostgreSQL. Refer to PostgreSQL manual for types and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_SSLCrl : TZProperty = (
+    Name: ConnProps_SSLCrl;
+    Purpose: 'Used for SSL handling in PostgreSQL. Refer to PostgreSQL manual for types and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_SSLKey : TZProperty = (
+    Name: ConnProps_SSLCrl;
+    Purpose: 'Used for SSL handling in PostgreSQL. Refer to PostgreSQL manual for types and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_SSLRootcert : TZProperty = (
+    Name: ConnProps_SSLRootcert;
+    Purpose: 'Used for SSL handling in PostgreSQL. Refer to PostgreSQL manual for types and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_keepalives : TZProperty = (
+    Name: ConnProps_keepalives;
+    Purpose: 'Refer to PostgreSQL manual for type and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_keepalives_idle : TZProperty = (
+    Name: ConnProps_keepalives_idle;
+    Purpose: 'Refer to PostgreSQL manual for type and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_keepalives_interval : TZProperty = (
+    Name: ConnProps_keepalives_interval;
+    Purpose: 'Refer to PostgreSQL manual for type and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_keepalives_count : TZProperty = (
+    Name: ConnProps_keepalives_count;
+    Purpose: 'Refer to PostgreSQL manual for type and acceptable values of this parameter.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_BindDoublesAsString : TZProperty = (
+    Name: ConnProps_BindDoublesAsString;
+    Purpose: 'Compatibility option for users who bind double values to the params even if it should by a NUMERIC complient type such as Currency or TBCD. If set, Zeos binds Doubles as string with then Unknown OID (0).';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: cBoolFalse; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_OidAsBlob : TZProperty = (
+    Name: DSProps_OidAsBlob;
+    Purpose: 'Is Oid type treated as Large Object handle (blob) or as a regular integer.';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: cBoolFalse; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_ExecAsync : TZProperty = (
+    Name: DSProps_ExecAsync;
+    Purpose: 'If set, queries will be executed asyncronous.';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: cBoolFalse; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_SingleRowMode : TZProperty = (
+    Name: DSProps_SingleRowMode;
+    Purpose: 'Fetch results row by row from Server. Do not cache the results in libpq.';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: cBoolFalse; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_BinaryWireResultMode : TZProperty = (
+    Name: DSProps_BinaryWireResultMode;
+    Purpose: 'Force binary results to be retrieved from the server. Supported since Protocol V3 except libraries like pgbouncer which have no pqexecparams/pqexecprepared.';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: cBoolEnum; Default: cBoolTrue; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+  ZProp_PG_ListernerInterval : TZProperty = (
+    Name: ELProps_ListernerInterval;
+    Purpose: 'Sets event listener interval in milliseconds.';
+    ValueType: pvtNumber; LevelTypes: [pltEventListener];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 1; Items: @cPostgreSQLProvider);
+    Protocols: (Count: 1; Items: @AllPostgreSQL);
+  );
+{$ENDIF}
 {$IFDEF ENABLE_MYSQL}
   const
     AllMySQL: array[0..1] of String = ('mariadb','mysql');
