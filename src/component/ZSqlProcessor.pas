@@ -67,11 +67,15 @@ type
   {** Defines an error handle action. }
   TZErrorHandleAction = (eaFail, eaAbort, eaSkip, eaRetry);
 
-  {** Defines an Processor notification event. }
-  TZProcessorNotifyEvent = procedure(Processor: TZSQLProcessor;
+  {** Defines a Processor beforeexecute notification event. }
+  TZProcessorBeforeExecuteEvent = procedure(Processor: TZSQLProcessor;
     StatementIndex: Integer) of object;
 
-  {** Defines an Processor error handling event. }
+  {** Defines a Processor afterexecute notification event. }
+  TZProcessorAfterExecuteEvent = procedure(Processor: TZSQLProcessor;
+    StatementIndex, RowsAffected: Integer) of object;
+
+  {** Defines a Processor error handling event. }
   TZProcessorErrorEvent = procedure(Processor: TZSQLProcessor;
     StatementIndex: Integer; E: Exception;
     var ErrorHandleAction: TZErrorHandleAction) of object;
@@ -88,8 +92,8 @@ type
     FScript: TZSQLStrings;
 
     FScriptParser: TZSQLScriptParser;
-    FBeforeExecute: TZProcessorNotifyEvent;
-    FAfterExecute: TZProcessorNotifyEvent;
+    FBeforeExecute: TZProcessorBeforeExecuteEvent;
+    FAfterExecute: TZProcessorAfterExecuteEvent;
     FOnError: TZProcessorErrorEvent;
 
     procedure SetParams(Value: {$IFNDEF DISABLE_ZPARAM}TZParams{$ELSE}TParams{$ENDIF});
@@ -115,7 +119,7 @@ type
     function DoOnError(StatementIndex: Integer; E: Exception):
       TZErrorHandleAction;
     procedure DoBeforeExecute(StatementIndex: Integer);
-    procedure DoAfterExecute(StatementIndex: Integer);
+    procedure DoAfterExecute(StatementIndex, RowsAffected: Integer);
 
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; virtual;
@@ -150,8 +154,8 @@ type
     property CleanupStatements: Boolean read GetCleanupStatements
       write SetCleanupStatements default False; 
     property OnError: TZProcessorErrorEvent read FOnError write FOnError;
-    property AfterExecute: TZProcessorNotifyEvent read FAfterExecute write FAfterExecute;
-    property BeforeExecute: TZProcessorNotifyEvent read FBeforeExecute write FBeforeExecute;
+    property AfterExecute: TZProcessorAfterExecuteEvent read FAfterExecute write FAfterExecute;
+    property BeforeExecute: TZProcessorBeforeExecuteEvent read FBeforeExecute write FBeforeExecute;
   end;
 
 implementation
@@ -333,10 +337,10 @@ end;
   Performs an action action execute a statement.
   @param StatementIndex an index of the executing statement.
 }
-procedure TZSQLProcessor.DoAfterExecute(StatementIndex: Integer);
+procedure TZSQLProcessor.DoAfterExecute(StatementIndex, RowsAffected: Integer);
 begin
   if Assigned(FAfterExecute) then
-    FAfterExecute(Self, StatementIndex);
+    FAfterExecute(Self, StatementIndex, RowsAffected);
 end;
 
 {**
@@ -364,7 +368,7 @@ end;
 }
 procedure TZSQLProcessor.Execute;
 var
-  I: Integer;
+  I, J: Integer;
   Statement: IZPreparedStatement;
   Action: TZErrorHandleAction;
   SQL: TZSQLStrings;
@@ -384,6 +388,8 @@ begin
       Action := eaSkip;
       DoBeforeExecute(I);
       repeat
+        J := -1;
+
         try
           SQL.Text := GetStatement(I);
           {https://zeoslib.sourceforge.io/viewtopic.php?f=50&t=127636}
@@ -392,7 +398,7 @@ begin
             try
               SetStatementParams(Statement, SQL.Statements[0].ParamNamesArray,
                 FParams);
-              Statement.ExecuteUpdatePrepared;
+              J := Statement.ExecuteUpdatePrepared;
             finally
               Statement.Close; //see test Test1049821: if LastResultSet is assigned
               Statement := nil;
@@ -410,7 +416,7 @@ begin
           end;
         end;
       until Action <> eaRetry;
-      DoAfterExecute(I);
+      DoAfterExecute(I, J);
 
     end;
   finally
