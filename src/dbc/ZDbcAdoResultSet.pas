@@ -1308,6 +1308,8 @@ procedure TZAdoCachedResolver.PostUpdates(Sender: IZCachedResultSet;
 var
   Recordset: ZPlainAdo.Recordset;
   RA: OleVariant;
+  D: Double;
+  Identity: OleVariant;  
 begin
   inherited PostUpdates(Sender, UpdateType, OldRowAccessor, NewRowAccessor);
 
@@ -1315,8 +1317,20 @@ begin
     and OldRowAccessor.IsNull(FAutoColumnIndex) then
   begin
     Recordset := FHandle.Execute(RA, null, 0);
-    if Recordset.RecordCount > 0 then
-      NewRowAccessor.SetLong(FAutoColumnIndex, Recordset.Fields.Item[0].Value);
+    if Recordset.RecordCount > 0 then begin
+      Identity := Recordset.Fields.Item[0].Value;
+      {$IFDEF FPC}
+      if VarType(Identity) = $000E{varDecimal} then begin
+        VarR8FromDec(PDecimal(@Identity)^, D);
+        Identity := Trunc(D);
+      end;
+      {$ENDIF}
+
+      if VarType(Identity) = varNull then
+        raise EZSQLException.Create('Cannot determine value of autoincrement field.')
+      else
+        NewRowAccessor.SetLong(FAutoColumnIndex, Identity);
+    end;
   end;
 end;
 
