@@ -1430,7 +1430,7 @@ VCS:            CharacterSizeToByteSize(DataSize, Precision);
         {DescriptorType := OCI_DTYPE_ROWID;
         DataSize := SizeOf(POCIRowid);}
         Precision := DataSize;
-        DataSize := Max(20, DataSize);
+        DataSize := {$IFDEF NATIVEINT_WEAK_REFERENCE}ZCompatibility.{$ENDIF}Max(20, DataSize);
         goto VCS;
       end;
     SQLT_NTY {NAMED DATATYPE / struct }: begin
