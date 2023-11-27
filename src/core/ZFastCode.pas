@@ -432,7 +432,9 @@ function PosEx(const SubStr, S: UnicodeString; Offset: Integer = 1): Integer; ov
 
 function GetOrdinalDigits(const Value: UInt64): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 {$IFDEF HAVE_TRUE_NATIVE_TYPES}//some newer delphi's can't determine the correct overload ):
+{$IFNDEF NATIVEINT_WEAK_REFERENCE}
 function GetOrdinalDigits(const Value: NativeInt; out U: NativeUInt; out Negative: Boolean): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+{$ENDIF}
 {$ENDIF}
 function GetOrdinalDigits(const Value: Int64; out U: UInt64; out Negative: Boolean): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 function GetOrdinalDigits(Value: Cardinal): Byte; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
@@ -7221,6 +7223,7 @@ begin
 end;
 
 {$IFDEF HAVE_TRUE_NATIVE_TYPES}//some newer delphi's can't determine the correct overload ):
+{$IFNDEF NATIVEINT_WEAK_REFERENCE}
 function GetOrdinalDigits(const Value: NativeInt; out U: NativeUInt; out Negative: Boolean): Byte;
 begin
   Negative := Value < 0;
@@ -7229,6 +7232,7 @@ begin
   else U := Value;
   Result := GetOrdinalDigits(U)
 end;
+{$ENDIF}
 {$ENDIF}
 
 function GetOrdinalDigits(Value: Cardinal): Byte;

@@ -1583,6 +1583,8 @@ end;
 
 {$Q-} {$R-} //else my shift fail
 {$IFDEF WITH_PG_WEIGHT_OPT_BUG}{$O-}{$ENDIF}
+// for a description of the structures delivered in Src see:
+// https://www.postgresql.org/message-id/16572.1091489720%40sss.pgh.pa.us
 procedure PGNumeric2BCD(Src: PAnsiChar; var Dst: TBCD);
 var
   i, NBASEDigitsCount, Precision, Scale, Digits: Integer;
@@ -1602,7 +1604,6 @@ begin
   NBASEDigitsCount := PWord(Src)^;
   NBASEDigit := PWord(Src+4)^; //read sign
   {$ENDIF ENDIAN_BIG}
-
   if ((NBASEDigitsCount = 0) and (NBASEDigit = NUMERIC_POS)) or      // zero
      ((NBASEDigit <> NUMERIC_POS) and (NBASEDigit <> NUMERIC_NEG)) then begin // NaN or NULL
 ZeroBCD:
@@ -1626,12 +1627,14 @@ ZeroBCD:
   end else
     I := Weight;
   if NBASEDigitsCount <= I then begin
-    Precision := (I - NBASEDigitsCount + 1) * BASE1000Digits;
+    Precision := (I + NBASEDigitsCount) * BASE1000Digits;
     Scale := Precision * Ord(Weight < 0);
   end else if Weight < -1 then begin //scale starts with weight -1 nbase digits
     Precision := (I - 1) * BASE1000Digits;
     Scale := Precision;
   end else begin
+    // determine precision as a multiple of 4 (because a Base1000-Digit always contains 4 Base10-Digits)
+    // later on the precision will be reduced to map to left packed TBCD requirements.
     Precision := NBASEDigitsCount * BASE1000Digits;
     Scale := (NBASEDigitsCount-(Weight + 1)) * BASE1000Digits;
   end;
@@ -1661,6 +1664,7 @@ Final2: Digits := 2;
       PByte(pNibble)^ := Byte(NBASEDigit) shl 4;
       Digits := 1;
     end;
+    // reduce the precision (still a multiple of 4) to the requirements of left packed TBCD
     Dec(Precision, BASE1000Digits-Digits);
     if (NBASEDigitsCount = 1) or (pNibble = pLastNibble)
     then goto done;
