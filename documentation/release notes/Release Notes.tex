@@ -184,11 +184,12 @@ The Zeos field classes can work directly on Zeos internal structures and by this
 Also Zeos implements some field classes to support features of databases, that are not supported by the Delphi / Free Pascal TField implementations or to enable the use of database features on older Delphi versions where the RTL does not provide some field types.
 Examples are the TZUInt64Field and Fields that support MySQLs dates with the day or month being set to 0.
 
-The new Zeos fields can be disabled, if necessary by setting the DisableZFields property of a Zeos Dataset to True.
+The new Zeos fields can be disabled, if necessary, by setting the DisableZFields property of a Zeos Dataset to True.
 In this case Zeos will not generate TZFieldDefs and will subsequently not generate the new Zeos fields.
 
 \subsection{New parameters for handling of exceptions and warnings}
 Zeos 8.0 introduces two new parameters for the handling of exceptions and warnings:
+AddLogMsgToExceptionOrWarningMsg and RaiseWarningMessages
 
 \subsubsection{AddLogMsgToExceptionOrWarningMsg }
 This is a boolean option.
@@ -271,15 +272,15 @@ Zeos now supports more timeouts, as introduced with Firebird 4.0:
 \subsection{Usage of new interface based API}
 The firebird driver uses the new interface based API that was introduced with Firebird 3.0.
 If the client library doesn't support this new API, it will automatically fall back to the ISC API.
-If you want to force the usage of the old API for some reason, you can set the option "`FirebirdAPI"' on the connection properties.
-If you set this property to "`interface"', the new interface based API will get used.
-If you set this property to "`legacy"', the legacy ISC API will get used.
+If you want to force the usage of the old API for some reason, you can set the option "FirebirdAPI" on the connection properties.
+If you set this property to "interface", the new interface based API will get used.
+If you set this property to "legacy", the legacy ISC API will get used.
 
 \section{MySQL / MariaDB}
 
 \subsection{MySQL\_FieldType\_Bit\_1\_IsBoolean is enabled by default}
 
-The parameter MySQL\_FieldType\_Bit\_1\_IsBoolean is enabled by default now if your server version is MySQL >= 5.0.3.
+The parameter MySQL\_FieldType\_Bit\_1\_IsBoolean is enabled by default now if your server version is equal to or greater than 5.0.3.
 This means that fields declared as BIT(1) will be treated as boolean fields.
 The old assumption that an enum('Y','N') is a boolean field is disabled if this parameter is enabled.
 If this parameter is enabled, enum('Y','N') will be a string field.
@@ -335,7 +336,8 @@ This should make using backticks in SQL safe with SQLite on Zeoslib.
 
 \subsection{better error descriptions}
 The SQLite driver now supports the proper use of sqlite3\_errstr which leads to better error descriptions.
-If you use the Error message of exceptions, you should check your code if it needs to be updated. (Ticket \#260)
+If you use the Error message of exceptions, you should check your code if it needs to be updated.
+(See \url{https://sourceforge.net/p/zeoslib/tickets/260/})
 
 \textbf{Note:}
 In Zeos 7.2 we introduced the new parameter "ExtendedErrorMessage" for enabling this new behavior.
@@ -404,7 +406,7 @@ To use this driver, insert the OLE DB Connection string into the Database proper
 The host name property doesn't work with this driver.
 This driver was mostly tested with Microsoft SQL Servers during development.
 
-\subsection{paramaters}
+\subsection{parameters}
 
 \begin{tabularx}{\textwidth}{lX}
     paramater name & description \\ \hline
@@ -425,12 +427,12 @@ This driver was mostly tested with Microsoft SQL Servers during development.
 			Turn it off on the DataSet or Statement level if you run into that issue. \\
 		StatementTimeOut &
 		  Execution timeout of a statement in seconds. \\
-		tds\_packed\_size &
-		  ???? \\
+%		tds\_packed\_size &
+%		  ???? \\
 		MarsConn &
 		  Enables MARS (Multiple Active Rsult Sets) on Microsoft SQL Server drivers. \\
-		User Id &
-		  ???? The user name? Why would we do that? \\
+%		User Id &
+%		  ???? The user name? Why would we do that? \\
 		Initial Catalog &
 		  The initial catalog to use for the connection.
 \end{tabularx}
@@ -452,7 +454,7 @@ The host name property doesn't work with this driver.
 This driver was mostly tested with Microsoft SQL Servers during development.
 Using ODBC data source names is not supported yet.
 
-\subsection{paramaters}
+\subsection{parameters}
 
 \begin{tabularx}{\textwidth}{lX}
     paramater name & description \\ \hline
@@ -472,13 +474,13 @@ Using ODBC data source names is not supported yet.
 		StatementTimeOut &
 		  Execution timeout of a statement in seconds. \\
     DriverCompletion &
-		  <SQL\_DRIVER\_COMPLETE | SQL\_DRIVER\_PROMPT | SQL\_DRIVER\_COMPLETE\_REQUIRED>
-      Refer to ODBC manual for details. \\
-		Server &
+		   Refer to ODBC manual for details. Possible values are:
+		  SQL\_DRIVER\_COMPLETE, SQL\_DRIVER\_PROMPT, SQL\_DRIVER\_COMPLETE\_REQUIRED \\
+	Server &
 		  The Server to connect to. \\
 		CharacterSet &
-		  Specifies the character set used to interact with driver.
-      If you are accessing a CharacterSet "`NONE"' Firebird / Interbase database you should always use the character set "`NONE"' as the connection character set.
+		  Specifies the character set used to interact with the driver.
+      If you are accessing a CharacterSet "NONE" Firebird / Interbase database you should always use the character set "NONE" as the connection character set.
 			In addition it is recommended to specify which character set the "NONE" represents by adding the Charset\_NONE\_Alias parameter.
       Example: Properties.Values['Charset\_NONE\_Alias'] := 'WIN1251'.
       For odbc\_a and ole\_db(raw longvarchar only) it is implemented as:
@@ -486,7 +488,7 @@ Using ODBC data source names is not supported yet.
       Note for odbc\_a: This CodePage must be equal for all fields(ODBC).
       Otherwise use the odbc\_w driver.
 			Here it is defined as:
-			<Character Set Alias>:<Codepage>/<MaxBytes> where "`Character Set Alias"' is the character set alias, "`Codepage"' is the Windows code page number to be used and "`MaxBytes"' is the maximum number of bytes in the character set.
+			\textless Character Set Alias\textgreater:\textless Codepage\textgreater/\textless MaxBytes\textgreater where "Character Set Alias" is the character set alias, "Codepage" is the Windows code page number to be used and "MaxBytes" is the maximum number of bytes in the character set.
 			Example: CharacterSet=latin1:1252/1 or CharacterSet=utf8:65001/4 \\
 		DRIVER &
 		  Specifies the ODBC driver to be used on this connection. \\
@@ -562,7 +564,7 @@ It is still a viable alternate until Zeos implements proper asynchronous functio
 \section{Known Limitations}
 
 \subsection{Negative Time Intervals on PostgreSQL}
-Zeos internal structures don't allow handling negative time intervals.
+Zeos internal structures don't allow handling of negative time intervals.
 Also there is no field type we can use to display negative intervals.
 Because of these limitations negative intervals will be returned with all parts (hours, minutes, seconds, microseconds) set to 0 (zero).
 
