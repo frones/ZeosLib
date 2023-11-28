@@ -63,7 +63,7 @@ If you have any problems with Zeos 8.0, please get in contact with us on the for
 \label{sec:GeneralChanges}
 \subsection{Supported compilers}
 \label{sec:GeneralChanges_SupportedCompilers}
-Zeos 8.0 supports Delphi versions from Delphi 7 to XE 10.4 Seattle.
+Zeos 8.0 supports Delphi versions from Delphi 7 to 12.
 Besides the x86 and x86\_64 compilers, Zeos now also supports the Nextgen compilers (starting from Delphi XE2), and so supports all available platforms on Delphi.
 So on Delphi Windows, macOS / Mac OS X, iOS and Android are supported now.
 The Free Pascal compiler is supported from version 3.0 to version 3.2.
@@ -74,7 +74,7 @@ Older versions might work but don't get official support by us anymore.
 Zeos 8.0 now comes with some new drivers:
 \begin{itemize}
   \item OleDB
-	\item ODBC (including UnixODBC?)
+	\item ODBC
 	\item Firebird with new interface based API
 	\item Webservice Proxy Driver
 \end{itemize}
@@ -93,14 +93,22 @@ Based on the latter file, we will release a more detailed documentation for Zeos
 
 \subsection{Support for connection loss}
 Zeos 8.0 now supports the programmer in reacting to a connection loss.
-If Zeos detects a connecton loss, it will
+If Zeos detects a connection loss, it will
 \begin{itemize}
 	\item close all handles
 	\item close all results and datasets
 	\item fire the OnLost event of TZConnection
 \end{itemize}
 
-\textbf{Jan:} Which drivers are supported Egonhugeist?
+Some drivers are not supported for this feature:
+\begin{itemize}
+	\item WebServiceProxy
+	\item SQLite
+	\item ASA (Adaptive Server Anywhere)
+\end{itemize}
+
+On the bridge drivers (ADO, OLEDB and ODBC) the feature is not fully tested.
+If you use one of them, we suggest, you do some tests for your application.
 
 \subsection{New prepare logic}
 \label{subsec:NewPrepareLogic}
@@ -115,12 +123,11 @@ Setting this parameter to a negative value will turn off preparing completely.
 
 Currently the following drivers support this parameter:
 \begin{itemize}
-  \item PostgreSQL
+  	\item PostgreSQL
 	\item MySQL / MariaDB
 \end{itemize}
 
-For ODBC, OLEDB and ADO there is the DeferPrepare property.
-\textbf{Jan:} @Egonhugeist: What exactly does DeferPrepare do?
+For ODBC, OLEDB and ADO the DeferPrepare property can be used.
 
 Finally there is PreferPrepared.
 PreferPrepared gets mapped to DeferPrepared for OleDB, ODBC and ADO.
@@ -158,7 +165,7 @@ This is supported on MySQL, MariaDB, Oracle, dblib (MS SQL Server, SAP Adaptive 
 
 \subsection{new method StartTransaction on the DBC layer}
 Until Zeos 8.0 the DBC layer didn't have a way to start transactions besides leaving AutoCommit mode.
-Zoes 8.0 introduces a new StartTransaction method.
+Zeos 8.0 introduces a new StartTransaction method.
 This can save API calls - especially on databases that default to using auto commit because it doesn't start unnecessary transactions after Commit / Rollback.
 
 \subsection{Nested transactions}
@@ -202,9 +209,9 @@ Until Zeos 7.2 Zeos could update queries only if they queried a single table and
 Starting with Zeos 8.0 Zeos uses information from TField.ProviderFlags and TField.ReadOnly.
 This allows us to have more queries be updateable automatically.
 
-Note: pfInWhere only makes sense in wmWhereKeyOnly.
+Fields that don't have the pfInUpdate flag set will not get updated by Zeos.
 
-\textbf{Jan:}We need more information on how these things work for the information to be more useful.
+Fields that don't have the pfInWhere flag set will not get used for constructing the where clause of an DML statement.
 
 \subsection{output parameter support on TZQuery}
 EH@Jan Outparamter support added for the TZQuery.
