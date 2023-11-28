@@ -140,12 +140,12 @@ type
     procedure SetReadOnly(ColumnIndex: Integer; Value: Boolean);
     /// <summary>Set the searchable state of a field. The value will be ignored
     ///  if the field is not searchable at all e.g. LOB's.</summary>
-    /// <param>"ColumnIndex" the first Column is 1, the second is 2, ... unless
+    /// <param name = "ColumnIndex">The first Column is 1, the second is 2, ... unless
     ///  <c>GENERIC_INDEX</c> is defined. Then the first column is 0, the second
     ///  is 1. This will change in future to a zero based index. It's recommented
     ///  to use an incrementation of FirstDbcIndex.</param>
-    /// <param>"Value" if <c>true</c> then the field will be ignored on
-    ///  generating the where clause of the dml's.</param>
+    /// <param name = "Value">If <c>false</c> then the field will be ignored on
+    ///  generating the where clause of DML statements.</param>
     procedure SetSearchable(ColumnIndex: Integer; Value: Boolean);
     /// <summary>Set the Calculate null columns defaults.</summary>
     /// <param>"Value" <c>true</c> means calc defaults.</param>
