@@ -57,6 +57,13 @@ interface
 
 {$IFDEF ENABLE_LDAP_SECURITY}
 
+{*********************************************************}
+{* Note: If you get stuck building here, disable ldap in *}
+{*       the dbcproxy.inc file or add the synapse units  *}
+{*       (https://sourceforge.net/projects/synalist/)    *}
+{*       to the search path.                             *}
+{*********************************************************}
+
 uses
   Classes, SysUtils, DbcProxySecurityModule, IniFiles, ldapsend;
 
