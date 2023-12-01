@@ -146,9 +146,6 @@
     <Other>
       <CustomOptions Value="-dUseCThreads
 -dZEOS_DISABLE_ADO"/>
-      <OtherDefines Count="1">
-        <Define0 Value="UseCThreads"/>
-      </OtherDefines>
     </Other>
   </CompilerOptions>
   <Debugging>

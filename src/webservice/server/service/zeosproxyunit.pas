@@ -62,7 +62,7 @@ uses
   // wst
   fpc_https_server,
   //
-  dbcproxycleanupthread, dbcproxyconfigutils
+  dbcproxycleanupthread, dbcproxyconfigutils, dbcproxycertstore
   ;
 
 type
@@ -94,7 +94,7 @@ uses
 
 procedure RegisterDaemon;
 begin
-  RegisterDaemonClass(TZeosProxyDaemon)
+  RegisterDaemonClass(TZeosProxyDaemon);
 end;
 
 {$R *.lfm}
@@ -123,6 +123,7 @@ begin
     FreeAndNil(zeosproxy_imp.Logger);
     zeosproxy_imp.Logger := TDbcProxyFileLogger.Create(ConfigManager.LogFile);
   end;
+
   ConfigManager.LoadConnectionConfig(configFile);
   try
     zeosproxy_imp.Logger.Debug('Creating Connection Manager...');
