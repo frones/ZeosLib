@@ -109,7 +109,11 @@ var
   CleanupThread: TDbcProxyCleanupThread;
 begin
   {$IFDEF LINUX}
-  configFile := '/etc/zeosproxy.ini';
+    {$IFDEF ENABLE_DEBUG_SETTINGS}
+    configFile := ExtractFilePath(ParamStr(0)) + 'zeosproxy.ini';
+    {$ELSE}
+    configFile := '/etc/zeosproxy.ini';
+    {$IFEND}
   {$ELSE}
   configFile := ExtractFilePath(ParamStr(0)) + 'zeosproxy.ini';
   {$ENDIF}

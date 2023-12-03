@@ -9,5 +9,8 @@
 // modified synapse library from https://github.com/marsupilami79/synapse
 {.$DEFINE ENABLE_TOFU_CERTIFICATES}
 
+// On Linux this will change where the config file is read from and where
+// certificates for TOFU are stored.
+{.$DEFINE ENABLE_DEBUG_SETTINGS}
 
 {$I ../../Zeos.inc}

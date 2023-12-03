@@ -225,9 +225,13 @@ end;
 function GetCertificatesPath: String;
 begin
   {$IFDEF WINDOWS}
-    Result := GetSpecialFolder(0, CSIDL_LOCAL_APPDATA) + '\ZeosProxy\Certificates';
+    Result := GetSpecialFolder(0, CSIDL_LOCAL_APPDATA) + 'ZeosProxy\Certificates';
   {$ELSE}
+    {$IFDEF ENABLE_DEBUG_SETTINGS}
+    Result := ExtractFilePath(ParamStr(0)) + '.zeosproxy/certificates';
+    {$ELSE}
     Result := '/var/lib/zeosproxy/certificates';
+    {$IFEND}
   {$IFEND}
 end;
 
