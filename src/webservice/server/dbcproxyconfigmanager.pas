@@ -51,7 +51,7 @@
 
 unit DbcProxyConfigManager;
 
-{$mode delphi}{$H+}
+{$I dbcproxy.inc}
 
 interface
 
@@ -91,7 +91,9 @@ type
     FCertificateFile: String;
     FKeyFile: String;
     FKeyPasswod: String;
-
+    {$IFDEF ENABLE_TOFU_CERTIFICATES}
+    FUseTofuSSL: Boolean;
+    {$ENDIF}
   public
     property ListeningPort: Word read FListeningPort;
     property IPAddress: String read FIPAddress;
@@ -101,7 +103,9 @@ type
     property EnableThreading: Boolean read FEnableThreading;
     property LogFile: String read FLogFile;
     property UseSSL: Boolean read FUseSSL;
-    property HostName: String read FHostName;
+    {$IFDEF ENABLE_TOFU_CERTIFICATES}
+    property UseTofuSSL: Boolean read FUseTofuSSL;
+    {$ENDIF}    property HostName: String read FHostName;
     property CertificateFile: String read FCertificateFile;
     property KeyFile: String read FKeyFile;
     property KeyPasswod: String read FKeyPasswod;
@@ -179,6 +183,14 @@ begin
 
     // load SSL configuration
     FUseSSL := IniFile.ReadBool('general', 'use ssl', false);
+    {$IFDEF ENABLE_TOFU_CERTIFICATES}
+    FUseTofuSSL := IniFile.ReadBool('general', 'use tofu ssl', false);
+    if FUseSSL and FUseTofuSSL then begin
+      zeosproxy_imp.Logger.Warning('SSL and TOFU SSL is enabled. Preferring SSL and disabling TOFU SSL.');
+      FUseTofuSSL := false;
+    end;
+    {$ENDIF}
+
     if FUseSSL then begin
       FHostName := IniFile.ReadString('general', 'host name', '');
       FCertificateFile := IniFile.ReadString('general', 'Certificate File', '');

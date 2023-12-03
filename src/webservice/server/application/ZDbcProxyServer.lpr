@@ -68,7 +68,7 @@ uses
   {local}zeosproxy, zeosproxy_binder, zeosproxy_imp, DbcProxyUtils,
   DbcProxyConnectionManager, DbcProxyConfigManager, ZDbcProxyManagement,
   dbcproxycleanupthread, dbcproxysecuritymodule, DbcProxyFileLogger,
-  dbcproxyconfigutils,
+  dbcproxyconfigutils, dbcproxycertstore,
   //Zeos drivers:
   ZDbcAdo, ZDbcASA, ZDbcDbLib, ZDbcFirebird, ZDbcInterbase6, ZDbcMySql, ZDbcODBCCon,
   ZDbcOleDB, ZDbcOracle, ZDbcPostgreSql, ZDbcSQLAnywhere, ZDbcSqLite, ZDbcProxyMgmtDriver;
@@ -150,6 +150,12 @@ begin
   AppObject := TwstFPHttpsListener.Create(ConfigManager.IPAddress, ConfigManager.ListeningPort);
   try
     InitializeSSLLibs;
+    {$IFDEF ENABLE_TOFU_CERTIFICATES}
+    if ConfigManager.UseTofuSSL then begin
+      TofuCertStore := TDbcProxyCertificateStore.Create;
+      zeosproxy_imp.Logger.Info('Certificate store: ' + TofuCertStore.CertificatesPath);
+    end;
+    {$ENDIF}
     ConfigureSSL(AppObject);
     AppObject.OnNotifyMessage := OnMessage;
     WriteLn('Zeos Proxy Server listening at:');

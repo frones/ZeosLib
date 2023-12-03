@@ -55,8 +55,10 @@ unit dbcproxycertstore;
 
 interface
 
+{$IFDEF ENABLE_TOFU_CERTIFICATES}
+
 uses
-  Classes, SysUtils, generics.collections;
+  Classes, SysUtils, generics.collections, SyncObjs, Types, IniFiles;
 
 type
   TCertificateInfo = record
@@ -64,7 +66,7 @@ type
     KeyFile: String;
     PublicKey: String;
     ValidFrom: TDate;
-    ValidUntil: TDate;
+    ValidTo: TDate;
     SectionName: String;
   end;
 
@@ -72,23 +74,42 @@ type
 
   TDbcProxyCertificateStore = class
     protected
+      FCriticalSection: TCriticalSection;
       FCertificatesPath: String;
       FCertificates: TCertificateList;
       FCertificatesInfoFile: String;
+      FHostName: String;
+      FIniFileOptions: TIniFileOptions;
       procedure LoadCertificates;
       procedure ValidateCertificateInfo;
       procedure DeleteCertificate(Index: Integer);
       procedure AddNewCertificate;
-      //procedure MaintainCertificates;
+      procedure MaintainStore;
     public
       property CertificatesPath: String read FCertificatesPath;
+      property HostName: String read FHostName;
       constructor Create;
+      destructor Destroy; override;
+      procedure DoMaintenance;
+      function GetValidPublicKeys: TStringDynArray;
+      procedure GetCurrentCertificate(out CertificateFile, KeyFile: String);
   end;
+
+var
+  TofuCertStore: TDbcProxyCertificateStore;
+
+{$ENDIF}
 
 implementation
 
-uses {$IFDEF WINDOWS}Windows, ShlObj, {$IFEND}zeosproxy_imp, inifiles, ssl_openssl_lib,
-  synautil, base64;
+{$IFDEF ENABLE_TOFU_CERTIFICATES}
+
+uses {$IFDEF WINDOWS}Windows, ShlObj, {$ELSE}unix, {$IFEND}zeosproxy_imp, ssl_openssl11_lib,
+  synautil, base64, dateutils, math;
+
+const
+  ValidDays = 365;
+
 
 {$IFDEF WINDOWS}
 const
@@ -105,7 +126,7 @@ begin
 end;
 {$ENDIF}
 
-function CreateSelfSignedCert(const HostName, Country: String; const ValidDays: Integer; out Certificate, Key: RawBytestring): Boolean;
+function CreateSelfSignedCert(const HostName, Country: String; const ValidDays: Integer; out Certificate, PrivateKey: RawBytestring; out PublicKey: AnsiString): Boolean;
 var
   pk: EVP_PKEY;
   x: PX509;
@@ -120,7 +141,7 @@ begin
   pk := EvpPkeynew;
   x := X509New;
   try
-    rsa := RsaGenerateKey(2048, $10001, nil, nil);
+    rsa := RsaGenerateKey(3072, $10001, nil, nil);
     EvpPkeyAssign(pk, EVP_PKEY_RSA, rsa);
     X509SetVersion(x, 2);
 //    Asn1IntegerSet(X509getSerialNumber(x), 0);
@@ -136,7 +157,8 @@ begin
     end;
     X509SetPubkey(x, pk);
     Name := X509GetSubjectName(x);
-    X509NameAddEntryByTxt(Name, 'C', $1001, Country, -1, -1, 0);
+    if Country <> '' then
+      X509NameAddEntryByTxt(Name, 'C', $1001, Country, -1, -1, 0);
     X509NameAddEntryByTxt(Name, 'CN', $1001, HostName, -1, -1, 0);
     //X509AddExtension(x, NID_ext_key_usage, 'serverAuth,clientAuth');
     //X509AddExtension(x, NID_subject_alt_name, 'DNS:' + HostName);
@@ -167,7 +189,33 @@ begin
     finally
       BioFreeAll(b);
     end;
-    Key := s;
+    PrivateKey := s;
+
+    b := BioNew(BioSMem);
+    try
+      EvpPkeyPrintPublic(b, pk, 0, nil);
+      xn := BioCtrlPending(b);
+      SetLength(s, xn);
+      y := BioRead(b, s, xn);
+      if y > 0 then
+        SetLength(s, y);
+    finally
+      BioFreeAll(b);
+    end;
+    PublicKey := s;
+    // clean up the private key, because it is prepared to be printed in a pretty way for humans and not for machines:
+    y := pos('Modulus:', PublicKey);
+    Delete(PublicKey, 1, y + 7);
+    y := pos('Exponent:', PublicKey);
+    Delete(PublicKey, y, length(PublicKey));
+    for y := length(PublicKey) downto 1 do begin
+      case PublicKey[y] of
+        '0'..'9', 'a'..'f': ;// do nothing
+        else Delete(PublicKey, y, 1);
+      end;
+    end;
+    if copy(PublicKey, 1, 2) = '00' then
+      Delete(PublicKey, 1, 2);
   finally
     X509free(x);
     EvpPkeyFree(pk);
@@ -183,12 +231,71 @@ begin
   {$IFEND}
 end;
 
+// The Windows portion is taken from here:
+// https://www.delphipraxis.net/107832-post3.html
+// The Unix portion is taken from here:
+// https://forum.lazarus.freepascal.org/index.php/topic,30885.msg196955.html#msg196955
+function GetComputerName: String;
+{$IFDEF WINDOWS}
+var
+  Size: DWORD;
+{$IFEND}
+begin
+  {$IFDEF WINDOWS}
+  Size := MAX_COMPUTERNAME_LENGTH + 1;
+  SetLength(Result, Size);
+  if Windows.GetComputerName(PChar(Result), Size) then
+    SetLength(Result, Size)
+  else
+    Result := '';
+  {$ELSE}
+  Result := GetHostName;
+  {$IFEND}
+end;
+
+procedure ExportCertData(Data: RawByteString; Header, Footer: String; FileName: String);
+var
+  Base64Data: String;
+  Lines: TStringList;
+begin
+  Base64Data := EncodeStringBase64(Data);
+
+  Lines := TStringList.Create;
+  try
+    Lines.Add(Header);
+    while Base64Data <> '' do begin
+      Lines.Add(Copy(Base64Data, 1, 80));
+      Delete(Base64Data, 1, 80);
+    end;
+    Lines.Add(Footer);
+    Lines.SaveToFile(FileName);
+  finally
+    FreeAndNil(Lines);
+  end;
+end;
+
 constructor TDbcProxyCertificateStore.Create;
 begin
   inherited;
+  FIniFileOptions := [ifoWriteStringBoolean];
   FCertificatesPath := GetCertificatesPath;
   FCertificates := TCertificateList.Create;
   FCertificatesInfoFile := FCertificatesPath + DirectorySeparator + 'certinfo.ini';
+  FCriticalSection := SyncObjs.TCriticalSection.Create();
+  FHostName := LowerCase(GetComputerName) + '.local';
+
+  LoadCertificates;
+  ValidateCertificateInfo;
+  MaintainStore;
+end;
+
+destructor TDbcProxyCertificateStore.Destroy;
+begin
+  if Assigned(FCriticalSection)
+    then FreeAndNil(FCriticalSection);
+  if Assigned(FCertificates) then
+    FreeAndNil(FCertificates);
+  inherited;
 end;
 
 procedure TDbcProxyCertificateStore.LoadCertificates;
@@ -198,12 +305,13 @@ var
   x: Integer;
   Certificate: TCertificateInfo;
   SectionName: String;
+  TempDate: String;
 begin
   if not DirectoryExists(FCertificatesPath)
     then ForceDirectories(FCertificatesPath);
 
   try
-    CertInfo := TIniFile.Create(FCertificatesInfoFile);
+    CertInfo := TIniFile.Create(FCertificatesInfoFile, FIniFileOptions);
     Sections := TStringList.Create;
     CertInfo.ReadSections(Sections);
     for
@@ -213,8 +321,10 @@ begin
         Certificate.CertificateFile := CertInfo.ReadString(SectionName, 'CertificateFile', '');
         Certificate.KeyFile := CertInfo.ReadString(SectionName, 'KeyFile', '');
         Certificate.PublicKey := CertInfo.ReadString(SectionName, 'PublicKey', '');
-        Certificate.ValidFrom := CertInfo.ReadDate(SectionName, 'ValidFrom', 0);
-        Certificate.ValidUntil := CertInfo.ReadDate(SectionName, 'ValidUntil', 0);
+        TempDate := CertInfo.ReadString(SectionName, 'ValidFrom', '');
+        Certificate.ValidFrom := StrToDate(TempDate);
+        TempDate := CertInfo.ReadString(SectionName, 'ValidTo', '');
+        Certificate.ValidTo := StrToDate(TempDate);
         FCertificates.Add(Certificate);
       end;
   finally
@@ -233,7 +343,7 @@ var
 begin
   for x := FCertificates.Count - 1 downto 0 do begin
     Certificate := FCertificates[x];
-    IsValid := Certificate.ValidUntil > Date;
+    IsValid := Certificate.ValidTo > Date;
     IsValid := IsValid and (Certificate.PublicKey <> '');
     IsValid := IsValid and (Certificate.KeyFile <> '');
     IsValid := IsValid and FileExists(FCertificatesPath + DirectorySeparator + Certificate.KeyFile);
@@ -248,14 +358,17 @@ procedure TDbcProxyCertificateStore.DeleteCertificate(Index: Integer);
 var
   Certificate: TCertificateInfo;
   CertInfo: TIniFile;
+  CertFile, KeyFile: String;
 begin
   Certificate := FCertificates.Items[Index];
   FCertificates.Delete(Index);
-  If (Certificate.KeyFile <> '') and FileExists(Certificate.KeyFile) then
-    SysUtils.DeleteFile(Certificate.KeyFile);
-  If (Certificate.CertificateFile <> '') and FileExists(Certificate.CertificateFile) then
-    SysUtils.DeleteFile(Certificate.CertificateFile);
-  CertInfo := TIniFile.Create(FCertificatesInfoFile);
+  CertFile := FCertificatesPath + PathDelim + Certificate.CertificateFile;
+  KeyFile := FCertificatesPath + PathDelim + Certificate.KeyFile;
+  If (Certificate.KeyFile <> '') and FileExists(KeyFile) then
+    SysUtils.DeleteFile(KeyFile);
+  If (Certificate.CertificateFile <> '') and FileExists(CertFile) then
+    SysUtils.DeleteFile(CertFile);
+  CertInfo := TIniFile.Create(FCertificatesInfoFile, FIniFileOptions);
   try
     CertInfo.EraseSection(Certificate.SectionName);
   finally
@@ -267,20 +380,117 @@ procedure TDbcProxyCertificateStore.AddNewCertificate;
 var
   Certificate, PrivateKey: RawByteString;
   PublicKey: String;
+  UUID: TGuid;
+  UUIDStr: String;
+  CertFile, KeyFile: String;
+  ValidFrom, ValidTo: TDate;
+  CertInfo: TIniFile;
+  CertRecord: TCertificateInfo;
 begin
-  if CreateSelfSignedCert('zeos', '', 365, Certificate, PrivateKey) then begin
+  if CreateSelfSignedCert(GetComputerName + '.local', '', ValidDays, Certificate, PrivateKey, PublicKey) then begin
+    CreateGUID(UUID);
+    UUIDStr := GUIDToString(UUID);
+    CertFile := UUIDStr + '.crt';
+    KeyFile := UUIDStr + '.key';
+    ExportCertData(Certificate, '-----BEGIN CERTIFICATE-----', '-----END CERTIFICATE-----', FCertificatesPath + DirectorySeparator + CertFile);
+    ExportCertData(PrivateKey, '-----BEGIN RSA PRIVATE KEY-----', '-----END RSA PRIVATE KEY-----', FCertificatesPath + DirectorySeparator + KeyFile);
+    ValidFrom := Date;
+    ValidTo := ValidFrom;
+    ValidTo := IncDay(ValidTo, ValidDays - 1);
 
+    CertInfo := TIniFile.Create(FCertificatesInfoFile, FIniFileOptions);
+    try
+      CertInfo.WriteString(UUIDStr, 'CertificateFile', CertFile);
+      CertInfo.WriteString(UUIDStr, 'KeyFile', KeyFile);
+      CertInfo.WriteString(UUIDStr, 'PublicKey', PublicKey);
+      CertInfo.WriteDate(UUIDStr, 'ValidFrom', ValidFrom);
+      CertInfo.WriteDate(UUIDStr, 'ValidTo', ValidTo);
+    finally
+      FreeAndNil(CertInfo);
+    end;
+
+    CertRecord.CertificateFile := CertFile;
+    CertRecord.KeyFile := KeyFile;
+    CertRecord.PublicKey := PublicKey;
+    CertRecord.ValidFrom := ValidFrom;
+    CertRecord.ValidTo := ValidTo;
+    FCertificates.Add(CertRecord);
   end;
 end;
 
-(*
 procedure TDbcProxyCertificateStore.MaintainStore;
 var
-  Certificate: TCertificateInfo;
+  MaxValidity: TDate;
+  x: Integer;
 begin
+  MaxValidity := 0;
+  for x := FCertificates.Count - 1 downto 0 do begin
+    if FCertificates[x].ValidTo < Date then
+      DeleteCertificate(x)
+    else
+      MaxValidity := Max(MaxValidity, FCertificates[x].ValidTo);
+  end;
 
-
+  if FCertificates.Count = 0 then
+    AddNewCertificate
+  else if DaysBetween(Date, MaxValidity) > (ValidDays div 2) then
+    AddNewCertificate;
 end;
-*)
+
+procedure TDbcProxyCertificateStore.DoMaintenance;
+begin
+  FCriticalSection.Enter;
+  try
+    MaintainStore;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+function TDbcProxyCertificateStore.GetValidPublicKeys: TStringDynArray;
+var
+  x: Integer;
+  PublicKey: String;
+begin
+  FCriticalSection.Enter;
+  try
+    SetLength(Result, FCertificates.Count);
+    for x := 0 to FCertificates.Count - 1 do begin
+      PublicKey := FCertificates[x].PublicKey;
+      Result[x] := Copy(PublicKey, 1, Length(PublicKey));
+    end;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+procedure TDbcProxyCertificateStore.GetCurrentCertificate(out CertificateFile, KeyFile: String);
+var
+  x: Integer;
+  ResultIdx: Integer;
+  MinValid: TDate;
+begin
+  FCriticalSection.Enter;
+  try
+    // Find the certificate with the lowest ValidFrom date
+    ResultIdx := 0;
+    MinValid := FCertificates.Items[0].ValidFrom;
+    for x := 1 to FCertificates.Count - 1 do begin
+      if FCertificates[x].ValidFrom < MinValid then begin
+        ResultIdx := x;
+        MinValid := FCertificates[x].ValidFrom;
+      end;
+    end;
+
+    //Return certificate data
+    CertificateFile := FCertificatesPath + DirectorySeparator + FCertificates[ResultIdx].CertificateFile;
+    KeyFile := FCertificatesPath + DirectorySeparator + FCertificates[ResultIdx].KeyFile;
+  finally
+    FCriticalSection.Leave;
+  end;
+end;
+
+{$ENDIF}
+
 end.
 

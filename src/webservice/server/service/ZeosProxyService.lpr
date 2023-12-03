@@ -57,7 +57,7 @@ Uses
 {$ENDIF}{$ENDIF}
   DaemonApp, lazdaemonapp, ZeosProxyMapperUnit, zeosproxyunit,
   DbcProxyUtils, ZDbcProxyManagement, DbcProxyFileLogger,
-  DbcProxyLdapSecurityModule;
+  DbcProxyLdapSecurityModule, dbcproxycertstore;
 
 begin
   SetMultiByteConversionCodePage(65001);

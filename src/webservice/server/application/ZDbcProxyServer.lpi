@@ -114,7 +114,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\..\src\core;..\..\..\..\src\parsesql;..\..\..\..\src\plain;..\..\..\..\src\dbc;..\DelphiOTP;..\..\..\..\..\synapse-trunk"/>
+      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\..\src\core;..\..\..\..\src\parsesql;..\..\..\..\src\plain;..\..\..\..\src\dbc;..\DelphiOTP"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>
@@ -131,6 +131,11 @@
       </Checks>
       <VerifyObjMethodCallValidity Value="True"/>
     </CodeGeneration>
+    <Linking>
+      <Debugging>
+        <DebugInfoType Value="dsDwarf2"/>
+      </Debugging>
+    </Linking>
     <Other>
       <CustomOptions Value="-dUseCThreads"/>
     </Other>

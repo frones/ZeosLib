@@ -139,6 +139,12 @@ begin
     zeosproxy_imp.Logger.Debug('Creating Listener...');
     AppObject := TwstFPHttpsListener.Create(ConfigManager.IPAddress, ConfigManager.ListeningPort);
     InitializeSSLLibs;
+    {$IFDEF ENABLE_TOFU_CERTIFICATES}
+    if ConfigManager.UseTofuSSL then begin
+      TofuCertStore := TDbcProxyCertificateStore.Create;
+      zeosproxy_imp.Logger.Info('Certificate store: ' + TofuCertStore.CertificatesPath);
+    end;
+    {$ENDIF}
     ConfigureSSL(AppObject);
     AppObject.OnNotifyMessage := OnMessage;
     AppObject.Options := [loExecuteInThread];
