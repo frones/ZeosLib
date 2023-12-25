@@ -71,7 +71,7 @@ begin
     result := TZDbcProxy.Create as IZDbcProxy;
   except
     on E: Exception do begin
-      LastErrorStr := E.Message;
+      LastErrorStr := unicodestring(E.Message);
       result := nil;
     end;
   end;

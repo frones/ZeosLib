@@ -13,4 +13,11 @@
 // certificates for TOFU are stored.
 {.$DEFINE ENABLE_DEBUG_SETTINGS}
 
+// If enabled, this will make the server register with the Windows DNS Service Discovery
+// facility. This can enable other devices on the network to find the service.
+// To compile this, you will need the MDNS / DNS-SD components from:
+// https://github.com/marsupilami79/mdns4Delphi
+{.$DEFINE ENABLE_DNSSD}
+
+
 {$I ../../Zeos.inc}

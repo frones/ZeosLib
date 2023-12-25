@@ -2,7 +2,7 @@
 This unit has been produced by ws_helper.
   Input unit name : "zeosproxy".
   This unit name  : "zeosproxy_binder".
-  Date            : "29.03.2023 20:49:32".
+  Date            : "15.12.2023 17:53:32".
 }
 unit zeosproxy_binder;
 {$IFDEF FPC} {$mode objfpc}{$H+} {$ENDIF}
@@ -39,6 +39,7 @@ type
     procedure GetProcedureColumnsHandler(AFormatter : IFormatterResponse; AContext : ICallContext);
     procedure GetCharacterSetsHandler(AFormatter : IFormatterResponse; AContext : ICallContext);
     procedure StartTransactionHandler(AFormatter : IFormatterResponse; AContext : ICallContext);
+    procedure GetPublicKeysHandler(AFormatter : IFormatterResponse; AContext : ICallContext);
   public
     constructor Create();
   end;
@@ -1172,6 +1173,44 @@ begin
   end;
 end;
 
+procedure TZeosProxy_ServiceBinder.GetPublicKeysHandler(AFormatter : IFormatterResponse; AContext : ICallContext);
+var
+  cllCntrl : ICallControl;
+  objCntrl : IObjectControl;
+  hasObjCntrl : Boolean;
+  tmpObj : IZeosProxy;
+  callCtx : ICallContext;
+  locStrPrmName : string;
+  procName,trgName : string;
+  returnVal : string;
+begin
+  callCtx := AContext;
+  
+  
+  tmpObj := Self.GetFactory().CreateInstance() as IZeosProxy;
+  if Supports(tmpObj,ICallControl,cllCntrl) then
+    cllCntrl.SetCallContext(callCtx);
+  hasObjCntrl := Supports(tmpObj,IObjectControl,objCntrl);
+  if hasObjCntrl then
+    objCntrl.Activate();
+  try
+    returnVal := tmpObj.GetPublicKeys();
+    
+    procName := AFormatter.GetCallProcedureName();
+    trgName := AFormatter.GetCallTarget();
+    AFormatter.Clear();
+    AFormatter.BeginCallResponse(procName,trgName);
+      AFormatter.Put('result',TypeInfo(string),returnVal);
+    AFormatter.EndCallResponse();
+    
+    callCtx := nil;
+  finally
+    if hasObjCntrl then
+      objCntrl.Deactivate();
+    Self.GetFactory().ReleaseInstance(tmpObj);
+  end;
+end;
+
 
 constructor TZeosProxy_ServiceBinder.Create();
 begin
@@ -1201,6 +1240,7 @@ begin
   RegisterVerbHandler('GetProcedureColumns',{$IFDEF FPC}@{$ENDIF}GetProcedureColumnsHandler);
   RegisterVerbHandler('GetCharacterSets',{$IFDEF FPC}@{$ENDIF}GetCharacterSetsHandler);
   RegisterVerbHandler('StartTransaction',{$IFDEF FPC}@{$ENDIF}StartTransactionHandler);
+  RegisterVerbHandler('GetPublicKeys',{$IFDEF FPC}@{$ENDIF}GetPublicKeysHandler);
 end;
 
 

@@ -68,7 +68,7 @@ uses
   {local}zeosproxy, zeosproxy_binder, zeosproxy_imp, DbcProxyUtils,
   DbcProxyConnectionManager, DbcProxyConfigManager, ZDbcProxyManagement,
   dbcproxycleanupthread, dbcproxysecuritymodule, DbcProxyFileLogger,
-  dbcproxyconfigutils, dbcproxycertstore,
+  dbcproxyconfigutils, dbcproxycertstore, {$IFDEF ENABLE_DNSSD} mdnsService,{$ENDIF}
   //Zeos drivers:
   ZDbcAdo, ZDbcASA, ZDbcDbLib, ZDbcFirebird, ZDbcInterbase6, ZDbcMySql, ZDbcODBCCon,
   ZDbcOleDB, ZDbcOracle, ZDbcPostgreSql, ZDbcSQLAnywhere, ZDbcSqLite, ZDbcProxyMgmtDriver;
@@ -79,6 +79,9 @@ type
 
   TZDbcProxyServer = class(TCustomApplication)
   protected
+    {$IFDEF ENABLE_DNSSD}
+    mdnsService: TMdnsService;
+    {$ENDIF}
     procedure DoRun; override;
     procedure OnMessage(Sender : TObject; const AMsg : string);
   public
@@ -173,6 +176,14 @@ begin
       Logger.Info('Threading is enabled.');
     end;
     AppObject.Start();
+
+    {$IFDEF ENABLE_DNSSD}
+    mdnsService := TMdnsService.Create(nil);
+    mdnsService.PortNumber := ConfigManager.ListeningPort;
+    mdnsService.ServiceName := '_zeosdbo._tcp.local';
+    mdnsService.RegisterService;
+    {$ENDIF}
+
     Logger.Info('Proxy started.');
     ReadLn();
     WriteLn('Stopping the Server...');

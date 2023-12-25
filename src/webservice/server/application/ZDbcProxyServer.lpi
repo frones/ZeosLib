@@ -25,16 +25,13 @@
     <RunParams>
       <FormatVersion Value="2"/>
     </RunParams>
-    <RequiredPackages Count="3">
+    <RequiredPackages Count="2">
       <Item1>
         <PackageName Value="wst_fcltransport"/>
       </Item1>
       <Item2>
         <PackageName Value="wst_core"/>
       </Item2>
-      <Item3>
-        <PackageName Value="sparta_generics"/>
-      </Item3>
     </RequiredPackages>
     <Units Count="15">
       <Unit0>
@@ -114,7 +111,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\..\src\core;..\..\..\..\src\parsesql;..\..\..\..\src\plain;..\..\..\..\src\dbc;..\DelphiOTP"/>
+      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\..\src\core;..\..\..\..\src\parsesql;..\..\..\..\src\plain;..\..\..\..\src\dbc;..\DelphiOTP;..\..\..\..\..\synapse;..\..\..\..\..\mdns4delphi"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>
