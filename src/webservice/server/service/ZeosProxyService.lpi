@@ -144,7 +144,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\core;..\..\..\parsesql;..\..\..\plain;..\..\..\dbc;..\DelphiOTP;..\..\..\..\..\synapse"/>
+      <OtherUnitFiles Value="..;..\..\wsdl;..\..\..\core;..\..\..\parsesql;..\..\..\plain;..\..\..\dbc;..\DelphiOTP;..\..\..\..\..\synapse;..\..\..\..\..\mdns4delphi"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Other>

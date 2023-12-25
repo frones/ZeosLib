@@ -55,7 +55,7 @@ unit zeosproxyunit;
 interface
 
 uses
-  Classes, SysUtils, DaemonApp, server_listener,
+  Classes, SysUtils, DaemonApp, server_listener, {$IFDEF WITH_DNSSD}mdnsService, {$ENDIF}
   // for including the Zeos drivers:
   ZDbcAdo, ZDbcASA, ZDbcDbLib, ZDbcFirebird, ZDbcInterbase6, ZDbcMySql, ZDbcODBCCon,
   ZDbcOleDB, ZDbcOracle, ZDbcPostgreSql, ZDbcSQLAnywhere, ZDbcSqLite, ZDbcProxyMgmtDriver,
@@ -75,6 +75,9 @@ type
   private
     AppObject: TwstFPHttpsListener;
     CleanupThread: TDbcProxyCleanupThread;
+    {$IFDEF WITH_DNSSD}
+    MdnsService: TMdnsService;
+    {$ENDIF}
     procedure OnMessage(Sender : TObject; const AMsg : string);
   public
 
@@ -156,6 +159,14 @@ begin
     AppObject.Start();
     CleanupThread := TDbcProxyCleanupThread.Create(ConnectionManager, ConfigManager);
     CleanupThread.Start;
+
+    {$IFDEF ENABLE_DNSSD}
+    MdnsService := TMdnsService.Create(nil);
+    MdnsService.PortNumber := ConfigManager.ListeningPort;
+    MdnsService.ServiceName := '_zeosdbo._tcp.local';
+    MdnsService.RegisterService;
+    {$ENDIF}
+
     zeosproxy_imp.Logger.Info('Zeos Proxy started.');
     OK := True;
   except

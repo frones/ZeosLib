@@ -79,7 +79,7 @@ type
 
   TZDbcProxyServer = class(TCustomApplication)
   protected
-    {$IFDEF ENABLE_DNSSD}
+    {$IFDEF WITH_DNSSD}
     mdnsService: TMdnsService;
     {$ENDIF}
     procedure DoRun; override;
@@ -177,7 +177,7 @@ begin
     end;
     AppObject.Start();
 
-    {$IFDEF ENABLE_DNSSD}
+    {$IFDEF WITH_DNSSD}
     mdnsService := TMdnsService.Create(nil);
     mdnsService.PortNumber := ConfigManager.ListeningPort;
     mdnsService.ServiceName := '_zeosdbo._tcp.local';

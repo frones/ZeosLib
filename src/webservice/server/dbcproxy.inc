@@ -21,3 +21,16 @@
 
 
 {$I ../../Zeos.inc}
+
+// Do not change anything below this line if you are not sure, what you are doing.
+
+{$IFNDEF FPC}
+  {$IFDEF MSWINDOWS}
+    {$DEFINE WINDOWS}
+  {$ENDIF}
+{$ENDIF}
+
+{$IF DEFINED(ENABLE_DNSSD) AND DEFINED(WINDOWS)}
+  {$DEFINE WITH_DNSSD}
+{$IFEND}
+
