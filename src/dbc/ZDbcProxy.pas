@@ -352,6 +352,7 @@ var
   PropList: WideString;
   MyDbInfo: WideString;
   WsUrl: String; // Webservice URL
+  TofuPubKeys: String;
 begin
   if not Closed then
     Exit;
@@ -367,6 +368,12 @@ begin
   LogMessage := 'CONNECT TO "'+ URL.Database + '" AS USER "' + URL.UserName + '"';
 
   PropList := WideString(encodeProperties('autocommit', BoolToStr(GetAutoCommit, True)));
+
+  if URL.Properties.IndexOfName(ConnProps_TofuPubKeys) >= 0 then begin
+    TofuPubKeys := URL.Properties.Values[ConnProps_TofuPubKeys];
+    PropList := PropList + LineEnding + 'TofuPubKeys=' + TofuPubKeys;
+  end;
+
   FConnIntf.Connect(WideString(User), WideString(Password), WideString(WsUrl), WideString(Database), PropList, MyDbInfo);
 
   DriverManager.LogMessage(lcConnect, URL.Protocol , LogMessage);

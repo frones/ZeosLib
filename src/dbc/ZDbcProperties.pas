@@ -1000,6 +1000,15 @@ const
   ///   Behavior is undefined if an undefined value is set.
   /// </summary>
   ConnProps_ProxyProtocol = 'ProxyProtocol';
+  /// <summary>
+  ///   Type: String;
+  ///   Enables TOFU type certificate validation.
+  ///   Defines which public keys will be accepted.
+  ///   Public keys are provided in HEX and delimited by a colon (:).
+  ///   Overrules Delphi automatic checking.
+  ///   If empty, any certificate will be accepted on the first connection.
+  /// </summary>
+  ConnProps_TofuPubKeys = 'TofuPubKeys';
 {$ENDIF}
 
 {$IFDEF ENABLE_POOLED}

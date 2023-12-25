@@ -3392,6 +3392,34 @@ const
   );
 {$ENDIF ENABLE_FIREBIRD}
 
+{$IFDEF ENABLE_PROXY}
+  ProxyProtocol: array[0..0] of String =
+    ('WebServiceProxy');
+  ZProp_ProxyTofuPubKeys : TZProperty = (
+    Name: ConnProps_TofuPubKeys;
+    Purpose: 'List of public keys for TOFU mode certificate validation. ' +
+      'Enables TOFU type certificate validation. ' +
+      'Defines which public keys will be accepted. ' +
+      'Public keys are provided in HEX (0123456789ABCDEF) and delimited from each other by a colon (:). ' +
+      'Overrules Delphi automatic public key valildation. ' +
+      'If empty, any certificate will be accepted on the first connection.';
+    ValueType: pvtString; LevelTypes: [pltConnection];
+    Values: ''; Default: ''; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 1; Items: @ProxyProtocol[0]);
+  );
+  ZProp_ProxyProtocol: TZProperty = (
+    Name: ConnProps_ProxyProtocol;
+    Purpose: 'Defines which protocol the Webservicde Proxy driver uses for connecting to the server. '+
+      'If empty, https will be used. '+
+      'Behavior is undefined if an undefined value is set.';
+    ValueType: pvtEnum; LevelTypes: [pltConnection];
+    Values: 'http|https'; Default: 'https'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 1; Items: @ProxyProtocol[0]);
+  );
+{$ENDIF}
+
 {$IFDEF ENABLE_SQLITE}
   cSqlite3upProvider: TZPropertyProvider = (
     Provider: spSQLite; MinimumServerVersion: 0;
@@ -4296,6 +4324,9 @@ initialization
 {$ENDIF}
 {$IF declared(ZProp_SessionIdleTimeOut)}
   RegisterZProperties([@ZProp_SessionIdleTimeOut, @ZProp_FirebirdAPI]);
+{$IFEND}
+{$IF declared(ZProp_ProxyProtocol)}
+  RegisterZProperties([@ZProp_ProxyTofuPubKeys, @ZProp_ProxyProtocol]);
 {$IFEND}
 {$IF declared(ZProp_SessionIdleTimeOut)}
   RegisterZProperty(@ZProp_FBProtocol);
