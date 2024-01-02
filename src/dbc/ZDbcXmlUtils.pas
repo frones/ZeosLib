@@ -167,7 +167,7 @@ var
   Value: ZWideString;
 begin
   Value := RS.GetUnicodeString(Idx);
-  Result := '<field value="' + XMLEncode(Utf8Encode(Value)) + '" />';
+  Result := '<field value="' + XMLEncode(String(Utf8Encode(Value))) + '" />';
 end;
 
 function ConvertBinaryStream(const RS: IZResultSet; Const Idx: Integer): String;
@@ -199,7 +199,7 @@ begin
   end;
 *)
   {$IFDEF WITH_TBYTES}
-  Result := '<field value="' + ZEncodeBase64(RS.GetBytes(Idx)) + '" />';
+  Result := '<field value="' + String(ZEncodeBase64(RS.GetBytes(Idx))) + '" />';
   {$ELSE}
   raise EZSQLException.Create('Encoding Binary is not supported with this compiler.');
   {$ENDIF}
@@ -230,7 +230,7 @@ begin
   end;
 *)
   {$IFDEF WITH_TBYTES}
-  Result := '<field value="' + ZEncodeBase64(RS.GetBytes(Idx)) + '" />';
+  Result := '<field value="' + String(ZEncodeBase64(RS.GetBytes(Idx))) + '" />';
   {$ELSE}
   raise EZSQLException.Create('Encoding Binary is not supported with this compiler.');
   {$ENDIF}
