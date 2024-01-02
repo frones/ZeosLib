@@ -55,14 +55,14 @@ unit zeosproxyunit;
 interface
 
 uses
-  Classes, SysUtils, DaemonApp, server_listener,
+  Classes, SysUtils, DaemonApp, server_listener, {$IFDEF WITH_DNSSD}mdnsService, {$ENDIF}
   // for including the Zeos drivers:
   ZDbcAdo, ZDbcASA, ZDbcDbLib, ZDbcFirebird, ZDbcInterbase6, ZDbcMySql, ZDbcODBCCon,
   ZDbcOleDB, ZDbcOracle, ZDbcPostgreSql, ZDbcSQLAnywhere, ZDbcSqLite, ZDbcProxyMgmtDriver,
   // wst
   fpc_https_server,
   //
-  dbcproxycleanupthread, dbcproxyconfigutils
+  dbcproxycleanupthread, dbcproxyconfigutils, dbcproxycertstore
   ;
 
 type
@@ -75,6 +75,9 @@ type
   private
     AppObject: TwstFPHttpsListener;
     CleanupThread: TDbcProxyCleanupThread;
+    {$IFDEF WITH_DNSSD}
+    MdnsService: TMdnsService;
+    {$ENDIF}
     procedure OnMessage(Sender : TObject; const AMsg : string);
   public
 
@@ -94,7 +97,7 @@ uses
 
 procedure RegisterDaemon;
 begin
-  RegisterDaemonClass(TZeosProxyDaemon)
+  RegisterDaemonClass(TZeosProxyDaemon);
 end;
 
 {$R *.lfm}
@@ -123,6 +126,7 @@ begin
     FreeAndNil(zeosproxy_imp.Logger);
     zeosproxy_imp.Logger := TDbcProxyFileLogger.Create(ConfigManager.LogFile);
   end;
+
   ConfigManager.LoadConnectionConfig(configFile);
   try
     zeosproxy_imp.Logger.Debug('Creating Connection Manager...');
@@ -138,6 +142,12 @@ begin
     zeosproxy_imp.Logger.Debug('Creating Listener...');
     AppObject := TwstFPHttpsListener.Create(ConfigManager.IPAddress, ConfigManager.ListeningPort);
     InitializeSSLLibs;
+    {$IFDEF ENABLE_TOFU_CERTIFICATES}
+    if ConfigManager.UseTofuSSL then begin
+      TofuCertStore := TDbcProxyCertificateStore.Create;
+      zeosproxy_imp.Logger.Info('Certificate store: ' + TofuCertStore.CertificatesPath);
+    end;
+    {$ENDIF}
     ConfigureSSL(AppObject);
     AppObject.OnNotifyMessage := OnMessage;
     AppObject.Options := [loExecuteInThread];
@@ -149,6 +159,14 @@ begin
     AppObject.Start();
     CleanupThread := TDbcProxyCleanupThread.Create(ConnectionManager, ConfigManager);
     CleanupThread.Start;
+
+    {$IFDEF ENABLE_DNSSD}
+    MdnsService := TMdnsService.Create(nil);
+    MdnsService.PortNumber := ConfigManager.ListeningPort;
+    MdnsService.ServiceName := '_zeosdbo._tcp.local';
+    MdnsService.RegisterService;
+    {$ENDIF}
+
     zeosproxy_imp.Logger.Info('Zeos Proxy started.');
     OK := True;
   except

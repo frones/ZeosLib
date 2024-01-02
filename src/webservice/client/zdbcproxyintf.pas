@@ -86,6 +86,7 @@ uses
     function GetProcedures(const Catalog, SchemaPattern, ProcedureNamePattern : WideString): WideString; safecall;
     function GetProcedureColumns(const Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern: WideString): WideString; safecall;
     function GetCharacterSets(): WideString; safecall;
+    function GetPublicKeys: WideString; safecall;
   end;
 
   type TZDbcProxy = class(TInterfacedObject, IZDbcProxy, ISupportErrorInfo)
@@ -124,6 +125,7 @@ uses
       function GetProcedures(const Catalog, SchemaPattern, ProcedureNamePattern : WideString): WideString; safecall;
       function GetProcedureColumns(const Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern: WideString): WideString; safecall;
       function GetCharacterSets(): WideString; safecall;
+      function GetPublicKeys: WideString; safecall;
 
       constructor Create;
       destructor Destroy; override;
@@ -338,6 +340,12 @@ function TZDbcProxy.GetCharacterSets(): WideString; safecall;
 begin
  CheckConnected;
  Result := FService.GetCharacterSets(FConnectionID);
+end;
+
+function TZDbcProxy.GetPublicKeys: WideString; safecall;
+begin
+ CheckConnected;
+ Result := FService.GetPublicKeys();
 end;
 
 initialization

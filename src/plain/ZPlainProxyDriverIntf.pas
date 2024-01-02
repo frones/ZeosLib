@@ -65,6 +65,8 @@ uses
   WideString = String;
   {$ENDIF}
 
+  StringArray = Array of String;
+
   IZDbcProxy = Interface(IUnknown)
     ['{374CAA55-95CD-44FE-8FF3-F90BF8D1DF8C}']
     procedure Connect(const UserName, Password, ServiceEndpoint, DbName: WideString; var Properties: WideString; out DbInfo: WideString); {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
@@ -92,6 +94,11 @@ uses
     function GetProcedures(const Catalog, SchemaPattern, ProcedureNamePattern : WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
     function GetProcedureColumns(const Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
     function GetCharacterSets(): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+    /// <summary>
+    ///   Retrieves public keys that are valid now and in the future. Public keys
+    ///   are delimited by a colon (:).
+    /// </summary>
+    function GetPublicKeys: WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
   end;
 
 {$ENDIF ENABLE_PROXY}

@@ -1464,7 +1464,9 @@ procedure TZAdoCachedResolver.PostUpdates(const Sender: IZCachedResultSet;
 var
   Recordset: ZPlainAdo.Recordset;
   RA: OleVariant;
+  {$IFDEF FPC}
   D: Double;
+  {$ENDIF}
   Identity: OleVariant;
 begin
   inherited PostUpdates(Sender, UpdateType, OldRowAccessor, NewRowAccessor);

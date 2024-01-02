@@ -22,11 +22,13 @@ function ConstructServerURL: String;
 
 implementation
 
-uses zeosproxy_imp;
+uses zeosproxy_imp, dbcproxycertstore;
 
 function ConstructServerURL: String;
 begin
-  if ConfigManager.UseSSL then
+  if ConfigManager.UseSSL
+     {$IFDEF ENABLE_TOFU_CERTIFICATES}or ConfigManager.UseTofuSSL{$ENDIF}
+  then
     Result := 'https://'
   else
     Result := 'http://';
@@ -34,6 +36,10 @@ begin
 end;
 
 procedure ConfigureSSL(AppObject: TwstFPHttpsListener);
+{$IFDEF ENABLE_TOFU_CERTIFICATES}
+var
+  CertFile, KeyFile: String;
+{$ENDIF}
 begin
   if ConfigManager.UseSSL then begin
     AppObject.UseSSL := True;
@@ -42,6 +48,15 @@ begin
     AppObject.KeyFile := ConfigManager.KeyFile;
     AppObject.KeyPasswod := ConfigManager.KeyPasswod;
   end;
+  {$IFDEF ENABLE_TOFU_CERTIFICATES}
+  if ConfigManager.UseTofuSSL then begin
+    TofuCertStore.GetCurrentCertificate(CertFile, KeyFile);
+    AppObject.UseSSL := true;
+    AppObject.HostName := TofuCertStore.HostName;
+    AppObject.CertificateFileName := CertFile;
+    AppObject.KeyFile := KeyFile;
+  end;
+  {$ENDIF}
 end;
 
 procedure InitializeSSLLibs;

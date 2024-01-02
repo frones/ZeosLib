@@ -68,7 +68,7 @@ uses
   {local}zeosproxy, zeosproxy_binder, zeosproxy_imp, DbcProxyUtils,
   DbcProxyConnectionManager, DbcProxyConfigManager, ZDbcProxyManagement,
   dbcproxycleanupthread, dbcproxysecuritymodule, DbcProxyFileLogger,
-  dbcproxyconfigutils,
+  dbcproxyconfigutils, dbcproxycertstore, {$IFDEF ENABLE_DNSSD} mdnsService,{$ENDIF}
   //Zeos drivers:
   ZDbcAdo, ZDbcASA, ZDbcDbLib, ZDbcFirebird, ZDbcInterbase6, ZDbcMySql, ZDbcODBCCon,
   ZDbcOleDB, ZDbcOracle, ZDbcPostgreSql, ZDbcSQLAnywhere, ZDbcSqLite, ZDbcProxyMgmtDriver;
@@ -79,6 +79,9 @@ type
 
   TZDbcProxyServer = class(TCustomApplication)
   protected
+    {$IFDEF WITH_DNSSD}
+    mdnsService: TMdnsService;
+    {$ENDIF}
     procedure DoRun; override;
     procedure OnMessage(Sender : TObject; const AMsg : string);
   public
@@ -109,7 +112,11 @@ var
   CleanupThread: TDbcProxyCleanupThread;
 begin
   {$IFDEF LINUX}
-  configFile := '/etc/zeosproxy.ini';
+    {$IFDEF ENABLE_DEBUG_SETTINGS}
+    configFile := ExtractFilePath(ParamStr(0)) + 'zeosproxy.ini';
+    {$ELSE}
+    configFile := '/etc/zeosproxy.ini';
+    {$IFEND}
   {$ELSE}
   configFile := ExtractFilePath(ParamStr(0)) + 'zeosproxy.ini';
   {$ENDIF}
@@ -150,6 +157,12 @@ begin
   AppObject := TwstFPHttpsListener.Create(ConfigManager.IPAddress, ConfigManager.ListeningPort);
   try
     InitializeSSLLibs;
+    {$IFDEF ENABLE_TOFU_CERTIFICATES}
+    if ConfigManager.UseTofuSSL then begin
+      TofuCertStore := TDbcProxyCertificateStore.Create;
+      zeosproxy_imp.Logger.Info('Certificate store: ' + TofuCertStore.CertificatesPath);
+    end;
+    {$ENDIF}
     ConfigureSSL(AppObject);
     AppObject.OnNotifyMessage := OnMessage;
     WriteLn('Zeos Proxy Server listening at:');
@@ -163,6 +176,14 @@ begin
       Logger.Info('Threading is enabled.');
     end;
     AppObject.Start();
+
+    {$IFDEF WITH_DNSSD}
+    mdnsService := TMdnsService.Create(nil);
+    mdnsService.PortNumber := ConfigManager.ListeningPort;
+    mdnsService.ServiceName := '_zeosdbo._tcp.local';
+    mdnsService.RegisterService;
+    {$ENDIF}
+
     Logger.Info('Proxy started.');
     ReadLn();
     WriteLn('Stopping the Server...');

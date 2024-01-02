@@ -5,7 +5,9 @@ This unit has been produced by ws_helper.
   Date            : "29.03.2023 20:49:32".
 }
 Unit zeosproxy_imp;
-{$IFDEF FPC} {$mode objfpc}{$H+} {$ENDIF}
+
+{$I dbcproxy.inc}
+
 Interface
 
 Uses SysUtils, Classes, 
@@ -150,6 +152,7 @@ type
     function StartTransaction(
       const  ConnectionID : UnicodeString
     ):integer;
+    function GetPublicKeys():string;
   End;
 
 
@@ -162,7 +165,7 @@ var
 
 Implementation
 
-uses config_objects, ZDbcIntfs, DbcProxyUtils, ZDbcXmlUtils;
+uses config_objects, ZDbcIntfs, DbcProxyUtils, ZDbcXmlUtils{$IFDEF ENABLE_TOFU_CERTIFICATES}, dbcproxycertstore, types{$ENDIF};
 
 { TZeosProxy_ServiceImp implementation }
 function TZeosProxy_ServiceImp.Connect(
@@ -608,6 +611,26 @@ Begin
   finally
     Unlock;
   end;
+End;
+
+function TZeosProxy_ServiceImp.GetPublicKeys():string;
+{$IFDEF ENABLE_TOFU_CERTIFICATES}
+var
+  X: Integer;
+  ValidKeys: TStringDynArray;
+{$ENDIF}
+Begin
+  {$IFDEF ENABLE_TOFU_CERTIFICATES}
+  if Assigned(TofuCertStore) then begin
+    ValidKeys := TofuCertStore.GetValidPublicKeys;
+    for x := 0 to Length(ValidKeys) - 1 do begin
+      if x > 0 then
+        Result := Result + ':';
+      Result := Result + ValidKeys[x];
+    end;
+  end else
+    Result := '';
+  {$ENDIF}
 End;
 
 

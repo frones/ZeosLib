@@ -69,18 +69,22 @@ implementation
 
 {$IF DEFINED(ENABLE_PROXY) AND DEFINED(ENABLE_INTERNAL_PROXY)}
 
-uses SysUtils, {$IFNDEF NO_SAFECALL}ActiveX, ComObj,{$ENDIF} SOAPHTTPClient, ZExceptions;
+uses SysUtils, {$IFNDEF NO_SAFECALL}ActiveX, ComObj,{$ENDIF} SOAPHTTPClient, ZExceptions, SOAPHTTPTrans, Net.URLClient, Net.HttpClient, Types;
 
 type
   TZDbcProxy = class(TInterfacedObject, IZDbcProxy{$IFNDEF NO_SAFECALL}, ISupportErrorInfo{$ENDIF})
     protected
       FService: IZeosProxy;
       FConnectionID: WideString;
+      FValidPublicKeys: TStringList;
       procedure CheckConnected;
       // this is necessary for safecall exception handling
       {$IFNDEF NO_SAFECALL}
       function InterfaceSupportsErrorInfo(const iid: TIID): HResult; stdcall;
       {$ENDIF}
+
+      procedure ValidateServerCertificate(const Sender: TObject; const ARequest: TURLRequest; const Certificate: TCertificate; var Accepted: Boolean);
+      procedure BeforePostData(const HTTPReqResp: THTTPReqResp; Client: THTTPClient);
     public
       // this is necessary for safecall exception handling
       {$IFNDEF NO_SAFECALL}
@@ -112,6 +116,7 @@ type
       function GetProcedures(const Catalog, SchemaPattern, ProcedureNamePattern : WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
       function GetProcedureColumns(const Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
       function GetCharacterSets(): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetPublicKeys: WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 
       constructor Create;
       destructor Destroy; override;
@@ -161,11 +166,32 @@ end;
 constructor TZDbcProxy.Create;
 begin
   FService := nil;
+  FValidPublicKeys := TStringList.Create;
+  FValidPublicKeys.Delimiter := ':';
 end;
 
 destructor TZDbcProxy.Destroy;
 begin
+ if Assigned(FValidPublicKeys) then
+   FreeAndNil(FValidPublicKeys);
  FService := nil;
+end;
+
+procedure TZDbcProxy.ValidateServerCertificate(const Sender: TObject; const ARequest: TURLRequest; const Certificate: TCertificate; var Accepted: Boolean);
+var
+  PubKey: String;
+begin
+  PubKey := LowerCase(Certificate.PublicKey);
+  Accepted := FValidPublicKeys.Count = 0;
+  if Accepted then
+    FValidPublicKeys.Add(PubKey)
+  else
+    Accepted := 0 <= FValidPublicKeys.IndexOf(PubKey);
+end;
+
+procedure TZDbcProxy.BeforePostData(const HTTPReqResp: THTTPReqResp; Client: THTTPClient);
+begin
+  HTTPReqResp.HTTP.OnValidateServerCertificate := ValidateServerCertificate;
 end;
 
 procedure TZDbcProxy.Connect(const UserName, Password, ServiceEndpoint, DbName: WideString; var Properties: WideString; out DbInfo: WideString); {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
@@ -175,10 +201,21 @@ var
   MyInProperties: UnicodeString;
   MyOutProperties: UnicodeString;
   MyDbInfo: UnicodeString;
+  PropList: TStringList;
 begin
   FRIO := THTTPRIO.Create(nil);
   Url := ServiceEndpoint;
   FRIO.HTTPWebNode.InvokeOptions := [];
+  PropList := TStringList.Create;
+  try
+    PropList.DelimitedText := Properties;
+    if PropList.IndexOfName('TofuCerts') > 0 then begin
+      FRIO.HTTPWebNode.OnBeforePost := BeforePostData;
+      FValidPublicKeys.DelimitedText := LowerCase(Trim(PropList.Values['TofuCerts']));
+    end;
+  finally
+    FreeAndNil(PropList);
+  end;
   FService := GetIZeosProxy(false, Url, FRIO);
   if Assigned(FService) then begin
     MyInProperties := Properties;
@@ -336,6 +373,16 @@ function TZDbcProxy.GetCharacterSets(): WideString; {$IFNDEF NO_SAFECALL}safecal
 begin
  CheckConnected;
  Result := FService.GetCharacterSets(FConnectionID);
+end;
+
+function TZDbcProxy.GetPublicKeys: WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+begin
+  CheckConnected;
+  Result := FService.GetPublicKeys;
+  if Result <> '' then
+    FValidPublicKeys.DelimitedText := LowerCase(Result)
+  else
+    Result := FValidPublicKeys.DelimitedText;
 end;
 
 initialization

@@ -1,7 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <definitions name="zproxy" xmlns="http://schemas.xmlsoap.org/wsdl/" xmlns:tns="zproxy" xmlns:wst="urn:wst_base" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" targetNamespace="zproxy">
   <types>
-    <xsd:schema xmlns="http://www.w3.org/2001/XMLSchema" xmlns:tns="zproxy" targetNamespace="zproxy"/>
+    <xsd:schema xmlns="http://www.w3.org/2001/XMLSchema" xmlns:tns="zproxy" xmlns:wst="urn:wst_base" xmlns:xsd="http://www.w3.org/2001/XMLSchema" targetNamespace="zproxy">
+      <xsd:complexType name="StringArray">
+        <xsd:annotation>
+          <xsd:documentation>A simple array of strings.</xsd:documentation>
+        </xsd:annotation>
+        <xsd:sequence>
+          <xsd:element name="item" type="xsd:string" maxOccurs="unbounded" minOccurs="0" wst:TypeHint="UnicodeString"/>
+        </xsd:sequence>
+      </xsd:complexType>
+    </xsd:schema>
   </types>
   <message name="Connect">
     <part name="UserName" type="xsd:string" wst:TypeHint="UnicodeString"/>
@@ -204,6 +213,10 @@
   <message name="StartTransactionResponse">
     <part name="result" type="xsd:int"/>
   </message>
+  <message name="GetPublicKeys"/>
+  <message name="GetPublicKeysResponse">
+    <part name="result" type="xsd:string"/>
+  </message>
   <portType name="IZeosProxy">
     <documentation>
       <GUID value="{DD0144C6-0CD5-483C-A8D9-28A00BAD1C75}"/>
@@ -307,6 +320,10 @@
     <operation name="StartTransaction">
       <input message="tns:StartTransaction"/>
       <output message="tns:StartTransactionResponse"/>
+    </operation>
+    <operation name="GetPublicKeys">
+      <input message="tns:GetPublicKeys"/>
+      <output message="tns:GetPublicKeysResponse"/>
     </operation>
   </portType>
   <binding name="IZeosProxyBinding" type="tns:IZeosProxy">
@@ -528,6 +545,15 @@
       </output>
     </operation>
     <operation name="StartTransaction">
+      <soap:operation soapAction=""/>
+      <input>
+        <soap:body use="literal" namespace="zproxy"/>
+      </input>
+      <output>
+        <soap:body use="literal" namespace="zproxy"/>
+      </output>
+    </operation>
+    <operation name="GetPublicKeys">
       <soap:operation soapAction=""/>
       <input>
         <soap:body use="literal" namespace="zproxy"/>
