@@ -2,8 +2,8 @@ This is a sample project demonstrating how to use Firebird 4.0 with Zeos on Andr
 
 Getting started:
 - Unpack the Firebird ARM64 files into the firebird folder.
-- Grab icudt63l.dat, libicudata.so.63, libicui18n.so.63, libicuuc.so.63 from the Firebird 4.0 RC1 release and put them in the correct locations.
 - Grab a firebird.msg file from another distribution because it isn't generated automatically.
+- Reset the libaries to system default if necessary.
 
 The project was tested with Firebird 4.0. For other versions you might have to do some changes.
 
