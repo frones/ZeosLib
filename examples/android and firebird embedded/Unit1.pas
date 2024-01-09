@@ -64,11 +64,11 @@ implementation
 
 {$R *.fmx}
 
-uses IOUtils, FireDAC.Stan.Util, Posix.Unistd;
+uses IOUtils, FireDAC.Stan.Util, Posix.Unistd, ZExceptions;
 
 const
   FirebirdBase = PathDelim + 'firebird';
-  ClientLib =    PathDelim + 'firebird' + PathDelim + 'lib' + PathDelim + 'libfbclient.so.4.0.0';
+  ClientLib =    PathDelim + 'firebird' + PathDelim + 'lib' + PathDelim + 'libfbclient.so.4.0.4';
   LogFile =      PathDelim + 'firebird' + PathDelim + 'firebird.log';
 
 procedure CreateSymlinkIfNecessary(Const SymLink, Target: String);
@@ -80,7 +80,7 @@ end;
 
 procedure TForm1.prepareFirebird(FirebirdBase: String);
 begin
-  CreateSymlinkIfNecessary(FirebirdBase + PathDelim + 'lib' + PathDelim + 'libfbclient.so.2', FirebirdBase + PathDelim + 'lib' + PathDelim + 'libfbclient.so.4.0.0');
+  CreateSymlinkIfNecessary(FirebirdBase + PathDelim + 'lib' + PathDelim + 'libfbclient.so.2', FirebirdBase + PathDelim + 'lib' + PathDelim + 'libfbclient.so.4.0.4');
   CreateSymlinkIfNecessary(FirebirdBase + PathDelim + 'lib' + PathDelim + 'libfbclient.so',   FirebirdBase + PathDelim + 'lib' + PathDelim + 'libfbclient.so.2');
   CreateSymlinkIfNecessary(FirebirdBase + PathDelim + 'lib' + PathDelim + 'libicudata.so',    FirebirdBase + PathDelim + 'lib' + PathDelim + 'libicudata.so.63');
   CreateSymlinkIfNecessary(FirebirdBase + PathDelim + 'lib' + PathDelim + 'libicui18n.so',    FirebirdBase + PathDelim + 'lib' + PathDelim + 'libicui18n.so.63');

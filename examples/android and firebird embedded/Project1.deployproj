@@ -130,7 +130,7 @@
             <RemoteCommand/>
             <Overwrite>True</Overwrite>
         </DeployFile>
-        <DeployFile Include="firebird\lib\libicui18n.so.63" Condition="'$(Config)'=='Debug'">
+        <DeployFile Include="firebird\libicui18n.so.63" Condition="'$(Config)'=='Debug'">
             <RemoteDir>Project1\assets\internal\firebird\lib\</RemoteDir>
             <RemoteName>libicui18n.so.63</RemoteName>
             <DeployClass>File</DeployClass>
@@ -193,7 +193,7 @@
             <RemoteCommand/>
             <Overwrite>True</Overwrite>
         </DeployFile>
-        <DeployFile Include="firebird\lib\icudt63l.dat" Condition="'$(Config)'=='Debug'">
+        <DeployFile Include="firebird\icudt63l.dat" Condition="'$(Config)'=='Debug'">
             <RemoteDir>Project1\assets\internal\firebird\lib\</RemoteDir>
             <RemoteName>icudt63l.dat</RemoteName>
             <DeployClass>File</DeployClass>
@@ -310,7 +310,7 @@
             <RemoteCommand/>
             <Overwrite>True</Overwrite>
         </DeployFile>
-        <DeployFile Include="firebird\lib\libicuuc.so.63" Condition="'$(Config)'=='Debug'">
+        <DeployFile Include="firebird\libicuuc.so.63" Condition="'$(Config)'=='Debug'">
             <RemoteDir>Project1\assets\internal\firebird\lib\</RemoteDir>
             <RemoteName>libicuuc.so.63</RemoteName>
             <DeployClass>File</DeployClass>
@@ -319,9 +319,9 @@
             <RemoteCommand/>
             <Overwrite>True</Overwrite>
         </DeployFile>
-        <DeployFile Include="firebird\lib\libfbclient.so.4.0.0" Condition="'$(Config)'=='Debug'">
+        <DeployFile Include="firebird\lib\libfbclient.so.4.0.4" Condition="'$(Config)'=='Debug'">
             <RemoteDir>Project1\assets\internal\firebird\lib\</RemoteDir>
-            <RemoteName>libfbclient.so.4.0.0</RemoteName>
+            <RemoteName>libfbclient.so.4.0.4</RemoteName>
             <DeployClass>File</DeployClass>
             <Operation>0</Operation>
             <LocalCommand/>
@@ -374,7 +374,7 @@
             <RemoteCommand/>
             <Overwrite>True</Overwrite>
         </DeployFile>
-        <DeployFile Include="firebird\lib\libicudata.so.63" Condition="'$(Config)'=='Debug'">
+        <DeployFile Include="firebird\libicudata.so.63" Condition="'$(Config)'=='Debug'">
             <RemoteDir>Project1\assets\internal\firebird\lib\</RemoteDir>
             <RemoteName>libicudata.so.63</RemoteName>
             <DeployClass>File</DeployClass>

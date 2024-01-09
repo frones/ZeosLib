@@ -319,7 +319,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="firebird\lib\libicui18n.so.63" Configuration="Debug" Class="File">
+                <DeployFile LocalName="firebird\libicui18n.so.63" Configuration="Debug" Class="File">
                     <Platform Name="Android64">
                         <RemoteDir>.\assets\internal\firebird\lib\</RemoteDir>
                         <RemoteName>libicui18n.so.63</RemoteName>
@@ -365,7 +365,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="firebird\lib\icudt63l.dat" Configuration="Debug" Class="File">
+                <DeployFile LocalName="firebird\icudt63l.dat" Configuration="Debug" Class="File">
                     <Platform Name="Android64">
                         <RemoteDir>.\assets\internal\firebird\lib\</RemoteDir>
                         <RemoteName>icudt63l.dat</RemoteName>
@@ -453,17 +453,17 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="firebird\lib\libicuuc.so.63" Configuration="Debug" Class="File">
+                <DeployFile LocalName="firebird\libicuuc.so.63" Configuration="Debug" Class="File">
                     <Platform Name="Android64">
                         <RemoteDir>.\assets\internal\firebird\lib\</RemoteDir>
                         <RemoteName>libicuuc.so.63</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="firebird\lib\libfbclient.so.4.0.0" Configuration="Debug" Class="File">
+                <DeployFile LocalName="firebird\lib\libfbclient.so.4.0.4" Configuration="Debug" Class="File">
                     <Platform Name="Android64">
                         <RemoteDir>.\assets\internal\firebird\lib\</RemoteDir>
-                        <RemoteName>libfbclient.so.4.0.0</RemoteName>
+                        <RemoteName>libfbclient.so.4.0.4</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
@@ -502,7 +502,7 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="firebird\lib\libicudata.so.63" Configuration="Debug" Class="File">
+                <DeployFile LocalName="firebird\libicudata.so.63" Configuration="Debug" Class="File">
                     <Platform Name="Android64">
                         <RemoteDir>.\assets\internal\firebird\lib\</RemoteDir>
                         <RemoteName>libicudata.so.63</RemoteName>
