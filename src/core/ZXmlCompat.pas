@@ -31,6 +31,7 @@ type
   IXmlDocument = interface(IUnknown)
   ['{123AE59F-7756-4548-9DD8-A6053E09EBC1}']
     procedure LoadFromStream(Stream: TStream);
+    procedure LoadFromFile(FileName: String);
     function GetChildNodes: IXMLNodeList;
     property ChildNodes: IXMLNodeList read GetChildNodes;
   end;
@@ -40,6 +41,7 @@ type
       FXmlDoc: TXmlDocument;
     public
       procedure LoadFromStream(Stream: TStream);
+      procedure LoadFromFile(FileName: String);
       function GetChildNodes: IXMLNodeList;
   end;
 
@@ -74,6 +76,11 @@ uses xmlread, Variants;
 procedure TZXmlDocument.LoadFromStream(Stream: TStream);
 begin
   ReadXMLFile(FXmlDoc, Stream);
+end;
+
+procedure TZXmlDocument.LoadFromFile(FileName: String);
+begin
+  ReadXMLFile(FXmlDoc, FileName);
 end;
 
 function TZXmlDocument.GetChildNodes: IXMLNodeList;
