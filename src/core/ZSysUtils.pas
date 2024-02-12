@@ -8053,7 +8053,7 @@ begin
     Result := Value
 end;
 
-const HalfFractModulos:     array [TFractionRoundToScale] of Cardinal = ( 444444445, 44444445,  4444445,  444445,  44445,  4445,  445, 45, 5,0);
+const HalfFractModulos:     array [TFractionRoundToScale] of Cardinal = ( 500000000, 50000000,  5000000,  500000,  50000,  5000,  500, 50, 5,0);
 const FractionRoundSummant: array [TFractionRoundToScale] of Cardinal = (1000000000,100000000, 10000000, 1000000, 100000, 10000, 1000,100,10,1);
 
 function RoundNanoFractionTo(const Value: Cardinal; Scale: TFractionRoundToScale): Cardinal;
