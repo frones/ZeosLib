@@ -797,18 +797,12 @@ type
   ///  designed to use one memory block with an untyped array of elements.</summary>
   TZCustomElementList = class(TObject)
   private
-    FCount, FCapacity: NativeInt;
-    FElementSize: Cardinal;
     FElementNeedsFinalize: Boolean;
   protected
+    FCount, FCapacity: NativeInt;
+    FElementSize: Cardinal;
     FElements: Pointer; //the buffer of the elements
   protected
-    /// <summary>Get the address of an element in the list. It is an error
-    ///  remembering the address while the element capacity changes. The address
-    ///  might be invalid then.</summary>
-    /// <param>"Index" the index of the element.</param>
-    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
-    function Get(Index: NativeInt): Pointer;
     /// <summary>Grows the Memory used for the array of elements.
     ///  If ElementNeedsFinalize is set to true, the memory will be zeroed out.
     ///  </summary>
@@ -854,11 +848,17 @@ type
     /// <summary>destroys this object and releases all recources.</summary>
     destructor Destroy; override;
   public
+    /// <summary>Get the address of an element in the list. It is an error
+    ///  remembering the address while the element capacity changes. The address
+    ///  might be invalid then.</summary>
+    /// <param>"Index" the index of the element.</param>
+    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
+    function Get(Index: NativeInt): Pointer; overload;
     /// <summary>Clears all elements and frees the memory.</summary>
     procedure Clear; virtual;
     /// <summary>Delete an element on given position.</summary>
     /// <param>"Index" the position of the element to be removed.</param>
-    procedure Delete(Index: NativeInt);
+    procedure Delete(Index: NativeInt); overload;
   public
     property Count: NativeInt read FCount write SetCount;
     property Items[Index: NativeInt]: Pointer read Get; default;
@@ -892,6 +892,42 @@ type
   /// <author>EgonHugeist</author>
   /// <summary>implements list compare object function</summary>
   TZListSortCompare = function(Item1, Item2: Pointer): Integer of object;
+
+  /// <author>EgonHugeist</author>
+  /// <summary>implements list of sorted custom elements</summary>
+  TZCustomUniqueElementBinarySearchList = class(TZCustomElementList)
+  protected
+    FCompare: TZSortCompare;
+  public
+    /// <summary>Delete an element by given Value comapred to the list.</summary>
+    /// <param>"ValueToCompare" the value compared to the list items to be removed.</param>
+    procedure Delete(Element: Pointer); overload;
+    /// <summary>Get the address of an element in the list.</summary>
+    /// <param>"ValueToCompare" the Value to be found in the list.</param>
+    /// <returns>The address or raises an EListError if the Index is invalid.</returns>
+    function Get(ValueToCompare: Pointer): Pointer; overload;
+    /// <summary>Get the Index of an element in the list. If the Element does
+    ///  not exisits the method returns the insert index </summary>
+    /// <param>"ValueToCompare" the Value to be found in the list.</param>
+    /// <param>"Index" the index if found or the insert-index if not found.</param>
+    /// <returns>Success if the element has been found in the list.</returns>
+    function Find(ElementToFind: Pointer; out Index: NativeInt): Boolean;
+    /// <summary>Get the Index of an element in the list.</summary>
+    /// <param>"ValueToCompare" the Value to be found in the list.</param>
+    /// <returns>The Index of the Element if found, -1 if otherwise.</returns>
+    function IndexOf(ElementToFind: Pointer): NativeInt;
+  public
+    /// <summary>Create this object and assigns main properties.</summary>
+    /// <param>"ElementSize" a size of the element hold in array.</param>
+    /// <param>"ElementNeedsFinalize" indicate if a users finalize is
+    ///  required on removing the items and if the memory needs to be zeroed out
+    ///  on growing the buffer.</param>
+    /// <param>"Compare" a custom compare function used to get and add the elemenets</param>
+    constructor Create(Compare: TZSortCompare; ElementSize: Cardinal; ElementNeedsFinalize: Boolean);
+  public
+    property Count: NativeInt read FCount;
+    property Items[ValueToCompare: Pointer]: Pointer read Get;
+  end;
 
   /// <author>EgonHugeist</author>
   /// <summary>implements list of sortable custom elements</summary>
@@ -3146,6 +3182,76 @@ begin;
   end;*)
 begin
   QuickSort(0, Count-1, Compare);
+end;
+
+{ TZCustomUniqueElementBinarySearchList }
+
+constructor TZCustomUniqueElementBinarySearchList.Create(Compare: TZSortCompare;
+  ElementSize: Cardinal; ElementNeedsFinalize: Boolean);
+begin
+  inherited Create(ElementSize, ElementNeedsFinalize);
+  FCompare := Compare;
+end;
+
+procedure TZCustomUniqueElementBinarySearchList.Delete(Element: Pointer);
+var Idx: NativeInt;
+begin
+  if Find(Element, Idx) then
+    inherited Delete(Idx);
+end;
+
+function TZCustomUniqueElementBinarySearchList.Find(ElementToFind: Pointer;
+  out Index: NativeInt): Boolean;
+var
+  First, Last, Pivot: NativeInt;
+  CompareResult: Integer;
+  ElementOfList: Pointer;
+label Found;
+begin
+  Result := false;//init Result
+  Index := -1;
+  if ElementToFind = nil then
+    Exit;
+
+  First := 0; //Sets the first item of the range
+  Last := FCount-1; //Sets the last item of the range
+  //If First > Last then the searched item doesn't exist
+  //If the item is found the loop will stop
+  Pivot := 0;
+  CompareResult := 0;
+  while (First <= Last) do begin
+    Pivot := (First + Last) shr 1; //Gets the middle of the selected range
+    ElementOfList := inherited Get(Pivot);
+    CompareResult := Self.FCompare(ElementOfList, ElementToFind); //Compares the Elements in the middle with the searched one
+    if CompareResult < 0 then
+      First := Pivot + 1
+    else begin
+      Last := Pivot - 1;
+      if CompareResult = 0 then begin
+        Result := true;
+        goto Found;
+      end;
+    end;
+  end;
+  if (CompareResult < 0) then
+    Inc(Pivot); //element not found return the insert index
+Found:
+  Index := Pivot;
+end;
+
+function TZCustomUniqueElementBinarySearchList.Get(ValueToCompare: Pointer): Pointer;
+var Idx: NativeInt;
+begin
+  if Find(ValueToCompare, Idx)
+  then Result := inherited Get(Idx)
+  else Result := nil;
+end;
+
+function TZCustomUniqueElementBinarySearchList.IndexOf(
+  ElementToFind: Pointer): NativeInt;
+begin
+  if not Find(ElementToFind, Result) then
+    Result := -1;
 end;
 
 end.
