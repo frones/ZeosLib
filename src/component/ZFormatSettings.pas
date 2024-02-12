@@ -407,6 +407,17 @@ type
     /// <param>"AOwner" the Owner of this object.</param>
     constructor Create(AOwner: TComponent);
   published
+    /// <summary>Represents the date format used if time value is the zero. If
+    ///  the value is not set the value of the parent is used or the shortdate
+    ///  format of the formatsettings if the parent is not assigned.</summary>
+    /// <returns>the date format string.</returns>
+    property DateFormat;
+    /// <summary>Represents the time format used if date value is the pascal
+    ///  integral date; alias zero. If the value is not set the value of the
+    ///  parent is used or the longtime format of the formatsettings if the
+    ///  parent is not assigned.</summary>
+    /// <returns>the time format string.</returns>
+    property TimeFormat;
     /// <summary>Represents the SecondFractionOption of this object or parents
     ///  SecondFractionOption if the Format is empty</summary>
     property SecondFractionOption stored IsFormatAssigned default foSetByFormat;
@@ -853,11 +864,14 @@ begin
 end;
 
 procedure TZAbstractTimeFormatSettings.SetFormat(const Value: String);
+var Delim: Char;
 begin
   if ((FFormat = nil) and (Value <> '')) or ((FFormat <> nil) and (Value = '')) or ((FFormat <> nil) and (FFormat^ <> Value)) then begin
     if Value <> '' then begin
       FFormat := @FFormatSettings.LongTimeFormat;
       FFormat^ := Value;
+      if FindFirstFormatDelimiter(Value, Delim) then
+        FFormatSettings.TimeSeparator := Delim;
     end else FFormat := nil;
     if Assigned(FOnFormatChanged) then
       FOnFormatChanged;
@@ -980,11 +994,14 @@ begin
 end;
 
 procedure TZAbstractDateFormatSettings.SetFormat(const Value: String);
+var Delim: Char;
 begin
   if ((FFormat = nil) and (Value <> '')) or ((FFormat <> nil) and (Value = '')) or ((FFormat <> nil) and (FFormat^ <> Value)) then begin
     if Value <> '' then begin
       FFormat := @FFormatSettings.ShortDateFormat;
       FFormat^ := Value;
+      if FindFirstFormatDelimiter(Value, Delim) then
+        FFormatSettings.DateSeparator := Delim;
     end else FFormat := nil;
     if Assigned(FOnFormatChanged) then
       FOnFormatChanged;
@@ -1110,11 +1127,14 @@ begin
 end;
 
 procedure TZAbstractTimestampFormatSettings.SetDateFormat(const Value: String);
+var Delim: Char;
 begin
   if ((FDateFormat = nil) and (Value <> '')) or ((FDateFormat <> nil) and (Value = '')) or ((FDateFormat <> nil) and (FDateFormat^ <> Value)) then begin
     if Value <> '' then begin
       FDateFormat := @FFormatSettings.ShortDateFormat;
       FDateFormat^ := Value;
+      if FindFirstFormatDelimiter(Value, Delim) then
+        FFormatSettings.DateSeparator := Delim;
     end else FDateFormat := nil;
     if Assigned(FOnFormatChanged) then
       FOnFormatChanged;
@@ -1144,11 +1164,14 @@ begin
 end;
 
 procedure TZAbstractTimestampFormatSettings.SetTimeFormat(const Value: String);
+var Delim: Char;
 begin
   if ((FTimeFormat = nil) and (Value <> '')) or ((FTimeFormat <> nil) and (Value = '')) or ((FTimeFormat <> nil) and (FTimeFormat^ <> Value)) then begin
     if Value <> '' then begin
-      FTimeFormat := @FFormatSettings.ShortTimeFormat;
+      FTimeFormat := @FFormatSettings.LongTimeFormat;
       FTimeFormat^ := Value;
+      if FindFirstFormatDelimiter(Value, Delim) then
+        FFormatSettings.TimeSeparator := Delim;
     end else FTimeFormat := nil;
     if Assigned(FOnFormatChanged) then
       FOnFormatChanged;
