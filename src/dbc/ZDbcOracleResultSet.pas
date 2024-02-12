@@ -107,7 +107,6 @@ type
     FIteration: Integer; //Max count of rows which fit into BufferSize <= FZBufferSize
     FCurrentRowBufIndex: Cardinal; //The current row in buffer! NOT the current row of RS
     FZBufferSize: Integer; //max size for multiple rows. If Row > Value ignore it!
-    FRowsBuffer: TByteDynArray; //Buffer for multiple rows if possible which is reallocated or freed by IDE -> mem leak save!
     FTempLob: IZBlob;
     FClientCP: Word;
     FvnuInfo: TZvnuInfo;
@@ -2539,7 +2538,6 @@ begin
   if (RowSize = 0 ) then begin
     FIteration := 1;
     FColumns[0].value_sz := 8;
-    RowSize := 8 +SizeOf(sb2);
   end else if (RowSize > FZBufferSize) { now let's calc the iters we can use }
     then FIteration := 1
     else FIteration := FZBufferSize div RowSize;
@@ -2547,10 +2545,7 @@ begin
     FIteration := 1000 div DescriptorColumnCount;
   if (SubObjectColumnCount > 0) then
     FIteration := 1; //EH: current code isn't prepared -> Bugfix required
-
-  SetLength(FRowsBuffer, RowSize * FIteration); //Alloc mem we need for multiple rows
   {give our Vars it's addressation in RowsBuffer}
-  P := Pointer(FRowsBuffer);
   { Bind handle and Fills the column info. }
   for I := 1 to Length(FColumns) do begin
     {$R-}
@@ -2558,29 +2553,32 @@ begin
     {$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}
     if (CurrentVar^.value_sz = 0) then
       continue;
-    CurrentVar.indp := Pointer(P);
-    Inc(PAnsiChar(P), SizeOf(sb2)*FIteration);
-    CurrentVar.valuep := P;
+
+    SetLength(CurrentVar.Data, CurrentVar.value_sz * Cardinal(FIteration));
+    SetLength(CurrentVar.DataIndicators, FIteration);
+    SetLength(CurrentVar.DataLengths, FIteration);
+    CurrentVar.valuep := PAnsiChar(CurrentVar.Data);
+    CurrentVar.indp := PSB2Array(CurrentVar.DataIndicators);
+    CurrentVar.alenp  := PUB2Array(CurrentVar.DataLengths);
+
     if CurrentVar^.ColType = stUnknown then
       continue;
+
     if CurrentVar^.DescriptorType <> NO_DTYPE then
       for J := 0 to FIteration -1 do begin
-        Status := FPlainDriver.OCIDescriptorAlloc(FOCIEnv, PPOCIDescriptor(P)^, CurrentVar^.DescriptorType, 0, nil);
+        Status := FPlainDriver.OCIDescriptorAlloc(FOCIEnv, PPOCIDescriptor(CurrentVar.valuep + (J * SizeOf(PPOCIDescriptor)) )^, CurrentVar^.DescriptorType, 0, nil);
         if Status <> OCI_SUCCESS then
           FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
             'OCIDescriptorAlloc', Self);
-        Inc(PAnsiChar(P), SizeOf(PPOCIDescriptor));
       end
     else if CurrentVar^.dty = SQLT_VST then
       for J := 0 to FIteration -1 do begin
-        Status := FPlainDriver.OCIStringResize(FOCIEnv, FOCIError, CurrentVar^.value_sz, PPOCIString(P));
+        Status := FPlainDriver.OCIStringResize(FOCIEnv, FOCIError, CurrentVar^.value_sz, PPOCIString(CurrentVar.valuep + (J * SizeOf(PPOCIDescriptor))));
         if Status <> OCI_SUCCESS then
           FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
             'OCIStringResize', Self);
-        Inc(PAnsiChar(P), SizeOf(PPOCIString));
-      end
-    else
-      Inc(PAnsiChar(P), CurrentVar^.value_sz*Cardinal(FIteration));
+      end;
+
     defn_or_bindpp := nil;
     Status := FPlainDriver.OCIDefineByPos(FStmtHandle, defn_or_bindpp,
       FOCIError, I, CurrentVar^.valuep, CurrentVar^.value_sz, CurrentVar^.dty,
@@ -2597,12 +2595,14 @@ begin
         FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
           'OCIAttrSet(OCI_ATTR_CHARSET_ID)', Self);
     end else if CurrentVar^.dty=SQLT_NTY then
+    begin
       //second step: http://www.csee.umbc.edu/portal/help/oracle8/server.815/a67846/obj_bind.htm
       Status := FPlainDriver.OCIDefineObject(defn_or_bindpp, FOCIError, CurrentVar^._Obj.tdo,
            @CurrentVar^._Obj.obj_value, nil, nil, nil);
       if Status <> OCI_SUCCESS then
         FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcExecPrepStmt,
           'OCIDefineObject', Self);
+    end;
   end;
   inherited Open;
   FCursorLocation := rctServer;
@@ -2630,9 +2630,18 @@ end;
   is also automatically closed when it is garbage collected.
 }
 procedure TZOracleResultSet.BeforeClose;
+var
+  i: Integer;
+  LCol: TZSQLVar;
 begin
   inherited BeforeClose;
-  SetLength(Self.FRowsBuffer, 0);
+  for i := 0 to Length(FColumns) - 1 do
+  begin
+    LCol := FColumns[i];
+    SetLength(LCol.Data, 0);
+    SetLength(LCol.DataIndicators, 0);
+    SetLength(LCol.DataLengths, 0);
+  end;
   { prepared statement own handles, so dont free them }
   FStmtHandle := nil;
 end;
@@ -2701,7 +2710,6 @@ begin
         goto LogSuccess;
     end;
   end;
-
   if Status = OCI_NO_DATA then begin
     FPlainDriver.OCIAttrGet(FStmtHandle,OCI_HTYPE_STMT,@FetchedRows,nil,OCI_ATTR_ROWS_FETCHED,FOCIError);
     LastRowNo := RowNo+Integer(FetchedRows);  //this makes Exit out in first check on next fetch
