@@ -73,6 +73,10 @@
 
 {.$DEFINE DO_NOT_DERIVE_FROM_EDATABASEERROR} //don't derive Zeos Exceptions from EDatabaseError
 
+// Enabling this directive will cause Zeos not to cache client connection libraries. This basically means
+// that all handles will be immediately released once the final connection is closed
+{.$DEFINE ZEOS_DISABLE_DRIVER_CACHE}
+
 // In Version 6.1.5 there are several bugs with the TZSQLMetadata-Component
 // For Version 6.5.0 you should uncomment the following line
 {$DEFINE USE_METADATA}
