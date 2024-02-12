@@ -200,6 +200,9 @@ type
     Precision: sb2; //field.precision used 4 out params
     Scale:     sb1; //field.scale used 4 out params
     ColType:   TZSQLType; //Zeos SQLType
+    Data: TBytes;
+    DataIndicators:  Array of sb2;
+    DataLengths:     Array of ub2;
   end;
 
   TZSQLVarDynArray = Array of TZSQLVar;
@@ -1226,9 +1229,15 @@ function NormalizeOracleTypeToSQLType(var DataType: ub2; var DataSize: ub4;
 label VCS;
   procedure CharacterSizeToByteSize(var DataSize: ub4; Precision: Integer);
   begin
-    //EH: Note NCHAR, NVARCHAR2, CLOB, and NCLOB columns are always character-based.
+    // EH: Note NCHAR, NVARCHAR2, CLOB, and NCLOB columns are always character-based.
+    // MShark67: Adjusted the UTF16 buffer size down to 2 times character size instead of 4.  Needs testing.
+    // The question is... can a single ansi character become two UTF16 chars (a surrogate pair.)
+	// Marsupilami79: The thing is: Oracle seens to not support surrogate pairs in NVARCHAR2 - or they count as
+	// two characters. See https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlqr/Data-Types.html :
+	// "The number of bytes can be up to two times size for AL16UTF16 encoding and three times size for UTF8 encoding."
+	// These usuall only cover the Basic Multilingual Plane on Unicode.
     if (ScaleOrCharSetForm = SQLCS_NCHAR) or (ConSettings.ClientCodePage.Encoding = ceUTF16)
-    then DataSize := Precision shl 2
+    then DataSize := Precision shl 1
     else if (ConSettings.ClientCodePage.CharWidth > 1)
       then DataSize := Precision * Byte(ConSettings.ClientCodePage.CharWidth)
       else DataSize := Precision;

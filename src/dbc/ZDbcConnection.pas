@@ -974,7 +974,7 @@ begin
     TempPlain := FCachedPlainDrivers.Get(TempKey) as IZPlainDriver;
     if Assigned(TempPlain) then begin
       Result := TempPlain.Clone;
-      AddPlainDriverToCache(Result, Protocol, LibLocation);
+      {$IFNDEF ZEOS_DISABLE_DRIVER_CACHE}AddPlainDriverToCache(Result, Protocol, LibLocation);{$ENDIF}
     end;
   end;
 end;

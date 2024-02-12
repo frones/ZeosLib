@@ -16,6 +16,8 @@ type
   ['{D960E088-0897-41C4-83C7-0E4F1F315630}']
     function GetChildNodes: IXMLNodeList;
     function GetAttribute(AttrName: DOMString): OleVariant;
+    function GetNodeName: String;
+    function GetText: String;
     property ChildNodes: IXMLNodeList read GetChildNodes;
     property Attributes[const AttrName: DOMString]: OleVariant read GetAttribute;
   end;
@@ -31,6 +33,7 @@ type
   IXmlDocument = interface(IUnknown)
   ['{123AE59F-7756-4548-9DD8-A6053E09EBC1}']
     procedure LoadFromStream(Stream: TStream);
+    procedure LoadFromFile(FileName: String);
     function GetChildNodes: IXMLNodeList;
     property ChildNodes: IXMLNodeList read GetChildNodes;
   end;
@@ -40,6 +43,7 @@ type
       FXmlDoc: TXmlDocument;
     public
       procedure LoadFromStream(Stream: TStream);
+      procedure LoadFromFile(FileName: String);
       function GetChildNodes: IXMLNodeList;
   end;
 
@@ -49,6 +53,8 @@ type
     public
       constructor Create(Node: TDOMNode);
       function GetChildNodes: IXMLNodeList;
+      function GetNodeName: String;
+      function GetText: String;
       function GetAttribute(AttrName: DOMString): OleVariant;
   end;
 
@@ -74,6 +80,11 @@ uses xmlread, Variants;
 procedure TZXmlDocument.LoadFromStream(Stream: TStream);
 begin
   ReadXMLFile(FXmlDoc, Stream);
+end;
+
+procedure TZXmlDocument.LoadFromFile(FileName: String);
+begin
+  ReadXMLFile(FXmlDoc, FileName);
 end;
 
 function TZXmlDocument.GetChildNodes: IXMLNodeList;
@@ -126,6 +137,16 @@ end;
 function TZXmlNode.GetChildNodes: IXMLNodeList;
 begin
   Result := TZXmlNodeList.Create(FNode) as IXMLNodeList;
+end;
+
+function TZXmlNode.GetNodeName: String;
+begin
+  Result := FNode.NodeName;
+end;
+
+function TZXmlNode.GetText: String;
+begin
+  Result := FNode.TextContent;
 end;
 
 function TZXmlNode.GetAttribute(AttrName: DOMString): OleVariant;
