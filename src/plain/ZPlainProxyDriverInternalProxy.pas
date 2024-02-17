@@ -178,6 +178,7 @@ begin
 end;
 
 procedure TZDbcProxy.ValidateServerCertificate(const Sender: TObject; const ARequest: TURLRequest; const Certificate: TCertificate; var Accepted: Boolean);
+{$IFDEF TCERTIFICATE_HAS_PUBLICKEY}
 var
   PubKey: String;
 begin
@@ -188,6 +189,11 @@ begin
   else
     Accepted := 0 <= FValidPublicKeys.IndexOf(PubKey);
 end;
+{$ELSE}
+begin
+  Accepted := False;
+end;
+{$ENDIF}
 
 procedure TZDbcProxy.BeforePostData(const HTTPReqResp: THTTPReqResp; Client: THTTPClient);
 begin
@@ -209,10 +215,12 @@ begin
   PropList := TStringList.Create;
   try
     PropList.DelimitedText := Properties;
+    {$IFDEF TCERTIFICATE_HAS_PUBLICKEY}
     if PropList.IndexOfName('TofuCerts') > 0 then begin
       FRIO.HTTPWebNode.OnBeforePost := BeforePostData;
       FValidPublicKeys.DelimitedText := LowerCase(Trim(PropList.Values['TofuCerts']));
     end;
+    {$ENDIF}
   finally
     FreeAndNil(PropList);
   end;

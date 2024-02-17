@@ -391,6 +391,7 @@
                                           {$UNDEF WITH_TMEMOFIELD_GETASVARIANT_varNULL_BUG} //The bug is resolved.
                                           {$DEFINE USE_SYNCOBJS_FOR_INLINING} //Add SyncObjs unit to the uses list to resolve a warning about inlining
                                           {$IF CompilerVersion >= 35} //Delphi 11 Alexandria
+										    {$DEFINE TCERTIFICATE_HAS_PUBLICKEY}
                                             {$DEFINE MEMORYSTREAM_REALLOC_NATIVEINT} // TMemoryStream.Realloc uses NativeInt instead of Longint
                                             {$IF CompilerVersion >= 36} //Delphi 12 Athens
                                               {$DEFINE NATIVEINT_WEAK_REFERENCE} // TMemoryStream.Realloc uses NativeInt instead of Longint
