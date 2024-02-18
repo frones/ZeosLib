@@ -69,7 +69,7 @@ implementation
 
 {$IF DEFINED(ENABLE_PROXY) AND DEFINED(ENABLE_INTERNAL_PROXY)}
 
-uses SysUtils, {$IFNDEF NO_SAFECALL}ActiveX, ComObj,{$ENDIF} SOAPHTTPClient, ZExceptions, SOAPHTTPTrans, Net.URLClient, Net.HttpClient, Types;
+uses SysUtils, {$IFNDEF NO_SAFECALL}ActiveX, ComObj,{$ENDIF} SOAPHTTPClient, ZExceptions, SOAPHTTPTrans, Types {$IFDEF TCERTIFICATE_HAS_PUBLICKEY}, Net.URLClient, Net.HttpClient{$ENDIF};
 
 type
   TZDbcProxy = class(TInterfacedObject, IZDbcProxy{$IFNDEF NO_SAFECALL}, ISupportErrorInfo{$ENDIF})
@@ -83,8 +83,10 @@ type
       function InterfaceSupportsErrorInfo(const iid: TIID): HResult; stdcall;
       {$ENDIF}
 
+      {$IFDEF TCERTIFICATE_HAS_PUBLICKEY}
       procedure ValidateServerCertificate(const Sender: TObject; const ARequest: TURLRequest; const Certificate: TCertificate; var Accepted: Boolean);
       procedure BeforePostData(const HTTPReqResp: THTTPReqResp; Client: THTTPClient);
+      {$ENDIF}
     public
       // this is necessary for safecall exception handling
       {$IFNDEF NO_SAFECALL}
@@ -177,8 +179,8 @@ begin
  FService := nil;
 end;
 
-procedure TZDbcProxy.ValidateServerCertificate(const Sender: TObject; const ARequest: TURLRequest; const Certificate: TCertificate; var Accepted: Boolean);
 {$IFDEF TCERTIFICATE_HAS_PUBLICKEY}
+procedure TZDbcProxy.ValidateServerCertificate(const Sender: TObject; const ARequest: TURLRequest; const Certificate: TCertificate; var Accepted: Boolean);
 var
   PubKey: String;
 begin
@@ -189,16 +191,12 @@ begin
   else
     Accepted := 0 <= FValidPublicKeys.IndexOf(PubKey);
 end;
-{$ELSE}
-begin
-  Accepted := False;
-end;
-{$ENDIF}
 
 procedure TZDbcProxy.BeforePostData(const HTTPReqResp: THTTPReqResp; Client: THTTPClient);
 begin
   HTTPReqResp.HTTP.OnValidateServerCertificate := ValidateServerCertificate;
 end;
+{$ENDIF}
 
 procedure TZDbcProxy.Connect(const UserName, Password, ServiceEndpoint, DbName: WideString; var Properties: WideString; out DbInfo: WideString); {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
 var

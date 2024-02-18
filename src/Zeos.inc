@@ -66,7 +66,7 @@
 {.$DEFINE ZEOS_DISABLE_OLEDB}
 {.$DEFINE ZEOS_DISABLE_ODBC}
 {.$DEFINE ZEOS_DISABLE_PROXY}
-{.$DEFINE ZEOS_PROXY_USE_INTERNAL_PROXY}
+{$DEFINE ZEOS_PROXY_USE_INTERNAL_PROXY}
 
 {.$DEFINE USE_SYNCOMMONS} //enable JSON content support by using SynCommons.pas from Synopse project v1.18
 {.$DEFINE MORMOT2} //enable JSON content support by using mormot.db.core.pas from Synopse project v2+
