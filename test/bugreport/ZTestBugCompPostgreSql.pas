@@ -121,6 +121,7 @@ type
     procedure TestSF460_B;
     procedure TestSF478;
     procedure TestPgTruncScale;
+    procedure TestInfinityNan;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -140,7 +141,7 @@ implementation
 uses ZSysUtils, ZTestCase, ZPgEventAlerter, DateUtils, ZEncoding,
   ZDbcPostgreSqlMetadata, ZPlainPostgreSqlDriver, ZDatasetUtils, ZFormatSettings,
   (*{$IFDEF WITH_VCL_PREFIX}Vcl.Forms{$ELSE}Forms{$ENDIF}*)ZTestConfig
-  {$IFDEF WITH_TDATASETPROVIDER},Provider, DBClient{$ENDIF};
+  {$IFDEF WITH_TDATASETPROVIDER},Provider, DBClient{$ENDIF}, Math;
 
 { TZTestCompPostgreSQLBugReport }
 
@@ -1609,6 +1610,40 @@ begin
   end;
 end;
 
+procedure TZTestCompPostgreSQLBugReport.TestInfinityNan;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'insert into number_values (n_id, n_dprecission) values (:id, :value)';
+    Query.ParamByName('id').AsInteger := 20240217;
+    Query.ParamByName('value').AsSingle := Infinity;
+    Query.ExecSQL;
+    Query.ParamByName('id').AsInteger := 20240218;
+    Query.ParamByName('value').AsSingle := NegInfinity;
+    Query.ExecSQL;
+    Query.ParamByName('id').AsInteger := 20240219;
+    Query.ParamByName('value').AsSingle := NaN;
+    Query.ExecSQL;
+
+    Query.SQL.Text := 'select n_id, n_dprecission from number_values where n_id in (20240217, 20240218, 20240219) order by n_id';
+    Query.Open;
+
+    CheckEquals(3, Query.RecordCount, 'Three records are expected.');
+    Query.First;
+    Check(IsInfinite(Query.FieldByName('n_dprecission').AsFloat), 'infinite expected');
+    Query.Next;
+    Check(IsInfinite(Query.FieldByName('n_dprecission').AsFloat), 'infinite expected');
+    Query.Next;
+    Check(IsNan((Query.FieldByName('n_dprecission').AsFloat)), 'NAN expected');
+    Query.Close;
+  finally
+    Query.Connection.ExecuteDirect('delete from number_values where n_id in (20240217, 20240218, 20240219)');
+    FreeAndNil(Query);
+  end;
+
+end;
 
 initialization
   RegisterTest('bugreport',TZTestCompPostgreSQLBugReport.Suite);
