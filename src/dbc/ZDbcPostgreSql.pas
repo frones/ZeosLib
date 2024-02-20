@@ -784,13 +784,16 @@ begin
   Cnt := 0;
   SQLWriter := TZRawSQLStringWriter.Create(512);
   //Entering parameters from the ZConnection
-  If IsIpAddr(HostName) then
-    AddParamToResult('hostaddr', HostName)
-  else
-    AddParamToResult('host', HostName);
+  if HostName <> '' then begin
+    If IsIpAddr(HostName) then
+      AddParamToResult('hostaddr', HostName)
+    else
+      AddParamToResult('host', HostName);
+  end;
 
   AddParamToResult('port', ZFastCode.IntToStr(Port));
-  AddParamToResult('dbname', Database);
+  if database <> '' then
+    AddParamToResult('dbname', Database);
   if user <> '' then begin
     AddParamToResult('user', User);
     AddParamToResult('password', Password);
