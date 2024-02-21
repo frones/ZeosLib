@@ -796,7 +796,8 @@ begin
     AddParamToResult('dbname', Database);
   if user <> '' then begin
     AddParamToResult('user', User);
-    AddParamToResult('password', Password);
+    if Password <> '' then
+      AddParamToResult('password', Password);
   end;
 
   If Info.Values[ConnProps_SSLMode] <> ''
