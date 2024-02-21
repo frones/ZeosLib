@@ -66,7 +66,7 @@
 {.$DEFINE ZEOS_DISABLE_OLEDB}
 {.$DEFINE ZEOS_DISABLE_ODBC}
 {.$DEFINE ZEOS_DISABLE_PROXY}
-{.$DEFINE ZEOS_PROXY_USE_INTERNAL_PROXY}
+{$DEFINE ZEOS_PROXY_USE_INTERNAL_PROXY}
 
 {.$DEFINE USE_SYNCOMMONS} //enable JSON content support by using SynCommons.pas from Synopse project v1.18
 {.$DEFINE MORMOT2} //enable JSON content support by using mormot.db.core.pas from Synopse project v2+
@@ -391,6 +391,7 @@
                                           {$UNDEF WITH_TMEMOFIELD_GETASVARIANT_varNULL_BUG} //The bug is resolved.
                                           {$DEFINE USE_SYNCOBJS_FOR_INLINING} //Add SyncObjs unit to the uses list to resolve a warning about inlining
                                           {$IF CompilerVersion >= 35} //Delphi 11 Alexandria
+										    {$DEFINE TCERTIFICATE_HAS_PUBLICKEY}
                                             {$DEFINE MEMORYSTREAM_REALLOC_NATIVEINT} // TMemoryStream.Realloc uses NativeInt instead of Longint
                                             {$IF CompilerVersion >= 36} //Delphi 12 Athens
                                               {$DEFINE NATIVEINT_WEAK_REFERENCE} // TMemoryStream.Realloc uses NativeInt instead of Longint
