@@ -57,7 +57,7 @@ interface
 
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL} //if set we have an empty unit
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, FmtBCD, Math,
   {$IF defined(UNICODE) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows,{$IFEND}
   ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZPlainPostgreSqlDriver,
   ZCompatibility, ZVariant, ZDbcGenericResolver,
@@ -1271,6 +1271,7 @@ var
     TS: TZTimeStamp absolute BCD;
     D: TZDate absolute BCD;
     T: TZTime absolute BCD;
+    dbl: Double;
   begin
     L := Length(FASQL);
     N := BindList.Count shl 4;
@@ -1311,7 +1312,15 @@ var
                 Data := FPQparamValues[i];
                 case FPQParamOIDs[I] of
                   INT8OID:  SQLWriter.AddOrd(PG2Int64(Data), TmpSQL);
-                  FLOAT8OID:SQLWriter.AddFloat(PG2Double(Data), TmpSQL);
+                  FLOAT8OID: begin
+                              dbl := PG2Double(Data);
+                              L := Ord((dbl = Infinity) or (dbl = NegInfinity) or (dbl = NaN));
+                              if L <> 0 then
+                                SQLWriter.AddChar(#39, TmpSQL);
+                              SQLWriter.AddFloat(dbl, TmpSQL);
+                              if L <> 0 then
+                                SQLWriter.AddChar(#39, TmpSQL);
+                            end;
                   CASHOID:  begin
                               i64 := PG2Int64(Data) * 100;
                               SQLWriter.AddDecimal(C, TmpSQL);
