@@ -1272,6 +1272,7 @@ var
     D: TZDate absolute BCD;
     T: TZTime absolute BCD;
     dbl: Double;
+    sgl: Single;
   begin
     L := Length(FASQL);
     N := BindList.Count shl 4;
@@ -1299,7 +1300,15 @@ var
                   INT2OID:  SQLWriter.AddOrd(PG2SmallInt(Data), TmpSQL);
                   INT4OID:  SQLWriter.AddOrd(PG2Integer(Data), TmpSQL);
                   OIDOID:   SQLWriter.AddOrd(PG2Cardinal(Data), TmpSQL);
-                  FLOAT4OID:SQLWriter.AddFloat(PG2Single(Data), TmpSQL);
+                  FLOAT4OID:begin
+                              sgl := PG2Single(Data);
+                              L := Ord (IsInfinite(sgl) or IsNan(sgl));
+                              if L <> 0 then
+                                SQLWriter.AddChar(#39, TmpSQL);
+                              SQLWriter.AddFloat(sgl, TmpSQL);
+                              if L <> 0 then
+                                SQLWriter.AddChar(#39, TmpSQL);
+                            end;
                   DATEOID:  begin
                               PG2Date(PInteger(Data)^, D.Year, D.Month, d.Day);
                               D.IsNegative := False;
