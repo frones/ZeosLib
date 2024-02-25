@@ -72,12 +72,18 @@ type
 
   TZYubiOtpSecurityModule = class(TZAbstractSecurityModule)
   protected
-    FYubikeysName: String;
+    FYubikeysFile: String;
     FAddDatabase: Boolean;
     FDatabaseSeparator: String;
     FBaseURL: String;
     FClientID: Integer;
     FSecretKey: String;
+    FYubikeySQL: String;
+    FDBUser: String;
+    FDBPassword: String;
+    FReplacementUserNameColumn: String;
+    function CheckUserYubikeyFile(const UserName, Password, ConnectionName: String): Boolean;
+    function CheckUserYubikeyDatabase(var UserName: String; const Password, ConnectionName: String): Boolean;
   public
     function CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean; override;
     procedure LoadConfig(IniFile: TIniFile; const Section: String); override;
@@ -159,20 +165,19 @@ begin
   FModuleName := Section;
 end;
 
-function TZYubiOtpSecurityModule.CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean;
+{------------------------------------------------------------------------------}
+
+function TZYubiOtpSecurityModule.CheckUserYubikeyFile(const UserName, Password, ConnectionName: String): Boolean;
 var
   Yubikeys: TStringList;
   AllowedKeys: String;
   PublicIdentity: String;
   YubikeysUser: String;
-  YubiStatus: TYubiOtpStatus;
-  RemainingPassword: String;
 begin
-  Result := false;
   Yubikeys := TStringList.Create;
   try
     Yubikeys.NameValueSeparator:=':';
-    Yubikeys.LoadFromFile(FYubikeysName, TEncoding.UTF8);
+    Yubikeys.LoadFromFile(FYubikeysFile, TEncoding.UTF8);
     YubikeysUser := UserName;
     if FAddDatabase then
       YubikeysUser := YubikeysUser + FDatabaseSeparator + ConnectionName;
@@ -185,6 +190,72 @@ begin
   finally
     FreeAndNil(Yubikeys);
   end;
+end;
+
+function TZYubiOtpSecurityModule.CheckUserYubikeyDatabase(var UserName: String; const Password, ConnectionName: String): Boolean;
+var
+  URL: String;
+  Conn: IZConnection;
+  Stmt: IZPreparedStatement;
+  RS: IZResultSet;
+  PropertiesList: TStringList;
+  PublicIdentity: String;
+  YubikeysUser: String;
+begin
+  Result := False;
+
+  if FAddDatabase then
+    YubikeysUser := YubikeysUser + FDatabaseSeparator + ConnectionName
+  else
+    YubikeysUser := UserName;
+
+  PublicIdentity := GetYubikeyIdentity(Password);
+
+  URL := ConfigManager.ConstructUrl(ConnectionName, FDBUser, FDBPassword, False);
+  PropertiesList := TStringList.Create;
+  try
+    Conn := DriverManager.GetConnectionWithParams(Url, PropertiesList);
+  finally
+    FreeAndNil(PropertiesList);
+  end;
+
+  Stmt := Conn.PrepareStatement(FYubikeySQL);
+  Stmt.SetResultSetConcurrency(rcReadOnly);
+  Stmt.SetResultSetType(rtForwardOnly);
+  Stmt.SetString(FirstDbcIndex, PublicIdentity);
+  Stmt.SetString(FirstDbcIndex + 1, YubikeysUser);
+  if Stmt.ExecutePrepared then begin
+    RS := Stmt.GetResultSet;
+    if Assigned(RS) and RS.IsBeforeFirst then begin
+      if RS.Next then begin
+        try
+          if FReplacementUserNameColumn <> '' then
+            UserName := RS.GetStringByName(FReplacementUserNameColumn);
+          Result := True;
+        finally
+          RS.Close;
+        end;
+      end else begin
+        raise Exception.Create('No record for user ' + UserName + ' and Yubikey ' + PublicIdentity + '  found.');
+      end;
+    end;
+  end;
+  RS := nil;
+  Stmt := nil;
+  Conn.Close;
+  Conn := nil;
+end;
+
+function TZYubiOtpSecurityModule.CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean;
+var
+  YubiStatus: TYubiOtpStatus;
+  RemainingPassword: String;
+begin
+  Result := false;
+  if FYubikeysFile <> '' then
+    Result := CheckUserYubikeyFile(UserName, Password, ConnectionName);
+  if FYubikeySQL <> '' then
+    Result := CheckUserYubikeyDatabase(UserName, Password, ConnectionName);
 
   if Result then begin
     YubiStatus := VerifyYubiOtp(FBaseURL, Password, RemainingPassword, FClientID, FSecretKey);
@@ -199,12 +270,16 @@ procedure TZYubiOtpSecurityModule.LoadConfig(IniFile: TIniFile; const Section: S
 begin
   inherited;
   Logger.Debug('Initializing Security module ' + Section);
-  FYubikeysName := IniFile.ReadString(Section, 'Yubikeys File', '');
+  FYubikeysFile := IniFile.ReadString(Section, 'Yubikeys File', '');
   FAddDatabase := IniFile.ReadBool(Section, 'Add Database To Username', false);
   FDatabaseSeparator := IniFile.ReadString(Section, 'Database Separator', '@');
   FBaseURL := IniFile.ReadString(Section, 'Base URL', 'https://api.yubico.com/wsapi/2.0/verify');
   FClientID := IniFile.ReadInteger(Section, 'Client ID', 0);
   FSecretKey := IniFile.ReadString(Section, 'Secret Key', '');
+  FYubikeySQL := IniFile.ReadString(Section, 'Yubikey SQL', '');
+  FDBUser := IniFile.ReadString(Section, 'DB User', '');
+  FDBPassword := IniFile.ReadString(Section, 'DB Password', '');
+  FReplacementUserNameColumn := IniFile.ReadString(Section, 'Replacement User Column', '');
 end;
 
 {------------------------------------------------------------------------------}
