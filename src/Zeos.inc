@@ -437,6 +437,9 @@
       {$DEFINE FAST_MOVE}
     {$IFEND}
   {$IFEND CompilerVersion < 15}
+  {$IFDEF VER360}
+    {$DEFINE ILINK_HAS_TBCD_IN_UNIONS_BUG}
+  {$ENDIF VER360}
 {$ENDIF}
 
 {$IFDEF LINUX}

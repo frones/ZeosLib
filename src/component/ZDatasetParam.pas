@@ -73,6 +73,9 @@ type
   PBoolean = ^Boolean;
   {$ENDIF}
   TZParamValue = record //don't use any managed types here!!!!
+    {$IFDEF ILINK_HAS_TBCD_IN_UNIONS_BUG}
+    pvBCD: TBCD;
+    {$ENDIF}
     case Integer of
       0:  (pvBool: Boolean);
       1:  (pvByte: Byte);
@@ -86,7 +89,9 @@ type
       9:  (pvSingle: Single);
       10: (pvDouble: Double);
       11: (pvCurrency: Currency);
+      {$IFNDEF ILINK_HAS_TBCD_IN_UNIONS_BUG}
       12: (pvBCD: TBCD);
+      {$ENDIF}
       13: (pvDateTime: TDateTime);
       14: (pvDate: TZDate);
       15: (pvTime: TZTime);
@@ -100,7 +105,7 @@ type
       {$IF defined(DELPHI) or defined(FPC_HAS_TYPE_EXTENDED)}
       20: (pvExtended: Extended);
       {$IFEND}
-    end;
+  end;
 
   TZArrayType = (atDML, atIN{, atArrayField yet not supported});
   TZParams = class; //forward
