@@ -62,7 +62,7 @@ type
   TDbcProxyConnectionList = TList<TDbcProxyConnection>;
 
   TDbcProxyConnectionInfo = record
-    ID: String;
+    SessionNr: Int64;
     Database: String;
     User: String;
     Created: TDateTime;
@@ -215,7 +215,7 @@ begin
       Connection := List.Items[x];
       Result[x].Created := Connection.CreationTime;
       Result[x].Database := Connection.DatabaseName;
-      Result[x].ID := Connection.ID;
+      Result[x].SessionNr := Connection.Nr;
       Result[x].LastAccess := Connection.LastAccessTime;
       Result[x].User := Connection.OriginalUser;
     end;

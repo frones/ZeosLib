@@ -62,6 +62,7 @@ type
   TDbcProxyConnection = class
   protected
     FID: String;
+    FNr: Int64;
     FZeosConnection: IZConnection;
     FLastAccessTime: TDateTime;
     FCriticalSection: TCriticalSection;
@@ -73,6 +74,7 @@ type
     destructor Destroy; override;
     property ZeosConnection: IZConnection read FZeosConnection;
     property ID: String read FID;
+    property Nr: Int64 read FNr;
     property LastAccessTime: TDateTime read FLastAccessTime;
     property CreationTime: TDateTime read FCreationTime;
     property OriginalUser: String read FOriginalUser write FOriginalUser;
@@ -87,6 +89,15 @@ implementation
 
 uses
   ZExceptions;
+
+var
+  NextSessionNr: Int64;
+
+function GetNextSessionNr: Int64;
+begin
+  Result := NextSessionNr;
+  Inc(NextSessionNr);
+end;
 
 procedure RaiseNotImplemented(FunctionName: String);
 begin
@@ -103,6 +114,7 @@ begin
   FZeosConnection := AConnection;
   FLastAccessTime := Now;
   FCreationTime := LastAccessTime;
+  FNr := GetNextSessionNr;
 end;
 
 destructor TDbcProxyConnection.Destroy;
@@ -123,5 +135,8 @@ begin
   FLastAccessTime := Now;
   FCriticalSection.Leave;
 end;
+
+initialization
+  NextSessionNr := 1;
 
 end.

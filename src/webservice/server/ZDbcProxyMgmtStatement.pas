@@ -133,7 +133,7 @@ const
   AttachmentsColumnCount = 5;
   AttachmentsColumns: array[FirstDbcIndex..AttachmentsColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
-    (Name: 'ID'; SQLType: stString; Length: 25),
+    (Name: 'NR'; SQLType: stLong; Length: 0),
     (Name: 'DATABASE_NAME'; SQLType: stString; Length: 25),
     (Name: 'USER_NAME'; SQLType: stString; Length: 25),
     (Name: 'CREATED'; SQLType: stTimestamp; Length: 0),
@@ -176,7 +176,7 @@ begin
   InfoList := ConnectionManager.GetConnectionInfoList;
   for x := 0 to High(InfoList) do begin
     FLastResultSet.MoveToInsertRow;
-    FLastResultSet.UpdateAnsiString(FirstDbcIndex, InfoList[x].ID);
+    FLastResultSet.UpdateLong(FirstDbcIndex, InfoList[x].SessionNr);
     FLastResultSet.UpdateAnsiString(FirstDbcIndex+1, InfoList[x].Database);
     FLastResultSet.UpdateAnsiString(FirstDbcIndex+2, InfoList[x].User);
     FLastResultSet.UpdateTimestamp(FirstDbcIndex+3, InfoList[x].Created);
