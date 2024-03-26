@@ -105,7 +105,7 @@ implementation
 {$IFDEF ENABLE_TOFU_CERTIFICATES}
 
 uses {$IFDEF WINDOWS}Windows, ShlObj, {$ELSE}unix, {$IFEND}zeosproxy_imp, openssl,
-  synautil, base64, dateutils, math;
+  base64, dateutils, math;
 
 const
   ValidDays = 365;
@@ -175,7 +175,7 @@ begin
     EvpPkeyAssign(pk, EVP_PKEY_RSA, rsa);
     X509SetVersion(x, 2);
 //    Asn1IntegerSet(X509getSerialNumber(x), 0);
-    Asn1IntegerSet(X509getSerialNumber(x), GetTick);
+    Asn1IntegerSet(X509getSerialNumber(x), GetTickCount);
     t := Asn1UtctimeNew;
     try
       X509GmtimeAdj(t, -60 * 60 *24);
