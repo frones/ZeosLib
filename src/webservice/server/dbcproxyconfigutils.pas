@@ -1,6 +1,7 @@
 unit dbcproxyconfigutils;
 
 {$I dbcproxy.inc}
+{$MACRO ON}
 
 interface
 
@@ -73,11 +74,16 @@ begin
   LibSslFile := ExtractFilePath(ParamStr(0)) + 'libssl-1_1-x64.dll';
   LibCryptoFile := ExtractFilePath(ParamStr(0)) + 'libcrypto-1_1-x64.dll';
   {$ENDIF}
-  {$ENDIF}
   if FileExists(LibSslFile) and FileExists(LibCryptoFile) then begin
+    {$IF FPC_FULLVERSION <= 30202}
     openssl.DLLSSLName := LibSslFile;
     openssl.DLLUtilName := LibCryptoFile;
+    {$ELSE}
+    openssl.SSL_DLL_Names[1] := LibSslFile;
+    openssl.Crypto_DLL_Names[1] := LibCryptoFile;
+    {$IFEND}
   end;
+  {$ENDIF}
 end;
 
 end.
