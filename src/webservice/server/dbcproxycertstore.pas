@@ -104,7 +104,7 @@ implementation
 
 {$IFDEF ENABLE_TOFU_CERTIFICATES}
 
-uses {$IFDEF WINDOWS}Windows, ShlObj, {$ELSE}unix, {$IFEND}zeosproxy_imp, ssl_openssl11_lib,
+uses {$IFDEF WINDOWS}Windows, ShlObj, {$ELSE}unix, {$IFEND}zeosproxy_imp, openssl,
   synautil, base64, dateutils, math;
 
 const
@@ -126,9 +126,39 @@ begin
 end;
 {$ENDIF}
 
+// Some stuff to extend the existing functionality of the openssl unit
+type
+  PASN1_PCTX = SslPtr;
+  TEvpPkeyPrintPublic = function(outvar: PBIO; pkey: PEVP_PKEY; indent: Integer;
+    pctx: PASN1_PCTX): Integer; cdecl;
+
+var
+  _EvpPkeyPrintPublic: TEvpPkeyPrintPublic = nil;
+
+function InitSSLInterface: Boolean;
+begin
+  Result := openssl.InitSSLInterface;
+  if Result then begin
+    if not Assigned(_EvpPkeyPrintPublic) then begin
+      _EvpPkeyPrintPublic := GetProcAddress(SSLUtilHandle, 'EVP_PKEY_print_public');
+      Result := Assigned(_EvpPkeyPrintPublic);
+    end;
+  end;
+end;
+
+function EvpPkeyPrintPublic(outvar: PBIO; pkey: PEVP_PKEY; indent: Integer;
+  pctx: PASN1_PCTX): Integer;
+begin
+  if InitSSLInterface and Assigned(_EvpPkeyPrintPublic) then
+    Result := _EvpPkeyPrintPublic(outvar, pkey, indent, pctx)
+  else
+    Result := 0;
+end;
+
+// The function to create self signed certificates
 function CreateSelfSignedCert(const HostName, Country: String; const ValidDays: Integer; out Certificate, PrivateKey: RawBytestring; out PublicKey: AnsiString): Boolean;
 var
-  pk: EVP_PKEY;
+  pk: PEVP_PKEY;
   x: PX509;
   rsa: PRSA;
   t: PASN1_UTCTIME;
@@ -437,7 +467,7 @@ begin
 
   if FCertificates.Count = 0 then
     AddNewCertificate
-  else if DaysBetween(Date, MaxValidity) > (ValidDays div 2) then
+  else if DaysBetween(Date, MaxValidity) < (ValidDays div 2) then
     AddNewCertificate;
 end;
 
