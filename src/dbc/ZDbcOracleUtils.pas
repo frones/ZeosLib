@@ -2295,6 +2295,9 @@ begin
         if Param.DataType <> SQLT_CLOB then
           Param.Precision := Param.GetUb2(OCI_ATTR_CHAR_SIZE);
         Param.csform := Param.GetUb1(OCI_ATTR_CHARSET_FORM);
+        // Comment by EH: A separate Variable would be better because Scale should
+        // be empty for character fields. I (JB) agree to this.
+        Param.Scale := Param.csform;
       end;
       Param.SQLType := NormalizeOracleTypeToSQLType(Param.DataType, Param.DataSize,
         Param.DescriptorType, Param.Precision, Param.Scale, ConSettings);
