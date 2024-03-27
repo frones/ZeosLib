@@ -774,7 +774,10 @@ begin
     else if tmp = 'SQL_DRIVER_COMPLETE_REQUIRED' then
       DriverCompletion := SQL_DRIVER_COMPLETE_REQUIRED;
 
-  ConnectStrings := SplitString(DataBase, ';');
+  tmp := DataBase;
+  if Pos('=', tmp) = 0 then
+    tmp := 'DSN=' + tmp;
+  ConnectStrings := SplitString(tmp, ';');
   AssignPropertiesToConnectionStrings(Info, ConnectStrings);
   if StrToBoolEx(ConnectStrings.Values[ConnProps_TrustedConnection]) then
     tmp := DataBase
