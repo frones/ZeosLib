@@ -775,7 +775,7 @@ begin
       DriverCompletion := SQL_DRIVER_COMPLETE_REQUIRED;
 
   tmp := DataBase;
-  if Pos('=', tmp) = 0 then
+  if System.Pos('=', tmp) = 0 then
     tmp := 'DSN=' + tmp;
   ConnectStrings := SplitString(tmp, ';');
   AssignPropertiesToConnectionStrings(Info, ConnectStrings);
