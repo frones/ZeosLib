@@ -1049,6 +1049,8 @@ begin
     FSequence := nil;
   if (FUpdateTransaction <> nil) then
     SetUpdateTransaction(nil); //unregister
+  if Assigned(FTransaction) then
+    SetTransaction(nil);
   inherited Destroy;
 end;
 
