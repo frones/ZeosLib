@@ -104,13 +104,18 @@ type
     VUnicodeString: UnicodeString;
     VRawByteString: RawByteString;
     VInterface: IZInterface;
+    {$IFDEF ILINK_HAS_TBCD_IN_UNIONS_BUG}
+    VBigDecimal: TBCD;
+    {$ENDIF}
     case TZVariantType of
       vtBoolean: (VBoolean: Boolean);
       vtInteger: (VInteger: Int64);
       vtUInteger: (VUInteger: UInt64);
       vtDouble: (VDouble: Double);
       vtCurrency: (VCurrency: Currency);
+      {$IFNDEF ILINK_HAS_TBCD_IN_UNIONS_BUG}
       vtBigDecimal: (VBigDecimal: TBCD);
+      {$ENDIF}
       vtGUID: (VGUID: TGUID);
       vtDate: (VDate: TZDate);
       vtTime: (VTime: TZTime);
