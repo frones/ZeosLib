@@ -178,7 +178,7 @@ The two data types stBigDecimal and stCurrency are not used for describing TExte
 They now are used for describing decimal and numeric field types.
 
 \subsection{Zeos Field Classes}
-Zeos introduced its own field classes.
+Zeos 8 introduces its own field classes.
 They derive from the original Fields, so can be used almost seamlessly.
 The Zeos field classes can work directly on Zeos internal structures and by this way are way faster then normal TField descandants.
 Also Zeos implements some field classes to support features of databases, that are not supported by the Delphi / Free Pascal TField implementations or to enable the use of database features on older Delphi versions where the RTL does not provide some field types.
@@ -186,6 +186,13 @@ Examples are the TZUInt64Field and Fields that support MySQLs dates with the day
 
 The new Zeos fields can be disabled, if necessary, by setting the DisableZFields property of a Zeos Dataset to True.
 In this case Zeos will not generate TZFieldDefs and will subsequently not generate the new Zeos fields.
+
+\subsubsection{TZDateTimeField}
+TZDateTimeField is a replacement for TDateTimeField.
+It allows for greater flexibility when it comes to displaying and editing Dates and Times.
+An example are dates with 0 components in them on MySQL and MariaDB.
+Also it allows a more accurate display of timestamps - up to 1 microsecond.
+
 
 \subsection{New parameters for handling of exceptions and warnings}
 Zeos 8.0 introduces two new parameters for the handling of exceptions and warnings:
@@ -215,13 +222,26 @@ Fields that don't have the pfInUpdate flag set will not get updated by Zeos.
 Fields that don't have the pfInWhere flag set will not get used for constructing the where clause of an DML statement.
 
 \subsection{output parameter support on TZQuery}
-EH@Jan Outparamter support added for the TZQuery.
-Means all SP's can be executed without using the TZStoredProc component.
-So the TZStoredProc acts like TZTable and is just a name wrapper.
-IZCallableStatement just expects the SP name.
-To get out-params running the parameter IO needs to be set explicit and for some drivers the sizes of variable types need to be set too.
+TZQuery now supports output paramaters.
+To use this feature, you need to disable the ParamCheck property of TZQuery and register the parameters manually.
+Types and sizes of parameter need to be set accordingly.
+See the following example:
 
-\textbf{Jan:}We need more information on how these things work for the information to be more useful.
+\begin{lstlisting}
+    Query.ParamCheck := False;
+    Query.SQL.Text := 'CALL abtest(?, ?, ?, ?, ?)';
+    Query.Params.CreateParam(ftInteger, 'P1', ptInPut);
+    Query.Params[0].AsInteger := 10;
+    Query.Params.CreateParam(ftInteger, 'P2', ptInPut);
+    Query.Params[1].AsInteger := 20;
+    Query.Params.CreateParam(ftString, 'P3', ptInPut);
+    Query.Params[2].Precision := 10;
+    Query.Params[2].AsString := 'xx';
+    Query.Params.CreateParam(ftInteger, 'P4', ptOutPut);
+    Query.Params.CreateParam(ftString, 'P5', ptOutPut);
+    Query.Params[4].Precision := 20;
+    Query.ExecSQL;
+\end{lstlisting}
 
 \subsection{smaller memory footprint}
 By optimizing access in TDataset descandants, Zeos is able to save on memory now if TZFields are used, which is the default for Zeos 8.0.
@@ -379,6 +399,9 @@ Possible values can be seen in table \ref{tbl:OCIAuthenticateModeValues}.
     \label{tbl:OCIAuthenticateModeValues}
 \end{table}
 
+\subsection{Support for old installations}
+Zeos does not support Oracle installations oder than Oracle 9i.
+
 \FloatBarrier
 \section{dblib (MS SQL Server with freetds / SAP Adaptive Server Enterprise)}
 
@@ -450,9 +473,11 @@ Zeos now supports ODBC for Delphi as well as for Free Pascal.
 The driver registers two drivers, namely odbc\_a and odbc\_w.
 This allows to use Wide Char drivers as well as ANSI drivers.
 To use this driver, insert the ODBC Connection string into the Database property of TZConnection.
+For examples see \url(https://www.connectionstrings.com/).
 The host name property doesn't work with this driver.
 This driver was mostly tested with Microsoft SQL Servers during development.
-Using ODBC data source names is not supported yet.
+Support for data source names is implemented in that the driver checks if there is an equals sign (=) in the database property.
+If there is no equals sign, the driver assumes that only the name of a DSN was given and internally converts to a connection sting in the form "DSN=\textless Database\textgreater".
 
 \subsection{parameters}
 
@@ -500,8 +525,25 @@ Otherwise Zeos will not be able to get metadata from the server while it reads a
 For more information see \url(https://sourceforge.net/p/zeoslib/tickets/434/\#9e48).
 
 
-\section{Webservice Proxy}
-New driver - needs extensive description.
+\section{Web Service Proxy}
+The Web Service Proxy driver is meant to work in combination with a special Zeos based web service server.
+The server can access any database supported by Zeos.
+It is Web Service based because the server and the client use SOAP over HTTP(S) to communicate with each other.
+This allows for several scenarios where regular database connections can be problematic:
+
+\begin{itemize}
+	\item
+	  Scenarios where the connection may be unstable or where the connection and IP addresses used may change.
+	  I.e. access over the internet or mobile networks or connectrions where the client transitions from mobile connections to wireless lan or even wired connections.
+	\item
+	  Work on clients where a native access library is not available.
+	  I.e. Delphi Apps for mobile phones. 
+\end{itemize}
+
+Also the web service proxy server can add a layer of security because it can add one time password schemes to the authentication used.
+
+For more information on the Web Service Proxy see \url{https://sourceforge.net/p/zeoslib/wiki/WebServiceProxyDriver/}
+
 
 \section{new unit - ZMethodInThread}
 TZMethodInThread was the first CONCEPT of a runtime component which allows the users to force long-lasting SQL operations to the background, like a simulated synchronous mode.
