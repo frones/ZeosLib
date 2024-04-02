@@ -178,6 +178,7 @@ type
     FTransactions: TZSortedList;
     FRawCharacterTransliterateOptions: TZRawCharacterTransliterateOptions;
     FFormatSettings: TZFormatSettings;
+    FDisableSavepoints: Boolean;
     procedure SetRawCharacterTransliterateOptions(Value: TZRawCharacterTransliterateOptions);
     procedure SetFormatSettings(const Value: TZFormatSettings);
     function GetFormatSettings: TZFormatSettings;
@@ -363,6 +364,7 @@ type
     property OnStartTransaction: TNotifyEvent
       read FOnStartTransaction write FOnStartTransaction;
     property OnLost: TNotifyEvent read FOnLost write FOnLost;
+    property DisableSavepoints: Boolean read FDisableSavepoints write FDisableSavepoints;
     {$IFDEF ZEOS_TEST_ONLY}
     property TestMode : Byte read FTestMode write FTestMode;
     {$ENDIF}
@@ -1152,6 +1154,8 @@ end;
 function TZAbstractConnection.StartTransaction: Integer;
 begin
   CheckConnected;
+  if FDisableSavepoints and (not FAutoCommit or (FExplicitTransactionCounter > 0))  then
+    raise EZDatabaseError.Create('Cannot start another transaction - savepoints are disabled.');
   ShowSQLHourGlass;
   try
     FTxnLevel := FConnection.StartTransaction;

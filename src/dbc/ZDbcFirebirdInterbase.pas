@@ -4551,11 +4551,12 @@ begin
   LastUpdateCount := BatchDMLArrayCount;
 end;
 
+{$IFNDEF WITH_RAWBYTESTRING}
 {$IF not declared(PRawByteString)}
 type
   PRawByteString = ^RawByteString;
 {$IFEND}
-
+{$ENDIF}
 
 const
   sRETURNING = 'RETURNING';
@@ -4585,7 +4586,7 @@ var
   PStmts, PResult, P: PAnsiChar;
   TypeToken: PRawByteString;
   procedure ComposeTypeTokens;
-  var TypeToken: PRawByteString;
+  var TypeToken: {$IFNDEF WITH_RAWBYTESTRING}ZCompatibility.{$ENDIF} PRawByteString;
     ParamIndex, j: Cardinal;
     SQLWriter: TZRawSQLStringWriter;
     CodePageInfo: PZCodePage;

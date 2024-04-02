@@ -477,7 +477,7 @@ begin
       C := I else
       C := ResultsWriter.Fields[i];
     {$R-}
-    with FColumns^.Variables[C] do
+    with FColumns[C] do
     if (valuep = nil) or (indp^[FCurrentRowBufIndex] < 0) then begin
       if not (jcsSkipNulls in JSONComposeOptions) then begin
         if ResultsWriter.Expand then

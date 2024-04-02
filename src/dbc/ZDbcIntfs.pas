@@ -187,10 +187,11 @@ type
     procedure SetPassword(const Value: string);
     function GetLibLocation: String;
     procedure SetLibLocation(const Value: String);
-    function GetURL: string;
-    procedure SetURL(const Value: string);
     procedure DoOnPropertiesChange(Sender: TObject);
     procedure AddValues(Values: TStrings);
+  protected
+    function GetURL: string; virtual;
+    procedure SetURL(const Value: string); virtual;
   public
     constructor Create; overload;
     constructor Create(const AURL: String); overload;

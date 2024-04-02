@@ -1024,9 +1024,11 @@ begin
     if MyMemoryStream.Memory = nil
     then SetBlob(ParameterIndex, stAsciiStream, TZAbstractClob.CreateWithData(PEmptyAnsiString, Value.Size, ConSettings^.ClientCodePage^.CP, ConSettings))
     else
+      {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
       if ConSettings^.ClientCodePage^.CP = zCP_UTF16 then
         SetBlob(ParameterIndex, stAsciiStream, TZAbstractClob.CreateWithData(MyMemoryStream.Memory, Value.Size, DefaultSystemCodePage, ConSettings))
       else
+      {$ENDIF}
         SetBlob(ParameterIndex, stAsciiStream, TZAbstractClob.CreateWithData(MyMemoryStream.Memory, Value.Size, ConSettings^.ClientCodePage^.CP, ConSettings));
   finally
     if NeedToRelease then
