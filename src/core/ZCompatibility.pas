@@ -353,8 +353,11 @@ type
     {$ELSE}
     RawByteString = AnsiString;
     {$ENDIF}
-    PRawByteString = ^RawByteString;
   {$ENDIF}
+  {$IF not declared(PRawByteString)}
+    PRawByteString = ^RawByteString;
+  {$IFEND}
+
 
   {$If not declared(UnicodeString)}
   UnicodeString = WideString;
