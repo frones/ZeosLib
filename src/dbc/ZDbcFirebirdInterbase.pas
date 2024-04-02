@@ -4551,13 +4551,6 @@ begin
   LastUpdateCount := BatchDMLArrayCount;
 end;
 
-{$IFNDEF WITH_RAWBYTESTRING}
-{$IF not declared(PRawByteString)}
-type
-  PRawByteString = ^RawByteString;
-{$IFEND}
-{$ENDIF}
-
 const
   sRETURNING = 'RETURNING';
   EBStart = {$IFNDEF NO_ANSISTRING}AnsiString{$ELSE}RawByteString{$ENDIF}('EXECUTE BLOCK(');
