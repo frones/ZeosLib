@@ -432,9 +432,9 @@ begin
   if fODBCPlainDriver.SQLAllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), fHENV) <> SQL_SUCCESS then
     raise EZSQLException.Create('Couldn''t allocate an Environment handle');
   //Try to SET Major Version 3 and minior Version 8
-  if fODBCPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80, 0) = SQL_SUCCESS then
+  (*if fODBCPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80, 0) = SQL_SUCCESS then
     fODBCVersion := {%H-}Word(SQL_OV_ODBC3_80)
-  else begin
+  else *)begin
     //set minimum Major Version 3
     if fODBCPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0) <> SQL_SUCCESS then
       raise EZSQLException.Create('Failed to set minimum ODBC version 3');
@@ -788,12 +788,12 @@ begin
     tmp := ComposeString(ConnectStrings, ';');
   end;
   {$IFDEF WITH_VAR_INIT_WARNING}OutConnectString := '';{$ENDIF}
-  SetLength(OutConnectString, 1024);
+  SetLength(OutConnectString, 4096);
   FLogMessage := Format(SConnect2AsUser, [URL.Database, URL.UserName]);
   try
-    Ret := fODBCPlainDriver.SQLDriverConnect(fHDBC,
-      {$IFDEF MSWINDOWS}SQLHWND(GetDesktopWindow){$ELSE}nil{$ENDIF},
-      Pointer(tmp), Length(tmp), Pointer(OutConnectString),
+    Ret := fODBCPlainDriver.SQLDriverConnect(fHDBC, nil,
+      //{$IFDEF MSWINDOWS}SQLHWND(GetDesktopWindow){$ELSE}nil{$ENDIF},
+      Pointer(tmp), Length(tmp), @OutConnectString[1],
       Length(OutConnectString), @aLen, DriverCompletion);
     if Ret <> SQL_SUCCESS then
       HandleErrorOrWarning(Ret, fHDBC, SQL_HANDLE_DBC, FLogMessage, lcConnect, Self)

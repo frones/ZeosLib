@@ -558,7 +558,7 @@ begin
     PlainDriver.Initialize(LibraryLocation);
     Assert(ODBC3BaseDriver.SQLAllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), HENV) = SQL_SUCCESS, 'Couldn''t allocate an Environment handle');
     //Try to SET Major Version 3 and minior Version 8
-    if ODBC3BaseDriver.SQLSetEnvAttr(HENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80, 0) <> SQL_SUCCESS then
+    //if ODBC3BaseDriver.SQLSetEnvAttr(HENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80, 0) <> SQL_SUCCESS then
       //set minimum Major Version 3
       Assert(ODBC3BaseDriver.SQLSetEnvAttr(HENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0) = SQL_SUCCESS, 'Couln''t set minimum ODBC-Version 3.0');
     Assert(ODBC3BaseDriver.SQLAllocHandle(SQL_HANDLE_DBC,HENV,HDBC) = SQL_SUCCESS, 'Couldn''t allocate a DBC handle');
