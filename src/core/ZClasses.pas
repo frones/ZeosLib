@@ -65,7 +65,7 @@ const
   ZEOS_MAJOR_VERSION = 8;
   ZEOS_MINOR_VERSION = 0;
   ZEOS_SUB_VERSION = 0;
-  ZEOS_STATUS = 'beta';
+  ZEOS_STATUS = 'release';
   ZEOS_VERSION = {$IF ZEOS_MAJOR_VERSION > 9}
                  Char(48+ZEOS_MAJOR_VERSION div 10)+Char(48+ZEOS_MAJOR_VERSION mod 10)+'.'+
                  {$ELSE}
