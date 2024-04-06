@@ -1107,7 +1107,11 @@ begin
 
   case ColType of
     stBytes, stBinaryStream:
+      {$IFDEF NEXTGEN}
       Result := ZDecodeBase64(Val);
+      {$ELSE}
+      Result := ZDecodeBase64(AnsiString(Val));
+      {$ENDIF}
     else begin
       raise EZSQLException.Create('GetBytes is not supported for ' + ColInfo.GetColumnTypeName + ' (yet). Column: ' + ColInfo.ColumnLabel);
     end;
