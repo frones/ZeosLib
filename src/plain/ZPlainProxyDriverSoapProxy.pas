@@ -68,7 +68,7 @@ interface
 
 {$IF DEFINED(ENABLE_PROXY) AND DEFINED(ENABLE_INTERNAL_PROXY)}
 
-uses Soap.InvokeRegistry, Soap.SOAPHTTPClient, System.Types, Soap.XSBuiltIns;
+uses {Soap.}InvokeRegistry, {Soap.}SOAPHTTPClient, {System.}Types, {Soap.}XSBuiltIns;
 
 const
   IS_OPTN = $0001;
@@ -240,7 +240,7 @@ function GetIZeosProxy(UseWSDL: Boolean=System.False; Addr: string=''; HTTPRIO: 
 implementation
 {$IF DEFINED(ENABLE_PROXY) AND DEFINED(ENABLE_INTERNAL_PROXY)}
 
-uses System.SysUtils;
+uses {System.}SysUtils;
 
 function GetIZeosProxy(UseWSDL: Boolean; Addr: string; HTTPRIO: THTTPRIO): IZeosProxy;
 const
