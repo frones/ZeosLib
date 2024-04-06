@@ -124,7 +124,7 @@ const
 implementation
 {$IFNDEF ZEOS_DISABLE_ODBC} //if set we have an empty unit
 
-uses ZEncoding, ZSysUtils, ZMessages, ZDbcLogging, ZDbcUtils
+uses ZEncoding, ZSysUtils, ZMessages, ZDbcLogging, ZDbcUtils, ZExceptions
  {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
 
 function SQL_LEN_DATA_AT_EXEC(Len: SQLLEN): SQLLEN;
@@ -556,12 +556,15 @@ begin
   ODBC3BaseDriver := TZODBC3PlainDriver(PlainDriver.GetInstance);
   try
     PlainDriver.Initialize(LibraryLocation);
-    Assert(ODBC3BaseDriver.SQLAllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), HENV) = SQL_SUCCESS, 'Couldn''t allocate an Environment handle');
+    if ODBC3BaseDriver.SQLAllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), HENV) <> SQL_SUCCESS then
+      raise EZSQLException.Create('Couldn''t allocate an Environment handle');
     //Try to SET Major Version 3 and minior Version 8
     //if ODBC3BaseDriver.SQLSetEnvAttr(HENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80, 0) <> SQL_SUCCESS then
       //set minimum Major Version 3
-      Assert(ODBC3BaseDriver.SQLSetEnvAttr(HENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0) = SQL_SUCCESS, 'Couln''t set minimum ODBC-Version 3.0');
-    Assert(ODBC3BaseDriver.SQLAllocHandle(SQL_HANDLE_DBC,HENV,HDBC) = SQL_SUCCESS, 'Couldn''t allocate a DBC handle');
+      if ODBC3BaseDriver.SQLSetEnvAttr(HENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0) <> SQL_SUCCESS then
+        raise EZSQLException.Create('Couln''t set minimum ODBC-Version 3.0');
+    if ODBC3BaseDriver.SQLAllocHandle(SQL_HANDLE_DBC,HENV,HDBC) <> SQL_SUCCESS then
+      raise EZSQLException.Create('Couldn''t allocate a DBC handle.');
     {$IFDEF WITH_VAR_INIT_WARNING}Result := '';{$ENDIF}
     SetLength(Result, 1024);
     aLen := 0;
