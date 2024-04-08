@@ -37,7 +37,7 @@ var
   OutStream: TBytesStream;
   {$ELSE}
   InStream: TMemoryStream;
-  OutStream: TBytesStream;
+  OutStream: {$IF DECLARED(TBytesStream)}TBytesStream{$ELSE}TMemoryStream{$IFEND};
   {$ENDIF}
 {$ENDIF}
 begin
@@ -63,14 +63,20 @@ begin
     {$ELSE}
     try
       InStream := TMemoryStream.Create;
-      OutStream := TBytesStream.Create;
+      OutStream := {$IF DECLARED(TBytesStream)}TBytesStream{$ELSE}TMemoryStream{$IFEND}.Create;
 
       InStream.Write(InStr[1], Length(InStr));
       InStream.Position := 0;
 
       DecodeStream(InStream, OutStream);
 
+      {$IF DECLARED(TBytesStream)}
       Result := OutStream.Bytes;
+      {$ELSE}
+      SetLength(Result, OutStream.Size);
+      OutStream.Position := 0;
+      OutStream.Read(Result[0], OutStream.Size);
+      {$IFEND}
     finally
       if Assigned(InStream) then
         FreeAndNil(InStream);
@@ -89,7 +95,7 @@ var
   EncodingStream: TBase64EncodingStream;
   OutStream: TStringStream;
   {$ELSE}
-  InStream: TBytesStream;
+  InStream: {$IF DECLARED(TBytesStream)}TBytesStream{$ELSE}TMemoryStream{$IFEND};
   OutStream: TMemoryStream;
   {$ENDIF}
 {$ENDIF}
@@ -116,7 +122,13 @@ begin
     end;
     {$ELSE}
     try
+      {$IF DECLARED(TBytesStream)}
       InStream := TBytesStream.Create(InValue);
+      {ELSE}
+      InStream := TMemoryStream.Create;
+      InStream.Write(InValue[0], Length[InValue]);
+      InStream.Position := 0;
+      {$IFEND}
       OutStream := TMemoryStream.Create;
 
       EncodeStream(InStream, OutStream);
