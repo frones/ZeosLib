@@ -159,8 +159,8 @@
                   {$DEFINE WITH_FTLONGWORD}                 // ftLongWord is supported
                   {$DEFINE WITH_FTBYTE}                     // ftByte is supported
                   {$DEFINE WITH_FTEXTENDED}                 // ftExtended is supported
-                  {$IF FPC_FULLVERSION >= 30300}
                   {$DEFINE WITH_FTSINGLE}                   // ftSingle is supported
+                  {$IF FPC_FULLVERSION >= 30300}
                   {$DEFINE WITH_FTSHORTINT}                 // ftShortInt is supported
                   {$IFEND}
                 {$IFEND} 
