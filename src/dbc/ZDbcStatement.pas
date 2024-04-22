@@ -1669,6 +1669,8 @@ var ImmediatelyReleasable: IImmediatelyReleasable;
 begin
   if not FClosed then begin
     FClosed := True;
+    if FConnection <> nil then
+      FConnection.DeregisterStatement(Self);	
     if (FOpenResultSet <> nil) and Supports(IZResultSet(FOpenResultSet), IImmediatelyReleasable, ImmediatelyReleasable) and
        (ImmediatelyReleasable <> Sender) then
       ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
@@ -1678,8 +1680,6 @@ begin
     if Assigned(Connection) and Supports(Connection, IImmediatelyReleasable, ImmediatelyReleasable) and
        (ImmediatelyReleasable <> Sender) then
       ImmediatelyReleasable.ReleaseImmediat(Sender, AError);
-    if FConnection <> nil then
-      FConnection.DeregisterStatement(Self);
   end;
 end;
 
