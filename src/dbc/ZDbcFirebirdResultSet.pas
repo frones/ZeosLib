@@ -1337,6 +1337,8 @@ begin
     WriteStream := Lob.CreateLobStream(FColumnCodePage, lsmWrite);
     P := nil;
     try
+      if not FBlobInfoFilled then
+        FLobStream.OpenLob;
       if FBlobInfo.TotalSize > 0 then begin
         segmentsize := FBlobInfo.MaxSegmentSize;
         GetMem(P, SegmentSize);
