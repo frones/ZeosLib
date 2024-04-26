@@ -1764,7 +1764,7 @@ begin
     Query.Open;
     Check(not Query.FieldByName('clob').IsNull, 'IsNull is expected to be false #1');
     //Activating this lines makes the test work out good.
-    CheckEquals('TEST FIELD BLOB', Query.FieldByName('clob').AsString, 'Check AsString #1');
+    //CheckEquals('TEST FIELD BLOB', Query.FieldByName('clob').AsString, 'Check AsString #1');
     tempstr := LowerCase(Query.FieldByName('clob').DisplayText);
     Check((tempstr = '(memo)') or (tempstr = '(widememo)'), 'Check DisplayText #1');
     Query.Edit;
