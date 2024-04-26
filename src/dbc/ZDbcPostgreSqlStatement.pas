@@ -318,8 +318,7 @@ uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}Types,
   ZSysUtils, ZFastCode, ZMessages, ZEncoding, ZTokenizer, ZDbcCachedResultSet,
   ZDbcPostgreSqlUtils, ZDbcProperties, ZDbcResultSet, ZDbcPostgreSqlResultSet
-  {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND}
-  {$IFDEF NO_INLINE_SIZE_CHECK}, Math{$ENDIF};
+  {$IF defined(NO_INLINE_SIZE_CHECK) and not defined(UNICODE) and defined(MSWINDOWS)},Windows{$IFEND};
 
 const
    cLoggingType: array[Boolean] of TZLoggingCategory = (lcExecPrepStmt,lcExecute);

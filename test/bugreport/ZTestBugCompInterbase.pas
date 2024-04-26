@@ -105,6 +105,7 @@ type
     procedure TestSF443;
     procedure TestSF_Internal7;
     procedure TestSF524;
+    procedure TestSF595;
     procedure TestDisconnect;
     procedure Test_SF_Ticket512;
     procedure TestTransactionMonitoring;
@@ -1745,6 +1746,41 @@ begin
     finally
       FreeAndNil(Query);
     end;
+  end;
+end;
+
+procedure ZTestCompInterbaseBugReport.TestSF595;
+var
+  Query: TZQuery;
+  tempstr: String;
+begin
+  Connection.Connect;
+  Query := CreateQuery;
+  try
+    Connection.ExecuteDirect('delete from Ticket595');
+    Connection.ExecuteDirect('insert into ticket595 values (1, ''ABC'', ''TEST FIELD BLOB'')');
+    Query.SQL.Text := 'select * from ticket595';
+    Query.DisableZFields := false;
+    Query.Open;
+    Check(not Query.FieldByName('clob').IsNull, 'IsNull is expected to be false #1');
+    //Activating this lines makes the test work out good.
+    CheckEquals('TEST FIELD BLOB', Query.FieldByName('clob').AsString, 'Check AsString #1');
+    tempstr := LowerCase(Query.FieldByName('clob').DisplayText);
+    Check((tempstr = '(memo)') or (tempstr = '(widememo)'), 'Check DisplayText #1');
+    Query.Edit;
+    try
+      Query.FieldByName('string').AsString := 'TEST';
+      Query.Post;
+    except
+      Query.Cancel;
+    end;
+
+    Check(not Query.FieldByName('clob').IsNull, 'IsNull is expected to be false #2');
+    CheckEquals('TEST FIELD BLOB', Query.FieldByName('clob').AsString, 'Check AsString #2');
+    tempstr := LowerCase(Query.FieldByName('clob').DisplayText);
+    Check((tempstr = '(memo)') or (tempstr = '(widememo)'), 'Check DisplayText #2');
+  finally
+    FreeAndNil(Query);
   end;
 end;
 
