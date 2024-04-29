@@ -176,7 +176,8 @@ type
     function SetConsettings: Boolean;
   private
     class function CreateConversionError(Current, Expected: TZSQLType): EVariantTypeCastError;
-    class function CreateIndexError(Value: Integer): EListError;
+    class function CreateIndexError(Value: Integer): EListError; overload;
+    class function CreateIndexError(Value: Cardinal): EListError; overload;
     procedure SetSQLType(Value: TZSQLType);
     procedure SetSQLDataType(Value: TZSQLType; ZVarType: TZVariantType);
     procedure SetDataType(Value: TFieldType);
@@ -1410,6 +1411,11 @@ begin
 end;
 
 class function TZParam.CreateIndexError(Value: Integer): EListError;
+begin
+  Result := EListError.CreateFmt(SListIndexError, [Value]);
+end;
+
+class function TZParam.CreateIndexError(Value: Cardinal): EListError;
 begin
   Result := EListError.CreateFmt(SListIndexError, [Value]);
 end;
