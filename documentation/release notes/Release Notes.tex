@@ -66,7 +66,7 @@ If you have any problems with Zeos 8.0, please get in contact with us on the for
 Zeos 8.0 supports Delphi versions from Delphi 7 to 12.
 Besides the x86 and x86\_64 compilers, Zeos now also supports the Nextgen compilers (starting from Delphi XE2), and so supports all available platforms on Delphi.
 So on Delphi Windows, macOS / Mac OS X, iOS and Android are supported now.
-The Free Pascal compiler is supported from version 3.0 to version 3.2.
+The Free Pascal compiler is supported version 3.0 to version 3.2.2.
 Older versions might work but don't get official support by us anymore.
 
 \subsection{New Drivers}
@@ -87,7 +87,7 @@ So protocol names like "firebird-3.0" will not work anymore.
 Please use protocol names without version numbers instead, like "firebird".
 
 \subsection{Property Documentation}
-Zeos drivers support a multitude of parameters. via the "`Properties"' property of our components.
+Zeos drivers support a multitude of parameters via the "`Properties"' property of our components.
 These parameters are now collected in the new file ZDbcProperties.pas and also in ZPropertiesEditor.pas.
 Based on the latter file, we will release a more detailed documentation for Zeos driver properties.
 
@@ -248,10 +248,11 @@ By optimizing access in TDataset descandants, Zeos is able to save on memory now
 
 \subsection{TZParam}
 
-TZParam will follow up. 
-Not yet commited.
+% ToDo: Explain TZParam and batch bindings in a better way.
 
-\textbf{Jan:}I assume this is important for explaining how batch bindings work on Zeos?
+Zeos now implements its own paramater type TZParam.
+This will lead to problems when parameters are stored in dfm/lfm files.
+The new TZParam became necessary to support batch DML statements on the component layer - with TZQuery and TZReadOnlyQuery.
 
 \subsection{new component TZTransaction}
 
@@ -277,9 +278,9 @@ A simple example how to use the new TZTransaction can be seen in the test case T
 \subsection{Support for TGUID-Field}
 Zeos now supports different ways to store GUIDs in Firebird and map them to TGUIDField:
 \begin{itemize}
-  \item SetGUIDByType -> all CHAR(16) CHARACTER SET OCTETS type columns will be treated as GUID columns. Can be used on Connection and DataSet.
-  \item GUIDDomains -> list of database domains that are to be treated as GUID columns. List separators are ';' and ','. Can be used on connection only.
-  \item GUIDFields -> list of fields that should be treated as GUID type fields. List separators are ';' and ','. Can be used on Dataset only.
+  \item SetGUIDByType: all CHAR(16) CHARACTER SET OCTETS type columns will be treated as GUID columns. Can be used on Connection and DataSet.
+  \item GUIDDomains: list of database domains that are to be treated as GUID columns. List separators are ';' and ','. Can be used on connection only.
+  \item GUIDFields: list of fields that should be treated as GUID type fields. List separators are ';' and ','. Can be used on Dataset only.
 \end{itemize}
 
 \subsection{Support for timeouts on Firebird 4.0}
@@ -379,8 +380,8 @@ The character set UTF8 is now aliased to AL32UTF8 because the Oracle UTF8 is bro
 It is CESU-8 in reality which Zeos can't convert reliably.
 This might lead to problems on older servers.
 
-\subsection{New parameter OCIAuthenticateMode}
 \FloatBarrier
+\subsection{New parameter OCIAuthenticateMode}
 We introduced a new parameter OCIAuthenticateMode for Oracle authentication.
 This parameter maps to the mode parameter of the OCISessionBegin function (\url{https://docs.oracle.com/cd/B10501_01/appdev.920/a96584/oci15r13.htm}).
 OCIAuthenticateMode needs to be set as an integer because the flags it represents can be combined in some cases.
@@ -400,7 +401,7 @@ Possible values can be seen in table \ref{tbl:OCIAuthenticateModeValues}.
 \end{table}
 
 \subsection{Support for old installations}
-Zeos does not support Oracle installations oder than Oracle 9i.
+Zeos does not support Oracle installations older than Oracle 9i.
 
 \FloatBarrier
 \section{dblib (MS SQL Server with freetds / SAP Adaptive Server Enterprise)}
@@ -461,7 +462,7 @@ This driver was mostly tested with Microsoft SQL Servers during development.
 \end{tabularx}
 
 \subsection{Note for users of Microsoft SQL Server}
-Don't forget to add the "`MarsConn=True"' parameter to the connection string unless UseMetadata is turned off.
+Don't forget to add the "MarsConn=True" parameter to the connection string unless UseMetadata is turned off.
 Otherwise Zeos will not be able to get metadata from the server while it reads a result set.
 For more information see \url(https://sourceforge.net/p/zeoslib/tickets/434/\#9e48).
 
@@ -520,7 +521,7 @@ If there is no equals sign, the driver assumes that only the name of a DSN was g
 \end{tabularx}
 
 \subsection{Note for users of Microsoft SQL Server}
-Don't forget to add the "`MarsConn=True"' parameter to the connection string unless UseMetadata is turned off.
+Don't forget to add the "MarsConn=True" parameter to the connection string unless UseMetadata is turned off.
 Otherwise Zeos will not be able to get metadata from the server while it reads a result set.
 For more information see \url(https://sourceforge.net/p/zeoslib/tickets/434/\#9e48).
 
@@ -590,7 +591,7 @@ A long running operation can be canceled in two ways:
   \item 
 	  Graceful: call ZConnection.AbortOperation.
     This is not implemented for all drivers; and implemented, but untested at some.
-		If it's not supported, a EZUnsupportedException will be raised.
+		If it's not supported, an EZUnsupportedException will be raised.
 		Only use this method to keep data consistency.
   \item
 	  Ungraceful: call ZMethodInThread.Kill(True).
