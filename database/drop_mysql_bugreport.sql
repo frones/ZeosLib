@@ -50,3 +50,5 @@ drop table if EXISTS TableTicket304;
 drop table if exists biginterror;
 drop table if exists table_ticket_442;
 drop table if exists table_p156227;
+
+drop procedure if exists forum199899;

@@ -508,3 +508,10 @@ CREATE TABLE table_p156227 (
   `VatLow` numeric(10,2) NOT NULL, 
   PRIMARY KEY (`id`) 
   );
+
+delimiter //
+
+create procedure forum199899(in somevalue varchar(50)) 
+begin
+  select length(somevalue);
+end

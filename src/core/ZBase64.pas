@@ -124,7 +124,7 @@ begin
     try
       {$IF DECLARED(TBytesStream)}
       InStream := TBytesStream.Create(InValue);
-      {ELSE}
+      {$ELSE}
       InStream := TMemoryStream.Create;
       InStream.Write(InValue[0], Length[InValue]);
       InStream.Position := 0;
