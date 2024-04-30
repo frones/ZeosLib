@@ -515,3 +515,5 @@ create procedure forum199899(in somevalue varchar(50))
 begin
   select length(somevalue);
 end
+
+delimiter ;
