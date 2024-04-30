@@ -2007,7 +2007,7 @@ begin
   try
     Proc.Connection := Connection;
     Proc.StoredProcName := 'forum199899';
-    Proc.ParamByName('somevalue').AsString := 'Test';
+    Proc.ParamByName('somevalue').AsString := '';
     Proc.Open;
 
     CheckEquals(1, Proc.RecordCount, 'Record Count');
