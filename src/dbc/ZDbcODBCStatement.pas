@@ -70,7 +70,7 @@ type
     fPlainDriver: TZODBC3PlainDriver;
     fPHDBC: PSQLHDBC;
     fHSTMT: SQLHSTMT;
-    //fStreamSupport: Boolean;
+    fStreamSupport: Boolean;
     FHandleState: TZODBCHandleState;
     fZBufferLength: Integer;
     fStmtTimeOut: SQLULEN;
@@ -364,7 +364,7 @@ constructor TZAbstractODBCStatement.Create(const Connection: IZODBCConnection;
 begin
   inherited Create(Connection, SQL, Info);
   fPlainDriver := Connection.GetPlainDriver;
-  //fStreamSupport := Connection.ODBCVersion >= {%H-}Word(SQL_OV_ODBC3_80);
+  fStreamSupport := Connection.ODBCVersion >= {%H-}Word(SQL_OV_ODBC3_80);
   fPHDBC := @ConnectionHandle;
   FZBufferLength := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, DSProps_InternalBufSize, ''), 131072); //by default 128KB
   FEnhancedColInfo := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, DSProps_EnhancedColumnInfo, StrTrue));
