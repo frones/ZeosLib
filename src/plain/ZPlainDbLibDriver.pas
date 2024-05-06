@@ -790,6 +790,10 @@ type
     tdsVarBinary          = 37,
     tdsIntN               = 38,
     tdsVarchar            = 39,
+    tdsMsDate             = 40, // FreeTDS calls this SYBMSDATE, but it doesn't fit into the names nicely...
+    tdsMsTime             = 41, // FreeTDS calls this SYBMSTIME, but it doesn't fit into the names nicely...
+    tdsMsDateTime2        = 42, // FreeTDS calls this SYBMSDATETIME", but it doesn't fit into the names nicely...
+    tdsMsDateTimeOffset   = 43, // FreeTDS calls this SYBMSDATETIMEOFFSET, but it doesn't fit into the names nicely...
     tdsBinary             = 45,
     tdsChar               = 47,
     tdsInt1               = 48,
@@ -943,6 +947,20 @@ type
     dttime:	DBINT;       // 300ths of a second since midnight, 25920000 unit is 1 day
   end;
 
+  TDBDATETIMEALL = packed record
+    time: UInt64;
+    date: Int32;
+    offset: Int16;
+    flags: Word;
+  end;
+  PDBDATETIMEALL = ^TDBDATETIMEALL;
+
+const
+  DbDateTimeAllTimePrecMask  = $0007;
+  DbDateTimeAllHasTimeMask   = $2000;
+  DbDateTimeAllHasDateMask   = $4000;
+  DbDatetimeAllHasOffsetMask = $8000;
+
 (*
  * Sybase & Microsoft use different names for the dbdaterec members.
  * Keep these two structures physically identical in memory.
@@ -951,6 +969,7 @@ type
  * Giving credit where credit is due, we can acknowledge that
  * Microsoft chose the better names here, hands down.  ("datedmonth"?!)
  *)
+type
   { FreeTDS sybdb.h }
   PTDS_DBDATEREC = ^Ttds_dbdaterec;
   Ttds_dbdaterec = packed record
@@ -1689,6 +1708,12 @@ type
     procedure BeforeDestruction; override;
   end;
   {$ENDIF TEST_CALLBACK}
+
+  function TdsDateTimeAllGetPrecision(const Value: TDBDATETIMEALL): Integer;
+  function TdsDateTimeAllHasDate(const Value: TDBDATETIMEALL): Boolean;
+  function TdsDateTimeAllHasTime(const Value: TDBDATETIMEALL): Boolean;
+  function TdsDateTimeAllHasOffset(const Value: TDBDATETIMEALL): Boolean;
+
 {$ENDIF ZEOS_DISABLE_DBLIB}
 
 implementation
@@ -3440,6 +3465,28 @@ begin
     PDBLibMessage(Ptr).SrvName  := EmptyRaw;
     PDBLibMessage(Ptr).ProcName := EmptyRaw;
   end;
+end;
+
+{ Helper functions for TDS_DATETIMEALL}
+
+function TdsDateTimeAllGetPrecision(const Value: TDBDATETIMEALL): Integer;
+begin
+  Result := Value.flags and DbDateTimeAllTimePrecMask;
+end;
+
+function TdsDateTimeAllHasDate(const Value: TDBDATETIMEALL): Boolean;
+begin
+  Result := WordBool(Value.flags and DbDateTimeAllHasDateMask)
+end;
+
+function TdsDateTimeAllHasTime(const Value: TDBDATETIMEALL): Boolean;
+begin
+  Result := WordBool(Value.flags and DbDateTimeAllHasTimeMask)
+end;
+
+function TdsDateTimeAllHasOffset(const Value: TDBDATETIMEALL): Boolean;
+begin
+  Result := WordBool(Value.flags and DbDatetimeAllHasOffsetMask)
 end;
 
 initialization

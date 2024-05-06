@@ -80,6 +80,9 @@ function ConvertTDSTypeToSqlType(FieldType: TTDSType; Precision, Scale: Integer)
 }
 function ConvertSqlTypeToTDSType(FieldType: TZSQLType): TTDSType;
 
+function TdsDateTimeAllToDateTime(const Value: TDBDATETIMEALL): TDateTime;
+procedure TdsDateTimeAllToZeosTimeStamp(const Value: TDBDATETIMEALL; out ZeosTS: TZTimeStamp);
+
 {$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
 implementation
 {$IFNDEF ZEOS_DISABLE_DBLIB} //if set we have an empty unit
@@ -156,7 +159,7 @@ begin
       Result := stSmall;
     tdsInt4:
       Result := stInteger;
-    tdsDateTime, tdsDateTimeN, tdsDateTime4:
+    tdsDateTime, tdsDateTimeN, tdsDateTime4, tdsMsDateTime2, tdsMsDateTimeOffset:
       Result := stTimeStamp;
     tdsFlt4, tdsFltN:
       Result := stFloat;
@@ -171,6 +174,10 @@ begin
     //tdsVariant: {from tds.h -> sybase only -> na't test it}
     tdsInt8:
       Result := stLong;
+    tdsMsTime:
+      Result := stTime;
+    tdsMsDate:
+      Result := stDate;
     else
       Result := stUnknown;
   end;
@@ -199,6 +206,24 @@ begin
     stBinaryStream: Result := tdsImage;
     else Result := tdsVoid;
   end;
+end;
+
+function TdsDateTimeAllToDateTime(const Value: TDBDATETIMEALL): TDateTime;
+begin
+  if TdsDateTimeAllHasDate(Value) then begin
+    Result := Value.date + 2;
+  end else begin
+    Result := 0;
+  end;
+
+  if TdsDateTimeAllHasTime(Value) then
+    Result := Result + (Value.time / 864000000000);
+end;
+
+procedure TdsDateTimeAllToZeosTimeStamp(const Value: TDBDATETIMEALL; out ZeosTS: TZTimeStamp);
+begin
+  DecodeDateTimeToTimeStamp(TdsDateTimeAllToDateTime(Value), ZeosTS);
+  ZeosTS.Fractions := (Value.Time mod 10000000) * 100;
 end;
 
 {$ENDIF ZEOS_DISABLE_DBLIB} //if set we have an empty unit

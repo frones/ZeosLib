@@ -2040,8 +2040,17 @@ begin
           SQLType := stGUID
         else if (SQLType = stBigDecimal) and EndsWith(tmp, 'MONEY') then
           SQLType := stCurrency
-        else if (SQLType = stString) and (tmp = 'DATE') then
-          SQLType := stDate;
+        else if (SQLType = stString) then begin
+          if tmp = 'DATE' then
+            SQLType := stDate
+          else if tmp = 'TIME' then
+            SQLType := stTime
+          // These are not tested but included here becuse of the expericence with DATE and TIME...
+          else if tmp = 'DATETIME2' then
+            SQLType := stTimestamp
+          else if tmp = 'DATETIMEOFFSET' then
+            SQLType := stTimestamp;
+        end;
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
       end;
       Result.UpdateString(TableColColumnTypeNameIndex, tmp);
