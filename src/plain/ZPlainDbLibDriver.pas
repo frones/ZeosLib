@@ -949,8 +949,8 @@ type
 
   TDBDATETIMEALL = packed record
     time: UInt64;
-    date: Int32;
-    offset: Int16;
+    date: DBINT;
+    offset: DBSMALLINT;
     flags: Word;
   end;
   PDBDATETIMEALL = ^TDBDATETIMEALL;
