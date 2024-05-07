@@ -877,9 +877,9 @@ begin
     case SQLVarHolder.dty of
       { the supported String types we use }
       SQLT_AFC: if ColumnCodePage = zCP_UTF16 then begin
-                  Len := GetAbsorbedTrailingSpacesLen(PWideChar(Result), SQLVarHolder.Value_sz shr 1);
+                  Len := GetAbsorbedTrailingSpacesLen(PWideChar(Result), SQLVarHolder.DataLengths[FCurrentRowBufIndex] shr 1);
                   goto jmpW2A;
-                end else Len := GetAbsorbedTrailingSpacesLen(Result, SQLVarHolder.Value_sz);
+                end else Len := GetAbsorbedTrailingSpacesLen(Result, SQLVarHolder.DataLengths[FCurrentRowBufIndex]);
       SQLT_VST: begin
                   Len := PPOCILong(Result)^.Len;
                   Result := @PPOCILong(Result)^.data[0];
@@ -1053,9 +1053,9 @@ begin
       { the supported String types we use }
       SQLT_AFC: if ColumnCodePage = zCP_UTF16 then begin
                   Result := PWideChar(P);
-                  Len := GetAbsorbedTrailingSpacesLen(Result, SQLVarHolder.Value_sz shr 1)
+                  Len := GetAbsorbedTrailingSpacesLen(Result, SQLVarHolder.DataLengths[FCurrentRowBufIndex] shr 1);
                 end else begin
-                  Len := GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.Value_sz);
+                  Len := GetAbsorbedTrailingSpacesLen(Result, SQLVarHolder.DataLengths[FCurrentRowBufIndex]);
                   goto jmpA2W;
                 end;
       SQLT_VST: if ColumnCodePage = zCP_UTF16 then begin

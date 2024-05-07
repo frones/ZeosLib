@@ -890,7 +890,7 @@ begin
     ExecuteImmediat(S, lcTransaction);
     FSavePoints.Delete(FSavePoints.Count-1);
   end else if FTransaction <> nil then try
-    if TZFirebirdConnection(FOwner).FHardCommit or
+    if FHardCommit or
       ((FOpenCursors.Count = 0) and (FOpenUncachedLobs.Count = 0)) or
       ((FOpenUncachedLobs.Count = 0) and TestCachedResultsAndForceFetchAll)
     then begin
@@ -1011,7 +1011,7 @@ var I, RowNo: Integer;
 begin
   Result := False;
   for I := 0 to FOpenCursors.Count -1 do
-    if IZResultSet(FOpenCursors[i]).GetConcurrency <> rcUpdatable then
+    if IZResultSet(FOpenCursors[i]).getType <> rtForwardOnly then
       Exit;
   Result := True;
   while FOpenCursors.Count > 0 do begin

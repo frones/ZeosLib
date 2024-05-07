@@ -90,7 +90,7 @@ type
   { a struct for the ora var(char/byte) types }
   POCIVary = ^TOCIVary;
   TOCIVary = record
-    Len: sb2;
+    Len: ub2;
     data: array[0..7] of Byte; //just something for debugging
   end;
   {** Declares SQL Object }

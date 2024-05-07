@@ -821,19 +821,26 @@ end;
 
 function TZMySQLConnection.PrepareCallWithParams(const Name: String;
   Params: TStrings): IZCallableStatement;
+var ClientVersion: ULong;
 begin
-  if (FPLainDriver.IsMariaDBDriver and (FPLainDriver.mysql_get_client_version >= 100000)) or
-     (not FPLainDriver.IsMariaDBDriver and (FPLainDriver.mysql_get_client_version >= 50608))
+  if IsClosed then
+     Open;
+  ClientVersion := FPlainDriver.mysql_get_client_version;
+  //The mariadb clientversion has been set down to version 30000 +
+  if (FPLainDriver.IsMariaDBDriver and ((ClientVersion < 50000) or (ClientVersion >= 100207))) or
+     (not FPLainDriver.IsMariaDBDriver and (ClientVersion >= 50608))
   then Result := TZMySQLCallableStatement56up.Create(Self, Name, Params)
   else Result := TZMySQLCallableStatement56down.Create(Self, Name, Params);
 end;
 
 function TZMySQLConnection.PrepareStatementWithParams(const SQL: string;
   Info: TStrings): IZPreparedStatement;
+var ClientVersion: ULong;
 begin
   if IsClosed then
      Open;
-  if FPlainDriver.IsMariaDBDriver and (FPlainDriver.mysql_get_client_version >= 100207) and
+  ClientVersion := FPlainDriver.mysql_get_client_version;
+  if FPlainDriver.IsMariaDBDriver and ((ClientVersion >= 100207) or ( ClientVersion < 50000)) and
      (GetHostVersion >= EncodeSQLVersioning(10,3,0))
   then Result := TZMariaDBBatchDMLPreparedStatement.Create(Self, SQL, Info)
   else Result := TZMySQLEmulatedBatchPreparedStatement.Create(Self, SQL, Info);

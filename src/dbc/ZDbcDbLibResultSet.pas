@@ -148,6 +148,7 @@ type
     FDecimalSep: Char;
     FClientCP: Word;
     FByteBuffer: PByteBuffer;
+    FTempStr: String;
     procedure CheckColumnIndex(ColumnIndex: Integer);
   protected
     FDBLibConnection: IZDBLibConnection;
@@ -573,6 +574,7 @@ function TZDBLibResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt
 var
   dbData: Pointer;
   dbDatLen: Integer;
+  x: TTDSType;
 begin
   Len := 0;
   with TZDBLIBColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do begin
@@ -581,8 +583,9 @@ begin
     Result := dbData;
     Len := dbDatLen;
     LastWasNull := Result = nil;
-    if not LastWasNull then
-      case TdsType of
+    if not LastWasNull then begin
+      x := TDSType;
+      case x of
         tdsBinary, tdsBigBinary, tdsVarBinary, tdsBigVarBinary, tdsVarChar,
         tdsBigVarChar, tdsText:
             Exit;
@@ -594,6 +597,11 @@ begin
             GUIDToBuffer(dbData, Result, [guidWithBrackets]);
             Len := 38;
           end;
+        tdsMsTime: begin
+            FTempStr := FormatDateTime(GetStatement.GetConSettings^.ReadFormatSettings.TimeFormat, TdsDateTimeAllToDateTime(PDBDATETIMEALL(dbData)^));
+            Result := PAnsiChar(FTempStr);
+            Len := Length(FTempStr);
+          end;
         else begin
           Result := PAnsiChar(FByteBuffer);
           Len := FPlainDriver.dbconvert(FHandle, Ord(TDSType), dbData, Len,
@@ -601,6 +609,7 @@ begin
           //FDBLibConnection.CheckDBLibError(lcOther, 'GetPAnsiChar');
         end;
       end;
+    end;
   end;
 end;
 
@@ -1011,6 +1020,8 @@ Enc:    if FPlainDriver.DBLibraryVendorType = lvtFreeTDS //type diff
         then DT := PTDSDBDATETIME(Data)^.dtdays + 2 + (PTDSDBDATETIME(Data)^.dttime / 25920000)
         else DT := PDBDATETIME(Data)^.dtdays + 2 + (PDBDATETIME(Data)^.dttime / 25920000);
         DecodeDateTimeToTimeStamp(DT, Result);
+      end else if TDSType in [tdsMsTime, tdsMsDateTime2, tdsMsDate] then begin
+        TdsDateTimeAllToZeosTimeStamp(PDBDATETIMEALL(Data)^, Result);
       end else if (TDSType in [tdsNText, tdsNVarChar, tdsText, tdsVarchar, tdsChar]) then begin
         if (TDSType in [tdsNText, tdsChar]) then
           DL := ZDbcUtils.GetAbsorbedTrailingSpacesLen(PAnsichar(Data), DL);
