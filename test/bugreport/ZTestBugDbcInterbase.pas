@@ -81,6 +81,7 @@ type
     procedure TestTicket376_A;
     procedure TestTicket376_B;
     procedure TestTicket426;
+    procedure TestIks20240506;
   end;
 
 {$ENDIF DISABLE_INTERBASE_AND_FIREBIRD}
@@ -666,6 +667,31 @@ begin
   try
     RS:= Stmt.ExecuteQuery('select '+QuotedStr('')+' as ERROR_WITH_ZEOS from RDB$DATABASE');
     Check(RS.Next, 'there is a row and we should not get and exception');
+  finally
+    if RS <> nil then
+      RS.Close;
+    Stmt := nil;
+  end;
+end;
+
+procedure TZTestDbcInterbaseBugReport.TestIks20240506;
+var
+  Stmt: IZStatement;
+  RS: IZResultSet;
+begin
+  Stmt := Connection.CreateStatement;
+  Stmt.SetResultSetConcurrency(rcReadOnly);
+  Stmt.SetResultSetType(rtForwardOnly);
+  RS := nil;
+  CheckFalse(Connection.IsClosed, 'Could not establish a connection');
+  CheckTrue(Connection.GetAutoCommit, 'Connection should be in AutoCommit mode (#1)');
+  try
+    Connection.StartTransaction;
+    CheckFalse(Connection.GetAutoCommit, 'Connection should not in AutoCommit mode');
+    RS:= Stmt.ExecuteQuery('select * from RDB$DATABASE');
+    Check(RS.Next, 'there is a row and we should not get and exception');
+    Connection.Commit;
+    CheckTrue(Connection.GetAutoCommit, 'Connection should be in AutoCommit mode (#2)');
   finally
     if RS <> nil then
       RS.Close;
