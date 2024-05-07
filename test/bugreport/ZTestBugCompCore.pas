@@ -136,6 +136,8 @@ type
     procedure TestSF498;
     procedure TestSF499;
     procedure TestSF525;
+    // A test for https://zeoslib.sourceforge.io/viewtopic.php?t=200781
+    procedure TestForum200781;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -2128,6 +2130,22 @@ begin
     Table.Post;
 
     Table.Locate('ID', 8, []);
+  finally
+    FreeAndNil(Table);
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestForum200781;
+var
+  Table: TZMemTable;
+begin
+  Table := TZMemTable.Create(nil);
+  try
+    Table.FieldDefs.Clear;
+    Table.FieldDefs.Add('price', ftCurrency);
+    Table.Open;
+    CheckEquals(ftCurrency, Table.Fields[0].DataType);
+    Table.Close;
   finally
     FreeAndNil(Table);
   end;

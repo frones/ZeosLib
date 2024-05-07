@@ -433,7 +433,7 @@ begin
     ftSingle:
       Result := stFloat;
     {$ENDIF}
-    ftFloat:
+    ftFloat, ftCurrency:
       Result := stDouble;
     {$IFDEF WITH_FTEXTENDED}
     ftExtended:
@@ -441,8 +441,8 @@ begin
     {$ENDIF}
     ftLargeInt:
       Result := stLong;
-    ftCurrency:
-      Result := stBigDecimal;
+//    ftCurrency:
+//      Result := stBigDecimal;
     ftBCD:
       Result := stCurrency;
     ftFmtBCD:
