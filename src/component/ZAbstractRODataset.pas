@@ -1030,6 +1030,13 @@ type
     procedure Clear; override;
   End;
 
+  TZCurrencyField = Class(TZDoubleField)
+  public
+    constructor Create(AOwner: TComponent); override;
+  published
+    property Currency default True;
+  end;
+
   TZSingleField = Class({$IFDEF WITH_FTSINGLE}TSingleField{$ELSE}TZDoubleField{$ENDIF})
   private
     {$IFDEF WITH_FTSINGLE}
@@ -2722,6 +2729,7 @@ begin
       {$IFDEF WITH_WIDEMEMO}
       ftWideMemo: Result := TZUnicodeCLobField;
       {$ENDIF WITH_WIDEMEMO}
+      ftCurrency: Result := TZCurrencyField;
       else {ftBlob} Result := TZBLobField;
     end;
   end else
@@ -8587,6 +8595,15 @@ begin
   if TVarData(Value).VType <= 1 //in [varEmpty, varNull]
   then Clear
   else SetAsFloat(Value);
+end;
+
+{ TZCurrencyField }
+
+constructor TZCurrencyField.Create(AOwner: TComponent);
+begin
+  inherited;
+  SetDataType(ftCurrency);
+  Currency := True;
 end;
 
 { TZBCDField }
