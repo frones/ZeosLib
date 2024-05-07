@@ -1020,7 +1020,7 @@ Enc:    if FPlainDriver.DBLibraryVendorType = lvtFreeTDS //type diff
         then DT := PTDSDBDATETIME(Data)^.dtdays + 2 + (PTDSDBDATETIME(Data)^.dttime / 25920000)
         else DT := PDBDATETIME(Data)^.dtdays + 2 + (PDBDATETIME(Data)^.dttime / 25920000);
         DecodeDateTimeToTimeStamp(DT, Result);
-      end else if TDSType in [tdsMsTime, tdsMsDateTime2, tdsMsDate] then begin
+      end else if TDSType in [tdsMsTime, tdsMsDateTime2, tdsMsDate, tdsMsDateTimeOffset] then begin
         TdsDateTimeAllToZeosTimeStamp(PDBDATETIMEALL(Data)^, Result);
       end else if (TDSType in [tdsNText, tdsNVarChar, tdsText, tdsVarchar, tdsChar]) then begin
         if (TDSType in [tdsNText, tdsChar]) then
