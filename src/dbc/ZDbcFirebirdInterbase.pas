@@ -1563,15 +1563,22 @@ begin
 end;
 
 procedure TZInterbaseFirebirdConnection.Commit;
+var txn: IZInterbaseFirebirdTransaction; //localize
+    txnLvl: Integer;
 begin
   if Closed then
     raise EZSQLException.Create(SConnectionIsNotOpened);
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseCommit);
-  with GetActiveTransaction do begin
-    Commit;
-    if (not FRestartTransaction) and (GetTransactionLevel <= 0) then
+  txn := GetActiveTransaction;
+  try
+    txn.Commit;
+    txnLvl := txn.GetTransactionLevel;
+    if (fActiveTransaction = nil {released because of commit?}) or
+       (not FRestartTransaction) and (txnLvl <= 0) then
       SetAutoCommit(True);
+  finally
+    txn := nil;
   end;
 end;
 
@@ -2233,15 +2240,22 @@ begin
 end;
 
 procedure TZInterbaseFirebirdConnection.Rollback;
+var txn: IZInterbaseFirebirdTransaction; //localize
+    txnLvl: Integer;
 begin
   if Closed then
     raise EZSQLException.Create(SConnectionIsNotOpened);
   if AutoCommit then
     raise EZSQLException.Create(SCannotUseRollback);
-  with GetActiveTransaction do begin
-    Rollback;
-    if (not FRestartTransaction) and (GetTransactionLevel <= 0) then
-      SetAutoCommit(True)
+  txn := GetActiveTransaction;
+  try
+    txn.Rollback;
+    txnLvl := txn.GetTransactionLevel;
+    if (fActiveTransaction = nil {released because of commit?}) or
+       (not FRestartTransaction) and (txnLvl <= 0) then
+      SetAutoCommit(True);
+  finally
+    txn := nil;
   end;
 end;
 
