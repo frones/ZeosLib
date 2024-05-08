@@ -121,6 +121,9 @@ type
     procedure TestClearParametersAndLoggedValues;
     procedure TestAssignDBRTLParams;
     procedure Test_TField_DefaultExpression;
+    {$IFDEF WITH_TBYTES}
+    procedure TestSF597;
+    {$ENDIF}
   end;
 
   {$IF not declared(TTestMethod)}
@@ -1689,6 +1692,61 @@ begin
     Query.Free;
   end;
 end;
+
+{$IFDEF WITH_TBYTES}
+procedure TZGenericTestDataSet.TestSF597;
+var
+  Query: TZQuery;
+  TestBytes: TBytes;
+  TestByte: Byte;
+  x: Byte;
+begin
+  SetLength(TestBytes, 26);
+  TestByte := ord('a');
+  for x := TestByte to TestByte + 25 do
+    TestBytes[x-ord('a')] := x;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'insert into blob_values (b_id, b_image) values (:id, :image)';
+    Query.ParamByName('id').AsInteger := 20240508;
+    Query.ParamByName('image').AsBytes := TestBytes;
+    Query.ExecSQL;
+
+    Query.ParamByName('id').AsInteger := 20240509;
+    Query.ParamByName('image').AsBytes := nil;
+    Query.ExecSQL;
+
+    Query.SQL.Text := 'select * from blob_values where b_id = 20240508';
+    Query.Open;
+    CheckFalse(Query.FieldByName('b_image').IsNull, 'b_id should not be null');
+    Query.Edit;
+    try
+      Query.FieldByName('b_image').AsBytes := nil;
+      Query.Post;
+    except
+      Query.Cancel;
+      raise;
+    end;
+
+    Query.Close;
+    Query.SQL.Text := 'select * from blob_values where b_id = 20240509';
+    Query.Open;
+    CheckTrue(Query.FieldByName('b_image').IsNull, 'b_id should be null');
+    Query.Edit;
+    try
+      Query.FieldByName('b_image').AsBytes := nil;
+      Query.Post;
+    except
+      Query.Cancel;
+      raise;
+    end;
+  finally
+    Query.Connection.ExecuteDirect('delete from blob_values where b_id in (20240508,20240509)');
+    FreeAndNil(Query);
+  end;
+end;
+{$ENDIF}
 
 {**
 Runs a test for time filter expressions.
