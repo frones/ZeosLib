@@ -1337,8 +1337,10 @@ begin
       end else if AComp.InheritsFrom(TZSequence) then try
         TZSequence(AComp).CloseSequence
       except end else if AComp.InheritsFrom(TZAbstractTransaction) then try
-        if TZAbstractTransaction(AComp).Active then
+        if TZAbstractTransaction(AComp).Active then begin
           TZProtectedMethodTransaction(AComp).GetIZTransaction.Close;
+          TZProtectedMethodTransaction(AComp).ReleaseInternalTransaction;
+        end;
       except end else if AComp.InheritsFrom(TAbstractActiveConnectionLinkedComponent) then try
         if TAbstractActiveConnectionLinkedComponent(AComp).Active then
           TAbstractActiveConnectionLinkedComponent(AComp).SetActive(False);
