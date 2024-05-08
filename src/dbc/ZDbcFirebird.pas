@@ -1011,7 +1011,7 @@ var I, RowNo: Integer;
 begin
   Result := False;
   for I := 0 to FOpenCursors.Count -1 do
-    if IZResultSet(FOpenCursors[i]).getType <> rtForwardOnly then
+    if IZResultSet(FOpenCursors[i]).getType = rtForwardOnly then
       Exit;
   Result := True;
   while FOpenCursors.Count > 0 do begin
