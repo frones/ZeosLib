@@ -592,15 +592,15 @@ begin
         GUIDToBuffer(dbData, Result, [guidWithBrackets]);
         Len := 38;
       end else if tdstype = tdsMsTime then begin
-        FTempStr := FormatDateTime(GetStatement.GetConSettings^.ReadFormatSettings.TimeFormat, TdsDateTimeAllToDateTime(PDBDATETIMEALL(dbData)^));
+        FTempStr := AnsiString(FormatDateTime(GetStatement.GetConSettings^.ReadFormatSettings.TimeFormat, TdsDateTimeAllToDateTime(PDBDATETIMEALL(dbData)^)));
         Result := PAnsiChar(FTempStr);
         Len := Length(FTempStr);
       end else if tdstype = tdsMsDate then begin
-        FTempStr := FormatDateTime(GetStatement.GetConSettings^.ReadFormatSettings.DateFormat, TdsDateTimeAllToDateTime(PDBDATETIMEALL(dbData)^));
+        FTempStr := AnsiString(FormatDateTime(GetStatement.GetConSettings^.ReadFormatSettings.DateFormat, TdsDateTimeAllToDateTime(PDBDATETIMEALL(dbData)^)));
         Result := PAnsiChar(FTempStr);
         Len := Length(FTempStr);
       end else if tdstype in [tdsMsDateTime2, tdsMsDateTimeOffset] then begin
-        FTempStr := FormatDateTime(GetStatement.GetConSettings^.ReadFormatSettings.DateTimeFormat, TdsDateTimeAllToDateTime(PDBDATETIMEALL(dbData)^));
+        FTempStr := AnsiString(FormatDateTime(GetStatement.GetConSettings^.ReadFormatSettings.DateTimeFormat, TdsDateTimeAllToDateTime(PDBDATETIMEALL(dbData)^)));
         Result := PAnsiChar(FTempStr);
         Len := Length(FTempStr);
       end else begin
