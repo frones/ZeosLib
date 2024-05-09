@@ -1702,6 +1702,7 @@ var
   x: Byte;
   BinLob: String;
 begin
+  Connection.Connect;
   case Connection.DbcConnection.GetServerProvider of
     spOracle: BinLob := 'b_blob';
     spSQLite: BinLob := 'b_blob';
