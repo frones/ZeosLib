@@ -1700,7 +1700,14 @@ var
   TestBytes: TBytes;
   TestByte: Byte;
   x: Byte;
+  BinLob: String;
 begin
+  case Connection.DbcConnection.GetServerProvider of
+    spOracle: BinLob := 'b_blob';
+    spSQLite: BinLob := 'b_blob';
+    else      BinLob := 'b_image';
+  end;
+
   SetLength(TestBytes, 26);
   TestByte := ord('a');
   for x := TestByte to TestByte + 25 do
@@ -1708,7 +1715,7 @@ begin
 
   Query := CreateQuery;
   try
-    Query.SQL.Text := 'insert into blob_values (b_id, b_image) values (:id, :image)';
+    Query.SQL.Text := 'insert into blob_values (b_id, ' + BinLob + ') values (:id, :image)';
     Query.ParamByName('id').AsInteger := 20240508;
     Query.ParamByName('image').AsBytes := TestBytes;
     Query.ExecSQL;
@@ -1719,10 +1726,10 @@ begin
 
     Query.SQL.Text := 'select * from blob_values where b_id = 20240508';
     Query.Open;
-    CheckFalse(Query.FieldByName('b_image').IsNull, 'b_id should not be null');
+    CheckFalse(Query.FieldByName(BinLob).IsNull, BinLob + ' should not be null');
     Query.Edit;
     try
-      Query.FieldByName('b_image').AsBytes := nil;
+      Query.FieldByName(BinLob).AsBytes := nil;
       Query.Post;
     except
       Query.Cancel;
@@ -1732,10 +1739,10 @@ begin
     Query.Close;
     Query.SQL.Text := 'select * from blob_values where b_id = 20240509';
     Query.Open;
-    CheckTrue(Query.FieldByName('b_image').IsNull, 'b_id should be null');
+    CheckTrue(Query.FieldByName(BinLob).IsNull, BinLob + ' should be null');
     Query.Edit;
     try
-      Query.FieldByName('b_image').AsBytes := nil;
+      Query.FieldByName(BinLob).AsBytes := nil;
       Query.Post;
     except
       Query.Cancel;
