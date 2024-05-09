@@ -3106,7 +3106,10 @@ end;
 
 procedure TZParam.SetAsBytes(const Value: TBytes);
 begin
-  SetAsBytesArray(Cardinal(-1), Value);
+  if Value = nil then
+    SetIsNull(True)
+  else
+    SetAsBytesArray(Cardinal(-1), Value);
 end;
 
 procedure TZParam.SetAsBytesArray(Index: Cardinal; const Value: TBytes);
@@ -3124,7 +3127,7 @@ var DataAddr: PPointer;
 begin
   CheckDataIndex(Integer(Index), stBytes, vtNull, DataAddr, IsNullAddr);
   if Value = nil
-  then SetIsNulls(Integer(Index), true)
+  then SetIsNulls(Index, true)
   else begin
     case FSQLDataType of
       stBytes: TBytes(DataAddr^) := Value;

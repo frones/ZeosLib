@@ -99,6 +99,7 @@ type
   protected
     procedure SetConnection(Value: TZAbstractConnection); override;
     function GetIZTransaction: IZTransaction;
+    procedure ReleaseInternalTransaction;
   public
     constructor Create(AOnwer: TComponent); override;
     procedure BeforeDestruction; override;
@@ -157,11 +158,7 @@ begin
   end;
   FreeAndNil(FParams);
   FreeAndNil(FLinkedComponents);
-  if (FTransaction <> nil) then begin
-    with GetTransactionManager do
-      if IsTransactionValid(FTransaction) then ReleaseTransaction(FTransaction);
-    FTransaction := nil;
-  end;
+  ReleaseInternalTransaction;
   if Connection <> nil then
     SetConnection(nil);
   inherited BeforeDestruction;
@@ -248,6 +245,16 @@ begin
   with Connection.DbcConnection.GetMetadata.GetDatabaseInfo do begin
     FSupportsOpenCursorsAcrossRollback := SupportsOpenCursorsAcrossRollback;
     FSupportsOpenCursorsAcrossCommit := FSupportsOpenCursorsAcrossCommit;
+  end;
+end;
+
+procedure TZAbstractTransaction.ReleaseInternalTransaction;
+begin
+  if (FTransaction <> nil) then begin
+    with GetTransactionManager do
+      if IsTransactionValid(FTransaction) then
+        ReleaseTransaction(FTransaction);
+    FTransaction := nil;
   end;
 end;
 

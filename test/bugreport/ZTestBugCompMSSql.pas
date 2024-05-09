@@ -87,6 +87,7 @@ type
     procedure TestSF391;
     procedure TestSF402;
     procedure TestSF421;
+    procedure TestDateTimeOffset;
  end;
 
 {$ENDIF ZEOS_DISABLE_MSSQL_SYBASE}
@@ -679,6 +680,33 @@ begin
     q.ExecSql;
   finally
     q.Free;
+  end;
+end;
+
+procedure TZTestCompMSSqlBugReport.TestDateTimeOffset;
+var
+  Q: TZQuery;
+  Version: Integer;
+begin
+  Connection.Connect;
+  if (Protocol = 'mssql') and (Connection.DbcConnection.GetServerProvider = spMSSQL) then begin
+    Version := Connection.ServerVersion div 1000000;
+    if Version >= 13 then begin
+      Connection.ExecuteDirect('drop table if exists datetimeoffsettest');
+      Connection.ExecuteDirect('create table datetimeoffsettest(id integer not null, value datetimeoffset)');
+      Connection.ExecuteDirect('insert into datetimeoffsettest (id, value) values (20240507, ''2024-05-07 23:00:00 +02:00'')');
+      Q := CreateQuery;
+      try
+        Q.SQL.Text := 'select * from datetimeoffsettest';
+        Q.Open;
+        CheckEquals(1, Q.RecordCount);
+        CheckEquals(20240507, Q.FieldByName('id').AsInteger);
+        CheckEquals(EncodeDateTime(2024, 05, 07, 21, 00, 00, 00), Q.FieldByName('value').AsDateTime);
+        Q.Close;
+      finally
+        FreeAndNil(Q);
+      end;
+    end
   end;
 end;
 
