@@ -1701,6 +1701,10 @@ var
   TestByte: Byte;
   x: Byte;
   BinLob: String;
+  {$IFNDEF TBLOBDATA_IS_TBYTES}
+  Bts: TBytes;
+  BlobData: TBlobData;
+  {$ENDIF}
 begin
   Connection.Connect;
   case Connection.DbcConnection.GetServerProvider of
@@ -1716,9 +1720,13 @@ begin
 
   Query := CreateQuery;
   try
+    if Connection.DbcConnection.GetServerProvider = spPostgreSQL then
+      Query.Properties.Add(DSProps_OidAsBlob+'=true');
     Query.SQL.Text := 'insert into blob_values (b_id, ' + BinLob + ') values (:id, :image)';
     Query.ParamByName('id').AsInteger := 20240508;
-    Query.ParamByName('image').AsBytes := TestBytes;
+    if Connection.DbcConnection.GetServerProvider = spPostgreSQL
+    then Query.ParamByName('image').AsBlob := TestBytes
+    else Query.ParamByName('image').AsBytes := TestBytes;
     Query.ExecSQL;
 
     Query.ParamByName('id').AsInteger := 20240509;
