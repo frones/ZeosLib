@@ -1725,7 +1725,11 @@ begin
     Query.SQL.Text := 'insert into blob_values (b_id, ' + BinLob + ') values (:id, :image)';
     Query.ParamByName('id').AsInteger := 20240508;
     if Connection.DbcConnection.GetServerProvider = spPostgreSQL
+    {$IFDEF TBLOBDATA_IS_TBYTES}
     then Query.ParamByName('image').AsBlob := TestBytes
+    {$ELSE}
+    then Query.ParamByName('image').AsBlob := PAnsiChar(@TestBytes[0])
+    {$IFEND}
     else Query.ParamByName('image').AsBytes := TestBytes;
     Query.ExecSQL;
 
