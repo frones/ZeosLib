@@ -5326,7 +5326,8 @@ begin
         ftMemo, ftFmtMemo: begin
             FieldCP := GetTransliterateCodePage(FControlsCodePage);
             NativeCP := FResultSetMetadata.GetColumnCodePage(ColumnIndex);
-            if not ((FCharEncoding = ceUTF16) or
+
+            if (NativeCP <> zCP_UTF16) and not ((FCharEncoding = ceUTF16) or
       {XE10.3 x64 bug: a ObjectCast of a descendand doesn't work -> use exact class or the "As" operator}
               ((Field as TMemoField).Transliterate and (FieldCP <> NativeCP))) then
                 FieldCP := NativeCP;

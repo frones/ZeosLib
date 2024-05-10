@@ -4391,7 +4391,7 @@ begin
   if Data <> nil then begin
      FDataRef.IsNotNull := 1;
      SetCapacity(BytesCount);
-     Move(Data^, FDataRef.VarLenData.Data, BytesCount);
+     Move(Data^, FDataRef.VarLenData.Data[0], BytesCount);
   end;
 end;
 
