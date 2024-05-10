@@ -2920,7 +2920,7 @@ const PGOidLopOpenMode: Array[TZLobStreamMode] of Integer = (INV_READ or INV_WRI
 procedure TZPostgreSQLOidBlobStream.CreateLob;
 begin
   { Creates a new large object. }
-  FOwnerLob.FBlobOid := FPlainDriver.lo_creat(FHandle, PGOidLopOpenMode[FLobStreamMode]);
+  FOwnerLob.FBlobOid := FPlainDriver.lo_creat(FHandle, 0);
   if not PGSucceeded(FPlainDriver.PQerrorMessage(FHandle)) then
     FOwnerLob.FOwner.HandleErrorOrWarning(PGRES_FATAL_ERROR, lcOther, 'Create Large Object', Self, nil);
 end;
