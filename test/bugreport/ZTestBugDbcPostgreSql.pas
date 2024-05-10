@@ -394,7 +394,7 @@ begin
   TextStream := TStringStream.Create('ABCDEFG');
   ImageStream := TMemoryStream.Create;
   ImageStream.LoadFromFile(TestFilePath('images/horse.jpg'));
-
+  TempStream := nil;
   try
     PreparedStatement := Connection.PrepareStatement(
       'INSERT INTO blob_values (b_id,b_text,b_image) VALUES(?,?,?)');
@@ -411,17 +411,18 @@ begin
 
     TempStream := ResultSet.GetAsciiStreamByName('b_text');
     CheckEquals(TextStream, TempStream);
-    TempStream.Free;
+    FreeAndNil(TempStream);
 
     TempStream := ResultSet.GetBinaryStreamByName('b_image');
     CheckEquals(ImageStream, TempStream);
-    TempStream.Free;
+    FreeAndNil(TempStream);
 
-    ResultSet.Close;
   finally
     TextStream.Free;
     ImageStream.Free;
-
+    if TempStream <> nil then
+      FreeAndNil(TempStream);
+    ResultSet.Close;
     Statement.Close;
     Connection.Close;
   end;

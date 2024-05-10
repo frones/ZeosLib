@@ -1055,7 +1055,7 @@ begin
                   Result := PWideChar(P);
                   Len := GetAbsorbedTrailingSpacesLen(Result, SQLVarHolder.DataLengths[FCurrentRowBufIndex] shr 1);
                 end else begin
-                  Len := GetAbsorbedTrailingSpacesLen(Result, SQLVarHolder.DataLengths[FCurrentRowBufIndex]);
+                  Len := GetAbsorbedTrailingSpacesLen(P, SQLVarHolder.DataLengths[FCurrentRowBufIndex]);
                   goto jmpA2W;
                 end;
       SQLT_VST: if ColumnCodePage = zCP_UTF16 then begin
