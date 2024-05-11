@@ -1729,7 +1729,7 @@ begin
     then Query.ParamByName('image').AsBlob := TestBytes
     {$ELSE}
     then Query.ParamByName('image').AsBlob := PAnsiChar(@TestBytes[0])
-    {$IFEND}
+    {$ENDIF}
     else Query.ParamByName('image').AsBytes := TestBytes;
     Query.ExecSQL;
 
