@@ -225,6 +225,7 @@ begin
     raise EZSQLException.Create(SCanNotRetrieveResultSetData)
   else if ( ASASQLDA^.sqld > ASASQLDA^.sqln) then begin
     FSQLData.AllocateSQLDA(ASASQLDA^.sqld);
+    ASASQLDA := FSQLData.GetData;
     FPlainDriver.dbpp_describe_cursor(ASASQLCA, Pointer(FCursorName), ASASQLDA, SQL_DESCRIBE_OUTPUT);
     if ASASQLCA.sqlCode <> SQLE_NOERROR then
       FASAConnection.HandleErrorOrWarning(lcExecute, SQL, IImmediatelyReleasable(FWeakImmediatRelPtr));
