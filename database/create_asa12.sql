@@ -290,12 +290,3 @@ BEGIN
   SELECT eq_name as R1 FROM equipment ORDER BY eq_name
 END;
 
-/*==============================================================*/
-/* Grant privileges to columns                                  */
-/*==============================================================*/
---grant update(p_resume, p_redundant) on people to DBA;
-
-/*==============================================================*/
-/* Grant privileges to table                                    */
-/*==============================================================*/
---grant select on people to DBA;
