@@ -2779,7 +2779,7 @@ begin
         for i := 0 to ParamList.Count -1 do
         begin
           PutSplitString(Params, ParamList[i], ' ');
-          if Params.Count = 2 then {no name available}
+          //if Params.Count = 2 then {no name available}
             if Params[0] = 'RETURNS' then
               Params.Insert(1,'')
             else

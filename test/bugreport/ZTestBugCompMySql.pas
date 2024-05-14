@@ -126,6 +126,7 @@ type
     procedure TestTicket265;
     //test for https://zeoslib.sourceforge.io/viewtopic.php?t=199899
     procedure TestForum199899;
+    procedure TestForum199899_2;
   end;
 
 {$ENDIF ZEOS_DISABLE_MYSQL}
@@ -2017,6 +2018,45 @@ begin
     FreeAndNil(Proc);
   end;
 end;
+
+procedure TZTestCompMySQLBugReport.TestForum199899_2;
+var
+  Proc: TZStoredProc;
+  val: String;
+begin
+  Proc := TZStoredProc.Create(nil);
+  try
+    Proc.Connection := Connection;
+
+    //############################
+    //test storedfunction<1>
+    //############################
+    Proc.Close;
+    Proc.StoredProcName :='FncForumT199899_1';
+    Proc.Params[1].value :='test_zeos';
+    Proc.Prepare;
+    Proc.Open;
+    val := Proc.Params[0].value;
+    CheckEquals('select * from test_zeos', val);
+    Proc.Close;
+
+    //############################
+    //test storedfunction<2>
+    //############################
+    Proc.Close;
+    Proc.StoredProcName :='FncForumT199899_2';
+    Proc.Params[1].asinteger :=0;
+    Proc.Params[2].asstring :='db_master_';
+    Proc.Prepare;
+    Proc.Open;
+    val:=Proc.Params[0].value;
+    CheckEquals('select * from db_master_zeos', val);
+    Proc.Close;
+  finally
+    FreeAndNil(Proc);
+  end;
+end;
+
 
 
 procedure TZTestCompMySQLBugReport.TestTicket304;
