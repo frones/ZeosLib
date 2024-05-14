@@ -542,7 +542,7 @@ delimiter //
 create function FncForumT199899_1 (
   in_tablename varchar(100)
 )
-returns text not deterministic
+returns text deterministic
 begin
   return concat('select * from ', in_tablename);
 end //
@@ -551,7 +551,7 @@ create function FncForumT199899_2 (
   in_flg int,
   in_table_headername varchar(100)
 )
-returns text not deterministic
+returns text deterministic
 begin
   declare val_sqltext_select text default "";
   declare val_open_tablename varchar(100) default "";
