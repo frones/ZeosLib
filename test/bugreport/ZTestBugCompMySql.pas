@@ -2052,6 +2052,19 @@ begin
     val:=Proc.Params[0].value;
     CheckEquals('select * from db_master_zeos', val);
     Proc.Close;
+
+    //############################
+    //test storedfunction<3>
+    //############################
+    Proc.StoredProcName :='ProcForumT199899_3';
+    Proc.Params[0].value :='TblForumT199899_1';
+    CheckEquals(2, Proc.Params.Count, 'Parameter count');
+    CheckEquals(0, Proc.ParamByName('in_tablename').Index);
+    CheckEquals(1, Proc.ParamByName('out_pcname').Index);
+    Proc.Prepare;
+    Proc.Open;
+    CheckEquals('desktop1', Proc.Params[1].AsString);
+    Proc.Close;
   finally
     FreeAndNil(Proc);
   end;

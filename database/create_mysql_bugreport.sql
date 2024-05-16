@@ -517,7 +517,7 @@ begin
 end; //
 
 
-/*
+
 delimiter ;
 
 create table TblForumT199899_1 (
@@ -528,6 +528,7 @@ create table TblForumT199899_1 (
   update_stamp datetime(3) not null default current_timestamp(3) on update current_timestamp(3)
 );
 
+/*
 create table TblForumT199899_2 (
   id int auto_increment primary key,
   customercode varchar(6) not null default '',
@@ -535,9 +536,9 @@ create table TblForumT199899_2 (
   customername varchar(100) not null default '',
   update_stamp datetime(3) not null default current_timestamp(3) on update current_timestamp(3)
 );
+*/
 
 delimiter //
-*/
 
 create function FncForumT199899_1 (
   in_tablename varchar(100)
@@ -565,6 +566,19 @@ begin
 									'from ', val_open_tablename);
   end if;
   return val_sqltext_select;
+end //
+
+create procedure ProcForumT199899_3 (
+  in in_tablename varchar(100),
+  out out_pcname varchar(100)
+)
+begin
+  set @s = concat('select pc_name into @pc_name from ', in_tablename, ' where appliname = "aaa.exe"');
+  prepare stmt1 from @s;
+  execute stmt1;
+  deallocate prepare stmt1;
+  
+  set out_pcname=@pc_name;
 end //
 
 delimiter ;

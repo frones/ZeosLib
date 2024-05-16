@@ -56,3 +56,4 @@ drop table if exists TblForumT199899_1;
 drop table if exists TblForumT199899_2;
 drop function if exists FncForumT199899_1;
 drop function if exists FncForumT199899_2;
+drop procedure if exists ProcForumT199899_3;
