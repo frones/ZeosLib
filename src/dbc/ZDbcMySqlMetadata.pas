@@ -2637,8 +2637,8 @@ var
 begin
   // I do check the server version because I don't know how to check for the server type.
   // MariaDB 10 supports the information_schema too, so we can use it there too.
-  RequiresInformationSchema := isMySQL and (GetConnection.GetHostVersion >= EncodeSQLVersioning(8,0,0));
-
+  RequiresInformationSchema := (isMySQL   and (GetConnection.GetHostVersion >= EncodeSQLVersioning(8,0,0))) or
+                               (isMariaDB and (GetConnection.GetHostVersion >= EncodeSQLVersioning(10,0,0)));
   if RequiresInformationSchema
   then Result := GetProcedureColumnsFromInformationSchema(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern)
   else Result := GetProcedureColumnsFromProcTable(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);

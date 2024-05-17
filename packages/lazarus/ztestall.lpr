@@ -295,10 +295,13 @@ end;
 var
   Applicationc: TMyTestRunner;
 
-{$IFDEF WINDOWS}{$R ztestall.rc}{$ENDIF}
+//JBau: This stuff is not needed anymore ans just triggers problems with windres.
+//Lazarus now can do this on its own - if needed.
+//{$IFDEF WINDOWS}{$R ztestall.rc}{$ENDIF}
+
+{$R *.res}
 
 begin
-  {$I ztestall.lrs}
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
   if CommandLineSwitches.memcheck and (CommandLineSwitches.memcheck_file <> '') then
   begin
@@ -326,6 +329,7 @@ begin
   end
   else
   begin
+    Application.Title:='';
     Application.Initialize;
     Application.CreateForm(TMyGuiTestRunner, TestRunner);
     Application.Run;

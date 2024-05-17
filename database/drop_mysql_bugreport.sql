@@ -52,3 +52,8 @@ drop table if exists table_ticket_442;
 drop table if exists table_p156227;
 
 drop procedure if exists forum199899;
+drop table if exists TblForumT199899_1;
+drop table if exists TblForumT199899_2;
+drop function if exists FncForumT199899_1;
+drop function if exists FncForumT199899_2;
+drop procedure if exists ProcForumT199899_3;

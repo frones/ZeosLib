@@ -567,6 +567,10 @@ begin
         ConnectionString := ConnectionString + 'DBN="' + Database + '"; ';
     end;
 
+    Links := Info.Values[ConnProps_Host];
+    if Links <> '' then
+      ConnectionString := 'Host=' + Links + ';';
+    
     Links := '';
     if Info.Values[ConnProps_CommLinks] <> ''
       then Links := 'CommLinks=' + Info.Values[ConnProps_CommLinks];
@@ -576,6 +580,17 @@ begin
       then Links := 'LINKS=tcpip(PORT=' + ZFastCode.IntToStr(Port) + ')';
     if Links <> ''
       then ConnectionString := ConnectionString + Links + '; ';
+
+    if URL.UserName <> '' then begin
+      if System.Pos(';', URL.UserName) > 0 then
+        raise EZSQLException.Create('The user name may not include semicolons.');
+      ConnectionString := ConnectionString + 'UID=' + URL.UserName + ';';
+      if URL.Password <> '' then begin
+        if System.Pos(';', URL.Password) > 0 then
+          raise EZSQLException.Create('The password may not include semicolons.');
+        ConnectionString := ConnectionString + 'PWD=' + URL.Password + ';'
+      end;
+    end;
 
     {$IFDEF UNICODE}
     RawTemp := ZUnicodeToRaw(ConnectionString, ZOSCodePage);

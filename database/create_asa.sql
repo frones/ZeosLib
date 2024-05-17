@@ -108,7 +108,7 @@ p_redundant          SMALLINT						null,
 primary key (p_id)
 );
 
-create index people_FK on dba.people (p_dep_id);
+create index people_FK on people (p_dep_id);
 
 /*==============================================================*/
 /* Table : string_values                                        */
@@ -293,9 +293,9 @@ END;
 /*==============================================================*/
 /* Grant privileges to columns                                  */
 /*==============================================================*/
-grant update(p_resume, p_redundant) on people to DBA;
+--grant update(p_resume, p_redundant) on people to DBA;
 
 /*==============================================================*/
 /* Grant privileges to table                                    */
 /*==============================================================*/
-grant select on people to DBA;
+--grant select on people to DBA;

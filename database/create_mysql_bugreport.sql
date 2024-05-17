@@ -516,4 +516,70 @@ begin
   select length(somevalue);
 end; //
 
+
+
 delimiter ;
+
+create table TblForumT199899_1 (
+  id int auto_increment primary key,
+  appliname varchar(100) not null default '',
+  pc_name varchar(15) not null default '',
+  contents1 varchar(200) not null default '',
+  update_stamp datetime(3) not null default current_timestamp(3) on update current_timestamp(3)
+);
+
+/*
+create table TblForumT199899_2 (
+  id int auto_increment primary key,
+  customercode varchar(6) not null default '',
+  orderflg varchar(1) not null default '0',
+  customername varchar(100) not null default '',
+  update_stamp datetime(3) not null default current_timestamp(3) on update current_timestamp(3)
+);
+*/
+
+delimiter //
+
+create function FncForumT199899_1 (
+  in_tablename varchar(100)
+)
+returns text deterministic
+begin
+  return concat('select * from ', in_tablename);
+end //
+
+create function FncForumT199899_2 (
+  in_flg int,
+  in_table_headername varchar(100)
+)
+returns text deterministic
+begin
+  declare val_sqltext_select text default "";
+  declare val_open_tablename varchar(100) default "";
+
+  set val_open_tablename = concat(in_table_headername, 'zeos');
+  if in_flg=0 then
+    set val_sqltext_select = concat('select * from ', val_open_tablename);
+  else
+    set val_sqltext_select = concat('select customercode, orderflg, customername, ',
+	                                'case when orderflg="0" then "not ordered" else "ordered" as orderflg_name ',
+									'from ', val_open_tablename);
+  end if;
+  return val_sqltext_select;
+end //
+
+create procedure ProcForumT199899_3 (
+  in in_tablename varchar(100),
+  out out_pcname varchar(100)
+)
+begin
+  set @s = concat('select pc_name into @pc_name from ', in_tablename, ' where appliname = "aaa.exe"');
+  prepare stmt1 from @s;
+  execute stmt1;
+  deallocate prepare stmt1;
+  
+  set out_pcname=@pc_name;
+end //
+
+delimiter ;
+
