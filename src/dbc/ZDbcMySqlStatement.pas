@@ -595,8 +595,8 @@ begin
   Result := ((not FInitial_emulate_prepare) or (BatchDMLArrayCount > 0 )) and
      (FMYSQL_STMT = nil) and (TokenMatchIndex <> -1) and
      ((BatchDMLArrayCount > 0 ) or (FExecCount = FMinExecCount2Prepare) or
-     ((TokenMatchIndex = Ord(myCall)) and ((FPLainDriver.IsMariaDBDriver and (FPLainDriver.mysql_get_client_version >= 100000)) or
-     (not FPLainDriver.IsMariaDBDriver and (FPLainDriver.mysql_get_client_version >= 50608)))));
+     ((TokenMatchIndex = Ord(myCall)) and ((FPLainDriver.IsMariaDBDriver and ((FClientVersion  >= 100000) or (FClientVersion  < 50000))) or
+     (not FPLainDriver.IsMariaDBDriver and (FClientVersion >= 50608)))));
   if Result then begin
     FEmulatedParams := False;
     if (BindList.Count > 0) then
@@ -660,7 +660,7 @@ begin
   FClientVersion := FPLainDriver.mysql_get_client_version;
   FBindOffset := GetBindOffsets(FPlainDriver.IsMariaDBDriver, FClientVersion);
 
-  FIsCallPreparable := (FPLainDriver.IsMariaDBDriver and (FClientVersion >= 100000)) or
+  FIsCallPreparable := (FPLainDriver.IsMariaDBDriver and ((FClientVersion >= 100000) or (FClientVersion < 50000))) or
      (not FPLainDriver.IsMariaDBDriver and (FClientVersion >= 50608));
   FPreparablePrefixTokens := MySQL568PreparableTokens;
   FMySQLConnection := Connection;
