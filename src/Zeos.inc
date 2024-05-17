@@ -440,7 +440,7 @@
   {$IF DEFINED(VER360) OR DEFINED(VER370)}
     // see https://zeoslib.sourceforge.io/viewtopic.php?p=261006#p261006
 	{$DEFINE ILINK_HAS_TBCD_IN_UNIONS_BUG}
-  {$ENDIF VER360}
+  {$IFEND VER360}
 {$ENDIF}
 
 {$IFDEF LINUX}
