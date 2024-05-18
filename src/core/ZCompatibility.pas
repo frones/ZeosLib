@@ -510,7 +510,7 @@ function align(addr: NativeUInt; alignment: NativeUInt) : NativeUInt; inline;
 {$IFEND}
 
 {$IFDEF NO_UINT64_MIN}
-function Min(const Var1, Var2: UNIT64): UNIT64;
+function Min(const Var1, Var2: UInt64): UInt64; overload;
 {$ENDIF}
 
 const
@@ -901,7 +901,7 @@ function ReturnAddress: Pointer;
 {$ENDIF ZReturnAddress}
 
 {$IFDEF NO_UINT64_MIN}
-function Min(const Var1, Var2: UNIT64): UNIT64;
+function Min(const Var1, Var2: UInt64): UInt64;
 begin
   if Var1 < Var2 then
     Result := Var1

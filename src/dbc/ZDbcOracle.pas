@@ -536,7 +536,7 @@ var
 implementation
 
 uses {$IFNDEF UNICODE}ZDbcUtils,{$ENDIF}
-  ZMessages, ZCollections, ZEncoding, ZSysUtils, ZFastCode, ZCompatibility,
+  ZMessages, ZCollections, ZEncoding, ZSysUtils, ZFastCode,
   ZGenericSqlToken, ZOracleToken, ZOracleAnalyser,
   ZDbcOracleStatement, ZDbcOracleUtils, ZDbcOracleMetadata, ZDbcProperties;
 
