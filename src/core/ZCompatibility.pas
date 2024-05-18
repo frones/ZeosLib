@@ -509,6 +509,10 @@ function ReturnAddress: Pointer;
 function align(addr: NativeUInt; alignment: NativeUInt) : NativeUInt; inline;
 {$IFEND}
 
+{$IFDEF NO_UINT64_MIN}
+function Min(const Var1, Var2: UNIT64): UNIT64;
+{$ENDIF}
+
 const
   PEmptyUnicodeString: PWideChar = '';
   PEmptyAnsiString: PAnsiChar = '';
@@ -895,5 +899,16 @@ function ReturnAddress: Pointer;
   end;
 {$ENDIF}
 {$ENDIF ZReturnAddress}
+
+{$IFDEF NO_UINT64_MIN}
+function Min(const Var1, Var2: UNIT64): UNIT64;
+begin
+  if Var1 < Var2 then
+    Result := Var1
+  else
+    Result := Var2;
+end;
+{$ENDIF}
+
 
 end.

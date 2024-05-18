@@ -164,6 +164,7 @@
   {$IF CompilerVersion < 15}
      "Delphi versions below Delphi 7 aren't supported anymore"
   {$ELSE}
+    {$DEFINE NO_UINT64_MIN}                // The Math unit has no Min function for UINT64
     {$DEFINE WITH_FTWIDESTRING}                 //Have ftWideString
     {$DEFINE TWIDESTRINGFIELD_DATABUFFER_IS_PWIDESTRING}
     {$DEFINE WITH_UINT64_C1118_ERROR}       //D7-D2005 has proplems to assign code constants for UInt64
@@ -257,6 +258,7 @@
                 {$DEFINE DELPHI14_UP}                 // used in ZTestStoredProcedure.pas only
                 {$DEFINE WITH_FTTIMESTAMP_OFFSET}     // TSQLTimeStampOffset record and field exists
                 {$IF CompilerVersion >= 22} //Delphi XE+
+                  {$UNDEF NO_UINT64_MIN}              // I assume, from XE on Delphi has a Min function suitable for UINT64
                   {$DEFINE WITH_tagVARIANT_UINT64}          // ActivX.tagVariant supports UInt64 Values
                   {$DEFINE TENCODING_HAS_CODEPAGE}          //TEncoding has property CodePage
                   {$DEFINE WITH_FORMATSETTINGS}             //Unit SysUtils have global FormatSettings
