@@ -3663,7 +3663,10 @@ begin
       pBuf := Pointer(ConversionBuf);
       if FHas64BitLobMethods
       // then Len := OCIStream64.ReadPoll(pBuf, Size * FBytesPerChar, FBytesPerChar)
-      then Len := OCIStream64.ReadFull(pBuf, Size * FBytesPerChar)
+      then
+      {$IFNDEF FPC}{$IFDEF VER150}{$IFDEF RangeCheckEnabled}{$R-}{$ENDIF}{$ENDIF}{$ENDIF}
+      Len := OCIStream64.ReadFull(pBuf, Size * FBytesPerChar)
+      {$IFNDEF FPC}{$IFDEF VER150}{$IFDEF RangeCheckEnabled}{$R+}{$ENDIF}{$ENDIF}{$ENDIF}
       else Len := OCIStream32.ReadPoll(pBuf);
       SetLength(ConversionBuf, len);
       Result := Pointer(ConversionBuf);
@@ -4075,7 +4078,9 @@ begin
   BytesTotal := Len * FBytesPerChar;
   GetMem(Buf, BytesTotal);
   // Len := TZOracleInternalLobStream64(Stream).ReadPoll(Buf, BytesTotal, FBytesPerChar);
+  {$IFNDEF FPC}{$IFDEF VER150}{$R-}{$ENDIF}{$ENDIF}
   Len := TZOracleInternalLobStream64(Stream).ReadFull(Buf, BytesTotal);
+  {$IFNDEF FPC}{$IFDEF VER150}{$IFDEF RangeCheckEnabled} {$R+} {$ENDIF}{$ENDIF}{$ENDIF}
   if Len <> BytesTotal then
     ReallocMem(Buf, Len);
 end;
