@@ -13,7 +13,7 @@ Interface
 Uses SysUtils, Classes, 
      base_service_intf, server_service_intf, zeosproxy,
      ZDbcProxyManagement, DbcProxyConnectionManager, DbcProxyConfigManager,
-     DbcProxyFileLogger;
+     DbcProxyFileLogger, DbcProxyConfigProvider;
 
 type
   TZeosProxy_ServiceImp=class(TBaseServiceImplementation,IZeosProxy)
@@ -160,7 +160,7 @@ type
 
 var
   ConnectionManager: TDbcProxyConnectionManager;
-  ConfigManager: TDbcProxyConfigManager;
+  ConfigManager: IZDbcProxyConfigStore;
   Logger: TDbcProxyLogger;
 
 Implementation

@@ -56,7 +56,7 @@ unit dbcproxycleanupthread;
 interface
 
 uses
-  Classes, SysUtils, DbcProxyConnectionManager, DbcProxyConfigManager;
+  Classes, SysUtils, DbcProxyConnectionManager, DbcProxyConfigManager, DbcProxyConfigProvider;
 
 type
   TDbcProxyCleanupThread = class(TThread)
@@ -66,7 +66,7 @@ type
     protected
       procedure Execute; override;
     public
-      constructor Create(ConnManager: TDbcProxyConnectionManager; ConfigManager: TDbcProxyConfigManager);
+      constructor Create(ConnManager: TDbcProxyConnectionManager; ConfigManager: IZDbcProxyConfigStore);
   end;
 
 implementation
@@ -74,7 +74,7 @@ implementation
 uses
   DateUtils, ZDbcProxyManagement, zeosproxy_imp;
 
-constructor TDbcProxyCleanupThread.Create(ConnManager: TDbcProxyConnectionManager; ConfigManager: TDbcProxyConfigManager);
+constructor TDbcProxyCleanupThread.Create(ConnManager: TDbcProxyConnectionManager; ConfigManager: IZDbcProxyConfigStore);
 begin
   inherited Create(True);
   FConnManager := ConnManager;

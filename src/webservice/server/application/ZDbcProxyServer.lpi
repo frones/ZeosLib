@@ -33,7 +33,7 @@
         <PackageName Value="wst_core"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="16">
+    <Units Count="17">
       <Unit0>
         <Filename Value="ZDbcProxyServer.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -106,6 +106,10 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="DbcProxyStartupProcedures"/>
       </Unit15>
+      <Unit16>
+        <Filename Value="..\dbcproxyconfigprovider.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit16>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
