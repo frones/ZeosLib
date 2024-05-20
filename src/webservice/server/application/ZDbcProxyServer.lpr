@@ -68,12 +68,11 @@ uses
   {local}zeosproxy, zeosproxy_binder, zeosproxy_imp, DbcProxyUtils,
   DbcProxyConnectionManager, DbcProxyConfigManager, ZDbcProxyManagement,
   dbcproxycleanupthread, dbcproxysecuritymodule, DbcProxyFileLogger,
-  dbcproxyconfigutils, dbcproxycertstore,
+  dbcproxyconfigutils, dbcproxycertstore, DbcProxyConfigStore,
   //Zeos drivers:
   ZDbcAdo, ZDbcASA, ZDbcDbLib, ZDbcFirebird, ZDbcInterbase6, ZDbcMySql,
   ZDbcODBCCon, ZDbcOleDB, ZDbcOracle, ZDbcPostgreSql, ZDbcSQLAnywhere,
-  ZDbcSqLite, ZDbcProxyMgmtDriver, DbcProxyStartupProcedures,
-dbcproxyconfigprovider;
+  ZDbcSqLite, ZDbcProxyMgmtDriver, DbcProxyStartupProcedures;
 
 type
 

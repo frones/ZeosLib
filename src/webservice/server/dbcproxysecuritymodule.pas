@@ -58,7 +58,7 @@ interface
 uses
   Classes, SysUtils, IniFiles,
   ZDbcIntfs,
-  dbcproxyconfigprovider,
+  dbcproxyconfigstore,
   yubiotp,
   GoogleOTP,
   md5crypt;

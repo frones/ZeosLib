@@ -56,7 +56,7 @@ unit dbcproxycleanupthread;
 interface
 
 uses
-  Classes, SysUtils, DbcProxyConnectionManager, DbcProxyConfigManager, DbcProxyConfigProvider;
+  Classes, SysUtils, DbcProxyConnectionManager, DbcProxyConfigManager, DbcProxyConfigStore;
 
 type
   TDbcProxyCleanupThread = class(TThread)

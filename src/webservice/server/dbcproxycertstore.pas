@@ -49,7 +49,7 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 
-unit dbcproxycertstore;
+unit DbcProxyCertStore;
 
 {$I dbcproxy.inc}
 
@@ -94,6 +94,8 @@ type
       function GetValidPublicKeys: TStringDynArray;
       procedure GetCurrentCertificate(out CertificateFile, KeyFile: String);
   end;
+
+function GetComputerName: String;
 
 var
   TofuCertStore: TDbcProxyCertificateStore;

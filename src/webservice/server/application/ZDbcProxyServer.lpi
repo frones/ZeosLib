@@ -107,7 +107,7 @@
         <UnitName Value="DbcProxyStartupProcedures"/>
       </Unit15>
       <Unit16>
-        <Filename Value="..\dbcproxyconfigprovider.pas"/>
+        <Filename Value="..\dbcproxyconfigstore.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit16>
     </Units>
