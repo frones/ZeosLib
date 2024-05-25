@@ -122,7 +122,7 @@ implementation
 
 uses ZMessages, ZEncoding,
   ZDbcStatement, ZDbcMetadata, ZDbcUtils, ZDbcCache, ZDbcConnection,
-  ZDbcCachedResultSet, ZGenericSqlToken, ZDbcXmlUtils;
+  ZDbcCachedResultSet, ZGenericSqlToken{$IFNDEF ZEOS_DISABLE_PROXY}, ZDbcXmlUtils{$ENDIF};
 
 type
   TZMemResultSetPreparedStatement = Class(TZBeginnerPreparedStatement,
