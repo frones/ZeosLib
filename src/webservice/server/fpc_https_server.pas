@@ -132,12 +132,12 @@ type
     {$IFDEF FPC_IS_SSLENABLED}
     procedure SetUseSSL(const AValue: Boolean);
     procedure SetKeyFile(const AValue: String);
-    procedure SetKeyPasswod(const AValue: String);
+    procedure SetKeyPassword(const AValue: String);
     procedure SetCertificateFileName(const AValue: String);
     procedure SetHostName(const AValue: String);
     function GetUseSSL: Boolean;
     function GetKeyFile: String;
-    function GetKeyPasswod: String;
+    function GetKeyPassword: String;
     function GetCertificateFileName: String;
     function GetHostName: String;
     {$ENDIF}
@@ -160,7 +160,7 @@ type
     {$IFDEF FPC_IS_SSLENABLED}
     property UseSSL: Boolean read GetUseSSL write SetUseSSL;
     property KeyFile: String read GetKeyFile write SetKeyFile;
-    property KeyPasswod: String read GetKeyPasswod write SetKeyPasswod;
+    property KeyPassword: String read GetKeyPassword write SetKeyPassword;
     property CertificateFileName: String read GetCertificateFileName write SetCertificateFileName;
     property HostName: String read GetHostName write SetHostName;
     {$ENDIF}
@@ -435,7 +435,7 @@ begin
   FWorkerObject.KeyFile := AValue;
 end;
 
-procedure TwstFPHttpsListener.SetKeyPasswod(const AValue: String);
+procedure TwstFPHttpsListener.SetKeyPassword(const AValue: String);
 begin
   FWorkerObject.KeyPasswod := AValue;
 end;
@@ -460,7 +460,7 @@ begin
   Result := FWorkerObject.KeyFile;
 end;
 
-function TwstFPHttpsListener.GetKeyPasswod: String;
+function TwstFPHttpsListener.GetKeyPassword: String;
 begin
   Result := FWorkerObject.KeyPasswod;
 end;

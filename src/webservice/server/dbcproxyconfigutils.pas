@@ -47,7 +47,7 @@ begin
     AppObject.HostName := ConfigManager.HostName;
     AppObject.CertificateFileName := ConfigManager.CertificateFile;
     AppObject.KeyFile := ConfigManager.KeyFile;
-    AppObject.KeyPasswod := ConfigManager.KeyPasswod;
+    AppObject.KeyPassword := ConfigManager.KeyPassword;
   end;
   {$IFDEF ENABLE_TOFU_CERTIFICATES}
   if ConfigManager.UseTofuSSL then begin

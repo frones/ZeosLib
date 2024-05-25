@@ -58,6 +58,7 @@ interface
 uses
   Classes, SysUtils, IniFiles,
   ZDbcIntfs,
+  dbcproxyconfigstore,
   yubiotp,
   GoogleOTP,
   md5crypt;
@@ -67,7 +68,7 @@ type
   public
     FModuleName: String;
     function CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean; virtual; abstract;
-    procedure LoadConfig(IniFile: TIniFile; const Section: String); virtual;
+    procedure LoadConfig(Values: IZDbcProxyKeyValueStore); virtual;
   end;
 
   TZYubiOtpSecurityModule = class(TZAbstractSecurityModule)
@@ -86,7 +87,7 @@ type
     function CheckUserYubikeyDatabase(var UserName: String; const Password, ConnectionName: String): Boolean;
   public
     function CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean; override;
-    procedure LoadConfig(IniFile: TIniFile; const Section: String); override;
+    procedure LoadConfig(Values: IZDbcProxyKeyValueStore); override;
   end;
 
   TZTotpSecurityModule = class(TZAbstractSecurityModule)
@@ -96,7 +97,7 @@ type
     FDatabaseSeparator: String;
   public
     function CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean; override;
-    procedure LoadConfig(IniFile: TIniFile; const Section: String); override;
+    procedure LoadConfig(Values: IZDbcProxyKeyValueStore); override;
   end;
 
   TZIntegratedSecurityModule = class(TZAbstractSecurityModule)
@@ -110,7 +111,7 @@ type
     FAuthDbName: String;
   public
     function CheckPassword(var XUserName, Password: String; const ConnectionName: String): Boolean; override;
-    procedure LoadConfig(IniFile: TIniFile; const Section: String); override;
+    procedure LoadConfig(Values: IZDbcProxyKeyValueStore); override;
   end;
 
   TZChainedSecurityModule = class(TZAbstractSecurityModule)
@@ -118,7 +119,7 @@ type
     FModuleChain: Array of TZAbstractSecurityModule;
   public
     function CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean; override;
-    procedure LoadConfig(IniFile: TIniFile; const Section: String); override;
+    procedure LoadConfig(Values: IZDbcProxyKeyValueStore); override;
     destructor Destroy; override;
   end;
 
@@ -127,7 +128,7 @@ type
     FModuleChain: Array of TZAbstractSecurityModule;
   public
     function CheckPassword(var UserName, Password: String; const ConnectionName: String): Boolean; override;
-    procedure LoadConfig(IniFile: TIniFile; const Section: String); override;
+    procedure LoadConfig(Values: IZDbcProxyKeyValueStore); override;
     destructor Destroy; override;
   end;
 
@@ -160,9 +161,9 @@ begin
     raise EZSQLException.Create('Security module of type ' + TypeName + ' is unknown.');
 end;
 
-procedure TZAbstractSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
+procedure TZAbstractSecurityModule.LoadConfig(Values: IZDbcProxyKeyValueStore);
 begin
-  FModuleName := Section;
+  FModuleName := Values.GetName;
 end;
 
 {------------------------------------------------------------------------------}
@@ -181,12 +182,14 @@ begin
     YubikeysUser := UserName;
     if FAddDatabase then
       YubikeysUser := YubikeysUser + FDatabaseSeparator + ConnectionName;
-    AllowedKeys := ':' + Yubikeys.Values[UserName] + ':';
+    AllowedKeys := ':' + Yubikeys.Values[YubikeysUser] + ':';
     Logger.Debug('yubiotp: User: ' + YubikeysUser + ' Allowed keys: ' + AllowedKeys);
+    if AllowedKeys = '::' then
+      raise Exception.Create('No yubikeys found for user ' + YubikeysUser);
     PublicIdentity := GetYubikeyIdentity(Password);
     Result := Pos(':' + PublicIdentity + ':', AllowedKeys) > 0;
     if not Result then
-      raise EZSQLException.Create('This yubikey cannot be used for this user.');
+      raise Exception.Create('The yubikey ' + PublicIdentity + ' cannot be used for the user ' + YubikeysUser + '.');
   finally
     FreeAndNil(Yubikeys);
   end;
@@ -266,20 +269,20 @@ begin
   Logger.Debug('yubiotpresult for server ' + FBaseURL + ': ' + BoolToStr(Result, true));
 end;
 
-procedure TZYubiOtpSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
+procedure TZYubiOtpSecurityModule.LoadConfig(Values: IZDbcProxyKeyValueStore);
 begin
   inherited;
-  Logger.Debug('Initializing Security module ' + Section);
-  FYubikeysFile := IniFile.ReadString(Section, 'Yubikeys File', '');
-  FAddDatabase := IniFile.ReadBool(Section, 'Add Database To Username', false);
-  FDatabaseSeparator := IniFile.ReadString(Section, 'Database Separator', '@');
-  FBaseURL := IniFile.ReadString(Section, 'Base URL', 'https://api.yubico.com/wsapi/2.0/verify');
-  FClientID := IniFile.ReadInteger(Section, 'Client ID', 0);
-  FSecretKey := IniFile.ReadString(Section, 'Secret Key', '');
-  FYubikeySQL := IniFile.ReadString(Section, 'Yubikey SQL', '');
-  FDBUser := IniFile.ReadString(Section, 'DB User', '');
-  FDBPassword := IniFile.ReadString(Section, 'DB Password', '');
-  FReplacementUserNameColumn := IniFile.ReadString(Section, 'Replacement User Column', '');
+  Logger.Debug('Initializing Security module ' + Values.GetName);
+  FYubikeysFile := Values.ReadString('Yubikeys File', '');
+  FAddDatabase := StrToBool(Values.ReadString('Add Database To Username', 'false'));
+  FDatabaseSeparator := Values.ReadString('Database Separator', '@');
+  FBaseURL := Values.ReadString('Base URL', 'https://api.yubico.com/wsapi/2.0/verify');
+  FClientID := Values.ReadInteger('Client ID', 0);
+  FSecretKey := Values.ReadString('Secret Key', '');
+  FYubikeySQL := Values.ReadString('Yubikey SQL', '');
+  FDBUser := Values.ReadString('DB User', '');
+  FDBPassword := Values.ReadString('DB Password', '');
+  FReplacementUserNameColumn := Values.ReadString('Replacement User Column', '');
 end;
 
 {------------------------------------------------------------------------------}
@@ -299,7 +302,7 @@ begin
     SecretsUser := UserName;
     if FAddDatabase then
       SecretsUser := SecretsUser + FDatabaseSeparator + ConnectionName;
-    Secret := Secrets.Values[UserName];
+    Secret := UpperCase(Trim(Secrets.Values[SecretsUser]));
     Result := Secret <> '';
   finally
     FreeAndNil(Secrets);
@@ -307,22 +310,27 @@ begin
 
   if Result then begin
     OTP := Copy(Password, Length(Password) - 6 + 1, 6);
-    RemainingPassword := Copy(Password, 1, Length(Password) - 6);
-    Password := RemainingPassword;
     Result := GoogleOTP.ValidateTOPT(Secret, StrToIntDef(OTP, 0));
-  end;
+  end else
+    raise Exception.Create('Could not find secret for user ' + SecretsUser);
+
+  if not Result then
+    raise Exception.Create('Could not validate username / OTP: ' + SecretsUser + ' / ' + OTP);
 
   if not Result then
     raise EZSQLException.Create('Could not validate username / password.');
+
+  RemainingPassword := Copy(Password, 1, Length(Password) - 6);
+  Password := RemainingPassword;
 end;
 
-procedure TZTotpSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
+procedure TZTotpSecurityModule.LoadConfig(Values: IZDbcProxyKeyValueStore);
 begin
   inherited;
-  Logger.Debug('Initializing Security module ' + Section);
-  FSecretsName := IniFile.ReadString(Section, 'Secrets File', '');
-  FAddDatabase := IniFile.ReadBool(Section, 'Add Database To Username', false);
-  FDatabaseSeparator := IniFile.ReadString(Section, 'Database Separator', '@');
+  Logger.Debug('Initializing Security module ' + Values.GetName);
+  FSecretsName := Values.ReadString('Secrets File', '');
+  FAddDatabase := StrToBool(Values.ReadString('Add Database To Username', 'false'));
+  FDatabaseSeparator := Values.ReadString('Database Separator', '@');
 end;
 
 {------------------------------------------------------------------------------}
@@ -413,17 +421,17 @@ begin
   end;
 end;
 
-procedure TZIntegratedSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
+procedure TZIntegratedSecurityModule.LoadConfig(Values: IZDbcProxyKeyValueStore);
 begin
   inherited;
-  Logger.Debug('Initializing Security module ' + Section);
-  FDBUser := IniFile.ReadString(Section, 'DB User', '');
-  FDBPassword := IniFile.ReadString(Section, 'DB Password', '');
-  FReplacementUser := IniFile.ReadString(Section, 'Replacement User', '');
-  FReplacementPassword := IniFile.ReadString(Section, 'Replacement Password', '');
-  FPasswordSQL := IniFile.ReadString(Section, 'Password SQL', '');
-  FAddDatabaseToUserName := IniFile.ReadBool(Section, 'Add Database To Username', false);
-  FAuthDbName := IniFile.ReadString(Section, 'Auth DB Name', '');
+  Logger.Debug('Initializing Security module ' + Values.GetName);
+  FDBUser := Values.ReadString('DB User', '');
+  FDBPassword := Values.ReadString('DB Password', '');
+  FReplacementUser := Values.ReadString('Replacement User', '');
+  FReplacementPassword := Values.ReadString('Replacement Password', '');
+  FPasswordSQL := Values.ReadString('Password SQL', '');
+  FAddDatabaseToUserName := Values.ReadBool('Add Database To Username', false);
+  FAuthDbName := Values.ReadString('Auth DB Name', '');
 end;
 
 {------------------------------------------------------------------------------}
@@ -448,30 +456,32 @@ begin
   end;
 end;
 
-procedure TZChainedSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
+procedure TZChainedSecurityModule.LoadConfig(Values: IZDbcProxyKeyValueStore);
 var
   Modules: String;
-  TypeList: TStringDynArray;
+  ModuleList: TStringDynArray;
   x: Integer;
   SectionName: String;
+  SubmoduleInfos: IZDbcProxyKeyValueStore;
 begin
   inherited;
-  Logger.Debug('Initializing Security module ' + Section);
-  Modules := IniFile.ReadString(Section, 'Module List', '');
-  TypeList := SplitString(Modules, ',');
-  for x := Length(TypeList) - 1 downto 0 do
-    TypeList[x] := Trim(TypeList[x]);
-  for x := Length(TypeList) - 1 downto 0 do
-    if TypeList[x] = '' then
-      Delete(TypeList, x, 1);
-  if Length(TypeList) = 0 then
+  Logger.Debug('Initializing Security module ' + Values.GetName);
+  Modules := Values.ReadString('Module List', '');
+  ModuleList := SplitString(Modules, ',');
+  for x := Length(ModuleList) - 1 downto 0 do
+    ModuleList[x] := Trim(ModuleList[x]);
+  for x := Length(ModuleList) - 1 downto 0 do
+    if ModuleList[x] = '' then
+      Delete(ModuleList, x, 1);
+  if Length(ModuleList) = 0 then
     raise EZSQLException.Create('A chained security module may not have an empty Module List');
 
-  SetLength(FModuleChain, Length(TypeList));
-  for x := 0 to Length(TypeList) - 1 do begin
-    SectionName := ConfigManager.SecurityPrefix + TypeList[x];
-    FModuleChain[x] := GetSecurityModule(TypeList[x]);
-    FModuleChain[x].LoadConfig(IniFile, SectionName);
+  SetLength(FModuleChain, Length(ModuleList));
+  for x := 0 to Length(ModuleList) - 1 do begin
+    SectionName := ModuleList[x];
+    SubmoduleInfos := Values.GetConfigStore.GetSecurityConfig(SectionName);
+    FModuleChain[x] := GetSecurityModule(SubmoduleInfos.ReadString('type', ''));
+    FModuleChain[x].LoadConfig(SubmoduleInfos);
   end;
 end;
 
@@ -504,17 +514,18 @@ begin
   end;
 end;
 
-procedure TZAlternateSecurityModule.LoadConfig(IniFile: TIniFile; const Section: String);
+procedure TZAlternateSecurityModule.LoadConfig(Values: IZDbcProxyKeyValueStore);
 var
   Modules: String;
   ModuleList: TStringDynArray;
   x: Integer;
   SectionName: String;
   ModuleType: String;
+  SubmoduleInfos: IZDbcProxyKeyValueStore;
 begin
   inherited;
-  Logger.Debug('Initializing Security module ' + Section);
-  Modules := IniFile.ReadString(Section, 'Module List', '');
+  Logger.Debug('Initializing Security module ' + Values.GetName);
+  Modules := Values.ReadString('Module List', '');
   ModuleList := SplitString(Modules, ',');
   for x := Length(ModuleList) - 1 downto 0 do
     ModuleList[x] := Trim(ModuleList[x]);
@@ -528,11 +539,12 @@ begin
   SetLength(FModuleChain, Length(ModuleList));
   for x := 0 to Length(ModuleList) - 1 do begin
 
-    SectionName := ConfigManager.SecurityPrefix + ModuleList[x];
-    ModuleType := IniFile.ReadString(SectionName, 'type', '');
+    SectionName := ModuleList[x];
+    SubmoduleInfos := Values.GetConfigStore.GetSecurityConfig(SectionName);
+    ModuleType := SubmoduleInfos.ReadString('type', '');
     Logger.Debug('Initializing submodule ' + SectionName + ' of type ' + ModuleType);
     FModuleChain[x] := GetSecurityModule(ModuleType);
-    FModuleChain[x].LoadConfig(IniFile, SectionName);
+    FModuleChain[x].LoadConfig(SubmoduleInfos);
   end;
   Logger.Debug('Initialization od alternate module finished.');
 end;

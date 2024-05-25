@@ -68,7 +68,7 @@ uses
   {local}zeosproxy, zeosproxy_binder, zeosproxy_imp, DbcProxyUtils,
   DbcProxyConnectionManager, DbcProxyConfigManager, ZDbcProxyManagement,
   dbcproxycleanupthread, dbcproxysecuritymodule, DbcProxyFileLogger,
-  dbcproxyconfigutils, dbcproxycertstore,
+  dbcproxyconfigutils, dbcproxycertstore, DbcProxyConfigStore,
   //Zeos drivers:
   ZDbcAdo, ZDbcASA, ZDbcDbLib, ZDbcFirebird, ZDbcInterbase6, ZDbcMySql,
   ZDbcODBCCon, ZDbcOleDB, ZDbcOracle, ZDbcPostgreSql, ZDbcSQLAnywhere,
@@ -146,12 +146,12 @@ begin
   InitializeSSLLibs;
 
   // initialize configuration and logger -> this is server specific
-  ConfigManager := TDbcProxyConfigManager.Create;
+  ConfigManager := TDbcProxyIniConfigManager.Create(ConfigFile) as IZDbcProxyConfigStore;
   WriteLn('Loading Base Config...');
-  ConfigManager.LoadBaseConfig(configFile);
+  ConfigManager.LoadBaseConfig;
   Logger := TDbcProxyConsoleLogger.Create;
   WriteLn('Loading Connection Config...');
-  ConfigManager.LoadConnectionConfig(configFile);
+  ConfigManager.LoadConnectionConfig;
 
   InitTofuCerts;
   CreateConnectionManager;
