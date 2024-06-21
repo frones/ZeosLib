@@ -112,6 +112,7 @@ type
     FvnuInfo: TZvnuInfo;
     fByteBuffer: PByteBuffer;
     FIsParamResultSet: Boolean; //just a tag to know if Descriptors are allocated/Freed by owner stmt
+    FLobsOwnLocators: Boolean;
     function GetFinalObject(Obj: POCIObject): POCIObject;
     function CreateOCIConvertError(ColumnIndex: Integer; DataType: ub2): EZOCIConvertError;
     procedure FreeOracleSQLVars;
@@ -247,7 +248,7 @@ type
     function CreateLobStream(CodePage: Word; LobStreamMode: TZLobStreamMode): TStream; override;
   public
     constructor Create(const Connection: IZOracleConnection;
-      LobLocator: POCILobLocator; dty: ub2; const OpenLobStreams: TZSortedList);
+      LobLocator: POCILobLocator; OwnsLobLocator: Boolean; dty: ub2; const OpenLobStreams: TZSortedList);
     destructor Destroy; override;
   protected
     LobIsOpen: Boolean;
@@ -403,9 +404,9 @@ type
     function GetPAnsiChar(CodePage: Word; var ConversionBuf: RawByteString; out Len: NativeUInt): PAnsiChar; reintroduce;
   public
     constructor Create(const Connection: IZOracleConnection;
-      LobLocator: POCILobLocator; CharsetForm: ub1; csid: ub2;
+      LobLocator: POCILobLocator; OwnsLobLocator: Boolean; CharsetForm: ub1; csid: ub2;
       const OpenLobStreams: TZSortedList);
-    constructor CreateFromClob(const Lob: IZCLob; LobLocator: POCILobLocator;
+    constructor CreateFromClob(const Lob: IZCLob; LobLocator: POCILobLocator; OwnsLobLocator: Boolean;
       CharsetForm: ub1; csid: ub2; const Connection: IZOracleConnection;
       const OpenLobStreams: TZSortedList); reintroduce;
   end;
@@ -724,6 +725,7 @@ constructor TZOracleAbstractResultSet.Create(
   ErrorHandle: POCIError; const ZBufferSize: Integer);
 begin
   inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
+  FLobsOwnLocators := (Statement.GetResultSetConcurrency <> rcReadOnly) or (Statement.GetResultSetType <> rtForwardOnly);
   FOracleConnection := Statement.GetConnection as IZOracleConnection;
   fByteBuffer := FOracleConnection.GetByteBufferAddress;
   FStmtHandle := StmtHandle;
@@ -791,7 +793,11 @@ begin
       if Assigned(CurrentVar^._Obj) then
         DisposeObject(CurrentVar^._Obj);
       if (CurrentVar^.valuep <> nil) then
-        if (CurrentVar^.DescriptorType > 0) and not (CurrentVar^.DescriptorType in [OCI_DTYPE_LOB, OCI_DTYPE_FILE]) then begin
+
+        if (CurrentVar^.DescriptorType > 0) and (not FLobsOwnLocators or
+           (FLobsOwnLocators and not (CurrentVar^.DescriptorType in [OCI_DTYPE_LOB, OCI_DTYPE_FILE]))) then
+        begin
+          // Free all allocated Descriptors or ones that aren't lobs if lobsOwnLocators
           for J := 0 to FIteration-1 do
             if ((PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer))))^ <> nil) and (not FIsParamResultSet) then begin
               Status := FPlainDriver.OCIDescriptorFree(PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer)))^,
@@ -799,6 +805,25 @@ begin
               if Status <> OCI_SUCCESS then
                 FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcOther, 'OCIDescriptorFree', Self);
             end;
+
+//        if (CurrentVar^.DescriptorType > 0) and not FLobsOwnLocators then begin
+//          // Free all allocated Descriptors
+//          for J := 0 to FIteration-1 do
+//            if ((PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer))))^ <> nil) and (not FIsParamResultSet) then begin
+//              Status := FPlainDriver.OCIDescriptorFree(PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer)))^,
+//                CurrentVar^.DescriptorType);
+//              if Status <> OCI_SUCCESS then
+//                FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcOther, 'OCIDescriptorFree', Self);
+//            end;
+//        end else if (CurrentVar^.DescriptorType > 0) and not (CurrentVar^.DescriptorType in [OCI_DTYPE_LOB, OCI_DTYPE_FILE]) then begin
+//          // Free all allocated Descriptors that aren't lobs.
+//          for J := 0 to FIteration-1 do
+//            if ((PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer))))^ <> nil) and (not FIsParamResultSet) then begin
+//              Status := FPlainDriver.OCIDescriptorFree(PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer)))^,
+//                CurrentVar^.DescriptorType);
+//              if Status <> OCI_SUCCESS then
+//                FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcOther, 'OCIDescriptorFree', Self);
+//            end;
         end else if CurrentVar^.dty = SQLT_VST then
           for J := 0 to FIteration-1 do begin
             Status := FPlainDriver.OCIStringResize(FOCIEnv, FOCIError, 0, PPOCIString(CurrentVar^.valuep+(J*SizeOf(POCIString))));
@@ -2333,9 +2358,9 @@ begin
                 end;
       SQLT_BLOB,
       SQLT_BFILEE,
-      SQLT_CFILEE: Result := TZOracleBlob.Create(FOracleConnection, PPOCIDescriptor(P)^, SQLVarHolder.dty, FOpenLobStreams);
+      SQLT_CFILEE: Result := TZOracleBlob.Create(FOracleConnection, PPOCIDescriptor(P)^, FLobsOwnLocators, SQLVarHolder.dty, FOpenLobStreams);
       SQLT_CLOB: with TZOracleColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) do
-          Result := TZOracleClob.Create(FOracleConnection, PPOCIDescriptor(P)^, CharSetForm, csid, FOpenLobStreams);
+          Result := TZOracleClob.Create(FOracleConnection, PPOCIDescriptor(P)^, FLobsOwnLocators, CharSetForm, csid, FOpenLobStreams);
       SQLT_NTY: ;
       else raise CreateCanNotAccessBlobRecordException(ColumnIndex, TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType);
     end;
@@ -2648,6 +2673,8 @@ var
   Status: Integer;
   CurrentVar: PZSQLVar;
 begin
+  if ALobLocatorsOnly and not FLobsOwnLocators then
+    Exit;
   for i := 0 to Length(FColumns) - 1 do
   begin
     CurrentVar := @FColumns[i];
@@ -2678,8 +2705,8 @@ begin
       for J := 0 to FIteration - 1 do
       begin
         // Unused (or no longer needed) descriptors are ones above the fetchcount on the final fetch
-        // OR lob descriptors that are null.
-        if ((CurrentVar.DescriptorType in [OCI_DTYPE_LOB, OCI_DTYPE_FILE]) and (CurrentVar.DataIndicators[j] < 0)) or
+        // OR lob descriptors that are null and own their own locators.
+        if (FLobsOwnLocators and (CurrentVar.DescriptorType in [OCI_DTYPE_LOB, OCI_DTYPE_FILE]) and (CurrentVar.DataIndicators[j] < 0)) or
            (j >= FetchedRows) then
         begin
           Status := FPlainDriver.OCIDescriptorFree(PPOCIDescriptor(CurrentVar.valuep + (J * SizeOf(POCIDescriptor)))^, CurrentVar.DescriptorType);
@@ -3339,11 +3366,11 @@ begin
     SQLT_BFILEE,
     SQLT_CFILEE,
     SQLT_BLOB:  begin
-                  AbstractOracleBlob := TZOracleBlob.Create(FOracleConnection, FLobLocator, Fdty, FOpenLobStreams);
+                  AbstractOracleBlob := TZOracleBlob.Create(FOracleConnection, FLobLocator, False, Fdty, FOpenLobStreams);
                   Result := TZOracleBlob(AbstractOracleBlob);
                 end;
     SQLT_CLOB:  begin
-                  AbstractOracleBlob := TZOracleClob.Create(FOracleConnection, FLobLocator, Fcharsetform, fcsid, FOpenLobStreams);
+                  AbstractOracleBlob := TZOracleClob.Create(FOracleConnection, FLobLocator, False, Fcharsetform, fcsid, FOpenLobStreams);
                   Result := TZOracleClob(AbstractOracleBlob);
                 end;
     else raise EZUnsupportedException.Create(SUnsupportedOperation);
@@ -3373,7 +3400,7 @@ begin
 end;
 
 constructor TZAbstractOracleBlob.Create(const Connection: IZOracleConnection;
-  LobLocator: POCILobLocator; dty: ub2; const OpenLobStreams: TZSortedList);
+  LobLocator: POCILobLocator; OwnsLobLocator: Boolean; dty: ub2; const OpenLobStreams: TZSortedList);
 begin
   inherited Create(zCP_Binary, OpenLobStreams);
   FOracleConnection := Connection;
@@ -3391,7 +3418,7 @@ begin
   else if (Fdty = SQLT_BFILEE) or (Fdty = OCI_DTYPE_FILE)
     then FDescriptorType := OCI_DTYPE_FILE
     else FDescriptorType := 0; //will raise an error by oci
-  if Assigned(FLobLocator) then
+  if Assigned(FLobLocator) and OwnsLobLocator then
     FLocatorAllocated := True;
 end;
 
@@ -3526,7 +3553,7 @@ var P: Pointer;
   Stream: TZAbstracOracleLobStream;
   Success: Boolean;
 begin
-  Create(Connection, LobLocator, SQLT_BLOB, OpenLobStreams);
+  Create(Connection, LobLocator, False, SQLT_BLOB, OpenLobStreams);
   R := '';
   Fdty := SQLT_BLOB;
   FLobStreamMode := lsmWrite;
@@ -3550,11 +3577,11 @@ end;
 { TZOracleClob }
 
 constructor TZOracleClob.Create(const Connection: IZOracleConnection;
-      LobLocator: POCILobLocator; CharsetForm: ub1; csid: ub2;
+      LobLocator: POCILobLocator; OwnsLobLocator: Boolean; CharsetForm: ub1; csid: ub2;
       const OpenLobStreams: TZSortedList);
 var CodePage: PZCodePage;
 begin
-  inherited Create(Connection, Loblocator, SQLT_CLOB, OpenLobStreams);
+  inherited Create(Connection, Loblocator, OwnsLobLocator, SQLT_CLOB, OpenLobStreams);
   Fcsid := csid;
   FCharsetForm := CharsetForm;
   if (FCharsetForm = SQLCS_NCHAR) or (csid >= OCI_UTF16ID) then begin
@@ -3575,6 +3602,7 @@ begin
 end;
 
 constructor TZOracleClob.CreateFromClob(const Lob: IZCLob; LobLocator: POCILobLocator;
+  OwnsLobLocator: Boolean;
   CharsetForm: ub1; csid: ub2; const Connection: IZOracleConnection;
   const OpenLobStreams: TZSortedList);
 var P: Pointer;
@@ -3584,7 +3612,7 @@ var P: Pointer;
   Stream: TZAbstracOracleLobStream;
   Success: Boolean;
 begin
-  Create(Connection, LobLocator, CharsetForm, csid, OpenLobStreams);
+  Create(Connection, LobLocator, OwnsLobLocator, CharsetForm, csid, OpenLobStreams);
   FLobStreamMode := lsmWrite;
   if Fcsid = OCI_UTF16ID then begin
     U := '';
@@ -3996,12 +4024,12 @@ begin
     SQLT_BLOB,
     SQLT_BFILEE,
     SQLT_CFILEE: begin
-                  OracleLob := TZOracleBlob.Create(Connection, nil, ColumnInfo.dty, FOpenLobStreams);
+                  OracleLob := TZOracleBlob.Create(Connection, nil, False, ColumnInfo.dty, FOpenLobStreams);
                   OracleLob.FLobStreamMode := LobStreamMode;
                   Result := TZOracleBLob(OracleLob);
                 end;
     SQLT_CLOB:  begin
-                  OracleLob := TZOracleClob.Create(Connection, nil, ColumnInfo.CharsetForm,
+                  OracleLob := TZOracleClob.Create(Connection, nil, False, ColumnInfo.CharsetForm,
                     ColumnInfo.csid, FOpenLobStreams);
                   OracleLob.FLobStreamMode := LobStreamMode;
                   Result := TZOracleClob(OracleLob);
