@@ -793,7 +793,6 @@ begin
       if Assigned(CurrentVar^._Obj) then
         DisposeObject(CurrentVar^._Obj);
       if (CurrentVar^.valuep <> nil) then
-
         if (CurrentVar^.DescriptorType > 0) and (not FLobsOwnLocators or
            (FLobsOwnLocators and not (CurrentVar^.DescriptorType in [OCI_DTYPE_LOB, OCI_DTYPE_FILE]))) then
         begin
@@ -805,25 +804,6 @@ begin
               if Status <> OCI_SUCCESS then
                 FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcOther, 'OCIDescriptorFree', Self);
             end;
-
-//        if (CurrentVar^.DescriptorType > 0) and not FLobsOwnLocators then begin
-//          // Free all allocated Descriptors
-//          for J := 0 to FIteration-1 do
-//            if ((PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer))))^ <> nil) and (not FIsParamResultSet) then begin
-//              Status := FPlainDriver.OCIDescriptorFree(PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer)))^,
-//                CurrentVar^.DescriptorType);
-//              if Status <> OCI_SUCCESS then
-//                FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcOther, 'OCIDescriptorFree', Self);
-//            end;
-//        end else if (CurrentVar^.DescriptorType > 0) and not (CurrentVar^.DescriptorType in [OCI_DTYPE_LOB, OCI_DTYPE_FILE]) then begin
-//          // Free all allocated Descriptors that aren't lobs.
-//          for J := 0 to FIteration-1 do
-//            if ((PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer))))^ <> nil) and (not FIsParamResultSet) then begin
-//              Status := FPlainDriver.OCIDescriptorFree(PPOCIDescriptor(CurrentVar^.valuep+(J*SizeOf(Pointer)))^,
-//                CurrentVar^.DescriptorType);
-//              if Status <> OCI_SUCCESS then
-//                FOracleConnection.HandleErrorOrWarning(FOCIError, status, lcOther, 'OCIDescriptorFree', Self);
-//            end;
         end else if CurrentVar^.dty = SQLT_VST then
           for J := 0 to FIteration-1 do begin
             Status := FPlainDriver.OCIStringResize(FOCIEnv, FOCIError, 0, PPOCIString(CurrentVar^.valuep+(J*SizeOf(POCIString))));
