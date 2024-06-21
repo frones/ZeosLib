@@ -1997,7 +1997,7 @@ Str_Size:   Result.UpdateInt(TableColColumnCharOctetLengthIndex, FieldLength);  
       else Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
       P := GetPAnsiChar(DESCRIPTION_Index, L);
       if P <> nil then begin
-        L := {$IFDEF NATIVEINT_WEAK_REFERENCE}ZCompatibility.{$ENDIF}min(L,255);
+        L := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}min(L,255);
         Result.UpdatePAnsiChar(TableColColumnRemarksIndex, P, L);   //REMARKS
       end;
       P := GetPAnsiChar(DEFAULT_SOURCE_Index, L);

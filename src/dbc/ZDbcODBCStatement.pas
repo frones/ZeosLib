@@ -1958,7 +1958,7 @@ begin
           ActualLength := SizeOf(Pointer);
           P := IZBlob(BindList[Index].Value).GetBuffer(FRawTemp, L);
           if P = nil then L := 0;
-          Bind.ColumnSize := {$IFDEF NATIVEINT_WEAK_REFERENCE}ZCompatibility.{$ENDIF}Max(L, Bind.ColumnSize);
+          Bind.ColumnSize := {$IFDEF MISS_MATH_NATIVEUINT_MIN_MAX_OVERLOAD}ZCompatibility.{$ENDIF}Max(L, Bind.ColumnSize);
         end else if (Ord(SQLType) < Ord(stString)) then
           ActualLength := CalcBufSize(ActualLength, ODBC_CType, SQLType, ConSettings.ClientCodePage);
         if ActualLength <> Bind.BufferLength then
