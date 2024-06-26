@@ -328,7 +328,7 @@ var
   procedure AsBlob;
   var Blob: IZBlob;
   begin
-    Blob := TZOracleBlob.Create(FOracleConnection, nil, SQLT_BLOB, FOpenLobStreams);
+    Blob := TZOracleBlob.Create(FOracleConnection, nil, False, SQLT_BLOB, FOpenLobStreams);
     Blob.SetBuffer(Buf, Len);
     BindLob(Index, stBinaryStream, Blob);
   end;
@@ -381,11 +381,11 @@ begin
         else raise CreateConversionError(Index, stBinaryStream, stUnicodeStream);
         IZBlob(BindValue.Value).QueryInterface(IZCLob, Clob);
         if ZEncoding.IsMBCSCodePage(FClientCP) then begin
-          RefCntLob := TZOracleClob.CreateFromClob(Clob, nil,
+          RefCntLob := TZOracleClob.CreateFromClob(Clob, nil, False,
             SQLCS_IMPLICIT, OCI_UTF16ID, FOracleConnection, FOpenLobStreams);
           SQLType := stUnicodeStream;
         end else begin
-          RefCntLob := TZOracleClob.CreateFromClob(Clob, nil,
+          RefCntLob := TZOracleClob.CreateFromClob(Clob, nil, False,
             SQLCS_IMPLICIT, ConSettings.ClientCodePage.ID, FOracleConnection, FOpenLobStreams);
           SQLType := stAsciiStream;
         end;
@@ -1021,7 +1021,7 @@ begin
       OCIBindValue.indp[0] := 0;
     end
   else if OCIBindValue.dty = SQLT_CLOB then begin
-    Lob := TZOracleClob.Create(FOracleConnection, nil, SQLCS_IMPLICIT, FClientCP, FOpenLobStreams);
+    Lob := TZOracleClob.Create(FOracleConnection, nil, False, SQLCS_IMPLICIT, FClientCP, FOpenLobStreams);
     if Len > 0 then
       Lob.SetPAnsiChar(Buf, FClientCP, Len);
     BindLob(Index, stAsciiStream, Lob);
@@ -1485,7 +1485,7 @@ label bind_direct;
             end
           else raise CreateConversionError(ParameterIndex, SQLType, stUnicodeStream);
           if not Supports(Lob, IZOracleLob, OCILob) then
-            OciLob := TZOracleClob.CreateFromClob(Clob, nil, CharsetForm, csid, FOracleConnection, FOpenLobStreams);
+            OciLob := TZOracleClob.CreateFromClob(Clob, nil, False, CharsetForm, csid, FOracleConnection, FOpenLobStreams);
         end;
         PPOCIDescriptor(PAnsiChar(OCIBindValue.valuep)+SizeOf(Pointer)*I)^ := OciLob.GetLobLocator;
         OraLobs[i] := OciLob; //destroy old interface or replace it
@@ -2167,7 +2167,7 @@ var
   procedure AsLob;
   var Lob: IZCLob;
   begin
-    Lob := TZOracleClob.Create(FOracleConnection, nil, SQLCS_NCHAR, OCI_UTF16ID, FOpenLobStreams);
+    Lob := TZOracleClob.Create(FOracleConnection, nil, False, SQLCS_NCHAR, OCI_UTF16ID, FOpenLobStreams);
     try
       Lob.SetPWideChar(Value, WLen);
       BindLob(Index, stUnicodeStream, Lob);

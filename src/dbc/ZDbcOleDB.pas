@@ -51,7 +51,7 @@
 
 (*
 constributors:
-  Mark Ford(MJFShark)
+  Mark Ford
   Miab3
 *)
 

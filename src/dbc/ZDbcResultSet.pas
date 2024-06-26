@@ -1227,7 +1227,7 @@ type
     procedure AfterConstruction; override;
   public //might be obsolete in future
     function IsClob: Boolean;
-    function IsCached:  Boolean;   // mjf:
+    function IsCached:  Boolean;
     function Length: Integer; virtual; abstract;
   public
     function IsEmpty: Boolean; virtual; abstract;
