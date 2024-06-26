@@ -429,17 +429,6 @@ begin
     FMetaData := TODBCDatabaseMetadataA.Create(Self, Url, fHDBC);
   fCatalog := '';
   inherited AfterConstruction; //dec constructors RefCnt
-  if fODBCPlainDriver.SQLAllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), fHENV) <> SQL_SUCCESS then
-    raise EZSQLException.Create('Couldn''t allocate an Environment handle');
-  //Try to SET Major Version 3 and minior Version 8
-  if fODBCPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3_80, 0) = SQL_SUCCESS then
-    fODBCVersion := {%H-}Word(SQL_OV_ODBC3_80)
-  else begin
-    //set minimum Major Version 3
-    if fODBCPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0) <> SQL_SUCCESS then
-      raise EZSQLException.Create('Failed to set minimum ODBC version 3');
-    fODBCVersion := {%H-}Word(SQL_OV_ODBC3) * 100;
-  end;
 end;
 
 {**
@@ -488,6 +477,9 @@ begin
         fODBCPlainDriver.SQLFreeHandle(SQL_HANDLE_DBC, fHDBC);
         fHDBC := nil;
       end;
+    if Assigned(fHENV) then
+      fODBCPlainDriver.SQLFreeHandle(SQL_HANDLE_ENV, fHENV);
+      fHENV := nil;
     end;
   end;
 end;
@@ -519,8 +511,6 @@ end;
 destructor TZAbstractODBCConnection.Destroy;
 begin
   inherited Destroy;
-  if Assigned(fHENV) then
-    fODBCPlainDriver.SQLFreeHandle(SQL_HANDLE_ENV, fHENV);
   ClearWarnings;
 end;
 
@@ -738,10 +728,11 @@ const
     (DriverName: 'PSQLODBC';    Provider: spPostgreSQL),
     (DriverName: 'NXODBCDRIVER';Provider: spNexusDB),
     (DriverName: 'ICLIT09B';    Provider: spInformix)
-    );
+  );
 var
   tmp, OutConnectString: String;
   TimeOut: NativeUInt;
+  iODBCVersion: SQLPointer;
   aLen: SQLSMALLINT;
   ConnectStrings: TStrings;
   DriverCompletion: SQLUSMALLINT;
@@ -750,6 +741,32 @@ var
 begin
   if not Closed then
     Exit;
+  if fHENV = nil then begin
+    tmp := Info.Values[ConnProps_ODBC_Version];
+    if tmp = '' then
+      iODBCVersion := SQL_OV_ODBC3_80
+    else begin
+      {$IFNDEF UNICODE}
+      iODBCVersion := SQLPointer(ZFastCode.{$IFDEF CPU64}RawToUInt64Def{$ELSE}RawToUInt32Def{$ENDIF}(tmp, NativeUInt(SQL_OV_ODBC3_80)));
+      {$ELSE}
+      iODBCVersion := SQLPointer(ZFastCode.{$IFDEF CPU64}UnicodeToUInt64Def{$ELSE}UnicodeToUInt32Def{$ENDIF}(tmp, NativeUInt(SQL_OV_ODBC3_80)));
+      {$ENDIF}
+      if NativeUInt(iODBCVersion) < NativeUInt(SQL_OV_ODBC3_80)
+      then iODBCVersion := SQL_OV_ODBC3
+      else iODBCVersion := SQL_OV_ODBC3_80;
+    end;
+    if fODBCPlainDriver.SQLAllocHandle(SQL_HANDLE_ENV, Pointer(SQL_NULL_HANDLE), fHENV) <> SQL_SUCCESS then
+      raise EZSQLException.Create('Couldn''t allocate an Environment handle');
+    //Try to SET Major Version 3 and minior Version 8
+    if fODBCPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, iODBCVersion, 0) = SQL_SUCCESS then
+      fODBCVersion := {%H-}Word(SQL_OV_ODBC3_80)
+    else begin
+      //set minimum Major Version 3
+      if fODBCPlainDriver.SQLSetEnvAttr(fHENV, SQL_ATTR_ODBC_VERSION, SQL_OV_ODBC3, 0) <> SQL_SUCCESS then
+        raise EZSQLException.Create('Failed to set minimum ODBC version 3');
+      fODBCVersion := {%H-}Word(SQL_OV_ODBC3) * 100;
+    end;
+  end;
   DetermineAttachmentCharset; //do this by default!
   Ret := fODBCPlainDriver.SQLAllocHandle(SQL_HANDLE_DBC,fHENV,fHDBC);
   if Ret <> SQL_SUCCESS then

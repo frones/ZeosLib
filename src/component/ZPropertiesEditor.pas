@@ -4229,6 +4229,16 @@ const
     Providers: (Count: 0; Items: nil);
     Protocols: (Count: 2; Items: @cODBCProtocols);
   );
+  ZProp_ODBC_Version : TZProperty = (
+    Name: ConnProps_ODBC_Version;
+    Purpose: 'Specifies the ODBC driver version to be used on this connection. '+
+      'The supportend versions are ODBC 3 or ODBC 3.80 (submit the value as 380)';
+    ValueType: pvtNumber; LevelTypes: [pltConnection];
+    Values: '3|380'; Default: '380'; Alias: '';
+    Providers: (Count: 0; Items: nil);
+    Protocols: (Count: 2; Items: @cODBCProtocols);
+  );
+
 {$ENDIF}
 {$IFNDEF ZEOS_DISABLE_POSTGRESQL}
   PostgreOnly: array[0..0] of String = ('postrgres');
@@ -4392,7 +4402,7 @@ initialization
     @ZProp_KRB, @ZProp_LANG, @ZProp_LazyClose, @ZProp_LCLOSE]);
 {$ENDIF}
 {$IFDEF ENABLE_ODBC}
-  RegisterZProperties([@ZProp_Server, @ZProp_CharacterSet, @ZProp_DRIVER]);
+  RegisterZProperties([@ZProp_Server, @ZProp_CharacterSet, @ZProp_DRIVER, @ZProp_ODBC_Version]);
 {$ENDIF}
 
 {$IF declared(ELProps_ListernerInterval )}
