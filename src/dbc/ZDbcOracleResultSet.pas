@@ -3811,7 +3811,8 @@ begin
   // if a lobprefetch size was set then the polling buffer must be a multiple of that size.
   if LobPrefetchSize > 0 then
     bufl := LobPrefetchSize * ABytesPerChar;
-  bufl := Min(BufByteSize, bufl);
+  if BufByteSize < bufl then
+    bufl := BufByteSize;
   pStart := pBuff;
   piece := OCI_FIRST_PIECE;
   repeat
