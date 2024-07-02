@@ -3040,7 +3040,7 @@ begin
         Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[ColumnNameIndex], Len), Len);
         aTypeName := GetPAnsiChar(fTableColColumnMap.ColIndices[TableColColumnTypeNameIndex], Len);
         Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, aTypeName, Len);
-        IsUnsigned := (aTypeName <> nil) and ((PWord(aTypeName)^ or $20) = Ord('u')); //test unsigned
+        IsUnsigned := (aTypeName <> nil) and ((PByte(aTypeName)^ or $20) = Ord('u')); //test unsigned
         SQLType := ConvertODBCTypeToSQLType(GetSmall(fTableColColumnMap.ColIndices[TableColColumnTypeIndex]),
           GetInt(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]),
           SmallInt(GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex])), IsUnsigned, ConSettings, nil);
