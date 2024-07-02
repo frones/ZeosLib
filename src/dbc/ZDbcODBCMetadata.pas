@@ -2165,7 +2165,9 @@ var
   HSTMT: SQLHSTMT;
   SQLType: TZSQLType;
   Cat, Schem, Table, Column: UnicodeString;
+  aTypeName: PWideChar;
   ODBCConnection: IZODBCConnection;
+  IsUnsigned: Boolean;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern,
       TableNamePattern, ColumnNamePattern);
@@ -2191,16 +2193,15 @@ begin
         Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[SchemaNameIndex], Len), Len);
         Result.UpdatePWideChar(TableNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableNameIndex], Len), Len);
         Result.UpdatePWideChar(ColumnNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[ColumnNameIndex], Len), Len);
+        aTypeName := GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnTypeNameIndex], Len);
+        Result.UpdatePWideChar(TableColColumnTypeNameIndex, aTypeName, Len);
+        IsUnsigned := (aTypeName <> nil) and ((PWord(aTypeName)^ or $0020) = Ord('u')); //test unsigned
         SQLType := ConvertODBCTypeToSQLType(GetSmall(fTableColColumnMap.ColIndices[TableColColumnTypeIndex]),
           GetInt(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]),
-          SmallInt(GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex])), False, ConSettings, nil);
-        if (Ord(SQLType) < Ord(stFloat)) and (Ord(SQLType) > Ord(stBoolean)) then
-          if SQLType = stShort then //spezial case: MSSQL should map stByte / MySQL should use stShort
-            SQLType := stByte
-          else //test unsigned
-            SQLType := TZSQLType(Ord(SQLType)-Ord(ZFastCode.Pos('U', UpperCase(GetString(fTableColColumnMap.ColIndices[TableColColumnTypeNameIndex]))) > 0));
+          SmallInt(GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex])), IsUnsigned, ConSettings, nil);
+        if (SQLType = stShort) and (ODBCConnection.GetServerProvider in [spMSSQL]) then //spezial case: MSSQL should map stByte / MySQL should use stShort
+          SQLType := stByte;
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
-        Result.UpdatePWideChar(TableColColumnTypeNameIndex, GetPWideChar(fTableColColumnMap.ColIndices[TableColColumnTypeNameIndex], Len), Len);
         Result.UpdateInt(TableColColumnSizeIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex]));
         Result.UpdateInt(TableColColumnBufLengthIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]));
         Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]));
@@ -3010,7 +3011,9 @@ var
   Len: NativeUInt;
   HSTMT: SQLHSTMT;
   Cat, Schem, Tabl, Col: RawByteString;
+  aTypeName: PAnsiChar;
   ODBCConnection: IZODBCConnection;
+  IsUnsigned: Boolean;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern,
       TableNamePattern, ColumnNamePattern);
@@ -3035,16 +3038,15 @@ begin
         Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[SchemaNameIndex], Len), Len);
         Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[TableNameIndex], Len), Len);
         Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[ColumnNameIndex], Len), Len);
+        aTypeName := GetPAnsiChar(fTableColColumnMap.ColIndices[TableColColumnTypeNameIndex], Len);
+        Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, aTypeName, Len);
+        IsUnsigned := (aTypeName <> nil) and ((PWord(aTypeName)^ or $20) = Ord('u')); //test unsigned
         SQLType := ConvertODBCTypeToSQLType(GetSmall(fTableColColumnMap.ColIndices[TableColColumnTypeIndex]),
           GetInt(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]),
-          GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex]), False, ConSettings, nil);
-        if (Ord(SQLType) < Ord(stFloat)) and (Ord(SQLType) > Ord(stBoolean)) then
-          if SQLType = stShort then //spezial case: MSSQL should map stByte / MySQL should use stShort
-            SQLType := stByte
-          else //test unsigned
-            SQLType := TZSQLType(Ord(SQLType)-Ord(ZFastCode.Pos('U', UpperCase(GetString(fTableColColumnMap.ColIndices[TableColColumnTypeNameIndex]))) > 0));
+          SmallInt(GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex])), IsUnsigned, ConSettings, nil);
+        if (SQLType = stShort) and (ODBCConnection.GetServerProvider in [spMSSQL]) then //spezial case: MSSQL should map stByte / MySQL should use stShort
+          SQLType := stByte;
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
-        Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(fTableColColumnMap.ColIndices[TableColColumnTypeNameIndex], Len), Len);
         Result.UpdateInt(TableColColumnSizeIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnSizeIndex]));
         Result.UpdateInt(TableColColumnBufLengthIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnBufLengthIndex]));
         Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetInt(fTableColColumnMap.ColIndices[TableColColumnDecimalDigitsIndex]));

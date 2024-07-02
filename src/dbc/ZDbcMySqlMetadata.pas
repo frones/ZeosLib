@@ -3314,7 +3314,7 @@ begin
     '    TABLE_CONSTRAINTS.TABLE_NAME = KEY_COLUMN_USAGE.REFERENCED_TABLE_NAME AND CONSTRAINT_TYPE = ''PRIMARY KEY''';
 
   // Conditions for primary table
-
+  cond := '';
   If LPTable <> '' Then
     cond := cond + sLineBreak + '  ' + ConstructNameCondition(LPTable, 'KEY_COLUMN_USAGE.REFERENCED_TABLE_NAME');
 
