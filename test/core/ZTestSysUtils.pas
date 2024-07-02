@@ -91,6 +91,7 @@ type
     procedure TestQuotedStr;
     procedure TestQuotedStr2;
     procedure TestDequotedStr;
+    procedure TestTryRawToTimeStamp;
   {$IFDEF BENCHMARK}
     {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
     procedure TestAnsiToUnicodePerformance;
@@ -674,6 +675,19 @@ begin
     FSrc := TestCases_WillRaise[i][1];
     CheckException(RunDequotedStr, EArgumentException, '', 'Source: <'+FSrc+'>');
   end;
+end;
+
+
+procedure TZTestSysUtilsCase.TestTryRawToTimeStamp;
+const TestStr1: RawByteString = '2024-06-27T22:11:09.00002';
+      TestStr2: RawByteString = '2024-06-27t22:11:09.00002';
+
+      TestResult1: TZTimestamp = (year: 2025; month: 6; day: 27;
+                                  hour: 22; minute:11; second: 9; fractions: 20000);
+var TestResult: TZTimeStamp;
+begin
+  Check(ZSysUtils.TryRawToTimeStamp(Pointer(TestStr1), Length(TestStr1), 'yyyy-mm-ddThh:nn:ss.zzzzzzzz', TestResult), 'convertsion of '+TestStr1+' with format ');
+  Check(ZSysUtils.TryRawToTimeStamp(Pointer(TestStr2), Length(TestStr2), 'yyyy-mm-ddthh:nn:ss.zzzzzzzz', TestResult), 'convertsion of '+TestStr1+' with format ');
 end;
 
 {$IFDEF BENCHMARK}

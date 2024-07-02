@@ -136,6 +136,7 @@ type
     procedure TestSF498;
     procedure TestSF499;
     procedure TestSF525;
+    procedure TestSF600;
     // A test for https://zeoslib.sourceforge.io/viewtopic.php?t=200781
     procedure TestForum200781;
   end;
@@ -193,7 +194,9 @@ uses
 procedure ZTestCompCoreBugReport.DataSetCalcFields(Dataset: TDataSet);
 var p_calc_x: TField;
 begin
-  Dataset.FieldByName('p_calc').AsInteger := Dataset.RecNo + 100;
+  p_calc_x := Dataset.FindField('p_calc');
+  if p_calc_x <> nil then
+    Dataset.FieldByName('p_calc').AsInteger := Dataset.RecNo + 100;
   p_calc_x := Dataset.FindField('p_calc2');
   if p_calc_x <> nil then
     p_calc_x.AsString := Dataset.FieldByName('p_name').AsString + ' ' + Dataset.FieldByName('p_name').AsString;
@@ -2162,6 +2165,54 @@ begin
     Table.Locate('ID', 8, []);
   finally
     FreeAndNil(Table);
+  end;
+end;
+
+procedure ZTestCompCoreBugReport.TestSF600;
+var
+  I, rc: Integer;
+  Query: TZQuery;
+  FieldDefs: TFieldDefs;
+  CalcField: TField;
+begin
+  if SkipForReason([srClosedBug]) then Exit;
+
+  Query := CreateQuery;
+  try
+    CheckEquals(False, Query.CachedUpdates);
+    Query.ReadOnly := True;
+    Query.OnCalcFields := DataSetCalcFields;
+
+    Query.SQL.Text := 'SELECT p_id FROM people';
+    FieldDefs := Query.FieldDefs;
+    FieldDefs.Update;
+
+    for I := 0 to FieldDefs.Count - 1 do
+      FieldDefs[I].CreateField(Query).DataSet := Query;
+
+    CalcField := TIntegerField.Create(nil);
+    CalcField.FieldName := 'p_calc3';
+    CalcField.FieldKind := fkCalculated;
+    CalcField.Visible := True;
+    CalcField.DataSet := Query;
+
+    Query.Open;
+    for I := 1 to 5 do begin
+      Query.Filter := 'p_calc3='+IntToStr(i);
+      Query.Filtered := True;
+      Query.First;
+      rc := 0;
+      while not Query.Eof do
+      begin
+        Inc(rc);
+        CheckEquals(Query.FieldByName('p_id').AsInteger, Query.FieldByName('p_calc3').AsInteger);
+        Query.Next;
+      end;
+      CheckEquals(Integer(1), rc, 'the RecordCount after filtering by a calculated Field');
+    end;
+    Query.Close;
+  finally
+    Query.Free;
   end;
 end;
 
