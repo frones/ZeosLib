@@ -1944,10 +1944,13 @@ function TZProxyDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const ColumnNamePattern: string): IZResultSet;
 var
   Res: WideString;
+  X: TZDbcProxyResultSet;
 begin
   Res := (GetConnection as IZDbcProxyConnection).GetConnectionInterface.GetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
-  Result := TZDbcProxyResultSet.Create(GetConnection, '', Res);
+  X := TZDbcProxyResultSet.Create(GetConnection, '', Res);
+  X.SetType(rtScrollInsensitive);
+  Result := X;
 end;
 
 {**
