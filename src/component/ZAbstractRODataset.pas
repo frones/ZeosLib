@@ -2221,30 +2221,37 @@ begin
     SavedState := SetTempState(dsNewValue);
     CurrentRows.Add(Pointer(RowNo));
     CurrentRow := 1;
-
     try
-      OnFilterRecord(Self, Result);
-    except
-      if Assigned(ApplicationHandleException)
-      then ApplicationHandleException(Self);
+      try
+        OnFilterRecord(Self, Result);
+      except
+        if Assigned(ApplicationHandleException)
+        then ApplicationHandleException(Self);
+      end;
+    finally
+      CurrentRow := SavedRow;
+      {$IFDEF AUTOREFCOUNT}
+      CurrentRows := nil;
+      {$ELSE}
+      CurrentRows.Free;
+      {$ENDIF}
+      CurrentRows := SavedRows;
+      RestoreState(SavedState);
     end;
-
-    CurrentRow := SavedRow;
-    {$IFDEF AUTOREFCOUNT}
-    CurrentRows := nil;
-    {$ELSE}
-    CurrentRows.Free;
-    {$ENDIF}
-    CurrentRows := SavedRows;
-    RestoreState(SavedState);
-
   end;
   if not Result then
      Exit;
 
   { Check the record by filter expression. }
-  if FilterEnabled and (FilterExpression.Expression <> '') then
-    Result := InternalFilterRow;
+  if FilterEnabled and (FilterExpression.Expression <> '') then begin
+    SavedState := SetTempState(dsFilter);
+    try
+      GetCalcFields(TGetCalcFieldsParamType(TempBuffer));
+      Result := InternalFilterRow;
+    finally
+      RestoreState(SavedState);
+    end;
+  end;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -2660,6 +2667,7 @@ begin
           end;
         end;
       end;
+    dsFilter: RowBuffer := PZRowBuffer(TempBuffer);//PZRowBuffer(ActiveBuffer);
     {$IFDEF FPC}else; {$ENDIF}
   end;
   Result := RowBuffer <> nil;

@@ -121,9 +121,7 @@ type
     procedure TestClearParametersAndLoggedValues;
     procedure TestAssignDBRTLParams;
     procedure Test_TField_DefaultExpression;
-    {$IFDEF WITH_TBYTES}
     procedure TestSF597;
-    {$ENDIF}
   end;
 
   {$IF not declared(TTestMethod)}
@@ -1693,56 +1691,64 @@ begin
   end;
 end;
 
-{$IFDEF WITH_TBYTES}
 procedure TZGenericTestDataSet.TestSF597;
 var
   Query: TZQuery;
   TestBytes: TBytes;
   TestByte: Byte;
   x: Byte;
-  BinLob: String;
+  BinLobField: String;
   {$IFNDEF TBLOBDATA_IS_TBYTES}
-  Bts: TBytes;
   BlobData: TBlobData;
   {$ENDIF}
 begin
   Connection.Connect;
   case Connection.DbcConnection.GetServerProvider of
-    spOracle: BinLob := 'b_blob';
-    spSQLite: BinLob := 'b_blob';
-    else      BinLob := 'b_image';
+    spOracle: BinLobField := 'b_blob';
+    spSQLite: BinLobField := 'b_blob';
+    else      BinLobField := 'b_image';
   end;
 
   SetLength(TestBytes, 26);
   TestByte := ord('a');
   for x := TestByte to TestByte + 25 do
     TestBytes[x-ord('a')] := x;
-
+  {$IFNDEF TBLOBDATA_IS_TBYTES}
+  ZSetString(@TestBytes[0], 26, BlobData);
+  {$ENDIF}
   Query := CreateQuery;
   try
-    if Connection.DbcConnection.GetServerProvider = spPostgreSQL then
+    if Connection.DbcConnection.GetServerProvider = spPostgreSQL then begin
       Query.Properties.Add(DSProps_OidAsBlob+'=true');
-    Query.SQL.Text := 'insert into blob_values (b_id, ' + BinLob + ') values (:id, :image)';
+      Connection.StartTransaction;
+    end;
+    Query.SQL.Text := 'insert into blob_values (b_id, ' + BinLobField + ') values (:id, :image)';
     Query.ParamByName('id').AsInteger := 20240508;
     if Connection.DbcConnection.GetServerProvider = spPostgreSQL
     {$IFDEF TBLOBDATA_IS_TBYTES}
     then Query.ParamByName('image').AsBlob := TestBytes
     {$ELSE}
-    then Query.ParamByName('image').AsBlob := PAnsiChar(@TestBytes[0])
+    then Query.ParamByName('image').AsBlob := BlobData
     {$ENDIF}
     else Query.ParamByName('image').AsBytes := TestBytes;
     Query.ExecSQL;
 
     Query.ParamByName('id').AsInteger := 20240509;
-    Query.ParamByName('image').AsBytes := nil;
+    if Connection.DbcConnection.GetServerProvider = spPostgreSQL
+    then Query.ParamByName('image').AsBlob := {$IFDEF TBLOBDATA_IS_TBYTES}nil{$ELSE}''{$ENDIF} //switch to OID lobs. no other way to distinguish except prepare emmidiatly
+    else Query.ParamByName('image').AsBytes := nil;
     Query.ExecSQL;
 
     Query.SQL.Text := 'select * from blob_values where b_id = 20240508';
     Query.Open;
-    CheckFalse(Query.FieldByName(BinLob).IsNull, BinLob + ' should not be null');
+    CheckFalse(Query.FieldByName(BinLobField).IsNull, BinLobField + ' should not be null');
     Query.Edit;
     try
-      Query.FieldByName(BinLob).AsBytes := nil;
+      {$IFDEF TFIELD_HAS_ASBYTES}
+      Query.FieldByName(BinLobField).AsBytes := nil;
+      {$ELSE}
+      TBlobField(Query.FieldByName(BinLobField)).Value := '';
+      {$ENDIF}
       Query.Post;
     except
       Query.Cancel;
@@ -1752,21 +1758,26 @@ begin
     Query.Close;
     Query.SQL.Text := 'select * from blob_values where b_id = 20240509';
     Query.Open;
-    CheckTrue(Query.FieldByName(BinLob).IsNull, BinLob + ' should be null');
+    CheckTrue(Query.FieldByName(BinLobField).IsNull, BinLobField + ' should be null');
     Query.Edit;
     try
-      Query.FieldByName(BinLob).AsBytes := nil;
+      {$IFDEF TFIELD_HAS_ASBYTES}
+      Query.FieldByName(BinLobField).AsBytes := nil;
+      {$ELSE}
+      TBlobField(Query.FieldByName(BinLobField)).Value := '';
+      {$ENDIF}
       Query.Post;
     except
       Query.Cancel;
       raise;
     end;
   finally
-    Query.Connection.ExecuteDirect('delete from blob_values where b_id in (20240508,20240509)');
+    if Connection.DbcConnection.GetServerProvider = spPostgreSQL
+    then Connection.Rollback
+    else Query.Connection.ExecuteDirect('delete from blob_values where b_id in (20240508,20240509)');
     FreeAndNil(Query);
   end;
 end;
-{$ENDIF}
 
 {**
 Runs a test for time filter expressions.
