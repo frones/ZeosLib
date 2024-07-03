@@ -350,15 +350,15 @@ const
   PAnsiInc = SizeOf(Cardinal);
   PWideInc = SizeOf(Word); //PWide inc assumes allways two byte
   BothNotNull = Low(Integer);
-  // Results of Asc comparation of Null1, Null2 flags.
-  // If both flags are False, comparation of values is required
+  // Results of Asc comparison of Null1, Null2 flags.
+  // If both flags are False, comparison of values is required
   NullsCompareMatrix: array[Boolean] of array[Boolean] of Integer =
     (
       (BothNotNull, 1),
       (-1, 0)
     );
-  // Results of equality comparation of Null1, Null2 flags.
-  // If both flags are False, comparation of values is required
+  // Results of equality comparison of Null1, Null2 flags.
+  // If both flags are False, comparison of values is required
   NullsEqualMatrix: array[Boolean] of array[Boolean] of Integer =
     (
       (BothNotNull, bIsNotNull),
