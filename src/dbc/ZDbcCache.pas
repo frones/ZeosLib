@@ -175,9 +175,10 @@ type
     procedure DisposeBuffer(Buffer: PZRowBuffer);
 
     function CompareBuffers(Buffer1, Buffer2: PZRowBuffer;
-      const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs): Integer;
+      const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs;
+      NullsFirst: Boolean = false): Integer;
     function CompareBuffer(Buffer1, Buffer2: PZRowBuffer;
-      ColumnIndex: Integer; CompareFunc: TCompareFunc): Integer;
+      ColumnIndex: Integer; CompareFunc: TCompareFunc; NullsFirst: Boolean = false): Integer;
     function GetCompareFunc(ColumnIndex: Integer; const CompareKind: TComparisonKind): TCompareFunc;
     function GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
       const CompareKinds: TComparisonKindArray): TCompareFuncs;
@@ -1760,8 +1761,10 @@ end;
   @param ColumnDirs compare direction for each columns.
 }
 function TZRowAccessor.CompareBuffer(Buffer1, Buffer2: PZRowBuffer;
-  ColumnIndex: Integer; CompareFunc: TCompareFunc): Integer;
-var ValuePtr1, ValuePtr2: Pointer;
+  ColumnIndex: Integer; CompareFunc: TCompareFunc; NullsFirst: Boolean = false): Integer;
+var
+  ValuePtr1, ValuePtr2: Pointer;
+  isNull1, isNull2: Boolean;
 begin
   {$IFNDEF GENERIC_INDEX}ColumnIndex := ColumnIndex-1{$ENDIF};
   { Compares column values. }
@@ -1769,19 +1772,30 @@ begin
   ValuePtr2 := @Buffer2.Columns[FColumnOffsets[ColumnIndex] + 1];
   if @CompareFunc = @CompareNothing
   then Result := -1
-  else Result := CompareFunc(
-    (Buffer1.Columns[FColumnOffsets[ColumnIndex]] = bIsNull),
-    (Buffer2.Columns[FColumnOffsets[ColumnIndex]] = bIsNull),
-      ValuePtr1, ValuePtr2);
+  else begin
+    isNull1 := Buffer1.Columns[FColumnOffsets[ColumnIndex]] = bIsNull;
+    isNull2 := Buffer2.Columns[FColumnOffsets[ColumnIndex]] = bIsNull;
+    if isNull1 xor isNull2 then begin
+      if isNull1 then
+        Result := 1
+      else Result := -1;
+      if NullsFirst then
+        Result := Result * (-1);
+    end else if isNull1 and isNull2 then
+      Result := 0
+    else
+      Result := CompareFunc(isNull1, isNull2, ValuePtr1, ValuePtr2);
+  end;
 end;
 
 function TZRowAccessor.CompareBuffers(Buffer1, Buffer2: PZRowBuffer;
-  const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs): Integer;
+  const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs;
+  NullsFirst: Boolean = false): Integer;
 var I: Integer;
 begin
   Result := 0; //satisfy compiler
   for I := Low(ColumnIndices) to High(ColumnIndices) do begin
-    Result := CompareBuffer(Buffer1, Buffer2, ColumnIndices[I], CompareFuncs[i]);
+    Result := CompareBuffer(Buffer1, Buffer2, ColumnIndices[I], CompareFuncs[i], NullsFirst);
     if Result <> 0 then
       Break;
   end;

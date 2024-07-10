@@ -1047,7 +1047,7 @@ type
     procedure MoveToCurrentRow; virtual;
 
     function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
-      const CompareFuncs: TCompareFuncs): Integer; virtual;
+      const CompareFuncs: TCompareFuncs; NullsFirst: Boolean = false): Integer; virtual;
     function GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
       const CompareKinds: TComparisonKindArray): TCompareFuncs; virtual;
 
@@ -1591,8 +1591,8 @@ end;
 function CompareDate_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
   if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
+  else if Null1 then Result := 1
+  else if Null2 then Result := -1
   else Result := ZCompareDate(TZVariant(V1).VDate, TZVariant(V2).VDate);
 end;
 
@@ -3555,12 +3555,14 @@ end;
   @param ColumnDirs compare direction for each columns.
 }
 function TZAbstractResultSet.CompareRows(Row1, Row2: NativeInt;
-  const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs): Integer;
+  const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs;
+  NullsFirst: Boolean = false): Integer;
 var
   I: Integer;
   ColumnIndex: Integer;
   SaveRowNo: Integer;
   Value1, Value2: TZVariant;
+  IsNull1, IsNull2: Boolean;
 begin
   Result := 0;
   SaveRowNo := RowNo;
@@ -3571,9 +3573,21 @@ begin
 
       MoveAbsolute(Row1);
       Value1 := GetValue(ColumnIndex);
+      IsNull1 := (Value1.VType = vtNull);
       MoveAbsolute(Row2);
       Value2 := GetValue(ColumnIndex);
-      Result := CompareFuncs[i]((Value1.VType = vtNull), (Value2.VType = vtNull), Value1, Value2);
+      IsNull2 := (Value2.VType = vtNull);
+      if IsNull1 xor IsNull2 then begin
+        if IsNull1 then
+          Result := 1
+        else
+          Result := -1;
+        if NullsFirst then
+          Result := Result * (-1);
+      end else if IsNull1 and IsNull2 then
+        Result := 0
+      else
+        Result := CompareFuncs[i](IsNull1, IsNull2, Value1, Value2);
       if Result <> 0 then Break;
     end;
   finally

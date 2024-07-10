@@ -305,6 +305,7 @@ type
     FLastRowFetched: Boolean;
     FTryKeepDataOnDisconnect: Boolean;
     FCursorLocation: TZCursorLocation;
+    FSortNullsFirst: Boolean;
     procedure CheckOpened;
     procedure CheckConnected; virtual;
     procedure CheckBiDirectional;
@@ -557,6 +558,7 @@ type
     function PSIsSQLBased: Boolean; {$IFDEF WITH_IPROVIDER}override;{$ELSE}virtual;{$ENDIF}
   protected
     procedure DataEvent(Event: TDataEvent; Info: {$IFDEF FPC}PtrInt{$ELSE}NativeInt{$ENDIF}); override;
+    procedure SetSortNullsFirst(NewValue: Boolean);
   protected //internals to identify if some options/operations are relevant or not
     function InheritsFromReadWriteTransactionUpdateObjectDataSet: Boolean; virtual;
     function InheritsFromReadWriteDataSet: Boolean; virtual;
@@ -642,6 +644,7 @@ type
     property Filter;
     property Filtered;
     property Connection: TZAbstractConnection read FConnection write SetConnection;
+    property SortNullsFirst: Boolean read FSortNullsFirst write SetSortNullsFirst default false;
   public
     function NextResultSet: Boolean; virtual;
     function NextRecordSet: Boolean;
@@ -5603,7 +5606,7 @@ begin
 
   { Compare both records. }
   Result := FFieldsAccessor.CompareBuffers(FSortRowBuffer1, FSortRowBuffer2,
-    FSortedFieldIndices, FCompareFuncs);
+    FSortedFieldIndices, FCompareFuncs, FSortNullsFirst);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -5620,7 +5623,7 @@ end;
 function TZAbstractRODataset.LowLevelSort(Item1, Item2: Pointer): Integer;
 begin
   Result := ResultSet.CompareRows(NativeInt(Item1), NativeInt(Item2),
-    FSortedFieldIndices, FCompareFuncs);
+    FSortedFieldIndices, FCompareFuncs, FSortNullsFirst);
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
@@ -6094,6 +6097,17 @@ begin
 end;
 
 {====================end of bangfauzan addition====================}
+
+procedure TZAbstractRODataset.SetSortNullsFirst(NewValue: Boolean);
+begin
+  if NewValue xor FSortNullsFirst then begin
+    FSortNullsFirst := NewValue;
+    // basically copied from StSortedFields
+    if Active and (FSortedFields <> '')then
+      InternalSort;
+  end;
+end;
+
 
 { TZInt64Field }
 
