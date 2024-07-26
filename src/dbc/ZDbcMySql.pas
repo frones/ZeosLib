@@ -750,7 +750,7 @@ setuint:      UIntOpt := {$IFDEF UNICODE}UnicodeToUInt32Def{$ELSE}RawToUInt32Def
   S := Info.Values[ConnProps_MySQL_FieldType_Bit_1_IsBoolean];
   FMySQL_FieldType_Bit_1_IsBoolean := StrToBoolEx(S);
   FSupportsBitType := (
-    (    FPlainDriver.IsMariaDBDriver and (ClientVersion >= 100109) ) or
+    (    FPlainDriver.IsMariaDBDriver and (ClientVersion >= 100109) or (ClientVersion < 50000) ) or
     (not FPlainDriver.IsMariaDBDriver and (ClientVersion >=  50003) ) ) and (GetHostVersion >= EncodeSQLVersioning(5,0,3));
   //if not explizit !un!set -> assume as default since Zeos 7.3
   FMySQL_FieldType_Bit_1_IsBoolean := FMySQL_FieldType_Bit_1_IsBoolean or (FSupportsBitType and (S = ''));
