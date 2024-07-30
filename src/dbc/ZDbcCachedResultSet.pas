@@ -393,7 +393,7 @@ type
     procedure RefreshRow; override;// FOS+ 071106
 
     function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
-      const CompareFuncs: TCompareFuncs): Integer; override;
+      const CompareFuncs: TCompareFuncs; NullsFirst: Boolean = false): Integer; override;
     function GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
       const CompareKinds: TComparisonKindArray): TCompareFuncs; override;
 
@@ -2499,7 +2499,7 @@ end;
   @param ColumnDirs compare direction for each columns.
 }
 function TZAbstractCachedResultSet.CompareRows(Row1, Row2: NativeInt;
-  const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs): Integer;
+  const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs; NullsFirst: Boolean = false): Integer;
 var
   RowBuffer1, RowBuffer2: PZRowBuffer;
 begin
@@ -2510,7 +2510,7 @@ begin
   RowBuffer1 := PZRowBuffer(FRowsList[Row1 - 1]);
   RowBuffer2 := PZRowBuffer(FRowsList[Row2 - 1]);
   Result := FRowAccessor.CompareBuffers(RowBuffer1, RowBuffer2,
-    ColumnIndices, CompareFuncs);
+    ColumnIndices, CompareFuncs, NullsFirst);
 end;
 
 function TZAbstractCachedResultSet.HasServerLinkedColumns: Boolean;

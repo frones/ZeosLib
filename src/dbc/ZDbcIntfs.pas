@@ -4022,7 +4022,7 @@ type
     procedure MoveToCurrentRow;
 
     function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
-      const CompareFuncs: TCompareFuncs): Integer;
+      const CompareFuncs: TCompareFuncs; NullsFirst: Boolean = false): Integer;
     function GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
       const CompareKinds: TComparisonKindArray): TCompareFuncs;
 
