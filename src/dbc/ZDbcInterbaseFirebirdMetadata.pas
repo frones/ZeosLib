@@ -452,6 +452,7 @@ var
   P: PChar;
   PA: PAnsiChar absolute P;
   L: NativeUInt;
+  FbPos: Integer;
 begin
   {$IFDEF WITH_VAR_INIT_WARNING}L := 0;{$ENDIF}
   if FServerVersion = '' then begin
@@ -488,7 +489,8 @@ begin
     then FServerVersion := ConvertConnRawToString({$IFDEF UNICODE}
       Connection.GetConSettings, {$ENDIF}@Buffer[5], Integer(Buffer[4]))
     else FServerVersion := '';
-    FIsFireBird := ZFastCode.Pos('Firebird', FServerVersion) > 0;
+    FbPos := ZFastCode.Pos('Firebird', FServerVersion);
+    FIsFireBird := FbPos > 0;
     FProductVersion := Copy(FServerVersion, ZFastCode.Pos(DBProvider[FIsFireBird],
       FServerVersion)+8+Ord(not FIsFireBird)+1, Length(FServerVersion));
     I := ZFastCode.Pos('.', FProductVersion);
@@ -499,20 +501,14 @@ begin
     else
       tmp := Copy(FProductVersion, I+1, MaxInt);
     FHostVersion := FHostVersion + StrToInt(tmp)*1000;
-    { determine release version see http://www.firebirdfaq.org/faq223/ }
-    if FIsFireBird and (FHostVersion > 2001000) then begin
-      with Connection.CreateStatement.ExecuteQuery('SELECT rdb$get_context(''SYSTEM'', ''ENGINE_VERSION'') from rdb$database') do begin
-        if Next then begin
-          PA := GetPAnsiChar(FirstDbcIndex, L);
-          Inc(PA, NativeInt(L));
-          I := 0;
-          while (PByte(PA-1)^ <> Byte('.')) do begin
-            Dec(PA);
-            Inc(I);
-          end;
-          FHostVersion := FHostVersion+RawToIntDef(PA, PA+I, 0);
-        end;
-        Close;
+    if FIsFireBird and (Copy(FServerVersion, FirstStringIndex, 8) = 'WI-V6.3.') then begin
+      tmp := FServerVersion;
+      Delete(tmp, FbPos - 1, length(tmp));
+      Delete(tmp, FirstStringIndex, 8);
+      FbPos := ZFastCode.Pos('.', tmp);
+      if FbPos > 0 then begin
+        Delete(tmp, FbPos, length(tmp));
+        FHostVersion := FHostVersion + StrToIntDef(tmp, 0);
       end;
     end;
   end;
