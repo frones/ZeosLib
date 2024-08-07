@@ -210,6 +210,7 @@ type
 
     FIndexFields: {$IFDEF WITH_GENERIC_TLISTTFIELD}TList<TField>{$ELSE}TList{$ENDIF};
     FLobCacheMode: TLobCacheMode;
+    FLastState: TDataSetState;
     FSortType : TSortType;
     FHasOutParams: Boolean;
     FSortedFields: string;
@@ -2246,7 +2247,8 @@ begin
      Exit;
 
   { Check the record by filter expression. }
-  if FilterEnabled and (FilterExpression.Expression <> '') then begin
+  if FilterEnabled and (FilterExpression.Expression <> '') and
+     (State <> dsInactive){TempBuffer not available!} then begin
     SavedState := SetTempState(dsFilter);
     try
       GetCalcFields(TGetCalcFieldsParamType(TempBuffer));
@@ -4455,10 +4457,20 @@ begin
   GotoRow(PZRowBuffer(Buffer)^.Index);
 end;
 
+function HasFilterExpression(DS: TZAbstractRODataset): Boolean; //suppress the _xStrClear
+begin
+  Result := (DS.FilterExpression.Expression <> '');
+end;
+
 procedure TZAbstractRODataset.DataEvent(Event: TDataEvent; Info: {$IFDEF FPC}PtrInt{$ELSE}NativeInt{$ENDIF});
 var I, j: Integer;
+  SavedLastState: TDataSetState;
 begin
+  SavedLastState := FLastState;
+  FLastState := State;
   inherited DataEvent(Event, Info);
+  if (SavedLastState = dsInactive) and (State = dsBrowse) and FilterEnabled and HasFilterExpression(Self) then
+    ReReadRows;
   if Event = deLayoutChange then
     for i := 0 to Fields.Count -1 do
       for j := 0 to high(FieldsLookupTable) do
