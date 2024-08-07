@@ -5787,7 +5787,7 @@ type
   end;
 
 {$IFNDEF NO_FBCLIENT}
-  function fb_get_master_interface : IMaster; cdecl; external 'fbclient';
+ // function fb_get_master_interface : IMaster; cdecl; external 'fbclient';
 {$ENDIF}
 
 const
