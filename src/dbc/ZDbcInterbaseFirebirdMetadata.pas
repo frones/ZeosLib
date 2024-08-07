@@ -462,7 +462,7 @@ begin
       Attachment := FBConnection.GetAttachment;
       Status := FBConnection.GetStatus;
       Attachment.getInfo(Status, 1, @isc_info, SizeOf(Buffer), @Buffer[0]);
-      if (Status.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+      if (Status.getState and cIStatus_STATE_ERRORS) <> 0 then
         FBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(Status.getErrors), 'IAttachment.getInfo', FBConnection);
     {$IFNDEF ZEOS_DISABLE_INTERBASE}end else {$ELSE}end;{$ENDIF}
     {$ENDIF ZEOS_DISABLE_FIREBIRD}

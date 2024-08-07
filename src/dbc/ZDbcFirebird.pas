@@ -407,7 +407,7 @@ begin
   then Result := 0
   else begin
     FAttachment.cancelOperation(FStatus, fb_cancel_abort);
-    Result := Ord((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_OK{$ELSE}IStatus_RESULT_OK{$ENDIF}) <> 0);
+    Result := Ord((Fstatus.getState and cIStatus_RESULT_OK) <> 0);
     if Result <> 0 then
       FStatus.init;
   end;
@@ -444,7 +444,7 @@ destructor TZFirebirdConnection.Destroy;
 begin
   inherited;
   if FStatus <> nil then begin
-    FStatus.Dispose;
+    FStatus.{$IFDEF WITH_RECORD_METHODS}Disposable.{$ENDIF}Dispose;
     FStatus := nil;
   end;
   //How to free IMaster?
@@ -468,8 +468,8 @@ begin
     FAttachment.execute(FStatus, FBTrans, Length(SQL), Pointer(SQL),
       FDialect, nil, nil, nil, nil);
     State := Fstatus.getState;
-    if ((State and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-       ((State and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then begin
+    if ((State and cIStatus_STATE_ERRORS) <> 0) or
+       ((State and cIStatus_STATE_WARNINGS) <> 0) then begin
       {$IFDEF UNICODE}
       if not DriverManager.HasLoggingListener then
         FLogMessage := ZRawToUnicode(SQL, ConSettings.ClientCodePage.CP);
@@ -479,8 +479,8 @@ begin
     end;
   end else begin
     Stmt := FAttachment.prepare(FStatus, FBTrans, Length(SQL){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, Pointer(SQL), FDialect, 0);
-    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-       ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then begin
+    if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) or
+       ((Fstatus.getState and cIStatus_STATE_WARNINGS) <> 0) then begin
       {$IFDEF UNICODE}
       if not DriverManager.HasLoggingListener then
         FLogMessage := ZRawToUnicode(SQL, ConSettings.ClientCodePage.CP);
@@ -494,8 +494,8 @@ begin
       then raise EZSQLException.Create(SStatementIsNotAllowed)
       else begin
         Stmt.execute(FStatus, FBTrans, nil, nil, nil, nil);
-        if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-           ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then begin
+        if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) or
+           ((Fstatus.getState and cIStatus_STATE_WARNINGS) <> 0) then begin
           {$IFDEF UNICODE}
           if not DriverManager.HasLoggingListener then
             FLogMessage := ZRawToUnicode(SQL, ConSettings.ClientCodePage.CP);
@@ -506,7 +506,7 @@ begin
       end;
     finally
       Stmt.free(FStatus);
-      Stmt.release;
+      Stmt{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
     end;
   end;
 end;
@@ -555,18 +555,18 @@ begin
   if FAttachment <> nil then begin
     FAttachment.detach(FStatus);
     try
-      if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+      if (FStatus.getState and cIStatus_STATE_ERRORS) <> 0 then
         HandleErrorOrWarning(lcFetch, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.detach', Self)
       else // detach releases intf on success
         FAttachment:= nil;
     finally
       if Assigned(FAttachment) then
-        FAttachment.release;
+        FAttachment{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
       FAttachment := nil;
     end;
   end;
   if FProvider <> nil then begin
-    FProvider.release;
+    FProvider{$IFDEF WITH_RECORD_METHODS}.PluginBase.ReferenceCounted{$ENDIF}.release;
     FProvider := nil;
   end;
 end;
@@ -660,12 +660,12 @@ begin
       Info.Values[ConnProps_CreateNewDatabase] := ''; //prevent recreation on open
       DBCreated := True;
       FLogMessage := 'CREATE DATABASE "'+URL.Database+'" AS USER "'+ URL.UserName+'"';
-      if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+      if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) then
       try
         HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors),
           FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
       finally
-        FProvider.release;
+        FProvider{$IFDEF WITH_RECORD_METHODS}.PluginBase.ReferenceCounted{$ENDIF}.release;
         FProvider := nil;
       end;
       if DriverManager.HasLoggingListener then
@@ -679,7 +679,7 @@ begin
       PrepareDPB;
       FLogMessage := Format(SConnect2AsUser, [ConnectionString, URL.UserName]);;
       FAttachment := FProvider.attachDatabase(FStatus, @FByteBuffer[0], Length(DPB), Pointer(DPB));
-      if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+      if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) then
         HandleErrorOrWarning(lcConnect, PARRAY_ISC_STATUS(FStatus.getErrors),
           FLogMessage, IImmediatelyReleasable(FWeakImmediatRelPtr));
       { Logging connection action }
@@ -689,7 +689,7 @@ begin
     { Dialect could have changed by isc_dpb_set_db_SQL_dialect command }
     FByteBuffer[0] := isc_info_db_SQL_Dialect;
     FAttachment.getInfo(FStatus, 1, @FByteBuffer[0], SizeOf(TByteBuffer)-1, @FByteBuffer[1]);
-    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+    if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) then
       HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.getInfo', Self);
     if FByteBuffer[1] = isc_info_db_SQL_Dialect
     then FDialect := ReadInterbase6Number(FPlainDriver, @FByteBuffer[2])
@@ -702,11 +702,11 @@ begin
   finally
     if Closed then begin
       if FAttachment <> nil then begin
-        FAttachment.Release;
+        FAttachment{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.Release;
         FAttachment := nil;
       end;
       if FProvider <> nil then begin
-        FProvider.Release;
+        FProvider{$IFDEF WITH_RECORD_METHODS}.PluginBase.ReferenceCounted{$ENDIF}.Release;
         FProvider := nil;
       end;
     end;
@@ -776,18 +776,18 @@ begin
     end else if FClientCodePage = '' then
       CheckCharEncoding(DBCP);
   end;
-  if (FAttachment.vTable.version >= 4) and (FHostVersion >= 4000000) then begin
+  if (FAttachment{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted.Versioned{$ENDIF}.vTable.version >= 4) and (FHostVersion >= 4000000) then begin
     TimeOut := StrToIntDef(Info.Values[ConnProps_StatementTimeOut], 0);
     if TimeOut > 0 then begin
       FAttachment.SetStatementTimeOut(Fstatus, TimeOut);
-      if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+      if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) then
         HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors),
           'IAttachment.SetStatmentTimeOut', IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
     TimeOut := StrToIntDef(Info.Values[ConnProps_SessionIdleTimeOut], 0);
     if TimeOut > 16 then begin
       FAttachment.setIdleTimeout(Fstatus, TimeOut);
-      if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+      if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) then
         HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors),
           'IAttachment.setIdleTimeout', IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
@@ -810,7 +810,7 @@ function TZFirebirdConnection.PingServer: Integer;
 begin
   if (FAttachment <> nil) and (FStatus <> nil) then begin
     FAttachment.Ping(FStatus);
-    Result := -Ord((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.RESULT_OK{$ELSE}IStatus_RESULT_OK{$ENDIF}) <> 0);
+    Result := -Ord((Fstatus.getState and cIStatus_RESULT_OK) <> 0);
     FStatus.init;
   end else Result := -1;
 end;
@@ -847,7 +847,7 @@ begin
     inherited;
   finally
     if Assigned(FAttachment) then begin
-      FAttachment.release;
+      FAttachment{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
       FAttachment:= nil;
     end;
     FReleasingSender:= LPrevReleasingSender;
@@ -865,10 +865,10 @@ begin
     if fDoCommit
     then FTransaction.commit(FStatus)
     else FTransaction.rollback(FStatus);
-    FTransaction.release;
+    FTransaction{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
     FTransaction := nil;
     fSavepoints.Clear;
-    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+    if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) then
       HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(FStatus.getErrors),
         sCommitMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
     FOwner.ReleaseTransaction(IZTransaction(FWeakIZTransactionPtr));
@@ -879,7 +879,7 @@ procedure TZFirebirdTransaction.Commit;
 var S: RawByteString;
   procedure _HandleErrorOrWarning(var AStatus: IStatus);
   begin
-    if ((AStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+    if ((AStatus.getState and cIStatus_STATE_ERRORS) <> 0) then
       FOwner.HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(AStatus.getErrors),
         sCommitMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
   end;
@@ -896,7 +896,7 @@ begin
     then begin
       FTransaction.commit(FStatus);
       _HandleErrorOrWarning(FStatus);
-      {$IFDEF ZEOSDEBUG}Assert({$ENDIF}FTransaction.Release{$IFDEF ZEOSDEBUG} = 0){$ENDIF};
+      {$IFDEF ZEOSDEBUG}Assert({$ENDIF}FTransaction{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.Release{$IFDEF ZEOSDEBUG} = 0){$ENDIF};
       FTransaction := nil;
     end else begin
       fDoCommit := True;
@@ -940,7 +940,7 @@ procedure TZFirebirdTransaction.ReleaseImmediat(
 begin
   try
     if FTransaction <> nil then begin
-      FTransaction.release;
+      FTransaction{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
       FTransaction := nil;
     end;
   finally
@@ -962,7 +962,7 @@ begin
       ((FOpenUncachedLobs.Count = 0) and TestCachedResultsAndForceFetchAll)
     then begin
       FTransaction.rollback(FStatus);
-      {$IFDEF ZEOSDEBUG}Assert({$ENDIF}FTransaction.Release{$IFDEF ZEOSDEBUG} = 0){$ENDIF};
+      {$IFDEF ZEOSDEBUG}Assert({$ENDIF}FTransaction{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.Release{$IFDEF ZEOSDEBUG} = 0){$ENDIF};
       FTransaction := nil;
     end else begin
       fDoCommit := True;
@@ -970,7 +970,7 @@ begin
       FTransaction.rollbackRetaining(FStatus);
       ReleaseTransaction(IZTransaction(FWeakIZTransactionPtr));
     end;
-    if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+    if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) then
       HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(FStatus.getErrors),
         sRollbackMsg, IImmediatelyReleasable(FWeakImmediatRelPtr));
   finally
@@ -989,10 +989,10 @@ begin
         FTPB := FOwner.GenerateTPB(FAutoCommit, FReadOnly, FTransactionIsolation, FProperties);
       FTransaction := FAttachment.startTransaction(FStatus,
         Length(FTPB){$IFDEF WITH_TBYTES_AS_RAWBYTESTRING}-1{$ENDIF}, Pointer(FTPB));
-      if ((Fstatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+      if ((Fstatus.getState and cIStatus_STATE_ERRORS) <> 0) then
         HandleErrorOrWarning(lcTransaction, PARRAY_ISC_STATUS(FStatus.getErrors),
           sGetTxn, IImmediatelyReleasable(FWeakImmediatRelPtr));
-      FTransaction.AddRef;
+      FTransaction{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.AddRef;
       Result := Ord(not Self.FAutoCommit);
       if DriverManager.HasLoggingListener then
         DriverManager.LogMessage(lcTransaction, URL.Protocol, 'TRANSACTION STARTED.');
@@ -1076,12 +1076,17 @@ begin
   if EventBlock.FBEventsCallback = nil then
     EventBlock.FBEventsCallback := TZFBEventCallback.Create(Self, EventBlock);
   if EventBlock.FBEvent <> nil then begin
-    IEvents(EventBlock.FBEvent).Release;
+    IEvents(EventBlock.FBEvent){$IFDEF WITH_RECORD_METHODS}^.ReferenceCounted{$ENDIF}.Release;
     EventBlock.FBEvent := nil;
   end;
   with TZFirebirdConnection(Connection) do
+  {$IFDEF WITH_RECORD_METHODS}
+  EventBlock.FBEvent := FAttachment.queEvents(FStatus, TZFBEventCallback(EventBlock.FBEventsCallback).AsIEventCallback,
+    EventBlock.buffer_length, PByte(EventBlock.event_buffer));
+  {$ELSE}
   EventBlock.FBEvent := FAttachment.queEvents(FStatus, TZFBEventCallback(EventBlock.FBEventsCallback),
     EventBlock.buffer_length, PByte(EventBlock.event_buffer));
+  {$ENDIF}
 end;
 
 procedure TZFirebirdEventList.UnregisterEvents;
@@ -1095,12 +1100,12 @@ begin
       try
         if EventBlock.FBEvent <> nil then with TZFirebirdConnection(Connection) do begin
           IEvents(EventBlock.FBEvent).Cancel(FStatus);
-          if ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) then
+          if ((FStatus.getState and cIStatus_STATE_ERRORS) <> 0) then
             HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.queEvents', IImmediatelyReleasable(FWeakImmediatRelPtr));
         end;
       finally
         if EventBlock.FBEvent <> nil then begin
-          IEvents(EventBlock.FBEvent).Release;
+          IEvents(EventBlock.FBEvent){$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.Release;
           EventBlock.FBEvent := nil;
         end;
         if EventBlock.FBEventsCallback <> nil then begin

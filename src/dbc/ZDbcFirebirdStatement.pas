@@ -206,7 +206,7 @@ begin
   inherited Create(Connection, SQL, Params);
   FFBConnection := Connection;
   FAttachment := Connection.GetAttachment;
-  FAttachment.addRef;
+  FAttachment{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.addRef;
   FStatus := Connection.GetStatus;
   FPlainDriver := FFBConnection.GetPlainDriver;
 end;
@@ -257,7 +257,7 @@ destructor TZAbstractFirebirdStatement.Destroy;
 begin
   inherited Destroy;
   if Assigned(FAttachment) then
-    FAttachment.release;
+    FAttachment{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
 end;
 
 procedure TZAbstractFirebirdStatement.ExecuteInternal;
@@ -278,8 +278,8 @@ begin
         FInMessageMetadata, FInData, FOutMessageMetadata, flags)
     end else FFBTransaction := FFBStatement.execute(FStatus, FFBTransaction,
       FInMessageMetadata, FInData, FOutMessageMetadata, FOutData);
-    if ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-       ((FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0)  then
+    if ((FStatus.getState and cIStatus_STATE_ERRORS) <> 0) or
+       ((FStatus.getState and cIStatus_STATE_WARNINGS) <> 0)  then
       FFBConnection.HandleErrorOrWarning(lcExecPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self);
   end else ExecuteBatchDml;
 end;
@@ -340,9 +340,9 @@ begin
           FOpenResultSet := nil;
         end else if FResultSet <> nil then begin
           FResultSet.Close(FStatus);
-          if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+          if (FStatus.getState and cIStatus_STATE_ERRORS) <> 0 then
             FFBConnection.HandleErrorOrWarning(lcExecPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self);
-          FResultSet.Release;
+          FResultSet{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.Release;
         end;
       stExecProc: begin{ Create ResultSet if possible }
           if FOutMessageMetadata <> nil then
@@ -414,24 +414,19 @@ begin
     FMemPerRow := 0;
     Transaction := FFBConnection.GetActiveTransaction.GetTransaction;
     if FWeakIZPreparedStatementPtr <> nil
-    {$IFDEF WITH_CLASS_CONST}
-    then flags := IStatement.PREPARE_PREFETCH_METADATA
-    else flags := IStatement.PREPARE_PREFETCH_TYPE or IStatement.PREPARE_PREFETCH_OUTPUT_PARAMETERS;
-    {$ELSE}
-    then flags := IStatement_PREPARE_PREFETCH_METADATA
-    else flags := IStatement_PREPARE_PREFETCH_TYPE or IStatement_PREPARE_PREFETCH_OUTPUT_PARAMETERS;
-    {$ENDIF}
+    then flags := cIStatement_PREPARE_PREFETCH_METADATA
+    else flags := cIStatement_PREPARE_PREFETCH_TYPE or cIStatement_PREPARE_PREFETCH_OUTPUT_PARAMETERS;
     FFBStatement := FAttachment.prepare(FStatus, Transaction, Length(fASQL),
       Pointer(fASQL), FDialect, flags);
-    if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+    if (FStatus.getState and cIStatus_STATE_ERRORS) <> 0 then
       FFBConnection.HandleErrorOrWarning(lcPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self);
     if DriverManager.HasLoggingListener then
       DriverManager.LogMessage(lcPrepStmt,Self);
-    if FFBStatement.vTable.version > 3 then begin
+    if FFBStatement{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted.Versioned{$ENDIF}.vTable.version > 3 then begin
       TimeOut := StrToInt(DefineStatementParameter(Self, DSProps_StatementTimeOut, '0'));
       if TimeOut <> 0 then begin
         FFBStatement.setTimeout(FStatus, TimeOut);
-        if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+        if (FStatus.getState and cIStatus_STATE_ERRORS) <> 0 then
           FFBConnection.HandleErrorOrWarning(lcPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self);
       end;
     end;
@@ -441,7 +436,7 @@ begin
     FOrgTypeList.Clear;
     FOrgTypeList.Capacity := FOutMessageCount;
     if FOutMessageCount = 0 then begin
-      FOutMessageMetadata.release;
+      FOutMessageMetadata{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
       FOutMessageMetadata := nil;
     end else begin
       MetadataBuilder := FOutMessageMetadata.getBuilder(FStatus);
@@ -477,7 +472,7 @@ begin
             MetadataBuilder.setType(FStatus, flags, sqltype);
             sqltype := CS_NONE;
             MetadataBuilder.setCharSet(FStatus, flags, sqltype);
-            sqltype := {$IFDEF WITH_CLASS_CONST}IInt128.STRING_SIZE{$ELSE}IInt128_STRING_SIZE{$ENDIF};
+            sqltype := cIInt128_STRING_SIZE;
             MetadataBuilder.setLength(FStatus, flags, sqltype);
           end else begin
             MetadataBuilder.setType(FStatus, flags, sqltype);
@@ -491,14 +486,14 @@ begin
             MetadataBuilder.setCharSet(FStatus, flags, sqltype);
           end;
         end;
-        FOutMessageMetadata.release;
+        FOutMessageMetadata{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
         FOutMessageMetadata := MetadataBuilder.getMetadata(FStatus);
         FMemPerRow := FOutMessageMetadata.getMessageLength(FStatus);
         if FMemPerRow = 0 then //see TestTicket426 (even if not reproducable with FB3 client)
           FMemPerRow := SizeOf(Cardinal);
         GetMem(FOutData, FMemPerRow);
       finally
-        MetadataBuilder.release;
+        MetadataBuilder{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
       end;
     end;
     inherited Prepare;
@@ -567,7 +562,7 @@ begin
             sqllen := {$IFDEF WITH_CLASS_CONST}IDecFloat34.STRING_SIZE{$ELSE}IDecFloat34_STRING_SIZE{$ENDIF};
           end *)else if (sqltype = SQL_INT128) or (sqltype = SQL_DEC_FIXED) then begin
             sqltype := SQL_VARYING;
-            sqllen := {$IFDEF WITH_CLASS_CONST}IInt128.STRING_SIZE{$ELSE}IInt128_STRING_SIZE{$ENDIF};
+            sqllen := cIInt128_STRING_SIZE;
           end;
           MetadataBuilder.setType(FStatus, Index, sqltype);
           sqlSubType := MessageMetadata.getSubType(FStatus, Index);
@@ -597,7 +592,7 @@ begin
         end;
         FInMessageMetadata := MetadataBuilder.getMetadata(FStatus);
       finally
-        MetadataBuilder.release;
+        MetadataBuilder{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
       end;
       FMemPerRow := FInMessageMetadata.getMessageLength(FStatus);
       GetMem(FInData, FMemPerRow);
@@ -609,7 +604,7 @@ begin
       end;
     end;
   finally
-    MessageMetadata.release;
+    MessageMetadata{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
   end;
 end;
 
@@ -617,16 +612,16 @@ procedure TZAbstractFirebirdStatement.ReleaseImmediat(const Sender: IImmediately
   var AError: EZSQLConnectionLost);
 begin
   if Assigned(FResultSet) then begin
-    FResultSet.release;
+    FResultSet{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
     FResultSet:= nil;
   end;
   if Assigned(FFBStatement) then begin
-    FFBStatement.release;
+    FFBStatement{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
     FFBStatement:= nil;
   end;
   FFBTransaction:= nil;
   if Assigned(FAttachment) then begin
-    FAttachment.release;
+    FAttachment{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
     FAttachment:= nil;
   end;
   inherited;
@@ -636,23 +631,23 @@ procedure TZAbstractFirebirdStatement.Unprepare;
 begin
   inherited Unprepare;
   if FInMessageMetadata <> nil then begin
-    FInMessageMetadata.release;
+    FInMessageMetadata{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
     FInMessageMetadata := nil;
   end;
   if FOutMessageMetadata <> nil then begin
-    FOutMessageMetadata.release;
+    FOutMessageMetadata{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
     FOutMessageMetadata := nil;
   end;
   if FFBStatement <> nil then begin
     FFBStatement.free(FStatus);
     try
-      if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+      if (FStatus.getState and cIStatus_STATE_ERRORS) <> 0 then
         FFBConnection.HandleErrorOrWarning(lcUnprepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), SQL, Self)
       else // free() releases intf on success
         FFBStatement:= nil;
     finally
       if Assigned(FFBStatement) then
-        FFBStatement.release;
+        FFBStatement{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
       FFBStatement := nil;
     end;
   end;
@@ -674,7 +669,7 @@ begin
     Attachment := FFBConnection.GetAttachment;
     Transaction := FFBConnection.GetActiveTransaction.GetTransaction;
     Blob := Attachment.createBlob(FStatus, Transaction, PISC_QUAD(sqldata), 0, nil);
-    if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+    if (FStatus.getState and cIStatus_STATE_ERRORS) <> 0 then
       FFBConnection.HandleErrorOrWarning(lcBindPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IAttachment.createBlob', Self);
     { put data to blob }
     CurPos := 0;
@@ -683,7 +678,7 @@ begin
       if (CurPos + SegLen > Len) then
         SegLen := Len - CurPos;
       Blob.putSegment(FStatus, SegLen, P);
-      if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+      if (FStatus.getState and cIStatus_STATE_ERRORS) <> 0 then
         FFBConnection.HandleErrorOrWarning(lcBindPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.putSegment', Self);
       Inc(CurPos, SegLen);
       Inc(P, SegLen);
@@ -691,13 +686,13 @@ begin
     { close blob handle }
     Blob.close(FStatus);
     try
-      if (FStatus.getState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0 then
+      if (FStatus.getState and cIStatus_STATE_ERRORS) <> 0 then
         FFBConnection.HandleErrorOrWarning(lcBindPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBlob.close', Self)
       else // close releases intf on success
         Blob:= nil;
     finally
       if Assigned(Blob) then
-        Blob.release;
+        Blob{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
     end;
     sqlind^ := ISC_NOTNULL;
   end;
@@ -742,14 +737,14 @@ begin
     prepared mem/offsets und use it as writer per row
     But first prepare the batch}
   //create a batch parameter buffer
-  Xpb := FFBConnection.GetUtil.getXpbBuilder(FStatus, {$IFDEF WITH_CLASS_CONST}IXpbBuilder.BATCH{$ELSE}IXpbBuilder_BATCH{$ENDIF}, nil, 0);
-  Xpb.insertInt(FStatus, {$IFDEF WITH_CLASS_CONST}IBatch.TAG_RECORD_COUNTS{$ELSE}IBatch_TAG_RECORD_COUNTS{$ENDIF}, 1);
-  Xpb.insertInt(FStatus, {$IFDEF WITH_CLASS_CONST}IBatch.TAG_BLOB_POLICY{$ELSE}IBatch_TAG_BLOB_POLICY{$ENDIF}, {$IFDEF WITH_CLASS_CONST}IBatch.BLOB_ID_USER{$ELSE}IBatch_BLOB_ID_USER{$ENDIF});
+  Xpb := FFBConnection.GetUtil.getXpbBuilder(FStatus, cIXpbBuilder_BATCH, nil, 0);
+  Xpb.insertInt(FStatus, cIBatch_TAG_RECORD_COUNTS, 1);
+  Xpb.insertInt(FStatus, cIBatch_TAG_BLOB_POLICY, cIBatch_BLOB_ID_USER);
   Batch := FFBStatement.createBatch(FStatus, FInMessageMetadata, Xpb.getBufferLength(FStatus), Xpb.getBuffer(FStatus));
-  Xpb.dispose;
+  Xpb{$IFDEF WITH_RECORD_METHODS}.Disposable{$ENDIF}.dispose;
   cstate := FStatus.getState;
-  if ((cstate and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-     ((cstate and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
+  if ((cstate and cIStatus_STATE_ERRORS) <> 0) or
+     ((cstate and cIStatus_STATE_WARNINGS) <> 0) then
     FFBConnection.HandleErrorOrWarning(lcOther, PARRAY_ISC_STATUS(FStatus.getErrors), 'IStatement.createBatch', Self);
   //save transaction or create a new one
   Connection.StartTransaction;
@@ -773,22 +768,22 @@ begin
           P := InterbaseFirebirdParam.sqldata;
           Batch.registerBlob(fStatus, PISC_QUAD(P), PISC_QUAD(P));
           cState := FStatus.getState;
-          if ((cState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-             ((cState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
+          if ((cState and cIStatus_STATE_ERRORS) <> 0) or
+             ((cState and cIStatus_STATE_WARNINGS) <> 0) then
             FFBConnection.HandleErrorOrWarning(lcBindPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBatch.registerBlob', IImmediatelyReleasable(FWeakImmediatRelPtr));
         end;
       end;
       Batch.add(fStatus, 1, FInData);
       cState := FStatus.getState;
-      if ((cState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-         ((cState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
+      if ((cState and cIStatus_STATE_ERRORS) <> 0) or
+         ((cState and cIStatus_STATE_WARNINGS) <> 0) then
         FFBConnection.HandleErrorOrWarning(lcBindPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBatch.add', IImmediatelyReleasable(FWeakImmediatRelPtr));
     end;
     // now execute the batch
     BatchCompletionState := Batch.execute(FStatus, Transaction);
     cState := FStatus.getState;
-    if ((cState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-       ((cState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
+    if ((cState and cIStatus_STATE_ERRORS) <> 0) or
+       ((cState and cIStatus_STATE_WARNINGS) <> 0) then
       FFBConnection.HandleErrorOrWarning(lcExecPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBatch.execute', IImmediatelyReleasable(FWeakImmediatRelPtr));
     try
       if BatchCompletionState <> nil then begin
@@ -796,15 +791,15 @@ begin
         if sz > 0 then for j := 0 to sz -1 do begin
           istate := BatchCompletionState.getState(fStatus, j);
           case istate of
-            {$IFDEF WITH_CLASS_CONST}IBatchCompletionState.EXECUTE_FAILED{$ELSE}IBatchCompletionState_EXECUTE_FAILED{$ENDIF}: begin
+            cIBatchCompletionState_EXECUTE_FAILED: begin
                 BatchCompletionState.findError(FStatus, j);
                 BatchCompletionState.getStatus(FStatus, FStatus, j);
                 cState := FStatus.getState;
-                if ((cState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_ERRORS{$ELSE}IStatus_STATE_ERRORS{$ENDIF}) <> 0) or
-                   ((cState and {$IFDEF WITH_CLASS_CONST}IStatus.STATE_WARNINGS{$ELSE}IStatus_STATE_WARNINGS{$ENDIF}) <> 0) then
+                if ((cState and cIStatus_STATE_ERRORS) <> 0) or
+                   ((cState and cIStatus_STATE_WARNINGS) <> 0) then
                   FFBConnection.HandleErrorOrWarning(lcExecPrepStmt, PARRAY_ISC_STATUS(FStatus.getErrors), 'IBatch.execute', IImmediatelyReleasable(FWeakImmediatRelPtr));
               end;
-            {$IFDEF WITH_CLASS_CONST}IBatchCompletionState.SUCCESS_NO_INFO{$ELSE}IBatchCompletionState_SUCCESS_NO_INFO{$ENDIF}: begin
+            cIBatchCompletionState_SUCCESS_NO_INFO: begin
                 LastUpdateCount := istate;
                 Break;
               end;
@@ -815,7 +810,7 @@ begin
       end;
     finally
       if BatchCompletionState <> nil then
-        BatchCompletionState.dispose;
+        BatchCompletionState{$IFDEF WITH_RECORD_METHODS}.Disposable{$ENDIF}.dispose;
     end;
     Succeeded := True;
   finally
@@ -826,7 +821,7 @@ begin
     if Succeeded
     then Connection.Commit
     else Connection.Rollback;
-    Batch.release;
+    Batch{$IFDEF WITH_RECORD_METHODS}.ReferenceCounted{$ENDIF}.release;
   end;
   LastUpdateCount := BatchDMLArrayCount;
 end;
