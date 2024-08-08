@@ -136,6 +136,7 @@
             {$DEFINE WITH_varUString} //Variant now supports refcounted UnicodeStrings
             {$UNDEF WITH_RAWBYTESTRING_CONVERSION_BUG} //issue seems to be fixed
             {$DEFINE WITH_VIRTUAL_TFIELD_BIND} //TField has procedure Bind(Binding: Boolean);
+            {$DEFINE WITH_RECORD_METHODS} //the compiler supports methods in records
             {$IF FPC_FULLVERSION>=30100}
               {$UNDEF MISS_RBS_SETSTRING_OVERLOAD} //SetString overload for RawByteString is available now
               {$DEFINE WITH_NOT_INLINED_WARNING} //handle marked as inline is not inlined warnings
