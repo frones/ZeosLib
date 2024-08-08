@@ -109,6 +109,7 @@ type
     procedure TestDisconnect;
     procedure Test_SF_Ticket512;
     procedure TestTransactionMonitoring;
+    procedure TestFilter;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1891,6 +1892,29 @@ begin
     Query.Free;
   end;
 end;
+
+procedure ZTestCompInterbaseBugReport.TestFilter;
+var
+  Query: TZReadOnlyQuery;
+begin
+  Connection.Connect;
+  Check(Connection.Connected);
+  Query := CreateReadOnlyQuery;
+  try
+    Query.SQL.Text := 'select * from rdb$database union all select * from rdb$database union all select * from rdb$database union all select * from rdb$database';
+    Query.SortedFields := 'RDB$CHARACTER_SET_NAME';
+    Query.Open;
+    Query.Filter := '(RDB$CHARACTER_SET_NAME like ''*WIN*'')';
+    Query.Filtered := true;
+    Query.Close;
+    Query.SQL.Text := 'select * from rdb$database union all select * from rdb$database union all select * from rdb$database union all select * from rdb$database union all select * from rdb$database';
+    Query.Open;
+  finally
+    FreeAndNil(Query)
+  end;
+end;
+
+
 
 { ZTestCompInterbaseBugReportMBCs }
 
