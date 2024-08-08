@@ -153,6 +153,7 @@ const
   cIResultSet_VERSION = 5;
   cIResultSet_INF_RECORD_COUNT = Byte(10);
   cIStatement_VERSION = 5;
+  cIStatement_VERSION_FB4 = 4;
   cIStatement_PREPARE_PREFETCH_NONE = Cardinal($0);
   cIStatement_PREPARE_PREFETCH_TYPE = Cardinal($1);
   cIStatement_PREPARE_PREFETCH_INPUT_PARAMETERS = Cardinal($2);
@@ -2143,10 +2144,12 @@ type
     procedure setCursorName(status: IStatus; name: PAnsiChar);
     procedure deprecatedFree(status: IStatus);
     function getFlags(status: IStatus): Cardinal;
+    //Added by FB4+
     function getTimeout(status: IStatus): Cardinal;
     procedure setTimeout(status: IStatus; timeOut: Cardinal);
     function createBatch(status: IStatus; inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch;
     procedure free(status: IStatus);
+    //Added by FB5+
   end;
 
   {$IFDEF WITH_RECORD_METHODS}
@@ -9990,7 +9993,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TStatement.getTimeout(status: IStatus): Cardinal;
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIStatement_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cIStatement_VERSION_FB4) then begin
     setVersionError(status, Pointer(sIStatement), ReferenceCounted.Versioned.vTable^.version, cIStatement_VERSION);
     Result := 0;
   end
@@ -10000,7 +10003,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IStatement.getTimeout(status: IStatus): Cardinal;
 begin
-  if (vTable.version < cIStatement_VERSION) then begin
+  if (vTable.version < cIStatement_VERSION_FB4) then begin
     setVersionError(status, Pointer(sIStatement), vTable.version, cIStatement_VERSION);
     Result := 0;
   end
@@ -10013,7 +10016,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TStatement.setTimeout(status: IStatus; timeOut: Cardinal);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIStatement_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cIStatement_VERSION_FB4) then begin
     setVersionError(status, Pointer(sIStatement), ReferenceCounted.Versioned.vTable^.version, cIStatement_VERSION);
   end
   else begin
@@ -10022,7 +10025,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IStatement.setTimeout(status: IStatus; timeOut: Cardinal);
 begin
-  if (vTable.version < cIStatement_VERSION) then begin
+  if (vTable.version < cIStatement_VERSION_FB4) then begin
     setVersionError(status, Pointer(sIStatement), vTable.version, cIStatement_VERSION);
   end
   else begin
@@ -10034,7 +10037,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TStatement.createBatch(status: IStatus; inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch;
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIStatement_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cIStatement_VERSION_FB4) then begin
     setVersionError(status, Pointer(sIStatement), ReferenceCounted.Versioned.vTable^.version, cIStatement_VERSION);
     Result := nil;
   end
@@ -10044,7 +10047,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IStatement.createBatch(status: IStatus; inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch;
 begin
-  if (vTable.version < cIStatement_VERSION) then begin
+  if (vTable.version < cIStatement_VERSION_FB4) then begin
     setVersionError(status, Pointer(sIStatement), vTable.version, cIStatement_VERSION);
     Result := nil;
   end
