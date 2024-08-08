@@ -1,4 +1,4 @@
-\documentclass[a4paper,12pt,oneside]{article}
+\documentclass[a4paper,12pt,oneside]{report}
 %\usepackage{geometry}
 %\usepackage{fancyhdr}
 %\usepackage{amsmath,amsthm,amssymb }
@@ -34,7 +34,7 @@
 
 \pagestyle{plain}
 
-\title{Zeos 8.0 Release Notes}
+\title{Zeos 8.1 Release Notes}
 \author{Jan Baumgarten}
 \date{\today}
 %\overfullrule=2mm
@@ -51,13 +51,102 @@
 
 \maketitle
 
-\section{Zeos 8.0}
-The Zeos Team is proud to announce the availability of Zeos 8.0 as a stable release.
+\tableofcontents
+
+\chapter{Zeos 8.1}
+
+The Zeos Team is proud to announce the availability of Zeos 8.1 as a stable release.
 This is the newest stable version of Zeos.
-It deprecates Zeos 7.2 and all prior versions of Zeos.
-Zeos 8.0 has seen tons of bug fixes and improvements.
+It deprecates Zeos 8.0 and all prior versions of Zeos.
+Zeos 8.1 is a bugfix release for Zeos 8 that also has seen improvements.
 We urge all people still using older versions of Zeos to upgrade.
-If you have any problems with Zeos 8.0, please get in contact with us on the forums (\url{http://zeoslib.sourceforge.io}) or on the bugtracker (\url{https://sourceforge.net/p/zeoslib/tickets/}).
+If you have any problems with Zeos 8.1, please get in contact with us on the forums (\url{http://zeoslib.sourceforge.io}) or on the bugtracker (\url{https://sourceforge.net/p/zeoslib/tickets/}).
+
+\section{General}
+\subsection{Package versioning for Delphi 12}
+In Version 8.0 all packages used Libsuffix/DllSuffix = 280, which was the default for Delphi 11.
+Zeos 8.1 now uses the auto setting, so correct suffixes get created.
+
+\subsection{TZCurrencyField}
+Zeos didn't have a TZCurrencyField which lead to problems when creating a TZMemTable with a field of the kind fkCurrency.
+We added a TZCurrencyField for compatiblity.
+The TZCurrencyField derives from TZFloatField - the same as TCurrencyField does.
+We discourage the usage of these field types because they don't do exact numerics.
+Instead please use one of the BCD field types and set the Currency property to True.
+
+\subsection{Assigning nil to TField.AsBytes fails}
+In Zeos 8.0 Assigning nil to TField.AsBytes as a way to set the field value of a TBytesField to null lead to an exception.
+This was fixed in Zeos 8.1.
+
+\subsection{sorting of calculated fields}
+In Zeos 8.0 is was impossible to sort on calculated columns.
+This has been fixed.
+
+\subsection{sorting null values in Zeos datasets}
+Until now null values were sorted to be last in Zeos datasets.
+Starting with Zeos 8.1 Zeos datasets have the new property SortNullsFirst.
+For backwards compatibility it defaults to False.
+Setting it to True will make Zeos datasets sort null values first.
+
+\section{MySQL / MariaDB}
+\subsection{Incorrect feature detection}
+A bug was found with newer versions of libmariadb.
+Older libmariadb verions reported library version numbers as 10.x.
+Newer libmariadb versions changed to reporting library version numbers 3.0.
+Zeos didn't use some features because it incorrectly guessed these were old client libraries that don't have some modern features.
+These problems manifested in problems with handling parameters for stored procedures, and the correct usage of the MySQL\_FieldType\_Bit\_1\_IsBoolean option.
+Zeos now correctly detects these client library versions, so the problems don't occur anymore.
+
+\section{Firebird / Interbase}
+\subsection{Problems with losing the contents of BLOB fields}
+A problem was found where Zeos could loose the contents of BLOB fields of any subtype if a record was updated but the BLOB field was not read before posting the changes.
+The bug has been fixed.
+
+\subsection{Note for Android users}
+Firebird versions up to and including 4.0.4 and 5.0.0 have a bug that prevent these versions to be used on Android 14.
+For more details see \url{https://github.com/FirebirdSQL/firebird/issues/8110}.
+For Firebird 5.0 a fixed version 5.0.1 has been released as of this writing (2024-08-08).
+For Firebird 4.0 a fixed version is still pending.
+
+\subsection{Note for users of FPC trunk}
+The new interface based Firebird API doesn't work on FPC trunk.
+This is because a change in FPC.
+For more information see \url{https://sourceforge.net/p/zeoslib/tickets/603/}.
+Users that wish to use Zeos 8.1 with FPC trunk will have to use the legacy API (set FirebirdAPI=legacy in TZConnection.Properties).
+Users that wish to use the new interface based API with FPC trunk can use the fix in the current trunk and 8.0-patches branches.
+
+\section{Oracle}
+\subsection{Problems with 32k extended varchars and incorrectly trimmed character fields}
+On Oracle some problems were fixed that occured, when long or many character fields were used.
+
+\section{dblib (MS SQL Server with freetds / SAP Adaptive Server Enterprise)}
+\subsection{support for Microsoft DATE, TIME, DATETIME2 and DATETIMEOFFSET types}
+The dblib driver was enhanced to support reading of fields of the types DATE, TIME, DATETIME2 and DATETIMEOFFSET.
+For DATETIMEOFFSET the offset is ignored and values are returned in UTC.
+
+\section{Sybase Adaptive Server Anywhere / SAP SQL Anywhere}
+\subsection{ASA driver now uses username and password}
+In former versions of Zeos the ASA driver was only able to log in in integrated login mode.
+It now can use the username and password as supplied by the respective properties to login in standard mode.
+
+\subsection{ASA driver now honors the host property}
+The ASA driver now honors the host property when set in the Properties of TZConnection.
+This allows to connect to other servers on the network:
+
+\begin{lstlisting}
+ZConnection.Properties.Add('host=somehost.on.thenetwork');
+\end{lstlisting}
+
+Note: The HostName property of the ASA driver refers to the server name of the server one wants to connect to.
+
+\section{ODBC}
+\subsection{new parameter to set the ODBC version}
+For some ODBC drivers it might be necessary to change the ODBC version.
+For this Zeos introduced the new ODBC\_Version parameter.
+It defaults to 380 which means version 3.8.
+Allowed values are 3 for ODBC version 3.0 and 380 for ODBC version 3.8.
+
+\chapter{Zeos 8.0}
 
 \section{General Changes}
 \label{sec:GeneralChanges}
