@@ -110,3 +110,7 @@ create table family (
   surname varchar(50),
   constraint pk_family primary key (id)
 );
+
+create table sf611 (
+  num numeric(19,4)
+);
