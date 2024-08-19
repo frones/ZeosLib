@@ -122,6 +122,8 @@ type
     procedure TestSF478;
     procedure TestPgTruncScale;
     procedure TestInfinityNan;
+    procedure TestSF611_1;
+    procedure TestSF611_2;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1644,6 +1646,38 @@ begin
   end;
 
 end;
+
+procedure TZTestCompPostgreSQLBugReport.TestSF611_1;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from sf611';
+    Query.Open;
+    CheckEquals(1, Query.RecordCount);
+    CheckEquals(310000000, Query.FieldByName('num').AsFloat);
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestSF611_2;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from sf611';
+    Query.Open;
+    CheckEquals(1, Query.RecordCount);
+    CheckEquals(310000000, Query.FieldByName('num').AsInteger);
+  finally
+    FreeAndNil(Query);
+  end;
+end;
+
+
 
 initialization
   RegisterTest('bugreport',TZTestCompPostgreSQLBugReport.Suite);

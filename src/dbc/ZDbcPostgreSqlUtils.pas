@@ -393,7 +393,7 @@ begin
       //i.e. numeric(10,2) is ((10 << 16) | 2) + 4
         if TypeModifier <> -1 then begin
           Scale := (TypeModifier - VARHDRSZ) and $FFFF;
-          if (Scale <= 4) and ((TypeModifier - VARHDRSZ) shr 16 and $FFFF < sAlignCurrencyScale2Precision[Scale]) then
+          if (Scale <= 4) and ((TypeModifier - VARHDRSZ) shr 16 and $FFFF <= sAlignCurrencyScale2Precision[Scale]) then
             Result := stCurrency
         end;
       end;
