@@ -1104,6 +1104,9 @@ type
     FBound, FIsValidating: Boolean;
     function FilledValueWasNull(var Value: TBCD): Boolean;
     function IsRowDataAvailable: Boolean;
+    {$IFNDEF TFIELD_HAS_ASLARGEINT}
+    function GetAsLargeInt: LargeInt;
+    {$ENDIF}
   protected
     function GetIsNull: Boolean; override;
     function GetAsCurrency: Currency; override;
@@ -1119,6 +1122,7 @@ type
     procedure Bind(Binding: Boolean); {$IFDEF WITH_VIRTUAL_TFIELD_BIND}override;{$ENDIF}
   public
     procedure Clear; override;
+    {$IFNDEF TFIELD_HAS_ASLARGEINT}property AsLargeInt: LargeInt read GetAsLargeInt write SetAsLargeInt;{$ENDIF}
   end;
 
   TZGuidField = class(TGuidField)
@@ -8875,6 +8879,16 @@ begin
     U := 0;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
+
+{$IFNDEF TFIELD_HAS_ASLARGEINT}
+function TZFMTBCDField.GetAsLargeInt: LargeInt;
+var aValue: TBCD;
+begin
+  if FilledValueWasNull(aValue)
+  then Result := 0
+  else Result := ZSysUtils.BCD2Int64(aValue);
+end;
+{$ENDIF}
 
 function TZFMTBCDField.GetAsCurrency: Currency;
 begin
