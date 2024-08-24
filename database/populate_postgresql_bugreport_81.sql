@@ -61,3 +61,6 @@ DD_131753 Ref: 20140220-B06 PRS-41722-216-Hornsby.xlsx',NULL,NULL,NULL,NULL,NULL
 ;
 
 insert into sf611 (num) values (310000000);
+insert into sf611 (num) values (310000000.9);
+insert into sf611 (num) values (310000000000);
+insert into sf611 (num) values (310000000000.9);

@@ -1619,6 +1619,7 @@ ZeroBCD:
   Inc(Src, 8);
   pNibble := @Dst.Fraction[0];
   pLastNibble := pNibble + MaxFMTBcdDigits -1; //overflow control
+
   if Weight < 0 then begin {save absolute Weight value to I }
     I := -Weight;
     Inc(pNibble, (I - 1) shl 1); //set new bcd nibble offset
@@ -1626,8 +1627,9 @@ ZeroBCD:
       goto ZeroBCD;
   end else
     I := Weight;
+
   if NBASEDigitsCount <= I then begin
-    Precision := (I + NBASEDigitsCount) * BASE1000Digits;
+    Precision := (I + NBASEDigitsCount -Ord(NBASEDigitsCount = Weight)) * BASE1000Digits;
     Scale := Precision * Ord(Weight < 0);
   end else if Weight < -1 then begin //scale starts with weight -1 nbase digits
     Precision := (I - 1) * BASE1000Digits;
