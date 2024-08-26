@@ -5,11 +5,11 @@ program FirebirdPasToZPlainFirebirdDriverPas;
 uses
   SysUtils,
   Classes,
-  ZSysUtils, ZClasses, ZCompatibility;
+  ZSysUtils, ZClasses, ZCompatibility, ZFastCode;
 type
   PObjectInfoDesc = ^TObjectInfoDesc;
   TObjectInfoDesc = record
-    ObjectName, ObjectNameNew, InheritesFrom, InheritesFromNew: String;
+    ObjectName, ObjectNameNew, InheritesFrom, InheritesFromNew, vTableVersion: String;
     HelperList: TStringList;
   end;
 
@@ -20,7 +20,18 @@ type
     constructor Create;
   End;
 
+  PObjVersionInfo = ^TObjVersionInfo;
+  TObjVersionInfo = record
+    ObjectVersionConstName, ObjectVersionConstNameNew: String;
+    Version: Integer;
+  end;
 
+  TObjVersionInfoList = Class(TZCustomUniqueElementBinarySearchList)
+  protected
+    procedure Notify(Ptr: Pointer; Action: TListNotification); override;
+  public
+    constructor Create;
+  End;
 
 procedure PatchForwardDeclaration(Lines: TStringList; LineIndex: Integer; var Line: String);
 var PC, PEnd, FWStart, FWEnd: PChar;
@@ -46,9 +57,13 @@ begin
   Lines[LineIndex] := Line;
 end;
 
-procedure PatchObjectDeclaration(ObjList: TObjectInfoDescList; Lines, ConstList, IntfNameList: TStringList; var lIdx: Cardinal; ClassPos: Cardinal);
+procedure PatchObjectDeclaration(ObjList: TObjectInfoDescList;
+  ObjVersionInfoList: TObjVersionInfoList;
+  Lines, ConstList, IntfNameList: TStringList; var lIdx: Cardinal; ClassPos: Cardinal);
 var PC, PEnd, FWStart, FWEnd: PChar;
     ObjectInfoDesc, FinderObjectInfoDesc: TObjectInfoDesc;
+    ObjVersionInfo: TObjVersionInfo;
+    ObjVersionInfoAddr: PObjVersionInfo;
     Line, OrgLine, sTmp: String;
     tmpIdx: Cardinal;
     aIdx, aCnt: NativeInt;
@@ -152,7 +167,7 @@ begin
       Line := Lines[tmpIdx];
       if EndsWith(Line, 'end;') then
         Break;
-      aCnt := Pos('version: NativeInt', Line);
+      aCnt := System.Pos('version: NativeInt', Line);
       if ((aCnt = 0) or (ObjectInfoDesc.ObjectName = 'VersionedVTable')) and (Line <> '') then
         ObjectInfoDescRef^.HelperList.Add(Trim(Line));
       Inc(tmpIdx);
@@ -190,12 +205,12 @@ begin
       end;
       ObjectInfoDescRef^.HelperList := TStringList.Create;
       Line := Lines[lIdx];
-      if Pos('constructor', Line) > 0 then begin
+      if System.Pos('constructor', Line) > 0 then begin
         tmpIdx := lIdx +1;
         while tmpIdx <= Cardinal(Lines.Count) -1 do begin
           Line := Lines[tmpIdx];
-          aCnt := Pos('virtual; abstract;', Line);
-          if (Pos('toString', Line) > 0) and (aCnt > 0) then begin
+          aCnt := System.Pos('virtual; abstract;', Line);
+          if (System.Pos('toString', Line) > 0) and (aCnt > 0) then begin
             insert('reintroduce; ', Line, aCnt);
             Lines[tmpIdx] := Line;
           end;
@@ -281,8 +296,8 @@ begin
       Line := Lines[lIdx];
       if EndsWith(Line, 'end;') then
         Break;
-      if (Pos('function', Line) > 0) or (Pos('procedure', Line) > 0) then begin
-        aCnt := Pos(' reintroduce;', Line);
+      if (System.Pos('function', Line) > 0) or (System.Pos('procedure', Line) > 0) then begin
+        aCnt := System.Pos(' reintroduce;', Line);
         if aCnt > 0 then begin
           Delete(Line, aCnt, Length(' reintroduce;'));
           Insert('{$IFNDEF WITH_RECORD_METHODS} reintroduce; {$ENDIF WITH_RECORD_METHODS}', Line, aCnt);
@@ -293,12 +308,37 @@ begin
         Lines.Delete(lIdx);
         Continue;
       end;
-      aIdx := Pos('const', Line);
+      aIdx := System.Pos('const', Line);
       if aIdx > 0 then begin
         Line := Copy(Line, aIdx+6, Length(Line)-6);
-        sTmp :='c'+ObjectInfoDescRef.ObjectName+'_';
-        Line := StringReplace(Line, ObjectInfoDescRef.ObjectName+'.', sTmp, [rfReplaceAll]);
-        Line := sTmp+Trim(Line);
+        if StartsWith(Line, 'VERSION ') then begin
+          ObjVersionInfo.ObjectVersionConstNameNew := 'c'+ObjectInfoDescRef.ObjectName+'_VERSION';
+          ObjVersionInfo.ObjectVersionConstName := ObjectInfoDescRef.ObjectName;
+          PC := Pointer(Line);
+          Inc(PC, 8);
+          PEnd := Pointer(Line);
+          Inc(PEnd, Length(Line));
+          while ((Ord(PC^) < Ord('0')) or (PC^ = '=')) and (PC^ <> #0) do
+            Inc(PC);
+          ObjVersionInfo.Version := ZFastCode.{$IFDEF UNICODE}ValUnicodeInt{$ELSE}ValRawInt{$ENDIF}(PC, PEnd);
+          if not ObjVersionInfoList.Find(@ObjVersionInfo, aIdx) then begin
+            ObjVersionInfoAddr := ObjVersionInfoList.Insert(aIdx);
+            ObjVersionInfoAddr.ObjectVersionConstName := ObjVersionInfo.ObjectVersionConstName;
+            ObjVersionInfoAddr.Version := ObjVersionInfo.Version;
+            sTmp := 'c'+ObjectInfoDescRef.ObjectName+'_VERSION_v'+SysUtils.IntToStr(ObjVersionInfo.Version);
+            ObjVersionInfoAddr.ObjectVersionConstNameNew := sTmp;
+            ObjectInfoDescRef.vTableVersion := sTmp;
+          end else begin
+            ObjVersionInfoAddr := ObjVersionInfoList.Get(aIdx);
+            sTmp := ObjVersionInfoAddr.ObjectVersionConstNameNew;
+          end;
+          Delete(Line, 1, Length('VERSION'));
+          Insert(sTmp, Line, 1);
+        end else begin
+          sTmp :='c'+ObjectInfoDescRef.ObjectName+'_';
+          Line := StringReplace(Line, ObjectInfoDescRef.ObjectName+'.', sTmp, [rfReplaceAll]);
+          Line := sTmp+Trim(Line);
+        end;
         ConstList.Add(Line);
         Lines.Delete(lIdx);
         Continue;
@@ -377,7 +417,10 @@ var Lines: TStringList;
   aObjToFind: TObjectInfoDesc;
   ObjectInfoDescRef: PObjectInfoDesc;
   AConstList, aBodyList, aIntfNameList: TStringList;
-  PC: PChar;
+  ObjVersionInfoList: TObjVersionInfoList;
+  aObjVersionInfoToFind: TObjVersionInfo;
+  ObjVersionInfoAddr: PObjVersionInfo;
+  PC, PEnd: PChar;
   y,m,d: Word;
 begin
   TypeLineIdx := 0;
@@ -389,6 +432,7 @@ begin
     AConstList := TStringList.Create;
     aBodyList := TStringList.Create;
     aIntfNameList := TStringList.Create;
+    ObjVersionInfoList := TObjVersionInfoList.Create;
     try
       Lines.LoadFromFile(SrcFileName, TEncoding.UTF8);
       { Patch forward declarations}
@@ -459,7 +503,7 @@ begin
       if B then begin
         while lIdx < Cardinal(Lines.Count -1) do begin
           aLine := Lines[lIdx];
-          if Pos('Exception', aLine) > 0 then begin
+          if System.Pos('Exception', aLine) > 0 then begin
             Lines.Delete(lIdx);
             while True do begin
               aLine := Lines[lIdx];
@@ -471,8 +515,8 @@ begin
           if EndsWith(aLine, 'cdecl;') then
             Break
           else if ((aLine <> '') or (Lines[lIdx-1] = '')) and
-              (Pos('BooleanPtr = ^Boolean;', aLine) = 0) and
-              (Pos('IKeyHolderPluginPtr', aLine) = 0) then begin
+              (System.Pos('BooleanPtr = ^Boolean;', aLine) = 0) and
+              (System.Pos('IKeyHolderPluginPtr', aLine) = 0) then begin
             Lines.Delete(lIdx);
             Continue;
           end;
@@ -482,31 +526,39 @@ begin
 
       while lIdx < Cardinal(Lines.Count -1) do begin
         aLine := Lines[lIdx];
-        lPos := Pos('= class', aLine);
-        if Pos('= class', aLine) > 0 then begin
-          PatchObjectDeclaration(ModelList, Lines, AConstList, aIntfNameList, lIdx, lPos);
+        lPos := System.Pos('= class', aLine);
+        if System.Pos('= class', aLine) > 0 then begin
+          PatchObjectDeclaration(ModelList, ObjVersionInfoList, Lines, AConstList, aIntfNameList, lIdx, lPos);
+        end else if System.Pos('cdecl; external', aLine) >0 then begin
+          aLine := '//'+aLine;
+          Lines[lIdx] := aLine;
+        end else if aLine = 'const' then begin
+          Inc(lIdx, 2);
+          Lines.Insert(lIdx, '{ compare manually please');
+          Inc(lIdx);
         end else if aLine = 'implementation' then begin
           Lines.Insert(lIdx,    '{$ENDIF ZEOS_DISABLE_FIREBIRD}');
-          Lines.Insert(lIdx +2, '{$IFNDEF ZEOS_DISABLE_FIREBIRD}');
-          Lines.Insert(lIdx +3,'');
-          Lines.Insert(lIdx +4, 'procedure setVersionError(status: IStatus; interfaceName: PAnsiChar;');
-          Lines.Insert(lIdx +5, '  currentVersion, expectedVersion: NativeInt);');
-          Lines.Insert(lIdx +6, 'var statusVector: array[0..8] of NativeIntPtr;');
-          Lines.Insert(lIdx +7, 'begin');
-          Lines.Insert(lIdx +8, '  statusVector[0] := NativeIntPtr(isc_arg_gds);');
-          Lines.Insert(lIdx +9, '  statusVector[1] := NativeIntPtr(isc_interface_version_too_old);');
-          Lines.Insert(lIdx +10,'  statusVector[2] := NativeIntPtr(isc_arg_number);');
-          Lines.Insert(lIdx +11,'  statusVector[3] := NativeIntPtr(expectedVersion);');
-          Lines.Insert(lIdx +12,'  statusVector[4] := NativeIntPtr(isc_arg_number);');
-          Lines.Insert(lIdx +13,'  statusVector[5] := NativeIntPtr(currentVersion);');
-          Lines.Insert(lIdx +14,'  statusVector[6] := NativeIntPtr(isc_arg_string);');
-          Lines.Insert(lIdx +15,'  statusVector[7] := NativeIntPtr(interfaceName);');
-          Lines.Insert(lIdx +16,'  statusVector[8] := NativeIntPtr(isc_arg_end);');
-          Lines.Insert(lIdx +17,'  status.setErrors(@statusVector);');
-          Lines.Insert(lIdx +18,'end;');
-          Lines.Insert(lIdx +19,'');
-          Lines.Insert(lIdx +20,'const');
-          Inc(lIdx, 21);
+          Lines.Insert(lIdx,    '}');
+          Lines.Insert(lIdx +3, '{$IFNDEF ZEOS_DISABLE_FIREBIRD}');
+          Lines.Insert(lIdx +4,'');
+          Lines.Insert(lIdx +5, 'procedure setVersionError(status: IStatus; interfaceName: PAnsiChar;');
+          Lines.Insert(lIdx +6, '  currentVersion, expectedVersion: NativeInt);');
+          Lines.Insert(lIdx +7, 'var statusVector: array[0..8] of NativeIntPtr;');
+          Lines.Insert(lIdx +8, 'begin');
+          Lines.Insert(lIdx +9, '  statusVector[0] := NativeIntPtr(isc_arg_gds);');
+          Lines.Insert(lIdx +10, '  statusVector[1] := NativeIntPtr(isc_interface_version_too_old);');
+          Lines.Insert(lIdx +11,'  statusVector[2] := NativeIntPtr(isc_arg_number);');
+          Lines.Insert(lIdx +12,'  statusVector[3] := NativeIntPtr(expectedVersion);');
+          Lines.Insert(lIdx +13,'  statusVector[4] := NativeIntPtr(isc_arg_number);');
+          Lines.Insert(lIdx +14,'  statusVector[5] := NativeIntPtr(currentVersion);');
+          Lines.Insert(lIdx +15,'  statusVector[6] := NativeIntPtr(isc_arg_string);');
+          Lines.Insert(lIdx +16,'  statusVector[7] := NativeIntPtr(interfaceName);');
+          Lines.Insert(lIdx +17,'  statusVector[8] := NativeIntPtr(isc_arg_end);');
+          Lines.Insert(lIdx +18,'  status.setErrors(@statusVector);');
+          Lines.Insert(lIdx +19,'end;');
+          Lines.Insert(lIdx +20,'');
+          Lines.Insert(lIdx +21,'const');
+          Inc(lIdx, 22);
           for lPos := 0 to aIntfNameList.Count -1 do begin
             Lines.Insert(lIdx, '  '+aIntfNameList[lPos]);
             Inc(lIdx);
@@ -518,7 +570,7 @@ begin
       while lIdx < Cardinal(Lines.Count -1) do begin
         aLine := Lines[lIdx];
         if StartsWith(aLine, 'procedure') or StartsWith(aLine, 'function') and
-           (Pos('FbException.', aLine) = 0)  then begin
+           (System.Pos('FbException.', aLine) = 0)  then begin
           if EndsWith(aLine, 'cdecl;') then begin //Dispatcher -> remove the Try except block first
             tmpIdx := lIdx +1;
             while tmpIdx < Cardinal(Lines.Count -1) do begin
@@ -526,21 +578,21 @@ begin
               if aLine = 'end;' then
                 Break;
               if aLine <> 'begin' then begin
-                if (Pos('checkException', aLine) > 0) then
+                if (System.Pos('checkException', aLine) > 0) then
                   Lines.Delete(tmpIdx);
                 if EndsWith(aLine, 'try') or EndsWith(aLine, 'except') or
                    EndsWith(aLine, 'Result := 0;') or EndsWith(aLine, 'end') or
-                   (Pos('on e: Exception', aLine) > 0) or EndsWith(aLine, 'Result := nil;') or
+                   (System.Pos('on e: Exception', aLine) > 0) or EndsWith(aLine, 'Result := nil;') or
                    EndsWith(aLine, 'Result := false;') then begin
                   Lines.Delete(tmpIdx);
                   Continue;
                 end else begin
                   aLine := Trim(aLine);
                   sTmp := '';
-                  lPos := Pos('(this)', aLine);
+                  lPos := System.Pos('(this)', aLine);
                   ObjectInfoDescRef := nil;
                   if lPos > 0 then begin
-                    lPos2 := Pos(' := ', aLine);
+                    lPos2 := System.Pos(' := ', aLine);
                     if lPos2 > 0 then
                       Inc(lPos2, Length(' := '))
                     else
@@ -583,8 +635,8 @@ begin
               Inc(tmpIdx);
             end;
           end else begin
-            lPos := Pos(' ', aLine);
-            lPos2 := Pos('.', aLine);
+            lPos := System.Pos(' ', aLine);
+            lPos2 := System.Pos('.', aLine);
             sTmp := Copy(aLine, lPos+1, lPos2-lPos-1);
             aObjToFind.ObjectName := sTmp;
             aBodyList.Clear;
@@ -592,6 +644,8 @@ begin
               ObjectInfoDescRef := ModelList.Get(findIdx);
               vTableNew := ConcatVTable(ModelList, aObjToFind.ObjectName)+'.vTable^';
               aVersionConstName := 'c'+aObjToFind.ObjectName+'_VERSION';
+                if ObjectInfoDescRef.ObjectName = 'IResultSet' then
+              Lines.Insert(lIdx, '{$IFDEF WITH_RECORD_METHODS}') else
               Lines.Insert(lIdx, '{$IFDEF WITH_RECORD_METHODS}');
               Inc(lIdx);
               SaveIdx := lIdx;
@@ -602,30 +656,47 @@ begin
                   Lines.Insert(tmpIdx, '{$ENDIF !WITH_RECORD_METHODS}');
                   Break;
                 end;
-                if (Pos('checkException', aLine) > 0) then begin
+                if (System.Pos('checkException', aLine) > 0) then begin
                   Lines.Delete(tmpIdx);
                   aLine := Lines[tmpIdx];
                   Continue;
                 end;
-                lPos := Pos('(vTable.version < ', ALine);
+                lPos := System.Pos('(vTable.version < ', ALine);
                 if lPos > 0 then begin
                   PC := Pointer(aLine);
+                  if ObjectInfoDescRef.ObjectName = 'IResultSet' then
+                lPos := lPos + Length('(vTable.version < ') else
                   lPos := lPos + Length('(vTable.version < ');
                   Inc(PC, lPos-1);
+                  PEnd := PC;
                   lPos2 := lPos;
-                  while (PC^ <> ')') and (PC^ <> #0) do begin
-                    Inc(PC);
+                  while (PEnd^ <> ')') and (PEnd^ <> #0) do begin
+                    Inc(PEnd);
                     Inc(lPos2);
                   end;
+                  aObjVersionInfoToFind.ObjectVersionConstName := ObjectInfoDescRef.ObjectName;
+                  if ObjectInfoDescRef.ObjectName = 'IResultSet' then
+                aObjVersionInfoToFind.Version := ZFastCode.{$IFDEF UNICODE}ValUnicodeInt{$ELSE}ValRawInt{$ENDIF}(PC, PEnd) else
+                  aObjVersionInfoToFind.Version := ZFastCode.{$IFDEF UNICODE}ValUnicodeInt{$ELSE}ValRawInt{$ENDIF}(PC, PEnd);
+                  if not ObjVersionInfoList.Find(@aObjVersionInfoToFind, findIdx) then begin
+                    ObjVersionInfoAddr := ObjVersionInfoList.Insert(findIdx);
+                    ObjVersionInfoAddr.ObjectVersionConstName := aObjVersionInfoToFind.ObjectVersionConstName;
+                    ObjVersionInfoAddr.Version := aObjVersionInfoToFind.Version;
+                    ObjVersionInfoAddr.ObjectVersionConstNameNew := 'c'+ObjectInfoDescRef.ObjectName+'_VERSION_v'+SysUtils.IntToStr(aObjVersionInfoToFind.Version);
+                    sTmp :=ObjVersionInfoAddr.ObjectVersionConstNameNew+' = '+Copy(aLine, lPos, lpos2-lpos)+';';
+                    aConstList.Add(sTmp);
+                  end else
+                    ObjVersionInfoAddr := ObjVersionInfoList.Get(findIdx);
+                  aVersionConstName := ObjVersionInfoAddr.ObjectVersionConstNameNew;
                   Delete(aLine, lPos, lpos2-lpos);
                   Insert(aVersionConstName, aLine, lPos);
                   Lines[tmpIdx] := aLine;
                   aLine := StringReplace(aLine, 'vTable', vTableNew, [rfReplaceAll]);
                 end;
-                lPos := Pos('FbException.', ALine);
+                lPos := System.Pos('FbException.', ALine);
                 if lPos > 0 then begin
                   Delete(aLine, lPos, Length('FbException.'));
-                  lPos := Pos('status, '#39, aLine);
+                  lPos := System.Pos('status, '#39, aLine);
                   if lPos > 0 then begin
                     PC := Pointer(ALine);
                     Inc(lPos, Length('status, '#39)-1);
@@ -641,7 +712,7 @@ begin
                       Insert('Pointer(s'+sTmp+')', aLine, lPos)
                     end;
                   end;
-                  lPos := Pos('vTable.version, ', aLine);
+                  lPos := System.Pos('vTable.version, ', aLine);
                   if lPos > 0 then begin
                     PC := Pointer(ALine);
                     Inc(lPos, Length('vTable.version, '));
@@ -659,8 +730,8 @@ begin
                   Lines[tmpIdx] := aLine;
                   aLine := StringReplace(aLine, 'vTable', vTableNew, [rfReplaceAll]);
                 end;
-                lPos := Pos('(vTable)', ALine);
-                lPos2 := Pos(' := ', aLine);
+                lPos := System.Pos('(vTable)', ALine);
+                lPos2 := System.Pos(' := ', aLine);
                 if lPos2 > 0 then
                   Inc(lPos2, 4)
                 else lPos2 := 1;
@@ -690,7 +761,7 @@ begin
               aLine := Lines[lIdx];
               if aLine = 'end;' then
                 Break;
-              if (Pos('checkException', aLine) > 0) then begin
+              if (System.Pos('checkException', aLine) > 0) then begin
                 Lines.Delete(lIdx);
                 Continue;
               end;
@@ -698,8 +769,8 @@ begin
             end;
           end;
         end else if StartsWith(aLine, 'constructor') and
-          (Pos('FbException.', aLine) = 0) then begin
-          lPos := Pos('.', aLine);
+          (System.Pos('FbException.', aLine) = 0) then begin
+          lPos := System.Pos('.', aLine);
           sTmp := Copy(aLine, 13, lPos -13);
           aObjToFind.ObjectName := sTmp;
           if (sTmp <> 'IVersionedImpl') and (sTmp <> 'IDisposableImpl') and (sTmp <> 'IReferenceCountedImpl') then begin
@@ -723,7 +794,7 @@ begin
           Inc(lIdx, 2); //skip begin
           aLine := Lines[lIdx];
           Lines.Delete(lIdx);
-          if Pos('vTable', aLine) > 0  then begin
+          if System.Pos('vTable', aLine) > 0  then begin
             sTmp2 := ConcatVTable(ModelList, aObjToFind.ObjectName);
             sTmp2 := StringReplace(aLine, 'vTable := ', 'vTable := @', []);
             Lines.Insert(lIdx, '{$IFDEF WITH_RECORD_METHODS}');
@@ -745,17 +816,20 @@ begin
           Inc(lIdx);
           while lIdx < Cardinal(Lines.Count -1) do begin
             aLine := Lines[lIdx];
-            lPos := Pos('.version := ', aLine);
+            lPos := System.Pos('.version := ', aLine);
             if (lPos > 0) then begin
               aLine := Copy(aLine, 1, lPos -1 + Length('.version := '));
-              lPos2 := Pos('Impl_vTable', aLine);
+              lPos2 := System.Pos('Impl_vTable', aLine);
               stmp := Copy(aLine, 1, lPos2-1);
-              sTmp := Trim(sTmp);
-              sTmp2 := 'c'+Copy(sTmp, 1, lPos2-1)+'_VERSION;';
-              aLine := aLine+sTmp2;
-              Lines[lIdx] := aLine;
+              aObjToFind.ObjectName := Trim(sTmp);
+              if ModelList.Find(@aObjToFind, findIdx) then begin
+                ObjectInfoDescRef := ModelList.Get(findIdx);
+                //sTmp2 := 'c'+Copy(sTmp, 1, lPos2-1)+'_VERSION;';
+                aLine := aLine+ObjectInfoDescRef.vTableVersion+';';
+                Lines[lIdx] := aLine;
+              end;
             end else begin
-              lPos := Pos('Impl_vTable := ', aLine);
+              lPos := System.Pos('Impl_vTable := ', aLine);
               if (lPos > 0) then begin
                 Insert('T', aLine, lPos+Length('Impl_vTable := '));
                 Lines[lIdx] := aLine;
@@ -768,27 +842,32 @@ begin
           Lines.Insert(lIdx, '{$IFDEF WITH_RECORD_METHODS}');
           Inc(lIdx);
           aLine := Lines[lIdx];
-          lPos := Pos(':', aLine);
-          lPos2 := Pos(';', aLine);
+          lPos := System.Pos(':', aLine);
+          lPos2 := System.Pos(';', aLine);
           sTmp := Copy(aLine, lPos+2, lPos2 - Lpos -2);
           sTmp := Trim(sTmp);
-          lPos2 := Pos('VTable', sTmp);
+          lPos2 := System.Pos('VTable', sTmp);
           aLine := StringReplace(aLine, sTmp, 'T'+sTmp, []);
           Lines[lIdx] := aLine;
-          sTmp2 := 'cI'+Copy(sTmp, 1, lPos2-1)+'_VERSION';
-          sTmp := ' = ('+LineEnding+'    '+ConcatImplVar(ModelList, sTmp, sTmp2, '    ');
-          sTmp2 := StringReplace(aLine, ';', sTmp, []);
-          Lines.Insert(lIdx, sTmp2);
-          Inc(lIdx);
+          aObjToFind.ObjectName := 'I'+Copy(sTmp, 1, lPos2-1);
+          if ModelList.Find(@aObjToFind, findIdx) then begin
+            ObjectInfoDescRef := ModelList.Get(findIdx);
+            sTmp := ' = ('+LineEnding+'    '+ConcatImplVar(ModelList, sTmp, ObjectInfoDescRef.vTableVersion, '    ');
+            sTmp2 := StringReplace(aLine, ';', sTmp, []);
+            Lines.Insert(lIdx, sTmp2);
+            Inc(lIdx);
+          end;
           Lines.Insert(lIdx, '{$ELSE !WITH_RECORD_METHODS}');
           Inc(lIdx);
           Inc(lIdx);
           Lines.Insert(lIdx, '{$ENDIF !WITH_RECORD_METHODS}');
         end;
-        if (Pos('class procedure FbException.', aLine) > 0) or
-          (Pos('constructor FbException.', aLine) > 0) or
-          (Pos('destructor FbException.', aLine) > 0) or
-          (Pos('function FbException.', aLine) > 0)  then begin
+
+
+        if (System.Pos('class procedure FbException.', aLine) > 0) or
+          (System.Pos('constructor FbException.', aLine) > 0) or
+          (System.Pos('destructor FbException.', aLine) > 0) or
+          (System.Pos('function FbException.', aLine) > 0)  then begin
           repeat
             aLine := Lines[lIdx];
             Lines.Delete(lIdx);
@@ -814,51 +893,51 @@ begin
           Continue;
         end;
 
-        if Pos(#9, aLine) > 0 then
+        if System.Pos(#9, aLine) > 0 then
           aLine := StringReplace(aLine, #9, '  ', [rfReplaceAll]);
-        if Pos('BooleanPtr', aLine) > 0 then
+        if System.Pos('BooleanPtr', aLine) > 0 then
           aLine := StringReplace(aLine, 'BooleanPtr', 'PBoolean', [rfReplaceAll]);
-        if Pos('BytePtr', aLine) > 0 then
+        if System.Pos('BytePtr', aLine) > 0 then
           aLine := StringReplace(aLine, 'BytePtr', 'PByte', [rfReplaceAll]);
-        if Pos('CardinalPtr', aLine) > 0 then
+        if System.Pos('CardinalPtr', aLine) > 0 then
           aLine := StringReplace(aLine, 'CardinalPtr', 'PCardinal', [rfReplaceAll]);
-        if Pos('FB_DEC16Ptr', aLine) > 0 then
+        if System.Pos('FB_DEC16Ptr', aLine) > 0 then
           aLine := StringReplace(aLine, 'FB_DEC16Ptr', 'PFB_DEC16', [rfReplaceAll]);
-        if Pos('FB_DEC34Ptr', aLine) > 0 then
+        if System.Pos('FB_DEC34Ptr', aLine) > 0 then
           aLine := StringReplace(aLine, 'FB_DEC34Ptr', 'PFB_DEC34', [rfReplaceAll]);
-        if Pos('FB_I128Ptr', aLine) > 0 then
+        if System.Pos('FB_I128Ptr', aLine) > 0 then
           aLine := StringReplace(aLine, 'FB_I128Ptr', 'PFB_I128', [rfReplaceAll]);
-        if Pos('IKeyHolderPluginPtr', aLine) > 0 then
+        if System.Pos('IKeyHolderPluginPtr', aLine) > 0 then
           aLine := StringReplace(aLine, 'IKeyHolderPluginPtr', 'PIKeyHolderPlugin', [rfReplaceAll]);
-        if Pos('ISC_QUADPtr', aLine) > 0 then
+        if System.Pos('ISC_QUADPtr', aLine) > 0 then
           aLine := StringReplace(aLine, 'ISC_QUADPtr', 'PISC_QUAD', [rfReplaceAll]);
-        if Pos('ISC_TIMESTAMP_TZPtr', aLine) > 0 then
+        if System.Pos('ISC_TIMESTAMP_TZPtr', aLine) > 0 then
           aLine := StringReplace(aLine, 'ISC_TIMESTAMP_TZPtr', 'PISC_TIMESTAMP_TZ', [rfReplaceAll]);
-        if Pos('ISC_TIMESTAMP_TZ_EXPtr', aLine) > 0 then
+        if System.Pos('ISC_TIMESTAMP_TZ_EXPtr', aLine) > 0 then
           aLine := StringReplace(aLine, 'ISC_TIMESTAMP_TZ_EXPtr', 'PISC_TIMESTAMP_TZ_EX', [rfReplaceAll]);
-        if Pos('ISC_TIME_TZPtr', aLine) > 0 then
+        if System.Pos('ISC_TIME_TZPtr', aLine) > 0 then
           aLine := StringReplace(aLine, 'ISC_TIME_TZPtr', 'PISC_TIME_TZ', [rfReplaceAll]);
-        if Pos('ISC_TIME_TZ_EXPtr', aLine) > 0 then
+        if System.Pos('ISC_TIME_TZ_EXPtr', aLine) > 0 then
           aLine := StringReplace(aLine, 'ISC_TIME_TZ_EXPtr', 'PISC_TIME_TZ_EX', [rfReplaceAll]);
-        if Pos('Int64Ptr', aLine) > 0 then
+        if System.Pos('Int64Ptr', aLine) > 0 then
           aLine := StringReplace(aLine, 'Int64Ptr', 'PInt64', [rfReplaceAll]);
-        if Pos('IntegerPtr', aLine) > 0 then
+        if System.Pos('IntegerPtr', aLine) > 0 then
           aLine := StringReplace(aLine, 'IntegerPtr', 'PInteger', [rfReplaceAll]);
-        if Pos('NativeIntPtr', aLine) > 0 then
+        if System.Pos('NativeIntPtr', aLine) > 0 then
           aLine := StringReplace(aLine, 'NativeIntPtr', 'PNativeInt', [rfReplaceAll]);
-        if Pos('PerformanceInfoPtr', aLine) > 0 then
+        if System.Pos('PerformanceInfoPtr', aLine) > 0 then
           aLine := StringReplace(aLine, 'PerformanceInfoPtr', 'PPerformanceInfo', [rfReplaceAll]);
-        if Pos(' ISC_DATE;', aLine) > 0 then
+        if System.Pos(' ISC_DATE;', aLine) > 0 then
           aLine := StringReplace(aLine, ' ISC_DATE;', ' TISC_DATE;', [rfReplaceAll]);
-        if Pos(' ISC_TIME;', aLine) > 0 then
+        if System.Pos(' ISC_TIME;', aLine) > 0 then
           aLine := StringReplace(aLine, ' ISC_TIME;', ' TISC_TIME;', [rfReplaceAll]);
-        if Pos(' ISC_TIMESTAMP_TZ;', aLine) > 0 then
+        if System.Pos(' ISC_TIMESTAMP_TZ;', aLine) > 0 then
           aLine := StringReplace(aLine, ' ISC_TIMESTAMP_TZ;', ' TISC_TIMESTAMP_TZ;', [rfReplaceAll]);
-        if Pos(' ISC_TIMESTAMP_TZ)', aLine) > 0 then
+        if System.Pos(' ISC_TIMESTAMP_TZ)', aLine) > 0 then
           aLine := StringReplace(aLine, ' ISC_TIMESTAMP_TZ)', ' TISC_TIMESTAMP_TZ)', [rfReplaceAll]);
-        if Pos('dscPtr', aLine) > 0 then
+        if System.Pos('dscPtr', aLine) > 0 then
           aLine := StringReplace(aLine, 'dscPtr', 'Pdsc', [rfReplaceAll]);
-        if Pos('QWord', aLine) > 0 then
+        if System.Pos('QWord', aLine) > 0 then
           aLine := StringReplace(aLine, 'QWord', 'UInt64', [rfReplaceAll]);
         Lines[lIdx] := aLine;
         Inc(lIdx);
@@ -947,6 +1026,7 @@ begin
       FreeAndNil(AConstList);
       FreeAndNil(aBodyList);
       FreeAndNil(aIntfNameList);
+      FreeAndNil(ObjVersionInfoList);
     end;
   end;
 
@@ -971,8 +1051,31 @@ begin
     PObjectInfoDesc(Ptr)^.ObjectNameNew := '';
     PObjectInfoDesc(Ptr)^.InheritesFrom := '';
     PObjectInfoDesc(Ptr)^.InheritesFromNew := '';
+    PObjectInfoDesc(Ptr)^.vTableVersion := '';
     if PObjectInfoDesc(Ptr)^.HelperList <> nil then
       FreeAndNil(PObjectInfoDesc(Ptr)^.HelperList);
+  end;
+end;
+
+function ObjectVersionCompare(P1, P2: Pointer): Integer;
+begin
+  Result := StrComp(PChar(PObjVersionInfo(P1).ObjectVersionConstName), PChar(PObjVersionInfo(P2).ObjectVersionConstName));
+  if Result = 0 then
+    Result := Ord(PObjVersionInfo(P1).Version > PObjVersionInfo(P2).Version) -
+              Ord(PObjVersionInfo(P1).Version < PObjVersionInfo(P2).Version)
+end;
+{ TObjVersionInfoList }
+
+constructor TObjVersionInfoList.Create;
+begin
+  inherited Create(@ObjectVersionCompare, SizeOf(TObjVersionInfo), True);
+end;
+
+procedure TObjVersionInfoList.Notify(Ptr: Pointer; Action: TListNotification);
+begin
+  if Action = lnDeleted then begin
+    PObjVersionInfo(Ptr)^.ObjectVersionConstName := '';
+    PObjVersionInfo(Ptr)^.ObjectVersionConstNameNew := '';
   end;
 end;
 

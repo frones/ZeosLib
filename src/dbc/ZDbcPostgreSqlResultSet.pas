@@ -1073,7 +1073,7 @@ begin
     NUMERICOID: if TypeModifier <> -1 then begin
         ColumnInfo.Precision := (TypeModifier - VARHDRSZ) shr 16 and $FFFF;
         ColumnInfo.Scale     := (TypeModifier - VARHDRSZ)        and $FFFF;
-        if (ColumnInfo.Scale <= 4) and (ColumnInfo.Precision <= sAlignCurrencyScale2Precision[ColumnInfo.Scale])
+        if (ColumnInfo.Scale <= 4) and (ColumnInfo.Precision < sAlignCurrencyScale2Precision[ColumnInfo.Scale])
         then ColumnInfo.ColumnType := stCurrency
         else ColumnInfo.ColumnType := stBigDecimal;
         Exit;

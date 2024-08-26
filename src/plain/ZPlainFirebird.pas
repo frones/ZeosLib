@@ -91,26 +91,26 @@ interface
 uses ZCompatibility, ZPlainFirebirdInterbaseDriver;
 
 const
-  cIVersioned_VERSION = 1;
-  cIReferenceCounted_VERSION = 2;
-  cIDisposable_VERSION = 2;
-  cIStatus_VERSION = 3;
+  cIVersioned_VERSION_v1 = 1;
+  cIReferenceCounted_VERSION_v2 = 2;
+  cIDisposable_VERSION_v2 = 2;
+  cIStatus_VERSION_v3 = 3;
   cIStatus_STATE_WARNINGS = Cardinal($1);
   cIStatus_STATE_ERRORS = Cardinal($2);
   cIStatus_RESULT_ERROR = Integer(-1);
   cIStatus_RESULT_OK = Integer(0);
   cIStatus_RESULT_NO_DATA = Integer(1);
   cIStatus_RESULT_SEGMENT = Integer(2);
-  cIMaster_VERSION = 2;
-  cIPluginBase_VERSION = 3;
-  cIPluginSet_VERSION = 3;
-  cIConfigEntry_VERSION = 3;
-  cIConfig_VERSION = 3;
-  cIFirebirdConf_VERSION = 4;
-  cIPluginConfig_VERSION = 3;
-  cIPluginFactory_VERSION = 2;
-  cIPluginModule_VERSION = 3;
-  cIPluginManager_VERSION = 2;
+  cIMaster_VERSION_v2 = 2;
+  cIPluginBase_VERSION_v3 = 3;
+  cIPluginSet_VERSION_v3 = 3;
+  cIConfigEntry_VERSION_v3 = 3;
+  cIConfig_VERSION_v3 = 3;
+  cIFirebirdConf_VERSION_v4 = 4;
+  cIPluginConfig_VERSION_v3 = 3;
+  cIPluginFactory_VERSION_v2 = 2;
+  cIPluginModule_VERSION_v3 = 3;
+  cIPluginManager_VERSION_v2 = 2;
   cIPluginManager_TYPE_PROVIDER = Cardinal(1);
   cIPluginManager_TYPE_FIRST_NON_LIB = Cardinal(2);
   cIPluginManager_TYPE_AUTH_SERVER = Cardinal(3);
@@ -124,8 +124,8 @@ const
   cIPluginManager_TYPE_REPLICATOR = Cardinal(11);
   cIPluginManager_TYPE_PROFILER = Cardinal(12);
   cIPluginManager_TYPE_COUNT = Cardinal(13);
-  cICryptKey_VERSION = 2;
-  cIConfigManager_VERSION = 3;
+  cICryptKey_VERSION_v2 = 2;
+  cIConfigManager_VERSION_v3 = 3;
   cIConfigManager_DIR_BIN = Cardinal(0);
   cIConfigManager_DIR_SBIN = Cardinal(1);
   cIConfigManager_DIR_CONF = Cardinal(2);
@@ -145,15 +145,14 @@ const
   cIConfigManager_DIR_PLUGINS = Cardinal(16);
   cIConfigManager_DIR_TZDATA = Cardinal(17);
   cIConfigManager_DIR_COUNT = Cardinal(18);
-  cIEventCallback_VERSION = 3;
-  cIBlob_VERSION = 4;
-  cITransaction_VERSION = 4;
-  cIMessageMetadata_VERSION = 4;
-  cIMetadataBuilder_VERSION = 4;
-  cIResultSet_VERSION = 5;
+  cIEventCallback_VERSION_v3 = 3;
+  cIBlob_VERSION_v4 = 4;
+  cITransaction_VERSION_v4 = 4;
+  cIMessageMetadata_VERSION_v4 = 4;
+  cIMetadataBuilder_VERSION_v4 = 4;
+  cIResultSet_VERSION_v5 = 5;
   cIResultSet_INF_RECORD_COUNT = Byte(10);
-  cIStatement_VERSION = 5;
-  cIStatement_VERSION_FB4 = 4;
+  cIStatement_VERSION_v5 = 5;
   cIStatement_PREPARE_PREFETCH_NONE = Cardinal($0);
   cIStatement_PREPARE_PREFETCH_TYPE = Cardinal($1);
   cIStatement_PREPARE_PREFETCH_INPUT_PARAMETERS = Cardinal($2);
@@ -167,7 +166,7 @@ const
   cIStatement_FLAG_HAS_CURSOR = Cardinal($1);
   cIStatement_FLAG_REPEAT_EXECUTE = Cardinal($2);
   cIStatement_CURSOR_TYPE_SCROLLABLE = Cardinal($1);
-  cIBatch_VERSION = 4;
+  cIBatch_VERSION_v4 = 4;
   cIBatch_VERSION1 = Byte(1);
   cIBatch_CURRENT_VERSION = Byte(cIBatch_VERSION1);
   cIBatch_TAG_MULTIERROR = Byte(1);
@@ -185,52 +184,52 @@ const
   cIBatch_BLOB_ID_USER = Byte(2);
   cIBatch_BLOB_STREAM = Byte(3);
   cIBatch_BLOB_SEGHDR_ALIGN = Cardinal(2);
-  cIBatchCompletionState_VERSION = 3;
+  cIBatchCompletionState_VERSION_v3 = 3;
   cIBatchCompletionState_EXECUTE_FAILED = Integer(-1);
   cIBatchCompletionState_SUCCESS_NO_INFO = Integer(-2);
   cIBatchCompletionState_NO_MORE_ERRORS = Cardinal($ffffffff);
-  cIReplicator_VERSION = 4;
-  cIRequest_VERSION = 4;
-  cIEvents_VERSION = 4;
-  cIAttachment_VERSION = 5;
-  cIService_VERSION = 5;
-  cIProvider_VERSION = 4;
-  cIDtcStart_VERSION = 3;
-  cIDtc_VERSION = 2;
-  cIAuth_VERSION = 4;
+  cIReplicator_VERSION_v4 = 4;
+  cIRequest_VERSION_v4 = 4;
+  cIEvents_VERSION_v4 = 4;
+  cIAttachment_VERSION_v5 = 5;
+  cIService_VERSION_v5 = 5;
+  cIProvider_VERSION_v4 = 4;
+  cIDtcStart_VERSION_v3 = 3;
+  cIDtc_VERSION_v2 = 2;
+  cIAuth_VERSION_v4 = 4;
   cIAuth_AUTH_FAILED = Integer(-1);
   cIAuth_AUTH_SUCCESS = Integer(0);
   cIAuth_AUTH_MORE_DATA = Integer(1);
   cIAuth_AUTH_CONTINUE = Integer(2);
-  cIWriter_VERSION = 2;
-  cIServerBlock_VERSION = 2;
-  cIClientBlock_VERSION = 4;
-  cIServer_VERSION = 6;
-  cIClient_VERSION = 5;
-  cIUserField_VERSION = 2;
-  cICharUserField_VERSION = 3;
-  cIIntUserField_VERSION = 3;
-  cIUser_VERSION = 2;
+  cIWriter_VERSION_v2 = 2;
+  cIServerBlock_VERSION_v2 = 2;
+  cIClientBlock_VERSION_v4 = 4;
+  cIServer_VERSION_v6 = 6;
+  cIClient_VERSION_v5 = 5;
+  cIUserField_VERSION_v2 = 2;
+  cICharUserField_VERSION_v3 = 3;
+  cIIntUserField_VERSION_v3 = 3;
+  cIUser_VERSION_v2 = 2;
   cIUser_OP_USER_ADD = Cardinal(1);
   cIUser_OP_USER_MODIFY = Cardinal(2);
   cIUser_OP_USER_DELETE = Cardinal(3);
   cIUser_OP_USER_DISPLAY = Cardinal(4);
   cIUser_OP_USER_SET_MAP = Cardinal(5);
   cIUser_OP_USER_DROP_MAP = Cardinal(6);
-  cIListUsers_VERSION = 2;
-  cILogonInfo_VERSION = 3;
-  cIManagement_VERSION = 4;
-  cIAuthBlock_VERSION = 2;
-  cIWireCryptPlugin_VERSION = 5;
-  cICryptKeyCallback_VERSION = 2;
-  cIKeyHolderPlugin_VERSION = 5;
-  cIDbCryptInfo_VERSION = 3;
-  cIDbCryptPlugin_VERSION = 5;
-  cIExternalContext_VERSION = 2;
-  cIExternalResultSet_VERSION = 3;
-  cIExternalFunction_VERSION = 3;
-  cIExternalProcedure_VERSION = 3;
-  cIExternalTrigger_VERSION = 3;
+  cIListUsers_VERSION_v2 = 2;
+  cILogonInfo_VERSION_v3 = 3;
+  cIManagement_VERSION_v4 = 4;
+  cIAuthBlock_VERSION_v2 = 2;
+  cIWireCryptPlugin_VERSION_v5 = 5;
+  cICryptKeyCallback_VERSION_v2 = 2;
+  cIKeyHolderPlugin_VERSION_v5 = 5;
+  cIDbCryptInfo_VERSION_v3 = 3;
+  cIDbCryptPlugin_VERSION_v5 = 5;
+  cIExternalContext_VERSION_v2 = 2;
+  cIExternalResultSet_VERSION_v3 = 3;
+  cIExternalFunction_VERSION_v3 = 3;
+  cIExternalProcedure_VERSION_v3 = 3;
+  cIExternalTrigger_VERSION_v3 = 3;
   cIExternalTrigger_TYPE_BEFORE = Cardinal(1);
   cIExternalTrigger_TYPE_AFTER = Cardinal(2);
   cIExternalTrigger_TYPE_DATABASE = Cardinal(3);
@@ -243,14 +242,14 @@ const
   cIExternalTrigger_ACTION_TRANS_COMMIT = Cardinal(7);
   cIExternalTrigger_ACTION_TRANS_ROLLBACK = Cardinal(8);
   cIExternalTrigger_ACTION_DDL = Cardinal(9);
-  cIRoutineMetadata_VERSION = 2;
-  cIExternalEngine_VERSION = 4;
-  cITimer_VERSION = 3;
-  cITimerControl_VERSION = 2;
-  cIVersionCallback_VERSION = 2;
-  cIUtil_VERSION = 4;
-  cIOffsetsCallback_VERSION = 2;
-  cIXpbBuilder_VERSION = 3;
+  cIRoutineMetadata_VERSION_v2 = 2;
+  cIExternalEngine_VERSION_v4 = 4;
+  cITimer_VERSION_v3 = 3;
+  cITimerControl_VERSION_v2 = 2;
+  cIVersionCallback_VERSION_v2 = 2;
+  cIUtil_VERSION_v4 = 4;
+  cIOffsetsCallback_VERSION_v2 = 2;
+  cIXpbBuilder_VERSION_v3 = 3;
   cIXpbBuilder_DPB = Cardinal(1);
   cIXpbBuilder_SPB_ATTACH = Cardinal(2);
   cIXpbBuilder_SPB_START = Cardinal(3);
@@ -262,34 +261,34 @@ const
   cIXpbBuilder_SPB_RESPONSE = Cardinal(9);
   cIXpbBuilder_INFO_SEND = Cardinal(10);
   cIXpbBuilder_INFO_RESPONSE = Cardinal(11);
-  cITraceConnection_VERSION = 2;
+  cITraceConnection_VERSION_v2 = 2;
   cITraceConnection_KIND_DATABASE = Cardinal(1);
   cITraceConnection_KIND_SERVICE = Cardinal(2);
-  cITraceDatabaseConnection_VERSION = 3;
-  cITraceTransaction_VERSION = 3;
+  cITraceDatabaseConnection_VERSION_v3 = 3;
+  cITraceTransaction_VERSION_v3 = 3;
   cITraceTransaction_ISOLATION_CONSISTENCY = Cardinal(1);
   cITraceTransaction_ISOLATION_CONCURRENCY = Cardinal(2);
   cITraceTransaction_ISOLATION_READ_COMMITTED_RECVER = Cardinal(3);
   cITraceTransaction_ISOLATION_READ_COMMITTED_NORECVER = Cardinal(4);
   cITraceTransaction_ISOLATION_READ_COMMITTED_READ_CONSISTENCY = Cardinal(5);
-  cITraceParams_VERSION = 3;
-  cITraceStatement_VERSION = 2;
-  cITraceSQLStatement_VERSION = 3;
-  cITraceBLRStatement_VERSION = 3;
-  cITraceDYNRequest_VERSION = 2;
-  cITraceContextVariable_VERSION = 2;
-  cITraceProcedure_VERSION = 3;
-  cITraceFunction_VERSION = 3;
-  cITraceTrigger_VERSION = 3;
+  cITraceParams_VERSION_v3 = 3;
+  cITraceStatement_VERSION_v2 = 2;
+  cITraceSQLStatement_VERSION_v3 = 3;
+  cITraceBLRStatement_VERSION_v3 = 3;
+  cITraceDYNRequest_VERSION_v2 = 2;
+  cITraceContextVariable_VERSION_v2 = 2;
+  cITraceProcedure_VERSION_v3 = 3;
+  cITraceFunction_VERSION_v3 = 3;
+  cITraceTrigger_VERSION_v3 = 3;
   cITraceTrigger_TYPE_ALL = Cardinal(0);
   cITraceTrigger_TYPE_BEFORE = Cardinal(1);
   cITraceTrigger_TYPE_AFTER = Cardinal(2);
-  cITraceServiceConnection_VERSION = 3;
-  cITraceStatusVector_VERSION = 2;
-  cITraceSweepInfo_VERSION = 2;
-  cITraceLogWriter_VERSION = 4;
-  cITraceInitInfo_VERSION = 2;
-  cITracePlugin_VERSION = 5;
+  cITraceServiceConnection_VERSION_v3 = 3;
+  cITraceStatusVector_VERSION_v2 = 2;
+  cITraceSweepInfo_VERSION_v2 = 2;
+  cITraceLogWriter_VERSION_v4 = 4;
+  cITraceInitInfo_VERSION_v2 = 2;
+  cITracePlugin_VERSION_v5 = 5;
   cITracePlugin_RESULT_SUCCESS = Cardinal(0);
   cITracePlugin_RESULT_FAILED = Cardinal(1);
   cITracePlugin_RESULT_UNAUTHORIZED = Cardinal(2);
@@ -297,7 +296,7 @@ const
   cITracePlugin_SWEEP_STATE_FINISHED = Cardinal(2);
   cITracePlugin_SWEEP_STATE_FAILED = Cardinal(3);
   cITracePlugin_SWEEP_STATE_PROGRESS = Cardinal(4);
-  cITraceFactory_VERSION = 4;
+  cITraceFactory_VERSION_v4 = 4;
   cITraceFactory_TRACE_EVENT_ATTACH = Cardinal(0);
   cITraceFactory_TRACE_EVENT_DETACH = Cardinal(1);
   cITraceFactory_TRACE_EVENT_TRANSACTION_START = Cardinal(2);
@@ -322,27 +321,33 @@ const
   cITraceFactory_TRACE_EVENT_FUNC_COMPILE = Cardinal(21);
   cITraceFactory_TRACE_EVENT_TRIGGER_COMPILE = Cardinal(22);
   cITraceFactory_TRACE_EVENT_MAX = Cardinal(23);
-  cIUdrFunctionFactory_VERSION = 3;
-  cIUdrProcedureFactory_VERSION = 3;
-  cIUdrTriggerFactory_VERSION = 3;
-  cIUdrPlugin_VERSION = 2;
-  cIDecFloat16_VERSION = 2;
+  cIUdrFunctionFactory_VERSION_v3 = 3;
+  cIUdrProcedureFactory_VERSION_v3 = 3;
+  cIUdrTriggerFactory_VERSION_v3 = 3;
+  cIUdrPlugin_VERSION_v2 = 2;
+  cIDecFloat16_VERSION_v2 = 2;
   cIDecFloat16_BCD_SIZE = Cardinal(16);
   cIDecFloat16_STRING_SIZE = Cardinal(24);
-  cIDecFloat34_VERSION = 2;
+  cIDecFloat34_VERSION_v2 = 2;
   cIDecFloat34_BCD_SIZE = Cardinal(34);
   cIDecFloat34_STRING_SIZE = Cardinal(43);
-  cIInt128_VERSION = 2;
+  cIInt128_VERSION_v2 = 2;
   cIInt128_STRING_SIZE = Cardinal(46);
-  cIReplicatedField_VERSION = 2;
-  cIReplicatedRecord_VERSION = 2;
-  cIReplicatedTransaction_VERSION = 3;
-  cIReplicatedSession_VERSION = 4;
-  cIProfilerPlugin_VERSION = 4;
-  cIProfilerSession_VERSION = 3;
+  cIReplicatedField_VERSION_v2 = 2;
+  cIReplicatedRecord_VERSION_v2 = 2;
+  cIReplicatedTransaction_VERSION_v3 = 3;
+  cIReplicatedSession_VERSION_v4 = 4;
+  cIProfilerPlugin_VERSION_v4 = 4;
+  cIProfilerSession_VERSION_v3 = 3;
   cIProfilerSession_FLAG_BEFORE_EVENTS = Cardinal($1);
   cIProfilerSession_FLAG_AFTER_EVENTS = Cardinal($2);
-  cIProfilerStats_VERSION = 2;
+  cIProfilerStats_VERSION_v2 = 2;
+  cIResultSet_VERSION_v4 = 4;
+  cIStatement_VERSION_v4 = 4;
+  cIAttachment_VERSION_v4 = 4;
+  cIService_VERSION_v4 = 4;
+  cIUtil_VERSION_v3 = 3;
+  cITracePlugin_VERSION_v4 = 4;
 type
   IVersioned = {$IFDEF WITH_RECORD_METHODS}^TVersioned{$ELSE}class{$ENDIF};
   IReferenceCounted = {$IFDEF WITH_RECORD_METHODS}^TReferenceCounted{$ELSE}class{$ENDIF};
@@ -2144,12 +2149,10 @@ type
     procedure setCursorName(status: IStatus; name: PAnsiChar);
     procedure deprecatedFree(status: IStatus);
     function getFlags(status: IStatus): Cardinal;
-    //Added by FB4+
     function getTimeout(status: IStatus): Cardinal;
     procedure setTimeout(status: IStatus; timeOut: Cardinal);
     function createBatch(status: IStatus; inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch;
     procedure free(status: IStatus);
-    //Added by FB5+
   end;
 
   {$IFDEF WITH_RECORD_METHODS}
@@ -5790,12 +5793,12 @@ type
   end;
 
 {$IFNDEF NO_FBCLIENT}
- // function fb_get_master_interface : IMaster; cdecl; external 'fbclient';
+//  function fb_get_master_interface : IMaster; cdecl; external 'fbclient';
 {$ENDIF}
 
 const
   FB_UsedInYValve = FALSE;
-  { compare manualy please !!
+{ compare manually please
   isc_dpb_version1 = byte(1);
   isc_dpb_version2 = byte(2);
   isc_dpb_cdd_pathname = byte(1);
@@ -8050,7 +8053,7 @@ const
    isc_trace_switch_param_miss = 337182758;
    isc_trace_param_act_notcompat = 337182759;
    isc_trace_mandatory_switch_miss = 337182760;
-   }
+}
 {$ENDIF ZEOS_DISABLE_FIREBIRD}
 implementation
 {$IFNDEF ZEOS_DISABLE_FIREBIRD}
@@ -8647,8 +8650,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TFirebirdConf.getVersion(status: IStatus): Cardinal;
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIFirebirdConf_VERSION) then begin
-    setVersionError(status, Pointer(sIFirebirdConf), ReferenceCounted.Versioned.vTable^.version, cIFirebirdConf_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIFirebirdConf_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIFirebirdConf), ReferenceCounted.Versioned.vTable^.version, cIFirebirdConf_VERSION_v4);
     Result := 0;
   end
   else begin
@@ -8657,8 +8660,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IFirebirdConf.getVersion(status: IStatus): Cardinal;
 begin
-  if (vTable.version < cIFirebirdConf_VERSION) then begin
-    setVersionError(status, Pointer(sIFirebirdConf), vTable.version, cIFirebirdConf_VERSION);
+  if (vTable.version < cIFirebirdConf_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIFirebirdConf), vTable.version, cIFirebirdConf_VERSION_v4);
     Result := 0;
   end
   else begin
@@ -8736,7 +8739,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TPluginModule.threadDetach();
 begin
-  if (Versioned.vTable^.version < cIPluginModule_VERSION) then begin
+  if (Versioned.vTable^.version < cIPluginModule_VERSION_v3) then begin
   end
   else begin
     PPluginModuleVTable(Versioned.vTable)^.threadDetach(@Versioned.SelfOffsetPtr);
@@ -8744,7 +8747,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IPluginModule.threadDetach();
 begin
-  if (vTable.version < cIPluginModule_VERSION) then begin
+  if (vTable.version < cIPluginModule_VERSION_v3) then begin
   end
   else begin
     TPluginModuleVTable(vTable).threadDetach(Self);
@@ -8931,7 +8934,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TConfigManager.getDefaultSecurityDb(): PAnsiChar;
 begin
-  if (Versioned.vTable^.version < cIConfigManager_VERSION) then begin
+  if (Versioned.vTable^.version < cIConfigManager_VERSION_v3) then begin
     Result := nil;
   end
   else begin
@@ -8940,7 +8943,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IConfigManager.getDefaultSecurityDb(): PAnsiChar;
 begin
-  if (vTable.version < cIConfigManager_VERSION) then begin
+  if (vTable.version < cIConfigManager_VERSION_v3) then begin
     Result := nil;
   end
   else begin
@@ -9029,9 +9032,9 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TBlob.cancel(status: IStatus);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIBlob_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cIBlob_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIBlob), ReferenceCounted.Versioned.vTable^.version, cIBlob_VERSION);
+      setVersionError(status, Pointer(sIBlob), ReferenceCounted.Versioned.vTable^.version, cIBlob_VERSION_v4);
     end
     else begin
       deprecatedCancel(status);
@@ -9043,9 +9046,9 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IBlob.cancel(status: IStatus);
 begin
-  if (vTable.version < cIBlob_VERSION) then begin
+  if (vTable.version < cIBlob_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIBlob), vTable.version, cIBlob_VERSION);
+      setVersionError(status, Pointer(sIBlob), vTable.version, cIBlob_VERSION_v4);
     end
     else begin
       deprecatedCancel(status);
@@ -9060,9 +9063,9 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TBlob.close(status: IStatus);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIBlob_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cIBlob_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIBlob), ReferenceCounted.Versioned.vTable^.version, cIBlob_VERSION);
+      setVersionError(status, Pointer(sIBlob), ReferenceCounted.Versioned.vTable^.version, cIBlob_VERSION_v4);
     end
     else begin
       deprecatedClose(status);
@@ -9074,9 +9077,9 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IBlob.close(status: IStatus);
 begin
-  if (vTable.version < cIBlob_VERSION) then begin
+  if (vTable.version < cIBlob_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIBlob), vTable.version, cIBlob_VERSION);
+      setVersionError(status, Pointer(sIBlob), vTable.version, cIBlob_VERSION_v4);
     end
     else begin
       deprecatedClose(status);
@@ -9201,9 +9204,9 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TTransaction.commit(status: IStatus);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cITransaction_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cITransaction_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sITransaction), ReferenceCounted.Versioned.vTable^.version, cITransaction_VERSION);
+      setVersionError(status, Pointer(sITransaction), ReferenceCounted.Versioned.vTable^.version, cITransaction_VERSION_v4);
     end
     else begin
       deprecatedCommit(status);
@@ -9215,9 +9218,9 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure ITransaction.commit(status: IStatus);
 begin
-  if (vTable.version < cITransaction_VERSION) then begin
+  if (vTable.version < cITransaction_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sITransaction), vTable.version, cITransaction_VERSION);
+      setVersionError(status, Pointer(sITransaction), vTable.version, cITransaction_VERSION_v4);
     end
     else begin
       deprecatedCommit(status);
@@ -9232,9 +9235,9 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TTransaction.rollback(status: IStatus);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cITransaction_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cITransaction_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sITransaction), ReferenceCounted.Versioned.vTable^.version, cITransaction_VERSION);
+      setVersionError(status, Pointer(sITransaction), ReferenceCounted.Versioned.vTable^.version, cITransaction_VERSION_v4);
     end
     else begin
       deprecatedRollback(status);
@@ -9246,9 +9249,9 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure ITransaction.rollback(status: IStatus);
 begin
-  if (vTable.version < cITransaction_VERSION) then begin
+  if (vTable.version < cITransaction_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sITransaction), vTable.version, cITransaction_VERSION);
+      setVersionError(status, Pointer(sITransaction), vTable.version, cITransaction_VERSION_v4);
     end
     else begin
       deprecatedRollback(status);
@@ -9263,9 +9266,9 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TTransaction.disconnect(status: IStatus);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cITransaction_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cITransaction_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sITransaction), ReferenceCounted.Versioned.vTable^.version, cITransaction_VERSION);
+      setVersionError(status, Pointer(sITransaction), ReferenceCounted.Versioned.vTable^.version, cITransaction_VERSION_v4);
     end
     else begin
       deprecatedDisconnect(status);
@@ -9277,9 +9280,9 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure ITransaction.disconnect(status: IStatus);
 begin
-  if (vTable.version < cITransaction_VERSION) then begin
+  if (vTable.version < cITransaction_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sITransaction), vTable.version, cITransaction_VERSION);
+      setVersionError(status, Pointer(sITransaction), vTable.version, cITransaction_VERSION_v4);
     end
     else begin
       deprecatedDisconnect(status);
@@ -9459,8 +9462,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TMessageMetadata.getAlignment(status: IStatus): Cardinal;
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIMessageMetadata_VERSION) then begin
-    setVersionError(status, Pointer(sIMessageMetadata), ReferenceCounted.Versioned.vTable^.version, cIMessageMetadata_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIMessageMetadata_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIMessageMetadata), ReferenceCounted.Versioned.vTable^.version, cIMessageMetadata_VERSION_v4);
     Result := 0;
   end
   else begin
@@ -9469,8 +9472,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IMessageMetadata.getAlignment(status: IStatus): Cardinal;
 begin
-  if (vTable.version < cIMessageMetadata_VERSION) then begin
-    setVersionError(status, Pointer(sIMessageMetadata), vTable.version, cIMessageMetadata_VERSION);
+  if (vTable.version < cIMessageMetadata_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIMessageMetadata), vTable.version, cIMessageMetadata_VERSION_v4);
     Result := 0;
   end
   else begin
@@ -9482,8 +9485,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TMessageMetadata.getAlignedLength(status: IStatus): Cardinal;
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIMessageMetadata_VERSION) then begin
-    setVersionError(status, Pointer(sIMessageMetadata), ReferenceCounted.Versioned.vTable^.version, cIMessageMetadata_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIMessageMetadata_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIMessageMetadata), ReferenceCounted.Versioned.vTable^.version, cIMessageMetadata_VERSION_v4);
     Result := 0;
   end
   else begin
@@ -9492,8 +9495,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IMessageMetadata.getAlignedLength(status: IStatus): Cardinal;
 begin
-  if (vTable.version < cIMessageMetadata_VERSION) then begin
-    setVersionError(status, Pointer(sIMessageMetadata), vTable.version, cIMessageMetadata_VERSION);
+  if (vTable.version < cIMessageMetadata_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIMessageMetadata), vTable.version, cIMessageMetadata_VERSION_v4);
     Result := 0;
   end
   else begin
@@ -9615,8 +9618,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TMetadataBuilder.setField(status: IStatus; index: Cardinal; field: PAnsiChar);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIMetadataBuilder_VERSION) then begin
-    setVersionError(status, Pointer(sIMetadataBuilder), ReferenceCounted.Versioned.vTable^.version, cIMetadataBuilder_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIMetadataBuilder_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIMetadataBuilder), ReferenceCounted.Versioned.vTable^.version, cIMetadataBuilder_VERSION_v4);
   end
   else begin
     PMetadataBuilderVTable(ReferenceCounted.Versioned.vTable)^.setField(@ReferenceCounted.Versioned.SelfOffsetPtr, status, index, field);
@@ -9624,8 +9627,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IMetadataBuilder.setField(status: IStatus; index: Cardinal; field: PAnsiChar);
 begin
-  if (vTable.version < cIMetadataBuilder_VERSION) then begin
-    setVersionError(status, Pointer(sIMetadataBuilder), vTable.version, cIMetadataBuilder_VERSION);
+  if (vTable.version < cIMetadataBuilder_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIMetadataBuilder), vTable.version, cIMetadataBuilder_VERSION_v4);
   end
   else begin
     TMetadataBuilderVTable(vTable).setField(Self, status, index, field);
@@ -9636,8 +9639,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TMetadataBuilder.setRelation(status: IStatus; index: Cardinal; relation: PAnsiChar);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIMetadataBuilder_VERSION) then begin
-    setVersionError(status, Pointer(sIMetadataBuilder), ReferenceCounted.Versioned.vTable^.version, cIMetadataBuilder_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIMetadataBuilder_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIMetadataBuilder), ReferenceCounted.Versioned.vTable^.version, cIMetadataBuilder_VERSION_v4);
   end
   else begin
     PMetadataBuilderVTable(ReferenceCounted.Versioned.vTable)^.setRelation(@ReferenceCounted.Versioned.SelfOffsetPtr, status, index, relation);
@@ -9645,8 +9648,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IMetadataBuilder.setRelation(status: IStatus; index: Cardinal; relation: PAnsiChar);
 begin
-  if (vTable.version < cIMetadataBuilder_VERSION) then begin
-    setVersionError(status, Pointer(sIMetadataBuilder), vTable.version, cIMetadataBuilder_VERSION);
+  if (vTable.version < cIMetadataBuilder_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIMetadataBuilder), vTable.version, cIMetadataBuilder_VERSION_v4);
   end
   else begin
     TMetadataBuilderVTable(vTable).setRelation(Self, status, index, relation);
@@ -9657,8 +9660,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TMetadataBuilder.setOwner(status: IStatus; index: Cardinal; owner: PAnsiChar);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIMetadataBuilder_VERSION) then begin
-    setVersionError(status, Pointer(sIMetadataBuilder), ReferenceCounted.Versioned.vTable^.version, cIMetadataBuilder_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIMetadataBuilder_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIMetadataBuilder), ReferenceCounted.Versioned.vTable^.version, cIMetadataBuilder_VERSION_v4);
   end
   else begin
     PMetadataBuilderVTable(ReferenceCounted.Versioned.vTable)^.setOwner(@ReferenceCounted.Versioned.SelfOffsetPtr, status, index, owner);
@@ -9666,8 +9669,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IMetadataBuilder.setOwner(status: IStatus; index: Cardinal; owner: PAnsiChar);
 begin
-  if (vTable.version < cIMetadataBuilder_VERSION) then begin
-    setVersionError(status, Pointer(sIMetadataBuilder), vTable.version, cIMetadataBuilder_VERSION);
+  if (vTable.version < cIMetadataBuilder_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIMetadataBuilder), vTable.version, cIMetadataBuilder_VERSION_v4);
   end
   else begin
     TMetadataBuilderVTable(vTable).setOwner(Self, status, index, owner);
@@ -9678,8 +9681,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TMetadataBuilder.setAlias(status: IStatus; index: Cardinal; alias: PAnsiChar);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIMetadataBuilder_VERSION) then begin
-    setVersionError(status, Pointer(sIMetadataBuilder), ReferenceCounted.Versioned.vTable^.version, cIMetadataBuilder_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIMetadataBuilder_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIMetadataBuilder), ReferenceCounted.Versioned.vTable^.version, cIMetadataBuilder_VERSION_v4);
   end
   else begin
     PMetadataBuilderVTable(ReferenceCounted.Versioned.vTable)^.setAlias(@ReferenceCounted.Versioned.SelfOffsetPtr, status, index, alias);
@@ -9687,8 +9690,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IMetadataBuilder.setAlias(status: IStatus; index: Cardinal; alias: PAnsiChar);
 begin
-  if (vTable.version < cIMetadataBuilder_VERSION) then begin
-    setVersionError(status, Pointer(sIMetadataBuilder), vTable.version, cIMetadataBuilder_VERSION);
+  if (vTable.version < cIMetadataBuilder_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIMetadataBuilder), vTable.version, cIMetadataBuilder_VERSION_v4);
   end
   else begin
     TMetadataBuilderVTable(vTable).setAlias(Self, status, index, alias);
@@ -9820,9 +9823,9 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TResultSet.close(status: IStatus);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIResultSet_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cIResultSet_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIResultSet), ReferenceCounted.Versioned.vTable^.version, cIResultSet_VERSION);
+      setVersionError(status, Pointer(sIResultSet), ReferenceCounted.Versioned.vTable^.version, cIResultSet_VERSION_v4);
     end
     else begin
       deprecatedClose(status);
@@ -9834,9 +9837,9 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IResultSet.close(status: IStatus);
 begin
-  if (vTable.version < cIResultSet_VERSION) then begin
+  if (vTable.version < cIResultSet_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIResultSet), vTable.version, cIResultSet_VERSION);
+      setVersionError(status, Pointer(sIResultSet), vTable.version, cIResultSet_VERSION_v4);
     end
     else begin
       deprecatedClose(status);
@@ -9851,8 +9854,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TResultSet.getInfo(status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIResultSet_VERSION) then begin
-    setVersionError(status, Pointer(sIResultSet), ReferenceCounted.Versioned.vTable^.version, cIResultSet_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIResultSet_VERSION_v5) then begin
+    setVersionError(status, Pointer(sIResultSet), ReferenceCounted.Versioned.vTable^.version, cIResultSet_VERSION_v5);
   end
   else begin
     PResultSetVTable(ReferenceCounted.Versioned.vTable)^.getInfo(@ReferenceCounted.Versioned.SelfOffsetPtr, status, itemsLength, items, bufferLength, buffer);
@@ -9860,8 +9863,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IResultSet.getInfo(status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte);
 begin
-  if (vTable.version < cIResultSet_VERSION) then begin
-    setVersionError(status, Pointer(sIResultSet), vTable.version, cIResultSet_VERSION);
+  if (vTable.version < cIResultSet_VERSION_v5) then begin
+    setVersionError(status, Pointer(sIResultSet), vTable.version, cIResultSet_VERSION_v5);
   end
   else begin
     TResultSetVTable(vTable).getInfo(Self, status, itemsLength, items, bufferLength, buffer);
@@ -9993,8 +9996,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TStatement.getTimeout(status: IStatus): Cardinal;
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIStatement_VERSION_FB4) then begin
-    setVersionError(status, Pointer(sIStatement), ReferenceCounted.Versioned.vTable^.version, cIStatement_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIStatement_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIStatement), ReferenceCounted.Versioned.vTable^.version, cIStatement_VERSION_v4);
     Result := 0;
   end
   else begin
@@ -10003,8 +10006,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IStatement.getTimeout(status: IStatus): Cardinal;
 begin
-  if (vTable.version < cIStatement_VERSION_FB4) then begin
-    setVersionError(status, Pointer(sIStatement), vTable.version, cIStatement_VERSION);
+  if (vTable.version < cIStatement_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIStatement), vTable.version, cIStatement_VERSION_v4);
     Result := 0;
   end
   else begin
@@ -10016,8 +10019,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TStatement.setTimeout(status: IStatus; timeOut: Cardinal);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIStatement_VERSION_FB4) then begin
-    setVersionError(status, Pointer(sIStatement), ReferenceCounted.Versioned.vTable^.version, cIStatement_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIStatement_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIStatement), ReferenceCounted.Versioned.vTable^.version, cIStatement_VERSION_v4);
   end
   else begin
     PStatementVTable(ReferenceCounted.Versioned.vTable)^.setTimeout(@ReferenceCounted.Versioned.SelfOffsetPtr, status, timeOut);
@@ -10025,8 +10028,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IStatement.setTimeout(status: IStatus; timeOut: Cardinal);
 begin
-  if (vTable.version < cIStatement_VERSION_FB4) then begin
-    setVersionError(status, Pointer(sIStatement), vTable.version, cIStatement_VERSION);
+  if (vTable.version < cIStatement_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIStatement), vTable.version, cIStatement_VERSION_v4);
   end
   else begin
     TStatementVTable(vTable).setTimeout(Self, status, timeOut);
@@ -10037,8 +10040,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TStatement.createBatch(status: IStatus; inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch;
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIStatement_VERSION_FB4) then begin
-    setVersionError(status, Pointer(sIStatement), ReferenceCounted.Versioned.vTable^.version, cIStatement_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIStatement_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIStatement), ReferenceCounted.Versioned.vTable^.version, cIStatement_VERSION_v4);
     Result := nil;
   end
   else begin
@@ -10047,8 +10050,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IStatement.createBatch(status: IStatus; inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch;
 begin
-  if (vTable.version < cIStatement_VERSION_FB4) then begin
-    setVersionError(status, Pointer(sIStatement), vTable.version, cIStatement_VERSION);
+  if (vTable.version < cIStatement_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIStatement), vTable.version, cIStatement_VERSION_v4);
     Result := nil;
   end
   else begin
@@ -10060,9 +10063,9 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TStatement.free(status: IStatus);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIStatement_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cIStatement_VERSION_v5) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIStatement), ReferenceCounted.Versioned.vTable^.version, cIStatement_VERSION);
+      setVersionError(status, Pointer(sIStatement), ReferenceCounted.Versioned.vTable^.version, cIStatement_VERSION_v5);
     end
     else begin
       deprecatedFree(status);
@@ -10074,9 +10077,9 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IStatement.free(status: IStatus);
 begin
-  if (vTable.version < cIStatement_VERSION) then begin
+  if (vTable.version < cIStatement_VERSION_v5) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIStatement), vTable.version, cIStatement_VERSION);
+      setVersionError(status, Pointer(sIStatement), vTable.version, cIStatement_VERSION_v5);
     end
     else begin
       deprecatedFree(status);
@@ -10212,9 +10215,9 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TBatch.close(status: IStatus);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIBatch_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cIBatch_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIBatch), ReferenceCounted.Versioned.vTable^.version, cIBatch_VERSION);
+      setVersionError(status, Pointer(sIBatch), ReferenceCounted.Versioned.vTable^.version, cIBatch_VERSION_v4);
     end
     else begin
       deprecatedClose(status);
@@ -10226,9 +10229,9 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IBatch.close(status: IStatus);
 begin
-  if (vTable.version < cIBatch_VERSION) then begin
+  if (vTable.version < cIBatch_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIBatch), vTable.version, cIBatch_VERSION);
+      setVersionError(status, Pointer(sIBatch), vTable.version, cIBatch_VERSION_v4);
     end
     else begin
       deprecatedClose(status);
@@ -10243,8 +10246,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TBatch.getInfo(status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIBatch_VERSION) then begin
-    setVersionError(status, Pointer(sIBatch), ReferenceCounted.Versioned.vTable^.version, cIBatch_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIBatch_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIBatch), ReferenceCounted.Versioned.vTable^.version, cIBatch_VERSION_v4);
   end
   else begin
     PBatchVTable(ReferenceCounted.Versioned.vTable)^.getInfo(@ReferenceCounted.Versioned.SelfOffsetPtr, status, itemsLength, items, bufferLength, buffer);
@@ -10252,8 +10255,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IBatch.getInfo(status: IStatus; itemsLength: Cardinal; items: PByte; bufferLength: Cardinal; buffer: PByte);
 begin
-  if (vTable.version < cIBatch_VERSION) then begin
-    setVersionError(status, Pointer(sIBatch), vTable.version, cIBatch_VERSION);
+  if (vTable.version < cIBatch_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIBatch), vTable.version, cIBatch_VERSION_v4);
   end
   else begin
     TBatchVTable(vTable).getInfo(Self, status, itemsLength, items, bufferLength, buffer);
@@ -10330,9 +10333,9 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TReplicator.close(status: IStatus);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIReplicator_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cIReplicator_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIReplicator), ReferenceCounted.Versioned.vTable^.version, cIReplicator_VERSION);
+      setVersionError(status, Pointer(sIReplicator), ReferenceCounted.Versioned.vTable^.version, cIReplicator_VERSION_v4);
     end
     else begin
       deprecatedClose(status);
@@ -10344,9 +10347,9 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IReplicator.close(status: IStatus);
 begin
-  if (vTable.version < cIReplicator_VERSION) then begin
+  if (vTable.version < cIReplicator_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIReplicator), vTable.version, cIReplicator_VERSION);
+      setVersionError(status, Pointer(sIReplicator), vTable.version, cIReplicator_VERSION_v4);
     end
     else begin
       deprecatedClose(status);
@@ -10438,9 +10441,9 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TRequest.free(status: IStatus);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIRequest_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cIRequest_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIRequest), ReferenceCounted.Versioned.vTable^.version, cIRequest_VERSION);
+      setVersionError(status, Pointer(sIRequest), ReferenceCounted.Versioned.vTable^.version, cIRequest_VERSION_v4);
     end
     else begin
       deprecatedFree(status);
@@ -10452,9 +10455,9 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IRequest.free(status: IStatus);
 begin
-  if (vTable.version < cIRequest_VERSION) then begin
+  if (vTable.version < cIRequest_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIRequest), vTable.version, cIRequest_VERSION);
+      setVersionError(status, Pointer(sIRequest), vTable.version, cIRequest_VERSION_v4);
     end
     else begin
       deprecatedFree(status);
@@ -10480,9 +10483,9 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TEvents.cancel(status: IStatus);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIEvents_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cIEvents_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIEvents), ReferenceCounted.Versioned.vTable^.version, cIEvents_VERSION);
+      setVersionError(status, Pointer(sIEvents), ReferenceCounted.Versioned.vTable^.version, cIEvents_VERSION_v4);
     end
     else begin
       deprecatedCancel(status);
@@ -10494,9 +10497,9 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IEvents.cancel(status: IStatus);
 begin
-  if (vTable.version < cIEvents_VERSION) then begin
+  if (vTable.version < cIEvents_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIEvents), vTable.version, cIEvents_VERSION);
+      setVersionError(status, Pointer(sIEvents), vTable.version, cIEvents_VERSION_v4);
     end
     else begin
       deprecatedCancel(status);
@@ -10709,8 +10712,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TAttachment.getIdleTimeout(status: IStatus): Cardinal;
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIAttachment_VERSION) then begin
-    setVersionError(status, Pointer(sIAttachment), ReferenceCounted.Versioned.vTable^.version, cIAttachment_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIAttachment_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIAttachment), ReferenceCounted.Versioned.vTable^.version, cIAttachment_VERSION_v4);
     Result := 0;
   end
   else begin
@@ -10719,8 +10722,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IAttachment.getIdleTimeout(status: IStatus): Cardinal;
 begin
-  if (vTable.version < cIAttachment_VERSION) then begin
-    setVersionError(status, Pointer(sIAttachment), vTable.version, cIAttachment_VERSION);
+  if (vTable.version < cIAttachment_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIAttachment), vTable.version, cIAttachment_VERSION_v4);
     Result := 0;
   end
   else begin
@@ -10732,8 +10735,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TAttachment.setIdleTimeout(status: IStatus; timeOut: Cardinal);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIAttachment_VERSION) then begin
-    setVersionError(status, Pointer(sIAttachment), ReferenceCounted.Versioned.vTable^.version, cIAttachment_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIAttachment_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIAttachment), ReferenceCounted.Versioned.vTable^.version, cIAttachment_VERSION_v4);
   end
   else begin
     PAttachmentVTable(ReferenceCounted.Versioned.vTable)^.setIdleTimeout(@ReferenceCounted.Versioned.SelfOffsetPtr, status, timeOut);
@@ -10741,8 +10744,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IAttachment.setIdleTimeout(status: IStatus; timeOut: Cardinal);
 begin
-  if (vTable.version < cIAttachment_VERSION) then begin
-    setVersionError(status, Pointer(sIAttachment), vTable.version, cIAttachment_VERSION);
+  if (vTable.version < cIAttachment_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIAttachment), vTable.version, cIAttachment_VERSION_v4);
   end
   else begin
     TAttachmentVTable(vTable).setIdleTimeout(Self, status, timeOut);
@@ -10753,8 +10756,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TAttachment.getStatementTimeout(status: IStatus): Cardinal;
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIAttachment_VERSION) then begin
-    setVersionError(status, Pointer(sIAttachment), ReferenceCounted.Versioned.vTable^.version, cIAttachment_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIAttachment_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIAttachment), ReferenceCounted.Versioned.vTable^.version, cIAttachment_VERSION_v4);
     Result := 0;
   end
   else begin
@@ -10763,8 +10766,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IAttachment.getStatementTimeout(status: IStatus): Cardinal;
 begin
-  if (vTable.version < cIAttachment_VERSION) then begin
-    setVersionError(status, Pointer(sIAttachment), vTable.version, cIAttachment_VERSION);
+  if (vTable.version < cIAttachment_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIAttachment), vTable.version, cIAttachment_VERSION_v4);
     Result := 0;
   end
   else begin
@@ -10776,8 +10779,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TAttachment.setStatementTimeout(status: IStatus; timeOut: Cardinal);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIAttachment_VERSION) then begin
-    setVersionError(status, Pointer(sIAttachment), ReferenceCounted.Versioned.vTable^.version, cIAttachment_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIAttachment_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIAttachment), ReferenceCounted.Versioned.vTable^.version, cIAttachment_VERSION_v4);
   end
   else begin
     PAttachmentVTable(ReferenceCounted.Versioned.vTable)^.setStatementTimeout(@ReferenceCounted.Versioned.SelfOffsetPtr, status, timeOut);
@@ -10785,8 +10788,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IAttachment.setStatementTimeout(status: IStatus; timeOut: Cardinal);
 begin
-  if (vTable.version < cIAttachment_VERSION) then begin
-    setVersionError(status, Pointer(sIAttachment), vTable.version, cIAttachment_VERSION);
+  if (vTable.version < cIAttachment_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIAttachment), vTable.version, cIAttachment_VERSION_v4);
   end
   else begin
     TAttachmentVTable(vTable).setStatementTimeout(Self, status, timeOut);
@@ -10797,8 +10800,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TAttachment.createBatch(status: IStatus; transaction: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch;
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIAttachment_VERSION) then begin
-    setVersionError(status, Pointer(sIAttachment), ReferenceCounted.Versioned.vTable^.version, cIAttachment_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIAttachment_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIAttachment), ReferenceCounted.Versioned.vTable^.version, cIAttachment_VERSION_v4);
     Result := nil;
   end
   else begin
@@ -10807,8 +10810,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IAttachment.createBatch(status: IStatus; transaction: ITransaction; stmtLength: Cardinal; sqlStmt: PAnsiChar; dialect: Cardinal; inMetadata: IMessageMetadata; parLength: Cardinal; par: PByte): IBatch;
 begin
-  if (vTable.version < cIAttachment_VERSION) then begin
-    setVersionError(status, Pointer(sIAttachment), vTable.version, cIAttachment_VERSION);
+  if (vTable.version < cIAttachment_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIAttachment), vTable.version, cIAttachment_VERSION_v4);
     Result := nil;
   end
   else begin
@@ -10820,8 +10823,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TAttachment.createReplicator(status: IStatus): IReplicator;
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIAttachment_VERSION) then begin
-    setVersionError(status, Pointer(sIAttachment), ReferenceCounted.Versioned.vTable^.version, cIAttachment_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIAttachment_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIAttachment), ReferenceCounted.Versioned.vTable^.version, cIAttachment_VERSION_v4);
     Result := nil;
   end
   else begin
@@ -10830,8 +10833,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IAttachment.createReplicator(status: IStatus): IReplicator;
 begin
-  if (vTable.version < cIAttachment_VERSION) then begin
-    setVersionError(status, Pointer(sIAttachment), vTable.version, cIAttachment_VERSION);
+  if (vTable.version < cIAttachment_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIAttachment), vTable.version, cIAttachment_VERSION_v4);
     Result := nil;
   end
   else begin
@@ -10843,9 +10846,9 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TAttachment.detach(status: IStatus);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIAttachment_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cIAttachment_VERSION_v5) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIAttachment), ReferenceCounted.Versioned.vTable^.version, cIAttachment_VERSION);
+      setVersionError(status, Pointer(sIAttachment), ReferenceCounted.Versioned.vTable^.version, cIAttachment_VERSION_v5);
     end
     else begin
       deprecatedDetach(status);
@@ -10857,9 +10860,9 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IAttachment.detach(status: IStatus);
 begin
-  if (vTable.version < cIAttachment_VERSION) then begin
+  if (vTable.version < cIAttachment_VERSION_v5) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIAttachment), vTable.version, cIAttachment_VERSION);
+      setVersionError(status, Pointer(sIAttachment), vTable.version, cIAttachment_VERSION_v5);
     end
     else begin
       deprecatedDetach(status);
@@ -10874,9 +10877,9 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TAttachment.dropDatabase(status: IStatus);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIAttachment_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cIAttachment_VERSION_v5) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIAttachment), ReferenceCounted.Versioned.vTable^.version, cIAttachment_VERSION);
+      setVersionError(status, Pointer(sIAttachment), ReferenceCounted.Versioned.vTable^.version, cIAttachment_VERSION_v5);
     end
     else begin
       deprecatedDropDatabase(status);
@@ -10888,9 +10891,9 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IAttachment.dropDatabase(status: IStatus);
 begin
-  if (vTable.version < cIAttachment_VERSION) then begin
+  if (vTable.version < cIAttachment_VERSION_v5) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIAttachment), vTable.version, cIAttachment_VERSION);
+      setVersionError(status, Pointer(sIAttachment), vTable.version, cIAttachment_VERSION_v5);
     end
     else begin
       deprecatedDropDatabase(status);
@@ -10938,9 +10941,9 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TService.detach(status: IStatus);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIService_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cIService_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIService), ReferenceCounted.Versioned.vTable^.version, cIService_VERSION);
+      setVersionError(status, Pointer(sIService), ReferenceCounted.Versioned.vTable^.version, cIService_VERSION_v4);
     end
     else begin
       deprecatedDetach(status);
@@ -10952,9 +10955,9 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IService.detach(status: IStatus);
 begin
-  if (vTable.version < cIService_VERSION) then begin
+  if (vTable.version < cIService_VERSION_v4) then begin
     if FB_UsedInYValve then begin
-      setVersionError(status, Pointer(sIService), vTable.version, cIService_VERSION);
+      setVersionError(status, Pointer(sIService), vTable.version, cIService_VERSION_v4);
     end
     else begin
       deprecatedDetach(status);
@@ -10969,8 +10972,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TService.cancel(status: IStatus);
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIService_VERSION) then begin
-    setVersionError(status, Pointer(sIService), ReferenceCounted.Versioned.vTable^.version, cIService_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIService_VERSION_v5) then begin
+    setVersionError(status, Pointer(sIService), ReferenceCounted.Versioned.vTable^.version, cIService_VERSION_v5);
   end
   else begin
     PServiceVTable(ReferenceCounted.Versioned.vTable)^.cancel(@ReferenceCounted.Versioned.SelfOffsetPtr, status);
@@ -10978,8 +10981,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IService.cancel(status: IStatus);
 begin
-  if (vTable.version < cIService_VERSION) then begin
-    setVersionError(status, Pointer(sIService), vTable.version, cIService_VERSION);
+  if (vTable.version < cIService_VERSION_v5) then begin
+    setVersionError(status, Pointer(sIService), vTable.version, cIService_VERSION_v5);
   end
   else begin
     TServiceVTable(vTable).cancel(Self, status);
@@ -11243,8 +11246,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TClientBlock.getAuthBlock(status: IStatus): IAuthBlock;
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cIClientBlock_VERSION) then begin
-    setVersionError(status, Pointer(sIClientBlock), ReferenceCounted.Versioned.vTable^.version, cIClientBlock_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cIClientBlock_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIClientBlock), ReferenceCounted.Versioned.vTable^.version, cIClientBlock_VERSION_v4);
     Result := nil;
   end
   else begin
@@ -11253,8 +11256,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IClientBlock.getAuthBlock(status: IStatus): IAuthBlock;
 begin
-  if (vTable.version < cIClientBlock_VERSION) then begin
-    setVersionError(status, Pointer(sIClientBlock), vTable.version, cIClientBlock_VERSION);
+  if (vTable.version < cIClientBlock_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIClientBlock), vTable.version, cIClientBlock_VERSION_v4);
     Result := nil;
   end
   else begin
@@ -11277,8 +11280,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TServer.setDbCryptCallback(status: IStatus; cryptCallback: ICryptKeyCallback);
 begin
-  if (Auth.PluginBase.ReferenceCounted.Versioned.vTable^.version < cIServer_VERSION) then begin
-    setVersionError(status, Pointer(sIServer), Auth.PluginBase.ReferenceCounted.Versioned.vTable^.version, cIServer_VERSION);
+  if (Auth.PluginBase.ReferenceCounted.Versioned.vTable^.version < cIServer_VERSION_v6) then begin
+    setVersionError(status, Pointer(sIServer), Auth.PluginBase.ReferenceCounted.Versioned.vTable^.version, cIServer_VERSION_v6);
   end
   else begin
     PServerVTable(Auth.PluginBase.ReferenceCounted.Versioned.vTable)^.setDbCryptCallback(@Auth.PluginBase.ReferenceCounted.Versioned.SelfOffsetPtr, status, cryptCallback);
@@ -11286,8 +11289,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IServer.setDbCryptCallback(status: IStatus; cryptCallback: ICryptKeyCallback);
 begin
-  if (vTable.version < cIServer_VERSION) then begin
-    setVersionError(status, Pointer(sIServer), vTable.version, cIServer_VERSION);
+  if (vTable.version < cIServer_VERSION_v6) then begin
+    setVersionError(status, Pointer(sIServer), vTable.version, cIServer_VERSION_v6);
   end
   else begin
     TServerVTable(vTable).setDbCryptCallback(Self, status, cryptCallback);
@@ -11573,8 +11576,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TLogonInfo.attachment(status: IStatus): IAttachment;
 begin
-  if (Versioned.vTable^.version < cILogonInfo_VERSION) then begin
-    setVersionError(status, Pointer(sILogonInfo), Versioned.vTable^.version, cILogonInfo_VERSION);
+  if (Versioned.vTable^.version < cILogonInfo_VERSION_v3) then begin
+    setVersionError(status, Pointer(sILogonInfo), Versioned.vTable^.version, cILogonInfo_VERSION_v3);
     Result := nil;
   end
   else begin
@@ -11583,8 +11586,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ILogonInfo.attachment(status: IStatus): IAttachment;
 begin
-  if (vTable.version < cILogonInfo_VERSION) then begin
-    setVersionError(status, Pointer(sILogonInfo), vTable.version, cILogonInfo_VERSION);
+  if (vTable.version < cILogonInfo_VERSION_v3) then begin
+    setVersionError(status, Pointer(sILogonInfo), vTable.version, cILogonInfo_VERSION_v3);
     Result := nil;
   end
   else begin
@@ -11596,8 +11599,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TLogonInfo.transaction(status: IStatus): ITransaction;
 begin
-  if (Versioned.vTable^.version < cILogonInfo_VERSION) then begin
-    setVersionError(status, Pointer(sILogonInfo), Versioned.vTable^.version, cILogonInfo_VERSION);
+  if (Versioned.vTable^.version < cILogonInfo_VERSION_v3) then begin
+    setVersionError(status, Pointer(sILogonInfo), Versioned.vTable^.version, cILogonInfo_VERSION_v3);
     Result := nil;
   end
   else begin
@@ -11606,8 +11609,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ILogonInfo.transaction(status: IStatus): ITransaction;
 begin
-  if (vTable.version < cILogonInfo_VERSION) then begin
-    setVersionError(status, Pointer(sILogonInfo), vTable.version, cILogonInfo_VERSION);
+  if (vTable.version < cILogonInfo_VERSION_v3) then begin
+    setVersionError(status, Pointer(sILogonInfo), vTable.version, cILogonInfo_VERSION_v3);
     Result := nil;
   end
   else begin
@@ -11784,8 +11787,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TWireCryptPlugin.getSpecificData(status: IStatus; keyType: PAnsiChar; length: PCardinal): PByte;
 begin
-  if (PluginBase.ReferenceCounted.Versioned.vTable^.version < cIWireCryptPlugin_VERSION) then begin
-    setVersionError(status, Pointer(sIWireCryptPlugin), PluginBase.ReferenceCounted.Versioned.vTable^.version, cIWireCryptPlugin_VERSION);
+  if (PluginBase.ReferenceCounted.Versioned.vTable^.version < cIWireCryptPlugin_VERSION_v5) then begin
+    setVersionError(status, Pointer(sIWireCryptPlugin), PluginBase.ReferenceCounted.Versioned.vTable^.version, cIWireCryptPlugin_VERSION_v5);
     Result := nil;
   end
   else begin
@@ -11794,8 +11797,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IWireCryptPlugin.getSpecificData(status: IStatus; keyType: PAnsiChar; length: PCardinal): PByte;
 begin
-  if (vTable.version < cIWireCryptPlugin_VERSION) then begin
-    setVersionError(status, Pointer(sIWireCryptPlugin), vTable.version, cIWireCryptPlugin_VERSION);
+  if (vTable.version < cIWireCryptPlugin_VERSION_v5) then begin
+    setVersionError(status, Pointer(sIWireCryptPlugin), vTable.version, cIWireCryptPlugin_VERSION_v5);
     Result := nil;
   end
   else begin
@@ -11807,8 +11810,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TWireCryptPlugin.setSpecificData(status: IStatus; keyType: PAnsiChar; length: Cardinal; data: PByte);
 begin
-  if (PluginBase.ReferenceCounted.Versioned.vTable^.version < cIWireCryptPlugin_VERSION) then begin
-    setVersionError(status, Pointer(sIWireCryptPlugin), PluginBase.ReferenceCounted.Versioned.vTable^.version, cIWireCryptPlugin_VERSION);
+  if (PluginBase.ReferenceCounted.Versioned.vTable^.version < cIWireCryptPlugin_VERSION_v5) then begin
+    setVersionError(status, Pointer(sIWireCryptPlugin), PluginBase.ReferenceCounted.Versioned.vTable^.version, cIWireCryptPlugin_VERSION_v5);
   end
   else begin
     PWireCryptPluginVTable(PluginBase.ReferenceCounted.Versioned.vTable)^.setSpecificData(@PluginBase.ReferenceCounted.Versioned.SelfOffsetPtr, status, keyType, length, data);
@@ -11816,8 +11819,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IWireCryptPlugin.setSpecificData(status: IStatus; keyType: PAnsiChar; length: Cardinal; data: PByte);
 begin
-  if (vTable.version < cIWireCryptPlugin_VERSION) then begin
-    setVersionError(status, Pointer(sIWireCryptPlugin), vTable.version, cIWireCryptPlugin_VERSION);
+  if (vTable.version < cIWireCryptPlugin_VERSION_v5) then begin
+    setVersionError(status, Pointer(sIWireCryptPlugin), vTable.version, cIWireCryptPlugin_VERSION_v5);
   end
   else begin
     TWireCryptPluginVTable(vTable).setSpecificData(Self, status, keyType, length, data);
@@ -11861,8 +11864,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TKeyHolderPlugin.useOnlyOwnKeys(status: IStatus): Boolean;
 begin
-  if (PluginBase.ReferenceCounted.Versioned.vTable^.version < cIKeyHolderPlugin_VERSION) then begin
-    setVersionError(status, Pointer(sIKeyHolderPlugin), PluginBase.ReferenceCounted.Versioned.vTable^.version, cIKeyHolderPlugin_VERSION);
+  if (PluginBase.ReferenceCounted.Versioned.vTable^.version < cIKeyHolderPlugin_VERSION_v5) then begin
+    setVersionError(status, Pointer(sIKeyHolderPlugin), PluginBase.ReferenceCounted.Versioned.vTable^.version, cIKeyHolderPlugin_VERSION_v5);
     Result := false;
   end
   else begin
@@ -11871,8 +11874,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IKeyHolderPlugin.useOnlyOwnKeys(status: IStatus): Boolean;
 begin
-  if (vTable.version < cIKeyHolderPlugin_VERSION) then begin
-    setVersionError(status, Pointer(sIKeyHolderPlugin), vTable.version, cIKeyHolderPlugin_VERSION);
+  if (vTable.version < cIKeyHolderPlugin_VERSION_v5) then begin
+    setVersionError(status, Pointer(sIKeyHolderPlugin), vTable.version, cIKeyHolderPlugin_VERSION_v5);
     Result := false;
   end
   else begin
@@ -11884,8 +11887,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TKeyHolderPlugin.chainHandle(status: IStatus): ICryptKeyCallback;
 begin
-  if (PluginBase.ReferenceCounted.Versioned.vTable^.version < cIKeyHolderPlugin_VERSION) then begin
-    setVersionError(status, Pointer(sIKeyHolderPlugin), PluginBase.ReferenceCounted.Versioned.vTable^.version, cIKeyHolderPlugin_VERSION);
+  if (PluginBase.ReferenceCounted.Versioned.vTable^.version < cIKeyHolderPlugin_VERSION_v5) then begin
+    setVersionError(status, Pointer(sIKeyHolderPlugin), PluginBase.ReferenceCounted.Versioned.vTable^.version, cIKeyHolderPlugin_VERSION_v5);
     Result := nil;
   end
   else begin
@@ -11894,8 +11897,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IKeyHolderPlugin.chainHandle(status: IStatus): ICryptKeyCallback;
 begin
-  if (vTable.version < cIKeyHolderPlugin_VERSION) then begin
-    setVersionError(status, Pointer(sIKeyHolderPlugin), vTable.version, cIKeyHolderPlugin_VERSION);
+  if (vTable.version < cIKeyHolderPlugin_VERSION_v5) then begin
+    setVersionError(status, Pointer(sIKeyHolderPlugin), vTable.version, cIKeyHolderPlugin_VERSION_v5);
     Result := nil;
   end
   else begin
@@ -11951,8 +11954,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TDbCryptPlugin.setInfo(status: IStatus; info: IDbCryptInfo);
 begin
-  if (PluginBase.ReferenceCounted.Versioned.vTable^.version < cIDbCryptPlugin_VERSION) then begin
-    setVersionError(status, Pointer(sIDbCryptPlugin), PluginBase.ReferenceCounted.Versioned.vTable^.version, cIDbCryptPlugin_VERSION);
+  if (PluginBase.ReferenceCounted.Versioned.vTable^.version < cIDbCryptPlugin_VERSION_v5) then begin
+    setVersionError(status, Pointer(sIDbCryptPlugin), PluginBase.ReferenceCounted.Versioned.vTable^.version, cIDbCryptPlugin_VERSION_v5);
   end
   else begin
     PDbCryptPluginVTable(PluginBase.ReferenceCounted.Versioned.vTable)^.setInfo(@PluginBase.ReferenceCounted.Versioned.SelfOffsetPtr, status, info);
@@ -11960,8 +11963,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IDbCryptPlugin.setInfo(status: IStatus; info: IDbCryptInfo);
 begin
-  if (vTable.version < cIDbCryptPlugin_VERSION) then begin
-    setVersionError(status, Pointer(sIDbCryptPlugin), vTable.version, cIDbCryptPlugin_VERSION);
+  if (vTable.version < cIDbCryptPlugin_VERSION_v5) then begin
+    setVersionError(status, Pointer(sIDbCryptPlugin), vTable.version, cIDbCryptPlugin_VERSION_v5);
   end
   else begin
     TDbCryptPluginVTable(vTable).setInfo(Self, status, info);
@@ -12511,8 +12514,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TUtil.getDecFloat16(status: IStatus): IDecFloat16;
 begin
-  if (Versioned.vTable^.version < cIUtil_VERSION) then begin
-    setVersionError(status, Pointer(sIUtil), Versioned.vTable^.version, cIUtil_VERSION);
+  if (Versioned.vTable^.version < cIUtil_VERSION_v3) then begin
+    setVersionError(status, Pointer(sIUtil), Versioned.vTable^.version, cIUtil_VERSION_v3);
     Result := nil;
   end
   else begin
@@ -12521,8 +12524,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IUtil.getDecFloat16(status: IStatus): IDecFloat16;
 begin
-  if (vTable.version < cIUtil_VERSION) then begin
-    setVersionError(status, Pointer(sIUtil), vTable.version, cIUtil_VERSION);
+  if (vTable.version < cIUtil_VERSION_v3) then begin
+    setVersionError(status, Pointer(sIUtil), vTable.version, cIUtil_VERSION_v3);
     Result := nil;
   end
   else begin
@@ -12534,8 +12537,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TUtil.getDecFloat34(status: IStatus): IDecFloat34;
 begin
-  if (Versioned.vTable^.version < cIUtil_VERSION) then begin
-    setVersionError(status, Pointer(sIUtil), Versioned.vTable^.version, cIUtil_VERSION);
+  if (Versioned.vTable^.version < cIUtil_VERSION_v3) then begin
+    setVersionError(status, Pointer(sIUtil), Versioned.vTable^.version, cIUtil_VERSION_v3);
     Result := nil;
   end
   else begin
@@ -12544,8 +12547,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IUtil.getDecFloat34(status: IStatus): IDecFloat34;
 begin
-  if (vTable.version < cIUtil_VERSION) then begin
-    setVersionError(status, Pointer(sIUtil), vTable.version, cIUtil_VERSION);
+  if (vTable.version < cIUtil_VERSION_v3) then begin
+    setVersionError(status, Pointer(sIUtil), vTable.version, cIUtil_VERSION_v3);
     Result := nil;
   end
   else begin
@@ -12557,8 +12560,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TUtil.decodeTimeTz(status: IStatus; timeTz: PISC_TIME_TZ; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar);
 begin
-  if (Versioned.vTable^.version < cIUtil_VERSION) then begin
-    setVersionError(status, Pointer(sIUtil), Versioned.vTable^.version, cIUtil_VERSION);
+  if (Versioned.vTable^.version < cIUtil_VERSION_v3) then begin
+    setVersionError(status, Pointer(sIUtil), Versioned.vTable^.version, cIUtil_VERSION_v3);
   end
   else begin
     PUtilVTable(Versioned.vTable)^.decodeTimeTz(@Versioned.SelfOffsetPtr, status, timeTz, hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
@@ -12566,8 +12569,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IUtil.decodeTimeTz(status: IStatus; timeTz: PISC_TIME_TZ; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar);
 begin
-  if (vTable.version < cIUtil_VERSION) then begin
-    setVersionError(status, Pointer(sIUtil), vTable.version, cIUtil_VERSION);
+  if (vTable.version < cIUtil_VERSION_v3) then begin
+    setVersionError(status, Pointer(sIUtil), vTable.version, cIUtil_VERSION_v3);
   end
   else begin
     TUtilVTable(vTable).decodeTimeTz(Self, status, timeTz, hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
@@ -12578,8 +12581,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TUtil.decodeTimeStampTz(status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ; year: PCardinal; month: PCardinal; day: PCardinal; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar);
 begin
-  if (Versioned.vTable^.version < cIUtil_VERSION) then begin
-    setVersionError(status, Pointer(sIUtil), Versioned.vTable^.version, cIUtil_VERSION);
+  if (Versioned.vTable^.version < cIUtil_VERSION_v3) then begin
+    setVersionError(status, Pointer(sIUtil), Versioned.vTable^.version, cIUtil_VERSION_v3);
   end
   else begin
     PUtilVTable(Versioned.vTable)^.decodeTimeStampTz(@Versioned.SelfOffsetPtr, status, timeStampTz, year, month, day, hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
@@ -12587,8 +12590,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IUtil.decodeTimeStampTz(status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ; year: PCardinal; month: PCardinal; day: PCardinal; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar);
 begin
-  if (vTable.version < cIUtil_VERSION) then begin
-    setVersionError(status, Pointer(sIUtil), vTable.version, cIUtil_VERSION);
+  if (vTable.version < cIUtil_VERSION_v3) then begin
+    setVersionError(status, Pointer(sIUtil), vTable.version, cIUtil_VERSION_v3);
   end
   else begin
     TUtilVTable(vTable).decodeTimeStampTz(Self, status, timeStampTz, year, month, day, hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
@@ -12599,8 +12602,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TUtil.encodeTimeTz(status: IStatus; timeTz: PISC_TIME_TZ; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal; timeZone: PAnsiChar);
 begin
-  if (Versioned.vTable^.version < cIUtil_VERSION) then begin
-    setVersionError(status, Pointer(sIUtil), Versioned.vTable^.version, cIUtil_VERSION);
+  if (Versioned.vTable^.version < cIUtil_VERSION_v3) then begin
+    setVersionError(status, Pointer(sIUtil), Versioned.vTable^.version, cIUtil_VERSION_v3);
   end
   else begin
     PUtilVTable(Versioned.vTable)^.encodeTimeTz(@Versioned.SelfOffsetPtr, status, timeTz, hours, minutes, seconds, fractions, timeZone);
@@ -12608,8 +12611,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IUtil.encodeTimeTz(status: IStatus; timeTz: PISC_TIME_TZ; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal; timeZone: PAnsiChar);
 begin
-  if (vTable.version < cIUtil_VERSION) then begin
-    setVersionError(status, Pointer(sIUtil), vTable.version, cIUtil_VERSION);
+  if (vTable.version < cIUtil_VERSION_v3) then begin
+    setVersionError(status, Pointer(sIUtil), vTable.version, cIUtil_VERSION_v3);
   end
   else begin
     TUtilVTable(vTable).encodeTimeTz(Self, status, timeTz, hours, minutes, seconds, fractions, timeZone);
@@ -12620,8 +12623,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TUtil.encodeTimeStampTz(status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ; year: Cardinal; month: Cardinal; day: Cardinal; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal; timeZone: PAnsiChar);
 begin
-  if (Versioned.vTable^.version < cIUtil_VERSION) then begin
-    setVersionError(status, Pointer(sIUtil), Versioned.vTable^.version, cIUtil_VERSION);
+  if (Versioned.vTable^.version < cIUtil_VERSION_v3) then begin
+    setVersionError(status, Pointer(sIUtil), Versioned.vTable^.version, cIUtil_VERSION_v3);
   end
   else begin
     PUtilVTable(Versioned.vTable)^.encodeTimeStampTz(@Versioned.SelfOffsetPtr, status, timeStampTz, year, month, day, hours, minutes, seconds, fractions, timeZone);
@@ -12629,8 +12632,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IUtil.encodeTimeStampTz(status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ; year: Cardinal; month: Cardinal; day: Cardinal; hours: Cardinal; minutes: Cardinal; seconds: Cardinal; fractions: Cardinal; timeZone: PAnsiChar);
 begin
-  if (vTable.version < cIUtil_VERSION) then begin
-    setVersionError(status, Pointer(sIUtil), vTable.version, cIUtil_VERSION);
+  if (vTable.version < cIUtil_VERSION_v3) then begin
+    setVersionError(status, Pointer(sIUtil), vTable.version, cIUtil_VERSION_v3);
   end
   else begin
     TUtilVTable(vTable).encodeTimeStampTz(Self, status, timeStampTz, year, month, day, hours, minutes, seconds, fractions, timeZone);
@@ -12641,8 +12644,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TUtil.getInt128(status: IStatus): IInt128;
 begin
-  if (Versioned.vTable^.version < cIUtil_VERSION) then begin
-    setVersionError(status, Pointer(sIUtil), Versioned.vTable^.version, cIUtil_VERSION);
+  if (Versioned.vTable^.version < cIUtil_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIUtil), Versioned.vTable^.version, cIUtil_VERSION_v4);
     Result := nil;
   end
   else begin
@@ -12651,8 +12654,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function IUtil.getInt128(status: IStatus): IInt128;
 begin
-  if (vTable.version < cIUtil_VERSION) then begin
-    setVersionError(status, Pointer(sIUtil), vTable.version, cIUtil_VERSION);
+  if (vTable.version < cIUtil_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIUtil), vTable.version, cIUtil_VERSION_v4);
     Result := nil;
   end
   else begin
@@ -12664,8 +12667,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TUtil.decodeTimeTzEx(status: IStatus; timeTz: PISC_TIME_TZ_EX; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar);
 begin
-  if (Versioned.vTable^.version < cIUtil_VERSION) then begin
-    setVersionError(status, Pointer(sIUtil), Versioned.vTable^.version, cIUtil_VERSION);
+  if (Versioned.vTable^.version < cIUtil_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIUtil), Versioned.vTable^.version, cIUtil_VERSION_v4);
   end
   else begin
     PUtilVTable(Versioned.vTable)^.decodeTimeTzEx(@Versioned.SelfOffsetPtr, status, timeTz, hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
@@ -12673,8 +12676,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IUtil.decodeTimeTzEx(status: IStatus; timeTz: PISC_TIME_TZ_EX; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar);
 begin
-  if (vTable.version < cIUtil_VERSION) then begin
-    setVersionError(status, Pointer(sIUtil), vTable.version, cIUtil_VERSION);
+  if (vTable.version < cIUtil_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIUtil), vTable.version, cIUtil_VERSION_v4);
   end
   else begin
     TUtilVTable(vTable).decodeTimeTzEx(Self, status, timeTz, hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
@@ -12685,8 +12688,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 procedure TUtil.decodeTimeStampTzEx(status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ_EX; year: PCardinal; month: PCardinal; day: PCardinal; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar);
 begin
-  if (Versioned.vTable^.version < cIUtil_VERSION) then begin
-    setVersionError(status, Pointer(sIUtil), Versioned.vTable^.version, cIUtil_VERSION);
+  if (Versioned.vTable^.version < cIUtil_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIUtil), Versioned.vTable^.version, cIUtil_VERSION_v4);
   end
   else begin
     PUtilVTable(Versioned.vTable)^.decodeTimeStampTzEx(@Versioned.SelfOffsetPtr, status, timeStampTz, year, month, day, hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
@@ -12694,8 +12697,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 procedure IUtil.decodeTimeStampTzEx(status: IStatus; timeStampTz: PISC_TIMESTAMP_TZ_EX; year: PCardinal; month: PCardinal; day: PCardinal; hours: PCardinal; minutes: PCardinal; seconds: PCardinal; fractions: PCardinal; timeZoneBufferLength: Cardinal; timeZoneBuffer: PAnsiChar);
 begin
-  if (vTable.version < cIUtil_VERSION) then begin
-    setVersionError(status, Pointer(sIUtil), vTable.version, cIUtil_VERSION);
+  if (vTable.version < cIUtil_VERSION_v4) then begin
+    setVersionError(status, Pointer(sIUtil), vTable.version, cIUtil_VERSION_v4);
   end
   else begin
     TUtilVTable(vTable).decodeTimeStampTzEx(Self, status, timeStampTz, year, month, day, hours, minutes, seconds, fractions, timeZoneBufferLength, timeZoneBuffer);
@@ -13113,7 +13116,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TTraceTransaction.getInitialID(): Int64;
 begin
-  if (Versioned.vTable^.version < cITraceTransaction_VERSION) then begin
+  if (Versioned.vTable^.version < cITraceTransaction_VERSION_v3) then begin
     Result := 0;
   end
   else begin
@@ -13122,7 +13125,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ITraceTransaction.getInitialID(): Int64;
 begin
-  if (vTable.version < cITraceTransaction_VERSION) then begin
+  if (vTable.version < cITraceTransaction_VERSION_v3) then begin
     Result := 0;
   end
   else begin
@@ -13134,7 +13137,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TTraceTransaction.getPreviousID(): Int64;
 begin
-  if (Versioned.vTable^.version < cITraceTransaction_VERSION) then begin
+  if (Versioned.vTable^.version < cITraceTransaction_VERSION_v3) then begin
     Result := 0;
   end
   else begin
@@ -13143,7 +13146,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ITraceTransaction.getPreviousID(): Int64;
 begin
-  if (vTable.version < cITraceTransaction_VERSION) then begin
+  if (vTable.version < cITraceTransaction_VERSION_v3) then begin
     Result := 0;
   end
   else begin
@@ -13177,8 +13180,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TTraceParams.getTextUTF8(status: IStatus; idx: Cardinal): PAnsiChar;
 begin
-  if (Versioned.vTable^.version < cITraceParams_VERSION) then begin
-    setVersionError(status, Pointer(sITraceParams), Versioned.vTable^.version, cITraceParams_VERSION);
+  if (Versioned.vTable^.version < cITraceParams_VERSION_v3) then begin
+    setVersionError(status, Pointer(sITraceParams), Versioned.vTable^.version, cITraceParams_VERSION_v3);
     Result := nil;
   end
   else begin
@@ -13187,8 +13190,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ITraceParams.getTextUTF8(status: IStatus; idx: Cardinal): PAnsiChar;
 begin
-  if (vTable.version < cITraceParams_VERSION) then begin
-    setVersionError(status, Pointer(sITraceParams), vTable.version, cITraceParams_VERSION);
+  if (vTable.version < cITraceParams_VERSION_v3) then begin
+    setVersionError(status, Pointer(sITraceParams), vTable.version, cITraceParams_VERSION_v3);
     Result := nil;
   end
   else begin
@@ -13409,7 +13412,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TTraceProcedure.getStmtID(): Int64;
 begin
-  if (Versioned.vTable^.version < cITraceProcedure_VERSION) then begin
+  if (Versioned.vTable^.version < cITraceProcedure_VERSION_v3) then begin
     Result := 0;
   end
   else begin
@@ -13418,7 +13421,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ITraceProcedure.getStmtID(): Int64;
 begin
-  if (vTable.version < cITraceProcedure_VERSION) then begin
+  if (vTable.version < cITraceProcedure_VERSION_v3) then begin
     Result := 0;
   end
   else begin
@@ -13430,7 +13433,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TTraceProcedure.getPlan(): PAnsiChar;
 begin
-  if (Versioned.vTable^.version < cITraceProcedure_VERSION) then begin
+  if (Versioned.vTable^.version < cITraceProcedure_VERSION_v3) then begin
     Result := nil;
   end
   else begin
@@ -13439,7 +13442,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ITraceProcedure.getPlan(): PAnsiChar;
 begin
-  if (vTable.version < cITraceProcedure_VERSION) then begin
+  if (vTable.version < cITraceProcedure_VERSION_v3) then begin
     Result := nil;
   end
   else begin
@@ -13451,7 +13454,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TTraceProcedure.getExplainedPlan(): PAnsiChar;
 begin
-  if (Versioned.vTable^.version < cITraceProcedure_VERSION) then begin
+  if (Versioned.vTable^.version < cITraceProcedure_VERSION_v3) then begin
     Result := nil;
   end
   else begin
@@ -13460,7 +13463,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ITraceProcedure.getExplainedPlan(): PAnsiChar;
 begin
-  if (vTable.version < cITraceProcedure_VERSION) then begin
+  if (vTable.version < cITraceProcedure_VERSION_v3) then begin
     Result := nil;
   end
   else begin
@@ -13516,7 +13519,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TTraceFunction.getStmtID(): Int64;
 begin
-  if (Versioned.vTable^.version < cITraceFunction_VERSION) then begin
+  if (Versioned.vTable^.version < cITraceFunction_VERSION_v3) then begin
     Result := 0;
   end
   else begin
@@ -13525,7 +13528,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ITraceFunction.getStmtID(): Int64;
 begin
-  if (vTable.version < cITraceFunction_VERSION) then begin
+  if (vTable.version < cITraceFunction_VERSION_v3) then begin
     Result := 0;
   end
   else begin
@@ -13537,7 +13540,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TTraceFunction.getPlan(): PAnsiChar;
 begin
-  if (Versioned.vTable^.version < cITraceFunction_VERSION) then begin
+  if (Versioned.vTable^.version < cITraceFunction_VERSION_v3) then begin
     Result := nil;
   end
   else begin
@@ -13546,7 +13549,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ITraceFunction.getPlan(): PAnsiChar;
 begin
-  if (vTable.version < cITraceFunction_VERSION) then begin
+  if (vTable.version < cITraceFunction_VERSION_v3) then begin
     Result := nil;
   end
   else begin
@@ -13558,7 +13561,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TTraceFunction.getExplainedPlan(): PAnsiChar;
 begin
-  if (Versioned.vTable^.version < cITraceFunction_VERSION) then begin
+  if (Versioned.vTable^.version < cITraceFunction_VERSION_v3) then begin
     Result := nil;
   end
   else begin
@@ -13567,7 +13570,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ITraceFunction.getExplainedPlan(): PAnsiChar;
 begin
-  if (vTable.version < cITraceFunction_VERSION) then begin
+  if (vTable.version < cITraceFunction_VERSION_v3) then begin
     Result := nil;
   end
   else begin
@@ -13634,7 +13637,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TTraceTrigger.getStmtID(): Int64;
 begin
-  if (Versioned.vTable^.version < cITraceTrigger_VERSION) then begin
+  if (Versioned.vTable^.version < cITraceTrigger_VERSION_v3) then begin
     Result := 0;
   end
   else begin
@@ -13643,7 +13646,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ITraceTrigger.getStmtID(): Int64;
 begin
-  if (vTable.version < cITraceTrigger_VERSION) then begin
+  if (vTable.version < cITraceTrigger_VERSION_v3) then begin
     Result := 0;
   end
   else begin
@@ -13655,7 +13658,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TTraceTrigger.getPlan(): PAnsiChar;
 begin
-  if (Versioned.vTable^.version < cITraceTrigger_VERSION) then begin
+  if (Versioned.vTable^.version < cITraceTrigger_VERSION_v3) then begin
     Result := nil;
   end
   else begin
@@ -13664,7 +13667,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ITraceTrigger.getPlan(): PAnsiChar;
 begin
-  if (vTable.version < cITraceTrigger_VERSION) then begin
+  if (vTable.version < cITraceTrigger_VERSION_v3) then begin
     Result := nil;
   end
   else begin
@@ -13676,7 +13679,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TTraceTrigger.getExplainedPlan(): PAnsiChar;
 begin
-  if (Versioned.vTable^.version < cITraceTrigger_VERSION) then begin
+  if (Versioned.vTable^.version < cITraceTrigger_VERSION_v3) then begin
     Result := nil;
   end
   else begin
@@ -13685,7 +13688,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ITraceTrigger.getExplainedPlan(): PAnsiChar;
 begin
-  if (vTable.version < cITraceTrigger_VERSION) then begin
+  if (vTable.version < cITraceTrigger_VERSION_v3) then begin
     Result := nil;
   end
   else begin
@@ -13840,8 +13843,8 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TTraceLogWriter.write_s(status: IStatus; buf: Pointer; size: Cardinal): Cardinal;
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cITraceLogWriter_VERSION) then begin
-    setVersionError(status, Pointer(sITraceLogWriter), ReferenceCounted.Versioned.vTable^.version, cITraceLogWriter_VERSION);
+  if (ReferenceCounted.Versioned.vTable^.version < cITraceLogWriter_VERSION_v4) then begin
+    setVersionError(status, Pointer(sITraceLogWriter), ReferenceCounted.Versioned.vTable^.version, cITraceLogWriter_VERSION_v4);
     Result := 0;
   end
   else begin
@@ -13850,8 +13853,8 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ITraceLogWriter.write_s(status: IStatus; buf: Pointer; size: Cardinal): Cardinal;
 begin
-  if (vTable.version < cITraceLogWriter_VERSION) then begin
-    setVersionError(status, Pointer(sITraceLogWriter), vTable.version, cITraceLogWriter_VERSION);
+  if (vTable.version < cITraceLogWriter_VERSION_v4) then begin
+    setVersionError(status, Pointer(sITraceLogWriter), vTable.version, cITraceLogWriter_VERSION_v4);
     Result := 0;
   end
   else begin
@@ -14171,7 +14174,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TTracePlugin.trace_dsql_restart(connection: ITraceDatabaseConnection; transaction: ITraceTransaction; statement: ITraceSQLStatement; number: Cardinal): Boolean;
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cITracePlugin_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cITracePlugin_VERSION_v4) then begin
     Result := false;
   end
   else begin
@@ -14180,7 +14183,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ITracePlugin.trace_dsql_restart(connection: ITraceDatabaseConnection; transaction: ITraceTransaction; statement: ITraceSQLStatement; number: Cardinal): Boolean;
 begin
-  if (vTable.version < cITracePlugin_VERSION) then begin
+  if (vTable.version < cITracePlugin_VERSION_v4) then begin
     Result := false;
   end
   else begin
@@ -14192,7 +14195,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TTracePlugin.trace_proc_compile(connection: ITraceDatabaseConnection; procedure_: ITraceProcedure; time_millis: Int64; proc_result: Cardinal): Boolean;
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cITracePlugin_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cITracePlugin_VERSION_v5) then begin
     Result := false;
   end
   else begin
@@ -14201,7 +14204,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ITracePlugin.trace_proc_compile(connection: ITraceDatabaseConnection; procedure_: ITraceProcedure; time_millis: Int64; proc_result: Cardinal): Boolean;
 begin
-  if (vTable.version < cITracePlugin_VERSION) then begin
+  if (vTable.version < cITracePlugin_VERSION_v5) then begin
     Result := false;
   end
   else begin
@@ -14213,7 +14216,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TTracePlugin.trace_func_compile(connection: ITraceDatabaseConnection; function_: ITraceFunction; time_millis: Int64; func_result: Cardinal): Boolean;
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cITracePlugin_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cITracePlugin_VERSION_v5) then begin
     Result := false;
   end
   else begin
@@ -14222,7 +14225,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ITracePlugin.trace_func_compile(connection: ITraceDatabaseConnection; function_: ITraceFunction; time_millis: Int64; func_result: Cardinal): Boolean;
 begin
-  if (vTable.version < cITracePlugin_VERSION) then begin
+  if (vTable.version < cITracePlugin_VERSION_v5) then begin
     Result := false;
   end
   else begin
@@ -14234,7 +14237,7 @@ end;
 {$IFDEF WITH_RECORD_METHODS}
 function TTracePlugin.trace_trigger_compile(connection: ITraceDatabaseConnection; trigger: ITraceTrigger; time_millis: Int64; trig_result: Cardinal): Boolean;
 begin
-  if (ReferenceCounted.Versioned.vTable^.version < cITracePlugin_VERSION) then begin
+  if (ReferenceCounted.Versioned.vTable^.version < cITracePlugin_VERSION_v5) then begin
     Result := false;
   end
   else begin
@@ -14243,7 +14246,7 @@ begin
 {$ELSE !WITH_RECORD_METHODS}
 function ITracePlugin.trace_trigger_compile(connection: ITraceDatabaseConnection; trigger: ITraceTrigger; time_millis: Int64; trig_result: Cardinal): Boolean;
 begin
-  if (vTable.version < cITracePlugin_VERSION) then begin
+  if (vTable.version < cITracePlugin_VERSION_v5) then begin
     Result := false;
   end
   else begin
@@ -14992,7 +14995,7 @@ end;
 var
 {$IFDEF WITH_RECORD_METHODS}
   IVersionedImpl_vTable: TVersionedVTable = (
-    SelfOffsetPtr: nil; version: cIVersioned_VERSION);
+    SelfOffsetPtr: nil; version: cIVersioned_VERSION_v1);
 {$ELSE !WITH_RECORD_METHODS}
   IVersionedImpl_vTable: TVersionedVTable;
 {$ENDIF !WITH_RECORD_METHODS}
@@ -15029,7 +15032,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IReferenceCountedImpl_vTable: TReferenceCountedVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIReferenceCounted_VERSION);
+      SelfOffsetPtr: nil; version: cIReferenceCounted_VERSION_v2);
     addRef: IReferenceCountedImpl_addRefDispatcher;
     release: IReferenceCountedImpl_releaseDispatcher);
 {$ELSE !WITH_RECORD_METHODS}
@@ -15059,7 +15062,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IDisposableImpl_vTable: TDisposableVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIDisposable_VERSION);
+      SelfOffsetPtr: nil; version: cIDisposable_VERSION_v2);
     dispose: IDisposableImpl_disposeDispatcher);
 {$ELSE !WITH_RECORD_METHODS}
   IDisposableImpl_vTable: TDisposableVTable;
@@ -15170,7 +15173,7 @@ var
   IStatusImpl_vTable: TStatusVTable = (
     DisposableVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIStatus_VERSION);
+        SelfOffsetPtr: nil; version: cIStatus_VERSION_v3);
       dispose: IDisposableImpl_disposeDispatcher);
     init: IStatusImpl_initDispatcher;
     getState: IStatusImpl_getStateDispatcher;
@@ -15314,7 +15317,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IMasterImpl_vTable: TMasterVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIMaster_VERSION);
+      SelfOffsetPtr: nil; version: cIMaster_VERSION_v2);
     getStatus: IMasterImpl_getStatusDispatcher;
     getDispatcher: IMasterImpl_getDispatcherDispatcher;
     getPluginManager: IMasterImpl_getPluginManagerDispatcher;
@@ -15389,7 +15392,7 @@ var
   IPluginBaseImpl_vTable: TPluginBaseVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIPluginBase_VERSION);
+        SelfOffsetPtr: nil; version: cIPluginBase_VERSION_v3);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     setOwner: IPluginBaseImpl_setOwnerDispatcher;
@@ -15483,7 +15486,7 @@ var
   IPluginSetImpl_vTable: TPluginSetVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIPluginSet_VERSION);
+        SelfOffsetPtr: nil; version: cIPluginSet_VERSION_v3);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     getName: IPluginSetImpl_getNameDispatcher;
@@ -15580,7 +15583,7 @@ var
   IConfigEntryImpl_vTable: TConfigEntryVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIConfigEntry_VERSION);
+        SelfOffsetPtr: nil; version: cIConfigEntry_VERSION_v3);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     getName: IConfigEntryImpl_getNameDispatcher;
@@ -15659,7 +15662,7 @@ var
   IConfigImpl_vTable: TConfigVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIConfig_VERSION);
+        SelfOffsetPtr: nil; version: cIConfig_VERSION_v3);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     find: IConfigImpl_findDispatcher;
@@ -15754,7 +15757,7 @@ var
   IFirebirdConfImpl_vTable: TFirebirdConfVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIFirebirdConf_VERSION);
+        SelfOffsetPtr: nil; version: cIFirebirdConf_VERSION_v4);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     getKey: IFirebirdConfImpl_getKeyDispatcher;
@@ -15842,7 +15845,7 @@ var
   IPluginConfigImpl_vTable: TPluginConfigVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIPluginConfig_VERSION);
+        SelfOffsetPtr: nil; version: cIPluginConfig_VERSION_v3);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     getConfigFileName: IPluginConfigImpl_getConfigFileNameDispatcher;
@@ -15883,7 +15886,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IPluginFactoryImpl_vTable: TPluginFactoryVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIPluginFactory_VERSION);
+      SelfOffsetPtr: nil; version: cIPluginFactory_VERSION_v2);
     createPlugin: IPluginFactoryImpl_createPluginDispatcher);
 {$ELSE !WITH_RECORD_METHODS}
   IPluginFactoryImpl_vTable: TPluginFactoryVTable;
@@ -15928,7 +15931,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IPluginModuleImpl_vTable: TPluginModuleVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIPluginModule_VERSION);
+      SelfOffsetPtr: nil; version: cIPluginModule_VERSION_v3);
     doClean: IPluginModuleImpl_doCleanDispatcher;
     threadDetach: IPluginModuleImpl_threadDetachDispatcher);
 {$ELSE !WITH_RECORD_METHODS}
@@ -16010,7 +16013,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IPluginManagerImpl_vTable: TPluginManagerVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIPluginManager_VERSION);
+      SelfOffsetPtr: nil; version: cIPluginManager_VERSION_v2);
     registerPluginFactory: IPluginManagerImpl_registerPluginFactoryDispatcher;
     registerModule: IPluginManagerImpl_registerModuleDispatcher;
     unregisterModule: IPluginManagerImpl_unregisterModuleDispatcher;
@@ -16078,7 +16081,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   ICryptKeyImpl_vTable: TCryptKeyVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cICryptKey_VERSION);
+      SelfOffsetPtr: nil; version: cICryptKey_VERSION_v2);
     setSymmetric: ICryptKeyImpl_setSymmetricDispatcher;
     setAsymmetric: ICryptKeyImpl_setAsymmetricDispatcher;
     getEncryptKey: ICryptKeyImpl_getEncryptKeyDispatcher;
@@ -16171,7 +16174,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IConfigManagerImpl_vTable: TConfigManagerVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIConfigManager_VERSION);
+      SelfOffsetPtr: nil; version: cIConfigManager_VERSION_v3);
     getDirectory: IConfigManagerImpl_getDirectoryDispatcher;
     getFirebirdConf: IConfigManagerImpl_getFirebirdConfDispatcher;
     getDatabaseConf: IConfigManagerImpl_getDatabaseConfDispatcher;
@@ -16232,7 +16235,7 @@ var
   IEventCallbackImpl_vTable: TEventCallbackVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIEventCallback_VERSION);
+        SelfOffsetPtr: nil; version: cIEventCallback_VERSION_v3);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     eventCallbackFunction: IEventCallbackImpl_eventCallbackFunctionDispatcher);
@@ -16352,7 +16355,7 @@ var
   IBlobImpl_vTable: TBlobVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIBlob_VERSION);
+        SelfOffsetPtr: nil; version: cIBlob_VERSION_v4);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     getInfo: IBlobImpl_getInfoDispatcher;
@@ -16524,7 +16527,7 @@ var
   ITransactionImpl_vTable: TTransactionVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cITransaction_VERSION);
+        SelfOffsetPtr: nil; version: cITransaction_VERSION_v4);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     getInfo: ITransactionImpl_getInfoDispatcher;
@@ -16737,7 +16740,7 @@ var
   IMessageMetadataImpl_vTable: TMessageMetadataVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIMessageMetadata_VERSION);
+        SelfOffsetPtr: nil; version: cIMessageMetadata_VERSION_v4);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     getCount: IMessageMetadataImpl_getCountDispatcher;
@@ -16927,7 +16930,7 @@ var
   IMetadataBuilderImpl_vTable: TMetadataBuilderVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIMetadataBuilder_VERSION);
+        SelfOffsetPtr: nil; version: cIMetadataBuilder_VERSION_v4);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     setType: IMetadataBuilderImpl_setTypeDispatcher;
@@ -17105,7 +17108,7 @@ var
   IResultSetImpl_vTable: TResultSetVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIResultSet_VERSION);
+        SelfOffsetPtr: nil; version: cIResultSet_VERSION_v5);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     fetchNext: IResultSetImpl_fetchNextDispatcher;
@@ -17300,7 +17303,7 @@ var
   IStatementImpl_vTable: TStatementVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIStatement_VERSION);
+        SelfOffsetPtr: nil; version: cIStatement_VERSION_v5);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     getInfo: IStatementImpl_getInfoDispatcher;
@@ -17479,7 +17482,7 @@ var
   IBatchImpl_vTable: TBatchVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIBatch_VERSION);
+        SelfOffsetPtr: nil; version: cIBatch_VERSION_v4);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     add: IBatchImpl_addDispatcher;
@@ -17566,7 +17569,7 @@ var
   IBatchCompletionStateImpl_vTable: TBatchCompletionStateVTable = (
     DisposableVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIBatchCompletionState_VERSION);
+        SelfOffsetPtr: nil; version: cIBatchCompletionState_VERSION_v3);
       dispose: IDisposableImpl_disposeDispatcher);
     getSize: IBatchCompletionStateImpl_getSizeDispatcher;
     getState: IBatchCompletionStateImpl_getStateDispatcher;
@@ -17643,7 +17646,7 @@ var
   IReplicatorImpl_vTable: TReplicatorVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIReplicator_VERSION);
+        SelfOffsetPtr: nil; version: cIReplicator_VERSION_v4);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     process: IReplicatorImpl_processDispatcher;
@@ -17765,7 +17768,7 @@ var
   IRequestImpl_vTable: TRequestVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIRequest_VERSION);
+        SelfOffsetPtr: nil; version: cIRequest_VERSION_v4);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     receive: IRequestImpl_receiveDispatcher;
@@ -17838,7 +17841,7 @@ var
   IEventsImpl_vTable: TEventsVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIEvents_VERSION);
+        SelfOffsetPtr: nil; version: cIEvents_VERSION_v4);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     deprecatedCancel: IEventsImpl_deprecatedCancelDispatcher;
@@ -18121,7 +18124,7 @@ var
   IAttachmentImpl_vTable: TAttachmentVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIAttachment_VERSION);
+        SelfOffsetPtr: nil; version: cIAttachment_VERSION_v5);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     getInfo: IAttachmentImpl_getInfoDispatcher;
@@ -18239,7 +18242,7 @@ var
   IServiceImpl_vTable: TServiceVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIService_VERSION);
+        SelfOffsetPtr: nil; version: cIService_VERSION_v5);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     deprecatedDetach: IServiceImpl_deprecatedDetachDispatcher;
@@ -18355,7 +18358,7 @@ var
     PluginBaseVTable: (
       ReferenceCountedVTable: (
         VersionedVTable: (
-          SelfOffsetPtr: nil; version: cIProvider_VERSION);
+          SelfOffsetPtr: nil; version: cIProvider_VERSION_v4);
         addRef: IReferenceCountedImpl_addRefDispatcher;
         release: IReferenceCountedImpl_releaseDispatcher);
       setOwner: IPluginBaseImpl_setOwnerDispatcher;
@@ -18427,7 +18430,7 @@ var
   IDtcStartImpl_vTable: TDtcStartVTable = (
     DisposableVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIDtcStart_VERSION);
+        SelfOffsetPtr: nil; version: cIDtcStart_VERSION_v3);
       dispose: IDisposableImpl_disposeDispatcher);
     addAttachment: IDtcStartImpl_addAttachmentDispatcher;
     addWithTpb: IDtcStartImpl_addWithTpbDispatcher;
@@ -18475,7 +18478,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IDtcImpl_vTable: TDtcVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIDtc_VERSION);
+      SelfOffsetPtr: nil; version: cIDtc_VERSION_v2);
     join: IDtcImpl_joinDispatcher;
     startBuilder: IDtcImpl_startBuilderDispatcher);
 {$ELSE !WITH_RECORD_METHODS}
@@ -18541,7 +18544,7 @@ var
     PluginBaseVTable: (
       ReferenceCountedVTable: (
         VersionedVTable: (
-          SelfOffsetPtr: nil; version: cIAuth_VERSION);
+          SelfOffsetPtr: nil; version: cIAuth_VERSION_v4);
         addRef: IReferenceCountedImpl_addRefDispatcher;
         release: IReferenceCountedImpl_releaseDispatcher);
       setOwner: IPluginBaseImpl_setOwnerDispatcher;
@@ -18607,7 +18610,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IWriterImpl_vTable: TWriterVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIWriter_VERSION);
+      SelfOffsetPtr: nil; version: cIWriter_VERSION_v2);
     reset: IWriterImpl_resetDispatcher;
     add: IWriterImpl_addDispatcher;
     setType: IWriterImpl_setTypeDispatcher;
@@ -18673,7 +18676,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IServerBlockImpl_vTable: TServerBlockVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIServerBlock_VERSION);
+      SelfOffsetPtr: nil; version: cIServerBlock_VERSION_v2);
     getLogin: IServerBlockImpl_getLoginDispatcher;
     getData: IServerBlockImpl_getDataDispatcher;
     putData: IServerBlockImpl_putDataDispatcher;
@@ -18776,7 +18779,7 @@ var
   IClientBlockImpl_vTable: TClientBlockVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIClientBlock_VERSION);
+        SelfOffsetPtr: nil; version: cIClientBlock_VERSION_v4);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     getLogin: IClientBlockImpl_getLoginDispatcher;
@@ -18867,7 +18870,7 @@ var
       PluginBaseVTable: (
         ReferenceCountedVTable: (
           VersionedVTable: (
-            SelfOffsetPtr: nil; version: cIServer_VERSION);
+            SelfOffsetPtr: nil; version: cIServer_VERSION_v6);
           addRef: IReferenceCountedImpl_addRefDispatcher;
           release: IReferenceCountedImpl_releaseDispatcher);
         setOwner: IPluginBaseImpl_setOwnerDispatcher;
@@ -18947,7 +18950,7 @@ var
       PluginBaseVTable: (
         ReferenceCountedVTable: (
           VersionedVTable: (
-            SelfOffsetPtr: nil; version: cIClient_VERSION);
+            SelfOffsetPtr: nil; version: cIClient_VERSION_v5);
           addRef: IReferenceCountedImpl_addRefDispatcher;
           release: IReferenceCountedImpl_releaseDispatcher);
         setOwner: IPluginBaseImpl_setOwnerDispatcher;
@@ -19005,7 +19008,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IUserFieldImpl_vTable: TUserFieldVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIUserField_VERSION);
+      SelfOffsetPtr: nil; version: cIUserField_VERSION_v2);
     entered: IUserFieldImpl_enteredDispatcher;
     specified: IUserFieldImpl_specifiedDispatcher;
     setEntered: IUserFieldImpl_setEnteredDispatcher);
@@ -19080,7 +19083,7 @@ var
   ICharUserFieldImpl_vTable: TCharUserFieldVTable = (
     UserFieldVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cICharUserField_VERSION);
+        SelfOffsetPtr: nil; version: cICharUserField_VERSION_v3);
       entered: IUserFieldImpl_enteredDispatcher;
       specified: IUserFieldImpl_specifiedDispatcher;
       setEntered: IUserFieldImpl_setEnteredDispatcher);
@@ -19157,7 +19160,7 @@ var
   IIntUserFieldImpl_vTable: TIntUserFieldVTable = (
     UserFieldVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIIntUserField_VERSION);
+        SelfOffsetPtr: nil; version: cIIntUserField_VERSION_v3);
       entered: IUserFieldImpl_enteredDispatcher;
       specified: IUserFieldImpl_specifiedDispatcher;
       setEntered: IUserFieldImpl_setEnteredDispatcher);
@@ -19287,7 +19290,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IUserImpl_vTable: TUserVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIUser_VERSION);
+      SelfOffsetPtr: nil; version: cIUser_VERSION_v2);
     operation: IUserImpl_operationDispatcher;
     userName: IUserImpl_userNameDispatcher;
     password: IUserImpl_passwordDispatcher;
@@ -19333,7 +19336,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IListUsersImpl_vTable: TListUsersVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIListUsers_VERSION);
+      SelfOffsetPtr: nil; version: cIListUsers_VERSION_v2);
     list: IListUsersImpl_listDispatcher);
 {$ELSE !WITH_RECORD_METHODS}
   IListUsersImpl_vTable: TListUsersVTable;
@@ -19423,7 +19426,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   ILogonInfoImpl_vTable: TLogonInfoVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cILogonInfo_VERSION);
+      SelfOffsetPtr: nil; version: cILogonInfo_VERSION_v3);
     name: ILogonInfoImpl_nameDispatcher;
     role: ILogonInfoImpl_roleDispatcher;
     networkProtocol: ILogonInfoImpl_networkProtocolDispatcher;
@@ -19530,7 +19533,7 @@ var
     PluginBaseVTable: (
       ReferenceCountedVTable: (
         VersionedVTable: (
-          SelfOffsetPtr: nil; version: cIManagement_VERSION);
+          SelfOffsetPtr: nil; version: cIManagement_VERSION_v4);
         addRef: IReferenceCountedImpl_addRefDispatcher;
         release: IReferenceCountedImpl_releaseDispatcher);
       setOwner: IPluginBaseImpl_setOwnerDispatcher;
@@ -19627,7 +19630,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IAuthBlockImpl_vTable: TAuthBlockVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIAuthBlock_VERSION);
+      SelfOffsetPtr: nil; version: cIAuthBlock_VERSION_v2);
     getType: IAuthBlockImpl_getTypeDispatcher;
     getName: IAuthBlockImpl_getNameDispatcher;
     getPlugin: IAuthBlockImpl_getPluginDispatcher;
@@ -19752,7 +19755,7 @@ var
     PluginBaseVTable: (
       ReferenceCountedVTable: (
         VersionedVTable: (
-          SelfOffsetPtr: nil; version: cIWireCryptPlugin_VERSION);
+          SelfOffsetPtr: nil; version: cIWireCryptPlugin_VERSION_v5);
         addRef: IReferenceCountedImpl_addRefDispatcher;
         release: IReferenceCountedImpl_releaseDispatcher);
       setOwner: IPluginBaseImpl_setOwnerDispatcher;
@@ -19797,7 +19800,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   ICryptKeyCallbackImpl_vTable: TCryptKeyCallbackVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cICryptKeyCallback_VERSION);
+      SelfOffsetPtr: nil; version: cICryptKeyCallback_VERSION_v2);
     callback: ICryptKeyCallbackImpl_callbackDispatcher);
 {$ELSE !WITH_RECORD_METHODS}
   ICryptKeyCallbackImpl_vTable: TCryptKeyCallbackVTable;
@@ -19898,7 +19901,7 @@ var
     PluginBaseVTable: (
       ReferenceCountedVTable: (
         VersionedVTable: (
-          SelfOffsetPtr: nil; version: cIKeyHolderPlugin_VERSION);
+          SelfOffsetPtr: nil; version: cIKeyHolderPlugin_VERSION_v5);
         addRef: IReferenceCountedImpl_addRefDispatcher;
         release: IReferenceCountedImpl_releaseDispatcher);
       setOwner: IPluginBaseImpl_setOwnerDispatcher;
@@ -19960,7 +19963,7 @@ var
   IDbCryptInfoImpl_vTable: TDbCryptInfoVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIDbCryptInfo_VERSION);
+        SelfOffsetPtr: nil; version: cIDbCryptInfo_VERSION_v3);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     getDatabaseFullPath: IDbCryptInfoImpl_getDatabaseFullPathDispatcher);
@@ -20063,7 +20066,7 @@ var
     PluginBaseVTable: (
       ReferenceCountedVTable: (
         VersionedVTable: (
-          SelfOffsetPtr: nil; version: cIDbCryptPlugin_VERSION);
+          SelfOffsetPtr: nil; version: cIDbCryptPlugin_VERSION_v5);
         addRef: IReferenceCountedImpl_addRefDispatcher;
         release: IReferenceCountedImpl_releaseDispatcher);
       setOwner: IPluginBaseImpl_setOwnerDispatcher;
@@ -20187,7 +20190,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IExternalContextImpl_vTable: TExternalContextVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIExternalContext_VERSION);
+      SelfOffsetPtr: nil; version: cIExternalContext_VERSION_v2);
     getMaster: IExternalContextImpl_getMasterDispatcher;
     getEngine: IExternalContextImpl_getEngineDispatcher;
     getAttachment: IExternalContextImpl_getAttachmentDispatcher;
@@ -20242,7 +20245,7 @@ var
   IExternalResultSetImpl_vTable: TExternalResultSetVTable = (
     DisposableVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIExternalResultSet_VERSION);
+        SelfOffsetPtr: nil; version: cIExternalResultSet_VERSION_v3);
       dispose: IDisposableImpl_disposeDispatcher);
     fetch: IExternalResultSetImpl_fetchDispatcher);
 {$ELSE !WITH_RECORD_METHODS}
@@ -20298,7 +20301,7 @@ var
   IExternalFunctionImpl_vTable: TExternalFunctionVTable = (
     DisposableVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIExternalFunction_VERSION);
+        SelfOffsetPtr: nil; version: cIExternalFunction_VERSION_v3);
       dispose: IDisposableImpl_disposeDispatcher);
     getCharSet: IExternalFunctionImpl_getCharSetDispatcher;
     execute: IExternalFunctionImpl_executeDispatcher);
@@ -20355,7 +20358,7 @@ var
   IExternalProcedureImpl_vTable: TExternalProcedureVTable = (
     DisposableVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIExternalProcedure_VERSION);
+        SelfOffsetPtr: nil; version: cIExternalProcedure_VERSION_v3);
       dispose: IDisposableImpl_disposeDispatcher);
     getCharSet: IExternalProcedureImpl_getCharSetDispatcher;
     open: IExternalProcedureImpl_openDispatcher);
@@ -20412,7 +20415,7 @@ var
   IExternalTriggerImpl_vTable: TExternalTriggerVTable = (
     DisposableVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIExternalTrigger_VERSION);
+        SelfOffsetPtr: nil; version: cIExternalTrigger_VERSION_v3);
       dispose: IDisposableImpl_disposeDispatcher);
     getCharSet: IExternalTriggerImpl_getCharSetDispatcher;
     execute: IExternalTriggerImpl_executeDispatcher);
@@ -20522,7 +20525,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IRoutineMetadataImpl_vTable: TRoutineMetadataVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIRoutineMetadata_VERSION);
+      SelfOffsetPtr: nil; version: cIRoutineMetadata_VERSION_v2);
     getPackage: IRoutineMetadataImpl_getPackageDispatcher;
     getName: IRoutineMetadataImpl_getNameDispatcher;
     getEntryPoint: IRoutineMetadataImpl_getEntryPointDispatcher;
@@ -20649,7 +20652,7 @@ var
     PluginBaseVTable: (
       ReferenceCountedVTable: (
         VersionedVTable: (
-          SelfOffsetPtr: nil; version: cIExternalEngine_VERSION);
+          SelfOffsetPtr: nil; version: cIExternalEngine_VERSION_v4);
         addRef: IReferenceCountedImpl_addRefDispatcher;
         release: IReferenceCountedImpl_releaseDispatcher);
       setOwner: IPluginBaseImpl_setOwnerDispatcher;
@@ -20713,7 +20716,7 @@ var
   ITimerImpl_vTable: TTimerVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cITimer_VERSION);
+        SelfOffsetPtr: nil; version: cITimer_VERSION_v3);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     handler: ITimerImpl_handlerDispatcher);
@@ -20760,7 +20763,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   ITimerControlImpl_vTable: TTimerControlVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cITimerControl_VERSION);
+      SelfOffsetPtr: nil; version: cITimerControl_VERSION_v2);
     start: ITimerControlImpl_startDispatcher;
     stop: ITimerControlImpl_stopDispatcher);
 {$ELSE !WITH_RECORD_METHODS}
@@ -20797,7 +20800,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IVersionCallbackImpl_vTable: TVersionCallbackVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIVersionCallback_VERSION);
+      SelfOffsetPtr: nil; version: cIVersionCallback_VERSION_v2);
     callback: IVersionCallbackImpl_callbackDispatcher);
 {$ELSE !WITH_RECORD_METHODS}
   IVersionCallbackImpl_vTable: TVersionCallbackVTable;
@@ -21022,7 +21025,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IUtilImpl_vTable: TUtilVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIUtil_VERSION);
+      SelfOffsetPtr: nil; version: cIUtil_VERSION_v4);
     getFbVersion: IUtilImpl_getFbVersionDispatcher;
     loadBlob: IUtilImpl_loadBlobDispatcher;
     dumpBlob: IUtilImpl_dumpBlobDispatcher;
@@ -21079,7 +21082,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IOffsetsCallbackImpl_vTable: TOffsetsCallbackVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIOffsetsCallback_VERSION);
+      SelfOffsetPtr: nil; version: cIOffsetsCallback_VERSION_v2);
     setOffset: IOffsetsCallbackImpl_setOffsetDispatcher);
 {$ELSE !WITH_RECORD_METHODS}
   IOffsetsCallbackImpl_vTable: TOffsetsCallbackVTable;
@@ -21296,7 +21299,7 @@ var
   IXpbBuilderImpl_vTable: TXpbBuilderVTable = (
     DisposableVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIXpbBuilder_VERSION);
+        SelfOffsetPtr: nil; version: cIXpbBuilder_VERSION_v3);
       dispose: IDisposableImpl_disposeDispatcher);
     clear: IXpbBuilderImpl_clearDispatcher;
     removeCurrent: IXpbBuilderImpl_removeCurrentDispatcher;
@@ -21424,7 +21427,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   ITraceConnectionImpl_vTable: TTraceConnectionVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cITraceConnection_VERSION);
+      SelfOffsetPtr: nil; version: cITraceConnection_VERSION_v2);
     getKind: ITraceConnectionImpl_getKindDispatcher;
     getProcessID: ITraceConnectionImpl_getProcessIDDispatcher;
     getUserName: ITraceConnectionImpl_getUserNameDispatcher;
@@ -21559,7 +21562,7 @@ var
   ITraceDatabaseConnectionImpl_vTable: TTraceDatabaseConnectionVTable = (
     TraceConnectionVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cITraceDatabaseConnection_VERSION);
+        SelfOffsetPtr: nil; version: cITraceDatabaseConnection_VERSION_v3);
       getKind: ITraceConnectionImpl_getKindDispatcher;
       getProcessID: ITraceConnectionImpl_getProcessIDDispatcher;
       getUserName: ITraceConnectionImpl_getUserNameDispatcher;
@@ -21659,7 +21662,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   ITraceTransactionImpl_vTable: TTraceTransactionVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cITraceTransaction_VERSION);
+      SelfOffsetPtr: nil; version: cITraceTransaction_VERSION_v3);
     getTransactionID: ITraceTransactionImpl_getTransactionIDDispatcher;
     getReadOnly: ITraceTransactionImpl_getReadOnlyDispatcher;
     getWait: ITraceTransactionImpl_getWaitDispatcher;
@@ -21719,7 +21722,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   ITraceParamsImpl_vTable: TTraceParamsVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cITraceParams_VERSION);
+      SelfOffsetPtr: nil; version: cITraceParams_VERSION_v3);
     getCount: ITraceParamsImpl_getCountDispatcher;
     getParam: ITraceParamsImpl_getParamDispatcher;
     getTextUTF8: ITraceParamsImpl_getTextUTF8Dispatcher);
@@ -21766,7 +21769,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   ITraceStatementImpl_vTable: TTraceStatementVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cITraceStatement_VERSION);
+      SelfOffsetPtr: nil; version: cITraceStatement_VERSION_v2);
     getStmtID: ITraceStatementImpl_getStmtIDDispatcher;
     getPerf: ITraceStatementImpl_getPerfDispatcher);
 {$ELSE !WITH_RECORD_METHODS}
@@ -21858,7 +21861,7 @@ var
   ITraceSQLStatementImpl_vTable: TTraceSQLStatementVTable = (
     TraceStatementVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cITraceSQLStatement_VERSION);
+        SelfOffsetPtr: nil; version: cITraceSQLStatement_VERSION_v3);
       getStmtID: ITraceStatementImpl_getStmtIDDispatcher;
       getPerf: ITraceStatementImpl_getPerfDispatcher);
     getText: ITraceSQLStatementImpl_getTextDispatcher;
@@ -21937,7 +21940,7 @@ var
   ITraceBLRStatementImpl_vTable: TTraceBLRStatementVTable = (
     TraceStatementVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cITraceBLRStatement_VERSION);
+        SelfOffsetPtr: nil; version: cITraceBLRStatement_VERSION_v3);
       getStmtID: ITraceStatementImpl_getStmtIDDispatcher;
       getPerf: ITraceStatementImpl_getPerfDispatcher);
     getData: ITraceBLRStatementImpl_getDataDispatcher;
@@ -21995,7 +21998,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   ITraceDYNRequestImpl_vTable: TTraceDYNRequestVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cITraceDYNRequest_VERSION);
+      SelfOffsetPtr: nil; version: cITraceDYNRequest_VERSION_v2);
     getData: ITraceDYNRequestImpl_getDataDispatcher;
     getDataLength: ITraceDYNRequestImpl_getDataLengthDispatcher;
     getText: ITraceDYNRequestImpl_getTextDispatcher);
@@ -22051,7 +22054,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   ITraceContextVariableImpl_vTable: TTraceContextVariableVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cITraceContextVariable_VERSION);
+      SelfOffsetPtr: nil; version: cITraceContextVariable_VERSION_v2);
     getNameSpace: ITraceContextVariableImpl_getNameSpaceDispatcher;
     getVarName: ITraceContextVariableImpl_getVarNameDispatcher;
     getVarValue: ITraceContextVariableImpl_getVarValueDispatcher);
@@ -22134,7 +22137,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   ITraceProcedureImpl_vTable: TTraceProcedureVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cITraceProcedure_VERSION);
+      SelfOffsetPtr: nil; version: cITraceProcedure_VERSION_v3);
     getProcName: ITraceProcedureImpl_getProcNameDispatcher;
     getInputs: ITraceProcedureImpl_getInputsDispatcher;
     getPerf: ITraceProcedureImpl_getPerfDispatcher;
@@ -22229,7 +22232,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   ITraceFunctionImpl_vTable: TTraceFunctionVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cITraceFunction_VERSION);
+      SelfOffsetPtr: nil; version: cITraceFunction_VERSION_v3);
     getFuncName: ITraceFunctionImpl_getFuncNameDispatcher;
     getInputs: ITraceFunctionImpl_getInputsDispatcher;
     getResult: ITraceFunctionImpl_getResultDispatcher;
@@ -22334,7 +22337,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   ITraceTriggerImpl_vTable: TTraceTriggerVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cITraceTrigger_VERSION);
+      SelfOffsetPtr: nil; version: cITraceTrigger_VERSION_v3);
     getTriggerName: ITraceTriggerImpl_getTriggerNameDispatcher;
     getRelationName: ITraceTriggerImpl_getRelationNameDispatcher;
     getAction: ITraceTriggerImpl_getActionDispatcher;
@@ -22477,7 +22480,7 @@ var
   ITraceServiceConnectionImpl_vTable: TTraceServiceConnectionVTable = (
     TraceConnectionVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cITraceServiceConnection_VERSION);
+        SelfOffsetPtr: nil; version: cITraceServiceConnection_VERSION_v3);
       getKind: ITraceConnectionImpl_getKindDispatcher;
       getProcessID: ITraceConnectionImpl_getProcessIDDispatcher;
       getUserName: ITraceConnectionImpl_getUserNameDispatcher;
@@ -22551,7 +22554,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   ITraceStatusVectorImpl_vTable: TTraceStatusVectorVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cITraceStatusVector_VERSION);
+      SelfOffsetPtr: nil; version: cITraceStatusVector_VERSION_v2);
     hasError: ITraceStatusVectorImpl_hasErrorDispatcher;
     hasWarning: ITraceStatusVectorImpl_hasWarningDispatcher;
     getStatus: ITraceStatusVectorImpl_getStatusDispatcher;
@@ -22626,7 +22629,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   ITraceSweepInfoImpl_vTable: TTraceSweepInfoVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cITraceSweepInfo_VERSION);
+      SelfOffsetPtr: nil; version: cITraceSweepInfo_VERSION_v2);
     getOIT: ITraceSweepInfoImpl_getOITDispatcher;
     getOST: ITraceSweepInfoImpl_getOSTDispatcher;
     getOAT: ITraceSweepInfoImpl_getOATDispatcher;
@@ -22694,7 +22697,7 @@ var
   ITraceLogWriterImpl_vTable: TTraceLogWriterVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cITraceLogWriter_VERSION);
+        SelfOffsetPtr: nil; version: cITraceLogWriter_VERSION_v4);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     write: ITraceLogWriterImpl_writeDispatcher;
@@ -22787,7 +22790,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   ITraceInitInfoImpl_vTable: TTraceInitInfoVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cITraceInitInfo_VERSION);
+      SelfOffsetPtr: nil; version: cITraceInitInfo_VERSION_v2);
     getConfigText: ITraceInitInfoImpl_getConfigTextDispatcher;
     getTraceSessionID: ITraceInitInfoImpl_getTraceSessionIDDispatcher;
     getTraceSessionName: ITraceInitInfoImpl_getTraceSessionNameDispatcher;
@@ -23064,7 +23067,7 @@ var
   ITracePluginImpl_vTable: TTracePluginVTable = (
     ReferenceCountedVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cITracePlugin_VERSION);
+        SelfOffsetPtr: nil; version: cITracePlugin_VERSION_v5);
       addRef: IReferenceCountedImpl_addRefDispatcher;
       release: IReferenceCountedImpl_releaseDispatcher);
     trace_get_error: ITracePluginImpl_trace_get_errorDispatcher;
@@ -23173,7 +23176,7 @@ var
     PluginBaseVTable: (
       ReferenceCountedVTable: (
         VersionedVTable: (
-          SelfOffsetPtr: nil; version: cITraceFactory_VERSION);
+          SelfOffsetPtr: nil; version: cITraceFactory_VERSION_v4);
         addRef: IReferenceCountedImpl_addRefDispatcher;
         release: IReferenceCountedImpl_releaseDispatcher);
       setOwner: IPluginBaseImpl_setOwnerDispatcher;
@@ -23233,7 +23236,7 @@ var
   IUdrFunctionFactoryImpl_vTable: TUdrFunctionFactoryVTable = (
     DisposableVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIUdrFunctionFactory_VERSION);
+        SelfOffsetPtr: nil; version: cIUdrFunctionFactory_VERSION_v3);
       dispose: IDisposableImpl_disposeDispatcher);
     setup: IUdrFunctionFactoryImpl_setupDispatcher;
     newItem: IUdrFunctionFactoryImpl_newItemDispatcher);
@@ -23290,7 +23293,7 @@ var
   IUdrProcedureFactoryImpl_vTable: TUdrProcedureFactoryVTable = (
     DisposableVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIUdrProcedureFactory_VERSION);
+        SelfOffsetPtr: nil; version: cIUdrProcedureFactory_VERSION_v3);
       dispose: IDisposableImpl_disposeDispatcher);
     setup: IUdrProcedureFactoryImpl_setupDispatcher;
     newItem: IUdrProcedureFactoryImpl_newItemDispatcher);
@@ -23347,7 +23350,7 @@ var
   IUdrTriggerFactoryImpl_vTable: TUdrTriggerFactoryVTable = (
     DisposableVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIUdrTriggerFactory_VERSION);
+        SelfOffsetPtr: nil; version: cIUdrTriggerFactory_VERSION_v3);
       dispose: IDisposableImpl_disposeDispatcher);
     setup: IUdrTriggerFactoryImpl_setupDispatcher;
     newItem: IUdrTriggerFactoryImpl_newItemDispatcher);
@@ -23412,7 +23415,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IUdrPluginImpl_vTable: TUdrPluginVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIUdrPlugin_VERSION);
+      SelfOffsetPtr: nil; version: cIUdrPlugin_VERSION_v2);
     getMaster: IUdrPluginImpl_getMasterDispatcher;
     registerFunction: IUdrPluginImpl_registerFunctionDispatcher;
     registerProcedure: IUdrPluginImpl_registerProcedureDispatcher;
@@ -23478,7 +23481,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IDecFloat16Impl_vTable: TDecFloat16VTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIDecFloat16_VERSION);
+      SelfOffsetPtr: nil; version: cIDecFloat16_VERSION_v2);
     toBcd: IDecFloat16Impl_toBcdDispatcher;
     toString: IDecFloat16Impl_toStringDispatcher;
     fromBcd: IDecFloat16Impl_fromBcdDispatcher;
@@ -23544,7 +23547,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IDecFloat34Impl_vTable: TDecFloat34VTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIDecFloat34_VERSION);
+      SelfOffsetPtr: nil; version: cIDecFloat34_VERSION_v2);
     toBcd: IDecFloat34Impl_toBcdDispatcher;
     toString: IDecFloat34Impl_toStringDispatcher;
     fromBcd: IDecFloat34Impl_fromBcdDispatcher;
@@ -23592,7 +23595,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IInt128Impl_vTable: TInt128VTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIInt128_VERSION);
+      SelfOffsetPtr: nil; version: cIInt128_VERSION_v2);
     toString: IInt128Impl_toStringDispatcher;
     fromString: IInt128Impl_fromStringDispatcher);
 {$ELSE !WITH_RECORD_METHODS}
@@ -23683,7 +23686,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IReplicatedFieldImpl_vTable: TReplicatedFieldVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIReplicatedField_VERSION);
+      SelfOffsetPtr: nil; version: cIReplicatedField_VERSION_v2);
     getName: IReplicatedFieldImpl_getNameDispatcher;
     getType: IReplicatedFieldImpl_getTypeDispatcher;
     getSubType: IReplicatedFieldImpl_getSubTypeDispatcher;
@@ -23752,7 +23755,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IReplicatedRecordImpl_vTable: TReplicatedRecordVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIReplicatedRecord_VERSION);
+      SelfOffsetPtr: nil; version: cIReplicatedRecord_VERSION_v2);
     getCount: IReplicatedRecordImpl_getCountDispatcher;
     getField: IReplicatedRecordImpl_getFieldDispatcher;
     getRawLength: IReplicatedRecordImpl_getRawLengthDispatcher;
@@ -23891,7 +23894,7 @@ var
   IReplicatedTransactionImpl_vTable: TReplicatedTransactionVTable = (
     DisposableVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIReplicatedTransaction_VERSION);
+        SelfOffsetPtr: nil; version: cIReplicatedTransaction_VERSION_v3);
       dispose: IDisposableImpl_disposeDispatcher);
     prepare: IReplicatedTransactionImpl_prepareDispatcher;
     commit: IReplicatedTransactionImpl_commitDispatcher;
@@ -24003,7 +24006,7 @@ var
     PluginBaseVTable: (
       ReferenceCountedVTable: (
         VersionedVTable: (
-          SelfOffsetPtr: nil; version: cIReplicatedSession_VERSION);
+          SelfOffsetPtr: nil; version: cIReplicatedSession_VERSION_v4);
         addRef: IReferenceCountedImpl_addRefDispatcher;
         release: IReferenceCountedImpl_releaseDispatcher);
       setOwner: IPluginBaseImpl_setOwnerDispatcher;
@@ -24102,7 +24105,7 @@ var
     PluginBaseVTable: (
       ReferenceCountedVTable: (
         VersionedVTable: (
-          SelfOffsetPtr: nil; version: cIProfilerPlugin_VERSION);
+          SelfOffsetPtr: nil; version: cIProfilerPlugin_VERSION_v4);
         addRef: IReferenceCountedImpl_addRefDispatcher;
         release: IReferenceCountedImpl_releaseDispatcher);
       setOwner: IPluginBaseImpl_setOwnerDispatcher;
@@ -24280,7 +24283,7 @@ var
   IProfilerSessionImpl_vTable: TProfilerSessionVTable = (
     DisposableVTable: (
       VersionedVTable: (
-        SelfOffsetPtr: nil; version: cIProfilerSession_VERSION);
+        SelfOffsetPtr: nil; version: cIProfilerSession_VERSION_v3);
       dispose: IDisposableImpl_disposeDispatcher);
     getId: IProfilerSessionImpl_getIdDispatcher;
     getFlags: IProfilerSessionImpl_getFlagsDispatcher;
@@ -24331,7 +24334,7 @@ var
 {$IFDEF WITH_RECORD_METHODS}
   IProfilerStatsImpl_vTable: TProfilerStatsVTable = (
     VersionedVTable: (
-      SelfOffsetPtr: nil; version: cIProfilerStats_VERSION);
+      SelfOffsetPtr: nil; version: cIProfilerStats_VERSION_v2);
     getElapsedTicks: IProfilerStatsImpl_getElapsedTicksDispatcher);
 {$ELSE !WITH_RECORD_METHODS}
   IProfilerStatsImpl_vTable: TProfilerStatsVTable;
@@ -24357,19 +24360,19 @@ end;
 {$IFNDEF WITH_RECORD_METHODS}
 initialization
   IVersionedImpl_vTable := TVersionedVTable.create;
-  IVersionedImpl_vTable.version := cIVersioned_VERSION;
+  IVersionedImpl_vTable.version := cIVersioned_VERSION_v1;
 
   IReferenceCountedImpl_vTable := TReferenceCountedVTable.create;
-  IReferenceCountedImpl_vTable.version := cIReferenceCounted_VERSION;
+  IReferenceCountedImpl_vTable.version := cIReferenceCounted_VERSION_v2;
   IReferenceCountedImpl_vTable.addRef := @IReferenceCountedImpl_addRefDispatcher;
   IReferenceCountedImpl_vTable.release := @IReferenceCountedImpl_releaseDispatcher;
 
   IDisposableImpl_vTable := TDisposableVTable.create;
-  IDisposableImpl_vTable.version := cIDisposable_VERSION;
+  IDisposableImpl_vTable.version := cIDisposable_VERSION_v2;
   IDisposableImpl_vTable.dispose := @IDisposableImpl_disposeDispatcher;
 
   IStatusImpl_vTable := TStatusVTable.create;
-  IStatusImpl_vTable.version := cIStatus_VERSION;
+  IStatusImpl_vTable.version := cIStatus_VERSION_v3;
   IStatusImpl_vTable.dispose := @IStatusImpl_disposeDispatcher;
   IStatusImpl_vTable.init := @IStatusImpl_initDispatcher;
   IStatusImpl_vTable.getState := @IStatusImpl_getStateDispatcher;
@@ -24382,7 +24385,7 @@ initialization
   IStatusImpl_vTable.clone := @IStatusImpl_cloneDispatcher;
 
   IMasterImpl_vTable := TMasterVTable.create;
-  IMasterImpl_vTable.version := cIMaster_VERSION;
+  IMasterImpl_vTable.version := cIMaster_VERSION_v2;
   IMasterImpl_vTable.getStatus := @IMasterImpl_getStatusDispatcher;
   IMasterImpl_vTable.getDispatcher := @IMasterImpl_getDispatcherDispatcher;
   IMasterImpl_vTable.getPluginManager := @IMasterImpl_getPluginManagerDispatcher;
@@ -24397,14 +24400,14 @@ initialization
   IMasterImpl_vTable.getProcessExiting := @IMasterImpl_getProcessExitingDispatcher;
 
   IPluginBaseImpl_vTable := TPluginBaseVTable.create;
-  IPluginBaseImpl_vTable.version := cIPluginBase_VERSION;
+  IPluginBaseImpl_vTable.version := cIPluginBase_VERSION_v3;
   IPluginBaseImpl_vTable.addRef := @IPluginBaseImpl_addRefDispatcher;
   IPluginBaseImpl_vTable.release := @IPluginBaseImpl_releaseDispatcher;
   IPluginBaseImpl_vTable.setOwner := @IPluginBaseImpl_setOwnerDispatcher;
   IPluginBaseImpl_vTable.getOwner := @IPluginBaseImpl_getOwnerDispatcher;
 
   IPluginSetImpl_vTable := TPluginSetVTable.create;
-  IPluginSetImpl_vTable.version := cIPluginSet_VERSION;
+  IPluginSetImpl_vTable.version := cIPluginSet_VERSION_v3;
   IPluginSetImpl_vTable.addRef := @IPluginSetImpl_addRefDispatcher;
   IPluginSetImpl_vTable.release := @IPluginSetImpl_releaseDispatcher;
   IPluginSetImpl_vTable.getName := @IPluginSetImpl_getNameDispatcher;
@@ -24414,7 +24417,7 @@ initialization
   IPluginSetImpl_vTable.set_ := @IPluginSetImpl_set_Dispatcher;
 
   IConfigEntryImpl_vTable := TConfigEntryVTable.create;
-  IConfigEntryImpl_vTable.version := cIConfigEntry_VERSION;
+  IConfigEntryImpl_vTable.version := cIConfigEntry_VERSION_v3;
   IConfigEntryImpl_vTable.addRef := @IConfigEntryImpl_addRefDispatcher;
   IConfigEntryImpl_vTable.release := @IConfigEntryImpl_releaseDispatcher;
   IConfigEntryImpl_vTable.getName := @IConfigEntryImpl_getNameDispatcher;
@@ -24424,7 +24427,7 @@ initialization
   IConfigEntryImpl_vTable.getSubConfig := @IConfigEntryImpl_getSubConfigDispatcher;
 
   IConfigImpl_vTable := TConfigVTable.create;
-  IConfigImpl_vTable.version := cIConfig_VERSION;
+  IConfigImpl_vTable.version := cIConfig_VERSION_v3;
   IConfigImpl_vTable.addRef := @IConfigImpl_addRefDispatcher;
   IConfigImpl_vTable.release := @IConfigImpl_releaseDispatcher;
   IConfigImpl_vTable.find := @IConfigImpl_findDispatcher;
@@ -24432,7 +24435,7 @@ initialization
   IConfigImpl_vTable.findPos := @IConfigImpl_findPosDispatcher;
 
   IFirebirdConfImpl_vTable := TFirebirdConfVTable.create;
-  IFirebirdConfImpl_vTable.version := cIFirebirdConf_VERSION;
+  IFirebirdConfImpl_vTable.version := cIFirebirdConf_VERSION_v4;
   IFirebirdConfImpl_vTable.addRef := @IFirebirdConfImpl_addRefDispatcher;
   IFirebirdConfImpl_vTable.release := @IFirebirdConfImpl_releaseDispatcher;
   IFirebirdConfImpl_vTable.getKey := @IFirebirdConfImpl_getKeyDispatcher;
@@ -24442,7 +24445,7 @@ initialization
   IFirebirdConfImpl_vTable.getVersion := @IFirebirdConfImpl_getVersionDispatcher;
 
   IPluginConfigImpl_vTable := TPluginConfigVTable.create;
-  IPluginConfigImpl_vTable.version := cIPluginConfig_VERSION;
+  IPluginConfigImpl_vTable.version := cIPluginConfig_VERSION_v3;
   IPluginConfigImpl_vTable.addRef := @IPluginConfigImpl_addRefDispatcher;
   IPluginConfigImpl_vTable.release := @IPluginConfigImpl_releaseDispatcher;
   IPluginConfigImpl_vTable.getConfigFileName := @IPluginConfigImpl_getConfigFileNameDispatcher;
@@ -24451,16 +24454,16 @@ initialization
   IPluginConfigImpl_vTable.setReleaseDelay := @IPluginConfigImpl_setReleaseDelayDispatcher;
 
   IPluginFactoryImpl_vTable := TPluginFactoryVTable.create;
-  IPluginFactoryImpl_vTable.version := cIPluginFactory_VERSION;
+  IPluginFactoryImpl_vTable.version := cIPluginFactory_VERSION_v2;
   IPluginFactoryImpl_vTable.createPlugin := @IPluginFactoryImpl_createPluginDispatcher;
 
   IPluginModuleImpl_vTable := TPluginModuleVTable.create;
-  IPluginModuleImpl_vTable.version := cIPluginModule_VERSION;
+  IPluginModuleImpl_vTable.version := cIPluginModule_VERSION_v3;
   IPluginModuleImpl_vTable.doClean := @IPluginModuleImpl_doCleanDispatcher;
   IPluginModuleImpl_vTable.threadDetach := @IPluginModuleImpl_threadDetachDispatcher;
 
   IPluginManagerImpl_vTable := TPluginManagerVTable.create;
-  IPluginManagerImpl_vTable.version := cIPluginManager_VERSION;
+  IPluginManagerImpl_vTable.version := cIPluginManager_VERSION_v2;
   IPluginManagerImpl_vTable.registerPluginFactory := @IPluginManagerImpl_registerPluginFactoryDispatcher;
   IPluginManagerImpl_vTable.registerModule := @IPluginManagerImpl_registerModuleDispatcher;
   IPluginManagerImpl_vTable.unregisterModule := @IPluginManagerImpl_unregisterModuleDispatcher;
@@ -24469,14 +24472,14 @@ initialization
   IPluginManagerImpl_vTable.releasePlugin := @IPluginManagerImpl_releasePluginDispatcher;
 
   ICryptKeyImpl_vTable := TCryptKeyVTable.create;
-  ICryptKeyImpl_vTable.version := cICryptKey_VERSION;
+  ICryptKeyImpl_vTable.version := cICryptKey_VERSION_v2;
   ICryptKeyImpl_vTable.setSymmetric := @ICryptKeyImpl_setSymmetricDispatcher;
   ICryptKeyImpl_vTable.setAsymmetric := @ICryptKeyImpl_setAsymmetricDispatcher;
   ICryptKeyImpl_vTable.getEncryptKey := @ICryptKeyImpl_getEncryptKeyDispatcher;
   ICryptKeyImpl_vTable.getDecryptKey := @ICryptKeyImpl_getDecryptKeyDispatcher;
 
   IConfigManagerImpl_vTable := TConfigManagerVTable.create;
-  IConfigManagerImpl_vTable.version := cIConfigManager_VERSION;
+  IConfigManagerImpl_vTable.version := cIConfigManager_VERSION_v3;
   IConfigManagerImpl_vTable.getDirectory := @IConfigManagerImpl_getDirectoryDispatcher;
   IConfigManagerImpl_vTable.getFirebirdConf := @IConfigManagerImpl_getFirebirdConfDispatcher;
   IConfigManagerImpl_vTable.getDatabaseConf := @IConfigManagerImpl_getDatabaseConfDispatcher;
@@ -24486,13 +24489,13 @@ initialization
   IConfigManagerImpl_vTable.getDefaultSecurityDb := @IConfigManagerImpl_getDefaultSecurityDbDispatcher;
 
   IEventCallbackImpl_vTable := TEventCallbackVTable.create;
-  IEventCallbackImpl_vTable.version := cIEventCallback_VERSION;
+  IEventCallbackImpl_vTable.version := cIEventCallback_VERSION_v3;
   IEventCallbackImpl_vTable.addRef := @IEventCallbackImpl_addRefDispatcher;
   IEventCallbackImpl_vTable.release := @IEventCallbackImpl_releaseDispatcher;
   IEventCallbackImpl_vTable.eventCallbackFunction := @IEventCallbackImpl_eventCallbackFunctionDispatcher;
 
   IBlobImpl_vTable := TBlobVTable.create;
-  IBlobImpl_vTable.version := cIBlob_VERSION;
+  IBlobImpl_vTable.version := cIBlob_VERSION_v4;
   IBlobImpl_vTable.addRef := @IBlobImpl_addRefDispatcher;
   IBlobImpl_vTable.release := @IBlobImpl_releaseDispatcher;
   IBlobImpl_vTable.getInfo := @IBlobImpl_getInfoDispatcher;
@@ -24505,7 +24508,7 @@ initialization
   IBlobImpl_vTable.close := @IBlobImpl_closeDispatcher;
 
   ITransactionImpl_vTable := TTransactionVTable.create;
-  ITransactionImpl_vTable.version := cITransaction_VERSION;
+  ITransactionImpl_vTable.version := cITransaction_VERSION_v4;
   ITransactionImpl_vTable.addRef := @ITransactionImpl_addRefDispatcher;
   ITransactionImpl_vTable.release := @ITransactionImpl_releaseDispatcher;
   ITransactionImpl_vTable.getInfo := @ITransactionImpl_getInfoDispatcher;
@@ -24523,7 +24526,7 @@ initialization
   ITransactionImpl_vTable.disconnect := @ITransactionImpl_disconnectDispatcher;
 
   IMessageMetadataImpl_vTable := TMessageMetadataVTable.create;
-  IMessageMetadataImpl_vTable.version := cIMessageMetadata_VERSION;
+  IMessageMetadataImpl_vTable.version := cIMessageMetadata_VERSION_v4;
   IMessageMetadataImpl_vTable.addRef := @IMessageMetadataImpl_addRefDispatcher;
   IMessageMetadataImpl_vTable.release := @IMessageMetadataImpl_releaseDispatcher;
   IMessageMetadataImpl_vTable.getCount := @IMessageMetadataImpl_getCountDispatcher;
@@ -24545,7 +24548,7 @@ initialization
   IMessageMetadataImpl_vTable.getAlignedLength := @IMessageMetadataImpl_getAlignedLengthDispatcher;
 
   IMetadataBuilderImpl_vTable := TMetadataBuilderVTable.create;
-  IMetadataBuilderImpl_vTable.version := cIMetadataBuilder_VERSION;
+  IMetadataBuilderImpl_vTable.version := cIMetadataBuilder_VERSION_v4;
   IMetadataBuilderImpl_vTable.addRef := @IMetadataBuilderImpl_addRefDispatcher;
   IMetadataBuilderImpl_vTable.release := @IMetadataBuilderImpl_releaseDispatcher;
   IMetadataBuilderImpl_vTable.setType := @IMetadataBuilderImpl_setTypeDispatcher;
@@ -24564,7 +24567,7 @@ initialization
   IMetadataBuilderImpl_vTable.setAlias := @IMetadataBuilderImpl_setAliasDispatcher;
 
   IResultSetImpl_vTable := TResultSetVTable.create;
-  IResultSetImpl_vTable.version := cIResultSet_VERSION;
+  IResultSetImpl_vTable.version := cIResultSet_VERSION_v5;
   IResultSetImpl_vTable.addRef := @IResultSetImpl_addRefDispatcher;
   IResultSetImpl_vTable.release := @IResultSetImpl_releaseDispatcher;
   IResultSetImpl_vTable.fetchNext := @IResultSetImpl_fetchNextDispatcher;
@@ -24582,7 +24585,7 @@ initialization
   IResultSetImpl_vTable.getInfo := @IResultSetImpl_getInfoDispatcher;
 
   IStatementImpl_vTable := TStatementVTable.create;
-  IStatementImpl_vTable.version := cIStatement_VERSION;
+  IStatementImpl_vTable.version := cIStatement_VERSION_v5;
   IStatementImpl_vTable.addRef := @IStatementImpl_addRefDispatcher;
   IStatementImpl_vTable.release := @IStatementImpl_releaseDispatcher;
   IStatementImpl_vTable.getInfo := @IStatementImpl_getInfoDispatcher;
@@ -24602,7 +24605,7 @@ initialization
   IStatementImpl_vTable.free := @IStatementImpl_freeDispatcher;
 
   IBatchImpl_vTable := TBatchVTable.create;
-  IBatchImpl_vTable.version := cIBatch_VERSION;
+  IBatchImpl_vTable.version := cIBatch_VERSION_v4;
   IBatchImpl_vTable.addRef := @IBatchImpl_addRefDispatcher;
   IBatchImpl_vTable.release := @IBatchImpl_releaseDispatcher;
   IBatchImpl_vTable.add := @IBatchImpl_addDispatcher;
@@ -24620,7 +24623,7 @@ initialization
   IBatchImpl_vTable.getInfo := @IBatchImpl_getInfoDispatcher;
 
   IBatchCompletionStateImpl_vTable := TBatchCompletionStateVTable.create;
-  IBatchCompletionStateImpl_vTable.version := cIBatchCompletionState_VERSION;
+  IBatchCompletionStateImpl_vTable.version := cIBatchCompletionState_VERSION_v3;
   IBatchCompletionStateImpl_vTable.dispose := @IBatchCompletionStateImpl_disposeDispatcher;
   IBatchCompletionStateImpl_vTable.getSize := @IBatchCompletionStateImpl_getSizeDispatcher;
   IBatchCompletionStateImpl_vTable.getState := @IBatchCompletionStateImpl_getStateDispatcher;
@@ -24628,7 +24631,7 @@ initialization
   IBatchCompletionStateImpl_vTable.getStatus := @IBatchCompletionStateImpl_getStatusDispatcher;
 
   IReplicatorImpl_vTable := TReplicatorVTable.create;
-  IReplicatorImpl_vTable.version := cIReplicator_VERSION;
+  IReplicatorImpl_vTable.version := cIReplicator_VERSION_v4;
   IReplicatorImpl_vTable.addRef := @IReplicatorImpl_addRefDispatcher;
   IReplicatorImpl_vTable.release := @IReplicatorImpl_releaseDispatcher;
   IReplicatorImpl_vTable.process := @IReplicatorImpl_processDispatcher;
@@ -24636,7 +24639,7 @@ initialization
   IReplicatorImpl_vTable.close := @IReplicatorImpl_closeDispatcher;
 
   IRequestImpl_vTable := TRequestVTable.create;
-  IRequestImpl_vTable.version := cIRequest_VERSION;
+  IRequestImpl_vTable.version := cIRequest_VERSION_v4;
   IRequestImpl_vTable.addRef := @IRequestImpl_addRefDispatcher;
   IRequestImpl_vTable.release := @IRequestImpl_releaseDispatcher;
   IRequestImpl_vTable.receive := @IRequestImpl_receiveDispatcher;
@@ -24649,14 +24652,14 @@ initialization
   IRequestImpl_vTable.free := @IRequestImpl_freeDispatcher;
 
   IEventsImpl_vTable := TEventsVTable.create;
-  IEventsImpl_vTable.version := cIEvents_VERSION;
+  IEventsImpl_vTable.version := cIEvents_VERSION_v4;
   IEventsImpl_vTable.addRef := @IEventsImpl_addRefDispatcher;
   IEventsImpl_vTable.release := @IEventsImpl_releaseDispatcher;
   IEventsImpl_vTable.deprecatedCancel := @IEventsImpl_deprecatedCancelDispatcher;
   IEventsImpl_vTable.cancel := @IEventsImpl_cancelDispatcher;
 
   IAttachmentImpl_vTable := TAttachmentVTable.create;
-  IAttachmentImpl_vTable.version := cIAttachment_VERSION;
+  IAttachmentImpl_vTable.version := cIAttachment_VERSION_v5;
   IAttachmentImpl_vTable.addRef := @IAttachmentImpl_addRefDispatcher;
   IAttachmentImpl_vTable.release := @IAttachmentImpl_releaseDispatcher;
   IAttachmentImpl_vTable.getInfo := @IAttachmentImpl_getInfoDispatcher;
@@ -24687,7 +24690,7 @@ initialization
   IAttachmentImpl_vTable.dropDatabase := @IAttachmentImpl_dropDatabaseDispatcher;
 
   IServiceImpl_vTable := TServiceVTable.create;
-  IServiceImpl_vTable.version := cIService_VERSION;
+  IServiceImpl_vTable.version := cIService_VERSION_v5;
   IServiceImpl_vTable.addRef := @IServiceImpl_addRefDispatcher;
   IServiceImpl_vTable.release := @IServiceImpl_releaseDispatcher;
   IServiceImpl_vTable.deprecatedDetach := @IServiceImpl_deprecatedDetachDispatcher;
@@ -24697,7 +24700,7 @@ initialization
   IServiceImpl_vTable.cancel := @IServiceImpl_cancelDispatcher;
 
   IProviderImpl_vTable := TProviderVTable.create;
-  IProviderImpl_vTable.version := cIProvider_VERSION;
+  IProviderImpl_vTable.version := cIProvider_VERSION_v4;
   IProviderImpl_vTable.addRef := @IProviderImpl_addRefDispatcher;
   IProviderImpl_vTable.release := @IProviderImpl_releaseDispatcher;
   IProviderImpl_vTable.setOwner := @IProviderImpl_setOwnerDispatcher;
@@ -24709,40 +24712,40 @@ initialization
   IProviderImpl_vTable.setDbCryptCallback := @IProviderImpl_setDbCryptCallbackDispatcher;
 
   IDtcStartImpl_vTable := TDtcStartVTable.create;
-  IDtcStartImpl_vTable.version := cIDtcStart_VERSION;
+  IDtcStartImpl_vTable.version := cIDtcStart_VERSION_v3;
   IDtcStartImpl_vTable.dispose := @IDtcStartImpl_disposeDispatcher;
   IDtcStartImpl_vTable.addAttachment := @IDtcStartImpl_addAttachmentDispatcher;
   IDtcStartImpl_vTable.addWithTpb := @IDtcStartImpl_addWithTpbDispatcher;
   IDtcStartImpl_vTable.start := @IDtcStartImpl_startDispatcher;
 
   IDtcImpl_vTable := TDtcVTable.create;
-  IDtcImpl_vTable.version := cIDtc_VERSION;
+  IDtcImpl_vTable.version := cIDtc_VERSION_v2;
   IDtcImpl_vTable.join := @IDtcImpl_joinDispatcher;
   IDtcImpl_vTable.startBuilder := @IDtcImpl_startBuilderDispatcher;
 
   IAuthImpl_vTable := TAuthVTable.create;
-  IAuthImpl_vTable.version := cIAuth_VERSION;
+  IAuthImpl_vTable.version := cIAuth_VERSION_v4;
   IAuthImpl_vTable.addRef := @IAuthImpl_addRefDispatcher;
   IAuthImpl_vTable.release := @IAuthImpl_releaseDispatcher;
   IAuthImpl_vTable.setOwner := @IAuthImpl_setOwnerDispatcher;
   IAuthImpl_vTable.getOwner := @IAuthImpl_getOwnerDispatcher;
 
   IWriterImpl_vTable := TWriterVTable.create;
-  IWriterImpl_vTable.version := cIWriter_VERSION;
+  IWriterImpl_vTable.version := cIWriter_VERSION_v2;
   IWriterImpl_vTable.reset := @IWriterImpl_resetDispatcher;
   IWriterImpl_vTable.add := @IWriterImpl_addDispatcher;
   IWriterImpl_vTable.setType := @IWriterImpl_setTypeDispatcher;
   IWriterImpl_vTable.setDb := @IWriterImpl_setDbDispatcher;
 
   IServerBlockImpl_vTable := TServerBlockVTable.create;
-  IServerBlockImpl_vTable.version := cIServerBlock_VERSION;
+  IServerBlockImpl_vTable.version := cIServerBlock_VERSION_v2;
   IServerBlockImpl_vTable.getLogin := @IServerBlockImpl_getLoginDispatcher;
   IServerBlockImpl_vTable.getData := @IServerBlockImpl_getDataDispatcher;
   IServerBlockImpl_vTable.putData := @IServerBlockImpl_putDataDispatcher;
   IServerBlockImpl_vTable.newKey := @IServerBlockImpl_newKeyDispatcher;
 
   IClientBlockImpl_vTable := TClientBlockVTable.create;
-  IClientBlockImpl_vTable.version := cIClientBlock_VERSION;
+  IClientBlockImpl_vTable.version := cIClientBlock_VERSION_v4;
   IClientBlockImpl_vTable.addRef := @IClientBlockImpl_addRefDispatcher;
   IClientBlockImpl_vTable.release := @IClientBlockImpl_releaseDispatcher;
   IClientBlockImpl_vTable.getLogin := @IClientBlockImpl_getLoginDispatcher;
@@ -24753,7 +24756,7 @@ initialization
   IClientBlockImpl_vTable.getAuthBlock := @IClientBlockImpl_getAuthBlockDispatcher;
 
   IServerImpl_vTable := TServerVTable.create;
-  IServerImpl_vTable.version := cIServer_VERSION;
+  IServerImpl_vTable.version := cIServer_VERSION_v6;
   IServerImpl_vTable.addRef := @IServerImpl_addRefDispatcher;
   IServerImpl_vTable.release := @IServerImpl_releaseDispatcher;
   IServerImpl_vTable.setOwner := @IServerImpl_setOwnerDispatcher;
@@ -24762,7 +24765,7 @@ initialization
   IServerImpl_vTable.setDbCryptCallback := @IServerImpl_setDbCryptCallbackDispatcher;
 
   IClientImpl_vTable := TClientVTable.create;
-  IClientImpl_vTable.version := cIClient_VERSION;
+  IClientImpl_vTable.version := cIClient_VERSION_v5;
   IClientImpl_vTable.addRef := @IClientImpl_addRefDispatcher;
   IClientImpl_vTable.release := @IClientImpl_releaseDispatcher;
   IClientImpl_vTable.setOwner := @IClientImpl_setOwnerDispatcher;
@@ -24770,13 +24773,13 @@ initialization
   IClientImpl_vTable.authenticate := @IClientImpl_authenticateDispatcher;
 
   IUserFieldImpl_vTable := TUserFieldVTable.create;
-  IUserFieldImpl_vTable.version := cIUserField_VERSION;
+  IUserFieldImpl_vTable.version := cIUserField_VERSION_v2;
   IUserFieldImpl_vTable.entered := @IUserFieldImpl_enteredDispatcher;
   IUserFieldImpl_vTable.specified := @IUserFieldImpl_specifiedDispatcher;
   IUserFieldImpl_vTable.setEntered := @IUserFieldImpl_setEnteredDispatcher;
 
   ICharUserFieldImpl_vTable := TCharUserFieldVTable.create;
-  ICharUserFieldImpl_vTable.version := cICharUserField_VERSION;
+  ICharUserFieldImpl_vTable.version := cICharUserField_VERSION_v3;
   ICharUserFieldImpl_vTable.entered := @ICharUserFieldImpl_enteredDispatcher;
   ICharUserFieldImpl_vTable.specified := @ICharUserFieldImpl_specifiedDispatcher;
   ICharUserFieldImpl_vTable.setEntered := @ICharUserFieldImpl_setEnteredDispatcher;
@@ -24784,7 +24787,7 @@ initialization
   ICharUserFieldImpl_vTable.set_ := @ICharUserFieldImpl_set_Dispatcher;
 
   IIntUserFieldImpl_vTable := TIntUserFieldVTable.create;
-  IIntUserFieldImpl_vTable.version := cIIntUserField_VERSION;
+  IIntUserFieldImpl_vTable.version := cIIntUserField_VERSION_v3;
   IIntUserFieldImpl_vTable.entered := @IIntUserFieldImpl_enteredDispatcher;
   IIntUserFieldImpl_vTable.specified := @IIntUserFieldImpl_specifiedDispatcher;
   IIntUserFieldImpl_vTable.setEntered := @IIntUserFieldImpl_setEnteredDispatcher;
@@ -24792,7 +24795,7 @@ initialization
   IIntUserFieldImpl_vTable.set_ := @IIntUserFieldImpl_set_Dispatcher;
 
   IUserImpl_vTable := TUserVTable.create;
-  IUserImpl_vTable.version := cIUser_VERSION;
+  IUserImpl_vTable.version := cIUser_VERSION_v2;
   IUserImpl_vTable.operation := @IUserImpl_operationDispatcher;
   IUserImpl_vTable.userName := @IUserImpl_userNameDispatcher;
   IUserImpl_vTable.password := @IUserImpl_passwordDispatcher;
@@ -24806,11 +24809,11 @@ initialization
   IUserImpl_vTable.clear := @IUserImpl_clearDispatcher;
 
   IListUsersImpl_vTable := TListUsersVTable.create;
-  IListUsersImpl_vTable.version := cIListUsers_VERSION;
+  IListUsersImpl_vTable.version := cIListUsers_VERSION_v2;
   IListUsersImpl_vTable.list := @IListUsersImpl_listDispatcher;
 
   ILogonInfoImpl_vTable := TLogonInfoVTable.create;
-  ILogonInfoImpl_vTable.version := cILogonInfo_VERSION;
+  ILogonInfoImpl_vTable.version := cILogonInfo_VERSION_v3;
   ILogonInfoImpl_vTable.name := @ILogonInfoImpl_nameDispatcher;
   ILogonInfoImpl_vTable.role := @ILogonInfoImpl_roleDispatcher;
   ILogonInfoImpl_vTable.networkProtocol := @ILogonInfoImpl_networkProtocolDispatcher;
@@ -24820,7 +24823,7 @@ initialization
   ILogonInfoImpl_vTable.transaction := @ILogonInfoImpl_transactionDispatcher;
 
   IManagementImpl_vTable := TManagementVTable.create;
-  IManagementImpl_vTable.version := cIManagement_VERSION;
+  IManagementImpl_vTable.version := cIManagement_VERSION_v4;
   IManagementImpl_vTable.addRef := @IManagementImpl_addRefDispatcher;
   IManagementImpl_vTable.release := @IManagementImpl_releaseDispatcher;
   IManagementImpl_vTable.setOwner := @IManagementImpl_setOwnerDispatcher;
@@ -24831,7 +24834,7 @@ initialization
   IManagementImpl_vTable.rollback := @IManagementImpl_rollbackDispatcher;
 
   IAuthBlockImpl_vTable := TAuthBlockVTable.create;
-  IAuthBlockImpl_vTable.version := cIAuthBlock_VERSION;
+  IAuthBlockImpl_vTable.version := cIAuthBlock_VERSION_v2;
   IAuthBlockImpl_vTable.getType := @IAuthBlockImpl_getTypeDispatcher;
   IAuthBlockImpl_vTable.getName := @IAuthBlockImpl_getNameDispatcher;
   IAuthBlockImpl_vTable.getPlugin := @IAuthBlockImpl_getPluginDispatcher;
@@ -24841,7 +24844,7 @@ initialization
   IAuthBlockImpl_vTable.first := @IAuthBlockImpl_firstDispatcher;
 
   IWireCryptPluginImpl_vTable := TWireCryptPluginVTable.create;
-  IWireCryptPluginImpl_vTable.version := cIWireCryptPlugin_VERSION;
+  IWireCryptPluginImpl_vTable.version := cIWireCryptPlugin_VERSION_v5;
   IWireCryptPluginImpl_vTable.addRef := @IWireCryptPluginImpl_addRefDispatcher;
   IWireCryptPluginImpl_vTable.release := @IWireCryptPluginImpl_releaseDispatcher;
   IWireCryptPluginImpl_vTable.setOwner := @IWireCryptPluginImpl_setOwnerDispatcher;
@@ -24854,11 +24857,11 @@ initialization
   IWireCryptPluginImpl_vTable.setSpecificData := @IWireCryptPluginImpl_setSpecificDataDispatcher;
 
   ICryptKeyCallbackImpl_vTable := TCryptKeyCallbackVTable.create;
-  ICryptKeyCallbackImpl_vTable.version := cICryptKeyCallback_VERSION;
+  ICryptKeyCallbackImpl_vTable.version := cICryptKeyCallback_VERSION_v2;
   ICryptKeyCallbackImpl_vTable.callback := @ICryptKeyCallbackImpl_callbackDispatcher;
 
   IKeyHolderPluginImpl_vTable := TKeyHolderPluginVTable.create;
-  IKeyHolderPluginImpl_vTable.version := cIKeyHolderPlugin_VERSION;
+  IKeyHolderPluginImpl_vTable.version := cIKeyHolderPlugin_VERSION_v5;
   IKeyHolderPluginImpl_vTable.addRef := @IKeyHolderPluginImpl_addRefDispatcher;
   IKeyHolderPluginImpl_vTable.release := @IKeyHolderPluginImpl_releaseDispatcher;
   IKeyHolderPluginImpl_vTable.setOwner := @IKeyHolderPluginImpl_setOwnerDispatcher;
@@ -24869,13 +24872,13 @@ initialization
   IKeyHolderPluginImpl_vTable.chainHandle := @IKeyHolderPluginImpl_chainHandleDispatcher;
 
   IDbCryptInfoImpl_vTable := TDbCryptInfoVTable.create;
-  IDbCryptInfoImpl_vTable.version := cIDbCryptInfo_VERSION;
+  IDbCryptInfoImpl_vTable.version := cIDbCryptInfo_VERSION_v3;
   IDbCryptInfoImpl_vTable.addRef := @IDbCryptInfoImpl_addRefDispatcher;
   IDbCryptInfoImpl_vTable.release := @IDbCryptInfoImpl_releaseDispatcher;
   IDbCryptInfoImpl_vTable.getDatabaseFullPath := @IDbCryptInfoImpl_getDatabaseFullPathDispatcher;
 
   IDbCryptPluginImpl_vTable := TDbCryptPluginVTable.create;
-  IDbCryptPluginImpl_vTable.version := cIDbCryptPlugin_VERSION;
+  IDbCryptPluginImpl_vTable.version := cIDbCryptPlugin_VERSION_v5;
   IDbCryptPluginImpl_vTable.addRef := @IDbCryptPluginImpl_addRefDispatcher;
   IDbCryptPluginImpl_vTable.release := @IDbCryptPluginImpl_releaseDispatcher;
   IDbCryptPluginImpl_vTable.setOwner := @IDbCryptPluginImpl_setOwnerDispatcher;
@@ -24886,7 +24889,7 @@ initialization
   IDbCryptPluginImpl_vTable.setInfo := @IDbCryptPluginImpl_setInfoDispatcher;
 
   IExternalContextImpl_vTable := TExternalContextVTable.create;
-  IExternalContextImpl_vTable.version := cIExternalContext_VERSION;
+  IExternalContextImpl_vTable.version := cIExternalContext_VERSION_v2;
   IExternalContextImpl_vTable.getMaster := @IExternalContextImpl_getMasterDispatcher;
   IExternalContextImpl_vTable.getEngine := @IExternalContextImpl_getEngineDispatcher;
   IExternalContextImpl_vTable.getAttachment := @IExternalContextImpl_getAttachmentDispatcher;
@@ -24899,30 +24902,30 @@ initialization
   IExternalContextImpl_vTable.setInfo := @IExternalContextImpl_setInfoDispatcher;
 
   IExternalResultSetImpl_vTable := TExternalResultSetVTable.create;
-  IExternalResultSetImpl_vTable.version := cIExternalResultSet_VERSION;
+  IExternalResultSetImpl_vTable.version := cIExternalResultSet_VERSION_v3;
   IExternalResultSetImpl_vTable.dispose := @IExternalResultSetImpl_disposeDispatcher;
   IExternalResultSetImpl_vTable.fetch := @IExternalResultSetImpl_fetchDispatcher;
 
   IExternalFunctionImpl_vTable := TExternalFunctionVTable.create;
-  IExternalFunctionImpl_vTable.version := cIExternalFunction_VERSION;
+  IExternalFunctionImpl_vTable.version := cIExternalFunction_VERSION_v3;
   IExternalFunctionImpl_vTable.dispose := @IExternalFunctionImpl_disposeDispatcher;
   IExternalFunctionImpl_vTable.getCharSet := @IExternalFunctionImpl_getCharSetDispatcher;
   IExternalFunctionImpl_vTable.execute := @IExternalFunctionImpl_executeDispatcher;
 
   IExternalProcedureImpl_vTable := TExternalProcedureVTable.create;
-  IExternalProcedureImpl_vTable.version := cIExternalProcedure_VERSION;
+  IExternalProcedureImpl_vTable.version := cIExternalProcedure_VERSION_v3;
   IExternalProcedureImpl_vTable.dispose := @IExternalProcedureImpl_disposeDispatcher;
   IExternalProcedureImpl_vTable.getCharSet := @IExternalProcedureImpl_getCharSetDispatcher;
   IExternalProcedureImpl_vTable.open := @IExternalProcedureImpl_openDispatcher;
 
   IExternalTriggerImpl_vTable := TExternalTriggerVTable.create;
-  IExternalTriggerImpl_vTable.version := cIExternalTrigger_VERSION;
+  IExternalTriggerImpl_vTable.version := cIExternalTrigger_VERSION_v3;
   IExternalTriggerImpl_vTable.dispose := @IExternalTriggerImpl_disposeDispatcher;
   IExternalTriggerImpl_vTable.getCharSet := @IExternalTriggerImpl_getCharSetDispatcher;
   IExternalTriggerImpl_vTable.execute := @IExternalTriggerImpl_executeDispatcher;
 
   IRoutineMetadataImpl_vTable := TRoutineMetadataVTable.create;
-  IRoutineMetadataImpl_vTable.version := cIRoutineMetadata_VERSION;
+  IRoutineMetadataImpl_vTable.version := cIRoutineMetadata_VERSION_v2;
   IRoutineMetadataImpl_vTable.getPackage := @IRoutineMetadataImpl_getPackageDispatcher;
   IRoutineMetadataImpl_vTable.getName := @IRoutineMetadataImpl_getNameDispatcher;
   IRoutineMetadataImpl_vTable.getEntryPoint := @IRoutineMetadataImpl_getEntryPointDispatcher;
@@ -24934,7 +24937,7 @@ initialization
   IRoutineMetadataImpl_vTable.getTriggerType := @IRoutineMetadataImpl_getTriggerTypeDispatcher;
 
   IExternalEngineImpl_vTable := TExternalEngineVTable.create;
-  IExternalEngineImpl_vTable.version := cIExternalEngine_VERSION;
+  IExternalEngineImpl_vTable.version := cIExternalEngine_VERSION_v4;
   IExternalEngineImpl_vTable.addRef := @IExternalEngineImpl_addRefDispatcher;
   IExternalEngineImpl_vTable.release := @IExternalEngineImpl_releaseDispatcher;
   IExternalEngineImpl_vTable.setOwner := @IExternalEngineImpl_setOwnerDispatcher;
@@ -24947,22 +24950,22 @@ initialization
   IExternalEngineImpl_vTable.makeTrigger := @IExternalEngineImpl_makeTriggerDispatcher;
 
   ITimerImpl_vTable := TTimerVTable.create;
-  ITimerImpl_vTable.version := cITimer_VERSION;
+  ITimerImpl_vTable.version := cITimer_VERSION_v3;
   ITimerImpl_vTable.addRef := @ITimerImpl_addRefDispatcher;
   ITimerImpl_vTable.release := @ITimerImpl_releaseDispatcher;
   ITimerImpl_vTable.handler := @ITimerImpl_handlerDispatcher;
 
   ITimerControlImpl_vTable := TTimerControlVTable.create;
-  ITimerControlImpl_vTable.version := cITimerControl_VERSION;
+  ITimerControlImpl_vTable.version := cITimerControl_VERSION_v2;
   ITimerControlImpl_vTable.start := @ITimerControlImpl_startDispatcher;
   ITimerControlImpl_vTable.stop := @ITimerControlImpl_stopDispatcher;
 
   IVersionCallbackImpl_vTable := TVersionCallbackVTable.create;
-  IVersionCallbackImpl_vTable.version := cIVersionCallback_VERSION;
+  IVersionCallbackImpl_vTable.version := cIVersionCallback_VERSION_v2;
   IVersionCallbackImpl_vTable.callback := @IVersionCallbackImpl_callbackDispatcher;
 
   IUtilImpl_vTable := TUtilVTable.create;
-  IUtilImpl_vTable.version := cIUtil_VERSION;
+  IUtilImpl_vTable.version := cIUtil_VERSION_v4;
   IUtilImpl_vTable.getFbVersion := @IUtilImpl_getFbVersionDispatcher;
   IUtilImpl_vTable.loadBlob := @IUtilImpl_loadBlobDispatcher;
   IUtilImpl_vTable.dumpBlob := @IUtilImpl_dumpBlobDispatcher;
@@ -24987,11 +24990,11 @@ initialization
   IUtilImpl_vTable.decodeTimeStampTzEx := @IUtilImpl_decodeTimeStampTzExDispatcher;
 
   IOffsetsCallbackImpl_vTable := TOffsetsCallbackVTable.create;
-  IOffsetsCallbackImpl_vTable.version := cIOffsetsCallback_VERSION;
+  IOffsetsCallbackImpl_vTable.version := cIOffsetsCallback_VERSION_v2;
   IOffsetsCallbackImpl_vTable.setOffset := @IOffsetsCallbackImpl_setOffsetDispatcher;
 
   IXpbBuilderImpl_vTable := TXpbBuilderVTable.create;
-  IXpbBuilderImpl_vTable.version := cIXpbBuilder_VERSION;
+  IXpbBuilderImpl_vTable.version := cIXpbBuilder_VERSION_v3;
   IXpbBuilderImpl_vTable.dispose := @IXpbBuilderImpl_disposeDispatcher;
   IXpbBuilderImpl_vTable.clear := @IXpbBuilderImpl_clearDispatcher;
   IXpbBuilderImpl_vTable.removeCurrent := @IXpbBuilderImpl_removeCurrentDispatcher;
@@ -25015,7 +25018,7 @@ initialization
   IXpbBuilderImpl_vTable.getBuffer := @IXpbBuilderImpl_getBufferDispatcher;
 
   ITraceConnectionImpl_vTable := TTraceConnectionVTable.create;
-  ITraceConnectionImpl_vTable.version := cITraceConnection_VERSION;
+  ITraceConnectionImpl_vTable.version := cITraceConnection_VERSION_v2;
   ITraceConnectionImpl_vTable.getKind := @ITraceConnectionImpl_getKindDispatcher;
   ITraceConnectionImpl_vTable.getProcessID := @ITraceConnectionImpl_getProcessIDDispatcher;
   ITraceConnectionImpl_vTable.getUserName := @ITraceConnectionImpl_getUserNameDispatcher;
@@ -25027,7 +25030,7 @@ initialization
   ITraceConnectionImpl_vTable.getRemoteProcessName := @ITraceConnectionImpl_getRemoteProcessNameDispatcher;
 
   ITraceDatabaseConnectionImpl_vTable := TTraceDatabaseConnectionVTable.create;
-  ITraceDatabaseConnectionImpl_vTable.version := cITraceDatabaseConnection_VERSION;
+  ITraceDatabaseConnectionImpl_vTable.version := cITraceDatabaseConnection_VERSION_v3;
   ITraceDatabaseConnectionImpl_vTable.getKind := @ITraceDatabaseConnectionImpl_getKindDispatcher;
   ITraceDatabaseConnectionImpl_vTable.getProcessID := @ITraceDatabaseConnectionImpl_getProcessIDDispatcher;
   ITraceDatabaseConnectionImpl_vTable.getUserName := @ITraceDatabaseConnectionImpl_getUserNameDispatcher;
@@ -25041,7 +25044,7 @@ initialization
   ITraceDatabaseConnectionImpl_vTable.getDatabaseName := @ITraceDatabaseConnectionImpl_getDatabaseNameDispatcher;
 
   ITraceTransactionImpl_vTable := TTraceTransactionVTable.create;
-  ITraceTransactionImpl_vTable.version := cITraceTransaction_VERSION;
+  ITraceTransactionImpl_vTable.version := cITraceTransaction_VERSION_v3;
   ITraceTransactionImpl_vTable.getTransactionID := @ITraceTransactionImpl_getTransactionIDDispatcher;
   ITraceTransactionImpl_vTable.getReadOnly := @ITraceTransactionImpl_getReadOnlyDispatcher;
   ITraceTransactionImpl_vTable.getWait := @ITraceTransactionImpl_getWaitDispatcher;
@@ -25051,18 +25054,18 @@ initialization
   ITraceTransactionImpl_vTable.getPreviousID := @ITraceTransactionImpl_getPreviousIDDispatcher;
 
   ITraceParamsImpl_vTable := TTraceParamsVTable.create;
-  ITraceParamsImpl_vTable.version := cITraceParams_VERSION;
+  ITraceParamsImpl_vTable.version := cITraceParams_VERSION_v3;
   ITraceParamsImpl_vTable.getCount := @ITraceParamsImpl_getCountDispatcher;
   ITraceParamsImpl_vTable.getParam := @ITraceParamsImpl_getParamDispatcher;
   ITraceParamsImpl_vTable.getTextUTF8 := @ITraceParamsImpl_getTextUTF8Dispatcher;
 
   ITraceStatementImpl_vTable := TTraceStatementVTable.create;
-  ITraceStatementImpl_vTable.version := cITraceStatement_VERSION;
+  ITraceStatementImpl_vTable.version := cITraceStatement_VERSION_v2;
   ITraceStatementImpl_vTable.getStmtID := @ITraceStatementImpl_getStmtIDDispatcher;
   ITraceStatementImpl_vTable.getPerf := @ITraceStatementImpl_getPerfDispatcher;
 
   ITraceSQLStatementImpl_vTable := TTraceSQLStatementVTable.create;
-  ITraceSQLStatementImpl_vTable.version := cITraceSQLStatement_VERSION;
+  ITraceSQLStatementImpl_vTable.version := cITraceSQLStatement_VERSION_v3;
   ITraceSQLStatementImpl_vTable.getStmtID := @ITraceSQLStatementImpl_getStmtIDDispatcher;
   ITraceSQLStatementImpl_vTable.getPerf := @ITraceSQLStatementImpl_getPerfDispatcher;
   ITraceSQLStatementImpl_vTable.getText := @ITraceSQLStatementImpl_getTextDispatcher;
@@ -25072,7 +25075,7 @@ initialization
   ITraceSQLStatementImpl_vTable.getExplainedPlan := @ITraceSQLStatementImpl_getExplainedPlanDispatcher;
 
   ITraceBLRStatementImpl_vTable := TTraceBLRStatementVTable.create;
-  ITraceBLRStatementImpl_vTable.version := cITraceBLRStatement_VERSION;
+  ITraceBLRStatementImpl_vTable.version := cITraceBLRStatement_VERSION_v3;
   ITraceBLRStatementImpl_vTable.getStmtID := @ITraceBLRStatementImpl_getStmtIDDispatcher;
   ITraceBLRStatementImpl_vTable.getPerf := @ITraceBLRStatementImpl_getPerfDispatcher;
   ITraceBLRStatementImpl_vTable.getData := @ITraceBLRStatementImpl_getDataDispatcher;
@@ -25080,19 +25083,19 @@ initialization
   ITraceBLRStatementImpl_vTable.getText := @ITraceBLRStatementImpl_getTextDispatcher;
 
   ITraceDYNRequestImpl_vTable := TTraceDYNRequestVTable.create;
-  ITraceDYNRequestImpl_vTable.version := cITraceDYNRequest_VERSION;
+  ITraceDYNRequestImpl_vTable.version := cITraceDYNRequest_VERSION_v2;
   ITraceDYNRequestImpl_vTable.getData := @ITraceDYNRequestImpl_getDataDispatcher;
   ITraceDYNRequestImpl_vTable.getDataLength := @ITraceDYNRequestImpl_getDataLengthDispatcher;
   ITraceDYNRequestImpl_vTable.getText := @ITraceDYNRequestImpl_getTextDispatcher;
 
   ITraceContextVariableImpl_vTable := TTraceContextVariableVTable.create;
-  ITraceContextVariableImpl_vTable.version := cITraceContextVariable_VERSION;
+  ITraceContextVariableImpl_vTable.version := cITraceContextVariable_VERSION_v2;
   ITraceContextVariableImpl_vTable.getNameSpace := @ITraceContextVariableImpl_getNameSpaceDispatcher;
   ITraceContextVariableImpl_vTable.getVarName := @ITraceContextVariableImpl_getVarNameDispatcher;
   ITraceContextVariableImpl_vTable.getVarValue := @ITraceContextVariableImpl_getVarValueDispatcher;
 
   ITraceProcedureImpl_vTable := TTraceProcedureVTable.create;
-  ITraceProcedureImpl_vTable.version := cITraceProcedure_VERSION;
+  ITraceProcedureImpl_vTable.version := cITraceProcedure_VERSION_v3;
   ITraceProcedureImpl_vTable.getProcName := @ITraceProcedureImpl_getProcNameDispatcher;
   ITraceProcedureImpl_vTable.getInputs := @ITraceProcedureImpl_getInputsDispatcher;
   ITraceProcedureImpl_vTable.getPerf := @ITraceProcedureImpl_getPerfDispatcher;
@@ -25101,7 +25104,7 @@ initialization
   ITraceProcedureImpl_vTable.getExplainedPlan := @ITraceProcedureImpl_getExplainedPlanDispatcher;
 
   ITraceFunctionImpl_vTable := TTraceFunctionVTable.create;
-  ITraceFunctionImpl_vTable.version := cITraceFunction_VERSION;
+  ITraceFunctionImpl_vTable.version := cITraceFunction_VERSION_v3;
   ITraceFunctionImpl_vTable.getFuncName := @ITraceFunctionImpl_getFuncNameDispatcher;
   ITraceFunctionImpl_vTable.getInputs := @ITraceFunctionImpl_getInputsDispatcher;
   ITraceFunctionImpl_vTable.getResult := @ITraceFunctionImpl_getResultDispatcher;
@@ -25111,7 +25114,7 @@ initialization
   ITraceFunctionImpl_vTable.getExplainedPlan := @ITraceFunctionImpl_getExplainedPlanDispatcher;
 
   ITraceTriggerImpl_vTable := TTraceTriggerVTable.create;
-  ITraceTriggerImpl_vTable.version := cITraceTrigger_VERSION;
+  ITraceTriggerImpl_vTable.version := cITraceTrigger_VERSION_v3;
   ITraceTriggerImpl_vTable.getTriggerName := @ITraceTriggerImpl_getTriggerNameDispatcher;
   ITraceTriggerImpl_vTable.getRelationName := @ITraceTriggerImpl_getRelationNameDispatcher;
   ITraceTriggerImpl_vTable.getAction := @ITraceTriggerImpl_getActionDispatcher;
@@ -25122,7 +25125,7 @@ initialization
   ITraceTriggerImpl_vTable.getExplainedPlan := @ITraceTriggerImpl_getExplainedPlanDispatcher;
 
   ITraceServiceConnectionImpl_vTable := TTraceServiceConnectionVTable.create;
-  ITraceServiceConnectionImpl_vTable.version := cITraceServiceConnection_VERSION;
+  ITraceServiceConnectionImpl_vTable.version := cITraceServiceConnection_VERSION_v3;
   ITraceServiceConnectionImpl_vTable.getKind := @ITraceServiceConnectionImpl_getKindDispatcher;
   ITraceServiceConnectionImpl_vTable.getProcessID := @ITraceServiceConnectionImpl_getProcessIDDispatcher;
   ITraceServiceConnectionImpl_vTable.getUserName := @ITraceServiceConnectionImpl_getUserNameDispatcher;
@@ -25137,14 +25140,14 @@ initialization
   ITraceServiceConnectionImpl_vTable.getServiceName := @ITraceServiceConnectionImpl_getServiceNameDispatcher;
 
   ITraceStatusVectorImpl_vTable := TTraceStatusVectorVTable.create;
-  ITraceStatusVectorImpl_vTable.version := cITraceStatusVector_VERSION;
+  ITraceStatusVectorImpl_vTable.version := cITraceStatusVector_VERSION_v2;
   ITraceStatusVectorImpl_vTable.hasError := @ITraceStatusVectorImpl_hasErrorDispatcher;
   ITraceStatusVectorImpl_vTable.hasWarning := @ITraceStatusVectorImpl_hasWarningDispatcher;
   ITraceStatusVectorImpl_vTable.getStatus := @ITraceStatusVectorImpl_getStatusDispatcher;
   ITraceStatusVectorImpl_vTable.getText := @ITraceStatusVectorImpl_getTextDispatcher;
 
   ITraceSweepInfoImpl_vTable := TTraceSweepInfoVTable.create;
-  ITraceSweepInfoImpl_vTable.version := cITraceSweepInfo_VERSION;
+  ITraceSweepInfoImpl_vTable.version := cITraceSweepInfo_VERSION_v2;
   ITraceSweepInfoImpl_vTable.getOIT := @ITraceSweepInfoImpl_getOITDispatcher;
   ITraceSweepInfoImpl_vTable.getOST := @ITraceSweepInfoImpl_getOSTDispatcher;
   ITraceSweepInfoImpl_vTable.getOAT := @ITraceSweepInfoImpl_getOATDispatcher;
@@ -25152,14 +25155,14 @@ initialization
   ITraceSweepInfoImpl_vTable.getPerf := @ITraceSweepInfoImpl_getPerfDispatcher;
 
   ITraceLogWriterImpl_vTable := TTraceLogWriterVTable.create;
-  ITraceLogWriterImpl_vTable.version := cITraceLogWriter_VERSION;
+  ITraceLogWriterImpl_vTable.version := cITraceLogWriter_VERSION_v4;
   ITraceLogWriterImpl_vTable.addRef := @ITraceLogWriterImpl_addRefDispatcher;
   ITraceLogWriterImpl_vTable.release := @ITraceLogWriterImpl_releaseDispatcher;
   ITraceLogWriterImpl_vTable.write := @ITraceLogWriterImpl_writeDispatcher;
   ITraceLogWriterImpl_vTable.write_s := @ITraceLogWriterImpl_write_sDispatcher;
 
   ITraceInitInfoImpl_vTable := TTraceInitInfoVTable.create;
-  ITraceInitInfoImpl_vTable.version := cITraceInitInfo_VERSION;
+  ITraceInitInfoImpl_vTable.version := cITraceInitInfo_VERSION_v2;
   ITraceInitInfoImpl_vTable.getConfigText := @ITraceInitInfoImpl_getConfigTextDispatcher;
   ITraceInitInfoImpl_vTable.getTraceSessionID := @ITraceInitInfoImpl_getTraceSessionIDDispatcher;
   ITraceInitInfoImpl_vTable.getTraceSessionName := @ITraceInitInfoImpl_getTraceSessionNameDispatcher;
@@ -25169,7 +25172,7 @@ initialization
   ITraceInitInfoImpl_vTable.getLogWriter := @ITraceInitInfoImpl_getLogWriterDispatcher;
 
   ITracePluginImpl_vTable := TTracePluginVTable.create;
-  ITracePluginImpl_vTable.version := cITracePlugin_VERSION;
+  ITracePluginImpl_vTable.version := cITracePlugin_VERSION_v5;
   ITracePluginImpl_vTable.addRef := @ITracePluginImpl_addRefDispatcher;
   ITracePluginImpl_vTable.release := @ITracePluginImpl_releaseDispatcher;
   ITracePluginImpl_vTable.trace_get_error := @ITracePluginImpl_trace_get_errorDispatcher;
@@ -25199,7 +25202,7 @@ initialization
   ITracePluginImpl_vTable.trace_trigger_compile := @ITracePluginImpl_trace_trigger_compileDispatcher;
 
   ITraceFactoryImpl_vTable := TTraceFactoryVTable.create;
-  ITraceFactoryImpl_vTable.version := cITraceFactory_VERSION;
+  ITraceFactoryImpl_vTable.version := cITraceFactory_VERSION_v4;
   ITraceFactoryImpl_vTable.addRef := @ITraceFactoryImpl_addRefDispatcher;
   ITraceFactoryImpl_vTable.release := @ITraceFactoryImpl_releaseDispatcher;
   ITraceFactoryImpl_vTable.setOwner := @ITraceFactoryImpl_setOwnerDispatcher;
@@ -25208,51 +25211,51 @@ initialization
   ITraceFactoryImpl_vTable.trace_create := @ITraceFactoryImpl_trace_createDispatcher;
 
   IUdrFunctionFactoryImpl_vTable := TUdrFunctionFactoryVTable.create;
-  IUdrFunctionFactoryImpl_vTable.version := cIUdrFunctionFactory_VERSION;
+  IUdrFunctionFactoryImpl_vTable.version := cIUdrFunctionFactory_VERSION_v3;
   IUdrFunctionFactoryImpl_vTable.dispose := @IUdrFunctionFactoryImpl_disposeDispatcher;
   IUdrFunctionFactoryImpl_vTable.setup := @IUdrFunctionFactoryImpl_setupDispatcher;
   IUdrFunctionFactoryImpl_vTable.newItem := @IUdrFunctionFactoryImpl_newItemDispatcher;
 
   IUdrProcedureFactoryImpl_vTable := TUdrProcedureFactoryVTable.create;
-  IUdrProcedureFactoryImpl_vTable.version := cIUdrProcedureFactory_VERSION;
+  IUdrProcedureFactoryImpl_vTable.version := cIUdrProcedureFactory_VERSION_v3;
   IUdrProcedureFactoryImpl_vTable.dispose := @IUdrProcedureFactoryImpl_disposeDispatcher;
   IUdrProcedureFactoryImpl_vTable.setup := @IUdrProcedureFactoryImpl_setupDispatcher;
   IUdrProcedureFactoryImpl_vTable.newItem := @IUdrProcedureFactoryImpl_newItemDispatcher;
 
   IUdrTriggerFactoryImpl_vTable := TUdrTriggerFactoryVTable.create;
-  IUdrTriggerFactoryImpl_vTable.version := cIUdrTriggerFactory_VERSION;
+  IUdrTriggerFactoryImpl_vTable.version := cIUdrTriggerFactory_VERSION_v3;
   IUdrTriggerFactoryImpl_vTable.dispose := @IUdrTriggerFactoryImpl_disposeDispatcher;
   IUdrTriggerFactoryImpl_vTable.setup := @IUdrTriggerFactoryImpl_setupDispatcher;
   IUdrTriggerFactoryImpl_vTable.newItem := @IUdrTriggerFactoryImpl_newItemDispatcher;
 
   IUdrPluginImpl_vTable := TUdrPluginVTable.create;
-  IUdrPluginImpl_vTable.version := cIUdrPlugin_VERSION;
+  IUdrPluginImpl_vTable.version := cIUdrPlugin_VERSION_v2;
   IUdrPluginImpl_vTable.getMaster := @IUdrPluginImpl_getMasterDispatcher;
   IUdrPluginImpl_vTable.registerFunction := @IUdrPluginImpl_registerFunctionDispatcher;
   IUdrPluginImpl_vTable.registerProcedure := @IUdrPluginImpl_registerProcedureDispatcher;
   IUdrPluginImpl_vTable.registerTrigger := @IUdrPluginImpl_registerTriggerDispatcher;
 
   IDecFloat16Impl_vTable := TDecFloat16VTable.create;
-  IDecFloat16Impl_vTable.version := cIDecFloat16_VERSION;
+  IDecFloat16Impl_vTable.version := cIDecFloat16_VERSION_v2;
   IDecFloat16Impl_vTable.toBcd := @IDecFloat16Impl_toBcdDispatcher;
   IDecFloat16Impl_vTable.toString := @IDecFloat16Impl_toStringDispatcher;
   IDecFloat16Impl_vTable.fromBcd := @IDecFloat16Impl_fromBcdDispatcher;
   IDecFloat16Impl_vTable.fromString := @IDecFloat16Impl_fromStringDispatcher;
 
   IDecFloat34Impl_vTable := TDecFloat34VTable.create;
-  IDecFloat34Impl_vTable.version := cIDecFloat34_VERSION;
+  IDecFloat34Impl_vTable.version := cIDecFloat34_VERSION_v2;
   IDecFloat34Impl_vTable.toBcd := @IDecFloat34Impl_toBcdDispatcher;
   IDecFloat34Impl_vTable.toString := @IDecFloat34Impl_toStringDispatcher;
   IDecFloat34Impl_vTable.fromBcd := @IDecFloat34Impl_fromBcdDispatcher;
   IDecFloat34Impl_vTable.fromString := @IDecFloat34Impl_fromStringDispatcher;
 
   IInt128Impl_vTable := TInt128VTable.create;
-  IInt128Impl_vTable.version := cIInt128_VERSION;
+  IInt128Impl_vTable.version := cIInt128_VERSION_v2;
   IInt128Impl_vTable.toString := @IInt128Impl_toStringDispatcher;
   IInt128Impl_vTable.fromString := @IInt128Impl_fromStringDispatcher;
 
   IReplicatedFieldImpl_vTable := TReplicatedFieldVTable.create;
-  IReplicatedFieldImpl_vTable.version := cIReplicatedField_VERSION;
+  IReplicatedFieldImpl_vTable.version := cIReplicatedField_VERSION_v2;
   IReplicatedFieldImpl_vTable.getName := @IReplicatedFieldImpl_getNameDispatcher;
   IReplicatedFieldImpl_vTable.getType := @IReplicatedFieldImpl_getTypeDispatcher;
   IReplicatedFieldImpl_vTable.getSubType := @IReplicatedFieldImpl_getSubTypeDispatcher;
@@ -25262,14 +25265,14 @@ initialization
   IReplicatedFieldImpl_vTable.getData := @IReplicatedFieldImpl_getDataDispatcher;
 
   IReplicatedRecordImpl_vTable := TReplicatedRecordVTable.create;
-  IReplicatedRecordImpl_vTable.version := cIReplicatedRecord_VERSION;
+  IReplicatedRecordImpl_vTable.version := cIReplicatedRecord_VERSION_v2;
   IReplicatedRecordImpl_vTable.getCount := @IReplicatedRecordImpl_getCountDispatcher;
   IReplicatedRecordImpl_vTable.getField := @IReplicatedRecordImpl_getFieldDispatcher;
   IReplicatedRecordImpl_vTable.getRawLength := @IReplicatedRecordImpl_getRawLengthDispatcher;
   IReplicatedRecordImpl_vTable.getRawData := @IReplicatedRecordImpl_getRawDataDispatcher;
 
   IReplicatedTransactionImpl_vTable := TReplicatedTransactionVTable.create;
-  IReplicatedTransactionImpl_vTable.version := cIReplicatedTransaction_VERSION;
+  IReplicatedTransactionImpl_vTable.version := cIReplicatedTransaction_VERSION_v3;
   IReplicatedTransactionImpl_vTable.dispose := @IReplicatedTransactionImpl_disposeDispatcher;
   IReplicatedTransactionImpl_vTable.prepare := @IReplicatedTransactionImpl_prepareDispatcher;
   IReplicatedTransactionImpl_vTable.commit := @IReplicatedTransactionImpl_commitDispatcher;
@@ -25284,7 +25287,7 @@ initialization
   IReplicatedTransactionImpl_vTable.executeSqlIntl := @IReplicatedTransactionImpl_executeSqlIntlDispatcher;
 
   IReplicatedSessionImpl_vTable := TReplicatedSessionVTable.create;
-  IReplicatedSessionImpl_vTable.version := cIReplicatedSession_VERSION;
+  IReplicatedSessionImpl_vTable.version := cIReplicatedSession_VERSION_v4;
   IReplicatedSessionImpl_vTable.addRef := @IReplicatedSessionImpl_addRefDispatcher;
   IReplicatedSessionImpl_vTable.release := @IReplicatedSessionImpl_releaseDispatcher;
   IReplicatedSessionImpl_vTable.setOwner := @IReplicatedSessionImpl_setOwnerDispatcher;
@@ -25295,7 +25298,7 @@ initialization
   IReplicatedSessionImpl_vTable.setSequence := @IReplicatedSessionImpl_setSequenceDispatcher;
 
   IProfilerPluginImpl_vTable := TProfilerPluginVTable.create;
-  IProfilerPluginImpl_vTable.version := cIProfilerPlugin_VERSION;
+  IProfilerPluginImpl_vTable.version := cIProfilerPlugin_VERSION_v4;
   IProfilerPluginImpl_vTable.addRef := @IProfilerPluginImpl_addRefDispatcher;
   IProfilerPluginImpl_vTable.release := @IProfilerPluginImpl_releaseDispatcher;
   IProfilerPluginImpl_vTable.setOwner := @IProfilerPluginImpl_setOwnerDispatcher;
@@ -25305,7 +25308,7 @@ initialization
   IProfilerPluginImpl_vTable.flush := @IProfilerPluginImpl_flushDispatcher;
 
   IProfilerSessionImpl_vTable := TProfilerSessionVTable.create;
-  IProfilerSessionImpl_vTable.version := cIProfilerSession_VERSION;
+  IProfilerSessionImpl_vTable.version := cIProfilerSession_VERSION_v3;
   IProfilerSessionImpl_vTable.dispose := @IProfilerSessionImpl_disposeDispatcher;
   IProfilerSessionImpl_vTable.getId := @IProfilerSessionImpl_getIdDispatcher;
   IProfilerSessionImpl_vTable.getFlags := @IProfilerSessionImpl_getFlagsDispatcher;
@@ -25324,7 +25327,7 @@ initialization
   IProfilerSessionImpl_vTable.afterRecordSourceGetRecord := @IProfilerSessionImpl_afterRecordSourceGetRecordDispatcher;
 
   IProfilerStatsImpl_vTable := TProfilerStatsVTable.create;
-  IProfilerStatsImpl_vTable.version := cIProfilerStats_VERSION;
+  IProfilerStatsImpl_vTable.version := cIProfilerStats_VERSION_v2;
   IProfilerStatsImpl_vTable.getElapsedTicks := @IProfilerStatsImpl_getElapsedTicksDispatcher;
 
 finalization
