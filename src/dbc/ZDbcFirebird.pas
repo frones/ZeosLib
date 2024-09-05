@@ -407,6 +407,10 @@ begin
   then Result := 0
   else begin
     FAttachment.cancelOperation(FStatus, fb_cancel_abort);
+
+    // This is a mess and probably doesn't work as intended. cIStatus_RESULT_OK is 0, which means it doesn't matter what
+    // getState returns, anything AND 0 will be 0. Therefore, 0 <> 0 will always return FALSE and Ord(False) is always 0.
+    // Result is always 0, so FStatus.init will never be called...
     Result := Ord((Fstatus.getState and cIStatus_RESULT_OK) <> 0);
     if Result <> 0 then
       FStatus.init;

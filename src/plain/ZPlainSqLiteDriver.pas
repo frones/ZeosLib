@@ -306,6 +306,7 @@ type
     sqlite3_last_insert_rowid: function(db: Psqlite): Int64; cdecl;
     sqlite3_changes: function(db: Psqlite): Integer; cdecl;
     sqlite3_interrupt: procedure(db: Psqlite); cdecl;
+    sqlite3_is_interrupted: function(db: Psqlite): Integer; cdecl;
     sqlite3_complete: function(const sql: PAnsiChar): Integer; cdecl;
     sqlite3_busy_handler: procedure(db: Psqlite; callback: Tsqlite_busy_callback; ptr: Pointer); cdecl;
     sqlite3_busy_timeout: procedure(db: Psqlite; ms: Integer); cdecl;
@@ -449,6 +450,7 @@ begin
   @sqlite3_extended_errcode       := GetAddress('sqlite3_extended_errcode');
 
   @sqlite3_interrupt              := GetAddress('sqlite3_interrupt');
+  @sqlite3_is_interrupted         := GetAddress('sqlite3_is_interrupted');
   @sqlite3_complete               := GetAddress('sqlite3_complete');
   @sqlite3_busy_handler           := GetAddress('sqlite3_busy_handler');
   @sqlite3_busy_timeout           := GetAddress('sqlite3_busy_timeout');

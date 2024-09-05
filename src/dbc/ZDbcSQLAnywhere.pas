@@ -309,10 +309,13 @@ end;
 }
 function TZSQLAnywhereConnection.AbortOperation: Integer;
 begin
-  Result := 1;
+  Result := 0;
   if Closed then
     Exit;
-  FSQLAnyPlainDriver.sqlany_cancel(Fa_sqlany_connection);
+  If Assigned(FSQLAnyPlainDriver.sqlany_cancel) Then
+    FSQLAnyPlainDriver.sqlany_cancel(Fa_sqlany_connection)
+  Else
+    Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 {**
