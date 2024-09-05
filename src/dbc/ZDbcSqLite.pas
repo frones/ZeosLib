@@ -752,10 +752,11 @@ begin
   Begin
     FPlainDriver.sqlite3_interrupt(FHandle);
 
-    If Not Assigled(FPlainDriver.sqlite3_is_interrupted) Or (FPlainDriver.sqlite3_is_interrupted(FHandle) = SQLITE_INTERRUPT) Then
+    If Not Assigned(FPlainDriver.sqlite3_is_interrupted) Or (FPlainDriver.sqlite3_is_interrupted(FHandle) = SQLITE_INTERRUPT) Then
       Result := 0
     Else
       Result := 1
+  End
   Else
     Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
