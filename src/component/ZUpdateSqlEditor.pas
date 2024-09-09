@@ -269,10 +269,7 @@ begin
       else
         ListBox.Selected[I] := False;
     if ListBox.Items.Count > 0 then
-    begin
-      ListBox.ItemIndex := 0;
       ListBox.TopIndex := 0;
-    end;
   finally
     ListBox.Items.EndUpdate;
   end;
@@ -284,14 +281,10 @@ var
 begin
   ListBox.Items.BeginUpdate;
   try
-    with ListBox do
-      for I := 0 to Items.Count - 1 do
-        Selected[I] := True;
+    ListBox.SelectAll;
+
     if ListBox.Items.Count > 0 then
-    begin
-      ListBox.ItemIndex := 0;
       ListBox.TopIndex := 0;
-    end;
   finally
     ListBox.Items.EndUpdate;
   end;
