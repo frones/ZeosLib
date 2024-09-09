@@ -370,14 +370,15 @@ end;
 
 Function TZInterbase6Connection.AbortOperation: Integer;
 Begin
- // https://github.com/FirebirdSQL/firebird/blob/master/doc/README.fb_cancel_operation
- if assigned(FPlainDriver.fb_cancel_operation) then begin
+  // https://github.com/FirebirdSQL/firebird/blob/master/doc/README.fb_cancel_operation
+  if assigned(FPlainDriver.fb_cancel_operation) then begin
    Result := 0;
    {If  }FPlainDriver.fb_cancel_operation(@FStatusVector, @FHandle, fb_cancel_raise){ <> 0 Then
      commented by EH: if nothing was cancel, propably because FB is ready
      inbetween we receive an exception...
      HandleErrorOrWarning(lcOther, @FStatusVector, 'cancel operation', Self);}
- end else Result := 1 //abort opertion is not supported by the current client library
+ end else
+   Raise EZUnsupportedException.Create(SUnsupportedOperation);
 End;
 
 procedure TZInterbase6Connection.InternalClose;

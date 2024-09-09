@@ -747,8 +747,18 @@ end;
 function TZSQLiteConnection.AbortOperation: Integer;
 begin
   // https://sqlite.org/c3ref/interrupt.html
-  FPlainDriver.sqlite3_interrupt(FHandle);
-  Result := 1;
+
+  If Assigned(FPlainDriver.sqlite3_interrupt) Then
+  Begin
+    FPlainDriver.sqlite3_interrupt(FHandle);
+
+    If Not Assigned(FPlainDriver.sqlite3_is_interrupted) Or (FPlainDriver.sqlite3_is_interrupted(FHandle) = SQLITE_INTERRUPT) Then
+      Result := 0
+    Else
+      Result := 1
+  End
+  Else
+    Raise EZUnsupportedException.Create(SUnsupportedOperation);
 end;
 
 procedure TZSQLiteConnection.AfterConstruction;
