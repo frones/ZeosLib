@@ -1017,13 +1017,13 @@ begin
   for I := 0 to FOpenCursors.Count -1 do
     if IZResultSet(FOpenCursors[i]).getType = rtForwardOnly then
       Exit;
-  Result := True;
-  while FOpenCursors.Count > 0 do begin
-    P := FOpenCursors[FOpenCursors.Count-1];
+  for I := FOpenCursors.Count - 1 downto 0 do begin
+    P := FOpenCursors[I];
     RowNo := IZResultSet(P).GetRow;
     IZResultSet(P).Last; //now the pointer will be removed from the open cursor list
     IZResultSet(P).MoveAbsolute(RowNo); //restore current position
   end;
+  Result := FOpenCursors = 0;
 end;
 
 function TZFirebirdTransaction.TxnIsStarted: Boolean;
