@@ -1023,7 +1023,7 @@ begin
     IZResultSet(P).Last; //now the pointer will be removed from the open cursor list
     IZResultSet(P).MoveAbsolute(RowNo); //restore current position
   end;
-  Result := FOpenCursors = 0;
+  Result := FOpenCursors.Count = 0;
 end;
 
 function TZFirebirdTransaction.TxnIsStarted: Boolean;
