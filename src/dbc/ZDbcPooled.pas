@@ -880,7 +880,10 @@ end;
   side
 }function TZDbcPooledConnection.AbortOperation: Integer;
 begin
-  Result := GetConnection.AbortOperation;
+  If Assigned(FConnection) Then
+    Result := FConnection.AbortOperation
+  Else
+    Result := 0;
 end;
 
 {**
