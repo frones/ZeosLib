@@ -888,7 +888,7 @@ type
 
   /// <author>EgonHugeist</author>
   /// <summary>implements sort compare function.</summary>
-  TZSortCompare = function(Item1, Item2: Pointer): Integer;
+  TZCompareFunc = function(Item1, Item2: Pointer): Integer;
   /// <author>EgonHugeist</author>
   /// <summary>implements list compare object function</summary>
   TZListSortCompare = function(Item1, Item2: Pointer): Integer of object;
@@ -897,7 +897,7 @@ type
   /// <summary>implements list of sorted custom elements</summary>
   TZCustomUniqueElementBinarySearchList = class(TZCustomElementList)
   protected
-    FCompare: TZSortCompare;
+    FCompare: TZCompareFunc;
   public
     /// <summary>Delete an element by given Value comapred to the list.</summary>
     /// <param>"ValueToCompare" the value compared to the list items to be removed.</param>
@@ -923,7 +923,7 @@ type
     ///  required on removing the items and if the memory needs to be zeroed out
     ///  on growing the buffer.</param>
     /// <param>"Compare" a custom compare function used to get and add the elemenets</param>
-    constructor Create(Compare: TZSortCompare; ElementSize: Cardinal; ElementNeedsFinalize: Boolean);
+    constructor Create(Compare: TZCompareFunc; ElementSize: Cardinal; ElementNeedsFinalize: Boolean);
   public
     property Count: NativeInt read FCount;
     property Items[ValueToCompare: Pointer]: Pointer read Get;
@@ -938,7 +938,7 @@ type
     /// <param>"L" an address of an element.</param>
     /// <param>"R" an address of an element.</param>
     /// <param>"Compare" a global comparision function.</param>
-    procedure QuickSortSha_0AA(L, R: PAnsiChar; Compare: TZSortCompare); overload;
+    procedure QuickSortSha_0AA(L, R: PAnsiChar; Compare: TZCompareFunc); overload;
     /// <author>Aleksandr Sharahov see http://guildalfa.ru/alsha/</author>
     /// <summary>Performs hybrid sort algorithm for the element list.<summary>
     /// <param>"L" an address of an element.</param>
@@ -950,7 +950,7 @@ type
     /// <param>"L" an address of an element.</param>
     /// <param>"R" an address of an element.</param>
     /// <param>"Compare" a global comparision function.</param>
-    procedure QuickSort(L, R: Integer; Compare: TZSortCompare); overload;
+    procedure QuickSort(L, R: Integer; Compare: TZCompareFunc); overload;
     /// <summary>Performs quick sort algorithm for the element list.<summary>
     /// <param>"L" an address of an element.</param>
     /// <param>"R" an address of an element.</param>
@@ -960,7 +960,7 @@ type
     /// <author>Aleksandr Sharahov see http://guildalfa.ru/alsha/</author>
     /// <summary>Performs hybrid sort algorithm for the element list.<summary>
     /// <param>"Compare" a global comparision function.</param>
-    procedure Sort(Compare: TZSortCompare); overload;
+    procedure Sort(Compare: TZCompareFunc); overload;
     /// <author>Aleksandr Sharahov see http://guildalfa.ru/alsha/</author>
     /// <summary>Performs hybrid sort algorithm for the element list.<summary>
     /// <param>"Compare" an object comparision function.</param>
@@ -2941,7 +2941,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 procedure TZSortableCustomElementList.QuickSortSha_0AA(L, R: PAnsiChar;
-  Compare: TZSortCompare);
+  Compare: TZCompareFunc);
 var
   I, J, T: PAnsiChar;
 begin;
@@ -3024,7 +3024,7 @@ end;
 
 {$IFDEF FPC} {$PUSH} {$WARN 4055 off : Conversion between ordinals and pointers is not portable} {$ENDIF}
 procedure TZSortableCustomElementList.QuickSort(L, R: Integer;
-  Compare: TZSortCompare);
+  Compare: TZCompareFunc);
 var
   I, J: Integer;
   P, T, E: Pointer;
@@ -3106,7 +3106,7 @@ end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
 
-procedure TZSortableCustomElementList.Sort(Compare: TZSortCompare);
+procedure TZSortableCustomElementList.Sort(Compare: TZCompareFunc);
 (*var
   I, J, L, R: PAnsiChar;
 begin;
@@ -3186,7 +3186,7 @@ end;
 
 { TZCustomUniqueElementBinarySearchList }
 
-constructor TZCustomUniqueElementBinarySearchList.Create(Compare: TZSortCompare;
+constructor TZCustomUniqueElementBinarySearchList.Create(Compare: TZCompareFunc;
   ElementSize: Cardinal; ElementNeedsFinalize: Boolean);
 begin
   inherited Create(ElementSize, ElementNeedsFinalize);

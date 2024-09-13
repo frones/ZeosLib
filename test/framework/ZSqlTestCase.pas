@@ -1193,7 +1193,7 @@ var
   I: Integer;
 begin
   Result := TZConnection.Create(nil);
-  Result.LibLocation := LibLocation;
+  Result.LibraryLocation := LibLocation;
   Result.Protocol := Protocol;
   Result.Port := Port;
   Result.HostName := HostName;

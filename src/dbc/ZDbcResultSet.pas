@@ -1047,9 +1047,9 @@ type
     procedure MoveToCurrentRow; virtual;
 
     function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
-      const CompareFuncs: TCompareFuncs; NullsFirst: Boolean = false): Integer; virtual;
+      const CompareFuncs: TZCompareFuncs; NullsFirst: Boolean = false): Integer; virtual;
     function GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
-      const CompareKinds: TComparisonKindArray): TCompareFuncs; virtual;
+      const CompareKinds: TComparisonKindArray): TZCompareFuncs; virtual;
 
     function GetStatement: IZStatement; virtual;
 
@@ -1478,193 +1478,152 @@ uses ZMessages, ZDbcUtils, ZDbcResultSetMetadata, ZEncoding, ZFastCode
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}, Math;
 
 {$IFDEF FPC} {$PUSH} {$WARN 5024 off : Parameter "$1" not used} {$ENDIF} // parameters not used intentionally
-function CompareNothing(const Null1, Null2: Boolean; const V1, V2): Integer; //emergency exit for complex types we can't sort quickly like arrays, ResultSet ...
+function CompareNothing(V1, V2: Pointer): Integer; //emergency exit for complex types we can't sort quickly like arrays, ResultSet ...
 begin
   Result := 0;
 end;
 {$IFDEF FPC} {$POP} {$ENDIF}
 
-function CompareBoolean_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBoolean_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(TZVariant(V1).VBoolean)-Ord(TZVariant(V2).VBoolean);
+  Result := Ord(PZVariant(V1)^.VBoolean)-Ord(PZVariant(V2)^.VBoolean);
 end;
 
-function CompareBoolean_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBoolean_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareBoolean_Asc(Null1, Null2, V1, V2);
+  Result := -CompareBoolean_Asc(V1, V2);
 end;
 
-function CompareInt64_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareInt64_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(TZVariant(V1).VInteger > TZVariant(V2).VInteger)-Ord(TZVariant(V1).VInteger < TZVariant(V2).VInteger);
+  Result := Ord(PZVariant(V1)^.VInteger > PZVariant(V2)^.VInteger)-Ord(PZVariant(V1)^.VInteger < PZVariant(V2)^.VInteger);
 end;
 
-function CompareInt64_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareInt64_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareInt64_Asc(Null1, Null2, V1, V2);
+  Result := -CompareInt64_Asc(V1, V2);
 end;
 
-function CompareUInt64_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUInt64_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(TZVariant(V1).VUInteger > TZVariant(V2).VUInteger)-Ord(TZVariant(V1).VUInteger < TZVariant(V2).VUInteger);
+  Result := Ord(PZVariant(V1)^.VUInteger > PZVariant(V2)^.VUInteger)-Ord(PZVariant(V1)^.VUInteger < PZVariant(V2)^.VUInteger);
 end;
 
-function CompareUInt64_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUInt64_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareUInt64_Asc(Null1, Null2, V1, V2);
+  Result := -CompareUInt64_Asc(V1, V2);
 end;
 
-function CompareDouble_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareDouble_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(CompareValue(TZVariant(V1).VDouble, TZVariant(V2).VDouble));
+  Result := Ord(CompareValue(PZVariant(V1)^.VDouble, PZVariant(V2)^.VDouble));
 end;
 
-function CompareDouble_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareDouble_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareDouble_Asc(Null1, Null2, V1, V2);
+  Result := -CompareDouble_Asc(V1, V2);
 end;
 
-function CompareCurrency_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareCurrency_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := Ord(TZVariant(V1).VCurrency > TZVariant(V2).VCurrency)-Ord(TZVariant(V1).VCurrency < TZVariant(V2).VCurrency);
+  Result := Ord(PZVariant(V1)^.VCurrency > PZVariant(V2)^.VCurrency)-Ord(PZVariant(V1)^.VCurrency < PZVariant(V2)^.VCurrency);
 end;
 
-function CompareCurrency_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareCurrency_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareCurrency_Asc(Null1, Null2, V1, V2);
+  Result := -CompareCurrency_Asc(V1, V2);
 end;
 
-function CompareBigDecimal_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBigDecimal_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := ZBCDCompare(PBCD(@TZVariant(V1).VBigDecimal.Precision)^, PBCD(@TZVariant(V2).VBigDecimal.Precision)^);
+  Result := ZBCDCompare(PBCD(@PZVariant(V1)^.VBigDecimal.Precision)^, PBCD(@PZVariant(V2)^.VBigDecimal.Precision)^);
 end;
 
-function CompareBigDecimal_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBigDecimal_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareBigDecimal_Asc(Null1, Null2, V1, V2);
+  Result := -CompareBigDecimal_Asc(V1, V2);
 end;
 
-function CompareDateTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareDateTime_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := ZCompareDateTime(TZVariant(V1).VDateTime, TZVariant(V2).VDateTime);
+  Result := ZCompareDateTime(PZVariant(V1)^.VDateTime, PZVariant(V2)^.VDateTime);
 end;
 
-function CompareTimeStamp_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareTimeStamp_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := ZCompareTimeStamp(TZVariant(V1).VTimeStamp, TZVariant(V2).VTimeStamp);
+  Result := ZCompareTimeStamp(PZVariant(V1)^.VTimeStamp, PZVariant(V2)^.VTimeStamp);
 end;
 
-function CompareDateTime_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareDateTime_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareDateTime_Asc(Null1, Null2, V1, V2);
+  Result := -CompareDateTime_Asc(V1, V2);
 end;
 
-function CompareTimeStamp_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareTimeStamp_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareTimeStamp_Asc(Null1, Null2, V1, V2);
+  Result := -CompareTimeStamp_Asc(V1, V2);
 end;
 
-function CompareDate_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareDate_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := 1
-  else if Null2 then Result := -1
-  else Result := ZCompareDate(TZVariant(V1).VDate, TZVariant(V2).VDate);
+  Result := ZCompareDate(PZVariant(V1)^.VDate, PZVariant(V2)^.VDate);
 end;
 
-function CompareDate_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareDate_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareDate_Asc(Null1, Null2, V1, V2);
+  Result := -CompareDate_Asc(V1, V2);
 end;
 
-function CompareTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareTime_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := ZCompareTime(TZVariant(V1).VTime, TZVariant(V2).VTime);
+  Result := ZCompareTime(PZVariant(V1)^.VTime, PZVariant(V2)^.VTime);
 end;
 
-function CompareTime_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareTime_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareDateTime_Asc(Null1, Null2, V1, V2);
+  Result := -CompareDateTime_Asc(V1, V2);
 end;
 
-function CompareBytes_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBytes_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1 else
-  begin
-    Result := Length(TZVariant(V1).VRawByteString) - Length(TZVariant(V2).VRawByteString); //overflow save!
-    if Result = 0 then
-      Result := ZMemLComp(Pointer(TZVariant(V1).VRawByteString), Pointer(TZVariant(V2).VRawByteString),
-        Length(TZVariant(V1).VRawByteString));
-  end;
+  Result := Length(PZVariant(V1)^.VRawByteString) - Length(PZVariant(V2)^.VRawByteString); //overflow save!
+  if Result = 0 then
+    Result := ZMemLComp(Pointer(PZVariant(V1)^.VRawByteString), Pointer(PZVariant(V2)^.VRawByteString),
+      Length(PZVariant(V1)^.VRawByteString));
 end;
 
-function CompareBytes_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareBytes_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareBytes_Asc(Null1, Null2, V1, V2);
+  Result := -CompareBytes_Asc(V1, V2);
 end;
 
 {$IFNDEF WITH_USC2_ANSICOMPARESTR_ONLY}
 {$IFDEF WITH_NOT_INLINED_WARNING}{$PUSH}{$WARN 6058 off : Call to subroutine "ReadInterbase6Number" marked as inline is not inlined}{$ENDIF}
-function CompareRawByteString_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareRawByteString_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
-  else Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
-    AnsiStrComp(PAnsiChar(TZVariant(V1).VRawByteString), PAnsiChar(TZVariant(V2).VRawByteString));
+  Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
+    AnsiStrComp(PAnsiChar(PZVariant(V1)^.VRawByteString), PAnsiChar(PZVariant(V2)^.VRawByteString));
 end;
 {$IFDEF WITH_NOT_INLINED_WARNING}{$POP}{$ENDIF}
 
-function CompareRawByteString_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareRawByteString_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareRawByteString_Asc(Null1, Null2, V1, V2);
+  Result := -CompareRawByteString_Asc(V1, V2);
 end;
 {$ENDIF}
 
-function CompareUnicodeString_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeString_Asc(V1, V2: Pointer): Integer;
 begin
-  if Null1 and Null2 then Result := 0
-  else if Null1 then Result := -1
-  else if Null2 then Result := 1
   {$IFDEF UNICODE}
-  else Result := AnsiCompareStr(TZVariant(V1).VUnicodeString, TZVariant(V2).VUnicodeString);
+  Result := AnsiCompareStr(PZVariant(V1)^.VUnicodeString, PZVariant(V2)^.VUnicodeString);
   {$ELSE}
-  else Result := WideCompareStr(TZVariant(V1).VUnicodeString, TZVariant(V2).VUnicodeString);
+  Result := WideCompareStr(PZVariant(V1)^.VUnicodeString, PZVariant(V2)^.VUnicodeString);
   {$ENDIF}
 end;
 
-function CompareUnicodeString_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeString_Desc(V1, V2: Pointer): Integer;
 begin
-  Result := -CompareUnicodeString_Asc(Null1, Null2, V1, V2);
+  Result := -CompareUnicodeString_Asc(V1, V2);
 end;
 
 { TZLocalMemCLob }
@@ -3555,7 +3514,7 @@ end;
   @param ColumnDirs compare direction for each columns.
 }
 function TZAbstractResultSet.CompareRows(Row1, Row2: NativeInt;
-  const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs;
+  const ColumnIndices: TIntegerDynArray; const CompareFuncs: TZCompareFuncs;
   NullsFirst: Boolean = false): Integer;
 var
   I: Integer;
@@ -3587,7 +3546,7 @@ begin
       end else if IsNull1 and IsNull2 then
         Result := 0
       else
-        Result := CompareFuncs[i](IsNull1, IsNull2, Value1, Value2);
+        Result := CompareFuncs[i](@Value1, @Value2);
       if Result <> 0 then Break;
     end;
   finally
@@ -3596,7 +3555,7 @@ begin
 end;
 
 function TZAbstractResultSet.GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
-  const CompareKinds: TComparisonKindArray): TCompareFuncs;
+  const CompareKinds: TComparisonKindArray): TZCompareFuncs;
 var I: Integer;
 begin
   {$IFDEF WITH_VAR_INIT_WARNING}Result := nil;{$ENDIF}

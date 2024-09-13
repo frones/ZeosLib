@@ -218,7 +218,7 @@ type
     FSortedFieldIndices: TIntegerDynArray;
     FSortedComparsionKinds: TComparisonKindArray;
     FSortedOnlyDataFields: Boolean;
-    FCompareFuncs: TCompareFuncs;
+    FCompareFuncs: TZCompareFuncs;
     FSortRowBuffer1: PZRowBuffer;
     FSortRowBuffer2: PZRowBuffer;
     FPrepared: Boolean;
@@ -3783,7 +3783,7 @@ begin
   end;
 end;
 
-type TProtectedPropField = class(TField);
+//type TProtectedPropField = class(TField);
 procedure TZAbstractRODataset.InternalOpen;
 var
   ColumnList: TObjectList;

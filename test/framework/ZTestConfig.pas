@@ -426,9 +426,11 @@ end;
 function TZTestConfiguration.ReadProperty(
   const Group, Key, Default: string): string;
 begin
-  if Assigned(FConfigFile) then
-    Result := Trim(FConfigFile.ReadString(Group, Group + '.' + Key, Default))
-  else Result := '';
+  if Assigned(FConfigFile) then begin
+    Result := Trim(FConfigFile.ReadString(Group, Group + '.' + Key, Default));
+    if (Result = '') and (Default <> '') then
+      Result := Default;
+  end else Result := '';
 end;
 
 function PathIsAbsolute(const Path: string): Boolean;

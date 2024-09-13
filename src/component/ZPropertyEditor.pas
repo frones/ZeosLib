@@ -802,7 +802,7 @@ begin
     if ((GetZComponent as TZAbstractConnection).Protocol = 'odbc_a') or
        ((GetZComponent as TZAbstractConnection).Protocol = 'odbc_w') then
       (GetZComponent as TZAbstractConnection).Database := GetConnectionString({%H-}Pointer({$IFDEF FPC}Application.MainFormHandle{$ELSE}Application.Handle{$ENDIF}),
-        (GetZComponent as TZAbstractConnection).Database, (GetZComponent as TZAbstractConnection).LibLocation)
+        (GetZComponent as TZAbstractConnection).Database, (GetZComponent as TZAbstractConnection).LibraryLocation)
 {$ENDIF}
     else
     begin
@@ -863,9 +863,9 @@ begin
   begin
     OD := TOpenDialog.Create(nil);
     try
-      OD.InitialDir := ExtractFilePath((GetZComponent as TZAbstractConnection).LibLocation);
+      OD.InitialDir := ExtractFilePath((GetZComponent as TZAbstractConnection).LibraryLocation);
       if OD.Execute then
-        (GetZComponent as TZAbstractConnection).LibLocation := OD.FileName;
+        (GetZComponent as TZAbstractConnection).LibraryLocation := OD.FileName;
     finally
       OD.Free;
     end;

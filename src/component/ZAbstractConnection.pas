@@ -291,7 +291,8 @@ type
     property User: string read GetUser write SetUser;
     property Password: string read GetPassword write SetPassword;
     property Protocol: string read GetProtocol write SetProtocol;
-    property LibLocation: string read GetLibLocation write SetLibLocation;
+    //property LibLocation: string read GetLibLocation write SetLibLocation; deprecated;
+    property LibraryLocation: string read GetLibLocation write SetLibLocation;
 
     property DbcDriver: IZDriver read GetDbcDriver;
     property DbcConnection: IZConnection read FConnection;
