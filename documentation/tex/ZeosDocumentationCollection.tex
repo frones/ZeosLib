@@ -13,6 +13,11 @@
 \usepackage{placeins}
 \usepackage{ulem}
 
+% One can use the package listings for formatting source code.
+% It provides commands for having code inside the paragraph as
+% well as for having code between paragraphs.
+\usepackage{listings}
+
 \setlength{\parskip}{0.2cm}
 
 \hypersetup{
@@ -49,6 +54,157 @@ The developer documentation is here for historic interests and to be a guide on 
 Also it should help to understand how Zeos was organized in the past and still is organized.
 
 \part{Zeos user documentation}
+
+\chapter{Zeos components reference}
+
+\section{Overview}
+To start with, a citation from "A ZEOS basics tutorial not only for Firebird ..." written by one of the founders, Michael Seeger:
+The name "ZEOS" has no special meaning. The founders of ZEOS found that this name just sounded good.
+Since that time the Library is called "ZEOS".
+
+Zeos consists of the following components:
+\begin{itemize}
+	\item TZConnection: encapsulates the connection to the database and a transaction.
+	\item TZTransaction: encapsulates additional transactions on databases that support it.
+	\item TZQuery: encapsulates a query to database and the corresponding result set(s). Results can be modified.
+	\item TZReadOnlyQuery: encapsulates a query to database and the corresponding result set(s). Results cannot be modified. This component is more lightweight than TZQuery.
+	\item TZTable: An emulation of the BDE TTable component.
+	\item TZMemTable: A Zeos based implementation of an in memory table that is not connected to any database.
+	\item TZUpdateSQL: A component that allows specifying database commands for doing insert, update, delete and refresh operations.
+	  Can be used to make a result set writable that is not normally writable.
+	\item TZStoredProc: encapsulates stored procedures of a database.
+    \item TZSequence: encapsulates sequences (generators in Firebird).
+      Can be used to assign values to key columns of a TZQuery.
+	\item TZSQLMetadata: A component for retrieving metadata about a database.
+	\item TZSQLProcessor: A component for processing SQL scripts.
+	\item TZSQLMonitor: A component for logging what Zeos does on a database.
+	  Logs the execution of statements and other actions.
+	\item TZIBEventAlewrter:
+	  A receiver component for events on Interbase and Firebird.
+	\item TZPgEventEventAlerter:
+	  A receiver component for events on PostgreSQL.
+	\item TZEventListener:
+	  ??? Egonhugeist, what does this component do?
+	\item TZConnectionGroup:
+	   Provides configuration information for a TZGroupedConnection.
+	   When used with connection pooling, more or less represents the connection pool.
+	\item TZGroupedConnection:
+	  A special Zeos connection object that works like TZConnection but gets its configuration information from a TZConnectionGroup.
+\end{itemize}
+
+\section{TZConnection}
+TZConnection represents the connection to a database.
+It is the central point for configuring database access and do basic operations.
+
+\subsection{TZConnection properties}
+
+\subsubsection{AddLogMsgToExceptionOrWarningMsg}
+EgonHugeist: what does this do?
+
+\FloatBarrier
+\subsubsection{AutoCommit}
+
+\begin{figure}
+	\includegraphics[width=\linewidth]{Reference/autocommit.png}
+	\caption{state diagram for auto comit mode}
+	\label{fig:autocommit}
+\end{figure}
+
+AutoCommit enables or disables AutoCommit mode.
+
+In AutoCommit mode Zeos will do an implicit commit to the database after each write operation.
+For databases that do support auto commit on their own (Firebird, MS SQL, ...) Zeos will leave it to the database when to do a commit operation.
+Usually one would do that kind of thing, if you display some data to your user and any change should be committed to the database immediately.
+If you ocassionally need a transaction where you want to do multiple operations in one transaction and need to fully be in control of when to commit, you can start an explicit transaction by calling StartTransaction.
+In that case StartTransaction temporarily disables AutoCommit until you call Rollback or Commit. Either one of them will bring you back to the AutoCommit mode.
+
+Beware:
+There are cases where Zeos will not be able to identify a write operation and possibly doesn't do a commit.
+That can happen if you have a stored procedure that changes data and also returns records.
+In that case your sql probably looks similar to this:
+
+\begin{lstlisting}
+select * from someprocedure;
+\end{lstlisting}
+
+or 
+
+\begin{lstlisting}
+select * from someprocedure(:param1, :param2);
+\end{lstlisting}
+
+In some of these cases Zeos might think you are only doing a read and doesn't commit immediately afterwards.
+
+If you always want to be in control when to commit, then AutoCommit mode probably isn't for you.
+In that case set AutoCommit to false.
+Zeos will start a transaction for you immediately after you connect to the database.
+Calling Commit or Rollback will end that transaction and immediately start a new transaction.
+Zeos will never do a commit or rollback on its own.
+
+\FloatBarrier
+\subsubsection{Catalog}
+Defines the default schema to use, if a database supports schemas.
+
+\subsubsection{ClientCodepage}
+Defines the character set to use whan communicating to a server.
+Accepted values depend on the database implementation.
+
+\subsubsection{Database}
+The name of the database to connect to.
+On some implementations it can have a special meaning like in ODBC or OLEDB, where it contains the connection string.
+
+\subsubsection{DesignConnection}
+EgonHugeist: what does this do?
+
+\subsubsection{DisableSavepoints}
+Starting with Zeos 8 Zeos can use savepoints to emulate nested transactions.
+Setting this to True will disable the usage of savepoints and generate an exception if a savepoint would be generated.
+
+\subsubsection{FormatSettings}
+Allows changing the format of dates and times when displayed in Edit fields and DbGrid.
+If left empty, the systems default values will be used.
+
+\begin{itemize}
+	\item 
+	    DisplayDateFormatSettings: Describes how dates are formatted when displayed.
+	\item
+	    DisplayTimeFormatSettings: Describes how times are formatted when displayed.
+	\item
+	    DisplayTimestampFormatSettings: Describes how timesstamps (combination of date and time) are formatted when displayed.
+	\item 
+        EditDateFormatSettings: Describes how dates are formatted when edited.
+    \item
+        EditTimeFormatSettings: Describes how times are formatted when edited.
+    \item
+        EditTimestampFormatSettings: Describes how timesstamps (combination of date and time) are formatted when edited.
+\end{itemize}
+
+\subsubsection{HostName}
+The hostname to connect to on databases that have servers.
+Please read the protocol specific notes for exceptions (ADO, ODBC, OLEDB, Oracle).
+
+\subsubsection{LibraryLocation}
+Can be used to specify the client library to use for connecting to the database.
+
+If not specified, Zeos will try a list of library names.
+In most cases it makes sense to specify the the full path of the client library to use.
+
+\subsubsection{LoginPrompt}
+If set to true, Zeos will show a window to specify the username and password before connecting to the database.
+
+\subsubsection{Password}
+Specifies the password to use when connecting to the database.
+
+\subsubsection{Port}
+Specifies the TCP port to use when connecting to the database server.
+It has no meaning for databases, that don't support servers (SQLite).
+
+\subsubsection{Properties}
+Most Zeos drivers allow to set additional parameters that can influence the connection to the database or the usage of the database or the operation of the drivers themselves.
+Properties is a list of name value pairs that can be used to specify these additional parameters.
+Unknown parameters and empty lines are ignored.
+
+
 
 \chapter{A ZEOS basics tutorial not only for Firebird ...}
 This tutorial was originally written by Michael Seeger.
