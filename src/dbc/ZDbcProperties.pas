@@ -990,8 +990,9 @@ const
   ///  for the ODBC connection only. Example:
   ///  Properties.Values[ConnProps_Server]=(localdb)\ZeosLib</summary>
   ConnProps_Server = 'Server';
-  // Type: Float
-  // Default is 3.80 processed as 380
+  // Type: Number
+  // Default is 380 which is mapped to version 3.8
+  // Also allowed is 3 which is mapped to version 3.0
   ConnProps_ODBC_Version = 'ODBC_Version';
 {$ENDIF}
 
