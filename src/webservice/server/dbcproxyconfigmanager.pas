@@ -76,6 +76,8 @@ type
 
   TDbcProxyBaseConfigManager = class(TInterfacedObject, IZDbcProxyConfigStore)
   protected
+    FConfigList: TDbcProxyConnConfigList;
+
     // general stuff
     FListeningPort: Word;
     FIPAddress: String;
@@ -119,7 +121,7 @@ type
     property CertificateFile: String read FCertificateFile;
     property KeyFile: String read FKeyFile;
     property KeyPasswod: String read FKeyPasswod;
-    function ConstructUrl(ConfigName, UserName, Password: String; CheckSecurity: Boolean = True): String; virtual; abstract;
+    function ConstructUrl(ConfigName, UserName, Password: String; CheckSecurity: Boolean = True): String; virtual;
     procedure LoadBaseConfig; virtual; abstract;
     procedure LoadConnectionConfig; virtual; abstract;
     function GetSecurityConfig(const Name: String): IZDbcProxyKeyValueStore; virtual; abstract;
@@ -134,7 +136,7 @@ type
       FStore: TDbcProxyIniConfigManager;
     public
       function ReadString(const Key, DefaultValue: String): String;
-      function ReadInteger(const Key: String; DefaultVaue: Integer): Integer;
+      function ReadInteger(const Key: String; DefaultValue: Integer): Integer;
       function ReadBool(const Key: String; DefaultValue: Boolean): Boolean;
       function GetName: String;
       function GetConfigStore: IZDbcProxyConfigStore;
@@ -144,7 +146,6 @@ type
   TDbcProxyIniConfigManager = class(TDbcProxyBaseConfigManager)
   protected
     // general stuff
-    FConfigList: TDbcProxyConnConfigList;
     FDbPrefix: String;
     FSecurityPrefix: String;
     FIniFileName: String;
@@ -152,7 +153,6 @@ type
   public
     property DbPrefix: String read FDbPrefix;
     property SecurityPrefix: String read FSecurityPrefix;
-    function ConstructUrl(ConfigName, UserName, Password: String; CheckSecurity: Boolean = True): String; override;
     procedure LoadBaseConfig; override;
     procedure LoadConnectionConfig; override;
     function GetSecurityConfig(const Name: String): IZDbcProxyKeyValueStore; override;
@@ -224,6 +224,43 @@ begin
   Result := FKeyPasswod;
 end;
 
+function TDbcProxyBaseConfigManager.ConstructUrl(ConfigName, UserName, Password: String; CheckSecurity: Boolean = True): String;
+var
+  x: Integer;
+  found: Boolean;
+  Cfg: TDbcProxyConnConfig;
+  Properties: TStringList;
+begin
+  ConfigName := LowerCase(ConfigName);
+  found := false;
+  Logger.Debug('Finding Connection...');
+  if not Assigned(FConfigList) then
+    raise Exception.Create('ConfigList is not assigned.');
+  for x := 0 to FConfigList.Count - 1 do begin
+    if FConfigList.Items[x].ConfigName = ConfigName then begin
+      Cfg := FConfigList.Items[x];
+      found := true;
+      break;
+    end;
+  end;
+
+  if not found then
+    raise EZSQLException.Create('No config named ' + ConfigName + ' was found.');
+
+  Logger.Debug('Checking Security...');
+  if CheckSecurity and Assigned(Cfg.SecurityModule)
+    then if not Cfg.SecurityModule.CheckPassword(UserName, Password, ConfigName) then
+      raise Exception.Create('Could not validate username / password.');
+
+  Properties := TStringList.Create;
+  try
+    Properties.Values['codepage'] := Cfg.ClientCodepage;
+    Result := DriverManager.ConstructURL(Cfg.Protocol, Cfg.HostName, Cfg.Database, UserName, Password, Cfg.Port, Properties, Cfg.LibraryLocation);
+  finally
+    FreeAndNil(Properties);
+  end;
+end;
+
 { TDbcProxyIniKeyValueProvider }
 
 function TDbcProxyIniKeyValueProvider.ReadString(const Key, DefaultValue: String): String;
@@ -231,9 +268,9 @@ begin
   Result := FIniFile.ReadString(FSectionName, Key, DefaultValue);
 end;
 
-function TDbcProxyIniKeyValueProvider.ReadInteger(const Key: String; DefaultVaue: Integer): Integer;
+function TDbcProxyIniKeyValueProvider.ReadInteger(const Key: String; DefaultValue: Integer): Integer;
 begin
-  Result := FIniFile.ReadInteger(FSectionName, Key, DefaultVaue);
+  Result := FIniFile.ReadInteger(FSectionName, Key, DefaultValue);
 end;
 
 function TDbcProxyIniKeyValueProvider.ReadBool(const Key: String; DefaultValue: Boolean): Boolean;
@@ -259,7 +296,7 @@ begin
   FSectionName := SectionName;
 end;
 
-{ TDbcProxyConfigManager }
+{ TDbcProxyIniConfigManager }
 
 constructor TDbcProxyIniConfigManager.Create(IniFileName: String);
 begin
@@ -371,38 +408,6 @@ begin
       FreeAndNil(Sections);
     if assigned(FIniFile) then
       FreeAndNil(FIniFile);
-  end;
-end;
-
-function TDbcProxyIniConfigManager.ConstructUrl(ConfigName, UserName, Password: String; CheckSecurity: Boolean = True): String;
-var
-  x: Integer;
-  found: Boolean;
-  Cfg: TDbcProxyConnConfig;
-  Properties: TStringList;
-begin
-  ConfigName := LowerCase(ConfigName);
-  found := false;
-  for x := 0 to FConfigList.Count - 1 do begin
-    if FConfigList.Items[x].ConfigName = ConfigName then begin
-      Cfg := FConfigList.Items[x];
-      found := true;
-      break;
-    end;
-  end;
-
-  if not found then raise EZSQLException.Create('No config named ' + ConfigName + ' was found.');
-
-  if CheckSecurity and Assigned(Cfg.SecurityModule)
-    then if not Cfg.SecurityModule.CheckPassword(UserName, Password, ConfigName) then
-      raise Exception.Create('Could not validate username / password.');
-
-  Properties := TStringList.Create;
-  try
-    Properties.Values['codepage'] := Cfg.ClientCodepage;
-    Result := DriverManager.ConstructURL(Cfg.Protocol, Cfg.HostName, Cfg.Database, UserName, Password, Cfg.Port, Properties, Cfg.LibraryLocation);
-  finally
-    FreeAndNil(Properties);
   end;
 end;
 

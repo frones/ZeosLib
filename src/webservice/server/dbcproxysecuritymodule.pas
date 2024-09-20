@@ -114,6 +114,21 @@ type
     procedure LoadConfig(Values: IZDbcProxyKeyValueStore); override;
   end;
 
+  {
+  TZIntegratedSecurityModule = class(TZAbstractSecurityModule)
+  protected
+    FDBUser: String;
+    FDBPassword: String;
+    FPasswordSQL: String;
+    FReplacementUser: String;
+    FReplacementPassword: String;
+    FAddDatabaseToUserName: Boolean;
+    FAuthDbName: String;
+  public
+    function CheckPassword(var XUserName, Password: String; const ConnectionName: String): Boolean; override;
+    procedure LoadConfig(Values: IZDbcProxyKeyValueStore); override;
+  end;
+  }
   TZChainedSecurityModule = class(TZAbstractSecurityModule)
   protected
     FModuleChain: Array of TZAbstractSecurityModule;
@@ -137,6 +152,7 @@ function GetSecurityModule(TypeName: String): TZAbstractSecurityModule;
 implementation
 
 uses DbcProxyConfigManager, zeosproxy_imp, StrUtils, Types, ZExceptions
+     {$IFDEF ENABLE_BCRYPT}, BCrypt{$ENDIF}
      {$IFDEF ENABLE_LDAP_SECURITY},DbcProxyLdapSecurityModule{$ENDIF}
      ;
 
@@ -206,6 +222,7 @@ var
   YubikeysUser: String;
 begin
   Result := False;
+  YubikeysUser := '';
 
   if FAddDatabase then
     YubikeysUser := YubikeysUser + FDatabaseSeparator + ConnectionName
@@ -348,6 +365,9 @@ var
   DBUserName: String;
   PWUserName: String;
   Position: Integer;
+  {$IFDEF ENABLE_BCRYPT}
+  BCrypt: TBCryptHash;
+  {$ENDIF}
 begin
   Result := False;
 
@@ -410,10 +430,22 @@ begin
     CryptPwdUser := crypt_md5(Password, CryptPwdDB)
   else if pwdStart = 'md5' then //md5 by PpostgreSQL
     CryptPwdUser := crypt_md5pg(Password, PWUserName)
-  else
+  {$IFDEF ENABLE_BCRYPT}
+  else if copy(CryptPwdDB, 1, 4) = '$2y$' then begin
+    BCrypt := TBCryptHash.Create;
+    try
+      Result := BCrypt.VerifyHash(Password, CryptPwdDB);
+    finally
+      FreeAndNil(BCrypt);
+    end;
+  {$ENDIF}
+  end else
     CryptPwdUser := '$$$$$$$$$$'; // $-Signs shouldn't make up a valid crypted password.
-  Result := CryptPwdDB = CryptPwdUser;
-  Logger.Debug('Integrated security module: CryptPwdUser:' + CryptPwdUser + ' CryptPwdDB: ' + CryptPwdDB);
+
+  if not Result then begin
+    Result := CryptPwdDB = CryptPwdUser;
+    Logger.Debug('Integrated security module: CryptPwdUser:' + CryptPwdUser + ' CryptPwdDB: ' + CryptPwdDB);
+  end;
 
   if FReplacementUser <> '' then begin
     XUserName := FReplacementUser;

@@ -31,10 +31,13 @@ type
       FFileOpened: Boolean;
       FLogFile: TextFile;
       FFileLock: TCriticalSection;
+      FEnabled: Boolean;
       procedure Log(MessageStr: String); override;
     public
+      procedure LogLine(MessageStr: String);
       constructor Create(LogFileName: String); virtual;
       destructor Destroy; override;
+      property Enabled: Boolean read FEnabled write FEnabled;
   end;
 
   TDbcProxyConsoleLogger = class(TDbcProxyWritelnLogger)
@@ -100,6 +103,19 @@ begin
     Flush(FLogFile);
   finally
     FFileLock.Leave;
+  end;
+end;
+
+procedure TDbcProxyFileLogger.LogLine(MessageStr: String);
+begin
+  if FEnabled then begin;
+    FFileLock.Enter;
+    try
+      WriteLn(FLogFile, MessageStr);
+      Flush(FLogFile);
+    finally
+      FFileLock.Leave;
+    end;
   end;
 end;
 
