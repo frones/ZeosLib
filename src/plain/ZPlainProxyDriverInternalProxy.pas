@@ -118,7 +118,9 @@ type
       function GetProcedures(const Catalog, SchemaPattern, ProcedureNamePattern : WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
       function GetProcedureColumns(const Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
       function GetCharacterSets(): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
-      function GetPublicKeys: WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetPublicKeys: WideString; overload; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+      function GetPublicKeys(EndPoint: WideString): WideString; overload; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+
 
       constructor Create;
       destructor Destroy; override;
@@ -186,15 +188,18 @@ var
 begin
   PubKey := LowerCase(Certificate.PublicKey);
   Accepted := FValidPublicKeys.Count = 0;
-  if Accepted then
-    FValidPublicKeys.Add(PubKey)
-  else
+  if Accepted then begin
+    if PubKey <> '' then
+      FValidPublicKeys.Add(PubKey)
+  end else
     Accepted := 0 <= FValidPublicKeys.IndexOf(PubKey);
 end;
 
 procedure TZDbcProxy.BeforePostData(const HTTPReqResp: THTTPReqResp; Client: THTTPClient);
 begin
+  //{$IFNDEF ANDROID}
   HTTPReqResp.HTTP.OnValidateServerCertificate := ValidateServerCertificate;
+  //{$ENDIF}
 end;
 {$ENDIF}
 
@@ -206,6 +211,7 @@ var
   MyOutProperties: UnicodeString;
   MyDbInfo: UnicodeString;
   PropList: TStringList;
+  Certs: String;
 begin
   FRIO := THTTPRIO.Create(nil);
   Url := ServiceEndpoint;
@@ -214,9 +220,15 @@ begin
   try
     PropList.DelimitedText := Properties;
     {$IFDEF TCERTIFICATE_HAS_PUBLICKEY}
-    if PropList.IndexOfName('TofuCerts') > 0 then begin
+    if PropList.IndexOfName('TofuPubKeys') > 0 then begin
+      {$IFDEF ANDROID}
+      FRIO.HTTPWebNode.InvokeOptions := FRIO.HTTPWebNode.InvokeOptions + [soIgnoreInvalidCerts];
+      {$ELSE}
       FRIO.HTTPWebNode.OnBeforePost := BeforePostData;
-      FValidPublicKeys.DelimitedText := LowerCase(Trim(PropList.Values['TofuCerts']));
+      Certs := LowerCase(Trim(PropList.Values['TofuPubKeys']));
+      if Certs <> 'yes' then
+        FValidPublicKeys.DelimitedText := Certs;
+      {$ENDIF}
     end;
     {$ENDIF}
   finally
@@ -389,6 +401,22 @@ begin
     FValidPublicKeys.DelimitedText := LowerCase(Result)
   else
     Result := FValidPublicKeys.DelimitedText;
+end;
+
+function TZDbcProxy.GetPublicKeys(EndPoint: WideString): WideString; {$IFNDEF NO_SAFECALL}safecall;{$ENDIF}
+var
+  Url: String;
+  FRIO: THTTPRIO;
+  MyService: IZeosProxy;
+begin
+  FRIO := THTTPRIO.Create(nil);
+  Url := Endpoint;
+  FRIO.HTTPWebNode.InvokeOptions := [soIgnoreInvalidCerts];
+  MyService := GetIZeosProxy(false, Url, FRIO);
+  if Assigned(MyService) then
+    Result := MyService.GetPublicKeys
+  else
+    FreeAndNil(FRIO);
 end;
 
 initialization

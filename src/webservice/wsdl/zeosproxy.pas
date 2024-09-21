@@ -2,7 +2,7 @@
 This unit has been produced by ws_helper.
   Input unit name : "zeosproxy".
   This unit name  : "zeosproxy".
-  Date            : "15.12.2023 17:53:32".
+  Date            : "21.09.2024 17:27:26".
 }
 unit zeosproxy;
 {$IFDEF FPC}
@@ -19,9 +19,36 @@ const
 
 type
 
-  StringArray = class;
+  TStatementDescriptions = class;
+  TStringArray = class;
 
-  StringArray = class(TBaseSimpleTypeArrayRemotable)
+{ TStatementDescription
+A description for a statement that is to be executed.
+}
+  TStatementDescription = record
+    SQL : UnicodeString;
+    Parameters : UnicodeString;
+    MaxRows : LongWord;
+  end;
+
+  TStatementDescriptions = class(TBaseSimpleTypeArrayRemotable)
+  private
+    FData : array of TStatementDescription;
+  private
+    function GetItem(AIndex: Integer): TStatementDescription;
+    procedure SetItem(AIndex: Integer; const AValue: TStatementDescription);
+  protected
+    function GetLength():Integer;override;
+    procedure SaveItem(AStore : IFormatterBase;const AName : String;const AIndex : Integer);override;
+    procedure LoadItem(AStore : IFormatterBase;const AIndex : Integer);override;
+  public
+    class function GetItemTypeInfo():PTypeInfo;override;
+    procedure SetLength(const ANewSize : Integer);override;
+    procedure Assign(Source: TPersistent); override;
+    property Item[AIndex:Integer] : TStatementDescription read GetItem write SetItem; default;
+  end;
+
+  TStringArray = class(TBaseSimpleTypeArrayRemotable)
   private
     FData : array of UnicodeString;
   private
@@ -174,7 +201,11 @@ type
     function StartTransaction(
       const  ConnectionID : UnicodeString
     ):integer;
-    function GetPublicKeys():string;
+    function GetPublicKeys():UnicodeString;
+    function ExecuteMultipleStmts(
+      const  ConnectionID : UnicodeString; 
+       Statements : TStatementDescriptions
+    ):TStringArray;
   end;
 
   procedure Register_zeosproxy_ServiceMetadata();
@@ -182,44 +213,44 @@ type
 Implementation
 uses metadata_repository, record_rtti, wst_types;
 
-{ StringArray }
+{ TStatementDescriptions }
 
-function StringArray.GetItem(AIndex: Integer): UnicodeString;
+function TStatementDescriptions.GetItem(AIndex: Integer): TStatementDescription;
 begin
   CheckIndex(AIndex);
   Result := FData[AIndex];
 end;
 
-procedure StringArray.SetItem(AIndex: Integer;const AValue: UnicodeString);
+procedure TStatementDescriptions.SetItem(AIndex: Integer;const AValue: TStatementDescription);
 begin
   CheckIndex(AIndex);
   FData[AIndex] := AValue;
 end;
 
-function StringArray.GetLength(): Integer;
+function TStatementDescriptions.GetLength(): Integer;
 begin
   Result := System.Length(FData);
 end;
 
-procedure StringArray.SaveItem(AStore: IFormatterBase;const AName: String; const AIndex: Integer);
+procedure TStatementDescriptions.SaveItem(AStore: IFormatterBase;const AName: String; const AIndex: Integer);
 begin
-  AStore.Put('_item',TypeInfo(UnicodeString),FData[AIndex]);
+  AStore.Put('_item',TypeInfo(TStatementDescription),FData[AIndex]);
 end;
 
-procedure StringArray.LoadItem(AStore: IFormatterBase;const AIndex: Integer);
+procedure TStatementDescriptions.LoadItem(AStore: IFormatterBase;const AIndex: Integer);
 var
   sName : string;
 begin
   sName := '_item';
-  AStore.Get(TypeInfo(UnicodeString),sName,FData[AIndex]);
+  AStore.Get(TypeInfo(TStatementDescription),sName,FData[AIndex]);
 end;
 
-class function StringArray.GetItemTypeInfo(): PTypeInfo;
+class function TStatementDescriptions.GetItemTypeInfo(): PTypeInfo;
 begin
-  Result := TypeInfo(UnicodeString);
+  Result := TypeInfo(TStatementDescription);
 end;
 
-procedure StringArray.SetLength(const ANewSize: Integer);
+procedure TStatementDescriptions.SetLength(const ANewSize: Integer);
 var
   i : Integer;
 begin
@@ -230,13 +261,80 @@ begin
   System.SetLength(FData,i);
 end;
 
-procedure StringArray.Assign(Source: TPersistent);
+procedure TStatementDescriptions.Assign(Source: TPersistent);
 var
-  src : StringArray;
+  src : TStatementDescriptions;
   i, c : Integer;
 begin
-  if Assigned(Source) and Source.InheritsFrom(StringArray) then begin
-    src := StringArray(Source);
+  if Assigned(Source) and Source.InheritsFrom(TStatementDescriptions) then begin
+    src := TStatementDescriptions(Source);
+    c := src.Length;
+    Self.SetLength(c);
+    if ( c > 0 ) then begin
+      for i := 0 to Pred(c) do begin
+        Self[i] := src[i];
+      end;
+    end;
+  end else begin
+    inherited Assign(Source);
+  end;
+end;
+
+{ TStringArray }
+
+function TStringArray.GetItem(AIndex: Integer): UnicodeString;
+begin
+  CheckIndex(AIndex);
+  Result := FData[AIndex];
+end;
+
+procedure TStringArray.SetItem(AIndex: Integer;const AValue: UnicodeString);
+begin
+  CheckIndex(AIndex);
+  FData[AIndex] := AValue;
+end;
+
+function TStringArray.GetLength(): Integer;
+begin
+  Result := System.Length(FData);
+end;
+
+procedure TStringArray.SaveItem(AStore: IFormatterBase;const AName: String; const AIndex: Integer);
+begin
+  AStore.Put('_item',TypeInfo(UnicodeString),FData[AIndex]);
+end;
+
+procedure TStringArray.LoadItem(AStore: IFormatterBase;const AIndex: Integer);
+var
+  sName : string;
+begin
+  sName := '_item';
+  AStore.Get(TypeInfo(UnicodeString),sName,FData[AIndex]);
+end;
+
+class function TStringArray.GetItemTypeInfo(): PTypeInfo;
+begin
+  Result := TypeInfo(UnicodeString);
+end;
+
+procedure TStringArray.SetLength(const ANewSize: Integer);
+var
+  i : Integer;
+begin
+  if ( ANewSize < 0 ) then
+    i := 0
+  else
+    i := ANewSize;
+  System.SetLength(FData,i);
+end;
+
+procedure TStringArray.Assign(Source: TPersistent);
+var
+  src : TStringArray;
+  i, c : Integer;
+begin
+  if Assigned(Source) and Source.InheritsFrom(TStringArray) then begin
+    src := TStringArray(Source);
     c := src.Length;
     Self.SetLength(c);
     if ( c > 0 ) then begin
@@ -996,16 +1094,69 @@ begin
     'FORMAT_OutputEncodingStyle',
     'literal'
   );
+  mm.SetOperationCustomData(
+    sUNIT_NAME,
+    'IZeosProxy',
+    'ExecuteMultipleStmts',
+    '_E_N_',
+    'ExecuteMultipleStmts'
+  );
+  mm.SetOperationCustomData(
+    sUNIT_NAME,
+    'IZeosProxy',
+    'ExecuteMultipleStmts',
+    'TRANSPORT_soapAction',
+    ''
+  );
+  mm.SetOperationCustomData(
+    sUNIT_NAME,
+    'IZeosProxy',
+    'ExecuteMultipleStmts',
+    'FORMAT_Input_EncodingStyle',
+    'literal'
+  );
+  mm.SetOperationCustomData(
+    sUNIT_NAME,
+    'IZeosProxy',
+    'ExecuteMultipleStmts',
+    'FORMAT_OutputEncodingStyle',
+    'literal'
+  );
 end;
 
 
+
+{$IFDEF WST_RECORD_RTTI}
+function __TStatementDescription_TYPEINFO_FUNC__() : PTypeInfo;
+var
+  p : ^TStatementDescription;
+  r : TStatementDescription;
+begin
+  p := @r;
+  Result := MakeRawTypeInfo(
+    'TStatementDescription',
+    SizeOf(TStatementDescription),
+    [ PtrUInt(@(p^.SQL)) - PtrUInt(p), PtrUInt(@(p^.Parameters)) - PtrUInt(p), PtrUInt(@(p^.MaxRows)) - PtrUInt(p) ],
+    [ TypeInfo(UnicodeString), TypeInfo(UnicodeString), TypeInfo(LongWord) ]
+  );
+end;
+{$ENDIF WST_RECORD_RTTI}
 var
   typeRegistryInstance : TTypeRegistry = nil;
 initialization
   typeRegistryInstance := GetTypeRegistry();
 
-  typeRegistryInstance.Register(sNAME_SPACE,TypeInfo(StringArray),'StringArray');
+  typeRegistryInstance.Register(sNAME_SPACE,TypeInfo(TStatementDescriptions),'TStatementDescriptions');
+  typeRegistryInstance.Register(sNAME_SPACE,TypeInfo(TStringArray),'TStringArray');
 
+
+  typeRegistryInstance.Register(sNAME_SPACE,TypeInfo(TStatementDescription),'TStatementDescription').RegisterExternalPropertyName('__FIELDS__','SQL;Parameters;MaxRows');
+{$IFNDEF WST_RECORD_RTTI}
+  typeRegistryInstance.ItemByTypeInfo[TypeInfo(TStatementDescription)].RegisterObject(FIELDS_STRING,TRecordRttiDataObject.Create(MakeRecordTypeInfo(TypeInfo(TStatementDescription)),GetTypeRegistry().ItemByTypeInfo[TypeInfo(TStatementDescription)].GetExternalPropertyName('__FIELDS__')));
+{$ENDIF WST_RECORD_RTTI}
+{$IFDEF WST_RECORD_RTTI}
+  typeRegistryInstance.ItemByTypeInfo[TypeInfo(TStatementDescription)].RegisterObject(FIELDS_STRING,TRecordRttiDataObject.Create(MakeRecordTypeInfo(__TStatementDescription_TYPEINFO_FUNC__()),GetTypeRegistry().ItemByTypeInfo[TypeInfo(TStatementDescription)].GetExternalPropertyName('__FIELDS__')));
+{$ENDIF WST_RECORD_RTTI}
 
 
 End.

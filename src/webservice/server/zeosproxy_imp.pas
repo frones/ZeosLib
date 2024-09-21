@@ -2,7 +2,7 @@
 This unit has been produced by ws_helper.
   Input unit name : "zeosproxy".
   This unit name  : "zeosproxy_imp".
-  Date            : "29.03.2023 20:49:32".
+  Date            : "21.09.2024 17:27:26".
 }
 Unit zeosproxy_imp;
 
@@ -13,10 +13,17 @@ Interface
 Uses SysUtils, Classes, 
      base_service_intf, server_service_intf, zeosproxy,
      ZDbcProxyManagement, DbcProxyConnectionManager, DbcProxyConfigManager,
-     DbcProxyFileLogger, DbcProxyConfigStore;
+     DbcProxyFileLogger, DbcProxyConfigStore, ZDbcIntfs;
 
 type
   TZeosProxy_ServiceImp=class(TBaseServiceImplementation,IZeosProxy)
+  Private
+    function ExecuteSingleStmt(
+      Connection: IZConnection;
+      const  SQL : UnicodeString;
+      const  Parameters : UnicodeString;
+      const  MaxRows : LongWord
+    ): UnicodeString;
   Protected
     function Connect(
       const  UserName : UnicodeString; 
@@ -152,7 +159,11 @@ type
     function StartTransaction(
       const  ConnectionID : UnicodeString
     ):integer;
-    function GetPublicKeys():string;
+    function GetPublicKeys():UnicodeString;
+    function ExecuteMultipleStmts(
+      const  ConnectionID : UnicodeString;
+       Statements : TStatementDescriptions
+    ):TStringArray;
   End;
 
 
@@ -166,7 +177,7 @@ var
 
 Implementation
 
-uses config_objects, ZDbcIntfs, DbcProxyUtils, ZDbcXmlUtils{$IFDEF ENABLE_TOFU_CERTIFICATES}, dbcproxycertstore, types{$ENDIF};
+uses config_objects, DbcProxyUtils, ZDbcXmlUtils{$IFDEF ENABLE_TOFU_CERTIFICATES}, dbcproxycertstore, types{$ENDIF};
 
 { TZeosProxy_ServiceImp implementation }
 function TZeosProxy_ServiceImp.Connect(
@@ -273,20 +284,19 @@ Begin
   AuditLogger.LogLine('SetProperties');
 End;
 
-function TZeosProxy_ServiceImp.ExecuteStatement(
-  const  ConnectionID : UnicodeString; 
-  const  SQL : UnicodeString; 
-  const  Parameters : UnicodeString; 
+function TZeosProxy_ServiceImp.ExecuteSingleStmt(
+  Connection: IZConnection;
+  const  SQL : UnicodeString;
+  const  Parameters : UnicodeString;
   const  MaxRows : LongWord
-):UnicodeString;
+): UnicodeString;
 var
   Statement: IZPreparedStatement;
   ResultSet: IZResultSet;
-  ResultStr: UTF8String;
-Begin
-  with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
+  ResultStr: String;
+begin
   try
-    Statement := ZeosConnection.PrepareStatementWithParams(UTF8Encode(SQL), nil);
+    Statement := Connection.PrepareStatementWithParams(UTF8Encode(SQL), nil);
     if Parameters <> '' then
       DecodeParameters(UTF8Encode(Parameters), Statement);
     Statement.SetResultSetConcurrency(rcReadOnly);
@@ -301,9 +311,25 @@ Begin
     end else
       Result := UnicodeString(IntToStr(Statement.GetUpdateCount));
   finally
-    Unlock;
-    Statement := nil;
     ResultSet := nil;
+    Statement := nil;
+  end;
+end;
+
+function TZeosProxy_ServiceImp.ExecuteStatement(
+  const  ConnectionID : UnicodeString; 
+  const  SQL : UnicodeString; 
+  const  Parameters : UnicodeString; 
+  const  MaxRows : LongWord
+):UnicodeString;
+var
+  ResultStr: UTF8String;
+Begin
+  with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
+  try
+    Result := ExecuteSingleStmt(ZeosConnection, SQL, Parameters, MaxRows);
+  finally
+    Unlock;
   end;
   AuditLogger.LogLine('ExecuteStatement');
   AuditLogger.LogLine(String(SQL));
@@ -646,7 +672,7 @@ Begin
   AuditLogger.LogLine('StartTransaction');
 End;
 
-function TZeosProxy_ServiceImp.GetPublicKeys():string;
+function TZeosProxy_ServiceImp.GetPublicKeys():UnicodeString;
 {$IFDEF ENABLE_TOFU_CERTIFICATES}
 var
   X: Integer;
@@ -665,6 +691,28 @@ Begin
   end else
     Result := '';
   {$ENDIF}
+End;
+
+function TZeosProxy_ServiceImp.ExecuteMultipleStmts(
+  const  ConnectionID : UnicodeString;
+   Statements : TStatementDescriptions
+):TStringArray;
+var
+  x: Integer;
+  Desc: TStatementDescription;
+Begin
+  with ConnectionManager.LockConnection(Utf8Encode(ConnectionID)) do
+  try
+    Result := TStringArray.Create;
+    Result.SetLength(Statements.Length);
+    for x := 0 to Statements.Length - 1 do begin
+      Desc := Statements.Item[x];
+      Result.Item[x] := ExecuteSingleStmt(ZeosConnection, Desc.SQL, Desc.Parameters, Desc.MaxRows);
+    end;
+  finally
+    Unlock;
+  end;
+  AuditLogger.LogLine('ExecuteMultiple');
 End;
 
 

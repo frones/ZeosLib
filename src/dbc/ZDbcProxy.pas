@@ -81,6 +81,7 @@ type
     function GetPlainDriver: IZProxyPlainDriver;
     function GetConnectionInterface: IZDbcProxy;
     function GetDbInfoStr: ZWideString;
+    function GetPublicKeys: ZWideString;
   end;
 
   {** Implements DBC Proxy Database Connection. }
@@ -222,6 +223,11 @@ type
     function GetDbInfoStr: ZWideString;
 
     procedure ExecuteImmediat(const SQL: UnicodeString; LoggingCategory: TZLoggingCategory); override;
+
+    /// <summary>
+    ///   Gets the public keys from a dbc proxy server in TOFU mode.
+    /// </summary>
+    function GetPublicKeys: ZWideString;
   end;
 
 var
@@ -743,9 +749,16 @@ var
   Statement: IZStatement;
 begin
   Statement := CreateStatementWithParams(nil);
-  Statement.Execute(SQL);
-  Statement.Close;
+  try
+    Statement.Execute(SQL);
+  finally
+    Statement.Close;
+  end;
+end;
 
+function TZDbcProxyConnection.GetPublicKeys: ZWideString;
+begin
+  Result := FConnIntf.GetPublicKeys;
 end;
 
 initialization

@@ -438,8 +438,9 @@ begin
     finally
       FreeAndNil(BCrypt);
     end;
+  end
   {$ENDIF}
-  end else
+  else
     CryptPwdUser := '$$$$$$$$$$'; // $-Signs shouldn't make up a valid crypted password.
 
   if not Result then begin

@@ -2,7 +2,7 @@
 This unit has been produced by ws_helper.
   Input unit name : "zeosproxy".
   This unit name  : "zeosproxy_proxy".
-  Date            : "15.12.2023 17:53:32".
+  Date            : "21.09.2024 17:27:26".
 }
 
 Unit zeosproxy_proxy;
@@ -151,7 +151,11 @@ Type
     function StartTransaction(
       const  ConnectionID : UnicodeString
     ):integer;
-    function GetPublicKeys():string;
+    function GetPublicKeys():UnicodeString;
+    function ExecuteMultipleStmts(
+      const  ConnectionID : UnicodeString; 
+       Statements : TStatementDescriptions
+    ):TStringArray;
   End;
 
   Function wst_CreateInstance_IZeosProxy(const AFormat : string = 'SOAP:'; const ATransport : string = 'HTTP:'; const AAddress : string = ''):IZeosProxy;
@@ -939,7 +943,7 @@ Begin
   End;
 End;
 
-function TZeosProxy_Proxy.GetPublicKeys():string;
+function TZeosProxy_Proxy.GetPublicKeys():UnicodeString;
 Var
   locSerializer : IFormatterClient;
   locCallContext : ICallContext;
@@ -955,7 +959,36 @@ Begin
 
     locSerializer.BeginCallRead(locCallContext);
       locStrPrmName := 'result';
-      locSerializer.Get(TypeInfo(string), locStrPrmName, Result);
+      locSerializer.Get(TypeInfo(UnicodeString), locStrPrmName, Result);
+
+  Finally
+    locSerializer.Clear();
+  End;
+End;
+
+function TZeosProxy_Proxy.ExecuteMultipleStmts(
+  const  ConnectionID : UnicodeString; 
+   Statements : TStatementDescriptions
+):TStringArray;
+Var
+  locSerializer : IFormatterClient;
+  locCallContext : ICallContext;
+  locStrPrmName : string;
+Begin
+  locCallContext := Self as ICallContext;
+  locSerializer := GetSerializer();
+  Try
+    locSerializer.BeginCall('ExecuteMultipleStmts', GetTarget(),locCallContext);
+      locSerializer.Put('ConnectionID', TypeInfo(UnicodeString), ConnectionID);
+      locSerializer.Put('Statements', TypeInfo(TStatementDescriptions), Statements);
+    locSerializer.EndCall();
+
+    MakeCall();
+
+    locSerializer.BeginCallRead(locCallContext);
+      Result := Nil;
+      locStrPrmName := 'result';
+      locSerializer.Get(TypeInfo(TStringArray), locStrPrmName, Result);
 
   Finally
     locSerializer.Clear();
